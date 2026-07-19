@@ -1,0 +1,142 @@
+{
+  "phase": "1D-C1-UI-04",
+  "title": "Reader Journey Visualization Full Plot Restoration and Vertical Tool Rail",
+  "version": "v3.0",
+  "verdict": "READER_JOURNEY_VISUALIZATION_V3_0_READY_FOR_HUMAN_UAT",
+  "visualization_version": "3.0",
+  "parent_ui_baseline": "reader-journey-ui-final-v2.9",
+  "new_ui_baseline": "reader-journey-ui-final-v3.0",
+  "change_type": "controlled_full_plot_restore_after_human_uat_failure",
+  "parent_human_uat": "READER_JOURNEY_VISUALIZATION_V2_9_HUMAN_UAT_FAILED",
+  "diagnosis": {
+    "direct_cause_y_25_and_0_clipped": "Overview grid ratio (~72%) + overflow:hidden on overview/export-root/curve clipped the SVG bottom where ticks 0/25 live; chrome above SVG (phase nav + horizontal toolbar) reduced remaining plot viewport. Not data loss; not Scene-count special cases.",
+    "runtime_dom_metrics_13": {
+      "shell_clientHeight": 481,
+      "shell_minHeight": "440px",
+      "svg_height": "420",
+      "viewBox": "0 0 1129 420",
+      "plotHeight": 352,
+      "clipHeight": "352",
+      "container_overflowY": "hidden",
+      "viewport_overflowY": "hidden",
+      "nodeCount": 13
+    }
+  },
+  "problem_addressed": [
+    "Y axis only showed 100/75/50; 25 and 0 clipped",
+    "low troughs below visible area disappeared",
+    "outer module tall enough but real plot height insufficient",
+    "height/clipPath/viewBox/overflow chain desync",
+    "top toolbar competed with plot height"
+  ],
+  "architecture": {
+    "canonical_entry": "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.tsx",
+    "canonical_chart": "apps/desktop/src/components/readerJourney/CanonicalJourneyChart.tsx",
+    "global_config": "apps/desktop/src/components/readerJourney/journeyVisualizationConfig.ts",
+    "tool_rail": "apps/desktop/src/components/readerJourney/JourneyChartToolRail.tsx",
+    "no_book_chapter_run_special_cases": true,
+    "page_order": [
+      "title",
+      "phase_nav",
+      "chart_shell(tool_rail+viewport)",
+      "svg_plot",
+      "scene_rhythm_below_svg",
+      "one_line_summary",
+      "collapsed_inspector_summary",
+      "expanded_detail_on_demand"
+    ]
+  },
+  "plot_area": {
+    "chart_shell_min_px": 440,
+    "svg_standard_height": 420,
+    "plot_standard_px": 352,
+    "expanded_px": 480,
+    "y_domain": [0, 100],
+    "y_ticks": [0, 25, 50, 75, 100]
+  },
+  "tool_rail": {
+    "width_px": 56,
+    "replaces_top_primary_toolbar": true,
+    "actions": ["指标", "适应全部", "当前Phase", "详情", "导出", "更多设置"]
+  },
+  "inspector": {
+    "default": "collapsed",
+    "summary_bar": true,
+    "expand_does_not_compress_plot": true
+  },
+  "overflow": {
+    "chart_overflow_y": "hidden",
+    "overview_row": "auto_content_sized",
+    "x_scroll_allowed_when_scene_gt_15": true
+  },
+  "png": {
+    "default_mode": "full_journey",
+    "filename_pattern": "StoryLens_<title>_完整旅程_v3.0.png"
+  },
+  "forbidden_changes": [
+    "Prompt",
+    "Contract",
+    "Validator",
+    "Reader Journey Profile",
+    "Phase/Question/Hook/Payoff/Risk/Evidence semantics",
+    "API return contracts",
+    "ModelInvocationBroker",
+    "Provider/Budget/Recovery",
+    "book/chapter/run special cases",
+    "additional display modes beyond restore"
+  ],
+  "freeze": {
+    "thaw": "audits/mvp-functional-baseline-v1/ui-presentation-thaw-v2-11.json",
+    "manifest": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v3.0/reader-journey-ui-final-freeze-v3.0.json",
+    "rollback": "point checker to v2.9; remove thaw v2-11; restore hashed files"
+  },
+  "docs": ["docs/reader-journey-full-plot-and-tool-rail-v3.0.md"],
+  "tests": [
+    "apps/desktop/src/components/readerJourney/phase_1dc1_ui04_visualization_v3_0.test.tsx",
+    "apps/desktop/e2e/phase_1dc1_ui04_reader_journey_v3_0.spec.ts"
+  ],
+  "visual_regression": {
+    "dir": "audits/single-chapter-pipeline/reader-journey-visual-regression-v3.0",
+    "screenshots": [
+      "01-13-scene-full-y-axis.png",
+      "02-13-scene-y-ticks-0-25-visible.png",
+      "03-13-scene-trough-visible.png",
+      "04-13-scene-inspector-collapsed.png",
+      "05-13-scene-inspector-expanded.png",
+      "06-vertical-tool-rail.png",
+      "07-30-scene-horizontal-browse.png"
+    ],
+    "capture": "playwright DOM screenshots of running page (not synthetic SVG)",
+    "dom_metrics": "dom-metrics-13.json"
+  },
+  "invariants": {
+    "agent_real_model_requests": 0,
+    "agent_tokens": 0,
+    "agent_cost": 0,
+    "main_and_canary_db_unchanged_by_agent": true
+  },
+  "gates": {
+    "reader_journey_ui_freeze_v3_0": "PASS",
+    "certified_baseline_core_freeze_with_thaw_v2_11": "PASS",
+    "check_project": "PASS",
+    "desktop_reader_journey_unit_tests": "PASS",
+    "playwright_dom_screenshots_v3_0": "PASS"
+  },
+  "affected_files": [
+    "apps/desktop/src/components/readerJourney/CanonicalJourneyChart.tsx",
+    "apps/desktop/src/components/readerJourney/JourneyChartToolRail.tsx",
+    "apps/desktop/src/components/readerJourney/JourneyChartToolbar.tsx",
+    "apps/desktop/src/components/readerJourney/journeyVisualizationConfig.ts",
+    "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.tsx",
+    "apps/desktop/src/components/readerJourney/JourneyResizableSplit.tsx",
+    "apps/desktop/src/components/readerJourney/exportJourneyPng.ts",
+    "apps/desktop/src/components/readerJourney/readerJourney.css",
+    "apps/desktop/src/components/readerJourney/SplitPane.tsx",
+    "apps/desktop/src/components/readerJourney/syncWorkspace.css",
+    "scripts/check_reader_journey_ui_freeze.py",
+    "scripts/check_core_freeze.py",
+    "scripts/seal_reader_journey_ui_freeze_v3_0.py",
+    "audits/mvp-functional-baseline-v1/ui-presentation-thaw-v2-11.json",
+    "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v3.0/reader-journey-ui-final-freeze-v3.0.json"
+  ]
+}

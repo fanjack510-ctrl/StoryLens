@@ -1,0 +1,19 @@
+{
+  "batch_id": "phase-1db1-offline-20260718",
+  "cert_db": "D:/Dstorylens/artifacts/single-chapter-pipeline-certification/certification.sqlite3",
+  "cert_integrity": "ok",
+  "cert_fk_violations": 0,
+  "cert_analysis_runs": 12,
+  "cert_journey_runs": 12,
+  "main_db_unchanged": true,
+  "fixture_books": 3,
+  "fixture_chapters": 12,
+  "offline_responses": 12,
+  "real_model_requests": 0,
+  "token": 0,
+  "cost": 0,
+  "defects": [],
+  "integrity_result": "PASS",
+  "template_result": "PASS",
+  "fake_provider_calls_approx": 12
+}

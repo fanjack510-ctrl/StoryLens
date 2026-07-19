@@ -1,0 +1,145 @@
+{
+  "change_id": "global-model-invocation-policy-change-v1.1.0",
+  "phase": "1D-B2-R11",
+  "defect_id": "DEFECT-CANARY-015",
+  "title": "Global Model Invocation Policy Unification via ModelInvocationBroker",
+  "old_batch_id": "phase-1db2-r10-20260719T000923Z",
+  "old_batch_verdict_preserved": "REAL_CANARY_FAILED",
+  "superseded_by_future_batch": true,
+  "root_cause": {
+    "primary": "SCHEMA_REPAIR_HARDCODED_FLASH_BYPASS_RUN_POLICY",
+    "secondary": [
+      "NESTED_REPAIR_IGNORES_AUTO_ROUTE_FALSE",
+      "DISABLED_FLASH_REACHES_PROVIDER_PRE_SEND",
+      "NO_SINGLE_MODEL_INVOCATION_POLICY_ENTRY",
+      "DESKTOP_ROUTING_PREVIEW_ADVERTISED_FLASH_REPAIR"
+    ],
+    "detail": "generate_validated switched json/schema repair from aliyun_qwen_plus to aliyun_qwen_flash; canary DB only seeded Plus (disabled Flash) → PROVIDER_DISABLED on schema_repair after SCHEMA_VALIDATION_FAILED."
+  },
+  "old_routing_paths": [
+    "structured_output.generate_validated → hardcode aliyun_qwen_flash on json_repair/schema_repair",
+    "gateway.generate(direct) inside structured_output without policy precheck",
+    "desktop.routing_preview advertised JSON repair → Flash"
+  ],
+  "new_single_entry": "apps/api/app/services/model_invocation_broker.py::ModelInvocationBroker",
+  "registered_invocation_types": [
+    "scene_boundary",
+    "scene_boundary_schema_repair",
+    "scene_analysis",
+    "scene_analysis_provider_retry",
+    "scene_analysis_provider_recovery",
+    "reader_journey_scene_batch",
+    "reader_journey_scene_schema_repair",
+    "reader_journey_structural_repair",
+    "reader_journey_targeted_evidence_patch",
+    "reader_journey_chapter",
+    "reader_journey_chapter_schema_repair",
+    "repair_provider_retry",
+    "generic_provider_retry"
+  ],
+  "provider_policy": {
+    "authorized_provider": "aliyun_qwen_plus",
+    "inheritance": "normal/transport_retry/schema_repair/structural_repair/repair_provider_retry/provider_recovery",
+    "auto_route_false": "resolved_provider == authorized_provider"
+  },
+  "model_policy": {
+    "authorized_model": "qwen3.7-plus",
+    "auto_route_false": "resolved_model == authorized_model",
+    "request_hash_policy": "independent_of_model_policy"
+  },
+  "fallback_policy": {
+    "when_auto_route_false": "none",
+    "flash_fallback": "forbidden",
+    "violation_codes": [
+      "MODEL_INVOCATION_POLICY_VIOLATION",
+      "MODEL_UNAUTHORIZED_FALLBACK"
+    ]
+  },
+  "disabled_provider_precheck": {
+    "code": "MODEL_PROVIDER_DISABLED_PRECHECK",
+    "phase": "pre_send",
+    "http_request_sent": false
+  },
+  "error_codes": [
+    "MODEL_INVOCATION_POLICY_VIOLATION",
+    "MODEL_PROVIDER_DISABLED_PRECHECK",
+    "MODEL_UNAUTHORIZED_FALLBACK",
+    "MODEL_INVOCATION_TYPE_UNREGISTERED"
+  ],
+  "allowed_files": [
+    "apps/api/app/services/model_invocation_broker.py",
+    "apps/api/app/services/structured_output.py",
+    "apps/api/app/services/scene_pipeline.py",
+    "apps/api/app/services/scene_analysis_provider_recovery.py",
+    "apps/api/app/api/v1/desktop.py",
+    "apps/api/tests/test_defect_canary_015_model_invocation_policy.py",
+    "apps/api/tests/test_aliyun_provider.py",
+    "apps/api/tests/test_phase_2b2.py",
+    "scripts/check_model_invocation_policy.py",
+    "audits/single-chapter-pipeline/changes/global-model-invocation-policy-change-v1.1.0.json",
+    "audits/single-chapter-pipeline/model-invocation-graph-v1.json",
+    "audits/single-chapter-pipeline/real-invocation-path-qualification-preflight-v1.json",
+    "audits/single-chapter-pipeline/real-canary-preflight-v12.json",
+    "audits/single-chapter-pipeline/real-canary-v11/final-verdict-v1.json",
+    "audits/single-chapter-pipeline/real-canary-v11/defects/DEFECT-CANARY-015.json",
+    "audits/single-chapter-pipeline/real-canary-v11/defect-015-remediation-verdict-v1.json",
+    "audits/single-chapter-pipeline/real-canary-v11/batches/phase-1db2-r10-20260719T000923Z/final-verdict-v1.json",
+    "audits/single-chapter-pipeline/real-canary-v11/batches/phase-1db2-r10-20260719T000923Z/defects/DEFECT-CANARY-015.json",
+    "docs/50_single_chapter_real_api_canary.md"
+  ],
+  "prohibited_files": [
+    "packages/prompts/**",
+    "apps/desktop/**",
+    "data/storylens.db",
+    "artifacts/single-chapter-pipeline-certification/real-canary/canary-v11.sqlite3",
+    "audits/single-chapter-pipeline/real-canary-v11/authorization-v11.json",
+    "audits/single-chapter-pipeline/real-canary-v12/authorization-v12.json"
+  ],
+  "prohibited_actions": [
+    "resume phase-1db2-r10-20260719T000923Z",
+    "issue authorization-v12 in this phase",
+    "enable aliyun_qwen_flash as sole fix",
+    "hardcode qwen3.7-plus only inside schema_repair without broker"
+  ],
+  "affected_files": [
+    "apps/api/app/services/model_invocation_broker.py",
+    "apps/api/app/services/structured_output.py",
+    "apps/api/app/services/scene_pipeline.py",
+    "apps/api/app/services/scene_analysis_provider_recovery.py",
+    "apps/api/app/api/v1/desktop.py",
+    "scripts/check_model_invocation_policy.py"
+  ],
+  "regression_tests": [
+    "apps/api/tests/test_defect_canary_015_model_invocation_policy.py",
+    "apps/api/tests/test_aliyun_provider.py",
+    "apps/api/tests/test_phase_2b2.py",
+    "apps/api/tests/test_defect_canary_010_journey_repair_resilience.py",
+    "apps/api/tests/test_defect_canary_011_targeted_repair.py",
+    "apps/api/tests/test_defect_canary_014_scene_analysis_provider_recovery.py"
+  ],
+  "offline_gate": "scripts/check_model_invocation_policy.py",
+  "next_gate": "real-invocation-path-qualification-preflight-v1.json",
+  "next_canary_preflight": "real-canary-preflight-v12.json",
+  "next_canary_db": "artifacts/single-chapter-pipeline-certification/real-canary/canary-v12.sqlite3",
+  "rollback_plan": "Restore structured_output flash ternary for json/schema repair; delete model_invocation_broker.py; revert classify_pipeline_error MODEL_* handling; revert desktop routing_preview; remove check_model_invocation_policy.py and v1.1.0 audits.",
+  "new_hashes": {
+    "apps/api/app/services/model_invocation_broker.py": "f03dbb14d1e5a7d51fd864670154a877a16db790b5a65697d7a58065eb48733f",
+    "apps/api/app/services/structured_output.py": "11707d4244c6ccda1f32ab0de00b9f1bfc79eb2b51a9bab2dc06d3c6ae155124",
+    "apps/api/app/services/scene_pipeline.py": "fa2b721f48deb83272769c6098a2f4739df454d1005b4c17c508c1aa83832ee2",
+    "apps/api/app/services/scene_analysis_provider_recovery.py": "cb2ab2aa6040162ec61d63b015eb9d306488e42c9a97fc64d558c17c85a3b573",
+    "apps/api/app/api/v1/desktop.py": "047a99ecc032a59a6f5dc5615c9ee4b83f31b02b26f360ded2e1d26ac80767cc",
+    "apps/api/tests/test_defect_canary_015_model_invocation_policy.py": "9e03a0061c428f210024c3422eb17de42d09e8306270c422b2d56d816092a015",
+    "apps/api/tests/test_aliyun_provider.py": "18ebe0d49409727c9b754fb0c9b9c13853d9d06f3e70e7640c3d4e53b9885acb",
+    "apps/api/tests/test_phase_2b2.py": "b78f303d404d5b21dadba60d0df1c4122fdab992c64ff513c850a34d6aaaa7ad",
+    "scripts/check_model_invocation_policy.py": "d00e5a87d39ff0e7c11df25fbc5d36ea5ae2e731a8a95baf5a918a4f23a59337",
+    "docs/50_single_chapter_real_api_canary.md": "da5b3a16caddd68dd37a3fc7d9e6e13dfbead509960ccd0455f2a5f098771d57"
+  },
+  "real_model_requests_this_phase": 0,
+  "tokens_this_phase": 0,
+  "cost_cny_this_phase": 0,
+  "ui_baseline_unfrozen": false,
+  "final_conclusion_candidates": [
+    "DEFECT_015_REMEDIATED_READY_FOR_INVOCATION_QUALIFICATION",
+    "DEFECT_015_NOT_REMEDIATED"
+  ]
+}

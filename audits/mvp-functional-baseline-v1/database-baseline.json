@@ -1,0 +1,268 @@
+{
+  "generated_at": "2026-07-18T05:43:59.729740+00:00",
+  "database_path": "data/storylens.db",
+  "integrity_check": "ok",
+  "foreign_key_check": [],
+  "book_count": 5,
+  "chapter_count": 2101,
+  "paragraph_count": 188397,
+  "analysis_run_count": 55,
+  "analysis_run_status_distribution": {
+    "failed": 13,
+    "succeeded": 42
+  },
+  "run_55": {
+    "exists": true,
+    "status": "succeeded",
+    "subject_type": "chapter",
+    "subject_id": "2",
+    "provider": "aliyun_qwen_plus",
+    "prompt_version": "v3.5",
+    "error_code": null
+  },
+  "boundary_revision_1": {
+    "exists": true,
+    "id": 1,
+    "analysis_run_id": 55,
+    "coverage_rate": 1.0,
+    "revision_number": 1,
+    "confirmed_at": "2026-07-17 04:27:10.609137",
+    "confirmed_by": "desktop-user"
+  },
+  "scenes_6_19": {
+    "count": 14,
+    "ids": [
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19
+    ],
+    "ordinals": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14
+    ],
+    "complete": true
+  },
+  "scene_analysis_artifact_count_run55": 14,
+  "scene_analysis_valid_count_run55": 14,
+  "evidence_count_run55_scene_analysis": 130,
+  "illegal_evidence_count": 0,
+  "reader_journey_run_count": 2,
+  "reader_journey_status_distribution": {
+    "failed": 1,
+    "succeeded": 1
+  },
+  "journey_run_2": {
+    "exists": true,
+    "status": "succeeded",
+    "analysis_run_id": 55,
+    "scene_contract_version": "1.3",
+    "scene_prompt_version": "v1.3",
+    "chapter_prompt_version": "v1",
+    "chapter_contract_version": "1.0",
+    "formula_version": "1.0",
+    "planner_version": "1.1"
+  },
+  "scene_profile_count_journey2": 14,
+  "phase_count_journey2": 4,
+  "chapter_summary_count_journey2": 1,
+  "visualization_generatable": true,
+  "question_chain_count": 8,
+  "question_cluster_count": 11,
+  "model_invocation_total": 149,
+  "active_reservation_count": 0,
+  "active_reservations": [],
+  "orphan_reservation_count": 0,
+  "orphan_reservations": [],
+  "leaked_active_reservation_count": 0,
+  "leaked_active_reservations": [],
+  "duplicate_valid_scene_analysis_artifacts_run55": [],
+  "duplicate_profiles_journey2": [],
+  "golden_sample": {
+    "run_id": 55,
+    "journey_run_id": 2,
+    "checks": {
+      "chapter_body_complete": true,
+      "scene_count_14": true,
+      "scene_ids_6_19": true,
+      "scene_order_correct": true,
+      "scene_coverage_100": true,
+      "paragraph_no_omission": true,
+      "paragraph_no_overlap": true,
+      "scene_analysis_14_of_14": true,
+      "evidence_all_legal": true,
+      "journey_run_2_succeeded": true,
+      "profiles_14_of_14": true,
+      "phase_coverage_100": true,
+      "phase_no_overlap": true,
+      "chapter_summary_present": true,
+      "engagement_curve_14": true,
+      "core_secondary_beat_6_5_3": true,
+      "visible_hook_8": true,
+      "visible_payoff_7": true,
+      "question_cluster_11": true,
+      "default_visible_cluster_5": true,
+      "scene14_is_core": true,
+      "scene1_and_14_serializable": true,
+      "png_datasource_generatable": true,
+      "phase_mappable_to_scene": true,
+      "scene_mappable_to_paragraph": true,
+      "evidence_mappable_to_paragraph": true,
+      "profile_1_serializable": true,
+      "profile_14_serializable": true,
+      "writing_takeaways_compatible": true,
+      "export_json_generatable": true,
+      "export_markdown_generatable": true,
+      "journey_export_generatable": true,
+      "url_state_recovery_contract_documented": true
+    },
+    "chapter": {
+      "chapter_id": 2,
+      "paragraph_count": 68,
+      "first_paragraph_id": "B0001-C0002-P0001",
+      "last_paragraph_id": "B0001-C0002-P0068",
+      "body_complete": true
+    },
+    "scene_coverage": {
+      "missing_paragraph_nums": [],
+      "extra_paragraph_nums": [],
+      "overlap": false,
+      "covered_count": 68,
+      "chapter_para_count": 68
+    },
+    "evidence": {
+      "total": 130,
+      "illegal_count": 0,
+      "illegal_samples": []
+    },
+    "journey_run": {
+      "status": "succeeded",
+      "scene_contract_version": "1.3",
+      "scene_prompt_version": "v1.3",
+      "chapter_prompt_version": "v1",
+      "chapter_contract_version": "1.0",
+      "formula_version": "1.0",
+      "planner_version": "1.1",
+      "analysis_run_id": 55
+    },
+    "phases": {
+      "count": 4,
+      "ranges": [
+        {
+          "ordinal": 1,
+          "start": 1,
+          "end": 4,
+          "title": "意识觉醒与身份迷雾"
+        },
+        {
+          "ordinal": 2,
+          "start": 5,
+          "end": 8,
+          "title": "世界观重构与归家本能"
+        },
+        {
+          "ordinal": 3,
+          "start": 9,
+          "end": 11,
+          "title": "温情崩塌与非人异变"
+        },
+        {
+          "ordinal": 4,
+          "start": 12,
+          "end": 14,
+          "title": "逻辑悖论与终极悬疑"
+        }
+      ]
+    },
+    "question_chain_count": 8,
+    "visualization": {
+      "visualization_version": "1.1",
+      "scene_node_count": 14,
+      "engagement_points": 14,
+      "level_counts": {
+        "core": 6,
+        "secondary": 5,
+        "beat": 3
+      },
+      "visible_hook_count": 8,
+      "visible_payoff_count": 7,
+      "question_cluster_count": 11,
+      "default_visible_cluster_count": 5,
+      "reported_visible_hook_count": 8,
+      "reported_visible_payoff_count": 7,
+      "scene14_level": "core",
+      "scene1_serializable": true,
+      "scene14_serializable": true,
+      "formula_versions": {
+        "visualization_version": "1.1",
+        "chain_rank_formula_version": "1.0",
+        "importance_formula_version": "1.1",
+        "chain_merge_formula_version": "1.0",
+        "hook_select_formula_version": "1.1",
+        "payoff_derive_formula_version": "1.1",
+        "cluster_formula_version": "1.1",
+        "engagement_formula_version": "1.0"
+      },
+      "calibration_status": {
+        "scene_contract_version": "1.3",
+        "scene_prompt_version": "v1.3",
+        "planner_version": "1.1",
+        "semantic_source": "model+deterministic_calibration",
+        "calibrated": true,
+        "latest_audit": {
+          "to_contract_version": "1.3",
+          "empty_qin_before": 14,
+          "non_opening_empty_qin_after": 0,
+          "journey_node_count": 14,
+          "http_requests": 0,
+          "tokens": 0,
+          "cost": 0.0
+        },
+        "evidence_coverage": 1.0
+      },
+      "curve_series_keys": [
+        "engagement",
+        "valence",
+        "arousal",
+        "curiosity",
+        "tension",
+        "payoff",
+        "hook",
+        "dropoff_risk"
+      ]
+    },
+    "visualization_error": null,
+    "writing_takeaways_note": "Present on visualization.scene_nodes; omitted from scene_profiles summary DTO",
+    "export": {
+      "json": true,
+      "markdown": true,
+      "journey_json": true,
+      "error": null
+    }
+  },
+  "real_model_requests_this_audit": 0,
+  "tokens_this_audit": 0,
+  "cost_this_audit": 0
+}

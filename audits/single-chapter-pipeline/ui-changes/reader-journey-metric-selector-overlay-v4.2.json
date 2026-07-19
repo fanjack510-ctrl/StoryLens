@@ -1,0 +1,73 @@
+{
+  "phase": "1D-C1-UI-07",
+  "title": "Reader Journey Metric Selector and Overlay System",
+  "version": "v4.2",
+  "verdict": "READER_JOURNEY_METRIC_SELECTOR_V4_2_READY_FOR_HUMAN_UAT",
+  "visualization_version": "4.2",
+  "parent_ui_baseline": "reader-journey-ui-final-v4.1",
+  "new_ui_baseline": "reader-journey-ui-final-v4.2",
+  "change_type": "controlled_metric_selector_overlay_after_human_uat",
+  "parent_human_uat": "READER_JOURNEY_RESIZABLE_WORKSPACE_V4_1_HUMAN_UAT_FAILED",
+  "defect": "DEFECT-UAT-009 Metric Selector Overlays Journey Content",
+  "problem_addressed": [
+    "metric dropdown portal overlays Phase cards",
+    "metric dropdown overlays Scene caption and journey chart marks",
+    "no unified overlay / z-index token system",
+    "metric menu not keyboard listbox accessible as in-flow panel"
+  ],
+  "architecture": {
+    "metric_selector": "in-flow MetricSelectorPanel between Toolbar and PhaseNavigation",
+    "metric_position": "static (document flow)",
+    "metric_max_height_px": 280,
+    "metric_grid": "2-4 columns adaptive; narrow 1 column",
+    "popover": "JourneyPopover/SharedPopover → #journey-overlay-root",
+    "z_index_tokens": {
+      "content": 0,
+      "sticky_toolbar": 10,
+      "popover_menu": 40,
+      "chart_tooltip": 50,
+      "modal_dialog": 100
+    },
+    "no_absolute_metric_over_chart": true
+  },
+  "plot_area_preserved": {
+    "chart_shell_min_px": 440,
+    "svg_standard_height": 420,
+    "plot_standard_px": 352,
+    "y_domain": [0, 100],
+    "y_ticks": [0, 25, 50, 75, 100]
+  },
+  "forbidden_changes": [
+    "Prompt",
+    "Contract",
+    "Validator",
+    "Reader Journey Profile",
+    "Phase/Question/Hook/Payoff/Risk/Evidence semantics",
+    "API return contracts",
+    "ModelInvocationBroker",
+    "Provider/Budget/Recovery",
+    "book/chapter/run special cases",
+    "z-index-only metric patch"
+  ],
+  "freeze": {
+    "thaw": "audits/mvp-functional-baseline-v1/ui-presentation-thaw-v2-14.json",
+    "manifest": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v4.2/reader-journey-ui-final-freeze-v4.2.json",
+    "rollback": "point checker to v4.1; remove thaw v2-14; restore hashed files"
+  },
+  "docs": ["docs/reader-journey-metric-selector-overlay-v4.2.md"],
+  "layout_audit": "audits/single-chapter-pipeline/reader-journey-metric-selector-layout-audit-v4.2.json",
+  "tests": [
+    "apps/desktop/src/components/readerJourney/phase_1dc1_ui07_metric_selector_v4_2.test.tsx",
+    "apps/desktop/e2e/phase_1dc1_ui07_metric_selector_v4_2.spec.ts"
+  ],
+  "visual_regression": {
+    "dir": "audits/single-chapter-pipeline/reader-journey-metric-selector-visual-regression-v4.2"
+  },
+  "gates": {
+    "certified_baseline": "PASS (unchanged business data)",
+    "invocation_policy": "PASS (zero model calls)",
+    "output_budget": "PASS",
+    "main_and_canary_db": "unchanged",
+    "real_model_requests_tokens_cost": 0
+  }
+}

@@ -1,0 +1,98 @@
+{
+  "baseline": "mvp-functional-baseline-v1",
+  "purpose": "reader-journey-viewport-fit-presentation-only",
+  "thaw_id": "ui-presentation-thaw-v2",
+  "parent_thaw": "ui-presentation-thaw-v1",
+  "core_freeze_manifest": "audits/mvp-functional-baseline-v1/core-freeze-manifest.json",
+  "allowed_files": [
+    {
+      "path": "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.tsx",
+      "before_sha256": "8a18a9fc8d8c68c80701610e9b9d3542d6403404b3cc0cea6d738876307c3f2a",
+      "reason": "Overview triple-mode, compact phase band, curve min-height, presentation-only overview URL",
+      "allowed_change": "layout|presentation|view-only"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/ReaderJourneySyncWorkspace.tsx",
+      "before_sha256": "3fea9b58855bc167280810ac71184fff12d47afdacb3459fd71faf918b501ec2",
+      "reason": "Overview/detail resizable split wiring; no selection semantics",
+      "allowed_change": "layout|presentation"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/readerJourney.css",
+      "before_sha256": "3955da52787f8df7e701aa1445b5a544a111bddc0df851346782d9693eaf43ac",
+      "reason": "Overview modes, compact phase band, curve height, density CSS",
+      "allowed_change": "css|layout"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/syncWorkspace.css",
+      "before_sha256": "7415cd3864ccf6b049a57eaa860020036f7394cf6c2932f1b6e05d243ae39573",
+      "reason": "Sync column resizable overview/detail and responsive layout CSS",
+      "allowed_change": "css|layout"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/SplitPane.tsx",
+      "before_sha256": "bb9d4e54da642f2330e55ebc419bb4ad4e744db47e11db516ea37293ea55876e",
+      "reason": "Responsive left/right ratio defaults for viewport fit (presentation)",
+      "allowed_change": "layout|presentation"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/exportJourneyPng.ts",
+      "before_sha256": "5b603f26ab42dcc4589c58da05176cd076faa9d2c2d0c588f8b2e5471530940c",
+      "reason": "Export temporarily uses curve overview; no data semantic change",
+      "allowed_change": "presentation|view-only"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/journeyUiLabels.ts",
+      "before_sha256": "8614bfde96f0838edb7f14e349aaec2d17e3db1f0061ad373dc79f6af9324659",
+      "reason": "Compact metric/emotion presentation labels",
+      "allowed_change": "presentation|view-only"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/JourneySceneDetailPanel.tsx",
+      "before_sha256": "64ad54ce29ea08e210a821bf1e8b74090d2850aaf0bc703ee27aeae8f0b892a6",
+      "reason": "Optional compact Phase detail slot above scene tabs",
+      "allowed_change": "presentation|layout|view-only"
+    },
+    {
+      "path": "apps/desktop/src/styles/global.css",
+      "before_sha256": "b5374d0f843119483f86a0159c1cd7c795820c6ec426b26ce32cabe1133ebc41",
+      "reason": "Shell height/overflow helpers for viewport fit",
+      "allowed_change": "css|layout"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/overviewMode.ts",
+      "before_sha256": null,
+      "reason": "Pure presentation overview=curve|questions|diagnosis URL helper",
+      "allowed_change": "presentation|view-only",
+      "new_file": true
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/JourneyOverviewModes.tsx",
+      "before_sha256": null,
+      "reason": "Mutual overview mode panels (curve / questions / diagnosis)",
+      "allowed_change": "presentation|layout|view-only",
+      "new_file": true
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/JourneyResizableSplit.tsx",
+      "before_sha256": null,
+      "reason": "Overview/detail vertical resize with localStorage preference",
+      "allowed_change": "layout|presentation",
+      "new_file": true
+    }
+  ],
+  "forbidden_behavior_changes": [
+    "selection semantics",
+    "scroll spy",
+    "evidence mapping",
+    "analysis data",
+    "export data semantics",
+    "useJourneySelection"
+  ],
+  "notes": [
+    "Original core-freeze-manifest.json must not be modified.",
+    "v1 thaw remains; v2 is additive for Phase 1C-C.2.5.",
+    "Production presentation files capped at 12.",
+    "overview URL param is presentation-only and does not alter selection semantics."
+  ]
+}

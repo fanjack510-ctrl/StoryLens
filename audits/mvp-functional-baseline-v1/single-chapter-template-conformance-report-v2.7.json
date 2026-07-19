@@ -1,0 +1,2778 @@
+{
+  "phase": "1D-A",
+  "template_id": "reader-journey-single-chapter",
+  "template_version": "2.7",
+  "ui_final_baseline": "reader-journey-ui-final-v2.7",
+  "canonical_entry": "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.tsx",
+  "composition_shell": "apps/desktop/src/components/readerJourney/ReaderJourneySyncWorkspace.tsx",
+  "production_template_entry_count": 1,
+  "duplicated_template": false,
+  "books_route_chain": [
+    "apps/desktop/src/pages/BookRoutePage.tsx",
+    "apps/desktop/src/components/chapterResult/EmbeddedAnalysisResultShell.tsx",
+    "apps/desktop/src/components/chapterResult/AnalysisResultRouteAdapter.tsx",
+    "apps/desktop/src/pages/AnalysisResultsPage.tsx",
+    "apps/desktop/src/components/readerJourney/ReaderJourneySyncWorkspace.tsx",
+    "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.tsx"
+  ],
+  "standalone_route_chain": [
+    "apps/desktop/src/pages/AnalysisResultsShellPage.tsx",
+    "apps/desktop/src/pages/AnalysisResultsPage.tsx",
+    "apps/desktop/src/components/readerJourney/ReaderJourneySyncWorkspace.tsx",
+    "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.tsx"
+  ],
+  "book_special_cases": [],
+  "chapter_special_cases": [],
+  "run_special_cases": [],
+  "hardcoded_scene_count": [],
+  "hardcoded_phase_count": [],
+  "version_authority": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json#version",
+  "version_string_locations": [
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 2,
+      "kind": "ui-baseline-id",
+      "category": "authoritative-manifest",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 51,
+      "kind": "ui-baseline-id",
+      "category": "authoritative-manifest",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 60,
+      "kind": "ui-baseline-id",
+      "category": "authoritative-manifest",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 69,
+      "kind": "ui-baseline-id",
+      "category": "authoritative-manifest",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 78,
+      "kind": "ui-baseline-id",
+      "category": "authoritative-manifest",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 90,
+      "kind": "ui-baseline-id",
+      "category": "authoritative-manifest",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 99,
+      "kind": "ui-baseline-id",
+      "category": "authoritative-manifest",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 112,
+      "kind": "ui-baseline-id",
+      "category": "authoritative-manifest",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 121,
+      "kind": "ui-baseline-id",
+      "category": "authoritative-manifest",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 130,
+      "kind": "ui-baseline-id",
+      "category": "authoritative-manifest",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 139,
+      "kind": "ui-baseline-id",
+      "category": "authoritative-manifest",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 150,
+      "kind": "ui-baseline-id",
+      "category": "authoritative-manifest",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 159,
+      "kind": "ui-baseline-id",
+      "category": "authoritative-manifest",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 170,
+      "kind": "ui-baseline-id",
+      "category": "authoritative-manifest",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 181,
+      "kind": "ui-baseline-id",
+      "category": "authoritative-manifest",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 190,
+      "kind": "ui-baseline-id",
+      "category": "authoritative-manifest",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 199,
+      "kind": "ui-baseline-id",
+      "category": "authoritative-manifest",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 208,
+      "kind": "ui-baseline-id",
+      "category": "authoritative-manifest",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 217,
+      "kind": "ui-baseline-id",
+      "category": "authoritative-manifest",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 226,
+      "kind": "ui-baseline-id",
+      "category": "authoritative-manifest",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 235,
+      "kind": "ui-baseline-id",
+      "category": "authoritative-manifest",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 244,
+      "kind": "ui-baseline-id",
+      "category": "authoritative-manifest",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 253,
+      "kind": "ui-baseline-id",
+      "category": "authoritative-manifest",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 262,
+      "kind": "ui-baseline-id",
+      "category": "authoritative-manifest",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 271,
+      "kind": "ui-baseline-id",
+      "category": "authoritative-manifest",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 280,
+      "kind": "ui-baseline-id",
+      "category": "authoritative-manifest",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 289,
+      "kind": "ui-baseline-id",
+      "category": "authoritative-manifest",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 298,
+      "kind": "ui-baseline-id",
+      "category": "authoritative-manifest",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 2,
+      "kind": "version-2.7",
+      "category": "authoritative-manifest",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 3,
+      "kind": "version-2.7",
+      "category": "authoritative-manifest",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 51,
+      "kind": "version-2.7",
+      "category": "authoritative-manifest",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 60,
+      "kind": "version-2.7",
+      "category": "authoritative-manifest",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 69,
+      "kind": "version-2.7",
+      "category": "authoritative-manifest",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 78,
+      "kind": "version-2.7",
+      "category": "authoritative-manifest",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 90,
+      "kind": "version-2.7",
+      "category": "authoritative-manifest",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 99,
+      "kind": "version-2.7",
+      "category": "authoritative-manifest",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 112,
+      "kind": "version-2.7",
+      "category": "authoritative-manifest",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 121,
+      "kind": "version-2.7",
+      "category": "authoritative-manifest",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 130,
+      "kind": "version-2.7",
+      "category": "authoritative-manifest",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 139,
+      "kind": "version-2.7",
+      "category": "authoritative-manifest",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 150,
+      "kind": "version-2.7",
+      "category": "authoritative-manifest",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 159,
+      "kind": "version-2.7",
+      "category": "authoritative-manifest",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 170,
+      "kind": "version-2.7",
+      "category": "authoritative-manifest",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 181,
+      "kind": "version-2.7",
+      "category": "authoritative-manifest",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 190,
+      "kind": "version-2.7",
+      "category": "authoritative-manifest",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 199,
+      "kind": "version-2.7",
+      "category": "authoritative-manifest",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 208,
+      "kind": "version-2.7",
+      "category": "authoritative-manifest",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 217,
+      "kind": "version-2.7",
+      "category": "authoritative-manifest",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 226,
+      "kind": "version-2.7",
+      "category": "authoritative-manifest",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 235,
+      "kind": "version-2.7",
+      "category": "authoritative-manifest",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 244,
+      "kind": "version-2.7",
+      "category": "authoritative-manifest",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 253,
+      "kind": "version-2.7",
+      "category": "authoritative-manifest",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 262,
+      "kind": "version-2.7",
+      "category": "authoritative-manifest",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 271,
+      "kind": "version-2.7",
+      "category": "authoritative-manifest",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 280,
+      "kind": "version-2.7",
+      "category": "authoritative-manifest",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 289,
+      "kind": "version-2.7",
+      "category": "authoritative-manifest",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+      "line": 298,
+      "kind": "version-2.7",
+      "category": "authoritative-manifest",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-dependency-map-v2.7.json",
+      "line": 2,
+      "kind": "ui-baseline-id",
+      "category": "audit-manifest",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-dependency-map-v2.7.json",
+      "line": 2,
+      "kind": "version-2.7",
+      "category": "audit-manifest",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-route-baseline-v2.7.json",
+      "line": 2,
+      "kind": "ui-baseline-id",
+      "category": "audit-manifest",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-route-baseline-v2.7.json",
+      "line": 2,
+      "kind": "version-2.7",
+      "category": "audit-manifest",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-test-baseline-v2.7.json",
+      "line": 2,
+      "kind": "ui-baseline-id",
+      "category": "audit-manifest",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-test-baseline-v2.7.json",
+      "line": 2,
+      "kind": "version-2.7",
+      "category": "audit-manifest",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-visual-baseline-v2.7.json",
+      "line": 2,
+      "kind": "ui-baseline-id",
+      "category": "audit-manifest",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-visual-baseline-v2.7.json",
+      "line": 3,
+      "kind": "ui-baseline-id",
+      "category": "audit-manifest",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-visual-baseline-v2.7.json",
+      "line": 2,
+      "kind": "version-2.7",
+      "category": "audit-manifest",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-visual-baseline-v2.7.json",
+      "line": 3,
+      "kind": "version-2.7",
+      "category": "audit-manifest",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/single-chapter-journey-template-v2.7.json",
+      "line": 4,
+      "kind": "ui-baseline-id",
+      "category": "template-governance-manifest",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/single-chapter-journey-template-v2.7.json",
+      "line": 7,
+      "kind": "ui-baseline-id",
+      "category": "template-governance-manifest",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/single-chapter-journey-template-v2.7.json",
+      "line": 8,
+      "kind": "ui-baseline-id",
+      "category": "template-governance-manifest",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/single-chapter-journey-template-v2.7.json",
+      "line": 9,
+      "kind": "ui-baseline-id",
+      "category": "template-governance-manifest",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/single-chapter-journey-template-v2.7.json",
+      "line": 3,
+      "kind": "version-2.7",
+      "category": "template-governance-manifest",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/single-chapter-journey-template-v2.7.json",
+      "line": 4,
+      "kind": "version-2.7",
+      "category": "template-governance-manifest",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/single-chapter-journey-template-v2.7.json",
+      "line": 7,
+      "kind": "version-2.7",
+      "category": "template-governance-manifest",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/single-chapter-journey-template-v2.7.json",
+      "line": 8,
+      "kind": "version-2.7",
+      "category": "template-governance-manifest",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/single-chapter-journey-template-v2.7.json",
+      "line": 9,
+      "kind": "version-2.7",
+      "category": "template-governance-manifest",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/single-chapter-journey-template-v2.7.json",
+      "line": 109,
+      "kind": "version-2.7",
+      "category": "template-governance-manifest",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "audits/mvp-functional-baseline-v1/single-chapter-journey-template-v2.7.json",
+      "line": 3,
+      "kind": "template-version",
+      "category": "template-governance-manifest",
+      "snippet": "\"template_version\": \"2.7\"",
+      "drift_risk": false
+    },
+    {
+      "path": "docs/47_reader_journey_ui_final_freeze_v2_7.md",
+      "line": 14,
+      "kind": "ui-baseline-id",
+      "category": "docs",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "docs/47_reader_journey_ui_final_freeze_v2_7.md",
+      "line": 1,
+      "kind": "version-2.7",
+      "category": "docs",
+      "snippet": "2.7",
+      "drift_risk": true
+    },
+    {
+      "path": "docs/47_reader_journey_ui_final_freeze_v2_7.md",
+      "line": 3,
+      "kind": "version-2.7",
+      "category": "docs",
+      "snippet": "2.7",
+      "drift_risk": true
+    },
+    {
+      "path": "docs/47_reader_journey_ui_final_freeze_v2_7.md",
+      "line": 14,
+      "kind": "version-2.7",
+      "category": "docs",
+      "snippet": "2.7",
+      "drift_risk": true
+    },
+    {
+      "path": "docs/47_reader_journey_ui_final_freeze_v2_7.md",
+      "line": 93,
+      "kind": "version-2.7",
+      "category": "docs",
+      "snippet": "2.7",
+      "drift_risk": true
+    },
+    {
+      "path": "docs/48_single_chapter_journey_template_governance.md",
+      "line": 25,
+      "kind": "ui-baseline-id",
+      "category": "docs",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "docs/48_single_chapter_journey_template_governance.md",
+      "line": 3,
+      "kind": "version-2.7",
+      "category": "docs",
+      "snippet": "2.7",
+      "drift_risk": true
+    },
+    {
+      "path": "docs/48_single_chapter_journey_template_governance.md",
+      "line": 4,
+      "kind": "version-2.7",
+      "category": "docs",
+      "snippet": "2.7",
+      "drift_risk": true
+    },
+    {
+      "path": "docs/48_single_chapter_journey_template_governance.md",
+      "line": 11,
+      "kind": "version-2.7",
+      "category": "docs",
+      "snippet": "2.7",
+      "drift_risk": true
+    },
+    {
+      "path": "docs/48_single_chapter_journey_template_governance.md",
+      "line": 17,
+      "kind": "version-2.7",
+      "category": "docs",
+      "snippet": "2.7",
+      "drift_risk": true
+    },
+    {
+      "path": "docs/48_single_chapter_journey_template_governance.md",
+      "line": 25,
+      "kind": "version-2.7",
+      "category": "docs",
+      "snippet": "2.7",
+      "drift_risk": true
+    },
+    {
+      "path": "docs/48_single_chapter_journey_template_governance.md",
+      "line": 27,
+      "kind": "version-2.7",
+      "category": "docs",
+      "snippet": "2.7",
+      "drift_risk": true
+    },
+    {
+      "path": "docs/48_single_chapter_journey_template_governance.md",
+      "line": 67,
+      "kind": "version-2.7",
+      "category": "docs",
+      "snippet": "2.7",
+      "drift_risk": true
+    },
+    {
+      "path": "docs/48_single_chapter_journey_template_governance.md",
+      "line": 81,
+      "kind": "version-2.7",
+      "category": "docs",
+      "snippet": "2.7",
+      "drift_risk": true
+    },
+    {
+      "path": "docs/48_single_chapter_journey_template_governance.md",
+      "line": 95,
+      "kind": "version-2.7",
+      "category": "docs",
+      "snippet": "2.7",
+      "drift_risk": true
+    },
+    {
+      "path": "scripts/check_reader_journey_ui_freeze.py",
+      "line": 19,
+      "kind": "ui-baseline-id",
+      "category": "gate-script",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "scripts/check_reader_journey_ui_freeze.py",
+      "line": 2,
+      "kind": "version-2.7",
+      "category": "gate-script",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "scripts/check_reader_journey_ui_freeze.py",
+      "line": 19,
+      "kind": "version-2.7",
+      "category": "gate-script",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "scripts/check_single_chapter_journey_template.py",
+      "line": 25,
+      "kind": "ui-baseline-id",
+      "category": "gate-script",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "scripts/check_single_chapter_journey_template.py",
+      "line": 32,
+      "kind": "ui-baseline-id",
+      "category": "gate-script",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "scripts/check_single_chapter_journey_template.py",
+      "line": 156,
+      "kind": "ui-baseline-id",
+      "category": "gate-script",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "scripts/check_single_chapter_journey_template.py",
+      "line": 161,
+      "kind": "ui-baseline-id",
+      "category": "gate-script",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "scripts/check_single_chapter_journey_template.py",
+      "line": 166,
+      "kind": "ui-baseline-id",
+      "category": "gate-script",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "scripts/check_single_chapter_journey_template.py",
+      "line": 171,
+      "kind": "ui-baseline-id",
+      "category": "gate-script",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "scripts/check_single_chapter_journey_template.py",
+      "line": 176,
+      "kind": "ui-baseline-id",
+      "category": "gate-script",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "scripts/check_single_chapter_journey_template.py",
+      "line": 461,
+      "kind": "ui-baseline-id",
+      "category": "gate-script",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "scripts/check_single_chapter_journey_template.py",
+      "line": 5,
+      "kind": "version-2.7",
+      "category": "gate-script",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "scripts/check_single_chapter_journey_template.py",
+      "line": 25,
+      "kind": "version-2.7",
+      "category": "gate-script",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "scripts/check_single_chapter_journey_template.py",
+      "line": 32,
+      "kind": "version-2.7",
+      "category": "gate-script",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "scripts/check_single_chapter_journey_template.py",
+      "line": 146,
+      "kind": "version-2.7",
+      "category": "gate-script",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "scripts/check_single_chapter_journey_template.py",
+      "line": 156,
+      "kind": "version-2.7",
+      "category": "gate-script",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "scripts/check_single_chapter_journey_template.py",
+      "line": 161,
+      "kind": "version-2.7",
+      "category": "gate-script",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "scripts/check_single_chapter_journey_template.py",
+      "line": 166,
+      "kind": "version-2.7",
+      "category": "gate-script",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "scripts/check_single_chapter_journey_template.py",
+      "line": 171,
+      "kind": "version-2.7",
+      "category": "gate-script",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "scripts/check_single_chapter_journey_template.py",
+      "line": 176,
+      "kind": "version-2.7",
+      "category": "gate-script",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "scripts/check_single_chapter_journey_template.py",
+      "line": 196,
+      "kind": "version-2.7",
+      "category": "gate-script",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "scripts/check_single_chapter_journey_template.py",
+      "line": 226,
+      "kind": "version-2.7",
+      "category": "gate-script",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "scripts/check_single_chapter_journey_template.py",
+      "line": 325,
+      "kind": "version-2.7",
+      "category": "gate-script",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "scripts/check_single_chapter_journey_template.py",
+      "line": 461,
+      "kind": "version-2.7",
+      "category": "gate-script",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "scripts/generate_reader_journey_ui_final_v2_7.py",
+      "line": 14,
+      "kind": "ui-baseline-id",
+      "category": "gate-script",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "scripts/generate_reader_journey_ui_final_v2_7.py",
+      "line": 275,
+      "kind": "ui-baseline-id",
+      "category": "gate-script",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "scripts/generate_reader_journey_ui_final_v2_7.py",
+      "line": 309,
+      "kind": "ui-baseline-id",
+      "category": "gate-script",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "scripts/generate_reader_journey_ui_final_v2_7.py",
+      "line": 328,
+      "kind": "ui-baseline-id",
+      "category": "gate-script",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "scripts/generate_reader_journey_ui_final_v2_7.py",
+      "line": 337,
+      "kind": "ui-baseline-id",
+      "category": "gate-script",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "scripts/generate_reader_journey_ui_final_v2_7.py",
+      "line": 390,
+      "kind": "ui-baseline-id",
+      "category": "gate-script",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "scripts/generate_reader_journey_ui_final_v2_7.py",
+      "line": 422,
+      "kind": "ui-baseline-id",
+      "category": "gate-script",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "scripts/generate_reader_journey_ui_final_v2_7.py",
+      "line": 423,
+      "kind": "ui-baseline-id",
+      "category": "gate-script",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "scripts/generate_reader_journey_ui_final_v2_7.py",
+      "line": 2,
+      "kind": "version-2.7",
+      "category": "gate-script",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "scripts/generate_reader_journey_ui_final_v2_7.py",
+      "line": 14,
+      "kind": "version-2.7",
+      "category": "gate-script",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "scripts/generate_reader_journey_ui_final_v2_7.py",
+      "line": 275,
+      "kind": "version-2.7",
+      "category": "gate-script",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "scripts/generate_reader_journey_ui_final_v2_7.py",
+      "line": 309,
+      "kind": "version-2.7",
+      "category": "gate-script",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "scripts/generate_reader_journey_ui_final_v2_7.py",
+      "line": 310,
+      "kind": "version-2.7",
+      "category": "gate-script",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "scripts/generate_reader_journey_ui_final_v2_7.py",
+      "line": 328,
+      "kind": "version-2.7",
+      "category": "gate-script",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "scripts/generate_reader_journey_ui_final_v2_7.py",
+      "line": 337,
+      "kind": "version-2.7",
+      "category": "gate-script",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "scripts/generate_reader_journey_ui_final_v2_7.py",
+      "line": 390,
+      "kind": "version-2.7",
+      "category": "gate-script",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "scripts/generate_reader_journey_ui_final_v2_7.py",
+      "line": 422,
+      "kind": "version-2.7",
+      "category": "gate-script",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "scripts/generate_reader_journey_ui_final_v2_7.py",
+      "line": 423,
+      "kind": "version-2.7",
+      "category": "gate-script",
+      "snippet": "2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/journeyUiLabels.ts",
+      "line": 78,
+      "kind": "version-2.7",
+      "category": "ui-title-comment",
+      "snippet": "2.7",
+      "drift_risk": true
+    },
+    {
+      "path": "apps/desktop/e2e/phase_1cc27_reader_journey_ui_final_visual_baseline.spec.ts",
+      "line": 15,
+      "kind": "ui-baseline-id",
+      "category": "test",
+      "snippet": "reader-journey-ui-final-v2.7",
+      "drift_risk": false
+    },
+    {
+      "path": "apps/desktop/e2e/phase_1cc27_reader_journey_ui_final_visual_baseline.spec.ts",
+      "line": 15,
+      "kind": "version-2.7",
+      "category": "test",
+      "snippet": "2.7",
+      "drift_risk": true
+    },
+    {
+      "path": "apps/desktop/e2e/phase_1cc27_reader_journey_ui_final_visual_baseline.spec.ts",
+      "line": 18,
+      "kind": "version-2.7",
+      "category": "test",
+      "snippet": "2.7",
+      "drift_risk": true
+    }
+  ],
+  "checks": {
+    "canonical_entry_exists": true,
+    "composition_shell_exists": true,
+    "route_adapter_count": 2,
+    "route_adapters": [
+      {
+        "id": "books-embedded",
+        "chain_complete": true,
+        "missing": [],
+        "points_to_canonical": true,
+        "role": "adapter-only"
+      },
+      {
+        "id": "standalone-results",
+        "chain_complete": true,
+        "missing": [],
+        "points_to_canonical": true,
+        "role": "adapter-only"
+      }
+    ],
+    "canonical_in_freeze": true,
+    "composition_in_freeze": true,
+    "workspace_importers": [
+      {
+        "path": "apps/desktop/src/components/readerJourney/ReaderJourneySyncWorkspace.tsx",
+        "imports_workspace": true
+      }
+    ],
+    "unexpected_workspace_importers": [],
+    "sync_importers": [
+      {
+        "path": "apps/desktop/src/pages/AnalysisResultsPage.tsx",
+        "imports_sync": true
+      }
+    ],
+    "unexpected_sync_importers": [],
+    "duplicate_workspace_candidates": [],
+    "legacy_non_entry_files": [
+      {
+        "path": "apps/desktop/src/components/readerJourney/JourneyOverviewModes.tsx",
+        "note": "Unused legacy overview modes; not imported by production route chain; not a second template entry."
+      }
+    ],
+    "production_special_cases": [],
+    "production_special_case_count": 0,
+    "version_string_locations": [
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 2,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 51,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 60,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 69,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 78,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 90,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 99,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 112,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 121,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 130,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 139,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 150,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 159,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 170,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 181,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 190,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 199,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 208,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 217,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 226,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 235,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 244,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 253,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 262,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 271,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 280,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 289,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 298,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 2,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 3,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 51,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 60,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 69,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 78,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 90,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 99,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 112,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 121,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 130,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 139,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 150,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 159,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 170,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 181,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 190,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 199,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 208,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 217,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 226,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 235,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 244,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 253,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 262,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 271,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 280,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 289,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 298,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-dependency-map-v2.7.json",
+        "line": 2,
+        "kind": "ui-baseline-id",
+        "category": "audit-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-dependency-map-v2.7.json",
+        "line": 2,
+        "kind": "version-2.7",
+        "category": "audit-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-route-baseline-v2.7.json",
+        "line": 2,
+        "kind": "ui-baseline-id",
+        "category": "audit-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-route-baseline-v2.7.json",
+        "line": 2,
+        "kind": "version-2.7",
+        "category": "audit-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-test-baseline-v2.7.json",
+        "line": 2,
+        "kind": "ui-baseline-id",
+        "category": "audit-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-test-baseline-v2.7.json",
+        "line": 2,
+        "kind": "version-2.7",
+        "category": "audit-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-visual-baseline-v2.7.json",
+        "line": 2,
+        "kind": "ui-baseline-id",
+        "category": "audit-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-visual-baseline-v2.7.json",
+        "line": 3,
+        "kind": "ui-baseline-id",
+        "category": "audit-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-visual-baseline-v2.7.json",
+        "line": 2,
+        "kind": "version-2.7",
+        "category": "audit-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-visual-baseline-v2.7.json",
+        "line": 3,
+        "kind": "version-2.7",
+        "category": "audit-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/single-chapter-journey-template-v2.7.json",
+        "line": 4,
+        "kind": "ui-baseline-id",
+        "category": "template-governance-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/single-chapter-journey-template-v2.7.json",
+        "line": 7,
+        "kind": "ui-baseline-id",
+        "category": "template-governance-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/single-chapter-journey-template-v2.7.json",
+        "line": 8,
+        "kind": "ui-baseline-id",
+        "category": "template-governance-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/single-chapter-journey-template-v2.7.json",
+        "line": 9,
+        "kind": "ui-baseline-id",
+        "category": "template-governance-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/single-chapter-journey-template-v2.7.json",
+        "line": 3,
+        "kind": "version-2.7",
+        "category": "template-governance-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/single-chapter-journey-template-v2.7.json",
+        "line": 4,
+        "kind": "version-2.7",
+        "category": "template-governance-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/single-chapter-journey-template-v2.7.json",
+        "line": 7,
+        "kind": "version-2.7",
+        "category": "template-governance-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/single-chapter-journey-template-v2.7.json",
+        "line": 8,
+        "kind": "version-2.7",
+        "category": "template-governance-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/single-chapter-journey-template-v2.7.json",
+        "line": 9,
+        "kind": "version-2.7",
+        "category": "template-governance-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/single-chapter-journey-template-v2.7.json",
+        "line": 109,
+        "kind": "version-2.7",
+        "category": "template-governance-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/single-chapter-journey-template-v2.7.json",
+        "line": 3,
+        "kind": "template-version",
+        "category": "template-governance-manifest",
+        "snippet": "\"template_version\": \"2.7\"",
+        "drift_risk": false
+      },
+      {
+        "path": "docs/47_reader_journey_ui_final_freeze_v2_7.md",
+        "line": 14,
+        "kind": "ui-baseline-id",
+        "category": "docs",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "docs/47_reader_journey_ui_final_freeze_v2_7.md",
+        "line": 1,
+        "kind": "version-2.7",
+        "category": "docs",
+        "snippet": "2.7",
+        "drift_risk": true
+      },
+      {
+        "path": "docs/47_reader_journey_ui_final_freeze_v2_7.md",
+        "line": 3,
+        "kind": "version-2.7",
+        "category": "docs",
+        "snippet": "2.7",
+        "drift_risk": true
+      },
+      {
+        "path": "docs/47_reader_journey_ui_final_freeze_v2_7.md",
+        "line": 14,
+        "kind": "version-2.7",
+        "category": "docs",
+        "snippet": "2.7",
+        "drift_risk": true
+      },
+      {
+        "path": "docs/47_reader_journey_ui_final_freeze_v2_7.md",
+        "line": 93,
+        "kind": "version-2.7",
+        "category": "docs",
+        "snippet": "2.7",
+        "drift_risk": true
+      },
+      {
+        "path": "docs/48_single_chapter_journey_template_governance.md",
+        "line": 25,
+        "kind": "ui-baseline-id",
+        "category": "docs",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "docs/48_single_chapter_journey_template_governance.md",
+        "line": 3,
+        "kind": "version-2.7",
+        "category": "docs",
+        "snippet": "2.7",
+        "drift_risk": true
+      },
+      {
+        "path": "docs/48_single_chapter_journey_template_governance.md",
+        "line": 4,
+        "kind": "version-2.7",
+        "category": "docs",
+        "snippet": "2.7",
+        "drift_risk": true
+      },
+      {
+        "path": "docs/48_single_chapter_journey_template_governance.md",
+        "line": 11,
+        "kind": "version-2.7",
+        "category": "docs",
+        "snippet": "2.7",
+        "drift_risk": true
+      },
+      {
+        "path": "docs/48_single_chapter_journey_template_governance.md",
+        "line": 17,
+        "kind": "version-2.7",
+        "category": "docs",
+        "snippet": "2.7",
+        "drift_risk": true
+      },
+      {
+        "path": "docs/48_single_chapter_journey_template_governance.md",
+        "line": 25,
+        "kind": "version-2.7",
+        "category": "docs",
+        "snippet": "2.7",
+        "drift_risk": true
+      },
+      {
+        "path": "docs/48_single_chapter_journey_template_governance.md",
+        "line": 27,
+        "kind": "version-2.7",
+        "category": "docs",
+        "snippet": "2.7",
+        "drift_risk": true
+      },
+      {
+        "path": "docs/48_single_chapter_journey_template_governance.md",
+        "line": 67,
+        "kind": "version-2.7",
+        "category": "docs",
+        "snippet": "2.7",
+        "drift_risk": true
+      },
+      {
+        "path": "docs/48_single_chapter_journey_template_governance.md",
+        "line": 81,
+        "kind": "version-2.7",
+        "category": "docs",
+        "snippet": "2.7",
+        "drift_risk": true
+      },
+      {
+        "path": "docs/48_single_chapter_journey_template_governance.md",
+        "line": 95,
+        "kind": "version-2.7",
+        "category": "docs",
+        "snippet": "2.7",
+        "drift_risk": true
+      },
+      {
+        "path": "scripts/check_reader_journey_ui_freeze.py",
+        "line": 19,
+        "kind": "ui-baseline-id",
+        "category": "gate-script",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "scripts/check_reader_journey_ui_freeze.py",
+        "line": 2,
+        "kind": "version-2.7",
+        "category": "gate-script",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "scripts/check_reader_journey_ui_freeze.py",
+        "line": 19,
+        "kind": "version-2.7",
+        "category": "gate-script",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "scripts/check_single_chapter_journey_template.py",
+        "line": 25,
+        "kind": "ui-baseline-id",
+        "category": "gate-script",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "scripts/check_single_chapter_journey_template.py",
+        "line": 32,
+        "kind": "ui-baseline-id",
+        "category": "gate-script",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "scripts/check_single_chapter_journey_template.py",
+        "line": 156,
+        "kind": "ui-baseline-id",
+        "category": "gate-script",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "scripts/check_single_chapter_journey_template.py",
+        "line": 161,
+        "kind": "ui-baseline-id",
+        "category": "gate-script",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "scripts/check_single_chapter_journey_template.py",
+        "line": 166,
+        "kind": "ui-baseline-id",
+        "category": "gate-script",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "scripts/check_single_chapter_journey_template.py",
+        "line": 171,
+        "kind": "ui-baseline-id",
+        "category": "gate-script",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "scripts/check_single_chapter_journey_template.py",
+        "line": 176,
+        "kind": "ui-baseline-id",
+        "category": "gate-script",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "scripts/check_single_chapter_journey_template.py",
+        "line": 461,
+        "kind": "ui-baseline-id",
+        "category": "gate-script",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "scripts/check_single_chapter_journey_template.py",
+        "line": 5,
+        "kind": "version-2.7",
+        "category": "gate-script",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "scripts/check_single_chapter_journey_template.py",
+        "line": 25,
+        "kind": "version-2.7",
+        "category": "gate-script",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "scripts/check_single_chapter_journey_template.py",
+        "line": 32,
+        "kind": "version-2.7",
+        "category": "gate-script",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "scripts/check_single_chapter_journey_template.py",
+        "line": 146,
+        "kind": "version-2.7",
+        "category": "gate-script",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "scripts/check_single_chapter_journey_template.py",
+        "line": 156,
+        "kind": "version-2.7",
+        "category": "gate-script",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "scripts/check_single_chapter_journey_template.py",
+        "line": 161,
+        "kind": "version-2.7",
+        "category": "gate-script",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "scripts/check_single_chapter_journey_template.py",
+        "line": 166,
+        "kind": "version-2.7",
+        "category": "gate-script",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "scripts/check_single_chapter_journey_template.py",
+        "line": 171,
+        "kind": "version-2.7",
+        "category": "gate-script",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "scripts/check_single_chapter_journey_template.py",
+        "line": 176,
+        "kind": "version-2.7",
+        "category": "gate-script",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "scripts/check_single_chapter_journey_template.py",
+        "line": 196,
+        "kind": "version-2.7",
+        "category": "gate-script",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "scripts/check_single_chapter_journey_template.py",
+        "line": 226,
+        "kind": "version-2.7",
+        "category": "gate-script",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "scripts/check_single_chapter_journey_template.py",
+        "line": 325,
+        "kind": "version-2.7",
+        "category": "gate-script",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "scripts/check_single_chapter_journey_template.py",
+        "line": 461,
+        "kind": "version-2.7",
+        "category": "gate-script",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "scripts/generate_reader_journey_ui_final_v2_7.py",
+        "line": 14,
+        "kind": "ui-baseline-id",
+        "category": "gate-script",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "scripts/generate_reader_journey_ui_final_v2_7.py",
+        "line": 275,
+        "kind": "ui-baseline-id",
+        "category": "gate-script",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "scripts/generate_reader_journey_ui_final_v2_7.py",
+        "line": 309,
+        "kind": "ui-baseline-id",
+        "category": "gate-script",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "scripts/generate_reader_journey_ui_final_v2_7.py",
+        "line": 328,
+        "kind": "ui-baseline-id",
+        "category": "gate-script",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "scripts/generate_reader_journey_ui_final_v2_7.py",
+        "line": 337,
+        "kind": "ui-baseline-id",
+        "category": "gate-script",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "scripts/generate_reader_journey_ui_final_v2_7.py",
+        "line": 390,
+        "kind": "ui-baseline-id",
+        "category": "gate-script",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "scripts/generate_reader_journey_ui_final_v2_7.py",
+        "line": 422,
+        "kind": "ui-baseline-id",
+        "category": "gate-script",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "scripts/generate_reader_journey_ui_final_v2_7.py",
+        "line": 423,
+        "kind": "ui-baseline-id",
+        "category": "gate-script",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "scripts/generate_reader_journey_ui_final_v2_7.py",
+        "line": 2,
+        "kind": "version-2.7",
+        "category": "gate-script",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "scripts/generate_reader_journey_ui_final_v2_7.py",
+        "line": 14,
+        "kind": "version-2.7",
+        "category": "gate-script",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "scripts/generate_reader_journey_ui_final_v2_7.py",
+        "line": 275,
+        "kind": "version-2.7",
+        "category": "gate-script",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "scripts/generate_reader_journey_ui_final_v2_7.py",
+        "line": 309,
+        "kind": "version-2.7",
+        "category": "gate-script",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "scripts/generate_reader_journey_ui_final_v2_7.py",
+        "line": 310,
+        "kind": "version-2.7",
+        "category": "gate-script",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "scripts/generate_reader_journey_ui_final_v2_7.py",
+        "line": 328,
+        "kind": "version-2.7",
+        "category": "gate-script",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "scripts/generate_reader_journey_ui_final_v2_7.py",
+        "line": 337,
+        "kind": "version-2.7",
+        "category": "gate-script",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "scripts/generate_reader_journey_ui_final_v2_7.py",
+        "line": 390,
+        "kind": "version-2.7",
+        "category": "gate-script",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "scripts/generate_reader_journey_ui_final_v2_7.py",
+        "line": 422,
+        "kind": "version-2.7",
+        "category": "gate-script",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "scripts/generate_reader_journey_ui_final_v2_7.py",
+        "line": 423,
+        "kind": "version-2.7",
+        "category": "gate-script",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "apps/desktop/src/components/readerJourney/journeyUiLabels.ts",
+        "line": 78,
+        "kind": "version-2.7",
+        "category": "ui-title-comment",
+        "snippet": "2.7",
+        "drift_risk": true
+      },
+      {
+        "path": "apps/desktop/e2e/phase_1cc27_reader_journey_ui_final_visual_baseline.spec.ts",
+        "line": 15,
+        "kind": "ui-baseline-id",
+        "category": "test",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "apps/desktop/e2e/phase_1cc27_reader_journey_ui_final_visual_baseline.spec.ts",
+        "line": 15,
+        "kind": "version-2.7",
+        "category": "test",
+        "snippet": "2.7",
+        "drift_risk": true
+      },
+      {
+        "path": "apps/desktop/e2e/phase_1cc27_reader_journey_ui_final_visual_baseline.spec.ts",
+        "line": 18,
+        "kind": "version-2.7",
+        "category": "test",
+        "snippet": "2.7",
+        "drift_risk": true
+      }
+    ],
+    "authoritative_version_sources": [
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 2,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 51,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 60,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 69,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 78,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 90,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 99,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 112,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 121,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 130,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 139,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 150,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 159,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 170,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 181,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 190,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 199,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 208,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 217,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 226,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 235,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 244,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 253,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 262,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 271,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 280,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 289,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 298,
+        "kind": "ui-baseline-id",
+        "category": "authoritative-manifest",
+        "snippet": "reader-journey-ui-final-v2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 2,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 3,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 51,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 60,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 69,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 78,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 90,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 99,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 112,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 121,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 130,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 139,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 150,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 159,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 170,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 181,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 190,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 199,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 208,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 217,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 226,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 235,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 244,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 253,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 262,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 271,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 280,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 289,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      },
+      {
+        "path": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+        "line": 298,
+        "kind": "version-2.7",
+        "category": "authoritative-manifest",
+        "snippet": "2.7",
+        "drift_risk": false
+      }
+    ],
+    "version_drift_risk_count": 16,
+    "required_region_count": 12,
+    "missing_freeze_graph_nodes": [],
+    "books_points_to_canonical": true,
+    "standalone_points_to_canonical": true
+  },
+  "structural_issues": [],
+  "warnings": [],
+  "data_independence": {
+    "chapter_data_contains_page_template": false,
+    "ui_template_change_requires_model_rerun": false,
+    "ui_template_change_requires_analysis_run": false,
+    "ui_template_change_requires_journey_run": false,
+    "propagation": "Controlled Change Package upgrades canonical entry; all chapters reuse the same component."
+  },
+  "pipeline_reliability_certification_allowed": true,
+  "result": "PASS"
+}

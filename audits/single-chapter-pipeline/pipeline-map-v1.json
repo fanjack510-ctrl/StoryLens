@@ -1,0 +1,83 @@
+{
+  "phase": "1D-B1",
+  "title": "Single-Chapter Journey Pipeline Map",
+  "source": "code-traced",
+  "generated_at": "2026-07-18T09:20:00+00:00",
+  "architectural_note": "Reader Journey is NOT auto-chained after AnalysisRun.succeeded; UI must call POST /reader-journey.",
+  "entry_points": {
+    "ui_start_analysis": "apps/desktop/src/components/analysis/StartAnalysisDialog.tsx",
+    "create_run_api": "POST /api/v1/chapters/{chapter_id}/analysis-runs",
+    "create_run_handler": "apps/api/app/api/v1/analysis.py::create_analysis_run",
+    "scene_pipeline": "apps/api/app/services/scene_pipeline.py::execute_scene_pipeline",
+    "boundary_confirm": "apps/api/app/services/boundary_review_service.py::confirm_review",
+    "scene_analysis": "apps/api/app/services/boundary_review_service.py::analyze_confirmed_review",
+    "reader_journey_create": "POST /api/v1/analysis-runs/{run_id}/reader-journey",
+    "reader_journey_execute": "apps/api/app/services/reader_journey_pipeline.py::execute_reader_journey",
+    "visualization": "apps/api/app/services/reader_journey_visualization.py::build_reader_journey_visualization",
+    "template_v2_7": "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.tsx"
+  },
+  "call_chain": [
+    "StartAnalysisDialog.submit",
+    "analysisApi.preflight (optional cloud)",
+    "analysisApi.start → create_analysis_run → create_run_record (status=queued)",
+    "Stage-1 reserve_budget(boundary_review_generation) when cloud",
+    "status→boundary_candidates_running (assisted) or running",
+    "background execute_scene_pipeline",
+    "build_windows / transition batches / generate_validated (FakeProvider offline)",
+    "create_review_session → awaiting_boundary_review",
+    "BoundaryReviewPanel.confirm → confirm_review → BoundaryRevision + Scene rows",
+    "status→boundary_confirmed → scene_analysis_running (or boundary_confirmed_budget_blocked)",
+    "analyze_confirmed_review → AnalysisArtifact + AnalysisEvidence per scene",
+    "status→succeeded | scene_analysis_partial | failed",
+    "[USER] create ReaderJourneyRun (queued)",
+    "execute_reader_journey → scene_profiles_running → chapter_synthesis_running → succeeded",
+    "build_reader_journey_visualization when journey succeeded",
+    "Frontend poll → ReaderJourneySyncWorkspace → ReaderJourneyWorkspace (template v2.7)"
+  ],
+  "analysis_run_status_machine": {
+    "queued": {"next": ["running", "boundary_candidates_running", "failed"], "terminal": false},
+    "boundary_candidates_running": {"next": ["awaiting_boundary_review", "boundary_candidates_partial", "failed", "failed_provider", "failed_structural"], "terminal": false},
+    "running": {"next": ["succeeded", "failed", "failed_provider", "failed_structural"], "terminal": false},
+    "awaiting_boundary_review": {"next": ["boundary_confirmed", "review_cancelled"], "terminal": false},
+    "boundary_confirmed": {"next": ["scene_analysis_running", "boundary_confirmed_budget_blocked"], "terminal": false},
+    "boundary_confirmed_budget_blocked": {"next": ["scene_analysis_running"], "terminal": false},
+    "scene_analysis_running": {"next": ["succeeded", "scene_analysis_partial", "failed"], "terminal": false},
+    "scene_analysis_partial": {"next": ["scene_analysis_running", "succeeded", "failed"], "terminal": false, "note": "partial terminal until resume"},
+    "boundary_candidates_partial": {"next": ["boundary_candidates_running", "failed"], "terminal": false},
+    "failed": {"next": [], "terminal": true, "retry": "POST /retry creates new run"},
+    "failed_provider": {"next": [], "terminal": true},
+    "failed_structural": {"next": [], "terminal": true},
+    "succeeded": {"next": [], "terminal": true},
+    "review_cancelled": {"next": [], "terminal": true}
+  },
+  "reader_journey_run_status_machine": {
+    "queued": {"next": ["scene_profiles_running", "failed"], "terminal": false},
+    "scene_profiles_running": {"next": ["chapter_synthesis_running", "scene_profiles_partial", "failed"], "terminal": false},
+    "scene_profiles_partial": {"next": ["queued"], "terminal": false, "resume": "offline-replay then resume"},
+    "chapter_synthesis_running": {"next": ["succeeded", "failed"], "terminal": false},
+    "succeeded": {"next": [], "terminal": true},
+    "failed": {"next": ["queued"], "terminal": true, "resume_if": "retryable"},
+    "cancelled": {"next": [], "terminal": true},
+    "budget_blocked": {"next": [], "terminal": true, "note": "declared in Literal/UI; no writer found assigning this status in pipeline"}
+  },
+  "paragraph_id_format": "B{book_id:04d}-C{chapter_index:04d}-P{paragraph_index:04d}",
+  "scene_sharing_rule": "Contiguous non-overlapping partitions via scene_ranges; same paragraph cannot belong to two scenes in one revision. Window overlap is input packing only.",
+  "certification_fields_on_runs": false,
+  "length_bands_basis": {
+    "scene_window_max_chars": 12000,
+    "short_scene_char_threshold": 400,
+    "long_scene_char_threshold": 1800,
+    "chapter_bands": {
+      "short": "<800 chars",
+      "medium": "800-4000 chars",
+      "long": "4000-9000 chars",
+      "near_limit": "9000-12000 chars (approaching scene_window_max_chars)"
+    },
+    "note": "No short/medium/long chapter tiers in Settings; bands derived from scene_window_max_chars and scene packing thresholds."
+  },
+  "offline_replay_entrypoints": [
+    "POST /api/v1/analysis-runs/{run_id}/scene-analysis/offline-replay",
+    "POST /api/v1/reader-journey-runs/{id}/scene-profiles/offline-replay",
+    "apps/api/tests/fakes.py::FakeProvider"
+  ]
+}

@@ -1,0 +1,110 @@
+{
+  "change_id": "single-chapter-journey-change-v1.0.2",
+  "phase": "1D-B2-R2",
+  "defect_id": "DEFECT-CANARY-006",
+  "title": "Reader Journey answered must reference real prior question; prompt v1.4 + same-scene Evidence order",
+  "old_batch_id": "phase-1db2-r1-20260718T130551Z",
+  "root_cause": {
+    "primary": "A. JOURNEY_PROMPT_SEMANTIC_MISMATCH",
+    "secondary": [
+      "H. REPAIR_PROMPT_BUG",
+      "I. OUTPUT_TRUNCATION (repair path only; structural_repair previously used generic 1600 limit)"
+    ]
+  },
+  "affected_prompt": "packages/prompts/reader_journey_scene/v1.4 (new; v1.3 preserved)",
+  "affected_parser": null,
+  "affected_normalization": null,
+  "affected_validator": "apps/api/app/services/reader_journey_validation.py",
+  "affected_cluster_logic": null,
+  "allowed_files": [
+    "packages/prompts/reader_journey_scene/v1.4/system.md",
+    "packages/prompts/reader_journey_scene/v1.4/user.md",
+    "packages/prompts/reader_journey_scene/v1.4/repair.md",
+    "apps/api/app/schemas/reader_journey.py",
+    "apps/api/app/services/reader_journey_validation.py",
+    "apps/api/app/services/cloud_output_policy.py",
+    "apps/api/tests/test_defect_canary_006_question_lifecycle.py",
+    "audits/mvp-functional-baseline-v1/core-freeze-manifest.json",
+    "audits/mvp-functional-baseline-v1/_generate_freeze_manifest.py",
+    "audits/single-chapter-pipeline/changes/single-chapter-journey-change-v1.0.2.json",
+    "scripts/certification/real_canary_runner.py",
+    "scripts/check_single_chapter_pipeline_reliability.py",
+    "audits/single-chapter-pipeline/real-canary-preflight-v3.json",
+    "audits/single-chapter-pipeline/real-canary-v2/defects/DEFECT-CANARY-006.json",
+    "audits/single-chapter-pipeline/real-canary-v2/final-verdict-v1.json"
+  ],
+  "prohibited_files": [
+    "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/**",
+    "packages/prompts/reader_journey_scene/v1.3/**",
+    "packages/prompts/scene_analysis/v3.2/**",
+    "data/storylens.db",
+    "apps/desktop/src/components/readerJourney/**",
+    "artifacts/single-chapter-pipeline-certification/real-canary/canary-v2.sqlite3"
+  ],
+  "old_behavior": {
+    "prompt_v1.3": "question chain rules without hard ban on inventing answered from revelation/payoff",
+    "repair": "generic structural repair; journey structural_repair used cloud_output_business_repair=1600 (truncation on canary inv#8)",
+    "validator": "rejected answered without exact prior text match (JOURNEY_ANSWER_WITHOUT_PRIOR_QUESTION); no same-scene Evidence ordinal proof",
+    "canary_a1": "Scene2 answered invented rain-trace question while payoff/information_changes already held the revelation"
+  },
+  "new_behavior": {
+    "prompt_v1.4": "answered must exact-match prior in/created/prior-out; revelation/payoff must not use answered; forbid reverse-inventing questions; repair reclassify guidance",
+    "repair_limit": "reader_journey_* structural/business repair uses cloud_output_reader_journey_business_repair=1800",
+    "validator": "keeps JOURNEY_ANSWER_WITHOUT_PRIOR_QUESTION; adds JOURNEY_ANSWER_BEFORE_QUESTION and JOURNEY_SAME_SCENE_ORDER_UNPROVEN for same-scene Evidence order",
+    "normalization": "unchanged; no fabricate prior/evidence; no silent drop-success"
+  },
+  "lifecycle_invariants": [
+    "answered references existing prior question text",
+    "prior established before answer (cross-scene via prior_high_strength_outs/in; same-scene via Evidence paragraph ordinal)",
+    "no auto-create question or evidence",
+    "no silent success after deleting illegal answered without model repair / audited rule",
+    "contract 1.3 unchanged (no carry-in field added)"
+  ],
+  "compatibility_impact": "Active SCENE_PROMPT_VERSION becomes v1.4; contract remains 1.3. Same-scene create+answer with identical earliest Evidence paragraph now rejected as order-unproven.",
+  "contract_version_impact": "none (SCENE_CONTRACT_VERSION stays 1.3)",
+  "data_migration_required": false,
+  "replay_required": true,
+  "regression_tests": [
+    "apps/api/tests/test_defect_canary_006_question_lifecycle.py",
+    "apps/api/tests/test_phase_1c_c1_3.py",
+    "scripts/check_single_chapter_pipeline_reliability.py",
+    "scripts/run_single_chapter_pipeline_certification.py"
+  ],
+  "rollback_plan": "Set SCENE_PROMPT_VERSION back to v1.3; restore previous reader_journey_validation answered block and cloud_output_policy _configured_limit; leave v1.4 unused; revert core-freeze-manifest hashes for the three service/schema files and remove v1.4 prompt entries.",
+  "new_hashes": {
+    "apps/api/app/schemas/reader_journey.py": "89f5c77f4826c0f29c4d2abd2b452f574cabeb7a9c0e3eb5572aea54d0f3ca09",
+    "apps/api/app/services/reader_journey_validation.py": "caa98f63a1cc752d6b552a3d75e773b8e6515b8d47baca53c93fef2c1986f853",
+    "apps/api/app/services/cloud_output_policy.py": "c754575be4be7eb58c493af2e07b997755d56b57fe2698b7e7906ce84408fd97",
+    "packages/prompts/reader_journey_scene/v1.4/system.md": "4ef6404a113cd58d36773b9ac6c7553d4592179aad0473ea8f024e68ec49ee63",
+    "packages/prompts/reader_journey_scene/v1.4/user.md": "79cb5543a4502a9950f10b7919a69a6a2a7cec9052b98f867b4feef4f6211807",
+    "packages/prompts/reader_journey_scene/v1.4/repair.md": "3990582bc81348e3e930ad0c7fe6878dbae1d59adc6cea020effb9a94cc6c227"
+  },
+  "core_freeze_update": {
+    "manifest": "audits/mvp-functional-baseline-v1/core-freeze-manifest.json",
+    "prompt_versions.reader_journey_scene": "v1.4",
+    "note": "v1.3 entries retained as historical frozen artifacts; active version bumped via this change package"
+  },
+  "defect_003_004_005_audit": {
+    "DEFECT-CANARY-003": {
+      "scope": "real_canary_runner import uses spec.text only (no stamp/title front-matter)",
+      "production_change": false,
+      "change_package": "embedded in runner + preflight-v2 notes; not a Frozen Core production path",
+      "regression_tests": "canary runner / offline stamp checks",
+      "enter_new_canary": true
+    },
+    "DEFECT-CANARY-004": {
+      "scope": "certification chapter_fixtures A1/C1 expanded for 3–6 journey phases; production split semantics unchanged",
+      "production_change": false,
+      "change_package": "scripts/certification/chapter_fixtures.py (cert-only)",
+      "regression_tests": "single-chapter pipeline certification",
+      "enter_new_canary": true
+    },
+    "DEFECT-CANARY-005": {
+      "scope": "Canary env STORYLENS_CLOUD_OUTPUT_READER_JOURNEY_SCENE=3500; production default remains 2000; this package also routes journey structural_repair to journey business_repair=1800",
+      "production_change": "partial (cloud_output_policy journey repair routing only)",
+      "change_package": "single-chapter-journey-change-v1.0.2 (repair routing) + canary env for 3500 scene limit",
+      "regression_tests": "test_defect_canary_006_question_lifecycle::test_journey_structural_repair_uses_journey_limit",
+      "enter_new_canary": true
+    }
+  }
+}

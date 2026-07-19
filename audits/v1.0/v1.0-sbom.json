@@ -1,0 +1,132 @@
+{
+  "bomFormat": "StoryLens-lightweight-SBOM",
+  "specVersion": "1.0",
+  "serialNumber": "urn:storylens:sbom:v1.0.0-rc1:2026-07-19T10:56:13Z",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-07-19T10:56:13Z",
+    "component": {
+      "name": "storylens-community",
+      "version": "1.0.0-rc1",
+      "type": "application"
+    },
+    "note": "Direct dependencies only; not a full CycloneDX export"
+  },
+  "components": [
+    {
+      "ecosystem": "pypi",
+      "name": "fastapi",
+      "scope": "runtime"
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "uvicorn",
+      "scope": "runtime"
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "pydantic",
+      "scope": "runtime"
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "pydantic-settings",
+      "scope": "runtime"
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "sqlalchemy",
+      "scope": "runtime"
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "alembic",
+      "scope": "runtime"
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "python-multipart",
+      "scope": "runtime"
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "python-docx",
+      "scope": "runtime"
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "ebooklib",
+      "scope": "runtime"
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "beautifulsoup4",
+      "scope": "runtime"
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "httpx",
+      "scope": "runtime"
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "tenacity",
+      "scope": "runtime"
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "jsonschema",
+      "scope": "runtime"
+    },
+    {
+      "ecosystem": "pypi",
+      "name": "keyring",
+      "scope": "runtime"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "react",
+      "scope": "runtime"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "react-dom",
+      "scope": "runtime"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "react-router-dom",
+      "scope": "runtime"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@tanstack/react-query",
+      "scope": "runtime"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@tauri-apps/api",
+      "scope": "runtime"
+    },
+    {
+      "ecosystem": "npm",
+      "name": "zustand",
+      "scope": "runtime"
+    },
+    {
+      "ecosystem": "crates.io",
+      "name": "tauri",
+      "scope": "runtime"
+    },
+    {
+      "ecosystem": "crates.io",
+      "name": "serde",
+      "scope": "runtime"
+    },
+    {
+      "ecosystem": "crates.io",
+      "name": "serde_json",
+      "scope": "runtime"
+    }
+  ]
+}

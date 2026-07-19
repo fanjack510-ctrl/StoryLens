@@ -1,0 +1,73 @@
+{
+  "phase": "1D-C1-UI-05",
+  "title": "Reader Journey Workspace Layout",
+  "version": "v4.0",
+  "verdict": "READER_JOURNEY_WORKSPACE_LAYOUT_V4_0_READY_FOR_HUMAN_UAT",
+  "visualization_version": "4.0",
+  "parent_ui_baseline": "reader-journey-ui-final-v3.0",
+  "new_ui_baseline": "reader-journey-ui-final-v4.0",
+  "change_type": "controlled_workspace_layout_refactor_after_human_uat_failure",
+  "parent_human_uat": "READER_JOURNEY_VISUALIZATION_V3_0_HUMAN_UAT_FAILED",
+  "audit": "audits/single-chapter-pipeline/reader-journey-layout-audit-v4.0.json",
+  "problem_addressed": [
+    "tool rail single-char truncation",
+    "Inspector overlaying / competing with chart column",
+    "triple left chrome (nav + source + rail)",
+    "competing vertical scroll regions",
+    "no responsive button convergence architecture"
+  ],
+  "architecture": {
+    "grid": "source | minmax(720px,1fr) | inspector",
+    "source_pane_width_px": { "desktop": 300, "mid": 270, "collapsed": 0 },
+    "inspector_pane_width_px": { "desktop": 360, "collapsed": 0 },
+    "breakpoints": { "desktop": ">=1440", "mid": "1100-1439", "narrow": "<1100" },
+    "tool_rail_removed": true,
+    "toolbar": "JourneyChartToolbar horizontal + JourneyAnchoredMenu portal",
+    "inspector_dock": ["right", "bottom", "tab"],
+    "no_absolute_inspector_over_plot": true
+  },
+  "plot_area_preserved_from_v3": {
+    "chart_shell_min_px": 440,
+    "svg_standard_height": 420,
+    "plot_standard_px": 352,
+    "y_domain": [0, 100],
+    "y_ticks": [0, 25, 50, 75, 100]
+  },
+  "labels": ["当前指标", "适应全部", "当前Phase", "查看详情", "导出PNG", "更多设置"],
+  "forbidden_labels": ["指", "全", "P", "详", "出"],
+  "png": {
+    "default_mode": "full_journey",
+    "filename_pattern": "StoryLens_<title>_完整旅程_v4.0.png"
+  },
+  "forbidden_changes": [
+    "Prompt",
+    "Contract",
+    "Validator",
+    "Reader Journey Profile",
+    "Phase/Question/Hook/Payoff/Risk/Evidence semantics",
+    "API return contracts",
+    "ModelInvocationBroker",
+    "Provider/Budget/Recovery",
+    "book/chapter/run special cases"
+  ],
+  "freeze": {
+    "thaw": "audits/mvp-functional-baseline-v1/ui-presentation-thaw-v2-12.json",
+    "manifest": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v4.0/reader-journey-ui-final-freeze-v4.0.json",
+    "rollback": "point checker to v3.0; remove thaw v2-12; restore hashed files"
+  },
+  "docs": ["docs/reader-journey-workspace-layout-v4.0.md"],
+  "tests": [
+    "apps/desktop/src/components/readerJourney/phase_1dc1_ui05_workspace_layout_v4_0.test.tsx",
+    "apps/desktop/e2e/phase_1dc1_ui05_reader_journey_layout_v4_0.spec.ts"
+  ],
+  "visual_regression": {
+    "dir": "audits/single-chapter-pipeline/reader-journey-visual-regression-v4.0"
+  },
+  "gates": {
+    "certified_baseline": "PASS (unchanged business data)",
+    "invocation_policy": "PASS (zero model calls)",
+    "output_budget": "PASS",
+    "main_and_canary_db": "unchanged",
+    "real_model_requests_tokens_cost": 0
+  }
+}

@@ -1,0 +1,75 @@
+{
+  "audit_id": "v1.0-dependency-license-report",
+  "generated_at": "2026-07-19T10:56:13Z",
+  "community_license_chosen_by_agent": false,
+  "license_file_present": false,
+  "operator_action_required": "Choose Community LICENSE after reviewing docs/license-selection-notes.md",
+  "python": {
+    "manifest": "pyproject.toml",
+    "project_version_declared": "0.1.0",
+    "requires_python": ">=3.11,<3.13",
+    "direct_dependencies": [
+      "fastapi",
+      "uvicorn[standard]",
+      "pydantic",
+      "pydantic-settings",
+      "sqlalchemy",
+      "alembic",
+      "python-multipart",
+      "python-docx",
+      "ebooklib",
+      "beautifulsoup4",
+      "httpx",
+      "tenacity",
+      "jsonschema",
+      "keyring"
+    ],
+    "dev_dependencies": [
+      "pytest",
+      "pytest-asyncio",
+      "ruff",
+      "mypy"
+    ],
+    "typical_licenses_note": "Most are MIT/BSD/Apache-2.0; operator should confirm with pip-licenses before publish"
+  },
+  "node": {
+    "manifest": "apps/desktop/package.json",
+    "package_version_declared": "0.1.0",
+    "direct_dependencies": [
+      "@tanstack/react-query",
+      "@tauri-apps/api",
+      "react",
+      "react-dom",
+      "react-router-dom",
+      "zustand"
+    ],
+    "direct_dev_dependencies": [
+      "typescript",
+      "vite",
+      "vitest",
+      "eslint",
+      "@playwright/test",
+      "@tauri-apps/cli",
+      "@testing-library/react",
+      "@testing-library/jest-dom"
+    ]
+  },
+  "rust_tauri": {
+    "manifest": "apps/desktop/src-tauri/Cargo.toml",
+    "crate_version_declared": "0.1.0",
+    "direct_dependencies": [
+      "tauri",
+      "serde",
+      "serde_json"
+    ],
+    "build_dependencies": [
+      "tauri-build"
+    ]
+  },
+  "redistribution_checks_pending": [
+    "fonts",
+    "icons",
+    "screenshots",
+    "sample texts"
+  ]
+}

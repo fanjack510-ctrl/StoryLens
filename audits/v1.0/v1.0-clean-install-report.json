@@ -1,0 +1,46 @@
+{
+  "audit_id": "v1.0-clean-install",
+  "generated_at": "2026-07-19T10:56:13Z",
+  "mode": "environment_prep_only",
+  "real_api_calls": 0,
+  "human_uat_status": "PENDING_OPERATOR",
+  "host_probe": {
+    "python_system": "3.11 available (venv uses 3.12.10)",
+    "node": "v22.20.0",
+    "npm": "11.11.0",
+    "rustc": "1.91.0",
+    "venv_present": true
+  },
+  "prep_checklist": [
+    {
+      "step": "bootstrap_windows / scripts/bootstrap.ps1",
+      "status": "script_ready"
+    },
+    {
+      "step": "start-dev.ps1",
+      "status": "script_ready"
+    },
+    {
+      "step": "check-project.ps1",
+      "status": "script_ready"
+    },
+    {
+      "step": "build-release.ps1",
+      "status": "script_ready"
+    },
+    {
+      "step": "RC folder artifacts/release-candidate/storylens-community-v1.0-rc1",
+      "status": "prepared_empty"
+    }
+  ],
+  "operator_must_execute": [
+    "fresh install or start",
+    "Qwen wizard + own API Key",
+    "explicit connection test",
+    "import book + full pipeline",
+    "export PNG/JSON/Markdown",
+    "restart restore",
+    "delete credentials and verify cloud blocked"
+  ],
+  "verdict": "CLEAN_INSTALL_ENV_PREP_READY_HUMAN_UAT_PENDING"
+}

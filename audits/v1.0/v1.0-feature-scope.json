@@ -1,0 +1,56 @@
+{
+  "product": "StoryLens Community",
+  "version": "1.0.0-rc1",
+  "generated_at": "2026-07-19T10:56:13Z",
+  "in_scope": [
+    "single_chapter_import_and_reading",
+    "scene_boundary_detection_and_human_review",
+    "scene_analysis",
+    "reader_journey",
+    "phase_navigation",
+    "journey_chart",
+    "context_inspector",
+    "evidence",
+    "export_png_json_markdown",
+    "task_recovery",
+    "local_sqlite_persistence",
+    "byok_qwen_aliyun"
+  ],
+  "ordinary_mode_supported_provider": {
+    "display_name": "阿里云百炼 · Qwen",
+    "provider": "aliyun_qwen_plus",
+    "default_model": "qwen3.7-plus",
+    "region": "cn-beijing",
+    "auto_route": false,
+    "flash_fallback": false
+  },
+  "developer_mode_or_feature_flag_only": [
+    "local_llama_providers",
+    "aliyun_qwen_max",
+    "aliyun_qwen_flash",
+    "advanced_routing",
+    "cloud_daily_request_limit_manual_edit",
+    "token_retry_engineering_fields"
+  ],
+  "explicitly_out_of_scope_v1": [
+    "multi_chapter_comparison",
+    "full_book_journey_network",
+    "neo4j",
+    "pro_license_billing",
+    "afdian_integration",
+    "automatic_training",
+    "multi_model_voting"
+  ],
+  "platforms": {
+    "primary": "Windows 10/11 (PowerShell bootstrap)",
+    "desktop_stack": "React + TypeScript + Vite + Tauri 2",
+    "api_stack": "Python 3.11/3.12 + FastAPI + SQLite",
+    "macos_linux": "not formally certified for V1.0 ordinary release"
+  },
+  "data_location": {
+    "default_database": "data/storylens.db",
+    "runtime": "data/runtime/",
+    "credentials": "OS keyring via CredentialStore (not SQLite plaintext)",
+    "env": "local .env (gitignored); placeholders only in .env.example"
+  }
+}

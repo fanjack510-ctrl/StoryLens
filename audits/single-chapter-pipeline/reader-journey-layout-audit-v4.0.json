@@ -1,0 +1,200 @@
+{
+  "phase": "1D-C1-UI-05",
+  "title": "Reader Journey Workspace Layout Audit v4.0",
+  "audit_version": "4.0",
+  "parent_verdict": "READER_JOURNEY_VISUALIZATION_V3_0_HUMAN_UAT_FAILED",
+  "audited_at": "2026-07-19T08:40:00+00:00",
+  "method": "static_css_and_component_tree + v3.0_runtime_dom_metrics_13",
+  "human_uat_failures_mapped": [
+    "tool_rail_single_char_truncated",
+    "inspector_overlays_chart",
+    "triple_left_chrome_nav_source_rail",
+    "competing_vertical_scroll_regions",
+    "no_responsive_button_convergence",
+    "no_unified_layout_architecture"
+  ],
+  "nodes": {
+    "AppShell": {
+      "selector": "[data-testid=app-shell].app.app-shell-simplified",
+      "display": "grid",
+      "grid_template": "52px 1fr 24px / 200px 1fr",
+      "position": "static",
+      "min_width": "1100px",
+      "min_height": "100vh",
+      "overflow": "visible (inherited); main child overflow:auto",
+      "containing_block": "viewport",
+      "notes": "System nav occupies left 200px track; journey content lives in main."
+    },
+    "SystemSidebar": {
+      "selector": "aside.app-nav[data-testid=primary-nav]",
+      "display": "flex",
+      "position": "static",
+      "width": "200px (grid track)",
+      "overflow": "visible",
+      "z_index": "auto",
+      "notes": "First of three left chrome layers (nav → SourcePane → tool rail)."
+    },
+    "ReaderJourneySyncWorkspace": {
+      "selector": "[data-testid=journey-sync-workspace]",
+      "display": "grid",
+      "grid_template_rows": "auto auto 1fr",
+      "height": "100%",
+      "overflow": "visible on root; .journey-sync-main overflow:hidden",
+      "notes": "Hosts SplitPane (Source|Journey) OR journey-only / reading-only."
+    },
+    "SourcePane": {
+      "selector": ".journey-split-primary (via SplitPane)",
+      "display": "block/flex",
+      "position": "static",
+      "min_width_expanded": "420px",
+      "width_collapsed": "36px",
+      "overflow_y": "auto",
+      "overflow_x": "auto (pane)",
+      "flex": "ratio-based ~46–52% at ≥1280",
+      "sticky": false,
+      "z_index": "auto",
+      "scroll_owner": true,
+      "notes": "Competes with tool rail for left horizontal space; collapse frees chart width but still leaves 36px strip."
+    },
+    "ReaderJourneyWorkspace": {
+      "selector": "[data-testid=journey-workspace].journey-workspace-split",
+      "display": "grid",
+      "grid_template_rows": "minmax(0,1fr) when compact-head",
+      "height": "100%",
+      "overflow_x": "hidden",
+      "overflow_y": "auto",
+      "min_width": "0",
+      "scroll_owner": true,
+      "runtime_v3_0": {
+        "clientWidth": 1216,
+        "clientHeight": 743,
+        "overflowY": "auto"
+      }
+    },
+    "MainJourneyPane": {
+      "selector": "[data-testid=journey-overview-pane] / [data-testid=journey-resizable-overview]",
+      "display": "flex column",
+      "position": "relative",
+      "z_index": 1,
+      "overflow": "visible",
+      "min_height": "0",
+      "notes": "Not an independent grid column today; stacked above Inspector in JourneyResizableSplit."
+    },
+    "JourneyToolbar_ToolRail": {
+      "selector": "[data-testid=journey-chart-tool-rail]",
+      "display": "flex column",
+      "position": "static (flyouts absolute)",
+      "width": "56px",
+      "min_width": "48px",
+      "max_width": "64px",
+      "flex": "0 0 56px",
+      "overflow": "visible",
+      "z_index": 2,
+      "button_labels": {
+        "visible_icons": ["指", "全", "P", "详", "出", "⋯"],
+        "full_labels_css": ".journey-tool-rail-label { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:10px }",
+        "truncation_cause": "fixed 56px rail + nowrap ellipsis on Chinese labels"
+      },
+      "flyout": {
+        "position": "absolute",
+        "left": "calc(100% + 6px)",
+        "z_index": 30,
+        "portal": false,
+        "boundary_detection": false
+      }
+    },
+    "PhaseNavigation": {
+      "selector": "[data-testid=journey-phase-strip-wrap]",
+      "display": "block",
+      "position": "relative (parent)",
+      "overflow_x": "auto (strip)",
+      "overflow_y": "hidden/visible",
+      "sticky": false,
+      "absolute": false,
+      "notes": "Above chart shell; competes for vertical chrome with tool rail row on narrow."
+    },
+    "CanonicalJourneyChart": {
+      "selector": "[data-testid=journey-curve-svg] inside [data-testid=journey-chart-viewport]",
+      "shell": {
+        "min_height": "440px",
+        "display": "flex row (rail + viewport)",
+        "runtime_clientHeight": 481
+      },
+      "svg_height": "420",
+      "plot_height": 352,
+      "viewport_overflow_y": "hidden",
+      "viewport_overflow_x": "auto",
+      "chart_internal_vertical_scroll": false,
+      "y_domain": [0, 100],
+      "notes": "v3.0 plot floors are valid; layout failure is chrome around the plot, not Y-scale."
+    },
+    "SceneNavigator": {
+      "selector": "[data-testid=journey-rhythm-strip]",
+      "position": "static below SVG",
+      "notes": "Correctly placed under plot in v3.0; must remain outside Inspector DOM."
+    },
+    "Inspector": {
+      "selector": "[data-testid=journey-resizable-detail] > [data-testid=journey-detail-pane]",
+      "layout_model": "vertical_stack_below_overview_via_JourneyResizableSplit",
+      "collapsed": {
+        "detail_slot": "position:absolute; width:0; height:0; visibility:hidden",
+        "summary_bar": "44px flex row below overview"
+      },
+      "expanded": {
+        "grid_rows": "auto 28px minmax(200px,1fr) auto",
+        "detail_overflow": "hidden; pane overflow:auto",
+        "resize_handle": "28px row-resize"
+      },
+      "why_floats_over_chart": {
+        "primary": "Inspector is not a peer grid column of the chart; expand consumes vertical space in the same column, and overview/workspace overflow:auto creates a second scroll while chart shell remains in view — users perceive detail as covering the plot viewport when scrolling or when stacked height exceeds available main height.",
+        "positioning_context": ".journey-overview-pane { position:relative; z-index:1 } and collapsed detail uses position:absolute (zero-size hide), establishing absolute positioning habits in the same tree.",
+        "not_css_fixed_over_svg": "Inspector itself is not position:fixed over the SVG in default desktop expand; Human UAT still fails because expand competes in the same vertical track and does not reflow as a right dock releasing chart width.",
+        "containing_block_for_collapsed_slot": ".journey-resizable-split (position static → nearest positioned ancestor or padding box)"
+      },
+      "forbidden_for_v4": [
+        "position:absolute/fixed over plot",
+        "negative margin overlay",
+        "high z-index float on chart"
+      ]
+    },
+    "Dropdown_Popover_Modal": {
+      "tool_rail_flyouts": "absolute; no Portal; no viewport clamp",
+      "analysis_info_popover": "in-header relative popover",
+      "scene_structure_drawer": "drawer overlay (SyncWorkspace)",
+      "export_feedback": "position:fixed; right:16px; bottom:16px; z-index:40"
+    }
+  },
+  "scroll_regions_inventory": [
+    { "region": "AppShell main", "overflow_y": "auto", "active_on_journey": "often nested under results-shell overflow:hidden" },
+    { "region": "SourcePane .journey-split-primary", "overflow_y": "auto", "active": true },
+    { "region": "ReaderJourneyWorkspace", "overflow_y": "auto", "active": true },
+    { "region": "Inspector detail pane", "overflow_y": "auto", "active_when_expanded": true },
+    { "region": "Chart viewport", "overflow_y": "hidden", "overflow_x": "auto", "active": "x only" },
+    { "region": "Phase strip", "overflow_x": "auto", "overflow_y": "not_vertical_owner" }
+  ],
+  "answers_required": {
+    "1_why_inspector_floats_on_chart": "Vertical JourneyResizableSplit places Inspector under Overview in one column; expand does not allocate a dedicated non-overlapping dock column beside the chart. Combined with workspace overflow:auto and absolute-hidden collapsed slot, detail expansion visually competes with / covers chart chrome instead of pushing a peer pane.",
+    "2_positioning_context": "Nearest positioned ancestors include .journey-overview-pane (relative, z-index:1) and absolute rules on .journey-detail-collapsed-slot; flyouts use .journey-tool-rail-item (relative).",
+    "3_vertical_scroll_owners": [
+      "App main (conditional)",
+      "SourcePane",
+      "journey-workspace",
+      "Inspector detail when expanded"
+    ],
+    "4_buttons_clipped": "Tool rail fixed 56px + .journey-tool-rail-label ellipsis; icons 指/全/P/详/出 are the only reliably visible glyphs.",
+    "5_tool_rail_duplicates_source_pane": true,
+    "6_main_pane_min_usable_width": "SplitPane enforces minWidth 400 on journey secondary when source expanded; after 56px rail, plot viewport ≈ secondary−56. At 1440 with ~46% source, journey ~650–700px before rail — below v4.0 minmax(720px,1fr) Main requirement when Source+Inspector both open."
+  },
+  "architecture_verdict": {
+    "local_css_patch_sufficient": false,
+    "required_change": "Replace vertical tool rail + vertical Inspector split with CSS Grid Source|Main|Inspector, horizontal toolbar, docked Inspector, unified scroll ownership."
+  },
+  "v3_0_plot_constraints_to_preserve": {
+    "y_domain": [0, 100],
+    "svg_height_standard": 420,
+    "plot_height_standard": 352,
+    "shell_min_height": 440,
+    "chart_overflow_y": "hidden",
+    "scene_nav_below_svg": true
+  }
+}

@@ -1,0 +1,128 @@
+{
+  "phase": "1D-B1",
+  "title": "Pipeline Stage Input/Output Contracts",
+  "stages": [
+    {
+      "stage": "chapter_import",
+      "input": "filename + raw bytes",
+      "output": "Book, Chapter, Paragraph rows; diagnostics",
+      "persisted": "books, chapters, paragraphs",
+      "validation": "detect_chapters; non-empty paragraphs",
+      "retryable": true,
+      "failure_status": "HTTP 400 / DuplicateBookError",
+      "notes": "Original text stored as paragraph.raw_text; normalized_text may differ by newline normalization only."
+    },
+    {
+      "stage": "paragraph_id_assignment",
+      "input": "book.id, chapter_index, paragraph_index",
+      "output": "Paragraph.id = B####-C####-P####",
+      "persisted": "paragraphs.id (PK)",
+      "validation": "unique PK",
+      "retryable": false,
+      "failure_status": "import abort"
+    },
+    {
+      "stage": "analysis_run_create",
+      "input": "chapter_id, provider, analysis_mode, cloud_consent, client_request_id",
+      "output": "AnalysisRun queued",
+      "persisted": "analysis_runs",
+      "validation": "provider eligibility; consent for cloud",
+      "retryable": true,
+      "failure_status": "HTTP 4xx; no run",
+      "idempotency": "client_request_id reuses existing run when present"
+    },
+    {
+      "stage": "budget_reservation_stage1",
+      "input": "run, STAGE_BOUNDARY=boundary_review_generation",
+      "output": "CloudBudgetReservation active or block",
+      "persisted": "cloud_budget_reservations",
+      "validation": "daily limits",
+      "retryable": true,
+      "failure_status": "budget blocked / HTTP error"
+    },
+    {
+      "stage": "boundary_detection",
+      "input": "chapter paragraphs windows",
+      "output": "scene_boundary artifact + BoundaryReviewSession pending",
+      "persisted": "analysis_artifacts, boundary_review_sessions, model_invocations, checkpoints",
+      "validation": "structured_output generate_validated + business validators",
+      "retryable": true,
+      "failure_status": "failed / failed_provider / failed_structural / boundary_candidates_partial"
+    },
+    {
+      "stage": "boundary_confirm",
+      "input": "user decisions on candidates",
+      "output": "BoundaryRevision + Scene rows (contiguous ranges)",
+      "persisted": "boundary_revisions, scenes",
+      "validation": "scene_ranges continuous non-overlapping coverage",
+      "retryable": false,
+      "failure_status": "confirm rejected / review_cancelled"
+    },
+    {
+      "stage": "scene_analysis",
+      "input": "confirmed scenes + paragraphs",
+      "output": "AnalysisArtifact(scene_analysis) + AnalysisEvidence per scene",
+      "persisted": "analysis_artifacts, analysis_evidence",
+      "validation": "SceneAnalysisResult schema + validate_scene_analysis",
+      "retryable": true,
+      "failure_status": "scene_analysis_partial / failed",
+      "notes": "Per-scene commit; completed scenes skipped on resume"
+    },
+    {
+      "stage": "reader_journey_create",
+      "input": "succeeded AnalysisRun + cloud_consent",
+      "output": "ReaderJourneyRun queued",
+      "persisted": "reader_journey_runs",
+      "validation": "all scenes have completed analysis artifacts",
+      "retryable": true,
+      "failure_status": "HTTP 4xx",
+      "idempotency": "client_request_id"
+    },
+    {
+      "stage": "reader_journey_scene_profiles",
+      "input": "scene batches",
+      "output": "SceneReaderJourneyProfile rows",
+      "persisted": "scene_reader_journey_profiles",
+      "validation": "SceneReaderJourneyBatchResult contract + validate_scene_batch_result",
+      "retryable": true,
+      "failure_status": "scene_profiles_partial / failed"
+    },
+    {
+      "stage": "reader_journey_chapter_synthesis",
+      "input": "all profiles",
+      "output": "ReaderJourneyPhase + ChapterReaderJourneySummary",
+      "persisted": "reader_journey_phases, chapter_reader_journey_summaries",
+      "validation": "chapter synthesis schema",
+      "retryable": true,
+      "failure_status": "failed"
+    },
+    {
+      "stage": "visualization",
+      "input": "succeeded ReaderJourneyRun + profiles/phases",
+      "output": "ReaderJourneyVisualization JSON (API response)",
+      "persisted": "not a separate table; built on read when status=succeeded",
+      "validation": "scene node count matches profiles",
+      "retryable": false,
+      "failure_status": "API omit / error"
+    },
+    {
+      "stage": "template_v2_7_render",
+      "input": "visualization payload",
+      "output": "ReaderJourneyWorkspace DOM",
+      "persisted": "none (presentation)",
+      "validation": "template governance regions; illegal payloads rejected upstream",
+      "retryable": false,
+      "failure_status": "empty/error inspector states; no silent succeeded"
+    }
+  ],
+  "invariants": {
+    "original_text_immutable": "Pipeline must not rewrite paragraph.raw_text during scene split",
+    "paragraph_id_timing": "Assigned at import",
+    "scene_index": "Paragraph ID inclusive ranges; ordinal 1..N continuous",
+    "scene_continuity": "Required contiguous coverage of chapter paragraphs in confirmed revision",
+    "profile_to_scene": "SceneReaderJourneyProfile.scene_id → scenes.id",
+    "phase_coverage": "Phase ordinals continuous; every scene_ordinal in some phase span",
+    "evidence_to_paragraph": "AnalysisEvidence.paragraph_id / profile evidence IDs → paragraphs.id",
+    "visualization_to_profile": "scene_nodes length == profile count for succeeded run"
+  }
+}

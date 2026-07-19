@@ -1,0 +1,62 @@
+{
+  "baseline_name": "reader-journey-ui-final-v2.7",
+  "screenshots_dir": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/screenshots",
+  "screenshots": [
+    {
+      "file": "books-1920x1080-scene.png",
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "route": "books-embedded",
+      "focus": "scene-inspector"
+    },
+    {
+      "file": "books-1280x720-phase.png",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "route": "books-embedded-phase",
+      "focus": "phase-inspector"
+    },
+    {
+      "file": "books-1024x768-empty-state.png",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "route": "books-no-selection",
+      "focus": "empty-state"
+    },
+    {
+      "file": "standalone-1920x1080-scene.png",
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "route": "standalone-results",
+      "focus": "scene-inspector"
+    },
+    {
+      "file": "png-export-reader-journey-v2.7.png",
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "route": "books-embedded",
+      "focus": "png-export-overview"
+    }
+  ],
+  "checks": [
+    "no text occlusion",
+    "no duplicate titles",
+    "no overlapping tags",
+    "phase titles readable",
+    "curve complete",
+    "inspector hierarchy clear",
+    "empty state compact",
+    "png not cropped"
+  ],
+  "note": "Screenshots are visual references only; DOM/E2E assertions remain authoritative."
+}

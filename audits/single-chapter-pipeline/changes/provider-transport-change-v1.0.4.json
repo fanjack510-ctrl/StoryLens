@@ -1,0 +1,78 @@
+{
+  "change_id": "provider-transport-change-v1.0.4",
+  "phase": "1D-B2-R5",
+  "defect_id": "DEFECT-CANARY-009",
+  "title": "Cloud provider transport resilience: max 3 attempts with exponential backoff + jitter",
+  "old_batch_id": "phase-1db2-r4-20260718T144746Z",
+  "root_cause": {
+    "primary": "IMMEDIATE_PROVIDER_RETRY_INSUFFICIENT",
+    "secondary": [
+      "CLOUD_MAX_ATTEMPTS_CAPPED_AT_2",
+      "NO_BACKOFF_OR_JITTER_ON_REMOTE_DISCONNECT",
+      "HTTP_STATUS_RETRYABLE_WHEN_TRANSPORT_KIND_UNKNOWN"
+    ]
+  },
+  "diagnosis_ref": "audits/single-chapter-pipeline/real-canary-v5/defects/DEFECT-CANARY-009-diagnosis-v1.json",
+  "allowed_files": [
+    "apps/api/app/model_gateway/transport_retry.py",
+    "apps/api/app/model_gateway/provider_errors.py",
+    "apps/api/app/services/structured_output.py",
+    "apps/api/app/core/config.py",
+    "apps/api/tests/test_defect_canary_009_transport_resilience.py",
+    "scripts/certification/real_canary_runner.py",
+    "scripts/check_single_chapter_pipeline_reliability.py",
+    "apps/api/tests/test_phase_1db1_pipeline_certification.py",
+    "audits/single-chapter-pipeline/changes/provider-transport-change-v1.0.4.json",
+    "audits/single-chapter-pipeline/real-canary-preflight-v6.json",
+    "audits/single-chapter-pipeline/real-canary-v5/final-verdict-v1.json",
+    "audits/single-chapter-pipeline/real-canary-v5/defects/DEFECT-CANARY-009-diagnosis-v1.json"
+  ],
+  "prohibited_files": [
+    "packages/prompts/reader_journey_scene/v1.5/**",
+    "packages/prompts/scene_analysis/**",
+    "apps/api/app/services/reader_journey_validation.py",
+    "data/storylens.db",
+    "audits/single-chapter-pipeline/real-canary-v4/**",
+    "artifacts/single-chapter-pipeline-certification/real-canary/canary-v5.sqlite3"
+  ],
+  "old_behavior": {
+    "cloud_max_attempts": "min(aliyun_max_retries, 2) → 2",
+    "provider_retry_delay": "immediate (~0s)",
+    "non_retryable_abort": "still continued provider_retry until attempt budget exhausted in some paths",
+    "http_503_without_transport_kind": "treated as non-retryable (TRANSPORT_UNKNOWN)"
+  },
+  "new_behavior": {
+    "cloud_max_attempts": "min(aliyun_max_retries, aliyun_transport_max_attempts) → 3",
+    "provider_retry_delay": "after 1st fail: uniform 2–4s; after 2nd fail: uniform 8–12s (cloud only)",
+    "retry_scope": "only ProviderRequestError.retryable / retryable HTTP statuses",
+    "non_retryable": "401/403 and other non-retryable → provider_abort after recording attempt",
+    "request_hash": "provider_retry reuses same request body → identical request_hash",
+    "cost": "disconnect without tokens → estimated_cost null",
+    "budget": "per-attempt cloud budget gate before send",
+    "canary_cooldown": "canary_inter_run_cooldown_seconds=8 between successful canary runs"
+  },
+  "invariants": [
+    "no prompt changes",
+    "no validator / hook score / question lifecycle changes",
+    "no duplicate AnalysisRun / ReaderJourneyRun / Scene / Profile from transport retry",
+    "final failure code remains PROVIDER_REMOTE_DISCONNECT",
+    "reservation release unchanged (pipeline failure path)"
+  ],
+  "regression_tests": [
+    "apps/api/tests/test_defect_canary_009_transport_resilience.py",
+    "apps/api/tests/test_hardening.py::test_repair_contains_snapshot_and_provider_retry_is_not_repair",
+    "apps/api/tests/test_phase_1c_a5.py"
+  ],
+  "rollback_plan": "Restore min(aliyun_max_retries,2); remove asyncio.sleep backoff; remove transport_retry.py; revert is_retryable http_status short-circuit.",
+  "new_hashes": {
+    "apps/api/app/model_gateway/transport_retry.py": "bab64c517f299d4d0b87d6830996e2c149d1209c82285b564b7ed859935642a8",
+    "apps/api/app/model_gateway/provider_errors.py": "ebd8043da375c65a43be2ded8dcb81e2e30e2e18f998724c9da6d3094e6617eb",
+    "apps/api/app/services/structured_output.py": "3fd093d7e766c4ed2c49302811fafa86839c7709d0c350e4064d53c362877afb",
+    "apps/api/app/core/config.py": "d246bd1c1c354914f43f56eb5397208e43149e449bbf0e54a3ac14b33a0f4cad",
+    "apps/api/tests/test_defect_canary_009_transport_resilience.py": "efbb700b728a1c9d3e6d5e62a461301e13096de8548f67a589d111425ebec2b1",
+    "scripts/certification/real_canary_runner.py": "cdc4c92a4eede947caa11e177ca6a133d3ab5b9dfc0cd17ed6b8ee4659547eb9",
+    "scripts/check_single_chapter_pipeline_reliability.py": "93f9911f9fc53ac5d89e84b8e9771ccf597e70de3726b854a3959dd3a95bd3cd",
+    "apps/api/tests/test_phase_1db1_pipeline_certification.py": "569ff2bacde89017b3f1b72e761a748264fe053ff58516342dc3d0cfed78281e"
+  },
+  "real_model_requests_this_phase": 0
+}

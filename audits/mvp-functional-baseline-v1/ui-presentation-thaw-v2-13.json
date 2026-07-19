@@ -1,0 +1,73 @@
+{
+  "baseline": "mvp-functional-baseline-v1",
+  "thaw_id": "ui-presentation-thaw-v2-13",
+  "parent_thaw": "ui-presentation-thaw-v2-12.json",
+  "purpose": "phase-1d-c1-ui-06-reader-journey-resizable-workspace-v4.1",
+  "core_freeze_manifest": "audits/mvp-functional-baseline-v1/core-freeze-manifest.json",
+  "reader_journey_ui_freeze": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v4.1/reader-journey-ui-final-freeze-v4.1.json",
+  "approved_behavior": [
+    "Resizable Source|Splitter|Main|Splitter|Inspector CSS Grid with preferred vs effective pane widths",
+    "Pointer-capture column splitters + keyboard a11y; double-click / 更多设置 restore defaults",
+    "Mid breakpoint: bottom dock height splitter; narrow: tabs only, no splitters",
+    "Main pane floor 640px; Chart ResizeObserver follows Main width; Y 0-100 / svg 420 / plot 352 preserved",
+    "UI prefs storylens.readerJourney.sourcePaneWidth / inspectorPaneWidth / inspectorDockHeight (global)",
+    "Does not modify Prompt/Contract/Validator/Broker/Budget/Recovery or Reader Journey semantics"
+  ],
+  "forbidden": [
+    "book_id/chapter_id/run_id/scene_count special cases",
+    "modify FROZEN_CORE or FROZEN_CONTRACT",
+    "modify FROZEN_CERTIFIED_*",
+    "agent-initiated real model calls",
+    "mutate Scene/Boundary/ReaderJourney business data",
+    "absolute/fixed Inspector over plot"
+  ],
+  "allowed_files": [
+    {
+      "path": "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.tsx",
+      "before_sha256": "035485af3cc82fec9ea7d403dd5eb577b801cdf999787ec80437aae0790898df",
+      "reason": "Wire resizable splitters, preferred/effective widths, dock height",
+      "allowed_change": "presentation|resizable-workspace-v4.1"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/JourneyChartToolbar.tsx",
+      "before_sha256": "d2a9cbd48dc98f0cb50aebb6d9cf6251cdfa6bb750c58ce5003c503f6b39f007",
+      "reason": "Add 恢复默认栏宽 in 更多设置",
+      "allowed_change": "presentation|resizable-workspace-v4.1"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/readerJourney.css",
+      "before_sha256": "5c4f0ea97231069ba73093433af63c062a8f87486b47f96cc4dc1db4c960afda",
+      "reason": "Five-column grid, splitter chrome, dock row splitter",
+      "allowed_change": "presentation|resizable-workspace-v4.1"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/journeyVisualizationConfig.ts",
+      "before_sha256": "2e6e3a6fe1eadb4c43ded9c2e47870a56d616d6e99f54c8c5c6aacfb404f2cd1",
+      "reason": "Version 4.1 + pane width preference keys",
+      "allowed_change": "presentation|resizable-workspace-v4.1"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/JourneyPaneSplitter.tsx",
+      "before_sha256": null,
+      "reason": "New column/row splitter with pointer capture and keyboard",
+      "allowed_change": "presentation|resizable-workspace-v4.1"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/journeyPaneWidth.ts",
+      "before_sha256": null,
+      "reason": "Pane width ranges and preferred/effective clamp helpers",
+      "allowed_change": "presentation|resizable-workspace-v4.1"
+    }
+  ],
+  "forbidden_behavior_changes": [
+    "FROZEN_CORE",
+    "FROZEN_CONTRACT",
+    "FROZEN_CERTIFIED_*",
+    "Prompt/Schema/Validator/Provider routing",
+    "Reader Journey Profile / Phase / Question / Hook / Payoff / Risk / Evidence semantics"
+  ],
+  "notes": [
+    "v4.1 upgrades fixed pane widths to professional resizable workspace after Human UAT on v4.0.",
+    "Rollback: point freeze checker to v4.0; remove thaw v2-13 from DEFAULT_THAWS; restore hashed files."
+  ]
+}

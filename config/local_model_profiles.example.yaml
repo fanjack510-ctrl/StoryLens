@@ -1,0 +1,16 @@
+{
+  "qwen3_14b_dev": {
+    "provider_name": "local_qwen14", "model_family": "qwen3",
+    "model_path": "D:/AI/StoryLens/models/Qwen3-14B-Q4_K_M/Qwen3-14B-Q4_K_M.gguf",
+    "context_size": 4096, "gpu_layers": 16, "parallel": 1,
+    "batch_size": 128, "ubatch_size": 64, "max_output_tokens": 512,
+    "enable_thinking": false, "structured_output_mode": "auto",
+    "enabled": true, "default": false, "manual_only": false
+  },
+  "qwen36_27b_manual": {
+    "provider_name": "local_qwen27_manual", "model_family": "qwen",
+    "model_path": "SET_OUTSIDE_PROJECT", "context_size": 4096,
+    "gpu_layers": 16, "parallel": 1, "batch_size": 128, "ubatch_size": 64,
+    "enable_thinking": false, "enabled": true, "default": false, "manual_only": true
+  }
+}

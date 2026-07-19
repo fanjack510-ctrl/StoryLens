@@ -1,0 +1,78 @@
+{
+  "change_id": "journey-repair-resilience-change-v1.0.5",
+  "phase": "1D-B2-R6",
+  "defect_id": "DEFECT-CANARY-010",
+  "title": "Separate normal vs structural-repair transport budgets; preserve journey error causality",
+  "old_batch_id": "phase-1db2-r5-20260718T151121Z",
+  "root_cause": {
+    "primary": "SHARED_3_ATTEMPT_POOL_BETWEEN_NORMAL_AND_STRUCTURAL_REPAIR",
+    "secondary": [
+      "STRUCTURAL_REPAIR_REUSED_ORIGINAL_MESSAGES_SAME_REQUEST_HASH",
+      "REPAIR_TRANSPORT_DISCONNECT_OVERWROTE_PRIMARY_JOURNEY_EVIDENCE_OUT_OF_SCOPE",
+      "FINAL_ERROR_SURFACED_AS_PROVIDER_REMOTE_DISCONNECT_ONLY"
+    ]
+  },
+  "offline_replay": {
+    "attempt": 2,
+    "invocation_id": 7,
+    "error_code": "JOURNEY_EVIDENCE_OUT_OF_SCOPE",
+    "oos_confirmed": true,
+    "oos_detail": "Scene 2 reader_question_out cited B0001-C0001-P0004 which belongs to Scene 1 (P0001-P0004); Scene 2 owns P0005-P0010",
+    "not_id_mapping_bug": true,
+    "parser_normalization": "parsed_response_json present; cloud raw logging off; validator saw real OOS after schema parse",
+    "response_ref": "audits/single-chapter-pipeline/real-canary-v6/defects/DEFECT-CANARY-010-attempt2-response.json"
+  },
+  "allowed_files": [
+    "apps/api/app/services/structured_output.py",
+    "apps/api/app/services/cloud_output_policy.py",
+    "apps/api/app/model_gateway/transport_retry.py",
+    "apps/api/tests/test_defect_canary_010_journey_repair_resilience.py",
+    "audits/single-chapter-pipeline/changes/journey-repair-resilience-change-v1.0.5.json",
+    "audits/single-chapter-pipeline/real-canary-preflight-v7.json",
+    "audits/single-chapter-pipeline/real-canary-v6/final-verdict-v1.json",
+    "audits/single-chapter-pipeline/real-canary-v6/batches/phase-1db2-r5-20260718T151121Z/final-verdict-v1.json",
+    "audits/single-chapter-pipeline/real-canary-v6/defect-010-remediation-verdict-v1.json",
+    "audits/single-chapter-pipeline/real-canary-v6/defects/DEFECT-CANARY-010-attempt2-response.json",
+    "audits/single-chapter-pipeline/real-canary-v6/defects/DEFECT-CANARY-010-diagnosis-v1.json"
+  ],
+  "prohibited_files": [
+    "packages/prompts/reader_journey_scene/**",
+    "packages/prompts/scene_analysis/**",
+    "apps/api/app/services/reader_journey_validation.py",
+    "data/storylens.db",
+    "audits/single-chapter-pipeline/real-canary-v6/authorization-v6.json",
+    "artifacts/single-chapter-pipeline-certification/real-canary/canary-v6.sqlite3"
+  ],
+  "old_behavior": {
+    "attempt_pool": "single max_attempts=3 shared by normal + provider_retry + structural_repair",
+    "structural_repair_messages": "fell through to original_messages (same request_hash as normal when output limits matched)",
+    "repair_transport": "no independent repair_provider_retry; one disconnect exhausted remaining shared slot",
+    "final_error": "last transport error (PROVIDER_REMOTE_DISCONNECT) replaced primary JOURNEY_EVIDENCE_OUT_OF_SCOPE"
+  },
+  "new_behavior": {
+    "normal_transport": "max 3 attempts (initial/normal_batch + provider_retry) with existing backoff",
+    "structural_repair_rounds": "max 1 round",
+    "repair_transport": "max 3 attempts (structural_repair + repair_provider_retry) independent of normal",
+    "request_hash": "repair uses repair.md body; repair retries reuse same repair hash; differs from normal",
+    "error_causality": {
+      "oos_then_repair_ok": "Journey succeeded",
+      "oos_then_repair_still_invalid": "JOURNEY_REPAIR_VALIDATION_FAILED + primary_error=JOURNEY_EVIDENCE_OUT_OF_SCOPE",
+      "oos_then_repair_transport_exhausted": "JOURNEY_REPAIR_PROVIDER_FAILURE + primary_error + transport_error=PROVIDER_REMOTE_DISCONNECT"
+    },
+    "budget": "per-attempt cloud budget gate retained; disconnect without tokens → null cost; reservations unchanged",
+    "invariants": "no Evidence scope relaxation; no forged Evidence; no score/question/scene-analysis changes; no real model calls this phase"
+  },
+  "regression_tests": [
+    "apps/api/tests/test_defect_canary_010_journey_repair_resilience.py",
+    "apps/api/tests/test_defect_canary_009_transport_resilience.py",
+    "apps/api/tests/test_hardening.py::test_repair_contains_snapshot_and_provider_retry_is_not_repair"
+  ],
+  "rollback_plan": "Restore shared max_attempts loop; remove repair_provider_retry and JOURNEY_REPAIR_* final codes; remove structural_repair from REPAIR_MESSAGE_KINDS.",
+  "new_hashes": {
+    "apps/api/app/services/structured_output.py": "c8e84ab8215e143e530b7c1192cbb91c7412fdab2c173526c916e6769ff005d9",
+    "apps/api/app/services/cloud_output_policy.py": "632d0195421f281f1a395b38e443930156f684e3e8ce7b63ccf76b0f68263954",
+    "apps/api/app/model_gateway/transport_retry.py": "69b25f7ca9979b7baa8b99391fa04d31c09728446da191629f44ea779ffcd705",
+    "apps/api/tests/test_defect_canary_010_journey_repair_resilience.py": "5f0929efec9f24404ebffaefbd61a1e01bb6a57fe5756e8c4adff9c3b66cabc3"
+  },
+  "real_model_requests_this_phase": 0
+}

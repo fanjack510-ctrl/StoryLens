@@ -1,0 +1,282 @@
+{
+  "batch_id": "phase-1db1-offline-20260718",
+  "book_count": 3,
+  "chapter_count": 12,
+  "length_basis": "scene_window_max_chars=12000 + derived bands",
+  "fixtures": [
+    {
+      "fixture_id": "A1-short-dialogue",
+      "book_key": "book_a",
+      "book_title": "戏影",
+      "book_id": 1,
+      "chapter_id": 1,
+      "chapter_title": "第1章 门缝",
+      "declared_length_band": "short",
+      "measured_length_band": "short",
+      "char_count": 180,
+      "paragraph_count": 13,
+      "narrative_tags": [
+        "dialogue_dense",
+        "suspense_reveal"
+      ],
+      "structure_tags": [
+        "few_scenes",
+        "has_hook_no_payoff",
+        "evidence_sparse"
+      ],
+      "scene_count": 3,
+      "certification_batch_id": "phase-1db1-offline-20260718"
+    },
+    {
+      "fixture_id": "A2-medium-action",
+      "book_key": "book_a",
+      "book_title": "戏影",
+      "book_id": 2,
+      "chapter_id": 2,
+      "chapter_title": "第2章 追巷",
+      "declared_length_band": "medium",
+      "measured_length_band": "short",
+      "char_count": 243,
+      "paragraph_count": 14,
+      "narrative_tags": [
+        "action_dense",
+        "emotion_push"
+      ],
+      "structure_tags": [
+        "has_question_chain",
+        "has_payoff",
+        "evidence_rich"
+      ],
+      "scene_count": 4,
+      "certification_batch_id": "phase-1db1-offline-20260718"
+    },
+    {
+      "fixture_id": "A3-long-suspense",
+      "book_key": "book_a",
+      "book_title": "戏影",
+      "book_id": 3,
+      "chapter_id": 3,
+      "chapter_title": "第3章 灯塔回声——这是一个故意写得很长的章节标题用于认证模板不因标题分叉",
+      "declared_length_band": "long",
+      "measured_length_band": "medium",
+      "char_count": 2954,
+      "paragraph_count": 86,
+      "narrative_tags": [
+        "suspense_reveal",
+        "hook_dense",
+        "description_dense"
+      ],
+      "structure_tags": [
+        "many_scenes",
+        "many_phases",
+        "long_title",
+        "long_phase_titles"
+      ],
+      "scene_count": 14,
+      "certification_batch_id": "phase-1db1-offline-20260718"
+    },
+    {
+      "fixture_id": "A4-near-limit-info",
+      "book_key": "book_a",
+      "book_title": "戏影",
+      "book_id": 4,
+      "chapter_id": 4,
+      "chapter_title": "第4章 档案柜",
+      "declared_length_band": "near_limit",
+      "measured_length_band": "long",
+      "char_count": 5929,
+      "paragraph_count": 167,
+      "narrative_tags": [
+        "info_explain_dense",
+        "description_dense"
+      ],
+      "structure_tags": [
+        "many_scenes",
+        "no_question_chain",
+        "evidence_rich"
+      ],
+      "scene_count": 14,
+      "certification_batch_id": "phase-1db1-offline-20260718"
+    },
+    {
+      "fixture_id": "B1-short-emotion",
+      "book_key": "book_b",
+      "book_title": "镜河",
+      "book_id": 5,
+      "chapter_id": 5,
+      "chapter_title": "序章 裂",
+      "declared_length_band": "short",
+      "measured_length_band": "short",
+      "char_count": 102,
+      "paragraph_count": 5,
+      "narrative_tags": [
+        "emotion_push"
+      ],
+      "structure_tags": [
+        "few_scenes",
+        "few_phases",
+        "no_question_chain"
+      ],
+      "scene_count": 3,
+      "certification_batch_id": "phase-1db1-offline-20260718"
+    },
+    {
+      "fixture_id": "B2-medium-description",
+      "book_key": "book_b",
+      "book_title": "镜河",
+      "book_id": 6,
+      "chapter_id": 6,
+      "chapter_title": "第1章 芦苇",
+      "declared_length_band": "medium",
+      "measured_length_band": "short",
+      "char_count": 204,
+      "paragraph_count": 10,
+      "narrative_tags": [
+        "description_dense",
+        "emotion_push"
+      ],
+      "structure_tags": [
+        "has_question_chain",
+        "has_hook_no_payoff",
+        "evidence_sparse"
+      ],
+      "scene_count": 3,
+      "certification_batch_id": "phase-1db1-offline-20260718"
+    },
+    {
+      "fixture_id": "B3-long-payoff",
+      "book_key": "book_b",
+      "book_title": "镜河",
+      "book_id": 7,
+      "chapter_id": 7,
+      "chapter_title": "第2章 旧桥",
+      "declared_length_band": "long",
+      "measured_length_band": "medium",
+      "char_count": 3160,
+      "paragraph_count": 92,
+      "narrative_tags": [
+        "payoff_dense",
+        "dialogue_dense"
+      ],
+      "structure_tags": [
+        "many_phases",
+        "has_payoff",
+        "evidence_rich"
+      ],
+      "scene_count": 6,
+      "certification_batch_id": "phase-1db1-offline-20260718"
+    },
+    {
+      "fixture_id": "B4-medium-hook",
+      "book_key": "book_b",
+      "book_title": "镜河",
+      "book_id": 8,
+      "chapter_id": 8,
+      "chapter_title": "第3章 夜航",
+      "declared_length_band": "medium",
+      "measured_length_band": "short",
+      "char_count": 180,
+      "paragraph_count": 11,
+      "narrative_tags": [
+        "hook_dense",
+        "action_dense"
+      ],
+      "structure_tags": [
+        "has_hook_no_payoff",
+        "few_phases"
+      ],
+      "scene_count": 3,
+      "certification_batch_id": "phase-1db1-offline-20260718"
+    },
+    {
+      "fixture_id": "C1-short-info",
+      "book_key": "book_c",
+      "book_title": "城轨",
+      "book_id": 9,
+      "chapter_id": 9,
+      "chapter_title": "第1章 时刻表",
+      "declared_length_band": "short",
+      "measured_length_band": "short",
+      "char_count": 184,
+      "paragraph_count": 11,
+      "narrative_tags": [
+        "info_explain_dense"
+      ],
+      "structure_tags": [
+        "few_scenes",
+        "evidence_sparse"
+      ],
+      "scene_count": 3,
+      "certification_batch_id": "phase-1db1-offline-20260718"
+    },
+    {
+      "fixture_id": "C2-medium-dialogue",
+      "book_key": "book_c",
+      "book_title": "城轨",
+      "book_id": 10,
+      "chapter_id": 10,
+      "chapter_title": "第2章 换乘",
+      "declared_length_band": "medium",
+      "measured_length_band": "short",
+      "char_count": 201,
+      "paragraph_count": 10,
+      "narrative_tags": [
+        "dialogue_dense",
+        "info_explain_dense"
+      ],
+      "structure_tags": [
+        "has_question_chain",
+        "has_payoff"
+      ],
+      "scene_count": 3,
+      "certification_batch_id": "phase-1db1-offline-20260718"
+    },
+    {
+      "fixture_id": "C3-long-action",
+      "book_key": "book_c",
+      "book_title": "城轨",
+      "book_id": 11,
+      "chapter_id": 11,
+      "chapter_title": "第3章 封站",
+      "declared_length_band": "long",
+      "measured_length_band": "medium",
+      "char_count": 3368,
+      "paragraph_count": 98,
+      "narrative_tags": [
+        "action_dense",
+        "suspense_reveal"
+      ],
+      "structure_tags": [
+        "many_scenes",
+        "many_phases",
+        "evidence_rich"
+      ],
+      "scene_count": 14,
+      "certification_batch_id": "phase-1db1-offline-20260718"
+    },
+    {
+      "fixture_id": "C4-near-limit-mixed",
+      "book_key": "book_c",
+      "book_title": "城轨",
+      "book_id": 12,
+      "chapter_id": 12,
+      "chapter_title": "第4章 环形线",
+      "declared_length_band": "near_limit",
+      "measured_length_band": "long",
+      "char_count": 5609,
+      "paragraph_count": 158,
+      "narrative_tags": [
+        "description_dense",
+        "hook_dense",
+        "payoff_dense"
+      ],
+      "structure_tags": [
+        "many_scenes",
+        "long_phase_titles",
+        "evidence_rich"
+      ],
+      "scene_count": 14,
+      "certification_batch_id": "phase-1db1-offline-20260718"
+    }
+  ]
+}

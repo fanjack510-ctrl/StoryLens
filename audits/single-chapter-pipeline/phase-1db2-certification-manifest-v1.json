@@ -1,0 +1,288 @@
+{
+  "manifest_id": "phase-1db2-certification-manifest-v1",
+  "phase": "1D-B2",
+  "verdict": "REAL_CANARY_PASSED",
+  "batch_id": "phase-1db2-r13-20260719T022027Z",
+  "database": "artifacts/single-chapter-pipeline-certification/real-canary/canary-v13.sqlite3",
+  "run_count": 8,
+  "planned_runs": 8,
+  "fixture_plan": [
+    {
+      "run_index": 1,
+      "fixture_id": "C3-long-action",
+      "repeat_of": null
+    },
+    {
+      "run_index": 2,
+      "fixture_id": "A2-medium-action",
+      "repeat_of": null
+    },
+    {
+      "run_index": 3,
+      "fixture_id": "B2-medium-description",
+      "repeat_of": null
+    },
+    {
+      "run_index": 4,
+      "fixture_id": "A1-short-dialogue",
+      "repeat_of": null
+    },
+    {
+      "run_index": 5,
+      "fixture_id": "B3-long-payoff",
+      "repeat_of": null
+    },
+    {
+      "run_index": 6,
+      "fixture_id": "C1-short-info",
+      "repeat_of": null
+    },
+    {
+      "run_index": 7,
+      "fixture_id": "C3-long-action",
+      "repeat_of": 1
+    },
+    {
+      "run_index": 8,
+      "fixture_id": "B3-long-payoff",
+      "repeat_of": 5
+    }
+  ],
+  "provider": "aliyun_qwen_plus",
+  "model": "qwen3.7-plus",
+  "auto_route": false,
+  "http_count": 164,
+  "accounting": {
+    "reported_count": 163,
+    "conservative_count": 1,
+    "unknown_count": 0,
+    "actual_reported_cost": 1.83661,
+    "conservative_estimated_cost": 0.01565,
+    "certification_accounted_cost": 1.85226
+  },
+  "certification_cost_cny": 1.85226,
+  "profile_count": 48,
+  "evidence_max_items": 16,
+  "evidence_over_16": 0,
+  "main_database_invariance": {
+    "unchanged_counts": true,
+    "sha_equal": true,
+    "analysis_run_55": "succeeded",
+    "reader_journey_run_2": "succeeded",
+    "seal_snapshot": {
+      "exists": true,
+      "path": "D:/Dstorylens/data/storylens.db",
+      "sha256": "a08dab78d491f97625d721d2da7ab0e07ddb18c836ab2948e64f4c7ab8286636",
+      "size": 83529728,
+      "analysis_run_count": 55,
+      "reader_journey_run_count": 2,
+      "run_55_status": "succeeded",
+      "journey_run_2_status": "succeeded",
+      "open_mode": "ro",
+      "captured_at": "2026-07-19T03:31:17.901277+00:00"
+    }
+  },
+  "versions": {
+    "scene_analysis_prompt": "v3.2",
+    "reader_journey_scene_prompt": "v1.6",
+    "reader_journey_scene_contract": "1.3",
+    "reader_journey_chapter_prompt": "v1.2",
+    "reader_journey_chapter_contract": "1.2",
+    "transport_retry": "v1.0.4",
+    "journey_repair_resilience": "v1.0.5",
+    "journey_targeted_repair": "v1.0.6",
+    "journey_adaptive_phase_contract": "v1.0.7",
+    "canary_conservative_usage_accounting": "v1.0.8",
+    "scene_analysis_provider_recovery": "v1.0.9",
+    "global_model_invocation_policy": "v1.1.0",
+    "reader_journey_evidence_budget": "v1.1.1",
+    "change_package": "reader-journey-evidence-budget-change-v1.1.1"
+  },
+  "prompt_versions": {
+    "scene_analysis": "v3.2",
+    "reader_journey_scene": "v1.6",
+    "reader_journey_chapter": "v1.2"
+  },
+  "contract_versions": {
+    "reader_journey_scene": "1.3",
+    "reader_journey_chapter": "1.2"
+  },
+  "validator_gates": {
+    "real_canary_checker": "PASS",
+    "invocation_policy": "INVOCATION_POLICY_PASS",
+    "output_budget": "READER_JOURNEY_OUTPUT_BUDGET_PASS"
+  },
+  "change_packages": [
+    "single-chapter-pipeline-change-v1.0.1",
+    "single-chapter-journey-change-v1.0.2",
+    "single-chapter-journey-change-v1.0.3",
+    "provider-transport-change-v1.0.4",
+    "journey-repair-resilience-change-v1.0.5",
+    "journey-targeted-repair-change-v1.0.6",
+    "journey-adaptive-phase-contract-change-v1.0.7",
+    "canary-conservative-usage-accounting-change-v1.0.8",
+    "scene-analysis-provider-recovery-change-v1.0.9",
+    "global-model-invocation-policy-change-v1.1.0",
+    "reader-journey-evidence-budget-change-v1.1.1"
+  ],
+  "frozen_file_hash_ref": "audits/single-chapter-pipeline/phase-1db2-certified-file-hashes-v1.json",
+  "baseline_aggregate_sha256": "c8ae612e19909dd61283bcc46ee4fcff89388f7dd17eb1adb57d5c0bfa331eaa",
+  "checker_result": "PASS",
+  "phase_1d_c_allowed": true,
+  "elapsed_minutes": 46.95883328666665,
+  "runs": [
+    {
+      "run_index": 1,
+      "fixture_id": "C3-long-action",
+      "repeat_of": null,
+      "analysis_run_id": 1,
+      "reader_journey_run_id": 1,
+      "status": "PASS",
+      "analysis_status": "succeeded",
+      "journey_status": "succeeded",
+      "integrity": {
+        "scene_count": 14,
+        "scene_analysis_count": 14,
+        "profile_count": 14,
+        "analysis_status": "succeeded",
+        "journey_status": "succeeded"
+      },
+      "cost_so_far": 0.493916,
+      "requests_so_far": 41
+    },
+    {
+      "run_index": 2,
+      "fixture_id": "A2-medium-action",
+      "repeat_of": null,
+      "analysis_run_id": 2,
+      "reader_journey_run_id": 2,
+      "status": "PASS",
+      "analysis_status": "succeeded",
+      "journey_status": "succeeded",
+      "integrity": {
+        "scene_count": 3,
+        "scene_analysis_count": 3,
+        "profile_count": 3,
+        "analysis_status": "succeeded",
+        "journey_status": "succeeded"
+      },
+      "cost_so_far": 0.63933,
+      "requests_so_far": 51
+    },
+    {
+      "run_index": 3,
+      "fixture_id": "B2-medium-description",
+      "repeat_of": null,
+      "analysis_run_id": 3,
+      "reader_journey_run_id": 3,
+      "status": "PASS",
+      "analysis_status": "succeeded",
+      "journey_status": "succeeded",
+      "integrity": {
+        "scene_count": 4,
+        "scene_analysis_count": 4,
+        "profile_count": 4,
+        "analysis_status": "succeeded",
+        "journey_status": "succeeded"
+      },
+      "cost_so_far": 0.749764,
+      "requests_so_far": 62
+    },
+    {
+      "run_index": 4,
+      "fixture_id": "A1-short-dialogue",
+      "repeat_of": null,
+      "analysis_run_id": 4,
+      "reader_journey_run_id": 4,
+      "status": "PASS",
+      "analysis_status": "succeeded",
+      "journey_status": "succeeded",
+      "integrity": {
+        "scene_count": 3,
+        "scene_analysis_count": 3,
+        "profile_count": 3,
+        "analysis_status": "succeeded",
+        "journey_status": "succeeded"
+      },
+      "cost_so_far": 0.846668,
+      "requests_so_far": 71
+    },
+    {
+      "run_index": 5,
+      "fixture_id": "B3-long-payoff",
+      "repeat_of": null,
+      "analysis_run_id": 5,
+      "reader_journey_run_id": 5,
+      "status": "PASS",
+      "analysis_status": "succeeded",
+      "journey_status": "succeeded",
+      "integrity": {
+        "scene_count": 4,
+        "scene_analysis_count": 4,
+        "profile_count": 4,
+        "analysis_status": "succeeded",
+        "journey_status": "succeeded"
+      },
+      "cost_so_far": 1.068646,
+      "requests_so_far": 93
+    },
+    {
+      "run_index": 6,
+      "fixture_id": "C1-short-info",
+      "repeat_of": null,
+      "analysis_run_id": 6,
+      "reader_journey_run_id": 6,
+      "status": "PASS",
+      "analysis_status": "succeeded",
+      "journey_status": "succeeded",
+      "integrity": {
+        "scene_count": 3,
+        "scene_analysis_count": 3,
+        "profile_count": 3,
+        "analysis_status": "succeeded",
+        "journey_status": "succeeded"
+      },
+      "cost_so_far": 1.153254,
+      "requests_so_far": 102
+    },
+    {
+      "run_index": 7,
+      "fixture_id": "C3-long-action",
+      "repeat_of": 1,
+      "analysis_run_id": 7,
+      "reader_journey_run_id": 7,
+      "status": "PASS",
+      "analysis_status": "succeeded",
+      "journey_status": "succeeded",
+      "integrity": {
+        "scene_count": 13,
+        "scene_analysis_count": 13,
+        "profile_count": 13,
+        "analysis_status": "succeeded",
+        "journey_status": "succeeded"
+      },
+      "cost_so_far": 1.632014,
+      "requests_so_far": 142
+    },
+    {
+      "run_index": 8,
+      "fixture_id": "B3-long-payoff",
+      "repeat_of": 5,
+      "analysis_run_id": 8,
+      "reader_journey_run_id": 8,
+      "status": "PASS",
+      "analysis_status": "succeeded",
+      "journey_status": "succeeded",
+      "integrity": {
+        "scene_count": 4,
+        "scene_analysis_count": 4,
+        "profile_count": 4,
+        "analysis_status": "succeeded",
+        "journey_status": "succeeded"
+      },
+      "cost_so_far": 1.85226,
+      "requests_so_far": 164
+    }
+  ],
+  "sealed_at": "2026-07-19T03:31:17.909278+00:00"
+}

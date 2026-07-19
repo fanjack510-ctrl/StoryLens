@@ -1,0 +1,88 @@
+{
+  "finished_at": "2026-07-19T01:16:22.595523+00:00",
+  "results": [
+    {
+      "scenario_id": "FI-SCHEMA-SCENE",
+      "covers": "reader_journey_scene_schema_repair",
+      "ok": true,
+      "detail": "real_http=1 hits=1",
+      "invocation_ids": [
+        2
+      ],
+      "error": null
+    },
+    {
+      "scenario_id": "FI-STRUCTURAL",
+      "covers": "reader_journey_structural_repair",
+      "ok": true,
+      "detail": "real_http=1 hits=1",
+      "invocation_ids": [
+        4
+      ],
+      "error": null
+    },
+    {
+      "scenario_id": "FI-PROVIDER-RETRY",
+      "covers": "generic_provider_retry",
+      "ok": true,
+      "detail": "real_http=1 hits=1 kinds=['initial', 'provider_retry']",
+      "invocation_ids": [
+        6
+      ],
+      "error": null
+    },
+    {
+      "scenario_id": "FI-REPAIR-RETRY",
+      "covers": "repair_provider_retry",
+      "ok": true,
+      "detail": "real_http=1 hits=1 kinds=['normal_batch_request', 'structural_repair', 'repair_provider_retry']",
+      "invocation_ids": [
+        9
+      ],
+      "error": null
+    },
+    {
+      "scenario_id": "FI-TARGETED-PATCH",
+      "covers": "reader_journey_targeted_evidence_patch",
+      "ok": true,
+      "detail": "real_http=1 hits=1 kinds=['normal_batch_request', 'structural_repair'] types=[None, 'reader_journey_targeted_evidence_patch']",
+      "invocation_ids": [
+        11
+      ],
+      "error": null
+    },
+    {
+      "scenario_id": "FI-RECOVERY",
+      "covers": "scene_analysis_provider_recovery",
+      "ok": true,
+      "detail": "exhaust_calls=3 resume_http=1 hits=1",
+      "invocation_ids": [
+        15
+      ],
+      "error": null
+    },
+    {
+      "scenario_id": "FI-SCHEMA-CHAPTER",
+      "covers": "reader_journey_chapter_schema_repair",
+      "ok": true,
+      "detail": "real_http=1 hits=1",
+      "invocation_ids": [
+        17
+      ],
+      "error": null
+    },
+    {
+      "scenario_id": "FI-FLASH-REJECT",
+      "covers": "flash_reject",
+      "ok": true,
+      "detail": "code=MODEL_UNAUTHORIZED_FALLBACK",
+      "invocation_ids": [],
+      "error": null
+    }
+  ],
+  "budget": {
+    "certification_accounted_cost": 0.086716,
+    "requests": 17,
+    "retries": 6
+  }
+}

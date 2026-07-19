@@ -1,0 +1,57 @@
+{
+  "phase": "1D-B1",
+  "title": "Single-Chapter Pipeline Offline Reliability Certification",
+  "engineering_verdict": "ENGINEERING_READY_FOR_REAL_CANARY",
+  "canary_start_allowed": false,
+  "canary_blockers": [
+    "max_cost not configured by operator",
+    "operator explicit approval required"
+  ],
+  "zero_model": {
+    "real_http_requests": 0,
+    "token": 0,
+    "cost": 0
+  },
+  "main_db": {
+    "cert_window_sha_equal": true,
+    "analysis_run_count": 55,
+    "reader_journey_run_count": 2,
+    "run_55": "succeeded",
+    "journey_run_2": "succeeded",
+    "live_sha_match_cert_window": false,
+    "live_sha_drift_note": "Post-cert diagnostic RW SQLite opens changed file bytes without logical mutation; snapshots now use mode=ro; size and run invariants unchanged"
+  },
+  "offline": {
+    "fixture_books": 3,
+    "fixture_chapters": 12,
+    "integrity": "PASS",
+    "template_render": "PASS",
+    "persistence_recovery": "PASS",
+    "idempotency": "PASS",
+    "fault_injection": "PASS"
+  },
+  "e2e_stability": {
+    "result": "PASS",
+    "runs": "3/3",
+    "tests_per_run": 67,
+    "workers": 1,
+    "command": "npm run test:e2e -- --workers=1"
+  },
+  "gates": {
+    "core_freeze": "PASS",
+    "journey_ui_freeze": "PASS",
+    "template_governance": "PASS",
+    "pipeline_reliability": "PASS",
+    "ruff": "PASS",
+    "pytest": "289 passed",
+    "desktop_typecheck_lint_vitest_build": "PASS"
+  },
+  "phase_1db2": {
+    "status": "PLANNED_NOT_EXECUTED",
+    "preflight": "audits/single-chapter-pipeline/real-canary-preflight-v1.json",
+    "full_pipeline_runs": 8,
+    "provider": "aliyun_qwen_plus",
+    "max_cost": null
+  },
+  "captured_at": "2026-07-18T11:30:00+00:00"
+}

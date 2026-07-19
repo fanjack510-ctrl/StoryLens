@@ -1,0 +1,18 @@
+# EditorConfig helps keep LF endings on this Windows workspace.
+# This is not a Git repository; .gitattributes should be added when Git is introduced.
+# Do not run a whole-repo reformat — only new edits should follow these rules.
+
+root = true
+
+[*]
+end_of_line = lf
+insert_final_newline = true
+charset = utf-8
+indent_style = space
+trim_trailing_whitespace = true
+
+[*.{cmd,bat,ps1}]
+end_of_line = crlf
+
+[*.md]
+trim_trailing_whitespace = false

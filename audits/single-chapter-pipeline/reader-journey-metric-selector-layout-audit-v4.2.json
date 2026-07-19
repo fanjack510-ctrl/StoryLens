@@ -1,0 +1,133 @@
+{
+  "phase": "1D-C1-UI-07",
+  "title": "Reader Journey Metric Selector Layout Audit v4.2",
+  "audit_version": "4.2",
+  "parent_verdict": "READER_JOURNEY_RESIZABLE_WORKSPACE_V4_1_HUMAN_UAT_FAILED",
+  "defect": "DEFECT-UAT-009 Metric Selector Overlays Journey Content",
+  "audited_at": "2026-07-19T09:45:00+00:00",
+  "method": "static_component_css_tree + computed_style_inference_from_v4.1_sources",
+  "note": "Audit completed before any z-index / coordinate patch. No Book/Chapter/Run special cases.",
+  "root_cause": {
+    "summary": "当前指标 uses JourneyAnchoredMenu portal dropdown (position:fixed) anchored below the trigger; the panel paints over PhaseNavigation and CanonicalJourneyChart instead of participating in MainJourneyPane document flow.",
+    "why_covers_phase_and_chart": [
+      "Menu is createPortal(..., document.body) with position:fixed; top = trigger.bottom + 6",
+      "Menu does not reserve layout height in .journey-overview-curve flex column",
+      "Phase strip and chart remain at their original Y; fixed menu draws on top",
+      "Solid background exists on panel, but metric option text still visually overlaps Phase cards and chart marks in the screenshot because the panel occupies the same viewport region"
+    ]
+  },
+  "nodes": {
+    "MetricSelectorTrigger": {
+      "component": "JourneyChartToolbar",
+      "selector": "[data-testid=journey-metric-select]",
+      "position": "static (inside relative .journey-anchored-menu)",
+      "display": "inline-flex (button.journey-toolbar-btn)",
+      "top_left": "layout flow in toolbar-left",
+      "width_height": "max-width 220px; min-height ~36px (LAYOUT_TOKENS.buttonHeight)",
+      "overflow": "visible",
+      "z_index": "auto",
+      "opacity_background": "surface button; opaque",
+      "aria": {
+        "aria-expanded": "boolean metricOpen",
+        "aria-haspopup": "menu",
+        "aria-label": "当前指标：{label}"
+      },
+      "in_layout_flow": true
+    },
+    "MetricSelectorMenu": {
+      "component": "JourneyAnchoredMenu portal panel",
+      "selector": "[data-testid=journey-metric-menu-panel] / [data-testid=journey-metric-select-menu]",
+      "portal": true,
+      "portal_root": "document.body (no dedicated overlay-root)",
+      "position": "fixed",
+      "display": "block",
+      "top_left": "computed from trigger getBoundingClientRect; prefer below; flip above if needed",
+      "width_height": "minWidth max(coords.width,200); max-width min(320px, 100vw-16px); max-height min(70vh,420px); overflow auto",
+      "clientRect_inference": "Overlaps Phase strip + active-scene caption + chart top when open on typical 1366–1920 heights",
+      "overflow": "auto on panel",
+      "z_index": 50,
+      "opacity_background": "var(--surface) solid; border 1px; box-shadow present",
+      "in_layout_flow": false,
+      "affected_by_MainJourneyPane_scroll": "Repositions on scroll capture (window scroll listener true); still overlays content rather than pushing it"
+    },
+    "JourneyToolbar": {
+      "selector": "[data-testid=journey-curve-toolbar]",
+      "position": "static",
+      "display": "flex",
+      "overflow": "visible",
+      "z_index": "auto (no sticky token yet)",
+      "in_layout_flow": true
+    },
+    "PhaseNavigation": {
+      "selector": "[data-testid=journey-phase-strip-wrap] / [data-testid=journey-phase-strip]",
+      "position": "static",
+      "display": "flex (strip); wrap overflow-x auto",
+      "overflow": "hidden on wrap; strip overflow-x auto",
+      "z_index": "auto",
+      "in_layout_flow": true,
+      "covered_by_metric_menu": true
+    },
+    "CanonicalJourneyChart": {
+      "selector": "[data-testid=journey-curve-svg] inside [data-testid=journey-chart-shell]",
+      "position": "static (svg)",
+      "overflow": "hidden on shell/viewport per v4.1 scroll ownership",
+      "z_index": "auto; node tooltip card z-index 40 in CSS",
+      "in_layout_flow": true,
+      "covered_by_metric_menu": true
+    },
+    "MainJourneyPane": {
+      "selector": "[data-testid=journey-main-pane] / [data-testid=journey-overview-pane]",
+      "position": "relative / static per workspace grid",
+      "overflow_y": "auto (main scroll owner)",
+      "overflow_x": "hidden",
+      "z_index": "content layer ~0–1",
+      "containing_block_for_metric_menu": false,
+      "notes": "Metric portal escapes Main overflow; not clipped; therefore overlays siblings visually"
+    }
+  },
+  "ancestor_overflow_chain": [
+    {
+      "node": "journey-workspace-v4",
+      "overflow": "hidden on workspace shell; panes scroll internally"
+    },
+    {
+      "node": "journey-main-pane",
+      "overflow": "auto vertical"
+    },
+    {
+      "node": "journey-overview-curve",
+      "overflow": "visible / flex column"
+    },
+    {
+      "node": "document.body portal host",
+      "overflow": "viewport; fixed menu not clipped by Main"
+    }
+  ],
+  "stacking_context": {
+    "metric_menu": "new stacking via position:fixed + z-index:50 on body",
+    "phase_and_chart": "normal flow under Main; no competing z-index against fixed menu",
+    "inspector": "grid column / bottom dock; not the cause of DEFECT-UAT-009"
+  },
+  "transparency": {
+    "menu_background_opaque": true,
+    "issue_is_not_translucent_mix": true,
+    "issue_is_spatial_overlap": true
+  },
+  "forbidden_quick_fixes_not_applied": [
+    "z-index bump only",
+    "top/left coordinate tweak",
+    "margin-only patch",
+    "Book/Chapter/Run special case"
+  ],
+  "required_fix": {
+    "metric_selector": "in-flow MetricSelectorPanel between Toolbar and PhaseNavigation",
+    "simple_menus": "unified JourneyPopover / SharedPopover via overlay-root",
+    "z_index_tokens": {
+      "content": 0,
+      "sticky_toolbar": 10,
+      "popover_menu": 40,
+      "chart_tooltip": 50,
+      "modal_dialog": 100
+    }
+  }
+}

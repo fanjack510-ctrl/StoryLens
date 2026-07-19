@@ -1,0 +1,60 @@
+{
+  "baseline_name": "mvp-functional-baseline-v1",
+  "generated_at": "2026-07-17T16:55:00+00:00",
+  "real_model_env_vars_set": false,
+  "commands": {
+    "bootstrap": "powershell -ExecutionPolicy Bypass -File .\\scripts\\bootstrap_windows.ps1 -SkipInstall",
+    "check_project": ".\\.venv\\Scripts\\python.exe .\\scripts\\check_project.py",
+    "pytest": ".\\.venv\\Scripts\\python.exe -m pytest",
+    "ruff": ".\\.venv\\Scripts\\python.exe -m ruff check apps/api scripts",
+    "typecheck": "npm run typecheck",
+    "lint": "npm run lint",
+    "vitest": "npm test",
+    "build": "npm run build",
+    "e2e": "npm run test:e2e",
+    "sqlite_integrity": "PRAGMA integrity_check",
+    "sqlite_fk": "PRAGMA foreign_key_check",
+    "golden_audit": ".\\.venv\\Scripts\\python.exe .\\audits\\mvp-functional-baseline-v1\\_readonly_audit.py"
+  },
+  "results": {
+    "check_project": "passed",
+    "pytest": {"passed": 271, "failed": 0, "warnings": 1},
+    "ruff": "passed",
+    "typecheck": "passed",
+    "eslint": "passed",
+    "vitest": {"passed": 111, "failed": 0, "files": 12},
+    "build": "passed",
+    "e2e": {"passed": 19, "failed": 0},
+    "sqlite_integrity_check": "ok",
+    "sqlite_foreign_key_check": [],
+    "golden_sample_checks": {"total": 33, "failed": 0}
+  },
+  "fake_e2e_coverage": {
+    "import_fixture": "confirmed_via_pytest_test_import",
+    "chapter_detection": "confirmed_via_pytest",
+    "create_analysis_run": "confirmed_via_pytest_fake_provider",
+    "scene_boundary": "confirmed_via_pytest_phase_1c_a",
+    "scene_analysis": "confirmed_via_pytest_phase_1c_a10",
+    "reader_journey_profile": "confirmed_via_pytest_phase_1c_c1",
+    "chapter_synthesis": "confirmed_via_pytest_phase_1c_c1",
+    "semantic_calibration": "confirmed_via_pytest_phase_1c_c1_5",
+    "visualization": "confirmed_via_pytest_phase_1c_c2_1",
+    "sync_workspace": "confirmed_via_vitest_and_e2e_phase_1cc2_2",
+    "scene_click_text_locate": "confirmed_via_e2e_phase_1cc2_2",
+    "evidence_locate": "confirmed_via_e2e_phase_1cb_and_1cc2_2",
+    "export": "confirmed_via_pytest_and_e2e",
+    "scene_analysis_failure": "confirmed_via_pytest_phase_1c_a10",
+    "reader_journey_partial_failure": "confirmed_via_pytest_and_e2e_phase_1cc1_2",
+    "output_truncation": "confirmed_via_pytest_and_e2e_phase_1cc1_2",
+    "business_validation_failure": "confirmed_via_pytest",
+    "offline_replay": "confirmed_via_pytest_and_e2e_phase_1cc1_3_1cc1_4",
+    "resume": "confirmed_via_pytest_and_e2e",
+    "idempotency": "confirmed_via_pytest",
+    "page_refresh_url_recovery": "confirmed_via_e2e_phase_1cc2_2"
+  },
+  "notes": [
+    "No STORYLENS_RUN_LOCAL_MODEL_TESTS / STORYLENS_RUN_ALIYUN_TESTS / STORYLENS_ALIYUN_LIVE set",
+    "E2E uses mocked API routes; no real Aliyun calls",
+    "Golden sample verified offline against data/storylens.db Run #55 and JourneyRun #2"
+  ]
+}

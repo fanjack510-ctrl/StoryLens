@@ -1,0 +1,19 @@
+{
+  "version": "1.0",
+  "default_genre": "suspense",
+  "genres": {
+    "suspense": {
+      "label": "悬疑",
+      "weights": {
+        "curiosity": 0.25,
+        "tension": 0.20,
+        "hook": 0.20,
+        "payoff": 0.15,
+        "information_gain": 0.10,
+        "emotional_resonance": 0.10,
+        "cognitive_load": -0.10,
+        "dropoff_risk": -0.15
+      }
+    }
+  }
+}

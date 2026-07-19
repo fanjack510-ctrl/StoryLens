@@ -1,0 +1,199 @@
+{
+  "phase": "1D-C1-UAT-07",
+  "title": "Analysis Progress and Budget Recovery UX",
+  "version": "v1.1.3",
+  "verdict": "DEFECT_UAT_005_REMEDIATION_INCOMPLETE",
+  "verdict_note": "Superseded for DEFECT-UAT-005 auto-discovery gap; completion tracked in active-analysis-run-auto-discovery-v1.1.4.json",
+  "defect_ids": ["DEFECT-UAT-005", "DEFECT-UAT-006"],
+  "current_run": {
+    "analysis_run_id": 5,
+    "boundary_revision_id": 1,
+    "scene_count": 13,
+    "scene_analysis": "0/13",
+    "error_code": "INSUFFICIENT_BUDGET_RESERVATION",
+    "failed_stage": "scene_analysis_budget",
+    "budget_preview": {
+      "expected_requests": 13,
+      "worst_requests": 26,
+      "remaining_requests": 13,
+      "remaining_tokens": 164405,
+      "remaining_cost": 19.877306
+    },
+    "mutated_by_this_phase": false,
+    "auto_continued": false,
+    "real_model_calls": 0
+  },
+  "root_cause": {
+    "DEFECT-UAT-005": "Boundary confirm follow-up directed users only to TasksPage; chapter progress panel lacked persistent Run meta and did not treat post-confirm Scene Analysis as current-page live state.",
+    "DEFECT-UAT-006": "Request-limit shortfall (26 need / 13 remaining) surfaced as opaque budget failure; daily request protection lived in developer settings; no one-click adjust+resume same Run path; create-time preflight only covered Stage 1."
+  },
+  "old_user_flow": [
+    "Confirm boundary → message points to 任务中心",
+    "Budget block shows generic failure / continue Scene Analysis",
+    "User must find 每日最大真实请求数 in developer settings",
+    "Create task only validates Stage 1 reservation envelope"
+  ],
+  "new_user_flow": [
+    "Confirm boundary → stay on chapter; progress panel polls GET /analysis-runs/{id}",
+    "Budget pause → modal once + persistent card: 分析已暂停：今日云端请求额度不足",
+    "调整额度并继续 → confirm 50→80 requests (cost limit unchanged) → resume same Run #5 / BoundaryRevision #1 → Scene Analysis",
+    "Create task shows full-run advisory precheck (Boundary + Scene Analysis + Reader Journey)"
+  ],
+  "progress_state_source": {
+    "primary": "GET /api/v1/analysis-runs/{run_id}",
+    "hook": "useCurrentPageAnalysisProgress",
+    "url_anchor": "/books/{bookId}?chapter={id}&analysisRun={runId}&view=progress",
+    "poll_ms_visible": 2000,
+    "poll_ms_hidden": 12000,
+    "not_used": "frontend-only ephemeral progress"
+  },
+  "budget_pause_mapping": {
+    "ui_state": "awaiting_budget_adjustment",
+    "backend_statuses": [
+      "boundary_confirmed_budget_blocked",
+      "failed + failed_stage=scene_analysis_budget",
+      "INSUFFICIENT_BUDGET_RESERVATION / CLOUD_*_LIMIT_EXCEEDED"
+    ],
+    "user_facing_status": "分析已暂停：今日云端请求额度不足",
+    "tasks_center_status": "已暂停 · 等待调整额度",
+    "not_shown_as": "普通不可恢复 failed",
+    "tech_codes_location": "诊断详情 / 查看技术详情 only"
+  },
+  "recovery_action": {
+    "primary_cta": "调整额度并继续",
+    "confirm_fields": [
+      "当前每日请求保护",
+      "完成本章建议至少",
+      "推荐调整到",
+      "预计本阶段新增费用上限",
+      "每日费用上限保持不变"
+    ],
+    "writes": ["cloud_daily_request_limit via PUT /settings/cloud-budget"],
+    "does_not_write": [
+      "cloud_daily_estimated_cost_limit",
+      "provider",
+      "model",
+      "new AnalysisRun",
+      "BoundaryRevision",
+      "Scene boundaries"
+    ],
+    "resume_api": "POST /analysis-runs/{id}/resume-scene-analysis",
+    "pre_validate": "resume-scene-analysis/preflight within_budget with explicit shortfall copy"
+  },
+  "run_reuse_invariant": {
+    "same_analysis_run": true,
+    "same_boundary_revision": true,
+    "no_new_analysis_run": true,
+    "no_boundary_model_recall": true,
+    "scene_analysis_starts_from": "0/N remaining scenes"
+  },
+  "error_copy_mapping": {
+    "INSUFFICIENT_BUDGET_RESERVATION": "本阶段需要的云端请求额度超过今日剩余额度。",
+    "CLOUD_REQUEST_LIMIT_EXCEEDED": "今日云端请求保护已达到上限。",
+    "CLOUD_TOKEN_LIMIT_EXCEEDED": "今日Token保护已达到上限。",
+    "CLOUD_COST_LIMIT_EXCEEDED": "今日费用预算已达到上限。",
+    "CLOUD_BUDGET_EXCEEDED": "当前云端预算不足以继续分析。"
+  },
+  "tests": {
+    "unit_covered": [
+      "boundary confirm → chapter progress meta (Run ID, Scene 0/N)",
+      "refresh restores same analysisRun via URL+status API",
+      "budget pause modal + persistent card",
+      "26 need / 13 remaining; token/cost not mislabeled",
+      "one-click adjust request limit + resume same run id",
+      "no new AnalysisRun / no boundary re-run in recovery path",
+      "TasksPage status 已暂停·等待调整额度 + 调整额度并继续",
+      "full-run precheck before create",
+      "tech error codes only in details"
+    ],
+    "suites_run": [
+      "budgetRecoveryMath",
+      "budgetErrorCopy",
+      "mapAnalysisUiState",
+      "BudgetPauseRecovery",
+      "ChapterAnalysisProgress*",
+      "StartAnalysisDialog",
+      "BoundaryReviewPanel",
+      "TasksPage",
+      "useCurrentPageAnalysisProgress",
+      "BookRoutePage"
+    ],
+    "gates": {
+      "core_freeze": "PASS",
+      "ui_presentation_thaw": "PASS (v2-7)",
+      "certified_baseline": "CERTIFIED_BASELINE_PASS",
+      "reader_journey_ui_final_v2_7": "PASS",
+      "check_project": "PASS"
+    },
+    "invariants": {
+      "main_db_unchanged_by_agent": true,
+      "canary_db_unchanged_by_agent": true,
+      "real_model_requests_this_phase": 0,
+      "real_tokens_this_phase": 0,
+      "real_cost_this_phase": 0
+    }
+  },
+  "affected_files": [
+    "apps/desktop/src/services/budgetErrorCopy.ts",
+    "apps/desktop/src/services/budgetRecoveryMath.ts",
+    "apps/desktop/src/services/budgetPauseDetect.ts",
+    "apps/desktop/src/components/chapterAnalysis/BudgetPauseRecovery.tsx",
+    "apps/desktop/src/components/chapterAnalysis/mapAnalysisUiState.ts",
+    "apps/desktop/src/components/chapterAnalysis/ChapterAnalysisProgressPanel.tsx",
+    "apps/desktop/src/components/chapterAnalysis/chapterAnalysis.css",
+    "apps/desktop/src/pages/BookRoutePage.tsx",
+    "apps/desktop/src/hooks/useCurrentPageAnalysisProgress.ts",
+    "apps/desktop/src/components/analysis/BoundaryReviewPanel.tsx",
+    "apps/desktop/src/components/analysis/StartAnalysisDialog.tsx",
+    "apps/desktop/src/pages/TasksPage.tsx",
+    "audits/mvp-functional-baseline-v1/ui-presentation-thaw-v2-7.json",
+    "scripts/check_core_freeze.py",
+    "scripts/check_ui_presentation_thaw.py",
+    "audits/single-chapter-pipeline/human-uat-session-v1/defects/DEFECT-UAT-005.json",
+    "audits/single-chapter-pipeline/human-uat-session-v1/defects/DEFECT-UAT-006.json"
+  ],
+  "prohibited_files": [
+    "apps/api/app/services/model_invocation_broker.py",
+    "apps/api/app/services/structured_output.py",
+    "apps/api/app/services/scene_pipeline.py",
+    "apps/api/app/services/staged_budget.py",
+    "apps/api/app/api/v1/analysis.py",
+    "apps/api/app/api/v1/boundary_reviews.py",
+    "apps/api/app/schemas/scene.py",
+    "packages/prompts/**",
+    "Reader Journey UI Final Baseline v2.7 frozen files",
+    "FROZEN_CERTIFIED_*"
+  ],
+  "rollback_plan": [
+    "Revert desktop UX files listed in affected_files",
+    "Remove ui-presentation-thaw-v2-7.json and drop DEFAULT_THAW_V2_7 from freeze checkers",
+    "Restore DEFECT-UAT-005/006 status to OPEN",
+    "No DB rollback required (this phase wrote no Run/Revision/Scene data)"
+  ],
+  "new_hashes": {
+    "apps/desktop/src/services/budgetErrorCopy.ts": "d9ea403eb56b7367e8671dedf6d0c5e42f319176b1620fb731e278e25e1b1517",
+    "apps/desktop/src/services/budgetRecoveryMath.ts": "e0530393d05af633ff5e344d2b303e1932d5ee19f84269913161686d413dd4ff",
+    "apps/desktop/src/services/budgetPauseDetect.ts": "4bfdd492af23c7c8e2bf67a2c6aa3bdeadb97824d02f76fc311506bda923dd48",
+    "apps/desktop/src/components/chapterAnalysis/BudgetPauseRecovery.tsx": "771479f35229a955d7fab2d51db9392c1bfd5631395fefe994226212076f0fe4",
+    "apps/desktop/src/components/chapterAnalysis/mapAnalysisUiState.ts": "efc58bc1678c890335c5dd0010f0690d1a9d970d1afad7ba0c1650e9a6b38ac5",
+    "apps/desktop/src/components/chapterAnalysis/ChapterAnalysisProgressPanel.tsx": "b421414c7638dceb507ce65aed314e7f359da260c2b919c17ebd58a4e728c6bc",
+    "apps/desktop/src/components/chapterAnalysis/chapterAnalysis.css": "92a07b34a4c1a07067620305da49c7dff757eb391860d88cf56810100a01821c",
+    "apps/desktop/src/pages/BookRoutePage.tsx": "1ee9b46b83f82a359ff152028672bd92ff79757ed97f4ce0b44fc7f55e81f85d",
+    "apps/desktop/src/hooks/useCurrentPageAnalysisProgress.ts": "0aa9c82f3d3517c50905bb1f134f179d6a82567cece3f77354d60b793a96a3fa",
+    "apps/desktop/src/components/analysis/BoundaryReviewPanel.tsx": "332a7013b52597d41c695ebb41e36cef3b455f3b4a05a3e91144f83718047627",
+    "apps/desktop/src/components/analysis/StartAnalysisDialog.tsx": "3f2cd11c6012b5ffcb9a9fd1b2e4edccf2c9b4341380d1de2eee8f26aaab1d14",
+    "apps/desktop/src/pages/TasksPage.tsx": "bd282a26ebb5189fa48e1d055ae3f32692c7afb18382735a1b96e97b502808e9",
+    "audits/mvp-functional-baseline-v1/ui-presentation-thaw-v2-7.json": "2e2da9954b53ff1625361679d29862e9f35cd890ccbf9d2f928d5c8b0b3442cb"
+  },
+  "constraints_honored": {
+    "no_new_analysis_run": true,
+    "no_auto_continue_run_5": true,
+    "no_real_model_calls": true,
+    "no_boundary_revision_mutation": true,
+    "no_scene_boundary_mutation": true,
+    "no_prompt_schema_validator_change": true,
+    "no_provider_routing_change": true,
+    "no_desktop_ui_operated_for_user": true,
+    "run_5_not_forced_succeeded": true
+  }
+}

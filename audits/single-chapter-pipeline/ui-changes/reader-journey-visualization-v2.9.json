@@ -1,0 +1,130 @@
+{
+  "phase": "1D-C1-UI-03",
+  "title": "Reader Journey Visualization Canonical Journey View Restoration",
+  "version": "v2.9",
+  "verdict": "READER_JOURNEY_VISUALIZATION_V2_9_READY_FOR_HUMAN_UAT",
+  "visualization_version": "2.9",
+  "parent_ui_baseline": "reader-journey-ui-final-v2.8",
+  "new_ui_baseline": "reader-journey-ui-final-v2.9",
+  "change_type": "controlled_visualization_restore_after_human_uat_failure",
+  "parent_human_uat": "READER_JOURNEY_VISUALIZATION_V2_8_HUMAN_UAT_FAILED",
+  "problem_addressed": [
+    "expand mode only grew outer container, not real plot area",
+    "plot area too short; troughs/Y axis not fully readable",
+    "chart interior vertical scroll",
+    "toolbar/summary chrome too tall",
+    "Inspector default expanded crushing curve",
+    "curve not page hero",
+    "display modes added complexity without improving full display"
+  ],
+  "architecture": {
+    "canonical_entry": "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.tsx",
+    "canonical_chart": "apps/desktop/src/components/readerJourney/CanonicalJourneyChart.tsx",
+    "global_config": "apps/desktop/src/components/readerJourney/journeyVisualizationConfig.ts",
+    "no_book_chapter_run_special_cases": true,
+    "page_order": [
+      "title+export",
+      "phase_nav",
+      "metric+primary_toolbar",
+      "full_journey_curve",
+      "one_line_summary",
+      "collapsed_inspector_summary",
+      "expanded_detail_on_demand"
+    ]
+  },
+  "plot_area": {
+    "standard_px": 340,
+    "expanded_px": 480,
+    "svg_standard_height": 408,
+    "svg_expanded_height": 548,
+    "module_height_target_px": "420-480"
+  },
+  "y_axis": {
+    "default": "fixed_0_100",
+    "ticks": [0, 25, 50, 75, 100],
+    "focus_data": "more_settings_only"
+  },
+  "toolbar": {
+    "primary": ["当前指标", "适应全部", "当前Phase", "展开详情", "导出PNG"],
+    "more_settings": ["紧凑", "标准", "展开", "聚焦数据", "放大", "缩小", "恢复默认"],
+    "zoom_hidden_when_scene_le_15": true
+  },
+  "inspector": {
+    "default": "collapsed",
+    "summary_bar": true,
+    "no_empty_height_reserve": true,
+    "drag_hint_removed": true
+  },
+  "overflow": {
+    "chart_overflow_y": "hidden",
+    "x_scroll_allowed_when_scene_gt_15": true
+  },
+  "png": {
+    "default_mode": "full_journey",
+    "filename_pattern": "StoryLens_<title>_完整旅程_v2.9.png"
+  },
+  "forbidden_changes": [
+    "Prompt",
+    "Contract",
+    "Validator",
+    "Reader Journey Profile",
+    "Phase/Question/Hook/Payoff/Risk/Evidence semantics",
+    "API return contracts",
+    "ModelInvocationBroker",
+    "Provider/Budget/Recovery",
+    "book/chapter/run special cases"
+  ],
+  "freeze": {
+    "thaw": "audits/mvp-functional-baseline-v1/ui-presentation-thaw-v2-10.json",
+    "manifest": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.9/reader-journey-ui-final-freeze-v2.9.json",
+    "rollback": "point checker to v2.8; remove thaw v2-10; restore hashed files"
+  },
+  "docs": ["docs/reader-journey-chart-interaction-v2.9.md"],
+  "tests": [
+    "apps/desktop/src/components/readerJourney/phase_1dc1_ui03_visualization_v2_9.test.tsx"
+  ],
+  "visual_regression": {
+    "dir": "audits/single-chapter-pipeline/reader-journey-visual-regression-v2.9",
+    "screenshots": [
+      "01-13-scene-standard-default.png",
+      "02-13-scene-inspector-collapsed.png",
+      "03-13-scene-inspector-expanded.png",
+      "04-13-scene-full-0-100-curve.png",
+      "05-30-scene-horizontal-browse.png",
+      "06-png-full-export-root.png"
+    ],
+    "capture": "playwright DOM screenshots (not synthetic SVG)"
+  },
+  "invariants": {
+    "agent_real_model_requests": 0,
+    "agent_tokens": 0,
+    "agent_cost": 0,
+    "main_and_canary_db_unchanged_by_agent": true
+  },
+  "gates": {
+    "reader_journey_ui_freeze_v2_9": "PASS",
+    "certified_baseline_core_freeze_with_thaw_v2_10": "PASS",
+    "check_project": "PASS",
+    "desktop_reader_journey_unit_tests": "PASS",
+    "playwright_dom_screenshots_v2_9": "PASS",
+    "dom_metrics_13": {
+      "svgHeight": "408",
+      "plotArea": "340",
+      "overflowY": "hidden",
+      "nodeCount": 13
+    }
+  },
+  "affected_files": [
+    "apps/desktop/src/components/readerJourney/CanonicalJourneyChart.tsx",
+    "apps/desktop/src/components/readerJourney/JourneyChartToolbar.tsx",
+    "apps/desktop/src/components/readerJourney/journeyVisualizationConfig.ts",
+    "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.tsx",
+    "apps/desktop/src/components/readerJourney/JourneyResizableSplit.tsx",
+    "apps/desktop/src/components/readerJourney/exportJourneyPng.ts",
+    "apps/desktop/src/components/readerJourney/readerJourney.css",
+    "scripts/check_reader_journey_ui_freeze.py",
+    "scripts/check_core_freeze.py",
+    "audits/mvp-functional-baseline-v1/ui-presentation-thaw-v2-10.json",
+    "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.9/reader-journey-ui-final-freeze-v2.9.json"
+  ]
+}

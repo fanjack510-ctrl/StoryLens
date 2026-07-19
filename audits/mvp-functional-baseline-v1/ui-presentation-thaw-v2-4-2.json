@@ -1,0 +1,45 @@
+{
+  "baseline": "mvp-functional-baseline-v1",
+  "thaw_id": "ui-presentation-thaw-v2-4-2",
+  "parent_thaw": "ui-presentation-thaw-v2-4-1.json",
+  "purpose": "compact-phase-navigation-strip",
+  "core_freeze_manifest": "audits/mvp-functional-baseline-v1/core-freeze-manifest.json",
+  "approved_behavior": [
+    "two-line compact phase navigation on desktop as four equal columns",
+    "medium width single-row horizontal scroll within phase strip only",
+    "narrow screens may use phase select that reuses existing handleSelectPhase",
+    "phase selection semantics unchanged"
+  ],
+  "forbidden": [
+    "change phase click semantics",
+    "change useJourneySelection",
+    "change journeySelectionTransaction",
+    "desktop-only phase dropdown",
+    "modify phase titles or metrics values",
+    "model calls",
+    "new AnalysisRun or ReaderJourneyRun"
+  ],
+  "allowed_files": [
+    {
+      "path": "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.tsx",
+      "before_sha256": "6b20b580f2197cf827fc77d11f2bedd79945647e145afdf03db4f0e877b2676d",
+      "reason": "Two-line phase nav markup, mobile select reusing handleSelectPhase, scroll active phase into view",
+      "allowed_change": "presentation|information-architecture"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/readerJourney.css",
+      "before_sha256": "8a39ac88bbac529c88087c85288c9352313c8b577a68a75ba5d83f8c2a46a021",
+      "reason": "Compact phase strip layout, mid-width scroll, narrow select, export four-column force",
+      "allowed_change": "presentation|css"
+    }
+  ],
+  "forbidden_behavior_changes": [
+    "journeySelectionTransaction.ts",
+    "useJourneySelection.ts",
+    "FROZEN_CORE",
+    "FROZEN_CONTRACT"
+  ],
+  "notes": [
+    "Additive to prior thaws. Does not modify old thaw files or core-freeze-manifest."
+  ]
+}

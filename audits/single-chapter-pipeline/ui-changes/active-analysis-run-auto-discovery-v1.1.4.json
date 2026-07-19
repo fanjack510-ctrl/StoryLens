@@ -1,0 +1,62 @@
+{
+  "phase": "1D-C1-UAT-08",
+  "title": "DEFECT-UAT-005 Active AnalysisRun Auto Discovery Completion",
+  "version": "v1.1.4",
+  "verdict": "DEFECT_UAT_005_REMEDIATION_COMPLETE_READY_FOR_HUMAN_CHECK",
+  "prior_correction": "ANALYSIS_PROGRESS_AND_BUDGET_RECOVERY_UX_READY → DEFECT_UAT_005_REMEDIATION_INCOMPLETE",
+  "defect_ids": ["DEFECT-UAT-005"],
+  "root_cause": "Progress/budget UX loaded only when URL already contained analysisRun; /books/1 and /books/1?chapter=2 did not query/list runs to bind the chapter's active AnalysisRun.",
+  "fix": {
+    "selector": "discoverActiveChapterRun(runs, chapterId)",
+    "priority": [
+      "processing / scene_analysis_partial / reader_journey_processing / awaiting_provider_recovery / budget pause / awaiting_boundary_review",
+      "succeeded",
+      "latest failed"
+    ],
+    "url_behavior": {
+      "explicit_analysisRun": "wins",
+      "missing_analysisRun": "replaceState chapter + analysisRun + view=progress for active runs",
+      "no_full_reload": true,
+      "no_create_run": true,
+      "no_model_calls": true
+    },
+    "chapter_id": "URL chapter= is internal Chapter.id; display title 第1章 may map to chapter_id=2",
+    "tasks_center": "Run # / 调整额度并继续 → /books/{bookId}?chapter={subject_id}&analysisRun={id}&view=progress without adjusting budget"
+  },
+  "tests": [
+    "discoverActiveChapterRun prefers Run #5 over #1–#4",
+    "/books/1 and /books/1?chapter=2 auto-bind Run #5",
+    "deep link analysisRun=5 unchanged",
+    "other chapter does not show Run #5",
+    "budget modal not reopened by polling after dismiss",
+    "TasksPage / BookRoutePage suites green"
+  ],
+  "gates": {
+    "core_freeze": "PASS",
+    "certified_baseline": "CERTIFIED_BASELINE_PASS",
+    "reader_journey_ui_final_v2_7": "PASS",
+    "check_project": "PASS"
+  },
+  "invariants": {
+    "no_real_model_calls": true,
+    "no_budget_adjust": true,
+    "no_continue_run_5": true,
+    "no_create_run_6": true,
+    "boundary_revision_1_unchanged": true,
+    "scene_data_unchanged": true,
+    "main_rc_canary_db_unchanged_by_agent": true
+  },
+  "affected_files": [
+    "apps/desktop/src/services/discoverActiveChapterRun.ts",
+    "apps/desktop/src/services/discoverActiveChapterRun.test.ts",
+    "apps/desktop/src/pages/BookRoutePage.tsx",
+    "apps/desktop/src/pages/BookRoutePage.autoDiscover.test.tsx",
+    "apps/desktop/src/pages/TasksPage.tsx",
+    "apps/desktop/src/pages/TasksPage.test.tsx"
+  ],
+  "new_hashes": {
+    "apps/desktop/src/services/discoverActiveChapterRun.ts": "683433d0062e23938c3446c9db9c3240eee301a970aa5e4c09cc19153e84ca49",
+    "apps/desktop/src/pages/BookRoutePage.tsx": "ba1d9c50fffa2c76c016d3d6d3d7a503dff5f1e80bdc40d574ecb48fe4fd2e3a",
+    "apps/desktop/src/pages/TasksPage.tsx": "6876065184accd3a7eabc753a415362494415b3f0a6d152f3b89c2b0c7cb3314"
+  }
+}

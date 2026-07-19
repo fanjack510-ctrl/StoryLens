@@ -1,0 +1,110 @@
+﻿# StoryLens V1.0 Baseline Dependency Lock Snapshot
+# Generated: 2026-07-19T21:08:29+08:00
+# Note: Snapshot of declared + lockfile presence; no dependency changes made.
+
+## Python (pyproject.toml)
+[project]
+name = "storylens"
+version = "0.1.0"
+description = "AI-assisted structured book analysis and narrative case retrieval"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.30",
+  "pydantic>=2.8",
+  "pydantic-settings>=2.4",
+  "sqlalchemy>=2.0",
+  "alembic>=1.13",
+  "python-multipart>=0.0.9",
+  "python-docx>=1.1",
+  "ebooklib>=0.18",
+  "beautifulsoup4>=4.12",
+  "httpx>=0.27",
+  "tenacity>=9.0",
+  "jsonschema>=4.23",
+  "keyring>=25.6",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3",
+  "pytest-asyncio>=0.23",
+  "ruff>=0.6",
+  "mypy>=1.11",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["apps/api/app"]
+
+[tool.pytest.ini_options]
+pythonpath = ["apps/api"]
+testpaths = ["apps/api/tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+## Desktop package.json
+
+{
+  "name": "storylens-desktop",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc -b && vite build",
+    "typecheck": "tsc -b --pretty false",
+    "lint": "eslint src --max-warnings 0",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "screenshots": "playwright test e2e/screenshots.spec.ts",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.66.0",
+    "@tauri-apps/api": "^2.2.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-router-dom": "^7.1.5",
+    "zustand": "^5.0.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.19.0",
+    "@playwright/test": "^1.50.1",
+    "@tauri-apps/cli": "^2.2.7",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.2.0",
+    "@types/node": "^22.13.1",
+    "@types/react": "^19.0.8",
+    "@types/react-dom": "^19.0.3",
+    "@vitejs/plugin-react": "^4.3.4",
+    "eslint": "^9.19.0",
+    "eslint-plugin-react-hooks": "^5.0.0",
+    "eslint-plugin-react-refresh": "^0.4.18",
+    "globals": "^15.14.0",
+    "jsdom": "^26.0.0",
+    "typescript": "~5.7.2",
+    "typescript-eslint": "^8.22.0",
+    "vite": "^6.1.0",
+    "vitest": "^3.0.5"
+  }
+}
+
+## package-lock.json present: YES (hash)
+
+
+
+Algorithm : SHA256
+Hash      : EE655580191E827D2E6A1A068302A6F98F414F6A15C81D950AEC7FE7866B1FB2
+Path      : D:\Dstorylens\apps\desktop\package-lock.json
+
+
+
+
+## Python lockfile: none (pyproject only)
+

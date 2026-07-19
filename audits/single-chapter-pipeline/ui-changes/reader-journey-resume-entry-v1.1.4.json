@@ -1,0 +1,109 @@
+{
+  "phase": "1D-C1-UAT-10",
+  "title": "DEFECT-UAT-007 Resume Reader Journey After Completed Scene Analysis",
+  "version": "v1.1.4",
+  "verdict": "DEFECT_UAT_007_REMEDIATED_READY_FOR_HUMAN_JOURNEY_GENERATION",
+  "defect_ids": ["DEFECT-UAT-007"],
+  "root_cause": {
+    "pipeline": "Formal scene_pipeline marks AnalysisRun.status=succeeded after Scene Analysis only; Reader Journey is a separate follow-on via POST /analysis-runs/{id}/reader-journey (requires succeeded).",
+    "ux": "Chapter shell treated scene-succeeded as full completion; ResultViewSwitcher and generate path were gated/hidden when ReaderJourneyRun was absent, so humans saw Scene results with a dead「分析结果」label and no journey start entry.",
+    "not_canary_only": "Production create/preflight/progress/resume APIs already exist; remediation reuses them from the chapter shell."
+  },
+  "correct_state_machine_ui": {
+    "backend_invariant_preserved": "AnalysisRun.status===succeeded still means scene_pipeline complete (certified). No FROZEN_CERTIFIED / FROZEN_CONTRACT changes.",
+    "shell_composition": {
+      "awaiting_reader_journey_start": "scene succeeded + no succeeded journey visualization",
+      "reader_journey_processing": "ReaderJourneyRun active",
+      "succeeded": "scene succeeded + journey succeeded + visualization present"
+    },
+    "full_success_requires": [
+      "Scene Analysis all succeeded",
+      "ReaderJourneyRun exists",
+      "ReaderJourneyRun.status=succeeded",
+      "Chapter Journey / Phase / Scene Profiles present via journey result"
+    ]
+  },
+  "resume_api": {
+    "create": "POST /api/v1/analysis-runs/{id}/reader-journey",
+    "preflight": "POST /api/v1/analysis-runs/{id}/reader-journey/preflight",
+    "progress": "GET /api/v1/reader-journey-runs/{id}/progress",
+    "resume": "POST /api/v1/reader-journey-runs/{id}/resume",
+    "reuses": ["Scene Artifacts", "BoundaryRevision", "AnalysisRun #N"],
+    "does_not": ["re-run boundary", "re-run scene analysis", "create new AnalysisRun"],
+    "idempotency": "sessionStorage client_request_id per analysis_run_id",
+    "provider": "Inherited from AnalysisRun via production API (UAT Run #5: aliyun_qwen_plus / qwen3.7-plus; auto_route=false on run). Not hard-coded in desktop business code.",
+    "budget": "Preflight + within_budget gate before create; no ReaderJourneyRun on reservation failure"
+  },
+  "ui": {
+    "top_switcher": ["Scene分析", "阅读旅程"],
+    "resume_card": {
+      "title": "Scene分析已完成",
+      "body": "阅读旅程尚未生成…不会重新执行场景边界和Scene分析",
+      "primary": "继续生成阅读旅程",
+      "secondary": "查看Scene分析",
+      "tech": "查看任务详情"
+    },
+    "forbidden_copy": ["分析全部完成"],
+    "journey_tab_without_data": "opens resume card (not silent)",
+    "processing": "ReaderJourneyProgressCard + poll; Tasks page via run_id link",
+    "on_success": "auto-open tab=reader-journey when transitioning from reader_journey_processing"
+  },
+  "tests": [
+    "chapterJourneyComposition awaiting / processing / full success",
+    "ReaderJourneyResumeCard preflight + budget block + idempotent client_request_id + resume path",
+    "BookRoutePage switcher + resume card + progress card + banner copy",
+    "ChapterAnalysisProgressPanel awaiting-journey CTA",
+    "mapAnalysisUiState labels"
+  ],
+  "gates": {
+    "core_freeze": "PASS",
+    "ui_presentation_thaw": "PASS",
+    "reader_journey_ui_final_v2_7": "PASS",
+    "certified_baseline": "CERTIFIED_BASELINE_PASS",
+    "check_project": "PASS"
+  },
+  "invariants": {
+    "no_real_model_calls_by_agent": true,
+    "no_continue_run_5_by_agent": true,
+    "no_create_run_6": true,
+    "no_boundary_or_scene_rerun": true,
+    "no_scene_artifact_mutation": true,
+    "no_desktop_ui_clicks_by_agent": true,
+    "main_rc_canary_db_unchanged_by_agent": true,
+    "agent_phase_model_request_token_cost": 0
+  },
+  "tasks_center": {
+    "succeeded_without_journey": "Scene分析已完成 + 继续生成阅读旅程 → chapter result tab=reader-journey",
+    "succeeded_with_journey": "查看阅读旅程",
+    "processing": "查看阅读旅程进度",
+    "no_full_complete_claim": true
+  },
+  "affected_files": [
+    "apps/desktop/src/pages/BookRoutePage.tsx",
+    "apps/desktop/src/pages/TasksPage.tsx",
+    "apps/desktop/src/services/chapterJourneyComposition.ts",
+    "apps/desktop/src/services/chapterJourneyComposition.test.ts",
+    "apps/desktop/src/services/discoverActiveChapterRun.ts",
+    "apps/desktop/src/components/chapterAnalysis/ReaderJourneyResumeCard.tsx",
+    "apps/desktop/src/components/chapterAnalysis/ReaderJourneyResumeCard.test.tsx",
+    "apps/desktop/src/components/chapterAnalysis/ReaderJourneyProgressCard.tsx",
+    "apps/desktop/src/components/chapterAnalysis/ChapterAnalysisProgressPanel.tsx",
+    "apps/desktop/src/components/chapterAnalysis/mapAnalysisUiState.ts",
+    "apps/desktop/src/components/layout/ResultViewSwitcher.tsx",
+    "apps/desktop/src/components/chapterAnalysis/chapterAnalysis.css",
+    "apps/desktop/src/pages/BookRoutePage.readerJourneyResume.test.tsx",
+    "apps/desktop/src/pages/TasksPage.test.tsx"
+  ],
+  "new_hashes": {
+    "apps/desktop/src/pages/BookRoutePage.tsx": "c4f660811a76be48ef8c5e88afb4cf169459b7238a7da92706c4569637dc3a5c",
+    "apps/desktop/src/pages/TasksPage.tsx": "daf65f38bb0e1f6a1ea51be1f88db1e65dafb540c79b6810626421409077ce8c",
+    "apps/desktop/src/services/discoverActiveChapterRun.ts": "2553406783835fa94bcb698128a49d5d6fe2e11b166c60333039c503e6adc7e0",
+    "apps/desktop/src/services/chapterJourneyComposition.ts": "31acbdea2d2cbe33750fc0dca93d273a4ed90e62d99bca7f803a6c07523b66ba",
+    "apps/desktop/src/components/chapterAnalysis/ReaderJourneyResumeCard.tsx": "9ffeb53c4a7afcbc209d58d17c6961f1c4430a4b52cb8a4af4741368abc394d7",
+    "apps/desktop/src/components/chapterAnalysis/ReaderJourneyProgressCard.tsx": "3f9f055d8add9c3dc5dac9de057b03cc2c8bb06ebdf50c3473096fd085c43e6b",
+    "apps/desktop/src/components/chapterAnalysis/mapAnalysisUiState.ts": "300b3974baf37b4775268e57ab378500f687165cf3da75a2300a6222dbcffb29",
+    "apps/desktop/src/components/layout/ResultViewSwitcher.tsx": "7c6c117a5bd66efb579cdce9342543579510d1cfb41f1b46706d5dd6fef65ed2",
+    "apps/desktop/src/components/chapterAnalysis/ChapterAnalysisProgressPanel.tsx": "6bb5f3fe5f7b71019a69a4bdcf5b3ab986a350da52d51b41ddd2137073626366"
+  },
+  "human_next_step": "Open /books/1?chapter=2&analysisRun=5&view=result → 阅读旅程 → review preflight → 继续生成阅读旅程 (user-initiated only). Restart desktop if UI was already open before this build."
+}

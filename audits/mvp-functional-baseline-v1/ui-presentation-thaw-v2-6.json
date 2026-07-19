@@ -1,0 +1,35 @@
+{
+  "baseline": "mvp-functional-baseline-v1",
+  "thaw_id": "ui-presentation-thaw-v2-6",
+  "parent_thaw": "ui-presentation-thaw-v2-5.json",
+  "purpose": "phase-1dc-task-status-user-facing-labels",
+  "core_freeze_manifest": "audits/mvp-functional-baseline-v1/core-freeze-manifest.json",
+  "approved_behavior": [
+    "TasksPage status badges use Chinese business labels for awaiting_provider_recovery and budget/limit pauses",
+    "Internal error_code / root_error_code remain in task Details / developer panels only",
+    "Does not modify Reader Journey UI Final Baseline v2.7 composition or interaction files"
+  ],
+  "forbidden": [
+    "unfreeze reader-journey-ui-final-v2.7",
+    "change journeySelectionTransaction",
+    "change useJourneySelection",
+    "model calls",
+    "modify FROZEN_CORE or FROZEN_CONTRACT"
+  ],
+  "allowed_files": [
+    {
+      "path": "apps/desktop/src/pages/TasksPage.tsx",
+      "before_sha256": "47bd207b82330fce82482e7b756e3017d9606104ab1f414ed20eeafbeacd1f02",
+      "reason": "User-facing AnalysisRun status labels for provider recovery and limit abort; keep error codes in Details",
+      "allowed_change": "presentation|labels"
+    }
+  ],
+  "forbidden_behavior_changes": [
+    "reader-journey-ui-final-v2.7 frozen files",
+    "FROZEN_CORE",
+    "FROZEN_CONTRACT"
+  ],
+  "notes": [
+    "Phase 1D-C CHANGEABLE_UI_SHELL only. Additive thaw; does not edit older thaw files or core-freeze-manifest hashes."
+  ]
+}

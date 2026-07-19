@@ -1,0 +1,141 @@
+{
+  "phase": "1D-C1-UI-01",
+  "title": "Settings and AI Service UX Simplification",
+  "verdict": "SETTINGS_AI_SERVICE_UX_READY",
+  "preserved_rc_verdict": "PHASE_1D_C_RELEASE_CANDIDATE_READY",
+  "constraints": {
+    "no_real_model_calls": true,
+    "no_analysis_run_created": true,
+    "no_human_uat": true,
+    "no_certified_pipeline_core_change": true,
+    "reader_journey_ui_final_v2_7_unfrozen": false,
+    "change_scope": "CHANGEABLE_UI_SHELL"
+  },
+  "navigation": {
+    "primary": ["我的书库", "设置"],
+    "removed_from_primary": ["系统状态", "模型与API"],
+    "developer_mode": {
+      "label": "开发者模式",
+      "default": false,
+      "storage_key": "storylens.developerMode",
+      "when_on_shows": ["分析工作台", "任务中心", "案例库", "模型与API", "设置·高级设置"]
+    }
+  },
+  "settings_tabs": {
+    "normal": ["通用", "AI服务", "预算与隐私"],
+    "developer_only": ["高级设置"]
+  },
+  "default_ai_service": {
+    "display_name": "阿里云百炼",
+    "provider_id": "aliyun_qwen_plus",
+    "model": "qwen3.7-plus",
+    "provider_id_shown_in_primary_ui": false
+  },
+  "user_status_mapping": {
+    "provider_not_configured": "尚未配置AI服务",
+    "credential_missing": "尚未填写API Key",
+    "provider_disabled": "云端AI尚未开启",
+    "provider_disconnected": "尚未连接AI服务",
+    "dns_failed": "无法连接云端服务，请检查网络或代理设置",
+    "auth_failed": "API Key无效或没有模型访问权限",
+    "healthy": "已连接，可以开始分析",
+    "awaiting_provider_recovery": "云端服务暂时波动，系统正在自动恢复"
+  },
+  "hidden_primary_codes": [
+    "unhealthy",
+    "configured_readiness",
+    "provider_disabled",
+    "provider_not_configured",
+    "provider_disconnected"
+  ],
+  "cloud_switch_consolidation": {
+    "user_facing_label": "启用云端AI",
+    "backend_api": "PUT /api/v1/settings/cloud",
+    "removed_duplicate_labels": ["允许云端模型连接", "云端总开关"]
+  },
+  "connection_test_policy": {
+    "normal_wizard_uses": "transport_diagnostic",
+    "real_model_test": "developer_advanced_only",
+    "token_cost_this_phase": 0
+  },
+  "files_changed": [
+    "apps/desktop/src/stores/developerModeStore.ts",
+    "apps/desktop/src/services/aiServiceViewModel.ts",
+    "apps/desktop/src/services/aiServiceViewModel.test.ts",
+    "apps/desktop/src/pages/SettingsPage.tsx",
+    "apps/desktop/src/components/settings/SettingsGeneralTab.tsx",
+    "apps/desktop/src/components/settings/SettingsAiServiceTab.tsx",
+    "apps/desktop/src/components/settings/SettingsBudgetPrivacyTab.tsx",
+    "apps/desktop/src/components/settings/SettingsAdvancedTab.tsx",
+    "apps/desktop/src/components/layout/DevelopmentNavigationGroup.tsx",
+    "apps/desktop/src/components/layout/AppShell.test.tsx",
+    "apps/desktop/src/components/analysis/StartAnalysisDialog.tsx",
+    "apps/desktop/src/components/analysis/StartAnalysisDialog.test.tsx",
+    "apps/desktop/src/pages/CloudBudgetPages.test.tsx",
+    "apps/desktop/src/styles/global.css",
+    "apps/desktop/e2e/settings_ai_service_ux_screenshots.spec.ts",
+    "docs/settings-ai-service-user-flow-v1.md"
+  ],
+  "files_not_modified": [
+    "apps/api/app/services/model_invocation_broker.py",
+    "Provider routing / Provider ID / model versions",
+    "Prompt / Schema / Validator / Retry / Recovery",
+    "Budget settlement semantics",
+    "Reader Journey UI Final Baseline v2.7 frozen files"
+  ],
+  "tests": {
+    "unit": {
+      "aiServiceViewModel": "PASS",
+      "AppShell": "PASS",
+      "CloudBudgetPages_and_Settings": "PASS",
+      "StartAnalysisDialog": "PASS",
+      "desktop_suite": "292_passed",
+      "desktop_suite_note": "vitest exit 1 due to unrelated post-teardown ReaderJourney export async; all tests passed",
+      "covered": [
+        "normal_mode_hides_provider_engineering_fields",
+        "developer_mode_shows_advanced_fields",
+        "system_status_not_in_primary_nav",
+        "single_cloud_ai_switch",
+        "create_task_disabled_when_disconnected",
+        "create_task_enabled_when_connected",
+        "normal_dialog_no_provider_select",
+        "developer_provider_diagnostics",
+        "user_status_mapping",
+        "diagnostics_retain_raw_codes",
+        "advanced_budget_defaults_unchanged"
+      ]
+    },
+    "e2e": {
+      "smoke": "PASS",
+      "phase_1cc23a_ui_shell": "PASS",
+      "settings_ai_service_ux_screenshots": "PASS"
+    },
+    "freeze_checks": {
+      "reader_journey_ui_freeze": "PASS",
+      "certified_baseline": "CERTIFIED_BASELINE_PASS",
+      "model_invocation_policy": "INVOCATION_POLICY_PASS",
+      "zero_real_model_requests": true
+    }
+  },
+  "screenshots": [
+    "audits/single-chapter-pipeline/ui-changes/screenshots/01-settings-general.png",
+    "audits/single-chapter-pipeline/ui-changes/screenshots/02-settings-ai-disconnected.png",
+    "audits/single-chapter-pipeline/ui-changes/screenshots/03-settings-ai-connected.png",
+    "audits/single-chapter-pipeline/ui-changes/screenshots/04-settings-budget-privacy.png",
+    "audits/single-chapter-pipeline/ui-changes/screenshots/05-settings-advanced-developer.png",
+    "audits/single-chapter-pipeline/ui-changes/screenshots/06-start-analysis-connected.png",
+    "audits/single-chapter-pipeline/ui-changes/screenshots/07-start-analysis-disconnected.png"
+  ],
+  "docs": [
+    "docs/settings-ai-service-user-flow-v1.md"
+  ],
+  "main_db_invariance": {
+    "analysis_runs": 55,
+    "reader_journey_runs": 2,
+    "unchanged": true
+  },
+  "real_model_requests": 0,
+  "real_model_tokens": 0,
+  "real_model_cost": 0,
+  "generated_at": "2026-07-19T04:25:00+00:00"
+}

@@ -1,0 +1,110 @@
+{
+  "template_id": "reader-journey-single-chapter",
+  "template_version": "2.7",
+  "ui_final_baseline": "reader-journey-ui-final-v2.7",
+  "canonical_entry": "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.tsx",
+  "composition_shell": "apps/desktop/src/components/readerJourney/ReaderJourneySyncWorkspace.tsx",
+  "freeze_manifest": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json",
+  "dependency_map": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-dependency-map-v2.7.json",
+  "route_baseline": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-route-baseline-v2.7.json",
+  "route_adapters": [
+    {
+      "id": "books-embedded",
+      "route": "/books/{bookId}?chapter={chapterId}&analysisRun={runId}&view=result&resultTab=reader-journey",
+      "chain": [
+        "apps/desktop/src/pages/BookRoutePage.tsx",
+        "apps/desktop/src/components/chapterResult/EmbeddedAnalysisResultShell.tsx",
+        "apps/desktop/src/components/chapterResult/AnalysisResultRouteAdapter.tsx",
+        "apps/desktop/src/pages/AnalysisResultsPage.tsx",
+        "apps/desktop/src/components/readerJourney/ReaderJourneySyncWorkspace.tsx",
+        "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.tsx"
+      ],
+      "role": "adapter-only"
+    },
+    {
+      "id": "standalone-results",
+      "route": "/analysis-runs/{runId}/results?tab=reader-journey",
+      "chain": [
+        "apps/desktop/src/pages/AnalysisResultsShellPage.tsx",
+        "apps/desktop/src/pages/AnalysisResultsPage.tsx",
+        "apps/desktop/src/components/readerJourney/ReaderJourneySyncWorkspace.tsx",
+        "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.tsx"
+      ],
+      "role": "adapter-only"
+    }
+  ],
+  "production_template_entry_count": 1,
+  "required_regions": [
+    "journey-analysis-title",
+    "journey-diagnosis-summary",
+    "journey-summary-cards",
+    "journey-phase-strip-wrap",
+    "journey-phase-strip",
+    "journey-phase-mobile-select",
+    "journey-metric-switcher",
+    "journey-curve-legend",
+    "journey-curve-svg",
+    "journey-rhythm-strip",
+    "journey-detail-pane",
+    "journey-export-root"
+  ],
+  "required_inspectors": [
+    "scene",
+    "phase",
+    "question",
+    "hook",
+    "payoff",
+    "risk"
+  ],
+  "required_url_semantics": [
+    "tab=reader-journey or resultTab=reader-journey",
+    "mode=sync|journey|reading",
+    "scene=<ordinal>",
+    "inspector=scene|phase|question|hook|payoff|risk",
+    "overview=curve (legacy questions|diagnosis normalize to curve)",
+    "metric=<curve metric>"
+  ],
+  "required_interactions": [
+    "phase-nav-select",
+    "metric-select",
+    "curve-node-select",
+    "rhythm-dot-select",
+    "inspector-empty-state",
+    "evidence-locate",
+    "png-export"
+  ],
+  "required_responsive_rules": [
+    "phase-desktop-four-column",
+    "phase-mid-horizontal-scroll",
+    "phase-narrow-select",
+    "curve-min-height-300",
+    "inspector-single-scroll-container"
+  ],
+  "required_export_rules": [
+    "export-root=data-reader-journey-export-root",
+    "png-overview-only",
+    "export-title=旅程分析"
+  ],
+  "forbidden_special_cases": [
+    "book-specific-layout",
+    "chapter-specific-layout",
+    "run-specific-layout",
+    "duplicated-template",
+    "hardcoded-scene-count",
+    "hardcoded-phase-count"
+  ],
+  "legacy_non_entry_files": [
+    {
+      "path": "apps/desktop/src/components/readerJourney/JourneyOverviewModes.tsx",
+      "note": "Unused legacy overview modes; not imported by production route chain; not a second template entry."
+    }
+  ],
+  "data_independence": {
+    "chapter_data_contains_page_template": false,
+    "ui_template_change_requires_model_rerun": false,
+    "ui_template_change_requires_analysis_run": false,
+    "ui_template_change_requires_journey_run": false,
+    "propagation": "Controlled Change Package upgrades canonical entry; all chapters reuse the same component."
+  },
+  "notes": "Read-only description of existing production facts for Phase 1D-A. Does not alter frozen v2.7 production files."
+}

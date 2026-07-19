@@ -1,0 +1,38 @@
+{
+  "operator_approved": true,
+  "operator_max_cost_cny": 20.0,
+  "operator_approval_note": "批准执行 DEFECT-CANARY-015 修复后的真实模型调用路径资格验证。本授权仅绑定 audits/single-chapter-pipeline/real-invocation-path-qualification-preflight-v1.json、global-model-invocation-policy-change-v1.1.0.json、model-invocation-graph-v1.json、check_model_invocation_policy.py 当前通过状态，以及 preflight 中冻结的独立资格验证数据库、代码哈希、Prompt、契约和测试夹具。\n\n本授权仅允许执行 Invocation Path Qualification，不允许启动 real-canary-preflight-v12.json，不允许执行3本书、6章、8次完整Canary。\n\nProvider必须为aliyun_qwen_plus，Model必须为qwen3.7-plus，auto_route=false。所有正常生成、schema repair、structural repair、targeted evidence patch、provider retry、repair provider retry、provider recovery及chapter repair调用都必须经过ModelInvocationBroker。\n\n资格验证必须实际覆盖preflight声明的全部调用路径。仅有静态注册、模拟结果或配置检查，不得算作真实路径覆盖。每个被要求覆盖的调用类型必须具有独立Invocation审计记录，并记录requested_provider、requested_model、resolved_provider、resolved_model、route_source、fallback_used、auto_route、provider_enabled、policy_match和request_hash。\n\n允许使用preflight中预先冻结的确定性资格验证夹具或故障注入，以触发schema repair、structural repair、provider retry、repair retry和recovery。不得在资格验证执行过程中临时修改生产代码、路由配置、Prompt、Validator、故障注入规则或审计门禁。任何未在preflight中声明的运行时补丁均使本次资格验证无效。\n\n总认证费用上限为20元人民币。达到模型请求数、重试数、输入Token、输出Token、certification_accounted_cost或总时长任一硬上限时必须停止。缺失Provider usage时继续使用canary-conservative-usage-accounting-change-v1.0.8的保守估算规则。\n\n当auto_route=false时，任何调用若resolved_provider不等于aliyun_qwen_plus、resolved_model不等于qwen3.7-plus、fallback_used=true、调用类型未注册或绕过ModelInvocationBroker，必须在请求发送前失败并将资格验证判定为失败。\n\n不得启用aliyun_qwen_flash，不得将Flash作为隐藏Fallback，不得复用authorization-v1至authorization-v11，不得resume phase-1db2-r10-20260719T000923Z或其他历史批次，不得写入主数据库，不得修改AnalysisRun #55或ReaderJourneyRun #2。",
+  "approved_at_utc": "2026-07-19T01:15:00+00:00",
+  "scope": "invocation_path_qualification",
+  "allows_full_canary": false,
+  "batch_generation": "qualification-v1",
+  "preflight_ref": "audits/single-chapter-pipeline/real-invocation-path-qualification-preflight-v1.json",
+  "change_package_ref": "audits/single-chapter-pipeline/changes/global-model-invocation-policy-change-v1.1.0.json",
+  "invocation_graph_ref": "audits/single-chapter-pipeline/model-invocation-graph-v1.json",
+  "offline_gate_ref": "scripts/check_model_invocation_policy.py",
+  "accounting_change_package_ref": "audits/single-chapter-pipeline/changes/canary-conservative-usage-accounting-change-v1.0.8.json",
+  "qualification_database": "artifacts/single-chapter-pipeline-certification/real-canary/qualification-v1.sqlite3",
+  "provider": "aliyun_qwen_plus",
+  "model": "qwen3.7-plus",
+  "allow_auto_route": false,
+  "prior_batches_resume_forbidden": [
+    "phase-1db2-r10-20260719T000923Z"
+  ],
+  "forbidden_authorizations_reuse": [
+    "authorization-v1",
+    "authorization-v2",
+    "authorization-v3",
+    "authorization-v4",
+    "authorization-v5",
+    "authorization-v6",
+    "authorization-v7",
+    "authorization-v8",
+    "authorization-v9",
+    "authorization-v10",
+    "authorization-v11"
+  ],
+  "accounting_abort_on": ["accounting_unknown", "max_cost"],
+  "preflight_worst_cost_cny": 8.0,
+  "preflight_nominal_cost_cny": 1.5,
+  "max_cost_covers_worst_case": true
+}

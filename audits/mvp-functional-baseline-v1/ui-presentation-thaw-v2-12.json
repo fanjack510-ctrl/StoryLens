@@ -1,0 +1,85 @@
+{
+  "baseline": "mvp-functional-baseline-v1",
+  "thaw_id": "ui-presentation-thaw-v2-12",
+  "parent_thaw": "ui-presentation-thaw-v2-11.json",
+  "purpose": "phase-1d-c1-ui-05-reader-journey-workspace-layout-v4.0",
+  "core_freeze_manifest": "audits/mvp-functional-baseline-v1/core-freeze-manifest.json",
+  "reader_journey_ui_freeze": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v4.0/reader-journey-ui-final-freeze-v4.0.json",
+  "approved_behavior": [
+    "CSS Grid Source|Main|Inspector replaces vertical Inspector split and vertical tool rail",
+    "Inspector docks as right column (>=1440), bottom dock (1100-1439), or tab (<1100); never absolute/fixed over plot",
+    "Horizontal JourneyChartToolbar with full Chinese labels; secondary actions in Portal 更多设置",
+    "Preserve v3.0 plot floors: svg=420 plot>=340 shell>=440 Y 0-100",
+    "Unified scroll ownership: workspace overflow hidden; Source/Main/Inspector independent; Chart no vertical scroll",
+    "Does not modify Prompt/Contract/Validator/Broker/Budget/Recovery"
+  ],
+  "forbidden": [
+    "book_id/chapter_id/run_id/scene_count special cases",
+    "modify FROZEN_CORE or FROZEN_CONTRACT",
+    "modify FROZEN_CERTIFIED_*",
+    "agent-initiated real model calls",
+    "mutate Scene/Boundary/ReaderJourney business data",
+    "single-char tool rail labels 指/全/P/详/出"
+  ],
+  "allowed_files": [
+    {
+      "path": "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.tsx",
+      "before_sha256": "719e270c07fa03b2b008fb6fb1c75dda6ce74576654614634814f1d659013855",
+      "reason": "Three-column workspace grid; docked Inspector; horizontal toolbar",
+      "allowed_change": "presentation|workspace-layout-v4.0"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/ReaderJourneySyncWorkspace.tsx",
+      "before_sha256": "b1894afd8b41ce3fc42b9a5076f875dd01cc93f46b961d4b04ac95b46a8b3d1e",
+      "reason": "Pass SourcePane into Workspace grid; remove nested SplitPane for sync mode",
+      "allowed_change": "presentation|workspace-layout-v4.0"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/JourneyChartToolbar.tsx",
+      "before_sha256": "d720390155646e75a18c55940fdea9e894fe10726df773c238530f715d09410a",
+      "reason": "Professional horizontal chart toolbar with full Chinese labels",
+      "allowed_change": "presentation|workspace-layout-v4.0"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/JourneyChartToolRail.tsx",
+      "before_sha256": "24844672a4073f8e3cf214224a7110c7d79c0e7bbf8e037f0d098c0b5ba89550",
+      "reason": "Deprecate vertical rail; re-export toolbar",
+      "allowed_change": "presentation|workspace-layout-v4.0"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/JourneyAnchoredMenu.tsx",
+      "before_sha256": null,
+      "reason": "New Portal anchored menu with viewport clamping",
+      "allowed_change": "presentation|workspace-layout-v4.0"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/readerJourney.css",
+      "before_sha256": "128ebda23424aa96065d198cc0af499bc7bf111a52a094e0576fd58729578432",
+      "reason": "v4.0 grid tokens, toolbar, dock, scroll ownership",
+      "allowed_change": "presentation|workspace-layout-v4.0"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/journeyVisualizationConfig.ts",
+      "before_sha256": "20507f5b672c80be30227f8bd1f03b51acb7f170458b670dba020458e5eac74b",
+      "reason": "Layout breakpoints and tokens; version 4.0",
+      "allowed_change": "presentation|workspace-layout-v4.0"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/exportJourneyPng.ts",
+      "before_sha256": "e6833c16a7f58a109525e7b01d97e40c4c6d12ea54f4aab052fa249993b344d5",
+      "reason": "PNG filename version v4.0",
+      "allowed_change": "presentation|export-v4.0"
+    }
+  ],
+  "forbidden_behavior_changes": [
+    "FROZEN_CORE",
+    "FROZEN_CONTRACT",
+    "FROZEN_CERTIFIED_*",
+    "Prompt/Schema/Validator/Provider routing",
+    "Reader Journey Profile / Phase / Question / Hook / Payoff / Risk / Evidence semantics"
+  ],
+  "notes": [
+    "v4.0 addresses READER_JOURNEY_VISUALIZATION_V3_0_HUMAN_UAT_FAILED via whole-workspace layout refactor.",
+    "Rollback: point freeze checker to v3.0; remove thaw v2-12 from DEFAULT_THAWS; restore hashed files."
+  ]
+}

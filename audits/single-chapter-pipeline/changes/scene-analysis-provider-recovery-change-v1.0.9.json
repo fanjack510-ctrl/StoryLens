@@ -1,0 +1,88 @@
+{
+  "change_id": "scene-analysis-provider-recovery-change-v1.0.9",
+  "phase": "1D-B2-R10",
+  "defect_id": "DEFECT-CANARY-014",
+  "title": "Scene Analysis provider recovery: scene checkpoints, awaiting_provider_recovery, circuit breaker",
+  "old_batch_id": "phase-1db2-r9-20260718T165459Z",
+  "old_batch_verdict_preserved": "REAL_CANARY_FAILED",
+  "superseded_by_future_batch": true,
+  "root_cause": {
+    "primary": "SCENE_ANALYSIS_TRANSPORT_EXHAUSTION_FAILS_ENTIRE_RUN",
+    "secondary": [
+      "NO_AWAITING_PROVIDER_RECOVERY_PAUSE",
+      "NO_CIRCUIT_BREAKER_COOLDOWN_BETWEEN_SCENE_TRANSPORT_CYCLES",
+      "CANARY_TREATS_PARTIAL_AS_TERMINAL_WITHOUT_AUTO_RECOVERY",
+      "COMPLETED_SCENES_SAFE_BUT_NO_AUTOMATIC_PENDING_ONLY_RESUME_AFTER_DISCONNECT"
+    ]
+  },
+  "allowed_files": [
+    "apps/api/app/services/scene_analysis_provider_recovery.py",
+    "apps/api/app/services/boundary_review_service.py",
+    "apps/api/app/core/config.py",
+    "apps/api/app/api/v1/analysis.py",
+    "apps/api/tests/test_defect_canary_014_scene_analysis_provider_recovery.py",
+    "scripts/certification/real_canary_runner.py",
+    "audits/single-chapter-pipeline/changes/scene-analysis-provider-recovery-change-v1.0.9.json",
+    "audits/single-chapter-pipeline/real-canary-preflight-v11.json",
+    "audits/single-chapter-pipeline/real-canary-v10/defect-014-remediation-verdict-v1.json",
+    "audits/single-chapter-pipeline/real-canary-v10/defects/DEFECT-CANARY-014.json",
+    "audits/single-chapter-pipeline/real-canary-v10/final-verdict-v1.json",
+    "audits/single-chapter-pipeline/real-canary-v10/batches/phase-1db2-r9-20260718T165459Z/final-verdict-v1.json",
+    "audits/single-chapter-pipeline/real-canary-v10/batches/phase-1db2-r9-20260718T165459Z/defects/DEFECT-CANARY-014.json",
+    "docs/50_single_chapter_real_api_canary.md"
+  ],
+  "prohibited_files": [
+    "packages/prompts/**",
+    "apps/api/app/services/reader_journey_validation.py",
+    "apps/desktop/**",
+    "data/storylens.db",
+    "artifacts/single-chapter-pipeline-certification/real-canary/canary-v10.sqlite3",
+    "audits/single-chapter-pipeline/real-canary-v10/authorization-v10.json"
+  ],
+  "old_behavior": {
+    "on_scene_transport_exhaustion": "persist scene_analysis_partial/failed and abort AnalysisRun; canary marks FAIL",
+    "completed_scenes": "artifacts retained but no automatic cooldown+retry of pending only",
+    "status": "no awaiting_provider_recovery; no circuit breaker audits"
+  },
+  "new_behavior": {
+    "status": "awaiting_provider_recovery on recoverable provider transport exhaustion",
+    "circuit_breaker": "open + cooldown (scene_analysis_recovery_cooldown_seconds) then half-open retry",
+    "reuse": "valid scene_analysis artifacts permanently reused; only pending scenes retried",
+    "request_hash": "unchanged within same Scene transport provider_retry envelope",
+    "audits": "each recovery cycle appends independent provider_recovery_cycle record",
+    "limits": {
+      "max_recovery_cycles": "STORYLENS_SCENE_ANALYSIS_RECOVERY_MAX_CYCLES (default 3)",
+      "max_recovery_duration": "STORYLENS_SCENE_ANALYSIS_RECOVERY_MAX_DURATION_SECONDS (default 1800)",
+      "max_cost": "STORYLENS_SCENE_ANALYSIS_RECOVERY_MAX_COST (optional null)"
+    },
+    "exhaustion": "retain PROVIDER_REMOTE_DISCONNECT; scene_analysis_partial/failed; provider_recovery_exhausted=true",
+    "non_recoverable": "401/403, validation, business/contract errors never enter provider recovery",
+    "reservation": "single Stage-2 reservation held across recovery loop; released once in finally",
+    "canary_wait": "awaiting_provider_recovery is non-terminal; keep polling until succeeded or terminal partial/failed"
+  },
+  "invariants": [
+    "no duplicate AnalysisRun / Scene / Profile from recovery",
+    "no duplicate Scene Analysis artifacts for completed scenes",
+    "no duplicate active Reservation during recovery loop",
+    "real_model_requests_this_phase=0",
+    "main DB remains 55/2",
+    "do not resume phase-1db2-r9-20260718T165459Z"
+  ],
+  "regression_tests": [
+    "apps/api/tests/test_defect_canary_014_scene_analysis_provider_recovery.py",
+    "apps/api/tests/test_defect_canary_009_transport_resilience.py",
+    "apps/api/tests/test_phase_1c_a10.py"
+  ],
+  "rollback_plan": "Remove recovery loop from analyze_confirmed_review; delete scene_analysis_provider_recovery.py; restore wait_run_status treating only prior terminals; revert config recovery settings.",
+  "new_hashes": {
+    "apps/api/app/services/scene_analysis_provider_recovery.py": "5bd87d86cf380a4aef21d820e5f8f9fb1245074559bfe27a67b52f1c5889cb84",
+    "apps/api/app/services/boundary_review_service.py": "9f4243c6a03fb093e1fcace3263730198727198113939681bb2be69d124dfcbf",
+    "apps/api/app/core/config.py": "a64c009f4a676b8be9404320216752bcd2a5a689f7b95760591dfac49ca6d7ad",
+    "apps/api/app/api/v1/analysis.py": "74b80a5e17676809d665a7a80493d371ad9edebfd147efa70457effc9e699617",
+    "apps/api/tests/test_defect_canary_014_scene_analysis_provider_recovery.py": "9bb5179d4536f1b08976ff8dfa7144e2d3fc0f935ddd4f7de65f3c240da36405",
+    "scripts/certification/real_canary_runner.py": "9655e77594410ccc3c3b81ea91ea393b813e625563df39835ffa5704941b15e3",
+    "docs/50_single_chapter_real_api_canary.md": "49f4c49b138e27d5671a42401778a46800487af269d5b9bcdda83ae0367979ce"
+  },
+  "real_model_requests_this_phase": 0,
+  "ui_baseline_unfrozen": false
+}

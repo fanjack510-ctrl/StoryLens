@@ -1,0 +1,147 @@
+{
+  "phase": "1D-C1-UI-02",
+  "title": "Reader Journey Visualization Global Optimization",
+  "version": "v2.8",
+  "verdict": "READER_JOURNEY_VISUALIZATION_V2_8_READY",
+  "visualization_version": "2.8",
+  "parent_ui_baseline": "reader-journey-ui-final-v2.7",
+  "new_ui_baseline": "reader-journey-ui-final-v2.8",
+  "change_type": "controlled_visualization_thaw",
+  "problem": [
+    "curve trough clipped by Y axis / overflow",
+    "chart height too small",
+    "Inspector crushing chart",
+    "no user chart height control",
+    "missing zoom / fit-all / phase focus",
+    "many scenes forcibly compressed",
+    "layout controls unclear",
+    "PNG export viewport/zoom dependent"
+  ],
+  "architecture": {
+    "canonical_entry": "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.tsx",
+    "canonical_chart": "apps/desktop/src/components/readerJourney/CanonicalJourneyChart.tsx",
+    "global_config": "apps/desktop/src/components/readerJourney/journeyVisualizationConfig.ts",
+    "no_book_chapter_run_special_cases": true,
+    "call_graph": [
+      "ReaderJourneyWorkspace",
+      "JourneyChartToolbar",
+      "CanonicalJourneyChart",
+      "JourneyResizableSplit / Inspector",
+      "exportJourneyPng full_journey",
+      "Scene/Phase navigation",
+      "URL sync (scene + xStart/xEnd)"
+    ]
+  },
+  "y_axis": {
+    "default": "fixed_0_100",
+    "ticks": [
+      0,
+      25,
+      50,
+      75,
+      100
+    ],
+    "optional_mode": "focus_data",
+    "null_handling": "line_break",
+    "out_of_range": "warn_no_silent_clip"
+  },
+  "chart_height": {
+    "compact": 240,
+    "standard": 360,
+    "expanded": 520,
+    "default": "standard",
+    "persistence": "localStorage storylens.readerJourney.chartHeight.v2_8"
+  },
+  "layout": {
+    "drag_handle": true,
+    "collapse_inspector": true,
+    "expand_inspector": true,
+    "reset_default": true,
+    "keyboard_accessible": true
+  },
+  "zoom": {
+    "toolbar": [
+      "适应全部",
+      "放大",
+      "缩小",
+      "当前Phase",
+      "恢复默认"
+    ],
+    "scene_le_15": "fit_all",
+    "scene_16_30": "pan_zoom",
+    "scene_gt_30": "brush",
+    "does_not_mutate_scores": true
+  },
+  "png": {
+    "default_mode": "full_journey",
+    "independent_of_viewport_zoom": true,
+    "independent_of_inspector": true,
+    "y_fixed_0_100": true,
+    "filename_pattern": "StoryLens_<title>_完整旅程_v2.8.png"
+  },
+  "forbidden_changes": [
+    "Prompt",
+    "Contract",
+    "Validator",
+    "Reader Journey Profile",
+    "Phase/Question/Hook/Payoff/Risk/Evidence semantics",
+    "API return contracts",
+    "ModelInvocationBroker",
+    "Provider/Budget/Recovery",
+    "book/chapter/run special cases"
+  ],
+  "freeze": {
+    "thaw": "audits/mvp-functional-baseline-v1/ui-presentation-thaw-v2-9.json",
+    "manifest": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.8/reader-journey-ui-final-freeze-v2.8.json",
+    "rollback": "point checker to v2.7 and restore hashed files; remove thaw v2-9"
+  },
+  "docs": [
+    "docs/reader-journey-chart-interaction-v2.8.md"
+  ],
+  "tests": [
+    "apps/desktop/src/components/readerJourney/phase_1dc1_ui02_visualization_v2_8.test.tsx"
+  ],
+  "visual_regression": {
+    "dir": "audits/single-chapter-pipeline/reader-journey-visual-regression-v2.8",
+    "screenshots": [
+      "01-13-scene-standard-full-curve.png",
+      "02-13-scene-expanded-height.png",
+      "03-30-scene-horizontal-zoom.png",
+      "04-60-scene-brush-selection.png",
+      "05-inspector-collapsed.png",
+      "06-inspector-expanded.png",
+      "07-boundary-0-100.png",
+      "08-full-png-export.png"
+    ]
+  },
+  "invariants": {
+    "agent_real_model_requests": 0,
+    "agent_tokens": 0,
+    "agent_cost": 0,
+    "main_and_canary_db_unchanged_by_agent": true
+  },
+  "gates": {
+    "reader_journey_ui_freeze": "PASS",
+    "certified_baseline": "PASS",
+    "invocation_policy": "PASS",
+    "core_freeze_with_thaw_v2_9": "PASS",
+    "check_project": "PASS",
+    "desktop_reader_journey_tests": "PASS",
+    "output_budget": "PASS"
+  },
+  "affected_files": [
+    "apps/desktop/src/components/readerJourney/CanonicalJourneyChart.tsx",
+    "apps/desktop/src/components/readerJourney/JourneyChartToolbar.tsx",
+    "apps/desktop/src/components/readerJourney/journeyChartScales.ts",
+    "apps/desktop/src/components/readerJourney/journeyVisualizationConfig.ts",
+    "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.tsx",
+    "apps/desktop/src/components/readerJourney/JourneyResizableSplit.tsx",
+    "apps/desktop/src/components/readerJourney/exportJourneyPng.ts",
+    "apps/desktop/src/components/readerJourney/readerJourney.css",
+    "apps/desktop/src/components/readerJourney/mockVisualizationFixtures.ts",
+    "scripts/check_reader_journey_ui_freeze.py",
+    "scripts/check_core_freeze.py",
+    "audits/mvp-functional-baseline-v1/ui-presentation-thaw-v2-9.json",
+    "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.8/reader-journey-ui-final-freeze-v2.8.json"
+  ]
+}

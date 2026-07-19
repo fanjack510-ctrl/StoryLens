@@ -1,0 +1,22 @@
+{
+  "label": "before",
+  "exists": true,
+  "path": "D:/Dstorylens/data/storylens.db",
+  "sha256": "b7d5035c2e6e1d3361ef42b1cc0d91850632087ff765621cdd2c842776438643",
+  "mtime": 1784381027.5645697,
+  "size": 83529728,
+  "analysis_run_count": 55,
+  "reader_journey_run_count": 2,
+  "run_55": {
+    "id": 55,
+    "status": "succeeded"
+  },
+  "journey_run_2": {
+    "id": 2,
+    "status": "succeeded"
+  },
+  "integrity_check": "ok",
+  "foreign_key_check_rows": 0,
+  "captured_at": "2026-07-18T14:10:47.827233+00:00",
+  "open_mode": "ro"
+}

@@ -1,0 +1,29 @@
+{
+  "name": "storylens-community-v1.0-rc1",
+  "version": "1.0.0-rc1",
+  "generated_at": "2026-07-19T10:56:13Z",
+  "real_model_requests": 0,
+  "github_published": false,
+  "license_file": null,
+  "rc_directory": "artifacts/release-candidate/storylens-community-v1.0-rc1/",
+  "expectations": {
+    "database": "empty",
+    "api_key": "none",
+    "user_data": "none",
+    "historical_runs": "none",
+    "human_uat_data": "none",
+    "canary_data": "none",
+    "developer_mode_default": false,
+    "qwen_wizard_on_first_launch": true,
+    "demo_auto_import": false
+  },
+  "package_manifests_still_declare": {
+    "pyproject.toml": "0.1.0",
+    "apps/desktop/package.json": "0.1.0",
+    "apps/desktop/src-tauri/Cargo.toml": "0.1.0",
+    "note": "RC marketing version is 1.0.0-rc1; bump package versions in a follow-up if operator requires exact match"
+  },
+  "hashes_ref": "audits/v1.0/v1.0-certified-file-hashes.json",
+  "baseline_ref": "audits/v1.0/certified-baseline/storylens-community-v1.0-certified-baseline.json",
+  "human_uat": "PENDING"
+}

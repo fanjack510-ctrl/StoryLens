@@ -1,0 +1,58 @@
+{
+  "phase": "1D-B2-R1",
+  "defect_id": "DEFECT-CANARY-001",
+  "verdict": "DEFECT_REMEDIATED_READY_FOR_NEW_CANARY",
+  "finished_at": "2026-07-18T12:30:00+00:00",
+  "root_cause": {
+    "primary": "A. FIXTURE_INVALID",
+    "secondary": [
+      "G. BUSINESS_VALIDATOR_BUG",
+      "C. PROMPT_CONTRACT_MISMATCH",
+      "I. RETRY_TRANSFORMS_BUG"
+    ]
+  },
+  "answers": {
+    "1_source_has_supportable_action": true,
+    "2_scene_mainly_dialogue_psych_info": "dialogue_dense + suspense; also contains one clear action 他后退半步",
+    "3_first_response_key_actions": [],
+    "4_retry_response_key_actions": [],
+    "5_empty_key_actions_allowed": true,
+    "6_schema_minItems_gt_0": false,
+    "7_validator_rejected_empty_array_before_fix": true,
+    "8_declared_actions_locate_real_paragraphs": "N/A on failed batch — analyzed metadata paragraphs only",
+    "9_evidence_ids_lost_in_mapping": false,
+    "10_scene_boundary_too_fragmented": false,
+    "11_retry_prompt_reinforced_error": true,
+    "12_affects_other_short_scenes": true
+  },
+  "old_batch": {
+    "batch_id": "phase-1db2-20260718T115555Z",
+    "verdict": "REAL_CANARY_FAILED",
+    "superseded_by_future_batch": true,
+    "resume_forbidden": true
+  },
+  "change_package": "audits/single-chapter-pipeline/changes/single-chapter-pipeline-change-v1.0.1.json",
+  "preflight_v2": "audits/single-chapter-pipeline/real-canary-preflight-v2.json",
+  "new_operator_authorization_required": true,
+  "new_canary_start_allowed_now": false,
+  "gates": {
+    "core_freeze": "PASS",
+    "journey_ui_freeze": "PASS",
+    "template_checker": "PASS",
+    "pipeline_checker": "PASS",
+    "pytest": "310 passed",
+    "ruff": "PASS",
+    "typescript": "PASS",
+    "eslint": "PASS",
+    "vitest": "276 passed",
+    "e2e_1": "PASS 67",
+    "e2e_2": "PASS 67",
+    "e2e_3_initial": "FAIL 1 (DEFECT-E2E-001 flake phase_1cc253 F)",
+    "e2e_consecutive_triple": "PASS 67 x3",
+    "model_requests": 0,
+    "tokens": 0,
+    "cost": 0,
+    "main_db_analysis_runs": 55,
+    "main_db_journey_runs": 2
+  }
+}

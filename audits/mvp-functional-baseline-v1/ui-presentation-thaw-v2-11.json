@@ -1,0 +1,57 @@
+{
+  "baseline": "mvp-functional-baseline-v1",
+  "thaw_id": "ui-presentation-thaw-v2-11",
+  "parent_thaw": "ui-presentation-thaw-v2-10.json",
+  "purpose": "phase-1d-c1-ui-04-reader-journey-visualization-v3.0-full-plot-tool-rail",
+  "core_freeze_manifest": "audits/mvp-functional-baseline-v1/core-freeze-manifest.json",
+  "reader_journey_ui_freeze": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v3.0/reader-journey-ui-final-freeze-v3.0.json",
+  "approved_behavior": [
+    "Single CanonicalJourneyChart shared by all books/chapters/runs",
+    "Desktop default svg_height=420 plot_area>=340 chart_shell>=440; Y ticks 0/25/50/75/100 fully visible",
+    "Overview content-sized; no overflow-y auto/scroll clipping of plot",
+    "Vertical tool rail replaces top primary toolbar",
+    "Inspector collapsed by default with summary bar; expand does not compress plot",
+    "Scene rhythm strip below SVG; text pane collapsible for chart width",
+    "clipPath height equals live plotHeight; nodes not radius-clipped",
+    "Does not modify Prompt/Contract/Validator/Broker/Budget/Recovery"
+  ],
+  "forbidden": [
+    "book_id/chapter_id/run_id/scene_count special cases",
+    "modify FROZEN_CORE or FROZEN_CONTRACT",
+    "modify FROZEN_CERTIFIED_*",
+    "agent-initiated real model calls",
+    "mutate Scene/Boundary/ReaderJourney business data"
+  ],
+  "allowed_files": [
+    {
+      "path": "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.tsx",
+      "before_sha256": "d4e3c9af4b97acbf7010de4ed4343cade12e03133b5704d91620ad587e18b9d3",
+      "reason": "Full plot shell + vertical tool rail layout; Scene nav below SVG",
+      "allowed_change": "presentation|visualization-v3.0"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/exportJourneyPng.ts",
+      "before_sha256": "67c8ac4471930cde273b67fcbf9c22c6a3b6782f6c77150f1c55080948931e89",
+      "reason": "Full-journey PNG filename/version v3.0",
+      "allowed_change": "presentation|export-v3.0"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/SplitPane.tsx",
+      "before_sha256": "607af6786196a0a5359278fff6772656d6147bd5ddf3b877f23afdbd75f549eb",
+      "reason": "Collapsible text/Scene pane to free chart width",
+      "allowed_change": "presentation|visualization-v3.0"
+    }
+  ],
+  "forbidden_behavior_changes": [
+    "FROZEN_CORE",
+    "FROZEN_CONTRACT",
+    "FROZEN_CERTIFIED_*",
+    "Prompt/Schema/Validator/Provider routing",
+    "Reader Journey Profile / Phase / Question / Hook / Payoff / Risk / Evidence semantics"
+  ],
+  "notes": [
+    "v3.0 restores full Y 0—100 after READER_JOURNEY_VISUALIZATION_V2_9_HUMAN_UAT_FAILED.",
+    "Root cause was overview ratio + overflow:hidden clipping SVG bottom (ticks 0/25).",
+    "Rollback: point freeze checker to v2.9; remove thaw v2-11 from DEFAULT_THAWS."
+  ]
+}

@@ -1,0 +1,55 @@
+{
+  "workspace": {
+    "clientWidth": 1216,
+    "clientHeight": 743,
+    "scrollWidth": 1216,
+    "scrollHeight": 743,
+    "overflowX": "hidden",
+    "overflowY": "auto",
+    "minHeight": "0px",
+    "maxHeight": "none",
+    "height": "743px"
+  },
+  "shell": {
+    "clientWidth": 1198,
+    "clientHeight": 481,
+    "scrollWidth": 1198,
+    "scrollHeight": 481,
+    "overflowX": "visible",
+    "overflowY": "visible",
+    "minHeight": "440px",
+    "maxHeight": "none",
+    "height": "481px"
+  },
+  "viewport": {
+    "clientWidth": 1141,
+    "clientHeight": 479,
+    "scrollWidth": 1141,
+    "scrollHeight": 479,
+    "overflowX": "auto",
+    "overflowY": "hidden",
+    "minHeight": "420px",
+    "maxHeight": "none",
+    "height": "481px"
+  },
+  "container": {
+    "clientWidth": 1129,
+    "clientHeight": 420,
+    "scrollWidth": 1129,
+    "scrollHeight": 420,
+    "overflowX": "auto",
+    "overflowY": "hidden",
+    "minHeight": "0px",
+    "maxHeight": "none",
+    "height": "420px"
+  },
+  "svg": {
+    "width": "1129",
+    "height": "420",
+    "viewBox": "0 0 1129 420",
+    "clientHeight": 420
+  },
+  "clipHeight": "352",
+  "nodeCount": 13,
+  "capturedAt": "2026-07-19T08:26:52.832Z"
+}

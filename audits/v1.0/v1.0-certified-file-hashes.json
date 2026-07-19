@@ -1,0 +1,236 @@
+{
+  "baseline": "StoryLens Community V1.0 Certified Baseline",
+  "version": "1.0.0-rc1",
+  "generated_at": "2026-07-19T10:56:13Z",
+  "aggregate_sha256": "b414f8d38e0de0c8ed93156a4ab62fdd6d27c12f0f791b9f9e6254bca0253eff",
+  "files": [
+    {
+      "path": "apps/api/app/services/model_invocation_broker.py",
+      "sha256": "f03dbb14d1e5a7d51fd864670154a877a16db790b5a65697d7a58065eb48733f",
+      "size": 20399,
+      "missing": false
+    },
+    {
+      "path": "apps/api/app/services/structured_output.py",
+      "sha256": "5d4dd6519815f5dc8c28bf6220792c34670d4c9cd91eb3614e9011eea9f71767",
+      "size": 60495,
+      "missing": false
+    },
+    {
+      "path": "apps/api/app/services/scene_pipeline.py",
+      "sha256": "6b02ec9d0b413dd01ae52712aaac476e183a6a790b58d25fbcde4b72abfb390b",
+      "size": 47075,
+      "missing": false
+    },
+    {
+      "path": "apps/api/app/services/reader_journey_pipeline.py",
+      "sha256": "0d76cccf396fdea169b5e14768d64e48f85da1a7729717187bf40b89f1fa39d3",
+      "size": 45725,
+      "missing": false
+    },
+    {
+      "path": "apps/api/app/services/analysis_recovery_center.py",
+      "sha256": "a3c87f30bdf3222e7e15a8c8ec4dc04194d297704cdd1a3700f8b0680bc74c11",
+      "size": 40666,
+      "missing": false
+    },
+    {
+      "path": "apps/api/app/services/run_scoped_budget_auth.py",
+      "sha256": "6b68ac041aa9390dd907567de9b13183a1458b5014420a80375b982c0a2fa7d1",
+      "size": 7947,
+      "missing": false
+    },
+    {
+      "path": "apps/api/app/services/scene_analysis_provider_recovery.py",
+      "sha256": "cb2ab2aa6040162ec61d63b015eb9d306488e42c9a97fc64d558c17c85a3b573",
+      "size": 17729,
+      "missing": false
+    },
+    {
+      "path": "apps/api/app/services/reader_journey_evidence_compaction.py",
+      "sha256": "76577a9e61b6b1ed0c639976e98c1eeff0cc3af6b95bd0344a4f09e4c0c9e2d9",
+      "size": 14045,
+      "missing": false
+    },
+    {
+      "path": "apps/api/app/services/reader_journey_output_budget.py",
+      "sha256": "f0e5f3fc9395c26b156ea67dab7ad2555b6ef0288fa0ac28e6809e7b94c1d63f",
+      "size": 14913,
+      "missing": false
+    },
+    {
+      "path": "apps/api/app/services/reader_journey_targeted_repair.py",
+      "sha256": "d1a2d74109c1afa8187a64d0f4783502382fc72cea30327ec793463b291950dd",
+      "size": 20332,
+      "missing": false
+    },
+    {
+      "path": "apps/api/app/services/cloud_output_policy.py",
+      "sha256": "632d0195421f281f1a395b38e443930156f684e3e8ce7b63ccf76b0f68263954",
+      "size": 3919,
+      "missing": false
+    },
+    {
+      "path": "apps/api/app/services/reader_journey_validation.py",
+      "sha256": "8c7eb5cefc4ed224271e7a7cbcabd4dc203ecb6d2ca2eb912dcbc5e41212928e",
+      "size": 24693,
+      "missing": false
+    },
+    {
+      "path": "apps/api/app/core/config.py",
+      "sha256": "afa77049ee66e192917efb8255a3534ced001a55e2911fe00b7374f975d43cbc",
+      "size": 3877,
+      "missing": false
+    },
+    {
+      "path": "apps/api/app/schemas/scene.py",
+      "sha256": "16ac6678d533624537ef5f22a6e89a808a415a7db6552b1b780b567a630364d5",
+      "size": 23629,
+      "missing": false
+    },
+    {
+      "path": "apps/api/app/schemas/reader_journey.py",
+      "sha256": "e63890b440ef7055b99eb4b6321c2e82e09a553bdfc3265d7efa51a913ef788e",
+      "size": 20215,
+      "missing": false
+    },
+    {
+      "path": "apps/api/app/schemas/analysis_recovery.py",
+      "sha256": "b3e4fd3f980f304857960b8a68d62c782fd9acc39311fa8db0838b087c2a39cb",
+      "size": 6592,
+      "missing": false
+    },
+    {
+      "path": "packages/prompts/reader_journey_scene/v1.6/system.md",
+      "sha256": "cb47a479939d4f6f620ee1c75b744d0adcaabc24d5091d125395cdd35356d651",
+      "size": 4198,
+      "missing": false
+    },
+    {
+      "path": "packages/prompts/reader_journey_scene/v1.6/user.md",
+      "sha256": "6e9e98b27a4b5a6091c276264dcf430d7f616bdb937de11165ef0b0d38bf8cf0",
+      "size": 1199,
+      "missing": false
+    },
+    {
+      "path": "packages/prompts/reader_journey_scene/v1.6/repair.md",
+      "sha256": "b7c9921e3c73b0ca4147d52bdfec59698d49fff51879c00a6dd6ebac42b9078a",
+      "size": 1211,
+      "missing": false
+    },
+    {
+      "path": "packages/prompts/reader_journey_chapter/v1.2/system.md",
+      "sha256": "1713e96f7c56903fba83b50eff6735fc07a6e2c1a2e68dec8b373cb4559db712",
+      "size": 1384,
+      "missing": false
+    },
+    {
+      "path": "packages/prompts/reader_journey_chapter/v1.2/user.md",
+      "sha256": "0222f9686992fb317bfd937f9f4624fc239c9fe84f4d7eac8adaceaa8ec5b615",
+      "size": 98,
+      "missing": false
+    },
+    {
+      "path": "packages/prompts/reader_journey_chapter/v1.2/repair.md",
+      "sha256": "cd30351e5f4f7692b5144042f80d0dd7d52badc4304545239ad758a4792d5f91",
+      "size": 1048,
+      "missing": false
+    },
+    {
+      "path": "packages/prompts/scene_analysis/v3.2/system.md",
+      "sha256": "6832b6cd78ca52e84077807e32a4b907ae115784b96e29a3c2af48fba5966e1c",
+      "size": 1377,
+      "missing": false
+    },
+    {
+      "path": "packages/prompts/scene_analysis/v3.2/user.md",
+      "sha256": "63d3315b08ad1ae8a5b9674d107eea10e0fe7c5f079efea01b020ee66f60d38c",
+      "size": 213,
+      "missing": false
+    },
+    {
+      "path": "packages/prompts/scene_analysis/v3.2/repair.md",
+      "sha256": "07c498de1f18ce0545f24e97aaf7a7b9fd4b6db09c3c868c37759269fd26f99f",
+      "size": 686,
+      "missing": false
+    },
+    {
+      "path": "apps/desktop/src/components/analysis/StartAnalysisDialog.tsx",
+      "sha256": "b78dcace85aa93d609b34f56bed4d0f99ebbc7ffa43b30cc82a2d222a72209f0",
+      "size": 39120,
+      "missing": false
+    },
+    {
+      "path": "apps/desktop/src/components/chapterAnalysis/UnifiedAnalysisRecoveryCard.tsx",
+      "sha256": "4ee624f0cfa7ab3d4ad623851f861273aee5a5a5a705ca7a5d43328622b5c154",
+      "size": 11089,
+      "missing": false
+    },
+    {
+      "path": "apps/desktop/src/components/settings/SettingsAiServiceTab.tsx",
+      "sha256": "2b8d20766a9877a6b9bd8f98cb9bd11af7967b3da4df83b5f3a87372591698d4",
+      "size": 19610,
+      "missing": false
+    },
+    {
+      "path": "apps/desktop/src/components/onboarding/QwenFirstLaunchBanner.tsx",
+      "sha256": "18ff7940014a98f5f06277b728b8e794ebd3d53c1cdd437b31492ea73bb3a967",
+      "size": 1660,
+      "missing": false
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.tsx",
+      "sha256": "700801396b1b4f066f7f8d85779933cc262c2bf7416e121660c5bf9fad0fd98f",
+      "size": 66916,
+      "missing": false
+    },
+    {
+      "path": "apps/desktop/src/services/aiServiceViewModel.ts",
+      "sha256": "a931330fd3b839e43db99782739871ffa88750a2541d5fcd72b5e207b60c56db",
+      "size": 9486,
+      "missing": false
+    },
+    {
+      "path": "scripts/check_project.py",
+      "sha256": "374a0260debfb7afc7ef0d3b5ecb3f21d3ebc1bd2280364e2e76e5a1f50fbd2c",
+      "size": 2687,
+      "missing": false
+    },
+    {
+      "path": "scripts/check_certified_baseline.py",
+      "sha256": "442c8b7cb4d5839e9995c9cec5b354356d5d2ea713278ca748dbdaaeee0ce5dc",
+      "size": 2590,
+      "missing": false
+    },
+    {
+      "path": "scripts/check_model_invocation_policy.py",
+      "sha256": "d00e5a87d39ff0e7c11df25fbc5d36ea5ae2e731a8a95baf5a918a4f23a59337",
+      "size": 9903,
+      "missing": false
+    },
+    {
+      "path": "pyproject.toml",
+      "sha256": "b4d1ad3c0489ac746d74936ac3e28c177c07039bc6f48ffcafcc912d89e64487",
+      "size": 885,
+      "missing": false
+    },
+    {
+      "path": "apps/desktop/package.json",
+      "sha256": "580679c49c2fd8fda7599cbf3cb930fceab0e3721d4e14210cf8bfe5736abe8f",
+      "size": 1243,
+      "missing": false
+    },
+    {
+      "path": "apps/desktop/src-tauri/Cargo.toml",
+      "sha256": "b1d7354154c4256088cf190cdb5081eb80c13f587b1f19c5d434e770b4d2a28b",
+      "size": 264,
+      "missing": false
+    },
+    {
+      "path": ".env.example",
+      "sha256": "352929b70f5ca4d26b04356cfa5ffbfecdb2d72f2b0b8defbf20e1d7afe1a111",
+      "size": 1829,
+      "missing": false
+    }
+  ]
+}

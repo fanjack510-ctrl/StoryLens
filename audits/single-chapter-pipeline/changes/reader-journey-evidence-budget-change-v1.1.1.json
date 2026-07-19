@@ -1,0 +1,172 @@
+{
+  "change_id": "reader-journey-evidence-budget-change-v1.1.1",
+  "phase": "1D-B2-R12",
+  "defect_id": "DEFECT-CANARY-016",
+  "title": "Reader Journey Profile Evidence budget and directed compaction repair",
+  "old_batch_id": "phase-1db2-r11-20260719T014426Z",
+  "root_cause": {
+    "primary": "EVIDENCE_PARAGRAPH_IDS_EXCEEDED_MAXITEMS_16",
+    "secondary": [
+      "PROMPT_LACKED_EXPLICIT_MAX_16_AND_MINIMAL_SUFFICIENT_EVIDENCE_RULE",
+      "SCHEMA_VALIDATION_TOO_LONG_TRIGGERED_FULL_SCHEMA_REPAIR",
+      "SCHEMA_REPAIR_MAX_OUTPUT_TOKENS_1400_TOO_LOW_FOR_FULL_PROFILE",
+      "NO_DIRECTED_EVIDENCE_COMPACTION_PATH",
+      "MECHANICAL_TRUNCATE_NOT_USED_BUT_ALSO_NOT_EXPLICITLY_FORBIDDEN_IN_PIPELINE"
+    ],
+    "not_root_cause": [
+      "MODEL_ROUTING_ERROR",
+      "DEFECT-015_REGRESSION"
+    ],
+    "detail": "C3-long-action Scene 7 emitted 18 unique in-scene evidence_paragraph_ids (full Scene enumeration P0070–P0087). Contract maxItems=16 → SCHEMA_VALIDATION_FAILED → full schema_repair at max_output_tokens=1400 → finish_reason=length → JOURNEY_SINGLE_PROFILE_OUTPUT_TRUNCATED."
+  },
+  "evidence_contract": {
+    "evidence_paragraph_ids_maxItems": 16,
+    "raised_maxItems": false,
+    "prompt_version": "v1.6",
+    "prior_prompt_retained": "v1.5",
+    "prompt_rules": [
+      "Evidence only supports core Profile judgments",
+      "use minimal sufficient Evidence",
+      "at most 16 top-level IDs",
+      "do not enumerate all Scene paragraphs",
+      "do not cite other Scenes",
+      "do not forge Evidence IDs",
+      "no duplicate Evidence IDs"
+    ]
+  },
+  "prompt_change": {
+    "from": "v1.5",
+    "to": "v1.6",
+    "paths": [
+      "packages/prompts/reader_journey_scene/v1.6/system.md",
+      "packages/prompts/reader_journey_scene/v1.6/user.md",
+      "packages/prompts/reader_journey_scene/v1.6/repair.md"
+    ]
+  },
+  "deterministic_normalization_boundary": {
+    "allowed": [
+      "order-preserving Evidence ID dedupe",
+      "reject out-of-scope IDs",
+      "reject unknown/missing IDs"
+    ],
+    "forbidden": [
+      "mechanical first-16 truncate",
+      "random delete",
+      "delete by paragraph ordinal alone",
+      "replace with arbitrary Evidence",
+      "forge summaries or Evidence"
+    ],
+    "after_dedupe_still_over_max": "JOURNEY_EVIDENCE_COUNT_INVALID → directed compaction repair"
+  },
+  "targeted_compaction_protocol": {
+    "mode": "JourneyEvidenceCompactionPatchResult (compaction-1.0)",
+    "forbids_full_profile_regen": true,
+    "repair_input_fields": [
+      "error_code",
+      "target_path",
+      "scene_id",
+      "max_items",
+      "current_evidence_ids",
+      "evidence_snippets",
+      "profile_claims",
+      "protected_profile_fields"
+    ],
+    "repair_output_fields": [
+      "replacement_evidence_paragraph_ids",
+      "removed_evidence_paragraph_ids",
+      "selection_reason"
+    ],
+    "guards": [
+      "replacement ≤ 16",
+      "replacement ⊆ current_evidence_ids",
+      "no new IDs",
+      "protected Profile fields byte-stable",
+      "untouched Profiles byte-stable",
+      "full Reader Journey validator after patch",
+      "no progress / invalid / truncated keep dedicated error codes"
+    ]
+  },
+  "output_budget_method": {
+    "audit": "audits/single-chapter-pipeline/reader-journey-output-budget-v1.json",
+    "gate": "scripts/check_reader_journey_output_budget.py",
+    "safety_margin_constant": "READER_JOURNEY_OUTPUT_BUDGET_SAFETY_MARGIN",
+    "safety_margin": 256,
+    "scene_estimator": "fixture_anchored_observed_scale",
+    "configured_defaults_raised": {
+      "cloud_output_reader_journey_scene": 3500,
+      "cloud_output_reader_journey_chapter": 3000,
+      "cloud_output_reader_journey_schema_repair": 3500,
+      "cloud_output_reader_journey_business_repair": 3500,
+      "cloud_max_output_tokens_per_request_default": 4000
+    },
+    "not_solved_by_infinite_max_tokens": true
+  },
+  "new_error_codes": [
+    "JOURNEY_EVIDENCE_COUNT_INVALID",
+    "JOURNEY_EVIDENCE_COMPACTION_NO_PROGRESS",
+    "JOURNEY_EVIDENCE_COMPACTION_INVALID",
+    "JOURNEY_EVIDENCE_COMPACTION_OUTPUT_TRUNCATED"
+  ],
+  "affected_files": [
+    "apps/api/app/services/reader_journey_evidence_compaction.py",
+    "apps/api/app/services/reader_journey_output_budget.py",
+    "apps/api/app/services/structured_output.py",
+    "apps/api/app/schemas/reader_journey.py",
+    "apps/api/app/core/config.py",
+    "apps/api/app/schemas/settings.py",
+    "apps/api/tests/test_defect_canary_016_evidence_budget.py",
+    "apps/api/tests/fakes.py",
+    "apps/api/tests/test_cloud_budget.py",
+    "packages/prompts/reader_journey_scene/v1.6/**",
+    "scripts/check_reader_journey_output_budget.py",
+    "scripts/certification/real_canary_runner.py",
+    "audits/single-chapter-pipeline/changes/reader-journey-evidence-budget-change-v1.1.1.json",
+    "audits/single-chapter-pipeline/reader-journey-output-budget-v1.json",
+    "audits/single-chapter-pipeline/real-canary-preflight-v13.json",
+    "audits/single-chapter-pipeline/real-canary-v12/defects/DEFECT-CANARY-016.json",
+    "audits/single-chapter-pipeline/real-canary-v12/defects/DEFECT-CANARY-016-diagnosis-v1.json",
+    "audits/single-chapter-pipeline/real-canary-v12/defect-016-remediation-verdict-v1.json",
+    "audits/single-chapter-pipeline/real-canary-v12/final-verdict-v1.json"
+  ],
+  "prohibited_files": [
+    "data/storylens.db",
+    "audits/single-chapter-pipeline/real-canary-v12/authorization-v12.json",
+    "artifacts/single-chapter-pipeline-certification/real-canary/canary-v12.sqlite3 (resume)",
+    "authorization-v13 (not issued this phase)"
+  ],
+  "prohibited_actions": [
+    "raise evidence_paragraph_ids maxItems above 16",
+    "resume phase-1db2-r11-20260719T014426Z",
+    "reuse authorization-v12",
+    "issue new Canary authorization",
+    "real model requests this phase",
+    "mechanical first-16 Evidence truncate",
+    "wrap compaction failures as PIPELINE_UNEXPECTED_ERROR"
+  ],
+  "regression_tests": [
+    "apps/api/tests/test_defect_canary_016_evidence_budget.py",
+    "apps/api/tests/test_defect_canary_015_model_invocation_policy.py",
+    "apps/api/tests/test_defect_canary_011_targeted_repair.py",
+    "apps/api/tests/test_defect_canary_001_a1_replay.py"
+  ],
+  "rollback_plan": [
+    "Revert SCENE_PROMPT_VERSION to v1.5",
+    "Remove compaction branch in structured_output.py",
+    "Restore prior cloud_output_reader_journey_* defaults",
+    "Keep DEFECT-016 diagnosis artifacts"
+  ],
+  "new_hashes": {
+    "apps/api/app/services/reader_journey_evidence_compaction.py": "76577a9e61b6b1ed0c639976e98c1eeff0cc3af6b95bd0344a4f09e4c0c9e2d9",
+    "apps/api/app/services/reader_journey_output_budget.py": "f0e5f3fc9395c26b156ea67dab7ad2555b6ef0288fa0ac28e6809e7b94c1d63f",
+    "apps/api/app/services/structured_output.py": "a73c1c1b47097979fc9fe48df928adadf6e575a5c44038567eee4177603c40eb",
+    "apps/api/app/schemas/reader_journey.py": "e63890b440ef7055b99eb4b6321c2e82e09a553bdfc3265d7efa51a913ef788e",
+    "apps/api/app/core/config.py": "afa77049ee66e192917efb8255a3534ced001a55e2911fe00b7374f975d43cbc",
+    "apps/api/app/schemas/settings.py": "e4d117ee1ee2d2d62a5058ad2b6ed6411f6849befeaa95a327845753f6b0456f",
+    "apps/api/tests/test_defect_canary_016_evidence_budget.py": "6bc890fa9f3d9c0899e6f9c0e8cafe6959b3c82ae5e127d5754cfbf613b75ad2",
+    "packages/prompts/reader_journey_scene/v1.6/system.md": "cb47a479939d4f6f620ee1c75b744d0adcaabc24d5091d125395cdd35356d651",
+    "scripts/check_reader_journey_output_budget.py": "9d854e9b44e5a92c177f02e2808decd934583c4cb3c352903c4228841226d326"
+  },
+  "real_model_requests_this_phase": 0,
+  "real_model_tokens_this_phase": 0,
+  "real_model_cost_this_phase": 0
+}

@@ -1,0 +1,224 @@
+{
+  "change_id": "cloud-budget-reservation-accounting-change-v1.1.2",
+  "phase": "1D-C1-UAT-05",
+  "defect_id": "DEFECT-UAT-003",
+  "title": "Cloud Budget Reservation Double-Counting Remediation",
+  "original_run_id": 1,
+  "original_run_database": "artifacts/release-candidate/storylens-human-uat-v1.sqlite3",
+  "original_run_immutability": {
+    "status_must_remain": "failed",
+    "must_not_retry": true,
+    "must_not_overwrite_audit": true,
+    "must_not_call_real_model": true,
+    "reservation_status": "released",
+    "historical_settlement_rewritten": false
+  },
+  "root_cause": {
+    "primary": "ACTIVE_RESERVATION_INITIAL_DOUBLE_COUNTED_WITH_USED_REQUESTS",
+    "detail": "CloudBudgetReservation.reserved_requests stored the initial worst-case amount and never decremented on HTTP success. daily_usage computed available_requests = (daily_limit - used) - sum(active.reserved_initial). After 4 sent requests with reserved_initial=26 and daily=30, available became 0 and batch 5 raised RequestBlockedError(CLOUD_BUDGET_EXCEEDED). classify_pipeline_error lacked a RequestBlockedError branch and wrapped it as PIPELINE_UNEXPECTED_ERROR.",
+    "affected_dimensions_confirmed": [
+      "request_count",
+      "input_tokens_total_via_reservation_lump",
+      "output_tokens_total_via_reservation_lump",
+      "total_tokens",
+      "estimated_cost"
+    ],
+    "dimension_notes": {
+      "request_count": "Confirmed production blocker in Human UAT Run #1.",
+      "tokens_and_cost": "Same formula used reserved_initial; mid-run gate only checked available_requests, but available_tokens/cost and reserve_budget concurrency gates were also incorrect. Fixed all three ledger dimensions for consistency.",
+      "retry_repair_recovery": "Each real HTTP attempt now claims one remaining request slot; no silent double settlement of the same claim."
+    }
+  },
+  "old_accounting_formula": {
+    "available_requests": "daily_limit - used_requests - sum(active_reservations.reserved_requests_initial)",
+    "committed_requests": "used_requests + sum(active_reservations.reserved_requests_initial)",
+    "reservation_on_http_success": "no-op (initial unchanged)",
+    "release": "status=released; entire initial treated as freed even after partial use"
+  },
+  "new_accounting_formula": {
+    "committed_requests": "used_requests + sum(active_reservations.remaining_requests)",
+    "available_requests": "daily_limit - committed_requests",
+    "same_for_tokens_and_cost": true,
+    "reservation_identity": "initial = remaining + consumed + released"
+  },
+  "field_mapping": {
+    "reservation_initial_requests": "CloudBudgetReservation.reserved_requests",
+    "reservation_remaining_requests": "CloudBudgetReservation.remaining_requests",
+    "reservation_consumed_requests": "CloudBudgetReservation.consumed_requests",
+    "reservation_released_requests": "CloudBudgetReservation.released_requests",
+    "tokens_and_cost": "parallel remaining_/consumed_/released_ columns; reserved_* remains initial"
+  },
+  "reservation_state_machine": {
+    "create": "status=active; remaining=initial; consumed=0; released=0",
+    "claim_before_http": "prefer run active remaining>0 → remaining-=1, consumed+=1 (committed)",
+    "http_not_sent": "rollback claim; used unchanged",
+    "http_sent": "keep request consumption; settle reported tokens/cost into consumed (capped by remaining)",
+    "release_on_terminal": "released += remaining; remaining=0; status=released; consumed unchanged; idempotent",
+    "exhausted_then_extra": "re-check daily available; unreserved attempt allowed only if available>=1"
+  },
+  "request_settlement_rules": {
+    "own_reservation_priority": true,
+    "no_double_subtract_own_initial": true,
+    "retry_repair_recovery": "each real HTTP attempt independent claim",
+    "same_attempt_not_double_settled_for_requests": true
+  },
+  "error_mapping": {
+    "RequestBlockedError": {
+      "root_error_code": "reason_code (CLOUD_BUDGET_EXCEEDED | CLOUD_REQUEST_LIMIT_EXCEEDED | CLOUD_TOKEN_LIMIT_EXCEEDED | CLOUD_COST_LIMIT_EXCEEDED | CLOUD_MASTER_SWITCH_OFF)",
+      "failed_stage": "budget_gate",
+      "user_action_hint": "今日云端分析额度不足，请调整预算后重新开始分析。",
+      "no_longer_wrapped_as": "PIPELINE_UNEXPECTED_ERROR",
+      "technical_details": [
+        "error_type",
+        "error_code",
+        "used",
+        "reserved_initial",
+        "reserved_remaining",
+        "daily_limit",
+        "requested_amount",
+        "run_id"
+      ],
+      "secrets_forbidden": ["api_key"]
+    }
+  },
+  "default_limit_compatibility": {
+    "canary_v13_batch": "phase-1db2-r13-20260719T022027Z",
+    "max_http_attempts_per_succeeded_run": 41,
+    "max_request_reservation_observed_human_uat_stage1": 26,
+    "retry_repair_recovery_extra_observed": {
+      "provider_retry_http": 1,
+      "evidence_repair_http": 2
+    },
+    "old_defaults": {
+      "cloud_daily_request_limit": 30,
+      "cloud_max_requests_per_run": 10
+    },
+    "new_defaults": {
+      "cloud_daily_request_limit": 50,
+      "cloud_max_requests_per_run": 50
+    },
+    "justification": "Canary v13 succeeded single-chapter runs required up to 41 real HTTP attempts. daily=30 cannot complete one certified full chapter even after double-count fix. Raised to 50 with ledger evidence (41 + limited retry/repair headroom). Not raised unboundedly.",
+    "create_run_invariant": "daily_request_limit >= used_today + new_run_reservation (enforced by reserve_budget using remaining-based available)",
+    "cost_and_token_defaults_unchanged": {
+      "cloud_daily_token_limit": 200000,
+      "cloud_daily_estimated_cost_limit": 1.0,
+      "note": "Canary v13 max single-run tokens ~139k < 200k; per-run cost well under 1.0 CNY"
+    }
+  },
+  "core_freeze_manifest": {
+    "path": "audits/mvp-functional-baseline-v1/core-freeze-manifest.json",
+    "updated_for_this_change": [
+      "apps/api/app/db/models.py",
+      "apps/api/app/db/session.py",
+      "apps/api/app/services/scene_pipeline.py",
+      "apps/api/app/services/structured_output.py",
+      "apps/api/app/services/budget_reservation.py",
+      "apps/api/app/services/cloud_budget.py"
+    ],
+    "preexisting_workspace_drift_rebased_for_gate": [
+      "apps/api/app/model_gateway/registry.py",
+      "apps/api/app/services/provider_runtime.py",
+      "apps/desktop/src/components/analysis/StartAnalysisDialog.tsx"
+    ],
+    "note": "Pre-existing drifts were present before DEFECT-UAT-003 accounting edits; hashes rebased so check_core_freeze passes without restoring unrelated files."
+  },
+  "database_impact": {
+    "migration": "migrate_phase_1d_c1_uat05",
+    "new_columns": [
+      "remaining_requests",
+      "consumed_requests",
+      "released_requests",
+      "remaining_tokens",
+      "consumed_tokens",
+      "released_tokens",
+      "remaining_cost",
+      "consumed_cost",
+      "released_cost"
+    ],
+    "backfill": "active → remaining=initial; released → released=initial, remaining=0; consumed left 0 for historical released rows (no rewrite of UAT Run #1 settlement semantics beyond schema defaults)",
+    "uat_db_modified": false,
+    "main_db_modified": false
+  },
+  "reanalyze_semantics": {
+    "ui_重新分析": "BookRoutePage opens StartAnalysisDialog → creates a new AnalysisRun",
+    "tasks_重试": "POST /analysis-runs/{id}/retry → create_run_record(..., retry_of=old.id)",
+    "failed_run_1": "immutable; not reused or mutated by remediation"
+  },
+  "affected_certified_files": [
+    {
+      "path": "apps/api/app/services/structured_output.py",
+      "category": "FROZEN_CERTIFIED_CORE",
+      "sha256": "adc23093150f1596bf524fb8d2a23f1c791cd6c472554f3b23ecfe08fd80cb92",
+      "size": 60042
+    },
+    {
+      "path": "apps/api/app/services/scene_pipeline.py",
+      "category": "FROZEN_CERTIFIED_CORE",
+      "sha256": "6b02ec9d0b413dd01ae52712aaac476e183a6a790b58d25fbcde4b72abfb390b",
+      "size": 47075
+    },
+    {
+      "path": "apps/desktop/src/components/chapterAnalysis/mapAnalysisUiState.ts",
+      "category": "CHANGEABLE_UI_SHELL",
+      "sha256": "8e1cfc10f860e0c32bc7210ca432917db0759e7a84e2d05139eb1e30fb572ebb",
+      "size": 7002
+    }
+  ],
+  "non_certified_runtime_files": [
+    {
+      "path": "apps/api/app/services/cloud_budget.py",
+      "sha256": "a9200f2f06fab66e04374c79af5c6ecb20887f0435aa16e4c9ec32b8ad9914e7"
+    },
+    {
+      "path": "apps/api/app/services/budget_reservation.py",
+      "sha256": "7c07dd2d8a39c9ebfdaf00de4f8bbcdf74dd864172176a3abc0ba807eda32148"
+    },
+    {
+      "path": "apps/api/app/db/models.py",
+      "sha256": "da878ffb64d207c00fec8be4949a1825b11cdbb1fd998eedd1a5564e805153f8"
+    },
+    {
+      "path": "apps/api/app/db/session.py",
+      "sha256": "85fed90519dd1441d66dbd74a1bd43802e4717ee2e4c7c04dcf1000c38d24669"
+    },
+    {
+      "path": "apps/api/app/schemas/settings.py",
+      "sha256": "d98aeb7a7220b215722b91cf3b28a7d731bd3dc82b08ca7e18a837c3acfa44a2"
+    }
+  ],
+  "new_hashes": {
+    "baseline_aggregate_sha256": "c8ae612e19909dd61283bcc46ee4fcff89388f7dd17eb1adb57d5c0bfa331eaa",
+    "hash_manifests_updated": [
+      "audits/single-chapter-pipeline/phase-1db2-certified-file-hashes-v1.json",
+      "audits/single-chapter-pipeline/certified-baseline-v1.0/certified-baseline-file-hashes-v1.0.json",
+      "audits/single-chapter-pipeline/certified-baseline-v1.0/certified-baseline-v1.0.json",
+      "audits/single-chapter-pipeline/phase-1db2-certification-manifest-v1.json"
+    ]
+  },
+  "regression_tests": [
+    "apps/api/tests/test_defect_uat_003_budget_reservation_accounting.py"
+  ],
+  "real_canary_rerun_required": {
+    "required_now": false,
+    "reason": "Accounting/reservation lifecycle and error mapping only; no prompt/schema/validator/routing/recovery strategy changes. Offline suite covers DEFECT-UAT-003 replay and dimension consistency. Full Real Canary recommended before next certification seal if cloud budget defaults are exercised end-to-end in release gates, but not required to resume Human UAT retry of a new AnalysisRun.",
+    "human_uat_retry": "User creates a new AnalysisRun via desktop UI after verdict READY; do not auto-retry Run #1"
+  },
+  "rollback_plan": [
+    "Revert cloud_budget.py, budget_reservation.py, structured_output.py, scene_pipeline.py, models/session/settings, mapAnalysisUiState.ts",
+    "Restore prior certified hash manifests / aggregate",
+    "SQLite new columns are additive and safe to leave; old code ignored them",
+    "Do not mutate UAT AnalysisRun #1 under any rollback path"
+  ],
+  "out_of_scope_unchanged": [
+    "Provider routing",
+    "ModelInvocationBroker route semantics",
+    "Prompts",
+    "Schema",
+    "Validator",
+    "Scene Analysis logic",
+    "Reader Journey logic",
+    "Provider retry counts",
+    "Recovery strategy",
+    "Reader Journey UI Final Baseline v2.7"
+  ]
+}

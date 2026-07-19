@@ -1,0 +1,45 @@
+{
+  "audit_id": "phase-1dc-ui-status-audit-v1",
+  "reader_journey_ui_final_v2_7_unfrozen": false,
+  "checks": [
+    {
+      "status": "awaiting_boundary_review",
+      "user_facing": true,
+      "internal_codes_in_details": true
+    },
+    {
+      "status": "scene_analysis_partial",
+      "user_facing": true,
+      "internal_codes_in_details": true
+    },
+    {
+      "status": "awaiting_provider_recovery",
+      "user_facing": true,
+      "internal_codes_in_details": true
+    },
+    {
+      "status": "reader_journey_processing",
+      "user_facing": true,
+      "note": "Composed from scene_profiles_running / chapter_synthesis_running",
+      "internal_codes_in_details": true
+    },
+    {
+      "status": "succeeded",
+      "user_facing": true,
+      "internal_codes_in_details": true
+    },
+    {
+      "status": "failed",
+      "user_facing": true,
+      "internal_codes_in_details": true
+    },
+    {
+      "status": "aborted_by_limit",
+      "user_facing": true,
+      "note": "UI also maps boundary_confirmed_budget_blocked",
+      "internal_codes_in_details": true
+    }
+  ],
+  "ok": true,
+  "generated_at": "2026-07-19T03:31:19.916972+00:00"
+}

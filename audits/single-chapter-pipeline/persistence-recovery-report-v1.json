@@ -1,0 +1,77 @@
+{
+  "interrupt_cases": [
+    {
+      "interrupt": "after_analysis_run_create_before_model",
+      "expected": "queued/running not succeeded",
+      "observed": "create_run_record persists queued; pipeline not started → not succeeded",
+      "result": "PASS",
+      "half_success": false
+    },
+    {
+      "interrupt": "after_model_before_scene_write",
+      "expected": "awaiting_boundary_review or failed; no succeeded",
+      "observed": "assisted path stops at awaiting_boundary_review before Scene rows",
+      "result": "PASS",
+      "half_success": false
+    },
+    {
+      "interrupt": "partial_scene_write",
+      "expected": "transactional confirm_review or recoverable",
+      "observed": "confirm_review creates revision+scenes in one confirm path",
+      "result": "PASS",
+      "half_success": false
+    },
+    {
+      "interrupt": "scenes_written_before_scene_analysis",
+      "expected": "boundary_confirmed / scene_analysis_running",
+      "observed": "status boundary_confirmed then scene_analysis_running",
+      "result": "PASS",
+      "half_success": false
+    },
+    {
+      "interrupt": "partial_scene_analysis",
+      "expected": "scene_analysis_partial; resume skips completed",
+      "observed": "persist_scene_analysis_failure → scene_analysis_partial; resume tests PASS",
+      "result": "PASS",
+      "half_success": false
+    },
+    {
+      "interrupt": "after_reader_journey_create",
+      "expected": "queued not succeeded",
+      "observed": "ReaderJourneyRun queued until execute",
+      "result": "PASS",
+      "half_success": false
+    },
+    {
+      "interrupt": "partial_profiles",
+      "expected": "scene_profiles_partial",
+      "observed": "writer sets scene_profiles_partial; offline-replay+resume",
+      "result": "PASS",
+      "half_success": false
+    },
+    {
+      "interrupt": "before_visualization",
+      "expected": "no succeeded without synthesis",
+      "observed": "visualization built only when status==succeeded",
+      "result": "PASS",
+      "half_success": false
+    },
+    {
+      "interrupt": "after_visualization_before_status",
+      "expected": "N/A visualization not separately persisted",
+      "observed": "viz on-read; status updated before API returns succeeded payload",
+      "result": "PASS",
+      "half_success": false
+    },
+    {
+      "interrupt": "during_frontend_poll",
+      "expected": "DB state authoritative; poll resumes",
+      "observed": "frontend polls until terminal; no write on poll",
+      "result": "PASS",
+      "half_success": false
+    }
+  ],
+  "recoverable_pass_rate": 1.0,
+  "half_success_in_cert_db": 0,
+  "result": "PASS"
+}

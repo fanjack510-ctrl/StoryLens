@@ -1,0 +1,303 @@
+{
+  "baseline_name": "reader-journey-ui-final-v2.7",
+  "version": "2.7",
+  "generated_at": "2026-07-18T08:30:04.368123+00:00",
+  "purpose": "Final freeze of Reader Journey UI after Context Inspector hierarchy (Phase 1C-C.2.7)",
+  "parent_core_freeze": "audits/mvp-functional-baseline-v1/core-freeze-manifest.json",
+  "source_thaw": "audits/mvp-functional-baseline-v1/ui-presentation-thaw-v2-5.json",
+  "change_policy": {
+    "direct_edit_frozen_files": false,
+    "required_change_package": "reader-journey-ui-change-<version>.json",
+    "notes": "Do not overwrite this manifest in place; issue a new change package and bump baseline version."
+  },
+  "ux_invariants": [
+    "页面名称为「旅程分析」",
+    "页面只显示一个标题",
+    "章节结论条为紧凑布局",
+    "Phase 桌面四列",
+    "Phase 中宽横向滚动",
+    "Phase 窄屏下拉",
+    "曲线 min-height=300px",
+    "当前 Scene marker 数量=1",
+    "Scene 首次点击不回退",
+    "Phase 点击不改 Scene",
+    "Context Inspector 单一实例",
+    "六类 Inspector 统一骨架",
+    "空状态不创建新 Run",
+    "Evidence 仍可精确定位",
+    "Inspector 不挤压曲线",
+    "PNG 只包含 Overview",
+    "Books 与独立路由都可用",
+    "旧 overview URL 兼容",
+    "一个 Inspector 纵向滚动容器",
+    "无嵌套详情卡片墙"
+  ],
+  "ux_invariant_count": 20,
+  "category_counts": {
+    "FROZEN_JOURNEY_COMPOSITION": 11,
+    "FROZEN_JOURNEY_INSPECTOR": 6,
+    "FROZEN_JOURNEY_EXPORT": 2,
+    "FROZEN_JOURNEY_INTERACTION": 3,
+    "FROZEN_JOURNEY_PRESENTATION": 3,
+    "FROZEN_JOURNEY_VISUALIZATION": 2
+  },
+  "file_count": 27,
+  "files": [
+    {
+      "path": "apps/desktop/src/components/common/States.tsx",
+      "sha256": "ef07e1524ef739635440147b5e0e43880f668cfd7f14f5c3b27ab41eed7e6483",
+      "category": "FROZEN_JOURNEY_COMPOSITION",
+      "responsibility": "Reader Journey production dependency",
+      "approved_version": "reader-journey-ui-final-v2.7",
+      "source_thaw": "ui-presentation-thaw-v2-5.json",
+      "test_coverage": []
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/JourneyDetailErrorBoundary.tsx",
+      "sha256": "0f2cc251027fdcbd53bae64960f8aa408ebec03fc37eae6bd0614c39c5f500f7",
+      "category": "FROZEN_JOURNEY_INSPECTOR",
+      "responsibility": "Inspector error boundary",
+      "approved_version": "reader-journey-ui-final-v2.7",
+      "source_thaw": "ui-presentation-thaw-v2-5.json",
+      "test_coverage": []
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/JourneyResizableSplit.tsx",
+      "sha256": "bb190f5c5fc00b6eface0defbe8f34cc70ec6b91f4171ffd66eb1be2bcaccbf6",
+      "category": "FROZEN_JOURNEY_COMPOSITION",
+      "responsibility": "Overview/Inspector resizable split",
+      "approved_version": "reader-journey-ui-final-v2.7",
+      "source_thaw": "ui-presentation-thaw-v2-5.json",
+      "test_coverage": []
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/JourneySceneDetailPanel.tsx",
+      "sha256": "29740ab379df24c5de16f1036907c8914f0234482cbf7818fe3ef6a7d36d63f7",
+      "category": "FROZEN_JOURNEY_INSPECTOR",
+      "responsibility": "Scene/Phase/Question/Hook/Payoff/Risk inspectors",
+      "approved_version": "reader-journey-ui-final-v2.7",
+      "source_thaw": "ui-presentation-thaw-v2-5.json",
+      "test_coverage": [
+        "phase_1cc27_context_inspector_hierarchy.test.tsx",
+        "phase_1cc24b_scene_detail_information_architecture.test.tsx"
+      ]
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/ReaderJourneySyncWorkspace.tsx",
+      "sha256": "b1894afd8b41ce3fc42b9a5076f875dd01cc93f46b961d4b04ac95b46a8b3d1e",
+      "category": "FROZEN_JOURNEY_COMPOSITION",
+      "responsibility": "Books/standalone sync shell, selection wiring",
+      "approved_version": "reader-journey-ui-final-v2.7",
+      "source_thaw": "ui-presentation-thaw-v2-5.json",
+      "test_coverage": []
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.tsx",
+      "sha256": "2d6851c3364f568ae73594ff32d7f44d95a2000821c8f9e256e617206d606a2f",
+      "category": "FROZEN_JOURNEY_COMPOSITION",
+      "responsibility": "Journey Overview + Context Inspector composition",
+      "approved_version": "reader-journey-ui-final-v2.7",
+      "source_thaw": "ui-presentation-thaw-v2-5.json",
+      "test_coverage": [
+        "phase_1cc27_context_inspector_hierarchy.test.tsx",
+        "phase_1cc26_journey_analysis_focused_view.test.tsx",
+        "phase_1cc262_compact_phase_navigation.test.tsx"
+      ]
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/SceneStructureDrawer.tsx",
+      "sha256": "aa60ee959b56eefad3c7549265e77cbd4f4f1e8ee50c008326b7fb2a9f8d5789",
+      "category": "FROZEN_JOURNEY_COMPOSITION",
+      "responsibility": "Scene structure side drawer",
+      "approved_version": "reader-journey-ui-final-v2.7",
+      "source_thaw": "ui-presentation-thaw-v2-5.json",
+      "test_coverage": []
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/SplitPane.tsx",
+      "sha256": "607af6786196a0a5359278fff6772656d6147bd5ddf3b877f23afdbd75f549eb",
+      "category": "FROZEN_JOURNEY_COMPOSITION",
+      "responsibility": "Text/journey column split",
+      "approved_version": "reader-journey-ui-final-v2.7",
+      "source_thaw": "ui-presentation-thaw-v2-5.json",
+      "test_coverage": []
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/StructuredChapterTextPane.tsx",
+      "sha256": "2aaaeaa9c2046e585e98941727e66518a65150daf39f7f70fbacd8ca980ee30b",
+      "category": "FROZEN_JOURNEY_COMPOSITION",
+      "responsibility": "Chapter text + scroll spy surface",
+      "approved_version": "reader-journey-ui-final-v2.7",
+      "source_thaw": "ui-presentation-thaw-v2-5.json",
+      "test_coverage": []
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/exportJourneyPng.ts",
+      "sha256": "c2332ed025c788aac5293605d28f541b74669a10a3295e7aafceafd4afe56cac",
+      "category": "FROZEN_JOURNEY_EXPORT",
+      "responsibility": "PNG Overview export",
+      "approved_version": "reader-journey-ui-final-v2.7",
+      "source_thaw": "ui-presentation-thaw-v2-5.json",
+      "test_coverage": [
+        "phase_1cc251_blocking_ui_fix.test.tsx"
+      ]
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/exportSceneCard.ts",
+      "sha256": "06ab005f429107380f2c7a207b595c59cbeca2c5fdc014792a30825ec48a4dc7",
+      "category": "FROZEN_JOURNEY_EXPORT",
+      "responsibility": "Scene card markdown export helper",
+      "approved_version": "reader-journey-ui-final-v2.7",
+      "source_thaw": "ui-presentation-thaw-v2-5.json",
+      "test_coverage": []
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/inspectorShell.tsx",
+      "sha256": "d32d2b5370c5c6b27de8f870b59a921566b37bedf2f10682294a62fd0a09da85",
+      "category": "FROZEN_JOURNEY_INSPECTOR",
+      "responsibility": "Shared Inspector presentation shell",
+      "approved_version": "reader-journey-ui-final-v2.7",
+      "source_thaw": "ui-presentation-thaw-v2-5.json",
+      "test_coverage": [
+        "phase_1cc27_context_inspector_hierarchy.test.tsx"
+      ]
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/journeySelectionTransaction.ts",
+      "sha256": "63bba2693722746540f6ee13bc285c46b1acef1285520004179a16e028a5eb81",
+      "category": "FROZEN_JOURNEY_INTERACTION",
+      "responsibility": "Atomic URL selection transaction",
+      "approved_version": "reader-journey-ui-final-v2.7",
+      "source_thaw": "ui-presentation-thaw-v2-5.json",
+      "test_coverage": [
+        "phase_1cc253_books_route_selection_transaction.test.tsx"
+      ]
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/journeyUiLabels.ts",
+      "sha256": "c772083c18f21628819e125517270eabb91d0e37bef1eec8d49cca68a921f698",
+      "category": "FROZEN_JOURNEY_PRESENTATION",
+      "responsibility": "Chinese label maps",
+      "approved_version": "reader-journey-ui-final-v2.7",
+      "source_thaw": "ui-presentation-thaw-v2-5.json",
+      "test_coverage": []
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/journeyVisualTokens.ts",
+      "sha256": "404904f014fb841f637ed2b207e83c61f108feb624d6f7871101669d1ff59937",
+      "category": "FROZEN_JOURNEY_VISUALIZATION",
+      "responsibility": "Phase/role visual tokens",
+      "approved_version": "reader-journey-ui-final-v2.7",
+      "source_thaw": "ui-presentation-thaw-v2-5.json",
+      "test_coverage": []
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/overviewMode.ts",
+      "sha256": "267195ff7310b7eeac91867a2da266efca9af96758fd3bb21fd95691ed244651",
+      "category": "FROZEN_JOURNEY_COMPOSITION",
+      "responsibility": "Overview/inspector URL param helpers",
+      "approved_version": "reader-journey-ui-final-v2.7",
+      "source_thaw": "ui-presentation-thaw-v2-5.json",
+      "test_coverage": []
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/readerJourney.css",
+      "sha256": "98d972a69d201f406a0695154cb826e2878e42268e4d237bf0530ce4ab707a42",
+      "category": "FROZEN_JOURNEY_PRESENTATION",
+      "responsibility": "Reader Journey presentation CSS",
+      "approved_version": "reader-journey-ui-final-v2.7",
+      "source_thaw": "ui-presentation-thaw-v2-5.json",
+      "test_coverage": []
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/safeRender.ts",
+      "sha256": "073bf74d8dfd6f035b9308cbb037eaefb902dce4b6a0a4f0399c8e3122519829",
+      "category": "FROZEN_JOURNEY_INSPECTOR",
+      "responsibility": "Normalize unknown analysis field shapes",
+      "approved_version": "reader-journey-ui-final-v2.7",
+      "source_thaw": "ui-presentation-thaw-v2-5.json",
+      "test_coverage": []
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/sceneDetailFields.tsx",
+      "sha256": "e78955e91d091889978cb249bc02b2ec74aef5a8533ba121bb9baedb6489ca87",
+      "category": "FROZEN_JOURNEY_INSPECTOR",
+      "responsibility": "Safe field list renderers",
+      "approved_version": "reader-journey-ui-final-v2.7",
+      "source_thaw": "ui-presentation-thaw-v2-5.json",
+      "test_coverage": []
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/syncWorkspace.css",
+      "sha256": "0aacfc1fbcbf60bac10bbaf741e7148ce9634d8dcaa1940aa63987ef5551d1fd",
+      "category": "FROZEN_JOURNEY_PRESENTATION",
+      "responsibility": "Sync workspace presentation CSS",
+      "approved_version": "reader-journey-ui-final-v2.7",
+      "source_thaw": "ui-presentation-thaw-v2-5.json",
+      "test_coverage": []
+    },
+    {
+      "path": "apps/desktop/src/hooks/useJourneySelection.ts",
+      "sha256": "f5e1c3088028e8659862b869c89fcf6250ffcdd7c916074f324994381ec01b95",
+      "category": "FROZEN_JOURNEY_INTERACTION",
+      "responsibility": "Selection state hook",
+      "approved_version": "reader-journey-ui-final-v2.7",
+      "source_thaw": "ui-presentation-thaw-v2-5.json",
+      "test_coverage": []
+    },
+    {
+      "path": "apps/desktop/src/services/apiClient.ts",
+      "sha256": "484d6fbf257898b14880a2b5e62d5091f435210d79a4a5577fe7f322cfbde764",
+      "category": "FROZEN_JOURNEY_COMPOSITION",
+      "responsibility": "Reader Journey production dependency",
+      "approved_version": "reader-journey-ui-final-v2.7",
+      "source_thaw": "ui-presentation-thaw-v2-5.json",
+      "test_coverage": []
+    },
+    {
+      "path": "apps/desktop/src/services/booksApi.ts",
+      "sha256": "37b1f4e02adb15e9e140f8c7c2361840fa47cfb089c6ab0b06cd75aef79def63",
+      "category": "FROZEN_JOURNEY_COMPOSITION",
+      "responsibility": "Reader Journey production dependency",
+      "approved_version": "reader-journey-ui-final-v2.7",
+      "source_thaw": "ui-presentation-thaw-v2-5.json",
+      "test_coverage": []
+    },
+    {
+      "path": "apps/desktop/src/types/index.ts",
+      "sha256": "baad850de1efe28181b42a8cf32fd5a5d189df35da89bf7c871ae43e290dbb55",
+      "category": "FROZEN_JOURNEY_COMPOSITION",
+      "responsibility": "Reader Journey production dependency",
+      "approved_version": "reader-journey-ui-final-v2.7",
+      "source_thaw": "ui-presentation-thaw-v2-5.json",
+      "test_coverage": []
+    },
+    {
+      "path": "apps/desktop/src/types/journeySelection.ts",
+      "sha256": "eea6592b4b719ddd46362fc38e02ff86077558c92f7a3e53d03ec5e68da38505",
+      "category": "FROZEN_JOURNEY_INTERACTION",
+      "responsibility": "Selection types",
+      "approved_version": "reader-journey-ui-final-v2.7",
+      "source_thaw": "ui-presentation-thaw-v2-5.json",
+      "test_coverage": []
+    },
+    {
+      "path": "apps/desktop/src/types/readerJourneyProfileItems.ts",
+      "sha256": "2e0921e7ca1d461701360d60f71ef2ad8df0336158eeda315590433fa9658b4a",
+      "category": "FROZEN_JOURNEY_INSPECTOR",
+      "responsibility": "Profile item TypeScript types",
+      "approved_version": "reader-journey-ui-final-v2.7",
+      "source_thaw": "ui-presentation-thaw-v2-5.json",
+      "test_coverage": []
+    },
+    {
+      "path": "apps/desktop/src/types/readerJourneyVisualization.ts",
+      "sha256": "2b7b2eb9d9b874d8d39caf8f741c4770384adfdc23e41558fafd970c192629a1",
+      "category": "FROZEN_JOURNEY_VISUALIZATION",
+      "responsibility": "Visualization TypeScript contract",
+      "approved_version": "reader-journey-ui-final-v2.7",
+      "source_thaw": "ui-presentation-thaw-v2-5.json",
+      "test_coverage": []
+    }
+  ]
+}

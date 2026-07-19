@@ -1,0 +1,128 @@
+{
+  "baseline_name": "reader-journey-ui-final-v2.7",
+  "entry_points": [
+    "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.tsx",
+    "apps/desktop/src/components/readerJourney/ReaderJourneySyncWorkspace.tsx",
+    "apps/desktop/src/components/readerJourney/JourneySceneDetailPanel.tsx",
+    "apps/desktop/src/components/readerJourney/inspectorShell.tsx",
+    "apps/desktop/src/components/readerJourney/exportJourneyPng.ts",
+    "apps/desktop/src/components/readerJourney/journeyUiLabels.ts",
+    "apps/desktop/src/components/readerJourney/journeySelectionTransaction.ts",
+    "apps/desktop/src/hooks/useJourneySelection.ts",
+    "apps/desktop/src/components/readerJourney/readerJourney.css",
+    "apps/desktop/src/components/readerJourney/syncWorkspace.css"
+  ],
+  "edges": {
+    "apps/desktop/src/components/readerJourney/JourneySceneDetailPanel.tsx": [
+      "apps/desktop/src/components/readerJourney/inspectorShell.tsx",
+      "apps/desktop/src/components/readerJourney/journeyUiLabels.ts",
+      "apps/desktop/src/components/readerJourney/sceneDetailFields.tsx",
+      "apps/desktop/src/types/readerJourneyVisualization.ts"
+    ],
+    "apps/desktop/src/components/readerJourney/ReaderJourneySyncWorkspace.tsx": [
+      "apps/desktop/src/components/common/States.tsx",
+      "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.tsx",
+      "apps/desktop/src/components/readerJourney/SceneStructureDrawer.tsx",
+      "apps/desktop/src/components/readerJourney/SplitPane.tsx",
+      "apps/desktop/src/components/readerJourney/StructuredChapterTextPane.tsx",
+      "apps/desktop/src/components/readerJourney/exportSceneCard.ts",
+      "apps/desktop/src/components/readerJourney/journeySelectionTransaction.ts",
+      "apps/desktop/src/components/readerJourney/syncWorkspace.css",
+      "apps/desktop/src/hooks/useJourneySelection.ts",
+      "apps/desktop/src/services/booksApi.ts",
+      "apps/desktop/src/types/index.ts",
+      "apps/desktop/src/types/journeySelection.ts",
+      "apps/desktop/src/types/readerJourneyVisualization.ts"
+    ],
+    "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.tsx": [
+      "apps/desktop/src/components/readerJourney/JourneyDetailErrorBoundary.tsx",
+      "apps/desktop/src/components/readerJourney/JourneyResizableSplit.tsx",
+      "apps/desktop/src/components/readerJourney/JourneySceneDetailPanel.tsx",
+      "apps/desktop/src/components/readerJourney/exportJourneyPng.ts",
+      "apps/desktop/src/components/readerJourney/journeySelectionTransaction.ts",
+      "apps/desktop/src/components/readerJourney/journeyUiLabels.ts",
+      "apps/desktop/src/components/readerJourney/journeyVisualTokens.ts",
+      "apps/desktop/src/components/readerJourney/overviewMode.ts",
+      "apps/desktop/src/components/readerJourney/readerJourney.css",
+      "apps/desktop/src/types/journeySelection.ts",
+      "apps/desktop/src/types/readerJourneyVisualization.ts"
+    ],
+    "apps/desktop/src/components/readerJourney/SceneStructureDrawer.tsx": [
+      "apps/desktop/src/types/index.ts",
+      "apps/desktop/src/types/readerJourneyVisualization.ts"
+    ],
+    "apps/desktop/src/components/readerJourney/StructuredChapterTextPane.tsx": [
+      "apps/desktop/src/components/readerJourney/journeyUiLabels.ts",
+      "apps/desktop/src/components/readerJourney/journeyVisualTokens.ts",
+      "apps/desktop/src/types/index.ts",
+      "apps/desktop/src/types/journeySelection.ts",
+      "apps/desktop/src/types/readerJourneyVisualization.ts"
+    ],
+    "apps/desktop/src/components/readerJourney/exportSceneCard.ts": [
+      "apps/desktop/src/components/readerJourney/exportJourneyPng.ts",
+      "apps/desktop/src/types/readerJourneyVisualization.ts"
+    ],
+    "apps/desktop/src/components/readerJourney/journeySelectionTransaction.ts": [
+      "apps/desktop/src/components/readerJourney/overviewMode.ts"
+    ],
+    "apps/desktop/src/components/readerJourney/journeyUiLabels.ts": [
+      "apps/desktop/src/types/readerJourneyVisualization.ts"
+    ],
+    "apps/desktop/src/components/readerJourney/safeRender.ts": [
+      "apps/desktop/src/types/readerJourneyProfileItems.ts"
+    ],
+    "apps/desktop/src/components/readerJourney/sceneDetailFields.tsx": [
+      "apps/desktop/src/components/readerJourney/journeyUiLabels.ts",
+      "apps/desktop/src/components/readerJourney/safeRender.ts",
+      "apps/desktop/src/types/readerJourneyProfileItems.ts"
+    ],
+    "apps/desktop/src/hooks/useJourneySelection.ts": [
+      "apps/desktop/src/types/index.ts",
+      "apps/desktop/src/types/journeySelection.ts",
+      "apps/desktop/src/types/readerJourneyVisualization.ts"
+    ],
+    "apps/desktop/src/services/booksApi.ts": [
+      "apps/desktop/src/services/apiClient.ts",
+      "apps/desktop/src/types/index.ts"
+    ],
+    "apps/desktop/src/types/index.ts": [
+      "apps/desktop/src/types/readerJourneyVisualization.ts"
+    ],
+    "apps/desktop/src/types/journeySelection.ts": [
+      "apps/desktop/src/types/readerJourneyVisualization.ts"
+    ]
+  },
+  "nodes": [
+    "apps/desktop/src/components/common/States.tsx",
+    "apps/desktop/src/components/readerJourney/JourneyDetailErrorBoundary.tsx",
+    "apps/desktop/src/components/readerJourney/JourneyResizableSplit.tsx",
+    "apps/desktop/src/components/readerJourney/JourneySceneDetailPanel.tsx",
+    "apps/desktop/src/components/readerJourney/ReaderJourneySyncWorkspace.tsx",
+    "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.tsx",
+    "apps/desktop/src/components/readerJourney/SceneStructureDrawer.tsx",
+    "apps/desktop/src/components/readerJourney/SplitPane.tsx",
+    "apps/desktop/src/components/readerJourney/StructuredChapterTextPane.tsx",
+    "apps/desktop/src/components/readerJourney/exportJourneyPng.ts",
+    "apps/desktop/src/components/readerJourney/exportSceneCard.ts",
+    "apps/desktop/src/components/readerJourney/inspectorShell.tsx",
+    "apps/desktop/src/components/readerJourney/journeySelectionTransaction.ts",
+    "apps/desktop/src/components/readerJourney/journeyUiLabels.ts",
+    "apps/desktop/src/components/readerJourney/journeyVisualTokens.ts",
+    "apps/desktop/src/components/readerJourney/overviewMode.ts",
+    "apps/desktop/src/components/readerJourney/readerJourney.css",
+    "apps/desktop/src/components/readerJourney/safeRender.ts",
+    "apps/desktop/src/components/readerJourney/sceneDetailFields.tsx",
+    "apps/desktop/src/components/readerJourney/syncWorkspace.css",
+    "apps/desktop/src/hooks/useJourneySelection.ts",
+    "apps/desktop/src/services/apiClient.ts",
+    "apps/desktop/src/services/booksApi.ts",
+    "apps/desktop/src/types/index.ts",
+    "apps/desktop/src/types/journeySelection.ts",
+    "apps/desktop/src/types/readerJourneyProfileItems.ts",
+    "apps/desktop/src/types/readerJourneyVisualization.ts"
+  ],
+  "excluded": [
+    "mockVisualization.ts"
+  ],
+  "note": "Built by static relative-import walk from production entry points; no node_modules."
+}

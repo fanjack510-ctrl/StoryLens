@@ -1,0 +1,83 @@
+{
+  "baseline": "mvp-functional-baseline-v1",
+  "purpose": "reader-journey-presentation-only-refinement",
+  "thaw_id": "ui-presentation-thaw-v1",
+  "core_freeze_manifest": "audits/mvp-functional-baseline-v1/core-freeze-manifest.json",
+  "allowed_files": [
+    {
+      "path": "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.tsx",
+      "before_sha256": "583572a41a601a98fe7c1a47658248b2087f706f9c3ec8332fc5e20dbe0cecba",
+      "reason": "Overview/detail split, phase cards, curve axes, active scene marker presentation",
+      "allowed_change": "layout|presentation|view-only"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/ReaderJourneySyncWorkspace.tsx",
+      "before_sha256": "03652b02cfee4a64692a10514fd4b36484af17e012a20ae4056cc8b4f1be5ec0",
+      "reason": "Sync layout wrapper overflow/grid classes only; no selection semantics",
+      "allowed_change": "layout|presentation"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/sceneDetailFields.tsx",
+      "before_sha256": "c7655bc59aed6381106cada9246342e05d630f96587b757986c133075c8249b2",
+      "reason": "Scene detail field presentation for 2.4B tabs",
+      "allowed_change": "presentation|view-only"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/StructuredChapterTextPane.tsx",
+      "before_sha256": "f26b2671aee8110d1fb8330b14eaf3195d71cdf1457472d7c8a8da51ae2d92a5",
+      "reason": "Text dimming, scene title chrome, H/P/R label presentation for 2.4C",
+      "allowed_change": "presentation|css|view-only"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/readerJourney.css",
+      "before_sha256": "42a95fb16142ef1f6fe30af62289998cf1577f7e4f79e9219aa45ea037f4e71f",
+      "reason": "Journey overview/detail/phase/curve presentation CSS",
+      "allowed_change": "css|layout"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/syncWorkspace.css",
+      "before_sha256": "c5a8d913714b35419be231adab70e54c2f47dda8657e83cae1e435dffc415b00",
+      "reason": "Sync pane scroll regions and text presentation CSS",
+      "allowed_change": "css|layout"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/journeyVisualTokens.ts",
+      "before_sha256": "d27d92f85a944d809d272cca14faacd1985930e1bb36821b466f8a256a0aad24",
+      "reason": "Presentation color tokens only",
+      "allowed_change": "presentation"
+    },
+    {
+      "path": "apps/desktop/src/styles/global.css",
+      "before_sha256": "ddb8b2fd54daa65a46fdb7dfc78635be3fd71e6db6d6df6195243bcc6157cae8",
+      "reason": "Results/journey shell height and overflow for split panes",
+      "allowed_change": "css|layout"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/journeyUiLabels.ts",
+      "before_sha256": null,
+      "reason": "Pure presentation label maps (metrics, lifecycle, roles)",
+      "allowed_change": "presentation|view-only",
+      "new_file": true
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/JourneySceneDetailPanel.tsx",
+      "before_sha256": null,
+      "reason": "Pure presentation Scene detail tabs panel for 2.4B",
+      "allowed_change": "presentation|layout|view-only",
+      "new_file": true
+    }
+  ],
+  "forbidden_behavior_changes": [
+    "selection semantics",
+    "scroll spy",
+    "evidence mapping",
+    "url state",
+    "analysis data",
+    "export data"
+  ],
+  "notes": [
+    "Original core-freeze-manifest.json must not be modified.",
+    "Production presentation files capped at 10.",
+    "Tests and docs may be added outside this list."
+  ]
+}

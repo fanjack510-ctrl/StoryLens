@@ -1,0 +1,106 @@
+{
+  "register": "StoryLens V1.0 Defect Register",
+  "generated_at": "2026-07-19T10:56:13Z",
+  "release_rule": {
+    "P0_must_be": 0,
+    "P1_must_be": 0,
+    "P2_requires_operator_accept": true
+  },
+  "open_p0": [],
+  "open_p1": [],
+  "open_p0_count": 0,
+  "open_p1_count": 0,
+  "defects": [
+    {
+      "id": "DEFECT-V1-001",
+      "title": "Create task greyed at 66 worst vs 59 remaining without explanation",
+      "severity": "P1",
+      "status": "CLOSED",
+      "root_cause": "Create CTA disabled solely on daily request shortfall; no ordinary-language blocker or in-page remedy",
+      "affected_flow": "StartAnalysisDialog create-time preflight",
+      "remediation": "Request-quota panel with required/available/shortfall + 按推荐额度创建任务 using run_temporary_request_allowance",
+      "test": "StartAnalysisDialog.test.tsx (full_worst_requests=66 scenario)",
+      "human_verification": "PENDING_FINAL_UAT",
+      "accepted_risk": null,
+      "release_blocker": false
+    },
+    {
+      "id": "DEFECT-V1-002",
+      "title": "Budget recovery mutated cloud_daily_request_limit permanently",
+      "severity": "P1",
+      "status": "CLOSED",
+      "root_cause": "One-click adjust raised global daily request limit",
+      "affected_flow": "Unified recover / create with temporary allowance",
+      "remediation": "run_scoped_budget_auth.apply_run_budget_auth; mutates_daily_request_limit=false; recovery prefers run_temporary",
+      "test": "test_unified_analysis_recovery_center.py",
+      "human_verification": "PENDING_FINAL_UAT",
+      "accepted_risk": null,
+      "release_blocker": false
+    },
+    {
+      "id": "DEFECT-UAT-001",
+      "severity": "P1",
+      "status": "CLOSED",
+      "title": "Provider bootstrap / connection UX",
+      "prior_status": "DEFECT_UAT_001_REMEDIATED_READY_FOR_HUMAN_CONNECTION",
+      "release_blocker": false
+    },
+    {
+      "id": "DEFECT-UAT-002",
+      "severity": "P1",
+      "status": "CLOSED",
+      "title": "Provider configuration remediation",
+      "prior_status": "DEFECT_UAT_002_REMEDIATED_READY_FOR_HUMAN_UAT",
+      "release_blocker": false
+    },
+    {
+      "id": "DEFECT-UAT-003",
+      "severity": "P0",
+      "status": "CLOSED",
+      "title": "CLOUD_BUDGET_EXCEEDED wrapped as PIPELINE_UNEXPECTED_ERROR / reservation double-count",
+      "note": "Code remediated; earlier runtime miss was stale uvicorn process",
+      "release_blocker": false
+    },
+    {
+      "id": "DEFECT-UAT-004",
+      "severity": "P1",
+      "status": "CLOSED",
+      "prior_status": "DEFECT_UAT_004_REMEDIATED",
+      "release_blocker": false
+    },
+    {
+      "id": "DEFECT-UAT-005",
+      "severity": "P1",
+      "status": "CLOSED",
+      "title": "Active AnalysisRun auto-discovery",
+      "prior_status": "DEFECT_UAT_005_REMEDIATION_COMPLETE_READY_FOR_HUMAN_CHECK",
+      "release_blocker": false
+    },
+    {
+      "id": "DEFECT-UAT-006",
+      "severity": "P1",
+      "status": "CLOSED",
+      "title": "Hidden request limit unclear budget pause",
+      "prior_status": "DEFECT_UAT_006_REMEDIATED",
+      "release_blocker": false
+    },
+    {
+      "id": "DEFECT-UAT-007",
+      "severity": "P1",
+      "status": "CLOSED",
+      "title": "Resume Reader Journey after Scene Analysis",
+      "prior_status": "REMEDIATED_READY_FOR_HUMAN_JOURNEY_GENERATION",
+      "release_blocker": false
+    },
+    {
+      "id": "DEFECT-UAT-009",
+      "severity": "P1",
+      "status": "CLOSED",
+      "title": "Metric Selector overlays journey content",
+      "remediation": "reader-journey-ui-final-v4.2 MetricSelectorPanel",
+      "release_blocker": false
+    }
+  ],
+  "p2_open_for_operator_review": [],
+  "readiness_note": "Open P0/P1 count is 0 for engineering register; final Human UAT may reopen defects."
+}

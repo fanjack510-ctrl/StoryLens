@@ -1,0 +1,54 @@
+{
+  "baseline": "mvp-functional-baseline-v1",
+  "thaw_id": "ui-presentation-thaw-v2-7",
+  "parent_thaw": "ui-presentation-thaw-v2-6.json",
+  "purpose": "phase-1d-c1-uat-07-analysis-progress-and-budget-recovery-ux",
+  "core_freeze_manifest": "audits/mvp-functional-baseline-v1/core-freeze-manifest.json",
+  "approved_behavior": [
+    "Chapter page shows live AnalysisRun progress from status API after boundary confirm",
+    "INSUFFICIENT_BUDGET_RESERVATION mapped to recoverable awaiting_budget_adjustment pause UX",
+    "One-click request-limit adjust + resume same AnalysisRun without re-running boundary",
+    "StartAnalysisDialog shows full-run advisory request precheck before create",
+    "TasksPage shows 已暂停·等待调整额度 and 调整额度并继续; tech codes only in details",
+    "Does not modify Reader Journey UI Final Baseline v2.7 composition or interaction files"
+  ],
+  "forbidden": [
+    "unfreeze reader-journey-ui-final-v2.7",
+    "change journeySelectionTransaction",
+    "change useJourneySelection",
+    "model calls",
+    "create AnalysisRun during remediation",
+    "modify FROZEN_CORE or FROZEN_CONTRACT",
+    "modify FROZEN_CERTIFIED_*"
+  ],
+  "allowed_files": [
+    {
+      "path": "apps/desktop/src/pages/TasksPage.tsx",
+      "before_sha256": "47bd207b82330fce82482e7b756e3017d9606104ab1f414ed20eeafbeacd1f02",
+      "reason": "Budget pause status labels and adjust-and-continue recovery entry",
+      "allowed_change": "presentation|recovery-ux"
+    },
+    {
+      "path": "apps/desktop/src/components/analysis/StartAnalysisDialog.tsx",
+      "before_sha256": "8043dc8d3a92918dd9db16a49863a13042cfb4a087e0c07d64d90a21696d50e8",
+      "reason": "Full-run budget precheck advisory and clearer budget error copy",
+      "allowed_change": "presentation|precheck-ux"
+    },
+    {
+      "path": "apps/desktop/src/components/analysis/BoundaryReviewPanel.tsx",
+      "before_sha256": "c38383e983bd9a3b9d06f1d28d769f4344ae44c234fe2133453faa43277ec517",
+      "reason": "Post-confirm progress stays on chapter page; budget pause copy",
+      "allowed_change": "presentation|followup-copy"
+    }
+  ],
+  "forbidden_behavior_changes": [
+    "reader-journey-ui-final-v2.7 frozen files",
+    "FROZEN_CORE",
+    "FROZEN_CONTRACT",
+    "FROZEN_CERTIFIED_*",
+    "Prompt/Schema/Validator/Provider routing"
+  ],
+  "notes": [
+    "Phase 1D-C1-UAT-07 CHANGEABLE_UI_SHELL + REUSABLE_UI_LOGIC thaw. Additive; does not edit older thaw files or core-freeze-manifest hashes."
+  ]
+}

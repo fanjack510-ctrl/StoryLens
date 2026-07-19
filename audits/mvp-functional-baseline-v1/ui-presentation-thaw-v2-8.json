@@ -1,0 +1,51 @@
+{
+  "baseline": "mvp-functional-baseline-v1",
+  "thaw_id": "ui-presentation-thaw-v2-8",
+  "parent_thaw": "ui-presentation-thaw-v2-7.json",
+  "purpose": "phase-1d-c1-uat-12-unified-analysis-recovery-center",
+  "core_freeze_manifest": "audits/mvp-functional-baseline-v1/core-freeze-manifest.json",
+  "approved_behavior": [
+    "Chapter and Tasks share one Unified Analysis Recovery card titled 分析已暂停",
+    "Primary CTA is 修复并继续 driven by GET recovery-plan / POST recover",
+    "Internal error codes only in 查看详情",
+    "Does not modify Reader Journey UI Final Baseline v2.7 composition files",
+    "Does not modify FROZEN_CORE or FROZEN_CONTRACT hashes"
+  ],
+  "forbidden": [
+    "unfreeze reader-journey-ui-final-v2.7",
+    "modify FROZEN_CORE or FROZEN_CONTRACT",
+    "modify FROZEN_CERTIFIED_*",
+    "agent-initiated real model calls",
+    "auto-create AnalysisRun #6 or mutate Run #5 Scene/Boundary/Journey data"
+  ],
+  "allowed_files": [
+    {
+      "path": "apps/desktop/src/pages/TasksPage.tsx",
+      "before_sha256": "daf65f38bb0e1f6a1ea51be1f88db1e65dafb540c79b6810626421409077ce8c",
+      "reason": "Unify recovery CTAs to 修复并继续; embed UnifiedAnalysisRecoveryCard",
+      "allowed_change": "presentation|recovery-ux"
+    },
+    {
+      "path": "apps/desktop/src/components/analysis/StartAnalysisDialog.tsx",
+      "before_sha256": "8043dc8d3a92918dd9db16a49863a13042cfb4a087e0c07d64d90a21696d50e8",
+      "reason": "May surface full-pipeline advisory from Recovery Center preflight",
+      "allowed_change": "presentation|precheck-ux"
+    },
+    {
+      "path": "apps/desktop/src/components/analysis/BoundaryReviewPanel.tsx",
+      "before_sha256": "c38383e983bd9a3b9d06f1d28d769f4344ae44c234fe2133453faa43277ec517",
+      "reason": "Budget/provider pause copy points to unified recovery card",
+      "allowed_change": "presentation|followup-copy"
+    }
+  ],
+  "forbidden_behavior_changes": [
+    "reader-journey-ui-final-v2.7 frozen files",
+    "FROZEN_CORE",
+    "FROZEN_CONTRACT",
+    "FROZEN_CERTIFIED_*",
+    "Prompt/Schema/Validator/Provider routing"
+  ],
+  "notes": [
+    "Additive thaw for UAT-12 Recovery Center shell. New backend routes live in analysis_recovery.py (non-frozen)."
+  ]
+}

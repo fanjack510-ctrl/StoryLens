@@ -1,0 +1,78 @@
+{
+  "audit_id": "v1.0-qwen-onboarding",
+  "generated_at": "2026-07-19T10:56:13Z",
+  "real_model_requests": 0,
+  "verdict": "QWEN_BYOK_ONBOARDING_IMPLEMENTED_OFFLINE",
+  "ordinary_defaults": {
+    "provider": "aliyun_qwen_plus",
+    "model": "qwen3.7-plus",
+    "display_name": "阿里云百炼 · Qwen",
+    "auto_route": false,
+    "flash_fallback": false,
+    "base_url_bootstrap": true
+  },
+  "wizard": {
+    "component": "apps/desktop/src/components/settings/SettingsAiServiceTab.tsx",
+    "testid": "ai-service-wizard",
+    "fields_ordinary": [
+      "API Key",
+      "模型档位 Qwen Plus（默认推荐）",
+      "每日费用上限",
+      "云端正文发送确认"
+    ],
+    "fields_hidden_from_ordinary": [
+      "Provider ID",
+      "Base URL",
+      "Workspace ID",
+      "invocation type",
+      "fallback",
+      "request hash",
+      "transport",
+      "schema repair routing"
+    ],
+    "connection_test": "explicit user click only; page load must not auto-charge"
+  },
+  "entry_points": [
+    {
+      "id": "first_launch_banner",
+      "path": "apps/desktop/src/components/onboarding/QwenFirstLaunchBanner.tsx",
+      "route": "/settings?tab=ai&focus=api_key"
+    },
+    {
+      "id": "settings_ai_service",
+      "route": "/settings?tab=ai"
+    },
+    {
+      "id": "start_analysis_dialog",
+      "component": "StartAnalysisDialog.tsx"
+    },
+    {
+      "id": "recovery_center_credential",
+      "component": "UnifiedAnalysisRecoveryCard.tsx"
+    },
+    {
+      "id": "empty_library",
+      "page": "LibraryPage.tsx"
+    }
+  ],
+  "credential_policy": {
+    "store": "OS credential manager / keyring",
+    "ui_display": [
+      "已配置",
+      "未配置"
+    ],
+    "forbidden": [
+      "localStorage plaintext key",
+      "SQLite plaintext key",
+      "logs",
+      "audit JSON secrets",
+      "exports",
+      "git tracked files"
+    ]
+  },
+  "gaps_for_human_uat": [
+    "operator must paste own API Key",
+    "real connection test wait for operator click",
+    "no StoryLens-provided cloud account"
+  ]
+}

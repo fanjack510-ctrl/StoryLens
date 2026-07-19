@@ -1,0 +1,66 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Env and secrets
+.env
+*.key
+*.pem
+*.p12
+credential-dump*
+credentials-dump*
+*keychain-export*
+*.keychain-export*
+
+# Databases
+data/*.db
+*.sqlite3
+artifacts/**/*.sqlite3
+artifacts/*.sqlite3
+
+# Runtime data
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+data/exports/*
+!data/exports/.gitkeep
+data/runtime/
+config/local_model_profiles.yaml
+config/cloud_pricing.json
+.env.backup-*
+
+# Human UAT / canary / private sessions
+**/human-uat-session*/
+**/human-uat-session/**
+**/*real-canary*
+**/*canary*.sqlite3
+artifacts/release-candidate/**/*.sqlite3
+!artifacts/release-candidate/**/README.md
+!artifacts/release-candidate/**/.gitkeep
+
+# Logs
+backend.out.log
+backend.err.log
+*.out.log
+*.err.log
+
+# Frontend / build
+node_modules/
+dist/
+build/
+coverage/
+.target/
+target/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

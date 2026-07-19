@@ -1,0 +1,50 @@
+{
+  "audit_id": "v1.0-security-privacy",
+  "generated_at": "2026-07-19T10:56:13Z",
+  "verdict": "SECURITY_PRIVACY_CONTROLS_PRESENT_OFFLINE",
+  "controls": [
+    {
+      "id": "credential_store",
+      "status": "PASS",
+      "detail": "API keys via OS keyring; DB stores reference only"
+    },
+    {
+      "id": "cloud_consent_gates",
+      "status": "PASS",
+      "detail": "global cloud enable + per-run cloud_consent required"
+    },
+    {
+      "id": "raw_logging_default_off",
+      "status": "PASS",
+      "detail": "STORYLENS_CLOUD_RAW_LOGGING=false in .env.example"
+    },
+    {
+      "id": "env_example_placeholders",
+      "status": "PASS",
+      "detail": "STORYLENS_ALIYUN_API_KEY= empty placeholder only"
+    },
+    {
+      "id": "no_storylens_cloud_account",
+      "status": "PASS",
+      "detail": "BYOK only; user pays Aliyun"
+    },
+    {
+      "id": "gitignore_runtime_and_secrets",
+      "status": "UPDATED",
+      "detail": ".gitignore excludes .env, runtime, sqlite artifacts, logs, UAT/canary DBs"
+    }
+  ],
+  "must_not_enter_github": [
+    "API keys",
+    "user novel text",
+    "human-uat databases",
+    "real-canary databases",
+    "credential dumps",
+    "private absolute path dumps with secrets",
+    "backend.out.log / backend.err.log with live data"
+  ],
+  "pending_operator": [
+    "confirm no local .env committed before publish",
+    "scrub any private paths from future screenshots"
+  ]
+}

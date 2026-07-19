@@ -1,0 +1,19 @@
+{
+  "change_id": "certified-baseline-core-freeze-rebase-v1.0",
+  "phase": "1D-C",
+  "title": "Rebase MVP core-freeze hashes to Single-Chapter Certified Baseline v1.0",
+  "source_batch": "phase-1db2-r13-20260719T022027Z",
+  "reason": "FROZEN_CORE/CONTRACT paths were intentionally mutated by CLOSED_VERIFIED canary change packages (v1.0.4–v1.1.1). Phase 1D-C rebases core-freeze-manifest hashes to the certified code without unfreezing Reader Journey UI Final Baseline v2.7.",
+  "updated_paths": [
+    "apps/api/app/services/scene_pipeline.py",
+    "apps/api/app/services/boundary_review_service.py",
+    "apps/api/app/services/structured_output.py",
+    "apps/api/app/services/cloud_output_policy.py",
+    "apps/api/app/services/reader_journey_validation.py",
+    "apps/api/app/schemas/reader_journey.py",
+    "apps/api/app/api/v1/analysis.py"
+  ],
+  "ui_presentation_thaw": "ui-presentation-thaw-v2-6.json",
+  "reader_journey_ui_final_v2_7_unfrozen": false,
+  "real_model_requests_this_phase": 0
+}

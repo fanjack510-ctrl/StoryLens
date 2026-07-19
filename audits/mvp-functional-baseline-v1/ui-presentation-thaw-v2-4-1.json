@@ -1,0 +1,57 @@
+{
+  "baseline": "mvp-functional-baseline-v1",
+  "thaw_id": "ui-presentation-thaw-v2-4-1",
+  "parent_thaw": "ui-presentation-thaw-v2-4.json",
+  "purpose": "journey-analysis-header-and-insight-density",
+  "core_freeze_manifest": "audits/mvp-functional-baseline-v1/core-freeze-manifest.json",
+  "approved_behavior": [
+    "single visible journey analysis title on page",
+    "export-only title for PNG",
+    "compact chapter insight strip with optional clicks via existing selection intents",
+    "responsive curve width filling container"
+  ],
+  "forbidden": [
+    "change selection transaction implementation",
+    "change useJourneySelection",
+    "change visualization algorithms",
+    "delete chapter summary conclusions",
+    "new AnalysisRun or ReaderJourneyRun",
+    "model calls"
+  ],
+  "allowed_files": [
+    {
+      "path": "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.tsx",
+      "before_sha256": "63c79c7bd156620e0e517f6427458e3b2b9af408e89604e4cab897ba89464a09",
+      "reason": "Deduplicate titles, compact insight strip with existing selection intents, responsive curve width",
+      "allowed_change": "presentation|information-architecture"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/ReaderJourneySyncWorkspace.tsx",
+      "before_sha256": "62e52a13a121a58522a46f8c14db441b4fd352a8cac2d61dc80541be62a58784",
+      "reason": "Remove duplicate sync sticky product title when analysis header is present",
+      "allowed_change": "presentation|labels"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/readerJourney.css",
+      "before_sha256": "4f62c8dbbd54bc7117f98f51df355c1a0b6acb403d7d8d0ccfe3c568edfd3640",
+      "reason": "Export-only title, compact insight strip, curve min-height/width",
+      "allowed_change": "presentation|css"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/syncWorkspace.css",
+      "before_sha256": "6b5e0c33100c238cd03c9bd4e24edee7fadd1651c74a9dbdb05bedadd4fcaa02",
+      "reason": "Hide duplicate sync sticky title under journey analysis header",
+      "allowed_change": "presentation|css"
+    }
+  ],
+  "forbidden_behavior_changes": [
+    "journeySelectionTransaction.ts",
+    "useJourneySelection.ts",
+    "FROZEN_CORE",
+    "FROZEN_CONTRACT"
+  ],
+  "notes": [
+    "Additive to v1+v2+v2-2+v2-3+v2-4. Does not modify prior thaw files or core-freeze-manifest.",
+    "Insight clicks reuse handleSelectScene / question-cluster / hook intents only."
+  ]
+}

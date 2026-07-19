@@ -1,0 +1,70 @@
+{
+  "program": "StoryLens V1.0 Open-Source Release Readiness Program",
+  "version_target": "1.0.0-rc1",
+  "generated_at": "2026-07-19T10:56:13Z",
+  "real_model_requests": 0,
+  "github_publish": false,
+  "license_chosen": false,
+  "phases": [
+    {
+      "id": "budget-recovery",
+      "status": "implemented_in_code",
+      "notes": "StartAnalysisDialog request-quota UX + run_temporary_request_allowance + UnifiedAnalysisRecoveryCard"
+    },
+    {
+      "id": "qwen-byok-onboarding",
+      "status": "implemented_in_code",
+      "notes": "QwenSetupWizard in SettingsAiServiceTab; QwenFirstLaunchBanner; DEFAULT aliyun_qwen_plus / qwen3.7-plus"
+    },
+    {
+      "id": "security-privacy-secrets",
+      "status": "audited_offline",
+      "artifact": "audits/v1.0/v1.0-secrets-scan.json"
+    },
+    {
+      "id": "dependency-license-sbom",
+      "status": "summarized",
+      "notes": "Community LICENSE intentionally NOT chosen by agent"
+    },
+    {
+      "id": "docs-and-scripts",
+      "status": "prepared",
+      "notes": "User docs under docs/; wrapper scripts under scripts/"
+    },
+    {
+      "id": "offline-gates",
+      "status": "ready_to_run_pending_execution",
+      "gates": [
+        "pytest",
+        "ruff",
+        "typescript",
+        "eslint",
+        "vitest",
+        "production_build",
+        "certified_baseline",
+        "invocation_policy",
+        "secrets_scan"
+      ]
+    },
+    {
+      "id": "clean-install-human-uat",
+      "status": "environment_prep_only",
+      "waiting_for": "operator authorization and real clicks"
+    },
+    {
+      "id": "github-release",
+      "status": "blocked_until_operator",
+      "forbidden_now": [
+        "publish",
+        "choose_LICENSE",
+        "auto_real_qwen_calls"
+      ]
+    }
+  ],
+  "recommended_verdict_candidate": "STORYLENS_V1_0_RELEASE_CANDIDATE_READY_FOR_HUMAN_UAT",
+  "formal_seal_requires": [
+    "offline_gates_pass",
+    "operator_human_uat_pass",
+    "operator_license_selection"
+  ]
+}

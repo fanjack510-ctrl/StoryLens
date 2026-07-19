@@ -1,0 +1,21 @@
+{
+  "panelOpen": true,
+  "panelPosition": "static",
+  "panelBackground": "rgb(255, 255, 255)",
+  "panelOpaque": true,
+  "panelInFlow": true,
+  "overlapsPhase": false,
+  "overlapsChart": false,
+  "phaseBelowPanel": true,
+  "chartBelowPhase": true,
+  "metricLabel": "当前指标·阅读牵引",
+  "ariaExpanded": "true",
+  "svgHeight": "420",
+  "moreInViewport": null,
+  "overlayRoot": true,
+  "viewport": {
+    "w": 1920,
+    "h": 1080
+  },
+  "capturedAt": "2026-07-19T10:05:56.492Z"
+}

@@ -1,0 +1,93 @@
+{
+  "change_id": "single-chapter-journey-change-v1.0.3",
+  "phase": "1D-B2-R3",
+  "defect_id": "DEFECT-CANARY-007",
+  "title": "Hook score distribution: all-high with Evidence becomes warning; preserve JOURNEY_* business error codes",
+  "old_batch_id": "phase-1db2-r2-20260718T135023Z",
+  "root_cause": {
+    "primary": "D. DISTRIBUTION_VALIDATOR_TOO_STRICT",
+    "secondary": [
+      "C. SMALL_SAMPLE_DISTRIBUTION_FALSE_POSITIVE",
+      "J. BUSINESS_ERROR_MAPPING_BUG",
+      "A. HOOK_SCORE_PROMPT_ANCHOR_MISSING"
+    ]
+  },
+  "affected_prompt": "packages/prompts/reader_journey_scene/v1.5 (new; v1.4 preserved)",
+  "affected_validator": "apps/api/app/services/reader_journey_validation.py::assess_score_distribution",
+  "affected_error_mapping": "apps/api/app/services/reader_journey_pipeline.py::_classify_journey_error; apps/api/app/services/scene_pipeline.py::classify_pipeline_error",
+  "affected_repair": "packages/prompts/reader_journey_scene/v1.5/repair.md",
+  "allowed_files": [
+    "packages/prompts/reader_journey_scene/v1.5/system.md",
+    "packages/prompts/reader_journey_scene/v1.5/user.md",
+    "packages/prompts/reader_journey_scene/v1.5/repair.md",
+    "apps/api/app/schemas/reader_journey.py",
+    "apps/api/app/services/reader_journey_validation.py",
+    "apps/api/app/services/reader_journey_pipeline.py",
+    "apps/api/app/services/scene_pipeline.py",
+    "apps/api/tests/test_defect_canary_007_score_distribution.py",
+    "apps/api/tests/test_phase_1c_c1.py",
+    "audits/mvp-functional-baseline-v1/core-freeze-manifest.json",
+    "audits/single-chapter-pipeline/changes/single-chapter-journey-change-v1.0.3.json",
+    "audits/single-chapter-pipeline/real-canary-preflight-v4.json",
+    "scripts/certification/real_canary_runner.py",
+    "scripts/check_single_chapter_pipeline_reliability.py",
+    "audits/single-chapter-pipeline/real-canary-v3/final-verdict-v1.json",
+    "audits/single-chapter-pipeline/real-canary-v3/defects/DEFECT-CANARY-007.json"
+  ],
+  "prohibited_files": [
+    "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/**",
+    "packages/prompts/reader_journey_scene/v1.4/**",
+    "data/storylens.db",
+    "artifacts/single-chapter-pipeline-certification/real-canary/canary-v3.sqlite3"
+  ],
+  "old_behavior": {
+    "distribution": "all hook_score>80 with len(profiles)>=3 raised JOURNEY_SCORE_DISTRIBUTION_SUSPICIOUS as fatal",
+    "error_mapping": "StructuralValidationError JOURNEY_* became PIPELINE_UNEXPECTED_ERROR",
+    "prompt_v1.4": "no numeric hook_score anchors"
+  },
+  "new_behavior": {
+    "distribution": "high score without Hook/Evidence is hard FAIL; all-high with Evidence becomes warning + requires_review; scores not rewritten",
+    "error_mapping": "StructuralValidationError with JOURNEY_* preserves original error_code",
+    "prompt_v1.5": "hook_score anchors 0-100; not tension/curiosity/engagement; 90+ needs major breakpoint"
+  },
+  "score_invariants": [
+    "no normalization score rewrite",
+    "no validator score rewrite",
+    "high hook requires Hook+Evidence",
+    "legitimate all-high allowed with warning"
+  ],
+  "warning_vs_error_rules": {
+    "hard_errors": [
+      "JOURNEY_SCORE_OUT_OF_RANGE",
+      "JOURNEY_HIGH_HOOK_WITHOUT_HOOK_OBJECT",
+      "JOURNEY_HIGH_HOOK_WITHOUT_EVIDENCE",
+      "JOURNEY_UNREALISTIC_RISK_DISTRIBUTION",
+      "JOURNEY_QUESTION_CHAIN_ALL_EMPTY_IN",
+      "JOURNEY_CONSECUTIVE_NO_PAYOFF"
+    ],
+    "warnings": [
+      "JOURNEY_SMALL_SAMPLE_ALL_HIGH",
+      "JOURNEY_ALL_HOOK_SCORES_HIGH",
+      "JOURNEY_REPEATED_SCORE_PATTERN",
+      "JOURNEY_SCORE_DEFAULT_PATTERN_CONFIRMED"
+    ]
+  },
+  "small_sample_rules": "2-3 scenes all hook_score>80 with Evidence → warning JOURNEY_SMALL_SAMPLE_ALL_HIGH / ALL_HOOK_SCORES_HIGH, requires_review=true, Journey may succeed",
+  "compatibility_impact": "SCENE_PROMPT_VERSION becomes v1.5; contract remains 1.3. Previously failing all-high chapters with valid Evidence can now succeed with audit warnings.",
+  "migration_required": false,
+  "regression_tests": [
+    "apps/api/tests/test_defect_canary_007_score_distribution.py",
+    "apps/api/tests/test_phase_1c_c1.py::test_score_distribution_validation",
+    "scripts/run_single_chapter_pipeline_certification.py"
+  ],
+  "rollback_plan": "Set SCENE_PROMPT_VERSION to v1.4; restore prior validate_score_distribution fatal all-high; restore classify without StructuralValidationError branch; revert freeze hashes.",
+  "new_hashes": {
+    "apps/api/app/schemas/reader_journey.py": "7d8f8ed2dc9fcc1c524cfa6c8233ac5e9044c65490f5549e9b8a6fc79fbe316f",
+    "apps/api/app/services/reader_journey_validation.py": "e814b878952221c4ccf047ba0110a1ae8b6c7db5b0670db660dd2ab9210a41b9",
+    "apps/api/app/services/reader_journey_pipeline.py": "1f0ce6d915b86e6002c1a4191b58338b6128625b57ac133c6cf9dcb89db6bb1b",
+    "apps/api/app/services/scene_pipeline.py": "f4cce8d7833f7ba68c330ba4b51ee8c590c59387df008d9611c12a0bb7c3b85c",
+    "packages/prompts/reader_journey_scene/v1.5/system.md": "41faec2e4b1992a31e31c2679f82ed35eb017013eee145de6752d658da95fc6c",
+    "packages/prompts/reader_journey_scene/v1.5/user.md": "a0ca6bcb6c3602de16dbf01130b165c6fcf9fa5b1fbb03b32ac5e1758ece8cc7",
+    "packages/prompts/reader_journey_scene/v1.5/repair.md": "1b6f62868a56bdd0ca082f973d00347d4a14b69cb24b782c44e5f9864afd1273"
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "baseline": "mvp-functional-baseline-v1",
+  "thaw_id": "ui-presentation-thaw-v2-10",
+  "parent_thaw": "ui-presentation-thaw-v2-9.json",
+  "purpose": "phase-1d-c1-ui-03-reader-journey-visualization-v2.9-canonical-restore",
+  "core_freeze_manifest": "audits/mvp-functional-baseline-v1/core-freeze-manifest.json",
+  "reader_journey_ui_freeze": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.9/reader-journey-ui-final-freeze-v2.9.json",
+  "approved_behavior": [
+    "Single CanonicalJourneyChart shared by all books/chapters/runs",
+    "Default plot_area_height=340px (SVG height includes pad); expanded plot=480px",
+    "Default Y domain fixed 0—100; focus-data only under 更多图表设置",
+    "Inspector collapsed by default with summary bar; curve is page hero",
+    "Primary toolbar: metric / fit-all / current Phase / expand detail / export PNG",
+    "Scene<=15 fit-all without zoom controls; 16–30 horizontal browse; >30 brush",
+    "Chart overflow-y hidden/visible only; PNG full journey independent of viewport",
+    "Does not modify Prompt/Contract/Validator/Broker/Budget/Recovery"
+  ],
+  "forbidden": [
+    "book_id/chapter_id/run_id/scene_count special cases",
+    "modify FROZEN_CORE or FROZEN_CONTRACT",
+    "modify FROZEN_CERTIFIED_*",
+    "agent-initiated real model calls",
+    "mutate Scene/Boundary/ReaderJourney business data"
+  ],
+  "allowed_files": [
+    {
+      "path": "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.tsx",
+      "before_sha256": "101c253267ede4e7753e35939ca714695f523bc46a1849da8bcef416e1948c32",
+      "reason": "Canonical layout restore: curve hero, collapsed Inspector, compact chrome",
+      "allowed_change": "presentation|visualization-v2.9"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/exportJourneyPng.ts",
+      "before_sha256": "5ecc4815bd5aa331f4763309b1ca779a9ac151e20f20c827acc2c6ed6a33ca0d",
+      "reason": "Full-journey PNG filename/version v2.9",
+      "allowed_change": "presentation|export-v2.9"
+    }
+  ],
+  "forbidden_behavior_changes": [
+    "FROZEN_CORE",
+    "FROZEN_CONTRACT",
+    "FROZEN_CERTIFIED_*",
+    "Prompt/Schema/Validator/Provider routing",
+    "Reader Journey Profile / Phase / Question / Hook / Payoff / Risk / Evidence semantics"
+  ],
+  "notes": [
+    "v2.9 is a controlled restore after READER_JOURNEY_VISUALIZATION_V2_8_HUMAN_UAT_FAILED.",
+    "Visualization modules sealed into reader-journey-ui-final-v2.9.",
+    "Rollback: point freeze checker to v2.8; remove thaw v2-10 from DEFAULT_THAWS."
+  ]
+}

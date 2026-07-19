@@ -1,0 +1,1311 @@
+{
+  "baseline_name": "mvp-functional-baseline-v1",
+  "generated_at": "2026-07-17T16:52:58.894711+00:00",
+  "git_commit": null,
+  "git_worktree_status": "not_a_git_repository",
+  "database_path": "data/storylens.db",
+  "schema_version": {
+    "migrations": [
+      "migrate_phase_1b",
+      "migrate_phase_2a1",
+      "migrate_phase_2b1",
+      "migrate_phase_2b2",
+      "migrate_phase_1c_a",
+      "migrate_phase_1c_a3",
+      "migrate_phase_1c_a4",
+      "migrate_phase_1c_a7",
+      "migrate_phase_1c_c1"
+    ],
+    "note": "No single schema_version table; migrations are idempotent functions in session.py"
+  },
+  "prompt_versions": {
+    "scene_boundary_cloud": "v3.5",
+    "scene_boundary_adjudication": "v1",
+    "scene_analysis": "v3.2",
+    "reader_journey_scene": "v1.5",
+    "reader_journey_chapter_code_default": "v1.1",
+    "reader_journey_chapter_journey_run_2_stored": "v1"
+  },
+  "formula_versions": {
+    "engagement": "1.0",
+    "importance": "1.1",
+    "hook_select": "1.1",
+    "payoff_derive": "1.1",
+    "cluster": "1.1",
+    "chain_rank": "1.0",
+    "chain_merge": "1.0"
+  },
+  "visualization_version": "1.1",
+  "contract_versions": {
+    "scene_contract": "1.3",
+    "chapter_contract_code_default": "1.1",
+    "chapter_contract_journey_run_2_stored": "1.0",
+    "planner_version": "1.1"
+  },
+  "test_counts": {
+    "pytest_passed": 271,
+    "vitest_passed": 111,
+    "e2e_passed": 19,
+    "ruff": "passed",
+    "typescript": "passed",
+    "eslint": "passed",
+    "build": "passed"
+  },
+  "category_counts": {
+    "FROZEN_CORE": 63,
+    "FROZEN_CONTRACT": 15,
+    "REUSABLE_UI_LOGIC": 15
+  },
+  "ui_shell_changeable_count": 16,
+  "ui_shell_changeable": [
+    "apps/desktop/src/app/router.tsx",
+    "apps/desktop/src/app/App.tsx",
+    "apps/desktop/src/components/layout/AppShell.tsx",
+    "apps/desktop/src/pages/HomePage.tsx",
+    "apps/desktop/src/pages/LibraryPage.tsx",
+    "apps/desktop/src/pages/WorkspaceLandingPage.tsx",
+    "apps/desktop/src/pages/CasesPage.tsx",
+    "apps/desktop/src/pages/ProvidersPage.tsx",
+    "apps/desktop/src/pages/SettingsPage.tsx",
+    "apps/desktop/src/pages/BookRoutePage.tsx",
+    "apps/desktop/src/components/common/States.tsx",
+    "apps/desktop/src/components/readerJourney/SceneStructureDrawer.tsx",
+    "apps/desktop/src/components/readerJourney/journeyVisualTokens.ts",
+    "apps/desktop/src/components/readerJourney/readerJourney.css",
+    "apps/desktop/src/components/readerJourney/syncWorkspace.css",
+    "apps/desktop/src/styles/global.css"
+  ],
+  "missing_files": [],
+  "files": [
+    {
+      "path": "apps/api/app/db/models.py",
+      "category": "FROZEN_CORE",
+      "sha256": "da878ffb64d207c00fec8be4949a1825b11cdbb1fd998eedd1a5564e805153f8",
+      "reason": "ORM persistence for Book/Chapter/Paragraph/AnalysisRun/Scene/Artifact/Evidence/Journey",
+      "public_interfaces": [
+        "Book",
+        "Chapter",
+        "Paragraph",
+        "AnalysisRun",
+        "Scene",
+        "AnalysisArtifact",
+        "AnalysisEvidence",
+        "ReaderJourneyRun",
+        "SceneReaderJourneyProfile",
+        "ReaderJourneyPhase",
+        "ChapterReaderJourneySummary",
+        "BoundaryRevision",
+        "CloudBudgetReservation",
+        "ModelInvocation"
+      ],
+      "covered_by_tests": [
+        "apps/api/tests/test_migration.py",
+        "apps/api/tests/test_phase_1c_c1.py"
+      ],
+      "size": 33842
+    },
+    {
+      "path": "apps/api/app/db/session.py",
+      "category": "FROZEN_CORE",
+      "sha256": "85fed90519dd1441d66dbd74a1bd43802e4717ee2e4c7c04dcf1000c38d24669",
+      "reason": "DB bootstrap and incremental migrations; schema evolution entrypoint",
+      "public_interfaces": [
+        "create_db",
+        "migrate_phase_1b",
+        "migrate_phase_1c_c1",
+        "SessionLocal",
+        "get_db"
+      ],
+      "covered_by_tests": [
+        "apps/api/tests/test_migration.py"
+      ],
+      "size": 22400
+    },
+    {
+      "path": "apps/api/app/domain/ingestion.py",
+      "category": "FROZEN_CORE",
+      "sha256": "b04376937144010e6f96dd391b1de11fcdd3d57dd2624f0c29bbbc2978ed2ab1",
+      "reason": "Chapter detection rules and paragraph addressing foundation",
+      "public_interfaces": [
+        "detect_chapters",
+        "ParsedChapter",
+        "ChapterDetection"
+      ],
+      "covered_by_tests": [
+        "apps/api/tests/test_import.py",
+        "apps/api/tests/test_phase_2a1.py"
+      ]
+    },
+    {
+      "path": "apps/api/app/services/extractors.py",
+      "category": "FROZEN_CORE",
+      "sha256": "5c912a89a58cbce7e32b053cc6d00dd93eb1786c05eee5e0069dceba856a330a",
+      "reason": "TXT/DOCX/EPUB extraction into normalized text",
+      "public_interfaces": [
+        "extract_document",
+        "ExtractedDocument"
+      ],
+      "covered_by_tests": [
+        "apps/api/tests/test_import.py"
+      ]
+    },
+    {
+      "path": "apps/api/app/services/book_service.py",
+      "category": "FROZEN_CORE",
+      "sha256": "c3fc54ff654539afdf62778e0b0ff1e7e8730432ba83a43740e2614b5223ac5e",
+      "reason": "Book import persistence and stable Book/Chapter/Paragraph IDs",
+      "public_interfaces": [
+        "import_book",
+        "preview_book",
+        "_write_chapters"
+      ],
+      "covered_by_tests": [
+        "apps/api/tests/test_import.py"
+      ]
+    },
+    {
+      "path": "apps/api/app/services/scene_pipeline.py",
+      "category": "FROZEN_CORE",
+      "sha256": "6b02ec9d0b413dd01ae52712aaac476e183a6a790b58d25fbcde4b72abfb390b",
+      "reason": "Scene boundary + analysis orchestration core",
+      "public_interfaces": [
+        "execute_scene_pipeline",
+        "validate_scene_analysis",
+        "classify_pipeline_error"
+      ],
+      "covered_by_tests": [
+        "apps/api/tests/test_scene_pipeline.py",
+        "apps/api/tests/test_phase_1c_a.py"
+      ],
+      "certified_rebase": "phase-1db2-r13 / Certified Baseline v1.0",
+      "size": 47075
+    },
+    {
+      "path": "apps/api/app/services/boundary_review_service.py",
+      "category": "FROZEN_CORE",
+      "sha256": "9f4243c6a03fb093e1fcace3263730198727198113939681bb2be69d124dfcbf",
+      "reason": "Boundary review confirm → BoundaryRevision → Scene analysis",
+      "public_interfaces": [
+        "create_review_session",
+        "confirm_review",
+        "analyze_confirmed_review"
+      ],
+      "covered_by_tests": [
+        "apps/api/tests/test_phase_1c_a8_review_confirm.py"
+      ],
+      "certified_rebase": "phase-1db2-r13 / Certified Baseline v1.0"
+    },
+    {
+      "path": "apps/api/app/services/boundary_detection_checkpoints.py",
+      "category": "FROZEN_CORE",
+      "sha256": "433443cbff2cecef85a2a5097be1efa99a79c2ec37f864b5f58f81fbde041f40",
+      "reason": "Detection batch checkpoints and offline recovery",
+      "public_interfaces": [
+        "upsert_detection_checkpoint",
+        "recover_boundary_detection_from_invocations"
+      ],
+      "covered_by_tests": [
+        "apps/api/tests/test_phase_1c_a7.py",
+        "apps/api/tests/test_phase_1c_a10.py"
+      ]
+    },
+    {
+      "path": "apps/api/app/services/scene_analysis_progress.py",
+      "category": "FROZEN_CORE",
+      "sha256": "ef937e12628b2bd9f0aa4cf15b904541adb7c87379f3b72922b0167f57f258c8",
+      "reason": "Scene analysis progress, pending scenes, failure persistence",
+      "public_interfaces": [
+        "scene_analysis_progress",
+        "pending_scenes_for_run",
+        "persist_scene_analysis_failure"
+      ],
+      "covered_by_tests": [
+        "apps/api/tests/test_phase_1c_a10.py"
+      ]
+    },
+    {
+      "path": "apps/api/app/services/scene_analysis_offline_replay.py",
+      "category": "FROZEN_CORE",
+      "sha256": "0faf417e8b4248ff0965b899b5ff1d6d3fab36eebc090f3485561f92cbb95760",
+      "reason": "Offline replay of scene analysis from stored invocations",
+      "public_interfaces": [
+        "offline_replay_scene_analysis"
+      ],
+      "covered_by_tests": [
+        "apps/api/tests/test_phase_1c_a10.py"
+      ]
+    },
+    {
+      "path": "apps/api/app/services/structured_output.py",
+      "category": "FROZEN_CORE",
+      "sha256": "adc23093150f1596bf524fb8d2a23f1c791cd6c472554f3b23ecfe08fd80cb92",
+      "reason": "Unified validated model generation + ModelInvocation persistence",
+      "public_interfaces": [
+        "generate_validated"
+      ],
+      "covered_by_tests": [
+        "apps/api/tests/test_scene_pipeline.py",
+        "apps/api/tests/test_phase_1c_c1.py"
+      ],
+      "certified_rebase": "phase-1db2-r13 / Certified Baseline v1.0",
+      "size": 60042
+    },
+    {
+      "path": "apps/api/app/services/prompt_service.py",
+      "category": "FROZEN_CORE",
+      "sha256": "3786e904304e78c7bc7cc7abdcde3b9a8818556334ce3edbed479ca9f6627dfb",
+      "reason": "Prompt loader from packages/prompts",
+      "public_interfaces": [
+        "load_prompt"
+      ],
+      "covered_by_tests": [
+        "apps/api/tests/test_scene_pipeline.py"
+      ]
+    },
+    {
+      "path": "apps/api/app/services/response_contract.py",
+      "category": "FROZEN_CORE",
+      "sha256": "b2deeb73fb4542632a9dc31eec9018758d06cd699743c33ab17000d1b5e5093a",
+      "reason": "Structured response contract helpers",
+      "public_interfaces": [],
+      "covered_by_tests": []
+    },
+    {
+      "path": "apps/api/app/model_gateway/gateway.py",
+      "category": "FROZEN_CORE",
+      "sha256": "187f4c67a69613744fe7253ce2d016c8df94b95a40ef4162901a62b1b07fd33b",
+      "reason": "Unified ModelGateway protocol for local and cloud",
+      "public_interfaces": [
+        "ModelGateway",
+        "generate"
+      ],
+      "covered_by_tests": [
+        "apps/api/tests/test_model_gateway.py"
+      ]
+    },
+    {
+      "path": "apps/api/app/model_gateway/registry.py",
+      "category": "FROZEN_CORE",
+      "sha256": "3ce9035af5b3bab9d4e83415e1b2e55292cfb3e4e32ed75ce66ca1e124d06aef",
+      "reason": "Provider registry assembly",
+      "public_interfaces": [
+        "get_model_gateway"
+      ],
+      "covered_by_tests": [
+        "apps/api/tests/test_model_gateway.py"
+      ],
+      "size": 3784
+    },
+    {
+      "path": "apps/api/app/model_gateway/providers/openai_compatible.py",
+      "category": "FROZEN_CORE",
+      "sha256": "29a4495248ad3f0a73b7f7cf33c97774fc24d06f92f3c25099b6a8af1f478cce",
+      "reason": "OpenAI-compatible HTTP provider (local + Aliyun)",
+      "public_interfaces": [
+        "OpenAICompatibleProvider"
+      ],
+      "covered_by_tests": [
+        "apps/api/tests/test_aliyun_provider.py"
+      ]
+    },
+    {
+      "path": "apps/api/app/services/provider_runtime_service.py",
+      "category": "FROZEN_CORE",
+      "sha256": "cad47e699f492ab9c304def1bc87046af1f1741d6c8c919c4edfc5a857f01d34",
+      "reason": "Canonical pre-send provider runtime resolution",
+      "public_interfaces": [
+        "ProviderRuntimeService.resolve_for_run"
+      ],
+      "covered_by_tests": [
+        "apps/api/tests/test_phase_1c_a10.py"
+      ]
+    },
+    {
+      "path": "apps/api/app/services/provider_runtime.py",
+      "category": "FROZEN_CORE",
+      "sha256": "fa5f561dba2725327c43007ffc5b202bbfc6e94c4de5ef3325ae6c2c1a82f99e",
+      "reason": "DB overlay onto provider instances",
+      "public_interfaces": [],
+      "covered_by_tests": [
+        "apps/api/tests/test_phase_1c_a5.py"
+      ],
+      "size": 3016
+    },
+    {
+      "path": "apps/api/app/services/provider_eligibility.py",
+      "category": "FROZEN_CORE",
+      "sha256": "f83a19ff8ba11bf47ea9434b5032b5d235439886de9c06ac788f55b7b23fc27d",
+      "reason": "Manual/automatic route eligibility gates",
+      "public_interfaces": [],
+      "covered_by_tests": [
+        "apps/api/tests/test_phase_1c_a.py"
+      ]
+    },
+    {
+      "path": "apps/api/app/services/budget_reservation.py",
+      "category": "FROZEN_CORE",
+      "sha256": "7c07dd2d8a39c9ebfdaf00de4f8bbcdf74dd864172176a3abc0ba807eda32148",
+      "reason": "Cloud budget reservation and release",
+      "public_interfaces": [
+        "reserve_budget",
+        "release_run_reservation",
+        "InsufficientBudgetReservation"
+      ],
+      "covered_by_tests": [
+        "apps/api/tests/test_phase_1c_a4.py",
+        "apps/api/tests/test_cloud_budget.py"
+      ],
+      "size": 15506
+    },
+    {
+      "path": "apps/api/app/services/staged_budget.py",
+      "category": "FROZEN_CORE",
+      "sha256": "4ef2a92c9972558f62159a656d61b5b2e0f48c86c79e9eb7193804106af099ac",
+      "reason": "Staged budget estimates for boundary/analysis/journey",
+      "public_interfaces": [
+        "STAGE_BOUNDARY",
+        "STAGE_ANALYSIS",
+        "estimate_stage1_boundary",
+        "estimate_stage2_scene_analysis"
+      ],
+      "covered_by_tests": [
+        "apps/api/tests/test_phase_1c_a4.py"
+      ]
+    },
+    {
+      "path": "apps/api/app/services/cloud_budget.py",
+      "category": "FROZEN_CORE",
+      "sha256": "a9200f2f06fab66e04374c79af5c6ecb20887f0435aa16e4c9ec32b8ad9914e7",
+      "reason": "Daily cloud usage aggregation",
+      "public_interfaces": [
+        "daily_usage"
+      ],
+      "covered_by_tests": [
+        "apps/api/tests/test_cloud_budget.py"
+      ],
+      "size": 6189
+    },
+    {
+      "path": "apps/api/app/services/cloud_pricing.py",
+      "category": "FROZEN_CORE",
+      "sha256": "6ed1b37c45989ee41dbb756a4de4bed12c9745a94e0cb4347748a299e2514a12",
+      "reason": "Cloud pricing estimates from config",
+      "public_interfaces": [
+        "pricing_status",
+        "estimate_cost"
+      ],
+      "covered_by_tests": [
+        "apps/api/tests/test_cloud_budget.py"
+      ]
+    },
+    {
+      "path": "apps/api/app/services/cloud_output_policy.py",
+      "category": "FROZEN_CORE",
+      "sha256": "632d0195421f281f1a395b38e443930156f684e3e8ce7b63ccf76b0f68263954",
+      "reason": "Output token caps per task type",
+      "public_interfaces": [],
+      "covered_by_tests": [],
+      "certified_rebase": "phase-1db2-r13 / Certified Baseline v1.0"
+    },
+    {
+      "path": "apps/api/app/services/scene_transitions.py",
+      "category": "FROZEN_CORE",
+      "sha256": "521b7e9bf3f518d4e58aa41dedf1219e6614e738c50531c0cd6eca3f59061b9c",
+      "reason": "Adjacent transition building for boundary detection",
+      "public_interfaces": [
+        "build_adjacent_transitions",
+        "validate_and_map_transitions"
+      ],
+      "covered_by_tests": [
+        "apps/api/tests/test_phase_2b1.py"
+      ]
+    },
+    {
+      "path": "apps/api/app/services/transition_batch_planner.py",
+      "category": "FROZEN_CORE",
+      "sha256": "4583124c71746500e9a2c2a493f7da1d2e7851af0fb412a26a2cd96d769ec65d",
+      "reason": "Transition batch planning for v3.x boundary",
+      "public_interfaces": [
+        "plan_transition_batches"
+      ],
+      "covered_by_tests": [
+        "apps/api/tests/test_phase_2b2.py"
+      ]
+    },
+    {
+      "path": "apps/api/app/services/scene_boundary_adjudicator.py",
+      "category": "FROZEN_CORE",
+      "sha256": "ec788b25687969c9f5191552096f5df70594b508dbf195286b9a11e379077497",
+      "reason": "v3.5 adjudication to canonical boundaries",
+      "public_interfaces": [
+        "plan_adjudication_batches",
+        "adjudicated_to_canonical"
+      ],
+      "covered_by_tests": [
+        "apps/api/tests/test_phase_2b8.py"
+      ]
+    },
+    {
+      "path": "apps/api/app/services/compact_transition_adapter.py",
+      "category": "FROZEN_CORE",
+      "sha256": "d846b2113503072d88ff619cecb5e5cf77c10102c23b0e665d1f93a2bac7a9a8",
+      "reason": "Compact transition → canonical adapter",
+      "public_interfaces": [
+        "compact_to_canonical"
+      ],
+      "covered_by_tests": [
+        "apps/api/tests/test_phase_2b3.py"
+      ]
+    },
+    {
+      "path": "apps/api/app/services/compact_transition_adapter_v34.py",
+      "category": "FROZEN_CORE",
+      "sha256": "bcf81f636f6c0d2dde46d5db61c88af2d982a5f0a63aca4f2096691acbdb0955",
+      "reason": "v3.4 compact transition adapter",
+      "public_interfaces": [
+        "compact_v34_to_canonical"
+      ],
+      "covered_by_tests": [
+        "apps/api/tests/test_phase_2b4.py"
+      ]
+    },
+    {
+      "path": "apps/api/app/services/reader_journey_pipeline.py",
+      "category": "FROZEN_CORE",
+      "sha256": "1f0ce6d915b86e6002c1a4191b58338b6128625b57ac133c6cf9dcb89db6bb1b",
+      "reason": "Reader journey execution: profiles → synthesis → persistence",
+      "public_interfaces": [
+        "execute_reader_journey",
+        "build_preflight_payload"
+      ],
+      "covered_by_tests": [
+        "apps/api/tests/test_phase_1c_c1.py",
+        "apps/api/tests/test_phase_1c_c1_2.py"
+      ]
+    },
+    {
+      "path": "apps/api/app/services/reader_journey_validation.py",
+      "category": "FROZEN_CORE",
+      "sha256": "8c7eb5cefc4ed224271e7a7cbcabd4dc203ecb6d2ca2eb912dcbc5e41212928e",
+      "reason": "Journey business validation and evidence scope checks",
+      "public_interfaces": [
+        "validate_scene_batch_result",
+        "validate_chapter_synthesis"
+      ],
+      "covered_by_tests": [
+        "apps/api/tests/test_phase_1c_c1.py"
+      ],
+      "certified_rebase": "phase-1db2-r13 / Certified Baseline v1.0"
+    },
+    {
+      "path": "apps/api/app/services/reader_journey_semantic_calibrate.py",
+      "category": "FROZEN_CORE",
+      "sha256": "7d29c47d1d4924f686c96bcb546b3e18b00938ae0958c6bab13e27f57d537154",
+      "reason": "Offline semantic calibration (q_in chain, hooks, journey_nodes)",
+      "public_interfaces": [
+        "semantic_recalibrate_journey_run",
+        "apply_deterministic_qin"
+      ],
+      "covered_by_tests": [
+        "apps/api/tests/test_phase_1c_c1_5.py"
+      ]
+    },
+    {
+      "path": "apps/api/app/services/reader_journey_visualization.py",
+      "category": "FROZEN_CORE",
+      "sha256": "4094d2cd0e7e74166b578b2210be23d170a481bbc2018e820a0e1a2285746915",
+      "reason": "Deterministic visualization aggregate (zero model)",
+      "public_interfaces": [
+        "build_reader_journey_visualization"
+      ],
+      "covered_by_tests": [
+        "apps/api/tests/test_phase_1c_c2.py",
+        "apps/api/tests/test_phase_1c_c2_1.py"
+      ]
+    },
+    {
+      "path": "apps/api/app/services/reader_journey_visual_calibration.py",
+      "category": "FROZEN_CORE",
+      "sha256": "2d352da28f14d6629869b3c2fea96268939563347ebba03c67fcaaa3cbfd476f",
+      "reason": "Visualization 1.1 formulas: levels, hooks, payoffs, clusters",
+      "public_interfaces": [
+        "VISUALIZATION_VERSION",
+        "classify_scene_levels",
+        "select_visible_hooks",
+        "derive_and_select_payoffs",
+        "build_question_clusters"
+      ],
+      "covered_by_tests": [
+        "apps/api/tests/test_phase_1c_c2_1.py"
+      ]
+    },
+    {
+      "path": "apps/api/app/services/reader_journey_engagement.py",
+      "category": "FROZEN_CORE",
+      "sha256": "93408472fe7799c119291ac2eca11c0cf0986d681a70f1a87994081869c0feb1",
+      "reason": "Engagement formula from config/reader_journey_formulas.json",
+      "public_interfaces": [
+        "compute_engagement",
+        "load_formula_config"
+      ],
+      "covered_by_tests": [
+        "apps/api/tests/test_phase_1c_c1.py"
+      ]
+    },
+    {
+      "path": "apps/api/app/services/reader_journey_batch_planner.py",
+      "category": "FROZEN_CORE",
+      "sha256": "f6d787c7d705e9029779230401c5bc458c20cf76674d579373231180417d9724",
+      "reason": "Scene profile batch planner",
+      "public_interfaces": [
+        "plan_scene_batches",
+        "PLANNER_VERSION"
+      ],
+      "covered_by_tests": [
+        "apps/api/tests/test_phase_1c_c1_2.py"
+      ]
+    },
+    {
+      "path": "apps/api/app/services/reader_journey_offline_replay.py",
+      "category": "FROZEN_CORE",
+      "sha256": "f01cb7f72e72ee3fa22d53a03801335572f0ec07cb2ec035f64935b831edaf0f",
+      "reason": "Offline replay of journey profiles from invocations",
+      "public_interfaces": [
+        "offline_replay_journey_profiles"
+      ],
+      "covered_by_tests": [
+        "apps/api/tests/test_phase_1c_c1_3.py"
+      ]
+    },
+    {
+      "path": "apps/api/app/services/reader_journey_progress.py",
+      "category": "FROZEN_CORE",
+      "sha256": "2d69037a2d78a27d576e4e5db03d8561e62a09a410034d5dbb1195fda5a99b34",
+      "reason": "Journey progress and recoverable-run discovery",
+      "public_interfaces": [
+        "reader_journey_progress",
+        "find_recoverable_journey_run"
+      ],
+      "covered_by_tests": [
+        "apps/api/tests/test_phase_1c_c1_4.py"
+      ]
+    },
+    {
+      "path": "apps/api/app/services/reader_journey_statistics.py",
+      "category": "FROZEN_CORE",
+      "sha256": "e5d246294dcd1b39cdf51f056b89619be3bbb77a2c37b1b556281b64ebcf24e9",
+      "reason": "Deterministic chapter journey statistics",
+      "public_interfaces": [],
+      "covered_by_tests": [
+        "apps/api/tests/test_phase_1c_c1.py"
+      ]
+    },
+    {
+      "path": "apps/api/app/services/reader_journey_question_lifecycle.py",
+      "category": "FROZEN_CORE",
+      "sha256": "a9a5d126a7d39355999980df7a242cbba59dc0f7c878af6dbf777827c2f43683",
+      "reason": "Question lifecycle helpers for chains",
+      "public_interfaces": [],
+      "covered_by_tests": [
+        "apps/api/tests/test_phase_1c_c2.py"
+      ]
+    },
+    {
+      "path": "apps/api/app/services/reader_journey_contract_migrate.py",
+      "category": "FROZEN_CORE",
+      "sha256": "95b9549a5a4c39ce97962cc6b2af7d67c0af4904d2e93ff66feddf1e6472210d",
+      "reason": "Contract migration for offline profile upgrades",
+      "public_interfaces": [],
+      "covered_by_tests": [
+        "apps/api/tests/test_phase_1c_c1_3.py"
+      ]
+    },
+    {
+      "path": "apps/api/app/services/scene_results_service.py",
+      "category": "FROZEN_CORE",
+      "sha256": "df17b829b79548075d8d522bf19e05ab7349e4523bfed0b12beba43de0b52bf0",
+      "reason": "Run results bundle assembly (scenes + artifacts + evidence)",
+      "public_interfaces": [
+        "build_run_results",
+        "build_scene_bundle"
+      ],
+      "covered_by_tests": [
+        "apps/api/tests/test_phase_1c_b_results.py"
+      ]
+    },
+    {
+      "path": "apps/api/app/services/scene_results_export.py",
+      "category": "FROZEN_CORE",
+      "sha256": "da080f8d8b5ccdcb953d692306ad6cbc3123f9881ae201720b8edbca43c097ba",
+      "reason": "Markdown/JSON export rendering for scene analysis",
+      "public_interfaces": [
+        "render_markdown"
+      ],
+      "covered_by_tests": [
+        "apps/api/tests/test_phase_1c_b_results.py"
+      ]
+    },
+    {
+      "path": "config/reader_journey_formulas.json",
+      "category": "FROZEN_CORE",
+      "sha256": "e43b3e38b68328994bb8df955577ced1568c5cdf69789d853ddff08b19bd6192",
+      "reason": "Engagement formula weights version 1.0",
+      "public_interfaces": [
+        "version",
+        "genres"
+      ],
+      "covered_by_tests": [
+        "apps/api/tests/test_phase_1c_c1.py"
+      ]
+    },
+    {
+      "path": "config/cloud_pricing.json",
+      "category": "FROZEN_CORE",
+      "sha256": "94b6adb7f0b5562264b8bae61456a7ab0b842bbef629d3381b2be460cd8dd056",
+      "reason": "Cloud pricing table used by budget estimates",
+      "public_interfaces": [],
+      "covered_by_tests": [
+        "apps/api/tests/test_cloud_budget.py"
+      ]
+    },
+    {
+      "path": "packages/prompts/scene_boundary/v3.5/system.md",
+      "category": "FROZEN_CORE",
+      "sha256": "a654c9dfd5551606b6bda4c71fd7445d61c767f55fac8dbac75953ecf4005c54",
+      "reason": "Active cloud boundary system prompt v3.5",
+      "public_interfaces": [],
+      "covered_by_tests": [
+        "apps/api/tests/test_phase_1c_a.py"
+      ]
+    },
+    {
+      "path": "packages/prompts/scene_boundary/v3.5/user.md",
+      "category": "FROZEN_CORE",
+      "sha256": "4192abba01de58cc0927045e35dd3e51c2df1f4a7d0b20d5d1ac639972c99d52",
+      "reason": "Active cloud boundary user prompt v3.5",
+      "public_interfaces": [],
+      "covered_by_tests": []
+    },
+    {
+      "path": "packages/prompts/scene_boundary/v3.5/repair.md",
+      "category": "FROZEN_CORE",
+      "sha256": "041933372369186f016a061a4067372c93e117c02b9e6780c4c2fd349f0a2586",
+      "reason": "Active cloud boundary repair prompt v3.5",
+      "public_interfaces": [],
+      "covered_by_tests": []
+    },
+    {
+      "path": "packages/prompts/scene_boundary_adjudication/v1/system.md",
+      "category": "FROZEN_CORE",
+      "sha256": "43b8f16e6e3f15e1427972edb858abcc6f297b48c1b07c7723db8069890425bc",
+      "reason": "Boundary adjudication system prompt",
+      "public_interfaces": [],
+      "covered_by_tests": []
+    },
+    {
+      "path": "packages/prompts/scene_boundary_adjudication/v1/user.md",
+      "category": "FROZEN_CORE",
+      "sha256": "e8b5895ff37c3048004117480564ef8b69b2958c044bccd29ae424cd8843dafb",
+      "reason": "Boundary adjudication user prompt",
+      "public_interfaces": [],
+      "covered_by_tests": []
+    },
+    {
+      "path": "packages/prompts/scene_boundary_adjudication/v1/repair.md",
+      "category": "FROZEN_CORE",
+      "sha256": "59fb221a13e615724ab4bba28fd55abb64e9fdc690377a1037320d7930e0c391",
+      "reason": "Boundary adjudication repair prompt",
+      "public_interfaces": [],
+      "covered_by_tests": []
+    },
+    {
+      "path": "packages/prompts/scene_analysis/v3.1/system.md",
+      "category": "FROZEN_CORE",
+      "sha256": "3b442ec68db44f2c981f815551547bd32a8ad6788f47d2f20e122136b3ee5355",
+      "reason": "Historical scene analysis system prompt v3.1",
+      "public_interfaces": [],
+      "covered_by_tests": [
+        "apps/api/tests/test_phase_1c_a10.py"
+      ]
+    },
+    {
+      "path": "packages/prompts/scene_analysis/v3.1/user.md",
+      "category": "FROZEN_CORE",
+      "sha256": "9fd8247bf91f0bd857b422280c7735c92cae90068449c2e04ef9844427770e2c",
+      "reason": "Historical scene analysis user prompt v3.1",
+      "public_interfaces": [],
+      "covered_by_tests": []
+    },
+    {
+      "path": "packages/prompts/scene_analysis/v3.1/repair.md",
+      "category": "FROZEN_CORE",
+      "sha256": "85f8b23ee9d8c97ee5a71d280ad723937837622865bea7ba1201785e1e56cf91",
+      "reason": "Historical scene analysis repair prompt v3.1",
+      "public_interfaces": [],
+      "covered_by_tests": []
+    },
+    {
+      "path": "packages/prompts/scene_analysis/v3.2/system.md",
+      "category": "FROZEN_CORE",
+      "sha256": "6832b6cd78ca52e84077807e32a4b907ae115784b96e29a3c2af48fba5966e1c",
+      "reason": "Active scene analysis system prompt v3.2",
+      "public_interfaces": [],
+      "covered_by_tests": [
+        "apps/api/tests/test_defect_canary_001_key_actions.py"
+      ]
+    },
+    {
+      "path": "packages/prompts/scene_analysis/v3.2/user.md",
+      "category": "FROZEN_CORE",
+      "sha256": "63d3315b08ad1ae8a5b9674d107eea10e0fe7c5f079efea01b020ee66f60d38c",
+      "reason": "Active scene analysis user prompt v3.2",
+      "public_interfaces": [],
+      "covered_by_tests": [
+        "apps/api/tests/test_defect_canary_001_key_actions.py"
+      ]
+    },
+    {
+      "path": "packages/prompts/scene_analysis/v3.2/repair.md",
+      "category": "FROZEN_CORE",
+      "sha256": "07c498de1f18ce0545f24e97aaf7a7b9fd4b6db09c3c868c37759269fd26f99f",
+      "reason": "Active scene analysis repair prompt v3.2",
+      "public_interfaces": [],
+      "covered_by_tests": [
+        "apps/api/tests/test_defect_canary_001_key_actions.py"
+      ]
+    },
+    {
+      "path": "packages/prompts/reader_journey_scene/v1.3/system.md",
+      "category": "FROZEN_CORE",
+      "sha256": "cb5289ba2a67806c57ed06364efe2af2e675aae2d9e645f72c91ce0c4da97e6a",
+      "reason": "Historical reader journey scene system prompt v1.3 (superseded by v1.4)",
+      "public_interfaces": [],
+      "covered_by_tests": [
+        "apps/api/tests/test_phase_1c_c1.py"
+      ]
+    },
+    {
+      "path": "packages/prompts/reader_journey_scene/v1.3/user.md",
+      "category": "FROZEN_CORE",
+      "sha256": "523d8990fbd4d59a90ed6dad1df10b387d57bc5e27cc66812b6c2a4fcdc932ae",
+      "reason": "Historical reader journey scene user prompt v1.3 (superseded by v1.4)",
+      "public_interfaces": [],
+      "covered_by_tests": []
+    },
+    {
+      "path": "packages/prompts/reader_journey_scene/v1.3/repair.md",
+      "category": "FROZEN_CORE",
+      "sha256": "11612f4c934665d92b7844ff9f3783ca99adbd75bb853b557b806f18379dfadf",
+      "reason": "Historical reader journey scene repair prompt v1.3 (superseded by v1.4)",
+      "public_interfaces": [],
+      "covered_by_tests": []
+    },
+    {
+      "path": "packages/prompts/reader_journey_scene/v1.4/system.md",
+      "category": "FROZEN_CORE",
+      "sha256": "4ef6404a113cd58d36773b9ac6c7553d4592179aad0473ea8f024e68ec49ee63",
+      "reason": "Historical reader journey scene system prompt v1.4 (superseded by v1.5)",
+      "public_interfaces": [],
+      "covered_by_tests": [
+        "apps/api/tests/test_defect_canary_006_question_lifecycle.py"
+      ]
+    },
+    {
+      "path": "packages/prompts/reader_journey_scene/v1.4/user.md",
+      "category": "FROZEN_CORE",
+      "sha256": "79cb5543a4502a9950f10b7919a69a6a2a7cec9052b98f867b4feef4f6211807",
+      "reason": "Historical reader journey scene user prompt v1.4 (superseded by v1.5)",
+      "public_interfaces": [],
+      "covered_by_tests": []
+    },
+    {
+      "path": "packages/prompts/reader_journey_scene/v1.4/repair.md",
+      "category": "FROZEN_CORE",
+      "sha256": "3990582bc81348e3e930ad0c7fe6878dbae1d59adc6cea020effb9a94cc6c227",
+      "reason": "Historical reader journey scene repair prompt v1.4 (superseded by v1.5)",
+      "public_interfaces": [],
+      "covered_by_tests": []
+    },
+    {
+      "path": "packages/prompts/reader_journey_scene/v1.5/system.md",
+      "category": "FROZEN_CORE",
+      "sha256": "41faec2e4b1992a31e31c2679f82ed35eb017013eee145de6752d658da95fc6c",
+      "reason": "Active reader journey scene system prompt v1.5",
+      "public_interfaces": [],
+      "covered_by_tests": [
+        "apps/api/tests/test_defect_canary_007_score_distribution.py"
+      ]
+    },
+    {
+      "path": "packages/prompts/reader_journey_scene/v1.5/user.md",
+      "category": "FROZEN_CORE",
+      "sha256": "a0ca6bcb6c3602de16dbf01130b165c6fcf9fa5b1fbb03b32ac5e1758ece8cc7",
+      "reason": "Active reader journey scene user prompt v1.5",
+      "public_interfaces": [],
+      "covered_by_tests": []
+    },
+    {
+      "path": "packages/prompts/reader_journey_scene/v1.5/repair.md",
+      "category": "FROZEN_CORE",
+      "sha256": "1b6f62868a56bdd0ca082f973d00347d4a14b69cb24b782c44e5f9864afd1273",
+      "reason": "Active reader journey scene repair prompt v1.5",
+      "public_interfaces": [],
+      "covered_by_tests": []
+    },
+    {
+      "path": "packages/prompts/reader_journey_chapter/v1.1/system.md",
+      "category": "FROZEN_CORE",
+      "sha256": "d992a7f07c8a5e2e2b85c9c9d439861b27c713df8f2e56cfef0947e71a82260a",
+      "reason": "Active chapter synthesis system prompt v1.1 (code default; JourneyRun#2 stored v1)",
+      "public_interfaces": [],
+      "covered_by_tests": [
+        "apps/api/tests/test_phase_1c_c1.py"
+      ]
+    },
+    {
+      "path": "packages/prompts/reader_journey_chapter/v1.1/user.md",
+      "category": "FROZEN_CORE",
+      "sha256": "ee0d17dabcec082a34ea0dd1b98cf34a362960df3c2e3abb28d993d5153e009a",
+      "reason": "Active chapter synthesis user prompt v1.1",
+      "public_interfaces": [],
+      "covered_by_tests": []
+    },
+    {
+      "path": "packages/prompts/reader_journey_chapter/v1.1/repair.md",
+      "category": "FROZEN_CORE",
+      "sha256": "82c7c4591811168461b8c4ebc835f7b229fc16b7e9f29f6618b68523d3c6757d",
+      "reason": "Active chapter synthesis repair prompt v1.1",
+      "public_interfaces": [],
+      "covered_by_tests": []
+    },
+    {
+      "path": "apps/api/app/schemas/scene.py",
+      "category": "FROZEN_CONTRACT",
+      "sha256": "fecc06f30d1cf78cad38edc0ab2c366ee21423f0046f832d4e14344d64113247",
+      "reason": "Pydantic contracts for scene boundary/analysis runs and results",
+      "public_interfaces": [
+        "SceneAnalysisResult",
+        "SceneBoundaryResult",
+        "AnalysisRunCreate",
+        "RunResultsBundle"
+      ],
+      "covered_by_tests": [
+        "apps/api/tests/test_phase_1c_b_results.py"
+      ]
+    },
+    {
+      "path": "apps/api/app/schemas/reader_journey.py",
+      "category": "FROZEN_CONTRACT",
+      "sha256": "e63890b440ef7055b99eb4b6321c2e82e09a553bdfc3265d7efa51a913ef788e",
+      "reason": "Pydantic contracts and version pins for reader journey",
+      "public_interfaces": [
+        "SCENE_PROMPT_VERSION",
+        "SCENE_CONTRACT_VERSION",
+        "SceneReaderJourneyProfileItem",
+        "ChapterReaderJourneySynthesisResult"
+      ],
+      "covered_by_tests": [
+        "apps/api/tests/test_phase_1c_c1.py",
+        "apps/api/tests/test_phase_1c_c2.py"
+      ],
+      "certified_rebase": "phase-1db2-r13 / Certified Baseline v1.0"
+    },
+    {
+      "path": "apps/api/app/schemas/boundary_review.py",
+      "category": "FROZEN_CONTRACT",
+      "sha256": "acf1feac116de9bfef9df8d9dd27f5b24eae5c0c5ccb6f8b7f71a7a700b45834",
+      "reason": "Boundary review API/DTO contracts",
+      "public_interfaces": [],
+      "covered_by_tests": [
+        "apps/api/tests/test_phase_1c_a8_review_confirm.py"
+      ]
+    },
+    {
+      "path": "apps/api/app/schemas/book.py",
+      "category": "FROZEN_CONTRACT",
+      "sha256": "f644516e455d49dc26fcb9a7dc100bfae6f77d2dd736d84691d6d1cba5d8256f",
+      "reason": "Book/Chapter/Paragraph API DTOs",
+      "public_interfaces": [
+        "ImportResponse",
+        "BookResponse",
+        "ChapterResponse",
+        "ParagraphPage"
+      ],
+      "covered_by_tests": [
+        "apps/api/tests/test_import.py"
+      ]
+    },
+    {
+      "path": "apps/api/app/api/v1/analysis.py",
+      "category": "FROZEN_CONTRACT",
+      "sha256": "74b80a5e17676809d665a7a80493d371ad9edebfd147efa70457effc9e699617",
+      "reason": "Analysis run/resume/results API surface (semantics frozen)",
+      "public_interfaces": [
+        "create_analysis_run",
+        "get_analysis_run",
+        "resume_scene_analysis"
+      ],
+      "covered_by_tests": [
+        "apps/api/tests/test_phase_1c_a10.py",
+        "apps/api/tests/test_phase_1c_b_results.py"
+      ],
+      "certified_rebase": "phase-1db2-r13 / Certified Baseline v1.0"
+    },
+    {
+      "path": "apps/api/app/api/v1/boundary_reviews.py",
+      "category": "FROZEN_CONTRACT",
+      "sha256": "26e0540f4407d611dc4e2e27e0f948f7613e5a0223b6becae854e29188c541f5",
+      "reason": "Boundary review API surface",
+      "public_interfaces": [
+        "confirm_boundary_review"
+      ],
+      "covered_by_tests": [
+        "apps/api/tests/test_phase_1c_a8_review_confirm.py"
+      ]
+    },
+    {
+      "path": "apps/api/app/api/v1/reader_journey.py",
+      "category": "FROZEN_CONTRACT",
+      "sha256": "cc49f20ffaeca47c1fa26d2876412c26ce9f4487464317489fb9bc7c1c945c8e",
+      "reason": "Reader journey API surface including visualization payload",
+      "public_interfaces": [
+        "create_reader_journey",
+        "_serialize_result",
+        "semantic_recalibrate"
+      ],
+      "covered_by_tests": [
+        "apps/api/tests/test_phase_1c_c1.py",
+        "apps/api/tests/test_phase_1c_c2.py"
+      ]
+    },
+    {
+      "path": "apps/api/app/api/v1/router.py",
+      "category": "FROZEN_CONTRACT",
+      "sha256": "d4df7c0cac5141edbcea42b74c8f4fbc9631b61458926511d957fc499c466bc7",
+      "reason": "Books import/chapters/paragraphs API surface",
+      "public_interfaces": [
+        "upload_book",
+        "list_chapters",
+        "list_paragraphs"
+      ],
+      "covered_by_tests": [
+        "apps/api/tests/test_import.py"
+      ]
+    },
+    {
+      "path": "apps/desktop/src/types/index.ts",
+      "category": "FROZEN_CONTRACT",
+      "sha256": "baad850de1efe28181b42a8cf32fd5a5d189df35da89bf7c871ae43e290dbb55",
+      "reason": "TypeScript mirrors of core API entities and run results",
+      "public_interfaces": [
+        "RunResults",
+        "SceneResultItem",
+        "ReaderJourneyResult",
+        "Run"
+      ],
+      "covered_by_tests": [
+        "apps/desktop/src/pages/AnalysisResultsPage.test.tsx"
+      ]
+    },
+    {
+      "path": "apps/desktop/src/types/readerJourneyVisualization.ts",
+      "category": "FROZEN_CONTRACT",
+      "sha256": "2b7b2eb9d9b874d8d39caf8f741c4770384adfdc23e41558fafd970c192629a1",
+      "reason": "TypeScript visualization 1.1 contract",
+      "public_interfaces": [
+        "ReaderJourneyVisualization",
+        "JourneySceneNode",
+        "JourneyCurveMetric"
+      ],
+      "covered_by_tests": [
+        "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.test.tsx"
+      ]
+    },
+    {
+      "path": "apps/desktop/src/types/journeySelection.ts",
+      "category": "FROZEN_CONTRACT",
+      "sha256": "eea6592b4b719ddd46362fc38e02ff86077558c92f7a3e53d03ec5e68da38505",
+      "reason": "Journey selection state and URL param contract",
+      "public_interfaces": [
+        "JourneySelectionState",
+        "JourneyPageMode",
+        "JourneySelectionPatch"
+      ],
+      "covered_by_tests": [
+        "apps/desktop/e2e/phase_1cc2_2_sync_workspace.spec.ts"
+      ]
+    },
+    {
+      "path": "apps/desktop/src/types/readerJourneyProfileItems.ts",
+      "category": "FROZEN_CONTRACT",
+      "sha256": "2e0921e7ca1d461701360d60f71ef2ad8df0336158eeda315590433fa9658b4a",
+      "reason": "Normalized profile item shapes (contract 1.3)",
+      "public_interfaces": [],
+      "covered_by_tests": [
+        "apps/desktop/src/components/readerJourney/sceneDetailFields.test.tsx"
+      ]
+    },
+    {
+      "path": "apps/desktop/src/services/analysisApi.ts",
+      "category": "FROZEN_CONTRACT",
+      "sha256": "ebd9a39ad94826cdd4a31aa1fc0bb6692f468c0569a935ef473a15e93522140d",
+      "reason": "Desktop analysis/journey API client methods and paths",
+      "public_interfaces": [
+        "analysisApi"
+      ],
+      "covered_by_tests": [
+        "apps/desktop/src/pages/AnalysisResultsPage.test.tsx"
+      ]
+    },
+    {
+      "path": "apps/desktop/src/services/apiClient.ts",
+      "category": "FROZEN_CONTRACT",
+      "sha256": "484d6fbf257898b14880a2b5e62d5091f435210d79a4a5577fe7f322cfbde764",
+      "reason": "HTTP client and ApiError mapping",
+      "public_interfaces": [
+        "api",
+        "ApiError"
+      ],
+      "covered_by_tests": []
+    },
+    {
+      "path": "apps/desktop/src/services/booksApi.ts",
+      "category": "FROZEN_CONTRACT",
+      "sha256": "37b1f4e02adb15e9e140f8c7c2361840fa47cfb089c6ab0b06cd75aef79def63",
+      "reason": "Books import/list/chapter API client",
+      "public_interfaces": [
+        "booksApi"
+      ],
+      "covered_by_tests": []
+    },
+    {
+      "path": "apps/desktop/src/hooks/useJourneySelection.ts",
+      "category": "REUSABLE_UI_LOGIC",
+      "sha256": "f5e1c3088028e8659862b869c89fcf6250ffcdd7c916074f324994381ec01b95",
+      "reason": "URL↔selection state machine; must not be reimplemented",
+      "public_interfaces": [
+        "useJourneySelection"
+      ],
+      "covered_by_tests": [
+        "apps/desktop/e2e/phase_1cc2_2_sync_workspace.spec.ts"
+      ]
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/ReaderJourneySyncWorkspace.tsx",
+      "category": "REUSABLE_UI_LOGIC",
+      "sha256": "03652b02cfee4a64692a10514fd4b36484af17e012a20ae4056cc8b4f1be5ec0",
+      "reason": "Text–journey sync orchestration",
+      "public_interfaces": [
+        "ReaderJourneySyncWorkspace"
+      ],
+      "covered_by_tests": [
+        "apps/desktop/src/components/readerJourney/ReaderJourneySyncWorkspace.test.tsx",
+        "apps/desktop/e2e/phase_1cc2_2_sync_workspace.spec.ts"
+      ]
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.tsx",
+      "category": "REUSABLE_UI_LOGIC",
+      "sha256": "583572a41a601a98fe7c1a47658248b2087f706f9c3ec8332fc5e20dbe0cecba",
+      "reason": "Curve/phases/clusters/detail drawer controlled selection",
+      "public_interfaces": [
+        "ReaderJourneyWorkspace"
+      ],
+      "covered_by_tests": [
+        "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.test.tsx"
+      ]
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/StructuredChapterTextPane.tsx",
+      "category": "REUSABLE_UI_LOGIC",
+      "sha256": "f26b2671aee8110d1fb8330b14eaf3195d71cdf1457472d7c8a8da51ae2d92a5",
+      "reason": "Structured chapter text + scroll spy + evidence marks",
+      "public_interfaces": [
+        "StructuredChapterTextPane"
+      ],
+      "covered_by_tests": [
+        "apps/desktop/src/components/readerJourney/StructuredChapterTextPane.test.tsx"
+      ]
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/sceneDetailFields.tsx",
+      "category": "REUSABLE_UI_LOGIC",
+      "sha256": "c7655bc59aed6381106cada9246342e05d630f96587b757986c133075c8249b2",
+      "reason": "Structured scene detail field renderers with evidence locate",
+      "public_interfaces": [
+        "WritingTakeawayList",
+        "HookList",
+        "PayoffList"
+      ],
+      "covered_by_tests": [
+        "apps/desktop/src/components/readerJourney/sceneDetailFields.test.tsx"
+      ]
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/safeRender.ts",
+      "category": "REUSABLE_UI_LOGIC",
+      "sha256": "073bf74d8dfd6f035b9308cbb037eaefb902dce4b6a0a4f0399c8e3122519829",
+      "reason": "Defensive normalization so unknown objects never crash React",
+      "public_interfaces": [
+        "normalizeTechnique",
+        "normalizeHook",
+        "renderFallbackValue"
+      ],
+      "covered_by_tests": [
+        "apps/desktop/src/components/readerJourney/sceneDetailFields.test.tsx"
+      ]
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/JourneyDetailErrorBoundary.tsx",
+      "category": "REUSABLE_UI_LOGIC",
+      "sha256": "0f2cc251027fdcbd53bae64960f8aa408ebec03fc37eae6bd0614c39c5f500f7",
+      "reason": "Isolates scene detail render failures",
+      "public_interfaces": [
+        "JourneyDetailErrorBoundary"
+      ],
+      "covered_by_tests": [
+        "apps/desktop/src/components/readerJourney/sceneDetailFields.test.tsx"
+      ]
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/exportJourneyPng.ts",
+      "category": "REUSABLE_UI_LOGIC",
+      "sha256": "5b603f26ab42dcc4589c58da05176cd076faa9d2c2d0c588f8b2e5471530940c",
+      "reason": "PNG export from journey-export-root",
+      "public_interfaces": [
+        "exportJourneyPng"
+      ],
+      "covered_by_tests": [
+        "apps/desktop/e2e/phase_1cc2_reader_journey_visual.spec.ts"
+      ]
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/exportSceneCard.ts",
+      "category": "REUSABLE_UI_LOGIC",
+      "sha256": "06ab005f429107380f2c7a207b595c59cbeca2c5fdc014792a30825ec48a4dc7",
+      "reason": "Scene card PNG/Markdown export",
+      "public_interfaces": [
+        "exportSceneCardPng",
+        "exportSceneCardMarkdown"
+      ],
+      "covered_by_tests": []
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/SplitPane.tsx",
+      "category": "REUSABLE_UI_LOGIC",
+      "sha256": "bb9d4e54da642f2330e55ebc419bb4ad4e744db47e11db516ea37293ea55876e",
+      "reason": "Split ratio persistence and responsive split behavior",
+      "public_interfaces": [
+        "SplitPane"
+      ],
+      "covered_by_tests": [
+        "apps/desktop/e2e/phase_1cc2_2_sync_workspace.spec.ts"
+      ]
+    },
+    {
+      "path": "apps/desktop/src/pages/AnalysisResultsPage.tsx",
+      "category": "REUSABLE_UI_LOGIC",
+      "sha256": "2595cacfec0f835467d8b5b3eb1c78aa71636e32143ef46ce9fd3ffd26c8acc5",
+      "reason": "Results + journey lifecycle gating (logic portions reusable)",
+      "public_interfaces": [
+        "AnalysisResultsPage"
+      ],
+      "covered_by_tests": [
+        "apps/desktop/src/pages/AnalysisResultsPage.test.tsx",
+        "apps/desktop/e2e/phase_1cb_results.spec.ts"
+      ]
+    },
+    {
+      "path": "apps/desktop/src/pages/TasksPage.tsx",
+      "category": "REUSABLE_UI_LOGIC",
+      "sha256": "47bd207b82330fce82482e7b756e3017d9606104ab1f414ed20eeafbeacd1f02",
+      "reason": "Task center recovery/resume state machines",
+      "public_interfaces": [
+        "TasksPage"
+      ],
+      "covered_by_tests": [
+        "apps/desktop/src/pages/TasksPage.test.tsx",
+        "apps/desktop/e2e/phase_1ca10_scene_resume.spec.ts"
+      ]
+    },
+    {
+      "path": "apps/desktop/src/pages/BookWorkspacePage.tsx",
+      "category": "REUSABLE_UI_LOGIC",
+      "sha256": "0bb6fd8d44bd300fe713a24cd2f535a606a842dde30ba5e56b1036c1431f386a",
+      "reason": "Chapter reading + analysis start + evidence locate",
+      "public_interfaces": [
+        "BookWorkspacePage"
+      ],
+      "covered_by_tests": []
+    },
+    {
+      "path": "apps/desktop/src/components/analysis/StartAnalysisDialog.tsx",
+      "category": "REUSABLE_UI_LOGIC",
+      "sha256": "8043dc8d3a92918dd9db16a49863a13042cfb4a087e0c07d64d90a21696d50e8",
+      "reason": "Analysis creation + cloud consent + staged budget preflight UI",
+      "public_interfaces": [
+        "StartAnalysisDialog"
+      ],
+      "covered_by_tests": [
+        "apps/desktop/src/components/analysis/StartAnalysisDialog.test.tsx"
+      ],
+      "size": 19935
+    },
+    {
+      "path": "apps/desktop/src/components/analysis/BoundaryReviewPanel.tsx",
+      "category": "REUSABLE_UI_LOGIC",
+      "sha256": "c38383e983bd9a3b9d06f1d28d769f4344ae44c234fe2133453faa43277ec517",
+      "reason": "Boundary review decisions and confirm gating",
+      "public_interfaces": [
+        "BoundaryReviewPanel"
+      ],
+      "covered_by_tests": [
+        "apps/desktop/src/components/analysis/BoundaryReviewPanel.test.tsx",
+        "apps/desktop/e2e/phase_1ca8_boundary_review.spec.ts"
+      ]
+    }
+  ],
+  "golden_sample": {
+    "analysis_run_id": 55,
+    "boundary_revision_id": 1,
+    "reader_journey_run_id": 2,
+    "scene_ids": [
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19
+    ]
+  },
+  "constraints": {
+    "real_model_requests": 0,
+    "tokens": 0,
+    "cost": 0,
+    "no_production_code_modified": true,
+    "phase_1c_c2_3_not_executed": true
+  },
+  "certified_rebase": {
+    "phase": "1D-C",
+    "source_batch": "phase-1db2-r13-20260719T022027Z",
+    "baseline": "Single-Chapter Pipeline Certified Baseline v1.0",
+    "updated_paths": [
+      "apps/api/app/services/scene_pipeline.py",
+      "apps/api/app/services/boundary_review_service.py",
+      "apps/api/app/services/structured_output.py",
+      "apps/api/app/services/cloud_output_policy.py",
+      "apps/api/app/services/reader_journey_validation.py",
+      "apps/api/app/schemas/reader_journey.py",
+      "apps/api/app/api/v1/analysis.py"
+    ],
+    "note": "Rebase MVP core-freeze hashes for files mutated by CLOSED_VERIFIED canary change packages v1.0.4–v1.1.1; does not unfreeze Reader Journey UI Final v2.7"
+  }
+}

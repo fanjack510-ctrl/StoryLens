@@ -1,0 +1,90 @@
+{
+  "baseline": "mvp-functional-baseline-v1",
+  "thaw_id": "ui-presentation-thaw-v2-14",
+  "parent_thaw": "ui-presentation-thaw-v2-13.json",
+  "purpose": "phase-1d-c1-ui-07-reader-journey-metric-selector-overlay-v4.2",
+  "core_freeze_manifest": "audits/mvp-functional-baseline-v1/core-freeze-manifest.json",
+  "reader_journey_ui_freeze": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v4.2/reader-journey-ui-final-freeze-v4.2.json",
+  "approved_behavior": [
+    "MetricSelectorPanel in-flow under JourneyToolbar; pushes Phase/Chart; no absolute/fixed overlay",
+    "Shared JourneyPopover via journey-overlay-root with flip/shift and z-index tokens",
+    "Listbox a11y for metrics; Esc/outside/select close; URL metric sync; PNG hides open panel",
+    "Narrow: full-width in-flow metric panel + secondary actions in 更多设置",
+    "Does not modify Prompt/Contract/Validator/Broker/Budget/Recovery or Reader Journey semantics"
+  ],
+  "forbidden": [
+    "book_id/chapter_id/run_id/scene_count special cases",
+    "modify FROZEN_CORE or FROZEN_CONTRACT",
+    "modify FROZEN_CERTIFIED_*",
+    "agent-initiated real model calls",
+    "mutate Scene/Boundary/ReaderJourney business data",
+    "z-index-only patch for metric selector"
+  ],
+  "allowed_files": [
+    {
+      "path": "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.tsx",
+      "before_sha256": "28eb20548d9713cad7d18b08a3550dbd1023204348faa3ca4c23df7c6c1004cd",
+      "reason": "Wire narrowLayout/compactToolbar; viz 4.2 meta",
+      "allowed_change": "presentation|metric-selector-overlay-v4.2"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/JourneyChartToolbar.tsx",
+      "before_sha256": "c2fe6b2958745ee0f65568dad5980e8ddf11c551ef19a427a37911126dece256",
+      "reason": "Replace metric dropdown with in-flow MetricSelectorPanel; JourneyPopover for 更多",
+      "allowed_change": "presentation|metric-selector-overlay-v4.2"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/readerJourney.css",
+      "before_sha256": "7f3ee36d78d9a99bb4ccead4ac99d4b8ba1fa076e1bfcda699386f3bed36046d",
+      "reason": "Metric panel grid + z-index tokens + export hide",
+      "allowed_change": "presentation|metric-selector-overlay-v4.2"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/journeyVisualizationConfig.ts",
+      "before_sha256": "7e84aa049d08c53ef06d991243f737ae9879aba90a023eae29a327f0c4436428",
+      "reason": "Version 4.2",
+      "allowed_change": "presentation|metric-selector-overlay-v4.2"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/JourneyAnchoredMenu.tsx",
+      "before_sha256": "6f8c57847ec288ab48c1edc2405be389444678776fcbbb7949080c6d27418d8f",
+      "reason": "Re-export Shared JourneyPopover",
+      "allowed_change": "presentation|metric-selector-overlay-v4.2"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/journeyUiLabels.ts",
+      "before_sha256": "c772083c18f21628819e125517270eabb91d0e37bef1eec8d49cca68a921f698",
+      "reason": "METRIC_HINTS_ZH for panel explanations",
+      "allowed_change": "presentation|metric-selector-overlay-v4.2"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/MetricSelectorPanel.tsx",
+      "before_sha256": null,
+      "reason": "New in-flow metric listbox panel",
+      "allowed_change": "presentation|metric-selector-overlay-v4.2"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/JourneyPopover.tsx",
+      "before_sha256": null,
+      "reason": "Unified SharedPopover / JourneyPopover",
+      "allowed_change": "presentation|metric-selector-overlay-v4.2"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/journeyOverlayTokens.ts",
+      "before_sha256": null,
+      "reason": "Z-index tokens + overlay-root",
+      "allowed_change": "presentation|metric-selector-overlay-v4.2"
+    }
+  ],
+  "forbidden_behavior_changes": [
+    "FROZEN_CORE",
+    "FROZEN_CONTRACT",
+    "FROZEN_CERTIFIED_*",
+    "Prompt/Schema/Validator/Provider routing",
+    "Reader Journey Profile / Phase / Question / Hook / Payoff / Risk / Evidence semantics"
+  ],
+  "notes": [
+    "v4.2 replaces overlay metric dropdown with in-flow MetricSelectorPanel after Human UAT DEFECT-UAT-009.",
+    "Rollback: point freeze checker to v4.1; remove thaw v2-14 from DEFAULT_THAWS; restore hashed files."
+  ]
+}

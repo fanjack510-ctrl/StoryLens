@@ -1,0 +1,112 @@
+{
+  "gate": "check_invocation_path_qualification",
+  "verdict": "INVOCATION_PATH_QUALIFICATION_CHECK_PASS",
+  "checks": [
+    {
+      "name": "report_present",
+      "ok": true,
+      "detail": "D:\\Dstorylens\\audits\\single-chapter-pipeline\\invocation-path-qualification-v1\\qualification-report-v1.json"
+    },
+    {
+      "name": "verdict_present",
+      "ok": true,
+      "detail": "D:\\Dstorylens\\audits\\single-chapter-pipeline\\invocation-path-qualification-v1\\final-verdict-v1.json"
+    },
+    {
+      "name": "auth_present",
+      "ok": true,
+      "detail": "D:\\Dstorylens\\audits\\single-chapter-pipeline\\invocation-path-qualification-v1\\authorization-qualification-v1.json"
+    },
+    {
+      "name": "operator_approved",
+      "ok": true,
+      "detail": "True"
+    },
+    {
+      "name": "scope_qualification",
+      "ok": true,
+      "detail": "invocation_path_qualification"
+    },
+    {
+      "name": "no_full_canary",
+      "ok": true,
+      "detail": "False"
+    },
+    {
+      "name": "provider_plus",
+      "ok": true,
+      "detail": "aliyun_qwen_plus"
+    },
+    {
+      "name": "model_plus",
+      "ok": true,
+      "detail": "qwen3.7-plus"
+    },
+    {
+      "name": "auto_route_false",
+      "ok": true,
+      "detail": "False"
+    },
+    {
+      "name": "full_canary_not_started",
+      "ok": true,
+      "detail": "ok"
+    },
+    {
+      "name": "auth_v12_not_issued",
+      "ok": true,
+      "detail": "ok"
+    },
+    {
+      "name": "covered_reader_journey_scene_schema_repair",
+      "ok": true,
+      "detail": "{'covered': True, 'count': 1, 'invocation_ids': [2]}"
+    },
+    {
+      "name": "covered_reader_journey_structural_repair",
+      "ok": true,
+      "detail": "{'covered': True, 'count': 2, 'invocation_ids': [4, 8]}"
+    },
+    {
+      "name": "covered_generic_provider_retry",
+      "ok": true,
+      "detail": "{'covered': True, 'count': 1, 'invocation_ids': [6]}"
+    },
+    {
+      "name": "covered_repair_provider_retry",
+      "ok": true,
+      "detail": "{'covered': True, 'count': 1, 'invocation_ids': [9]}"
+    },
+    {
+      "name": "covered_reader_journey_targeted_evidence_patch",
+      "ok": true,
+      "detail": "{'covered': True, 'count': 1, 'invocation_ids': [11]}"
+    },
+    {
+      "name": "covered_scene_analysis_provider_recovery",
+      "ok": true,
+      "detail": "{'covered': True, 'count': 1, 'invocation_ids': [15]}"
+    },
+    {
+      "name": "covered_reader_journey_chapter_schema_repair",
+      "ok": true,
+      "detail": "{'covered': True, 'count': 1, 'invocation_ids': [17]}"
+    },
+    {
+      "name": "no_policy_failures",
+      "ok": true,
+      "detail": "0"
+    },
+    {
+      "name": "main_db_55_2",
+      "ok": true,
+      "detail": "55/2"
+    },
+    {
+      "name": "verdict_passed",
+      "ok": true,
+      "detail": "INVOCATION_PATH_QUALIFICATION_PASSED"
+    }
+  ],
+  "failed": []
+}

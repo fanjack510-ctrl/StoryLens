@@ -1,0 +1,347 @@
+.chapter-analysis-progress-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 340px;
+  max-width: 400px;
+  width: 100%;
+  padding: 14px 16px 20px;
+  border-left: 1px solid var(--line);
+  background: var(--surface);
+  overflow: auto;
+  min-height: 0;
+}
+
+.chapter-analysis-progress-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.chapter-analysis-progress-head small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.chapter-analysis-progress-head h2 {
+  margin: 2px 0 0;
+  font-size: 16px;
+}
+
+.chapter-analysis-chapter {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.chapter-analysis-status-badge {
+  display: inline-flex;
+  align-self: flex-start;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  background: var(--accent2);
+  border: 1px solid var(--line);
+}
+
+.chapter-analysis-status-badge.state-succeeded {
+  background: #e7f6ec;
+  border-color: #b7dfc4;
+}
+
+.chapter-analysis-status-badge.state-failed,
+.chapter-analysis-status-badge.state-partial {
+  background: #fff4e5;
+  border-color: #f0d2a0;
+}
+
+.chapter-analysis-status-badge.state-boundary_review_required {
+  background: #eef3ff;
+  border-color: #c5d4f5;
+}
+
+.chapter-analysis-status-badge.state-awaiting_budget_adjustment,
+.chapter-analysis-status-badge.state-aborted_by_limit {
+  background: #fff4e5;
+  border-color: #f0d2a0;
+}
+
+.chapter-analysis-run-meta {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  font-size: 12px;
+}
+
+.chapter-analysis-run-meta > div {
+  display: grid;
+  grid-template-columns: 7.5em 1fr;
+  gap: 8px;
+}
+
+.chapter-analysis-run-meta dt {
+  margin: 0;
+  color: var(--muted);
+}
+
+.chapter-analysis-run-meta dd {
+  margin: 0;
+  color: var(--text);
+}
+
+.budget-pause-card {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #f0d2a0;
+  border-radius: 8px;
+  background: #fff8ef;
+}
+
+.budget-pause-card h3,
+.budget-pause-modal h2 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.budget-pause-card p,
+.budget-pause-modal p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.budget-pause-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.budget-adjust-summary {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  display: grid;
+  gap: 6px;
+}
+
+.budget-pause-modal {
+  max-width: 480px;
+}
+
+.chapter-analysis-stages {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.chapter-analysis-stages li {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.chapter-analysis-stages li[data-tone="active"] {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.chapter-analysis-stages li[data-tone="done"] {
+  color: var(--text);
+}
+
+.stage-mark {
+  width: 1.1em;
+  text-align: center;
+}
+
+.chapter-analysis-meter-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--surface2, #efece3);
+  overflow: hidden;
+}
+
+.chapter-analysis-meter-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.3s ease;
+}
+
+.chapter-analysis-meter p,
+.chapter-analysis-boundary p,
+.muted {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.chapter-analysis-boundary,
+.chapter-analysis-success,
+.chapter-analysis-failure-card {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+.chapter-analysis-success h3,
+.chapter-analysis-failure-card h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.chapter-analysis-success ul,
+.chapter-analysis-failure-stats {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+}
+
+.chapter-analysis-success-actions,
+.chapter-analysis-failure-actions,
+.chapter-analysis-boundary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.chapter-analysis-success-actions a.primary,
+.chapter-analysis-boundary .primary {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 12px;
+  border-radius: 6px;
+  background: var(--accent);
+  color: #fff;
+  border: 0;
+}
+
+.chapter-analysis-tech {
+  margin: 0;
+  padding: 8px;
+  font-size: 11px;
+  overflow: auto;
+  max-height: 160px;
+  background: #f7f3e8;
+  border-radius: 6px;
+}
+
+.book-shell-body[data-has-progress="true"] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 380px);
+  min-height: 0;
+  flex: 1;
+}
+
+.book-shell-body[data-has-progress="true"] .book-shell-workspace {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.book-shell-body[data-has-progress="true"] .book-shell-workspace .workspace {
+  height: 100%;
+}
+
+.book-shell-running-banner {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  padding: 8px 14px;
+  background: #eef3ff;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+
+.reader-journey-resume-card,
+.reader-journey-progress-card {
+  margin: 16px;
+  padding: 20px 22px;
+  max-width: 720px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #faf8f4;
+}
+
+.reader-journey-resume-card h2,
+.reader-journey-progress-card h2 {
+  margin: 0 0 8px;
+  font-size: 18px;
+}
+
+.reader-journey-resume-card p,
+.reader-journey-progress-card p {
+  margin: 0 0 14px;
+  line-height: 1.55;
+  color: #444;
+}
+
+.reader-journey-resume-meta,
+.reader-journey-progress-card dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 10px 16px;
+  margin: 0 0 16px;
+}
+
+.reader-journey-resume-meta dt,
+.reader-journey-progress-card dt {
+  font-size: 11px;
+  color: #777;
+}
+
+.reader-journey-resume-meta dd,
+.reader-journey-progress-card dd {
+  margin: 2px 0 0;
+  font-size: 13px;
+}
+
+.reader-journey-resume-consent {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 0 0 14px;
+  font-size: 13px;
+}
+
+.reader-journey-resume-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.reader-journey-progress-meter {
+  margin: 0 0 14px;
+}
+
+.reader-journey-progress-meter-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: #e6e0d4;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+
+.reader-journey-progress-meter-bar > span {
+  display: block;
+  height: 100%;
+  background: #3d6b4f;
+}

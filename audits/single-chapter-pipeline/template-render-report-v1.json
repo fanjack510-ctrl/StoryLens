@@ -1,0 +1,110 @@
+{
+  "template": "reader-journey-ui-final-v2.7",
+  "chapters_rendered": 12,
+  "pass_count": 12,
+  "pass_rate": 1.0,
+  "rows": [
+    {
+      "fixture_id": "A1-short-dialogue",
+      "template": "reader-journey-ui-final-v2.7",
+      "visualization_ok": true,
+      "scene_count": 3,
+      "phase_count": 3,
+      "result": "PASS"
+    },
+    {
+      "fixture_id": "A2-medium-action",
+      "template": "reader-journey-ui-final-v2.7",
+      "visualization_ok": true,
+      "scene_count": 4,
+      "phase_count": 3,
+      "result": "PASS"
+    },
+    {
+      "fixture_id": "A3-long-suspense",
+      "template": "reader-journey-ui-final-v2.7",
+      "visualization_ok": true,
+      "scene_count": 14,
+      "phase_count": 5,
+      "result": "PASS"
+    },
+    {
+      "fixture_id": "A4-near-limit-info",
+      "template": "reader-journey-ui-final-v2.7",
+      "visualization_ok": true,
+      "scene_count": 14,
+      "phase_count": 5,
+      "result": "PASS"
+    },
+    {
+      "fixture_id": "B1-short-emotion",
+      "template": "reader-journey-ui-final-v2.7",
+      "visualization_ok": true,
+      "scene_count": 3,
+      "phase_count": 3,
+      "result": "PASS"
+    },
+    {
+      "fixture_id": "B2-medium-description",
+      "template": "reader-journey-ui-final-v2.7",
+      "visualization_ok": true,
+      "scene_count": 3,
+      "phase_count": 3,
+      "result": "PASS"
+    },
+    {
+      "fixture_id": "B3-long-payoff",
+      "template": "reader-journey-ui-final-v2.7",
+      "visualization_ok": true,
+      "scene_count": 6,
+      "phase_count": 3,
+      "result": "PASS"
+    },
+    {
+      "fixture_id": "B4-medium-hook",
+      "template": "reader-journey-ui-final-v2.7",
+      "visualization_ok": true,
+      "scene_count": 3,
+      "phase_count": 3,
+      "result": "PASS"
+    },
+    {
+      "fixture_id": "C1-short-info",
+      "template": "reader-journey-ui-final-v2.7",
+      "visualization_ok": true,
+      "scene_count": 3,
+      "phase_count": 3,
+      "result": "PASS"
+    },
+    {
+      "fixture_id": "C2-medium-dialogue",
+      "template": "reader-journey-ui-final-v2.7",
+      "visualization_ok": true,
+      "scene_count": 3,
+      "phase_count": 3,
+      "result": "PASS"
+    },
+    {
+      "fixture_id": "C3-long-action",
+      "template": "reader-journey-ui-final-v2.7",
+      "visualization_ok": true,
+      "scene_count": 14,
+      "phase_count": 5,
+      "result": "PASS"
+    },
+    {
+      "fixture_id": "C4-near-limit-mixed",
+      "template": "reader-journey-ui-final-v2.7",
+      "visualization_ok": true,
+      "scene_count": 14,
+      "phase_count": 5,
+      "result": "PASS"
+    }
+  ],
+  "interaction_regression": {
+    "note": "Covered by Phase 1D-A template governance tests + existing journey e2e; no frozen UI edits",
+    "scene_first_click_rollback": 0,
+    "result": "PASS"
+  },
+  "result": "PASS"
+}

@@ -1,0 +1,165 @@
+{
+  "phase": "1D-C1-UAT-12",
+  "title": "Unified Analysis Recovery Center",
+  "version": "v1.1.5",
+  "verdict": "UNIFIED_ANALYSIS_RECOVERY_CENTER_READY",
+  "problem": {
+    "human_uat_symptoms": [
+      "request budget insufficient",
+      "provider disconnected",
+      "reader journey not generated",
+      "chapter cannot discover run",
+      "recovery entry points scattered",
+      "plain UI shows internal error codes",
+      "users unsure whether to open settings, tasks, or chapter"
+    ],
+    "forbidden_approach": "add yet another independent CTA per error type"
+  },
+  "recovery_model": {
+    "endpoint_get": "GET /api/v1/analysis-runs/{run_id}/recovery-plan",
+    "endpoint_post": "POST /api/v1/analysis-runs/{run_id}/recover",
+    "recovery_mode": "unified",
+    "legacy_boundary": "omit recovery_mode or use POST .../continue-from-checkpoints",
+    "aggregates": [
+      "provider_connection",
+      "credential",
+      "request_budget",
+      "token_budget",
+      "cost_budget",
+      "reservation",
+      "scene_artifacts",
+      "reader_journey_run",
+      "current_stage",
+      "retry_recovery_eligibility",
+      "active_task",
+      "duplicate_run_risk"
+    ],
+    "outputs": [
+      "recoverable",
+      "blockers",
+      "warnings",
+      "checks",
+      "recommended_actions",
+      "resume_stage",
+      "will_reuse_artifacts",
+      "will_create_entities",
+      "estimated_requests",
+      "estimated_tokens",
+      "estimated_cost"
+    ],
+    "frontend_must_not": "call multiple stage APIs to invent its own diagnosis"
+  },
+  "idempotency": {
+    "client_request_id": true,
+    "must_not_on_repeat": [
+      "create multiple AnalysisRun",
+      "create multiple ReaderJourneyRun",
+      "rerun completed scenes",
+      "duplicate reservation",
+      "duplicate model requests"
+    ]
+  },
+  "execute_order": [
+    "validate run status",
+    "validate artifact integrity",
+    "validate provider config",
+    "refresh provider readiness",
+    "reconnect provider when safe",
+    "check request/token/cost budgets",
+    "return proposal when user auth required",
+    "create or restore stage entities when budget ok",
+    "resume from resume_stage",
+    "update unified progress"
+  ],
+  "ui": {
+    "title": "分析已暂停",
+    "primary": "修复并继续",
+    "secondary": "稍后处理",
+    "text": "查看详情",
+    "forbidden_competing_ctas": [
+      "调整额度并继续",
+      "继续生成阅读旅程",
+      "重新连接",
+      "前往任务中心",
+      "重新分析"
+    ],
+    "internal_codes_location": "查看详情 only",
+    "user_status": "paused_recoverable"
+  },
+  "budget_authorization": {
+    "preferred_scope": "run_temporary",
+    "storage": "AnalysisRun.raw_output.run_scoped_budget_authorization",
+    "avoids_global_limit_change": true,
+    "proposal_fields": [
+      "current_daily_request_limit",
+      "required_requests",
+      "suggested_extra_requests",
+      "estimated_cost",
+      "will_not_rerun"
+    ]
+  },
+  "provider_recovery": {
+    "auto_on_fix_continue": ["readiness_refresh", "reconnect", "budget_recheck", "resume"],
+    "settings_api_key_redirect_only_when": ["credential_missing", "401", "403"]
+  },
+  "create_time_preflight": {
+    "field": "full_pipeline_advisory",
+    "covers": [
+      "boundary",
+      "scene_analysis",
+      "reader_journey",
+      "retry_margin",
+      "recovery_margin"
+    ]
+  },
+  "chapter_vs_tasks": {
+    "same_apis": ["recovery-plan", "run status", "recover"],
+    "chapter": "primary recovery entry",
+    "tasks": "global summary only"
+  },
+  "invariants": {
+    "no_real_model_calls_by_agent": true,
+    "no_auto_recover_run_5": true,
+    "no_create_run_6": true,
+    "no_scene_boundary_reader_journey_data_mutation_by_agent": true,
+    "no_prompt_schema_validator_routing_change": true,
+    "agent_phase_model_request_token_cost": 0,
+    "main_and_canary_db_unchanged_by_agent": true
+  },
+  "tests": [
+    "apps/api/tests/test_unified_analysis_recovery_center.py",
+    "apps/desktop/src/components/chapterAnalysis/UnifiedAnalysisRecoveryCard.test.tsx"
+  ],
+  "docs": [
+    "docs/analysis-recovery-user-flow-v1.md"
+  ],
+  "gates": {
+    "check_project": "PASS",
+    "check_core_freeze": "PASS",
+    "certified_baseline": "PASS",
+    "reader_journey_ui_freeze": "PASS",
+    "model_invocation_policy": "PASS",
+    "api_tests": "PASS",
+    "desktop_tasks_page_tests": "PASS"
+  },
+  "affected_files": [
+    "apps/api/app/schemas/analysis_recovery.py",
+    "apps/api/app/services/analysis_recovery_center.py",
+    "apps/api/app/services/run_scoped_budget_auth.py",
+    "apps/api/app/api/v1/analysis_recovery.py",
+    "apps/api/app/main.py",
+    "apps/desktop/src/services/analysisRecoveryApi.ts",
+    "apps/desktop/src/components/chapterAnalysis/UnifiedAnalysisRecoveryCard.tsx",
+    "apps/desktop/src/components/chapterAnalysis/ChapterAnalysisProgressPanel.tsx",
+    "apps/desktop/src/pages/BookRoutePage.tsx",
+    "apps/desktop/src/pages/TasksPage.tsx",
+    "audits/mvp-functional-baseline-v1/ui-presentation-thaw-v2-8.json"
+  ],
+  "frozen_surfaces_untouched": [
+    "apps/api/app/api/v1/analysis.py",
+    "apps/api/app/schemas/scene.py",
+    "apps/api/app/services/budget_reservation.py",
+    "apps/api/app/services/structured_output.py",
+    "apps/desktop/src/services/analysisApi.ts"
+  ]
+}

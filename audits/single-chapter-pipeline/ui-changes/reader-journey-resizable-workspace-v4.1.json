@@ -1,0 +1,73 @@
+{
+  "phase": "1D-C1-UI-06",
+  "title": "Reader Journey Resizable Workspace",
+  "version": "v4.1",
+  "verdict": "READER_JOURNEY_RESIZABLE_WORKSPACE_V4_1_READY_FOR_HUMAN_UAT",
+  "visualization_version": "4.1",
+  "parent_ui_baseline": "reader-journey-ui-final-v4.0",
+  "new_ui_baseline": "reader-journey-ui-final-v4.1",
+  "change_type": "controlled_resizable_workspace_after_human_uat",
+  "parent_human_uat": "READER_JOURNEY_WORKSPACE_LAYOUT_V4_0_READY_FOR_HUMAN_UAT",
+  "problem_addressed": [
+    "fixed Source/Inspector pane widths",
+    "unable to balance body text, chart, and inspector density",
+    "no keyboard-accessible column resize",
+    "no preferred vs effective width persistence across books/chapters"
+  ],
+  "architecture": {
+    "grid": "source | splitter | minmax(640px,1fr) | splitter | inspector",
+    "source_pane_width_px": { "min": 220, "default": 300, "max": 480 },
+    "inspector_pane_width_px": { "min": 300, "default": 360, "max": 520 },
+    "main_pane_min_px": 640,
+    "splitter_width_px": 8,
+    "hit_area_min_px": 12,
+    "dock_height_px": { "min": 240, "default": 320, "max": 520 },
+    "breakpoints": { "desktop": ">=1440", "mid": "1100-1439", "narrow": "<1100" },
+    "preferences": [
+      "storylens.readerJourney.sourcePaneWidth",
+      "storylens.readerJourney.inspectorPaneWidth",
+      "storylens.readerJourney.inspectorDockHeight"
+    ],
+    "preferred_vs_effective": true,
+    "pointer_events": ["pointerdown", "setPointerCapture", "pointermove", "pointerup", "pointercancel"],
+    "no_absolute_inspector_over_plot": true
+  },
+  "plot_area_preserved": {
+    "chart_shell_min_px": 440,
+    "svg_standard_height": 420,
+    "plot_standard_px": 352,
+    "y_domain": [0, 100],
+    "y_ticks": [0, 25, 50, 75, 100]
+  },
+  "forbidden_changes": [
+    "Prompt",
+    "Contract",
+    "Validator",
+    "Reader Journey Profile",
+    "Phase/Question/Hook/Payoff/Risk/Evidence semantics",
+    "API return contracts",
+    "ModelInvocationBroker",
+    "Provider/Budget/Recovery",
+    "book/chapter/run special cases"
+  ],
+  "freeze": {
+    "thaw": "audits/mvp-functional-baseline-v1/ui-presentation-thaw-v2-13.json",
+    "manifest": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v4.1/reader-journey-ui-final-freeze-v4.1.json",
+    "rollback": "point checker to v4.0; remove thaw v2-13; restore hashed files"
+  },
+  "docs": ["docs/reader-journey-resizable-workspace-v4.1.md"],
+  "tests": [
+    "apps/desktop/src/components/readerJourney/phase_1dc1_ui06_resizable_workspace_v4_1.test.tsx",
+    "apps/desktop/e2e/phase_1dc1_ui06_reader_journey_resizable_v4_1.spec.ts"
+  ],
+  "visual_regression": {
+    "dir": "audits/single-chapter-pipeline/reader-journey-resizable-visual-regression-v4.1"
+  },
+  "gates": {
+    "certified_baseline": "PASS (unchanged business data)",
+    "invocation_policy": "PASS (zero model calls)",
+    "output_budget": "PASS",
+    "main_and_canary_db": "unchanged",
+    "real_model_requests_tokens_cost": 0
+  }
+}

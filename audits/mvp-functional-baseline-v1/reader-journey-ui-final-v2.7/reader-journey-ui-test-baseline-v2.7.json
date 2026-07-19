@@ -1,0 +1,31 @@
+{
+  "baseline_name": "reader-journey-ui-final-v2.7",
+  "unit_tests": [
+    "apps/desktop/src/components/readerJourney/phase_1cc27_context_inspector_hierarchy.test.tsx",
+    "apps/desktop/src/components/readerJourney/phase_1cc26_journey_analysis_focused_view.test.tsx",
+    "apps/desktop/src/components/readerJourney/phase_1cc262_compact_phase_navigation.test.tsx",
+    "apps/desktop/src/components/readerJourney/phase_1cc261_header_insight_density.test.tsx",
+    "apps/desktop/src/components/readerJourney/phase_1cc253_books_route_selection_transaction.test.tsx",
+    "apps/desktop/src/components/readerJourney/phase_1cc252_context_inspector.test.tsx"
+  ],
+  "e2e_tests": [
+    "apps/desktop/e2e/phase_1cc27_context_inspector_hierarchy.spec.ts",
+    "apps/desktop/e2e/phase_1cc27_reader_journey_ui_final_visual_baseline.spec.ts",
+    "apps/desktop/e2e/phase_1cc26_journey_analysis_focused_view.spec.ts",
+    "apps/desktop/e2e/phase_1cc262_compact_phase_navigation.spec.ts",
+    "apps/desktop/e2e/phase_1cc261_header_insight_density.spec.ts"
+  ],
+  "gates": [
+    "check_core_freeze.py",
+    "check_ui_presentation_thaw.py",
+    "check_reader_journey_ui_freeze.py",
+    "check_project.py",
+    "pytest",
+    "ruff",
+    "typecheck",
+    "lint",
+    "vitest",
+    "build",
+    "test:e2e"
+  ]
+}

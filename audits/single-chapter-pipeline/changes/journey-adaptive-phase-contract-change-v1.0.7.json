@@ -1,0 +1,65 @@
+{
+  "change_id": "journey-adaptive-phase-contract-change-v1.0.7",
+  "phase": "1D-B2-R8",
+  "defect_id": "DEFECT-CANARY-012",
+  "old_batch_id": "phase-1db2-r7-20260718T155450Z",
+  "old_phase_rule": "3 <= phase_count <= 6 (hard for all chapters)",
+  "new_phase_rule": "1 <= phase_count <= min(6, scene_count); 3–6 is advisory for longer chapters only",
+  "prompt_changes": {
+    "added": "packages/prompts/reader_journey_chapter/v1.2/",
+    "preserved": [
+      "v1",
+      "v1.1"
+    ],
+    "CHAPTER_PROMPT_VERSION": "v1.2",
+    "CHAPTER_CONTRACT_VERSION": "1.2"
+  },
+  "validator_changes": {
+    "file": "apps/api/app/services/reader_journey_validation.py",
+    "removed_hard_min_3": true,
+    "removed_single_phase_multi_scene_ban": true,
+    "adaptive_bounds_helper": "adaptive_phase_count_bounds"
+  },
+  "repair_changes": {
+    "file": "packages/prompts/reader_journey_chapter/v1.2/repair.md",
+    "do_not_force_expand_legal_short_chapters": true,
+    "targeted_by_error_code": true
+  },
+  "error_code_changes": {
+    "deprecated_umbrella_for_new_failures": "JOURNEY_PHASE_COVERAGE_INVALID",
+    "new_or_specialized": [
+      "JOURNEY_PHASE_COUNT_INVALID",
+      "JOURNEY_PHASE_SCENE_GAP",
+      "JOURNEY_PHASE_SCENE_OVERLAP",
+      "JOURNEY_PHASE_DUPLICATE_SCENE",
+      "JOURNEY_PHASE_ORDER_INVALID",
+      "JOURNEY_PHASE_RANGE_NONCONTIGUOUS"
+    ],
+    "legacy_alias_note": "JOURNEY_PHASE_OVERLAP replaced by JOURNEY_PHASE_SCENE_OVERLAP for new validations"
+  },
+  "compatibility_impact": {
+    "ui_final_baseline_v2_7": "unchanged; tests prove 1–2 Phase render/PNG/inspector OK",
+    "existing_stored_journeys": "readable; new runs use chapter contract 1.2"
+  },
+  "existing_result_impact": "Existing successful journeys with 3–6 phases remain valid. Short-chapter failures like A2 (2 phases / 3 scenes) become valid under new contract.",
+  "migration_required": false,
+  "regression_tests": [
+    "apps/api/tests/test_defect_canary_012_adaptive_phase_contract.py",
+    "apps/desktop/src/components/readerJourney/defect_012_adaptive_phase_ui.test.tsx",
+    "apps/api/tests/test_defect_canary_011_targeted_repair.py",
+    "apps/api/tests/test_defect_canary_010_journey_repair_resilience.py"
+  ],
+  "rollback_plan": "Point CHAPTER_PROMPT_VERSION back to v1.1 and restore prior validate_chapter_synthesis 3–6 floor (not recommended).",
+  "new_hashes": {
+    "apps/api/app/services/reader_journey_validation.py": "8c7eb5cefc4ed224271e7a7cbcabd4dc203ecb6d2ca2eb912dcbc5e41212928e",
+    "apps/api/app/schemas/reader_journey.py": "84730f2b4717a6a22e07da6ba1d868c899d12e104c98f8e5097c29458247ca38",
+    "apps/api/tests/test_defect_canary_012_adaptive_phase_contract.py": "e7b73163de812d13fd789832209c31a55e31a2f4063c6f44c58d30b092a91f47",
+    "packages/prompts/reader_journey_chapter/v1.2/system.md": "1713e96f7c56903fba83b50eff6735fc07a6e2c1a2e68dec8b373cb4559db712",
+    "packages/prompts/reader_journey_chapter/v1.2/user.md": "0222f9686992fb317bfd937f9f4624fc239c9fe84f4d7eac8adaceaa8ec5b615",
+    "packages/prompts/reader_journey_chapter/v1.2/repair.md": "cd30351e5f4f7692b5144042f80d0dd7d52badc4304545239ad758a4792d5f91",
+    "apps/desktop/src/components/readerJourney/defect_012_adaptive_phase_ui.test.tsx": "29d964c23641d0f4b1fed36b9695be304d878d9ef613eabf901095200dece260",
+    "docs/28_phase_1cc1_reader_journey_engine.md": "e0d17b9c198074423ce565e6b5ec87368b5b4de6ec10b76e642757f262c8558f"
+  },
+  "real_model_requests_this_phase": 0,
+  "ui_baseline_unfrozen": false
+}

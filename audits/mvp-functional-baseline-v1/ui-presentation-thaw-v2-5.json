@@ -1,0 +1,75 @@
+{
+  "baseline": "mvp-functional-baseline-v1",
+  "thaw_id": "ui-presentation-thaw-v2-5",
+  "parent_thaw": "ui-presentation-thaw-v2-4-2.json",
+  "purpose": "context-inspector-information-hierarchy-and-empty-states",
+  "core_freeze_manifest": "audits/mvp-functional-baseline-v1/core-freeze-manifest.json",
+  "approved_behavior": [
+    "unified Context Inspector visual shell for Scene/Phase/Question/Hook/Payoff/Risk",
+    "primary conclusion from existing fields only",
+    "Scene resident metrics limited to engagement/curiosity/tension",
+    "compact Evidence list default 5 with expand",
+    "unified empty states without creating runs",
+    "error boundary remains distinct from empty states"
+  ],
+  "forbidden": [
+    "change journeySelectionTransaction",
+    "change useJourneySelection",
+    "change pendingProgrammaticSceneRef semantics",
+    "change Scroll Spy semantics",
+    "change Evidence locate semantics",
+    "change URL scene/phase/paragraph/inspector/metric semantics",
+    "invent analysis conclusions",
+    "model calls",
+    "new AnalysisRun or ReaderJourneyRun",
+    "modify FROZEN_CORE or FROZEN_CONTRACT"
+  ],
+  "allowed_files": [
+    {
+      "path": "apps/desktop/src/components/readerJourney/inspectorShell.tsx",
+      "new_file": true,
+      "reason": "Pure presentation shell: header, conclusion, sections, empty state, evidence list",
+      "allowed_change": "presentation|information-architecture"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/JourneySceneDetailPanel.tsx",
+      "before_sha256": "c7bea9843b75eca6c87a58627e811b3bd38110fc2ca53b999379729a6ecdab9a",
+      "reason": "Scene/Phase/Question/Hook/Payoff/Risk inspectors share hierarchy shell",
+      "allowed_change": "presentation|information-architecture"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.tsx",
+      "before_sha256": "6fb6fb2dd85aff8372508d142ab89d064a6dd4ca0cd0cad17621126308eff7bd",
+      "reason": "No-selection empty state with light navigation hints",
+      "allowed_change": "presentation|information-architecture"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/readerJourney.css",
+      "before_sha256": "3c517bf5c7090de8a0ed9caa99bfabef4db827b76aab45454aea52962c89e388",
+      "reason": "Inspector hierarchy, sticky header, compact empty/evidence styles",
+      "allowed_change": "presentation|css"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/journeyUiLabels.ts",
+      "before_sha256": "6fb9812783af0b31a5892935475599273533663fec03f3d0b741281c140ed9bf",
+      "reason": "Question lifecycle Chinese labels for Inspector",
+      "allowed_change": "presentation|labels"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/sceneDetailFields.tsx",
+      "before_sha256": "4bdaa5ba18442ea27653e7d80abb863870ef86987364a5b110807fb8964dc6fb",
+      "reason": "normalizeWritingTakeawayList helper for typed takeaway rendering",
+      "allowed_change": "presentation|safe-render"
+    }
+  ],
+  "forbidden_behavior_changes": [
+    "journeySelectionTransaction.ts",
+    "useJourneySelection.ts",
+    "exportJourneyPng.ts",
+    "FROZEN_CORE",
+    "FROZEN_CONTRACT"
+  ],
+  "notes": [
+    "Additive to prior thaws. Does not modify old thaw files or core-freeze-manifest."
+  ]
+}

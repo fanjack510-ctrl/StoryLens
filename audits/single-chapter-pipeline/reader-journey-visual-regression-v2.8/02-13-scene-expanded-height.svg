@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="520" viewBox="0 0 720 520">
+<rect width="100%" height="100%" fill="#ffffff"/>
+<text x="16" y="18" font-family="Microsoft YaHei, sans-serif" font-size="14" fill="#222">13 Scene 展开高度</text>
+<text x="16" y="36" font-family="Microsoft YaHei, sans-serif" font-size="11" fill="#666">Scenes=13 height=520px Y=0—100 inspector=expanded view=1-13</text>
+<rect x="36.0" y="28" width="125.3" height="452" fill="#e8ede9" opacity="0.18"/>
+<rect x="200.0" y="28" width="125.3" height="452" fill="#f0ebe3" opacity="0.18"/>
+<rect x="364.0" y="28" width="125.3" height="452" fill="#e6ebf0" opacity="0.18"/>
+<rect x="528.0" y="28" width="180.0" height="452" fill="#ede8e6" opacity="0.18"/>
+<rect x="256.7" y="28" width="121.3" height="452" fill="#f3ddd8" opacity="0.28"/>
+<line x1="44" y1="480.0" x2="700" y2="480.0" stroke="#ddd" stroke-width="1"/>
+<text x="38" y="483.0" text-anchor="end" font-family="sans-serif" font-size="10" fill="#666">0</text>
+<line x1="44" y1="367.0" x2="700" y2="367.0" stroke="#ddd" stroke-width="1"/>
+<text x="38" y="370.0" text-anchor="end" font-family="sans-serif" font-size="10" fill="#666">25</text>
+<line x1="44" y1="254.0" x2="700" y2="254.0" stroke="#ddd" stroke-width="1"/>
+<text x="38" y="257.0" text-anchor="end" font-family="sans-serif" font-size="10" fill="#666">50</text>
+<line x1="44" y1="141.0" x2="700" y2="141.0" stroke="#ddd" stroke-width="1"/>
+<text x="38" y="144.0" text-anchor="end" font-family="sans-serif" font-size="10" fill="#666">75</text>
+<line x1="44" y1="28.0" x2="700" y2="28.0" stroke="#ddd" stroke-width="1"/>
+<text x="38" y="31.0" text-anchor="end" font-family="sans-serif" font-size="10" fill="#666">100</text>
+<path d="M 44.0 480.0 L 98.7 321.8 L 153.3 290.2 L 208.0 353.4 L 262.7 231.4 L 317.3 163.6 L 372.0 263.0 L 426.7 380.6 L 481.3 208.8 L 536.0 95.8" fill="none" stroke="#2f6f5e" stroke-width="2.25"/>
+<path d="M 645.3 299.2 L 700.0 28.0" fill="none" stroke="#2f6f5e" stroke-width="2.25"/>
+<circle cx="44.0" cy="480.0" r="5" fill="#fff" stroke="#2f6f5e" stroke-width="1.5"/>
+<circle cx="98.7" cy="321.8" r="5" fill="#fff" stroke="#2f6f5e" stroke-width="1.5"/>
+<circle cx="153.3" cy="290.2" r="5" fill="#fff" stroke="#2f6f5e" stroke-width="1.5"/>
+<circle cx="208.0" cy="353.4" r="5" fill="#fff" stroke="#2f6f5e" stroke-width="1.5"/>
+<circle cx="262.7" cy="231.4" r="5" fill="#fff" stroke="#2f6f5e" stroke-width="1.5"/>
+<circle cx="317.3" cy="163.6" r="5" fill="#fff" stroke="#2f6f5e" stroke-width="1.5"/>
+<circle cx="372.0" cy="263.0" r="5" fill="#fff" stroke="#2f6f5e" stroke-width="1.5"/>
+<circle cx="426.7" cy="380.6" r="5" fill="#fff" stroke="#2f6f5e" stroke-width="1.5"/>
+<circle cx="481.3" cy="208.8" r="5" fill="#fff" stroke="#2f6f5e" stroke-width="1.5"/>
+<circle cx="536.0" cy="95.8" r="5" fill="#fff" stroke="#2f6f5e" stroke-width="1.5"/>
+<circle cx="645.3" cy="299.2" r="5" fill="#fff" stroke="#2f6f5e" stroke-width="1.5"/>
+<circle cx="700.0" cy="28.0" r="5" fill="#fff" stroke="#2f6f5e" stroke-width="1.5"/>
+</svg>

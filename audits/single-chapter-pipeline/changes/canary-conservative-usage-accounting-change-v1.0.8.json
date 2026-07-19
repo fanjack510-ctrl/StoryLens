@@ -1,0 +1,105 @@
+{
+  "change_id": "canary-conservative-usage-accounting-change-v1.0.8",
+  "phase": "1D-B2-R9",
+  "defect_id": "DEFECT-CANARY-013",
+  "old_batch_id": "phase-1db2-r8-20260718T161902Z",
+  "old_batch_verdict_preserved": "REAL_CANARY_ABORTED_BY_LIMIT",
+  "superseded_by_future_batch": true,
+  "gate_location": "A_canary_runner_only",
+  "production_budget_reservation_changed": false,
+  "original_gate": "http_request_sent=true AND input_tokens IS NULL => stop_reason=token_stats_missing / REAL_CANARY_ABORTED_BY_LIMIT",
+  "new_gate": "accounting_status=unknown => ABORT; OR certification_accounted_cost + next_conservative_budget > max_cost => ABORT",
+  "accounting_statuses": [
+    "reported",
+    "conservative_estimate",
+    "provider_confirmed_zero",
+    "unknown"
+  ],
+  "estimation_method": {
+    "estimated_input_tokens": "conservative_token_estimate on request payload when available; else character_count+8 upper bound from redacted cloud input_snapshot",
+    "estimated_output_tokens": "requested_output_tokens / max_output_tokens / effective_limit from request_parameters",
+    "estimated_cost": "input*input_per_million/1e6 + output*output_per_million/1e6 from config/cloud_pricing.json",
+    "usage_source_on_estimate": "conservative_upper_bound",
+    "estimate_reason_on_disconnect": "provider_disconnect_without_usage",
+    "never_write_estimates_into_reported_fields": true,
+    "never_treat_disconnect_as_provider_confirmed_zero": true,
+    "never_coerce_null_reported_tokens_to_zero": true
+  },
+  "pricing_source": "config/cloud_pricing.json (aliyun-cn-beijing-2026-07-16-official-list-price-v1)",
+  "reported_vs_estimated_fields": [
+    "reported_input_tokens",
+    "reported_output_tokens",
+    "reported_cost",
+    "estimated_input_tokens",
+    "estimated_output_tokens",
+    "estimated_cost",
+    "accounting_status",
+    "usage_source",
+    "estimate_reason",
+    "reservation_amount",
+    "settled_amount"
+  ],
+  "batch_cost_outputs": [
+    "actual_reported_cost",
+    "conservative_estimated_cost",
+    "certification_accounted_cost"
+  ],
+  "reservation_behavior": {
+    "production": "unchanged — release_run_reservation retains existing semantics",
+    "on_remote_disconnect": "do not settle as 0; certification ledger uses conservative estimate; production reservation released per existing path",
+    "reconciliation": "future provider bill may reconcile without overwriting original audit records"
+  },
+  "stop_conditions": [
+    "accounting_status=unknown",
+    "certification_accounted_cost + next_request_conservative_budget > max_cost",
+    "existing max_model_requests / max_retry_requests / max_input_tokens / max_output_tokens / max_total_duration"
+  ],
+  "continue_allowed_when": [
+    "failed attempt missing usage but conservative_estimate available",
+    "retry succeeded with reported usage",
+    "certification_accounted_cost within hard max_cost",
+    "no data/idempotency/persistence anomalies"
+  ],
+  "allowed_files": [
+    "scripts/certification/conservative_usage_accounting.py",
+    "scripts/certification/real_canary_runner.py",
+    "scripts/check_single_chapter_real_canary.py",
+    "apps/api/tests/test_defect_canary_013_conservative_usage_accounting.py",
+    "audits/single-chapter-pipeline/changes/canary-conservative-usage-accounting-change-v1.0.8.json",
+    "audits/single-chapter-pipeline/real-canary-preflight-v10.json",
+    "audits/single-chapter-pipeline/real-canary-v9/defect-013-remediation-verdict-v1.json",
+    "audits/single-chapter-pipeline/real-canary-v9/defects/DEFECT-CANARY-013-*.json",
+    "docs/50_single_chapter_real_api_canary.md"
+  ],
+  "prohibited_files": [
+    "packages/prompts/**",
+    "apps/api/app/services/reader_journey_*.py",
+    "apps/api/app/services/reader_journey_validation.py",
+    "apps/api/app/services/scene_pipeline.py",
+    "apps/api/app/services/scene_analysis*.py",
+    "apps/desktop/**",
+    "data/storylens.db"
+  ],
+  "offline_replay_run6": {
+    "db": "artifacts/single-chapter-pipeline-certification/real-canary/canary-v9.sqlite3",
+    "analysis_run_id": 6,
+    "unknown_count": 0,
+    "conservative_count": 1,
+    "inv_72_status": "conservative_estimate",
+    "inv_73_status": "reported",
+    "run6_certification_accounted_cost_cny": 0.111324,
+    "no_longer_aborts_on_token_stats_missing": true
+  },
+  "regression_tests": [
+    "apps/api/tests/test_defect_canary_013_conservative_usage_accounting.py"
+  ],
+  "rollback_plan": "Restore real_canary_runner.py null-token gate (input_tokens IS NULL => token_stats_missing) and remove conservative_usage_accounting import. Not recommended.",
+  "new_hashes": {
+    "scripts/certification/conservative_usage_accounting.py": "0fffca5143bf408b044b5350b3a232bd6f29dfb6a3b499a63a16863cd61cf462",
+    "scripts/certification/real_canary_runner.py": "f44f71c5f94154f03e0526497799a040b9705b88eddfd290e71daccabe2dbf98",
+    "apps/api/tests/test_defect_canary_013_conservative_usage_accounting.py": "8e6a4688398ed1b3795fdeef6cdb25162193c2b61252263a62a7fefd32fa76db",
+    "docs/50_single_chapter_real_api_canary.md": "f64441ea251f014ffad1f035185f663bfc14627d741a75dce51e05d3866c2fe4"
+  },
+  "real_model_requests_this_phase": 0,
+  "ui_baseline_unfrozen": false
+}

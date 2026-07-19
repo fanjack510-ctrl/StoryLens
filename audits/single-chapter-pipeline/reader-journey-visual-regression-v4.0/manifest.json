@@ -1,0 +1,31 @@
+{
+  "phase": "1D-C1-UI-05",
+  "version": "4.0",
+  "dir": "audits/single-chapter-pipeline/reader-journey-visual-regression-v4.0",
+  "screenshots": [
+    "01-1920-inspector-closed.png",
+    "02-1920-inspector-open.png",
+    "03-toolbar-full-labels.png",
+    "04-1600-inspector-open.png",
+    "05-1366-inspector-closed.png",
+    "06-1366-bottom-dock.png",
+    "07-more-menu-right-edge.png",
+    "08-phase-horizontal.png",
+    "09-30-scene-horizontal-browse.png",
+    "10-13-scene-full-curve.png"
+  ],
+  "dom_metrics": [
+    "dom-metrics-1920-closed.json",
+    "dom-metrics-1920-open.json",
+    "dom-metrics-1366-dock.json"
+  ],
+  "proofs": [
+    "full Chinese toolbar labels",
+    "no vertical tool rail",
+    "Inspector dock does not overlay clipped plot",
+    "Y ticks 0/25/50/75/100 visible",
+    "13 scene nodes",
+    "30 scene horizontal browse",
+    "more menu viewport clamped"
+  ]
+}

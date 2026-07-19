@@ -1,0 +1,253 @@
+{
+  "phase": "1D-B2-R11-QUAL",
+  "title": "Real Invocation Path Qualification Preflight v1 (post DEFECT-CANARY-015)",
+  "status": "OPERATOR_AUTHORIZED",
+  "execution_allowed": true,
+  "authorization_required": true,
+  "real_model_requests_allowed": true,
+  "allows_full_canary": false,
+  "purpose": "Prove every nested invocation path resolves to frozen Plus policy with auto_route=false and fallback_used=false via real ModelInvocationBroker HTTP audits.",
+  "prior_failed_batch": {
+    "batch_id": "phase-1db2-r10-20260719T000923Z",
+    "verdict": "REAL_CANARY_FAILED",
+    "defect": "DEFECT-CANARY-015",
+    "superseded_by_future_batch": true,
+    "resume_forbidden": true
+  },
+  "remediation_ref": "audits/single-chapter-pipeline/changes/global-model-invocation-policy-change-v1.1.0.json",
+  "invocation_graph_ref": "audits/single-chapter-pipeline/model-invocation-graph-v1.json",
+  "offline_gate": "scripts/check_model_invocation_policy.py",
+  "required_gate_verdict": "INVOCATION_POLICY_PASS",
+  "runner": "scripts/run_invocation_path_qualification.py",
+  "checker": "scripts/check_invocation_path_qualification.py",
+  "authorization_ref": "audits/single-chapter-pipeline/invocation-path-qualification-v1/authorization-qualification-v1.json",
+  "authorized_policy": {
+    "provider": "aliyun_qwen_plus",
+    "model": "qwen3.7-plus",
+    "auto_route": false,
+    "fallback_used": false,
+    "flash_enabled": false
+  },
+  "isolation": {
+    "database_path": "artifacts/single-chapter-pipeline-certification/real-canary/qualification-v1.sqlite3",
+    "independent_from_main_db": true,
+    "must_not_touch": [
+      "data/storylens.db",
+      "AnalysisRun#55",
+      "ReaderJourneyRun#2",
+      "artifacts/single-chapter-pipeline-certification/real-canary/canary-v11.sqlite3",
+      "audits/single-chapter-pipeline/real-canary-v11/authorization-v11.json"
+    ],
+    "resume_forbidden_batches": [
+      "phase-1db2-r10-20260719T000923Z"
+    ],
+    "report_retention": "audits/single-chapter-pipeline/invocation-path-qualification-v1/"
+  },
+  "frozen_hashes": {
+    "apps/api/app/services/model_invocation_broker.py": "f03dbb14d1e5a7d51fd864670154a877a16db790b5a65697d7a58065eb48733f",
+    "apps/api/app/services/structured_output.py": "1d4faa441c5b26ce307566541829f7f355b0399cd091160f6de7a4ab879af47a",
+    "scripts/check_model_invocation_policy.py": "d00e5a87d39ff0e7c11df25fbc5d36ea5ae2e731a8a95baf5a918a4f23a59337",
+    "scripts/certification/invocation_path_qualification_runner.py": "a20660546ed903ab54a23bf10f37a8cadc9160c74d25becd7c4590be49e66073",
+    "scripts/run_invocation_path_qualification.py": "4d32484b01a16e333d9af982354acea2fc2b0391fa7805deeec8a9da29cf7356",
+    "scripts/check_invocation_path_qualification.py": "83bbc5443d7f057023dc0a00a7be3a8ade7f5b21cdb848d7fb46ce2fe15b75de",
+    "audits/single-chapter-pipeline/changes/global-model-invocation-policy-change-v1.1.0.json": "39036163fd131dd6d510cbac6a2cf2925f20fe1938a24ab5cd0a2959e14cc566",
+    "audits/single-chapter-pipeline/model-invocation-graph-v1.json": "403e8c62b1cf9dac82a47378bc3c6550213d3bd69d7f96f61010e2c35a04bfed",
+    "packages/prompts/scene_boundary/v3.1/system.md": "71160f1f091cff31cf992bcdcc830e74a26cc40f36af202f7d2fff7b278b0b6c",
+    "packages/prompts/reader_journey_scene/v1.5/system.md": "41faec2e4b1992a31e31c2679f82ed35eb017013eee145de6752d658da95fc6c"
+  },
+  "frozen_versions": {
+    "scene_boundary_prompt": "v3.1",
+    "reader_journey_scene_prompt": "v1.5",
+    "reader_journey_scene_contract": "1.3",
+    "global_model_invocation_policy": "v1.1.0",
+    "canary_conservative_usage_accounting": "v1.0.8"
+  },
+  "fault_injection": {
+    "mode": "qualification_provider_proxy",
+    "declared_in": "scripts/certification/invocation_path_qualification_runner.py",
+    "runtime_patches_forbidden": true,
+    "rules": [
+      {
+        "id": "FI-SCHEMA-SCENE",
+        "covers": "reader_journey_scene_schema_repair",
+        "script": [
+          "invalid_json",
+          "passthrough"
+        ],
+        "fixture": "SceneBoundaryResult invalid then real HTTP repair"
+      },
+      {
+        "id": "FI-STRUCTURAL",
+        "covers": "reader_journey_structural_repair",
+        "script": [
+          "canned_json_valid",
+          "passthrough"
+        ],
+        "validator_fault": "JOURNEY_EVIDENCE_OUT_OF_SCOPE once",
+        "fixture": "SceneBoundaryResult"
+      },
+      {
+        "id": "FI-PROVIDER-RETRY",
+        "covers": "generic_provider_retry",
+        "script": [
+          "disconnect",
+          "passthrough"
+        ],
+        "fixture": "scene_boundary"
+      },
+      {
+        "id": "FI-REPAIR-RETRY",
+        "covers": "repair_provider_retry",
+        "script": [
+          "canned_json_valid",
+          "disconnect",
+          "passthrough"
+        ],
+        "validator_fault": "JOURNEY_EVIDENCE_OUT_OF_SCOPE once"
+      },
+      {
+        "id": "FI-TARGETED-PATCH",
+        "covers": "reader_journey_targeted_evidence_patch",
+        "script": [
+          "canned_json_oos_batch",
+          "passthrough"
+        ],
+        "fixture": "audits/single-chapter-pipeline/real-canary-v7/defects/DEFECT-CANARY-011-attempt1-normal-response.json"
+      },
+      {
+        "id": "FI-RECOVERY",
+        "covers": "scene_analysis_provider_recovery",
+        "script_phase_a": [
+          "disconnect",
+          "disconnect",
+          "disconnect"
+        ],
+        "script_phase_b": [
+          "passthrough"
+        ],
+        "policy_stamp": "scene_analysis_provider_recovery on resume HTTP"
+      },
+      {
+        "id": "FI-SCHEMA-CHAPTER",
+        "covers": "reader_journey_chapter_schema_repair",
+        "script": [
+          "invalid_json",
+          "passthrough"
+        ],
+        "task_type": "reader_journey_chapter"
+      },
+      {
+        "id": "FI-FLASH-REJECT",
+        "covers": "negative_control",
+        "action": "broker.resolve requested_provider=aliyun_qwen_flash must fail pre-send"
+      }
+    ]
+  },
+  "must_cover_invocation_types": [
+    {
+      "invocation_type": "reader_journey_scene_schema_repair",
+      "resolved_provider": "aliyun_qwen_plus",
+      "resolved_model": "qwen3.7-plus",
+      "auto_route": false,
+      "fallback_used": false,
+      "requires_http_request_sent": true
+    },
+    {
+      "invocation_type": "reader_journey_structural_repair",
+      "resolved_provider": "aliyun_qwen_plus",
+      "resolved_model": "qwen3.7-plus",
+      "auto_route": false,
+      "fallback_used": false,
+      "requires_http_request_sent": true
+    },
+    {
+      "invocation_type": "generic_provider_retry",
+      "resolved_provider": "aliyun_qwen_plus",
+      "resolved_model": "qwen3.7-plus",
+      "auto_route": false,
+      "fallback_used": false,
+      "requires_http_request_sent": true
+    },
+    {
+      "invocation_type": "repair_provider_retry",
+      "resolved_provider": "aliyun_qwen_plus",
+      "resolved_model": "qwen3.7-plus",
+      "auto_route": false,
+      "fallback_used": false,
+      "requires_http_request_sent": true
+    },
+    {
+      "invocation_type": "reader_journey_targeted_evidence_patch",
+      "resolved_provider": "aliyun_qwen_plus",
+      "resolved_model": "qwen3.7-plus",
+      "auto_route": false,
+      "fallback_used": false,
+      "requires_http_request_sent": true
+    },
+    {
+      "invocation_type": "scene_analysis_provider_recovery",
+      "resolved_provider": "aliyun_qwen_plus",
+      "resolved_model": "qwen3.7-plus",
+      "auto_route": false,
+      "fallback_used": false,
+      "requires_http_request_sent": true
+    },
+    {
+      "invocation_type": "reader_journey_chapter_schema_repair",
+      "resolved_provider": "aliyun_qwen_plus",
+      "resolved_model": "qwen3.7-plus",
+      "auto_route": false,
+      "fallback_used": false,
+      "requires_http_request_sent": true
+    }
+  ],
+  "required_audit_fields": [
+    "requested_provider",
+    "requested_model",
+    "resolved_provider",
+    "resolved_model",
+    "route_source",
+    "fallback_used",
+    "auto_route",
+    "provider_enabled",
+    "policy_match",
+    "request_hash"
+  ],
+  "hard_limits": {
+    "max_model_requests": 40,
+    "max_retry_requests": 20,
+    "max_input_tokens": 200000,
+    "max_output_tokens": 80000,
+    "max_cost_cny": 20.0,
+    "max_total_duration_minutes": 45
+  },
+  "aggregate_estimates": {
+    "estimated_model_requests_worst": 24,
+    "estimated_cost_cny_nominal": 1.5,
+    "estimated_cost_cny_worst": 8.0
+  },
+  "pass_criteria": [
+    "INVOCATION_POLICY_PASS before execution",
+    "all must_cover_invocation_types have >=1 http_request_sent audit row",
+    "each covered row has full required_audit_fields",
+    "resolved_provider=aliyun_qwen_plus and resolved_model=qwen3.7-plus",
+    "auto_route=false and fallback_used=false and policy_match=true",
+    "Flash request rejected pre-send",
+    "main DB remains 55/2",
+    "full canary not started",
+    "authorization-v12 not issued"
+  ],
+  "on_pass": {
+    "verdict": "INVOCATION_PATH_QUALIFICATION_PASSED",
+    "allow_generate": "real-canary-preflight-v12.json",
+    "still_forbidden": [
+      "authorization-v12 until separate operator approval of preflight-v12",
+      "resume phase-1db2-r10-20260719T000923Z",
+      "enable aliyun_qwen_flash"
+    ]
+  },
+  "on_fail": {
+    "verdict": "INVOCATION_PATH_QUALIFICATION_FAILED",
+    "conclusion": "DEFECT_015_NOT_REMEDIATED"
+  }
+}

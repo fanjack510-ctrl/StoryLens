@@ -1,0 +1,7 @@
+{
+  "verdict": "INVOCATION_PATH_QUALIFICATION_PASSED",
+  "defect_015_followup": "READY_FOR_CANARY_PREFLIGHT_V12",
+  "finished_at": "2026-07-19T01:16:22.604522+00:00",
+  "certification_accounted_cost": 0.086716,
+  "main_db_invariance": "55/2"
+}

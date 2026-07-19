@@ -1,0 +1,40 @@
+{
+  "version": "2.9",
+  "nodes": [
+    {
+      "id": "ReaderJourneyWorkspace",
+      "path": "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.tsx"
+    },
+    {
+      "id": "CanonicalJourneyChart",
+      "path": "apps/desktop/src/components/readerJourney/CanonicalJourneyChart.tsx"
+    },
+    {
+      "id": "JourneyChartToolbar",
+      "path": "apps/desktop/src/components/readerJourney/JourneyChartToolbar.tsx"
+    },
+    {
+      "id": "JourneyResizableSplit",
+      "path": "apps/desktop/src/components/readerJourney/JourneyResizableSplit.tsx"
+    },
+    {
+      "id": "exportJourneyPng",
+      "path": "apps/desktop/src/components/readerJourney/exportJourneyPng.ts"
+    }
+  ],
+  "edges": [
+    ["ReaderJourneyWorkspace", "JourneyChartToolbar"],
+    ["ReaderJourneyWorkspace", "CanonicalJourneyChart"],
+    ["ReaderJourneyWorkspace", "JourneyResizableSplit"],
+    ["ReaderJourneyWorkspace", "exportJourneyPng"],
+    ["exportJourneyPng", "CanonicalJourneyChart"]
+  ],
+  "invariants": [
+    "single_canonical_chart",
+    "no_book_chapter_run_special_cases",
+    "plot_area_standard_340",
+    "y_domain_default_0_100",
+    "inspector_default_collapsed",
+    "overflow_y_not_scroll"
+  ]
+}

@@ -1,0 +1,93 @@
+{
+  "change_id": "journey-targeted-repair-change-v1.0.6",
+  "phase": "1D-B2-R7",
+  "defect_id": "DEFECT-CANARY-011",
+  "title": "Targeted Journey Evidence structural repair with no-progress detection",
+  "old_batch_id": "phase-1db2-r6-20260718T153541Z",
+  "root_cause": {
+    "primary": "STRUCTURAL_REPAIR_REGENERATED_FULL_JOURNEY_WITHOUT_OOS_CONTEXT",
+    "secondary": [
+      "REPAIR_PROMPT_LACKED_TARGET_PATH_ALLOWED_IDS_OWNER_SCENE",
+      "REPAIR_RESPONSE_BYTE_IDENTICAL_TO_ORIGINAL",
+      "NO_PROGRESS_DETECTION_MISSING",
+      "LEGAL_PROFILES_EXPOSED_TO_FULL_REGEN_RISK"
+    ]
+  },
+  "offline_diagnosis": {
+    "normal_vs_repair_identical": true,
+    "oos_path": "profiles[scene_id=2].reader_question_out[1].evidence_paragraph_ids",
+    "invalid_evidence_ids": ["B0001-C0001-P0004"],
+    "target_scene_id": 2,
+    "owner_scene_of_invalid": 1,
+    "repair_input_had_field_path": false,
+    "repair_input_had_allowed_ids": false,
+    "repair_input_had_owner_scene": false,
+    "response_refs": [
+      "audits/single-chapter-pipeline/real-canary-v7/defects/DEFECT-CANARY-011-attempt1-normal-response.json",
+      "audits/single-chapter-pipeline/real-canary-v7/defects/DEFECT-CANARY-011-attempt1-repair-response.json"
+    ]
+  },
+  "allowed_files": [
+    "apps/api/app/services/reader_journey_targeted_repair.py",
+    "apps/api/app/services/structured_output.py",
+    "apps/api/app/services/reader_journey_validation.py",
+    "apps/api/app/services/validation_errors.py",
+    "apps/api/tests/test_defect_canary_011_targeted_repair.py",
+    "audits/single-chapter-pipeline/changes/journey-targeted-repair-change-v1.0.6.json",
+    "audits/single-chapter-pipeline/real-canary-preflight-v8.json",
+    "audits/single-chapter-pipeline/real-canary-v7/final-verdict-v1.json",
+    "audits/single-chapter-pipeline/real-canary-v7/batches/phase-1db2-r6-20260718T153541Z/final-verdict-v1.json",
+    "audits/single-chapter-pipeline/real-canary-v7/defect-011-remediation-verdict-v1.json",
+    "audits/single-chapter-pipeline/real-canary-v7/defects/DEFECT-CANARY-011-diagnosis-v1.json"
+  ],
+  "prohibited": [
+    "Evidence scope relaxation",
+    "auto-forge Evidence",
+    "auto-remap OOS Evidence to arbitrary current-Scene IDs",
+    "score rule changes",
+    "question lifecycle changes",
+    "scene analysis changes",
+    "real model calls",
+    "reuse authorization-v7",
+    "resume phase-1db2-r6-20260718T153541Z"
+  ],
+  "new_behavior": {
+    "repair_mode": "directed Evidence patch (JourneyEvidenceRepairPatchResult)",
+    "repair_input_fields": [
+      "error_code",
+      "target_path",
+      "invalid_evidence_ids",
+      "target_scene_id",
+      "allowed_evidence_ids",
+      "allowed_evidence_snippets",
+      "original_invalid_node"
+    ],
+    "guards": [
+      "only error nodes",
+      "no Scene ID/count changes",
+      "untouched Profiles byte-stable",
+      "no cross-Scene borrow",
+      "no forge",
+      "semantic match required for replace",
+      "delete/remove_node when no match",
+      "full validator after patch",
+      "max 1 structural repair round"
+    ],
+    "error_codes": {
+      "JOURNEY_REPAIR_NO_PROGRESS": "illegal nodes / same invalid Evidence unchanged after repair",
+      "JOURNEY_REPAIR_VALIDATION_FAILED": "repair changed something but still violates contract"
+    }
+  },
+  "regression_tests": [
+    "apps/api/tests/test_defect_canary_011_targeted_repair.py",
+    "apps/api/tests/test_defect_canary_010_journey_repair_resilience.py"
+  ],
+  "new_hashes": {
+    "apps/api/app/services/reader_journey_targeted_repair.py": "d1a2d74109c1afa8187a64d0f4783502382fc72cea30327ec793463b291950dd",
+    "apps/api/app/services/structured_output.py": "d337aa8978da3d3d01e768c42f3bb08272664214a54e913d99345597c6211929",
+    "apps/api/app/services/reader_journey_validation.py": "c445deabdf16be1b08fa43a3189227dfabdcd835b8d31c3d7ee93ed0cfa0d330",
+    "apps/api/app/services/validation_errors.py": "df2015795c232d9080fb184ba70247af313a2d1328e7efdffb4e290b837de7df",
+    "apps/api/tests/test_defect_canary_011_targeted_repair.py": "d2b6c7ed18dcef31e2e42ab0946b66ae99d4eeeff32b498297e29a1cb25fd946"
+  },
+  "real_model_requests_this_phase": 0
+}

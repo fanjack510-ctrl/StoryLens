@@ -1,0 +1,49 @@
+{
+  "baseline": "mvp-functional-baseline-v1",
+  "thaw_id": "ui-presentation-thaw-v2-9",
+  "parent_thaw": "ui-presentation-thaw-v2-8.json",
+  "purpose": "phase-1d-c1-ui-02-reader-journey-visualization-v2.8",
+  "core_freeze_manifest": "audits/mvp-functional-baseline-v1/core-freeze-manifest.json",
+  "reader_journey_ui_freeze": "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.8/reader-journey-ui-final-freeze-v2.8.json",
+  "approved_behavior": [
+    "Single CanonicalJourneyChart shared by all books/chapters/runs",
+    "Default Y domain fixed 0—100 with ticks 0/25/50/75/100",
+    "Chart height presets compact=240 standard=360 expanded=520 persisted in local UI prefs",
+    "Overview/Inspector drag handle with collapse/expand/reset",
+    "Zoom toolbar: fit-all / zoom-in / zoom-out / focus phase / reset",
+    "Scene>30 uses brush interval; PNG default exports full journey independent of viewport",
+    "Does not modify Prompt/Contract/Validator/Broker/Budget/Recovery"
+  ],
+  "forbidden": [
+    "book_id/chapter_id/run_id/scene_count special cases",
+    "modify FROZEN_CORE or FROZEN_CONTRACT",
+    "modify FROZEN_CERTIFIED_*",
+    "agent-initiated real model calls",
+    "mutate Scene/Boundary/ReaderJourney business data"
+  ],
+  "allowed_files": [
+    {
+      "path": "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.tsx",
+      "before_sha256": "583572a41a601a98fe7c1a47658248b2087f706f9c3ec8332fc5e20dbe0cecba",
+      "reason": "Compose CanonicalJourneyChart + viz toolbar + full PNG export root",
+      "allowed_change": "presentation|visualization-v2.8"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/exportJourneyPng.ts",
+      "before_sha256": "5b603f26ab42dcc4589c58da05176cd076faa9d2c2d0c588f8b2e5471530940c",
+      "reason": "Full-journey PNG export independent of viewport zoom",
+      "allowed_change": "presentation|export-v2.8"
+    }
+  ],
+  "forbidden_behavior_changes": [
+    "FROZEN_CORE",
+    "FROZEN_CONTRACT",
+    "FROZEN_CERTIFIED_*",
+    "Prompt/Schema/Validator/Provider routing",
+    "Reader Journey Profile / Phase / Question / Hook / Payoff / Risk / Evidence semantics"
+  ],
+  "notes": [
+    "New visualization modules are additive and sealed into reader-journey-ui-final-v2.8.",
+    "JourneyResizableSplit and readerJourney.css are governed by Reader Journey UI freeze v2.8."
+  ]
+}

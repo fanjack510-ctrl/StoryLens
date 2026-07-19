@@ -1,0 +1,56 @@
+{
+  "baseline_name": "reader-journey-ui-final-v2.7",
+  "routes": [
+    {
+      "id": "books-embedded",
+      "url": "/books/1?chapter=2&analysisRun=55&view=result&resultTab=reader-journey&mode=sync&scene=9&overview=curve&inspector=scene",
+      "expected_title": "旅程分析",
+      "expected_scene": 9,
+      "expected_phase": null,
+      "expected_inspector": "scene",
+      "expected_metric": "engagement",
+      "expected_visible_regions": [
+        "journey-analysis-title",
+        "journey-overview-curve",
+        "journey-detail-pane",
+        "journey-phase-strip"
+      ]
+    },
+    {
+      "id": "standalone-results",
+      "url": "/analysis-runs/55/results?tab=reader-journey&mode=sync&scene=9&overview=curve&inspector=scene",
+      "expected_title": "旅程分析",
+      "expected_scene": 9,
+      "expected_phase": null,
+      "expected_inspector": "scene",
+      "expected_metric": "engagement",
+      "expected_visible_regions": [
+        "journey-analysis-title",
+        "journey-overview-curve",
+        "journey-detail-pane"
+      ]
+    },
+    {
+      "id": "legacy-overview-questions",
+      "url": "/books/1?chapter=2&analysisRun=55&view=result&resultTab=reader-journey&mode=sync&scene=9&overview=questions&inspector=scene",
+      "expected_title": "旅程分析",
+      "expected_scene": 9,
+      "expected_inspector": "scene",
+      "normalized_overview": "curve",
+      "expected_visible_regions": [
+        "journey-overview-curve"
+      ]
+    },
+    {
+      "id": "legacy-overview-diagnosis",
+      "url": "/books/1?chapter=2&analysisRun=55&view=result&resultTab=reader-journey&mode=sync&scene=9&overview=diagnosis&inspector=scene",
+      "expected_title": "旅程分析",
+      "expected_scene": 9,
+      "expected_inspector": "scene",
+      "normalized_overview": "curve",
+      "expected_visible_regions": [
+        "journey-overview-curve"
+      ]
+    }
+  ]
+}

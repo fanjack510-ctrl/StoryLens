@@ -1,0 +1,83 @@
+{
+  "baseline_id": "storylens-v1.0-baseline",
+  "product": "StoryLens (叙镜)",
+  "version_intent": "1.0.0-rc1",
+  "generated_at": "2026-07-19T13:04:00+08:00",
+  "purpose": "Open-source-prep technical baseline: architecture audit, rollback snapshot, optimization reference.",
+  "constraints": {
+    "no_business_logic_change": true,
+    "no_refactor": true,
+    "no_ui_optimization": true,
+    "no_dependency_change": true,
+    "no_file_deletion": true
+  },
+  "git": {
+    "status_at_audit": "NOT_INITIALIZED",
+    "action": "git init + initial commit + tag storylens-v1.0-baseline",
+    "tag": "storylens-v1.0-baseline",
+    "note": "Prior to this baseline pass the working tree had no .git directory."
+  },
+  "related_certified_baseline": "audits/v1.0/certified-baseline/storylens-community-v1.0-certified-baseline.json",
+  "artifacts": [
+    "audits/v1.0-baseline/baseline-manifest.json",
+    "audits/v1.0-baseline/current-file-tree.txt",
+    "audits/v1.0-baseline/dependency-lock.txt",
+    "audits/v1.0-baseline/database-schema.md",
+    "audits/v1.0-baseline/api-registry.md",
+    "docs/architecture/01-product-overview.md",
+    "docs/architecture/02-system-architecture.md",
+    "docs/architecture/03-frontend-architecture.md",
+    "docs/architecture/04-backend-architecture.md",
+    "docs/architecture/05-ai-pipeline.md",
+    "docs/architecture/06-database-design.md",
+    "docs/architecture/07-api-reference.md",
+    "docs/architecture/08-feature-matrix.md",
+    "docs/architecture/09-known-issues.md",
+    "docs/architecture/10-open-source-checklist.md",
+    "docs/audits/README.md",
+    "docs/release/v1.0-baseline-notes.md"
+  ],
+  "stack": {
+    "frontend": "apps/desktop — React 19 + Vite 6 + Tauri 2 + react-router-dom 7 + TanStack Query 5 + Zustand 5",
+    "backend": "apps/api — FastAPI + SQLAlchemy 2 + SQLite",
+    "ai": "ModelGateway → OpenAI-compatible (Aliyun Qwen BYOK; optional local llama)",
+    "prompts": "packages/prompts",
+    "data": "data/storylens.db (gitignored); credentials via OS keyring"
+  },
+  "scale_snapshot": {
+    "frontend_src_files_ts_tsx_css": 158,
+    "frontend_src_non_test": 103,
+    "frontend_test_files": 55,
+    "frontend_loc": 36081,
+    "backend_app_py_files": 92,
+    "backend_test_py_files": 56,
+    "backend_app_loc": 24588,
+    "backend_test_loc": 14054,
+    "prompt_files": 76,
+    "tracked_tree_file_count_approx": 1278
+  },
+  "ordinary_mode_provider": {
+    "provider": "aliyun_qwen_plus",
+    "default_model": "qwen3.7-plus",
+    "auto_route": false,
+    "flash_fallback": false
+  },
+  "v1_in_scope": [
+    "single_chapter_import_and_reading",
+    "scene_boundary_detection_and_human_review",
+    "scene_analysis",
+    "reader_journey",
+    "export_png_json_markdown",
+    "task_recovery",
+    "local_sqlite_persistence",
+    "byok_qwen_aliyun"
+  ],
+  "v1_out_of_scope": [
+    "multi_chapter_comparison",
+    "full_book_journey_network",
+    "neo4j",
+    "pro_license_billing",
+    "automatic_training",
+    "multi_model_voting"
+  ]
+}

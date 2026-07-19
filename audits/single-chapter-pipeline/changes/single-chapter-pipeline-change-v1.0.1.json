@@ -1,0 +1,75 @@
+{
+  "change_id": "single-chapter-pipeline-change-v1.0.1",
+  "phase": "1D-B2-R1",
+  "defect_id": "DEFECT-CANARY-001",
+  "title": "Allow empty key_actions for short dialogue/emotion/info scenes; fix canary chapter selection",
+  "root_cause": {
+    "primary": "A. FIXTURE_INVALID",
+    "secondary": ["G. BUSINESS_VALIDATOR_BUG", "C. PROMPT_CONTRACT_MISMATCH", "I. RETRY_TRANSFORMS_BUG"]
+  },
+  "affected_contract": "SceneAnalysisResult strict business validation (key_actions)",
+  "affected_prompt": "packages/prompts/scene_analysis/v3.2 (new; v3.1 preserved)",
+  "affected_validator": "apps/api/app/services/scene_pipeline.py::validate_scene_analysis",
+  "allowed_files": [
+    "apps/api/app/services/scene_pipeline.py",
+    "apps/api/app/services/boundary_review_service.py",
+    "apps/api/app/services/provider_eligibility.py",
+    "apps/api/app/services/scene_analysis_offline_replay.py",
+    "packages/prompts/scene_analysis/v3.2/system.md",
+    "packages/prompts/scene_analysis/v3.2/user.md",
+    "packages/prompts/scene_analysis/v3.2/repair.md",
+    "scripts/certification/real_canary_runner.py",
+    "apps/api/tests/test_defect_canary_001_key_actions.py",
+    "apps/api/tests/test_phase_1c_a10.py",
+    "apps/api/tests/test_phase_1c_a.py",
+    "audits/mvp-functional-baseline-v1/core-freeze-manifest.json",
+    "audits/single-chapter-pipeline/changes/single-chapter-pipeline-change-v1.0.1.json",
+    "audits/single-chapter-pipeline/real-canary-preflight-v2.json",
+    "audits/single-chapter-pipeline/real-canary/final-verdict-v1.json"
+  ],
+  "prohibited_files": [
+    "audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/**",
+    "packages/prompts/scene_analysis/v3.1/**",
+    "data/storylens.db",
+    "apps/desktop/src/components/readerJourney/**"
+  ],
+  "old_behavior": {
+    "key_actions": "strict_contract required len(key_actions)>=1 with evidence; empty array failed with BUSINESS_VALIDATION_ERROR",
+    "normalization": "single-paragraph empty key_actions fabricated from goal/outcome",
+    "prompt_v3.1": "key_actions至少一项、允许多项且每项有Evidence",
+    "canary_import": "stamped chapter_title caused front-matter split; runner selected metadata-only first chapter"
+  },
+  "new_behavior": {
+    "key_actions": "empty array legal when no clear action; non-empty items each require summary + in-scene evidence",
+    "normalization": "evidence ID cleanup only; never fabricate key_actions",
+    "prompt_v3.2": "documents empty key_actions for dialogue/emotion/info; repair forbids inventing actions",
+    "canary_import": "stamp matches offline (no title heading); select narrative chapter; abort if metadata-thin"
+  },
+  "compatibility_impact": "Scene analysis responses with key_actions=[] now succeed when other required fields are evidenced; unevidenced non-empty actions still fail. Active prompt version becomes v3.2; v3.1 files unchanged.",
+  "migration_required": false,
+  "regression_tests": [
+    "apps/api/tests/test_defect_canary_001_key_actions.py",
+    "apps/api/tests/test_phase_1c_a10.py::test_empty_key_actions_single_paragraph_offline_replay",
+    "apps/api/tests/test_scene_pipeline.py",
+    "scripts/run_single_chapter_pipeline_certification.py",
+    "scripts/check_single_chapter_pipeline_reliability.py"
+  ],
+  "rollback_plan": "Point boundary_review_service and provider_eligibility back to scene_analysis v3.1; restore previous validate_scene_analysis/normalize bodies from git; revert core-freeze-manifest hashes for those three service files; leave v3.2 prompt directory unused.",
+  "new_hashes": {
+    "apps/api/app/services/scene_pipeline.py": "0194c05489ac78372afe241ad0e4af6edfecc5bc7808cbcdb0b0c1cefee66b60",
+    "apps/api/app/services/boundary_review_service.py": "ec5ac46a3129828d0b9ad464d7271f399e87db2469adae8e72f47c367ba976c3",
+    "apps/api/app/services/provider_eligibility.py": "f83a19ff8ba11bf47ea9434b5032b5d235439886de9c06ac788f55b7b23fc27d",
+    "apps/api/app/services/scene_analysis_offline_replay.py": "0faf417e8b4248ff0965b899b5ff1d6d3fab36eebc090f3485561f92cbb95760",
+    "packages/prompts/scene_analysis/v3.2/system.md": "6832b6cd78ca52e84077807e32a4b907ae115784b96e29a3c2af48fba5966e1c",
+    "packages/prompts/scene_analysis/v3.2/user.md": "63d3315b08ad1ae8a5b9674d107eea10e0fe7c5f079efea01b020ee66f60d38c",
+    "packages/prompts/scene_analysis/v3.2/repair.md": "07c498de1f18ce0545f24e97aaf7a7b9fd4b6db09c3c868c37759269fd26f99f",
+    "packages/prompts/scene_analysis/v3.1/system.md": "3b442ec68db44f2c981f815551547bd32a8ad6788f47d2f20e122136b3ee5355",
+    "packages/prompts/scene_analysis/v3.1/user.md": "9fd8247bf91f0bd857b422280c7735c92cae90068449c2e04ef9844427770e2c",
+    "packages/prompts/scene_analysis/v3.1/repair.md": "85f8b23ee9d8c97ee5a71d280ad723937837622865bea7ba1201785e1e56cf91"
+  },
+  "core_freeze_update": {
+    "manifest": "audits/mvp-functional-baseline-v1/core-freeze-manifest.json",
+    "prompt_versions.scene_analysis": "v3.2",
+    "note": "v3.1 entries retained as historical frozen artifacts; active version bumped via this change package"
+  }
+}

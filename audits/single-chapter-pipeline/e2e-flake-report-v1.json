@@ -1,0 +1,22 @@
+{
+  "title": "E2E Flake Report",
+  "result": "MITIGATED_FOR_CERT",
+  "cert_triple_result": "PASS",
+  "cert_command": "npm run test:e2e -- --workers=1 (via scripts/run_e2e_stability_triple.py)",
+  "historical_failed_runs_under_default_workers": [
+    {
+      "note": "Prior triples under default Playwright parallelism showed intermittent timeouts on Run #55 / Books route tests",
+      "examples": [
+        "61–64/67 with elevated timeout mentions",
+        "failures often on phase_1cc1_reader_journey / phase_1cb_results / phase_1cc253"
+      ]
+    }
+  ],
+  "mitigation": {
+    "port_cleanup": "Free Dstorylens Vite/Playwright listeners on :1421 before each run",
+    "workers": 1,
+    "policy": "Full suite only; no selective retry of failed cases; no frozen UI edits"
+  },
+  "remaining_risk": "Default parallel `npm run test:e2e` may still flake under machine load; tracked as DEFECT-E2E-001",
+  "policy": "Do not edit frozen UI to silence flakes in Phase 1D-B1"
+}

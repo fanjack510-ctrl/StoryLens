@@ -1,0 +1,159 @@
+{
+  "mode": "offline_fake_provider",
+  "disclaimer": "Not equivalent to real API latency",
+  "by_length_band": {
+    "short": {
+      "import_ms": {
+        "median": 16.7,
+        "p90": 17.62,
+        "max": 62.64
+      },
+      "seed_analysis_ms": {
+        "median": 14.76,
+        "p90": 16.6,
+        "max": 27.36
+      },
+      "journey_ms": {
+        "median": 359.73,
+        "p90": 401.48,
+        "max": 545.86
+      },
+      "n": 7
+    },
+    "medium": {
+      "import_ms": {
+        "median": 24.76,
+        "p90": 24.76,
+        "max": 26.53
+      },
+      "seed_analysis_ms": {
+        "median": 21.76,
+        "p90": 21.76,
+        "max": 30.45
+      },
+      "journey_ms": {
+        "median": 926.61,
+        "p90": 926.61,
+        "max": 970.59
+      },
+      "n": 3
+    },
+    "long": {
+      "import_ms": {
+        "median": 36.96,
+        "p90": 27.93,
+        "max": 36.96
+      },
+      "seed_analysis_ms": {
+        "median": 28.47,
+        "p90": 23.51,
+        "max": 28.47
+      },
+      "journey_ms": {
+        "median": 1709.12,
+        "p90": 1184.11,
+        "max": 1709.12
+      },
+      "n": 2
+    }
+  },
+  "rows": [
+    {
+      "fixture_id": "A1-short-dialogue",
+      "length_band": "short",
+      "import_ms": 62.64,
+      "seed_analysis_ms": 27.36,
+      "journey_ms": 545.86,
+      "note": "offline FakeProvider; not real API latency"
+    },
+    {
+      "fixture_id": "A2-medium-action",
+      "length_band": "short",
+      "import_ms": 17.62,
+      "seed_analysis_ms": 16.6,
+      "journey_ms": 319.92,
+      "note": "offline FakeProvider; not real API latency"
+    },
+    {
+      "fixture_id": "A3-long-suspense",
+      "length_band": "medium",
+      "import_ms": 21.21,
+      "seed_analysis_ms": 21.76,
+      "journey_ms": 970.59,
+      "note": "offline FakeProvider; not real API latency"
+    },
+    {
+      "fixture_id": "A4-near-limit-info",
+      "length_band": "long",
+      "import_ms": 27.93,
+      "seed_analysis_ms": 23.51,
+      "journey_ms": 1709.12,
+      "note": "offline FakeProvider; not real API latency"
+    },
+    {
+      "fixture_id": "B1-short-emotion",
+      "length_band": "short",
+      "import_ms": 13.89,
+      "seed_analysis_ms": 13.59,
+      "journey_ms": 401.48,
+      "note": "offline FakeProvider; not real API latency"
+    },
+    {
+      "fixture_id": "B2-medium-description",
+      "length_band": "short",
+      "import_ms": 15.99,
+      "seed_analysis_ms": 14.02,
+      "journey_ms": 359.73,
+      "note": "offline FakeProvider; not real API latency"
+    },
+    {
+      "fixture_id": "B3-long-payoff",
+      "length_band": "medium",
+      "import_ms": 26.53,
+      "seed_analysis_ms": 18.28,
+      "journey_ms": 729.91,
+      "note": "offline FakeProvider; not real API latency"
+    },
+    {
+      "fixture_id": "B4-medium-hook",
+      "length_band": "short",
+      "import_ms": 16.71,
+      "seed_analysis_ms": 14.76,
+      "journey_ms": 370.6,
+      "note": "offline FakeProvider; not real API latency"
+    },
+    {
+      "fixture_id": "C1-short-info",
+      "length_band": "short",
+      "import_ms": 16.0,
+      "seed_analysis_ms": 15.41,
+      "journey_ms": 335.61,
+      "note": "offline FakeProvider; not real API latency"
+    },
+    {
+      "fixture_id": "C2-medium-dialogue",
+      "length_band": "short",
+      "import_ms": 16.7,
+      "seed_analysis_ms": 12.74,
+      "journey_ms": 341.79,
+      "note": "offline FakeProvider; not real API latency"
+    },
+    {
+      "fixture_id": "C3-long-action",
+      "length_band": "medium",
+      "import_ms": 24.76,
+      "seed_analysis_ms": 30.45,
+      "journey_ms": 926.61,
+      "note": "offline FakeProvider; not real API latency"
+    },
+    {
+      "fixture_id": "C4-near-limit-mixed",
+      "length_band": "long",
+      "import_ms": 36.96,
+      "seed_analysis_ms": 28.47,
+      "journey_ms": 1184.11,
+      "note": "offline FakeProvider; not real API latency"
+    }
+  ],
+  "result": "PASS"
+}

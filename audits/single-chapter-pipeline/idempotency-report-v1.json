@@ -1,0 +1,31 @@
+{
+  "cases": [
+    {
+      "case": "unique_cert_analysis_client_request_ids",
+      "result": "PASS",
+      "duplicate_analysis_runs": 0
+    },
+    {
+      "case": "unique_cert_journey_client_request_ids",
+      "result": "PASS",
+      "duplicate_journey_runs": 0
+    },
+    {
+      "case": "no_succeeded_marked_running",
+      "result": "PASS"
+    },
+    {
+      "case": "reader_journey_create_idempotent_contract",
+      "result": "PASS",
+      "note": "Verified by apps/api/tests/test_phase_1c_c1.py::test_create_idempotent"
+    },
+    {
+      "case": "analysis_create_client_request_id_reuse",
+      "result": "PASS",
+      "note": "analysis.py selects existing AnalysisRun by client_request_id"
+    }
+  ],
+  "duplicate_analysis_runs": 0,
+  "duplicate_journey_runs": 0,
+  "result": "PASS"
+}

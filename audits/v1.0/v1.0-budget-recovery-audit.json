@@ -1,0 +1,82 @@
+{
+  "audit_id": "v1.0-budget-recovery",
+  "generated_at": "2026-07-19T10:56:13Z",
+  "real_model_requests": 0,
+  "verdict": "BUDGET_RECOVERY_UX_IMPLEMENTED_OFFLINE",
+  "defect_scenario_66_vs_59": {
+    "description": "Full run worst-case requests=66 while remaining=59 previously greyed Create without explanation",
+    "remediation_status": "CLOSED",
+    "ui": {
+      "title": "当前技术请求额度不足",
+      "shows": [
+        "required",
+        "available",
+        "shortfall",
+        "estimated",
+        "worst_case"
+      ],
+      "primary_cta": "按推荐额度创建任务",
+      "secondary_cta": "按预计用量创建",
+      "text_cta": "查看详细预算",
+      "component": "apps/desktop/src/components/analysis/StartAnalysisDialog.tsx",
+      "tests": [
+        "apps/desktop/src/components/analysis/StartAnalysisDialog.test.tsx"
+      ]
+    }
+  },
+  "run_temporary_request_allowance": {
+    "status": "CLOSED",
+    "semantics": "run_temporary_request_allowance",
+    "mutates_cloud_daily_request_limit": false,
+    "backend": [
+      "apps/api/app/services/run_scoped_budget_auth.py",
+      "apps/api/app/services/analysis_recovery_center.py"
+    ],
+    "invariants": [
+      "does_not_permanently_change_daily_request_settings",
+      "does_not_raise_daily_cost_cap_without_consent",
+      "does_not_change_provider_or_model",
+      "does_not_disable_budget_protection",
+      "rechecks_cost_and_token_before_create",
+      "authorization_audited_on_run",
+      "idempotent_repeat_clicks",
+      "no_duplicate_analysis_run"
+    ],
+    "tests": [
+      "apps/api/tests/test_unified_analysis_recovery_center.py"
+    ]
+  },
+  "ordinary_budget_surface": [
+    "每日费用上限",
+    "今日已用费用",
+    "本章预计费用",
+    "是否允许云端",
+    "是否允许自动恢复"
+  ],
+  "advanced_only": [
+    "request_count_limits",
+    "token_limits",
+    "retry_limits"
+  ],
+  "unified_recovery_center": {
+    "endpoints": [
+      "GET /api/v1/analysis-runs/{run_id}/recovery-plan",
+      "POST /api/v1/analysis-runs/{run_id}/recover"
+    ],
+    "ui_title": "分析已暂停",
+    "primary_cta": "修复并继续",
+    "aggregates_blockers": [
+      "provider_disconnected",
+      "credential_missing",
+      "request_budget_insufficient",
+      "token_budget_insufficient",
+      "cost_budget_insufficient",
+      "awaiting_boundary_review",
+      "awaiting_reader_journey",
+      "awaiting_provider_recovery",
+      "partial_scene_analysis",
+      "failed_reader_journey"
+    ],
+    "change_package": "audits/single-chapter-pipeline/ui-changes/unified-analysis-recovery-center-v1.1.5.json"
+  }
+}

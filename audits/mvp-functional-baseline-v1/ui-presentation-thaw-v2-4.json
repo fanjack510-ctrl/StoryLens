@@ -1,0 +1,87 @@
+{
+  "baseline": "mvp-functional-baseline-v1",
+  "thaw_id": "ui-presentation-thaw-v2-4",
+  "parent_thaw": "ui-presentation-thaw-v2-3.json",
+  "purpose": "single-journey-analysis-view",
+  "core_freeze_manifest": "audits/mvp-functional-baseline-v1/core-freeze-manifest.json",
+  "approved_behavior": [
+    "remove top-level overview mode tabs (curve/questions/diagnosis)",
+    "single journey analysis presentation with legacy overview URL normalize-to-curve",
+    "metric selector and density refinements without changing metric/selection semantics",
+    "question cluster and chapter diagnosis data remain available via inspector and summary"
+  ],
+  "forbidden": [
+    "delete question cluster data",
+    "delete chapter diagnosis data",
+    "change selection transaction",
+    "change useJourneySelection",
+    "change visualization algorithms",
+    "change engagement or importance formulas",
+    "new AnalysisRun or ReaderJourneyRun",
+    "model calls"
+  ],
+  "allowed_files": [
+    {
+      "path": "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.tsx",
+      "before_sha256": "521dbce25c57da653b2cddb514fa7055a809826c48bc644513b631d373abf97b",
+      "reason": "Single journey analysis header, remove overview tabs, metric selector, analysis info popover",
+      "allowed_change": "presentation|information-architecture"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/ReaderJourneySyncWorkspace.tsx",
+      "before_sha256": "c787a270870c13684562b53ac7353b73b8d77532849dadd463ffa61fca7794e7",
+      "reason": "Rename sync sticky product title to 旅程分析",
+      "allowed_change": "presentation|labels"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/JourneyOverviewModes.tsx",
+      "before_sha256": "7948d801a71ffa6743e9e73efb0e7882ed27546e921403130e48b43bf2dce217",
+      "reason": "Remove top-level overview mode tabs; retain unused overview panels as non-mounted helpers",
+      "allowed_change": "presentation|information-architecture"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/overviewMode.ts",
+      "before_sha256": "4b9046fa043e25a4a717c500b01ec1aca79790bd0f4e606e93f4e4727b1c7143",
+      "reason": "Normalize legacy overview=questions|diagnosis to curve via replace-safe helpers",
+      "allowed_change": "presentation|url-compat"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/readerJourney.css",
+      "before_sha256": "95fe58d2008d0669f27ea288772031005d5e47468168081c9c802a661a3e5864",
+      "reason": "Summary weights, phase height, curve min-height, analysis toolbar styles",
+      "allowed_change": "presentation|css"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/syncWorkspace.css",
+      "before_sha256": "14dcc9eb1789317fe722080f0b8612fbea348aaae66e11161d98291f65cb6565",
+      "reason": "Mode label 旅程总览 → align product naming where shell maps labels",
+      "allowed_change": "presentation|css"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/exportJourneyPng.ts",
+      "before_sha256": "6613feb917277a281e493ad60b57e17c45838dc943912dab014dc54735b4b23b",
+      "reason": "PNG product title filename uses 旅程分析; data semantics unchanged",
+      "allowed_change": "presentation|export-label"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/journeyUiLabels.ts",
+      "before_sha256": "343ffab094cef1b5e28000ef49df02b8b296564bc57621eb0357219aeaa4e9fb",
+      "reason": "Single metric selector key list; underlying metric values unchanged",
+      "allowed_change": "presentation|labels"
+    }
+  ],
+  "forbidden_behavior_changes": [
+    "journeySelectionTransaction.ts",
+    "useJourneySelection.ts",
+    "FROZEN_CORE",
+    "FROZEN_CONTRACT",
+    "visualization algorithms",
+    "question cluster generation",
+    "chapter diagnosis generation"
+  ],
+  "notes": [
+    "Additive to v1+v2+v2-2+v2-3. Does not modify core-freeze-manifest or prior thaw files.",
+    "Legacy overview URL values open the same journey analysis view and normalize to overview=curve with replace.",
+    "Question clusters and diagnosis remain in Context Inspector / chapter summary / export semantics."
+  ]
+}

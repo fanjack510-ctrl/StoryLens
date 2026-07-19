@@ -1,0 +1,49 @@
+{
+  "visualization_version": "2.8",
+  "nodes": [
+    {
+      "id": "ReaderJourneyWorkspace",
+      "path": "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.tsx",
+      "role": "composition entry"
+    },
+    {
+      "id": "CanonicalJourneyChart",
+      "path": "apps/desktop/src/components/readerJourney/CanonicalJourneyChart.tsx",
+      "role": "sole journey SVG chart"
+    },
+    {
+      "id": "JourneyChartToolbar",
+      "path": "apps/desktop/src/components/readerJourney/JourneyChartToolbar.tsx",
+      "role": "height/Y/zoom/inspector controls"
+    },
+    {
+      "id": "JourneyResizableSplit",
+      "path": "apps/desktop/src/components/readerJourney/JourneyResizableSplit.tsx",
+      "role": "overview/inspector layout"
+    },
+    {
+      "id": "Inspector",
+      "path": "apps/desktop/src/components/readerJourney/JourneySceneDetailPanel.tsx",
+      "role": "context inspector panels"
+    },
+    {
+      "id": "exportJourneyPng",
+      "path": "apps/desktop/src/components/readerJourney/exportJourneyPng.ts",
+      "role": "full journey PNG export"
+    },
+    {
+      "id": "URLSync",
+      "path": "apps/desktop/src/components/readerJourney/journeySelectionTransaction.ts",
+      "role": "scene/inspector URL; xStart/xEnd via Workspace"
+    }
+  ],
+  "edges": [
+    ["ReaderJourneyWorkspace", "JourneyChartToolbar"],
+    ["ReaderJourneyWorkspace", "CanonicalJourneyChart"],
+    ["ReaderJourneyWorkspace", "JourneyResizableSplit"],
+    ["JourneyResizableSplit", "Inspector"],
+    ["ReaderJourneyWorkspace", "exportJourneyPng"],
+    ["ReaderJourneyWorkspace", "URLSync"],
+    ["CanonicalJourneyChart", "URLSync"]
+  ]
+}

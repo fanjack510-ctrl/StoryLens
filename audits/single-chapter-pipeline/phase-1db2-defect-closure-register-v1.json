@@ -1,0 +1,139 @@
+{
+  "register_id": "phase-1db2-defect-closure-register-v1",
+  "certified_batch_id": "phase-1db2-r13-20260719T022027Z",
+  "allowed_statuses": [
+    "CLOSED_VERIFIED",
+    "SUPERSEDED",
+    "OPEN"
+  ],
+  "history_batches_preserved": true,
+  "defects": [
+    {
+      "defect_id": "DEFECT-CANARY-006",
+      "original_batch": "phase-1db2-r1-20260718T130551Z",
+      "symptom": "Reader Journey answered_question invented a prior question with no matching prior ask in-scene (JOURNEY_ANSWER_WITHOUT_PRIOR_QUESTION).",
+      "root_cause": "Prompt/contract allowed answered-without-prior; same-scene evidence ordering insufficiently constrained.",
+      "change_package": "single-chapter-journey-change-v1.0.2",
+      "offline_verification": "apps/api/tests/test_defect_canary_001_a1_replay.py + journey validators",
+      "real_canary_holdout": "A1-short-dialogue PASS in certified batch phase-1db2-r13-20260719T022027Z (and earlier v4+)",
+      "final_status": "CLOSED_VERIFIED",
+      "regression_guard": "answered-must-reference-real-prior-question validator + Prompt v1.4+"
+    },
+    {
+      "defect_id": "DEFECT-CANARY-007",
+      "original_batch": "phase-1db2-r2-20260718T135023Z",
+      "symptom": "All scene hook_score > 80 rejected as JOURNEY_SCORE_DISTRIBUTION_SUSPICIOUS.",
+      "root_cause": "Hard reject on high hook distribution; should warn when evidence supports scores.",
+      "change_package": "single-chapter-journey-change-v1.0.3",
+      "offline_verification": "journey score distribution tests",
+      "real_canary_holdout": "A2-medium-action PASS in certified batch r13",
+      "final_status": "CLOSED_VERIFIED",
+      "regression_guard": "distribution warning path; JOURNEY_* codes preserved"
+    },
+    {
+      "defect_id": "DEFECT-CANARY-008",
+      "original_batch": "phase-1db2-r3-20260718T142546Z",
+      "symptom": "PROVIDER_REMOTE_DISCONNECT aborted pipeline without resilient transport retry.",
+      "root_cause": "Insufficient cloud transport attempt budget / backoff.",
+      "change_package": "provider-transport-change-v1.0.4",
+      "offline_verification": "transport retry unit tests",
+      "real_canary_holdout": "B2-medium-description PASS in certified batch r13",
+      "final_status": "CLOSED_VERIFIED",
+      "regression_guard": "max 3 transport attempts + exponential backoff/jitter"
+    },
+    {
+      "defect_id": "DEFECT-CANARY-009",
+      "original_batch": "phase-1db2-r4-20260718T144746Z",
+      "symptom": "PROVIDER_REMOTE_DISCONNECT recurrence after partial transport hardening.",
+      "root_cause": "Transport retry policy incomplete for sustained remote disconnects.",
+      "change_package": "provider-transport-change-v1.0.4",
+      "offline_verification": "real-canary-v5/defect-canary-008-transport-preflight-verdict-v1.json + transport tests",
+      "real_canary_holdout": "A2-medium-action PASS in certified batch r13",
+      "final_status": "CLOSED_VERIFIED",
+      "regression_guard": "provider-transport-change-v1.0.4 attempt budget"
+    },
+    {
+      "defect_id": "DEFECT-CANARY-010",
+      "original_batch": "phase-1db2-r5-20260718T151121Z",
+      "symptom": "Journey structural repair shared transport budget with normal; disconnect during repair lost causality.",
+      "root_cause": "Normal and repair transport attempts not independent.",
+      "change_package": "journey-repair-resilience-change-v1.0.5",
+      "offline_verification": "apps/api/tests/test_defect_canary_010_journey_repair_resilience.py",
+      "real_canary_holdout": "A2-medium-action PASS in certified batch r13",
+      "final_status": "CLOSED_VERIFIED",
+      "regression_guard": "independent normal vs repair transport attempts"
+    },
+    {
+      "defect_id": "DEFECT-CANARY-011",
+      "original_batch": "phase-1db2-r6-20260718T153541Z",
+      "symptom": "JOURNEY_EVIDENCE_OUT_OF_SCOPE full structural repair still invalid (JOURNEY_REPAIR_VALIDATION_FAILED).",
+      "root_cause": "Full-profile regen repair instead of targeted evidence patch.",
+      "change_package": "journey-targeted-repair-change-v1.0.6",
+      "offline_verification": "apps/api/tests/test_defect_canary_011_targeted_repair.py",
+      "real_canary_holdout": "A2-medium-action PASS in certified batch r13",
+      "final_status": "CLOSED_VERIFIED",
+      "regression_guard": "targeted evidence patch + no-progress detection"
+    },
+    {
+      "defect_id": "DEFECT-CANARY-012",
+      "original_batch": "phase-1db2-r7-20260718T155450Z",
+      "symptom": "JOURNEY_PHASE_COVERAGE_INVALID on short chapters (phase_count vs scene_count).",
+      "root_cause": "Fixed phase upper bound incompatible with short scene counts.",
+      "change_package": "journey-adaptive-phase-contract-change-v1.0.7",
+      "offline_verification": "adaptive phase contract tests",
+      "real_canary_holdout": "short fixtures A1/C1 PASS in certified batch r13",
+      "final_status": "CLOSED_VERIFIED",
+      "regression_guard": "1 <= phase_count <= min(6, scene_count)"
+    },
+    {
+      "defect_id": "DEFECT-CANARY-013",
+      "original_batch": "phase-1db2-r8-20260718T161902Z",
+      "symptom": "Canary aborted by TOKEN_STATS_MISSING_AFTER_TRANSPORT_FAILURE / accounting gate.",
+      "root_cause": "Missing provider usage treated as zero/unknown hard-stop without conservative estimate.",
+      "change_package": "canary-conservative-usage-accounting-change-v1.0.8",
+      "offline_verification": "scripts/certification/conservative_usage_accounting.py tests",
+      "real_canary_holdout": "r13 cost report unknown_accounting_count=0; conservative path exercised historically",
+      "final_status": "CLOSED_VERIFIED",
+      "regression_guard": "conservative_estimate settlement; abort only on accounting_unknown or max_cost"
+    },
+    {
+      "defect_id": "DEFECT-CANARY-014",
+      "original_batch": "phase-1db2-r9-20260718T165459Z",
+      "symptom": "Scene Analysis transport exhaustion marked run half-success instead of awaiting_provider_recovery.",
+      "root_cause": "No circuit-breaker recovery pause / successful artifact reuse.",
+      "change_package": "scene-analysis-provider-recovery-change-v1.0.9",
+      "offline_verification": "apps/api/tests/test_defect_canary_014_scene_analysis_provider_recovery.py",
+      "real_canary_holdout": "C3-long-action PASS in certified batch r13",
+      "final_status": "CLOSED_VERIFIED",
+      "regression_guard": "awaiting_provider_recovery + successful scene artifact reuse"
+    },
+    {
+      "defect_id": "DEFECT-CANARY-015",
+      "original_batch": "phase-1db2-r10-20260719T000923Z",
+      "symptom": "Nested repair/retry routed to unauthorized Flash / disabled provider (PROVIDER_DISABLED / policy violation).",
+      "root_cause": "Model routing not centralized; nested paths could bypass Run-frozen Plus policy.",
+      "change_package": "global-model-invocation-policy-change-v1.1.0",
+      "offline_verification": "INVOCATION_POLICY_PASS + qualification-report-v1.json",
+      "real_canary_holdout": "r13: 164/164 HTTP aliyun_qwen_plus/qwen3.7-plus; flash=0 fallback=0",
+      "final_status": "CLOSED_VERIFIED",
+      "regression_guard": "ModelInvocationBroker + check_model_invocation_policy.py"
+    },
+    {
+      "defect_id": "DEFECT-CANARY-016",
+      "original_batch": "phase-1db2-r11-20260719T014426Z",
+      "symptom": "C3 Scene enumerated 18 evidence IDs (>16) → schema_repair truncation (JOURNEY_SINGLE_PROFILE_OUTPUT_TRUNCATED).",
+      "root_cause": "Prompt lacked minimal-evidence rule; no directed compaction; schema_repair token budget too low for full profile.",
+      "change_package": "reader-journey-evidence-budget-change-v1.1.1",
+      "offline_verification": "READER_JOURNEY_OUTPUT_BUDGET_PASS + test_defect_canary_016_evidence_budget.py",
+      "real_canary_holdout": "C3-long-action Run1+Run7 PASS in r13; profiles=48 max_evidence=16 over16=0",
+      "final_status": "CLOSED_VERIFIED",
+      "regression_guard": "Prompt v1.6 + directed compaction + output budget gate; maxItems remains 16"
+    }
+  ],
+  "summary": {
+    "CLOSED_VERIFIED": 11,
+    "SUPERSEDED": 0,
+    "OPEN": 0
+  },
+  "generated_at": "2026-07-19T03:31:17.912285+00:00"
+}

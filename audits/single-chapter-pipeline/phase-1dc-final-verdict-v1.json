@@ -1,0 +1,179 @@
+{
+  "phase": "1D-C",
+  "verdict": "PHASE_1D_C_RELEASE_CANDIDATE_READY",
+  "checks": [
+    {
+      "name": "seal_artifacts_present",
+      "ok": true,
+      "returncode": null,
+      "detail": null
+    },
+    {
+      "name": "ui_status_audit",
+      "ok": true,
+      "returncode": null,
+      "detail": {
+        "audit_id": "phase-1dc-ui-status-audit-v1",
+        "reader_journey_ui_final_v2_7_unfrozen": false,
+        "checks": [
+          {
+            "status": "awaiting_boundary_review",
+            "user_facing": true,
+            "internal_codes_in_details": true
+          },
+          {
+            "status": "scene_analysis_partial",
+            "user_facing": true,
+            "internal_codes_in_details": true
+          },
+          {
+            "status": "awaiting_provider_recovery",
+            "user_facing": true,
+            "internal_codes_in_details": true
+          },
+          {
+            "status": "reader_journey_processing",
+            "user_facing": true,
+            "note": "Composed from scene_profiles_running / chapter_synthesis_running",
+            "internal_codes_in_details": true
+          },
+          {
+            "status": "succeeded",
+            "user_facing": true,
+            "internal_codes_in_details": true
+          },
+          {
+            "status": "failed",
+            "user_facing": true,
+            "internal_codes_in_details": true
+          },
+          {
+            "status": "aborted_by_limit",
+            "user_facing": true,
+            "note": "UI also maps boundary_confirmed_budget_blocked",
+            "internal_codes_in_details": true
+          }
+        ],
+        "ok": true,
+        "generated_at": "2026-07-19T03:31:19.916972+00:00"
+      }
+    },
+    {
+      "name": "main_db_invariance",
+      "ok": true,
+      "returncode": null,
+      "detail": {
+        "analysis_run_count": 55,
+        "reader_journey_run_count": 2,
+        "run_55_status": "succeeded",
+        "journey_run_2_status": "succeeded"
+      }
+    },
+    {
+      "name": "pytest",
+      "ok": true,
+      "returncode": 0,
+      "detail": "........................................................................ [ 15%]\n........................................................................ [ 30%]\n........................................................................ [ 46%]\n........................................................................ [ 61%]\n........................................................................ [ 76%]\n........................................................................ [ 92%]\n.....................................                                    [100%]\n============================== warnings summary ===============================\n.venv\\Lib\\site-packages\\fastapi\\testclient.py:1\n  D:\\Dstorylens\\.venv\\Lib\\site-packages\\fastapi\\testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n469 passed, 1 warning in 132.04s (0:02:12)"
+    },
+    {
+      "name": "ruff",
+      "ok": true,
+      "returncode": 0,
+      "detail": "\u001b[1;32mAll checks passed!\u001b[0m"
+    },
+    {
+      "name": "typecheck",
+      "ok": true,
+      "returncode": 0,
+      "detail": "\n> storylens-desktop@0.1.0 typecheck\n> tsc -b --pretty false\n"
+    },
+    {
+      "name": "eslint",
+      "ok": true,
+      "returncode": 0,
+      "detail": "\n> storylens-desktop@0.1.0 lint\n> eslint src --max-warnings 0\n"
+    },
+    {
+      "name": "vitest",
+      "ok": true,
+      "returncode": 0,
+      "detail": "    at workLoopSync (D:\\Dstorylens\\apps\\desktop\\node_modules\\react-dom\\cjs\\react-dom-client.development.js:17469:41)\n    at renderRootSync (D:\\Dstorylens\\apps\\desktop\\node_modules\\react-dom\\cjs\\react-dom-client.development.js:17450:11)\n    at performWorkOnRoot (D:\\Dstorylens\\apps\\desktop\\node_modules\\react-dom\\cjs\\react-dom-client.development.js:16583:35) \n    at Boom (D:\\Dstorylens\\apps\\desktop\\src\\components\\readerJourney\\phase_1cc24b_scene_detail_information_architecture.test.tsx:174:13)\n    at JourneyDetailErrorBoundary (D:\\Dstorylens\\apps\\desktop\\src\\components\\readerJourney\\JourneyDetailErrorBoundary.tsx:5:1)\n\nstderr | src/components/readerJourney/sceneDetailFields.test.tsx > writing takeaways and structured detail fields > error boundary catches detail render crashes\nError: detail boom\n    at Boom (D:\\Dstorylens\\apps\\desktop\\src\\components\\readerJourney\\sceneDetailFields.test.tsx:142:13)\n    at Object.react_stack_bottom_frame (D:\\Dstorylens\\apps\\desktop\\node_modules\\react-dom\\cjs\\react-dom-client.development.js:25904:20)\n    at renderWithHooks (D:\\Dstorylens\\apps\\desktop\\node_modules\\react-dom\\cjs\\react-dom-client.development.js:7662:22)\n    at updateFunctionComponent (D:\\Dstorylens\\apps\\desktop\\node_modules\\react-dom\\cjs\\react-dom-client.development.js:10166:19)\n    at beginWork (D:\\Dstorylens\\apps\\desktop\\node_modules\\react-dom\\cjs\\react-dom-client.development.js:11778:18)\n    at runWithFiberInDEV (D:\\Dstorylens\\apps\\desktop\\node_modules\\react-dom\\cjs\\react-dom-client.development.js:874:13)\n    at performUnitOfWork (D:\\Dstorylens\\apps\\desktop\\node_modules\\react-dom\\cjs\\react-dom-client.development.js:17641:22)\n    at workLoopSync (D:\\Dstorylens\\apps\\desktop\\node_modules\\react-dom\\cjs\\react-dom-client.development.js:17469:41)\n    at renderRootSync (D:\\Dstorylens\\apps\\desktop\\node_modules\\react-dom\\cjs\\react-dom-client.development.js:17450:11)\n    at performWorkOnRoot (D:\\Dstorylens\\apps\\desktop\\node_modules\\react-dom\\cjs\\react-dom-client.development.js:16583:35) {\n  [stack]: [Getter/Setter],\n  [message]: 'detail boom'\n}\n\nThe above error occurred in the <Boom> component.\n\nReact will try to recreate this component tree from scratch using the error boundary you provided, JourneyDetailErrorBoundary.\n\n[journey-detail] Error: detail boom\n    at Boom (D:\\Dstorylens\\apps\\desktop\\src\\components\\readerJourney\\sceneDetailFields.test.tsx:142:13)\n    at Object.react_stack_bottom_frame (D:\\Dstorylens\\apps\\desktop\\node_modules\\react-dom\\cjs\\react-dom-client.development.js:25904:20)\n    at renderWithHooks (D:\\Dstorylens\\apps\\desktop\\node_modules\\react-dom\\cjs\\react-dom-client.development.js:7662:22)\n    at updateFunctionComponent (D:\\Dstorylens\\apps\\desktop\\node_modules\\react-dom\\cjs\\react-dom-client.development.js:10166:19)\n    at beginWork (D:\\Dstorylens\\apps\\desktop\\node_modules\\react-dom\\cjs\\react-dom-client.development.js:11778:18)\n    at runWithFiberInDEV (D:\\Dstorylens\\apps\\desktop\\node_modules\\react-dom\\cjs\\react-dom-client.development.js:874:13)\n    at performUnitOfWork (D:\\Dstorylens\\apps\\desktop\\node_modules\\react-dom\\cjs\\react-dom-client.development.js:17641:22)\n    at workLoopSync (D:\\Dstorylens\\apps\\desktop\\node_modules\\react-dom\\cjs\\react-dom-client.development.js:17469:41)\n    at renderRootSync (D:\\Dstorylens\\apps\\desktop\\node_modules\\react-dom\\cjs\\react-dom-client.development.js:17450:11)\n    at performWorkOnRoot (D:\\Dstorylens\\apps\\desktop\\node_modules\\react-dom\\cjs\\react-dom-client.development.js:16583:35) \n    at Boom (D:\\Dstorylens\\apps\\desktop\\src\\components\\readerJourney\\sceneDetailFields.test.tsx:222:13)\n    at JourneyDetailErrorBoundary (D:\\Dstorylens\\apps\\desktop\\src\\components\\readerJourney\\JourneyDetailErrorBoundary.tsx:5:1)\n"
+    },
+    {
+      "name": "production_build",
+      "ok": true,
+      "returncode": 0,
+      "detail": "\n> storylens-desktop@0.1.0 build\n> tsc -b && vite build\n\nvite v6.4.3 building for production...\ntransforming...\n✓ 153 modules transformed.\nrendering chunks...\ncomputing gzip size...\ndist/index.html                   0.17 kB │ gzip:   0.14 kB\ndist/assets/index-YYazh42R.css   62.97 kB │ gzip:  11.50 kB\ndist/assets/index-ChmShTrq.js   584.04 kB │ gzip: 174.74 kB\n✓ built in 4.60s\n\n(!) Some chunks are larger than 500 kB after minification. Consider:\n- Using dynamic import() to code-split the application\n- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks\n- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit."
+    },
+    {
+      "name": "e2e_round_1",
+      "ok": true,
+      "returncode": 0,
+      "detail": "  ok 32 e2e\\phase_1cc253_books_route_selection_transaction.spec.ts:207:3 › Phase 1C-C.2.5.3 Books route selection transaction › E: Back/Forward restores selection (3.0s)\n  ok 33 e2e\\phase_1cc253_books_route_selection_transaction.spec.ts:228:3 › Phase 1C-C.2.5.3 Books route selection transaction › F: standalone results route Curve/Rhythm/Phase still work (1.6s)\n  ok 34 e2e\\phase_1cc26_journey_analysis_focused_view.spec.ts:143:3 › Phase 1C-C.2.6 journey analysis focused view › scenario A: Books embedded route shows single journey analysis (1.2s)\n  ok 35 e2e\\phase_1cc26_journey_analysis_focused_view.spec.ts:166:3 › Phase 1C-C.2.6 journey analysis focused view › scenario B: legacy overview=questions normalizes without blank or new run (1.3s)\n  ok 36 e2e\\phase_1cc26_journey_analysis_focused_view.spec.ts:186:3 › Phase 1C-C.2.6 journey analysis focused view › scenario C: legacy overview=diagnosis normalizes (1.4s)\n  ok 37 e2e\\phase_1cc26_journey_analysis_focused_view.spec.ts:199:3 › Phase 1C-C.2.6 journey analysis focused view › scenario D: metric selector updates curve and URL (3.0s)\n  ok 38 e2e\\phase_1cc26_journey_analysis_focused_view.spec.ts:222:3 › Phase 1C-C.2.6 journey analysis focused view › scenario E: Scene click stays stable for 3s (4.5s)\n  ok 39 e2e\\phase_1cc26_journey_analysis_focused_view.spec.ts:238:3 › Phase 1C-C.2.6 journey analysis focused view › scenario F: PNG export uses 旅程分析 title (1.9s)\n  ok 40 e2e\\phase_1cc26_journey_analysis_focused_view.spec.ts:255:3 › Phase 1C-C.2.6 journey analysis focused view › scenario G: independent results route same layout (1.4s)\n  ok 41 e2e\\phase_1cc261_header_insight_density.spec.ts:143:3 › Phase 1C-C.2.6.1 header and insight density › scenario A: single title, compact insights, wide curve (1.3s)\n  ok 42 e2e\\phase_1cc261_header_insight_density.spec.ts:171:3 › Phase 1C-C.2.6.1 header and insight density › scenario B: peak click selects Scene and stays 3s (4.5s)\n  ok 43 e2e\\phase_1cc261_header_insight_density.spec.ts:187:3 › Phase 1C-C.2.6.1 header and insight density › scenario C: weak interval clicks valley scene (1.3s)\n  ok 44 e2e\\phase_1cc261_header_insight_density.spec.ts:202:3 › Phase 1C-C.2.6.1 header and insight density › scenario D: traction and hook open inspectors (1.6s)\n  ok 45 e2e\\phase_1cc261_header_insight_density.spec.ts:218:3 › Phase 1C-C.2.6.1 header and insight density › scenario E: PNG has single title (2.1s)\n  ok 46 e2e\\phase_1cc262_compact_phase_navigation.spec.ts:153:3 › Phase 1C-C.2.6.2 compact phase navigation › scenario A: 1920×1080 four phases visible, equal height, no vertical clip (1.7s)\n  ok 47 e2e\\phase_1cc262_compact_phase_navigation.spec.ts:189:3 › Phase 1C-C.2.6.2 compact phase navigation › scenario B: 1280×720 single-row strip, page not horizontally scrolled (1.4s)\n  ok 48 e2e\\phase_1cc262_compact_phase_navigation.spec.ts:221:3 › Phase 1C-C.2.6.2 compact phase navigation › scenario C: narrow phase select keeps scene, switches inspector (1.6s)\n  ok 49 e2e\\phase_1cc262_compact_phase_navigation.spec.ts:240:3 › Phase 1C-C.2.6.2 compact phase navigation › scenario D: long title uses ellipsis and title tooltip (1.3s)\n  ok 50 e2e\\phase_1cc262_compact_phase_navigation.spec.ts:257:3 › Phase 1C-C.2.6.2 compact phase navigation › scenario E: PNG export keeps four-column phase strip without mobile select (2.4s)\n  ok 51 e2e\\phase_1cc262_compact_phase_navigation.spec.ts:277:3 › Phase 1C-C.2.6.2 compact phase navigation › standalone route still loads compact phase nav (1.4s)\n  ok 52 e2e\\phase_1cc27_context_inspector_hierarchy.spec.ts:147:3 › Phase 1C-C.2.7 Context Inspector hierarchy › scenario A: Scene overview hierarchy (4.4s)\n  ok 53 e2e\\phase_1cc27_context_inspector_hierarchy.spec.ts:168:3 › Phase 1C-C.2.7 Context Inspector hierarchy › scenario B: empty question chain state (1.5s)\n  ok 54 e2e\\phase_1cc27_context_inspector_hierarchy.spec.ts:188:3 › Phase 1C-C.2.7 Context Inspector hierarchy › scenario C: writing takeaways object renders (1.4s)\n  ok 55 e2e\\phase_1cc27_context_inspector_hierarchy.spec.ts:206:3 › Phase 1C-C.2.7 Context Inspector hierarchy › scenario D: Evidence default 5 and locate (1.5s)\n  ok 56 e2e\\phase_1cc27_context_inspector_hierarchy.spec.ts:232:3 › Phase 1C-C.2.7 Context Inspector hierarchy › scenario E: Phase keeps Scene and compact related list (1.7s)\n  ok 57 e2e\\phase_1cc27_context_inspector_hierarchy.spec.ts:248:3 › Phase 1C-C.2.7 Context Inspector hierarchy › scenario F: Question/Hook/Payoff/Risk inspectors (3.9s)\n  ok 58 e2e\\phase_1cc27_context_inspector_hierarchy.spec.ts:277:3 › Phase 1C-C.2.7 Context Inspector hierarchy › scenario G: no-selection empty state (1.3s)\n  ok 59 e2e\\phase_1cc27_context_inspector_hierarchy.spec.ts:289:3 › Phase 1C-C.2.7 Context Inspector hierarchy › scenario H: responsive viewports (3.3s)\n  ok 60 e2e\\phase_1cc27_reader_journey_ui_final_visual_baseline.spec.ts:157:3 › Reader Journey UI Final Freeze v2.7 visual baseline › capture visual baseline screenshots (4.7s)\n  ok 61 e2e\\provider_transport_diagnostic.spec.ts:165:3 › Provider transport diagnostic e2e (fake) › 诊断成功不产生真实云端调用 (1.1s)\n  ok 62 e2e\\provider_transport_diagnostic.spec.ts:173:3 › Provider transport diagnostic e2e (fake) › DNS失败结果展示 (1.1s)\n  ok 63 e2e\\provider_transport_diagnostic.spec.ts:189:3 › Provider transport diagnostic e2e (fake) › TLS失败与ConnectTimeout展示 (1.1s)\n  ok 64 e2e\\provider_transport_diagnostic.spec.ts:204:3 › Provider transport diagnostic e2e (fake) › 真实连接测试确认、运行与结果均可见且使用Fake (1.8s)\n  ok 65 e2e\\screenshots.spec.ts:4:1 › phase2a screenshots (7.8s)\n  ok 66 e2e\\smoke.spec.ts:3:1 › navigation and offline-safe shell (1.6s)\n  ok 67 e2e\\start_analysis_dialog_layout.spec.ts:143:3 › StartAnalysisDialog layout › 小视口下 Body 可滚动且创建任务按钮在视口内 (1.5s)\n\n  67 passed (2.7m)\n(node:34200) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\n(Use `node --trace-warnings ...` to show where the warning was created)"
+    },
+    {
+      "name": "e2e_round_2",
+      "ok": true,
+      "returncode": 0,
+      "detail": "  ok 32 e2e\\phase_1cc253_books_route_selection_transaction.spec.ts:207:3 › Phase 1C-C.2.5.3 Books route selection transaction › E: Back/Forward restores selection (3.8s)\n  ok 33 e2e\\phase_1cc253_books_route_selection_transaction.spec.ts:228:3 › Phase 1C-C.2.5.3 Books route selection transaction › F: standalone results route Curve/Rhythm/Phase still work (1.7s)\n  ok 34 e2e\\phase_1cc26_journey_analysis_focused_view.spec.ts:143:3 › Phase 1C-C.2.6 journey analysis focused view › scenario A: Books embedded route shows single journey analysis (1.3s)\n  ok 35 e2e\\phase_1cc26_journey_analysis_focused_view.spec.ts:166:3 › Phase 1C-C.2.6 journey analysis focused view › scenario B: legacy overview=questions normalizes without blank or new run (1.5s)\n  ok 36 e2e\\phase_1cc26_journey_analysis_focused_view.spec.ts:186:3 › Phase 1C-C.2.6 journey analysis focused view › scenario C: legacy overview=diagnosis normalizes (1.4s)\n  ok 37 e2e\\phase_1cc26_journey_analysis_focused_view.spec.ts:199:3 › Phase 1C-C.2.6 journey analysis focused view › scenario D: metric selector updates curve and URL (2.6s)\n  ok 38 e2e\\phase_1cc26_journey_analysis_focused_view.spec.ts:222:3 › Phase 1C-C.2.6 journey analysis focused view › scenario E: Scene click stays stable for 3s (4.4s)\n  ok 39 e2e\\phase_1cc26_journey_analysis_focused_view.spec.ts:238:3 › Phase 1C-C.2.6 journey analysis focused view › scenario F: PNG export uses 旅程分析 title (1.7s)\n  ok 40 e2e\\phase_1cc26_journey_analysis_focused_view.spec.ts:255:3 › Phase 1C-C.2.6 journey analysis focused view › scenario G: independent results route same layout (1.2s)\n  ok 41 e2e\\phase_1cc261_header_insight_density.spec.ts:143:3 › Phase 1C-C.2.6.1 header and insight density › scenario A: single title, compact insights, wide curve (1.1s)\n  ok 42 e2e\\phase_1cc261_header_insight_density.spec.ts:171:3 › Phase 1C-C.2.6.1 header and insight density › scenario B: peak click selects Scene and stays 3s (4.3s)\n  ok 43 e2e\\phase_1cc261_header_insight_density.spec.ts:187:3 › Phase 1C-C.2.6.1 header and insight density › scenario C: weak interval clicks valley scene (1.4s)\n  ok 44 e2e\\phase_1cc261_header_insight_density.spec.ts:202:3 › Phase 1C-C.2.6.1 header and insight density › scenario D: traction and hook open inspectors (1.5s)\n  ok 45 e2e\\phase_1cc261_header_insight_density.spec.ts:218:3 › Phase 1C-C.2.6.1 header and insight density › scenario E: PNG has single title (1.9s)\n  ok 46 e2e\\phase_1cc262_compact_phase_navigation.spec.ts:153:3 › Phase 1C-C.2.6.2 compact phase navigation › scenario A: 1920×1080 four phases visible, equal height, no vertical clip (1.4s)\n  ok 47 e2e\\phase_1cc262_compact_phase_navigation.spec.ts:189:3 › Phase 1C-C.2.6.2 compact phase navigation › scenario B: 1280×720 single-row strip, page not horizontally scrolled (1.2s)\n  ok 48 e2e\\phase_1cc262_compact_phase_navigation.spec.ts:221:3 › Phase 1C-C.2.6.2 compact phase navigation › scenario C: narrow phase select keeps scene, switches inspector (1.4s)\n  ok 49 e2e\\phase_1cc262_compact_phase_navigation.spec.ts:240:3 › Phase 1C-C.2.6.2 compact phase navigation › scenario D: long title uses ellipsis and title tooltip (1.2s)\n  ok 50 e2e\\phase_1cc262_compact_phase_navigation.spec.ts:257:3 › Phase 1C-C.2.6.2 compact phase navigation › scenario E: PNG export keeps four-column phase strip without mobile select (1.9s)\n  ok 51 e2e\\phase_1cc262_compact_phase_navigation.spec.ts:277:3 › Phase 1C-C.2.6.2 compact phase navigation › standalone route still loads compact phase nav (1.1s)\n  ok 52 e2e\\phase_1cc27_context_inspector_hierarchy.spec.ts:147:3 › Phase 1C-C.2.7 Context Inspector hierarchy › scenario A: Scene overview hierarchy (4.2s)\n  ok 53 e2e\\phase_1cc27_context_inspector_hierarchy.spec.ts:168:3 › Phase 1C-C.2.7 Context Inspector hierarchy › scenario B: empty question chain state (1.2s)\n  ok 54 e2e\\phase_1cc27_context_inspector_hierarchy.spec.ts:188:3 › Phase 1C-C.2.7 Context Inspector hierarchy › scenario C: writing takeaways object renders (1.1s)\n  ok 55 e2e\\phase_1cc27_context_inspector_hierarchy.spec.ts:206:3 › Phase 1C-C.2.7 Context Inspector hierarchy › scenario D: Evidence default 5 and locate (1.4s)\n  ok 56 e2e\\phase_1cc27_context_inspector_hierarchy.spec.ts:232:3 › Phase 1C-C.2.7 Context Inspector hierarchy › scenario E: Phase keeps Scene and compact related list (1.4s)\n  ok 57 e2e\\phase_1cc27_context_inspector_hierarchy.spec.ts:248:3 › Phase 1C-C.2.7 Context Inspector hierarchy › scenario F: Question/Hook/Payoff/Risk inspectors (2.9s)\n  ok 58 e2e\\phase_1cc27_context_inspector_hierarchy.spec.ts:277:3 › Phase 1C-C.2.7 Context Inspector hierarchy › scenario G: no-selection empty state (1.1s)\n  ok 59 e2e\\phase_1cc27_context_inspector_hierarchy.spec.ts:289:3 › Phase 1C-C.2.7 Context Inspector hierarchy › scenario H: responsive viewports (2.9s)\n  ok 60 e2e\\phase_1cc27_reader_journey_ui_final_visual_baseline.spec.ts:157:3 › Reader Journey UI Final Freeze v2.7 visual baseline › capture visual baseline screenshots (4.0s)\n  ok 61 e2e\\provider_transport_diagnostic.spec.ts:165:3 › Provider transport diagnostic e2e (fake) › 诊断成功不产生真实云端调用 (1.1s)\n  ok 62 e2e\\provider_transport_diagnostic.spec.ts:173:3 › Provider transport diagnostic e2e (fake) › DNS失败结果展示 (958ms)\n  ok 63 e2e\\provider_transport_diagnostic.spec.ts:189:3 › Provider transport diagnostic e2e (fake) › TLS失败与ConnectTimeout展示 (935ms)\n  ok 64 e2e\\provider_transport_diagnostic.spec.ts:204:3 › Provider transport diagnostic e2e (fake) › 真实连接测试确认、运行与结果均可见且使用Fake (1.6s)\n  ok 65 e2e\\screenshots.spec.ts:4:1 › phase2a screenshots (7.2s)\n  ok 66 e2e\\smoke.spec.ts:3:1 › navigation and offline-safe shell (1.1s)\n  ok 67 e2e\\start_analysis_dialog_layout.spec.ts:143:3 › StartAnalysisDialog layout › 小视口下 Body 可滚动且创建任务按钮在视口内 (1.1s)\n\n  67 passed (2.6m)\n(node:40424) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\n(Use `node --trace-warnings ...` to show where the warning was created)"
+    },
+    {
+      "name": "e2e_round_3",
+      "ok": true,
+      "returncode": 0,
+      "detail": "  ok 32 e2e\\phase_1cc253_books_route_selection_transaction.spec.ts:207:3 › Phase 1C-C.2.5.3 Books route selection transaction › E: Back/Forward restores selection (3.5s)\n  ok 33 e2e\\phase_1cc253_books_route_selection_transaction.spec.ts:228:3 › Phase 1C-C.2.5.3 Books route selection transaction › F: standalone results route Curve/Rhythm/Phase still work (1.8s)\n  ok 34 e2e\\phase_1cc26_journey_analysis_focused_view.spec.ts:143:3 › Phase 1C-C.2.6 journey analysis focused view › scenario A: Books embedded route shows single journey analysis (1.2s)\n  ok 35 e2e\\phase_1cc26_journey_analysis_focused_view.spec.ts:166:3 › Phase 1C-C.2.6 journey analysis focused view › scenario B: legacy overview=questions normalizes without blank or new run (1.3s)\n  ok 36 e2e\\phase_1cc26_journey_analysis_focused_view.spec.ts:186:3 › Phase 1C-C.2.6 journey analysis focused view › scenario C: legacy overview=diagnosis normalizes (1.3s)\n  ok 37 e2e\\phase_1cc26_journey_analysis_focused_view.spec.ts:199:3 › Phase 1C-C.2.6 journey analysis focused view › scenario D: metric selector updates curve and URL (2.2s)\n  ok 38 e2e\\phase_1cc26_journey_analysis_focused_view.spec.ts:222:3 › Phase 1C-C.2.6 journey analysis focused view › scenario E: Scene click stays stable for 3s (4.5s)\n  ok 39 e2e\\phase_1cc26_journey_analysis_focused_view.spec.ts:238:3 › Phase 1C-C.2.6 journey analysis focused view › scenario F: PNG export uses 旅程分析 title (2.1s)\n  ok 40 e2e\\phase_1cc26_journey_analysis_focused_view.spec.ts:255:3 › Phase 1C-C.2.6 journey analysis focused view › scenario G: independent results route same layout (1.4s)\n  ok 41 e2e\\phase_1cc261_header_insight_density.spec.ts:143:3 › Phase 1C-C.2.6.1 header and insight density › scenario A: single title, compact insights, wide curve (1.6s)\n  ok 42 e2e\\phase_1cc261_header_insight_density.spec.ts:171:3 › Phase 1C-C.2.6.1 header and insight density › scenario B: peak click selects Scene and stays 3s (5.0s)\n  ok 43 e2e\\phase_1cc261_header_insight_density.spec.ts:187:3 › Phase 1C-C.2.6.1 header and insight density › scenario C: weak interval clicks valley scene (1.7s)\n  ok 44 e2e\\phase_1cc261_header_insight_density.spec.ts:202:3 › Phase 1C-C.2.6.1 header and insight density › scenario D: traction and hook open inspectors (2.2s)\n  ok 45 e2e\\phase_1cc261_header_insight_density.spec.ts:218:3 › Phase 1C-C.2.6.1 header and insight density › scenario E: PNG has single title (2.5s)\n  ok 46 e2e\\phase_1cc262_compact_phase_navigation.spec.ts:153:3 › Phase 1C-C.2.6.2 compact phase navigation › scenario A: 1920×1080 four phases visible, equal height, no vertical clip (2.0s)\n  ok 47 e2e\\phase_1cc262_compact_phase_navigation.spec.ts:189:3 › Phase 1C-C.2.6.2 compact phase navigation › scenario B: 1280×720 single-row strip, page not horizontally scrolled (1.7s)\n  ok 48 e2e\\phase_1cc262_compact_phase_navigation.spec.ts:221:3 › Phase 1C-C.2.6.2 compact phase navigation › scenario C: narrow phase select keeps scene, switches inspector (1.7s)\n  ok 49 e2e\\phase_1cc262_compact_phase_navigation.spec.ts:240:3 › Phase 1C-C.2.6.2 compact phase navigation › scenario D: long title uses ellipsis and title tooltip (1.7s)\n  ok 50 e2e\\phase_1cc262_compact_phase_navigation.spec.ts:257:3 › Phase 1C-C.2.6.2 compact phase navigation › scenario E: PNG export keeps four-column phase strip without mobile select (2.7s)\n  ok 51 e2e\\phase_1cc262_compact_phase_navigation.spec.ts:277:3 › Phase 1C-C.2.6.2 compact phase navigation › standalone route still loads compact phase nav (1.4s)\n  ok 52 e2e\\phase_1cc27_context_inspector_hierarchy.spec.ts:147:3 › Phase 1C-C.2.7 Context Inspector hierarchy › scenario A: Scene overview hierarchy (4.7s)\n  ok 53 e2e\\phase_1cc27_context_inspector_hierarchy.spec.ts:168:3 › Phase 1C-C.2.7 Context Inspector hierarchy › scenario B: empty question chain state (1.5s)\n  ok 54 e2e\\phase_1cc27_context_inspector_hierarchy.spec.ts:188:3 › Phase 1C-C.2.7 Context Inspector hierarchy › scenario C: writing takeaways object renders (1.7s)\n  ok 55 e2e\\phase_1cc27_context_inspector_hierarchy.spec.ts:206:3 › Phase 1C-C.2.7 Context Inspector hierarchy › scenario D: Evidence default 5 and locate (2.0s)\n  ok 56 e2e\\phase_1cc27_context_inspector_hierarchy.spec.ts:232:3 › Phase 1C-C.2.7 Context Inspector hierarchy › scenario E: Phase keeps Scene and compact related list (2.3s)\n  ok 57 e2e\\phase_1cc27_context_inspector_hierarchy.spec.ts:248:3 › Phase 1C-C.2.7 Context Inspector hierarchy › scenario F: Question/Hook/Payoff/Risk inspectors (4.3s)\n  ok 58 e2e\\phase_1cc27_context_inspector_hierarchy.spec.ts:277:3 › Phase 1C-C.2.7 Context Inspector hierarchy › scenario G: no-selection empty state (1.6s)\n  ok 59 e2e\\phase_1cc27_context_inspector_hierarchy.spec.ts:289:3 › Phase 1C-C.2.7 Context Inspector hierarchy › scenario H: responsive viewports (4.0s)\n  ok 60 e2e\\phase_1cc27_reader_journey_ui_final_visual_baseline.spec.ts:157:3 › Reader Journey UI Final Freeze v2.7 visual baseline › capture visual baseline screenshots (5.5s)\n  ok 61 e2e\\provider_transport_diagnostic.spec.ts:165:3 › Provider transport diagnostic e2e (fake) › 诊断成功不产生真实云端调用 (1.3s)\n  ok 62 e2e\\provider_transport_diagnostic.spec.ts:173:3 › Provider transport diagnostic e2e (fake) › DNS失败结果展示 (1.3s)\n  ok 63 e2e\\provider_transport_diagnostic.spec.ts:189:3 › Provider transport diagnostic e2e (fake) › TLS失败与ConnectTimeout展示 (1.1s)\n  ok 64 e2e\\provider_transport_diagnostic.spec.ts:204:3 › Provider transport diagnostic e2e (fake) › 真实连接测试确认、运行与结果均可见且使用Fake (2.0s)\n  ok 65 e2e\\screenshots.spec.ts:4:1 › phase2a screenshots (8.0s)\n  ok 66 e2e\\smoke.spec.ts:3:1 › navigation and offline-safe shell (1.3s)\n  ok 67 e2e\\start_analysis_dialog_layout.spec.ts:143:3 › StartAnalysisDialog layout › 小视口下 Body 可滚动且创建任务按钮在视口内 (1.3s)\n\n  67 passed (2.7m)\n(node:16552) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\n(Use `node --trace-warnings ...` to show where the warning was created)"
+    },
+    {
+      "name": "reader_journey_ui_freeze",
+      "ok": true,
+      "returncode": 0,
+      "detail": "StoryLens Reader Journey UI Final Freeze Check\nmanifest: audits/mvp-functional-baseline-v1/reader-journey-ui-final-v2.7/reader-journey-ui-final-freeze-v2.7.json\nbaseline: reader-journey-ui-final-v2.7\nfile_count=27\n\nFROZEN_JOURNEY_COMPOSITION: ok=11 modified=0 missing=0\nFROZEN_JOURNEY_EXPORT: ok=2 modified=0 missing=0\nFROZEN_JOURNEY_INSPECTOR: ok=6 modified=0 missing=0\nFROZEN_JOURNEY_INTERACTION: ok=3 modified=0 missing=0\nFROZEN_JOURNEY_PRESENTATION: ok=3 modified=0 missing=0\nFROZEN_JOURNEY_VISUALIZATION: ok=2 modified=0 missing=0\n\nok=27\nmodified=0\nmissing=0\n\nRESULT: PASS"
+    },
+    {
+      "name": "template_freeze",
+      "ok": true,
+      "returncode": 0,
+      "detail": "StoryLens Single-Chapter Journey Template Check\ntemplate: audits/mvp-functional-baseline-v1/single-chapter-journey-template-v2.7.json\ncanonical_entry: apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.tsx\nproduction_template_entry_count: 1\nduplicated_template: False\nbooks_points_to_canonical: True\nstandalone_points_to_canonical: True\nproduction_special_case_count: 0\nversion_drift_risk_count: 16\n\nRESULT: PASS"
+    },
+    {
+      "name": "invocation_policy",
+      "ok": true,
+      "returncode": 0,
+      "detail": "INVOCATION_POLICY_PASS\n  [PASS] all_invocation_types_registered: []\n  [PASS] production_calls_use_broker: structured_output wired to broker\n  [PASS] no_direct_provider_calls_in_pipelines: structured_output has no direct gateway.generate\n  [PASS] no_bypass_gateway_generate: []\n  [PASS] no_flash_hardcode_in_structured_output: flash absent from structured_output\n  [PASS] plus_policy_no_flash: all plus\n  [PASS] auto_route_false_no_fallback: MODEL_UNAUTHORIZED_FALLBACK\n  [PASS] disabled_provider_not_resolved: MODEL_PROVIDER_DISABLED_PRECHECK\n  [PASS] retry_no_reroute: aliyun_qwen_plus\n  [PASS] repair_no_default_flash: aliyun_qwen_plus/qwen3.7-plus\n  [PASS] recovery_no_default_flash: aliyun_qwen_plus/qwen3.7-plus\n  [PASS] invocation_graph_present: D:\\Dstorylens\\audits\\single-chapter-pipeline\\model-invocation-graph-v1.json\n  [PASS] graph_no_live_flash: flash_nodes=0\n  [PASS] change_package_present: D:\\Dstorylens\\audits\\single-chapter-pipeline\\changes\\global-model-invocation-policy-change-v1.1.0.json\n  [PASS] zero_real_model_requests: 0\n  [PASS] broker_ast: ok"
+    },
+    {
+      "name": "output_budget",
+      "ok": true,
+      "returncode": 0,
+      "detail": "READER_JOURNEY_OUTPUT_BUDGET_PASS"
+    },
+    {
+      "name": "certified_baseline",
+      "ok": true,
+      "returncode": 0,
+      "detail": "StoryLens Certified Baseline Check\nbaseline: Single-Chapter Pipeline Certified Baseline v1.0\nrecorded_aggregate: d492f69074f193fb196012a701378e852889b8c7d17fb2b3244dc6aceda8f4df\nfrozen_live_aggregate: fac9ea7c3e87502118284abfaeca5c22496a878d88095157024f620276904e2b\nCERTIFIED_BASELINE_PASS"
+    },
+    {
+      "name": "core_freeze",
+      "ok": true,
+      "returncode": 0,
+      "detail": "StoryLens Core Freeze Check\nmanifest: audits/mvp-functional-baseline-v1/core-freeze-manifest.json\nbaseline: mvp-functional-baseline-v1\nui_thaw: audits/mvp-functional-baseline-v1/ui-presentation-thaw-v1.json, audits/mvp-functional-baseline-v1/ui-presentation-thaw-v2.json, audits/mvp-functional-baseline-v1/ui-presentation-thaw-v2-2.json, audits/mvp-functional-baseline-v1/ui-presentation-thaw-v2-3.json, audits/mvp-functional-baseline-v1/ui-presentation-thaw-v2-4.json, audits/mvp-functional-baseline-v1/ui-presentation-thaw-v2-4-1.json, audits/mvp-functional-baseline-v1/ui-presentation-thaw-v2-4-2.json, audits/mvp-functional-baseline-v1/ui-presentation-thaw-v2-5.json, audits/mvp-functional-baseline-v1/ui-presentation-thaw-v2-6.json allowed=18\n\nFROZEN_CORE: unchanged=69 modified=0 thawed=0 missing=0\nFROZEN_CONTRACT: unchanged=15 modified=0 thawed=0 missing=0\nREUSABLE_UI_LOGIC: unchanged=8 modified=0 thawed=7 missing=0\n\nunchanged=92\nmodified=0\nthawed_modified=7\nmissing=0\nunexpected=0\n\nThaw-allowed presentation modifications:\n  - [REUSABLE_UI_LOGIC] apps/desktop/src/components/readerJourney/ReaderJourneySyncWorkspace.tsx\n  - [REUSABLE_UI_LOGIC] apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.tsx\n  - [REUSABLE_UI_LOGIC] apps/desktop/src/components/readerJourney/StructuredChapterTextPane.tsx\n  - [REUSABLE_UI_LOGIC] apps/desktop/src/components/readerJourney/sceneDetailFields.tsx\n  - [REUSABLE_UI_LOGIC] apps/desktop/src/components/readerJourney/exportJourneyPng.ts\n  - [REUSABLE_UI_LOGIC] apps/desktop/src/components/readerJourney/SplitPane.tsx\n  - [REUSABLE_UI_LOGIC] apps/desktop/src/pages/TasksPage.tsx\n\nRESULT: PASS"
+    },
+    {
+      "name": "real_canary_checker",
+      "ok": true,
+      "returncode": 0,
+      "detail": "StoryLens Single-Chapter Real Canary Check\n  [OK] required_reports: all present\n  [OK] operator_approved: True\n  [OK] batch_generation_v13: v13\n  [OK] max_cost_positive: 100.0\n  [OK] run_order_holdouts: run1=C3-long-action run2=A2-medium-action\n  [OK] prompt_v1_6: v1.6\n  [OK] evidence_max_items_16: 16\n  [OK] provider: aliyun_qwen_plus\n  [OK] model: qwen3.7-plus\n  [OK] auto_route_false: False\n  [OK] max_cost_matches_auth: compared\n  [OK] plan_run1_c3: C3-long-action\n  [OK] plan_run2_a2: A2-medium-action\n  [OK] canary_db_v13: D:/Dstorylens/artifacts/single-chapter-pipeline-certification/real-canary/canary-v13.sqlite3\n  [OK] change_package_v111: reader-journey-evidence-budget-change-v1.1.1\n  [OK] batch_id_r13: phase-1db2-r13-20260719T022027Z\n  [OK] not_resume_r11: phase-1db2-r13-20260719T022027Z\n  [OK] eight_runs: n=8\n  [OK] all_runs_pass: n=8\n  [OK] all_analysis_succeeded: ok\n  [OK] all_journey_succeeded: ok\n  [OK] requests_within_limit: 164/480\n  [OK] tokens_within_limit: in=384706 out=135356\n  [OK] cost_within_limit: 1.85226/100.0\n  [OK] no_unknown_accounting: unknown=0\n  [OK] invocation_policy_plus_only: http_rows=164\n  [OK] main_db_counts: True\n  [OK] verdict_legal: REAL_CANARY_PASSED\n  [OK] final_batch_r13: phase-1db2-r13-20260719T022027Z\n\nRESULT: PASS\nFINAL_VERDICT: REAL_CANARY_PASSED"
+    },
+    {
+      "name": "zero_real_model_cost_phase_1dc",
+      "ok": true,
+      "returncode": null,
+      "detail": null
+    }
+  ],
+  "failed": [],
+  "rc_database": "D:/Dstorylens/artifacts/release-candidate/storylens-rc-v1.sqlite3",
+  "real_model_requests_this_phase": 0,
+  "finished_at": "2026-07-19T03:42:55.077519+00:00"
+}

@@ -1,0 +1,525 @@
+{
+  "phase": "1D-B2-R11-QUAL",
+  "verdict": "INVOCATION_PATH_QUALIFICATION_PASSED",
+  "finished_at": "2026-07-19T01:16:22.603524+00:00",
+  "authorization_ref": "audits/single-chapter-pipeline/invocation-path-qualification-v1/authorization-qualification-v1.json",
+  "preflight_ref": "audits/single-chapter-pipeline/real-invocation-path-qualification-preflight-v1.json",
+  "change_package": "global-model-invocation-policy-change-v1.1.0",
+  "provider": "aliyun_qwen_plus",
+  "model": "qwen3.7-plus",
+  "auto_route": false,
+  "qualification_db": "artifacts/single-chapter-pipeline-certification/real-canary/qualification-v1.sqlite3",
+  "main_db_before": {
+    "analysis_runs": 55,
+    "reader_journey_runs": 2
+  },
+  "main_db_after": {
+    "analysis_runs": 55,
+    "reader_journey_runs": 2
+  },
+  "stop_reason": null,
+  "budget": {
+    "max_cost_cny": 20.0,
+    "certification_accounted_cost": 0.086716,
+    "requests": 17,
+    "retries": 6,
+    "input_tokens": 12482,
+    "output_tokens": 7719,
+    "elapsed_minutes": 0.3760864166666579,
+    "unknown_accounting_count": 0
+  },
+  "scenarios": [
+    {
+      "scenario_id": "FI-SCHEMA-SCENE",
+      "covers": "reader_journey_scene_schema_repair",
+      "ok": true,
+      "detail": "real_http=1 hits=1",
+      "invocation_ids": [
+        2
+      ],
+      "error": null
+    },
+    {
+      "scenario_id": "FI-STRUCTURAL",
+      "covers": "reader_journey_structural_repair",
+      "ok": true,
+      "detail": "real_http=1 hits=1",
+      "invocation_ids": [
+        4
+      ],
+      "error": null
+    },
+    {
+      "scenario_id": "FI-PROVIDER-RETRY",
+      "covers": "generic_provider_retry",
+      "ok": true,
+      "detail": "real_http=1 hits=1 kinds=['initial', 'provider_retry']",
+      "invocation_ids": [
+        6
+      ],
+      "error": null
+    },
+    {
+      "scenario_id": "FI-REPAIR-RETRY",
+      "covers": "repair_provider_retry",
+      "ok": true,
+      "detail": "real_http=1 hits=1 kinds=['normal_batch_request', 'structural_repair', 'repair_provider_retry']",
+      "invocation_ids": [
+        9
+      ],
+      "error": null
+    },
+    {
+      "scenario_id": "FI-TARGETED-PATCH",
+      "covers": "reader_journey_targeted_evidence_patch",
+      "ok": true,
+      "detail": "real_http=1 hits=1 kinds=['normal_batch_request', 'structural_repair'] types=[None, 'reader_journey_targeted_evidence_patch']",
+      "invocation_ids": [
+        11
+      ],
+      "error": null
+    },
+    {
+      "scenario_id": "FI-RECOVERY",
+      "covers": "scene_analysis_provider_recovery",
+      "ok": true,
+      "detail": "exhaust_calls=3 resume_http=1 hits=1",
+      "invocation_ids": [
+        15
+      ],
+      "error": null
+    },
+    {
+      "scenario_id": "FI-SCHEMA-CHAPTER",
+      "covers": "reader_journey_chapter_schema_repair",
+      "ok": true,
+      "detail": "real_http=1 hits=1",
+      "invocation_ids": [
+        17
+      ],
+      "error": null
+    },
+    {
+      "scenario_id": "FI-FLASH-REJECT",
+      "covers": "flash_reject",
+      "ok": true,
+      "detail": "code=MODEL_UNAUTHORIZED_FALLBACK",
+      "invocation_ids": [],
+      "error": null
+    }
+  ],
+  "coverage": {
+    "reader_journey_scene_schema_repair": {
+      "covered": true,
+      "count": 1,
+      "invocation_ids": [
+        2
+      ]
+    },
+    "reader_journey_structural_repair": {
+      "covered": true,
+      "count": 2,
+      "invocation_ids": [
+        4,
+        8
+      ]
+    },
+    "generic_provider_retry": {
+      "covered": true,
+      "count": 1,
+      "invocation_ids": [
+        6
+      ]
+    },
+    "repair_provider_retry": {
+      "covered": true,
+      "count": 1,
+      "invocation_ids": [
+        9
+      ]
+    },
+    "reader_journey_targeted_evidence_patch": {
+      "covered": true,
+      "count": 1,
+      "invocation_ids": [
+        11
+      ]
+    },
+    "scene_analysis_provider_recovery": {
+      "covered": true,
+      "count": 1,
+      "invocation_ids": [
+        15
+      ]
+    },
+    "reader_journey_chapter_schema_repair": {
+      "covered": true,
+      "count": 1,
+      "invocation_ids": [
+        17
+      ]
+    }
+  },
+  "policy_failures": [],
+  "invocation_audits": [
+    {
+      "invocation_id": 1,
+      "task_type": "reader_journey_scene",
+      "invocation_kind": "normal_batch_request",
+      "invocation_type": "reader_journey_scene_batch",
+      "provider_name": "aliyun_qwen_plus",
+      "model_name": "qwen3.7-plus",
+      "http_request_sent": true,
+      "status": "failed",
+      "error_code": "SCHEMA_VALIDATION_FAILED",
+      "request_hash": "75926c0e5136f8d7b077a76bff0dc046d527276bf8406d8cdfc372bf60395145",
+      "requested_provider": "aliyun_qwen_plus",
+      "requested_model": "qwen3.7-plus",
+      "resolved_provider": "aliyun_qwen_plus",
+      "resolved_model": "qwen3.7-plus",
+      "route_source": "run_frozen_policy",
+      "fallback_used": false,
+      "auto_route": false,
+      "provider_enabled": true,
+      "policy_match": true
+    },
+    {
+      "invocation_id": 2,
+      "task_type": "reader_journey_scene",
+      "invocation_kind": "schema_repair",
+      "invocation_type": "reader_journey_scene_schema_repair",
+      "provider_name": "aliyun_qwen_plus",
+      "model_name": "qwen3.7-plus",
+      "http_request_sent": true,
+      "status": "succeeded",
+      "error_code": null,
+      "request_hash": "a2fdb1706a1b6d71099478917405708b6e7c52e62036c35fd9fdf73223c246df",
+      "requested_provider": "aliyun_qwen_plus",
+      "requested_model": "qwen3.7-plus",
+      "resolved_provider": "aliyun_qwen_plus",
+      "resolved_model": "qwen3.7-plus",
+      "route_source": "run_frozen_policy",
+      "fallback_used": false,
+      "auto_route": false,
+      "provider_enabled": true,
+      "policy_match": true
+    },
+    {
+      "invocation_id": 3,
+      "task_type": "reader_journey_scene",
+      "invocation_kind": "normal_batch_request",
+      "invocation_type": null,
+      "provider_name": "aliyun_qwen_plus",
+      "model_name": "qwen3.7-plus",
+      "http_request_sent": true,
+      "status": "failed",
+      "error_code": "JOURNEY_EVIDENCE_OUT_OF_SCOPE",
+      "request_hash": "9473817b2ab262dc22b89a0d1fec768eee07d890846e143d2846af61182ce7e9",
+      "requested_provider": null,
+      "requested_model": null,
+      "resolved_provider": null,
+      "resolved_model": null,
+      "route_source": null,
+      "fallback_used": null,
+      "auto_route": null,
+      "provider_enabled": null,
+      "policy_match": null
+    },
+    {
+      "invocation_id": 4,
+      "task_type": "reader_journey_scene",
+      "invocation_kind": "structural_repair",
+      "invocation_type": "reader_journey_structural_repair",
+      "provider_name": "aliyun_qwen_plus",
+      "model_name": "qwen3.7-plus",
+      "http_request_sent": true,
+      "status": "succeeded",
+      "error_code": null,
+      "request_hash": "b239bc9a8a64d8414d826238cf25c8b4a7aafe38f3f2fd4a3e4d8e85da3217f9",
+      "requested_provider": "aliyun_qwen_plus",
+      "requested_model": "qwen3.7-plus",
+      "resolved_provider": "aliyun_qwen_plus",
+      "resolved_model": "qwen3.7-plus",
+      "route_source": "run_frozen_policy",
+      "fallback_used": false,
+      "auto_route": false,
+      "provider_enabled": true,
+      "policy_match": true
+    },
+    {
+      "invocation_id": 5,
+      "task_type": "scene_boundary",
+      "invocation_kind": "initial",
+      "invocation_type": "scene_boundary",
+      "provider_name": "aliyun_qwen_plus",
+      "model_name": "qwen3.7-plus",
+      "http_request_sent": true,
+      "status": "failed",
+      "error_code": "PROVIDER_REMOTE_DISCONNECT",
+      "request_hash": "1e7363aa2de059d6a8b96b2319e5501db5bd576e3fd1279e8c9db81e218ece15",
+      "requested_provider": "aliyun_qwen_plus",
+      "requested_model": "qwen3.7-plus",
+      "resolved_provider": "aliyun_qwen_plus",
+      "resolved_model": "qwen3.7-plus",
+      "route_source": "run_frozen_policy",
+      "fallback_used": false,
+      "auto_route": false,
+      "provider_enabled": true,
+      "policy_match": true
+    },
+    {
+      "invocation_id": 6,
+      "task_type": "scene_boundary",
+      "invocation_kind": "provider_retry",
+      "invocation_type": "generic_provider_retry",
+      "provider_name": "aliyun_qwen_plus",
+      "model_name": "qwen3.7-plus",
+      "http_request_sent": true,
+      "status": "succeeded",
+      "error_code": null,
+      "request_hash": "1e7363aa2de059d6a8b96b2319e5501db5bd576e3fd1279e8c9db81e218ece15",
+      "requested_provider": "aliyun_qwen_plus",
+      "requested_model": "qwen3.7-plus",
+      "resolved_provider": "aliyun_qwen_plus",
+      "resolved_model": "qwen3.7-plus",
+      "route_source": "run_frozen_policy",
+      "fallback_used": false,
+      "auto_route": false,
+      "provider_enabled": true,
+      "policy_match": true
+    },
+    {
+      "invocation_id": 7,
+      "task_type": "reader_journey_scene",
+      "invocation_kind": "normal_batch_request",
+      "invocation_type": null,
+      "provider_name": "aliyun_qwen_plus",
+      "model_name": "qwen3.7-plus",
+      "http_request_sent": true,
+      "status": "failed",
+      "error_code": "JOURNEY_EVIDENCE_OUT_OF_SCOPE",
+      "request_hash": "9dd5054a3eb1baef1d1c39840daada3e55578d07b183a2d6d09ba663ee2e7c0a",
+      "requested_provider": null,
+      "requested_model": null,
+      "resolved_provider": null,
+      "resolved_model": null,
+      "route_source": null,
+      "fallback_used": null,
+      "auto_route": null,
+      "provider_enabled": null,
+      "policy_match": null
+    },
+    {
+      "invocation_id": 8,
+      "task_type": "reader_journey_scene",
+      "invocation_kind": "structural_repair",
+      "invocation_type": "reader_journey_structural_repair",
+      "provider_name": "aliyun_qwen_plus",
+      "model_name": "qwen3.7-plus",
+      "http_request_sent": true,
+      "status": "failed",
+      "error_code": "PROVIDER_REMOTE_DISCONNECT",
+      "request_hash": "87458d082943b981d2a0dfd28e02a7caf0be80efa58ad7436f9672156b04dd21",
+      "requested_provider": "aliyun_qwen_plus",
+      "requested_model": "qwen3.7-plus",
+      "resolved_provider": "aliyun_qwen_plus",
+      "resolved_model": "qwen3.7-plus",
+      "route_source": "run_frozen_policy",
+      "fallback_used": false,
+      "auto_route": false,
+      "provider_enabled": true,
+      "policy_match": true
+    },
+    {
+      "invocation_id": 9,
+      "task_type": "reader_journey_scene",
+      "invocation_kind": "repair_provider_retry",
+      "invocation_type": "repair_provider_retry",
+      "provider_name": "aliyun_qwen_plus",
+      "model_name": "qwen3.7-plus",
+      "http_request_sent": true,
+      "status": "succeeded",
+      "error_code": null,
+      "request_hash": "87458d082943b981d2a0dfd28e02a7caf0be80efa58ad7436f9672156b04dd21",
+      "requested_provider": "aliyun_qwen_plus",
+      "requested_model": "qwen3.7-plus",
+      "resolved_provider": "aliyun_qwen_plus",
+      "resolved_model": "qwen3.7-plus",
+      "route_source": "run_frozen_policy",
+      "fallback_used": false,
+      "auto_route": false,
+      "provider_enabled": true,
+      "policy_match": true
+    },
+    {
+      "invocation_id": 10,
+      "task_type": "reader_journey_scene",
+      "invocation_kind": "normal_batch_request",
+      "invocation_type": null,
+      "provider_name": "aliyun_qwen_plus",
+      "model_name": "qwen3.7-plus",
+      "http_request_sent": true,
+      "status": "failed",
+      "error_code": "JOURNEY_EVIDENCE_OUT_OF_SCOPE",
+      "request_hash": "e97786102a580b1db381c5995e405c9566a1b8275a6d7fdee149228618400f7d",
+      "requested_provider": null,
+      "requested_model": null,
+      "resolved_provider": null,
+      "resolved_model": null,
+      "route_source": null,
+      "fallback_used": null,
+      "auto_route": null,
+      "provider_enabled": null,
+      "policy_match": null
+    },
+    {
+      "invocation_id": 11,
+      "task_type": "reader_journey_scene",
+      "invocation_kind": "structural_repair",
+      "invocation_type": "reader_journey_targeted_evidence_patch",
+      "provider_name": "aliyun_qwen_plus",
+      "model_name": "qwen3.7-plus",
+      "http_request_sent": true,
+      "status": "succeeded",
+      "error_code": null,
+      "request_hash": "6395a0e91cae9ebc862afd56cbe3963b07c41fcd6db49abcd5e77c2437498faf",
+      "requested_provider": "aliyun_qwen_plus",
+      "requested_model": "qwen3.7-plus",
+      "resolved_provider": "aliyun_qwen_plus",
+      "resolved_model": "qwen3.7-plus",
+      "route_source": "run_frozen_policy",
+      "fallback_used": false,
+      "auto_route": false,
+      "provider_enabled": true,
+      "policy_match": true
+    },
+    {
+      "invocation_id": 12,
+      "task_type": "scene_analysis",
+      "invocation_kind": "initial",
+      "invocation_type": "scene_analysis",
+      "provider_name": "aliyun_qwen_plus",
+      "model_name": "qwen3.7-plus",
+      "http_request_sent": true,
+      "status": "failed",
+      "error_code": "PROVIDER_REMOTE_DISCONNECT",
+      "request_hash": "27c7250ea1938deff44dbc720d0a6dc7c58497ff4843033d039f94078fec6449",
+      "requested_provider": "aliyun_qwen_plus",
+      "requested_model": "qwen3.7-plus",
+      "resolved_provider": "aliyun_qwen_plus",
+      "resolved_model": "qwen3.7-plus",
+      "route_source": "run_frozen_policy",
+      "fallback_used": false,
+      "auto_route": false,
+      "provider_enabled": true,
+      "policy_match": true
+    },
+    {
+      "invocation_id": 13,
+      "task_type": "scene_analysis",
+      "invocation_kind": "provider_retry",
+      "invocation_type": "scene_analysis_provider_retry",
+      "provider_name": "aliyun_qwen_plus",
+      "model_name": "qwen3.7-plus",
+      "http_request_sent": true,
+      "status": "failed",
+      "error_code": "PROVIDER_REMOTE_DISCONNECT",
+      "request_hash": "27c7250ea1938deff44dbc720d0a6dc7c58497ff4843033d039f94078fec6449",
+      "requested_provider": "aliyun_qwen_plus",
+      "requested_model": "qwen3.7-plus",
+      "resolved_provider": "aliyun_qwen_plus",
+      "resolved_model": "qwen3.7-plus",
+      "route_source": "run_frozen_policy",
+      "fallback_used": false,
+      "auto_route": false,
+      "provider_enabled": true,
+      "policy_match": true
+    },
+    {
+      "invocation_id": 14,
+      "task_type": "scene_analysis",
+      "invocation_kind": "provider_retry",
+      "invocation_type": "scene_analysis_provider_retry",
+      "provider_name": "aliyun_qwen_plus",
+      "model_name": "qwen3.7-plus",
+      "http_request_sent": true,
+      "status": "failed",
+      "error_code": "PROVIDER_REMOTE_DISCONNECT",
+      "request_hash": "27c7250ea1938deff44dbc720d0a6dc7c58497ff4843033d039f94078fec6449",
+      "requested_provider": "aliyun_qwen_plus",
+      "requested_model": "qwen3.7-plus",
+      "resolved_provider": "aliyun_qwen_plus",
+      "resolved_model": "qwen3.7-plus",
+      "route_source": "run_frozen_policy",
+      "fallback_used": false,
+      "auto_route": false,
+      "provider_enabled": true,
+      "policy_match": true
+    },
+    {
+      "invocation_id": 15,
+      "task_type": "scene_analysis",
+      "invocation_kind": "initial",
+      "invocation_type": "scene_analysis_provider_recovery",
+      "provider_name": "aliyun_qwen_plus",
+      "model_name": "qwen3.7-plus",
+      "http_request_sent": true,
+      "status": "succeeded",
+      "error_code": null,
+      "request_hash": "2ee91bffa0bfbce4eba52195adcc28425240a58456794a15a4dd83261173281b",
+      "requested_provider": "aliyun_qwen_plus",
+      "requested_model": "qwen3.7-plus",
+      "resolved_provider": "aliyun_qwen_plus",
+      "resolved_model": "qwen3.7-plus",
+      "route_source": "run_frozen_policy",
+      "fallback_used": false,
+      "auto_route": false,
+      "provider_enabled": true,
+      "policy_match": true
+    },
+    {
+      "invocation_id": 16,
+      "task_type": "reader_journey_chapter",
+      "invocation_kind": "initial",
+      "invocation_type": "reader_journey_chapter",
+      "provider_name": "aliyun_qwen_plus",
+      "model_name": "qwen3.7-plus",
+      "http_request_sent": true,
+      "status": "failed",
+      "error_code": "SCHEMA_VALIDATION_FAILED",
+      "request_hash": "8b1231f03fa5157dbcc92f63b62a53af21e13c57f7ca965380d6eb31e61476ab",
+      "requested_provider": "aliyun_qwen_plus",
+      "requested_model": "qwen3.7-plus",
+      "resolved_provider": "aliyun_qwen_plus",
+      "resolved_model": "qwen3.7-plus",
+      "route_source": "run_frozen_policy",
+      "fallback_used": false,
+      "auto_route": false,
+      "provider_enabled": true,
+      "policy_match": true
+    },
+    {
+      "invocation_id": 17,
+      "task_type": "reader_journey_chapter",
+      "invocation_kind": "schema_repair",
+      "invocation_type": "reader_journey_chapter_schema_repair",
+      "provider_name": "aliyun_qwen_plus",
+      "model_name": "qwen3.7-plus",
+      "http_request_sent": true,
+      "status": "succeeded",
+      "error_code": null,
+      "request_hash": "0ef9ca5d3f364925c1228f025636e2746329636c85d5053abe9d6b481983a48b",
+      "requested_provider": "aliyun_qwen_plus",
+      "requested_model": "qwen3.7-plus",
+      "resolved_provider": "aliyun_qwen_plus",
+      "resolved_model": "qwen3.7-plus",
+      "route_source": "run_frozen_policy",
+      "fallback_used": false,
+      "auto_route": false,
+      "provider_enabled": true,
+      "policy_match": true
+    }
+  ],
+  "full_canary_started": false,
+  "authorization_v12_issued": false
+}

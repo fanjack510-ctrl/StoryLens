@@ -1,0 +1,216 @@
+{
+  "baseline_id": "Single-Chapter Pipeline Certified Baseline v1.0",
+  "aggregate_sha256": "c8ae612e19909dd61283bcc46ee4fcff89388f7dd17eb1adb57d5c0bfa331eaa",
+  "files": [
+    {
+      "path": "apps/api/app/services/model_invocation_broker.py",
+      "category": "FROZEN_CERTIFIED_CORE",
+      "sha256": "f03dbb14d1e5a7d51fd864670154a877a16db790b5a65697d7a58065eb48733f",
+      "size": 20399,
+      "missing": false
+    },
+    {
+      "path": "apps/api/app/services/structured_output.py",
+      "category": "FROZEN_CERTIFIED_CORE",
+      "sha256": "adc23093150f1596bf524fb8d2a23f1c791cd6c472554f3b23ecfe08fd80cb92",
+      "size": 60042,
+      "missing": false
+    },
+    {
+      "path": "apps/api/app/services/scene_pipeline.py",
+      "category": "FROZEN_CERTIFIED_CORE",
+      "sha256": "6b02ec9d0b413dd01ae52712aaac476e183a6a790b58d25fbcde4b72abfb390b",
+      "size": 47075,
+      "missing": false
+    },
+    {
+      "path": "apps/api/app/services/reader_journey_pipeline.py",
+      "category": "FROZEN_CERTIFIED_CORE",
+      "sha256": "1f0ce6d915b86e6002c1a4191b58338b6128625b57ac133c6cf9dcb89db6bb1b",
+      "size": 45480,
+      "missing": false
+    },
+    {
+      "path": "apps/api/app/services/reader_journey_evidence_compaction.py",
+      "category": "FROZEN_CERTIFIED_CORE",
+      "sha256": "76577a9e61b6b1ed0c639976e98c1eeff0cc3af6b95bd0344a4f09e4c0c9e2d9",
+      "size": 14045,
+      "missing": false
+    },
+    {
+      "path": "apps/api/app/services/reader_journey_output_budget.py",
+      "category": "FROZEN_CERTIFIED_CORE",
+      "sha256": "f0e5f3fc9395c26b156ea67dab7ad2555b6ef0288fa0ac28e6809e7b94c1d63f",
+      "size": 14913,
+      "missing": false
+    },
+    {
+      "path": "apps/api/app/services/reader_journey_targeted_repair.py",
+      "category": "FROZEN_CERTIFIED_CORE",
+      "sha256": "d1a2d74109c1afa8187a64d0f4783502382fc72cea30327ec793463b291950dd",
+      "size": 20332,
+      "missing": false
+    },
+    {
+      "path": "apps/api/app/services/cloud_output_policy.py",
+      "category": "FROZEN_CERTIFIED_CORE",
+      "sha256": "632d0195421f281f1a395b38e443930156f684e3e8ce7b63ccf76b0f68263954",
+      "size": 3919,
+      "missing": false
+    },
+    {
+      "path": "apps/api/app/core/config.py",
+      "category": "FROZEN_CERTIFIED_CORE",
+      "sha256": "afa77049ee66e192917efb8255a3534ced001a55e2911fe00b7374f975d43cbc",
+      "size": 3877,
+      "missing": false
+    },
+    {
+      "path": "apps/api/app/schemas/reader_journey.py",
+      "category": "FROZEN_CERTIFIED_CONTRACT",
+      "sha256": "e63890b440ef7055b99eb4b6321c2e82e09a553bdfc3265d7efa51a913ef788e",
+      "size": 20215,
+      "missing": false
+    },
+    {
+      "path": "apps/api/app/schemas/scene.py",
+      "category": "FROZEN_CERTIFIED_CONTRACT",
+      "sha256": "fecc06f30d1cf78cad38edc0ab2c366ee21423f0046f832d4e14344d64113247",
+      "size": 23274,
+      "missing": false
+    },
+    {
+      "path": "packages/prompts/reader_journey_scene/v1.6/system.md",
+      "category": "FROZEN_CERTIFIED_PROMPT",
+      "sha256": "cb47a479939d4f6f620ee1c75b744d0adcaabc24d5091d125395cdd35356d651",
+      "size": 4198,
+      "missing": false
+    },
+    {
+      "path": "packages/prompts/reader_journey_scene/v1.6/user.md",
+      "category": "FROZEN_CERTIFIED_PROMPT",
+      "sha256": "6e9e98b27a4b5a6091c276264dcf430d7f616bdb937de11165ef0b0d38bf8cf0",
+      "size": 1199,
+      "missing": false
+    },
+    {
+      "path": "packages/prompts/reader_journey_scene/v1.6/repair.md",
+      "category": "FROZEN_CERTIFIED_PROMPT",
+      "sha256": "b7c9921e3c73b0ca4147d52bdfec59698d49fff51879c00a6dd6ebac42b9078a",
+      "size": 1211,
+      "missing": false
+    },
+    {
+      "path": "packages/prompts/reader_journey_chapter/v1.2/system.md",
+      "category": "FROZEN_CERTIFIED_PROMPT",
+      "sha256": "1713e96f7c56903fba83b50eff6735fc07a6e2c1a2e68dec8b373cb4559db712",
+      "size": 1384,
+      "missing": false
+    },
+    {
+      "path": "packages/prompts/reader_journey_chapter/v1.2/user.md",
+      "category": "FROZEN_CERTIFIED_PROMPT",
+      "sha256": "0222f9686992fb317bfd937f9f4624fc239c9fe84f4d7eac8adaceaa8ec5b615",
+      "size": 98,
+      "missing": false
+    },
+    {
+      "path": "packages/prompts/reader_journey_chapter/v1.2/repair.md",
+      "category": "FROZEN_CERTIFIED_PROMPT",
+      "sha256": "cd30351e5f4f7692b5144042f80d0dd7d52badc4304545239ad758a4792d5f91",
+      "size": 1048,
+      "missing": false
+    },
+    {
+      "path": "packages/prompts/scene_analysis/v3.2/system.md",
+      "category": "FROZEN_CERTIFIED_PROMPT",
+      "sha256": "6832b6cd78ca52e84077807e32a4b907ae115784b96e29a3c2af48fba5966e1c",
+      "size": 1377,
+      "missing": false
+    },
+    {
+      "path": "packages/prompts/scene_analysis/v3.2/user.md",
+      "category": "FROZEN_CERTIFIED_PROMPT",
+      "sha256": "63d3315b08ad1ae8a5b9674d107eea10e0fe7c5f079efea01b020ee66f60d38c",
+      "size": 213,
+      "missing": false
+    },
+    {
+      "path": "packages/prompts/scene_analysis/v3.2/repair.md",
+      "category": "FROZEN_CERTIFIED_PROMPT",
+      "sha256": "07c498de1f18ce0545f24e97aaf7a7b9fd4b6db09c3c868c37759269fd26f99f",
+      "size": 686,
+      "missing": false
+    },
+    {
+      "path": "apps/api/app/services/reader_journey_validation.py",
+      "category": "FROZEN_CERTIFIED_VALIDATOR",
+      "sha256": "8c7eb5cefc4ed224271e7a7cbcabd4dc203ecb6d2ca2eb912dcbc5e41212928e",
+      "size": 24693,
+      "missing": false
+    },
+    {
+      "path": "apps/api/app/services/scene_analysis_provider_recovery.py",
+      "category": "FROZEN_CERTIFIED_RECOVERY",
+      "sha256": "cb2ab2aa6040162ec61d63b015eb9d306488e42c9a97fc64d558c17c85a3b573",
+      "size": 17729,
+      "missing": false
+    },
+    {
+      "path": "scripts/certification/conservative_usage_accounting.py",
+      "category": "FROZEN_CERTIFIED_ACCOUNTING",
+      "sha256": "0fffca5143bf408b044b5350b3a232bd6f29dfb6a3b499a63a16863cd61cf462",
+      "size": 21354,
+      "missing": false
+    },
+    {
+      "path": "scripts/check_model_invocation_policy.py",
+      "category": "FROZEN_CERTIFIED_VALIDATOR",
+      "sha256": "d00e5a87d39ff0e7c11df25fbc5d36ea5ae2e731a8a95baf5a918a4f23a59337",
+      "size": 9903,
+      "missing": false
+    },
+    {
+      "path": "scripts/check_reader_journey_output_budget.py",
+      "category": "FROZEN_CERTIFIED_VALIDATOR",
+      "sha256": "9d854e9b44e5a92c177f02e2808decd934583c4cb3c352903c4228841226d326",
+      "size": 976,
+      "missing": false
+    },
+    {
+      "path": "scripts/check_single_chapter_real_canary.py",
+      "category": "CHANGEABLE_CERTIFICATION_TOOLING",
+      "sha256": "dca04e3fd3188dfca6b398490571a7c38430b83308f9f173a15c1c505c16471a",
+      "size": 8655,
+      "missing": false
+    },
+    {
+      "path": "scripts/certification/real_canary_runner.py",
+      "category": "CHANGEABLE_CERTIFICATION_TOOLING",
+      "sha256": "064fc0605aa9f72ab67eb8f9c0f5a18325387a088783f2f7044ba5838b78947a",
+      "size": 60993,
+      "missing": false
+    },
+    {
+      "path": "apps/desktop/src/pages/TasksPage.tsx",
+      "category": "CHANGEABLE_UI_SHELL",
+      "sha256": "420888526c8d5efa8aadc17f753143611f4481da38af82f4985445066852217e",
+      "size": 42647,
+      "missing": false
+    },
+    {
+      "path": "apps/desktop/src/components/chapterAnalysis/mapAnalysisUiState.ts",
+      "category": "CHANGEABLE_UI_SHELL",
+      "sha256": "8e1cfc10f860e0c32bc7210ca432917db0759e7a84e2d05139eb1e30fb572ebb",
+      "size": 7002,
+      "missing": false
+    },
+    {
+      "path": "apps/desktop/src/components/chapterAnalysis/ChapterAnalysisFailureCard.tsx",
+      "category": "CHANGEABLE_UI_SHELL",
+      "sha256": "7c719c586ea3fb8023865b6580d3cb652617bf8849ae31e42d96ad2a5297bf26",
+      "size": 2887,
+      "missing": false
+    }
+  ]
+}

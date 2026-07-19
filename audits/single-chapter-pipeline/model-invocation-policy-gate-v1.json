@@ -1,0 +1,87 @@
+{
+  "gate": "check_model_invocation_policy",
+  "verdict": "INVOCATION_POLICY_PASS",
+  "checks": [
+    {
+      "name": "all_invocation_types_registered",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "name": "production_calls_use_broker",
+      "ok": true,
+      "detail": "structured_output wired to broker"
+    },
+    {
+      "name": "no_direct_provider_calls_in_pipelines",
+      "ok": true,
+      "detail": "structured_output has no direct gateway.generate"
+    },
+    {
+      "name": "no_bypass_gateway_generate",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "name": "no_flash_hardcode_in_structured_output",
+      "ok": true,
+      "detail": "flash absent from structured_output"
+    },
+    {
+      "name": "plus_policy_no_flash",
+      "ok": true,
+      "detail": "all plus"
+    },
+    {
+      "name": "auto_route_false_no_fallback",
+      "ok": true,
+      "detail": "MODEL_UNAUTHORIZED_FALLBACK"
+    },
+    {
+      "name": "disabled_provider_not_resolved",
+      "ok": true,
+      "detail": "MODEL_PROVIDER_DISABLED_PRECHECK"
+    },
+    {
+      "name": "retry_no_reroute",
+      "ok": true,
+      "detail": "aliyun_qwen_plus"
+    },
+    {
+      "name": "repair_no_default_flash",
+      "ok": true,
+      "detail": "aliyun_qwen_plus/qwen3.7-plus"
+    },
+    {
+      "name": "recovery_no_default_flash",
+      "ok": true,
+      "detail": "aliyun_qwen_plus/qwen3.7-plus"
+    },
+    {
+      "name": "invocation_graph_present",
+      "ok": true,
+      "detail": "D:\\Dstorylens\\audits\\single-chapter-pipeline\\model-invocation-graph-v1.json"
+    },
+    {
+      "name": "graph_no_live_flash",
+      "ok": true,
+      "detail": "flash_nodes=0"
+    },
+    {
+      "name": "change_package_present",
+      "ok": true,
+      "detail": "D:\\Dstorylens\\audits\\single-chapter-pipeline\\changes\\global-model-invocation-policy-change-v1.1.0.json"
+    },
+    {
+      "name": "zero_real_model_requests",
+      "ok": true,
+      "detail": "0"
+    },
+    {
+      "name": "broker_ast",
+      "ok": true,
+      "detail": "ok"
+    }
+  ],
+  "failed": []
+}

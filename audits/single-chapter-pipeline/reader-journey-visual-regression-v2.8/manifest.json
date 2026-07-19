@@ -1,0 +1,15 @@
+{
+  "version": "2.8",
+  "generator": "scripts/generate_reader_journey_visual_regression_v2_8.py",
+  "note": "Deterministic SVG fixtures; no real model / DB mutation",
+  "files": [
+    "01-13-scene-standard-full-curve.svg",
+    "02-13-scene-expanded-height.svg",
+    "03-30-scene-horizontal-zoom.svg",
+    "04-60-scene-brush-selection.svg",
+    "05-inspector-collapsed.svg",
+    "06-inspector-expanded.svg",
+    "07-boundary-0-100.svg",
+    "08-full-png-export.svg"
+  ]
+}

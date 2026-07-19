@@ -1,0 +1,25 @@
+{
+  "id": "DEFECT-E2E-001",
+  "severity": "P2",
+  "stage": "e2e_stability",
+  "fixture": "full_desktop_e2e_suite",
+  "reproduction": "scripts/run_e2e_stability_triple.py — three consecutive npm run test:e2e",
+  "expected": "3/3 full suites PASS with 67 tests each",
+  "actual": "Intermittent first-run failures (e.g. 61/67 or 64/67) with elevated timeout mentions; subsequent runs often 67/67 PASS. See e2e-stability-report-v1.json and artifacts/.../e2e-logs/",
+  "affected_files": [
+    "apps/desktop/e2e/*.spec.ts",
+    "apps/desktop/playwright.config.ts"
+  ],
+  "frozen_category": "FROZEN_JOURNEY_* (do not edit in 1D-B1)",
+  "data_risk": false,
+  "cost_risk": false,
+  "observed_pattern": "Fail-then-pass across consecutive full suites; consistent with stale Vite reuse (reuseExistingServer=true) or cold-start contention on :1421",
+  "proposed_minimal_fix": "Harness-only: free :1421 leftovers; run stability triple with --workers=1 to reduce Run #55 contention; optional Change Package for reuseExistingServer=!CI and/or shared-fixture serialization",
+  "required_change_package": "reader-journey-ui-change-<ver>.json or e2e-harness-change if non-frozen",
+  "regression_tests": [
+    "scripts/run_e2e_stability_triple.py"
+  ],
+  "phase_1db1_policy": "Do not edit frozen journey UI to silence flakes; report only",
+  "cert_status": "MITIGATED_FOR_1DB1_GATE",
+  "cert_mitigation": "scripts/run_e2e_stability_triple.py uses --workers=1 + :1421 cleanup; 3/3 full suites 67 passed"
+}

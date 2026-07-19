@@ -1,0 +1,152 @@
+{
+  "batch_id": "phase-1db1-offline-20260718",
+  "real_http_requests": 0,
+  "response_count": 12,
+  "items": [
+    {
+      "fixture_id": "A1-short-dialogue",
+      "response_hash": "de7277c583b2fc3a2c6112fe9c4c5f7f3e6f83c612eb2a8981c83e9720953382",
+      "contract_version": "reader_journey_scene=1.2 / chapter=1.0 / scene_analysis=v1",
+      "parser_version": "pydantic+FakeProvider",
+      "expected_validity": "valid",
+      "expected_failure_type": null,
+      "analysis_run_id": 1,
+      "reader_journey_run_id": 1,
+      "journey_status": "succeeded",
+      "fake_provider_http": 0
+    },
+    {
+      "fixture_id": "A2-medium-action",
+      "response_hash": "8b74f9a0b8957b6efd04647d79b3227a44f108eeb7cb68ffee3d1e1e60fc4b3a",
+      "contract_version": "reader_journey_scene=1.2 / chapter=1.0 / scene_analysis=v1",
+      "parser_version": "pydantic+FakeProvider",
+      "expected_validity": "valid",
+      "expected_failure_type": null,
+      "analysis_run_id": 2,
+      "reader_journey_run_id": 2,
+      "journey_status": "succeeded",
+      "fake_provider_http": 0
+    },
+    {
+      "fixture_id": "A3-long-suspense",
+      "response_hash": "944331ba4c070e4357c312dc079119171dfcab3de49c4587c52f3ff650c7d248",
+      "contract_version": "reader_journey_scene=1.2 / chapter=1.0 / scene_analysis=v1",
+      "parser_version": "pydantic+FakeProvider",
+      "expected_validity": "valid",
+      "expected_failure_type": null,
+      "analysis_run_id": 3,
+      "reader_journey_run_id": 3,
+      "journey_status": "succeeded",
+      "fake_provider_http": 0
+    },
+    {
+      "fixture_id": "A4-near-limit-info",
+      "response_hash": "f5499bba84ca88ed017eb2e8aae1549645865e3d8d360988f75ef3076b08951e",
+      "contract_version": "reader_journey_scene=1.2 / chapter=1.0 / scene_analysis=v1",
+      "parser_version": "pydantic+FakeProvider",
+      "expected_validity": "valid",
+      "expected_failure_type": null,
+      "analysis_run_id": 4,
+      "reader_journey_run_id": 4,
+      "journey_status": "succeeded",
+      "fake_provider_http": 0
+    },
+    {
+      "fixture_id": "B1-short-emotion",
+      "response_hash": "de5b022af427fb31da48912d4698a1d516e36eb4463590a814cbe765cf676448",
+      "contract_version": "reader_journey_scene=1.2 / chapter=1.0 / scene_analysis=v1",
+      "parser_version": "pydantic+FakeProvider",
+      "expected_validity": "valid",
+      "expected_failure_type": null,
+      "analysis_run_id": 5,
+      "reader_journey_run_id": 5,
+      "journey_status": "succeeded",
+      "fake_provider_http": 0
+    },
+    {
+      "fixture_id": "B2-medium-description",
+      "response_hash": "326060f7ad17abead5bb968f89f5fcc4a3b46ea7a1fe2d029ba9316f83350076",
+      "contract_version": "reader_journey_scene=1.2 / chapter=1.0 / scene_analysis=v1",
+      "parser_version": "pydantic+FakeProvider",
+      "expected_validity": "valid",
+      "expected_failure_type": null,
+      "analysis_run_id": 6,
+      "reader_journey_run_id": 6,
+      "journey_status": "succeeded",
+      "fake_provider_http": 0
+    },
+    {
+      "fixture_id": "B3-long-payoff",
+      "response_hash": "4d97677f3c9f3109d59c96b89d8f5b199f8d4be9d1ba6fcdfb364b41bc23ec30",
+      "contract_version": "reader_journey_scene=1.2 / chapter=1.0 / scene_analysis=v1",
+      "parser_version": "pydantic+FakeProvider",
+      "expected_validity": "valid",
+      "expected_failure_type": null,
+      "analysis_run_id": 7,
+      "reader_journey_run_id": 7,
+      "journey_status": "succeeded",
+      "fake_provider_http": 0
+    },
+    {
+      "fixture_id": "B4-medium-hook",
+      "response_hash": "da27fad8b8064606ffd8959ccd0b2ec4e55331fcd030c341c428bd7950641a67",
+      "contract_version": "reader_journey_scene=1.2 / chapter=1.0 / scene_analysis=v1",
+      "parser_version": "pydantic+FakeProvider",
+      "expected_validity": "valid",
+      "expected_failure_type": null,
+      "analysis_run_id": 8,
+      "reader_journey_run_id": 8,
+      "journey_status": "succeeded",
+      "fake_provider_http": 0
+    },
+    {
+      "fixture_id": "C1-short-info",
+      "response_hash": "5441d4a7d703708073a9dc2c36d4ec5b4cb43edd25b78d5fe0204a6539683cdc",
+      "contract_version": "reader_journey_scene=1.2 / chapter=1.0 / scene_analysis=v1",
+      "parser_version": "pydantic+FakeProvider",
+      "expected_validity": "valid",
+      "expected_failure_type": null,
+      "analysis_run_id": 9,
+      "reader_journey_run_id": 9,
+      "journey_status": "succeeded",
+      "fake_provider_http": 0
+    },
+    {
+      "fixture_id": "C2-medium-dialogue",
+      "response_hash": "79f67f70d80451d23018691cde9f4a083925f928b3286616152a0edaa988b91f",
+      "contract_version": "reader_journey_scene=1.2 / chapter=1.0 / scene_analysis=v1",
+      "parser_version": "pydantic+FakeProvider",
+      "expected_validity": "valid",
+      "expected_failure_type": null,
+      "analysis_run_id": 10,
+      "reader_journey_run_id": 10,
+      "journey_status": "succeeded",
+      "fake_provider_http": 0
+    },
+    {
+      "fixture_id": "C3-long-action",
+      "response_hash": "c8f2d97e378f97c3a8b8bc54f451db6a5c178df6be69b91ff3484d00f58d5af2",
+      "contract_version": "reader_journey_scene=1.2 / chapter=1.0 / scene_analysis=v1",
+      "parser_version": "pydantic+FakeProvider",
+      "expected_validity": "valid",
+      "expected_failure_type": null,
+      "analysis_run_id": 11,
+      "reader_journey_run_id": 11,
+      "journey_status": "succeeded",
+      "fake_provider_http": 0
+    },
+    {
+      "fixture_id": "C4-near-limit-mixed",
+      "response_hash": "0989f29cfd4e1a7adb00764238f5f2d2a3327a37a8e9fac4af0a5ca12a7d5847",
+      "contract_version": "reader_journey_scene=1.2 / chapter=1.0 / scene_analysis=v1",
+      "parser_version": "pydantic+FakeProvider",
+      "expected_validity": "valid",
+      "expected_failure_type": null,
+      "analysis_run_id": 12,
+      "reader_journey_run_id": 12,
+      "journey_status": "succeeded",
+      "fake_provider_http": 0
+    }
+  ],
+  "result": "PASS"
+}

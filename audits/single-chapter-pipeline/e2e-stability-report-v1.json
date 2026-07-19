@@ -1,0 +1,49 @@
+{
+  "runs": [
+    {
+      "run_index": 1,
+      "exit_code": 0,
+      "elapsed_seconds": 169.36,
+      "passed": true,
+      "summary_line": "67 passed (2.7m)",
+      "timeout_mentions": 1,
+      "retry_mentions": 0,
+      "port_cleanup": [],
+      "log_path": "D:/Dstorylens/artifacts/single-chapter-pipeline-certification/e2e-logs/e2e-run-1.log",
+      "failed_line_samples": [],
+      "captured_at": "2026-07-18T11:20:09.301682+00:00"
+    },
+    {
+      "run_index": 2,
+      "exit_code": 0,
+      "elapsed_seconds": 167.49,
+      "passed": true,
+      "summary_line": "67 passed (2.7m)",
+      "timeout_mentions": 1,
+      "retry_mentions": 0,
+      "port_cleanup": [],
+      "log_path": "D:/Dstorylens/artifacts/single-chapter-pipeline-certification/e2e-logs/e2e-run-2.log",
+      "failed_line_samples": [],
+      "captured_at": "2026-07-18T11:22:56.792299+00:00"
+    },
+    {
+      "run_index": 3,
+      "exit_code": 0,
+      "elapsed_seconds": 144.12,
+      "passed": true,
+      "summary_line": "67 passed (2.3m)",
+      "timeout_mentions": 1,
+      "retry_mentions": 0,
+      "port_cleanup": [],
+      "log_path": "D:/Dstorylens/artifacts/single-chapter-pipeline-certification/e2e-logs/e2e-run-3.log",
+      "failed_line_samples": [],
+      "captured_at": "2026-07-18T11:25:20.917546+00:00"
+    }
+  ],
+  "all_passed": true,
+  "flake_count": 0,
+  "result": "PASS",
+  "slowest_run_seconds": 169.36,
+  "note": "Three consecutive full npm run test:e2e -- --workers=1 executions; no selective retry of failed cases; port 1421 cleaned of leftover Dstorylens vite/playwright before each run.",
+  "workers": 1
+}

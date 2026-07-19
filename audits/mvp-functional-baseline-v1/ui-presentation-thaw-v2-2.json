@@ -1,0 +1,49 @@
+{
+  "baseline": "mvp-functional-baseline-v1",
+  "purpose": "phase-context-inspector-selection-behavior",
+  "thaw_id": "ui-presentation-thaw-v2-2",
+  "parent_thaw": "ui-presentation-thaw-v2.json",
+  "core_freeze_manifest": "audits/mvp-functional-baseline-v1/core-freeze-manifest.json",
+  "approved_behavior_change": {
+    "phase_click": [
+      "set activePhase",
+      "highlight phase scene range",
+      "show phase inspector"
+    ],
+    "must_not": [
+      "change activeScene automatically",
+      "change scene click semantics",
+      "change scroll spy semantics",
+      "change evidence mapping",
+      "change URL scene semantics",
+      "create second selection state"
+    ]
+  },
+  "allowed_files": [
+    {
+      "path": "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.tsx",
+      "before_sha256": "2a2e551f578cece679b4f5c8ceba5459840c9dcbf03a28221ecde5698e9dae6c",
+      "reason": "Phase click sets activePhase + inspector=phase only; does not send activeSceneOrdinal",
+      "allowed_change": "presentation|view-only|phase-inspector-selection"
+    },
+    {
+      "path": "apps/desktop/src/components/readerJourney/ReaderJourneySyncWorkspace.tsx",
+      "before_sha256": "3782130c92bd78a711a18c0b84bd9ea5d585046ab4f0dba65c152ef38bf8dd86",
+      "reason": "journey_phase path calls selectPhase without firstSceneOrdinal so Scene URL/selection is preserved",
+      "allowed_change": "presentation|phase-inspector-selection"
+    }
+  ],
+  "forbidden_behavior_changes": [
+    "useJourneySelection implementation",
+    "scroll spy",
+    "evidence mapping",
+    "scene click activeScene update",
+    "FROZEN_CORE",
+    "FROZEN_CONTRACT"
+  ],
+  "notes": [
+    "Additive to v1+v2. Does not modify core-freeze-manifest or prior thaw files.",
+    "Authorizes Phase→Context Inspector UX already shipped in 1C-C.2.5.2.",
+    "FROZEN_CORE / FROZEN_CONTRACT must never appear in allowed_files."
+  ]
+}

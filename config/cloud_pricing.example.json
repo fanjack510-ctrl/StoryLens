@@ -1,0 +1,9 @@
+{
+  "version": "unconfigured",
+  "currency": "CNY",
+  "models": {
+    "qwen3.7-plus": {"input_per_million": null, "output_per_million": null},
+    "qwen3.7-max": {"input_per_million": null, "output_per_million": null},
+    "qwen3.6-flash": {"input_per_million": null, "output_per_million": null}
+  }
+}
