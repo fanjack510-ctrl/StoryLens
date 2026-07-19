@@ -64,3 +64,20 @@ target/
 # OS
 .DS_Store
 Thumbs.db
+
+# StoryLens open source cleanup
+# Runtime artifacts
+artifacts/
+
+# Local database
+apps/api/data/
+
+# User generated data
+uploads/
+user-data/
+
+# Test cache
+test-results/
+
+# TypeScript build cache
+*.tsbuildinfo
