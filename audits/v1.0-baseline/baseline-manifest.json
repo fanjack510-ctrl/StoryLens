@@ -14,8 +14,10 @@
   "git": {
     "status_at_audit": "NOT_INITIALIZED",
     "action": "git init + initial commit + tag storylens-v1.0-baseline",
+    "branch": "main",
+    "commit": "ee51c227e69cb526f0107fe749571f424d28ba6a",
     "tag": "storylens-v1.0-baseline",
-    "note": "Prior to this baseline pass the working tree had no .git directory."
+    "note": "Prior to this baseline pass the working tree had no .git directory. Tag points at the initial baseline commit (915 files). Accidental artifacts =ro and StoryLens-source.zip were left untracked."
   },
   "related_certified_baseline": "audits/v1.0/certified-baseline/storylens-community-v1.0-certified-baseline.json",
   "artifacts": [
