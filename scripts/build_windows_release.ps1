@@ -85,9 +85,17 @@ try {
             if ($LASTEXITCODE) { throw "npm install failed" }
         }
         Write-Step "Frontend build (vite)"
-        # Use vite directly: full `tsc -b` currently includes legacy e2e typing debts.
-        & npx.cmd vite build
-        if ($LASTEXITCODE) { throw "frontend build failed" }
+        # Use vite directly: full `tsc -b` is covered by npm run typecheck / typecheck:e2e.
+        # Vite may write chunk-size warnings to stderr; with ErrorActionPreference=Stop that
+        # becomes a terminating NativeCommandError even when exit code is 0.
+        $prevEap = $ErrorActionPreference
+        $ErrorActionPreference = "Continue"
+        try {
+            & npx.cmd vite build
+            if ($LASTEXITCODE) { throw "frontend build failed" }
+        } finally {
+            $ErrorActionPreference = $prevEap
+        }
         $Summary.frontend = "ok"
     } finally {
         Pop-Location
@@ -106,8 +114,14 @@ try {
     Write-Step "Tauri Windows installer"
     Push-Location (Join-Path $Root "apps\desktop")
     try {
-        & npm.cmd run tauri -- build --bundles nsis
-        if ($LASTEXITCODE) { throw "tauri build failed" }
+        $prevEap = $ErrorActionPreference
+        $ErrorActionPreference = "Continue"
+        try {
+            & npm.cmd run tauri -- build --bundles nsis
+            if ($LASTEXITCODE) { throw "tauri build failed" }
+        } finally {
+            $ErrorActionPreference = $prevEap
+        }
         $Summary.tauri = "ok"
     } finally {
         Pop-Location

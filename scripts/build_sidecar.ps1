@@ -8,18 +8,25 @@ if (-not (Test-Path $Python)) {
     throw "Missing .venv. Run .\scripts\bootstrap.ps1 first."
 }
 
-Write-Host "==> Ensuring PyInstaller"
-& $Python -m pip install -q "pyinstaller>=6.3"
-if ($LASTEXITCODE) { exit $LASTEXITCODE }
-
 $OutDir = Join-Path $Root "apps\api\dist-sidecar"
 $WorkDir = Join-Path $Root "apps\api\build\pyinstaller"
 $Spec = Join-Path $Root "apps\api\storylens-api.spec"
 New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
 
-Write-Host "==> PyInstaller sidecar"
-& $Python -m PyInstaller --noconfirm --clean --distpath $OutDir --workpath $WorkDir $Spec
-if ($LASTEXITCODE) { exit $LASTEXITCODE }
+Write-Host "==> Ensuring PyInstaller"
+# Native tools often write progress to stderr; do not treat that as terminating under Stop.
+$prevEap = $ErrorActionPreference
+$ErrorActionPreference = "Continue"
+try {
+    & $Python -m pip install -q "pyinstaller>=6.3"
+    if ($LASTEXITCODE) { exit $LASTEXITCODE }
+
+    Write-Host "==> PyInstaller sidecar"
+    & $Python -m PyInstaller --noconfirm --clean --distpath $OutDir --workpath $WorkDir $Spec
+    if ($LASTEXITCODE) { exit $LASTEXITCODE }
+} finally {
+    $ErrorActionPreference = $prevEap
+}
 
 $Built = Join-Path $OutDir "storylens-api.exe"
 if (-not (Test-Path $Built)) {
