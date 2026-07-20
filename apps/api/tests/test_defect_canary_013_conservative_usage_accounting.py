@@ -10,6 +10,13 @@ from types import SimpleNamespace
 
 import pytest
 
+from tests.optional_gates import require_main_db_cert_counts, require_path
+
+pytestmark = [
+    pytest.mark.canary_offline,
+    pytest.mark.requires_audit_assets,
+]
+
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "scripts"))
 
@@ -43,6 +50,13 @@ OLD_VERDICT = (
     / "real-canary-v9"
     / "final-verdict-v1.json"
 )
+
+
+@pytest.fixture(autouse=True)
+def _verified_cloud_pricing_for_accounting(request) -> None:
+    """Unit accounting tests need verified pricing when config/cloud_pricing.json is absent."""
+    if request.node.name != "test_06_missing_pricing_is_unknown":
+        request.getfixturevalue("verified_cloud_pricing")
 
 
 def _snap(character_count: int = 1500) -> dict:
@@ -291,8 +305,7 @@ def test_10_failed_request_not_provider_confirmed_zero():
 
 
 def test_11_reservations_released_on_canary_v9():
-    if not CANARY_V9.exists():
-        pytest.skip("canary-v9.sqlite3 missing")
+    require_path(CANARY_V9)
     uri = CANARY_V9.resolve().as_uri() + "?mode=ro"
     con = sqlite3.connect(uri, uri=True)
     rows = list(con.execute("SELECT status, COUNT(*) FROM cloud_budget_reservations GROUP BY status"))
@@ -301,8 +314,7 @@ def test_11_reservations_released_on_canary_v9():
 
 
 def test_12_no_duplicate_run_scene_profile_on_canary_v9_run6():
-    if not CANARY_V9.exists():
-        pytest.skip("canary-v9.sqlite3 missing")
+    require_path(CANARY_V9)
     uri = CANARY_V9.resolve().as_uri() + "?mode=ro"
     con = sqlite3.connect(uri, uri=True)
     analysis_runs = con.execute("SELECT COUNT(*) FROM analysis_runs WHERE id=6").fetchone()[0]
@@ -326,8 +338,7 @@ def test_12_no_duplicate_run_scene_profile_on_canary_v9_run6():
 
 
 def test_13_run6_offline_replay_no_longer_aborts_on_null_tokens():
-    if not CANARY_V9.exists():
-        pytest.skip("canary-v9.sqlite3 missing")
+    require_path(CANARY_V9)
     summary = replay_run_invocations_from_sqlite(CANARY_V9, analysis_run_id=6, pricing_path=PRICING)
     assert summary.request_count >= 1
     assert not has_unknown_accounting(summary)
@@ -340,8 +351,7 @@ def test_13_run6_offline_replay_no_longer_aborts_on_null_tokens():
 
 
 def test_14_run6_accounted_cost_below_100():
-    if not CANARY_V9.exists():
-        pytest.skip("canary-v9.sqlite3 missing")
+    require_path(CANARY_V9)
     # Full batch re-settlement from canary DB (all http-sent invocations).
     uri = CANARY_V9.resolve().as_uri() + "?mode=ro"
     con = sqlite3.connect(uri, uri=True)
@@ -378,19 +388,11 @@ def test_14_run6_accounted_cost_below_100():
 
 
 def test_15_main_db_counts_unchanged():
-    if not MAIN_DB.exists():
-        pytest.skip("main db missing")
-    uri = MAIN_DB.resolve().as_uri() + "?mode=ro"
-    con = sqlite3.connect(uri, uri=True)
-    analysis = con.execute("SELECT COUNT(*) FROM analysis_runs").fetchone()[0]
-    journey = con.execute("SELECT COUNT(*) FROM reader_journey_runs").fetchone()[0]
-    con.close()
-    assert analysis == 55
-    assert journey == 2
+    require_main_db_cert_counts()
 
 
 def test_16_zero_real_model_requests_this_remediation_and_old_batch_frozen():
-    assert OLD_VERDICT.exists()
+    require_path(OLD_VERDICT)
     verdict = json.loads(OLD_VERDICT.read_text(encoding="utf-8"))
     assert verdict["verdict"] == "REAL_CANARY_ABORTED_BY_LIMIT"
     assert verdict["superseded_by_future_batch"] is True

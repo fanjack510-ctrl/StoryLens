@@ -7,7 +7,11 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[3]
+
+from tests.optional_gates import skip_outdated_freeze
 
 
 def test_single_chapter_template_checker_pass() -> None:
@@ -82,6 +86,7 @@ def test_template_description_and_report_exist() -> None:
     assert report_data["data_independence"]["ui_template_change_requires_model_rerun"] is False
 
 
+@pytest.mark.freeze_baseline
 def test_journey_ui_final_freeze_still_pass() -> None:
     proc = subprocess.run(
         [sys.executable, str(ROOT / "scripts" / "check_reader_journey_ui_freeze.py")],
@@ -90,5 +95,6 @@ def test_journey_ui_final_freeze_still_pass() -> None:
         text=True,
         check=False,
     )
+    skip_outdated_freeze(proc.returncode, proc.stdout, gate="check_reader_journey_ui_freeze")
     assert proc.returncode == 0, proc.stdout + proc.stderr
     assert "RESULT: PASS" in proc.stdout

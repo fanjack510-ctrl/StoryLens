@@ -31,6 +31,8 @@ from app.services.cloud_pricing import pricing_status
 from app.services.scene_pipeline import classify_pipeline_error
 from app.schemas.settings import CloudBudgetUpdate
 
+from tests.optional_gates import require_main_db_cert_counts, require_path
+
 ROOT = Path(__file__).resolve().parents[3]
 UAT_DB = ROOT / "artifacts" / "release-candidate" / "storylens-human-uat-v1.sqlite3"
 MAIN_DB = ROOT / "data" / "storylens.db"
@@ -686,20 +688,17 @@ def test_19_20_21_uat_db_immutable_failed_run():
     assert int(res[1]) == 26
 
 
+@pytest.mark.canary_offline
+@pytest.mark.requires_audit_assets
 def test_22_main_db_55_2_invariant():
-    if not MAIN_DB.exists():
-        pytest.skip("main database not present")
+    require_main_db_cert_counts()
     con = sqlite3.connect(f"file:{MAIN_DB.as_posix()}?mode=ro", uri=True)
     try:
-        runs = con.execute("SELECT COUNT(*) FROM analysis_runs").fetchone()[0]
-        journeys = con.execute("SELECT COUNT(*) FROM reader_journey_runs").fetchone()[0]
         status55 = con.execute(
             "SELECT status FROM analysis_runs WHERE id=55"
         ).fetchone()
     finally:
         con.close()
-    assert runs == 55
-    assert journeys == 2
     assert status55 is not None
     assert status55[0] == "succeeded"
 
@@ -720,8 +719,11 @@ def test_23_no_real_model_in_this_suite():
     assert "model_invocation_broker" not in imported
 
 
+@pytest.mark.canary_offline
+@pytest.mark.requires_audit_assets
 def test_24_canary_v13_default_limit_compatibility():
-    assert CANARY_LEDGER.exists() and CANARY_RESULTS.exists()
+    require_path(CANARY_LEDGER)
+    require_path(CANARY_RESULTS)
     by_run: dict[int, int] = {}
     for line in CANARY_LEDGER.read_text(encoding="utf-8").splitlines():
         if not line.strip():

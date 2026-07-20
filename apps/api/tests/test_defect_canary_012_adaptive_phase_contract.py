@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import sqlite3
 from pathlib import Path
 
 import pytest
@@ -21,8 +20,14 @@ from app.services.reader_journey_validation import (
 )
 from app.services.validation_errors import StructuralValidationError
 
+from tests.optional_gates import require_main_db_cert_counts, require_path
+
+pytestmark = [
+    pytest.mark.canary_offline,
+    pytest.mark.requires_audit_assets,
+]
+
 ROOT = Path(__file__).resolve().parents[3]
-MAIN_DB = ROOT / "data" / "storylens.db"
 A2_CHAPTER = (
     ROOT
     / "audits"
@@ -175,6 +180,8 @@ def test_phase_range_noncontiguous_fail():
 
 
 def test_a2_offline_failure_now_passes_without_forcing_three_phases():
+    require_path(A2_CHAPTER)
+    require_path(A2_REPAIR)
     payload = json.loads(A2_CHAPTER.read_text(encoding="utf-8"))
     result = ChapterReaderJourneySynthesisResult.model_validate(payload)
     assert len(result.phases) == 2
@@ -208,14 +215,7 @@ def test_valid_short_phase_count_must_not_be_treated_as_count_error():
 
 
 def test_main_db_invariant_55_2():
-    if not MAIN_DB.exists():
-        pytest.skip("main db missing")
-    uri = MAIN_DB.resolve().as_uri() + "?mode=ro"
-    con = sqlite3.connect(uri, uri=True)
-    ar = con.execute("select count(*) from analysis_runs").fetchone()[0]
-    jr = con.execute("select count(*) from reader_journey_runs").fetchone()[0]
-    con.close()
-    assert (ar, jr) == (55, 2)
+    require_main_db_cert_counts()
 
 
 def test_no_real_model_marker():
