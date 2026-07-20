@@ -144,7 +144,64 @@ fn spawn_sidecar(path: &PathBuf, port: u16, log_dir: &PathBuf) -> Result<Child, 
     Ok(child)
 }
 
-fn wait_for_health(port: u16, child: &Arc<Mutex<Child>>) -> Result<(), BackendError> {
+const MAX_PORT_ATTEMPTS: u32 = 3;
+
+fn sidecar_stderr_log_path(log_dir: &PathBuf) -> PathBuf {
+    log_dir.join("sidecar-stderr.log")
+}
+
+fn read_sidecar_error_token(log_dir: &PathBuf) -> Option<String> {
+    let path = sidecar_stderr_log_path(log_dir);
+    let content = std::fs::read_to_string(path).ok()?;
+    for line in content.lines().rev().take(40) {
+        if let Some(rest) = line.strip_prefix("STORYLENS_SIDECAR_ERROR=") {
+            return Some(rest.to_string());
+        }
+    }
+    None
+}
+
+fn map_sidecar_token_to_user_message(token: &str) -> Option<String> {
+    if token.starts_with("DATA_DIR_NOT_WRITABLE") {
+        return Some(
+            "无法写入 StoryLens 数据目录。请检查磁盘空间与文件夹权限，或更换安装位置后重试。".into(),
+        );
+    }
+    if token.starts_with("PORT_OR_BIND_FAILED") {
+        return Some(
+            "本地分析服务端口被占用。请关闭占用端口的程序后重试。".into(),
+        );
+    }
+    None
+}
+
+fn should_retry_port(err: &BackendError, log_dir: &PathBuf, attempt: u32) -> bool {
+    if attempt >= MAX_PORT_ATTEMPTS {
+        return false;
+    }
+    if err.detail.contains("health check timeout") {
+        return false;
+    }
+    if err.detail.contains("sidecar exited during health wait") {
+        if let Some(token) = read_sidecar_error_token(log_dir) {
+            if token.starts_with("DATA_DIR_NOT_WRITABLE") {
+                return false;
+            }
+            if token.starts_with("PORT_OR_BIND_FAILED") {
+                return true;
+            }
+        }
+        // Unknown early exit: one retry may help transient bind races.
+        return attempt + 1 < MAX_PORT_ATTEMPTS;
+    }
+    false
+}
+
+fn wait_for_health(
+    port: u16,
+    child: &Arc<Mutex<Child>>,
+    log_dir: &PathBuf,
+) -> Result<(), BackendError> {
     let url = format!("http://127.0.0.1:{port}/health");
     let deadline = Instant::now() + Duration::from_secs(60);
     let agent = ureq::AgentBuilder::new()
@@ -156,9 +213,18 @@ fn wait_for_health(port: u16, child: &Arc<Mutex<Child>>) -> Result<(), BackendEr
         if let Ok(mut guard) = child.lock() {
             match guard.try_wait() {
                 Ok(Some(status)) => {
+                    let mut user_message =
+                        "本地分析服务意外退出。请重启 StoryLens；若反复出现，请重新安装。".to_string();
+                    let mut detail = format!("sidecar exited during health wait: {status}");
+                    if let Some(token) = read_sidecar_error_token(log_dir) {
+                        detail = format!("{detail}; token={token}");
+                        if let Some(mapped) = map_sidecar_token_to_user_message(&token) {
+                            user_message = mapped;
+                        }
+                    }
                     return Err(BackendError {
-                        user_message: "本地分析服务意外退出。请重启 StoryLens；若反复出现，请重新安装。".into(),
-                        detail: format!("sidecar exited during health wait: {status}"),
+                        user_message,
+                        detail,
                     });
                 }
                 Ok(None) => {}
@@ -208,34 +274,53 @@ pub fn start_backend(app: &AppHandle) -> Result<(), BackendError> {
         guard.status = BackendStatus::Starting;
     }
 
-    let port = find_free_port()?;
     let sidecar = resolve_sidecar(app)?;
     let log_dir = user_log_dir();
-    let child = spawn_sidecar(&sidecar, port, &log_dir)?;
-    let child = Arc::new(Mutex::new(child));
 
-    {
-        let mut guard = state.lock().map_err(|e| BackendError {
-            user_message: "应用内部状态异常，请重启 StoryLens。".into(),
-            detail: e.to_string(),
-        })?;
-        guard.child = Some(child.clone());
+    let mut port = 0u16;
+    let mut child: Option<Arc<Mutex<Child>>> = None;
+
+    for attempt in 0..MAX_PORT_ATTEMPTS {
+        port = find_free_port()?;
+        let spawned = spawn_sidecar(&sidecar, port, &log_dir)?;
+        let spawned = Arc::new(Mutex::new(spawned));
+        child = Some(spawned.clone());
+
+        {
+            let mut guard = state.lock().map_err(|e| BackendError {
+                user_message: "应用内部状态异常，请重启 StoryLens。".into(),
+                detail: e.to_string(),
+            })?;
+            guard.child = Some(spawned.clone());
+        }
+
+        match wait_for_health(port, &spawned, &log_dir) {
+            Ok(()) => break,
+            Err(err) => {
+                if let Ok(mut guard) = spawned.lock() {
+                    let _ = guard.kill();
+                    let _ = guard.wait();
+                }
+                if should_retry_port(&err, &log_dir, attempt) {
+                    continue;
+                }
+                if let Ok(mut guard) = state.lock() {
+                    guard.child = None;
+                    guard.status = BackendStatus::Failed {
+                        user_message: err.user_message.clone(),
+                        detail: err.detail.clone(),
+                    };
+                }
+                return Err(err);
+            }
+        }
     }
 
-    if let Err(err) = wait_for_health(port, &child) {
-        if let Ok(mut guard) = child.lock() {
-            let _ = guard.kill();
-            let _ = guard.wait();
-        }
-        if let Ok(mut guard) = state.lock() {
-            guard.child = None;
-            guard.status = BackendStatus::Failed {
-                user_message: err.user_message.clone(),
-                detail: err.detail.clone(),
-            };
-        }
-        return Err(err);
-    }
+    let child = child.ok_or_else(|| BackendError {
+        user_message: "本地分析服务启动失败。请重新安装后重试。".into(),
+        detail: "no sidecar child after port attempts".into(),
+    })?;
+
     let api_base = format!("http://127.0.0.1:{port}");
 
     {

@@ -117,7 +117,9 @@
 | `./scripts/build_windows_release.ps1` | 生成 NSIS：`dist/release/StoryLens_0.1.0_x64-setup.exe`；含 sidecar |
 | 安装包含 sidecar | 通过（`externalBin` + release 目录旁路拷贝） |
 | 未装 Python 理论可运行 | 通过（sidecar 为独立 exe，`runw` 无控制台） |
-| sidecar `/health` | 通过（临时数据目录 smoke） |
+| `scripts/smoke_windows_release.ps1` | 通过（pytest + 可选 sidecar `/health` + 产物门禁） |
+| `scripts/check_release_artifacts.ps1` | 通过（安装包/sidecar/摘要/无私钥/未暂存 sidecar exe） |
+| 端口占用重试 / 数据目录不可写中文错误 | 代码路径已加固（sidecar token + Tauri 最多 3 次端口重试） |
 | 应用启动自动起后端 | 未验证（未做完整安装后 GUI 手工验收） |
 | 退出关闭后端 | 未验证（代码路径已实现 `CloseRequested` → kill） |
 | 用户库在安装目录外 | 未验证（代码默认 `%LOCALAPPDATA%/StoryLens/`；需安装后确认） |

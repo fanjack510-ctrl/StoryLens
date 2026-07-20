@@ -146,7 +146,12 @@ try {
     $Summary.finished_at = (Get-Date).ToString("o")
 
     $SummaryPath = Join-Path $ReleaseDir "build-summary.json"
-    $Summary | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $SummaryPath -Encoding UTF8
+    $utf8 = New-Object System.Text.UTF8Encoding $false
+    [System.IO.File]::WriteAllText($SummaryPath, ($Summary | ConvertTo-Json -Depth 6), $utf8)
+
+    Write-Step "Release artifact gates"
+    & (Join-Path $Root "scripts\check_release_artifacts.ps1") -ReleaseDir $ReleaseDir
+    if ($LASTEXITCODE) { throw "release artifact gates failed" }
 
     Write-Host ""
     Write-Host "BUILD OK" -ForegroundColor Green
@@ -161,7 +166,10 @@ try {
     $Summary.finished_at = (Get-Date).ToString("o")
     $ReleaseDir = Join-Path $Root "dist\release"
     New-Item -ItemType Directory -Force -Path $ReleaseDir | Out-Null
-    $Summary | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $ReleaseDir "build-summary.json") -Encoding UTF8
+    $Summary | ConvertTo-Json -Depth 6 | ForEach-Object {
+        $utf8 = New-Object System.Text.UTF8Encoding $false
+        [System.IO.File]::WriteAllText((Join-Path $ReleaseDir "build-summary.json"), $_, $utf8)
+    }
     Write-Host "BUILD FAILED: $($_.Exception.Message)" -ForegroundColor Red
     exit 1
 } finally {

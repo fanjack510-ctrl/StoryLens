@@ -21,9 +21,21 @@ def _prepare() -> None:
         os.environ.setdefault("STORYLENS_APP_ENV", "production")
     else:
         os.environ.setdefault("STORYLENS_APP_ENV", "development")
-    from app.core.paths import apply_runtime_path_defaults, user_data_layout
+    from app.core.paths import apply_runtime_path_defaults
 
-    layout = apply_runtime_path_defaults()
+    try:
+        layout = apply_runtime_path_defaults()
+    except RuntimeError as exc:
+        message = str(exc)
+        if "DATA_DIR_NOT_WRITABLE" in message:
+            logging.basicConfig(level=logging.ERROR, stream=sys.stderr)
+            logging.error(message)
+            print(
+                f"STORYLENS_SIDECAR_ERROR=DATA_DIR_NOT_WRITABLE:{message}",
+                file=sys.stderr,
+            )
+            raise SystemExit(4) from exc
+        raise
     log_dir = layout["logs"]
     logging.basicConfig(
         level=logging.INFO,
@@ -61,6 +73,7 @@ def main() -> int:
             port=port,
             log_level="info",
             access_log=False,
+            log_config=None,
         )
     except OSError as exc:
         logging.exception("Backend bind/start failed: %s", exc)
