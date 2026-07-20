@@ -22,6 +22,7 @@ import { settingsApi } from "../../services/settingsApi";
 import { useAdvancedSettingsStore } from "../../stores/advancedSettingsStore";
 import { useDeveloperModeStore } from "../../stores/developerModeStore";
 import { Loading } from "../common/States";
+import "./settings.css";
 
 type Props = {
   autoOpenWizard?: boolean;
@@ -94,9 +95,13 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
     ],
   );
 
-  const statusLabel = setup.data?.provider_eligible
+  const eligible = setup.data?.provider_eligible === true;
+  const rawMessage = setup.data?.user_message || view.userStatusLabel;
+  const statusLabel = eligible
     ? "已连接，可以开始分析"
-    : setup.data?.user_message || view.userStatusLabel;
+    : /可以开始分析/.test(rawMessage)
+      ? view.userStatusLabel
+      : rawMessage;
 
   const modeToSave = (
     showAdvanced && analysisMode === "CUSTOM"
@@ -184,8 +189,12 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
     );
   }
 
+  const apiKeyConfigured = setup.data?.credential_configured || view.apiKeyConfigured;
+  const providerEnabled = setup.data?.provider_enabled || view.providerEnabled;
+  const cloudEnabled = setup.data?.cloud_enabled || view.cloudEnabled;
+
   return (
-    <article className="settings-panel" data-testid="settings-panel-ai-service">
+    <article className="settings-panel settings-module" data-testid="settings-panel-ai-service">
       <header className="settings-panel-header">
         <h2>AI 服务</h2>
         <p>连接阿里云百炼完成章节分析。Endpoint 与模型 ID 将随分析模式自动配置。</p>
@@ -196,18 +205,18 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
           <div>
             <p className="eyebrow">连接状态</p>
             <span
-              className={`ai-status-badge ${setup.data?.provider_eligible ? "ok" : "warn"}`}
+              className={`ai-status-badge ${eligible ? "ok" : "warn"}`}
               data-testid="ai-service-connection-status"
             >
               {statusLabel}
             </span>
           </div>
         </div>
-        <ul className="ai-status-facts" data-testid="ai-service-status-facts">
-          <li>凭据：{setup.data?.credential_configured || view.apiKeyConfigured ? "已配置" : "未配置"}</li>
-          <li>Provider：{setup.data?.provider_enabled || view.providerEnabled ? "已启用" : "未启用"}</li>
-          <li>云端连接：{setup.data?.cloud_enabled || view.cloudEnabled ? "已开启" : "未开启"}</li>
-          <li>可用于分析：{setup.data?.provider_eligible ? "是" : "否"}</li>
+        <ul className="ai-status-facts settings-ai-facts" data-testid="ai-service-status-facts">
+          <li>API Key：{apiKeyConfigured ? "已配置" : "未配置"}</li>
+          <li>Provider：{providerEnabled ? "已启用" : "未启用"}</li>
+          <li>云端连接：{cloudEnabled ? "已开启" : "未开启"}</li>
+          <li>可用于分析：{eligible ? "是" : "否"}</li>
           <li data-testid="ai-service-default-provider-label">
             默认服务：阿里云百炼（推荐）
           </li>
@@ -247,7 +256,7 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
             aria-label="API Key"
             data-testid="ai-api-key-input"
             placeholder={
-              setup.data?.credential_configured || view.apiKeyConfigured
+              apiKeyConfigured
                 ? "已配置；留空表示不修改"
                 : "粘贴你的 API Key"
             }
@@ -256,7 +265,7 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
         </label>
         <p className="hint" data-testid="ai-service-api-key-state">
           凭据状态：
-          {setup.data?.credential_configured || view.apiKeyConfigured ? "已配置" : "未配置"}
+          {apiKeyConfigured ? "已配置" : "未配置"}
           （界面不会显示完整 Key）
         </p>
 
@@ -281,7 +290,7 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
         <button
           type="button"
           data-testid="ai-service-test"
-          disabled={busy || (!(setup.data?.credential_configured || view.apiKeyConfigured) && !apiKey)}
+          disabled={busy || (!apiKeyConfigured && !apiKey)}
           onClick={() => void onTest()}
         >
           {busy ? "测试中…" : "测试连接"}
@@ -290,7 +299,7 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
           type="button"
           className="primary"
           data-testid="ai-service-save"
-          disabled={busy || (!apiKey && !(setup.data?.credential_configured || view.apiKeyConfigured))}
+          disabled={busy || (!apiKey && !apiKeyConfigured)}
           onClick={() => void onSave()}
         >
           {busy ? "保存中…" : "保存"}
@@ -304,7 +313,7 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
           <button
             type="button"
             data-testid="ai-service-disconnect"
-            disabled={busy || !(setup.data?.credential_configured || view.apiKeyConfigured)}
+            disabled={busy || !apiKeyConfigured}
             onClick={() => void disconnect()}
           >
             断开连接

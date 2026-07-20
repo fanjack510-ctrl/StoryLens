@@ -8,6 +8,7 @@ import { SettingsPrivacyUpdateTab } from "../components/settings/SettingsPrivacy
 import { SettingsLicenseTab } from "../components/settings/SettingsLicenseTab";
 import { SettingsAppearanceTab } from "../components/settings/SettingsAppearanceTab";
 import { SettingsAdvancedTab } from "../components/settings/SettingsAdvancedTab";
+import "../components/settings/settings.css";
 
 type TabId =
   | "ai"

@@ -5,6 +5,22 @@ import {
   MOCK_ACTIVATION_CODES,
 } from "../../services/license";
 import { licenseStatusLabel, useLicenseStore } from "../../stores/license";
+import type { LicenseStatus } from "../../services/license";
+import "./settings.css";
+
+function statusTone(status: LicenseStatus): "success" | "warning" | "danger" | "neutral" {
+  switch (status) {
+    case "VIP_ACTIVE":
+      return "success";
+    case "VIP_OFFLINE_GRACE":
+      return "warning";
+    case "VIP_EXPIRED":
+    case "VIP_INVALID":
+      return "danger";
+    default:
+      return "neutral";
+  }
+}
 
 /** VIP license settings card; wired via SettingsLicenseTab. Commerce remains 即将开放. */
 export function LicenseSettingsCard() {
@@ -35,10 +51,10 @@ export function LicenseSettingsCard() {
   }, [hydrated, hydrate]);
 
   return (
-    <article className="settings-panel" data-testid="license-settings-card">
+    <article className="settings-panel settings-module" data-testid="license-settings-card">
       <header className="settings-panel-header">
-        <h2>VIP 授权</h2>
-        <p>本地优先授权基础。真实购买与远程验签即将开放，当前不限制已有功能。</p>
+        <h2>授权与会员</h2>
+        <p>本地优先授权。真实购买与远程验签即将开放；当前不限制已有功能。</p>
       </header>
 
       <div className="settings-fields">
@@ -49,13 +65,18 @@ export function LicenseSettingsCard() {
 
         <div className="settings-field" data-testid="license-status">
           <span>授权状态</span>
-          <strong>{licenseStatusLabel(status)}</strong>
+          <span className="settings-status-pill" data-tone={statusTone(status)}>
+            {licenseStatusLabel(status)}
+          </span>
+          <code className="settings-tech-id" title="状态码">
+            {status}
+          </code>
         </div>
 
         {license && (
           <div className="settings-field" data-testid="license-meta">
             <span>授权信息</span>
-            <small>
+            <small className="settings-license-meta">
               ID：{license.license_id}
               {license.expires_at ? ` · 到期：${license.expires_at.slice(0, 10)}` : " · 无到期日"}
               {license.last_verified_at
@@ -70,6 +91,15 @@ export function LicenseSettingsCard() {
             购买 VIP：即将开放。本阶段不展示价格，也不跳转无效购买地址。
           </p>
         )}
+      </div>
+
+      <section className="settings-license-activate" data-testid="license-activate-zone">
+        <h3>激活码</h3>
+        <p className="zone-hint">
+          {mockAllowed
+            ? "开发环境可使用 Mock 激活码验证状态流转；正式构建不会启用 DEV Mock。"
+            : "正式购买通道即将开放。激活入口已预留，当前不会启用额外 VIP 限制。"}
+        </p>
 
         {usingMockService && mockAllowed && (
           <p className="muted" data-testid="license-mock-notice">
@@ -80,7 +110,7 @@ export function LicenseSettingsCard() {
         )}
 
         <label className="settings-field">
-          <span>激活码</span>
+          <span>输入激活码</span>
           <input
             type="text"
             value={code}
@@ -91,35 +121,35 @@ export function LicenseSettingsCard() {
             onChange={(e) => setCode(e.target.value)}
           />
         </label>
-      </div>
 
-      <div className="settings-actions">
-        <button
-          type="button"
-          className="primary"
-          data-testid="license-activate-button"
-          disabled={!mockAllowed || busy || !code.trim()}
-          onClick={() => void activateLicense(code)}
-        >
-          {busy ? "处理中…" : mockAllowed ? "激活（Mock）" : "激活（即将开放）"}
-        </button>
-        <button
-          type="button"
-          data-testid="license-refresh-button"
-          disabled={!mockAllowed || busy}
-          onClick={() => void refreshLicense()}
-        >
-          刷新授权
-        </button>
-        <button
-          type="button"
-          data-testid="license-deactivate-button"
-          disabled={busy || status === "FREE"}
-          onClick={() => void deactivateLicense()}
-        >
-          解除本机授权
-        </button>
-      </div>
+        <div className="settings-actions">
+          <button
+            type="button"
+            className="primary"
+            data-testid="license-activate-button"
+            disabled={!mockAllowed || busy || !code.trim()}
+            onClick={() => void activateLicense(code)}
+          >
+            {busy ? "处理中…" : mockAllowed ? "激活" : "激活（即将开放）"}
+          </button>
+          <button
+            type="button"
+            data-testid="license-refresh-button"
+            disabled={!mockAllowed || busy}
+            onClick={() => void refreshLicense()}
+          >
+            刷新授权
+          </button>
+          <button
+            type="button"
+            data-testid="license-deactivate-button"
+            disabled={busy || status === "FREE"}
+            onClick={() => void deactivateLicense()}
+          >
+            解除本机授权
+          </button>
+        </div>
+      </section>
 
       <section data-testid="license-vip-features">
         <h3>VIP 功能说明</h3>

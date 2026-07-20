@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTelemetryStore } from "../../stores/telemetry";
+import "./settings.css";
 
 const PRIVACY_DOC_PATH = "docs/telemetry-plan.md";
 
@@ -7,6 +8,12 @@ function maskInstallId(id: string | null): string {
   if (!id) return "尚未生成（启用统计或重置后会创建）";
   if (id.length <= 8) return `${id.slice(0, 2)}…`;
   return `${id.slice(0, 4)}…${id.slice(-4)}`;
+}
+
+function consentLabel(consent: string): { text: string; tone: "neutral" | "success" | "warning" } {
+  if (consent === "ENABLED") return { text: "已启用（ENABLED）", tone: "success" };
+  if (consent === "DISABLED") return { text: "已关闭（DISABLED）", tone: "neutral" };
+  return { text: "尚未选择（UNKNOWN）", tone: "warning" };
 }
 
 export function TelemetrySettingsCard() {
@@ -22,6 +29,7 @@ export function TelemetrySettingsCard() {
   }, [refreshPreview]);
 
   const enabled = consent === "ENABLED";
+  const status = consentLabel(consent);
 
   const onToggle = (next: boolean) => {
     setMessage("");
@@ -40,11 +48,17 @@ export function TelemetrySettingsCard() {
   };
 
   return (
-    <article className="settings-panel" data-testid="telemetry-settings-card">
+    <article className="settings-card settings-panel" data-testid="telemetry-settings-card">
       <header className="settings-panel-header">
         <h2>匿名使用统计</h2>
         <p>可选、默认关闭。仅在你明确同意后才会发送汇总使用情况。</p>
       </header>
+
+      <p data-testid="telemetry-consent-status">
+        <span className="settings-status-pill" data-tone={status.tone}>
+          {status.text}
+        </span>
+      </p>
 
       <div className="settings-fields">
         <label className="settings-switch-row" data-testid="telemetry-consent-switch">

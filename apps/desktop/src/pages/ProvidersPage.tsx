@@ -3,8 +3,16 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { providersApi } from "../services/providersApi";
 import { Badge, ErrorState, Loading } from "../components/common/States";
 import { AliyunForm } from "../components/providers/AliyunForm";
+import {
+  cloudStateLabel,
+  formatUnknown,
+  healthStateLabel,
+  providerDisplayName,
+  providerListStatusLabel,
+} from "../components/providers/providerDisplayLabels";
 import { settingsApi } from "../services/settingsApi";
 import { Link } from "react-router-dom";
+import "../components/providers/providers.css";
 
 type TransportStatus = "idle" | "running" | "succeeded" | "failed";
 type RealTestStatus =
@@ -189,7 +197,6 @@ export function ProvidersPage() {
     setRealTestStatus("checking_budget");
     setRealTestError(undefined);
     try {
-      // Keep the checking state perceptible even when the local preflight is cached.
       const [preflight] = await Promise.all([
         providersApi.connectionTestPreflight(selected),
         new Promise((resolve) => window.setTimeout(resolve, 120)),
@@ -233,8 +240,10 @@ export function ProvidersPage() {
   const realTestBusy =
     realTestStatus === "checking_budget" || realTestStatus === "running";
   const realTestButtonText = realTestBusy ? "测试中……" : "真实连接测试";
+  const selectedDisplay = providerDisplayName(selected);
+
   return (
-    <section className="page">
+    <section className="page providers-page" data-testid="providers-page">
       <div className="page-title">
         <div>
           <p className="eyebrow">连接与路由</p>
@@ -244,31 +253,82 @@ export function ProvidersPage() {
       </div>
       {providers.isLoading && <Loading />}
       {providers.error && <ErrorState error={providers.error} />}
-      <div className="panel cloud-protection-summary">
-        <header><div><p className="eyebrow">云端请求保护</p><h2>预算与价格门禁</h2></div><Badge tone={blockedReasons.length ? "warning" : "success"}>{blockedReasons.length ? "已阻止收费请求" : "可用"}</Badge></header>
-        <div className="health-grid">
-          <span>云端总开关 <b>{cloud.data?.enabled ? "开启" : "关闭"}</b></span>
-          <span>预算保护 <b>{budget.data?.cloud_request_budget_enabled ? "开启" : "关闭"}</b></span>
-          <span>每日费用上限 <b>{budget.data?.cloud_daily_estimated_cost_limit ?? "-"} CNY</b></span>
-          <span>今日估算费用 <b>{usage.data?.estimated_cost ?? 0} CNY</b></span>
-          <span>今日 Token <b>{usage.data?.total_tokens ?? 0}</b></span>
-          <span>剩余预算 <b>{usage.data?.remaining_estimated_cost ?? "-"} CNY</b></span>
-          <span>价格配置 <b>{pricing.data?.enabled ? "已配置" : pricing.data?.valid ? "未验证" : "无效或未配置"}</b></span>
+
+      <section className="providers-section cloud-protection-summary panel" data-testid="cloud-protection-section">
+        <header>
+          <div>
+            <p className="eyebrow">云端请求保护</p>
+            <h2>预算与价格门禁</h2>
+          </div>
+          <Badge tone={blockedReasons.length ? "warning" : "success"}>
+            {blockedReasons.length ? "已阻止收费请求" : "可用"}
+          </Badge>
+        </header>
+        <div className="health-grid providers-health-grid">
+          <span>
+            云端总开关 <b>{cloud.data?.enabled ? "开启" : "关闭"}</b>
+          </span>
+          <span>
+            预算保护 <b>{budget.data?.cloud_request_budget_enabled ? "开启" : "关闭"}</b>
+          </span>
+          <span>
+            每日费用上限{" "}
+            <b>
+              {formatUnknown(budget.data?.cloud_daily_estimated_cost_limit, " CNY")}
+            </b>
+          </span>
+          <span>
+            今日估算费用{" "}
+            <b>
+              {usage.data == null
+                ? "—"
+                : formatUnknown(usage.data.estimated_cost, " CNY")}
+            </b>
+          </span>
+          <span>
+            今日 Token{" "}
+            <b>{usage.data == null ? "—" : formatUnknown(usage.data.total_tokens)}</b>
+          </span>
+          <span>
+            剩余预算{" "}
+            <b>{formatUnknown(usage.data?.remaining_estimated_cost, " CNY")}</b>
+          </span>
+          <span>
+            价格配置{" "}
+            <b>
+              {pricing.data?.enabled
+                ? "已配置"
+                : pricing.data?.valid
+                  ? "未验证"
+                  : "无效或未配置"}
+            </b>
+          </span>
         </div>
-        {blockedReasons.length > 0 && <p role="alert">禁用原因：{blockedReasons.join("；")}</p>}
+        {blockedReasons.length > 0 && (
+          <p role="alert">禁用原因：{blockedReasons.join("；")}</p>
+        )}
         <div className="master-actions">
-          <Link className="button" to="/settings">打开预算设置</Link>
-          <button onClick={refresh}>刷新用量</button>
-          <button onClick={() => providersApi.setCloud(false).then(refresh)}>关闭云端连接</button>
+          <Link className="button" to="/settings">
+            打开预算设置
+          </Link>
+          <button type="button" onClick={refresh}>
+            刷新用量
+          </button>
+          <button type="button" onClick={() => providersApi.setCloud(false).then(refresh)}>
+            关闭云端连接
+          </button>
         </div>
-      </div>
-      <div className="cloud-master panel">
+      </section>
+
+      <section className="providers-section cloud-master panel" data-testid="cloud-master-section">
         <div>
           <Badge tone={cloud.data?.enabled ? "success" : "neutral"}>
-            {cloud.data?.state || "disabled"}
+            {cloudStateLabel(cloud.data?.state)}
           </Badge>
           <h2>允许云端模型连接</h2>
-          <p>关闭后禁止新云端请求，保留配置、凭据和历史记录。</p>
+          <p className="providers-section-hint">
+            关闭后禁止新云端请求，保留配置、凭据和历史记录。
+          </p>
         </div>
         <label className="switch">
           <input
@@ -284,6 +344,7 @@ export function ProvidersPage() {
         </label>
         <div className="master-actions">
           <button
+            type="button"
             onClick={() =>
               providers.data
                 ?.filter((p) => p.capabilities.cloud)
@@ -293,6 +354,7 @@ export function ProvidersPage() {
             断开全部云端连接
           </button>
           <button
+            type="button"
             className="danger"
             onClick={() =>
               confirm("确认删除全部云端凭据？") &&
@@ -304,42 +366,49 @@ export function ProvidersPage() {
             删除全部云端凭据
           </button>
         </div>
-      </div>
-      <div className="provider-layout">
-        <aside className="provider-list">
-          <h3>Provider</h3>
-          {providers.data?.map((p) => (
-            <button
-              key={p.name}
-              className={selected === p.name ? "selected" : ""}
-              onClick={() => {
-                setSelected(p.name);
-                setTransportStatus("idle");
-                setTransportResult(undefined);
-                setTransportError("");
-                setRealTestStatus("idle");
-                setRealTestPreflight(undefined);
-                setRealTestResult(undefined);
-                setRealTestError(undefined);
-              }}
-            >
-              <span>
-                <b>{p.name}</b>
-                <small>{p.default_model}</small>
-              </span>
-              <Badge tone={(p.enabled ?? p.capabilities.enabled) ? "success" : "neutral"}>
-                {!(p.enabled ?? p.capabilities.enabled)
-                  ? "停用"
-                  : p.healthy
-                    ? "健康"
-                    : p.running
-                      ? "不健康"
-                      : "服务未启动"}
-              </Badge>
-            </button>
-          ))}
+      </section>
+
+      <div className="provider-layout providers-layout">
+        <aside className="provider-list providers-list providers-section" data-testid="provider-list-section">
+          <header>
+            <div>
+              <p className="eyebrow">服务</p>
+              <h3>Provider</h3>
+            </div>
+          </header>
+          {providers.data?.map((p) => {
+            const status = providerListStatusLabel(p);
+            return (
+              <button
+                key={p.name}
+                type="button"
+                className={selected === p.name ? "selected" : ""}
+                onClick={() => {
+                  setSelected(p.name);
+                  setTransportStatus("idle");
+                  setTransportResult(undefined);
+                  setTransportError("");
+                  setRealTestStatus("idle");
+                  setRealTestPreflight(undefined);
+                  setRealTestResult(undefined);
+                  setRealTestError(undefined);
+                }}
+              >
+                <span>
+                  <b>{providerDisplayName(p.name)}</b>
+                  <small className="providers-tech-id" title={p.name}>
+                    {p.name}
+                  </small>
+                  <small className="providers-tech-id" title={p.default_model}>
+                    {p.default_model}
+                  </small>
+                </span>
+                <Badge tone={status.tone}>{status.label}</Badge>
+              </button>
+            );
+          })}
           {["DeepSeek", "智谱 GLM", "Kimi"].map((p) => (
-            <button disabled key={p}>
+            <button type="button" disabled key={p}>
               <span>
                 <b>{p}</b>
                 <small>后续支持</small>
@@ -348,24 +417,28 @@ export function ProvidersPage() {
             </button>
           ))}
         </aside>
-        <article className="panel config-panel">
+
+        <article className="panel config-panel providers-section providers-config-panel">
           <header>
             <div>
               <p className="eyebrow">当前配置</p>
-              <h2>{selected}</h2>
+              <h2>{selectedDisplay}</h2>
+              <code className="providers-tech-id">{selected}</code>
             </div>
             <Badge>
-              {providers.data?.find((p) => p.name === selected)?.capabilities
-                .region || "local"}
+              {providers.data?.find((p) => p.name === selected)?.capabilities.region ||
+                "local"}
             </Badge>
           </header>
           {selected.startsWith("aliyun_") ? (
             <>
-              {selected === "aliyun_qwen_plus" && <div className="notice">
-                <b>能力状态</b>
-                <span>结构化输出通过 · Scene Analysis通过 · 场景边界需人工确认</span>
-                <span>不参与全自动路由</span>
-              </div>}
+              {selected === "aliyun_qwen_plus" && (
+                <div className="notice">
+                  <b>能力状态</b>
+                  <span>结构化输出通过 · Scene Analysis通过 · 场景边界需人工确认</span>
+                  <span>不参与全自动路由</span>
+                </div>
+              )}
               <div className="panel" data-testid="transport-diagnostic-panel">
                 <header>
                   <div>
@@ -374,7 +447,7 @@ export function ProvidersPage() {
                     <p>传输诊断不会调用模型，不消耗Token。</p>
                   </div>
                   <Badge tone={providerEnabled ? "success" : "neutral"}>
-                    {providerEnabled ? "已启用" : "停用"}
+                    {providerEnabled ? "已启用" : "已停用"}
                   </Badge>
                 </header>
                 <div className="master-actions">
@@ -396,14 +469,21 @@ export function ProvidersPage() {
                     {realTestButtonText}
                   </button>
                 </div>
-                <p className="notice">真实连接测试将发送原创最小请求，可能产生少量Token费用。</p>
-                {transportError && <p role="alert" data-testid="transport-diagnostic-error">{transportError}</p>}
+                <p className="notice">
+                  真实连接测试将发送原创最小请求，可能产生少量Token费用。
+                </p>
+                {transportError && (
+                  <p role="alert" data-testid="transport-diagnostic-error">
+                    {transportError}
+                  </p>
+                )}
                 {transportResult && (
                   <div data-testid="transport-diagnostic-result">
                     <h4>传输诊断结果</h4>
-                    <dl>
+                    <dl className="providers-diag-dl">
                       <dt>总体</dt>
-                      <dd>{transportResult.overall_status}
+                      <dd>
+                        {transportResult.overall_status}
                         {transportResult.error_code
                           ? ` · ${TRANSPORT_LABELS[transportResult.error_code] || transportResult.error_code}`
                           : ""}
@@ -411,17 +491,45 @@ export function ProvidersPage() {
                       <dt>配置</dt>
                       <dd>{transportResult.configuration_valid ? "有效" : "无效"}</dd>
                       <dt>DNS</dt>
-                      <dd>{transportResult.dns?.status}{transportResult.dns?.latency_ms != null ? ` · ${transportResult.dns.latency_ms}ms` : ""}</dd>
+                      <dd>
+                        {transportResult.dns?.status}
+                        {transportResult.dns?.latency_ms != null
+                          ? ` · ${transportResult.dns.latency_ms}ms`
+                          : ""}
+                      </dd>
                       <dt>TCP</dt>
-                      <dd>{transportResult.tcp?.status}{transportResult.tcp?.latency_ms != null ? ` · ${transportResult.tcp.latency_ms}ms` : ""}</dd>
+                      <dd>
+                        {transportResult.tcp?.status}
+                        {transportResult.tcp?.latency_ms != null
+                          ? ` · ${transportResult.tcp.latency_ms}ms`
+                          : ""}
+                      </dd>
                       <dt>TLS</dt>
-                      <dd>{transportResult.tls?.status}{transportResult.tls?.certificate_valid === true ? " · 证书有效" : ""}{transportResult.tls?.latency_ms != null ? ` · ${transportResult.tls.latency_ms}ms` : ""}</dd>
+                      <dd>
+                        {transportResult.tls?.status}
+                        {transportResult.tls?.certificate_valid === true ? " · 证书有效" : ""}
+                        {transportResult.tls?.latency_ms != null
+                          ? ` · ${transportResult.tls.latency_ms}ms`
+                          : ""}
+                      </dd>
                       <dt>Proxy</dt>
-                      <dd>{transportResult.proxy?.detected ? `检测到（${transportResult.proxy.source}）` : "未检测到"}</dd>
+                      <dd>
+                        {transportResult.proxy?.detected
+                          ? `检测到（${transportResult.proxy.source}）`
+                          : "未检测到"}
+                      </dd>
                       <dt>CA证书</dt>
-                      <dd>{transportResult.ca_bundle?.status} · {transportResult.ca_bundle?.source}</dd>
+                      <dd>
+                        {transportResult.ca_bundle?.status} ·{" "}
+                        {transportResult.ca_bundle?.source}
+                      </dd>
                       <dt>Endpoint形态</dt>
-                      <dd>{transportResult.request_endpoint_shape?.status} · {transportResult.request_endpoint_shape?.path_redacted}</dd>
+                      <dd>
+                        {transportResult.request_endpoint_shape?.status} ·{" "}
+                        <code className="providers-tech-id">
+                          {transportResult.request_endpoint_shape?.path_redacted}
+                        </code>
+                      </dd>
                       <dt>建议</dt>
                       <dd>{transportResult.user_action_hint || "无"}</dd>
                     </dl>
@@ -437,9 +545,17 @@ export function ProvidersPage() {
                   <div role="alert" data-testid="real-connection-test-error">
                     <h4>真实连接测试结果：失败</h4>
                     <p>{realTestError.message}</p>
-                    <p>错误代码：{realTestError.code}</p>
+                    <p>
+                      错误代码：
+                      <code className="providers-tech-id">{realTestError.code}</code>
+                    </p>
                     <p>HTTP：{realTestError.status ?? "无响应"}</p>
-                    <p>request_id：{realTestError.requestId || "无"}</p>
+                    <p>
+                      request_id：
+                      <code className="providers-tech-id">
+                        {realTestError.requestId || "无"}
+                      </code>
+                    </p>
                     <p>是否可重试：{realTestError.retryable ? "是" : "否"}</p>
                     <p>处理建议：{realTestError.userActionHint}</p>
                   </div>
@@ -447,15 +563,25 @@ export function ProvidersPage() {
                 {realTestResult && (
                   <div data-testid="real-connection-test-result">
                     <h4>真实连接测试结果：成功</h4>
-                    <dl>
+                    <dl className="providers-diag-dl">
                       <dt>HTTP</dt>
                       <dd>{realTestResult.http_status}</dd>
                       <dt>Provider</dt>
-                      <dd>{realTestResult.provider}</dd>
+                      <dd>
+                        <code className="providers-tech-id">{realTestResult.provider}</code>
+                      </dd>
                       <dt>配置模型</dt>
-                      <dd>{realTestResult.configured_model}</dd>
+                      <dd>
+                        <code className="providers-tech-id">
+                          {realTestResult.configured_model}
+                        </code>
+                      </dd>
                       <dt>响应模型</dt>
-                      <dd>{realTestResult.response_model}</dd>
+                      <dd>
+                        <code className="providers-tech-id">
+                          {realTestResult.response_model}
+                        </code>
+                      </dd>
                       <dt>JSON</dt>
                       <dd>{realTestResult.json_valid ? "通过" : "失败"}</dd>
                       <dt>Schema</dt>
@@ -471,9 +597,16 @@ export function ProvidersPage() {
                       <dt>Invocation</dt>
                       <dd>#{realTestResult.invocation_id}</dd>
                       <dt>request_id</dt>
-                      <dd>{realTestResult.request_id || "无"}</dd>
+                      <dd>
+                        <code className="providers-tech-id">
+                          {realTestResult.request_id || "无"}
+                        </code>
+                      </dd>
                       <dt>估算费用</dt>
-                      <dd>{realTestResult.estimated_cost ?? "未知"} {realTestResult.currency || ""}</dd>
+                      <dd>
+                        {realTestResult.estimated_cost ?? "未知"}{" "}
+                        {realTestResult.currency || ""}
+                      </dd>
                       <dt>价格版本</dt>
                       <dd>{realTestResult.pricing_version || "未知"}</dd>
                     </dl>
@@ -487,26 +620,27 @@ export function ProvidersPage() {
               <h3>本地 Provider</h3>
               <p>本地模型路径和运行参数由受保护的本机 Profile 管理。</p>
               <div className="master-actions">
-                <button onClick={() => localAction("start")}>
+                <button type="button" onClick={() => localAction("start")}>
                   启动本地服务
                 </button>
-                <button onClick={() => localAction("stop")}>
+                <button type="button" onClick={() => localAction("stop")}>
                   停止本地服务
                 </button>
-                <button onClick={refresh}>刷新状态</button>
+                <button type="button" onClick={refresh}>
+                  刷新状态
+                </button>
               </div>
-              <dl>
+              <dl className="providers-diag-dl">
                 <dt>模型</dt>
                 <dd>
-                  {
-                    providers.data?.find((p) => p.name === selected)
-                      ?.default_model
-                  }
+                  <code className="providers-tech-id">
+                    {providers.data?.find((p) => p.name === selected)?.default_model}
+                  </code>
                 </dd>
                 <dt>自动路由</dt>
                 <dd>
-                  {providers.data?.find((p) => p.name === selected)
-                    ?.capabilities.manual_only
+                  {providers.data?.find((p) => p.name === selected)?.capabilities
+                    .manual_only
                     ? "不允许（manual-only）"
                     : "候选"}
                 </dd>
@@ -518,20 +652,32 @@ export function ProvidersPage() {
                 </dd>
                 <dt>健康</dt>
                 <dd>
-                  {providers.data?.find((p) => p.name === selected)?.healthy
-                    ? "健康"
-                    : "不健康"}
+                  {healthStateLabel(
+                    providers.data?.find((p) => p.name === selected)?.health_state,
+                    providers.data?.find((p) => p.name === selected)?.healthy,
+                  )}
                 </dd>
               </dl>
             </div>
           )}
         </article>
-        <aside className="panel routing">
-          <h2>路由预览</h2>
+
+        <aside className="panel routing providers-section providers-routing" data-testid="routing-preview-section">
+          <header>
+            <div>
+              <p className="eyebrow">任务分配</p>
+              <h2>路由预览</h2>
+            </div>
+          </header>
           {routing.data?.map((r) => (
-            <div key={r.task}>
+            <div key={r.task} className="providers-routing-row">
               <b>{r.task}</b>
-              <span>→ {r.provider}</span>
+              <span>
+                →{" "}
+                <code className="providers-tech-id">
+                  {r.provider}
+                </code>
+              </span>
               <small>
                 {r.available ? "可用" : "不可选"} ·{" "}
                 {r.sends_content_to_cloud ? "发送正文到云端" : "本地处理"}
@@ -540,6 +686,7 @@ export function ProvidersPage() {
           ))}
         </aside>
       </div>
+
       {realTestStatus === "awaiting_confirmation" && (
         <div className="modal-backdrop" data-testid="connection-test-confirmation">
           <div
@@ -550,17 +697,28 @@ export function ProvidersPage() {
           >
             <header>
               <h2 id="connection-test-title">执行真实连接测试</h2>
-              <button type="button" aria-label="关闭" onClick={cancelPaidTest}>×</button>
+              <button type="button" aria-label="关闭" onClick={cancelPaidTest}>
+                ×
+              </button>
             </header>
             <p>
               本测试将向云端模型发送一条原创最小JSON请求，不会发送小说正文，
               可能产生少量Token费用。
             </p>
-            <dl>
+            <dl className="providers-diag-dl">
               <dt>Provider</dt>
-              <dd>{selected}</dd>
+              <dd>
+                {selectedDisplay}{" "}
+                <code className="providers-tech-id">{selected}</code>
+              </dd>
               <dt>模型</dt>
-              <dd>{realTestPreflight?.configured_model || selectedProvider?.default_model || "加载中……"}</dd>
+              <dd>
+                <code className="providers-tech-id">
+                  {realTestPreflight?.configured_model ||
+                    selectedProvider?.default_model ||
+                    "加载中……"}
+                </code>
+              </dd>
               <dt>最大输出Token</dt>
               <dd>{realTestPreflight?.max_output_tokens ?? 32}</dd>
               <dt>最大真实请求</dt>
@@ -586,17 +744,21 @@ export function ProvidersPage() {
               </p>
             )}
             {realTestError && (
-              <p role="alert">{realTestError.message} {realTestError.userActionHint}</p>
+              <p role="alert">
+                {realTestError.message} {realTestError.userActionHint}
+              </p>
             )}
             <footer>
-              <button type="button" onClick={cancelPaidTest}>取消</button>
+              <button type="button" onClick={cancelPaidTest}>
+                取消
+              </button>
               <button
                 type="button"
                 className="primary"
                 disabled={
-                  !realTestPreflight
-                  || !realTestPreflight.within_budget
-                  || Boolean(realTestError)
+                  !realTestPreflight ||
+                  !realTestPreflight.within_budget ||
+                  Boolean(realTestError)
                 }
                 onClick={confirmPaidTest}
               >
