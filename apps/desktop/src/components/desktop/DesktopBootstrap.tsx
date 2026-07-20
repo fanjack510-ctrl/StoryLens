@@ -1,18 +1,42 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import {
   bootstrapDesktopRuntime,
+  isTauriRuntime,
   listenBackendEvents,
   type BackendUiStatus,
 } from "../../services/desktopRuntime";
 import { checkForAppUpdate, type UpdateCheckResult } from "../../services/updaterService";
 import { trackAppLaunchedOncePerSession } from "../../services/telemetry/telemetryRuntime";
 import { UpdateAvailableDialog } from "./UpdateAvailableDialog";
+import { Button } from "../ui/Button";
 
 export function DesktopBootstrap({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<BackendUiStatus>({ state: "starting" });
   const [runtimeError, setRuntimeError] = useState<string | null>(null);
   const [updateInfo, setUpdateInfo] = useState<UpdateCheckResult | null>(null);
   const [dismissedUpdate, setDismissedUpdate] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [bootKey, setBootKey] = useState(0);
+
+  const retryBootstrap = useCallback(() => {
+    setRuntimeError(null);
+    setDetailsOpen(false);
+    setStatus({ state: "starting" });
+    setBootKey((k) => k + 1);
+  }, []);
+
+  const exitApp = useCallback(async () => {
+    if (!isTauriRuntime()) {
+      window.close();
+      return;
+    }
+    try {
+      const { getCurrentWindow } = await import("@tauri-apps/api/window");
+      await getCurrentWindow().close();
+    } catch {
+      window.close();
+    }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -61,13 +85,19 @@ export function DesktopBootstrap({ children }: { children: ReactNode }) {
       cancelled = true;
       unlisten?.();
     };
-  }, []);
+  }, [bootKey]);
 
   if (status.state === "starting") {
     return (
       <div className="desktop-bootstrap" data-testid="desktop-bootstrap-starting" data-theme="light">
-        <h1 className="sl-page-title">StoryLens</h1>
-        <p>正在启动本地分析服务，请稍候…</p>
+        <div className="desktop-bootstrap-brand" aria-hidden="true">
+          <span className="brand-mark">SL</span>
+        </div>
+        <h1 className="sl-page-title">正在启动 StoryLens</h1>
+        <p>正在连接本地分析服务，通常只需几秒钟</p>
+        <div className="desktop-bootstrap-progress" role="status" aria-label="正在启动">
+          <span className="desktop-bootstrap-spinner" />
+        </div>
       </div>
     );
   }
@@ -79,9 +109,33 @@ export function DesktopBootstrap({ children }: { children: ReactNode }) {
         data-testid="desktop-bootstrap-error"
         data-theme="light"
       >
+        <div className="desktop-bootstrap-brand" aria-hidden="true">
+          <span className="brand-mark">SL</span>
+        </div>
         <h1 className="sl-page-title">StoryLens 无法启动</h1>
-        <p>{status.message}</p>
-        <p className="muted">详细信息已写入本机日志（%LOCALAPPDATA%\\StoryLens\\logs）。</p>
+        <p>本地分析服务未能正常启动。</p>
+        <p className="muted">你的书籍和已有分析数据不会受到影响。</p>
+        <div className="desktop-bootstrap-actions">
+          <Button
+            variant="primary"
+            data-testid="desktop-bootstrap-retry"
+            onClick={retryBootstrap}
+          >
+            重新启动
+          </Button>
+          <Button variant="secondary" data-testid="desktop-bootstrap-exit" onClick={() => void exitApp()}>
+            退出 StoryLens
+          </Button>
+        </div>
+        <details
+          className="desktop-bootstrap-details"
+          open={detailsOpen}
+          onToggle={(e) => setDetailsOpen((e.target as HTMLDetailsElement).open)}
+        >
+          <summary>查看详情</summary>
+          <p role="status">{status.message}</p>
+          <p className="muted">详细信息已写入本机日志目录（用户数据下的 logs 文件夹）。</p>
+        </details>
       </div>
     );
   }

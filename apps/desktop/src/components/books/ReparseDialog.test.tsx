@@ -54,19 +54,31 @@ describe("Phase 2A.2 reparse acceptance", () => {
     await open({ ...base, hash_match: false });
     expect(screen.getByText(/Hash不同/)).toBeVisible();
   });
-  test("replace_in_place二次确认", async () => {
+  test("replace_in_place value and confirm", async () => {
     await open();
-    fireEvent.click(screen.getByText("替换当前结构"));
+    const replace = screen.getByTestId("reparse-replace-in-place");
+    expect(replace).toHaveAttribute("value", "replace_in_place");
+    expect(replace).toBeChecked();
+    fireEvent.click(screen.getByTestId("reparse-apply"));
     expect(confirm).toHaveBeenCalled();
+    await waitFor(() =>
+      expect(apply).toHaveBeenCalledWith(1, expect.any(File), "replace_in_place", false),
+    );
   });
   test("succeeded Run保护", async () => {
     await open({ ...base, has_succeeded_runs: true });
-    expect(screen.getByText("替换当前结构")).toBeDisabled();
+    expect(screen.getByTestId("reparse-replace-in-place")).toBeDisabled();
+    await waitFor(() => {
+      expect(screen.getByTestId("reparse-create-revision")).toBeChecked();
+    });
   });
-  test("create_revision", async () => {
+  test("create_revision value unchanged", async () => {
     apply.mockResolvedValue({ book_id: 2 });
     await open();
-    fireEvent.click(screen.getByText("创建修订版"));
+    const revision = screen.getByTestId("reparse-create-revision");
+    expect(revision).toHaveAttribute("value", "create_revision");
+    fireEvent.click(revision);
+    fireEvent.click(screen.getByTestId("reparse-apply"));
     await waitFor(() =>
       expect(apply).toHaveBeenCalledWith(
         1,
@@ -92,8 +104,9 @@ describe("Phase 2A.2 reparse acceptance", () => {
     fireEvent.change(document.querySelector('input[type="file"]')!, {
       target: { files: [new File(["x"], "b.txt")] },
     });
-    await screen.findByText("创建修订版");
-    fireEvent.click(screen.getByText("创建修订版"));
+    await screen.findByTestId("reparse-create-revision");
+    fireEvent.click(screen.getByTestId("reparse-create-revision"));
+    fireEvent.click(screen.getByTestId("reparse-apply"));
     await waitFor(() => expect(done).toHaveBeenCalledWith(1));
   });
   test("超大章节分页诊断可见", async () => {

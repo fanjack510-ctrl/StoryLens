@@ -40,7 +40,7 @@ describe("FirstLaunchWizard telemetry opt-in", () => {
     );
     fireEvent.click(screen.getByText("下一步"));
     fireEvent.click(screen.getByText("稍后配置"));
-    fireEvent.click(screen.getByText("进入空书库"));
+    fireEvent.click(screen.getByText("开始使用 StoryLens"));
     expect(localStorage.getItem("storylens.telemetry.consent")).toBe("DISABLED");
   });
 
@@ -53,7 +53,7 @@ describe("FirstLaunchWizard telemetry opt-in", () => {
     fireEvent.click(screen.getByText("下一步"));
     fireEvent.click(screen.getByText("稍后配置"));
     fireEvent.click(screen.getByTestId("onboarding-telemetry-opt-in").querySelector("input")!);
-    fireEvent.click(screen.getByText("进入空书库"));
+    fireEvent.click(screen.getByText("开始使用 StoryLens"));
     expect(localStorage.getItem("storylens.telemetry.consent")).toBe("ENABLED");
   });
 });
@@ -65,7 +65,20 @@ describe("FirstLaunchWizard AI setup", () => {
     vi.mocked(aiServiceConfig.configureRecommendedQwenService).mockReset();
   });
 
-  it("test connection does not persist", async () => {
+  it("shows step chrome without changing underlying step state machine", () => {
+    render(
+      <MemoryRouter>
+        <FirstLaunchWizard />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText("步骤 1 / 3")).toBeInTheDocument();
+    expect(screen.getByTestId("onboarding-step-welcome")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("下一步"));
+    expect(screen.getByText("步骤 2 / 3")).toBeInTheDocument();
+    expect(screen.getByTestId("onboarding-step-ai")).toBeInTheDocument();
+  });
+
+  it("test connection does not persist and does not finish wizard", async () => {
     vi.mocked(aiServiceConfig.configureRecommendedQwenService).mockResolvedValue({
       ok: true,
       persisted: false,
@@ -96,6 +109,7 @@ describe("FirstLaunchWizard AI setup", () => {
       );
     });
     expect(screen.getByTestId("onboarding-ai-message")).toHaveTextContent("尚未保存");
+    expect(screen.getByTestId("onboarding-connection-status")).toHaveTextContent("连接成功");
     expect(screen.queryByTestId("onboarding-step-start")).not.toBeInTheDocument();
   });
 
@@ -131,5 +145,17 @@ describe("FirstLaunchWizard AI setup", () => {
       );
     });
     expect(await screen.findByTestId("onboarding-step-start")).toBeInTheDocument();
+  });
+
+  it("consent checkbox still gates save", async () => {
+    render(
+      <MemoryRouter>
+        <FirstLaunchWizard />
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByText("下一步"));
+    fireEvent.click(screen.getByTestId("onboarding-save-next"));
+    expect(await screen.findByTestId("onboarding-ai-message")).toHaveTextContent("请先确认正文发送说明");
+    expect(aiServiceConfig.configureRecommendedQwenService).not.toHaveBeenCalled();
   });
 });

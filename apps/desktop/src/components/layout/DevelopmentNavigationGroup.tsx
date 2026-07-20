@@ -6,7 +6,7 @@ const DEV_LINKS: Array<[string, string]> = [
   ["/workspace", "分析工作台"],
   ["/tasks", "任务中心"],
   ["/cases", "案例库"],
-  ["/providers", "模型与API"],
+  ["/providers", "模型与 API"],
 ];
 
 type Props = {
@@ -49,6 +49,7 @@ export function DevelopmentNavigationGroup({ children }: Props) {
       </label>
       {developerMode && (
         <div className="dev-nav-panel" data-testid="dev-nav-panel">
+          <p className="dev-nav-group-title">开发工具</p>
           <nav className="dev-nav-links">
             {DEV_LINKS.map(([to, label]) => (
               <NavLink

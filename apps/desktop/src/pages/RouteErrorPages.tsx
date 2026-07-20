@@ -1,4 +1,4 @@
-import { isRouteErrorResponse, Link, useNavigate, useRouteError } from "react-router-dom";
+import { isRouteErrorResponse, useNavigate, useRouteError } from "react-router-dom";
 import { StateView } from "../components/ui/StateView";
 
 function isDevMode(): boolean {
@@ -28,7 +28,6 @@ export function RouteErrorPage() {
 
   return (
     <section className="page route-error-page" data-testid="route-error-page">
-      <p className="eyebrow">StoryLens</p>
       <StateView
         kind="error"
         title="页面出错了"
@@ -46,9 +45,6 @@ export function RouteErrorPage() {
           testId: "route-error-library",
         }}
       />
-      <p className="route-error-actions">
-        <Link to="/library">前往书库</Link>
-      </p>
     </section>
   );
 }
@@ -58,7 +54,6 @@ export function NotFoundPage() {
   const navigate = useNavigate();
   return (
     <section className="page not-found-page" data-testid="not-found-page">
-      <p className="eyebrow">StoryLens</p>
       <StateView
         kind="empty"
         title="页面未找到"
@@ -76,9 +71,6 @@ export function NotFoundPage() {
           testId: "not-found-library",
         }}
       />
-      <p className="route-error-actions">
-        <Link to="/library">前往书库</Link>
-      </p>
     </section>
   );
 }

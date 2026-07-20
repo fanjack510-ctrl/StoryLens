@@ -101,25 +101,25 @@ test.describe("02 import preview", () => {
 
   test("TXT preview", async ({ page }) => {
     await pickImportFile(page, tmpImport("fiction_starport.txt"));
-    await page.getByText("章节识别预览").waitFor();
+    await page.getByTestId("import-panel").waitFor();
     await shot(page, { id: "03-01", file: "03_import_txt_ok.png", route: "/library", theme: "light" });
   });
 
   test("DOCX preview", async ({ page }) => {
     await pickImportFile(page, tmpImport("fiction_tides.docx", "PK\x03\x04mock-docx-audit"));
-    await page.getByText("章节识别预览").waitFor();
+    await page.getByTestId("import-panel").waitFor();
     await shot(page, { id: "03-02", file: "03_import_docx_ok.png", route: "/library", theme: "light" });
   });
 
   test("EPUB preview", async ({ page }) => {
     await pickImportFile(page, tmpImport("fiction_bird.epub", "PK\x03\x04mock-epub-audit"));
-    await page.getByText("章节识别预览").waitFor();
+    await page.getByTestId("import-panel").waitFor();
     await shot(page, { id: "03-03", file: "03_import_epub_ok.png", route: "/library", theme: "light" });
   });
 
   test("chapters ok", async ({ page }) => {
     await pickImportFile(page, tmpImport("fiction_starport.txt"));
-    await page.getByText("章节识别预览").waitFor();
+    await page.getByTestId("import-panel").waitFor();
     await shot(page, { id: "03-06", file: "03_import_chapters_ok.png", route: "/library", theme: "light" });
   });
 });
@@ -134,7 +134,7 @@ test.describe("02 import errors and states", () => {
     await installUiAuditMocks(page, { books: "empty", importPreview: "pending" });
     await page.reload({ waitUntil: "domcontentloaded" });
     await pickImportFile(page, tmpImport("pending.txt"));
-    await page.getByText("章节识别预览").waitFor({ state: "hidden" }).catch(() => undefined);
+    await page.getByTestId("import-panel-parsing").waitFor({ timeout: 10_000 }).catch(() => undefined);
     await shot(page, {
       id: "03-05",
       file: "03_import_parsing.png",
@@ -148,7 +148,7 @@ test.describe("02 import errors and states", () => {
     await installUiAuditMocks(page, { books: "empty", importPreview: "suspect" });
     await page.reload({ waitUntil: "domcontentloaded" });
     await pickImportFile(page, tmpImport("suspect.txt"));
-    await page.getByText("章节识别预览").waitFor();
+    await page.getByTestId("import-panel").waitFor();
     await shot(page, { id: "03-07", file: "03_import_chapters_suspect.png", route: "/library", theme: "light" });
   });
 
@@ -156,7 +156,7 @@ test.describe("02 import errors and states", () => {
     await installUiAuditMocks(page, { books: "empty", importPreview: "format_error" });
     await page.reload({ waitUntil: "domcontentloaded" });
     await pickImportFile(page, tmpImport("bad.bin", "not-a-book"));
-    await page.locator(".notice, [role=alert]").first().waitFor({ timeout: 15_000 }).catch(() => undefined);
+    await page.locator(".import-panel--danger, [role=alert]").first().waitFor({ timeout: 15_000 }).catch(() => undefined);
     await shot(page, { id: "03-08", file: "03_import_format_error.png", route: "/library", theme: "light" });
   });
 
@@ -164,7 +164,7 @@ test.describe("02 import errors and states", () => {
     await installUiAuditMocks(page, { books: "empty", importPreview: "too_large" });
     await page.reload({ waitUntil: "domcontentloaded" });
     await pickImportFile(page, tmpImport("huge.txt"));
-    await page.locator(".notice, [role=alert]").first().waitFor({ timeout: 15_000 }).catch(() => undefined);
+    await page.locator(".import-panel--danger, [role=alert]").first().waitFor({ timeout: 15_000 }).catch(() => undefined);
     await shot(page, { id: "03-09", file: "03_import_too_large.png", route: "/library", theme: "light" });
   });
 
@@ -172,7 +172,7 @@ test.describe("02 import errors and states", () => {
     await installUiAuditMocks(page, { books: "empty", importPreview: "encoding_error" });
     await page.reload({ waitUntil: "domcontentloaded" });
     await pickImportFile(page, tmpImport("bad-encoding.txt"));
-    await page.locator(".notice, [role=alert]").first().waitFor({ timeout: 15_000 }).catch(() => undefined);
+    await page.locator(".import-panel--danger, [role=alert]").first().waitFor({ timeout: 15_000 }).catch(() => undefined);
     await shot(page, { id: "03-10", file: "03_import_encoding_error.png", route: "/library", theme: "light" });
   });
 
@@ -180,9 +180,9 @@ test.describe("02 import errors and states", () => {
     await installUiAuditMocks(page, { books: "one", importPreview: "duplicate_on_upload" });
     await page.reload({ waitUntil: "domcontentloaded" });
     await pickImportFile(page, tmpImport("dup.txt"));
-    await page.getByText("章节识别预览").waitFor();
-    await page.getByRole("button", { name: "按当前结果继续导入" }).click();
-    await page.locator(".notice, [role=alert]").first().waitFor({ timeout: 15_000 }).catch(() => undefined);
+    await page.getByTestId("import-panel").waitFor();
+    await page.getByRole("button", { name: "完成导入" }).click();
+    await page.locator(".import-panel--warning, [role=alert]").first().waitFor({ timeout: 15_000 }).catch(() => undefined);
     await shot(page, { id: "03-11", file: "03_import_duplicate.png", route: "/library", theme: "light" });
   });
 
@@ -190,8 +190,8 @@ test.describe("02 import errors and states", () => {
     await installUiAuditMocks(page, { books: "empty", importPreview: "ok" });
     await page.reload({ waitUntil: "domcontentloaded" });
     await pickImportFile(page, tmpImport("new.txt"));
-    await page.getByText("章节识别预览").waitFor();
-    await page.getByRole("button", { name: "按当前结果继续导入" }).click();
+    await page.getByTestId("import-panel").waitFor();
+    await page.getByRole("button", { name: "完成导入" }).click();
     await installUiAuditMocks(page, { books: "one" });
     await page.reload({ waitUntil: "domcontentloaded" });
     await page.getByTestId("book-row-1").waitFor({ timeout: 15_000 }).catch(() => undefined);

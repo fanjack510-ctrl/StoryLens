@@ -18,6 +18,8 @@ describe("RouteErrorPages", () => {
     expect(screen.getByTestId("not-found-page")).toHaveTextContent("页面未找到");
     expect(screen.getByTestId("not-found-library")).toBeInTheDocument();
     expect(screen.getByTestId("not-found-reload")).toBeInTheDocument();
+    expect(screen.queryByText("前往书库")).not.toBeInTheDocument();
+    expect(screen.queryByText("StoryLens")).not.toBeInTheDocument();
   });
 
   it("renders Chinese runtime error page without stack in production-like render", () => {
