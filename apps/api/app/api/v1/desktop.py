@@ -10,6 +10,7 @@ from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
 
 from app.api.v1.router import error
+from app.core.paths import get_project_root, user_data_root
 from app.db.models import (
     AnalysisEvidence,
     AnalysisRun,
@@ -47,7 +48,7 @@ router = APIRouter(prefix="/api/v1")
 CLOUD_KEY = "cloud_enabled"
 DESKTOP_KEY = "desktop_settings"
 CLOUD_BUDGET_KEY = "cloud_budget_settings"
-PROJECT_ROOT = Path(__file__).resolve().parents[5]
+PROJECT_ROOT = get_project_root()
 PRICING_PATH = PROJECT_ROOT / "config" / "cloud_pricing.json"
 LOCAL_PROFILES = {"safe", "qwen3_14b_dev", "qwen3_27b_manual"}
 
@@ -493,7 +494,7 @@ def diagnostics(
             {"name": item.name, "enabled": item.capabilities().enabled}
             for item in gateway.providers()
         ],
-        "data_directory": "managed",
+        "data_directory": str(user_data_root()),
         "recent_error": None,
     }
 

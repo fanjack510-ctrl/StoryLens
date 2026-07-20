@@ -1,4 +1,4 @@
-import { api, API_BASE } from "./apiClient";
+import { api, getApiBase } from "./apiClient";
 import type { Run, RunResults, Scene, SceneParagraphs, SceneResultItem } from "../types";
 export const analysisApi = {
   preflight: (payload: any) => api<any>("/api/v1/analysis-runs/preflight", {
@@ -13,7 +13,7 @@ export const analysisApi = {
   sceneParagraphs: (sceneId: number | string) =>
     api<SceneParagraphs>(`/api/v1/scenes/${sceneId}/paragraphs`),
   resultsExportUrl: (runId: number, format: "json" | "markdown") =>
-    `${API_BASE}/api/v1/analysis-runs/${runId}/results/export?format=${format}`,
+    `${getApiBase()}/api/v1/analysis-runs/${runId}/results/export?format=${format}`,
   scenes: (chapter: number) =>
     api<Scene[]>(`/api/v1/chapters/${chapter}/scenes`),
   artifacts: (scene: string | number) =>
@@ -267,5 +267,5 @@ export const analysisApi = {
       body: JSON.stringify({ confirmed: true, ...payload }),
     }),
   readerJourneyExportUrl: (journeyRunId: number) =>
-    `${API_BASE}/api/v1/reader-journey-runs/${journeyRunId}/export?format=json`,
+    `${getApiBase()}/api/v1/reader-journey-runs/${journeyRunId}/export?format=json`,
 };

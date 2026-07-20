@@ -1799,3 +1799,80 @@ button[aria-busy="true"] {
   flex-wrap: wrap;
 }
 
+/* Desktop bootstrap / updater (Windows packaged shell) */
+.desktop-bootstrap {
+  min-height: 100vh;
+  display: grid;
+  place-content: center;
+  gap: 12px;
+  padding: 32px;
+  text-align: center;
+  background: var(--bg, #f6f4ef);
+  color: var(--text, #1f1a14);
+}
+.desktop-bootstrap h1 {
+  margin: 0;
+  font-size: 2rem;
+}
+.desktop-bootstrap-error p {
+  max-width: 36rem;
+  margin: 0 auto;
+}
+.desktop-bootstrap .muted {
+  opacity: 0.7;
+  font-size: 0.9rem;
+}
+.desktop-runtime-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: #fff3cd;
+  color: #5c4500;
+  border-bottom: 1px solid #e6d59a;
+}
+.update-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 16, 12, 0.45);
+  display: grid;
+  place-items: center;
+  z-index: 1000;
+}
+.update-dialog {
+  width: min(480px, calc(100vw - 32px));
+  background: #fff;
+  color: #1f1a14;
+  border-radius: 8px;
+  padding: 20px 22px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+}
+.update-dialog-body {
+  margin: 12px 0 18px;
+  max-height: 200px;
+  overflow: auto;
+  background: #f7f5f1;
+  padding: 10px 12px;
+  border-radius: 6px;
+}
+.update-dialog-body pre {
+  margin: 0;
+  white-space: pre-wrap;
+  font-family: inherit;
+  font-size: 0.9rem;
+}
+.update-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.settings-update-block {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border, #e4ddd0);
+}
+.settings-update-block h3 {
+  margin: 0 0 6px;
+}
+

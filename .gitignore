@@ -57,6 +57,18 @@ coverage/
 .target/
 target/
 
+# Windows release artifacts (never commit installers / sidecars)
+dist/release/
+apps/desktop/src-tauri/binaries/*.exe
+apps/api/dist-sidecar/
+apps/api/build/
+apps/api/build/**
+
+# Updater signing private keys (public key may live in tauri.conf.json)
+.tauri/
+*.key
+!*.key.pub
+
 # IDE
 .vscode/
 .idea/

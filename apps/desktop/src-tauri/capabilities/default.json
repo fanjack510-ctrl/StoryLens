@@ -1,1 +1,10 @@
-{"identifier":"default","description":"StoryLens desktop capability","windows":["main"],"permissions":["core:default"]}
+{
+  "identifier": "default",
+  "description": "StoryLens desktop capability",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "process:default",
+    "updater:default"
+  ]
+}

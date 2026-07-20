@@ -1,0 +1,108 @@
+name: Windows Release Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Optional version override (e.g. 0.1.0). Empty keeps repo version."
+        required: false
+        type: string
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: read
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/desktop/src-tauri -> target
+
+      - name: Create venv and install Python deps
+        shell: pwsh
+        run: |
+          python -m venv .venv
+          .\.venv\Scripts\python.exe -m pip install -U pip
+          .\.venv\Scripts\python.exe -m pip install -e ".[dev]"
+          .\.venv\Scripts\python.exe -m pip install "pyinstaller>=6.3"
+
+      - name: Apply version from tag or input
+        shell: pwsh
+        run: |
+          $version = "${{ inputs.version }}"
+          if (-not $version) {
+            $ref = "${{ github.ref_name }}"
+            if ($ref -match '^v(\d+\.\d+\.\d+.*)$') { $version = $Matches[1] }
+          }
+          if ($version) {
+            ./scripts/set_version.ps1 $version
+          } else {
+            Write-Host "Keeping repository version"
+          }
+
+      - name: Inject updater public key (optional)
+        shell: pwsh
+        env:
+          TAURI_UPDATER_PUBKEY: ${{ secrets.TAURI_UPDATER_PUBKEY }}
+        run: |
+          if ($env:TAURI_UPDATER_PUBKEY) {
+            Write-Host "Updater pubkey provided via secret (value not printed)."
+          } else {
+            Write-Host "No TAURI_UPDATER_PUBKEY secret; using committed pubkey in tauri.conf.json"
+          }
+
+      - name: Configure updater signing (no forge)
+        shell: pwsh
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          if ($env:TAURI_SIGNING_PRIVATE_KEY) {
+            Write-Host "Signing key present in secrets (not logged)."
+          } else {
+            Write-Host "No signing secret; installer will build without updater signatures."
+          }
+
+      - name: Build Windows release
+        shell: pwsh
+        env:
+          # Signing is opt-in via STORYLENS_SIGN_UPDATER=1 AND a real private key secret.
+          STORYLENS_SIGN_UPDATER: "1"
+          TAURI_UPDATER_PUBKEY: ${{ secrets.TAURI_UPDATER_PUBKEY }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: ./scripts/build_windows_release.ps1
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: storylens-windows-release
+          path: dist/release/
+          if-no-files-found: error
+
+      # Intentionally does NOT create a GitHub Release automatically.
+      # Publish manually after validating artifacts.
