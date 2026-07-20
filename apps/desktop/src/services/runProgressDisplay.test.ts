@@ -10,7 +10,7 @@ describe("formatRunProgress", () => {
         progress_current: 1,
         progress_total: 10,
       }),
-    ).toBe("Scene Analysis：2 / 4");
+    ).toBe("场景分析：2 / 4");
   });
 
   it("uses progress_current/total when scene totals missing", () => {

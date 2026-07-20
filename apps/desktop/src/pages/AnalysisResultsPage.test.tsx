@@ -150,7 +150,7 @@ describe("AnalysisResultsPage", () => {
   it("自动选中Scene 01并显示14项场景列表", async () => {
     renderPage();
     expect(await screen.findByTestId("results-header")).toHaveTextContent(
-      "分析结果：Run #55 · 14个Scene",
+      "场景分析结果：Run #55 · 14 个场景",
     );
     for (let ordinal = 1; ordinal <= 14; ordinal += 1) {
       expect(screen.getByTestId(`scene-list-item-${ordinal}`)).toBeInTheDocument();
@@ -194,7 +194,7 @@ describe("AnalysisResultsPage", () => {
     await screen.findByTestId("structure-field-goal");
     fireEvent.click(screen.getByTestId("tab-overview"));
     const panel = await screen.findByTestId("overview-panel");
-    expect(panel).toHaveTextContent("Scene总数");
+    expect(panel).toHaveTextContent("场景总数");
     for (let ordinal = 1; ordinal <= 14; ordinal += 1) {
       expect(screen.getByTestId(`overview-scene-${ordinal}`)).toBeInTheDocument();
     }

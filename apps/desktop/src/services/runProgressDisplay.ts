@@ -12,7 +12,7 @@ export function formatRunProgress(run: {
       typeof run.completed_scene_count === "number" && Number.isFinite(run.completed_scene_count)
         ? run.completed_scene_count
         : 0;
-    return `Scene Analysis：${completed} / ${totalScenes}`;
+    return `场景分析：${completed} / ${totalScenes}`;
   }
 
   const current = run.progress_current;

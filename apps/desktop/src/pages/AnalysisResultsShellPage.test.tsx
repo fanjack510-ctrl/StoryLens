@@ -260,7 +260,7 @@ describe("Analysis results shell", () => {
     renderShell();
     const shell = await screen.findByTestId("results-shell");
     await waitFor(() => expect(shell).toHaveAttribute("data-results-state", "failed"));
-    expect(await screen.findByTestId("results-empty-failed")).toHaveTextContent(/failed/);
+    expect(await screen.findByTestId("results-empty-failed")).toHaveTextContent(/失败|failed/);
   });
 
   it("analysis view CSS hides legacy journey tab and resident export buttons", async () => {

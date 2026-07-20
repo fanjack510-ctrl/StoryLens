@@ -262,9 +262,65 @@ test.describe("05 analysis", () => {
     await expect(page.getByTestId("results-shell")).toBeVisible();
     await expect(page.getByTestId("results-shell")).toHaveAttribute("data-results-state", "completed");
     await expect(page.getByText("Unexpected Application Error")).toHaveCount(0);
+    await expect(page.getByTestId("results-header")).toBeVisible();
+    await expect(page.getByTestId("scene-nav")).toBeVisible();
+    await expect(page.getByTestId("structure-panel")).toBeVisible();
     await shot(page, {
       id: "05-25",
       file: "05_scene_analysis_result.png",
+      route: "/analysis-runs/55/results",
+      theme: "light",
+    });
+
+    await applyProductTheme(page, "dark");
+    await assertAnalysisDarkSurfaces(page);
+    await shot(page, {
+      id: "05-25d",
+      file: "05_scene_analysis_result_dark.png",
+      route: "/analysis-runs/55/results",
+      theme: "dark",
+    });
+    assertScreenshotsDiffer(
+      "05_scene_analysis_result.png",
+      "05_scene_analysis_result_dark.png",
+      "scene analysis light vs dark",
+    );
+    await applyProductTheme(page, "light");
+
+    await installUiAuditMocks(page, { analysisRun: "none", tasks: "empty" });
+    await page.route("**/api/v1/analysis-runs/999/results**", async (route) => {
+      return route.fulfill({ json: {} });
+    });
+    await gotoReady(page, "/analysis-runs/999/results");
+    await expect(page.getByTestId("results-empty-incomplete")).toBeVisible();
+    await shot(page, {
+      id: "05-25e",
+      file: "05_scene_analysis_empty.png",
+      route: "/analysis-runs/999/results",
+      theme: "light",
+    });
+
+    await installUiAuditMocks(page, { analysisRun: "failed" });
+    await page.route("**/api/v1/analysis-runs/55/results**", async (route) => {
+      return route.fulfill({
+        json: {
+          run: {
+            id: 55,
+            status: "failed",
+            provider: "aliyun_qwen_plus",
+            model: "qwen3.7-plus",
+          },
+          chapter: { id: 1, book_id: 1, chapter_index: 1, title: "第一章", display_title: "第一章" },
+          scenes: [],
+          summary: { total_scene_count: 0 },
+        },
+      });
+    });
+    await gotoReady(page, "/analysis-runs/55/results");
+    await expect(page.getByTestId("results-empty-failed")).toBeVisible();
+    await shot(page, {
+      id: "05-25f",
+      file: "05_scene_analysis_failed.png",
       route: "/analysis-runs/55/results",
       theme: "light",
     });

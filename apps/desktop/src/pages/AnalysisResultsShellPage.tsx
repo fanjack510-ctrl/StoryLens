@@ -9,6 +9,8 @@ import { Empty, ErrorState, Loading } from "../components/common/States";
 import { analysisApi } from "../services/analysisApi";
 import { booksApi } from "../services/booksApi";
 import { resolveRunResultsViewState } from "../services/runResultsGuard";
+import { formatRunStatusForResults } from "./sceneResultLabels";
+import "./analysisResults.css";
 
 function clickResults(selector: string) {
   document.querySelector<HTMLElement>(selector)?.dispatchEvent(
@@ -198,16 +200,16 @@ export function AnalysisResultsShellPage() {
       {techOpen && (
         <div className="shell-banner tech-info" data-testid="results-tech-info">
           <span>
-            Run #{runId}
+            运行 #{runId}
             {journey.data?.journey_run_id
-              ? ` · JourneyRun #${journey.data.journey_run_id}`
+              ? ` · 旅程任务 #${journey.data.journey_run_id}`
               : ""}
-            {completedRun?.provider ? ` · ${completedRun.provider}` : ""}
+            {completedRun?.provider ? ` · 服务商 ${completedRun.provider}` : ""}
             {completedRun?.prompt_version
-              ? ` · prompt ${completedRun.prompt_version}`
+              ? ` · 提示词 ${completedRun.prompt_version}`
               : ""}
             {bookQuery.data?.title ? ` · ${bookQuery.data.title}` : ""}
-            {chapterId != null ? ` · Chapter ${chapterId}` : ""}
+            {chapterId != null ? ` · 章节 ${chapterId}` : ""}
           </span>
           <button type="button" onClick={() => setTechOpen(false)}>
             关闭
@@ -230,24 +232,24 @@ export function AnalysisResultsShellPage() {
     );
   } else if (viewState.kind === "missing") {
     body = (
-      <div className="state" data-testid="results-empty-missing">
+      <div className="state results-page-state" data-testid="results-empty-missing">
         <strong>未找到分析结果</strong>
         <span>该运行可能尚不存在，或结果尚未生成。</span>
       </div>
     );
   } else if (viewState.kind === "incomplete") {
     body = (
-      <div className="state" data-testid="results-empty-incomplete">
+      <div className="state results-page-state" data-testid="results-empty-incomplete">
         <strong>分析结果数据不完整</strong>
         <span>{viewState.reason}</span>
       </div>
     );
   } else if (viewState.kind === "failed") {
     body = (
-      <div className="state" data-testid="results-empty-failed">
+      <div className="state results-page-state" data-testid="results-empty-failed">
         <strong>分析尚未完成</strong>
         <span>
-          当前状态：{viewState.status}。请返回任务中心查看进度，或等待分析成功后再打开结果。
+          当前状态：{formatRunStatusForResults(viewState.status)}。请返回任务中心查看进度，或等待分析成功后再打开结果。
         </span>
       </div>
     );

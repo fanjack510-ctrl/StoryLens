@@ -7,29 +7,20 @@ import { hasUsableJourneyVisualization } from "../components/readerJourney/hasUs
 import { formatJourneyStatus } from "../components/readerJourney/journeyUiLabels";
 import { ReaderJourneySyncWorkspace } from "../components/readerJourney/ReaderJourneySyncWorkspace";
 import { StateView } from "../components/ui/StateView";
+import { formatSceneDisplayLabel } from "../services/formatSceneDisplayLabel";
 import { resolveRunResultsViewState } from "../services/runResultsGuard";
-import type { ReaderJourneyPreflight, ReaderJourneyProgress, ReaderJourneyResult, SceneAnalysisFields, SceneResultItem } from "../types";
+import type { ReaderJourneyPreflight, ReaderJourneyProgress, ReaderJourneyResult, SceneResultItem } from "../types";
+import {
+  EVIDENCE_GROUP_LABELS,
+  STRUCTURE_FIELD_SECTIONS,
+  formatBoundarySource,
+  formatFunctionTags,
+  formatRunStatusForResults,
+  formatSceneSummary,
+} from "./sceneResultLabels";
+import "./analysisResults.css";
 
 type Tab = "structure" | "evidence" | "history" | "overview" | "journey";
-
-const FIELD_LABELS: { key: keyof SceneAnalysisFields; label: string }[] = [
-  { key: "entry_state", label: "进入状态 entry_state" },
-  { key: "goal", label: "目标 goal" },
-  { key: "obstacle", label: "阻碍 obstacle" },
-  { key: "turning_point", label: "转折 turning_point" },
-  { key: "outcome", label: "结果 outcome" },
-  { key: "unresolved_question", label: "悬而未决 unresolved_question" },
-];
-
-const EVIDENCE_GROUPS: { group: string; label: string }[] = [
-  { group: "entry_state", label: "entry_state 证据" },
-  { group: "goal", label: "goal 证据" },
-  { group: "obstacle", label: "obstacle 证据" },
-  { group: "key_actions", label: "key_actions 证据" },
-  { group: "turning_point", label: "turning_point 证据" },
-  { group: "outcome", label: "outcome 证据" },
-  { group: "unresolved_question", label: "unresolved_question 证据" },
-];
 
 function fieldSummary(field?: { summary: string; evidence_paragraph_ids: string[] }): string {
   if (!field || !field.summary?.trim()) return "无";
@@ -384,7 +375,7 @@ export function AnalysisResultsPage() {
   }
   if (viewState.kind === "missing") {
     return (
-      <div className="state" data-testid="results-page-missing">
+      <div className="state results-page-state" data-testid="results-page-missing">
         <strong>未找到分析结果</strong>
         <span>该运行可能尚不存在，或结果尚未生成。</span>
       </div>
@@ -392,7 +383,7 @@ export function AnalysisResultsPage() {
   }
   if (viewState.kind === "incomplete") {
     return (
-      <div className="state" data-testid="results-page-incomplete">
+      <div className="state results-page-state" data-testid="results-page-incomplete">
         <strong>分析结果数据不完整</strong>
         <span>{viewState.reason}</span>
       </div>
@@ -400,10 +391,10 @@ export function AnalysisResultsPage() {
   }
   if (viewState.kind === "failed") {
     return (
-      <div className="state" data-testid="results-page-failed">
+      <div className="state results-page-state" data-testid="results-page-failed">
         <strong>分析尚未完成</strong>
         <span>
-          当前状态：{viewState.status}。请返回任务中心查看进度后再打开结果。
+          当前状态：{formatRunStatusForResults(viewState.status)}。请返回任务中心查看进度后再打开结果。
         </span>
       </div>
     );
@@ -731,16 +722,22 @@ export function AnalysisResultsPage() {
   }
 
   return (
-    <section className="workspace results-page">
+    <section className="workspace results-page analysis-results-layout" data-testid="scene-analysis-results">
       <aside className="structure-pane" data-testid="scene-list">
-        <div className="pane-head">
-          <small>分析结果</small>
-          <h2 data-testid="results-header">
-            分析结果：Run #{run.id} · {summary.total_scene_count}个Scene
-          </h2>
-          <p>{chapter.display_title || chapter.title}</p>
+        <div className="pane-head results-page-header">
+          <div>
+            <small>场景分析</small>
+            <h2 data-testid="results-header">
+              场景分析结果：Run #{run.id} · {summary.total_scene_count} 个场景
+            </h2>
+            <p>{chapter.display_title || chapter.title}</p>
+          </div>
+          <div className="results-page-status">
+            <Badge tone="success">{formatRunStatusForResults(run.status)}</Badge>
+          </div>
         </div>
-        <div className="scene-selector">
+        <div className="scene-nav-label">场景导航</div>
+        <div className="scene-selector" data-testid="scene-nav">
           {scenes.map((item) => {
             const s = item.scene;
             const goal = fieldSummary(item.analysis_artifact?.analysis.goal);
@@ -755,7 +752,7 @@ export function AnalysisResultsPage() {
                 onClick={() => selectScene(s.id)}
               >
                 <span className="scene-line">
-                  <b>Scene {String(s.ordinal).padStart(2, "0")}</b>
+                  <b>{formatSceneDisplayLabel(s)}</b>
                   {item.analysis_artifact?.offline_recovered && (
                     <Badge tone="warning">离线恢复</Badge>
                   )}
@@ -765,11 +762,11 @@ export function AnalysisResultsPage() {
                   {s.start_paragraph_id} → {s.end_paragraph_id}
                   {s.is_single_paragraph ? "（单段）" : ""}
                 </small>
-                <small className="scene-goal">{goal}</small>
+                <small className="scene-goal">{goal === "无" ? "暂无目标摘要" : goal}</small>
                 <small className="scene-tags">
-                  {(item.analysis_artifact?.analysis.function_tags ?? []).join(" · ")}
+                  {formatFunctionTags(item.analysis_artifact?.analysis.function_tags)}
                 </small>
-                <small>边界来源：{s.boundary_source || "章末"}</small>
+                <small>边界来源：{formatBoundarySource(s.boundary_source)}</small>
               </button>
             );
           })}
@@ -778,9 +775,9 @@ export function AnalysisResultsPage() {
 
       <article className="reader" ref={proseRef}>
         <header>
-          <p className="eyebrow">正文 · {selected?.scene.scene_key}</p>
+          <p className="eyebrow">场景正文</p>
           <h1>
-            Scene {selected ? String(selected.scene.ordinal).padStart(2, "0") : "--"}
+            {selected ? formatSceneDisplayLabel(selected.scene) : "未选择场景"}
             {selected?.scene && (
               <small>
                 {" "}
@@ -884,56 +881,109 @@ export function AnalysisResultsPage() {
         {!selected ? (
           <Empty text="没有可显示的场景" />
         ) : tab === "structure" ? (
-          <div className="scene-structure" data-testid="structure-panel">
+          <div className="scene-structure analysis-results-body" data-testid="structure-panel">
             <div className="scene-title">
-              <Badge tone="success">Scene {selected.scene.ordinal}</Badge>
+              <Badge tone="success">{formatSceneDisplayLabel(selected.scene)}</Badge>
               <h2>{selected.scene.scene_key}</h2>
               <p>
                 {selected.scene.start_paragraph_id} → {selected.scene.end_paragraph_id}
               </p>
             </div>
-            {FIELD_LABELS.map(({ key, label }) => (
-              <div className="structure-field" data-testid={`structure-field-${key}`} key={key}>
-                <b>{label}</b>
-                <p>{fieldSummary(analysis[key] as any)}</p>
+            {!selected.analysis_artifact ? (
+              <Empty text="该场景暂无分析结果" />
+            ) : (
+              <div className="results-structure-sections">
+                <section className="analysis-result-section results-structure-section" data-testid="scene-summary-section">
+                  <h3>场景摘要</h3>
+                  <p>{formatSceneSummary(analysis)}</p>
+                </section>
+                {STRUCTURE_FIELD_SECTIONS.map(({ key, label, section }) => (
+                  <section className="analysis-result-section results-structure-section" key={key}>
+                    <h3>{section}</h3>
+                    <div className="structure-field" data-testid={`structure-field-${key}`}>
+                      <b>{label}</b>
+                      <p>{fieldSummary(analysis[key] as any)}</p>
+                    </div>
+                  </section>
+                ))}
+                <section className="analysis-result-section results-structure-section">
+                  <h3>关键动作</h3>
+                  <div className="structure-field" data-testid="structure-field-key_actions">
+                    <b>关键动作</b>
+                    {(analysis.key_actions ?? []).length ? (
+                      <ul>
+                        {(analysis.key_actions ?? []).map((action, index) => (
+                          <li key={index}>{action.summary?.trim() || "无"}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p>无</p>
+                    )}
+                  </div>
+                </section>
+                <section className="analysis-result-section results-structure-section">
+                  <h3>功能标签</h3>
+                  <div className="structure-field" data-testid="structure-field-function_tags">
+                    <b>功能标签</b>
+                    <p>{formatFunctionTags(analysis.function_tags)}</p>
+                  </div>
+                </section>
+                <section className="analysis-result-section results-structure-section" data-testid="scene-evidence-preview">
+                  <h3>证据</h3>
+                  {(selected.evidence ?? []).length ? (
+                    <div className="analysis-result-evidence-chips">
+                      {(selected.evidence ?? []).slice(0, 8).map((item, index) => (
+                        <button
+                          key={`${item.field_path}-${item.paragraph_id}-${index}`}
+                          type="button"
+                          className="secondary"
+                          data-testid={`structure-evidence-${item.paragraph_id}`}
+                          onClick={() => {
+                            setTab("evidence");
+                            locateEvidence(item.paragraph_id);
+                          }}
+                        >
+                          {item.paragraph_id}
+                        </button>
+                      ))}
+                      <button type="button" className="ghost" onClick={() => setTab("evidence")}>
+                        查看全部证据
+                      </button>
+                    </div>
+                  ) : (
+                    <p>暂无证据段落</p>
+                  )}
+                </section>
               </div>
-            ))}
-            <div className="structure-field" data-testid="structure-field-key_actions">
-              <b>关键动作 key_actions</b>
-              {(analysis.key_actions ?? []).length ? (
-                <ul>
-                  {(analysis.key_actions ?? []).map((action, index) => (
-                    <li key={index}>{action.summary?.trim() || "无"}</li>
-                  ))}
-                </ul>
-              ) : (
-                <p>无</p>
-              )}
-            </div>
-            <div className="structure-field" data-testid="structure-field-function_tags">
-              <b>function_tags</b>
-              <p>{(analysis.function_tags ?? []).join(" · ") || "无"}</p>
-            </div>
-            <dl className="structure-meta">
-              <dt>Provider</dt>
-              <dd>{selected.analysis_artifact?.provider}</dd>
-              <dt>模型</dt>
-              <dd>{selected.analysis_artifact?.model}</dd>
-              <dt>Prompt版本</dt>
-              <dd>{selected.analysis_artifact?.prompt_version}</dd>
-              <dt>Artifact ID</dt>
-              <dd>#{selected.analysis_artifact?.id}</dd>
-              <dt>分析时间</dt>
-              <dd>
-                {selected.analysis_artifact?.created_at
-                  ? new Date(selected.analysis_artifact.created_at).toLocaleString()
-                  : "无"}
-              </dd>
-            </dl>
+            )}
+            <details className="analysis-result-tech results-tech-details" data-testid="scene-tech-details">
+              <summary>技术详情</summary>
+              <dl className="structure-meta">
+                <dt>运行编号</dt>
+                <dd>#{run.id}</dd>
+                <dt>服务商</dt>
+                <dd>{selected.analysis_artifact?.provider || "—"}</dd>
+                <dt>模型</dt>
+                <dd>{selected.analysis_artifact?.model || "—"}</dd>
+                <dt>提示词版本</dt>
+                <dd>{selected.analysis_artifact?.prompt_version || "—"}</dd>
+                <dt>结果工件</dt>
+                <dd>#{selected.analysis_artifact?.id ?? "—"}</dd>
+                <dt>分析时间</dt>
+                <dd>
+                  {selected.analysis_artifact?.created_at
+                    ? new Date(selected.analysis_artifact.created_at).toLocaleString()
+                    : "无"}
+                </dd>
+              </dl>
+              <pre data-testid="scene-raw-json">
+                {JSON.stringify(selected.analysis_artifact?.analysis ?? {}, null, 2)}
+              </pre>
+            </details>
           </div>
         ) : tab === "evidence" ? (
           <div className="scene-evidence" data-testid="evidence-panel">
-            {EVIDENCE_GROUPS.map(({ group, label }) => {
+            {EVIDENCE_GROUP_LABELS.map(({ group, label }) => {
               const items = (selected.evidence ?? []).filter((e) => e.group === group);
               if (!items.length) return null;
               return (
@@ -947,7 +997,7 @@ export function AnalysisResultsPage() {
                       onClick={() => locateEvidence(item.paragraph_id)}
                     >
                       {item.paragraph_id}
-                      {!item.in_scope && <span className="danger">超出Scene范围</span>}
+                      {!item.in_scope && <span className="danger">超出场景范围</span>}
                     </button>
                   ))}
                 </div>
@@ -957,6 +1007,9 @@ export function AnalysisResultsPage() {
               <div className="notice error" data-testid="evidence-illegal">
                 检测到 {selected.illegal_evidence.length} 条超范围/缺失证据
               </div>
+            )}
+            {!selected.evidence?.length && !(selected.illegal_evidence ?? []).length && (
+              <Empty text="该场景暂无证据条目" />
             )}
           </div>
         ) : tab === "history" ? (
@@ -989,16 +1042,16 @@ export function AnalysisResultsPage() {
         ) : tab === "overview" ? (
           <div className="chapter-overview" data-testid="overview-panel">
             <dl className="overview-stats">
-              <dt>Scene总数</dt>
+              <dt>场景总数</dt>
               <dd>{summary.total_scene_count}</dd>
               <dt>覆盖率</dt>
               <dd>{summary.coverage_rate != null ? `${Math.round(summary.coverage_rate * 100)}%` : "-"}</dd>
-              <dt>单段Scene</dt>
+              <dt>单段场景</dt>
               <dd>{summary.single_paragraph_scene_count}</dd>
-              <dt>最长Scene</dt>
+              <dt>最长场景</dt>
               <dd>
                 {summary.longest_scene_ordinal != null
-                  ? `Scene ${summary.longest_scene_ordinal}（${summary.longest_scene_paragraph_count}段）`
+                  ? `${formatSceneDisplayLabel({ ordinal: summary.longest_scene_ordinal })}（${summary.longest_scene_paragraph_count}段）`
                   : "-"}
               </dd>
               <dt>人工新增边界</dt>
@@ -1007,7 +1060,7 @@ export function AnalysisResultsPage() {
               <dd>{summary.model_accepted_boundary_count}</dd>
               <dt>人工接受冲突</dt>
               <dd>{summary.user_accepted_conflict_count}</dd>
-              <dt>Evidence覆盖率</dt>
+              <dt>证据覆盖率</dt>
               <dd>{Math.round(summary.evidence_coverage_rate * 100)}%</dd>
             </dl>
             <ol className="scene-chain">
@@ -1018,7 +1071,7 @@ export function AnalysisResultsPage() {
                   onClick={() => selectScene(item.scene.id)}
                 >
                   <b>
-                    Scene {String(item.scene.ordinal).padStart(2, "0")}
+                    {formatSceneDisplayLabel(item.scene)}
                     {item.scene.is_single_paragraph ? "（单段）" : ""}
                   </b>
                   <small>
@@ -1030,9 +1083,9 @@ export function AnalysisResultsPage() {
                     悬念：{fieldSummary(item.analysis_artifact?.analysis.unresolved_question)}
                   </span>
                   <small>
-                    {(item.analysis_artifact?.analysis.function_tags ?? []).join(" · ")}
+                    {formatFunctionTags(item.analysis_artifact?.analysis.function_tags)}
                     {" · "}
-                    {item.scene.boundary_source || "章末"}
+                    {formatBoundarySource(item.scene.boundary_source)}
                   </small>
                 </li>
               ))}
