@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { checkForAppUpdate } from "../../services/updaterService";
 import { UpdateAvailableDialog } from "../desktop/UpdateAvailableDialog";
+import { TelemetrySettingsCard } from "./TelemetrySettingsCard";
 
 const APP_VERSION = "1.0.0-rc1";
 
@@ -60,27 +61,6 @@ export function SettingsPrivacyUpdateTab() {
         />
       </label>
 
-      <label className="settings-switch-row" data-testid="telemetry-placeholder">
-        <span>
-          <b>匿名使用统计</b>
-          <small>尚未启用 · 不会发送网络请求</small>
-        </span>
-        <input
-          type="checkbox"
-          role="switch"
-          className="settings-switch"
-          disabled
-          aria-label="匿名使用统计"
-        />
-      </label>
-
-      <p className="hint">
-        <a href="https://storylens.app/privacy" target="_blank" rel="noreferrer">
-          查看隐私说明
-        </a>
-        （占位链接，正式版将替换为有效地址）
-      </p>
-
       <p data-testid="settings-app-version">当前版本：{APP_VERSION}</p>
 
       <div className="settings-actions">
@@ -112,6 +92,8 @@ export function SettingsPrivacyUpdateTab() {
           }}
         />
       )}
+
+      <TelemetrySettingsCard />
     </article>
   );
 }

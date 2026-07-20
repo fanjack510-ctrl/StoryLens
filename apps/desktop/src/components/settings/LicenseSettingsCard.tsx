@@ -6,12 +6,7 @@ import {
 } from "../../services/license";
 import { licenseStatusLabel, useLicenseStore } from "../../stores/license";
 
-/**
- * Standalone VIP license settings card.
- *
- * Not wired into SettingsPage in this stage (SettingsPage.tsx must not be modified).
- * Real commerce / Afdian purchase is "即将开放" — no fake prices or dead purchase links.
- */
+/** VIP license settings card; wired via SettingsLicenseTab. Commerce remains 即将开放. */
 export function LicenseSettingsCard() {
   const {
     status,

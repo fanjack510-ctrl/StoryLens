@@ -646,7 +646,10 @@ export function CanonicalJourneyChart({
               height={108}
               data-testid="journey-node-tooltip"
             >
-              <div className="journey-node-tooltip-card" xmlns="http://www.w3.org/1999/xhtml">
+              <div
+                className="journey-node-tooltip-card"
+                {...({ xmlns: "http://www.w3.org/1999/xhtml" } as Record<string, string>)}
+              >
                 <div>
                   Scene {tooltipNode.scene_ordinal}
                   {tooltipNode.role ? ` · ${tooltipNode.role}` : ""}

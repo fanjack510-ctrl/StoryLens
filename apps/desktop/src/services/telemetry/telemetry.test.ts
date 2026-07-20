@@ -143,3 +143,13 @@ describe("NoopTelemetryTransport", () => {
     await expect(t.send("app_launched", {}, "x")).resolves.toBeUndefined();
   });
 });
+
+describe("analysisRunTelemetry buckets", () => {
+  it("maps duration and scene count to buckets", async () => {
+    const { bucketDurationMs, bucketSceneCount } = await import("./analysisRunTelemetry");
+    expect(bucketDurationMs(30_000)).toBe("under_1m");
+    expect(bucketDurationMs(120_000)).toBe("1m_to_5m");
+    expect(bucketSceneCount(3)).toBe("1_5");
+    expect(bucketSceneCount(40)).toBe("31_plus");
+  });
+});

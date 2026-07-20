@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { analysisApi } from "../services/analysisApi";
@@ -13,6 +13,7 @@ import {
   chapterResultHref,
 } from "../services/discoverActiveChapterRun";
 import { isSceneAnalysisComplete } from "../services/chapterJourneyComposition";
+import { maybeTrackAnalysisCompleted } from "../services/telemetry/analysisRunTelemetry";
 
 type RecoveryState = "idle" | "checking" | "creating_recovery" | "created" | "failed";
 type SceneResumeState = "idle" | "checking" | "resuming" | "done" | "failed";
@@ -279,6 +280,13 @@ export function TasksPage() {
     queryFn: analysisApi.runs,
     refetchInterval: 5000,
   });
+
+  useEffect(() => {
+    for (const run of runs.data ?? []) {
+      maybeTrackAnalysisCompleted(run);
+    }
+  }, [runs.data]);
+
   const retry = async (id: number) => {
     await analysisApi.retry(id);
     await qc.invalidateQueries({ queryKey: ["runs"] });

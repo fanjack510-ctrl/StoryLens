@@ -22,6 +22,7 @@ import {
   requestOnlyShortfall,
   type CreateBudgetBlocker,
 } from "../../services/budgetRecoveryMath";
+import { trackAnalysisStarted } from "../../services/telemetry/analysisRunTelemetry";
 
 function formatBudgetGaps(preflight: any): string {
   const dims: string[] = preflight?.exceeded_dimensions || [];
@@ -684,6 +685,7 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
         };
       }
       const run = await analysisApi.start(chapterId, payload);
+      trackAnalysisStarted(mode);
       setSubmitState("created");
       setMessage(`任务已创建，Run ID：${run.run_id}。将在本章显示分析进度。`);
       onClose();

@@ -31,7 +31,7 @@ function withSceneCount(sceneCount: number) {
   const series = values.map((value, i) => ({ scene_ordinal: i + 1, value }));
   const curve_series = Object.fromEntries(
     Object.keys(base.curve_series).map((key) => [key, series]),
-  ) as typeof base.curve_series;
+  ) as unknown as typeof base.curve_series;
   return {
     ...base,
     scene_nodes: nodes,

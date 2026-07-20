@@ -9,6 +9,7 @@ import {
 import { DEFAULT_AI_SERVICE_ID } from "../../services/aiServiceViewModel";
 import { saveAiServiceConfiguration, testAiServiceConnection } from "../../services/aiServiceConfig";
 import { useOnboardingStore } from "../../stores/onboardingStore";
+import { useTelemetryStore } from "../../stores/telemetry";
 
 type Step = 1 | 2 | 3;
 
@@ -17,14 +18,17 @@ export function FirstLaunchWizard() {
   const qc = useQueryClient();
   const complete = useOnboardingStore((s) => s.complete);
   const skip = useOnboardingStore((s) => s.skip);
+  const setTelemetryEnabled = useTelemetryStore((s) => s.setAnonymousTelemetryEnabled);
   const [step, setStep] = useState<Step>(1);
   const [apiKey, setApiKey] = useState("");
   const [analysisMode, setAnalysisMode] = useState<AnalysisModePresetId>(DEFAULT_ANALYSIS_MODE);
   const [consent, setConsent] = useState(false);
+  const [anonymousStats, setAnonymousStats] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
 
   const finish = (target: "library" | "import") => {
+    setTelemetryEnabled(anonymousStats);
     complete();
     if (target === "import") {
       navigate("/library?import=1");
@@ -138,6 +142,15 @@ export function FirstLaunchWizard() {
           <div data-testid="onboarding-step-start">
             <h2>开始使用</h2>
             <p>导入第一本小说，或先浏览空书库；随时可在设置中修改 AI 配置。</p>
+            <label className="consent" data-testid="onboarding-telemetry-opt-in">
+              <input
+                type="checkbox"
+                checked={anonymousStats}
+                onChange={(e) => setAnonymousStats(e.target.checked)}
+              />
+              允许发送匿名使用统计，帮助改进 StoryLens
+            </label>
+            <p className="muted">不包含小说正文、书名、文件路径或 API Key</p>
             <div className="settings-actions">
               <button type="button" className="primary" onClick={() => finish("import")}>
                 导入第一本小说

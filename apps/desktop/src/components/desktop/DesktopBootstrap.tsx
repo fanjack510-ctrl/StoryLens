@@ -5,6 +5,7 @@ import {
   type BackendUiStatus,
 } from "../../services/desktopRuntime";
 import { checkForAppUpdate, type UpdateCheckResult } from "../../services/updaterService";
+import { trackAppLaunchedOncePerSession } from "../../services/telemetry/telemetryRuntime";
 import { UpdateAvailableDialog } from "./UpdateAvailableDialog";
 
 export function DesktopBootstrap({ children }: { children: ReactNode }) {
@@ -32,6 +33,7 @@ export function DesktopBootstrap({ children }: { children: ReactNode }) {
       });
 
       if (result.state === "ready" || result.state === "browser_dev") {
+        trackAppLaunchedOncePerSession();
         const update = await checkForAppUpdate(false);
         if (!cancelled && update.kind === "available") {
           setUpdateInfo(update);

@@ -62,12 +62,19 @@ StoryLens 是本地优先工具。可选匿名统计用于了解：
 
 切换自建服务时：只需替换 endpoint 与 ingest 契约适配层，保留 schema 白名单与同意门禁；业务代码继续调用 `TelemetryClient.track`。
 
-## 尚未上线（本阶段）
+## 尚未接线（本阶段）
 
-- **未** 修改 `SettingsPage.tsx`：设置卡片组件已就绪，尚未挂入主导航。
-- **未** 修改首次启动向导：不会在 onboarding 中弹同意框。
-- **未** 在应用启动/analysis 路径自动打点（仅 foundation + 测试）。
-- **未** 在 CI/Release 流水线注入生产 PostHog 项目（需发布流程单独配置 env）。
-- **未** 后端 API 侧统计；全部为桌面端 opt-in 出站事件。
+- **`feature_used`**：功能键命中尚未在 UI 路径挂载可靠触发点；schema 与 `TelemetryClient` 已就绪。
+- **`update_installed`**：更新安装成功回调尚未与遥测挂钩；检查更新失败不影响分析。
+- **生产 ingest**：Release 流水线注入 `VITE_TELEMETRY_*` 仍由发布流程单独配置；未配置时使用 Noop。
 
-详见 `apps/desktop/src/services/telemetry/` 与 `apps/desktop/src/components/settings/TelemetrySettingsCard.tsx`。
+## 已接线（v0.1.0 Preview 集成）
+
+- 设置「隐私与更新」页：`TelemetrySettingsCard`（opt-in 开关、不收集说明、安装 ID 重置）。
+- 设置「授权与会员」页：`LicenseSettingsCard`（免费版 / 即将开放；DEV Mock 仅开发模式）。
+- 首次启动向导第三步：可选匿名统计（默认不勾选；完成时 ENABLED/DISABLED；跳过保持 UNKNOWN）。
+- **`app_launched`**：`DesktopBootstrap` 本地 API 就绪后每会话一次（sessionStorage 防 HMR 重复）。
+- **`analysis_started`**：`StartAnalysisDialog` 任务创建成功后。
+- **`analysis_completed`**：任务进入终态（`useCurrentPageAnalysisProgress` / 任务列表轮询），含桶化 `duration_bucket` / `scene_count_bucket`（有数据时）。
+
+详见 `apps/desktop/src/services/telemetry/` 与设置卡片组件。

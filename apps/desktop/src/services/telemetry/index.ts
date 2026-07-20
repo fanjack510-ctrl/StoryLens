@@ -23,3 +23,14 @@ export {
 export { readTelemetryBuildConfig, isTelemetryTransportConfigured } from "./config";
 export { getDefaultTelemetryContext, detectOsFamily } from "./context";
 export { TelemetryClient, type TelemetryClientDeps } from "./telemetryClient";
+export {
+  trackAppLaunchedOncePerSession,
+  getAppTelemetryClient,
+} from "./telemetryRuntime";
+export {
+  bucketDurationMs,
+  bucketSceneCount,
+  maybeTrackAnalysisCompleted,
+  trackAnalysisStarted,
+  telemetryStatusForRun,
+} from "./analysisRunTelemetry";
