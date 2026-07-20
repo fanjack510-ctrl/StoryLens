@@ -39,7 +39,7 @@ export function ChapterAnalysisFailureCard({
     <div className="chapter-analysis-failure-card" data-testid="chapter-analysis-failure">
       <h3>分析未完成</h3>
       <p data-testid="chapter-analysis-failure-lead">
-        StoryLens 在分析过程中遇到了问题，已完成的部分不会丢失。
+        StoryLens 在分析过程中遇到了问题。已经完成的分析结果会被保留。
       </p>
       <p data-testid="chapter-analysis-failure-hint">{userFacingFailureHint(run)}</p>
       <ul className="chapter-analysis-failure-stats">

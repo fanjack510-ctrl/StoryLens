@@ -128,10 +128,45 @@ describe("场景边界审阅", () => {
   it("显示候选上下文、分隔线和风险", async () => {
     renderPanel(); expect(await screen.findByText("场景边界审阅")).toBeInTheDocument();
     expect(screen.getByText("建议在此拆分场景")).toBeInTheDocument();
-    expect(screen.getByText("高置信度")).toBeInTheDocument();
+    expect(screen.getByText(/高置信度/)).toBeInTheDocument();
+    expect(screen.getByTestId("decision-reason-T0001")).toHaveTextContent("人物目标发生变化");
+    expect(screen.getByTestId("decision-reason-T0001")).not.toHaveTextContent("primary_goal_reset");
     expect(screen.getByText("原创段落1")).toBeInTheDocument();
     expect(screen.getByText("原创段落8")).toBeInTheDocument();
     expect(screen.getByTestId("review-stats")).toHaveTextContent("待处理 1");
+    expect(screen.getByTestId("review-candidate-count")).toHaveTextContent("候选边界 1 / 1");
+    expect(screen.getByTestId("review-candidate-pages").querySelectorAll("button")).toHaveLength(1);
+    expect(screen.queryByTestId("review-candidate-page-2")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("decision-tech-T0001").querySelector("summary")!);
+    expect(screen.getByTestId("decision-tech-T0001")).toHaveTextContent("primary_goal_reset");
+  });
+
+  it("两个候选时 Header 与页码共用同一数量", async () => {
+    vi.mocked(analysisApi.boundaryReview).mockResolvedValue({
+      ...review,
+      decisions: [
+        review.decisions[0],
+        {
+          ...review.decisions[0],
+          id: 2,
+          transition_id: "T0002",
+          left_paragraph_id: "P5",
+          right_paragraph_id: "P6",
+          model_reason_code: "location_change",
+          review_priority: "medium",
+        },
+      ],
+    } as any);
+    renderPanel();
+    expect(await screen.findByTestId("review-candidate-count")).toHaveTextContent("候选边界 1 / 2");
+    const pages = screen.getByTestId("review-candidate-pages");
+    expect(pages.querySelectorAll("button")).toHaveLength(2);
+    expect(screen.getByTestId("review-candidate-page-1")).toBeInTheDocument();
+    expect(screen.getByTestId("review-candidate-page-2")).toBeInTheDocument();
+    expect(screen.getByTestId("decision-reason-T0001")).toHaveTextContent("人物目标发生变化");
+    fireEvent.click(screen.getByTestId("review-candidate-page-2"));
+    expect(screen.getByTestId("review-candidate-count")).toHaveTextContent("候选边界 2 / 2");
+    expect(screen.getByTestId("decision-reason-T0002")).toHaveTextContent("位置发生变化");
   });
 
   it("接受与拒绝只保存人工决定", async () => {

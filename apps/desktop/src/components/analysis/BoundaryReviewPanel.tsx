@@ -4,6 +4,7 @@ import { analysisApi } from "../../services/analysisApi";
 import { ApiError } from "../../services/apiClient";
 import {
   formatBoundaryDecision,
+  formatBoundaryReasonCode,
   formatConfidencePercent,
   formatCny,
   formatManualReasonType,
@@ -453,15 +454,18 @@ export function BoundaryReviewPanel({
           <div className="review-candidate-badges">
             <Badge tone={item.review_priority === "high" ? "warning" : "neutral"}>
               {formatReviewPriority(item.review_priority)}
+              {" · "}
+              {formatConfidencePercent(item.model_confidence)}
             </Badge>
-            <Badge tone="neutral">置信度 {formatConfidencePercent(item.model_confidence)}</Badge>
           </div>
-          <span className="para-id">{item.left_paragraph_id}</span>
-          {item.model_reason_code ? (
-            <span className="review-reason-code">{item.model_reason_code}</span>
-          ) : (
-            <span className="review-reason-code">人工新增</span>
-          )}
+          <p className="review-reason-label" data-testid={`decision-reason-${item.transition_id}`}>
+            {item.model_reason_code
+              ? formatBoundaryReasonCode(item.model_reason_code)
+              : "人工新增"}
+          </p>
+          {item.left_paragraph_id ? (
+            <small className="para-id review-candidate-para-id">{item.left_paragraph_id}</small>
+          ) : null}
         </header>
         {item.semantic_conflict && (
           <div className="notice" data-testid="semantic-conflict">
@@ -469,34 +473,37 @@ export function BoundaryReviewPanel({
             <p>
               模型认为这里可能是场景边界，但其结构化分类显示行动链仍连续，需要人工判断。
             </p>
-            <dl>
-              <dt>Transition ID</dt>
-              <dd>{item.transition_id}</dd>
-              <dt>模型候选</dt>
-              <dd>{item.model_boundary_candidate ? "true" : "false"}</dd>
-              <dt>goal_relation</dt>
-              <dd>{enumSnapshot.goal_relation || "-"}</dd>
-              <dt>action_chain_relation</dt>
+            <details className="review-tech-details">
+              <summary>技术详情</summary>
+              <dl>
+                <dt>Transition ID</dt>
+                <dd>{item.transition_id}</dd>
+                <dt>模型候选</dt>
+                <dd>{item.model_boundary_candidate ? "true" : "false"}</dd>
+                <dt>goal_relation</dt>
+                <dd>{enumSnapshot.goal_relation || "-"}</dd>
+                <dt>action_chain_relation</dt>
                 <dd>{enumSnapshot.action_chain_relation || "-"}</dd>
-              <dt>trigger_type</dt>
-              <dd>{enumSnapshot.trigger_type || "-"}</dd>
-              <dt>deterministic_reason</dt>
-              <dd>{item.deterministic_reason || "null"}</dd>
-              <dt>deterministic_legal</dt>
-              <dd>
-                {item.deterministic_legal === false
-                  ? "false"
-                  : item.deterministic_legal === true
-                    ? "true"
-                    : "-"}
-              </dd>
-              <dt>conflict_code</dt>
-              <dd>{item.conflict_code}</dd>
-              <dt>review_priority</dt>
-              <dd>{item.review_priority}</dd>
-              <dt>来源批次</dt>
-              <dd>Batch {item.source_batch_index ?? "-"}</dd>
-            </dl>
+                <dt>trigger_type</dt>
+                <dd>{enumSnapshot.trigger_type || "-"}</dd>
+                <dt>deterministic_reason</dt>
+                <dd>{item.deterministic_reason || "null"}</dd>
+                <dt>deterministic_legal</dt>
+                <dd>
+                  {item.deterministic_legal === false
+                    ? "false"
+                    : item.deterministic_legal === true
+                      ? "true"
+                      : "-"}
+                </dd>
+                <dt>conflict_code</dt>
+                <dd>{item.conflict_code}</dd>
+                <dt>review_priority</dt>
+                <dd>{item.review_priority}</dd>
+                <dt>来源批次</dt>
+                <dd>Batch {item.source_batch_index ?? "-"}</dd>
+              </dl>
+            </details>
           </div>
         )}
         <div className="review-context">
@@ -510,8 +517,18 @@ export function BoundaryReviewPanel({
             </div>
           ))}
         </div>
-        <details>
-          <summary>模型结构化结果</summary>
+        <details className="review-tech-details" data-testid={`decision-tech-${item.transition_id}`}>
+          <summary>技术详情</summary>
+          <dl>
+            <dt>类型</dt>
+            <dd>{item.model_reason_code || "manual"}</dd>
+            <dt>Boundary ID</dt>
+            <dd>{item.transition_id}</dd>
+            <dt>段落</dt>
+            <dd>
+              {item.left_paragraph_id} → {item.right_paragraph_id}
+            </dd>
+          </dl>
           <pre>{item.first_pass_json}</pre>
           <pre>{item.adjudication_result}</pre>
         </details>
@@ -643,10 +660,31 @@ export function BoundaryReviewPanel({
         </p>
       )}
       {ordered.length > 0 && (
-        <nav className="review-candidate-nav" aria-label="候选边界导航">
-          <span className="review-candidate-nav-label">
-            候选边界 {activeIndex + 1}/{ordered.length}
+        <nav className="review-candidate-nav" aria-label="候选边界导航" data-testid="review-candidate-nav">
+          <span className="review-candidate-nav-label" data-testid="review-candidate-count">
+            候选边界 {activeIndex + 1} / {ordered.length}
           </span>
+          <div
+            className="review-candidate-pages"
+            role="tablist"
+            aria-label="候选边界页码"
+            data-testid="review-candidate-pages"
+            data-count={ordered.length}
+          >
+            {ordered.map((item, index) => (
+              <button
+                key={decisionKey(item)}
+                type="button"
+                role="tab"
+                aria-selected={index === activeIndex}
+                className={index === activeIndex ? "is-active" : undefined}
+                data-testid={`review-candidate-page-${index + 1}`}
+                onClick={() => selectDecision(item)}
+              >
+                {index + 1}
+              </button>
+            ))}
+          </div>
           <button
             type="button"
             className="secondary"
@@ -665,14 +703,17 @@ export function BoundaryReviewPanel({
           </button>
         </nav>
       )}
-      <div className="boundary-timeline" aria-label="章节段落时间线">
+      <div className="boundary-timeline" aria-label="章节段落时间线" data-testid="boundary-timeline">
         {gaps.map((gap) => {
           const markClass =
             gap.source === "none"
-              ? ""
+              ? "timeline-gap"
               : `timeline-mark ${gap.status}${gap.source === "semantic_conflict" && gap.status === "pending" ? " pending" : ""}`;
           const isActive =
             gap.decision && activeKey === decisionKey(gap.decision) ? " active" : "";
+          const candidateOrdinal = gap.decision
+            ? ordered.findIndex((item) => decisionKey(item) === decisionKey(gap.decision)) + 1
+            : 0;
           return (
             <button
               key={gap.gap_after_paragraph_id}
@@ -684,6 +725,11 @@ export function BoundaryReviewPanel({
                   ? `${gap.gap_after_paragraph_id} · ${gap.transition_id}`
                   : gap.gap_after_paragraph_id
               }
+              aria-label={
+                candidateOrdinal > 0
+                  ? `候选边界 ${candidateOrdinal}`
+                  : `段落 ${gap.paragraph_index + 1}`
+              }
               data-testid={
                 gap.transition_id
                   ? `timeline-${gap.transition_id}`
@@ -693,7 +739,7 @@ export function BoundaryReviewPanel({
               data-source={gap.source}
               onClick={() => onTimelineClick(gap)}
             >
-              {gap.paragraph_index + 1}
+              {candidateOrdinal > 0 ? candidateOrdinal : "·"}
             </button>
           );
         })}

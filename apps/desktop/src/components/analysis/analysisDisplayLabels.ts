@@ -49,6 +49,21 @@ const PRIORITY_LABELS: Record<string, string> = {
   low: "低置信度",
 };
 
+const BOUNDARY_REASON_LABELS: Record<string, string> = {
+  location_change: "位置发生变化",
+  time_change: "时间发生变化",
+  time_jump: "时间发生变化",
+  character_goal_change: "人物目标发生变化",
+  primary_goal_reset: "人物目标发生变化",
+  conflict_change: "冲突发生变化",
+  topic_change: "叙事重点发生变化",
+  viewpoint_change: "视角发生变化",
+  explicit_scene_separator: "明确的场景分隔",
+  other_manual_boundary: "其他变化",
+  manual: "人工新增",
+  model: "模型建议",
+};
+
 const DECISION_LABELS: Record<string, string> = {
   pending: "待处理",
   accept: "已接受",
@@ -66,12 +81,12 @@ const REVIEW_STATUS_LABELS: Record<string, string> = {
 };
 
 const MANUAL_REASON_LABELS: Record<string, string> = {
-  location_change: "地点变化",
-  time_jump: "时间跳跃",
-  viewpoint_change: "视角变化",
-  primary_goal_reset: "人物目标重置",
+  location_change: "位置发生变化",
+  time_jump: "时间发生变化",
+  viewpoint_change: "视角发生变化",
+  primary_goal_reset: "人物目标发生变化",
   explicit_scene_separator: "明确的场景分隔",
-  other_manual_boundary: "其他人工边界",
+  other_manual_boundary: "其他变化",
 };
 
 function clean(value: unknown): string | null {
@@ -124,7 +139,13 @@ export function formatReviewStatus(raw: unknown): string {
 export function formatManualReasonType(raw: unknown): string {
   const key = clean(raw);
   if (!key) return "";
-  return MANUAL_REASON_LABELS[key] || key;
+  return MANUAL_REASON_LABELS[key] || BOUNDARY_REASON_LABELS[key] || "其他变化";
+}
+
+export function formatBoundaryReasonCode(raw: unknown): string {
+  const key = clean(raw);
+  if (!key) return "人工新增";
+  return BOUNDARY_REASON_LABELS[key] || "其他变化";
 }
 
 export function formatCny(amount: unknown, fallback = "暂无法估算"): string {

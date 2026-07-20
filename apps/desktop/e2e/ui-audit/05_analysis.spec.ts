@@ -1,11 +1,35 @@
 import { test, expect } from "@playwright/test";
+import crypto from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
 import { installUiAuditMocks } from "./helpers/mockApi";
-import { shot, prepareAuditSession, gotoReady } from "./helpers/shot";
+import {
+  shot,
+  prepareAuditSession,
+  gotoReady,
+  applyProductTheme,
+  assertAnalysisDarkSurfaces,
+  SCREENSHOT_DIR,
+} from "./helpers/shot";
 
 test.describe.configure({ mode: "serial" });
 test.setTimeout(180_000);
 
 const BOOK = "/books/1?chapter=1";
+
+function fileSha256(file: string): string {
+  const buf = fs.readFileSync(path.join(SCREENSHOT_DIR, file));
+  return crypto.createHash("sha256").update(buf).digest("hex");
+}
+
+function assertScreenshotsDiffer(a: string, b: string, label: string) {
+  const pathA = path.join(SCREENSHOT_DIR, a);
+  const pathB = path.join(SCREENSHOT_DIR, b);
+  if (!fs.existsSync(pathA) || !fs.existsSync(pathB)) {
+    throw new Error(`${label}: missing screenshot ${!fs.existsSync(pathA) ? a : b}`);
+  }
+  expect(fileSha256(a), `${label}: ${a} vs ${b} must differ`).not.toBe(fileSha256(b));
+}
 
 async function openStartAnalysis(page: import("@playwright/test").Page) {
   await page.getByTestId("shell-start-analysis").click();
@@ -15,6 +39,13 @@ async function openStartAnalysis(page: import("@playwright/test").Page) {
   if (await modeSelect.count()) {
     await modeSelect.selectOption("cloud");
   }
+}
+
+async function assertSubmitDisabled(page: import("@playwright/test").Page, reason: RegExp) {
+  const submit = page.getByTestId("start-analysis-submit");
+  await expect(submit).toBeDisabled();
+  await expect(page.getByTestId("start-analysis-disabled-reason")).toContainText(reason);
+  await expect(page.getByTestId("start-analysis-no-provider")).toContainText(reason);
 }
 
 test.describe("05 analysis", () => {
@@ -38,23 +69,33 @@ test.describe("05 analysis", () => {
     await openStartAnalysis(page);
     await expect(page.getByTestId("start-analysis-dialog")).toBeVisible();
     await expect(page.getByTestId("start-analysis-provider-select")).toBeVisible();
+    await expect(page.getByTestId("start-analysis-provider-select")).toContainText("阿里云百炼");
+    await expect(page.getByTestId("start-analysis-provider-select")).not.toContainText("qwen3.7-plus");
+    await expect(page.getByTestId("start-analysis-submit")).toBeEnabled();
     await expect(page.getByTestId("start-analysis-dialog")).toContainText("创建分析任务");
     await expect(page.getByTestId("start-analysis-mode-section")).toBeVisible();
+    await expect(page.getByTestId("analysis-mode-label-balanced")).toHaveText("均衡 · 推荐");
     await shot(page, { id: "05-02", file: "05_start_dialog.png", route: BOOK, theme: "light" });
     const tech = page.getByTestId("start-analysis-tech-details");
     if (await tech.count()) {
       await tech.locator("summary").click();
     }
     await expect(page.getByTestId("start-analysis-dialog")).toContainText("aliyun_qwen_plus");
+    await expect(page.getByTestId("start-analysis-dialog")).toContainText("qwen3.7-plus");
     await shot(page, { id: "05-03", file: "05_provider_single.png", route: BOOK, theme: "light" });
     await page.getByRole("checkbox").check().catch(() => undefined);
     await shot(page, { id: "05-15", file: "05_confirm_budget.png", route: BOOK, theme: "light" });
+
+    await applyProductTheme(page, "dark");
+    await assertAnalysisDarkSurfaces(page);
     await shot(page, {
       id: "05-d1",
       file: "05_start_dialog_dark.png",
       route: BOOK,
       theme: "dark",
     });
+    assertScreenshotsDiffer("05_start_dialog.png", "05_start_dialog_dark.png", "start dialog light vs dark");
+    await applyProductTheme(page, "light");
   });
 
   test("start dialog provider none", async ({ page }) => {
@@ -66,10 +107,7 @@ test.describe("05 analysis", () => {
     await gotoReady(page, BOOK);
     await openStartAnalysis(page);
     await expect(page.getByTestId("start-analysis-dialog")).toBeVisible();
-    await expect(page.getByTestId("start-analysis-no-provider")).toBeVisible();
-    await expect(page.getByTestId("start-analysis-no-provider")).toContainText(
-      /尚未配置 API Key|当前没有可用/,
-    );
+    await assertSubmitDisabled(page, /尚未配置 API Key|当前没有可用/);
     await shot(page, { id: "05-05", file: "05_provider_none.png", route: BOOK, theme: "light" });
   });
 
@@ -83,10 +121,7 @@ test.describe("05 analysis", () => {
     await gotoReady(page, BOOK);
     await openStartAnalysis(page);
     await expect(page.getByTestId("start-analysis-dialog")).toBeVisible();
-    await expect(page.getByTestId("start-analysis-no-provider")).toBeVisible();
-    await expect(page.getByTestId("start-analysis-no-provider")).toContainText(
-      /云端分析尚未开启|云端连接未开启/,
-    );
+    await assertSubmitDisabled(page, /云端分析尚未开启|云端连接未开启/);
     await shot(page, { id: "05-06", file: "05_cloud_off.png", route: BOOK, theme: "light" });
   });
 
@@ -99,7 +134,7 @@ test.describe("05 analysis", () => {
     await gotoReady(page, BOOK);
     await openStartAnalysis(page);
     await expect(page.getByTestId("start-analysis-dialog")).toBeVisible();
-    await expect(page.getByTestId("start-analysis-no-provider")).toContainText("尚未配置 API Key");
+    await assertSubmitDisabled(page, /尚未配置 API Key/);
     await shot(page, { id: "05-07", file: "05_key_missing.png", route: BOOK, theme: "light" });
     await shot(page, { id: "05-10", file: "05_goto_ai_settings.png", route: BOOK, theme: "light" });
   });
@@ -113,9 +148,7 @@ test.describe("05 analysis", () => {
     await gotoReady(page, BOOK);
     await openStartAnalysis(page);
     await expect(page.getByTestId("start-analysis-dialog")).toBeVisible();
-    await expect(page.getByTestId("start-analysis-no-provider")).toContainText(
-      /AI 服务已停用|Provider 已停用/,
-    );
+    await assertSubmitDisabled(page, /Provider 已停用|AI 服务已停用/);
     await shot(page, { id: "05-08", file: "05_provider_disabled.png", route: BOOK, theme: "light" });
   });
 
@@ -128,10 +161,7 @@ test.describe("05 analysis", () => {
     await gotoReady(page, BOOK);
     await openStartAnalysis(page);
     await expect(page.getByTestId("start-analysis-dialog")).toBeVisible();
-    await expect(page.getByTestId("start-analysis-no-provider")).toBeVisible();
-    await expect(page.getByTestId("start-analysis-no-provider")).toContainText(
-      /保存的凭据已失效|凭据无效/,
-    );
+    await assertSubmitDisabled(page, /凭据已失效|保存的凭据已失效|凭据无效/);
     await shot(page, { id: "05-09", file: "05_credential_invalid.png", route: BOOK, theme: "light" });
   });
 
@@ -161,6 +191,7 @@ test.describe("05 analysis", () => {
     await expect(page.getByTestId("start-analysis-mode-hint")).toContainText("速度优先");
     await shot(page, { id: "05-11", file: "05_mode_fast.png", route: BOOK, theme: "light" });
     await page.getByTestId("analysis-mode-balanced").click();
+    await expect(page.getByTestId("analysis-mode-label-balanced")).toHaveText("均衡 · 推荐");
     await shot(page, { id: "05-12", file: "05_mode_balanced.png", route: BOOK, theme: "light" });
     await page.getByTestId("analysis-mode-quality").click();
     await shot(page, { id: "05-13", file: "05_mode_quality.png", route: BOOK, theme: "light" });
@@ -184,17 +215,31 @@ test.describe("05 analysis", () => {
     await expect(page.getByTestId("chapter-analysis-progress")).not.toContainText("Scene Analysis");
     await shot(page, { id: "05-16", file: "05_analyzing.png", route: BOOK, theme: "light" });
     await shot(page, { id: "05-17", file: "05_progress.png", route: BOOK, theme: "light" });
+
+    await applyProductTheme(page, "dark");
+    await assertAnalysisDarkSurfaces(page);
     await shot(page, {
       id: "05-d2",
       file: "05_analysis_progress_dark.png",
       route: BOOK,
       theme: "dark",
     });
+    assertScreenshotsDiffer(
+      "05_progress.png",
+      "05_analysis_progress_dark.png",
+      "progress light vs dark",
+    );
+    await applyProductTheme(page, "light");
 
     await installUiAuditMocks(page, { analysisRun: "failed" });
     await gotoReady(page, `${BOOK}&analysisRun=55&view=progress`);
-    await page.getByTestId("chapter-analysis-failure").waitFor({ timeout: 10_000 }).catch(() => undefined);
-    await expect(page.getByTestId("chapter-analysis-progress")).toContainText(/分析未完成|分析已暂停/);
+    await page.getByTestId("chapter-analysis-progress").waitFor({ timeout: 10_000 });
+    await expect(page.getByTestId("chapter-analysis-status-badge")).toContainText("分析未完成");
+    await expect(page.getByTestId("unified-recovery-title")).toContainText("分析未完成");
+    await expect(page.getByTestId("unified-recovery-lead")).toContainText(
+      "StoryLens 在分析过程中遇到了问题",
+    );
+    await expect(page.getByTestId("chapter-analysis-progress")).not.toContainText("分析已暂停");
     await shot(page, { id: "05-18", file: "05_failed.png", route: BOOK, theme: "light" });
     const retry = page.getByTestId("chapter-analysis-reanalyze");
     if (await retry.count()) {
@@ -203,8 +248,12 @@ test.describe("05 analysis", () => {
 
     await installUiAuditMocks(page, { analysisRun: "budget_pause" });
     await gotoReady(page, `${BOOK}&analysisRun=55&view=progress`);
-    await expect(page.getByTestId("chapter-analysis-progress")).toContainText("分析已暂停");
+    await expect(page.getByTestId("chapter-analysis-status-badge")).toContainText("分析已暂停");
+    await expect(page.getByTestId("unified-recovery-title")).toContainText("分析已暂停");
+    await expect(page.getByTestId("unified-recovery-lead")).toContainText("当前进度已保存");
+    await expect(page.getByTestId("chapter-analysis-progress")).not.toContainText("分析未完成");
     await shot(page, { id: "05-19b", file: "05_paused.png", route: BOOK, theme: "light" });
+    assertScreenshotsDiffer("05_failed.png", "05_paused.png", "failed vs paused");
 
     await installUiAuditMocks(page, { analysisRun: "succeeded" });
     await gotoReady(page, `${BOOK}&analysisRun=55&view=result`);
@@ -270,6 +319,10 @@ test.describe("05 analysis", () => {
     await expect(page.getByTestId("shell-boundary-review")).toContainText("审阅中");
     await expect(page.getByTestId("shell-boundary-review")).toContainText("待处理");
     await expect(page.getByTestId("shell-boundary-review")).not.toContainText("in_review");
+    await expect(page.getByTestId("decision-reason-T0001")).toContainText("位置发生变化");
+    await expect(page.getByTestId("decision-reason-T0001")).not.toContainText("location_change");
+    await expect(page.getByTestId("review-candidate-count")).toHaveText("候选边界 1 / 1");
+    await expect(page.getByTestId("review-candidate-pages").locator("button")).toHaveCount(1);
     await expect(page.getByTestId("book-shell-body")).toHaveCount(0);
     await shot(page, {
       id: "05-21",
@@ -288,11 +341,20 @@ test.describe("05 analysis", () => {
       await shot(page, { id: "05-23", file: "05_boundary_edit.png", route: BOOK, theme: "light" });
     }
     await shot(page, { id: "05-24", file: "05_boundary_save.png", route: BOOK, theme: "light" });
+
+    await applyProductTheme(page, "dark");
+    await assertAnalysisDarkSurfaces(page);
     await shot(page, {
       id: "05-d3",
       file: "05_boundary_review_dark.png",
       route: BOOK,
       theme: "dark",
     });
+    assertScreenshotsDiffer(
+      "05_boundary_list.png",
+      "05_boundary_review_dark.png",
+      "boundary light vs dark",
+    );
+    await applyProductTheme(page, "light");
   });
 });

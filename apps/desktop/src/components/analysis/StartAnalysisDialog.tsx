@@ -44,20 +44,51 @@ const EXECUTION_HINTS: Record<string, string> = {
   hybrid: "部分步骤本地执行，关键步骤使用云端 AI。",
 };
 
-function formatProviderOptionLabel(item: {
+function formatProviderDisplayName(item: {
   name: string;
-  default_model?: string;
-  requires_boundary_review?: boolean;
+  display_name?: string;
+  capabilities?: { region?: string; profile_name?: string };
 }): string {
-  const base = item.name.startsWith("local_")
-    ? "本地模型"
-    : item.name.includes("qwen")
+  if (item.name.startsWith("local_")) return "本地模型";
+  const base =
+    item.display_name ||
+    (item.name.includes("qwen")
       ? serviceDisplayNameFor(item.name, "阿里云百炼")
-      : item.name;
-  const parts = [base];
-  if (item.default_model) parts.push(item.default_model);
-  if (item.requires_boundary_review) parts.push("边界候选 · 需人工确认");
-  return parts.join(" · ");
+      : item.name);
+  return base;
+}
+
+function formatProviderOptionLabel(
+  item: {
+    name: string;
+    display_name?: string;
+    default_model?: string;
+    requires_boundary_review?: boolean;
+    capabilities?: { region?: string; profile_name?: string };
+  },
+  peers: Array<{ name: string; display_name?: string }> = [],
+): string {
+  const base = formatProviderDisplayName(item);
+  const sameNameCount = peers.filter((p) => formatProviderDisplayName(p) === base).length;
+  if (sameNameCount <= 1) return base;
+  const region = item.capabilities?.region;
+  if (region) return `${base} · ${region}`;
+  const profile = item.capabilities?.profile_name;
+  if (profile && profile !== item.name) return `${base} · ${profile}`;
+  return base;
+}
+
+function formatProviderStatusHint(item: {
+  connected?: boolean;
+  healthy?: boolean;
+  requires_boundary_review?: boolean;
+} | null | undefined): string | null {
+  if (!item) return null;
+  const connected = item.connected || item.healthy ? "已连接" : "未连接";
+  if (item.requires_boundary_review) {
+    return `${connected} · 需要人工确认场景边界`;
+  }
+  return connected;
 }
 
 function formatBudgetGaps(preflight: any): string {
@@ -463,12 +494,12 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
     if (blockers.includes("cloud_master_switch_off") || cloud.data?.enabled === false) {
       return "云端分析尚未开启";
     }
-    if (blockers.includes("provider_disabled")) return "AI 服务已停用";
+    if (blockers.includes("provider_disabled")) return "Provider 已停用";
     if (
       blockers.includes("credential_invalid") ||
       configuration.data?.credential_state === "invalid"
     ) {
-      return "保存的凭据已失效";
+      return "凭据已失效";
     }
     if (blockers.length) return "当前 AI 服务不支持此分析";
     return "当前 AI 服务不支持此分析";
@@ -712,11 +743,13 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
 
   // Ordinary: do NOT hard-disable solely for request shortfall — show recovery panel instead.
   // Still disable for Stage-1 hard block, missing consent/connection, or cost/token hard blocks.
+  // Local mode uses local eligible list only — cloud Provider blockers do not affect it.
+  const providerUnavailable = eligible.length === 0 || !provider;
   const hardCreateBlocked = budgetBlocked || tokenBlocked || costBlocked
     || (!developerMode && (!aiView.canStartAnalysis || !consent));
   const effectiveSubmitDisabled = developerMode
-    ? busy || budgetBlocked || (fullPipelineShortfall > 0 && !requestOnly)
-    : busy || hardCreateBlocked || (fullPipelineShortfall > 0 && !requestOnly);
+    ? busy || budgetBlocked || providerUnavailable || (fullPipelineShortfall > 0 && !requestOnly)
+    : busy || hardCreateBlocked || providerUnavailable || (fullPipelineShortfall > 0 && !requestOnly);
 
   const showRequestQuotaPanel = Boolean(requestOnly && consent && preflight && !budgetBlocked);
 
@@ -730,6 +763,9 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
 
   const submitDisabledReason = useMemo(() => {
     if (busy && (submitState === "checking" || submitState === "creating")) return null;
+    if (providerUnavailable) {
+      return unavailableReason || (developerMode ? "请选择可用 Provider" : "AI 服务尚未连接");
+    }
     if (!developerMode && !aiView.canStartAnalysis) {
       return unavailableReason || "AI 服务尚未连接";
     }
@@ -746,6 +782,7 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
   }, [
     busy,
     submitState,
+    providerUnavailable,
     developerMode,
     aiView.canStartAnalysis,
     unavailableReason,
@@ -773,6 +810,9 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
     extra_requests: number;
   }) => {
     if (submitState === "checking" || submitState === "creating") return;
+    if (providerUnavailable) {
+      return setMessage(unavailableReason || "当前没有可用的 AI 服务，请前往设置配置。");
+    }
     if (!developerMode && !aiView.canStartAnalysis) {
       return setMessage("AI服务尚未连接，请前往设置完成配置。");
     }
@@ -1015,11 +1055,16 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
                       {eligible.length > 1 && <option value="">请选择</option>}
                       {eligible.map((item) => (
                         <option key={item.name} value={item.name}>
-                          {formatProviderOptionLabel(item)}
+                          {formatProviderOptionLabel(item, eligible)}
                         </option>
                       ))}
                     </select>
                   </label>
+                )}
+                {selected && (
+                  <p className="hint" data-testid="start-analysis-provider-hint">
+                    {formatProviderStatusHint(selected)}
+                  </p>
                 )}
                 {selected?.requires_boundary_review && (
                   <p className="notice">
@@ -1047,9 +1092,10 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
                     onChange={() => handleAnalysisModeSelect(preset.id)}
                   />
                   <span>
-                    <strong>
-                      {preset.label}
-                      {preset.recommended ? "（推荐）" : ""}
+                    <strong data-testid={`analysis-mode-label-${preset.id.toLowerCase()}`}>
+                      {preset.recommended
+                        ? `${preset.shortLabel} · 推荐`
+                        : preset.shortLabel || preset.label}
                     </strong>
                     {preset.id !== "CUSTOM" && (
                       <small>{MODE_CARD_HINT[preset.id as "FAST" | "BALANCED" | "QUALITY"]}</small>

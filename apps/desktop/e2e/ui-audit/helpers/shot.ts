@@ -169,7 +169,8 @@ export async function applyProductTheme(page: Page, theme: "light" | "dark") {
   if (current === theme) return;
   const toggle = page.locator(".theme-toggle-btn");
   await expect(toggle).toBeVisible();
-  await toggle.click();
+  // Prefer DOM click so modal/backdrops cannot block the real product toggle handler.
+  await toggle.evaluate((el: HTMLButtonElement) => el.click());
   await expect(shell).toHaveAttribute("data-theme", theme, { timeout: 5_000 });
 }
 
@@ -186,6 +187,32 @@ export async function assertRealDarkTheme(page: Page) {
   if (await journey.count()) {
     const surface = await journey.evaluate((el) => getComputedStyle(el).backgroundColor);
     expect(surface).not.toMatch(/^rgb\(\s*255,\s*255,\s*255\s*\)$/);
+  }
+}
+
+/** Assert analysis surfaces (dialog / progress inspector / boundary card) are truly dark. */
+export async function assertAnalysisDarkSurfaces(page: Page, opts: { flipCompare?: boolean } = {}) {
+  const flipCompare = opts.flipCompare ?? true;
+  if (flipCompare) {
+    await assertRealDarkTheme(page);
+  } else {
+    const shell = page.getByTestId("app-shell");
+    await expect(shell).toHaveAttribute("data-theme", "dark");
+    const bg = await shell.evaluate((el) => getComputedStyle(el).backgroundColor);
+    expect(bg).not.toMatch(/^rgb\(\s*255,\s*255,\s*255\s*\)$/);
+  }
+  const candidates = [
+    page.getByTestId("start-analysis-dialog"),
+    page.getByTestId("chapter-analysis-progress"),
+    page.locator(".review-candidate").first(),
+    page.getByTestId("shell-boundary-review"),
+  ];
+  for (const loc of candidates) {
+    if (!(await loc.count())) continue;
+    const bg = await loc.evaluate((el) => getComputedStyle(el).backgroundColor);
+    expect(bg, "analysis dark surface must not be pure white").not.toMatch(
+      /^rgb\(\s*255,\s*255,\s*255\s*\)$/,
+    );
   }
 }
 

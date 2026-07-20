@@ -1347,6 +1347,39 @@ a {
   font-size: 13px;
   font-weight: 600;
 }
+.review-candidate-pages {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.review-candidate-pages button {
+  min-width: 28px;
+  height: 28px;
+  padding: 0 6px;
+  border-radius: 6px;
+  font-size: 12px;
+}
+.review-candidate-pages button.is-active {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+.review-reason-label {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--color-text-secondary, #5b6472);
+}
+.review-candidate-para-id {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 400;
+  opacity: 0.65;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+.boundary-timeline .timeline-gap {
+  opacity: 0.45;
+  font-weight: 500;
+}
 .review-body {
   flex: 1;
   min-height: 0;

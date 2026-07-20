@@ -152,14 +152,17 @@ describe("开始分析人工审阅入口", () => {
   it("云端模式显示非默认且关闭自动路由的Plus", async () => {
     renderDialog();
     fireEvent.change(screen.getByLabelText("执行方式"), { target: { value: "cloud" } });
-    expect(await screen.findByRole("option", { name: /阿里云百炼.*需人工确认/ })).toBeInTheDocument();
+    expect(await screen.findByRole("option", { name: /^阿里云百炼$/ })).toBeInTheDocument();
+    expect(await screen.findByTestId("start-analysis-provider-hint")).toHaveTextContent(
+      /已连接.*需要人工确认场景边界/,
+    );
   });
   it("选择Plus显示人工确认说明和三个后端Prompt版本", async () => {
     renderDialog();
     fireEvent.change(screen.getByLabelText("执行方式"), { target: { value: "cloud" } });
     const option = await screen.findByRole("option", { name: /阿里云百炼/ });
     fireEvent.change(screen.getByLabelText("Provider"), { target: { value: (option as HTMLOptionElement).value } });
-    expect(screen.getByText(/只生成场景边界候选/)).toBeInTheDocument();
+    expect(screen.getByText(/本次会先识别场景边界/)).toBeInTheDocument();
     fireEvent.click(screen.getByText("技术详情"));
     expect(screen.getByText(/v3.5/)).toBeInTheDocument();
     expect(screen.getByText(/v1$/)).toBeInTheDocument();
@@ -341,6 +344,43 @@ describe("StartAnalysisDialog 布局与交互", () => {
     renderDialog();
     const close = await screen.findByRole("button", { name: "关闭" });
     expect(close.className).toContain("modal-close");
+  });
+
+  it("无可用 Provider 时真实禁用创建按钮并展示原因", async () => {
+    vi.mocked(providersApi.list).mockResolvedValue([]);
+    renderDialog();
+    fireEvent.change(await screen.findByLabelText(/执行模式|执行方式/), { target: { value: "cloud" } });
+    expect(await screen.findByTestId("start-analysis-no-provider")).toHaveTextContent(
+      /尚未配置 API Key|当前没有可用/,
+    );
+    const submit = screen.getByTestId("start-analysis-submit");
+    expect(submit).toBeDisabled();
+    expect(screen.getByTestId("start-analysis-disabled-reason")).toHaveTextContent(
+      /尚未配置 API Key|当前没有可用/,
+    );
+    fireEvent.click(submit);
+    expect(analysisApi.start).not.toHaveBeenCalled();
+  });
+
+  it("均衡模式可见文案只包含一个推荐", async () => {
+    renderDialog();
+    const label = await screen.findByTestId("analysis-mode-label-balanced");
+    expect(label).toHaveTextContent("均衡 · 推荐");
+    expect(label.textContent?.match(/推荐/g)?.length).toBe(1);
+    expect(label).not.toHaveTextContent("（推荐）（推荐）");
+  });
+
+  it("Provider 主视图不展示模型 ID", async () => {
+    vi.mocked(providersApi.list).mockResolvedValue([plus] as any);
+    renderDialog();
+    fireEvent.change(await screen.findByLabelText(/执行模式|执行方式/), { target: { value: "cloud" } });
+    const select = await screen.findByTestId("start-analysis-provider-select");
+    expect(select).toHaveTextContent("阿里云百炼");
+    expect(select).not.toHaveTextContent("configured-plus");
+    expect(select).not.toHaveTextContent("aliyun_qwen_plus");
+    expect(await screen.findByTestId("start-analysis-provider-hint")).toHaveTextContent(
+      /已连接.*需要人工确认场景边界/,
+    );
   });
 });
 
