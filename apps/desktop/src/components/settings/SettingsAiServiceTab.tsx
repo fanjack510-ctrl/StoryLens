@@ -13,8 +13,9 @@ import {
   writeStoredAnalysisMode,
 } from "../../services/analysisModePresets";
 import {
-  saveAiServiceConfiguration,
-  testAiServiceConnection,
+  configureRecommendedQwenService,
+  fetchRecommendedQwenStatus,
+  repairRecommendedQwenSetup,
 } from "../../services/aiServiceConfig";
 import { providersApi } from "../../services/providersApi";
 import { settingsApi } from "../../services/settingsApi";
@@ -38,10 +39,15 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
   const [cloudBodyConsent, setCloudBodyConsent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [userMessage, setUserMessage] = useState("");
-  const [rawDiagnostic, setRawDiagnostic] = useState("");
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [testErrorCode, setTestErrorCode] = useState<string | null>(null);
 
+  const setup = useQuery({
+    queryKey: ["recommended-qwen-setup"],
+    queryFn: fetchRecommendedQwenStatus,
+    refetchOnMount: "always",
+    staleTime: 0,
+  });
   const providers = useQuery({ queryKey: ["providers"], queryFn: providersApi.list });
   const cloud = useQuery({ queryKey: ["cloud"], queryFn: settingsApi.cloud });
   const configuration = useQuery({
@@ -54,6 +60,12 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
       document.querySelector<HTMLInputElement>('[data-testid="ai-api-key-input"]')?.focus();
     }
   }, [autoOpenWizard, focusField]);
+
+  useEffect(() => {
+    if (setup.data?.analysis_mode === "FAST" || setup.data?.analysis_mode === "BALANCED" || setup.data?.analysis_mode === "QUALITY") {
+      setAnalysisMode(setup.data.analysis_mode);
+    }
+  }, [setup.data?.analysis_mode]);
 
   const provider = useMemo(
     () =>
@@ -68,22 +80,46 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
       buildAiServiceViewModel({
         provider,
         configuration: configuration.data,
-        cloudEnabled: cloud.data?.enabled,
+        cloudEnabled: setup.data?.cloud_enabled ?? cloud.data?.enabled,
+        providerEligible: setup.data?.provider_eligible ?? provider?.manual_boundary_candidate_eligible,
         connectionErrorCode: testErrorCode,
       }),
-    [provider, configuration.data, cloud.data?.enabled, testErrorCode],
+    [
+      provider,
+      configuration.data,
+      cloud.data?.enabled,
+      setup.data?.cloud_enabled,
+      setup.data?.provider_eligible,
+      testErrorCode,
+    ],
   );
+
+  const statusLabel = setup.data?.provider_eligible
+    ? "已连接，可以开始分析"
+    : setup.data?.user_message || view.userStatusLabel;
+
+  const modeToSave = (
+    showAdvanced && analysisMode === "CUSTOM"
+      ? DEFAULT_ANALYSIS_MODE
+      : analysisMode === "CUSTOM"
+        ? DEFAULT_ANALYSIS_MODE
+        : analysisMode
+  ) as "FAST" | "BALANCED" | "QUALITY";
 
   const onTest = async () => {
     if (busy) return;
     setBusy(true);
     setUserMessage("");
-    setRawDiagnostic("");
     setTestErrorCode(null);
-    const result = await testAiServiceConnection(DEFAULT_AI_SERVICE_ID, qc);
-    setUserMessage(result.userMessage);
-    setRawDiagnostic(result.rawDiagnostic || "");
-    setTestErrorCode(result.testErrorCode || null);
+    const result = await configureRecommendedQwenService({
+      apiKey,
+      analysisMode: modeToSave,
+      cloudBodyConsent,
+      persist: false,
+      qc,
+    });
+    setUserMessage(result.user_message);
+    setTestErrorCode(result.error_code || null);
     setBusy(false);
   };
 
@@ -91,26 +127,35 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
     if (busy) return;
     setBusy(true);
     setUserMessage("");
-    setRawDiagnostic("");
     setTestErrorCode(null);
-    const modeToSave =
-      showAdvanced && analysisMode === "CUSTOM"
-        ? ("CUSTOM" as const)
-        : (analysisMode === "CUSTOM" ? DEFAULT_ANALYSIS_MODE : analysisMode);
-    const result = await saveAiServiceConfiguration({
-      providerId: DEFAULT_AI_SERVICE_ID,
+    const result = await configureRecommendedQwenService({
       apiKey,
       analysisMode: modeToSave,
       cloudBodyConsent,
+      persist: true,
       qc,
     });
-    setUserMessage(result.userMessage);
-    setRawDiagnostic(result.rawDiagnostic || "");
-    setTestErrorCode(result.testErrorCode || null);
-    if (result.ok) {
+    setUserMessage(result.user_message);
+    setTestErrorCode(result.error_code || null);
+    if (result.ok && result.persisted) {
       setApiKey("");
       writeStoredAnalysisMode(modeToSave);
+      await setup.refetch();
     }
+    setBusy(false);
+  };
+
+  const onRepair = async () => {
+    if (busy) return;
+    setBusy(true);
+    setUserMessage("");
+    const result = await repairRecommendedQwenSetup({
+      cloudBodyConsent: cloudBodyConsent || null,
+      qc,
+    });
+    setUserMessage(result.user_message);
+    setTestErrorCode(result.error_code || null);
+    await setup.refetch();
     setBusy(false);
   };
 
@@ -121,6 +166,7 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
       await providersApi.action(DEFAULT_AI_SERVICE_ID, "disconnect");
       const latest = await providersApi.configuration(DEFAULT_AI_SERVICE_ID);
       qc.setQueryData(["provider-config", DEFAULT_AI_SERVICE_ID], latest);
+      await setup.refetch();
       setUserMessage("已断开 AI 服务连接。");
       setTestErrorCode(null);
     } catch (error: any) {
@@ -130,7 +176,7 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
     }
   };
 
-  if (providers.isLoading || configuration.isLoading) {
+  if (providers.isLoading || configuration.isLoading || setup.isLoading) {
     return (
       <article className="settings-panel">
         <Loading />
@@ -150,13 +196,23 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
           <div>
             <p className="eyebrow">连接状态</p>
             <span
-              className={`ai-status-badge ${view.canStartAnalysis ? "ok" : "warn"}`}
+              className={`ai-status-badge ${setup.data?.provider_eligible ? "ok" : "warn"}`}
               data-testid="ai-service-connection-status"
             >
-              {view.userStatusLabel}
+              {statusLabel}
             </span>
           </div>
         </div>
+        <ul className="ai-status-facts" data-testid="ai-service-status-facts">
+          <li>凭据：{setup.data?.credential_configured || view.apiKeyConfigured ? "已配置" : "未配置"}</li>
+          <li>Provider：{setup.data?.provider_enabled || view.providerEnabled ? "已启用" : "未启用"}</li>
+          <li>云端连接：{setup.data?.cloud_enabled || view.cloudEnabled ? "已开启" : "未开启"}</li>
+          <li>可用于分析：{setup.data?.provider_eligible ? "是" : "否"}</li>
+          <li data-testid="ai-service-default-provider-label">
+            默认服务：阿里云百炼（推荐）
+          </li>
+          <li>分析模式：{setup.data?.analysis_mode || analysisMode}</li>
+        </ul>
       </div>
 
       <div className="settings-fields">
@@ -190,12 +246,18 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
             value={apiKey}
             aria-label="API Key"
             data-testid="ai-api-key-input"
-            placeholder={view.apiKeyConfigured ? "已配置；留空表示不修改" : "粘贴你的 API Key"}
+            placeholder={
+              setup.data?.credential_configured || view.apiKeyConfigured
+                ? "已配置；留空表示不修改"
+                : "粘贴你的 API Key"
+            }
             onChange={(e) => setApiKey(e.target.value)}
           />
         </label>
         <p className="hint" data-testid="ai-service-api-key-state">
-          凭据状态：{view.apiKeyConfigured ? "已配置" : "未配置"}（界面不会显示完整 Key）
+          凭据状态：
+          {setup.data?.credential_configured || view.apiKeyConfigured ? "已配置" : "未配置"}
+          （界面不会显示完整 Key）
         </p>
 
         <label className="consent">
@@ -219,7 +281,7 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
         <button
           type="button"
           data-testid="ai-service-test"
-          disabled={busy || (!view.apiKeyConfigured && !apiKey)}
+          disabled={busy || (!(setup.data?.credential_configured || view.apiKeyConfigured) && !apiKey)}
           onClick={() => void onTest()}
         >
           {busy ? "测试中…" : "测试连接"}
@@ -228,16 +290,21 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
           type="button"
           className="primary"
           data-testid="ai-service-save"
-          disabled={busy || (!apiKey && !view.apiKeyConfigured)}
+          disabled={busy || (!apiKey && !(setup.data?.credential_configured || view.apiKeyConfigured))}
           onClick={() => void onSave()}
         >
           {busy ? "保存中…" : "保存"}
         </button>
+        {setup.data?.needs_cloud_consent && (
+          <button type="button" data-testid="ai-service-repair" disabled={busy} onClick={() => void onRepair()}>
+            修复配置
+          </button>
+        )}
         {showAdvanced && (
           <button
             type="button"
             data-testid="ai-service-disconnect"
-            disabled={busy || !view.apiKeyConfigured}
+            disabled={busy || !(setup.data?.credential_configured || view.apiKeyConfigured)}
             onClick={() => void disconnect()}
           >
             断开连接
@@ -255,8 +322,14 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
       </button>
       {showDiagnostics && (
         <pre className="ai-diagnostics" data-testid="ai-service-diagnostics">
-          {JSON.stringify(view.diagnostics, null, 2)}
-          {rawDiagnostic ? `\n\n${rawDiagnostic}` : ""}
+          {JSON.stringify(
+            {
+              setup: setup.data,
+              viewDiagnostics: view.diagnostics,
+            },
+            null,
+            2,
+          )}
         </pre>
       )}
 

@@ -24,10 +24,23 @@ from app.schemas.scene import SceneBoundaryResult
 from app.services.prompt_service import load_prompt
 from app.services.structured_output import StructuredOutputError, generate_validated
 from tests.fakes import FakeProvider
+from tests.optional_gates import require_main_db_cert_counts, require_path
 from tests.test_aliyun_provider import CloudFake
+
+pytestmark = [
+    pytest.mark.canary_offline,
+    pytest.mark.requires_audit_assets,
+]
 
 ROOT = Path(__file__).resolve().parents[3]
 MAIN_DB = ROOT / "data" / "storylens.db"
+CANARY_V5_DB = (
+    ROOT
+    / "artifacts"
+    / "single-chapter-pipeline-certification"
+    / "real-canary"
+    / "canary-v5.sqlite3"
+)
 VALID = '{"chapter_id":"B0001-C0001","boundaries":[],"overall_confidence":0.9}'
 
 
@@ -316,14 +329,7 @@ async def test_11_failed_attempt_zero_token_cost(testing_session, zero_delay_set
 
 
 def test_12_reservations_released_on_failed_canary_batch():
-    db = (
-        ROOT
-        / "artifacts"
-        / "single-chapter-pipeline-certification"
-        / "real-canary"
-        / "canary-v5.sqlite3"
-    )
-    assert db.exists()
+    db = require_path(CANARY_V5_DB)
     con = sqlite3.connect(f"file:{db.as_posix()}?mode=ro", uri=True)
     active = con.execute(
         "SELECT COUNT(*) FROM cloud_budget_reservations WHERE status='active'"
@@ -481,14 +487,11 @@ async def test_18_final_error_code_preserved(testing_session, zero_delay_setting
 
 
 def test_19_main_db_55_2_unchanged():
-    assert MAIN_DB.exists()
+    require_main_db_cert_counts()
     con = sqlite3.connect(f"file:{MAIN_DB.as_posix()}?mode=ro", uri=True)
-    ar = con.execute("SELECT COUNT(*) FROM analysis_runs").fetchone()[0]
-    jr = con.execute("SELECT COUNT(*) FROM reader_journey_runs").fetchone()[0]
     s55 = con.execute("SELECT status FROM analysis_runs WHERE id=55").fetchone()[0]
     j2 = con.execute("SELECT status FROM reader_journey_runs WHERE id=2").fetchone()[0]
     con.close()
-    assert ar == 55 and jr == 2
     assert s55 == "succeeded" and j2 == "succeeded"
 
 

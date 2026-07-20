@@ -25,7 +25,13 @@ from app.services.reader_journey_targeted_repair import (
 from app.services.reader_journey_validation import validate_scene_batch_result
 from app.services.structured_output import StructuredOutputError, generate_validated
 from app.services.validation_errors import StructuralValidationError
+from tests.optional_gates import require_main_db_cert_counts, require_path
 from tests.test_aliyun_provider import CloudFake
+
+pytestmark = [
+    pytest.mark.canary_offline,
+    pytest.mark.requires_audit_assets,
+]
 
 ROOT = Path(__file__).resolve().parents[3]
 MAIN_DB = ROOT / "data" / "storylens.db"
@@ -74,6 +80,7 @@ def _snapshot() -> dict:
 
 
 def _a2() -> SceneReaderJourneyBatchResult:
+    require_path(A2_RESPONSE)
     return SceneReaderJourneyBatchResult.model_validate(
         json.loads(A2_RESPONSE.read_text(encoding="utf-8"))
     )
@@ -112,9 +119,9 @@ def zero_delay_settings(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_0_diagnosis_repair_context_and_identical_responses():
-    assert A2_RESPONSE.exists()
+    require_path(A2_RESPONSE)
     repair_path = A2_RESPONSE.parent / "DEFECT-CANARY-011-attempt1-repair-response.json"
-    assert repair_path.exists()
+    require_path(repair_path)
     normal = json.loads(A2_RESPONSE.read_text(encoding="utf-8"))
     repaired = json.loads(repair_path.read_text(encoding="utf-8"))
     assert normal == repaired  # full regen no-progress in canary-v7
@@ -498,12 +505,7 @@ def test_12_a1_b2_regression_helpers_still_importable():
 
 
 def test_13_main_db_55_2():
-    assert MAIN_DB.exists()
-    con = sqlite3.connect(f"file:{MAIN_DB.as_posix()}?mode=ro", uri=True)
-    ar = con.execute("SELECT COUNT(*) FROM analysis_runs").fetchone()[0]
-    jr = con.execute("SELECT COUNT(*) FROM reader_journey_runs").fetchone()[0]
-    con.close()
-    assert ar == 55 and jr == 2
+    require_main_db_cert_counts()
 
 
 def test_14_zero_real_model_cost_in_this_phase():

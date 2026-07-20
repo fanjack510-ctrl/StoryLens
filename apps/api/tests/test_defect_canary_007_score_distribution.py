@@ -14,7 +14,13 @@ from app.services.reader_journey_pipeline import _classify_journey_error
 from app.services.scene_pipeline import classify_pipeline_error
 from app.services.reader_journey_validation import validate_score_distribution
 from app.services.validation_errors import StructuralValidationError
+from tests.optional_gates import require_path
 from tests.test_phase_1c_c1_3 import _base_profile_dict
+
+pytestmark = [
+    pytest.mark.canary_offline,
+    pytest.mark.requires_audit_assets,
+]
 
 EVIDENCE_PATH = (
     Path(__file__).resolve().parents[3]
@@ -122,7 +128,7 @@ def test_all_high_with_evidence_warns_not_fails():
 
 
 def test_a2_real_scores_offline_reproduce():
-    assert EVIDENCE_PATH.is_file()
+    require_path(EVIDENCE_PATH)
     rows = json.loads(EVIDENCE_PATH.read_text(encoding="utf-8"))
     profiles = []
     for row in rows:

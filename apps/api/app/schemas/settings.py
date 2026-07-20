@@ -87,6 +87,15 @@ class ProviderConfigurationUpdate(BaseModel):
     raw_logging_enabled: bool = False
     api_key: str | None = Field(default=None, min_length=8)
 
+    @model_validator(mode="before")
+    @classmethod
+    def empty_base_url_as_none(cls, data):
+        # Frontend historically round-tripped GET responses with base_url="".
+        # Empty string is not a valid HttpUrl and blocked ordinary-user saves.
+        if isinstance(data, dict) and data.get("base_url") == "":
+            data = {**data, "base_url": None}
+        return data
+
 
 class ProviderConfigurationResponse(BaseModel):
     provider_name: str
@@ -162,3 +171,32 @@ class DemoSettings(BaseModel):
     theme: Literal["light", "dark", "system"] = "light"
     font_size: int = Field(default=17, ge=14, le=26)
     line_height: float = Field(default=1.9, ge=1.3, le=2.6)
+
+
+class RecommendedQwenSetupRequest(BaseModel):
+    """Ordinary-user Bailian quick setup (wizard + settings share this)."""
+
+    api_key: str | None = Field(default=None, min_length=8)
+    analysis_mode: Literal["FAST", "BALANCED", "QUALITY"] = "BALANCED"
+    cloud_body_consent: bool = False
+    persist: bool = True
+
+
+class RecommendedQwenRepairRequest(BaseModel):
+    cloud_body_consent: bool | None = None
+
+
+class RecommendedQwenSetupResponse(BaseModel):
+    ok: bool
+    user_message: str
+    persisted: bool = False
+    credential_configured: bool
+    provider_enabled: bool
+    cloud_enabled: bool
+    provider_eligible: bool
+    selected_provider_id: str
+    connection_status: str
+    analysis_mode: str | None = None
+    blockers: list[str] = Field(default_factory=list)
+    needs_cloud_consent: bool = False
+    error_code: str | None = None

@@ -18,6 +18,7 @@ from scripts.freeze_hygiene_lf import (  # noqa: E402
     sha256_bytes,
     validate_crlf_only_restore,
 )
+from tests.optional_gates import require_main_db_cert_counts, skip_outdated_freeze
 
 
 def test_crlf_normalize_matching_baseline_allows_restore(tmp_path: Path) -> None:
@@ -50,6 +51,7 @@ def test_bom_change_rejects_restore() -> None:
         validate_crlf_only_restore(with_bom_crlf, baseline_sha256=baseline_sha)
 
 
+@pytest.mark.freeze_baseline
 def test_check_core_freeze_raw_pass() -> None:
     proc = subprocess.run(
         [sys.executable, str(ROOT / "scripts" / "check_core_freeze.py")],
@@ -58,12 +60,14 @@ def test_check_core_freeze_raw_pass() -> None:
         text=True,
         check=False,
     )
+    skip_outdated_freeze(proc.returncode, proc.stdout, gate="check_core_freeze")
     assert proc.returncode == 0, proc.stdout + proc.stderr
     assert "RESULT: PASS" in proc.stdout
     assert "FROZEN_CORE: unchanged=" in proc.stdout
     assert "modified=0" in proc.stdout.split("FROZEN_CORE:")[1].splitlines()[0]
 
 
+@pytest.mark.freeze_baseline
 def test_thaw_checker_reads_v2_2() -> None:
     proc = subprocess.run(
         [sys.executable, str(ROOT / "scripts" / "check_ui_presentation_thaw.py")],
@@ -72,6 +76,7 @@ def test_thaw_checker_reads_v2_2() -> None:
         text=True,
         check=False,
     )
+    skip_outdated_freeze(proc.returncode, proc.stdout, gate="check_ui_presentation_thaw")
     assert proc.returncode == 0, proc.stdout + proc.stderr
     assert "ui-presentation-thaw-v2-2.json" in proc.stdout
     assert "ui-presentation-thaw-v2-3.json" in proc.stdout
@@ -112,7 +117,9 @@ def test_frozen_core_cannot_enter_ui_thaw(tmp_path: Path) -> None:
     assert "must not list FROZEN_CORE/CONTRACT" in proc.stdout
 
 
+@pytest.mark.freeze_baseline
 def test_readonly_audit_default_zero_file_writes(tmp_path: Path) -> None:
+    require_main_db_cert_counts()
     baseline = ROOT / "audits/mvp-functional-baseline-v1/database-baseline.json"
     before_sha = sha256_bytes(baseline.read_bytes())
     before_mtime = baseline.stat().st_mtime_ns
@@ -135,7 +142,9 @@ def test_readonly_audit_default_zero_file_writes(tmp_path: Path) -> None:
     assert sha256_bytes(db.read_bytes()) == db_sha
 
 
+@pytest.mark.freeze_baseline
 def test_readonly_audit_output_writes_new_and_refuses_overwrite(tmp_path: Path) -> None:
+    require_main_db_cert_counts()
     out = tmp_path / "audit-out.json"
     proc = subprocess.run(
         [

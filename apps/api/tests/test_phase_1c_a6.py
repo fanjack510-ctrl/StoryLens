@@ -71,7 +71,7 @@ class ConnectionTestFake:
 
 
 @pytest.fixture
-def connection_env(tmp_path):
+def connection_env(tmp_path, verified_cloud_pricing):
     engine = create_engine(
         f"sqlite:///{tmp_path / 'connection-test.db'}",
         connect_args={"check_same_thread": False},

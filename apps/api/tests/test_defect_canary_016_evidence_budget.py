@@ -32,7 +32,13 @@ from app.services.reader_journey_output_budget import (
 from app.services.reader_journey_validation import validate_scene_batch_result
 from app.services.structured_output import StructuredOutputError, generate_validated
 from app.services.validation_errors import StructuralValidationError
+from tests.optional_gates import require_main_db_cert_counts, require_path
 from tests.test_aliyun_provider import CloudFake
+
+pytestmark = [
+    pytest.mark.canary_offline,
+    pytest.mark.requires_audit_assets,
+]
 
 ROOT = Path(__file__).resolve().parents[3]
 MAIN_DB = ROOT / "data" / "storylens.db"
@@ -429,7 +435,7 @@ def test_12_no_random_delete_in_normalize():
 
 
 def test_13_c3_scene7_offline_replay_count_invalid():
-    assert C3_PARSED.exists()
+    require_path(C3_PARSED)
     data = json.loads(C3_PARSED.read_text(encoding="utf-8"))
     ids = data["profiles"][0]["evidence_paragraph_ids"]
     assert len(ids) == 18
@@ -440,6 +446,7 @@ def test_13_c3_scene7_offline_replay_count_invalid():
 
 
 def test_14_c3_scene7_targeted_compaction_passes_validator():
+    require_path(C3_PARSED)
     data = json.loads(C3_PARSED.read_text(encoding="utf-8"))
     # Keep a minimal valid profile shell with C3 evidence for apply test
     payload = _batch(list(data["profiles"][0]["evidence_paragraph_ids"]))
@@ -491,18 +498,11 @@ def test_18_prompt_v16_states_max_sixteen():
     assert "最多 16" in system or "最多16" in system
     assert "不得枚举" in system
     # Old version retained
-    assert (ROOT / "packages/prompts/reader_journey_scene/v1.5/system.md").exists()
+    require_path(ROOT / "packages/prompts/reader_journey_scene/v1.5/system.md")
 
 
 def test_19_main_db_still_55_and_2():
-    if not MAIN_DB.exists():
-        pytest.skip("main db missing")
-    conn = sqlite3.connect(MAIN_DB)
-    runs = conn.execute("select count(*) from analysis_runs").fetchone()[0]
-    journeys = conn.execute("select count(*) from reader_journey_runs").fetchone()[0]
-    conn.close()
-    assert runs == 55
-    assert journeys == 2
+    require_main_db_cert_counts()
 
 
 def test_20_real_model_requests_zero_in_this_module():

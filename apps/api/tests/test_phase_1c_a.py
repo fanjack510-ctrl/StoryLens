@@ -211,7 +211,9 @@ def configured_eligibility(testing_session, *, cloud=True, credential="secret-re
     )
 
 
-def test_manual_eligibility_does_not_require_default_or_auto_route(testing_session):
+def test_manual_eligibility_does_not_require_default_or_auto_route(
+    testing_session, verified_cloud_pricing
+):
     result = configured_eligibility(testing_session)
     assert result["manual_boundary_candidate_eligible"] is True
     assert result["automatic_route_eligible"] is False
@@ -223,7 +225,9 @@ def test_manual_eligibility_does_not_require_default_or_auto_route(testing_sessi
     }
 
 
-def test_unified_manual_evaluation_has_versioned_readiness(testing_session):
+def test_unified_manual_evaluation_has_versioned_readiness(
+    testing_session, verified_cloud_pricing
+):
     configured_eligibility(testing_session)
     capabilities = ProviderCapabilities(
         max_context_tokens=32000, default_timeout_seconds=10, enabled=True, cloud=True,

@@ -356,14 +356,14 @@ describe("普通模式开始分析弹窗", () => {
     expect(screen.queryByTestId("start-analysis-provider-select")).not.toBeInTheDocument();
   });
 
-  it("AI服务未连接时禁用创建任务", async () => {
+  it("AI服务未连接时禁用创建任务并给出明确原因", async () => {
     vi.mocked(providersApi.list).mockResolvedValue([{
       ...plus,
       connected: false,
       healthy: false,
       configured: false,
       manual_boundary_candidate_eligible: false,
-      manual_selection_blockers: ["provider_disconnected"],
+      manual_selection_blockers: ["credential_missing"],
     }] as any);
     vi.mocked(providersApi.cloud).mockResolvedValue({ enabled: false, state: "disabled" });
     vi.mocked(providersApi.configuration).mockResolvedValue({
@@ -374,9 +374,28 @@ describe("普通模式开始分析弹窗", () => {
       connection_state: "disconnected",
     } as any);
     renderDialog();
-    expect(await screen.findByTestId("start-analysis-ai-disconnected")).toHaveTextContent("AI服务尚未连接");
-    expect(screen.getByTestId("start-analysis-goto-settings")).toBeInTheDocument();
+    expect(await screen.findByTestId("start-analysis-ai-disconnected")).toHaveTextContent("尚未配置 API Key");
+    expect(screen.getByTestId("start-analysis-goto-settings")).toHaveTextContent("去配置 AI 服务");
     expect(screen.getByTestId("start-analysis-submit")).toBeDisabled();
+  });
+
+  it("唯一可用 Provider 时自动选中真实 provider id", async () => {
+    vi.mocked(providersApi.list).mockResolvedValue([plus] as any);
+    vi.mocked(providersApi.cloud).mockResolvedValue({ enabled: true, state: "enabled" });
+    renderDialog();
+    expect(await screen.findByTestId("start-analysis-ai-connected")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("checkbox"));
+    await waitFor(() => expect(screen.getByTestId("start-analysis-submit")).toBeEnabled());
+    fireEvent.click(screen.getByTestId("start-analysis-submit"));
+    await waitFor(() =>
+      expect(analysisApi.start).toHaveBeenCalledWith(
+        7,
+        expect.objectContaining({
+          provider_name: "aliyun_qwen_plus",
+          selected_provider: "aliyun_qwen_plus",
+        }),
+      ),
+    );
   });
 
   it("AI服务已连接时可创建任务", async () => {

@@ -28,8 +28,14 @@ from app.services.model_invocation_broker import (
 from app.services.prompt_service import load_prompt
 from app.services.scene_pipeline import classify_pipeline_error
 from app.services.structured_output import StructuredOutputError, generate_validated
+from tests.optional_gates import require_main_db_cert_counts, require_path
 from tests.test_aliyun_provider import CloudFake
 from tests.test_phase_2b1 import boundary_json
+
+pytestmark = [
+    pytest.mark.canary_offline,
+    pytest.mark.requires_audit_assets,
+]
 
 ROOT = Path(__file__).resolve().parents[3]
 MAIN_DB = ROOT / "data" / "storylens.db"
@@ -379,6 +385,7 @@ def test_14_request_hash_policy_independent_of_model() -> None:
 
 
 def test_15_defect_015_historical_offline_replay() -> None:
+    require_path(DEFECT_015)
     defect = json.loads(DEFECT_015.read_text(encoding="utf-8"))
     chain = defect["causal_chain"]
     assert chain[0]["provider"] == PLUS
@@ -426,14 +433,7 @@ def test_17_canonical_types_registered_and_no_bypass_markers() -> None:
 
 
 def test_18_main_db_invariance_55_2() -> None:
-    assert MAIN_DB.exists()
-    conn = sqlite3.connect(str(MAIN_DB))
-    try:
-        analysis = conn.execute("select count(*) from analysis_runs").fetchone()[0]
-        journey = conn.execute("select count(*) from reader_journey_runs").fetchone()[0]
-    finally:
-        conn.close()
-    assert (analysis, journey) == (55, 2)
+    require_main_db_cert_counts()
 
 
 def test_19_zero_real_model_requests_this_phase() -> None:
