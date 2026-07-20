@@ -288,7 +288,7 @@ describe("Analysis results shell", () => {
     expect(globalCss).toContain(".results-shell-simplified.is-journey .journey-sync-tabs");
     expect(globalCss).toContain(".results-shell-simplified.is-journey .journey-sync-export-bar");
     expect(syncCss).toContain(".results-shell-simplified.is-journey .journey-sync-tabs");
-    expect(syncCss).toContain('content: "正文与旅程"');
+    expect(syncCss).toContain('content: "正文对照"');
     renderShell("/analysis-runs/55/results?tab=reader-journey");
     await waitFor(() =>
       expect(screen.getByTestId("results-shell")).toHaveAttribute("data-results-state", "completed"),

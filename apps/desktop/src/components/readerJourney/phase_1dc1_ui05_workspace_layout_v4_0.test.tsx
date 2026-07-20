@@ -101,13 +101,13 @@ describe("Reader Journey Workspace Layout v4.0", () => {
     renderWorkspace(buildFixture13Scenes(), 1600);
     expect(screen.getByTestId("journey-curve-toolbar")).toBeInTheDocument();
     expect(screen.getByTestId("journey-zoom-fit-all")).toHaveTextContent("适应全部");
-    expect(screen.getByTestId("journey-zoom-focus-phase")).toHaveTextContent("当前Phase");
-    expect(screen.getByTestId("journey-inspector-toggle")).toHaveTextContent("查看详情");
+    expect(screen.getByTestId("journey-zoom-focus-phase")).toHaveTextContent("当前阶段");
+    expect(screen.getByTestId("journey-inspector-toggle")).toHaveTextContent("展开详情");
     expect(screen.getByTestId("journey-export-png")).toHaveTextContent("导出PNG");
     expect(screen.getByTestId("journey-more-chart-settings")).toHaveTextContent(
       "更多设置",
     );
-    expect(screen.getByTestId("journey-metric-select")).toHaveTextContent("当前指标");
+    expect(screen.getByTestId("journey-metric-select")).toHaveTextContent("更多指标");
   });
 
   it("keeps Chart Y 0—100 and plot floors from v3.0", () => {
@@ -133,7 +133,7 @@ describe("Reader Journey Workspace Layout v4.0", () => {
       "true",
     );
     expect(screen.getByTestId("journey-inspector-summary-bar")).toBeInTheDocument();
-    expect(screen.getByTestId("journey-inspector-summary-expand")).toHaveTextContent("查看详情");
+    expect(screen.getByTestId("journey-inspector-summary-expand")).toHaveTextContent("展开详情");
     expect(screen.queryByTestId("journey-inspector-pane")).not.toBeInTheDocument();
     expect(css).toMatch(/\.journey-inspector-pane\s*\{[^}]*overflow-y:\s*auto/);
     expect(css).toMatch(/journey-workspace-v4/);

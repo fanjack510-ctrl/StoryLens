@@ -37,7 +37,7 @@ import {
   JourneyQuestionInspectorPanel,
   JourneySceneDetailPanel,
 } from "./JourneySceneDetailPanel";
-import { METRIC_LABELS_ZH, roleLabelZh } from "./journeyUiLabels";
+import { roleLabelZh, formatJourneyPhaseLabel, formatJourneyPhaseFallbackSummary, formatJourneyScore, formatJourneySceneLabel, formatJourneyMetricLabel } from "./journeyUiLabels";
 import {
   CANONICAL_OVERVIEW_MODE,
   OVERVIEW_MODE_PARAM,
@@ -101,8 +101,6 @@ function exportErrorMessage(error: unknown): string {
   }
   return "导出过程中发生未知错误";
 }
-
-const METRIC_LABELS = METRIC_LABELS_ZH;
 
 const ROLE_CLASS: Record<string, string> = {
   core: "journey-node-core",
@@ -1105,10 +1103,19 @@ export function ReaderJourneyWorkspace({
       <header className="journey-analysis-header" data-testid="journey-analysis-header">
         <div className="journey-analysis-titles">
           <h2 className="journey-analysis-title" data-testid="journey-analysis-title">
-            旅程分析
+            阅读旅程
           </h2>
-          <p className="journey-analysis-subtitle" data-testid="journey-analysis-subtitle">
-            {chapterHeading} · {sceneCount}个Scene
+          <p className="journey-analysis-subtitle" data-testid="journey-analysis-subtitle" title={chapterHeading}>
+            {chapterHeading}
+          </p>
+          <p className="journey-analysis-meta" data-testid="journey-analysis-meta">
+            {sceneCount > 0 ? `${sceneCount} 个场景` : "— 个场景"}
+            {" · "}
+            {visualization.phases.length > 0
+              ? `${visualization.phases.length} 个阶段`
+              : "— 个阶段"}
+            {" · "}
+            观察读者在本章中的情绪、节奏、牵引力与钩子变化
           </p>
         </div>
         <div className="journey-analysis-tools" data-testid="journey-analysis-tools">
@@ -1168,13 +1175,13 @@ export function ReaderJourneyWorkspace({
           className="journey-export-title journey-export-only-title"
           data-testid="journey-export-title"
         >
-          旅程分析
+          阅读旅程
         </h3>
         <p
           className="journey-export-chapter journey-export-only-title"
           data-testid="journey-export-chapter"
         >
-          {chapterHeading} · {sceneCount}个Scene
+          {chapterHeading} · {sceneCount} 个场景
         </p>
         <div className="journey-export-meta journey-export-meta-inline" data-testid="journey-export-meta-inline">
           {analysisInfoMeta}
@@ -1264,7 +1271,7 @@ export function ReaderJourneyWorkspace({
               </option>
               {visualization.phases.map((phase) => (
                 <option key={phase.ordinal} value={phase.ordinal}>
-                  {`Phase ${phase.ordinal} · ${phase.title} · S${phase.start_scene_ordinal}—${phase.end_scene_ordinal} · ${phase.average_engagement}`}
+                  {`${formatJourneyPhaseLabel(phase.title)} · 场景 ${phase.start_scene_ordinal}—${phase.end_scene_ordinal} · ${formatJourneyScore(phase.average_engagement)}`}
                 </option>
               ))}
             </select>
@@ -1276,36 +1283,37 @@ export function ReaderJourneyWorkspace({
           >
             {visualization.phases.map((phase, index) => {
               const isSelected = selectedPhase === phase.ordinal;
+              const phaseLabel = formatJourneyPhaseLabel(phase.title);
+              const phaseSummary =
+                typeof phase.summary === "string" && phase.summary.trim()
+                  ? phase.summary.trim()
+                  : formatJourneyPhaseFallbackSummary(phase.title);
+              const avgText = formatJourneyScore(phase.average_engagement);
               return (
                 <button
                   key={phase.ordinal}
                   type="button"
                   className={`journey-phase-card journey-phase-compact journey-phase-nav-card ${isSelected ? "selected active-phase" : ""}`}
                   data-testid={`journey-phase-${phase.ordinal}`}
-                  title={phase.title}
+                  title={`${phaseLabel} · ${phaseSummary}`}
+                  aria-pressed={isSelected}
                   style={{
-                    background: phaseColors[index % phaseColors.length],
+                    ["--phase-band-color" as string]: phaseColors[index % phaseColors.length],
                   }}
                   onClick={() => handleSelectPhase(phase.ordinal)}
                 >
-                  <div className="journey-phase-row1">
-                    <span className="journey-phase-meta">
-                      {`Phase ${phase.ordinal} · S${phase.start_scene_ordinal}—${phase.end_scene_ordinal}`}
-                    </span>
-                    <span className="journey-phase-row1-end">
-                      <span className="journey-phase-avg" data-testid={`journey-phase-avg-${phase.ordinal}`}>
-                        {phase.average_engagement}
-                      </span>
-                      {isSelected ? (
-                        <span className="journey-phase-current-badge" data-testid="journey-phase-current-badge">
-                          当前
-                        </span>
-                      ) : null}
+                  <div className="journey-phase-card-head">
+                    <strong className="journey-phase-title">{phaseLabel}</strong>
+                    <span className="journey-phase-avg" data-testid={`journey-phase-avg-${phase.ordinal}`}>
+                      {avgText}
                     </span>
                   </div>
-                  <div className="journey-phase-row2">
-                    <strong className="journey-phase-title">{phase.title}</strong>
-                  </div>
+                  <p className="journey-phase-card-desc">{phaseSummary}</p>
+                  {isSelected ? (
+                    <span className="journey-phase-current-badge" data-testid="journey-phase-current-badge">
+                      当前
+                    </span>
+                  ) : null}
                 </button>
               );
             })}
@@ -1314,7 +1322,8 @@ export function ReaderJourneyWorkspace({
 
           {selectedSceneOrdinal != null && selectedMetricValue != null && (
             <p className="journey-active-scene-caption" data-testid="journey-active-scene-caption">
-              Scene {selectedSceneOrdinal} · {METRIC_LABELS[metric]} {selectedMetricValue}
+              {formatJourneySceneLabel(selectedSceneOrdinal)} · {formatJourneyMetricLabel(metric)}{" "}
+              {formatJourneyScore(selectedMetricValue)}
             </p>
           )}
 
@@ -1432,16 +1441,16 @@ export function ReaderJourneyWorkspace({
               </section>
 
               <div className="journey-curve-legend" data-testid="journey-curve-legend">
-                <span data-legend="active-scene">当前 Scene</span>
-                <span data-legend="hook-key">Hook</span>
-                <span data-legend="payoff">Payoff</span>
-                <span data-legend="risk">Risk</span>
+                <span data-legend="active-scene">当前场景</span>
+                <span data-legend="hook-key">钩子</span>
+                <span data-legend="payoff">回报</span>
+                <span data-legend="risk">风险</span>
                 {markerMode === "full" && (
                   <>
-                    <span data-legend="answered">answered question</span>
-                    <span data-legend="transformed">transformed question</span>
-                    <span data-legend="secondary">Secondary</span>
-                    <span data-legend="beat">Beat</span>
+                    <span data-legend="answered">已回答问题</span>
+                    <span data-legend="transformed">问题升级</span>
+                    <span data-legend="secondary">次级节点</span>
+                    <span data-legend="beat">节拍节点</span>
                     <span data-legend="derived">派生标记</span>
                   </>
                 )}
@@ -1454,17 +1463,24 @@ export function ReaderJourneyWorkspace({
             <div className="journey-inspector-summary-inner" data-testid="journey-inspector-summary-inner">
               <span className="journey-inspector-summary-text" data-testid="journey-inspector-summary-text">
                 {selectedNode
-                  ? `Scene ${selectedNode.scene_ordinal} · ${roleLabelZh(selectedNode.role)} · Phase ${selectedNode.phase_ordinal ?? "—"}`
+                  ? `${formatJourneySceneLabel(selectedNode.scene_ordinal)} · ${roleLabelZh(selectedNode.role)} · ${
+                      formatJourneyPhaseLabel(
+                        visualization.phases.find((p) => p.ordinal === selectedNode.phase_ordinal)?.title,
+                      )
+                    }`
                   : selectedPhase != null
-                    ? `Phase ${selectedPhase} · 点击展开查看阶段详情`
-                    : "选择 Scene 或 Phase 查看详情"}
+                    ? `${formatJourneyPhaseLabel(
+                        visualization.phases.find((p) => p.ordinal === selectedPhase)?.title,
+                      )} · 点击展开查看阶段详情`
+                    : "选择一个阶段、场景或曲线节点查看详细分析"}
               </span>
               <button
                 type="button"
                 data-testid="journey-inspector-summary-expand"
+                aria-label="展开旅程详情"
                 onClick={expandInspector}
               >
-                查看详情
+                展开详情
               </button>
             </div>
           </div>
@@ -1525,9 +1541,9 @@ export function ReaderJourneyWorkspace({
                 title={`Scene ${peakOrdinal} · ${summary.peaks.engagement_peak.value}`}
                 onClick={handleInsightPeak}
               >
-                <span>峰值Scene</span>
+                <span>峰值场景</span>
                 <b>
-                  Scene {peakOrdinal} · {summary.peaks.engagement_peak.value}
+                  场景 {peakOrdinal} · {summary.peaks.engagement_peak.value}
                 </b>
               </button>
               <span className="journey-insight-sep" aria-hidden="true">
@@ -1607,10 +1623,12 @@ export function ReaderJourneyWorkspace({
             {inspectorBody}
             <button
               type="button"
+              className="journey-collapse-inspector-btn"
               data-testid="journey-collapse-inspector"
+              aria-label="收起旅程详情"
               onClick={handleToggleInspector}
             >
-              收起详情
+              收起
             </button>
           </div>
         ) : null}
@@ -1648,10 +1666,12 @@ export function ReaderJourneyWorkspace({
             {inspectorBody}
             <button
               type="button"
+              className="journey-collapse-inspector-btn"
               data-testid="journey-collapse-inspector"
+              aria-label="收起旅程详情"
               onClick={handleToggleInspector}
             >
-              收起详情
+              收起
             </button>
           </aside>
         ) : layoutMode === "desktop" ? (
@@ -1675,10 +1695,12 @@ export function ReaderJourneyWorkspace({
             {inspectorBody}
             <button
               type="button"
+              className="journey-collapse-inspector-btn"
               data-testid="journey-collapse-inspector"
+              aria-label="收起旅程详情"
               onClick={handleToggleInspector}
             >
-              收起详情
+              收起
             </button>
           </aside>
         ) : null}
@@ -1710,9 +1732,9 @@ export function ReaderJourneyWorkspace({
         data-reader-journey-export-root="true"
         aria-hidden="true"
       >
-        <h2 data-testid="journey-export-full-title">旅程分析 · 完整旅程</h2>
+        <h2 data-testid="journey-export-full-title">阅读旅程 · 完整旅程</h2>
         <p data-testid="journey-export-full-meta">
-          {chapterHeading} · {sceneCount}个Scene · Y轴 0—100 · viz 4.2
+          {chapterHeading} · {sceneCount} 个场景 · Y轴 0—100 · viz 4.2
         </p>
         <CanonicalJourneyChart
           visualization={visualization}

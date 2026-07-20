@@ -32,7 +32,7 @@ function renderAt(ui: ReactElement, initial: string) {
 
 function visibleJourneyTitles(): HTMLElement[] {
   return Array.from(document.querySelectorAll("h1, h2, h3")).filter((el) => {
-    if (el.textContent?.trim() !== "旅程分析") return false;
+    if (el.textContent?.trim() !== "阅读旅程") return false;
     if (el.classList.contains("journey-export-only-title")) return false;
     if (el.classList.contains("sr-only")) return false;
     const style = window.getComputedStyle(el);
@@ -52,7 +52,7 @@ describe("Phase 1C-C.2.6.1 header and insight density", () => {
       />,
       "/?overview=curve&scene=9",
     );
-    expect(screen.getByTestId("journey-analysis-title")).toHaveTextContent("旅程分析");
+    expect(screen.getByTestId("journey-analysis-title")).toHaveTextContent("阅读旅程");
     expect(screen.getByTestId("journey-analysis-subtitle")).toHaveTextContent("第1章 戏鬼回家");
     expect(screen.getByTestId("journey-export-title")).toHaveClass("journey-export-only-title");
     expect(css).toMatch(/\.journey-export-only-title\s*\{[^}]*display:\s*none/s);
@@ -225,7 +225,7 @@ describe("Phase 1C-C.2.6.1 header and insight density", () => {
     );
     fireEvent.click(screen.getByTestId("journey-export-png"));
     await waitFor(() => expect(exportJourneyPng).toHaveBeenCalled());
-    expect(screen.getByTestId("journey-export-title")).toHaveTextContent("旅程分析");
+    expect(screen.getByTestId("journey-export-title")).toHaveTextContent("阅读旅程");
     expect(screen.getByTestId("journey-summary-cards")).toBeInTheDocument();
     expect(fetchSpy).not.toHaveBeenCalled();
     fetchSpy.mockRestore();

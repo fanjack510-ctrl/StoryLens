@@ -179,12 +179,12 @@ describe("BookRoutePage reader journey resume entry", () => {
     vi.clearAllMocks();
   });
 
-  it("shows Scene分析/阅读旅程 switcher and resume card when journey missing", async () => {
+  it("shows 场景分析/阅读旅程 switcher and resume card when journey missing", async () => {
     renderBook("/books/1?chapter=2&analysisRun=5&view=result");
     await waitFor(() => {
       expect(screen.getByTestId("result-view-switcher")).toBeInTheDocument();
     });
-    expect(screen.getByTestId("result-view-analysis")).toHaveTextContent("Scene分析");
+    expect(screen.getByTestId("result-view-analysis")).toHaveTextContent("场景分析");
     expect(screen.getByTestId("result-view-journey")).toHaveTextContent("阅读旅程");
     expect(screen.queryByTestId("book-result-analysis-label")).not.toBeInTheDocument();
     expect(screen.queryByText("分析全部完成")).not.toBeInTheDocument();

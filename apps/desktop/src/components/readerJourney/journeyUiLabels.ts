@@ -151,3 +151,174 @@ export function hookTypeZh(type: string | undefined | null): string {
   if (!type) return "钩子";
   return HOOK_TYPE_ZH[type] ?? type;
 }
+
+/** Primary metric keys for the Reader Journey segmented control (presentation only). */
+export const PRIMARY_JOURNEY_METRICS = [
+  "engagement",
+  "arousal",
+  "tension",
+  "hook",
+] as const satisfies readonly JourneyCurveMetric[];
+
+/** User-facing primary metric labels (does not rename underlying metric keys). */
+export const PRIMARY_METRIC_LABELS_ZH: Record<(typeof PRIMARY_JOURNEY_METRICS)[number], string> = {
+  engagement: "阅读牵引",
+  arousal: "情绪强度",
+  tension: "节奏变化",
+  hook: "钩子强度",
+};
+
+export const PRIMARY_METRIC_HINTS_ZH: Record<(typeof PRIMARY_JOURNEY_METRICS)[number], string> = {
+  engagement: "读者继续阅读的动力",
+  arousal: "场景带来的情绪波动",
+  tension: "叙事推进速度与密度",
+  hook: "悬念、问题和期待程度",
+};
+
+/** Fixed phase role explanations when backend summary is missing (not plot conclusions). */
+export const PHASE_ROLE_FALLBACK_ZH: Record<string, string> = {
+  入: "建立人物、环境与阅读期待",
+  入局: "建立人物、环境与阅读期待",
+  entry: "建立人物、环境与阅读期待",
+  Entry: "建立人物、环境与阅读期待",
+  推: "冲突发展，核心目标逐渐明确",
+  推进: "冲突发展，核心目标逐渐明确",
+  development: "冲突发展，核心目标逐渐明确",
+  Development: "冲突发展，核心目标逐渐明确",
+  转: "信息变化或事件升级",
+  转折: "信息变化或事件升级",
+  turn: "信息变化或事件升级",
+  Turn: "信息变化或事件升级",
+  收: "阶段结果与下一步悬念",
+  收束: "阶段结果与下一步悬念",
+  resolution: "阶段结果与下一步悬念",
+  Resolution: "阶段结果与下一步悬念",
+};
+
+const PHASE_SHORT_TO_FULL: Record<string, string> = {
+  入: "入局",
+  推: "推进",
+  转: "转折",
+  收: "收束",
+  entry: "入局",
+  Entry: "入局",
+  development: "推进",
+  Development: "推进",
+  turn: "转折",
+  Turn: "转折",
+  resolution: "收束",
+  Resolution: "收束",
+};
+
+function isDirtyDisplayToken(value: string): boolean {
+  return /^(undefined|null|NaN|\[object Object\])$/i.test(value.trim());
+}
+
+/** Format raw phase title/key for ordinary UI. Never invents plot conclusions. */
+export function formatJourneyPhaseLabel(raw: string | null | undefined): string {
+  if (raw == null) return "未知阶段";
+  const trimmed = String(raw).trim();
+  if (!trimmed || isDirtyDisplayToken(trimmed)) return "未知阶段";
+  if (PHASE_SHORT_TO_FULL[trimmed]) return PHASE_SHORT_TO_FULL[trimmed];
+  const lower = trimmed.toLowerCase();
+  if (PHASE_SHORT_TO_FULL[lower]) return PHASE_SHORT_TO_FULL[lower];
+  return trimmed;
+}
+
+export function formatJourneyPhaseFallbackSummary(raw: string | null | undefined): string {
+  if (raw == null) return "选择阶段或节点查看详细分析";
+  const trimmed = String(raw).trim();
+  const full = formatJourneyPhaseLabel(trimmed);
+  return (
+    PHASE_ROLE_FALLBACK_ZH[trimmed] ||
+    PHASE_ROLE_FALLBACK_ZH[full] ||
+    PHASE_ROLE_FALLBACK_ZH[trimmed.toLowerCase()] ||
+    "选择阶段或节点查看详细分析"
+  );
+}
+
+/** Metric key → user label. Unknown keys → 未知指标 (never undefined/NaN). */
+export function formatJourneyMetricLabel(metric: string | null | undefined): string {
+  if (metric == null) return "未知指标";
+  const key = String(metric).trim();
+  if (!key || isDirtyDisplayToken(key)) return "未知指标";
+  if (key in PRIMARY_METRIC_LABELS_ZH) {
+    return PRIMARY_METRIC_LABELS_ZH[key as keyof typeof PRIMARY_METRIC_LABELS_ZH];
+  }
+  if (key in METRIC_LABELS_ZH) {
+    return METRIC_LABELS_ZH[key as JourneyCurveMetric];
+  }
+  return "未知指标";
+}
+
+export function formatJourneyMetricHint(metric: string | null | undefined): string | null {
+  if (metric == null) return null;
+  const key = String(metric).trim();
+  if (key in PRIMARY_METRIC_HINTS_ZH) {
+    return PRIMARY_METRIC_HINTS_ZH[key as keyof typeof PRIMARY_METRIC_HINTS_ZH];
+  }
+  if (key in METRIC_HINTS_ZH) return METRIC_HINTS_ZH[key as JourneyCurveMetric];
+  if (key in SCORE_TOOLTIPS_ZH) return SCORE_TOOLTIPS_ZH[key];
+  return null;
+}
+
+export function formatJourneySelectionType(kind: string | null | undefined): string {
+  if (kind == null) return "未知";
+  const key = String(kind).trim().toLowerCase();
+  const map: Record<string, string> = {
+    phase: "阶段",
+    scene: "场景",
+    node: "节点",
+    curve: "曲线",
+    metric: "指标",
+    question: "问题",
+    hook: "钩子",
+    payoff: "回报",
+    risk: "风险",
+  };
+  return map[key] ?? "未知";
+}
+
+export function formatJourneyStatus(status: string | null | undefined): string {
+  if (status == null) return "—";
+  const key = String(status).trim();
+  if (!key || isDirtyDisplayToken(key)) return "—";
+  const map: Record<string, string> = {
+    succeeded: "分析已完成",
+    completed: "分析已完成",
+    running: "正在生成",
+    pending: "等待生成",
+    failed: "生成失败",
+    none: "尚未生成",
+    empty: "暂无结果",
+  };
+  return map[key] ?? map[key.toLowerCase()] ?? key;
+}
+
+/** Safe numeric display; missing / non-finite → em dash. */
+export function formatJourneyScore(value: unknown): string {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(Math.round(value));
+  }
+  if (typeof value === "string" && value.trim() && !isDirtyDisplayToken(value)) {
+    const n = Number(value);
+    if (Number.isFinite(n)) return String(Math.round(n));
+  }
+  return "—";
+}
+
+export function formatJourneySceneLabel(
+  ordinal: number | null | undefined,
+  title?: string | null,
+): string {
+  const hasOrdinal =
+    typeof ordinal === "number" && Number.isFinite(ordinal) && ordinal > 0;
+  const ordinalText = hasOrdinal
+    ? `场景 ${String(Math.trunc(ordinal)).padStart(2, "0")}`
+    : "场景";
+  const name = typeof title === "string" ? title.trim() : "";
+  if (name && !isDirtyDisplayToken(name) && !/^Scene\s*#?undefined$/i.test(name)) {
+    return `${ordinalText} · ${name}`;
+  }
+  return ordinalText;
+}

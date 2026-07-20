@@ -11,7 +11,7 @@ import type {
   JourneySceneNode,
   ReaderJourneyVisualization,
 } from "../../types/readerJourneyVisualization";
-import { METRIC_LABELS_ZH } from "./journeyUiLabels";
+import { formatJourneyMetricLabel, formatJourneyPhaseLabel, formatJourneySceneLabel, formatJourneyScore, roleLabelZh } from "./journeyUiLabels";
 import { PHASE_BAND_COLORS } from "./journeyVisualTokens";
 import {
   buildLinePathD,
@@ -651,17 +651,26 @@ export function CanonicalJourneyChart({
                 {...({ xmlns: "http://www.w3.org/1999/xhtml" } as Record<string, string>)}
               >
                 <div>
-                  Scene {tooltipNode.scene_ordinal}
-                  {tooltipNode.role ? ` · ${tooltipNode.role}` : ""}
+                  {formatJourneySceneLabel(tooltipNode.scene_ordinal)}
+                  {tooltipNode.role ? ` · ${roleLabelZh(tooltipNode.role)}` : ""}
                 </div>
-                <div>Phase {tooltipNode.phase_ordinal ?? "—"}{tooltipPhase ? ` · ${tooltipPhase.title}` : ""}</div>
                 <div>
-                  {METRIC_LABELS_ZH[metric]}：
-                  {tooltipScore == null ? "—" : Math.round(tooltipScore)}
+                  阶段{" "}
+                  {tooltipPhase
+                    ? formatJourneyPhaseLabel(tooltipPhase.title)
+                    : tooltipNode.phase_ordinal != null
+                      ? String(tooltipNode.phase_ordinal)
+                      : "—"}
                 </div>
-                <div>Hook：{tooltipHook?.summary ?? "—"}</div>
-                <div>Payoff：{tooltipPayoff?.summary ?? "—"}</div>
-                <div>Risk：{tooltipRisk?.summary ?? tooltipRisk?.risk_type ?? "—"}</div>
+                <div>
+                  {formatJourneyMetricLabel(metric)}：
+                  {formatJourneyScore(tooltipScore)}
+                </div>
+                {tooltipHook?.summary ? <div>钩子：{tooltipHook.summary}</div> : null}
+                {tooltipPayoff?.summary ? <div>回报：{tooltipPayoff.summary}</div> : null}
+                {tooltipRisk?.summary || tooltipRisk?.risk_type ? (
+                  <div>风险：{tooltipRisk?.summary ?? tooltipRisk?.risk_type}</div>
+                ) : null}
               </div>
             </foreignObject>
           )}

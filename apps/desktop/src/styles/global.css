@@ -667,16 +667,30 @@ a {
   color: var(--muted);
 }
 .results-page-journey-sync {
-  grid-template-columns: 1fr;
+  /* Must beat .workspace 3-column template (and ≤1280 media override). */
+  grid-template-columns: minmax(0, 1fr) !important;
   display: grid;
   height: calc(100vh - 84px);
   min-height: 0;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
   overflow: hidden;
+}
+
+.book-shell-simplified .results-page-journey-sync,
+.results-shell-simplified .results-page-journey-sync,
+.analysis-result-route-adapter .results-page-journey-sync {
+  grid-template-columns: minmax(0, 1fr) !important;
+  width: 100%;
+  min-width: 0;
 }
 
 .results-page-journey-sync .journey-sync-workspace {
   height: 100%;
   min-height: 0;
+  min-width: 0;
+  width: 100%;
   overflow: hidden;
 }
 
@@ -1156,7 +1170,7 @@ a {
   .app {
     grid-template-columns: 190px 1fr;
   }
-  .workspace {
+  .workspace:not(.results-page-journey-sync) {
     grid-template-columns: 220px 1fr 330px;
   }
   .provider-layout {
@@ -2091,7 +2105,9 @@ a {
 .book-shell-simplified .analysis-pane:not(:has(.artifact)) {
   display: none;
 }
-.book-shell-simplified .workspace:not(:has(.artifact)) {
+/* Reading workspace only — never apply to Reader Journey sync (single child
+   would otherwise sit in the 240px first track with a blank 1fr column). */
+.book-shell-simplified .workspace:not(:has(.artifact)):not(.results-page-journey-sync) {
   grid-template-columns: 240px minmax(0, 1fr);
 }
 .book-shell-simplified .reader {

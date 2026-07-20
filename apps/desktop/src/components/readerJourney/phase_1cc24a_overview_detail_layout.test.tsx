@@ -56,12 +56,12 @@ describe("Phase 1C-C.2.4A overview–detail layout", () => {
       <ReaderJourneyWorkspace visualization={visualization} onLocateEvidence={vi.fn()} />,
     );
     const card = screen.getByTestId("journey-phase-3");
-    expect(card).toHaveTextContent(/Phase 3 · S/);
+    expect(card).toHaveTextContent(/转折|推进|入局|收束/);
     expect(card.textContent).not.toMatch(/平均牵引/);
     expect(card.textContent).not.toMatch(/核心问题/);
     expect(card.textContent).not.toMatch(/阶段回报/);
     expect(card.textContent).not.toMatch(/续读/);
-    expect(css).toMatch(/\.journey-phase-card\.journey-phase-compact[\s\S]*height:\s*64px/);
+    expect(css).toMatch(/\.journey-workspace-v4\s+\.journey-phase-nav-card[\s\S]*min-height:\s*96px/);
   });
 
   it("enlarges curve with Y ticks and S1–S14 X labels", () => {
@@ -101,9 +101,9 @@ describe("Phase 1C-C.2.4A overview–detail layout", () => {
     renderJourney(
       <ReaderJourneyWorkspace visualization={visualization} onLocateEvidence={vi.fn()} />,
     );
-    expect(screen.getByTestId("journey-curve-legend")).toHaveTextContent("Hook");
+    expect(screen.getByTestId("journey-curve-legend")).toHaveTextContent("钩子");
     fireEvent.click(screen.getByTestId("journey-marker-full"));
-    expect(screen.getByTestId("journey-curve-legend")).toHaveTextContent("Secondary");
+    expect(screen.getByTestId("journey-curve-legend")).toHaveTextContent("次级节点");
     const endNode = screen.getByTestId("journey-curve-node-14");
     expect(endNode.getAttribute("data-hook-tier")).toBe("chapter");
   });

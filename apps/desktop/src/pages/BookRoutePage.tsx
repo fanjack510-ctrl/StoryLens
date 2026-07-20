@@ -668,12 +668,12 @@ export function BookRoutePage() {
               active={isJourneyTab ? "journey" : "analysis"}
               onChange={(v) => setResultTab(v)}
               journeyAvailable
-              analysisLabel="Scene分析"
+              analysisLabel="场景分析"
               journeyLabel="阅读旅程"
             />
           ) : view === "result" ? (
             <span className="secondary" data-testid="book-result-analysis-label">
-              Scene分析
+              场景分析
             </span>
           ) : (
             <button
@@ -734,7 +734,7 @@ export function BookRoutePage() {
                   onClick={() => setView("result")}
                 >
                   {compositionUiState === "awaiting_reader_journey_start"
-                    ? "查看Scene分析"
+                    ? "查看场景分析"
                     : compositionUiState === "reader_journey_processing"
                       ? "查看阅读旅程进度"
                       : "查看分析结果"}

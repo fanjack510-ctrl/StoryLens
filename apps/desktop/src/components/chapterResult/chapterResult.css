@@ -13,6 +13,17 @@
 .analysis-result-route-adapter .workspace {
   height: 100%;
   min-height: 0;
+  min-width: 0;
+  width: 100%;
+}
+
+.analysis-result-route-adapter .results-page-journey-sync {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+.embedded-analysis-result-shell.is-journey {
+  min-width: 0;
+  width: 100%;
 }
 
 .book-shell-body[data-view="result"] {

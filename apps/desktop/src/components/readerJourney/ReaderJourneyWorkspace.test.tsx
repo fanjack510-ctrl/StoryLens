@@ -34,7 +34,7 @@ describe("ReaderJourneyWorkspace", () => {
       />,
     );
 
-    expect(screen.getByTestId("journey-analysis-title")).toHaveTextContent("旅程分析");
+    expect(screen.getByTestId("journey-analysis-title")).toHaveTextContent("阅读旅程");
     expect(screen.getByTestId("journey-summary-cards")).toBeInTheDocument();
     expect(screen.getByTestId("summary-card-traction")).toBeInTheDocument();
     expect(screen.getByTestId("journey-phase-strip").querySelectorAll("button")).toHaveLength(4);
@@ -51,9 +51,11 @@ describe("ReaderJourneyWorkspace", () => {
       beatNode.querySelector("circle")?.getAttribute("r"),
     );
 
+    fireEvent.click(screen.getByTestId("journey-metric-segment-hook"));
+    expect(screen.getByTestId("journey-metric-select")).toHaveAttribute("data-current-metric", "hook");
     fireEvent.click(screen.getByTestId("journey-metric-select"));
     fireEvent.click(screen.getByTestId("journey-metric-hook"));
-    expect(screen.getByTestId("journey-metric-select")).toHaveTextContent("钩子");
+    expect(screen.getByTestId("journey-metric-select")).toHaveTextContent("钩子强度");
 
     fireEvent.click(screen.getByTestId("journey-curve-node-14"));
     expect(screen.getByTestId("journey-detail-drawer")).toHaveTextContent("Scene 14");
@@ -163,5 +165,61 @@ describe("ReaderJourneyWorkspace", () => {
     expect(screen.getByTestId("journey-curve-node-14").getAttribute("class")).toContain(
       "journey-node-active",
     );
+  });
+
+  it("shows full phase cards and keeps phase ids on select", () => {
+    const onSelectionChange = vi.fn();
+    renderJourney(
+      <ReaderJourneyWorkspace
+        visualization={visualization}
+        onLocateEvidence={vi.fn()}
+        activePhaseOrdinal={null}
+        onSelectionChange={onSelectionChange}
+      />,
+    );
+    const phase1 = screen.getByTestId("journey-phase-1");
+    expect(phase1).toHaveTextContent(/入局|推进|转折|收束/);
+    expect(screen.getByTestId("journey-phase-avg-1").textContent).not.toMatch(/undefined|NaN/);
+    fireEvent.click(phase1);
+    expect(onSelectionChange).toHaveBeenCalledWith(
+      expect.objectContaining({ activePhaseOrdinal: 1, source: "journey_phase" }),
+    );
+  });
+
+  it("expands and collapses detail without clearing selection", () => {
+    renderJourney(
+      <ReaderJourneyWorkspace
+        visualization={visualization}
+        onLocateEvidence={vi.fn()}
+        activeSceneOrdinal={4}
+        activePhaseOrdinal={2}
+      />,
+      "/?scene=4&inspector=scene",
+    );
+    expect(screen.getByTestId("journey-detail-pane")).toBeInTheDocument();
+    const collapse = screen.getAllByTestId("journey-collapse-inspector")[0];
+    fireEvent.click(collapse!);
+    expect(screen.getByTestId("journey-inspector-summary-expand")).toBeInTheDocument();
+    expect(screen.getByTestId("journey-inspector-summary-text").textContent).toMatch(/场景 04/);
+    fireEvent.click(screen.getByTestId("journey-inspector-summary-expand"));
+    expect(screen.getByTestId("journey-detail-pane")).toBeInTheDocument();
+  });
+
+  it("keeps metric value identity when switching primary segments", () => {
+    const onSelectionChange = vi.fn();
+    const before = visualization.curve_series.engagement?.[0]?.value;
+    renderJourney(
+      <ReaderJourneyWorkspace
+        visualization={visualization}
+        onLocateEvidence={vi.fn()}
+        selectedMetric="engagement"
+        onSelectionChange={onSelectionChange}
+      />,
+    );
+    fireEvent.click(screen.getByTestId("journey-metric-segment-tension"));
+    expect(onSelectionChange).toHaveBeenCalledWith(
+      expect.objectContaining({ selectedMetric: "tension" }),
+    );
+    expect(visualization.curve_series.engagement?.[0]?.value).toBe(before);
   });
 });

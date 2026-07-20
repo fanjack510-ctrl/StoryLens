@@ -153,18 +153,18 @@ describe("Phase 1C-C.2.5.2 Context Inspector", () => {
   it("uses compact legend by default and expands in full marker mode", () => {
     renderAt("/?overview=curve");
     const legend = screen.getByTestId("journey-curve-legend");
-    expect(legend).toHaveTextContent("当前 Scene");
-    expect(legend).toHaveTextContent("Hook");
-    expect(legend).toHaveTextContent("Payoff");
-    expect(legend).toHaveTextContent("Risk");
-    expect(legend.textContent).not.toMatch(/Secondary/);
-    expect(legend.textContent).not.toMatch(/answered question/);
+    expect(legend).toHaveTextContent("当前场景");
+    expect(legend).toHaveTextContent("钩子");
+    expect(legend).toHaveTextContent("回报");
+    expect(legend).toHaveTextContent("风险");
+    expect(legend.textContent).not.toMatch(/次级节点/);
+    expect(legend.textContent).not.toMatch(/已回答问题/);
 
     fireEvent.click(screen.getByTestId("journey-marker-full"));
-    expect(legend).toHaveTextContent("answered question");
-    expect(legend).toHaveTextContent("transformed question");
-    expect(legend).toHaveTextContent("Secondary");
-    expect(legend).toHaveTextContent("Beat");
+    expect(legend).toHaveTextContent("已回答问题");
+    expect(legend).toHaveTextContent("问题升级");
+    expect(legend).toHaveTextContent("次级节点");
+    expect(legend).toHaveTextContent("节拍节点");
     expect(legend).toHaveTextContent("派生标记");
   });
 

@@ -132,7 +132,7 @@ export function MetricSelectorPanel({
       data-testid="journey-metric-select-menu"
       data-metric-panel="in-flow"
       role="listbox"
-      aria-label="选择当前指标"
+      aria-label="选择指标"
       aria-labelledby={triggerId}
     >
       <div className="journey-metric-selector-grid" data-testid="journey-metric-selector-grid">

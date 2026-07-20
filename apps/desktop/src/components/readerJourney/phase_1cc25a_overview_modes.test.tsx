@@ -42,7 +42,7 @@ describe("Phase 1C-C.2.5A overview modes (superseded by 2.6 single view)", () =>
     expect(parseOverviewMode("diagnosis")).toBe("curve");
     renderWorkspace("/?scene=12");
 
-    expect(screen.getByTestId("journey-analysis-title")).toHaveTextContent("旅程分析");
+    expect(screen.getByTestId("journey-analysis-title")).toHaveTextContent("阅读旅程");
     expect(screen.getByTestId("journey-overview-curve")).toBeInTheDocument();
     expect(screen.queryByTestId("journey-overview-mode-tabs")).not.toBeInTheDocument();
     expect(screen.queryByTestId("journey-overview-questions")).not.toBeInTheDocument();
@@ -55,13 +55,13 @@ describe("Phase 1C-C.2.5A overview modes (superseded by 2.6 single view)", () =>
   it("uses compact two-line phase nav without essay copy and standard curve height 408", () => {
     renderWorkspace();
     const card = screen.getByTestId("journey-phase-3");
-    expect(card).toHaveTextContent(/Phase 3 · S/);
-    expect(card.querySelector(".journey-phase-row1")).toBeTruthy();
-    expect(card.querySelector(".journey-phase-row2")).toBeTruthy();
+    expect(card).toHaveTextContent(/转折|推进|入局|收束/);
+    expect(card.querySelector(".journey-phase-card-head")).toBeTruthy();
+    expect(card.querySelector(".journey-phase-card-desc")).toBeTruthy();
     expect(card.textContent).not.toMatch(/平均牵引/);
     expect(card.textContent).not.toMatch(/核心问题/);
     expect(card.textContent).not.toMatch(/阶段回报/);
-    expect(css).toMatch(/\.journey-phase-card\.journey-phase-compact[\s\S]*height:\s*64px/);
+    expect(css).toMatch(/\.journey-workspace-v4\s+\.journey-phase-nav-card[\s\S]*min-height:\s*96px/);
     expect(screen.getByTestId("journey-curve-svg").getAttribute("height")).toBe("420");
     for (const tick of [100, 75, 50, 25, 0]) {
       expect(screen.getByTestId(`journey-y-tick-${tick}`)).toBeInTheDocument();

@@ -2825,3 +2825,275 @@ body.journey-pane-resizing[data-row-resize="true"] * {
     grid-template-columns: 1fr;
   }
 }
+
+/* ============================================================
+   Phase 3A.2 — Reader Journey visualization polish
+   ============================================================ */
+
+.journey-workspace.journey-workspace-v4 {
+  width: 100%;
+  max-width: none;
+  margin-inline: 0;
+}
+
+.journey-sync-main .journey-workspace.journey-workspace-v4 {
+  max-width: none;
+}
+
+.journey-analysis-meta {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.journey-analysis-subtitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: min(720px, 100%);
+}
+
+.journey-metric-segmented {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  gap: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow-x: auto;
+  max-width: 100%;
+  background: var(--surface);
+}
+
+.journey-metric-segment {
+  border: 0;
+  border-right: 1px solid var(--line);
+  background: transparent;
+  color: var(--text);
+  padding: 6px 12px;
+  font-size: 12px;
+  line-height: 1.3;
+  white-space: nowrap;
+  cursor: pointer;
+  min-height: 32px;
+}
+
+.journey-metric-segment:last-child {
+  border-right: 0;
+}
+
+.journey-metric-segment.is-selected,
+.journey-metric-segment[aria-selected="true"] {
+  background: var(--color-brand-soft, var(--accent2));
+  color: var(--color-brand, var(--accent));
+  font-weight: 600;
+  box-shadow: inset 0 -2px 0 var(--color-brand, var(--accent));
+}
+
+.journey-metric-segment:focus-visible {
+  outline: 2px solid var(--color-brand, var(--accent));
+  outline-offset: -2px;
+  z-index: 1;
+}
+
+.journey-workspace-v4 .journey-phase-nav-card {
+  position: relative;
+  flex: 0 0 auto;
+  width: 200px;
+  min-width: 180px;
+  max-width: 240px;
+  height: auto;
+  min-height: 96px;
+  max-height: none;
+  padding: 12px 12px 14px;
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--phase-band-color, var(--surface2)) 28%, var(--surface));
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  writing-mode: horizontal-tb;
+}
+
+.journey-workspace-v4 .journey-phase-nav-card.selected,
+.journey-workspace-v4 .journey-phase-nav-card.active-phase {
+  border-color: var(--color-brand, var(--accent));
+  border-width: 2px;
+  background: var(--color-brand-soft, var(--accent2));
+  box-shadow: none;
+}
+
+.journey-phase-card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.journey-workspace-v4 .journey-phase-nav-card .journey-phase-title {
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.journey-workspace-v4 .journey-phase-nav-card .journey-phase-avg {
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+  color: var(--text);
+  flex-shrink: 0;
+}
+
+.journey-phase-card-desc {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  white-space: normal;
+  writing-mode: horizontal-tb;
+}
+
+.journey-workspace-v4 .journey-phase-nav-card .journey-phase-current-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
+.journey-inspector-pane,
+.journey-inspector-dock {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.journey-inspector-pane[data-dock="right"] {
+  width: 100%;
+  max-width: 360px;
+}
+
+.journey-collapse-inspector-btn {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  align-self: flex-end;
+  margin: 0 0 8px;
+  padding: 4px 10px;
+  font-size: 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.journey-collapse-inspector-btn:hover {
+  color: var(--text);
+  border-color: var(--color-brand, var(--accent));
+}
+
+.journey-collapse-inspector-btn:focus-visible {
+  outline: 2px solid var(--color-brand, var(--accent));
+  outline-offset: 2px;
+}
+
+.journey-curve-svg-frame {
+  width: 100%;
+  min-width: 0;
+}
+
+/* Width is driven by ResizeObserver → chartWidth; do not force 100% or pan math breaks. */
+.journey-curve-svg {
+  max-width: none;
+}
+
+.journey-node-tooltip-card {
+  background: var(--color-bg-surface, var(--surface));
+  color: var(--color-text, var(--text));
+  border: 1px solid var(--color-border, var(--line));
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 1.45;
+  box-shadow: var(--shadow-sm, 0 4px 14px rgba(0, 0, 0, 0.12));
+}
+
+.app[data-theme="dark"] .journey-node-tooltip-card,
+[data-theme="dark"] .journey-node-tooltip-card {
+  background: var(--color-bg-surface, #1e2420);
+  color: var(--color-text, #e8ebe9);
+  border-color: var(--color-border, #3a433e);
+}
+
+.app[data-theme="dark"] .journey-workspace-v4 .journey-phase-nav-card,
+[data-theme="dark"] .journey-workspace-v4 .journey-phase-nav-card {
+  background: color-mix(in srgb, var(--phase-band-color, #2a332e) 22%, var(--surface));
+  border-color: var(--line);
+}
+
+.app[data-theme="dark"] .journey-metric-segmented,
+[data-theme="dark"] .journey-metric-segmented {
+  background: var(--surface);
+  border-color: var(--line);
+}
+
+.app[data-theme="dark"] .journey-collapse-inspector-btn,
+[data-theme="dark"] .journey-collapse-inspector-btn {
+  background: var(--surface);
+  color: var(--muted);
+}
+
+@media (max-width: 1179px) {
+  .journey-workspace-v4 .journey-phase-nav-card {
+    width: 170px;
+    min-width: 160px;
+  }
+
+  .journey-inspector-pane[data-dock="right"] {
+    max-width: none;
+  }
+}
+
+@media (max-width: 1023px) {
+  .journey-chart-shell,
+  .journey-chart-viewport,
+  .journey-curve-section {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .journey-metric-segmented {
+    width: 100%;
+  }
+
+  .journey-workspace-v4 .journey-phase-nav-card {
+    width: 168px;
+    min-width: 156px;
+    writing-mode: horizontal-tb;
+  }
+
+  .journey-phase-card-desc,
+  .journey-phase-card-head,
+  .journey-phase-title {
+    writing-mode: horizontal-tb !important;
+    text-orientation: mixed !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .journey-metric-segment,
+  .journey-phase-nav-card,
+  .journey-collapse-inspector-btn {
+    transition: none !important;
+  }
+}

@@ -57,9 +57,9 @@ function renderWorkspace(initial: string, extra?: { analysisRunId?: number; jour
 }
 
 describe("Phase 1C-C.2.6 journey analysis focused view", () => {
-  it("shows 旅程分析 and hides legacy top-level overview tabs", () => {
+  it("shows 阅读旅程 and hides legacy top-level overview tabs", () => {
     renderWorkspace("/?overview=curve&scene=9&metric=engagement");
-    expect(screen.getByTestId("journey-analysis-title")).toHaveTextContent("旅程分析");
+    expect(screen.getByTestId("journey-analysis-title")).toHaveTextContent("阅读旅程");
     expect(screen.queryByTestId("journey-overview-mode-tabs")).not.toBeInTheDocument();
     expect(screen.queryByTestId("overview-mode-curve")).not.toBeInTheDocument();
     expect(screen.queryByTestId("overview-mode-questions")).not.toBeInTheDocument();
@@ -75,7 +75,7 @@ describe("Phase 1C-C.2.6 journey analysis focused view", () => {
       renderWorkspace(
         `/?overview=${mode}&scene=9&paragraph=B0001-C0002-P0090&inspector=scene&metric=curiosity`,
       );
-      expect(screen.getByTestId("journey-analysis-title")).toHaveTextContent("旅程分析");
+      expect(screen.getByTestId("journey-analysis-title")).toHaveTextContent("阅读旅程");
       expect(screen.getByTestId("journey-overview-curve")).toBeInTheDocument();
       expect(screen.queryByTestId("journey-overview-questions")).not.toBeInTheDocument();
       expect(screen.queryByTestId("journey-overview-diagnosis")).not.toBeInTheDocument();
@@ -111,7 +111,7 @@ describe("Phase 1C-C.2.6 journey analysis focused view", () => {
     renderWorkspace("/?overview=curve&scene=9&metric=engagement");
     expect(screen.getByTestId("journey-metric-select")).toHaveAttribute(
       "title",
-      "当前指标：阅读牵引",
+      "指标：阅读牵引",
     );
     expect(screen.getByTestId("journey-metric-select")).toHaveTextContent("阅读牵引");
     expect(screen.queryByTestId("journey-metric-more")).not.toBeInTheDocument();
@@ -126,7 +126,7 @@ describe("Phase 1C-C.2.6 journey analysis focused view", () => {
     await waitFor(() => {
       expect(screen.getByTestId("journey-metric-select")).toHaveAttribute(
         "title",
-        "当前指标：好奇",
+        "指标：好奇",
       );
       expect(screen.getByTestId("journey-metric-select")).toHaveTextContent("好奇");
     });
@@ -135,11 +135,11 @@ describe("Phase 1C-C.2.6 journey analysis focused view", () => {
   it("shows compact vs full legend", () => {
     renderWorkspace("/?overview=curve&scene=9");
     const legend = screen.getByTestId("journey-curve-legend");
-    expect(within(legend).getByText("当前 Scene")).toBeInTheDocument();
-    expect(within(legend).getByText("Hook")).toBeInTheDocument();
-    expect(within(legend).queryByText("Secondary")).not.toBeInTheDocument();
+    expect(within(legend).getByText("当前场景")).toBeInTheDocument();
+    expect(within(legend).getByText("钩子")).toBeInTheDocument();
+    expect(within(legend).queryByText("次级节点")).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId("journey-marker-full"));
-    expect(within(legend).getByText("Secondary")).toBeInTheDocument();
+    expect(within(legend).getByText("次级节点")).toBeInTheDocument();
     expect(within(legend).getByText("派生标记")).toBeInTheDocument();
   });
 
@@ -153,16 +153,16 @@ describe("Phase 1C-C.2.6 journey analysis focused view", () => {
     expect(screen.getByTestId("phase-detail-tab-risks")).toHaveTextContent("节奏风险");
   });
 
-  it("exports PNG with 旅程分析 title and without legacy tabs", async () => {
+  it("exports PNG with 阅读旅程 title and without legacy tabs", async () => {
     renderWorkspace("/?overview=questions&scene=9");
-    expect(screen.getByTestId("journey-export-title")).toHaveTextContent("旅程分析");
+    expect(screen.getByTestId("journey-export-title")).toHaveTextContent("阅读旅程");
     expect(screen.queryByTestId("journey-overview-mode-tabs")).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId("journey-export-png"));
     await waitFor(() => {
       expect(exportJourneyPng).toHaveBeenCalled();
     });
     const feedback = await screen.findByTestId("journey-export-feedback");
-    expect(feedback.textContent).toMatch(/旅程分析/);
+    expect(feedback.textContent).toMatch(/旅程分析|阅读旅程/);
   });
 
   it("keeps curve/rhythm first-click and phase-without-scene-change semantics", async () => {

@@ -2,7 +2,7 @@ import { useId, useState } from "react";
 import type { JourneyCurveMetric } from "../../types/readerJourneyVisualization";
 import { JourneyPopover } from "./JourneyPopover";
 import { MetricSelectorPanel } from "./MetricSelectorPanel";
-import { ALL_METRIC_KEYS, METRIC_LABELS_ZH } from "./journeyUiLabels";
+import { ALL_METRIC_KEYS, PRIMARY_JOURNEY_METRICS, PRIMARY_METRIC_LABELS_ZH, PRIMARY_METRIC_HINTS_ZH, formatJourneyMetricLabel } from "./journeyUiLabels";
 import type { ChartHeightPreset, YDomainMode } from "./journeyVisualizationConfig";
 
 type Props = {
@@ -72,7 +72,7 @@ export function JourneyChartToolbar({
   const moreTriggerId = useId();
   const metricPanelDomId = useId();
 
-  const metricLabel = METRIC_LABELS_ZH[metric];
+  const metricLabel = formatJourneyMetricLabel(metric);
 
   const handleMetricSelect = (key: JourneyCurveMetric) => {
     onMetricChange(key);
@@ -81,14 +81,41 @@ export function JourneyChartToolbar({
 
   const primaryLeft = (
     <div className="journey-toolbar-left" data-testid="journey-metric-switcher">
+      <div
+        className="journey-metric-segmented"
+        data-testid="journey-metric-segmented"
+        role="tablist"
+        aria-label="旅程指标"
+      >
+        {PRIMARY_JOURNEY_METRICS.map((key) => {
+          const selected = metric === key;
+          const label = PRIMARY_METRIC_LABELS_ZH[key];
+          const hint = PRIMARY_METRIC_HINTS_ZH[key];
+          return (
+            <button
+              key={key}
+              type="button"
+              role="tab"
+              aria-selected={selected}
+              className={`journey-metric-segment${selected ? " is-selected" : ""}`}
+              data-testid={`journey-metric-segment-${key}`}
+              data-metric={key}
+              title={hint}
+              onClick={() => onMetricChange(key)}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
       <button
         type="button"
         id={metricTriggerId}
         className={`journey-toolbar-btn journey-toolbar-btn-select ${metricOpen ? "active" : ""}`}
         data-testid="journey-metric-select"
         data-current-metric={metric}
-        title={`当前指标：${metricLabel}`}
-        aria-label={`当前指标：${metricLabel}`}
+        title={`指标：${metricLabel}`}
+        aria-label={`指标：${metricLabel}`}
         aria-expanded={metricOpen}
         aria-haspopup="listbox"
         aria-controls={metricOpen ? metricPanelDomId : undefined}
@@ -97,7 +124,7 @@ export function JourneyChartToolbar({
           setMoreOpen(false);
         }}
       >
-        <span className="journey-toolbar-btn-label">当前指标</span>
+        <span className="journey-toolbar-btn-label">更多指标</span>
         <span className="journey-toolbar-btn-sep" aria-hidden="true">
           ·
         </span>
@@ -117,12 +144,12 @@ export function JourneyChartToolbar({
         data-testid="journey-zoom-focus-phase"
         onClick={onFocusPhase}
       >
-        当前Phase
+        当前阶段
       </button>
     </div>
   );
 
-  const inspectorLabel = inspectorCollapsed ? "查看详情" : "关闭详情";
+  const inspectorLabel = inspectorCollapsed ? "展开详情" : "收起详情";
   const sourceLabel = sourceCollapsed ? "展开正文" : "收起正文";
 
   const moreItems = (

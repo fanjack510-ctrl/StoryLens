@@ -73,7 +73,7 @@ describe("Reader Journey Metric Selector Overlay System v4.2", () => {
     const panel = screen.getByTestId("journey-metric-select-menu");
     expect(panel).toHaveAttribute("data-metric-panel", "in-flow");
     expect(panel).toHaveAttribute("role", "listbox");
-    expect(panel).toHaveAttribute("aria-label", "选择当前指标");
+    expect(panel).toHaveAttribute("aria-label", "选择指标");
     const region = screen.getByTestId("journey-toolbar-region");
     expect(region.contains(panel)).toBe(true);
     expect(screen.getByTestId("journey-metric-select")).toHaveAttribute("aria-expanded", "true");
@@ -133,7 +133,7 @@ describe("Reader Journey Metric Selector Overlay System v4.2", () => {
       "data-current-metric",
       "hook",
     );
-    expect(screen.getByTestId("journey-metric-select")).toHaveTextContent("钩子");
+    expect(screen.getByTestId("journey-metric-select")).toHaveTextContent("钩子强度");
     expect(screen.getByTestId("journey-metric-select")).toHaveAttribute("aria-expanded", "false");
     // Scene URL param preserved; chart nodes still present
     expect(screen.getByTestId("journey-curve-node-3")).toBeInTheDocument();
@@ -232,12 +232,12 @@ describe("Reader Journey Metric Selector Overlay System v4.2", () => {
     expect(workspaceSource).not.toMatch(/MetricSelector[\s\S]{0,80}bookId\s*===/);
   });
 
-  it("shows current metric on trigger as 当前指标 · label", () => {
+  it("shows current metric on trigger as 更多指标 · label", () => {
     renderWorkspace();
     const trigger = screen.getByTestId("journey-metric-select");
-    expect(trigger).toHaveTextContent("当前指标");
+    expect(trigger).toHaveTextContent("更多指标");
     expect(trigger).toHaveTextContent("阅读牵引");
-    expect(trigger.textContent).toMatch(/当前指标\s*·\s*阅读牵引/);
+    expect(trigger.textContent).toMatch(/更多指标\s*·\s*阅读牵引/);
   });
 
   it("uses full-width narrow panel styles without floating mini-menu", () => {

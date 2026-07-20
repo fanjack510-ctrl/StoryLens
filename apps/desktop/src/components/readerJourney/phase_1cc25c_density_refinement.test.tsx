@@ -40,12 +40,12 @@ describe("Phase 1C-C.2.5C density refinement (updated for 2.6)", () => {
     );
     expect(screen.getByTestId("journey-summary-cards").className).toMatch(/journey-(insight|metric|summary)-strip/);
     expect(css).toMatch(/\.journey-metric-strip/);
-    expect(screen.getByTestId("journey-curve-legend")).toHaveTextContent("当前 Scene");
-    expect(screen.getByTestId("journey-curve-legend")).toHaveTextContent("Hook");
-    expect(screen.getByTestId("journey-curve-legend").textContent).not.toMatch(/answered question/);
+    expect(screen.getByTestId("journey-curve-legend")).toHaveTextContent("当前场景");
+    expect(screen.getByTestId("journey-curve-legend")).toHaveTextContent("钩子");
+    expect(screen.getByTestId("journey-curve-legend").textContent).not.toMatch(/已回答问题/);
 
     fireEvent.click(screen.getByTestId("journey-marker-full"));
-    expect(screen.getByTestId("journey-curve-legend")).toHaveTextContent("answered question");
+    expect(screen.getByTestId("journey-curve-legend")).toHaveTextContent("已回答问题");
 
     expect(QUICK_METRIC_KEYS).toEqual(["engagement", "curiosity", "tension"]);
     expect(MORE_METRIC_KEYS).toContain("valence");
