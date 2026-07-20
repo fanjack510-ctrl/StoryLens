@@ -433,6 +433,18 @@ export function BookRoutePage() {
     );
   };
 
+  useEffect(() => {
+    if (!catalogOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setCatalogOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [catalogOpen]);
+
+  const bookTitle = book.data?.title || "书籍";
+  const chapterCount = (chapters.data || []).length;
+
   const moreItems =
     view === "result"
       ? [
@@ -572,29 +584,84 @@ export function BookRoutePage() {
           },
         ];
 
+  const startAnalysisDisabled =
+    !chapterId ||
+    Boolean(
+      analysisRunId &&
+        progress.run &&
+        String(progress.run.subject_id) === String(chapterId) &&
+        (progress.uiState === "running" ||
+          progress.uiState === "boundary_review_required" ||
+          progress.uiState === "awaiting_budget_adjustment"),
+    );
+
+  const readingToolbarTitle = (
+    <div className="workspace-toolbar-identity">
+      <button
+        type="button"
+        className="ghost workspace-back-library"
+        data-testid="workspace-back-library"
+        onClick={() => navigate("/library")}
+      >
+        ‹ 返回书库
+      </button>
+      <span className="workspace-toolbar-titles">
+        <span className="workspace-toolbar-book" title={bookTitle}>
+          {bookTitle}
+        </span>
+        {chapterTitle ? (
+          <span className="workspace-toolbar-chapter" title={chapterTitle}>
+            {chapterTitle}
+          </span>
+        ) : null}
+      </span>
+      <button
+        type="button"
+        className="ghost workspace-catalog-trigger"
+        data-testid="book-chapter-catalog"
+        onClick={() => setCatalogOpen(true)}
+      >
+        章节目录
+      </button>
+    </div>
+  );
+
+  const resultToolbarTitle = (
+    <div className="workspace-toolbar-identity">
+      <button
+        type="button"
+        className="ghost workspace-back-library"
+        data-testid="workspace-back-library"
+        onClick={() => navigate("/library")}
+      >
+        ‹ 返回书库
+      </button>
+      <button
+        type="button"
+        className="ghost"
+        data-testid="book-chapter-catalog"
+        onClick={() => setCatalogOpen(true)}
+      >
+        章节目录
+      </button>
+    </div>
+  );
+
   return (
     <div
-      className="book-shell-simplified"
+      className="book-shell-simplified workspace-shell"
       data-testid="book-chapter-shell"
       data-content-width={contentWidth}
       data-show-paragraph-ids={showParagraphIds ? "true" : "false"}
       data-analysis-run={analysisRunId ? String(analysisRunId) : undefined}
       data-view={view}
+      data-catalog-open={catalogOpen ? "true" : "false"}
+      data-has-progress={showProgressPanel ? "true" : "false"}
     >
       <CompactToolbar
+        className="workspace-toolbar"
         data-testid="book-shell-toolbar"
-        title={
-          view === "result" || progress.uiState === "succeeded" ? (
-            <button
-              type="button"
-              className="ghost"
-              data-testid="book-chapter-catalog"
-              onClick={() => setCatalogOpen(true)}
-            >
-              章节目录
-            </button>
-          ) : undefined
-        }
+        title={view === "result" ? resultToolbarTitle : readingToolbarTitle}
         primary={
           view === "result" && sceneComplete ? (
             <ResultViewSwitcher
@@ -613,17 +680,7 @@ export function BookRoutePage() {
               type="button"
               className="primary"
               data-testid="shell-start-analysis"
-              disabled={
-                !chapterId ||
-                Boolean(
-                  analysisRunId &&
-                    progress.run &&
-                    String(progress.run.subject_id) === String(chapterId) &&
-                    (progress.uiState === "running" ||
-                      progress.uiState === "boundary_review_required" ||
-                      progress.uiState === "awaiting_budget_adjustment"),
-                )
-              }
+              disabled={startAnalysisDisabled}
               onClick={() => setDialog(true)}
             >
               开始分析
@@ -803,25 +860,59 @@ export function BookRoutePage() {
       ) : null}
 
       {catalogOpen && (
-        <div className="chapter-catalog-drawer" data-testid="chapter-catalog-drawer">
-          <div className="chapter-catalog-panel">
-            <div className="shell-review-head">
-              <h3>章节目录</h3>
-              <button type="button" onClick={() => setCatalogOpen(false)}>
-                关闭
+        <div
+          className="chapter-catalog-drawer"
+          data-testid="chapter-catalog-drawer"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setCatalogOpen(false);
+          }}
+        >
+          <div
+            className="chapter-catalog-panel"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="chapter-catalog-title"
+          >
+            <div className="chapter-catalog-head">
+              <h3 id="chapter-catalog-title">章节目录</h3>
+              <button
+                type="button"
+                className="chapter-catalog-close"
+                aria-label="关闭"
+                data-testid="chapter-catalog-close"
+                onClick={() => setCatalogOpen(false)}
+              >
+                ×
               </button>
             </div>
-            {(chapters.data || []).map((c) => (
-              <button
-                key={c.id}
-                type="button"
-                className={c.id === chapterId ? "active" : ""}
-                data-testid={`catalog-chapter-${c.id}`}
-                onClick={() => selectChapterFromCatalog(c.id)}
-              >
-                {c.display_title || c.title}
-              </button>
-            ))}
+            <div className="chapter-catalog-context">
+              <strong className="chapter-catalog-book" title={bookTitle}>
+                {bookTitle}
+              </strong>
+              <span className="chapter-catalog-count">共 {chapterCount} 章</span>
+            </div>
+            <div className="chapter-catalog-list">
+              {(chapters.data || []).map((c) => {
+                const title = c.display_title || c.title;
+                const num =
+                  c.section_type === "front_matter"
+                    ? "资料"
+                    : String(c.chapter_number_normalized || c.chapter_index).padStart(2, "0");
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    className={`chapter-catalog-item${c.id === chapterId ? " active" : ""}`}
+                    data-testid={`catalog-chapter-${c.id}`}
+                    title={title}
+                    onClick={() => selectChapterFromCatalog(c.id)}
+                  >
+                    <span className="chapter-catalog-item-num">{num}</span>
+                    <span className="chapter-catalog-item-title">{title}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}

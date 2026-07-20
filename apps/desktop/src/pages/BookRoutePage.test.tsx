@@ -164,6 +164,7 @@ function renderBook(path = "/books/1") {
       <MemoryRouter initialEntries={[path]}>
         <Routes>
           <Route path="/books/:bookId" element={<BookRoutePage />} />
+          <Route path="/library" element={<div data-testid="library-page">书库</div>} />
           <Route path="/tasks" element={<div data-testid="tasks-page">任务中心</div>} />
           <Route
             path="/analysis-runs/:runId/results"
@@ -399,5 +400,144 @@ describe("Book chapter shell", () => {
     });
     expect(screen.getByTestId("book-chapter-shell")).toHaveAttribute("data-view", "result");
     expect(analysisApi.createReaderJourney).not.toHaveBeenCalled();
+  });
+
+  it("shows book and chapter names in toolbar and returns to library", async () => {
+    renderBook("/books/1?chapter=2");
+    expect(await screen.findByText("测试书")).toBeInTheDocument();
+    const toolbar = screen.getByTestId("book-shell-toolbar");
+    expect(within(toolbar).getByText("测试书")).toBeInTheDocument();
+    expect(within(toolbar).getByText("开端")).toBeInTheDocument();
+    fireEvent.click(within(toolbar).getByTestId("workspace-back-library"));
+    expect(await screen.findByTestId("library-page")).toBeInTheDocument();
+  });
+
+  it("keeps long titles accessible via title attribute", async () => {
+    const prevFetch = global.fetch;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        const href = String(url);
+        if (href.includes("/chapters")) {
+          return new Response(
+            JSON.stringify([
+              {
+                id: 2,
+                section_type: "chapter",
+                title: "超长章节标题".repeat(8),
+                display_title: "超长章节标题".repeat(8),
+              },
+            ]),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          );
+        }
+        if (href.match(/\/books\/\d+$/)) {
+          return new Response(
+            JSON.stringify({
+              id: 1,
+              title: "超长书名".repeat(10),
+              source_file_name: "a.txt",
+              source_file_hash: "abc123def456",
+              created_at: "2026-01-01T00:00:00Z",
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          );
+        }
+        return new Response(JSON.stringify([]), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }),
+    );
+    try {
+      renderBook("/books/1?chapter=2");
+      expect(await screen.findByText(/超长书名/)).toBeInTheDocument();
+      const toolbar = screen.getByTestId("book-shell-toolbar");
+      const bookEl = within(toolbar).getByText(/超长书名/);
+      const chapterEl = within(toolbar).getByText(/超长章节标题/);
+      expect(bookEl.getAttribute("title")).toContain("超长书名");
+      expect(chapterEl.getAttribute("title")).toContain("超长章节标题");
+    } finally {
+      vi.stubGlobal("fetch", prevFetch);
+    }
+  });
+
+  it("reading settings write original store values and keep paragraph id toggle", async () => {
+    renderBook();
+    const toolbar = screen.getByTestId("book-shell-toolbar");
+    fireEvent.click(within(toolbar).getByTestId("reading-settings-trigger"));
+    const panel = within(toolbar).getByTestId("reading-settings-panel");
+    fireEvent.click(within(panel).getByTestId("reading-font-increase"));
+    expect(useUiStore.getState().fontSize).toBe(18);
+    fireEvent.click(within(panel).getByRole("button", { name: "宽松" }));
+    expect(useUiStore.getState().lineHeight).toBe(2.2);
+    fireEvent.click(within(panel).getByRole("button", { name: "窄" }));
+    expect(useUiStore.getState().contentWidth).toBe("narrow");
+    const checkbox = within(panel).getByTestId("reading-show-paragraph-ids");
+    fireEvent.click(checkbox);
+    expect(useUiStore.getState().showParagraphIds).toBe(true);
+    expect(screen.getByTestId("book-chapter-shell")).toHaveAttribute(
+      "data-show-paragraph-ids",
+      "true",
+    );
+  });
+
+  it("catalog drawer exposes title, close icon, and chapter click", async () => {
+    vi.mocked(analysisApi.run).mockResolvedValue({
+      id: 77,
+      subject_id: "2",
+      provider: "fake",
+      model: "fake",
+      status: "succeeded",
+      progress_current: 14,
+      progress_total: 14,
+      execution_mode: "cloud",
+      cloud_consent: true,
+      sends_content_to_cloud: true,
+      retryable: false,
+      created_at: "2026-01-01T00:00:00Z",
+      completed_at: "2026-01-01T00:05:00Z",
+      reusable_checkpoint_count: 0,
+      conflicted_checkpoint_count: 0,
+      checkpoint_total_count: 0,
+      checkpoint_available: false,
+      completed_scene_count: 14,
+      total_scene_count: 14,
+    } as any);
+    renderBook("/books/1?chapter=2&analysisRun=77&view=result");
+    await waitFor(() => {
+      expect(screen.getByTestId("book-chapter-catalog")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByTestId("book-chapter-catalog"));
+    const drawer = await screen.findByTestId("chapter-catalog-drawer");
+    expect(within(drawer).getByText("章节目录")).toBeInTheDocument();
+    expect(within(drawer).getByTestId("chapter-catalog-close")).toHaveAttribute(
+      "aria-label",
+      "关闭",
+    );
+    expect(within(drawer).getByTestId("catalog-chapter-2")).toHaveClass("active");
+    fireEvent.click(within(drawer).getByTestId("chapter-catalog-close"));
+    await waitFor(() => {
+      expect(screen.queryByTestId("chapter-catalog-drawer")).not.toBeInTheDocument();
+    });
+  });
+
+  it("collapsing progress inspector does not drop analysisRun binding", async () => {
+    renderBook("/books/1?chapter=2&analysisRun=77&view=progress");
+    await waitFor(() => {
+      expect(screen.getByTestId("chapter-analysis-progress")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByTestId("chapter-analysis-dismiss"));
+    await waitFor(() => {
+      expect(screen.queryByTestId("chapter-analysis-progress")).not.toBeInTheDocument();
+    });
+    expect(screen.getByTestId("book-chapter-shell")).toHaveAttribute("data-analysis-run", "77");
+  });
+
+  it("does not change start analysis disabled rules", async () => {
+    renderBook();
+    const start = await screen.findByTestId("shell-start-analysis");
+    await waitFor(() => expect(start).toBeEnabled());
+    expect(start).toHaveAttribute("data-testid", "shell-start-analysis");
   });
 });

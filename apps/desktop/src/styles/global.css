@@ -1824,17 +1824,25 @@ a {
   color: var(--muted);
   padding: 4px 8px;
 }
-.overflow-menu-panel button {
+.overflow-menu-panel button,
+.overflow-menu-item {
   width: 100%;
   text-align: left;
   border: 0;
   background: transparent;
   color: var(--text);
   padding: 8px 10px;
+  min-height: 36px;
   border-radius: 6px;
+  font-size: 13px;
 }
-.overflow-menu-panel button:hover {
+.overflow-menu-panel button:hover,
+.overflow-menu-item:hover {
   background: var(--accent2);
+}
+.overflow-menu-item.danger,
+.overflow-menu-panel button.danger {
+  color: var(--color-danger, #b42318);
 }
 
 .reading-settings-popover {
@@ -1844,22 +1852,77 @@ a {
   position: absolute;
   right: 0;
   top: calc(100% + 6px);
-  min-width: 260px;
+  width: min(300px, calc(100vw - 24px));
+  min-width: 280px;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 10px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
-  padding: 12px;
+  padding: 14px;
   z-index: 40;
   display: grid;
-  gap: 10px;
+  gap: 12px;
+  max-height: min(420px, calc(100vh - 80px));
+  overflow: auto;
+}
+.reading-settings-heading {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text, var(--text));
 }
 .reading-settings-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
   align-items: center;
-  justify-content: space-between;
   gap: 10px;
   font-size: 13px;
+}
+.reading-settings-label {
+  color: var(--color-text-secondary, var(--muted));
+  font-size: 12px;
+}
+.reading-settings-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.reading-settings-stepper [data-testid="reading-font-size"] {
+  min-width: 44px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.reading-settings-segment {
+  display: inline-flex;
+  gap: 4px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+.reading-settings-chip {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--text);
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  min-height: 32px;
+  cursor: pointer;
+}
+.reading-settings-chip.is-active {
+  background: var(--color-brand-soft, var(--accent2));
+  border-color: var(--color-brand, var(--accent));
+  color: var(--color-brand, var(--accent));
+}
+.reading-settings-chip:focus-visible,
+.reading-settings-stepper button:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
+.reading-settings-check {
+  grid-template-columns: 1fr;
+}
+.reading-settings-check .sl-check {
+  margin: 0;
 }
 
 .result-view-switcher {
@@ -2005,13 +2068,17 @@ a {
   flex-direction: column;
   height: calc(100vh - 76px);
   min-height: 0;
+  overflow: hidden;
 }
 .book-shell-body {
   flex: 1;
   min-height: 0;
+  min-width: 0;
+  overflow: hidden;
 }
 .book-shell-simplified .workspace {
   height: 100%;
+  min-width: 0;
 }
 .book-shell-simplified .reader-tools {
   position: fixed;
@@ -2024,23 +2091,25 @@ a {
 .book-shell-simplified .analysis-pane:not(:has(.artifact)) {
   display: none;
 }
-.book-shell-simplified .workspace:has(.analysis-pane:not(:has(.artifact))) {
+.book-shell-simplified .workspace:not(:has(.artifact)) {
   grid-template-columns: 240px minmax(0, 1fr);
 }
 .book-shell-simplified .reader {
-  padding-left: 36px;
-  padding-right: 36px;
+  padding-left: 28px;
+  padding-right: 28px;
+  min-width: 0;
 }
 .book-shell-simplified[data-content-width="narrow"] .prose {
   max-width: 42rem;
-  margin: 0 auto;
+  margin-inline: auto;
 }
 .book-shell-simplified[data-content-width="normal"] .prose {
   max-width: 52rem;
-  margin: 0 auto;
+  margin-inline: auto;
 }
 .book-shell-simplified[data-content-width="wide"] .prose {
-  max-width: none;
+  max-width: 760px;
+  margin-inline: auto;
 }
 
 /* Paragraph ID layout: dual column when shown, single column when hidden.
@@ -2174,3 +2243,401 @@ a {
   margin: 0 0 6px;
 }
 
+/* ===== Phase 3A: workspace reading shell (scoped to book shell) ===== */
+.workspace-shell .workspace-toolbar.compact-toolbar {
+  height: 52px;
+  min-height: 52px;
+  padding: 0 14px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 30;
+}
+.workspace-toolbar-identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+.workspace-back-library {
+  flex-shrink: 0;
+  white-space: nowrap;
+  padding-inline: 4px !important;
+  font-size: 13px;
+}
+.workspace-toolbar-titles {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+  overflow: hidden;
+}
+.workspace-toolbar-book,
+.workspace-toolbar-chapter {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 220px;
+}
+.workspace-toolbar-book {
+  font-size: 14px;
+  font-weight: 600;
+}
+.workspace-toolbar-chapter {
+  font-size: 13px;
+  color: var(--color-text-secondary, var(--muted));
+}
+.workspace-catalog-trigger {
+  flex-shrink: 0;
+  display: none;
+}
+
+.book-shell-simplified .workspace.workspace-content {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  background: var(--surface);
+}
+.book-shell-simplified .workspace.workspace-content:has(.analysis-pane .artifact) {
+  grid-template-columns: 240px minmax(0, 1fr) minmax(340px, 360px);
+}
+
+.workspace-book-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 12px 18px;
+  min-width: 0;
+  width: auto;
+  overflow: auto;
+  border-right: 1px solid var(--line);
+  background: var(--bg);
+}
+.workspace-book-info {
+  margin-bottom: 4px;
+  padding-bottom: 10px;
+}
+.workspace-book-info small {
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+.workspace-book-title {
+  margin: 4px 0 0;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.35;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  word-break: break-word;
+}
+.workspace-book-meta {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.workspace-nav-label {
+  display: block;
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+  text-transform: none;
+}
+.workspace-book-tools {
+  padding: 8px 0 4px;
+  border-bottom: 1px solid var(--line);
+}
+.workspace-book-tools-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+}
+.workspace-tool-link {
+  border: 0 !important;
+  background: transparent !important;
+  color: var(--color-text-secondary, var(--muted)) !important;
+  padding: 2px 0 !important;
+  font-size: 12px !important;
+  width: auto !important;
+  display: inline !important;
+  grid-template-columns: none !important;
+  white-space: nowrap;
+  text-align: left;
+  cursor: pointer;
+}
+.workspace-tool-link:hover {
+  color: var(--color-brand, var(--accent)) !important;
+}
+.workspace-tool-sep {
+  color: var(--muted);
+  font-size: 12px;
+}
+.workspace-diagnostics {
+  margin-top: 8px;
+  font-size: 12px;
+}
+.workspace-nav-section {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.workspace-chapter-list,
+.workspace-scene-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+}
+.workspace-chapter-item,
+.workspace-scene-item {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  padding: 8px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  min-height: 36px;
+}
+.workspace-scene-item {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+}
+.workspace-chapter-item:hover,
+.workspace-scene-item:hover {
+  background: var(--color-bg-muted, rgba(0, 0, 0, 0.04));
+}
+.workspace-chapter-item.selected,
+.workspace-scene-item.selected {
+  background: var(--color-brand-soft, var(--accent2));
+}
+.workspace-chapter-num,
+.workspace-scene-ordinal {
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  padding-top: 1px;
+}
+.workspace-chapter-title,
+.workspace-scene-name {
+  font-size: 14px;
+  line-height: 1.4;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  word-break: break-word;
+  white-space: normal;
+}
+.workspace-scene-empty {
+  padding: 8px 4px !important;
+  min-height: 0 !important;
+}
+.workspace-scene-empty .sl-state__mark {
+  display: none;
+}
+.workspace-scene-empty .sl-state__title {
+  font-size: 13px;
+}
+.workspace-scene-empty .sl-state__desc {
+  font-size: 12px;
+}
+
+.workspace-reader {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: auto;
+}
+.workspace-reading-canvas {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 8px 0 48px;
+}
+.workspace-reading-header {
+  padding: 28px 0 16px;
+  max-width: 760px;
+  margin-inline: auto;
+}
+.workspace-reading-label {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0 0 8px;
+}
+.workspace-chapter-heading {
+  margin: 0;
+  font-family: var(--font-reading);
+  font-size: 1.65rem;
+  line-height: 1.35;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  writing-mode: horizontal-tb;
+  text-orientation: mixed;
+}
+.book-shell-simplified .workspace-prose {
+  max-width: 760px;
+  margin-inline: auto;
+}
+.book-shell-simplified .workspace-prose .paragraph {
+  padding: 10px 4px;
+  gap: 0;
+}
+.book-shell-simplified .workspace-prose .paragraph + .paragraph {
+  margin-top: 2px;
+}
+.book-shell-simplified .workspace-inspector {
+  overflow: auto;
+  min-width: 0;
+  max-width: 380px;
+}
+
+/* Mid width with inspector/progress: collapse book nav so reader stays usable */
+@media (max-width: 1439px) {
+  .book-shell-simplified[data-has-progress="true"] .workspace-book-nav,
+  .book-shell-simplified .workspace:has(.analysis-pane .artifact) .workspace-book-nav {
+    display: none;
+  }
+  .book-shell-simplified[data-has-progress="true"] .workspace.workspace-content {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .book-shell-simplified .workspace.workspace-content:has(.analysis-pane .artifact) {
+    grid-template-columns: minmax(0, 1fr) minmax(340px, 360px);
+  }
+  .book-shell-simplified[data-has-progress="true"] .workspace-catalog-trigger,
+  .book-shell-simplified:has(.analysis-pane .artifact) .workspace-catalog-trigger {
+    display: inline-flex;
+  }
+  .book-shell-body[data-has-progress="true"] {
+    grid-template-columns: minmax(0, 1fr) minmax(340px, 360px);
+  }
+}
+
+/* Narrow: single reading column; nav & inspector overlay */
+@media (max-width: 1179px) {
+  .workspace-toolbar-chapter {
+    display: none;
+  }
+  .workspace-toolbar-book {
+    max-width: 160px;
+  }
+  .workspace-catalog-trigger {
+    display: inline-flex !important;
+  }
+  .book-shell-simplified .workspace {
+    display: block !important;
+    grid-template-columns: none !important;
+  }
+  .book-shell-simplified .workspace.workspace-content {
+    display: block !important;
+    grid-template-columns: none !important;
+  }
+  .book-shell-simplified .workspace-book-nav {
+    display: none !important;
+  }
+  .book-shell-simplified .structure-pane.workspace-book-nav {
+    display: none !important;
+  }
+  .book-shell-simplified .workspace-reader {
+    display: block !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    box-sizing: border-box;
+  }
+  .book-shell-simplified article.reader {
+    display: block !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    box-sizing: border-box;
+  }
+  .book-shell-simplified .workspace-inspector:has(.artifact),
+  .book-shell-simplified .analysis-pane:has(.artifact) {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(360px, 92vw);
+    max-width: 380px;
+    z-index: 36;
+    background: var(--surface);
+    border-left: 1px solid var(--line);
+    box-shadow: -8px 0 24px rgba(0, 0, 0, 0.08);
+    display: flex !important;
+    flex-direction: column;
+  }
+  .book-shell-body {
+    position: relative;
+  }
+  .book-shell-body[data-has-progress="true"] {
+    display: block !important;
+    grid-template-columns: none !important;
+    position: relative;
+  }
+  .book-shell-body[data-has-progress="true"] .chapter-analysis-progress-panel {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(360px, 92vw);
+    max-width: 380px;
+    z-index: 36;
+    box-shadow: -8px 0 24px rgba(0, 0, 0, 0.08);
+  }
+  .book-shell-simplified .workspace-chapter-heading,
+  .book-shell-simplified .workspace-prose,
+  .book-shell-simplified .paragraph,
+  .book-shell-simplified .paragraph > p {
+    writing-mode: horizontal-tb !important;
+    text-orientation: mixed !important;
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: break-word;
+  }
+}
+
+@media (max-width: 1024px) {
+  .book-shell-simplified .workspace-reader,
+  .book-shell-simplified .reader {
+    min-width: 0;
+  }
+  .workspace-reading-header,
+  .book-shell-simplified .workspace-prose,
+  .book-shell-simplified[data-content-width="wide"] .prose,
+  .book-shell-simplified[data-content-width="normal"] .prose,
+  .book-shell-simplified[data-content-width="narrow"] .prose {
+    max-width: min(760px, 100%);
+    padding-inline: 8px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+}
+
+/* Prefer left-anchored reading settings when inspector is open */
+.book-shell-simplified[data-has-progress="true"] .reading-settings-panel,
+.book-shell-simplified:has(.workspace-inspector .artifact) .reading-settings-panel {
+  right: auto;
+  left: 0;
+}
+@media (max-width: 1179px) {
+  .reading-settings-panel {
+    right: 0;
+    left: auto;
+    max-width: min(300px, calc(100vw - 32px));
+  }
+}
