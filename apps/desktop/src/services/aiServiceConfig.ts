@@ -1,159 +1,127 @@
+/**
+ * Shared ordinary-user Bailian (Qwen) setup.
+ * FirstLaunchWizard and SettingsAiServiceTab must call only these helpers.
+ */
+
 import type { QueryClient } from "@tanstack/react-query";
 import {
-  applyPresetToCloudBudget,
-  applyPresetToProviderConfig,
   type AnalysisModePresetId,
   writeStoredAnalysisMode,
 } from "./analysisModePresets";
-import {
-  DEFAULT_AI_SERVICE_DISPLAY_NAME,
-  mapTransportOrHttpError,
-  serviceDisplayNameFor,
-} from "./aiServiceViewModel";
+import { mapTransportOrHttpError } from "./aiServiceViewModel";
+import { api } from "./apiClient";
 import { mapConnectionError, redactSecrets } from "./userFacingErrors";
-import { providersApi } from "./providersApi";
-import { settingsApi } from "./settingsApi";
 
-export async function persistProviderConnected(providerId: string, qc: QueryClient) {
-  if (!(await settingsApi.cloud()).enabled) {
-    await settingsApi.setCloud(true);
-  }
-  await providersApi.action(providerId, "enable");
-  await providersApi.action(providerId, "connect");
-  const latest = await providersApi.configuration(providerId);
-  qc.setQueryData(["provider-config", providerId], latest);
-}
-
-export type SaveAiServiceInput = {
-  providerId: string;
-  apiKey: string;
-  analysisMode: AnalysisModePresetId;
-  cloudBodyConsent: boolean;
-  qc: QueryClient;
+export type RecommendedQwenSetupStatus = {
+  ok: boolean;
+  user_message: string;
+  persisted: boolean;
+  credential_configured: boolean;
+  provider_enabled: boolean;
+  cloud_enabled: boolean;
+  provider_eligible: boolean;
+  selected_provider_id: string;
+  connection_status: string;
+  analysis_mode: string | null;
+  blockers: string[];
+  needs_cloud_consent: boolean;
+  error_code?: string | null;
 };
 
-export async function saveAiServiceConfiguration(input: SaveAiServiceInput): Promise<{
-  ok: boolean;
-  userMessage: string;
-  rawDiagnostic?: string;
-  testErrorCode?: string | null;
-}> {
-  const { providerId, apiKey, analysisMode, cloudBodyConsent, qc } = input;
-  if (!cloudBodyConsent) {
-    return { ok: false, userMessage: "请先确认云端正文发送说明。" };
-  }
-  if (!apiKey) {
-    const cfg = await providersApi.configuration(providerId);
-    if (cfg.credential_state !== "configured") {
-      return { ok: false, userMessage: "请填写 API Key 后再保存。" };
-    }
-  }
+export type ConfigureRecommendedQwenInput = {
+  apiKey: string;
+  analysisMode: Exclude<AnalysisModePresetId, "CUSTOM">;
+  cloudBodyConsent: boolean;
+  /** false = connectivity probe only; does not claim configuration saved */
+  persist: boolean;
+  qc?: QueryClient;
+};
 
+const SETUP_PATH = "/api/v1/desktop/ai-setup/recommended-qwen";
+
+export async function fetchRecommendedQwenStatus(): Promise<RecommendedQwenSetupStatus> {
+  return api<RecommendedQwenSetupStatus>(SETUP_PATH);
+}
+
+export async function configureRecommendedQwenService(
+  input: ConfigureRecommendedQwenInput,
+): Promise<RecommendedQwenSetupStatus> {
+  const body = {
+    api_key: input.apiKey.trim() ? input.apiKey.trim() : null,
+    analysis_mode: input.analysisMode,
+    cloud_body_consent: input.cloudBodyConsent,
+    persist: input.persist,
+  };
   try {
-    const existing = await providersApi.configuration(providerId);
-    let providerPayload: Record<string, unknown> = {
-      ...existing,
-      display_name: serviceDisplayNameFor(providerId) || DEFAULT_AI_SERVICE_DISPLAY_NAME,
-      api_key: apiKey || null,
-      enabled: true,
-      disconnected: false,
-      allow_auto_route: false,
-    };
-
-    const currentBudget = await settingsApi.cloudBudget();
-    let budgetPayload: Record<string, unknown> = { ...currentBudget };
-
-    if (analysisMode !== "CUSTOM") {
-      providerPayload = applyPresetToProviderConfig(providerPayload, analysisMode);
-      budgetPayload = applyPresetToCloudBudget(budgetPayload, analysisMode);
-      writeStoredAnalysisMode(analysisMode);
-    } else {
-      writeStoredAnalysisMode("CUSTOM");
-    }
-
-    await settingsApi.saveCloudBudget({ ...budgetPayload, currency: "CNY" });
-    await providersApi.save(providerId, providerPayload);
-    await settingsApi.setCloud(true);
-
-    const transport = await providersApi.transportDiagnostic(providerId);
-    const rawDiagnostic = JSON.stringify(transport, null, 2);
-    if (transport.overall_status === "ok" || transport.overall_status === "healthy") {
-      await persistProviderConnected(providerId, qc);
-      await invalidateAiQueries(qc);
-      return { ok: true, userMessage: "保存成功，连接正常。", rawDiagnostic };
-    }
-    const mapped = mapTransportOrHttpError({
-      code: transport.error_code || "TRANSPORT_FAILED",
-      message: transport.user_action_hint || transport.overall_status,
+    const result = await api<RecommendedQwenSetupStatus>(SETUP_PATH, {
+      method: "POST",
+      body: JSON.stringify(body),
     });
-    await invalidateAiQueries(qc);
-    return {
-      ok: false,
-      userMessage: mapConnectionError({ code: mapped.rawCode, message: mapped.userLabel }),
-      rawDiagnostic,
-      testErrorCode: mapped.rawCode,
-    };
+    if (result.ok && result.persisted && result.analysis_mode) {
+      writeStoredAnalysisMode(result.analysis_mode as AnalysisModePresetId);
+    }
+    if (input.qc) {
+      await invalidateAiQueries(input.qc);
+    }
+    return result;
   } catch (error: any) {
     const mapped = mapTransportOrHttpError(error);
     return {
       ok: false,
-      userMessage: mapConnectionError({
+      user_message: mapConnectionError({
         code: mapped.rawCode,
         status: error?.status,
         message: redactSecrets(error?.message || mapped.userLabel),
       }),
-      rawDiagnostic: JSON.stringify(
-        {
-          code: error?.code,
-          status: error?.status,
-          message: redactSecrets(error?.message || ""),
-          requestId: error?.requestId,
-        },
-        null,
-        2,
-      ),
-      testErrorCode: mapped.rawCode,
+      persisted: false,
+      credential_configured: false,
+      provider_enabled: false,
+      cloud_enabled: false,
+      provider_eligible: false,
+      selected_provider_id: "aliyun_qwen_plus",
+      connection_status: "unconfigured",
+      analysis_mode: null,
+      blockers: [mapped.rawCode || "request_failed"],
+      needs_cloud_consent: false,
+      error_code: mapped.rawCode,
     };
   }
 }
 
-export async function testAiServiceConnection(
-  providerId: string,
-  qc: QueryClient,
-): Promise<{ ok: boolean; userMessage: string; rawDiagnostic?: string; testErrorCode?: string | null }> {
+export async function repairRecommendedQwenSetup(input: {
+  cloudBodyConsent?: boolean | null;
+  qc?: QueryClient;
+}): Promise<RecommendedQwenSetupStatus> {
   try {
-    const transport = await providersApi.transportDiagnostic(providerId);
-    const rawDiagnostic = JSON.stringify(transport, null, 2);
-    if (transport.overall_status === "ok" || transport.overall_status === "healthy") {
-      await persistProviderConnected(providerId, qc);
-      await invalidateAiQueries(qc);
-      return { ok: true, userMessage: "连接测试成功。", rawDiagnostic };
-    }
-    const mapped = mapTransportOrHttpError({
-      code: transport.error_code || "TRANSPORT_FAILED",
-      message: transport.user_action_hint || transport.overall_status,
-    });
-    return {
-      ok: false,
-      userMessage: mapConnectionError({ code: mapped.rawCode, message: mapped.userLabel }),
-      rawDiagnostic,
-      testErrorCode: mapped.rawCode,
-    };
-  } catch (error: any) {
-    const mapped = mapTransportOrHttpError(error);
-    return {
-      ok: false,
-      userMessage: mapConnectionError({
-        code: mapped.rawCode,
-        status: error?.status,
-        message: error?.message,
+    const result = await api<RecommendedQwenSetupStatus>(`${SETUP_PATH}/repair`, {
+      method: "POST",
+      body: JSON.stringify({
+        cloud_body_consent: input.cloudBodyConsent ?? null,
       }),
-      rawDiagnostic: JSON.stringify(
-        { code: error?.code, status: error?.status, message: error?.message },
-        null,
-        2,
-      ),
-      testErrorCode: mapped.rawCode,
+    });
+    if (input.qc) {
+      await invalidateAiQueries(input.qc);
+    }
+    return result;
+  } catch (error: any) {
+    return {
+      ok: false,
+      user_message: mapConnectionError({
+        code: error?.code,
+        status: error?.status,
+        message: redactSecrets(error?.message || "修复失败"),
+      }),
+      persisted: false,
+      credential_configured: false,
+      provider_enabled: false,
+      cloud_enabled: false,
+      provider_eligible: false,
+      selected_provider_id: "aliyun_qwen_plus",
+      connection_status: "unconfigured",
+      analysis_mode: null,
+      blockers: [error?.code || "repair_failed"],
+      needs_cloud_consent: Boolean(error?.code === "CLOUD_CONSENT_REQUIRED"),
+      error_code: error?.code || "REPAIR_FAILED",
     };
   }
 }
@@ -165,5 +133,61 @@ export async function invalidateAiQueries(qc: QueryClient) {
     qc.invalidateQueries({ queryKey: ["cloud-usage"] }),
     qc.invalidateQueries({ queryKey: ["cloud-budget"] }),
     qc.invalidateQueries({ queryKey: ["provider-config"] }),
+    qc.invalidateQueries({ queryKey: ["recommended-qwen-setup"] }),
   ]);
+}
+
+/** @deprecated Prefer configureRecommendedQwenService — kept for advanced diagnostics only */
+export async function persistProviderConnected(providerId: string, qc: QueryClient) {
+  const { providersApi } = await import("./providersApi");
+  const { settingsApi } = await import("./settingsApi");
+  if (!(await settingsApi.cloud()).enabled) {
+    await settingsApi.setCloud(true);
+  }
+  await providersApi.action(providerId, "enable");
+  await providersApi.action(providerId, "connect");
+  const latest = await providersApi.configuration(providerId);
+  qc.setQueryData(["provider-config", providerId], latest);
+}
+
+/** @deprecated Use configureRecommendedQwenService({ persist: true }) */
+export async function saveAiServiceConfiguration(input: {
+  providerId: string;
+  apiKey: string;
+  analysisMode: AnalysisModePresetId;
+  cloudBodyConsent: boolean;
+  qc: QueryClient;
+}): Promise<{ ok: boolean; userMessage: string; rawDiagnostic?: string; testErrorCode?: string | null }> {
+  const mode = input.analysisMode === "CUSTOM" ? "BALANCED" : input.analysisMode;
+  const result = await configureRecommendedQwenService({
+    apiKey: input.apiKey,
+    analysisMode: mode,
+    cloudBodyConsent: input.cloudBodyConsent,
+    persist: true,
+    qc: input.qc,
+  });
+  return {
+    ok: result.ok && result.persisted,
+    userMessage: result.user_message,
+    testErrorCode: result.error_code || null,
+  };
+}
+
+/** @deprecated Use configureRecommendedQwenService({ persist: false }) */
+export async function testAiServiceConnection(
+  _providerId: string,
+  qc: QueryClient,
+): Promise<{ ok: boolean; userMessage: string; rawDiagnostic?: string; testErrorCode?: string | null }> {
+  const result = await configureRecommendedQwenService({
+    apiKey: "",
+    analysisMode: "BALANCED",
+    cloudBodyConsent: false,
+    persist: false,
+    qc,
+  });
+  return {
+    ok: result.ok,
+    userMessage: result.user_message,
+    testErrorCode: result.error_code || null,
+  };
 }

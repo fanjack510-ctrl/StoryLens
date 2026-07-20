@@ -19,6 +19,30 @@ vi.mock("../services/providersApi", () => ({ providersApi: {
   configuration: vi.fn(), save: vi.fn(),
   transportDiagnostic: vi.fn(), connectionTestPreflight: vi.fn(), testConnection: vi.fn(),
 } }));
+vi.mock("../services/aiServiceConfig", async () => {
+  const actual = await vi.importActual<typeof import("../services/aiServiceConfig")>(
+    "../services/aiServiceConfig",
+  );
+  return {
+    ...actual,
+    fetchRecommendedQwenStatus: vi.fn(async () => ({
+      ok: false,
+      user_message: "尚未填写 API Key",
+      persisted: true,
+      credential_configured: false,
+      provider_enabled: false,
+      cloud_enabled: false,
+      provider_eligible: false,
+      selected_provider_id: "aliyun_qwen_plus",
+      connection_status: "unconfigured",
+      analysis_mode: null,
+      blockers: ["credential_missing"],
+      needs_cloud_consent: false,
+    })),
+    configureRecommendedQwenService: vi.fn(),
+    repairRecommendedQwenSetup: vi.fn(),
+  };
+});
 vi.mock("../components/providers/AliyunForm", () => ({ AliyunForm: () => <div>API Key 不回显</div> }));
 
 const budget = {

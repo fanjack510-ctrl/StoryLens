@@ -6,8 +6,7 @@ import {
   ordinaryModeOptions,
   type AnalysisModePresetId,
 } from "../../services/analysisModePresets";
-import { DEFAULT_AI_SERVICE_ID } from "../../services/aiServiceViewModel";
-import { saveAiServiceConfiguration, testAiServiceConnection } from "../../services/aiServiceConfig";
+import { configureRecommendedQwenService } from "../../services/aiServiceConfig";
 import { useOnboardingStore } from "../../stores/onboardingStore";
 import { useTelemetryStore } from "../../stores/telemetry";
 
@@ -26,6 +25,7 @@ export function FirstLaunchWizard() {
   const [anonymousStats, setAnonymousStats] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [setupSaved, setSetupSaved] = useState(false);
 
   const finish = (target: "library" | "import") => {
     setTelemetryEnabled(anonymousStats);
@@ -42,27 +42,47 @@ export function FirstLaunchWizard() {
     navigate("/library");
   };
 
+  const mode = (analysisMode === "CUSTOM" ? DEFAULT_ANALYSIS_MODE : analysisMode) as
+    | "FAST"
+    | "BALANCED"
+    | "QUALITY";
+
   const onTest = async () => {
+    setBusy(true);
+    setMessage("");
+    const result = await configureRecommendedQwenService({
+      apiKey,
+      analysisMode: mode,
+      cloudBodyConsent: consent,
+      persist: false,
+      qc,
+    });
+    setMessage(result.user_message);
+    setBusy(false);
+  };
+
+  const onSaveAndNext = async () => {
     if (!consent) {
       setMessage("请先确认正文发送说明。");
       return;
     }
     setBusy(true);
     setMessage("");
-    const saveResult = await saveAiServiceConfiguration({
-      providerId: DEFAULT_AI_SERVICE_ID,
+    const result = await configureRecommendedQwenService({
       apiKey,
-      analysisMode,
+      analysisMode: mode,
       cloudBodyConsent: consent,
+      persist: true,
       qc,
     });
-    if (!saveResult.ok && !apiKey) {
-      const testResult = await testAiServiceConnection(DEFAULT_AI_SERVICE_ID, qc);
-      setMessage(testResult.userMessage);
-    } else {
-      setMessage(saveResult.userMessage);
-    }
+    setMessage(result.user_message);
     setBusy(false);
+    if (result.ok && result.persisted && result.provider_eligible) {
+      setSetupSaved(true);
+      setStep(3);
+      return;
+    }
+    setSetupSaved(false);
   };
 
   return (
@@ -99,6 +119,7 @@ export function FirstLaunchWizard() {
                 autoComplete="new-password"
                 value={apiKey}
                 data-testid="onboarding-api-key"
+                placeholder="已配置时可留空表示保持原凭据"
                 onChange={(e) => setApiKey(e.target.value)}
               />
             </label>
@@ -120,7 +141,16 @@ export function FirstLaunchWizard() {
               <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
               我确认分析时可发送章节正文至阿里云百炼。
             </label>
-            {message && <p role="status">{message}</p>}
+            {message && (
+              <p role="status" data-testid="onboarding-ai-message">
+                {message}
+              </p>
+            )}
+            {setupSaved && (
+              <p data-testid="onboarding-ai-saved" className="hint">
+                配置已保存，可用于分析。
+              </p>
+            )}
             <div className="settings-actions">
               <Link to="/settings?tab=advanced" className="linkish" onClick={() => skip()}>
                 其他 AI 服务 / 本地模型
@@ -128,11 +158,17 @@ export function FirstLaunchWizard() {
               <button type="button" className="linkish" onClick={() => setStep(3)}>
                 稍后配置
               </button>
-              <button type="button" disabled={busy} onClick={() => void onTest()}>
+              <button type="button" disabled={busy} onClick={() => void onTest()} data-testid="onboarding-test">
                 {busy ? "测试中…" : "测试连接"}
               </button>
-              <button type="button" className="primary" onClick={() => setStep(3)}>
-                下一步
+              <button
+                type="button"
+                className="primary"
+                disabled={busy}
+                data-testid="onboarding-save-next"
+                onClick={() => void onSaveAndNext()}
+              >
+                {busy ? "保存中…" : "下一步"}
               </button>
             </div>
           </div>

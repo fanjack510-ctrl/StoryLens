@@ -390,11 +390,30 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
 
   const defaultProvider = useMemo(
     () =>
+      eligible.find((p) => p.name === DEFAULT_AI_SERVICE_ID) ||
+      (eligible.length === 1 ? eligible[0] : null) ||
       (providers.data || []).find((p) => p.name === DEFAULT_AI_SERVICE_ID) ||
       (providers.data || []).find((p) => p.capabilities?.cloud) ||
       null,
-    [providers.data],
+    [eligible, providers.data],
   );
+
+  const unavailableReason = useMemo(() => {
+    if (eligible.length > 0) return null;
+    const target =
+      (providers.data || []).find((p) => p.name === DEFAULT_AI_SERVICE_ID) ||
+      (providers.data || []).find((p) => p.capabilities?.cloud);
+    const blockers = target?.manual_selection_blockers || [];
+    if (!target || blockers.includes("credential_missing")) return "尚未配置 API Key";
+    if (blockers.includes("cloud_master_switch_off") || cloud.data?.enabled === false) {
+      return "云端连接未开启";
+    }
+    if (blockers.includes("provider_disabled")) return "Provider 已停用";
+    if (blockers.includes("credential_missing")) return "凭据无效或缺失";
+    if (configuration.data?.credential_state === "invalid") return "凭据无效";
+    if (blockers.length) return "当前没有可用的 AI 服务";
+    return "当前没有可用的 AI 服务";
+  }, [eligible.length, providers.data, cloud.data?.enabled, configuration.data?.credential_state]);
 
   const aiView = useMemo(
     () =>
@@ -402,21 +421,34 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
         provider: developerMode ? selected || defaultProvider : defaultProvider,
         configuration: configuration.data,
         cloudEnabled: cloud.data?.enabled ?? true,
+        providerEligible: eligible.some((p) => p.name === (defaultProvider?.name || DEFAULT_AI_SERVICE_ID)),
       }),
-    [developerMode, selected, defaultProvider, configuration.data, cloud.data?.enabled],
+    [developerMode, selected, defaultProvider, configuration.data, cloud.data?.enabled, eligible],
   );
 
   useEffect(() => {
-    if (developerMode) return;
-    if (defaultProvider?.name && provider !== defaultProvider.name) {
-      setProvider(defaultProvider.name);
+    if (developerMode) {
+      if (eligible.length === 1 && provider !== eligible[0].name) {
+        setProvider(eligible[0].name);
+      }
+      return;
+    }
+    const preferred =
+      eligible.find((p) => p.name === DEFAULT_AI_SERVICE_ID)?.name ||
+      (eligible.length === 1 ? eligible[0].name : null) ||
+      DEFAULT_AI_SERVICE_ID;
+    if (preferred && provider !== preferred) {
+      setProvider(preferred);
     }
     if (mode !== "cloud") setMode("cloud");
-  }, [developerMode, defaultProvider, provider, mode]);
+  }, [developerMode, eligible, provider, mode]);
 
   useEffect(() => {
     if (provider && !eligible.some((item) => item.name === provider)) {
-      if (developerMode) setProvider("");
+      if (developerMode) {
+        if (eligible.length === 1) setProvider(eligible[0].name);
+        else setProvider("");
+      }
     }
   }, [eligible, provider, developerMode]);
 
@@ -646,7 +678,16 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
       return setMessage("AI服务尚未连接，请前往设置完成配置。");
     }
     if ((mode === "cloud" || mode === "hybrid") && !consent) return setMessage("请先确认云端传输同意。");
-    if (!provider) return setMessage(developerMode ? "请选择可用 Provider。" : "AI服务尚未连接。");
+    if (!provider) {
+      return setMessage(
+        developerMode
+          ? unavailableReason || "请选择可用 Provider。"
+          : unavailableReason || "AI服务尚未连接。",
+      );
+    }
+    if (!developerMode && eligible.every((item) => item.name !== provider)) {
+      return setMessage(unavailableReason || "当前没有可用的 AI 服务，请前往设置配置。");
+    }
     if (budgetBlocked) return setMessage(formatBudgetGaps(preflight) || "当前Stage 1预算不足。");
     if ((tokenBlocked || costBlocked) && !allowance) {
       return setMessage("费用或Token预算不足，请先调整每日费用上限或等待额度恢复。");
@@ -761,7 +802,7 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
 
           {!developerMode && (
             <div className="ai-service-summary" data-testid="start-analysis-ai-summary">
-              {aiView.canStartAnalysis ? (
+              {aiView.canStartAnalysis && eligible.length > 0 ? (
                 <>
                   <p data-testid="start-analysis-ai-connected">
                     <b>{aiView.serviceDisplayName}</b>
@@ -774,18 +815,20 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
                     data-testid="start-analysis-reconfigure-qwen"
                     onClick={onClose}
                   >
-                    配置阿里云百炼 · Qwen
+                    去配置 AI 服务
                   </Link>
                 </>
               ) : (
                 <>
-                  <p data-testid="start-analysis-ai-disconnected">AI服务尚未连接</p>
+                  <p data-testid="start-analysis-ai-disconnected">
+                    {unavailableReason || "AI服务尚未连接"}
+                  </p>
                   <Link
                     to="/settings?tab=ai&focus=api_key"
                     data-testid="start-analysis-goto-settings"
                     onClick={onClose}
                   >
-                    配置阿里云百炼 · Qwen
+                    去配置 AI 服务
                   </Link>
                 </>
               )}
@@ -803,11 +846,21 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
               <button type="button" disabled={providers.isFetching} onClick={async () => {
                 await providers.refetch(); setMessage("Provider状态已刷新。");
               }}>{providers.isFetching ? "刷新中……" : "刷新Provider状态"}</button>
-              <label>Provider<select aria-label="Provider" value={provider} onChange={(event) => setProvider(event.target.value)} data-testid="start-analysis-provider-select">
-                <option value="">请选择</option>{eligible.map((item) => <option key={item.name} value={item.name}>
-                  {item.name} · {item.default_model}{item.requires_boundary_review ? " · 云端 · 边界候选生成 · 需要人工确认" : ""}
-                </option>)}
-              </select></label>
+              {eligible.length === 0 ? (
+                <div data-testid="start-analysis-no-provider">
+                  <p>{unavailableReason || "当前没有可用 Provider"}</p>
+                  <Link to="/settings?tab=ai&focus=api_key" onClick={onClose}>
+                    去配置 AI 服务
+                  </Link>
+                </div>
+              ) : (
+                <label>Provider<select aria-label="Provider" value={provider} onChange={(event) => setProvider(event.target.value)} data-testid="start-analysis-provider-select">
+                  {eligible.length > 1 && <option value="">请选择</option>}
+                  {eligible.map((item) => <option key={item.name} value={item.name}>
+                    {item.name} · {item.default_model}{item.requires_boundary_review ? " · 云端 · 边界候选生成 · 需要人工确认" : ""}
+                  </option>)}
+                </select></label>
+              )}
               {selected?.requires_boundary_review && <p className="notice">该Provider只生成场景边界候选。候选完成后需要人工确认，确认后才会执行Scene Analysis。</p>}
             </>
           )}
