@@ -632,4 +632,70 @@ describe("TasksPage Scene Analysis 恢复", () => {
     expect(screen.queryByText("复制错误")).not.toBeInTheDocument();
     expect(screen.queryByText("分析全部完成")).not.toBeInTheDocument();
   });
+
+  it("进度缺字段时显示等待进度而不是 undefined", async () => {
+    const run = {
+      ...failedRun54,
+      id: 77,
+      progress_current: undefined,
+      progress_total: undefined,
+      total_scene_count: undefined,
+      completed_scene_count: undefined,
+    };
+    vi.mocked(analysisApi.runs).mockResolvedValue([run] as any);
+    renderPage();
+    expect(await screen.findByTestId("run-77-progress")).toHaveTextContent("等待进度");
+    expect(screen.getByTestId("run-77-progress").textContent).not.toMatch(/undefined|null|NaN/i);
+  });
+
+  it("任务详情正常打开并消费 invocations 数组", async () => {
+    vi.mocked(analysisApi.runs).mockResolvedValue([failedRun54] as any);
+    vi.mocked(analysisApi.run).mockResolvedValue({
+      ...failedRun54,
+      failed_invocation: undefined,
+    } as any);
+    vi.mocked(analysisApi.invocations).mockResolvedValue([
+      { id: 96, http_status_code: 422, error_message: "schema failed", latency_ms: 10 },
+    ] as any);
+    vi.mocked(analysisApi.recoveryPreflight).mockResolvedValue(preflightOk as any);
+    renderPage();
+    fireEvent.click(await screen.findByText("查看详情"));
+    expect(await screen.findByText("任务详情")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("查看脱敏技术详情"));
+    expect(await screen.findByText("schema failed")).toBeInTheDocument();
+    expect(screen.queryByTestId("detail-invocations-error")).not.toBeInTheDocument();
+  });
+
+  it("invocations 返回空数组时详情不崩溃", async () => {
+    vi.mocked(analysisApi.runs).mockResolvedValue([failedRun54] as any);
+    vi.mocked(analysisApi.run).mockResolvedValue({
+      ...failedRun54,
+      failed_invocation: undefined,
+    } as any);
+    vi.mocked(analysisApi.invocations).mockResolvedValue([]);
+    vi.mocked(analysisApi.recoveryPreflight).mockResolvedValue(preflightOk as any);
+    renderPage();
+    fireEvent.click(await screen.findByText("查看详情"));
+    fireEvent.click(await screen.findByText("查看脱敏技术详情"));
+    expect(screen.getByText("没有可用的 Invocation 摘要。")).toBeInTheDocument();
+  });
+
+  it("invocations 非数组错误结构时显示明确错误且不崩溃", async () => {
+    vi.mocked(analysisApi.runs).mockResolvedValue([failedRun54] as any);
+    vi.mocked(analysisApi.run).mockResolvedValue({
+      ...failedRun54,
+      failed_invocation: undefined,
+    } as any);
+    vi.mocked(analysisApi.invocations).mockRejectedValue(
+      new ApiError("INVOCATIONS_RESPONSE_INVALID", "模型调用列表响应格式异常（Run #54）", 502),
+    );
+    vi.mocked(analysisApi.recoveryPreflight).mockResolvedValue(preflightOk as any);
+    renderPage();
+    fireEvent.click(await screen.findByText("查看详情"));
+    expect(await screen.findByTestId("detail-invocations-error")).toHaveTextContent(
+      /模型调用列表响应格式异常/,
+    );
+    fireEvent.click(screen.getByText("查看脱敏技术详情"));
+    expect(screen.getByText("没有可用的 Invocation 摘要。")).toBeInTheDocument();
+  });
 });

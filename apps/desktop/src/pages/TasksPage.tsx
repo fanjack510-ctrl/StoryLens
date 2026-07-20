@@ -14,6 +14,7 @@ import {
 } from "../services/discoverActiveChapterRun";
 import { isSceneAnalysisComplete } from "../services/chapterJourneyComposition";
 import { maybeTrackAnalysisCompleted } from "../services/telemetry/analysisRunTelemetry";
+import { formatRunProgress } from "../services/runProgressDisplay";
 
 type RecoveryState = "idle" | "checking" | "creating_recovery" | "created" | "failed";
 type SceneResumeState = "idle" | "checking" | "resuming" | "done" | "failed";
@@ -253,7 +254,8 @@ function SucceededRunRowActions({
 export function TasksPage() {
   const navigate = useNavigate();
   const [detail, setDetail] = useState<any>();
-  const [detailInvocations, setDetailInvocations] = useState<any[]>([]);
+  const [detailInvocations, setDetailInvocations] = useState<unknown[]>([]);
+  const [detailInvocationsError, setDetailInvocationsError] = useState<string>();
   const [recoveryPreflight, setRecoveryPreflight] = useState<any>();
   const [recoveryConsent, setRecoveryConsent] = useState(false);
   const [recoveryState, setRecoveryState] = useState<RecoveryState>("idle");
@@ -348,6 +350,7 @@ export function TasksPage() {
   const openDetail = async (run: any) => {
     setDetail(run);
     setDetailInvocations([]);
+    setDetailInvocationsError(undefined);
     setRecoveryPreflight(undefined);
     setRecoveryConsent(false);
     setRecoveryState("idle");
@@ -363,7 +366,16 @@ export function TasksPage() {
     try {
       const fresh = await analysisApi.run(run.id);
       setDetail(fresh);
-      setDetailInvocations(await analysisApi.invocations(run.id));
+      try {
+        setDetailInvocations(await analysisApi.invocations(run.id));
+      } catch (invocationError) {
+        setDetailInvocations([]);
+        setDetailInvocationsError(
+          invocationError instanceof Error
+            ? invocationError.message
+            : "无法加载模型调用详情",
+        );
+      }
       if (fresh.detection_recovery_available || fresh.checkpoint_available) {
         setRecoveryPreflight(await analysisApi.recoveryPreflight(run.id));
       }
@@ -769,13 +781,15 @@ export function TasksPage() {
                     )}
                   </td>
                   <td>
-                    {typeof run.total_scene_count === "number" && run.total_scene_count > 0
-                      ? (
-                        <span data-testid={`run-${run.id}-scene-progress`}>
-                          Scene Analysis：{run.completed_scene_count ?? 0} / {run.total_scene_count}
-                        </span>
-                      )
-                      : `${run.progress_current}/${run.progress_total}`}
+                    <span
+                      data-testid={
+                        typeof run.total_scene_count === "number" && run.total_scene_count > 0
+                          ? `run-${run.id}-scene-progress`
+                          : `run-${run.id}-progress`
+                      }
+                    >
+                      {formatRunProgress(run)}
+                    </span>
                   </td>
                   <td>{new Date(run.created_at).toLocaleString()}</td>
                   <td>
@@ -971,20 +985,35 @@ export function TasksPage() {
             </dl>
             <details data-testid="invocation-safe-details">
               <summary>查看脱敏技术详情</summary>
+              {detailInvocationsError ? (
+                <p className="notice" data-testid="detail-invocations-error" role="alert">
+                  {detailInvocationsError}
+                </p>
+              ) : null}
               {(() => {
-                const failed = detail.failed_invocation || detailInvocations.find(
-                  (item) => item.id === detail.failed_invocation_id,
-                );
-                return failed ? <dl>
-                  <dt>Invocation</dt><dd>#{failed.id}</dd>
-                  <dt>HTTP</dt><dd>{failed.http_status_code ?? failed.http_status ?? "无响应"}</dd>
-                  <dt>JSON</dt><dd>{failed.json_valid ?? Boolean(failed.parsed_response_json) ? "通过" : "失败/无响应"}</dd>
-                  <dt>Schema</dt><dd>{failed.schema_valid ?? (failed.error_code !== "SCHEMA_VALIDATION_FAILED") ? "通过" : "失败"}</dd>
-                  <dt>error_message</dt><dd>{failed.error_message || "无"}</dd>
-                  <dt>耗时</dt><dd>{failed.latency_ms ?? "-"} ms</dd>
-                  <dt>Token</dt><dd>{failed.total_tokens ?? "-"}</dd>
+                const failed =
+                  detail.failed_invocation ||
+                  detailInvocations.find(
+                    (item) =>
+                      item != null &&
+                      typeof item === "object" &&
+                      "id" in item &&
+                      (item as { id: unknown }).id === detail.failed_invocation_id,
+                  );
+                return failed && typeof failed === "object" ? (
+                  <dl>
+                  <dt>Invocation</dt><dd>#{(failed as any).id}</dd>
+                  <dt>HTTP</dt><dd>{(failed as any).http_status_code ?? (failed as any).http_status ?? "无响应"}</dd>
+                  <dt>JSON</dt><dd>{(failed as any).json_valid ?? Boolean((failed as any).parsed_response_json) ? "通过" : "失败/无响应"}</dd>
+                  <dt>Schema</dt><dd>{(failed as any).schema_valid ?? ((failed as any).error_code !== "SCHEMA_VALIDATION_FAILED") ? "通过" : "失败"}</dd>
+                  <dt>error_message</dt><dd>{(failed as any).error_message || "无"}</dd>
+                  <dt>耗时</dt><dd>{(failed as any).latency_ms ?? "-"} ms</dd>
+                  <dt>Token</dt><dd>{(failed as any).total_tokens ?? "-"}</dd>
                   <dt>safe_details</dt><dd><pre>{JSON.stringify(detail.failure_details || {}, null, 2)}</pre></dd>
-                </dl> : <p>没有可用的 Invocation 摘要。</p>;
+                </dl>
+                ) : (
+                  <p>没有可用的 Invocation 摘要。</p>
+                );
               })()}
             </details>
             {(isBudgetPauseRun(detail) ||

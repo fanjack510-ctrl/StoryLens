@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { analysisApi } from "../services/analysisApi";
 import { Badge, Empty, ErrorState, Loading } from "../components/common/States";
 import { ReaderJourneySyncWorkspace } from "../components/readerJourney/ReaderJourneySyncWorkspace";
+import { resolveRunResultsViewState } from "../services/runResultsGuard";
 import type { ReaderJourneyPreflight, ReaderJourneyProgress, ReaderJourneyResult, SceneAnalysisFields, SceneResultItem } from "../types";
 
 type Tab = "structure" | "evidence" | "history" | "overview" | "journey";
@@ -71,7 +72,17 @@ export function AnalysisResultsPage() {
     enabled: Number.isFinite(runId),
   });
 
-  const scenes = useMemo(() => results.data?.scenes ?? [], [results.data]);
+  const viewState = resolveRunResultsViewState({
+    isLoading: results.isLoading,
+    error: results.error,
+    data: results.data,
+  });
+  const completedResults = viewState.kind === "completed" ? viewState.data : null;
+
+  const scenes = useMemo(
+    () => completedResults?.scenes ?? [],
+    [completedResults],
+  );
   const selected: SceneResultItem | undefined = useMemo(
     () => scenes.find((item) => item.scene.id === selectedSceneId) ?? scenes[0],
     [scenes, selectedSceneId],
@@ -92,7 +103,10 @@ export function AnalysisResultsPage() {
   const readerJourney = useQuery({
     queryKey: ["reader-journey", runId],
     queryFn: () => analysisApi.readerJourney(runId),
-    enabled: Number.isFinite(runId) && results.data?.run.status === "succeeded",
+    enabled:
+      Number.isFinite(runId) &&
+      completedResults != null &&
+      completedResults.run.status === "succeeded",
   });
 
   const journeyProgress = useQuery({
@@ -350,11 +364,40 @@ export function AnalysisResultsPage() {
 
   const openJourneyTab = () => setTab("journey");
 
-  if (results.isLoading) return <Loading />;
-  if (results.error) return <ErrorState error={results.error as Error} retry={() => results.refetch()} />;
-  if (!results.data) return <Empty text="未找到分析结果" />;
+  if (viewState.kind === "loading") return <Loading />;
+  if (viewState.kind === "error") {
+    return (
+      <ErrorState error={viewState.error} retry={() => void results.refetch()} />
+    );
+  }
+  if (viewState.kind === "missing") {
+    return (
+      <div className="state" data-testid="results-page-missing">
+        <strong>未找到分析结果</strong>
+        <span>该运行可能尚不存在，或结果尚未生成。</span>
+      </div>
+    );
+  }
+  if (viewState.kind === "incomplete") {
+    return (
+      <div className="state" data-testid="results-page-incomplete">
+        <strong>分析结果数据不完整</strong>
+        <span>{viewState.reason}</span>
+      </div>
+    );
+  }
+  if (viewState.kind === "failed") {
+    return (
+      <div className="state" data-testid="results-page-failed">
+        <strong>分析尚未完成</strong>
+        <span>
+          当前状态：{viewState.status}。请返回任务中心查看进度后再打开结果。
+        </span>
+      </div>
+    );
+  }
 
-  const { summary, chapter, run, boundary_revision } = results.data;
+  const { summary, chapter, run, boundary_revision } = viewState.data;
   const analysis = selected?.analysis_artifact?.analysis ?? {};
 
   const exportBar = (

@@ -19,6 +19,22 @@ export function DesktopBootstrap({ children }: { children: ReactNode }) {
     let unlisten: (() => void) | undefined;
 
     (async () => {
+      // DEV / UI-audit only: force bootstrap screens without touching production paths.
+      if (import.meta.env.DEV) {
+        const force = sessionStorage.getItem("storylens.uiAudit.forceBootstrap");
+        if (force === "starting") {
+          setStatus({ state: "starting" });
+          return;
+        }
+        if (force === "failed") {
+          setStatus({
+            state: "failed",
+            message: "审计模拟：本地分析服务未能启动（Sidecar 连接失败）。",
+          });
+          return;
+        }
+      }
+
       const result = await bootstrapDesktopRuntime((next) => {
         if (!cancelled) setStatus(next);
       });

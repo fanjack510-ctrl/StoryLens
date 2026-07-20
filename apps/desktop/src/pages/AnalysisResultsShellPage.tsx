@@ -1,12 +1,14 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { AnalysisResultsPage } from "./AnalysisResultsPage";
 import { CompactToolbar } from "../components/layout/CompactToolbar";
 import { OverflowMenu } from "../components/layout/OverflowMenu";
 import { ResultViewSwitcher } from "../components/layout/ResultViewSwitcher";
+import { Empty, ErrorState, Loading } from "../components/common/States";
 import { analysisApi } from "../services/analysisApi";
 import { booksApi } from "../services/booksApi";
+import { resolveRunResultsViewState } from "../services/runResultsGuard";
 
 function clickResults(selector: string) {
   document.querySelector<HTMLElement>(selector)?.dispatchEvent(
@@ -29,18 +31,31 @@ export function AnalysisResultsShellPage() {
     queryFn: () => analysisApi.results(runId),
     enabled: Number.isFinite(runId),
   });
+
+  const viewState = resolveRunResultsViewState({
+    isLoading: results.isLoading,
+    error: results.error,
+    data: results.data,
+  });
+
+  const completedRun = viewState.kind === "completed" ? viewState.data.run : null;
+  const completedChapter = viewState.kind === "completed" ? viewState.data.chapter : null;
+  const failedChapter =
+    viewState.kind === "failed" ? viewState.chapter : null;
+  const chapter = completedChapter ?? failedChapter;
+  const bookId = chapter != null ? chapter.book_id : undefined;
+  const chapterId = chapter != null ? chapter.id : undefined;
+
   const journey = useQuery({
     queryKey: ["reader-journey", runId],
     queryFn: () => analysisApi.readerJourney(runId),
-    enabled: Number.isFinite(runId) && results.data?.run.status === "succeeded",
+    enabled: Number.isFinite(runId) && completedRun != null && completedRun.status === "succeeded",
   });
 
-  const chapterId = results.data?.chapter.id;
-  const bookId = results.data?.chapter.book_id;
   const bookQuery = useQuery({
     queryKey: ["book", bookId],
     queryFn: () => booksApi.detail(bookId!),
-    enabled: !!bookId,
+    enabled: bookId != null,
   });
 
   const journeyLabel = useMemo(() => {
@@ -70,14 +85,8 @@ export function AnalysisResultsShellPage() {
 
   const primaryActionsCount = 4; // 返回 / 分析视图 / 读者旅程 / 更多
 
-  return (
-    <div
-      className={`results-shell-simplified results-shell--compact ${isJourney ? "is-journey results-shell--journey" : "is-analysis results-shell--analysis"}`}
-      data-testid="results-shell"
-      data-shell-mode={isJourney ? "journey" : "analysis"}
-      data-result-view={isJourney ? "journey" : "analysis"}
-      data-primary-actions={primaryActionsCount}
-    >
+  const shellChrome = (
+    <>
       <CompactToolbar
         data-testid="results-shell-toolbar"
         title={
@@ -86,7 +95,7 @@ export function AnalysisResultsShellPage() {
             className="ghost"
             data-testid="back-to-chapter"
             onClick={() => {
-              if (bookId) navigate(`/books/${bookId}`);
+              if (bookId != null) navigate(`/books/${bookId}`);
               else navigate("/library");
             }}
           >
@@ -169,7 +178,7 @@ export function AnalysisResultsShellPage() {
                 group: "操作",
                 testId: "results-more-reanalyze",
                 onSelect: () => {
-                  if (bookId) navigate(`/books/${bookId}`);
+                  if (bookId != null) navigate(`/books/${bookId}`);
                 },
               },
               {
@@ -178,7 +187,7 @@ export function AnalysisResultsShellPage() {
                 group: "操作",
                 testId: "results-more-boundary",
                 onSelect: () => {
-                  if (bookId) navigate(`/books/${bookId}`);
+                  if (bookId != null) navigate(`/books/${bookId}`);
                 },
               },
             ]}
@@ -193,22 +202,70 @@ export function AnalysisResultsShellPage() {
             {journey.data?.journey_run_id
               ? ` · JourneyRun #${journey.data.journey_run_id}`
               : ""}
-            {results.data?.run.provider ? ` · ${results.data.run.provider}` : ""}
-            {results.data?.run.prompt_version
-              ? ` · prompt ${results.data.run.prompt_version}`
+            {completedRun?.provider ? ` · ${completedRun.provider}` : ""}
+            {completedRun?.prompt_version
+              ? ` · prompt ${completedRun.prompt_version}`
               : ""}
             {bookQuery.data?.title ? ` · ${bookQuery.data.title}` : ""}
-            {chapterId ? ` · Chapter ${chapterId}` : ""}
+            {chapterId != null ? ` · Chapter ${chapterId}` : ""}
           </span>
           <button type="button" onClick={() => setTechOpen(false)}>
             关闭
           </button>
         </div>
       )}
+    </>
+  );
 
-      <div className="results-shell-body">
-        <AnalysisResultsPage />
+  let body: ReactNode;
+  if (!Number.isFinite(runId)) {
+    body = (
+      <Empty text="无效的分析运行 ID" />
+    );
+  } else if (viewState.kind === "loading") {
+    body = <Loading />;
+  } else if (viewState.kind === "error") {
+    body = (
+      <ErrorState error={viewState.error} retry={() => void results.refetch()} />
+    );
+  } else if (viewState.kind === "missing") {
+    body = (
+      <div className="state" data-testid="results-empty-missing">
+        <strong>未找到分析结果</strong>
+        <span>该运行可能尚不存在，或结果尚未生成。</span>
       </div>
+    );
+  } else if (viewState.kind === "incomplete") {
+    body = (
+      <div className="state" data-testid="results-empty-incomplete">
+        <strong>分析结果数据不完整</strong>
+        <span>{viewState.reason}</span>
+      </div>
+    );
+  } else if (viewState.kind === "failed") {
+    body = (
+      <div className="state" data-testid="results-empty-failed">
+        <strong>分析尚未完成</strong>
+        <span>
+          当前状态：{viewState.status}。请返回任务中心查看进度，或等待分析成功后再打开结果。
+        </span>
+      </div>
+    );
+  } else {
+    body = <AnalysisResultsPage />;
+  }
+
+  return (
+    <div
+      className={`results-shell-simplified results-shell--compact ${isJourney ? "is-journey results-shell--journey" : "is-analysis results-shell--analysis"}`}
+      data-testid="results-shell"
+      data-shell-mode={isJourney ? "journey" : "analysis"}
+      data-result-view={isJourney ? "journey" : "analysis"}
+      data-primary-actions={primaryActionsCount}
+      data-results-state={viewState.kind}
+    >
+      {shellChrome}
+      <div className="results-shell-body">{body}</div>
     </div>
   );
 }

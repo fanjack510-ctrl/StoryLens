@@ -52,7 +52,7 @@ export function ReparseDialog({
     }
   };
   return (
-    <div className="modal-backdrop">
+    <div className="modal-backdrop" data-testid="reparse-dialog">
       <div className="modal">
         <header>
           <h2>重新识别章节</h2>
@@ -63,13 +63,16 @@ export function ReparseDialog({
           hidden
           type="file"
           accept=".txt,.docx,.epub"
+          data-testid="reparse-file-input"
           onChange={(event) => choose(event.target.files?.[0])}
         />
-        <button onClick={() => input.current?.click()}>选择原文件</button>
+        <button onClick={() => input.current?.click()} data-testid="reparse-choose-file">
+          选择原文件
+        </button>
         {busy && <Loading />}
       {failure && <ErrorState error={failure as Error} />}
         {preview && (
-          <div className="import-preview">
+          <div className="import-preview" data-testid="reparse-preview">
             <p className={preview.hash_match ? "success" : "notice"}>
               {preview.hash_match
                 ? "文件Hash一致"
@@ -98,12 +101,14 @@ export function ReparseDialog({
               <button onClick={onClose}>取消</button>
               <button
                 disabled={preview.has_succeeded_runs}
+                data-testid="reparse-replace-in-place"
                 onClick={() => apply("replace_in_place")}
               >
                 替换当前结构
               </button>
               <button
                 className="primary"
+                data-testid="reparse-create-revision"
                 onClick={() => apply("create_revision")}
               >
                 创建修订版

@@ -410,7 +410,12 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
     }
     if (blockers.includes("provider_disabled")) return "Provider 已停用";
     if (blockers.includes("credential_missing")) return "凭据无效或缺失";
-    if (configuration.data?.credential_state === "invalid") return "凭据无效";
+    if (
+      blockers.includes("credential_invalid") ||
+      configuration.data?.credential_state === "invalid"
+    ) {
+      return "凭据无效";
+    }
     if (blockers.length) return "当前没有可用的 AI 服务";
     return "当前没有可用的 AI 服务";
   }, [eligible.length, providers.data, cloud.data?.enabled, configuration.data?.credential_state]);

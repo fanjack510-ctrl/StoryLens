@@ -15,6 +15,21 @@ function isTauriRuntime(): boolean {
 }
 
 export async function checkForAppUpdate(manual = false): Promise<UpdateCheckResult> {
+  // UI audit (browser): surface a real update dialog without Tauri / cloud calls.
+  if (
+    typeof sessionStorage !== "undefined" &&
+    sessionStorage.getItem("storylens.uiAudit") === "1" &&
+    manual
+  ) {
+    return {
+      kind: "available",
+      currentVersion: "1.0.0-rc1",
+      latestVersion: "1.0.1-audit",
+      body: "审计模拟更新说明：稳定性修复与界面安全基线。",
+      downloadAndInstall: async () => undefined,
+    };
+  }
+
   if (!isTauriRuntime()) {
     return { kind: "disabled" };
   }

@@ -12,6 +12,7 @@
     "test": "vitest run",
     "test:e2e": "playwright test",
     "screenshots": "playwright test e2e/screenshots.spec.ts",
+    "ui-audit": "playwright test --config playwright.ui-audit.config.ts",
     "tauri": "tauri"
   },
   "dependencies": {

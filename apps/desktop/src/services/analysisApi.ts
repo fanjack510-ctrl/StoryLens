@@ -1,4 +1,5 @@
 import { api, getApiBase } from "./apiClient";
+import { normalizeInvocations } from "./normalizeInvocations";
 import type { Run, RunResults, Scene, SceneParagraphs, SceneResultItem } from "../types";
 export const analysisApi = {
   preflight: (payload: any) => api<any>("/api/v1/analysis-runs/preflight", {
@@ -106,8 +107,10 @@ export const analysisApi = {
         ? { method: "POST", body: JSON.stringify(payload) }
         : { method: "GET" },
     ),
-  invocations: (run: number) =>
-    api<any[]>(`/api/v1/analysis-runs/${run}/model-invocations`),
+  invocations: async (run: number) => {
+    const data = await api<unknown>(`/api/v1/analysis-runs/${run}/model-invocations`);
+    return normalizeInvocations(data, run);
+  },
   recoveryPreflight: (run: number) =>
     api<any>(`/api/v1/analysis-runs/${run}/recovery-preflight`),
   recoverPreflight: (run: number, payload: { cloud_consent: boolean }) =>

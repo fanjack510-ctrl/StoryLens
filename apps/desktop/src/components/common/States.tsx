@@ -12,7 +12,7 @@ export const ErrorState = ({
   error: Error;
   retry?: () => void;
 }) => (
-  <div className="state error">
+  <div className="state error" data-testid="error-state" role="alert">
     <strong>无法读取数据</strong>
     <span>{error.message}</span>
     {retry && <button onClick={retry}>重试</button>}
