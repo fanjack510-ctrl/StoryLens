@@ -31,12 +31,16 @@ describe("journeyUiLabels display formatters", () => {
 
   it("rejects punctuation-only phase summaries", () => {
     expect(isEffectivePhaseSummary(".")).toBe(false);
+    expect(isEffectivePhaseSummary("...")).toBe(false);
+    expect(isEffectivePhaseSummary("…")).toBe(false);
     expect(isEffectivePhaseSummary("。")).toBe(false);
     expect(isEffectivePhaseSummary("   ")).toBe(false);
     expect(isEffectivePhaseSummary(null)).toBe(false);
     expect(isEffectivePhaseSummary(undefined)).toBe(false);
     expect(isEffectivePhaseSummary("建立背景")).toBe(true);
     expect(resolvePhaseSummaryDisplay(".", "入局")).toContain("阅读期待");
+    expect(resolvePhaseSummaryDisplay("...", "入局")).toContain("阅读期待");
+    expect(resolvePhaseSummaryDisplay("…", "收束")).toContain("后续期待");
     expect(resolvePhaseSummaryDisplay("  ", "推进")).toContain("核心冲突");
     expect(resolvePhaseSummaryDisplay(null, "转折")).toContain("信息变化");
     expect(resolvePhaseSummaryDisplay("真实阶段说明", "推进")).toBe("真实阶段说明");
@@ -61,6 +65,13 @@ describe("journeyUiLabels display formatters", () => {
     expect(formatJourneySelectionType("scene")).toBe("场景");
     expect(formatJourneyStatus("succeeded")).toBe("已完成");
     expect(formatJourneyStatus("running")).toBe("生成中");
+    expect(formatJourneyStatus("scene_profiles_running")).toBe("正在分析场景特征");
+    expect(formatJourneyStatus("scene_profiles_pending")).toBe("等待分析场景特征");
+    expect(formatJourneyStatus("journey_running")).toBe("正在生成阅读旅程");
+    expect(formatJourneyStatus("journey_pending")).toBe("等待生成阅读旅程");
+    expect(formatJourneyStatus("completed")).toBe("已完成");
+    expect(formatJourneyStatus("failed")).toBe("生成失败");
+    expect(formatJourneyStatus("some_unknown_snake_case")).toBe("处理中");
     expect(formatJourneyStatus(null)).toBe("—");
   });
 });

@@ -34,10 +34,79 @@ const FORBIDDEN_VISIBLE = [
   /Scene Profiles/i,
   /\brunning\b/,
   /\bsucceeded\b/,
+  /scene_profiles_running/,
+  /journey_running/,
   /Scene summary/i,
+  /Scene \d+ summary/i,
+  /Scene \d+ 写作启示/,
+  /Phase summary/i,
   /所属 Phase/,
   /相关Scene/,
 ];
+
+/** Phase-card / status regions must not show raw ellipsis as content. */
+async function assertPhaseSummariesHonest(page: Page) {
+  for (const ordinal of [1, 2, 3, 4]) {
+    const card = page.getByTestId(`journey-phase-${ordinal}`);
+    await expect(card).toBeVisible();
+    const desc = card.locator(".journey-phase-card-desc");
+    const text = ((await desc.textContent()) || "").trim();
+    expect(text, `phase ${ordinal} summary`).not.toMatch(/^\.\.\.$|^…$|^\.$/);
+    expect(text.length, `phase ${ordinal} summary length`).toBeGreaterThan(1);
+    const name = await card.getAttribute("aria-label") || (await card.innerText());
+    expect(name).toMatch(/入局|推进|转折|收束|阅读期待|核心冲突|信息变化|后续期待|建立|冲突|反转|悬念/);
+  }
+}
+
+function relativeLuminance(rgb: string): number {
+  const m = rgb.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+  if (!m) return 0;
+  const toLin = (c: number) => {
+    const s = c / 255;
+    return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+  };
+  const r = toLin(Number(m[1]));
+  const g = toLin(Number(m[2]));
+  const b = toLin(Number(m[3]));
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function contrastRatio(fg: string, bg: string): number {
+  const l1 = relativeLuminance(fg);
+  const l2 = relativeLuminance(bg);
+  const light = Math.max(l1, l2);
+  const dark = Math.min(l1, l2);
+  return (light + 0.05) / (dark + 0.05);
+}
+
+async function assertDarkButtonContrast(page: Page) {
+  const selectors = [
+    '[data-testid="journey-marker-compact"]',
+    '[data-testid="journey-marker-full"]',
+    '[data-testid="journey-analysis-info"]',
+    '[data-testid="journey-metric-segment-engagement"]',
+    '[data-testid="journey-metric-segment-arousal"]',
+    '[data-testid="journey-export-png"]',
+    '[data-testid="journey-more-chart-settings"]',
+    '[data-testid="journey-inspector-summary-expand"]',
+  ];
+  for (const sel of selectors) {
+    const el = page.locator(sel).first();
+    if (!(await el.count())) continue;
+    if (!(await el.isVisible().catch(() => false))) continue;
+    const styles = await el.evaluate((node) => {
+      const cs = getComputedStyle(node);
+      return {
+        backgroundColor: cs.backgroundColor,
+        color: cs.color,
+        disabled: (node as HTMLButtonElement).disabled,
+      };
+    });
+    expect(styles.backgroundColor, `${sel} bg`).not.toMatch(/^rgb\(\s*255,\s*255,\s*255\s*\)$/);
+    const ratio = contrastRatio(styles.color, styles.backgroundColor);
+    expect(ratio, `${sel} contrast ${styles.color} on ${styles.backgroundColor}`).toBeGreaterThanOrEqual(3);
+  }
+}
 
 async function assertNoForbiddenVisible(page: Page) {
   const root = page.getByTestId("journey-workspace");
@@ -152,6 +221,16 @@ function assertScreenshotsDiffer(a: string, b: string, label: string) {
 test.describe("06 reader journey", () => {
   test.beforeEach(async ({ page }) => {
     await prepareAuditSession(page, { onboarding: "completed", developerMode: true });
+    await page.addInitScript(() => {
+      try {
+        const keys = Object.keys(localStorage);
+        for (const key of keys) {
+          if (key.startsWith("storylens.readerJourney.")) localStorage.removeItem(key);
+        }
+      } catch {
+        /* ignore */
+      }
+    });
   });
 
   test("empty result state", async ({ page }) => {
@@ -193,9 +272,10 @@ test.describe("06 reader journey", () => {
     await page.getByTestId("reader-journey-progress-card").waitFor({ timeout: 10_000 }).catch(() => undefined);
     await page.getByTestId("journey-progress").waitFor({ timeout: 5_000 }).catch(() => undefined);
     const body = await page.locator("body").innerText();
-    expect(body).toMatch(/正在生成阅读旅程|正在处理场景|已处理/);
-    expect(body).not.toMatch(/0\s*\/\s*0/);
-    expect(body.replace(/技术详情[\s\S]*/, "")).not.toMatch(/AnalysisRun|JourneyRun|\brunning\b/);
+    const ordinary = body.replace(/技术详情[\s\S]*/g, "");
+    expect(ordinary).toMatch(/正在生成阅读旅程|正在处理场景|已处理|正在分析场景特征/);
+    expect(ordinary).not.toMatch(/0\s*\/\s*0/);
+    expect(ordinary).not.toMatch(/AnalysisRun|JourneyRun|\brunning\b|scene_profiles_running|journey_running/);
     await shot(page, { id: "06-02", file: "06_reader_journey_loading.png", route: JOURNEY_BOOK, theme: "light" });
     await shot(page, { id: "06-02b", file: "06_rj_generating.png", route: JOURNEY_BOOK, theme: "light" });
   });
@@ -231,7 +311,8 @@ test.describe("06 reader journey", () => {
     const chartBox = await chart.boundingBox();
     expect(chartBox?.width ?? 0).toBeGreaterThanOrEqual(700);
 
-    // Phase "." fallback must show structural Chinese, not a lone period.
+    // Phase "." fallback must show structural Chinese, not a lone period / ellipsis.
+    await assertPhaseSummariesHonest(page);
     const phase1 = page.getByTestId("journey-phase-1");
     await expect(phase1).toContainText(/建立背景|阅读期待/);
     await expect(phase1).not.toHaveText(/^\s*\.\s*$/);
@@ -249,9 +330,12 @@ test.describe("06 reader journey", () => {
       expect(inspectorBox.x).toBeGreaterThan(chartAfter.x + chartAfter.width - 8);
     }
     await expect(page.getByTestId("journey-inspector-close")).toHaveCount(0);
+    await expect(page.getByTestId("journey-collapse-inspector")).toHaveCount(1);
+    await expect(page.getByTestId("journey-collapse-inspector")).toHaveText("收起详情");
     // Collapse again for a clean default shot of the main curve.
     await page.getByTestId("journey-collapse-inspector").first().click();
     await expect(page.getByTestId("journey-inspector-summary-expand")).toBeVisible();
+    await expect(page.getByTestId("journey-collapse-inspector")).toHaveCount(0);
 
     await assertNoForbiddenVisible(page);
     await shot(page, {
@@ -320,6 +404,9 @@ test.describe("06 reader journey", () => {
     await expect(page.getByTestId("scene-detail-title")).toContainText(/场景 04/);
     const sceneIdBefore = visualization.scene_nodes.find((n) => n.scene_ordinal === 4)?.scene_id;
     expect(sceneIdBefore).toBe(104);
+    const detailText = await page.getByTestId("journey-detail-pane").innerText();
+    expect(detailText).toMatch(/紧张状态|关键线索|信息递进|避免一次性解释/);
+    expect(detailText).not.toMatch(/Scene 4 summary|Scene 4 写作启示|Phase summary/i);
     await shot(page, {
       id: "06-14b",
       file: "06_reader_journey_scene_selected.png",
@@ -427,6 +514,19 @@ test.describe("06 reader journey", () => {
     const clientWidth = await page.evaluate(() => document.documentElement.clientWidth);
     expect(scrollWidth).toBeLessThanOrEqual(clientWidth + 1);
 
+    // Ensure journey tab is active so phase cards are visible in narrow layout.
+    const mainTab = page.getByTestId("journey-tab-main");
+    if (await mainTab.count()) {
+      const alreadyMain = await mainTab.evaluate((el) => el.classList.contains("active"));
+      if (!alreadyMain) {
+        await mainTab.click({ force: true });
+      }
+    }
+    await expect(page.getByTestId("journey-collapse-inspector")).toHaveCount(0);
+    await expect(page.getByTestId("journey-inspector-summary-expand")).toBeVisible();
+    await expect(page.getByTestId("journey-inspector-summary-expand")).toHaveText("展开详情");
+
+    await assertPhaseSummariesHonest(page);
     for (const ordinal of [1, 2, 3, 4]) {
       const card = page.getByTestId(`journey-phase-${ordinal}`);
       await expect(card).toBeVisible();
@@ -450,6 +550,40 @@ test.describe("06 reader journey", () => {
       expect(box.x + box.width).toBeLessThanOrEqual(clientWidth + 4);
     }
 
+    // Detail closed: no orphan 收起; expand entry present.
+    await expect(page.getByTestId("journey-collapse-inspector")).toHaveCount(0);
+    await expect(page.getByTestId("journey-inspector-summary-expand")).toBeVisible();
+    await expect(page.getByTestId("journey-inspector-summary-expand")).toHaveText("展开详情");
+    await shot(page, {
+      id: "06-17c",
+      file: "06_reader_journey_1024_detail_closed.png",
+      route: JOURNEY_BOOK,
+      theme: "light",
+    });
+
+    // Open narrow drawer via 详情 tab or 展开详情 (avoid overlay-intercepted clicks).
+    const expandBtn = page.getByTestId("journey-inspector-summary-expand");
+    if (await expandBtn.isVisible().catch(() => false)) {
+      await expandBtn.click({ force: true });
+    } else {
+      await page.getByTestId("journey-tab-inspector").click({ force: true });
+    }
+    await expect(page.getByTestId("journey-inspector-pane")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByTestId("journey-detail-pane")).toBeVisible();
+    await expect(page.getByTestId("journey-collapse-inspector")).toHaveCount(1);
+    await expect(page.getByTestId("journey-collapse-inspector")).toHaveText("收起详情");
+    await expect(page.getByTestId("journey-inspector-drawer-header")).toBeVisible();
+    await shot(page, {
+      id: "06-17o",
+      file: "06_reader_journey_1024_detail_open.png",
+      route: JOURNEY_BOOK,
+      theme: "light",
+    });
+
+    await page.getByTestId("journey-collapse-inspector").click({ force: true });
+    await expect(page.getByTestId("journey-collapse-inspector")).toHaveCount(0);
+    await expect(page.getByTestId("journey-inspector-summary-expand")).toBeVisible();
+
     await shot(page, {
       id: "06-17",
       file: "06_reader_journey_1024.png",
@@ -467,6 +601,7 @@ test.describe("06 reader journey", () => {
     await applyProductTheme(page, "dark");
     await assertRealDarkTheme(page);
     await resetJourneyScroll(page);
+    await assertDarkButtonContrast(page);
     await shot(page, {
       id: "06-18",
       file: "06_reader_journey_dark.png",
@@ -479,8 +614,12 @@ test.describe("06 reader journey", () => {
     const tooltip = page.locator(".journey-node-tooltip-card");
     if (await tooltip.count()) {
       await expect(tooltip).toBeVisible();
-      const bg = await tooltip.evaluate((el) => getComputedStyle(el).backgroundColor);
-      expect(bg).not.toMatch(/^rgb\(\s*255,\s*255,\s*255\s*\)$/);
+      const tipStyles = await tooltip.evaluate((el) => {
+        const cs = getComputedStyle(el);
+        return { backgroundColor: cs.backgroundColor, color: cs.color };
+      });
+      expect(tipStyles.backgroundColor).not.toMatch(/^rgb\(\s*255,\s*255,\s*255\s*\)$/);
+      expect(contrastRatio(tipStyles.color, tipStyles.backgroundColor)).toBeGreaterThanOrEqual(3);
     }
     await shot(page, {
       id: "06-19",
@@ -495,6 +634,14 @@ test.describe("06 reader journey", () => {
       .getByTestId("journey-detail-pane")
       .evaluate((el) => getComputedStyle(el).backgroundColor);
     expect(detailBg).not.toMatch(/^rgb\(\s*255,\s*255,\s*255\s*\)$/);
+    const tab = page.locator(".scene-detail-tabs button").first();
+    if (await tab.count()) {
+      const tabStyles = await tab.evaluate((el) => {
+        const cs = getComputedStyle(el);
+        return { backgroundColor: cs.backgroundColor, color: cs.color };
+      });
+      expect(contrastRatio(tabStyles.color, tabStyles.backgroundColor)).toBeGreaterThanOrEqual(3);
+    }
     await shot(page, {
       id: "06-20",
       file: "06_reader_journey_detail_dark.png",

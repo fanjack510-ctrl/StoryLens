@@ -219,7 +219,16 @@ export function isEffectivePhaseSummary(raw: string | null | undefined): boolean
   if (raw == null) return false;
   const trimmed = String(raw).trim();
   if (!trimmed || isDirtyDisplayToken(trimmed)) return false;
-  if (/^[.。…·•\-–—_*]+$/.test(trimmed)) return false;
+  // Lone period / ellipsis / dashes must never appear as phase copy.
+  if (
+    trimmed === "." ||
+    trimmed === "..." ||
+    trimmed === "…" ||
+    trimmed === "。。。" ||
+    /^[.。…·•\-–—_*…]+$/.test(trimmed)
+  ) {
+    return false;
+  }
   return true;
 }
 
@@ -308,12 +317,24 @@ export function formatJourneyStatus(status: string | null | undefined): string {
     pending: "等待生成",
     queued: "排队中",
     failed: "生成失败",
+    scene_profiles_pending: "等待分析场景特征",
+    scene_profiles_running: "正在分析场景特征",
+    scene_profiles_completed: "场景特征分析完成",
     scene_profiles_partial: "部分完成",
+    chapter_synthesis_pending: "等待汇总章节旅程",
+    chapter_synthesis_running: "正在汇总章节旅程",
+    journey_pending: "等待生成阅读旅程",
+    journey_running: "正在生成阅读旅程",
     budget_blocked: "额度不足",
     none: "尚未生成",
     empty: "暂无结果",
+    cancelled: "已取消",
   };
-  return map[key] ?? map[key.toLowerCase()] ?? key;
+  const mapped = map[key] ?? map[key.toLowerCase()];
+  if (mapped) return mapped;
+  // Never surface raw snake_case keys in ordinary UI.
+  if (/^[a-z][a-z0-9_]*$/i.test(key)) return "处理中";
+  return "未知状态";
 }
 
 /** Scene ordinal → S04 style label for ordinary UI. */

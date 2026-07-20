@@ -36,6 +36,32 @@
   gap: 4px;
 }
 
+.journey-sync-mode-toggle button {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--color-bg-subtle, var(--surface2));
+  color: var(--color-text-primary, var(--text));
+  padding: 6px 12px;
+  font-size: 13px;
+  min-height: 32px;
+  cursor: pointer;
+}
+
+.journey-sync-mode-toggle button:hover {
+  border-color: var(--color-brand, var(--accent));
+}
+
+.journey-sync-mode-toggle button:focus-visible {
+  outline: 2px solid var(--color-brand, var(--accent));
+  outline-offset: 2px;
+}
+
+.journey-sync-mode-toggle button:disabled {
+  background: var(--color-disabled-bg, var(--surface2));
+  color: var(--color-disabled-text, var(--muted));
+  cursor: not-allowed;
+}
+
 /* Phase 1C-C.2.3A: secondary view modes (distinct from top-level 正文阅读/场景分析/阅读旅程) */
 .results-shell-simplified [data-testid="journey-mode-sync"],
 .book-shell-simplified [data-testid="journey-mode-sync"] {
@@ -79,8 +105,23 @@
 }
 
 .journey-sync-mode-toggle button.active {
-  border-color: var(--accent);
-  background: var(--accent2);
+  border-color: var(--color-brand, var(--accent));
+  background: var(--color-brand-soft, var(--accent2));
+  color: var(--color-brand, var(--accent));
+  font-weight: 600;
+}
+
+.app[data-theme="dark"] .journey-sync-mode-toggle button,
+[data-theme="dark"] .journey-sync-mode-toggle button {
+  background: var(--color-bg-subtle, var(--surface2));
+  color: var(--color-text-primary, var(--text));
+  border-color: var(--line);
+}
+
+.app[data-theme="dark"] .journey-sync-mode-toggle button.active,
+[data-theme="dark"] .journey-sync-mode-toggle button.active {
+  background: var(--color-brand-soft, var(--accent2));
+  color: var(--color-brand, var(--accent));
 }
 
 .journey-sync-actions {

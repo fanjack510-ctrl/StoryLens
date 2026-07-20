@@ -227,6 +227,14 @@ export async function prepareAuditSession(
       if (clearLicense) {
         localStorage.removeItem("storylens.license.dev.mock");
       }
+      // Reset Reader Journey UI prefs so layout audits start from defaults.
+      try {
+        for (const key of Object.keys(localStorage)) {
+          if (key.startsWith("storylens.readerJourney.")) localStorage.removeItem(key);
+        }
+      } catch {
+        /* ignore */
+      }
       sessionStorage.setItem("storylens.screenshotInit", "1");
       sessionStorage.setItem("storylens.uiAudit", "1");
     },

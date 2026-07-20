@@ -58,21 +58,59 @@ body.journey-pane-resizing[data-row-resize="true"] * {
   grid-template-rows: minmax(0, 1fr);
 }
 
+/* Narrow tabs must keep their own row even with compact-head, or the grid overlays the tab bar. */
+.journey-workspace.journey-workspace-v4.compact-head[data-layout="narrow"] {
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
 .journey-workspace-tabs {
   display: none;
   gap: 4px;
   padding: 6px 8px;
   border-bottom: 1px solid var(--line);
   flex: 0 0 auto;
+  position: relative;
+  z-index: calc(var(--journey-z-sticky-toolbar, 10) + 1);
+  background: var(--color-bg-surface, var(--surface));
 }
 
 .journey-workspace-v4[data-layout="narrow"] .journey-workspace-tabs {
   display: flex;
 }
 
+.journey-workspace-tabs button {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--color-bg-subtle, var(--surface2));
+  color: var(--color-text-primary, var(--text));
+  padding: 6px 12px;
+  font-size: 13px;
+  min-height: 32px;
+  cursor: pointer;
+}
+
+.journey-workspace-tabs button:hover {
+  border-color: var(--color-brand, var(--accent));
+  color: var(--color-text-primary, var(--text));
+}
+
+.journey-workspace-tabs button:focus-visible {
+  outline: 2px solid var(--color-brand, var(--accent));
+  outline-offset: 2px;
+}
+
 .journey-workspace-tabs button.active {
-  border-color: var(--accent);
-  background: var(--accent2);
+  border-color: var(--color-brand, var(--accent));
+  background: var(--color-brand-soft, var(--accent2));
+  color: var(--color-brand, var(--accent));
+  font-weight: 600;
+}
+
+.journey-workspace-tabs button:disabled {
+  background: var(--color-disabled-bg, var(--surface2));
+  color: var(--color-disabled-text, var(--muted));
+  opacity: 1;
+  cursor: not-allowed;
 }
 
 .journey-workspace-grid {
@@ -393,19 +431,34 @@ body.journey-pane-resizing[data-row-resize="true"] * {
   white-space: nowrap;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--surface2);
-  color: var(--text);
+  background: var(--color-bg-subtle, var(--surface2));
+  color: var(--color-text-primary, var(--text));
   cursor: pointer;
 }
 
-.journey-toolbar-btn:hover,
+.journey-toolbar-btn:hover {
+  border-color: var(--color-brand, var(--accent));
+  background: var(--color-bg-muted, var(--surface2));
+  color: var(--color-text-primary, var(--text));
+}
+
+.journey-toolbar-btn:focus-visible {
+  outline: 2px solid var(--color-brand, var(--accent));
+  outline-offset: 2px;
+}
+
+.journey-toolbar-btn:active:not(:disabled),
 .journey-toolbar-btn.active {
-  border-color: var(--accent);
-  background: var(--accent2);
+  border-color: var(--color-brand, var(--accent));
+  background: var(--color-brand-soft, var(--accent2));
+  color: var(--color-brand, var(--accent));
 }
 
 .journey-toolbar-btn:disabled {
-  opacity: 0.55;
+  background: var(--color-disabled-bg, var(--surface2));
+  color: var(--color-disabled-text, var(--muted));
+  border-color: var(--line);
+  opacity: 1;
   cursor: not-allowed;
 }
 
@@ -1201,18 +1254,22 @@ body.journey-pane-resizing[data-row-resize="true"] * {
   padding: 3px 8px;
   border: 1px solid var(--line);
   border-radius: 6px;
-  background: var(--surface);
+  background: var(--color-bg-subtle, var(--surface2));
+  color: var(--color-text-primary, var(--text));
   cursor: pointer;
 }
 
 .journey-viz-toolbar-group button.active {
-  border-color: var(--accent);
-  color: var(--accent);
+  border-color: var(--color-brand, var(--accent));
+  background: var(--color-brand-soft, var(--accent2));
+  color: var(--color-brand, var(--accent));
   font-weight: 600;
 }
 
 .journey-viz-toolbar-group button:disabled {
-  opacity: 0.45;
+  background: var(--color-disabled-bg, var(--surface2));
+  color: var(--color-disabled-text, var(--muted));
+  opacity: 1;
   cursor: not-allowed;
 }
 
@@ -1775,9 +1832,45 @@ body.journey-pane-resizing[data-row-resize="true"] * {
   gap: 4px;
 }
 
-.journey-marker-toggle button.active {
-  border-color: var(--accent);
-  background: var(--accent2);
+.journey-marker-toggle button,
+.journey-analysis-tools > button,
+.journey-analysis-info-wrap > button {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--color-bg-subtle, var(--surface2));
+  color: var(--color-text-primary, var(--text));
+  padding: 6px 10px;
+  font-size: 12px;
+  min-height: 32px;
+  cursor: pointer;
+}
+
+.journey-marker-toggle button:hover,
+.journey-analysis-info-wrap > button:hover {
+  border-color: var(--color-brand, var(--accent));
+  color: var(--color-text-primary, var(--text));
+}
+
+.journey-marker-toggle button:focus-visible,
+.journey-analysis-info-wrap > button:focus-visible {
+  outline: 2px solid var(--color-brand, var(--accent));
+  outline-offset: 2px;
+}
+
+.journey-marker-toggle button.active,
+.journey-analysis-info-wrap > button.active {
+  border-color: var(--color-brand, var(--accent));
+  background: var(--color-brand-soft, var(--accent2));
+  color: var(--color-brand, var(--accent));
+  font-weight: 600;
+}
+
+.journey-marker-toggle button:disabled,
+.journey-analysis-info-wrap > button:disabled {
+  background: var(--color-disabled-bg, var(--surface2));
+  color: var(--color-disabled-text, var(--muted));
+  opacity: 1;
+  cursor: not-allowed;
 }
 
 .journey-layer-banner {
@@ -1907,8 +2000,8 @@ body.journey-pane-resizing[data-row-resize="true"] * {
   padding: 8px 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--panel, #fff);
-  color: var(--text);
+  background: var(--color-bg-surface, var(--surface));
+  color: var(--color-text-primary, var(--text));
 }
 
 .journey-phase-scroll-hint {
@@ -2131,15 +2224,35 @@ body.journey-pane-resizing[data-row-resize="true"] * {
 
 .scene-detail-tabs button {
   border: 1px solid var(--line);
-  background: var(--surface);
-  color: var(--text);
+  border-radius: 6px;
+  background: var(--color-bg-subtle, var(--surface2));
+  color: var(--color-text-primary, var(--text));
   padding: 5px 8px;
   font-size: 12px;
+  cursor: pointer;
+}
+
+.scene-detail-tabs button:hover {
+  border-color: var(--color-brand, var(--accent));
+}
+
+.scene-detail-tabs button:focus-visible {
+  outline: 2px solid var(--color-brand, var(--accent));
+  outline-offset: 2px;
 }
 
 .scene-detail-tabs button.active {
-  border-color: var(--accent);
-  background: var(--accent2);
+  border-color: var(--color-brand, var(--accent));
+  background: var(--color-brand-soft, var(--accent2));
+  color: var(--color-brand, var(--accent));
+  font-weight: 600;
+}
+
+.scene-detail-tabs button:disabled {
+  background: var(--color-disabled-bg, var(--surface2));
+  color: var(--color-disabled-text, var(--muted));
+  opacity: 1;
+  cursor: not-allowed;
 }
 
 .scene-detail-tab-panel {
@@ -2890,8 +3003,8 @@ body.journey-pane-resizing[data-row-resize="true"] * {
 .journey-metric-segment {
   border: 0;
   border-right: 1px solid var(--line);
-  background: transparent;
-  color: var(--text);
+  background: var(--color-bg-subtle, var(--surface2));
+  color: var(--color-text-primary, var(--text));
   padding: 6px 12px;
   font-size: 12px;
   line-height: 1.3;
@@ -2918,7 +3031,7 @@ body.journey-pane-resizing[data-row-resize="true"] * {
   z-index: 1;
 }
 
-.journey-workspace-v4 .journey-phase-nav-card {
+.journey-workspace-v4 .journey-phase-card.journey-phase-nav-card {
   position: relative;
   flex: 0 0 auto;
   width: 200px;
@@ -2932,16 +3045,18 @@ body.journey-pane-resizing[data-row-resize="true"] * {
   border: 1px solid var(--line);
   border-radius: 10px;
   background: color-mix(in srgb, var(--phase-band-color, var(--surface2)) 28%, var(--surface));
-  color: var(--text);
+  color: var(--color-text-primary, var(--text));
   cursor: pointer;
   display: flex;
   flex-direction: column;
   gap: 6px;
   writing-mode: horizontal-tb;
+  overflow: hidden;
+  justify-content: flex-start;
 }
 
-.journey-workspace-v4 .journey-phase-nav-card.selected,
-.journey-workspace-v4 .journey-phase-nav-card.active-phase {
+.journey-workspace-v4 .journey-phase-card.journey-phase-nav-card.selected,
+.journey-workspace-v4 .journey-phase-card.journey-phase-nav-card.active-phase {
   border-color: var(--color-brand, var(--accent));
   border-width: 2px;
   background: var(--color-brand-soft, var(--accent2));
@@ -2962,13 +3077,14 @@ body.journey-pane-resizing[data-row-resize="true"] * {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  color: var(--color-text-primary, var(--text));
 }
 
 .journey-workspace-v4 .journey-phase-nav-card .journey-phase-avg {
   font-size: 18px;
   font-variant-numeric: tabular-nums;
   font-weight: 650;
-  color: var(--text);
+  color: var(--color-text-primary, var(--text));
   flex-shrink: 0;
 }
 
@@ -2976,13 +3092,14 @@ body.journey-pane-resizing[data-row-resize="true"] * {
   margin: 0;
   font-size: 12px;
   line-height: 1.4;
-  color: var(--muted);
+  color: var(--color-text-secondary, var(--muted));
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
   white-space: normal;
   writing-mode: horizontal-tb;
+  min-height: calc(1.4em * 2);
 }
 
 .journey-workspace-v4 .journey-phase-nav-card .journey-phase-current-badge {
@@ -2999,9 +3116,25 @@ body.journey-pane-resizing[data-row-resize="true"] * {
   min-width: 0;
 }
 
+.journey-inspector-pane[hidden],
+.journey-inspector-dock[hidden],
+.journey-main-pane[hidden] {
+  display: none !important;
+}
+
 .journey-inspector-pane[data-dock="right"] {
   width: 100%;
   max-width: 360px;
+}
+
+.journey-inspector-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 0 0 auto;
+  gap: 8px;
+  margin: 0 0 8px;
+  position: static;
 }
 
 .journey-collapse-inspector-btn {
@@ -3009,24 +3142,30 @@ body.journey-pane-resizing[data-row-resize="true"] * {
   z-index: 2;
   align-self: flex-end;
   flex: 0 0 auto;
-  margin: 0 0 8px;
+  margin: 0;
   padding: 4px 10px;
   font-size: 12px;
   border: 1px solid var(--line);
   border-radius: 6px;
-  background: var(--surface);
-  color: var(--muted);
+  background: var(--color-bg-subtle, var(--surface2));
+  color: var(--color-text-secondary, var(--muted));
   cursor: pointer;
 }
 
 .journey-collapse-inspector-btn:hover {
-  color: var(--text);
+  color: var(--color-text-primary, var(--text));
   border-color: var(--color-brand, var(--accent));
+  background: var(--color-bg-muted, var(--surface2));
 }
 
 .journey-collapse-inspector-btn:focus-visible {
   outline: 2px solid var(--color-brand, var(--accent));
   outline-offset: 2px;
+}
+
+.journey-collapse-inspector-btn:active {
+  background: var(--color-brand-soft, var(--accent2));
+  color: var(--color-brand, var(--accent));
 }
 
 .journey-curve-svg-frame {
@@ -3057,26 +3196,72 @@ body.journey-pane-resizing[data-row-resize="true"] * {
   border-color: var(--color-border, #3a433e);
 }
 
-.app[data-theme="dark"] .journey-workspace-v4 .journey-phase-nav-card,
-[data-theme="dark"] .journey-workspace-v4 .journey-phase-nav-card {
+.app[data-theme="dark"] .journey-workspace-v4 .journey-phase-card.journey-phase-nav-card,
+[data-theme="dark"] .journey-workspace-v4 .journey-phase-card.journey-phase-nav-card {
   background: color-mix(in srgb, var(--phase-band-color, #2a332e) 22%, var(--surface));
   border-color: var(--line);
+  color: var(--color-text-primary, var(--text));
 }
 
 .app[data-theme="dark"] .journey-metric-segmented,
 [data-theme="dark"] .journey-metric-segmented {
-  background: var(--surface);
+  background: var(--color-bg-surface, var(--surface));
   border-color: var(--line);
 }
 
+.app[data-theme="dark"] .journey-metric-segment,
+[data-theme="dark"] .journey-metric-segment {
+  background: transparent;
+  color: var(--color-text-primary, var(--text));
+}
+
+.app[data-theme="dark"] .journey-metric-segment.is-selected,
+.app[data-theme="dark"] .journey-metric-segment[aria-selected="true"],
+[data-theme="dark"] .journey-metric-segment.is-selected,
+[data-theme="dark"] .journey-metric-segment[aria-selected="true"] {
+  background: var(--color-brand-soft, var(--accent2));
+  color: var(--color-brand, var(--accent));
+}
+
 .app[data-theme="dark"] .journey-collapse-inspector-btn,
-[data-theme="dark"] .journey-collapse-inspector-btn {
-  background: var(--surface);
-  color: var(--muted);
+[data-theme="dark"] .journey-collapse-inspector-btn,
+.app[data-theme="dark"] .journey-toolbar-btn,
+[data-theme="dark"] .journey-toolbar-btn,
+.app[data-theme="dark"] .journey-marker-toggle button,
+[data-theme="dark"] .journey-marker-toggle button,
+.app[data-theme="dark"] .journey-analysis-info-wrap > button,
+[data-theme="dark"] .journey-analysis-info-wrap > button,
+.app[data-theme="dark"] .journey-workspace-tabs button,
+[data-theme="dark"] .journey-workspace-tabs button,
+.app[data-theme="dark"] .scene-detail-tabs button,
+[data-theme="dark"] .scene-detail-tabs button {
+  background: var(--color-bg-subtle, var(--surface2));
+  color: var(--color-text-primary, var(--text));
+  border-color: var(--line);
+}
+
+.app[data-theme="dark"] .journey-toolbar-btn.active,
+[data-theme="dark"] .journey-toolbar-btn.active,
+.app[data-theme="dark"] .journey-marker-toggle button.active,
+[data-theme="dark"] .journey-marker-toggle button.active,
+.app[data-theme="dark"] .journey-workspace-tabs button.active,
+[data-theme="dark"] .journey-workspace-tabs button.active,
+.app[data-theme="dark"] .scene-detail-tabs button.active,
+[data-theme="dark"] .scene-detail-tabs button.active {
+  background: var(--color-brand-soft, var(--accent2));
+  color: var(--color-brand, var(--accent));
+}
+
+.app[data-theme="dark"] .journey-toolbar-btn:disabled,
+[data-theme="dark"] .journey-toolbar-btn:disabled,
+.app[data-theme="dark"] .journey-marker-toggle button:disabled,
+[data-theme="dark"] .journey-marker-toggle button:disabled {
+  background: var(--color-disabled-bg, var(--surface2));
+  color: var(--color-disabled-text, var(--muted));
 }
 
 @media (max-width: 1179px) {
-  .journey-workspace-v4 .journey-phase-nav-card {
+  .journey-workspace-v4 .journey-phase-card.journey-phase-nav-card {
     width: 170px;
     min-width: 160px;
   }
@@ -3098,10 +3283,16 @@ body.journey-pane-resizing[data-row-resize="true"] * {
     width: 100%;
   }
 
-  .journey-workspace-v4 .journey-phase-nav-card {
+  .journey-workspace-v4 .journey-phase-card.journey-phase-nav-card {
     width: 168px;
     min-width: 156px;
     writing-mode: horizontal-tb;
+    min-height: 84px;
+  }
+
+  .journey-phase-card-desc {
+    -webkit-line-clamp: 1;
+    min-height: 1.4em;
   }
 
   .journey-phase-card-desc,

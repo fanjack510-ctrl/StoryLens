@@ -462,10 +462,18 @@ export function ReaderJourneyWorkspace({
   const setInspectorCollapsedPref = (collapsed: boolean) => {
     setInspectorCollapsed(collapsed);
     writeLocalPref(UI_PREF_KEYS.inspectorCollapsed, collapsed);
-    if (!collapsed && layoutMode === "narrow") setNarrowPane("inspector");
+    if (!collapsed && layoutMode === "narrow") {
+      setNarrowPane("inspector");
+    }
   };
 
   const handleToggleInspector = () => {
+    if (!inspectorCollapsed && layoutMode === "narrow") {
+      setInspectorCollapsed(true);
+      writeLocalPref(UI_PREF_KEYS.inspectorCollapsed, true);
+      setNarrowPane("main");
+      return;
+    }
     setInspectorCollapsedPref(!inspectorCollapsed);
   };
 
@@ -483,6 +491,15 @@ export function ReaderJourneyWorkspace({
   };
 
   const expandInspector = () => setInspectorCollapsedPref(false);
+
+  /** Narrow drawer is open only when the inspector tab is active and not collapsed. */
+  const narrowDrawerOpen =
+    layoutMode === "narrow" && !inspectorCollapsed && narrowPane === "inspector";
+  /** Detail panel is actually on-screen (desktop right / mid dock / narrow drawer). */
+  const detailVisible =
+    (layoutMode === "desktop" && !inspectorCollapsed) ||
+    (layoutMode === "mid" && !inspectorCollapsed) ||
+    narrowDrawerOpen;
 
   const handleSelectScene = (node: JourneySceneNode, source: JourneySelectionSource = "journey_scene") => {
     if (!isControlled) {
@@ -1004,7 +1021,11 @@ export function ReaderJourneyWorkspace({
             <button
               type="button"
               data-testid="journey-tab-source"
-              onClick={() => setNarrowPane("source")}
+              className={narrowPane === "source" ? "active" : ""}
+              onClick={() => {
+                setNarrowPane("source");
+                if (!inspectorCollapsed) setInspectorCollapsedPref(true);
+              }}
             >
               正文
             </button>
@@ -1012,13 +1033,18 @@ export function ReaderJourneyWorkspace({
           <button
             type="button"
             data-testid="journey-tab-main"
-            onClick={() => setNarrowPane("main")}
+            className={narrowPane === "main" ? "active" : ""}
+            onClick={() => {
+              setNarrowPane("main");
+              if (!inspectorCollapsed) setInspectorCollapsedPref(true);
+            }}
           >
             旅程
           </button>
           <button
             type="button"
             data-testid="journey-tab-inspector"
+            className={narrowPane === "inspector" && !inspectorCollapsed ? "active" : ""}
             onClick={() => {
               setNarrowPane("inspector");
               expandInspector();
@@ -1236,7 +1262,7 @@ export function ReaderJourneyWorkspace({
             syncViewToUrl(1, sceneCount);
           }}
           onResetPaneWidths={resetPaneWidths}
-          inspectorCollapsed={inspectorCollapsed}
+          inspectorCollapsed={!detailVisible}
           onToggleInspector={handleToggleInspector}
           showSourceToggle={hasSourcePane}
           sourceCollapsed={sourceCollapsed}
@@ -1453,7 +1479,7 @@ export function ReaderJourneyWorkspace({
             </div>
           </div>
 
-        {inspectorCollapsed ? (
+        {!detailVisible ? (
           <div className="journey-inspector-summary-bar" data-testid="journey-inspector-summary-bar">
             <div className="journey-inspector-summary-inner" data-testid="journey-inspector-summary-inner">
               <span className="journey-inspector-summary-text" data-testid="journey-inspector-summary-text">
@@ -1471,6 +1497,7 @@ export function ReaderJourneyWorkspace({
               </span>
               <button
                 type="button"
+                className="journey-toolbar-btn"
                 data-testid="journey-inspector-summary-expand"
                 aria-label="展开旅程详情"
                 onClick={expandInspector}
@@ -1613,18 +1640,21 @@ export function ReaderJourneyWorkspace({
             className="journey-inspector-dock"
             data-testid="journey-inspector-dock"
             data-dock="bottom"
+            data-detail-state="expanded"
             style={{ gridColumn: "1 / -1", gridRow: showDockSplitter ? 3 : 2 }}
           >
+            <div className="journey-inspector-drawer-header" data-testid="journey-inspector-drawer-header">
+              <button
+                type="button"
+                className="journey-collapse-inspector-btn"
+                data-testid="journey-collapse-inspector"
+                aria-label="收起旅程详情"
+                onClick={handleToggleInspector}
+              >
+                收起详情
+              </button>
+            </div>
             {inspectorBody}
-            <button
-              type="button"
-              className="journey-collapse-inspector-btn"
-              data-testid="journey-collapse-inspector"
-              aria-label="收起旅程详情"
-              onClick={handleToggleInspector}
-            >
-              收起
-            </button>
           </div>
         ) : null}
 
@@ -1656,18 +1686,21 @@ export function ReaderJourneyWorkspace({
             className="journey-inspector-pane"
             data-testid="journey-inspector-pane"
             data-dock="right"
+            data-detail-state="expanded"
             style={{ gridColumn: gridInspectorCol, gridRow: 1 }}
           >
+            <div className="journey-inspector-drawer-header" data-testid="journey-inspector-drawer-header">
+              <button
+                type="button"
+                className="journey-collapse-inspector-btn"
+                data-testid="journey-collapse-inspector"
+                aria-label="收起旅程详情"
+                onClick={handleToggleInspector}
+              >
+                收起详情
+              </button>
+            </div>
             {inspectorBody}
-            <button
-              type="button"
-              className="journey-collapse-inspector-btn"
-              data-testid="journey-collapse-inspector"
-              aria-label="收起旅程详情"
-              onClick={handleToggleInspector}
-            >
-              收起
-            </button>
           </aside>
         ) : layoutMode === "desktop" ? (
           <div
@@ -1678,31 +1711,33 @@ export function ReaderJourneyWorkspace({
           />
         ) : null}
 
-        {showNarrowTabs ? (
+        {narrowDrawerOpen ? (
           <aside
             className="journey-inspector-pane"
             data-testid="journey-inspector-pane"
             data-dock="tab"
+            data-detail-state="drawer-open"
             style={{ gridColumn: 1, gridRow: 1 }}
-            hidden={narrowPane !== "inspector" || inspectorCollapsed}
-            aria-hidden={narrowPane !== "inspector" || inspectorCollapsed ? true : undefined}
           >
+            <div className="journey-inspector-drawer-header" data-testid="journey-inspector-drawer-header">
+              <button
+                type="button"
+                className="journey-collapse-inspector-btn"
+                data-testid="journey-collapse-inspector"
+                aria-label="收起旅程详情"
+                onClick={handleToggleInspector}
+              >
+                收起详情
+              </button>
+            </div>
             {inspectorBody}
-            <button
-              type="button"
-              className="journey-collapse-inspector-btn"
-              data-testid="journey-collapse-inspector"
-              aria-label="收起旅程详情"
-              onClick={handleToggleInspector}
-            >
-              收起
-            </button>
           </aside>
         ) : null}
 
         <div
           data-testid="journey-resizable-split"
-          data-inspector-collapsed={inspectorCollapsed ? "true" : "false"}
+          data-inspector-collapsed={detailVisible ? "false" : "true"}
+          data-detail-visible={detailVisible ? "true" : "false"}
           className="journey-layout-compat-split"
           aria-hidden="true"
         />
