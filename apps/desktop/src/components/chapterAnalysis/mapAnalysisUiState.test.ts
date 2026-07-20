@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { Run } from "../../types";
 import {
+  budgetSummary,
+  currentWorkLabel,
+  elapsedLabel,
   isTerminalUiState,
   mapRunToUiState,
   progressCounts,
+  stageLabelForRun,
   stageSteps,
   uiStateLabel,
 } from "./mapAnalysisUiState";
@@ -62,14 +66,30 @@ describe("mapAnalysisUiState", () => {
     expect(uiStateLabel("provider_recovery")).toBe("分析已暂停");
     expect(uiStateLabel("aborted_by_limit")).toBe("分析已暂停");
     expect(uiStateLabel("awaiting_budget_adjustment")).toBe("分析已暂停");
-    expect(uiStateLabel("succeeded")).toBe("Scene与阅读旅程已完成");
+    expect(uiStateLabel("succeeded")).toBe("分析完成");
     expect(uiStateLabel("awaiting_reader_journey_start")).toBe("分析已暂停");
     expect(uiStateLabel("reader_journey_processing")).toBe("正在生成阅读旅程");
-    expect(uiStateLabel("failed")).toBe("分析已暂停");
+    expect(uiStateLabel("failed")).toBe("分析未完成");
     expect(JSON.stringify(uiStateLabel("running"))).not.toMatch(/pipeline|invocation|artifact/i);
     expect(uiStateLabel("awaiting_budget_adjustment")).not.toMatch(
       /provider_disconnected|INSUFFICIENT_BUDGET/i,
     );
+  });
+
+  it("uses Chinese-only stage labels", () => {
+    expect(stageLabelForRun(run({ current_stage: "scene_analysis" }))).toBe("正在分析场景");
+    expect(stageLabelForRun(run({ current_stage: "reader_journey" }))).toBe("正在生成阅读旅程");
+    expect(stageLabelForRun(run({ current_stage: "scene_analysis" }))).not.toMatch(
+      /Scene Analysis|Reader Journey/i,
+    );
+  });
+
+  it("derives current work labels from ui state and run", () => {
+    expect(currentWorkLabel("running", run({ current_stage: "scene_analysis" }))).toBe(
+      "正在分析场景",
+    );
+    expect(currentWorkLabel("failed", run({}))).toBe("分析未完成");
+    expect(currentWorkLabel("succeeded", run({}))).toBe("分析完成");
   });
 
   it("stops terminal polling states", () => {
@@ -91,9 +111,59 @@ describe("mapAnalysisUiState", () => {
     ).toEqual({ current: 3, total: 14 });
   });
 
-  it("builds stage checklist without inventing backend stages", () => {
+  it("builds six-step checklist with boundary review active before analyze", () => {
     const steps = stageSteps("boundary_review_required");
-    expect(steps.map((s) => s.label)).toContain("等待边界审阅");
-    expect(steps.find((s) => s.id === "analyze")?.tone).toBe("active");
+    expect(steps.map((s) => s.label)).toEqual([
+      "准备章节",
+      "识别场景边界",
+      "确认场景边界",
+      "分析场景",
+      "生成读者旅程",
+      "完成",
+    ]);
+    expect(steps.find((s) => s.id === "boundary_review")?.tone).toBe("active");
+    expect(steps.find((s) => s.id === "analyze")?.tone).toBe("pending");
+    expect(steps.find((s) => s.id === "analyze")?.tone).not.toBe("done");
+  });
+
+  it("formats budget summary in yuan", () => {
+    expect(
+      budgetSummary(
+        run({
+          budget_required: { estimated_cost: 1.2 },
+          budget_remaining: { estimated_cost: 0.8 },
+        }),
+      ),
+    ).toBe("约 1.2 元 · 剩余约 0.8 元");
+    expect(budgetSummary(run({ budget_required: { estimated_cost: 2 } }))).toBe("约 2 元");
+  });
+
+  it("guards elapsed label against invalid or absurd durations", () => {
+    expect(elapsedLabel(run({ created_at: "not-a-date" }))).toBeNull();
+    expect(
+      elapsedLabel(
+        run({
+          created_at: "2026-01-02T00:00:00Z",
+          started_at: "2026-01-02T00:00:00Z",
+        }),
+      ),
+    ).toBeNull();
+    expect(
+      elapsedLabel(
+        run({
+          created_at: "2020-01-01T00:00:00Z",
+          started_at: "2020-01-01T00:00:00Z",
+        }),
+      ),
+    ).toBeNull();
+    expect(
+      elapsedLabel(
+        run({
+          created_at: "2026-01-01T00:00:00Z",
+          started_at: "2026-01-01T00:00:00Z",
+          completed_at: "2026-01-01T00:05:30Z",
+        }),
+      ),
+    ).toBe("5 分 30 秒");
   });
 });

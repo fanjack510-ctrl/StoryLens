@@ -9,7 +9,6 @@ import { Empty, ErrorState, Loading, Badge } from "../components/common/States";
 import { StateView } from "../components/ui/StateView";
 import { StartAnalysisDialog } from "../components/analysis/StartAnalysisDialog";
 import { ReparseDialog } from "../components/books/ReparseDialog";
-import { BoundaryReviewPanel } from "../components/analysis/BoundaryReviewPanel";
 
 function chapterOrdinalLabel(c: {
   section_type: string;
@@ -38,7 +37,6 @@ export function BookWorkspacePage() {
   const [loaded, setLoaded] = useState<any[]>([]);
   const [diagnostics, setDiagnostics] = useState<any>();
   const [reparseOpen, setReparseOpen] = useState(false);
-  const [reviewOpen, setReviewOpen] = useState(false);
   const chapterListRef = useRef<HTMLDivElement>(null);
   const qc = useQueryClient();
   const { fontSize, lineHeight, setReading, demo } = useUiStore();
@@ -265,9 +263,6 @@ export function BookWorkspacePage() {
           >
             开始分析
           </button>
-          <button onClick={() => setReviewOpen((value) => !value)}>
-            场景边界审阅
-          </button>
         </div>
 
         <div className="workspace-reading-canvas">
@@ -291,9 +286,6 @@ export function BookWorkspacePage() {
           )}
 
           <div className="prose workspace-prose" style={{ fontSize, lineHeight }}>
-            {reviewOpen && (
-              <BoundaryReviewPanel bookId={bookId} chapterId={chapter} />
-            )}
             {!chapter ? null : paragraphs.isLoading ? (
               <StateView
                 kind="loading"

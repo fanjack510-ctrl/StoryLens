@@ -1,6 +1,7 @@
 import type { Run } from "../../types";
 import { isBudgetPauseRun } from "../../services/budgetPauseDetect";
 import { userFacingBudgetMessage } from "../../services/budgetErrorCopy";
+import { formatCny } from "../analysis/analysisDisplayLabels";
 
 /** Frontend-only composition states; never persisted as a second backend enum. */
 export type ChapterAnalysisUiState =
@@ -22,6 +23,15 @@ export type ChapterAnalysisUiState =
 
 /** Full chapter success only. Journey-incomplete states keep polling journey APIs. */
 const TERMINAL: ChapterAnalysisUiState[] = ["succeeded", "failed", "cancelled"];
+
+const STAGE_STEP_DEFS = [
+  { id: "prepare", label: "准备章节" },
+  { id: "boundary_identify", label: "识别场景边界" },
+  { id: "boundary_review", label: "确认场景边界" },
+  { id: "analyze", label: "分析场景" },
+  { id: "journey", label: "生成读者旅程" },
+  { id: "complete", label: "完成" },
+] as const;
 
 export function isTerminalUiState(state: ChapterAnalysisUiState): boolean {
   return TERMINAL.includes(state);
@@ -75,7 +85,7 @@ export function uiStateLabel(state: ChapterAnalysisUiState): string {
     case "partial":
       return "分析已暂停";
     case "failed":
-      return "分析已暂停";
+      return "分析未完成";
     case "aborted_by_limit":
       return "分析已暂停";
     case "awaiting_budget_adjustment":
@@ -85,7 +95,7 @@ export function uiStateLabel(state: ChapterAnalysisUiState): string {
     case "reader_journey_processing":
       return "正在生成阅读旅程";
     case "succeeded":
-      return "Scene与阅读旅程已完成";
+      return "分析完成";
     case "cancelled":
       return "任务已取消";
     default:
@@ -97,19 +107,53 @@ export function stageLabelForRun(run: Run | null | undefined): string {
   if (!run) return "—";
   const stage = run.current_stage || run.failed_stage || "";
   if (stage === "scene_analysis" || stage === "scene_analysis_budget") {
-    return "Scene Analysis";
+    return "正在分析场景";
   }
   if (stage === "boundary_review" || stage === "boundary_review_generation") {
-    return "场景边界";
+    return "确认场景边界";
+  }
+  if (stage === "boundary_generation") {
+    return "识别场景边界";
   }
   if (stage === "reader_journey" || String(stage).startsWith("reader_journey")) {
-    return "Reader Journey";
+    return "正在生成阅读旅程";
   }
-  if (stage === "completed") return "已完成";
-  if (run.status === "awaiting_boundary_review") return "等待边界审阅";
-  if (run.status === "scene_analysis_running") return "Scene Analysis";
-  if (run.status === "boundary_confirmed_budget_blocked") return "Scene Analysis";
+  if (stage === "completed") return "完成";
+  if (run.status === "awaiting_boundary_review") return "确认场景边界";
+  if (run.status === "scene_analysis_running") return "正在分析场景";
+  if (run.status === "boundary_confirmed_budget_blocked") return "正在分析场景";
   return stage || "进行中";
+}
+
+export function currentWorkLabel(
+  ui: ChapterAnalysisUiState,
+  run?: Run | null,
+): string | null {
+  switch (ui) {
+    case "idle":
+    case "preflight_loading":
+    case "awaiting_consent":
+    case "creating":
+      return uiStateLabel(ui);
+    case "running":
+    case "boundary_review_required":
+    case "reader_journey_processing":
+    case "awaiting_reader_journey_start":
+      return stageLabelForRun(run);
+    case "provider_recovery":
+    case "partial":
+    case "aborted_by_limit":
+    case "awaiting_budget_adjustment":
+      return "分析已暂停";
+    case "failed":
+      return "分析未完成";
+    case "succeeded":
+      return "分析完成";
+    case "cancelled":
+      return "任务已取消";
+    default:
+      return null;
+  }
 }
 
 export function readerJourneyStageLabel(
@@ -147,74 +191,73 @@ export function progressCounts(run: Run | null | undefined): {
 export type StageStep = {
   id: string;
   label: string;
-  tone: "done" | "active" | "pending";
+  tone: "done" | "active" | "pending" | "failed";
 };
 
-export function stageSteps(ui: ChapterAnalysisUiState, run?: Run | null): StageStep[] {
-  const prepare: StageStep = {
-    id: "prepare",
-    label: "准备章节",
-    tone: ui === "idle" || ui === "creating" ? "active" : "done",
-  };
+function stageToPhase(stage: string): number {
+  if (!stage) return -1;
+  if (stage === "preparing") return 0;
+  if (stage === "boundary_generation" || stage === "boundary_review_generation") return 1;
+  if (stage === "boundary_review") return 2;
+  if (stage.startsWith("scene_analysis")) return 3;
+  if (stage.startsWith("reader_journey")) return 4;
+  if (stage === "completed") return 5;
+  if (stage.startsWith("boundary")) return 1;
+  return -1;
+}
 
-  let analyzeTone: StageStep["tone"] = "pending";
+function activePhaseForUi(ui: ChapterAnalysisUiState, run?: Run | null): number {
+  if (ui === "idle" || ui === "preflight_loading" || ui === "awaiting_consent" || ui === "creating") {
+    return 0;
+  }
+  if (ui === "boundary_review_required") return 2;
+  if (ui === "reader_journey_processing" || ui === "awaiting_reader_journey_start") return 4;
+  if (ui === "succeeded") return 5;
+
+  const stage = run?.current_stage || run?.failed_stage || "";
+  const mapped = stageToPhase(stage);
+  if (mapped >= 0) return mapped;
+
   if (
     ui === "running" ||
-    ui === "boundary_review_required" ||
-    ui === "provider_recovery" ||
     ui === "partial" ||
+    ui === "provider_recovery" ||
+    ui === "awaiting_budget_adjustment" ||
     ui === "aborted_by_limit" ||
-    ui === "awaiting_budget_adjustment"
+    ui === "failed"
   ) {
-    analyzeTone = "active";
-  } else if (
-    ui === "succeeded" ||
-    ui === "awaiting_reader_journey_start" ||
-    ui === "reader_journey_processing"
-  ) {
-    analyzeTone = "done";
-  } else if (ui === "failed" || ui === "cancelled") {
-    analyzeTone = run && (run.completed_scene_count ?? 0) > 0 ? "active" : "pending";
+    return 3;
   }
+  return 0;
+}
 
-  const analyze: StageStep = {
-    id: "analyze",
-    label:
-      ui === "boundary_review_required"
-        ? "等待边界审阅"
-        : ui === "provider_recovery"
-          ? "等待模型服务恢复"
-          : ui === "awaiting_budget_adjustment"
-            ? "已暂停 · 等待调整额度"
-            : ui === "aborted_by_limit"
-              ? "已因限额暂停"
-              : "场景识别与分析",
-    tone: analyzeTone,
-  };
+function failedPhaseForUi(ui: ChapterAnalysisUiState, run?: Run | null): number | null {
+  if (ui !== "failed" && ui !== "cancelled") return null;
+  const stage = run?.failed_stage || run?.current_stage || "";
+  const mapped = stageToPhase(stage);
+  return mapped >= 0 ? mapped : null;
+}
 
-  let journeyTone: StageStep["tone"] = "pending";
-  if (ui === "reader_journey_processing") journeyTone = "active";
-  else if (ui === "succeeded") journeyTone = "done";
-  else if (ui === "awaiting_reader_journey_start") journeyTone = "active";
+export function stageSteps(ui: ChapterAnalysisUiState, run?: Run | null): StageStep[] {
+  const activePhase = activePhaseForUi(ui, run);
+  const failedPhase = failedPhaseForUi(ui, run);
 
-  const journey: StageStep = {
-    id: "reader_journey",
-    label:
-      ui === "awaiting_reader_journey_start"
-        ? "等待生成阅读旅程"
-        : ui === "reader_journey_processing"
-          ? "正在生成阅读旅程"
-          : "阅读旅程",
-    tone: journeyTone,
-  };
+  return STAGE_STEP_DEFS.map((step, index) => {
+    let tone: StageStep["tone"] = "pending";
+    if (failedPhase != null) {
+      if (index < failedPhase) tone = "done";
+      else if (index === failedPhase) tone = "failed";
+      else tone = "pending";
+    } else if (ui === "succeeded") {
+      tone = "done";
+    } else if (index < activePhase) {
+      tone = "done";
+    } else if (index === activePhase) {
+      tone = "active";
+    }
 
-  const results: StageStep = {
-    id: "results",
-    label: "查看分析结果",
-    tone: ui === "succeeded" ? "done" : "pending",
-  };
-
-  return [prepare, analyze, journey, results];
+    return { id: step.id, label: step.label, tone };
+  });
 }
 
 export function userFacingFailureHint(run: Run): string {
@@ -258,11 +301,21 @@ export function userFacingFailureHint(run: Run): string {
   return "分析未完成，可查看技术详情或尝试恢复。";
 }
 
+const MAX_ELAPSED_MS = 48 * 60 * 60 * 1000;
+
 export function elapsedLabel(run: Run): string | null {
   const start = run.started_at || run.created_at;
   if (!start) return null;
+  const startMs = new Date(start).getTime();
+  if (!Number.isFinite(startMs)) return null;
+
   const end = run.completed_at ? new Date(run.completed_at).getTime() : Date.now();
-  const ms = Math.max(0, end - new Date(start).getTime());
+  if (!Number.isFinite(end)) return null;
+  if (end < startMs) return null;
+
+  const ms = end - startMs;
+  if (ms > MAX_ELAPSED_MS) return null;
+
   const sec = Math.floor(ms / 1000);
   if (sec < 60) return `${sec} 秒`;
   const min = Math.floor(sec / 60);
@@ -276,9 +329,9 @@ export function budgetSummary(run: Run): string | null {
   const cost = run.budget_required?.estimated_cost;
   const remaining = run.budget_remaining?.estimated_cost;
   if (typeof cost === "number" && typeof remaining === "number") {
-    return `预估约 ${cost} CNY · 剩余约 ${remaining} CNY`;
+    return `${formatCny(cost, "预估费用未知")} · 剩余${formatCny(remaining, "剩余预算未知")}`;
   }
-  if (typeof cost === "number") return `预估约 ${cost} CNY`;
-  if (typeof remaining === "number") return `剩余预算约 ${remaining} CNY`;
+  if (typeof cost === "number") return formatCny(cost, "预估费用未知");
+  if (typeof remaining === "number") return `剩余${formatCny(remaining, "剩余预算未知")}`;
   return null;
 }

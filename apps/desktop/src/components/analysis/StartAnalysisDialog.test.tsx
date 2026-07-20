@@ -100,8 +100,8 @@ const renderDialog = (onClose = vi.fn(), onCreated = vi.fn()) =>
   );
 
 async function openCloudPlusWithConsent() {
-  fireEvent.change(screen.getByLabelText("执行模式"), { target: { value: "cloud" } });
-  await screen.findByRole("option", { name: /aliyun_qwen_plus/ });
+  fireEvent.change(screen.getByLabelText("执行方式"), { target: { value: "cloud" } });
+  await screen.findByRole("option", { name: /阿里云百炼/ });
   fireEvent.change(screen.getByLabelText("Provider"), { target: { value: "aliyun_qwen_plus" } });
   fireEvent.click(screen.getByRole("checkbox"));
 }
@@ -146,20 +146,21 @@ afterEach(cleanup);
 describe("开始分析人工审阅入口", () => {
   it("本地模式不显示云端Provider", async () => {
     renderDialog();
-    expect(await screen.findByRole("option", { name: /local_qwen14/ })).toBeInTheDocument();
-    expect(screen.queryByRole("option", { name: /aliyun_qwen_plus/ })).not.toBeInTheDocument();
+    expect(await screen.findByRole("option", { name: /本地模型/ })).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: /阿里云百炼/ })).not.toBeInTheDocument();
   });
   it("云端模式显示非默认且关闭自动路由的Plus", async () => {
     renderDialog();
-    fireEvent.change(screen.getByLabelText("执行模式"), { target: { value: "cloud" } });
-    expect(await screen.findByRole("option", { name: /aliyun_qwen_plus.*需要人工确认/ })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("执行方式"), { target: { value: "cloud" } });
+    expect(await screen.findByRole("option", { name: /阿里云百炼.*需人工确认/ })).toBeInTheDocument();
   });
   it("选择Plus显示人工确认说明和三个后端Prompt版本", async () => {
     renderDialog();
-    fireEvent.change(screen.getByLabelText("执行模式"), { target: { value: "cloud" } });
-    const option = await screen.findByRole("option", { name: /aliyun_qwen_plus/ });
+    fireEvent.change(screen.getByLabelText("执行方式"), { target: { value: "cloud" } });
+    const option = await screen.findByRole("option", { name: /阿里云百炼/ });
     fireEvent.change(screen.getByLabelText("Provider"), { target: { value: (option as HTMLOptionElement).value } });
     expect(screen.getByText(/只生成场景边界候选/)).toBeInTheDocument();
+    fireEvent.click(screen.getByText("技术详情"));
     expect(screen.getByText(/v3.5/)).toBeInTheDocument();
     expect(screen.getByText(/v1$/)).toBeInTheDocument();
     expect(screen.getByText(/v3.1/)).toBeInTheDocument();
@@ -178,8 +179,8 @@ describe("开始分析人工审阅入口", () => {
     renderDialog();
     await openCloudPlusWithConsent();
     const preview = await screen.findByTestId("stage1-budget-preview");
-    expect(preview).toHaveTextContent("本阶段仅生成场景边界候选");
-    expect(preview).toHaveTextContent("不会执行Scene Analysis");
+    expect(preview).toHaveTextContent("本阶段仅识别场景边界");
+    expect(preview).toHaveTextContent("不会执行 Scene Analysis");
     expect(preview).toHaveTextContent("最坏请求");
     expect(preview).toHaveTextContent("6");
     expect(screen.getByTestId("stage1-budget-grid").querySelectorAll(".budget-summary-card").length).toBeGreaterThanOrEqual(13);
@@ -210,8 +211,8 @@ describe("开始分析人工审阅入口", () => {
   it("无资格时显示具体blocker", async () => {
     vi.mocked(providersApi.list).mockResolvedValue([{ ...plus, manual_boundary_candidate_eligible: false, manual_selection_blockers: ["budget_unavailable"] }] as any);
     renderDialog();
-    fireEvent.change(screen.getByLabelText("执行模式"), { target: { value: "cloud" } });
-    fireEvent.click(screen.getByText("Provider诊断"));
+    fireEvent.change(screen.getByLabelText("执行方式"), { target: { value: "cloud" } });
+    fireEvent.click(screen.getByText("技术详情"));
     expect(await screen.findByText("budget_unavailable")).toBeInTheDocument();
   });
   it("资格字段缺失时显示版本不一致而不是无阻塞", async () => {
@@ -219,17 +220,17 @@ describe("开始分析人工审阅入口", () => {
     delete missing.manual_boundary_candidate_eligible;
     vi.mocked(providersApi.list).mockResolvedValue([missing]);
     renderDialog();
-    fireEvent.change(screen.getByLabelText("执行模式"), { target: { value: "cloud" } });
-    fireEvent.click(screen.getByText("Provider诊断"));
+    fireEvent.change(screen.getByLabelText("执行方式"), { target: { value: "cloud" } });
+    fireEvent.click(screen.getByText("技术详情"));
     expect(await screen.findByText(/Provider资格信息缺失/)).toBeInTheDocument();
     expect(screen.queryByText(/无手动资格阻塞/)).not.toBeInTheDocument();
   });
   it("Provider API离线显示明确诊断", async () => {
     vi.mocked(providersApi.list).mockRejectedValue(new Error("FastAPI离线"));
     renderDialog();
-    fireEvent.change(screen.getByLabelText("执行模式"), { target: { value: "cloud" } });
-    fireEvent.click(screen.getByText("Provider诊断"));
-    expect(await screen.findByText(/Provider状态接口离线/)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("执行方式"), { target: { value: "cloud" } });
+    fireEvent.click(screen.getByText("技术详情"));
+    expect(await screen.findByText(/Provider 状态接口离线/)).toBeInTheDocument();
   });
 });
 
@@ -260,7 +261,7 @@ describe("StartAnalysisDialog 布局与交互", () => {
     renderDialog();
     await openCloudPlusWithConsent();
     await screen.findByTestId("stage1-budget-preview");
-    fireEvent.click(screen.getByText("Provider诊断"));
+    fireEvent.click(screen.getByText("技术详情"));
     expect(await screen.findByText(/手动边界资格/)).toBeInTheDocument();
     const body = screen.getByTestId("start-analysis-modal-body");
     expect(body).toBeInTheDocument();
@@ -321,7 +322,7 @@ describe("StartAnalysisDialog 布局与交互", () => {
     const dialog = await screen.findByRole("dialog");
     const submit = await waitFor(() => {
       const button = screen.getByTestId("start-analysis-submit");
-      expect(button).toHaveTextContent("创建任务");
+      expect(button).toHaveTextContent("创建分析任务");
       expect(button).not.toBeDisabled();
       return button;
     });

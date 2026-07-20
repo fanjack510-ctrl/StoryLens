@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { ChapterAnalysisFailureCard } from "./ChapterAnalysisFailureCard";
 import { ChapterAnalysisProgressPanel } from "./ChapterAnalysisProgressPanel";
 import type { Run } from "../../types";
 
@@ -88,6 +89,7 @@ function run(partial: Partial<Run> = {}): Run {
     checkpoint_available: false,
     completed_scene_count: 5,
     total_scene_count: 14,
+    current_stage: "scene_analysis",
     ...partial,
   };
 }
@@ -105,9 +107,11 @@ describe("ChapterAnalysisProgressPanel", () => {
     );
     expect(screen.getByTestId("chapter-analysis-progress")).toBeInTheDocument();
     expect(screen.getByTestId("chapter-analysis-status-badge")).toHaveTextContent("正在分析本章");
+    expect(screen.getByTestId("chapter-analysis-current-work")).toHaveTextContent("正在分析场景");
     expect(screen.getByTestId("chapter-analysis-run-id")).toHaveTextContent("#55");
     expect(screen.getByTestId("chapter-analysis-count")).toHaveTextContent("5 / 14");
     expect(screen.queryByText(/invocation/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Scene Analysis/i)).not.toBeInTheDocument();
   });
 
   it("shows boundary review entry", () => {
@@ -121,6 +125,14 @@ describe("ChapterAnalysisProgressPanel", () => {
     );
     fireEvent.click(screen.getByTestId("chapter-analysis-review-boundary"));
     expect(onReview).toHaveBeenCalled();
+    expect(screen.getByTestId("chapter-analysis-stage-boundary_review")).toHaveAttribute(
+      "data-tone",
+      "active",
+    );
+    expect(screen.getByTestId("chapter-analysis-stage-analyze")).toHaveAttribute(
+      "data-tone",
+      "pending",
+    );
   });
 
   it("shows success CTA that opens embedded results when callback provided", () => {
@@ -133,9 +145,11 @@ describe("ChapterAnalysisProgressPanel", () => {
         />,
     );
     const cta = screen.getByTestId("chapter-analysis-open-results");
-    expect(cta).toHaveTextContent("查看正文与读者旅程");
+    expect(cta).toHaveTextContent("查看分析结果");
+    expect(screen.getByTestId("chapter-analysis-success")).toHaveTextContent("分析完成");
     fireEvent.click(cta);
     expect(onViewResults).toHaveBeenCalled();
+    expect(screen.queryByTestId("chapter-analysis-meter")).not.toBeInTheDocument();
   });
 
   it("shows unified recovery card when awaiting reader journey", async () => {
@@ -169,5 +183,27 @@ describe("ChapterAnalysisProgressPanel", () => {
     );
     expect(await screen.findByTestId("unified-recovery-card")).toBeInTheDocument();
     expect(screen.queryByTestId("chapter-analysis-failure")).not.toBeInTheDocument();
+  });
+
+  it("shows failure card with polished actions", () => {
+    const onLater = vi.fn();
+    render(
+      <ChapterAnalysisFailureCard
+        run={run({ status: "failed_structural" })}
+        canResume
+        onResume={vi.fn()}
+        onLater={onLater}
+        onReanalyze={vi.fn()}
+        completed={5}
+        total={14}
+      />,
+    );
+    expect(screen.getByTestId("chapter-analysis-failure-lead")).toHaveTextContent(
+      "StoryLens 在分析过程中遇到了问题",
+    );
+    expect(screen.getByTestId("chapter-analysis-resume")).toHaveTextContent("修复并继续");
+    expect(screen.getByTestId("chapter-analysis-reanalyze")).toHaveClass("ghost");
+    fireEvent.click(screen.getByTestId("chapter-analysis-failure-later"));
+    expect(onLater).toHaveBeenCalled();
   });
 });

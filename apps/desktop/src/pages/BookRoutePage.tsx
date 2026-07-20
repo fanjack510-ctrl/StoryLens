@@ -853,16 +853,12 @@ export function BookRoutePage() {
       )}
 
       {reviewOpen && chapterId ? (
-        <div className="shell-review-host" data-testid="shell-boundary-review">
-          <div className="shell-review-head">
-            <b>场景边界审阅</b>
-            <button type="button" onClick={() => setReviewOpen(false)}>
-              关闭
-            </button>
-          </div>
+        <div className="shell-review-focus" data-testid="shell-boundary-review">
           <BoundaryReviewPanel
             bookId={bookId}
             chapterId={chapterId}
+            chapterTitle={chapterTitle}
+            onExit={() => setReviewOpen(false)}
             onConfirmed={({ runId, budgetBlocked }) => {
               if (runId) bindAnalysisRun(runId);
               setReviewOpen(false);
@@ -877,7 +873,141 @@ export function BookRoutePage() {
             }}
           />
         </div>
-      ) : null}
+      ) : (
+        <div
+          className="book-shell-body"
+          data-has-progress={showProgressPanel ? "true" : "false"}
+          data-view={view}
+          data-testid="book-shell-body"
+        >
+          {view !== "result" && (
+            <div className="book-shell-workspace">
+              <BookWorkspacePage />
+            </div>
+          )}
+          {showProgressPanel && (
+            <ChapterAnalysisProgressPanel
+              run={progress.run}
+              uiState={
+                progress.isLoading && !progress.run
+                  ? "creating"
+                  : compositionUiState !== "idle"
+                    ? compositionUiState
+                    : progress.uiState === "idle" && analysisRunId
+                      ? "running"
+                      : progress.uiState
+              }
+              chapterTitle={chapterTitle}
+              reconnectHint={progress.reconnectHint}
+              canResume={progress.canResume}
+              onResume={progress.resume}
+              onReanalyze={() => setDialog(true)}
+              onReviewBoundary={() => setReviewOpen(true)}
+              onDismiss={() => setPanelCollapsed(true)}
+              onContinueReading={() => setView("reading")}
+              onViewResults={() => {
+                setResultTab("analysis");
+              }}
+              onContinueReaderJourney={() => setResultTab("journey")}
+              onBudgetContinued={() => void progress.refresh()}
+            />
+          )}
+          {view === "result" && analysisRunId ? (
+            <>
+              {isJourneyTab && journeyFailed ? (
+                <StateView
+                  kind="error"
+                  data-testid="journey-failed"
+                  title="阅读旅程生成失败"
+                  description="已完成的场景分析不会受到影响。"
+                  primaryAction={{
+                    label: "重新生成",
+                    testId: "journey-failed-retry",
+                    onClick: () => {
+                      void (async () => {
+                        try {
+                          if (journeyRunId) {
+                            await analysisApi.resumeReaderJourney(journeyRunId, {
+                              client_request_id: getOrCreateJourneyClientRequestId(analysisRunId),
+                              cloud_consent: true,
+                              confirmed: true,
+                            });
+                          } else if (progress.run) {
+                            await analysisRecoveryApi.recover(progress.run.id, {
+                              client_request_id: getOrCreateJourneyClientRequestId(analysisRunId),
+                              cloud_consent: true,
+                              confirmed: true,
+                              recovery_mode: "unified",
+                              resume: true,
+                            });
+                          }
+                        } finally {
+                          void qc.invalidateQueries({
+                            queryKey: ["reader-journey", analysisRunId],
+                          });
+                          void journey.refetch();
+                          void progress.refresh();
+                        }
+                      })();
+                    },
+                  }}
+                  secondaryAction={{
+                    label: "查看任务详情",
+                    testId: "journey-failed-task-details",
+                    onClick: () => navigate(`/tasks?run_id=${analysisRunId}`),
+                  }}
+                />
+              ) : null}
+              {isJourneyTab &&
+              compositionUiState === "awaiting_reader_journey_start" &&
+              !journeyFailed &&
+              progress.run ? (
+                <UnifiedAnalysisRecoveryCard
+                  run={progress.run}
+                  variant="card"
+                  onContinued={() => {
+                    void qc.invalidateQueries({ queryKey: ["reader-journey", analysisRunId] });
+                    void journey.refetch();
+                    void progress.refresh();
+                  }}
+                />
+              ) : null}
+              {isJourneyTab && compositionUiState === "reader_journey_processing" ? (
+                <ReaderJourneyProgressCard
+                  analysisRunId={analysisRunId}
+                  progress={journeyProgress.data}
+                  loading={journeyProgress.isLoading && !journeyProgress.data}
+                  errorMessage={
+                    journeyProgress.data?.user_error_message ||
+                    journeyProgress.data?.root_error_message ||
+                    null
+                  }
+                  onViewTaskDetails={() => navigate(`/tasks?run_id=${analysisRunId}`)}
+                />
+              ) : null}
+              {!(
+                isJourneyTab &&
+                (journeyFailed ||
+                  compositionUiState === "awaiting_reader_journey_start" ||
+                  compositionUiState === "reader_journey_processing")
+              ) ? (
+                <EmbeddedAnalysisResultShell
+                  runId={analysisRunId}
+                  onReading={() => setView("reading")}
+                />
+              ) : null}
+              {isJourneyTab &&
+              compositionUiState === "awaiting_reader_journey_start" &&
+              !journeyFailed &&
+              !progress.run ? (
+                <p className="notice" data-testid="reader-journey-resume-loading-run">
+                  正在加载分析任务…
+                </p>
+              ) : null}
+            </>
+          ) : null}
+        </div>
+      )}
 
       {catalogOpen && (
         <div
@@ -936,140 +1066,6 @@ export function BookRoutePage() {
           </div>
         </div>
       )}
-
-      <div
-        className="book-shell-body"
-        data-has-progress={showProgressPanel ? "true" : "false"}
-        data-view={view}
-        data-testid="book-shell-body"
-      >
-        {view !== "result" && (
-          <div className="book-shell-workspace">
-            <BookWorkspacePage />
-          </div>
-        )}
-        {showProgressPanel && (
-          <ChapterAnalysisProgressPanel
-            run={progress.run}
-            uiState={
-              progress.isLoading && !progress.run
-                ? "creating"
-                : compositionUiState !== "idle"
-                  ? compositionUiState
-                  : progress.uiState === "idle" && analysisRunId
-                    ? "running"
-                    : progress.uiState
-            }
-            chapterTitle={chapterTitle}
-            reconnectHint={progress.reconnectHint}
-            canResume={progress.canResume}
-            onResume={progress.resume}
-            onReanalyze={() => setDialog(true)}
-            onReviewBoundary={() => setReviewOpen(true)}
-            onDismiss={() => setPanelCollapsed(true)}
-            onContinueReading={() => setView("reading")}
-            onViewResults={() => {
-              setResultTab("analysis");
-            }}
-            onContinueReaderJourney={() => setResultTab("journey")}
-            onBudgetContinued={() => void progress.refresh()}
-          />
-        )}
-        {view === "result" && analysisRunId ? (
-          <>
-            {isJourneyTab && journeyFailed ? (
-              <StateView
-                kind="error"
-                data-testid="journey-failed"
-                title="阅读旅程生成失败"
-                description="已完成的场景分析不会受到影响。"
-                primaryAction={{
-                  label: "重新生成",
-                  testId: "journey-failed-retry",
-                  onClick: () => {
-                    void (async () => {
-                      try {
-                        if (journeyRunId) {
-                          await analysisApi.resumeReaderJourney(journeyRunId, {
-                            client_request_id: getOrCreateJourneyClientRequestId(analysisRunId),
-                            cloud_consent: true,
-                            confirmed: true,
-                          });
-                        } else if (progress.run) {
-                          await analysisRecoveryApi.recover(progress.run.id, {
-                            client_request_id: getOrCreateJourneyClientRequestId(analysisRunId),
-                            cloud_consent: true,
-                            confirmed: true,
-                            recovery_mode: "unified",
-                            resume: true,
-                          });
-                        }
-                      } finally {
-                        void qc.invalidateQueries({
-                          queryKey: ["reader-journey", analysisRunId],
-                        });
-                        void journey.refetch();
-                        void progress.refresh();
-                      }
-                    })();
-                  },
-                }}
-                secondaryAction={{
-                  label: "查看任务详情",
-                  testId: "journey-failed-task-details",
-                  onClick: () => navigate(`/tasks?run_id=${analysisRunId}`),
-                }}
-              />
-            ) : null}
-            {isJourneyTab &&
-            compositionUiState === "awaiting_reader_journey_start" &&
-            !journeyFailed &&
-            progress.run ? (
-              <UnifiedAnalysisRecoveryCard
-                run={progress.run}
-                variant="card"
-                onContinued={() => {
-                  void qc.invalidateQueries({ queryKey: ["reader-journey", analysisRunId] });
-                  void journey.refetch();
-                  void progress.refresh();
-                }}
-              />
-            ) : null}
-            {isJourneyTab && compositionUiState === "reader_journey_processing" ? (
-              <ReaderJourneyProgressCard
-                analysisRunId={analysisRunId}
-                progress={journeyProgress.data}
-                loading={journeyProgress.isLoading && !journeyProgress.data}
-                errorMessage={
-                  journeyProgress.data?.user_error_message ||
-                  journeyProgress.data?.root_error_message ||
-                  null
-                }
-                onViewTaskDetails={() => navigate(`/tasks?run_id=${analysisRunId}`)}
-              />
-            ) : null}
-            {!(
-              isJourneyTab &&
-              (journeyFailed ||
-                compositionUiState === "awaiting_reader_journey_start" ||
-                compositionUiState === "reader_journey_processing")
-            ) ? (
-              <EmbeddedAnalysisResultShell
-                runId={analysisRunId}
-                onReading={() => setView("reading")}
-              />
-            ) : null}
-            {isJourneyTab &&
-            compositionUiState === "awaiting_reader_journey_start" &&
-            !journeyFailed &&
-            !progress.run ? (
-              <p className="notice" data-testid="reader-journey-resume-loading-run">
-                正在加载分析任务…
-              </p>
-            ) : null}
-          </>
-        ) : null}
-      </div>
 
       {budgetModalOpen &&
       progress.run &&

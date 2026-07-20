@@ -67,6 +67,42 @@
   border-color: #f0d2a0;
 }
 
+.chapter-analysis-current-work {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.chapter-analysis-fold {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+.chapter-analysis-fold > summary {
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--text);
+  list-style: none;
+}
+
+.chapter-analysis-fold > summary::-webkit-details-marker {
+  display: none;
+}
+
+.chapter-analysis-fold[open] > summary {
+  border-bottom: 1px solid var(--line);
+}
+
+.chapter-analysis-fold .chapter-analysis-run-meta {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
 .chapter-analysis-run-meta {
   display: grid;
   gap: 6px;
@@ -158,6 +194,11 @@
 
 .chapter-analysis-stages li[data-tone="done"] {
   color: var(--text);
+}
+
+.chapter-analysis-stages li[data-tone="failed"] {
+  color: #b45309;
+  font-weight: 600;
 }
 
 .stage-mark {

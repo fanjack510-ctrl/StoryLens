@@ -2,6 +2,15 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { analysisApi } from "../../services/analysisApi";
 import { ApiError } from "../../services/apiClient";
+import {
+  formatBoundaryDecision,
+  formatConfidencePercent,
+  formatCny,
+  formatManualReasonType,
+  formatReviewPriority,
+  formatReviewStatus,
+  formatTokenCount,
+} from "./analysisDisplayLabels";
 import { Badge, Empty, ErrorState, Loading } from "../common/States";
 
 type ConfirmState =
@@ -48,13 +57,26 @@ function sortDecisions(decisions: any[]) {
   });
 }
 
+const MANUAL_REASON_VALUES = [
+  "location_change",
+  "time_jump",
+  "viewpoint_change",
+  "primary_goal_reset",
+  "explicit_scene_separator",
+  "other_manual_boundary",
+] as const;
+
 export function BoundaryReviewPanel({
   bookId,
   chapterId,
+  chapterTitle,
+  onExit,
   onConfirmed,
 }: {
   bookId: number;
   chapterId: number;
+  chapterTitle?: string;
+  onExit?: () => void;
   onConfirmed?: (result: {
     runId: number | null;
     revisionId: number;
@@ -105,6 +127,12 @@ export function BoundaryReviewPanel({
   });
   const review = query.data;
   const ordered = useMemo(() => sortDecisions(review?.decisions || []), [review]);
+  const activeIndex = useMemo(() => {
+    if (!activeKey) return 0;
+    const index = ordered.findIndex((item) => decisionKey(item) === activeKey);
+    return index >= 0 ? index : 0;
+  }, [activeKey, ordered]);
+  const activeItem = ordered[activeIndex] ?? null;
   const pendingItems = useMemo(
     () =>
       (review?.decisions || []).filter(
@@ -155,6 +183,14 @@ export function BoundaryReviewPanel({
       };
     });
   }, [review]);
+
+  useEffect(() => {
+    if (!review || activeKey || !ordered.length) return;
+    const first =
+      ordered.find((item) => item.model_candidate && item.user_decision === "pending") ||
+      ordered[0];
+    if (first) setActiveKey(decisionKey(first));
+  }, [review, ordered, activeKey]);
 
   useEffect(() => {
     if (!activeKey || !review) return;
@@ -387,28 +423,247 @@ export function BoundaryReviewPanel({
     }
   };
 
+  const renderCandidateCard = (item: any, cardIndex: number) => {
+    const key = decisionKey(item);
+    const index = positions.get(item.left_paragraph_id) as number;
+    const context = review.paragraphs.slice(
+      Math.max(0, index - 3),
+      Math.min(review.paragraphs.length, index + 5),
+    );
+    let enumSnapshot: any = {};
+    try {
+      enumSnapshot = JSON.parse(item.enum_snapshot_json || item.first_pass_json || "{}");
+    } catch {
+      enumSnapshot = {};
+    }
+    return (
+      <article
+        className={`review-candidate${activeKey === key ? " selected" : ""}`}
+        key={key}
+        data-decision-key={key}
+        data-testid={`decision-card-${item.transition_id}`}
+        ref={(node) => {
+          cardRefs.current[key] = node;
+        }}
+      >
+        <header className="review-candidate-head">
+          <h3 className="review-candidate-title">
+            候选边界 {String(cardIndex + 1).padStart(2, "0")}
+          </h3>
+          <div className="review-candidate-badges">
+            <Badge tone={item.review_priority === "high" ? "warning" : "neutral"}>
+              {formatReviewPriority(item.review_priority)}
+            </Badge>
+            <Badge tone="neutral">置信度 {formatConfidencePercent(item.model_confidence)}</Badge>
+          </div>
+          <span className="para-id">{item.left_paragraph_id}</span>
+          {item.model_reason_code ? (
+            <span className="review-reason-code">{item.model_reason_code}</span>
+          ) : (
+            <span className="review-reason-code">人工新增</span>
+          )}
+        </header>
+        {item.semantic_conflict && (
+          <div className="notice" data-testid="semantic-conflict">
+            <b>模型与规则发生冲突</b>
+            <p>
+              模型认为这里可能是场景边界，但其结构化分类显示行动链仍连续，需要人工判断。
+            </p>
+            <dl>
+              <dt>Transition ID</dt>
+              <dd>{item.transition_id}</dd>
+              <dt>模型候选</dt>
+              <dd>{item.model_boundary_candidate ? "true" : "false"}</dd>
+              <dt>goal_relation</dt>
+              <dd>{enumSnapshot.goal_relation || "-"}</dd>
+              <dt>action_chain_relation</dt>
+                <dd>{enumSnapshot.action_chain_relation || "-"}</dd>
+              <dt>trigger_type</dt>
+              <dd>{enumSnapshot.trigger_type || "-"}</dd>
+              <dt>deterministic_reason</dt>
+              <dd>{item.deterministic_reason || "null"}</dd>
+              <dt>deterministic_legal</dt>
+              <dd>
+                {item.deterministic_legal === false
+                  ? "false"
+                  : item.deterministic_legal === true
+                    ? "true"
+                    : "-"}
+              </dd>
+              <dt>conflict_code</dt>
+              <dd>{item.conflict_code}</dd>
+              <dt>review_priority</dt>
+              <dd>{item.review_priority}</dd>
+              <dt>来源批次</dt>
+              <dd>Batch {item.source_batch_index ?? "-"}</dd>
+            </dl>
+          </div>
+        )}
+        <div className="review-context">
+          {context.map((paragraph: any) => (
+            <div key={paragraph.id}>
+              {paragraph.id === item.right_paragraph_id && (
+                <div className="boundary-divider">建议在此拆分场景</div>
+              )}
+              <small className="para-id">{paragraph.id}</small>
+              <p>{paragraph.raw_text}</p>
+            </div>
+          ))}
+        </div>
+        <details>
+          <summary>模型结构化结果</summary>
+          <pre>{item.first_pass_json}</pre>
+          <pre>{item.adjudication_result}</pre>
+        </details>
+        <footer className="review-candidate-actions">
+          {item.model_candidate ? (
+            <>
+              <button
+                type="button"
+                className="primary"
+                onClick={() => {
+                  if (item.semantic_conflict) setConflictAccepting(item.transition_id);
+                  else void act(item, "accept");
+                }}
+              >
+                接受边界
+              </button>
+              <button type="button" className="secondary" onClick={() => void act(item, "reject")}>
+                拒绝边界
+              </button>
+              <button type="button" className="ghost" onClick={() => void act(item, "pending")}>
+                保持待处理
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={async () => {
+                await analysisApi.deleteManualBoundary(review.id, item.transition_id);
+                setMessage("已保存");
+                await refresh();
+              }}
+            >
+              删除新增边界
+            </button>
+          )}
+          <Badge>{formatBoundaryDecision(item.user_decision)}</Badge>
+        </footer>
+        {conflictAccepting === item.transition_id && (
+          <div className="panel" data-testid="conflict-accept-form">
+            <label>
+              人工原因类型
+              <select
+                aria-label="人工原因类型"
+                value={manualReasons[item.transition_id] || ""}
+                onChange={(event) =>
+                  setManualReasons((current) => ({
+                    ...current,
+                    [item.transition_id]: event.target.value,
+                  }))
+                }
+              >
+                <option value="">请选择</option>
+                {MANUAL_REASON_VALUES.map((value) => (
+                  <option key={value} value={value}>
+                    {formatManualReasonType(value)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              简短理由
+              <input
+                aria-label="冲突边界人工理由"
+                value={manualNotes[item.transition_id] || ""}
+                onChange={(event) =>
+                  setManualNotes((current) => ({
+                    ...current,
+                    [item.transition_id]: event.target.value,
+                  }))
+                }
+              />
+            </label>
+            <button
+              type="button"
+              className="primary"
+              disabled={!manualReasons[item.transition_id]}
+              onClick={() => {
+                void act(
+                  item,
+                  "accept",
+                  manualReasons[item.transition_id],
+                  manualNotes[item.transition_id],
+                );
+                setConflictAccepting(null);
+              }}
+            >
+              确认人工接受
+            </button>
+            <button type="button" onClick={() => setConflictAccepting(null)}>
+              取消
+            </button>
+          </div>
+        )}
+      </article>
+    );
+  };
+
   return (
     <div className="boundary-review">
       <header className="review-head">
-        <div>
-          <p className="eyebrow">辅助审阅模式</p>
+        <div className="review-head-main">
           <h2 ref={titleRef} tabIndex={-1}>
             场景边界审阅
           </h2>
+          {chapterTitle ? <p className="review-chapter-title">{chapterTitle}</p> : null}
         </div>
-        <Badge tone="warning">{review.status}</Badge>
-        <span>
-          {review.provider} / {review.model} · Prompt {review.prompt_version}
-        </span>
+        <Badge tone={isConfirmed ? "success" : "warning"}>
+          {formatReviewStatus(review.status)}
+        </Badge>
+        <div className="review-head-stats scene-preview-summary" data-testid="review-stats">
+          待处理 {pendingCount} · 已接受 {review.accepted_count} · 已拒绝 {review.rejected_count} ·
+          冲突 {conflictCount}
+        </div>
+        <details className="review-tech-details">
+          <summary>技术详情</summary>
+          <span>
+            {review.provider} / {review.model} · Prompt {review.prompt_version}
+          </span>
+        </details>
+        {onExit ? (
+          <button type="button" className="ghost review-exit" onClick={onExit}>
+            退出审阅
+          </button>
+        ) : null}
       </header>
-      <div className="scene-preview-summary" data-testid="review-stats">
-        待审 {pendingItems.length}｜已接受 {review.accepted_count}｜已拒绝 {review.rejected_count}
-        ｜人工新增 {review.manually_added_count}｜冲突 {conflictCount}
-      </div>
       {message && (
         <p className="notice" data-testid="review-message">
           {message}
         </p>
+      )}
+      {ordered.length > 0 && (
+        <nav className="review-candidate-nav" aria-label="候选边界导航">
+          <span className="review-candidate-nav-label">
+            候选边界 {activeIndex + 1}/{ordered.length}
+          </span>
+          <button
+            type="button"
+            className="secondary"
+            disabled={activeIndex <= 0}
+            onClick={() => selectDecision(ordered[activeIndex - 1])}
+          >
+            上一项
+          </button>
+          <button
+            type="button"
+            className="secondary"
+            disabled={activeIndex >= ordered.length - 1}
+            onClick={() => selectDecision(ordered[activeIndex + 1])}
+          >
+            下一项
+          </button>
+        </nav>
       )}
       <div className="boundary-timeline" aria-label="章节段落时间线">
         {gaps.map((gap) => {
@@ -430,7 +685,9 @@ export function BoundaryReviewPanel({
                   : gap.gap_after_paragraph_id
               }
               data-testid={
-                gap.transition_id ? `timeline-${gap.transition_id}` : `timeline-gap-${gap.paragraph_index + 1}`
+                gap.transition_id
+                  ? `timeline-${gap.transition_id}`
+                  : `timeline-gap-${gap.paragraph_index + 1}`
               }
               data-transition-id={gap.transition_id || undefined}
               data-source={gap.source}
@@ -441,259 +698,142 @@ export function BoundaryReviewPanel({
           );
         })}
       </div>
-      {stage2?.preview && (
-        <div className="scene-preview-summary" data-testid="scene-preview-live">
-          Scene预览：{stage2.preview.scenes.length}个，覆盖率
-          {(stage2.preview.coverage_rate * 100).toFixed(0)}%
-        </div>
-      )}
-      {stage2?.estimate && (
-        <div className="budget-preview" data-testid="stage2-budget-preview">
-          <h3>Scene Analysis 预算预览</h3>
-          <ul>
-            <li>Scene数量：{stage2.preview?.scenes?.length ?? stage2.estimate.scene_count}</li>
-            <li>预计请求：{stage2.estimate.expected_request_count}</li>
-            <li>最坏请求：{stage2.estimate.worst_case_request_count}</li>
-            <li>预计Token：{stage2.estimate.estimated_total_tokens}</li>
-            <li>最坏Token：{stage2.estimate.worst_case_total_tokens}</li>
-            <li>预计费用：{stage2.estimate.estimated_cost}</li>
-            <li>最坏费用：{stage2.estimate.worst_case_cost}</li>
-            <li>当前剩余请求：{stage2.estimate.remaining?.requests}</li>
-            <li>当前剩余Token：{stage2.estimate.remaining?.tokens}</li>
-            <li>当前剩余费用：{stage2.estimate.remaining?.estimated_cost}</li>
-          </ul>
-          {!stage2.estimate.within_budget && (
-            <p>Stage 2预算不足时仍可确认边界；Scene Analysis 将进入可恢复阻塞状态。</p>
-          )}
-        </div>
-      )}
-      {ordered.map((item: any) => {
-        const key = decisionKey(item);
-        const index = positions.get(item.left_paragraph_id) as number;
-        const context = review.paragraphs.slice(
-          Math.max(0, index - 3),
-          Math.min(review.paragraphs.length, index + 5),
-        );
-        let enumSnapshot: any = {};
-        try {
-          enumSnapshot = JSON.parse(item.enum_snapshot_json || item.first_pass_json || "{}");
-        } catch {
-          enumSnapshot = {};
-        }
-        return (
-          <article
-            className={`review-candidate${activeKey === key ? " selected" : ""}`}
-            key={key}
-            data-decision-key={key}
-            data-testid={`decision-card-${item.transition_id}`}
-            ref={(node) => {
-              cardRefs.current[key] = node;
-            }}
-          >
-            <header>
-              <Badge tone={item.review_priority === "high" ? "warning" : "neutral"}>
-                {item.review_priority}
-              </Badge>
-              <b>{item.transition_id}</b>
-              <span>{item.model_reason_code || "人工新增"}</span>
-              <span>置信度 {((item.model_confidence || 0) * 100).toFixed(0)}%</span>
-            </header>
-            {item.semantic_conflict && (
-              <div className="notice" data-testid="semantic-conflict">
-                <b>模型与规则发生冲突</b>
-                <p>
-                  模型认为这里可能是场景边界，但其结构化分类显示行动链仍连续，需要人工判断。
-                </p>
-                <dl>
-                  <dt>Transition ID</dt>
-                  <dd>{item.transition_id}</dd>
-                  <dt>模型候选</dt>
-                  <dd>{item.model_boundary_candidate ? "true" : "false"}</dd>
-                  <dt>goal_relation</dt>
-                  <dd>{enumSnapshot.goal_relation || "-"}</dd>
-                  <dt>action_chain_relation</dt>
-                  <dd>{enumSnapshot.action_chain_relation || "-"}</dd>
-                  <dt>trigger_type</dt>
-                  <dd>{enumSnapshot.trigger_type || "-"}</dd>
-                  <dt>deterministic_reason</dt>
-                  <dd>{item.deterministic_reason || "null"}</dd>
-                  <dt>deterministic_legal</dt>
-                  <dd>
-                    {item.deterministic_legal === false
-                      ? "false"
-                      : item.deterministic_legal === true
-                        ? "true"
-                        : "-"}
-                  </dd>
-                  <dt>conflict_code</dt>
-                  <dd>{item.conflict_code}</dd>
-                  <dt>review_priority</dt>
-                  <dd>{item.review_priority}</dd>
-                  <dt>来源批次</dt>
-                  <dd>Batch {item.source_batch_index ?? "-"}</dd>
-                </dl>
-              </div>
+      <div className="review-body">
+        {stage2?.preview && (
+          <div className="scene-preview-summary" data-testid="scene-preview-live">
+            场景预览：{stage2.preview.scenes.length}个，覆盖率
+            {(stage2.preview.coverage_rate * 100).toFixed(0)}%
+          </div>
+        )}
+        {stage2?.estimate && (
+          <div className="budget-preview" data-testid="stage2-budget-preview">
+            <h3>Scene Analysis 预算预览</h3>
+            <ul>
+              <li>Scene数量：{stage2.preview?.scenes?.length ?? stage2.estimate.scene_count}</li>
+              <li>预计请求：{stage2.estimate.expected_request_count}</li>
+              <li>最坏请求：{stage2.estimate.worst_case_request_count}</li>
+              <li>
+                预计Token：
+                {formatTokenCount(stage2.estimate.estimated_total_tokens)}
+              </li>
+              <li>
+                最坏Token：
+                {formatTokenCount(stage2.estimate.worst_case_total_tokens)}
+              </li>
+              <li>预计费用：{formatCny(stage2.estimate.estimated_cost)}</li>
+              <li>最坏费用：{formatCny(stage2.estimate.worst_case_cost)}</li>
+              <li>当前剩余请求：{stage2.estimate.remaining?.requests}</li>
+              <li>
+                当前剩余Token：
+                {formatTokenCount(stage2.estimate.remaining?.tokens)}
+              </li>
+              <li>当前剩余费用：{formatCny(stage2.estimate.remaining?.estimated_cost)}</li>
+            </ul>
+            {!stage2.estimate.within_budget && (
+              <p>Stage 2预算不足时仍可确认边界；Scene Analysis 将进入可恢复阻塞状态。</p>
             )}
-            <div className="review-context">
-              {context.map((paragraph: any) => (
-                <div key={paragraph.id}>
-                  {paragraph.id === item.right_paragraph_id && (
-                    <div className="boundary-divider">候选场景边界</div>
-                  )}
-                  <small>{paragraph.id}</small>
-                  <p>{paragraph.raw_text}</p>
-                </div>
-              ))}
-            </div>
-            <details>
-              <summary>模型结构化结果</summary>
-              <pre>{item.first_pass_json}</pre>
-              <pre>{item.adjudication_result}</pre>
-            </details>
-            <footer>
-              {item.model_candidate ? (
-                <>
-                  <button
-                    className="primary"
-                    onClick={() => {
-                      if (item.semantic_conflict) setConflictAccepting(item.transition_id);
-                      else void act(item, "accept");
-                    }}
-                  >
-                    接受边界
-                  </button>
-                  <button onClick={() => void act(item, "reject")}>拒绝边界</button>
-                  <button onClick={() => void act(item, "pending")}>保持待审</button>
-                </>
-              ) : (
-                <button
-                  onClick={async () => {
-                    await analysisApi.deleteManualBoundary(review.id, item.transition_id);
-                    setMessage("已保存");
-                    await refresh();
-                  }}
-                >
-                  删除新增边界
-                </button>
-              )}
-              <Badge>{item.user_decision}</Badge>
-            </footer>
-            {conflictAccepting === item.transition_id && (
-              <div className="panel" data-testid="conflict-accept-form">
-                <label>
-                  人工原因类型
-                  <select
-                    aria-label="人工原因类型"
-                    value={manualReasons[item.transition_id] || ""}
-                    onChange={(event) =>
-                      setManualReasons((current) => ({
-                        ...current,
-                        [item.transition_id]: event.target.value,
-                      }))
-                    }
-                  >
-                    <option value="">请选择</option>
-                    <option value="location_change">location_change</option>
-                    <option value="time_jump">time_jump</option>
-                    <option value="viewpoint_change">viewpoint_change</option>
-                    <option value="primary_goal_reset">primary_goal_reset</option>
-                    <option value="explicit_scene_separator">explicit_scene_separator</option>
-                    <option value="other_manual_boundary">other_manual_boundary</option>
-                  </select>
-                </label>
-                <label>
-                  简短理由
-                  <input
-                    aria-label="冲突边界人工理由"
-                    value={manualNotes[item.transition_id] || ""}
-                    onChange={(event) =>
-                      setManualNotes((current) => ({
-                        ...current,
-                        [item.transition_id]: event.target.value,
-                      }))
-                    }
-                  />
-                </label>
-                <button
-                  className="primary"
-                  disabled={!manualReasons[item.transition_id]}
-                  onClick={() => {
-                    void act(
-                      item,
-                      "accept",
-                      manualReasons[item.transition_id],
-                      manualNotes[item.transition_id],
-                    );
-                    setConflictAccepting(null);
-                  }}
-                >
-                  确认人工接受
-                </button>
-                <button onClick={() => setConflictAccepting(null)}>取消</button>
-              </div>
-            )}
-          </article>
-        );
-      })}
+          </div>
+        )}
+        {activeItem ? renderCandidateCard(activeItem, activeIndex) : null}
+      </div>
       <footer className="review-actions">
-        <button
-          onClick={async () => {
-            const last = history.at(-1);
-            if (!last) return;
-            setHistory((current) => current.slice(0, -1));
-            decide.mutate({ id: last.id, value: last.previous });
-          }}
-          disabled={!history.length}
-        >
-          撤销上一步
-        </button>
-        <button onClick={() => setMessage("草稿已保存")}>保存草稿</button>
-        <button
-          onClick={async () => {
-            try {
-              const { preview } = await loadStage2();
-              setMessage(`Scene预览：${preview.scenes.length}个，覆盖率${preview.coverage_rate * 100}%`);
-            } catch (error) {
-              setMessage((error as Error).message);
-            }
-          }}
-        >
-          Scene预览
-        </button>
-        {!isConfirmed && (
+        <div className="review-actions-left">
           <button
             type="button"
-            data-testid="accept-all-non-conflicts"
-            disabled={batchAcceptBusy || pendingNonConflictItems.length === 0}
-            onClick={() => setBatchAcceptConfirmOpen(true)}
+            onClick={async () => {
+              const last = history.at(-1);
+              if (!last) return;
+              setHistory((current) => current.slice(0, -1));
+              decide.mutate({ id: last.id, value: last.previous });
+            }}
+            disabled={!history.length}
           >
-            接受全部非冲突项
+            撤销上一步
           </button>
-        )}
-        {pendingCount > 0 && !isConfirmed && (
-          <>
+          <button type="button" onClick={() => setMessage("草稿已保存")}>
+            保存草稿
+          </button>
+          <button
+            type="button"
+            onClick={async () => {
+              try {
+                const { preview } = await loadStage2();
+                setMessage(
+                  `场景预览：${preview.scenes.length}个，覆盖率${preview.coverage_rate * 100}%`,
+                );
+              } catch (error) {
+                setMessage((error as Error).message);
+              }
+            }}
+          >
+            场景预览
+          </button>
+          {!isConfirmed && (
+            <button
+              type="button"
+              className="ghost review-batch-accept"
+              data-testid="accept-all-non-conflicts"
+              disabled={batchAcceptBusy || pendingNonConflictItems.length === 0}
+              onClick={() => setBatchAcceptConfirmOpen(true)}
+            >
+              接受全部非冲突项
+            </button>
+          )}
+        </div>
+        <div className="review-actions-center">
+          {pendingCount > 0 && !isConfirmed && (
             <span className="notice" data-testid="pending-remaining-hint">
               还有{pendingCount}项待处理
               {pendingConflictItems.length > 0
                 ? `（含${pendingConflictItems.length}个冲突项需人工处理）`
                 : ""}
             </span>
+          )}
+        </div>
+        <div className="review-actions-right">
+          {pendingCount > 0 && !isConfirmed && (
             <button
               type="button"
+              className="secondary"
               data-testid="locate-next-pending"
               onClick={() => focusNextPending()}
             >
               定位到下一项
             </button>
-          </>
-        )}
+          )}
+          {isConfirmed ? (
+            <div className="notice" data-testid="boundary-review-confirmed-status">
+              <p>边界审阅已确认。决策不可再编辑。</p>
+              {stage2?.revision_id && <p>BoundaryRevision #{stage2.revision_id}</p>}
+              {stage2?.scene_count != null && <p>正式Scene：{stage2.scene_count}个</p>}
+              <p data-testid="scene-analysis-followup-hint">{runStatusHint(review)}</p>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="primary"
+              data-testid="confirm-all-boundaries"
+              disabled={!canCompleteReview}
+              aria-busy={confirmBusy}
+              title={
+                pendingCount > 0
+                  ? `还有${pendingCount}项待处理，处理完毕后可完成审阅`
+                  : "完成审阅并进入 Scene Analysis"
+              }
+              onClick={() => void runConfirm()}
+            >
+              {confirmState === "confirming" ? "正在确认……" : "完成审阅"}
+            </button>
+          )}
+        </div>
         {batchAcceptConfirmOpen && !isConfirmed && (
-          <div className="panel" data-testid="batch-accept-confirm">
+          <div className="panel review-batch-confirm" data-testid="batch-accept-confirm">
             <p>
               将接受 {pendingNonConflictItems.length} 个非冲突待审项；排除{" "}
               {pendingConflictItems.length} 个冲突项（冲突项必须人工处理，不会被批量接受）。
             </p>
             <button
+              type="button"
               className="primary"
               data-testid="batch-accept-confirm-yes"
               disabled={batchAcceptBusy || pendingNonConflictItems.length === 0}
@@ -710,31 +850,6 @@ export function BoundaryReviewPanel({
               取消
             </button>
           </div>
-        )}
-        {isConfirmed ? (
-          <div className="notice" data-testid="boundary-review-confirmed-status">
-            <p>边界审阅已确认。决策不可再编辑。</p>
-            {stage2?.revision_id && <p>BoundaryRevision #{stage2.revision_id}</p>}
-            {stage2?.scene_count != null && <p>正式Scene：{stage2.scene_count}个</p>}
-            <p data-testid="scene-analysis-followup-hint">
-              {runStatusHint(review)}
-            </p>
-          </div>
-        ) : (
-          <button
-            className="primary"
-            data-testid="confirm-all-boundaries"
-            disabled={!canCompleteReview}
-            aria-busy={confirmBusy}
-            title={
-              pendingCount > 0
-                ? `还有${pendingCount}项待处理，处理完毕后可完成审阅`
-                : "完成审阅并进入 Scene Analysis"
-            }
-            onClick={() => void runConfirm()}
-          >
-            {confirmState === "confirming" ? "正在确认……" : "完成审阅"}
-          </button>
         )}
       </footer>
     </div>

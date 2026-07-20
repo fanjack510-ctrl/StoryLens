@@ -127,11 +127,11 @@ afterEach(cleanup);
 describe("场景边界审阅", () => {
   it("显示候选上下文、分隔线和风险", async () => {
     renderPanel(); expect(await screen.findByText("场景边界审阅")).toBeInTheDocument();
-    expect(screen.getByText("候选场景边界")).toBeInTheDocument();
-    expect(screen.getByText("high")).toBeInTheDocument();
+    expect(screen.getByText("建议在此拆分场景")).toBeInTheDocument();
+    expect(screen.getByText("高置信度")).toBeInTheDocument();
     expect(screen.getByText("原创段落1")).toBeInTheDocument();
     expect(screen.getByText("原创段落8")).toBeInTheDocument();
-    expect(screen.getByTestId("review-stats")).toHaveTextContent("待审 1");
+    expect(screen.getByTestId("review-stats")).toHaveTextContent("待处理 1");
   });
 
   it("接受与拒绝只保存人工决定", async () => {
@@ -190,7 +190,7 @@ describe("场景边界审阅", () => {
     const complete = await screen.findByTestId("confirm-all-boundaries");
     expect(complete).toHaveTextContent("完成审阅");
     expect(complete).not.toBeDisabled();
-    fireEvent.click(await screen.findByText("Scene预览"));
+    fireEvent.click(await screen.findByText("场景预览"));
     expect(await screen.findByTestId("scene-preview-live")).toHaveTextContent("覆盖率100");
     fireEvent.click(complete);
     await waitFor(() => expect(analysisApi.confirmReview).toHaveBeenCalledWith(3, "desktop-user"));
@@ -315,7 +315,7 @@ describe("场景边界审阅", () => {
     });
 
     renderPanel();
-    expect(await screen.findByTestId("review-stats")).toHaveTextContent("待审 14");
+    expect(await screen.findByTestId("review-stats")).toHaveTextContent("待处理 14");
     expect(screen.getByTestId("review-stats")).toHaveTextContent("已接受 1");
     expect(screen.getByTestId("review-stats")).toHaveTextContent("冲突 3");
     expect(screen.getByTestId("confirm-all-boundaries")).toBeDisabled();
@@ -335,7 +335,7 @@ describe("场景边界审阅", () => {
     expect(calledIds).toContain("T0001");
 
     await waitFor(() =>
-      expect(screen.getByTestId("review-stats")).toHaveTextContent("待审 3"),
+      expect(screen.getByTestId("review-stats")).toHaveTextContent("待处理 3"),
     );
     expect(screen.getByTestId("review-stats")).toHaveTextContent("已接受 12");
     expect(screen.getByTestId("review-stats")).toHaveTextContent("冲突 3");
@@ -402,8 +402,9 @@ describe("场景边界审阅", () => {
     renderPanel();
     fireEvent.click(await screen.findByTestId("timeline-T0017"));
     expect(screen.getByTestId("decision-card-T0017")).toHaveClass("selected");
-    expect(screen.getByTestId("decision-card-M-P2")).toBeInTheDocument();
     fireEvent.click(screen.getByTestId("locate-next-pending"));
     expect(screen.getByTestId("decision-card-T0017")).toHaveClass("selected");
+    fireEvent.click(screen.getByText("下一项"));
+    expect(screen.getByTestId("decision-card-M-P2")).toBeInTheDocument();
   });
 });

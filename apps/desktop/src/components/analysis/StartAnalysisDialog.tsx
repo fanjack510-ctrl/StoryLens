@@ -23,6 +23,42 @@ import {
   type CreateBudgetBlocker,
 } from "../../services/budgetRecoveryMath";
 import { trackAnalysisStarted } from "../../services/telemetry/analysisRunTelemetry";
+import { formatCny, formatTokenCount } from "./analysisDisplayLabels";
+import {
+  ordinaryModeOptions,
+  readStoredAnalysisMode,
+  writeStoredAnalysisMode,
+  type AnalysisModePresetId,
+} from "../../services/analysisModePresets";
+import { serviceDisplayNameFor } from "../../services/aiServiceViewModel";
+
+const MODE_CARD_HINT: Record<"FAST" | "BALANCED" | "QUALITY", string> = {
+  FAST: "速度优先，适合初步拆解",
+  BALANCED: "推荐，兼顾成本和质量",
+  QUALITY: "适合关键章节和最终分析",
+};
+
+const EXECUTION_HINTS: Record<string, string> = {
+  local: "在本机运行模型，不发送正文到云端。",
+  cloud: "使用云端 AI 生成边界候选，需人工确认后继续。",
+  hybrid: "部分步骤本地执行，关键步骤使用云端 AI。",
+};
+
+function formatProviderOptionLabel(item: {
+  name: string;
+  default_model?: string;
+  requires_boundary_review?: boolean;
+}): string {
+  const base = item.name.startsWith("local_")
+    ? "本地模型"
+    : item.name.includes("qwen")
+      ? serviceDisplayNameFor(item.name, "阿里云百炼")
+      : item.name;
+  const parts = [base];
+  if (item.default_model) parts.push(item.default_model);
+  if (item.requires_boundary_review) parts.push("边界候选 · 需人工确认");
+  return parts.join(" · ");
+}
 
 function formatBudgetGaps(preflight: any): string {
   const dims: string[] = preflight?.exceeded_dimensions || [];
@@ -66,8 +102,8 @@ function Stage1BudgetSummary({ preflight, budgetBlocked }: { preflight: any; bud
   ];
   return (
     <div className="budget-preview" data-testid="stage1-budget-preview">
-      <h3>本阶段仅生成场景边界候选</h3>
-      <p>本阶段不会执行Scene Analysis。人工确认边界后，系统会根据最终Scene数量重新估算Scene Analysis预算。</p>
+      <h3>本阶段仅识别场景边界</h3>
+      <p>本阶段不会执行 Scene Analysis。人工确认边界后，系统会根据最终 Scene 数量重新估算 Scene Analysis 预算。</p>
       <dl className="budget-summary-grid" data-testid="stage1-budget-grid">
         {cards.map((card) => (
           <div key={card.label} className="budget-summary-card">
@@ -318,6 +354,22 @@ function FullPipelineBudgetAdvisory({
   );
 }
 
+function OrdinaryBudgetSummary({ preflight }: { preflight: any }) {
+  return (
+    <div className="ordinary-budget-summary" data-testid="start-analysis-budget-summary">
+      <h3>预计本次用量</h3>
+      <p data-testid="start-analysis-budget-estimate">
+        约 {preflight.expected_request_count} 次请求
+        {" · "}
+        {formatTokenCount(preflight.estimated_total_tokens)} Token
+        {" · "}
+        {formatCny(preflight.estimated_cost)}
+      </p>
+      <p className="hint">本阶段仅识别场景边界；确认边界后将重新估算后续分析用量。</p>
+    </div>
+  );
+}
+
 function HardBudgetBlockers({ blockers }: { blockers: CreateBudgetBlocker[] }) {
   const hard = blockers.filter((b) => b.dimension !== "requests");
   if (!hard.length) return null;
@@ -353,6 +405,9 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
   const [preflight, setPreflight] = useState<any>(null);
   const [fullAdvisory, setFullAdvisory] = useState<any>(null);
   const [budgetDetailOpen, setBudgetDetailOpen] = useState(false);
+  const [analysisModePreset, setAnalysisModePreset] = useState<AnalysisModePresetId>(() =>
+    readStoredAnalysisMode(),
+  );
   const [submitState, setSubmitState] = useState<"idle" | "checking" | "creating" | "created" | "failed">("idle");
   const clientRequestId = useRef(crypto.randomUUID());
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -406,18 +461,17 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
     const blockers = target?.manual_selection_blockers || [];
     if (!target || blockers.includes("credential_missing")) return "尚未配置 API Key";
     if (blockers.includes("cloud_master_switch_off") || cloud.data?.enabled === false) {
-      return "云端连接未开启";
+      return "云端分析尚未开启";
     }
-    if (blockers.includes("provider_disabled")) return "Provider 已停用";
-    if (blockers.includes("credential_missing")) return "凭据无效或缺失";
+    if (blockers.includes("provider_disabled")) return "AI 服务已停用";
     if (
       blockers.includes("credential_invalid") ||
       configuration.data?.credential_state === "invalid"
     ) {
-      return "凭据无效";
+      return "保存的凭据已失效";
     }
-    if (blockers.length) return "当前没有可用的 AI 服务";
-    return "当前没有可用的 AI 服务";
+    if (blockers.length) return "当前 AI 服务不支持此分析";
+    return "当前 AI 服务不支持此分析";
   }, [eligible.length, providers.data, cloud.data?.enabled, configuration.data?.credential_state]);
 
   const aiView = useMemo(
@@ -667,12 +721,52 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
   const showRequestQuotaPanel = Boolean(requestOnly && consent && preflight && !budgetBlocked);
 
   const submitLabel = providers.isFetching && (submitState === "idle" || submitState === "failed")
-    ? (developerMode ? "正在刷新Provider……" : "正在刷新服务状态……")
+    ? (developerMode ? "正在刷新 Provider……" : "正在刷新服务状态……")
     : submitState === "checking"
       ? "正在检查预算……"
       : submitState === "creating"
         ? "正在创建任务……"
-        : "创建任务";
+        : "创建分析任务";
+
+  const submitDisabledReason = useMemo(() => {
+    if (busy && (submitState === "checking" || submitState === "creating")) return null;
+    if (!developerMode && !aiView.canStartAnalysis) {
+      return unavailableReason || "AI 服务尚未连接";
+    }
+    if ((mode === "cloud" || mode === "hybrid") && !consent) {
+      return "请先确认正文发送说明";
+    }
+    if (!provider) {
+      return unavailableReason || (developerMode ? "请选择可用 Provider" : "AI 服务尚未连接");
+    }
+    if (budgetBlocked) return "本阶段预算不足";
+    if (tokenBlocked || costBlocked) return "费用或 Token 预算不足";
+    if (fullPipelineShortfall > 0 && !requestOnly) return "完整分析请求额度不足";
+    return null;
+  }, [
+    busy,
+    submitState,
+    developerMode,
+    aiView.canStartAnalysis,
+    unavailableReason,
+    mode,
+    consent,
+    provider,
+    budgetBlocked,
+    tokenBlocked,
+    costBlocked,
+    fullPipelineShortfall,
+    requestOnly,
+  ]);
+
+  const handleAnalysisModeSelect = (id: AnalysisModePresetId) => {
+    setAnalysisModePreset(id);
+    writeStoredAnalysisMode(id);
+  };
+
+  const analysisModeCards = developerMode
+    ? [...ordinaryModeOptions(), { id: "CUSTOM" as const, label: "自定义", shortLabel: "自定义", recommended: false }]
+    : ordinaryModeOptions();
 
   const submit = async (allowance?: {
     mode: "recommended_worst_case" | "estimated_usage";
@@ -803,76 +897,185 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
         </header>
 
         <div className="modal-body" data-testid="start-analysis-modal-body">
-          <label>分析范围<select aria-label="分析范围"><option>当前章节</option><option disabled>全书（后续开放）</option></select></label>
+          <section className="start-analysis-section">
+            <label className="start-analysis-field">
+              <span className="start-analysis-field-label">分析范围</span>
+              <select aria-label="分析范围">
+                <option>当前章节</option>
+                <option disabled>全书（后续开放）</option>
+              </select>
+            </label>
+            <p className="hint">当前仅支持分析单个章节；全书分析将在后续版本开放。</p>
+          </section>
 
-          {!developerMode && (
-            <div className="ai-service-summary" data-testid="start-analysis-ai-summary">
-              {aiView.canStartAnalysis && eligible.length > 0 ? (
-                <>
-                  <p data-testid="start-analysis-ai-connected">
-                    <b>{aiView.serviceDisplayName}</b>
-                    {" · "}
-                    {aiView.modelDisplayName}
-                  </p>
-                  <p className="ai-connected-label">已连接</p>
-                  <Link
-                    to="/settings?tab=ai&focus=api_key"
-                    data-testid="start-analysis-reconfigure-qwen"
-                    onClick={onClose}
+          <section className="start-analysis-section">
+            <span className="start-analysis-field-label">执行方式</span>
+            {developerMode ? (
+              <>
+                <label className="start-analysis-field">
+                  <select
+                    aria-label="执行方式"
+                    value={mode}
+                    onChange={(event) => {
+                      setMode(event.target.value);
+                      setProvider("");
+                      setMessage("");
+                      setPreflight(null);
+                      void providers.refetch();
+                    }}
                   >
-                    去配置 AI 服务
-                  </Link>
-                </>
-              ) : (
-                <>
-                  <p data-testid="start-analysis-ai-disconnected">
-                    {unavailableReason || "AI服务尚未连接"}
-                  </p>
-                  <Link
-                    to="/settings?tab=ai&focus=api_key"
-                    data-testid="start-analysis-goto-settings"
-                    onClick={onClose}
-                  >
-                    去配置 AI 服务
-                  </Link>
-                </>
-              )}
-              <p className="hint" data-testid="start-analysis-connection-label">
-                连接状态：{aiView.userStatusLabel}
-              </p>
+                    <option value="local">本地分析</option>
+                    <option value="cloud">云端 AI</option>
+                    <option value="hybrid">混合</option>
+                  </select>
+                </label>
+                <p className="hint">{EXECUTION_HINTS[mode] || ""}</p>
+              </>
+            ) : (
+              <div className="start-analysis-execution-static" data-testid="start-analysis-execution-static">
+                <span className="start-analysis-execution-value">云端 AI</span>
+                <p className="hint">章节正文将发送至云端模型进行场景边界识别与分析。</p>
+              </div>
+            )}
+          </section>
+
+          <section className="start-analysis-section">
+            <div className="start-analysis-section-head">
+              <span className="start-analysis-field-label">AI 服务</span>
+              <button
+                type="button"
+                className="ghost"
+                data-testid="start-analysis-refresh-status"
+                disabled={providers.isFetching}
+                onClick={async () => {
+                  await providers.refetch();
+                  setMessage(developerMode ? "Provider 状态已刷新。" : "服务状态已刷新。");
+                }}
+              >
+                {providers.isFetching ? "刷新中……" : "刷新状态"}
+              </button>
             </div>
-          )}
 
-          {developerMode && (
-            <>
-              <label>执行模式<select aria-label="执行模式" value={mode} onChange={(event) => {
-                setMode(event.target.value); setProvider(""); setMessage(""); setPreflight(null); void providers.refetch();
-              }}><option value="local">本地</option><option value="cloud">云端</option><option value="hybrid">混合</option></select></label>
-              <button type="button" disabled={providers.isFetching} onClick={async () => {
-                await providers.refetch(); setMessage("Provider状态已刷新。");
-              }}>{providers.isFetching ? "刷新中……" : "刷新Provider状态"}</button>
-              {eligible.length === 0 ? (
-                <div data-testid="start-analysis-no-provider">
-                  <p>{unavailableReason || "当前没有可用 Provider"}</p>
-                  <Link to="/settings?tab=ai&focus=api_key" onClick={onClose}>
-                    去配置 AI 服务
-                  </Link>
-                </div>
-              ) : (
-                <label>Provider<select aria-label="Provider" value={provider} onChange={(event) => setProvider(event.target.value)} data-testid="start-analysis-provider-select">
-                  {eligible.length > 1 && <option value="">请选择</option>}
-                  {eligible.map((item) => <option key={item.name} value={item.name}>
-                    {item.name} · {item.default_model}{item.requires_boundary_review ? " · 云端 · 边界候选生成 · 需要人工确认" : ""}
-                  </option>)}
-                </select></label>
-              )}
-              {selected?.requires_boundary_review && <p className="notice">该Provider只生成场景边界候选。候选完成后需要人工确认，确认后才会执行Scene Analysis。</p>}
-            </>
+            {!developerMode && (
+              <div className="ai-service-summary" data-testid="start-analysis-ai-summary">
+                {aiView.canStartAnalysis && eligible.length > 0 ? (
+                  <>
+                    <p data-testid="start-analysis-ai-connected">
+                      <b>{aiView.serviceDisplayName}</b>
+                      {" · "}
+                      {aiView.modelDisplayName}
+                    </p>
+                    <p className="ai-connected-label">已连接</p>
+                    <Link
+                      to="/settings?tab=ai&focus=api_key"
+                      data-testid="start-analysis-reconfigure-qwen"
+                      onClick={onClose}
+                    >
+                      去配置 AI 服务
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <p data-testid="start-analysis-ai-disconnected">
+                      {unavailableReason || "AI 服务尚未连接"}
+                    </p>
+                    <Link
+                      to="/settings?tab=ai&focus=api_key"
+                      data-testid="start-analysis-goto-settings"
+                      onClick={onClose}
+                    >
+                      去配置 AI 服务
+                    </Link>
+                  </>
+                )}
+                <p className="hint" data-testid="start-analysis-connection-label">
+                  连接状态：{aiView.userStatusLabel}
+                </p>
+              </div>
+            )}
+
+            {developerMode && (
+              <>
+                {eligible.length === 0 ? (
+                  <div data-testid="start-analysis-no-provider">
+                    <p>{unavailableReason || "当前没有可用 Provider"}</p>
+                    <Link to="/settings?tab=ai&focus=api_key" onClick={onClose}>
+                      去配置 AI 服务
+                    </Link>
+                  </div>
+                ) : (
+                  <label className="start-analysis-field">
+                    <span className="sr-only">Provider</span>
+                    <select
+                      aria-label="Provider"
+                      value={provider}
+                      onChange={(event) => setProvider(event.target.value)}
+                      data-testid="start-analysis-provider-select"
+                    >
+                      {eligible.length > 1 && <option value="">请选择</option>}
+                      {eligible.map((item) => (
+                        <option key={item.name} value={item.name}>
+                          {formatProviderOptionLabel(item)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+                {selected?.requires_boundary_review && (
+                  <p className="notice">
+                    本次会先识别场景边界。确认边界后，StoryLens 会继续完成场景分析。
+                  </p>
+                )}
+              </>
+            )}
+          </section>
+
+          <section className="start-analysis-section" data-testid="start-analysis-mode-section">
+            <span className="start-analysis-field-label">分析模式</span>
+            <div className="analysis-mode-cards" role="radiogroup" aria-label="分析模式">
+              {analysisModeCards.map((preset) => (
+                <label
+                  key={preset.id}
+                  className={`analysis-mode-card ${analysisModePreset === preset.id ? "is-selected" : ""}`}
+                  data-testid={`analysis-mode-${preset.id.toLowerCase()}`}
+                >
+                  <input
+                    type="radio"
+                    name="start-analysis-mode"
+                    value={preset.id}
+                    checked={analysisModePreset === preset.id}
+                    onChange={() => handleAnalysisModeSelect(preset.id)}
+                  />
+                  <span>
+                    <strong>
+                      {preset.label}
+                      {preset.recommended ? "（推荐）" : ""}
+                    </strong>
+                    {preset.id !== "CUSTOM" && (
+                      <small>{MODE_CARD_HINT[preset.id as "FAST" | "BALANCED" | "QUALITY"]}</small>
+                    )}
+                    {preset.id === "CUSTOM" && (
+                      <small>使用设置中的自定义 Provider 与预算参数</small>
+                    )}
+                  </span>
+                </label>
+              ))}
+            </div>
+            <p className="hint" data-testid="start-analysis-mode-hint">
+              {analysisModePreset === "CUSTOM"
+                ? "自定义模式（开发者）"
+                : MODE_CARD_HINT[analysisModePreset as "FAST" | "BALANCED" | "QUALITY"] ||
+                  "分析模式影响设置中的模型与预算偏好，不改变本次任务的边界审阅流程。"}
+            </p>
+          </section>
+
+          {(mode === "cloud" || mode === "hybrid") && preflight && consent && !developerMode && (
+            <OrdinaryBudgetSummary preflight={preflight} />
           )}
 
           {(mode === "cloud" || mode === "hybrid") && preflight && (
             <>
-              {(developerMode || budgetDetailOpen) && (
+              {developerMode && (
                 <Stage1BudgetSummary preflight={preflight} budgetBlocked={budgetBlocked} />
               )}
               {showRequestQuotaPanel && requestOnly && (
@@ -891,72 +1094,126 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
                 />
               )}
               <HardBudgetBlockers blockers={createBlockers} />
-              <FullPipelineBudgetAdvisory
-                advisory={fullAdvisory}
-                preflight={preflight}
-                usage={cloudUsage.data}
-                budget={budgetSettings.data}
-                detailOpen={developerMode || budgetDetailOpen || !showRequestQuotaPanel}
-              />
+              {(developerMode || budgetDetailOpen) && (
+                <FullPipelineBudgetAdvisory
+                  advisory={fullAdvisory}
+                  preflight={preflight}
+                  usage={cloudUsage.data}
+                  budget={budgetSettings.data}
+                  detailOpen={developerMode || budgetDetailOpen || !showRequestQuotaPanel}
+                />
+              )}
             </>
           )}
 
-          {developerMode && (
-            <div className="advanced"><b>高级设置</b>{selected?.workflow_prompts ? <>
-              <span>Boundary Candidate Prompt：{selected.workflow_prompts.boundary_candidate}</span>
-              <span>Boundary Adjudication Prompt：{selected.workflow_prompts.boundary_adjudication}</span>
-              <span>Scene Analysis Prompt：{selected.workflow_prompts.scene_analysis}</span>
-              <span>Thinking：{selected.workflow_prompts.thinking ? "开启" : "关闭"}</span><span>边界确认：人工确认</span>
-            </> : <span>任务协议由后端Provider能力配置决定</span>}</div>
+          {(mode === "cloud" || mode === "hybrid") && (
+            <label className="consent start-analysis-consent">
+              <input
+                type="checkbox"
+                checked={consent}
+                onChange={(event) => setConsent(event.target.checked)}
+              />
+              <span>
+                <strong>正文发送说明</strong>
+                <br />
+                我确认所选章节正文将发送至云端模型服务。
+              </span>
+            </label>
           )}
 
-          {developerMode && (mode === "cloud" || mode === "hybrid") && (
-            <details className="provider-diagnostics">
-              <summary>Provider诊断</summary>
-              {providers.isError ? <p>Provider状态接口离线：{String(providers.error)}</p> :
-                cloudDiagnostics.map(({ item, eligibility }) => <div key={item.name}>
-                  <b>{item.name}</b><span>手动边界资格：{eligibility.status === "eligible" ? "可用" : eligibility.status === "blocked" ? "阻塞" : "未知"}</span>
-                  <span>原始值：{typeof item.manual_boundary_candidate_eligible === "boolean" ? String(item.manual_boundary_candidate_eligible) : "missing"}</span>
-                  <span>Schema：{item.capability_schema_version || "missing"}</span><span>检查时间：{item.evaluated_at || "missing"}</span>
-                  <span>健康状态：{item.health_state || "unknown"}（{item.health_source || "unknown"}）</span>
-                  <span>{eligibility.status === "unknown" ? PROVIDER_ELIGIBILITY_MISSING : eligibility.blockers.join("、") || "资格明确可用"}</span>
-                </div>)}
+          {developerMode && (
+            <details className="start-analysis-tech-details" data-testid="start-analysis-tech-details">
+              <summary>技术详情</summary>
+              <div className="advanced">
+                <b>Provider</b>
+                <span>ID：{selected?.name || provider || "—"}</span>
+                <span>Model：{selected?.default_model || "—"}</span>
+                {selected?.workflow_prompts ? (
+                  <>
+                    <span>Boundary Candidate Prompt：{selected.workflow_prompts.boundary_candidate}</span>
+                    <span>Boundary Adjudication Prompt：{selected.workflow_prompts.boundary_adjudication}</span>
+                    <span>Scene Analysis Prompt：{selected.workflow_prompts.scene_analysis}</span>
+                    <span>Thinking：{selected.workflow_prompts.thinking ? "开启" : "关闭"}</span>
+                    <span>边界确认：人工确认</span>
+                  </>
+                ) : (
+                  <span>任务协议由后端 Provider 能力配置决定</span>
+                )}
+              </div>
+              {(mode === "cloud" || mode === "hybrid") && (
+                <div className="provider-diagnostics">
+                  {providers.isError ? (
+                    <p>Provider 状态接口离线：{String(providers.error)}</p>
+                  ) : (
+                    cloudDiagnostics.map(({ item, eligibility }) => (
+                      <div key={item.name}>
+                        <b>{item.name}</b>
+                        <span>
+                          手动边界资格：
+                          {eligibility.status === "eligible"
+                            ? "可用"
+                            : eligibility.status === "blocked"
+                              ? "阻塞"
+                              : "未知"}
+                        </span>
+                        <span>
+                          原始值：
+                          {typeof item.manual_boundary_candidate_eligible === "boolean"
+                            ? String(item.manual_boundary_candidate_eligible)
+                            : "missing"}
+                        </span>
+                        <span>Schema：{item.capability_schema_version || "missing"}</span>
+                        <span>检查时间：{item.evaluated_at || "missing"}</span>
+                        <span>
+                          健康状态：{item.health_state || "unknown"}（{item.health_source || "unknown"}）
+                        </span>
+                        <span>
+                          {eligibility.status === "unknown"
+                            ? PROVIDER_ELIGIBILITY_MISSING
+                            : eligibility.blockers.join("、") || "资格明确可用"}
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
             </details>
           )}
 
-          {(mode === "cloud" || mode === "hybrid") && (
-            <label className="consent">
-              <input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} />
-              我确认所选章节正文将发送到云端模型服务。
-            </label>
-          )}
           {message && <p className="notice">{message}</p>}
         </div>
 
         <footer className="modal-footer" data-testid="start-analysis-modal-footer">
           <button type="button" onClick={onClose}>取消</button>
-          {!showRequestQuotaPanel && (
-            <button
-              type="button"
-              className="primary"
-              data-testid="start-analysis-submit"
-              disabled={effectiveSubmitDisabled}
-              onClick={() => void submit()}
-            >
-              {submitLabel}
-            </button>
-          )}
-          {showRequestQuotaPanel && (
-            <button
-              type="button"
-              className="primary"
-              data-testid="start-analysis-submit"
-              disabled={busy || !costAndTokenOk}
-              onClick={createWithRecommended}
-            >
-              {busy ? submitLabel : "按推荐额度创建任务"}
-            </button>
-          )}
+          <div className="start-analysis-footer-actions">
+            {!showRequestQuotaPanel && effectiveSubmitDisabled && submitDisabledReason && (
+              <span className="start-analysis-disabled-reason" data-testid="start-analysis-disabled-reason">
+                {submitDisabledReason}
+              </span>
+            )}
+            {!showRequestQuotaPanel && (
+              <button
+                type="button"
+                className="primary"
+                data-testid="start-analysis-submit"
+                disabled={effectiveSubmitDisabled}
+                onClick={() => void submit()}
+              >
+                {submitLabel}
+              </button>
+            )}
+            {showRequestQuotaPanel && (
+              <button
+                type="button"
+                className="primary"
+                data-testid="start-analysis-submit"
+                disabled={busy || !costAndTokenOk}
+                onClick={createWithRecommended}
+              >
+                {busy ? submitLabel : "按推荐额度创建任务"}
+              </button>
+            )}
+          </div>
         </footer>
       </div>
     </div>

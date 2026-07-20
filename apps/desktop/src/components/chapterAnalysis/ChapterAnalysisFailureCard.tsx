@@ -7,6 +7,7 @@ type Props = {
   canResume: boolean;
   resumeBusy?: boolean;
   onResume?: () => void;
+  onLater?: () => void;
   onReanalyze?: () => void;
   completed?: number;
   total?: number;
@@ -19,6 +20,7 @@ export function ChapterAnalysisFailureCard({
   canResume,
   resumeBusy,
   onResume,
+  onLater,
   onReanalyze,
   completed = 0,
   total = 0,
@@ -36,6 +38,9 @@ export function ChapterAnalysisFailureCard({
   return (
     <div className="chapter-analysis-failure-card" data-testid="chapter-analysis-failure">
       <h3>分析未完成</h3>
+      <p data-testid="chapter-analysis-failure-lead">
+        StoryLens 在分析过程中遇到了问题，已完成的部分不会丢失。
+      </p>
       <p data-testid="chapter-analysis-failure-hint">{userFacingFailureHint(run)}</p>
       <ul className="chapter-analysis-failure-stats">
         {total > 0 && (
@@ -56,17 +61,17 @@ export function ChapterAnalysisFailureCard({
             disabled={resumeBusy}
             onClick={onResume}
           >
-            {resumeBusy ? "正在恢复…" : "恢复分析"}
+            {resumeBusy ? "正在恢复…" : "修复并继续"}
           </button>
         )}
-        {onReanalyze && (
+        {onLater && (
           <button
             type="button"
             className="secondary"
-            data-testid="chapter-analysis-reanalyze"
-            onClick={onReanalyze}
+            data-testid="chapter-analysis-failure-later"
+            onClick={onLater}
           >
-            重新分析
+            稍后处理
           </button>
         )}
         <button
@@ -75,8 +80,18 @@ export function ChapterAnalysisFailureCard({
           data-testid="chapter-analysis-tech-toggle"
           onClick={() => setTechOpen((v) => !v)}
         >
-          {techOpen ? "收起技术详情" : "查看技术详情"}
+          {techOpen ? "收起详情" : "查看详情"}
         </button>
+        {onReanalyze && (
+          <button
+            type="button"
+            className="ghost"
+            data-testid="chapter-analysis-reanalyze"
+            onClick={onReanalyze}
+          >
+            重新分析
+          </button>
+        )}
       </div>
       {techOpen && (
         <pre className="chapter-analysis-tech" data-testid="chapter-analysis-tech-details">
