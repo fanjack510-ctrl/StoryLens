@@ -88,6 +88,10 @@ apps/api/data/
 uploads/
 user-data/
 
+# Local VIP license files (never commit; live under %LOCALAPPDATA%/StoryLens/license/)
+*.license
+**/license/storylens.license
+
 # Test cache
 test-results/
 
