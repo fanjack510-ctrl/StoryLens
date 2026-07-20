@@ -102,6 +102,9 @@ try {
     }
 
     Write-Step "FastAPI sidecar build"
+    # Build only — do not launch the sidecar process here. Runtime smoke and
+    # owned-PID tree cleanup live in scripts/smoke_windows_release.ps1
+    # (Stop-Process -Id only; never -Name).
     & (Join-Path $Root "scripts\build_sidecar.ps1")
     if ($LASTEXITCODE) { throw "sidecar build failed" }
     $Summary.sidecar = "ok"

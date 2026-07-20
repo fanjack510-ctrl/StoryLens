@@ -54,6 +54,7 @@ REQUIRED = [
     "scripts/check_release_artifacts.ps1",
     "scripts/set_version.ps1",
     "scripts/smoke_windows_release.ps1",
+    "scripts/stop_owned_process_tree.ps1",
     ".github/workflows/windows-release.yml",
     "docs/windows-desktop-release-plan.md",
     "docs/windows-desktop-updater-keys.md",

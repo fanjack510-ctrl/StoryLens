@@ -2,10 +2,12 @@
 
 mod backend;
 mod updater_support;
+#[cfg(windows)]
+mod win_lifecycle;
 
 use backend::{BackendState, BackendStatus};
 use std::sync::Mutex;
-use tauri::{AppHandle, Emitter, Manager, State};
+use tauri::{AppHandle, Emitter, Manager, RunEvent, State};
 
 #[tauri::command]
 fn get_api_base(state: State<'_, Mutex<BackendState>>) -> Result<String, String> {
@@ -35,7 +37,7 @@ fn updater_enabled() -> bool {
 }
 
 fn main() {
-    tauri::Builder::default()
+    let app = tauri::Builder::default()
         .plugin(tauri_plugin_process::init())
         .setup(|app| {
             if updater_support::updater_enabled() {
@@ -52,6 +54,10 @@ fn main() {
                     let _ = handle.emit("backend-error", err.user_message.clone());
                     if let Some(state) = handle.try_state::<Mutex<BackendState>>() {
                         if let Ok(mut guard) = state.lock() {
+                            // Failed start must not leave orphan processes.
+                            if let Some(life) = guard.lifecycle.take() {
+                                backend::stop_lifecycle(life);
+                            }
                             guard.status = BackendStatus::Failed {
                                 user_message: err.user_message,
                                 detail: err.detail,
@@ -76,6 +82,15 @@ fn main() {
             get_app_version,
             updater_enabled
         ])
-        .run(tauri::generate_context!())
+        .build(tauri::generate_context!())
         .expect("StoryLens failed to start");
+
+    app.run(|app_handle, event| match event {
+        RunEvent::ExitRequested { .. } | RunEvent::Exit => {
+            if let Some(state) = app_handle.try_state::<Mutex<BackendState>>() {
+                backend::stop_backend(&state);
+            }
+        }
+        _ => {}
+    });
 }

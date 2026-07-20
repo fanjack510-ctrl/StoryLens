@@ -1,12 +1,13 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+import uuid
+
+from fastapi import FastAPI, Header, Request
 from fastapi.exceptions import HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
-import uuid
 
 from app.api.v1.router import router as api_v1_router
 from app.api.v1.analysis import router as analysis_router
@@ -15,6 +16,7 @@ from app.api.v1.desktop import router as desktop_router
 from app.api.v1.boundary_reviews import router as boundary_review_router
 from app.api.v1.reader_journey import router as reader_journey_router
 from app.core.config import get_settings
+from app.core.sidecar_control import request_shutdown, shutdown_token
 from app.db.session import SessionLocal, create_db
 from app.services.scene_pipeline import mark_interrupted_runs_failed
 
@@ -94,6 +96,31 @@ def health() -> dict[str, str]:
         "database": "ok",
         "default_provider": get_settings().default_model_provider,
     }
+
+
+def _client_is_loopback(request: Request) -> bool:
+    host = (request.client.host if request.client else "") or ""
+    # "testclient" is Starlette/FastAPI TestClient's in-process peer, not a network client.
+    return host in {"127.0.0.1", "::1", "localhost", "testclient"}
+
+
+@app.post("/internal/shutdown")
+def internal_shutdown(
+    request: Request,
+    authorization: str | None = Header(default=None),
+) -> dict[str, str]:
+    """Desktop-owned graceful stop. Loopback + optional bearer token only."""
+    if not _client_is_loopback(request):
+        raise HTTPException(status_code=403, detail="Shutdown allowed from loopback only")
+    expected = shutdown_token()
+    if expected:
+        provided = ""
+        if authorization and authorization.lower().startswith("bearer "):
+            provided = authorization[7:].strip()
+        if provided != expected:
+            raise HTTPException(status_code=401, detail="Invalid shutdown token")
+    request_shutdown()
+    return {"status": "shutting_down"}
 
 
 @app.get("/api/v1/system/capabilities")

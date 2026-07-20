@@ -67,7 +67,9 @@ def main() -> int:
         return 2
 
     try:
-        uvicorn.run(
+        from app.core.sidecar_control import set_uvicorn_server
+
+        config = uvicorn.Config(
             "app.main:app",
             host=host,
             port=port,
@@ -75,6 +77,9 @@ def main() -> int:
             access_log=False,
             log_config=None,
         )
+        server = uvicorn.Server(config)
+        set_uvicorn_server(server)
+        server.run()
     except OSError as exc:
         logging.exception("Backend bind/start failed: %s", exc)
         # Structured token for Tauri / UI mapping
