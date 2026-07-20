@@ -13,10 +13,13 @@ import { UnifiedAnalysisRecoveryCard } from "../components/chapterAnalysis/Unifi
 import { ChapterAnalysisProgressPanel } from "../components/chapterAnalysis/ChapterAnalysisProgressPanel";
 import { ReaderJourneyProgressCard } from "../components/chapterAnalysis/ReaderJourneyProgressCard";
 import { EmbeddedAnalysisResultShell } from "../components/chapterResult/EmbeddedAnalysisResultShell";
+import { StateView } from "../components/ui/StateView";
 import { useCurrentPageAnalysisProgress } from "../hooks/useCurrentPageAnalysisProgress";
 import { analysisApi } from "../services/analysisApi";
+import { analysisRecoveryApi } from "../services/analysisRecoveryApi";
 import { booksApi } from "../services/booksApi";
 import {
+  getOrCreateJourneyClientRequestId,
   isSceneAnalysisComplete,
   mapChapterCompositionState,
 } from "../services/chapterJourneyComposition";
@@ -278,6 +281,10 @@ export function BookRoutePage() {
   );
   const isJourneyTab = searchParams.get("tab") === "reader-journey";
   const journeyRunId = journey.data?.journey_run_id ?? null;
+  const journeyFailed = Boolean(
+    journey.data?.status &&
+      ["failed", "scene_profiles_partial", "budget_blocked"].includes(journey.data.status),
+  );
   const journeyProgress = useQuery({
     queryKey: ["reader-journey-progress", journeyRunId],
     queryFn: () => analysisApi.readerJourneyProgress(journeyRunId!),
@@ -970,7 +977,54 @@ export function BookRoutePage() {
         )}
         {view === "result" && analysisRunId ? (
           <>
-            {isJourneyTab && compositionUiState === "awaiting_reader_journey_start" && progress.run ? (
+            {isJourneyTab && journeyFailed ? (
+              <StateView
+                kind="error"
+                data-testid="journey-failed"
+                title="阅读旅程生成失败"
+                description="已完成的场景分析不会受到影响。"
+                primaryAction={{
+                  label: "重新生成",
+                  testId: "journey-failed-retry",
+                  onClick: () => {
+                    void (async () => {
+                      try {
+                        if (journeyRunId) {
+                          await analysisApi.resumeReaderJourney(journeyRunId, {
+                            client_request_id: getOrCreateJourneyClientRequestId(analysisRunId),
+                            cloud_consent: true,
+                            confirmed: true,
+                          });
+                        } else if (progress.run) {
+                          await analysisRecoveryApi.recover(progress.run.id, {
+                            client_request_id: getOrCreateJourneyClientRequestId(analysisRunId),
+                            cloud_consent: true,
+                            confirmed: true,
+                            recovery_mode: "unified",
+                            resume: true,
+                          });
+                        }
+                      } finally {
+                        void qc.invalidateQueries({
+                          queryKey: ["reader-journey", analysisRunId],
+                        });
+                        void journey.refetch();
+                        void progress.refresh();
+                      }
+                    })();
+                  },
+                }}
+                secondaryAction={{
+                  label: "查看任务详情",
+                  testId: "journey-failed-task-details",
+                  onClick: () => navigate(`/tasks?run_id=${analysisRunId}`),
+                }}
+              />
+            ) : null}
+            {isJourneyTab &&
+            compositionUiState === "awaiting_reader_journey_start" &&
+            !journeyFailed &&
+            progress.run ? (
               <UnifiedAnalysisRecoveryCard
                 run={progress.run}
                 variant="card"
@@ -994,26 +1048,10 @@ export function BookRoutePage() {
                 onViewTaskDetails={() => navigate(`/tasks?run_id=${analysisRunId}`)}
               />
             ) : null}
-            {isJourneyTab &&
-            compositionUiState === "awaiting_reader_journey_start" &&
-            journey.data &&
-            ["failed", "scene_profiles_partial", "budget_blocked"].includes(
-              journey.data.status || "",
-            ) ? (
-              <ReaderJourneyProgressCard
-                analysisRunId={analysisRunId}
-                progress={journeyProgress.data}
-                errorMessage={
-                  journeyProgress.data?.user_error_message ||
-                  journeyProgress.data?.root_error_message ||
-                  journey.data.status
-                }
-                onViewTaskDetails={() => navigate(`/tasks?run_id=${analysisRunId}`)}
-              />
-            ) : null}
             {!(
               isJourneyTab &&
-              (compositionUiState === "awaiting_reader_journey_start" ||
+              (journeyFailed ||
+                compositionUiState === "awaiting_reader_journey_start" ||
                 compositionUiState === "reader_journey_processing")
             ) ? (
               <EmbeddedAnalysisResultShell
@@ -1023,9 +1061,10 @@ export function BookRoutePage() {
             ) : null}
             {isJourneyTab &&
             compositionUiState === "awaiting_reader_journey_start" &&
+            !journeyFailed &&
             !progress.run ? (
               <p className="notice" data-testid="reader-journey-resume-loading-run">
-                正在加载 AnalysisRun…
+                正在加载分析任务…
               </p>
             ) : null}
           </>

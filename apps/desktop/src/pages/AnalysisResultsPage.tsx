@@ -3,7 +3,10 @@ import { useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { analysisApi } from "../services/analysisApi";
 import { Badge, Empty, ErrorState, Loading } from "../components/common/States";
+import { hasUsableJourneyVisualization } from "../components/readerJourney/hasUsableJourneyVisualization";
+import { formatJourneyStatus } from "../components/readerJourney/journeyUiLabels";
 import { ReaderJourneySyncWorkspace } from "../components/readerJourney/ReaderJourneySyncWorkspace";
+import { StateView } from "../components/ui/StateView";
 import { resolveRunResultsViewState } from "../services/runResultsGuard";
 import type { ReaderJourneyPreflight, ReaderJourneyProgress, ReaderJourneyResult, SceneAnalysisFields, SceneResultItem } from "../types";
 
@@ -351,8 +354,17 @@ export function AnalysisResultsPage() {
         (journeyProg && journeyProg.recovery_safe === false && !journeyProg.resume_preflight
           ? "正在重新计算恢复计划"
           : null);
-  const journeyHasVisualization = Boolean(
-    journeyData?.status === "succeeded" && journeyData.visualization,
+  const journeyHasVisualization = hasUsableJourneyVisualization(journeyData);
+  const journeyEmptyVisualization = Boolean(
+    journeyData?.status === "succeeded" &&
+      journeyData.visualization &&
+      !journeyHasVisualization,
+  );
+  const journeyStatusFailed = Boolean(
+    (journeyData?.status &&
+      ["failed", "scene_profiles_partial", "budget_blocked"].includes(journeyData.status)) ||
+      (journeyProg?.status &&
+        ["failed", "scene_profiles_partial", "budget_blocked"].includes(journeyProg.status)),
   );
   const showJourneySync = tab === "journey" && journeyHasVisualization;
   const generateJourneyLabel = journeyHasVisualization
@@ -438,7 +450,7 @@ export function AnalysisResultsPage() {
   const journeyTaskControls = (
     <div className="reader-journey-panel" data-testid="journey-panel">
       <p className="muted">
-        本功能会基于已完成的 Scene Analysis 分析阅读节奏、读者问题、正反馈、钩子和风险，不会重新切分 Scene。
+        本功能会基于已完成的场景分析，计算阅读节奏、读者问题、正反馈、钩子和风险，不会重新切分场景。
       </p>
       {journeyError && <div className="notice error">{journeyError}</div>}
       {offlineReplayMessage && (
@@ -564,71 +576,142 @@ export function AnalysisResultsPage() {
           </button>
         )}
       </div>
-      {(journeyProg?.status === "failed" || journeyProg?.status === "scene_profiles_partial") && (
-        <div
-          className={`notice journey-failed ${journeyProg.status === "failed" ? "error" : ""}`}
-          data-testid={journeyProg.status === "failed" ? "journey-failed" : "journey-partial"}
-        >
-          <strong>{journeyProg.status === "failed" ? "生成失败" : "部分完成"}</strong>
-          {journeyProg.failed_stage && (
-            <div>失败阶段：{failedStageLabel(journeyProg.failed_stage)}</div>
-          )}
-          {(journeyProg.user_error_message || journeyProg.root_error_message || journeyProg.root_error_code) && (
-            <div>
-              错误：
-              {journeyProg.user_error_message ||
+      {(journeyProg?.status === "failed" || journeyProg?.status === "scene_profiles_partial") &&
+        (journeyProg.status === "failed" ? (
+          <StateView
+            kind="error"
+            data-testid="journey-failed"
+            title="阅读旅程生成失败"
+            description={
+              <>
+                <span>已完成的场景分析不会受到影响。</span>
+                <details data-testid="journey-failed-tech">
+                  <summary>技术详情</summary>
+                  {journeyProg.failed_stage && (
+                    <div>失败阶段：{failedStageLabel(journeyProg.failed_stage)}</div>
+                  )}
+                  {(journeyProg.user_error_message ||
+                    journeyProg.root_error_message ||
+                    journeyProg.root_error_code) && (
+                    <div>
+                      错误：
+                      {journeyProg.user_error_message ||
+                        journeyProg.root_error_message ||
+                        journeyProg.root_error_code}
+                    </div>
+                  )}
+                  {journeyProg.failed_scene_ordinal != null && (
+                    <div data-testid="journey-failed-scene">
+                      failed_scene：Scene {journeyProg.failed_scene_ordinal}
+                      {journeyProg.failed_scene_id != null
+                        ? ` (id=${journeyProg.failed_scene_id})`
+                        : ""}
+                    </div>
+                  )}
+                  {journeyProg.failed_invocation_id != null && (
+                    <div data-testid="journey-failed-invocation">
+                      failed_invocation_id：{journeyProg.failed_invocation_id}
+                    </div>
+                  )}
+                  <div>
+                    已完成 Profile：{journeyProg.completed_scene_count} / 剩余：
+                    {journeyProg.remaining_scene_count}
+                  </div>
+                  <div>
+                    规划器：{journeyProg.planner_version || "-"} · 契约：
+                    {journeyProg.scene_contract_version || "-"}
+                  </div>
+                  <div data-testid="journey-usage-summary">
+                    请求 {journeyProg.request_count ?? 0} · Token {journeyProg.total_tokens ?? 0} ·
+                    费用 {journeyProg.estimated_cost ?? 0} {journeyProg.currency || "CNY"}
+                  </div>
+                  <div>
+                    Reservation：{journeyProg.reservation_released ? "已释放" : "仍占用"}
+                  </div>
+                  <div>
+                    是否可恢复：
+                    {resumeDisabledReason
+                      ? `否（${resumeDisabledReason}）`
+                      : journeyProg.recovery_safe
+                        ? "是"
+                        : journeyProg.retryable
+                          ? "是"
+                          : "否"}
+                  </div>
+                </details>
+              </>
+            }
+          />
+        ) : (
+          <div className="notice journey-failed" data-testid="journey-partial">
+            <strong>部分完成</strong>
+            <details data-testid="journey-partial-tech">
+              <summary>技术详情</summary>
+              {journeyProg.failed_stage && (
+                <div>失败阶段：{failedStageLabel(journeyProg.failed_stage)}</div>
+              )}
+              {(journeyProg.user_error_message ||
                 journeyProg.root_error_message ||
-                journeyProg.root_error_code}
-            </div>
-          )}
-          {journeyProg.failed_scene_ordinal != null && (
-            <div data-testid="journey-failed-scene">
-              failed_scene：Scene {journeyProg.failed_scene_ordinal}
-              {journeyProg.failed_scene_id != null ? ` (id=${journeyProg.failed_scene_id})` : ""}
-            </div>
-          )}
-          {journeyProg.failed_invocation_id != null && (
-            <div data-testid="journey-failed-invocation">
-              failed_invocation_id：{journeyProg.failed_invocation_id}
-            </div>
-          )}
-          <div>
-            已完成 Profile：{journeyProg.completed_scene_count} / 剩余：
-            {journeyProg.remaining_scene_count}
+                journeyProg.root_error_code) && (
+                <div>
+                  错误：
+                  {journeyProg.user_error_message ||
+                    journeyProg.root_error_message ||
+                    journeyProg.root_error_code}
+                </div>
+              )}
+              <div>
+                已完成 Profile：{journeyProg.completed_scene_count} / 剩余：
+                {journeyProg.remaining_scene_count}
+              </div>
+            </details>
           </div>
-          <div>
-            规划器：{journeyProg.planner_version || "-"} · 契约：
-            {journeyProg.scene_contract_version || "-"}
-          </div>
-          <div data-testid="journey-usage-summary">
-            请求 {journeyProg.request_count ?? 0} · Token {journeyProg.total_tokens ?? 0} · 费用{" "}
-            {journeyProg.estimated_cost ?? 0} {journeyProg.currency || "CNY"}
-          </div>
-          <div>
-            Reservation：{journeyProg.reservation_released ? "已释放" : "仍占用"}
-          </div>
-          <div>
-            是否可恢复：
-            {resumeDisabledReason
-              ? `否（${resumeDisabledReason}）`
-              : journeyProg.recovery_safe
-                ? "是"
-                : journeyProg.retryable
-                  ? "是"
-                  : "否"}
-          </div>
-        </div>
-      )}
+        ))}
       {journeyProg && (
         <div data-testid="journey-progress">
-          状态：{journeyProg.status} · 进度：{journeyProg.completed_scene_count}/
-          {journeyProg.total_scene_count}
-          {journeyProg.current_stage ? ` · ${journeyProg.current_stage}` : ""}
-          {journeyProg.status === "scene_profiles_partial" && "（部分完成）"}
+          <div>
+            状态：{formatJourneyStatus(journeyProg.status)}
+            {" · "}
+            {(journeyProg.total_scene_count ?? 0) > 0
+              ? `已处理 ${journeyProg.completed_scene_count} / ${journeyProg.total_scene_count} 个场景`
+              : "正在处理场景数据"}
+          </div>
+          <details data-testid="journey-progress-tech">
+            <summary>技术详情</summary>
+            <div>AnalysisRun #{journeyProg.analysis_run_id}</div>
+            <div>JourneyRun #{journeyProg.journey_run_id}</div>
+            <div>原始状态：{journeyProg.status}</div>
+            {journeyProg.current_stage ? (
+              <div>原始阶段：{journeyProg.current_stage}</div>
+            ) : null}
+          </details>
         </div>
       )}
     </div>
   );
+
+  if (tab === "journey" && journeyStatusFailed && !showJourneySync) {
+    return (
+      <section className="workspace results-page results-page-journey-state">
+        {exportBar}
+        {journeyTaskControls}
+      </section>
+    );
+  }
+
+  if (tab === "journey" && journeyEmptyVisualization) {
+    return (
+      <section className="workspace results-page results-page-journey-state">
+        <StateView
+          kind="empty"
+          data-testid="journey-empty-state"
+          title="暂时没有可显示的阅读旅程"
+          description="当前分析结果没有包含有效的场景或指标数据。"
+        />
+        {exportBar}
+      </section>
+    );
+  }
 
   if (showJourneySync && journeyData?.visualization) {
     return (

@@ -273,7 +273,7 @@ describe("Phase 1C-C.2.5.1 blocking UI fix", () => {
       "title",
       expect.stringContaining("钩子"),
     );
-    expect(screen.getByTestId("scene-detail-title")).toHaveTextContent("Scene 12");
+    expect(screen.getByTestId("scene-detail-title")).toHaveTextContent("场景 12");
   });
 
   it("keeps journey analysis after export from legacy diagnosis URL", async () => {

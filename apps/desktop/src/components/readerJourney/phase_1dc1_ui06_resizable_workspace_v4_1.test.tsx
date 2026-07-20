@@ -106,8 +106,8 @@ describe("Reader Journey Resizable Workspace v4.1", () => {
     expect(configSource).not.toMatch(/book_id\s*===|chapter_id\s*===|run_id\s*===/);
   });
 
-  it("uses 5-column grid with minmax(640px, 1fr) main", () => {
-    expect(css).toMatch(/minmax\(640px,\s*1fr\)/);
+  it("uses 5-column grid with minmax(0, 1fr) main", () => {
+    expect(css).toMatch(/minmax\(0,\s*1fr\)/);
     expect(css).toMatch(/--splitter-left-width/);
     expect(css).toMatch(/--splitter-right-width/);
     expect(css).toMatch(/journey-pane-splitter/);

@@ -52,7 +52,7 @@ describe("Phase 1C-C.2.4B Scene detail information architecture", () => {
       />,
     );
     fireEvent.click(screen.getByTestId("scene-detail-tab-questions"));
-    expect(screen.getByTestId("scene-detail-questions")).toHaveTextContent("本 Scene 建立的问题");
+    expect(screen.getByTestId("scene-detail-questions")).toHaveTextContent("本场景建立的问题");
     expect(screen.getByTestId("scene-detail-questions")).toHaveTextContent("留给后续的问题");
     rerender(
       <MemoryRouter>
@@ -64,7 +64,7 @@ describe("Phase 1C-C.2.4B Scene detail information architecture", () => {
       </MemoryRouter>,
     );
     expect(screen.getByTestId("scene-detail-panel-questions")).toBeInTheDocument();
-    expect(screen.getByTestId("scene-detail-title")).toHaveTextContent("Scene 8");
+    expect(screen.getByTestId("scene-detail-title")).toHaveTextContent("场景 08");
   });
 
   it("renders hook fields and writing takeaways without crashing", () => {
@@ -113,7 +113,7 @@ describe("Phase 1C-C.2.4B Scene detail information architecture", () => {
     fireEvent.click(screen.getByTestId("scene-detail-tab-questions"));
     expect(screen.getByTestId("empty-questions")).toHaveTextContent("未识别出明确问题链");
     fireEvent.click(screen.getByTestId("scene-detail-tab-payoffs"));
-    expect(screen.getByTestId("empty-hook-payoff")).toHaveTextContent("未识别出明确的 Hook 或 Payoff");
+    expect(screen.getByTestId("empty-hook-payoff")).toHaveTextContent("未识别出明确的钩子或回报");
     fireEvent.click(screen.getByTestId("scene-detail-tab-techniques"));
     expect(screen.getByTestId("empty-techniques")).toHaveTextContent("未提取出可复用技法");
     fireEvent.click(screen.getByTestId("scene-detail-tab-evidence"));

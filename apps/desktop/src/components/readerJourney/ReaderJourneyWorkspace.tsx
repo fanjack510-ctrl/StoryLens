@@ -37,7 +37,7 @@ import {
   JourneyQuestionInspectorPanel,
   JourneySceneDetailPanel,
 } from "./JourneySceneDetailPanel";
-import { roleLabelZh, formatJourneyPhaseLabel, formatJourneyPhaseFallbackSummary, formatJourneyScore, formatJourneySceneLabel, formatJourneyMetricLabel } from "./journeyUiLabels";
+import { roleLabelZh, formatJourneyPhaseLabel, resolvePhaseSummaryDisplay, formatJourneyScore, formatJourneySceneLabel, formatJourneyMetricLabel } from "./journeyUiLabels";
 import {
   CANONICAL_OVERVIEW_MODE,
   OVERVIEW_MODE_PARAM,
@@ -319,9 +319,8 @@ export function ReaderJourneyWorkspace({
       const measured = rect.width;
       const isJsdom =
         typeof navigator !== "undefined" && /jsdom/i.test(navigator.userAgent || "");
-      // Real browsers: fall back to window width when unlaid-out.
-      // jsdom: prefer desktop floor so unit tests without width mocks stay desktop.
-      const width =
+      // Pane widths use host width; layout mode uses viewport so 1440px gets right Inspector.
+      const hostWidth =
         measured >= 200
           ? measured
           : isJsdom
@@ -329,7 +328,11 @@ export function ReaderJourneyWorkspace({
             : typeof window !== "undefined"
               ? window.innerWidth
               : LAYOUT_BREAKPOINTS.desktopMin;
-      setWorkspaceWidth(width);
+      const layoutWidth =
+        typeof window !== "undefined" && !isJsdom
+          ? window.innerWidth
+          : hostWidth;
+      setWorkspaceWidth(hostWidth);
       setWorkspaceHeight(
         rect.height > 0
           ? rect.height
@@ -337,12 +340,17 @@ export function ReaderJourneyWorkspace({
             ? window.innerHeight
             : 900,
       );
-      setLayoutMode(resolveJourneyLayoutMode(width));
+      setLayoutMode(resolveJourneyLayoutMode(layoutWidth));
     };
     update();
     const observer = new ResizeObserver(update);
     observer.observe(node);
-    return () => observer.disconnect();
+    const onResize = () => update();
+    window.addEventListener("resize", onResize);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", onResize);
+    };
   }, []);
 
   useEffect(() => {
@@ -789,8 +797,8 @@ export function ReaderJourneyWorkspace({
           ? ` · contract ${visualization.calibration_status.scene_contract_version}`
           : ""}
       </span>
-      {analysisRunLabel ? <span>Run #{analysisRunLabel}</span> : null}
-      {journeyRunLabel ? <span>JourneyRun #{journeyRunLabel}</span> : null}
+      {analysisRunLabel ? <span>分析任务 #{analysisRunLabel}</span> : null}
+      {journeyRunLabel ? <span>旅程任务 #{journeyRunLabel}</span> : null}
     </>
   );
 
@@ -910,7 +918,6 @@ export function ReaderJourneyWorkspace({
             phase={selectedPhaseData}
             visualization={visualization}
             onSelectScene={(node) => handleSelectScene(node, "journey_scene")}
-            onClose={clearInspectorSelection}
           />
         </JourneyDetailErrorBoundary>
       ) : effectiveInspector === "question" && selectedCluster ? (
@@ -918,27 +925,23 @@ export function ReaderJourneyWorkspace({
           cluster={selectedCluster}
           nodes={nodes}
           onSelectScene={(node) => handleSelectScene(node, "journey_cluster")}
-          onClose={clearInspectorSelection}
         />
       ) : effectiveInspector === "hook" ? (
         <JourneyMarkerInspectorPanel
           kind="hook"
           node={selectedNode ?? null}
           onLocateEvidence={(id) => handleLocateEvidence(id, selectedNode)}
-          onClose={clearInspectorSelection}
         />
       ) : effectiveInspector === "payoff" ? (
         <JourneyMarkerInspectorPanel
           kind="payoff"
           node={selectedNode ?? null}
-          onClose={clearInspectorSelection}
         />
       ) : effectiveInspector === "risk" ? (
         <JourneyMarkerInspectorPanel
           kind="risk"
           node={selectedNode ?? null}
           riskInterval={selectedRiskInterval}
-          onClose={clearInspectorSelection}
         />
       ) : effectiveInspector === "scene" && selectedNode ? (
         <JourneyDetailErrorBoundary
@@ -956,11 +959,6 @@ export function ReaderJourneyWorkspace({
           <JourneySceneDetailPanel
             node={selectedNode}
             onLocateEvidence={(id) => handleLocateEvidence(id, selectedNode)}
-            onClose={() => {
-              if (!isControlled) setSelectedSceneOrdinalInternal(null);
-              onSelectionChange?.({ activeSceneOrdinal: null, source: "journey_scene" });
-              clearInspectorParam();
-            }}
             onOpenInSceneList={
               onSelectScene ? () => onSelectScene(selectedNode.scene_id) : undefined
             }
@@ -969,12 +967,12 @@ export function ReaderJourneyWorkspace({
       ) : (
         <div className="journey-detail-empty" data-testid="journey-detail-empty">
           <p className="journey-detail-empty-title">
-            选择一个 Phase、曲线 Scene 或结论入口，查看详细分析。
+            选择一个阶段、场景或曲线节点，查看详细分析。
           </p>
           <ul className="journey-detail-empty-hints">
-            <li>点击 Phase 查看阶段作用</li>
-            <li>点击曲线节点查看 Scene</li>
-            <li>点击章节结论查看问题、Hook 或薄弱点</li>
+            <li>点击阶段卡查看阶段作用</li>
+            <li>点击曲线节点查看场景变化</li>
+            <li>点击章节结论查看问题、钩子与薄弱点</li>
           </ul>
         </div>
       )}
@@ -1124,7 +1122,7 @@ export function ReaderJourneyWorkspace({
               type="button"
               className={markerMode === "compact" ? "active" : ""}
               data-testid="journey-marker-compact"
-              title="精简标记：突出主要阅读结构，仅显示关键 Scene、Hook、Payoff 和问题簇。"
+              title="精简标记：突出主要阅读结构，仅显示关键场景、钩子、回报和问题簇。"
               onClick={() => setMarkerMode("compact")}
             >
               精简标记
@@ -1284,10 +1282,7 @@ export function ReaderJourneyWorkspace({
             {visualization.phases.map((phase, index) => {
               const isSelected = selectedPhase === phase.ordinal;
               const phaseLabel = formatJourneyPhaseLabel(phase.title);
-              const phaseSummary =
-                typeof phase.summary === "string" && phase.summary.trim()
-                  ? phase.summary.trim()
-                  : formatJourneyPhaseFallbackSummary(phase.title);
+              const phaseSummary = resolvePhaseSummaryDisplay(phase.summary, phase.title);
               const avgText = formatJourneyScore(phase.average_engagement);
               return (
                 <button

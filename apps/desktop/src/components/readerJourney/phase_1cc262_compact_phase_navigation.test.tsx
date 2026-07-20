@@ -110,10 +110,9 @@ describe("Phase 1C-C.2.6.2 compact phase navigation strip", () => {
     );
   });
 
-  it("defines mid-width horizontal scroll and narrow dropdown layouts", () => {
+  it("defines mid-width two-column phase cards and narrow dropdown layouts", () => {
     expect(css).toMatch(/@media\s*\(max-width:\s*1100px\)\s*and\s*\(min-width:\s*701px\)/);
-    expect(css).toMatch(/grid-auto-flow:\s*column/);
-    expect(css).toMatch(/overflow-x:\s*auto/);
+    expect(css).toMatch(/grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/);
     expect(css).toMatch(/@media\s*\(max-width:\s*700px\)/);
     expect(css).toMatch(/\.journey-phase-mobile-select-wrap[\s\S]*display:\s*flex/);
     expect(css).toMatch(

@@ -49,7 +49,7 @@ describe("Phase 1C-C.2.5A overview modes (superseded by 2.6 single view)", () =>
     expect(screen.queryByTestId("journey-overview-diagnosis")).not.toBeInTheDocument();
     expect(screen.getByTestId("journey-curve-svg")).toBeInTheDocument();
     expect(screen.getByTestId("journey-active-scene-guide")).toBeInTheDocument();
-    expect(screen.getByTestId("scene-detail-title")).toHaveTextContent("Scene 12");
+    expect(screen.getByTestId("scene-detail-title")).toHaveTextContent("场景 12");
   });
 
   it("uses compact two-line phase nav without essay copy and standard curve height 408", () => {

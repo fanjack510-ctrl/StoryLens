@@ -177,22 +177,22 @@ export const PRIMARY_METRIC_HINTS_ZH: Record<(typeof PRIMARY_JOURNEY_METRICS)[nu
 
 /** Fixed phase role explanations when backend summary is missing (not plot conclusions). */
 export const PHASE_ROLE_FALLBACK_ZH: Record<string, string> = {
-  入: "建立人物、环境与阅读期待",
-  入局: "建立人物、环境与阅读期待",
-  entry: "建立人物、环境与阅读期待",
-  Entry: "建立人物、环境与阅读期待",
-  推: "冲突发展，核心目标逐渐明确",
-  推进: "冲突发展，核心目标逐渐明确",
-  development: "冲突发展，核心目标逐渐明确",
-  Development: "冲突发展，核心目标逐渐明确",
-  转: "信息变化或事件升级",
-  转折: "信息变化或事件升级",
-  turn: "信息变化或事件升级",
-  Turn: "信息变化或事件升级",
-  收: "阶段结果与下一步悬念",
-  收束: "阶段结果与下一步悬念",
-  resolution: "阶段结果与下一步悬念",
-  Resolution: "阶段结果与下一步悬念",
+  入: "建立背景、人物与阅读期待",
+  入局: "建立背景、人物与阅读期待",
+  entry: "建立背景、人物与阅读期待",
+  Entry: "建立背景、人物与阅读期待",
+  推: "推动事件发展与核心冲突",
+  推进: "推动事件发展与核心冲突",
+  development: "推动事件发展与核心冲突",
+  Development: "推动事件发展与核心冲突",
+  转: "出现信息变化或事件升级",
+  转折: "出现信息变化或事件升级",
+  turn: "出现信息变化或事件升级",
+  Turn: "出现信息变化或事件升级",
+  收: "形成阶段结果并留下后续期待",
+  收束: "形成阶段结果并留下后续期待",
+  resolution: "形成阶段结果并留下后续期待",
+  Resolution: "形成阶段结果并留下后续期待",
 };
 
 const PHASE_SHORT_TO_FULL: Record<string, string> = {
@@ -212,6 +212,15 @@ const PHASE_SHORT_TO_FULL: Record<string, string> = {
 
 function isDirtyDisplayToken(value: string): boolean {
   return /^(undefined|null|NaN|\[object Object\])$/i.test(value.trim());
+}
+
+/** Empty / punctuation-only / dirty tokens are not usable phase descriptions. */
+export function isEffectivePhaseSummary(raw: string | null | undefined): boolean {
+  if (raw == null) return false;
+  const trimmed = String(raw).trim();
+  if (!trimmed || isDirtyDisplayToken(trimmed)) return false;
+  if (/^[.。…·•\-–—_*]+$/.test(trimmed)) return false;
+  return true;
 }
 
 /** Format raw phase title/key for ordinary UI. Never invents plot conclusions. */
@@ -235,6 +244,15 @@ export function formatJourneyPhaseFallbackSummary(raw: string | null | undefined
     PHASE_ROLE_FALLBACK_ZH[trimmed.toLowerCase()] ||
     "选择阶段或节点查看详细分析"
   );
+}
+
+/** Prefer real summary; otherwise fixed structural fallback. Never returns "." alone. */
+export function resolvePhaseSummaryDisplay(
+  summary: string | null | undefined,
+  title: string | null | undefined,
+): string {
+  if (isEffectivePhaseSummary(summary)) return String(summary).trim();
+  return formatJourneyPhaseFallbackSummary(title);
 }
 
 /** Metric key → user label. Unknown keys → 未知指标 (never undefined/NaN). */
@@ -284,15 +302,33 @@ export function formatJourneyStatus(status: string | null | undefined): string {
   const key = String(status).trim();
   if (!key || isDirtyDisplayToken(key)) return "—";
   const map: Record<string, string> = {
-    succeeded: "分析已完成",
-    completed: "分析已完成",
-    running: "正在生成",
+    succeeded: "已完成",
+    completed: "已完成",
+    running: "生成中",
     pending: "等待生成",
+    queued: "排队中",
     failed: "生成失败",
+    scene_profiles_partial: "部分完成",
+    budget_blocked: "额度不足",
     none: "尚未生成",
     empty: "暂无结果",
   };
   return map[key] ?? map[key.toLowerCase()] ?? key;
+}
+
+/** Scene ordinal → S04 style label for ordinary UI. */
+export function formatJourneySceneRangeLabel(
+  start: number | null | undefined,
+  end?: number | null,
+): string {
+  const fmt = (n: number | null | undefined) => {
+    if (typeof n !== "number" || !Number.isFinite(n) || n <= 0) return null;
+    return `S${String(Math.trunc(n)).padStart(2, "0")}`;
+  };
+  const a = fmt(start);
+  if (!a) return "—";
+  const b = end == null || end === start ? null : fmt(end);
+  return b ? `${a}—${b}` : a;
 }
 
 /** Safe numeric display; missing / non-finite → em dash. */

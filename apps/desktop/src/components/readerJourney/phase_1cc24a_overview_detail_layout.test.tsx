@@ -43,7 +43,7 @@ describe("Phase 1C-C.2.4A overview–detail layout", () => {
     expect(screen.getByTestId("journey-phase-strip")).toBeInTheDocument();
     expect(screen.getByTestId("journey-curve-svg")).toBeInTheDocument();
     expect(screen.getByTestId("journey-active-scene-guide")).toBeInTheDocument();
-    expect(screen.getByTestId("journey-detail-drawer")).toHaveTextContent("Scene 12");
+    expect(screen.getByTestId("journey-detail-drawer")).toHaveTextContent("场景 12");
 
     expect(css).toMatch(/journey-workspace-split/);
     expect(css).toMatch(/journey-resizable-split/);

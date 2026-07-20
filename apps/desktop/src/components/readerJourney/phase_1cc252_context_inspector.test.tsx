@@ -75,7 +75,7 @@ describe("Phase 1C-C.2.5.2 Context Inspector", () => {
     });
     expect(screen.getByTestId("journey-phase-detail-panel")).toBeInTheDocument();
     fireEvent.click(screen.getByTestId("journey-curve-node-10"));
-    expect(screen.getByTestId("scene-detail-title")).toHaveTextContent("Scene 10");
+    expect(screen.getByTestId("scene-detail-title")).toHaveTextContent("场景 10");
     expect(screen.queryByTestId("journey-phase-detail-panel")).not.toBeInTheDocument();
   });
 
@@ -117,7 +117,7 @@ describe("Phase 1C-C.2.5.2 Context Inspector", () => {
     });
     fireEvent.click(screen.getByTestId("phase-detail-tab-scenes"));
     fireEvent.click(screen.getByTestId("phase-related-scene-2"));
-    expect(screen.getByTestId("scene-detail-title")).toHaveTextContent("Scene 2");
+    expect(screen.getByTestId("scene-detail-title")).toHaveTextContent("场景 02");
     expect(onSelectionChange).toHaveBeenCalledWith(
       expect.objectContaining({ activeSceneOrdinal: 2, source: "journey_scene" }),
     );

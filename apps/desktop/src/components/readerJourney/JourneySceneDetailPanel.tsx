@@ -7,10 +7,14 @@ import type {
   ReaderJourneyVisualization,
 } from "../../types/readerJourneyVisualization";
 import {
+  formatJourneySceneLabel,
+  formatJourneySceneRangeLabel,
+  formatJourneyPhaseLabel,
   hookTypeZh,
   METRIC_LABELS_ZH,
   payoffTypeZh,
   questionLifecycleZh,
+  resolvePhaseSummaryDisplay,
   roleLabelZh,
   SCORE_TOOLTIPS_ZH,
 } from "./journeyUiLabels";
@@ -89,7 +93,7 @@ export function JourneySceneDetailPanel({
         rows.push({ paragraphId, conclusion, kind });
       }
     };
-    push(node.evidence_paragraph_ids, "Scene 结论", "scene");
+    push(node.evidence_paragraph_ids, "场景结论", "scene");
     for (const q of node.reader_question_created ?? []) {
       push(q.evidence_paragraph_ids, q.question ?? "问题", "question");
     }
@@ -148,12 +152,8 @@ export function JourneySceneDetailPanel({
       className="journey-scene-detail-panel"
     >
       <JourneyInspectorHeader
-        title={`Scene ${node.scene_ordinal} · ${role}`}
-        meta={
-          node.phase_ordinal != null
-            ? `Phase ${node.phase_ordinal} · S${node.scene_ordinal}`
-            : `S${node.scene_ordinal}`
-        }
+        title={`${formatJourneySceneLabel(node.scene_ordinal)} · ${role}`}
+        meta={`场景范围：${formatJourneySceneRangeLabel(node.scene_ordinal)}`}
         pills={[role]}
         onClose={onClose}
         titleTestId="scene-detail-title"
@@ -173,12 +173,12 @@ export function JourneySceneDetailPanel({
               {conclusion ? (
                 <JourneyPrimaryConclusion text={conclusion} testId="scene-primary-conclusion" />
               ) : null}
-              <JourneyInspectorSection title="结构等级" testId="scene-overview-level">
+              <JourneyInspectorSection title="场景概览" testId="scene-overview-level">
                 <p>{role}</p>
               </JourneyInspectorSection>
               {node.phase_ordinal != null ? (
-                <JourneyInspectorSection title="所属 Phase" testId="scene-overview-phase">
-                  <p>Phase {node.phase_ordinal}</p>
+                <JourneyInspectorSection title="所属阶段" testId="scene-overview-phase">
+                  <p>阶段 {node.phase_ordinal}</p>
                 </JourneyInspectorSection>
               ) : null}
               {node.dominant_emotion ? (
@@ -210,13 +210,13 @@ export function JourneySceneDetailPanel({
                 <JourneyInspectorEmptyState
                   kind="no-question-chain"
                   testId="empty-questions"
-                  actionLabel="查看 Scene 概览"
+                  actionLabel="查看场景概览"
                   onAction={() => setTab("overview")}
                 />
               ) : (
                 <>
                   {hasQuestionItems(node.reader_question_created) ? (
-                    <JourneyInspectorSection title="本 Scene 建立的问题">
+                    <JourneyInspectorSection title="本场景建立的问题">
                       <ReaderQuestionList
                         items={node.reader_question_created}
                         onLocateEvidence={onLocateEvidence}
@@ -258,13 +258,13 @@ export function JourneySceneDetailPanel({
                 <JourneyInspectorEmptyState
                   kind="no-hook-payoff"
                   testId="empty-hook-payoff"
-                  actionLabel="查看 Scene 概览"
+                  actionLabel="查看场景概览"
                   onAction={() => setTab("overview")}
                 />
               ) : (
                 <>
                   {hasHooks ? (
-                    <JourneyInspectorSection title="Hook" testId="scene-hooks-section">
+                    <JourneyInspectorSection title="钩子" testId="scene-hooks-section">
                       {(node.hooks?.length ?? 0) > 0 ? (
                         <HookList items={node.hooks} onLocateEvidence={onLocateEvidence} />
                       ) : null}
@@ -283,7 +283,7 @@ export function JourneySceneDetailPanel({
                             <p>下一场承接：{node.primary_hook.next_handoff}</p>
                           ) : (
                             <p className="journey-inspector-hint">
-                              当前 Hook 尚未识别出明确的后续承接。
+                              当前钩子尚未识别出明确的后续承接。
                             </p>
                           )}
                         </div>
@@ -291,7 +291,7 @@ export function JourneySceneDetailPanel({
                     </JourneyInspectorSection>
                   ) : null}
                   {hasPayoffs ? (
-                    <JourneyInspectorSection title="Payoff" testId="scene-payoffs-section">
+                    <JourneyInspectorSection title="回报" testId="scene-payoffs-section">
                       {(node.payoffs?.length ?? 0) > 0 ? (
                         <PayoffList items={node.payoffs} onLocateEvidence={onLocateEvidence} />
                       ) : node.primary_payoff ? (
@@ -354,7 +354,7 @@ const PHASE_TABS: { id: PhaseDetailTab; label: string; testId: string }[] = [
   { id: "overview", label: "阶段概览", testId: "phase-detail-tab-overview" },
   { id: "questions", label: "问题与回报", testId: "phase-detail-tab-questions" },
   { id: "risks", label: "节奏风险", testId: "phase-detail-tab-risks" },
-  { id: "scenes", label: "相关Scene", testId: "phase-detail-tab-scenes" },
+  { id: "scenes", label: "相关场景", testId: "phase-detail-tab-scenes" },
 ];
 
 type PhaseDetailProps = {
@@ -486,8 +486,8 @@ export function JourneyPhaseDetailPanel({
       className="journey-phase-detail-panel"
     >
       <JourneyInspectorHeader
-        title={`Phase ${phase.ordinal}`}
-        meta={`${phase.title} · S${phase.start_scene_ordinal}—S${phase.end_scene_ordinal}`}
+        title={formatJourneyPhaseLabel(phase.title)}
+        meta={`场景范围：${formatJourneySceneRangeLabel(phase.start_scene_ordinal, phase.end_scene_ordinal)}`}
         onClose={onClose}
         titleTestId="phase-detail-title"
       />
@@ -515,25 +515,25 @@ export function JourneyPhaseDetailPanel({
                   },
                   {
                     key: "peak-scene",
-                    label: peak ? `峰值 S${peak.scene_ordinal}` : "峰值",
+                    label: peak ? `峰值 ${formatJourneySceneRangeLabel(peak.scene_ordinal)}` : "峰值",
                     value: peak ? Math.round(peak.value) : 0,
                   },
                   {
                     key: "scene-count",
-                    label: "Scene 数",
+                    label: "场景数",
                     value: nodes.length,
                   },
                 ]}
                 testId="phase-compact-metrics"
               />
-              <JourneyInspectorSection title="Scene 范围">
+              <JourneyInspectorSection title="场景范围">
                 <p>
-                  Scene {phase.start_scene_ordinal}—{phase.end_scene_ordinal}
+                  {formatJourneySceneRangeLabel(phase.start_scene_ordinal, phase.end_scene_ordinal)}
                 </p>
               </JourneyInspectorSection>
-              {phase.summary || phase.title ? (
+              {resolvePhaseSummaryDisplay(phase.summary, phase.title) ? (
                 <JourneyInspectorSection title="结构任务">
-                  <p>{phase.summary || phase.title}</p>
+                  <p>{resolvePhaseSummaryDisplay(phase.summary, phase.title)}</p>
                 </JourneyInspectorSection>
               ) : null}
               {phase.primary_reader_question ? (
@@ -630,7 +630,10 @@ export function JourneyPhaseDetailPanel({
                             <b>{interval.risk_type}</b>
                             <span>
                               {" "}
-                              Scene {interval.start_scene_ordinal}—{interval.end_scene_ordinal}
+                              {formatJourneySceneRangeLabel(
+                                interval.start_scene_ordinal,
+                                interval.end_scene_ordinal,
+                              )}
                             </span>
                             <p>{interval.summary || interval.trigger || "—"}</p>
                           </li>
@@ -651,7 +654,7 @@ export function JourneyPhaseDetailPanel({
                 testId="phase-related-scenes"
                 items={nodes.map((node) => ({
                   key: String(node.scene_ordinal),
-                  primary: `Scene ${node.scene_ordinal} · ${roleLabelZh(node.final_level ?? node.role)}`,
+                  primary: `${formatJourneySceneLabel(node.scene_ordinal)} · ${roleLabelZh(node.final_level ?? node.role)}`,
                   secondary: node.scene_value_summary || undefined,
                   meta: `牵引 ${Number(node.engagement?.engagement_score ?? 0)}`,
                   onClick: () => onSelectScene(node),

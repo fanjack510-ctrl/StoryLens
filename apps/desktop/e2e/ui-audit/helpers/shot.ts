@@ -158,19 +158,34 @@ export async function shot(page: Page, meta: ShotMeta) {
 }
 
 export async function setTheme(page: Page, theme: "light" | "dark") {
-  await page.evaluate((t) => {
-    localStorage.setItem("storylens.theme", t);
-    document.documentElement.dataset.theme = t;
-    document.documentElement.classList.toggle("dark", t === "dark");
-  }, theme);
-  // Prefer clicking the theme toggle if present for real CSS application
-  const darkBtn = page.getByText("深色", { exact: true });
-  const lightBtn = page.getByText("浅色", { exact: true });
-  if (theme === "dark" && (await darkBtn.count())) {
-    await darkBtn.click().catch(() => undefined);
-  }
-  if (theme === "light" && (await lightBtn.count())) {
-    await lightBtn.click().catch(() => undefined);
+  await applyProductTheme(page, theme);
+}
+
+/** Switch theme through the real product shell toggle (Zustand → `.app[data-theme]`). */
+export async function applyProductTheme(page: Page, theme: "light" | "dark") {
+  const shell = page.getByTestId("app-shell");
+  await shell.waitFor({ timeout: 10_000 });
+  const current = await shell.getAttribute("data-theme");
+  if (current === theme) return;
+  const toggle = page.locator(".theme-toggle-btn");
+  await expect(toggle).toBeVisible();
+  await toggle.click();
+  await expect(shell).toHaveAttribute("data-theme", theme, { timeout: 5_000 });
+}
+
+export async function assertRealDarkTheme(page: Page) {
+  const shell = page.getByTestId("app-shell");
+  await expect(shell).toHaveAttribute("data-theme", "dark");
+  const darkBg = await shell.evaluate((el) => getComputedStyle(el).backgroundColor);
+  // Flip to light briefly to compare, then restore dark.
+  await applyProductTheme(page, "light");
+  const lightBg = await shell.evaluate((el) => getComputedStyle(el).backgroundColor);
+  await applyProductTheme(page, "dark");
+  expect(darkBg).not.toBe(lightBg);
+  const journey = page.getByTestId("journey-workspace");
+  if (await journey.count()) {
+    const surface = await journey.evaluate((el) => getComputedStyle(el).backgroundColor);
+    expect(surface).not.toMatch(/^rgb\(\s*255,\s*255,\s*255\s*\)$/);
   }
 }
 

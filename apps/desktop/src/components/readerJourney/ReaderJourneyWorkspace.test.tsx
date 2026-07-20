@@ -58,7 +58,7 @@ describe("ReaderJourneyWorkspace", () => {
     expect(screen.getByTestId("journey-metric-select")).toHaveTextContent("钩子强度");
 
     fireEvent.click(screen.getByTestId("journey-curve-node-14"));
-    expect(screen.getByTestId("journey-detail-drawer")).toHaveTextContent("Scene 14");
+    expect(screen.getByTestId("journey-detail-drawer")).toHaveTextContent("场景 14");
     expect(screen.getByTestId("scene-detail-tab-questions")).toHaveTextContent("问题链");
 
     expect(screen.getByTestId("journey-export-png")).toBeInTheDocument();

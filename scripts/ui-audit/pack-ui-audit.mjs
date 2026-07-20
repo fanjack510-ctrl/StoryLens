@@ -7,6 +7,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { execSync } from "node:child_process";
+import crypto from "node:crypto";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(__dirname, "../..");
@@ -275,6 +276,68 @@ function zipPackage() {
   return outPath;
 }
 
+function sha256File(filePath) {
+  return crypto.createHash("sha256").update(fs.readFileSync(filePath)).digest("hex");
+}
+
+/** Pairs that must be visually distinct; identical SHA-256 fails the audit pack. */
+const DISTINCT_PAIRS = [
+  ["06_reader_journey_default.png", "06_reader_journey_dark.png"],
+  ["06_reader_journey_tooltip.png", "06_reader_journey_tooltip_dark.png"],
+  ["06_reader_journey_empty.png", "06_reader_journey_failed.png"],
+  ["06_reader_journey_empty.png", "06_reader_journey_analysis_paused.png"],
+  ["06_reader_journey_failed.png", "06_reader_journey_analysis_paused.png"],
+  ["06_reader_journey_detail_open.png", "06_reader_journey_detail_collapsed.png"],
+  ["06_reader_journey_metric_reading-pull.png", "06_reader_journey_metric_emotion.png"],
+  ["06_reader_journey_metric_reading-pull.png", "06_reader_journey_metric_pacing.png"],
+  ["06_reader_journey_metric_reading-pull.png", "06_reader_journey_metric_hook.png"],
+];
+
+function assertScreenshotIntegrity(pngs) {
+  const have = new Set(pngs);
+  const errors = [];
+  const sameInteraction = [];
+  for (const f of fs.readdirSync(SHOTS)) {
+    if (f.endsWith(".same_interaction.json")) {
+      const meta = JSON.parse(fs.readFileSync(path.join(SHOTS, f), "utf8"));
+      sameInteraction.push({ file: f, ...meta });
+      const fakePng = f.replace(/\.same_interaction\.json$/, ".png");
+      if (have.has(fakePng)) {
+        errors.push(
+          `same_interaction state still has duplicate PNG: ${fakePng} (see ${f})`,
+        );
+      }
+    }
+  }
+  for (const [a, b] of DISTINCT_PAIRS) {
+    if (!have.has(a) || !have.has(b)) continue;
+    const ha = sha256File(path.join(SHOTS, a));
+    const hb = sha256File(path.join(SHOTS, b));
+    if (ha === hb) {
+      errors.push(`identical screenshots (SHA-256): ${a} == ${b}`);
+    }
+  }
+  const report = [
+    `# Screenshot integrity ${VERSION}`,
+    "",
+    `- checked pairs: ${DISTINCT_PAIRS.length}`,
+    `- same_interaction markers: ${sameInteraction.length}`,
+    "",
+    ...sameInteraction.map(
+      (s) => `- \`${s.file}\` → same_as \`${s.same_as || "?"}\`: ${s.reason || ""}`,
+    ),
+    "",
+    errors.length ? "## FAILURES" : "## OK",
+    ...errors.map((e) => `- ${e}`),
+  ].join("\n");
+  fs.writeFileSync(path.join(WORK, "screenshot-integrity.md"), report, "utf8");
+  if (errors.length) {
+    console.error(report);
+    process.exit(3);
+  }
+  return { sameInteraction, errors };
+}
+
 function main() {
   ensure();
   const pngs = listPngs();
@@ -284,6 +347,7 @@ function main() {
   writeScreenshotList(pngs);
   writeRunbook();
   copyDocs();
+  const integrity = assertScreenshotIntegrity(pngs);
 
   const secretHits = scanSecrets(WORK);
   if (secretHits.length) {
@@ -297,6 +361,7 @@ function main() {
     generated_at: new Date().toISOString(),
     screenshot_count: pngs.length,
     ...summary,
+    same_interaction: integrity.sameInteraction.length,
     zip: ZIP_OUT,
   };
   fs.writeFileSync(path.join(WORK, "audit-meta.json"), JSON.stringify(meta, null, 2));

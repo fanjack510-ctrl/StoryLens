@@ -978,10 +978,28 @@ export async function installUiAuditMocks(page: Page, scenario: MockScenario = {
 
     if (url.includes("/reader-journey") || url.includes("journey")) {
       const j = scenario.journey ?? "ready";
+      const isProgress =
+        url.includes("/progress") || /\/reader-journey-runs\/\d+/.test(url);
       if (j === "none") {
         return route.fulfill({ status: 404, json: { detail: "not generated" } });
       }
       if (j === "generating") {
+        if (isProgress) {
+          return route.fulfill({
+            json: {
+              journey_run_id: 701,
+              analysis_run_id: 55,
+              status: "scene_profiles_running",
+              total_scene_count: 14,
+              completed_scene_count: 7,
+              remaining_scene_count: 7,
+              phase_count: 0,
+              has_chapter_summary: false,
+              retryable: true,
+              progress_percent: 55,
+            },
+          });
+        }
         return route.fulfill({
           json: {
             journey_run_id: 701,
@@ -993,13 +1011,37 @@ export async function installUiAuditMocks(page: Page, scenario: MockScenario = {
         });
       }
       if (j === "failed") {
+        if (isProgress) {
+          return route.fulfill({
+            json: {
+              journey_run_id: 701,
+              analysis_run_id: 55,
+              status: "failed",
+              total_scene_count: 14,
+              completed_scene_count: 3,
+              remaining_scene_count: 11,
+              phase_count: 0,
+              has_chapter_summary: false,
+              retryable: true,
+              user_error_message: "阅读旅程生成失败（审计）",
+            },
+          });
+        }
         return route.fulfill({
-          status: 500,
-          json: { detail: "Reader Journey 生成失败（审计 Mock）" },
+          json: {
+            journey_run_id: 701,
+            analysis_run_id: 55,
+            status: "failed",
+            user_error_message: "阅读旅程生成失败（审计）",
+            retryable: true,
+          },
         });
       }
       const visualization = buildVisualizationFixture();
       if (j === "empty") {
+        const emptySeries = Object.fromEntries(
+          Object.keys(visualization.curve_series || {}).map((key) => [key, []]),
+        );
         return route.fulfill({
           json: {
             journey_run_id: 701,
@@ -1008,6 +1050,8 @@ export async function installUiAuditMocks(page: Page, scenario: MockScenario = {
             visualization: {
               ...visualization,
               scene_nodes: [],
+              phases: [],
+              curve_series: emptySeries,
               chapter_summary: {
                 ...visualization.chapter_summary,
                 chapter_title: "空旅程",

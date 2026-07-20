@@ -73,7 +73,7 @@ describe("Phase 1C-C.2.5C density refinement (updated for 2.6)", () => {
     fireEvent.click(screen.getByTestId("journey-curve-node-12"));
     fireEvent.click(screen.getByTestId("scene-detail-tab-questions"));
     expect(screen.getByTestId("scene-detail-panel-questions")).toBeInTheDocument();
-    expect(screen.getByTestId("scene-detail-title")).toHaveTextContent("Scene 12");
+    expect(screen.getByTestId("scene-detail-title")).toHaveTextContent("场景 12");
   });
 
   it("exports PNG from legacy overview=questions without leaving journey analysis", async () => {

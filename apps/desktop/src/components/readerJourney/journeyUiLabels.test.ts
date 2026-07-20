@@ -7,7 +7,9 @@ import {
   formatJourneyScore,
   formatJourneySelectionType,
   formatJourneyStatus,
+  isEffectivePhaseSummary,
   PRIMARY_JOURNEY_METRICS,
+  resolvePhaseSummaryDisplay,
 } from "./journeyUiLabels";
 
 describe("journeyUiLabels display formatters", () => {
@@ -23,7 +25,21 @@ describe("journeyUiLabels display formatters", () => {
 
   it("uses fixed fallback phase explanations only", () => {
     expect(formatJourneyPhaseFallbackSummary("入")).toContain("阅读期待");
-    expect(formatJourneyPhaseFallbackSummary("推进")).toContain("冲突");
+    expect(formatJourneyPhaseFallbackSummary("推进")).toContain("核心冲突");
+    expect(formatJourneyPhaseFallbackSummary("收束")).toContain("后续期待");
+  });
+
+  it("rejects punctuation-only phase summaries", () => {
+    expect(isEffectivePhaseSummary(".")).toBe(false);
+    expect(isEffectivePhaseSummary("。")).toBe(false);
+    expect(isEffectivePhaseSummary("   ")).toBe(false);
+    expect(isEffectivePhaseSummary(null)).toBe(false);
+    expect(isEffectivePhaseSummary(undefined)).toBe(false);
+    expect(isEffectivePhaseSummary("建立背景")).toBe(true);
+    expect(resolvePhaseSummaryDisplay(".", "入局")).toContain("阅读期待");
+    expect(resolvePhaseSummaryDisplay("  ", "推进")).toContain("核心冲突");
+    expect(resolvePhaseSummaryDisplay(null, "转折")).toContain("信息变化");
+    expect(resolvePhaseSummaryDisplay("真实阶段说明", "推进")).toBe("真实阶段说明");
   });
 
   it("maps metrics and scores safely", () => {
@@ -43,7 +59,8 @@ describe("journeyUiLabels display formatters", () => {
     expect(formatJourneySceneLabel(undefined)).toBe("场景");
     expect(formatJourneySelectionType("phase")).toBe("阶段");
     expect(formatJourneySelectionType("scene")).toBe("场景");
-    expect(formatJourneyStatus("succeeded")).toBe("分析已完成");
+    expect(formatJourneyStatus("succeeded")).toBe("已完成");
+    expect(formatJourneyStatus("running")).toBe("生成中");
     expect(formatJourneyStatus(null)).toBe("—");
   });
 });

@@ -78,9 +78,11 @@ describe("Reader Journey Workspace Layout v4.0", () => {
   it("resolves layout breakpoints without book/scene special cases", () => {
     expect(resolveJourneyLayoutMode(1440)).toBe("desktop");
     expect(resolveJourneyLayoutMode(1366)).toBe("mid");
+    expect(resolveJourneyLayoutMode(1180)).toBe("mid");
+    expect(resolveJourneyLayoutMode(1179)).toBe("narrow");
     expect(resolveJourneyLayoutMode(1099)).toBe("narrow");
     expect(LAYOUT_BREAKPOINTS.desktopMin).toBe(1440);
-    expect(LAYOUT_BREAKPOINTS.midMin).toBe(1100);
+    expect(LAYOUT_BREAKPOINTS.midMin).toBe(1180);
     expect(configSource).not.toMatch(/book_id\s*===|chapter_id\s*===|run_id\s*===/);
     expect(workspaceSource).not.toMatch(/bookId\s*===|chapterId\s*===|runId\s*===/);
   });
@@ -183,7 +185,7 @@ describe("Reader Journey Workspace Layout v4.0", () => {
   it("uses CSS grid tokens for source/inspector widths", () => {
     expect(SOURCE_PANE_WIDTH_PX.desktop).toBe(300);
     expect(INSPECTOR_PANE_WIDTH_PX.desktop).toBe(360);
-    expect(css).toMatch(/minmax\(640px,\s*1fr\)/);
+    expect(css).toMatch(/minmax\(0,\s*1fr\)/);
     expect(css).toMatch(/--source-pane-width/);
     expect(css).toMatch(/--inspector-pane-width/);
     expect(workspaceSource).toMatch(/journey-workspace-v4/);

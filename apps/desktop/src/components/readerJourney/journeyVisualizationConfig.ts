@@ -6,10 +6,13 @@
 
 export const JOURNEY_VISUALIZATION_VERSION = "4.2";
 
-/** Layout breakpoints (viewport width of workspace host, not book/scene count). */
+/**
+ * Layout breakpoints use the browser viewport width (not host/nav-subtracted width),
+ * so 1440px viewport always gets a right Inspector and &lt;1180px stays narrow.
+ */
 export const LAYOUT_BREAKPOINTS = {
   desktopMin: 1440,
-  midMin: 1100,
+  midMin: 1180,
 } as const;
 
 export type JourneyLayoutMode = "desktop" | "mid" | "narrow";
