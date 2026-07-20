@@ -2,6 +2,7 @@ import { expect, type Page } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { AUDIT_DIRTY_VISIBLE_PATTERNS } from "../../../src/services/auditDirtyVisibleText";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -18,6 +19,8 @@ export type ShotMeta = {
   theme?: "light" | "dark";
   notes?: string;
   fullPage?: boolean;
+  /** Strict visible dirty-token scan (undefined/null/NaN/…). Used by 04 workspace shots. */
+  checkDirtyVisible?: boolean;
 };
 
 function ensureDirs() {
@@ -69,11 +72,72 @@ export async function assertAuditPageHealthy(page: Page) {
   if (/\bundefined\b\/\bundefined\b/i.test(bodyText) || bodyText.includes("undefined/undefined")) {
     throw new Error("Audit page shows undefined/undefined");
   }
+  // Scene catalog bug class — must never appear in any audit shot
+  if (/Sundefined|Snull|SNaN/i.test(bodyText)) {
+    throw new Error("Audit page shows dirty scene ordinal label");
+  }
+}
+
+/** Visible text / control values only — not raw HTML / JS source. */
+export async function assertNoDirtyVisibleText(page: Page) {
+  const patternSources = AUDIT_DIRTY_VISIBLE_PATTERNS.map((re) => ({
+    source: re.source,
+    flags: re.flags,
+  }));
+  const hits = await page.evaluate((patterns) => {
+    const dirty = patterns.map((p) => new RegExp(p.source, p.flags));
+    const found: string[] = [];
+    const pushIf = (raw: string | null | undefined) => {
+      const text = (raw || "").trim();
+      if (!text) return;
+      for (const re of dirty) {
+        if (re.test(text)) {
+          found.push(text.slice(0, 120));
+          return;
+        }
+      }
+    };
+    const walk = (node: Node) => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        const parent = node.parentElement;
+        if (!parent) return;
+        const tag = parent.tagName;
+        if (tag === "SCRIPT" || tag === "STYLE" || tag === "NOSCRIPT") return;
+        const style = getComputedStyle(parent);
+        if (style.display === "none" || style.visibility === "hidden" || style.opacity === "0") {
+          return;
+        }
+        pushIf(node.textContent);
+        return;
+      }
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        const el = node as HTMLElement;
+        if (el.tagName === "SCRIPT" || el.tagName === "STYLE" || el.tagName === "NOSCRIPT") return;
+        if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+          pushIf(el.value);
+        }
+        if (el instanceof HTMLSelectElement) {
+          pushIf(el.value);
+          const opt = el.selectedOptions?.[0];
+          pushIf(opt?.textContent);
+        }
+        el.childNodes.forEach(walk);
+      }
+    };
+    walk(document.body);
+    return found;
+  }, patternSources);
+  if (hits.length) {
+    throw new Error(`Audit page shows dirty visible text: ${hits[0]}`);
+  }
 }
 
 export async function shot(page: Page, meta: ShotMeta) {
   ensureDirs();
   await assertAuditPageHealthy(page);
+  if (meta.checkDirtyVisible) {
+    await assertNoDirtyVisibleText(page);
+  }
   await maskSecretsInDom(page);
   const file = meta.file.endsWith(".png") ? meta.file : `${meta.file}.png`;
   const target = path.join(SCREENSHOT_DIR, file);

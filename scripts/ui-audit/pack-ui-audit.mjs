@@ -243,24 +243,36 @@ function copyDocs() {
 }
 
 function zipPackage() {
-  if (fs.existsSync(ZIP_OUT)) fs.unlinkSync(ZIP_OUT);
   const staging = path.join(REPO, "artifacts", `_zip_staging_${VERSION}`);
   fs.rmSync(staging, { recursive: true, force: true });
   fs.mkdirSync(staging, { recursive: true });
   const rootName = `StoryLens_UI_Audit_${VERSION}`;
   const dest = path.join(staging, rootName);
   fs.cpSync(WORK, dest, { recursive: true });
-  // Prefer tar (handles locks better than Compress-Archive on Windows).
+
+  let outPath = ZIP_OUT;
   try {
-    execSync(`tar -a -c -f "${ZIP_OUT}" -C "${staging}" "${rootName}"`, {
+    if (fs.existsSync(ZIP_OUT)) fs.unlinkSync(ZIP_OUT);
+  } catch (err) {
+    // Windows may lock the previous zip (Explorer preview). Write a sibling file.
+    outPath = path.join(
+      path.dirname(ZIP_OUT),
+      `StoryLens_UI_Audit_${VERSION}_${Date.now()}.zip`,
+    );
+    console.warn(`ZIP locked at ${ZIP_OUT}; writing ${outPath} instead (${err.code || err})`);
+  }
+
+  try {
+    execSync(`tar -a -c -f "${outPath}" -C "${staging}" "${rootName}"`, {
       stdio: "inherit",
       shell: true,
     });
   } catch {
-    const ps = `Compress-Archive -Path '${dest.replace(/'/g, "''")}' -DestinationPath '${ZIP_OUT.replace(/'/g, "''")}' -Force`;
+    const ps = `Compress-Archive -Path '${dest.replace(/'/g, "''")}' -DestinationPath '${outPath.replace(/'/g, "''")}' -Force`;
     execSync(`powershell -NoProfile -Command "${ps}"`, { stdio: "inherit" });
   }
   fs.rmSync(staging, { recursive: true, force: true });
+  return outPath;
 }
 
 function main() {
@@ -288,7 +300,9 @@ function main() {
     zip: ZIP_OUT,
   };
   fs.writeFileSync(path.join(WORK, "audit-meta.json"), JSON.stringify(meta, null, 2));
-  zipPackage();
+  const zipPath = zipPackage();
+  meta.zip = zipPath;
+  fs.writeFileSync(path.join(WORK, "audit-meta.json"), JSON.stringify(meta, null, 2));
   console.log(JSON.stringify(meta, null, 2));
 }
 

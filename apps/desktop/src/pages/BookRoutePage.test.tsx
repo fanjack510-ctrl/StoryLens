@@ -527,11 +527,26 @@ describe("Book chapter shell", () => {
     await waitFor(() => {
       expect(screen.getByTestId("chapter-analysis-progress")).toBeInTheDocument();
     });
+    const shell = screen.getByTestId("book-chapter-shell");
+    const reader = document.querySelector(".book-shell-workspace") as HTMLElement | null;
+    const expandedWidth = reader?.getBoundingClientRect().width ?? 0;
     fireEvent.click(screen.getByTestId("chapter-analysis-dismiss"));
     await waitFor(() => {
       expect(screen.queryByTestId("chapter-analysis-progress")).not.toBeInTheDocument();
     });
-    expect(screen.getByTestId("book-chapter-shell")).toHaveAttribute("data-analysis-run", "77");
+    expect(shell).toHaveAttribute("data-analysis-run", "77");
+    expect(shell).toHaveAttribute("data-has-progress", "false");
+    expect(screen.getByTestId("chapter-analysis-expand")).toBeInTheDocument();
+    const collapsedWidth = reader?.getBoundingClientRect().width ?? 0;
+    // jsdom may report 0 widths; only assert widen when layout metrics exist.
+    if (expandedWidth > 0 && collapsedWidth > 0) {
+      expect(collapsedWidth).toBeGreaterThanOrEqual(expandedWidth);
+    }
+    fireEvent.click(screen.getByTestId("chapter-analysis-expand"));
+    await waitFor(() => {
+      expect(screen.getByTestId("chapter-analysis-progress")).toBeInTheDocument();
+    });
+    expect(shell).toHaveAttribute("data-has-progress", "true");
   });
 
   it("does not change start analysis disabled rules", async () => {

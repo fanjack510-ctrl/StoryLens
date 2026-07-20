@@ -700,6 +700,19 @@ export function BookRoutePage() {
           ) : (
             <>
               <ReadingSettingsPopover />
+              {panelCollapsed && analysisRunId ? (
+                <button
+                  type="button"
+                  className="secondary"
+                  data-testid="chapter-analysis-expand"
+                  onClick={() => {
+                    setPanelCollapsed(false);
+                    setView("progress");
+                  }}
+                >
+                  展开分析面板
+                </button>
+              ) : null}
               {latestSucceeded && !analysisRunId && (
                 <Link
                   className="secondary"

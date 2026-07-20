@@ -16,6 +16,8 @@ export type ProviderKind =
 
 export type MockScenario = {
   books?: "empty" | "one" | "multi" | "long_titles";
+  /** Empty chapter list for a book that exists — product no-chapter reading state. */
+  chapters?: "default" | "empty";
   provider?: ProviderKind;
   cloudEnabled?: boolean;
   multiProviders?: boolean;
@@ -197,6 +199,7 @@ function booksPayload(scenario: MockScenario) {
 }
 
 function chaptersPayload(scenario: MockScenario) {
+  if (scenario.chapters === "empty") return [];
   const longTitle =
     scenario.chapterMode === "long_title"
       ? "第一章　虚构超长章节名：守夜人沿着螺旋阶梯下降到潮汐钟房并抄写三百年无人核对的航线附录"
@@ -217,6 +220,36 @@ function chaptersPayload(scenario: MockScenario) {
       section_type: "chapter",
       title: "第二章　星港夜航",
       display_title: "第二章　星港夜航",
+    },
+  ];
+}
+
+/** Matches backend SceneResponse / frontend Scene for GET /chapters/{id}/scenes. */
+function scenesPayload() {
+  return [
+    {
+      id: 1,
+      scene_key: "B0001-C0001-R0001-S0001",
+      book_id: 1,
+      chapter_id: 1,
+      ordinal: 1,
+      start_paragraph_id: "B0001-C0001-P0001",
+      end_paragraph_id: "B0001-C0001-P0002",
+      created_by_run_id: 55,
+      boundary_detected: true,
+      boundary_confidence: 0.92,
+    },
+    {
+      id: 2,
+      scene_key: "B0001-C0001-R0001-S0002",
+      book_id: 1,
+      chapter_id: 1,
+      ordinal: 2,
+      start_paragraph_id: "B0001-C0001-P0003",
+      end_paragraph_id: "B0001-C0001-P0003",
+      created_by_run_id: 55,
+      boundary_detected: false,
+      boundary_confidence: 0.4,
     },
   ];
 }
@@ -854,7 +887,12 @@ export async function installUiAuditMocks(page: Page, scenario: MockScenario = {
       return route.fulfill({ json: found });
     }
 
-    if (url.includes("/chapters") && !url.includes("paragraphs") && method === "GET") {
+    if (
+      url.includes("/chapters") &&
+      !url.includes("/scenes") &&
+      !url.includes("paragraphs") &&
+      method === "GET"
+    ) {
       return route.fulfill({ json: chaptersPayload(scenario) });
     }
 
@@ -900,28 +938,31 @@ export async function installUiAuditMocks(page: Page, scenario: MockScenario = {
         const runId = Number(singleRunMatch[1]);
         const fromTasks = tasksPayload({ ...scenario, tasks: scenario.tasks ?? "multi" });
         const found = fromTasks.find((item) => item.id === runId);
+        const fromPayload = analysisRunPayload(scenario);
         const run =
           found ||
-          analysisRunPayload(scenario) || {
-            id: runId,
-            subject_id: "1",
-            book_id: 1,
-            chapter_id: 1,
-            provider: "aliyun_qwen_plus",
-            model: "qwen3.7-plus",
-            status: "succeeded",
-            progress_current: 3,
-            progress_total: 3,
-            execution_mode: "cloud",
-            cloud_consent: true,
-            sends_content_to_cloud: true,
-            retryable: false,
-            created_at: "2026-07-10T08:00:00Z",
-            reusable_checkpoint_count: 0,
-            conflicted_checkpoint_count: 0,
-            checkpoint_total_count: 0,
-            checkpoint_available: false,
-          };
+          (fromPayload
+            ? { ...fromPayload, id: runId }
+            : {
+                id: runId,
+                subject_id: "1",
+                book_id: 1,
+                chapter_id: 1,
+                provider: "aliyun_qwen_plus",
+                model: "qwen3.7-plus",
+                status: "succeeded",
+                progress_current: 3,
+                progress_total: 3,
+                execution_mode: "cloud",
+                cloud_consent: true,
+                sends_content_to_cloud: true,
+                retryable: false,
+                created_at: "2026-07-10T08:00:00Z",
+                reusable_checkpoint_count: 0,
+                conflicted_checkpoint_count: 0,
+                checkpoint_total_count: 0,
+                checkpoint_available: false,
+              });
         return route.fulfill({ json: run });
       }
       // list only: /analysis-runs or /analysis-runs?
@@ -988,6 +1029,11 @@ export async function installUiAuditMocks(page: Page, scenario: MockScenario = {
           visualization,
         },
       });
+    }
+
+    // Chapter scenes list: plain SceneResponse[] (not boundary-review items wrapper).
+    if (/\/chapters\/\d+\/scenes(?:\?|$)/.test(url) && method === "GET") {
+      return route.fulfill({ json: scenesPayload() });
     }
 
     if (url.includes("/scenes") || url.includes("boundaries") || url.includes("boundary")) {

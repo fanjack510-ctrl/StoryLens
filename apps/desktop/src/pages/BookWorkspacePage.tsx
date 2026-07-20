@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { booksApi } from "../services/booksApi";
 import { analysisApi } from "../services/analysisApi";
+import { formatSceneDisplayLabel } from "../services/formatSceneDisplayLabel";
 import { useUiStore } from "../stores/uiStore";
 import { Empty, ErrorState, Loading, Badge } from "../components/common/States";
 import { StateView } from "../components/ui/StateView";
@@ -221,12 +222,15 @@ export function BookWorkspacePage() {
                   className={`workspace-scene-item${selectedScene?.id === s.id ? " selected" : ""}`}
                   onClick={() => setScene(s)}
                   key={s.id}
-                  title={s.scene_key}
+                  data-scene-id={s.id}
+                  title={s.scene_key || formatSceneDisplayLabel(s)}
                 >
                   <span className="workspace-scene-ordinal">
-                    S{String(s.ordinal).padStart(2, "0")}
+                    {formatSceneDisplayLabel(s)}
                   </span>
-                  <span className="workspace-scene-name">{s.scene_key}</span>
+                  {s.scene_key && typeof s.ordinal === "number" && Number.isFinite(s.ordinal) ? (
+                    <span className="workspace-scene-name">{s.scene_key}</span>
+                  ) : null}
                   <Badge tone={s.boundary_detected ? "success" : "neutral"}>
                     {s.boundary_detected ? "边界" : "章末"}
                   </Badge>

@@ -157,6 +157,54 @@ describe("BookWorkspacePage polish", () => {
     expect(screen.getByText("章末")).toBeInTheDocument();
     const sceneBtn = screen.getByText("客厅").closest("button");
     expect(sceneBtn?.querySelector("input")).toBeNull();
+    expect(sceneBtn).toHaveAttribute("data-scene-id", "9");
+    fireEvent.click(sceneBtn!);
+    await waitFor(() => {
+      expect(
+        document.querySelector('.workspace-scene-item.selected[data-scene-id="9"]'),
+      ).toBeTruthy();
+    });
+  });
+
+  it("does not render Sundefined when scene ordinal is missing", async () => {
+    vi.mocked(analysisApi.scenes).mockResolvedValue([
+      {
+        id: 3,
+        scene_key: "星港灯火",
+        chapter_id: 1,
+        // ordinal intentionally omitted — malformed payload must not leak dirty labels
+        start_paragraph_id: "a",
+        end_paragraph_id: "b",
+        created_by_run_id: 1,
+        boundary_detected: true,
+        boundary_confidence: 0.9,
+      },
+    ] as any);
+    renderWorkspace();
+    expect(await screen.findByText("星港灯火")).toBeInTheDocument();
+    expect(screen.queryByText(/Sundefined|Snull|SNaN/i)).toBeNull();
+    expect(screen.getByText("边界")).toBeInTheDocument();
+  });
+
+  it("shows no-chapter StateView when chapters list is empty", async () => {
+    vi.mocked(booksApi.chapters).mockResolvedValue([]);
+    renderWorkspace();
+    expect(await screen.findByTestId("workspace-no-chapter")).toHaveTextContent(
+      "选择一个章节开始阅读",
+    );
+    expect(screen.queryByRole("heading", { name: /第一章/ })).toBeNull();
+    expect(screen.queryByText("潮汐涌起。")).toBeNull();
+  });
+
+  it("shows loading state without body paragraphs", async () => {
+    vi.mocked(booksApi.paragraphs).mockImplementation(
+      () => new Promise(() => undefined) as any,
+    );
+    renderWorkspace();
+    expect(await screen.findByTestId("workspace-chapter-loading")).toHaveTextContent(
+      "正在载入章节",
+    );
+    expect(screen.queryByText("潮汐涌起。")).toBeNull();
   });
 
   it("shows empty body state for chapters without paragraphs", async () => {
