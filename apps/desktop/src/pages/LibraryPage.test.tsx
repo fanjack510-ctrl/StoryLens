@@ -1,5 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { LibraryPage } from "./LibraryPage";
@@ -159,5 +161,57 @@ describe("LibraryPage polish", () => {
     const panel = await screen.findByTestId("import-panel");
     expect(panel).toHaveTextContent("继续导入");
     expect(panel).toHaveTextContent("重新选择文件");
+  });
+
+  it("populated library does not force a large fixed min-height", async () => {
+    renderLibrary();
+    await screen.findByTestId("book-row-1");
+    const list = screen.getByTestId("library-list");
+    expect(list.className).toContain("library-main--populated");
+    expect(list.className).not.toContain("library-main--empty");
+    const globalCss = readFileSync(
+      resolve(__dirname, "../styles/global.css"),
+      "utf8",
+    );
+    expect(globalCss).toMatch(/\.library-main\s*\{[^}]*min-height:\s*0/);
+    expect(globalCss).not.toMatch(/\.library-main\s*\{[^}]*min-height:\s*500px/);
+  });
+  it("empty library still shows EmptyState", async () => {
+    list.mockResolvedValue([]);
+    renderLibrary();
+    expect(await screen.findByTestId("library-empty-state")).toBeInTheDocument();
+    expect(screen.getByTestId("library-list").className).toContain("library-main--empty");
+  });
+
+  it("shows authentic duplicate upload warning", async () => {
+    preview.mockResolvedValue({
+      encoding: "utf-8",
+      byte_count: 1000,
+      candidate_count: 1,
+      final_chapter_count: 1,
+      chapter_titles: ["第一章"],
+      warning: null,
+    });
+    importFile.mockRejectedValue(
+      new ApiError("DUPLICATE_BOOK", "该文件已导入", 409, {}),
+    );
+    renderLibrary();
+    await screen.findByTestId("import-book");
+    fireEvent.change(document.querySelector('input[type="file"]') as HTMLInputElement, {
+      target: { files: [new File(["dup"], "dup.txt")] },
+    });
+    expect(await screen.findByTestId("import-panel")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "完成导入" }));
+    const alert = await screen.findByTestId("import-duplicate-alert");
+    expect(alert).toHaveTextContent("书籍可能已存在");
+    expect(alert).toHaveTextContent("该文件已导入");
+    expect(alert.className).toContain("import-panel--warning");
+  });
+
+  it("ordinary library without duplicate alert cannot pass duplicate state check", async () => {
+    renderLibrary();
+    await screen.findByTestId("book-row-1");
+    expect(screen.queryByTestId("import-duplicate-alert")).not.toBeInTheDocument();
+    expect(screen.queryByText("书籍可能已存在")).not.toBeInTheDocument();
   });
 });

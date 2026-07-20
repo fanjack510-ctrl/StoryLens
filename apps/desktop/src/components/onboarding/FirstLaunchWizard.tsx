@@ -1,12 +1,15 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   DEFAULT_ANALYSIS_MODE,
   ordinaryModeOptions,
   type AnalysisModePresetId,
 } from "../../services/analysisModePresets";
-import { configureRecommendedQwenService } from "../../services/aiServiceConfig";
+import {
+  configureRecommendedQwenService,
+  fetchRecommendedQwenStatus,
+} from "../../services/aiServiceConfig";
 import { useOnboardingStore } from "../../stores/onboardingStore";
 import { useTelemetryStore } from "../../stores/telemetry";
 import { Button } from "../ui/Button";
@@ -32,6 +35,10 @@ export function FirstLaunchWizard() {
   const complete = useOnboardingStore((s) => s.complete);
   const skip = useOnboardingStore((s) => s.skip);
   const setTelemetryEnabled = useTelemetryStore((s) => s.setAnonymousTelemetryEnabled);
+  const setupStatus = useQuery({
+    queryKey: ["recommended-qwen-setup"],
+    queryFn: fetchRecommendedQwenStatus,
+  });
   const [step, setStep] = useState<Step>(1);
   const [apiKey, setApiKey] = useState("");
   const [analysisMode, setAnalysisMode] = useState<AnalysisModePresetId>(DEFAULT_ANALYSIS_MODE);
@@ -44,6 +51,7 @@ export function FirstLaunchWizard() {
 
   const busy = busyIntent !== null;
   const meta = STEP_META[step];
+  const hasExistingCredential = Boolean(setupStatus.data?.credential_configured);
 
   const finish = (target: "library" | "import") => {
     setTelemetryEnabled(anonymousStats);
@@ -131,7 +139,7 @@ export function FirstLaunchWizard() {
     if (lastOk === false) {
       const needsRepair = /修复|repair|凭据/i.test(message);
       return {
-        tone: "danger" as const,
+        tone: (needsRepair ? "warning" : "danger") as "warning" | "danger",
         title: needsRepair ? "配置需要修复" : "连接失败",
         detail: message,
       };
@@ -153,7 +161,7 @@ export function FirstLaunchWizard() {
               <div className="onboarding-welcome-mark" aria-hidden="true">
                 <span className="brand-mark">SL</span>
               </div>
-              <h3>欢迎使用 StoryLens</h3>
+              <h3>本地优先的小说拆解工具</h3>
               <p>
                 StoryLens 是一款本地优先的小说结构分析与深度阅读工具。它可以帮助你整理章节、识别场景，并观察读者旅程。
               </p>
@@ -178,11 +186,17 @@ export function FirstLaunchWizard() {
                   autoComplete="new-password"
                   value={apiKey}
                   data-testid="onboarding-api-key"
-                  placeholder="已配置时可留空表示保持原凭据"
+                  placeholder={
+                    hasExistingCredential
+                      ? "留空表示保持现有凭据"
+                      : "粘贴你的 API Key"
+                  }
                   onChange={(e) => setApiKey(e.target.value)}
                 />
                 <small className="field-hint">
-                  API Key 仅保存在 Windows 凭据管理器中。留空表示保持现有凭据不变。
+                  {hasExistingCredential
+                    ? "API Key 仅保存在 Windows 凭据管理器中。留空表示保持现有凭据不变。"
+                    : "API Key 仅保存在 Windows 凭据管理器中。"}
                 </small>
               </label>
 
@@ -203,7 +217,15 @@ export function FirstLaunchWizard() {
                 <small className="field-hint">{MODE_HINT[mode]}</small>
               </label>
 
-              <label className="consent onboarding-consent-box">
+              <label
+                className={`consent onboarding-consent-box ${
+                  consent
+                    ? "onboarding-consent-box--checked"
+                    : "onboarding-consent-box--unchecked"
+                }`}
+                data-testid="onboarding-consent-box"
+                data-consent={consent ? "checked" : "unchecked"}
+              >
                 <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
                 <span>
                   为完成云端分析，所选章节正文会发送至阿里云百炼。
@@ -212,9 +234,10 @@ export function FirstLaunchWizard() {
               </label>
 
               <div
-                className={`onboarding-status-card status-card onboarding-status-card--${connectionStatus.tone}`}
+                className={`onboarding-status-card onboarding-status-card--${connectionStatus.tone}`}
                 role="status"
                 data-testid="onboarding-connection-status"
+                data-tone={connectionStatus.tone}
               >
                 <strong>{connectionStatus.title}</strong>
                 {(message || busyIntent) && (

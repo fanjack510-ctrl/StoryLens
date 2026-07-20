@@ -113,6 +113,26 @@ describe("Phase 2A.2 reparse acceptance", () => {
     await open();
     expect(screen.getByText(/12000段/)).toBeVisible();
   });
+  test("header and footer stay visible with long preview content", async () => {
+    const longTitles = Array.from({ length: 40 }, (_, i) => `第${i + 1}章｜长内容样例`);
+    await open({ ...base, chapter_titles: longTitles, formal_chapter_count: longTitles.length });
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toHaveAttribute("aria-modal", "true");
+    expect(dialog.className).toContain("reparse-dialog-modal");
+    expect(screen.getByRole("heading", { name: "重新识别章节" })).toBeVisible();
+    expect(screen.getByTestId("reparse-dialog-footer")).toBeVisible();
+    expect(screen.getByRole("button", { name: "取消" })).toBeVisible();
+    expect(screen.getByTestId("reparse-apply")).toBeVisible();
+    expect(screen.getByTestId("reparse-dialog-body")).toBeInTheDocument();
+    expect(screen.getByTestId("reparse-replace-in-place")).toHaveAttribute(
+      "value",
+      "replace_in_place",
+    );
+    expect(screen.getByTestId("reparse-create-revision")).toHaveAttribute(
+      "value",
+      "create_revision",
+    );
+  });
   test("Provider 502详情数据保持脱敏", () => {
     const value = { root_error_code: "PROVIDER_HTTP_ERROR", http_status: 502 };
     expect(JSON.stringify(value)).not.toContain("原创正文");

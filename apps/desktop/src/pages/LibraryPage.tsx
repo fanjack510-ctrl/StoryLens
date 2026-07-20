@@ -26,17 +26,21 @@ function importErrorKind(error: unknown): {
   tone: "danger" | "warning";
 } {
   if (error instanceof ApiError) {
-    const msg = `${error.message} ${String(error.detail || "")}`.toLowerCase();
+    const msg = `${error.code} ${error.message} ${String(error.detail || "")}`.toLowerCase();
     if (error.status === 413 || /过大|too large|size/i.test(msg)) {
       return { title: "文件过大", tone: "danger" };
     }
     if (/编码|encoding/i.test(msg)) {
       return { title: "编码无法识别", tone: "danger" };
     }
-    if (/格式|format|不支持/i.test(msg)) {
+    if (/格式|format|不支持|invalid_file_type/i.test(msg)) {
       return { title: "文件格式不支持", tone: "danger" };
     }
-    if (/重复|duplicate|已存在/i.test(msg)) {
+    if (
+      error.status === 409 ||
+      error.code === "DUPLICATE_BOOK" ||
+      /重复|duplicate|已存在|已导入/i.test(msg)
+    ) {
       return { title: "书籍可能已存在", tone: "warning" };
     }
   }
@@ -55,6 +59,7 @@ export function LibraryPage() {
   });
   const [sort, setSort] = useState<"recent" | "title">("recent");
   const [pendingFile, setPendingFile] = useState<File>();
+  const [dragOver, setDragOver] = useState(false);
   const qc = useQueryClient();
   const books = useQuery({ queryKey: ["books"], queryFn: booksApi.list });
   const upload = useMutation({
@@ -94,6 +99,8 @@ export function LibraryPage() {
   }, [books.data, search, formats, sort]);
 
   const hasActiveFilter = Boolean(search) || !FORMAT_OPTIONS.every((f) => formats[f]);
+  const isEmptyLibrary = !books.isLoading && !books.error && (books.data?.length ?? 0) === 0;
+  const listHasRows = visible.length > 0;
 
   useEffect(() => {
     if (searchParams.get("import") === "1") {
@@ -255,11 +262,27 @@ export function LibraryPage() {
       </div>
 
       <div
-        className="panel library-main library-main-wide"
+        className={`panel library-main library-main-wide ${
+          isEmptyLibrary ? "library-main--empty" : listHasRows ? "library-main--populated" : ""
+        }${dragOver ? " is-drag-over" : ""}`}
         data-testid="library-list"
-        onDragOver={(event) => event.preventDefault()}
+        data-drag-active={dragOver ? "true" : "false"}
+        onDragEnter={(event) => {
+          event.preventDefault();
+          setDragOver(true);
+        }}
+        onDragOver={(event) => {
+          event.preventDefault();
+          setDragOver(true);
+        }}
+        onDragLeave={(event) => {
+          event.preventDefault();
+          if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
+          setDragOver(false);
+        }}
         onDrop={(event) => {
           event.preventDefault();
+          setDragOver(false);
           accept(event.dataTransfer.files);
         }}
       >
@@ -273,6 +296,11 @@ export function LibraryPage() {
           <div
             className={`import-panel import-panel--${importErrorKind(upload.error).tone}`}
             role="alert"
+            data-testid={
+              importErrorKind(upload.error).title === "书籍可能已存在"
+                ? "import-duplicate-alert"
+                : "import-upload-error"
+            }
           >
             <h2>{importErrorKind(upload.error).title}</h2>
             <ErrorState error={upload.error as Error} />

@@ -82,12 +82,16 @@ test.describe("02 library", () => {
   test("drop hint", async ({ page }) => {
     await installUiAuditMocks(page, { books: "one" });
     await gotoReady(page, "/library");
+    const list = page.getByTestId("library-list");
+    await list.dispatchEvent("dragenter");
+    await expect(list).toHaveAttribute("data-drag-active", "true");
+    await expect(list).toHaveClass(/is-drag-over/);
     await shot(page, {
       id: "03-04",
       file: "03_import_drop_hint.png",
       route: "/library",
       theme: "light",
-      notes: "drop-hint footer in library list panel",
+      notes: "drag-active drop-hint state on library list panel",
     });
   });
 });
@@ -182,7 +186,12 @@ test.describe("02 import errors and states", () => {
     await pickImportFile(page, tmpImport("dup.txt"));
     await page.getByTestId("import-panel").waitFor();
     await page.getByRole("button", { name: "完成导入" }).click();
-    await page.locator(".import-panel--warning, [role=alert]").first().waitFor({ timeout: 15_000 }).catch(() => undefined);
+    const duplicate = page.getByTestId("import-duplicate-alert");
+    await expect(duplicate).toBeVisible({ timeout: 15_000 });
+    await expect(duplicate).toContainText("书籍可能已存在");
+    await expect(duplicate).toContainText("该文件已导入");
+    // Ordinary library rows alone must not satisfy this audit shot.
+    await expect(page.getByTestId("book-row-1")).toBeVisible();
     await shot(page, { id: "03-11", file: "03_import_duplicate.png", route: "/library", theme: "light" });
   });
 
@@ -194,7 +203,8 @@ test.describe("02 import errors and states", () => {
     await page.getByRole("button", { name: "完成导入" }).click();
     await installUiAuditMocks(page, { books: "one" });
     await page.reload({ waitUntil: "domcontentloaded" });
-    await page.getByTestId("book-row-1").waitFor({ timeout: 15_000 }).catch(() => undefined);
+    await expect(page.getByTestId("book-row-1")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("虚构星港编年史")).toBeVisible();
     await shot(page, {
       id: "03-15",
       file: "03_import_done.png",

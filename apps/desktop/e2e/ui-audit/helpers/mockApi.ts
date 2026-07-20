@@ -779,17 +779,18 @@ export async function installUiAuditMocks(page: Page, scenario: MockScenario = {
         await new Promise((r) => setTimeout(r, 800));
       }
       if (url.includes("reparse-with-file-preview") || url.includes("/reparse-preview")) {
+        const titles = Array.from({ length: 24 }, (_, i) => `第${i + 1}章　虚构章节标题 ${i + 1}`);
         return route.fulfill({
           json: {
             hash_match: true,
             old_chapter_count: 2,
             old_paragraph_count: 40,
-            formal_chapter_count: 3,
+            formal_chapter_count: titles.length,
             front_matter_count: 0,
-            new_paragraph_count: 48,
-            chapter_titles: ["第一章　潮汐钟", "第二章　星港夜航", "第三章　玻璃鸟"],
-            middle_sample_titles: ["第二章　星港夜航"],
-            ending_sample_titles: ["第三章　玻璃鸟"],
+            new_paragraph_count: 480,
+            chapter_titles: titles,
+            middle_sample_titles: [titles[11]],
+            ending_sample_titles: [titles[titles.length - 1]],
             has_succeeded_runs: false,
           },
         });
@@ -798,16 +799,35 @@ export async function installUiAuditMocks(page: Page, scenario: MockScenario = {
       return route.fulfill({ status: preview.status, json: preview.body });
     }
 
+    if (url.includes("/books/import") && method === "POST") {
+      if (scenario.importPreview === "duplicate_on_upload") {
+        return route.fulfill({
+          status: 409,
+          json: {
+            detail: {
+              error_code: "DUPLICATE_BOOK",
+              message: "该文件已导入",
+              details: {},
+            },
+          },
+        });
+      }
+      return route.fulfill({
+        status: 201,
+        json: {
+          book_id: 99,
+          status: "imported",
+          chapter_count: 3,
+          paragraph_count: 40,
+          warning: null,
+        },
+      });
+    }
+
     if (
       (url.endsWith("/books") || url.endsWith("/books/")) &&
       method === "POST"
     ) {
-      if (scenario.importPreview === "duplicate_on_upload") {
-        return route.fulfill({
-          status: 409,
-          json: { detail: "书库中已存在相同文件（审计 Mock）" },
-        });
-      }
       return route.fulfill({
         json: {
           id: 99,

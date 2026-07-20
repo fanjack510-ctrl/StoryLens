@@ -337,8 +337,27 @@ a {
   margin-top: 6px;
 }
 .library-main {
-  min-height: 500px;
+  min-height: 0;
   position: relative;
+}
+.library-main--empty {
+  min-height: 360px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.library-main--populated {
+  min-height: 0;
+}
+.library-main.is-drag-over {
+  outline: 2px dashed var(--color-brand);
+  outline-offset: -4px;
+  background: var(--color-brand-soft);
+}
+.library-main.is-drag-over .drop-hint {
+  border-color: var(--color-brand);
+  color: var(--color-brand);
+  background: var(--color-bg-surface);
 }
 .book-row {
   display: grid;
@@ -410,9 +429,12 @@ a {
 .drop-hint {
   text-align: center;
   border: 1px dashed var(--line);
-  padding: 14px;
+  padding: 14px 20px;
   color: var(--muted);
   margin-top: 20px;
+  width: 100%;
+  min-width: 220px;
+  box-sizing: border-box;
 }
 .import-progress {
   background: var(--accent2);
@@ -1417,8 +1439,21 @@ a {
 .onboarding-consent-box {
   padding: 12px 14px;
   border-radius: var(--radius-md);
-  background: var(--color-success-soft);
-  border: 1px solid color-mix(in srgb, var(--color-success) 28%, var(--color-border));
+}
+.onboarding-consent-box--unchecked {
+  background: var(--color-bg-subtle);
+  border: 1px solid var(--color-border);
+}
+.onboarding-consent-box--checked {
+  background: var(--color-brand-soft);
+  border: 1px solid color-mix(in srgb, var(--color-brand) 28%, var(--color-border));
+}
+.onboarding-consent-box--checked:has(input:disabled),
+.onboarding-consent-box:has(input:disabled) {
+  opacity: 0.55;
+  cursor: not-allowed;
+  background: var(--color-bg-subtle);
+  border-color: var(--color-border);
 }
 .onboarding-consent-box em {
   display: block;
@@ -1430,6 +1465,9 @@ a {
 .onboarding-status-card {
   display: grid;
   gap: 4px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
 }
 .onboarding-status-card strong {
   font-size: var(--text-sm);
@@ -1441,15 +1479,23 @@ a {
 }
 .onboarding-status-card--neutral {
   background: var(--color-bg-subtle);
+  border-color: var(--color-border);
 }
 .onboarding-status-card--info {
-  background: var(--color-info-soft, var(--color-brand-soft));
+  background: var(--color-info-soft);
+  border-color: color-mix(in srgb, var(--color-info) 28%, var(--color-border));
 }
 .onboarding-status-card--success {
   background: var(--color-success-soft);
+  border-color: color-mix(in srgb, var(--color-success) 28%, var(--color-border));
+}
+.onboarding-status-card--warning {
+  background: var(--color-warning-soft);
+  border-color: color-mix(in srgb, var(--color-warning) 35%, var(--color-border));
 }
 .onboarding-status-card--danger {
   background: var(--color-danger-soft);
+  border-color: color-mix(in srgb, var(--color-danger) 35%, var(--color-border));
 }
 .onboarding-done-checklist {
   margin: 0;
