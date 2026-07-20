@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SettingsAiServiceTab } from "./SettingsAiServiceTab";
 import { providersApi } from "../../services/providersApi";
 import { settingsApi } from "../../services/settingsApi";
-import { useDeveloperModeStore } from "../../stores/developerModeStore";
+import { useAdvancedSettingsStore } from "../../stores/advancedSettingsStore";
 
 vi.mock("../../services/providersApi", () => ({
   providersApi: {
@@ -82,7 +82,7 @@ function renderTab() {
 describe("SettingsAiServiceTab DEFECT-UAT-002", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    useDeveloperModeStore.setState({ developerMode: false });
+    useAdvancedSettingsStore.setState({ showAdvancedSettings: false });
     vi.mocked(settingsApi.cloud).mockResolvedValue({ enabled: true, state: "available" });
     vi.mocked(settingsApi.setCloud).mockResolvedValue({ enabled: true, state: "available" });
     vi.mocked(settingsApi.cloudUsage).mockResolvedValue({ estimated_cost: 0 });
@@ -135,9 +135,8 @@ describe("SettingsAiServiceTab DEFECT-UAT-002", () => {
     await waitFor(() => {
       expect(screen.getByTestId("ai-service-test")).toHaveTextContent("测试连接");
       expect(screen.getByTestId("ai-service-test")).toBeEnabled();
-      expect(screen.getByTestId("ai-service-disconnect")).toBeEnabled();
     });
-    expect(screen.getByRole("status")).toHaveTextContent("连接正常");
+    expect(screen.getByRole("status")).toHaveTextContent("连接测试成功");
   });
 
   it("keeps connected after remount refresh from backend configuration", async () => {
@@ -158,6 +157,7 @@ describe("SettingsAiServiceTab DEFECT-UAT-002", () => {
   });
 
   it("syncs disconnected state after disconnect action", async () => {
+    useAdvancedSettingsStore.setState({ showAdvancedSettings: true });
     vi.mocked(providersApi.list).mockResolvedValue([connectedProvider] as any);
     vi.mocked(providersApi.configuration)
       .mockResolvedValueOnce(connectedConfig as any)
@@ -191,7 +191,7 @@ describe("SettingsAiServiceTab DEFECT-UAT-002", () => {
     fireEvent.click(screen.getByTestId("ai-service-test"));
 
     await waitFor(() => {
-      expect(screen.getByRole("status")).toHaveTextContent("无法连接云端服务");
+      expect(screen.getByRole("status")).toHaveTextContent("无法连接");
     });
     expect(providersApi.action).not.toHaveBeenCalledWith("aliyun_qwen_plus", "connect");
     expect(screen.getByTestId("ai-service-connection-status")).toHaveTextContent(

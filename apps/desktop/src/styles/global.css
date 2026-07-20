@@ -1198,6 +1198,24 @@ button[aria-busy="true"] {
 }
 
 /* Settings UX simplification */
+.onboarding-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  background: rgba(10, 14, 12, 0.55);
+  padding: 24px;
+}
+.onboarding-card {
+  width: min(520px, 100%);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+}
+
 .settings-page {
   max-width: 1080px;
   margin: 0;

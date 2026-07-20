@@ -14,7 +14,7 @@ describe("aiServiceViewModel", () => {
     expect(mapUserStatusLabel("provider_disabled")).toBe("云端AI尚未开启");
     expect(mapUserStatusLabel("provider_disconnected")).toBe("尚未连接AI服务");
     expect(mapUserStatusLabel("dns_failed")).toBe("无法连接云端服务，请检查网络或代理设置");
-    expect(mapUserStatusLabel("auth_failed")).toBe("API Key无效或没有模型访问权限");
+    expect(mapUserStatusLabel("auth_failed")).toBe("API Key 无效，请检查后重新测试。");
     expect(mapUserStatusLabel("healthy")).toBe("已连接，可以开始分析");
     expect(mapUserStatusLabel("awaiting_provider_recovery")).toBe(
       "云端服务暂时波动，系统正在自动恢复",
@@ -130,7 +130,7 @@ describe("aiServiceViewModel", () => {
 
   it("maps 401/403 and DNS errors", () => {
     expect(mapTransportOrHttpError({ status: 401, code: "AUTHENTICATION_FAILED" }).userLabel).toBe(
-      "API Key无效或没有模型访问权限",
+      "API Key 无效，请检查后重新测试。",
     );
     expect(mapTransportOrHttpError({ code: "PROVIDER_DNS_ERROR" }).userLabel).toContain(
       "无法连接云端服务",

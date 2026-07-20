@@ -90,7 +90,7 @@ export function SettingsAdvancedTab() {
       <article className="settings-panel">
         <header className="settings-panel-header">
           <h2>高级设置</h2>
-          <p>Provider、路由、传输与系统诊断（仅开发者模式）。</p>
+          <p>自定义 Provider、Endpoint、预算明细与诊断。关闭「显示高级设置」不会清除已保存配置。</p>
         </header>
 
         <section className="advanced-section">
@@ -135,6 +135,12 @@ export function SettingsAdvancedTab() {
               {JSON.stringify(transportResult, null, 2)}
             </pre>
           )}
+        </section>
+
+        <section className="advanced-section" data-testid="advanced-prompt-version">
+          <h3>Prompt 版本</h3>
+          <p className="muted">由分析流水线自动选择，此处仅作只读说明。</p>
+          <p>当前任务使用的工作流 Prompt 在分析启动时确定，不在此修改。</p>
         </section>
 
         <section className="advanced-section">

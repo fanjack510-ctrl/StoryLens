@@ -46,7 +46,7 @@ const USER_STATUS_LABELS: Record<AiUserStatusCode, string> = {
   provider_disabled: "云端AI尚未开启",
   provider_disconnected: "尚未连接AI服务",
   dns_failed: "无法连接云端服务，请检查网络或代理设置",
-  auth_failed: "API Key无效或没有模型访问权限",
+  auth_failed: "API Key 无效，请检查后重新测试。",
   healthy: "已连接，可以开始分析",
   awaiting_provider_recovery: "云端服务暂时波动，系统正在自动恢复",
   unknown: "AI服务状态未知",

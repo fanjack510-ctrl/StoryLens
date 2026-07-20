@@ -1,11 +1,15 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { booksApi } from "../services/booksApi";
 import { Empty, ErrorState, Loading } from "../components/common/States";
 import { QwenFirstLaunchBanner } from "../components/onboarding/QwenFirstLaunchBanner";
+import { FirstLaunchWizard } from "../components/onboarding/FirstLaunchWizard";
+import { useOnboardingStore } from "../stores/onboardingStore";
 
 export function LibraryPage() {
+  const onboardingStatus = useOnboardingStore((s) => s.status);
+  const [searchParams] = useSearchParams();
   const input = useRef<HTMLInputElement>(null);
   const [search, setSearch] = useState("");
   const [pendingFile, setPendingFile] = useState<File>();
@@ -27,8 +31,15 @@ export function LibraryPage() {
     (book.title + book.source_file_name).includes(search),
   );
 
+  useEffect(() => {
+    if (searchParams.get("import") === "1") {
+      input.current?.click();
+    }
+  }, [searchParams]);
+
   return (
     <section className="page library-page-compact" data-testid="library-page">
+      {onboardingStatus === "pending" && <FirstLaunchWizard />}
       <QwenFirstLaunchBanner />
       <div className="page-title library-title-compact">
         <div>

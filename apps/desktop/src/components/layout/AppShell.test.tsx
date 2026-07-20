@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AppShell } from "./AppShell";
 import { HomePage } from "../../pages/HomePage";
 import { LibraryPage } from "../../pages/LibraryPage";
+import { useOnboardingStore } from "../../stores/onboardingStore";
 
 vi.stubGlobal(
   "fetch",
@@ -89,6 +90,8 @@ describe("UI shell navigation", () => {
   beforeEach(() => {
     localStorage.removeItem("storylens.nav.devExpanded");
     localStorage.removeItem("storylens.developerMode");
+    localStorage.removeItem("storylens.onboarding.v1");
+    useOnboardingStore.setState({ status: "completed" });
   });
 
   it("shows only library and settings in primary nav", () => {
