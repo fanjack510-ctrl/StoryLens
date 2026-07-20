@@ -1,4 +1,5 @@
 import { isRouteErrorResponse, Link, useNavigate, useRouteError } from "react-router-dom";
+import { StateView } from "../components/ui/StateView";
 
 function isDevMode(): boolean {
   return Boolean(import.meta.env.DEV);
@@ -27,29 +28,27 @@ export function RouteErrorPage() {
 
   return (
     <section className="page route-error-page" data-testid="route-error-page">
-      <div className="state error" role="alert">
-        <p className="eyebrow">StoryLens</p>
-        <h1>页面出错了</h1>
-        <p>{message}</p>
-        <div className="route-error-actions">
-          <button
-            type="button"
-            className="primary"
-            data-testid="route-error-reload"
-            onClick={() => window.location.reload()}
-          >
-            重新加载
-          </button>
-          <button
-            type="button"
-            data-testid="route-error-library"
-            onClick={() => navigate("/library")}
-          >
-            返回书库
-          </button>
-          <Link to="/library">前往书库</Link>
-        </div>
-      </div>
+      <p className="eyebrow">StoryLens</p>
+      <StateView
+        kind="error"
+        title="页面出错了"
+        description={message}
+        data-testid="route-error-state"
+        primaryAction={{
+          label: "重新加载",
+          onClick: () => window.location.reload(),
+          testId: "route-error-reload",
+        }}
+        secondaryAction={{
+          label: "返回书库",
+          onClick: () => navigate("/library"),
+          variant: "secondary",
+          testId: "route-error-library",
+        }}
+      />
+      <p className="route-error-actions">
+        <Link to="/library">前往书库</Link>
+      </p>
     </section>
   );
 }
@@ -59,29 +58,27 @@ export function NotFoundPage() {
   const navigate = useNavigate();
   return (
     <section className="page not-found-page" data-testid="not-found-page">
-      <div className="state">
-        <p className="eyebrow">StoryLens</p>
-        <h1>页面未找到</h1>
-        <p>您访问的地址不存在，或内容已被移动。</p>
-        <div className="route-error-actions">
-          <button
-            type="button"
-            className="primary"
-            data-testid="not-found-reload"
-            onClick={() => window.location.reload()}
-          >
-            重新加载
-          </button>
-          <button
-            type="button"
-            data-testid="not-found-library"
-            onClick={() => navigate("/library")}
-          >
-            返回书库
-          </button>
-          <Link to="/library">前往书库</Link>
-        </div>
-      </div>
+      <p className="eyebrow">StoryLens</p>
+      <StateView
+        kind="empty"
+        title="页面未找到"
+        description="您访问的地址不存在，或内容已被移动。"
+        data-testid="not-found-state"
+        primaryAction={{
+          label: "重新加载",
+          onClick: () => window.location.reload(),
+          testId: "not-found-reload",
+        }}
+        secondaryAction={{
+          label: "返回书库",
+          onClick: () => navigate("/library"),
+          variant: "secondary",
+          testId: "not-found-library",
+        }}
+      />
+      <p className="route-error-actions">
+        <Link to="/library">前往书库</Link>
+      </p>
     </section>
   );
 }

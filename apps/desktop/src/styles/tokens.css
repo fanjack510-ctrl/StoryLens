@@ -1,0 +1,160 @@
+/**
+ * StoryLens design tokens (phase 1).
+ * Prefer these variables for new/edited UI; legacy --bg/--accent aliases stay in global.css.
+ */
+
+:root {
+  /* Fonts — system stacks only, no network fonts */
+  --font-ui:
+    "Microsoft YaHei UI",
+    "PingFang SC",
+    "Noto Sans CJK SC",
+    "Segoe UI",
+    sans-serif;
+  --font-reading:
+    "Songti SC",
+    "SimSun",
+    "STSong",
+    serif;
+  --font-mono:
+    "Cascadia Mono",
+    "SFMono-Regular",
+    Consolas,
+    monospace;
+
+  /* Type scale */
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-base: 14px;
+  --text-md: 15px;
+  --text-lg: 16px;
+  --text-xl: 20px;
+  --text-page-title: 28px;
+
+  --line-tight: 1.3;
+  --line-normal: 1.55;
+  --line-reading: 1.85;
+
+  --weight-normal: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 40px;
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-dialog: 12px;
+  --radius-pill: 999px;
+
+  /* Control sizes */
+  --control-height-sm: 32px;
+  --control-height-md: 36px;
+  --control-height-lg: 40px;
+  --control-height-field: 38px;
+  --badge-height: 22px;
+
+  /* Shadows (lightweight only) */
+  --shadow-dropdown: 0 8px 24px rgba(24, 32, 28, 0.12);
+  --shadow-dialog:
+    0 18px 50px rgba(15, 22, 18, 0.18),
+    0 2px 8px rgba(15, 22, 18, 0.08);
+
+  /* Focus / overlay */
+  --focus-ring: 0 0 0 2px var(--color-bg-surface), 0 0 0 4px var(--color-brand);
+  --overlay-scrim: rgba(15, 22, 18, 0.45);
+
+  /* Light theme */
+  --color-bg-app: #f5f5f1;
+  --color-bg-surface: #ffffff;
+  --color-bg-subtle: #f0f2ef;
+  --color-bg-muted: #e8ece8;
+
+  --color-text-primary: #18201c;
+  --color-text-secondary: #66716b;
+  --color-text-tertiary: #8a948e;
+  --color-text-inverse: #ffffff;
+
+  --color-border: #d9ded9;
+  --color-border-strong: #c6cec8;
+
+  --color-brand: #2f6b57;
+  --color-brand-hover: #285c4b;
+  --color-brand-active: #214d3f;
+  --color-brand-soft: #e4f0ea;
+
+  --color-success: #2d7652;
+  --color-success-soft: #e5f2eb;
+
+  --color-warning: #9a671c;
+  --color-warning-soft: #f7eedc;
+
+  --color-danger: #b44747;
+  --color-danger-hover: #993b3b;
+  --color-danger-soft: #f8e7e7;
+
+  --color-info: #416e8a;
+  --color-info-soft: #e7f0f5;
+
+  --color-disabled-bg: #e8ece8;
+  --color-disabled-text: #8a948e;
+  --color-selection-bg: #c8e0d4;
+  --color-link: var(--color-brand);
+  --color-scrollbar: rgba(102, 113, 107, 0.35);
+}
+
+/* Dark theme: AppShell sets data-theme on .app */
+.app[data-theme="dark"],
+[data-theme="dark"] {
+  --color-bg-app: #111713;
+  --color-bg-surface: #18211d;
+  --color-bg-subtle: #202a25;
+  --color-bg-muted: #29352f;
+
+  --color-text-primary: #f1f4f2;
+  --color-text-secondary: #aab4ae;
+  --color-text-tertiary: #7f8c85;
+  --color-text-inverse: #111713;
+
+  --color-border: #334139;
+  --color-border-strong: #43534a;
+
+  --color-brand: #69a98e;
+  --color-brand-hover: #78b69b;
+  --color-brand-active: #59947b;
+  --color-brand-soft: #213b31;
+
+  --color-success: #72b893;
+  --color-success-soft: #20392e;
+
+  --color-warning: #d2a458;
+  --color-warning-soft: #3d3220;
+
+  --color-danger: #dc7d7d;
+  --color-danger-hover: #e09292;
+  --color-danger-soft: #422727;
+
+  --color-info: #7fb0cc;
+  --color-info-soft: #233744;
+
+  --color-disabled-bg: #29352f;
+  --color-disabled-text: #7f8c85;
+  --color-selection-bg: #2a4a3d;
+  --color-link: var(--color-brand);
+  --color-scrollbar: rgba(170, 180, 174, 0.35);
+
+  --shadow-dropdown: 0 8px 24px rgba(0, 0, 0, 0.35);
+  --shadow-dialog:
+    0 18px 50px rgba(0, 0, 0, 0.45),
+    0 2px 8px rgba(0, 0, 0, 0.25);
+  --overlay-scrim: rgba(0, 0, 0, 0.55);
+}

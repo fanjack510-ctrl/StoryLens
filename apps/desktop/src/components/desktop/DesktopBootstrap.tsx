@@ -65,8 +65,8 @@ export function DesktopBootstrap({ children }: { children: ReactNode }) {
 
   if (status.state === "starting") {
     return (
-      <div className="desktop-bootstrap" data-testid="desktop-bootstrap-starting">
-        <h1>StoryLens</h1>
+      <div className="desktop-bootstrap" data-testid="desktop-bootstrap-starting" data-theme="light">
+        <h1 className="sl-page-title">StoryLens</h1>
         <p>正在启动本地分析服务，请稍候…</p>
       </div>
     );
@@ -74,8 +74,12 @@ export function DesktopBootstrap({ children }: { children: ReactNode }) {
 
   if (status.state === "failed") {
     return (
-      <div className="desktop-bootstrap desktop-bootstrap-error" data-testid="desktop-bootstrap-error">
-        <h1>StoryLens 无法启动</h1>
+      <div
+        className="desktop-bootstrap desktop-bootstrap-error"
+        data-testid="desktop-bootstrap-error"
+        data-theme="light"
+      >
+        <h1 className="sl-page-title">StoryLens 无法启动</h1>
         <p>{status.message}</p>
         <p className="muted">详细信息已写入本机日志（%LOCALAPPDATA%\\StoryLens\\logs）。</p>
       </div>
