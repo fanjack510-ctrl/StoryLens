@@ -107,6 +107,12 @@
       "message": "Sync CHG-20260721-012 registry after V2 default-pipeline attach.",
       "primary": false,
       "multi_change_reason": "final registry sync after V2 default-pipeline attach"
+    },
+    {
+      "sha": "e3c92f3569a9f3df06c1e9c3ad7e12f865c2a60f",
+      "message": "Fix Reader Journey lens picker overlay by using inline segmented control (CHG-20260721-012).",
+      "primary": false,
+      "multi_change_reason": "fix lens picker overlay with inline segmented control; status remains tested"
     }
   ],
   "modules": [
@@ -163,7 +169,8 @@
     "节奏镜头区分 pacing_speed 与 pacing_fit，线段显示加速/减速/变化不明显",
     "通用规则文档冻结输入/公式/权重/阈值/诊断/fallback/clamp/rounding",
     "development/holdout/regression 分流；holdout 默认不跑",
-    "单篇实例失败不得触发定向规则修改"
+    "单篇实例失败不得触发定向规则修改",
+    "镜头选择器改为内联分段控件，不得用 Popover/fixed 覆盖阶段卡与折线图"
   ],
   "tests": [
     "pytest apps/api/tests/test_reader_journey_v2_local.py",
@@ -172,7 +179,8 @@
     "npm run typecheck",
     "vitest observation_lenses_v2_local.test.ts (lens binding/terminology/diagnosis/Beat/pacing)",
     "pytest apps/api/tests/test_reader_journey_v2_dropoff_risk_local.py",
-    "pytest apps/api/tests/test_reader_journey_v2_general_rules_local.py"
+    "pytest apps/api/tests/test_reader_journey_v2_general_rules_local.py",
+    "vitest observation_lens_selector_inline_local.test.tsx"
   ],
   "verification_evidence": [
     "12 passed local v2 pytest",
@@ -190,7 +198,9 @@
     "局部测试：vitest 32 passed；pytest dropoff+run_id=2 一致性 6 passed；typecheck/version/registry/diff-check passed；VERSION 1.0.3",
     "run_id=2（《我不是戏神》第1章）只读校验：DB engagement/hook/payoff/dropoff 与 API scene_nodes 一致；该run仍为contract 1.3无v2_scene_scores，V2原生风险替换仅在source_mode=v2_native/contract2.x生效",
     "通用规则审计：V2 formula/diagnosis/prompts/lens 无作品名/人物/Scene编号分支；legacy CLUSTER_ANCHOR_TERMS 记为可视化聚类债务不影响 V2 公式",
-    "通用验证：general_rules 11 passed；contrast≥90%；mutation 100%；degradation≥90%；cross-type role invariance；anti-instance tokens；未改权重/阈值"
+    "通用验证：general_rules 11 passed；contrast≥90%；mutation 100%；degradation≥90%；cross-type role invariance；anti-instance tokens；未改权重/阈值",
+    "实机问题：镜头下拉 Popover(fixed/z40) 覆盖阶段卡与折线图",
+    "镜头选择器改为内联 segmented control + 单行说明；vitest inline selector 7 + lenses 32 = 39 passed；1024/1180/1440/1920 布局非重叠断言通过；typecheck/version/registry/diff-check passed"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -207,5 +217,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-21T12:43:43Z",
-  "updated_at": "2026-07-21T15:26:07Z"
+  "updated_at": "2026-07-21T16:08:47Z"
 }
