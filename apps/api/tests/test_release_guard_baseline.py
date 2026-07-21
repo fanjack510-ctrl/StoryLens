@@ -53,7 +53,7 @@ def _seed_minimal(tmp: Path, version: str = "1.0.3") -> None:
                         "endpoints": [
                             "https://github.com/fanjack510-ctrl/StoryLens/releases/latest/download/latest.json"
                         ],
-                        "windows": {"installMode": "basic"},
+                        "windows": {"installMode": "basicUi"},
                     }
                 },
             },
