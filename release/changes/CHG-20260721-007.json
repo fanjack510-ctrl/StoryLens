@@ -23,6 +23,12 @@
       "message": "Verify StoryLens 1.0.3 change scope",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "0404161e339c4c67274ac0e3c75b8c6b9357ecbb",
+      "message": "Allow frozen prepared VERSION to track target_version",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -61,5 +67,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-21T06:02:51Z",
-  "updated_at": "2026-07-21T06:47:21Z"
+  "updated_at": "2026-07-21T06:50:06Z"
 }
