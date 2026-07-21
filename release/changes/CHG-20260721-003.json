@@ -7,12 +7,6 @@
   "include_in_next_release": true,
   "commits": [
     {
-      "sha": "22750ecaaefd925188ff2f5b5decdb900a750748",
-      "message": "Simplify Reader Journey toolbar and refresh app subtitle",
-      "primary": true,
-      "multi_change_reason": null
-    },
-    {
       "sha": "3a516f609dd302c484a605d7b696c51e78c79a50",
       "message": "Simplify Reader Journey toolbar and refresh app subtitle",
       "primary": true,
@@ -24,7 +18,7 @@
   ],
   "files": [],
   "user_summary": "精简阅读旅程工具栏、修复设置遮挡并优化响应式布局",
-  "technical_summary": "副标题改为小说叙事洞察与创作平台；删除重复正文展开收起；指标下拉与更多操作；设置遮挡修复；响应式布局。实现 commit 在 release/v0.1.0-preview，尚未进入当前 HEAD。",
+  "technical_summary": "Cherry-picked 22750ec into HEAD as 3a516f6. Subtitle 小说叙事洞察与创作平台; remove duplicate expand/collapse; metric dropdown + more menu; responsive toolbar.",
   "acceptance_criteria": [
     "工具栏无重复展开控件",
     "设置面板不被遮挡"
@@ -50,5 +44,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-21T06:02:50Z",
-  "updated_at": "2026-07-21T06:46:57Z"
+  "updated_at": "2026-07-21T06:47:45Z"
 }
