@@ -3,7 +3,7 @@
   "title": "StoryLens local web production mode",
   "type": "feature",
   "base_version": "1.0.3",
-  "status": "registered",
+  "status": "tested",
   "include_in_next_release": true,
   "commits": [
     {
@@ -62,5 +62,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-21T17:13:38Z",
-  "updated_at": "2026-07-21T17:28:11Z"
+  "updated_at": "2026-07-21T17:28:34Z"
 }
