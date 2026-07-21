@@ -1,3 +1,5 @@
+import subprocess
+import sys
 from pathlib import Path
 
 REQUIRED = [
@@ -5,6 +7,7 @@ REQUIRED = [
     "AGENTS.md",
     "CODEX_START_PROMPT.md",
     ".env.example",
+    "VERSION",
     "pyproject.toml",
     "apps/api/app/main.py",
     "apps/api/app/db/models.py",
@@ -36,11 +39,22 @@ REQUIRED = [
     "scripts/inspect_last_shutdown.ps1",
     "scripts/check_env.py",
     "scripts/package_project.ps1",
+    "scripts/version_manager.py",
+    "scripts/change_registry.py",
+    "packaging/updater/latest.json.template",
     "docs/10_local_model_calibration.md",
     "docs/11_local_model_selection.md",
     "docs/12_aliyun_qwen_provider.md",
+    "docs/versioning-and-release.md",
+    "docs/change-registration-and-release.md",
+    "docs/releases/README.md",
+    "release/baseline.json",
+    "release/unreleased.json",
+    "release/registry.schema.json",
+    "release/registry_config.json",
     "scripts/probe_aliyun_qwen.py",
     "config/cloud_pricing.example.json",
+    "config/cloud_pricing.default.json",
     "apps/desktop/package.json",
     "apps/desktop/src/app/App.tsx",
     "apps/desktop/src-tauri/tauri.conf.json",
@@ -49,6 +63,17 @@ REQUIRED = [
     "scripts/start_storylens_dev.ps1",
     "scripts/stop_storylens_dev.ps1",
     "scripts/build_desktop.ps1",
+    "scripts/build_sidecar.ps1",
+    "scripts/build_windows_release.ps1",
+    "scripts/check_release_artifacts.ps1",
+    "scripts/set_version.ps1",
+    "scripts/smoke_windows_release.ps1",
+    "scripts/stop_owned_process_tree.ps1",
+    ".github/workflows/windows-release.yml",
+    "docs/windows-desktop-release-plan.md",
+    "docs/windows-desktop-updater-keys.md",
+    "docs/windows-desktop-updater-channels.md",
+    "docs/releases/1.0.3.md",
     "docs/00_project_overview.md",
     "docs/08_codex_workflow.md",
     "docs/21_phase_1c_assisted_boundary_review.md",
@@ -68,6 +93,23 @@ def main() -> None:
     required_directories = [root / "data"]
     for directory in required_directories:
         directory.mkdir(parents=True, exist_ok=True)
+
+    version_check = subprocess.run(
+        [sys.executable, str(root / "scripts" / "version_manager.py"), "check"],
+        cwd=root,
+        check=False,
+    )
+    if version_check.returncode != 0:
+        raise SystemExit("Version consistency check failed.")
+
+    registry_check = subprocess.run(
+        [sys.executable, str(root / "scripts" / "change_registry.py"), "check"],
+        cwd=root,
+        check=False,
+    )
+    if registry_check.returncode != 0:
+        raise SystemExit("Change registry check failed.")
+
     print("Project scaffold check passed.")
 
 

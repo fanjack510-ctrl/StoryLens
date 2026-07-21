@@ -12,7 +12,7 @@ export function ResultViewSwitcher({
   active,
   onChange,
   journeyAvailable = true,
-  analysisLabel = "Scene分析",
+  analysisLabel = "场景分析",
   journeyLabel = "阅读旅程",
 }: Props) {
   return (

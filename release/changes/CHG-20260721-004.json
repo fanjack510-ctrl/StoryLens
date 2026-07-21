@@ -1,0 +1,51 @@
+{
+  "id": "CHG-20260721-004",
+  "title": "统一版本管理机制",
+  "type": "build",
+  "base_version": "1.0.2",
+  "status": "released",
+  "include_in_next_release": true,
+  "commits": [
+    {
+      "sha": "8906cd6d0f9fae0c5adf7cb1434b8c561f302430",
+      "message": "Add centralized StoryLens version management",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "scripts"
+  ],
+  "files": [
+    "scripts/version_manager.py",
+    "VERSION"
+  ],
+  "user_summary": "以 VERSION 为唯一来源统一版本同步与发布门禁",
+  "technical_summary": "引入 VERSION 单一来源、version_manager 同步与 check/release-guard。",
+  "acceptance_criteria": [
+    "version_manager check 通过"
+  ],
+  "tests": [
+    "apps/api/tests/test_version_manager.py",
+    "apps/api/tests/test_release_guard_baseline.py"
+  ],
+  "verification_evidence": [
+    "version_manager check passed; next_patch=1.0.3; VERSION sole source"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-21T06:02:50Z",
+  "updated_at": "2026-07-21T08:22:13Z"
+}

@@ -60,20 +60,8 @@ function readTextCollapsed(): boolean {
 export function SplitPane({ layout, left, right, activeTab = "left", onActiveTabChange }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [ratio, setRatio] = useState(readStoredRatio);
-  const [textCollapsed, setTextCollapsed] = useState(readTextCollapsed);
+  const [textCollapsed] = useState(readTextCollapsed);
   const dragging = useRef(false);
-
-  const toggleTextCollapsed = () => {
-    setTextCollapsed((prev) => {
-      const next = !prev;
-      try {
-        localStorage.setItem(TEXT_COLLAPSE_KEY, next ? "1" : "0");
-      } catch {
-        /* ignore */
-      }
-      return next;
-    });
-  };
 
   const persistRatio = useCallback((value: number) => {
     setRatio(value);
@@ -189,16 +177,6 @@ export function SplitPane({ layout, left, right, activeTab = "left", onActiveTab
       data-text-collapsed={textCollapsed ? "true" : "false"}
     >
       <div className="journey-split-primary" style={primaryStyle}>
-        <button
-          type="button"
-          className="journey-text-pane-collapse"
-          data-testid="journey-text-pane-collapse"
-          title={textCollapsed ? "展开正文/Scene列表" : "收起正文/Scene列表"}
-          aria-pressed={textCollapsed}
-          onClick={toggleTextCollapsed}
-        >
-          {textCollapsed ? "展开正文" : "收起正文"}
-        </button>
         {!textCollapsed ? left : null}
       </div>
       {!textCollapsed ? (

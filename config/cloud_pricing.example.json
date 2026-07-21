@@ -5,5 +5,6 @@
     "qwen3.7-plus": {"input_per_million": null, "output_per_million": null},
     "qwen3.7-max": {"input_per_million": null, "output_per_million": null},
     "qwen3.6-flash": {"input_per_million": null, "output_per_million": null}
-  }
+  },
+  "_comment": "Copy to cloud_pricing.json and fill prices, or rely on cloud_pricing.default.json (official list-price fallback shipped with the app)."
 }

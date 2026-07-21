@@ -25,9 +25,9 @@ const EMPTY_COPY: Record<
       "当前分析结果中没有独立的问题建立、延续或回答记录。它可能主要承担情绪推进、动作推进或信息确认。",
   },
   "no-hook-payoff": {
-    title: "未识别出明确的 Hook 或 Payoff",
+    title: "未识别出明确的钩子或回报",
     description:
-      "这不代表 Scene 无作用，可能由其他结构功能承担推进。",
+      "这不代表场景无作用，可能由其他结构功能承担推进。",
   },
   "no-technique": {
     title: "未提取出可复用技法",
@@ -38,12 +38,12 @@ const EMPTY_COPY: Record<
     description: "当前对象没有可定位的段落证据记录。",
   },
   "no-risk": {
-    title: "未识别出明确节奏风险",
-    description: "当前阶段未识别出明确的结构性节奏风险。",
+    title: "未识别出明确流失风险",
+    description: "当前阶段未识别出明确的结构性流失风险。",
   },
   "no-related-scenes": {
-    title: "暂无相关 Scene",
-    description: "当前阶段范围内没有可展示的 Scene 节点。",
+    title: "暂无相关场景",
+    description: "当前阶段范围内没有可展示的场景节点。",
   },
   "no-lifecycle": {
     title: "生命周期链不完整",
@@ -51,7 +51,7 @@ const EMPTY_COPY: Record<
   },
   "no-selection": {
     title: "尚未选择分析对象",
-    description: "选择一个 Phase、曲线 Scene 或结论入口，查看详细分析。",
+    description: "选择一个阶段、场景或曲线节点，查看详细分析。",
   },
   "no-section": {
     title: "本小节暂无内容",

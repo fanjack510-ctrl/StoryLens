@@ -17,7 +17,6 @@ import { computeYScale } from "./journeyChartScales";
 
 const css = readFileSync(resolve(__dirname, "./readerJourney.css"), "utf8");
 const toolbarSource = readFileSync(resolve(__dirname, "./JourneyChartToolbar.tsx"), "utf8");
-const panelSource = readFileSync(resolve(__dirname, "./MetricSelectorPanel.tsx"), "utf8");
 const popoverSource = readFileSync(resolve(__dirname, "./JourneyPopover.tsx"), "utf8");
 const workspaceSource = readFileSync(
   resolve(__dirname, "./ReaderJourneyWorkspace.tsx"),
@@ -56,6 +55,15 @@ function renderWorkspace(viz = buildFixture13Scenes(), width = 1600) {
   );
 }
 
+
+function openExportMenu() {
+  const more = screen.queryByTestId("journey-more-chart-settings");
+  if (more && !screen.queryByTestId("journey-export-png")) {
+    fireEvent.click(more);
+  }
+  return screen.getByTestId("journey-export-png");
+}
+
 describe("Reader Journey Metric Selector Overlay System v4.2", () => {
   afterEach(() => {
     cleanup();
@@ -66,76 +74,51 @@ describe("Reader Journey Metric Selector Overlay System v4.2", () => {
     expect(JOURNEY_VISUALIZATION_VERSION).toBe("4.2");
   });
 
-  it("opens MetricSelectorPanel in document flow below toolbar", () => {
+  it("opens metric options as a compact popover dropdown", () => {
     renderWorkspace();
-    expect(screen.queryByTestId("journey-metric-select-menu")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("journey-metric-select-menu-panel")).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId("journey-metric-select"));
-    const panel = screen.getByTestId("journey-metric-select-menu");
-    expect(panel).toHaveAttribute("data-metric-panel", "in-flow");
-    expect(panel).toHaveAttribute("role", "listbox");
-    expect(panel).toHaveAttribute("aria-label", "选择当前指标");
-    const region = screen.getByTestId("journey-toolbar-region");
-    expect(region.contains(panel)).toBe(true);
+    const panel = screen.getByTestId("journey-metric-select-menu-panel");
+    expect(panel).toBeInTheDocument();
+    expect(screen.getByTestId("journey-metric-selector-list")).toHaveAttribute(
+      "data-metric-panel",
+      "popover",
+    );
+    expect(screen.getByTestId("journey-metric-selector-list")).toHaveAttribute("role", "listbox");
     expect(screen.getByTestId("journey-metric-select")).toHaveAttribute("aria-expanded", "true");
+    expect(document.getElementById("journey-overlay-root")?.contains(panel)).toBe(true);
+    expect(toolbarSource).toMatch(/JourneyPopover/);
+    expect(toolbarSource).not.toMatch(/MetricSelectorPanel/);
+  });
+
+  it("does not mount a wide in-flow metric grid under the toolbar", () => {
+    renderWorkspace();
+    fireEvent.click(screen.getByTestId("journey-metric-select"));
+    expect(screen.queryByTestId("journey-metric-selector-grid")).not.toBeInTheDocument();
+    expect(toolbarSource).not.toMatch(/阅读牵引[\s\S]{0,40}情绪/);
+  });
+
+  it("selects metric, closes menu, keeps scene, and shows full Chinese labels", async () => {
+    renderWorkspace();
     expect(screen.getByTestId("journey-metric-select")).toHaveAttribute(
-      "aria-haspopup",
-      "listbox",
+      "data-current-metric",
+      "engagement",
     );
-    // Not a fixed/absolute overlay in CSS or panel styles
-    const style = window.getComputedStyle(panel);
-    expect(style.position === "static" || style.position === "" || style.position === "relative").toBe(
-      true,
-    );
-    expect(css).toMatch(/\.journey-metric-selector-panel\s*\{[^}]*position:\s*static/s);
-    expect(panelSource).toMatch(/role="listbox"/);
-    expect(panelSource).toMatch(/data-metric-panel="in-flow"/);
-  });
-
-  it("pushes Phase and Chart below the open panel in DOM order", () => {
-    renderWorkspace();
     fireEvent.click(screen.getByTestId("journey-metric-select"));
-    const region = screen.getByTestId("journey-toolbar-region");
-    const phase = screen.getByTestId("journey-phase-strip-wrap");
-    const chart = screen.getByTestId("journey-chart-shell");
-    const panel = screen.getByTestId("journey-metric-select-menu");
-    expect(
-      region.compareDocumentPosition(phase) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
-    expect(
-      panel.compareDocumentPosition(phase) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
-    expect(
-      phase.compareDocumentPosition(chart) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
-  });
-
-  it("does not use absolute overlay for metric options", () => {
-    expect(toolbarSource).toMatch(/MetricSelectorPanel/);
-    expect(toolbarSource).not.toMatch(/JourneyAnchoredMenu[\s\S]*journey-metric/);
-    expect(css).toMatch(/\.journey-metric-selector-panel\s*\{[^}]*position:\s*static/s);
-    expect(css).not.toMatch(/\.journey-metric-selector-panel\s*\{[^}]*position:\s*(absolute|fixed)/s);
-  });
-
-  it("selects metric, closes panel, keeps scene, and shows full Chinese labels", async () => {
-    renderWorkspace();
-    const sceneBefore = screen.getByTestId("journey-metric-select").getAttribute("data-current-metric");
-    expect(sceneBefore).toBe("engagement");
-    fireEvent.click(screen.getByTestId("journey-metric-select"));
-    const menu = screen.getByTestId("journey-metric-select-menu");
+    const menu = screen.getByTestId("journey-metric-select-menu-panel");
     for (const key of ALL_METRIC_KEYS) {
       const opt = within(menu).getByTestId(`journey-metric-${key}`);
       expect(opt).toHaveAttribute("role", "option");
       expect(opt).toHaveTextContent(METRIC_LABELS_ZH[key]);
     }
     fireEvent.click(within(menu).getByTestId("journey-metric-hook"));
-    expect(screen.queryByTestId("journey-metric-select-menu")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("journey-metric-select-menu-panel")).not.toBeInTheDocument();
     expect(screen.getByTestId("journey-metric-select")).toHaveAttribute(
       "data-current-metric",
       "hook",
     );
-    expect(screen.getByTestId("journey-metric-select")).toHaveTextContent("钩子");
+    expect(screen.getByTestId("journey-metric-select")).toHaveTextContent("钩子强度");
     expect(screen.getByTestId("journey-metric-select")).toHaveAttribute("aria-expanded", "false");
-    // Scene URL param preserved; chart nodes still present
     expect(screen.getByTestId("journey-curve-node-3")).toBeInTheDocument();
     expect(screen.getByTestId("journey-rhythm-dot-3")).toBeInTheDocument();
   });
@@ -143,32 +126,28 @@ describe("Reader Journey Metric Selector Overlay System v4.2", () => {
   it("closes on Escape and outside click", () => {
     renderWorkspace();
     fireEvent.click(screen.getByTestId("journey-metric-select"));
-    expect(screen.getByTestId("journey-metric-select-menu")).toBeInTheDocument();
+    expect(screen.getByTestId("journey-metric-select-menu-panel")).toBeInTheDocument();
     fireEvent.keyDown(document, { key: "Escape" });
-    expect(screen.queryByTestId("journey-metric-select-menu")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("journey-metric-select-menu-panel")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId("journey-metric-select"));
-    expect(screen.getByTestId("journey-metric-select-menu")).toBeInTheDocument();
+    expect(screen.getByTestId("journey-metric-select-menu-panel")).toBeInTheDocument();
     fireEvent.mouseDown(screen.getByTestId("journey-phase-strip"));
-    expect(screen.queryByTestId("journey-metric-select-menu")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("journey-metric-select-menu-panel")).not.toBeInTheDocument();
   });
 
-  it("supports keyboard listbox selection", () => {
+  it("supports option click selection from popover list", () => {
     renderWorkspace();
     fireEvent.click(screen.getByTestId("journey-metric-select"));
-    const selected = screen.getByTestId("journey-metric-engagement");
-    expect(selected).toHaveAttribute("aria-selected", "true");
-    fireEvent.keyDown(selected, { key: "ArrowRight" });
-    const curiosity = screen.getByTestId("journey-metric-curiosity");
-    fireEvent.keyDown(curiosity, { key: "Enter" });
-    expect(screen.queryByTestId("journey-metric-select-menu")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("journey-metric-curiosity"));
+    expect(screen.queryByTestId("journey-metric-select-menu-panel")).not.toBeInTheDocument();
     expect(screen.getByTestId("journey-metric-select")).toHaveAttribute(
       "data-current-metric",
       "curiosity",
     );
   });
 
-  it("keeps splitter widths and inspector state when opening metric panel", () => {
+  it("keeps splitter widths and inspector state when opening metric menu", () => {
     renderWorkspace(buildFixture13Scenes(), 1600);
     const expand = screen.queryByTestId("journey-inspector-summary-expand");
     if (expand) fireEvent.click(expand);
@@ -176,7 +155,7 @@ describe("Reader Journey Metric Selector Overlay System v4.2", () => {
     const sourceW = grid.getAttribute("data-source-width");
     const inspectorW = grid.getAttribute("data-inspector-width");
     fireEvent.click(screen.getByTestId("journey-metric-select"));
-    expect(screen.getByTestId("journey-metric-select-menu")).toBeInTheDocument();
+    expect(screen.getByTestId("journey-metric-select-menu-panel")).toBeInTheDocument();
     expect(grid.getAttribute("data-source-width")).toBe(sourceW);
     expect(grid.getAttribute("data-inspector-width")).toBe(inspectorW);
     expect(screen.getByTestId("journey-workspace")).toHaveAttribute(
@@ -185,7 +164,7 @@ describe("Reader Journey Metric Selector Overlay System v4.2", () => {
     );
   });
 
-  it("uses SharedPopover via overlay-root for 更多设置 with z-index token 40", () => {
+  it("uses SharedPopover via overlay-root for 更多操作 with z-index token 40", () => {
     expect(JOURNEY_Z_INDEX.popoverMenu).toBe(40);
     expect(JOURNEY_Z_INDEX.chartTooltip).toBe(50);
     expect(JOURNEY_Z_INDEX.modalDialog).toBe(100);
@@ -199,6 +178,14 @@ describe("Reader Journey Metric Selector Overlay System v4.2", () => {
     expect(document.getElementById("journey-overlay-root")).toBeTruthy();
     const panel = screen.getByTestId("journey-more-menu-panel");
     expect(document.getElementById("journey-overlay-root")?.contains(panel)).toBe(true);
+    expect(within(panel).getByTestId("journey-export-png")).toHaveTextContent("导出 PNG");
+    expect(within(panel).getByTestId("journey-chart-height-controls")).toBeInTheDocument();
+    expect(within(panel).getByTestId("journey-y-domain-fixed")).toHaveTextContent("固定 0—100");
+    expect(within(panel).getByTestId("journey-y-domain-focus")).toHaveTextContent("聚焦数据");
+    expect(within(panel).getByTestId("journey-zoom-reset")).toHaveTextContent("恢复默认");
+    expect(within(panel).getByTestId("journey-reset-pane-widths")).toHaveTextContent(
+      "恢复默认栏宽",
+    );
   });
 
   it("preserves chart Y 0—100 and plot floors", () => {
@@ -227,22 +214,21 @@ describe("Reader Journey Metric Selector Overlay System v4.2", () => {
   });
 
   it("has no book/chapter/run special cases in metric selector sources", () => {
-    expect(panelSource).not.toMatch(/book_id|chapter_id|run_id|bookId|chapterId|runId/);
     expect(toolbarSource).not.toMatch(/book_id\s*===|chapter_id\s*===|run_id\s*===/);
     expect(workspaceSource).not.toMatch(/MetricSelector[\s\S]{0,80}bookId\s*===/);
   });
 
-  it("shows current metric on trigger as 当前指标 · label", () => {
+  it("shows current metric on trigger as 更多指标 · label", () => {
     renderWorkspace();
     const trigger = screen.getByTestId("journey-metric-select");
-    expect(trigger).toHaveTextContent("当前指标");
+    expect(trigger).toHaveTextContent("更多指标");
     expect(trigger).toHaveTextContent("阅读牵引");
-    expect(trigger.textContent).toMatch(/当前指标\s*·\s*阅读牵引/);
+    expect(trigger.textContent).toMatch(/更多指标\s*·\s*阅读牵引/);
   });
 
-  it("uses full-width narrow panel styles without floating mini-menu", () => {
-    expect(css).toMatch(/\.journey-metric-selector-panel\.is-narrow/);
-    expect(css).toMatch(/grid-template-columns:\s*1fr/);
-    expect(panelSource).toMatch(/narrow/);
+  it("does not show source expand/collapse on the journey toolbar", () => {
+    renderWorkspace();
+    expect(screen.queryByTestId("journey-source-toggle")).not.toBeInTheDocument();
+    expect(toolbarSource).not.toMatch(/收起正文|展开正文/);
   });
 });

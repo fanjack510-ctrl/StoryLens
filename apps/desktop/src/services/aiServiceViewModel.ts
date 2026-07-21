@@ -13,6 +13,8 @@ export type AiUserStatusCode =
   | "credential_missing"
   | "provider_disabled"
   | "provider_disconnected"
+  | "cloud_disabled"
+  | "not_eligible"
   | "dns_failed"
   | "auth_failed"
   | "healthy"
@@ -29,6 +31,8 @@ export type AiServiceViewModel = {
   canStartAnalysis: boolean;
   apiKeyConfigured: boolean;
   cloudEnabled: boolean;
+  providerEnabled: boolean;
+  providerEligible: boolean;
   /** Raw / engineering fields — only for diagnostic details */
   diagnostics: {
     providerId: string;
@@ -43,11 +47,13 @@ export type AiServiceViewModel = {
 const USER_STATUS_LABELS: Record<AiUserStatusCode, string> = {
   provider_not_configured: "尚未配置AI服务",
   credential_missing: "尚未填写API Key",
-  provider_disabled: "云端AI尚未开启",
+  provider_disabled: "API Key 已保存，但 AI 服务未启用",
+  cloud_disabled: "AI 服务已启用，但云端连接未开启",
   provider_disconnected: "尚未连接AI服务",
+  not_eligible: "配置尚未完成，暂时无法开始分析",
   dns_failed: "无法连接云端服务，请检查网络或代理设置",
-  auth_failed: "API Key无效或没有模型访问权限",
-  healthy: "已连接，可以开始分析",
+  auth_failed: "API Key 无效，请检查后重新测试。",
+  healthy: "配置完成，可以开始分析",
   awaiting_provider_recovery: "云端服务暂时波动，系统正在自动恢复",
   unknown: "AI服务状态未知",
 };
@@ -108,6 +114,7 @@ export type BuildAiServiceInput = {
     health_state?: string;
     health_source?: string;
     manual_selection_blockers?: string[];
+    manual_boundary_candidate_eligible?: boolean;
     capabilities?: { enabled?: boolean; cloud?: boolean };
   } | null;
   configuration?: {
@@ -119,6 +126,8 @@ export type BuildAiServiceInput = {
     connection_state?: string;
   } | null;
   cloudEnabled?: boolean;
+  /** Authoritative eligibility from recommended setup / provider list */
+  providerEligible?: boolean | null;
   transportErrorCode?: string | null;
   connectionErrorCode?: string | null;
   httpStatus?: number | null;
@@ -186,17 +195,21 @@ export function buildAiServiceViewModel(input: BuildAiServiceInput): AiServiceVi
   const apiKeyConfigured =
     input.configuration?.credential_state === "configured" ||
     (configured && !hasBlocker(effectiveBlockers, "credential_missing"));
+  const providerEligible =
+    input.providerEligible === true ||
+    input.provider?.manual_boundary_candidate_eligible === true;
   // Transport-verified / configuration-ready connection counts as healthy for UX
-  // when list health lags behind a successful zero-token connectivity check.
+  // only when eligibility agrees — avoids "已连接" while analysis has no Provider.
   const healthy =
-    Boolean(input.provider?.healthy) ||
-    input.provider?.health_state === "healthy" ||
-    (connected &&
-      apiKeyConfigured &&
-      providerEnabled &&
-      cloudEnabled &&
-      !detectAuthFailure(rawCodes) &&
-      !detectDnsFailure(rawCodes));
+    providerEligible &&
+    (Boolean(input.provider?.healthy) ||
+      input.provider?.health_state === "healthy" ||
+      (connected &&
+        apiKeyConfigured &&
+        providerEnabled &&
+        cloudEnabled &&
+        !detectAuthFailure(rawCodes) &&
+        !detectDnsFailure(rawCodes)));
 
   let userStatusCode: AiUserStatusCode = "unknown";
 
@@ -210,19 +223,23 @@ export function buildAiServiceViewModel(input: BuildAiServiceInput): AiServiceVi
     userStatusCode = "provider_not_configured";
   } else if (!apiKeyConfigured || hasBlocker(effectiveBlockers, "credential_missing")) {
     userStatusCode = "credential_missing";
-  } else if (!cloudEnabled || !providerEnabled || hasBlocker(effectiveBlockers, "provider_disabled", "cloud_master")) {
+  } else if (!providerEnabled || hasBlocker(effectiveBlockers, "provider_disabled")) {
     userStatusCode = "provider_disabled";
+  } else if (!cloudEnabled || hasBlocker(effectiveBlockers, "cloud_master")) {
+    userStatusCode = "cloud_disabled";
   } else if (!connected || hasBlocker(effectiveBlockers, "provider_disconnected")) {
     userStatusCode = "provider_disconnected";
-  } else if (connected && healthy && cloudEnabled && providerEnabled) {
+  } else if (providerEligible && connected && healthy && cloudEnabled && providerEnabled) {
     userStatusCode = "healthy";
+  } else if (connected && !providerEligible) {
+    userStatusCode = "not_eligible";
   } else if (connected && !healthy) {
     userStatusCode = "awaiting_provider_recovery";
   } else {
     userStatusCode = "provider_disconnected";
   }
 
-  const canStartAnalysis = userStatusCode === "healthy";
+  const canStartAnalysis = userStatusCode === "healthy" && providerEligible;
 
   return {
     providerId,
@@ -234,6 +251,8 @@ export function buildAiServiceViewModel(input: BuildAiServiceInput): AiServiceVi
     canStartAnalysis,
     apiKeyConfigured,
     cloudEnabled,
+    providerEnabled,
+    providerEligible,
     diagnostics: {
       providerId,
       healthState: input.provider?.health_state ?? null,
@@ -261,8 +280,11 @@ export function mapTransportOrHttpError(error: {
   if (/CREDENTIAL_MISSING/i.test(code)) {
     return { userLabel: mapUserStatusLabel("credential_missing"), rawCode: code };
   }
-  if (/PROVIDER_DISABLED|CLOUD_MASTER/i.test(code)) {
+  if (/PROVIDER_DISABLED/i.test(code)) {
     return { userLabel: mapUserStatusLabel("provider_disabled"), rawCode: code };
+  }
+  if (/CLOUD_MASTER/i.test(code)) {
+    return { userLabel: mapUserStatusLabel("cloud_disabled"), rawCode: code };
   }
   if (/PROVIDER_NOT_CONNECTED|PROVIDER_DISCONNECTED/i.test(code)) {
     return { userLabel: mapUserStatusLabel("provider_disconnected"), rawCode: code };

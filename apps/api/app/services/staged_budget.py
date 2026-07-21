@@ -55,10 +55,29 @@ class StageEstimate:
 
     @property
     def required(self) -> BudgetAmounts:
+        """Hard-gate amounts: normal-path estimated usage (not worst-case)."""
+        return BudgetAmounts(
+            self.expected_request_count,
+            self.estimated_total_tokens,
+            self.estimated_cost,
+        )
+
+    @property
+    def worst_case(self) -> BudgetAmounts:
+        """Risk / advisory envelope only - never the default start gate."""
         return BudgetAmounts(
             self.worst_case_request_count,
             self.worst_case_total_tokens,
             self.worst_case_cost,
+        )
+
+    @property
+    def retry_reserve(self) -> BudgetAmounts:
+        """Spare headroom for retry / repair; advisory only, not a hard gate."""
+        return BudgetAmounts(
+            max(0, self.worst_case_request_count - self.expected_request_count),
+            max(0, self.worst_case_total_tokens - self.estimated_total_tokens),
+            round(max(0.0, self.worst_case_cost - self.estimated_cost), 6),
         )
 
 

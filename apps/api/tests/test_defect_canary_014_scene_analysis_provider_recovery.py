@@ -38,8 +38,14 @@ from app.services.scene_analysis_provider_recovery import (
 from app.services.staged_budget import STAGE_ANALYSIS
 from app.services.structured_output import StructuredOutputError
 from app.services.validation_errors import StructuralValidationError
+from tests.optional_gates import require_main_db_cert_counts
 from tests.test_aliyun_provider import CloudFake
 from tests.test_phase_1c_a10 import _scene_payload, _seed_confirmed_run
+
+pytestmark = [
+    pytest.mark.canary_offline,
+    pytest.mark.requires_audit_assets,
+]
 
 ROOT = Path(__file__).resolve().parents[3]
 MAIN_DB = ROOT / "data" / "storylens.db"
@@ -179,7 +185,7 @@ def _main_db_fingerprint() -> tuple[int, int]:
 
 
 @pytest.fixture
-def recovery_settings(monkeypatch: pytest.MonkeyPatch):
+def recovery_settings(monkeypatch: pytest.MonkeyPatch, verified_cloud_pricing):
     _zero_transport_delay(monkeypatch)
     yield
     get_settings.cache_clear()
@@ -291,7 +297,8 @@ async def test_1_to_7_partial_disconnect_recovers_third_scene_only(
     assert released[0].status == "released"
 
     require_completed_scene_analysis(testing_session, run, list(scenes))
-    assert _main_db_fingerprint() == before_fp == (55, 2)
+    # Recovery must not mutate the operator main DB; counts are environment-specific.
+    assert _main_db_fingerprint() == before_fp
 
 
 @pytest.mark.asyncio
@@ -372,7 +379,7 @@ async def test_9_auth_and_contract_errors_not_recoverable(
 
 
 def test_10_main_database_unchanged_55_2():
-    assert MAIN_DB.exists()
+    require_main_db_cert_counts()
     assert _main_db_fingerprint() == (55, 2)
 
 

@@ -1,0 +1,85 @@
+/* Scoped polish for task center. Do not touch tokens.css. */
+
+.tasks-page .page-title p {
+  max-width: 42rem;
+  color: var(--color-text-muted, var(--muted));
+}
+
+.tasks-page .table-wrap td .tasks-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.tasks-page .table-wrap td .badge + small,
+.tasks-page .table-wrap td b + small {
+  display: block;
+  margin-top: 2px;
+}
+
+.tasks-detail-modal {
+  width: min(720px, 95vw);
+  max-height: min(88vh, 920px);
+  overflow: auto;
+}
+
+.tasks-detail-modal header h2 {
+  margin: 0;
+}
+
+.tasks-detail-sections {
+  display: grid;
+  gap: 14px;
+  padding: 4px 0 12px;
+}
+
+.tasks-detail-section {
+  border: 1px solid var(--color-border, var(--line));
+  border-radius: var(--radius-md, 8px);
+  padding: 10px 12px;
+  background: var(--color-bg-surface, var(--surface));
+}
+
+.tasks-detail-section > h3 {
+  margin: 0 0 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.tasks-detail-section dl {
+  display: grid;
+  grid-template-columns: minmax(7rem, 32%) 1fr;
+  gap: 6px 10px;
+  margin: 0;
+}
+
+.tasks-detail-section dt {
+  color: var(--color-text-muted, var(--muted));
+  font-weight: 500;
+}
+
+.tasks-detail-section dd {
+  margin: 0;
+  word-break: break-word;
+}
+
+.tasks-detail-section pre {
+  margin: 0;
+  white-space: pre-wrap;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 12px;
+}
+
+.tasks-raw-error {
+  margin-top: 8px;
+}
+
+.tasks-raw-error > summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.tasks-status-filter {
+  min-width: 9rem;
+}

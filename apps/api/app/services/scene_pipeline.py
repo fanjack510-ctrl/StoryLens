@@ -160,10 +160,21 @@ def validate_boundaries(
 
 
 def scene_ranges(
-    paragraphs: list[Paragraph], boundary_ids: list[str]
+    paragraphs: list[Paragraph],
+    boundary_ids: list[str],
+    *,
+    consolidate_short_fragments: bool = False,
+    boundary_meta: dict | None = None,
 ) -> list[tuple[Paragraph, Paragraph]]:
+    from app.services.scene_fragment_consolidation import consolidate_boundary_ids
+
+    adopted = (
+        consolidate_boundary_ids(paragraphs, boundary_ids, boundary_meta)
+        if consolidate_short_fragments
+        else list(boundary_ids)
+    )
     positions = {paragraph.id: index for index, paragraph in enumerate(paragraphs)}
-    ends = [positions[item] for item in boundary_ids] + [len(paragraphs) - 1]
+    ends = [positions[item] for item in adopted] + [len(paragraphs) - 1]
     ranges: list[tuple[Paragraph, Paragraph]] = []
     start = 0
     for end in ends:
@@ -961,6 +972,19 @@ async def _execute(session: Session, gateway: ModelGateway, run: AnalysisRun) ->
         settings.scene_boundary_min_confidence,
         settings.scene_boundary_min_vote_ratio,
     )
+    from app.services.scene_fragment_consolidation import (
+        BoundaryMeta,
+        consolidate_boundary_ids,
+    )
+
+    boundary_meta = {
+        str(item["after_paragraph_id"]): BoundaryMeta(
+            reason_labels=frozenset(str(reason) for reason in (item.get("reasons") or [])),
+        )
+        for item in candidate_stats
+        if item.get("after_paragraph_id")
+    }
+    ordered_ids = consolidate_boundary_ids(paragraphs, ordered_ids, boundary_meta)
     stats_by_id = {str(item["after_paragraph_id"]): item for item in candidate_stats}
     window_confidences = [item.overall_confidence for item in window_results]
     overall_confidence = sum(window_confidences) / len(window_confidences)
@@ -1000,7 +1024,12 @@ async def _execute(session: Session, gateway: ModelGateway, run: AnalysisRun) ->
 
         create_review_session(session, run)
         return True
-    ranges = scene_ranges(paragraphs, ordered_ids)
+    ranges = scene_ranges(
+        paragraphs,
+        ordered_ids,
+        consolidate_short_fragments=False,
+        boundary_meta=boundary_meta,
+    )
     run.progress_total += len(ranges)
     analysis_prompt = load_prompt(
         "scene_analysis",

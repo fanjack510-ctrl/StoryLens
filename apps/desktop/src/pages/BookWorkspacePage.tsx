@@ -1,14 +1,31 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { booksApi } from "../services/booksApi";
 import { analysisApi } from "../services/analysisApi";
+import { formatSceneDisplayLabel } from "../services/formatSceneDisplayLabel";
 import { useUiStore } from "../stores/uiStore";
 import { Empty, ErrorState, Loading, Badge } from "../components/common/States";
+import { StateView } from "../components/ui/StateView";
 import { StartAnalysisDialog } from "../components/analysis/StartAnalysisDialog";
 import { ReparseDialog } from "../components/books/ReparseDialog";
-import { useQueryClient } from "@tanstack/react-query";
-import { BoundaryReviewPanel } from "../components/analysis/BoundaryReviewPanel";
+
+function chapterOrdinalLabel(c: {
+  section_type: string;
+  chapter_number_normalized?: number;
+  chapter_index: number;
+}) {
+  if (c.section_type === "front_matter") return "资料";
+  const n = c.chapter_number_normalized || c.chapter_index;
+  return String(n).padStart(2, "0");
+}
+
+function fileExtLabel(name?: string) {
+  if (!name) return null;
+  const m = name.match(/\.([a-z0-9]+)$/i);
+  return m ? m[1].toUpperCase() : null;
+}
+
 export function BookWorkspacePage() {
   const params = useParams();
   const bookId = Number(params.bookId || 1);
@@ -20,7 +37,7 @@ export function BookWorkspacePage() {
   const [loaded, setLoaded] = useState<any[]>([]);
   const [diagnostics, setDiagnostics] = useState<any>();
   const [reparseOpen, setReparseOpen] = useState(false);
-  const [reviewOpen, setReviewOpen] = useState(false);
+  const chapterListRef = useRef<HTMLDivElement>(null);
   const qc = useQueryClient();
   const { fontSize, lineHeight, setReading, demo } = useUiStore();
   const book = useQuery({
@@ -69,6 +86,22 @@ export function BookWorkspacePage() {
     queryFn: () => analysisApi.artifacts(selectedScene.scene_key),
     enabled: !!selectedScene,
   });
+
+  const currentChapter = useMemo(
+    () => chapters.data?.find((c) => c.id === chapter),
+    [chapters.data, chapter],
+  );
+  const formatLabel = fileExtLabel(book.data?.source_file_name);
+  const chapterCount = chapters.data?.length;
+
+  useEffect(() => {
+    if (!chapter || !chapterListRef.current) return;
+    const el = chapterListRef.current.querySelector<HTMLElement>(
+      `.workspace-chapter-item[data-chapter-id="${chapter}"]`,
+    );
+    el?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [chapter, chapters.data]);
+
   const locate = async (id: number) => {
     const rows = await analysisApi.evidence(id);
     const paragraphIds = rows.map((row) => row.paragraph_id);
@@ -86,60 +119,127 @@ export function BookWorkspacePage() {
       0,
     );
   };
+
   if (book.isLoading) return <Loading />;
+
+  const bookTitle = book.data?.title || "选择一本书";
+  const chapterTitle = currentChapter?.display_title || currentChapter?.title;
+
   return (
-    <section className="workspace">
-      <aside className="structure-pane">
-        <div className="pane-head">
+    <section className="workspace workspace-content">
+      <aside className="structure-pane workspace-book-nav">
+        <div className="pane-head workspace-book-info">
           <small>当前书籍</small>
-          <h2>{book.data?.title || "选择一本书"}</h2>
+          <h2 className="workspace-book-title" title={bookTitle}>
+            {bookTitle}
+          </h2>
+          {(formatLabel || chapterCount != null) && (
+            <p className="workspace-book-meta">
+              {[formatLabel, chapterCount != null ? `${chapterCount} 章` : null]
+                .filter(Boolean)
+                .join(" · ")}
+            </p>
+          )}
         </div>
-        <h3>章节目录</h3>
-        <button
-          onClick={async () =>
-            setDiagnostics(await booksApi.diagnostics(bookId))
-          }
-        >
-          导入诊断
-        </button>
-        <button onClick={() => setReparseOpen(true)}>重新识别章节</button>
-        {diagnostics && (
-          <div className="notice">
-            <b>识别结果</b>
-            <span>编码 {diagnostics.encoding}</span>
-            <span>
-              候选 {diagnostics.candidate_count} · 最终{" "}
-              {diagnostics.final_chapter_count}章
+
+        <div className="workspace-book-tools">
+          <span className="workspace-nav-label">书籍工具</span>
+          <div className="workspace-book-tools-actions">
+            <button
+              type="button"
+              className="workspace-tool-link"
+              onClick={async () =>
+                setDiagnostics(await booksApi.diagnostics(bookId))
+              }
+            >
+              导入诊断
+            </button>
+            <span className="workspace-tool-sep" aria-hidden="true">
+              ·
             </span>
-            {diagnostics.warning && <span>CHAPTER_DETECTION_SUSPECT</span>}
+            <button
+              type="button"
+              className="workspace-tool-link"
+              onClick={() => setReparseOpen(true)}
+            >
+              重新识别章节
+            </button>
           </div>
-        )}
-        {chapters.data?.map((c) => (
-          <button
-            className={chapter === c.id ? "selected" : ""}
-            onClick={() => setChapter(c.id)}
-            key={c.id}
-          >
-            <span>
-              {c.section_type === "front_matter"
-                ? "资料"
-                : `第${c.chapter_number_normalized || c.chapter_index}章`}
-            </span>
-            {c.display_title || c.title}
-          </button>
-        ))}
-        <h3>场景目录</h3>
-        {scenes.data?.map((s) => (
-          <button onClick={() => setScene(s)} key={s.id}>
-            <span>S{s.ordinal}</span>
-            {s.scene_key}
-            <Badge tone={s.boundary_detected ? "success" : "neutral"}>
-              {s.boundary_detected ? "边界" : "章末"}
-            </Badge>
-          </button>
-        ))}
+          {diagnostics && (
+            <div className="notice workspace-diagnostics">
+              <b>识别结果</b>
+              <span>编码 {diagnostics.encoding}</span>
+              <span>
+                候选 {diagnostics.candidate_count} · 最终{" "}
+                {diagnostics.final_chapter_count}章
+              </span>
+              {diagnostics.warning && <span>CHAPTER_DETECTION_SUSPECT</span>}
+            </div>
+          )}
+        </div>
+
+        <div className="workspace-nav-section">
+          <h3 className="workspace-nav-label">章节</h3>
+          <div className="workspace-chapter-list" ref={chapterListRef}>
+            {chapters.data?.map((c) => {
+              const title = c.display_title || c.title;
+              return (
+                <button
+                  type="button"
+                  className={`workspace-chapter-item${chapter === c.id ? " selected" : ""}`}
+                  data-chapter-id={c.id}
+                  onClick={() => setChapter(c.id)}
+                  key={c.id}
+                  title={title}
+                >
+                  <span className="workspace-chapter-num">
+                    {chapterOrdinalLabel(c)}
+                  </span>
+                  <span className="workspace-chapter-title">{title}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="workspace-nav-section">
+          <h3 className="workspace-nav-label">场景</h3>
+          <div className="workspace-scene-list">
+            {!scenes.data?.length ? (
+              <StateView
+                kind="empty"
+                title="尚未生成场景"
+                description="完成场景边界分析后会显示在这里。"
+                className="workspace-scene-empty"
+                data-testid="workspace-scene-empty"
+              />
+            ) : (
+              scenes.data.map((s) => (
+                <button
+                  type="button"
+                  className={`workspace-scene-item${selectedScene?.id === s.id ? " selected" : ""}`}
+                  onClick={() => setScene(s)}
+                  key={s.id}
+                  data-scene-id={s.id}
+                  title={s.scene_key || formatSceneDisplayLabel(s)}
+                >
+                  <span className="workspace-scene-ordinal">
+                    {formatSceneDisplayLabel(s)}
+                  </span>
+                  {s.scene_key && typeof s.ordinal === "number" && Number.isFinite(s.ordinal) ? (
+                    <span className="workspace-scene-name">{s.scene_key}</span>
+                  ) : null}
+                  <Badge tone={s.boundary_detected ? "success" : "neutral"}>
+                    {s.boundary_detected ? "边界" : "章末"}
+                  </Badge>
+                </button>
+              ))
+            )}
+          </div>
+        </div>
       </aside>
-      <article className="reader">
+
+      <article className="reader workspace-reader">
         <div className="reader-tools">
           <button
             onClick={() => setReading(Math.max(14, fontSize - 1), lineHeight)}
@@ -163,50 +263,70 @@ export function BookWorkspacePage() {
           >
             开始分析
           </button>
-          <button onClick={() => setReviewOpen((value) => !value)}>
-            场景边界审阅
-          </button>
         </div>
-        <header>
-          <p className="eyebrow">正文阅读</p>
-          <h1>{chapters.data?.find((c) => c.id === chapter)?.title}</h1>
-        </header>
-        {(paragraphs.data?.total || 0) > 2000 && (
-          <p className="notice">当前章节异常偏大，可能需要重新识别章节。</p>
-        )}
-        <div className="prose" style={{ fontSize, lineHeight }}>
-          {reviewOpen && <BoundaryReviewPanel bookId={bookId} chapterId={chapter} />}
-          {paragraphs.isLoading ? (
-            <Loading />
-          ) : paragraphs.error ? (
-            <ErrorState error={paragraphs.error} />
-          ) : loaded.length ? (
-            loaded.slice(Math.max(0, loaded.length - 600)).map((p) => (
-              <div
-                id={p.id}
-                className={`paragraph ${evidence.includes(p.id) ? "highlight" : ""}`}
-                key={p.id}
-              >
-                <button
-                  title="复制段落ID"
-                  onClick={() => navigator.clipboard?.writeText(p.id)}
+
+        <div className="workspace-reading-canvas">
+          <header className="workspace-reading-header">
+            <p className="eyebrow workspace-reading-label">正文阅读</p>
+            {!chapter ? (
+              <StateView
+                kind="empty"
+                title="选择一个章节开始阅读"
+                data-testid="workspace-no-chapter"
+              />
+            ) : (
+              <h1 className="workspace-chapter-heading" title={chapterTitle}>
+                {chapterTitle}
+              </h1>
+            )}
+          </header>
+
+          {(paragraphs.data?.total || 0) > 2000 && (
+            <p className="notice">当前章节异常偏大，可能需要重新识别章节。</p>
+          )}
+
+          <div className="prose workspace-prose" style={{ fontSize, lineHeight }}>
+            {!chapter ? null : paragraphs.isLoading ? (
+              <StateView
+                kind="loading"
+                title="正在载入章节"
+                data-testid="workspace-chapter-loading"
+              />
+            ) : paragraphs.error ? (
+              <ErrorState error={paragraphs.error} />
+            ) : loaded.length ? (
+              loaded.slice(Math.max(0, loaded.length - 600)).map((p) => (
+                <div
+                  id={p.id}
+                  className={`paragraph ${evidence.includes(p.id) ? "highlight" : ""}`}
+                  key={p.id}
                 >
-                  {p.id}
-                </button>
-                <p>{p.raw_text}</p>
-              </div>
-            ))
-          ) : (
-            <Empty text="当前章节没有可显示的正文" />
-          )}
-          {paragraphs.data?.has_more && (
-            <button onClick={() => setOffset(offset + paragraphs.data!.limit)}>
-              继续加载正文
-            </button>
-          )}
+                  <button
+                    title="复制段落ID"
+                    onClick={() => navigator.clipboard?.writeText(p.id)}
+                  >
+                    {p.id}
+                  </button>
+                  <p>{p.raw_text}</p>
+                </div>
+              ))
+            ) : (
+              <StateView
+                kind="empty"
+                title="这个章节没有可显示的正文"
+                data-testid="workspace-empty-body"
+              />
+            )}
+            {paragraphs.data?.has_more && (
+              <button onClick={() => setOffset(offset + paragraphs.data!.limit)}>
+                继续加载正文
+              </button>
+            )}
+          </div>
         </div>
       </article>
-      <aside className="analysis-pane">
+
+      <aside className="analysis-pane workspace-inspector">
         <div className="tabs">
           <button className="active">场景结构</button>
           <button>证据</button>
@@ -248,11 +368,14 @@ export function BookWorkspacePage() {
           {demo && <small>演示模式已开启，不写入数据库</small>}
         </div>
       </aside>
+
       {dialog && (
         <StartAnalysisDialog
           chapterId={chapter}
           onClose={() => setDialog(false)}
-          onCreated={(runId) => { location.href = `/tasks?run_id=${runId}`; }}
+          onCreated={(runId) => {
+            location.href = `/tasks?run_id=${runId}`;
+          }}
         />
       )}
       {reparseOpen && (

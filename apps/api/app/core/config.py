@@ -15,6 +15,11 @@ class Settings(BaseSettings):
     app_host: str = "127.0.0.1"
     app_port: int = 8000
     database_url: str = "sqlite:///./data/storylens.db"
+    data_dir: str = ""
+    log_dir: str = ""
+    uploads_dir: str = ""
+    exports_dir: str = ""
+    config_dir: str = ""
     default_model_provider: str = "none"
 
     local_llama_base_url: str = "http://127.0.0.1:8080/v1"

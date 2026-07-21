@@ -61,7 +61,8 @@ V1.0 发布就绪审计：`audits/v1.0/`。
 
 默认自动化测试使用 Fake Provider，不连接真实模型。真实 Qwen 调用必须由操作者明确授权。
 
-构建前端 RC：`.\scripts\build-release.ps1`（调用 `build_desktop.ps1`，版本意图 `1.0.0-rc1`）。
+构建前端：`.\scripts\build-release.ps1`（调用 `build_desktop.ps1`；正式版本以 `tauri.conf.json` / `set_version.ps1` 为准）。
+构建 Windows 安装包：`.\scripts\build_windows_release.ps1`。
 
 ### 主要 API（摘要）
 

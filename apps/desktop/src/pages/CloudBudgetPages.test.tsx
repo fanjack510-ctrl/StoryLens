@@ -7,6 +7,7 @@ import { ProvidersPage } from "./ProvidersPage";
 import { settingsApi } from "../services/settingsApi";
 import { providersApi } from "../services/providersApi";
 import { useDeveloperModeStore } from "../stores/developerModeStore";
+import { useAdvancedSettingsStore } from "../stores/advancedSettingsStore";
 
 vi.mock("../services/settingsApi", () => ({ settingsApi: {
   diagnostics: vi.fn(), get: vi.fn(), save: vi.fn(), cloud: vi.fn(), setCloud: vi.fn(),
@@ -18,6 +19,30 @@ vi.mock("../services/providersApi", () => ({ providersApi: {
   configuration: vi.fn(), save: vi.fn(),
   transportDiagnostic: vi.fn(), connectionTestPreflight: vi.fn(), testConnection: vi.fn(),
 } }));
+vi.mock("../services/aiServiceConfig", async () => {
+  const actual = await vi.importActual<typeof import("../services/aiServiceConfig")>(
+    "../services/aiServiceConfig",
+  );
+  return {
+    ...actual,
+    fetchRecommendedQwenStatus: vi.fn(async () => ({
+      ok: false,
+      user_message: "尚未填写 API Key",
+      persisted: true,
+      credential_configured: false,
+      provider_enabled: false,
+      cloud_enabled: false,
+      provider_eligible: false,
+      selected_provider_id: "aliyun_qwen_plus",
+      connection_status: "unconfigured",
+      analysis_mode: null,
+      blockers: ["credential_missing"],
+      needs_cloud_consent: false,
+    })),
+    configureRecommendedQwenService: vi.fn(),
+    repairRecommendedQwenSetup: vi.fn(),
+  };
+});
 vi.mock("../components/providers/AliyunForm", () => ({ AliyunForm: () => <div>API Key 不回显</div> }));
 
 const budget = {
@@ -45,7 +70,10 @@ const renderPage = (page: React.ReactNode) => render(<MemoryRouter><QueryClientP
 
 beforeEach(() => {
   localStorage.removeItem("storylens.developerMode");
+  localStorage.removeItem("storylens.showAdvancedSettings");
+  localStorage.removeItem("storylens.onboarding.v1");
   useDeveloperModeStore.setState({ developerMode: false });
+  useAdvancedSettingsStore.setState({ showAdvancedSettings: false });
   vi.mocked(settingsApi.diagnostics).mockResolvedValue({ fastapi: "ok", sqlite: "ok" });
   vi.mocked(settingsApi.cloud).mockResolvedValue({ enabled: false, state: "disabled" });
   vi.mocked(settingsApi.setCloud).mockResolvedValue({});
@@ -116,17 +144,20 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
 describe("设置页结构", () => {
-  it("普通模式显示三个标签且无高级设置", async () => {
+  it("普通模式显示六个标签且无高级设置", async () => {
     renderPage(<SettingsPage />);
     expect(await screen.findByTestId("settings-tabs")).toBeInTheDocument();
-    expect(screen.getByTestId("settings-tab-general")).toBeInTheDocument();
     expect(screen.getByTestId("settings-tab-ai")).toBeInTheDocument();
-    expect(screen.getByTestId("settings-tab-budget")).toBeInTheDocument();
+    expect(screen.getByTestId("settings-tab-cost")).toBeInTheDocument();
+    expect(screen.getByTestId("settings-tab-data")).toBeInTheDocument();
+    expect(screen.getByTestId("settings-tab-privacy")).toBeInTheDocument();
+    expect(screen.getByTestId("settings-tab-license")).toBeInTheDocument();
+    expect(screen.getByTestId("settings-tab-appearance")).toBeInTheDocument();
     expect(screen.queryByTestId("settings-tab-advanced")).not.toBeInTheDocument();
   });
 
-  it("开发者模式显示高级设置", async () => {
-    useDeveloperModeStore.setState({ developerMode: true });
+  it("开启高级设置后显示高级标签", async () => {
+    useAdvancedSettingsStore.setState({ showAdvancedSettings: true });
     renderPage(<SettingsPage />);
     expect(await screen.findByTestId("settings-tab-advanced")).toBeInTheDocument();
     fireEvent.click(screen.getByTestId("settings-tab-advanced"));
@@ -135,10 +166,11 @@ describe("设置页结构", () => {
   });
 });
 
-describe("通用与AI服务普通模式", () => {
-  it("通用页无巨大Demo勾选徽章且可统一保存", async () => {
+describe("外观与AI服务普通模式", () => {
+  it("外观页可保存且无 Demo 徽章", async () => {
+    useAdvancedSettingsStore.setState({ showAdvancedSettings: true });
     renderPage(<SettingsPage />);
-    fireEvent.click(await screen.findByTestId("settings-tab-general"));
+    fireEvent.click(await screen.findByTestId("settings-tab-appearance"));
     expect(screen.getByTestId("demo-mode-switch")).toBeInTheDocument();
     expect(screen.queryByText("演示")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "保存" }));
@@ -149,7 +181,7 @@ describe("通用与AI服务普通模式", () => {
     renderPage(<SettingsPage />);
     fireEvent.click(await screen.findByTestId("settings-tab-ai"));
     expect(await screen.findByTestId("ai-service-status-card")).toBeInTheDocument();
-    expect(screen.getByTestId("ai-service-name")).toHaveTextContent("阿里云百炼");
+    expect(screen.getByTestId("ai-service-name")).toHaveValue("阿里云百炼（推荐）");
     expect(screen.queryByText("Workspace ID")).not.toBeInTheDocument();
     expect(screen.queryByText("Base URL")).not.toBeInTheDocument();
     expect(screen.queryByText("Region")).not.toBeInTheDocument();
@@ -166,42 +198,58 @@ describe("通用与AI服务普通模式", () => {
   });
 });
 
-describe("预算与隐私", () => {
-  it("只显示一个云端开关且无高级Token字段", async () => {
+describe("使用额度", () => {
+  it("显示费用、请求与 Token 额度入口且无高级单请求字段", async () => {
     renderPage(<SettingsPage />);
-    fireEvent.click(await screen.findByTestId("settings-tab-budget"));
-    expect(await screen.findByLabelText("启用云端AI")).toBeInTheDocument();
-    expect(screen.queryByLabelText("允许云端模型连接")).not.toBeInTheDocument();
+    fireEvent.click(await screen.findByTestId("settings-tab-cost"));
+    await waitFor(() => expect(screen.getByTestId("cost-limit-input")).toHaveValue(1));
+    expect(screen.getByTestId("cost-request-limit-input")).toHaveValue(30);
+    expect(screen.getByTestId("cost-token-limit-input")).toHaveValue(200000);
     expect(screen.queryByLabelText("单请求最大输入 Token")).not.toBeInTheDocument();
-    expect(screen.getByLabelText("每日预算上限")).toHaveValue(1);
+    expect(screen.queryByLabelText("启用云端AI")).not.toBeInTheDocument();
   });
 
-  it("保存预算到后端", async () => {
+  it("保存费用与请求 Token 额度到后端", async () => {
     renderPage(<SettingsPage />);
-    fireEvent.click(await screen.findByTestId("settings-tab-budget"));
-    fireEvent.click(await screen.findByTestId("budget-save"));
-    expect(await screen.findByText("预算与隐私设置已保存。")).toBeInTheDocument();
-    expect(settingsApi.saveCloudBudget).toHaveBeenCalled();
+    fireEvent.click(await screen.findByTestId("settings-tab-cost"));
+    await waitFor(() => expect(screen.getByTestId("cost-limit-input")).toHaveValue(1));
+    fireEvent.change(screen.getByTestId("cost-request-limit-input"), { target: { value: "80" } });
+    fireEvent.change(screen.getByTestId("cost-token-limit-input"), { target: { value: "300000" } });
+    fireEvent.click(screen.getByTestId("cost-save"));
+    expect(await screen.findByText("额度设置已保存。")).toBeInTheDocument();
+    expect(settingsApi.saveCloudBudget).toHaveBeenCalledWith(
+      expect.objectContaining({
+        cloud_daily_estimated_cost_limit: 1,
+        cloud_daily_request_limit: 80,
+        cloud_daily_token_limit: 300000,
+      }),
+    );
   });
 
   it("拒绝非法费用输入", async () => {
     renderPage(<SettingsPage />);
-    fireEvent.click(await screen.findByTestId("settings-tab-budget"));
-    fireEvent.change(await screen.findByLabelText("每日预算上限"), { target: { value: "0" } });
-    fireEvent.click(screen.getByTestId("budget-save"));
+    fireEvent.click(await screen.findByTestId("settings-tab-cost"));
+    const input = await screen.findByTestId("cost-limit-input");
+    await waitFor(() => expect(input).toHaveValue(1));
+    fireEvent.change(input, { target: { value: "0" } });
+    fireEvent.click(screen.getByTestId("cost-save"));
     expect(await screen.findByText(/保存失败/)).toBeInTheDocument();
     expect(settingsApi.saveCloudBudget).not.toHaveBeenCalled();
   });
 
-  it("启用云端AI调用同一云端开关接口", async () => {
+  it("拒绝非法请求额度输入", async () => {
     renderPage(<SettingsPage />);
-    fireEvent.click(await screen.findByTestId("settings-tab-budget"));
-    fireEvent.click(await screen.findByLabelText("启用云端AI"));
-    await waitFor(() => expect(settingsApi.setCloud).toHaveBeenCalledWith(true));
+    fireEvent.click(await screen.findByTestId("settings-tab-cost"));
+    const input = await screen.findByTestId("cost-request-limit-input");
+    await waitFor(() => expect(input).toHaveValue(30));
+    fireEvent.change(input, { target: { value: "0" } });
+    fireEvent.click(screen.getByTestId("cost-save"));
+    expect(await screen.findByText(/每日请求额度必须为正整数/)).toBeInTheDocument();
+    expect(settingsApi.saveCloudBudget).not.toHaveBeenCalled();
   });
 
-  it("高级预算字段仅开发者模式可见且默认值不变", async () => {
-    useDeveloperModeStore.setState({ developerMode: true });
+  it("高级预算字段仅高级设置可见且默认值不变", async () => {
+    useAdvancedSettingsStore.setState({ showAdvancedSettings: true });
     renderPage(<SettingsPage />);
     fireEvent.click(await screen.findByTestId("settings-tab-advanced"));
     expect(await screen.findByLabelText("单请求最大输入 Token")).toHaveValue(16000);

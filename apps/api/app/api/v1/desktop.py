@@ -10,6 +10,7 @@ from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
 
 from app.api.v1.router import error
+from app.core.paths import get_project_root, user_data_root
 from app.db.models import (
     AnalysisEvidence,
     AnalysisRun,
@@ -37,17 +38,25 @@ from app.schemas.settings import (
     ProviderConnectionTestPreflight,
     ProviderConnectionTestResponse,
     ProviderTestRequest,
+    RecommendedQwenRepairRequest,
+    RecommendedQwenSetupRequest,
+    RecommendedQwenSetupResponse,
 )
 from app.services.credentials.base import CredentialStore
 from app.services.credentials.service import get_credential_store
 from app.services.cloud_budget import daily_usage
 from app.services.cloud_pricing import pricing_status
+from app.services.recommended_ai_setup import (
+    configure_recommended_qwen,
+    get_recommended_qwen_status,
+    repair_recommended_qwen,
+)
 
 router = APIRouter(prefix="/api/v1")
 CLOUD_KEY = "cloud_enabled"
 DESKTOP_KEY = "desktop_settings"
 CLOUD_BUDGET_KEY = "cloud_budget_settings"
-PROJECT_ROOT = Path(__file__).resolve().parents[5]
+PROJECT_ROOT = get_project_root()
 PRICING_PATH = PROJECT_ROOT / "config" / "cloud_pricing.json"
 LOCAL_PROFILES = {"safe", "qwen3_14b_dev", "qwen3_27b_manual"}
 
@@ -218,6 +227,80 @@ def _bootstrap_aliyun_row(session: Session, provider_name: str) -> ProviderConfi
     )
 
 
+def _recommended_setup_response(result) -> RecommendedQwenSetupResponse:
+    return RecommendedQwenSetupResponse(
+        ok=result.ok,
+        user_message=result.user_message,
+        persisted=result.persisted,
+        credential_configured=result.credential_configured,
+        provider_enabled=result.provider_enabled,
+        cloud_enabled=result.cloud_enabled,
+        provider_eligible=result.provider_eligible,
+        selected_provider_id=result.selected_provider_id,
+        connection_status=result.connection_status,
+        analysis_mode=result.analysis_mode,
+        blockers=list(result.blockers),
+        needs_cloud_consent=result.needs_cloud_consent,
+        error_code=result.error_code,
+        model_service_validated=bool(getattr(result, "model_validated", False)),
+        analysis_ready=bool(getattr(result, "analysis_ready", False)),
+        readiness_reasons=list(getattr(result, "readiness_reasons", []) or []),
+    )
+
+
+@router.get(
+    "/desktop/ai-setup/recommended-qwen",
+    response_model=RecommendedQwenSetupResponse,
+)
+def get_recommended_qwen_setup(
+    session: Session = Depends(get_db),
+    store: CredentialStore = Depends(get_credential_store),
+    gateway: ModelGateway = Depends(get_model_gateway),
+):
+    return _recommended_setup_response(get_recommended_qwen_status(session, store, gateway))
+
+
+@router.post(
+    "/desktop/ai-setup/recommended-qwen",
+    response_model=RecommendedQwenSetupResponse,
+)
+def post_recommended_qwen_setup(
+    value: RecommendedQwenSetupRequest,
+    session: Session = Depends(get_db),
+    store: CredentialStore = Depends(get_credential_store),
+    gateway: ModelGateway = Depends(get_model_gateway),
+):
+    result = configure_recommended_qwen(
+        session=session,
+        store=store,
+        gateway=gateway,
+        api_key=value.api_key,
+        analysis_mode=value.analysis_mode,
+        cloud_body_consent=value.cloud_body_consent,
+        persist=value.persist,
+    )
+    return _recommended_setup_response(result)
+
+
+@router.post(
+    "/desktop/ai-setup/recommended-qwen/repair",
+    response_model=RecommendedQwenSetupResponse,
+)
+def post_recommended_qwen_repair(
+    value: RecommendedQwenRepairRequest,
+    session: Session = Depends(get_db),
+    store: CredentialStore = Depends(get_credential_store),
+    gateway: ModelGateway = Depends(get_model_gateway),
+):
+    result = repair_recommended_qwen(
+        session=session,
+        store=store,
+        gateway=gateway,
+        cloud_body_consent=value.cloud_body_consent,
+    )
+    return _recommended_setup_response(result)
+
+
 @router.get(
     "/model-providers/{provider_name}/configuration", response_model=ProviderConfigurationResponse
 )
@@ -263,7 +346,18 @@ def put_provider_configuration(
         row.credential_reference = f"keyring:{provider_name}"
     row.updated_at = datetime.now(timezone.utc)
     session.commit()
-    _bootstrap_aliyun_row(session, provider_name)
+    # Fill public Bailian endpoint when client omitted / sent empty base_url.
+    from app.services.provider_bootstrap import (
+        ensure_aliyun_provider_configuration,
+        is_aliyun_cloud_provider,
+    )
+
+    if is_aliyun_cloud_provider(provider_name):
+        ensure_aliyun_provider_configuration(
+            session, provider_name, create_if_missing=True
+        )
+    else:
+        _bootstrap_aliyun_row(session, provider_name)
     return configuration_response(
         session.scalar(
             select(ProviderConfiguration).where(
@@ -493,7 +587,7 @@ def diagnostics(
             {"name": item.name, "enabled": item.capabilities().enabled}
             for item in gateway.providers()
         ],
-        "data_directory": "managed",
+        "data_directory": str(user_data_root()),
         "recent_error": None,
     }
 

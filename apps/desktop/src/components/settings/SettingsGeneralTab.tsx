@@ -1,11 +1,19 @@
 import { useState } from "react";
 import { useUiStore } from "../../stores/uiStore";
 import { settingsApi } from "../../services/settingsApi";
+import { checkForAppUpdate } from "../../services/updaterService";
+import { UpdateAvailableDialog } from "../desktop/UpdateAvailableDialog";
 
+/**
+ * Legacy general tab (appearance + update). SettingsPage maps "general" → appearance;
+ * update entry lives under 隐私与更新. Kept for deep-links / tests.
+ */
 export function SettingsGeneralTab() {
   const ui = useUiStore();
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
+  const [showDialog, setShowDialog] = useState(false);
 
   const save = async () => {
     setSaving(true);
@@ -22,6 +30,26 @@ export function SettingsGeneralTab() {
       setMessage(`保存失败：${error instanceof Error ? error.message : "未知错误"}`);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const onCheckUpdate = async () => {
+    setCheckingUpdate(true);
+    setMessage("");
+    try {
+      const result = await checkForAppUpdate(true);
+      if (result.kind === "disabled") {
+        setMessage("当前环境未启用自动更新检查（开发模式或已关闭）。");
+      } else if (result.kind === "latest") {
+        setMessage(`当前已是最新版本（${result.currentVersion}）。`);
+      } else if (result.kind === "available") {
+        setShowDialog(true);
+        setMessage(`新版本 ${result.latestVersion} 可用。`);
+      } else {
+        setMessage(result.message);
+      }
+    } finally {
+      setCheckingUpdate(false);
     }
   };
 
@@ -86,12 +114,27 @@ export function SettingsGeneralTab() {
         </label>
       </div>
 
+      <section className="settings-update-block" data-testid="settings-update-block">
+        <h3>软件更新</h3>
+        <p>检查是否有新版本。检查失败不会影响本地分析。下载与安装需确认。</p>
+        <button
+          type="button"
+          data-testid="check-update-button"
+          disabled={checkingUpdate}
+          onClick={() => void onCheckUpdate()}
+        >
+          {checkingUpdate ? "正在检查…" : "检查更新"}
+        </button>
+      </section>
+
       {message && <p role="status">{message}</p>}
       <div className="settings-actions">
         <button type="button" className="primary" disabled={saving} onClick={save}>
           {saving ? "保存中…" : "保存"}
         </button>
       </div>
+
+      <UpdateAvailableDialog open={showDialog} onClose={() => setShowDialog(false)} />
     </article>
   );
 }

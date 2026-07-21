@@ -1,0 +1,188 @@
+/* Module styles for Scene Analysis / Analysis Results — keep out of global tokens. */
+
+.results-page.analysis-results-layout {
+  gap: 0;
+}
+
+.analysis-results-layout .results-page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px 20px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel, var(--bg-elevated, #fff));
+}
+
+.analysis-results-layout .results-page-header h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 650;
+}
+
+.analysis-results-layout .results-page-header p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.analysis-results-layout .results-page-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.analysis-results-layout .structure-pane {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.analysis-results-layout .scene-nav-label {
+  padding: 8px 12px 4px;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.analysis-results-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 0;
+}
+
+.analysis-result-section {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg, transparent);
+}
+
+.results-structure-section {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg, transparent);
+}
+
+.results-structure-sections {
+  display: grid;
+  gap: 10px;
+}
+
+.analysis-result-section > h3,
+.results-structure-section > h3 {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 650;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+
+.analysis-result-section > p,
+.analysis-result-section .structure-field p {
+  margin: 0;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.analysis-result-section .structure-field {
+  display: grid;
+  gap: 4px;
+}
+
+.analysis-result-section .structure-field b {
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.analysis-result-evidence-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.analysis-result-evidence-chips button {
+  font-size: 0.75rem;
+  padding: 4px 8px;
+}
+
+.analysis-result-tech,
+.results-tech-details {
+  margin-top: 4px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0 12px 10px;
+  background: color-mix(in srgb, var(--panel, #f6f6f6) 80%, transparent);
+}
+
+.analysis-result-tech > summary,
+.results-tech-details > summary {
+  cursor: pointer;
+  padding: 10px 0;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.analysis-result-tech dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  margin: 0 0 10px;
+  font-size: 0.82rem;
+}
+
+.analysis-result-tech dt {
+  color: var(--muted);
+}
+
+.analysis-result-tech pre {
+  margin: 0;
+  max-height: 220px;
+  overflow: auto;
+  padding: 8px;
+  border-radius: 6px;
+  background: var(--bg, #111);
+  color: var(--text);
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+
+.results-page-state {
+  display: grid;
+  gap: 8px;
+  place-content: center;
+  min-height: 280px;
+  padding: 32px 24px;
+  text-align: center;
+}
+
+.results-page-state strong {
+  font-size: 1.05rem;
+}
+
+.results-page-state span {
+  color: var(--muted);
+  max-width: 36rem;
+  margin: 0 auto;
+}
+
+html[data-theme="dark"] .analysis-result-section,
+html.theme-dark .analysis-result-section,
+[data-theme="dark"] .analysis-result-section {
+  background: color-mix(in srgb, var(--panel, #1a1a1a) 70%, transparent);
+}
+
+html[data-theme="dark"] .analysis-result-tech,
+html.theme-dark .analysis-result-tech,
+[data-theme="dark"] .analysis-result-tech {
+  background: color-mix(in srgb, var(--panel, #1a1a1a) 90%, #000);
+}

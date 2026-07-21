@@ -1,4 +1,5 @@
 from collections.abc import Generator
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -11,11 +12,28 @@ from app.main import app
 from app.model_gateway.gateway import ModelGateway
 from app.model_gateway.registry import get_model_gateway
 from tests.fakes import FakeProvider
+from tests.optional_gates import (
+    CLOUD_PRICING_PATH,
+    install_verified_cloud_pricing,
+    restore_cloud_pricing,
+)
+
+ROOT = Path(__file__).resolve().parents[3]
 
 
 @pytest.fixture
 def fake_provider() -> FakeProvider:
     return FakeProvider()
+
+
+@pytest.fixture
+def verified_cloud_pricing() -> Generator[Path, None, None]:
+    """Ensure config/cloud_pricing.json is verified for budget/eligibility tests."""
+    path, previous = install_verified_cloud_pricing(CLOUD_PRICING_PATH)
+    try:
+        yield path
+    finally:
+        restore_cloud_pricing(path, previous)
 
 
 @pytest.fixture

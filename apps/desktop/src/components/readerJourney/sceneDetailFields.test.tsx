@@ -117,7 +117,7 @@ describe("writing takeaways and structured detail fields", () => {
         activeSceneOrdinal={1}
       />,
     );
-    expect(screen.getByTestId("journey-detail-drawer")).toHaveTextContent("Scene 1");
+    expect(screen.getByTestId("journey-detail-drawer")).toHaveTextContent("场景 01");
     fireEvent.click(screen.getByTestId("scene-detail-tab-techniques"));
     expect(screen.getByTestId("journey-writing-takeaways")).toHaveTextContent(
       "用具体动作建立身份疑点",
@@ -132,7 +132,7 @@ describe("writing takeaways and structured detail fields", () => {
         />
       </MemoryRouter>,
     );
-    expect(screen.getByTestId("journey-detail-drawer")).toHaveTextContent("Scene 14");
+    expect(screen.getByTestId("journey-detail-drawer")).toHaveTextContent("场景 14");
     fireEvent.click(screen.getByTestId("scene-detail-tab-techniques"));
     expect(screen.getByTestId("journey-writing-takeaways")).toBeInTheDocument();
   });

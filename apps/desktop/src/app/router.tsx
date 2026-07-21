@@ -9,19 +9,29 @@ import { AnalysisResultsShellPage } from "../pages/AnalysisResultsShellPage";
 import { CasesPage } from "../pages/CasesPage";
 import { ProvidersPage } from "../pages/ProvidersPage";
 import { SettingsPage } from "../pages/SettingsPage";
+import { NotFoundPage, RouteErrorPage } from "../pages/RouteErrorPages";
+
+const routeErrorElement = <RouteErrorPage />;
+
 export const router = createBrowserRouter([
   {
     element: <AppShell />,
+    errorElement: routeErrorElement,
     children: [
-      { path: "/", element: <HomePage /> },
-      { path: "/library", element: <LibraryPage /> },
-      { path: "/workspace", element: <WorkspaceLandingPage /> },
-      { path: "/books/:bookId", element: <BookRoutePage /> },
-      { path: "/tasks", element: <TasksPage /> },
-      { path: "/analysis-runs/:runId/results", element: <AnalysisResultsShellPage /> },
-      { path: "/cases", element: <CasesPage /> },
-      { path: "/providers", element: <ProvidersPage /> },
-      { path: "/settings", element: <SettingsPage /> },
+      { path: "/", element: <HomePage />, errorElement: routeErrorElement },
+      { path: "/library", element: <LibraryPage />, errorElement: routeErrorElement },
+      { path: "/workspace", element: <WorkspaceLandingPage />, errorElement: routeErrorElement },
+      { path: "/books/:bookId", element: <BookRoutePage />, errorElement: routeErrorElement },
+      { path: "/tasks", element: <TasksPage />, errorElement: routeErrorElement },
+      {
+        path: "/analysis-runs/:runId/results",
+        element: <AnalysisResultsShellPage />,
+        errorElement: routeErrorElement,
+      },
+      { path: "/cases", element: <CasesPage />, errorElement: routeErrorElement },
+      { path: "/providers", element: <ProvidersPage />, errorElement: routeErrorElement },
+      { path: "/settings", element: <SettingsPage />, errorElement: routeErrorElement },
+      { path: "*", element: <NotFoundPage />, errorElement: routeErrorElement },
     ],
   },
 ]);

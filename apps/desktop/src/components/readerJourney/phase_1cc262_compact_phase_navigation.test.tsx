@@ -13,7 +13,7 @@ vi.mock("./exportJourneyPng", async (importOriginal) => {
   return {
     ...actual,
     exportJourneyPng: vi.fn().mockResolvedValue({
-      filename: "StoryLens_�?章_旅程分析_v1.1.png",
+      filename: "StoryLens_Chapter_旅程分析_v1.1.png",
     }),
   };
 });
@@ -30,16 +30,25 @@ function renderAt(ui: ReactElement, initial: string) {
   return render(<MemoryRouter initialEntries={[initial]}>{ui}</MemoryRouter>);
 }
 
+
+function openExportMenu() {
+  const more = screen.queryByTestId("journey-more-chart-settings");
+  if (more && !screen.queryByTestId("journey-export-png")) {
+    fireEvent.click(more);
+  }
+  return screen.getByTestId("journey-export-png");
+}
+
 describe("Phase 1C-C.2.6.2 compact phase navigation strip", () => {
-  it("shows Phase 1�? with two primary rows each", () => {
+  it("shows Phase 1-4 with two primary rows each", () => {
     renderAt(
       <ReaderJourneyWorkspace visualization={visualization} onLocateEvidence={vi.fn()} />,
       "/?overview=curve&scene=9",
     );
     for (const n of [1, 2, 3, 4]) {
       const card = screen.getByTestId(`journey-phase-${n}`);
-      expect(card.querySelectorAll(".journey-phase-row1")).toHaveLength(1);
-      expect(card.querySelectorAll(".journey-phase-row2")).toHaveLength(1);
+      expect(card.querySelectorAll(".journey-phase-card-head")).toHaveLength(1);
+      expect(card.querySelectorAll(".journey-phase-card-desc")).toHaveLength(1);
       expect(card.querySelector(".journey-phase-question")).toBeNull();
       expect(card.querySelector(".journey-phase-payoff")).toBeNull();
     }
@@ -61,7 +70,7 @@ describe("Phase 1C-C.2.6.2 compact phase navigation strip", () => {
     const card = screen.getByTestId("journey-phase-1");
     const title = card.querySelector(".journey-phase-title");
     expect(title).toHaveTextContent(longTitle);
-    expect(card).toHaveAttribute("title", longTitle);
+    expect(card.getAttribute("title") || "").toContain(longTitle);
     expect(css).toMatch(
       /\.journey-phase-card\.journey-phase-nav-card\s+\.journey-phase-title[\s\S]*?text-overflow:\s*ellipsis/,
     );
@@ -71,21 +80,22 @@ describe("Phase 1C-C.2.6.2 compact phase navigation strip", () => {
     expect(css).not.toMatch(/-webkit-line-clamp:\s*2;\s*\n\s*-webkit-box-orient:\s*vertical;\s*\n\s*white-space:\s*normal/);
   });
 
-  it("shows scene range and average engagement without average-label text", () => {
+  it("shows scene range and labeled metric score", () => {
     renderAt(
       <ReaderJourneyWorkspace visualization={visualization} onLocateEvidence={vi.fn()} />,
       "/?overview=curve",
     );
     const card = screen.getByTestId("journey-phase-2");
-    expect(card).toHaveTextContent(/Phase 2 · S4/);
-    expect(within(card).getByTestId("journey-phase-avg-2")).toHaveTextContent("58");
+    expect(card).toHaveTextContent(/推进/);
+    expect(within(card).getByTestId("journey-phase-avg-2")).toHaveTextContent("阅读牵引 58");
     expect(card.textContent).not.toMatch(/平均牵引/);
     expect(card.textContent).not.toMatch(/核心问题/);
     expect(card.textContent).not.toMatch(/阶段回报/);
     expect(card.textContent).not.toMatch(/继续动力/);
+    expect(card.textContent).not.toMatch(/æ|å|ç|è|ï¿½|�/);
   });
 
-  it("marks current phase without an extra row", () => {
+  it("marks current phase without a current badge", () => {
     renderAt(
       <ReaderJourneyWorkspace
         visualization={visualization}
@@ -96,24 +106,25 @@ describe("Phase 1C-C.2.6.2 compact phase navigation strip", () => {
     );
     const card = screen.getByTestId("journey-phase-3");
     expect(card).toHaveClass("active-phase");
-    expect(within(card).getByTestId("journey-phase-current-badge")).toHaveTextContent("当前");
-    expect(card.querySelectorAll(".journey-phase-row1")).toHaveLength(1);
-    expect(card.querySelectorAll(".journey-phase-row2")).toHaveLength(1);
+    expect(card).toHaveAttribute("aria-selected", "true");
+    expect(within(card).queryByTestId("journey-phase-current-badge")).not.toBeInTheDocument();
+    expect(card.querySelectorAll(".journey-phase-card-head")).toHaveLength(1);
+    expect(card.querySelectorAll(".journey-phase-card-desc")).toHaveLength(1);
+    expect(within(card).getByTestId("journey-phase-avg-3").textContent).toMatch(/阅读牵引/);
     expect(within(card).getByTestId("journey-phase-avg-3").textContent).not.toMatch(/当前/);
   });
 
   it("keeps equal compact card height and desktop four columns in CSS", () => {
-    expect(css).toMatch(/\.journey-phase-card\.journey-phase-nav-card[\s\S]*height:\s*64px/);
-    expect(css).toMatch(/max-height:\s*68px/);
+    expect(css).toMatch(/\.journey-workspace-v4\s+\.journey-phase-nav-card[\s\S]*min-height:\s*96px/);
+    expect(css).toMatch(/\.journey-workspace-v4\s+\.journey-phase-nav-card[\s\S]*max-height:\s*none/);
     expect(css).toMatch(
       /\.journey-phase-strip\.journey-phase-nav[\s\S]*grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/,
     );
   });
 
-  it("defines mid-width horizontal scroll and narrow dropdown layouts", () => {
+  it("defines mid-width two-column phase cards and narrow dropdown layouts", () => {
     expect(css).toMatch(/@media\s*\(max-width:\s*1100px\)\s*and\s*\(min-width:\s*701px\)/);
-    expect(css).toMatch(/grid-auto-flow:\s*column/);
-    expect(css).toMatch(/overflow-x:\s*auto/);
+    expect(css).toMatch(/grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/);
     expect(css).toMatch(/@media\s*\(max-width:\s*700px\)/);
     expect(css).toMatch(/\.journey-phase-mobile-select-wrap[\s\S]*display:\s*flex/);
     expect(css).toMatch(
@@ -190,7 +201,7 @@ describe("Phase 1C-C.2.6.2 compact phase navigation strip", () => {
       />,
       "/?overview=curve&scene=9",
     );
-    fireEvent.click(screen.getByTestId("journey-export-png"));
+    fireEvent.click(openExportMenu());
     await waitFor(() => {
       expect(exportJourneyPng).toHaveBeenCalledTimes(1);
     });
@@ -201,7 +212,7 @@ describe("Phase 1C-C.2.6.2 compact phase navigation strip", () => {
 
   it("does not clip titles via two-line clamp inside fixed 72px shell", () => {
     expect(css).not.toMatch(/min-height:\s*72px;\s*max-height:\s*72px/);
-    expect(css).toMatch(/height:\s*64px/);
+    expect(css).toMatch(/\.journey-workspace-v4\s+\.journey-phase-nav-card[\s\S]*min-height:\s*96px/);
   });
 });
 

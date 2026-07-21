@@ -65,6 +65,15 @@ function renderWorkspace(viz = buildFixture13Scenes(), width = 1600) {
   );
 }
 
+
+function openExportMenu() {
+  const more = screen.queryByTestId("journey-more-chart-settings");
+  if (more && !screen.queryByTestId("journey-export-png")) {
+    fireEvent.click(more);
+  }
+  return screen.getByTestId("journey-export-png");
+}
+
 describe("Reader Journey Workspace Layout v4.0", () => {
   afterEach(() => {
     cleanup();
@@ -78,9 +87,11 @@ describe("Reader Journey Workspace Layout v4.0", () => {
   it("resolves layout breakpoints without book/scene special cases", () => {
     expect(resolveJourneyLayoutMode(1440)).toBe("desktop");
     expect(resolveJourneyLayoutMode(1366)).toBe("mid");
+    expect(resolveJourneyLayoutMode(1180)).toBe("mid");
+    expect(resolveJourneyLayoutMode(1179)).toBe("narrow");
     expect(resolveJourneyLayoutMode(1099)).toBe("narrow");
     expect(LAYOUT_BREAKPOINTS.desktopMin).toBe(1440);
-    expect(LAYOUT_BREAKPOINTS.midMin).toBe(1100);
+    expect(LAYOUT_BREAKPOINTS.midMin).toBe(1180);
     expect(configSource).not.toMatch(/book_id\s*===|chapter_id\s*===|run_id\s*===/);
     expect(workspaceSource).not.toMatch(/bookId\s*===|chapterId\s*===|runId\s*===/);
   });
@@ -101,13 +112,13 @@ describe("Reader Journey Workspace Layout v4.0", () => {
     renderWorkspace(buildFixture13Scenes(), 1600);
     expect(screen.getByTestId("journey-curve-toolbar")).toBeInTheDocument();
     expect(screen.getByTestId("journey-zoom-fit-all")).toHaveTextContent("适应全部");
-    expect(screen.getByTestId("journey-zoom-focus-phase")).toHaveTextContent("当前Phase");
-    expect(screen.getByTestId("journey-inspector-toggle")).toHaveTextContent("查看详情");
-    expect(screen.getByTestId("journey-export-png")).toHaveTextContent("导出PNG");
+    expect(screen.getByTestId("journey-zoom-focus-phase")).toHaveTextContent("当前阶段");
+    expect(screen.getByTestId("journey-inspector-toggle")).toHaveTextContent("展开详情");
+    expect(openExportMenu()).toHaveTextContent("导出PNG");
     expect(screen.getByTestId("journey-more-chart-settings")).toHaveTextContent(
       "更多设置",
     );
-    expect(screen.getByTestId("journey-metric-select")).toHaveTextContent("当前指标");
+    expect(screen.getByTestId("journey-metric-select")).toHaveTextContent("更多指标");
   });
 
   it("keeps Chart Y 0—100 and plot floors from v3.0", () => {
@@ -133,7 +144,7 @@ describe("Reader Journey Workspace Layout v4.0", () => {
       "true",
     );
     expect(screen.getByTestId("journey-inspector-summary-bar")).toBeInTheDocument();
-    expect(screen.getByTestId("journey-inspector-summary-expand")).toHaveTextContent("查看详情");
+    expect(screen.getByTestId("journey-inspector-summary-expand")).toHaveTextContent("展开详情");
     expect(screen.queryByTestId("journey-inspector-pane")).not.toBeInTheDocument();
     expect(css).toMatch(/\.journey-inspector-pane\s*\{[^}]*overflow-y:\s*auto/);
     expect(css).toMatch(/journey-workspace-v4/);
@@ -183,7 +194,7 @@ describe("Reader Journey Workspace Layout v4.0", () => {
   it("uses CSS grid tokens for source/inspector widths", () => {
     expect(SOURCE_PANE_WIDTH_PX.desktop).toBe(300);
     expect(INSPECTOR_PANE_WIDTH_PX.desktop).toBe(360);
-    expect(css).toMatch(/minmax\(640px,\s*1fr\)/);
+    expect(css).toMatch(/minmax\(0,\s*1fr\)/);
     expect(css).toMatch(/--source-pane-width/);
     expect(css).toMatch(/--inspector-pane-width/);
     expect(workspaceSource).toMatch(/journey-workspace-v4/);

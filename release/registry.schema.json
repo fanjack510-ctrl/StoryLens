@@ -1,0 +1,138 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://storylens.local/schemas/change-registry.json",
+  "title": "StoryLensChangeRecord",
+  "type": "object",
+  "required": [
+    "id",
+    "title",
+    "type",
+    "base_version",
+    "status",
+    "include_in_next_release",
+    "commits",
+    "modules",
+    "files",
+    "user_summary",
+    "technical_summary",
+    "acceptance_criteria",
+    "tests",
+    "verification_evidence",
+    "data_compatibility",
+    "release_impact",
+    "created_at",
+    "updated_at"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^CHG-[0-9]{8}-[0-9]{3}$"
+    },
+    "title": { "type": "string", "minLength": 1 },
+    "type": {
+      "type": "string",
+      "enum": [
+        "feature",
+        "improvement",
+        "fix",
+        "security",
+        "performance",
+        "database",
+        "build",
+        "updater",
+        "documentation"
+      ]
+    },
+    "base_version": { "type": "string", "minLength": 1 },
+    "status": {
+      "type": "string",
+      "enum": [
+        "registered",
+        "implemented",
+        "tested",
+        "verified",
+        "ready-for-staging",
+        "ready",
+        "deferred",
+        "released"
+      ]
+    },
+    "include_in_next_release": { "type": "boolean" },
+    "commits": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["sha", "message"],
+        "properties": {
+          "sha": { "type": "string", "minLength": 7 },
+          "message": { "type": "string" },
+          "primary": { "type": "boolean" },
+          "multi_change_reason": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "modules": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "files": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "user_summary": { "type": "string" },
+    "technical_summary": { "type": "string" },
+    "acceptance_criteria": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "tests": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "verification_evidence": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "data_compatibility": {
+      "type": "object",
+      "required": [
+        "database_changed",
+        "migration_required",
+        "user_data_compatible",
+        "notes"
+      ],
+      "properties": {
+        "database_changed": { "type": "boolean" },
+        "migration_required": { "type": "boolean" },
+        "user_data_compatible": { "type": "boolean" },
+        "notes": { "type": "string" }
+      }
+    },
+    "release_impact": {
+      "type": "object",
+      "required": [
+        "requires_reanalysis",
+        "requires_restart",
+        "updater_impact",
+        "breaking_change"
+      ],
+      "properties": {
+        "requires_reanalysis": { "type": "boolean" },
+        "requires_restart": { "type": "boolean" },
+        "updater_impact": { "type": "boolean" },
+        "breaking_change": { "type": "boolean" }
+      }
+    },
+    "blocker_level": {
+      "type": ["string", "null"],
+      "enum": [null, "P0", "P1", "P2"]
+    },
+    "head_inclusion": {
+      "type": ["string", "null"],
+      "enum": [null, "INCLUDED", "EXISTS_NOT_INCLUDED", "NOT_FOUND"]
+    },
+    "created_at": { "type": "string" },
+    "updated_at": { "type": "string" }
+  }
+}

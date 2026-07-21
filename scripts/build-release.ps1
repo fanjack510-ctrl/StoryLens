@@ -1,11 +1,18 @@
-# Thin wrapper: production frontend build for StoryLens Community 1.0.0-rc1.
+# Thin wrapper: production frontend build for StoryLens.
 # Notes:
 # - Does NOT publish to GitHub.
 # - Does NOT choose or write a LICENSE file.
 # - Does NOT send real model requests.
-# - Package manifests may still declare 0.1.0; RC marketing version is 1.0.0-rc1.
-# - After build, place reproducible artifacts under artifacts/release-candidate/storylens-community-v1.0-rc1/
+# - App version comes from repository-root VERSION (synced via scripts/version_manager.py).
 $ErrorActionPreference = "Stop"
-Write-Host "Building StoryLens Community 1.0.0-rc1 (desktop production bundle)..."
+$Root = Resolve-Path (Join-Path $PSScriptRoot "..")
+$py = Join-Path $Root ".venv\Scripts\python.exe"
+if (-not (Test-Path $py)) { $py = "python" }
+& $py (Join-Path $Root "scripts\version_manager.py") check
+if ($LASTEXITCODE) { exit $LASTEXITCODE }
+& $py (Join-Path $Root "scripts\change_registry.py") check
+if ($LASTEXITCODE) { exit $LASTEXITCODE }
+$version = (Get-Content -LiteralPath (Join-Path $Root "VERSION") -Raw -Encoding UTF8).Trim()
+Write-Host "Building StoryLens $version (desktop production bundle)..."
 & "$PSScriptRoot\build_desktop.ps1"
 exit $LASTEXITCODE

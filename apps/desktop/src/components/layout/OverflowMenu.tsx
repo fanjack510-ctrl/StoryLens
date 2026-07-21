@@ -7,6 +7,8 @@ export type OverflowMenuItem = {
   disabled?: boolean;
   group?: string;
   testId?: string;
+  /** Visual tone for destructive actions; does not change onSelect. */
+  danger?: boolean;
 };
 
 type Props = {
@@ -67,6 +69,7 @@ export function OverflowMenu({
                   type="button"
                   role="menuitem"
                   disabled={item.disabled}
+                  className={item.danger ? "overflow-menu-item danger" : "overflow-menu-item"}
                   data-testid={item.testId || `overflow-item-${item.id}`}
                   onClick={() => {
                     item.onSelect();

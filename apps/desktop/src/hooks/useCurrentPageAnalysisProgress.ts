@@ -7,6 +7,7 @@ import {
   mapRunToUiState,
   type ChapterAnalysisUiState,
 } from "../components/chapterAnalysis/mapAnalysisUiState";
+import { maybeTrackAnalysisCompleted } from "../services/telemetry/analysisRunTelemetry";
 
 const POLL_MS = 2000;
 const HIDDEN_POLL_MS = 12000;
@@ -74,6 +75,10 @@ export function useCurrentPageAnalysisProgress({ runId, enabled = true }: Option
     () => (runId ? mapRunToUiState(run) : "idle"),
     [run, runId],
   );
+
+  useEffect(() => {
+    maybeTrackAnalysisCompleted(run);
+  }, [run]);
 
   const refresh = useCallback(async () => {
     if (!runId) return;

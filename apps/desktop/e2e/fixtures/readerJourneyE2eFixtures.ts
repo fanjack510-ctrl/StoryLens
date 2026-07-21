@@ -46,7 +46,10 @@ function buildVisualizationFixture() {
       importance_score: role === "core" ? 70 : 45,
       importance_formula_version: "1.1",
       deterministic_reasons: ["e2e"],
-      scene_value_summary: `Scene ${ordinal} summary`,
+      scene_value_summary:
+        ordinal === 4
+          ? "该场景进一步强化人物的紧张状态，并推动关键线索显现。"
+          : `场景 ${ordinal} 进一步推进人物关系与阅读期待。`,
       dominant_emotion: "紧张",
       engagement: { engagement_score: 40 + ordinal * 3 },
       scores: {
@@ -74,7 +77,10 @@ function buildVisualizationFixture() {
       character_effects: [],
       writing_takeaways: [
         {
-          summary: `Scene ${ordinal} 写作启示`,
+          summary:
+            ordinal === 4
+              ? "适合加强信息递进，避免一次性解释过多。"
+              : `场景 ${ordinal}：控制信息披露节奏，保持阅读牵引。`,
           applicable_when: "需要迁移技巧时",
           avoid_when: "信息过载时",
         },
@@ -118,10 +124,10 @@ function buildVisualizationFixture() {
       expanded_diagnosis: { chapter_strengths: ["开篇明确"], chapter_risks: ["中段偏密"] },
     },
     phases: [
-      { ordinal: 1, title: "入局", start_scene_ordinal: 1, end_scene_ordinal: 3, primary_reader_question: "为何回家？", dominant_emotion: "不安", reading_payoff: "威胁", continuation_motivation: "强", summary: "建立", confidence: 0.8, average_engagement: 50, core_scene_count: 1, beat_count: 1, scene_span: 3 },
-      { ordinal: 2, title: "推进", start_scene_ordinal: 4, end_scene_ordinal: 7, primary_reader_question: "障碍？", dominant_emotion: "紧张", reading_payoff: "增量", continuation_motivation: "中", summary: "升级", confidence: 0.8, average_engagement: 58, core_scene_count: 1, beat_count: 1, scene_span: 4 },
-      { ordinal: 3, title: "转折", start_scene_ordinal: 8, end_scene_ordinal: 11, primary_reader_question: "真相？", dominant_emotion: "震惊", reading_payoff: "反转", continuation_motivation: "强", summary: "反转", confidence: 0.8, average_engagement: 66, core_scene_count: 2, beat_count: 1, scene_span: 4 },
-      { ordinal: 4, title: "收束", start_scene_ordinal: 12, end_scene_ordinal: 14, primary_reader_question: "能否脱身？", dominant_emotion: "余悸", reading_payoff: "钩子", continuation_motivation: "强", summary: "悬念", confidence: 0.8, average_engagement: 75, core_scene_count: 2, beat_count: 1, scene_span: 3 },
+      { ordinal: 1, title: "入局", start_scene_ordinal: 1, end_scene_ordinal: 3, primary_reader_question: "为何回家？", dominant_emotion: "不安", reading_payoff: "威胁", continuation_motivation: "强", summary: "建立背景与人物出场，奠定阅读期待。", confidence: 0.8, average_engagement: 50, core_scene_count: 1, beat_count: 1, scene_span: 3 },
+      { ordinal: 2, title: "推进", start_scene_ordinal: 4, end_scene_ordinal: 7, primary_reader_question: "障碍？", dominant_emotion: "紧张", reading_payoff: "增量", continuation_motivation: "中", summary: "冲突升级，关键线索开始汇聚。", confidence: 0.8, average_engagement: 58, core_scene_count: 1, beat_count: 1, scene_span: 4 },
+      { ordinal: 3, title: "转折", start_scene_ordinal: 8, end_scene_ordinal: 11, primary_reader_question: "真相？", dominant_emotion: "震惊", reading_payoff: "反转", continuation_motivation: "强", summary: "信息反转改变局势，代价随之显现。", confidence: 0.8, average_engagement: 66, core_scene_count: 2, beat_count: 1, scene_span: 4 },
+      { ordinal: 4, title: "收束", start_scene_ordinal: 12, end_scene_ordinal: 14, primary_reader_question: "能否脱身？", dominant_emotion: "余悸", reading_payoff: "钩子", continuation_motivation: "强", summary: "阶段结果成形，并留下后续悬念。", confidence: 0.8, average_engagement: 75, core_scene_count: 2, beat_count: 1, scene_span: 3 },
     ],
     curve_series: {
       engagement: sceneNodes.map((node) => curvePoint(node.scene_ordinal, node.engagement.engagement_score)),

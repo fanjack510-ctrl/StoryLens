@@ -14,7 +14,13 @@ from app.services.reader_journey_contract_migrate import migrate_v11_profile_dic
 from app.services.reader_journey_question_lifecycle import build_question_chains
 from app.services.reader_journey_validation import validate_scene_profile_item
 from app.services.validation_errors import StructuralValidationError
+from tests.optional_gates import require_path
 from tests.test_phase_1c_c1_3 import _base_profile_dict
+
+pytestmark = [
+    pytest.mark.canary_offline,
+    pytest.mark.requires_audit_assets,
+]
 
 EVIDENCE_PATH = (
     Path(__file__).resolve().parents[3]
@@ -366,7 +372,7 @@ def test_13_16_no_question_chain_opening_still_needs_out_or_summary():
 
 
 def test_13_17_a1_real_failure_reproduces_then_repair_reclassify():
-    assert EVIDENCE_PATH.is_file()
+    require_path(EVIDENCE_PATH)
     payload = json.loads(EVIDENCE_PATH.read_text(encoding="utf-8"))
     inv7 = next(item for item in payload["invocations"] if item["id"] == 7)
     scene2 = inv7["profiles"][1]

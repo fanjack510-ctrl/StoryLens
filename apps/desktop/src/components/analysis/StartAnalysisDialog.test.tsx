@@ -100,8 +100,8 @@ const renderDialog = (onClose = vi.fn(), onCreated = vi.fn()) =>
   );
 
 async function openCloudPlusWithConsent() {
-  fireEvent.change(screen.getByLabelText("执行模式"), { target: { value: "cloud" } });
-  await screen.findByRole("option", { name: /aliyun_qwen_plus/ });
+  fireEvent.change(screen.getByLabelText("执行方式"), { target: { value: "cloud" } });
+  await screen.findByRole("option", { name: /阿里云百炼/ });
   fireEvent.change(screen.getByLabelText("Provider"), { target: { value: "aliyun_qwen_plus" } });
   fireEvent.click(screen.getByRole("checkbox"));
 }
@@ -146,20 +146,24 @@ afterEach(cleanup);
 describe("开始分析人工审阅入口", () => {
   it("本地模式不显示云端Provider", async () => {
     renderDialog();
-    expect(await screen.findByRole("option", { name: /local_qwen14/ })).toBeInTheDocument();
-    expect(screen.queryByRole("option", { name: /aliyun_qwen_plus/ })).not.toBeInTheDocument();
+    expect(await screen.findByRole("option", { name: /本地模型/ })).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: /阿里云百炼/ })).not.toBeInTheDocument();
   });
   it("云端模式显示非默认且关闭自动路由的Plus", async () => {
     renderDialog();
-    fireEvent.change(screen.getByLabelText("执行模式"), { target: { value: "cloud" } });
-    expect(await screen.findByRole("option", { name: /aliyun_qwen_plus.*需要人工确认/ })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("执行方式"), { target: { value: "cloud" } });
+    expect(await screen.findByRole("option", { name: /^阿里云百炼$/ })).toBeInTheDocument();
+    expect(await screen.findByTestId("start-analysis-provider-hint")).toHaveTextContent(
+      /已连接.*需要人工确认场景边界/,
+    );
   });
   it("选择Plus显示人工确认说明和三个后端Prompt版本", async () => {
     renderDialog();
-    fireEvent.change(screen.getByLabelText("执行模式"), { target: { value: "cloud" } });
-    const option = await screen.findByRole("option", { name: /aliyun_qwen_plus/ });
+    fireEvent.change(screen.getByLabelText("执行方式"), { target: { value: "cloud" } });
+    const option = await screen.findByRole("option", { name: /阿里云百炼/ });
     fireEvent.change(screen.getByLabelText("Provider"), { target: { value: (option as HTMLOptionElement).value } });
-    expect(screen.getByText(/只生成场景边界候选/)).toBeInTheDocument();
+    expect(screen.getByText(/本次会先识别场景边界/)).toBeInTheDocument();
+    fireEvent.click(screen.getByText("技术详情"));
     expect(screen.getByText(/v3.5/)).toBeInTheDocument();
     expect(screen.getByText(/v1$/)).toBeInTheDocument();
     expect(screen.getByText(/v3.1/)).toBeInTheDocument();
@@ -178,8 +182,8 @@ describe("开始分析人工审阅入口", () => {
     renderDialog();
     await openCloudPlusWithConsent();
     const preview = await screen.findByTestId("stage1-budget-preview");
-    expect(preview).toHaveTextContent("本阶段仅生成场景边界候选");
-    expect(preview).toHaveTextContent("不会执行Scene Analysis");
+    expect(preview).toHaveTextContent("本阶段仅识别场景边界");
+    expect(preview).toHaveTextContent("不会执行 Scene Analysis");
     expect(preview).toHaveTextContent("最坏请求");
     expect(preview).toHaveTextContent("6");
     expect(screen.getByTestId("stage1-budget-grid").querySelectorAll(".budget-summary-card").length).toBeGreaterThanOrEqual(13);
@@ -210,8 +214,8 @@ describe("开始分析人工审阅入口", () => {
   it("无资格时显示具体blocker", async () => {
     vi.mocked(providersApi.list).mockResolvedValue([{ ...plus, manual_boundary_candidate_eligible: false, manual_selection_blockers: ["budget_unavailable"] }] as any);
     renderDialog();
-    fireEvent.change(screen.getByLabelText("执行模式"), { target: { value: "cloud" } });
-    fireEvent.click(screen.getByText("Provider诊断"));
+    fireEvent.change(screen.getByLabelText("执行方式"), { target: { value: "cloud" } });
+    fireEvent.click(screen.getByText("技术详情"));
     expect(await screen.findByText("budget_unavailable")).toBeInTheDocument();
   });
   it("资格字段缺失时显示版本不一致而不是无阻塞", async () => {
@@ -219,17 +223,17 @@ describe("开始分析人工审阅入口", () => {
     delete missing.manual_boundary_candidate_eligible;
     vi.mocked(providersApi.list).mockResolvedValue([missing]);
     renderDialog();
-    fireEvent.change(screen.getByLabelText("执行模式"), { target: { value: "cloud" } });
-    fireEvent.click(screen.getByText("Provider诊断"));
+    fireEvent.change(screen.getByLabelText("执行方式"), { target: { value: "cloud" } });
+    fireEvent.click(screen.getByText("技术详情"));
     expect(await screen.findByText(/Provider资格信息缺失/)).toBeInTheDocument();
     expect(screen.queryByText(/无手动资格阻塞/)).not.toBeInTheDocument();
   });
   it("Provider API离线显示明确诊断", async () => {
     vi.mocked(providersApi.list).mockRejectedValue(new Error("FastAPI离线"));
     renderDialog();
-    fireEvent.change(screen.getByLabelText("执行模式"), { target: { value: "cloud" } });
-    fireEvent.click(screen.getByText("Provider诊断"));
-    expect(await screen.findByText(/Provider状态接口离线/)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("执行方式"), { target: { value: "cloud" } });
+    fireEvent.click(screen.getByText("技术详情"));
+    expect(await screen.findByText(/Provider 状态接口离线/)).toBeInTheDocument();
   });
 });
 
@@ -260,7 +264,7 @@ describe("StartAnalysisDialog 布局与交互", () => {
     renderDialog();
     await openCloudPlusWithConsent();
     await screen.findByTestId("stage1-budget-preview");
-    fireEvent.click(screen.getByText("Provider诊断"));
+    fireEvent.click(screen.getByText("技术详情"));
     expect(await screen.findByText(/手动边界资格/)).toBeInTheDocument();
     const body = screen.getByTestId("start-analysis-modal-body");
     expect(body).toBeInTheDocument();
@@ -321,7 +325,7 @@ describe("StartAnalysisDialog 布局与交互", () => {
     const dialog = await screen.findByRole("dialog");
     const submit = await waitFor(() => {
       const button = screen.getByTestId("start-analysis-submit");
-      expect(button).toHaveTextContent("创建任务");
+      expect(button).toHaveTextContent("按当前额度开始");
       expect(button).not.toBeDisabled();
       return button;
     });
@@ -341,6 +345,43 @@ describe("StartAnalysisDialog 布局与交互", () => {
     const close = await screen.findByRole("button", { name: "关闭" });
     expect(close.className).toContain("modal-close");
   });
+
+  it("无可用 Provider 时真实禁用创建按钮并展示原因", async () => {
+    vi.mocked(providersApi.list).mockResolvedValue([]);
+    renderDialog();
+    fireEvent.change(await screen.findByLabelText(/执行模式|执行方式/), { target: { value: "cloud" } });
+    expect(await screen.findByTestId("start-analysis-no-provider")).toHaveTextContent(
+      /尚未配置 API Key|当前没有可用/,
+    );
+    const submit = screen.getByTestId("start-analysis-submit");
+    expect(submit).toBeDisabled();
+    expect(screen.getByTestId("start-analysis-disabled-reason")).toHaveTextContent(
+      /尚未配置 API Key|当前没有可用/,
+    );
+    fireEvent.click(submit);
+    expect(analysisApi.start).not.toHaveBeenCalled();
+  });
+
+  it("均衡模式可见文案只包含一个推荐", async () => {
+    renderDialog();
+    const label = await screen.findByTestId("analysis-mode-label-balanced");
+    expect(label).toHaveTextContent("均衡 · 推荐");
+    expect(label.textContent?.match(/推荐/g)?.length).toBe(1);
+    expect(label).not.toHaveTextContent("（推荐）（推荐）");
+  });
+
+  it("Provider 主视图不展示模型 ID", async () => {
+    vi.mocked(providersApi.list).mockResolvedValue([plus] as any);
+    renderDialog();
+    fireEvent.change(await screen.findByLabelText(/执行模式|执行方式/), { target: { value: "cloud" } });
+    const select = await screen.findByTestId("start-analysis-provider-select");
+    expect(select).toHaveTextContent("阿里云百炼");
+    expect(select).not.toHaveTextContent("configured-plus");
+    expect(select).not.toHaveTextContent("aliyun_qwen_plus");
+    expect(await screen.findByTestId("start-analysis-provider-hint")).toHaveTextContent(
+      /已连接.*需要人工确认场景边界/,
+    );
+  });
 });
 
 describe("普通模式开始分析弹窗", () => {
@@ -356,14 +397,14 @@ describe("普通模式开始分析弹窗", () => {
     expect(screen.queryByTestId("start-analysis-provider-select")).not.toBeInTheDocument();
   });
 
-  it("AI服务未连接时禁用创建任务", async () => {
+  it("AI服务未连接时禁用创建任务并给出明确原因", async () => {
     vi.mocked(providersApi.list).mockResolvedValue([{
       ...plus,
       connected: false,
       healthy: false,
       configured: false,
       manual_boundary_candidate_eligible: false,
-      manual_selection_blockers: ["provider_disconnected"],
+      manual_selection_blockers: ["credential_missing"],
     }] as any);
     vi.mocked(providersApi.cloud).mockResolvedValue({ enabled: false, state: "disabled" });
     vi.mocked(providersApi.configuration).mockResolvedValue({
@@ -374,9 +415,28 @@ describe("普通模式开始分析弹窗", () => {
       connection_state: "disconnected",
     } as any);
     renderDialog();
-    expect(await screen.findByTestId("start-analysis-ai-disconnected")).toHaveTextContent("AI服务尚未连接");
-    expect(screen.getByTestId("start-analysis-goto-settings")).toBeInTheDocument();
+    expect(await screen.findByTestId("start-analysis-ai-disconnected")).toHaveTextContent("尚未配置 API Key");
+    expect(screen.getByTestId("start-analysis-goto-settings")).toHaveTextContent("去配置 AI 服务");
     expect(screen.getByTestId("start-analysis-submit")).toBeDisabled();
+  });
+
+  it("唯一可用 Provider 时自动选中真实 provider id", async () => {
+    vi.mocked(providersApi.list).mockResolvedValue([plus] as any);
+    vi.mocked(providersApi.cloud).mockResolvedValue({ enabled: true, state: "enabled" });
+    renderDialog();
+    expect(await screen.findByTestId("start-analysis-ai-connected")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("checkbox"));
+    await waitFor(() => expect(screen.getByTestId("start-analysis-submit")).toBeEnabled());
+    fireEvent.click(screen.getByTestId("start-analysis-submit"));
+    await waitFor(() =>
+      expect(analysisApi.start).toHaveBeenCalledWith(
+        7,
+        expect.objectContaining({
+          provider_name: "aliyun_qwen_plus",
+          selected_provider: "aliyun_qwen_plus",
+        }),
+      ),
+    );
   });
 
   it("AI服务已连接时可创建任务", async () => {
@@ -397,6 +457,104 @@ describe("普通模式开始分析弹窗", () => {
     await waitFor(() => expect(screen.getByTestId("start-analysis-submit")).toBeEnabled());
   });
 
+  it("本阶段预计足够时允许创建，即使完整分析最坏请求更高", async () => {
+    localStorage.removeItem("storylens.developerMode");
+    useDeveloperModeStore.setState({ developerMode: false });
+    vi.mocked(providersApi.list).mockResolvedValue([plus] as any);
+    vi.mocked(providersApi.cloud).mockResolvedValue({ enabled: true, state: "enabled" });
+    vi.mocked(providersApi.configuration).mockResolvedValue({
+      provider_name: "aliyun_qwen_plus",
+      display_name: "阿里云百炼",
+      plus_model: "configured-plus",
+      credential_state: "configured",
+      enabled: true,
+      disconnected: false,
+      connection_state: "connected",
+    } as any);
+    vi.mocked(analysisApi.preflight).mockResolvedValue({
+      ...longPreflight,
+      expected_request_count: 7,
+      worst_case_request_count: 14,
+      estimated_total_tokens: 9895,
+      worst_case_total_tokens: 22197,
+      estimated_cost: 0.052046,
+      worst_case_cost: 0.14385,
+      within_budget: true,
+      exceeded_dimensions: [],
+      remaining: { requests: 7, tokens: 74114, estimated_cost: 4.47905 },
+    });
+    vi.mocked(analysisRecoveryApi.fullPipelinePreflight).mockResolvedValue({
+      full_expected_requests: 22,
+      full_worst_requests: 49,
+      remaining_requests: 7,
+      remaining_tokens: 74114,
+      remaining_cost: 4.47905,
+      within_budget: false,
+      exceeded_dimensions: ["requests"],
+      worst_case_tokens: 77665,
+      worst_case_cost: 0.5,
+      estimated_tokens: 30000,
+      estimated_cost: 0.2,
+    } as any);
+    renderDialog();
+    fireEvent.click(await screen.findByRole("checkbox"));
+    await waitFor(() => expect(screen.getByTestId("start-analysis-submit")).toBeEnabled());
+    expect(screen.queryByTestId("create-request-quota-block")).not.toBeInTheDocument();
+    expect(screen.queryByText(/当前 Token 额度不足/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/本阶段预算不足/)).not.toBeInTheDocument();
+    expect(await screen.findByTestId("start-analysis-retry-reserve-note")).toHaveTextContent(
+      "预计额度足够，暂无重试余量。",
+    );
+    expect(screen.getByTestId("start-analysis-adjust-quota")).toHaveTextContent("调整额度");
+    expect(screen.getByTestId("start-analysis-submit")).toHaveTextContent("按当前额度开始");
+  });
+
+  it("本阶段预计请求不足时显示阻塞原因并提供临时授权创建", async () => {
+    vi.mocked(providersApi.list).mockResolvedValue([plus] as any);
+    vi.mocked(providersApi.cloud).mockResolvedValue({ enabled: true, state: "enabled" });
+    vi.mocked(providersApi.configuration).mockResolvedValue({
+      provider_name: "aliyun_qwen_plus",
+      display_name: "阿里云百炼",
+      plus_model: "configured-plus",
+      credential_state: "configured",
+      enabled: true,
+      disconnected: false,
+      connection_state: "connected",
+    } as any);
+    vi.mocked(analysisApi.preflight).mockResolvedValue({
+      ...longPreflight,
+      expected_request_count: 11,
+      worst_case_request_count: 22,
+      estimated_total_tokens: 10000,
+      worst_case_total_tokens: 20000,
+      estimated_cost: 0.1,
+      worst_case_cost: 0.2,
+      within_budget: false,
+      exceeded_dimensions: ["requests"],
+      remaining: { requests: 7, tokens: 200000, estimated_cost: 20 },
+    });
+    vi.mocked(analysisRecoveryApi.fullPipelinePreflight).mockResolvedValue({
+      full_expected_requests: 40,
+      full_worst_requests: 66,
+      remaining_requests: 7,
+      remaining_tokens: 200000,
+      remaining_cost: 20,
+      within_budget: false,
+      exceeded_dimensions: ["requests"],
+      worst_case_tokens: 90000,
+      worst_case_cost: 0.66,
+      estimated_tokens: 45000,
+      estimated_cost: 0.4,
+    } as any);
+    renderDialog();
+    fireEvent.click(screen.getByRole("checkbox"));
+    expect(await screen.findByTestId("create-request-quota-block")).toBeInTheDocument();
+    expect(screen.getByTestId("create-request-quota-title")).toHaveTextContent("当前技术请求额度不足");
+    expect(screen.getByTestId("create-request-quota-body")).toHaveTextContent(/预计需要11次/);
+    expect(screen.getByTestId("create-request-quota-body")).toHaveTextContent(/还差4次/);
+    expect(screen.getByTestId("create-with-recommended-allowance")).toBeEnabled();
+  });
+
   it("请求额度不足时显示阻塞原因并提供临时授权创建，而非仅灰掉按钮", async () => {
     vi.mocked(providersApi.list).mockResolvedValue([plus] as any);
     vi.mocked(providersApi.cloud).mockResolvedValue({ enabled: true, state: "enabled" });
@@ -411,7 +569,11 @@ describe("普通模式开始分析弹窗", () => {
     } as any);
     vi.mocked(analysisApi.preflight).mockResolvedValue({
       ...longPreflight,
+      expected_request_count: 66,
+      worst_case_request_count: 80,
       remaining: { requests: 59, tokens: 200000, estimated_cost: 20 },
+      within_budget: false,
+      exceeded_dimensions: ["requests"],
     });
     vi.mocked(analysisRecoveryApi.fullPipelinePreflight).mockResolvedValue({
       full_expected_requests: 40,
@@ -430,6 +592,7 @@ describe("普通模式开始分析弹窗", () => {
     fireEvent.click(screen.getByRole("checkbox"));
     expect(await screen.findByTestId("create-request-quota-block")).toBeInTheDocument();
     expect(screen.getByTestId("create-request-quota-title")).toHaveTextContent("当前技术请求额度不足");
+    expect(screen.getByTestId("create-request-quota-body")).toHaveTextContent(/预计需要66次/);
     expect(screen.getByTestId("create-request-quota-body")).toHaveTextContent(/还差7次/);
     expect(screen.getByTestId("create-request-quota-body")).toHaveTextContent(/费用和Token预算充足/);
     expect(screen.getByTestId("create-with-recommended-allowance")).toBeEnabled();

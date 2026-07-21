@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactElement } from "react";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -27,8 +27,34 @@ vi.mock("./exportJourneyPng", async (importOriginal) => {
 
 afterEach(cleanup);
 
+beforeEach(() => {
+  localStorage.clear();
+});
+
 function renderJourney(ui: ReactElement) {
-  return render(<MemoryRouter>{ui}</MemoryRouter>);
+  Object.defineProperty(HTMLElement.prototype, "getBoundingClientRect", {
+    configurable: true,
+    value() {
+      return {
+        width: 1600,
+        height: 900,
+        top: 0,
+        left: 0,
+        bottom: 900,
+        right: 1600,
+        x: 0,
+        y: 0,
+        toJSON() {
+          return {};
+        },
+      };
+    },
+  });
+  return render(
+    <MemoryRouter>
+      <div style={{ width: 1600 }}>{ui}</div>
+    </MemoryRouter>,
+  );
 }
 
 describe("Phase 1C-C.2.7 Context Inspector hierarchy", () => {
@@ -42,7 +68,7 @@ describe("Phase 1C-C.2.7 Context Inspector hierarchy", () => {
   it("renders unified Scene Inspector header with at most 2 pills", () => {
     render(<JourneySceneDetailPanel node={node9} onLocateEvidence={vi.fn()} />);
     expect(screen.getByTestId("journey-inspector-header")).toBeInTheDocument();
-    expect(screen.getByTestId("scene-detail-title")).toHaveTextContent("Scene 9");
+    expect(screen.getByTestId("scene-detail-title")).toHaveTextContent("场景 09");
     const pills = screen.queryAllByTestId("journey-inspector-pill");
     expect(pills.length).toBeLessThanOrEqual(2);
   });
@@ -56,7 +82,7 @@ describe("Phase 1C-C.2.7 Context Inspector hierarchy", () => {
       />,
     );
     expect(screen.getByTestId("journey-inspector-header")).toBeInTheDocument();
-    expect(screen.getByTestId("phase-detail-title")).toHaveTextContent("Phase 3");
+    expect(screen.getByTestId("phase-detail-title")).toHaveTextContent(/转折|阶段/);
   });
 
   it("renders unified Question Inspector header", () => {
@@ -262,9 +288,11 @@ describe("Phase 1C-C.2.7 Context Inspector hierarchy", () => {
     renderJourney(
       <ReaderJourneyWorkspace visualization={visualization} onLocateEvidence={vi.fn()} />,
     );
+    // Inspector is collapsed by default (curve-first); expand to reach empty state.
+    fireEvent.click(screen.getByTestId("journey-inspector-summary-expand"));
     const empty = screen.getByTestId("journey-detail-empty");
-    expect(empty).toHaveTextContent("选择一个 Phase");
-    expect(empty).toHaveTextContent("点击曲线节点查看 Scene");
+    expect(empty).toHaveTextContent("选择一个阶段");
+    expect(empty).toHaveTextContent("点击曲线节点查看场景变化");
     expect(screen.getByTestId("journey-detail-pane")).toHaveAttribute("data-inspector", "empty");
   });
 

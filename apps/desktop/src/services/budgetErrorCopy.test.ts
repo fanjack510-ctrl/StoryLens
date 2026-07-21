@@ -7,9 +7,10 @@ import {
 } from "./budgetErrorCopy";
 
 describe("budgetErrorCopy", () => {
-  it("maps reservation code to request-focused user copy", () => {
-    expect(BUDGET_ERROR_USER_COPY.INSUFFICIENT_BUDGET_RESERVATION).toContain("请求额度");
+  it("maps reservation code to user-facing budget copy", () => {
+    expect(BUDGET_ERROR_USER_COPY.INSUFFICIENT_BUDGET_RESERVATION).toContain("预算不足");
     expect(BUDGET_ERROR_USER_COPY.CLOUD_COST_LIMIT_EXCEEDED).toContain("费用");
+    expect(BUDGET_ERROR_USER_COPY.BUDGET_NOT_AVAILABLE).toContain("无法计算");
   });
 
   it("formats 26 need / 13 remaining without claiming cost shortage", () => {

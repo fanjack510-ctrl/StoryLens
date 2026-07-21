@@ -1,0 +1,51 @@
+{
+  "change_id_prefix": "CHG",
+  "trailer_key": "StoryLens-Change",
+  "required_registration_prefixes": [
+    "apps/",
+    "scripts/",
+    "packaging/",
+    "config/",
+    "migrations/",
+    "pyproject.toml",
+    "Cargo.toml",
+    "Cargo.lock",
+    "package.json",
+    "package-lock.json",
+    "tauri.conf.json"
+  ],
+  "required_registration_path_substrings": [
+    "src-tauri/Cargo.toml",
+    "src-tauri/Cargo.lock",
+    "src-tauri/tauri.conf.json"
+  ],
+  "ignore_path_prefixes": [
+    "docs/",
+    "audits/",
+    "release/",
+    ".cursor/rules/"
+  ],
+  "ignore_path_exact": [
+    "AGENTS.md",
+    "README.md",
+    "CODEX_START_PROMPT.md"
+  ],
+  "docs_only_subject_markers": [
+    "[docs-only]",
+    "docs-only:",
+    "Docs only:"
+  ],
+  "status_order": [
+    "registered",
+    "implemented",
+    "tested",
+    "verified",
+    "ready-for-staging",
+    "ready",
+    "released"
+  ],
+  "terminal_statuses": [
+    "deferred",
+    "released"
+  ]
+}

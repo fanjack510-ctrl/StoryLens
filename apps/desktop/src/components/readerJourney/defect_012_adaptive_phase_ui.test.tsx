@@ -110,6 +110,7 @@ describe("DEFECT-012 adaptive phase UI compatibility", () => {
         />
       </MemoryRouter>,
     );
+    fireEvent.click(screen.getByTestId("journey-more-chart-settings"));
     fireEvent.click(screen.getByTestId("journey-export-png"));
     await vi.waitFor(() => expect(exportJourneyPng).toHaveBeenCalled());
     const two = visualizationWithPhases(6, 2);
@@ -123,6 +124,7 @@ describe("DEFECT-012 adaptive phase UI compatibility", () => {
         />
       </MemoryRouter>,
     );
+    fireEvent.click(screen.getByTestId("journey-more-chart-settings"));
     fireEvent.click(screen.getByTestId("journey-export-png"));
     await vi.waitFor(() => expect(exportJourneyPng).toHaveBeenCalled());
   });

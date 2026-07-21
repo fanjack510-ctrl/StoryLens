@@ -1,6 +1,8 @@
 [package]
 name = "storylens-desktop"
-version = "0.1.0"
+version = "1.0.3"
+description = "StoryLens desktop shell"
+authors = ["StoryLens"]
 edition = "2021"
 
 [build-dependencies]
@@ -8,5 +10,25 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 tauri = { version = "2", features = [] }
+tauri-plugin-process = "2"
+tauri-plugin-updater = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+ureq = { version = "2", default-features = false, features = ["tls"] }
+url = "2"
+time = { version = "0.3", features = ["formatting", "parsing"] }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.59", features = [
+  "Win32_Foundation",
+  "Win32_System_JobObjects",
+  "Win32_System_Threading",
+  "Win32_Security",
+  "Win32_System_Diagnostics_ToolHelp",
+  "Win32_NetworkManagement_IpHelper",
+  "Win32_Networking_WinSock",
+] }
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]

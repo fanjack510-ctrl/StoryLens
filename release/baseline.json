@@ -1,0 +1,13 @@
+{
+  "version": "1.0.3",
+  "git_tag": "v1.0.3",
+  "git_commit": "b487514f121d9e7835f47f46ee352bf33136fa66",
+  "status": "verified",
+  "released_at": "2026-07-21T08:22:14Z",
+  "channel": "manual-upgrade-only",
+  "installer_sha256": "85B247F23176790411DE0C6BF79BCB211051E89F0DE2EC9DCD54FF1CA43D5A18",
+  "updater_sha256": "96359D31A4E5A2878C01FAB8532C388D261C4A9BC1AF7EEE9221EB3231690A09",
+  "manifest_url": "manual-upgrade-only",
+  "notes": "StoryLens 1.0.3 published as manual-upgrade-only after staging Result B on installed 1.0.2 (no confirm-install). Stable latest.json not published. Installer/GitHub Release published.",
+  "legacy_source_baseline": false
+}
