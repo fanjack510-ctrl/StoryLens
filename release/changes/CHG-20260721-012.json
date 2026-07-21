@@ -71,6 +71,12 @@
       "message": "Run real 牛角坳 Reader Journey V2 native E2E and surface V2真实正文分析 banner (CHG-20260721-012).",
       "primary": false,
       "multi_change_reason": "real 牛角坳 V2 native E2E harness + banner; status remains tested"
+    },
+    {
+      "sha": "08336c3eb02a4bd608aa86bd001920803683167c",
+      "message": "Attach real Niujiaokao V2 native E2E commit to CHG-20260721-012.",
+      "primary": false,
+      "multi_change_reason": "attach real E2E registry sync"
     }
   ],
   "modules": [
