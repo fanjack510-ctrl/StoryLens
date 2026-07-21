@@ -65,6 +65,12 @@
       "message": "Attach fixture-audit commit to CHG-20260721-012.",
       "primary": false,
       "multi_change_reason": "attach fixture-audit registry sync"
+    },
+    {
+      "sha": "ff627f0c9c621f052c8c4e8c1acd7d51dbadabe1",
+      "message": "Run real 牛角坳 Reader Journey V2 native E2E and surface V2真实正文分析 banner (CHG-20260721-012).",
+      "primary": false,
+      "multi_change_reason": "real 牛角坳 V2 native E2E harness + banner; status remains tested"
     }
   ],
   "modules": [
