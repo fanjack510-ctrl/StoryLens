@@ -275,6 +275,30 @@
   color: var(--color-text-secondary, #4a4a44);
 }
 
+.settings-status-meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 0 0 0.75rem;
+}
+
+.settings-status-meta dt {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--color-text-muted, #6b6b63);
+}
+
+.settings-status-meta dd {
+  margin: 0.15rem 0 0;
+  font-weight: 600;
+}
+
+@media (max-width: 1024px) {
+  .settings-status-meta {
+    grid-template-columns: 1fr;
+  }
+}
+
 .settings-stat-emphasis dd {
   font-size: 1.35rem;
 }

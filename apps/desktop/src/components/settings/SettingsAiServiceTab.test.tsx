@@ -81,6 +81,11 @@ const eligibleSetup = {
   blockers: [],
   needs_cloud_consent: false,
   cloud_body_consent: true,
+  connection_ui_state: "READY",
+  connection_ui_label: "可以开始分析",
+  connection_ui_reason: "当前配置可以连接阿里云百炼。最近验证：2026-07-22 14:35",
+  validated_at_display: "2026-07-22 14:35",
+  validated_model: "qwen3.7-plus",
   config_profile: {
     runtime_mode: "browser_dev",
     app_env: "development",
@@ -133,8 +138,18 @@ describe("SettingsAiServiceTab recommended setup", () => {
   });
 
   it("shows eligible only when backend provider_eligible is true", async () => {
+    vi.mocked(aiServiceConfig.fetchRecommendedQwenStatus).mockResolvedValue({
+      ...eligibleSetup,
+      connection_ui_state: "READY",
+      connection_ui_label: "可以开始分析",
+      connection_ui_reason: "当前配置可以连接阿里云百炼。最近验证：2026-07-22 14:35",
+      validated_at_display: "2026-07-22 14:35",
+      cloud_body_consent: true,
+    } as any);
     renderTab();
-    expect(await screen.findByTestId("ai-service-connection-status")).toHaveTextContent("已就绪");
+    expect(await screen.findByTestId("ai-service-connection-status")).toHaveTextContent(
+      "可以开始分析",
+    );
     expect(screen.getByTestId("ai-service-status-facts")).toHaveTextContent("最终分析就绪：是");
     expect(screen.getByTestId("ai-service-status-facts")).toHaveTextContent("云端分析：已开启");
   });
@@ -149,10 +164,13 @@ describe("SettingsAiServiceTab recommended setup", () => {
       blockers: ["cloud_master_switch_off"],
       user_message: "云端模型服务尚未开启",
       needs_cloud_consent: true,
+      connection_ui_state: "CONFIG_CHANGED",
+      connection_ui_label: "配置已更改，需要重新验证",
+      cloud_body_consent: false,
     } as any);
     renderTab();
     expect(await screen.findByTestId("ai-service-connection-status")).toHaveTextContent(
-      "服务不可用",
+      "配置已更改，需要重新验证",
     );
     expect(screen.getByTestId("ai-service-status-facts")).toHaveTextContent("最终分析就绪：否");
     expect(screen.getByTestId("ai-service-status-facts")).toHaveTextContent("云端分析：未开启");
@@ -167,12 +185,17 @@ describe("SettingsAiServiceTab recommended setup", () => {
       analysis_ready: false,
       blockers: ["pricing_unavailable"],
       user_message: "当前模型缺少计价信息",
+      connection_ui_state: "VERIFIED",
+      connection_ui_label: "验证成功",
+      connection_ui_reason: "当前配置可以连接阿里云百炼。最近验证：2026-07-22 14:35",
+      validated_at_display: "2026-07-22 14:35",
+      cloud_body_consent: true,
     } as any);
     renderTab();
     expect(await screen.findByTestId("ai-service-connection-status")).toHaveTextContent(
-      "服务不可用",
+      "验证成功",
     );
-    expect(screen.getByTestId("ai-service-status-reason")).toHaveTextContent("计价");
+    expect(screen.getByTestId("ai-service-status-reason")).toHaveTextContent("阿里云百炼");
     expect(screen.getByTestId("ai-service-readiness-detail")).toHaveTextContent("处理方式");
     expect(screen.getByTestId("ai-service-readiness-detail")).not.toHaveTextContent(
       "BUDGET_NOT_AVAILABLE",
@@ -203,7 +226,8 @@ describe("SettingsAiServiceTab recommended setup", () => {
   it("verify and save calls configure with persist true", async () => {
     renderTab();
     await screen.findByTestId("ai-service-connection-status");
-    fireEvent.click(screen.getByTestId("cloud-body-consent"));
+    // Consent is hydrated checked from backend; keep it checked for persist.
+    expect(screen.getByTestId("cloud-body-consent")).toBeChecked();
     fireEvent.change(screen.getByTestId("ai-api-key-input"), {
       target: { value: "sk-new-key-value" },
     });
@@ -221,11 +245,23 @@ describe("SettingsAiServiceTab recommended setup", () => {
   });
 
   it("keeps status after remount from backend setup endpoint", async () => {
+    vi.mocked(aiServiceConfig.fetchRecommendedQwenStatus).mockResolvedValue({
+      ...eligibleSetup,
+      connection_ui_state: "READY",
+      connection_ui_label: "可以开始分析",
+      validated_at_display: "2026-07-22 14:35",
+      cloud_body_consent: true,
+      analysis_ready: true,
+    } as any);
     const { unmount } = renderTab();
-    expect(await screen.findByTestId("ai-service-connection-status")).toHaveTextContent("已就绪");
+    expect(await screen.findByTestId("ai-service-connection-status")).toHaveTextContent(
+      "可以开始分析",
+    );
     unmount();
     renderTab();
-    expect(await screen.findByTestId("ai-service-connection-status")).toHaveTextContent("已就绪");
+    expect(await screen.findByTestId("ai-service-connection-status")).toHaveTextContent(
+      "可以开始分析",
+    );
     expect(aiServiceConfig.fetchRecommendedQwenStatus).toHaveBeenCalled();
   });
 

@@ -35,6 +35,22 @@ export type RecommendedQwenSetupStatus = {
   retryable?: boolean | null;
   cloud_body_consent?: boolean;
   config_profile?: ConfigRuntimeProfile | null;
+  connection_ui_state?:
+    | "NOT_CONFIGURED"
+    | "CONFIGURED_NOT_VERIFIED"
+    | "VERIFIED"
+    | "CONFIG_CHANGED"
+    | "VERIFICATION_FAILED"
+    | "CONSENT_REQUIRED"
+    | "READY"
+    | string
+    | null;
+  connection_ui_label?: string | null;
+  connection_ui_reason?: string | null;
+  validated_at?: string | null;
+  validated_at_display?: string | null;
+  validated_model?: string | null;
+  validation_snapshot?: Record<string, unknown> | null;
 };
 
 export type ConfigRuntimeProfile = {

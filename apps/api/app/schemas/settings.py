@@ -232,3 +232,10 @@ class RecommendedQwenSetupResponse(BaseModel):
     retryable: bool | None = None
     config_profile: ConfigRuntimeProfile | None = None
     cloud_body_consent: bool = False
+    connection_ui_state: str | None = None
+    connection_ui_label: str | None = None
+    connection_ui_reason: str | None = None
+    validated_at: str | None = None
+    validated_at_display: str | None = None
+    validated_model: str | None = None
+    validation_snapshot: dict | None = None

@@ -259,7 +259,14 @@ def _recommended_setup_response(
         error_category=getattr(result, "error_category", None),
         retryable=getattr(result, "retryable", None),
         config_profile=profile,
-        cloud_body_consent=bool(consent),
+        cloud_body_consent=bool(getattr(result, "cloud_body_consent", consent)),
+        connection_ui_state=getattr(result, "connection_ui_state", None),
+        connection_ui_label=getattr(result, "connection_ui_label", None),
+        connection_ui_reason=getattr(result, "connection_ui_reason", None),
+        validated_at=getattr(result, "validated_at", None),
+        validated_at_display=getattr(result, "validated_at_display", None),
+        validated_model=getattr(result, "validated_model", None),
+        validation_snapshot=getattr(result, "validation_snapshot", None),
     )
 
 

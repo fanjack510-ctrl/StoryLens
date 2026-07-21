@@ -28,6 +28,14 @@ from app.model_gateway.base import ModelRequest, ProviderRequestError
 from app.model_gateway.gateway import ModelGateway
 from app.schemas.settings import CloudBudgetUpdate
 from app.services.aliyun_endpoint import CN_BEIJING, resolve_aliyun_compatible_base_url
+from app.services.ai_validation_snapshot import (
+    build_current_fingerprints,
+    derive_connection_ui_state,
+    format_validated_at_local,
+    load_validation_snapshot,
+    public_snapshot_view,
+    record_validation_outcome,
+)
 from app.services.cloud_pricing import model_pricing_available, resolve_cloud_pricing_path
 from app.services.credentials.base import CredentialStore
 from app.services.provider_bootstrap import (
@@ -116,10 +124,95 @@ class RecommendedAiSetupResult:
     http_status: int | None = None
     error_category: str | None = None
     retryable: bool | None = None
+    cloud_body_consent: bool = False
+    connection_ui_state: str | None = None
+    connection_ui_label: str | None = None
+    connection_ui_reason: str | None = None
+    validated_at: str | None = None
+    validated_at_display: str | None = None
+    validated_model: str | None = None
+    validation_snapshot: dict | None = None
+
+
+def _application_version() -> str:
+    try:
+        root = Path(__file__).resolve().parents[4]
+        version_path = root / "VERSION"
+        if version_path.is_file():
+            return version_path.read_text(encoding="utf-8").strip() or "unknown"
+    except Exception:  # noqa: BLE001
+        pass
+    return "unknown"
 
 
 def _pricing_path() -> Path:
     return resolve_cloud_pricing_path(Path("config/cloud_pricing.json"))
+
+
+def _attach_connection_ui(
+    session: Session,
+    store: CredentialStore,
+    result: RecommendedAiSetupResult,
+) -> RecommendedAiSetupResult:
+    consent = bool(_read_setting(session, CLOUD_BODY_CONSENT_KEY, False))
+    snapshot = load_validation_snapshot(session)
+    current = build_current_fingerprints(
+        session, store, provider_id=CANONICAL_PROVIDER_ID, cloud_key=CLOUD_KEY
+    )
+    state, label, reason = derive_connection_ui_state(
+        credential_configured=result.credential_configured,
+        provider_enabled=result.provider_enabled,
+        cloud_enabled=result.cloud_enabled,
+        cloud_body_consent=consent,
+        provider_eligible=result.provider_eligible,
+        snapshot=snapshot,
+        current=current,
+    )
+    # Analysis ready requires verified snapshot + consent + eligibility gates.
+    analysis_ready = state == "READY"
+    model_validated = state in {"VERIFIED", "CONSENT_REQUIRED", "READY"}
+    result.cloud_body_consent = consent
+    result.connection_ui_state = state
+    result.connection_ui_label = label
+    result.connection_ui_reason = reason
+    result.validated_at = (snapshot or {}).get("validated_at")
+    result.validated_at_display = format_validated_at_local(result.validated_at)
+    result.validated_model = (snapshot or {}).get("response_model") or (snapshot or {}).get(
+        "model_id"
+    )
+    result.validation_snapshot = public_snapshot_view(snapshot)
+    result.model_validated = model_validated
+    result.analysis_ready = analysis_ready
+    if analysis_ready:
+        result.ok = True
+        if not result.user_message or "配置完成" in result.user_message:
+            result.user_message = "模型服务验证成功，可以开始分析。"
+    result.needs_cloud_consent = state == "CONSENT_REQUIRED" or (
+        result.credential_configured and not consent
+    )
+    return result
+
+
+def _record_probe_snapshot(
+    session: Session,
+    store: CredentialStore,
+    *,
+    ok: bool,
+    model_name: str | None,
+    failure_category: str | None = None,
+    failure_message: str | None = None,
+) -> None:
+    record_validation_outcome(
+        session,
+        store,
+        provider_id=CANONICAL_PROVIDER_ID,
+        ok=ok,
+        model_name=model_name,
+        failure_category=failure_category,
+        failure_message=failure_message,
+        application_version=_application_version(),
+        cloud_key=CLOUD_KEY,
+    )
 
 
 def _save_setting(session: Session, key: str, value) -> None:
@@ -306,7 +399,7 @@ def get_recommended_qwen_status(
         blockers=blockers,
         model=model,
     )
-    return RecommendedAiSetupResult(
+    result = RecommendedAiSetupResult(
         ok=ok,
         user_message=message,
         persisted=True,
@@ -320,10 +413,11 @@ def get_recommended_qwen_status(
         blockers=blockers,
         needs_cloud_consent=bool(credential and enabled and not cloud_enabled),
         error_code=error_code,
-        model_validated=bool(credential and enabled),
-        analysis_ready=ok,
+        model_validated=False,
+        analysis_ready=False,
         readiness_reasons=_readiness_reasons(blockers, model=model) if not ok else [],
     )
+    return _attach_connection_ui(session, store, result)
 
 
 def _probe_transport(
@@ -609,7 +703,18 @@ def configure_recommended_qwen(
                     "模型请求受到服务商限流（HTTP 429，error_category=rate_limited，retryable=true）。"
                     "请稍后重试；此错误与云端开关/Provider 启用状态无关。"
                 )
-            return RecommendedAiSetupResult(
+            _record_probe_snapshot(
+                session,
+                store,
+                ok=False,
+                model_name=row.plus_model or preset_model,
+                failure_category="RATE_LIMITED",
+                failure_message="请求受到服务商限流",
+            )
+            return _attach_connection_ui(
+                session,
+                store,
+                RecommendedAiSetupResult(
                 ok=False,
                 user_message=user_message,
                 persisted=False,
@@ -629,8 +734,20 @@ def configure_recommended_qwen(
                 http_status=http_status_i,
                 error_category=error_category,
                 retryable=bool(retryable),
+                ),
             )
-        return RecommendedAiSetupResult(
+        _record_probe_snapshot(
+            session,
+            store,
+            ok=False,
+            model_name=row.plus_model or preset_model,
+            failure_category=error_code,
+            failure_message=str(model_result.get("detail") or "模型服务验证失败"),
+        )
+        return _attach_connection_ui(
+            session,
+            store,
+            RecommendedAiSetupResult(
             ok=False,
             user_message=(
                 "模型服务验证失败\n"
@@ -653,6 +770,7 @@ def configure_recommended_qwen(
             http_status=http_status_i,
             error_category=str(error_category) if error_category else None,
             retryable=bool(retryable) if retryable is not None else None,
+            ),
         )
 
     if not persist:
@@ -665,12 +783,20 @@ def configure_recommended_qwen(
         row.disconnected = previous_disconnected
         session.commit()
         _save_setting(session, CLOUD_KEY, previous_cloud)
-        return RecommendedAiSetupResult(
+        # Persist snapshot only when the durable credential was the one probed.
+        if not temporary_key and previous:
+            _record_probe_snapshot(
+                session,
+                store,
+                ok=True,
+                model_name=str(model_result.get("model") or row.plus_model or preset_model),
+            )
+        return _attach_connection_ui(
+            session,
+            store,
+            RecommendedAiSetupResult(
             ok=True,
-            user_message=(
-                "API Key 与模型服务验证成功。"
-                "验证成功，保存配置后还需检查分析预算和计价信息。"
-            ),
+            user_message="模型服务验证成功。",
             persisted=False,
             credential_configured=bool(previous),
             provider_enabled=previous_enabled,
@@ -683,7 +809,8 @@ def configure_recommended_qwen(
             raw_diagnostic={"model": model_result, "transport": transport},
             model_validated=True,
             analysis_ready=False,
-            readiness_reasons=["API Key 尚未保存"],
+            readiness_reasons=["API Key 尚未保存"] if temporary_key else [],
+            ),
         )
 
     # Persist full ordinary configuration atomically.
@@ -746,16 +873,22 @@ def configure_recommended_qwen(
         session, store, gateway
     )
     model = row.plus_model or preset_model
+    _record_probe_snapshot(
+        session,
+        store,
+        ok=True,
+        model_name=str(model_result.get("model") or model),
+    )
     analysis_ready = bool(credential and enabled and cloud_enabled and eligible)
-    if not analysis_ready:
-        primary = blockers[0] if blockers else "SETUP_INCOMPLETE"
-        return RecommendedAiSetupResult(
+    consent = bool(_read_setting(session, CLOUD_BODY_CONSENT_KEY, False))
+    if not analysis_ready or not consent:
+        primary = blockers[0] if blockers else ("cloud_consent_required" if not consent else "SETUP_INCOMPLETE")
+        return _attach_connection_ui(
+            session,
+            store,
+            RecommendedAiSetupResult(
             ok=False,
-            user_message=(
-                "模型服务验证成功\n"
-                "API Key 和模型可以正常使用，但分析配置尚未完成。\n"
-                f"{blocker_guidance(primary, model=model)}"
-            ),
+            user_message="模型服务验证成功。",
             persisted=True,
             credential_configured=credential,
             provider_enabled=enabled,
@@ -770,11 +903,15 @@ def configure_recommended_qwen(
             model_validated=True,
             analysis_ready=False,
             readiness_reasons=_readiness_reasons(blockers, model=model),
+            ),
         )
 
-    return RecommendedAiSetupResult(
+    return _attach_connection_ui(
+        session,
+        store,
+        RecommendedAiSetupResult(
         ok=True,
-        user_message="配置完成。模型服务、计价和预算检查均已通过，可以开始分析。",
+        user_message="模型服务验证成功。",
         persisted=True,
         credential_configured=True,
         provider_enabled=True,
@@ -788,6 +925,7 @@ def configure_recommended_qwen(
         model_validated=True,
         analysis_ready=True,
         readiness_reasons=[],
+        ),
     )
 
 

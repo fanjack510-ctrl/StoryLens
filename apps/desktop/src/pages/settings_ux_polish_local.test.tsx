@@ -156,7 +156,9 @@ describe("AI service simplified page", () => {
 
   it("shows compact status and one primary save action", async () => {
     renderPage("/settings?tab=ai");
-    expect(await screen.findByTestId("ai-service-connection-status")).toHaveTextContent("已就绪");
+    expect(await screen.findByTestId("ai-service-connection-status")).toHaveTextContent(
+      "已配置，尚未验证",
+    );
     expect(screen.getByTestId("ai-config-environment-banner")).toHaveTextContent("开发环境");
     expect(screen.getByTestId("ai-service-save")).toBeInTheDocument();
     expect(screen.getByTestId("cloud-body-consent")).toBeInTheDocument();

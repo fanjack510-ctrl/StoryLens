@@ -30,18 +30,28 @@ type Props = {
   focusField?: "api_key";
 };
 
-type SimpleStatus = "ready" | "unconfigured" | "needs_verify" | "unavailable";
+type UiState =
+  | "NOT_CONFIGURED"
+  | "CONFIGURED_NOT_VERIFIED"
+  | "VERIFYING"
+  | "VERIFIED"
+  | "CONFIG_CHANGED"
+  | "VERIFICATION_FAILED"
+  | "CONSENT_REQUIRED"
+  | "READY";
 
-function simpleStatusLabel(status: SimpleStatus): string {
-  switch (status) {
-    case "ready":
-      return "已就绪";
-    case "unconfigured":
-      return "尚未配置";
-    case "needs_verify":
-      return "需要验证";
+function primaryLabelFor(state: UiState): string {
+  switch (state) {
+    case "NOT_CONFIGURED":
+      return "保存并验证";
+    case "CONSENT_REQUIRED":
+      return "保存同意";
+    case "CONFIGURED_NOT_VERIFIED":
+      return "验证连接";
+    case "VERIFYING":
+      return "正在验证…";
     default:
-      return "服务不可用";
+      return "重新验证";
   }
 }
 
@@ -54,13 +64,13 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
     readStoredAnalysisMode() === "CUSTOM" ? DEFAULT_ANALYSIS_MODE : readStoredAnalysisMode(),
   );
   const [cloudBodyConsent, setCloudBodyConsent] = useState(false);
+  const [consentHydrated, setConsentHydrated] = useState(false);
   const [busy, setBusy] = useState<"verify" | "save" | "repair" | "disconnect" | null>(null);
   const [userMessage, setUserMessage] = useState("");
   const [showConnectionDetails, setShowConnectionDetails] = useState(false);
   const [showEnvDetails, setShowEnvDetails] = useState(false);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [testErrorCode, setTestErrorCode] = useState<string | null>(null);
-  const [modelValidated, setModelValidated] = useState(false);
 
   const setup = useQuery({
     queryKey: ["recommended-qwen-setup"],
@@ -90,6 +100,12 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
       setAnalysisMode(setup.data.analysis_mode);
     }
   }, [setup.data?.analysis_mode]);
+
+  useEffect(() => {
+    if (!setup.data || consentHydrated) return;
+    setCloudBodyConsent(Boolean(setup.data.cloud_body_consent));
+    setConsentHydrated(true);
+  }, [setup.data, consentHydrated]);
 
   const provider = useMemo(
     () =>
@@ -141,9 +157,9 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
       persist: false,
       qc,
     });
-    setUserMessage(stripRawErrorCodes(result.user_message));
+    setUserMessage(stripRawErrorCodes(result.user_message || "模型服务验证成功。"));
     setTestErrorCode(result.error_code || null);
-    setModelValidated(Boolean(result.model_service_validated ?? result.model_validated ?? result.ok));
+    await setup.refetch();
     setBusy(null);
   };
 
@@ -161,12 +177,11 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
     });
     setUserMessage(stripRawErrorCodes(result.user_message));
     setTestErrorCode(result.error_code || null);
-    setModelValidated(Boolean(result.model_service_validated ?? result.model_validated ?? result.ok));
     if (result.persisted) {
       setApiKey("");
       writeStoredAnalysisMode(modeToSave);
-      await setup.refetch();
     }
+    await setup.refetch();
     setBusy(null);
   };
 
@@ -194,7 +209,6 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
       await setup.refetch();
       setUserMessage("已断开 AI 服务连接。");
       setTestErrorCode(null);
-      setModelValidated(false);
     } catch (error: any) {
       setUserMessage(error?.message || "断开失败");
     } finally {
@@ -219,34 +233,59 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
     testErrorCode === "rate_limited" ||
     /rate_limited|429/i.test(userMessage);
 
-  let status: SimpleStatus = "unavailable";
-  if (eligible && !rateLimited) status = "ready";
-  else if (!apiKeyConfigured) status = "unconfigured";
-  else if (rateLimited || primaryBlocker) status = "unavailable";
-  else status = "needs_verify";
+  const serverState = (setup.data?.connection_ui_state || "") as UiState | "";
+  const uiState: UiState =
+    busy === "verify" || busy === "save"
+      ? "VERIFYING"
+      : serverState === "NOT_CONFIGURED" ||
+          serverState === "CONFIGURED_NOT_VERIFIED" ||
+          serverState === "VERIFIED" ||
+          serverState === "CONFIG_CHANGED" ||
+          serverState === "VERIFICATION_FAILED" ||
+          serverState === "CONSENT_REQUIRED" ||
+          serverState === "READY"
+        ? serverState
+        : !apiKeyConfigured
+          ? "NOT_CONFIGURED"
+          : "CONFIGURED_NOT_VERIFIED";
+
+  const statusLabel =
+    uiState === "VERIFYING"
+      ? "正在验证"
+      : setup.data?.connection_ui_label ||
+        (uiState === "READY"
+          ? "可以开始分析"
+          : uiState === "VERIFIED"
+            ? "验证成功"
+            : uiState === "CONSENT_REQUIRED"
+              ? "连接已验证，分析前需确认正文发送"
+              : uiState === "CONFIG_CHANGED"
+                ? "配置已更改，需要重新验证"
+                : uiState === "VERIFICATION_FAILED"
+                  ? "验证失败"
+                  : uiState === "NOT_CONFIGURED"
+                    ? "尚未配置"
+                    : "已配置，尚未验证");
 
   const statusReason =
-    status === "ready"
-      ? "阿里云百炼已连接，可以开始分析。"
-      : status === "unconfigured"
-        ? "请填写 API Key 并完成验证。"
-        : rateLimited
-          ? "配置已完成，但模型服务暂时限流，请稍后再试。"
-          : primaryBlocker
-            ? mapSetupError(primaryBlocker, { model: view.modelDisplayName }).title
-            : "请验证连接后再开始分析。";
+    uiState === "VERIFYING"
+      ? "正在连接模型服务并保存验证结果…"
+      : setup.data?.connection_ui_reason ||
+        (uiState === "NOT_CONFIGURED"
+          ? "请完成模型服务配置。"
+          : "请验证模型服务后再开始分析。");
 
-  const primaryLabel =
-    status === "unconfigured"
-      ? "保存并验证"
-      : status === "ready"
-        ? "重新验证"
-        : status === "needs_verify"
-          ? "验证连接"
-          : "检查连接";
+  const validatedAtDisplay =
+    setup.data?.validated_at_display ||
+    (setup.data?.validation_snapshot as { validated_at_display?: string } | null | undefined)
+      ?.validated_at_display ||
+    null;
+  const validatedModel =
+    setup.data?.validated_model || view.modelDisplayName || configuration.data?.plus_model || "—";
 
+  const primaryLabel = primaryLabelFor(uiState);
   const runPrimary = () => {
-    if (status === "unconfigured" || apiKey) {
+    if (uiState === "NOT_CONFIGURED" || uiState === "CONSENT_REQUIRED" || apiKey) {
       void onSave();
       return;
     }
@@ -255,6 +294,8 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
 
   const isDevRuntime =
     profile?.runtime_mode === "browser_dev" || profile?.runtime_mode === "desktop_dev";
+  const modelValidated =
+    uiState === "VERIFIED" || uiState === "CONSENT_REQUIRED" || uiState === "READY";
 
   return (
     <article className="settings-panel settings-module" data-testid="settings-panel-ai-service">
@@ -290,19 +331,39 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
         </div>
       )}
 
-      <section className="settings-hero-card" data-testid="ai-service-status-card">
+      <section
+        className="settings-hero-card"
+        data-testid="ai-service-status-card"
+        data-connection-ui-state={uiState}
+      >
         <header className="settings-panel-header">
           <h2>AI模型服务</h2>
         </header>
         <p
-          className={`settings-status-line settings-status-${status}`}
+          className={`settings-status-line settings-status-${uiState.toLowerCase()}`}
           data-testid="ai-service-connection-status"
         >
-          {simpleStatusLabel(status)}
+          {statusLabel}
         </p>
         <p className="settings-status-reason" data-testid="ai-service-status-reason">
           {statusReason}
         </p>
+        <dl className="settings-status-meta" data-testid="ai-service-status-meta">
+          <div>
+            <dt>当前服务</dt>
+            <dd data-testid="ai-service-current-provider">阿里云百炼</dd>
+          </div>
+          <div>
+            <dt>当前模型</dt>
+            <dd data-testid="ai-service-current-model">{validatedModel}</dd>
+          </div>
+          {validatedAtDisplay ? (
+            <div>
+              <dt>最近验证</dt>
+              <dd data-testid="ai-service-validated-at">{validatedAtDisplay}</dd>
+            </div>
+          ) : null}
+        </dl>
         {apiKeyConfigured && (!cloudEnabled || !providerEnabled) && (
           <p className="hint" data-testid="ai-service-env-mismatch-hint">
             本机已有 Key，但当前环境的服务开关未开启。可点“修复配置”或重新验证。
@@ -313,17 +374,16 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
             {userMessage || "模型服务暂时限流，请稍后再试。"}
           </p>
         )}
-        {!eligible && !rateLimited && primaryBlocker && (
+        {!eligible && !rateLimited && primaryBlocker && uiState !== "READY" && (
           <p className="hint" data-testid="ai-service-readiness-detail">
             {formatSetupErrorBlock(primaryBlocker, { model: view.modelDisplayName })}
           </p>
         )}
-        {/* Legacy facts kept for regression tests; not shown in ordinary layout. */}
         <ul className="ai-status-facts settings-ai-facts visually-hidden" data-testid="ai-service-status-facts">
           <li>凭据状态：{apiKeyConfigured ? "已配置" : "未配置"}</li>
           <li>Provider：{providerEnabled ? "已启用" : "未启用"}</li>
           <li>云端分析：{cloudEnabled ? "已开启" : "未开启"}</li>
-          <li>最终分析就绪：{eligible ? "是" : "否"}</li>
+          <li>最终分析就绪：{uiState === "READY" ? "是" : "否"}</li>
           <li data-testid="ai-service-default-provider-label">默认服务：阿里云百炼（推荐）</li>
         </ul>
       </section>
@@ -391,25 +451,28 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
             type="button"
             className="primary"
             data-testid="ai-service-save"
-            disabled={Boolean(busy) || (!apiKey && !apiKeyConfigured)}
+            disabled={
+              Boolean(busy) ||
+              (!apiKey && !apiKeyConfigured) ||
+              (uiState === "CONSENT_REQUIRED" && !cloudBodyConsent)
+            }
             onClick={() => runPrimary()}
           >
-            {busy === "save" || busy === "verify"
-              ? "处理中…"
-              : primaryLabel === "保存并验证"
-                ? "保存并验证"
-                : primaryLabel}
+            {busy === "save" || busy === "verify" ? "正在验证…" : primaryLabel}
           </button>
-          {/* Secondary verify retained for tests / explicit verify-without-save */}
+          {/* Hidden alias keeps older test hooks calling verify-without-save */}
           <button
             type="button"
+            className="visually-hidden"
+            tabIndex={-1}
             data-testid="ai-service-test"
             disabled={Boolean(busy) || (!apiKeyConfigured && !apiKey)}
             onClick={() => void onVerify()}
+            aria-hidden
           >
-            {busy === "verify" ? "验证中…" : "验证模型服务"}
+            验证模型服务
           </button>
-          {setup.data?.needs_cloud_consent && (
+          {setup.data?.needs_cloud_consent && uiState !== "CONSENT_REQUIRED" && (
             <button
               type="button"
               data-testid="ai-service-repair"
@@ -417,16 +480,6 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
               onClick={() => void onRepair()}
             >
               修复配置
-            </button>
-          )}
-          {(showAdvanced || developerMode) && (
-            <button
-              type="button"
-              data-testid="ai-service-disconnect"
-              disabled={Boolean(busy) || !apiKeyConfigured}
-              onClick={() => void disconnect()}
-            >
-              断开连接
             </button>
           )}
         </div>
@@ -441,23 +494,24 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
         <summary>连接详情</summary>
         <div className="settings-fold-body">
           <ul className="settings-detail-list">
-            <li>凭据状态：{apiKeyConfigured ? "已配置" : "未配置"}</li>
+            <li>配置状态：{apiKeyConfigured ? "已配置" : "未配置"}</li>
+            <li>验证状态：{setup.data?.connection_ui_state || uiState}</li>
             <li>服务状态：{providerEnabled ? "已启用" : "未启用"}</li>
-            <li>
-              模型验证：
-              {rateLimited
-                ? "配置可用；最近请求受限"
-                : modelValidated || eligible
-                  ? "已通过或可分析"
-                  : "尚未验证"}
-            </li>
             <li>云端开关：{cloudEnabled ? "已开启" : "未开启"}</li>
-            <li>当前模型：{view.modelDisplayName || "—"}</li>
-            <li>分析模式：{setup.data?.analysis_mode || analysisMode}</li>
-            <li>
-              正文发送同意：{setup.data?.cloud_body_consent ? "是" : "否"}
-            </li>
+            <li>模型：{validatedModel}</li>
+            <li>Endpoint Host：{(setup.data?.validation_snapshot as { endpoint_host?: string } | null)?.endpoint_host || "—"}</li>
+            <li>最近验证：{validatedAtDisplay || "—"}</li>
+            <li>正文发送同意：{setup.data?.cloud_body_consent ? "是" : "否"}</li>
+            {testErrorCode ? <li>最近错误：{mapSetupError(testErrorCode, { model: validatedModel }).title}</li> : null}
           </ul>
+          <button
+            type="button"
+            data-testid="ai-service-disconnect"
+            disabled={Boolean(busy) || !apiKeyConfigured}
+            onClick={() => void disconnect()}
+          >
+            断开模型服务
+          </button>
         </div>
       </details>
 
