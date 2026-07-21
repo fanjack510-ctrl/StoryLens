@@ -17,6 +17,12 @@
       "message": "Record CHG-20260721-013 as tested after settings IA polish.",
       "primary": false,
       "multi_change_reason": null
+    },
+    {
+      "sha": "2c9e866b9cd5a88fd9186b3bc731a02e642f0d09",
+      "message": "Persist AI model validation snapshot for Settings readiness (CHG-20260721-013).",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -30,17 +36,22 @@
     "apps/desktop/src/components/settings/SettingsPrivacyUpdateTab.tsx",
     "apps/desktop/src/components/settings/TelemetrySettingsCard.tsx",
     "apps/desktop/src/components/settings/SettingsAppearanceTab.tsx",
-    "apps/desktop/src/components/settings/settings.css"
+    "apps/desktop/src/components/settings/settings.css",
+    "apps/api/app/services/ai_validation_snapshot.py",
+    "apps/api/app/services/recommended_ai_setup.py"
   ],
   "user_summary": "将设置页从技术配置后台重构为普通用户可理解的渐进式设置界面，技术诊断收进高级/开发者区域。",
-  "technical_summary": "Root causes: settings info overload; tech fields mixed with ordinary actions; unimplemented buttons; unclear primary CTAs. Presentation-only IA: 5 tabs (hide license), progressive disclosure, developer fold for diagnostics/channel/install ID.",
+  "technical_summary": "Root causes: config vs real probe conflated; validation not persisted; missing validated_at; duplicate verify buttons; consent vs ready contradiction. Added ApplicationSetting ai_service_validation_snapshot + connection_ui_state machine; consent hydrates from SQLite.",
   "acceptance_criteria": [
     "Ordinary tabs hide license and tech jargon",
     "AI shows one status + one primary CTA",
     "Usage emphasizes remaining quota",
     "Data hides unimplemented backup buttons",
     "Privacy hides channel/URL/install ID unless developer",
-    "Business save/credential/updater logic unchanged"
+    "Business save/credential/updater logic unchanged",
+    "Refresh restores verified_at from SQLite snapshot",
+    "Consent required blocks READY label",
+    "Single primary verify button"
   ],
   "tests": [
     "vitest:settings_ux_polish_local",
@@ -50,7 +61,10 @@
     "npm run typecheck",
     "version_manager check",
     "change_registry check",
-    "git diff --check"
+    "git diff --check",
+    "pytest:test_ai_validation_snapshot_local",
+    "pytest:test_ai_validation_persist_local",
+    "vitest:ai_connection_state_local"
   ],
   "verification_evidence": [],
   "data_compatibility": {
@@ -68,5 +82,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-21T16:42:02Z",
-  "updated_at": "2026-07-21T16:50:36Z"
+  "updated_at": "2026-07-21T17:03:15Z"
 }
