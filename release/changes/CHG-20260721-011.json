@@ -23,6 +23,18 @@
       "message": "Mark CHG-20260721-011 status as tested after local verification.",
       "primary": false,
       "multi_change_reason": "status transition to tested after verification"
+    },
+    {
+      "sha": "3250aa7f75ba155a9a49f364bc750521c49e6642",
+      "message": "Attach registry metadata commit to CHG-20260721-011.",
+      "primary": false,
+      "multi_change_reason": "registry metadata update after implementation commit"
+    },
+    {
+      "sha": "74712ae3569ea4e37bdfd4d2d08a543275ba2c32",
+      "message": "Attach tested-status commit to CHG-20260721-011.",
+      "primary": false,
+      "multi_change_reason": "attach tested-status commit record"
     }
   ],
   "modules": [
@@ -78,5 +90,5 @@
   "blocker_level": "P1",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-21T11:22:29Z",
-  "updated_at": "2026-07-21T11:33:19Z"
+  "updated_at": "2026-07-21T11:33:47Z"
 }
