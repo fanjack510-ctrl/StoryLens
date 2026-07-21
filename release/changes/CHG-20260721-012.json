@@ -41,6 +41,12 @@
       "message": "Add Reader Journey observation lenses and diagnosis band UI (CHG-20260721-012).",
       "primary": false,
       "multi_change_reason": "frontend observation lenses implementation"
+    },
+    {
+      "sha": "6c40631744de79bcd73778d67eb0f07dd6a7947f",
+      "message": "Attach frontend commit to CHG-20260721-012.",
+      "primary": false,
+      "multi_change_reason": "attach frontend registry sync"
     }
   ],
   "modules": [
@@ -103,5 +109,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-21T12:43:43Z",
-  "updated_at": "2026-07-21T13:10:32Z"
+  "updated_at": "2026-07-21T13:10:33Z"
 }
