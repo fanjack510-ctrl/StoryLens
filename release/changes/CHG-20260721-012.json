@@ -149,6 +149,12 @@
       "message": "Record terminal CHG-20260721-012 registry sync for hook/payoff fix.",
       "primary": false,
       "multi_change_reason": "terminal registry sync for hook/payoff semantics"
+    },
+    {
+      "sha": "7b4ce6852404f57be43964794e137ee5720f7c0e",
+      "message": "Fix Scene evidence validation false positives with adaptive field rules (CHG-20260721-012).",
+      "primary": false,
+      "multi_change_reason": "adaptive scene evidence validation + recovery UX; status remains tested"
     }
   ],
   "modules": [
@@ -183,10 +189,15 @@
     "apps/desktop/src/components/readerJourney/hook_payoff_lens_semantics_local.test.ts",
     "apps/api/tests/test_hook_payoff_visualization_semantics_local.py",
     "apps/desktop/src/components/readerJourney/journeySegmentMarkers.ts",
-    "apps/desktop/src/components/readerJourney/JourneyDiagnosisBand.tsx"
+    "apps/desktop/src/components/readerJourney/JourneyDiagnosisBand.tsx",
+    "config/scene_evidence_validation.json",
+    "apps/api/app/services/scene_evidence_validation.py",
+    "apps/api/app/services/scene_pipeline.py",
+    "apps/api/app/services/analysis_recovery_center.py",
+    "apps/desktop/src/components/chapterAnalysis/UnifiedAnalysisRecoveryCard.tsx"
   ],
   "user_summary": "建立 Reader Journey V2 通用规则规范与作品无关验证体系（对照/变形/退化/跨类型）；单篇小说仅作外部验证，不驱动调参。",
-  "technical_summary": "Hook/payoff lens: green=scores.hook (钩子强度), purple=scores.payoff (本场回报强度, not cumulative); no missing-value carry-forward; fixed legend; question_lifecycle on visualization; diagnosis/segment labels filtered; phase cards show avg hook/payoff.",
+  "technical_summary": "Scene evidence validation: field classes local/holistic/hybrid; micro/short/medium_long bands; rationale+full-scene multi-factor overbroad; SCENE_BOUNDARY_TOO_BROAD before EVIDENCE_OVERBROAD_REUSE; evidence_remap_repair max 1 no level change; recovery UI drops misleading fix button for non-repairable business errors.",
   "acceptance_criteria": [
     "v2 schema validates level fields with program mapped_score",
     "derived formulas match config weights and fit_to_band",
@@ -216,7 +227,12 @@
     "缺失 hook/payoff 断点显示，禁止 carry-forward 虚假平台",
     "固定图例始终可见并含非累计说明",
     "右侧问题生命周期展示 question_id/建立/推进/兑现/状态",
-    "钩子回报主诊断不优先显示推进停滞/张力下降/冲突升级"
+    "钩子回报主诊断不优先显示推进停滞/张力下降/冲突升级",
+    "短Scene整场证据共享不再误杀",
+    "整体字段整场引用不计入无差别复用主拒绝",
+    "EVIDENCE_OVERBROAD_REUSE需多条件且先区分SCENE_BOUNDARY_TOO_BROAD",
+    "不可修复业务错误不显示修复并继续",
+    "evidence_remap_repair不改level且最多一次"
   ],
   "tests": [
     "pytest apps/api/tests/test_reader_journey_v2_local.py",
@@ -228,7 +244,9 @@
     "pytest apps/api/tests/test_reader_journey_v2_general_rules_local.py",
     "vitest observation_lens_selector_inline_local.test.tsx",
     "pytest apps/api/tests/test_hook_payoff_visualization_semantics_local.py",
-    "vitest hook_payoff_lens_semantics_local.test.ts"
+    "vitest hook_payoff_lens_semantics_local.test.ts",
+    "pytest apps/api/tests/test_scene_evidence_validation_local.py",
+    "vitest evidence_recovery_card_local.test.tsx"
   ],
   "verification_evidence": [
     "12 passed local v2 pytest",
@@ -252,7 +270,12 @@
     "根因：紫色线已是本场 scores.payoff；平台多为真实重复 mapped 分数；主噪声为全镜头 segment/诊断标签混入推进停滞等",
     "局部 pytest hook_payoff_visualization_semantics 3 passed",
     "局部 vitest hook_payoff_lens_semantics 13 passed",
-    "version_manager check 1.0.3"
+    "version_manager check 1.0.3",
+    "原规则漏洞：≥4字段相同evidence集合即失败，忽略Scene长度/字段类型/rationale",
+    "run_id=3只读：失败Scene约2段micro，新规则分类ALLOWED_SHARED_OR_VALID（合理共享）",
+    "局部pytest scene_evidence_validation+scene_pipeline 23 passed",
+    "局部vitest evidence_recovery_card 4 passed",
+    "typecheck/version/registry/diff-check passed"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -269,5 +292,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-21T12:43:43Z",
-  "updated_at": "2026-07-21T16:22:31Z"
+  "updated_at": "2026-07-21T16:39:55Z"
 }
