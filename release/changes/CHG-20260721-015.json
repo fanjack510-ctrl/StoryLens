@@ -23,6 +23,18 @@
       "message": "Mark CHG-20260721-015 implemented then tested.",
       "primary": false,
       "multi_change_reason": "status transition to tested"
+    },
+    {
+      "sha": "dec8a6902f9788daa4d375baddfa8f583bb60f46",
+      "message": "Attach registry sync commit to CHG-20260721-015.",
+      "primary": false,
+      "multi_change_reason": "registry attach sync"
+    },
+    {
+      "sha": "d29a4f0f4a8bcef1bfa3ba1e03a25749287cc01a",
+      "message": "Attach status sync for CHG-20260721-015.",
+      "primary": false,
+      "multi_change_reason": "status attach sync"
     }
   ],
   "modules": [
@@ -68,5 +80,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-21T17:13:38Z",
-  "updated_at": "2026-07-21T17:28:34Z"
+  "updated_at": "2026-07-21T17:28:56Z"
 }
