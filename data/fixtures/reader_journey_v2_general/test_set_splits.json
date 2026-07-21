@@ -1,0 +1,42 @@
+{
+  "version": "1.0",
+  "description": "Anonymous Reader Journey V2 general fixtures — no novel titles.",
+  "splits": {
+    "development": [
+      "C01_state_change",
+      "C02_action_result",
+      "C03_consequence",
+      "C04_curiosity_quality",
+      "C05_emotion_concrete",
+      "C07_hook_payoff",
+      "C09_slow_effective_vs_stagnant",
+      "C10_fast_progress_vs_empty",
+      "C11_beat_vs_scene",
+      "C12_clarity"
+    ],
+    "holdout": [
+      "C06_setup_reveal",
+      "C08_redundancy_vs_gain"
+    ],
+    "regression": [
+      "C01_state_change",
+      "C02_action_result",
+      "C03_consequence",
+      "C07_hook_payoff",
+      "C10_fast_progress_vs_empty",
+      "C11_beat_vs_scene",
+      "MUT_identity",
+      "DEG_monotonic",
+      "XTYPE_role_invariance",
+      "ANTI_hardcode_v2"
+    ]
+  },
+  "external_validation_only": [
+    "book_alias_A",
+    "book_alias_B"
+  ],
+  "notes": [
+    "holdout must not drive weight/threshold edits",
+    "external_validation_only books are never product inputs"
+  ]
+}

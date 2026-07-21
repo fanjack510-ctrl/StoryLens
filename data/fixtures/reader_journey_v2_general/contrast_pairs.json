@@ -1,0 +1,121 @@
+{
+  "version": "1.0",
+  "description": "Minimal one-variable contrast pairs (levels only). Ordering only — no absolute score locks.",
+  "pairs": [
+    {
+      "id": "C01_state_change",
+      "variable": "state_change",
+      "low": { "state_change": 1 },
+      "high": { "state_change": 4 },
+      "expect_higher": ["plot_progress", "reading_momentum"]
+    },
+    {
+      "id": "C02_action_result",
+      "variable": "character_agency+goal_progress",
+      "low": { "character_agency": 1, "goal_progress": 1 },
+      "high": { "character_agency": 4, "goal_progress": 4 },
+      "expect_higher": ["plot_progress"]
+    },
+    {
+      "id": "C03_consequence",
+      "variable": "conflict_change+tension",
+      "low": { "conflict_change": 1, "tension": 1 },
+      "high": { "conflict_change": 4, "tension": 4 },
+      "expect_higher": ["plot_progress", "reading_tension"]
+    },
+    {
+      "id": "C04_curiosity_quality",
+      "variable": "curiosity",
+      "low": { "curiosity": 1, "information_gain": 1 },
+      "high": { "curiosity": 4, "information_gain": 3 },
+      "expect_higher": ["reading_tension"]
+    },
+    {
+      "id": "C05_emotion_concrete",
+      "variable": "emotional_investment",
+      "low": { "emotional_investment": 1 },
+      "high": { "emotional_investment": 4 },
+      "expect_higher": ["reading_tension", "reading_momentum"]
+    },
+    {
+      "id": "C06_setup_reveal",
+      "variable": "setup_consistency on reveal",
+      "scene_role": "reveal",
+      "low": { "setup_consistency": 1, "payoff": 4 },
+      "high": { "setup_consistency": 4, "payoff": 4 },
+      "expect_higher": ["hook_payoff_fit"]
+    },
+    {
+      "id": "C07_hook_payoff",
+      "variable": "payoff given high hook",
+      "low": { "hook": 4, "payoff": 1 },
+      "high": { "hook": 4, "payoff": 4 },
+      "expect_higher": ["hook_payoff_fit"],
+      "expect_lower_or_equal_risk_on_high": true
+    },
+    {
+      "id": "C08_redundancy_vs_gain",
+      "variable": "redundancy vs information_gain",
+      "low": { "redundancy": 4, "information_gain": 1 },
+      "high": { "redundancy": 1, "information_gain": 4 },
+      "expect_higher": ["plot_progress", "reading_momentum"]
+    },
+    {
+      "id": "C09_slow_effective_vs_stagnant",
+      "variable": "slow pacing with/without plot",
+      "scene_role": "aftermath",
+      "low": {
+        "pacing_speed": 1,
+        "goal_progress": 0,
+        "conflict_change": 0,
+        "state_change": 0,
+        "information_gain": 0
+      },
+      "high": {
+        "pacing_speed": 1,
+        "goal_progress": 3,
+        "conflict_change": 3,
+        "state_change": 3,
+        "information_gain": 3
+      },
+      "expect_higher": ["plot_progress", "reading_momentum"]
+    },
+    {
+      "id": "C10_fast_progress_vs_empty",
+      "variable": "fast pacing with/without plot",
+      "low": {
+        "pacing_speed": 5,
+        "goal_progress": 0,
+        "conflict_change": 0,
+        "state_change": 0,
+        "information_gain": 0,
+        "character_agency": 0
+      },
+      "high": {
+        "pacing_speed": 5,
+        "goal_progress": 4,
+        "conflict_change": 4,
+        "state_change": 4,
+        "information_gain": 3,
+        "character_agency": 4
+      },
+      "expect_higher": ["plot_progress"],
+      "expect_diagnosis_on_low": "empty_fast_pacing"
+    },
+    {
+      "id": "C11_beat_vs_scene",
+      "variable": "node_type",
+      "kind": "node_type",
+      "low_node_type": "beat",
+      "high_node_type": "scene",
+      "expect_high_in_main_curve": true
+    },
+    {
+      "id": "C12_clarity",
+      "variable": "clarity",
+      "low": { "clarity": 1 },
+      "high": { "clarity": 5 },
+      "expect_higher": ["reading_momentum"]
+    }
+  ]
+}
