@@ -20,7 +20,15 @@ python scripts/version_manager.py sync
 
 功能开发、UI 打磨、缺陷修复**默认不改版本**。
 
-只有在准备正式发布时才执行 `bump`。
+所有功能批次必须登记到变更池（见 [`docs/change-registration-and-release.md`](change-registration-and-release.md)）：
+
+```powershell
+python scripts/change_registry.py register --title "..." --type fix --user-summary "..."
+python scripts/change_registry.py attach-commit CHG-... <sha>
+python scripts/change_registry.py status
+```
+
+只有在用户明确要求「生成下一个版本」且已 `freeze` 后，才执行 `prepare-next-release --confirm`（内部调用 `version_manager bump`）。
 
 当前仓库版本：
 
@@ -78,14 +86,21 @@ python scripts/version_manager.py release-info
 至少执行：
 
 ```bash
+python scripts/change_registry.py check
 python scripts/version_manager.py check
 python scripts/version_manager.py release-guard
 python scripts/check_project.py
 ```
 
-`check_project.py` 已内置调用 `version_manager.py check`。
+正式发布前还须：
 
-正式构建脚本 `scripts/build_windows_release.ps1` 在开始前必须通过版本门禁；不一致则停止。
+```bash
+python scripts/change_registry.py check --release
+```
+
+`check_project.py` 已内置调用 `version_manager.py check` 与日常 `change_registry.py check`。
+
+正式构建脚本 `scripts/build_windows_release.ps1` 在开始前必须通过版本门禁与变更登记发布门禁；不一致则停止。
 
 ## 6. updater 与安装包版本同步
 

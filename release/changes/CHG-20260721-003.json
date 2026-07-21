@@ -1,0 +1,44 @@
+{
+  "id": "CHG-20260721-003",
+  "title": "Reader Journey 工具栏与响应式布局收口",
+  "type": "improvement",
+  "base_version": "1.0.2",
+  "status": "implemented",
+  "include_in_next_release": true,
+  "commits": [
+    {
+      "sha": "22750ecaaefd925188ff2f5b5decdb900a750748",
+      "message": "Simplify Reader Journey toolbar and refresh app subtitle",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "apps/desktop"
+  ],
+  "files": [],
+  "user_summary": "精简阅读旅程工具栏、修复设置遮挡并优化响应式布局",
+  "technical_summary": "副标题改为小说叙事洞察与创作平台；删除重复正文展开收起；指标下拉与更多操作；设置遮挡修复；响应式布局。实现 commit 在 release/v0.1.0-preview，尚未进入当前 HEAD。",
+  "acceptance_criteria": [
+    "工具栏无重复展开控件",
+    "设置面板不被遮挡"
+  ],
+  "tests": [],
+  "verification_evidence": [],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "EXISTS_NOT_INCLUDED",
+  "created_at": "2026-07-21T06:02:50Z",
+  "updated_at": "2026-07-21T06:03:10Z"
+}

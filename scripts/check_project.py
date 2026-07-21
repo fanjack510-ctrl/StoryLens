@@ -40,11 +40,18 @@ REQUIRED = [
     "scripts/check_env.py",
     "scripts/package_project.ps1",
     "scripts/version_manager.py",
+    "scripts/change_registry.py",
     "packaging/updater/latest.json.template",
     "docs/10_local_model_calibration.md",
     "docs/11_local_model_selection.md",
     "docs/12_aliyun_qwen_provider.md",
     "docs/versioning-and-release.md",
+    "docs/change-registration-and-release.md",
+    "docs/releases/README.md",
+    "release/baseline.json",
+    "release/unreleased.json",
+    "release/registry.schema.json",
+    "release/registry_config.json",
     "scripts/probe_aliyun_qwen.py",
     "config/cloud_pricing.example.json",
     "config/cloud_pricing.default.json",
@@ -94,6 +101,14 @@ def main() -> None:
     )
     if version_check.returncode != 0:
         raise SystemExit("Version consistency check failed.")
+
+    registry_check = subprocess.run(
+        [sys.executable, str(root / "scripts" / "change_registry.py"), "check"],
+        cwd=root,
+        check=False,
+    )
+    if registry_check.returncode != 0:
+        raise SystemExit("Change registry check failed.")
 
     print("Project scaffold check passed.")
 

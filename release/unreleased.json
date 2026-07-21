@@ -1,0 +1,16 @@
+{
+  "base_version": "1.0.2",
+  "target_version": null,
+  "status": "collecting",
+  "created_at": "2026-07-21T05:57:00Z",
+  "frozen_at": null,
+  "changes": [
+    "CHG-20260721-001",
+    "CHG-20260721-002",
+    "CHG-20260721-003",
+    "CHG-20260721-004",
+    "CHG-20260721-005",
+    "CHG-20260721-006",
+    "CHG-20260721-007"
+  ]
+}

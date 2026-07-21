@@ -37,8 +37,11 @@ HARDCODE_WHITELIST_PREFIXES = (
     "packaging/updater/",
     "scripts/version_manager.py",
     "scripts/test_version_manager.py",
+    "scripts/change_registry.py",
     "apps/api/tests/test_version_manager.py",
+    "apps/api/tests/test_change_registry.py",
     "docs/versioning-and-release.md",
+    "docs/change-registration-and-release.md",
 )
 
 
@@ -687,6 +690,24 @@ def cmd_release_guard(root: Path, artifacts_dir: Path | None = None) -> int:
     if cmd_check(root) != 0:
         errors.append("version check failed")
         # continue collecting more errors
+
+    registry = root / "scripts" / "change_registry.py"
+    if registry.is_file():
+        reg = subprocess.run(
+            [sys.executable, str(registry), "check", "--release"],
+            cwd=root,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if reg.returncode != 0:
+            detail = (reg.stdout or reg.stderr or "").strip()
+            errors.append(
+                "change registry release check failed"
+                + (f": {detail.splitlines()[0]}" if detail else "")
+            )
+    else:
+        errors.append("missing scripts/change_registry.py")
 
     version = read_version_file(root)
     expected_tag = f"v{version}"

@@ -34,6 +34,8 @@ try {
     $py = Resolve-Python
     & $py (Join-Path $Root "scripts\version_manager.py") check
     if ($LASTEXITCODE) { throw "version_manager.py check failed — refuse to build" }
+    & $py (Join-Path $Root "scripts\change_registry.py") check --release
+    if ($LASTEXITCODE) { throw "change_registry.py check --release failed — refuse to build" }
     & $py (Join-Path $Root "scripts\version_manager.py") release-guard
     if ($LASTEXITCODE) { throw "version_manager.py release-guard failed — refuse to build" }
 

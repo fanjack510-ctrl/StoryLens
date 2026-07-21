@@ -1,0 +1,47 @@
+{
+  "id": "CHG-20260721-002",
+  "title": "分析授权文案与阅读旅程指标表达优化",
+  "type": "improvement",
+  "base_version": "1.0.2",
+  "status": "implemented",
+  "include_in_next_release": true,
+  "commits": [
+    {
+      "sha": "6f03010d70fc72e94567c716c8dba49738dc247f",
+      "message": "Polish consent copy, nav labels, risk wording, and phase metrics",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "apps/desktop"
+  ],
+  "files": [],
+  "user_summary": "优化授权文案、中文标签、流失风险说明与阶段指标表达",
+  "technical_summary": "授权文案、导航中文标签乱码修复、流失风险中文说明、去掉当前徽标、阶段指标语义增强。",
+  "acceptance_criteria": [
+    "授权文案可读",
+    "中文标签无乱码",
+    "流失风险有中文说明",
+    "无多余当前徽标",
+    "阶段指标含语义"
+  ],
+  "tests": [],
+  "verification_evidence": [],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-21T06:02:50Z",
+  "updated_at": "2026-07-21T06:03:10Z"
+}

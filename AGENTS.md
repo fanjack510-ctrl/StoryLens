@@ -12,6 +12,7 @@
 8. 任何失败任务都必须可重试、可定位、可单项重跑。
 9. 修改后必须运行测试和 `scripts/check_project.py`。
 10. 不得自行引入图数据库、微服务、LoRA 训练等超出当前阶段的复杂度。
+11. 功能修改必须登记到 `release/changes/`（见 `docs/change-registration-and-release.md`）；日常不得修改 `VERSION`，不得在未确认时 bump / 正式构建 / 发布。
 
 ## 当前阶段边界
 

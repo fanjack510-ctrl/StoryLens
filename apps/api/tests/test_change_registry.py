@@ -1,0 +1,289 @@
+"""Tests for scripts/change_registry.py — use isolated temp git fixtures only."""
+
+from __future__ import annotations
+
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+import pytest
+
+ROOT = Path(__file__).resolve().parents[3]
+SCRIPT = ROOT / "scripts" / "change_registry.py"
+
+
+def _run(root: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [sys.executable, str(SCRIPT), "--root", str(root), *args],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
+def _write(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8", newline="\n")
+
+
+def _git(root: Path, *args: str) -> str:
+    proc = subprocess.run(
+        ["git", "-C", str(root), *args],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return proc.stdout.strip()
+
+
+def _seed_registry(root: Path, version: str = "1.0.2") -> str:
+    """Create a tiny git repo with baseline + registry scaffolding. Returns baseline sha."""
+    _git(root, "init")
+    _git(root, "config", "user.email", "test@example.com")
+    _git(root, "config", "user.name", "Test")
+    _write(root / "VERSION", f"{version}\n")
+    _write(root / "apps" / "api" / "app" / "main.py", "print('ok')\n")
+    _write(
+        root / "release" / "registry_config.json",
+        (ROOT / "release" / "registry_config.json").read_text(encoding="utf-8"),
+    )
+    _write(
+        root / "release" / "registry.schema.json",
+        (ROOT / "release" / "registry.schema.json").read_text(encoding="utf-8"),
+    )
+    (root / "release" / "changes").mkdir(parents=True, exist_ok=True)
+    (root / "release" / "generated").mkdir(parents=True, exist_ok=True)
+    _write(
+        root / "scripts" / "version_manager.py",
+        (
+            "import sys\n"
+            "from pathlib import Path\n"
+            "root = Path(__file__).resolve().parents[1]\n"
+            "cmd = sys.argv[1] if len(sys.argv) > 1 else ''\n"
+            "if cmd == 'check':\n"
+            "    raise SystemExit(0)\n"
+            "if cmd == 'bump' and len(sys.argv) > 2 and sys.argv[2] == 'patch':\n"
+            "    ver = (root / 'VERSION').read_text().strip()\n"
+            "    major, minor, patch = ver.split('.')\n"
+            "    (root / 'VERSION').write_text(f'{major}.{minor}.{int(patch)+1}\\n')\n"
+            "    raise SystemExit(0)\n"
+            "raise SystemExit(2)\n"
+        ),
+    )
+    # Placeholder baseline/unreleased so first commit is complete; sha filled after commit.
+    _write(
+        root / "release" / "baseline.json",
+        json.dumps(
+            {
+                "version": version,
+                "git_tag": None,
+                "git_commit": "PENDING",
+                "status": "verified",
+                "released_at": "2026-07-01T00:00:00Z",
+                "channel": "stable",
+                "installer_sha256": "abc",
+                "updater_sha256": "def",
+                "manifest_url": "https://example.invalid/latest.json",
+                "notes": "fixture",
+            },
+            indent=2,
+        )
+        + "\n",
+    )
+    _write(
+        root / "release" / "unreleased.json",
+        json.dumps(
+            {
+                "base_version": version,
+                "target_version": None,
+                "status": "collecting",
+                "created_at": "2026-07-21T00:00:00Z",
+                "frozen_at": None,
+                "changes": [],
+            },
+            indent=2,
+        )
+        + "\n",
+    )
+    _git(root, "add", "VERSION", "apps", "release", "scripts")
+    _git(root, "commit", "-m", "baseline")
+    baseline = _git(root, "rev-parse", "HEAD")
+    baseline_json = json.loads((root / "release" / "baseline.json").read_text(encoding="utf-8"))
+    baseline_json["git_commit"] = baseline
+    _write(root / "release" / "baseline.json", json.dumps(baseline_json, indent=2) + "\n")
+    # Amend-free: keep PENDING commit as baseline; update file in working tree only for tests
+    # that read baseline.json. Commit the pointer as docs-only style registry update so the
+    # unregistered scanner ignores it (release/baseline.json is whitelisted).
+    _git(root, "add", "release/baseline.json")
+    _git(root, "commit", "-m", "set baseline commit pointer")
+    return baseline
+
+
+@pytest.fixture()
+def fixture_repo(tmp_path: Path) -> Path:
+    _seed_registry(tmp_path)
+    return tmp_path
+
+
+def test_register_creates_unique_ids(fixture_repo: Path) -> None:
+    r1 = _run(fixture_repo, "register", "--title", "A", "--type", "fix")
+    r2 = _run(fixture_repo, "register", "--title", "B", "--type", "fix")
+    assert r1.returncode == 0, r1.stderr
+    assert r2.returncode == 0, r2.stderr
+    id1 = r1.stdout.strip().splitlines()[0]
+    id2 = r2.stdout.strip().splitlines()[0]
+    assert id1 != id2
+    assert (fixture_repo / "release" / "changes" / f"{id1}.json").is_file()
+    pool = json.loads((fixture_repo / "release" / "unreleased.json").read_text(encoding="utf-8"))
+    assert id1 in pool["changes"] and id2 in pool["changes"]
+
+
+def test_attach_real_commit_and_reject_missing(fixture_repo: Path) -> None:
+    reg = _run(fixture_repo, "register", "--title", "X", "--type", "fix")
+    cid = reg.stdout.strip().splitlines()[0]
+    _write(fixture_repo / "apps" / "api" / "app" / "main.py", "print('changed')\n")
+    _git(fixture_repo, "add", "apps")
+    _git(fixture_repo, "commit", "-m", "source change")
+    sha = _git(fixture_repo, "rev-parse", "HEAD")
+    ok = _run(fixture_repo, "attach-commit", cid, sha)
+    assert ok.returncode == 0, ok.stderr
+    bad = _run(fixture_repo, "attach-commit", cid, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef")
+    assert bad.returncode != 0
+
+
+def test_status_gates(fixture_repo: Path) -> None:
+    reg = _run(fixture_repo, "register", "--title", "Gate", "--type", "fix")
+    cid = reg.stdout.strip().splitlines()[0]
+    assert _run(fixture_repo, "mark", cid, "implemented").returncode != 0
+    assert _run(fixture_repo, "mark", cid, "tested").returncode != 0
+    assert _run(fixture_repo, "mark", cid, "verified").returncode != 0
+    assert _run(fixture_repo, "mark", cid, "ready").returncode != 0
+
+    _write(fixture_repo / "apps" / "api" / "app" / "main.py", "print('impl')\n")
+    _git(fixture_repo, "add", "apps")
+    _git(fixture_repo, "commit", "-m", "implement")
+    sha = _git(fixture_repo, "rev-parse", "HEAD")
+    assert _run(fixture_repo, "attach-commit", cid, sha).returncode == 0
+    assert _run(fixture_repo, "mark", cid, "implemented").returncode == 0
+
+    assert _run(fixture_repo, "mark", cid, "tested").returncode != 0
+    assert _run(fixture_repo, "update", cid, "--test", "pytest apps/api/tests/t.py").returncode == 0
+    assert _run(fixture_repo, "mark", cid, "tested").returncode == 0
+
+    assert _run(fixture_repo, "mark", cid, "verified").returncode != 0
+    assert _run(fixture_repo, "update", cid, "--evidence", "manual ok").returncode == 0
+    assert _run(fixture_repo, "mark", cid, "verified").returncode == 0
+    assert _run(fixture_repo, "mark", cid, "ready").returncode == 0
+
+
+def test_unregistered_and_docs_only(fixture_repo: Path) -> None:
+    _write(fixture_repo / "apps" / "api" / "app" / "main.py", "print('u')\n")
+    _git(fixture_repo, "add", "apps")
+    _git(fixture_repo, "commit", "-m", "unregistered source")
+    _write(fixture_repo / "docs" / "note.md", "hello\n")
+    _git(fixture_repo, "add", "docs")
+    _git(fixture_repo, "commit", "-m", "[docs-only] notes")
+    result = _run(fixture_repo, "unregistered")
+    assert "UNREGISTERED" in result.stdout
+    assert "unregistered source" in result.stdout
+    assert "[docs-only] notes" in result.stdout
+    ignored_idx = result.stdout.index("== IGNORED ==")
+    unreg_idx = result.stdout.index("== UNREGISTERED ==")
+    assert "unregistered source" in result.stdout[unreg_idx:ignored_idx]
+    assert "[docs-only] notes" in result.stdout[ignored_idx:]
+    assert result.returncode != 0
+
+
+def test_version_mismatch_fails_check(fixture_repo: Path) -> None:
+    _write(fixture_repo / "VERSION", "9.9.9\n")
+    result = _run(fixture_repo, "check")
+    assert result.returncode != 0
+    assert "VERSION" in result.stdout or "VERSION" in result.stderr
+
+
+def test_collecting_cannot_preset_target(fixture_repo: Path) -> None:
+    pool = json.loads((fixture_repo / "release" / "unreleased.json").read_text(encoding="utf-8"))
+    pool["target_version"] = "1.0.3"
+    _write(fixture_repo / "release" / "unreleased.json", json.dumps(pool, indent=2) + "\n")
+    result = _run(fixture_repo, "check")
+    assert result.returncode != 0
+    assert "target_version" in result.stdout
+
+
+def test_freeze_requires_ready_and_no_unregistered(fixture_repo: Path) -> None:
+    reg = _run(fixture_repo, "register", "--title", "Need ready", "--type", "fix")
+    cid = reg.stdout.strip().splitlines()[0]
+    _write(fixture_repo / "apps" / "api" / "app" / "main.py", "print('f')\n")
+    _git(fixture_repo, "add", "apps")
+    _git(fixture_repo, "commit", "-m", "feature")
+    sha = _git(fixture_repo, "rev-parse", "HEAD")
+    _run(fixture_repo, "attach-commit", cid, sha)
+    freeze = _run(fixture_repo, "freeze")
+    assert freeze.returncode != 0
+    assert "not ready" in freeze.stdout.lower() or "not ready" in freeze.stderr.lower()
+
+    # Separate unregistered commit blocks freeze even if change is ready later
+    _write(fixture_repo / "apps" / "api" / "app" / "main.py", "print('extra')\n")
+    _git(fixture_repo, "add", "apps")
+    _git(fixture_repo, "commit", "-m", "extra unregistered")
+    freeze2 = _run(fixture_repo, "freeze")
+    assert freeze2.returncode != 0
+    assert "unregistered" in (freeze2.stdout + freeze2.stderr).lower()
+
+
+def test_release_preview_does_not_modify(fixture_repo: Path) -> None:
+    before = (fixture_repo / "VERSION").read_text(encoding="utf-8")
+    before_pool = (fixture_repo / "release" / "unreleased.json").read_text(encoding="utf-8")
+    result = _run(fixture_repo, "release-preview")
+    assert result.returncode == 0
+    payload = json.loads(result.stdout)
+    assert payload["next_patch"] == "1.0.3"
+    assert (fixture_repo / "VERSION").read_text(encoding="utf-8") == before
+    assert (fixture_repo / "release" / "unreleased.json").read_text(encoding="utf-8") == before_pool
+
+
+def test_prepare_without_frozen_does_not_bump(fixture_repo: Path) -> None:
+    before = (fixture_repo / "VERSION").read_text(encoding="utf-8")
+    result = _run(fixture_repo, "prepare-next-release", "--bump", "patch")
+    assert result.returncode != 0
+    assert (fixture_repo / "VERSION").read_text(encoding="utf-8") == before
+    assert before.strip() == "1.0.2"
+
+
+def test_prepare_preview_when_frozen_no_confirm(fixture_repo: Path) -> None:
+    reg = _run(
+        fixture_repo,
+        "register",
+        "--title",
+        "Ready item",
+        "--type",
+        "fix",
+        "--user-summary",
+        "fix it",
+    )
+    cid = reg.stdout.strip().splitlines()[0]
+    _write(fixture_repo / "apps" / "api" / "app" / "main.py", "print('ready')\n")
+    _git(fixture_repo, "add", "apps")
+    _git(fixture_repo, "commit", "-m", "ready feature")
+    sha = _git(fixture_repo, "rev-parse", "HEAD")
+    assert _run(fixture_repo, "attach-commit", cid, sha).returncode == 0
+    assert _run(fixture_repo, "update", cid, "--test", "unit").returncode == 0
+    assert _run(fixture_repo, "mark", cid, "implemented").returncode == 0
+    assert _run(fixture_repo, "mark", cid, "tested").returncode == 0
+    assert _run(fixture_repo, "update", cid, "--evidence", "ok").returncode == 0
+    assert _run(fixture_repo, "mark", cid, "verified").returncode == 0
+    assert _run(fixture_repo, "mark", cid, "ready").returncode == 0
+    _git(fixture_repo, "add", "release")
+    _git(fixture_repo, "commit", "-m", "register ready change")
+    assert _run(fixture_repo, "freeze").returncode == 0, _run(fixture_repo, "freeze").stdout
+    _git(fixture_repo, "add", "release")
+    _git(fixture_repo, "commit", "-m", "freeze")
+    before = (fixture_repo / "VERSION").read_text(encoding="utf-8")
+    preview = _run(fixture_repo, "prepare-next-release", "--bump", "patch")
+    assert preview.returncode == 0, preview.stderr + preview.stdout
+    assert "preview only" in preview.stdout
+    assert (fixture_repo / "VERSION").read_text(encoding="utf-8") == before
+    assert before.strip() == "1.0.2"
+    assert before.strip() != "1.0.3"
