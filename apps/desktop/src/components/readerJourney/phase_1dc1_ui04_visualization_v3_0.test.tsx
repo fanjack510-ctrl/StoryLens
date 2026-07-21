@@ -169,6 +169,7 @@ describe("Reader Journey Visualization v3.0", () => {
     expect(screen.queryByTestId("journey-chart-tool-rail")).not.toBeInTheDocument();
     expect(screen.getByTestId("journey-curve-toolbar")).toBeInTheDocument();
     expect(screen.getByTestId("journey-zoom-fit-all")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("journey-more-chart-settings"));
     expect(screen.getByTestId("journey-export-png")).toBeInTheDocument();
     expect(css).toMatch(/\.journey-chart-tool-rail\s*\{[^}]*display:\s*none/);
   });

@@ -1,6 +1,6 @@
 [project]
 name = "storylens"
-version = "0.1.0"
+version = "1.0.3"
 description = "AI-assisted structured book analysis and narrative case retrieval"
 requires-python = ">=3.11,<3.13"
 dependencies = [
@@ -27,6 +27,9 @@ dev = [
   "ruff>=0.6",
   "mypy>=1.11",
 ]
+sidecar = [
+  "pyinstaller>=6.3",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -38,6 +41,15 @@ packages = ["apps/api/app"]
 [tool.pytest.ini_options]
 pythonpath = ["apps/api"]
 testpaths = ["apps/api/tests"]
+markers = [
+  "requires_audit_assets: needs audits/single-chapter-pipeline captures or reports",
+  "requires_main_db_snapshot: needs data/storylens.db with certification counts (55/2)",
+  "requires_certification_artifacts: needs artifacts/single-chapter-pipeline-certification/",
+  "requires_cloud_pricing: needs verified config/cloud_pricing.json (tests may install a fixture)",
+  "canary_offline: defect-canary offline replay against captured batches",
+  "freeze_baseline: core/UI freeze hash seals (optional until re-sealed)",
+  "integration: hits real local providers, repo paths, or certification scripts",
+]
 
 [tool.ruff]
 line-length = 100

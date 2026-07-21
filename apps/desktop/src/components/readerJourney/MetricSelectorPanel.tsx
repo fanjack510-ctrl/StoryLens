@@ -22,9 +22,9 @@ type Props = {
 };
 
 /**
- * In-document-flow metric selector panel (v4.2).
- * Opens below JourneyToolbar and pushes Phase/Chart down — never overlays.
- * No position:absolute/fixed, no elevated z-index.
+ * Legacy in-flow metric selector panel (v4.2).
+ * JourneyChartToolbar now uses a compact JourneyPopover dropdown instead.
+ * Kept for freeze / audit source-path compatibility.
  */
 export function MetricSelectorPanel({
   open,
@@ -132,7 +132,7 @@ export function MetricSelectorPanel({
       data-testid="journey-metric-select-menu"
       data-metric-panel="in-flow"
       role="listbox"
-      aria-label="选择当前指标"
+      aria-label="选择指标"
       aria-labelledby={triggerId}
     >
       <div className="journey-metric-selector-grid" data-testid="journey-metric-selector-grid">

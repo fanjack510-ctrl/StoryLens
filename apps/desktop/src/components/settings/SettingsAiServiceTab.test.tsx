@@ -5,7 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SettingsAiServiceTab } from "./SettingsAiServiceTab";
 import { providersApi } from "../../services/providersApi";
 import { settingsApi } from "../../services/settingsApi";
-import { useDeveloperModeStore } from "../../stores/developerModeStore";
+import * as aiServiceConfig from "../../services/aiServiceConfig";
+import { useAdvancedSettingsStore } from "../../stores/advancedSettingsStore";
 
 vi.mock("../../services/providersApi", () => ({
   providersApi: {
@@ -27,43 +28,58 @@ vi.mock("../../services/settingsApi", () => ({
   },
 }));
 
-const disconnectedProvider = {
+vi.mock("../../services/aiServiceConfig", async () => {
+  const actual = await vi.importActual<typeof import("../../services/aiServiceConfig")>(
+    "../../services/aiServiceConfig",
+  );
+  return {
+    ...actual,
+    fetchRecommendedQwenStatus: vi.fn(),
+    configureRecommendedQwenService: vi.fn(),
+    repairRecommendedQwenSetup: vi.fn(),
+  };
+});
+
+const eligibleProvider = {
   name: "aliyun_qwen_plus",
   default_model: "qwen3.7-plus",
   configured: true,
-  connected: false,
-  healthy: false,
+  connected: true,
+  healthy: true,
   enabled: true,
-  status: "unhealthy",
-  health_state: "unhealthy",
+  status: "healthy",
+  health_state: "healthy",
   health_source: "configured_readiness",
-  manual_selection_blockers: ["provider_disconnected"],
+  manual_boundary_candidate_eligible: true,
+  manual_selection_blockers: [],
   capabilities: { cloud: true, enabled: true },
 };
 
-const connectedProvider = {
-  ...disconnectedProvider,
-  connected: true,
-  healthy: true,
-  status: "healthy",
-  health_state: "healthy",
-  manual_selection_blockers: [],
-};
-
-const disconnectedConfig = {
+const connectedConfig = {
   provider_name: "aliyun_qwen_plus",
   display_name: "阿里云百炼",
   plus_model: "qwen3.7-plus",
   credential_state: "configured",
   enabled: true,
-  disconnected: true,
-  connection_state: "disconnected",
-};
-
-const connectedConfig = {
-  ...disconnectedConfig,
   disconnected: false,
   connection_state: "connected",
+};
+
+const eligibleSetup = {
+  ok: true,
+  user_message: "配置完成，可以开始分析",
+  persisted: true,
+  credential_configured: true,
+  provider_enabled: true,
+  cloud_enabled: true,
+  provider_eligible: true,
+  analysis_ready: true,
+  model_validated: true,
+  selected_provider_id: "aliyun_qwen_plus",
+  connection_status: "connected",
+  analysis_mode: "BALANCED",
+  blockers: [],
+  needs_cloud_consent: false,
 };
 
 function renderTab() {
@@ -79,124 +95,124 @@ function renderTab() {
   );
 }
 
-describe("SettingsAiServiceTab DEFECT-UAT-002", () => {
+describe("SettingsAiServiceTab recommended setup", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    useDeveloperModeStore.setState({ developerMode: false });
+    useAdvancedSettingsStore.setState({ showAdvancedSettings: false });
     vi.mocked(settingsApi.cloud).mockResolvedValue({ enabled: true, state: "available" });
-    vi.mocked(settingsApi.setCloud).mockResolvedValue({ enabled: true, state: "available" });
-    vi.mocked(settingsApi.cloudUsage).mockResolvedValue({ estimated_cost: 0 });
-    vi.mocked(settingsApi.cloudBudget).mockResolvedValue({
-      cloud_daily_estimated_cost_limit: 20,
-      cloud_daily_request_limit: 100,
-      currency: "CNY",
-    });
-    vi.mocked(settingsApi.saveCloudBudget).mockResolvedValue({
-      cloud_daily_estimated_cost_limit: 20,
+    vi.mocked(providersApi.list).mockResolvedValue([eligibleProvider] as any);
+    vi.mocked(providersApi.configuration).mockResolvedValue(connectedConfig as any);
+    vi.mocked(aiServiceConfig.fetchRecommendedQwenStatus).mockResolvedValue(eligibleSetup as any);
+    vi.mocked(aiServiceConfig.configureRecommendedQwenService).mockResolvedValue({
+      ...eligibleSetup,
+      user_message: "配置完成。模型服务、计价和预算检查均已通过，可以开始分析。",
+      persisted: true,
     } as any);
-    vi.mocked(providersApi.list).mockResolvedValue([disconnectedProvider] as any);
-    vi.mocked(providersApi.configuration).mockResolvedValue(disconnectedConfig as any);
-    vi.mocked(providersApi.action).mockResolvedValue({ status: "ok" } as any);
-    vi.mocked(providersApi.transportDiagnostic).mockResolvedValue({
-      overall_status: "ok",
-      error_code: null,
-      dns: { status: "ok" },
-      tcp: { status: "ok" },
-      tls: { status: "ok" },
-    });
   });
 
   afterEach(() => {
     cleanup();
   });
 
-  it("updates to connected immediately after successful test and ends testing state", async () => {
-    vi.mocked(providersApi.configuration)
-      .mockResolvedValueOnce(disconnectedConfig as any) // initial query
-      .mockResolvedValue(connectedConfig as any); // after persistConnected
-    vi.mocked(providersApi.list).mockResolvedValue([connectedProvider] as any);
-
+  it("shows eligible only when backend provider_eligible is true", async () => {
     renderTab();
     expect(await screen.findByTestId("ai-service-connection-status")).toHaveTextContent(
-      "尚未连接AI服务",
+      "当前可用于分析",
     );
-
-    fireEvent.click(screen.getByTestId("ai-service-test"));
-    expect(screen.getByTestId("ai-service-test")).toHaveTextContent("测试中");
-
-    await waitFor(() => {
-      expect(providersApi.action).toHaveBeenCalledWith("aliyun_qwen_plus", "connect");
-    });
-    await waitFor(() => {
-      expect(screen.getByTestId("ai-service-connection-status")).toHaveTextContent(
-        "已连接，可以开始分析",
-      );
-    });
-    await waitFor(() => {
-      expect(screen.getByTestId("ai-service-test")).toHaveTextContent("测试连接");
-      expect(screen.getByTestId("ai-service-test")).toBeEnabled();
-      expect(screen.getByTestId("ai-service-disconnect")).toBeEnabled();
-    });
-    expect(screen.getByRole("status")).toHaveTextContent("连接正常");
+    expect(screen.getByTestId("ai-service-status-facts")).toHaveTextContent("最终分析就绪：是");
+    expect(screen.getByTestId("ai-service-status-facts")).toHaveTextContent("云端分析：已开启");
   });
 
-  it("keeps connected after remount refresh from backend configuration", async () => {
-    vi.mocked(providersApi.list).mockResolvedValue([connectedProvider] as any);
-    vi.mocked(providersApi.configuration).mockResolvedValue(connectedConfig as any);
-
-    const { unmount } = renderTab();
-    expect(await screen.findByTestId("ai-service-connection-status")).toHaveTextContent(
-      "已连接，可以开始分析",
-    );
-    unmount();
-
+  it("does not show ready when eligibility is false even if credential configured", async () => {
+    vi.mocked(aiServiceConfig.fetchRecommendedQwenStatus).mockResolvedValue({
+      ...eligibleSetup,
+      ok: false,
+      provider_eligible: false,
+      analysis_ready: false,
+      cloud_enabled: false,
+      blockers: ["cloud_master_switch_off"],
+      user_message: "云端模型服务尚未开启",
+      needs_cloud_consent: true,
+    } as any);
     renderTab();
     expect(await screen.findByTestId("ai-service-connection-status")).toHaveTextContent(
-      "已连接，可以开始分析",
+      "当前不可用于分析",
     );
-    expect(providersApi.configuration).toHaveBeenCalled();
+    expect(screen.getByTestId("ai-service-status-facts")).toHaveTextContent("最终分析就绪：否");
+    expect(screen.getByTestId("ai-service-status-facts")).toHaveTextContent("云端分析：未开启");
+    expect(screen.getByTestId("ai-service-repair")).toBeInTheDocument();
   });
 
-  it("syncs disconnected state after disconnect action", async () => {
-    vi.mocked(providersApi.list).mockResolvedValue([connectedProvider] as any);
-    vi.mocked(providersApi.configuration)
-      .mockResolvedValueOnce(connectedConfig as any)
-      .mockResolvedValue(disconnectedConfig as any);
-
+  it("shows pricing blocker as the readiness reason", async () => {
+    vi.mocked(aiServiceConfig.fetchRecommendedQwenStatus).mockResolvedValue({
+      ...eligibleSetup,
+      ok: false,
+      provider_eligible: false,
+      analysis_ready: false,
+      blockers: ["pricing_unavailable"],
+      user_message: "当前模型缺少计价信息",
+    } as any);
     renderTab();
     expect(await screen.findByTestId("ai-service-connection-status")).toHaveTextContent(
-      "已连接，可以开始分析",
+      "当前模型缺少计价信息",
     );
-
-    fireEvent.click(screen.getByTestId("ai-service-disconnect"));
-    await waitFor(() => {
-      expect(providersApi.action).toHaveBeenCalledWith("aliyun_qwen_plus", "disconnect");
-    });
-    await waitFor(() => {
-      expect(screen.getByTestId("ai-service-connection-status")).toHaveTextContent(
-        "尚未连接AI服务",
-      );
-    });
+    expect(screen.getByTestId("ai-service-readiness-detail")).toHaveTextContent("处理方式");
+    expect(screen.getByTestId("ai-service-readiness-detail")).not.toHaveTextContent(
+      "BUDGET_NOT_AVAILABLE",
+    );
   });
 
-  it("does not mark connected when transport test fails", async () => {
-    vi.mocked(providersApi.transportDiagnostic).mockResolvedValue({
-      overall_status: "failed",
-      error_code: "PROVIDER_DNS_ERROR",
-      user_action_hint: "检查DNS或主机名",
-    });
-
+  it("verify model service calls shared configure with persist false", async () => {
+    vi.mocked(aiServiceConfig.configureRecommendedQwenService).mockResolvedValue({
+      ...eligibleSetup,
+      ok: true,
+      persisted: false,
+      analysis_ready: false,
+      model_validated: true,
+      user_message: "API Key 与模型服务验证成功。验证成功，保存配置后还需检查分析预算和计价信息。",
+    } as any);
     renderTab();
     await screen.findByTestId("ai-service-connection-status");
+    expect(screen.getByTestId("ai-service-test")).toHaveTextContent("验证模型服务");
     fireEvent.click(screen.getByTestId("ai-service-test"));
-
     await waitFor(() => {
-      expect(screen.getByRole("status")).toHaveTextContent("无法连接云端服务");
+      expect(aiServiceConfig.configureRecommendedQwenService).toHaveBeenCalledWith(
+        expect.objectContaining({ persist: false }),
+      );
     });
-    expect(providersApi.action).not.toHaveBeenCalledWith("aliyun_qwen_plus", "connect");
-    expect(screen.getByTestId("ai-service-connection-status")).toHaveTextContent(
-      "无法连接云端服务",
+    expect(screen.getByRole("status")).toHaveTextContent("验证成功");
+  });
+
+  it("verify and save calls configure with persist true", async () => {
+    renderTab();
+    await screen.findByTestId("ai-service-connection-status");
+    fireEvent.click(screen.getByTestId("cloud-body-consent"));
+    fireEvent.change(screen.getByTestId("ai-api-key-input"), {
+      target: { value: "sk-new-key-value" },
+    });
+    fireEvent.click(screen.getByTestId("ai-service-save"));
+    await waitFor(() => {
+      expect(aiServiceConfig.configureRecommendedQwenService).toHaveBeenCalledWith(
+        expect.objectContaining({
+          persist: true,
+          apiKey: "sk-new-key-value",
+          cloudBodyConsent: true,
+        }),
+      );
+    });
+    expect(screen.getByRole("status")).toHaveTextContent("配置完成");
+  });
+
+  it("keeps status after remount from backend setup endpoint", async () => {
+    const { unmount } = renderTab();
+    expect(await screen.findByTestId("ai-service-connection-status")).toHaveTextContent(
+      "当前可用于分析",
     );
-    expect(screen.getByTestId("ai-service-test")).toHaveTextContent("测试连接");
+    unmount();
+    renderTab();
+    expect(await screen.findByTestId("ai-service-connection-status")).toHaveTextContent(
+      "当前可用于分析",
+    );
+    expect(aiServiceConfig.fetchRecommendedQwenStatus).toHaveBeenCalled();
   });
 });

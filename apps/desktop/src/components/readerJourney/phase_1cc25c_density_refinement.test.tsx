@@ -27,6 +27,15 @@ afterEach(() => {
 const css = readFileSync(resolve(__dirname, "./readerJourney.css"), "utf8");
 const visualization = buildMockReaderJourneyVisualization();
 
+
+function openExportMenu() {
+  const more = screen.queryByTestId("journey-more-chart-settings");
+  if (more && !screen.queryByTestId("journey-export-png")) {
+    fireEvent.click(more);
+  }
+  return screen.getByTestId("journey-export-png");
+}
+
 describe("Phase 1C-C.2.5C density refinement (updated for 2.6)", () => {
   it("uses compact metric strip and single metric selector", () => {
     render(
@@ -40,18 +49,18 @@ describe("Phase 1C-C.2.5C density refinement (updated for 2.6)", () => {
     );
     expect(screen.getByTestId("journey-summary-cards").className).toMatch(/journey-(insight|metric|summary)-strip/);
     expect(css).toMatch(/\.journey-metric-strip/);
-    expect(screen.getByTestId("journey-curve-legend")).toHaveTextContent("当前 Scene");
-    expect(screen.getByTestId("journey-curve-legend")).toHaveTextContent("Hook");
-    expect(screen.getByTestId("journey-curve-legend").textContent).not.toMatch(/answered question/);
+    expect(screen.getByTestId("journey-curve-legend")).toHaveTextContent("当前场景");
+    expect(screen.getByTestId("journey-curve-legend")).toHaveTextContent("钩子");
+    expect(screen.getByTestId("journey-curve-legend").textContent).not.toMatch(/已回答问题/);
 
     fireEvent.click(screen.getByTestId("journey-marker-full"));
-    expect(screen.getByTestId("journey-curve-legend")).toHaveTextContent("answered question");
+    expect(screen.getByTestId("journey-curve-legend")).toHaveTextContent("已回答问题");
 
     expect(QUICK_METRIC_KEYS).toEqual(["engagement", "curiosity", "tension"]);
     expect(MORE_METRIC_KEYS).toContain("valence");
     expect(ALL_METRIC_KEYS).toContain("valence");
     fireEvent.click(screen.getByTestId("journey-metric-select"));
-    expect(screen.getByTestId("journey-metric-select-menu")).toBeInTheDocument();
+    expect(screen.getByTestId("journey-metric-select-menu-panel")).toBeInTheDocument();
     fireEvent.click(screen.getByTestId("journey-metric-valence"));
     expect(screen.getByTestId("journey-metric-select")).toHaveTextContent("情绪正负");
   });
@@ -73,7 +82,7 @@ describe("Phase 1C-C.2.5C density refinement (updated for 2.6)", () => {
     fireEvent.click(screen.getByTestId("journey-curve-node-12"));
     fireEvent.click(screen.getByTestId("scene-detail-tab-questions"));
     expect(screen.getByTestId("scene-detail-panel-questions")).toBeInTheDocument();
-    expect(screen.getByTestId("scene-detail-title")).toHaveTextContent("Scene 12");
+    expect(screen.getByTestId("scene-detail-title")).toHaveTextContent("场景 12");
   });
 
   it("exports PNG from legacy overview=questions without leaving journey analysis", async () => {
@@ -87,7 +96,7 @@ describe("Phase 1C-C.2.5C density refinement (updated for 2.6)", () => {
       </MemoryRouter>,
     );
     expect(screen.getByTestId("journey-overview-curve")).toBeInTheDocument();
-    fireEvent.click(screen.getByTestId("journey-export-png"));
+    fireEvent.click(openExportMenu());
     await vi.waitFor(() => {
       expect(exportModule.exportJourneyPng).toHaveBeenCalled();
     });

@@ -92,6 +92,15 @@ export function estimateFullPipelineRequests(stage1: {
   };
 }
 
+/** Hard-gate shortfall: remaining vs estimated (normal path), not worst-case. */
+export function estimatedRequestShortfall(input: {
+  remainingRequests: number;
+  estimatedRequests: number;
+}): number {
+  return Math.max(0, input.estimatedRequests - Math.max(0, input.remainingRequests));
+}
+
+/** @deprecated Prefer estimatedRequestShortfall for hard gates. Kept for advisory UI. */
 export function fullPipelineRequestShortfall(input: {
   remainingRequests: number;
   fullWorstRequests: number;
@@ -117,12 +126,21 @@ export type CreateBudgetBlocker = {
   worstCase: number | null;
 };
 
-/** Classify create-time blockers for ordinary-user recovery panel. */
+/**
+ * Classify create-time hard blockers.
+ * Hard gates use Stage-1 / estimated path only — never full-pipeline worst-case.
+ */
 export function classifyCreateBudgetBlockers(input: {
   remainingRequests: number;
   remainingTokens: number;
   remainingCost: number;
   envelope: FullPipelineEnvelope;
+  stage1EstimatedRequests?: number | null;
+  stage1EstimatedTokens?: number | null;
+  stage1EstimatedCost?: number | null;
+  stage1WorstRequests?: number | null;
+  stage1WorstTokens?: number | null;
+  stage1WorstCost?: number | null;
   stage1CostWorst?: number | null;
   providerConnected: boolean;
   apiKeyConfigured: boolean;
@@ -152,54 +170,52 @@ export function classifyCreateBudgetBlockers(input: {
       worstCase: null,
     });
   }
-  const reqShortfall = fullPipelineRequestShortfall({
+  const estimatedRequests = Math.max(
+    0,
+    Number(input.stage1EstimatedRequests) || input.envelope.boundary.expected || 0,
+  );
+  const reqShortfall = estimatedRequestShortfall({
     remainingRequests: input.remainingRequests,
-    fullWorstRequests: input.envelope.full.worst,
+    estimatedRequests,
   });
   if (reqShortfall > 0) {
     blockers.push({
       dimension: "requests",
       title: "当前技术请求额度不足",
-      userMessage: `本章完整分析最坏需要${input.envelope.full.worst}次云端请求，当前今日剩余${input.remainingRequests}次，还差${reqShortfall}次。`,
-      required: input.envelope.full.worst,
+      userMessage: `本阶段预计需要${estimatedRequests}次云端请求，当前今日剩余${input.remainingRequests}次，还差${reqShortfall}次。`,
+      required: estimatedRequests,
       available: input.remainingRequests,
       shortfall: reqShortfall,
-      estimated: input.envelope.full.expected,
-      worstCase: input.envelope.full.worst,
+      estimated: estimatedRequests,
+      worstCase: Number(input.stage1WorstRequests) || input.envelope.boundary.worst,
     });
   }
-  // Token / cost hard blockers use proportional scaling from stage-1 when available.
-  const tokenPerReq =
-    input.envelope.full.worst > 0 && (input.stage1CostWorst ?? 0) >= 0
-      ? 1500
-      : 1500;
-  const worstTokens = Math.round(input.envelope.full.worst * tokenPerReq);
-  if (input.remainingTokens < worstTokens) {
-    const shortfall = worstTokens - input.remainingTokens;
+  const estimatedTokens = Math.max(0, Number(input.stage1EstimatedTokens) || 0);
+  if (estimatedTokens > 0 && input.remainingTokens < estimatedTokens) {
+    const shortfall = estimatedTokens - input.remainingTokens;
     blockers.push({
       dimension: "tokens",
       title: "当前 Token 额度不足",
-      userMessage: `完整分析最坏约需 ${worstTokens} Token，当前剩余 ${input.remainingTokens}，还差 ${shortfall}。`,
-      required: worstTokens,
+      userMessage: `本阶段预计约需 ${estimatedTokens} Token，当前剩余 ${input.remainingTokens}，还差 ${shortfall}。`,
+      required: estimatedTokens,
       available: input.remainingTokens,
       shortfall,
-      estimated: Math.round(input.envelope.full.expected * tokenPerReq),
-      worstCase: worstTokens,
+      estimated: estimatedTokens,
+      worstCase: Number(input.stage1WorstTokens) || null,
     });
   }
-  const costPerReq = 0.01;
-  const worstCost = Math.round(input.envelope.full.worst * costPerReq * 1000) / 1000;
-  if (input.remainingCost + 1e-9 < worstCost) {
-    const shortfall = Math.round((worstCost - input.remainingCost) * 1000) / 1000;
+  const estimatedCost = Math.max(0, Number(input.stage1EstimatedCost) || 0);
+  if (estimatedCost > 0 && input.remainingCost + 1e-9 < estimatedCost) {
+    const shortfall = Math.round((estimatedCost - input.remainingCost) * 1000) / 1000;
     blockers.push({
       dimension: "estimated_cost",
       title: "当前费用额度不足",
-      userMessage: `完整分析最坏约需 ${worstCost} CNY，当前剩余约 ${input.remainingCost} CNY，还差 ${shortfall} CNY。`,
-      required: worstCost,
+      userMessage: `本阶段预计约需 ${estimatedCost} CNY，当前剩余约 ${input.remainingCost} CNY，还差 ${shortfall} CNY。`,
+      required: estimatedCost,
       available: input.remainingCost,
       shortfall,
-      estimated: Math.round(input.envelope.full.expected * costPerReq * 1000) / 1000,
-      worstCase: worstCost,
+      estimated: estimatedCost,
+      worstCase: Number(input.stage1WorstCost ?? input.stage1CostWorst) || null,
     });
   }
   return blockers;

@@ -50,7 +50,12 @@
   border-color: #b7dfc4;
 }
 
-.chapter-analysis-status-badge.state-failed,
+.chapter-analysis-status-badge.state-failed {
+  background: #fdecec;
+  border-color: #e8b4b4;
+  color: #8a3030;
+}
+
 .chapter-analysis-status-badge.state-partial {
   background: #fff4e5;
   border-color: #f0d2a0;
@@ -62,9 +67,55 @@
 }
 
 .chapter-analysis-status-badge.state-awaiting_budget_adjustment,
-.chapter-analysis-status-badge.state-aborted_by_limit {
+.chapter-analysis-status-badge.state-aborted_by_limit,
+.chapter-analysis-status-badge.state-provider_recovery {
   background: #fff4e5;
   border-color: #f0d2a0;
+  color: #8a5a10;
+}
+
+.unified-recovery-card.recovery-failed {
+  border-color: #e8b4b4;
+}
+
+.unified-recovery-card.recovery-paused {
+  border-color: #f0d2a0;
+}
+
+.chapter-analysis-current-work {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.chapter-analysis-fold {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+.chapter-analysis-fold > summary {
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--text);
+  list-style: none;
+}
+
+.chapter-analysis-fold > summary::-webkit-details-marker {
+  display: none;
+}
+
+.chapter-analysis-fold[open] > summary {
+  border-bottom: 1px solid var(--line);
+}
+
+.chapter-analysis-fold .chapter-analysis-run-meta {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
 .chapter-analysis-run-meta {
@@ -158,6 +209,11 @@
 
 .chapter-analysis-stages li[data-tone="done"] {
   color: var(--text);
+}
+
+.chapter-analysis-stages li[data-tone="failed"] {
+  color: #b45309;
+  font-weight: 600;
 }
 
 .stage-mark {

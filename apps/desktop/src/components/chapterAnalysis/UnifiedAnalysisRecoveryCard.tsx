@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Run } from "../../types";
 import { analysisRecoveryApi } from "../../services/analysisRecoveryApi";
+import { mapRunToUiState } from "./mapAnalysisUiState";
 
 type Props = {
   run: Run;
@@ -38,6 +39,12 @@ export function UnifiedAnalysisRecoveryCard({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const [proposalOpen, setProposalOpen] = useState(false);
+  const uiState = mapRunToUiState(run);
+  const isFailed = uiState === "failed";
+  const title = isFailed ? "分析未完成" : "分析已暂停";
+  const lead = isFailed
+    ? "StoryLens 在分析过程中遇到了问题。已经完成的分析结果会被保留。"
+    : "当前进度已保存，可以稍后继续。";
 
   const planQuery = useQuery({
     queryKey: ["analysis-recovery-plan", run.id],
@@ -138,8 +145,9 @@ export function UnifiedAnalysisRecoveryCard({
   };
 
   const body = (
-    <div data-testid="unified-recovery-body">
-      <h3 data-testid="unified-recovery-title">分析已暂停</h3>
+    <div data-testid="unified-recovery-body" data-recovery-kind={isFailed ? "failed" : "paused"}>
+      <h3 data-testid="unified-recovery-title">{title}</h3>
+      <p data-testid="unified-recovery-lead">{lead}</p>
       {planQuery.isLoading && <p data-testid="unified-recovery-loading">正在诊断可恢复项…</p>}
       {checkRows.length > 0 && (
         <ul className="unified-recovery-checks" data-testid="unified-recovery-checks">
@@ -285,7 +293,7 @@ export function UnifiedAnalysisRecoveryCard({
           data-testid="budget-pause-modal"
         >
           <header className="modal-header">
-            <h2>分析已暂停</h2>
+            <h2>{title}</h2>
             <button type="button" className="modal-close" aria-label="关闭" onClick={onClose}>
               ×
             </button>
@@ -298,8 +306,9 @@ export function UnifiedAnalysisRecoveryCard({
 
   return (
     <div
-      className="budget-pause-card unified-recovery-card"
+      className={`budget-pause-card unified-recovery-card recovery-${isFailed ? "failed" : "paused"}`}
       data-testid="unified-recovery-card"
+      data-recovery-kind={isFailed ? "failed" : "paused"}
     >
       {/* Compat alias for prior budget-pause shell tests */}
       <div data-testid="budget-pause-card" hidden aria-hidden="true" />

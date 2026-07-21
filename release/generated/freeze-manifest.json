@@ -1,0 +1,65 @@
+{
+  "frozen_at": "2026-07-21T06:48:00Z",
+  "base_version": "1.0.2",
+  "changes": [
+    {
+      "id": "CHG-20260721-001",
+      "title": "短句、残句和单句对白场景边界修复",
+      "status": "ready",
+      "commits": [
+        "e1884c1fc24af95d1bca32713289d63a7b15ee93"
+      ]
+    },
+    {
+      "id": "CHG-20260721-002",
+      "title": "分析授权文案与阅读旅程指标表达优化",
+      "status": "ready",
+      "commits": [
+        "6f03010d70fc72e94567c716c8dba49738dc247f"
+      ]
+    },
+    {
+      "id": "CHG-20260721-003",
+      "title": "Reader Journey 工具栏与响应式布局收口",
+      "status": "ready",
+      "commits": [
+        "3a516f609dd302c484a605d7b696c51e78c79a50"
+      ]
+    },
+    {
+      "id": "CHG-20260721-004",
+      "title": "统一版本管理机制",
+      "status": "ready",
+      "commits": [
+        "8906cd6d0f9fae0c5adf7cb1434b8c561f302430"
+      ]
+    },
+    {
+      "id": "CHG-20260721-005",
+      "title": "分析预算门禁与本地使用额度管理修复",
+      "status": "ready",
+      "commits": [
+        "a8542f2eb4a6cdc982fb98221b1b2cd03ee9c0d9",
+        "96bb68ac22f332517bc0e5bb9b37c73bd8697155"
+      ]
+    },
+    {
+      "id": "CHG-20260721-006",
+      "title": "应用更新用户确认与手动更新入口",
+      "status": "ready-for-staging",
+      "commits": [
+        "0f73058ebccfdabea2a73136dbae022ccd7d0e66"
+      ]
+    },
+    {
+      "id": "CHG-20260721-007",
+      "title": "变更登记池与下一版本发布汇总机制",
+      "status": "ready",
+      "commits": [
+        "4e656f1ca7ec4b5abc6d2780b73a2c5bc800c080",
+        "89eb36bd6fa87092ba2e25b01bc9aaa4207860a0",
+        "c115176fc36676a735cc9ced52da506747e15a8f"
+      ]
+    }
+  ]
+}

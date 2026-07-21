@@ -1,4 +1,5 @@
 import type { ReaderJourneyProgress } from "../../types";
+import { formatJourneyStatus } from "../readerJourney/journeyUiLabels";
 import "./chapterAnalysis.css";
 
 type Props = {
@@ -18,11 +19,12 @@ export function ReaderJourneyProgressCard({
 }: Props) {
   const total = progress?.total_scene_count ?? 0;
   const done = progress?.completed_scene_count ?? 0;
-  const pct = total > 0 ? Math.min(100, Math.round((done / total) * 100)) : 0;
+  const hasProgress = total > 0;
   const failed =
     progress?.status === "failed" ||
     progress?.status === "scene_profiles_partial" ||
     progress?.status === "budget_blocked";
+  const statusLabel = formatJourneyStatus(progress?.status);
 
   return (
     <section
@@ -32,56 +34,58 @@ export function ReaderJourneyProgressCard({
     >
       <header>
         <h2 data-testid="reader-journey-progress-title">正在生成阅读旅程</h2>
-        <p>
-          保持 AnalysisRun #{analysisRunId}
-          ，复用已有 Scene 分析结果；离开本页后任务仍会继续。
-        </p>
+        <p>正在计算场景之间的情绪、节奏和阅读牵引变化。离开本页后任务仍会继续。</p>
       </header>
-      {progress && (
-        <dl data-testid="reader-journey-progress-meta">
-          <div>
-            <dt>JourneyRun</dt>
-            <dd>#{progress.journey_run_id}</dd>
-          </div>
-          <div>
-            <dt>阶段</dt>
-            <dd data-testid="reader-journey-progress-stage">
-              {progress.current_stage || progress.status}
-            </dd>
-          </div>
-          <div>
-            <dt>Scene Profiles</dt>
-            <dd data-testid="reader-journey-progress-scenes">
-              {done} / {total}
-            </dd>
-          </div>
-          <div>
-            <dt>Phase</dt>
-            <dd>{progress.phase_count ?? 0}</dd>
-          </div>
-        </dl>
-      )}
       <div className="reader-journey-progress-meter" data-testid="reader-journey-progress-meter">
-        <div className="reader-journey-progress-meter-bar">
-          <span style={{ width: `${pct}%` }} />
-        </div>
-        <p>
+        <p data-testid="reader-journey-progress-scenes">
           {loading && !progress
             ? "正在连接进度…"
-            : total > 0
-              ? `${done} / ${total}`
-              : progress?.status || "处理中"}
+            : hasProgress
+              ? `已处理 ${done} / ${total} 个场景`
+              : "正在处理场景数据"}
         </p>
+        {progress?.status ? (
+          <p data-testid="reader-journey-progress-stage">
+            状态：{statusLabel}
+          </p>
+        ) : null}
       </div>
       {(failed || errorMessage) && (
         <p className="notice error" data-testid="reader-journey-progress-error">
           {errorMessage ||
             progress?.user_error_message ||
-            progress?.root_error_message ||
-            progress?.root_error_code ||
             "阅读旅程生成失败，可只重试旅程，无需重新分析整章。"}
         </p>
       )}
+      <details className="reader-journey-progress-tech" data-testid="reader-journey-progress-tech">
+        <summary>技术详情</summary>
+        <dl data-testid="reader-journey-progress-meta">
+          <div>
+            <dt>分析任务</dt>
+            <dd>#{analysisRunId}</dd>
+          </div>
+          {progress?.journey_run_id != null ? (
+            <div>
+              <dt>旅程任务</dt>
+              <dd>#{progress.journey_run_id}</dd>
+            </div>
+          ) : null}
+          <div>
+            <dt>原始状态</dt>
+            <dd>{progress?.status || (loading ? "loading" : "—")}</dd>
+          </div>
+          {progress?.current_stage ? (
+            <div>
+              <dt>原始阶段</dt>
+              <dd>{progress.current_stage}</dd>
+            </div>
+          ) : null}
+          <div>
+            <dt>阶段数</dt>
+            <dd>{progress?.phase_count ?? 0}</dd>
+          </div>
+        </dl>
+      </details>
       <button
         type="button"
         className="secondary"

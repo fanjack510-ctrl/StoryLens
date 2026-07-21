@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  classifyCreateBudgetBlockers,
   computeRequestLimitSuggestion,
   estimateFullPipelineRequests,
+  estimatedRequestShortfall,
   fullPipelineRequestShortfall,
 } from "./budgetRecoveryMath";
 
@@ -42,12 +44,61 @@ describe("budgetRecoveryMath", () => {
     );
   });
 
-  it("computes request shortfall for create-time precheck", () => {
+  it("hard-gates on estimated shortfall, not worst-case", () => {
     expect(
-      fullPipelineRequestShortfall({ remainingRequests: 13, fullWorstRequests: 40 }),
-    ).toBe(27);
-    expect(
-      fullPipelineRequestShortfall({ remainingRequests: 50, fullWorstRequests: 40 }),
+      estimatedRequestShortfall({ remainingRequests: 7, estimatedRequests: 7 }),
     ).toBe(0);
+    expect(
+      estimatedRequestShortfall({ remainingRequests: 7, estimatedRequests: 14 }),
+    ).toBe(7);
+    expect(
+      fullPipelineRequestShortfall({ remainingRequests: 7, fullWorstRequests: 14 }),
+    ).toBe(7);
+  });
+
+  it("screenshot case: stage1 estimated fits → no hard blockers", () => {
+    const envelope = estimateFullPipelineRequests({
+      expected_request_count: 7,
+      worst_case_request_count: 14,
+      paragraph_count: 42,
+      transition_count: 41,
+    });
+    const blockers = classifyCreateBudgetBlockers({
+      remainingRequests: 7,
+      remainingTokens: 74114,
+      remainingCost: 4.47905,
+      envelope,
+      stage1EstimatedRequests: 7,
+      stage1EstimatedTokens: 9895,
+      stage1EstimatedCost: 0.052046,
+      stage1WorstRequests: 14,
+      stage1WorstTokens: 22197,
+      stage1WorstCost: 0.14385,
+      providerConnected: true,
+      apiKeyConfigured: true,
+    });
+    expect(blockers).toEqual([]);
+    expect(envelope.full.worst).toBeGreaterThan(7);
+  });
+
+  it("blocks when stage1 estimated requests exceed remaining", () => {
+    const envelope = estimateFullPipelineRequests({
+      expected_request_count: 10,
+      worst_case_request_count: 20,
+      paragraph_count: 42,
+    });
+    const blockers = classifyCreateBudgetBlockers({
+      remainingRequests: 7,
+      remainingTokens: 74114,
+      remainingCost: 4.47905,
+      envelope,
+      stage1EstimatedRequests: 10,
+      stage1EstimatedTokens: 9895,
+      stage1EstimatedCost: 0.052046,
+      providerConnected: true,
+      apiKeyConfigured: true,
+    });
+    expect(blockers.some((b) => b.dimension === "requests")).toBe(true);
+    expect(blockers.find((b) => b.dimension === "requests")?.required).toBe(10);
   });
 });

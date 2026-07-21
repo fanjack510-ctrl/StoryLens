@@ -97,6 +97,14 @@ describe("UnifiedAnalysisRecoveryCard", () => {
     expect(await screen.findByTestId("unified-recovery-title")).toHaveTextContent(
       "分析已暂停",
     );
+    expect(screen.getByTestId("unified-recovery-lead")).toHaveTextContent(
+      "当前进度已保存，可以稍后继续。",
+    );
+    expect(screen.getByTestId("unified-recovery-card")).toHaveAttribute(
+      "data-recovery-kind",
+      "paused",
+    );
+    expect(screen.queryByText("分析未完成")).not.toBeInTheDocument();
     expect(await screen.findByTestId("unified-recovery-blockers")).toHaveTextContent(
       "今日云端请求额度不足",
     );
@@ -156,5 +164,30 @@ describe("UnifiedAnalysisRecoveryCard", () => {
     const tech = await screen.findByTestId("unified-recovery-tech");
     expect(tech).toHaveTextContent("INSUFFICIENT_BUDGET_RESERVATION");
     expect(tech).toHaveTextContent("resume_stage");
+  });
+
+  it("shows failed copy without paused title", async () => {
+    wrap(
+      <UnifiedAnalysisRecoveryCard
+        run={
+          {
+            id: 9,
+            status: "failed",
+            error_code: "SCENE_PIPELINE_FAILED",
+            root_error_code: "SCENE_PIPELINE_FAILED",
+            failed_stage: "scene_analysis",
+          } as any
+        }
+      />,
+    );
+    expect(await screen.findByTestId("unified-recovery-title")).toHaveTextContent("分析未完成");
+    expect(screen.getByTestId("unified-recovery-lead")).toHaveTextContent(
+      "StoryLens 在分析过程中遇到了问题。已经完成的分析结果会被保留。",
+    );
+    expect(screen.getByTestId("unified-recovery-card")).toHaveAttribute(
+      "data-recovery-kind",
+      "failed",
+    );
+    expect(screen.queryByText("分析已暂停")).not.toBeInTheDocument();
   });
 });

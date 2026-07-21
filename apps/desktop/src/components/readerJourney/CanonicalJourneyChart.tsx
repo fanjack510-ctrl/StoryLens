@@ -11,7 +11,7 @@ import type {
   JourneySceneNode,
   ReaderJourneyVisualization,
 } from "../../types/readerJourneyVisualization";
-import { METRIC_LABELS_ZH } from "./journeyUiLabels";
+import { formatJourneyMetricLabel, formatJourneyPhaseLabel, formatJourneySceneLabel, formatJourneyScore, formatJourneyRiskSummary, roleLabelZh } from "./journeyUiLabels";
 import { PHASE_BAND_COLORS } from "./journeyVisualTokens";
 import {
   buildLinePathD,
@@ -646,19 +646,44 @@ export function CanonicalJourneyChart({
               height={108}
               data-testid="journey-node-tooltip"
             >
-              <div className="journey-node-tooltip-card" xmlns="http://www.w3.org/1999/xhtml">
+              <div
+                className="journey-node-tooltip-card"
+                {...({ xmlns: "http://www.w3.org/1999/xhtml" } as Record<string, string>)}
+              >
                 <div>
-                  Scene {tooltipNode.scene_ordinal}
-                  {tooltipNode.role ? ` · ${tooltipNode.role}` : ""}
+                  {formatJourneySceneLabel(tooltipNode.scene_ordinal)}
+                  {tooltipNode.role ? ` · ${roleLabelZh(tooltipNode.role)}` : ""}
                 </div>
-                <div>Phase {tooltipNode.phase_ordinal ?? "—"}{tooltipPhase ? ` · ${tooltipPhase.title}` : ""}</div>
                 <div>
-                  {METRIC_LABELS_ZH[metric]}：
-                  {tooltipScore == null ? "—" : Math.round(tooltipScore)}
+                  阶段{" "}
+                  {tooltipPhase
+                    ? formatJourneyPhaseLabel(tooltipPhase.title)
+                    : tooltipNode.phase_ordinal != null
+                      ? String(tooltipNode.phase_ordinal)
+                      : "—"}
                 </div>
-                <div>Hook：{tooltipHook?.summary ?? "—"}</div>
-                <div>Payoff：{tooltipPayoff?.summary ?? "—"}</div>
-                <div>Risk：{tooltipRisk?.summary ?? tooltipRisk?.risk_type ?? "—"}</div>
+                <div>
+                  {formatJourneyMetricLabel(metric)}：
+                  {formatJourneyScore(tooltipScore)}
+                </div>
+                {tooltipHook?.summary ? <div>钩子：{tooltipHook.summary}</div> : null}
+                {tooltipPayoff?.summary ? <div>回报：{tooltipPayoff.summary}</div> : null}
+                {tooltipRisk?.summary || tooltipRisk?.risk_type ? (
+                  <div>
+                    流失风险：
+                    {formatJourneyRiskSummary({
+                      risk_type: tooltipRisk?.risk_type,
+                      summary: tooltipRisk?.summary,
+                      start_scene_ordinal: tooltipRisk?.start_scene_ordinal,
+                      end_scene_ordinal: tooltipRisk?.end_scene_ordinal,
+                      span: tooltipRisk?.span,
+                    })}
+                    <details className="journey-tech-details">
+                      <summary>技术详情</summary>
+                      <code>{tooltipRisk?.risk_type ?? "—"}</code>
+                    </details>
+                  </div>
+                ) : null}
               </div>
             </foreignObject>
           )}

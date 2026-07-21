@@ -431,9 +431,9 @@ async def execute_reader_journey(
                 session,
                 run_id=analysis_run.id,
                 stage=STAGE_READER_JOURNEY_SCENE,
-                required_requests=stage1.worst_case_request_count,
-                required_tokens=stage1.worst_case_total_tokens,
-                required_cost=stage1.worst_case_cost,
+                required_requests=stage1.expected_request_count,
+                required_tokens=stage1.estimated_total_tokens,
+                required_cost=stage1.estimated_cost,
                 remaining_requests=remaining.requests,
                 remaining_tokens=remaining.tokens,
                 remaining_cost=remaining.estimated_cost,
@@ -669,9 +669,9 @@ async def execute_reader_journey(
                 session,
                 run_id=analysis_run.id,
                 stage=STAGE_READER_JOURNEY_CHAPTER,
-                required_requests=stage2.worst_case_request_count,
-                required_tokens=stage2.worst_case_total_tokens,
-                required_cost=stage2.worst_case_cost,
+                required_requests=stage2.expected_request_count,
+                required_tokens=stage2.estimated_total_tokens,
+                required_cost=stage2.estimated_cost,
                 remaining_requests=remaining.requests,
                 remaining_tokens=remaining.tokens,
                 remaining_cost=remaining.estimated_cost,
@@ -929,7 +929,12 @@ def build_preflight_payload(
     stage2 = estimate_reader_journey_chapter_synthesis(scenes, pricing_path=pricing_path)
     pending_scenes = [scene for scene in scenes if scene.id in pending_ids]
     batches = plan_scene_batches(pending_scenes, paragraphs=paragraphs)
-    required = stage1.required
+    # Hard gate: estimated remaining work for both RJ stages (not worst-case).
+    required = BudgetAmounts(
+        stage1.expected_request_count + stage2.expected_request_count,
+        stage1.estimated_total_tokens + stage2.estimated_total_tokens,
+        round(stage1.estimated_cost + stage2.estimated_cost, 6),
+    )
     dims = exceeded_dimensions(required, remaining)
     return {
         "analysis_run_id": analysis_run.id,

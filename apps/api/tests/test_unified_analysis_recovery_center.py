@@ -269,7 +269,12 @@ def test_full_pipeline_preflight_advisory_surfaces_shortfall(client):
     assert resp.status_code == 200, resp.text
     advisory = resp.json()
     assert advisory["full_worst_requests"] > advisory["remaining_requests"]
-    assert advisory["within_budget"] is False
+    # Hard gate uses full_expected, not full_worst.
+    if advisory["full_expected_requests"] > advisory["remaining_requests"]:
+        assert advisory["within_budget"] is False
+        assert "requests" in advisory["exceeded_dimensions"]
+    else:
+        assert "requests" not in advisory.get("exceeded_dimensions", [])
 
 
 def test_succeeded_scenes_plan_awaiting_reader_journey_no_new_run(client):

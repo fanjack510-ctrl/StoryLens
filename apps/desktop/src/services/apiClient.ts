@@ -1,5 +1,13 @@
-export const API_BASE =
-  import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
+let apiBase = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
+
+export function getApiBase(): string {
+  return apiBase;
+}
+
+export function setApiBase(url: string): void {
+  apiBase = url.replace(/\/$/, "");
+}
+
 export class ApiError extends Error {
   constructor(
     public code: string,
@@ -43,7 +51,7 @@ function unwrapErrorPayload(payload: any): Record<string, any> {
 export async function api<T>(path: string, options?: RequestInit): Promise<T> {
   let response: Response;
   try {
-    response = await fetch(`${API_BASE}${path}`, {
+    response = await fetch(`${getApiBase()}${path}`, {
       ...options,
       headers: {
         ...(options?.body instanceof FormData
@@ -55,12 +63,12 @@ export async function api<T>(path: string, options?: RequestInit): Promise<T> {
   } catch {
     throw new ApiError(
       "BACKEND_OFFLINE",
-      "无法连接后端服务",
+      "无法连接本地分析服务",
       0,
       {},
       undefined,
       true,
-      "请确认 StoryLens API 已启动后重试",
+      "请确认 StoryLens 已完全启动；若刚打开，请稍等片刻后重试。若仍失败，请重启应用。",
     );
   }
   if (!response.ok) {

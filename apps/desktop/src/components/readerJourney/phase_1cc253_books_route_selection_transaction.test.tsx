@@ -134,7 +134,7 @@ describe("Phase 1C-C.2.5.3 books route selection transaction", () => {
       expect(last).toMatch(/inspector=scene/);
       expect(last).not.toMatch(/inspector=phase/);
     });
-    expect(screen.getByTestId("scene-detail-title")).toHaveTextContent("Scene 14");
+    expect(screen.getByTestId("scene-detail-title")).toHaveTextContent("场景 14");
   });
 
   it("Rhythm click commits scene URL atomically", async () => {

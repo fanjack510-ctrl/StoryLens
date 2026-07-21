@@ -3,11 +3,11 @@
  * Proves one canonical v2.7 template for all books/chapters/routes.
  * Zero model calls; no AnalysisRun / ReaderJourneyRun creation.
  */
-import { cleanup, render } from "@testing-library/react";
+import { cleanup, fireEvent, render } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ReaderJourneySyncWorkspace } from "./ReaderJourneySyncWorkspace";
 import { ReaderJourneyWorkspace } from "./ReaderJourneyWorkspace";
 import {
@@ -37,6 +37,10 @@ vi.mock("../../services/booksApi", () => ({
 }));
 
 afterEach(cleanup);
+
+beforeEach(() => {
+  localStorage.clear();
+});
 
 const fixtures = buildSingleChapterTemplateFixtures();
 
@@ -85,6 +89,27 @@ function makeScenes(fixture: TemplateChapterFixture): SceneResultItem[] {
   }));
 }
 
+function mockWorkspaceWidth(width = 1600) {
+  Object.defineProperty(HTMLElement.prototype, "getBoundingClientRect", {
+    configurable: true,
+    value() {
+      return {
+        width,
+        height: 900,
+        top: 0,
+        left: 0,
+        bottom: 900,
+        right: width,
+        x: 0,
+        y: 0,
+        toJSON() {
+          return {};
+        },
+      };
+    },
+  });
+}
+
 function renderCanonical(
   fixture: TemplateChapterFixture,
   options: {
@@ -94,19 +119,22 @@ function renderCanonical(
     initial?: string;
   } = {},
 ) {
+  mockWorkspaceWidth(1600);
   const marker = options.marker ?? "v2.7-base";
   const route = options.route ?? "canonical";
   return render(
     <MemoryRouter initialEntries={[options.initial ?? "/?tab=reader-journey&overview=curve"]}>
-      <TemplateStandIn marker={marker} route={route}>
-        <ReaderJourneyWorkspace
-          visualization={fixture.visualization}
-          chapterTitle={fixture.chapterTitle}
-          onLocateEvidence={vi.fn()}
-          activeSceneOrdinal={options.activeSceneOrdinal ?? null}
-          activePhaseOrdinal={null}
-        />
-      </TemplateStandIn>
+      <div style={{ width: 1600 }}>
+        <TemplateStandIn marker={marker} route={route}>
+          <ReaderJourneyWorkspace
+            visualization={fixture.visualization}
+            chapterTitle={fixture.chapterTitle}
+            onLocateEvidence={vi.fn()}
+            activeSceneOrdinal={options.activeSceneOrdinal ?? null}
+            activePhaseOrdinal={null}
+          />
+        </TemplateStandIn>
+      </div>
     </MemoryRouter>,
   );
 }
@@ -199,6 +227,16 @@ describe("Phase 1D-A single-chapter journey template governance", () => {
   it("keeps Inspector Shell for empty selection across fixtures", () => {
     for (const fixture of fixtures) {
       const { container, unmount } = renderCanonical(fixture, { activeSceneOrdinal: null });
+      // Curve-first default keeps Inspector collapsed; open it without relying on toggle
+      // (toggle would close an already-open pane left by local prefs / layout).
+      const expand = container.querySelector('[data-testid="journey-inspector-summary-expand"]');
+      if (expand) {
+        fireEvent.click(expand);
+      } else if (!container.querySelector('[data-testid="journey-detail-pane"]')) {
+        const toggle = container.querySelector('[data-testid="journey-inspector-toggle"]');
+        expect(toggle).toBeTruthy();
+        fireEvent.click(toggle!);
+      }
       expect(container.querySelector('[data-testid="journey-detail-pane"]')).toBeTruthy();
       expect(container.querySelector('[data-testid="journey-detail-empty"]')).toBeTruthy();
       unmount();

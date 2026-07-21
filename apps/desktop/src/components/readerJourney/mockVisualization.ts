@@ -22,7 +22,7 @@ function makeNode(
     importance_score: role === "core" ? 70 : role === "secondary" ? 45 : 20,
     importance_formula_version: "1.1",
     deterministic_reasons: ["test"],
-    scene_value_summary: `Scene ${ordinal} 价值摘要`,
+    scene_value_summary: `场景 ${ordinal} 进一步推进人物关系与阅读期待。`,
     dominant_emotion: "紧张",
     engagement: { engagement_score: engagement },
     scores: {

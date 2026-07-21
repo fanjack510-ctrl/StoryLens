@@ -1,10 +1,12 @@
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AppShell } from "./AppShell";
 import { HomePage } from "../../pages/HomePage";
 import { LibraryPage } from "../../pages/LibraryPage";
+import { useOnboardingStore } from "../../stores/onboardingStore";
+import { useUiStore } from "../../stores/uiStore";
 
 vi.stubGlobal(
   "fetch",
@@ -17,6 +19,12 @@ vi.stubGlobal(
       );
     }
     if (href.includes("/books")) {
+      return new Response(JSON.stringify([]), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    if (href.includes("/model-providers") || href.includes("/providers")) {
       return new Response(JSON.stringify([]), {
         status: 200,
         headers: { "Content-Type": "application/json" },
@@ -89,10 +97,14 @@ describe("UI shell navigation", () => {
   beforeEach(() => {
     localStorage.removeItem("storylens.nav.devExpanded");
     localStorage.removeItem("storylens.developerMode");
+    localStorage.removeItem("storylens.onboarding.v1");
+    useOnboardingStore.setState({ status: "completed" });
+    useUiStore.setState({ theme: "light" });
   });
 
   it("shows only library and settings in primary nav", () => {
     renderShell("/library");
+    expect(screen.getByText("小说叙事洞察与创作平台")).toBeInTheDocument();
     const nav = screen.getByTestId("primary-nav");
     expect(within(nav).getByTestId("nav-library")).toBeInTheDocument();
     expect(within(nav).getByTestId("nav-settings")).toBeInTheDocument();
@@ -101,6 +113,8 @@ describe("UI shell navigation", () => {
     expect(within(nav).queryByText("首页")).not.toBeInTheDocument();
     expect(within(nav).queryByText("系统状态")).not.toBeInTheDocument();
     expect(within(nav).queryByText("模型与API")).not.toBeInTheDocument();
+    expect(within(nav).queryByText("模型与 API")).not.toBeInTheDocument();
+    expect(within(nav).queryByText("开发工具")).not.toBeInTheDocument();
   });
 
   it("enables developer mode and keeps old routes reachable", () => {
@@ -108,9 +122,41 @@ describe("UI shell navigation", () => {
     expect(screen.queryByTestId("dev-nav-panel")).not.toBeInTheDocument();
     fireEvent.click(screen.getByLabelText("开发者模式"));
     expect(screen.getByTestId("dev-nav-panel")).toBeInTheDocument();
+    expect(within(screen.getByTestId("dev-nav-panel")).getByText("开发工具")).toBeInTheDocument();
     expect(within(screen.getByTestId("dev-nav-panel")).queryByText("系统状态")).not.toBeInTheDocument();
     fireEvent.click(within(screen.getByTestId("dev-nav-panel")).getByText("任务中心"));
     expect(screen.getByTestId("tasks-route")).toBeInTheDocument();
+  });
+
+  it("theme button toggles real theme state", () => {
+    renderShell("/library");
+    expect(screen.getByTestId("app-shell")).toHaveAttribute("data-theme", "light");
+    fireEvent.click(screen.getByLabelText("切换到深色模式"));
+    expect(useUiStore.getState().theme).toBe("dark");
+    expect(screen.getByTestId("app-shell")).toHaveAttribute("data-theme", "dark");
+    fireEvent.click(screen.getByLabelText("切换到浅色模式"));
+    expect(useUiStore.getState().theme).toBe("light");
+  });
+
+  it("shows friendly local service status instead of raw DB text", async () => {
+    renderShell("/library");
+    await waitFor(() => {
+      expect(screen.getByTestId("nav-service-status")).toHaveTextContent("本地服务正常");
+    });
+    const status = screen.getByTestId("nav-service-status");
+    expect(status).not.toHaveTextContent("DB ok");
+    expect(status.getAttribute("title") || "").toContain("DB");
+  });
+
+  it("shows build-injected app version in footer without stale hardcodes", async () => {
+    renderShell("/library");
+    const footer = await screen.findByTestId("app-footer");
+    await waitFor(() => {
+      expect(footer.textContent || "").toMatch(/StoryLens\s+\d+\.\d+\.\d+/);
+    });
+    expect(footer).not.toHaveTextContent("1.0.0-rc1");
+    expect(footer).not.toHaveTextContent("0.1.0");
+    expect(footer).not.toHaveTextContent("版本未知");
   });
 
   it("redirects home to library", async () => {

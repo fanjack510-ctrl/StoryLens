@@ -6,6 +6,11 @@ import { providersApi } from "../../services/providersApi";
 import { AliyunForm } from "../providers/AliyunForm";
 import { Badge, Loading } from "../common/States";
 import { DEFAULT_AI_SERVICE_ID } from "../../services/aiServiceViewModel";
+import {
+  healthStateLabel,
+  providerDisplayName,
+} from "../providers/providerDisplayLabels";
+import "./settings.css";
 
 const ADVANCED_BUDGET_FIELDS = [
   ["cloud_max_input_tokens_per_request", "单请求最大输入 Token", 1],
@@ -86,15 +91,19 @@ export function SettingsAdvancedTab() {
   }
 
   return (
-    <div className="settings-advanced" data-testid="settings-panel-advanced">
+    <div className="settings-advanced settings-module" data-testid="settings-panel-advanced">
       <article className="settings-panel">
         <header className="settings-panel-header">
           <h2>高级设置</h2>
-          <p>Provider、路由、传输与系统诊断（仅开发者模式）。</p>
+          <p>自定义 Provider、Endpoint、预算明细与诊断。关闭「显示高级设置」不会清除已保存配置。</p>
         </header>
 
-        <section className="advanced-section">
-          <h3>Provider 列表</h3>
+        <p className="settings-advanced-notice" data-testid="advanced-user-notice">
+          普通用户无需修改以下选项。默认折叠；仅在排查连接、预算或诊断问题时展开。
+        </p>
+
+        <details className="advanced-section" data-testid="advanced-provider-section">
+          <summary>Provider 列表</summary>
           <div className="advanced-provider-list" data-testid="advanced-provider-list">
             {(providers.data || []).map((p) => (
               <button
@@ -103,10 +112,11 @@ export function SettingsAdvancedTab() {
                 className={selected === p.name ? "selected" : ""}
                 onClick={() => setSelected(p.name)}
               >
-                <b>{p.name}</b>
-                <small>{p.default_model}</small>
+                <b>{providerDisplayName(p.name)}</b>
+                <small className="settings-tech-id">{p.name}</small>
+                <small className="settings-tech-id">{p.default_model}</small>
                 <Badge tone={p.healthy ? "success" : "warning"}>
-                  {p.health_state || (p.healthy ? "healthy" : "unhealthy")}
+                  {healthStateLabel(p.health_state, p.healthy)}
                 </Badge>
               </button>
             ))}
@@ -114,18 +124,21 @@ export function SettingsAdvancedTab() {
           <p>
             <Link to="/providers">打开完整模型与API页</Link>
           </p>
-        </section>
+        </details>
 
         {selected.startsWith("aliyun_") && (
-          <section className="advanced-section" data-testid="advanced-aliyun-form">
-            <h3>工程配置 · {selected}</h3>
+          <details className="advanced-section" data-testid="advanced-aliyun-form">
+            <summary>
+              工程配置 · {providerDisplayName(selected)}{" "}
+              <code className="settings-tech-id">{selected}</code>
+            </summary>
             <p className="hint">含 Workspace ID、Base URL、Region、Timeout、Retry、Max/Flash、自动路由。</p>
             <AliyunForm provider={selected} onSaved={refresh} />
-          </section>
+          </details>
         )}
 
-        <section className="advanced-section">
-          <h3>传输诊断（DNS / TCP / TLS）</h3>
+        <details className="advanced-section">
+          <summary>传输诊断（DNS / TCP / TLS）</summary>
           <button type="button" onClick={runTransport}>
             运行传输诊断
           </button>
@@ -135,22 +148,28 @@ export function SettingsAdvancedTab() {
               {JSON.stringify(transportResult, null, 2)}
             </pre>
           )}
-        </section>
+        </details>
 
-        <section className="advanced-section">
-          <h3>路由预览</h3>
+        <details className="advanced-section" data-testid="advanced-prompt-version">
+          <summary>Prompt 版本</summary>
+          <p className="muted">由分析流水线自动选择，此处仅作只读说明。</p>
+          <p>当前任务使用的工作流 Prompt 在分析启动时确定，不在此修改。</p>
+        </details>
+
+        <details className="advanced-section">
+          <summary>路由预览</summary>
           <div data-testid="advanced-routing-preview">
             {(routing.data || []).map((r: any) => (
               <div key={r.task}>
-                <b>{r.task}</b> → {r.provider}
+                <b>{r.task}</b> → <code className="settings-tech-id">{r.provider}</code>
               </div>
             ))}
             {!routing.data?.length && <p className="muted">暂无路由数据</p>}
           </div>
-        </section>
+        </details>
 
-        <section className="advanced-section">
-          <h3>高级预算闸门</h3>
+        <details className="advanced-section">
+          <summary>高级预算闸门</summary>
           {ADVANCED_BUDGET_FIELDS.map(([key, label, min]) => (
             <label key={key} className="settings-field">
               <span>{label}</span>
@@ -182,10 +201,10 @@ export function SettingsAdvancedTab() {
           <button type="button" className="primary" onClick={saveAdvancedBudget}>
             保存高级预算参数
           </button>
-        </section>
+        </details>
 
-        <section className="advanced-section">
-          <h3>本地模型服务</h3>
+        <details className="advanced-section">
+          <summary>本地模型服务</summary>
           <div className="settings-actions">
             <button
               type="button"
@@ -200,9 +219,10 @@ export function SettingsAdvancedTab() {
               停止本地服务
             </button>
           </div>
-        </section>
+        </details>
 
-        <section className="advanced-section">
+        <details className="advanced-section">
+          <summary>系统诊断 JSON</summary>
           <header className="settings-panel-header">
             <h3>系统诊断 JSON</h3>
             <button type="button" onClick={() => diagnostics.refetch()}>
@@ -225,7 +245,7 @@ export function SettingsAdvancedTab() {
               </button>
             </>
           )}
-        </section>
+        </details>
       </article>
     </div>
   );

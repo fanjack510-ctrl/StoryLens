@@ -373,7 +373,9 @@ def test_accepting_conflict_preserves_manual_source(testing_session):
     assert conflict.manual_reason_type == "other_manual_boundary"
 
 
-def test_recover_endpoint_requires_consent_and_is_idempotent(client, fake_provider):
+def test_recover_endpoint_requires_consent_and_is_idempotent(
+    client, fake_provider, verified_cloud_pricing
+):
     from app.db.models import ApplicationSetting, ProviderConfiguration
     from app.db.session import get_session_factory
     from app.main import app
@@ -530,7 +532,9 @@ def test_recover_endpoint_requires_consent_and_is_idempotent(client, fake_provid
     assert replay.json()["idempotent_replay"] is True
 
 
-def test_manual_eligibility_ignores_business_validation_http_200(testing_session):
+def test_manual_eligibility_ignores_business_validation_http_200(
+    testing_session, verified_cloud_pricing
+):
     """HTTP 200 + BUSINESS_VALIDATION_ERROR must not mark Provider unhealthy."""
     from datetime import datetime, timezone
 

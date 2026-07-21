@@ -143,7 +143,7 @@ describe("Phase 1C-C.2.4C visual refinement", () => {
     const marker = header.querySelector(".badge-hook, .badge-payoff, .badge-risk");
     if (marker) {
       expect(marker.getAttribute("title")).toBeTruthy();
-      expect(marker.textContent).toMatch(/钩子|回报|风险/);
+      expect(marker.textContent).toMatch(/钩子|回报|流失风险|风险/);
     }
   });
 
@@ -170,6 +170,6 @@ describe("Phase 1C-C.2.4C visual refinement", () => {
     fireEvent.click(screen.getByTestId("journey-marker-full"));
     expect(screen.getByTestId("journey-marker-full").className).toContain("active");
     expect(screen.getByTestId("scene-detail-panel-questions")).toBeInTheDocument();
-    expect(screen.getByTestId("scene-detail-title")).toHaveTextContent("Scene 12");
+    expect(screen.getByTestId("scene-detail-title")).toHaveTextContent("场景 12");
   });
 });

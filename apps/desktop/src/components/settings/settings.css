@@ -1,0 +1,233 @@
+/* Settings module — local styles (avoid global / parallel polish conflicts) */
+
+.settings-module .settings-panel + .settings-panel {
+  margin-top: var(--space-4, 1rem);
+}
+
+.settings-zone {
+  margin: var(--space-4, 1rem) 0;
+  padding: var(--space-3, 0.75rem) 0 0;
+  border-top: 1px solid var(--color-border-subtle, #e8e8e0);
+}
+
+.settings-zone:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+
+.settings-zone > h3 {
+  margin: 0 0 var(--space-2, 0.5rem);
+  font-size: var(--font-size-md, 0.95rem);
+}
+
+.settings-zone > p.zone-hint,
+.zone-hint {
+  margin: 0 0 var(--space-3, 0.75rem);
+  font-size: var(--font-size-sm, 0.875rem);
+  color: var(--color-text-muted, #6b6b63);
+}
+
+.settings-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  gap: var(--space-3, 0.75rem);
+  margin: var(--space-3, 0.75rem) 0 var(--space-4, 1rem);
+}
+
+.settings-stat {
+  border: 1px solid var(--color-border-subtle, #d8d8d0);
+  border-radius: var(--radius-md, 8px);
+  padding: var(--space-3, 0.75rem);
+  background: var(--color-bg-app, #f5f5f1);
+}
+
+.settings-stat dt {
+  margin: 0;
+  font-size: var(--font-size-xs, 0.75rem);
+  color: var(--color-text-muted, #6b6b63);
+}
+
+.settings-stat dd {
+  margin: 0.25rem 0 0;
+  font-size: var(--font-size-lg, 1.1rem);
+  font-weight: 600;
+}
+
+.settings-path-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.settings-path-value {
+  font-family: var(--font-mono, ui-monospace, Consolas, monospace);
+  font-size: 0.82rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--color-border-subtle, #d8d8d0);
+  border-radius: var(--radius-md, 8px);
+  background: var(--color-bg-surface, #fff);
+}
+
+.settings-card {
+  border: 1px solid var(--color-border-subtle, #d8d8d0);
+  border-radius: var(--radius-lg, 10px);
+  background: var(--color-bg-surface, #fff);
+  padding: var(--space-4, 1rem) var(--space-5, 1.25rem);
+  margin-bottom: var(--space-4, 1rem);
+}
+
+.settings-card > header h2,
+.settings-card > header h3 {
+  margin: 0.1rem 0;
+  font-size: var(--font-size-lg, 1.05rem);
+}
+
+.settings-card > header p {
+  margin: 0.25rem 0 0;
+  color: var(--color-text-secondary, #4a4a44);
+  font-size: var(--font-size-sm, 0.875rem);
+}
+
+.settings-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-md, 8px);
+  font-size: var(--font-size-sm, 0.875rem);
+  font-weight: 600;
+  border: 1px solid var(--color-border-subtle, #d8d8d0);
+}
+
+.settings-status-pill[data-tone="success"] {
+  background: color-mix(in srgb, var(--color-brand, #2f6b57) 12%, transparent);
+  border-color: color-mix(in srgb, var(--color-brand, #2f6b57) 35%, transparent);
+  color: var(--color-brand, #2f6b57);
+}
+
+.settings-status-pill[data-tone="warning"] {
+  background: color-mix(in srgb, #b8860b 14%, transparent);
+  border-color: color-mix(in srgb, #b8860b 40%, transparent);
+  color: #7a5a10;
+}
+
+.settings-status-pill[data-tone="neutral"] {
+  background: var(--color-bg-app, #f5f5f1);
+  color: var(--color-text-secondary, #4a4a44);
+}
+
+.settings-status-pill[data-tone="danger"] {
+  background: color-mix(in srgb, #a33 10%, transparent);
+  color: #8a2f2f;
+}
+
+.settings-appearance-preview {
+  margin-top: var(--space-3, 0.75rem);
+  padding: var(--space-4, 1rem);
+  border: 1px solid var(--color-border-subtle, #d8d8d0);
+  border-radius: var(--radius-md, 8px);
+  background: var(--color-bg-app, #f5f5f1);
+}
+
+.settings-appearance-preview[data-theme="dark"] {
+  background: #1c1e1d;
+  border-color: #333;
+  color: #e8e8e0;
+}
+
+.settings-appearance-preview .preview-label {
+  margin: 0 0 0.5rem;
+  font-size: var(--font-size-xs, 0.75rem);
+  color: var(--color-text-muted, #6b6b63);
+}
+
+.settings-appearance-preview[data-theme="dark"] .preview-label {
+  color: #9a9a90;
+}
+
+.settings-appearance-preview .preview-prose {
+  font-family: var(--font-reading, "Source Han Serif SC", "Noto Serif SC", serif);
+  margin: 0;
+}
+
+.settings-license-activate {
+  margin-top: var(--space-3, 0.75rem);
+  padding: var(--space-4, 1rem);
+  border: 1px dashed var(--color-border-subtle, #c8c8c0);
+  border-radius: var(--radius-md, 8px);
+  background: var(--color-bg-app, #f5f5f1);
+}
+
+.settings-license-activate h3 {
+  margin: 0 0 0.35rem;
+  font-size: var(--font-size-md, 0.95rem);
+}
+
+.settings-license-meta {
+  font-family: var(--font-mono, ui-monospace, Consolas, monospace);
+  font-size: 0.8rem;
+  color: var(--color-text-muted, #6b6b63);
+  word-break: break-all;
+}
+
+.settings-advanced-notice {
+  margin: 0 0 var(--space-4, 1rem);
+  padding: var(--space-3, 0.75rem);
+  border-radius: var(--radius-md, 8px);
+  background: var(--color-bg-app, #f5f5f1);
+  border: 1px solid var(--color-border-subtle, #d8d8d0);
+  font-size: var(--font-size-sm, 0.875rem);
+  color: var(--color-text-secondary, #4a4a44);
+}
+
+.settings-advanced details.advanced-section {
+  margin: var(--space-3, 0.75rem) 0;
+  padding: var(--space-3, 0.75rem) 0;
+  border-bottom: 1px solid var(--color-border-subtle, #e8e8e0);
+}
+
+.settings-advanced details.advanced-section > summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: var(--font-size-md, 0.95rem);
+  list-style: none;
+}
+
+.settings-advanced details.advanced-section > summary::-webkit-details-marker {
+  display: none;
+}
+
+.settings-advanced details.advanced-section > summary::before {
+  content: "▸ ";
+  color: var(--color-text-muted, #6b6b63);
+}
+
+.settings-advanced details.advanced-section[open] > summary::before {
+  content: "▾ ";
+}
+
+.settings-tech-id {
+  font-family: var(--font-mono, ui-monospace, Consolas, monospace);
+  font-size: 0.85em;
+  color: var(--color-text-muted, #6b6b63);
+}
+
+.settings-ai-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  gap: var(--space-2, 0.5rem);
+  margin: var(--space-3, 0.75rem) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.settings-ai-facts li {
+  font-size: var(--font-size-sm, 0.875rem);
+  padding: 0.4rem 0.55rem;
+  border-radius: var(--radius-sm, 6px);
+  background: var(--color-bg-app, #f5f5f1);
+}

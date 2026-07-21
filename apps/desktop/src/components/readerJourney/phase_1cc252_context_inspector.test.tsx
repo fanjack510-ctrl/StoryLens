@@ -35,6 +35,15 @@ function renderAt(path: string, props: Record<string, unknown> = {}) {
   );
 }
 
+
+function openExportMenu() {
+  const more = screen.queryByTestId("journey-more-chart-settings");
+  if (more && !screen.queryByTestId("journey-export-png")) {
+    fireEvent.click(more);
+  }
+  return screen.getByTestId("journey-export-png");
+}
+
 describe("Phase 1C-C.2.5.2 Context Inspector", () => {
   it("does not render Phase detail above the curve", () => {
     renderAt("/?overview=curve&scene=12&inspector=phase", {
@@ -75,7 +84,7 @@ describe("Phase 1C-C.2.5.2 Context Inspector", () => {
     });
     expect(screen.getByTestId("journey-phase-detail-panel")).toBeInTheDocument();
     fireEvent.click(screen.getByTestId("journey-curve-node-10"));
-    expect(screen.getByTestId("scene-detail-title")).toHaveTextContent("Scene 10");
+    expect(screen.getByTestId("scene-detail-title")).toHaveTextContent("场景 10");
     expect(screen.queryByTestId("journey-phase-detail-panel")).not.toBeInTheDocument();
   });
 
@@ -117,7 +126,7 @@ describe("Phase 1C-C.2.5.2 Context Inspector", () => {
     });
     fireEvent.click(screen.getByTestId("phase-detail-tab-scenes"));
     fireEvent.click(screen.getByTestId("phase-related-scene-2"));
-    expect(screen.getByTestId("scene-detail-title")).toHaveTextContent("Scene 2");
+    expect(screen.getByTestId("scene-detail-title")).toHaveTextContent("场景 02");
     expect(onSelectionChange).toHaveBeenCalledWith(
       expect.objectContaining({ activeSceneOrdinal: 2, source: "journey_scene" }),
     );
@@ -140,7 +149,7 @@ describe("Phase 1C-C.2.5.2 Context Inspector", () => {
     ]);
     expect(screen.getByTestId("journey-metric-select")).toHaveTextContent("阅读牵引");
     fireEvent.click(screen.getByTestId("journey-metric-select"));
-    expect(screen.getByTestId("journey-metric-select-menu")).toBeInTheDocument();
+    expect(screen.getByTestId("journey-metric-select-menu-panel")).toBeInTheDocument();
     expect(screen.getByTestId("journey-metric-engagement")).toBeInTheDocument();
     expect(screen.getByTestId("journey-metric-curiosity")).toBeInTheDocument();
     expect(screen.getByTestId("journey-metric-payoff")).toBeInTheDocument();
@@ -153,18 +162,18 @@ describe("Phase 1C-C.2.5.2 Context Inspector", () => {
   it("uses compact legend by default and expands in full marker mode", () => {
     renderAt("/?overview=curve");
     const legend = screen.getByTestId("journey-curve-legend");
-    expect(legend).toHaveTextContent("当前 Scene");
-    expect(legend).toHaveTextContent("Hook");
-    expect(legend).toHaveTextContent("Payoff");
-    expect(legend).toHaveTextContent("Risk");
-    expect(legend.textContent).not.toMatch(/Secondary/);
-    expect(legend.textContent).not.toMatch(/answered question/);
+    expect(legend).toHaveTextContent("当前场景");
+    expect(legend).toHaveTextContent("钩子");
+    expect(legend).toHaveTextContent("回报");
+    expect(legend).toHaveTextContent("流失风险");
+    expect(legend.textContent).not.toMatch(/次级节点/);
+    expect(legend.textContent).not.toMatch(/已回答问题/);
 
     fireEvent.click(screen.getByTestId("journey-marker-full"));
-    expect(legend).toHaveTextContent("answered question");
-    expect(legend).toHaveTextContent("transformed question");
-    expect(legend).toHaveTextContent("Secondary");
-    expect(legend).toHaveTextContent("Beat");
+    expect(legend).toHaveTextContent("已回答问题");
+    expect(legend).toHaveTextContent("问题升级");
+    expect(legend).toHaveTextContent("次级节点");
+    expect(legend).toHaveTextContent("节拍节点");
     expect(legend).toHaveTextContent("派生标记");
   });
 
@@ -198,7 +207,8 @@ describe("Phase 1C-C.2.5.2 Context Inspector", () => {
       activeSceneOrdinal: 12,
       activePhaseOrdinal: 3,
     });
-    fireEvent.click(screen.getByTestId("journey-export-png"));
+    fireEvent.click(screen.getByTestId("journey-more-chart-settings"));
+    fireEvent.click(openExportMenu());
     await vi.waitFor(() => {
       expect(exportModule.exportJourneyPng).toHaveBeenCalled();
     });

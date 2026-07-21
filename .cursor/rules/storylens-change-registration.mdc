@@ -1,0 +1,35 @@
+---
+description: StoryLens 功能变更必须登记到下一版本待发布池；日常不升版、不构建、不发布
+alwaysApply: true
+---
+
+# StoryLens 变更登记规则
+
+## 每次功能修改
+
+1. 开始前创建或确认 change id：`python scripts/change_registry.py register ...`
+2. 源码提交必须关联 change id（优先 commit trailer `StoryLens-Change: CHG-...`，或 `attach-commit`）
+3. 完成后更新登记状态、测试与验证证据
+4. 日常功能修改**不得**修改 `VERSION`
+5. 用户未明确要求发布时**不得** `bump`
+6. 用户未明确要求发布时**不得**构建正式安装包
+7. 用户未明确要求发布时**不得**修改远端 `latest.json`
+8. 用户未明确同意时**不得**自动安装更新
+
+## 状态
+
+`registered → implemented → tested → verified → ready-for-staging → ready → released`  
+无 commit / 无测试 / 无验证证据不得跳到 `ready`。
+
+## 完成报告必须输出
+
+- change id
+- 关联 commit
+- 登记状态
+- 是否进入下一版本
+- 是否修改 VERSION
+- 是否构建
+- 是否发布
+- 是否推送
+
+详细说明见 `docs/change-registration-and-release.md`。

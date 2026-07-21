@@ -295,6 +295,11 @@ def update_counts(session: Session, review: BoundaryReviewSession) -> None:
 
 
 def preview_ranges(session: Session, review: BoundaryReviewSession):
+    from app.services.scene_fragment_consolidation import (
+        BoundaryMeta,
+        consolidate_boundary_ids,
+    )
+
     paragraphs = _paragraphs(session, review.chapter_id)
     decisions = list(
         session.scalars(
@@ -306,7 +311,31 @@ def preview_ranges(session: Session, review: BoundaryReviewSession):
     )
     positions = {item.id: item.paragraph_index for item in paragraphs}
     ids = sorted({item.left_paragraph_id for item in decisions}, key=positions.get)
-    return paragraphs, ids, scene_ranges(paragraphs, ids)
+    boundary_meta = {
+        item.left_paragraph_id: BoundaryMeta(
+            reason_codes=frozenset(
+                [item.model_reason_code] if item.model_reason_code else []
+            ),
+            concise_reason=(
+                item.deterministic_reason
+                or item.manual_reason_type
+                or item.user_reason
+                or ""
+            ),
+        )
+        for item in decisions
+    }
+    consolidated = consolidate_boundary_ids(paragraphs, ids, boundary_meta)
+    return (
+        paragraphs,
+        consolidated,
+        scene_ranges(
+            paragraphs,
+            consolidated,
+            consolidate_short_fragments=False,
+            boundary_meta=boundary_meta,
+        ),
+    )
 
 
 def confirm_review(

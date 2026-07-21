@@ -1,43 +1,68 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { useDeveloperModeStore } from "../stores/developerModeStore";
-import { SettingsGeneralTab } from "../components/settings/SettingsGeneralTab";
+import { useAdvancedSettingsStore } from "../stores/advancedSettingsStore";
 import { SettingsAiServiceTab } from "../components/settings/SettingsAiServiceTab";
-import { SettingsBudgetPrivacyTab } from "../components/settings/SettingsBudgetPrivacyTab";
+import { SettingsUsageCostTab } from "../components/settings/SettingsUsageCostTab";
+import { SettingsDataStorageTab } from "../components/settings/SettingsDataStorageTab";
+import { SettingsPrivacyUpdateTab } from "../components/settings/SettingsPrivacyUpdateTab";
+import { SettingsLicenseTab } from "../components/settings/SettingsLicenseTab";
+import { SettingsAppearanceTab } from "../components/settings/SettingsAppearanceTab";
 import { SettingsAdvancedTab } from "../components/settings/SettingsAdvancedTab";
+import "../components/settings/settings.css";
 
-type TabId = "general" | "ai" | "budget" | "advanced";
+type TabId =
+  | "ai"
+  | "cost"
+  | "data"
+  | "privacy"
+  | "license"
+  | "appearance"
+  | "advanced"
+  | "general"
+  | "budget";
 
 const BASE_TABS: Array<{ id: TabId; label: string }> = [
-  { id: "general", label: "通用" },
-  { id: "ai", label: "AI服务" },
-  { id: "budget", label: "预算与隐私" },
+  { id: "ai", label: "AI 服务" },
+  { id: "cost", label: "使用额度" },
+  { id: "data", label: "数据与存储" },
+  { id: "privacy", label: "隐私与更新" },
+  { id: "license", label: "授权与会员" },
+  { id: "appearance", label: "外观" },
 ];
 
-function tabFromSearch(raw: string | null): TabId {
-  if (raw === "ai" || raw === "budget" || raw === "advanced" || raw === "general") return raw;
-  return "general";
+function normalizeTab(raw: string | null, showAdvanced: boolean): TabId {
+  if (raw === "general") return "appearance";
+  if (raw === "budget") return "cost";
+  if (raw === "advanced") return showAdvanced ? "advanced" : "ai";
+  if (
+    raw === "ai" ||
+    raw === "cost" ||
+    raw === "data" ||
+    raw === "privacy" ||
+    raw === "license" ||
+    raw === "appearance"
+  ) {
+    return raw;
+  }
+  return "ai";
 }
 
 export function SettingsPage() {
-  const developerMode = useDeveloperModeStore((s) => s.developerMode);
+  const showAdvanced = useAdvancedSettingsStore((s) => s.showAdvancedSettings);
   const [searchParams] = useSearchParams();
-  const [tab, setTab] = useState<TabId>(() => tabFromSearch(searchParams.get("tab")));
+  const [tab, setTab] = useState<TabId>(() =>
+    normalizeTab(searchParams.get("tab"), showAdvanced),
+  );
 
   useEffect(() => {
-    const next = tabFromSearch(searchParams.get("tab"));
-    if (next === "advanced" && !developerMode) {
-      setTab("ai");
-      return;
-    }
-    setTab(next);
-  }, [searchParams, developerMode]);
+    setTab(normalizeTab(searchParams.get("tab"), showAdvanced));
+  }, [searchParams, showAdvanced]);
 
-  const tabs = developerMode
+  const tabs = showAdvanced
     ? [...BASE_TABS, { id: "advanced" as const, label: "高级设置" }]
     : BASE_TABS;
 
-  const activeTab = !developerMode && tab === "advanced" ? "general" : tab;
+  const activeTab = tab === "advanced" && !showAdvanced ? "ai" : tab;
   const focus = searchParams.get("focus");
 
   return (
@@ -45,7 +70,7 @@ export function SettingsPage() {
       <div className="page-title settings-page-title">
         <div>
           <h1>设置</h1>
-          <p>外观偏好、AI 服务与预算隐私。</p>
+          <p>配置 AI 服务、费用、数据与外观。多数技术项由软件自动处理。</p>
         </div>
       </div>
 
@@ -65,15 +90,18 @@ export function SettingsPage() {
       </nav>
 
       <div className="settings-content" data-testid="settings-content">
-        {activeTab === "general" && <SettingsGeneralTab />}
         {activeTab === "ai" && (
           <SettingsAiServiceTab
             autoOpenWizard={focus === "api_key"}
             focusField={focus === "api_key" ? "api_key" : undefined}
           />
         )}
-        {activeTab === "budget" && <SettingsBudgetPrivacyTab />}
-        {activeTab === "advanced" && developerMode && <SettingsAdvancedTab />}
+        {activeTab === "cost" && <SettingsUsageCostTab />}
+        {activeTab === "data" && <SettingsDataStorageTab />}
+        {activeTab === "privacy" && <SettingsPrivacyUpdateTab />}
+        {activeTab === "license" && <SettingsLicenseTab />}
+        {activeTab === "appearance" && <SettingsAppearanceTab />}
+        {activeTab === "advanced" && showAdvanced && <SettingsAdvancedTab />}
       </div>
     </section>
   );

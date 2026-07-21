@@ -30,7 +30,7 @@ class InsufficientBudgetReservation(ValueError):
     def as_error_detail(self) -> dict[str, object]:
         return {
             "error_code": "INSUFFICIENT_BUDGET_RESERVATION",
-            "message": "最坏情况超出剩余云端预算",
+            "message": "预计用量超出剩余云端预算",
             "stage": self.stage,
             "required": {
                 "requests": self.required.requests,
@@ -54,15 +54,15 @@ def _hint(dims: list[str], required: BudgetAmounts, remaining: BudgetAmounts) ->
     parts: list[str] = []
     if "requests" in dims:
         parts.append(
-            f"请求次数不足：最坏需要{required.requests}次，当前剩余{remaining.requests}次。"
+            f"请求次数不足：预计需要{required.requests}次，当前剩余{remaining.requests}次。"
         )
     if "tokens" in dims:
         parts.append(
-            f"Token不足：最坏需要{required.tokens} Token，当前剩余{remaining.tokens} Token。"
+            f"Token不足：预计需要{required.tokens} Token，当前剩余{remaining.tokens} Token。"
         )
     if "estimated_cost" in dims:
         parts.append(
-            f"费用不足：最坏需要约{required.estimated_cost} CNY，"
+            f"费用不足：预计需要约{required.estimated_cost} CNY，"
             f"当前剩余约{remaining.estimated_cost} CNY。"
         )
     return " ".join(parts) or "请调整云端预算后重试。"

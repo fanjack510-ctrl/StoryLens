@@ -1,0 +1,36 @@
+/**
+ * Public barrel for StoryLens VIP license client foundation.
+ */
+
+export {
+  createLicenseService,
+  getLicenseService,
+  setLicenseServiceForTests,
+  FEATURE_KEYS,
+  FEATURE_REGISTRY,
+  hasFeature,
+  listVipFeatureDefinitions,
+  LICENSE_FILE_RELATIVE_PATH,
+  LICENSE_STORAGE_TARGET_DESCRIPTION,
+  createMemoryLicenseStorage,
+  createDevLocalStorageLicenseStorage,
+  createReservedTauriLicenseStorage,
+  MOCK_ACTIVATION_CODES,
+  MOCK_LICENSE_SERVICE_MARKER,
+  isMockActivationAllowed,
+  LicenseServiceError,
+  type LicenseService,
+  type FeatureGateResult,
+  type FeatureKey,
+  type LicenseInfo,
+  type LicenseSnapshot,
+  type LicenseStatus,
+  type StoredLicensePayload,
+  type ActivateLicenseRequest,
+  type ActivateLicenseResponse,
+  type RefreshLicenseRequest,
+  type RefreshLicenseResponse,
+  type DeactivateLicenseRequest,
+  type DeactivateLicenseResponse,
+  type GetLicenseStatusResponse,
+} from "./licenseService";

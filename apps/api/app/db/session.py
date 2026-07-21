@@ -10,10 +10,26 @@ from app.db.models import Base
 
 
 settings = get_settings()
-if settings.database_url.startswith("sqlite:///./"):
-    Path(settings.database_url.removeprefix("sqlite:///./")).parent.mkdir(
-        parents=True, exist_ok=True
-    )
+
+
+def _ensure_sqlite_parent(database_url: str) -> None:
+    if not database_url.startswith("sqlite:///"):
+        return
+    raw = database_url.removeprefix("sqlite:///")
+    # sqlite:///C:/... or sqlite:///./data/... or sqlite:////absolute
+    if raw.startswith("/") and len(raw) > 2 and raw[2] == ":":
+        # sqlite:////C:/path → /C:/path
+        raw = raw[1:]
+    path = Path(raw)
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        raise RuntimeError(
+            f"DATABASE_OPEN_FAILED: 无法创建数据库目录 {path.parent}: {exc}"
+        ) from exc
+
+
+_ensure_sqlite_parent(settings.database_url)
 
 engine = create_engine(
     settings.database_url,

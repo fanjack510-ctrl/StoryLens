@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { analysisApi } from "../../services/analysisApi";
 import { settingsApi } from "../../services/settingsApi";
+import { formatCny, formatTokenCount } from "../analysis/analysisDisplayLabels";
 import type { Run } from "../../types";
 import {
   shouldShowUnifiedRecovery,
@@ -11,6 +12,7 @@ import { ChapterAnalysisFailureCard } from "./ChapterAnalysisFailureCard";
 import { ChapterAnalysisStatusBadge } from "./ChapterAnalysisStatusBadge";
 import {
   budgetSummary,
+  currentWorkLabel,
   elapsedLabel,
   progressCounts,
   readerJourneyStageLabel,
@@ -72,6 +74,7 @@ export function ChapterAnalysisProgressPanel({
   const steps = stageSteps(uiState, run);
   const cost = run ? budgetSummary(run) : null;
   const elapsed = run ? elapsedLabel(run) : null;
+  const currentWork = currentWorkLabel(uiState, run);
   const usageQuery = useQuery({
     queryKey: ["cloud-usage"],
     queryFn: settingsApi.cloudUsage,
@@ -116,12 +119,14 @@ export function ChapterAnalysisProgressPanel({
 
   const showMeter =
     run &&
+    uiState !== "succeeded" &&
     (uiState === "running" ||
       uiState === "partial" ||
       uiState === "boundary_review_required" ||
       uiState === "awaiting_budget_adjustment" ||
       uiState === "aborted_by_limit" ||
-      uiState === "provider_recovery");
+      uiState === "provider_recovery" ||
+      uiState === "reader_journey_processing");
 
   return (
     <aside
@@ -148,85 +153,23 @@ export function ChapterAnalysisProgressPanel({
 
       <ChapterAnalysisStatusBadge state={uiState} />
 
-      {run && (
-        <dl className="chapter-analysis-run-meta" data-testid="chapter-analysis-run-meta">
-          <div>
-            <dt>Run ID</dt>
-            <dd data-testid="chapter-analysis-run-id">#{run.id}</dd>
-          </div>
-          <div>
-            <dt>当前阶段</dt>
-            <dd data-testid="chapter-analysis-stage">{stageLabelForRun(run)}</dd>
-          </div>
-          <div>
-            <dt>Scene 进度</dt>
-            <dd data-testid="chapter-analysis-scene-progress">
-              {counts.total > 0 ? `${counts.current} / ${counts.total}` : "—"}
-            </dd>
-          </div>
-          <div>
-            <dt>当前 Scene</dt>
-            <dd data-testid="chapter-analysis-current-scene">
-              {typeof run.failed_scene_index === "number"
-                ? `#${run.failed_scene_index}`
-                : counts.total > 0
-                  ? counts.current < counts.total
-                    ? `#${counts.current + 1}`
-                    : "已完成"
-                  : "—"}
-            </dd>
-          </div>
-          <div>
-            <dt>Reader Journey</dt>
-            <dd data-testid="chapter-analysis-journey-stage">
-              {readerJourneyStageLabel(run, uiState)}
-            </dd>
-          </div>
-          <div>
-            <dt>状态</dt>
-            <dd data-testid="chapter-analysis-status-text">{uiStateLabel(uiState)}</dd>
-          </div>
-          <div>
-            <dt>今日请求</dt>
-            <dd data-testid="chapter-analysis-today-requests">
-              {typeof usage?.request_count === "number"
-                ? `${usage.request_count}`
-                : typeof run.budget_remaining?.requests === "number"
-                  ? `剩余 ${run.budget_remaining.requests}`
-                  : "—"}
-              {typeof usage?.remaining_requests === "number"
-                ? ` · 剩余 ${usage.remaining_requests}`
-                : ""}
-            </dd>
-          </div>
-          <div>
-            <dt>Token</dt>
-            <dd data-testid="chapter-analysis-today-tokens">
-              {typeof usage?.total_tokens === "number"
-                ? `${usage.total_tokens}`
-                : typeof run.budget_remaining?.tokens === "number"
-                  ? `剩余 ${run.budget_remaining.tokens}`
-                  : "—"}
-            </dd>
-          </div>
-          <div>
-            <dt>费用</dt>
-            <dd data-testid="chapter-analysis-today-cost">
-              {typeof usage?.estimated_cost === "number"
-                ? `${usage.estimated_cost} CNY`
-                : typeof run.budget_remaining?.estimated_cost === "number"
-                  ? `剩余 ${run.budget_remaining.estimated_cost} CNY`
-                  : "—"}
-            </dd>
-          </div>
-        </dl>
+      {currentWork && (
+        <p className="chapter-analysis-current-work" data-testid="chapter-analysis-current-work">
+          {currentWork}
+        </p>
       )}
 
       <ol className="chapter-analysis-stages" data-testid="chapter-analysis-stages">
         {steps.map((step) => (
           <li key={step.id} data-tone={step.tone} data-testid={`chapter-analysis-stage-${step.id}`}>
             <span className="stage-mark" aria-hidden>
-              {step.tone === "done" ? "✓" : step.tone === "active" ? "●" : "○"}
+              {step.tone === "done"
+                ? "✓"
+                : step.tone === "active"
+                  ? "●"
+                  : step.tone === "failed"
+                    ? "!"
+                    : "○"}
             </span>
             {step.label}
           </li>
@@ -250,6 +193,91 @@ export function ChapterAnalysisProgressPanel({
           {elapsed && <p data-testid="chapter-analysis-elapsed">已用时间 {elapsed}</p>}
           {cost && <p data-testid="chapter-analysis-budget">{cost}</p>}
         </div>
+      )}
+
+      {run && (
+        <details className="chapter-analysis-fold" data-testid="chapter-analysis-usage-details">
+          <summary>用量详情</summary>
+          <dl className="chapter-analysis-run-meta">
+            <div>
+              <dt>场景进度</dt>
+              <dd data-testid="chapter-analysis-scene-progress">
+                {counts.total > 0 ? `${counts.current} / ${counts.total}` : "—"}
+              </dd>
+            </div>
+            <div>
+              <dt>当前场景</dt>
+              <dd data-testid="chapter-analysis-current-scene">
+                {typeof run.failed_scene_index === "number"
+                  ? `#${run.failed_scene_index}`
+                  : counts.total > 0
+                    ? counts.current < counts.total
+                      ? `#${counts.current + 1}`
+                      : "已完成"
+                    : "—"}
+              </dd>
+            </div>
+            <div>
+              <dt>今日请求</dt>
+              <dd data-testid="chapter-analysis-today-requests">
+                {typeof usage?.request_count === "number"
+                  ? `${usage.request_count}`
+                  : typeof run.budget_remaining?.requests === "number"
+                    ? `剩余 ${run.budget_remaining.requests}`
+                    : "—"}
+                {typeof usage?.remaining_requests === "number"
+                  ? ` · 剩余 ${usage.remaining_requests}`
+                  : ""}
+              </dd>
+            </div>
+            <div>
+              <dt>Token</dt>
+              <dd data-testid="chapter-analysis-today-tokens">
+                {typeof usage?.total_tokens === "number"
+                  ? formatTokenCount(usage.total_tokens)
+                  : typeof run.budget_remaining?.tokens === "number"
+                    ? `剩余 ${formatTokenCount(run.budget_remaining.tokens)}`
+                    : "—"}
+              </dd>
+            </div>
+            <div>
+              <dt>费用</dt>
+              <dd data-testid="chapter-analysis-today-cost">
+                {typeof usage?.estimated_cost === "number"
+                  ? formatCny(usage.estimated_cost)
+                  : typeof run.budget_remaining?.estimated_cost === "number"
+                    ? `剩余 ${formatCny(run.budget_remaining.estimated_cost)}`
+                    : "—"}
+              </dd>
+            </div>
+          </dl>
+        </details>
+      )}
+
+      {run && (
+        <details className="chapter-analysis-fold" data-testid="chapter-analysis-tech-fold">
+          <summary>技术详情</summary>
+          <dl className="chapter-analysis-run-meta" data-testid="chapter-analysis-run-meta">
+            <div>
+              <dt>Run ID</dt>
+              <dd data-testid="chapter-analysis-run-id">#{run.id}</dd>
+            </div>
+            <div>
+              <dt>当前阶段</dt>
+              <dd data-testid="chapter-analysis-stage">{stageLabelForRun(run)}</dd>
+            </div>
+            <div>
+              <dt>读者旅程</dt>
+              <dd data-testid="chapter-analysis-journey-stage">
+                {readerJourneyStageLabel(run, uiState)}
+              </dd>
+            </div>
+            <div>
+              <dt>状态</dt>
+              <dd data-testid="chapter-analysis-status-text">{uiStateLabel(uiState)}</dd>
+            </div>
+          </dl>
+        </details>
       )}
 
       {uiState === "boundary_review_required" && (
@@ -283,6 +311,7 @@ export function ChapterAnalysisProgressPanel({
           canResume={Boolean(canResume)}
           resumeBusy={resumeBusy}
           onResume={handleResume}
+          onLater={onDismiss}
           onReanalyze={onReanalyze}
           completed={counts.current}
           total={counts.total}
@@ -302,7 +331,7 @@ export function ChapterAnalysisProgressPanel({
           data-testid="chapter-analysis-journey-processing"
         >
           <h3>正在生成阅读旅程</h3>
-          <p>AnalysisRun #{run.id} 保持不变；任务中心可同步查看进度。</p>
+          <p>任务 #{run.id} 保持不变；任务中心可同步查看进度。</p>
           {onViewResults && (
             <button
               type="button"
@@ -310,7 +339,7 @@ export function ChapterAnalysisProgressPanel({
               data-testid="chapter-analysis-open-results"
               onClick={onViewResults}
             >
-              查看章节页进度
+              查看分析结果
             </button>
           )}
         </div>
@@ -318,10 +347,10 @@ export function ChapterAnalysisProgressPanel({
 
       {uiState === "succeeded" && run && (
         <div className="chapter-analysis-success" data-testid="chapter-analysis-success">
-          <h3>Scene与阅读旅程已完成</h3>
+          <h3>分析完成</h3>
           <ul>
             <li data-testid="chapter-analysis-scene-count">
-                Scene 数量：{(run.total_scene_count ?? counts.total) || "—"}
+              场景数量：{(run.total_scene_count ?? counts.total) || "—"}
             </li>
             <li data-testid="chapter-analysis-coverage">
               覆盖：
@@ -346,7 +375,7 @@ export function ChapterAnalysisProgressPanel({
                 data-testid="chapter-analysis-open-results"
                 onClick={onViewResults}
               >
-                查看正文与读者旅程
+                查看分析结果
               </button>
             ) : (
               <a
@@ -354,8 +383,18 @@ export function ChapterAnalysisProgressPanel({
                 data-testid="chapter-analysis-open-results"
                 href={`/analysis-runs/${run.id}/results?tab=reader-journey`}
               >
-                查看正文与读者旅程
+                查看分析结果
               </a>
+            )}
+            {hasJourney && onContinueReaderJourney && (
+              <button
+                type="button"
+                className="secondary"
+                data-testid="chapter-analysis-open-journey"
+                onClick={onContinueReaderJourney}
+              >
+                查看阅读旅程
+              </button>
             )}
             {onContinueReading && (
               <button

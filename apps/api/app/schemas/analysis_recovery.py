@@ -181,6 +181,9 @@ class FullPipelineBudgetAdvisory(BaseModel):
     recovery_margin_requests: int = 0
     full_expected_requests: int = 0
     full_worst_requests: int = 0
+    retry_reserve_requests: int = 0
+    retry_reserve_tokens: int = 0
+    retry_reserve_cost: float = 0.0
     estimated_tokens: int = 0
     worst_case_tokens: int = 0
     estimated_cost: float = 0.0

@@ -1,0 +1,259 @@
+/* Provider / 模型与 API — module-local styles (avoid global token conflicts) */
+
+.providers-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5, 1.25rem);
+}
+
+.providers-page .page-title h1 {
+  margin: 0.15rem 0;
+}
+
+.providers-section {
+  border: 1px solid var(--color-border-subtle, #d8d8d0);
+  border-radius: var(--radius-lg, 10px);
+  background: var(--color-bg-surface, #fff);
+  padding: var(--space-4, 1rem) var(--space-5, 1.25rem);
+}
+
+.providers-section > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3, 0.75rem);
+  margin-bottom: var(--space-3, 0.75rem);
+}
+
+.providers-section > header h2,
+.providers-section > header h3 {
+  margin: 0.1rem 0 0;
+  font-size: var(--font-size-lg, 1.05rem);
+}
+
+.providers-section .eyebrow {
+  margin: 0;
+  font-size: var(--font-size-xs, 0.75rem);
+  color: var(--color-text-muted, #6b6b63);
+  letter-spacing: 0.02em;
+}
+
+.providers-section-hint {
+  margin: 0 0 var(--space-3, 0.75rem);
+  color: var(--color-text-secondary, #4a4a44);
+  font-size: var(--font-size-sm, 0.875rem);
+}
+
+.providers-tech-id {
+  font-family: var(--font-mono, ui-monospace, Consolas, monospace);
+  font-size: 0.85em;
+  color: var(--color-text-muted, #6b6b63);
+}
+
+.providers-health-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: var(--space-2, 0.5rem) var(--space-4, 1rem);
+  font-size: var(--font-size-sm, 0.875rem);
+}
+
+.providers-health-grid span {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.providers-health-grid b {
+  font-weight: 600;
+}
+
+.providers-layout {
+  display: grid;
+  grid-template-columns: minmax(12rem, 15rem) minmax(0, 1fr) minmax(12rem, 16rem);
+  gap: var(--space-4, 1rem);
+  align-items: start;
+}
+
+.providers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.providers-list > button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  text-align: left;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--color-border-subtle, #d8d8d0);
+  border-radius: var(--radius-md, 8px);
+  background: var(--color-bg-surface, #fff);
+  cursor: pointer;
+}
+
+.providers-list > button.selected {
+  border-color: var(--color-brand, #2f6b57);
+  box-shadow: inset 0 0 0 1px var(--color-brand, #2f6b57);
+}
+
+.providers-list > button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.providers-list span {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.providers-list b {
+  font-size: var(--font-size-sm, 0.875rem);
+}
+
+.providers-list small {
+  font-family: var(--font-mono, ui-monospace, Consolas, monospace);
+  font-size: 0.72rem;
+  color: var(--color-text-muted, #6b6b63);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.providers-config-panel {
+  min-width: 0;
+}
+
+.providers-routing {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.providers-routing-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--color-border-subtle, #e8e8e0);
+  font-size: var(--font-size-sm, 0.875rem);
+}
+
+.providers-routing-row b {
+  font-weight: 600;
+}
+
+.providers-routing-row .providers-tech-id {
+  word-break: break-all;
+}
+
+.providers-form-section {
+  margin-top: var(--space-4, 1rem);
+  padding-top: var(--space-3, 0.75rem);
+  border-top: 1px solid var(--color-border-subtle, #e8e8e0);
+}
+
+.providers-form-section > h3,
+.providers-form-section > summary {
+  margin: 0 0 var(--space-3, 0.75rem);
+  font-size: var(--font-size-md, 0.95rem);
+  font-weight: 600;
+}
+
+.providers-form-section > summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.providers-form-section > summary::-webkit-details-marker {
+  display: none;
+}
+
+.providers-form-section > summary::before {
+  content: "▸ ";
+  color: var(--color-text-muted, #6b6b63);
+}
+
+.providers-form-section[open] > summary::before {
+  content: "▾ ";
+}
+
+.providers-advanced-note {
+  margin: 0 0 var(--space-3, 0.75rem);
+  font-size: var(--font-size-sm, 0.875rem);
+  color: var(--color-text-muted, #6b6b63);
+}
+
+.providers-credential-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 0.75rem;
+  margin-bottom: var(--space-3, 0.75rem);
+  font-size: var(--font-size-sm, 0.875rem);
+}
+
+.providers-credential-line small {
+  color: var(--color-text-muted, #6b6b63);
+}
+
+.providers-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  gap: var(--space-3, 0.75rem);
+}
+
+.providers-form-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: var(--font-size-sm, 0.875rem);
+}
+
+.providers-form-grid input,
+.providers-form-grid select {
+  font-family: inherit;
+}
+
+.providers-form-grid .providers-mono-input {
+  font-family: var(--font-mono, ui-monospace, Consolas, monospace);
+  font-size: 0.85em;
+}
+
+.providers-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3, 0.75rem);
+  margin: var(--space-3, 0.75rem) 0;
+  font-size: var(--font-size-sm, 0.875rem);
+}
+
+.providers-diag-dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.25rem 0.75rem;
+  font-size: var(--font-size-sm, 0.875rem);
+  margin: var(--space-3, 0.75rem) 0 0;
+}
+
+.providers-diag-dl dt {
+  color: var(--color-text-muted, #6b6b63);
+}
+
+.providers-diag-dl dd {
+  margin: 0;
+  word-break: break-word;
+}
+
+.providers-diag-dl .providers-tech-id {
+  display: inline;
+}
+
+@media (max-width: 1100px) {
+  .providers-layout {
+    grid-template-columns: 1fr;
+  }
+}

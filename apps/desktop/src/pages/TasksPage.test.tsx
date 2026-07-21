@@ -196,7 +196,7 @@ describe("TasksPage 传输错误展示", () => {
     vi.mocked(analysisApi.invocations).mockResolvedValue([]);
     renderPage();
     fireEvent.click(await screen.findByText("查看详情"));
-    expect(screen.getByText("Provider请求")).toBeInTheDocument();
+    expect(screen.getByText("服务请求")).toBeInTheDocument();
     expect(screen.getByText("可重试")).toBeInTheDocument();
     expect(screen.getByTestId("provider-transport-error-label")).toBeInTheDocument();
   });
@@ -208,8 +208,9 @@ describe("TasksPage 传输错误展示", () => {
     vi.mocked(analysisApi.recoveryPreflight).mockResolvedValue(preflightOk as any);
     renderPage();
     fireEvent.click(await screen.findByText("查看详情"));
-    expect(await screen.findByText("T0017")).toBeInTheDocument();
-    expect(screen.getByText("CANDIDATE_TRUE_WITHOUT_LEGAL_REASON")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("原始错误（默认折叠）"));
+    expect(await screen.findAllByText("T0017")).not.toHaveLength(0);
+    expect(screen.getAllByText("CANDIDATE_TRUE_WITHOUT_LEGAL_REASON").length).toBeGreaterThanOrEqual(1);
     expect(await screen.findByTestId("checkpoint-summary")).toHaveTextContent("3/10");
     expect(screen.queryByText("exceeded_dimensions")).not.toBeInTheDocument();
     fireEvent.click(screen.getByText("查看脱敏技术详情"));
@@ -294,8 +295,8 @@ describe("TasksPage 从已有结果继续", () => {
         provider_state_version: "abc123version",
       }),
     );
-    expect(await screen.findByTestId("recovery-created")).toHaveTextContent("Run ID：55");
-    expect(screen.getByTestId("recovery-created")).toHaveTextContent("recovered_from_run_id=54");
+    expect(await screen.findByTestId("recovery-created")).toHaveTextContent("任务 ID：55");
+    expect(screen.getByTestId("recovery-created")).toHaveTextContent("来源任务 54");
   });
 
   it("loading期间禁用并防止双击", async () => {
@@ -454,7 +455,8 @@ describe("TasksPage Scene Analysis 恢复", () => {
     expect(await screen.findByTestId("task-unified-recovery")).toBeInTheDocument();
     expect(screen.queryByTestId("checkpoint-summary")).not.toBeInTheDocument();
     expect(screen.getByTestId("detail-scene-progress")).toHaveTextContent("0 / 14");
-    expect(screen.getByText("Scene Analysis")).toBeInTheDocument();
+    expect(screen.getByText("场景分析")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("原始错误（默认折叠）"));
     expect(screen.getAllByText("PROVIDER_DISABLED").length).toBeGreaterThanOrEqual(1);
     expect(await screen.findByTestId("unified-recovery-fix-continue")).toBeInTheDocument();
   });
@@ -526,7 +528,7 @@ describe("TasksPage Scene Analysis 恢复", () => {
     } as any);
     renderPage();
     expect(await screen.findByTestId("run-55-scene-progress")).toHaveTextContent(
-      "Scene Analysis：4 / 14",
+      "场景分析：4 / 14",
     );
     fireEvent.click(await screen.findByText("查看详情"));
     expect(await screen.findByTestId("detail-scene-progress")).toHaveTextContent("4 / 14");
@@ -595,7 +597,7 @@ describe("TasksPage Scene Analysis 恢复", () => {
     vi.mocked(analysisApi.invocations).mockResolvedValue([]);
     renderPage();
     expect(await screen.findByTestId("run-55-scene-progress")).toHaveTextContent(
-      "Scene Analysis：12 / 14",
+      "场景分析：12 / 14",
     );
     fireEvent.click(await screen.findByText("查看详情"));
     expect(screen.getByTestId("detail-evidence-error")).toHaveTextContent(
@@ -624,12 +626,79 @@ describe("TasksPage Scene Analysis 恢复", () => {
     vi.mocked(analysisApi.invocations).mockResolvedValue([]);
     vi.mocked(analysisApi.readerJourney).mockResolvedValue(null);
     renderPage();
-    expect(await screen.findByTestId("unified-recover-open-55")).toHaveTextContent(
+    expect(await screen.findByTestId("view-results-55")).toHaveTextContent("查看详情");
+    fireEvent.click(screen.getByTestId("run-more-55-trigger"));
+    expect(screen.getByTestId("unified-recover-open-55")).toHaveTextContent(
       "修复并继续",
     );
-    expect(screen.getByTestId("view-results-55")).toHaveTextContent("查看详情");
-    expect(screen.getByText("Scene分析已完成")).toBeInTheDocument();
+    expect(screen.getByText("场景分析已完成")).toBeInTheDocument();
     expect(screen.queryByText("复制错误")).not.toBeInTheDocument();
     expect(screen.queryByText("分析全部完成")).not.toBeInTheDocument();
+  });
+
+  it("进度缺字段时显示等待进度而不是 undefined", async () => {
+    const run = {
+      ...failedRun54,
+      id: 77,
+      progress_current: undefined,
+      progress_total: undefined,
+      total_scene_count: undefined,
+      completed_scene_count: undefined,
+    };
+    vi.mocked(analysisApi.runs).mockResolvedValue([run] as any);
+    renderPage();
+    expect(await screen.findByTestId("run-77-progress")).toHaveTextContent("等待进度");
+    expect(screen.getByTestId("run-77-progress").textContent).not.toMatch(/undefined|null|NaN/i);
+  });
+
+  it("任务详情正常打开并消费 invocations 数组", async () => {
+    vi.mocked(analysisApi.runs).mockResolvedValue([failedRun54] as any);
+    vi.mocked(analysisApi.run).mockResolvedValue({
+      ...failedRun54,
+      failed_invocation: undefined,
+    } as any);
+    vi.mocked(analysisApi.invocations).mockResolvedValue([
+      { id: 96, http_status_code: 422, error_message: "schema failed", latency_ms: 10 },
+    ] as any);
+    vi.mocked(analysisApi.recoveryPreflight).mockResolvedValue(preflightOk as any);
+    renderPage();
+    fireEvent.click(await screen.findByText("查看详情"));
+    expect(await screen.findByText("任务详情")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("查看脱敏技术详情"));
+    expect(await screen.findByText("schema failed")).toBeInTheDocument();
+    expect(screen.queryByTestId("detail-invocations-error")).not.toBeInTheDocument();
+  });
+
+  it("invocations 返回空数组时详情不崩溃", async () => {
+    vi.mocked(analysisApi.runs).mockResolvedValue([failedRun54] as any);
+    vi.mocked(analysisApi.run).mockResolvedValue({
+      ...failedRun54,
+      failed_invocation: undefined,
+    } as any);
+    vi.mocked(analysisApi.invocations).mockResolvedValue([]);
+    vi.mocked(analysisApi.recoveryPreflight).mockResolvedValue(preflightOk as any);
+    renderPage();
+    fireEvent.click(await screen.findByText("查看详情"));
+    fireEvent.click(await screen.findByText("查看脱敏技术详情"));
+    expect(screen.getByText("没有可用的 Invocation 摘要。")).toBeInTheDocument();
+  });
+
+  it("invocations 非数组错误结构时显示明确错误且不崩溃", async () => {
+    vi.mocked(analysisApi.runs).mockResolvedValue([failedRun54] as any);
+    vi.mocked(analysisApi.run).mockResolvedValue({
+      ...failedRun54,
+      failed_invocation: undefined,
+    } as any);
+    vi.mocked(analysisApi.invocations).mockRejectedValue(
+      new ApiError("INVOCATIONS_RESPONSE_INVALID", "模型调用列表响应格式异常（Run #54）", 502),
+    );
+    vi.mocked(analysisApi.recoveryPreflight).mockResolvedValue(preflightOk as any);
+    renderPage();
+    fireEvent.click(await screen.findByText("查看详情"));
+    expect(await screen.findByTestId("detail-invocations-error")).toHaveTextContent(
+      /模型调用列表响应格式异常/,
+    );
+    fireEvent.click(screen.getByText("查看脱敏技术详情"));
+    expect(screen.getByText("没有可用的 Invocation 摘要。")).toBeInTheDocument();
   });
 });

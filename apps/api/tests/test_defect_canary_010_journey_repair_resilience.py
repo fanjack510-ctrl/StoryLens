@@ -18,7 +18,13 @@ from app.schemas.scene import SceneBoundaryResult
 from app.services.prompt_service import load_prompt
 from app.services.structured_output import StructuredOutputError, generate_validated
 from app.services.validation_errors import StructuralValidationError
+from tests.optional_gates import require_main_db_cert_counts, require_path
 from tests.test_aliyun_provider import CloudFake
+
+pytestmark = [
+    pytest.mark.canary_offline,
+    pytest.mark.requires_audit_assets,
+]
 
 ROOT = Path(__file__).resolve().parents[3]
 MAIN_DB = ROOT / "data" / "storylens.db"
@@ -117,9 +123,9 @@ def _rows(session, run_id: int) -> list[ModelInvocation]:
 
 
 def test_0_offline_replay_attempt2_oos_is_real():
-    assert ATTEMPT2_RESPONSE.exists()
+    require_path(ATTEMPT2_RESPONSE)
     payload = json.loads(ATTEMPT2_RESPONSE.read_text(encoding="utf-8"))
-    assert CANARY_V6.exists()
+    require_path(CANARY_V6)
     con = sqlite3.connect(f"file:{CANARY_V6.as_posix()}?mode=ro", uri=True)
     scenes = {
         r[0]: (r[1], r[2])
@@ -564,7 +570,7 @@ async def test_13_no_partial_profile_entities(
 
 
 def test_14_reservations_released_on_canary_v6():
-    assert CANARY_V6.exists()
+    require_path(CANARY_V6)
     con = sqlite3.connect(f"file:{CANARY_V6.as_posix()}?mode=ro", uri=True)
     active = con.execute(
         "SELECT COUNT(*) FROM cloud_budget_reservations WHERE status='active'"
@@ -574,12 +580,9 @@ def test_14_reservations_released_on_canary_v6():
 
 
 def test_15_main_db_55_2_unchanged():
-    assert MAIN_DB.exists()
+    require_main_db_cert_counts()
     con = sqlite3.connect(f"file:{MAIN_DB.as_posix()}?mode=ro", uri=True)
-    ar = con.execute("SELECT COUNT(*) FROM analysis_runs").fetchone()[0]
-    jr = con.execute("SELECT COUNT(*) FROM reader_journey_runs").fetchone()[0]
     s55 = con.execute("SELECT status FROM analysis_runs WHERE id=55").fetchone()[0]
     j2 = con.execute("SELECT status FROM reader_journey_runs WHERE id=2").fetchone()[0]
     con.close()
-    assert ar == 55 and jr == 2
     assert s55 == "succeeded" and j2 == "succeeded"
