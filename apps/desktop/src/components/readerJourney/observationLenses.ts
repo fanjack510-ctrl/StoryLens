@@ -339,14 +339,22 @@ export const LEGACY_UNCALIBRATED_BANNER =
 export const V2_LOCAL_FIXTURE_BANNER =
   "合成测试数据：仅用于验证V2图表、数据透传和诊断规则，不代表真实小说分析结果。";
 
+export const V2_NATIVE_REAL_BANNER = "V2真实正文分析";
+
 export function resolveJourneyTopBanner(
   visualization: ReaderJourneyVisualization,
   options: { legacyFlag?: boolean | null; contractVersion?: string | null } = {},
 ): string | null {
   const sourceMode = visualization.calibration_status?.source_mode;
   const displayBanner = visualization.calibration_status?.display_banner?.trim();
-  if (sourceMode === "local_fixture" || sourceMode === "v2_native") {
+  if (sourceMode === "v2_native") {
+    return displayBanner || V2_NATIVE_REAL_BANNER;
+  }
+  if (sourceMode === "local_fixture") {
     return displayBanner || V2_LOCAL_FIXTURE_BANNER;
+  }
+  if (displayBanner === V2_NATIVE_REAL_BANNER) {
+    return V2_NATIVE_REAL_BANNER;
   }
   if (displayBanner === V2_LOCAL_FIXTURE_BANNER) {
     return V2_LOCAL_FIXTURE_BANNER;

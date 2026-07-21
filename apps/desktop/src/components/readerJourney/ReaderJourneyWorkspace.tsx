@@ -30,6 +30,7 @@ import { buildChapterSummaryBullets } from "./journeyChapterSummary";
 import {
   DEFAULT_OBSERVATION_LENS,
   V2_LOCAL_FIXTURE_BANNER,
+  V2_NATIVE_REAL_BANNER,
   getObservationLens,
   resolveJourneyTopBanner,
   type ObservationLensId,
@@ -405,6 +406,7 @@ export function ReaderJourneyWorkspace({
   const lensDef = getObservationLens(observationLens);
   const topBanner = resolveJourneyTopBanner(visualization);
   const isV2LocalFixtureBanner = topBanner === V2_LOCAL_FIXTURE_BANNER;
+  const isV2NativeRealBanner = topBanner === V2_NATIVE_REAL_BANNER;
   const sceneDiagnoses: SceneDiagnosisLike[] = useMemo(
     () =>
       visualization.scene_nodes.map((node) => ({
@@ -1196,9 +1198,11 @@ export function ReaderJourneyWorkspace({
           <p
             className="journey-legacy-banner"
             data-testid={
-              isV2LocalFixtureBanner
-                ? "journey-v2-local-fixture-banner"
-                : "journey-legacy-uncalibrated-banner"
+              isV2NativeRealBanner
+                ? "journey-v2-native-real-banner"
+                : isV2LocalFixtureBanner
+                  ? "journey-v2-local-fixture-banner"
+                  : "journey-legacy-uncalibrated-banner"
             }
             role="status"
           >

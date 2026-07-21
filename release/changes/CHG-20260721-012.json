@@ -84,6 +84,8 @@
     "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.tsx",
     "data/fixtures/reader_journey_v2_native/chapter_preview_v2.json",
     "scripts/seed_reader_journey_v2_native_preview.py",
+    "scripts/run_reader_journey_v2_native_real_niujiaokao.py",
+    "scripts/execute_reader_journey_v2_native_niujiaokao.py",
     "apps/api/tests/test_reader_journey_v2_anti_hardcode_local.py"
   ],
   "user_summary": "建立 Reader Journey v2.0 独立数据契约与确定性派生算法：level映射、Scene/Beat、问题生命周期与诊断引擎；旧版 v1.6 只读兼容。",
@@ -102,6 +104,7 @@
     "diagnosis band primary/secondary",
     "legacy uncalibrated banner",
     "synthetic fixture renamed away from real novel branding; anti-hardcode diagnosis tests",
+    "real 牛角坳 V2 native E2E: rematerialize + model levels + program finalize; banner V2真实正文分析",
     "awaiting user desktop smoke checklist for CHG-20260721-012"
   ],
   "tests": [
@@ -120,7 +123,8 @@
     "verification matrix: pytest 18 passed (incl. stagnation/empty-spin/empty-hook/recompute/sqlite legacy)",
     "verification matrix: vitest 25 passed (15-point lens/chart checklist)",
     "local SQLite reader_journey_runs contract=1.3 marked legacy_uncalibrated (no model call)",
-    "fixture coupling audit: synthetic preview renamed away from 牛角坳; anti-hardcode pytest 8 passed; page path reads seeded v2 scores/diagnoses (no live derive/diagnose)"
+    "fixture coupling audit: synthetic preview renamed away from 牛角坳; anti-hardcode pytest 8 passed; page path reads seeded v2 scores/diagnoses (no live derive/diagnose)",
+    "real 牛角坳 V2 native: 9 scenes/3 beats; contract/prompt/formula 2.0; source_mode=v2_native; 9 scene batches + retries ~0.31 CNY; scores/diagnoses program-derived; hand-recalc 3/3 match; ordering 11/12 (elder pacing equal not lower)"
   ],
   "data_compatibility": {
     "database_changed": false,

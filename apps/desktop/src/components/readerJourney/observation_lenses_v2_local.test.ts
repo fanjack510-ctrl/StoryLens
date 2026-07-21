@@ -7,6 +7,7 @@ import {
   DEFAULT_OBSERVATION_LENS,
   LEGACY_UNCALIBRATED_BANNER,
   V2_LOCAL_FIXTURE_BANNER,
+  V2_NATIVE_REAL_BANNER,
   resolveJourneyTopBanner,
   OBSERVATION_LENSES,
   buildLensChartLines,
@@ -449,7 +450,7 @@ describe("CHG-20260721-012 verification matrix", () => {
     );
   });
 
-    it("13b) synthetic fixture banner is preferred over legacy copy", () => {
+  it("13b) synthetic fixture banner is preferred over legacy copy", () => {
     const viz = minimalViz([{ scene_ordinal: 1 }]);
     viz.calibration_status = {
       scene_contract_version: "2.0",
@@ -461,6 +462,19 @@ describe("CHG-20260721-012 verification matrix", () => {
     expect(resolveJourneyTopBanner(viz)).toContain("合成测试数据");
     expect(resolveJourneyTopBanner(viz)).not.toContain("旧版未校准分析");
     expect(resolveJourneyTopBanner(viz)).not.toContain("牛角坳");
+  });
+
+  it("13c) v2 native real banner distinct from synthetic fixture", () => {
+    const viz = minimalViz([{ scene_ordinal: 1 }]);
+    viz.calibration_status = {
+      scene_contract_version: "2.0",
+      source_mode: "v2_native",
+      display_banner: V2_NATIVE_REAL_BANNER,
+    };
+    expect(resolveJourneyTopBanner(viz)).toBe(V2_NATIVE_REAL_BANNER);
+    expect(resolveJourneyTopBanner(viz)).toContain("V2真实正文分析");
+    expect(resolveJourneyTopBanner(viz)).not.toContain("合成测试数据");
+    expect(resolveJourneyTopBanner(viz)).not.toContain("旧版未校准分析");
   });
 
   it("14) fixed 0-100 domain is absolute (no chapter min-max rescale)", () => {
