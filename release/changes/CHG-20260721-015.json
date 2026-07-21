@@ -17,6 +17,12 @@
       "message": "Record CHG-20260721-015 as tested after local web checks.",
       "primary": false,
       "multi_change_reason": "registry status mark only"
+    },
+    {
+      "sha": "909fe93472190a000dcecd110d15bd52c03859e8",
+      "message": "Mark CHG-20260721-015 implemented then tested.",
+      "primary": false,
+      "multi_change_reason": "status transition to tested"
     }
   ],
   "modules": [
