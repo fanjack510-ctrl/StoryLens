@@ -3,15 +3,49 @@
   "title": "Settings page information architecture for ordinary users",
   "type": "improvement",
   "base_version": "1.0.3",
-  "status": "registered",
+  "status": "tested",
   "include_in_next_release": true,
-  "commits": [],
-  "modules": [],
-  "files": [],
+  "commits": [
+    {
+      "sha": "8a8b5f1b5a5656e27fdb24fe92ce349aa0fa899a",
+      "message": "Simplify Settings page IA for ordinary users (CHG-20260721-013).",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "desktop-settings"
+  ],
+  "files": [
+    "apps/desktop/src/pages/SettingsPage.tsx",
+    "apps/desktop/src/components/settings/SettingsAiServiceTab.tsx",
+    "apps/desktop/src/components/settings/SettingsUsageCostTab.tsx",
+    "apps/desktop/src/components/settings/SettingsDataStorageTab.tsx",
+    "apps/desktop/src/components/settings/SettingsPrivacyUpdateTab.tsx",
+    "apps/desktop/src/components/settings/TelemetrySettingsCard.tsx",
+    "apps/desktop/src/components/settings/SettingsAppearanceTab.tsx",
+    "apps/desktop/src/components/settings/settings.css"
+  ],
   "user_summary": "将设置页从技术配置后台重构为普通用户可理解的渐进式设置界面，技术诊断收进高级/开发者区域。",
-  "technical_summary": "",
-  "acceptance_criteria": [],
-  "tests": [],
+  "technical_summary": "Root causes: settings info overload; tech fields mixed with ordinary actions; unimplemented buttons; unclear primary CTAs. Presentation-only IA: 5 tabs (hide license), progressive disclosure, developer fold for diagnostics/channel/install ID.",
+  "acceptance_criteria": [
+    "Ordinary tabs hide license and tech jargon",
+    "AI shows one status + one primary CTA",
+    "Usage emphasizes remaining quota",
+    "Data hides unimplemented backup buttons",
+    "Privacy hides channel/URL/install ID unless developer",
+    "Business save/credential/updater logic unchanged"
+  ],
+  "tests": [
+    "vitest:settings_ux_polish_local",
+    "vitest:SettingsAiServiceTab",
+    "vitest:TelemetrySettingsCard",
+    "vitest:CloudBudgetPages settings tabs",
+    "npm run typecheck",
+    "version_manager check",
+    "change_registry check",
+    "git diff --check"
+  ],
   "verification_evidence": [],
   "data_compatibility": {
     "database_changed": false,
@@ -26,7 +60,7 @@
     "breaking_change": false
   },
   "blocker_level": null,
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-21T16:42:02Z",
-  "updated_at": "2026-07-21T16:42:02Z"
+  "updated_at": "2026-07-21T16:49:45Z"
 }
