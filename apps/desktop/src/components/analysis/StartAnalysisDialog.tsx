@@ -389,7 +389,15 @@ function FullPipelineBudgetAdvisory({
   );
 }
 
-function OrdinaryBudgetSummary({ preflight }: { preflight: any }) {
+function OrdinaryBudgetSummary({
+  preflight,
+  estimatedFits,
+  retryReserveTight,
+}: {
+  preflight: any;
+  estimatedFits: boolean;
+  retryReserveTight: boolean;
+}) {
   return (
     <div className="ordinary-budget-summary" data-testid="start-analysis-budget-summary">
       <h3>预计本次用量</h3>
@@ -400,6 +408,11 @@ function OrdinaryBudgetSummary({ preflight }: { preflight: any }) {
         {" · "}
         {formatCny(preflight.estimated_cost)}
       </p>
+      {estimatedFits && retryReserveTight && (
+        <p className="hint" data-testid="start-analysis-retry-reserve-note">
+          预计额度足够，暂无重试余量。
+        </p>
+      )}
       <p className="hint">本阶段仅识别场景边界；确认边界后将重新估算后续分析用量。</p>
     </div>
   );
@@ -785,8 +798,9 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
     if (!provider) {
       return unavailableReason || (developerMode ? "请选择可用 Provider" : "AI 服务尚未连接");
     }
-    if (budgetBlocked) return "本阶段预算不足";
-    if (tokenBlocked || costBlocked) return "费用或 Token 预算不足";
+    if (stage1RequestShortfall > 0) return "当前技术请求额度不足";
+    if (tokenBlocked) return "当前 Token 额度不足";
+    if (costBlocked) return "当前费用额度不足";
     return null;
   }, [
     busy,
@@ -798,7 +812,7 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
     mode,
     consent,
     provider,
-    budgetBlocked,
+    stage1RequestShortfall,
     tokenBlocked,
     costBlocked,
   ]);
@@ -1131,7 +1145,11 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
           </section>
 
           {(mode === "cloud" || mode === "hybrid") && preflight && consent && !developerMode && (
-            <OrdinaryBudgetSummary preflight={preflight} />
+            <OrdinaryBudgetSummary
+              preflight={preflight}
+              estimatedFits={stage1RequestShortfall === 0 && !tokenBlocked && !costBlocked}
+              retryReserveTight={fullPipelineShortfall > 0 || (Number(preflight?.worst_case_request_count) || 0) > remainingRequests}
+            />
           )}
 
           {(mode === "cloud" || mode === "hybrid") && preflight && (
@@ -1252,6 +1270,23 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
                 {submitDisabledReason}
               </span>
             )}
+            <Link
+              to="/settings?tab=cost"
+              className="button-link"
+              data-testid="start-analysis-adjust-quota"
+              onClick={() => {
+                try {
+                  sessionStorage.setItem(
+                    "storylens.startAnalysis.resumeChapterId",
+                    String(chapterId),
+                  );
+                } catch {
+                  /* ignore */
+                }
+              }}
+            >
+              调整额度
+            </Link>
             {!showRequestQuotaPanel && (
               <button
                 type="button"
@@ -1260,7 +1295,7 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
                 disabled={effectiveSubmitDisabled}
                 onClick={() => void submit()}
               >
-                {submitLabel}
+                {busy ? submitLabel : "按当前额度开始"}
               </button>
             )}
             {showRequestQuotaPanel && (

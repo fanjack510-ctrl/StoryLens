@@ -198,7 +198,7 @@ describe("外观与AI服务普通模式", () => {
   });
 });
 
-describe("使用费用", () => {
+describe("使用额度", () => {
   it("显示费用、请求与 Token 额度入口且无高级单请求字段", async () => {
     renderPage(<SettingsPage />);
     fireEvent.click(await screen.findByTestId("settings-tab-cost"));

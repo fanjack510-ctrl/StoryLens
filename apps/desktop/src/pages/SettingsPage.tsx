@@ -23,7 +23,7 @@ type TabId =
 
 const BASE_TABS: Array<{ id: TabId; label: string }> = [
   { id: "ai", label: "AI 服务" },
-  { id: "cost", label: "使用费用" },
+  { id: "cost", label: "使用额度" },
   { id: "data", label: "数据与存储" },
   { id: "privacy", label: "隐私与更新" },
   { id: "license", label: "授权与会员" },

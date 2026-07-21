@@ -325,7 +325,7 @@ describe("StartAnalysisDialog 布局与交互", () => {
     const dialog = await screen.findByRole("dialog");
     const submit = await waitFor(() => {
       const button = screen.getByTestId("start-analysis-submit");
-      expect(button).toHaveTextContent("创建分析任务");
+      expect(button).toHaveTextContent("按当前额度开始");
       expect(button).not.toBeDisabled();
       return button;
     });
@@ -501,6 +501,12 @@ describe("普通模式开始分析弹窗", () => {
     await waitFor(() => expect(screen.getByTestId("start-analysis-submit")).toBeEnabled());
     expect(screen.queryByTestId("create-request-quota-block")).not.toBeInTheDocument();
     expect(screen.queryByText(/当前 Token 额度不足/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/本阶段预算不足/)).not.toBeInTheDocument();
+    expect(await screen.findByTestId("start-analysis-retry-reserve-note")).toHaveTextContent(
+      "预计额度足够，暂无重试余量。",
+    );
+    expect(screen.getByTestId("start-analysis-adjust-quota")).toHaveTextContent("调整额度");
+    expect(screen.getByTestId("start-analysis-submit")).toHaveTextContent("按当前额度开始");
   });
 
   it("本阶段预计请求不足时显示阻塞原因并提供临时授权创建", async () => {

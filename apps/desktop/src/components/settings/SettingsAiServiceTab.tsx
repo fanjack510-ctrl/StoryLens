@@ -366,6 +366,11 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
         </pre>
       )}
 
+      <p className="hint" data-testid="ai-service-usage-quota-link">
+        需要调整本地每日请求 / Token / 费用上限？请打开{" "}
+        <Link to="/settings?tab=cost">使用额度</Link>。
+      </p>
+
       {(developerMode || showAdvanced) && (
         <p className="hint">
           需要自定义 Endpoint 或 Model ID？请打开 <Link to="/settings?tab=advanced">高级设置</Link>
