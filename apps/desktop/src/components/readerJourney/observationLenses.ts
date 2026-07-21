@@ -257,15 +257,22 @@ export function buildLensChartLines(
   } else if (lens.id === "hook_payoff") {
     lines.push({
       id: "hook",
-      labelZh: "钩子",
-      series: seriesFromNodes(visualization, (n) => nodeScores(n).hook),
+      labelZh: "钩子强度",
+      series: seriesFromNodes(visualization, (n) => {
+        const value = nodeScores(n).hook;
+        // Explicit 0 is valid; missing key stays undefined (line break, no carry-forward).
+        return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+      }),
       style: "solid",
       includeInMainPolyline: true,
     });
     lines.push({
       id: "payoff",
-      labelZh: "回报",
-      series: seriesFromNodes(visualization, (n) => nodeScores(n).payoff),
+      labelZh: "本场回报强度",
+      series: seriesFromNodes(visualization, (n) => {
+        const value = nodeScores(n).payoff;
+        return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+      }),
       style: "dashed",
       includeInMainPolyline: true,
     });

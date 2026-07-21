@@ -28,6 +28,13 @@ import {
 } from "./journeyChartScales";
 import { buildChapterSummaryBullets } from "./journeyChapterSummary";
 import {
+  buildHookPayoffChapterBullets,
+  buildHookPayoffSceneSummary,
+  formatHookPayoffSceneCaption,
+  isHookPayoffLens,
+  phaseHookPayoffAverages,
+} from "./hookPayoffLensModel";
+import {
   DEFAULT_OBSERVATION_LENS,
   V2_LOCAL_FIXTURE_BANNER,
   V2_NATIVE_REAL_BANNER,
@@ -439,10 +446,13 @@ export function ReaderJourneyWorkspace({
       })),
     [visualization],
   );
-  const chapterSummaryBullets = useMemo(
-    () => buildChapterSummaryBullets(visualization, sceneDiagnoses),
-    [visualization, sceneDiagnoses],
-  );
+  const chapterSummaryBullets = useMemo(() => {
+    if (isHookPayoffLens(observationLens)) {
+      return buildHookPayoffChapterBullets(visualization);
+    }
+    return buildChapterSummaryBullets(visualization, sceneDiagnoses);
+  }, [visualization, sceneDiagnoses, observationLens]);
+
   const expandedClusterId = controlledClusterId ?? null;
 
   const summary = visualization.chapter_summary;
@@ -1447,18 +1457,29 @@ export function ReaderJourneyWorkspace({
               const phaseSummary = resolvePhaseSummaryDisplay(phase.summary, phase.title);
               const phaseMetric =
                 phaseMetricAverages.get(phase.ordinal) ?? phase.average_engagement;
-              const avgText = formatLensPhaseScoreLabel(
-                visualization,
-                observationLens,
-                phaseMetric,
-              );
+              const hookPayoffAvg = isHookPayoffLens(observationLens)
+                ? phaseHookPayoffAverages(visualization, phase)
+                : null;
+              const avgText = hookPayoffAvg
+                ? [
+                    hookPayoffAvg.avgHook == null
+                      ? "平均钩子 —"
+                      : `平均钩子 ${Math.round(hookPayoffAvg.avgHook)}`,
+                    hookPayoffAvg.avgPayoff == null
+                      ? "平均回报 —"
+                      : `平均回报 ${Math.round(hookPayoffAvg.avgPayoff)}`,
+                  ].join(" · ")
+                : formatLensPhaseScoreLabel(visualization, observationLens, phaseMetric);
+              const phaseDesc = hookPayoffAvg
+                ? `状态：${hookPayoffAvg.statusLabel}`
+                : phaseSummary;
               return (
                 <button
                   key={phase.ordinal}
                   type="button"
                   className={`journey-phase-card journey-phase-compact journey-phase-nav-card ${isSelected ? "selected active-phase" : ""}`}
                   data-testid={`journey-phase-${phase.ordinal}`}
-                  title={`${phaseLabel} · ${phaseSummary}`}
+                  title={`${phaseLabel} · ${phaseDesc}`}
                   aria-pressed={isSelected}
                   aria-selected={isSelected}
                   style={{
@@ -1472,7 +1493,7 @@ export function ReaderJourneyWorkspace({
                       {avgText}
                     </span>
                   </div>
-                  <p className="journey-phase-card-desc">{phaseSummary}</p>
+                  <p className="journey-phase-card-desc">{phaseDesc}</p>
                 </button>
               );
             })}
@@ -1481,8 +1502,14 @@ export function ReaderJourneyWorkspace({
 
           {selectedSceneOrdinal != null && selectedLensBinding != null && (
             <p className="journey-active-scene-caption" data-testid="journey-active-scene-caption">
-              {formatJourneySceneLabel(selectedSceneOrdinal)} ·{" "}
-              {formatLensBindingCaption(selectedLensBinding)}
+              {isHookPayoffLens(observationLens) && selectedNode
+                ? (() => {
+                    const summaryHp = buildHookPayoffSceneSummary(visualization, selectedNode);
+                    return summaryHp
+                      ? formatHookPayoffSceneCaption(summaryHp)
+                      : `${formatJourneySceneLabel(selectedSceneOrdinal)} · ${formatLensBindingCaption(selectedLensBinding)}`;
+                  })()
+                : `${formatJourneySceneLabel(selectedSceneOrdinal)} · ${formatLensBindingCaption(selectedLensBinding)}`}
             </p>
           )}
 
@@ -1583,6 +1610,7 @@ export function ReaderJourneyWorkspace({
               <JourneyDiagnosisBand
                 diagnoses={sceneDiagnoses}
                 selectedSceneOrdinal={selectedSceneOrdinal}
+                observationLens={observationLens}
                 onSelectScene={(ordinal: number) => {
                   const node = visualization.scene_nodes.find(
                     (item) => item.scene_ordinal === ordinal,

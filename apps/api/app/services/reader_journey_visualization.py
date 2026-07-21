@@ -1000,6 +1000,23 @@ def _apply_v2_presentation_overrides(
                 node["role"] = "core"
 
 
+def _question_lifecycle_from_summary(
+    summary: ChapterReaderJourneySummary | None,
+) -> list[dict[str, Any]]:
+    if summary is None:
+        return []
+    try:
+        deterministic = json.loads(summary.deterministic_statistics_json or "{}")
+    except json.JSONDecodeError:
+        return []
+    if not isinstance(deterministic, dict):
+        return []
+    raw = deterministic.get("question_lifecycle")
+    if not isinstance(raw, list):
+        return []
+    return [item for item in raw if isinstance(item, dict)]
+
+
 def _expanded_diagnosis(summary: ChapterReaderJourneySummary | None) -> dict[str, Any]:
     if summary is None:
         return {}
@@ -1492,4 +1509,5 @@ def build_reader_journey_visualization(
             "engagement_formula_version": str(formula.get("version", "1.0")),
         },
         "calibration_status": _calibration_status(journey_run),
+        "question_lifecycle": _question_lifecycle_from_summary(summary),
     }

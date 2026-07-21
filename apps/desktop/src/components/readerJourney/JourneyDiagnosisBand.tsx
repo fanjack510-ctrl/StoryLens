@@ -6,19 +6,28 @@ import {
   secondaryBandLabels,
   type SceneDiagnosisLike,
 } from "./diagnosisBandModel";
+import {
+  isHookPayoffLens,
+  otherDiagnosesForHookPayoffLens,
+  primaryBandLabelForHookPayoffLens,
+} from "./hookPayoffLensModel";
+import type { ObservationLensId } from "./observationLenses";
 
 type Props = {
   diagnoses: SceneDiagnosisLike[];
   selectedSceneOrdinal: number | null;
   onSelectScene: (ordinal: number) => void;
+  observationLens?: ObservationLensId | null;
 };
 
 export function JourneyDiagnosisBand({
   diagnoses,
   selectedSceneOrdinal,
   onSelectScene,
+  observationLens = null,
 }: Props) {
   const [expandedOrdinal, setExpandedOrdinal] = useState<number | null>(null);
+  const hookPayoff = isHookPayoffLens(observationLens);
 
   if (!diagnoses.length) return null;
 
@@ -26,12 +35,17 @@ export function JourneyDiagnosisBand({
     <div
       className="journey-diagnosis-band"
       data-testid="journey-diagnosis-band"
+      data-lens={observationLens ?? undefined}
       role="list"
       aria-label="场景诊断带"
     >
       {diagnoses.map((diag) => {
-        const label = primaryBandLabelForScene(diag);
-        const secondary = secondaryBandLabels(diag);
+        const label = hookPayoff
+          ? primaryBandLabelForHookPayoffLens(diag)
+          : primaryBandLabelForScene(diag);
+        const secondary = hookPayoff
+          ? otherDiagnosesForHookPayoffLens(diag)
+          : secondaryBandLabels(diag);
         const selected = selectedSceneOrdinal === diag.scene_ordinal;
         const expanded = expandedOrdinal === diag.scene_ordinal;
         return (
@@ -57,7 +71,7 @@ export function JourneyDiagnosisBand({
                 className="journey-diagnosis-band-secondary"
                 data-testid={`journey-diagnosis-band-secondary-s${diag.scene_ordinal}`}
               >
-                {secondary.join(" · ")}
+                {hookPayoff ? `其他诊断：${secondary.join(" · ")}` : secondary.join(" · ")}
               </span>
             )}
           </button>

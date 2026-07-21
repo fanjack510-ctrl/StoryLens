@@ -42,14 +42,25 @@ import {
   normalizeWritingTakeawayList,
 } from "./sceneDetailFields";
 import { buildSceneNarrative } from "./journeySceneNarrative";
+import type { ObservationLensId } from "./observationLenses";
+import { DEFAULT_OBSERVATION_LENS } from "./observationLenses";
+import {
+  getQuestionLifecycle,
+  hookPayoffCombinationExplanation,
+  isHookPayoffLens,
+  lifecycleStatusLabelZh,
+  otherDiagnosesForHookPayoffLens,
+  payoffPlainLanguage,
+  questionsForScene,
+  sceneRoleInLifecycle,
+} from "./hookPayoffLensModel";
 import { primaryBandLabelForScene } from "./diagnosisBandModel";
+import type { SceneDiagnosisLike } from "./diagnosisBandModel";
 import {
   formatLensBindingCaption,
   resolveLensMetricBinding,
   readingMomentumLabelZh,
 } from "./lensMetricBinding";
-import type { ObservationLensId } from "./observationLenses";
-import { DEFAULT_OBSERVATION_LENS } from "./observationLenses";
 
 export type SceneDetailTab =
   | "overview"
@@ -348,7 +359,13 @@ export function JourneySceneDetailPanel({
 
           {tab === "payoffs" && (
             <div data-testid="scene-detail-payoffs">
-              {!hasPayoffs && !hasHooks ? (
+              {visualization && isHookPayoffLens(observationLens) ? (
+                <HookPayoffLifecycleSection
+                  visualization={visualization}
+                  node={node}
+                />
+              ) : null}
+              {!hasPayoffs && !hasHooks && !(visualization && isHookPayoffLens(observationLens)) ? (
                 <JourneyInspectorEmptyState
                   kind="no-hook-payoff"
                   testId="empty-hook-payoff"
@@ -393,7 +410,7 @@ export function JourneySceneDetailPanel({
                           <b>{payoffTypeZh(node.primary_payoff.type)}</b>
                           <p>{node.primary_payoff.summary || "—"}</p>
                           {node.primary_payoff.strength != null ? (
-                            <small>强度 {node.primary_payoff.strength}</small>
+                            <small>本场强度 {node.primary_payoff.strength}</small>
                           ) : null}
                         </article>
                       ) : null}
@@ -439,6 +456,116 @@ export function JourneySceneDetailPanel({
         ) : null}
       </JourneyInspectorBody>
     </JourneyInspectorShell>
+  );
+}
+
+function HookPayoffLifecycleSection({
+  visualization,
+  node,
+}: {
+  visualization: ReaderJourneyVisualization;
+  node: JourneySceneNode;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const lifecycle = getQuestionLifecycle(visualization);
+  const related = questionsForScene(lifecycle, node.scene_ordinal);
+  const primary = related[0];
+  const others = related.slice(1);
+  const hook = typeof node.scores?.hook === "number" ? node.scores.hook : null;
+  const payoff = typeof node.scores?.payoff === "number" ? node.scores.payoff : null;
+  const combo = hookPayoffCombinationExplanation(hook, payoff);
+  const diagLike: SceneDiagnosisLike = {
+    scene_ordinal: node.scene_ordinal,
+    primary_diagnosis: node.primary_diagnosis,
+    secondary_diagnoses: node.secondary_diagnoses,
+    positive_mechanism: node.positive_mechanism,
+    role: node.role,
+    node_type: node.node_type,
+    include_in_main_curve: node.include_in_main_curve,
+  };
+  const otherDiag = otherDiagnosesForHookPayoffLens(diagLike);
+
+  return (
+    <>
+      <JourneyInspectorSection title="钩子与回报解读" testId="scene-hook-payoff-combo">
+        <p data-testid="scene-hook-payoff-combo-text">{combo}</p>
+        <p className="journey-inspector-hint" data-testid="scene-payoff-plain">
+          {payoffPlainLanguage(payoff)}
+        </p>
+      </JourneyInspectorSection>
+      <JourneyInspectorSection title="问题生命周期" testId="scene-question-lifecycle">
+        {!related.length ? (
+          <p data-testid="scene-question-lifecycle-empty">
+            本场未关联到明确的问题生命周期。
+          </p>
+        ) : (
+          <>
+            {primary ? (
+              <article
+                className="journey-lifecycle-card"
+                data-testid={`scene-lifecycle-${primary.question_id}`}
+              >
+                <p>
+                  <b>
+                    {primary.question_id}：{primary.question_text}
+                  </b>
+                </p>
+                <p>
+                  S{primary.setup_scene} 建立问题
+                  {(primary.development_scenes || []).map((s) => ` → S${s} 推进`).join("")}
+                  {primary.payoff_scene != null
+                    ? ` → S${primary.payoff_scene} ${
+                        primary.status === "paid_off" ? "完成兑现" : "部分兑现"
+                      }`
+                    : ""}
+                </p>
+                <p>当前状态：{lifecycleStatusLabelZh(primary.status)}</p>
+                <p>
+                  本场作用：{sceneRoleInLifecycle(primary, node.scene_ordinal)}
+                </p>
+                {typeof primary.strength === "number" ? (
+                  <p>confidence / strength：{primary.strength}</p>
+                ) : null}
+              </article>
+            ) : null}
+            {others.length > 0 ? (
+              <details
+                open={expanded}
+                onToggle={(e) => setExpanded((e.target as HTMLDetailsElement).open)}
+                data-testid="scene-lifecycle-others"
+              >
+                <summary>其他关联问题（{others.length}）</summary>
+                {others.map((item) => (
+                  <article key={item.question_id} className="journey-lifecycle-card">
+                    <p>
+                      <b>
+                        {item.question_id}：{item.question_text}
+                      </b>
+                    </p>
+                    <p>
+                      建立 S{item.setup_scene}
+                      {item.payoff_scene != null ? ` · 兑现 S${item.payoff_scene}` : ""}
+                      {" · "}
+                      {lifecycleStatusLabelZh(item.status)}
+                      {" · 本场："}
+                      {sceneRoleInLifecycle(item, node.scene_ordinal)}
+                    </p>
+                  </article>
+                ))}
+              </details>
+            ) : null}
+          </>
+        )}
+      </JourneyInspectorSection>
+      {otherDiag.length > 0 ? (
+        <JourneyInspectorSection title="其他诊断" testId="scene-other-diagnoses">
+          <p>{otherDiag.join(" · ")}</p>
+          <p className="journey-inspector-hint">
+            主诊断标签：{primaryBandLabelForScene(diagLike)}（非钩子回报主标签时收纳于此）
+          </p>
+        </JourneyInspectorSection>
+      ) : null}
+    </>
   );
 }
 

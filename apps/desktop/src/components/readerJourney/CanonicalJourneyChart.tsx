@@ -44,6 +44,15 @@ import {
 } from "./observationLenses";
 import { resolveNodeVisualStyle } from "./journeyNodeDiagnosisStyle";
 import { buildSegmentMarkers } from "./journeySegmentMarkers";
+import {
+  HOOK_STRENGTH_LABEL,
+  PAYOFF_NOT_CUMULATIVE_HINT,
+  PAYOFF_STRENGTH_LABEL,
+  getQuestionLifecycle,
+  questionsForScene,
+  resolveHookPayoffDataStatus,
+  sceneRoleInLifecycle,
+} from "./hookPayoffLensModel";
 
 const ROLE_CLASS: Record<string, string> = {
   core: "journey-node-core",
@@ -231,6 +240,7 @@ export function CanonicalJourneyChart({
         arousal:
           ((node.scores.arousal_start ?? 0) + (node.scores.arousal_end ?? 0)) / 2,
       })),
+      { lensId },
     );
   }, [lensId, nodes]);
 
@@ -401,6 +411,26 @@ export function CanonicalJourneyChart({
         overflowY: "hidden",
       }}
     >
+      {lensId === "hook_payoff" ? (
+        <div className="journey-hook-payoff-legend" data-testid="journey-hook-payoff-legend">
+          <div className="journey-hook-payoff-legend-rows">
+            <span className="journey-hook-payoff-legend-item" data-testid="journey-legend-hook">
+              <span className="journey-legend-swatch journey-legend-swatch-hook" aria-hidden="true" />
+              绿色实线：{HOOK_STRENGTH_LABEL}
+            </span>
+            <span className="journey-hook-payoff-legend-item" data-testid="journey-legend-payoff">
+              <span
+                className="journey-legend-swatch journey-legend-swatch-payoff"
+                aria-hidden="true"
+              />
+              紫色虚线：{PAYOFF_STRENGTH_LABEL}
+            </span>
+          </div>
+          <p className="journey-hook-payoff-legend-hint" data-testid="journey-hook-payoff-legend-hint">
+            {PAYOFF_NOT_CUMULATIVE_HINT}
+          </p>
+        </div>
+      ) : null}
       {warnings.length > 0 && (
         <div
           className="journey-chart-data-warning"
@@ -866,50 +896,100 @@ export function CanonicalJourneyChart({
         <g data-layer="labels_tooltip">
           {hover != null && tooltipNode && (
             <foreignObject
-              x={Math.min(Math.max(hover.x - 90, 4), chartWidth - 200)}
-              y={Math.max(hover.y - 110, 4)}
-              width={196}
-              height={108}
+              x={Math.min(Math.max(hover.x - 90, 4), chartWidth - 220)}
+              y={Math.max(hover.y - (lensId === "hook_payoff" ? 160 : 110), 4)}
+              width={lensId === "hook_payoff" ? 220 : 196}
+              height={lensId === "hook_payoff" ? 168 : 108}
               data-testid="journey-node-tooltip"
             >
               <div
                 className="journey-node-tooltip-card"
                 {...({ xmlns: "http://www.w3.org/1999/xhtml" } as Record<string, string>)}
               >
-                <div>
-                  {formatJourneySceneLabel(tooltipNode.scene_ordinal)}
-                  {tooltipNode.role ? ` · ${roleLabelZh(tooltipNode.role)}` : ""}
-                </div>
-                <div>
-                  阶段{" "}
-                  {tooltipPhase
-                    ? formatJourneyPhaseLabel(tooltipPhase.title)
-                    : tooltipNode.phase_ordinal != null
-                      ? String(tooltipNode.phase_ordinal)
-                      : "—"}
-                </div>
-                <div>
-                  {formatJourneyMetricLabel(metric)}：
-                  {formatJourneyScore(tooltipScore)}
-                </div>
-                {tooltipHook?.summary ? <div>钩子：{tooltipHook.summary}</div> : null}
-                {tooltipPayoff?.summary ? <div>回报：{tooltipPayoff.summary}</div> : null}
-                {tooltipRisk?.summary || tooltipRisk?.risk_type ? (
-                  <div>
-                    流失风险：
-                    {formatJourneyRiskSummary({
-                      risk_type: tooltipRisk?.risk_type,
-                      summary: tooltipRisk?.summary,
-                      start_scene_ordinal: tooltipRisk?.start_scene_ordinal,
-                      end_scene_ordinal: tooltipRisk?.end_scene_ordinal,
-                      span: tooltipRisk?.span,
-                    })}
-                    <details className="journey-tech-details">
-                      <summary>技术详情</summary>
-                      <code>{tooltipRisk?.risk_type ?? "—"}</code>
-                    </details>
-                  </div>
-                ) : null}
+                {lensId === "hook_payoff" ? (
+                  (() => {
+                    const hookVal = tooltipNode.scores.hook;
+                    const payoffVal = tooltipNode.scores.payoff;
+                    const life = questionsForScene(
+                      getQuestionLifecycle(visualization),
+                      tooltipNode.scene_ordinal,
+                    );
+                    const primaryQ = life[0];
+                    const dataStatus = resolveHookPayoffDataStatus(visualization, tooltipNode);
+                    return (
+                      <>
+                        <div>
+                          {formatJourneySceneLabel(tooltipNode.scene_ordinal)}
+                          {tooltipNode.scene_value_summary
+                            ? ` · ${tooltipNode.scene_value_summary.slice(0, 24)}`
+                            : ""}
+                        </div>
+                        <div>
+                          {HOOK_STRENGTH_LABEL}：
+                          {hookVal == null ? "数据不足" : formatJourneyScore(hookVal)}
+                        </div>
+                        <div>
+                          {PAYOFF_STRENGTH_LABEL}：
+                          {payoffVal == null ? "数据不足" : formatJourneyScore(payoffVal)}
+                        </div>
+                        <div>
+                          生命周期：
+                          {primaryQ
+                            ? `${primaryQ.status} · ${sceneRoleInLifecycle(primaryQ, tooltipNode.scene_ordinal)}`
+                            : "未关联"}
+                        </div>
+                        <div>关联问题：{life.length}</div>
+                        {primaryQ ? (
+                          <div>主要问题：{primaryQ.question_text.slice(0, 36)}</div>
+                        ) : null}
+                        <div>
+                          confidence：
+                          {tooltipNode.confidence != null
+                            ? tooltipNode.confidence.toFixed(2)
+                            : "—"}
+                        </div>
+                        <div>数据状态：{dataStatus}</div>
+                      </>
+                    );
+                  })()
+                ) : (
+                  <>
+                    <div>
+                      {formatJourneySceneLabel(tooltipNode.scene_ordinal)}
+                      {tooltipNode.role ? ` · ${roleLabelZh(tooltipNode.role)}` : ""}
+                    </div>
+                    <div>
+                      阶段{" "}
+                      {tooltipPhase
+                        ? formatJourneyPhaseLabel(tooltipPhase.title)
+                        : tooltipNode.phase_ordinal != null
+                          ? String(tooltipNode.phase_ordinal)
+                          : "—"}
+                    </div>
+                    <div>
+                      {formatJourneyMetricLabel(metric)}：
+                      {formatJourneyScore(tooltipScore)}
+                    </div>
+                    {tooltipHook?.summary ? <div>钩子：{tooltipHook.summary}</div> : null}
+                    {tooltipPayoff?.summary ? <div>回报：{tooltipPayoff.summary}</div> : null}
+                    {tooltipRisk?.summary || tooltipRisk?.risk_type ? (
+                      <div>
+                        流失风险：
+                        {formatJourneyRiskSummary({
+                          risk_type: tooltipRisk?.risk_type,
+                          summary: tooltipRisk?.summary,
+                          start_scene_ordinal: tooltipRisk?.start_scene_ordinal,
+                          end_scene_ordinal: tooltipRisk?.end_scene_ordinal,
+                          span: tooltipRisk?.span,
+                        })}
+                        <details className="journey-tech-details">
+                          <summary>技术详情</summary>
+                          <code>{tooltipRisk?.risk_type ?? "—"}</code>
+                        </details>
+                      </div>
+                    ) : null}
+                  </>
+                )}
               </div>
             </foreignObject>
           )}

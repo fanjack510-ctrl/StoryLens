@@ -374,4 +374,14 @@ export type ReaderJourneyVisualization = {
   risk_intervals: JourneyRiskInterval[];
   formula_versions: JourneyFormulaVersions;
   calibration_status: JourneyCalibrationStatus;
+  /** V2 question lifecycle records (presentation); absent on legacy. */
+  question_lifecycle?: Array<{
+    question_id: string;
+    question_text: string;
+    setup_scene: number;
+    development_scenes: number[];
+    payoff_scene: number | null;
+    status: string;
+    strength?: number;
+  }>;
 };

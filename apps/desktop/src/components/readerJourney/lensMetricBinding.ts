@@ -121,21 +121,21 @@ export function resolveLensMetricBinding(
     const payoff = node ? resolveNodeFieldValue(node, "payoff") : null;
     return {
       fieldKey: "hook",
-      labelZh: "钩子",
+      labelZh: "钩子强度",
       value: hook,
       secondary: [
         {
           fieldKey: "payoff",
-          labelZh: "回报",
+          labelZh: "本场回报强度",
           value: payoff,
           text:
             payoff == null
-              ? "回报 —"
+              ? "本场回报 —"
               : payoff >= 70
-                ? `回报 ${Math.round(payoff)} · 有效兑现`
+                ? `本场回报 ${Math.round(payoff)} · 有效兑现`
                 : payoff >= 40
-                  ? `回报 ${Math.round(payoff)} · 部分兑现`
-                  : `回报 ${Math.round(payoff)} · 未兑现`,
+                  ? `本场回报 ${Math.round(payoff)} · 部分兑现`
+                  : `本场回报 ${Math.round(payoff)} · 未兑现`,
         },
       ],
     };
@@ -194,8 +194,8 @@ export function formatLensPhaseScoreLabel(
   }
   if (lensId === "hook_payoff") {
     return value == null || !Number.isFinite(value)
-      ? "钩子 —"
-      : `钩子 ${formatJourneyScore(value)}`;
+      ? "平均钩子 —"
+      : `平均钩子 ${formatJourneyScore(value)}`;
   }
   return value == null || !Number.isFinite(value)
     ? `${binding.labelZh} —`

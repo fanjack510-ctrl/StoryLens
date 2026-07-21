@@ -1,5 +1,7 @@
 /** Significant segment rise/fall markers — only label clear deltas. */
 
+import type { ObservationLensId } from "./observationLenses";
+
 export type SegmentMarkerKind =
   | "冲突升级"
   | "新信息揭晓"
@@ -10,7 +12,9 @@ export type SegmentMarkerKind =
   | "节奏拖慢"
   | "张力下降"
   | "钩子失效"
-  | "表达阻力";
+  | "表达阻力"
+  | "兑现延迟"
+  | "空钩子";
 
 export type SegmentMarker = {
   fromOrdinal: number;
@@ -36,7 +40,21 @@ export type SegmentSample = {
 const RISE_THRESHOLD = 12;
 const FALL_THRESHOLD = -12;
 
-export function buildSegmentMarkers(samples: SegmentSample[]): SegmentMarker[] {
+const HOOK_PAYOFF_ALLOWED = new Set<SegmentMarkerKind>([
+  "钩子建立",
+  "有效兑现",
+  "钩子失效",
+  "兑现延迟",
+  "空钩子",
+]);
+
+export function buildSegmentMarkers(
+  samples: SegmentSample[],
+  options: { lensId?: ObservationLensId | null } = {},
+): SegmentMarker[] {
+  if (options.lensId === "hook_payoff") {
+    return buildHookPayoffSegmentMarkers(samples);
+  }
   const ordered = [...samples].sort((a, b) => a.scene_ordinal - b.scene_ordinal);
   const markers: SegmentMarker[] = [];
   for (let i = 1; i < ordered.length; i += 1) {
@@ -71,6 +89,62 @@ export function buildSegmentMarkers(samples: SegmentSample[]): SegmentMarker[] {
     }
   }
   return markers;
+}
+
+/** Hook/payoff lens: only hook/payoff-related segment labels (no plot/tension noise). */
+export function buildHookPayoffSegmentMarkers(samples: SegmentSample[]): SegmentMarker[] {
+  const ordered = [...samples].sort((a, b) => a.scene_ordinal - b.scene_ordinal);
+  const markers: SegmentMarker[] = [];
+  for (let i = 1; i < ordered.length; i += 1) {
+    const prev = ordered[i - 1];
+    const curr = ordered[i];
+    // Skip if either side missing — never invent deltas from carry-forward zeros.
+    if (prev.hook == null || curr.hook == null || prev.payoff == null || curr.payoff == null) {
+      continue;
+    }
+    const hookDelta = curr.hook - prev.hook;
+    const payoffDelta = curr.payoff - prev.payoff;
+    if (payoffDelta >= 15) {
+      markers.push({
+        fromOrdinal: prev.scene_ordinal,
+        toOrdinal: curr.scene_ordinal,
+        direction: "up",
+        label: "有效兑现",
+        delta: payoffDelta,
+      });
+      continue;
+    }
+    if (hookDelta >= 15 && curr.payoff < 40) {
+      markers.push({
+        fromOrdinal: prev.scene_ordinal,
+        toOrdinal: curr.scene_ordinal,
+        direction: "up",
+        label: "钩子建立",
+        delta: hookDelta,
+      });
+      continue;
+    }
+    if (hookDelta <= -15) {
+      markers.push({
+        fromOrdinal: prev.scene_ordinal,
+        toOrdinal: curr.scene_ordinal,
+        direction: "down",
+        label: "钩子失效",
+        delta: hookDelta,
+      });
+      continue;
+    }
+    if (prev.hook >= 70 && curr.payoff < 35 && payoffDelta <= 5) {
+      markers.push({
+        fromOrdinal: prev.scene_ordinal,
+        toOrdinal: curr.scene_ordinal,
+        direction: "down",
+        label: curr.hook >= 65 ? "空钩子" : "兑现延迟",
+        delta: payoffDelta,
+      });
+    }
+  }
+  return markers.filter((m) => HOOK_PAYOFF_ALLOWED.has(m.label));
 }
 
 function pickRiseLabel(prev: SegmentSample, curr: SegmentSample): SegmentMarkerKind | null {
