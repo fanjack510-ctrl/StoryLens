@@ -137,6 +137,12 @@
       "message": "Record final CHG-20260721-012 attach for hook/payoff semantics fix.",
       "primary": false,
       "multi_change_reason": "final registry sync after hook/payoff semantics"
+    },
+    {
+      "sha": "fd006c71e90c7c71652567ea63d92388f930c011",
+      "message": "Sync CHG-20260721-012 registry after hook/payoff semantics attach.",
+      "primary": false,
+      "multi_change_reason": "final registry sync commit"
     }
   ],
   "modules": [
@@ -257,5 +263,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-21T12:43:43Z",
-  "updated_at": "2026-07-21T16:21:41Z"
+  "updated_at": "2026-07-21T16:21:56Z"
 }
