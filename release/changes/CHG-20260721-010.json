@@ -17,6 +17,12 @@
       "message": "Record CHG-20260721-010 as tested for next release pool",
       "primary": false,
       "multi_change_reason": "registry metadata update after implementation commit"
+    },
+    {
+      "sha": "8dd84c91cef923c5fcfb07b4516bb2e7fb72c0ec",
+      "message": "Fix CHG-20260721-010 user_summary encoding",
+      "primary": false,
+      "multi_change_reason": "encoding fix for registry user_summary"
     }
   ],
   "modules": [
@@ -73,5 +79,5 @@
   "blocker_level": "P1",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-21T10:41:24Z",
-  "updated_at": "2026-07-21T11:01:32Z"
+  "updated_at": "2026-07-21T11:01:53Z"
 }
