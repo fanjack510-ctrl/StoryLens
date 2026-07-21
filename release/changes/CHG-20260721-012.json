@@ -125,6 +125,12 @@
       "message": "Clarify hook/payoff lens as per-scene strength with lifecycle UI (CHG-20260721-012).",
       "primary": false,
       "multi_change_reason": "hook/payoff lens semantics + lifecycle presentation; status remains tested"
+    },
+    {
+      "sha": "fa7b9dfbced8548f979ac79f26d80e8ea0e47f33",
+      "message": "Attach hook/payoff semantics fix and evidence to CHG-20260721-012.",
+      "primary": false,
+      "multi_change_reason": "attach hook/payoff semantics registry sync"
     }
   ],
   "modules": [
@@ -245,5 +251,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-21T12:43:43Z",
-  "updated_at": "2026-07-21T16:21:01Z"
+  "updated_at": "2026-07-21T16:21:40Z"
 }
