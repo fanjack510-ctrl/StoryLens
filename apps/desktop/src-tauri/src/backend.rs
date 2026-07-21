@@ -367,6 +367,7 @@ fn discover_owned_pids(
     let path_now = pids_for_executable_path(sidecar_path);
     let delta = path_delta_pids(baseline, &path_now);
     let descendants = descendant_pids(spawn_pid);
+    let spawn = [spawn_pid];
     let mut listen = Vec::new();
     if let Some(owner) = listen_owner_pid(port) {
         let tentative = merge_owned_pids(&[&spawn, &delta, &descendants]);
@@ -380,7 +381,6 @@ fn discover_owned_pids(
             listen.push(owner);
         }
     }
-    let spawn = [spawn_pid];
     merge_owned_pids(&[&spawn, &delta, &descendants, &listen])
 }
 

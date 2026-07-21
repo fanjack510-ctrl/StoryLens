@@ -121,6 +121,7 @@ test.describe("04 workspace", () => {
     await gotoReady(page, `${BOOK}&analysisRun=55&view=progress`);
     const inspector = page.getByTestId("chapter-analysis-progress");
     await expect(inspector).toBeVisible({ timeout: 10_000 });
+    await inspector.getByTestId("chapter-analysis-tech-fold").locator("summary").click();
     await expect(inspector.getByText("\u5f53\u524d\u9636\u6bb5")).toBeVisible();
     const width = await readerContentWidth(page);
     expect(width, "reader remains usable with analysis rail").toBeGreaterThanOrEqual(420);

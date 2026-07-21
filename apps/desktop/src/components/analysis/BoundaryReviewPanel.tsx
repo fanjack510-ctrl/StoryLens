@@ -521,7 +521,7 @@ export function BoundaryReviewPanel({
           <summary>技术详情</summary>
           <dl>
             <dt>类型</dt>
-            <dd>{formatBoundaryReasonCode(item.model_reason_code) || "人工新增"}</dd>
+            <dd>{item.model_reason_code || "人工新增"}</dd>
             <dt>Boundary ID</dt>
             <dd>{item.transition_id}</dd>
             <dt>段落</dt>
