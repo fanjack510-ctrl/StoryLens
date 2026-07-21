@@ -41,6 +41,8 @@ import {
   WritingTakeawayList,
   normalizeWritingTakeawayList,
 } from "./sceneDetailFields";
+import { buildSceneNarrative } from "./journeySceneNarrative";
+import { primaryBandLabelForScene } from "./diagnosisBandModel";
 
 export type SceneDetailTab =
   | "overview"
@@ -64,6 +66,8 @@ type Props = {
   onLocateEvidence: (paragraphId: string) => void;
   onClose?: () => void;
   onOpenInSceneList?: () => void;
+  visualization?: ReaderJourneyVisualization | null;
+  observationLensLabel?: string | null;
 };
 
 function scoreValue(node: JourneySceneNode, key: (typeof CORE_SCORE_KEYS)[number]): number {
@@ -80,6 +84,8 @@ export function JourneySceneDetailPanel({
   onLocateEvidence,
   onClose,
   onOpenInSceneList,
+  visualization = null,
+  observationLensLabel = null,
 }: Props) {
   const [tab, setTab] = useState<SceneDetailTab>("overview");
 
@@ -177,7 +183,67 @@ export function JourneySceneDetailPanel({
               ) : null}
               <JourneyInspectorSection title="场景概览" testId="scene-overview-level">
                 <p>{role}</p>
+                {node.node_type || node.scene_role ? (
+                  <p data-testid="scene-overview-v2-meta">
+                    {node.node_type ? `节点类型：${node.node_type}` : null}
+                    {node.node_type && node.scene_role ? " · " : null}
+                    {node.scene_role ? `场景角色：${node.scene_role}` : null}
+                  </p>
+                ) : null}
               </JourneyInspectorSection>
+              {(node.primary_diagnosis || node.positive_mechanism || node.data_quality_issue) && (
+                <JourneyInspectorSection title="诊断" testId="scene-overview-diagnosis">
+                  <p data-testid="scene-primary-diagnosis">
+                    主诊断：
+                    {primaryBandLabelForScene({
+                      scene_ordinal: node.scene_ordinal,
+                      primary_diagnosis: node.primary_diagnosis,
+                      secondary_diagnoses: node.secondary_diagnoses,
+                      positive_mechanism: node.positive_mechanism,
+                      data_quality_issue: node.data_quality_issue,
+                    })}
+                  </p>
+                  {node.secondary_diagnoses?.length ? (
+                    <p data-testid="scene-secondary-diagnoses">
+                      次要：{node.secondary_diagnoses.join(" · ")}
+                    </p>
+                  ) : null}
+                  {node.positive_mechanism ? (
+                    <p data-testid="scene-positive-mechanism">
+                      正向机制：{node.positive_mechanism}
+                    </p>
+                  ) : null}
+                  {node.data_quality_issue ? (
+                    <p data-testid="scene-data-quality-issue">
+                      数据质量：{node.data_quality_issue}
+                    </p>
+                  ) : null}
+                  <p>置信度：{Math.round((node.confidence ?? 0) * 100)}%</p>
+                </JourneyInspectorSection>
+              )}
+              {visualization ? (
+                <JourneyInspectorSection title="高低点叙事" testId="scene-overview-narrative">
+                  {(() => {
+                    const narrative = buildSceneNarrative(visualization, node);
+                    return (
+                      <ul data-testid="scene-narrative-list">
+                        <li>{narrative.whyHighOrLow}</li>
+                        <li>{narrative.narrativeTechnique}</li>
+                        <li>{narrative.priorSetup}</li>
+                        <li>{narrative.laterPayoff}</li>
+                      </ul>
+                    );
+                  })()}
+                  {observationLensLabel ? (
+                    <p data-testid="scene-current-lens-score">
+                      当前镜头：{observationLensLabel}
+                      {typeof node.scores.reading_momentum === "number"
+                        ? ` · 综合阅读 ${Math.round(node.scores.reading_momentum)}`
+                        : ` · 阅读牵引 ${Math.round(Number(node.engagement?.engagement_score ?? 0))}`}
+                    </p>
+                  ) : null}
+                </JourneyInspectorSection>
+              ) : null}
               {node.phase_ordinal != null ? (
                 <JourneyInspectorSection title="所属阶段" testId="scene-overview-phase">
                   <p>阶段 {node.phase_ordinal}</p>

@@ -17,6 +17,7 @@ import type { JourneySelectionSource } from "../../types/journeySelection";
 import { CanonicalJourneyChart } from "./CanonicalJourneyChart";
 import { exportJourneyPng, JourneyExportError } from "./exportJourneyPng";
 import { JourneyChartToolbar } from "./JourneyChartToolbar";
+import { JourneyDiagnosisBand } from "./JourneyDiagnosisBand";
 import { JourneyDetailErrorBoundary } from "./JourneyDetailErrorBoundary";
 import {
   clampViewWindow,
@@ -25,6 +26,15 @@ import {
   resolveMetricValue,
   zoomViewWindow,
 } from "./journeyChartScales";
+import { buildChapterSummaryBullets } from "./journeyChapterSummary";
+import {
+  DEFAULT_OBSERVATION_LENS,
+  LEGACY_UNCALIBRATED_BANNER,
+  getObservationLens,
+  isLegacyUncalibratedVisualization,
+  type ObservationLensId,
+} from "./observationLenses";
+import type { SceneDiagnosisLike } from "./diagnosisBandModel";
 import {
   applyJourneySelectionIntent,
   logJourneySelectionTransaction,
@@ -205,6 +215,9 @@ export function ReaderJourneyWorkspace({
     null,
   );
   const [metricInternal, setMetricInternal] = useState<JourneyCurveMetric>("engagement");
+  const [observationLens, setObservationLens] =
+    useState<ObservationLensId>(DEFAULT_OBSERVATION_LENS);
+  const [overlayComposite, setOverlayComposite] = useState(false);
   const [analysisInfoOpen, setAnalysisInfoOpen] = useState(false);
   const [exportStatus, setExportStatus] = useState<"idle" | "exporting" | "succeeded" | "failed">(
     "idle",
@@ -389,6 +402,26 @@ export function ReaderJourneyWorkspace({
   const selectedPhase =
     controlledPhaseOrdinal !== undefined ? controlledPhaseOrdinal : selectedPhaseInternal;
   const metric = controlledMetric ?? metricInternal;
+  const lensDef = getObservationLens(observationLens);
+  const legacyUncalibrated = isLegacyUncalibratedVisualization(visualization);
+  const sceneDiagnoses: SceneDiagnosisLike[] = useMemo(
+    () =>
+      visualization.scene_nodes.map((node) => ({
+        scene_ordinal: node.scene_ordinal,
+        primary_diagnosis: node.primary_diagnosis,
+        secondary_diagnoses: node.secondary_diagnoses,
+        positive_mechanism: node.positive_mechanism,
+        data_quality_issue: node.data_quality_issue,
+        reading_momentum:
+          node.scores.reading_momentum ?? node.engagement.engagement_score,
+        plot_progress: node.scores.plot_progress,
+      })),
+    [visualization.scene_nodes],
+  );
+  const chapterSummaryBullets = useMemo(
+    () => buildChapterSummaryBullets(visualization, sceneDiagnoses),
+    [visualization, sceneDiagnoses],
+  );
   const expandedClusterId = controlledClusterId ?? null;
 
   const summary = visualization.chapter_summary;
@@ -633,6 +666,11 @@ export function ReaderJourneyWorkspace({
       setMetricInternal(key);
     }
     onSelectionChange?.({ selectedMetric: key, source: "journey_rhythm" });
+  };
+
+  const handleObservationLensChange = (lens: ObservationLensId) => {
+    setObservationLens(lens);
+    if (lens === "hook_payoff") setOverlayComposite(false);
   };
 
   const handleLocateEvidence = (paragraphId: string, node?: JourneySceneNode) => {
@@ -1001,6 +1039,8 @@ export function ReaderJourneyWorkspace({
         >
           <JourneySceneDetailPanel
             node={selectedNode}
+            visualization={visualization}
+            observationLensLabel={lensDef.labelZh}
             onLocateEvidence={(id) => handleLocateEvidence(id, selectedNode)}
             onOpenInSceneList={
               onSelectScene ? () => onSelectScene(selectedNode.scene_id) : undefined
@@ -1151,6 +1191,27 @@ export function ReaderJourneyWorkspace({
           aria-hidden={showNarrowTabs && narrowPane !== "main" ? true : undefined}
         >
       <header className="journey-analysis-header" data-testid="journey-analysis-header">
+        {legacyUncalibrated ? (
+          <p
+            className="journey-legacy-banner"
+            data-testid="journey-legacy-uncalibrated-banner"
+            role="status"
+          >
+            {LEGACY_UNCALIBRATED_BANNER}
+          </p>
+        ) : null}
+        {chapterSummaryBullets.length > 0 ? (
+          <ul
+            className="journey-chapter-summary-bullets"
+            data-testid="journey-chapter-summary-bullets"
+          >
+            {chapterSummaryBullets.map((bullet) => (
+              <li key={bullet.kind} data-kind={bullet.kind}>
+                {bullet.text}
+              </li>
+            ))}
+          </ul>
+        ) : null}
         <div className="journey-analysis-titles">
           <h2 className="journey-analysis-title" data-testid="journey-analysis-title">
             阅读旅程
@@ -1242,6 +1303,10 @@ export function ReaderJourneyWorkspace({
         <JourneyChartToolbar
           metric={metric}
           onMetricChange={handleMetricChange}
+          observationLens={observationLens}
+          onObservationLensChange={handleObservationLensChange}
+          overlayComposite={overlayComposite}
+          onOverlayCompositeChange={setOverlayComposite}
           heightPreset={heightPreset}
           onHeightPresetChange={handleHeightPresetChange}
           yDomainMode={yDomainMode}
@@ -1394,6 +1459,8 @@ export function ReaderJourneyWorkspace({
                 <CanonicalJourneyChart
                   visualization={visualization}
                   metric={metric}
+                  observationLens={observationLens}
+                  overlayComposite={overlayComposite}
                   chartHeight={chartHeight}
                   yDomainMode={yDomainMode}
                   viewStart={viewWindow.start}
@@ -1464,6 +1531,17 @@ export function ReaderJourneyWorkspace({
                   }}
                 />
               </section>
+
+              <JourneyDiagnosisBand
+                diagnoses={sceneDiagnoses}
+                selectedSceneOrdinal={selectedSceneOrdinal}
+                onSelectScene={(ordinal: number) => {
+                  const node = visualization.scene_nodes.find(
+                    (item) => item.scene_ordinal === ordinal,
+                  );
+                  if (node) handleSelectScene(node, "journey_rhythm");
+                }}
+              />
 
               {/* Scene navigation must sit below SVG — never overlay or steal plot height */}
               <section
@@ -1794,6 +1872,8 @@ export function ReaderJourneyWorkspace({
         <CanonicalJourneyChart
           visualization={visualization}
           metric={metric}
+          observationLens={observationLens}
+          overlayComposite={overlayComposite}
           chartHeight={chartHeightPx("standard")}
           yDomainMode="fixed_0_100"
           viewStart={1}

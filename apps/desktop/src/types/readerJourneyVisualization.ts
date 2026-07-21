@@ -15,6 +15,9 @@ export type JourneyCurvePoint = {
   value?: number;
   start?: number;
   end?: number;
+  /** When false, Beat auxiliary points are excluded from equal-weight main polyline. */
+  include_in_main_curve?: boolean;
+  node_type?: "scene" | "beat";
 };
 
 export type JourneyPhaseVisualization = {
@@ -122,6 +125,13 @@ export type JourneySceneNodeScores = {
   valence_end: number;
   arousal_start: number;
   arousal_end: number;
+  /** Optional v2 derived / mapped fields (absent on legacy payloads). */
+  reading_momentum?: number;
+  plot_progress?: number;
+  reading_tension?: number;
+  pacing_speed?: number;
+  emotional_investment?: number;
+  clarity?: number;
 };
 
 export type JourneyReaderQuestionItem = {
@@ -239,6 +249,15 @@ export type JourneySceneNode = {
   primary_payoff: JourneyPayoffHookItem | null;
   primary_hook: JourneyPayoffHookItem | null;
   primary_risk: JourneyRiskPoint | null;
+  /** Optional v2 presentation fields (legacy payloads omit these). */
+  node_type?: "scene" | "beat";
+  include_in_main_curve?: boolean;
+  include_in_chapter_mean?: boolean;
+  scene_role?: string;
+  primary_diagnosis?: string | null;
+  secondary_diagnoses?: string[];
+  positive_mechanism?: string | null;
+  data_quality_issue?: string | null;
 };
 
 export type JourneyChapterSummary = {

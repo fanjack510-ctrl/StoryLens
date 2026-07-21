@@ -3334,3 +3334,71 @@ body.journey-pane-resizing[data-row-resize="true"] * {
     transition: none !important;
   }
 }
+
+/* CHG-20260721-012 observation lenses / diagnosis band */
+.journey-legacy-banner {
+  margin: 0 0 0.5rem;
+  padding: 0.45rem 0.7rem;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--muted) 18%, transparent);
+  color: var(--text);
+  font-size: 0.85rem;
+}
+
+.journey-chapter-summary-bullets {
+  list-style: none;
+  margin: 0 0 0.65rem;
+  padding: 0;
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.86rem;
+  color: var(--text);
+}
+
+.journey-diagnosis-band {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.35rem;
+  overflow-x: auto;
+  padding: 0.35rem 0.15rem 0.15rem;
+  margin-top: 0.25rem;
+}
+
+.journey-diagnosis-band-item {
+  flex: 0 0 auto;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  background: var(--surface);
+  border-radius: 6px;
+  padding: 0.3rem 0.45rem;
+  cursor: pointer;
+  min-width: 4.5rem;
+}
+
+.journey-diagnosis-band-item.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.journey-diagnosis-band-ordinal {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.journey-diagnosis-band-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.journey-diagnosis-band-secondary {
+  font-size: 0.7rem;
+  color: var(--muted);
+  max-width: 8rem;
+}
+
+.journey-curve-node[data-node-type="beat"] {
+  opacity: 0.85;
+}

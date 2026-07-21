@@ -19,6 +19,7 @@ import {
   collectDataWarnings,
   computeYScale,
   resolveMetricValue,
+  valenceYScaleOptions,
   xForSceneOrdinal,
 } from "./journeyChartScales";
 import {
@@ -32,6 +33,16 @@ import {
   requiresBrush,
   type YDomainMode,
 } from "./journeyVisualizationConfig";
+import {
+  buildLensChartLines,
+  getObservationLens,
+  mainCurveSeries,
+  pacingFitLabel,
+  valenceDirection,
+  type ObservationLensId,
+} from "./observationLenses";
+import { resolveNodeVisualStyle } from "./journeyNodeDiagnosisStyle";
+import { buildSegmentMarkers } from "./journeySegmentMarkers";
 
 const ROLE_CLASS: Record<string, string> = {
   core: "journey-node-core",
@@ -48,6 +59,9 @@ const NODE_RADIUS: Record<string, number> = {
 export type CanonicalJourneyChartProps = {
   visualization: ReaderJourneyVisualization;
   metric: JourneyCurveMetric;
+  /** When set, chart renders observation-lens series instead of raw metric alone. */
+  observationLens?: ObservationLensId;
+  overlayComposite?: boolean;
   chartHeight: number;
   yDomainMode: YDomainMode;
   viewStart: number;
@@ -88,6 +102,8 @@ function hookTier(
 export function CanonicalJourneyChart({
   visualization,
   metric,
+  observationLens,
+  overlayComposite = false,
   chartHeight,
   yDomainMode,
   viewStart,
@@ -105,7 +121,14 @@ export function CanonicalJourneyChart({
   const containerRef = useRef<HTMLDivElement>(null);
   const nodes = visualization.scene_nodes;
   const sceneCount = nodes.length;
-  const series = visualization.curve_series[metric] ?? [];
+  const lensId = observationLens;
+  const lensLines = useMemo(() => {
+    if (!lensId) return null;
+    return buildLensChartLines(visualization, lensId, { overlayComposite });
+  }, [visualization, lensId, overlayComposite]);
+  const series = lensLines?.[0]?.series ?? visualization.curve_series[metric] ?? [];
+  const secondarySeries = lensLines && lensLines.length > 1 ? lensLines[1].series : null;
+  const lensDef = lensId ? getObservationLens(lensId) : null;
 
   const effectiveView = exportFullJourney
     ? { start: 1, end: Math.max(sceneCount, 1) }
@@ -147,22 +170,68 @@ export function CanonicalJourneyChart({
     );
   }, [exportFullJourney, sceneCount, viewportWidth, effectiveView.start, effectiveView.end]);
 
+  const yScaleOptions = useMemo(() => {
+    if (lensDef?.yDomain === "valence_signed" || metric === "valence") {
+      return valenceYScaleOptions();
+    }
+    return undefined;
+  }, [lensDef, metric]);
+
   const yScale = useMemo(
-    () => computeYScale(series, chartHeight, effectiveYMode),
-    [series, chartHeight, effectiveYMode],
+    () => computeYScale(series, chartHeight, effectiveYMode, yScaleOptions),
+    [series, chartHeight, effectiveYMode, yScaleOptions],
   );
 
-  const warnings = useMemo(() => collectDataWarnings(series), [series]);
+  const warningDomain = yScaleOptions?.domainOverride
+    ? { min: yScaleOptions.domainOverride.min, max: yScaleOptions.domainOverride.max }
+    : { min: 0, max: 100 };
+  const warnings = useMemo(
+    () => collectDataWarnings(series, warningDomain),
+    [series, warningDomain.min, warningDomain.max],
+  );
 
   const xFor = useCallback(
     (ordinal: number) => xForSceneOrdinal(ordinal, sceneCount, chartWidth),
     [sceneCount, chartWidth],
   );
 
-  const linePath = useMemo(
-    () => buildLinePathD(series, xFor, yScale.yForValue),
-    [series, xFor, yScale],
+  const mainSeries = useMemo(() => mainCurveSeries(series), [series]);
+  const mainSecondary = useMemo(
+    () => (secondarySeries ? mainCurveSeries(secondarySeries) : []),
+    [secondarySeries],
   );
+
+  const linePath = useMemo(
+    () => buildLinePathD(mainSeries, xFor, yScale.yForValue),
+    [mainSeries, xFor, yScale],
+  );
+  const secondaryLinePath = useMemo(
+    () =>
+      mainSecondary.length
+        ? buildLinePathD(mainSecondary, xFor, yScale.yForValue)
+        : "",
+    [mainSecondary, xFor, yScale],
+  );
+
+  const segmentMarkers = useMemo(() => {
+    if (!lensId) return [];
+    return buildSegmentMarkers(
+      nodes.map((node) => ({
+        scene_ordinal: node.scene_ordinal,
+        reading_momentum:
+          node.scores.reading_momentum ?? node.engagement.engagement_score,
+        plot_progress: node.scores.plot_progress,
+        reading_tension: node.scores.reading_tension,
+        hook: node.scores.hook,
+        payoff: node.scores.payoff,
+        pacing_speed: node.scores.pacing_speed ?? node.scores.tension,
+        clarity: node.scores.clarity,
+        information_gain: node.scores.information_gain,
+        arousal:
+          ((node.scores.arousal_start ?? 0) + (node.scores.arousal_end ?? 0)) / 2,
+      })),
+    );
+  }, [lensId, nodes]);
 
   const hookOrdinals = useMemo(() => {
     if (markerMode === "compact") {
@@ -504,8 +573,40 @@ export function CanonicalJourneyChart({
               stroke="var(--accent)"
               strokeWidth={2.25}
               data-testid="journey-curve-path"
+              data-line-id={lensLines?.[0]?.id ?? metric}
             />
           )}
+          {secondaryLinePath ? (
+            <path
+              d={secondaryLinePath}
+              fill="none"
+              stroke="var(--journey-secondary-line, #ae3ec9)"
+              strokeWidth={2}
+              strokeDasharray="6 4"
+              data-testid="journey-curve-path-secondary"
+              data-line-id={lensLines?.[1]?.id ?? "secondary"}
+            />
+          ) : null}
+          {segmentMarkers.map((marker) => {
+            const x1 = xFor(marker.fromOrdinal);
+            const x2 = xFor(marker.toOrdinal);
+            const midX = (x1 + x2) / 2;
+            return (
+              <text
+                key={`seg-${marker.fromOrdinal}-${marker.toOrdinal}-${marker.label}`}
+                x={midX}
+                y={padTop + 12}
+                textAnchor="middle"
+                className="journey-segment-marker"
+                data-testid={`journey-segment-marker-${marker.toOrdinal}`}
+                data-direction={marker.direction}
+                fontSize={10}
+                fill="var(--muted)"
+              >
+                {marker.label}
+              </text>
+            );
+          })}
         </g>
 
         {/* 5. Nodes — not clipped by plot clipPath */}
@@ -547,10 +648,35 @@ export function CanonicalJourneyChart({
               );
             }
             const cy = yScale.yForValue(value);
-            const radius = NODE_RADIUS[node.role] ?? 4;
+            const isBeat =
+              node.role === "beat" ||
+              node.node_type === "beat" ||
+              node.include_in_main_curve === false;
+            const visual = resolveNodeVisualStyle({
+              primaryDiagnosis: node.primary_diagnosis,
+              secondaryDiagnoses: node.secondary_diagnoses,
+              isBeat,
+              confidence: node.confidence,
+              dataQualityIssue: node.data_quality_issue,
+            });
+            const radius = isBeat ? 2.5 : NODE_RADIUS[node.role] ?? 4;
             const selected = selectedSceneOrdinal === node.scene_ordinal;
             const tier = hookTier(visualization, node.scene_ordinal, sceneCount);
             const hookSize = tier === "chapter" ? 7 : tier === "phase" ? 5.5 : 4;
+            const valenceDir =
+              lensId === "emotion" ? valenceDirection(node) : null;
+            const pacingLabel =
+              lensId === "pacing"
+                ? pacingFitLabel(
+                    node.scores.pacing_speed ?? node.scores.tension ?? value,
+                    node.scene_role,
+                  )
+                : null;
+            const stroke = visual.colorToken;
+            const fill =
+              visual.shape === "hollow_circle" || visual.shape === "triangle" || visual.shape === "diamond"
+                ? "var(--surface)"
+                : visual.colorToken;
             return (
               <g
                 key={node.scene_ordinal}
@@ -559,9 +685,12 @@ export function CanonicalJourneyChart({
                 }
                 data-node-hit="true"
                 data-score={String(value)}
+                data-node-type={isBeat ? "beat" : "scene"}
+                data-include-in-main-curve={isBeat ? "false" : "true"}
+                data-node-shape={visual.shape}
                 className={`journey-curve-node ${ROLE_CLASS[node.role] ?? ""} ${
-                  selected ? "selected journey-node-active" : ""
-                }`}
+                  visual.cssClass
+                } ${selected ? "selected journey-node-active" : ""}`}
                 data-hook-tier={hookOrdinals.has(node.scene_ordinal) ? tier : undefined}
                 onMouseEnter={() => setHover({ ordinal: node.scene_ordinal, x: cx, y: cy })}
                 onMouseLeave={() => setHover(null)}
@@ -569,14 +698,69 @@ export function CanonicalJourneyChart({
                 style={{ cursor: "pointer" }}
               >
                 <rect x={cx - 14} y={cy - 14} width={28} height={28} fill="transparent" />
-                <circle
-                  cx={cx}
-                  cy={cy}
-                  r={radius + (selected ? 3 : 0)}
-                  fill="var(--surface)"
-                  stroke="var(--accent)"
-                  strokeWidth={selected ? 3 : 1.5}
-                />
+                {visual.shape === "square_dot" ? (
+                  <rect
+                    x={cx - radius}
+                    y={cy - radius}
+                    width={radius * 2}
+                    height={radius * 2}
+                    fill={fill}
+                    stroke={stroke}
+                    strokeWidth={1}
+                    data-testid={
+                      exportFullJourney
+                        ? undefined
+                        : `journey-beat-aux-node-${node.scene_ordinal}`
+                    }
+                  />
+                ) : visual.shape === "triangle" ? (
+                  <polygon
+                    points={`${cx},${cy - radius - 1} ${cx - radius - 1},${cy + radius} ${cx + radius + 1},${cy + radius}`}
+                    fill={fill}
+                    stroke={stroke}
+                    strokeWidth={selected ? 2.5 : 1.5}
+                  />
+                ) : visual.shape === "diamond" ? (
+                  <polygon
+                    points={`${cx},${cy - radius - 2} ${cx + radius + 1},${cy} ${cx},${cy + radius + 2} ${cx - radius - 1},${cy}`}
+                    fill={fill}
+                    stroke={stroke}
+                    strokeWidth={selected ? 2.5 : 1.5}
+                  />
+                ) : (
+                  <circle
+                    cx={cx}
+                    cy={cy}
+                    r={radius + (selected ? 3 : 0)}
+                    fill={fill}
+                    stroke={stroke}
+                    strokeWidth={selected ? 3 : 1.5}
+                  />
+                )}
+                {valenceDir && valenceDir !== "flat" ? (
+                  <text
+                    x={cx}
+                    y={cy - radius - 6}
+                    textAnchor="middle"
+                    fontSize={9}
+                    fill="var(--muted)"
+                    data-testid={`journey-valence-dir-${node.scene_ordinal}`}
+                  >
+                    {valenceDir === "up" ? "↑" : "↓"}
+                  </text>
+                ) : null}
+                {pacingLabel ? (
+                  <text
+                    x={cx}
+                    y={cy + radius + 11}
+                    textAnchor="middle"
+                    fontSize={9}
+                    fill="var(--muted)"
+                    data-testid={`journey-pacing-fit-${node.scene_ordinal}`}
+                  >
+                    {pacingLabel}
+                  </text>
+                ) : null}
                 {payoffOrdinals.has(node.scene_ordinal) && (
                   <circle
                     cx={cx + 5}

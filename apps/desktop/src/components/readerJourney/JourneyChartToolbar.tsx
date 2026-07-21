@@ -8,10 +8,21 @@ import {
   formatJourneyMetricLabel,
 } from "./journeyUiLabels";
 import type { ChartHeightPreset, YDomainMode } from "./journeyVisualizationConfig";
+import {
+  DEFAULT_OBSERVATION_LENS,
+  OBSERVATION_LENSES,
+  getObservationLens,
+  type ObservationLensId,
+} from "./observationLenses";
 
 type Props = {
   metric: JourneyCurveMetric;
   onMetricChange: (metric: JourneyCurveMetric) => void;
+  /** Observation lens (v2). When set, primary selector shows lenses instead of raw metrics. */
+  observationLens?: ObservationLensId;
+  onObservationLensChange?: (lens: ObservationLensId) => void;
+  overlayComposite?: boolean;
+  onOverlayCompositeChange?: (enabled: boolean) => void;
   heightPreset: ChartHeightPreset;
   onHeightPresetChange: (preset: ChartHeightPreset) => void;
   yDomainMode: YDomainMode;
@@ -49,6 +60,10 @@ type Props = {
 export function JourneyChartToolbar({
   metric,
   onMetricChange,
+  observationLens = DEFAULT_OBSERVATION_LENS,
+  onObservationLensChange,
+  overlayComposite = false,
+  onOverlayCompositeChange,
   heightPreset,
   onHeightPresetChange,
   yDomainMode,
@@ -68,10 +83,14 @@ export function JourneyChartToolbar({
   exportBusy = false,
 }: Props) {
   const [metricOpen, setMetricOpen] = useState(false);
+  const [lensOpen, setLensOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const metricTriggerId = useId();
+  const lensTriggerId = useId();
   const moreTriggerId = useId();
 
+  const useLenses = typeof onObservationLensChange === "function";
+  const lensDef = getObservationLens(observationLens);
   const metricLabel = formatJourneyMetricLabel(metric);
 
   const handleMetricSelect = (key: JourneyCurveMetric) => {
@@ -79,14 +98,85 @@ export function JourneyChartToolbar({
     setMetricOpen(false);
   };
 
+  const handleLensSelect = (id: ObservationLensId) => {
+    onObservationLensChange?.(id);
+    setLensOpen(false);
+  };
+
   const inspectorLabel = inspectorCollapsed ? "展开详情" : "收起详情";
+
+  const lensMenu = (
+    <JourneyPopover
+      open={lensOpen}
+      onOpenChange={(open) => {
+        setLensOpen(open);
+        if (open) {
+          setMoreOpen(false);
+          setMetricOpen(false);
+        }
+      }}
+      align="start"
+      data-testid="journey-lens-select-menu"
+      menuLabel="观察镜头"
+      trigger={
+        <button
+          type="button"
+          id={lensTriggerId}
+          className={`journey-toolbar-btn journey-toolbar-btn-select ${lensOpen ? "active" : ""}`}
+          data-testid="journey-lens-select"
+          data-current-lens={lensDef.id}
+          title={`观察镜头：${lensDef.labelZh}`}
+          aria-label={`观察镜头：${lensDef.labelZh}`}
+          aria-expanded={lensOpen}
+          aria-haspopup="listbox"
+          onClick={() => {
+            setLensOpen((v) => !v);
+            setMoreOpen(false);
+            setMetricOpen(false);
+          }}
+        >
+          <span className="journey-toolbar-btn-label">镜头</span>
+          <span className="journey-toolbar-btn-sep" aria-hidden="true">
+            ：
+          </span>
+          <span className="journey-toolbar-btn-value">{lensDef.labelZh}</span>
+        </button>
+      }
+    >
+      <div
+        role="listbox"
+        aria-label="选择观察镜头"
+        data-testid="journey-lens-selector-list"
+      >
+        {OBSERVATION_LENSES.map((item) => {
+          const selected = lensDef.id === item.id;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              role="option"
+              data-testid={`journey-lens-${item.id}`}
+              className={selected ? "active" : ""}
+              aria-selected={selected}
+              onClick={() => handleLensSelect(item.id)}
+            >
+              <span className="journey-metric-option-label">{item.labelZh}</span>
+            </button>
+          );
+        })}
+      </div>
+    </JourneyPopover>
+  );
 
   const metricMenu = (
     <JourneyPopover
       open={metricOpen}
       onOpenChange={(open) => {
         setMetricOpen(open);
-        if (open) setMoreOpen(false);
+        if (open) {
+          setMoreOpen(false);
+          setLensOpen(false);
+        }
       }}
       align="start"
       data-testid="journey-metric-select-menu"
@@ -105,6 +195,7 @@ export function JourneyChartToolbar({
           onClick={() => {
             setMetricOpen((v) => !v);
             setMoreOpen(false);
+            setLensOpen(false);
           }}
         >
           <span className="journey-toolbar-btn-label">指标</span>
@@ -284,7 +375,8 @@ export function JourneyChartToolbar({
     <div
       className="journey-toolbar-region"
       data-testid="journey-toolbar-region"
-      data-metric-panel-open={metricOpen ? "true" : "false"}
+      data-metric-panel-open={metricOpen || lensOpen ? "true" : "false"}
+      data-observation-lens={useLenses ? lensDef.id : undefined}
     >
       <div
         className="journey-curve-toolbar journey-viz-toolbar"
@@ -294,7 +386,24 @@ export function JourneyChartToolbar({
         aria-label="图表工具栏"
       >
         <div className="journey-toolbar-left" data-testid="journey-metric-switcher">
-          {metricMenu}
+          {useLenses ? lensMenu : metricMenu}
+          {useLenses && onOverlayCompositeChange ? (
+            <button
+              type="button"
+              className={`journey-toolbar-btn ${overlayComposite ? "active" : ""}`}
+              data-testid="journey-overlay-composite"
+              aria-pressed={overlayComposite}
+              title="叠加对比：综合阅读 + 当前镜头（最多两条线）"
+              onClick={() => onOverlayCompositeChange(!overlayComposite)}
+            >
+              叠加对比
+            </button>
+          ) : null}
+          {useLenses ? (
+            <span hidden aria-hidden="true">
+              {metricMenu}
+            </span>
+          ) : null}
           <button
             type="button"
             className="journey-toolbar-btn"
@@ -330,6 +439,9 @@ export function JourneyChartToolbar({
       {/* Keep metric key list reachable for static audits */}
       <span hidden aria-hidden="true" data-testid="journey-metric-keys-audit">
         {ALL_METRIC_KEYS.join(",")}
+      </span>
+      <span hidden aria-hidden="true" data-testid="journey-lens-keys-audit">
+        {OBSERVATION_LENSES.map((item) => item.id).join(",")}
       </span>
     </div>
   );

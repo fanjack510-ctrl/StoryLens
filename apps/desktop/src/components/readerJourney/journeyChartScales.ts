@@ -11,7 +11,7 @@ export type ResolvedMetricValue = number | null;
 export type DataRangeWarning = {
   scene_ordinal: number;
   value: number;
-  kind: "below_0" | "above_100";
+  kind: "below_0" | "above_100" | "below_domain" | "above_domain";
 };
 
 /** Resolve a curve point; missing/NaN → null (line break). Never coerce null to 0. */
@@ -45,15 +45,26 @@ export function metricValueOrZero(point: {
   return resolved ?? 0;
 }
 
-export function collectDataWarnings(series: JourneyCurvePoint[]): DataRangeWarning[] {
+export function collectDataWarnings(
+  series: JourneyCurvePoint[],
+  domain: { min: number; max: number } = { min: 0, max: 100 },
+): DataRangeWarning[] {
   const warnings: DataRangeWarning[] = [];
   for (const point of series) {
     const value = resolveMetricValue(point);
     if (value == null) continue;
-    if (value < 0) {
-      warnings.push({ scene_ordinal: point.scene_ordinal, value, kind: "below_0" });
-    } else if (value > 100) {
-      warnings.push({ scene_ordinal: point.scene_ordinal, value, kind: "above_100" });
+    if (value < domain.min) {
+      warnings.push({
+        scene_ordinal: point.scene_ordinal,
+        value,
+        kind: domain.min === 0 ? "below_0" : "below_domain",
+      });
+    } else if (value > domain.max) {
+      warnings.push({
+        scene_ordinal: point.scene_ordinal,
+        value,
+        kind: domain.max === 100 ? "above_100" : "above_domain",
+      });
     }
   }
   return warnings;
@@ -69,10 +80,18 @@ export type YScale = {
   plotY: (value: number | null) => number | null;
 };
 
+export type YScaleOptions = {
+  /** Explicit domain override (e.g. valence -100..100). */
+  domainOverride?: { min: number; max: number; ticks?: number[] };
+  /** When true, focus_data may expand below 0 / above 100 (signed metrics). */
+  allowSignedDomain?: boolean;
+};
+
 export function computeYScale(
   series: JourneyCurvePoint[],
   chartHeight: number,
   mode: YDomainMode = DEFAULT_Y_DOMAIN_MODE,
+  options: YScaleOptions = {},
 ): YScale {
   const padTop = CHART_PAD.top;
   const padBottom = CHART_PAD.bottom;
@@ -82,7 +101,16 @@ export function computeYScale(
   let domainMax = 100;
   let ticks: number[] = [...Y_TICKS_FIXED];
 
-  if (mode === "focus_data") {
+  if (options.domainOverride) {
+    domainMin = options.domainOverride.min;
+    domainMax = options.domainOverride.max;
+    ticks =
+      options.domainOverride.ticks ??
+      [-100, -50, 0, 50, 100].filter((t) => t >= domainMin && t <= domainMax);
+    if (domainMin === -100 && domainMax === 100 && !options.domainOverride.ticks) {
+      ticks = [-100, -50, 0, 50, 100];
+    }
+  } else if (mode === "focus_data") {
     const values = series
       .map((p) => resolveMetricValue(p))
       .filter((v): v is number => v != null);
@@ -90,11 +118,16 @@ export function computeYScale(
       const min = Math.min(...values);
       const max = Math.max(...values);
       const pad = Math.max((max - min) * 0.08, 4);
-      domainMin = Math.max(0, Math.floor((min - pad) / 5) * 5);
-      domainMax = Math.min(100, Math.ceil((max + pad) / 5) * 5);
+      if (options.allowSignedDomain) {
+        domainMin = Math.floor((min - pad) / 5) * 5;
+        domainMax = Math.ceil((max + pad) / 5) * 5;
+      } else {
+        domainMin = Math.max(0, Math.floor((min - pad) / 5) * 5);
+        domainMax = Math.min(100, Math.ceil((max + pad) / 5) * 5);
+      }
       if (domainMax <= domainMin) {
-        domainMin = Math.max(0, domainMin - 5);
-        domainMax = Math.min(100, domainMax + 5);
+        domainMin = options.allowSignedDomain ? domainMin - 5 : Math.max(0, domainMin - 5);
+        domainMax = options.allowSignedDomain ? domainMax + 5 : Math.min(100, domainMax + 5);
       }
       const step = Math.max((domainMax - domainMin) / 4, 1);
       ticks = Array.from({ length: 5 }, (_, i) =>
@@ -117,6 +150,14 @@ export function computeYScale(
   };
 
   return { mode, domainMin, domainMax, ticks, yForValue, plotY };
+}
+
+/** Valence must support -100..+100; negatives are valid, not out-of-range errors. */
+export function valenceYScaleOptions(): YScaleOptions {
+  return {
+    domainOverride: { min: -100, max: 100, ticks: [-100, -50, 0, 50, 100] },
+    allowSignedDomain: true,
+  };
 }
 
 export function xForSceneOrdinal(
