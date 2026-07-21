@@ -89,6 +89,12 @@
       "message": "Add Reader Journey V2 general rule spec and work-agnostic verification suite (CHG-20260721-012).",
       "primary": false,
       "multi_change_reason": "V2 general rule spec + work-agnostic verification suite"
+    },
+    {
+      "sha": "91eb0908303380c6851fce8a13492ee542c17756",
+      "message": "Wire Reader Journey V2 into the default product analysis pipeline (CHG-20260721-012).",
+      "primary": false,
+      "multi_change_reason": "wire V2 into default product pipeline; status remains tested"
     }
   ],
   "modules": [
@@ -189,5 +195,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-21T12:43:43Z",
-  "updated_at": "2026-07-21T15:04:32Z"
+  "updated_at": "2026-07-21T15:25:27Z"
 }
