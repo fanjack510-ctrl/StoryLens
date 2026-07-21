@@ -113,6 +113,12 @@
       "message": "Fix Reader Journey lens picker overlay by using inline segmented control (CHG-20260721-012).",
       "primary": false,
       "multi_change_reason": "fix lens picker overlay with inline segmented control; status remains tested"
+    },
+    {
+      "sha": "77f63e02d663ebae9581b5ffb46191f0895191ee",
+      "message": "Attach lens-picker overlay fix and evidence to CHG-20260721-012.",
+      "primary": false,
+      "multi_change_reason": "attach lens-picker registry sync"
     }
   ],
   "modules": [
@@ -217,5 +223,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-21T12:43:43Z",
-  "updated_at": "2026-07-21T16:08:47Z"
+  "updated_at": "2026-07-21T16:08:48Z"
 }
