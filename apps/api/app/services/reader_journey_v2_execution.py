@@ -75,8 +75,16 @@ def validate_scene_batch_result_v2(
     *,
     expected_scene_ids: set[int],
     paragraph_ids_by_scene: dict[int, set[str]],
+    boundary_meta_by_scene: dict[int, object] | None = None,
 ) -> None:
     """Lightweight V2 business validation — no v1 engagement / q_in rules."""
+    from app.services.scene_evidence_validation import (
+        BoundaryMeta,
+        SceneEvidenceValidationError,
+        validate_evidence_mapping,
+        v2_level_fields_from_profile,
+    )
+
     got = {int(item.scene_id) for item in value.profiles}
     if got != expected_scene_ids:
         raise StructuralValidationError(
@@ -93,6 +101,29 @@ def validate_scene_batch_result_v2(
                     "JOURNEY_EVIDENCE_OUT_OF_SCENE",
                     no_model_repair=False,
                 )
+        if not allowed:
+            continue
+        ordered = sorted(allowed)
+        raw_boundary = (boundary_meta_by_scene or {}).get(int(profile.scene_id))
+        boundary = raw_boundary if isinstance(raw_boundary, BoundaryMeta) else None
+        if isinstance(raw_boundary, dict):
+            boundary = BoundaryMeta(
+                signals=list(raw_boundary.get("signals") or []),
+                suspected_split_points=list(raw_boundary.get("suspected_split_points") or []),
+                consolidation_confidence=raw_boundary.get("consolidation_confidence"),
+                boundary_confidence=raw_boundary.get("boundary_confidence"),
+                paragraph_count=len(ordered),
+                multiple_structure_tasks=bool(raw_boundary.get("multiple_structure_tasks")),
+            )
+        try:
+            validate_evidence_mapping(
+                scene_id=str(profile.scene_id),
+                scene_paragraph_ids=ordered,
+                fields=v2_level_fields_from_profile(profile),
+                boundary=boundary,
+            )
+        except SceneEvidenceValidationError:
+            raise
 
 
 def _load_v2_profiles_from_artifacts(

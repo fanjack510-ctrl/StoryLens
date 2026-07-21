@@ -1,0 +1,95 @@
+{
+  "version": "1.0",
+  "change_id": "CHG-20260721-012",
+  "description": "Work-agnostic Scene evidence field classes and adaptive thresholds. Never branch on book/character/scene-id.",
+  "scene_length_bands": {
+    "micro_max_paragraphs": 3,
+    "short_max_paragraphs": 6,
+    "medium_long_min_paragraphs": 7
+  },
+  "overbroad_reuse": {
+    "min_local_fields_full_scene": 5,
+    "min_local_full_scene_ratio": 0.7,
+    "rationale_jaccard_duplicate": 0.92,
+    "max_evidence_repair_attempts": 1
+  },
+  "field_classes": {
+    "local": [
+      "goal_progress",
+      "conflict_change",
+      "state_change",
+      "information_gain",
+      "character_agency",
+      "curiosity",
+      "tension",
+      "hook",
+      "payoff",
+      "entry_state",
+      "goal",
+      "obstacle",
+      "key_actions",
+      "turning_point",
+      "unresolved_question"
+    ],
+    "holistic": [
+      "causal_coherence",
+      "pacing_speed",
+      "pacing_fit",
+      "clarity",
+      "cognitive_load",
+      "redundancy",
+      "scene_role",
+      "overall_emotional_arousal",
+      "scene_function",
+      "outcome",
+      "setup_consistency",
+      "question_lifecycle"
+    ],
+    "hybrid": [
+      "emotional_investment",
+      "valence",
+      "atmosphere",
+      "hook_payoff_fit",
+      "emotional_valence_start",
+      "emotional_valence_end",
+      "arousal_start",
+      "arousal_end"
+    ]
+  },
+  "error_codes": {
+    "EVIDENCE_OVERBROAD_REUSE": {
+      "repairable": true,
+      "suggested_action": "evidence_remap_repair",
+      "user_title_zh": "部分分析证据过于宽泛",
+      "user_lead_zh": "当前场景分析已经生成，但部分判断引用了过大的正文范围。StoryLens 将重新整理证据对应关系，不会重复分析已完成场景。",
+      "user_button_zh": "整理证据并继续"
+    },
+    "SCENE_BOUNDARY_TOO_BROAD": {
+      "repairable": true,
+      "suggested_action": "rerun_scene_boundary",
+      "user_title_zh": "当前场景可能包含多个事件",
+      "user_lead_zh": "场景范围可能过大，导致分析证据无法准确对应。需要重新检查该场景的边界。",
+      "user_button_zh": "重新检查场景边界"
+    },
+    "EVIDENCE_OUTSIDE_SCENE": {
+      "repairable": true,
+      "suggested_action": "evidence_remap_repair"
+    },
+    "EVIDENCE_MISSING": {
+      "repairable": true,
+      "suggested_action": "evidence_remap_repair"
+    }
+  },
+  "boundary_signals": [
+    "time_change",
+    "location_change",
+    "goal_change",
+    "conflict_object_change",
+    "event_result_landed",
+    "memory_enter_or_exit",
+    "multiple_event_clusters",
+    "low_consolidation_confidence",
+    "low_boundary_confidence",
+    "excessive_paragraphs_with_multiple_tasks"
+  ]
+}

@@ -1,8 +1,8 @@
 # Reader Journey V2 通用规则规范
 
-**Change:** CHG-20260721-012  
-**Contract / Formula / Prompt:** 2.0  
-**Status:** frozen baseline for general verification (VERSION 1.0.3)  
+**Change:** CHG-20260721-012
+**Contract / Formula / Prompt:** 2.0
+**Status:** frozen baseline for general verification (VERSION 1.0.3)
 **Principle:** Rules are work-agnostic. Named novels (e.g. external validation books) are instances only — never inputs to product branching.
 
 ---
@@ -31,12 +31,12 @@ Scanned for work-name / character-name / scene-ordinal / paragraph_id / Chinese-
 
 ### 0.3 Absolute bans (must never enter product rules)
 
-- Book / series title branches  
-- Character or location name branches  
-- Hard-coded `scene_ordinal` / `scene_id` / `paragraph_id` branches  
-- Chinese source-sentence branches that award score  
-- Per-novel thresholds or ±bonus  
-- Chapter min–max rescaling of scores for display or derivation  
+- Book / series title branches
+- Character or location name branches
+- Hard-coded `scene_ordinal` / `scene_id` / `paragraph_id` branches
+- Chinese source-sentence branches that award score
+- Per-novel thresholds or ±bonus
+- Chapter min–max rescaling of scores for display or derivation
 
 ---
 
@@ -44,7 +44,7 @@ Scanned for work-name / character-name / scene-ordinal / paragraph_id / Chinese-
 
 **Definition:** Degree to which the scene advances goals, conflict, world/character state, information, agency, and causal coherence.
 
-**Inputs (mapped_score 0–100 from level 0–5):**  
+**Inputs (mapped_score 0–100 from level 0–5):**
 `goal_progress`, `conflict_change`, `state_change`, `information_gain`, `character_agency`, `causal_coherence`
 
 **Formula:**
@@ -56,7 +56,7 @@ plot_progress = clamp_0_100(
 )
 ```
 
-**Rounding:** 1 decimal (`ROUND_HALF_UP`).  
+**Rounding:** 1 decimal (`ROUND_HALF_UP`).
 **scene_role:** does **not** change this formula.
 
 ---
@@ -171,7 +171,7 @@ reading_momentum = clamp_0_100(
 )
 ```
 
-User copy: **阅读动力**. Storage field: `reading_momentum`.  
+User copy: **阅读动力**. Storage field: `reading_momentum`.
 `engagement` is legacy-adapter only.
 
 ---
@@ -192,9 +192,9 @@ Legacy `engagement<40` consecutive rule is **forbidden** on `v2_native` / contra
 
 ## 14. Scene 与 Beat
 
-- Model / consolidation may mark `node_type=beat` for silence / reaction / environment / dialogue residue fragments.  
-- Beat: `include_in_main_curve=false`, `include_in_chapter_mean=false`.  
-- Missing evidence / tiny summary on beat → `data_quality_issue=scene_boundary_anomaly` (quality, not literary failure).  
+- Model / consolidation may mark `node_type=beat` for silence / reaction / environment / dialogue residue fragments.
+- Beat: `include_in_main_curve=false`, `include_in_chapter_mean=false`.
+- Missing evidence / tiny summary on beat → `data_quality_issue=scene_boundary_anomaly` (quality, not literary failure).
 - Inserting a Beat must not change equal-weight main-curve vertices of surrounding Scenes’ derived scores beyond re-index artifacts.
 
 ---
@@ -221,7 +221,7 @@ Legacy `engagement<40` consecutive rule is **forbidden** on `v2_native` / contra
 | low_confidence | profile.confidence &lt; 0.45 |
 | scene_boundary_anomaly | beat / boundary quality |
 
-Primary/secondary: first non-anomaly code primary; anomaly demoted if others exist.  
+Primary/secondary: first non-anomaly code primary; anomaly demoted if others exist.
 Diagnosis confidence: `clamp(0.2, 1.0, profile.confidence * (0.85 if primary else 1.0))`.
 
 UI band must **not** map missing primary →「正常」; Beat →「辅助节拍」.
@@ -253,9 +253,9 @@ Weights, level→score map, no-evidence cap, fit_to_band constants, dropoff bonu
 | 4 | 80 |
 | 5 | 95 |
 
-- No evidence IDs → `mapped_score = min(mapped, 40)`.  
-- Clamp all derived metrics to [0, 100].  
-- Round derived to 1 decimal.  
+- No evidence IDs → `mapped_score = min(mapped, 40)`.
+- Clamp all derived metrics to [0, 100].
+- Round derived to 1 decimal.
 - Model must not emit `mapped_score` / `reading_momentum` / `dropoff_risk` as authority; program overwrites mapping.
 
 ---
@@ -273,7 +273,7 @@ Weights, level→score map, no-evidence cap, fit_to_band constants, dropoff bonu
 
 ## 20. Instance validation boundary
 
-External books may only record: expected **general** ordering, failure class (model / rule / split / UI), and whether the same failure repeats across independent samples.  
+External books may only record: expected **general** ordering, failure class (model / rule / split / UI), and whether the same failure repeats across independent samples.
 Forbidden product edits: “Scene N must be peak”, “elder exposition must be lower”, named landmark score floors.
 
 ---
@@ -282,20 +282,88 @@ Forbidden product edits: “Scene N must be peak”, “elder exposition must be
 
 See `data/fixtures/reader_journey_v2_general/test_set_splits.json`:
 
-- **development** — may inspect when designing tests  
-- **holdout** — do not tune against; optional `RUN_V2_HOLDOUT=1`  
-- **regression** — always run in local V2 general suite  
+- **development** — may inspect when designing tests
+- **holdout** — do not tune against; optional `RUN_V2_HOLDOUT=1`
+- **regression** — always run in local V2 general suite
 
 ---
 
 ## 22. Verification acceptance (this baseline)
 
-1. V2 product modules + formula/prompt configs: no instance prose hardcoding (automated).  
-2. Identity mutations (names/ids/order metadata): 100% stable derived metrics.  
-3. Minimal contrast ordering: ≥90%.  
-4. Degradation direction: ≥90%.  
-5. Beat insert: main-curve membership stable.  
-6. Formulas deterministically recalculable.  
-7. Same base levels ⇒ same plot/tension across roles; role only moves fit metrics.  
-8. No chapter min–max normalization in derivation.  
-9. Single-instance novel scores are not grounds for weight edits.  
+1. V2 product modules + formula/prompt configs: no instance prose hardcoding (automated).
+2. Identity mutations (names/ids/order metadata): 100% stable derived metrics.
+3. Minimal contrast ordering: ≥90%.
+4. Degradation direction: ≥90%.
+5. Beat insert: main-curve membership stable.
+6. Formulas deterministically recalculable.
+7. Same base levels ⇒ same plot/tension across roles; role only moves fit metrics.
+8. No chapter min–max normalization in derivation.
+9. Single-instance novel scores are not grounds for weight edits.
+
+---
+
+## 23. Scene 证据映射与业务校验
+
+**Config:** `config/scene_evidence_validation.json`
+**Implementation:** `apps/api/app/services/scene_evidence_validation.py`
+**Principle:** Work-agnostic. Full-scene evidence alone is **not** a failure condition. Never retune V2 score weights from a single novel.
+
+### 23.1 Field classes
+
+| Class | Meaning | Examples |
+|-------|---------|----------|
+| **local** | Prefer minimal sufficient paragraphs (often 1–3); sharing evidence across fields is allowed | `goal_progress`, `conflict_change`, `state_change`, `information_gain`, `character_agency`, `curiosity`, `tension`, `hook`, `payoff`, Scene Analysis `entry_state`/`goal`/`obstacle`/`key_actions`/`turning_point`/`unresolved_question` |
+| **holistic** | May cite broad / full-scene range when rationale is field-targeted | `causal_coherence`, `pacing_speed`, `pacing_fit`, `clarity`, `cognitive_load`, `redundancy`, `scene_role`, `overall_emotional_arousal`, `scene_function`, Scene Analysis `outcome` |
+| **hybrid** | Not failed solely for full-scene citation; judged with length + rationale + reuse pattern | `emotional_investment`, `valence`, `atmosphere`, `hook_payoff_fit` |
+
+Shared evidence across fields is **not** an error by itself.
+
+### 23.2 Scene length bands (named thresholds)
+
+| Band | Paragraph count | Rule |
+|------|-----------------|------|
+| micro | 1–3 (`micro_max_paragraphs`) | Full-scene citation by many fields allowed; still require in-scene IDs + non-empty field-targeted rationale when required |
+| short | 4–6 (`short_max_paragraphs`) | Shared / full-scene evidence allowed; do not fail on full-scene alone |
+| medium_long | ≥7 (`medium_long_min_paragraphs`) | See overbroad rule below |
+
+### 23.3 Rationale checks (deterministic, no extra model)
+
+- Normalize whitespace / punctuation / case
+- Exact duplicate detection
+- Simple token / Jaccard similarity (`rationale_jaccard_duplicate`, default 0.92)
+- Mechanical templates such as「本场全部内容体现…」
+Rationale similarity alone does **not** fail; it only contributes when combined with medium_long full-scene local reuse.
+
+### 23.4 Boundary before evidence
+
+If generic boundary signals indicate multi-event scope (`SCENE_BOUNDARY_TOO_BROAD`), return that code **before** `EVIDENCE_OVERBROAD_REUSE`. Evidence remap must not mask a split problem.
+
+### 23.5 `EVIDENCE_OVERBROAD_REUSE` (all required)
+
+On medium_long scenes only:
+
+1. ≥ `min_local_fields_full_scene` (5) **local** fields cite the **exact** full-scene paragraph set
+2. Those fields are ≥ `min_local_full_scene_ratio` (0.70) of local fields that have evidence
+3. Rationales are highly duplicated / empty / mechanical
+4. Fields are not classified holistic
+5. Scene is not already classified boundary-too-broad
+
+Payload includes: `scene_id`, `scene_paragraph_count`, `affected_fields`, `shared_evidence`, `local_field_count`, `full_scene_reuse_ratio`, `duplicate_rationale_groups`, `repairable=true`, `suggested_action=evidence_remap_repair`.
+
+### 23.6 Other structured codes
+
+- `EVIDENCE_OUTSIDE_SCENE` / `EVIDENCE_MISSING` — repairable evidence legality failures
+- `SCENE_BOUNDARY_TOO_BROAD` — `suggested_action=rerun_scene_boundary`
+- Base rules: IDs exist, in-scene, deduped preserving order, evidence+rationale together when required
+
+### 23.7 `evidence_remap_repair`
+
+- Max attempts: `max_evidence_repair_attempts` = **1**
+- May rewrite only affected fields’ `evidence_paragraph_ids` and short field-targeted rationale
+- **Must not** change `level`, `mapped_score`, plot/tension/pacing/hook/payoff/momentum, diagnosis, or question lifecycle
+- Completed scenes are not re-analyzed; same `repair_request_id` is idempotent
+- After one failed repair: pause, keep completed work, no infinite retry
+
+### 23.8 Absolute ban
+
+Do not add book title / character / scene-ordinal / source-sentence special cases to these thresholds.

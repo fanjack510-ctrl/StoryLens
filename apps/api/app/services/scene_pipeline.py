@@ -188,14 +188,16 @@ def scene_ranges(
 
 
 def _normalize_evidence_ids(ids: list[str], allowed_ids: set[str]) -> list[str]:
+    """Dedupe evidence IDs while preserving first-seen (document) order. Never invent IDs."""
     seen: set[str] = set()
     ordered: list[str] = []
     for item in ids:
-        if item not in allowed_ids or item in seen:
+        text = str(item or "").strip()
+        if not text or text not in allowed_ids or text in seen:
             continue
-        seen.add(item)
-        ordered.append(item)
-    return sorted(ordered)
+        seen.add(text)
+        ordered.append(text)
+    return ordered
 
 
 def _normalize_evidence_field(field: EvidenceField, allowed_ids: set[str]) -> EvidenceField:
@@ -271,6 +273,16 @@ def is_evidence_paragraph_validation_error(message: str) -> bool:
         return True
     if "paragraph" in lower and ("outside" in lower or "不存在" in message):
         return True
+    # Structured evidence codes (user-facing copy lives elsewhere).
+    for code in (
+        "evidence_overbroad_reuse",
+        "evidence_outside_scene",
+        "evidence_missing",
+        "full-scene evidence",
+        "reuse full-scene evidence",
+    ):
+        if code in lower:
+            return True
     return "evidence" in lower and "evidenced action" not in lower
 
 
@@ -298,8 +310,14 @@ def describe_scene_validation_failure(
     # Empty key_actions is a legal shape for dialogue/emotion/info scenes; only note it.
     if not result.key_actions and "key_actions" in error_message:
         categories.append("key_actions_empty")
-    if "must not cite the whole scene" in error_message:
+    if (
+        "must not cite the whole scene" in error_message
+        or "EVIDENCE_OVERBROAD_REUSE" in error_message
+        or "reuse full-scene evidence" in error_message.lower()
+    ):
         categories.append("indiscriminate_scene_citation")
+    if "SCENE_BOUNDARY_TOO_BROAD" in error_message:
+        categories.append("scene_boundary_too_broad")
     if "must not reuse one generic summary" in error_message:
         categories.append("duplicate_summaries")
     if not categories:
@@ -318,7 +336,18 @@ def validate_scene_analysis(
     expected_scene_key: str,
     allowed_ids: set[str],
     strict_contract: bool = False,
+    *,
+    boundary_meta: object | None = None,
+    ordered_paragraph_ids: list[str] | None = None,
 ) -> None:
+    from app.services.scene_evidence_validation import (
+        BoundaryMeta,
+        SceneEvidenceValidationError,
+        scene_analysis_fields_from_result,
+        scene_length_band,
+        validate_evidence_mapping,
+    )
+
     if result.scene_id != expected_scene_key:
         raise ValueError("场景分析的 Scene ID 不匹配")
     required = (result.entry_state, result.goal, result.outcome)
@@ -348,20 +377,42 @@ def validate_scene_analysis(
         raise ValueError("key_actions 每项必须包含非空 summary 与当前场景内证据")
     if not result.outcome.summary.strip() or not result.function_tags:
         raise ValueError("outcome and scene function must be complete")
-    # Single-paragraph scenes can only cite one id; identical evidence sets are expected.
-    if len(allowed_ids) <= 1:
-        return
-    summaries = [item.summary.strip() for item in fields if item.summary.strip()]
-    if len(summaries) != len(set(summaries)):
-        raise ValueError("analysis fields must not reuse one generic summary")
-    nonempty_evidence = [
-        set(item.evidence_paragraph_ids) for item in fields if item.summary.strip()
-    ]
-    if (
-        len(nonempty_evidence) >= 4
-        and len({tuple(sorted(item)) for item in nonempty_evidence}) == 1
-    ):
-        raise ValueError("all analysis fields must not cite the whole scene indiscriminately")
+
+    ordered = list(ordered_paragraph_ids) if ordered_paragraph_ids else sorted(allowed_ids)
+    # Prefer caller order; fall back to allowed_ids membership only.
+    ordered = [pid for pid in ordered if pid in allowed_ids]
+    if not ordered:
+        ordered = sorted(allowed_ids)
+
+    boundary = None
+    if isinstance(boundary_meta, BoundaryMeta):
+        boundary = boundary_meta
+    elif isinstance(boundary_meta, dict):
+        boundary = BoundaryMeta(
+            signals=list(boundary_meta.get("signals") or []),
+            suspected_split_points=list(boundary_meta.get("suspected_split_points") or []),
+            consolidation_confidence=boundary_meta.get("consolidation_confidence"),
+            boundary_confidence=boundary_meta.get("boundary_confidence"),
+            paragraph_count=len(ordered),
+            multiple_structure_tasks=bool(boundary_meta.get("multiple_structure_tasks")),
+        )
+
+    try:
+        validate_evidence_mapping(
+            scene_id=expected_scene_key,
+            scene_paragraph_ids=ordered,
+            fields=scene_analysis_fields_from_result(result),
+            boundary=boundary,
+        )
+    except SceneEvidenceValidationError:
+        raise
+
+    # Duplicate generic summaries: only hard-fail on medium/long scenes.
+    # Micro/short dialogue scenes often share compact phrasings with distinct evidence angles.
+    if scene_length_band(len(ordered)) == "medium_long":
+        summaries = [item.summary.strip() for item in fields if item.summary.strip()]
+        if len(summaries) != len(set(summaries)):
+            raise ValueError("analysis fields must not reuse one generic summary")
 
 
 def evidence_fields(result: SceneAnalysisResult) -> list[tuple[str, str]]:
@@ -635,6 +686,25 @@ def classify_pipeline_error(exc: Exception) -> tuple[str, str, bool, str]:
                 "structural_validation",
                 True,
                 "可从已完成批次继续；请检查transition覆盖、顺序和ID",
+            )
+        if exc.error_code in {
+            "EVIDENCE_OVERBROAD_REUSE",
+            "EVIDENCE_OUTSIDE_SCENE",
+            "EVIDENCE_MISSING",
+            "EVIDENCE_VALIDATION_FAILED",
+        }:
+            return (
+                exc.error_code,
+                "evidence_validation",
+                True,
+                "可整理证据后继续；已完成场景不会重跑",
+            )
+        if exc.error_code == "SCENE_BOUNDARY_TOO_BROAD":
+            return (
+                "SCENE_BOUNDARY_TOO_BROAD",
+                "scene_boundary",
+                True,
+                "请重新检查场景边界后再继续",
             )
         if exc.category == "evidence_validation" or exc.error_code == "EVIDENCE_VALIDATION_FAILED":
             return (

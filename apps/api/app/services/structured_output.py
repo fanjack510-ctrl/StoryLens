@@ -914,7 +914,17 @@ async def generate_validated(
             last_error = str(exc) or "结构覆盖校验失败"
             error_code = exc.error_code
             last_error_code = exc.error_code
-            last_category = "structural_validation"
+            if exc.error_code in {
+                "EVIDENCE_OVERBROAD_REUSE",
+                "EVIDENCE_OUTSIDE_SCENE",
+                "EVIDENCE_MISSING",
+                "EVIDENCE_VALIDATION_FAILED",
+            }:
+                last_category = "evidence_validation"
+            elif exc.error_code == "SCENE_BOUNDARY_TOO_BROAD":
+                last_category = "business_validation"
+            else:
+                last_category = "structural_validation"
             last_retryable = not exc.no_model_repair
             last_provider_error = None
             previous_raw = raw

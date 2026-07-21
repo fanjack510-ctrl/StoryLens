@@ -163,6 +163,87 @@ def _boundary_user_copy(run: AnalysisRun, tech: dict[str, Any]) -> dict[str, str
     }
 
 
+def _classify_scene_evidence_recovery(
+    run: AnalysisRun, tech: dict[str, Any]
+) -> dict[str, Any] | None:
+    """Map structured evidence / boundary validation failures to recovery actions."""
+    from app.services.scene_evidence_validation import user_copy_for_error
+
+    code = str(run.root_error_code or run.error_code or "")
+    message = str(
+        tech.get("provider_message")
+        or tech.get("message")
+        or run.error_message
+        or ""
+    )
+    lower = message.lower()
+
+    if code == "SCENE_BOUNDARY_TOO_BROAD" or "scene_boundary_too_broad" in lower:
+        copy = user_copy_for_error("SCENE_BOUNDARY_TOO_BROAD")
+        return {
+            "error_code": "SCENE_BOUNDARY_TOO_BROAD",
+            "action": "rerun_scene_boundary",
+            "button": copy["button"],
+            "repairable": True,
+            "user_copy": {
+                "title": copy["title"],
+                "stage_label": "场景边界需复查",
+                "explanation": copy["lead"],
+                "reason": "当前场景可能包含多个独立事件",
+                "impact": "需要重新检查场景边界后才能可靠映射证据。",
+            },
+        }
+
+    overbroad_codes = {
+        "EVIDENCE_OVERBROAD_REUSE",
+        "EVIDENCE_OUTSIDE_SCENE",
+        "EVIDENCE_MISSING",
+        "EVIDENCE_VALIDATION_FAILED",
+    }
+    legacy_overbroad = (
+        "must not cite the whole scene" in lower
+        or "reuse full-scene evidence" in lower
+        or "indiscriminately" in lower
+    )
+    if code in overbroad_codes or legacy_overbroad:
+        mapped = (
+            code
+            if code in {"EVIDENCE_OVERBROAD_REUSE", "EVIDENCE_OUTSIDE_SCENE", "EVIDENCE_MISSING"}
+            else "EVIDENCE_OVERBROAD_REUSE"
+        )
+        copy = user_copy_for_error(mapped)
+        return {
+            "error_code": mapped,
+            "action": "evidence_remap_repair",
+            "button": copy["button"] or "整理证据并继续",
+            "repairable": True,
+            "user_copy": {
+                "title": copy["title"],
+                "stage_label": "场景证据需整理",
+                "explanation": copy["lead"],
+                "reason": "部分判断引用了过大的正文范围或证据不合法",
+                "impact": "将只整理当前失败场景的证据，不会重复分析已完成场景。",
+            },
+        }
+
+    # Non-repairable business validation (not evidence-coded): no fix button.
+    if run.retryable is False and code == "BUSINESS_VALIDATION_FAILED":
+        return {
+            "error_code": code,
+            "action": "view_error_details",
+            "button": "查看问题",
+            "repairable": False,
+            "user_copy": {
+                "title": "分析未完成",
+                "stage_label": "业务校验未通过",
+                "explanation": "当前问题无法通过自动修复继续。已完成的分析结果会被保留。",
+                "reason": "业务校验失败且不可自动修复",
+                "impact": "请查看问题详情，或稍后在任务中心处理。",
+            },
+        }
+    return None
+
+
 def _budget_settings(session: Session) -> tuple[bool, dict[str, Any]]:
     cloud_row = session.get(ApplicationSetting, "cloud_enabled")
     budget_row = session.get(ApplicationSetting, "cloud_budget_settings")
@@ -832,6 +913,10 @@ def build_recovery_plan(
         and run.status == "awaiting_provider_recovery"
     )
 
+    evidence_error = _classify_scene_evidence_recovery(run, tech)
+    if evidence_error and user_copy is None:
+        user_copy = evidence_error["user_copy"]
+
     if recovery_exhausted:
         actions = [
             RecommendedAction(
@@ -888,16 +973,89 @@ def build_recovery_plan(
                 automatic=False,
             )
         )
-    elif not any(a.action == "fix_and_continue" for a in actions):
-        actions.insert(
-            0,
-            RecommendedAction(
-                action="fix_and_continue",
-                label="修复并继续",
-                automatic=False,
-                requires_user_authorization=bool(proposal),
+    elif evidence_error:
+        # Replace generic “修复并继续” with structured evidence / boundary actions.
+        actions = [
+            a
+            for a in actions
+            if a.action
+            not in {
+                "fix_and_continue",
+                "start_reader_journey",
+            }
+        ]
+        if evidence_error["repairable"]:
+            actions.insert(
+                0,
+                RecommendedAction(
+                    action=evidence_error["action"],
+                    label=evidence_error["button"],
+                    automatic=False,
+                )
             )
+        else:
+            actions.insert(
+                0,
+                RecommendedAction(
+                    action="view_error_details",
+                    label="查看问题",
+                    automatic=False,
+                )
+            )
+            actions.append(
+                RecommendedAction(
+                    action="handle_later",
+                    label="稍后处理",
+                    automatic=False,
+                )
+            )
+            actions.append(
+                RecommendedAction(
+                    action="return_task_center",
+                    label="返回任务中心",
+                    automatic=False,
+                )
+            )
+    elif not any(a.action == "fix_and_continue" for a in actions):
+        # Non-retryable business validation must not show misleading fix_and_continue.
+        non_repairable_business = (
+            run.retryable is False
+            and run.root_error_code == "BUSINESS_VALIDATION_FAILED"
+            and not evidence_error
         )
+        if not non_repairable_business:
+            actions.insert(
+                0,
+                RecommendedAction(
+                    action="fix_and_continue",
+                    label="修复并继续",
+                    automatic=False,
+                    requires_user_authorization=bool(proposal),
+                )
+            )
+        else:
+            actions.insert(
+                0,
+                RecommendedAction(
+                    action="view_error_details",
+                    label="查看问题",
+                    automatic=False,
+                )
+            )
+            actions.append(
+                RecommendedAction(
+                    action="handle_later",
+                    label="稍后处理",
+                    automatic=False,
+                )
+            )
+            actions.append(
+                RecommendedAction(
+                    action="return_task_center",
+                    label="返回任务中心",
+                    automatic=False,
+                )
+            )
 
     hard_blockers = [b for b in blockers if b.severity == "block"]
     recoverable = True
@@ -997,6 +1155,15 @@ def build_recovery_plan(
             "max_auto_recovery_attempts": MAX_AUTO_PROVIDER_RECOVERY_ATTEMPTS,
             "recovery_exhausted": recovery_exhausted,
             "provider_not_retryable": provider_not_retryable,
+            "evidence_error": (
+                {
+                    "error_code": evidence_error["error_code"],
+                    "action": evidence_error["action"],
+                    "repairable": evidence_error["repairable"],
+                }
+                if evidence_error
+                else None
+            ),
             "user_error": user_copy,
             "http_status": tech.get("http_status"),
             "provider_error_code": tech.get("provider_error_code"),

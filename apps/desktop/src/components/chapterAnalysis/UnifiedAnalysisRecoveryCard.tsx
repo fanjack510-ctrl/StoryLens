@@ -119,16 +119,41 @@ export function UnifiedAnalysisRecoveryCard({
       b.reason === "credential_unauthorized",
   );
 
+  const evidenceError = (details.evidence_error || null) as {
+    error_code?: string;
+    action?: string;
+    repairable?: boolean;
+  } | null;
+
   const showFixContinue =
     !recoveryExhausted &&
     !providerNotRetryable &&
+    evidenceError?.repairable !== false &&
     (plan?.recommended_actions || []).some((a) => a.action === "fix_and_continue");
+
+  const evidenceRemapAction = (plan?.recommended_actions || []).find(
+    (a) => a.action === "evidence_remap_repair",
+  );
+  const boundaryRerunAction = (plan?.recommended_actions || []).find(
+    (a) => a.action === "rerun_scene_boundary",
+  );
+  const showEvidenceRemap =
+    !recoveryExhausted && !providerNotRetryable && Boolean(evidenceRemapAction);
+  const showBoundaryRerun =
+    !recoveryExhausted && !providerNotRetryable && Boolean(boundaryRerunAction);
+  const showNonRepairableActions =
+    Boolean(evidenceError) && evidenceError?.repairable === false;
 
   const fixAndContinue = async (withBudgetAuth: boolean) => {
     if (busy) return;
     setBusy(true);
     setError(undefined);
-    setStatusMessage("正在检查失败原因");
+    const initialStatus = showEvidenceRemap
+      ? "正在整理证据…"
+      : showBoundaryRerun
+        ? "正在检查场景边界…"
+        : "正在检查当前场景…";
+    setStatusMessage(initialStatus);
     try {
       if (needsAuthRedirect) {
         navigate("/settings?tab=ai&focus=api_key");
@@ -141,17 +166,21 @@ export function UnifiedAnalysisRecoveryCard({
         setStatusMessage(undefined);
         return;
       }
-      if (resumeStage === "boundary_detection") {
-        setStatusMessage("正在从场景边界识别继续");
-      } else if (resumeStage === "scene_analysis") {
-        setStatusMessage("正在从场景分析继续");
-      } else if (resumeStage === "reader_journey") {
-        setStatusMessage("正在继续生成阅读旅程");
-      } else {
-        setStatusMessage("正在修复并继续…");
-      }
+      setStatusMessage(
+        showEvidenceRemap
+          ? "正在重新校验证据…"
+          : showBoundaryRerun
+            ? "正在检查场景边界…"
+            : resumeStage === "boundary_detection"
+              ? "正在从场景边界识别继续"
+              : resumeStage === "scene_analysis"
+                ? "正在继续分析…"
+                : resumeStage === "reader_journey"
+                  ? "正在继续生成阅读旅程"
+                  : "正在修复并继续…",
+      );
       const body: Parameters<typeof analysisRecoveryApi.recover>[1] = {
-        client_request_id: clientRequestIdFor(run.id, { rotate: true }),
+        client_request_id: clientRequestIdFor(run.id, { rotate: false }),
         cloud_consent: true,
         confirmed: true,
         recovery_mode: "unified",
@@ -314,7 +343,26 @@ export function UnifiedAnalysisRecoveryCard({
       )}
       {!proposalOpen && (
         <div className="budget-pause-actions">
-          {showFixContinue && (
+          {(showEvidenceRemap || showBoundaryRerun) && (
+            <button
+              type="button"
+              className="primary"
+              data-testid={
+                showEvidenceRemap
+                  ? "unified-recovery-evidence-remap"
+                  : "unified-recovery-boundary-rerun"
+              }
+              disabled={busy || planQuery.isLoading || !plan}
+              onClick={() => void fixAndContinue(false)}
+            >
+              {busy
+                ? statusMessage || "处理中…"
+                : showEvidenceRemap
+                  ? evidenceRemapAction?.label || "整理证据并继续"
+                  : boundaryRerunAction?.label || "重新检查场景边界"}
+            </button>
+          )}
+          {showFixContinue && !showEvidenceRemap && !showBoundaryRerun && (
             <button
               type="button"
               className="primary"
@@ -323,6 +371,17 @@ export function UnifiedAnalysisRecoveryCard({
               onClick={() => void fixAndContinue(false)}
             >
               {busy ? statusMessage || "正在修复…" : "修复并继续"}
+            </button>
+          )}
+          {showNonRepairableActions && (
+            <button
+              type="button"
+              className="secondary"
+              data-testid="unified-recovery-view-issue"
+              disabled={busy}
+              onClick={() => setTechOpen(true)}
+            >
+              查看问题
             </button>
           )}
           {recoveryExhausted && (
@@ -408,6 +467,12 @@ export function UnifiedAnalysisRecoveryCard({
               http_status: details.http_status ?? null,
               provider_error_code: details.provider_error_code ?? null,
               provider_message: details.provider_message ?? null,
+              evidence_error: details.evidence_error ?? null,
+              affected_fields:
+                ((details.evidence_error as { details?: { affected_fields?: string[] } } | null)
+                  ?.details?.affected_fields) ??
+                (details as { affected_fields?: string[] }).affected_fields ??
+                null,
               provider_request_id: details.provider_request_id ?? null,
               endpoint_host: details.endpoint_host ?? null,
               error_category: details.error_category ?? null,
