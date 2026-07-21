@@ -11,6 +11,12 @@
       "message": "Simplify Reader Journey toolbar and refresh app subtitle",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "49e68686243aefda7c296273ce2c224bbbe30423",
+      "message": "Accept cherry-picked Reader Journey commit in release-guard",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -44,5 +50,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-21T06:02:50Z",
-  "updated_at": "2026-07-21T06:47:45Z"
+  "updated_at": "2026-07-21T06:51:40Z"
 }
