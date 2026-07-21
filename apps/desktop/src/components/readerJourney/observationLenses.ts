@@ -78,6 +78,21 @@ export const OBSERVATION_LENSES: ObservationLensDef[] = [
 
 export const DEFAULT_OBSERVATION_LENS: ObservationLensId = "composite";
 
+/** One-line hint for the active lens (shown under toolbar, not inside a menu). */
+export const OBSERVATION_LENS_HINTS_ZH: Record<ObservationLensId, string> = {
+  composite: "观察整章阅读动力的起伏",
+  plot_progress: "观察故事状态是否持续发生变化",
+  reading_tension: "观察好奇、压力与情绪投入",
+  emotion: "观察情绪强度、方向及转变",
+  hook_payoff: "观察问题建立、推进与兑现",
+  pacing: "观察叙事速度与场景任务是否匹配",
+};
+
+export function getObservationLensHint(id: ObservationLensId | string | null | undefined): string {
+  const lens = getObservationLens(id);
+  return OBSERVATION_LENS_HINTS_ZH[lens.id];
+}
+
 export function getObservationLens(id: ObservationLensId | string | null | undefined): ObservationLensDef {
   const found = OBSERVATION_LENSES.find((item) => item.id === id);
   return found ?? OBSERVATION_LENSES[0];

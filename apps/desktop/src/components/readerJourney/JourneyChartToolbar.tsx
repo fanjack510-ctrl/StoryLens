@@ -12,6 +12,7 @@ import {
   DEFAULT_OBSERVATION_LENS,
   OBSERVATION_LENSES,
   getObservationLens,
+  getObservationLensHint,
   type ObservationLensId,
 } from "./observationLenses";
 
@@ -54,8 +55,8 @@ type Props = {
 };
 
 /**
- * Compact chart toolbar: metric dropdown · phase fit · details · more actions.
- * Source expand/collapse lives in the top mode switch only.
+ * Compact chart toolbar: inline lens segmented control · phase fit · details · more.
+ * Lens options stay in document flow (wrap pushes content down) — never overlay the chart.
  */
 export function JourneyChartToolbar({
   metric,
@@ -83,14 +84,14 @@ export function JourneyChartToolbar({
   exportBusy = false,
 }: Props) {
   const [metricOpen, setMetricOpen] = useState(false);
-  const [lensOpen, setLensOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const metricTriggerId = useId();
-  const lensTriggerId = useId();
   const moreTriggerId = useId();
+  const lensHintId = useId();
 
   const useLenses = typeof onObservationLensChange === "function";
   const lensDef = getObservationLens(observationLens);
+  const lensHint = getObservationLensHint(observationLens);
   const metricLabel = formatJourneyMetricLabel(metric);
 
   const handleMetricSelect = (key: JourneyCurveMetric) => {
@@ -100,72 +101,51 @@ export function JourneyChartToolbar({
 
   const handleLensSelect = (id: ObservationLensId) => {
     onObservationLensChange?.(id);
-    setLensOpen(false);
   };
 
   const inspectorLabel = inspectorCollapsed ? "展开详情" : "收起详情";
 
-  const lensMenu = (
-    <JourneyPopover
-      open={lensOpen}
-      onOpenChange={(open) => {
-        setLensOpen(open);
-        if (open) {
-          setMoreOpen(false);
-          setMetricOpen(false);
-        }
-      }}
-      align="start"
+  const lensSegmented = (
+    <div
+      className="journey-lens-select-inline"
       data-testid="journey-lens-select-menu"
-      menuLabel="观察镜头"
-      trigger={
-        <button
-          type="button"
-          id={lensTriggerId}
-          className={`journey-toolbar-btn journey-toolbar-btn-select ${lensOpen ? "active" : ""}`}
-          data-testid="journey-lens-select"
-          data-current-lens={lensDef.id}
-          title={`观察镜头：${lensDef.labelZh}`}
-          aria-label={`观察镜头：${lensDef.labelZh}`}
-          aria-expanded={lensOpen}
-          aria-haspopup="listbox"
-          onClick={() => {
-            setLensOpen((v) => !v);
-            setMoreOpen(false);
-            setMetricOpen(false);
-          }}
-        >
-          <span className="journey-toolbar-btn-label">镜头</span>
-          <span className="journey-toolbar-btn-sep" aria-hidden="true">
-            ：
-          </span>
-          <span className="journey-toolbar-btn-value">{lensDef.labelZh}</span>
-        </button>
-      }
+      data-lens-layout="inline-segmented"
     >
       <div
-        role="listbox"
-        aria-label="选择观察镜头"
-        data-testid="journey-lens-selector-list"
+        role="radiogroup"
+        aria-label="观察镜头"
+        aria-describedby={lensHintId}
+        className="journey-lens-segmented"
+        data-testid="journey-lens-select"
+        data-current-lens={lensDef.id}
       >
-        {OBSERVATION_LENSES.map((item) => {
-          const selected = lensDef.id === item.id;
-          return (
-            <button
-              key={item.id}
-              type="button"
-              role="option"
-              data-testid={`journey-lens-${item.id}`}
-              className={selected ? "active" : ""}
-              aria-selected={selected}
-              onClick={() => handleLensSelect(item.id)}
-            >
-              <span className="journey-metric-option-label">{item.labelZh}</span>
-            </button>
-          );
-        })}
+        <div
+          role="presentation"
+          className="journey-lens-selector-list"
+          data-testid="journey-lens-selector-list"
+          data-lens-panel="inline"
+        >
+          {OBSERVATION_LENSES.map((item) => {
+            const selected = lensDef.id === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                role="radio"
+                data-testid={`journey-lens-${item.id}`}
+                className={`journey-toolbar-btn journey-lens-segment ${selected ? "active" : ""}`}
+                aria-checked={selected}
+                aria-label={item.labelZh}
+                title={item.labelZh}
+                onClick={() => handleLensSelect(item.id)}
+              >
+                {item.labelZh}
+              </button>
+            );
+          })}
+        </div>
       </div>
-    </JourneyPopover>
+    </div>
   );
 
   const metricMenu = (
@@ -175,7 +155,6 @@ export function JourneyChartToolbar({
         setMetricOpen(open);
         if (open) {
           setMoreOpen(false);
-          setLensOpen(false);
         }
       }}
       align="start"
@@ -195,7 +174,6 @@ export function JourneyChartToolbar({
           onClick={() => {
             setMetricOpen((v) => !v);
             setMoreOpen(false);
-            setLensOpen(false);
           }}
         >
           <span className="journey-toolbar-btn-label">指标</span>
@@ -373,10 +351,11 @@ export function JourneyChartToolbar({
 
   return (
     <div
-      className="journey-toolbar-region"
+      className={`journey-toolbar-region${useLenses ? " journey-toolbar-region-with-lenses" : ""}`}
       data-testid="journey-toolbar-region"
-      data-metric-panel-open={metricOpen || lensOpen ? "true" : "false"}
+      data-metric-panel-open={metricOpen ? "true" : "false"}
       data-observation-lens={useLenses ? lensDef.id : undefined}
+      data-lens-layout={useLenses ? "inline-segmented" : undefined}
     >
       <div
         className="journey-curve-toolbar journey-viz-toolbar"
@@ -386,7 +365,7 @@ export function JourneyChartToolbar({
         aria-label="图表工具栏"
       >
         <div className="journey-toolbar-left" data-testid="journey-metric-switcher">
-          {useLenses ? lensMenu : metricMenu}
+          {useLenses ? lensSegmented : metricMenu}
           {useLenses && onOverlayCompositeChange ? (
             <button
               type="button"
@@ -436,6 +415,15 @@ export function JourneyChartToolbar({
         {/* Legacy selector compatibility */}
         <div data-testid="journey-zoom-controls" hidden aria-hidden="true" />
       </div>
+      {useLenses ? (
+        <p
+          id={lensHintId}
+          className="journey-lens-active-hint"
+          data-testid="journey-lens-active-hint"
+        >
+          {lensHint}
+        </p>
+      ) : null}
       {/* Keep metric key list reachable for static audits */}
       <span hidden aria-hidden="true" data-testid="journey-metric-keys-audit">
         {ALL_METRIC_KEYS.join(",")}

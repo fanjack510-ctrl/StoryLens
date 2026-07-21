@@ -391,17 +391,18 @@ body.journey-pane-resizing[data-row-resize="true"] * {
 /* Professional horizontal toolbar */
 .journey-curve-toolbar.journey-viz-toolbar {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: var(--journey-button-gap);
   min-height: var(--journey-toolbar-height);
-  height: var(--journey-toolbar-height);
+  height: auto;
   flex: 0 0 auto;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   min-width: 0;
   padding: 0;
   border: none;
   background: transparent;
+  row-gap: 8px;
 }
 
 .journey-toolbar-left,
@@ -410,7 +411,8 @@ body.journey-pane-resizing[data-row-resize="true"] * {
   align-items: center;
   gap: var(--journey-button-gap);
   min-width: 0;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
+  row-gap: 8px;
 }
 
 .journey-toolbar-right {
@@ -1083,6 +1085,7 @@ body.journey-pane-resizing[data-row-resize="true"] * {
 .journey-overview-curve > .journey-summary-strip,
 .journey-overview-curve > .journey-phase-strip-wrap,
 .journey-overview-curve > .journey-curve-toolbar,
+.journey-overview-curve > .journey-toolbar-region,
 .journey-overview-curve > .journey-chart-shell,
 .journey-chart-card > .journey-curve-toolbar,
 .journey-chart-card > .journey-phase-strip-wrap,
@@ -3401,4 +3404,57 @@ body.journey-pane-resizing[data-row-resize="true"] * {
 
 .journey-curve-node[data-node-type="beat"] {
   opacity: 0.85;
+}
+
+/* CHG-20260721-012: inline lens segmented control (no overlay dropdown) */
+.journey-lens-select-inline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+  flex: 1 1 auto;
+  max-width: 100%;
+  position: static;
+}
+
+.journey-lens-segmented {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  position: static;
+}
+
+.journey-lens-selector-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  row-gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+  position: static;
+  z-index: auto;
+}
+
+.journey-lens-segment {
+  flex: 0 0 auto;
+}
+
+.journey-lens-active-hint {
+  margin: 8px 0 0;
+  padding: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--muted);
+  max-width: 100%;
+}
+
+.journey-toolbar-region-with-lenses {
+  margin-bottom: 12px;
+}
+
+.journey-toolbar-region-with-lenses + .journey-phase-nav,
+.journey-overview-curve:has(.journey-toolbar-region-with-lenses) .journey-phase-nav,
+.journey-overview-curve:has(.journey-toolbar-region-with-lenses) .journey-phase-strip {
+  margin-top: 0;
 }
