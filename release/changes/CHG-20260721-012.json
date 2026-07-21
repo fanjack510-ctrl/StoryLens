@@ -101,6 +101,12 @@
       "message": "Attach default-pipeline V2 wiring commit to CHG-20260721-012.",
       "primary": false,
       "multi_change_reason": "attach default-pipeline wiring registry sync"
+    },
+    {
+      "sha": "c16b12c039d3b9918dc6e5da775055c2f3826daa",
+      "message": "Sync CHG-20260721-012 registry after V2 default-pipeline attach.",
+      "primary": false,
+      "multi_change_reason": "final registry sync after V2 default-pipeline attach"
     }
   ],
   "modules": [
@@ -201,5 +207,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-21T12:43:43Z",
-  "updated_at": "2026-07-21T15:25:46Z"
+  "updated_at": "2026-07-21T15:26:07Z"
 }
