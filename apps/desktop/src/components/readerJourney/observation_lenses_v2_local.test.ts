@@ -6,6 +6,8 @@ import { describe, expect, it } from "vitest";
 import {
   DEFAULT_OBSERVATION_LENS,
   LEGACY_UNCALIBRATED_BANNER,
+  V2_LOCAL_FIXTURE_BANNER,
+  resolveJourneyTopBanner,
   OBSERVATION_LENSES,
   buildLensChartLines,
   getObservationLens,
@@ -442,6 +444,23 @@ describe("CHG-20260721-012 verification matrix", () => {
     const viz = minimalViz([{ scene_ordinal: 1 }]);
     expect(isLegacyUncalibratedVisualization(viz, { contractVersion: "1.3" })).toBe(true);
     expect(LEGACY_UNCALIBRATED_BANNER).toContain("旧版未校准分析");
+    expect(resolveJourneyTopBanner(viz, { contractVersion: "1.3" })).toBe(
+      LEGACY_UNCALIBRATED_BANNER,
+    );
+  });
+
+    it("13b) synthetic fixture banner is preferred over legacy copy", () => {
+    const viz = minimalViz([{ scene_ordinal: 1 }]);
+    viz.calibration_status = {
+      scene_contract_version: "2.0",
+      source_mode: "local_fixture",
+      display_banner: V2_LOCAL_FIXTURE_BANNER,
+    };
+    expect(isLegacyUncalibratedVisualization(viz)).toBe(false);
+    expect(resolveJourneyTopBanner(viz)).toBe(V2_LOCAL_FIXTURE_BANNER);
+    expect(resolveJourneyTopBanner(viz)).toContain("合成测试数据");
+    expect(resolveJourneyTopBanner(viz)).not.toContain("旧版未校准分析");
+    expect(resolveJourneyTopBanner(viz)).not.toContain("牛角坳");
   });
 
   it("14) fixed 0-100 domain is absolute (no chapter min-max rescale)", () => {

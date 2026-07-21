@@ -130,6 +130,7 @@ export type JourneySceneNodeScores = {
   plot_progress?: number;
   reading_tension?: number;
   pacing_speed?: number;
+  pacing_fit?: number;
   emotional_investment?: number;
   clarity?: number;
 };
@@ -313,6 +314,9 @@ export type JourneyCalibrationStatus = {
   scene_contract_version?: string;
   scene_prompt_version?: string;
   planner_version?: string;
+  formula_version?: string;
+  source_mode?: string;
+  display_banner?: string;
   semantic_source?: string;
   calibrated?: boolean;
   latest_audit?: Record<string, unknown>;

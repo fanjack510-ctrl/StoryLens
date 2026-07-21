@@ -335,3 +335,24 @@ export function isLegacyUncalibratedVisualization(
 
 export const LEGACY_UNCALIBRATED_BANNER =
   "旧版未校准分析，仅供章内走势参考。";
+
+export const V2_LOCAL_FIXTURE_BANNER =
+  "合成测试数据：仅用于验证V2图表、数据透传和诊断规则，不代表真实小说分析结果。";
+
+export function resolveJourneyTopBanner(
+  visualization: ReaderJourneyVisualization,
+  options: { legacyFlag?: boolean | null; contractVersion?: string | null } = {},
+): string | null {
+  const sourceMode = visualization.calibration_status?.source_mode;
+  const displayBanner = visualization.calibration_status?.display_banner?.trim();
+  if (sourceMode === "local_fixture" || sourceMode === "v2_native") {
+    return displayBanner || V2_LOCAL_FIXTURE_BANNER;
+  }
+  if (displayBanner === V2_LOCAL_FIXTURE_BANNER) {
+    return V2_LOCAL_FIXTURE_BANNER;
+  }
+  if (isLegacyUncalibratedVisualization(visualization, options)) {
+    return LEGACY_UNCALIBRATED_BANNER;
+  }
+  return null;
+}

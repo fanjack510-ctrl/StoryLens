@@ -69,7 +69,10 @@
     "config/scene_role_targets.json",
     "apps/desktop/src/components/readerJourney/observationLenses.ts",
     "apps/desktop/src/components/readerJourney/CanonicalJourneyChart.tsx",
-    "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.tsx"
+    "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.tsx",
+    "data/fixtures/reader_journey_v2_native/chapter_preview_v2.json",
+    "scripts/seed_reader_journey_v2_native_preview.py",
+    "apps/api/tests/test_reader_journey_v2_anti_hardcode_local.py"
   ],
   "user_summary": "建立 Reader Journey v2.0 独立数据契约与确定性派生算法：level映射、Scene/Beat、问题生命周期与诊断引擎；旧版 v1.6 只读兼容。",
   "technical_summary": "Added independent Reader Journey v2.0 contract (prompt/contract/formula 2.0), level→mapped_score mapping, deterministic plot_progress/reading_tension/pacing_fit/hook_payoff_fit/reading_momentum/dropoff_risk, Scene/Beat consolidation for silence-reaction fragments, explicit question lifecycle, diagnosis engine, and legacy_uncalibrated API compatibility. v1.6/1.3 remain default for new runs; no auto-rerun or billing.",
@@ -86,10 +89,12 @@
     "valence domain -100..100",
     "diagnosis band primary/secondary",
     "legacy uncalibrated banner",
+    "synthetic fixture renamed away from real novel branding; anti-hardcode diagnosis tests",
     "awaiting user desktop smoke checklist for CHG-20260721-012"
   ],
   "tests": [
     "pytest apps/api/tests/test_reader_journey_v2_local.py",
+    "pytest apps/api/tests/test_reader_journey_v2_anti_hardcode_local.py",
     "vitest observation_lenses_v2_local.test.ts",
     "npm run typecheck"
   ],
@@ -102,7 +107,8 @@
     "npm run typecheck passed",
     "verification matrix: pytest 18 passed (incl. stagnation/empty-spin/empty-hook/recompute/sqlite legacy)",
     "verification matrix: vitest 25 passed (15-point lens/chart checklist)",
-    "local SQLite reader_journey_runs contract=1.3 marked legacy_uncalibrated (no model call)"
+    "local SQLite reader_journey_runs contract=1.3 marked legacy_uncalibrated (no model call)",
+    "fixture coupling audit: synthetic preview renamed away from 牛角坳; anti-hardcode pytest 8 passed; page path reads seeded v2 scores/diagnoses (no live derive/diagnose)"
   ],
   "data_compatibility": {
     "database_changed": false,

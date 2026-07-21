@@ -29,9 +29,9 @@ import {
 import { buildChapterSummaryBullets } from "./journeyChapterSummary";
 import {
   DEFAULT_OBSERVATION_LENS,
-  LEGACY_UNCALIBRATED_BANNER,
+  V2_LOCAL_FIXTURE_BANNER,
   getObservationLens,
-  isLegacyUncalibratedVisualization,
+  resolveJourneyTopBanner,
   type ObservationLensId,
 } from "./observationLenses";
 import type { SceneDiagnosisLike } from "./diagnosisBandModel";
@@ -403,7 +403,8 @@ export function ReaderJourneyWorkspace({
     controlledPhaseOrdinal !== undefined ? controlledPhaseOrdinal : selectedPhaseInternal;
   const metric = controlledMetric ?? metricInternal;
   const lensDef = getObservationLens(observationLens);
-  const legacyUncalibrated = isLegacyUncalibratedVisualization(visualization);
+  const topBanner = resolveJourneyTopBanner(visualization);
+  const isV2LocalFixtureBanner = topBanner === V2_LOCAL_FIXTURE_BANNER;
   const sceneDiagnoses: SceneDiagnosisLike[] = useMemo(
     () =>
       visualization.scene_nodes.map((node) => ({
@@ -1191,13 +1192,17 @@ export function ReaderJourneyWorkspace({
           aria-hidden={showNarrowTabs && narrowPane !== "main" ? true : undefined}
         >
       <header className="journey-analysis-header" data-testid="journey-analysis-header">
-        {legacyUncalibrated ? (
+        {topBanner ? (
           <p
             className="journey-legacy-banner"
-            data-testid="journey-legacy-uncalibrated-banner"
+            data-testid={
+              isV2LocalFixtureBanner
+                ? "journey-v2-local-fixture-banner"
+                : "journey-legacy-uncalibrated-banner"
+            }
             role="status"
           >
-            {LEGACY_UNCALIBRATED_BANNER}
+            {topBanner}
           </p>
         ) : null}
         {chapterSummaryBullets.length > 0 ? (

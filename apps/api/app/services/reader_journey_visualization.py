@@ -709,15 +709,108 @@ def _calibration_status(journey_run: ReaderJourneyRun) -> dict[str, Any]:
         details = {}
     audits = details.get("semantic_calibration_audit") or []
     latest = audits[-1] if isinstance(audits, list) and audits else {}
-    return {
+    source_mode = details.get("source_mode")
+    status = {
         "scene_contract_version": journey_run.scene_contract_version,
         "scene_prompt_version": journey_run.scene_prompt_version,
         "planner_version": journey_run.planner_version,
+        "formula_version": journey_run.formula_version,
         "semantic_source": "model+deterministic_calibration",
         "calibrated": bool(audits),
         "latest_audit": latest,
         "evidence_coverage": 1.0,
     }
+    if source_mode:
+        status["source_mode"] = source_mode
+        status["semantic_source"] = str(source_mode)
+    display_banner = details.get("display_banner")
+    if display_banner:
+        status["display_banner"] = display_banner
+    return status
+
+
+def _apply_v2_presentation_overrides(
+    scene_nodes: list[dict[str, Any]],
+    summary: ChapterReaderJourneySummary | None,
+) -> None:
+    """Merge fixture / v2 deterministic presentation fields onto visualization nodes.
+
+    Does not recompute literary diagnostics; only surfaces already-persisted
+    scores, diagnoses, and node-role overrides for contract 2.0 runs.
+    """
+    if summary is None:
+        return
+    try:
+        deterministic = json.loads(summary.deterministic_statistics_json or "{}")
+    except json.JSONDecodeError:
+        return
+    if not isinstance(deterministic, dict):
+        return
+
+    scores_by_ordinal = deterministic.get("v2_scene_scores") or {}
+    diagnoses = deterministic.get("scene_diagnoses") or []
+    overrides = deterministic.get("v2_node_overrides") or {}
+    diagnosis_by_ordinal: dict[int, dict[str, Any]] = {}
+    if isinstance(diagnoses, list):
+        for item in diagnoses:
+            if not isinstance(item, dict):
+                continue
+            ordinal = item.get("scene_ordinal")
+            if ordinal is None:
+                continue
+            diagnosis_by_ordinal[int(ordinal)] = item
+
+    for node in scene_nodes:
+        ordinal = int(node["scene_ordinal"])
+        key = str(ordinal)
+        score_patch = scores_by_ordinal.get(key) if isinstance(scores_by_ordinal, dict) else None
+        if isinstance(score_patch, dict):
+            scores = dict(node.get("scores") or {})
+            for field in (
+                "reading_momentum",
+                "plot_progress",
+                "reading_tension",
+                "pacing_speed",
+                "pacing_fit",
+                "hook",
+                "payoff",
+                "emotional_investment",
+                "clarity",
+                "dropoff_risk",
+            ):
+                if field in score_patch and score_patch[field] is not None:
+                    scores[field] = score_patch[field]
+            node["scores"] = scores
+            if "reading_momentum" in score_patch and score_patch["reading_momentum"] is not None:
+                engagement = dict(node.get("engagement") or {})
+                engagement["engagement_score"] = int(round(float(score_patch["reading_momentum"])))
+                node["engagement"] = engagement
+
+        diag = diagnosis_by_ordinal.get(ordinal)
+        if diag:
+            node["primary_diagnosis"] = diag.get("primary_diagnosis")
+            node["secondary_diagnoses"] = list(diag.get("secondary_diagnoses") or [])
+            node["positive_mechanism"] = diag.get("positive_mechanism")
+            node["data_quality_issue"] = diag.get("data_quality_issue")
+
+        override = overrides.get(key) if isinstance(overrides, dict) else None
+        if isinstance(override, dict):
+            if override.get("scene_role"):
+                node["scene_role"] = override["scene_role"]
+            if override.get("node_type"):
+                node["node_type"] = override["node_type"]
+            if "include_in_main_curve" in override:
+                node["include_in_main_curve"] = bool(override["include_in_main_curve"])
+            if "include_in_chapter_mean" in override:
+                node["include_in_chapter_mean"] = bool(override["include_in_chapter_mean"])
+            forced_role = override.get("role")
+            if forced_role in {"core", "secondary", "beat"}:
+                node["role"] = forced_role
+            elif override.get("node_type") == "beat":
+                node["role"] = "beat"
+            elif override.get("node_type") == "scene" and node.get("role") == "beat":
+                # Fixture main scenes must not remain classifier beats.
+                node["role"] = "core"
 
 
 def _expanded_diagnosis(summary: ChapterReaderJourneySummary | None) -> dict[str, Any]:
@@ -1069,6 +1162,19 @@ def build_reader_journey_visualization(
 
     hook_markers = hook_selection["hook_markers"]
     payoff_markers = payoff_selection["visible_payoff_markers"]
+    _apply_v2_presentation_overrides(scene_nodes, summary)
+    # Keep curve include flags aligned with node overrides (e.g. fixture Beat).
+    beat_ordinals = {
+        int(node["scene_ordinal"])
+        for node in scene_nodes
+        if node.get("role") == "beat" or node.get("node_type") == "beat"
+    }
+    for points in curve_series.values():
+        for point in points:
+            ordinal = int(point["scene_ordinal"])
+            if ordinal in beat_ordinals:
+                point["include_in_main_curve"] = False
+                point["node_type"] = "beat"
     role_counts = {
         "core": sum(1 for node in scene_nodes if node["role"] == "core"),
         "secondary": sum(1 for node in scene_nodes if node["role"] == "secondary"),
