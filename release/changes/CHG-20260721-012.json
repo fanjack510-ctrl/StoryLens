@@ -155,6 +155,12 @@
       "message": "Fix Scene evidence validation false positives with adaptive field rules (CHG-20260721-012).",
       "primary": false,
       "multi_change_reason": "adaptive scene evidence validation + recovery UX; status remains tested"
+    },
+    {
+      "sha": "24c2930ba42a34b2c13cd8d857734066fd35ddd8",
+      "message": "Attach evidence-validation fix and evidence to CHG-20260721-012.",
+      "primary": false,
+      "multi_change_reason": "attach evidence-validation registry sync"
     }
   ],
   "modules": [
