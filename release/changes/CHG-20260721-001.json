@@ -3,7 +3,7 @@
   "title": "短句、残句和单句对白场景边界修复",
   "type": "fix",
   "base_version": "1.0.2",
-  "status": "tested",
+  "status": "ready",
   "include_in_next_release": true,
   "commits": [
     {
@@ -26,9 +26,12 @@
     "短句/残句/单句对白不再错误拆成独立场景"
   ],
   "tests": [
-    "apps/api/tests/test_scene_fragment_consolidation.py (present in commit e1884c1)"
+    "apps/api/tests/test_scene_fragment_consolidation.py (present in commit e1884c1)",
+    "apps/api/tests/test_scene_fragment_consolidation.py"
   ],
-  "verification_evidence": [],
+  "verification_evidence": [
+    "pytest scene_fragment_consolidation passed (venv) 2026-07-21; short fragment / dialogue / shout / onomatopoeia / time+place switch / chapter-end hook cases covered"
+  ],
   "data_compatibility": {
     "database_changed": false,
     "migration_required": false,
@@ -44,5 +47,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-21T06:02:50Z",
-  "updated_at": "2026-07-21T06:03:10Z"
+  "updated_at": "2026-07-21T06:46:56Z"
 }

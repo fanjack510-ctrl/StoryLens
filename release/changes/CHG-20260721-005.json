@@ -3,12 +3,18 @@
   "title": "分析预算门禁与本地使用额度管理修复",
   "type": "fix",
   "base_version": "1.0.2",
-  "status": "tested",
+  "status": "ready",
   "include_in_next_release": true,
   "commits": [
     {
       "sha": "a8542f2eb4a6cdc982fb98221b1b2cd03ee9c0d9",
       "message": "Fix analysis budget gate to use estimated usage, not worst-case.",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "96bb68ac22f332517bc0e5bb9b37c73bd8697155",
+      "message": "Polish budget quota UX for estimated hard-gate acceptance",
       "primary": true,
       "multi_change_reason": null
     }
@@ -30,7 +36,9 @@
     "apps/api/tests/test_budget_gate_estimated.py",
     "apps/desktop StartAnalysisDialog.test.tsx / budgetRecoveryMath.test.ts"
   ],
-  "verification_evidence": [],
+  "verification_evidence": [
+    "pytest budget_gate_estimated + vitest StartAnalysisDialog/budgetRecoveryMath/CloudBudgetPages: screenshot case executable; 预计额度足够暂无重试余量; 使用额度 settings + 调整额度/按当前额度开始"
+  ],
   "data_compatibility": {
     "database_changed": false,
     "migration_required": false,
@@ -46,5 +54,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-21T06:02:51Z",
-  "updated_at": "2026-07-21T06:03:11Z"
+  "updated_at": "2026-07-21T06:46:57Z"
 }

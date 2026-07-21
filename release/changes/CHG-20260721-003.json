@@ -3,11 +3,17 @@
   "title": "Reader Journey 工具栏与响应式布局收口",
   "type": "improvement",
   "base_version": "1.0.2",
-  "status": "implemented",
+  "status": "ready",
   "include_in_next_release": true,
   "commits": [
     {
       "sha": "22750ecaaefd925188ff2f5b5decdb900a750748",
+      "message": "Simplify Reader Journey toolbar and refresh app subtitle",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "3a516f609dd302c484a605d7b696c51e78c79a50",
       "message": "Simplify Reader Journey toolbar and refresh app subtitle",
       "primary": true,
       "multi_change_reason": null
@@ -23,8 +29,12 @@
     "工具栏无重复展开控件",
     "设置面板不被遮挡"
   ],
-  "tests": [],
-  "verification_evidence": [],
+  "tests": [
+    "apps/desktop/src/components/readerJourney/reader_journey_ui_cleanup_local_audit.test.tsx"
+  ],
+  "verification_evidence": [
+    "cherry-pick 22750ec -> 3a516f6 INCLUDED; subtitle 小说叙事洞察与创作平台; more-menu audit vitest passed"
+  ],
   "data_compatibility": {
     "database_changed": false,
     "migration_required": false,
@@ -38,7 +48,7 @@
     "breaking_change": false
   },
   "blocker_level": null,
-  "head_inclusion": "EXISTS_NOT_INCLUDED",
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-21T06:02:50Z",
-  "updated_at": "2026-07-21T06:03:10Z"
+  "updated_at": "2026-07-21T06:46:57Z"
 }

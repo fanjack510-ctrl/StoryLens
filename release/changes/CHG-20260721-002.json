@@ -3,7 +3,7 @@
   "title": "分析授权文案与阅读旅程指标表达优化",
   "type": "improvement",
   "base_version": "1.0.2",
-  "status": "implemented",
+  "status": "ready",
   "include_in_next_release": true,
   "commits": [
     {
@@ -26,8 +26,12 @@
     "无多余当前徽标",
     "阶段指标含语义"
   ],
-  "tests": [],
-  "verification_evidence": [],
+  "tests": [
+    "apps/desktop/src/components/readerJourney/journeyUiLabels.test.ts"
+  ],
+  "verification_evidence": [
+    "vitest journeyUiLabels + AppShell + Reader Journey cleanup audit passed; 流失风险 / 阅读牵引 labels present; no 当前 badge in source"
+  ],
   "data_compatibility": {
     "database_changed": false,
     "migration_required": false,
@@ -43,5 +47,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-21T06:02:50Z",
-  "updated_at": "2026-07-21T06:03:10Z"
+  "updated_at": "2026-07-21T06:46:57Z"
 }

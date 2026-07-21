@@ -40,8 +40,12 @@
     "implemented",
     "tested",
     "verified",
+    "ready-for-staging",
     "ready",
     "released"
   ],
-  "terminal_statuses": ["deferred", "released"]
+  "terminal_statuses": [
+    "deferred",
+    "released"
+  ]
 }

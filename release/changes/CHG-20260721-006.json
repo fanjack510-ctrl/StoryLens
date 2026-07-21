@@ -3,7 +3,7 @@
   "title": "应用更新用户确认与手动更新入口",
   "type": "updater",
   "base_version": "1.0.2",
-  "status": "tested",
+  "status": "ready-for-staging",
   "include_in_next_release": true,
   "commits": [
     {
@@ -33,7 +33,9 @@
     "apps/desktop/src/services/updaterUi.test.tsx",
     "apps/api/tests/test_release_guard_baseline.py"
   ],
-  "verification_evidence": [],
+  "verification_evidence": [
+    "vitest updaterService+updaterUi passed (check no download; later+immediate flow); staging verification required before stable"
+  ],
   "data_compatibility": {
     "database_changed": false,
     "migration_required": false,
@@ -49,5 +51,5 @@
   "blocker_level": "P0",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-21T06:02:51Z",
-  "updated_at": "2026-07-21T06:03:11Z"
+  "updated_at": "2026-07-21T06:46:58Z"
 }

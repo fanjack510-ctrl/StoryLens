@@ -3,7 +3,7 @@
   "title": "统一版本管理机制",
   "type": "build",
   "base_version": "1.0.2",
-  "status": "tested",
+  "status": "ready",
   "include_in_next_release": true,
   "commits": [
     {
@@ -29,7 +29,9 @@
     "apps/api/tests/test_version_manager.py",
     "apps/api/tests/test_release_guard_baseline.py"
   ],
-  "verification_evidence": [],
+  "verification_evidence": [
+    "version_manager check passed; next_patch=1.0.3; VERSION sole source"
+  ],
   "data_compatibility": {
     "database_changed": false,
     "migration_required": false,
@@ -45,5 +47,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-21T06:02:50Z",
-  "updated_at": "2026-07-21T06:03:11Z"
+  "updated_at": "2026-07-21T06:46:57Z"
 }
