@@ -54,6 +54,7 @@ from app.services.recommended_ai_setup import (
     get_recommended_qwen_status,
     repair_recommended_qwen,
 )
+from app.services.runtime_info import build_runtime_payload
 
 router = APIRouter(prefix="/api/v1")
 CLOUD_KEY = "cloud_enabled"
@@ -291,6 +292,29 @@ def get_config_runtime_profile(
     store: CredentialStore = Depends(get_credential_store),
 ) -> ConfigRuntimeProfile:
     return ConfigRuntimeProfile.model_validate(build_config_runtime_profile(store))
+
+
+@router.get("/runtime")
+def get_runtime(store: CredentialStore = Depends(get_credential_store)) -> dict:
+    """Read-only shell / capability description for desktop and local web."""
+    return build_runtime_payload(store)
+
+
+@router.post("/system/open-data-directory")
+def open_data_directory() -> dict[str, object]:
+    """Open the local data folder in the OS file manager (loopback API only)."""
+    root = user_data_root()
+    root.mkdir(parents=True, exist_ok=True)
+    try:
+        if platform.system() == "Windows":
+            subprocess.Popen(["explorer", str(root)])  # noqa: S603
+        elif platform.system() == "Darwin":
+            subprocess.Popen(["open", str(root)])  # noqa: S603
+        else:
+            subprocess.Popen(["xdg-open", str(root)])  # noqa: S603
+    except OSError as exc:
+        raise error(500, "OPEN_DATA_DIR_FAILED", f"无法打开数据目录：{exc}") from exc
+    return {"ok": True, "path": str(root)}
 
 
 @router.post(
@@ -624,6 +648,8 @@ def diagnostics(
             for item in gateway.providers()
         ],
         "data_directory": str(user_data_root()),
+        "database_path": profile["database_path"],
+        "app_env": profile["app_env"],
         "config_profile": profile,
         "recent_error": None,
     }

@@ -21,10 +21,12 @@ from app.core.paths import (
 )
 from app.services.credentials.base import CredentialStore
 
-RuntimeMode = Literal["browser_dev", "desktop_dev", "packaged"]
+RuntimeMode = Literal["browser_dev", "desktop_dev", "packaged", "browser_local_production"]
 
 
 def resolve_runtime_mode() -> RuntimeMode:
+    if paths.is_web_production_mode():
+        return "browser_local_production"
     if paths.is_frozen():
         return "packaged"
     env = os.environ.get("STORYLENS_APP_ENV", "").lower()
@@ -110,5 +112,11 @@ def _user_message(
             "当前为桌面开发模式（Tauri sidecar）。"
             f"配置目录：{data_directory}。"
             " 若使用正式版数据目录，请谨慎保存，以免覆盖正式版开关。"
+        )
+    if mode == "browser_local_production":
+        return (
+            "当前为本地网页版。数据与凭据保存在本机，"
+            f"配置目录：{data_directory}。"
+            " 与正式桌面版共用同一数据体系；请避免同时启动第二个写入实例。"
         )
     return f"当前为正式安装版。配置目录：{data_directory}。"

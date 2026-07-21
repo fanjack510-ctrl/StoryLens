@@ -54,7 +54,7 @@ export type RecommendedQwenSetupStatus = {
 };
 
 export type ConfigRuntimeProfile = {
-  runtime_mode: "browser_dev" | "desktop_dev" | "packaged";
+  runtime_mode: "browser_dev" | "desktop_dev" | "packaged" | "browser_local_production";
   app_env: "development" | "production";
   is_frozen?: boolean;
   data_directory: string;

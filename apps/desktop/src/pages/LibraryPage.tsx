@@ -12,6 +12,7 @@ import { Dialog } from "../components/ui/Dialog";
 import { OverflowMenu } from "../components/layout/OverflowMenu";
 import { PageHeader, PageSubtitle, PageTitle } from "../components/ui/PageHeader";
 import { StateView } from "../components/ui/StateView";
+import { isLocalWebShell, useRuntimeInfo } from "../services/runtimeCapabilities";
 import type { Book } from "../types";
 
 const FORMAT_OPTIONS = ["TXT", "DOCX", "EPUB"] as const;
@@ -53,6 +54,8 @@ export function LibraryPage() {
   const onboardingStatus = useOnboardingStore((s) => s.status);
   const [searchParams] = useSearchParams();
   const input = useRef<HTMLInputElement>(null);
+  const runtime = useRuntimeInfo();
+  const webShell = isLocalWebShell(runtime.data);
   const [search, setSearch] = useState("");
   const [formats, setFormats] = useState<Record<FormatOption, boolean>>({
     TXT: true,
@@ -123,6 +126,11 @@ export function LibraryPage() {
         <div>
           <PageTitle>我的书库</PageTitle>
           <PageSubtitle>管理已导入的小说和分析项目</PageSubtitle>
+          {webShell ? (
+            <p className="muted library-local-upload-hint" data-testid="library-local-upload-hint">
+              文件仅发送到本机 StoryLens 服务，不会上传互联网。
+            </p>
+          ) : null}
         </div>
         <Button
           variant="primary"

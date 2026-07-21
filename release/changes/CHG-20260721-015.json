@@ -1,0 +1,53 @@
+{
+  "id": "CHG-20260721-015",
+  "title": "StoryLens local web production mode",
+  "type": "feature",
+  "base_version": "1.0.3",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "api",
+    "desktop",
+    "scripts"
+  ],
+  "files": [
+    "apps/api/app/main.py",
+    "apps/api/app/services/spa_static.py",
+    "apps/api/app/services/runtime_info.py",
+    "apps/api/app/services/instance_lock.py",
+    "apps/api/app/middleware/local_origin.py",
+    "apps/desktop/src/services/runtimeCapabilities.ts",
+    "scripts/start_storylens_web.ps1",
+    "scripts/stop_storylens_web.ps1"
+  ],
+  "user_summary": "增加正式本地网页版：浏览器访问本机FastAPI静态站，复用现有React与业务后端，数据与凭据仍在本机，保留Tauri桌面版并支持浏览器缩放。",
+  "technical_summary": "Add browser_local_production shell: FastAPI serves React SPA on 127.0.0.1:8765, GET /api/v1/runtime capability adapter, loopback Origin guard, instance lock, LOCALAPPDATA data root, start/stop scripts.",
+  "acceptance_criteria": [
+    "Local web starts on http://127.0.0.1:8765 with SPA + API same origin",
+    "Runtime API reports browser_local_production; desktop updater hidden in web",
+    "Data uses LOCALAPPDATA\\\\StoryLens; credentials stay server-side",
+    "Idempotent start script; remote Origin rejected"
+  ],
+  "tests": [
+    "apps/api/tests/test_local_web_production.py",
+    "apps/desktop/src/services/runtime_capabilities_local.test.tsx"
+  ],
+  "verification_evidence": [],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "Shares production SQLite root with desktop; web mode acquires instance lock."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": null,
+  "created_at": "2026-07-21T17:13:38Z",
+  "updated_at": "2026-07-21T17:27:27Z"
+}

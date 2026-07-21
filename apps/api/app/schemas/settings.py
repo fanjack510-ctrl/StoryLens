@@ -198,7 +198,9 @@ class CredentialStoreCapability(BaseModel):
 class ConfigRuntimeProfile(BaseModel):
     """Which SQLite / credential environment the backend is currently using."""
 
-    runtime_mode: Literal["browser_dev", "desktop_dev", "packaged"]
+    runtime_mode: Literal[
+        "browser_dev", "desktop_dev", "packaged", "browser_local_production"
+    ]
     app_env: Literal["development", "production"]
     is_frozen: bool = False
     data_directory: str

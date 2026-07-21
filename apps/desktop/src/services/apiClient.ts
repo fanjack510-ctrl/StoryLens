@@ -1,4 +1,11 @@
-let apiBase = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
+let apiBase =
+  typeof import.meta.env.VITE_API_BASE_URL === "string" && import.meta.env.VITE_API_BASE_URL.length > 0
+    ? import.meta.env.VITE_API_BASE_URL
+    : typeof import.meta.env.VITE_API_BASE_URL === "string" && import.meta.env.VITE_API_BASE_URL === ""
+      ? ""
+      : import.meta.env.DEV
+        ? "http://127.0.0.1:8000"
+        : "";
 
 export function getApiBase(): string {
   return apiBase;

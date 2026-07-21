@@ -1,5 +1,5 @@
 from contextlib import asynccontextmanager
-
+import os
 import uuid
 
 from fastapi import FastAPI, Header, Request
@@ -17,28 +17,64 @@ from app.api.v1.desktop import router as desktop_router
 from app.api.v1.boundary_reviews import router as boundary_review_router
 from app.api.v1.reader_journey import router as reader_journey_router
 from app.core.config import get_settings
+from app.core.paths import is_web_production_mode
 from app.core.sidecar_control import request_shutdown, shutdown_token
 from app.db.session import SessionLocal, create_db
+from app.middleware.local_origin import LocalOriginGuardMiddleware, SecurityHeadersMiddleware
+from app.services.instance_lock import acquire_instance_lock, release_instance_lock
 from app.services.scene_pipeline import mark_interrupted_runs_failed
+from app.services.spa_static import mount_spa
+
+
+def _cors_origins() -> list[str]:
+    port = os.environ.get("STORYLENS_WEB_PORT", "8765").strip() or "8765"
+    origins = [
+        "http://127.0.0.1:1420",
+        "http://localhost:1420",
+        f"http://127.0.0.1:{port}",
+        f"http://localhost:{port}",
+        "tauri://localhost",
+        "http://tauri.localhost",
+    ]
+    extra = os.environ.get("STORYLENS_ALLOWED_ORIGINS", "")
+    for item in extra.split(","):
+        item = item.strip().rstrip("/")
+        if item and item not in origins:
+            origins.append(item)
+    return origins
+
+
+def _bind_port() -> int:
+    for key in ("STORYLENS_WEB_PORT", "STORYLENS_API_PORT", "PORT"):
+        raw = os.environ.get(key, "").strip()
+        if raw.isdigit():
+            return int(raw)
+    return 8765 if is_web_production_mode() else 8000
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    create_db()
-    with SessionLocal() as session:
-        mark_interrupted_runs_failed(session)
-    yield
+    # Prefer one writer on the production SQLite root when running local web.
+    if is_web_production_mode() and os.environ.get(
+        "STORYLENS_DISABLE_INSTANCE_LOCK", ""
+    ).lower() not in {"1", "true", "yes"}:
+        acquire_instance_lock(port=_bind_port(), shell="browser_local_production")
+    try:
+        create_db()
+        with SessionLocal() as session:
+            mark_interrupted_runs_failed(session)
+        yield
+    finally:
+        if is_web_production_mode():
+            release_instance_lock()
 
 
 app = FastAPI(title="StoryLens API", version=__version__, lifespan=lifespan)
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(LocalOriginGuardMiddleware)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://127.0.0.1:1420",
-        "http://localhost:1420",
-        "tauri://localhost",
-        "http://tauri.localhost",
-    ],
+    allow_origins=_cors_origins(),
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -127,3 +163,7 @@ def internal_shutdown(
 @app.get("/api/v1/system/capabilities")
 def system_capabilities() -> dict[str, str]:
     return {"capability_schema_version": "1c-a-2"}
+
+
+# SPA catch-all must be last so API routes keep precedence.
+mount_spa(app)

@@ -43,6 +43,9 @@ def enable_sqlite_foreign_keys(dbapi_connection, _) -> None:
     if module.startswith("sqlite3"):
         cursor = dbapi_connection.cursor()
         cursor.execute("PRAGMA foreign_keys=ON")
+        # WAL allows concurrent readers while one writer owns AnalysisRun tasks.
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute("PRAGMA synchronous=NORMAL")
         cursor.close()
 
 

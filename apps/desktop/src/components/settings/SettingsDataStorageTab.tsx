@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { settingsApi } from "../../services/settingsApi";
+import { isLocalWebShell, useRuntimeInfo } from "../../services/runtimeCapabilities";
 import { useDeveloperModeStore } from "../../stores/developerModeStore";
 import { useAdvancedSettingsStore } from "../../stores/advancedSettingsStore";
 import { Loading } from "../common/States";
@@ -18,9 +19,14 @@ export function SettingsDataStorageTab() {
   const showAdvanced = useAdvancedSettingsStore((s) => s.showAdvancedSettings);
   const showTech = developerMode || showAdvanced;
   const diagnostics = useQuery({ queryKey: ["diagnostics"], queryFn: settingsApi.diagnostics });
+  const runtime = useRuntimeInfo();
+  const webShell = isLocalWebShell(runtime.data);
 
-  const dataDir = diagnostics.data?.data_directory as string | undefined;
+  const dataDir =
+    (runtime.data?.data_directory as string | undefined) ||
+    (diagnostics.data?.data_directory as string | undefined);
   const dbPath =
+    (runtime.data?.database_path as string | undefined) ||
     (diagnostics.data?.database_path as string | undefined) ||
     (diagnostics.data?.sqlite_path as string | undefined) ||
     (dataDir ? `${dataDir}\\storylens.db` : undefined);
@@ -41,7 +47,17 @@ export function SettingsDataStorageTab() {
     }
   };
 
-  if (diagnostics.isLoading) {
+  const openDataFolder = async () => {
+    try {
+      const result = await settingsApi.openDataDirectory();
+      setMessage(`已请求打开数据文件夹：${result.path}`);
+    } catch {
+      await copyPath(dataDir, "数据目录路径");
+      setMessage((prev) => `${prev}（若未自动打开，请粘贴到资源管理器地址栏。）`);
+    }
+  };
+
+  if (diagnostics.isLoading && runtime.isLoading) {
     return (
       <article className="settings-panel">
         <Loading />
@@ -55,6 +71,16 @@ export function SettingsDataStorageTab() {
         <h2>数据与备份</h2>
         <p>数据保存在本机。</p>
       </header>
+
+      <section className="settings-zone" data-testid="data-runtime-zone">
+        <h3>运行方式</h3>
+        <p data-testid="data-runtime-mode">
+          {webShell ? "本地网页版" : "桌面版"}
+        </p>
+        <p className="zone-hint muted" data-testid="data-storage-local">
+          数据保存：本机
+        </p>
+      </section>
 
       <section className="settings-zone" data-testid="data-dir-zone">
         <h3>数据位置</h3>
@@ -74,8 +100,8 @@ export function SettingsDataStorageTab() {
             type="button"
             className="primary"
             data-testid="open-data-dir"
-            onClick={() => void copyPath(dataDir, "数据目录路径")}
-            title="复制路径后可在资源管理器中粘贴打开"
+            onClick={() => void openDataFolder()}
+            title="通过本机 StoryLens 服务打开文件夹"
           >
             打开数据文件夹
           </button>
@@ -126,7 +152,11 @@ export function SettingsDataStorageTab() {
             <p>数据目录：{dataDir || "—"}</p>
             <p>数据库文件：{dbPath || "—"}</p>
             <p data-testid="log-space-hint">日志目录：{logDir || "—"}</p>
-            <p>当前环境：{String((diagnostics.data as { app_env?: string } | undefined)?.app_env || "—")}</p>
+            <p>运行模式：{runtime.data?.runtime_mode || "—"}</p>
+            <p>
+              当前环境：
+              {String((diagnostics.data as { app_env?: string } | undefined)?.app_env || "—")}
+            </p>
           </div>
         </details>
       )}

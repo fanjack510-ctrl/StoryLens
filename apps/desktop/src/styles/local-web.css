@@ -1,0 +1,66 @@
+/* Local web / browser-zoom friendly layout tweaks (no algorithm changes). */
+
+.library-local-upload-hint {
+  margin: 6px 0 0;
+  font-size: clamp(12px, 0.85rem, 14px);
+  max-width: 42rem;
+  line-height: 1.45;
+}
+
+.app[data-shell="local-web"] .brand-text b {
+  font-size: clamp(0.95rem, 1.05rem, 1.2rem);
+  white-space: nowrap;
+}
+
+.app[data-shell="local-web"] .settings-path-row,
+.app[data-shell="local-web"] .settings-field {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.app[data-shell="local-web"] .settings-path-value {
+  min-width: 0;
+  flex: 1 1 12rem;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.app[data-shell="local-web"] .settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Reader Journey: tolerate browser zoom by preferring wrap / rem over fixed px overlays */
+.app[data-shell="local-web"] .journey-sync-sticky-bar,
+.app[data-shell="local-web"] .journey-toolbar-region-with-lenses,
+.app[data-shell="local-web"] .journey-lens-row {
+  flex-wrap: wrap;
+  row-gap: 8px;
+}
+
+.app[data-shell="local-web"] .journey-phase-strip-wrap {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+@media (max-width: 1180px) {
+  .app[data-shell="local-web"] .results-page-journey-sync {
+    height: auto;
+    min-height: calc(100vh - 84px);
+  }
+}
+
+/* ~150%+ browser zoom on common 1440/1920 panels collapses effective CSS px */
+@media (max-width: 1024px) {
+  .app[data-shell="local-web"] .workspace-toolbar-titles {
+    flex-wrap: wrap;
+  }
+
+  .app[data-shell="local-web"] .journey-workspace-v4 .journey-workspace-grid {
+    min-width: 0;
+  }
+}

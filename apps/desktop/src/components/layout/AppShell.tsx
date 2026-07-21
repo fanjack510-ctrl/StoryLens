@@ -2,6 +2,7 @@ import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useAppVersion } from "../../lib/useAppVersion";
 import { api } from "../../services/apiClient";
+import { isLocalWebShell, useRuntimeInfo } from "../../services/runtimeCapabilities";
 import { useUiStore } from "../../stores/uiStore";
 import { DevelopmentNavigationGroup } from "./DevelopmentNavigationGroup";
 
@@ -25,6 +26,9 @@ export function AppShell() {
   const navigate = useNavigate();
   const appVersion = useAppVersion();
   const { theme, setTheme } = useUiStore();
+  const runtime = useRuntimeInfo();
+  const webShell = isLocalWebShell(runtime.data);
+  const brandLabel = webShell ? "StoryLens · 本地网页版" : "StoryLens";
   const health = useQuery({
     queryKey: ["health"],
     queryFn: () => api<Record<string, string>>("/health"),
@@ -36,12 +40,19 @@ export function AppShell() {
   const techTitle = [
     health.isSuccess ? "后端：已连接" : health.isLoading || health.isFetching ? "后端：连接中" : "后端：离线",
     health.data?.database ? `DB ${health.data.database}` : null,
+    runtime.data?.runtime_mode ? `mode ${runtime.data.runtime_mode}` : null,
   ]
     .filter(Boolean)
     .join(" · ");
 
   return (
-    <div className="app app-shell-simplified" data-theme={theme} data-testid="app-shell">
+    <div
+      className="app app-shell-simplified"
+      data-theme={theme}
+      data-testid="app-shell"
+      data-runtime-mode={runtime.data?.runtime_mode || "unknown"}
+      data-shell={webShell ? "local-web" : "desktop"}
+    >
       <header className="app-topbar">
         <button
           type="button"
@@ -53,7 +64,7 @@ export function AppShell() {
             SL
           </span>
           <span className="brand-text">
-            <b>StoryLens</b>
+            <b data-testid="app-brand-label">{brandLabel}</b>
           </span>
         </button>
         <div className="context">小说叙事洞察与创作平台</div>
@@ -94,7 +105,7 @@ export function AppShell() {
           </p>
           <DevelopmentNavigationGroup />
           <p className="nav-version" data-testid="app-footer">
-            StoryLens {appVersion}
+            {webShell ? "本地网页版" : "StoryLens"} {appVersion}
           </p>
         </div>
       </aside>

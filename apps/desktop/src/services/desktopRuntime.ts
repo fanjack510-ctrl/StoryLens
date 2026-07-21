@@ -33,7 +33,11 @@ export async function bootstrapDesktopRuntime(
   onStatus?: (status: BackendUiStatus) => void,
 ): Promise<BackendUiStatus> {
   if (!isTauriRuntime()) {
-    // Browser / Vitest: API is started separately (start-dev.ps1). Do not block.
+    // Production SPA served by FastAPI: same-origin relative API paths.
+    if (!import.meta.env.DEV) {
+      setApiBase("");
+    }
+    // Browser / Vitest: API is started separately (start-dev.ps1 / start_storylens_web.ps1).
     onStatus?.({ state: "browser_dev" });
     return { state: "browser_dev" };
   }
