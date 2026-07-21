@@ -672,7 +672,7 @@ def working_tree_dirty(root: Path) -> list[str]:
 REQUIRED_RELEASE_COMMITS: tuple[tuple[str, str], ...] = (
     ("e1884c1", "short fragment scene boundary fix"),
     ("6f03010", "consent/nav/risk/phase metrics polish"),
-    ("22750ec", "Reader Journey UI + product subtitle"),
+    ("3a516f6", "Reader Journey UI + product subtitle (cherry-pick of 22750ec)"),
     ("8906cd6", "centralized version management"),
 )
 
