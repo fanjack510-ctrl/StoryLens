@@ -52,6 +52,7 @@ const TENSION_CODES = new Set([
   "information_overload",
   "好奇不足",
   "紧张不足",
+  "张力不足",
   "情绪不足",
   "张力过载",
 ]);
@@ -118,7 +119,7 @@ export function severityFromDiagnosis(
     return "beat";
   }
   const codes = [primary, ...secondary].filter(Boolean) as string[];
-  if (!codes.length || primary === "正常" || primary === "推进增强" || primary === "有效兑现") {
+  if (!codes.length || primary === "有效兑现" || primary === "表现有效" || primary === "未发现明显异常") {
     return "ok";
   }
   const severe = new Set([

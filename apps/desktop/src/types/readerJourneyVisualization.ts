@@ -100,6 +100,12 @@ export type JourneyMarker = {
   suppression_reason?: string;
 };
 
+export type JourneyRiskPenalty = {
+  code: string;
+  amount: number;
+  label?: string;
+};
+
 export type JourneyRiskInterval = {
   risk_type: string;
   start_scene_ordinal: number;
@@ -110,6 +116,10 @@ export type JourneyRiskInterval = {
   needs_review?: boolean;
   question?: string;
   strength?: number;
+  /** V2 dropoff panel: field used for the formula (e.g. reading_momentum). */
+  field_used?: string;
+  penalties?: JourneyRiskPenalty[];
+  final_risk?: number;
 };
 
 export type JourneySceneNodeScores = {

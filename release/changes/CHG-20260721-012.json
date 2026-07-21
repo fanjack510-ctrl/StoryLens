@@ -98,10 +98,13 @@
     "scripts/seed_reader_journey_v2_native_preview.py",
     "scripts/run_reader_journey_v2_native_real_niujiaokao.py",
     "scripts/execute_reader_journey_v2_native_niujiaokao.py",
-    "apps/api/tests/test_reader_journey_v2_anti_hardcode_local.py"
+    "apps/api/tests/test_reader_journey_v2_anti_hardcode_local.py",
+    "apps/desktop/src/components/readerJourney/lensMetricBinding.ts",
+    "apps/api/tests/test_reader_journey_v2_dropoff_risk_local.py",
+    "apps/desktop/src/components/readerJourney/diagnosisBandModel.ts"
   ],
-  "user_summary": "建立 Reader Journey v2.0 独立数据契约与确定性派生算法：level映射、Scene/Beat、问题生命周期与诊断引擎；旧版 v1.6 只读兼容。",
-  "technical_summary": "Added independent Reader Journey v2.0 contract (prompt/contract/formula 2.0), level→mapped_score mapping, deterministic plot_progress/reading_tension/pacing_fit/hook_payoff_fit/reading_momentum/dropoff_risk, Scene/Beat consolidation for silence-reaction fragments, explicit question lifecycle, diagnosis engine, and legacy_uncalibrated API compatibility. v1.6/1.3 remain default for new runs; no auto-rerun or billing.",
+  "user_summary": "修复 Reader Journey V2 实机字段混用：统一阅读动力/reading_momentum、镜头与阶段卡绑定、诊断带默认值、V2流失风险公式与节奏语义；等待再次实机确认。",
+  "technical_summary": "Fix V2/V1 field mixing: reading_momentum/阅读动力 as primary metric; lens↔phase-card binding; diagnosis band no longer defaults to 正常 (Beat→辅助节拍); v2_native dropoff uses 100-reading_momentum penalties (not engagement<40); pacing_speed/fit and segment 加速/减速 semantics.",
   "acceptance_criteria": [
     "v2 schema validates level fields with program mapped_score",
     "derived formulas match config weights and fit_to_band",
@@ -117,13 +120,20 @@
     "legacy uncalibrated banner",
     "synthetic fixture renamed away from real novel branding; anti-hardcode diagnosis tests",
     "real 牛角坳 V2 native E2E: rematerialize + model levels + program finalize; banner V2真实正文分析",
-    "awaiting user desktop smoke checklist for CHG-20260721-012"
+    "awaiting user desktop smoke checklist for CHG-20260721-012",
+    "v2_native 文案为阅读动力且字段为 reading_momentum，不显示阅读牵引/engagement<40",
+    "阶段卡/当前场景/折线/右侧详情与当前镜头字段数值一致",
+    "诊断缺失不默认正常；Beat显示辅助节拍",
+    "v2_native dropoff=100-reading_momentum+惩罚，风险面板含字段/范围/原因/惩罚/终值",
+    "节奏镜头区分 pacing_speed 与 pacing_fit，线段显示加速/减速/变化不明显"
   ],
   "tests": [
     "pytest apps/api/tests/test_reader_journey_v2_local.py",
     "pytest apps/api/tests/test_reader_journey_v2_anti_hardcode_local.py",
     "vitest observation_lenses_v2_local.test.ts",
-    "npm run typecheck"
+    "npm run typecheck",
+    "vitest observation_lenses_v2_local.test.ts (lens binding/terminology/diagnosis/Beat/pacing)",
+    "pytest apps/api/tests/test_reader_journey_v2_dropoff_risk_local.py"
   ],
   "verification_evidence": [
     "12 passed local v2 pytest",
@@ -136,7 +146,10 @@
     "verification matrix: vitest 25 passed (15-point lens/chart checklist)",
     "local SQLite reader_journey_runs contract=1.3 marked legacy_uncalibrated (no model call)",
     "fixture coupling audit: synthetic preview renamed away from 牛角坳; anti-hardcode pytest 8 passed; page path reads seeded v2 scores/diagnoses (no live derive/diagnose)",
-    "real 牛角坳 V2 native: 9 scenes/3 beats; contract/prompt/formula 2.0; source_mode=v2_native; 9 scene batches + retries ~0.31 CNY; scores/diagnoses program-derived; hand-recalc 3/3 match; ordering 11/12 (elder pacing equal not lower)"
+    "real 牛角坳 V2 native: 9 scenes/3 beats; contract/prompt/formula 2.0; source_mode=v2_native; 9 scene batches + retries ~0.31 CNY; scores/diagnoses program-derived; hand-recalc 3/3 match; ordering 11/12 (elder pacing equal not lower)",
+    "实机问题：各镜头阶段卡仍显示阅读牵引；诊断带S1-S11默认正常与右侧流失风险矛盾；风险trigger仍用engagement<40",
+    "局部测试：vitest 32 passed；pytest dropoff+run_id=2 一致性 6 passed；typecheck/version/registry/diff-check passed；VERSION 1.0.3",
+    "run_id=2（《我不是戏神》第1章）只读校验：DB engagement/hook/payoff/dropoff 与 API scene_nodes 一致；该run仍为contract 1.3无v2_scene_scores，V2原生风险替换仅在source_mode=v2_native/contract2.x生效"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -153,5 +166,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-21T12:43:43Z",
-  "updated_at": "2026-07-21T14:19:01Z"
+  "updated_at": "2026-07-21T14:54:40Z"
 }

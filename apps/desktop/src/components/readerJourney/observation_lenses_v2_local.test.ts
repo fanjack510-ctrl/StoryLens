@@ -15,8 +15,17 @@ import {
   isLegacyUncalibratedVisualization,
   mainCurveSeries,
   pacingFitLabel,
+  pacingSegmentLabel,
   valenceDirection,
 } from "./observationLenses";
+import {
+  formatLensBindingCaption,
+  formatLensPhaseScoreLabel,
+  phaseAverageForLens,
+  readingMomentumLabelZh,
+  resolveLensMetricBinding,
+  seriesValueAtOrdinal,
+} from "./lensMetricBinding";
 import { resolveOverlayLines, maxOverlayLineCount } from "./journeyOverlayRules";
 import {
   mapDiagnosisCodeToBandLabel,
@@ -311,6 +320,36 @@ describe("diagnosis band", () => {
       }),
     ).toBe("切分异常");
   });
+
+  it("does not default missing diagnosis to 正常", () => {
+    expect(
+      primaryBandLabelForScene({
+        scene_ordinal: 1,
+        primary_diagnosis: null,
+      }),
+    ).toBe("未发现明显异常");
+    expect(
+      primaryBandLabelForScene({
+        scene_ordinal: 2,
+        primary_diagnosis: null,
+        legacyUncalibrated: true,
+      }),
+    ).toBe("旧版数据");
+  });
+
+  it("defaults Beat to 辅助节拍", () => {
+    expect(
+      primaryBandLabelForScene({
+        scene_ordinal: 5,
+        role: "beat",
+        primary_diagnosis: null,
+      }),
+    ).toBe("辅助节拍");
+  });
+
+  it("maps weak_tension to 张力不足", () => {
+    expect(mapDiagnosisCodeToBandLabel("weak_tension")).toBe("张力不足");
+  });
 });
 
 describe("node visuals + pacing + segments + chapter summary", () => {
@@ -327,6 +366,15 @@ describe("node visuals + pacing + segments + chapter summary", () => {
     expect(pacingFitLabel(90, "aftermath")).toBe("偏快");
     expect(pacingFitLabel(50, "aftermath")).toBe("合适");
     expect(pacingFitLabel(20, "climax")).toBe("偏慢");
+  });
+
+  it("keeps pacing_speed and pacing_fit as distinct semantics", () => {
+    // High speed vs aftermath role → 偏快; high fit score can still report 合适.
+    expect(pacingFitLabel(90, "aftermath", 40)).toBe("偏快");
+    expect(pacingFitLabel(90, "aftermath", 80)).toBe("合适");
+    expect(pacingSegmentLabel(40, 60)).toBe("加速");
+    expect(pacingSegmentLabel(70, 50)).toBe("减速");
+    expect(pacingSegmentLabel(50, 52)).toBe("变化不明显");
   });
 
   it("only marks significant segment deltas", () => {
@@ -485,5 +533,92 @@ describe("CHG-20260721-012 verification matrix", () => {
     const scale = computeYScale(series, 240, "fixed_0_100");
     expect(scale.domainMin).toBe(0);
     expect(scale.domainMax).toBe(100);
+  });
+});
+
+describe("lens card binding + reading_momentum terminology", () => {
+  it("binds each lens field consistently across phase / caption / series / detail", () => {
+    const viz = minimalViz([
+      {
+        scene_ordinal: 1,
+        scene_role: "setup",
+        scores: {
+          reading_momentum: 71,
+          plot_progress: 55,
+          reading_tension: 62,
+          hook: 80,
+          payoff: 25,
+          pacing_speed: 48,
+          pacing_fit: 70,
+          arousal_start: 40,
+          arousal_end: 50,
+          valence_start: -10,
+          valence_end: 20,
+        } as never,
+      },
+      {
+        scene_ordinal: 2,
+        scene_role: "escalation",
+        scores: {
+          reading_momentum: 66,
+          plot_progress: 60,
+          reading_tension: 70,
+          hook: 50,
+          payoff: 40,
+          pacing_speed: 72,
+          pacing_fit: 55,
+        } as never,
+      },
+    ]);
+    viz.phases = [
+      {
+        ordinal: 1,
+        title: "起",
+        start_scene_ordinal: 1,
+        end_scene_ordinal: 2,
+        primary_reader_question: "",
+        dominant_emotion: "",
+        reading_payoff: "",
+        continuation_motivation: "",
+        summary: "阶段摘要",
+        confidence: 0.8,
+        average_engagement: 99,
+        core_scene_count: 2,
+        beat_count: 0,
+        scene_span: 2,
+      },
+    ];
+    viz.calibration_status = {
+      scene_contract_version: "2.0",
+      source_mode: "v2_native",
+      display_banner: V2_NATIVE_REAL_BANNER,
+    };
+
+    expect(readingMomentumLabelZh(viz)).toBe("阅读动力");
+    expect(formatLensPhaseScoreLabel(viz, "composite", 68)).toContain("阅读动力");
+    expect(formatLensPhaseScoreLabel(viz, "composite", 68)).not.toContain("阅读牵引");
+    expect(formatLensPhaseScoreLabel(viz, "plot_progress", 58)).toContain("剧情推进");
+    expect(formatLensPhaseScoreLabel(viz, "reading_tension", 66)).toContain("阅读张力");
+
+    const phaseAvg = phaseAverageForLens(viz, "composite", viz.phases[0]);
+    expect(phaseAvg).toBeCloseTo((71 + 66) / 2, 5);
+
+    for (const lensId of [
+      "composite",
+      "plot_progress",
+      "reading_tension",
+      "hook_payoff",
+      "pacing",
+    ] as const) {
+      const seriesVal = seriesValueAtOrdinal(viz, lensId, 1);
+      const binding = resolveLensMetricBinding(viz, lensId, viz.scene_nodes[0]);
+      expect(binding.value).toBe(seriesVal);
+      expect(formatLensBindingCaption(binding)).not.toMatch(/阅读牵引|engagement<40/);
+    }
+
+    const pacing = resolveLensMetricBinding(viz, "pacing", viz.scene_nodes[0]);
+    expect(pacing.fieldKey).toBe("pacing_speed");
+    expect(pacing.secondary?.[0]?.fieldKey).toBe("pacing_fit");
+    expect(pacing.value).not.toBe(pacing.secondary?.[0]?.value);
   });
 });

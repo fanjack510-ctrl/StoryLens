@@ -32,9 +32,17 @@ import {
   V2_LOCAL_FIXTURE_BANNER,
   V2_NATIVE_REAL_BANNER,
   getObservationLens,
+  isLegacyUncalibratedVisualization,
   resolveJourneyTopBanner,
   type ObservationLensId,
 } from "./observationLenses";
+import {
+  formatLensBindingCaption,
+  formatLensPhaseScoreLabel,
+  phaseAverageForLens,
+  resolveLensMetricBinding,
+  seriesValueAtOrdinal,
+} from "./lensMetricBinding";
 import type { SceneDiagnosisLike } from "./diagnosisBandModel";
 import {
   applyJourneySelectionIntent,
@@ -418,8 +426,18 @@ export function ReaderJourneyWorkspace({
         reading_momentum:
           node.scores.reading_momentum ?? node.engagement.engagement_score,
         plot_progress: node.scores.plot_progress,
+        role: node.role,
+        node_type: node.node_type,
+        include_in_main_curve: node.include_in_main_curve,
+        legacyUncalibrated: isLegacyUncalibratedVisualization(visualization),
+        insufficientData:
+          node.confidence != null && node.confidence < 0.45
+            ? true
+            : !node.primary_diagnosis &&
+              node.scores.reading_momentum == null &&
+              node.engagement?.engagement_score == null,
       })),
-    [visualization.scene_nodes],
+    [visualization],
   );
   const chapterSummaryBullets = useMemo(
     () => buildChapterSummaryBullets(visualization, sceneDiagnoses),
@@ -783,6 +801,12 @@ export function ReaderJourneyWorkspace({
   const selectedMetricValue =
     selectedSceneOrdinal != null
       ? (() => {
+          const fromLens = seriesValueAtOrdinal(
+            visualization,
+            observationLens,
+            selectedSceneOrdinal,
+          );
+          if (fromLens != null) return Math.round(fromLens);
           const resolved = resolveMetricValue(
             series.find((point) => point.scene_ordinal === selectedSceneOrdinal),
           );
@@ -798,6 +822,11 @@ export function ReaderJourneyWorkspace({
   const phaseMetricAverages = useMemo(() => {
     const averages = new Map<number, number>();
     for (const phase of visualization.phases) {
+      const lensAvg = phaseAverageForLens(visualization, observationLens, phase);
+      if (lensAvg != null && Number.isFinite(lensAvg)) {
+        averages.set(phase.ordinal, lensAvg);
+        continue;
+      }
       if (metric === "engagement" && Number.isFinite(phase.average_engagement)) {
         averages.set(phase.ordinal, phase.average_engagement);
         continue;
@@ -819,7 +848,12 @@ export function ReaderJourneyWorkspace({
       }
     }
     return averages;
-  }, [visualization.phases, series, metric]);
+  }, [visualization, series, metric, observationLens]);
+
+  const selectedLensBinding = useMemo(() => {
+    if (!selectedNode) return null;
+    return resolveLensMetricBinding(visualization, observationLens, selectedNode);
+  }, [visualization, observationLens, selectedNode]);
 
   const selectedCluster = useMemo(() => {
     if (!expandedClusterId) return null;
@@ -1044,6 +1078,7 @@ export function ReaderJourneyWorkspace({
             node={selectedNode}
             visualization={visualization}
             observationLensLabel={lensDef.labelZh}
+            observationLens={observationLens}
             onLocateEvidence={(id) => handleLocateEvidence(id, selectedNode)}
             onOpenInSceneList={
               onSelectScene ? () => onSelectScene(selectedNode.scene_id) : undefined
@@ -1395,7 +1430,7 @@ export function ReaderJourneyWorkspace({
                   phaseMetricAverages.get(phase.ordinal) ?? phase.average_engagement;
                 return (
                 <option key={phase.ordinal} value={phase.ordinal}>
-                  {`${formatJourneyPhaseLabel(phase.title)} · 场景 ${phase.start_scene_ordinal}—${phase.end_scene_ordinal} · ${formatPhaseMetricScoreLabel(metric, phaseMetric)}`}
+                  {`${formatJourneyPhaseLabel(phase.title)} · 场景 ${phase.start_scene_ordinal}—${phase.end_scene_ordinal} · ${formatLensPhaseScoreLabel(visualization, observationLens, phaseMetric)}`}
                 </option>
                 );
               })}
@@ -1412,7 +1447,11 @@ export function ReaderJourneyWorkspace({
               const phaseSummary = resolvePhaseSummaryDisplay(phase.summary, phase.title);
               const phaseMetric =
                 phaseMetricAverages.get(phase.ordinal) ?? phase.average_engagement;
-              const avgText = formatPhaseMetricScoreLabel(metric, phaseMetric);
+              const avgText = formatLensPhaseScoreLabel(
+                visualization,
+                observationLens,
+                phaseMetric,
+              );
               return (
                 <button
                   key={phase.ordinal}
@@ -1440,10 +1479,10 @@ export function ReaderJourneyWorkspace({
           </div>
         </section>
 
-          {selectedSceneOrdinal != null && selectedMetricValue != null && (
+          {selectedSceneOrdinal != null && selectedLensBinding != null && (
             <p className="journey-active-scene-caption" data-testid="journey-active-scene-caption">
-              {formatJourneySceneLabel(selectedSceneOrdinal)} · {formatJourneyMetricLabel(metric)}{" "}
-              {formatJourneyScore(selectedMetricValue)}
+              {formatJourneySceneLabel(selectedSceneOrdinal)} ·{" "}
+              {formatLensBindingCaption(selectedLensBinding)}
             </p>
           )}
 

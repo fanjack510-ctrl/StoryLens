@@ -92,7 +92,8 @@ export type ChartLineSpec = {
   includeInMainPolyline: boolean;
 };
 
-function nodeScores(node: JourneySceneNode): Record<string, number | undefined> {
+/** Resolved score bag for lens binding — engagement only as legacy fallback for reading_momentum. */
+export function nodeScoreRecord(node: JourneySceneNode): Record<string, number | undefined> {
   const scores = (node.scores ?? {}) as Record<string, number | undefined>;
   const engagement = node.engagement as { engagement_score?: number } | undefined;
   return {
@@ -113,8 +114,16 @@ function nodeScores(node: JourneySceneNode): Record<string, number | undefined> 
         ],
       ),
     pacing_speed: scores.pacing_speed ?? scores.tension,
+    pacing_fit: scores.pacing_fit,
+    hook: scores.hook,
+    payoff: scores.payoff,
     emotional_investment: scores.emotional_investment ?? scores.emotional_resonance,
   };
+}
+
+/** @deprecated Use nodeScoreRecord */
+function nodeScores(node: JourneySceneNode): Record<string, number | undefined> {
+  return nodeScoreRecord(node);
 }
 
 function averageDefined(...values: Array<number | undefined>): number | undefined {
@@ -192,7 +201,7 @@ export function buildLensChartLines(
   if (lens.id === "composite") {
     lines.push({
       id: "reading_momentum",
-      labelZh: "综合阅读",
+      labelZh: "阅读动力",
       series: seriesFromNodes(visualization, (n) => nodeScores(n).reading_momentum),
       style: "solid",
       includeInMainPolyline: true,
@@ -246,9 +255,10 @@ export function buildLensChartLines(
       includeInMainPolyline: true,
     });
   } else if (lens.id === "pacing") {
+    // pacing_speed drives the polyline; pacing_fit is a node/segment semantic, not the same score.
     lines.push({
       id: "pacing_speed",
-      labelZh: "节奏",
+      labelZh: "节奏速度",
       series: seriesFromNodes(visualization, (n) => nodeScores(n).pacing_speed),
       style: "solid",
       includeInMainPolyline: true,
@@ -264,7 +274,7 @@ export function buildLensChartLines(
   ) {
     lines.unshift({
       id: "reading_momentum",
-      labelZh: "综合阅读",
+      labelZh: "阅读动力",
       series: seriesFromNodes(visualization, (n) => nodeScores(n).reading_momentum),
       style: "dashed",
       includeInMainPolyline: true,
@@ -295,6 +305,7 @@ export function valenceDirection(node: JourneySceneNode): "up" | "down" | "flat"
 }
 
 export type PacingFitLabel = "偏慢" | "合适" | "偏快";
+export type PacingSegmentLabel = "加速" | "减速" | "变化不明显";
 
 /** Role target midpoints used when backend targets are absent (legacy). */
 const PACING_ROLE_BANDS: Record<string, [number, number]> = {
@@ -309,14 +320,46 @@ const PACING_ROLE_BANDS: Record<string, [number, number]> = {
   closed_end: [30, 60],
 };
 
+/**
+ * Node label for whether pacing_speed fits scene_role.
+ * Prefer backend pacing_fit when present; never treat fit as identical to speed.
+ */
 export function pacingFitLabel(
   pacingSpeed: number,
   sceneRole: string | undefined | null,
+  pacingFitScore?: number | null,
 ): PacingFitLabel {
   const band = PACING_ROLE_BANDS[sceneRole ?? ""] ?? [40, 70];
+  if (typeof pacingFitScore === "number" && Number.isFinite(pacingFitScore)) {
+    if (pacingFitScore >= 70) return "合适";
+    if (pacingFitScore < 45) {
+      if (pacingSpeed < (band[0] + band[1]) / 2) return "偏慢";
+      return "偏快";
+    }
+  }
   if (pacingSpeed < band[0]) return "偏慢";
   if (pacingSpeed > band[1]) return "偏快";
   return "合适";
+}
+
+/** Segment label between scenes based on pacing_speed delta (not pacing_fit). */
+export function pacingSegmentLabel(
+  prevSpeed: number | null | undefined,
+  currSpeed: number | null | undefined,
+  threshold = 8,
+): PacingSegmentLabel {
+  if (
+    typeof prevSpeed !== "number" ||
+    typeof currSpeed !== "number" ||
+    !Number.isFinite(prevSpeed) ||
+    !Number.isFinite(currSpeed)
+  ) {
+    return "变化不明显";
+  }
+  const delta = currSpeed - prevSpeed;
+  if (delta >= threshold) return "加速";
+  if (delta <= -threshold) return "减速";
+  return "变化不明显";
 }
 
 export function isLegacyUncalibratedVisualization(

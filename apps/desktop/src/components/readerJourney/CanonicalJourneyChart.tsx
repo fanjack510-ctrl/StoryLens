@@ -38,6 +38,7 @@ import {
   getObservationLens,
   mainCurveSeries,
   pacingFitLabel,
+  pacingSegmentLabel,
   valenceDirection,
   type ObservationLensId,
 } from "./observationLenses";
@@ -224,13 +225,33 @@ export function CanonicalJourneyChart({
         reading_tension: node.scores.reading_tension,
         hook: node.scores.hook,
         payoff: node.scores.payoff,
-        pacing_speed: node.scores.pacing_speed ?? node.scores.tension,
+        pacing_speed: node.scores.pacing_speed,
         clarity: node.scores.clarity,
         information_gain: node.scores.information_gain,
         arousal:
           ((node.scores.arousal_start ?? 0) + (node.scores.arousal_end ?? 0)) / 2,
       })),
     );
+  }, [lensId, nodes]);
+
+  const pacingSegments = useMemo(() => {
+    if (lensId !== "pacing") return [];
+    const ordered = [...nodes].sort((a, b) => a.scene_ordinal - b.scene_ordinal);
+    const out: Array<{
+      fromOrdinal: number;
+      toOrdinal: number;
+      label: ReturnType<typeof pacingSegmentLabel>;
+    }> = [];
+    for (let i = 1; i < ordered.length; i += 1) {
+      const prev = ordered[i - 1];
+      const curr = ordered[i];
+      out.push({
+        fromOrdinal: prev.scene_ordinal,
+        toOrdinal: curr.scene_ordinal,
+        label: pacingSegmentLabel(prev.scores.pacing_speed, curr.scores.pacing_speed),
+      });
+    }
+    return out;
   }, [lensId, nodes]);
 
   const hookOrdinals = useMemo(() => {
@@ -607,6 +628,26 @@ export function CanonicalJourneyChart({
               </text>
             );
           })}
+          {pacingSegments.map((seg) => {
+            const x1 = xFor(seg.fromOrdinal);
+            const x2 = xFor(seg.toOrdinal);
+            const midX = (x1 + x2) / 2;
+            return (
+              <text
+                key={`pace-seg-${seg.fromOrdinal}-${seg.toOrdinal}`}
+                x={midX}
+                y={padTop + plotHeight - 4}
+                textAnchor="middle"
+                className="journey-pacing-segment-label"
+                data-testid={`journey-pacing-segment-${seg.toOrdinal}`}
+                data-pacing-segment={seg.label}
+                fontSize={9}
+                fill="var(--muted)"
+              >
+                {seg.label}
+              </text>
+            );
+          })}
         </g>
 
         {/* 5. Nodes — not clipped by plot clipPath */}
@@ -668,8 +709,9 @@ export function CanonicalJourneyChart({
             const pacingLabel =
               lensId === "pacing"
                 ? pacingFitLabel(
-                    node.scores.pacing_speed ?? node.scores.tension ?? value,
+                    node.scores.pacing_speed ?? value,
                     node.scene_role,
+                    node.scores.pacing_fit,
                   )
                 : null;
             const stroke = visual.colorToken;

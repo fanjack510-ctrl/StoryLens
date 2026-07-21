@@ -1,15 +1,16 @@
 /** Single diagnosis-band labels under the main Reader Journey chart. */
 
 export type DiagnosisBandLabel =
-  | "正常"
-  | "推进增强"
+  | "表现有效"
+  | "未发现明显异常"
+  | "辅助节拍"
   | "推进偏弱"
   | "剧情停滞"
   | "空转"
   | "节奏偏慢"
   | "节奏偏快"
   | "好奇不足"
-  | "紧张不足"
+  | "张力不足"
   | "情绪不足"
   | "张力过载"
   | "钩子建立"
@@ -20,6 +21,8 @@ export type DiagnosisBandLabel =
   | "突然揭晓"
   | "表达不清"
   | "切分异常"
+  | "数据不足"
+  | "旧版数据"
   | "多项风险";
 
 const CODE_TO_LABEL: Record<string, DiagnosisBandLabel> = {
@@ -29,9 +32,9 @@ const CODE_TO_LABEL: Record<string, DiagnosisBandLabel> = {
   pacing_too_slow: "节奏偏慢",
   pacing_too_fast: "节奏偏快",
   weak_curiosity: "好奇不足",
-  weak_tension: "紧张不足",
+  weak_tension: "张力不足",
   weak_emotional_investment: "情绪不足",
-  suspended_tension: "紧张不足",
+  suspended_tension: "张力不足",
   tension_overload: "张力过载",
   weak_hook: "钩子不足",
   empty_hook: "空钩子",
@@ -40,7 +43,7 @@ const CODE_TO_LABEL: Record<string, DiagnosisBandLabel> = {
   effective_payoff: "有效兑现",
   unclear_expression: "表达不清",
   scene_boundary_anomaly: "切分异常",
-  low_confidence: "表达不清",
+  low_confidence: "数据不足",
   information_overload: "张力过载",
 };
 
@@ -52,6 +55,13 @@ export type SceneDiagnosisLike = {
   data_quality_issue?: string | null;
   reading_momentum?: number | null;
   plot_progress?: number | null;
+  role?: string | null;
+  node_type?: string | null;
+  include_in_main_curve?: boolean | null;
+  /** When true, missing diagnosis maps to 旧版数据 instead of 未发现明显异常. */
+  legacyUncalibrated?: boolean | null;
+  /** When scores themselves are missing / unusable. */
+  insufficientData?: boolean | null;
 };
 
 export function mapDiagnosisCodeToBandLabel(
@@ -64,24 +74,53 @@ export function mapDiagnosisCodeToBandLabel(
   return CODE_TO_LABEL[code] ?? null;
 }
 
+function isBeatDiag(diag: SceneDiagnosisLike): boolean {
+  if (diag.role === "beat") return true;
+  if (diag.node_type === "beat") return true;
+  if (diag.include_in_main_curve === false) return true;
+  return false;
+}
+
+/**
+ * Map scene diagnosis → band label.
+ * Missing primary_diagnosis must NOT become 「正常」.
+ */
 export function primaryBandLabelForScene(diag: SceneDiagnosisLike): DiagnosisBandLabel {
-  if (diag.data_quality_issue) return "切分异常";
+  // Beat defaults to 辅助节拍 (not 正常 / 切分异常 as primary band copy).
+  if (isBeatDiag(diag)) return "辅助节拍";
+
+  if (diag.insufficientData) return "数据不足";
+  if (diag.data_quality_issue === "scene_boundary_anomaly") return "切分异常";
+  if (diag.data_quality_issue) return "数据不足";
+
   const secondary = diag.secondary_diagnoses ?? [];
   if (secondary.length >= 2 && diag.primary_diagnosis) return "多项风险";
+
   const mapped = mapDiagnosisCodeToBandLabel(diag.primary_diagnosis);
   if (mapped) return mapped;
+
   const positive = mapDiagnosisCodeToBandLabel(diag.positive_mechanism);
   if (positive === "有效兑现") return "有效兑现";
+
   if (
     typeof diag.plot_progress === "number" &&
     typeof diag.reading_momentum === "number" &&
     diag.plot_progress >= 70 &&
     diag.reading_momentum >= 70
   ) {
-    return "推进增强";
+    return "表现有效";
   }
-  if (!diag.primary_diagnosis) return "正常";
-  return "正常";
+
+  if (diag.legacyUncalibrated && !diag.primary_diagnosis) {
+    return "旧版数据";
+  }
+
+  if (!diag.primary_diagnosis) {
+    return "未发现明显异常";
+  }
+
+  // Unknown code: do not invent 「正常」.
+  return "未发现明显异常";
 }
 
 export function secondaryBandLabels(diag: SceneDiagnosisLike): DiagnosisBandLabel[] {

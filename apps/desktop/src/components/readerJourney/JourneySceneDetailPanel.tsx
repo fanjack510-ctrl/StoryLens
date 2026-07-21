@@ -43,6 +43,13 @@ import {
 } from "./sceneDetailFields";
 import { buildSceneNarrative } from "./journeySceneNarrative";
 import { primaryBandLabelForScene } from "./diagnosisBandModel";
+import {
+  formatLensBindingCaption,
+  resolveLensMetricBinding,
+  readingMomentumLabelZh,
+} from "./lensMetricBinding";
+import type { ObservationLensId } from "./observationLenses";
+import { DEFAULT_OBSERVATION_LENS } from "./observationLenses";
 
 export type SceneDetailTab =
   | "overview"
@@ -59,7 +66,7 @@ const TABS: { id: SceneDetailTab; label: string; testId: string }[] = [
   { id: "evidence", label: "证据", testId: "scene-detail-tab-evidence" },
 ];
 
-const CORE_SCORE_KEYS = ["engagement", "curiosity", "tension"] as const;
+const CORE_SCORE_KEYS = ["reading_momentum", "curiosity", "tension"] as const;
 
 type Props = {
   node: JourneySceneNode;
@@ -68,10 +75,15 @@ type Props = {
   onOpenInSceneList?: () => void;
   visualization?: ReaderJourneyVisualization | null;
   observationLensLabel?: string | null;
+  observationLens?: ObservationLensId | null;
 };
 
 function scoreValue(node: JourneySceneNode, key: (typeof CORE_SCORE_KEYS)[number]): number {
-  if (key === "engagement") return Number(node.engagement?.engagement_score ?? 0);
+  if (key === "reading_momentum") {
+    return Number(
+      node.scores?.reading_momentum ?? node.engagement?.engagement_score ?? 0,
+    );
+  }
   return Number(node.scores?.[key] ?? 0);
 }
 
@@ -86,6 +98,7 @@ export function JourneySceneDetailPanel({
   onOpenInSceneList,
   visualization = null,
   observationLensLabel = null,
+  observationLens = DEFAULT_OBSERVATION_LENS,
 }: Props) {
   const [tab, setTab] = useState<SceneDetailTab>("overview");
 
@@ -149,9 +162,17 @@ export function JourneySceneDetailPanel({
 
   const coreMetrics = CORE_SCORE_KEYS.map((key) => ({
     key,
-    label: key === "engagement" ? METRIC_LABELS_ZH.engagement : METRIC_LABELS_ZH[key],
+    label:
+      key === "reading_momentum"
+        ? visualization
+          ? readingMomentumLabelZh(visualization)
+          : "阅读动力"
+        : METRIC_LABELS_ZH[key as keyof typeof METRIC_LABELS_ZH] ?? key,
     value: Math.max(0, Math.min(100, scoreValue(node, key))),
-    title: SCORE_TOOLTIPS_ZH[key],
+    title:
+      key === "reading_momentum"
+        ? "综合阅读动力（reading_momentum）"
+        : SCORE_TOOLTIPS_ZH[key],
   }));
 
   return (
@@ -234,12 +255,17 @@ export function JourneySceneDetailPanel({
                       </ul>
                     );
                   })()}
-                  {observationLensLabel ? (
+                  {observationLensLabel && visualization ? (
                     <p data-testid="scene-current-lens-score">
                       当前镜头：{observationLensLabel}
-                      {typeof node.scores.reading_momentum === "number"
-                        ? ` · 综合阅读 ${Math.round(node.scores.reading_momentum)}`
-                        : ` · 阅读牵引 ${Math.round(Number(node.engagement?.engagement_score ?? 0))}`}
+                      {" · "}
+                      {formatLensBindingCaption(
+                        resolveLensMetricBinding(
+                          visualization,
+                          observationLens ?? DEFAULT_OBSERVATION_LENS,
+                          node,
+                        ),
+                      )}
                     </p>
                   ) : null}
                 </JourneyInspectorSection>
@@ -873,9 +899,36 @@ export function JourneyMarkerInspectorPanel({
                   <p>{riskInterval.trigger}</p>
                 </JourneyInspectorSection>
               ) : null}
+              {riskInterval.field_used ? (
+                <JourneyInspectorSection title="使用的字段">
+                  <p data-testid="risk-field-used">{riskInterval.field_used}</p>
+                </JourneyInspectorSection>
+              ) : null}
+              <JourneyInspectorSection title="实际 Scene 范围">
+                <p data-testid="risk-scene-range">
+                  S{riskInterval.start_scene_ordinal}—S{riskInterval.end_scene_ordinal}
+                  {typeof riskInterval.span === "number" ? `（跨度 ${riskInterval.span}）` : ""}
+                </p>
+              </JourneyInspectorSection>
+              {riskInterval.penalties?.length ? (
+                <JourneyInspectorSection title="附加惩罚">
+                  <ul data-testid="risk-penalties">
+                    {riskInterval.penalties.map((penalty) => (
+                      <li key={`${penalty.code}-${penalty.amount}`}>
+                        {penalty.label ?? penalty.code}：+{penalty.amount}
+                      </li>
+                    ))}
+                  </ul>
+                </JourneyInspectorSection>
+              ) : null}
+              {typeof riskInterval.final_risk === "number" ? (
+                <JourneyInspectorSection title="最终风险值">
+                  <p data-testid="risk-final-value">{Math.round(riskInterval.final_risk)}</p>
+                </JourneyInspectorSection>
+              ) : null}
               <JourneyInspectorSection title="可能影响">
                 <p>
-                  连续缺少回报、节奏骤降或认知负担过高，可能降低读者继续阅读的意愿。属于提示性判断，并非确定性失败。
+                  阅读动力偏低、连续下降或高钩子未兑现，可能降低读者继续阅读的意愿。属于提示性判断，并非确定性失败。
                 </p>
               </JourneyInspectorSection>
               <details className="journey-tech-details">

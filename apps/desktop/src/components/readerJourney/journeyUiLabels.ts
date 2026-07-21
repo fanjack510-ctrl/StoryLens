@@ -310,6 +310,10 @@ export function formatJourneySelectionType(kind: string | null | undefined): str
 export const RISK_TYPE_LABELS_ZH: Record<string, string> = {
   consecutive_no_payoff: "连续场景缺少有效回报",
   low_engagement: "阅读牵引持续偏低",
+  low_reading_momentum: "阅读动力持续偏低",
+  momentum_decline: "阅读动力连续下降",
+  unpaid_hook: "高钩子未兑现",
+  high_dropoff_risk: "流失风险偏高",
   high_cognitive_load: "认知负担偏高",
   dropped_question: "高强度问题未承接",
   over_fragmented_beats: "节拍过碎，节奏可能断裂",
@@ -355,7 +359,8 @@ export function formatJourneyRiskSummary(input: {
   if (raw && !/^[a-z][a-z0-9_]*$/i.test(raw)) {
     return raw
       .replace(/\bScene\b/g, "场景")
-      .replace(/\bengagement\b/gi, "阅读牵引")
+      .replace(/\breading_momentum\b/gi, "阅读动力")
+      .replace(/\bengagement\b/gi, "阅读动力")
       .replace(/\bpayoff\b/gi, "回报")
       .replace(/\bBeat\b/g, "节拍");
   }

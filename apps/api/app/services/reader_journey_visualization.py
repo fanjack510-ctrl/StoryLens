@@ -564,6 +564,7 @@ def build_risk_intervals(
         )
         item["trigger"] = f"engagement<{LOW_ENGAGEMENT_THRESHOLD}，连续>=2"
         item["needs_review"] = item["span"] >= 3
+        item["field_used"] = "engagement"
         intervals.append(item)
 
     high_load_flags = [
@@ -613,6 +614,184 @@ def build_risk_intervals(
         item["trigger"] = f"连续>={OVER_FRAGMENTED_BEAT_MIN}个 beat 节点"
         item["needs_review"] = item["span"] >= OVER_FRAGMENTED_BEAT_MIN
         intervals.append(item)
+
+    intervals.sort(key=lambda item: (item["start_scene_ordinal"], item["risk_type"]))
+    return intervals
+
+
+def _is_v2_native_presentation(journey_run: ReaderJourneyRun) -> bool:
+    """True when visualization must use V2 reading_momentum dropoff (not engagement)."""
+    try:
+        details = json.loads(journey_run.failure_details_json or "{}")
+    except json.JSONDecodeError:
+        details = {}
+    source_mode = details.get("source_mode")
+    if source_mode in {"v2_native", "local_fixture"}:
+        return True
+    version = str(journey_run.scene_contract_version or "")
+    return version.startswith("2.")
+
+
+def build_v2_dropoff_risk_intervals(scene_nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Build V2 risk intervals from reading_momentum (never engagement<40).
+
+    base_dropoff_risk = 100 - reading_momentum, with chapter-level penalties:
+    - consecutive two-scene clear decline: +8
+    - three consecutive reading_momentum<45: +15
+    - hook>75 without payoff in a reasonable span: +10
+    """
+    ordered = sorted(
+        [
+            node
+            for node in scene_nodes
+            if node.get("role") != "beat" and node.get("node_type") != "beat"
+        ],
+        key=lambda item: int(item["scene_ordinal"]),
+    )
+    if not ordered:
+        return []
+
+    momentums: list[float] = []
+    hooks: list[float] = []
+    payoffs: list[float] = []
+    dropoffs: list[float] = []
+    ordinals: list[int] = []
+    for node in ordered:
+        scores = node.get("scores") or {}
+        momentum = scores.get("reading_momentum")
+        if momentum is None:
+            engagement = (node.get("engagement") or {}).get("engagement_score")
+            momentum = engagement if engagement is not None else 0
+        momentum_f = float(momentum)
+        momentums.append(momentum_f)
+        hooks.append(float(scores.get("hook") or 0))
+        payoffs.append(float(scores.get("payoff") or 0))
+        stored = scores.get("dropoff_risk")
+        dropoffs.append(
+            float(stored) if stored is not None else max(0.0, min(100.0, 100.0 - momentum_f))
+        )
+        ordinals.append(int(node["scene_ordinal"]))
+
+    intervals: list[dict[str, Any]] = []
+
+    for index in range(2, len(momentums)):
+        d1 = momentums[index - 1] - momentums[index - 2]
+        d2 = momentums[index] - momentums[index - 1]
+        if d1 < -0.5 and d2 < -0.5:
+            start_index = index - 2
+            end = index
+            penalties = [
+                {"code": "consecutive_decline", "amount": 8, "label": "连续两场明显下降"}
+            ]
+            base = 100.0 - momentums[end]
+            final_risk = max(dropoffs[end], min(100.0, base + 8))
+            intervals.append(
+                {
+                    "risk_type": "momentum_decline",
+                    "start_scene_ordinal": ordinals[start_index],
+                    "end_scene_ordinal": ordinals[end],
+                    "span": ordinals[end] - ordinals[start_index] + 1,
+                    "summary": (
+                        f"Scene {ordinals[start_index]}—{ordinals[end]} "
+                        "reading_momentum 连续明显下降"
+                    ),
+                    "trigger": "连续两场 reading_momentum 明显下降",
+                    "needs_review": True,
+                    "field_used": "reading_momentum",
+                    "penalties": penalties,
+                    "final_risk": round(final_risk, 1),
+                }
+            )
+
+    low_flags = [(ordinals[i], momentums[i] < 45) for i in range(len(momentums))]
+    for item in _collect_intervals(low_flags, risk_type="low_reading_momentum"):
+        if item["span"] < 3:
+            continue
+        end_ord = int(item["end_scene_ordinal"])
+        end_index = ordinals.index(end_ord)
+        base = 100.0 - momentums[end_index]
+        penalties = [
+            {
+                "code": "consecutive_low_momentum",
+                "amount": 15,
+                "label": "连续三场 reading_momentum<45",
+            }
+        ]
+        final_risk = max(dropoffs[end_index], min(100.0, base + 15))
+        item["summary"] = (
+            f"Scene {item['start_scene_ordinal']}—{item['end_scene_ordinal']} "
+            "reading_momentum 持续偏低"
+        )
+        item["trigger"] = "reading_momentum<45，连续>=3"
+        item["needs_review"] = True
+        item["field_used"] = "reading_momentum"
+        item["penalties"] = penalties
+        item["final_risk"] = round(final_risk, 1)
+        intervals.append(item)
+
+    span = 3
+    for index, hook in enumerate(hooks):
+        if hook <= 75:
+            continue
+        if payoffs[index] >= 40:
+            continue
+        future_payoff = any(
+            payoffs[ahead] >= 50
+            for ahead in range(index + 1, min(len(payoffs), index + 1 + span))
+        )
+        if future_payoff:
+            continue
+        end_index = min(len(ordinals) - 1, index + span)
+        base = 100.0 - momentums[index]
+        penalties = [
+            {
+                "code": "unpaid_hook",
+                "amount": 10,
+                "label": "hook>75 且合理跨度内无 payoff",
+            }
+        ]
+        final_risk = max(dropoffs[index], min(100.0, base + 10))
+        intervals.append(
+            {
+                "risk_type": "unpaid_hook",
+                "start_scene_ordinal": ordinals[index],
+                "end_scene_ordinal": ordinals[end_index],
+                "span": ordinals[end_index] - ordinals[index] + 1,
+                "summary": (
+                    f"Scene {ordinals[index]} hook 偏高且后续 {span} 场内未见有效 payoff"
+                ),
+                "trigger": "hook>75 且合理跨度内无 payoff",
+                "needs_review": True,
+                "field_used": "reading_momentum",
+                "penalties": penalties,
+                "final_risk": round(final_risk, 1),
+            }
+        )
+
+    for index, risk in enumerate(dropoffs):
+        if risk < 60:
+            continue
+        if any(
+            item["start_scene_ordinal"] <= ordinals[index] <= item["end_scene_ordinal"]
+            for item in intervals
+        ):
+            continue
+        intervals.append(
+            {
+                "risk_type": "high_dropoff_risk",
+                "start_scene_ordinal": ordinals[index],
+                "end_scene_ordinal": ordinals[index],
+                "span": 1,
+                "summary": (
+                    f"Scene {ordinals[index]} 流失风险偏高（base=100-reading_momentum）"
+                ),
+                "trigger": "base_dropoff_risk = 100 - reading_momentum",
+                "needs_review": risk >= 70,
+                "field_used": "reading_momentum",
+                "penalties": [],
+                "final_risk": round(risk, 1),
+            }
+        )
 
     intervals.sort(key=lambda item: (item["start_scene_ordinal"], item["risk_type"]))
     return intervals
@@ -690,7 +869,15 @@ def _weak_interval_text(risk_intervals: list[dict[str, Any]]) -> str:
     candidates = [
         item
         for item in risk_intervals
-        if item["risk_type"] in {"consecutive_no_payoff", "low_engagement", "over_fragmented_beats"}
+        if item["risk_type"] in {
+            "consecutive_no_payoff",
+            "low_engagement",
+            "low_reading_momentum",
+            "momentum_decline",
+            "unpaid_hook",
+            "high_dropoff_risk",
+            "over_fragmented_beats",
+        }
     ]
     if not candidates:
         return "无明显薄弱区间"
@@ -1163,6 +1350,25 @@ def build_reader_journey_visualization(
     hook_markers = hook_selection["hook_markers"]
     payoff_markers = payoff_selection["visible_payoff_markers"]
     _apply_v2_presentation_overrides(scene_nodes, summary)
+    if _is_v2_native_presentation(journey_run):
+        # Replace legacy engagement<40 intervals with V2 reading_momentum formula.
+        kept = [
+            item
+            for item in risk_intervals
+            if item.get("risk_type") not in {"low_engagement"}
+        ]
+        v2_intervals = build_v2_dropoff_risk_intervals(scene_nodes)
+        risk_intervals = kept + v2_intervals
+        risk_intervals.sort(
+            key=lambda item: (item["start_scene_ordinal"], item["risk_type"])
+        )
+        # Keep chapter peaks aligned with reading_momentum when present.
+        for node in scene_nodes:
+            scores = node.get("scores") or {}
+            momentum = scores.get("reading_momentum")
+            if momentum is None:
+                continue
+            engagement_by_ordinal[int(node["scene_ordinal"])] = int(round(float(momentum)))
     # Keep curve include flags aligned with node overrides (e.g. fixture Beat).
     beat_ordinals = {
         int(node["scene_ordinal"])

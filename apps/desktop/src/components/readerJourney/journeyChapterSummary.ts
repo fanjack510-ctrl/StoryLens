@@ -46,7 +46,7 @@ export function buildChapterSummaryBullets(
 
   const peakDiag = byOrdinal.get(peak.scene_ordinal);
   const valleyDiag = byOrdinal.get(valley.scene_ordinal);
-  const peakLabel = peakDiag ? primaryBandLabelForScene(peakDiag) : "推进增强";
+  const peakLabel = peakDiag ? primaryBandLabelForScene(peakDiag) : "表现有效";
   const valleyLabel = valleyDiag ? primaryBandLabelForScene(valleyDiag) : "推进偏弱";
 
   const payoffScene = nodes.find((n) => (n.scores?.payoff ?? 0) >= 70);
@@ -55,7 +55,7 @@ export function buildChapterSummaryBullets(
   const bullets: ChapterSummaryBullet[] = [];
   bullets.push({
     kind: "advantage",
-    text: `最大优势：S${peak.scene_ordinal} 形成本章高点（${peakLabel}），阅读动量约 ${Math.round(
+    text: `最大优势：S${peak.scene_ordinal} 形成本章高点（${peakLabel}），阅读动力约 ${Math.round(
       nodeMomentum(visualization, peak.scene_ordinal),
     )}。${peak.scene_value_summary ? `机制：${peak.scene_value_summary}` : ""}`.trim(),
   });
