@@ -29,6 +29,12 @@
       "message": "Sync remaining CHG-20260721-012 commit attachments.",
       "primary": false,
       "multi_change_reason": "final commit attachment sync"
+    },
+    {
+      "sha": "fb002db7efea7e4ba15647f8dad6eca8532d6d09",
+      "message": "Attach final registry sync commit to CHG-20260721-012.",
+      "primary": false,
+      "multi_change_reason": "final registry sync commit"
     }
   ],
   "modules": [
@@ -77,5 +83,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-21T12:43:43Z",
-  "updated_at": "2026-07-21T12:57:09Z"
+  "updated_at": "2026-07-21T12:57:52Z"
 }
