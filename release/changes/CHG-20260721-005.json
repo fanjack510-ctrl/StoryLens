@@ -3,7 +3,7 @@
   "title": "分析预算门禁与本地使用额度管理修复",
   "type": "fix",
   "base_version": "1.0.2",
-  "status": "ready",
+  "status": "released",
   "include_in_next_release": true,
   "commits": [
     {
@@ -54,5 +54,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-21T06:02:51Z",
-  "updated_at": "2026-07-21T06:46:57Z"
+  "updated_at": "2026-07-21T08:22:13Z"
 }

@@ -1,15 +1,13 @@
 {
-  "version": "1.0.2",
-  "git_tag": null,
-  "git_commit": "52fd44894b41fa48192fc06ef1e189acb517b8f5",
-  "status": "legacy_verified",
-  "released_at": null,
-  "channel": "stable",
-  "installer_sha256": null,
-  "updater_sha256": null,
-  "manifest_url": null,
-  "notes": "VERSION bump commit 52fd448 exists. No v1.0.2 Git tag, no archived installer hash, and no published updater manifest evidence found in-repo. Local install of 1.0.2 is claimed in docs but not cryptographically attested here.",
-  "legacy_source_baseline": true,
-  "legacy_adopted_at": "2026-07-21T06:47:29Z",
-  "legacy_adoption_notes": "1. 1.0.2 version commit exists (52fd44894b41fa48192fc06ef1e189acb517b8f5).\n2. current HEAD is a descendant of that baseline commit.\n3. Historical Git tag and complete release artifacts are missing.\n4. 1.0.3 will be the first fully traceable version after enabling release baseline management.\n5. User explicitly authorized generating the next version.\n6. This adoption does NOT claim historical installer/tag/manifest artifacts were verified."
+  "version": "1.0.3",
+  "git_tag": "v1.0.3",
+  "git_commit": "b487514f121d9e7835f47f46ee352bf33136fa66",
+  "status": "verified",
+  "released_at": "2026-07-21T08:22:14Z",
+  "channel": "manual-upgrade-only",
+  "installer_sha256": "85B247F23176790411DE0C6BF79BCB211051E89F0DE2EC9DCD54FF1CA43D5A18",
+  "updater_sha256": "96359D31A4E5A2878C01FAB8532C388D261C4A9BC1AF7EEE9221EB3231690A09",
+  "manifest_url": "manual-upgrade-only",
+  "notes": "StoryLens 1.0.3 published as manual-upgrade-only after staging Result B on installed 1.0.2 (no confirm-install). Stable latest.json not published. Installer/GitHub Release published.",
+  "legacy_source_baseline": false
 }
