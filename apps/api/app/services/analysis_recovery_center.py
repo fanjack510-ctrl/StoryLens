@@ -235,23 +235,27 @@ def build_full_pipeline_advisory(
     # Scale tokens/cost roughly with request ratio from stage1 envelope.
     token_per_req = (stage1_worst_tokens / stage1_worst) if stage1_worst else 1500
     cost_per_req = (stage1_worst_cost / stage1_worst) if stage1_worst else 0.01
+    # Prefer estimated-path scaling for hard-gate fields; fall back to worst-case ratio.
+    est_token_per_req = (stage1_tokens / stage1_expected) if stage1_expected else token_per_req
+    est_cost_per_req = (stage1_cost / stage1_expected) if stage1_expected else cost_per_req
     worst_tokens = int(full_worst * token_per_req)
     worst_cost = round(full_worst * cost_per_req, 6)
-    expected_tokens = int(full_expected * token_per_req)
-    expected_cost = round(full_expected * cost_per_req, 6)
-    required = BudgetAmounts(full_worst, worst_tokens, worst_cost)
+    expected_tokens = int(full_expected * est_token_per_req)
+    expected_cost = round(full_expected * est_cost_per_req, 6)
+    # Hard gate uses estimated (normal path). Worst-case / retry margins are advisory only.
+    required = BudgetAmounts(full_expected, expected_tokens, expected_cost)
     exceeded = exceeded_dimensions(required, remaining)
     msg = None
     if exceeded:
         parts = []
         if "requests" in exceeded:
             parts.append(
-                f"完整流水线最坏约需{full_worst}次请求，当前剩余{remaining.requests}次"
+                f"完整流水线预计约需{full_expected}次请求，当前剩余{remaining.requests}次"
             )
         if "tokens" in exceeded:
-            parts.append("Token额度不足以覆盖完整章节流水线")
+            parts.append("Token额度不足以覆盖完整章节流水线预计用量")
         if "estimated_cost" in exceeded:
-            parts.append("费用额度不足以覆盖完整章节流水线")
+            parts.append("费用额度不足以覆盖完整章节流水线预计用量")
         msg = "；".join(parts) + "。创建前请先调整额度，避免中途暂停。"
     return FullPipelineBudgetAdvisory(
         boundary_expected_requests=stage1_expected,
@@ -264,6 +268,9 @@ def build_full_pipeline_advisory(
         recovery_margin_requests=recovery_margin,
         full_expected_requests=full_expected,
         full_worst_requests=full_worst,
+        retry_reserve_requests=max(0, full_worst - full_expected),
+        retry_reserve_tokens=max(0, worst_tokens - expected_tokens),
+        retry_reserve_cost=round(max(0.0, worst_cost - expected_cost), 6),
         estimated_tokens=expected_tokens,
         worst_case_tokens=worst_tokens,
         estimated_cost=expected_cost,

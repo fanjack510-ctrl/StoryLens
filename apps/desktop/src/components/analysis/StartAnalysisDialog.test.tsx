@@ -457,6 +457,98 @@ describe("普通模式开始分析弹窗", () => {
     await waitFor(() => expect(screen.getByTestId("start-analysis-submit")).toBeEnabled());
   });
 
+  it("本阶段预计足够时允许创建，即使完整分析最坏请求更高", async () => {
+    localStorage.removeItem("storylens.developerMode");
+    useDeveloperModeStore.setState({ developerMode: false });
+    vi.mocked(providersApi.list).mockResolvedValue([plus] as any);
+    vi.mocked(providersApi.cloud).mockResolvedValue({ enabled: true, state: "enabled" });
+    vi.mocked(providersApi.configuration).mockResolvedValue({
+      provider_name: "aliyun_qwen_plus",
+      display_name: "阿里云百炼",
+      plus_model: "configured-plus",
+      credential_state: "configured",
+      enabled: true,
+      disconnected: false,
+      connection_state: "connected",
+    } as any);
+    vi.mocked(analysisApi.preflight).mockResolvedValue({
+      ...longPreflight,
+      expected_request_count: 7,
+      worst_case_request_count: 14,
+      estimated_total_tokens: 9895,
+      worst_case_total_tokens: 22197,
+      estimated_cost: 0.052046,
+      worst_case_cost: 0.14385,
+      within_budget: true,
+      exceeded_dimensions: [],
+      remaining: { requests: 7, tokens: 74114, estimated_cost: 4.47905 },
+    });
+    vi.mocked(analysisRecoveryApi.fullPipelinePreflight).mockResolvedValue({
+      full_expected_requests: 22,
+      full_worst_requests: 49,
+      remaining_requests: 7,
+      remaining_tokens: 74114,
+      remaining_cost: 4.47905,
+      within_budget: false,
+      exceeded_dimensions: ["requests"],
+      worst_case_tokens: 77665,
+      worst_case_cost: 0.5,
+      estimated_tokens: 30000,
+      estimated_cost: 0.2,
+    } as any);
+    renderDialog();
+    fireEvent.click(await screen.findByRole("checkbox"));
+    await waitFor(() => expect(screen.getByTestId("start-analysis-submit")).toBeEnabled());
+    expect(screen.queryByTestId("create-request-quota-block")).not.toBeInTheDocument();
+    expect(screen.queryByText(/当前 Token 额度不足/)).not.toBeInTheDocument();
+  });
+
+  it("本阶段预计请求不足时显示阻塞原因并提供临时授权创建", async () => {
+    vi.mocked(providersApi.list).mockResolvedValue([plus] as any);
+    vi.mocked(providersApi.cloud).mockResolvedValue({ enabled: true, state: "enabled" });
+    vi.mocked(providersApi.configuration).mockResolvedValue({
+      provider_name: "aliyun_qwen_plus",
+      display_name: "阿里云百炼",
+      plus_model: "configured-plus",
+      credential_state: "configured",
+      enabled: true,
+      disconnected: false,
+      connection_state: "connected",
+    } as any);
+    vi.mocked(analysisApi.preflight).mockResolvedValue({
+      ...longPreflight,
+      expected_request_count: 11,
+      worst_case_request_count: 22,
+      estimated_total_tokens: 10000,
+      worst_case_total_tokens: 20000,
+      estimated_cost: 0.1,
+      worst_case_cost: 0.2,
+      within_budget: false,
+      exceeded_dimensions: ["requests"],
+      remaining: { requests: 7, tokens: 200000, estimated_cost: 20 },
+    });
+    vi.mocked(analysisRecoveryApi.fullPipelinePreflight).mockResolvedValue({
+      full_expected_requests: 40,
+      full_worst_requests: 66,
+      remaining_requests: 7,
+      remaining_tokens: 200000,
+      remaining_cost: 20,
+      within_budget: false,
+      exceeded_dimensions: ["requests"],
+      worst_case_tokens: 90000,
+      worst_case_cost: 0.66,
+      estimated_tokens: 45000,
+      estimated_cost: 0.4,
+    } as any);
+    renderDialog();
+    fireEvent.click(screen.getByRole("checkbox"));
+    expect(await screen.findByTestId("create-request-quota-block")).toBeInTheDocument();
+    expect(screen.getByTestId("create-request-quota-title")).toHaveTextContent("当前技术请求额度不足");
+    expect(screen.getByTestId("create-request-quota-body")).toHaveTextContent(/预计需要11次/);
+    expect(screen.getByTestId("create-request-quota-body")).toHaveTextContent(/还差4次/);
+    expect(screen.getByTestId("create-with-recommended-allowance")).toBeEnabled();
+  });
+
   it("请求额度不足时显示阻塞原因并提供临时授权创建，而非仅灰掉按钮", async () => {
     vi.mocked(providersApi.list).mockResolvedValue([plus] as any);
     vi.mocked(providersApi.cloud).mockResolvedValue({ enabled: true, state: "enabled" });
@@ -471,7 +563,11 @@ describe("普通模式开始分析弹窗", () => {
     } as any);
     vi.mocked(analysisApi.preflight).mockResolvedValue({
       ...longPreflight,
+      expected_request_count: 66,
+      worst_case_request_count: 80,
       remaining: { requests: 59, tokens: 200000, estimated_cost: 20 },
+      within_budget: false,
+      exceeded_dimensions: ["requests"],
     });
     vi.mocked(analysisRecoveryApi.fullPipelinePreflight).mockResolvedValue({
       full_expected_requests: 40,
@@ -490,6 +586,7 @@ describe("普通模式开始分析弹窗", () => {
     fireEvent.click(screen.getByRole("checkbox"));
     expect(await screen.findByTestId("create-request-quota-block")).toBeInTheDocument();
     expect(screen.getByTestId("create-request-quota-title")).toHaveTextContent("当前技术请求额度不足");
+    expect(screen.getByTestId("create-request-quota-body")).toHaveTextContent(/预计需要66次/);
     expect(screen.getByTestId("create-request-quota-body")).toHaveTextContent(/还差7次/);
     expect(screen.getByTestId("create-request-quota-body")).toHaveTextContent(/费用和Token预算充足/);
     expect(screen.getByTestId("create-with-recommended-allowance")).toBeEnabled();

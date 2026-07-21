@@ -57,7 +57,7 @@ export function formatDimensionGaps(gap: BudgetGapView): string {
         const need = gap.required?.requests;
         const left = gap.remaining?.requests;
         if (typeof need === "number" && typeof left === "number") {
-          return `云端请求不足：最多需要 ${need} 次，今日剩余 ${left} 次。`;
+          return `云端请求不足：预计需要 ${need} 次，今日剩余 ${left} 次。`;
         }
         return BUDGET_ERROR_USER_COPY.INSUFFICIENT_BUDGET_RESERVATION;
       }
@@ -65,14 +65,14 @@ export function formatDimensionGaps(gap: BudgetGapView): string {
         const need = gap.required?.tokens;
         const left = gap.remaining?.tokens;
         if (typeof need === "number" && typeof left === "number") {
-          return `Token不足：最多需要 ${need}，今日剩余 ${left}。`;
+          return `Token不足：预计需要 ${need}，今日剩余 ${left}。`;
         }
         return BUDGET_ERROR_USER_COPY.CLOUD_TOKEN_LIMIT_EXCEEDED;
       }
       const need = gap.required?.estimated_cost;
       const left = gap.remaining?.estimated_cost;
       if (typeof need === "number" && typeof left === "number") {
-        return `费用不足：最多需要约 ${need} CNY，今日剩余约 ${left} CNY。`;
+        return `费用不足：预计需要约 ${need} CNY，今日剩余约 ${left} CNY。`;
       }
       return BUDGET_ERROR_USER_COPY.CLOUD_COST_LIMIT_EXCEEDED;
     })

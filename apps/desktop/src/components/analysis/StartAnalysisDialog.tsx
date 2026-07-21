@@ -18,6 +18,7 @@ import {
 import { BUDGET_ERROR_USER_COPY } from "../../services/budgetErrorCopy";
 import {
   estimateFullPipelineRequests,
+  estimatedRequestShortfall,
   fullPipelineRequestShortfall,
   requestOnlyShortfall,
   type CreateBudgetBlocker,
@@ -95,19 +96,19 @@ function formatBudgetGaps(preflight: any): string {
   const dims: string[] = preflight?.exceeded_dimensions || [];
   if (!dims.length) return "";
   const required = {
-    requests: preflight.worst_case_request_count,
-    tokens: preflight.worst_case_total_tokens,
-    estimated_cost: preflight.worst_case_cost,
+    requests: preflight.expected_request_count,
+    tokens: preflight.estimated_total_tokens,
+    estimated_cost: preflight.estimated_cost,
   };
   const remaining = preflight.remaining || {};
   return dims.map((dim) => {
     if (dim === "requests") {
-      return `请求不足：最坏需要${required.requests}次，当前剩余${remaining.requests}次。`;
+      return `请求不足：预计需要${required.requests}次，当前剩余${remaining.requests}次。`;
     }
     if (dim === "tokens") {
-      return `Token不足：最坏需要${required.tokens} Token，当前剩余${remaining.tokens} Token。`;
+      return `Token不足：预计需要${required.tokens} Token，当前剩余${remaining.tokens} Token。`;
     }
-    return `费用不足：最坏需要约${required.estimated_cost} CNY，当前剩余约${remaining.estimated_cost} CNY。`;
+    return `费用不足：预计需要约${required.estimated_cost} CNY，当前剩余约${remaining.estimated_cost} CNY。`;
   }).join("\n");
 }
 
@@ -189,8 +190,11 @@ function RequestQuotaBlockPanel({
     >
       <h3 data-testid="create-request-quota-title">当前技术请求额度不足</h3>
       <p data-testid="create-request-quota-body">
-        本章完整分析最坏需要{worstCase}次云端请求，当前今日剩余{available}次，还差{shortfall}次。
+        本阶段预计需要{estimated}次云端请求，当前今日剩余{available}次，还差{shortfall}次。
         {costAndTokenOk ? "费用和Token预算充足。" : ""}
+        {worstCase > estimated
+          ? `（最坏情况约${worstCase}次，仅作风险提示，不作为启动硬门槛。）`
+          : ""}
       </p>
       <dl className="budget-summary-grid" data-testid="create-request-quota-metrics">
         <div className="budget-summary-card">
@@ -643,18 +647,25 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
 
   const fullWorst = Number(fullAdvisory?.full_worst_requests) || envelope?.full.worst || 0;
   const fullExpected = Number(fullAdvisory?.full_expected_requests) || envelope?.full.expected || 0;
+  const stage1Estimated = Number(preflight?.expected_request_count) || envelope?.boundary.expected || 0;
+  // Hard gate shortfall: Stage-1 estimated only (never full-pipeline / worst-case).
+  const stage1RequestShortfall = estimatedRequestShortfall({
+    remainingRequests,
+    estimatedRequests: stage1Estimated,
+  });
+  // Advisory-only: full worst headroom tip (does not hard-block create).
   const fullPipelineShortfall = fullPipelineRequestShortfall({
     remainingRequests,
     fullWorstRequests: fullWorst,
   });
 
-  const advisoryExceeded: string[] = fullAdvisory?.exceeded_dimensions || [];
-  const tokenBlocked = advisoryExceeded.includes("tokens")
-    || (typeof fullAdvisory?.worst_case_tokens === "number"
-      && remainingTokens < fullAdvisory.worst_case_tokens);
-  const costBlocked = advisoryExceeded.includes("estimated_cost")
-    || (typeof fullAdvisory?.worst_case_cost === "number"
-      && remainingCost + 1e-9 < fullAdvisory.worst_case_cost);
+  const stage1Dims: string[] = preflight?.exceeded_dimensions || [];
+  const tokenBlocked = stage1Dims.includes("tokens")
+    || (typeof preflight?.estimated_total_tokens === "number"
+      && remainingTokens < preflight.estimated_total_tokens);
+  const costBlocked = stage1Dims.includes("estimated_cost")
+    || (typeof preflight?.estimated_cost === "number"
+      && remainingCost + 1e-9 < preflight.estimated_cost);
   const costAndTokenOk = !tokenBlocked && !costBlocked;
 
   const createBlockers = useMemo((): CreateBudgetBlocker[] => {
@@ -683,42 +694,42 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
         worstCase: null,
       });
     }
-    if (fullPipelineShortfall > 0 && preflight) {
+    if (stage1RequestShortfall > 0 && preflight) {
       list.push({
         dimension: "requests",
         title: "当前技术请求额度不足",
-        userMessage: `本章完整分析最坏需要${fullWorst}次云端请求，当前今日剩余${remainingRequests}次，还差${fullPipelineShortfall}次。`,
-        required: fullWorst,
+        userMessage: `本阶段预计需要${stage1Estimated}次云端请求，当前今日剩余${remainingRequests}次，还差${stage1RequestShortfall}次。`,
+        required: stage1Estimated,
         available: remainingRequests,
-        shortfall: fullPipelineShortfall,
-        estimated: fullExpected,
-        worstCase: fullWorst,
+        shortfall: stage1RequestShortfall,
+        estimated: stage1Estimated,
+        worstCase: Number(preflight.worst_case_request_count) || fullWorst,
       });
     }
     if (tokenBlocked && preflight) {
-      const required = Number(fullAdvisory?.worst_case_tokens) || 0;
+      const required = Number(preflight.estimated_total_tokens) || 0;
       list.push({
         dimension: "tokens",
         title: "当前 Token 额度不足",
-        userMessage: `完整分析最坏约需 ${required} Token，当前剩余 ${remainingTokens}。`,
+        userMessage: `本阶段预计约需 ${required} Token，当前剩余 ${remainingTokens}。`,
         required,
         available: remainingTokens,
         shortfall: Math.max(0, required - remainingTokens),
-        estimated: Number(fullAdvisory?.estimated_tokens) || null,
-        worstCase: required,
+        estimated: required,
+        worstCase: Number(preflight.worst_case_total_tokens) || null,
       });
     }
     if (costBlocked && preflight) {
-      const required = Number(fullAdvisory?.worst_case_cost) || 0;
+      const required = Number(preflight.estimated_cost) || 0;
       list.push({
         dimension: "estimated_cost",
         title: "当前费用额度不足",
-        userMessage: `完整分析最坏约需 ${required} CNY，当前剩余约 ${remainingCost} CNY。`,
+        userMessage: `本阶段预计约需 ${required} CNY，当前剩余约 ${remainingCost} CNY。`,
         required,
         available: remainingCost,
         shortfall: Math.max(0, Math.round((required - remainingCost) * 1000) / 1000),
-        estimated: Number(fullAdvisory?.estimated_cost) || null,
-        worstCase: required,
+        estimated: required,
+        worstCase: Number(preflight.worst_case_cost) || null,
       });
     }
     return list;
@@ -726,14 +737,13 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
     developerMode,
     aiView.apiKeyConfigured,
     aiView.canStartAnalysis,
-    fullPipelineShortfall,
+    stage1RequestShortfall,
     preflight,
-    fullWorst,
+    stage1Estimated,
     remainingRequests,
-    fullExpected,
+    fullWorst,
     tokenBlocked,
     costBlocked,
-    fullAdvisory,
     remainingTokens,
     remainingCost,
   ]);
@@ -741,17 +751,17 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
   const requestOnly = requestOnlyShortfall(createBlockers);
   const busy = submitState === "checking" || submitState === "creating" || providers.isFetching;
 
-  // Ordinary: do NOT hard-disable solely for request shortfall — show recovery panel instead.
-  // Still disable for Stage-1 hard block, missing consent/connection, or cost/token hard blocks.
-  // Local mode uses local eligible list only — cloud Provider blockers do not affect it.
+  // Ordinary: hard-disable only when Stage-1 estimated path cannot start.
+  // Request-only shortfall shows recovery panel (temp auth); token/cost remain hard.
   const providerUnavailable = eligible.length === 0 || !provider;
-  const hardCreateBlocked = budgetBlocked || tokenBlocked || costBlocked
+  const hardCreateBlocked = tokenBlocked || costBlocked
+    || (budgetBlocked && !requestOnly)
     || (!developerMode && (!aiView.canStartAnalysis || !consent));
   const effectiveSubmitDisabled = developerMode
-    ? busy || budgetBlocked || providerUnavailable || (fullPipelineShortfall > 0 && !requestOnly)
-    : busy || hardCreateBlocked || providerUnavailable || (fullPipelineShortfall > 0 && !requestOnly);
+    ? busy || (budgetBlocked && !requestOnly) || providerUnavailable
+    : busy || hardCreateBlocked || providerUnavailable;
 
-  const showRequestQuotaPanel = Boolean(requestOnly && consent && preflight && !budgetBlocked);
+  const showRequestQuotaPanel = Boolean(requestOnly && consent && preflight && costAndTokenOk);
 
   const submitLabel = providers.isFetching && (submitState === "idle" || submitState === "failed")
     ? (developerMode ? "正在刷新 Provider……" : "正在刷新服务状态……")
@@ -777,7 +787,6 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
     }
     if (budgetBlocked) return "本阶段预算不足";
     if (tokenBlocked || costBlocked) return "费用或 Token 预算不足";
-    if (fullPipelineShortfall > 0 && !requestOnly) return "完整分析请求额度不足";
     return null;
   }, [
     busy,
@@ -792,8 +801,6 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
     budgetBlocked,
     tokenBlocked,
     costBlocked,
-    fullPipelineShortfall,
-    requestOnly,
   ]);
 
   const handleAnalysisModeSelect = (id: AnalysisModePresetId) => {
@@ -827,9 +834,12 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
     if (!developerMode && eligible.every((item) => item.name !== provider)) {
       return setMessage(unavailableReason || "当前没有可用的 AI 服务，请前往设置配置。");
     }
-    if (budgetBlocked) return setMessage(formatBudgetGaps(preflight) || "当前Stage 1预算不足。");
+    if (budgetBlocked && !allowance) return setMessage(formatBudgetGaps(preflight) || "当前Stage 1预算不足。");
     if ((tokenBlocked || costBlocked) && !allowance) {
       return setMessage("费用或Token预算不足，请先调整每日费用上限或等待额度恢复。");
+    }
+    if (stage1RequestShortfall > 0 && !allowance) {
+      return setMessage(formatBudgetGaps(preflight) || "当前技术请求额度不足，请按推荐额度创建或提高每日请求保护。");
     }
     try {
       setSubmitState("checking");
@@ -843,8 +853,12 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
       setPreflight(checked);
       if (!checked.eligible) throw Object.assign(new Error((checked.blockers || []).join("、")), { code: "NO_MANUAL_BOUNDARY_PROVIDER" });
       if (checked.within_budget === false) {
-        setSubmitState("failed");
-        return setMessage(formatBudgetGaps(checked) || "当前Stage 1预算不足。");
+        const dims: string[] = checked.exceeded_dimensions || [];
+        const requestOnlyGap = dims.length > 0 && dims.every((d) => d === "requests");
+        if (!(allowance && requestOnlyGap)) {
+          setSubmitState("failed");
+          return setMessage(formatBudgetGaps(checked) || "当前Stage 1预算不足。");
+        }
       }
       setSubmitState("creating");
       setMessage(allowance
@@ -874,9 +888,9 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
       setSubmitState("failed");
       const dimGaps = formatBudgetGaps({
         exceeded_dimensions: error.exceededDimensions || error.detail?.exceeded_dimensions,
-        worst_case_request_count: error.required?.requests,
-        worst_case_total_tokens: error.required?.tokens,
-        worst_case_cost: error.required?.estimated_cost,
+        expected_request_count: error.required?.requests,
+        estimated_total_tokens: error.required?.tokens,
+        estimated_cost: error.required?.estimated_cost,
         remaining: error.remaining,
       });
       const messages: Record<string, string> = {
@@ -1127,11 +1141,11 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
               )}
               {showRequestQuotaPanel && requestOnly && (
                 <RequestQuotaBlockPanel
-                  required={requestOnly.required ?? fullWorst}
+                  required={requestOnly.required ?? stage1Estimated}
                   available={requestOnly.available ?? remainingRequests}
-                  shortfall={requestOnly.shortfall ?? fullPipelineShortfall}
-                  estimated={requestOnly.estimated ?? fullExpected}
-                  worstCase={requestOnly.worstCase ?? fullWorst}
+                  shortfall={requestOnly.shortfall ?? stage1RequestShortfall}
+                  estimated={requestOnly.estimated ?? stage1Estimated}
+                  worstCase={requestOnly.worstCase ?? (Number(preflight?.worst_case_request_count) || fullWorst)}
                   costAndTokenOk={costAndTokenOk}
                   detailOpen={budgetDetailOpen}
                   onToggleDetail={() => setBudgetDetailOpen((v) => !v)}
