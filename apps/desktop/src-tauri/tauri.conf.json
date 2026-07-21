@@ -50,7 +50,7 @@
         "https://github.com/fanjack510-ctrl/StoryLens/releases/latest/download/latest.json"
       ],
       "windows": {
-        "installMode": "passive"
+        "installMode": "basic"
       }
     }
   }

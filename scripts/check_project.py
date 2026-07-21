@@ -65,6 +65,8 @@ REQUIRED = [
     ".github/workflows/windows-release.yml",
     "docs/windows-desktop-release-plan.md",
     "docs/windows-desktop-updater-keys.md",
+    "docs/windows-desktop-updater-channels.md",
+    "docs/releases/1.0.3.md",
     "docs/00_project_overview.md",
     "docs/08_codex_workflow.md",
     "docs/21_phase_1c_assisted_boundary_review.md",

@@ -206,8 +206,13 @@ def test_ui_hardcode_detection(fixture_root: Path) -> None:
 
 
 def test_bump_does_not_mutate_real_repo() -> None:
-    """Safety: real VERSION stays 1.0.1 after suite (fixture-only bumps)."""
-    assert (ROOT / "VERSION").read_text(encoding="utf-8").strip() == "1.0.1"
+    """Safety: real VERSION remains a consistent SemVer after fixture-only bumps."""
+    version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
+    assert version  # non-empty
+    # Must stay in sync with managed files (suite must not have mutated the real tree).
+    result = _run(ROOT, "check")
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert version in result.stdout or f"Version check passed: {version}" in result.stdout
 
 
 def test_real_repo_check_passes() -> None:

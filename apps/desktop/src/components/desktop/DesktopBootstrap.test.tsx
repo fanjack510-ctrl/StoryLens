@@ -11,7 +11,30 @@ vi.mock("../../services/desktopRuntime", () => ({
 }));
 
 vi.mock("../../services/updaterService", () => ({
-  checkForAppUpdate: async () => ({ kind: "up-to-date" }),
+  checkForAppUpdate: async () => ({ kind: "latest", currentVersion: "0.0.0" }),
+  getUpdaterSnapshot: () => ({
+    phase: "idle",
+    currentVersion: "",
+    latestVersion: null,
+    releaseNotes: "",
+    progress: null,
+    message: "",
+    technicalDetail: null,
+    lastCheckAt: null,
+    channel: "stable",
+  }),
+  subscribeUpdater: () => () => undefined,
+  loadUpdaterPreferences: () => ({
+    automatic_check: true,
+    automatic_download: false,
+    automatic_install: false,
+    channel: "stable",
+    dismissed_version: null,
+    remind_after: null,
+    last_check_at: null,
+    internal_test_mode: false,
+  }),
+  shouldShowUpdateDialog: () => false,
 }));
 
 vi.mock("../../services/telemetry/telemetryRuntime", () => ({

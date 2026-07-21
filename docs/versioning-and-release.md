@@ -25,8 +25,10 @@ python scripts/version_manager.py sync
 当前仓库版本：
 
 ```text
-1.0.1
+1.0.2
 ```
+
+> 注意：1.0.2 已在本机构建并安装，版本号已占用。下一正式发布应为 **1.0.3**（见 `docs/releases/1.0.3.md`）。本文件版本号在 bump 前可能仍显示 1.0.2。
 
 ## 3. patch / minor / major 规则
 
@@ -91,6 +93,9 @@ python scripts/check_project.py
 - 安装包命名：`StoryLens_<VERSION>_x64-setup.exe`（由 `release-info` 给出）
 - Git tag：`v<VERSION>`
 - `latest.json` / updater bundle / `.sig` 中的版本必须与 `VERSION` 一致
+- 通道：默认 **stable**；内部测试使用 **staging**（见 `docs/windows-desktop-updater-channels.md`）
+- 客户端正式默认：`automatic_check=true`，`automatic_download=false`，`automatic_install=false`
+- 禁止远端 manifest 控制静默安装
 
 生成发布产物后可用：
 

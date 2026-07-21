@@ -3069,7 +3069,9 @@ dependencies = [
  "tauri-build",
  "tauri-plugin-process",
  "tauri-plugin-updater",
+ "time",
  "ureq",
+ "url",
  "windows-sys 0.59.0",
 ]
 

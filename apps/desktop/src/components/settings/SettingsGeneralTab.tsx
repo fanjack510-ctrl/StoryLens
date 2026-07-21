@@ -4,17 +4,16 @@ import { settingsApi } from "../../services/settingsApi";
 import { checkForAppUpdate } from "../../services/updaterService";
 import { UpdateAvailableDialog } from "../desktop/UpdateAvailableDialog";
 
+/**
+ * Legacy general tab (appearance + update). SettingsPage maps "general" → appearance;
+ * update entry lives under 隐私与更新. Kept for deep-links / tests.
+ */
 export function SettingsGeneralTab() {
   const ui = useUiStore();
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
   const [checkingUpdate, setCheckingUpdate] = useState(false);
-  const [updateDialog, setUpdateDialog] = useState<{
-    currentVersion: string;
-    latestVersion: string;
-    body: string;
-    downloadAndInstall: () => Promise<void>;
-  } | null>(null);
+  const [showDialog, setShowDialog] = useState(false);
 
   const save = async () => {
     setSaving(true);
@@ -44,12 +43,8 @@ export function SettingsGeneralTab() {
       } else if (result.kind === "latest") {
         setMessage(`当前已是最新版本（${result.currentVersion}）。`);
       } else if (result.kind === "available") {
-        setUpdateDialog({
-          currentVersion: result.currentVersion,
-          latestVersion: result.latestVersion,
-          body: result.body,
-          downloadAndInstall: result.downloadAndInstall,
-        });
+        setShowDialog(true);
+        setMessage(`新版本 ${result.latestVersion} 可用。`);
       } else {
         setMessage(result.message);
       }
@@ -121,7 +116,7 @@ export function SettingsGeneralTab() {
 
       <section className="settings-update-block" data-testid="settings-update-block">
         <h3>软件更新</h3>
-        <p>检查是否有新版本。检查失败不会影响本地分析。</p>
+        <p>检查是否有新版本。检查失败不会影响本地分析。下载与安装需确认。</p>
         <button
           type="button"
           data-testid="check-update-button"
@@ -139,22 +134,7 @@ export function SettingsGeneralTab() {
         </button>
       </div>
 
-      {updateDialog && (
-        <UpdateAvailableDialog
-          currentVersion={updateDialog.currentVersion}
-          latestVersion={updateDialog.latestVersion}
-          body={updateDialog.body}
-          onLater={() => setUpdateDialog(null)}
-          onUpdate={async () => {
-            try {
-              await updateDialog.downloadAndInstall();
-            } catch {
-              setMessage("更新安装失败。这不影响本地分析，请稍后重试。");
-              setUpdateDialog(null);
-            }
-          }}
-        />
-      )}
+      <UpdateAvailableDialog open={showDialog} onClose={() => setShowDialog(false)} />
     </article>
   );
 }

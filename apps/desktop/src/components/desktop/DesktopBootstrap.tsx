@@ -5,7 +5,14 @@ import {
   listenBackendEvents,
   type BackendUiStatus,
 } from "../../services/desktopRuntime";
-import { checkForAppUpdate, type UpdateCheckResult } from "../../services/updaterService";
+import {
+  checkForAppUpdate,
+  getUpdaterSnapshot,
+  shouldShowUpdateDialog,
+  loadUpdaterPreferences,
+  subscribeUpdater,
+  type UpdaterSnapshot,
+} from "../../services/updaterService";
 import { trackAppLaunchedOncePerSession } from "../../services/telemetry/telemetryRuntime";
 import { UpdateAvailableDialog } from "./UpdateAvailableDialog";
 import { Button } from "../ui/Button";
@@ -13,10 +20,12 @@ import { Button } from "../ui/Button";
 export function DesktopBootstrap({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<BackendUiStatus>({ state: "starting" });
   const [runtimeError, setRuntimeError] = useState<string | null>(null);
-  const [updateInfo, setUpdateInfo] = useState<UpdateCheckResult | null>(null);
-  const [dismissedUpdate, setDismissedUpdate] = useState(false);
+  const [showUpdateDialog, setShowUpdateDialog] = useState(false);
+  const [updaterSnap, setUpdaterSnap] = useState<UpdaterSnapshot>(() => getUpdaterSnapshot());
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [bootKey, setBootKey] = useState(0);
+
+  useEffect(() => subscribeUpdater(setUpdaterSnap), []);
 
   const retryBootstrap = useCallback(() => {
     setRuntimeError(null);
@@ -74,9 +83,14 @@ export function DesktopBootstrap({ children }: { children: ReactNode }) {
 
       if (result.state === "ready" || result.state === "browser_dev") {
         trackAppLaunchedOncePerSession();
+        // Automatic check only — never download / install here.
         const update = await checkForAppUpdate(false);
-        if (!cancelled && update.kind === "available") {
-          setUpdateInfo(update);
+        if (cancelled) return;
+        if (update.kind === "available") {
+          const prefs = loadUpdaterPreferences();
+          if (shouldShowUpdateDialog(prefs, update.latestVersion)) {
+            setShowUpdateDialog(true);
+          }
         }
       }
     })();
@@ -140,6 +154,15 @@ export function DesktopBootstrap({ children }: { children: ReactNode }) {
     );
   }
 
+  const updateDialogOpen =
+    showUpdateDialog &&
+    (updaterSnap.phase === "available" ||
+      updaterSnap.phase === "downloading" ||
+      updaterSnap.phase === "downloaded" ||
+      updaterSnap.phase === "installing" ||
+      updaterSnap.phase === "restart_required" ||
+      updaterSnap.phase === "failed");
+
   return (
     <>
       {runtimeError && (
@@ -151,22 +174,10 @@ export function DesktopBootstrap({ children }: { children: ReactNode }) {
         </div>
       )}
       {children}
-      {updateInfo?.kind === "available" && !dismissedUpdate && (
-        <UpdateAvailableDialog
-          currentVersion={updateInfo.currentVersion}
-          latestVersion={updateInfo.latestVersion}
-          body={updateInfo.body}
-          onLater={() => setDismissedUpdate(true)}
-          onUpdate={async () => {
-            try {
-              await updateInfo.downloadAndInstall();
-            } catch {
-              setRuntimeError("更新安装失败。这不影响本地分析，请稍后在设置中重试。");
-              setDismissedUpdate(true);
-            }
-          }}
-        />
-      )}
+      <UpdateAvailableDialog
+        open={updateDialogOpen}
+        onClose={() => setShowUpdateDialog(false)}
+      />
     </>
   );
 }

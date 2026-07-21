@@ -7,3 +7,5 @@
 - 可选 Secret：`TAURI_UPDATER_PUBKEY`、`TAURI_SIGNING_PRIVATE_KEY_PASSWORD`。
 - 开发环境默认关闭更新检查（`debug_assertions` 或 `STORYLENS_DISABLE_UPDATER=1`）。
 - **不要**在交互式 shell 中留下 `TAURI_SIGNING_PRIVATE_KEY` 后直接构建，否则可能卡在密码提示。
+- 通道隔离见 [`windows-desktop-updater-channels.md`](./windows-desktop-updater-channels.md)。
+- **禁止**重新生成密钥对以区分 staging/stable；两通道共用现有公钥。

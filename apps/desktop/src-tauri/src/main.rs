@@ -6,8 +6,10 @@ mod updater_support;
 mod win_lifecycle;
 
 use backend::{BackendState, BackendStatus};
+use serde::Serialize;
 use std::sync::Mutex;
-use tauri::{AppHandle, Emitter, Manager, RunEvent, State};
+use tauri::{AppHandle, Emitter, Manager, Runtime, State, Webview};
+use tauri_plugin_updater::UpdaterExt;
 
 #[tauri::command]
 fn get_api_base(state: State<'_, Mutex<BackendState>>) -> Result<String, String> {
@@ -34,6 +36,72 @@ fn get_app_version(app: AppHandle) -> String {
 #[tauri::command]
 fn updater_enabled() -> bool {
     updater_support::updater_enabled()
+}
+
+#[tauri::command]
+fn get_updater_channel(app: AppHandle) -> String {
+    updater_support::get_updater_channel(&app)
+}
+
+#[tauri::command]
+fn set_updater_channel(app: AppHandle, channel: String) -> Result<String, String> {
+    updater_support::write_updater_channel(&app, &channel)
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct StorylensUpdateMetadata {
+    rid: tauri::ResourceId,
+    current_version: String,
+    version: String,
+    date: Option<String>,
+    body: Option<String>,
+    raw_json: serde_json::Value,
+}
+
+/// Channel-aware update check. Does not download or install.
+#[tauri::command]
+async fn storylens_updater_check<R: Runtime>(
+    app: AppHandle<R>,
+    webview: Webview<R>,
+    channel: Option<String>,
+) -> Result<Option<StorylensUpdateMetadata>, String> {
+    if !updater_support::updater_enabled() {
+        return Err("更新检查未启用。".into());
+    }
+
+    let resolved = match channel.as_deref() {
+        Some(raw) => updater_support::normalize_channel(raw).to_string(),
+        None => updater_support::resolve_updater_channel(&app),
+    };
+    let endpoint = updater_support::endpoint_for_channel(&resolved);
+    let url = url::Url::parse(endpoint).map_err(|e| format!("更新地址无效：{e}"))?;
+
+    let updater = app
+        .updater_builder()
+        .endpoints(vec![url])
+        .map_err(|e| e.to_string())?
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let update = updater.check().await.map_err(|e| e.to_string())?;
+    let Some(update) = update else {
+        return Ok(None);
+    };
+
+    let formatted_date = update.date.and_then(|date| {
+        date.format(&time::format_description::well_known::Rfc3339)
+            .ok()
+    });
+
+    Ok(Some(StorylensUpdateMetadata {
+        current_version: update.current_version.clone(),
+        version: update.version.clone(),
+        date: formatted_date,
+        body: update.body.clone(),
+        raw_json: update.raw_json.clone(),
+        rid: webview.resources_table().add(update),
+    }))
 }
 
 fn main() {
@@ -80,13 +148,16 @@ fn main() {
             get_api_base,
             get_backend_status,
             get_app_version,
-            updater_enabled
+            updater_enabled,
+            get_updater_channel,
+            set_updater_channel,
+            storylens_updater_check
         ])
         .build(tauri::generate_context!())
         .expect("StoryLens failed to start");
 
     app.run(|app_handle, event| match event {
-        RunEvent::ExitRequested { .. } | RunEvent::Exit => {
+        tauri::RunEvent::ExitRequested { .. } | tauri::RunEvent::Exit => {
             if let Some(state) = app_handle.try_state::<Mutex<BackendState>>() {
                 backend::stop_backend(&state);
             }

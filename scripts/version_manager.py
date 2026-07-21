@@ -640,14 +640,61 @@ def version_files_dirty(root: Path) -> list[str]:
     return dirty
 
 
+def git_tag_exists(root: Path, tag: str) -> bool:
+    out = _git_output(root, "tag", "-l", tag)
+    return any(line.strip() == tag for line in out.splitlines())
+
+
+def git_is_ancestor(root: Path, commit: str) -> bool:
+    result = subprocess.run(
+        ["git", "merge-base", "--is-ancestor", commit, "HEAD"],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return result.returncode == 0
+
+
+def working_tree_dirty(root: Path) -> list[str]:
+    status = _git_output(root, "status", "--porcelain")
+    dirty: list[str] = []
+    for line in status.splitlines():
+        if line.strip():
+            dirty.append(line[3:].strip() if len(line) >= 4 else line.strip())
+    return dirty
+
+
+# Feature commits that must be ancestors of HEAD before a formal release.
+REQUIRED_RELEASE_COMMITS: tuple[tuple[str, str], ...] = (
+    ("e1884c1", "short fragment scene boundary fix"),
+    ("6f03010", "consent/nav/risk/phase metrics polish"),
+    ("22750ec", "Reader Journey UI + product subtitle"),
+    ("8906cd6", "centralized version management"),
+)
+
+
+def _source_contains(root: Path, relative: str, needle: str) -> bool:
+    path = root / relative
+    if not path.is_file():
+        return False
+    return needle in read_text(path)
+
+
 def cmd_release_guard(root: Path, artifacts_dir: Path | None = None) -> int:
-    """Block formal release when version/tag/artifacts are inconsistent."""
+    """Block formal release when version/tag/artifacts/updater policy are inconsistent."""
     errors: list[str] = []
     if cmd_check(root) != 0:
         errors.append("version check failed")
         # continue collecting more errors
 
     version = read_version_file(root)
+    expected_tag = f"v{version}"
+
+    # Exact tag for this VERSION must not already exist.
+    if git_tag_exists(root, expected_tag):
+        errors.append(f"Git tag already exists: {expected_tag}")
+
     tag = latest_release_tag(root)
     if tag:
         tag_version = tag[1:] if tag.startswith("v") else tag
@@ -666,9 +713,96 @@ def cmd_release_guard(root: Path, artifacts_dir: Path | None = None) -> int:
                     f"current VERSION {version} is behind latest tag {tag}"
                 )
 
-    dirty = version_files_dirty(root)
-    if dirty:
-        errors.append("uncommitted version files: " + ", ".join(dirty))
+    dirty_versions = version_files_dirty(root)
+    if dirty_versions:
+        errors.append("uncommitted version files: " + ", ".join(dirty_versions))
+
+    dirty_tree = working_tree_dirty(root)
+    if dirty_tree:
+        errors.append(
+            "working tree not clean: " + ", ".join(dirty_tree[:12])
+            + ("…" if len(dirty_tree) > 12 else "")
+        )
+
+    baseline = root / "docs" / "releases" / f"{version}.md"
+    if not baseline.is_file():
+        errors.append(
+            f"missing release baseline: docs/releases/{version}.md"
+        )
+    else:
+        body = read_text(baseline)
+        if "Unreleased" not in body and "已发布" not in body and "Released" not in body:
+            errors.append(
+                f"release baseline docs/releases/{version}.md missing status marker"
+            )
+
+    for commit, label in REQUIRED_RELEASE_COMMITS:
+        if not git_is_ancestor(root, commit):
+            errors.append(f"required commit MISSING ({commit}: {label})")
+
+    # Updater must not default to auto download / auto install.
+    pref_path = "apps/desktop/src/services/updater/preferences.ts"
+    if not _source_contains(root, pref_path, "automatic_download: false"):
+        errors.append("updater preferences missing automatic_download: false default")
+    if not _source_contains(root, pref_path, "automatic_install: false"):
+        errors.append("updater preferences missing automatic_install: false default")
+    svc = root / "apps/desktop/src/services/updaterService.ts"
+    if svc.is_file():
+        text = read_text(svc)
+        if "await update.downloadAndInstall" in text or "update.downloadAndInstall()" in text:
+            errors.append(
+                "updaterService must not call update.downloadAndInstall()"
+            )
+        # checkForAppUpdate body must not relaunch
+        if "export async function checkForAppUpdate" in text:
+            chunk = text.split("export async function checkForAppUpdate", 1)[1]
+            chunk = chunk.split("export async function startDownload", 1)[0]
+            if "relaunch(" in chunk:
+                errors.append("checkForAppUpdate must not relaunch the app")
+    else:
+        errors.append("missing updaterService.ts")
+
+    channels = root / "apps/desktop/src/services/updater/channels.ts"
+    if channels.is_file():
+        ch = read_text(channels)
+        if "STABLE_UPDATE_ENDPOINT" not in ch or "STAGING_UPDATE_ENDPOINT" not in ch:
+            errors.append("staging/stable updater endpoints not defined")
+        elif "latest/download/latest.json" not in ch:
+            errors.append("stable updater endpoint missing")
+        elif "/staging/" not in ch and "latest-staging" not in ch:
+            errors.append("staging updater endpoint missing")
+    else:
+        errors.append("missing updater channels module")
+
+    # tauri.conf default endpoint must be stable, not staging
+    tauri_conf = root / "apps/desktop/src-tauri/tauri.conf.json"
+    if tauri_conf.is_file():
+        conf = json.loads(read_text(tauri_conf))
+        endpoints = (
+            conf.get("plugins", {}).get("updater", {}).get("endpoints") or []
+        )
+        if not endpoints:
+            errors.append("tauri.conf.json updater endpoints empty")
+        else:
+            joined = " ".join(str(u) for u in endpoints)
+            if "staging" in joined.lower():
+                errors.append(
+                    "tauri.conf.json default endpoints must not point at staging"
+                )
+            if "latest/download/latest.json" not in joined:
+                errors.append(
+                    "tauri.conf.json default endpoint should be stable latest.json"
+                )
+        install_mode = (
+            conf.get("plugins", {})
+            .get("updater", {})
+            .get("windows", {})
+            .get("installMode")
+        )
+        if install_mode == "quiet":
+            errors.append(
+                "updater windows.installMode=quiet is forbidden (silent install)"
+            )
 
     if artifacts_dir is not None and artifacts_dir.is_dir():
         latest = artifacts_dir / "latest.json"
@@ -702,7 +836,10 @@ def cmd_release_guard(root: Path, artifacts_dir: Path | None = None) -> int:
                     sig_or_bundle.relative_to(artifacts_dir)
                 ):
                     # Only flag files that embed a different x.y.z product version.
-                    found = re.search(r"\b(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)\b", sig_or_bundle.name)
+                    found = re.search(
+                        r"\b(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)\b",
+                        sig_or_bundle.name,
+                    )
                     if found and found.group(1) != version:
                         errors.append(
                             f"updater artifact version mismatch: {sig_or_bundle.name}"
