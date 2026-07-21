@@ -397,6 +397,43 @@ a {
   color: var(--color-text-tertiary);
   opacity: 1;
 }
+.book-row-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.book-row-actions .book-row-open {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 14px;
+}
+
+.book-row-more .overflow-menu-trigger {
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0 10px;
+  line-height: 1;
+  font-size: 1.15rem;
+  letter-spacing: 0.05em;
+}
+
+.book-delete-dialog {
+  width: min(520px, calc(100vw - 32px));
+  max-width: 520px;
+}
+
+.book-delete-dialog .sl-dialog__body p {
+  margin: 0 0 0.75rem;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.library-delete-toast {
+  margin: 0 0 12px;
+}
 .book-row-open {
   align-self: center;
   text-decoration: none;

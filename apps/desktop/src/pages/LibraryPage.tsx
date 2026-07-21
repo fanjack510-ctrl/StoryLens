@@ -8,6 +8,8 @@ import { QwenFirstLaunchBanner } from "../components/onboarding/QwenFirstLaunchB
 import { FirstLaunchWizard } from "../components/onboarding/FirstLaunchWizard";
 import { useOnboardingStore } from "../stores/onboardingStore";
 import { Button } from "../components/ui/Button";
+import { Dialog } from "../components/ui/Dialog";
+import { OverflowMenu } from "../components/layout/OverflowMenu";
 import { PageHeader, PageSubtitle, PageTitle } from "../components/ui/PageHeader";
 import { StateView } from "../components/ui/StateView";
 import type { Book } from "../types";
@@ -60,6 +62,7 @@ export function LibraryPage() {
   const [sort, setSort] = useState<"recent" | "title">("recent");
   const [pendingFile, setPendingFile] = useState<File>();
   const [dragOver, setDragOver] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
   const qc = useQueryClient();
   const books = useQuery({ queryKey: ["books"], queryFn: booksApi.list });
   const upload = useMutation({
@@ -311,12 +314,29 @@ export function LibraryPage() {
             </div>
           </div>
         )}
+        {toast ? (
+          <p className="notice library-delete-toast" role="status" data-testid="library-delete-toast">
+            {toast}
+          </p>
+        ) : null}
         {books.isLoading ? (
           <Loading />
         ) : books.error ? (
           <ErrorState error={books.error} />
         ) : visible.length > 0 ? (
-          visible.map((book) => <BookRow key={book.id} book={book} />)
+          visible.map((book) => (
+            <BookRow
+              key={book.id}
+              book={book}
+              onDeleted={(deleted) => {
+                setToast(`《${deleted.title}》已从书库删除。`);
+                qc.setQueryData<Book[]>(["books"], (prev) =>
+                  (prev || []).filter((item) => item.id !== deleted.id),
+                );
+                void qc.invalidateQueries({ queryKey: ["books"] });
+              }}
+            />
+          ))
         ) : books.data && books.data.length > 0 ? (
           <div className="library-empty-guide" data-testid="library-search-miss">
             <StateView
@@ -361,8 +381,69 @@ export function LibraryPage() {
   );
 }
 
-function BookRow({ book }: { book: Book }) {
+function deleteErrorMessage(error: unknown): string {
+  if (error instanceof ApiError) {
+    if (error.code === "BOOK_HAS_ACTIVE_TASKS") {
+      return "这本书还有正在运行的分析任务，请先停止任务后再删除。";
+    }
+    if (error.code === "BOOK_NOT_FOUND" || error.status === 404) {
+      return "这本书已经被删除或不存在。";
+    }
+    return error.message || "删除失败，书籍和分析数据均未发生变化。";
+  }
+  return "删除失败，书籍和分析数据均未发生变化。";
+}
+
+function BookRow({
+  book,
+  onDeleted,
+}: {
+  book: Book;
+  onDeleted: (book: Book) => void;
+}) {
   const fmt = fileFormat(book.source_file_name);
+  const moreTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const deletingRef = useRef(false);
+  const remove = useMutation({
+    mutationFn: () => booksApi.delete(book.id),
+    onSuccess: () => {
+      setConfirmOpen(false);
+      setDeleteError(null);
+      onDeleted(book);
+    },
+    onError: (error) => {
+      setDeleteError(deleteErrorMessage(error));
+    },
+    onSettled: () => {
+      deletingRef.current = false;
+    },
+  });
+
+  useEffect(() => {
+    if (!confirmOpen) return;
+    const id = window.setTimeout(() => {
+      document
+        .querySelector<HTMLButtonElement>(`[data-testid="book-delete-cancel-${book.id}"]`)
+        ?.focus();
+    }, 0);
+    return () => window.clearTimeout(id);
+  }, [confirmOpen, book.id]);
+
+  const closeConfirm = () => {
+    if (remove.isPending || deletingRef.current) return;
+    setConfirmOpen(false);
+    setDeleteError(null);
+    window.setTimeout(() => moreTriggerRef.current?.focus(), 0);
+  };
+
+  const confirmDelete = () => {
+    if (remove.isPending || deletingRef.current) return;
+    deletingRef.current = true;
+    remove.mutate();
+  };
+
   return (
     <div className="book-row" data-testid={`book-row-${book.id}`}>
       <span className="cover" aria-hidden="true">
@@ -380,9 +461,85 @@ function BookRow({ book }: { book: Book }) {
           导入于 {new Date(book.created_at).toLocaleDateString()}
         </small>
       </span>
-      <Link className="row-actions secondary book-row-open" to={`/books/${book.id}`}>
-        打开
-      </Link>
+      <div className="book-row-actions">
+        <Link className="row-actions secondary book-row-open" to={`/books/${book.id}`}>
+          打开
+        </Link>
+        <div className="book-row-more" ref={(node) => {
+          const trigger = node?.querySelector<HTMLButtonElement>(".overflow-menu-trigger");
+          moreTriggerRef.current = trigger || null;
+        }}>
+          <OverflowMenu
+            label="⋯"
+            data-testid={`book-more-${book.id}`}
+            items={[
+              {
+                id: "delete",
+                label: "删除书籍",
+                danger: true,
+                testId: `book-delete-${book.id}`,
+                onSelect: () => {
+                  setDeleteError(null);
+                  setConfirmOpen(true);
+                },
+              },
+            ]}
+          />
+        </div>
+      </div>
+
+      <Dialog
+        open={confirmOpen}
+        onClose={closeConfirm}
+        title={`删除《${book.title}》？`}
+        data-testid={`book-delete-dialog-${book.id}`}
+        className="book-delete-dialog"
+        footer={
+          <>
+            <Button
+              variant="secondary"
+              disabled={remove.isPending}
+              onClick={closeConfirm}
+              data-testid={`book-delete-cancel-${book.id}`}
+              autoFocus
+            >
+              取消
+            </Button>
+            {remove.error instanceof ApiError &&
+            remove.error.code === "BOOK_HAS_ACTIVE_TASKS" ? (
+              <Link
+                className="sl-btn sl-btn--secondary secondary"
+                to="/tasks"
+                data-testid={`book-delete-goto-tasks-${book.id}`}
+              >
+                前往任务中心
+              </Link>
+            ) : null}
+            <Button
+              variant="danger"
+              loading={remove.isPending}
+              disabled={remove.isPending}
+              onClick={confirmDelete}
+              data-testid={`book-delete-confirm-${book.id}`}
+              aria-label={`确认删除《${book.title}》`}
+            >
+              {remove.isPending ? "正在删除…" : "确认删除"}
+            </Button>
+          </>
+        }
+      >
+        <p data-testid={`book-delete-warning-${book.id}`}>
+          此操作将从 StoryLens 中永久删除这本书及其章节、场景和分析结果，删除后无法恢复。
+        </p>
+        <p className="muted" data-testid={`book-delete-original-note-${book.id}`}>
+          不会删除你电脑中的原始 TXT、DOCX 或 EPUB 文件。
+        </p>
+        {deleteError ? (
+          <p className="danger" role="alert" data-testid={`book-delete-error-${book.id}`}>
+            {deleteError}
+          </p>
+        ) : null}
+      </Dialog>
     </div>
   );
 }

@@ -51,8 +51,10 @@ export function OverflowMenu({
         type="button"
         className="overflow-menu-trigger"
         data-testid={`${testId}-trigger`}
+        aria-label={label === "⋯" ? "更多" : label}
         aria-expanded={open}
         aria-controls={menuId}
+        aria-haspopup="menu"
         onClick={() => setOpen((value) => !value)}
       >
         {label}

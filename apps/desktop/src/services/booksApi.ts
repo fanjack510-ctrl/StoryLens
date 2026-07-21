@@ -59,4 +59,8 @@ export const booksApi = {
       body: data,
     });
   },
+  delete: (id: number) =>
+    api<void>(`/api/v1/books/${id}`, {
+      method: "DELETE",
+    }),
 };

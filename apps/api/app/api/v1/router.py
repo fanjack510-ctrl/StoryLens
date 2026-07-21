@@ -15,6 +15,12 @@ from app.services.book_service import (
     reparse_with_file,
     reparse_with_file_preview,
 )
+from app.services.book_delete import (
+    BookDeleteFailedError,
+    BookHasActiveTasksError,
+    BookNotFoundError,
+    delete_book,
+)
 from app.services.extractors import EmptyDocumentError, InvalidFileTypeError
 
 router = APIRouter(prefix="/api/v1")
@@ -83,6 +89,22 @@ def get_book(book_id: int, session: Session = Depends(get_db)) -> Book:
     if book is None:
         raise error(404, "BOOK_NOT_FOUND", "书籍不存在")
     return book
+
+
+@router.delete("/books/{book_id}", status_code=204)
+def delete_book_endpoint(book_id: int, session: Session = Depends(get_db)) -> None:
+    try:
+        delete_book(session, book_id)
+    except BookNotFoundError as exc:
+        raise error(404, "BOOK_NOT_FOUND", "书籍不存在") from exc
+    except BookHasActiveTasksError as exc:
+        raise error(
+            409,
+            "BOOK_HAS_ACTIVE_TASKS",
+            "这本书还有正在运行的分析任务，请先停止任务后再删除。",
+        ) from exc
+    except BookDeleteFailedError as exc:
+        raise error(500, "BOOK_DELETE_FAILED", "删除失败，书籍和分析数据均未发生变化。") from exc
 
 
 @router.get("/books/{book_id}/import-diagnostics")
