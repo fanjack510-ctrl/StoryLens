@@ -46,19 +46,14 @@ from app.services.provider_eligibility import evaluate_manual_boundary_candidate
 from app.services.staged_budget import estimate_stage1_boundary
 from app.services.boundary_review_service import analyze_confirmed_review
 from app.services.reader_journey_batch_planner import PLANNER_VERSION
-from app.services.reader_journey_engagement import load_formula_config
 from app.services.reader_journey_pipeline import execute_reader_journey
 from app.services.reader_journey_progress import (
     find_recoverable_journey_run,
     load_revision_scenes,
     require_completed_scene_analysis,
 )
-from app.schemas.reader_journey import (
-    CHAPTER_CONTRACT_VERSION,
-    CHAPTER_PROMPT_VERSION,
-    SCENE_CONTRACT_VERSION,
-    SCENE_PROMPT_VERSION,
-)
+from app.services.reader_journey_version import new_journey_version_fields
+
 
 router = APIRouter(tags=["analysis-recovery"])
 
@@ -169,7 +164,7 @@ def recover_analysis_run(
         _revision, scenes = load_revision_scenes(session, fresh.id)
         require_completed_scene_analysis(session, fresh, scenes)
         chapter = session.get(Chapter, int(fresh.subject_id))
-        formula = load_formula_config()
+        version_fields = new_journey_version_fields()
         journey_run = ReaderJourneyRun(
             analysis_run_id=fresh.id,
             book_id=chapter.book_id if chapter else 0,
@@ -178,13 +173,13 @@ def recover_analysis_run(
             current_stage=None,
             provider_name=fresh.provider,
             model_name=fresh.model,
-            scene_prompt_version=SCENE_PROMPT_VERSION,
-            chapter_prompt_version=CHAPTER_PROMPT_VERSION,
-            scene_contract_version=SCENE_CONTRACT_VERSION,
-            chapter_contract_version=CHAPTER_CONTRACT_VERSION,
+            scene_prompt_version=version_fields["scene_prompt_version"],
+            chapter_prompt_version=version_fields["chapter_prompt_version"],
+            scene_contract_version=version_fields["scene_contract_version"],
+            chapter_contract_version=version_fields["chapter_contract_version"],
             planner_version=PLANNER_VERSION,
-            formula_version=str(formula.get("version", "1.0")),
-            genre=str(formula.get("default_genre", "suspense")),
+            formula_version=version_fields["formula_version"],
+            genre=version_fields["genre"],
             total_scene_count=len(scenes),
             completed_scene_count=0,
             remaining_scene_count=len(scenes),
@@ -192,6 +187,7 @@ def recover_analysis_run(
             remaining_scene_ids_json=json.dumps([s.id for s in scenes]),
             cloud_consent=request.cloud_consent,
             client_request_id=request.client_request_id,
+            failure_details_json=version_fields["failure_details_json"],
         )
         session.add(journey_run)
         session.commit()

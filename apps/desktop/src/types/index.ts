@@ -245,6 +245,8 @@ export type ReaderJourneyResult = {
   analysis_run_id: number;
   status: string;
   formula_version: string;
+  scene_contract_version?: string | null;
+  scene_prompt_version?: string | null;
   visualization?: ReaderJourneyVisualization | null;
   phases: {
     ordinal: number;

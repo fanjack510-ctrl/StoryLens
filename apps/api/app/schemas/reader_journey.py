@@ -412,6 +412,8 @@ class ReaderJourneyPreflightResponse(BaseModel):
     planner_version: str | None = None
     scene_prompt_version: str | None = None
     scene_contract_version: str | None = None
+    pipeline_id: str | None = None
+    source_mode: str | None = None
     batch_plan: list[str] = Field(default_factory=list)
     recovery_mode: bool = False
     existing_journey_run_id: int | None = None

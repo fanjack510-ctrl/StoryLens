@@ -1,0 +1,35 @@
+{
+  "version": "1.0",
+  "default_pipeline": "v2",
+  "pipelines": {
+    "v2": {
+      "contract_version": "2.0",
+      "chapter_contract_version": "2.0",
+      "scene_prompt_version": "v2.0",
+      "chapter_prompt_version": "v2.0",
+      "formula_version": "2.0",
+      "formula_config": "config/reader_journey_formulas_v2.json",
+      "source_mode": "v2_native",
+      "display_banner": "V2真实正文分析",
+      "scores_origin": "program_finalize_v2",
+      "diagnoses_origin": "program_diagnose_chapter"
+    },
+    "legacy_v1": {
+      "contract_version": "1.3",
+      "chapter_contract_version": "1.3",
+      "scene_prompt_version": "v1.6",
+      "chapter_prompt_version": "v1.6",
+      "formula_version": "1.0",
+      "formula_config": "config/reader_journey_formulas.json",
+      "source_mode": "legacy_adapter",
+      "display_banner": "旧版未校准分析，仅供章内走势参考",
+      "scores_origin": "legacy_engagement",
+      "diagnoses_origin": "legacy_chapter_synthesis"
+    }
+  },
+  "notes": [
+    "New Reader Journey runs use default_pipeline.",
+    "Existing contract 1.x runs stay legacy read-only; never auto-upgrade.",
+    "force_new_version creates a new run under default_pipeline (v2)."
+  ]
+}

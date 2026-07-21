@@ -23,7 +23,6 @@ from app.model_gateway.gateway import ModelGateway
 from app.model_gateway.registry import get_model_gateway
 from app.schemas.reader_journey import (
     CHAPTER_CONTRACT_VERSION,
-    CHAPTER_PROMPT_VERSION,
     SCENE_CONTRACT_VERSION,
     SCENE_PROMPT_VERSION,
     ReaderJourneyCreateRequest,
@@ -42,7 +41,7 @@ from app.schemas.reader_journey import (
 )
 from app.services.credentials.service import get_credential_store
 from app.services.reader_journey_batch_planner import PLANNER_VERSION
-from app.services.reader_journey_engagement import compute_engagement, load_formula_config
+from app.services.reader_journey_engagement import compute_engagement
 from app.services.reader_journey_offline_replay import offline_replay_journey_profiles
 from app.services.reader_journey_pipeline import build_preflight_payload, execute_reader_journey
 from app.services.reader_journey_progress import (
@@ -52,6 +51,12 @@ from app.services.reader_journey_progress import (
     require_completed_scene_analysis,
 )
 from app.services.reader_journey_semantic_calibrate import semantic_recalibrate_journey_run
+from app.services.reader_journey_version import (
+    is_v2_journey_run,
+    merge_run_provenance,
+    new_journey_version_fields,
+    resolve_versions_for_new_run,
+)
 from app.services.reader_journey_visualization import build_reader_journey_visualization
 from app.services.reader_journey_v2_compatibility import (
     enrich_result_compatibility,
@@ -263,7 +268,7 @@ async def create_reader_journey(
     _revision, scenes = load_revision_scenes(session, run.id)
     require_completed_scene_analysis(session, run, scenes)
     chapter = session.get(Chapter, int(run.subject_id))
-    formula = load_formula_config()
+    version_fields = new_journey_version_fields()
     journey_run = ReaderJourneyRun(
         analysis_run_id=run.id,
         book_id=chapter.book_id if chapter else 0,
@@ -272,13 +277,13 @@ async def create_reader_journey(
         current_stage=None,
         provider_name=request.provider_name or run.provider,
         model_name=run.model,
-        scene_prompt_version=SCENE_PROMPT_VERSION,
-        chapter_prompt_version=CHAPTER_PROMPT_VERSION,
-        scene_contract_version=SCENE_CONTRACT_VERSION,
-        chapter_contract_version=CHAPTER_CONTRACT_VERSION,
+        scene_prompt_version=version_fields["scene_prompt_version"],
+        chapter_prompt_version=version_fields["chapter_prompt_version"],
+        scene_contract_version=version_fields["scene_contract_version"],
+        chapter_contract_version=version_fields["chapter_contract_version"],
         planner_version=PLANNER_VERSION,
-        formula_version=str(formula.get("version", "1.0")),
-        genre=str(formula.get("default_genre", "suspense")),
+        formula_version=version_fields["formula_version"],
+        genre=version_fields["genre"],
         total_scene_count=len(scenes),
         completed_scene_count=0,
         remaining_scene_count=len(scenes),
@@ -286,6 +291,7 @@ async def create_reader_journey(
         remaining_scene_ids_json=json.dumps([s.id for s in scenes]),
         cloud_consent=request.cloud_consent,
         client_request_id=request.client_request_id,
+        failure_details_json=version_fields["failure_details_json"],
     )
     session.add(journey_run)
     session.commit()
@@ -369,27 +375,37 @@ async def resume_reader_journey(
         details = json.loads(journey_run.failure_details_json or "{}")
     except json.JSONDecodeError:
         details = {}
-    if previous_contract != SCENE_CONTRACT_VERSION:
-        audit = details.get("resume_audit")
-        audits = audit if isinstance(audit, list) else ([audit] if audit else [])
-        audits.append(
-            {
-                "original_scene_contract_version": previous_contract,
-                "resumed_scene_contract_version": SCENE_CONTRACT_VERSION,
-                "prompt_version": SCENE_PROMPT_VERSION,
-                "planner_version": PLANNER_VERSION,
-                "resume_reason": "contract_semantics_upgrade",
-                "previous_prompt_version": previous_prompt,
-            }
+    # Never convert an existing V2 run into legacy on resume, and never auto-upgrade
+    # a legacy run into V2 (user must force_new_version to create a new V2 run).
+    if is_v2_journey_run(journey_run):
+        v2 = resolve_versions_for_new_run(pipeline_id="v2")
+        for field, value in v2.as_run_fields().items():
+            setattr(journey_run, field, value)
+        journey_run.failure_details_json = merge_run_provenance(
+            journey_run.failure_details_json, v2
         )
-        details["resume_audit"] = audits
-        journey_run.failure_details_json = json.dumps(details, ensure_ascii=False)
+    else:
+        if previous_contract != SCENE_CONTRACT_VERSION:
+            audit = details.get("resume_audit")
+            audits = audit if isinstance(audit, list) else ([audit] if audit else [])
+            audits.append(
+                {
+                    "original_scene_contract_version": previous_contract,
+                    "resumed_scene_contract_version": SCENE_CONTRACT_VERSION,
+                    "prompt_version": SCENE_PROMPT_VERSION,
+                    "planner_version": PLANNER_VERSION,
+                    "resume_reason": "contract_semantics_upgrade",
+                    "previous_prompt_version": previous_prompt,
+                }
+            )
+            details["resume_audit"] = audits
+            journey_run.failure_details_json = json.dumps(details, ensure_ascii=False)
+        journey_run.scene_prompt_version = SCENE_PROMPT_VERSION
+        journey_run.scene_contract_version = SCENE_CONTRACT_VERSION
+        journey_run.chapter_contract_version = CHAPTER_CONTRACT_VERSION
     journey_run.status = "queued"
     journey_run.current_stage = None
     journey_run.cloud_consent = request.cloud_consent
-    journey_run.scene_prompt_version = SCENE_PROMPT_VERSION
-    journey_run.scene_contract_version = SCENE_CONTRACT_VERSION
-    journey_run.chapter_contract_version = CHAPTER_CONTRACT_VERSION
     journey_run.planner_version = PLANNER_VERSION
     journey_run.retryable = False
     journey_run.root_error_code = None

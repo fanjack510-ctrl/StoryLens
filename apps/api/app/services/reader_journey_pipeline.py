@@ -288,6 +288,28 @@ async def execute_reader_journey(
     gateway: ModelGateway,
     journey_run_id: int,
 ) -> None:
+    """Dispatch to V2 or legacy pipeline based on the run's persisted contract."""
+    from app.services.reader_journey_version import is_v2_journey_run
+    from app.services.reader_journey_v2_execution import execute_reader_journey_v2
+
+    with session_factory() as session:
+        journey_run = session.get(ReaderJourneyRun, journey_run_id)
+        if journey_run is None:
+            return
+        if journey_run.status in {"succeeded", "cancelled"}:
+            return
+        if is_v2_journey_run(journey_run):
+            await execute_reader_journey_v2(session_factory, gateway, journey_run_id)
+            return
+
+    await _execute_reader_journey_legacy(session_factory, gateway, journey_run_id)
+
+
+async def _execute_reader_journey_legacy(
+    session_factory: sessionmaker[Session],
+    gateway: ModelGateway,
+    journey_run_id: int,
+) -> None:
     from app.services.credentials.service import get_credential_store
     from app.services.provider_runtime_service import ProviderRuntimeService
 
@@ -926,14 +948,48 @@ def build_preflight_payload(
         remaining_scene_ids=pending_ids,
         pricing_path=pricing_path,
     )
-    stage2 = estimate_reader_journey_chapter_synthesis(scenes, pricing_path=pricing_path)
+    from app.db.models import ReaderJourneyRun as _ReaderJourneyRun
+    from app.services.reader_journey_version import (
+        is_v2_journey_run,
+        resolve_versions_for_new_run,
+    )
+
+    versions = resolve_versions_for_new_run()
+    use_v2_preflight = True
+    if existing_journey_run_id is not None:
+        existing_jr = session.get(_ReaderJourneyRun, existing_journey_run_id)
+        if existing_jr is not None:
+            use_v2_preflight = is_v2_journey_run(existing_jr)
+            if use_v2_preflight:
+                versions = resolve_versions_for_new_run(pipeline_id="v2")
+            else:
+                versions = resolve_versions_for_new_run(pipeline_id="legacy_v1")
+
+    if use_v2_preflight:
+        # V2: model scene levels only; chapter diagnosis is program-owned (no stage2 model).
+        stage2 = estimate_reader_journey_chapter_synthesis(scenes, pricing_path=pricing_path)
+        stage2_requests = 0
+        stage2_tokens = 0
+        stage2_cost = 0.0
+        stage2_worst_requests = 0
+        stage2_worst_tokens = 0
+        stage2_worst_cost = 0.0
+    else:
+        stage2 = estimate_reader_journey_chapter_synthesis(scenes, pricing_path=pricing_path)
+        stage2_requests = stage2.expected_request_count
+        stage2_tokens = stage2.estimated_total_tokens
+        stage2_cost = stage2.estimated_cost
+        stage2_worst_requests = stage2.worst_case_request_count
+        stage2_worst_tokens = stage2.worst_case_total_tokens
+        stage2_worst_cost = stage2.worst_case_cost
+
     pending_scenes = [scene for scene in scenes if scene.id in pending_ids]
     batches = plan_scene_batches(pending_scenes, paragraphs=paragraphs)
-    # Hard gate: estimated remaining work for both RJ stages (not worst-case).
+    # Hard gate: estimated remaining work (not worst-case).
     required = BudgetAmounts(
-        stage1.expected_request_count + stage2.expected_request_count,
-        stage1.estimated_total_tokens + stage2.estimated_total_tokens,
-        round(stage1.estimated_cost + stage2.estimated_cost, 6),
+        stage1.expected_request_count + stage2_requests,
+        stage1.estimated_total_tokens + stage2_tokens,
+        round(stage1.estimated_cost + stage2_cost, 6),
     )
     dims = exceeded_dimensions(required, remaining)
     return {
@@ -941,12 +997,12 @@ def build_preflight_payload(
         "total_scenes": len(scenes),
         "remaining_scenes": len(pending_scenes),
         "scene_batch_count": len(batches),
-        "expected_requests": stage1.expected_request_count + stage2.expected_request_count,
-        "worst_case_requests": stage1.worst_case_request_count + stage2.worst_case_request_count,
-        "estimated_tokens": stage1.estimated_total_tokens + stage2.estimated_total_tokens,
-        "worst_case_tokens": stage1.worst_case_total_tokens + stage2.worst_case_total_tokens,
-        "estimated_cost": round(stage1.estimated_cost + stage2.estimated_cost, 6),
-        "worst_case_cost": round(stage1.worst_case_cost + stage2.worst_case_cost, 6),
+        "expected_requests": stage1.expected_request_count + stage2_requests,
+        "worst_case_requests": stage1.worst_case_request_count + stage2_worst_requests,
+        "estimated_tokens": stage1.estimated_total_tokens + stage2_tokens,
+        "worst_case_tokens": stage1.worst_case_total_tokens + stage2_worst_tokens,
+        "estimated_cost": round(stage1.estimated_cost + stage2_cost, 6),
+        "worst_case_cost": round(stage1.worst_case_cost + stage2_worst_cost, 6),
         "within_budget": not dims,
         "exceeded_dimensions": dims,
         "pricing_version": pricing.get("pricing_version"),
@@ -958,10 +1014,23 @@ def build_preflight_payload(
         "currency": stage1.currency,
         "estimated": True,
         "stage1_scene_profiles": estimate_to_dict(stage1),
-        "stage2_chapter_synthesis": estimate_to_dict(stage2),
+        "stage2_chapter_synthesis": estimate_to_dict(stage2)
+        if not use_v2_preflight
+        else {
+            **estimate_to_dict(stage2),
+            "expected_request_count": 0,
+            "worst_case_request_count": 0,
+            "estimated_total_tokens": 0,
+            "worst_case_total_tokens": 0,
+            "estimated_cost": 0.0,
+            "worst_case_cost": 0.0,
+            "note": "v2_native: chapter diagnosis is program-owned (no model)",
+        },
         "planner_version": PLANNER_VERSION,
-        "scene_prompt_version": SCENE_PROMPT_VERSION,
-        "scene_contract_version": SCENE_CONTRACT_VERSION,
+        "scene_prompt_version": versions.scene_prompt_version,
+        "scene_contract_version": versions.contract_version,
+        "pipeline_id": versions.pipeline_id,
+        "source_mode": versions.source_mode,
         "batch_plan": format_batch_plan_report(batches),
         "recovery_mode": recovery_mode,
         "existing_journey_run_id": existing_journey_run_id,

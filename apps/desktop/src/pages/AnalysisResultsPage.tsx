@@ -442,8 +442,17 @@ export function AnalysisResultsPage() {
     <div className="reader-journey-panel" data-testid="journey-panel">
       <p className="muted">
         本功能会基于已完成的场景分析，计算阅读节奏、读者问题、正反馈、钩子和风险，不会重新切分场景。
+        新建分析默认使用 Reader Journey V2（真实正文分析）。
       </p>
       {journeyError && <div className="notice error">{journeyError}</div>}
+      {(journeyProg?.status === "succeeded" || journeyData?.status === "succeeded") &&
+        String(journeyProg?.scene_contract_version || journeyData?.scene_contract_version || "").startsWith(
+          "1.",
+        ) && (
+          <div className="notice" data-testid="journey-legacy-reanalyze-hint">
+            当前为旧版未校准分析。重新生成将创建新的 V2 分析并产生相应模型费用；旧结果保留只读，不会自动升级。
+          </div>
+        )}
       {offlineReplayMessage && (
         <div className="notice" data-testid="journey-offline-replay-success">
           {offlineReplayMessage}
@@ -566,6 +575,40 @@ export function AnalysisResultsPage() {
             离线语义校准（重算问题链/诊断，零费用）
           </button>
         )}
+        {(journeyProg?.status === "succeeded" || journeyData?.status === "succeeded") &&
+          String(journeyProg?.scene_contract_version || journeyData?.scene_contract_version || "").startsWith(
+            "1.",
+          ) && (
+            <button
+              data-testid="force-new-v2-reader-journey"
+              disabled={!journeyConsent || journeyBusy}
+              onClick={async () => {
+                if (journeyBusy) return;
+                const ok = window.confirm(
+                  "将创建新的 V2 真实正文分析并产生相应模型费用。旧版结果保留只读，不会自动升级。是否继续？",
+                );
+                if (!ok) return;
+                setJourneyBusy(true);
+                setJourneyError(undefined);
+                try {
+                  const accepted = await analysisApi.createReaderJourney(runId, {
+                    client_request_id: crypto.randomUUID(),
+                    cloud_consent: journeyConsent,
+                    force_new_version: true,
+                  });
+                  setJourneyRunId(accepted.journey_run_id);
+                  setTab("journey");
+                  await journeyProgress.refetch();
+                } catch (error) {
+                  setJourneyError((error as Error).message);
+                } finally {
+                  setJourneyBusy(false);
+                }
+              }}
+            >
+              重新生成 V2 分析（产生模型费用）
+            </button>
+          )}
       </div>
       {(journeyProg?.status === "failed" || journeyProg?.status === "scene_profiles_partial") &&
         (journeyProg.status === "failed" ? (
