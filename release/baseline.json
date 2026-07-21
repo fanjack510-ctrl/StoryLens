@@ -2,11 +2,14 @@
   "version": "1.0.2",
   "git_tag": null,
   "git_commit": "52fd44894b41fa48192fc06ef1e189acb517b8f5",
-  "status": "unverified",
+  "status": "legacy_verified",
   "released_at": null,
   "channel": "stable",
   "installer_sha256": null,
   "updater_sha256": null,
   "manifest_url": null,
-  "notes": "VERSION bump commit 52fd448 exists. No v1.0.2 Git tag, no archived installer hash, and no published updater manifest evidence found in-repo. Local install of 1.0.2 is claimed in docs but not cryptographically attested here."
+  "notes": "VERSION bump commit 52fd448 exists. No v1.0.2 Git tag, no archived installer hash, and no published updater manifest evidence found in-repo. Local install of 1.0.2 is claimed in docs but not cryptographically attested here.",
+  "legacy_source_baseline": true,
+  "legacy_adopted_at": "2026-07-21T06:47:29Z",
+  "legacy_adoption_notes": "1. 1.0.2 version commit exists (52fd44894b41fa48192fc06ef1e189acb517b8f5).\n2. current HEAD is a descendant of that baseline commit.\n3. Historical Git tag and complete release artifacts are missing.\n4. 1.0.3 will be the first fully traceable version after enabling release baseline management.\n5. User explicitly authorized generating the next version.\n6. This adoption does NOT claim historical installer/tag/manifest artifacts were verified."
 }
