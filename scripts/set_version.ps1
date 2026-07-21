@@ -78,7 +78,25 @@ function Set-FastapiVersion([string]$Path, [string]$NewVersion) {
     Write-Host "updated $Path"
 }
 
+function Set-PackageLockRootVersion([string]$Path, [string]$NewVersion) {
+    $raw = [System.IO.File]::ReadAllText($Path)
+    # Root lockfile version + packages[""].version only (first two "version" fields).
+    # Must use Regex instance Replace(input, replacement, count) — static Replace's 4th arg is RegexOptions.
+    $rx = New-Object System.Text.RegularExpressions.Regex('"version"\s*:\s*"[^"]+"')
+    $updated = $rx.Replace($raw, "`"version`": `"$NewVersion`"", 2)
+    if ($updated -eq $raw) {
+        if ($raw -match '(?s)^[^\{]*\{[^\}]*"version"\s*:\s*"' + [regex]::Escape($NewVersion) + '"') {
+            Write-Host "unchanged $Path ($NewVersion)"
+            return
+        }
+        throw "Failed to update version in $Path"
+    }
+    Write-TextNoBom $Path $updated
+    Write-Host "updated $Path"
+}
+
 Set-JsonVersion (Join-Path $Root "apps/desktop/package.json") $Version
+Set-PackageLockRootVersion (Join-Path $Root "apps/desktop/package-lock.json") $Version
 Set-JsonVersion (Join-Path $Root "apps/desktop/src-tauri/tauri.conf.json") $Version
 Set-TomlPackageVersion (Join-Path $Root "apps/desktop/src-tauri/Cargo.toml") $Version
 Set-PyprojectVersion (Join-Path $Root "pyproject.toml") $Version

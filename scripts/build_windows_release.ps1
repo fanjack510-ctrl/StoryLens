@@ -137,8 +137,19 @@ try {
 
     $BundleDir = Join-Path $Root "apps\desktop\src-tauri\target\release\bundle"
     $copied = @()
+    $versionToken = [string]$Summary.version
     Get-ChildItem -Path $BundleDir -Recurse -File -ErrorAction SilentlyContinue |
-        Where-Object { $_.Extension -in ".exe", ".msi", ".sig", ".json", ".zip" -or $_.Name -like "*.nsis.zip" } |
+        Where-Object {
+            ($_.Extension -in ".exe", ".msi", ".sig", ".json", ".zip" -or $_.Name -like "*.nsis.zip") -and
+            (
+                # Prefer current-version installer/artifacts; always allow sidecar-related and updater sidecars.
+                -not $versionToken -or
+                $_.Name -like "*${versionToken}*" -or
+                $_.Name -like "*.sig" -or
+                $_.Name -eq "latest.json" -or
+                $_.Extension -eq ".json"
+            )
+        } |
         ForEach-Object {
             $dest = Join-Path $ReleaseDir $_.Name
             Copy-Item -Force $_.FullName $dest
@@ -148,13 +159,27 @@ try {
     Copy-Item -Force $Sidecar (Join-Path $ReleaseDir "storylens-api.exe")
     $copied += (Join-Path $ReleaseDir "storylens-api.exe")
 
-    $nsis = Get-ChildItem $ReleaseDir -Filter "*.exe" | Where-Object { $_.Name -match "StoryLens|nsis|setup" -and $_.Name -ne "storylens-api.exe" }
+    $nsis = @(
+        Get-ChildItem $ReleaseDir -Filter "*.exe" -ErrorAction SilentlyContinue |
+            Where-Object {
+                $_.Name -ne "storylens-api.exe" -and
+                $_.Name -match "setup" -and
+                (-not $versionToken -or $_.Name -like "*${versionToken}*")
+            }
+    )
     if (-not $nsis) {
-        # Tauri NSIS typically: StoryLens_0.1.0_x64-setup.exe
-        $nsis = Get-ChildItem $ReleaseDir -Filter "*setup*.exe" -ErrorAction SilentlyContinue
+        # Fallback: any setup exe (legacy leftover bundles may coexist under target/).
+        $nsis = @(
+            Get-ChildItem $ReleaseDir -Filter "*setup*.exe" -ErrorAction SilentlyContinue |
+                Where-Object { $_.Name -ne "storylens-api.exe" }
+        )
     }
     if (-not $nsis) {
         throw "NSIS installer not found under dist/release"
+    }
+    if ($nsis.Count -gt 1 -and $versionToken) {
+        $exact = @($nsis | Where-Object { $_.Name -like "*${versionToken}*" })
+        if ($exact) { $nsis = $exact }
     }
 
     $Summary.outputs = $copied

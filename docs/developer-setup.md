@@ -13,7 +13,8 @@
 .\scripts\bootstrap.ps1          # → bootstrap_windows.ps1
 .\scripts\start-dev.ps1          # → start_storylens_dev.ps1
 .\scripts\check-project.ps1      # venv: check_project.py + pytest
-.\scripts\build-release.ps1      # → build_desktop.ps1（标注 1.0.0-rc1）
+.\scripts\build-release.ps1      # → build_desktop.ps1（版本来自 package.json / set_version.ps1）
+.\scripts\build_windows_release.ps1  # Windows NSIS 安装包 → dist/release/
 ```
 
 停止：`.\scripts\stop_storylens_dev.ps1`

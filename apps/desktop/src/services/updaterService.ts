@@ -1,3 +1,5 @@
+import { APP_VERSION } from "../lib/appVersion";
+
 export type UpdateCheckResult =
   | { kind: "disabled" }
   | { kind: "latest"; currentVersion: string }
@@ -23,8 +25,8 @@ export async function checkForAppUpdate(manual = false): Promise<UpdateCheckResu
   ) {
     return {
       kind: "available",
-      currentVersion: "1.0.0-rc1",
-      latestVersion: "1.0.1-audit",
+      currentVersion: APP_VERSION,
+      latestVersion: `${APP_VERSION}-audit`,
       body: "审计模拟更新说明：稳定性修复与界面安全基线。",
       downloadAndInstall: async () => undefined,
     };

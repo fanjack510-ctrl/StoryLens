@@ -1,10 +1,9 @@
 import { useState } from "react";
+import { APP_VERSION } from "../../lib/appVersion";
 import { checkForAppUpdate } from "../../services/updaterService";
 import { UpdateAvailableDialog } from "../desktop/UpdateAvailableDialog";
 import { TelemetrySettingsCard } from "./TelemetrySettingsCard";
 import "./settings.css";
-
-const APP_VERSION = "1.0.0-rc1";
 
 export function SettingsPrivacyUpdateTab() {
   const [message, setMessage] = useState("");

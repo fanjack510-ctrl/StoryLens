@@ -1,5 +1,6 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { APP_VERSION } from "../../lib/appVersion";
 import { api } from "../../services/apiClient";
 import { useUiStore } from "../../stores/uiStore";
 import { DevelopmentNavigationGroup } from "./DevelopmentNavigationGroup";
@@ -92,7 +93,7 @@ export function AppShell() {
           </p>
           <DevelopmentNavigationGroup />
           <p className="nav-version" data-testid="app-footer">
-            StoryLens 1.0.0-rc1
+            StoryLens {APP_VERSION}
           </p>
         </div>
       </aside>
