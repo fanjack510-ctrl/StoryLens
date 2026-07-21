@@ -35,6 +35,12 @@
       "message": "Attach final registry sync commit to CHG-20260721-012.",
       "primary": false,
       "multi_change_reason": "final registry sync commit"
+    },
+    {
+      "sha": "db14c1facc6bb85320a2289de7408dccb4173d44",
+      "message": "Add Reader Journey observation lenses and diagnosis band UI (CHG-20260721-012).",
+      "primary": false,
+      "multi_change_reason": "frontend observation lenses implementation"
     }
   ],
   "modules": [
