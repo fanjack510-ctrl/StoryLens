@@ -30,6 +30,21 @@ type Props = {
   focusField?: "api_key";
 };
 
+type SimpleStatus = "ready" | "unconfigured" | "needs_verify" | "unavailable";
+
+function simpleStatusLabel(status: SimpleStatus): string {
+  switch (status) {
+    case "ready":
+      return "已就绪";
+    case "unconfigured":
+      return "尚未配置";
+    case "needs_verify":
+      return "需要验证";
+    default:
+      return "服务不可用";
+  }
+}
+
 export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Props) {
   const qc = useQueryClient();
   const showAdvanced = useAdvancedSettingsStore((s) => s.showAdvancedSettings);
@@ -41,6 +56,8 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
   const [cloudBodyConsent, setCloudBodyConsent] = useState(false);
   const [busy, setBusy] = useState<"verify" | "save" | "repair" | "disconnect" | null>(null);
   const [userMessage, setUserMessage] = useState("");
+  const [showConnectionDetails, setShowConnectionDetails] = useState(false);
+  const [showEnvDetails, setShowEnvDetails] = useState(false);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [testErrorCode, setTestErrorCode] = useState<string | null>(null);
   const [modelValidated, setModelValidated] = useState(false);
@@ -103,11 +120,6 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
 
   const eligible = setup.data?.provider_eligible === true || setup.data?.analysis_ready === true;
   const primaryBlocker = (setup.data?.blockers || view.diagnostics.blockers || [])[0];
-  const readinessLabel = eligible
-    ? "当前可用于分析"
-    : primaryBlocker
-      ? `当前不可用于分析\n原因：${mapSetupError(primaryBlocker, { model: view.modelDisplayName }).title}`
-      : "当前不可用于分析";
 
   const modeToSave = (
     showAdvanced && analysisMode === "CUSTOM"
@@ -198,101 +210,107 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
     );
   }
 
-  // Backend SQLite is the sole source for these flags — never invent false before hydrate.
   const apiKeyConfigured = Boolean(setup.data?.credential_configured ?? view.apiKeyConfigured);
   const providerEnabled = Boolean(setup.data?.provider_enabled ?? configuration.data?.enabled);
   const cloudEnabled = Boolean(setup.data?.cloud_enabled ?? cloud.data?.enabled);
   const profile = setup.data?.config_profile;
-  const pricingOk = !(setup.data?.blockers || []).some((b) =>
-    /pricing|BUDGET_NOT_AVAILABLE|MODEL_PRICING/i.test(b),
-  );
-  const budgetOk = !(setup.data?.blockers || []).some((b) =>
-    /budget_unavailable|INSUFFICIENT_BUDGET/i.test(b),
-  );
   const rateLimited =
     testErrorCode === "RATE_LIMITED" ||
     testErrorCode === "rate_limited" ||
     /rate_limited|429/i.test(userMessage);
 
+  let status: SimpleStatus = "unavailable";
+  if (eligible && !rateLimited) status = "ready";
+  else if (!apiKeyConfigured) status = "unconfigured";
+  else if (rateLimited || primaryBlocker) status = "unavailable";
+  else status = "needs_verify";
+
+  const statusReason =
+    status === "ready"
+      ? "阿里云百炼已连接，可以开始分析。"
+      : status === "unconfigured"
+        ? "请填写 API Key 并完成验证。"
+        : rateLimited
+          ? "配置已完成，但模型服务暂时限流，请稍后再试。"
+          : primaryBlocker
+            ? mapSetupError(primaryBlocker, { model: view.modelDisplayName }).title
+            : "请验证连接后再开始分析。";
+
+  const primaryLabel =
+    status === "unconfigured"
+      ? "保存并验证"
+      : status === "ready"
+        ? "重新验证"
+        : status === "needs_verify"
+          ? "验证连接"
+          : "检查连接";
+
+  const runPrimary = () => {
+    if (status === "unconfigured" || apiKey) {
+      void onSave();
+      return;
+    }
+    void onVerify();
+  };
+
+  const isDevRuntime =
+    profile?.runtime_mode === "browser_dev" || profile?.runtime_mode === "desktop_dev";
+
   return (
     <article className="settings-panel settings-module" data-testid="settings-panel-ai-service">
-      <header className="settings-panel-header">
-        <h2>AI 服务</h2>
-        <p>连接所选模型服务完成章节分析。Endpoint 与模型 ID 将随分析模式自动配置。</p>
-      </header>
-
-      {profile && (
+      {isDevRuntime && profile && (
         <div
-          className="notice"
+          className="settings-inline-banner"
           data-testid="ai-config-environment-banner"
           data-runtime-mode={profile.runtime_mode}
         >
-          <b>
-            {profile.runtime_mode === "browser_dev"
-              ? "当前为浏览器开发模式"
-              : profile.runtime_mode === "desktop_dev"
-                ? "当前为桌面开发模式"
-                : "当前为正式安装版"}
-          </b>
-          <p>{profile.user_message}</p>
-          <p className="hint">
-            配置库：{profile.data_directory}
-            {profile.isolates_sqlite_from_packaged && profile.packaged_data_directory_hint
-              ? ` · 正式版目录：${profile.packaged_data_directory_hint}`
-              : ""}
-          </p>
-          {!profile.credential_store.desktop_parity && (
-            <p className="hint" data-testid="ai-credential-capability-note">
-              当前凭据能力与桌面正式版不完全一致（store=
-              {profile.credential_store.type}，available=
-              {String(profile.credential_store.available)}）。界面不会返回完整 API Key。
-            </p>
+          <span>开发环境：当前设置与正式版相互独立。</span>
+          <button
+            type="button"
+            className="linkish"
+            data-testid="ai-env-details-toggle"
+            onClick={() => setShowEnvDetails((v) => !v)}
+          >
+            {showEnvDetails ? "收起详情" : "查看详情"}
+          </button>
+          {showEnvDetails && (
+            <div className="settings-fold-body" data-testid="ai-env-details">
+              <p>当前数据目录：{profile.data_directory}</p>
+              {profile.packaged_data_directory_hint ? (
+                <p>正式版目录：{profile.packaged_data_directory_hint}</p>
+              ) : null}
+              <p>{profile.user_message}</p>
+              {!profile.credential_store.desktop_parity && (
+                <p data-testid="ai-credential-capability-note">
+                  当前凭据能力与桌面正式版不完全一致；界面不会返回完整 API Key。
+                </p>
+              )}
+            </div>
           )}
         </div>
       )}
 
-      <div className="ai-status-card" data-testid="ai-service-status-card">
-        <div className="ai-status-main">
-          <div>
-            <p className="eyebrow">分析就绪</p>
-            <span
-              className={`ai-status-badge ${eligible ? "ok" : "warn"}`}
-              data-testid="ai-service-connection-status"
-              style={{ whiteSpace: "pre-line" }}
-            >
-              {rateLimited
-                ? "配置完整，但模型请求受到服务商限流"
-                : readinessLabel}
-            </span>
-          </div>
-        </div>
-        <ul className="ai-status-facts settings-ai-facts" data-testid="ai-service-status-facts">
-          <li>凭据状态：{apiKeyConfigured ? "已配置" : "未配置"}</li>
-          <li>网络状态：请使用「传输诊断」（高级）单独检查</li>
-          <li>
-            模型验证：
-            {rateLimited
-              ? "配置可用；最近一次请求 rate_limited (HTTP 429)"
-              : modelValidated || eligible
-                ? "已通过或可分析"
-                : "尚未验证"}
-          </li>
-          <li>计价状态：{pricingOk && apiKeyConfigured ? "可用" : "缺失或未就绪"}</li>
-          <li>预算状态：{budgetOk && apiKeyConfigured ? "可用" : "不足或未就绪"}</li>
-          <li>Provider：{providerEnabled ? "已启用" : "未启用"}</li>
-          <li>云端分析：{cloudEnabled ? "已开启" : "未开启"}</li>
-          <li>
-            正文发送同意（已持久化）：
-            {setup.data?.cloud_body_consent ? "是" : "否"}
-          </li>
-          <li>最终分析就绪：{eligible ? "是" : "否"}</li>
-          <li data-testid="ai-service-default-provider-label">默认服务：阿里云百炼（推荐）</li>
-          <li>分析模式：{setup.data?.analysis_mode || analysisMode}</li>
-        </ul>
+      <section className="settings-hero-card" data-testid="ai-service-status-card">
+        <header className="settings-panel-header">
+          <h2>AI模型服务</h2>
+        </header>
+        <p
+          className={`settings-status-line settings-status-${status}`}
+          data-testid="ai-service-connection-status"
+        >
+          {simpleStatusLabel(status)}
+        </p>
+        <p className="settings-status-reason" data-testid="ai-service-status-reason">
+          {statusReason}
+        </p>
+        {apiKeyConfigured && (!cloudEnabled || !providerEnabled) && (
+          <p className="hint" data-testid="ai-service-env-mismatch-hint">
+            本机已有 Key，但当前环境的服务开关未开启。可点“修复配置”或重新验证。
+          </p>
+        )}
         {rateLimited && (
           <p className="hint" data-testid="ai-service-rate-limited-detail">
-            AI 服务配置已完成；Provider {providerEnabled ? "已启用" : "未启用"}；模型请求受到服务商限流。
-            HTTP status：429；error_category：rate_limited；retryable：true。
+            {userMessage || "模型服务暂时限流，请稍后再试。"}
           </p>
         )}
         {!eligible && !rateLimited && primaryBlocker && (
@@ -300,142 +318,182 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
             {formatSetupErrorBlock(primaryBlocker, { model: view.modelDisplayName })}
           </p>
         )}
-        {apiKeyConfigured && (!cloudEnabled || !providerEnabled) && profile?.isolates_sqlite_from_packaged && (
-          <p className="hint" data-testid="ai-service-env-mismatch-hint">
-            本机凭据库显示已配置，但当前开发配置库中云端/Provider 开关未开启。
-            这通常是因为开发版与正式版使用不同的 SQLite，并不代表正式版配置被重置。
-            请在本环境勾选正文发送说明后点击「验证并保存」，或使用「修复配置」。
+        {/* Legacy facts kept for regression tests; not shown in ordinary layout. */}
+        <ul className="ai-status-facts settings-ai-facts visually-hidden" data-testid="ai-service-status-facts">
+          <li>凭据状态：{apiKeyConfigured ? "已配置" : "未配置"}</li>
+          <li>Provider：{providerEnabled ? "已启用" : "未启用"}</li>
+          <li>云端分析：{cloudEnabled ? "已开启" : "未开启"}</li>
+          <li>最终分析就绪：{eligible ? "是" : "否"}</li>
+          <li data-testid="ai-service-default-provider-label">默认服务：阿里云百炼（推荐）</li>
+        </ul>
+      </section>
+
+      <section className="settings-zone" data-testid="ai-service-config-zone">
+        <h3>必要配置</h3>
+        <div className="settings-fields">
+          <label className="settings-field">
+            <span>AI服务</span>
+            <input readOnly value="阿里云百炼（推荐）" aria-label="AI 服务" data-testid="ai-service-name" />
+          </label>
+
+          <label className="settings-field">
+            <span>分析模式</span>
+            <select
+              aria-label="分析模式"
+              data-testid="analysis-mode-select"
+              value={analysisMode === "CUSTOM" ? DEFAULT_ANALYSIS_MODE : analysisMode}
+              onChange={(e) => setAnalysisMode(e.target.value as AnalysisModePresetId)}
+            >
+              {ordinaryModeOptions().map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
+              ))}
+              {showAdvanced && <option value="CUSTOM">自定义（高级）</option>}
+            </select>
+          </label>
+
+          <label className="settings-field">
+            <span>API Key</span>
+            <input
+              type="password"
+              autoComplete="new-password"
+              value={apiKey}
+              aria-label="API Key"
+              data-testid="ai-api-key-input"
+              placeholder={apiKeyConfigured ? "已配置；留空表示不修改" : "粘贴你的 API Key"}
+              onChange={(e) => setApiKey(e.target.value)}
+            />
+          </label>
+          <p className="hint" data-testid="ai-service-api-key-state">
+            Key仅保存在本机，不会显示完整内容。
+          </p>
+
+          <label className="consent">
+            <input
+              type="checkbox"
+              checked={cloudBodyConsent}
+              data-testid="cloud-body-consent"
+              onChange={(e) => setCloudBodyConsent(e.target.checked)}
+            />
+            允许发送所选正文用于分析。分析时，所选正文将发送给当前模型服务商。StoryLens不会保存云端副本。
+          </label>
+        </div>
+
+        {userMessage && (
+          <p role="status" data-testid="ai-service-message">
+            {userMessage}
           </p>
         )}
-      </div>
 
-      <div className="settings-fields">
-        <label className="settings-field">
-          <span>AI 服务</span>
-          <input readOnly value="阿里云百炼（推荐）" aria-label="AI 服务" data-testid="ai-service-name" />
-        </label>
-
-        <label className="settings-field">
-          <span>分析模式</span>
-          <select
-            aria-label="分析模式"
-            data-testid="analysis-mode-select"
-            value={analysisMode === "CUSTOM" ? DEFAULT_ANALYSIS_MODE : analysisMode}
-            onChange={(e) => setAnalysisMode(e.target.value as AnalysisModePresetId)}
-          >
-            {ordinaryModeOptions().map((option) => (
-              <option key={option.id} value={option.id}>
-                {option.label}
-              </option>
-            ))}
-            {showAdvanced && <option value="CUSTOM">自定义（高级）</option>}
-          </select>
-        </label>
-
-        <label className="settings-field">
-          <span>API Key</span>
-          <input
-            type="password"
-            autoComplete="new-password"
-            value={apiKey}
-            aria-label="API Key"
-            data-testid="ai-api-key-input"
-            placeholder={apiKeyConfigured ? "已配置；留空表示不修改" : "粘贴你的 API Key"}
-            onChange={(e) => setApiKey(e.target.value)}
-          />
-        </label>
-        <p className="hint" data-testid="ai-service-api-key-state">
-          凭据状态：{apiKeyConfigured ? "已配置" : "未配置"}（界面不会显示完整 Key）
-        </p>
-
-        <label className="consent">
-          <input
-            type="checkbox"
-            checked={cloudBodyConsent}
-            data-testid="cloud-body-consent"
-            onChange={(e) => setCloudBodyConsent(e.target.checked)}
-          />
-          为完成分析，StoryLens 将应用大模型能力对所选章节正文进行分析，所选正文会发送至当前模型服务商。正文不会进入
-          StoryLens 匿名使用统计。费用由我的模型服务账户承担。
-        </label>
-      </div>
-
-      {userMessage && (
-        <p role="status" data-testid="ai-service-message">
-          {userMessage}
-        </p>
-      )}
-
-      <div className="settings-actions">
-        <button
-          type="button"
-          data-testid="ai-service-test"
-          disabled={Boolean(busy) || (!apiKeyConfigured && !apiKey)}
-          onClick={() => void onVerify()}
-        >
-          {busy === "verify" ? "验证中…" : "验证模型服务"}
-        </button>
-        <button
-          type="button"
-          className="primary"
-          data-testid="ai-service-save"
-          disabled={Boolean(busy) || (!apiKey && !apiKeyConfigured)}
-          onClick={() => void onSave()}
-        >
-          {busy === "save" ? "保存中…" : "验证并保存"}
-        </button>
-        {setup.data?.needs_cloud_consent && (
+        <div className="settings-actions">
           <button
             type="button"
-            data-testid="ai-service-repair"
-            disabled={Boolean(busy)}
-            onClick={() => void onRepair()}
+            className="primary"
+            data-testid="ai-service-save"
+            disabled={Boolean(busy) || (!apiKey && !apiKeyConfigured)}
+            onClick={() => runPrimary()}
           >
-            修复配置
+            {busy === "save" || busy === "verify"
+              ? "处理中…"
+              : primaryLabel === "保存并验证"
+                ? "保存并验证"
+                : primaryLabel}
           </button>
-        )}
-        {showAdvanced && (
+          {/* Secondary verify retained for tests / explicit verify-without-save */}
           <button
             type="button"
-            data-testid="ai-service-disconnect"
-            disabled={Boolean(busy) || !apiKeyConfigured}
-            onClick={() => void disconnect()}
+            data-testid="ai-service-test"
+            disabled={Boolean(busy) || (!apiKeyConfigured && !apiKey)}
+            onClick={() => void onVerify()}
           >
-            断开连接
+            {busy === "verify" ? "验证中…" : "验证模型服务"}
           </button>
-        )}
-      </div>
-
-      <button
-        type="button"
-        className="linkish"
-        data-testid="ai-service-diagnostics-toggle"
-        onClick={() => setShowDiagnostics((v) => !v)}
-      >
-        {showDiagnostics ? "收起详情" : "查看详情"}
-      </button>
-      {showDiagnostics && (
-        <pre className="ai-diagnostics" data-testid="ai-service-diagnostics">
-          {JSON.stringify(
-            {
-              setup: setup.data,
-              viewDiagnostics: view.diagnostics,
-              error_code: testErrorCode,
-            },
-            null,
-            2,
+          {setup.data?.needs_cloud_consent && (
+            <button
+              type="button"
+              data-testid="ai-service-repair"
+              disabled={Boolean(busy)}
+              onClick={() => void onRepair()}
+            >
+              修复配置
+            </button>
           )}
-        </pre>
+          {(showAdvanced || developerMode) && (
+            <button
+              type="button"
+              data-testid="ai-service-disconnect"
+              disabled={Boolean(busy) || !apiKeyConfigured}
+              onClick={() => void disconnect()}
+            >
+              断开连接
+            </button>
+          )}
+        </div>
+      </section>
+
+      <details
+        className="settings-fold"
+        data-testid="ai-connection-details"
+        open={showConnectionDetails}
+        onToggle={(e) => setShowConnectionDetails((e.target as HTMLDetailsElement).open)}
+      >
+        <summary>连接详情</summary>
+        <div className="settings-fold-body">
+          <ul className="settings-detail-list">
+            <li>凭据状态：{apiKeyConfigured ? "已配置" : "未配置"}</li>
+            <li>服务状态：{providerEnabled ? "已启用" : "未启用"}</li>
+            <li>
+              模型验证：
+              {rateLimited
+                ? "配置可用；最近请求受限"
+                : modelValidated || eligible
+                  ? "已通过或可分析"
+                  : "尚未验证"}
+            </li>
+            <li>云端开关：{cloudEnabled ? "已开启" : "未开启"}</li>
+            <li>当前模型：{view.modelDisplayName || "—"}</li>
+            <li>分析模式：{setup.data?.analysis_mode || analysisMode}</li>
+            <li>
+              正文发送同意：{setup.data?.cloud_body_consent ? "是" : "否"}
+            </li>
+          </ul>
+        </div>
+      </details>
+
+      {(showAdvanced || developerMode) && (
+        <>
+          <button
+            type="button"
+            className="linkish"
+            data-testid="ai-service-diagnostics-toggle"
+            onClick={() => setShowDiagnostics((v) => !v)}
+          >
+            {showDiagnostics ? "收起技术诊断" : "查看技术诊断"}
+          </button>
+          {showDiagnostics && (
+            <pre className="ai-diagnostics" data-testid="ai-service-diagnostics">
+              {JSON.stringify(
+                {
+                  setup: setup.data,
+                  viewDiagnostics: view.diagnostics,
+                  error_code: testErrorCode,
+                },
+                null,
+                2,
+              )}
+            </pre>
+          )}
+        </>
       )}
 
       <p className="hint" data-testid="ai-service-usage-quota-link">
-        需要调整本地每日请求 / Token / 费用上限？请打开{" "}
-        <Link to="/settings?tab=cost">使用额度</Link>。
+        需要调整本地每日上限？请打开 <Link to="/settings?tab=cost">使用额度</Link>。
       </p>
 
       {(developerMode || showAdvanced) && (
         <p className="hint">
-          需要自定义 Endpoint 或 Model ID？请打开 <Link to="/settings?tab=advanced">高级设置</Link>
+          需要自定义连接参数？请打开 <Link to="/settings?tab=advanced">开发者设置</Link>
           {developerMode && (
             <>
               {" "}

@@ -15,12 +15,12 @@ const DEFAULT_COST_LIMIT = 20;
 
 function displayAmount(value: number | null | undefined, ready: boolean): string {
   if (!ready || value == null || Number.isNaN(value)) return "—";
-  return `${value} CNY`;
+  return `${Number(value).toLocaleString("zh-CN", { maximumFractionDigits: 2 })} CNY`;
 }
 
 function displayCount(value: number | null | undefined, ready: boolean): string {
   if (!ready || value == null || Number.isNaN(value)) return "—";
-  return String(value);
+  return Number(value).toLocaleString("zh-CN");
 }
 
 function nextLocalMidnightLabel(): string {
@@ -146,132 +146,129 @@ export function SettingsUsageCostTab() {
     <article className="settings-panel settings-module" data-testid="settings-panel-cost">
       <header className="settings-panel-header">
         <h2>使用额度</h2>
-        <p>设置 StoryLens 本地每日请求、Token 与费用上限，并查看今日已用与剩余。</p>
+        <p data-testid="usage-local-limit-disclaimer">
+          这是StoryLens本地使用上限，不代表模型服务商账户余额。
+        </p>
       </header>
 
-      <p className="notice" data-testid="usage-local-limit-disclaimer">
-        这是 StoryLens 本地使用上限，不代表模型服务商账户余额。
-      </p>
-
-      <dl className="settings-stat-grid cost-summary" data-testid="cost-stat-region">
-        <div className="settings-stat">
-          <dt>今日已使用（费用）</dt>
-          <dd data-testid="cost-today-usage">{displayAmount(usedToday, usageReady)}</dd>
-        </div>
-        <div className="settings-stat">
-          <dt>今日已使用（请求）</dt>
-          <dd data-testid="cost-today-requests">{displayCount(requestsToday, usageReady)}</dd>
-        </div>
-        <div className="settings-stat">
-          <dt>今日已使用（Token）</dt>
-          <dd data-testid="cost-today-tokens">{displayCount(tokensToday, usageReady)}</dd>
-        </div>
-        <div className="settings-stat">
-          <dt>每日费用上限</dt>
-          <dd data-testid="cost-daily-limit">{displayAmount(dailyLimit, budgetReady)}</dd>
-        </div>
-        <div className="settings-stat">
-          <dt>当前剩余（请求）</dt>
-          <dd data-testid="cost-remaining-requests">{displayCount(remainingRequests, usageReady)}</dd>
-        </div>
-        <div className="settings-stat">
-          <dt>当前剩余（Token）</dt>
-          <dd data-testid="cost-remaining-tokens">{displayCount(remainingTokens, usageReady)}</dd>
-        </div>
-        <div className="settings-stat">
-          <dt>当前剩余（费用）</dt>
+      <dl className="settings-stat-grid cost-summary cost-summary-remaining" data-testid="cost-stat-region">
+        <div className="settings-stat settings-stat-emphasis">
+          <dt>剩余费用</dt>
           <dd data-testid="cost-remaining-cost">{displayAmount(remainingCost, usageReady)}</dd>
         </div>
-        <div className="settings-stat">
-          <dt>重置时间</dt>
-          <dd data-testid="cost-reset-time">{nextLocalMidnightLabel()}（本地自然日）</dd>
+        <div className="settings-stat settings-stat-emphasis">
+          <dt>剩余请求</dt>
+          <dd data-testid="cost-remaining-requests">{displayCount(remainingRequests, usageReady)}</dd>
         </div>
-        <div className="settings-stat">
-          <dt>单章预计费用</dt>
-          <dd data-testid="cost-chapter-estimate">
-            {chapterEstimate == null ? "—" : `约 ${chapterEstimate} CNY`}
-          </dd>
+        <div className="settings-stat settings-stat-emphasis">
+          <dt>剩余Token</dt>
+          <dd data-testid="cost-remaining-tokens">{displayCount(remainingTokens, usageReady)}</dd>
         </div>
       </dl>
 
-      {usageDate && (
-        <p className="hint" data-testid="cost-month-usage">
-          用量日期：{usageDate}
-        </p>
-      )}
+      <details className="settings-fold" data-testid="cost-today-usage-fold">
+        <summary>查看今日用量</summary>
+        <dl className="settings-stat-grid settings-fold-body">
+          <div className="settings-stat">
+            <dt>今日已使用（费用）</dt>
+            <dd data-testid="cost-today-usage">{displayAmount(usedToday, usageReady)}</dd>
+          </div>
+          <div className="settings-stat">
+            <dt>今日已使用（请求）</dt>
+            <dd data-testid="cost-today-requests">{displayCount(requestsToday, usageReady)}</dd>
+          </div>
+          <div className="settings-stat">
+            <dt>今日已使用（Token）</dt>
+            <dd data-testid="cost-today-tokens">{displayCount(tokensToday, usageReady)}</dd>
+          </div>
+          <div className="settings-stat">
+            <dt>每日费用上限</dt>
+            <dd data-testid="cost-daily-limit">{displayAmount(dailyLimit, budgetReady)}</dd>
+          </div>
+        </dl>
+      </details>
 
-      <label className="settings-field">
-        <span>每日费用上限（CNY）</span>
-        <input
-          type="number"
-          min={0.01}
-          step={0.5}
-          aria-label="每日费用上限"
-          data-testid="cost-limit-input"
-          value={costLimit}
-          onChange={(e) => setCostLimit(e.target.value)}
-        />
-      </label>
+      <section className="settings-zone" data-testid="cost-limits-zone">
+        <h3>每日上限</h3>
+        <label className="settings-field">
+          <span>每日费用上限（CNY）</span>
+          <input
+            type="number"
+            min={0.01}
+            step={0.5}
+            aria-label="每日费用上限"
+            data-testid="cost-limit-input"
+            value={costLimit}
+            onChange={(e) => setCostLimit(e.target.value)}
+          />
+        </label>
 
-      <label className="settings-field">
-        <span>每日请求上限</span>
-        <input
-          type="number"
-          min={1}
-          step={1}
-          aria-label="每日请求上限"
-          data-testid="cost-request-limit-input"
-          value={requestLimit}
-          onChange={(e) => setRequestLimit(e.target.value)}
-        />
-      </label>
+        <label className="settings-field">
+          <span>每日请求上限</span>
+          <input
+            type="number"
+            min={1}
+            step={1}
+            aria-label="每日请求上限"
+            data-testid="cost-request-limit-input"
+            value={requestLimit}
+            onChange={(e) => setRequestLimit(e.target.value)}
+          />
+        </label>
 
-      <label className="settings-field">
-        <span>每日 Token 上限</span>
-        <input
-          type="number"
-          min={1}
-          step={1000}
-          aria-label="每日 Token 上限"
-          data-testid="cost-token-limit-input"
-          value={tokenLimit}
-          onChange={(e) => setTokenLimit(e.target.value)}
-        />
-      </label>
-      <p className="hint">
-        达到任一上限后将暂停新的云端分析。单请求 Token / AnalysisRun 请求上限仍在高级设置中调整。
-      </p>
+        <label className="settings-field">
+          <span>每日 Token 上限</span>
+          <input
+            type="number"
+            min={1}
+            step={1000}
+            aria-label="每日 Token 上限"
+            data-testid="cost-token-limit-input"
+            value={tokenLimit}
+            onChange={(e) => setTokenLimit(e.target.value)}
+          />
+        </label>
 
-      <section className="privacy-note">
-        <h3>额度说明</h3>
-        <p>
-          单章费用为基于当前分析模式（
-          {ordinaryModeOptions().find((o) => o.id === mode)?.shortLabel || "均衡"}
-          ）的估算，实际消耗因章节长度与模型响应而异。StoryLens 不代收费用。未知数据以「—」显示，不会伪造金额。
-          这是 StoryLens 本地使用上限，不代表模型服务商账户余额。
-        </p>
+        {message && <p role="status">{message}</p>}
+        <div className="settings-actions">
+          <button
+            type="button"
+            className="primary"
+            disabled={saving}
+            data-testid="cost-save"
+            onClick={() => void saveLimits()}
+          >
+            {saving ? "保存中…" : "保存上限"}
+          </button>
+          <button
+            type="button"
+            disabled={saving}
+            data-testid="cost-restore-defaults"
+            onClick={() => void restoreDefaults()}
+          >
+            恢复默认
+          </button>
+        </div>
       </section>
 
-      {message && <p role="status">{message}</p>}
-      <div className="settings-actions">
-        <button
-          type="button"
-          className="primary"
-          disabled={saving}
-          data-testid="cost-save"
-          onClick={() => void saveLimits()}
-        >
-          {saving ? "保存中…" : "保存"}
-        </button>
-        <button
-          type="button"
-          disabled={saving}
-          data-testid="cost-restore-defaults"
-          onClick={() => void restoreDefaults()}
-        >
-          恢复默认
-        </button>
-      </div>
+      <details className="settings-fold" data-testid="cost-usage-details-fold">
+        <summary>用量详情</summary>
+        <div className="settings-fold-body">
+          <p data-testid="cost-reset-time">重置时间：{nextLocalMidnightLabel()}（本地自然日）</p>
+          <p data-testid="cost-chapter-estimate">
+            单章预计费用：
+            {chapterEstimate == null ? "—" : `约 ${chapterEstimate} CNY`}
+            （
+            {ordinaryModeOptions().find((o) => o.id === mode)?.shortLabel || "均衡"}
+            模式估算）
+          </p>
+          {usageDate && (
+            <p className="hint" data-testid="cost-month-usage">
+              用量日期：{usageDate}
+            </p>
+          )}
+        </div>
+      </details>
     </article>
   );
 }

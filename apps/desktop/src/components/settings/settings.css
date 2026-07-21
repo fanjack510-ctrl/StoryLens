@@ -231,3 +231,104 @@
   border-radius: var(--radius-sm, 6px);
   background: var(--color-bg-app, #f5f5f1);
 }
+
+/* CHG-20260721-013 — progressive disclosure layout */
+.settings-page .settings-content {
+  max-width: 1040px;
+}
+
+.settings-hero-card,
+.settings-panel.settings-module {
+  padding: 24px;
+}
+
+.settings-panel + .settings-panel,
+.settings-card + .settings-card {
+  margin-top: 20px;
+}
+
+.settings-fields .settings-field {
+  max-width: 520px;
+}
+
+.settings-inline-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  margin: 0 0 1rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--color-border-subtle, #d8d8d0);
+  background: var(--color-bg-app, #f7f7f3);
+  font-size: 0.875rem;
+}
+
+.settings-status-line {
+  margin: 0.25rem 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.settings-status-reason {
+  margin: 0 0 0.75rem;
+  color: var(--color-text-secondary, #4a4a44);
+}
+
+.settings-stat-emphasis dd {
+  font-size: 1.35rem;
+}
+
+.cost-summary-remaining {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.settings-fold {
+  margin: 1rem 0;
+  border-top: 1px solid var(--color-border-subtle, #e8e8e0);
+  padding-top: 0.75rem;
+}
+
+.settings-fold > summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.settings-fold-body {
+  margin-top: 0.75rem;
+}
+
+.settings-detail-list {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: var(--color-text-secondary, #4a4a44);
+  font-size: 0.9rem;
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 1180px) {
+  .cost-summary-remaining {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1024px) {
+  .settings-page .settings-tabs {
+    flex-wrap: wrap;
+  }
+
+  .cost-summary-remaining {
+    grid-template-columns: 1fr;
+  }
+}

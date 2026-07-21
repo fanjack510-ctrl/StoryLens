@@ -144,15 +144,15 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
 describe("设置页结构", () => {
-  it("普通模式显示六个标签且无高级设置", async () => {
+  it("普通模式显示五个标签且无授权与高级设置", async () => {
     renderPage(<SettingsPage />);
     expect(await screen.findByTestId("settings-tabs")).toBeInTheDocument();
     expect(screen.getByTestId("settings-tab-ai")).toBeInTheDocument();
     expect(screen.getByTestId("settings-tab-cost")).toBeInTheDocument();
     expect(screen.getByTestId("settings-tab-data")).toBeInTheDocument();
     expect(screen.getByTestId("settings-tab-privacy")).toBeInTheDocument();
-    expect(screen.getByTestId("settings-tab-license")).toBeInTheDocument();
     expect(screen.getByTestId("settings-tab-appearance")).toBeInTheDocument();
+    expect(screen.queryByTestId("settings-tab-license")).not.toBeInTheDocument();
     expect(screen.queryByTestId("settings-tab-advanced")).not.toBeInTheDocument();
   });
 
@@ -190,6 +190,7 @@ describe("外观与AI服务普通模式", () => {
   });
 
   it("诊断详情保留原始错误码", async () => {
+    useAdvancedSettingsStore.setState({ showAdvancedSettings: true });
     renderPage(<SettingsPage />);
     fireEvent.click(await screen.findByTestId("settings-tab-ai"));
     fireEvent.click(await screen.findByTestId("ai-service-diagnostics-toggle"));

@@ -134,9 +134,7 @@ describe("SettingsAiServiceTab recommended setup", () => {
 
   it("shows eligible only when backend provider_eligible is true", async () => {
     renderTab();
-    expect(await screen.findByTestId("ai-service-connection-status")).toHaveTextContent(
-      "当前可用于分析",
-    );
+    expect(await screen.findByTestId("ai-service-connection-status")).toHaveTextContent("已就绪");
     expect(screen.getByTestId("ai-service-status-facts")).toHaveTextContent("最终分析就绪：是");
     expect(screen.getByTestId("ai-service-status-facts")).toHaveTextContent("云端分析：已开启");
   });
@@ -154,7 +152,7 @@ describe("SettingsAiServiceTab recommended setup", () => {
     } as any);
     renderTab();
     expect(await screen.findByTestId("ai-service-connection-status")).toHaveTextContent(
-      "当前不可用于分析",
+      "服务不可用",
     );
     expect(screen.getByTestId("ai-service-status-facts")).toHaveTextContent("最终分析就绪：否");
     expect(screen.getByTestId("ai-service-status-facts")).toHaveTextContent("云端分析：未开启");
@@ -172,8 +170,9 @@ describe("SettingsAiServiceTab recommended setup", () => {
     } as any);
     renderTab();
     expect(await screen.findByTestId("ai-service-connection-status")).toHaveTextContent(
-      "当前模型缺少计价信息",
+      "服务不可用",
     );
+    expect(screen.getByTestId("ai-service-status-reason")).toHaveTextContent("计价");
     expect(screen.getByTestId("ai-service-readiness-detail")).toHaveTextContent("处理方式");
     expect(screen.getByTestId("ai-service-readiness-detail")).not.toHaveTextContent(
       "BUDGET_NOT_AVAILABLE",
@@ -223,14 +222,10 @@ describe("SettingsAiServiceTab recommended setup", () => {
 
   it("keeps status after remount from backend setup endpoint", async () => {
     const { unmount } = renderTab();
-    expect(await screen.findByTestId("ai-service-connection-status")).toHaveTextContent(
-      "当前可用于分析",
-    );
+    expect(await screen.findByTestId("ai-service-connection-status")).toHaveTextContent("已就绪");
     unmount();
     renderTab();
-    expect(await screen.findByTestId("ai-service-connection-status")).toHaveTextContent(
-      "当前可用于分析",
-    );
+    expect(await screen.findByTestId("ai-service-connection-status")).toHaveTextContent("已就绪");
     expect(aiServiceConfig.fetchRecommendedQwenStatus).toHaveBeenCalled();
   });
 
@@ -238,9 +233,7 @@ describe("SettingsAiServiceTab recommended setup", () => {
     renderTab();
     expect(await screen.findByTestId("ai-service-status-facts")).toHaveTextContent("云端分析：已开启");
     expect(screen.getByTestId("ai-service-status-facts")).toHaveTextContent("Provider：已启用");
-    expect(screen.getByTestId("ai-config-environment-banner")).toHaveTextContent(
-      "当前为浏览器开发模式",
-    );
+    expect(screen.getByTestId("ai-config-environment-banner")).toHaveTextContent("开发环境");
   });
 
   it("shows env mismatch hint when credentials exist but switches off in isolated profile", async () => {
