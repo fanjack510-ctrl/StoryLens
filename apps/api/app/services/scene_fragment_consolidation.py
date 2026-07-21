@@ -19,6 +19,8 @@ STRONG_REASON_CODES = frozenset(
         "explicit_scene_separator",
         "conflict_state_change",
         "new_event_unit",
+        "important_choice",
+        "story_state_change",
     }
 )
 
@@ -65,6 +67,17 @@ _HARD_CUT_MARKERS = (
 )
 _INDEPENDENT_FORM = re.compile(
     r"(短信|微信|邮件|新闻|报纸|公告|梦境|梦里|插叙|旁白|日记|电报)"
+)
+# Single-sentence silence / reaction / environment beats — merge by default.
+_SILENCE_REACTION_ENV = re.compile(
+    r"(陷入死寂|一片死寂|陷入沉默|沉默下来|沉默不语|安静下来|静了下来|"
+    r"一愣|愣住|呆住|怔住|愣了愣|神色一僵|面色一变|表情一僵|"
+    r"没有说话|无人应答|无人作声|空气仿佛凝固|空气忽然静|"
+    r"只剩下呼吸|只听得见|窗外|房间里|厅里|客厅里).{0,8}$"
+)
+_ENV_ONLY_SHORT = re.compile(
+    r"^[\u4e00-\u9fffA-Za-z0-9·、，,]{2,20}"
+    r"(?:陷入死寂|一片死寂|陷入沉默|安静下来|静了下来|没有说话)[。.!！?？…]*$"
 )
 
 
@@ -165,6 +178,47 @@ def looks_like_incomplete_residue(text: str) -> bool:
     return False
 
 
+def looks_like_silence_reaction_or_environment_beat(text: str) -> bool:
+    """Single-sentence silence, expression, reaction, or environment beats."""
+    compact = text.strip()
+    if not compact:
+        return True
+    if len(compact) > HARD_CHAR_LIMIT:
+        return False
+    if _ENV_ONLY_SHORT.match(compact):
+        return True
+    if _SILENCE_REACTION_ENV.search(compact) and len(compact) <= HARD_CHAR_LIMIT:
+        return True
+    # Bare environment / reaction clauses without goal or conflict change.
+    reactionish = (
+        compact.endswith(("。", ".", "！", "!", "？", "?"))
+        and len(compact) <= SOFT_CHAR_LIMIT
+        and not any(
+            token in compact
+            for token in ("因为", "所以", "决定", "选择", "必须", "目标", "冲突", "忽然想起")
+        )
+        and any(
+            token in compact
+            for token in ("死寂", "沉默", "愣", "呆", "静", "表情", "神色", "空气", "呼吸")
+        )
+    )
+    return bool(reactionish)
+
+
+def looks_like_beat_fragment(text: str) -> bool:
+    """Default Beat candidates: dialogue residue, silence/reaction/environment."""
+    compact = text.strip()
+    if not compact:
+        return True
+    if looks_like_dialogue_or_shout_fragment(compact):
+        return True
+    if looks_like_incomplete_residue(compact):
+        return True
+    if looks_like_silence_reaction_or_environment_beat(compact):
+        return True
+    return False
+
+
 def is_weak_short_fragment(
     scene_paragraphs: list[_ParagraphLike],
     *,
@@ -187,12 +241,18 @@ def is_weak_short_fragment(
     if looks_like_chapter_end_hook(text, is_last_scene=is_last_scene):
         return False
 
+    beat_fragment = looks_like_beat_fragment(text) and chars <= HARD_CHAR_LIMIT
     residual = looks_like_incomplete_residue(text) and chars <= HARD_CHAR_LIMIT
     very_short = para_count <= MAX_SHORT_PARAGRAPHS and chars <= SOFT_CHAR_LIMIT
     short_body = para_count <= MAX_SHORT_PARAGRAPHS and chars <= HARD_CHAR_LIMIT
 
-    # Strong cut into a non-residual body keeps the scene, even if brief.
-    if strong_open and not residual:
+    # Beat fragments (silence / reaction / environment / dialogue residue)
+    # prefer merging into neighboring scenes even if a strong label was attached.
+    if beat_fragment and para_count <= MAX_SHORT_PARAGRAPHS:
+        return True
+
+    # Strong cut into a non-residual, non-beat body keeps the scene, even if brief.
+    if strong_open and not residual and not beat_fragment:
         return False
 
     if residual:
@@ -257,10 +317,12 @@ def consolidate_boundary_ids(
             ):
                 continue
             if scene_index > 0 and opening_id:
-                # Keep strong cuts unless the fragment is a pure residual shout.
+                # Keep strong cuts unless the fragment is residual / Beat-like.
                 text = _joined_text(scene_paragraphs)
-                if has_strong_boundary_evidence(opening_meta) and not looks_like_incomplete_residue(
-                    text
+                if (
+                    has_strong_boundary_evidence(opening_meta)
+                    and not looks_like_incomplete_residue(text)
+                    and not looks_like_beat_fragment(text)
                 ):
                     continue
                 drop.add(opening_id)

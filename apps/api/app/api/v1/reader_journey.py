@@ -53,6 +53,10 @@ from app.services.reader_journey_progress import (
 )
 from app.services.reader_journey_semantic_calibrate import semantic_recalibrate_journey_run
 from app.services.reader_journey_visualization import build_reader_journey_visualization
+from app.services.reader_journey_v2_compatibility import (
+    enrich_result_compatibility,
+    is_v2_contract,
+)
 
 
 router = APIRouter(prefix="/api/v1")
@@ -122,6 +126,22 @@ def _serialize_result(session: Session, journey_run: ReaderJourneyRun) -> Reader
     visualization = None
     if journey_run.status == "succeeded":
         visualization = build_reader_journey_visualization(session, journey_run)
+    contract_version = journey_run.scene_contract_version
+    compat = enrich_result_compatibility(
+        {},
+        scene_contract_version=contract_version,
+        scene_prompt_version=journey_run.scene_prompt_version,
+        formula_version=journey_run.formula_version,
+    )
+    v2_lifecycle = None
+    v2_diagnoses = None
+    if is_v2_contract(contract_version) and deterministic:
+        raw_life = deterministic.get("question_lifecycle")
+        raw_diag = deterministic.get("scene_diagnoses")
+        if isinstance(raw_life, list):
+            v2_lifecycle = raw_life
+        if isinstance(raw_diag, list):
+            v2_diagnoses = raw_diag
     return ReaderJourneyResultResponse(
         journey_run_id=journey_run.id,
         analysis_run_id=journey_run.analysis_run_id,
@@ -133,6 +153,11 @@ def _serialize_result(session: Session, journey_run: ReaderJourneyRun) -> Reader
         scene_prompt_version=journey_run.scene_prompt_version,
         chapter_prompt_version=journey_run.chapter_prompt_version,
         formula_version=journey_run.formula_version,
+        scene_contract_version=contract_version,
+        contract_version=contract_version,
+        calibration_status_label=compat.get("calibration_status_label"),
+        legacy_uncalibrated=bool(compat.get("legacy_uncalibrated")),
+        display_mode=compat.get("display_mode"),
         phases=[
             ReaderJourneyPhaseSummary(
                 ordinal=phase.ordinal,
@@ -155,6 +180,8 @@ def _serialize_result(session: Session, journey_run: ReaderJourneyRun) -> Reader
         visualization=visualization,
         created_at=journey_run.created_at,
         completed_at=journey_run.completed_at,
+        v2_question_lifecycle=v2_lifecycle,
+        v2_scene_diagnoses=v2_diagnoses,
     )
 
 

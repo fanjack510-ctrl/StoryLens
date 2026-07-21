@@ -579,6 +579,11 @@ class ReaderJourneyResultResponse(BaseModel):
     scene_prompt_version: str
     chapter_prompt_version: str
     formula_version: str
+    scene_contract_version: str | None = None
+    contract_version: str | None = None
+    calibration_status_label: str | None = None
+    legacy_uncalibrated: bool = False
+    display_mode: str | None = None
     phases: list[ReaderJourneyPhaseSummary]
     scene_profiles: list[ReaderJourneyProfileSummary]
     chapter_summary: dict[str, object] | None = None
@@ -587,3 +592,6 @@ class ReaderJourneyResultResponse(BaseModel):
     visualization: dict[str, object] | None = None
     created_at: datetime | None = None
     completed_at: datetime | None = None
+    # v2.0 optional payload (present only for contract 2.x runs; never auto-billed).
+    v2_question_lifecycle: list[dict[str, object]] | None = None
+    v2_scene_diagnoses: list[dict[str, object]] | None = None

@@ -626,8 +626,20 @@ def _phase_payload(
     ordinals = list(
         range(int(phase.start_scene_ordinal), int(phase.end_scene_ordinal) + 1)
     )
-    engagements = [engagement_by_ordinal.get(ordinal, 0) for ordinal in ordinals]
     nodes = [node for node in scene_nodes if int(node["scene_ordinal"]) in ordinals]
+    # Beats are localization aids only — excluded from chapter/phase means.
+    mean_nodes = [
+        node
+        for node in nodes
+        if node.get("include_in_chapter_mean", str(node.get("role")) != "beat")
+        and str(node.get("role")) != "beat"
+    ]
+    if mean_nodes:
+        engagements = [
+            engagement_by_ordinal.get(int(node["scene_ordinal"]), 0) for node in mean_nodes
+        ]
+    else:
+        engagements = [engagement_by_ordinal.get(ordinal, 0) for ordinal in ordinals]
     return {
         "ordinal": phase.ordinal,
         "title": phase.title,
@@ -825,6 +837,9 @@ def _scene_node_payload(
         "primary_payoff": primary_payoff,
         "primary_hook": primary_hook,
         "primary_risk": primary_risk,
+        "node_type": "beat" if importance["role"] == "beat" else "scene",
+        "include_in_main_curve": importance["role"] != "beat",
+        "include_in_chapter_mean": importance["role"] != "beat",
     }
 
 
@@ -979,14 +994,24 @@ def build_reader_journey_visualization(
                 evidence_count=evidence_counts.get(scene.id, 0),
             )
         )
+        is_beat = importance["role"] == "beat"
+        curve_point_meta = {
+            "include_in_main_curve": not is_beat,
+            "node_type": "beat" if is_beat else "scene",
+        }
         curve_series["engagement"].append(
-            {"scene_ordinal": scene.ordinal, "value": engagement["engagement_score"]}
+            {
+                "scene_ordinal": scene.ordinal,
+                "value": engagement["engagement_score"],
+                **curve_point_meta,
+            }
         )
         curve_series["valence"].append(
             {
                 "scene_ordinal": scene.ordinal,
                 "start": profile.emotional_valence_start,
                 "end": profile.emotional_valence_end,
+                **curve_point_meta,
             }
         )
         curve_series["arousal"].append(
@@ -994,22 +1019,27 @@ def build_reader_journey_visualization(
                 "scene_ordinal": scene.ordinal,
                 "start": profile.arousal_start,
                 "end": profile.arousal_end,
+                **curve_point_meta,
             }
         )
         curve_series["curiosity"].append(
-            {"scene_ordinal": scene.ordinal, "value": profile.curiosity_score}
+            {"scene_ordinal": scene.ordinal, "value": profile.curiosity_score, **curve_point_meta}
         )
         curve_series["tension"].append(
-            {"scene_ordinal": scene.ordinal, "value": profile.tension_score}
+            {"scene_ordinal": scene.ordinal, "value": profile.tension_score, **curve_point_meta}
         )
         curve_series["payoff"].append(
-            {"scene_ordinal": scene.ordinal, "value": profile.payoff_score}
+            {"scene_ordinal": scene.ordinal, "value": profile.payoff_score, **curve_point_meta}
         )
         curve_series["hook"].append(
-            {"scene_ordinal": scene.ordinal, "value": profile.hook_score}
+            {"scene_ordinal": scene.ordinal, "value": profile.hook_score, **curve_point_meta}
         )
         curve_series["dropoff_risk"].append(
-            {"scene_ordinal": scene.ordinal, "value": profile.dropoff_risk_score}
+            {
+                "scene_ordinal": scene.ordinal,
+                "value": profile.dropoff_risk_score,
+                **curve_point_meta,
+            }
         )
 
     dropped_questions = diagnose_dropped_high_strength_questions(profiles)

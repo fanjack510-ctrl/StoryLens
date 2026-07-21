@@ -1,0 +1,57 @@
+{
+  "version": "2.0",
+  "contract_version": "2.0",
+  "default_genre": "suspense",
+  "level_to_mapped_score": {
+    "0": 10,
+    "1": 30,
+    "2": 50,
+    "3": 65,
+    "4": 80,
+    "5": 95
+  },
+  "no_evidence_mapped_score_cap": 40,
+  "weights": {
+    "plot_progress": {
+      "goal_progress": 0.25,
+      "conflict_change": 0.20,
+      "state_change": 0.20,
+      "information_gain": 0.15,
+      "character_agency": 0.10,
+      "causal_coherence": 0.10
+    },
+    "reading_tension": {
+      "curiosity": 0.40,
+      "tension": 0.35,
+      "emotional_investment": 0.25
+    },
+    "reading_momentum": {
+      "plot_progress": 0.30,
+      "reading_tension": 0.25,
+      "pacing_fit": 0.20,
+      "hook_payoff_fit": 0.25
+    }
+  },
+  "penalties": {
+    "clarity_below": 60,
+    "clarity_factor": 0.25,
+    "cognitive_load_above": 60,
+    "cognitive_load_factor": 0.15,
+    "redundancy_above": 50,
+    "redundancy_factor": 0.10
+  },
+  "fit_to_band": {
+    "in_band_score": 90,
+    "per_point_penalty": 2
+  },
+  "dropoff_risk": {
+    "base": "100-reading_momentum",
+    "consecutive_decline_bonus": 8,
+    "consecutive_low_momentum_threshold": 45,
+    "consecutive_low_momentum_count": 3,
+    "consecutive_low_momentum_bonus": 15,
+    "unpaid_hook_threshold": 75,
+    "unpaid_hook_bonus": 10,
+    "reasonable_payoff_span_scenes": 3
+  }
+}
