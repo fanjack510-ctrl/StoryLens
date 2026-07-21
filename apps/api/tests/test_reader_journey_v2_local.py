@@ -420,3 +420,173 @@ def test_legacy_compatibility_markers():
     )
     assert payload_v2["legacy_uncalibrated"] is False
     assert payload_v2["display_mode"] == "v2"
+
+
+# --- CHG-20260721-012 verification matrix (no new product behavior) ---
+
+
+def test_verify_plot_low_pacing_low_is_stagnation():
+    profile = _profile(
+        1,
+        levels={
+            "goal_progress": 0,
+            "conflict_change": 0,
+            "state_change": 0,
+            "information_gain": 0,
+            "character_agency": 0,
+            "causal_coherence": 0,
+            "pacing_speed": 1,
+            "curiosity": 2,
+            "tension": 2,
+            "emotional_investment": 2,
+            "clarity": 4,
+        },
+        evidence=["P1"],
+    )
+    derived, _ = derive_scene_metrics(profile)
+    assert float(derived.plot_progress or 0) < 30
+    assert mapped_pace(derived) < 40
+    diag = diagnose_scene(derived)
+    codes = [diag.primary_diagnosis, *diag.secondary_diagnoses]
+    assert "plot_stagnation" in codes or "weak_progress" in codes
+    assert "empty_fast_pacing" not in codes
+
+
+def test_verify_plot_low_pacing_high_is_empty_spin():
+    profile = _profile(
+        1,
+        levels={
+            "goal_progress": 0,
+            "conflict_change": 0,
+            "state_change": 0,
+            "information_gain": 0,
+            "character_agency": 0,
+            "causal_coherence": 0,
+            "pacing_speed": 5,
+            "curiosity": 2,
+            "tension": 2,
+            "emotional_investment": 2,
+            "clarity": 4,
+        },
+        evidence=["P1"],
+    )
+    derived, _ = derive_scene_metrics(profile)
+    assert float(derived.plot_progress or 0) < 35
+    assert mapped_pace(derived) > 70
+    diag = diagnose_scene(derived)
+    codes = [diag.primary_diagnosis, *diag.secondary_diagnoses]
+    assert "empty_fast_pacing" in codes
+
+
+def test_verify_high_hook_without_payoff_is_empty_or_delayed():
+    first = _profile(
+        1,
+        scene_role="open_end",
+        levels={"hook": 5, "payoff": 0, "curiosity": 4, "clarity": 4},
+        evidence=["P1"],
+        hook_rationale="他究竟是谁？",
+    )
+    second = _profile(
+        2,
+        scene_role="investigation",
+        levels={"hook": 4, "payoff": 0, "curiosity": 3, "clarity": 4},
+        evidence=["P2"],
+    )
+    derived = derive_chapter_profiles([first, second])
+    lifecycle = build_question_lifecycle(derived)
+    diag2 = diagnose_scene(derived[1], previous=derived[0], lifecycle=lifecycle)
+    codes = [diag2.primary_diagnosis, *diag2.secondary_diagnoses]
+    assert any(code in {"empty_hook", "delayed_payoff", "weak_hook"} for code in codes if code)
+
+
+def test_verify_metrics_are_deterministic_recomputable_from_base_fields():
+    from app.services.reader_journey_v2_derivation import (
+        compute_plot_progress,
+        compute_reading_tension,
+        load_scene_role_targets,
+    )
+    from app.services.reader_journey_v2_mapping import (
+        apply_profile_mapped_scores,
+        load_formula_v2_config,
+    )
+
+    profile = _profile(
+        1,
+        scene_role="escalation",
+        levels={
+            "goal_progress": 4,
+            "conflict_change": 3,
+            "state_change": 3,
+            "information_gain": 4,
+            "character_agency": 3,
+            "causal_coherence": 3,
+            "curiosity": 4,
+            "tension": 4,
+            "emotional_investment": 3,
+            "pacing_speed": 3,
+            "hook": 4,
+            "payoff": 2,
+            "clarity": 4,
+            "cognitive_load": 2,
+            "redundancy": 1,
+        },
+        evidence=["P1", "P2"],
+    )
+    cfg = load_formula_v2_config()
+    roles = load_scene_role_targets()
+    updated, derived = derive_scene_metrics(profile, formula_config=cfg, role_targets=roles)
+    scored = apply_profile_mapped_scores(profile, config=cfg)
+    plot = compute_plot_progress(scored, weights=cfg["weights"]["plot_progress"])
+    tension = compute_reading_tension(scored, weights=cfg["weights"]["reading_tension"])
+    assert float(derived.plot_progress or 0) == pytest.approx(plot, abs=0.2)
+    assert float(derived.reading_tension or 0) == pytest.approx(tension, abs=0.2)
+    # Re-derive must be stable (no chapter min-max normalization side effects).
+    again, derived2 = derive_scene_metrics(profile, formula_config=cfg, role_targets=roles)
+    assert derived2.reading_momentum == derived.reading_momentum
+    assert again.goal_progress.mapped_score == updated.goal_progress.mapped_score
+
+def test_verify_no_chapter_minmax_normalization_in_v2_formula():
+    low = _profile(1, levels={"goal_progress": 1, "curiosity": 1, "tension": 1}, evidence=["A"])
+    high = _profile(2, levels={"goal_progress": 5, "curiosity": 5, "tension": 5}, evidence=["B"])
+    alone_high, d_high = derive_scene_metrics(high)
+    chapter = derive_chapter_profiles([low, high])
+    # Absolute scores must not be rescaled by other scenes in the chapter.
+    assert chapter[1].reading_momentum == pytest.approx(float(d_high.reading_momentum), abs=0.2)
+    assert chapter[1].plot_progress == pytest.approx(float(alone_high.plot_progress or 0), abs=0.2)
+
+
+def test_verify_sqlite_legacy_sample_is_uncalibrated_contract():
+    import os
+    import sqlite3
+    from pathlib import Path
+
+    from app.services.reader_journey_v2_compatibility import calibration_label
+
+    paths = [
+        Path("data/storylens.db"),
+        Path(os.environ.get("LOCALAPPDATA", "")) / "StoryLens" / "database" / "storylens.db",
+    ]
+    found = False
+    for path in paths:
+        if not path.exists():
+            continue
+        con = sqlite3.connect(str(path))
+        cur = con.cursor()
+        row = cur.execute(
+            "SELECT scene_contract_version, scene_prompt_version FROM reader_journey_runs ORDER BY id DESC LIMIT 1"
+        ).fetchone()
+        con.close()
+        if not row:
+            continue
+        found = True
+        contract, prompt = row
+        assert str(contract).startswith("1.")
+        assert calibration_label(str(contract), prompt_version=str(prompt)) == "legacy_uncalibrated"
+        break
+    assert found, "expected local SQLite reader_journey_runs sample"
+
+
+def mapped_pace(profile):
+    from app.services.reader_journey_v2_mapping import mapped_or_zero
+
+    return mapped_or_zero(profile.pacing_speed)

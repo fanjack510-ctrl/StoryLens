@@ -78,8 +78,8 @@ function minimalViz(nodes: Partial<JourneySceneNode>[]): ReaderJourneyVisualizat
       risk_points: [],
       character_effects: [],
       writing_takeaways: [],
-      evidence_paragraph_ids: [],
-      evidence_count: 0,
+      evidence_paragraph_ids: partial.evidence_paragraph_ids ?? [],
+      evidence_count: partial.evidence_count ?? (partial.evidence_paragraph_ids?.length ?? 0),
       confidence: partial.confidence ?? 0.8,
       primary_payoff: null,
       primary_hook: null,
@@ -351,11 +351,106 @@ describe("node visuals + pacing + segments + chapter summary", () => {
   });
 });
 
-describe("legacy banner", () => {
-  it("flags contract 1.x as legacy_uncalibrated and keeps banner copy", () => {
+describe("CHG-20260721-012 verification matrix", () => {
+  it("1) composite defaults to a single reading_momentum line", () => {
+    const viz = minimalViz([{ scene_ordinal: 1 }, { scene_ordinal: 2 }]);
+    const lines = buildLensChartLines(viz, DEFAULT_OBSERVATION_LENS);
+    expect(lines).toHaveLength(1);
+    expect(lines[0].id).toBe("reading_momentum");
+  });
+
+  it("2) all six lenses switch independently on one chart", () => {
+    const viz = minimalViz([{ scene_ordinal: 1 }, { scene_ordinal: 2 }]);
+    expect(OBSERVATION_LENSES.map((l) => l.id)).toEqual([
+      "composite",
+      "plot_progress",
+      "reading_tension",
+      "emotion",
+      "hook_payoff",
+      "pacing",
+    ]);
+    for (const lens of OBSERVATION_LENSES) {
+      expect(buildLensChartLines(viz, lens.id).length).toBeLessThanOrEqual(2);
+    }
+  });
+
+  it("3) overlay adds at most one compare line", () => {
+    expect(resolveOverlayLines("reading_tension", true).lineCount).toBe(2);
     const viz = minimalViz([{ scene_ordinal: 1 }]);
-    expect(isLegacyUncalibratedVisualization(viz)).toBe(true);
-    expect(isLegacyUncalibratedVisualization(viz, { contractVersion: "2.0" })).toBe(false);
+    expect(
+      buildLensChartLines(viz, "reading_tension", { overlayComposite: true }),
+    ).toHaveLength(2);
+  });
+
+  it("4) emotion journey keeps negative valence", () => {
+    const series = [{ scene_ordinal: 1, start: -90, end: -30 }];
+    expect(resolveMetricValue(series[0])).toBe(-60);
+    const scale = computeYScale(series, 200, "fixed_0_100", valenceYScaleOptions());
+    expect(scale.domainMin).toBe(-100);
+    expect(collectDataWarnings(series, { min: -100, max: 100 })).toHaveLength(0);
+  });
+
+  it("5) hook/payoff shows two linked lines", () => {
+    const viz = minimalViz([{ scene_ordinal: 1, scores: { hook: 80, payoff: 20 } as never }]);
+    const lines = buildLensChartLines(viz, "hook_payoff");
+    expect(lines.map((l) => l.id)).toEqual(["hook", "payoff"]);
+  });
+
+  it("6-7) Beat / silence fragment does not become equal-weight main vertex", () => {
+    const viz = minimalViz([
+      { scene_ordinal: 1, role: "core", scores: { reading_momentum: 80 } as never },
+      {
+        scene_ordinal: 2,
+        role: "beat",
+        node_type: "beat",
+        include_in_main_curve: false,
+        scene_value_summary: "客厅陷入死寂。",
+        scores: { reading_momentum: 5 } as never,
+      },
+      { scene_ordinal: 3, role: "core", scores: { reading_momentum: 78 } as never },
+    ]);
+    const main = mainCurveSeries(buildLensChartLines(viz, "composite")[0].series);
+    expect(main.map((p) => p.scene_ordinal)).toEqual([1, 3]);
+  });
+
+  it("8-10) diagnosis labels for stagnation / empty spin / empty hook", () => {
+    expect(mapDiagnosisCodeToBandLabel("plot_stagnation")).toBe("剧情停滞");
+    expect(mapDiagnosisCodeToBandLabel("empty_fast_pacing")).toBe("空转");
+    expect(mapDiagnosisCodeToBandLabel("empty_hook")).toBe("空钩子");
+    expect(mapDiagnosisCodeToBandLabel("delayed_payoff")).toBe("兑现延迟");
+  });
+
+  it("11-12) peak narrative explains mechanism and keeps evidence hooks", () => {
+    const viz = minimalViz([
+      {
+        scene_ordinal: 1,
+        scores: { reading_momentum: 88, hook: 80, payoff: 70 } as never,
+        scene_value_summary: "信息连续升级形成峰值",
+        positive_mechanism: "effective_payoff",
+        evidence_paragraph_ids: ["P0001", "P0002"],
+        techniques: [{ name: "信息递进", code: "info_escalate" } as never],
+      },
+    ]);
+    const bullets = buildChapterSummaryBullets(viz, [
+      { scene_ordinal: 1, primary_diagnosis: "effective_payoff" },
+    ]);
+    expect(bullets[0].text).toMatch(/高点|优势|机制/);
+    expect(viz.scene_nodes[0].evidence_paragraph_ids.length).toBeGreaterThan(0);
+  });
+
+  it("13) legacy visualization shows uncalibrated banner copy", () => {
+    const viz = minimalViz([{ scene_ordinal: 1 }]);
+    expect(isLegacyUncalibratedVisualization(viz, { contractVersion: "1.3" })).toBe(true);
     expect(LEGACY_UNCALIBRATED_BANNER).toContain("旧版未校准分析");
+  });
+
+  it("14) fixed 0-100 domain is absolute (no chapter min-max rescale)", () => {
+    const series = [
+      { scene_ordinal: 1, value: 10 },
+      { scene_ordinal: 2, value: 90 },
+    ];
+    const scale = computeYScale(series, 240, "fixed_0_100");
+    expect(scale.domainMin).toBe(0);
+    expect(scale.domainMax).toBe(100);
   });
 });
