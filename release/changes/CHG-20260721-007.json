@@ -3,9 +3,16 @@
   "title": "变更登记池与下一版本发布汇总机制",
   "type": "build",
   "base_version": "1.0.2",
-  "status": "registered",
+  "status": "tested",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "4e656f1ca7ec4b5abc6d2780b73a2c5bc800c080",
+      "message": "Add StoryLens change registry and release aggregation",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "scripts",
     "release",
@@ -40,5 +47,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-21T06:02:51Z",
-  "updated_at": "2026-07-21T06:05:13Z"
+  "updated_at": "2026-07-21T06:06:18Z"
 }
