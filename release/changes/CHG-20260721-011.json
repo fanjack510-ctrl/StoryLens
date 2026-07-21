@@ -35,6 +35,12 @@
       "message": "Attach tested-status commit to CHG-20260721-011.",
       "primary": false,
       "multi_change_reason": "attach tested-status commit record"
+    },
+    {
+      "sha": "99c8ed52695dd3f6f02031fb0a9f47ae52ff7c26",
+      "message": "Sync remaining CHG-20260721-011 commit attachments.",
+      "primary": false,
+      "multi_change_reason": "final commit attachment sync"
     }
   ],
   "modules": [
