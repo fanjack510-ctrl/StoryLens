@@ -1,11 +1,13 @@
 import { useState } from "react";
-import { APP_VERSION } from "../../lib/appVersion";
+import { useAppVersion } from "../../lib/useAppVersion";
 import { checkForAppUpdate } from "../../services/updaterService";
 import { UpdateAvailableDialog } from "../desktop/UpdateAvailableDialog";
+import { AboutAppVersion } from "./AboutAppVersion";
 import { TelemetrySettingsCard } from "./TelemetrySettingsCard";
 import "./settings.css";
 
 export function SettingsPrivacyUpdateTab() {
+  const appVersion = useAppVersion();
   const [message, setMessage] = useState("");
   const [checkingUpdate, setCheckingUpdate] = useState(false);
   const [updateDialog, setUpdateDialog] = useState<{
@@ -41,6 +43,14 @@ export function SettingsPrivacyUpdateTab() {
 
   return (
     <div className="settings-module" data-testid="settings-panel-privacy">
+      <article className="settings-card settings-panel" data-testid="settings-about-card">
+        <header className="settings-panel-header">
+          <h2>关于 StoryLens</h2>
+          <p>应用版本来自统一 VERSION 源，与安装包 / updater 一致。</p>
+        </header>
+        <AboutAppVersion />
+      </article>
+
       <article className="settings-card settings-panel" data-testid="settings-update-card">
         <header className="settings-panel-header">
           <h2>自动更新</h2>
@@ -62,7 +72,7 @@ export function SettingsPrivacyUpdateTab() {
           />
         </label>
 
-        <p data-testid="settings-app-version">当前版本：{APP_VERSION}</p>
+        <p data-testid="settings-app-version">当前版本：{appVersion}</p>
 
         <div className="settings-actions">
           <button

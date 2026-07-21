@@ -59,9 +59,11 @@ jobs:
             if ($ref -match '^v(\d+\.\d+\.\d+.*)$') { $version = $Matches[1] }
           }
           if ($version) {
-            ./scripts/set_version.ps1 $version
+            .\.venv\Scripts\python.exe scripts/version_manager.py set $version --allow-same
           } else {
-            Write-Host "Keeping repository version"
+            Write-Host "Keeping repository VERSION"
+            .\.venv\Scripts\python.exe scripts/version_manager.py check
+            if ($LASTEXITCODE) { exit $LASTEXITCODE }
           }
 
       - name: Inject updater public key (optional)

@@ -1,0 +1,11 @@
+{
+  "version": "{{VERSION}}",
+  "notes": "StoryLens {{VERSION}}",
+  "pub_date": "{{PUB_DATE}}",
+  "platforms": {
+    "windows-x86_64": {
+      "signature": "{{SIGNATURE}}",
+      "url": "https://github.com/fanjack510-ctrl/StoryLens/releases/download/v{{VERSION}}/{{INSTALLER_STEM}}.nsis.zip"
+    }
+  }
+}

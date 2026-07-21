@@ -20,13 +20,33 @@ function Write-Step([string]$Message) {
     Write-Host "==== $Message ====" -ForegroundColor Cyan
 }
 
+function Resolve-Python() {
+    $venvPy = Join-Path $Root ".venv\Scripts\python.exe"
+    if (Test-Path $venvPy) { return $venvPy }
+    return "python"
+}
+
 $TauriConf = Join-Path $Root "apps\desktop\src-tauri\tauri.conf.json"
 $TauriConfBackup = $null
 
 try {
+    Write-Step "Version consistency gate"
+    $py = Resolve-Python
+    & $py (Join-Path $Root "scripts\version_manager.py") check
+    if ($LASTEXITCODE) { throw "version_manager.py check failed — refuse to build" }
+    & $py (Join-Path $Root "scripts\version_manager.py") release-guard
+    if ($LASTEXITCODE) { throw "version_manager.py release-guard failed — refuse to build" }
+
+    $versionFile = Join-Path $Root "VERSION"
+    if (-not (Test-Path $versionFile)) { throw "VERSION file missing" }
+    $Summary.version = (Get-Content -LiteralPath $versionFile -Raw -Encoding UTF8).Trim()
+    if (-not $Summary.version) { throw "VERSION file is empty" }
+
     $confRaw = Get-Content -LiteralPath $TauriConf -Raw -Encoding UTF8
     if ($confRaw -match '"version"\s*:\s*"([^"]+)"') {
-        $Summary.version = $Matches[1]
+        if ($Matches[1] -ne $Summary.version) {
+            throw "tauri.conf.json version $($Matches[1]) != VERSION $($Summary.version)"
+        }
     }
 
     # Opt-in signing only. Lingering shell env keys must not enable signing or hang on password prompts.

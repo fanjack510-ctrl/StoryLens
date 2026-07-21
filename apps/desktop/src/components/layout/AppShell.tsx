@@ -1,6 +1,6 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { APP_VERSION } from "../../lib/appVersion";
+import { useAppVersion } from "../../lib/useAppVersion";
 import { api } from "../../services/apiClient";
 import { useUiStore } from "../../stores/uiStore";
 import { DevelopmentNavigationGroup } from "./DevelopmentNavigationGroup";
@@ -23,6 +23,7 @@ function serviceLabel(health: {
 
 export function AppShell() {
   const navigate = useNavigate();
+  const appVersion = useAppVersion();
   const { theme, setTheme } = useUiStore();
   const health = useQuery({
     queryKey: ["health"],
@@ -93,7 +94,7 @@ export function AppShell() {
           </p>
           <DevelopmentNavigationGroup />
           <p className="nav-version" data-testid="app-footer">
-            StoryLens {APP_VERSION}
+            StoryLens {appVersion}
           </p>
         </div>
       </aside>

@@ -1,4 +1,4 @@
-import { APP_VERSION } from "../lib/appVersion";
+import { BUILD_APP_VERSION, formatAppVersionLabel } from "../lib/appVersion";
 
 export type UpdateCheckResult =
   | { kind: "disabled" }
@@ -23,10 +23,11 @@ export async function checkForAppUpdate(manual = false): Promise<UpdateCheckResu
     sessionStorage.getItem("storylens.uiAudit") === "1" &&
     manual
   ) {
+    const currentVersion = formatAppVersionLabel(BUILD_APP_VERSION);
     return {
       kind: "available",
-      currentVersion: APP_VERSION,
-      latestVersion: `${APP_VERSION}-audit`,
+      currentVersion,
+      latestVersion: `${currentVersion}-audit`,
       body: "审计模拟更新说明：稳定性修复与界面安全基线。",
       downloadAndInstall: async () => undefined,
     };

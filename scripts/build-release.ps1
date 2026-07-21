@@ -3,10 +3,14 @@
 # - Does NOT publish to GitHub.
 # - Does NOT choose or write a LICENSE file.
 # - Does NOT send real model requests.
-# - App version comes from apps/desktop/package.json (synced via scripts/set_version.ps1).
+# - App version comes from repository-root VERSION (synced via scripts/version_manager.py).
 $ErrorActionPreference = "Stop"
-$pkg = Get-Content -LiteralPath (Join-Path $PSScriptRoot "..\apps\desktop\package.json") -Raw -Encoding UTF8
-$version = if ($pkg -match '"version"\s*:\s*"([^"]+)"') { $Matches[1] } else { "unknown" }
+$Root = Resolve-Path (Join-Path $PSScriptRoot "..")
+$py = Join-Path $Root ".venv\Scripts\python.exe"
+if (-not (Test-Path $py)) { $py = "python" }
+& $py (Join-Path $Root "scripts\version_manager.py") check
+if ($LASTEXITCODE) { exit $LASTEXITCODE }
+$version = (Get-Content -LiteralPath (Join-Path $Root "VERSION") -Raw -Encoding UTF8).Trim()
 Write-Host "Building StoryLens $version (desktop production bundle)..."
 & "$PSScriptRoot\build_desktop.ps1"
 exit $LASTEXITCODE

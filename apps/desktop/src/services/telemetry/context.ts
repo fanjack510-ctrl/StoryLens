@@ -1,4 +1,4 @@
-import desktopPackage from "../../../package.json";
+import { BUILD_APP_VERSION } from "../../lib/appVersion";
 
 export type TelemetryContext = {
   app_version: string;
@@ -17,7 +17,7 @@ export function getDefaultTelemetryContext(): TelemetryContext {
   const locale =
     typeof navigator !== "undefined" && navigator.language ? navigator.language : "unknown";
   return {
-    app_version: desktopPackage.version ?? "0.0.0",
+    app_version: BUILD_APP_VERSION.trim() || "unknown",
     os_family: detectOsFamily(),
     locale,
   };

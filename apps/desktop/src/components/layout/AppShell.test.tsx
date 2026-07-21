@@ -147,6 +147,17 @@ describe("UI shell navigation", () => {
     expect(status.getAttribute("title") || "").toContain("DB");
   });
 
+  it("shows build-injected app version in footer without stale hardcodes", async () => {
+    renderShell("/library");
+    const footer = await screen.findByTestId("app-footer");
+    await waitFor(() => {
+      expect(footer.textContent || "").toMatch(/StoryLens\s+\d+\.\d+\.\d+/);
+    });
+    expect(footer).not.toHaveTextContent("1.0.0-rc1");
+    expect(footer).not.toHaveTextContent("0.1.0");
+    expect(footer).not.toHaveTextContent("版本未知");
+  });
+
   it("redirects home to library", async () => {
     renderShell("/");
     expect(await screen.findByTestId("library-page")).toBeInTheDocument();

@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
+from app import __version__
 from app.api.v1.router import router as api_v1_router
 from app.api.v1.analysis import router as analysis_router
 from app.api.v1.analysis_recovery import router as analysis_recovery_router
@@ -29,7 +30,7 @@ async def lifespan(_: FastAPI):
     yield
 
 
-app = FastAPI(title="StoryLens API", version="1.0.1", lifespan=lifespan)
+app = FastAPI(title="StoryLens API", version=__version__, lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[

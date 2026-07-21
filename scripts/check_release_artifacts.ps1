@@ -18,6 +18,26 @@ if (-not (Test-Path $ReleaseDir)) {
     Fail "Release directory missing: $ReleaseDir"
 }
 
+$VersionFile = Join-Path $Root "VERSION"
+if (-not (Test-Path $VersionFile)) {
+    Fail "VERSION file missing at repo root"
+}
+$ExpectedVersion = (Get-Content -LiteralPath $VersionFile -Raw -Encoding UTF8).Trim()
+if (-not $ExpectedVersion) {
+    Fail "VERSION file is empty"
+}
+
+$py = Join-Path $Root ".venv\Scripts\python.exe"
+if (-not (Test-Path $py)) { $py = "python" }
+& $py (Join-Path $Root "scripts\version_manager.py") check
+if ($LASTEXITCODE) {
+    Fail "version_manager.py check failed"
+}
+& $py (Join-Path $Root "scripts\version_manager.py") release-guard --artifacts-dir $ReleaseDir
+if ($LASTEXITCODE) {
+    Fail "version_manager.py release-guard failed"
+}
+
 $SummaryPath = Join-Path $ReleaseDir "build-summary.json"
 if (-not (Test-Path $SummaryPath)) {
     Fail "build-summary.json missing under $ReleaseDir"
@@ -41,6 +61,17 @@ if (-not $Installers) {
 foreach ($inst in $Installers) {
     if ($inst.Length -le 0) {
         Fail "Installer is empty: $($inst.FullName)"
+    }
+    if ($inst.Name -notlike "*${ExpectedVersion}*") {
+        Fail "Installer name missing VERSION ${ExpectedVersion}: $($inst.Name)"
+    }
+}
+
+$LatestJson = Join-Path $ReleaseDir "latest.json"
+if (Test-Path $LatestJson) {
+    $latestRaw = Get-Content -LiteralPath $LatestJson -Raw -Encoding UTF8
+    if ($latestRaw -notmatch '"version"\s*:\s*"' + [regex]::Escape($ExpectedVersion) + '"') {
+        Fail "latest.json version does not match VERSION $ExpectedVersion"
     }
 }
 

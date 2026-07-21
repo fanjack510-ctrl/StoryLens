@@ -1,3 +1,5 @@
+import subprocess
+import sys
 from pathlib import Path
 
 REQUIRED = [
@@ -5,6 +7,7 @@ REQUIRED = [
     "AGENTS.md",
     "CODEX_START_PROMPT.md",
     ".env.example",
+    "VERSION",
     "pyproject.toml",
     "apps/api/app/main.py",
     "apps/api/app/db/models.py",
@@ -36,9 +39,12 @@ REQUIRED = [
     "scripts/inspect_last_shutdown.ps1",
     "scripts/check_env.py",
     "scripts/package_project.ps1",
+    "scripts/version_manager.py",
+    "packaging/updater/latest.json.template",
     "docs/10_local_model_calibration.md",
     "docs/11_local_model_selection.md",
     "docs/12_aliyun_qwen_provider.md",
+    "docs/versioning-and-release.md",
     "scripts/probe_aliyun_qwen.py",
     "config/cloud_pricing.example.json",
     "config/cloud_pricing.default.json",
@@ -78,6 +84,15 @@ def main() -> None:
     required_directories = [root / "data"]
     for directory in required_directories:
         directory.mkdir(parents=True, exist_ok=True)
+
+    version_check = subprocess.run(
+        [sys.executable, str(root / "scripts" / "version_manager.py"), "check"],
+        cwd=root,
+        check=False,
+    )
+    if version_check.returncode != 0:
+        raise SystemExit("Version consistency check failed.")
+
     print("Project scaffold check passed.")
 
 
