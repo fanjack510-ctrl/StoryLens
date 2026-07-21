@@ -11,6 +11,12 @@
       "message": "Fix cloud/provider enablement reset in browser-dev (CHG-20260721-011).",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "94b4d54f2e2124cf1ebc0f17805b5ee752821477",
+      "message": "Record CHG-20260721-011 as tested for next release pool.",
+      "primary": false,
+      "multi_change_reason": "registry metadata update after implementation commit"
     }
   ],
   "modules": [
