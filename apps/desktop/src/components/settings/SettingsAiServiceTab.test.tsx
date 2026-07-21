@@ -67,12 +67,14 @@ const connectedConfig = {
 
 const eligibleSetup = {
   ok: true,
-  user_message: "已连接，可以开始分析",
+  user_message: "配置完成，可以开始分析",
   persisted: true,
   credential_configured: true,
   provider_enabled: true,
   cloud_enabled: true,
   provider_eligible: true,
+  analysis_ready: true,
+  model_validated: true,
   selected_provider_id: "aliyun_qwen_plus",
   connection_status: "connected",
   analysis_mode: "BALANCED",
@@ -103,7 +105,7 @@ describe("SettingsAiServiceTab recommended setup", () => {
     vi.mocked(aiServiceConfig.fetchRecommendedQwenStatus).mockResolvedValue(eligibleSetup as any);
     vi.mocked(aiServiceConfig.configureRecommendedQwenService).mockResolvedValue({
       ...eligibleSetup,
-      user_message: "保存成功，已连接，可以开始分析。",
+      user_message: "配置完成。模型服务、计价和预算检查均已通过，可以开始分析。",
       persisted: true,
     } as any);
   });
@@ -115,47 +117,73 @@ describe("SettingsAiServiceTab recommended setup", () => {
   it("shows eligible only when backend provider_eligible is true", async () => {
     renderTab();
     expect(await screen.findByTestId("ai-service-connection-status")).toHaveTextContent(
-      "已连接，可以开始分析",
+      "当前可用于分析",
     );
-    expect(screen.getByTestId("ai-service-status-facts")).toHaveTextContent("可用于分析：是");
+    expect(screen.getByTestId("ai-service-status-facts")).toHaveTextContent("最终分析就绪：是");
+    expect(screen.getByTestId("ai-service-status-facts")).toHaveTextContent("云端分析：已开启");
   });
 
-  it("does not show 可开始分析 when eligibility is false even if credential configured", async () => {
+  it("does not show ready when eligibility is false even if credential configured", async () => {
     vi.mocked(aiServiceConfig.fetchRecommendedQwenStatus).mockResolvedValue({
       ...eligibleSetup,
       ok: false,
       provider_eligible: false,
+      analysis_ready: false,
       cloud_enabled: false,
-      user_message: "AI 服务已启用，但云端连接未开启",
+      blockers: ["cloud_master_switch_off"],
+      user_message: "云端模型服务尚未开启",
       needs_cloud_consent: true,
     } as any);
     renderTab();
     expect(await screen.findByTestId("ai-service-connection-status")).toHaveTextContent(
-      "云端连接未开启",
+      "当前不可用于分析",
     );
-    expect(screen.getByTestId("ai-service-status-facts")).toHaveTextContent("可用于分析：否");
+    expect(screen.getByTestId("ai-service-status-facts")).toHaveTextContent("最终分析就绪：否");
+    expect(screen.getByTestId("ai-service-status-facts")).toHaveTextContent("云端分析：未开启");
     expect(screen.getByTestId("ai-service-repair")).toBeInTheDocument();
   });
 
-  it("test connection calls shared configure service with persist false", async () => {
+  it("shows pricing blocker as the readiness reason", async () => {
+    vi.mocked(aiServiceConfig.fetchRecommendedQwenStatus).mockResolvedValue({
+      ...eligibleSetup,
+      ok: false,
+      provider_eligible: false,
+      analysis_ready: false,
+      blockers: ["pricing_unavailable"],
+      user_message: "当前模型缺少计价信息",
+    } as any);
+    renderTab();
+    expect(await screen.findByTestId("ai-service-connection-status")).toHaveTextContent(
+      "当前模型缺少计价信息",
+    );
+    expect(screen.getByTestId("ai-service-readiness-detail")).toHaveTextContent("处理方式");
+    expect(screen.getByTestId("ai-service-readiness-detail")).not.toHaveTextContent(
+      "BUDGET_NOT_AVAILABLE",
+    );
+  });
+
+  it("verify model service calls shared configure with persist false", async () => {
     vi.mocked(aiServiceConfig.configureRecommendedQwenService).mockResolvedValue({
       ...eligibleSetup,
       ok: true,
       persisted: false,
-      user_message: "连接测试成功（尚未保存配置）。",
+      analysis_ready: false,
+      model_validated: true,
+      user_message: "API Key 与模型服务验证成功。验证成功，保存配置后还需检查分析预算和计价信息。",
     } as any);
     renderTab();
     await screen.findByTestId("ai-service-connection-status");
+    expect(screen.getByTestId("ai-service-test")).toHaveTextContent("验证模型服务");
     fireEvent.click(screen.getByTestId("ai-service-test"));
     await waitFor(() => {
       expect(aiServiceConfig.configureRecommendedQwenService).toHaveBeenCalledWith(
         expect.objectContaining({ persist: false }),
       );
     });
-    expect(screen.getByRole("status")).toHaveTextContent("尚未保存");
+    expect(screen.getByRole("status")).toHaveTextContent("验证成功");
   });
 
-  it("save calls the same configure service with persist true", async () => {
+  it("verify and save calls configure with persist true", async () => {
     renderTab();
     await screen.findByTestId("ai-service-connection-status");
     fireEvent.click(screen.getByTestId("cloud-body-consent"));
@@ -172,18 +200,18 @@ describe("SettingsAiServiceTab recommended setup", () => {
         }),
       );
     });
-    expect(screen.getByRole("status")).toHaveTextContent("保存成功");
+    expect(screen.getByRole("status")).toHaveTextContent("配置完成");
   });
 
   it("keeps status after remount from backend setup endpoint", async () => {
     const { unmount } = renderTab();
     expect(await screen.findByTestId("ai-service-connection-status")).toHaveTextContent(
-      "已连接，可以开始分析",
+      "当前可用于分析",
     );
     unmount();
     renderTab();
     expect(await screen.findByTestId("ai-service-connection-status")).toHaveTextContent(
-      "已连接，可以开始分析",
+      "当前可用于分析",
     );
     expect(aiServiceConfig.fetchRecommendedQwenStatus).toHaveBeenCalled();
   });

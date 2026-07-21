@@ -41,6 +41,7 @@ REQUIRED = [
     "docs/12_aliyun_qwen_provider.md",
     "scripts/probe_aliyun_qwen.py",
     "config/cloud_pricing.example.json",
+    "config/cloud_pricing.default.json",
     "apps/desktop/package.json",
     "apps/desktop/src/app/App.tsx",
     "apps/desktop/src-tauri/tauri.conf.json",

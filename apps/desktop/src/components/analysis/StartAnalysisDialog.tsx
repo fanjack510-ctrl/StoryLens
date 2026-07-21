@@ -885,7 +885,8 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
         PROVIDER_HEALTH_STALE: "AI服务健康状态已过期，请刷新状态或重新测试连接。",
         PROVIDER_NOT_CONNECTED: "AI服务尚未连接。",
         CLOUD_MASTER_SWITCH_OFF: "云端AI尚未开启。",
-        BUDGET_NOT_AVAILABLE: "当前预算或价格配置不满足请求条件。",
+        BUDGET_NOT_AVAILABLE: "当前无法计算本次分析费用",
+        MODEL_PRICING_NOT_FOUND: "当前模型缺少计价信息",
         CLOUD_CONSENT_REQUIRED: "请确认当前章节正文将发送至云端模型服务。",
         PROVIDER_STATE_CHANGED: "服务状态已经变化，请刷新后重新确认。",
         FULL_PIPELINE_HARD_BUDGET_INSUFFICIENT:

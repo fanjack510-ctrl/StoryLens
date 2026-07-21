@@ -26,6 +26,10 @@ export type RecommendedQwenSetupStatus = {
   blockers: string[];
   needs_cloud_consent: boolean;
   error_code?: string | null;
+  model_validated?: boolean;
+  analysis_ready?: boolean;
+  readiness_reasons?: string[];
+  model_service_validated?: boolean;
 };
 
 export type ConfigureRecommendedQwenInput = {
@@ -84,6 +88,9 @@ export async function configureRecommendedQwenService(
       blockers: [mapped.rawCode || "request_failed"],
       needs_cloud_consent: false,
       error_code: mapped.rawCode,
+      model_validated: false,
+      analysis_ready: false,
+      readiness_reasons: [],
     };
   }
 }

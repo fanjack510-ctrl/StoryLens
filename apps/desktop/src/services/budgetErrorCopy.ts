@@ -2,7 +2,9 @@
 
 export const BUDGET_ERROR_USER_COPY: Record<string, string> = {
   INSUFFICIENT_BUDGET_RESERVATION:
-    "本阶段需要的云端请求额度超过今日剩余额度。",
+    "当前预算不足，无法开始分析",
+  BUDGET_NOT_AVAILABLE: "当前无法计算本次分析费用",
+  MODEL_PRICING_NOT_FOUND: "当前模型缺少计价信息",
   CLOUD_REQUEST_LIMIT_EXCEEDED: "今日云端请求保护已达到上限。",
   CLOUD_TOKEN_LIMIT_EXCEEDED: "今日Token保护已达到上限。",
   CLOUD_COST_LIMIT_EXCEEDED: "今日费用预算已达到上限。",

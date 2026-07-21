@@ -54,12 +54,16 @@ const CONNECTION_ERROR_LABELS: Record<string, { message: string; hint: string }>
     hint: "请重新打开确认框并点击“确认并测试”。",
   },
   BUDGET_NOT_AVAILABLE: {
-    message: "价格或预算配置不可用。",
-    hint: "请先完成价格配置并检查云端预算。",
+    message: "当前无法计算本次分析费用",
+    hint: "检查模型映射和计价配置，或切换到已有计价信息的模型。",
+  },
+  MODEL_PRICING_NOT_FOUND: {
+    message: "当前模型缺少计价信息",
+    hint: "检查模型映射和计价配置，或切换到已有计价信息的模型。",
   },
   INSUFFICIENT_BUDGET_RESERVATION: {
-    message: "剩余请求、Token或费用不足。",
-    hint: "请等待预算恢复或调整预算后再试。",
+    message: "当前预算不足，无法开始分析",
+    hint: "提高每日预算，或等待今日用量重置后再试。",
   },
   PROVIDER_DISABLED: {
     message: "Provider已停用。",
@@ -726,7 +730,9 @@ export function ProvidersPage() {
               <dt>预计费用</dt>
               <dd>
                 {realTestPreflight
-                  ? `${realTestPreflight.estimated_cost ?? "未知"} ${realTestPreflight.currency || ""}`
+                  ? realTestPreflight.estimated_cost == null
+                    ? "无法计算（缺少计价信息）"
+                    : `${realTestPreflight.estimated_cost} ${realTestPreflight.currency || ""}`
                   : "正在读取预算……"}
               </dd>
               <dt>当前剩余预算</dt>
@@ -737,11 +743,50 @@ export function ProvidersPage() {
               </dd>
               <dt>用户内容</dt>
               <dd>不发送用户小说正文</dd>
+              <dt>模型服务验证</dt>
+              <dd data-testid="connection-test-model-status">
+                {realTestPreflight
+                  ? realTestPreflight.blockers?.some((b: string) =>
+                      /CREDENTIAL|PROVIDER_DISABLED|PROVIDER_NOT|CLOUD_MASTER|AUTH/i.test(b),
+                    )
+                    ? "未通过"
+                    : realTestPreflight.blockers?.some((b: string) =>
+                          /BUDGET_NOT_AVAILABLE|MODEL_PRICING|INSUFFICIENT_BUDGET/i.test(b),
+                        )
+                      ? "可尝试（分析配置未就绪）"
+                      : "可执行"
+                  : "检查中…"}
+              </dd>
+              <dt>分析就绪检查</dt>
+              <dd data-testid="connection-test-readiness-status">
+                {realTestPreflight
+                  ? realTestPreflight.within_budget
+                    ? "已就绪"
+                    : `未就绪：${(realTestPreflight.blockers || [])
+                        .map((code: string) => CONNECTION_ERROR_LABELS[code]?.message || code)
+                        .join("；")}`
+                  : "检查中…"}
+              </dd>
             </dl>
             {realTestPreflight && !realTestPreflight.within_budget && (
-              <p role="alert">
-                当前不可测试：{(realTestPreflight.blockers || []).join("、")}
-              </p>
+              <div role="alert" data-testid="connection-test-block-reason">
+                <p>
+                  当前不可测试：
+                  {(realTestPreflight.blockers || [])
+                    .map((code: string) => CONNECTION_ERROR_LABELS[code]?.message || code)
+                    .join("、")}
+                </p>
+                <p>
+                  {(realTestPreflight.blockers || [])
+                    .map((code: string) => CONNECTION_ERROR_LABELS[code]?.hint)
+                    .filter(Boolean)
+                    .join(" ")}
+                </p>
+                <details>
+                  <summary>技术详情</summary>
+                  <pre>{(realTestPreflight.blockers || []).join(", ")}</pre>
+                </details>
+              </div>
             )}
             {realTestError && (
               <p role="alert">

@@ -544,7 +544,7 @@ function aiSetupResponse(scenario: MockScenario, persist: boolean) {
   if (mode === "fail") {
     return {
       ok: false,
-      user_message: "审计模拟：连接失败（DNS/凭据无效）",
+      user_message: "模型服务验证失败\nAPI Key 无效或模型服务拒绝了请求。",
       persisted: false,
       credential_configured: false,
       provider_enabled: false,
@@ -553,9 +553,12 @@ function aiSetupResponse(scenario: MockScenario, persist: boolean) {
       selected_provider_id: "aliyun_qwen_plus",
       connection_status: "failed",
       analysis_mode: null,
-      blockers: ["connection_failed"],
+      blockers: ["connection_test_failed"],
       needs_cloud_consent: false,
-      error_code: "PROVIDER_CONNECTION_FAILED",
+      error_code: "CREDENTIAL_INVALID",
+      model_service_validated: false,
+      analysis_ready: false,
+      readiness_reasons: ["API Key 无效或已失效"],
     };
   }
   if (mode === "needs_repair") {
@@ -573,22 +576,30 @@ function aiSetupResponse(scenario: MockScenario, persist: boolean) {
       blockers: ["credential_stale"],
       needs_cloud_consent: true,
       error_code: "CONFIG_NEEDS_REPAIR",
+      model_service_validated: false,
+      analysis_ready: false,
+      readiness_reasons: ["配置需要修复"],
     };
   }
   return {
     ok: true,
-    user_message: persist ? "已保存推荐配置（审计 Mock）" : "连接测试成功（审计 Mock）",
+    user_message: persist
+      ? "配置完成。模型服务、计价和预算检查均已通过，可以开始分析。"
+      : "API Key 与模型服务验证成功。验证成功，保存配置后还需检查分析预算和计价信息。",
     persisted: persist,
     credential_configured: true,
-    provider_enabled: true,
-    cloud_enabled: true,
-    provider_eligible: true,
+    provider_enabled: persist,
+    cloud_enabled: persist,
+    provider_eligible: persist,
     selected_provider_id: "aliyun_qwen_plus",
-    connection_status: "connected",
+    connection_status: persist ? "connected" : "tested",
     analysis_mode: "BALANCED",
     blockers: [],
     needs_cloud_consent: false,
     error_code: null,
+    model_service_validated: true,
+    analysis_ready: persist,
+    readiness_reasons: persist ? [] : ["API Key 尚未保存"],
   };
 }
 

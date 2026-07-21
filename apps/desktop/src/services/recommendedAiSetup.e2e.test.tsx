@@ -93,7 +93,7 @@ describe("recommended AI setup e2e path", () => {
     vi.mocked(aiServiceConfig.configureRecommendedQwenService).mockResolvedValue({
       ok: true,
       persisted: true,
-      user_message: "保存成功，已连接，可以开始分析。",
+      user_message: "配置完成。模型服务、计价和预算检查均已通过，可以开始分析。",
       credential_configured: true,
       provider_enabled: true,
       cloud_enabled: true,
@@ -103,6 +103,9 @@ describe("recommended AI setup e2e path", () => {
       analysis_mode: "BALANCED",
       blockers: [],
       needs_cloud_consent: false,
+      model_service_validated: true,
+      analysis_ready: true,
+      readiness_reasons: [],
     });
     vi.mocked(providersApi.list).mockResolvedValue([plus] as any);
     vi.mocked(providersApi.cloud).mockResolvedValue({ enabled: true, state: "available" });
@@ -141,12 +144,14 @@ describe("recommended AI setup e2e path", () => {
       target: { value: "sk-e2e-test-key" },
     });
     fireEvent.click(screen.getByRole("checkbox"));
-    fireEvent.click(screen.getByTestId("onboarding-save-next"));
+    fireEvent.click(screen.getByTestId("onboarding-test"));
     await waitFor(() => {
       expect(aiServiceConfig.configureRecommendedQwenService).toHaveBeenCalledWith(
         expect.objectContaining({ persist: true }),
       );
     });
+    await waitFor(() => expect(screen.getByTestId("onboarding-save-next")).not.toBeDisabled());
+    fireEvent.click(screen.getByTestId("onboarding-save-next"));
     expect(await screen.findByTestId("onboarding-step-start")).toBeInTheDocument();
     cleanup();
 

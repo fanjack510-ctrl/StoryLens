@@ -91,7 +91,7 @@ test.describe("01 onboarding", () => {
     await page.getByTestId("onboarding-api-key").fill(AUDIT_FAKE_API_KEY);
     await page.locator(".consent input[type=checkbox]").first().check();
     await page.getByTestId("onboarding-test").click();
-    await expect(page.getByTestId("onboarding-test")).toContainText("测试中");
+    await expect(page.getByTestId("onboarding-test")).toContainText("验证中");
     await shot(page, {
       id: "01-04",
       file: "01_onboarding_test_pending.png",
@@ -138,6 +138,8 @@ test.describe("01 onboarding", () => {
     await openWizardStep2(page);
     await page.getByTestId("onboarding-api-key").fill(AUDIT_FAKE_API_KEY);
     await page.locator(".consent input[type=checkbox]").first().check();
+    await page.getByTestId("onboarding-test").click();
+    await expect(page.getByTestId("onboarding-save-next")).toBeEnabled({ timeout: 30_000 });
     await page.getByTestId("onboarding-save-next").click();
     await page.getByTestId("onboarding-step-start").waitFor({ timeout: 30_000 });
     await shot(page, {

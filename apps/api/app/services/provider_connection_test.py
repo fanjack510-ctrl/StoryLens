@@ -29,12 +29,16 @@ from app.schemas.settings import (
     ProviderConnectionTestResponse,
 )
 from app.services.cloud_budget import daily_usage
-from app.services.cloud_pricing import estimate_cost, pricing_status
+from app.services.cloud_pricing import estimate_cost, pricing_status, resolve_cloud_pricing_path
 from app.services.credentials.base import CredentialStore
 from app.services.provider_runtime import apply_provider_runtime, cloud_master_enabled
 from app.services.structured_output import extract_json_object
 
-PRICING_PATH = Path(__file__).resolve().parents[4] / "config" / "cloud_pricing.json"
+# Prefer resolved path so packaged installs fall back to cloud_pricing.default.json.
+def _pricing_path() -> Path:
+    return resolve_cloud_pricing_path(Path("config/cloud_pricing.json"))
+
+
 PROMPT_VERSION = "connection-test-v1"
 SCHEMA_VERSION = "v1"
 ESTIMATED_INPUT_TOKENS = 96
@@ -135,14 +139,15 @@ def connection_test_preflight(
         else True
     )
     master_enabled = cloud_master_enabled(session) if capabilities.cloud else True
-    pricing = pricing_status(PRICING_PATH)
+    pricing_path = _pricing_path()
+    pricing = pricing_status(pricing_path)
     budget = _budget_value(session)
     usage = daily_usage(session, budget, master_enabled, pricing)
     estimated_cost, currency, pricing_version = estimate_cost(
         provider.default_model,
         ESTIMATED_INPUT_TOKENS,
         max_output_tokens,
-        PRICING_PATH,
+        pricing_path,
     )
 
     blockers: list[str] = []
@@ -158,15 +163,17 @@ def connection_test_preflight(
         blockers.append("CLOUD_MASTER_SWITCH_OFF")
     if not pricing.get("enabled"):
         blockers.append("BUDGET_NOT_AVAILABLE")
-    if usage["available_requests"] < 1:
-        blockers.append("INSUFFICIENT_BUDGET_RESERVATION")
-    if usage["available_tokens"] < ESTIMATED_INPUT_TOKENS + max_output_tokens:
-        blockers.append("INSUFFICIENT_BUDGET_RESERVATION")
-    if (
-        estimated_cost is None
-        or usage["available_estimated_cost"] < float(estimated_cost)
-    ):
-        blockers.append("INSUFFICIENT_BUDGET_RESERVATION")
+    elif estimated_cost is None:
+        # Pricing file enabled but this model has no row — distinct from daily budget.
+        blockers.append("MODEL_PRICING_NOT_FOUND")
+    else:
+        # Only evaluate reservation dimensions when cost is known.
+        if usage["available_requests"] < 1:
+            blockers.append("INSUFFICIENT_BUDGET_RESERVATION")
+        if usage["available_tokens"] < ESTIMATED_INPUT_TOKENS + max_output_tokens:
+            blockers.append("INSUFFICIENT_BUDGET_RESERVATION")
+        if usage["available_estimated_cost"] < float(estimated_cost):
+            blockers.append("INSUFFICIENT_BUDGET_RESERVATION")
 
     return ProviderConnectionTestPreflight(
         provider=provider_name,
@@ -413,14 +420,14 @@ async def run_connection_test(
             response.model,
             response.input_tokens,
             response.output_tokens,
-            PRICING_PATH,
+            _pricing_path(),
         )
         if cost is None:
             cost, currency, pricing_version = estimate_cost(
                 preflight.configured_model,
                 response.input_tokens,
                 response.output_tokens,
-                PRICING_PATH,
+                _pricing_path(),
             )
         invocation = _invocation(
             run_id=run.id,

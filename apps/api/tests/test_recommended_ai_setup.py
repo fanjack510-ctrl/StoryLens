@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Generator
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -72,6 +73,21 @@ def _fail_transport(**_kwargs) -> dict:
     return {"overall_status": "failed", "error_code": "PROVIDER_DNS_ERROR"}
 
 
+def _ok_model(**_kwargs) -> dict:
+    return {"ok": True, "error_code": None, "model": "qwen3.7-plus"}
+
+
+def _fail_model(**_kwargs) -> dict:
+    return {"ok": False, "error_code": "CREDENTIAL_INVALID", "detail": "auth"}
+
+
+def _patch_model_probe(monkeypatch, probe=_ok_model) -> None:
+    monkeypatch.setattr(
+        "app.services.recommended_ai_setup._default_model_probe",
+        probe,
+    )
+
+
 @pytest.fixture
 def setup_env(tmp_path, verified_cloud_pricing) -> Generator[tuple[TestClient, Session, FakeCredentialStore], None, None]:
     engine = create_engine(
@@ -98,10 +114,7 @@ def setup_env(tmp_path, verified_cloud_pricing) -> Generator[tuple[TestClient, S
 
 def test_configure_persists_credential_and_enables_cloud(setup_env, monkeypatch) -> None:
     client, session, store = setup_env
-    monkeypatch.setattr(
-        "app.services.recommended_ai_setup.run_transport_diagnostic",
-        _ok_transport,
-    )
+    _patch_model_probe(monkeypatch)
     response = client.post(
         "/api/v1/desktop/ai-setup/recommended-qwen",
         json={
@@ -119,6 +132,8 @@ def test_configure_persists_credential_and_enables_cloud(setup_env, monkeypatch)
     assert body["provider_enabled"] is True
     assert body["cloud_enabled"] is True
     assert body["provider_eligible"] is True
+    assert body.get("analysis_ready") is True
+    assert body.get("model_service_validated") is True
     assert body["selected_provider_id"] == CANONICAL_PROVIDER_ID
     assert "sk-test-secret-value" not in response.text
     assert store.get(CANONICAL_PROVIDER_ID) == "sk-test-secret-value"
@@ -140,10 +155,7 @@ def test_configure_persists_credential_and_enables_cloud(setup_env, monkeypatch)
 
 def test_test_only_does_not_claim_saved_or_enable_cloud(setup_env, monkeypatch) -> None:
     client, session, store = setup_env
-    monkeypatch.setattr(
-        "app.services.recommended_ai_setup.run_transport_diagnostic",
-        _ok_transport,
-    )
+    _patch_model_probe(monkeypatch)
     response = client.post(
         "/api/v1/desktop/ai-setup/recommended-qwen",
         json={
@@ -157,7 +169,9 @@ def test_test_only_does_not_claim_saved_or_enable_cloud(setup_env, monkeypatch) 
     body = response.json()
     assert body["ok"] is True
     assert body["persisted"] is False
-    assert "尚未保存" in body["user_message"]
+    assert body.get("model_service_validated") is True
+    assert body.get("analysis_ready") is False
+    assert "验证成功" in body["user_message"] or "保存配置后" in body["user_message"]
     assert store.get(CANONICAL_PROVIDER_ID) is None
     cloud = session.get(ApplicationSetting, "cloud_enabled")
     assert cloud is None or json.loads(cloud.value_json) is False
@@ -166,10 +180,6 @@ def test_test_only_does_not_claim_saved_or_enable_cloud(setup_env, monkeypatch) 
 def test_failed_test_does_not_overwrite_existing_key(setup_env, monkeypatch) -> None:
     _client, session, store = setup_env
     store.set(CANONICAL_PROVIDER_ID, "sk-original-valid-key")
-    monkeypatch.setattr(
-        "app.services.recommended_ai_setup.run_transport_diagnostic",
-        _fail_transport,
-    )
     result = configure_recommended_qwen(
         session=session,
         store=store,
@@ -178,7 +188,7 @@ def test_failed_test_does_not_overwrite_existing_key(setup_env, monkeypatch) -> 
         analysis_mode="BALANCED",
         cloud_body_consent=True,
         persist=True,
-        transport_probe=_fail_transport,
+        model_probe=_fail_model,
     )
     assert result.ok is False
     assert store.get(CANONICAL_PROVIDER_ID) == "sk-original-valid-key"
@@ -186,10 +196,7 @@ def test_failed_test_does_not_overwrite_existing_key(setup_env, monkeypatch) -> 
 
 def test_without_consent_does_not_enable_cloud(setup_env, monkeypatch) -> None:
     client, _session, store = setup_env
-    monkeypatch.setattr(
-        "app.services.recommended_ai_setup.run_transport_diagnostic",
-        _ok_transport,
-    )
+    _patch_model_probe(monkeypatch)
     response = client.post(
         "/api/v1/desktop/ai-setup/recommended-qwen",
         json={
@@ -208,10 +215,7 @@ def test_without_consent_does_not_enable_cloud(setup_env, monkeypatch) -> None:
 
 def test_does_not_create_duplicate_providers(setup_env, monkeypatch) -> None:
     client, session, _store = setup_env
-    monkeypatch.setattr(
-        "app.services.recommended_ai_setup.run_transport_diagnostic",
-        _ok_transport,
-    )
+    _patch_model_probe(monkeypatch)
     payload = {
         "api_key": "sk-test-secret-value",
         "analysis_mode": "BALANCED",
@@ -233,10 +237,7 @@ def test_does_not_create_duplicate_providers(setup_env, monkeypatch) -> None:
 
 def test_status_survives_reload(setup_env, monkeypatch) -> None:
     client, session, store = setup_env
-    monkeypatch.setattr(
-        "app.services.recommended_ai_setup.run_transport_diagnostic",
-        _ok_transport,
-    )
+    _patch_model_probe(monkeypatch)
     assert client.post(
         "/api/v1/desktop/ai-setup/recommended-qwen",
         json={
@@ -252,6 +253,113 @@ def test_status_survives_reload(setup_env, monkeypatch) -> None:
     again = client.get("/api/v1/desktop/ai-setup/recommended-qwen").json()
     assert again["credential_configured"] is True
     assert again["provider_eligible"] is True
+
+
+def test_empty_api_key_without_existing_credential_fails(setup_env, monkeypatch) -> None:
+    client, _session, _store = setup_env
+    _patch_model_probe(monkeypatch)
+    response = client.post(
+        "/api/v1/desktop/ai-setup/recommended-qwen",
+        json={
+            "api_key": None,
+            "analysis_mode": "BALANCED",
+            "cloud_body_consent": True,
+            "persist": True,
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["ok"] is False
+    assert body["error_code"] == "CREDENTIAL_MISSING"
+
+
+def test_model_ok_but_pricing_missing_is_not_analysis_ready(
+    setup_env, monkeypatch, tmp_path
+) -> None:
+    client, session, store = setup_env
+    _patch_model_probe(monkeypatch)
+    empty = tmp_path / "empty_pricing.json"
+    empty.write_text(
+        json.dumps(
+            {
+                "version": "unconfigured",
+                "currency": "CNY",
+                "models": {"qwen3.7-plus": {"input_per_million": None, "output_per_million": None}},
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("STORYLENS_CLOUD_PRICING_PATH", str(empty))
+    from app.services.cloud_pricing import clear_pricing_path_cache
+
+    clear_pricing_path_cache()
+    response = client.post(
+        "/api/v1/desktop/ai-setup/recommended-qwen",
+        json={
+            "api_key": "sk-test-secret-value",
+            "analysis_mode": "BALANCED",
+            "cloud_body_consent": True,
+            "persist": True,
+        },
+    )
+    body = response.json()
+    assert body["persisted"] is True
+    assert body.get("model_service_validated") is True
+    assert body.get("analysis_ready") is False
+    assert body["provider_eligible"] is False
+    assert any("pricing" in b or "budget" in b.lower() for b in body["blockers"]) or body[
+        "error_code"
+    ]
+    monkeypatch.delenv("STORYLENS_CLOUD_PRICING_PATH", raising=False)
+    clear_pricing_path_cache()
+
+
+def test_api_key_not_in_sqlite_after_setup(setup_env, monkeypatch) -> None:
+    client, session, _store = setup_env
+    _patch_model_probe(monkeypatch)
+    secret = "sk-must-not-appear-in-db"
+    assert client.post(
+        "/api/v1/desktop/ai-setup/recommended-qwen",
+        json={
+            "api_key": secret,
+            "analysis_mode": "BALANCED",
+            "cloud_body_consent": True,
+            "persist": True,
+        },
+    ).json()["ok"]
+    for row in session.scalars(select(ApplicationSetting)):
+        assert secret not in row.value_json
+    for row in session.scalars(select(ProviderConfiguration)):
+        blob = " ".join(
+            str(getattr(row, field))
+            for field in (
+                "display_name",
+                "workspace_id",
+                "base_url",
+                "plus_model",
+                "credential_reference",
+            )
+        )
+        assert secret not in blob
+
+
+def test_default_pricing_resolves_qwen37_plus(tmp_path) -> None:
+    from app.services.cloud_pricing import (
+        estimate_cost,
+        model_pricing_available,
+        pricing_status,
+        resolve_cloud_pricing_path,
+    )
+
+    path = resolve_cloud_pricing_path(Path("config/cloud_pricing.json"))
+    status = pricing_status(path)
+    assert status["enabled"] is True
+    assert "qwen3.7-plus" in status["model_names"]
+    assert model_pricing_available("qwen3.7-plus", path) is True
+    cost, currency, version = estimate_cost("qwen3.7-plus", 1000, 500, path)
+    assert cost is not None and cost > 0
+    assert currency == "CNY"
+    assert version and "official-list-price" in version
 
 
 def test_repair_requires_consent_before_enabling_cloud(setup_env) -> None:
@@ -327,35 +435,3 @@ def test_production_credential_store_is_keyring() -> None:
     assert isinstance(store, KeyringCredentialStore)
     assert "FakeCredentialStore" not in type(store).__name__
     get_credential_store.cache_clear()
-
-
-def test_api_key_not_in_sqlite_after_setup(setup_env, monkeypatch) -> None:
-    client, session, _store = setup_env
-    monkeypatch.setattr(
-        "app.services.recommended_ai_setup.run_transport_diagnostic",
-        _ok_transport,
-    )
-    secret = "sk-must-not-appear-in-db"
-    assert client.post(
-        "/api/v1/desktop/ai-setup/recommended-qwen",
-        json={
-            "api_key": secret,
-            "analysis_mode": "BALANCED",
-            "cloud_body_consent": True,
-            "persist": True,
-        },
-    ).json()["ok"]
-    for row in session.scalars(select(ApplicationSetting)):
-        assert secret not in row.value_json
-    for row in session.scalars(select(ProviderConfiguration)):
-        blob = " ".join(
-            str(getattr(row, field))
-            for field in (
-                "display_name",
-                "workspace_id",
-                "base_url",
-                "plus_model",
-                "credential_reference",
-            )
-        )
-        assert secret not in blob

@@ -242,6 +242,9 @@ def _recommended_setup_response(result) -> RecommendedQwenSetupResponse:
         blockers=list(result.blockers),
         needs_cloud_consent=result.needs_cloud_consent,
         error_code=result.error_code,
+        model_service_validated=bool(getattr(result, "model_validated", False)),
+        analysis_ready=bool(getattr(result, "analysis_ready", False)),
+        readiness_reasons=list(getattr(result, "readiness_reasons", []) or []),
     )
 
 

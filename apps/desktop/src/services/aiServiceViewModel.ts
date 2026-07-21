@@ -53,7 +53,7 @@ const USER_STATUS_LABELS: Record<AiUserStatusCode, string> = {
   not_eligible: "配置尚未完成，暂时无法开始分析",
   dns_failed: "无法连接云端服务，请检查网络或代理设置",
   auth_failed: "API Key 无效，请检查后重新测试。",
-  healthy: "已连接，可以开始分析",
+  healthy: "配置完成，可以开始分析",
   awaiting_provider_recovery: "云端服务暂时波动，系统正在自动恢复",
   unknown: "AI服务状态未知",
 };

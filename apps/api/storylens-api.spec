@@ -13,6 +13,9 @@ datas = [
     (str(REPO / "packages" / "prompts"), "packages/prompts"),
     (str(REPO / "config" / "reader_journey_formulas.json"), "config"),
     (str(REPO / "config" / "cloud_pricing.example.json"), "config"),
+    # Verified official list-price fallback; resolve_cloud_pricing_path prefers this
+    # when config/cloud_pricing.json is absent in packaged installs.
+    (str(REPO / "config" / "cloud_pricing.default.json"), "config"),
 ]
 
 hiddenimports = [

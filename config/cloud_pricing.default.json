@@ -1,0 +1,12 @@
+{
+  "version": "aliyun-cn-beijing-2026-07-21-official-list-price-v1",
+  "currency": "CNY",
+  "source": "Aliyun Model Studio official list price (China mainland, ≤256K tier where applicable)",
+  "models": {
+    "qwen3.7-plus": {"input_per_million": 2.0, "output_per_million": 8.0},
+    "qwen3.7-max": {"input_per_million": 12.0, "output_per_million": 36.0},
+    "qwen3.6-flash": {"input_per_million": 1.2, "output_per_million": 7.2},
+    "qwen3.7-plus-response": {"input_per_million": 2.0, "output_per_million": 8.0},
+    "configured-plus": {"input_per_million": 2.0, "output_per_million": 8.0}
+  }
+}

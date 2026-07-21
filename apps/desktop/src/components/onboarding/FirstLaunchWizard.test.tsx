@@ -9,6 +9,8 @@ const setupQueryState = vi.hoisted(() => ({
   data: undefined as
     | {
         credential_configured: boolean;
+        cloud_enabled?: boolean;
+        blockers?: string[];
       }
     | undefined,
 }));
@@ -91,7 +93,7 @@ describe("FirstLaunchWizard AI setup", () => {
     expect(screen.getByTestId("onboarding-step-ai")).toBeInTheDocument();
   });
 
-  it("uses neutral tone before any connection test", () => {
+  it("uses neutral tone before any verification", () => {
     render(
       <MemoryRouter>
         <FirstLaunchWizard />
@@ -102,23 +104,39 @@ describe("FirstLaunchWizard AI setup", () => {
     expect(status).toHaveAttribute("data-tone", "neutral");
     expect(status.className).toContain("onboarding-status-card--neutral");
     expect(status.className).not.toContain("onboarding-status-card--success");
-    expect(status).toHaveTextContent("尚未测试连接");
+    expect(status).toHaveTextContent("尚未配置");
   });
 
-  it("uses success tone after a successful connection test", async () => {
+  it("disables verify without api key and without existing credential", () => {
+    render(
+      <MemoryRouter>
+        <FirstLaunchWizard />
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByText("下一步"));
+    expect(screen.getByTestId("onboarding-test")).toBeDisabled();
+    expect(screen.getByTestId("onboarding-save-next")).toBeDisabled();
+    expect(screen.getByTestId("onboarding-next-reason")).toHaveTextContent("尚未填写 API Key");
+  });
+
+  it("keeps next disabled after model validation until analysis ready", async () => {
     vi.mocked(aiServiceConfig.configureRecommendedQwenService).mockResolvedValue({
-      ok: true,
-      persisted: false,
-      user_message: "连接测试成功（尚未保存配置）。",
-      credential_configured: false,
-      provider_enabled: false,
-      cloud_enabled: false,
+      ok: false,
+      persisted: true,
+      user_message: "模型服务验证成功\n当前模型缺少计价信息",
+      credential_configured: true,
+      provider_enabled: true,
+      cloud_enabled: true,
       provider_eligible: false,
       selected_provider_id: "aliyun_qwen_plus",
-      connection_status: "tested",
-      analysis_mode: null,
-      blockers: [],
+      connection_status: "partial",
+      analysis_mode: "BALANCED",
+      blockers: ["pricing_unavailable"],
       needs_cloud_consent: false,
+      model_service_validated: true,
+      analysis_ready: false,
+      readiness_reasons: ["当前模型缺少计价配置"],
+      error_code: "pricing_unavailable",
     });
     render(
       <MemoryRouter>
@@ -129,19 +147,74 @@ describe("FirstLaunchWizard AI setup", () => {
     fireEvent.change(screen.getByTestId("onboarding-api-key"), {
       target: { value: "sk-test-key-value" },
     });
+    fireEvent.click(screen.getByRole("checkbox"));
     fireEvent.click(screen.getByTestId("onboarding-test"));
     await waitFor(() => {
-      expect(screen.getByTestId("onboarding-connection-status")).toHaveAttribute(
-        "data-tone",
-        "success",
+      expect(screen.getByTestId("onboarding-connection-status")).toHaveTextContent(
+        "模型服务验证成功",
       );
     });
-    expect(screen.getByTestId("onboarding-connection-status").className).toContain(
-      "onboarding-status-card--success",
-    );
+    expect(screen.getByTestId("onboarding-save-next")).toBeDisabled();
+    expect(screen.getByTestId("onboarding-next-reason")).toHaveTextContent("计价");
+    expect(screen.queryByTestId("onboarding-step-start")).not.toBeInTheDocument();
   });
 
-  it("keeps unchecked consent on neutral surface without success styling", () => {
+  it("enables next only when analysis ready after verify and save", async () => {
+    vi.mocked(aiServiceConfig.configureRecommendedQwenService).mockResolvedValue({
+      ok: true,
+      persisted: true,
+      user_message: "配置完成。模型服务、计价和预算检查均已通过，可以开始分析。",
+      credential_configured: true,
+      provider_enabled: true,
+      cloud_enabled: true,
+      provider_eligible: true,
+      selected_provider_id: "aliyun_qwen_plus",
+      connection_status: "connected",
+      analysis_mode: "BALANCED",
+      blockers: [],
+      needs_cloud_consent: false,
+      model_service_validated: true,
+      analysis_ready: true,
+      readiness_reasons: [],
+    });
+    render(
+      <MemoryRouter>
+        <FirstLaunchWizard />
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByText("下一步"));
+    fireEvent.change(screen.getByTestId("onboarding-api-key"), {
+      target: { value: "sk-test-key-value" },
+    });
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByTestId("onboarding-test"));
+    await waitFor(() => {
+      expect(aiServiceConfig.configureRecommendedQwenService).toHaveBeenCalledWith(
+        expect.objectContaining({ persist: true, cloudBodyConsent: true }),
+      );
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId("onboarding-save-next")).not.toBeDisabled();
+    });
+    fireEvent.click(screen.getByTestId("onboarding-save-next"));
+    expect(screen.getByTestId("onboarding-step-start")).toBeInTheDocument();
+  });
+
+  it("allows skip config with explicit analysis unavailable note", () => {
+    render(
+      <MemoryRouter>
+        <FirstLaunchWizard />
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByText("下一步"));
+    expect(screen.getByTestId("onboarding-skip-config")).toBeInTheDocument();
+    expect(screen.getByText(/完成 AI 服务配置前无法执行分析/)).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("onboarding-skip-config"));
+    expect(screen.getByTestId("onboarding-step-start")).toBeInTheDocument();
+    expect(screen.getByText(/完成 AI 服务配置前无法执行分析/)).toBeInTheDocument();
+  });
+
+  it("uses updated consent copy without hardcoding only 阿里云百炼 as destination", () => {
     render(
       <MemoryRouter>
         <FirstLaunchWizard />
@@ -149,10 +222,8 @@ describe("FirstLaunchWizard AI setup", () => {
     );
     fireEvent.click(screen.getByText("下一步"));
     const box = screen.getByTestId("onboarding-consent-box");
-    expect(box).toHaveAttribute("data-consent", "unchecked");
-    expect(box.className).toContain("onboarding-consent-box--unchecked");
-    expect(box.className).not.toContain("onboarding-consent-box--checked");
-    expect(box.className).not.toMatch(/success/);
+    expect(box).toHaveTextContent("所选章节正文将发送至该模型服务商");
+    expect(box).toHaveTextContent("正文不会进入 StoryLens 匿名使用统计");
   });
 
   it("uses different API Key placeholders for configured vs unconfigured credentials", () => {
@@ -182,20 +253,23 @@ describe("FirstLaunchWizard AI setup", () => {
     );
   });
 
-  it("test connection does not persist and does not finish wizard", async () => {
+  it("does not show contradictory 连接成功 and 连接失败 labels", async () => {
     vi.mocked(aiServiceConfig.configureRecommendedQwenService).mockResolvedValue({
-      ok: true,
+      ok: false,
       persisted: false,
-      user_message: "连接测试成功（尚未保存配置）。",
+      user_message: "模型服务验证失败",
       credential_configured: false,
       provider_enabled: false,
       cloud_enabled: false,
       provider_eligible: false,
       selected_provider_id: "aliyun_qwen_plus",
-      connection_status: "tested",
+      connection_status: "disconnected",
       analysis_mode: null,
-      blockers: [],
+      blockers: ["connection_test_failed"],
       needs_cloud_consent: false,
+      model_service_validated: false,
+      analysis_ready: false,
+      error_code: "CREDENTIAL_INVALID",
     });
     render(
       <MemoryRouter>
@@ -204,62 +278,17 @@ describe("FirstLaunchWizard AI setup", () => {
     );
     fireEvent.click(screen.getByText("下一步"));
     fireEvent.change(screen.getByTestId("onboarding-api-key"), {
-      target: { value: "sk-test-key-value" },
-    });
-    fireEvent.click(screen.getByTestId("onboarding-test"));
-    await waitFor(() => {
-      expect(aiServiceConfig.configureRecommendedQwenService).toHaveBeenCalledWith(
-        expect.objectContaining({ persist: false }),
-      );
-    });
-    expect(screen.getByTestId("onboarding-ai-message")).toHaveTextContent("尚未保存");
-    expect(screen.getByTestId("onboarding-connection-status")).toHaveTextContent("连接成功");
-    expect(screen.queryByTestId("onboarding-step-start")).not.toBeInTheDocument();
-  });
-
-  it("next persists setup and only advances when eligible", async () => {
-    vi.mocked(aiServiceConfig.configureRecommendedQwenService).mockResolvedValue({
-      ok: true,
-      persisted: true,
-      user_message: "保存成功，已连接，可以开始分析。",
-      credential_configured: true,
-      provider_enabled: true,
-      cloud_enabled: true,
-      provider_eligible: true,
-      selected_provider_id: "aliyun_qwen_plus",
-      connection_status: "connected",
-      analysis_mode: "BALANCED",
-      blockers: [],
-      needs_cloud_consent: false,
-    });
-    render(
-      <MemoryRouter>
-        <FirstLaunchWizard />
-      </MemoryRouter>,
-    );
-    fireEvent.click(screen.getByText("下一步"));
-    fireEvent.change(screen.getByTestId("onboarding-api-key"), {
-      target: { value: "sk-test-key-value" },
+      target: { value: "sk-bad" },
     });
     fireEvent.click(screen.getByRole("checkbox"));
-    fireEvent.click(screen.getByTestId("onboarding-save-next"));
+    fireEvent.click(screen.getByTestId("onboarding-test"));
     await waitFor(() => {
-      expect(aiServiceConfig.configureRecommendedQwenService).toHaveBeenCalledWith(
-        expect.objectContaining({ persist: true, cloudBodyConsent: true }),
+      expect(screen.getByTestId("onboarding-connection-status")).toHaveTextContent(
+        "模型服务验证失败",
       );
     });
-    expect(await screen.findByTestId("onboarding-step-start")).toBeInTheDocument();
-  });
-
-  it("consent checkbox still gates save", async () => {
-    render(
-      <MemoryRouter>
-        <FirstLaunchWizard />
-      </MemoryRouter>,
-    );
-    fireEvent.click(screen.getByText("下一步"));
-    fireEvent.click(screen.getByTestId("onboarding-save-next"));
-    expect(await screen.findByTestId("onboarding-ai-message")).toHaveTextContent("请先确认正文发送说明");
-    expect(aiServiceConfig.configureRecommendedQwenService).not.toHaveBeenCalled();
+    const status = screen.getByTestId("onboarding-connection-status");
+    expect(status).not.toHaveTextContent("连接成功");
+    expect(status).not.toHaveTextContent("连接失败");
   });
 });

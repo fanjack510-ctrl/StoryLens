@@ -200,3 +200,6 @@ class RecommendedQwenSetupResponse(BaseModel):
     blockers: list[str] = Field(default_factory=list)
     needs_cloud_consent: bool = False
     error_code: str | None = None
+    model_service_validated: bool = False
+    analysis_ready: bool = False
+    readiness_reasons: list[str] = Field(default_factory=list)

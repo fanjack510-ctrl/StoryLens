@@ -54,11 +54,11 @@ describe("configureRecommendedQwenService", () => {
     expect(JSON.stringify(localStorage)).not.toContain("sk-test-key-value");
   });
 
-  it("test-only path sets persist false", async () => {
+  it("verify-only path sets persist false", async () => {
     vi.mocked(api).mockResolvedValue({
       ok: true,
       persisted: false,
-      user_message: "连接测试成功（尚未保存配置）。",
+      user_message: "API Key 与模型服务验证成功。验证成功，保存配置后还需检查分析预算和计价信息。",
       credential_configured: false,
       provider_enabled: false,
       cloud_enabled: false,
@@ -68,6 +68,8 @@ describe("configureRecommendedQwenService", () => {
       analysis_mode: null,
       blockers: [],
       needs_cloud_consent: false,
+      model_validated: true,
+      analysis_ready: false,
     });
     const result = await configureRecommendedQwenService({
       apiKey: "sk-test-key-value",
@@ -76,14 +78,14 @@ describe("configureRecommendedQwenService", () => {
       persist: false,
     });
     expect(result.persisted).toBe(false);
-    expect(result.user_message).toContain("尚未保存");
+    expect(result.user_message).toContain("保存配置后");
   });
 
   it("fetchRecommendedQwenStatus uses GET", async () => {
     vi.mocked(api).mockResolvedValue({
       ok: true,
       persisted: true,
-      user_message: "已连接，可以开始分析",
+      user_message: "配置完成，可以开始分析",
       credential_configured: true,
       provider_enabled: true,
       cloud_enabled: true,
