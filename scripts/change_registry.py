@@ -949,14 +949,29 @@ def check_registry(root: Path, *, release_mode: bool = False) -> list[str]:
     except FileNotFoundError as exc:
         return [str(exc)]
 
-    if unreleased.get("base_version") != version:
-        errors.append(
-            f"VERSION {version} != unreleased.base_version {unreleased.get('base_version')}"
-        )
-    if baseline.get("version") != version:
-        errors.append(
-            f"VERSION {version} != baseline.version {baseline.get('version')}"
-        )
+    target = unreleased.get("target_version")
+    frozen_prepared = (
+        unreleased.get("status") == "frozen" and isinstance(target, str) and bool(target)
+    )
+    if frozen_prepared:
+        # After prepare-next-release: VERSION tracks target; baseline stays on prior base.
+        if version != target:
+            errors.append(
+                f"VERSION {version} != unreleased.target_version {target}"
+            )
+        if unreleased.get("base_version") != baseline.get("version"):
+            errors.append(
+                "frozen prepared pool: unreleased.base_version must match baseline.version"
+            )
+    else:
+        if unreleased.get("base_version") != version:
+            errors.append(
+                f"VERSION {version} != unreleased.base_version {unreleased.get('base_version')}"
+            )
+        if baseline.get("version") != version:
+            errors.append(
+                f"VERSION {version} != baseline.version {baseline.get('version')}"
+            )
     if unreleased.get("status") == "collecting" and unreleased.get("target_version") is not None:
         errors.append("collecting pool must keep target_version null")
     if unreleased.get("status") not in {"collecting", "frozen", "released"}:
