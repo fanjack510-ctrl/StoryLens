@@ -3,9 +3,16 @@
   "title": "Reader Journey v2.0 contract and deterministic derivation",
   "type": "feature",
   "base_version": "1.0.3",
-  "status": "registered",
+  "status": "tested",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "fd75d97964d5d3d6dabcc86981f295e146550779",
+      "message": "Add Reader Journey v2.0 contract and deterministic derivation (CHG-20260721-012).",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "apps/api",
     "config",
@@ -50,7 +57,7 @@
     "breaking_change": false
   },
   "blocker_level": null,
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-21T12:43:43Z",
-  "updated_at": "2026-07-21T12:51:27Z"
+  "updated_at": "2026-07-21T12:56:42Z"
 }
