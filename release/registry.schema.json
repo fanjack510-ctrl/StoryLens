@@ -52,6 +52,7 @@
         "implemented",
         "tested",
         "verified",
+        "ready-for-staging",
         "ready",
         "deferred",
         "released"

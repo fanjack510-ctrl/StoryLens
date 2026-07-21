@@ -1,0 +1,38 @@
+{
+  "id": "CHG-20260721-008",
+  "title": "change_registry ready-for-staging and legacy baseline adopt",
+  "type": "build",
+  "base_version": "1.0.2",
+  "status": "deferred",
+  "include_in_next_release": false,
+  "commits": [],
+  "modules": [
+    "scripts/change_registry.py"
+  ],
+  "files": [],
+  "user_summary": "Add ready-for-staging status and baseline adopt-legacy for 1.0.3 RC freeze gates",
+  "technical_summary": "Add ready-for-staging progress status, baseline adopt-legacy -> legacy_verified, freeze/release gates accept legacy_verified and ready-for-staging Absorbed into CHG-20260721-007 gate enhancements; deferred from 1.0.3 feature list.",
+  "acceptance_criteria": [],
+  "tests": [
+    "pytest apps/api/tests/test_change_registry.py"
+  ],
+  "verification_evidence": [
+    "14 passed change_registry tests"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": null,
+  "created_at": "2026-07-21T06:44:18Z",
+  "updated_at": "2026-07-21T06:44:49Z"
+}

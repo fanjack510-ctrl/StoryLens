@@ -44,6 +44,7 @@ VALID_STATUSES = frozenset(
         "implemented",
         "tested",
         "verified",
+        "ready-for-staging",
         "ready",
         "deferred",
         "released",
@@ -54,9 +55,22 @@ PROGRESS_STATUSES = (
     "implemented",
     "tested",
     "verified",
+    "ready-for-staging",
     "ready",
     "released",
 )
+# Acceptable for freeze / release inclusion (code-level ready; staging may still be pending).
+FREEZE_READY_STATUSES = frozenset({"ready", "ready-for-staging"})
+# Baseline statuses that satisfy freeze / release-mode gates (not full artifact verify).
+BASELINE_ACCEPTABLE_STATUSES = frozenset({"verified", "legacy_verified"})
+
+
+def is_freeze_ready_status(status: Any) -> bool:
+    return status in FREEZE_READY_STATUSES
+
+
+def is_baseline_acceptable(status: Any) -> bool:
+    return status in BASELINE_ACCEPTABLE_STATUSES
 
 
 def repo_root_from_here() -> Path:
@@ -165,6 +179,10 @@ def load_baseline(root: Path) -> dict[str, Any]:
     if not path.is_file():
         raise FileNotFoundError(f"missing {path}")
     return read_json(path)
+
+
+def save_baseline(root: Path, data: dict[str, Any]) -> None:
+    write_json(release_dir(root) / "baseline.json", data)
 
 
 def load_unreleased(root: Path) -> dict[str, Any]:
@@ -437,9 +455,24 @@ def can_mark_status(change: dict[str, Any], new_status: str) -> list[str]:
             errors.append("must be tested before verified")
         if not change.get("verification_evidence"):
             errors.append("cannot mark verified without verification evidence")
-    elif new_status == "ready":
+    elif new_status == "ready-for-staging":
         if current != "verified":
-            errors.append("only verified changes can be marked ready")
+            errors.append("only verified changes can be marked ready-for-staging")
+        if not change.get("tests"):
+            errors.append("ready-for-staging requires tests evidence")
+        if not change.get("verification_evidence"):
+            errors.append("ready-for-staging requires verification evidence")
+        if change.get("head_inclusion") in {"EXISTS_NOT_INCLUDED", "NOT_FOUND"}:
+            errors.append("change not included in HEAD cannot be ready-for-staging")
+        # Prefer updater-scoped changes for staging; soft preference (not a hard gate).
+        impact = change.get("release_impact") or {}
+        if change.get("type") != "updater" and not impact.get("updater_impact"):
+            pass  # preferably updater / updater_impact; do not block
+    elif new_status == "ready":
+        if current not in {"verified", "ready-for-staging"}:
+            errors.append(
+                "only verified or ready-for-staging changes can be marked ready"
+            )
         if not change.get("tests"):
             errors.append("ready requires tests evidence")
         if not change.get("verification_evidence"):
@@ -492,9 +525,10 @@ def default_change_payload(
 
 
 def collect_blockers(root: Path) -> list[str]:
+    """Hard blockers for freeze / prepare. Soft staging notes are collected separately."""
     blockers: list[str] = []
     baseline = load_baseline(root)
-    if baseline.get("status") != "verified":
+    if not is_baseline_acceptable(baseline.get("status")):
         blockers.append("baseline status is not verified")
     unreleased = load_unreleased(root)
     if unreleased.get("target_version") is not None and unreleased.get("status") == "collecting":
@@ -519,12 +553,13 @@ def collect_blockers(root: Path) -> list[str]:
                         )
                         break
         if change.get("blocker_level") in {"P0", "P1"}:
-            if change.get("status") != "ready":
+            if not is_freeze_ready_status(change.get("status")):
                 blockers.append(
                     f"{change.get('blocker_level')} blocker {change['id']}: status={change.get('status')}"
                 )
         if change.get("include_in_next_release") and change.get("status") not in {
             "ready",
+            "ready-for-staging",
             "released",
             "deferred",
         }:
@@ -533,36 +568,53 @@ def collect_blockers(root: Path) -> list[str]:
     return blockers
 
 
+def collect_staging_notes(root: Path) -> list[str]:
+    """Soft notes for release-preview; must not block freeze / can_prepare alone."""
+    notes: list[str] = []
+    for change in load_all_changes(root):
+        if not change.get("include_in_next_release", True):
+            continue
+        if change.get("status") == "ready-for-staging":
+            notes.append(
+                f"{change['id']}: staging verification required "
+                f"(status=ready-for-staging)"
+            )
+    return notes
+
+
 def preview_payload(root: Path) -> dict[str, Any]:
     version = read_version(root)
     baseline = load_baseline(root)
     unreleased = load_unreleased(root)
     changes = load_all_changes(root)
     included = [c for c in changes if c.get("include_in_next_release") and c.get("status") != "deferred"]
-    ready = [c for c in included if c.get("status") == "ready"]
+    ready = [c for c in included if is_freeze_ready_status(c.get("status"))]
     classified = classify_commits(root, baseline.get("git_commit"))
     blockers = collect_blockers(root)
+    staging_notes = collect_staging_notes(root)
     not_ready = [
         f"{c['id']} status={c['status']}"
         for c in included
-        if c.get("status") != "ready"
+        if not is_freeze_ready_status(c.get("status"))
     ]
     dirty = working_tree_dirty(root)
     can_freeze = (
         not classified["UNREGISTERED"]
         and not not_ready
         and not dirty
-        and baseline.get("status") == "verified"
+        and is_baseline_acceptable(baseline.get("status"))
         and unreleased.get("status") == "collecting"
-        and not any(c.get("blocker_level") in {"P0", "P1"} and c.get("status") != "ready" for c in changes)
+        and not any(
+            c.get("blocker_level") in {"P0", "P1"} and not is_freeze_ready_status(c.get("status"))
+            for c in changes
+        )
     )
-    can_prepare = unreleased.get("status") == "frozen" and can_freeze is False
     # can_prepare needs frozen + ready etc.
     can_prepare_release = (
         unreleased.get("status") == "frozen"
         and not classified["UNREGISTERED"]
         and not not_ready
-        and baseline.get("status") == "verified"
+        and is_baseline_acceptable(baseline.get("status"))
         and not dirty
     )
     return {
@@ -573,7 +625,7 @@ def preview_payload(root: Path) -> dict[str, Any]:
         "unregistered_commits": [
             {"sha": i["short"], "subject": i["subject"]} for i in classified["UNREGISTERED"]
         ],
-        "blockers": blockers + not_ready,
+        "blockers": blockers + not_ready + staging_notes,
         "can_freeze": bool(can_freeze),
         "can_prepare_release": bool(can_prepare_release),
     }
@@ -585,12 +637,12 @@ def cmd_status(root: Path) -> int:
     unreleased = load_unreleased(root)
     changes = load_all_changes(root)
     included = [c for c in changes if c.get("include_in_next_release")]
-    ready = [c for c in included if c.get("status") == "ready"]
+    ready = [c for c in included if is_freeze_ready_status(c.get("status"))]
     deferred = [c for c in changes if c.get("status") == "deferred"]
     incomplete = [
         c
         for c in included
-        if c.get("status") not in {"ready", "released", "deferred"}
+        if c.get("status") not in {"ready", "ready-for-staging", "released", "deferred"}
     ]
     classified = classify_commits(root, baseline.get("git_commit"))
     preview = preview_payload(root)
@@ -610,6 +662,63 @@ def cmd_status(root: Path) -> int:
 def cmd_baseline_show(root: Path) -> int:
     baseline = load_baseline(root)
     print(json.dumps(baseline, ensure_ascii=False, indent=2))
+    return 0
+
+
+LEGACY_ADOPTION_NOTES = (
+    "1. 1.0.2 version commit exists (52fd44894b41fa48192fc06ef1e189acb517b8f5).\n"
+    "2. current HEAD is a descendant of that baseline commit.\n"
+    "3. Historical Git tag and complete release artifacts are missing.\n"
+    "4. 1.0.3 will be the first fully traceable version after enabling release baseline management.\n"
+    "5. User explicitly authorized generating the next version.\n"
+    "6. This adoption does NOT claim historical installer/tag/manifest artifacts were verified."
+)
+
+
+def cmd_baseline_adopt_legacy(root: Path, *, confirm: bool = False) -> int:
+    baseline = load_baseline(root)
+    preview = {
+        "current_status": baseline.get("status"),
+        "would_set_status": "legacy_verified",
+        "legacy_source_baseline": True,
+        "legacy_adoption_notes": LEGACY_ADOPTION_NOTES,
+        "preserved_notes": baseline.get("notes"),
+        "confirm": confirm,
+    }
+    print(json.dumps(preview, ensure_ascii=False, indent=2))
+    if not confirm:
+        print("preview only — pass --confirm to write legacy_verified adoption")
+        return 0
+    if baseline.get("status") != "unverified":
+        print(
+            "error: adopt-legacy only allowed when baseline.status is unverified, "
+            f"got {baseline.get('status')!r}",
+            file=sys.stderr,
+        )
+        return 1
+    now = utc_now()
+    baseline["status"] = "legacy_verified"
+    baseline["legacy_source_baseline"] = True
+    baseline["legacy_adopted_at"] = now
+    baseline["legacy_adoption_notes"] = LEGACY_ADOPTION_NOTES
+    # Keep existing notes; do not invent tag/sha256/released_at
+    save_baseline(root, baseline)
+    audit = {
+        "adopted_at": now,
+        "previous_status": "unverified",
+        "new_status": "legacy_verified",
+        "baseline_version": baseline.get("version"),
+        "baseline_git_commit": baseline.get("git_commit"),
+        "legacy_source_baseline": True,
+        "legacy_adoption_notes": LEGACY_ADOPTION_NOTES,
+        "notes_preserved": baseline.get("notes"),
+        "git_tag": baseline.get("git_tag"),
+        "installer_sha256": baseline.get("installer_sha256"),
+        "released_at": baseline.get("released_at"),
+    }
+    write_json(release_dir(root) / "generated" / "legacy-baseline-adoption.json", audit)
+    print("baseline adopted as legacy_verified")
+    print("wrote release/generated/legacy-baseline-adoption.json")
     return 0
 
 
@@ -652,8 +761,15 @@ def cmd_baseline_verify(root: Path) -> int:
             errors.append(
                 f"tag {expected_tag} exists but baseline.git_tag is null — update baseline"
             )
-    if baseline.get("status") != "verified":
-        errors.append(f"baseline.status is {baseline.get('status')!r}, not verified")
+    status = baseline.get("status")
+    if status == "legacy_verified":
+        errors.append(
+            "baseline.status is legacy_verified — not fully verified "
+            "(legacy adoption satisfies freeze gates only; full verify still fails until "
+            "artifacts/tag evidence exist and status becomes verified)"
+        )
+    elif status != "verified":
+        errors.append(f"baseline.status is {status!r}, not verified")
     # release evidence
     if not baseline.get("installer_sha256"):
         errors.append("baseline.installer_sha256 missing (no installer attestation)")
@@ -852,8 +968,8 @@ def check_registry(root: Path, *, release_mode: bool = False) -> list[str]:
     elif not resolve_commit(root, baseline["git_commit"]):
         errors.append(f"baseline.git_commit invalid: {baseline['git_commit']}")
 
-    if release_mode and baseline.get("status") != "verified":
-        errors.append("release mode requires baseline.status=verified")
+    if release_mode and not is_baseline_acceptable(baseline.get("status")):
+        errors.append("release mode requires baseline.status=verified or legacy_verified")
 
     ids: list[str] = []
     changes = load_all_changes(root)
@@ -872,9 +988,11 @@ def check_registry(root: Path, *, release_mode: bool = False) -> list[str]:
                 errors.append(f"{cid}: commit missing: {sha}")
                 continue
             if not is_ancestor(root, sha):
-                # allowed for EXISTS_NOT_INCLUDED but flag if marked ready
-                if change.get("status") == "ready":
-                    errors.append(f"{cid}: ready but commit {sha[:7]} not in HEAD")
+                # allowed for EXISTS_NOT_INCLUDED but flag if marked freeze-ready
+                if is_freeze_ready_status(change.get("status")):
+                    errors.append(
+                        f"{cid}: {change.get('status')} but commit {sha[:7]} not in HEAD"
+                    )
                 if change.get("head_inclusion") not in {
                     "EXISTS_NOT_INCLUDED",
                     "NOT_FOUND",
@@ -892,12 +1010,13 @@ def check_registry(root: Path, *, release_mode: bool = False) -> list[str]:
             errors.append(f"{cid}: tested without tests evidence")
         if st == "verified" and not change.get("verification_evidence"):
             errors.append(f"{cid}: verified without verification evidence")
-        if st == "ready":
+        if st in {"ready", "ready-for-staging"}:
             if not change.get("tests") or not change.get("verification_evidence"):
-                errors.append(f"{cid}: ready without tests/verification evidence")
-            # ready implies verified prerequisites
-            if not change.get("verification_evidence"):
-                pass
+                errors.append(
+                    f"{cid}: {st} without tests/verification evidence"
+                )
+            if not change.get("commits"):
+                errors.append(f"{cid}: {st} without attached commits")
         if st == "deferred" and change.get("include_in_next_release"):
             for entry in change.get("commits") or []:
                 sha = entry.get("sha")
@@ -937,8 +1056,10 @@ def check_registry(root: Path, *, release_mode: bool = False) -> list[str]:
                 continue
             if change.get("status") == "deferred":
                 continue
-            if change.get("status") != "ready":
-                errors.append(f"release mode: {change['id']} not ready ({change.get('status')})")
+            if not is_freeze_ready_status(change.get("status")):
+                errors.append(
+                    f"release mode: {change['id']} not ready ({change.get('status')})"
+                )
         dirty = working_tree_dirty(root)
         if dirty:
             errors.append("release mode requires clean working tree")
@@ -952,6 +1073,13 @@ def check_registry(root: Path, *, release_mode: bool = False) -> list[str]:
 
 def cmd_check(root: Path, *, release_mode: bool = False) -> int:
     errors = check_registry(root, release_mode=release_mode)
+    if release_mode:
+        baseline = load_baseline(root)
+        if baseline.get("status") == "legacy_verified":
+            print(
+                "note: baseline.status=legacy_verified "
+                "(legacy adoption; not fully artifact-verified)"
+            )
     if errors:
         label = "Release registry check FAILED" if release_mode else "Change registry check FAILED"
         print(f"{label}:")
@@ -984,8 +1112,8 @@ def cmd_freeze(root: Path) -> int:
     if unreleased.get("status") != "collecting":
         print(f"error: cannot freeze from status {unreleased.get('status')}", file=sys.stderr)
         return 1
-    if baseline.get("status") != "verified":
-        errors.append("baseline must be verified before freeze")
+    if not is_baseline_acceptable(baseline.get("status")):
+        errors.append("baseline must be verified or legacy_verified before freeze")
     dirty = working_tree_dirty(root)
     if dirty:
         errors.append("working tree not clean")
@@ -995,9 +1123,11 @@ def cmd_freeze(root: Path) -> int:
             continue
         if change.get("status") == "deferred":
             continue
-        if change.get("status") != "ready":
+        if not is_freeze_ready_status(change.get("status")):
             errors.append(f"{change['id']} not ready ({change.get('status')})")
-        if change.get("blocker_level") in {"P0", "P1"} and change.get("status") != "ready":
+        if change.get("blocker_level") in {"P0", "P1"} and not is_freeze_ready_status(
+            change.get("status")
+        ):
             errors.append(f"blocker {change['id']} unresolved")
     classified = classify_commits(root, baseline.get("git_commit"))
     for item in classified["UNREGISTERED"]:
@@ -1109,7 +1239,7 @@ def cmd_prepare_next_release(
     changes = [
         c
         for c in load_all_changes(root)
-        if c.get("include_in_next_release") and c.get("status") == "ready"
+        if c.get("include_in_next_release") and is_freeze_ready_status(c.get("status"))
     ]
     print(
         json.dumps(
@@ -1189,6 +1319,15 @@ def build_parser() -> argparse.ArgumentParser:
     baseline_sub = baseline_p.add_subparsers(dest="baseline_command", required=True)
     baseline_sub.add_parser("show")
     baseline_sub.add_parser("verify")
+    adopt_p = baseline_sub.add_parser(
+        "adopt-legacy",
+        help="Adopt unverified baseline as legacy_verified (preview unless --confirm)",
+    )
+    adopt_p.add_argument(
+        "--confirm",
+        action="store_true",
+        help="Write legacy_verified status and audit fields",
+    )
 
     register_p = sub.add_parser("register", help="Create a new change record")
     register_p.add_argument("--title", required=True)
@@ -1259,6 +1398,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                 return cmd_baseline_show(root)
             if args.baseline_command == "verify":
                 return cmd_baseline_verify(root)
+            if args.baseline_command == "adopt-legacy":
+                return cmd_baseline_adopt_legacy(root, confirm=bool(args.confirm))
         if args.command == "register":
             return cmd_register(root, args.title, args.change_type, args.user_summary)
         if args.command == "attach-commit":

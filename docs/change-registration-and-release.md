@@ -12,6 +12,10 @@
 - 不得伪造 tag、安装包哈希或发布时间
 - 若无法证明该版本已正式发布，则 `status = unverified`
 - `unverified` 时**正式发布门禁必须失败**
+- 对历史基线（有 VERSION bump commit、但缺 tag / 安装包哈希等完整产物）可执行 `baseline adopt-legacy --confirm`，将状态设为 `legacy_verified`（**不是** `verified`）
+- `legacy_verified` 可满足 `freeze` / `check --release` 门禁，但 `baseline verify` 仍会失败（未完整验证产物）
+- 变更状态进度：`registered → implemented → tested → verified → ready-for-staging → ready → released`
+- `ready-for-staging` 与 `ready` 均可进入冻结与下一版本汇总；预览会提示 staging 验证仍待完成，但不单独阻断 freeze
 
 ## 2. 什么是下一版本待发布池
 
@@ -75,12 +79,12 @@ python scripts/change_registry.py freeze
 
 前置条件：
 
-- 计划发布项全部 `ready`
+- 计划发布项全部为 `ready` 或 `ready-for-staging`
 - 无未登记源码 commit
-- 无未解决 P0/P1 blocker
+- 无未解决 P0/P1 blocker（`ready-for-staging` 视为已解除代码级阻断）
 - 工作区干净
 - `VERSION` / `base_version` 一致
-- baseline 已 `verified`
+- baseline 已 `verified` 或 `legacy_verified`
 
 冻结后禁止再增加普通功能变更；只允许修本版本阻断问题。
 
@@ -166,4 +170,7 @@ python scripts/change_registry.py check
 python scripts/change_registry.py release-preview
 python scripts/change_registry.py baseline show
 python scripts/change_registry.py baseline verify
+python scripts/change_registry.py baseline adopt-legacy
+python scripts/change_registry.py baseline adopt-legacy --confirm
+python scripts/change_registry.py mark CHG-YYYYMMDD-NNN ready-for-staging
 ```

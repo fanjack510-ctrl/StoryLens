@@ -287,3 +287,130 @@ def test_prepare_preview_when_frozen_no_confirm(fixture_repo: Path) -> None:
     assert (fixture_repo / "VERSION").read_text(encoding="utf-8") == before
     assert before.strip() == "1.0.2"
     assert before.strip() != "1.0.3"
+
+
+def _advance_to_verified(root: Path, cid: str, *, source_line: str = "print('v')\n") -> str:
+    _write(root / "apps" / "api" / "app" / "main.py", source_line)
+    _git(root, "add", "apps")
+    _git(root, "commit", "-m", f"impl {cid}")
+    sha = _git(root, "rev-parse", "HEAD")
+    assert _run(root, "attach-commit", cid, sha).returncode == 0
+    assert _run(root, "update", cid, "--test", "unit").returncode == 0
+    assert _run(root, "mark", cid, "implemented").returncode == 0
+    assert _run(root, "mark", cid, "tested").returncode == 0
+    assert _run(root, "update", cid, "--evidence", "ok").returncode == 0
+    assert _run(root, "mark", cid, "verified").returncode == 0
+    return sha
+
+
+def test_adopt_legacy_without_confirm_does_not_write(fixture_repo: Path) -> None:
+    baseline_path = fixture_repo / "release" / "baseline.json"
+    baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
+    baseline["status"] = "unverified"
+    baseline["installer_sha256"] = None
+    baseline["released_at"] = None
+    _write(baseline_path, json.dumps(baseline, indent=2) + "\n")
+    before = baseline_path.read_text(encoding="utf-8")
+    audit = fixture_repo / "release" / "generated" / "legacy-baseline-adoption.json"
+    assert not audit.is_file()
+    result = _run(fixture_repo, "baseline", "adopt-legacy")
+    assert result.returncode == 0, result.stderr
+    assert "preview only" in result.stdout
+    assert baseline_path.read_text(encoding="utf-8") == before
+    assert not audit.is_file()
+
+
+def test_adopt_legacy_with_confirm_sets_legacy_verified(fixture_repo: Path) -> None:
+    baseline_path = fixture_repo / "release" / "baseline.json"
+    baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
+    baseline["status"] = "unverified"
+    baseline["installer_sha256"] = None
+    baseline["released_at"] = None
+    baseline["notes"] = "keep me"
+    _write(baseline_path, json.dumps(baseline, indent=2) + "\n")
+    result = _run(fixture_repo, "baseline", "adopt-legacy", "--confirm")
+    assert result.returncode == 0, result.stderr + result.stdout
+    updated = json.loads(baseline_path.read_text(encoding="utf-8"))
+    assert updated["status"] == "legacy_verified"
+    assert updated["legacy_source_baseline"] is True
+    assert updated["legacy_adopted_at"]
+    assert "52fd448" in updated["legacy_adoption_notes"]
+    assert "does NOT claim" in updated["legacy_adoption_notes"]
+    assert updated["notes"] == "keep me"
+    assert updated["git_tag"] is None
+    assert updated["installer_sha256"] is None
+    assert updated["released_at"] is None
+    audit = json.loads(
+        (fixture_repo / "release" / "generated" / "legacy-baseline-adoption.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert audit["new_status"] == "legacy_verified"
+    # verify still fails for legacy_verified
+    verify = _run(fixture_repo, "baseline", "verify")
+    assert verify.returncode != 0
+    assert "legacy_verified" in verify.stdout
+
+
+def test_cannot_mark_ready_for_staging_without_evidence(fixture_repo: Path) -> None:
+    reg = _run(fixture_repo, "register", "--title", "Staging gate", "--type", "updater")
+    cid = reg.stdout.strip().splitlines()[0]
+    assert _run(fixture_repo, "mark", cid, "ready-for-staging").returncode != 0
+    _advance_to_verified(fixture_repo, cid)
+    # strip evidence via raw edit to prove gate
+    path = fixture_repo / "release" / "changes" / f"{cid}.json"
+    change = json.loads(path.read_text(encoding="utf-8"))
+    change["verification_evidence"] = []
+    change["tests"] = []
+    _write(path, json.dumps(change, indent=2) + "\n")
+    bad = _run(fixture_repo, "mark", cid, "ready-for-staging")
+    assert bad.returncode != 0
+    assert "evidence" in (bad.stdout + bad.stderr).lower() or "tests" in (
+        bad.stdout + bad.stderr
+    ).lower()
+    # restore evidence and succeed
+    change["tests"] = ["unit"]
+    change["verification_evidence"] = ["ok"]
+    _write(path, json.dumps(change, indent=2) + "\n")
+    assert _run(fixture_repo, "mark", cid, "ready-for-staging").returncode == 0
+
+
+def test_freeze_accepts_legacy_verified_and_ready_for_staging(fixture_repo: Path) -> None:
+    baseline_path = fixture_repo / "release" / "baseline.json"
+    baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
+    baseline["status"] = "unverified"
+    baseline["installer_sha256"] = None
+    baseline["released_at"] = None
+    _write(baseline_path, json.dumps(baseline, indent=2) + "\n")
+    assert _run(fixture_repo, "baseline", "adopt-legacy", "--confirm").returncode == 0
+    _git(fixture_repo, "add", "release")
+    _git(fixture_repo, "commit", "-m", "adopt legacy baseline")
+
+    reg = _run(
+        fixture_repo,
+        "register",
+        "--title",
+        "Staging item",
+        "--type",
+        "updater",
+        "--user-summary",
+        "updater staging",
+    )
+    cid = reg.stdout.strip().splitlines()[0]
+    _advance_to_verified(fixture_repo, cid, source_line="print('staging')\n")
+    assert _run(fixture_repo, "mark", cid, "ready-for-staging").returncode == 0
+    _git(fixture_repo, "add", "release")
+    _git(fixture_repo, "commit", "-m", "register staging change")
+
+    preview = _run(fixture_repo, "release-preview")
+    assert preview.returncode == 0
+    payload = json.loads(preview.stdout)
+    assert payload["can_freeze"] is True
+    assert any("staging verification required" in b for b in payload["blockers"])
+
+    freeze = _run(fixture_repo, "freeze")
+    assert freeze.returncode == 0, freeze.stdout + freeze.stderr
+    pool = json.loads(
+        (fixture_repo / "release" / "unreleased.json").read_text(encoding="utf-8")
+    )
+    assert pool["status"] == "frozen"

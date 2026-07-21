@@ -18,7 +18,7 @@ alwaysApply: true
 
 ## 状态
 
-`registered → implemented → tested → verified → ready → released`  
+`registered → implemented → tested → verified → ready-for-staging → ready → released`  
 无 commit / 无测试 / 无验证证据不得跳到 `ready`。
 
 ## 完成报告必须输出
