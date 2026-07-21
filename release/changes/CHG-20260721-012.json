@@ -83,6 +83,12 @@
       "message": "Fix V2 Reader Journey field mixing and lens/diagnosis semantics (CHG-20260721-012).",
       "primary": false,
       "multi_change_reason": "V2 field mixing / lens binding / diagnosis / dropoff / pacing semantic fix"
+    },
+    {
+      "sha": "e4325f9dc15579a472e3052c03461d16fc73270a",
+      "message": "Add Reader Journey V2 general rule spec and work-agnostic verification suite (CHG-20260721-012).",
+      "primary": false,
+      "multi_change_reason": "V2 general rule spec + work-agnostic verification suite"
     }
   ],
   "modules": [
@@ -183,5 +189,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-21T12:43:43Z",
-  "updated_at": "2026-07-21T15:04:10Z"
+  "updated_at": "2026-07-21T15:04:32Z"
 }
