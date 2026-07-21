@@ -399,30 +399,33 @@ export function ReaderJourneySyncWorkspace({
           </button>
         </div>
 
-        <div className="journey-sync-mode-toggle">
+        <div className="journey-sync-mode-toggle" data-testid="journey-sync-mode-toggle">
           <button
             type="button"
             data-testid="journey-mode-sync"
             className={state.pageMode === "sync" ? "active" : ""}
             onClick={() => handleModeChange("sync")}
+            aria-pressed={state.pageMode === "sync"}
           >
-            同步
+            正文对照
           </button>
           <button
             type="button"
             data-testid="journey-mode-journey"
             className={state.pageMode === "journey" ? "active" : ""}
             onClick={() => handleModeChange("journey")}
+            aria-pressed={state.pageMode === "journey"}
           >
-            旅程
+            旅程视图
           </button>
           <button
             type="button"
             data-testid="journey-mode-reading"
             className={state.pageMode === "reading" ? "active" : ""}
             onClick={() => handleModeChange("reading")}
+            aria-pressed={state.pageMode === "reading"}
           >
-            正文
+            仅看正文
           </button>
         </div>
 

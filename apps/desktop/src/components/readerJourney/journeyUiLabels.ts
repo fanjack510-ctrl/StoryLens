@@ -10,7 +10,7 @@ export const METRIC_LABELS_ZH: Record<JourneyCurveMetric, string> = {
   tension: "紧张",
   payoff: "回报",
   hook: "钩子",
-  dropoff_risk: "掉线风险",
+  dropoff_risk: "流失风险",
 };
 
 /** Compact switcher labels (2.5C). Emotion maps to valence/arousal submenu. */
@@ -24,7 +24,7 @@ export const COMPACT_METRIC_SWITCHER: {
   { key: "tension", label: "紧张" },
   { key: "payoff", label: "回报" },
   { key: "hook", label: "钩子" },
-  { key: "dropoff_risk", label: "风险" },
+  { key: "dropoff_risk", label: "流失风险" },
 ];
 
 /** Quick metric shortcuts (2.5.2). Underlying metrics unchanged. */
@@ -127,7 +127,7 @@ export const SCORE_TOOLTIPS_ZH: Record<string, string> = {
   tension: "本场紧张与冲突强度",
   payoff: "本场兑现信息/情绪回报的强度",
   hook: "本场留下继续阅读钩子的强度",
-  dropoff_risk: "本场导致读者掉线的风险",
+  dropoff_risk: "连续缺少回报、节奏骤降或认知负担过高，可能降低读者继续阅读的意愿。",
 };
 
 /** Short one-line hints for MetricSelectorPanel (v4.2). Presentation only. */
@@ -137,7 +137,7 @@ export const METRIC_HINTS_ZH: Record<JourneyCurveMetric, string> = {
   tension: "紧张与冲突强度",
   payoff: "信息或情绪回报",
   hook: "继续阅读的钩子",
-  dropoff_risk: "读者掉线风险",
+  dropoff_risk: "连续缺少回报、节奏骤降或认知负担过高，可能降低读者继续阅读的意愿。",
   valence: "情绪正负倾向",
   arousal: "情绪唤醒程度",
 };
@@ -301,9 +301,75 @@ export function formatJourneySelectionType(kind: string | null | undefined): str
     question: "问题",
     hook: "钩子",
     payoff: "回报",
-    risk: "风险",
+    risk: "流失风险",
   };
   return map[key] ?? "未知";
+}
+
+/** Raw risk_type codes → Chinese (presentation only; keys unchanged). */
+export const RISK_TYPE_LABELS_ZH: Record<string, string> = {
+  consecutive_no_payoff: "连续场景缺少有效回报",
+  low_engagement: "阅读牵引持续偏低",
+  high_cognitive_load: "认知负担偏高",
+  dropped_question: "高强度问题未承接",
+  over_fragmented_beats: "节拍过碎，节奏可能断裂",
+  slow_progress: "推进过慢",
+  weak_hook: "钩子偏弱",
+  over_explanation: "解释过多",
+  repetition: "重复拖沓",
+  fragmented_scene: "场景过碎",
+  low_payoff: "回报不足",
+  other: "其他流失风险",
+};
+
+export function formatJourneyRiskTypeLabel(riskType: string | null | undefined): string {
+  if (riskType == null) return "流失风险";
+  const key = String(riskType).trim();
+  if (!key) return "流失风险";
+  return RISK_TYPE_LABELS_ZH[key] ?? key;
+}
+
+export function formatJourneyRiskSummary(input: {
+  risk_type?: string | null;
+  summary?: string | null;
+  start_scene_ordinal?: number | null;
+  end_scene_ordinal?: number | null;
+  span?: number | null;
+}): string {
+  const typeLabel = formatJourneyRiskTypeLabel(input.risk_type);
+  const start = input.start_scene_ordinal;
+  const end = input.end_scene_ordinal ?? start;
+  const span =
+    typeof input.span === "number" && Number.isFinite(input.span)
+      ? Math.trunc(input.span)
+      : start != null && end != null
+        ? Math.max(1, Math.trunc(end) - Math.trunc(start) + 1)
+        : null;
+
+  if (input.risk_type === "consecutive_no_payoff" && start != null && end != null) {
+    const spanText = span != null && span > 1 ? `连续${span}个场景` : "连续场景";
+    return `场景 ${start}—${end} ${spanText}缺少明显回报，可能降低阅读动力。`;
+  }
+
+  const raw = typeof input.summary === "string" ? input.summary.trim() : "";
+  if (raw && !/^[a-z][a-z0-9_]*$/i.test(raw)) {
+    return raw
+      .replace(/\bScene\b/g, "场景")
+      .replace(/\bengagement\b/gi, "阅读牵引")
+      .replace(/\bpayoff\b/gi, "回报")
+      .replace(/\bBeat\b/g, "节拍");
+  }
+  if (start != null && end != null) {
+    return `场景 ${start}—${end}：${typeLabel}。`;
+  }
+  return typeLabel;
+}
+
+export function formatPhaseMetricScoreLabel(
+  metric: string | null | undefined,
+  value: unknown,
+): string {
+  return `${formatJourneyMetricLabel(metric)} ${formatJourneyScore(value)}`;
 }
 
 export function formatJourneyStatus(status: string | null | undefined): string {

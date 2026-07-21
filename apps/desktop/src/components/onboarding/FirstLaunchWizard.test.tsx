@@ -222,7 +222,9 @@ describe("FirstLaunchWizard AI setup", () => {
     );
     fireEvent.click(screen.getByText("下一步"));
     const box = screen.getByTestId("onboarding-consent-box");
-    expect(box).toHaveTextContent("所选章节正文将发送至该模型服务商");
+    expect(box).toHaveTextContent(
+      "为完成分析，StoryLens 将应用大模型能力对所选章节正文进行分析，所选正文会发送至当前模型服务商。",
+    );
     expect(box).toHaveTextContent("正文不会进入 StoryLens 匿名使用统计");
   });
 

@@ -10,6 +10,8 @@ import {
   formatJourneySceneLabel,
   formatJourneySceneRangeLabel,
   formatJourneyPhaseLabel,
+  formatJourneyRiskSummary,
+  formatJourneyRiskTypeLabel,
   hookTypeZh,
   METRIC_LABELS_ZH,
   payoffTypeZh,
@@ -113,7 +115,7 @@ export function JourneySceneDetailPanel({
       push(t.evidence_paragraph_ids, t.name ?? "技法", "technique");
     }
     for (const r of node.risk_points ?? []) {
-      push(r.evidence_paragraph_ids, r.summary ?? "风险", "risk");
+      push(r.evidence_paragraph_ids, r.summary ?? "流失风险", "risk");
     }
     const seen = new Set<string>();
     return rows.filter((row) => {
@@ -190,7 +192,7 @@ export function JourneySceneDetailPanel({
                 <JourneyCompactMetrics items={coreMetrics} testId="scene-detail-score-bars" />
               </JourneyInspectorSection>
               {riskText ? (
-                <JourneyInspectorSection title="核心风险" testId="scene-overview-risk">
+                <JourneyInspectorSection title="核心流失风险" testId="scene-overview-risk">
                   <p>{riskText}</p>
                 </JourneyInspectorSection>
               ) : null}
@@ -353,7 +355,7 @@ export type PhaseDetailTab = "overview" | "questions" | "risks" | "scenes";
 const PHASE_TABS: { id: PhaseDetailTab; label: string; testId: string }[] = [
   { id: "overview", label: "阶段概览", testId: "phase-detail-tab-overview" },
   { id: "questions", label: "问题与回报", testId: "phase-detail-tab-questions" },
-  { id: "risks", label: "节奏风险", testId: "phase-detail-tab-risks" },
+  { id: "risks", label: "流失风险", testId: "phase-detail-tab-risks" },
   { id: "scenes", label: "相关场景", testId: "phase-detail-tab-scenes" },
 ];
 
@@ -620,14 +622,14 @@ export function JourneyPhaseDetailPanel({
                     </JourneyInspectorSection>
                   ) : null}
                   {overlappingRisks.length ? (
-                    <JourneyInspectorSection title="风险区间">
+                    <JourneyInspectorSection title="流失风险区间">
                       <ul className="phase-detail-list" data-testid="phase-detail-risk-list">
                         {overlappingRisks.map((interval) => (
                           <li
                             key={`${interval.risk_type}-${interval.start_scene_ordinal}`}
                             data-risk-type={interval.risk_type}
                           >
-                            <b>{interval.risk_type}</b>
+                            <b>{formatJourneyRiskTypeLabel(interval.risk_type)}</b>
                             <span>
                               {" "}
                               {formatJourneySceneRangeLabel(
@@ -635,7 +637,19 @@ export function JourneyPhaseDetailPanel({
                                 interval.end_scene_ordinal,
                               )}
                             </span>
-                            <p>{interval.summary || interval.trigger || "—"}</p>
+                            <p>
+                              {formatJourneyRiskSummary({
+                                risk_type: interval.risk_type,
+                                summary: interval.summary,
+                                start_scene_ordinal: interval.start_scene_ordinal,
+                                end_scene_ordinal: interval.end_scene_ordinal,
+                                span: interval.span,
+                              })}
+                            </p>
+                            <details className="journey-tech-details">
+                              <summary>技术详情</summary>
+                              <code>{interval.risk_type}</code>
+                            </details>
                           </li>
                         ))}
                       </ul>
@@ -756,17 +770,27 @@ export function JourneyMarkerInspectorPanel({
   const payoff = node?.primary_payoff ?? node?.payoffs?.[0] ?? null;
 
   if (kind === "risk") {
-    const summary = (riskInterval?.summary || riskInterval?.trigger || "").trim();
+    const summary = formatJourneyRiskSummary({
+      risk_type: riskInterval?.risk_type,
+      summary: riskInterval?.summary || riskInterval?.trigger,
+      start_scene_ordinal: riskInterval?.start_scene_ordinal,
+      end_scene_ordinal: riskInterval?.end_scene_ordinal,
+      span: riskInterval?.span,
+    });
     return (
       <JourneyInspectorShell testId="journey-risk-inspector" className="journey-inspector-panel">
         <JourneyInspectorHeader
-          title="风险提示"
+          title="流失风险"
           meta={
             riskInterval
-              ? `Risk · Scene ${riskInterval.start_scene_ordinal}—${riskInterval.end_scene_ordinal}`
-              : "Risk"
+              ? `场景 ${riskInterval.start_scene_ordinal}—${riskInterval.end_scene_ordinal}`
+              : "流失风险"
           }
-          pills={riskInterval?.risk_type ? [riskInterval.risk_type] : []}
+          pills={
+            riskInterval?.risk_type
+              ? [formatJourneyRiskTypeLabel(riskInterval.risk_type)]
+              : []
+          }
           onClose={onClose}
         />
         <JourneyInspectorBody>
@@ -775,17 +799,23 @@ export function JourneyMarkerInspectorPanel({
             <>
               <JourneyInspectorSection title="影响区间">
                 <p>
-                  Scene {riskInterval.start_scene_ordinal}—{riskInterval.end_scene_ordinal}
+                  场景 {riskInterval.start_scene_ordinal}—{riskInterval.end_scene_ordinal}
                 </p>
               </JourneyInspectorSection>
               {riskInterval.trigger ? (
-                <JourneyInspectorSection title="风险依据">
+                <JourneyInspectorSection title="流失风险依据">
                   <p>{riskInterval.trigger}</p>
                 </JourneyInspectorSection>
               ) : null}
               <JourneyInspectorSection title="可能影响">
-                <p>该区间可能影响读者持续阅读牵引，属于提示性风险，并非确定性失败判断。</p>
+                <p>
+                  连续缺少回报、节奏骤降或认知负担过高，可能降低读者继续阅读的意愿。属于提示性判断，并非确定性失败。
+                </p>
               </JourneyInspectorSection>
+              <details className="journey-tech-details">
+                <summary>技术详情</summary>
+                <code>{riskInterval.risk_type}</code>
+              </details>
             </>
           ) : (
             <JourneyInspectorEmptyState kind="no-risk" testId="empty-risk" />

@@ -37,7 +37,7 @@ import {
   JourneyQuestionInspectorPanel,
   JourneySceneDetailPanel,
 } from "./JourneySceneDetailPanel";
-import { roleLabelZh, formatJourneyPhaseLabel, resolvePhaseSummaryDisplay, formatJourneyScore, formatJourneySceneLabel, formatJourneyMetricLabel } from "./journeyUiLabels";
+import { roleLabelZh, formatJourneyPhaseLabel, resolvePhaseSummaryDisplay, formatJourneyScore, formatJourneySceneLabel, formatJourneyMetricLabel, formatPhaseMetricScoreLabel, formatJourneyRiskSummary, formatJourneyRiskTypeLabel } from "./journeyUiLabels";
 import {
   CANONICAL_OVERVIEW_MODE,
   OVERVIEW_MODE_PARAM,
@@ -754,6 +754,32 @@ export function ReaderJourneyWorkspace({
     [visualization.phases, selectedPhase],
   );
 
+  const phaseMetricAverages = useMemo(() => {
+    const averages = new Map<number, number>();
+    for (const phase of visualization.phases) {
+      if (metric === "engagement" && Number.isFinite(phase.average_engagement)) {
+        averages.set(phase.ordinal, phase.average_engagement);
+        continue;
+      }
+      const values: number[] = [];
+      for (
+        let ordinal = phase.start_scene_ordinal;
+        ordinal <= phase.end_scene_ordinal;
+        ordinal += 1
+      ) {
+        const point = series.find((item) => item.scene_ordinal === ordinal);
+        const resolved = resolveMetricValue(point);
+        if (resolved != null && Number.isFinite(resolved)) values.push(resolved);
+      }
+      if (values.length > 0) {
+        averages.set(phase.ordinal, values.reduce((sum, item) => sum + item, 0) / values.length);
+      } else if (Number.isFinite(phase.average_engagement)) {
+        averages.set(phase.ordinal, phase.average_engagement);
+      }
+    }
+    return averages;
+  }, [visualization.phases, series, metric]);
+
   const selectedCluster = useMemo(() => {
     if (!expandedClusterId) return null;
     const clusters =
@@ -1293,11 +1319,15 @@ export function ReaderJourneyWorkspace({
               <option value="" disabled>
                 选择阶段
               </option>
-              {visualization.phases.map((phase) => (
+              {visualization.phases.map((phase) => {
+                const phaseMetric =
+                  phaseMetricAverages.get(phase.ordinal) ?? phase.average_engagement;
+                return (
                 <option key={phase.ordinal} value={phase.ordinal}>
-                  {`${formatJourneyPhaseLabel(phase.title)} · 场景 ${phase.start_scene_ordinal}—${phase.end_scene_ordinal} · ${formatJourneyScore(phase.average_engagement)}`}
+                  {`${formatJourneyPhaseLabel(phase.title)} · 场景 ${phase.start_scene_ordinal}—${phase.end_scene_ordinal} · ${formatPhaseMetricScoreLabel(metric, phaseMetric)}`}
                 </option>
-              ))}
+                );
+              })}
             </select>
           </label>
           <div
@@ -1309,7 +1339,9 @@ export function ReaderJourneyWorkspace({
               const isSelected = selectedPhase === phase.ordinal;
               const phaseLabel = formatJourneyPhaseLabel(phase.title);
               const phaseSummary = resolvePhaseSummaryDisplay(phase.summary, phase.title);
-              const avgText = formatJourneyScore(phase.average_engagement);
+              const phaseMetric =
+                phaseMetricAverages.get(phase.ordinal) ?? phase.average_engagement;
+              const avgText = formatPhaseMetricScoreLabel(metric, phaseMetric);
               return (
                 <button
                   key={phase.ordinal}
@@ -1318,6 +1350,7 @@ export function ReaderJourneyWorkspace({
                   data-testid={`journey-phase-${phase.ordinal}`}
                   title={`${phaseLabel} · ${phaseSummary}`}
                   aria-pressed={isSelected}
+                  aria-selected={isSelected}
                   style={{
                     ["--phase-band-color" as string]: phaseColors[index % phaseColors.length],
                   }}
@@ -1330,11 +1363,6 @@ export function ReaderJourneyWorkspace({
                     </span>
                   </div>
                   <p className="journey-phase-card-desc">{phaseSummary}</p>
-                  {isSelected ? (
-                    <span className="journey-phase-current-badge" data-testid="journey-phase-current-badge">
-                      当前
-                    </span>
-                  ) : null}
                 </button>
               );
             })}
@@ -1465,7 +1493,7 @@ export function ReaderJourneyWorkspace({
                 <span data-legend="active-scene">当前场景</span>
                 <span data-legend="hook-key">钩子</span>
                 <span data-legend="payoff">回报</span>
-                <span data-legend="risk">风险</span>
+                <span data-legend="risk">流失风险</span>
                 {markerMode === "full" && (
                   <>
                     <span data-legend="answered">已回答问题</span>

@@ -58,13 +58,13 @@ vi.mock("./AnalysisResultsPage", () => ({
           </div>
           <div className="journey-sync-mode-toggle">
             <button type="button" data-testid="journey-mode-sync">
-              同步
+              正文对照
             </button>
             <button type="button" data-testid="journey-mode-journey">
-              旅程
+              旅程视图
             </button>
             <button type="button" data-testid="journey-mode-reading">
-              正文
+              仅看正文
             </button>
           </div>
           <div className="journey-sync-actions">
@@ -288,7 +288,7 @@ describe("Analysis results shell", () => {
     expect(globalCss).toContain(".results-shell-simplified.is-journey .journey-sync-tabs");
     expect(globalCss).toContain(".results-shell-simplified.is-journey .journey-sync-export-bar");
     expect(syncCss).toContain(".results-shell-simplified.is-journey .journey-sync-tabs");
-    expect(syncCss).toContain('content: "正文对照"');
+    expect(syncCss).not.toMatch(/content:\s*["']正文对照["']/);
     renderShell("/analysis-runs/55/results?tab=reader-journey");
     await waitFor(() =>
       expect(screen.getByTestId("results-shell")).toHaveAttribute("data-results-state", "completed"),
@@ -296,9 +296,15 @@ describe("Analysis results shell", () => {
     const shell = screen.getByTestId("results-shell");
     expect(shell).toHaveAttribute("data-shell-mode", "journey");
     expect(shell.className).toContain("is-journey");
-    expect(screen.getByTestId("journey-mode-sync")).toBeInTheDocument();
-    expect(screen.getByTestId("journey-mode-journey")).toBeInTheDocument();
-    expect(screen.getByTestId("journey-mode-reading")).toBeInTheDocument();
+    const sync = screen.getByTestId("journey-mode-sync");
+    const journey = screen.getByTestId("journey-mode-journey");
+    const reading = screen.getByTestId("journey-mode-reading");
+    expect(sync).toHaveTextContent("正文对照");
+    expect(journey).toHaveTextContent("旅程视图");
+    expect(reading).toHaveTextContent("仅看正文");
+    for (const label of [sync, journey, reading]) {
+      expect(label.textContent).not.toMatch(/æ|å|ç|è|ï¿½|�/);
+    }
     expect(document.querySelector(".journey-sync-tabs")).toBeTruthy();
     expect(document.querySelector(".journey-sync-export-bar")).toBeTruthy();
   });

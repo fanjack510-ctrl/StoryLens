@@ -3,10 +3,13 @@ import {
   formatJourneyMetricLabel,
   formatJourneyPhaseFallbackSummary,
   formatJourneyPhaseLabel,
+  formatJourneyRiskSummary,
+  formatJourneyRiskTypeLabel,
   formatJourneySceneLabel,
   formatJourneyScore,
   formatJourneySelectionType,
   formatJourneyStatus,
+  formatPhaseMetricScoreLabel,
   isEffectivePhaseSummary,
   PRIMARY_JOURNEY_METRICS,
   resolvePhaseSummaryDisplay,
@@ -51,11 +54,34 @@ describe("journeyUiLabels display formatters", () => {
     expect(formatJourneyMetricLabel("arousal")).toBe("情绪强度");
     expect(formatJourneyMetricLabel("tension")).toBe("节奏变化");
     expect(formatJourneyMetricLabel("hook")).toBe("钩子强度");
+    expect(formatJourneyMetricLabel("dropoff_risk")).toBe("流失风险");
     expect(formatJourneyMetricLabel("nope")).toBe("未知指标");
     expect(formatJourneyScore(76.4)).toBe("76");
     expect(formatJourneyScore(undefined)).toBe("—");
     expect(formatJourneyScore(Number.NaN)).toBe("—");
+    expect(formatPhaseMetricScoreLabel("engagement", 48)).toBe("阅读牵引 48");
     expect(PRIMARY_JOURNEY_METRICS).toEqual(["engagement", "arousal", "tension", "hook"]);
+  });
+
+  it("maps risk types without changing keys", () => {
+    expect(formatJourneyRiskTypeLabel("consecutive_no_payoff")).toBe("连续场景缺少有效回报");
+    expect(
+      formatJourneyRiskSummary({
+        risk_type: "consecutive_no_payoff",
+        start_scene_ordinal: 8,
+        end_scene_ordinal: 9,
+        span: 2,
+      }),
+    ).toContain("场景 8—9");
+    expect(
+      formatJourneyRiskSummary({
+        risk_type: "consecutive_no_payoff",
+        start_scene_ordinal: 8,
+        end_scene_ordinal: 9,
+        span: 2,
+      }),
+    ).toContain("缺少明显回报");
+    expect(formatJourneySelectionType("risk")).toBe("流失风险");
   });
 
   it("formats scene / selection / status without dirty tokens", () => {

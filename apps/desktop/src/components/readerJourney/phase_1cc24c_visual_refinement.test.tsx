@@ -143,7 +143,7 @@ describe("Phase 1C-C.2.4C visual refinement", () => {
     const marker = header.querySelector(".badge-hook, .badge-payoff, .badge-risk");
     if (marker) {
       expect(marker.getAttribute("title")).toBeTruthy();
-      expect(marker.textContent).toMatch(/钩子|回报|风险/);
+      expect(marker.textContent).toMatch(/钩子|回报|流失风险|风险/);
     }
   });
 

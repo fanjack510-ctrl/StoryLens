@@ -293,7 +293,7 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
             data-testid="cloud-body-consent"
             onChange={(e) => setCloudBodyConsent(e.target.checked)}
           />
-          为完成分析，StoryLens 需要调用所选模型服务，所选章节正文将发送至该模型服务商。正文不会进入
+          为完成分析，StoryLens 将应用大模型能力对所选章节正文进行分析，所选正文会发送至当前模型服务商。正文不会进入
           StoryLens 匿名使用统计。费用由我的模型服务账户承担。
         </label>
       </div>

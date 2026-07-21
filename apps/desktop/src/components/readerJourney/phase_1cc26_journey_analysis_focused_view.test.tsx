@@ -150,7 +150,7 @@ describe("Phase 1C-C.2.6 journey analysis focused view", () => {
     expect(screen.getByTestId("scene-detail-panel-overview")).toBeInTheDocument();
     fireEvent.click(screen.getByTestId("journey-phase-1"));
     expect(screen.getByTestId("phase-detail-tab-questions")).toHaveTextContent("问题与回报");
-    expect(screen.getByTestId("phase-detail-tab-risks")).toHaveTextContent("节奏风险");
+    expect(screen.getByTestId("phase-detail-tab-risks")).toHaveTextContent("流失风险");
   });
 
   it("exports PNG with 阅读旅程 title and without legacy tabs", async () => {

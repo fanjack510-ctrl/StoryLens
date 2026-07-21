@@ -156,7 +156,7 @@ describe("Phase 1C-C.2.5.2 Context Inspector", () => {
     expect(legend).toHaveTextContent("当前场景");
     expect(legend).toHaveTextContent("钩子");
     expect(legend).toHaveTextContent("回报");
-    expect(legend).toHaveTextContent("风险");
+    expect(legend).toHaveTextContent("流失风险");
     expect(legend.textContent).not.toMatch(/次级节点/);
     expect(legend.textContent).not.toMatch(/已回答问题/);
 

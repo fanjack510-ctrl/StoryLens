@@ -11,7 +11,7 @@ import type {
   JourneySceneNode,
   ReaderJourneyVisualization,
 } from "../../types/readerJourneyVisualization";
-import { formatJourneyMetricLabel, formatJourneyPhaseLabel, formatJourneySceneLabel, formatJourneyScore, roleLabelZh } from "./journeyUiLabels";
+import { formatJourneyMetricLabel, formatJourneyPhaseLabel, formatJourneySceneLabel, formatJourneyScore, formatJourneyRiskSummary, roleLabelZh } from "./journeyUiLabels";
 import { PHASE_BAND_COLORS } from "./journeyVisualTokens";
 import {
   buildLinePathD,
@@ -669,7 +669,20 @@ export function CanonicalJourneyChart({
                 {tooltipHook?.summary ? <div>钩子：{tooltipHook.summary}</div> : null}
                 {tooltipPayoff?.summary ? <div>回报：{tooltipPayoff.summary}</div> : null}
                 {tooltipRisk?.summary || tooltipRisk?.risk_type ? (
-                  <div>风险：{tooltipRisk?.summary ?? tooltipRisk?.risk_type}</div>
+                  <div>
+                    流失风险：
+                    {formatJourneyRiskSummary({
+                      risk_type: tooltipRisk?.risk_type,
+                      summary: tooltipRisk?.summary,
+                      start_scene_ordinal: tooltipRisk?.start_scene_ordinal,
+                      end_scene_ordinal: tooltipRisk?.end_scene_ordinal,
+                      span: tooltipRisk?.span,
+                    })}
+                    <details className="journey-tech-details">
+                      <summary>技术详情</summary>
+                      <code>{tooltipRisk?.risk_type ?? "—"}</code>
+                    </details>
+                  </div>
                 ) : null}
               </div>
             </foreignObject>

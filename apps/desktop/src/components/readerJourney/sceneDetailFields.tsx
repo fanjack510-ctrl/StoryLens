@@ -113,7 +113,7 @@ export function TechniqueList({
             {item.mechanism ? <p>机制：{item.mechanism}</p> : null}
             {item.reader_effect ? <p>读者效果：{item.reader_effect}</p> : null}
             {item.transfer_formula ? <p>迁移公式：{item.transfer_formula}</p> : null}
-            {item.risk ? <p>风险：{item.risk}</p> : null}
+            {item.risk ? <p>流失风险：{item.risk}</p> : null}
             <EvidenceButtons ids={item.evidence_paragraph_ids} onLocate={onLocateEvidence} />
           </li>
         );

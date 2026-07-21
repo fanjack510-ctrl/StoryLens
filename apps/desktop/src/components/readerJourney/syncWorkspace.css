@@ -62,34 +62,7 @@
   cursor: not-allowed;
 }
 
-/* Phase 1C-C.2.3A: secondary view modes (distinct from top-level 正文阅读/场景分析/阅读旅程) */
-.results-shell-simplified [data-testid="journey-mode-sync"],
-.book-shell-simplified [data-testid="journey-mode-sync"] {
-  font-size: 0;
-}
-.results-shell-simplified [data-testid="journey-mode-sync"]::after,
-.book-shell-simplified [data-testid="journey-mode-sync"]::after {
-  content: "正文对照";
-  font-size: 13px;
-}
-.results-shell-simplified [data-testid="journey-mode-journey"],
-.book-shell-simplified [data-testid="journey-mode-journey"] {
-  font-size: 0;
-}
-.results-shell-simplified [data-testid="journey-mode-journey"]::after,
-.book-shell-simplified [data-testid="journey-mode-journey"]::after {
-  content: "旅程视图";
-  font-size: 13px;
-}
-.results-shell-simplified [data-testid="journey-mode-reading"],
-.book-shell-simplified [data-testid="journey-mode-reading"] {
-  font-size: 0;
-}
-.results-shell-simplified [data-testid="journey-mode-reading"]::after,
-.book-shell-simplified [data-testid="journey-mode-reading"]::after {
-  content: "仅看正文";
-  font-size: 13px;
-}
+/* Secondary view mode labels live in React (UTF-8), not CSS content — avoids packaging mojibake. */
 
 /* Phase 1C-C.2.6.1: product title is in journey-analysis-header only */
 .journey-sync-workspace .journey-sync-title {

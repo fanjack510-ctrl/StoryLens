@@ -71,21 +71,22 @@ describe("Phase 1C-C.2.6.2 compact phase navigation strip", () => {
     expect(css).not.toMatch(/-webkit-line-clamp:\s*2;\s*\n\s*-webkit-box-orient:\s*vertical;\s*\n\s*white-space:\s*normal/);
   });
 
-  it("shows scene range and average engagement without average-label text", () => {
+  it("shows scene range and labeled metric score", () => {
     renderAt(
       <ReaderJourneyWorkspace visualization={visualization} onLocateEvidence={vi.fn()} />,
       "/?overview=curve",
     );
     const card = screen.getByTestId("journey-phase-2");
     expect(card).toHaveTextContent(/推进/);
-    expect(within(card).getByTestId("journey-phase-avg-2")).toHaveTextContent("58");
+    expect(within(card).getByTestId("journey-phase-avg-2")).toHaveTextContent("阅读牵引 58");
     expect(card.textContent).not.toMatch(/平均牵引/);
     expect(card.textContent).not.toMatch(/核心问题/);
     expect(card.textContent).not.toMatch(/阶段回报/);
     expect(card.textContent).not.toMatch(/继续动力/);
+    expect(card.textContent).not.toMatch(/æ|å|ç|è|ï¿½|�/);
   });
 
-  it("marks current phase without an extra row", () => {
+  it("marks current phase without a current badge", () => {
     renderAt(
       <ReaderJourneyWorkspace
         visualization={visualization}
@@ -96,9 +97,11 @@ describe("Phase 1C-C.2.6.2 compact phase navigation strip", () => {
     );
     const card = screen.getByTestId("journey-phase-3");
     expect(card).toHaveClass("active-phase");
-    expect(within(card).getByTestId("journey-phase-current-badge")).toHaveTextContent("当前");
+    expect(card).toHaveAttribute("aria-selected", "true");
+    expect(within(card).queryByTestId("journey-phase-current-badge")).not.toBeInTheDocument();
     expect(card.querySelectorAll(".journey-phase-card-head")).toHaveLength(1);
     expect(card.querySelectorAll(".journey-phase-card-desc")).toHaveLength(1);
+    expect(within(card).getByTestId("journey-phase-avg-3").textContent).toMatch(/阅读牵引/);
     expect(within(card).getByTestId("journey-phase-avg-3").textContent).not.toMatch(/当前/);
   });
 
