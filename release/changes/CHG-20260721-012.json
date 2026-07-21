@@ -53,6 +53,12 @@
       "message": "Record CHG-20260721-012 verification matrix evidence (no product change).",
       "primary": false,
       "multi_change_reason": "verification evidence only"
+    },
+    {
+      "sha": "ea5118206b080f1fe44de48ca33aae04a12e81fc",
+      "message": "Audit and isolate Reader Journey V2 synthetic fixture from real-novel branding (CHG-20260721-012).",
+      "primary": false,
+      "multi_change_reason": "fixture coupling audit + anti-hardcode tests; status remains tested"
     }
   ],
   "modules": [
@@ -125,5 +131,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-21T12:43:43Z",
-  "updated_at": "2026-07-21T13:16:53Z"
+  "updated_at": "2026-07-21T14:19:01Z"
 }
