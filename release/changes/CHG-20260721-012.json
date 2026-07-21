@@ -59,6 +59,12 @@
       "message": "Audit and isolate Reader Journey V2 synthetic fixture from real-novel branding (CHG-20260721-012).",
       "primary": false,
       "multi_change_reason": "fixture coupling audit + anti-hardcode tests; status remains tested"
+    },
+    {
+      "sha": "97b97947ffc822bcb54dbc8aaf24ec7e82112f22",
+      "message": "Attach fixture-audit commit to CHG-20260721-012.",
+      "primary": false,
+      "multi_change_reason": "attach fixture-audit registry sync"
     }
   ],
   "modules": [
