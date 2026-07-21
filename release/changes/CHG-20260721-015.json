@@ -35,6 +35,12 @@
       "message": "Attach status sync for CHG-20260721-015.",
       "primary": false,
       "multi_change_reason": "status attach sync"
+    },
+    {
+      "sha": "c36adaff4061584182276d0b7b48445212faa144",
+      "message": "Finalize CHG-20260721-015 commit attachments.",
+      "primary": false,
+      "multi_change_reason": "finalize attachments"
     }
   ],
   "modules": [
