@@ -80,6 +80,24 @@ const eligibleSetup = {
   analysis_mode: "BALANCED",
   blockers: [],
   needs_cloud_consent: false,
+  cloud_body_consent: true,
+  config_profile: {
+    runtime_mode: "browser_dev",
+    app_env: "development",
+    data_directory: "D:/dev/data",
+    database_path: "D:/dev/data/storylens.db",
+    isolates_sqlite_from_packaged: true,
+    packaged_data_directory_hint: "C:/Users/x/AppData/Local/StoryLens",
+    credential_store: {
+      type: "KeyringCredentialStore",
+      available: true,
+      machine_scoped: true,
+      returns_secret_to_api: false,
+      shares_with_packaged: true,
+      desktop_parity: true,
+    },
+    user_message: "当前为浏览器开发模式。配置库与正式版隔离。",
+  },
 };
 
 function renderTab() {
@@ -214,5 +232,54 @@ describe("SettingsAiServiceTab recommended setup", () => {
       "当前可用于分析",
     );
     expect(aiServiceConfig.fetchRecommendedQwenStatus).toHaveBeenCalled();
+  });
+
+  it("keeps backend cloud_enabled=true after init (no false default overwrite)", async () => {
+    renderTab();
+    expect(await screen.findByTestId("ai-service-status-facts")).toHaveTextContent("云端分析：已开启");
+    expect(screen.getByTestId("ai-service-status-facts")).toHaveTextContent("Provider：已启用");
+    expect(screen.getByTestId("ai-config-environment-banner")).toHaveTextContent(
+      "当前为浏览器开发模式",
+    );
+  });
+
+  it("shows env mismatch hint when credentials exist but switches off in isolated profile", async () => {
+    vi.mocked(aiServiceConfig.fetchRecommendedQwenStatus).mockResolvedValue({
+      ...eligibleSetup,
+      ok: false,
+      cloud_enabled: false,
+      provider_enabled: false,
+      provider_eligible: false,
+      analysis_ready: false,
+      blockers: ["cloud_master_switch_off"],
+      needs_cloud_consent: true,
+    } as any);
+    renderTab();
+    expect(await screen.findByTestId("ai-service-env-mismatch-hint")).toBeInTheDocument();
+    expect(screen.getByTestId("ai-service-status-facts")).toHaveTextContent("凭据状态：已配置");
+    expect(screen.getByTestId("ai-service-status-facts")).toHaveTextContent("云端分析：未开启");
+  });
+
+  it("shows rate_limited details without incomplete-config copy", async () => {
+    vi.mocked(aiServiceConfig.configureRecommendedQwenService).mockResolvedValue({
+      ...eligibleSetup,
+      ok: false,
+      persisted: false,
+      error_code: "RATE_LIMITED",
+      http_status: 429,
+      error_category: "rate_limited",
+      retryable: true,
+      user_message:
+        "AI 服务配置已完成；Provider 已启用；模型请求受到服务商限流。HTTP status：429；error_category：rate_limited；retryable：true。",
+    } as any);
+    renderTab();
+    await screen.findByTestId("ai-service-connection-status");
+    fireEvent.click(screen.getByTestId("ai-service-test"));
+    expect(await screen.findByTestId("ai-service-rate-limited-detail")).toHaveTextContent(
+      "error_category：rate_limited",
+    );
+    expect(screen.getByTestId("ai-service-rate-limited-detail")).toHaveTextContent("429");
+    expect(screen.queryByText(/分析配置尚未完成/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/云端模型服务尚未开启/)).not.toBeInTheDocument();
   });
 });

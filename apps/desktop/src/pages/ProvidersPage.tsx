@@ -151,6 +151,10 @@ export function ProvidersPage() {
     queryFn: providersApi.list,
   });
   const cloud = useQuery({ queryKey: ["cloud"], queryFn: providersApi.cloud });
+  const configProfile = useQuery({
+    queryKey: ["config-profile"],
+    queryFn: settingsApi.configProfile,
+  });
   const budget = useQuery({ queryKey: ["cloud-budget"], queryFn: settingsApi.cloudBudget });
   const usage = useQuery({ queryKey: ["cloud-usage"], queryFn: settingsApi.cloudUsage });
   const pricing = useQuery({ queryKey: ["cloud-pricing"], queryFn: settingsApi.cloudPricing });
@@ -163,6 +167,7 @@ export function ProvidersPage() {
     qc.invalidateQueries({ queryKey: ["cloud"] });
     qc.invalidateQueries({ queryKey: ["cloud-usage"] });
     qc.invalidateQueries({ queryKey: ["cloud-pricing"] });
+    qc.invalidateQueries({ queryKey: ["config-profile"] });
   };
   const blockedReasons = usage.data?.blocked_reasons ?? ["预算状态正在加载"];
   const runTransportDiagnostic = async () => {
@@ -240,11 +245,18 @@ export function ProvidersPage() {
     refresh();
   };
   const selectedProvider = providers.data?.find((p) => p.name === selected);
-  const providerEnabled = selectedProvider?.enabled ?? selectedProvider?.capabilities.enabled;
+  // Prefer list `enabled` (from ProviderConfiguration) over registry capabilities.enabled.
+  const providerEnabled = Boolean(
+    selectedProvider?.enabled ??
+      (selectedProvider?.capabilities?.enabled === true ? true : false),
+  );
+  const cloudHydrated = !cloud.isLoading && cloud.data != null;
+  const cloudEnabled = cloudHydrated ? Boolean(cloud.data?.enabled) : null;
   const realTestBusy =
     realTestStatus === "checking_budget" || realTestStatus === "running";
   const realTestButtonText = realTestBusy ? "测试中……" : "真实连接测试";
   const selectedDisplay = providerDisplayName(selected);
+  const profile = configProfile.data;
 
   return (
     <section className="page providers-page" data-testid="providers-page">
@@ -255,6 +267,18 @@ export function ProvidersPage() {
           <p>前端只连接 FastAPI；不会直接调用任何云端服务。</p>
         </div>
       </div>
+      {profile && (
+        <div className="notice" role="status" data-testid="providers-config-environment-banner">
+          <b>
+            {profile.runtime_mode === "browser_dev"
+              ? "当前为浏览器开发模式"
+              : profile.runtime_mode === "desktop_dev"
+                ? "当前为桌面开发模式"
+                : "当前为正式安装版"}
+          </b>
+          <p>{profile.user_message}</p>
+        </div>
+      )}
       {providers.isLoading && <Loading />}
       {providers.error && <ErrorState error={providers.error} />}
 
@@ -270,7 +294,10 @@ export function ProvidersPage() {
         </header>
         <div className="health-grid providers-health-grid">
           <span>
-            云端总开关 <b>{cloud.data?.enabled ? "开启" : "关闭"}</b>
+            云端总开关{" "}
+            <b>
+              {!cloudHydrated ? "加载中…" : cloudEnabled ? "开启" : "关闭"}
+            </b>
           </span>
           <span>
             预算保护 <b>{budget.data?.cloud_request_budget_enabled ? "开启" : "关闭"}</b>
@@ -326,18 +353,20 @@ export function ProvidersPage() {
 
       <section className="providers-section cloud-master panel" data-testid="cloud-master-section">
         <div>
-          <Badge tone={cloud.data?.enabled ? "success" : "neutral"}>
-            {cloudStateLabel(cloud.data?.state)}
+          <Badge tone={cloudEnabled ? "success" : "neutral"}>
+            {!cloudHydrated ? "加载中" : cloudStateLabel(cloud.data?.state)}
           </Badge>
           <h2>允许云端模型连接</h2>
           <p className="providers-section-hint">
-            关闭后禁止新云端请求，保留配置、凭据和历史记录。
+            关闭后禁止新云端请求，保留配置、凭据和历史记录。以后端 SQLite 为唯一事实源。
           </p>
         </div>
         <label className="switch">
           <input
             type="checkbox"
-            checked={!!cloud.data?.enabled}
+            data-testid="cloud-master-switch"
+            checked={cloudEnabled === true}
+            disabled={!cloudHydrated}
             onChange={(e) =>
               providersApi
                 .setCloud(e.target.checked)

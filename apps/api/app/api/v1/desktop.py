@@ -32,6 +32,7 @@ from app.schemas.settings import (
     CloudSettings,
     CloudSettingsUpdate,
     CloudUsageSummary,
+    ConfigRuntimeProfile,
     DemoSettings,
     ProviderConfigurationResponse,
     ProviderConfigurationUpdate,
@@ -42,11 +43,13 @@ from app.schemas.settings import (
     RecommendedQwenSetupRequest,
     RecommendedQwenSetupResponse,
 )
+from app.services.config_runtime_profile import build_config_runtime_profile
 from app.services.credentials.base import CredentialStore
 from app.services.credentials.service import get_credential_store
 from app.services.cloud_budget import daily_usage
 from app.services.cloud_pricing import pricing_status
 from app.services.recommended_ai_setup import (
+    CLOUD_BODY_CONSENT_KEY,
     configure_recommended_qwen,
     get_recommended_qwen_status,
     repair_recommended_qwen,
@@ -227,7 +230,14 @@ def _bootstrap_aliyun_row(session: Session, provider_name: str) -> ProviderConfi
     )
 
 
-def _recommended_setup_response(result) -> RecommendedQwenSetupResponse:
+def _recommended_setup_response(
+    result,
+    *,
+    session: Session,
+    store: CredentialStore,
+) -> RecommendedQwenSetupResponse:
+    consent = setting(session, CLOUD_BODY_CONSENT_KEY, False)
+    profile = ConfigRuntimeProfile.model_validate(build_config_runtime_profile(store))
     return RecommendedQwenSetupResponse(
         ok=result.ok,
         user_message=result.user_message,
@@ -245,6 +255,11 @@ def _recommended_setup_response(result) -> RecommendedQwenSetupResponse:
         model_service_validated=bool(getattr(result, "model_validated", False)),
         analysis_ready=bool(getattr(result, "analysis_ready", False)),
         readiness_reasons=list(getattr(result, "readiness_reasons", []) or []),
+        http_status=getattr(result, "http_status", None),
+        error_category=getattr(result, "error_category", None),
+        retryable=getattr(result, "retryable", None),
+        config_profile=profile,
+        cloud_body_consent=bool(consent),
     )
 
 
@@ -257,7 +272,18 @@ def get_recommended_qwen_setup(
     store: CredentialStore = Depends(get_credential_store),
     gateway: ModelGateway = Depends(get_model_gateway),
 ):
-    return _recommended_setup_response(get_recommended_qwen_status(session, store, gateway))
+    return _recommended_setup_response(
+        get_recommended_qwen_status(session, store, gateway),
+        session=session,
+        store=store,
+    )
+
+
+@router.get("/settings/config-profile", response_model=ConfigRuntimeProfile)
+def get_config_runtime_profile(
+    store: CredentialStore = Depends(get_credential_store),
+) -> ConfigRuntimeProfile:
+    return ConfigRuntimeProfile.model_validate(build_config_runtime_profile(store))
 
 
 @router.post(
@@ -279,7 +305,7 @@ def post_recommended_qwen_setup(
         cloud_body_consent=value.cloud_body_consent,
         persist=value.persist,
     )
-    return _recommended_setup_response(result)
+    return _recommended_setup_response(result, session=session, store=store)
 
 
 @router.post(
@@ -298,7 +324,7 @@ def post_recommended_qwen_repair(
         gateway=gateway,
         cloud_body_consent=value.cloud_body_consent,
     )
-    return _recommended_setup_response(result)
+    return _recommended_setup_response(result, session=session, store=store)
 
 
 @router.get(
@@ -576,9 +602,12 @@ def routing_preview(gateway: ModelGateway = Depends(get_model_gateway)):
 
 @router.get("/system/diagnostics")
 def diagnostics(
-    session: Session = Depends(get_db), gateway: ModelGateway = Depends(get_model_gateway)
+    session: Session = Depends(get_db),
+    gateway: ModelGateway = Depends(get_model_gateway),
+    store: CredentialStore = Depends(get_credential_store),
 ):
     session.execute(text("SELECT 1"))
+    profile = build_config_runtime_profile(store)
     return {
         "fastapi": "ok",
         "sqlite": "ok",
@@ -588,6 +617,7 @@ def diagnostics(
             for item in gateway.providers()
         ],
         "data_directory": str(user_data_root()),
+        "config_profile": profile,
         "recent_error": None,
     }
 

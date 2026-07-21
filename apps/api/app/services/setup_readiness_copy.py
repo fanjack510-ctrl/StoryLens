@@ -39,6 +39,9 @@ BLOCKER_LABELS: dict[str, str] = {
     "connection_test_failed": "模型服务验证失败",
     "SETUP_INCOMPLETE": "分析配置尚未完成",
     "API_KEY_NOT_SAVED": "API Key 尚未保存",
+    "RATE_LIMITED": "模型请求受到服务商限流",
+    "rate_limited": "模型请求受到服务商限流",
+    "PROVIDER_RATE_LIMITED": "模型请求受到服务商限流",
 }
 
 # Longer guidance for status cards / expandable help.
@@ -86,6 +89,14 @@ BLOCKER_GUIDANCE: dict[str, str] = {
     "MODEL_NOT_AVAILABLE": (
         "当前模型不可用。\n"
         "处理方式：切换分析模式或核对模型名称后重试。"
+    ),
+    "RATE_LIMITED": (
+        "模型请求受到服务商限流（HTTP 429，error_category=rate_limited，retryable=true）。\n"
+        "处理方式：稍后重试。此错误不表示云端开关或 Provider 未启用。"
+    ),
+    "rate_limited": (
+        "模型请求受到服务商限流（HTTP 429，error_category=rate_limited，retryable=true）。\n"
+        "处理方式：稍后重试。此错误不表示云端开关或 Provider 未启用。"
     ),
 }
 

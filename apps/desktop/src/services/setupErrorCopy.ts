@@ -101,6 +101,18 @@ const MAP: Record<string, Omit<SetupErrorInfo, "code">> = {
     message: "模型服务可用，但分析就绪检查未通过。",
     suggestion: "根据下方原因完成计价或预算配置。",
   },
+  RATE_LIMITED: {
+    title: "模型请求受到服务商限流",
+    message:
+      "AI 服务配置已完成且 Provider 已启用时，HTTP 429 表示服务商限流（error_category=rate_limited，retryable=true），不表示配置尚未完成。",
+    suggestion: "稍后重试模型请求；无需关闭或重置云端开关。",
+  },
+  rate_limited: {
+    title: "模型请求受到服务商限流",
+    message:
+      "AI 服务配置已完成且 Provider 已启用时，HTTP 429 表示服务商限流（error_category=rate_limited，retryable=true），不表示配置尚未完成。",
+    suggestion: "稍后重试模型请求；无需关闭或重置云端开关。",
+  },
 };
 
 export function mapSetupError(
@@ -170,5 +182,6 @@ export function stripRawErrorCodes(text: string): string {
     .replace(/\bCREDENTIAL_INVALID\b/g, "API Key 无效或已失效")
     .replace(/\bMODEL_NOT_AVAILABLE\b/g, "当前模型不可用")
     .replace(/\bCLOUD_DISABLED\b/g, "云端模型服务尚未开启")
-    .replace(/\bCLOUD_MASTER_SWITCH_OFF\b/g, "云端模型服务尚未开启");
+    .replace(/\bCLOUD_MASTER_SWITCH_OFF\b/g, "云端模型服务尚未开启")
+    .replace(/\bRATE_LIMITED\b/g, "模型请求受到服务商限流");
 }

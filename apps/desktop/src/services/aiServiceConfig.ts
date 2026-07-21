@@ -30,6 +30,30 @@ export type RecommendedQwenSetupStatus = {
   analysis_ready?: boolean;
   readiness_reasons?: string[];
   model_service_validated?: boolean;
+  http_status?: number | null;
+  error_category?: string | null;
+  retryable?: boolean | null;
+  cloud_body_consent?: boolean;
+  config_profile?: ConfigRuntimeProfile | null;
+};
+
+export type ConfigRuntimeProfile = {
+  runtime_mode: "browser_dev" | "desktop_dev" | "packaged";
+  app_env: "development" | "production";
+  is_frozen?: boolean;
+  data_directory: string;
+  database_path: string;
+  isolates_sqlite_from_packaged?: boolean;
+  packaged_data_directory_hint?: string | null;
+  credential_store: {
+    type: string;
+    available: boolean;
+    machine_scoped?: boolean;
+    returns_secret_to_api?: boolean;
+    shares_with_packaged?: boolean;
+    desktop_parity?: boolean;
+  };
+  user_message: string;
 };
 
 export type ConfigureRecommendedQwenInput = {
@@ -70,27 +94,37 @@ export async function configureRecommendedQwenService(
     return result;
   } catch (error: any) {
     const mapped = mapTransportOrHttpError(error);
+    const rateLimited =
+      error?.status === 429 ||
+      /RATE_LIMIT/i.test(mapped.rawCode) ||
+      error?.error_category === "rate_limited";
     return {
       ok: false,
-      user_message: mapConnectionError({
-        code: mapped.rawCode,
-        status: error?.status,
-        message: redactSecrets(error?.message || mapped.userLabel),
-      }),
+      user_message: rateLimited
+        ? "AI 服务配置已完成；Provider 已启用；模型请求受到服务商限流。HTTP status：429；error_category：rate_limited；retryable：true。"
+        : mapConnectionError({
+            code: mapped.rawCode,
+            status: error?.status,
+            message: redactSecrets(error?.message || mapped.userLabel),
+          }),
       persisted: false,
-      credential_configured: false,
-      provider_enabled: false,
-      cloud_enabled: false,
+      // Do not invent "closed" flags on transport failure — caller keeps prior GET snapshot.
+      credential_configured: Boolean(error?.credential_configured),
+      provider_enabled: Boolean(error?.provider_enabled),
+      cloud_enabled: Boolean(error?.cloud_enabled),
       provider_eligible: false,
       selected_provider_id: "aliyun_qwen_plus",
-      connection_status: "unconfigured",
+      connection_status: rateLimited ? "rate_limited" : "unconfigured",
       analysis_mode: null,
-      blockers: [mapped.rawCode || "request_failed"],
+      blockers: [rateLimited ? "rate_limited" : mapped.rawCode || "request_failed"],
       needs_cloud_consent: false,
-      error_code: mapped.rawCode,
+      error_code: rateLimited ? "RATE_LIMITED" : mapped.rawCode,
       model_validated: false,
       analysis_ready: false,
       readiness_reasons: [],
+      http_status: rateLimited ? 429 : error?.status ?? null,
+      error_category: rateLimited ? "rate_limited" : null,
+      retryable: rateLimited ? true : null,
     };
   }
 }

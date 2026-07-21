@@ -113,6 +113,9 @@ class RecommendedAiSetupResult:
     model_validated: bool = False
     analysis_ready: bool = False
     readiness_reasons: list[str] = field(default_factory=list)
+    http_status: int | None = None
+    error_category: str | None = None
+    retryable: bool | None = None
 
 
 def _pricing_path() -> Path:
@@ -379,13 +382,27 @@ async def _async_model_validate(
     except ProviderRequestError as exc:
         code = getattr(exc, "error_code", None) or "CREDENTIAL_INVALID"
         upper = str(code).upper()
-        if "AUTH" in upper or "401" in upper or "403" in upper:
+        http_status = getattr(exc, "http_status_code", None)
+        error_category = getattr(exc, "error_category", None)
+        retryable = getattr(exc, "retryable", None)
+        if http_status == 429 or error_category == "rate_limited":
+            mapped = "RATE_LIMITED"
+            error_category = "rate_limited"
+            retryable = True if retryable is None else bool(retryable)
+        elif "AUTH" in upper or "401" in upper or "403" in upper:
             mapped = "CREDENTIAL_INVALID"
         elif "MODEL" in upper and "NOT" in upper:
             mapped = "MODEL_NOT_AVAILABLE"
         else:
             mapped = upper
-        return {"ok": False, "error_code": mapped, "detail": str(exc)}
+        return {
+            "ok": False,
+            "error_code": mapped,
+            "detail": str(exc),
+            "http_status": http_status,
+            "error_category": error_category,
+            "retryable": retryable,
+        }
     except (ValidationError, json.JSONDecodeError, ValueError) as exc:
         return {
             "ok": False,
@@ -568,6 +585,51 @@ def configure_recommended_qwen(
         session.commit()
         _save_setting(session, CLOUD_KEY, previous_cloud)
         error_code = str(model_result.get("error_code") or "CREDENTIAL_INVALID")
+        http_status = model_result.get("http_status")
+        error_category = model_result.get("error_category")
+        retryable = model_result.get("retryable")
+        if isinstance(http_status, int):
+            http_status_i = http_status
+        else:
+            http_status_i = None
+        if error_code in {"RATE_LIMITED", "PROVIDER_RATE_LIMITED"} or http_status_i == 429:
+            error_code = "RATE_LIMITED"
+            error_category = "rate_limited"
+            retryable = True if retryable is None else bool(retryable)
+            http_status_i = http_status_i or 429
+            config_complete = bool(previous and previous_enabled and previous_cloud)
+            if config_complete:
+                user_message = (
+                    "AI 服务配置已完成；Provider 已启用。"
+                    "模型请求受到服务商限流（HTTP 429，error_category=rate_limited，retryable=true）。"
+                    "请稍后重试；此错误不等于云端未开启或 Provider 未启用。"
+                )
+            else:
+                user_message = (
+                    "模型请求受到服务商限流（HTTP 429，error_category=rate_limited，retryable=true）。"
+                    "请稍后重试；此错误与云端开关/Provider 启用状态无关。"
+                )
+            return RecommendedAiSetupResult(
+                ok=False,
+                user_message=user_message,
+                persisted=False,
+                credential_configured=bool(previous),
+                provider_enabled=previous_enabled,
+                cloud_enabled=previous_cloud,
+                provider_eligible=False,
+                selected_provider_id=CANONICAL_PROVIDER_ID,
+                connection_status="rate_limited",
+                analysis_mode=_read_setting(session, ANALYSIS_MODE_KEY, None),
+                blockers=["rate_limited"],
+                error_code=error_code,
+                raw_diagnostic={"model": model_result, "transport": transport},
+                model_validated=False,
+                analysis_ready=False,
+                readiness_reasons=[blocker_label("RATE_LIMITED")],
+                http_status=http_status_i,
+                error_category=error_category,
+                retryable=bool(retryable),
+            )
         return RecommendedAiSetupResult(
             ok=False,
             user_message=(
@@ -588,6 +650,9 @@ def configure_recommended_qwen(
             model_validated=False,
             analysis_ready=False,
             readiness_reasons=[blocker_label(error_code)],
+            http_status=http_status_i,
+            error_category=str(error_category) if error_category else None,
+            retryable=bool(retryable) if retryable is not None else None,
         )
 
     if not persist:

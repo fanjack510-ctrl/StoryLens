@@ -190,7 +190,7 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
     }
   };
 
-  if (providers.isLoading || configuration.isLoading || setup.isLoading) {
+  if (providers.isLoading || configuration.isLoading || setup.isLoading || cloud.isLoading) {
     return (
       <article className="settings-panel">
         <Loading />
@@ -198,15 +198,21 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
     );
   }
 
-  const apiKeyConfigured = setup.data?.credential_configured || view.apiKeyConfigured;
-  const providerEnabled = setup.data?.provider_enabled || view.providerEnabled;
-  const cloudEnabled = setup.data?.cloud_enabled || view.cloudEnabled;
+  // Backend SQLite is the sole source for these flags — never invent false before hydrate.
+  const apiKeyConfigured = Boolean(setup.data?.credential_configured ?? view.apiKeyConfigured);
+  const providerEnabled = Boolean(setup.data?.provider_enabled ?? configuration.data?.enabled);
+  const cloudEnabled = Boolean(setup.data?.cloud_enabled ?? cloud.data?.enabled);
+  const profile = setup.data?.config_profile;
   const pricingOk = !(setup.data?.blockers || []).some((b) =>
     /pricing|BUDGET_NOT_AVAILABLE|MODEL_PRICING/i.test(b),
   );
   const budgetOk = !(setup.data?.blockers || []).some((b) =>
     /budget_unavailable|INSUFFICIENT_BUDGET/i.test(b),
   );
+  const rateLimited =
+    testErrorCode === "RATE_LIMITED" ||
+    testErrorCode === "rate_limited" ||
+    /rate_limited|429/i.test(userMessage);
 
   return (
     <article className="settings-panel settings-module" data-testid="settings-panel-ai-service">
@@ -214,6 +220,36 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
         <h2>AI 服务</h2>
         <p>连接所选模型服务完成章节分析。Endpoint 与模型 ID 将随分析模式自动配置。</p>
       </header>
+
+      {profile && (
+        <div
+          className="notice"
+          data-testid="ai-config-environment-banner"
+          data-runtime-mode={profile.runtime_mode}
+        >
+          <b>
+            {profile.runtime_mode === "browser_dev"
+              ? "当前为浏览器开发模式"
+              : profile.runtime_mode === "desktop_dev"
+                ? "当前为桌面开发模式"
+                : "当前为正式安装版"}
+          </b>
+          <p>{profile.user_message}</p>
+          <p className="hint">
+            配置库：{profile.data_directory}
+            {profile.isolates_sqlite_from_packaged && profile.packaged_data_directory_hint
+              ? ` · 正式版目录：${profile.packaged_data_directory_hint}`
+              : ""}
+          </p>
+          {!profile.credential_store.desktop_parity && (
+            <p className="hint" data-testid="ai-credential-capability-note">
+              当前凭据能力与桌面正式版不完全一致（store=
+              {profile.credential_store.type}，available=
+              {String(profile.credential_store.available)}）。界面不会返回完整 API Key。
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="ai-status-card" data-testid="ai-service-status-card">
         <div className="ai-status-main">
@@ -224,25 +260,51 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
               data-testid="ai-service-connection-status"
               style={{ whiteSpace: "pre-line" }}
             >
-              {readinessLabel}
+              {rateLimited
+                ? "配置完整，但模型请求受到服务商限流"
+                : readinessLabel}
             </span>
           </div>
         </div>
         <ul className="ai-status-facts settings-ai-facts" data-testid="ai-service-status-facts">
           <li>凭据状态：{apiKeyConfigured ? "已配置" : "未配置"}</li>
           <li>网络状态：请使用「传输诊断」（高级）单独检查</li>
-          <li>模型验证：{modelValidated || eligible ? "已通过或可分析" : "尚未验证"}</li>
+          <li>
+            模型验证：
+            {rateLimited
+              ? "配置可用；最近一次请求 rate_limited (HTTP 429)"
+              : modelValidated || eligible
+                ? "已通过或可分析"
+                : "尚未验证"}
+          </li>
           <li>计价状态：{pricingOk && apiKeyConfigured ? "可用" : "缺失或未就绪"}</li>
           <li>预算状态：{budgetOk && apiKeyConfigured ? "可用" : "不足或未就绪"}</li>
           <li>Provider：{providerEnabled ? "已启用" : "未启用"}</li>
           <li>云端分析：{cloudEnabled ? "已开启" : "未开启"}</li>
+          <li>
+            正文发送同意（已持久化）：
+            {setup.data?.cloud_body_consent ? "是" : "否"}
+          </li>
           <li>最终分析就绪：{eligible ? "是" : "否"}</li>
           <li data-testid="ai-service-default-provider-label">默认服务：阿里云百炼（推荐）</li>
           <li>分析模式：{setup.data?.analysis_mode || analysisMode}</li>
         </ul>
-        {!eligible && primaryBlocker && (
+        {rateLimited && (
+          <p className="hint" data-testid="ai-service-rate-limited-detail">
+            AI 服务配置已完成；Provider {providerEnabled ? "已启用" : "未启用"}；模型请求受到服务商限流。
+            HTTP status：429；error_category：rate_limited；retryable：true。
+          </p>
+        )}
+        {!eligible && !rateLimited && primaryBlocker && (
           <p className="hint" data-testid="ai-service-readiness-detail">
             {formatSetupErrorBlock(primaryBlocker, { model: view.modelDisplayName })}
+          </p>
+        )}
+        {apiKeyConfigured && (!cloudEnabled || !providerEnabled) && profile?.isolates_sqlite_from_packaged && (
+          <p className="hint" data-testid="ai-service-env-mismatch-hint">
+            本机凭据库显示已配置，但当前开发配置库中云端/Provider 开关未开启。
+            这通常是因为开发版与正式版使用不同的 SQLite，并不代表正式版配置被重置。
+            请在本环境勾选正文发送说明后点击「验证并保存」，或使用「修复配置」。
           </p>
         )}
       </div>

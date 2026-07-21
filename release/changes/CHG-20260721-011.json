@@ -1,0 +1,63 @@
+{
+  "id": "CHG-20260721-011",
+  "title": "Fix cloud auth and provider enabled state reset on dev startup",
+  "type": "fix",
+  "base_version": "1.0.3",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "apps/api",
+    "apps/desktop"
+  ],
+  "files": [
+    "apps/api/app/services/config_runtime_profile.py",
+    "apps/api/app/api/v1/desktop.py",
+    "apps/api/app/schemas/settings.py",
+    "apps/api/app/services/recommended_ai_setup.py",
+    "apps/api/app/services/setup_readiness_copy.py",
+    "apps/desktop/src/components/providers/AliyunForm.tsx",
+    "apps/desktop/src/components/settings/SettingsAiServiceTab.tsx",
+    "apps/desktop/src/pages/ProvidersPage.tsx",
+    "apps/desktop/src/services/aiServiceConfig.ts",
+    "apps/desktop/src/services/aiServiceViewModel.ts",
+    "apps/desktop/src/services/setupErrorCopy.ts",
+    "apps/desktop/src/services/settingsApi.ts"
+  ],
+  "user_summary": "开发版启动后云端授权与 Provider 启用状态不再错误恢复为默认关闭；配置以后端持久化为唯一事实源。",
+  "technical_summary": "Browser-dev uses repo ./data SQLite while packaged uses LOCALAPPDATA; shared Windows keyring made credentials look configured while cloud_enabled/provider switches read false from the isolated DB. AliyunForm also defaulted enabled=false before hydrate and could overwrite. Added config-profile API/banner, hydrate gates, and accurate RATE_LIMITED (429) messaging that preserves enablement flags.",
+  "acceptance_criteria": [
+    "Backend cloud_enabled=true stays true after page init",
+    "Backend provider_enabled=true stays true after page init",
+    "UI defaults never overwrite saved backend flags before hydrate",
+    "Save then refresh keeps cloud and provider enabled",
+    "API Key never enters localStorage; full key never returned",
+    "Browser-dev banner shows isolated config environment",
+    "HTTP 429 shows rate_limited without incomplete-config copy"
+  ],
+  "tests": [
+    "pytest apps/api/tests/test_config_runtime_profile.py",
+    "pytest apps/api/tests/test_recommended_ai_setup.py",
+    "vitest SettingsAiServiceTab/AliyunForm/aiServiceViewModel",
+    "npm run typecheck"
+  ],
+  "verification_evidence": [
+    "Local: 22 pytest passed; 20 vitest passed; typecheck passed; version check 1.0.3; change_registry check passed; git diff --check passed. Confirmed prod DB cloud_enabled=true vs worktree data/storylens.db cloud_enabled=false with shared keyring."
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "No schema migration. Dev and packaged SQLite remain isolated by design; keyring remains machine-scoped."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "P1",
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-21T11:22:29Z",
+  "updated_at": "2026-07-21T11:32:41Z"
+}

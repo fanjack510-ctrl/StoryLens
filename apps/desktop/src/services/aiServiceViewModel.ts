@@ -185,12 +185,16 @@ export function buildAiServiceViewModel(input: BuildAiServiceInput): AiServiceVi
     input.httpStatus != null ? String(input.httpStatus) : null,
   ].filter(Boolean) as string[];
 
-  const cloudEnabled = Boolean(input.cloudEnabled);
-  const providerEnabled =
-    input.provider?.enabled ??
-    input.provider?.capabilities?.enabled ??
+  const cloudEnabled = Boolean(
+    input.cloudEnabled ?? false,
+  );
+  // Prefer ProviderConfiguration.enabled (SQLite) over registry capabilities.enabled.
+  const providerEnabled = Boolean(
     input.configuration?.enabled ??
-    false;
+      input.provider?.enabled ??
+      (input.provider?.capabilities?.enabled === true ? true : undefined) ??
+      false,
+  );
   const configured = Boolean(input.provider?.configured);
   const apiKeyConfigured =
     input.configuration?.credential_state === "configured" ||
@@ -285,6 +289,13 @@ export function mapTransportOrHttpError(error: {
   }
   if (/CLOUD_MASTER/i.test(code)) {
     return { userLabel: mapUserStatusLabel("cloud_disabled"), rawCode: code };
+  }
+  if (status === 429 || /RATE_LIMIT/i.test(code)) {
+    return {
+      userLabel:
+        "模型请求受到服务商限流（HTTP 429，error_category=rate_limited，retryable=true）",
+      rawCode: code || "RATE_LIMITED",
+    };
   }
   if (/PROVIDER_NOT_CONNECTED|PROVIDER_DISCONNECTED/i.test(code)) {
     return { userLabel: mapUserStatusLabel("provider_disconnected"), rawCode: code };
