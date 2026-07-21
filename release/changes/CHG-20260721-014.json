@@ -3,15 +3,42 @@
   "title": "Library book delete with confirmation",
   "type": "feature",
   "base_version": "1.0.3",
-  "status": "registered",
+  "status": "tested",
   "include_in_next_release": true,
-  "commits": [],
-  "modules": [],
-  "files": [],
+  "commits": [
+    {
+      "sha": "ddb6c56994ebc74c0fa49e26019ea8e804911ef8",
+      "message": "Add library book delete with confirmation (CHG-20260721-014).",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "desktop-library",
+    "api-books"
+  ],
+  "files": [
+    "apps/api/app/services/book_delete.py",
+    "apps/api/app/api/v1/router.py",
+    "apps/desktop/src/pages/LibraryPage.tsx",
+    "apps/desktop/src/services/booksApi.ts"
+  ],
   "user_summary": "在我的书库为每本书增加删除入口，二次确认后事务删除关联分析数据，不删除用户原始导入文件，运行中任务阻止删除。",
-  "technical_summary": "",
-  "acceptance_criteria": [],
-  "tests": [],
+  "technical_summary": "Root: library had open-only UX; no DELETE API; analysis_runs lack book_id FK so orphans without explicit delete; imports are DB BLOBs not filesystem. Added delete_book transaction, active-task gate, OverflowMenu+confirm dialog.",
+  "acceptance_criteria": [
+    "More menu delete requires confirm dialog",
+    "Active tasks return BOOK_HAS_ACTIVE_TASKS",
+    "Original user files never deleted",
+    "Analysis runs and chapters removed with book"
+  ],
+  "tests": [
+    "pytest:test_book_delete_local",
+    "vitest:library_book_delete_local",
+    "npm run typecheck",
+    "version_manager check",
+    "change_registry check",
+    "git diff --check"
+  ],
   "verification_evidence": [],
   "data_compatibility": {
     "database_changed": false,
@@ -26,7 +53,7 @@
     "breaking_change": false
   },
   "blocker_level": null,
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-21T17:05:48Z",
-  "updated_at": "2026-07-21T17:05:48Z"
+  "updated_at": "2026-07-21T17:12:26Z"
 }
