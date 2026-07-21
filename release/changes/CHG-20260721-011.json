@@ -17,6 +17,12 @@
       "message": "Record CHG-20260721-011 as tested for next release pool.",
       "primary": false,
       "multi_change_reason": "registry metadata update after implementation commit"
+    },
+    {
+      "sha": "f12df92eb10faa17161ce5a7d4d31f9a9702d73f",
+      "message": "Mark CHG-20260721-011 status as tested after local verification.",
+      "primary": false,
+      "multi_change_reason": "status transition to tested after verification"
     }
   ],
   "modules": [
@@ -72,5 +78,5 @@
   "blocker_level": "P1",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-21T11:22:29Z",
-  "updated_at": "2026-07-21T11:33:11Z"
+  "updated_at": "2026-07-21T11:33:19Z"
 }
