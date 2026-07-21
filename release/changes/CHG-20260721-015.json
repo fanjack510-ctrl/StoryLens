@@ -5,7 +5,14 @@
   "base_version": "1.0.3",
   "status": "registered",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "a83e805e857dbc0a3e90c2df72ddd4d74fe56e81",
+      "message": "Add StoryLens local web production mode (CHG-20260721-015).",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "api",
     "desktop",
@@ -47,7 +54,7 @@
     "breaking_change": false
   },
   "blocker_level": null,
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-21T17:13:38Z",
-  "updated_at": "2026-07-21T17:27:27Z"
+  "updated_at": "2026-07-21T17:28:10Z"
 }
