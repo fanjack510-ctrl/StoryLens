@@ -359,7 +359,7 @@ export function ReaderJourneySyncWorkspace({
       <header className="journey-sync-sticky-bar">
         <h1 className="journey-sync-title" data-testid="journey-sync-title">
           {/* Product title lives in journey-analysis-header; avoid duplicate visible H1. */}
-          <span className="sr-only">阅读旅程</span>
+          <span className="sr-only">旅程分析</span>
         </h1>
         <div className="journey-sync-tabs tabs">
           <button
@@ -453,7 +453,7 @@ export function ReaderJourneySyncWorkspace({
 
       {taskControls && (
         <details className="journey-task-controls" data-testid="journey-task-controls">
-          <summary>生成与任务</summary>
+          <summary>任务控制</summary>
           {taskControls}
         </details>
       )}

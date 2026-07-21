@@ -30,6 +30,15 @@ function renderAt(ui: ReactElement, initial: string) {
   return render(<MemoryRouter initialEntries={[initial]}>{ui}</MemoryRouter>);
 }
 
+
+function openExportMenu() {
+  const more = screen.queryByTestId("journey-more-chart-settings");
+  if (more && !screen.queryByTestId("journey-export-png")) {
+    fireEvent.click(more);
+  }
+  return screen.getByTestId("journey-export-png");
+}
+
 describe("Phase 1C-C.2.6.2 compact phase navigation strip", () => {
   it("shows Phase 1-4 with two primary rows each", () => {
     renderAt(
@@ -192,7 +201,7 @@ describe("Phase 1C-C.2.6.2 compact phase navigation strip", () => {
       />,
       "/?overview=curve&scene=9",
     );
-    fireEvent.click(screen.getByTestId("journey-export-png"));
+    fireEvent.click(openExportMenu());
     await waitFor(() => {
       expect(exportJourneyPng).toHaveBeenCalledTimes(1);
     });

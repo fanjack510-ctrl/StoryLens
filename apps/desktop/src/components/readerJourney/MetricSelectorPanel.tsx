@@ -22,9 +22,9 @@ type Props = {
 };
 
 /**
- * In-document-flow metric selector panel (v4.2).
- * Opens below JourneyToolbar and pushes Phase/Chart down — never overlays.
- * No position:absolute/fixed, no elevated z-index.
+ * Legacy in-flow metric selector panel (v4.2).
+ * JourneyChartToolbar now uses a compact JourneyPopover dropdown instead.
+ * Kept for freeze / audit source-path compatibility.
  */
 export function MetricSelectorPanel({
   open,

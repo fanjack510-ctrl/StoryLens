@@ -494,7 +494,10 @@ export function BookRoutePage() {
             label: "导出旅程PNG",
             group: "导出",
             testId: "book-more-export-png",
-            onSelect: () => clickResults('[data-testid="journey-export-png"]'),
+            onSelect: () => {
+              clickResults('[data-testid="journey-more-chart-settings"]');
+              queueMicrotask(() => clickResults('[data-testid="journey-export-png"]'));
+            },
           },
           {
             id: "export-json",

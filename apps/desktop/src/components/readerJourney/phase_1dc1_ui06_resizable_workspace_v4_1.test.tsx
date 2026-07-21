@@ -82,6 +82,15 @@ function openInspector() {
   if (toggle) fireEvent.click(toggle);
 }
 
+
+function openExportMenu() {
+  const more = screen.queryByTestId("journey-more-chart-settings");
+  if (more && !screen.queryByTestId("journey-export-png")) {
+    fireEvent.click(more);
+  }
+  return screen.getByTestId("journey-export-png");
+}
+
 describe("Reader Journey Resizable Workspace v4.1", () => {
   afterEach(() => {
     cleanup();

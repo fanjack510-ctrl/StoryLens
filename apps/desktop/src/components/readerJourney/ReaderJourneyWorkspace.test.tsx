@@ -51,8 +51,6 @@ describe("ReaderJourneyWorkspace", () => {
       beatNode.querySelector("circle")?.getAttribute("r"),
     );
 
-    fireEvent.click(screen.getByTestId("journey-metric-segment-hook"));
-    expect(screen.getByTestId("journey-metric-select")).toHaveAttribute("data-current-metric", "hook");
     fireEvent.click(screen.getByTestId("journey-metric-select"));
     fireEvent.click(screen.getByTestId("journey-metric-hook"));
     expect(screen.getByTestId("journey-metric-select")).toHaveTextContent("钩子强度");
@@ -61,6 +59,7 @@ describe("ReaderJourneyWorkspace", () => {
     expect(screen.getByTestId("journey-detail-drawer")).toHaveTextContent("场景 14");
     expect(screen.getByTestId("scene-detail-tab-questions")).toHaveTextContent("问题链");
 
+    fireEvent.click(screen.getByTestId("journey-more-chart-settings"));
     expect(screen.getByTestId("journey-export-png")).toBeInTheDocument();
     expect(screen.queryByTestId("journey-overview-mode-tabs")).not.toBeInTheDocument();
   });
@@ -205,7 +204,7 @@ describe("ReaderJourneyWorkspace", () => {
     expect(screen.getByTestId("journey-detail-pane")).toBeInTheDocument();
   });
 
-  it("keeps metric value identity when switching primary segments", () => {
+  it("keeps metric value identity when switching metrics", () => {
     const onSelectionChange = vi.fn();
     const before = visualization.curve_series.engagement?.[0]?.value;
     renderJourney(
@@ -216,7 +215,8 @@ describe("ReaderJourneyWorkspace", () => {
         onSelectionChange={onSelectionChange}
       />,
     );
-    fireEvent.click(screen.getByTestId("journey-metric-segment-tension"));
+    fireEvent.click(screen.getByTestId("journey-metric-select"));
+    fireEvent.click(screen.getByTestId("journey-metric-tension"));
     expect(onSelectionChange).toHaveBeenCalledWith(
       expect.objectContaining({ selectedMetric: "tension" }),
     );

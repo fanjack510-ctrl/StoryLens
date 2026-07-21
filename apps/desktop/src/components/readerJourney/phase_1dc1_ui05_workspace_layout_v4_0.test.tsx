@@ -65,6 +65,15 @@ function renderWorkspace(viz = buildFixture13Scenes(), width = 1600) {
   );
 }
 
+
+function openExportMenu() {
+  const more = screen.queryByTestId("journey-more-chart-settings");
+  if (more && !screen.queryByTestId("journey-export-png")) {
+    fireEvent.click(more);
+  }
+  return screen.getByTestId("journey-export-png");
+}
+
 describe("Reader Journey Workspace Layout v4.0", () => {
   afterEach(() => {
     cleanup();
@@ -105,7 +114,7 @@ describe("Reader Journey Workspace Layout v4.0", () => {
     expect(screen.getByTestId("journey-zoom-fit-all")).toHaveTextContent("适应全部");
     expect(screen.getByTestId("journey-zoom-focus-phase")).toHaveTextContent("当前阶段");
     expect(screen.getByTestId("journey-inspector-toggle")).toHaveTextContent("展开详情");
-    expect(screen.getByTestId("journey-export-png")).toHaveTextContent("导出PNG");
+    expect(openExportMenu()).toHaveTextContent("导出PNG");
     expect(screen.getByTestId("journey-more-chart-settings")).toHaveTextContent(
       "更多设置",
     );

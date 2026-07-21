@@ -56,6 +56,15 @@ function renderWorkspace(initial: string, extra?: { analysisRunId?: number; jour
   );
 }
 
+
+function openExportMenu() {
+  const more = screen.queryByTestId("journey-more-chart-settings");
+  if (more && !screen.queryByTestId("journey-export-png")) {
+    fireEvent.click(more);
+  }
+  return screen.getByTestId("journey-export-png");
+}
+
 describe("Phase 1C-C.2.6 journey analysis focused view", () => {
   it("shows 阅读旅程 and hides legacy top-level overview tabs", () => {
     renderWorkspace("/?overview=curve&scene=9&metric=engagement");
@@ -116,7 +125,7 @@ describe("Phase 1C-C.2.6 journey analysis focused view", () => {
     expect(screen.getByTestId("journey-metric-select")).toHaveTextContent("阅读牵引");
     expect(screen.queryByTestId("journey-metric-more")).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId("journey-metric-select"));
-    const menu = screen.getByTestId("journey-metric-select-menu");
+    const menu = screen.getByTestId("journey-metric-select-menu-panel");
     for (const key of ALL_METRIC_KEYS) {
       expect(within(menu).getByTestId(`journey-metric-${key}`)).toHaveTextContent(
         METRIC_LABELS_ZH[key],
@@ -157,7 +166,7 @@ describe("Phase 1C-C.2.6 journey analysis focused view", () => {
     renderWorkspace("/?overview=questions&scene=9");
     expect(screen.getByTestId("journey-export-title")).toHaveTextContent("阅读旅程");
     expect(screen.queryByTestId("journey-overview-mode-tabs")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByTestId("journey-export-png"));
+    fireEvent.click(openExportMenu());
     await waitFor(() => {
       expect(exportJourneyPng).toHaveBeenCalled();
     });

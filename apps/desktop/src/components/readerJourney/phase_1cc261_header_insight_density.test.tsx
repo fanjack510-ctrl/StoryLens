@@ -41,6 +41,15 @@ function visibleJourneyTitles(): HTMLElement[] {
   }) as HTMLElement[];
 }
 
+
+function openExportMenu() {
+  const more = screen.queryByTestId("journey-more-chart-settings");
+  if (more && !screen.queryByTestId("journey-export-png")) {
+    fireEvent.click(more);
+  }
+  return screen.getByTestId("journey-export-png");
+}
+
 describe("Phase 1C-C.2.6.1 header and insight density", () => {
   it("shows exactly one visible journey analysis title on the page", () => {
     renderAt(
@@ -223,7 +232,7 @@ describe("Phase 1C-C.2.6.1 header and insight density", () => {
       />,
       "/?overview=curve&scene=9",
     );
-    fireEvent.click(screen.getByTestId("journey-export-png"));
+    fireEvent.click(openExportMenu());
     await waitFor(() => expect(exportJourneyPng).toHaveBeenCalled());
     expect(screen.getByTestId("journey-export-title")).toHaveTextContent("阅读旅程");
     expect(screen.getByTestId("journey-summary-cards")).toBeInTheDocument();

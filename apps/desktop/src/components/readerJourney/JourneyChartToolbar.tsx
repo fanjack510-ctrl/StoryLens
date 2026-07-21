@@ -1,8 +1,12 @@
 import { useId, useState } from "react";
 import type { JourneyCurveMetric } from "../../types/readerJourneyVisualization";
 import { JourneyPopover } from "./JourneyPopover";
-import { MetricSelectorPanel } from "./MetricSelectorPanel";
-import { ALL_METRIC_KEYS, PRIMARY_JOURNEY_METRICS, PRIMARY_METRIC_LABELS_ZH, PRIMARY_METRIC_HINTS_ZH, formatJourneyMetricLabel } from "./journeyUiLabels";
+import {
+  ALL_METRIC_KEYS,
+  METRIC_HINTS_ZH,
+  METRIC_LABELS_ZH,
+  formatJourneyMetricLabel,
+} from "./journeyUiLabels";
 import type { ChartHeightPreset, YDomainMode } from "./journeyVisualizationConfig";
 
 type Props = {
@@ -24,21 +28,23 @@ type Props = {
   onResetPaneWidths?: () => void;
   inspectorCollapsed: boolean;
   onToggleInspector: () => void;
+  /** @deprecated Source visibility is controlled by top mode switch (正文对照/旅程视图/仅看正文). */
   sourceCollapsed?: boolean;
+  /** @deprecated Removed — duplicates top mode switch. */
   onToggleSource?: () => void;
+  /** @deprecated Always false — source toggle removed from Journey toolbar. */
   showSourceToggle?: boolean;
   onExportPng: () => void;
   exportBusy?: boolean;
   /** When true, collapse secondary actions into 更多 (narrow widths). */
   compactActions?: boolean;
-  /** <1100: full-width accordion-style metric panel. */
+  /** Unused — metric menu is always compact popover. Kept for call-site compat. */
   narrowLayout?: boolean;
 };
 
 /**
- * Professional single-row chart toolbar (v4.2).
- * Metric opens an in-flow MetricSelectorPanel below the toolbar (never overlays Phase/Chart).
- * Secondary menus use Shared JourneyPopover via overlay-root.
+ * Compact chart toolbar: metric dropdown · phase fit · details · more actions.
+ * Source expand/collapse lives in the top mode switch only.
  */
 export function JourneyChartToolbar({
   metric,
@@ -58,19 +64,13 @@ export function JourneyChartToolbar({
   onResetPaneWidths,
   inspectorCollapsed,
   onToggleInspector,
-  sourceCollapsed = false,
-  onToggleSource,
-  showSourceToggle = false,
   onExportPng,
   exportBusy = false,
-  compactActions = false,
-  narrowLayout = false,
 }: Props) {
   const [metricOpen, setMetricOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const metricTriggerId = useId();
   const moreTriggerId = useId();
-  const metricPanelDomId = useId();
 
   const metricLabel = formatJourneyMetricLabel(metric);
 
@@ -79,81 +79,87 @@ export function JourneyChartToolbar({
     setMetricOpen(false);
   };
 
-  const primaryLeft = (
-    <div className="journey-toolbar-left" data-testid="journey-metric-switcher">
+  const inspectorLabel = inspectorCollapsed ? "展开详情" : "收起详情";
+
+  const metricMenu = (
+    <JourneyPopover
+      open={metricOpen}
+      onOpenChange={(open) => {
+        setMetricOpen(open);
+        if (open) setMoreOpen(false);
+      }}
+      align="start"
+      data-testid="journey-metric-select-menu"
+      menuLabel="选择指标"
+      trigger={
+        <button
+          type="button"
+          id={metricTriggerId}
+          className={`journey-toolbar-btn journey-toolbar-btn-select ${metricOpen ? "active" : ""}`}
+          data-testid="journey-metric-select"
+          data-current-metric={metric}
+          title={`指标：${metricLabel}`}
+          aria-label={`指标：${metricLabel}`}
+          aria-expanded={metricOpen}
+          aria-haspopup="listbox"
+          onClick={() => {
+            setMetricOpen((v) => !v);
+            setMoreOpen(false);
+          }}
+        >
+          <span className="journey-toolbar-btn-label">指标</span>
+          <span className="journey-toolbar-btn-sep" aria-hidden="true">
+            ：
+          </span>
+          <span className="journey-toolbar-btn-value">{metricLabel}</span>
+        </button>
+      }
+    >
       <div
-        className="journey-metric-segmented"
-        data-testid="journey-metric-segmented"
-        role="tablist"
-        aria-label="旅程指标"
+        role="listbox"
+        aria-label="选择指标"
+        data-metric-panel="popover"
+        data-testid="journey-metric-selector-list"
       >
-        {PRIMARY_JOURNEY_METRICS.map((key) => {
+        {ALL_METRIC_KEYS.map((key) => {
           const selected = metric === key;
-          const label = PRIMARY_METRIC_LABELS_ZH[key];
-          const hint = PRIMARY_METRIC_HINTS_ZH[key];
+          const label = METRIC_LABELS_ZH[key];
+          const hint = METRIC_HINTS_ZH[key];
           return (
             <button
               key={key}
               type="button"
-              role="tab"
+              role="option"
+              data-testid={`journey-metric-${key}`}
+              className={selected ? "active" : ""}
               aria-selected={selected}
-              className={`journey-metric-segment${selected ? " is-selected" : ""}`}
-              data-testid={`journey-metric-segment-${key}`}
-              data-metric={key}
-              title={hint}
-              onClick={() => onMetricChange(key)}
+              onClick={() => handleMetricSelect(key)}
             >
-              {label}
+              <span className="journey-metric-option-label">{label}</span>
+              {hint ? <span className="journey-metric-option-hint">{hint}</span> : null}
             </button>
           );
         })}
       </div>
-      <button
-        type="button"
-        id={metricTriggerId}
-        className={`journey-toolbar-btn journey-toolbar-btn-select ${metricOpen ? "active" : ""}`}
-        data-testid="journey-metric-select"
-        data-current-metric={metric}
-        title={`指标：${metricLabel}`}
-        aria-label={`指标：${metricLabel}`}
-        aria-expanded={metricOpen}
-        aria-haspopup="listbox"
-        aria-controls={metricOpen ? metricPanelDomId : undefined}
-        onClick={() => {
-          setMetricOpen((v) => !v);
-          setMoreOpen(false);
-        }}
-      >
-        <span className="journey-toolbar-btn-label">更多指标</span>
-        <span className="journey-toolbar-btn-sep" aria-hidden="true">
-          ·
-        </span>
-        <span className="journey-toolbar-btn-value">{metricLabel}</span>
-      </button>
-      <button
-        type="button"
-        className="journey-toolbar-btn"
-        data-testid="journey-zoom-fit-all"
-        onClick={onFitAll}
-      >
-        适应全部
-      </button>
-      <button
-        type="button"
-        className="journey-toolbar-btn"
-        data-testid="journey-zoom-focus-phase"
-        onClick={onFocusPhase}
-      >
-        当前阶段
-      </button>
-    </div>
+    </JourneyPopover>
   );
-
-  const inspectorLabel = inspectorCollapsed ? "展开详情" : "收起详情";
-  const sourceLabel = sourceCollapsed ? "展开正文" : "收起正文";
 
   const moreItems = (
     <>
+      <div className="journey-anchored-menu-group" data-testid="journey-more-export-group">
+        <button
+          type="button"
+          role="menuitem"
+          data-testid="journey-export-png"
+          disabled={exportBusy}
+          onClick={() => {
+            onExportPng();
+            // Keep menu open while exporting so「导出中」status remains visible.
+          }}
+        >
+          {exportBusy ? "导出中" : "导出 PNG"}
+        </button>
+      </div>
       <div className="journey-anchored-menu-group" data-testid="journey-chart-height-controls">
         <div className="journey-anchored-menu-group-label">图表高度</div>
         {(
@@ -177,7 +183,7 @@ export function JourneyChartToolbar({
         ))}
       </div>
       <div className="journey-anchored-menu-group" data-testid="journey-y-domain-controls">
-        <div className="journey-anchored-menu-group-label">Y轴</div>
+        <div className="journey-anchored-menu-group-label">Y 轴</div>
         <button
           type="button"
           role="menuitem"
@@ -186,7 +192,7 @@ export function JourneyChartToolbar({
           aria-pressed={yDomainMode === "fixed_0_100"}
           onClick={() => onYDomainModeChange("fixed_0_100")}
         >
-          固定0—100
+          固定 0—100
         </button>
         <button
           type="button"
@@ -239,56 +245,19 @@ export function JourneyChartToolbar({
           </button>
         ) : null}
       </div>
-      {compactActions ? (
-        <div className="journey-anchored-menu-group" data-testid="journey-more-secondary-actions">
-          {showSourceToggle && onToggleSource ? (
-            <button
-              type="button"
-              role="menuitem"
-              data-testid="journey-source-toggle-menu"
-              onClick={() => {
-                onToggleSource();
-                setMoreOpen(false);
-              }}
-            >
-              {sourceLabel}
-            </button>
-          ) : null}
-          <button
-            type="button"
-            role="menuitem"
-            data-testid="journey-inspector-toggle-menu"
-            onClick={() => {
-              onToggleInspector();
-              setMoreOpen(false);
-            }}
-          >
-            {inspectorLabel}
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            data-testid="journey-export-png-menu"
-            disabled={exportBusy}
-            onClick={() => {
-              onExportPng();
-              setMoreOpen(false);
-            }}
-          >
-            {exportBusy ? "导出中" : "导出PNG"}
-          </button>
-        </div>
-      ) : null}
     </>
   );
 
   const moreMenu = (
     <JourneyPopover
       open={moreOpen}
-      onOpenChange={setMoreOpen}
+      onOpenChange={(open) => {
+        setMoreOpen(open);
+        if (open) setMetricOpen(false);
+      }}
       align="end"
       data-testid="journey-more-menu"
-      menuLabel="更多设置"
+      menuLabel="更多操作"
       trigger={
         <button
           type="button"
@@ -297,13 +266,13 @@ export function JourneyChartToolbar({
           data-testid="journey-more-chart-settings"
           aria-expanded={moreOpen}
           aria-haspopup="menu"
-          aria-label="更多设置"
+          aria-label="更多操作"
           onClick={() => {
             setMoreOpen((v) => !v);
             setMetricOpen(false);
           }}
         >
-          更多设置
+          更多操作
         </button>
       }
     >
@@ -313,67 +282,51 @@ export function JourneyChartToolbar({
 
   return (
     <div
-      className={`journey-toolbar-region${narrowLayout ? " is-narrow" : ""}`}
+      className="journey-toolbar-region"
       data-testid="journey-toolbar-region"
       data-metric-panel-open={metricOpen ? "true" : "false"}
     >
       <div
-        className={`journey-curve-toolbar journey-viz-toolbar ${compactActions ? "is-compact" : ""}`}
+        className="journey-curve-toolbar journey-viz-toolbar"
         data-testid="journey-curve-toolbar"
         data-visualization-version="4.2"
         role="toolbar"
         aria-label="图表工具栏"
       >
-        {primaryLeft}
+        <div className="journey-toolbar-left" data-testid="journey-metric-switcher">
+          {metricMenu}
+          <button
+            type="button"
+            className="journey-toolbar-btn"
+            data-testid="journey-zoom-fit-all"
+            onClick={onFitAll}
+          >
+            适应全部
+          </button>
+          <button
+            type="button"
+            className="journey-toolbar-btn"
+            data-testid="journey-zoom-focus-phase"
+            onClick={onFocusPhase}
+          >
+            当前阶段
+          </button>
+        </div>
         <div className="journey-toolbar-right" data-testid="journey-toolbar-right">
-          {!compactActions && showSourceToggle && onToggleSource ? (
-            <button
-              type="button"
-              className="journey-toolbar-btn"
-              data-testid="journey-source-toggle"
-              aria-pressed={!sourceCollapsed}
-              onClick={onToggleSource}
-            >
-              {sourceLabel}
-            </button>
-          ) : null}
-          {!compactActions ? (
-            <button
-              type="button"
-              className="journey-toolbar-btn journey-toolbar-btn-primary"
-              data-testid="journey-inspector-toggle"
-              aria-pressed={!inspectorCollapsed}
-              onClick={onToggleInspector}
-            >
-              {inspectorLabel}
-            </button>
-          ) : null}
-          {!compactActions ? (
-            <button
-              type="button"
-              className="journey-toolbar-btn"
-              data-testid="journey-export-png"
-              disabled={exportBusy}
-              aria-busy={exportBusy}
-              onClick={onExportPng}
-            >
-              {exportBusy ? "导出中" : "导出PNG"}
-            </button>
-          ) : null}
+          <button
+            type="button"
+            className="journey-toolbar-btn journey-toolbar-btn-primary"
+            data-testid="journey-inspector-toggle"
+            aria-pressed={!inspectorCollapsed}
+            onClick={onToggleInspector}
+          >
+            {inspectorLabel}
+          </button>
           {moreMenu}
         </div>
         {/* Legacy selector compatibility */}
         <div data-testid="journey-zoom-controls" hidden aria-hidden="true" />
       </div>
-      <MetricSelectorPanel
-        open={metricOpen}
-        metric={metric}
-        onSelect={handleMetricSelect}
-        onClose={() => setMetricOpen(false)}
-        triggerId={metricTriggerId}
-        listboxId={metricPanelDomId}
-        narrow={narrowLayout}
-      />
       {/* Keep metric key list reachable for static audits */}
       <span hidden aria-hidden="true" data-testid="journey-metric-keys-audit">
         {ALL_METRIC_KEYS.join(",")}

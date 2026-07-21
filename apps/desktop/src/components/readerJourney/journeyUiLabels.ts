@@ -365,6 +365,27 @@ export function formatJourneyRiskSummary(input: {
   return typeLabel;
 }
 
+/** Compact score nouns for phase/scene cards (presentation only). */
+export const METRIC_SCORE_SHORT_ZH: Record<JourneyCurveMetric, string> = {
+  engagement: "牵引",
+  valence: "正负",
+  arousal: "唤醒",
+  curiosity: "好奇",
+  tension: "节奏",
+  payoff: "回报",
+  hook: "钩子",
+  dropoff_risk: "风险",
+};
+
+/** e.g. 「节奏 66」「钩子 48」— never bare numbers. */
+export function formatMetricScoreLabel(
+  metric: JourneyCurveMetric,
+  value: number | null | undefined,
+): string {
+  if (value == null || !Number.isFinite(value)) return `${METRIC_SCORE_SHORT_ZH[metric]} —`;
+  return `${METRIC_SCORE_SHORT_ZH[metric]} ${Math.round(value)}`;
+}
+
 export function formatPhaseMetricScoreLabel(
   metric: string | null | undefined,
   value: unknown,

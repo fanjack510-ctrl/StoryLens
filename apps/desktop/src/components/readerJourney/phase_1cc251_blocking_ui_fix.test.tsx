@@ -75,6 +75,15 @@ function mockBox(el: Element, box: { x: number; y: number; width: number; height
   });
 }
 
+
+function openExportMenu() {
+  const more = screen.queryByTestId("journey-more-chart-settings");
+  if (more && !screen.queryByTestId("journey-export-png")) {
+    fireEvent.click(more);
+  }
+  return screen.getByTestId("journey-export-png");
+}
+
 describe("Phase 1C-C.2.5.1 blocking UI fix", () => {
   it("uses analysis header instead of legacy overview mode tabs", () => {
     renderWorkspace();
@@ -183,15 +192,16 @@ describe("Phase 1C-C.2.5.1 blocking UI fix", () => {
         }),
     );
     renderWorkspace();
-    const button = screen.getByTestId("journey-export-png");
+    const button = openExportMenu();
     expect(button).toHaveAttribute("type", "button");
     fireEvent.click(button);
     expect(await screen.findByText("导出中")).toBeInTheDocument();
-    expect(screen.getByTestId("journey-export-png")).toBeDisabled();
+    expect(openExportMenu()).toBeDisabled();
     await vi.waitFor(() => {
       expect(exportJourneyPng).toHaveBeenCalledTimes(1);
     });
-    fireEvent.click(screen.getByTestId("journey-export-png"));
+    fireEvent.click(screen.getByTestId("journey-more-chart-settings"));
+    fireEvent.click(openExportMenu());
     expect(exportJourneyPng).toHaveBeenCalledTimes(1);
     resolveExport({ filename: "StoryLens_第一章_完整旅程_v4.0.png" });
     expect(await screen.findByTestId("journey-export-feedback")).toHaveTextContent("已导出");
@@ -200,17 +210,19 @@ describe("Phase 1C-C.2.5.1 blocking UI fix", () => {
   it("shows error when export reports missing root", async () => {
     vi.mocked(exportJourneyPng).mockRejectedValue(new JourneyExportError("root_missing"));
     renderWorkspace();
-    fireEvent.click(screen.getByTestId("journey-export-png"));
+    fireEvent.click(screen.getByTestId("journey-more-chart-settings"));
+    fireEvent.click(openExportMenu());
     expect(await screen.findByTestId("journey-export-feedback")).toHaveTextContent(
       JOURNEY_EXPORT_USER_MESSAGES.root_missing,
     );
-    expect(screen.getByTestId("journey-export-png")).not.toBeDisabled();
+    expect(openExportMenu()).not.toBeDisabled();
   });
 
   it("shows error when chart is not rendered", async () => {
     vi.mocked(exportJourneyPng).mockRejectedValue(new JourneyExportError("not_rendered"));
     renderWorkspace();
-    fireEvent.click(screen.getByTestId("journey-export-png"));
+    fireEvent.click(screen.getByTestId("journey-more-chart-settings"));
+    fireEvent.click(openExportMenu());
     expect(await screen.findByTestId("journey-export-feedback")).toHaveTextContent(
       JOURNEY_EXPORT_USER_MESSAGES.not_rendered,
     );
@@ -219,7 +231,8 @@ describe("Phase 1C-C.2.5.1 blocking UI fix", () => {
   it("exports from legacy overview=questions while staying on journey analysis", async () => {
     renderWorkspace("/?overview=questions&scene=12");
     expect(screen.getByTestId("journey-overview-curve")).toBeInTheDocument();
-    fireEvent.click(screen.getByTestId("journey-export-png"));
+    fireEvent.click(screen.getByTestId("journey-more-chart-settings"));
+    fireEvent.click(openExportMenu());
     await vi.waitFor(() => {
       expect(exportJourneyPng).toHaveBeenCalled();
     });
@@ -232,7 +245,8 @@ describe("Phase 1C-C.2.5.1 blocking UI fix", () => {
 
   it("waits for render then calls exportJourneyPng with export root", async () => {
     renderWorkspace("/?overview=diagnosis&scene=12");
-    fireEvent.click(screen.getByTestId("journey-export-png"));
+    fireEvent.click(screen.getByTestId("journey-more-chart-settings"));
+    fireEvent.click(openExportMenu());
     await vi.waitFor(() => {
       expect(exportJourneyPng).toHaveBeenCalled();
     });
@@ -245,7 +259,8 @@ describe("Phase 1C-C.2.5.1 blocking UI fix", () => {
 
   it("shows success feedback with filename", async () => {
     renderWorkspace();
-    fireEvent.click(screen.getByTestId("journey-export-png"));
+    fireEvent.click(screen.getByTestId("journey-more-chart-settings"));
+    fireEvent.click(openExportMenu());
     const feedback = await screen.findByTestId("journey-export-feedback");
     expect(feedback).toHaveTextContent(/已导出.*StoryLens_第一章/);
     expect(feedback).toHaveAttribute("data-status", "succeeded");
@@ -254,19 +269,21 @@ describe("Phase 1C-C.2.5.1 blocking UI fix", () => {
   it("shows failure feedback and restores button", async () => {
     vi.mocked(exportJourneyPng).mockRejectedValue(new JourneyExportError("image_failed"));
     renderWorkspace();
-    fireEvent.click(screen.getByTestId("journey-export-png"));
+    fireEvent.click(screen.getByTestId("journey-more-chart-settings"));
+    fireEvent.click(openExportMenu());
     const feedback = await screen.findByTestId("journey-export-feedback");
     expect(feedback).toHaveTextContent(JOURNEY_EXPORT_USER_MESSAGES.image_failed);
     expect(feedback).toHaveAttribute("data-status", "failed");
-    expect(screen.getByTestId("journey-export-png")).not.toBeDisabled();
-    expect(screen.getByTestId("journey-export-png")).toHaveTextContent("导出");
+    expect(openExportMenu()).not.toBeDisabled();
+    expect(openExportMenu()).toHaveTextContent("导出 PNG");
   });
 
   it("keeps scene and metric after export from legacy questions URL", async () => {
     renderWorkspace("/?overview=questions&scene=12");
     fireEvent.click(screen.getByTestId("journey-metric-select"));
     fireEvent.click(screen.getByTestId("journey-metric-hook"));
-    fireEvent.click(screen.getByTestId("journey-export-png"));
+    fireEvent.click(screen.getByTestId("journey-more-chart-settings"));
+    fireEvent.click(openExportMenu());
     await vi.waitFor(() => expect(exportJourneyPng).toHaveBeenCalled());
     expect(screen.getByTestId("journey-overview-curve")).toBeInTheDocument();
     expect(screen.getByTestId("journey-metric-select")).toHaveAttribute(
@@ -278,7 +295,8 @@ describe("Phase 1C-C.2.5.1 blocking UI fix", () => {
 
   it("keeps journey analysis after export from legacy diagnosis URL", async () => {
     renderWorkspace("/?overview=diagnosis&scene=12");
-    fireEvent.click(screen.getByTestId("journey-export-png"));
+    fireEvent.click(screen.getByTestId("journey-more-chart-settings"));
+    fireEvent.click(openExportMenu());
     await vi.waitFor(() => expect(exportJourneyPng).toHaveBeenCalled());
     expect(screen.getByTestId("journey-overview-curve")).toBeInTheDocument();
     expect(screen.getByTestId("journey-export-root")).toHaveAttribute(
@@ -290,7 +308,8 @@ describe("Phase 1C-C.2.5.1 blocking UI fix", () => {
   it("does not invoke analysis APIs during export UI flow", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     renderWorkspace();
-    fireEvent.click(screen.getByTestId("journey-export-png"));
+    fireEvent.click(screen.getByTestId("journey-more-chart-settings"));
+    fireEvent.click(openExportMenu());
     await vi.waitFor(() => expect(exportJourneyPng).toHaveBeenCalled());
     expect(fetchSpy).not.toHaveBeenCalled();
     fetchSpy.mockRestore();

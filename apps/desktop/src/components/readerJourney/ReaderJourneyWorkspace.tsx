@@ -1290,9 +1290,6 @@ export function ReaderJourneyWorkspace({
           onResetPaneWidths={resetPaneWidths}
           inspectorCollapsed={!detailVisible}
           onToggleInspector={handleToggleInspector}
-          showSourceToggle={hasSourcePane}
-          sourceCollapsed={sourceCollapsed}
-          onToggleSource={handleToggleSource}
           compactActions={compactToolbar}
           narrowLayout={layoutMode === "narrow"}
           onExportPng={() => void handleExport()}

@@ -35,6 +35,15 @@ function renderAt(path: string, props: Record<string, unknown> = {}) {
   );
 }
 
+
+function openExportMenu() {
+  const more = screen.queryByTestId("journey-more-chart-settings");
+  if (more && !screen.queryByTestId("journey-export-png")) {
+    fireEvent.click(more);
+  }
+  return screen.getByTestId("journey-export-png");
+}
+
 describe("Phase 1C-C.2.5.2 Context Inspector", () => {
   it("does not render Phase detail above the curve", () => {
     renderAt("/?overview=curve&scene=12&inspector=phase", {
@@ -140,7 +149,7 @@ describe("Phase 1C-C.2.5.2 Context Inspector", () => {
     ]);
     expect(screen.getByTestId("journey-metric-select")).toHaveTextContent("阅读牵引");
     fireEvent.click(screen.getByTestId("journey-metric-select"));
-    expect(screen.getByTestId("journey-metric-select-menu")).toBeInTheDocument();
+    expect(screen.getByTestId("journey-metric-select-menu-panel")).toBeInTheDocument();
     expect(screen.getByTestId("journey-metric-engagement")).toBeInTheDocument();
     expect(screen.getByTestId("journey-metric-curiosity")).toBeInTheDocument();
     expect(screen.getByTestId("journey-metric-payoff")).toBeInTheDocument();
@@ -198,7 +207,8 @@ describe("Phase 1C-C.2.5.2 Context Inspector", () => {
       activeSceneOrdinal: 12,
       activePhaseOrdinal: 3,
     });
-    fireEvent.click(screen.getByTestId("journey-export-png"));
+    fireEvent.click(screen.getByTestId("journey-more-chart-settings"));
+    fireEvent.click(openExportMenu());
     await vi.waitFor(() => {
       expect(exportModule.exportJourneyPng).toHaveBeenCalled();
     });

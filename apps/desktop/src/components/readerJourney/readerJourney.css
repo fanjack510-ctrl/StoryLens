@@ -495,6 +495,30 @@ body.journey-pane-resizing[data-row-resize="true"] * {
 }
 
 /* In-flow metric panel — pushes Phase/Chart down; never overlays */
+.journey-popover-panel .journey-metric-option-label {
+  display: block;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.journey-popover-panel .journey-metric-option-hint {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 400;
+  margin-top: 2px;
+}
+
+.journey-popover-panel button[role="option"] {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  min-height: 40px;
+  white-space: normal;
+  line-height: 1.35;
+}
+
 .journey-metric-selector-panel {
   position: static;
   display: block;

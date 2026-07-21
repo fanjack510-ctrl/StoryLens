@@ -54,9 +54,9 @@ export function AppShell() {
           </span>
           <span className="brand-text">
             <b>StoryLens</b>
-            <small className="brand-tagline">小说拆解工作台</small>
           </span>
         </button>
+        <div className="context">小说叙事洞察与创作平台</div>
         <div className="top-status">
           <button
             type="button"

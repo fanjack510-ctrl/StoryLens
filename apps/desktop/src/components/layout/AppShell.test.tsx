@@ -104,6 +104,7 @@ describe("UI shell navigation", () => {
 
   it("shows only library and settings in primary nav", () => {
     renderShell("/library");
+    expect(screen.getByText("小说叙事洞察与创作平台")).toBeInTheDocument();
     const nav = screen.getByTestId("primary-nav");
     expect(within(nav).getByTestId("nav-library")).toBeInTheDocument();
     expect(within(nav).getByTestId("nav-settings")).toBeInTheDocument();

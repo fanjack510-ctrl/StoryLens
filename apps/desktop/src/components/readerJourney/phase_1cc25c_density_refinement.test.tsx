@@ -27,6 +27,15 @@ afterEach(() => {
 const css = readFileSync(resolve(__dirname, "./readerJourney.css"), "utf8");
 const visualization = buildMockReaderJourneyVisualization();
 
+
+function openExportMenu() {
+  const more = screen.queryByTestId("journey-more-chart-settings");
+  if (more && !screen.queryByTestId("journey-export-png")) {
+    fireEvent.click(more);
+  }
+  return screen.getByTestId("journey-export-png");
+}
+
 describe("Phase 1C-C.2.5C density refinement (updated for 2.6)", () => {
   it("uses compact metric strip and single metric selector", () => {
     render(
@@ -51,7 +60,7 @@ describe("Phase 1C-C.2.5C density refinement (updated for 2.6)", () => {
     expect(MORE_METRIC_KEYS).toContain("valence");
     expect(ALL_METRIC_KEYS).toContain("valence");
     fireEvent.click(screen.getByTestId("journey-metric-select"));
-    expect(screen.getByTestId("journey-metric-select-menu")).toBeInTheDocument();
+    expect(screen.getByTestId("journey-metric-select-menu-panel")).toBeInTheDocument();
     fireEvent.click(screen.getByTestId("journey-metric-valence"));
     expect(screen.getByTestId("journey-metric-select")).toHaveTextContent("情绪正负");
   });
@@ -87,7 +96,7 @@ describe("Phase 1C-C.2.5C density refinement (updated for 2.6)", () => {
       </MemoryRouter>,
     );
     expect(screen.getByTestId("journey-overview-curve")).toBeInTheDocument();
-    fireEvent.click(screen.getByTestId("journey-export-png"));
+    fireEvent.click(openExportMenu());
     await vi.waitFor(() => {
       expect(exportModule.exportJourneyPng).toHaveBeenCalled();
     });
