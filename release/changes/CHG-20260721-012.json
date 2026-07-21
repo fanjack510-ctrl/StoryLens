@@ -77,6 +77,12 @@
       "message": "Attach real Niujiaokao V2 native E2E commit to CHG-20260721-012.",
       "primary": false,
       "multi_change_reason": "attach real E2E registry sync"
+    },
+    {
+      "sha": "36d9903e10d003d52e8654a13c633440b34f0ddd",
+      "message": "Fix V2 Reader Journey field mixing and lens/diagnosis semantics (CHG-20260721-012).",
+      "primary": false,
+      "multi_change_reason": "V2 field mixing / lens binding / diagnosis / dropoff / pacing semantic fix"
     }
   ],
   "modules": [
@@ -166,5 +172,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-21T12:43:43Z",
-  "updated_at": "2026-07-21T14:54:40Z"
+  "updated_at": "2026-07-21T14:55:06Z"
 }
