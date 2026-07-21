@@ -198,6 +198,63 @@ def recover_analysis_run(
         background.add_task(execute_reader_journey, session_factory, gateway, journey_run.id)
         return int(journey_run.id)
 
+    def _resume_boundary() -> int | None:
+        from app.api.v1.analysis import (
+            _continue_from_checkpoints_impl,
+            _evaluate_recovery_provider,
+        )
+        from app.schemas.scene import BoundaryRecoveryContinueRequest
+        from fastapi import HTTPException
+
+        fresh = session.get(AnalysisRun, run_id)
+        if fresh is None:
+            return None
+        if fresh.status in {"boundary_candidates_running", "running", "queued"}:
+            return int(fresh.id)
+        existing = session.scalar(
+            select(AnalysisRun)
+            .where(
+                AnalysisRun.recovered_from_run_id == fresh.id,
+                AnalysisRun.status.in_(
+                    [
+                        "queued",
+                        "running",
+                        "boundary_candidates_running",
+                        "boundary_candidates_partial",
+                        "awaiting_boundary_review",
+                        "boundary_confirmed",
+                        "scene_analysis_running",
+                        "succeeded",
+                    ]
+                ),
+            )
+            .order_by(desc(AnalysisRun.id))
+        )
+        if existing is not None:
+            return int(existing.id)
+        _provider, eligibility = _evaluate_recovery_provider(
+            session, fresh, gateway, store
+        )
+        legacy = BoundaryRecoveryContinueRequest(
+            client_request_id=request.client_request_id,
+            cloud_consent=request.cloud_consent,
+            confirmed=True,
+            provider_state_version=str(eligibility.get("provider_state_version") or ""),
+        )
+        try:
+            result = _continue_from_checkpoints_impl(
+                run_id,
+                legacy,
+                background,
+                session,
+                gateway,
+                session_factory,
+                store,
+            )
+        except HTTPException:
+            return None
+        return int(getattr(result, "run_id", None) or 0) or None
+
     return execute_unified_recover(
         session,
         run,
@@ -206,6 +263,9 @@ def recover_analysis_run(
         store,
         background_resume_scene=_resume_scene if request.resume and request.confirmed else None,
         background_start_journey=_start_journey if request.resume and request.confirmed else None,
+        background_resume_boundary=_resume_boundary
+        if request.resume and request.confirmed
+        else None,
     )
 
 

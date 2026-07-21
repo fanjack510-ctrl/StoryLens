@@ -4,10 +4,28 @@ from __future__ import annotations
 
 import hashlib
 import re
+from datetime import datetime, timezone
 from typing import Any
 from urllib.parse import urlparse
 
 import httpx
+
+# Provider HTTP / transport error categories (user-facing taxonomy).
+ERROR_CATEGORY_AUTHENTICATION = "authentication_error"
+ERROR_CATEGORY_PERMISSION = "permission_error"
+ERROR_CATEGORY_INVALID_REQUEST = "invalid_request"
+ERROR_CATEGORY_MODEL_NOT_FOUND = "model_or_endpoint_not_found"
+ERROR_CATEGORY_RATE_LIMITED = "rate_limited"
+ERROR_CATEGORY_SERVER = "provider_server_error"
+ERROR_CATEGORY_TIMEOUT = "timeout"
+ERROR_CATEGORY_NETWORK = "network_error"
+ERROR_CATEGORY_INVALID_RESPONSE = "invalid_provider_response"
+ERROR_CATEGORY_UNKNOWN = "unknown_provider_error"
+
+RETRYABLE_HTTP_STATUSES = frozenset({408, 429, 500, 502, 503, 504})
+NON_RETRYABLE_HTTP_STATUSES = frozenset({400, 401, 403, 404})
+
+_EXCERPT_MAX = 400
 
 TRANSPORT_DNS = "dns_error"
 TRANSPORT_CONNECT_TIMEOUT = "connect_timeout"
@@ -176,9 +194,11 @@ def classify_exception(exc: BaseException) -> tuple[str, str | None, bool]:
         return TRANSPORT_READ_TIMEOUT, "timeout", True
     if isinstance(exc, httpx.HTTPStatusError):
         status = exc.response.status_code if exc.response is not None else None
-        retryable = status in {429, 500, 502, 503, 504} if status else True
+        retryable = status in RETRYABLE_HTTP_STATUSES if status else True
         if status in {401, 403}:
             return TRANSPORT_AUTH, None, False
+        if status == 408:
+            return TRANSPORT_READ_TIMEOUT, "http_408", True
         return TRANSPORT_HTTP, None, retryable
     if isinstance(exc, (ValueError, httpx.InvalidURL)):
         return TRANSPORT_INVALID_URL, None, False
@@ -188,8 +208,12 @@ def classify_exception(exc: BaseException) -> tuple[str, str | None, bool]:
 def error_code_for_transport(transport_kind: str, http_status: int | None = None) -> str:
     if transport_kind == TRANSPORT_HTTP and http_status in {401, 403}:
         return "PROVIDER_AUTHENTICATION_FAILED"
+    if transport_kind == TRANSPORT_AUTH:
+        return "PROVIDER_AUTHENTICATION_FAILED"
     if transport_kind == TRANSPORT_HTTP and http_status == 404:
         return "PROVIDER_MODEL_NOT_FOUND"
+    if transport_kind == TRANSPORT_HTTP and http_status == 400:
+        return "PROVIDER_HTTP_ERROR"
     return _CODE_BY_TRANSPORT.get(transport_kind, "PROVIDER_TRANSPORT_ERROR")
 
 
@@ -206,12 +230,12 @@ def is_retryable(
 ) -> bool:
     if explicit is not None:
         return explicit
-    if http_status in {401, 403}:
+    if http_status in NON_RETRYABLE_HTTP_STATUSES:
         return False
-    if http_status in {429, 500, 502, 503, 504}:
+    if http_status in RETRYABLE_HTTP_STATUSES:
         return True
     if transport_kind == TRANSPORT_HTTP:
-        return http_status in {429, 500, 502, 503, 504}
+        return http_status in RETRYABLE_HTTP_STATUSES
     if transport_kind in {TRANSPORT_DISABLED, TRANSPORT_AUTH, TRANSPORT_INVALID_URL}:
         return False
     if transport_kind == TRANSPORT_TLS:
@@ -219,7 +243,74 @@ def is_retryable(
     return transport_kind in _RETRYABLE_TRANSPORT
 
 
-def user_hint_for(transport_kind: str, error_code: str) -> str:
+def categorize_provider_error(
+    transport_kind: str,
+    *,
+    http_status: int | None = None,
+    timeout_kind: str | None = None,
+) -> str:
+    """Map transport/HTTP facts to a stable error_category (never invent status)."""
+    if http_status == 401 or transport_kind == TRANSPORT_AUTH:
+        return ERROR_CATEGORY_AUTHENTICATION
+    if http_status == 403:
+        return ERROR_CATEGORY_PERMISSION
+    if http_status == 400:
+        return ERROR_CATEGORY_INVALID_REQUEST
+    if http_status == 404:
+        return ERROR_CATEGORY_MODEL_NOT_FOUND
+    if http_status == 429:
+        return ERROR_CATEGORY_RATE_LIMITED
+    if http_status in {500, 502, 503, 504}:
+        return ERROR_CATEGORY_SERVER
+    if http_status == 408 or transport_kind in {
+        TRANSPORT_CONNECT_TIMEOUT,
+        TRANSPORT_READ_TIMEOUT,
+        TRANSPORT_WRITE_TIMEOUT,
+    } or timeout_kind:
+        return ERROR_CATEGORY_TIMEOUT
+    if transport_kind in {
+        TRANSPORT_DNS,
+        TRANSPORT_CONNECTION,
+        TRANSPORT_PROXY,
+        TRANSPORT_REMOTE_DISCONNECT,
+        TRANSPORT_PROTOCOL,
+        TRANSPORT_TLS,
+    }:
+        return ERROR_CATEGORY_NETWORK
+    if transport_kind == TRANSPORT_HTTP and http_status is None:
+        return ERROR_CATEGORY_UNKNOWN
+    if transport_kind == TRANSPORT_HTTP:
+        return ERROR_CATEGORY_UNKNOWN
+    return ERROR_CATEGORY_UNKNOWN
+
+
+def user_reason_for_category(category: str | None) -> str:
+    reasons = {
+        ERROR_CATEGORY_AUTHENTICATION: "API 凭据无权访问当前模型，或密钥无效",
+        ERROR_CATEGORY_PERMISSION: "API 凭据无权访问当前模型",
+        ERROR_CATEGORY_INVALID_REQUEST: "请求参数不被当前模型支持",
+        ERROR_CATEGORY_MODEL_NOT_FOUND: "当前模型或 Endpoint 不匹配",
+        ERROR_CATEGORY_RATE_LIMITED: "请求受到服务商限流",
+        ERROR_CATEGORY_SERVER: "模型服务暂时不可用",
+        ERROR_CATEGORY_TIMEOUT: "请求超时",
+        ERROR_CATEGORY_NETWORK: "网络连接中断或不可达",
+        ERROR_CATEGORY_INVALID_RESPONSE: "模型服务返回了无法解析的响应",
+        ERROR_CATEGORY_UNKNOWN: "模型服务返回错误",
+    }
+    return reasons.get(category or "", reasons[ERROR_CATEGORY_UNKNOWN])
+
+
+def user_hint_for(transport_kind: str, error_code: str, *, category: str | None = None) -> str:
+    if category == ERROR_CATEGORY_RATE_LIMITED:
+        return "稍后重试；若持续限流请降低并发或检查服务商配额"
+    if category == ERROR_CATEGORY_INVALID_REQUEST:
+        return "检查模型配置与请求参数；必要时验证并保存后重试"
+    if category == ERROR_CATEGORY_MODEL_NOT_FOUND:
+        return "检查模型名称与 Endpoint 配置是否正确"
+    if category == ERROR_CATEGORY_AUTHENTICATION:
+        return "检查 API Key 与云端总开关后重新验证"
+    if category == ERROR_CATEGORY_PERMISSION:
+        return "确认密钥具备当前模型访问权限"
     hints = {
         TRANSPORT_DNS: "检查网络DNS或Base URL主机名后重试；可先运行传输诊断",
         TRANSPORT_CONNECT_TIMEOUT: "检查网络连通性与防火墙后重试；可先运行传输诊断",
@@ -239,6 +330,142 @@ def user_hint_for(transport_kind: str, error_code: str) -> str:
     if error_code == "PROVIDER_MODEL_NOT_FOUND":
         return "检查模型名称配置是否正确"
     return hints.get(transport_kind, "前往“模型与API”运行传输诊断后重试")
+
+
+def endpoint_host_from_url(url: str | None) -> str | None:
+    if not url:
+        return None
+    try:
+        host = urlparse(url).hostname
+        return host or None
+    except Exception:
+        return None
+
+
+def parse_retry_after(headers: Any) -> float | None:
+    if headers is None:
+        return None
+    raw = None
+    try:
+        raw = headers.get("Retry-After") or headers.get("retry-after")
+    except Exception:
+        return None
+    if raw is None:
+        return None
+    try:
+        return float(str(raw).strip())
+    except ValueError:
+        return None
+
+
+def extract_provider_error_fields(response: httpx.Response | None) -> dict[str, Any]:
+    """Parse provider JSON error body without inventing missing fields."""
+    out: dict[str, Any] = {
+        "provider_error_code": None,
+        "provider_message": None,
+        "provider_request_id": None,
+        "response_content_type": None,
+        "sanitized_response_excerpt": None,
+    }
+    if response is None:
+        return out
+    try:
+        out["response_content_type"] = response.headers.get("content-type")
+    except Exception:
+        out["response_content_type"] = None
+    text = ""
+    try:
+        text = response.text or ""
+    except Exception:
+        text = ""
+    out["sanitized_response_excerpt"] = safe_message(text[:_EXCERPT_MAX], fallback="") or None
+    try:
+        payload = response.json()
+    except Exception:
+        payload = None
+    if isinstance(payload, dict):
+        err = payload.get("error")
+        if isinstance(err, dict):
+            code = err.get("code") or err.get("type") or err.get("error_code")
+            msg = err.get("message") or err.get("msg")
+            out["provider_error_code"] = str(code) if code is not None else None
+            if msg is not None:
+                out["provider_message"] = safe_message(str(msg), fallback=str(msg)[:200])
+        elif isinstance(err, str):
+            out["provider_message"] = safe_message(err, fallback=err[:200])
+        code2 = payload.get("code") or payload.get("error_code")
+        if out["provider_error_code"] is None and code2 is not None:
+            out["provider_error_code"] = str(code2)
+        msg2 = payload.get("message") or payload.get("msg")
+        if out["provider_message"] is None and msg2 is not None:
+            out["provider_message"] = safe_message(str(msg2), fallback=str(msg2)[:200])
+        req = (
+            payload.get("request_id")
+            or payload.get("requestId")
+            or (err.get("request_id") if isinstance(err, dict) else None)
+        )
+        if req is not None:
+            out["provider_request_id"] = str(req)
+    # Header request id fallback (never invent).
+    try:
+        header_id = (
+            response.headers.get("x-request-id")
+            or response.headers.get("x-dashscope-request-id")
+            or response.headers.get("request-id")
+        )
+    except Exception:
+        header_id = None
+    if out["provider_request_id"] is None and header_id:
+        out["provider_request_id"] = str(header_id)
+    return out
+
+
+def build_provider_http_error_snapshot(
+    *,
+    http_status: int | None,
+    transport_kind: str,
+    timeout_kind: str | None = None,
+    endpoint_host: str | None = None,
+    retry_after: float | None = None,
+    response: httpx.Response | None = None,
+    provider_error_code: str | None = None,
+    provider_message: str | None = None,
+    provider_request_id: str | None = None,
+    response_content_type: str | None = None,
+    sanitized_response_excerpt: str | None = None,
+    retryable: bool | None = None,
+) -> dict[str, Any]:
+    extracted = extract_provider_error_fields(response) if response is not None else {
+        "provider_error_code": provider_error_code,
+        "provider_message": provider_message,
+        "provider_request_id": provider_request_id,
+        "response_content_type": response_content_type,
+        "sanitized_response_excerpt": sanitized_response_excerpt,
+    }
+    category = categorize_provider_error(
+        transport_kind, http_status=http_status, timeout_kind=timeout_kind
+    )
+    resolved_retryable = (
+        retryable
+        if retryable is not None
+        else is_retryable(transport_kind, http_status=http_status)
+    )
+    return {
+        "http_status": http_status,
+        "provider_error_code": extracted.get("provider_error_code") or provider_error_code,
+        "provider_message": extracted.get("provider_message") or provider_message,
+        "provider_request_id": extracted.get("provider_request_id") or provider_request_id,
+        "endpoint_host": endpoint_host,
+        "error_category": category,
+        "retryable": resolved_retryable,
+        "retry_after": retry_after,
+        "timeout_stage": timeout_kind,
+        "response_content_type": extracted.get("response_content_type") or response_content_type,
+        "sanitized_response_excerpt": extracted.get("sanitized_response_excerpt")
+        or sanitized_response_excerpt,
+        "occurred_at": datetime.now(timezone.utc).isoformat(),
+        "user_reason": user_reason_for_category(category),
+    }
 
 
 def exception_type_name(exc: BaseException) -> str:

@@ -482,8 +482,31 @@ async def execute_scene_pipeline(
                             exc.provider_error.http_status_code
                         )
                         failure_payload["failure"]["request_id"] = exc.provider_error.request_id
+                        if getattr(exc.provider_error, "http_error_snapshot", None):
+                            failure_payload["failure"]["http_error_snapshot"] = (
+                                exc.provider_error.http_error_snapshot
+                            )
+                        for key in (
+                            "error_category",
+                            "provider_error_code",
+                            "provider_message",
+                            "provider_request_id",
+                            "endpoint_host",
+                            "retry_after",
+                            "timeout_kind",
+                            "response_content_type",
+                            "sanitized_response_excerpt",
+                            "occurred_at",
+                        ):
+                            val = getattr(exc.provider_error, key, None)
+                            if val is not None:
+                                failure_payload["failure"][key] = val
                 elif isinstance(exc, ProviderRequestError):
                     failure_payload["failure"].update(exc.as_safe_dict())
+                    if getattr(exc, "http_error_snapshot", None):
+                        failure_payload["failure"]["http_error_snapshot"] = (
+                            exc.http_error_snapshot
+                        )
                 else:
                     from app.services.cloud_budget import RequestBlockedError
 

@@ -13,12 +13,16 @@ from app.model_gateway.base import (
 from app.model_gateway.provider_errors import (
     TRANSPORT_DISABLED,
     TRANSPORT_HTTP,
+    build_provider_http_error_snapshot,
     build_safe_details,
+    categorize_provider_error,
     classify_exception,
+    endpoint_host_from_url,
     error_code_for_transport,
     exception_type_name,
     host_fingerprint,
     original_exception_type,
+    parse_retry_after,
     safe_message,
     user_hint_for,
 )
@@ -95,16 +99,21 @@ class OpenAICompatibleProvider(ModelProvider):
         http_request_sent: bool,
         http_status: int | None = None,
         model: str | None = None,
+        response: httpx.Response | None = None,
     ) -> None:
+        from app.model_gateway.provider_errors import (
+            RETRYABLE_HTTP_STATUSES,
+            TRANSPORT_AUTH,
+        )
+
         transport_kind, timeout_kind, retryable = classify_exception(exc)
+        response = response or (exc.response if isinstance(exc, httpx.HTTPStatusError) else None)
         if http_status is not None:
             transport_kind = TRANSPORT_HTTP if transport_kind != TRANSPORT_HTTP else transport_kind
             if http_status in {401, 403}:
-                from app.model_gateway.provider_errors import TRANSPORT_AUTH
-
                 transport_kind = TRANSPORT_AUTH
                 retryable = False
-            elif http_status in {429, 500, 502, 503, 504}:
+            elif http_status in RETRYABLE_HTTP_STATUSES:
                 retryable = True
             elif http_status is not None:
                 retryable = False
@@ -113,6 +122,20 @@ class OpenAICompatibleProvider(ModelProvider):
         message = safe_message(
             str(exc),
             fallback=f"Provider请求失败 ({exc_name})",
+        )
+        endpoint_host = endpoint_host_from_url(self.base_url)
+        retry_after = parse_retry_after(getattr(response, "headers", None))
+        snapshot = build_provider_http_error_snapshot(
+            http_status=http_status,
+            transport_kind=transport_kind,
+            timeout_kind=timeout_kind,
+            endpoint_host=endpoint_host,
+            retry_after=retry_after,
+            response=response,
+            retryable=retryable,
+        )
+        category = categorize_provider_error(
+            transport_kind, http_status=http_status, timeout_kind=timeout_kind
         )
         details = build_safe_details(
             provider=self.name,
@@ -124,6 +147,20 @@ class OpenAICompatibleProvider(ModelProvider):
             http_status=http_status,
             timeout_kind=timeout_kind,
             host_hash=self._host_hash(),
+            provider_request_id=snapshot.get("provider_request_id"),
+        )
+        details.update(
+            {
+                "error_category": category,
+                "retry_after": retry_after,
+                "endpoint_host": endpoint_host,
+                "provider_error_code": snapshot.get("provider_error_code"),
+                "provider_message": snapshot.get("provider_message"),
+                "response_content_type": snapshot.get("response_content_type"),
+                "sanitized_response_excerpt": snapshot.get("sanitized_response_excerpt"),
+                "occurred_at": snapshot.get("occurred_at"),
+                "user_reason": snapshot.get("user_reason"),
+            }
         )
         raise ProviderRequestError(
             message,
@@ -139,7 +176,16 @@ class OpenAICompatibleProvider(ModelProvider):
             transport_kind=transport_kind,
             safe_details=details,
             original_exception_type=original_exception_type(exc),
-            user_action_hint=user_hint_for(transport_kind, code),
+            user_action_hint=user_hint_for(transport_kind, code, category=category),
+            error_category=category,
+            retry_after=retry_after,
+            endpoint_host=endpoint_host,
+            provider_error_code=snapshot.get("provider_error_code"),
+            provider_message=snapshot.get("provider_message"),
+            provider_request_id=snapshot.get("provider_request_id"),
+            response_content_type=snapshot.get("response_content_type"),
+            sanitized_response_excerpt=snapshot.get("sanitized_response_excerpt"),
+            occurred_at=snapshot.get("occurred_at"),
         ) from exc
 
     def capabilities(self) -> ProviderCapabilities:
@@ -244,6 +290,7 @@ class OpenAICompatibleProvider(ModelProvider):
                 http_request_sent=True,
                 http_status=exc.response.status_code,
                 model=model,
+                response=exc.response,
             )
         except (httpx.HTTPError, ValueError, KeyError) as exc:
             self._raise_provider_error(

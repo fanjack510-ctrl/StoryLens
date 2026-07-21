@@ -92,7 +92,20 @@ class ProviderRequestError(RuntimeError):
         safe_details: dict[str, Any] | None = None,
         original_exception_type: str | None = None,
         user_action_hint: str | None = None,
+        error_category: str | None = None,
+        retry_after: float | None = None,
+        endpoint_host: str | None = None,
+        provider_error_code: str | None = None,
+        provider_message: str | None = None,
+        response_content_type: str | None = None,
+        sanitized_response_excerpt: str | None = None,
+        occurred_at: str | None = None,
     ) -> None:
+        from app.model_gateway.provider_errors import (
+            build_provider_http_error_snapshot,
+            categorize_provider_error,
+        )
+
         resolved_type = exception_type or "ProviderRequestError"
         transport = transport_kind or TRANSPORT_UNKNOWN
         code = error_code or error_code_for_transport(transport, http_status_code)
@@ -116,6 +129,32 @@ class ProviderRequestError(RuntimeError):
         self.timeout_kind = timeout_kind
         self.transport_kind = transport
         self.original_exception_type = original_exception_type or resolved_type
+        self.error_category = error_category or categorize_provider_error(
+            transport, http_status=http_status_code, timeout_kind=timeout_kind
+        )
+        self.retry_after = retry_after
+        self.endpoint_host = endpoint_host
+        self.provider_error_code = provider_error_code
+        self.provider_message = provider_message
+        self.response_content_type = response_content_type
+        self.sanitized_response_excerpt = sanitized_response_excerpt
+        self.occurred_at = occurred_at
+        snapshot = build_provider_http_error_snapshot(
+            http_status=http_status_code,
+            transport_kind=transport,
+            timeout_kind=timeout_kind,
+            endpoint_host=endpoint_host,
+            retry_after=retry_after,
+            provider_error_code=provider_error_code,
+            provider_message=provider_message,
+            provider_request_id=provider_request_id,
+            response_content_type=response_content_type,
+            sanitized_response_excerpt=sanitized_response_excerpt,
+            retryable=self.retryable,
+        )
+        if occurred_at:
+            snapshot["occurred_at"] = occurred_at
+        self.http_error_snapshot = snapshot
         self.safe_details = safe_details or {
             "provider": provider,
             "model": model,
@@ -127,8 +166,19 @@ class ProviderRequestError(RuntimeError):
             "timeout_kind": timeout_kind,
             "request_id": request_id,
             "provider_request_id": provider_request_id,
+            "error_category": self.error_category,
+            "retry_after": retry_after,
+            "endpoint_host": endpoint_host,
+            "provider_error_code": provider_error_code,
+            "provider_message": provider_message,
+            "response_content_type": response_content_type,
+            "sanitized_response_excerpt": sanitized_response_excerpt,
+            "occurred_at": snapshot.get("occurred_at"),
+            "user_reason": snapshot.get("user_reason"),
         }
-        self.user_action_hint = user_action_hint or user_hint_for(transport, code)
+        self.user_action_hint = user_action_hint or user_hint_for(
+            transport, code, category=self.error_category
+        )
 
     def as_safe_dict(self) -> dict[str, Any]:
         return {
@@ -148,6 +198,15 @@ class ProviderRequestError(RuntimeError):
             "original_exception_type": self.original_exception_type,
             "user_action_hint": self.user_action_hint,
             "http_request_sent": self.http_request_sent,
+            "error_category": self.error_category,
+            "retry_after": self.retry_after,
+            "endpoint_host": self.endpoint_host,
+            "provider_error_code": self.provider_error_code,
+            "provider_message": self.provider_message,
+            "response_content_type": self.response_content_type,
+            "sanitized_response_excerpt": self.sanitized_response_excerpt,
+            "occurred_at": self.occurred_at or self.http_error_snapshot.get("occurred_at"),
+            "http_error_snapshot": self.http_error_snapshot,
         }
 
 

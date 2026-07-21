@@ -382,7 +382,9 @@ async def generate_validated(
                 break
             if original_capabilities.cloud:
                 delay = compute_provider_retry_delay_seconds(
-                    normal_transport_used, transport_policy
+                    normal_transport_used,
+                    transport_policy,
+                    retry_after=getattr(last_provider_error, "retry_after", None),
                 )
                 if delay > 0:
                     await asyncio.sleep(delay)
@@ -393,7 +395,9 @@ async def generate_validated(
                 break
             if original_capabilities.cloud:
                 delay = compute_provider_retry_delay_seconds(
-                    repair_transport_used, transport_policy
+                    repair_transport_used,
+                    transport_policy,
+                    retry_after=getattr(last_provider_error, "retry_after", None),
                 )
                 if delay > 0:
                     await asyncio.sleep(delay)
