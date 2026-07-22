@@ -3,16 +3,46 @@
   "title": "Fix long-book chapter navigation",
   "type": "fix",
   "base_version": "1.0.4",
-  "status": "registered",
+  "status": "tested",
   "include_in_next_release": true,
-  "commits": [],
-  "modules": [],
-  "files": [],
+  "commits": [
+    {
+      "sha": "f3afc0e42a3f1c081b332228e5ceafc00cff083a",
+      "message": "fix: make long-book chapter navigation usable",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "desktop"
+  ],
+  "files": [
+    "apps/desktop/src/services/chapterNavigation.ts",
+    "apps/desktop/src/components/books/ChapterNavigatorDrawer.tsx",
+    "apps/desktop/src/components/books/ChapterListViewport.tsx",
+    "apps/desktop/src/components/books/ChapterAdjacentNav.tsx",
+    "apps/desktop/src/pages/BookWorkspacePage.tsx",
+    "apps/desktop/src/pages/BookRoutePage.tsx",
+    "apps/desktop/src/styles/global.css"
+  ],
   "user_summary": "长篇小说左侧只见前十几章，章节目录无法搜索/跳转，缺少上一章下一章，无法快速到达数百章之后。",
-  "technical_summary": "",
-  "acceptance_criteria": [],
-  "tests": [],
-  "verification_evidence": [],
+  "technical_summary": "Wide-screen 章节目录 only focused left nav; sidebar overflow scrolled whole pane without independent chapter list viewport and rendered all chapters. Fix: ChapterListViewport 100-chapter windows + independent overflow-y; ChapterNavigatorDrawer with search/ordinal/ranges; ChapterAdjacentNav prev/next; applyNavigateToChapterReading clears analysisRun/tab/journeyView.",
+  "acceptance_criteria": [
+    "Left chapter list independently scrolls with 100-chapter windows",
+    "Top 章节目录 always opens navigator drawer with search/ordinal/ranges",
+    "Prev/next and unified navigateToChapterReading without analysisRun/tab/journeyView",
+    "VERSION remains 1.0.4; no tag/baseline/build/push/model"
+  ],
+  "tests": [
+    "apps/desktop/src/services/chapterNavigation.test.ts",
+    "apps/desktop/src/components/books/ChapterNavigatorDrawer.test.tsx",
+    "apps/desktop/src/pages/BookWorkspacePage.test.tsx"
+  ],
+  "verification_evidence": [
+    "Manual 1.0.4: book with 1299 chapters, /books/3?chapter=5&view=reading showed only first dozen chapters; no usable catalog search/jump; no prev/next.",
+    "Root: openCatalogOrFocusNav focused left list on wide screens; workspace-chapter-list had no independent scroll; full DOM render of all chapters.",
+    "Local vitest: chapterNavigation + ChapterNavigatorDrawer + BookWorkspacePage + BookRoutePage (43 passed); typecheck/lint/version/registry/diff-check green."
+  ],
   "data_compatibility": {
     "database_changed": false,
     "migration_required": false,
@@ -25,8 +55,8 @@
     "updater_impact": false,
     "breaking_change": false
   },
-  "blocker_level": null,
-  "head_inclusion": null,
+  "blocker_level": "P1",
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-22T14:05:53Z",
-  "updated_at": "2026-07-22T14:05:53Z"
+  "updated_at": "2026-07-22T14:12:57Z"
 }
