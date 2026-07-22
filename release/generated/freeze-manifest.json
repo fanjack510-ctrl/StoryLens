@@ -1,64 +1,158 @@
 {
-  "frozen_at": "2026-07-21T06:48:00Z",
-  "base_version": "1.0.2",
+  "frozen_at": "2026-07-22T12:44:25Z",
+  "base_version": "1.0.3",
   "changes": [
     {
-      "id": "CHG-20260721-001",
-      "title": "短句、残句和单句对白场景边界修复",
+      "id": "CHG-20260721-010",
+      "title": "Fix provider HTTP error recovery and pipeline feedback",
       "status": "ready",
       "commits": [
-        "e1884c1fc24af95d1bca32713289d63a7b15ee93"
+        "c8bde44d3b0fc22a1abdc8c767618e1833b346ee",
+        "1ad88c92de1019340f2dbf28d858a9d996f66a0b",
+        "8dd84c91cef923c5fcfb07b4516bb2e7fb72c0ec"
       ]
     },
     {
-      "id": "CHG-20260721-002",
-      "title": "分析授权文案与阅读旅程指标表达优化",
+      "id": "CHG-20260721-011",
+      "title": "Fix cloud auth and provider enabled state reset on dev startup",
       "status": "ready",
       "commits": [
-        "6f03010d70fc72e94567c716c8dba49738dc247f"
+        "10adf8c593d15995db793526b0973dbf13e21a82",
+        "94b4d54f2e2124cf1ebc0f17805b5ee752821477",
+        "f12df92eb10faa17161ce5a7d4d31f9a9702d73f",
+        "3250aa7f75ba155a9a49f364bc750521c49e6642",
+        "74712ae3569ea4e37bdfd4d2d08a543275ba2c32",
+        "99c8ed52695dd3f6f02031fb0a9f47ae52ff7c26"
       ]
     },
     {
-      "id": "CHG-20260721-003",
-      "title": "Reader Journey 工具栏与响应式布局收口",
+      "id": "CHG-20260721-012",
+      "title": "Reader Journey v2.0 contract and deterministic derivation",
       "status": "ready",
       "commits": [
-        "3a516f609dd302c484a605d7b696c51e78c79a50"
+        "fd75d97964d5d3d6dabcc86981f295e146550779",
+        "1f720d34ec29a744944f144d7e165650344152b5",
+        "08d6509a81e07c40e706edcbe5dbf9329d1380bf",
+        "2974f9b36d0ed990f87b0c58a0b44edf3c6efe35",
+        "fb002db7efea7e4ba15647f8dad6eca8532d6d09",
+        "db14c1facc6bb85320a2289de7408dccb4173d44",
+        "6c40631744de79bcd73778d67eb0f07dd6a7947f",
+        "f04ae2b1ff6a8c177d71999d7d6a38a7f2f54d6a",
+        "ea5118206b080f1fe44de48ca33aae04a12e81fc",
+        "97b97947ffc822bcb54dbc8aaf24ec7e82112f22",
+        "ff627f0c9c621f052c8c4e8c1acd7d51dbadabe1",
+        "08336c3eb02a4bd608aa86bd001920803683167c",
+        "36d9903e10d003d52e8654a13c633440b34f0ddd",
+        "e4325f9dc15579a472e3052c03461d16fc73270a",
+        "91eb0908303380c6851fce8a13492ee542c17756",
+        "55ab5f5012b84d2908a4ea648cd6cbf2aa9e5914",
+        "c16b12c039d3b9918dc6e5da775055c2f3826daa",
+        "e3c92f3569a9f3df06c1e9c3ad7e12f865c2a60f",
+        "77f63e02d663ebae9581b5ffb46191f0895191ee",
+        "6d298d03eec69c075ed340f4f894bc3bf40c81fb",
+        "fa7b9dfbced8548f979ac79f26d80e8ea0e47f33",
+        "4a1ef0c1cbbaa24add83fd76af8829f1bb7f91dd",
+        "fd006c71e90c7c71652567ea63d92388f930c011",
+        "879ca6cdb11e05e2e05afc7354bccdd61c122c23",
+        "7b4ce6852404f57be43964794e137ee5720f7c0e",
+        "24c2930ba42a34b2c13cd8d857734066fd35ddd8"
       ]
     },
     {
-      "id": "CHG-20260721-004",
-      "title": "统一版本管理机制",
+      "id": "CHG-20260721-013",
+      "title": "Settings page information architecture for ordinary users",
       "status": "ready",
       "commits": [
-        "8906cd6d0f9fae0c5adf7cb1434b8c561f302430"
+        "8a8b5f1b5a5656e27fdb24fe92ce349aa0fa899a",
+        "3407c7ed91344e729227c5997fe9cef4790e0441",
+        "2c9e866b9cd5a88fd9186b3bc731a02e642f0d09"
       ]
     },
     {
-      "id": "CHG-20260721-005",
-      "title": "分析预算门禁与本地使用额度管理修复",
+      "id": "CHG-20260721-014",
+      "title": "Library book delete with confirmation",
       "status": "ready",
       "commits": [
-        "a8542f2eb4a6cdc982fb98221b1b2cd03ee9c0d9",
-        "96bb68ac22f332517bc0e5bb9b37c73bd8697155"
+        "ddb6c56994ebc74c0fa49e26019ea8e804911ef8"
       ]
     },
     {
-      "id": "CHG-20260721-006",
-      "title": "应用更新用户确认与手动更新入口",
-      "status": "ready-for-staging",
+      "id": "CHG-20260721-015",
+      "title": "StoryLens local web production mode",
+      "status": "ready",
       "commits": [
-        "0f73058ebccfdabea2a73136dbae022ccd7d0e66"
+        "a83e805e857dbc0a3e90c2df72ddd4d74fe56e81",
+        "2fd0d955e5e77105295ec3a6b63617865e43918e",
+        "909fe93472190a000dcecd110d15bd52c03859e8",
+        "dec8a6902f9788daa4d375baddfa8f583bb60f46",
+        "d29a4f0f4a8bcef1bfa3ba1e03a25749287cc01a",
+        "c36adaff4061584182276d0b7b48445212faa144",
+        "a7528eafdf87afeb7c30476209f6890159145ae4",
+        "f444b25d8b92dff96339e7b0fb674f45062d64ef",
+        "5f5505ff06900d58f4e3a04c2a6815b03874b8bf"
       ]
     },
     {
-      "id": "CHG-20260721-007",
-      "title": "变更登记池与下一版本发布汇总机制",
+      "id": "CHG-20260722-001",
+      "title": "Afdian offline StoryLens Pro license activation V1",
       "status": "ready",
       "commits": [
-        "4e656f1ca7ec4b5abc6d2780b73a2c5bc800c080",
-        "89eb36bd6fa87092ba2e25b01bc9aaa4207860a0",
-        "c115176fc36676a735cc9ced52da506747e15a8f"
+        "fe419880681a774d876173bebebdb75d6d6232a5",
+        "c3495c58876bcc35824b5e661102958c86c46db9",
+        "ce1df1e4e6145058c535a51b06899959b1114381",
+        "f7d6b0e46f0ae63350edc991c161335871109b65",
+        "8e722cc9fd2de70736bf798db44de05a1e255271",
+        "e4a830d8459e8f1a29f37ac214de0c55ebdf7ff7"
+      ]
+    },
+    {
+      "id": "CHG-20260722-002",
+      "title": "Simplify first-launch onboarding to two steps",
+      "status": "ready",
+      "commits": [
+        "817191c6ebd5bd1983887dcad1b0c2f431d891c5",
+        "5c847ce2d1f65afe0c33773313f183b1bcf5aca0"
+      ]
+    },
+    {
+      "id": "CHG-20260722-003",
+      "title": "Auto-continue Reader Journey after scene analysis completes",
+      "status": "ready",
+      "commits": [
+        "1b415cce695f4bfe23ad7b3f7c0ba68e162a7e22",
+        "8871dc70e977cfee2a4fb0c0644ba9d6b0c78117",
+        "c2ac597913b48fefffb930bf0216a5c1c426373b",
+        "0668976f8c63ec4cf72d3e5435a8b287f462bdba",
+        "16b69e7a2d0d4769a512c42a81d7fe5d03442ff8",
+        "41fc87614b6696ea000790e0cd117c966294b252",
+        "2f50a5bdd92083c0a27fa9fb4add0ed7f26bc8aa"
+      ]
+    },
+    {
+      "id": "CHG-20260722-004",
+      "title": "Confirm-only scene boundary division",
+      "status": "ready",
+      "commits": [
+        "4cf04ec856dd9b61dcc2c4ec3055ec05c5df0dd0",
+        "57b5653ed300b565e130b363fdf3d9380c380e51"
+      ]
+    },
+    {
+      "id": "CHG-20260722-005",
+      "title": "P0: Reader Journey context/grounding integrity (prevent cross-book contamination)",
+      "status": "ready",
+      "commits": [
+        "8ec07dcee983af07ab80fc1b3227e13f216f8d57",
+        "a75686403d1675973aa54769093133f9285adcd8",
+        "bc69e4e5c90e40f7ea39c357cff34511d8a78611"
+      ]
+    },
+    {
+      "id": "CHG-20260722-006",
+      "title": "Seal StoryLens 1.0.4 release baseline",
+      "status": "ready",
+      "commits": [
+        "889ce0494f54b89ace5e67d3ccbc09dcd101fc88"
       ]
     }
   ]
