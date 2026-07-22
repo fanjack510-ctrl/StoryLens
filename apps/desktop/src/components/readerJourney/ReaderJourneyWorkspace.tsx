@@ -431,8 +431,8 @@ export function ReaderJourneyWorkspace({
         positive_mechanism: node.positive_mechanism,
         data_quality_issue: node.data_quality_issue,
         reading_momentum:
-          node.scores.reading_momentum ?? node.engagement.engagement_score,
-        plot_progress: node.scores.plot_progress,
+          node.scores?.reading_momentum ?? node.engagement?.engagement_score,
+        plot_progress: node.scores?.plot_progress,
         role: node.role,
         node_type: node.node_type,
         include_in_main_curve: node.include_in_main_curve,
@@ -441,7 +441,7 @@ export function ReaderJourneyWorkspace({
           node.confidence != null && node.confidence < 0.45
             ? true
             : !node.primary_diagnosis &&
-              node.scores.reading_momentum == null &&
+              node.scores?.reading_momentum == null &&
               node.engagement?.engagement_score == null,
       })),
     [visualization],

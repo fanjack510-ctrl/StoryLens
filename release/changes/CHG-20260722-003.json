@@ -42,10 +42,14 @@
     "apps/desktop/src/services/resolveWorkspaceLayout.ts",
     "apps/desktop/src/components/readerJourney/WorkspaceJourneyPane.tsx",
     "apps/desktop/src/components/chapterResult/ChapterResultErrorState.tsx",
-    "apps/desktop/src/components/chapterResult/chapterResult.css"
+    "apps/desktop/src/components/chapterResult/chapterResult.css",
+    "apps/desktop/src/components/readerJourney/hasUsableJourneyVisualization.ts",
+    "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.tsx",
+    "apps/desktop/src/pages/RouteErrorPages.tsx",
+    "apps/desktop/src/pages/AnalysisResultsPage.tsx"
   ],
   "user_summary": "场景分析完成后自动衔接阅读旅程；统一单一 Book Workspace，修复 Journey 误显示与双布局。",
-  "technical_summary": "Scene pipeline no longer finalizes AnalysisRun; auto-enqueues Reader Journey on same run_id; Book workspace uses resolveWorkspaceLayout for mutually exclusive text|scene|journey tabs; WorkspaceJourneyPane replaces EmbeddedAnalysisResultShell for journey; remove independent-result CTA; progress+scene use grid not stacked shells.",
+  "technical_summary": "Scene pipeline no longer finalizes AnalysisRun; auto-enqueues Reader Journey on same run_id; Book workspace uses resolveWorkspaceLayout for mutually exclusive text|scene|journey tabs; WorkspaceJourneyPane replaces EmbeddedAnalysisResultShell for journey; remove independent-result CTA; progress+scene use grid not stacked shells. P0: do not mount chart on integrity-redacted nodes; optional-chain scores/engagement; RouteError tech details.",
   "acceptance_criteria": [
     "Scene完成后不标记completed_at",
     "自动进入reader_journey_generation并调度Journey",
@@ -67,7 +71,10 @@
     "apps/desktop/src/components/chapterAnalysis/ChapterAnalysisProgressPanel.test.tsx",
     "apps/desktop/src/components/readerJourney/WorkspaceJourneyPane.test.tsx",
     "apps/desktop/src/services/chapterJourneyComposition.test.ts",
-    "apps/desktop/src/pages/BookRoutePage.readerJourneyResume.test.tsx"
+    "apps/desktop/src/pages/BookRoutePage.readerJourneyResume.test.tsx",
+    "apps/desktop/src/components/readerJourney/WorkspaceJourneyPane.integrityCrash.test.tsx",
+    "apps/desktop/src/components/readerJourney/hasUsableJourneyVisualization.test.ts",
+    "apps/desktop/src/pages/RouteErrorPages.test.tsx"
   ],
   "verification_evidence": [
     "Scene完成后流水线提前终止",
@@ -85,7 +92,13 @@
     "Journey Pane仍依赖旧独立结果页上下文",
     "loading/empty/error状态混用",
     "查看Scene时重复渲染两套Workspace",
-    "修复为单一Book Workspace"
+    "修复为单一Book Workspace",
+    "单一Workspace改造后BookRoutePage发生render-time crash",
+    "不同Book和Run均可复现",
+    "AppShell正常、书籍主内容崩溃",
+    "根因：integrity红acted节点缺失scores时ReaderJourneyWorkspace访问node.scores.reading_momentum",
+    "修复后的异步/红acted节点防护",
+    "深链接回归测试"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -102,5 +115,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-22T04:41:55Z",
-  "updated_at": "2026-07-22T07:01:46Z"
+  "updated_at": "2026-07-22T07:16:26Z"
 }

@@ -23,6 +23,8 @@ export type WorkspaceLayout = {
   mainContentState: WorkspaceMainState;
   /** Dev-facing mode label. */
   workspaceMode: "reading" | "progress" | "scene_result" | "journey_result";
+  navigationPaneMode: "hidden" | "chapter_nav";
+  contextPaneMode: "hidden" | "progress" | "scene_detail" | "journey_detail";
 };
 
 export function mapUrlToActiveTab(args: {
@@ -132,6 +134,16 @@ export function resolveWorkspaceLayout(args: {
           ? "progress"
           : "reading";
 
+  const navigationPaneMode: WorkspaceLayout["navigationPaneMode"] =
+    activeTab === "text" ? "chapter_nav" : "hidden";
+  const contextPaneMode: WorkspaceLayout["contextPaneMode"] = showProgressContext
+    ? "progress"
+    : activeTab === "journey"
+      ? "journey_detail"
+      : activeTab === "scene"
+        ? "scene_detail"
+        : "hidden";
+
   return {
     activeTab,
     shellView,
@@ -139,5 +151,7 @@ export function resolveWorkspaceLayout(args: {
     showProgressContext,
     mainContentState,
     workspaceMode,
+    navigationPaneMode,
+    contextPaneMode,
   };
 }

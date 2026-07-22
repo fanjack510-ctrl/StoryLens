@@ -825,6 +825,22 @@ button:disabled.primary {
 }
 
 .sl-state__actions,
+.route-error-tech {
+  margin: 16px auto 0;
+  max-width: 42rem;
+  font-size: 12px;
+  color: var(--muted, #666);
+}
+.route-error-tech pre {
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: #f7f3e8;
+  border-radius: 6px;
+}
+
 .route-error-actions {
   display: flex;
   flex-wrap: wrap;

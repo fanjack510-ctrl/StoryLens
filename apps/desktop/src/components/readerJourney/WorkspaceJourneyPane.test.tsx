@@ -148,7 +148,8 @@ describe("WorkspaceJourneyPane", () => {
       />,
     );
     expect(screen.getByTestId("workspace-journey-integrity-banner")).toBeInTheDocument();
-    expect(screen.getByTestId("mock-journey-workspace")).toBeInTheDocument();
+    // Redacted nodes must not mount chart workspace (would crash on scores).
+    expect(screen.queryByTestId("mock-journey-workspace")).not.toBeInTheDocument();
     expect(screen.queryByTestId("chapter-result-open-independent")).not.toBeInTheDocument();
   });
 });

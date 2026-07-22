@@ -1,5 +1,8 @@
 import type { ReaderJourneyResult } from "../../types";
-import { hasUsableJourneyVisualization } from "./hasUsableJourneyVisualization";
+import {
+  hasChartSafeJourneyNodes,
+  hasUsableJourneyVisualization,
+} from "./hasUsableJourneyVisualization";
 import { ReaderJourneyWorkspace } from "./ReaderJourneyWorkspace";
 import type { WorkspaceMainState } from "../../services/resolveWorkspaceLayout";
 
@@ -13,6 +16,27 @@ type Props = {
   onReading: () => void;
   onViewScene?: () => void;
 };
+
+function JourneyActions({
+  onReading,
+  onViewScene,
+}: {
+  onReading: () => void;
+  onViewScene?: () => void;
+}) {
+  return (
+    <div className="chapter-result-error-actions">
+      <button type="button" className="secondary" onClick={onReading}>
+        返回正文阅读
+      </button>
+      {onViewScene ? (
+        <button type="button" className="secondary" onClick={onViewScene}>
+          查看场景结果
+        </button>
+      ) : null}
+    </div>
+  );
+}
 
 /**
  * Journey content for the unified Book workspace MainContentPane.
@@ -109,8 +133,9 @@ export function WorkspaceJourneyPane({
     );
   }
 
+  const chartSafe = Boolean(journey && hasChartSafeJourneyNodes(journey));
+
   if (mainContentState === "invalid_artifact") {
-    const canShowShell = Boolean(journey && hasUsableJourneyVisualization(journey));
     return (
       <div
         className="workspace-journey-pane"
@@ -136,7 +161,8 @@ export function WorkspaceJourneyPane({
             {journey?.journey_run_id ? ` · journey_run_id=${journey.journey_run_id}` : ""}
           </p>
         </details>
-        {canShowShell && journey?.visualization ? (
+        {/* Never mount chart shell on redacted/incomplete nodes — that caused render crash. */}
+        {chartSafe && journey?.visualization ? (
           <ReaderJourneyWorkspace
             visualization={journey.visualization}
             analysisRunId={analysisRunId}
@@ -144,16 +170,7 @@ export function WorkspaceJourneyPane({
             onLocateEvidence={() => undefined}
           />
         ) : (
-          <div className="chapter-result-error-actions">
-            <button type="button" className="secondary" onClick={onReading}>
-              返回正文阅读
-            </button>
-            {onViewScene ? (
-              <button type="button" className="secondary" onClick={onViewScene}>
-                查看场景结果
-              </button>
-            ) : null}
-          </div>
+          <JourneyActions onReading={onReading} onViewScene={onViewScene} />
         )}
       </div>
     );
@@ -174,19 +191,7 @@ export function WorkspaceJourneyPane({
     );
   }
 
-  // Guard against incomplete viz schemas that pass the coarse "usable" check
-  // but crash the chart workspace (missing scores/engagement).
-  const nodes = journey.visualization.scene_nodes;
-  const nodesRenderable =
-    Array.isArray(nodes) &&
-    nodes.every(
-      (n) =>
-        n &&
-        typeof n === "object" &&
-        ((n as { scores?: unknown }).scores ||
-          (n as { engagement?: unknown }).engagement),
-    );
-  if (!nodesRenderable) {
+  if (!chartSafe) {
     return (
       <div
         className="workspace-journey-pane state"
@@ -195,9 +200,7 @@ export function WorkspaceJourneyPane({
       >
         <strong>阅读旅程结果校验未通过</strong>
         <span>可视化结构不完整，暂不展示不可信内容。</span>
-        <button type="button" className="secondary" onClick={onReading}>
-          返回正文阅读
-        </button>
+        <JourneyActions onReading={onReading} onViewScene={onViewScene} />
       </div>
     );
   }

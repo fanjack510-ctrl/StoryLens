@@ -3,7 +3,7 @@ import { useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { analysisApi } from "../services/analysisApi";
 import { Badge, Empty, ErrorState, Loading } from "../components/common/States";
-import { hasUsableJourneyVisualization } from "../components/readerJourney/hasUsableJourneyVisualization";
+import { hasUsableJourneyVisualization, hasChartSafeJourneyNodes } from "../components/readerJourney/hasUsableJourneyVisualization";
 import { formatJourneyStatus } from "../components/readerJourney/journeyUiLabels";
 import { ReaderJourneySyncWorkspace } from "../components/readerJourney/ReaderJourneySyncWorkspace";
 import { StateView } from "../components/ui/StateView";
@@ -357,6 +357,7 @@ export function AnalysisResultsPage() {
           ? "正在重新计算恢复计划"
           : null);
   const journeyHasVisualization = hasUsableJourneyVisualization(journeyData);
+  const journeyChartSafe = hasChartSafeJourneyNodes(journeyData);
   const journeyEmptyVisualization = Boolean(
     journeyData?.status === "succeeded" &&
       journeyData.visualization &&
@@ -368,7 +369,7 @@ export function AnalysisResultsPage() {
       (journeyProg?.status &&
         ["failed", "scene_profiles_partial", "budget_blocked"].includes(journeyProg.status)),
   );
-  const showJourneySync = tab === "journey" && journeyHasVisualization;
+  const showJourneySync = tab === "journey" && journeyChartSafe;
   const generateJourneyLabel = journeyHasVisualization
     ? "查看预测读者旅程"
     : recoverablePartialOrFailed
@@ -752,6 +753,25 @@ export function AnalysisResultsPage() {
           data-testid="journey-empty-state"
           title="暂时没有可显示的阅读旅程"
           description="当前分析结果没有包含有效的场景或指标数据。"
+        />
+        {exportBar}
+      </section>
+    );
+  }
+
+  if (
+    tab === "journey" &&
+    journeyHasVisualization &&
+    !journeyChartSafe &&
+    !showJourneySync
+  ) {
+    return (
+      <section className="workspace results-page results-page-journey-state">
+        <StateView
+          kind="error"
+          data-testid="journey-integrity-blocked-state"
+          title="阅读旅程结果校验未通过"
+          description="检测到部分结论与当前正文不一致，图表详情已暂停展示。"
         />
         {exportBar}
       </section>
