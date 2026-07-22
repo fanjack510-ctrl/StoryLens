@@ -47,6 +47,12 @@
       "message": "Sync CHG-20260721-015 attachments.",
       "primary": false,
       "multi_change_reason": "attachment sync tip"
+    },
+    {
+      "sha": "f444b25d8b92dff96339e7b0fb674f45062d64ef",
+      "message": "Fix local web boot by disabling unused Uvicorn WebSocket (CHG-20260721-015).",
+      "primary": false,
+      "multi_change_reason": "uvicorn --ws none boot fix"
     }
   ],
   "modules": [
@@ -65,18 +71,22 @@
     "scripts/stop_storylens_web.ps1"
   ],
   "user_summary": "增加正式本地网页版：浏览器访问本机FastAPI静态站，复用现有React与业务后端，数据与凭据仍在本机，保留Tauri桌面版并支持浏览器缩放。",
-  "technical_summary": "Add browser_local_production shell: FastAPI serves React SPA on 127.0.0.1:8765, GET /api/v1/runtime capability adapter, loopback Origin guard, instance lock, LOCALAPPDATA data root, start/stop scripts.",
+  "technical_summary": "Local web production SPA on :8765; uvicorn --ws none because product uses HTTP polling and websockets.exceptions import fails on incomplete install; Origin guard + instance lock; soupsieve remains non-blocking warning.",
   "acceptance_criteria": [
     "Local web starts on http://127.0.0.1:8765 with SPA + API same origin",
     "Runtime API reports browser_local_production; desktop updater hidden in web",
     "Data uses LOCALAPPDATA\\\\StoryLens; credentials stay server-side",
-    "Idempotent start script; remote Origin rejected"
+    "Idempotent start script; remote Origin rejected",
+    "start_storylens_web.ps1 starts with --ws none and detects early process exit"
   ],
   "tests": [
     "apps/api/tests/test_local_web_production.py",
-    "apps/desktop/src/services/runtime_capabilities_local.test.tsx"
+    "apps/desktop/src/services/runtime_capabilities_local.test.tsx",
+    "apps/api/tests/test_uvicorn_ws_none_local.py"
   ],
-  "verification_evidence": [],
+  "verification_evidence": [
+    "uvicorn 0.51.0; websockets broken namespace (no exceptions); --ws none boots /health and /api/v1/runtime"
+  ],
   "data_compatibility": {
     "database_changed": false,
     "migration_required": false,
@@ -92,5 +102,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-21T17:13:38Z",
-  "updated_at": "2026-07-21T17:29:16Z"
+  "updated_at": "2026-07-22T00:24:18Z"
 }
