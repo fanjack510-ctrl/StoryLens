@@ -28,13 +28,50 @@
 
 .book-shell-body[data-view="result"] {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   min-height: 0;
   flex: 1;
 }
 
+.book-shell-body[data-view="result"][data-has-progress="true"] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 380px);
+}
+
 .book-shell-body[data-view="result"] .book-shell-workspace {
   display: none;
+}
+
+.book-shell-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.book-shell-context {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+}
+
+.workspace-journey-pane {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.workspace-journey-pane.state {
+  display: grid;
+  gap: 12px;
+  place-content: center;
+  min-height: 240px;
+  padding: 24px;
+  text-align: center;
 }
 
 .chapter-result-loading,

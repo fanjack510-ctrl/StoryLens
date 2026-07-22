@@ -66,7 +66,8 @@ export function EmbeddedAnalysisResultShell({ runId, onReading }: Props) {
       <ChapterResultErrorState
         onRetry={retry}
         onReading={onReading}
-        independentHref={`/analysis-runs/${runId}/results`}
+        title="场景分析结果加载失败"
+        description="章节正文仍然可用。可重新加载当前结果。"
       />
     );
   }
@@ -85,7 +86,8 @@ export function EmbeddedAnalysisResultShell({ runId, onReading }: Props) {
           <ChapterResultErrorState
             onRetry={retry}
             onReading={onReading}
-            independentHref={`/analysis-runs/${runId}/results`}
+            title="场景分析结果加载失败"
+            description="章节正文仍然可用。可重新加载当前结果。"
           />
         }
       >

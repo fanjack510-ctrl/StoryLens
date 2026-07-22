@@ -14,6 +14,7 @@ import { UnifiedAnalysisRecoveryCard } from "../components/chapterAnalysis/Unifi
 import { ChapterAnalysisProgressPanel } from "../components/chapterAnalysis/ChapterAnalysisProgressPanel";
 import { ReaderJourneyProgressCard } from "../components/chapterAnalysis/ReaderJourneyProgressCard";
 import { EmbeddedAnalysisResultShell } from "../components/chapterResult/EmbeddedAnalysisResultShell";
+import { WorkspaceJourneyPane } from "../components/readerJourney/WorkspaceJourneyPane";
 import { StateView } from "../components/ui/StateView";
 import { useCurrentPageAnalysisProgress } from "../hooks/useCurrentPageAnalysisProgress";
 import { analysisApi } from "../services/analysisApi";
@@ -30,6 +31,10 @@ import {
   type WorkspaceView,
 } from "../services/chapterJourneyComposition";
 import { discoverActiveChapterRun } from "../services/discoverActiveChapterRun";
+import {
+  resolveWorkspaceLayout,
+  type WorkspaceActiveTab,
+} from "../services/resolveWorkspaceLayout";
 import { useUiStore } from "../stores/uiStore";
 
 type ChapterView = WorkspaceView;
@@ -66,6 +71,7 @@ export function BookRoutePage() {
   const seenBudgetModalRef = useRef<Set<number>>(new Set());
   /** User-initiated shell view; prevents non-essential system redirects. */
   const userPinnedViewRef = useRef<ChapterView | null>(null);
+  const userPinnedTabRef = useRef<WorkspaceActiveTab | null>(null);
   const qc = useQueryClient();
   const { contentWidth, showParagraphIds } = useUiStore();
 
@@ -234,8 +240,9 @@ export function BookRoutePage() {
         bookId,
         chapterId,
       }),
-    enabled: !!analysisRunId && (progress.uiState === "succeeded" || sceneComplete),
+    enabled: Number.isFinite(bookId) && !!analysisRunId && !!chapterId,
     placeholderData: undefined,
+    retry: false,
     refetchInterval: (q) => {
       const status = q.state.data?.status;
       if (
@@ -257,9 +264,16 @@ export function BookRoutePage() {
   );
   const chapterComplete =
     isChapterAnalysisComplete(progress.run) || compositionUiState === "succeeded";
-  const chapterInFlight = isChapterAnalysisInFlight(progress.run, compositionUiState);
+  const awaitingRunHydration = Boolean(analysisRunId) && progress.isLoading && !progress.run;
+  const chapterInFlight =
+    awaitingRunHydration ||
+    isChapterAnalysisInFlight(progress.run, compositionUiState) ||
+    (Boolean(analysisRunId) &&
+      !chapterComplete &&
+      (searchParams.get("view") === "progress" || progress.uiState === "running"));
 
   const requestedView = searchParams.get("view");
+  const requestedTab = searchParams.get("tab");
   const view = resolveChapterWorkspaceView({
     requestedView,
     userPinnedView: userPinnedViewRef.current,
@@ -268,11 +282,46 @@ export function BookRoutePage() {
     composition: compositionUiState,
   });
 
-  // Rewrite stale view=result bookmarks while Journey is still running.
+  const journeyScopeMismatch = Boolean(
+    journey.isError &&
+      String((journey.error as { message?: string } | null)?.message || "").includes(
+        "ANALYSIS_RUN_SCOPE_MISMATCH",
+      ),
+  );
+  const journeyQueryStatus: "idle" | "loading" | "success" | "error" = !analysisRunId
+    ? "idle"
+    : journey.isLoading || (journey.isFetching && !journey.data)
+      ? "loading"
+      : journey.isError
+        ? "error"
+        : journey.isSuccess
+          ? "success"
+          : "idle";
+
+  const workspaceLayout = resolveWorkspaceLayout({
+    requestedView,
+    requestedTab,
+    userPinnedTab: userPinnedTabRef.current,
+    chapterComplete,
+    inFlight: chapterInFlight,
+    sceneAvailable: sceneComplete || chapterComplete,
+    journeyAvailable: hasJourney,
+    journeyStatus: journey.data?.status,
+    journeyQueryStatus,
+    journeyIntegrityStatus:
+      (journey.data as { integrity_status?: string } | null | undefined)?.integrity_status ??
+      (journey.data as { integrity?: { status?: string } } | null | undefined)?.integrity?.status,
+    journeyTrusted: (journey.data as { trusted?: boolean } | null | undefined)?.trusted,
+    scopeMismatch: journeyScopeMismatch,
+  });
+  const activeTab = workspaceLayout.activeTab;
+  const isJourneyTab = activeTab === "journey";
+
+  // Rewrite stale view=result bookmarks while Journey is still running (unless user pinned Scene).
   useEffect(() => {
     if (!analysisRunId || !chapterInFlight) return;
     if (requestedView !== "result") return;
-    if (userPinnedViewRef.current === "result") return;
+    if (userPinnedViewRef.current === "result" || userPinnedTabRef.current === "scene") return;
     setSearchParams(
       (prev) => {
         if (prev.get("view") !== "result") return prev;
@@ -288,7 +337,6 @@ export function BookRoutePage() {
     );
   }, [analysisRunId, chapterInFlight, requestedView, setSearchParams]);
 
-  const isJourneyTab = searchParams.get("tab") === "reader-journey";
   const journeyRunId = journey.data?.journey_run_id ?? null;
   const journeyFailed = Boolean(
     journey.data?.status &&
@@ -363,10 +411,7 @@ export function BookRoutePage() {
       run.status === "succeeded" && chapterId && String(run.subject_id) === String(chapterId),
   );
 
-  const showProgressPanel =
-    Boolean(analysisRunId) &&
-    !panelCollapsed &&
-    (chapterInFlight || view === "progress");
+  const showProgressPanel = workspaceLayout.showProgressContext && Boolean(analysisRunId) && !panelCollapsed;
   const showRunningBanner =
     view === "reading" &&
     Boolean(analysisRunId) &&
@@ -404,7 +449,10 @@ export function BookRoutePage() {
   }, [progress.uiState, progress.run?.id]);
 
   const setView = (next: ChapterView, source: "user" | "system" = "user") => {
-    if (source === "user") userPinnedViewRef.current = next;
+    if (source === "user") {
+      userPinnedViewRef.current = next;
+      userPinnedTabRef.current = next === "reading" || next === "progress" ? "text" : "scene";
+    }
     setSearchParams(
       (prev) => {
         const params = new URLSearchParams(prev);
@@ -428,17 +476,16 @@ export function BookRoutePage() {
   };
 
   const setResultTab = (tab: "analysis" | "journey", source: "user" | "system" = "user") => {
-    if (source === "user") userPinnedViewRef.current = "result";
+    if (source === "user") {
+      userPinnedViewRef.current = "result";
+      userPinnedTabRef.current = tab === "journey" ? "journey" : "scene";
+    }
     setSearchParams(
       (prev) => {
         const params = new URLSearchParams(prev);
         params.set("view", "result");
         if (tab === "journey") {
           params.set("tab", "reader-journey");
-          // Only click into frozen journey pane when visualization already exists.
-          if (hasJourney) {
-            queueMicrotask(() => clickResults('[data-testid="tab-journey"]'));
-          }
         } else {
           params.delete("tab");
           params.delete("mode");
@@ -446,7 +493,6 @@ export function BookRoutePage() {
           params.delete("paragraph");
           params.delete("metric");
           params.delete("cluster");
-          queueMicrotask(() => clickResults('[data-testid="tab-structure"]'));
         }
         return params;
       },
@@ -706,7 +752,8 @@ export function BookRoutePage() {
       data-content-width={contentWidth}
       data-show-paragraph-ids={showParagraphIds ? "true" : "false"}
       data-analysis-run={analysisRunId ? String(analysisRunId) : undefined}
-      data-view={view}
+      data-view={workspaceLayout.shellView}
+      data-active-tab={activeTab}
       data-catalog-open={catalogOpen ? "true" : "false"}
       data-has-progress={showProgressPanel ? "true" : "false"}
     >
@@ -723,11 +770,7 @@ export function BookRoutePage() {
             view === "result") ? (
             <WorkspaceViewSwitcher
               active={
-                view === "result"
-                  ? isJourneyTab
-                    ? "journey"
-                    : "analysis"
-                  : "reading"
+                activeTab === "journey" ? "journey" : activeTab === "scene" ? "analysis" : "reading"
               }
               analysisAvailable={sceneComplete || chapterComplete || Boolean(analysisRunId)}
               journeyAvailable={hasJourney || chapterComplete}
@@ -968,162 +1011,170 @@ export function BookRoutePage() {
         <div
           className="book-shell-body"
           data-has-progress={showProgressPanel ? "true" : "false"}
-          data-view={view}
+          data-view={workspaceLayout.shellView}
+          data-active-tab={activeTab}
+          data-workspace-mode={workspaceLayout.workspaceMode}
           data-testid="book-shell-body"
+          data-workspace-root="true"
         >
-          {/* Keep reading workspace mounted unless user is on a result tab. */}
-          {view !== "result" && (
-            <div className="book-shell-workspace">
-              <BookWorkspacePage />
-            </div>
-          )}
-          {/* Progress stays for any in-flight tab, including manual Scene browse. */}
-          {showProgressPanel && (
-            <ChapterAnalysisProgressPanel
-              run={progress.run}
-              uiState={
-                progress.isLoading && !progress.run
-                  ? "creating"
-                  : compositionUiState !== "idle"
-                    ? compositionUiState
-                    : progress.uiState === "idle" && analysisRunId
-                      ? "running"
-                      : progress.uiState
-              }
-              chapterTitle={chapterTitle}
-              reconnectHint={progress.reconnectHint}
-              canResume={progress.canResume}
-              onResume={progress.resume}
-              onReanalyze={() => setDialog(true)}
-              onReviewBoundary={() => setReviewOpen(true)}
-              onDismiss={() => setPanelCollapsed(true)}
-              onContinueReading={() => setView("reading")}
-              onViewResults={() => {
-                setResultTab("analysis");
-              }}
-              onContinueReaderJourney={() => {
-                if (
-                  compositionUiState === "awaiting_reader_journey_start" &&
-                  progress.run
-                ) {
-                  void (async () => {
-                    try {
-                      await analysisRecoveryApi.recover(progress.run!.id, {
-                        client_request_id: getOrCreateJourneyClientRequestId(progress.run!.id),
-                        cloud_consent: true,
-                        confirmed: true,
-                        recovery_mode: "unified",
-                        resume: true,
-                      });
-                    } finally {
-                      void qc.invalidateQueries({
-                        queryKey: ["reader-journey"],
-                      });
+          <div className="book-shell-main" data-testid="main-content-pane">
+            {activeTab === "text" ? (
+              <div className="book-shell-workspace">
+                <BookWorkspacePage />
+              </div>
+            ) : null}
+
+            {activeTab === "scene" && analysisRunId ? (
+              <EmbeddedAnalysisResultShell
+                runId={analysisRunId}
+                onReading={() => setView("reading", "user")}
+              />
+            ) : null}
+
+            {activeTab === "journey" && analysisRunId ? (
+              <>
+                {journeyFailed ? (
+                  <StateView
+                    kind="error"
+                    data-testid="journey-failed"
+                    title="阅读旅程生成失败"
+                    description="已完成的场景分析不会受到影响。"
+                    primaryAction={{
+                      label: "重新生成",
+                      testId: "journey-failed-retry",
+                      onClick: () => {
+                        void (async () => {
+                          try {
+                            if (journeyRunId) {
+                              await analysisApi.resumeReaderJourney(journeyRunId, {
+                                client_request_id: getOrCreateJourneyClientRequestId(analysisRunId),
+                                cloud_consent: true,
+                                confirmed: true,
+                              });
+                            } else if (progress.run) {
+                              await analysisRecoveryApi.recover(progress.run.id, {
+                                client_request_id: getOrCreateJourneyClientRequestId(analysisRunId),
+                                cloud_consent: true,
+                                confirmed: true,
+                                recovery_mode: "unified",
+                                resume: true,
+                              });
+                            }
+                          } finally {
+                            void qc.invalidateQueries({
+                              queryKey: ["reader-journey"],
+                            });
+                            void journey.refetch();
+                            void progress.refresh();
+                          }
+                        })();
+                      },
+                    }}
+                    secondaryAction={{
+                      label: "查看任务详情",
+                      testId: "journey-failed-task-details",
+                      onClick: () => navigate(`/tasks?run_id=${analysisRunId}`),
+                    }}
+                  />
+                ) : null}
+                {!journeyFailed &&
+                compositionUiState === "awaiting_reader_journey_start" &&
+                progress.run ? (
+                  <UnifiedAnalysisRecoveryCard
+                    run={progress.run}
+                    variant="card"
+                    onContinued={() => {
+                      void qc.invalidateQueries({ queryKey: ["reader-journey"] });
                       void journey.refetch();
                       void progress.refresh();
-                      setResultTab("journey");
+                    }}
+                  />
+                ) : null}
+                {!journeyFailed && compositionUiState === "reader_journey_processing" ? (
+                  <ReaderJourneyProgressCard
+                    analysisRunId={analysisRunId}
+                    progress={journeyProgress.data}
+                    loading={journeyProgress.isLoading && !journeyProgress.data}
+                    errorMessage={
+                      journeyProgress.data?.user_error_message ||
+                      journeyProgress.data?.root_error_message ||
+                      null
                     }
-                  })();
-                  return;
+                    onViewTaskDetails={() => navigate(`/tasks?run_id=${analysisRunId}`)}
+                  />
+                ) : null}
+                {!journeyFailed &&
+                compositionUiState !== "awaiting_reader_journey_start" &&
+                compositionUiState !== "reader_journey_processing" ? (
+                  <WorkspaceJourneyPane
+                    bookId={bookId}
+                    chapterId={chapterId}
+                    analysisRunId={analysisRunId}
+                    journey={journey.data}
+                    mainContentState={workspaceLayout.mainContentState}
+                    onRetry={() => void journey.refetch()}
+                    onReading={() => setView("reading", "user")}
+                    onViewScene={() => setResultTab("analysis", "user")}
+                  />
+                ) : null}
+              </>
+            ) : null}
+          </div>
+
+          {showProgressPanel ? (
+            <aside data-testid="context-pane" className="book-shell-context">
+              <ChapterAnalysisProgressPanel
+                run={progress.run}
+                uiState={
+                  progress.isLoading && !progress.run
+                    ? "creating"
+                    : compositionUiState !== "idle"
+                      ? compositionUiState
+                      : progress.uiState === "idle" && analysisRunId
+                        ? "running"
+                        : progress.uiState
                 }
-                setResultTab("journey");
-              }}
-              onBudgetContinued={() => void progress.refresh()}
-            />
-          )}
-          {view === "result" && analysisRunId ? (
-            <>
-              {isJourneyTab && journeyFailed ? (
-                <StateView
-                  kind="error"
-                  data-testid="journey-failed"
-                  title="阅读旅程生成失败"
-                  description="已完成的场景分析不会受到影响。"
-                  primaryAction={{
-                    label: "重新生成",
-                    testId: "journey-failed-retry",
-                    onClick: () => {
-                      void (async () => {
-                        try {
-                          if (journeyRunId) {
-                            await analysisApi.resumeReaderJourney(journeyRunId, {
-                              client_request_id: getOrCreateJourneyClientRequestId(analysisRunId),
-                              cloud_consent: true,
-                              confirmed: true,
-                            });
-                          } else if (progress.run) {
-                            await analysisRecoveryApi.recover(progress.run.id, {
-                              client_request_id: getOrCreateJourneyClientRequestId(analysisRunId),
-                              cloud_consent: true,
-                              confirmed: true,
-                              recovery_mode: "unified",
-                              resume: true,
-                            });
-                          }
-                        } finally {
-                          void qc.invalidateQueries({
-                            queryKey: ["reader-journey"],
-                          });
-                          void journey.refetch();
-                          void progress.refresh();
-                        }
-                      })();
-                    },
-                  }}
-                  secondaryAction={{
-                    label: "查看任务详情",
-                    testId: "journey-failed-task-details",
-                    onClick: () => navigate(`/tasks?run_id=${analysisRunId}`),
-                  }}
-                />
-              ) : null}
-              {isJourneyTab &&
-              compositionUiState === "awaiting_reader_journey_start" &&
-              !journeyFailed &&
-              progress.run ? (
-                <UnifiedAnalysisRecoveryCard
-                  run={progress.run}
-                  variant="card"
-                  onContinued={() => {
-                    void qc.invalidateQueries({ queryKey: ["reader-journey"] });
-                    void journey.refetch();
-                    void progress.refresh();
-                  }}
-                />
-              ) : null}
-              {isJourneyTab && compositionUiState === "reader_journey_processing" ? (
-                <ReaderJourneyProgressCard
-                  analysisRunId={analysisRunId}
-                  progress={journeyProgress.data}
-                  loading={journeyProgress.isLoading && !journeyProgress.data}
-                  errorMessage={
-                    journeyProgress.data?.user_error_message ||
-                    journeyProgress.data?.root_error_message ||
-                    null
+                chapterTitle={chapterTitle}
+                reconnectHint={progress.reconnectHint}
+                canResume={progress.canResume}
+                onResume={progress.resume}
+                onReanalyze={() => setDialog(true)}
+                onReviewBoundary={() => setReviewOpen(true)}
+                onDismiss={() => setPanelCollapsed(true)}
+                onContinueReading={() => setView("reading", "user")}
+                onViewResults={() => {
+                  setResultTab("analysis", "user");
+                }}
+                onContinueReaderJourney={() => {
+                  if (
+                    compositionUiState === "awaiting_reader_journey_start" &&
+                    progress.run
+                  ) {
+                    void (async () => {
+                      try {
+                        await analysisRecoveryApi.recover(progress.run!.id, {
+                          client_request_id: getOrCreateJourneyClientRequestId(progress.run!.id),
+                          cloud_consent: true,
+                          confirmed: true,
+                          recovery_mode: "unified",
+                          resume: true,
+                        });
+                      } finally {
+                        void qc.invalidateQueries({
+                          queryKey: ["reader-journey"],
+                        });
+                        void journey.refetch();
+                        void progress.refresh();
+                        setResultTab("journey", "user");
+                      }
+                    })();
+                    return;
                   }
-                  onViewTaskDetails={() => navigate(`/tasks?run_id=${analysisRunId}`)}
-                />
-              ) : null}
-              {!(
-                isJourneyTab &&
-                (journeyFailed ||
-                  compositionUiState === "awaiting_reader_journey_start" ||
-                  compositionUiState === "reader_journey_processing")
-              ) ? (
-                <EmbeddedAnalysisResultShell
-                  runId={analysisRunId}
-                  onReading={() => setView("reading")}
-                />
-              ) : null}
-              {isJourneyTab &&
-              compositionUiState === "awaiting_reader_journey_start" &&
-              !journeyFailed &&
-              !progress.run ? (
-                <p className="notice" data-testid="reader-journey-resume-loading-run">
-                  正在加载分析任务…
-                </p>
-              ) : null}
-            </>
+                  setResultTab("journey", "user");
+                }}
+                onBudgetContinued={() => void progress.refresh()}
+              />
+            </aside>
           ) : null}
         </div>
       )}

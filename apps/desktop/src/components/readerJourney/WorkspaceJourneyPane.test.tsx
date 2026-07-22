@@ -1,0 +1,154 @@
+import { describe, expect, it, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { WorkspaceJourneyPane } from "./WorkspaceJourneyPane";
+import {
+  mapUrlToActiveTab,
+  resolveWorkspaceLayout,
+} from "../../services/resolveWorkspaceLayout";
+
+vi.mock("./ReaderJourneyWorkspace", () => ({
+  ReaderJourneyWorkspace: () => <div data-testid="mock-journey-workspace">journey-shell</div>,
+}));
+
+describe("resolveWorkspaceLayout", () => {
+  it("maps reader-journey URL to journey tab inside one workspace", () => {
+    expect(
+      mapUrlToActiveTab({
+        requestedView: "result",
+        requestedTab: "reader-journey",
+        chapterComplete: true,
+        journeyAvailable: true,
+        sceneAvailable: true,
+        userPinnedTab: null,
+      }),
+    ).toBe("journey");
+  });
+
+  it("keeps scene pin while journey completes", () => {
+    const layout = resolveWorkspaceLayout({
+      requestedView: "result",
+      requestedTab: "reader-journey",
+      userPinnedTab: "scene",
+      chapterComplete: true,
+      inFlight: false,
+      sceneAvailable: true,
+      journeyAvailable: true,
+      journeyStatus: "succeeded",
+      journeyQueryStatus: "success",
+      journeyTrusted: true,
+    });
+    expect(layout.activeTab).toBe("scene");
+    expect(layout.showProgressContext).toBe(false);
+  });
+
+  it("shows progress context only while in flight", () => {
+    const layout = resolveWorkspaceLayout({
+      requestedView: "result",
+      requestedTab: null,
+      userPinnedTab: "scene",
+      chapterComplete: false,
+      inFlight: true,
+      sceneAvailable: true,
+      journeyAvailable: false,
+      journeyStatus: null,
+      journeyQueryStatus: "idle",
+    });
+    expect(layout.activeTab).toBe("scene");
+    expect(layout.showProgressContext).toBe(true);
+    expect(layout.shellView).toBe("result");
+  });
+
+  it("keeps shellView=reading when user pins text while in flight", () => {
+    const layout = resolveWorkspaceLayout({
+      requestedView: "reading",
+      requestedTab: null,
+      userPinnedTab: "text",
+      chapterComplete: false,
+      inFlight: true,
+      sceneAvailable: true,
+      journeyAvailable: false,
+      journeyStatus: null,
+      journeyQueryStatus: "idle",
+    });
+    expect(layout.activeTab).toBe("text");
+    expect(layout.shellView).toBe("reading");
+    expect(layout.showProgressContext).toBe(true);
+  });
+
+  it("distinguishes loading from error", () => {
+    expect(
+      resolveWorkspaceLayout({
+        requestedView: "result",
+        requestedTab: "reader-journey",
+        userPinnedTab: null,
+        chapterComplete: true,
+        inFlight: false,
+        sceneAvailable: true,
+        journeyAvailable: false,
+        journeyStatus: null,
+        journeyQueryStatus: "loading",
+      }).mainContentState,
+    ).toBe("loading");
+    expect(
+      resolveWorkspaceLayout({
+        requestedView: "result",
+        requestedTab: "reader-journey",
+        userPinnedTab: null,
+        chapterComplete: true,
+        inFlight: false,
+        sceneAvailable: true,
+        journeyAvailable: false,
+        journeyStatus: null,
+        journeyQueryStatus: "error",
+      }).mainContentState,
+    ).toBe("request_error");
+  });
+});
+
+describe("WorkspaceJourneyPane", () => {
+  it("does not show temporary-load error while loading", () => {
+    render(
+      <WorkspaceJourneyPane
+        bookId={9}
+        chapterId={1220}
+        analysisRunId={8}
+        journey={undefined}
+        mainContentState="loading"
+        onRetry={() => undefined}
+        onReading={() => undefined}
+      />,
+    );
+    expect(screen.getByTestId("workspace-journey-pane")).toHaveAttribute("data-state", "loading");
+    expect(screen.queryByText("分析结果暂时无法加载")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("chapter-result-open-independent")).not.toBeInTheDocument();
+  });
+
+  it("shows invalid artifact without independent page CTA", () => {
+    render(
+      <WorkspaceJourneyPane
+        bookId={9}
+        chapterId={1220}
+        analysisRunId={8}
+        journey={
+          {
+            status: "succeeded",
+            journey_run_id: 7,
+            integrity_status: "data_integrity_failed",
+            trusted: false,
+            visualization: {
+              scene_nodes: [{ scene_ordinal: 1, integrity_blocked: true }],
+              phases: [{ ordinal: 1 }],
+              curve_series: { curiosity: [{ scene_ordinal: 1, value: 1 }] },
+            },
+          } as any
+        }
+        mainContentState="invalid_artifact"
+        onRetry={() => undefined}
+        onReading={() => undefined}
+      />,
+    );
+    expect(screen.getByTestId("workspace-journey-integrity-banner")).toBeInTheDocument();
+    expect(screen.getByTestId("mock-journey-workspace")).toBeInTheDocument();
+    expect(screen.queryByTestId("chapter-result-open-independent")).not.toBeInTheDocument();
+  });
+});

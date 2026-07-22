@@ -32,10 +32,14 @@
     "apps/desktop/src/components/chapterAnalysis/ChapterAnalysisProgressPanel.tsx",
     "apps/desktop/src/services/chapterJourneyComposition.ts",
     "apps/desktop/src/services/discoverActiveChapterRun.ts",
-    "apps/desktop/src/components/layout/WorkspaceViewSwitcher.tsx"
+    "apps/desktop/src/components/layout/WorkspaceViewSwitcher.tsx",
+    "apps/desktop/src/services/resolveWorkspaceLayout.ts",
+    "apps/desktop/src/components/readerJourney/WorkspaceJourneyPane.tsx",
+    "apps/desktop/src/components/chapterResult/ChapterResultErrorState.tsx",
+    "apps/desktop/src/components/chapterResult/chapterResult.css"
   ],
-  "user_summary": "场景分析完成后自动衔接阅读旅程，禁止过早completed与结果页跳转。",
-  "technical_summary": "Scene pipeline no longer finalizes AnalysisRun; auto-enqueues Reader Journey on same run_id; Book workspace resolveChapterWorkspaceView blocks premature view=result; progress panel stays while in-flight; tabs stay inside BookRoutePage.",
+  "user_summary": "场景分析完成后自动衔接阅读旅程；统一单一 Book Workspace，修复 Journey 误显示与双布局。",
+  "technical_summary": "Scene pipeline no longer finalizes AnalysisRun; auto-enqueues Reader Journey on same run_id; Book workspace uses resolveWorkspaceLayout for mutually exclusive text|scene|journey tabs; WorkspaceJourneyPane replaces EmbeddedAnalysisResultShell for journey; remove independent-result CTA; progress+scene use grid not stacked shells.",
   "acceptance_criteria": [
     "Scene完成后不标记completed_at",
     "自动进入reader_journey_generation并调度Journey",
@@ -44,12 +48,18 @@
     "耗时不再用naive created_at墙钟",
     "Scene完成后保持Book workspace与进度面板",
     "仅chapter_complete后自动切阅读旅程Tab",
-    "旧view=result且Journey运行时恢复工作台"
+    "旧view=result且Journey运行时恢复工作台",
+    "BookRoutePage只渲染一个workspace root",
+    "已完成Journey在统一工作台内加载，不跳独立结果页",
+    "loading/empty/error/scope_mismatch严格区分",
+    "查看场景结果只切换activeTab=scene，不追加第二套布局"
   ],
   "tests": [
     "apps/api/tests/test_chapter_analysis_completion_local.py",
+    "apps/api/tests/test_reader_journey_scope_get_local.py",
     "apps/desktop/src/pages/BookRoutePage.test.tsx",
     "apps/desktop/src/components/chapterAnalysis/ChapterAnalysisProgressPanel.test.tsx",
+    "apps/desktop/src/components/readerJourney/WorkspaceJourneyPane.test.tsx",
     "apps/desktop/src/services/chapterJourneyComposition.test.ts",
     "apps/desktop/src/pages/BookRoutePage.readerJourneyResume.test.tsx"
   ],
@@ -63,13 +73,19 @@
     "前端因Scene artifact提前导航到view=result",
     "进度面板因view=result提前卸载",
     "章节分析过程被拆成独立结果页壳层",
-    "后台已自动衔接Journey但前端仍跳转"
+    "后台已自动衔接Journey但前端仍跳转",
+    "统一工作台中Journey结果加载失败",
+    "已完成Journey被错误显示为暂时无法加载",
+    "Journey Pane仍依赖旧独立结果页上下文",
+    "loading/empty/error状态混用",
+    "查看Scene时重复渲染两套Workspace",
+    "修复为单一Book Workspace"
   ],
   "data_compatibility": {
     "database_changed": false,
     "migration_required": false,
     "user_data_compatible": true,
-    "notes": "旧succeeded无Journey派生为partial_complete；可resume只补Journey"
+    "notes": "旧succeeded无Journey派生为partial_complete；可resume只补Journey；Run#8只读不修改"
   },
   "release_impact": {
     "requires_reanalysis": false,
@@ -80,5 +96,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-22T04:41:55Z",
-  "updated_at": "2026-07-22T05:47:50Z"
+  "updated_at": "2026-07-22T07:00:00Z"
 }

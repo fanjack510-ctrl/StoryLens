@@ -95,12 +95,23 @@ export function AnalysisResultsPage() {
   });
 
   const readerJourney = useQuery({
-    queryKey: ["reader-journey", runId],
-    queryFn: () => analysisApi.readerJourney(runId),
+    queryKey: [
+      "reader-journey",
+      completedResults?.chapter?.book_id ?? null,
+      completedResults?.chapter?.id ?? null,
+      runId,
+    ],
+    queryFn: () =>
+      analysisApi.readerJourney(runId, {
+        bookId: completedResults?.chapter?.book_id,
+        chapterId: completedResults?.chapter?.id,
+      }),
     enabled:
       Number.isFinite(runId) &&
       completedResults != null &&
-      completedResults.run.status === "succeeded",
+      completedResults.run.status === "succeeded" &&
+      Boolean(completedResults.chapter?.id),
+    placeholderData: undefined,
   });
 
   const journeyProgress = useQuery({

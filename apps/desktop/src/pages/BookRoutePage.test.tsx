@@ -71,6 +71,14 @@ vi.mock("../components/chapterResult/EmbeddedAnalysisResultShell", () => ({
   ),
 }));
 
+vi.mock("../components/readerJourney/ReaderJourneyWorkspace", () => ({
+  ReaderJourneyWorkspace: ({ analysisRunId }: { analysisRunId?: number }) => (
+    <div data-testid="mock-reader-journey-workspace" data-analysis-run={analysisRunId}>
+      journey-workspace
+    </div>
+  ),
+}));
+
 vi.mock("../components/analysis/StartAnalysisDialog", () => ({
   StartAnalysisDialog: ({
     onCreated,
@@ -335,6 +343,52 @@ describe("Book chapter shell", () => {
     expect(analysisApi.createReaderJourney).not.toHaveBeenCalled();
   });
 
+  it("renders a single workspace root and main pane for journey URL", async () => {
+    vi.mocked(analysisApi.run).mockResolvedValue({
+      id: 8,
+      subject_id: "2",
+      provider: "fake",
+      model: "fake",
+      status: "succeeded",
+      progress_current: 2,
+      progress_total: 2,
+      execution_mode: "cloud",
+      cloud_consent: true,
+      sends_content_to_cloud: true,
+      retryable: false,
+      created_at: "2026-01-01T00:00:00Z",
+      completed_at: "2026-01-01T00:05:00Z",
+      chapter_complete: true,
+      effective_status: "completed",
+      reusable_checkpoint_count: 0,
+      conflicted_checkpoint_count: 0,
+      checkpoint_total_count: 0,
+      checkpoint_available: false,
+      completed_scene_count: 2,
+      total_scene_count: 2,
+    } as any);
+    vi.mocked(analysisApi.readerJourney).mockResolvedValue({
+      status: "succeeded",
+      journey_run_id: 7,
+      trusted: true,
+      visualization: {
+        scene_nodes: [{ scene_ordinal: 1, scores: { reading_momentum: 1, plot_progress: 1 }, engagement: { engagement_score: 1 } }],
+        phases: [{ ordinal: 1 }],
+        curve_series: { curiosity: [{ scene_ordinal: 1, value: 1 }] },
+      },
+    } as any);
+
+    renderBook("/books/1?chapter=2&analysisRun=8&view=result&tab=reader-journey");
+    await waitFor(() => {
+      expect(screen.getByTestId("workspace-journey-pane")).toBeInTheDocument();
+    });
+    expect(screen.getAllByTestId("book-chapter-shell")).toHaveLength(1);
+    expect(screen.getAllByTestId("main-content-pane")).toHaveLength(1);
+    expect(screen.queryAllByTestId("context-pane").length).toBeLessThanOrEqual(1);
+    expect(screen.queryByTestId("embedded-analysis-result")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("chapter-result-open-independent")).not.toBeInTheDocument();
+  });
+
   it("auto-switches to journey result when chapter_complete with visualization", async () => {
     vi.mocked(analysisApi.run).mockResolvedValue({
       id: 77,
@@ -362,14 +416,19 @@ describe("Book chapter shell", () => {
     vi.mocked(analysisApi.readerJourney).mockResolvedValue({
       status: "succeeded",
       journey_run_id: 9,
-      visualization: { scene_nodes: [] },
+      trusted: true,
+      visualization: {
+        scene_nodes: [{ scene_ordinal: 1, scene_id: 1 }],
+        phases: [{ ordinal: 1 }],
+        curve_series: { curiosity: [{ scene_ordinal: 1, value: 0.5 }] },
+      },
     } as any);
 
     renderBook("/books/1?chapter=2&analysisRun=77");
     await waitFor(() => {
       expect(screen.getByTestId("book-chapter-shell")).toHaveAttribute("data-view", "result");
     });
-    expect(screen.getByTestId("embedded-analysis-result")).toBeInTheDocument();
+    expect(screen.getByTestId("workspace-journey-pane")).toBeInTheDocument();
     expect(screen.queryByTestId("chapter-analysis-progress")).not.toBeInTheDocument();
     expect(analysisApi.createReaderJourney).not.toHaveBeenCalled();
   });
@@ -453,16 +512,22 @@ describe("Book chapter shell", () => {
     vi.mocked(analysisApi.readerJourney).mockResolvedValue({
       status: "succeeded",
       journey_run_id: 2,
-      visualization: { scene_nodes: [{ scene_ordinal: 14 }] },
+      trusted: true,
+      visualization: {
+        scene_nodes: [{ scene_ordinal: 14 }],
+        phases: [{ ordinal: 1 }],
+        curve_series: { curiosity: [{ scene_ordinal: 14, value: 1 }] },
+      },
     } as any);
 
     renderBook(
-      "/books/1?chapter=2&analysisRun=55&view=result&resultTab=reader-journey&mode=sync&scene=14",
+      "/books/1?chapter=2&analysisRun=55&view=result&tab=reader-journey&mode=sync&scene=14",
     );
     await waitFor(() => {
-      expect(screen.getByTestId("embedded-analysis-result")).toBeInTheDocument();
+      expect(screen.getByTestId("workspace-journey-pane")).toBeInTheDocument();
     });
     expect(screen.getByTestId("book-chapter-shell")).toHaveAttribute("data-view", "result");
+    expect(screen.getByTestId("main-content-pane")).toBeInTheDocument();
     expect(analysisApi.createReaderJourney).not.toHaveBeenCalled();
   });
 

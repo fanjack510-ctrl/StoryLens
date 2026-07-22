@@ -366,7 +366,7 @@ export function ChapterAnalysisProgressPanel({
               data-testid="chapter-analysis-open-results"
               onClick={onViewResults}
             >
-              查看分析结果
+              查看场景结果
             </button>
           )}
         </div>
@@ -402,16 +402,18 @@ export function ChapterAnalysisProgressPanel({
                 data-testid="chapter-analysis-open-results"
                 onClick={onViewResults}
               >
-                查看分析结果
+                查看场景结果
               </button>
             ) : (
-              <a
+              <button
+                type="button"
                 className="primary"
                 data-testid="chapter-analysis-open-results"
-                href={`/analysis-runs/${run.id}/results?tab=reader-journey`}
+                disabled
+                title="请在章节工作台内查看场景结果"
               >
-                查看分析结果
-              </a>
+                查看场景结果
+              </button>
             )}
             {hasJourney && onContinueReaderJourney && (
               <button

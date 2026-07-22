@@ -68,7 +68,7 @@ describe("EmbeddedAnalysisResultShell", () => {
     expect(analysisApi.results).toHaveBeenCalledWith(55);
   });
 
-  it("shows error without crashing and offers independent route", async () => {
+  it("shows error without independent result-page escape hatch", async () => {
     vi.mocked(analysisApi.results).mockRejectedValue(new Error("boom"));
     renderShell("/books/1?chapter=2&analysisRun=55&view=result");
     await waitFor(
@@ -77,9 +77,8 @@ describe("EmbeddedAnalysisResultShell", () => {
       },
       { timeout: 4000 },
     );
-    expect(screen.getByTestId("chapter-result-open-independent")).toHaveAttribute(
-      "href",
-      "/analysis-runs/55/results",
-    );
+    expect(screen.queryByTestId("chapter-result-open-independent")).not.toBeInTheDocument();
+    expect(screen.getByTestId("chapter-result-retry")).toBeInTheDocument();
+    expect(screen.getByTestId("chapter-result-back-reading")).toBeInTheDocument();
   });
 });

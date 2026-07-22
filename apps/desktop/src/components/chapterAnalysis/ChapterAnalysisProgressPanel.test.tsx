@@ -150,7 +150,7 @@ describe("ChapterAnalysisProgressPanel", () => {
         />,
     );
     const cta = screen.getByTestId("chapter-analysis-open-results");
-    expect(cta).toHaveTextContent("查看分析结果");
+    expect(cta).toHaveTextContent("查看场景结果");
     expect(screen.getByTestId("chapter-analysis-success")).toHaveTextContent("分析完成");
     fireEvent.click(cta);
     expect(onViewResults).toHaveBeenCalled();
