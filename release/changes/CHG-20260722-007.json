@@ -17,6 +17,12 @@
       "message": "docs: mark CHG-20260722-007 tested for start-gate hotfix",
       "primary": false,
       "multi_change_reason": "registry tested status"
+    },
+    {
+      "sha": "44e22fb8a8c2e19a13df20bfc3d3928724898f26",
+      "message": "docs: attach registry commit for CHG-20260722-007",
+      "primary": false,
+      "multi_change_reason": "registry metadata sync"
     }
   ],
   "modules": [
@@ -63,5 +69,5 @@
   "blocker_level": "P0",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-22T13:23:02Z",
-  "updated_at": "2026-07-22T13:45:23Z"
+  "updated_at": "2026-07-22T13:45:49Z"
 }
