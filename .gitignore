@@ -97,3 +97,10 @@ test-results/
 
 # TypeScript build cache
 *.tsbuildinfo
+
+# License issuer secrets (never commit)
+private_release/
+secrets/
+license_private_keys/
+*_ed25519_private*
+*.ed25519.priv

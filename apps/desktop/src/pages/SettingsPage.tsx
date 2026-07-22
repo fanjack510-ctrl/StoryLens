@@ -8,6 +8,7 @@ import { SettingsDataStorageTab } from "../components/settings/SettingsDataStora
 import { SettingsPrivacyUpdateTab } from "../components/settings/SettingsPrivacyUpdateTab";
 import { SettingsAppearanceTab } from "../components/settings/SettingsAppearanceTab";
 import { SettingsAdvancedTab } from "../components/settings/SettingsAdvancedTab";
+import { SettingsLicenseTab } from "../components/settings/SettingsLicenseTab";
 import "../components/settings/settings.css";
 
 type TabId =
@@ -26,6 +27,7 @@ const BASE_TABS: Array<{ id: TabId; label: string }> = [
   { id: "cost", label: "使用额度" },
   { id: "data", label: "数据与备份" },
   { id: "privacy", label: "隐私与更新" },
+  { id: "license", label: "授权与专业版" },
   { id: "appearance", label: "外观" },
 ];
 
@@ -33,15 +35,14 @@ const BASE_TABS: Array<{ id: TabId; label: string }> = [
 export function normalizeSettingsTab(raw: string | null, showDeveloper: boolean): TabId {
   if (raw === "general") return "appearance";
   if (raw === "budget") return "cost";
-  // Membership UI not productized — redirect away from empty placeholder tab.
-  if (raw === "license") return "ai";
   if (raw === "advanced") return showDeveloper ? "advanced" : "ai";
   if (
     raw === "ai" ||
     raw === "cost" ||
     raw === "data" ||
     raw === "privacy" ||
-    raw === "appearance"
+    raw === "appearance" ||
+    raw === "license"
   ) {
     return raw;
   }
@@ -111,6 +112,7 @@ export function SettingsPage() {
         {activeTab === "cost" && <SettingsUsageCostTab />}
         {activeTab === "data" && <SettingsDataStorageTab />}
         {activeTab === "privacy" && <SettingsPrivacyUpdateTab />}
+        {activeTab === "license" && <SettingsLicenseTab />}
         {activeTab === "appearance" && <SettingsAppearanceTab />}
         {activeTab === "advanced" && showDeveloper && <SettingsAdvancedTab />}
       </div>

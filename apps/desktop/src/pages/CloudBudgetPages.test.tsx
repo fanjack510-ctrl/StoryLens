@@ -144,7 +144,7 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
 describe("设置页结构", () => {
-  it("普通模式显示五个标签且无授权与高级设置", async () => {
+  it("普通模式显示含授权的标签且无高级设置", async () => {
     renderPage(<SettingsPage />);
     expect(await screen.findByTestId("settings-tabs")).toBeInTheDocument();
     expect(screen.getByTestId("settings-tab-ai")).toBeInTheDocument();
@@ -152,7 +152,7 @@ describe("设置页结构", () => {
     expect(screen.getByTestId("settings-tab-data")).toBeInTheDocument();
     expect(screen.getByTestId("settings-tab-privacy")).toBeInTheDocument();
     expect(screen.getByTestId("settings-tab-appearance")).toBeInTheDocument();
-    expect(screen.queryByTestId("settings-tab-license")).not.toBeInTheDocument();
+    expect(screen.getByTestId("settings-tab-license")).toHaveTextContent("授权与专业版");
     expect(screen.queryByTestId("settings-tab-advanced")).not.toBeInTheDocument();
   });
 

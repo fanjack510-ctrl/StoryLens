@@ -1,180 +1,202 @@
 import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  isMockActivationAllowed,
-  listVipFeatureDefinitions,
-  MOCK_ACTIVATION_CODES,
-} from "../../services/license";
-import { licenseStatusLabel, useLicenseStore } from "../../stores/license";
-import type { LicenseStatus } from "../../services/license";
+  entitlementApi,
+  maskLicenseCode,
+  PRO_FEATURE_KEYS,
+  type EntitlementSnapshot,
+} from "../../services/entitlementApi";
+import { openExternalUrl } from "../../services/openExternalUrl";
+import { ApiError } from "../../services/apiClient";
+import { Button } from "../ui/Button";
+import { Dialog } from "../ui/Dialog";
 import "./settings.css";
 
-function statusTone(status: LicenseStatus): "success" | "warning" | "danger" | "neutral" {
-  switch (status) {
-    case "VIP_ACTIVE":
-      return "success";
-    case "VIP_OFFLINE_GRACE":
-      return "warning";
-    case "VIP_EXPIRED":
-    case "VIP_INVALID":
-      return "danger";
-    default:
-      return "neutral";
-  }
-}
+const FEATURE_LABELS: Record<(typeof PRO_FEATURE_KEYS)[number], string> = {
+  whole_book_analysis: "整书分析",
+  narrative_asset_library: "叙事资产库",
+  story_lab: "故事实验台",
+  cross_book_search: "跨书检索",
+  advanced_export: "进阶导出",
+};
 
-/** VIP license settings card; wired via SettingsLicenseTab. Commerce remains 即将开放. */
 export function LicenseSettingsCard() {
-  const {
-    status,
-    editionLabel,
-    license,
-    usingMockService,
-    commerceComingSoon,
-    hydrated,
-    busy,
-    message,
-    error,
-    hydrate,
-    activateLicense,
-    refreshLicense,
-    deactivateLicense,
-  } = useLicenseStore();
-
+  const qc = useQueryClient();
+  const entitlement = useQuery({
+    queryKey: ["entitlements"],
+    queryFn: entitlementApi.snapshot,
+  });
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [code, setCode] = useState("");
-  const mockAllowed = isMockActivationAllowed();
-  const vipFeatures = listVipFeatureDefinitions();
+  const [showFullCode, setShowFullCode] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  const [errorCode, setErrorCode] = useState<string | null>(null);
+  const [success, setSuccess] = useState<EntitlementSnapshot | null>(null);
 
   useEffect(() => {
-    if (!hydrated) {
-      void hydrate();
+    if (entitlement.data?.pro_active) {
+      setSuccess(entitlement.data);
     }
-  }, [hydrated, hydrate]);
+  }, [entitlement.data]);
+
+  const data = entitlement.data;
+  const pro = Boolean(data?.pro_active);
+  const buyUrl = data?.commerce?.afdian_product_url || "";
+
+  const onBuy = async () => {
+    const result = await openExternalUrl(buyUrl);
+    if (!result.ok) {
+      setMessage(result.message || "无法打开购买页。");
+      setErrorCode("COMMERCE_URL_MISSING");
+    }
+  };
+
+  const onActivate = async () => {
+    setBusy(true);
+    setMessage("");
+    setErrorCode(null);
+    try {
+      const result = await entitlementApi.activate(code);
+      setSuccess(result.entitlement);
+      setMessage(result.user_message);
+      setDialogOpen(false);
+      setCode("");
+      await qc.invalidateQueries({ queryKey: ["entitlements"] });
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setErrorCode(error.code);
+        setMessage(error.message);
+      } else {
+        setErrorCode("LICENSE_ACTIVATE_FAILED");
+        setMessage(error instanceof Error ? error.message : "激活失败");
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const copySummary = async () => {
+    const text = [
+      "StoryLens Pro",
+      `授权编号：${data?.license_id_masked || "—"}`,
+      `范围：StoryLens ${data?.major_version ?? 1}.x`,
+      `激活时间：${data?.activated_at || "—"}`,
+    ].join("\n");
+    try {
+      await navigator.clipboard?.writeText(text);
+      setMessage("授权摘要已复制。");
+    } catch {
+      setMessage(text);
+    }
+  };
 
   return (
-    <article className="settings-panel settings-module" data-testid="license-settings-card">
+    <article className="settings-panel settings-module" data-testid="settings-panel-license">
       <header className="settings-panel-header">
-        <h2>授权与会员</h2>
-        <p>本地优先授权。真实购买与远程验签即将开放；当前不限制已有功能。</p>
+        <h2>授权与专业版</h2>
+        <p>爱发电购买后，使用授权码在本机离线激活。</p>
       </header>
 
-      <div className="settings-fields">
-        <div className="settings-field" data-testid="license-edition">
-          <span>当前版本</span>
-          <strong>{editionLabel || "免费版"}</strong>
-        </div>
-
-        <div className="settings-field" data-testid="license-status">
-          <span>授权状态</span>
-          <span className="settings-status-pill" data-tone={statusTone(status)}>
-            {licenseStatusLabel(status)}
-          </span>
-          <code className="settings-tech-id" title="状态码">
-            {status}
-          </code>
-        </div>
-
-        {license && (
-          <div className="settings-field" data-testid="license-meta">
-            <span>授权信息</span>
-            <small className="settings-license-meta">
-              ID：{license.license_id}
-              {license.expires_at ? ` · 到期：${license.expires_at.slice(0, 10)}` : " · 无到期日"}
-              {license.last_verified_at
-                ? ` · 最近校验：${license.last_verified_at.slice(0, 10)}`
-                : ""}
-            </small>
-          </div>
-        )}
-
-        {commerceComingSoon && (
-          <p role="status" data-testid="license-coming-soon">
-            购买 VIP：即将开放。本阶段不展示价格，也不跳转无效购买地址。
-          </p>
-        )}
-      </div>
-
-      <section className="settings-license-activate" data-testid="license-activate-zone">
-        <h3>激活码</h3>
-        <p className="zone-hint">
-          {mockAllowed
-            ? "开发环境可使用 Mock 激活码验证状态流转；正式构建不会启用 DEV Mock。"
-            : "正式购买通道即将开放。激活入口已预留，当前不会启用额外 VIP 限制。"}
+      <section className="settings-zone" data-testid="license-edition-zone">
+        <h3>当前版本</h3>
+        <p data-testid="license-edition-label">
+          {pro ? "StoryLens Pro" : "StoryLens 免费版"}
         </p>
-
-        {usingMockService && mockAllowed && (
-          <p className="muted" data-testid="license-mock-notice">
-            开发 Mock 已启用（非真实付费授权）。可用码：
-            {MOCK_ACTIVATION_CODES.ACTIVE}、{MOCK_ACTIVATION_CODES.EXPIRED}、
-            {MOCK_ACTIVATION_CODES.OFFLINE_GRACE}、{MOCK_ACTIVATION_CODES.INVALID}
+        {!pro && (
+          <p className="zone-hint muted">
+            整书分析、叙事资产库和故事实验台属于 StoryLens Pro 功能。
           </p>
         )}
-
-        <label className="settings-field">
-          <span>输入激活码</span>
-          <input
-            type="text"
-            value={code}
-            aria-label="激活码"
-            data-testid="license-code-input"
-            placeholder={mockAllowed ? "输入 Mock 激活码" : "即将开放"}
-            disabled={!mockAllowed || busy}
-            onChange={(e) => setCode(e.target.value)}
-          />
-        </label>
-
-        <div className="settings-actions">
-          <button
-            type="button"
-            className="primary"
-            data-testid="license-activate-button"
-            disabled={!mockAllowed || busy || !code.trim()}
-            onClick={() => void activateLicense(code)}
-          >
-            {busy ? "处理中…" : mockAllowed ? "激活" : "激活（即将开放）"}
-          </button>
-          <button
-            type="button"
-            data-testid="license-refresh-button"
-            disabled={!mockAllowed || busy}
-            onClick={() => void refreshLicense()}
-          >
-            刷新授权
-          </button>
-          <button
-            type="button"
-            data-testid="license-deactivate-button"
-            disabled={busy || status === "FREE"}
-            onClick={() => void deactivateLicense()}
-          >
-            解除本机授权
-          </button>
-        </div>
       </section>
 
-      <section data-testid="license-vip-features">
-        <h3>VIP 功能说明</h3>
-        <p>以下能力已登记功能键，本阶段均为未启用或免费策略，不会锁定当前已有功能。</p>
-        <ul>
-          {vipFeatures.map((feature) => (
-            <li key={feature.key}>
-              <b>{feature.label}</b>
-              <span> — {feature.description}</span>
-              <small> （{feature.phaseAccess === "free" ? "免费可用" : "未启用"}）</small>
-            </li>
-          ))}
-        </ul>
-      </section>
+      {pro && data ? (
+        <section className="settings-zone" data-testid="license-pro-active">
+          <h3>StoryLens Pro 已激活</h3>
+          <ul className="settings-license-summary">
+            <li>授权范围：StoryLens {data.major_version ?? 1}.x</li>
+            <li>授权编号：{data.license_id_masked}</li>
+            <li>激活时间：{data.activated_at ? new Date(data.activated_at).toLocaleString() : "—"}</li>
+          </ul>
+          <p className="muted">专业版功能</p>
+          <ul>
+            {PRO_FEATURE_KEYS.map((key) => (
+              <li key={key}>{FEATURE_LABELS[key]}</li>
+            ))}
+          </ul>
+          <div className="settings-actions">
+            <Button type="button" data-testid="license-copy-summary" onClick={() => void copySummary()}>
+              复制授权摘要
+            </Button>
+          </div>
+        </section>
+      ) : (
+        <section className="settings-zone" data-testid="license-free-actions">
+          <div className="settings-actions">
+            <Button
+              variant="primary"
+              data-testid="license-buy-pro"
+              onClick={() => void onBuy()}
+            >
+              购买专业版
+            </Button>
+            <Button data-testid="license-open-activate" onClick={() => setDialogOpen(true)}>
+              输入授权码
+            </Button>
+          </div>
+        </section>
+      )}
 
       {message && (
-        <p role="status" data-testid="license-message">
+        <p role="status" data-testid="license-message" data-error-code={errorCode || undefined}>
           {message}
         </p>
       )}
-      {error && (
-        <p role="alert" data-testid="license-error">
-          {error}
-        </p>
-      )}
+
+      <Dialog
+        open={dialogOpen}
+        onClose={() => !busy && setDialogOpen(false)}
+        title="激活专业版"
+        data-testid="license-activate-dialog"
+      >
+        <label className="settings-field">
+          <span>授权码</span>
+          <textarea
+            value={code}
+            data-testid="license-code-input"
+            rows={3}
+            placeholder="粘贴 SLP1- 开头的授权码"
+            onChange={(e) => setCode(e.target.value)}
+            disabled={busy}
+          />
+          <small className="field-hint">
+            {showFullCode ? code : maskLicenseCode(code || "SLP1-••••••••")}
+          </small>
+          <button
+            type="button"
+            className="linkish"
+            data-testid="license-toggle-code-preview"
+            onClick={() => setShowFullCode((v) => !v)}
+          >
+            {showFullCode ? "隐藏授权码" : "显示完整授权码"}
+          </button>
+        </label>
+        <div className="settings-actions">
+          <Button
+            variant="primary"
+            data-testid="license-activate-submit"
+            disabled={busy || !code.trim()}
+            onClick={() => void onActivate()}
+          >
+            {busy ? "正在激活…" : "激活专业版"}
+          </Button>
+        </div>
+        {errorCode && (
+          <p className="muted" data-testid="license-activate-error-code">
+            {errorCode}
+          </p>
+        )}
+      </Dialog>
     </article>
   );
 }

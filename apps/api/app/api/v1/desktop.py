@@ -300,6 +300,35 @@ def get_runtime(store: CredentialStore = Depends(get_credential_store)) -> dict:
     return build_runtime_payload(store)
 
 
+@router.get("/entitlements")
+def get_entitlements(session: Session = Depends(get_db)) -> dict:
+    from app.services.entitlement import entitlement_snapshot
+
+    return entitlement_snapshot(session)
+
+
+@router.get("/entitlements/features/{feature_key}")
+def get_feature_entitlement(feature_key: str, session: Session = Depends(get_db)) -> dict:
+    from app.services.entitlement import can_use_feature
+
+    return can_use_feature(session, feature_key)
+
+
+class LicenseActivateRequest(BaseModel):
+    license_code: str
+
+
+@router.post("/licenses/activate")
+def activate_license(value: LicenseActivateRequest, session: Session = Depends(get_db)) -> dict:
+    from app.services.entitlement import activate_license_code
+    from app.services.license_crypto import LicenseError
+
+    try:
+        return activate_license_code(session, value.license_code)
+    except LicenseError as exc:
+        raise error(400, exc.code, exc.message) from exc
+
+
 @router.post("/system/open-data-directory")
 def open_data_directory() -> dict[str, object]:
     """Open the local data folder in the OS file manager (loopback API only)."""

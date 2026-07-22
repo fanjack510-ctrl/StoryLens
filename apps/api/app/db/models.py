@@ -389,6 +389,27 @@ class ApplicationSetting(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
 
+class LocalLicense(Base):
+    """Offline-verified StoryLens Pro license persisted on this machine only."""
+
+    __tablename__ = "local_licenses"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    license_id: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    product_code: Mapped[str] = mapped_column(String(64), index=True)
+    edition: Mapped[str] = mapped_column(String(32), default="pro")
+    major_version: Mapped[int] = mapped_column(Integer)
+    license_status: Mapped[str] = mapped_column(String(32), default="active", index=True)
+    signed_license: Mapped[str] = mapped_column(Text)
+    activated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_validated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    key_id: Mapped[str] = mapped_column(String(64), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+
 class BoundaryReviewSession(Base):
     __tablename__ = "boundary_review_sessions"
 

@@ -1,0 +1,56 @@
+{
+  "id": "CHG-20260722-001",
+  "title": "Afdian offline StoryLens Pro license activation V1",
+  "type": "feature",
+  "base_version": "1.0.3",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "api",
+    "desktop",
+    "scripts",
+    "docs",
+    "config"
+  ],
+  "files": [
+    "apps/api/app/services/license_crypto.py",
+    "apps/api/app/services/entitlement.py",
+    "apps/api/app/db/models.py",
+    "apps/api/app/db/session.py",
+    "apps/api/app/api/v1/desktop.py",
+    "apps/desktop/src/services/entitlementApi.ts",
+    "apps/desktop/src/components/settings/LicenseSettingsCard.tsx",
+    "config/license_public_keys.json",
+    "docs/afdian-storylens-pro-setup.md",
+    "scripts/license/generate_keypair.py"
+  ],
+  "user_summary": "增加爱发电离线签名授权码激活 StoryLens Pro 的首版流程，统一专业版文案与 entitlement 权限层。",
+  "technical_summary": "Ed25519 offline license codes (SLP1-), SQLite local_licenses, entitlement API/service, settings Pro UI, issuer scripts, Afdian setup doc.",
+  "acceptance_criteria": [
+    "Offline SLP1 activate unlocks Pro; canUseFeature gates; no private keys in repo"
+  ],
+  "tests": [
+    "pytest apps/api/tests/test_pro_license_local.py",
+    "vitest pro_license_local + settings license tab"
+  ],
+  "verification_evidence": [
+    "9 pytest passed; related vitest passed; typecheck/version/registry/diff-check passed; test activate+tamper+idempotent against test-dev-001"
+  ],
+  "data_compatibility": {
+    "database_changed": true,
+    "migration_required": true,
+    "user_data_compatible": true,
+    "notes": "Adds local_licenses table; free users unchanged"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": null,
+  "created_at": "2026-07-22T00:58:28Z",
+  "updated_at": "2026-07-22T01:16:44Z"
+}

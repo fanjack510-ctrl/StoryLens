@@ -125,19 +125,19 @@ describe("settings tab IA (CHG-013)", () => {
 
   afterEach(() => cleanup());
 
-  it("maps legacy URLs and hides license tab", () => {
-    expect(normalizeSettingsTab("license", false)).toBe("ai");
+  it("maps legacy URLs and keeps license tab", () => {
+    expect(normalizeSettingsTab("license", false)).toBe("license");
     expect(normalizeSettingsTab("budget", false)).toBe("cost");
     expect(normalizeSettingsTab("general", false)).toBe("appearance");
     renderPage("/settings?tab=license");
-    expect(screen.queryByTestId("settings-tab-license")).not.toBeInTheDocument();
-    expect(screen.getByTestId("settings-tab-ai")).toBeInTheDocument();
+    expect(screen.getByTestId("settings-tab-license")).toBeInTheDocument();
   });
 
-  it("shows five ordinary tabs and developer tab when enabled", async () => {
+  it("shows ordinary tabs including license and developer when enabled", async () => {
     renderPage();
     expect(await screen.findByTestId("settings-tab-ai")).toHaveTextContent("AI与模型");
     expect(screen.getByTestId("settings-tab-data")).toHaveTextContent("数据与备份");
+    expect(screen.getByTestId("settings-tab-license")).toHaveTextContent("授权与专业版");
     expect(screen.queryByTestId("settings-tab-advanced")).not.toBeInTheDocument();
     useDeveloperModeStore.setState({ developerMode: true });
     cleanup();
