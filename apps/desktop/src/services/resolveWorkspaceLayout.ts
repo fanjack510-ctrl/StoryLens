@@ -57,7 +57,7 @@ export function mapUrlToActiveTab(args: {
     return "scene";
   }
 
-  if (chapterComplete && journeyAvailable) return "journey";
+  // Default: text/reading. Never auto-jump to Journey because history exists.
   return "text";
 }
 

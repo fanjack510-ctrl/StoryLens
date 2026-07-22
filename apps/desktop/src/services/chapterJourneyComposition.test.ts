@@ -162,4 +162,16 @@ describe("resolveChapterWorkspaceView", () => {
       }),
     ).toBe("reading");
   });
+
+  it("does not auto-open result for historical chapter_complete", () => {
+    expect(
+      resolveChapterWorkspaceView({
+        requestedView: null,
+        userPinnedView: null,
+        chapterComplete: true,
+        inFlight: false,
+        composition: "succeeded",
+      }),
+    ).toBe("reading");
+  });
 });

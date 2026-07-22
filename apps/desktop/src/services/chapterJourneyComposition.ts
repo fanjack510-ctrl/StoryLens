@@ -158,7 +158,7 @@ export function resolveChapterWorkspaceView(args: {
   }
 
   if (inFlight) return "progress";
-  if (chapterComplete || composition === "succeeded") return "result";
+  // Historical chapter_complete must not auto-open result — user opts in via tabs / deep links.
   return "reading";
 }
 

@@ -181,7 +181,7 @@ vi.stubGlobal(
   }),
 );
 
-function renderBook(path = "/books/1") {
+function renderBook(path = "/books/1?chapter=2") {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
@@ -239,6 +239,14 @@ describe("Book chapter shell", () => {
     expect(screen.getByTestId("book-chapter-shell")).toBeInTheDocument();
     expect(screen.getByTestId("shell-start-analysis")).toBeInTheDocument();
     expect(document.querySelector(".analysis-pane .artifact")).toBeNull();
+  });
+
+  it("opens book home catalog when URL has no chapter", async () => {
+    renderBook("/books/1");
+    expect(await screen.findByTestId("book-home-catalog")).toBeInTheDocument();
+    expect(screen.getByTestId("book-chapter-shell")).toHaveAttribute("data-book-home", "true");
+    expect(screen.queryByTestId("shell-start-analysis")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("workspace-journey-pane")).not.toBeInTheDocument();
   });
 
   it("reading settings and more menu include boundary review and tasks", () => {
@@ -397,7 +405,7 @@ describe("Book chapter shell", () => {
     expect(screen.queryByTestId("chapter-result-open-independent")).not.toBeInTheDocument();
   });
 
-  it("auto-switches to journey result when chapter_complete with visualization", async () => {
+  it("does not auto-switch to journey for historical complete runs without explicit tab", async () => {
     vi.mocked(analysisApi.run).mockResolvedValue({
       id: 77,
       subject_id: "2",
@@ -426,18 +434,24 @@ describe("Book chapter shell", () => {
       journey_run_id: 9,
       trusted: true,
       visualization: {
-        scene_nodes: [{ scene_ordinal: 1, scene_id: 1 }],
+        scene_nodes: [
+          {
+            scene_ordinal: 1,
+            scores: { reading_momentum: 1, plot_progress: 1 },
+            engagement: { engagement_score: 1 },
+          },
+        ],
         phases: [{ ordinal: 1 }],
         curve_series: { curiosity: [{ scene_ordinal: 1, value: 0.5 }] },
       },
     } as any);
 
-    renderBook("/books/1?chapter=2&analysisRun=77");
+    renderBook("/books/1?chapter=2&analysisRun=77&view=reading");
     await waitFor(() => {
-      expect(screen.getByTestId("book-chapter-shell")).toHaveAttribute("data-view", "result");
+      expect(screen.getByTestId("book-chapter-shell")).toHaveAttribute("data-view", "reading");
     });
-    expect(screen.getByTestId("workspace-journey-pane")).toBeInTheDocument();
-    expect(screen.queryByTestId("chapter-analysis-progress")).not.toBeInTheDocument();
+    expect(screen.getByTestId("book-chapter-shell")).toHaveAttribute("data-active-tab", "text");
+    expect(screen.queryByTestId("workspace-journey-pane")).not.toBeInTheDocument();
     expect(analysisApi.createReaderJourney).not.toHaveBeenCalled();
   });
 
@@ -522,7 +536,13 @@ describe("Book chapter shell", () => {
       journey_run_id: 2,
       trusted: true,
       visualization: {
-        scene_nodes: [{ scene_ordinal: 14 }],
+        scene_nodes: [
+          {
+            scene_ordinal: 14,
+            scores: { reading_momentum: 1, plot_progress: 1 },
+            engagement: { engagement_score: 1 },
+          },
+        ],
         phases: [{ ordinal: 1 }],
         curve_series: { curiosity: [{ scene_ordinal: 14, value: 1 }] },
       },

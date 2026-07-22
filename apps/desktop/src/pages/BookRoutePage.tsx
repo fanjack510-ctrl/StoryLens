@@ -30,6 +30,7 @@ import {
   resolveChapterWorkspaceView,
   type WorkspaceView,
 } from "../services/chapterJourneyComposition";
+import { BookHomeCatalog } from "../components/books/BookHomeCatalog";
 import { discoverActiveChapterRun } from "../services/discoverActiveChapterRun";
 import {
   resolveWorkspaceLayout,
@@ -77,6 +78,8 @@ export function BookRoutePage() {
 
   const analysisRunFromUrl = parsePositiveInt(searchParams.get("analysisRun"));
   const chapterFromUrl = parsePositiveInt(searchParams.get("chapter"));
+  /** Book home: /books/:id with no chapter= — show catalog, do not auto-pick chapter 1. */
+  const showBookHome = chapterFromUrl == null;
 
   const book = useQuery({
     queryKey: ["book", bookId],
@@ -94,63 +97,28 @@ export function BookRoutePage() {
     refetchOnWindowFocus: true,
   });
 
-  const defaultChapterId = useMemo(() => {
-    const list = chapters.data || [];
-    const first = list.find((item) => item.section_type === "chapter") || list[0];
-    return first?.id || 0;
-  }, [chapters.data]);
+  const chapterId = chapterFromUrl;
 
-  const [selectedChapterId, setSelectedChapterId] = useState(0);
-  const chapterId = chapterFromUrl || selectedChapterId || defaultChapterId;
-
+  // Bind AnalysisRun for an explicitly selected chapter only — never invent chapter= or auto-open Journey.
   useEffect(() => {
-    if (!selectedChapterId && defaultChapterId) setSelectedChapterId(defaultChapterId);
-  }, [defaultChapterId, selectedChapterId]);
-
-  // Ensure chapter= is present (internal Chapter ID, not display ordinal).
-  useEffect(() => {
-    if (!chapterId || chapterFromUrl === chapterId) return;
-    if (chapterFromUrl) return;
-    setSearchParams(
-      (prev) => {
-        if (prev.get("chapter")) return prev;
-        const next = new URLSearchParams(prev);
-        next.set("chapter", String(chapterId));
-        return next;
-      },
-      { replace: true },
-    );
-  }, [chapterId, chapterFromUrl, setSearchParams]);
-
-  // Auto-discover active AnalysisRun when URL omits analysisRun (no create, no model calls).
-  useEffect(() => {
+    if (showBookHome) return;
     if (analysisRunFromUrl) return;
-    if (!chapterId || !recentRuns.data) return;
-    const discovered = discoverActiveChapterRun(recentRuns.data, chapterId);
+    if (!chapterFromUrl || !recentRuns.data) return;
+    const discovered = discoverActiveChapterRun(recentRuns.data, chapterFromUrl);
     if (!discovered) return;
     setPanelCollapsed(false);
     setSearchParams(
       (prev) => {
         if (prev.get("analysisRun")) return prev;
         const next = new URLSearchParams(prev);
-        next.set("chapter", String(chapterId));
         next.set("analysisRun", String(discovered.id));
-        const chapterDone = discovered.chapter_complete === true;
-        if (
-          !chapterDone &&
-          discovered.status !== "cancelled" &&
-          discovered.status !== "review_cancelled"
-        ) {
-          next.set("view", "progress");
-        } else if (chapterDone && !prev.get("view")) {
-          next.set("view", "result");
-          next.set("tab", "reader-journey");
-        }
+        // Keep current view (default reading). Do not force result / reader-journey.
+        if (!next.get("view")) next.set("view", "reading");
         return next;
       },
       { replace: true },
     );
-  }, [analysisRunFromUrl, chapterId, recentRuns.data, setSearchParams]);
+  }, [showBookHome, analysisRunFromUrl, chapterFromUrl, recentRuns.data, setSearchParams]);
 
   const analysisRunId = analysisRunFromUrl;
 
@@ -192,7 +160,6 @@ export function BookRoutePage() {
         return title && button.textContent?.includes(title);
       });
       if (!match) return;
-      setSelectedChapterId(match.id);
       setSearchParams(
         (prev) => {
           const next = new URLSearchParams(prev);
@@ -216,11 +183,11 @@ export function BookRoutePage() {
 
   // Keep chapter= aligned with the bound run's subject_id (internal Chapter ID).
   useEffect(() => {
+    if (showBookHome) return;
     if (!analysisRunId || !progress.run) return;
     const runChapterId = Number(progress.run.subject_id);
     if (!Number.isFinite(runChapterId) || runChapterId <= 0) return;
     if (runChapterId === chapterId) return;
-    setSelectedChapterId(runChapterId);
     setSearchParams(
       (prev) => {
         const next = new URLSearchParams(prev);
@@ -230,7 +197,14 @@ export function BookRoutePage() {
       },
       { replace: true },
     );
-  }, [analysisRunId, progress.run?.id, progress.run?.subject_id, chapterId, setSearchParams]);
+  }, [
+    showBookHome,
+    analysisRunId,
+    progress.run?.id,
+    progress.run?.subject_id,
+    chapterId,
+    setSearchParams,
+  ]);
 
   const sceneComplete = isSceneAnalysisComplete(progress.run);
   const journey = useQuery({
@@ -238,7 +212,7 @@ export function BookRoutePage() {
     queryFn: () =>
       analysisApi.readerJourney(analysisRunId!, {
         bookId,
-        chapterId,
+        chapterId: chapterId!,
       }),
     enabled: Number.isFinite(bookId) && !!analysisRunId && !!chapterId,
     placeholderData: undefined,
@@ -318,10 +292,13 @@ export function BookRoutePage() {
   const isJourneyTab = activeTab === "journey";
 
   // Rewrite stale view=result bookmarks while Journey is still running (unless user pinned Scene).
+  // Wait until the run row is loaded — never treat hydration as in-flight (would wipe deep-link tabs).
   useEffect(() => {
-    if (!analysisRunId || !chapterInFlight) return;
+    if (!analysisRunId || !progress.run) return;
     if (requestedView !== "result") return;
     if (userPinnedViewRef.current === "result" || userPinnedTabRef.current === "scene") return;
+    const stillRunning = isChapterAnalysisInFlight(progress.run, compositionUiState);
+    if (!stillRunning) return;
     setSearchParams(
       (prev) => {
         if (prev.get("view") !== "result") return prev;
@@ -331,11 +308,12 @@ export function BookRoutePage() {
         next.delete("mode");
         next.delete("scene");
         next.delete("resultTab");
+        next.delete("journeyView");
         return next;
       },
       { replace: true },
     );
-  }, [analysisRunId, chapterInFlight, requestedView, setSearchParams]);
+  }, [analysisRunId, progress.run, compositionUiState, requestedView, setSearchParams]);
 
   const journeyRunId = journey.data?.journey_run_id ?? null;
   const journeyFailed = Boolean(
@@ -355,25 +333,24 @@ export function BookRoutePage() {
     refetchInterval: compositionUiState === "reader_journey_processing" ? 2000 : false,
   });
 
-  // After full chapter success, open Journey tab once inside the same workspace shell.
+  // After full chapter success from an in-flight pipeline, open Journey once.
+  // Do not auto-open when landing on historical complete runs from book home / chapter pick.
   const prevCompositionRef = useRef(compositionUiState);
   const autoOpenedJourneyRef = useRef<number | null>(null);
   useEffect(() => {
     const prev = prevCompositionRef.current;
     prevCompositionRef.current = compositionUiState;
+    if (showBookHome) return;
     if (!hasJourney || !analysisRunId) return;
     if (!chapterComplete || compositionUiState !== "succeeded") return;
     if (userPinnedViewRef.current === "reading") return;
     if (userPinnedViewRef.current === "result" && searchParams.get("tab") !== "reader-journey") {
-      // User is browsing Scene results — show non-blocking affordance only via panel/banner.
       return;
     }
     const transitionedFromJourney =
       prev === "reader_journey_processing" || prev === "awaiting_reader_journey_start";
-    const landedComplete =
-      (!searchParams.get("view") || searchParams.get("view") === "progress") &&
-      autoOpenedJourneyRef.current !== analysisRunId;
-    if (!transitionedFromJourney && !landedComplete) return;
+    if (!transitionedFromJourney) return;
+    if (autoOpenedJourneyRef.current === analysisRunId) return;
     autoOpenedJourneyRef.current = analysisRunId;
     userPinnedViewRef.current = null;
     setSearchParams(
@@ -387,6 +364,7 @@ export function BookRoutePage() {
       { replace: true },
     );
   }, [
+    showBookHome,
     hasJourney,
     compositionUiState,
     chapterComplete,
@@ -411,7 +389,11 @@ export function BookRoutePage() {
       run.status === "succeeded" && chapterId && String(run.subject_id) === String(chapterId),
   );
 
-  const showProgressPanel = workspaceLayout.showProgressContext && Boolean(analysisRunId) && !panelCollapsed;
+  const showProgressPanel =
+    !showBookHome &&
+    workspaceLayout.showProgressContext &&
+    Boolean(analysisRunId) &&
+    !panelCollapsed;
   const showRunningBanner =
     view === "reading" &&
     Boolean(analysisRunId) &&
@@ -515,17 +497,23 @@ export function BookRoutePage() {
   };
 
   const selectChapterFromCatalog = (id: number) => {
-    setSelectedChapterId(id);
     setCatalogOpen(false);
+    userPinnedViewRef.current = "reading";
+    userPinnedTabRef.current = "text";
     setSearchParams(
       () => {
         const next = new URLSearchParams();
         next.set("chapter", String(id));
-        // Omit analysisRun so discovery binds the target chapter's run only.
+        next.set("view", "reading");
+        // Omit analysisRun / result tabs — discovery may bind status later without switching tabs.
         return next;
       },
-      { replace: true },
+      { replace: false },
     );
+  };
+
+  const openChapterFromBookHome = (id: number) => {
+    selectChapterFromCatalog(id);
   };
 
   useEffect(() => {
@@ -752,22 +740,49 @@ export function BookRoutePage() {
       data-content-width={contentWidth}
       data-show-paragraph-ids={showParagraphIds ? "true" : "false"}
       data-analysis-run={analysisRunId ? String(analysisRunId) : undefined}
-      data-view={workspaceLayout.shellView}
-      data-active-tab={activeTab}
+      data-view={showBookHome ? "home" : workspaceLayout.shellView}
+      data-active-tab={showBookHome ? "home" : activeTab}
+      data-book-home={showBookHome ? "true" : "false"}
       data-catalog-open={catalogOpen ? "true" : "false"}
-      data-has-progress={showProgressPanel ? "true" : "false"}
+      data-has-progress={!showBookHome && showProgressPanel ? "true" : "false"}
     >
       <CompactToolbar
         className="workspace-toolbar"
         data-testid="book-shell-toolbar"
-        title={view === "result" ? resultToolbarTitle : readingToolbarTitle}
+        title={
+          showBookHome ? (
+            <div className="workspace-toolbar-identity">
+              <button
+                type="button"
+                className="ghost workspace-back-library"
+                data-testid="workspace-back-library"
+                onClick={() => navigate("/library")}
+              >
+                ‹ 返回书库
+              </button>
+              <span className="workspace-toolbar-titles">
+                <span className="workspace-toolbar-book" title={bookTitle}>
+                  {bookTitle}
+                </span>
+              </span>
+            </div>
+          ) : view === "result" ? (
+            resultToolbarTitle
+          ) : (
+            readingToolbarTitle
+          )
+        }
         primary={
-          analysisRunId &&
-          (sceneComplete ||
-            chapterInFlight ||
-            chapterComplete ||
-            view === "progress" ||
-            view === "result") ? (
+          showBookHome ? (
+            <span className="secondary" data-testid="book-home-toolbar-hint">
+              选择章节
+            </span>
+          ) : analysisRunId &&
+            (sceneComplete ||
+              chapterInFlight ||
+              chapterComplete ||
+              view === "progress" ||
+              view === "result") ? (
             <WorkspaceViewSwitcher
               active={
                 activeTab === "journey" ? "journey" : activeTab === "scene" ? "analysis" : "reading"
@@ -806,8 +821,8 @@ export function BookRoutePage() {
         }
         secondary={
           <>
-            {view !== "result" ? <ReadingSettingsPopover /> : null}
-            {panelCollapsed && analysisRunId ? (
+            {!showBookHome && view !== "result" ? <ReadingSettingsPopover /> : null}
+            {!showBookHome && panelCollapsed && analysisRunId ? (
               <button
                 type="button"
                 className="secondary"
@@ -820,7 +835,7 @@ export function BookRoutePage() {
                 展开分析面板
               </button>
             ) : null}
-            {latestSucceeded && !analysisRunId && (
+            {!showBookHome && latestSucceeded && !analysisRunId && (
               <Link
                 className="secondary"
                 data-testid="view-recent-analysis"
@@ -829,9 +844,10 @@ export function BookRoutePage() {
                 查看最近分析
               </Link>
             )}
-            {(compositionUiState === "succeeded" ||
-              compositionUiState === "awaiting_reader_journey_start" ||
-              compositionUiState === "reader_journey_processing") &&
+            {!showBookHome &&
+              (compositionUiState === "succeeded" ||
+                compositionUiState === "awaiting_reader_journey_start" ||
+                compositionUiState === "reader_journey_processing") &&
               analysisRunId &&
               view === "reading" && (
                 <button
@@ -947,7 +963,7 @@ export function BookRoutePage() {
         </div>
       )}
 
-      {reviewOpen && chapterId ? (
+      {reviewOpen && chapterId && !showBookHome ? (
         <div className="shell-review-focus" data-testid="shell-boundary-review">
           {isConfirmOnlyBoundaryReview() ? (
             <ConfirmBoundaryDivisionPanel
@@ -1007,20 +1023,37 @@ export function BookRoutePage() {
           data-workspace-root="true"
         >
           <div className="book-shell-main" data-testid="main-content-pane">
-            {activeTab === "text" ? (
+            {showBookHome ? (
+              <BookHomeCatalog
+                book={book.data}
+                chapters={chapters.data}
+                runs={Array.isArray(recentRuns.data) ? recentRuns.data : []}
+                loading={book.isLoading || chapters.isLoading}
+                error={Boolean(book.isError || chapters.isError)}
+                onRetry={() => {
+                  void book.refetch();
+                  void chapters.refetch();
+                }}
+                onBackLibrary={() => navigate("/library")}
+                onSelectChapter={openChapterFromBookHome}
+                onReparse={() => setReparseOpen(true)}
+              />
+            ) : null}
+
+            {!showBookHome && activeTab === "text" ? (
               <div className="book-shell-workspace">
                 <BookWorkspacePage />
               </div>
             ) : null}
 
-            {activeTab === "scene" && analysisRunId ? (
+            {!showBookHome && activeTab === "scene" && analysisRunId ? (
               <EmbeddedAnalysisResultShell
                 runId={analysisRunId}
                 onReading={() => setView("reading", "user")}
               />
             ) : null}
 
-            {activeTab === "journey" && analysisRunId ? (
+            {!showBookHome && activeTab === "journey" && analysisRunId ? (
               <>
                 {journeyFailed ? (
                   <StateView
@@ -1097,7 +1130,7 @@ export function BookRoutePage() {
                 compositionUiState !== "reader_journey_processing" ? (
                   <WorkspaceJourneyPane
                     bookId={bookId}
-                    chapterId={chapterId}
+                    chapterId={chapterId!}
                     chapterTitle={chapterTitle}
                     analysisRunId={analysisRunId}
                     journey={journey.data}

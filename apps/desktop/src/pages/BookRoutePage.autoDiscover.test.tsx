@@ -194,12 +194,19 @@ describe("BookRoutePage active run auto discovery", () => {
   it("auto-discovers Run #5 from /books/1 without analysisRun", async () => {
     renderBook("/books/1");
     await waitFor(() => {
-      expect(screen.getByTestId("chapter-analysis-run-id")).toHaveTextContent("#5");
+      expect(screen.getByTestId("book-home-catalog")).toBeInTheDocument();
     });
-    expect(screen.getByTestId("chapter-analysis-scene-progress")).toHaveTextContent("0 / 13");
-    expect(screen.getByTestId("unified-recovery-card")).toBeInTheDocument();
-    expect(analysisApi.run).toHaveBeenCalledWith(5);
-    expect(analysisApi.run).not.toHaveBeenCalledWith(4);
+    expect(screen.queryByTestId("chapter-analysis-run-id")).not.toBeInTheDocument();
+    expect(analysisApi.run).not.toHaveBeenCalled();
+  });
+
+  it("shows book home chapter list without selecting chapter 1", async () => {
+    renderBook("/books/1");
+    await waitFor(() => {
+      expect(screen.getByTestId("book-home-chapter-2")).toBeInTheDocument();
+      expect(screen.getByTestId("book-home-chapter-3")).toBeInTheDocument();
+    });
+    expect(screen.getByTestId("book-chapter-shell")).toHaveAttribute("data-book-home", "true");
   });
 
   it("auto-discovers Run #5 from /books/1?chapter=2", async () => {
@@ -207,6 +214,43 @@ describe("BookRoutePage active run auto discovery", () => {
     await waitFor(() => {
       expect(screen.getByTestId("chapter-analysis-run-id")).toHaveTextContent("#5");
     });
+  });
+
+  it("does not auto-open journey tab when discovering a complete chapter run", async () => {
+    vi.mocked(analysisApi.runs).mockResolvedValue([
+      {
+        ...run5,
+        id: 5,
+        subject_id: "2",
+        status: "succeeded",
+        chapter_complete: true,
+        completed_scene_count: 13,
+        total_scene_count: 13,
+      },
+    ] as any);
+    vi.mocked(analysisApi.run).mockResolvedValue({
+      ...run5,
+      id: 5,
+      subject_id: "2",
+      status: "succeeded",
+      chapter_complete: true,
+      completed_scene_count: 13,
+      total_scene_count: 13,
+    } as any);
+    vi.mocked(analysisApi.readerJourney).mockResolvedValue({
+      status: "succeeded",
+      journey_run_id: 7,
+      visualization: {
+        scene_nodes: [{ scene_ordinal: 1, scores: { reading_momentum: 1 }, engagement: {} }],
+        phases: [{ ordinal: 1 }],
+        curve_series: { engagement: [{ scene_ordinal: 1, value: 1 }] },
+      },
+    } as any);
+    renderBook("/books/1?chapter=2&view=reading");
+    await waitFor(() => {
+      expect(screen.getByTestId("book-chapter-shell")).toHaveAttribute("data-active-tab", "text");
+    });
+    expect(screen.queryByTestId("workspace-journey-pane")).not.toBeInTheDocument();
   });
 
   it("keeps explicit deep link analysisRun=5", async () => {

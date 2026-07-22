@@ -472,7 +472,11 @@ function BookRow({
         </small>
       </span>
       <div className="book-row-actions">
-        <Link className="row-actions secondary book-row-open" to={`/books/${book.id}`}>
+        <Link
+          className="row-actions secondary book-row-open"
+          to={`/books/${book.id}`}
+          data-testid={`book-open-${book.id}`}
+        >
           打开
         </Link>
         <div className="book-row-more" ref={(node) => {

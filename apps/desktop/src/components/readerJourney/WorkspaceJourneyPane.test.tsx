@@ -155,6 +155,29 @@ describe("resolveWorkspaceLayout", () => {
     expect(layout.mainContentState).toBe("ready");
   });
 
+  it("does not default to journey tab merely because chapter is complete", () => {
+    expect(
+      mapUrlToActiveTab({
+        requestedView: null,
+        requestedTab: null,
+        chapterComplete: true,
+        journeyAvailable: true,
+        sceneAvailable: true,
+        userPinnedTab: null,
+      }),
+    ).toBe("text");
+    expect(
+      mapUrlToActiveTab({
+        requestedView: "reading",
+        requestedTab: null,
+        chapterComplete: true,
+        journeyAvailable: true,
+        sceneAvailable: true,
+        userPinnedTab: null,
+      }),
+    ).toBe("text");
+  });
+
   it("hard-blocks only data_integrity_failed", () => {
     expect(
       resolveWorkspaceLayout({
