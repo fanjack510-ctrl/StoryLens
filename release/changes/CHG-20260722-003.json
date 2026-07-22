@@ -35,6 +35,12 @@
       "message": "Restore Journey compare/journey/text modes in Book workspace (CHG-20260722-003).",
       "primary": false,
       "multi_change_reason": "Restore Journey internal view modes and fix duplicate 正文阅读 nav"
+    },
+    {
+      "sha": "41fc87614b6696ea000790e0cd117c966294b252",
+      "message": "Open library books to chapter catalog, not auto Journey (CHG-20260722-003).",
+      "primary": false,
+      "multi_change_reason": "Library Open must show book home catalog before chapter selection"
     }
   ],
   "modules": [
@@ -148,5 +154,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-22T04:41:55Z",
-  "updated_at": "2026-07-22T08:29:02Z"
-}\n
+  "updated_at": "2026-07-22T08:29:46Z"
+}
