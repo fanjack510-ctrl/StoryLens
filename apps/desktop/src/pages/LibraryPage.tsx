@@ -6,6 +6,7 @@ import { ApiError } from "../services/apiClient";
 import { ErrorState, Loading } from "../components/common/States";
 import { QwenFirstLaunchBanner } from "../components/onboarding/QwenFirstLaunchBanner";
 import { FirstLaunchWizard } from "../components/onboarding/FirstLaunchWizard";
+import { TelemetryInviteCard } from "../components/onboarding/TelemetryInviteCard";
 import { useOnboardingStore } from "../stores/onboardingStore";
 import { Button } from "../components/ui/Button";
 import { Dialog } from "../components/ui/Dialog";
@@ -121,6 +122,7 @@ export function LibraryPage() {
   return (
     <section className="page library-page-compact" data-testid="library-page">
       {onboardingStatus === "pending" && <FirstLaunchWizard />}
+      {onboardingStatus !== "pending" && <TelemetryInviteCard />}
       <QwenFirstLaunchBanner />
       <PageHeader className="library-title-compact">
         <div>
