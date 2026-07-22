@@ -17,6 +17,12 @@
       "message": "Grade Journey integrity: legacy/partial vs severe pollution (CHG-20260722-005).",
       "primary": false,
       "multi_change_reason": "Graded integrity states to stop over-blocking legacy Journeys"
+    },
+    {
+      "sha": "bc69e4e5c90e40f7ea39c357cff34511d8a78611",
+      "message": "Align chart eligibility with node_type; keep graded integrity (CHG-20260722-005).",
+      "primary": false,
+      "multi_change_reason": "Chart eligibility by node_type; avoid false pollution UI"
     }
   ],
   "modules": [
@@ -82,5 +88,5 @@
   "blocker_level": "P0",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-22T05:49:31Z",
-  "updated_at": "2026-07-22T07:51:57Z"
+  "updated_at": "2026-07-22T07:51:58Z"
 }
