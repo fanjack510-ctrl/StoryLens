@@ -11,6 +11,12 @@
       "message": "Add Afdian offline StoryLens Pro license activation (CHG-20260722-001).",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "c3495c58876bcc35824b5e661102958c86c46db9",
+      "message": "Mark CHG-20260722-001 tested after Pro license local verification.",
+      "primary": false,
+      "multi_change_reason": "status mark"
     }
   ],
   "modules": [
