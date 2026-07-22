@@ -1,9 +1,9 @@
 {
   "version": "1.0.4",
   "git_tag": "v1.0.4",
-  "git_commit": "bd0547274b3df1c881354dbfad43efe7d2318385",
+  "git_commit": "86fb7e5d0df20694092a459d0edd7926d1a6dc18",
   "status": "verified",
-  "released_at": "2026-07-22T13:01:00Z",
+  "released_at": "2026-07-22T13:02:01Z",
   "channel": "manual-upgrade-only",
   "installer_sha256": "6D379C9E39932DF362EDE1CA421B0E100108EBF7C191A5CE03C29B35987330CA",
   "updater_sha256": null,
