@@ -7,9 +7,8 @@
       "signature_version": 1,
       "algorithm": "ed25519",
       "environment": "production",
-      "public_key_b64url": "",
-      "status": "pending_issuance",
-      "comment": "Issuer must paste the production public key manually after generate_keypair.py. Do not auto-copy private keys into the repo."
+      "public_key_b64url": "saZLt7GNDDK_OrAkQLdF8xck8MyZlx7NC1HHlokLsno",
+      "status": "active"
     }
   ],
   "commerce": {
