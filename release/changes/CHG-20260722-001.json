@@ -36,19 +36,26 @@
     "apps/desktop/src/components/settings/LicenseSettingsCard.tsx",
     "config/license_public_keys.json",
     "docs/afdian-storylens-pro-setup.md",
-    "scripts/license/generate_keypair.py"
+    "scripts/license/generate_keypair.py",
+    "config/license_public_keys.production.json",
+    "tests/fixtures/license_public_keys.test.json",
+    "scripts/license/check_license_release_config.py",
+    "apps/api/tests/test_license_key_isolation.py"
   ],
   "user_summary": "增加爱发电离线签名授权码激活 StoryLens Pro 的首版流程，统一专业版文案与 entitlement 权限层。",
-  "technical_summary": "Ed25519 offline license codes (SLP1-), SQLite local_licenses, entitlement API/service, settings Pro UI, issuer scripts, Afdian setup doc.",
+  "technical_summary": "Ed25519 offline licenses with strict test/prod public-key isolation; production-only trust in formal runtimes; issuer scripts and release config checker.",
   "acceptance_criteria": [
-    "Offline SLP1 activate unlocks Pro; canUseFeature gates; no private keys in repo"
+    "Offline SLP1 activate unlocks Pro; canUseFeature gates; no private keys in repo",
+    "Formal runtimes reject test-dev keys with LICENSE_KEY_NOT_ALLOWED_IN_RUNTIME; no test pubkey fallback"
   ],
   "tests": [
     "pytest apps/api/tests/test_pro_license_local.py",
-    "vitest pro_license_local + settings license tab"
+    "vitest pro_license_local + settings license tab",
+    "pytest apps/api/tests/test_license_key_isolation.py"
   ],
   "verification_evidence": [
-    "9 pytest passed; related vitest passed; typecheck/version/registry/diff-check passed; test activate+tamper+idempotent against test-dev-001"
+    "9 pytest passed; related vitest passed; typecheck/version/registry/diff-check passed; test activate+tamper+idempotent against test-dev-001",
+    "18 local pytest passed; 8 vitest passed; typecheck/version/registry/diff-check passed; check_license_release_config.py --allow-pending-keys --allow-missing-commerce passed"
   ],
   "data_compatibility": {
     "database_changed": true,
@@ -65,5 +72,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-22T00:58:28Z",
-  "updated_at": "2026-07-22T01:17:06Z"
+  "updated_at": "2026-07-22T01:27:56Z"
 }

@@ -19,12 +19,19 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("license_code")
     parser.add_argument("--major-version", type=int, default=0)
+    parser.add_argument(
+        "--config",
+        type=Path,
+        default=None,
+        help="Explicit public-key JSON (required for inspecting against test fixture).",
+    )
     args = parser.parse_args()
     major = args.major_version or app_major_version()
+    cfg = load_license_config(args.config) if args.config else load_license_config()
     try:
         verified = parse_and_verify(
             args.license_code,
-            public_keys_by_id=public_keys_by_id(load_license_config()),
+            public_keys_by_id=public_keys_by_id(cfg),
             expected_major_version=major,
         )
     except LicenseError as exc:

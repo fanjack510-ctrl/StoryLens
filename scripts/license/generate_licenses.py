@@ -29,39 +29,52 @@ def main() -> int:
         "--private-key-file",
         type=Path,
         required=True,
-        help="Path to issuer private key (.ed25519.priv.b64 under private_release/).",
+        help="Issuer private key path (outside repo for production).",
     )
     parser.add_argument(
         "--output",
         type=Path,
-        default=Path("private_release/afdian_storylens_pro_1x_codes.txt"),
+        default=None,
+        help="One license code per line (do not commit).",
     )
     parser.add_argument(
+        "--ledger-output",
         "--ledger",
+        dest="ledger_output",
         type=Path,
-        default=Path("private_release/afdian_storylens_pro_1x_ledger.csv"),
+        default=None,
+        help="Issuer-only CSV ledger (do not upload to Afdian; do not commit).",
     )
     args = parser.parse_args()
     if args.product != "storylens_pro":
         raise SystemExit("Only storylens_pro is supported in V1.")
 
+    output = args.output or Path("private_release/afdian_storylens_pro_1x_codes.txt")
+    ledger = args.ledger_output or Path("private_release/afdian_storylens_pro_1x_ledger.csv")
+
     private = load_private_key_b64url(args.private_key_file.read_text(encoding="utf-8"))
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.ledger.parent.mkdir(parents=True, exist_ok=True)
+
+    output.parent.mkdir(parents=True, exist_ok=True)
+    ledger.parent.mkdir(parents=True, exist_ok=True)
 
     codes: list[str] = []
     rows: list[dict[str, str]] = []
     issued = datetime.now(timezone.utc).isoformat()
+    seen_ids: set[str] = set()
     for _ in range(args.count):
         payload = build_unsigned_payload(
             major_version=args.major_version,
             key_id=args.key_id,
         )
+        license_id = str(payload["license_id"])
+        if license_id in seen_ids:
+            raise SystemExit("Duplicate license_id generated; aborting.")
+        seen_ids.add(license_id)
         code = encode_license(payload, private)
         codes.append(code)
         rows.append(
             {
-                "license_id": payload["license_id"],
+                "license_id": license_id,
                 "product_code": payload["product_code"],
                 "major_version": str(payload["major_version"]),
                 "key_id": args.key_id,
@@ -70,8 +83,8 @@ def main() -> int:
             }
         )
 
-    args.output.write_text("\n".join(codes) + "\n", encoding="utf-8")
-    with args.ledger.open("w", encoding="utf-8", newline="") as fh:
+    output.write_text("\n".join(codes) + "\n", encoding="utf-8")
+    with ledger.open("w", encoding="utf-8", newline="") as fh:
         writer = csv.DictWriter(
             fh,
             fieldnames=[
@@ -86,9 +99,11 @@ def main() -> int:
         writer.writeheader()
         writer.writerows(rows)
 
-    print(f"Wrote {len(codes)} codes -> {args.output}")
-    print(f"Issuer ledger -> {args.ledger}")
+    # Do not dump codes to the terminal.
+    print(f"Wrote {len(codes)} codes -> {output}")
+    print(f"Issuer ledger -> {ledger}")
     print("Do not upload the ledger CSV to Afdian; upload only the one-code-per-line file.")
+    print("Do not commit output/ledger files or private keys.")
     return 0
 
 

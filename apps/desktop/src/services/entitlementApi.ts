@@ -25,6 +25,9 @@ export type EntitlementSnapshot = {
     product_label: string;
   };
   key_id?: string;
+  license_trust_mode?: "production" | "development";
+  license_issuance_ready?: boolean;
+  license_issuance_message?: string | null;
 };
 
 export type FeatureEntitlement = {

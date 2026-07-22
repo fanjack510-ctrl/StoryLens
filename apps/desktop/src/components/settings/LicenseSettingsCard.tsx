@@ -108,6 +108,11 @@ export function LicenseSettingsCard() {
             整书分析、叙事资产库和故事实验台属于 StoryLens Pro 功能。
           </p>
         )}
+        {!pro && data?.license_issuance_message && (
+          <p className="zone-hint muted" data-testid="license-issuance-message">
+            {data.license_issuance_message}
+          </p>
+        )}
       </section>
 
       {pro && data ? (

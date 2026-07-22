@@ -39,8 +39,9 @@ def keypair(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
         ],
         "commerce": {"afdian_product_url": "https://afdian.com/item/test", "product_code": "storylens_pro"},
     }
-    path = tmp_path / "license_public_keys.json"
+    path = tmp_path / "license_public_keys.test.json"
     path.write_text(json.dumps(config), encoding="utf-8")
+    monkeypatch.setattr(entitlement, "is_production_runtime", lambda: False)
     monkeypatch.setattr(entitlement, "license_config_path", lambda: path)
     monkeypatch.setattr(entitlement, "app_major_version", lambda: 1)
     return priv, key_id, private_key_b64url(priv)
@@ -133,6 +134,11 @@ def test_free_edition_requires_pro(session: Session) -> None:
 
 
 def test_private_key_not_in_repo_config() -> None:
-    config = Path("config/license_public_keys.json").read_text(encoding="utf-8")
-    assert "private" not in config.lower() or "never" in config.lower()
-    assert "ed25519.priv" not in config
+    prod = Path("config/license_public_keys.production.json").read_text(encoding="utf-8")
+    assert "ed25519.priv" not in prod
+    assert "test-dev-001" not in prod
+    assert "BEGIN PRIVATE KEY" not in prod
+    fixture = Path("tests/fixtures/license_public_keys.test.json").read_text(encoding="utf-8")
+    assert "ed25519.priv" not in fixture
+    data = json.loads(fixture)
+    assert all(str(k.get("environment")) != "production" for k in data.get("keys") or [])

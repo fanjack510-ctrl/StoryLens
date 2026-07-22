@@ -32,6 +32,9 @@ function freeSnapshot(): EntitlementSnapshot {
       product_code: "storylens_pro",
       product_label: "StoryLens Pro",
     },
+    license_trust_mode: "development",
+    license_issuance_ready: true,
+    license_issuance_message: null,
   };
 }
 
@@ -132,6 +135,41 @@ describe("StoryLens Pro entitlement UI", () => {
     await waitFor(() => {
       expect(screen.getByTestId("license-activate-error-code")).toHaveTextContent(
         "LICENSE_SIGNATURE_INVALID",
+      );
+    });
+  });
+
+  it("maps runtime-rejected test license without leaking key ids", async () => {
+    vi.spyOn(entitlementApi, "activate").mockRejectedValue(
+      new ApiError("LICENSE_KEY_NOT_ALLOWED_IN_RUNTIME", "此授权码不能用于当前版本。", 400),
+    );
+    wrap(<LicenseSettingsCard />);
+    await waitFor(() => screen.getByTestId("license-open-activate"));
+    fireEvent.click(screen.getByTestId("license-open-activate"));
+    fireEvent.change(screen.getByTestId("license-code-input"), {
+      target: { value: "SLP1-test.sig" },
+    });
+    fireEvent.click(screen.getByTestId("license-activate-submit"));
+    await waitFor(() => {
+      expect(screen.getByTestId("license-activate-error-code")).toHaveTextContent(
+        "LICENSE_KEY_NOT_ALLOWED_IN_RUNTIME",
+      );
+      expect(screen.getByTestId("license-message")).toHaveTextContent("此授权码不能用于当前版本");
+      expect(screen.queryByText(/test-dev/i)).not.toBeInTheDocument();
+    });
+  });
+
+  it("shows issuance-not-configured message from snapshot", async () => {
+    current = {
+      ...freeSnapshot(),
+      license_issuance_ready: false,
+      license_issuance_message: "专业版授权功能尚未配置。",
+      license_trust_mode: "production",
+    };
+    wrap(<LicenseSettingsCard />);
+    await waitFor(() => {
+      expect(screen.getByTestId("license-issuance-message")).toHaveTextContent(
+        "专业版授权功能尚未配置。",
       );
     });
   });

@@ -37,13 +37,18 @@ class LicenseError(Exception):
         self.message = message
 
 
-def _b64url_encode(data: bytes) -> str:
+def b64url_encode(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
 
 
-def _b64url_decode(text: str) -> bytes:
+def b64url_decode(text: str) -> bytes:
     pad = "=" * (-len(text) % 4)
     return base64.urlsafe_b64decode(text + pad)
+
+
+# Back-compat aliases for internal callers.
+_b64url_encode = b64url_encode
+_b64url_decode = b64url_decode
 
 
 def canonical_payload_bytes(payload: dict[str, Any]) -> bytes:
@@ -118,6 +123,22 @@ class VerifiedLicense:
     key_id: str
 
 
+def peek_license_payload(raw_code: str) -> dict[str, Any]:
+    """Parse license payload without verifying the signature."""
+    code = raw_code.strip().replace("\r", "").replace("\n", "").replace(" ", "")
+    match = _LICENSE_RE.match(code)
+    if not match:
+        raise LicenseError("LICENSE_FORMAT_INVALID", "授权码格式无效。")
+    body_b64 = match.group(1)
+    try:
+        payload = json.loads(b64url_decode(body_b64).decode("utf-8"))
+    except Exception as exc:  # noqa: BLE001
+        raise LicenseError("LICENSE_FORMAT_INVALID", "授权码内容无法解析。") from exc
+    if not isinstance(payload, dict):
+        raise LicenseError("LICENSE_FORMAT_INVALID", "授权码内容无效。")
+    return payload
+
+
 def parse_and_verify(
     raw_code: str,
     *,
@@ -130,12 +151,7 @@ def parse_and_verify(
     if not match:
         raise LicenseError("LICENSE_FORMAT_INVALID", "授权码格式无效。")
     body_b64, sig_b64 = match.group(1), match.group(2)
-    try:
-        payload = json.loads(_b64url_decode(body_b64).decode("utf-8"))
-    except Exception as exc:  # noqa: BLE001
-        raise LicenseError("LICENSE_FORMAT_INVALID", "授权码内容无法解析。") from exc
-    if not isinstance(payload, dict):
-        raise LicenseError("LICENSE_FORMAT_INVALID", "授权码内容无效。")
+    payload = peek_license_payload(code)
 
     key_id = str(payload.get("key_id") or "")
     pub_b64 = public_keys_by_id.get(key_id)
