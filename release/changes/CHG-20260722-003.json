@@ -29,6 +29,12 @@
       "message": "Stop Journey chart mount on integrity-redacted nodes (CHG-20260722-003).",
       "primary": false,
       "multi_change_reason": "P0: fix BookRoutePage render crash on redacted Journey nodes"
+    },
+    {
+      "sha": "16b69e7a2d0d4769a512c42a81d7fe5d03442ff8",
+      "message": "Restore Journey compare/journey/text modes in Book workspace (CHG-20260722-003).",
+      "primary": false,
+      "multi_change_reason": "Restore Journey internal view modes and fix duplicate 正文阅读 nav"
     }
   ],
   "modules": [
@@ -131,5 +137,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-22T04:41:55Z",
-  "updated_at": "2026-07-22T08:08:05Z"
+  "updated_at": "2026-07-22T08:08:06Z"
 }
