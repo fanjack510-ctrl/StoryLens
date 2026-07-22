@@ -53,6 +53,12 @@
       "message": "Fix local web boot by disabling unused Uvicorn WebSocket (CHG-20260721-015).",
       "primary": false,
       "multi_change_reason": "uvicorn --ws none boot fix"
+    },
+    {
+      "sha": "5f5505ff06900d58f4e3a04c2a6815b03874b8bf",
+      "message": "Record uvicorn --ws none fix on CHG-20260721-015.",
+      "primary": false,
+      "multi_change_reason": "registry note for ws-none fix"
     }
   ],
   "modules": [
