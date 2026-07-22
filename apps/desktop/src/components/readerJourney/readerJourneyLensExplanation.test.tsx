@@ -63,12 +63,12 @@ describe("JourneyLensExplanationChrome", () => {
       <JourneyLensExplanationChrome
         lensId="hook_payoff"
         hookPayoffStats={{ established: 3, answered: 1, waiting: 2, delayed_risk: 1 }}
-        inconsistentWarning="当前关系识别结果不一致，暂不作为确定结论"
+        inconsistentWarning="当前关系识别存在严重冲突，暂不作为确定结论。"
       />,
     );
     expect(screen.getByTestId("journey-hook-payoff-stats").textContent).toContain("本章建立问题：3");
     expect(screen.getByTestId("journey-loop-inconsistent-banner").textContent).toContain(
-      "不一致",
+      "严重冲突",
     );
   });
 });
@@ -140,27 +140,70 @@ describe("hookPayoffTimelineModel", () => {
     expect(model.nodes.filter((n) => n.loop_id === "L2" && n.rail === "payoff")).toHaveLength(0);
   });
 
-  it("does not draw deterministic links when inconsistent", () => {
-    const viz = {
+  it("draws graded primary link on soft conflict; hard block draws none", () => {
+    const softViz = {
+      scene_nodes: [{ scene_ordinal: 1 }, { scene_ordinal: 3 }],
+      narrative_loops: [
+        {
+          ...loops[0],
+          consistency_status: "soft_conflict",
+          soft_conflict: true,
+          hard_blocked: false,
+          status: "resolved",
+          display_status: "resolved",
+          conflicts: [{ code: "payoff_score_without_entity", message: "x" }],
+          primary_relation: {
+            loop_id: "L1",
+            grade: "probable",
+            total_score: 72,
+            is_primary: true,
+            payoff_ref: { scene_ordinal: 3, type: "full", summary: "钥匙找到了" },
+          },
+        },
+      ],
+      narrative_loop_consistency: {
+        status: "soft_conflict",
+        conflict_count: 1,
+        conflicts: [],
+        user_message: "系统找到较可信的承接，但部分分析结果仍存在分歧。",
+      },
+    } as unknown as ReaderJourneyVisualization;
+    const softModel = buildHookPayoffTimelineModel(softViz);
+    expect(softModel.inconsistent).toBe(false);
+    expect(softModel.softConflict).toBe(true);
+    expect(softModel.links).toHaveLength(1);
+    expect(softModel.links[0].grade).toBe("probable");
+    expect(softModel.links[0].stroke).toBe("dashed");
+    expect(softModel.warning).toContain("分歧");
+
+    const hardViz = {
       scene_nodes: [{ scene_ordinal: 1 }, { scene_ordinal: 3 }],
       narrative_loops: [
         {
           ...loops[0],
           consistency_status: "inconsistent",
+          hard_blocked: true,
           status: "inconsistent",
-          conflicts: [{ code: "payoff_score_without_entity", message: "x" }],
+          conflicts: [{ code: "fingerprint_mismatch", message: "fp" }],
+          primary_relation: {
+            loop_id: "L1",
+            grade: "unsupported",
+            total_score: 0,
+            blocked: true,
+            is_primary: true,
+          },
         },
       ],
       narrative_loop_consistency: {
         status: "inconsistent",
         conflict_count: 1,
         conflicts: [],
-        user_message: "当前关系识别结果不一致，暂不作为确定结论",
+        user_message: "当前关系识别存在严重冲突，暂不作为确定结论。",
       },
     } as unknown as ReaderJourneyVisualization;
-    const model = buildHookPayoffTimelineModel(viz);
-    expect(model.inconsistent).toBe(true);
-    expect(model.links).toHaveLength(0);
-    expect(model.warning).toContain("不一致");
+    const hardModel = buildHookPayoffTimelineModel(hardViz);
+    expect(hardModel.inconsistent).toBe(true);
+    expect(hardModel.links).toHaveLength(0);
+    expect(hardModel.warning).toContain("严重冲突");
   });
 });

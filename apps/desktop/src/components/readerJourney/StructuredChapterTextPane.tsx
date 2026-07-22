@@ -267,7 +267,7 @@ export const StructuredChapterTextPane = forwardRef<StructuredChapterTextPaneHan
                         )}
                         {riskOrdinals.has(s.ordinal) && (
                           <span className="badge-risk" title="连续缺少回报、节奏骤降或认知负担过高，可能降低读者继续阅读的意愿。">
-                            流失风险
+                            阅读阻力
                           </span>
                         )}
                       </span>

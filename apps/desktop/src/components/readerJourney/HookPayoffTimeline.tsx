@@ -6,6 +6,7 @@ type Props = {
   visualization: ReaderJourneyVisualization;
   selectedLoopId?: string | null;
   selectedSceneOrdinal?: number | null;
+  showCandidateRelations?: boolean;
   onSelectLoop?: (loopId: string, sceneOrdinal: number) => void;
 };
 
@@ -16,6 +17,7 @@ const KIND_GLYPH: Record<string, string> = {
   reversal: "◆",
   transformed: "↗",
   open: "○",
+  score_inferred: "◌",
 };
 
 /** Dual-rail relationship timeline — NarrativeLoopView only, no dual score curves. */
@@ -23,6 +25,7 @@ export function HookPayoffTimeline({
   visualization,
   selectedLoopId = null,
   selectedSceneOrdinal = null,
+  showCandidateRelations = false,
   onSelectLoop,
 }: Props) {
   const model = useMemo(
@@ -30,8 +33,9 @@ export function HookPayoffTimeline({
       buildHookPayoffTimelineModel(visualization, {
         selectedLoopId,
         selectedSceneOrdinal,
+        showCandidateRelations,
       }),
-    [visualization, selectedLoopId, selectedSceneOrdinal],
+    [visualization, selectedLoopId, selectedSceneOrdinal, showCandidateRelations],
   );
 
   const width = Math.max(480, model.maxScene * 56 + 80);
@@ -47,6 +51,7 @@ export function HookPayoffTimeline({
       className="hook-payoff-timeline"
       data-testid="hook-payoff-timeline"
       data-inconsistent={model.inconsistent ? "true" : "false"}
+      data-soft-conflict={model.softConflict ? "true" : "false"}
     >
       <svg
         className="hook-payoff-timeline-svg"
@@ -83,14 +88,17 @@ export function HookPayoffTimeline({
             selectedLoopId != null && link.loop_id !== selectedLoopId ? " is-muted" : "";
           return (
             <line
-              key={`${link.from_id}->${link.to_id}`}
+              key={`${link.from_id}->${link.to_id}:${link.grade}`}
               x1={xFor(from.scene_ordinal)}
               y1={topY}
               x2={xFor(to.scene_ordinal)}
               y2={bottomY}
-              className={`hook-payoff-link${muted}`}
+              className={`hook-payoff-link hook-payoff-link--${link.stroke} hook-payoff-link--${link.grade}${muted}`}
               data-testid="hook-payoff-link"
               data-loop-id={link.loop_id}
+              data-grade={link.grade}
+              data-stroke={link.stroke}
+              data-primary={link.is_primary ? "true" : "false"}
             />
           );
         })}

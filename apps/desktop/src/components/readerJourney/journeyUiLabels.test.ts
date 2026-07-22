@@ -54,7 +54,7 @@ describe("journeyUiLabels display formatters", () => {
     expect(formatJourneyMetricLabel("arousal")).toBe("情绪强度");
     expect(formatJourneyMetricLabel("tension")).toBe("节奏变化");
     expect(formatJourneyMetricLabel("hook")).toBe("钩子强度");
-    expect(formatJourneyMetricLabel("dropoff_risk")).toBe("流失风险");
+    expect(formatJourneyMetricLabel("dropoff_risk")).toBe("阅读阻力");
     expect(formatJourneyMetricLabel("nope")).toBe("未知指标");
     expect(formatJourneyScore(76.4)).toBe("76");
     expect(formatJourneyScore(undefined)).toBe("—");
@@ -81,7 +81,7 @@ describe("journeyUiLabels display formatters", () => {
         span: 2,
       }),
     ).toContain("缺少明显回报");
-    expect(formatJourneySelectionType("risk")).toBe("流失风险");
+    expect(formatJourneySelectionType("risk")).toBe("阅读阻力");
   });
 
   it("formats scene / selection / status without dirty tokens", () => {

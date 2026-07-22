@@ -144,12 +144,13 @@ describe("Phase 1C-C.2.6 journey analysis focused view", () => {
   it("shows compact vs full legend", () => {
     renderWorkspace("/?overview=curve&scene=9");
     const legend = screen.getByTestId("journey-curve-legend");
-    expect(within(legend).getByText("当前场景")).toBeInTheDocument();
-    expect(within(legend).getByText("钩子")).toBeInTheDocument();
+    expect(within(legend).getByText(/场景/)).toBeInTheDocument();
+    expect(within(legend).getByText(/阅读阻力/)).toBeInTheDocument();
     expect(within(legend).queryByText("次级节点")).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId("journey-marker-full"));
-    expect(within(legend).getByText("次级节点")).toBeInTheDocument();
-    expect(within(legend).getByText("派生标记")).toBeInTheDocument();
+    // Curve legend stays compact; full markers are drawn on the chart, not listed here.
+    expect(within(legend).queryByText("次级节点")).not.toBeInTheDocument();
+    expect(within(legend).getByText(/阅读阻力/)).toBeInTheDocument();
   });
 
   it("keeps Scene question chain and Phase questions/risks in Context Inspector", () => {
@@ -159,7 +160,7 @@ describe("Phase 1C-C.2.6 journey analysis focused view", () => {
     expect(screen.getByTestId("scene-detail-panel-overview")).toBeInTheDocument();
     fireEvent.click(screen.getByTestId("journey-phase-1"));
     expect(screen.getByTestId("phase-detail-tab-questions")).toHaveTextContent("问题与回报");
-    expect(screen.getByTestId("phase-detail-tab-risks")).toHaveTextContent("流失风险");
+    expect(screen.getByTestId("phase-detail-tab-risks")).toHaveTextContent("阅读阻力");
   });
 
   it("exports PNG with 阅读旅程 title and without legacy tabs", async () => {

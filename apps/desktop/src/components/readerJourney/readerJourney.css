@@ -3597,6 +3597,14 @@ body.journey-pane-resizing[data-row-resize="true"] * {
   background: #f7f0d8;
   border-radius: 6px;
 }
+.journey-loop-soft-conflict-banner {
+  margin: 0;
+  padding: 6px 10px;
+  font-size: 12px;
+  color: #4a5c52;
+  background: #eef4f0;
+  border-radius: 6px;
+}
 .journey-pacing-fit-note {
   margin: 4px 0 0;
   font-size: 12px;
@@ -3621,13 +3629,30 @@ body.journey-pane-resizing[data-row-resize="true"] * {
   stroke-width: 1;
 }
 .hook-payoff-link {
-  stroke: #7a8f82;
+  stroke: #3d6b58;
   stroke-width: 1.5;
-  opacity: 0.85;
+  opacity: 0.9;
+}
+.hook-payoff-link--solid {
+  stroke-dasharray: none;
+}
+.hook-payoff-link--dashed {
+  stroke-dasharray: 6 4;
+}
+.hook-payoff-link--dotted {
+  stroke: #9bb5a6;
+  stroke-dasharray: 2 4;
+  stroke-width: 1.25;
+}
+.hook-payoff-link--candidate {
+  stroke: #9bb5a6;
 }
 .hook-payoff-link.is-muted,
 .hook-payoff-node.is-muted {
   opacity: 0.28;
+}
+.hook-payoff-node--score_inferred .hook-payoff-node-dot {
+  fill: #9bb5a6;
 }
 .hook-payoff-node-dot {
   fill: #3d6b58;

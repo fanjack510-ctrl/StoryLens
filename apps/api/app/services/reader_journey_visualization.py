@@ -1029,6 +1029,7 @@ def _narrative_loop_fields(
     return {
         "narrative_loops": bundle["narrative_loops"],
         "narrative_loop_risks": bundle["narrative_loop_risks"],
+        "reading_resistance": bundle.get("reading_resistance") or [],
         "scene_payoff_claims": bundle["scene_payoff_claims"],
         "narrative_loop_consistency": bundle["consistency_report"],
         "narrative_loop_view_version": bundle["narrative_loop_view_version"],

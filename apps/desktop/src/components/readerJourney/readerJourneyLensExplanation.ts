@@ -24,7 +24,7 @@ const NUMERIC_LEGEND: Array<{ key: string; label: string }> = [
   { key: "scene", label: "● 场景" },
   { key: "beat", label: "• 节拍" },
   { key: "selection", label: "┆ 当前选择" },
-  { key: "risk", label: "■ 风险提醒" },
+  { key: "risk", label: "■ 阅读阻力" },
 ];
 
 export const READER_JOURNEY_LENS_EXPLANATIONS: Record<

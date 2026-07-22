@@ -1,0 +1,65 @@
+{
+  "id": "CHG-20260722-013",
+  "title": "Reconcile and rank hook-payoff relationships",
+  "type": "fix",
+  "base_version": "1.0.4",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "api",
+    "desktop"
+  ],
+  "files": [
+    "apps/api/app/services/narrative_relation_assessment.py",
+    "apps/api/app/services/narrative_loop_view.py",
+    "apps/api/app/services/reader_journey_visualization.py",
+    "apps/api/tests/test_narrative_relation_assessment_local.py",
+    "apps/api/tests/test_narrative_loop_view_local.py",
+    "apps/desktop/src/components/readerJourney/hookPayoffTimelineModel.ts",
+    "apps/desktop/src/components/readerJourney/HookPayoffTimeline.tsx",
+    "apps/desktop/src/components/readerJourney/narrativeLoopView.ts",
+    "apps/desktop/src/components/readerJourney/JourneyLensExplanationChrome.tsx",
+    "apps/desktop/src/components/readerJourney/journeyUiLabels.ts",
+    "apps/desktop/src/components/readerJourney/readerJourney.css",
+    "apps/desktop/src/components/readerJourney/readerJourneyLensExplanation.ts",
+    "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.tsx"
+  ],
+  "user_summary": "NarrativeLoopView不一致时图表完全不画关系，用户只看到警告；需用多维度评估排出主解释并分级绘制，同时将流失风险改为阅读阻力。",
+  "technical_summary": "Presentation-only NarrativeRelationAssessment: multi-dimension weighted ranking, grade-based drawing (confirmed/probable/candidate), soft vs hard conflict handling, display_status overlay without mutating artifacts, reading_resistance derivation. No prompt/algorithm/tag/baseline changes.",
+  "acceptance_criteria": [
+    "Soft conflicts still draw best primary relation with graded stroke",
+    "Hard blocks (scope/run/fingerprint/integrity/no evidence/cross-book) still blank links",
+    "One primary relation per hook by default; candidates optional",
+    "Ordinary UI copy 流失风险 → 阅读阻力",
+    "VERSION 1.0.4; no model/build/publish/push"
+  ],
+  "tests": [
+    "apps/api/tests/test_narrative_relation_assessment_local.py",
+    "apps/api/tests/test_narrative_loop_view_local.py",
+    "apps/desktop/src/components/readerJourney/readerJourneyLensExplanation.test.tsx",
+    "apps/desktop/src/components/readerJourney/narrativeLoopView.test.ts",
+    "apps/desktop/src/components/readerJourney/journeyUiLabels.test.ts"
+  ],
+  "verification_evidence": [
+    "pytest narrative_relation_assessment + narrative_loop_view local: 28 passed",
+    "vitest related readerJourney suites: 40 passed",
+    "typecheck/eslint on touched TS; VERSION 1.0.4; registry check; git diff --check"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "Additive presentation fields only; artifacts unchanged."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "P1",
+  "head_inclusion": null,
+  "created_at": "2026-07-22T15:36:09Z",
+  "updated_at": "2026-07-22T15:52:00Z"
+}

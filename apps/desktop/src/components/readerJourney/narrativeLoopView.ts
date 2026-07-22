@@ -6,6 +6,9 @@
 import type { ReaderJourneyVisualization } from "../../types/readerJourneyVisualization";
 
 export const INCONSISTENT_USER_MESSAGE = "当前关系识别结果不一致，暂不作为确定结论";
+export const HARD_BLOCK_USER_MESSAGE = "当前关系识别存在严重冲突，暂不作为确定结论。";
+export const SOFT_CONFLICT_USER_MESSAGE =
+  "系统找到较可信的承接，但部分分析结果仍存在分歧。";
 
 export type NarrativeLoopStatus =
   | "open"
@@ -15,7 +18,40 @@ export type NarrativeLoopStatus =
   | "abandoned"
   | "inconsistent";
 
-export type NarrativePayoffType = "partial" | "full" | "reversal" | "transformed_question";
+export type NarrativePayoffType =
+  | "partial"
+  | "full"
+  | "reversal"
+  | "transformed_question"
+  | "score_inferred";
+
+export type RelationGrade = "confirmed" | "probable" | "candidate" | "unsupported";
+
+export type NarrativeRelationAssessment = {
+  loop_id: string;
+  grade: RelationGrade;
+  total_score: number;
+  blocked?: boolean;
+  block_level?: string;
+  label_zh?: string;
+  grade_label_zh?: string;
+  dimensions?: Record<string, { score: number; reason: string }>;
+  reasons?: string[];
+  conflicts?: NarrativeLoopConflict[];
+  is_primary?: boolean;
+  payoff_ref?: {
+    scene_ordinal?: number;
+    type?: string;
+    summary?: string;
+    source_type?: string;
+    evidence_paragraph_ids?: string[];
+  };
+  hook_ref?: {
+    scene_ordinal?: number;
+    summary?: string;
+    gap?: string;
+  };
+};
 
 export type NarrativeLoopConflict = {
   code: string;
@@ -57,14 +93,22 @@ export type NarrativeLoopView = {
   payoffs: NarrativeLoopPayoff[];
   residual_question: string;
   status: NarrativeLoopStatus | string;
+  /** Presentation overlay — does not mutate stored artifact status. */
+  display_status?: NarrativeLoopStatus | string;
   evidence: string[];
   confidence: number;
-  consistency_status: "consistent" | "inconsistent" | string;
+  consistency_status: "consistent" | "inconsistent" | "soft_conflict" | string;
   conflicts: NarrativeLoopConflict[];
   payoff_score_by_scene?: Record<string, number>;
   open_from_scene?: number | null;
   nodes_spanned?: number;
   has_partial_response?: boolean;
+  hard_blocked?: boolean;
+  soft_conflict?: boolean;
+  relation_warning?: string | null;
+  primary_relation?: NarrativeRelationAssessment | null;
+  candidate_relations?: NarrativeRelationAssessment[];
+  relation_assessments?: NarrativeRelationAssessment[];
 };
 
 export type NarrativeLoopRisk = {
@@ -90,16 +134,33 @@ export type ScenePayoffClaim = {
 };
 
 export type NarrativeLoopConsistency = {
-  status: "consistent" | "inconsistent" | string;
+  status: "consistent" | "inconsistent" | "soft_conflict" | string;
   conflict_count: number;
+  hard_conflict_count?: number;
+  soft_conflict_count?: number;
   conflicts: NarrativeLoopConflict[];
   user_message?: string | null;
   scope?: Record<string, unknown>;
 };
 
+export type ReadingResistanceItem = {
+  resistance_type?: string;
+  loop_id?: string;
+  question?: string;
+  start_scene_ordinal?: number | null;
+  end_scene_ordinal?: number | null;
+  span?: number;
+  reason_codes?: string[];
+  reasons_zh?: string[];
+  summary?: string;
+  has_partial_response?: boolean;
+  severity?: boolean;
+};
+
 type VizWithLoops = ReaderJourneyVisualization & {
   narrative_loops?: NarrativeLoopView[];
   narrative_loop_risks?: NarrativeLoopRisk[];
+  reading_resistance?: ReadingResistanceItem[];
   scene_payoff_claims?: Record<string, ScenePayoffClaim>;
   narrative_loop_consistency?: NarrativeLoopConsistency;
   narrative_loop_view_version?: string;
@@ -121,6 +182,15 @@ export function getNarrativeLoopRisks(
   return deriveOpenLoopRisks(getNarrativeLoops(viz));
 }
 
+export function getReadingResistance(
+  visualization: ReaderJourneyVisualization | null | undefined,
+): ReadingResistanceItem[] {
+  const viz = visualization as VizWithLoops | null | undefined;
+  if (!viz) return [];
+  if (Array.isArray(viz.reading_resistance)) return viz.reading_resistance;
+  return [];
+}
+
 export function getNarrativeLoopConsistency(
   visualization: ReaderJourneyVisualization | null | undefined,
 ): NarrativeLoopConsistency | null {
@@ -129,11 +199,19 @@ export function getNarrativeLoopConsistency(
   if (viz.narrative_loop_consistency) return viz.narrative_loop_consistency;
   const loops = getNarrativeLoops(viz);
   const conflicts = loops.flatMap((loop) => loop.conflicts || []);
+  const hard = conflicts.some(
+    (c) =>
+      String(c.code || "").startsWith("scope_") ||
+      ["fingerprint_mismatch", "run_mismatch", "data_integrity_failed", "cross_book_contamination", "no_text_evidence"].includes(
+        String(c.code || ""),
+      ),
+  );
+  const soft = conflicts.length > 0 && !hard;
   return {
-    status: conflicts.length ? "inconsistent" : "consistent",
+    status: hard ? "inconsistent" : soft ? "soft_conflict" : "consistent",
     conflict_count: conflicts.length,
     conflicts,
-    user_message: conflicts.length ? INCONSISTENT_USER_MESSAGE : null,
+    user_message: hard ? HARD_BLOCK_USER_MESSAGE : soft ? SOFT_CONFLICT_USER_MESSAGE : null,
   };
 }
 
@@ -212,7 +290,7 @@ export function formatHookHandoffFromLoops(
 
 export function formatOpenLoopRiskSummary(risk: NarrativeLoopRisk): string {
   if (risk.risk_type === "narrative_loop_inconsistent") {
-    return INCONSISTENT_USER_MESSAGE;
+    return HARD_BLOCK_USER_MESSAGE;
   }
   if (risk.summary?.trim()) return risk.summary.trim();
   const question = (risk.question || "未命名问题").trim();
@@ -257,6 +335,7 @@ export function buildNarrativeLoopsFromLegacyVisualization(
           message: `Scene ${payoffNode!.scene_ordinal}: payoff_score without entity`,
         });
       }
+      const softOnly = conflicts.length > 0;
       return {
         loop_id: item.question_id,
         scope,
@@ -279,13 +358,15 @@ export function buildNarrativeLoopsFromLegacyVisualization(
         })),
         payoffs,
         residual_question: item.status === "open" || item.status === "progressing" ? item.question_text : "",
-        status: conflicts.length ? "inconsistent" : mapLifecycleStatus(item.status),
+        status: mapLifecycleStatus(item.status),
         evidence: [
           ...(node?.primary_hook?.evidence_paragraph_ids || []),
           ...payoffs.flatMap((p) => p.evidence_paragraph_ids || []),
         ],
         confidence: (item.strength ?? 50) / 100,
-        consistency_status: conflicts.length ? "inconsistent" : "consistent",
+        consistency_status: softOnly ? "soft_conflict" : "consistent",
+        soft_conflict: softOnly,
+        hard_blocked: false,
         conflicts,
         open_from_scene: setup,
         nodes_spanned: 1 + (item.development_scenes?.length || 0) + (item.payoff_scene != null ? 1 : 0),
@@ -324,6 +405,7 @@ export function buildNarrativeLoopsFromLegacyVisualization(
         message: `Scene ${answeredNode.scene_ordinal}: payoff_score without entity`,
       });
     }
+    const softOnly = conflicts.length > 0;
     return {
       loop_id: chain!.canonical_id,
       scope,
@@ -340,10 +422,12 @@ export function buildNarrativeLoopsFromLegacyVisualization(
       })),
       payoffs,
       residual_question: chain!.open_at_chapter_end ? chain!.canonical_question : "",
-      status: conflicts.length ? "inconsistent" : mapChainStatus(chain!.status),
+      status: mapChainStatus(chain!.status),
       evidence: payoffs.flatMap((p) => p.evidence_paragraph_ids || []),
       confidence: chain!.confidence <= 1 ? chain!.confidence : chain!.confidence / 100,
-      consistency_status: conflicts.length ? "inconsistent" : "consistent",
+      consistency_status: softOnly ? "soft_conflict" : "consistent",
+      soft_conflict: softOnly,
+      hard_blocked: false,
       conflicts,
       open_from_scene: created,
       nodes_spanned:
@@ -384,7 +468,7 @@ function deriveOpenLoopRisks(loops: NarrativeLoopView[]): NarrativeLoopRisk[] {
           end_scene_ordinal: loop.open_from_scene,
           span: loop.nodes_spanned || 1,
           has_partial_response: Boolean(loop.has_partial_response),
-          summary: INCONSISTENT_USER_MESSAGE,
+          summary: HARD_BLOCK_USER_MESSAGE,
           deterministic: false,
           conflicts: loop.conflicts,
         };
@@ -419,14 +503,31 @@ function scenePayoffClaimFromLoops(
   const related = loopsForScene(loops, sceneOrdinal);
   const node = visualization.scene_nodes.find((n) => n.scene_ordinal === sceneOrdinal);
   const score = node?.scores?.payoff;
-  if (related.some((loop) => loop.consistency_status === "inconsistent")) {
+  if (related.some((loop) => loop.hard_blocked || loop.consistency_status === "inconsistent")) {
     return {
       claim: "inconsistent",
-      label: INCONSISTENT_USER_MESSAGE,
+      label: HARD_BLOCK_USER_MESSAGE,
       deterministic: false,
       loops: related.map((l) => l.loop_id),
       payoff_types: [],
       evidence_paragraph_ids: [],
+    };
+  }
+  for (const loop of related) {
+    const primary = loop.primary_relation;
+    const pref = primary?.payoff_ref;
+    if (!primary?.grade || primary.grade === "unsupported") continue;
+    if (pref?.scene_ordinal != null && pref.scene_ordinal !== sceneOrdinal) continue;
+    if (pref?.scene_ordinal == null && !(loop.payoffs || []).some((p) => p.scene_ordinal === sceneOrdinal)) {
+      continue;
+    }
+    return {
+      claim: `relation_${primary.grade}`,
+      label: primary.grade_label_zh || primary.label_zh || SOFT_CONFLICT_USER_MESSAGE,
+      deterministic: primary.grade === "confirmed" && !loop.soft_conflict,
+      loops: related.map((l) => l.loop_id),
+      payoff_types: pref?.type ? [String(pref.type)] : [],
+      evidence_paragraph_ids: pref?.evidence_paragraph_ids || [],
     };
   }
   const payoffs = related.flatMap((loop) =>
@@ -460,7 +561,7 @@ function scenePayoffClaimFromLoops(
   if (score != null && score >= 40) {
     return {
       claim: "score_only",
-      label: INCONSISTENT_USER_MESSAGE,
+      label: SOFT_CONFLICT_USER_MESSAGE,
       deterministic: false,
       loops: related.map((l) => l.loop_id),
       payoff_types: [],

@@ -154,7 +154,7 @@ export function JourneySceneDetailPanel({
       push(t.evidence_paragraph_ids, t.name ?? "技法", "technique");
     }
     for (const r of node.risk_points ?? []) {
-      push(r.evidence_paragraph_ids, r.summary ?? "流失风险", "risk");
+      push(r.evidence_paragraph_ids, r.summary ?? "阅读阻力", "risk");
     }
     const seen = new Set<string>();
     return rows.filter((row) => {
@@ -345,7 +345,7 @@ export function JourneySceneDetailPanel({
                 <JourneyCompactMetrics items={coreMetrics} testId="scene-detail-score-bars" />
               </JourneyInspectorSection>
               {riskText ? (
-                <JourneyInspectorSection title="核心流失风险" testId="scene-overview-risk">
+                <JourneyInspectorSection title="核心阅读阻力" testId="scene-overview-risk">
                   <p>{riskText}</p>
                 </JourneyInspectorSection>
               ) : null}
@@ -640,7 +640,7 @@ export type PhaseDetailTab = "overview" | "questions" | "risks" | "scenes";
 const PHASE_TABS: { id: PhaseDetailTab; label: string; testId: string }[] = [
   { id: "overview", label: "阶段概览", testId: "phase-detail-tab-overview" },
   { id: "questions", label: "问题与回报", testId: "phase-detail-tab-questions" },
-  { id: "risks", label: "流失风险", testId: "phase-detail-tab-risks" },
+  { id: "risks", label: "阅读阻力", testId: "phase-detail-tab-risks" },
   { id: "scenes", label: "相关场景", testId: "phase-detail-tab-scenes" },
 ];
 
@@ -943,7 +943,7 @@ export function JourneyPhaseDetailPanel({
                     </JourneyInspectorSection>
                   ) : null}
                   {overlappingRisks.length ? (
-                    <JourneyInspectorSection title="流失风险区间">
+                    <JourneyInspectorSection title="阅读阻力区间">
                       <ul className="phase-detail-list" data-testid="phase-detail-risk-list">
                         {overlappingRisks.map((interval) => (
                           <li
@@ -1102,11 +1102,11 @@ export function JourneyMarkerInspectorPanel({
     return (
       <JourneyInspectorShell testId="journey-risk-inspector" className="journey-inspector-panel">
         <JourneyInspectorHeader
-          title="流失风险"
+          title="阅读阻力"
           meta={
             riskInterval
               ? `场景 ${riskInterval.start_scene_ordinal}—${riskInterval.end_scene_ordinal}`
-              : "流失风险"
+              : "阅读阻力"
           }
           pills={
             riskInterval?.risk_type
@@ -1125,7 +1125,7 @@ export function JourneyMarkerInspectorPanel({
                 </p>
               </JourneyInspectorSection>
               {riskInterval.trigger ? (
-                <JourneyInspectorSection title="流失风险依据">
+                <JourneyInspectorSection title="阅读阻力依据">
                   <p>{riskInterval.trigger}</p>
                 </JourneyInspectorSection>
               ) : null}

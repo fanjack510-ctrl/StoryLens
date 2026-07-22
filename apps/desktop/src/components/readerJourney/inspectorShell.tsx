@@ -38,8 +38,8 @@ const EMPTY_COPY: Record<
     description: "当前对象没有可定位的段落证据记录。",
   },
   "no-risk": {
-    title: "未识别出明确流失风险",
-    description: "当前阶段未识别出明确的结构性流失风险。",
+    title: "未识别出明确阅读阻力",
+    description: "当前阶段未识别出明确的结构性阅读阻力。",
   },
   "no-related-scenes": {
     title: "暂无相关场景",

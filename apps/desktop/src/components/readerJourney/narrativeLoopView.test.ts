@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { ReaderJourneyVisualization } from "../../types/readerJourneyVisualization";
 import {
-  INCONSISTENT_USER_MESSAGE,
+  HARD_BLOCK_USER_MESSAGE,
+  SOFT_CONFLICT_USER_MESSAGE,
   formatHookHandoffFromLoops,
   formatOpenLoopRiskSummary,
   formatPayoffClaimLabel,
@@ -207,7 +208,7 @@ describe("narrativeLoopView", () => {
     expect(formatPayoffClaimLabel(claim, 85)).toContain("较强兑现");
   });
 
-  it("marks score-without-entity as inconsistent and not 有效兑现", () => {
+  it("marks score-without-entity as soft conflict and not 有效兑现", () => {
     const viz = minimalViz({
       primary_question_chain: null,
       scene_nodes: [
@@ -225,8 +226,8 @@ describe("narrativeLoopView", () => {
       ],
       scene_payoff_claims: {
         "3": {
-          claim: "inconsistent",
-          label: INCONSISTENT_USER_MESSAGE,
+          claim: "score_only",
+          label: SOFT_CONFLICT_USER_MESSAGE,
           deterministic: false,
           loops: [],
           payoff_types: [],
@@ -236,8 +237,8 @@ describe("narrativeLoopView", () => {
     });
     const claim = getScenePayoffClaim(viz, 3);
     expect(claim?.deterministic).toBe(false);
-    expect(claim?.label).toBe(INCONSISTENT_USER_MESSAGE);
-    expect(formatPayoffClaimLabel(claim, 90)).toBe(INCONSISTENT_USER_MESSAGE);
+    expect(claim?.label).toBe(SOFT_CONFLICT_USER_MESSAGE);
+    expect(formatPayoffClaimLabel(claim, 90)).toBe(SOFT_CONFLICT_USER_MESSAGE);
   });
 
   it("derives open-loop risks with locatable question and span", () => {

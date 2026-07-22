@@ -10,6 +10,14 @@ import hashlib
 from typing import Any
 
 from app.schemas.reader_journey import SceneReaderJourneyProfileItem
+from app.services.narrative_relation_assessment import (
+    HARD_BLOCK_USER_MESSAGE,
+    SOFT_CONFLICT_USER_MESSAGE,
+    classify_conflicts,
+    derive_reading_resistance,
+    is_hard_block,
+    reconcile_narrative_loops,
+)
 
 NARRATIVE_LOOP_VIEW_VERSION = "1.0.0"
 
@@ -525,17 +533,28 @@ def _apply_conflicts_to_loops(
                 continue
             seen.add(token)
             unique.append(item)
-        if unique:
-            loop["conflicts"] = unique
+        if not unique:
+            continue
+        loop["conflicts"] = unique
+        hard, soft = classify_conflicts(unique)
+        if hard:
             loop["consistency_status"] = "inconsistent"
             loop["status"] = LOOP_STATUS_INCONSISTENT
+            loop["hard_blocked"] = True
+        elif soft:
+            # Soft divergence keeps original loop status for ranking; UI uses soft banner.
+            loop["consistency_status"] = "soft_conflict"
+            loop["soft_conflict"] = True
+            loop["hard_blocked"] = False
 
 
 def derive_loop_risks(loops: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Risks only from still-open / stalled loops — never from payoff_score alone."""
+    """Legacy open-loop risks — prefer reading_resistance for new UI."""
     risks: list[dict[str, Any]] = []
     for loop in loops:
-        if loop.get("consistency_status") == "inconsistent":
+        if loop.get("hard_blocked") or (
+            loop.get("consistency_status") == "inconsistent" and is_hard_block(loop.get("conflicts"))
+        ):
             risks.append(
                 {
                     "risk_type": "narrative_loop_inconsistent",
@@ -545,17 +564,17 @@ def derive_loop_risks(loops: list[dict[str, Any]]) -> list[dict[str, Any]]:
                     "end_scene_ordinal": loop.get("open_from_scene"),
                     "span": loop.get("nodes_spanned") or 1,
                     "has_partial_response": bool(loop.get("has_partial_response")),
-                    "summary": INCONSISTENT_USER_MESSAGE,
+                    "summary": HARD_BLOCK_USER_MESSAGE,
                     "deterministic": False,
                     "conflicts": loop.get("conflicts") or [],
                 }
             )
             continue
-        if loop.get("status") not in {LOOP_STATUS_OPEN, LOOP_STATUS_PARTIAL}:
+        display = str(loop.get("display_status") or loop.get("status") or "")
+        if display not in {LOOP_STATUS_OPEN, LOOP_STATUS_PARTIAL}:
             continue
         span = int(loop.get("nodes_spanned") or 1)
-        if span < OPEN_RISK_MIN_SPAN and loop.get("status") == LOOP_STATUS_PARTIAL:
-            # Partial with short span is not yet attrition risk.
+        if span < OPEN_RISK_MIN_SPAN and display == LOOP_STATUS_PARTIAL:
             continue
         if span < OPEN_RISK_MIN_SPAN and not loop.get("hook"):
             continue
@@ -598,16 +617,20 @@ def scene_payoff_claim(
         for loop in loops
         if any(int(p.get("scene_ordinal") or 0) == scene_ordinal for p in loop.get("payoffs") or [])
         or str(scene_ordinal) in (loop.get("payoff_score_by_scene") or {})
+        or (
+            (loop.get("primary_relation") or {}).get("payoff_ref") or {}
+        ).get("scene_ordinal")
+        == scene_ordinal
     ]
-    inconsistent = [loop for loop in related if loop.get("consistency_status") == "inconsistent"]
-    if inconsistent or (
-        payoff_score is not None
-        and payoff_score >= HIGH_PAYOFF_SCORE
-        and not any(loop.get("payoffs") for loop in related)
-    ):
+    hard_blocked = [
+        loop
+        for loop in related
+        if loop.get("hard_blocked") or loop.get("consistency_status") == "inconsistent"
+    ]
+    if hard_blocked:
         return {
             "claim": "inconsistent",
-            "label": INCONSISTENT_USER_MESSAGE,
+            "label": HARD_BLOCK_USER_MESSAGE,
             "deterministic": False,
             "loops": [loop.get("loop_id") for loop in related],
             "payoff_types": [],
@@ -646,14 +669,38 @@ def scene_payoff_claim(
             "evidence_paragraph_ids": list(dict.fromkeys(evidence)),
         }
 
+    # No entity payoffs: use ranked primary relation (incl. score-inferred).
+    for loop in related:
+        primary = loop.get("primary_relation") or {}
+        pref = primary.get("payoff_ref") or {}
+        if pref.get("scene_ordinal") != scene_ordinal:
+            continue
+        grade = primary.get("grade")
+        if grade and grade != "unsupported":
+            soft = bool(loop.get("soft_conflict"))
+            return {
+                "claim": f"relation_{grade}",
+                "label": primary.get("grade_label_zh")
+                or primary.get("label_zh")
+                or (SOFT_CONFLICT_USER_MESSAGE if soft else INCONSISTENT_USER_MESSAGE),
+                "deterministic": grade == "confirmed" and not soft,
+                "grade": grade,
+                "loops": [loop.get("loop_id") for loop in related],
+                "payoff_types": [str(pref.get("type") or "")] if pref.get("type") else [],
+                "evidence_paragraph_ids": list(pref.get("evidence_paragraph_ids") or []),
+                "soft_conflict": soft,
+            }
+
     if payoff_score is not None and payoff_score >= MID_PAYOFF_SCORE:
         return {
             "claim": "score_only",
-            "label": INCONSISTENT_USER_MESSAGE,
+            "label": SOFT_CONFLICT_USER_MESSAGE,
             "deterministic": False,
+            "grade": "candidate",
             "loops": [loop.get("loop_id") for loop in related],
             "payoff_types": [],
             "evidence_paragraph_ids": [],
+            "soft_conflict": True,
         }
 
     return {
@@ -722,7 +769,21 @@ def build_narrative_loop_bundle(
         loops, profiles, legacy_risk_intervals=legacy_risk_intervals
     )
     _apply_conflicts_to_loops(loops, conflicts)
+    loops = reconcile_narrative_loops(loops)
     loop_risks = derive_loop_risks(loops)
+    reading_resistance = derive_reading_resistance(loops)
+
+    hard_conflicts = [c for c in conflicts if is_hard_block([c])]
+    soft_conflicts = [c for c in conflicts if not is_hard_block([c])]
+    if hard_conflicts:
+        consistency_status = "inconsistent"
+        user_message = HARD_BLOCK_USER_MESSAGE
+    elif soft_conflicts:
+        consistency_status = "soft_conflict"
+        user_message = SOFT_CONFLICT_USER_MESSAGE
+    else:
+        consistency_status = "consistent"
+        user_message = None
 
     scene_claims = {
         str(profile.scene_ordinal): scene_payoff_claim(
@@ -737,12 +798,15 @@ def build_narrative_loop_bundle(
         "narrative_loop_view_version": NARRATIVE_LOOP_VIEW_VERSION,
         "narrative_loops": loops,
         "narrative_loop_risks": loop_risks,
+        "reading_resistance": reading_resistance,
         "scene_payoff_claims": scene_claims,
         "consistency_report": {
-            "status": "inconsistent" if conflicts else "consistent",
+            "status": consistency_status,
             "conflict_count": len(conflicts),
+            "hard_conflict_count": len(hard_conflicts),
+            "soft_conflict_count": len(soft_conflicts),
             "conflicts": conflicts,
-            "user_message": INCONSISTENT_USER_MESSAGE if conflicts else None,
+            "user_message": user_message,
             "scope": scope,
         },
     }

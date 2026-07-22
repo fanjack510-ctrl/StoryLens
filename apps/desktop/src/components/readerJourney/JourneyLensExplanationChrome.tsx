@@ -31,7 +31,18 @@ export function JourneyLensExplanationChrome({
   return (
     <div className="journey-lens-explanation" data-testid="journey-lens-explanation" data-lens={lensId}>
       {inconsistentWarning ? (
-        <p className="journey-loop-inconsistent-banner" data-testid="journey-loop-inconsistent-banner">
+        <p
+          className={
+            inconsistentWarning.includes("严重冲突")
+              ? "journey-loop-inconsistent-banner"
+              : "journey-loop-soft-conflict-banner"
+          }
+          data-testid={
+            inconsistentWarning.includes("严重冲突")
+              ? "journey-loop-inconsistent-banner"
+              : "journey-loop-soft-conflict-banner"
+          }
+        >
           {inconsistentWarning}
         </p>
       ) : null}

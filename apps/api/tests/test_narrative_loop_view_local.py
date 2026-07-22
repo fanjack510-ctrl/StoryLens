@@ -279,7 +279,7 @@ def test_partial_and_transformed_and_open_loops():
     assert open_risks[0]["span"] >= 2
 
 
-def test_score_without_entity_is_inconsistent_not_effective_payoff():
+def test_score_without_entity_is_soft_conflict_not_effective_payoff():
     profiles = [
         _profile(1, payoff_score=88, payoffs=[]),
         _profile(2, payoff_score=90, payoffs=[]),
@@ -297,11 +297,16 @@ def test_score_without_entity_is_inconsistent_not_effective_payoff():
         ],
     )
     report = bundle["consistency_report"]
-    assert report["status"] == "inconsistent"
+    assert report["status"] == "soft_conflict"
     assert any(c["code"] == "payoff_score_without_entity" for c in report["conflicts"])
     claim = bundle["scene_payoff_claims"]["1"]
     assert claim["deterministic"] is False
-    assert INCONSISTENT_USER_MESSAGE in claim["label"]
+    assert claim.get("soft_conflict") is True or "??" in claim["label"] or "??" in claim["label"]
+    # Soft conflict still attaches ranked primary relation on loops when score-inferred.
+    assert "reading_resistance" in bundle
+    for loop in bundle["narrative_loops"]:
+        assert "primary_relation" in loop
+        assert loop.get("hard_blocked") is not True
 
 
 def test_entity_without_evidence_flagged():

@@ -1743,7 +1743,7 @@ export function ReaderJourneyWorkspace({
                 <span data-legend="scene">● 场景</span>
                 <span data-legend="beat">• 节拍</span>
                 <span data-legend="selection">┆ 当前选择</span>
-                <span data-legend="risk">■ 风险提醒</span>
+                <span data-legend="risk">■ 阅读阻力</span>
               </div>
             </div>
           </div>

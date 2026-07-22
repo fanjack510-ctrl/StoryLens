@@ -984,7 +984,7 @@ export function CanonicalJourneyChart({
                     {tooltipPayoff?.summary ? <div>回报：{tooltipPayoff.summary}</div> : null}
                     {tooltipRisk?.summary || tooltipRisk?.risk_type ? (
                       <div>
-                        流失风险：
+                        阅读阻力：
                         {formatJourneyRiskSummary({
                           risk_type: tooltipRisk?.risk_type,
                           summary: tooltipRisk?.summary,

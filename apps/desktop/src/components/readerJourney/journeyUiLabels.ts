@@ -10,7 +10,7 @@ export const METRIC_LABELS_ZH: Record<JourneyCurveMetric, string> = {
   tension: "紧张",
   payoff: "回报",
   hook: "钩子",
-  dropoff_risk: "流失风险",
+  dropoff_risk: "阅读阻力",
 };
 
 /** Compact switcher labels (2.5C). Emotion maps to valence/arousal submenu. */
@@ -24,7 +24,7 @@ export const COMPACT_METRIC_SWITCHER: {
   { key: "tension", label: "紧张" },
   { key: "payoff", label: "回报" },
   { key: "hook", label: "钩子" },
-  { key: "dropoff_risk", label: "流失风险" },
+  { key: "dropoff_risk", label: "阅读阻力" },
 ];
 
 /** Quick metric shortcuts (2.5.2). Underlying metrics unchanged. */
@@ -301,7 +301,7 @@ export function formatJourneySelectionType(kind: string | null | undefined): str
     question: "问题",
     hook: "钩子",
     payoff: "回报",
-    risk: "流失风险",
+    risk: "阅读阻力",
   };
   return map[key] ?? "未知";
 }
@@ -315,7 +315,8 @@ export const RISK_TYPE_LABELS_ZH: Record<string, string> = {
   low_reading_momentum: "阅读动力持续偏低",
   momentum_decline: "阅读动力连续下降",
   unpaid_hook: "高钩子未兑现",
-  high_dropoff_risk: "流失风险偏高",
+  high_dropoff_risk: "阅读阻力偏高",
+  reading_resistance: "阅读阻力",
   high_cognitive_load: "认知负担偏高",
   dropped_question: "高强度问题未承接",
   over_fragmented_beats: "节拍过碎，节奏可能断裂",
@@ -325,13 +326,13 @@ export const RISK_TYPE_LABELS_ZH: Record<string, string> = {
   repetition: "重复拖沓",
   fragmented_scene: "场景过碎",
   low_payoff: "回报不足",
-  other: "其他流失风险",
+  other: "其他阅读阻力",
 };
 
 export function formatJourneyRiskTypeLabel(riskType: string | null | undefined): string {
-  if (riskType == null) return "流失风险";
+  if (riskType == null) return "阅读阻力";
   const key = String(riskType).trim();
-  if (!key) return "流失风险";
+  if (!key) return "阅读阻力";
   return RISK_TYPE_LABELS_ZH[key] ?? key;
 }
 
