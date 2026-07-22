@@ -3,7 +3,7 @@
   "title": "Fix provider HTTP error recovery and pipeline feedback",
   "type": "fix",
   "base_version": "1.0.3",
-  "status": "ready",
+  "status": "released",
   "include_in_next_release": true,
   "commits": [
     {
@@ -79,5 +79,5 @@
   "blocker_level": "P1",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-21T10:41:24Z",
-  "updated_at": "2026-07-22T12:41:29Z"
+  "updated_at": "2026-07-22T13:00:58Z"
 }
