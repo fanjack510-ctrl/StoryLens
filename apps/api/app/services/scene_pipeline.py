@@ -455,6 +455,17 @@ async def execute_scene_pipeline(
         try:
             awaiting_review = await _execute(session, gateway, run)
             if not awaiting_review:
+                from app.services.chapter_analysis_completion import (
+                    continue_chapter_after_scenes,
+                    is_scene_pipeline_complete,
+                    mark_scenes_complete_awaiting_journey,
+                )
+
+                if is_scene_pipeline_complete(session, run):
+                    mark_scenes_complete_awaiting_journey(session, run)
+                    session.commit()
+                    await continue_chapter_after_scenes(session_factory, gateway, run_id)
+                    return
                 run.status = "succeeded"
                 run.completed_at = datetime.now(timezone.utc)
             session.commit()

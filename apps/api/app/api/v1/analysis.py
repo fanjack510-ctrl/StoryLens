@@ -348,15 +348,24 @@ def serialize_run(session: Session, run: AnalysisRun) -> AnalysisRunResponse:
         detection_recovery_available = False
         remaining_detection = 0
     base = AnalysisRunResponse.model_validate(run)
+    from app.services.chapter_analysis_completion import chapter_completion_payload
+
+    chapter_meta = chapter_completion_payload(session, run)
+    # Map stage for UI checklist while journey is pending/running.
+    current_stage = stage_map.get(
+        run.status, run.failed_stage if run.status.startswith("failed") else run.status
+    )
+    if chapter_meta["effective_status"] in {"partial_complete", "journey_running", "journey_failed"}:
+        current_stage = "reader_journey"
+    elif chapter_meta["chapter_complete"]:
+        current_stage = "completed"
     return base.model_copy(
         update={
             "budget_required": block.get("required"),
             "budget_remaining": block.get("remaining"),
             "exceeded_dimensions": block.get("exceeded_dimensions"),
             "reservation_status": reservation.status if reservation else None,
-            "current_stage": stage_map.get(
-                run.status, run.failed_stage if run.status.startswith("failed") else run.status
-            ),
+            "current_stage": current_stage,
             "failure_details": failure_details,
             "legacy_classification_warning": legacy_classification_warning,
             "exception_type": (failure_details or {}).get("exception_type"),
@@ -402,6 +411,13 @@ def serialize_run(session: Session, run: AnalysisRun) -> AnalysisRunResponse:
             "completed_scene_ids": progress.completed_scene_ids,
             "remaining_scene_ids": progress.pending_scene_ids,
             "scene_validation_detail": scene_validation_detail,
+            "chapter_complete": chapter_meta["chapter_complete"],
+            "scene_pipeline_complete": chapter_meta["scene_pipeline_complete"],
+            "effective_status": chapter_meta["effective_status"],
+            "checkpoint_stage": chapter_meta["checkpoint_stage"],
+            "resume_stage": chapter_meta["resume_stage"],
+            "journey_run_id": chapter_meta["journey_run_id"],
+            "journey_status": chapter_meta["journey_status"],
         }
     )
 

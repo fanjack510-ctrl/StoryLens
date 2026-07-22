@@ -370,7 +370,11 @@ export function UnifiedAnalysisRecoveryCard({
               disabled={busy || planQuery.isLoading || !plan}
               onClick={() => void fixAndContinue(false)}
             >
-              {busy ? statusMessage || "正在修复…" : "修复并继续"}
+              {busy
+                ? statusMessage || "正在修复…"
+                : resumeStage === "reader_journey"
+                  ? "继续生成阅读旅程"
+                  : "修复并继续"}
             </button>
           )}
           {showNonRepairableActions && (

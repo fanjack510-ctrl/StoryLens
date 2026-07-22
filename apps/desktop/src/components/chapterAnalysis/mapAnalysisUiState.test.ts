@@ -67,7 +67,7 @@ describe("mapAnalysisUiState", () => {
     expect(uiStateLabel("aborted_by_limit")).toBe("分析已暂停");
     expect(uiStateLabel("awaiting_budget_adjustment")).toBe("分析已暂停");
     expect(uiStateLabel("succeeded")).toBe("分析完成");
-    expect(uiStateLabel("awaiting_reader_journey_start")).toBe("分析已暂停");
+    expect(uiStateLabel("awaiting_reader_journey_start")).toBe("场景分析已完成");
     expect(uiStateLabel("reader_journey_processing")).toBe("正在生成阅读旅程");
     expect(uiStateLabel("failed")).toBe("分析未完成");
     expect(JSON.stringify(uiStateLabel("running"))).not.toMatch(/pipeline|invocation|artifact/i);
@@ -116,9 +116,9 @@ describe("mapAnalysisUiState", () => {
     expect(steps.map((s) => s.label)).toEqual([
       "准备章节",
       "识别场景边界",
-      "确认场景边界",
+      "确认场景划分",
       "分析场景",
-      "生成读者旅程",
+      "生成阅读旅程",
       "完成",
     ]);
     expect(steps.find((s) => s.id === "boundary_review")?.tone).toBe("active");
@@ -147,7 +147,7 @@ describe("mapAnalysisUiState", () => {
           started_at: "2026-01-02T00:00:00Z",
         }),
       ),
-    ).toBeNull();
+    ).toBe("暂无准确记录");
     expect(
       elapsedLabel(
         run({
@@ -155,7 +155,7 @@ describe("mapAnalysisUiState", () => {
           started_at: "2020-01-01T00:00:00Z",
         }),
       ),
-    ).toBeNull();
+    ).toBe("暂无准确记录");
     expect(
       elapsedLabel(
         run({
@@ -165,5 +165,15 @@ describe("mapAnalysisUiState", () => {
         }),
       ),
     ).toBe("5 分 30 秒");
+    // Naive UTC timestamps must not be treated as local (+8h skew).
+    expect(
+      elapsedLabel(
+        run({
+          created_at: "2026-07-22 04:31:06.346675",
+          started_at: "2026-07-22 04:31:06.346675",
+          completed_at: "2026-07-22 04:31:43.710676",
+        }),
+      ),
+    ).toBe("37 秒");
   });
 });

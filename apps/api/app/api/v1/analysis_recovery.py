@@ -45,14 +45,7 @@ from app.services.credentials.service import get_credential_store
 from app.services.provider_eligibility import evaluate_manual_boundary_candidate
 from app.services.staged_budget import estimate_stage1_boundary
 from app.services.boundary_review_service import analyze_confirmed_review
-from app.services.reader_journey_batch_planner import PLANNER_VERSION
 from app.services.reader_journey_pipeline import execute_reader_journey
-from app.services.reader_journey_progress import (
-    find_recoverable_journey_run,
-    load_revision_scenes,
-    require_completed_scene_analysis,
-)
-from app.services.reader_journey_version import new_journey_version_fields
 
 
 router = APIRouter(tags=["analysis-recovery"])
@@ -147,9 +140,19 @@ def recover_analysis_run(
         background.add_task(analyze_confirmed_review, session_factory, gateway, review.id)
 
     def _start_journey() -> int | None:
+        """Resume/create journey on the same AnalysisRun (idempotent with auto-pipeline)."""
+        from app.services.chapter_analysis_completion import (
+            ensure_auto_reader_journey_row,
+            is_scene_pipeline_complete,
+            mark_scenes_complete_awaiting_journey,
+        )
+
         fresh = session.get(AnalysisRun, run_id)
         if fresh is None or fresh.status != "succeeded":
             return None
+        if not is_scene_pipeline_complete(session, fresh):
+            return None
+        # Prefer client_request_id match, then shared auto row / recoverable row.
         existing = session.scalar(
             select(ReaderJourneyRun).where(
                 ReaderJourneyRun.analysis_run_id == fresh.id,
@@ -157,39 +160,46 @@ def recover_analysis_run(
             )
         )
         if existing is not None:
-            return int(existing.id)
-        recoverable = find_recoverable_journey_run(session, fresh.id)
-        if recoverable is not None:
-            return int(recoverable.id)
-        _revision, scenes = load_revision_scenes(session, fresh.id)
-        require_completed_scene_analysis(session, fresh, scenes)
-        chapter = session.get(Chapter, int(fresh.subject_id))
-        version_fields = new_journey_version_fields()
-        journey_run = ReaderJourneyRun(
-            analysis_run_id=fresh.id,
-            book_id=chapter.book_id if chapter else 0,
-            chapter_id=int(fresh.subject_id),
-            status="queued",
-            current_stage=None,
-            provider_name=fresh.provider,
-            model_name=fresh.model,
-            scene_prompt_version=version_fields["scene_prompt_version"],
-            chapter_prompt_version=version_fields["chapter_prompt_version"],
-            scene_contract_version=version_fields["scene_contract_version"],
-            chapter_contract_version=version_fields["chapter_contract_version"],
-            planner_version=PLANNER_VERSION,
-            formula_version=version_fields["formula_version"],
-            genre=version_fields["genre"],
-            total_scene_count=len(scenes),
-            completed_scene_count=0,
-            remaining_scene_count=len(scenes),
-            completed_scene_ids_json="[]",
-            remaining_scene_ids_json=json.dumps([s.id for s in scenes]),
-            cloud_consent=request.cloud_consent,
-            client_request_id=request.client_request_id,
-            failure_details_json=version_fields["failure_details_json"],
-        )
-        session.add(journey_run)
+            journey_run = existing
+        else:
+            mark_scenes_complete_awaiting_journey(session, fresh)
+            journey_run = ensure_auto_reader_journey_row(
+                session, fresh, cloud_consent=request.cloud_consent
+            )
+            if journey_run is None:
+                return None
+            # Allow explicit recover client id to alias the auto row without a second create.
+            if (
+                journey_run.client_request_id
+                and journey_run.client_request_id != request.client_request_id
+                and journey_run.status
+                in {
+                    "queued",
+                    "failed",
+                    "scene_profiles_partial",
+                    "budget_blocked",
+                    "aborted_by_limit",
+                }
+            ):
+                pass
+        if journey_run.status == "succeeded":
+            session.commit()
+            return int(journey_run.id)
+        if journey_run.status in {
+            "failed",
+            "scene_profiles_partial",
+            "budget_blocked",
+            "aborted_by_limit",
+        }:
+            journey_run.status = "queued"
+            journey_run.completed_at = None
+        if journey_run.status in {
+            "running",
+            "scene_profiles_running",
+            "chapter_synthesis_running",
+        }:
+            session.commit()
+            return int(journey_run.id)
         session.commit()
         background.add_task(execute_reader_journey, session_factory, gateway, journey_run.id)
         return int(journey_run.id)

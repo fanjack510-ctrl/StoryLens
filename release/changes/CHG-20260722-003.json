@@ -1,0 +1,59 @@
+{
+  "id": "CHG-20260722-003",
+  "title": "Auto-continue Reader Journey after scene analysis completes",
+  "type": "fix",
+  "base_version": "1.0.3",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "chapter-analysis",
+    "reader-journey",
+    "desktop-shell"
+  ],
+  "files": [
+    "apps/api/app/services/chapter_analysis_completion.py",
+    "apps/api/app/services/scene_pipeline.py",
+    "apps/api/app/services/boundary_review_service.py",
+    "apps/desktop/src/pages/BookRoutePage.tsx",
+    "apps/desktop/src/components/chapterAnalysis/ChapterAnalysisProgressPanel.tsx"
+  ],
+  "user_summary": "场景分析完成后自动衔接阅读旅程，禁止过早completed与结果页跳转。",
+  "technical_summary": "Scene pipeline no longer finalizes AnalysisRun; auto-enqueues Reader Journey on same run_id via chapter_analysis_completion; UI keeps progress until chapter_complete; tasks/elapsed use derived completeness.",
+  "acceptance_criteria": [
+    "Scene完成后不标记completed_at",
+    "自动进入reader_journey_generation并调度Journey",
+    "同一analysis_run_id",
+    "半完成Run不显示完整完成",
+    "耗时不再用naive created_at墙钟"
+  ],
+  "tests": [
+    "apps/api/tests/test_chapter_analysis_completion_local.py",
+    "apps/desktop/src/pages/BookRoutePage.test.tsx",
+    "apps/desktop/src/components/chapterAnalysis/ChapterAnalysisProgressPanel.test.tsx"
+  ],
+  "verification_evidence": [
+    "Scene完成后流水线提前终止",
+    "Run过早标记完成",
+    "Reader Journey错误依赖Tab点击",
+    "完整进度面板提前消失",
+    "半完成Run被显示为完整结果",
+    "Run #8仍显示错误耗时"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "旧succeeded无Journey派生为partial_complete；可resume只补Journey"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": null,
+  "created_at": "2026-07-22T04:41:55Z",
+  "updated_at": "2026-07-22T04:58:38Z"
+}

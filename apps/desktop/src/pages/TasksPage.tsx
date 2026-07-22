@@ -169,7 +169,11 @@ function badgeToneForRun(run: any): string {
   if (isBudgetPauseRun(run) || run.status === "awaiting_provider_recovery") {
     return "warning";
   }
-  if (run.status === "succeeded") return "success";
+  if (run.status === "succeeded") {
+    if (run.chapter_complete === true) return "success";
+    if (isSceneAnalysisComplete(run)) return "warning";
+    return "success";
+  }
   if (
     run.status === "failed" ||
     run.status === "failed_structural" ||
@@ -228,7 +232,7 @@ function SucceededRunRowActions({
   } else if (sceneDone) {
     moreItems.push({
       id: "fix-continue",
-      label: "修复并继续",
+      label: "继续生成阅读旅程",
       testId: `unified-recover-open-${run.id}`,
       onSelect: () => onOpen("reader-journey"),
       disabled: busy,
@@ -692,8 +696,27 @@ export function TasksPage() {
   const runStatusLabel = (run: any) => {
     if (isBudgetPauseRun(run)) return "分析已暂停";
     if (run.status === "awaiting_provider_recovery") return "分析已暂停";
-    if (run.status === "succeeded" && isSceneAnalysisComplete(run)) {
-      return "场景分析已完成";
+    if (run.status === "succeeded") {
+      if (run.chapter_complete === true) return "已完成";
+      if (run.effective_status === "journey_running" || run.journey_status) {
+        const js = run.journey_status || "";
+        if (
+          ["queued", "running", "scene_profiles_running", "chapter_synthesis_running"].includes(js) ||
+          run.effective_status === "journey_running"
+        ) {
+          return "正在生成阅读旅程";
+        }
+        if (
+          ["failed", "scene_profiles_partial", "budget_blocked", "aborted_by_limit"].includes(js) ||
+          run.effective_status === "journey_failed"
+        ) {
+          return "阅读旅程已暂停";
+        }
+      }
+      if (isSceneAnalysisComplete(run) || run.effective_status === "partial_complete") {
+        return "场景分析已完成";
+      }
+      return "已完成";
     }
     return statusLabel[run.status] || "处理中";
   };
@@ -704,7 +727,9 @@ export function TasksPage() {
         isBudgetPauseRun(run) ||
         run.status === "awaiting_provider_recovery" ||
         run.status === "boundary_confirmed_budget_blocked" ||
-        run.status === "aborted_by_limit"
+        run.status === "aborted_by_limit" ||
+        run.effective_status === "partial_complete" ||
+        run.effective_status === "journey_failed"
       );
     }
     if (statusFilter === "failed") {
@@ -713,21 +738,26 @@ export function TasksPage() {
         ["failed", "failed_structural", "failed_provider"].includes(run.status)
       );
     }
-    if (statusFilter === "succeeded") return run.status === "succeeded";
+    if (statusFilter === "succeeded") {
+      return run.status === "succeeded" && run.chapter_complete === true;
+    }
     if (statusFilter === "cancelled") {
       return run.status === "cancelled" || run.status === "review_cancelled";
     }
     if (statusFilter === "running") {
-      return [
-        "queued",
-        "running",
-        "boundary_candidates_running",
-        "scene_analysis_running",
-        "awaiting_boundary_review",
-        "boundary_confirmed",
-        "scene_analysis_partial",
-        "boundary_candidates_partial",
-      ].includes(run.status);
+      return (
+        [
+          "queued",
+          "running",
+          "boundary_candidates_running",
+          "scene_analysis_running",
+          "awaiting_boundary_review",
+          "boundary_confirmed",
+          "scene_analysis_partial",
+          "boundary_candidates_partial",
+        ].includes(run.status) ||
+        run.effective_status === "journey_running"
+      );
     }
     return true;
   };

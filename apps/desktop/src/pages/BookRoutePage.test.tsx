@@ -289,7 +289,45 @@ describe("Book chapter shell", () => {
     expect(screen.getByTestId("sample-paragraph-text").textContent).toBe(textBefore);
   });
 
-  it("auto-switches to view=result on succeeded without navigating to independent route", async () => {
+  it("auto-switches to view=result only when journey visualization exists", async () => {
+    vi.mocked(analysisApi.run).mockResolvedValue({
+      id: 77,
+      subject_id: "2",
+      provider: "fake",
+      model: "fake",
+      status: "succeeded",
+      progress_current: 14,
+      progress_total: 14,
+      execution_mode: "cloud",
+      cloud_consent: true,
+      sends_content_to_cloud: true,
+      retryable: false,
+      created_at: "2026-01-01T00:00:00Z",
+      completed_at: null,
+      chapter_complete: false,
+      effective_status: "partial_complete",
+      reusable_checkpoint_count: 0,
+      conflicted_checkpoint_count: 0,
+      checkpoint_total_count: 0,
+      checkpoint_available: false,
+      completed_scene_count: 14,
+      total_scene_count: 14,
+    } as any);
+    vi.mocked(analysisApi.readerJourney).mockResolvedValue({
+      status: "missing",
+      visualization: null,
+    } as any);
+
+    renderBook("/books/1?chapter=2&analysisRun=77");
+    await waitFor(() => {
+      expect(screen.getByTestId("book-chapter-shell")).toHaveAttribute("data-view", "progress");
+    });
+    expect(screen.getByTestId("chapter-analysis-progress")).toBeInTheDocument();
+    expect(screen.queryByTestId("embedded-analysis-result")).not.toBeInTheDocument();
+    expect(analysisApi.createReaderJourney).not.toHaveBeenCalled();
+  });
+
+  it("auto-switches to journey result when chapter_complete with visualization", async () => {
     vi.mocked(analysisApi.run).mockResolvedValue({
       id: 77,
       subject_id: "2",
@@ -304,12 +342,19 @@ describe("Book chapter shell", () => {
       retryable: false,
       created_at: "2026-01-01T00:00:00Z",
       completed_at: "2026-01-01T00:05:00Z",
+      chapter_complete: true,
+      effective_status: "completed",
       reusable_checkpoint_count: 0,
       conflicted_checkpoint_count: 0,
       checkpoint_total_count: 0,
       checkpoint_available: false,
       completed_scene_count: 14,
       total_scene_count: 14,
+    } as any);
+    vi.mocked(analysisApi.readerJourney).mockResolvedValue({
+      status: "succeeded",
+      journey_run_id: 9,
+      visualization: { scene_nodes: [] },
     } as any);
 
     renderBook("/books/1?chapter=2&analysisRun=77");
@@ -318,7 +363,6 @@ describe("Book chapter shell", () => {
     });
     expect(screen.getByTestId("embedded-analysis-result")).toBeInTheDocument();
     expect(screen.queryByTestId("chapter-analysis-progress")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("results-page")).not.toBeInTheDocument();
     expect(analysisApi.createReaderJourney).not.toHaveBeenCalled();
   });
 
@@ -337,12 +381,18 @@ describe("Book chapter shell", () => {
       retryable: false,
       created_at: "2026-01-01T00:00:00Z",
       completed_at: "2026-01-01T00:05:00Z",
+      chapter_complete: false,
+      effective_status: "partial_complete",
       reusable_checkpoint_count: 0,
       conflicted_checkpoint_count: 0,
       checkpoint_total_count: 0,
       checkpoint_available: false,
       completed_scene_count: 14,
       total_scene_count: 14,
+    } as any);
+    vi.mocked(analysisApi.readerJourney).mockResolvedValue({
+      status: "missing",
+      visualization: null,
     } as any);
 
     renderBook("/books/1?chapter=2&analysisRun=77&view=result");

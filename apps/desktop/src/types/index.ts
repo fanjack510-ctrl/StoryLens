@@ -355,6 +355,14 @@ export type Run = {
   scene_analysis_max_http_attempts?: number;
   completed_scene_ids?: number[];
   remaining_scene_ids?: number[];
+  chapter_complete?: boolean;
+  scene_pipeline_complete?: boolean;
+  effective_status?: string | null;
+  checkpoint_stage?: string | null;
+  resume_stage?: string | null;
+  journey_run_id?: number | null;
+  journey_status?: string | null;
+  run_started_at?: string;
   scene_validation_detail?: {
     validation_error_message?: string;
     categories?: string[];

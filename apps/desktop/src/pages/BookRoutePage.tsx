@@ -238,25 +238,6 @@ export function BookRoutePage() {
     );
   }, [analysisRunId, progress.run?.id, progress.run?.subject_id, chapterId, setSearchParams]);
 
-  const view = resolveView(searchParams.get("view"), progress.uiState, analysisRunId);
-
-  // Auto-enter result view when Run succeeds (unless user chose reading).
-  useEffect(() => {
-    if (progress.uiState !== "succeeded" || !analysisRunId) return;
-    const explicit = searchParams.get("view");
-    if (explicit === "reading" || explicit === "result") return;
-    setSearchParams(
-      (prev) => {
-        const next = new URLSearchParams(prev);
-        next.set("view", "result");
-        next.set("analysisRun", String(analysisRunId));
-        if (chapterId) next.set("chapter", String(chapterId));
-        return next;
-      },
-      { replace: true },
-    );
-  }, [progress.uiState, analysisRunId, searchParams, setSearchParams, chapterId]);
-
   const sceneComplete = isSceneAnalysisComplete(progress.run);
   const journey = useQuery({
     queryKey: ["reader-journey", analysisRunId],
@@ -272,6 +253,8 @@ export function BookRoutePage() {
       ) {
         return 2000;
       }
+      // Keep polling while scenes are done but journey row not yet created (auto-start lag).
+      if (sceneComplete && !status) return 2000;
       return false;
     },
   });
@@ -279,6 +262,19 @@ export function BookRoutePage() {
   const hasJourney = Boolean(
     journey.data?.status === "succeeded" && journey.data.visualization,
   );
+
+  // Do not force-navigate while the user is reading or already on a result pane.
+  // Auto-open journey only on the transition into full chapter success (below).
+  const view = resolveView(
+    searchParams.get("view"),
+    // Keep progress shell while journey is still pending/running.
+    compositionUiState === "awaiting_reader_journey_start" ||
+      compositionUiState === "reader_journey_processing"
+      ? "running"
+      : compositionUiState,
+    analysisRunId,
+  );
+
   const isJourneyTab = searchParams.get("tab") === "reader-journey";
   const journeyRunId = journey.data?.journey_run_id ?? null;
   const journeyFailed = Boolean(
@@ -299,13 +295,21 @@ export function BookRoutePage() {
   });
 
   // After journey generation finishes, open ReaderJourneyWorkspace once.
+  // Also open once when landing on a fully complete run without an explicit view.
   const prevCompositionRef = useRef(compositionUiState);
+  const autoOpenedJourneyRef = useRef<number | null>(null);
   useEffect(() => {
     const prev = prevCompositionRef.current;
     prevCompositionRef.current = compositionUiState;
     if (!hasJourney || !analysisRunId) return;
     if (compositionUiState !== "succeeded") return;
-    if (prev !== "reader_journey_processing") return;
+    const explicit = searchParams.get("view");
+    if (explicit === "reading") return;
+    const transitionedFromJourney =
+      prev === "reader_journey_processing" || prev === "awaiting_reader_journey_start";
+    const landedComplete = !explicit && autoOpenedJourneyRef.current !== analysisRunId;
+    if (!transitionedFromJourney && !landedComplete) return;
+    autoOpenedJourneyRef.current = analysisRunId;
     setSearchParams(
       (params) => {
         const next = new URLSearchParams(params);
@@ -316,7 +320,7 @@ export function BookRoutePage() {
       },
       { replace: true },
     );
-  }, [hasJourney, compositionUiState, analysisRunId, setSearchParams]);
+  }, [hasJourney, compositionUiState, analysisRunId, setSearchParams, searchParams]);
 
   const chapterTitle = useMemo(() => {
     const list = chapters.data || [];
@@ -911,7 +915,33 @@ export function BookRoutePage() {
               onViewResults={() => {
                 setResultTab("analysis");
               }}
-              onContinueReaderJourney={() => setResultTab("journey")}
+              onContinueReaderJourney={() => {
+                if (
+                  compositionUiState === "awaiting_reader_journey_start" &&
+                  progress.run
+                ) {
+                  void (async () => {
+                    try {
+                      await analysisRecoveryApi.recover(progress.run!.id, {
+                        client_request_id: getOrCreateJourneyClientRequestId(progress.run!.id),
+                        cloud_consent: true,
+                        confirmed: true,
+                        recovery_mode: "unified",
+                        resume: true,
+                      });
+                    } finally {
+                      void qc.invalidateQueries({
+                        queryKey: ["reader-journey", analysisRunId],
+                      });
+                      void journey.refetch();
+                      void progress.refresh();
+                      setResultTab("journey");
+                    }
+                  })();
+                  return;
+                }
+                setResultTab("journey");
+              }}
               onBudgetContinued={() => void progress.refresh()}
             />
           )}

@@ -848,11 +848,24 @@ async def _execute_reader_journey_legacy(
             journey_run.completed_at = datetime.now(timezone.utc)
             journey_run.retryable = False
             sync_journey_run_counts(session, journey_run)
+            analysis_run = session.get(AnalysisRun, journey_run.analysis_run_id)
+            if analysis_run is not None:
+                from app.services.chapter_analysis_completion import (
+                    finalize_chapter_analysis,
+                    is_chapter_analysis_complete,
+                )
+
+                if is_chapter_analysis_complete(session, analysis_run):
+                    finalize_chapter_analysis(session, analysis_run)
             session.commit()
     except Exception as exc:
         with session_factory() as session:
             journey_run = session.get(ReaderJourneyRun, journey_run_id)
             analysis_run = session.get(AnalysisRun, journey_run.analysis_run_id)
+            if analysis_run is not None:
+                from app.services.chapter_analysis_completion import mark_journey_failed_on_run
+
+                mark_journey_failed_on_run(session, analysis_run)
             root_code, stage, retryable, hint = _classify_journey_error(exc)
             progress = sync_journey_run_counts(session, journey_run)
             journey_run.failed_stage = journey_run.current_stage or STAGE_READER_JOURNEY_SCENE

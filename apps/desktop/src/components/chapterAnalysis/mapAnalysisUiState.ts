@@ -27,14 +27,24 @@ const TERMINAL: ChapterAnalysisUiState[] = ["succeeded", "failed", "cancelled"];
 const STAGE_STEP_DEFS = [
   { id: "prepare", label: "准备章节" },
   { id: "boundary_identify", label: "识别场景边界" },
-  { id: "boundary_review", label: "确认场景边界" },
+  { id: "boundary_review", label: "确认场景划分" },
   { id: "analyze", label: "分析场景" },
-  { id: "journey", label: "生成读者旅程" },
+  { id: "journey", label: "生成阅读旅程" },
   { id: "complete", label: "完成" },
 ] as const;
 
 export function isTerminalUiState(state: ChapterAnalysisUiState): boolean {
   return TERMINAL.includes(state);
+}
+
+/** Scene-pipeline succeeded is not chapter-terminal when journey still missing. */
+export function isChapterShellTerminal(
+  state: ChapterAnalysisUiState,
+  run?: { chapter_complete?: boolean | null } | null,
+): boolean {
+  if (state === "failed" || state === "cancelled") return true;
+  if (state === "succeeded") return Boolean(run?.chapter_complete);
+  return false;
 }
 
 export function mapRunToUiState(run: Run | null | undefined): ChapterAnalysisUiState {
@@ -91,7 +101,7 @@ export function uiStateLabel(state: ChapterAnalysisUiState): string {
     case "awaiting_budget_adjustment":
       return "分析已暂停";
     case "awaiting_reader_journey_start":
-      return "分析已暂停";
+      return "场景分析已完成";
     case "reader_journey_processing":
       return "正在生成阅读旅程";
     case "succeeded":
@@ -303,18 +313,45 @@ export function userFacingFailureHint(run: Run): string {
 
 const MAX_ELAPSED_MS = 48 * 60 * 60 * 1000;
 
+/** Parse backend datetimes; naive values are treated as UTC to avoid +8h wall-clock skew. */
+export function parseAnalysisTimestamp(value: string | null | undefined): number {
+  if (!value) return NaN;
+  const raw = value.trim();
+  if (!raw) return NaN;
+  if (/Z$/i.test(raw) || /[+-]\d{2}:?\d{2}$/.test(raw)) {
+    return new Date(raw).getTime();
+  }
+  const normalized = raw.includes("T") ? raw : raw.replace(" ", "T");
+  return new Date(`${normalized}Z`).getTime();
+}
+
 export function elapsedLabel(run: Run): string | null {
-  const start = run.started_at || run.created_at;
+  const start = run.run_started_at || run.started_at || run.created_at;
   if (!start) return null;
-  const startMs = new Date(start).getTime();
+  const startMs = parseAnalysisTimestamp(start);
   if (!Number.isFinite(startMs)) return null;
 
-  const end = run.completed_at ? new Date(run.completed_at).getTime() : Date.now();
+  // Freeze when chapter fully complete; otherwise grow until pause/complete.
+  const end = run.completed_at
+    ? parseAnalysisTimestamp(run.completed_at)
+    : run.chapter_complete === true
+      ? parseAnalysisTimestamp(run.completed_at || start)
+      : Date.now();
   if (!Number.isFinite(end)) return null;
   if (end < startMs) return null;
 
   const ms = end - startMs;
-  if (ms > MAX_ELAPSED_MS) return null;
+  // Naive wall-clock skew or abandoned runs: do not show multi-hour ghosts.
+  if (ms > MAX_ELAPSED_MS) return "暂无准确记录";
+  // Legacy partial: scenes marked complete long ago without journey finalize —
+  // if completed_at is missing and duration already absurd for a chapter, hide.
+  if (
+    run.effective_status === "partial_complete" &&
+    !run.completed_at &&
+    ms > 2 * 60 * 60 * 1000
+  ) {
+    return "暂无准确记录";
+  }
 
   const sec = Math.floor(ms / 1000);
   if (sec < 60) return `${sec} 秒`;

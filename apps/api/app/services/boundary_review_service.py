@@ -472,7 +472,19 @@ async def analyze_confirmed_review(
         if run is None or (run.sends_content_to_cloud and not run.cloud_consent):
             raise ValueError("CLOUD_CONSENT_REQUIRED")
         if run.status == "succeeded":
-            return
+            from app.services.chapter_analysis_completion import (
+                continue_chapter_after_scenes,
+                is_chapter_analysis_complete,
+                is_scene_pipeline_complete,
+            )
+
+            if is_chapter_analysis_complete(session, run):
+                return
+            if is_scene_pipeline_complete(session, run):
+                session.commit()
+                await continue_chapter_after_scenes(session_factory, gateway, run.id)
+                return
+            # Succeeded marker without full scene artifacts — continue scene loop below.
         revision = session.scalar(
             select(BoundaryRevision)
             .where(BoundaryRevision.review_session_id == review.id)
@@ -622,21 +634,26 @@ async def analyze_confirmed_review(
                     run = session.get(AnalysisRun, review.analysis_run_id)
                     recovery_state = load_recovery_state(run) if run is not None else {}
                     clear_scene_analysis_error_fields(run)
-                    run.status = "succeeded"
-                    run.completed_at = datetime.now(timezone.utc)
+                    from app.services.chapter_analysis_completion import (
+                        continue_chapter_after_scenes,
+                        mark_scenes_complete_awaiting_journey,
+                    )
+
+                    mark_scenes_complete_awaiting_journey(session, run)
                     if recovery_state.get("recovery_audits"):
-                        run.raw_output = json.dumps(
-                            {
-                                "kind": "provider_recovery_completed",
-                                "recovery_cycles": recovery_state.get("recovery_cycles"),
-                                "recovery_started_at": recovery_state.get(
-                                    "recovery_started_at"
-                                ),
-                                "recovery_audits": recovery_state.get("recovery_audits"),
-                            },
-                            ensure_ascii=False,
+                        # Preserve recovery audits alongside pipeline marker.
+                        from app.services.chapter_analysis_completion import _store_marker
+
+                        _store_marker(
+                            run,
+                            recovery_cycles=recovery_state.get("recovery_cycles"),
+                            recovery_started_at=recovery_state.get("recovery_started_at"),
+                            recovery_audits=recovery_state.get("recovery_audits"),
                         )
                     session.commit()
+                    await continue_chapter_after_scenes(
+                        session_factory, gateway, review.analysis_run_id
+                    )
                     return
                 except Exception as exc:
                     session.rollback()

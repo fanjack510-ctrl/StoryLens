@@ -36,24 +36,46 @@ export function mapChapterCompositionState(
   const base = mapRunToUiState(run);
   if (base !== "succeeded") return base;
 
+  if (run?.chapter_complete === true) {
+    return "succeeded";
+  }
   if (journey?.status === "succeeded" && journey.visualization) {
     return "succeeded";
   }
-  if (journey?.status && JOURNEY_ACTIVE.has(journey.status)) {
+
+  const journeyStatus = journey?.status || run?.journey_status || null;
+  if (journeyStatus && JOURNEY_ACTIVE.has(journeyStatus)) {
+    return "reader_journey_processing";
+  }
+  if (run?.effective_status === "journey_running") {
     return "reader_journey_processing";
   }
   // null / missing / failed / partial → user can start or resume journey
-  if (journey == null || journey?.status == null || JOURNEY_NEEDS_RESUME.has(journey.status)) {
+  if (
+    journeyStatus == null ||
+    JOURNEY_NEEDS_RESUME.has(journeyStatus) ||
+    run?.effective_status === "partial_complete" ||
+    run?.effective_status === "journey_failed"
+  ) {
     return "awaiting_reader_journey_start";
   }
   return "awaiting_reader_journey_start";
 }
 
 export function isSceneAnalysisComplete(run: Run | null | undefined): boolean {
-  if (!run || run.status !== "succeeded") return false;
+  if (!run) return false;
+  if (run.scene_pipeline_complete === true) return true;
+  if (run.status !== "succeeded") return false;
   const total = run.total_scene_count ?? 0;
   const done = run.completed_scene_count ?? 0;
   return total > 0 && done >= total;
+}
+
+/** Full chapter (scenes + journey) — shared by tasks / shell / navigation. */
+export function isChapterAnalysisComplete(run: Run | null | undefined): boolean {
+  if (!run) return false;
+  if (run.chapter_complete === true) return true;
+  return false;
 }
 
 export function journeyClientRequestKey(runId: number): string {
