@@ -3,9 +3,16 @@
   "title": "Simplify Reader Journey terminology and explanations",
   "type": "improvement",
   "base_version": "1.0.4",
-  "status": "registered",
+  "status": "tested",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "3426457bec502f8f98f1ef5150dfe183f936e3ea",
+      "message": "improve: simplify reader journey terminology and explanations",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "desktop"
   ],
@@ -53,7 +60,7 @@
     "breaking_change": false
   },
   "blocker_level": "P2",
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-22T16:00:00Z",
-  "updated_at": "2026-07-22T16:10:00Z"
+  "updated_at": "2026-07-22T16:07:38Z"
 }
