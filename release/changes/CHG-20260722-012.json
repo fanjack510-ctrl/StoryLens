@@ -3,9 +3,16 @@
   "title": "Simplify Reader Journey chart explanations and hook-payoff visualization",
   "type": "improvement",
   "base_version": "1.0.4",
-  "status": "registered",
+  "status": "tested",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "3a03db6a0665dfa9a75844f4f945fad90585749a",
+      "message": "feat: simplify reader journey explanations",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "desktop"
   ],
@@ -50,7 +57,7 @@
     "breaking_change": false
   },
   "blocker_level": "P1",
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-22T15:08:25Z",
-  "updated_at": "2026-07-22T15:19:19Z"
+  "updated_at": "2026-07-22T15:20:36Z"
 }
