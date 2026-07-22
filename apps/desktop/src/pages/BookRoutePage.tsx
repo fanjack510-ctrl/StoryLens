@@ -30,8 +30,6 @@ import {
   resolveChapterWorkspaceView,
   type WorkspaceView,
 } from "../services/chapterJourneyComposition";
-import { BookHomeCatalog } from "../components/books/BookHomeCatalog";
-import { discoverActiveChapterRun } from "../services/discoverActiveChapterRun";
 import {
   resolveWorkspaceLayout,
   type WorkspaceActiveTab,
@@ -44,6 +42,14 @@ function parsePositiveInt(value: string | null): number | null {
   if (!value) return null;
   const n = Number(value);
   return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+function firstValidChapterId(
+  chapters: { id: number; section_type: string }[] | null | undefined,
+): number | null {
+  if (!chapters?.length) return null;
+  const first = chapters.find((item) => item.section_type === "chapter") || chapters[0];
+  return first?.id ?? null;
 }
 
 function clickResults(selector: string) {
@@ -64,6 +70,12 @@ export function BookRoutePage() {
   const [techOpen, setTechOpen] = useState(false);
   const [chapterInfoOpen, setChapterInfoOpen] = useState(false);
   const [catalogOpen, setCatalogOpen] = useState(false);
+  const [emptyDiagnostics, setEmptyDiagnostics] = useState<{
+    encoding: string;
+    candidate_count: number;
+    final_chapter_count: number;
+    warning?: string | null;
+  } | null>(null);
   const [analysisInfoOpen, setAnalysisInfoOpen] = useState(false);
   const [panelCollapsed, setPanelCollapsed] = useState(false);
   const [budgetModalOpen, setBudgetModalOpen] = useState(false);
@@ -78,8 +90,6 @@ export function BookRoutePage() {
 
   const analysisRunFromUrl = parsePositiveInt(searchParams.get("analysisRun"));
   const chapterFromUrl = parsePositiveInt(searchParams.get("chapter"));
-  /** Book home: /books/:id with no chapter= — show catalog, do not auto-pick chapter 1. */
-  const showBookHome = chapterFromUrl == null;
 
   const book = useQuery({
     queryKey: ["book", bookId],
@@ -97,28 +107,34 @@ export function BookRoutePage() {
     refetchOnWindowFocus: true,
   });
 
-  const chapterId = chapterFromUrl;
+  const firstChapterId = useMemo(
+    () => firstValidChapterId(chapters.data),
+    [chapters.data],
+  );
+  const chaptersReady = !chapters.isLoading && !chapters.isError;
+  const noChapters = chaptersReady && firstChapterId == null;
+  /** /books/:id with no chapter → loading chapters or replace into first reading. */
+  const bootstrappingChapter = chapterFromUrl == null && !noChapters;
 
-  // Bind AnalysisRun for an explicitly selected chapter only — never invent chapter= or auto-open Journey.
+  // Library Open (/books/:id): replace into first chapter reading workspace.
   useEffect(() => {
-    if (showBookHome) return;
-    if (analysisRunFromUrl) return;
-    if (!chapterFromUrl || !recentRuns.data) return;
-    const discovered = discoverActiveChapterRun(recentRuns.data, chapterFromUrl);
-    if (!discovered) return;
-    setPanelCollapsed(false);
+    if (chapterFromUrl != null) return;
+    if (!chaptersReady || firstChapterId == null) return;
     setSearchParams(
-      (prev) => {
-        if (prev.get("analysisRun")) return prev;
-        const next = new URLSearchParams(prev);
-        next.set("analysisRun", String(discovered.id));
-        // Keep current view (default reading). Do not force result / reader-journey.
-        if (!next.get("view")) next.set("view", "reading");
+      () => {
+        const next = new URLSearchParams();
+        next.set("chapter", String(firstChapterId));
+        next.set("view", "reading");
         return next;
       },
       { replace: true },
     );
-  }, [showBookHome, analysisRunFromUrl, chapterFromUrl, recentRuns.data, setSearchParams]);
+  }, [chapterFromUrl, chaptersReady, firstChapterId, setSearchParams]);
+
+  const chapterId = chapterFromUrl;
+
+  // Do not auto-write analysisRun into the URL. Library Open and chapter switches stay on
+  // reading; historical/in-flight runs only surface when explicitly bound (deep link / start).
 
   const analysisRunId = analysisRunFromUrl;
 
@@ -161,16 +177,16 @@ export function BookRoutePage() {
       });
       if (!match) return;
       setSearchParams(
-        (prev) => {
-          const next = new URLSearchParams(prev);
+        () => {
+          const next = new URLSearchParams();
           next.set("chapter", String(match.id));
-          // Drop bound run so the new chapter re-discovers its own AnalysisRun.
-          next.delete("analysisRun");
-          next.delete("view");
+          next.set("view", "reading");
           return next;
         },
-        { replace: true },
+        { replace: false },
       );
+      userPinnedViewRef.current = "reading";
+      userPinnedTabRef.current = "text";
     };
     root.addEventListener("click", onClick);
     return () => root.removeEventListener("click", onClick);
@@ -183,7 +199,6 @@ export function BookRoutePage() {
 
   // Keep chapter= aligned with the bound run's subject_id (internal Chapter ID).
   useEffect(() => {
-    if (showBookHome) return;
     if (!analysisRunId || !progress.run) return;
     const runChapterId = Number(progress.run.subject_id);
     if (!Number.isFinite(runChapterId) || runChapterId <= 0) return;
@@ -198,7 +213,6 @@ export function BookRoutePage() {
       { replace: true },
     );
   }, [
-    showBookHome,
     analysisRunId,
     progress.run?.id,
     progress.run?.subject_id,
@@ -340,7 +354,6 @@ export function BookRoutePage() {
   useEffect(() => {
     const prev = prevCompositionRef.current;
     prevCompositionRef.current = compositionUiState;
-    if (showBookHome) return;
     if (!hasJourney || !analysisRunId) return;
     if (!chapterComplete || compositionUiState !== "succeeded") return;
     if (userPinnedViewRef.current === "reading") return;
@@ -364,7 +377,6 @@ export function BookRoutePage() {
       { replace: true },
     );
   }, [
-    showBookHome,
     hasJourney,
     compositionUiState,
     chapterComplete,
@@ -390,7 +402,6 @@ export function BookRoutePage() {
   );
 
   const showProgressPanel =
-    !showBookHome &&
     workspaceLayout.showProgressContext &&
     Boolean(analysisRunId) &&
     !panelCollapsed;
@@ -512,8 +523,23 @@ export function BookRoutePage() {
     );
   };
 
-  const openChapterFromBookHome = (id: number) => {
-    selectChapterFromCatalog(id);
+  const openCatalogOrFocusNav = () => {
+    const list = document.querySelector<HTMLElement>(
+      ".book-shell-body .workspace-chapter-list",
+    );
+    const visible =
+      list &&
+      list.getBoundingClientRect().width > 40 &&
+      getComputedStyle(list).visibility !== "hidden";
+    if (visible && list) {
+      list.scrollIntoView({ block: "nearest", inline: "nearest" });
+      const selected =
+        list.querySelector<HTMLElement>(".workspace-chapter-item.selected") ||
+        list.querySelector<HTMLElement>(".workspace-chapter-item");
+      selected?.focus();
+      return;
+    }
+    setCatalogOpen(true);
   };
 
   useEffect(() => {
@@ -705,7 +731,7 @@ export function BookRoutePage() {
         type="button"
         className="ghost workspace-catalog-trigger"
         data-testid="book-chapter-catalog"
-        onClick={() => setCatalogOpen(true)}
+        onClick={openCatalogOrFocusNav}
       >
         章节目录
       </button>
@@ -726,7 +752,7 @@ export function BookRoutePage() {
         type="button"
         className="ghost"
         data-testid="book-chapter-catalog"
-        onClick={() => setCatalogOpen(true)}
+        onClick={openCatalogOrFocusNav}
       >
         章节目录
       </button>
@@ -740,44 +766,24 @@ export function BookRoutePage() {
       data-content-width={contentWidth}
       data-show-paragraph-ids={showParagraphIds ? "true" : "false"}
       data-analysis-run={analysisRunId ? String(analysisRunId) : undefined}
-      data-view={showBookHome ? "home" : workspaceLayout.shellView}
-      data-active-tab={showBookHome ? "home" : activeTab}
-      data-book-home={showBookHome ? "true" : "false"}
+      data-view={noChapters ? "empty" : bootstrappingChapter ? "bootstrapping" : workspaceLayout.shellView}
+      data-active-tab={noChapters || bootstrappingChapter ? "text" : activeTab}
+      data-book-home="false"
       data-catalog-open={catalogOpen ? "true" : "false"}
-      data-has-progress={!showBookHome && showProgressPanel ? "true" : "false"}
+      data-has-progress={showProgressPanel ? "true" : "false"}
     >
       <CompactToolbar
         className="workspace-toolbar"
         data-testid="book-shell-toolbar"
         title={
-          showBookHome ? (
-            <div className="workspace-toolbar-identity">
-              <button
-                type="button"
-                className="ghost workspace-back-library"
-                data-testid="workspace-back-library"
-                onClick={() => navigate("/library")}
-              >
-                ‹ 返回书库
-              </button>
-              <span className="workspace-toolbar-titles">
-                <span className="workspace-toolbar-book" title={bookTitle}>
-                  {bookTitle}
-                </span>
-              </span>
-            </div>
-          ) : view === "result" ? (
+          view === "result" && !noChapters && !bootstrappingChapter ? (
             resultToolbarTitle
           ) : (
             readingToolbarTitle
           )
         }
         primary={
-          showBookHome ? (
-            <span className="secondary" data-testid="book-home-toolbar-hint">
-              选择章节
-            </span>
-          ) : analysisRunId &&
+          noChapters || bootstrappingChapter ? null : analysisRunId &&
             (sceneComplete ||
               chapterInFlight ||
               chapterComplete ||
@@ -821,8 +827,10 @@ export function BookRoutePage() {
         }
         secondary={
           <>
-            {!showBookHome && view !== "result" ? <ReadingSettingsPopover /> : null}
-            {!showBookHome && panelCollapsed && analysisRunId ? (
+            {!noChapters && !bootstrappingChapter && view !== "result" ? (
+              <ReadingSettingsPopover />
+            ) : null}
+            {!noChapters && !bootstrappingChapter && panelCollapsed && analysisRunId ? (
               <button
                 type="button"
                 className="secondary"
@@ -835,7 +843,7 @@ export function BookRoutePage() {
                 展开分析面板
               </button>
             ) : null}
-            {!showBookHome && latestSucceeded && !analysisRunId && (
+            {!noChapters && !bootstrappingChapter && latestSucceeded && !analysisRunId && (
               <Link
                 className="secondary"
                 data-testid="view-recent-analysis"
@@ -844,7 +852,8 @@ export function BookRoutePage() {
                 查看最近分析
               </Link>
             )}
-            {!showBookHome &&
+            {!noChapters &&
+              !bootstrappingChapter &&
               (compositionUiState === "succeeded" ||
                 compositionUiState === "awaiting_reader_journey_start" ||
                 compositionUiState === "reader_journey_processing") &&
@@ -963,7 +972,7 @@ export function BookRoutePage() {
         </div>
       )}
 
-      {reviewOpen && chapterId && !showBookHome ? (
+      {reviewOpen && chapterId && !noChapters && !bootstrappingChapter ? (
         <div className="shell-review-focus" data-testid="shell-boundary-review">
           {isConfirmOnlyBoundaryReview() ? (
             <ConfirmBoundaryDivisionPanel
@@ -1023,37 +1032,70 @@ export function BookRoutePage() {
           data-workspace-root="true"
         >
           <div className="book-shell-main" data-testid="main-content-pane">
-            {showBookHome ? (
-              <BookHomeCatalog
-                book={book.data}
-                chapters={chapters.data}
-                runs={Array.isArray(recentRuns.data) ? recentRuns.data : []}
-                loading={book.isLoading || chapters.isLoading}
-                error={Boolean(book.isError || chapters.isError)}
-                onRetry={() => {
-                  void book.refetch();
-                  void chapters.refetch();
-                }}
-                onBackLibrary={() => navigate("/library")}
-                onSelectChapter={openChapterFromBookHome}
-                onReparse={() => setReparseOpen(true)}
+            {noChapters ? (
+              <div className="book-shell-empty-chapters" data-testid="book-no-chapters-wrap">
+                <StateView
+                  kind="empty"
+                  data-testid="book-no-chapters"
+                  title="尚未识别到章节"
+                  description="请重新识别章节，或查看导入诊断后再试。"
+                  primaryAction={{
+                    label: "重新识别章节",
+                    testId: "book-no-chapters-reparse",
+                    onClick: () => setReparseOpen(true),
+                  }}
+                  secondaryAction={{
+                    label: "查看导入诊断",
+                    testId: "book-no-chapters-diagnostics",
+                    onClick: () => {
+                      void booksApi.diagnostics(bookId).then((d) => setEmptyDiagnostics(d));
+                    },
+                  }}
+                />
+                {emptyDiagnostics ? (
+                  <div className="notice workspace-diagnostics" data-testid="book-no-chapters-diag">
+                    <b>识别结果</b>
+                    <span>编码 {emptyDiagnostics.encoding}</span>
+                    <span>
+                      候选 {emptyDiagnostics.candidate_count} · 最终{" "}
+                      {emptyDiagnostics.final_chapter_count}章
+                    </span>
+                    {emptyDiagnostics.warning ? <span>{emptyDiagnostics.warning}</span> : null}
+                  </div>
+                ) : null}
+                <button
+                  type="button"
+                  className="secondary"
+                  data-testid="book-no-chapters-back"
+                  onClick={() => navigate("/library")}
+                >
+                  返回书库
+                </button>
+              </div>
+            ) : null}
+
+            {bootstrappingChapter ? (
+              <StateView
+                kind="loading"
+                data-testid="book-chapter-bootstrap"
+                title="正在打开正文…"
               />
             ) : null}
 
-            {!showBookHome && activeTab === "text" ? (
+            {!noChapters && !bootstrappingChapter && activeTab === "text" ? (
               <div className="book-shell-workspace">
                 <BookWorkspacePage />
               </div>
             ) : null}
 
-            {!showBookHome && activeTab === "scene" && analysisRunId ? (
+            {!noChapters && !bootstrappingChapter && activeTab === "scene" && analysisRunId ? (
               <EmbeddedAnalysisResultShell
                 runId={analysisRunId}
                 onReading={() => setView("reading", "user")}
               />
             ) : null}
 
-            {!showBookHome && activeTab === "journey" && analysisRunId ? (
+            {!noChapters && !bootstrappingChapter && activeTab === "journey" && analysisRunId ? (
               <>
                 {journeyFailed ? (
                   <StateView

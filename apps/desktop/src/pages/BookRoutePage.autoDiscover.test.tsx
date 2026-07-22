@@ -1,6 +1,6 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useSearchParams } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BookRoutePage } from "./BookRoutePage";
 import { analysisApi } from "../services/analysisApi";
@@ -165,13 +165,34 @@ const olderFailed = {
   scene_analysis_resume_available: false,
 };
 
+function SearchProbe() {
+  const [params] = useSearchParams();
+  return (
+    <div
+      data-testid="search-probe"
+      data-chapter={params.get("chapter") || ""}
+      data-view={params.get("view") || ""}
+      data-analysis-run={params.get("analysisRun") || ""}
+      data-tab={params.get("tab") || ""}
+    />
+  );
+}
+
 function renderBook(path: string) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[path]}>
         <Routes>
-          <Route path="/books/:bookId" element={<BookRoutePage />} />
+          <Route
+            path="/books/:bookId"
+            element={
+              <>
+                <BookRoutePage />
+                <SearchProbe />
+              </>
+            }
+          />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -191,32 +212,52 @@ describe("BookRoutePage active run auto discovery", () => {
 
   afterEach(cleanup);
 
-  it("auto-discovers Run #5 from /books/1 without analysisRun", async () => {
+  it("library open replaces into first chapter reading without analysisRun", async () => {
     renderBook("/books/1");
     await waitFor(() => {
-      expect(screen.getByTestId("book-home-catalog")).toBeInTheDocument();
+      expect(screen.getByTestId("search-probe")).toHaveAttribute("data-chapter", "2");
+      expect(screen.getByTestId("search-probe")).toHaveAttribute("data-view", "reading");
     });
+    expect(screen.getByTestId("search-probe")).toHaveAttribute("data-analysis-run", "");
+    expect(screen.getByTestId("search-probe")).toHaveAttribute("data-tab", "");
+    expect(screen.queryByTestId("book-home-catalog")).not.toBeInTheDocument();
+    expect(screen.getByTestId("book-chapter-shell")).toHaveAttribute("data-book-home", "false");
+    expect(screen.getByTestId("book-chapter-shell")).toHaveAttribute("data-active-tab", "text");
+    expect(analysisApi.run).not.toHaveBeenCalled();
+  });
+
+  it("does not auto-bind historical complete runs on chapter reading", async () => {
+    vi.mocked(analysisApi.runs).mockResolvedValue([
+      {
+        ...run5,
+        id: 5,
+        subject_id: "2",
+        status: "succeeded",
+        chapter_complete: true,
+        completed_scene_count: 13,
+        total_scene_count: 13,
+      },
+    ] as any);
+    renderBook("/books/1?chapter=2&view=reading");
+    await waitFor(() => {
+      expect(screen.getByTestId("workspace-stub")).toBeInTheDocument();
+    });
+    expect(screen.getByTestId("search-probe")).toHaveAttribute("data-analysis-run", "");
+    expect(screen.getByTestId("book-chapter-shell")).toHaveAttribute("data-active-tab", "text");
+    expect(analysisApi.run).not.toHaveBeenCalled();
+  });
+
+  it("does not auto-bind in-flight runs into the URL", async () => {
+    renderBook("/books/1?chapter=2");
+    await waitFor(() => {
+      expect(screen.getByTestId("workspace-stub")).toBeInTheDocument();
+    });
+    expect(screen.getByTestId("search-probe")).toHaveAttribute("data-analysis-run", "");
     expect(screen.queryByTestId("chapter-analysis-run-id")).not.toBeInTheDocument();
     expect(analysisApi.run).not.toHaveBeenCalled();
   });
 
-  it("shows book home chapter list without selecting chapter 1", async () => {
-    renderBook("/books/1");
-    await waitFor(() => {
-      expect(screen.getByTestId("book-home-chapter-2")).toBeInTheDocument();
-      expect(screen.getByTestId("book-home-chapter-3")).toBeInTheDocument();
-    });
-    expect(screen.getByTestId("book-chapter-shell")).toHaveAttribute("data-book-home", "true");
-  });
-
-  it("auto-discovers Run #5 from /books/1?chapter=2", async () => {
-    renderBook("/books/1?chapter=2");
-    await waitFor(() => {
-      expect(screen.getByTestId("chapter-analysis-run-id")).toHaveTextContent("#5");
-    });
-  });
-
-  it("does not auto-open journey tab when discovering a complete chapter run", async () => {
+  it("does not auto-open journey tab when a complete chapter run exists", async () => {
     vi.mocked(analysisApi.runs).mockResolvedValue([
       {
         ...run5,
@@ -261,7 +302,7 @@ describe("BookRoutePage active run auto discovery", () => {
     expect(analysisApi.runs).toHaveBeenCalled();
   });
 
-  it("does not show Run #5 when chapter=3 has a different run", async () => {
+  it("keeps explicit chapter=3 deep link without binding another chapter run", async () => {
     vi.mocked(analysisApi.runs).mockResolvedValue([
       olderFailed,
       run5,
@@ -276,31 +317,16 @@ describe("BookRoutePage active run auto discovery", () => {
         exceeded_dimensions: [],
       },
     ] as any);
-    vi.mocked(analysisApi.run).mockImplementation(async (id: number) => {
-      if (id === 9) {
-        return {
-          ...run5,
-          id: 9,
-          subject_id: "3",
-          status: "scene_analysis_running",
-          completed_scene_count: 1,
-          error_code: undefined,
-          failed_stage: undefined,
-          exceeded_dimensions: [],
-        } as any;
-      }
-      return run5 as any;
-    });
-    renderBook("/books/1?chapter=3");
+    renderBook("/books/1?chapter=3&view=reading");
     await waitFor(() => {
-      expect(screen.getByTestId("chapter-analysis-run-id")).toHaveTextContent("#9");
+      expect(screen.getByTestId("search-probe")).toHaveAttribute("data-chapter", "3");
     });
-    expect(screen.getByTestId("chapter-analysis-run-id")).not.toHaveTextContent("#5");
-    expect(analysisApi.run).not.toHaveBeenCalledWith(5);
+    expect(screen.getByTestId("search-probe")).toHaveAttribute("data-analysis-run", "");
+    expect(screen.queryByTestId("chapter-analysis-run-id")).not.toBeInTheDocument();
   });
 
-  it("shows budget pause modal once and not again after close during polling", async () => {
-    renderBook("/books/1?chapter=2");
+  it("shows budget pause modal once for explicit analysisRun deep link", async () => {
+    renderBook("/books/1?chapter=2&analysisRun=5&view=progress");
     await waitFor(() => expect(screen.getByTestId("budget-pause-modal")).toBeInTheDocument());
     const modal = screen.getByTestId("budget-pause-modal");
     modal.querySelector('[data-testid="unified-recovery-later"]')?.dispatchEvent(

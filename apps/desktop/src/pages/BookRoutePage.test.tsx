@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useSearchParams } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BookRoutePage } from "../pages/BookRoutePage";
 import { useUiStore } from "../stores/uiStore";
@@ -146,40 +146,52 @@ vi.mock("../pages/BookWorkspacePage", () => ({
   ),
 }));
 
-vi.stubGlobal(
-  "fetch",
-  vi.fn(async (url: string) => {
-    const href = String(url);
-    if (href.includes("/books/1/chapters") || href.endsWith("/chapters")) {
-      return new Response(
-        JSON.stringify([{ id: 2, section_type: "chapter", title: "开端", display_title: "开端" }]),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      );
-    }
-    if (href.includes("/books/1") || href.match(/\/books\/\d+$/)) {
-      return new Response(
-        JSON.stringify({
-          id: 1,
-          title: "测试书",
-          source_file_name: "a.txt",
-          source_file_hash: "abc123def456",
-          created_at: "2026-01-01T00:00:00Z",
-        }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      );
-    }
-    if (href.includes("analysis-runs") && !href.includes("/77")) {
-      return new Response(JSON.stringify([]), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-    return new Response(JSON.stringify({}), {
+const defaultFetchMock = vi.fn(async (url: string) => {
+  const href = String(url);
+  if (href.includes("/books/1/chapters") || href.endsWith("/chapters")) {
+    return new Response(
+      JSON.stringify([{ id: 2, section_type: "chapter", title: "开端", display_title: "开端" }]),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  }
+  if (href.includes("/books/1") || href.match(/\/books\/\d+$/)) {
+    return new Response(
+      JSON.stringify({
+        id: 1,
+        title: "测试书",
+        source_file_name: "a.txt",
+        source_file_hash: "abc123def456",
+        created_at: "2026-01-01T00:00:00Z",
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  }
+  if (href.includes("analysis-runs") && !href.includes("/77")) {
+    return new Response(JSON.stringify([]), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
-  }),
-);
+  }
+  return new Response(JSON.stringify({}), {
+    status: 200,
+    headers: { "Content-Type": "application/json" },
+  });
+});
+
+vi.stubGlobal("fetch", defaultFetchMock);
+
+function SearchProbe() {
+  const [params] = useSearchParams();
+  return (
+    <div
+      data-testid="search-probe"
+      data-chapter={params.get("chapter") || ""}
+      data-view={params.get("view") || ""}
+      data-analysis-run={params.get("analysisRun") || ""}
+      data-tab={params.get("tab") || ""}
+    />
+  );
+}
 
 function renderBook(path = "/books/1?chapter=2") {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -187,7 +199,15 @@ function renderBook(path = "/books/1?chapter=2") {
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[path]}>
         <Routes>
-          <Route path="/books/:bookId" element={<BookRoutePage />} />
+          <Route
+            path="/books/:bookId"
+            element={
+              <>
+                <BookRoutePage />
+                <SearchProbe />
+              </>
+            }
+          />
           <Route path="/library" element={<div data-testid="library-page">书库</div>} />
           <Route path="/tasks" element={<div data-testid="tasks-page">任务中心</div>} />
           <Route
@@ -232,6 +252,7 @@ describe("Book chapter shell", () => {
 
   afterEach(() => {
     cleanup();
+    vi.stubGlobal("fetch", defaultFetchMock);
   });
 
   it("hides empty analysis pane and exposes shell start analysis", () => {
@@ -241,12 +262,103 @@ describe("Book chapter shell", () => {
     expect(document.querySelector(".analysis-pane .artifact")).toBeNull();
   });
 
-  it("opens book home catalog when URL has no chapter", async () => {
+  it("replaces into first chapter reading when URL has no chapter", async () => {
     renderBook("/books/1");
-    expect(await screen.findByTestId("book-home-catalog")).toBeInTheDocument();
-    expect(screen.getByTestId("book-chapter-shell")).toHaveAttribute("data-book-home", "true");
-    expect(screen.queryByTestId("shell-start-analysis")).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByTestId("search-probe")).toHaveAttribute("data-chapter", "2");
+      expect(screen.getByTestId("search-probe")).toHaveAttribute("data-view", "reading");
+    });
+    expect(screen.getByTestId("search-probe")).toHaveAttribute("data-analysis-run", "");
+    expect(screen.getByTestId("search-probe")).toHaveAttribute("data-tab", "");
+    expect(screen.getByTestId("book-chapter-shell")).toHaveAttribute("data-book-home", "false");
+    expect(screen.getByTestId("book-chapter-shell")).toHaveAttribute("data-active-tab", "text");
+    expect(screen.queryByTestId("book-home-catalog")).not.toBeInTheDocument();
+    expect(screen.getByTestId("shell-start-analysis")).toBeInTheDocument();
+  });
+
+  it("keeps reading when first chapter has historical journey and scene", async () => {
+    vi.mocked(analysisApi.runs).mockResolvedValue([
+      {
+        id: 88,
+        subject_id: "2",
+        status: "succeeded",
+        chapter_complete: true,
+        provider: "fake",
+        model: "fake",
+        created_at: "2026-01-01T00:00:00Z",
+      },
+    ] as any);
+    vi.mocked(analysisApi.run).mockResolvedValue({
+      id: 88,
+      subject_id: "2",
+      status: "succeeded",
+      chapter_complete: true,
+      provider: "fake",
+      model: "fake",
+      created_at: "2026-01-01T00:00:00Z",
+      completed_scene_count: 1,
+      total_scene_count: 1,
+    } as any);
+    vi.mocked(analysisApi.readerJourney).mockResolvedValue({
+      status: "succeeded",
+      journey_run_id: 9,
+      visualization: { scene_nodes: [{ scene_ordinal: 1 }] },
+    } as any);
+    renderBook("/books/1");
+    await waitFor(() => {
+      expect(screen.getByTestId("search-probe")).toHaveAttribute("data-chapter", "2");
+      expect(screen.getByTestId("search-probe")).toHaveAttribute("data-view", "reading");
+    });
+    expect(screen.getByTestId("search-probe")).toHaveAttribute("data-analysis-run", "");
+    expect(screen.getByTestId("book-chapter-shell")).toHaveAttribute("data-active-tab", "text");
     expect(screen.queryByTestId("workspace-journey-pane")).not.toBeInTheDocument();
+  });
+
+  it("shows structured empty state when book has no chapters", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        const href = String(url);
+        if (href.includes("/chapters")) {
+          return new Response(JSON.stringify([]), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        if (href.includes("/books/1") || href.match(/\/books\/\d+$/)) {
+          return new Response(
+            JSON.stringify({
+              id: 1,
+              title: "空书",
+              source_file_name: "a.txt",
+              created_at: "2026-01-01T00:00:00Z",
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          );
+        }
+        return new Response(JSON.stringify([]), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }),
+    );
+    renderBook("/books/1");
+    expect(await screen.findByTestId("book-no-chapters")).toBeInTheDocument();
+    expect(screen.getByTestId("book-no-chapters-reparse")).toBeInTheDocument();
+    expect(screen.getByTestId("book-no-chapters-diagnostics")).toBeInTheDocument();
+    expect(screen.getByTestId("book-no-chapters-back")).toBeInTheDocument();
+    expect(screen.getByTestId("search-probe")).toHaveAttribute("data-chapter", "");
+  });
+
+  it("top catalog control does not navigate to book-home intermediate page", async () => {
+    renderBook("/books/1?chapter=2&view=reading");
+    await waitFor(() => {
+      expect(screen.getByTestId("book-chapter-catalog")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByTestId("book-chapter-catalog"));
+    expect(screen.queryByTestId("book-home-catalog")).not.toBeInTheDocument();
+    expect(screen.getByTestId("search-probe")).toHaveAttribute("data-chapter", "2");
+    expect(await screen.findByTestId("chapter-catalog-drawer")).toBeInTheDocument();
   });
 
   it("reading settings and more menu include boundary review and tasks", () => {

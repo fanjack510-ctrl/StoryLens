@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { booksApi } from "../services/booksApi";
 import { analysisApi } from "../services/analysisApi";
@@ -26,10 +26,18 @@ function fileExtLabel(name?: string) {
   return m ? m[1].toUpperCase() : null;
 }
 
+function parsePositiveInt(value: string | null): number | null {
+  if (!value) return null;
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
 export function BookWorkspacePage() {
   const params = useParams();
   const bookId = Number(params.bookId || 1);
-  const [chapter, setChapter] = useState(0);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const chapterFromUrl = parsePositiveInt(searchParams.get("chapter"));
+  const [chapter, setChapter] = useState(chapterFromUrl || 0);
   const [selectedScene, setScene] = useState<any>();
   const [evidence, setEvidence] = useState<string[]>([]);
   const [dialog, setDialog] = useState(false);
@@ -51,14 +59,17 @@ export function BookWorkspacePage() {
     enabled: !!bookId,
   });
   useEffect(() => {
-    if (!chapter && chapters.data?.length)
-      setChapter(
-        (
-          chapters.data.find((item) => item.section_type === "chapter") ||
-          chapters.data[0]
-        ).id,
-      );
-  }, [chapters.data, chapter]);
+    if (chapterFromUrl && chapterFromUrl !== chapter) {
+      setChapter(chapterFromUrl);
+    }
+  }, [chapterFromUrl, chapter]);
+  useEffect(() => {
+    if (chapter || !chapters.data?.length) return;
+    if (chapterFromUrl) return;
+    const first =
+      chapters.data.find((item) => item.section_type === "chapter") || chapters.data[0];
+    if (first) setChapter(first.id);
+  }, [chapters.data, chapter, chapterFromUrl]);
   useEffect(() => {
     setOffset(0);
     setLoaded([]);
@@ -93,6 +104,19 @@ export function BookWorkspacePage() {
   );
   const formatLabel = fileExtLabel(book.data?.source_file_name);
   const chapterCount = chapters.data?.length;
+
+  const selectChapter = (id: number) => {
+    setChapter(id);
+    setSearchParams(
+      () => {
+        const next = new URLSearchParams();
+        next.set("chapter", String(id));
+        next.set("view", "reading");
+        return next;
+      },
+      { replace: false },
+    );
+  };
 
   useEffect(() => {
     if (!chapter || !chapterListRef.current) return;
@@ -188,7 +212,7 @@ export function BookWorkspacePage() {
                   type="button"
                   className={`workspace-chapter-item${chapter === c.id ? " selected" : ""}`}
                   data-chapter-id={c.id}
-                  onClick={() => setChapter(c.id)}
+                  onClick={() => selectChapter(c.id)}
                   key={c.id}
                   title={title}
                 >
