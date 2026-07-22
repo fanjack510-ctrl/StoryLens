@@ -1,9 +1,12 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useAppVersion } from "../../lib/useAppVersion";
+import { useProductEdition } from "../../hooks/useProductEdition";
 import { api } from "../../services/apiClient";
 import { isLocalWebShell, useRuntimeInfo } from "../../services/runtimeCapabilities";
 import { useUiStore } from "../../stores/uiStore";
+import { DocumentTitleSync } from "../product/DocumentTitleSync";
+import { ProductEditionBadge } from "../product/ProductEditionBadge";
 import { DevelopmentNavigationGroup } from "./DevelopmentNavigationGroup";
 
 const PRIMARY_NAV: Array<[string, string, string]> = [
@@ -25,10 +28,10 @@ function serviceLabel(health: {
 export function AppShell() {
   const navigate = useNavigate();
   const appVersion = useAppVersion();
+  const edition = useProductEdition();
   const { theme, setTheme } = useUiStore();
   const runtime = useRuntimeInfo();
   const webShell = isLocalWebShell(runtime.data);
-  const brandLabel = webShell ? "StoryLens · 本地网页版" : "StoryLens";
   const health = useQuery({
     queryKey: ["health"],
     queryFn: () => api<Record<string, string>>("/health"),
@@ -52,7 +55,9 @@ export function AppShell() {
       data-testid="app-shell"
       data-runtime-mode={runtime.data?.runtime_mode || "unknown"}
       data-shell={webShell ? "local-web" : "desktop"}
+      data-product-edition={edition.loaded ? edition.edition : "pending"}
     >
+      <DocumentTitleSync />
       <header className="app-topbar">
         <button
           type="button"
@@ -63,8 +68,17 @@ export function AppShell() {
           <span className="brand-mark" aria-hidden="true">
             SL
           </span>
-          <span className="brand-text">
-            <b data-testid="app-brand-label">{brandLabel}</b>
+          <span className="brand-text brand-text-row">
+            <b data-testid="app-brand-label" className="brand-label-row">
+              <span data-testid="app-brand-name">StoryLens</span>
+              <ProductEditionBadge edition={edition} />
+              {webShell ? (
+                <span className="brand-shell-sep" data-testid="app-shell-label">
+                  {" "}
+                  · 本地网页版
+                </span>
+              ) : null}
+            </b>
           </span>
         </button>
         <div className="context">小说叙事洞察与创作平台</div>
@@ -104,8 +118,29 @@ export function AppShell() {
             {service.text}
           </p>
           <DevelopmentNavigationGroup />
+          {edition.loaded ? (
+            <button
+              type="button"
+              className={`nav-edition-identity ${edition.is_pro ? "nav-edition-identity--pro" : ""}`}
+              data-testid="nav-edition-identity"
+              data-edition={edition.edition}
+              onClick={() => navigate("/settings?tab=license")}
+              title="打开授权与专业版"
+            >
+              {edition.product_line_name}
+            </button>
+          ) : (
+            <p className="nav-edition-identity nav-edition-identity--pending" data-testid="nav-edition-identity">
+              …
+            </p>
+          )}
+          {edition.user_error_message ? (
+            <p className="nav-edition-note" data-testid="nav-edition-error">
+              {edition.user_error_message}
+            </p>
+          ) : null}
           <p className="nav-version" data-testid="app-footer">
-            {webShell ? "本地网页版" : "StoryLens"} {appVersion}
+            {webShell ? "本地网页版" : "StoryLens"} · {appVersion}
           </p>
         </div>
       </aside>

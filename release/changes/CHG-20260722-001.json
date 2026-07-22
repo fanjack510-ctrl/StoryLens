@@ -64,7 +64,8 @@
   "technical_summary": "Ed25519 offline licenses with strict test/prod public-key isolation; production-only trust in formal runtimes; issuer scripts and release config checker.",
   "acceptance_criteria": [
     "Offline SLP1 activate unlocks Pro; canUseFeature gates; no private keys in repo",
-    "Formal runtimes reject test-dev keys with LICENSE_KEY_NOT_ALLOWED_IN_RUNTIME; no test pubkey fallback"
+    "Formal runtimes reject test-dev keys with LICENSE_KEY_NOT_ALLOWED_IN_RUNTIME; no test pubkey fallback",
+    "Pro identity visible in shell; activate updates without refresh; fail-closed free on entitlement error"
   ],
   "tests": [
     "pytest apps/api/tests/test_pro_license_local.py",
@@ -75,7 +76,8 @@
     "9 pytest passed; related vitest passed; typecheck/version/registry/diff-check passed; test activate+tamper+idempotent against test-dev-001",
     "18 local pytest passed; 8 vitest passed; typecheck/version/registry/diff-check passed; check_license_release_config.py --allow-pending-keys --allow-missing-commerce passed",
     "Production public key storylens-pro-1-prod-001 installed; check_license_release_config.py --allow-missing-commerce passed; 18 license pytest passed",
-    "Afdian product URL configured in production license config; openExternalUrl HTTPS hardening; check_license_release_config passed; 19 pytest + 13 vitest passed"
+    "Afdian product URL configured in production license config; openExternalUrl HTTPS hardening; check_license_release_config passed; 19 pytest + 13 vitest passed",
+    "Unified ProductEditionState in AppShell/topbar/sidebar/document.title; activate setQueryData for instant Pro; license page shows 后续开放; 25 related vitest + 10 pytest passed"
   ],
   "data_compatibility": {
     "database_changed": true,
@@ -92,5 +94,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-22T00:58:28Z",
-  "updated_at": "2026-07-22T02:28:20Z"
+  "updated_at": "2026-07-22T04:38:37Z"
 }

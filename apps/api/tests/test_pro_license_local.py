@@ -133,6 +133,20 @@ def test_free_edition_requires_pro(session: Session) -> None:
     assert gate["reason"] == "PRO_LICENSE_REQUIRED"
 
 
+def test_entitlement_snapshot_edition_fields(session: Session, keypair) -> None:
+    free = entitlement.entitlement_snapshot(session)
+    assert free["edition"] == "free"
+    assert free["pro_active"] is False
+    priv, key_id, _ = keypair
+    entitlement.activate_license_code(session, _code(priv, key_id))
+    pro = entitlement.entitlement_snapshot(session)
+    assert pro["edition"] == "pro"
+    assert pro["pro_active"] is True
+    # Re-read like process restart (same SQLite session content).
+    again = entitlement.entitlement_snapshot(session)
+    assert again["edition"] == "pro"
+
+
 def test_private_key_not_in_repo_config() -> None:
     prod = Path("config/license_public_keys.production.json").read_text(encoding="utf-8")
     assert "ed25519.priv" not in prod

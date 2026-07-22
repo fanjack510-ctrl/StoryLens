@@ -152,7 +152,7 @@ describe("UI shell navigation", () => {
     renderShell("/library");
     const footer = await screen.findByTestId("app-footer");
     await waitFor(() => {
-      expect(footer.textContent || "").toMatch(/StoryLens\s+\d+\.\d+\.\d+/);
+      expect(footer.textContent || "").toMatch(/StoryLens\s*·\s*\d+\.\d+\.\d+/);
     });
     expect(footer).not.toHaveTextContent("1.0.0-rc1");
     expect(footer).not.toHaveTextContent("0.1.0");

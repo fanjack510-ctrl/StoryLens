@@ -119,6 +119,9 @@ describe("StoryLens Pro entitlement UI", () => {
     await waitFor(() => {
       expect(screen.getByTestId("license-pro-active")).toBeInTheDocument();
     });
+    expect(screen.getByTestId("license-pro-status-heading")).toHaveTextContent("专业版已激活");
+    expect(screen.queryByText("StoryLens Pro 已激活")).not.toBeInTheDocument();
+    expect(screen.getAllByTestId("capability-pending").length).toBeGreaterThan(0);
   });
 
   it("maps activation failure codes", async () => {
