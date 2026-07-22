@@ -138,7 +138,7 @@ describe("Phase 1C-C.2.7 Context Inspector hierarchy", () => {
   it("limits Scene resident metrics to three", () => {
     render(<JourneySceneDetailPanel node={node9} onLocateEvidence={vi.fn()} />);
     const bars = screen.getByTestId("scene-detail-score-bars");
-    expect(within(bars).getByTestId("score-bar-engagement")).toBeInTheDocument();
+    expect(within(bars).getByTestId("score-bar-reading_momentum")).toBeInTheDocument();
     expect(within(bars).getByTestId("score-bar-curiosity")).toBeInTheDocument();
     expect(within(bars).getByTestId("score-bar-tension")).toBeInTheDocument();
     expect(within(bars).queryByTestId("score-bar-payoff")).not.toBeInTheDocument();

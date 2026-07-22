@@ -157,6 +157,8 @@ class SceneReaderJourneyProfileItemV2(BaseModel):
     include_in_main_curve: bool | None = None
     include_in_chapter_mean: bool | None = None
     data_quality_issue: str | None = None
+    # Persistence/integrity metadata written by pipeline; not model output.
+    source_context_fingerprint: str | None = None
 
     @field_validator("scene_value_summary")
     @classmethod

@@ -102,14 +102,18 @@ def setup_env(tmp_path, verified_cloud_pricing) -> Generator[tuple[TestClient, S
         with factory() as session:
             yield session
 
+    previous_overrides = dict(app.dependency_overrides)
     app.dependency_overrides[get_db] = override_db
     app.dependency_overrides[get_session_factory] = lambda: factory
     app.dependency_overrides[get_model_gateway] = lambda: ModelGateway([provider])
     app.dependency_overrides[get_credential_store] = lambda: store
-    with TestClient(app) as client, factory() as session:
-        yield client, session, store
-    app.dependency_overrides.clear()
-    engine.dispose()
+    try:
+        with TestClient(app) as client, factory() as session:
+            yield client, session, store
+    finally:
+        app.dependency_overrides.clear()
+        app.dependency_overrides.update(previous_overrides)
+        engine.dispose()
 
 
 def test_configure_persists_credential_and_enables_cloud(setup_env, monkeypatch) -> None:
@@ -169,7 +173,9 @@ def test_test_only_does_not_claim_saved_or_enable_cloud(setup_env, monkeypatch) 
     body = response.json()
     assert body["ok"] is True
     assert body["persisted"] is False
-    assert body.get("model_service_validated") is True
+    assert body["connection_status"] == "tested"
+    assert body.get("model_service_validated") is False
+    assert body.get("connection_ui_state") == "NOT_CONFIGURED"
     assert body.get("analysis_ready") is False
     assert "验证成功" in body["user_message"] or "保存配置后" in body["user_message"]
     assert store.get(CANONICAL_PROVIDER_ID) is None

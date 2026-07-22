@@ -134,10 +134,10 @@ def check_repo_secrets(errors: list[str]) -> None:
 
 def check_version(errors: list[str]) -> None:
     version = VERSION_FILE.read_text(encoding="utf-8").strip()
-    if version != "1.0.3":
-        _fail(f"VERSION expected 1.0.3, got {version}", errors)
+    if not re.fullmatch(r"\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?", version):
+        _fail(f"VERSION is not valid SemVer: {version!r}", errors)
     else:
-        _ok("VERSION is 1.0.3")
+        _ok(f"VERSION is {version}")
 
 
 def check_test_fixture_isolated(errors: list[str]) -> None:

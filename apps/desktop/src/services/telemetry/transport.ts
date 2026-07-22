@@ -10,10 +10,13 @@ export interface TelemetryTransport {
 
 export class NoopTelemetryTransport implements TelemetryTransport {
   async send(
-    _event: TelemetryEventName,
-    _properties: Record<string, TelemetryScalar>,
-    _distinctId: string,
+    event: TelemetryEventName,
+    properties: Record<string, TelemetryScalar>,
+    distinctId: string,
   ): Promise<void> {
+    void event;
+    void properties;
+    void distinctId;
     /* intentionally empty */
   }
 }

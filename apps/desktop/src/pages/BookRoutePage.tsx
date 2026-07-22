@@ -214,7 +214,7 @@ export function BookRoutePage() {
     );
   }, [
     analysisRunId,
-    progress.run?.id,
+    progress.run,
     progress.run?.subject_id,
     chapterId,
     setSearchParams,
@@ -303,7 +303,6 @@ export function BookRoutePage() {
     scopeMismatch: journeyScopeMismatch,
   });
   const activeTab = workspaceLayout.activeTab;
-  const isJourneyTab = activeTab === "journey";
 
   // Rewrite stale view=result bookmarks while Journey is still running (unless user pinned Scene).
   // Wait until the run row is loaded — never treat hydration as in-flight (would wipe deep-link tabs).
@@ -439,7 +438,7 @@ export function BookRoutePage() {
     seenBudgetModalRef.current.add(runId);
     setBudgetModalRunId(runId);
     setBudgetModalOpen(true);
-  }, [progress.uiState, progress.run?.id]);
+  }, [progress.uiState, progress.run]);
 
   const setView = (next: ChapterView, source: "user" | "system" = "user") => {
     if (source === "user") {

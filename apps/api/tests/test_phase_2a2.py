@@ -4,10 +4,6 @@ from fastapi.testclient import TestClient
 from sqlalchemy import func, select
 
 from app.db.models import AnalysisRun, Book, Chapter, Paragraph, ReparseAudit
-from app.db.session import get_db
-from app.main import app
-
-
 SOURCE = "书名：原创测试\n作者：测试者\n------章节内容开始-------\n第一章没有空格\n原创段落一。\n第二章继续\n原创段落二。"
 
 
@@ -18,6 +14,9 @@ def imported(client: TestClient) -> tuple[int, bytes]:
 
 
 def client_session():
+    from app.db.session import get_db
+    from app.main import app
+
     generator = app.dependency_overrides[get_db]()
     return generator, next(generator)
 

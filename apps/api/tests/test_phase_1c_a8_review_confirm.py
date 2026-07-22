@@ -13,6 +13,7 @@ from tests.test_phase_1c_a import seed
 
 
 def test_confirm_api_returns_pending_transition_ids(client, fake_provider):
+    """Legacy /confirm is blocked in confirm_only; incomplete stays on final-proposal path."""
     from app.db.session import get_session_factory
     from app.main import app
     from app.services.credentials.service import get_credential_store
@@ -91,7 +92,22 @@ def test_confirm_api_returns_pending_transition_ids(client, fake_provider):
     )
     assert denied.status_code == 409
     body = denied.json()
-    assert body["error_code"] == "BOUNDARY_REVIEW_INCOMPLETE"
-    assert body["pending_count"] == len(pending)
-    assert set(body["pending_transition_ids"]) == set(pending)
-    assert body["retryable"] is False
+    assert body["error_code"] == "CONFIRM_ONLY_MODE"
+    assert pending, "seed must leave at least one pending model candidate"
+
+    # Confirm-only path still surfaces incomplete/pending via service contract.
+    from app.services.boundary_review_service import BoundaryReviewIncomplete, confirm_review
+
+    with factory() as session:
+        from app.db.models import BoundaryReviewSession
+
+        review_row = session.get(BoundaryReviewSession, review_id)
+        try:
+            confirm_review(session, review_row, "tester")
+            raise AssertionError("expected BoundaryReviewIncomplete")
+        except BoundaryReviewIncomplete as raised:
+            assert raised.pending_count == len(pending)
+            assert set(raised.pending_transition_ids) == set(pending)
+            detail = raised.as_error_detail()
+            assert detail["error_code"] == "BOUNDARY_REVIEW_INCOMPLETE"
+            assert detail["retryable"] is False

@@ -144,9 +144,10 @@ def test_release_guard_mentions_missing_required_commit(tmp_path: Path) -> None:
 def test_repo_baseline_1_0_3_exists() -> None:
     path = ROOT / "docs" / "releases" / "1.0.3.md"
     assert path.is_file()
-    text = path.read_text(encoding="utf-8")
-    assert "Unreleased" in text
+    text = path.read_text(encoding="utf-8-sig")
     assert "1.0.3" in text
+    # Sealed release notes use Released; draft notes may still say Unreleased.
+    assert ("Released" in text) or ("Unreleased" in text)
 
 
 def test_updater_channels_documented() -> None:

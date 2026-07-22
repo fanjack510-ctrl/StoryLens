@@ -49,7 +49,10 @@ export function ConfirmBoundaryDivisionPanel({
   });
 
   const proposal = proposalQuery.data;
-  const paragraphs = proposal?.paragraphs || reviewQuery.data?.paragraphs || [];
+  const paragraphs = useMemo(
+    () => proposal?.paragraphs || reviewQuery.data?.paragraphs || [],
+    [proposal?.paragraphs, reviewQuery.data?.paragraphs],
+  );
   const sceneCount = proposal?.scene_count || 0;
   const title =
     proposal?.chapter_title || chapterTitle || reviewQuery.data?.chapter_title || "本章";

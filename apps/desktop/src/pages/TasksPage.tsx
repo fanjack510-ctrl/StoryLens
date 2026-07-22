@@ -280,16 +280,13 @@ export function TasksPage() {
   const [clientRequestId] = useState(
     () => globalThis.crypto?.randomUUID?.() || `recover-${Date.now()}`,
   );
-  const [sceneResumePreflight, setSceneResumePreflight] = useState<any>();
-  const [sceneResumeConsent, setSceneResumeConsent] = useState(false);
-  const [sceneResumeState, setSceneResumeState] = useState<SceneResumeState>("idle");
-  const [sceneResumeError, setSceneResumeError] = useState<RecoveryErrorView>();
-  const [offlineReplayState, setOfflineReplayState] = useState<OfflineReplayState>("idle");
-  const [offlineReplayMessage, setOfflineReplayMessage] = useState<string>();
-  const [offlineReplayError, setOfflineReplayError] = useState<RecoveryErrorView>();
-  const [sceneResumeClientId, setSceneResumeClientId] = useState(
-    () => globalThis.crypto?.randomUUID?.() || `scene-resume-${Date.now()}`,
-  );
+  const [, setSceneResumePreflight] = useState<any>();
+  const [, setSceneResumeConsent] = useState(false);
+  const [, setSceneResumeState] = useState<SceneResumeState>("idle");
+  const [, setSceneResumeError] = useState<RecoveryErrorView>();
+  const [, setOfflineReplayState] = useState<OfflineReplayState>("idle");
+  const [, setOfflineReplayMessage] = useState<string>();
+  const [, setOfflineReplayError] = useState<RecoveryErrorView>();
   const [navBusyRunId, setNavBusyRunId] = useState<number | null>(null);
   const qc = useQueryClient();
   const runs = useQuery({
@@ -400,138 +397,6 @@ export function TasksPage() {
     } catch (error) {
       setRecoveryError(toRecoveryError(error));
       setRecoveryState("failed");
-    }
-  };
-  const continueSceneAnalysis = async () => {
-    if (!detail) return;
-    if (sceneResumeState === "checking" || sceneResumeState === "resuming") return;
-    if (detail.offline_replay_available) {
-      setSceneResumeState("failed");
-      setSceneResumeError({
-        code: "OFFLINE_REPLAY_PREFERRED",
-        message: "已有可离线恢复的模型响应，请先离线重放，避免重复费用。",
-        hint: "点击「离线恢复失败Scene」；只有离线不可用时才继续云端调用。",
-        httpStatus: 409,
-        retryable: false,
-      });
-      return;
-    }
-    const attempts = detail.failed_scene_http_attempts ?? 0;
-    const maxAttempts = detail.scene_analysis_max_http_attempts ?? 4;
-    if (attempts >= maxAttempts) {
-      setSceneResumeState("failed");
-      setSceneResumeError({
-        code: "SCENE_ANALYSIS_ATTEMPT_LIMIT",
-        message: `失败Scene已达 HTTP 尝试上限（${attempts}/${maxAttempts}），拒绝再次付费调用。`,
-        hint: "请使用离线恢复，或查看失败Scene详情后再决定。",
-        httpStatus: 409,
-        retryable: false,
-      });
-      return;
-    }
-    if (!sceneResumeConsent) {
-      setSceneResumeState("failed");
-      setSceneResumeError({
-        code: "CLOUD_CONSENT_REQUIRED",
-        message: "尚未确认发送未完成Scene正文到云端。",
-        hint: "请勾选云端同意后再继续Scene Analysis。",
-        httpStatus: 422,
-        retryable: false,
-      });
-      return;
-    }
-    setSceneResumeError(undefined);
-    setSceneResumeState("checking");
-    try {
-      const fresh = await analysisApi.sceneAnalysisResumePreflight(detail.id, {
-        cloud_consent: true,
-      });
-      setSceneResumePreflight(fresh);
-      if (!fresh.eligible || !fresh.within_budget) {
-        setSceneResumeState("failed");
-        setSceneResumeError({
-          code: fresh.blockers?.includes("budget_unavailable") || !fresh.within_budget
-            ? "INSUFFICIENT_BUDGET_RESERVATION"
-            : "PROVIDER_NOT_ELIGIBLE",
-          message: !fresh.within_budget
-            ? (() => {
-                const need = fresh.worst_case_requests;
-                const left = fresh.remaining_budget?.requests;
-                if (typeof need === "number" && typeof left === "number") {
-                  return `请求不足：最多需要 ${need} 次，当前剩余 ${left} 次。`;
-                }
-                return BUDGET_ERROR_USER_COPY.INSUFFICIENT_BUDGET_RESERVATION;
-              })()
-            : `Provider ${fresh.provider_name} 当前不可用`,
-          hint: (fresh.blockers || [])
-            .map((item: string) => BLOCKER_LABELS[item] || item)
-            .join("；") || "请检查Provider与预算后重试",
-          httpStatus: 409,
-          retryable: Boolean(fresh.within_budget === false),
-          providerName: fresh.provider_name,
-          blockers: fresh.blockers,
-        });
-        return;
-      }
-      setSceneResumeState("resuming");
-      await analysisApi.resumeSceneAnalysis(detail.id, {
-        client_request_id: sceneResumeClientId,
-        cloud_consent: true,
-        confirmed: true,
-        provider_state_version: fresh.provider_state_version,
-      });
-      setSceneResumeState("done");
-      setHighlightRunId(detail.id);
-      setSceneResumeClientId(
-        globalThis.crypto?.randomUUID?.() || `scene-resume-${Date.now()}`,
-      );
-      await qc.invalidateQueries({ queryKey: ["runs"] });
-      const updated = await analysisApi.run(detail.id);
-      setDetail(updated);
-      window.setTimeout(() => setDetail(undefined), 900);
-    } catch (error) {
-      setSceneResumeState("failed");
-      setSceneResumeError(toRecoveryError(error));
-      try {
-        const updated = await analysisApi.run(detail.id);
-        setDetail(updated);
-        await qc.invalidateQueries({ queryKey: ["runs"] });
-      } catch {
-        /* keep existing detail */
-      }
-    }
-  };
-  const offlineReplayFailedScene = async () => {
-    if (!detail) return;
-    if (offlineReplayState === "replaying" || sceneResumeState === "resuming") return;
-    setOfflineReplayError(undefined);
-    setOfflineReplayMessage(undefined);
-    setOfflineReplayState("replaying");
-    try {
-      const result = await analysisApi.replaySceneAnalysisOffline(detail.id, {
-        scene_id: detail.failed_scene_id ?? detail.historical_failed_scene_id,
-        invocation_id: detail.historical_failed_invocation_id ?? detail.failed_invocation_id,
-        confirmed: true,
-        client_request_id: sceneResumeClientId,
-      });
-      setOfflineReplayState("succeeded");
-      setOfflineReplayMessage(result.message);
-      setHighlightRunId(detail.id);
-      await qc.invalidateQueries({ queryKey: ["runs"] });
-      const updated = await analysisApi.run(detail.id);
-      setDetail(updated);
-      setSceneResumePreflight(undefined);
-      if (updated.scene_analysis_resume_available) {
-        setSceneResumePreflight(
-          await analysisApi.sceneAnalysisResumePreflight(updated.id, { cloud_consent: true }),
-        );
-      }
-      if (result.remaining_scene_count === 0) {
-        window.setTimeout(() => setDetail(undefined), 900);
-      }
-    } catch (error) {
-      setOfflineReplayState("failed");
-      setOfflineReplayError(toRecoveryError(error));
     }
   };
   const continueFromCheckpoints = async () => {
@@ -720,55 +585,50 @@ export function TasksPage() {
     }
     return statusLabel[run.status] || "处理中";
   };
-  const matchesStatusFilter = (run: any): boolean => {
-    if (statusFilter === "all") return true;
-    if (statusFilter === "paused") {
-      return (
-        isBudgetPauseRun(run) ||
-        run.status === "awaiting_provider_recovery" ||
-        run.status === "boundary_confirmed_budget_blocked" ||
-        run.status === "aborted_by_limit" ||
-        run.effective_status === "partial_complete" ||
-        run.effective_status === "journey_failed"
-      );
-    }
-    if (statusFilter === "failed") {
-      return (
-        !isBudgetPauseRun(run) &&
-        ["failed", "failed_structural", "failed_provider"].includes(run.status)
-      );
-    }
-    if (statusFilter === "succeeded") {
-      return run.status === "succeeded" && run.chapter_complete === true;
-    }
-    if (statusFilter === "cancelled") {
-      return run.status === "cancelled" || run.status === "review_cancelled";
-    }
-    if (statusFilter === "running") {
-      return (
-        [
-          "queued",
-          "running",
-          "boundary_candidates_running",
-          "scene_analysis_running",
-          "awaiting_boundary_review",
-          "boundary_confirmed",
-          "scene_analysis_partial",
-          "boundary_candidates_partial",
-        ].includes(run.status) ||
-        run.effective_status === "journey_running"
-      );
-    }
-    return true;
-  };
-  const filteredRuns = useMemo(
-    () => (runs.data ?? []).filter(matchesStatusFilter),
-    [runs.data, statusFilter],
-  );
-  const sceneResumeBusy =
-    sceneResumeState === "checking" || sceneResumeState === "resuming";
-  const offlineReplayBusy = offlineReplayState === "replaying";
-  const needsOfflineReplayFirst = Boolean(detail?.offline_replay_available);
+  const filteredRuns = useMemo(() => {
+    const matchesStatusFilter = (run: any): boolean => {
+      if (statusFilter === "all") return true;
+      if (statusFilter === "paused") {
+        return (
+          isBudgetPauseRun(run) ||
+          run.status === "awaiting_provider_recovery" ||
+          run.status === "boundary_confirmed_budget_blocked" ||
+          run.status === "aborted_by_limit" ||
+          run.effective_status === "partial_complete" ||
+          run.effective_status === "journey_failed"
+        );
+      }
+      if (statusFilter === "failed") {
+        return (
+          !isBudgetPauseRun(run) &&
+          ["failed", "failed_structural", "failed_provider"].includes(run.status)
+        );
+      }
+      if (statusFilter === "succeeded") {
+        return run.status === "succeeded" && run.chapter_complete === true;
+      }
+      if (statusFilter === "cancelled") {
+        return run.status === "cancelled" || run.status === "review_cancelled";
+      }
+      if (statusFilter === "running") {
+        return (
+          [
+            "queued",
+            "running",
+            "boundary_candidates_running",
+            "scene_analysis_running",
+            "awaiting_boundary_review",
+            "boundary_confirmed",
+            "scene_analysis_partial",
+            "boundary_candidates_partial",
+          ].includes(run.status) ||
+          run.effective_status === "journey_running"
+        );
+      }
+      return true;
+    };
+    return (runs.data ?? []).filter(matchesStatusFilter);
+  }, [runs.data, statusFilter]);
   const showDetectionRecovery = Boolean(
     detail?.detection_recovery_available && detail?.remaining_detection_batch_count > 0,
   );

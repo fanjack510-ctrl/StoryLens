@@ -114,10 +114,13 @@ def bump_patch(version: str) -> str:
 
 
 def git(root: Path, *args: str, check: bool = False) -> subprocess.CompletedProcess[str]:
+    # Force UTF-8: commit subjects may contain arrows/CJK that break Windows locale (GBK).
     return subprocess.run(
         ["git", "-C", str(root), *args],
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         check=check,
     )
 

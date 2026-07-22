@@ -1,4 +1,4 @@
-import { getApiBase, setApiBase } from "./apiClient";
+import { setApiBase } from "./apiClient";
 
 export type BackendUiStatus =
   | { state: "browser_dev" }

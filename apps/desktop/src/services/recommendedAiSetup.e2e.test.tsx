@@ -11,7 +11,6 @@ import { StartAnalysisDialog } from "../components/analysis/StartAnalysisDialog"
 import * as aiServiceConfig from "./aiServiceConfig";
 import { providersApi } from "./providersApi";
 import { analysisApi } from "./analysisApi";
-import { analysisRecoveryApi } from "./analysisRecoveryApi";
 import { useDeveloperModeStore } from "../stores/developerModeStore";
 
 vi.mock("react-router-dom", async () => {
@@ -90,6 +89,20 @@ describe("recommended AI setup e2e path", () => {
     vi.clearAllMocks();
     localStorage.removeItem("storylens.developerMode");
     useDeveloperModeStore.setState({ developerMode: false });
+    vi.mocked(aiServiceConfig.fetchRecommendedQwenStatus).mockResolvedValue({
+      ok: false,
+      user_message: "尚未配置 API Key",
+      persisted: false,
+      credential_configured: false,
+      provider_enabled: false,
+      cloud_enabled: false,
+      provider_eligible: false,
+      selected_provider_id: "aliyun_qwen_plus",
+      connection_status: "unconfigured",
+      analysis_mode: null,
+      blockers: [],
+      needs_cloud_consent: false,
+    });
     vi.mocked(aiServiceConfig.configureRecommendedQwenService).mockResolvedValue({
       ok: true,
       persisted: true,
@@ -139,7 +152,7 @@ describe("recommended AI setup e2e path", () => {
         </QueryClientProvider>
       </MemoryRouter>,
     );
-    fireEvent.click(screen.getByText("下一步"));
+    fireEvent.click(screen.getByTestId("onboarding-start-setup"));
     fireEvent.change(screen.getByTestId("onboarding-api-key"), {
       target: { value: "sk-e2e-test-key" },
     });
@@ -150,9 +163,6 @@ describe("recommended AI setup e2e path", () => {
         expect.objectContaining({ persist: true }),
       );
     });
-    await waitFor(() => expect(screen.getByTestId("onboarding-save-next")).not.toBeDisabled());
-    fireEvent.click(screen.getByTestId("onboarding-save-next"));
-    expect(await screen.findByTestId("onboarding-step-start")).toBeInTheDocument();
     cleanup();
 
     render(

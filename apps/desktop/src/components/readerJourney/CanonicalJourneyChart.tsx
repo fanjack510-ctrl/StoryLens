@@ -136,7 +136,10 @@ export function CanonicalJourneyChart({
     if (!lensId) return null;
     return buildLensChartLines(visualization, lensId, { overlayComposite });
   }, [visualization, lensId, overlayComposite]);
-  const series = lensLines?.[0]?.series ?? visualization.curve_series[metric] ?? [];
+  const series = useMemo(
+    () => lensLines?.[0]?.series ?? visualization.curve_series[metric] ?? [],
+    [lensLines, visualization.curve_series, metric],
+  );
   const secondarySeries = lensLines && lensLines.length > 1 ? lensLines[1].series : null;
   const lensDef = lensId ? getObservationLens(lensId) : null;
 
@@ -192,13 +195,12 @@ export function CanonicalJourneyChart({
     [series, chartHeight, effectiveYMode, yScaleOptions],
   );
 
-  const warningDomain = yScaleOptions?.domainOverride
-    ? { min: yScaleOptions.domainOverride.min, max: yScaleOptions.domainOverride.max }
-    : { min: 0, max: 100 };
-  const warnings = useMemo(
-    () => collectDataWarnings(series, warningDomain),
-    [series, warningDomain.min, warningDomain.max],
-  );
+  const warnings = useMemo(() => {
+    const warningDomain = yScaleOptions?.domainOverride
+      ? { min: yScaleOptions.domainOverride.min, max: yScaleOptions.domainOverride.max }
+      : { min: 0, max: 100 };
+    return collectDataWarnings(series, warningDomain);
+  }, [series, yScaleOptions]);
 
   const xFor = useCallback(
     (ordinal: number) => xForSceneOrdinal(ordinal, sceneCount, chartWidth),

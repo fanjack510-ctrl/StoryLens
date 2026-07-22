@@ -69,7 +69,6 @@ export function UnifiedAnalysisRecoveryCard({
   });
 
   const plan = planQuery.data;
-  const checks = plan?.checks || [];
   const proposal = plan?.budget_authorization_proposal;
   const details = (plan?.details || {}) as Record<string, unknown>;
   const userError = (details.user_error || null) as UserErrorCopy | null;
@@ -94,6 +93,7 @@ export function UnifiedAnalysisRecoveryCard({
       : "当前进度已保存，可以稍后继续。";
 
   const checkRows = useMemo(() => {
+    const checks = plan?.checks || [];
     return checks
       .filter((c) => c.user_label && c.status !== "skip")
       .map((c) => {
@@ -110,7 +110,7 @@ export function UnifiedAnalysisRecoveryCard({
           label: `${c.user_label}${metrics}`,
         };
       });
-  }, [checks]);
+  }, [plan?.checks]);
 
   const needsAuthRedirect = (plan?.blockers || []).some(
     (b) =>

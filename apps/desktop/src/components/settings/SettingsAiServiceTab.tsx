@@ -294,8 +294,6 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
 
   const isDevRuntime =
     profile?.runtime_mode === "browser_dev" || profile?.runtime_mode === "desktop_dev";
-  const modelValidated =
-    uiState === "VERIFIED" || uiState === "CONSENT_REQUIRED" || uiState === "READY";
 
   return (
     <article className="settings-panel settings-module" data-testid="settings-panel-ai-service">

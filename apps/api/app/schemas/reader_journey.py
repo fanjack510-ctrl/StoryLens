@@ -318,6 +318,8 @@ class SceneReaderJourneyProfileItem(BaseModel):
     writing_takeaways: list[WritingTakeaway] = Field(default_factory=list, max_length=2)
     confidence: float = Field(ge=0, le=1)
     evidence_paragraph_ids: list[str] = Field(default_factory=list, max_length=16)
+    # Persistence/integrity metadata written by pipeline; not model output.
+    source_context_fingerprint: str | None = None
 
     @field_validator("scene_value_summary")
     @classmethod

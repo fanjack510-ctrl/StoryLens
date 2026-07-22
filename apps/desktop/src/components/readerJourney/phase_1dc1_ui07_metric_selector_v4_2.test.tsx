@@ -56,14 +56,6 @@ function renderWorkspace(viz = buildFixture13Scenes(), width = 1600) {
 }
 
 
-function openExportMenu() {
-  const more = screen.queryByTestId("journey-more-chart-settings");
-  if (more && !screen.queryByTestId("journey-export-png")) {
-    fireEvent.click(more);
-  }
-  return screen.getByTestId("journey-export-png");
-}
-
 describe("Reader Journey Metric Selector Overlay System v4.2", () => {
   afterEach(() => {
     cleanup();
@@ -218,12 +210,12 @@ describe("Reader Journey Metric Selector Overlay System v4.2", () => {
     expect(workspaceSource).not.toMatch(/MetricSelector[\s\S]{0,80}bookId\s*===/);
   });
 
-  it("shows current metric on trigger as 更多指标 · label", () => {
+  it("shows current metric on trigger as 指标 · label", () => {
     renderWorkspace();
     const trigger = screen.getByTestId("journey-metric-select");
-    expect(trigger).toHaveTextContent("更多指标");
+    expect(trigger).toHaveTextContent("指标");
     expect(trigger).toHaveTextContent("阅读牵引");
-    expect(trigger.textContent).toMatch(/更多指标\s*·\s*阅读牵引/);
+    expect(trigger.textContent).toMatch(/指标\s*：\s*阅读牵引/);
   });
 
   it("does not show source expand/collapse on the journey toolbar", () => {

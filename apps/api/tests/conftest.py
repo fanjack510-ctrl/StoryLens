@@ -7,10 +7,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.db.models import Base
-from app.db.session import get_db, get_session_factory
-from app.main import app
 from app.model_gateway.gateway import ModelGateway
-from app.model_gateway.registry import get_model_gateway
 from tests.fakes import FakeProvider
 from tests.optional_gates import (
     CLOUD_PRICING_PATH,
@@ -48,6 +45,10 @@ def testing_session(tmp_path):
 
 @pytest.fixture
 def client(tmp_path, fake_provider: FakeProvider) -> Generator[TestClient, None, None]:
+    from app.db.session import get_db, get_session_factory
+    from app.main import app
+    from app.model_gateway.registry import get_model_gateway
+
     engine = create_engine(
         f"sqlite:///{tmp_path / 'test.db'}", connect_args={"check_same_thread": False}
     )
@@ -58,10 +59,14 @@ def client(tmp_path, fake_provider: FakeProvider) -> Generator[TestClient, None,
         with testing_session() as session:
             yield session
 
+    previous_overrides = dict(app.dependency_overrides)
     app.dependency_overrides[get_db] = override_db
     app.dependency_overrides[get_session_factory] = lambda: testing_session
     app.dependency_overrides[get_model_gateway] = lambda: ModelGateway([fake_provider])
-    with TestClient(app) as test_client:
-        yield test_client
-    app.dependency_overrides.clear()
-    engine.dispose()
+    try:
+        with TestClient(app) as test_client:
+            yield test_client
+    finally:
+        app.dependency_overrides.clear()
+        app.dependency_overrides.update(previous_overrides)
+        engine.dispose()

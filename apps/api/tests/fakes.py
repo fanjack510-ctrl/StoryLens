@@ -261,16 +261,51 @@ class FakeProvider(ModelProvider):
                 raise value
             if isinstance(value, ModelResponse):
                 return value
+            if isinstance(value, (dict, list)):
+                return ModelResponse(
+                    text=json.dumps(value, ensure_ascii=False),
+                    model=self.default_model,
+                    http_status_code=200,
+                )
             return ModelResponse(text=str(value), model=self.default_model, http_status_code=200)
         combined = "\n".join(item["content"] for item in request.messages)
         paragraph_ids = list(dict.fromkeys(re.findall(r"B\d{4}-C\d{4}-P\d{4}", combined)))
         scene_ids = re.findall(r"B\d{4}-C\d{4}(?:-R\d{4})?-S\d{4}", combined)
         if not scene_ids:
             scene_ids = re.findall(r"B\d{4}-C\d{4}-S\d{4}", combined)
+        journeyish = (
+            "reader_journey_chapter" in combined
+            or "reader_journey_scene" in combined
+            or "章节阅读旅程" in combined
+            or "读者阅读旅程" in combined
+            or "JOURNEY_SCENE" in combined
+            or "scene_profiles" in combined
+            or "reading_momentum" in combined
+        )
         if "reader_journey_chapter" in combined or "章节阅读旅程合成" in combined:
             payload = self._reader_journey_chapter_payload(combined)
-        elif "reader_journey_scene" in combined or "读者阅读旅程" in combined:
+        elif journeyish:
             payload = self._reader_journey_scene_payload(combined)
+            # V2 prompts may omit regex-friendly scene blocks — synthesize from ordinals.
+            if not payload.get("profiles"):
+                ordinals = sorted(
+                    {int(item) for item in re.findall(r'"scene_ordinal"\s*:\s*(\d+)', combined)}
+                )
+                if not ordinals:
+                    ordinals = sorted(
+                        {int(item) for item in re.findall(r"Scene\s*(\d+)", combined, re.I)}
+                    )
+                if not ordinals:
+                    # Fall back to expected scene count hints in the prompt.
+                    count_match = re.search(r"(?:scenes?|场景)\s*[:=]?\s*(\d+)", combined, re.I)
+                    n = int(count_match.group(1)) if count_match else 2
+                    ordinals = list(range(1, n + 1))
+                paragraph_ids = paragraph_ids or ["B0001-C0001-P0001", "B0001-C0001-P0002"]
+                profiles = []
+                for ordinal in ordinals:
+                    chunk = paragraph_ids[:2]
+                    profiles.append(self._scene_profile_item(ordinal, ordinal, chunk))
+                payload = {"contract_version": "1.2", "profiles": profiles}
         elif "场景边界识别器" in combined or "boundary_candidate" in combined:
             payload = {
                 "chapter_id": paragraph_ids[0].rsplit("-P", 1)[0] if paragraph_ids else "B0001-C0001",

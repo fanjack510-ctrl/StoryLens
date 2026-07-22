@@ -5,7 +5,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BookRoutePage } from "./BookRoutePage";
 import { analysisApi } from "../services/analysisApi";
 import { booksApi } from "../services/booksApi";
-import { settingsApi } from "../services/settingsApi";
 
 vi.mock("../services/analysisApi", async () => {
   const actual = await vi.importActual<typeof import("../services/analysisApi")>(

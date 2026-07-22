@@ -12,7 +12,7 @@ import { buildFixture13Scenes } from "./mockVisualizationFixtures";
 import { formatMetricScoreLabel } from "./journeyUiLabels";
 
 const toolbarSource = readFileSync(resolve(__dirname, "./JourneyChartToolbar.tsx"), "utf8");
-const syncSource = readFileSync(resolve(__dirname, "./ReaderJourneySyncWorkspace.tsx"), "utf8");
+const modeSwitcherSource = readFileSync(resolve(__dirname, "./JourneyModeSwitcher.tsx"), "utf8");
 const shellSource = readFileSync(
   resolve(__dirname, "../layout/AppShell.tsx"),
   "utf8",
@@ -25,9 +25,9 @@ afterEach(() => {
 
 describe("Reader Journey UI cleanup local audit", () => {
   it("keeps top mode labels and removes source expand/collapse from toolbar", () => {
-    expect(syncSource).toMatch(/正文对照/);
-    expect(syncSource).toMatch(/旅程视图/);
-    expect(syncSource).toMatch(/仅看正文/);
+    expect(modeSwitcherSource).toMatch(/正文对照/);
+    expect(modeSwitcherSource).toMatch(/旅程视图/);
+    expect(modeSwitcherSource).toMatch(/仅看正文/);
     expect(toolbarSource).not.toMatch(/收起正文|展开正文/);
     expect(shellSource).toMatch(/小说叙事洞察与创作平台/);
     expect(shellSource).not.toMatch(/小说拆解工作台/);
@@ -88,7 +88,7 @@ describe("Reader Journey UI cleanup local audit", () => {
       </MemoryRouter>,
     );
     expect(screen.queryByTestId("journey-phase-current-badge")).not.toBeInTheDocument();
-    expect(screen.getByTestId("journey-phase-avg-2").textContent).toMatch(/牵引\s+\d+/);
+    expect(screen.getByTestId("journey-phase-avg-2").textContent).toMatch(/阅读动力\s+\d+/);
     expect(screen.getByTestId("journey-phase-2")).toHaveClass("active-phase");
   });
 });

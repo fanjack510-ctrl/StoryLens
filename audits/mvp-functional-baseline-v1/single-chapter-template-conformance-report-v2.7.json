@@ -774,23 +774,7 @@
     },
     {
       "path": "scripts/check_reader_journey_ui_freeze.py",
-      "line": 19,
-      "kind": "ui-baseline-id",
-      "category": "gate-script",
-      "snippet": "reader-journey-ui-final-v2.7",
-      "drift_risk": false
-    },
-    {
-      "path": "scripts/check_reader_journey_ui_freeze.py",
       "line": 2,
-      "kind": "version-2.7",
-      "category": "gate-script",
-      "snippet": "2.7",
-      "drift_risk": false
-    },
-    {
-      "path": "scripts/check_reader_journey_ui_freeze.py",
-      "line": 19,
       "kind": "version-2.7",
       "category": "gate-script",
       "snippet": "2.7",
@@ -854,7 +838,7 @@
     },
     {
       "path": "scripts/check_single_chapter_journey_template.py",
-      "line": 461,
+      "line": 463,
       "kind": "ui-baseline-id",
       "category": "gate-script",
       "snippet": "reader-journey-ui-final-v2.7",
@@ -958,7 +942,7 @@
     },
     {
       "path": "scripts/check_single_chapter_journey_template.py",
-      "line": 461,
+      "line": 463,
       "kind": "version-2.7",
       "category": "gate-script",
       "snippet": "2.7",
@@ -1171,6 +1155,10 @@
     ],
     "unexpected_workspace_importers": [],
     "sync_importers": [
+      {
+        "path": "apps/desktop/src/components/readerJourney/WorkspaceJourneyPane.tsx",
+        "imports_sync": true
+      },
       {
         "path": "apps/desktop/src/pages/AnalysisResultsPage.tsx",
         "imports_sync": true
@@ -1933,23 +1921,7 @@
       },
       {
         "path": "scripts/check_reader_journey_ui_freeze.py",
-        "line": 19,
-        "kind": "ui-baseline-id",
-        "category": "gate-script",
-        "snippet": "reader-journey-ui-final-v2.7",
-        "drift_risk": false
-      },
-      {
-        "path": "scripts/check_reader_journey_ui_freeze.py",
         "line": 2,
-        "kind": "version-2.7",
-        "category": "gate-script",
-        "snippet": "2.7",
-        "drift_risk": false
-      },
-      {
-        "path": "scripts/check_reader_journey_ui_freeze.py",
-        "line": 19,
         "kind": "version-2.7",
         "category": "gate-script",
         "snippet": "2.7",
@@ -2013,7 +1985,7 @@
       },
       {
         "path": "scripts/check_single_chapter_journey_template.py",
-        "line": 461,
+        "line": 463,
         "kind": "ui-baseline-id",
         "category": "gate-script",
         "snippet": "reader-journey-ui-final-v2.7",
@@ -2117,7 +2089,7 @@
       },
       {
         "path": "scripts/check_single_chapter_journey_template.py",
-        "line": 461,
+        "line": 463,
         "kind": "version-2.7",
         "category": "gate-script",
         "snippet": "2.7",

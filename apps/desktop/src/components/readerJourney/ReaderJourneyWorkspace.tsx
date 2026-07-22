@@ -22,7 +22,6 @@ import { JourneyDetailErrorBoundary } from "./JourneyDetailErrorBoundary";
 import {
   clampViewWindow,
   focusPhaseWindow,
-  metricValueOrZero,
   resolveMetricValue,
   zoomViewWindow,
 } from "./journeyChartScales";
@@ -48,7 +47,6 @@ import {
   formatLensPhaseScoreLabel,
   phaseAverageForLens,
   resolveLensMetricBinding,
-  seriesValueAtOrdinal,
 } from "./lensMetricBinding";
 import type { SceneDiagnosisLike } from "./diagnosisBandModel";
 import {
@@ -63,7 +61,7 @@ import {
   JourneyQuestionInspectorPanel,
   JourneySceneDetailPanel,
 } from "./JourneySceneDetailPanel";
-import { roleLabelZh, formatJourneyPhaseLabel, resolvePhaseSummaryDisplay, formatJourneyScore, formatJourneySceneLabel, formatJourneyMetricLabel, formatPhaseMetricScoreLabel, formatJourneyRiskSummary, formatJourneyRiskTypeLabel } from "./journeyUiLabels";
+import { roleLabelZh, formatJourneyPhaseLabel, resolvePhaseSummaryDisplay, formatJourneySceneLabel } from "./journeyUiLabels";
 import {
   CANONICAL_OVERVIEW_MODE,
   OVERVIEW_MODE_PARAM,
@@ -163,10 +161,6 @@ type Props = {
   onSourceCollapsedChange?: (collapsed: boolean) => void;
 };
 
-function metricValue(point: { value?: number; start?: number; end?: number }): number {
-  return metricValueOrZero(point);
-}
-
 function riskIntervalLabel(interval: {
   start_scene_ordinal: number;
   end_scene_ordinal: number;
@@ -220,7 +214,6 @@ export function ReaderJourneyWorkspace({
   journeyRunId: journeyRunIdProp,
   sourcePane,
   sourceCollapsed: sourceCollapsedProp,
-  onSourceCollapsedChange,
 }: Props) {
   const workspaceRef = useRef<HTMLDivElement>(null);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -248,7 +241,7 @@ export function ReaderJourneyWorkspace({
   const [inspectorCollapsed, setInspectorCollapsed] = useState(() =>
     readLocalPref<boolean>(UI_PREF_KEYS.inspectorCollapsed, true),
   );
-  const [sourceCollapsedInternal, setSourceCollapsedInternal] = useState(() =>
+  const [sourceCollapsedInternal] = useState(() =>
     readLocalPref<boolean>(UI_PREF_KEYS.sourceCollapsed, false),
   );
   const [insightExpanded, setInsightExpanded] = useState(() =>
@@ -465,7 +458,10 @@ export function ReaderJourneyWorkspace({
 
   const phaseStripRef = useRef<HTMLDivElement>(null);
   const chartHeight = chartHeightPx(heightPreset);
-  const series = visualization.curve_series[metric] ?? [];
+  const series = useMemo(
+    () => visualization.curve_series[metric] ?? [],
+    [visualization.curve_series, metric],
+  );
 
   const initialView = defaultViewWindow(sceneCount);
   const urlXStart = Number(searchParams.get(URL_CHART_PARAMS.xStart));
@@ -539,19 +535,6 @@ export function ReaderJourneyWorkspace({
       return;
     }
     setInspectorCollapsedPref(!inspectorCollapsed);
-  };
-
-  const setSourceCollapsedPref = (collapsed: boolean) => {
-    if (onSourceCollapsedChange) {
-      onSourceCollapsedChange(collapsed);
-    } else {
-      setSourceCollapsedInternal(collapsed);
-    }
-    writeLocalPref(UI_PREF_KEYS.sourceCollapsed, collapsed);
-  };
-
-  const handleToggleSource = () => {
-    setSourceCollapsedPref(!sourceCollapsed);
   };
 
   const expandInspector = () => setInspectorCollapsedPref(false);
@@ -807,22 +790,6 @@ export function ReaderJourneyWorkspace({
       setExportMessage(exportErrorMessage(error));
     }
   };
-
-  const selectedMetricValue =
-    selectedSceneOrdinal != null
-      ? (() => {
-          const fromLens = seriesValueAtOrdinal(
-            visualization,
-            observationLens,
-            selectedSceneOrdinal,
-          );
-          if (fromLens != null) return Math.round(fromLens);
-          const resolved = resolveMetricValue(
-            series.find((point) => point.scene_ordinal === selectedSceneOrdinal),
-          );
-          return resolved == null ? null : Math.round(resolved);
-        })()
-      : null;
 
   const selectedPhaseData = useMemo(
     () => visualization.phases.find((item) => item.ordinal === selectedPhase) ?? null,

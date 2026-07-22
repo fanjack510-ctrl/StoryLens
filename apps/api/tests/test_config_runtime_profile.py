@@ -71,14 +71,18 @@ def profile_client(tmp_path) -> Generator[TestClient, None, None]:
         with factory() as session:
             yield session
 
+    previous_overrides = dict(app.dependency_overrides)
     app.dependency_overrides[get_db] = override_db
     app.dependency_overrides[get_session_factory] = lambda: factory
     app.dependency_overrides[get_model_gateway] = lambda: ModelGateway([])
     app.dependency_overrides[get_credential_store] = lambda: store
-    with TestClient(app) as client:
-        yield client
-    app.dependency_overrides.clear()
-    engine.dispose()
+    try:
+        with TestClient(app) as client:
+            yield client
+    finally:
+        app.dependency_overrides.clear()
+        app.dependency_overrides.update(previous_overrides)
+        engine.dispose()
 
 
 def test_config_profile_endpoint_omits_secrets(profile_client):

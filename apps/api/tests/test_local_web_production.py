@@ -1,18 +1,59 @@
-"""Local tests for StoryLens local web production mode (CHG-20260721-015)."""
+﻿"""Local tests for StoryLens local web production mode (CHG-20260721-015)."""
 
 from __future__ import annotations
 
-import importlib
 import json
 import os
 from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
 
-def _reload_app(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, **env: str):
-    """Reload app.main with isolated data dir and web env."""
+def _set_database_url_from_layout() -> None:
+    from app.core.paths import ensure_user_data_dirs
+
+    layout = ensure_user_data_dirs()
+    db_path = (layout["database"] / "storylens.db").resolve()
+    os.environ["STORYLENS_DATABASE_URL"] = f"sqlite:///{db_path.as_posix()}"
+
+
+def _refresh_app_runtime_bindings() -> None:
+    """Point session/engine at current env without reloading modules (keeps Depends identities)."""
+    from app.core import paths
+    import app.core.config as config_mod
+    import app.db.session as session_mod
+
+    paths.user_data_root.cache_clear()
+    config_mod.get_settings.cache_clear()
+    _set_database_url_from_layout()
+    config_mod.get_settings.cache_clear()
+    settings = config_mod.get_settings()
+
+    session_mod.settings = settings
+    session_mod.engine.dispose()
+    session_mod._ensure_sqlite_parent(settings.database_url)
+    connect_args = (
+        {"check_same_thread": False} if settings.database_url.startswith("sqlite") else {}
+    )
+    engine = create_engine(settings.database_url, connect_args=connect_args)
+    session_mod.engine = engine
+    session_mod.SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
+
+
+def _ensure_spa_mounted(app) -> None:
+    if getattr(app.state, "storylens_spa_mounted", False):
+        return
+    from app.services.spa_static import mount_spa
+
+    mount_spa(app)
+    app.state.storylens_spa_mounted = True
+
+
+def _configure_web_app(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, **env: str):
+    """Configure env + DB bindings for local web production tests (no importlib.reload)."""
     monkeypatch.setenv("STORYLENS_DATA_DIR", str(tmp_path / "data"))
     monkeypatch.setenv("STORYLENS_DISABLE_INSTANCE_LOCK", "1")
     monkeypatch.setenv("STORYLENS_WEB_MODE", "1")
@@ -22,21 +63,30 @@ def _reload_app(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, **env: str):
     for key, value in env.items():
         monkeypatch.setenv(key, value)
 
-    # Clear cached path resolution
-    from app.core import paths
+    _refresh_app_runtime_bindings()
+    from app.main import app
 
-    paths.user_data_root.cache_clear()
+    _ensure_spa_mounted(app)
+    return app
 
-    import app.core.config as config_mod
 
-    config_mod.get_settings.cache_clear()
+@pytest.fixture()
+def _restore_app_runtime_after_web_tests():
+    """Restore default runtime env + DB bindings after web production tests."""
+    yield
+    for key in (
+        "STORYLENS_DATA_DIR",
+        "STORYLENS_DISABLE_INSTANCE_LOCK",
+        "STORYLENS_WEB_MODE",
+        "STORYLENS_APP_ENV",
+        "STORYLENS_SERVE_FRONTEND",
+        "STORYLENS_WEB_PORT",
+        "STORYLENS_FRONTEND_DIST",
+        "STORYLENS_DATABASE_URL",
+    ):
+        os.environ.pop(key, None)
 
-    import app.db.session as session_mod
-    import app.main as main_mod
-
-    importlib.reload(session_mod)
-    importlib.reload(main_mod)
-    return main_mod.app
+    _refresh_app_runtime_bindings()
 
 
 @pytest.fixture()
@@ -53,8 +103,13 @@ def web_dist(tmp_path: Path) -> Path:
 
 
 @pytest.fixture()
-def web_client(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, web_dist: Path):
-    app = _reload_app(
+def web_client(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    web_dist: Path,
+    _restore_app_runtime_after_web_tests,
+):
+    app = _configure_web_app(
         monkeypatch,
         tmp_path,
         STORYLENS_FRONTEND_DIST=str(web_dist),

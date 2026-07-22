@@ -117,6 +117,45 @@ export function JourneySceneDetailPanel({
     // Keep tab across Scene switches.
   }, [node.scene_ordinal]);
 
+  const evidenceRows = useMemo(() => {
+    const rows: EvidenceRow[] = [];
+    const push = (ids: string[] | undefined, conclusion: string, kind: string) => {
+      for (const paragraphId of ids ?? []) {
+        if (!paragraphId) continue;
+        rows.push({ paragraphId, conclusion, kind });
+      }
+    };
+    push(node.evidence_paragraph_ids, "场景结论", "scene");
+    for (const q of node.reader_question_created ?? []) {
+      push(q.evidence_paragraph_ids, q.question ?? "问题", "question");
+    }
+    for (const q of node.reader_question_answered ?? []) {
+      push(q.evidence_paragraph_ids, q.question ?? "回答", "question");
+    }
+    for (const p of node.payoffs ?? []) {
+      push(p.evidence_paragraph_ids, p.summary ?? "回报", "payoff");
+    }
+    for (const h of node.hooks ?? []) {
+      push(h.evidence_paragraph_ids, h.summary ?? "钩子", "hook");
+    }
+    if (node.primary_hook) {
+      push(node.primary_hook.evidence_paragraph_ids, node.primary_hook.summary ?? "主钩子", "hook");
+    }
+    for (const t of node.techniques ?? []) {
+      push(t.evidence_paragraph_ids, t.name ?? "技法", "technique");
+    }
+    for (const r of node.risk_points ?? []) {
+      push(r.evidence_paragraph_ids, r.summary ?? "流失风险", "risk");
+    }
+    const seen = new Set<string>();
+    return rows.filter((row) => {
+      const key = `${row.paragraphId}|${row.kind}|${row.conclusion}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [node]);
+
   if ((node as { integrity_blocked?: boolean }).integrity_blocked) {
     return (
       <JourneyInspectorShell testId="journey-scene-integrity-blocked">
@@ -157,45 +196,6 @@ export function JourneySceneDetailPanel({
       </JourneyInspectorShell>
     );
   }
-
-  const evidenceRows = useMemo(() => {
-    const rows: EvidenceRow[] = [];
-    const push = (ids: string[] | undefined, conclusion: string, kind: string) => {
-      for (const paragraphId of ids ?? []) {
-        if (!paragraphId) continue;
-        rows.push({ paragraphId, conclusion, kind });
-      }
-    };
-    push(node.evidence_paragraph_ids, "场景结论", "scene");
-    for (const q of node.reader_question_created ?? []) {
-      push(q.evidence_paragraph_ids, q.question ?? "问题", "question");
-    }
-    for (const q of node.reader_question_answered ?? []) {
-      push(q.evidence_paragraph_ids, q.question ?? "回答", "question");
-    }
-    for (const p of node.payoffs ?? []) {
-      push(p.evidence_paragraph_ids, p.summary ?? "回报", "payoff");
-    }
-    for (const h of node.hooks ?? []) {
-      push(h.evidence_paragraph_ids, h.summary ?? "钩子", "hook");
-    }
-    if (node.primary_hook) {
-      push(node.primary_hook.evidence_paragraph_ids, node.primary_hook.summary ?? "主钩子", "hook");
-    }
-    for (const t of node.techniques ?? []) {
-      push(t.evidence_paragraph_ids, t.name ?? "技法", "technique");
-    }
-    for (const r of node.risk_points ?? []) {
-      push(r.evidence_paragraph_ids, r.summary ?? "流失风险", "risk");
-    }
-    const seen = new Set<string>();
-    return rows.filter((row) => {
-      const key = `${row.paragraphId}|${row.kind}|${row.conclusion}`;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-  }, [node]);
 
   const hasQuestions =
     (node.reader_question_in?.length ?? 0) +

@@ -132,7 +132,7 @@ export function resolveChapterWorkspaceView(args: {
   inFlight: boolean;
   composition: ChapterAnalysisUiState;
 }): WorkspaceView {
-  const { requestedView, userPinnedView, chapterComplete, inFlight, composition } = args;
+  const { requestedView, userPinnedView, chapterComplete, inFlight } = args;
 
   // Stale bookmarks: view=result while journey still running → restore workspace.
   if (

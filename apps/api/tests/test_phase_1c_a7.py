@@ -341,7 +341,29 @@ def test_clone_checkpoints_records_source_without_rewriting_old_run(testing_sess
 
 
 def test_accepting_conflict_preserves_manual_source(testing_session):
+    from app.services.boundary_review_service import (
+        confirm_review_from_final_proposal,
+        create_review_session,
+    )
+    from app.services.final_boundary_proposal import build_final_boundary_proposal
+    from app.db.models import Paragraph
+
     _, _, _, run = seed_run(testing_session)
+    # Longer body so short-fragment consolidation keeps the accepted conflict cut.
+    paragraphs = list(
+        testing_session.scalars(
+            select(Paragraph)
+            .where(Paragraph.chapter_id == int(run.subject_id))
+            .order_by(Paragraph.paragraph_index)
+        )
+    )
+    for index, paragraph in enumerate(paragraphs, start=1):
+        long_text = f"这是用于冲突边界确认的较长正文段落内容{index}。" * 8
+        paragraph.raw_text = long_text
+        paragraph.normalized_text = long_text
+        paragraph.char_end = paragraph.char_start + len(long_text)
+    testing_session.commit()
+
     plan = planned_detection_batches(testing_session, run)[0]
     ids = list(plan.batch.owned_transition_ids)
     parsed = CompactTransitionClassificationResultV35.model_validate_json(
@@ -356,7 +378,6 @@ def test_accepting_conflict_preserves_manual_source(testing_session):
         validation=validate_candidate_detection_for_review(parsed.decisions, ids),
         status="conflicted_completed",
     )
-    from app.services.boundary_review_service import create_review_session
 
     review = create_review_session(testing_session, run)
     conflict = testing_session.scalar(
@@ -367,8 +388,19 @@ def test_accepting_conflict_preserves_manual_source(testing_session):
     conflict.user_decision = "accept"
     conflict.manual_reason_type = "other_manual_boundary"
     conflict.user_reason = "人工确认叙事单元在此结束"
-    revision, _scenes = confirm_review(testing_session, review, "reviewer")
+    testing_session.commit()
+
+    proposal = build_final_boundary_proposal(testing_session, review)
+    assert proposal.validation_status == "valid"
+    revision, _scenes, replay = confirm_review_from_final_proposal(
+        testing_session,
+        review,
+        confirmed_by="reviewer",
+        proposal_fingerprint=proposal.proposal_fingerprint,
+    )
+    assert replay is False
     payload = json.loads(revision.final_boundaries_json)
+    assert payload, "accepted conflict cut must survive consolidation"
     assert payload[0]["source"] == "user_accepted_model_conflict"
     assert conflict.manual_reason_type == "other_manual_boundary"
 
