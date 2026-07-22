@@ -11,6 +11,12 @@
       "message": "Simplify first-launch onboarding to two steps (CHG-20260722-002).",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "5c847ce2d1f65afe0c33773313f183b1bcf5aca0",
+      "message": "Mark CHG-20260722-002 tested after onboarding polish.",
+      "primary": false,
+      "multi_change_reason": "status mark"
     }
   ],
   "modules": [
@@ -45,5 +51,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-22T00:58:58Z",
-  "updated_at": "2026-07-22T01:02:23Z"
+  "updated_at": "2026-07-22T01:02:24Z"
 }
