@@ -35,6 +35,12 @@
       "message": "Configure Afdian Pro purchase URL with HTTPS-only open guard (CHG-20260722-001).",
       "primary": false,
       "multi_change_reason": "afdian product URL"
+    },
+    {
+      "sha": "e4a830d8459e8f1a29f37ac214de0c55ebdf7ff7",
+      "message": "Show StoryLens free/Pro identity across app shell (CHG-20260722-001).",
+      "primary": false,
+      "multi_change_reason": "product edition identity UI"
     }
   ],
   "modules": [
