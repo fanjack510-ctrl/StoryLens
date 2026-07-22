@@ -63,6 +63,14 @@ vi.mock("../components/chapterResult/AnalysisResultRouteAdapter", () => ({
   ),
 }));
 
+vi.mock("../components/chapterResult/EmbeddedAnalysisResultShell", () => ({
+  EmbeddedAnalysisResultShell: ({ runId }: { runId: number }) => (
+    <div data-testid="embedded-analysis-result" data-run-id={runId}>
+      embedded-run:{runId}
+    </div>
+  ),
+}));
+
 vi.mock("../components/analysis/StartAnalysisDialog", () => ({
   StartAnalysisDialog: ({
     onCreated,
@@ -380,7 +388,7 @@ describe("Book chapter shell", () => {
       sends_content_to_cloud: true,
       retryable: false,
       created_at: "2026-01-01T00:00:00Z",
-      completed_at: "2026-01-01T00:05:00Z",
+      completed_at: null,
       chapter_complete: false,
       effective_status: "partial_complete",
       reusable_checkpoint_count: 0,
@@ -395,26 +403,30 @@ describe("Book chapter shell", () => {
       visualization: null,
     } as any);
 
+    // Stale view=result while incomplete → restore progress workspace.
     renderBook("/books/1?chapter=2&analysisRun=77&view=result");
     await waitFor(() => {
-      expect(screen.getByTestId("embedded-analysis-result")).toBeInTheDocument();
+      expect(screen.getByTestId("book-chapter-shell")).toHaveAttribute("data-view", "progress");
     });
-    fireEvent.click(screen.getByTestId("book-view-reading"));
+    expect(screen.getByTestId("chapter-analysis-progress")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("workspace-tab-reading"));
     await waitFor(() => {
       expect(screen.getByTestId("book-chapter-shell")).toHaveAttribute("data-view", "reading");
     });
     expect(screen.getByTestId("chapter-analysis-scene-complete-banner")).toBeInTheDocument();
     expect(screen.queryByTestId("chapter-analysis-complete-banner")).not.toBeInTheDocument();
     expect(screen.getByTestId("book-chapter-shell")).toHaveAttribute("data-analysis-run", "77");
-    expect(screen.queryByTestId("chapter-analysis-progress")).not.toBeInTheDocument();
+    expect(screen.getByTestId("chapter-analysis-progress")).toBeInTheDocument();
     fireEvent.click(screen.getByTestId("book-view-result"));
     await waitFor(() => {
       expect(screen.getByTestId("book-chapter-shell")).toHaveAttribute("data-view", "result");
     });
+    expect(screen.getByTestId("embedded-analysis-result")).toBeInTheDocument();
+    expect(screen.getByTestId("chapter-analysis-progress")).toBeInTheDocument();
     expect(analysisApi.createReaderJourney).not.toHaveBeenCalled();
   });
 
-  it("restores result view and journey tab from URL without creating journey", async () => {
+  it("keeps complete chapter view=result Scene links working", async () => {
     vi.mocked(analysisApi.run).mockResolvedValue({
       id: 55,
       subject_id: "2",
@@ -429,6 +441,8 @@ describe("Book chapter shell", () => {
       retryable: false,
       created_at: "2026-01-01T00:00:00Z",
       completed_at: "2026-01-01T00:05:00Z",
+      chapter_complete: true,
+      effective_status: "completed",
       reusable_checkpoint_count: 0,
       conflicted_checkpoint_count: 0,
       checkpoint_total_count: 0,
@@ -547,12 +561,19 @@ describe("Book chapter shell", () => {
       retryable: false,
       created_at: "2026-01-01T00:00:00Z",
       completed_at: "2026-01-01T00:05:00Z",
+      chapter_complete: true,
+      effective_status: "completed",
       reusable_checkpoint_count: 0,
       conflicted_checkpoint_count: 0,
       checkpoint_total_count: 0,
       checkpoint_available: false,
       completed_scene_count: 14,
       total_scene_count: 14,
+    } as any);
+    vi.mocked(analysisApi.readerJourney).mockResolvedValue({
+      status: "succeeded",
+      journey_run_id: 9,
+      visualization: { scene_nodes: [] },
     } as any);
     renderBook("/books/1?chapter=2&analysisRun=77&view=result");
     await waitFor(() => {

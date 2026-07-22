@@ -78,6 +78,90 @@ export function isChapterAnalysisComplete(run: Run | null | undefined): boolean 
   return false;
 }
 
+/**
+ * True while the chapter pipeline is still open (including scene-succeeded /
+ * journey-pending). View must not treat this as a finished chapter.
+ */
+export function isChapterAnalysisInFlight(
+  run: Run | null | undefined,
+  composition?: ChapterAnalysisUiState,
+): boolean {
+  if (!run) return false;
+  if (isChapterAnalysisComplete(run)) return false;
+  if (composition === "succeeded" || composition === "cancelled") return false;
+  if (composition === "failed" && run.chapter_complete === true) return false;
+
+  if (
+    composition === "awaiting_reader_journey_start" ||
+    composition === "reader_journey_processing" ||
+    composition === "running" ||
+    composition === "creating" ||
+    composition === "partial" ||
+    composition === "boundary_review_required" ||
+    composition === "provider_recovery" ||
+    composition === "awaiting_budget_adjustment" ||
+    composition === "aborted_by_limit"
+  ) {
+    return true;
+  }
+
+  if (run.status === "succeeded" && run.chapter_complete !== true) return true;
+  if (
+    run.effective_status === "partial_complete" ||
+    run.effective_status === "journey_running" ||
+    run.effective_status === "journey_failed"
+  ) {
+    return true;
+  }
+  if (String(run.current_stage || "").startsWith("reader_journey")) return true;
+  return false;
+}
+
+export type WorkspaceView = "reading" | "progress" | "result";
+
+/**
+ * Decide BookRoutePage shell view. Run completeness is never inferred from view.
+ *
+ * Priority: in-flight pipeline (unless user pinned a view) → explicit user view →
+ * full chapter result → default reading.
+ */
+export function resolveChapterWorkspaceView(args: {
+  requestedView: string | null;
+  userPinnedView: WorkspaceView | null;
+  chapterComplete: boolean;
+  inFlight: boolean;
+  composition: ChapterAnalysisUiState;
+}): WorkspaceView {
+  const { requestedView, userPinnedView, chapterComplete, inFlight, composition } = args;
+
+  // Stale bookmarks: view=result while journey still running → restore workspace.
+  if (
+    inFlight &&
+    requestedView === "result" &&
+    userPinnedView !== "result"
+  ) {
+    return "progress";
+  }
+
+  if (userPinnedView === "reading" || userPinnedView === "result" || userPinnedView === "progress") {
+    if (userPinnedView === "result" && inFlight) return "result"; // manual Scene browse
+    if (userPinnedView === "reading") return "reading";
+    if (userPinnedView === "progress") return "progress";
+    if (userPinnedView === "result" && chapterComplete) return "result";
+  }
+
+  if (requestedView === "reading" || requestedView === "progress" || requestedView === "result") {
+    if (requestedView === "result" && inFlight && userPinnedView !== "result") {
+      return "progress";
+    }
+    return requestedView;
+  }
+
+  if (inFlight) return "progress";
+  if (chapterComplete || composition === "succeeded") return "result";
+  return "reading";
+}
+
 export function journeyClientRequestKey(runId: number): string {
   return `storylens.readerJourney.clientRequest.${runId}`;
 }

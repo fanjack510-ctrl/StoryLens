@@ -23,21 +23,29 @@
     "apps/api/app/services/scene_pipeline.py",
     "apps/api/app/services/boundary_review_service.py",
     "apps/desktop/src/pages/BookRoutePage.tsx",
-    "apps/desktop/src/components/chapterAnalysis/ChapterAnalysisProgressPanel.tsx"
+    "apps/desktop/src/components/chapterAnalysis/ChapterAnalysisProgressPanel.tsx",
+    "apps/desktop/src/services/chapterJourneyComposition.ts",
+    "apps/desktop/src/services/discoverActiveChapterRun.ts",
+    "apps/desktop/src/components/layout/WorkspaceViewSwitcher.tsx"
   ],
   "user_summary": "场景分析完成后自动衔接阅读旅程，禁止过早completed与结果页跳转。",
-  "technical_summary": "Scene pipeline no longer finalizes AnalysisRun; auto-enqueues Reader Journey on same run_id via chapter_analysis_completion; UI keeps progress until chapter_complete; tasks/elapsed use derived completeness.",
+  "technical_summary": "Scene pipeline no longer finalizes AnalysisRun; auto-enqueues Reader Journey on same run_id; Book workspace resolveChapterWorkspaceView blocks premature view=result; progress panel stays while in-flight; tabs stay inside BookRoutePage.",
   "acceptance_criteria": [
     "Scene完成后不标记completed_at",
     "自动进入reader_journey_generation并调度Journey",
     "同一analysis_run_id",
     "半完成Run不显示完整完成",
-    "耗时不再用naive created_at墙钟"
+    "耗时不再用naive created_at墙钟",
+    "Scene完成后保持Book workspace与进度面板",
+    "仅chapter_complete后自动切阅读旅程Tab",
+    "旧view=result且Journey运行时恢复工作台"
   ],
   "tests": [
     "apps/api/tests/test_chapter_analysis_completion_local.py",
     "apps/desktop/src/pages/BookRoutePage.test.tsx",
-    "apps/desktop/src/components/chapterAnalysis/ChapterAnalysisProgressPanel.test.tsx"
+    "apps/desktop/src/components/chapterAnalysis/ChapterAnalysisProgressPanel.test.tsx",
+    "apps/desktop/src/services/chapterJourneyComposition.test.ts",
+    "apps/desktop/src/pages/BookRoutePage.readerJourneyResume.test.tsx"
   ],
   "verification_evidence": [
     "Scene完成后流水线提前终止",
@@ -45,7 +53,11 @@
     "Reader Journey错误依赖Tab点击",
     "完整进度面板提前消失",
     "半完成Run被显示为完整结果",
-    "Run #8仍显示错误耗时"
+    "Run #8仍显示错误耗时",
+    "前端因Scene artifact提前导航到view=result",
+    "进度面板因view=result提前卸载",
+    "章节分析过程被拆成独立结果页壳层",
+    "后台已自动衔接Journey但前端仍跳转"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -62,5 +74,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-22T04:41:55Z",
-  "updated_at": "2026-07-22T05:00:34Z"
+  "updated_at": "2026-07-22T05:47:04Z"
 }
