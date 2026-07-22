@@ -117,6 +117,47 @@ export function JourneySceneDetailPanel({
     // Keep tab across Scene switches.
   }, [node.scene_ordinal]);
 
+  if ((node as { integrity_blocked?: boolean }).integrity_blocked) {
+    return (
+      <JourneyInspectorShell testId="journey-scene-integrity-blocked">
+        <JourneyInspectorHeader
+          title="分析结果校验未通过"
+          meta={formatJourneySceneLabel(node.scene_ordinal)}
+        />
+        <JourneyInspectorBody>
+          <p data-testid="journey-integrity-message">
+            {(node as { overview?: string }).overview ||
+              "检测到部分结论与当前正文不一致，相关结果已暂停展示。"}
+          </p>
+          <div className="journey-integrity-actions">
+            <button type="button" className="secondary" data-testid="journey-integrity-details">
+              查看校验详情
+            </button>
+            <button
+              type="button"
+              className="secondary"
+              data-testid="journey-integrity-regen"
+              disabled
+              title="需用户确认后才会调用模型"
+            >
+              重新生成受影响结果
+            </button>
+            {onClose ? (
+              <button type="button" className="ghost" onClick={onClose}>
+                返回正文
+              </button>
+            ) : null}
+          </div>
+          <p className="secondary" data-testid="journey-integrity-tech">
+            error_code=
+            {(node as { integrity_status?: string }).integrity_status || "DATA_INTEGRITY_FAILED"}
+            {typeof node.scene_id === "number" ? ` · scene_id=${node.scene_id}` : ""}
+          </p>
+        </JourneyInspectorBody>
+      </JourneyInspectorShell>
+    );
+  }
+
   const evidenceRows = useMemo(() => {
     const rows: EvidenceRow[] = [];
     const push = (ids: string[] | undefined, conclusion: string, kind: string) => {

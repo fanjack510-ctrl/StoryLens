@@ -176,6 +176,46 @@ def _persist_profile(
         return None
     engagement = compute_engagement(profile, genre=genre)
     payload = profile.model_dump()
+    from app.db.models import Scene
+    from app.services.analysis_context_fingerprint import (
+        compute_source_context_fingerprint,
+        paragraph_content_hash,
+    )
+    from app.services.analysis_integrity_guard import scan_journey_profile_grounding
+
+    scene = session.get(Scene, profile.scene_id)
+    if scene is not None:
+        ordered = []
+        for pid, paragraph in sorted(
+            (
+                (pid, p)
+                for pid, p in paragraphs_by_id.items()
+                if p.chapter_id == scene.chapter_id
+            ),
+            key=lambda item: item[1].paragraph_index,
+        ):
+            # Keep only paragraphs inside scene span when available.
+            start = paragraphs_by_id.get(scene.start_paragraph_id)
+            end = paragraphs_by_id.get(scene.end_paragraph_id)
+            if start and end:
+                lo = min(start.paragraph_index, end.paragraph_index)
+                hi = max(start.paragraph_index, end.paragraph_index)
+                if not (lo <= paragraph.paragraph_index <= hi):
+                    continue
+            ordered.append(paragraph)
+        if ordered:
+            payload["source_context_fingerprint"] = compute_source_context_fingerprint(
+                book_id=journey_run.book_id,
+                chapter_id=journey_run.chapter_id,
+                analysis_run_id=journey_run.analysis_run_id,
+                scene_id=profile.scene_id,
+                ordered_paragraph_ids=[p.id for p in ordered],
+                paragraph_content_hashes=[paragraph_content_hash(p.raw_text) for p in ordered],
+                prompt_version=journey_run.scene_prompt_version,
+                contract_version=journey_run.scene_contract_version,
+                formula_version=journey_run.formula_version,
+            )
+    validation_status = "valid"
     artifact = AnalysisArtifact(
         run_id=journey_run.analysis_run_id,
         artifact_type="reader_journey_scene_profile",
@@ -185,7 +225,7 @@ def _persist_profile(
         prompt_version=SCENE_PROMPT_VERSION,
         payload_json=json.dumps(payload, ensure_ascii=False),
         confidence=profile.confidence,
-        validation_status="valid",
+        validation_status=validation_status,
     )
     session.add(artifact)
     session.flush()
@@ -220,11 +260,29 @@ def _persist_profile(
         engagement_score=engagement.engagement_score,
         confidence=profile.confidence,
         payload_json=json.dumps(payload, ensure_ascii=False),
-        validation_status="valid",
+        validation_status=validation_status,
         artifact_id=artifact.id,
     )
     session.add(row)
     session.flush()
+    # Read-time style grounding without mutating provider raw responses.
+    try:
+        report = scan_journey_profile_grounding(
+            session,
+            profile=row,
+            book_id=journey_run.book_id,
+            chapter_id=journey_run.chapter_id,
+            analysis_run_id=journey_run.analysis_run_id,
+            prompt_version=journey_run.scene_prompt_version,
+            contract_version=journey_run.scene_contract_version,
+            formula_version=journey_run.formula_version,
+        )
+        if report.integrity_status in {"data_integrity_failed", "invalid_context"}:
+            row.validation_status = report.integrity_status
+            artifact.validation_status = report.integrity_status
+            session.flush()
+    except Exception:
+        pass
     return row
 
 
@@ -522,6 +580,14 @@ async def _execute_reader_journey_legacy(
                     else "normal_batch_request"
                 )
                 snapshot = {
+                    "book_id": journey_run.book_id,
+                    "chapter_id": journey_run.chapter_id,
+                    "analysis_run_id": analysis_run.id,
+                    "scene_ids": list(batch.scene_ids),
+                    "prompt_version": journey_run.scene_prompt_version,
+                    "contract_version": journey_run.scene_contract_version,
+                    "formula_version": journey_run.formula_version,
+                    "analysis_mode": "reader_journey_scene",
                     "profiles_target": scene_payloads,
                     "owned_scene_ids_json": json.dumps(batch.scene_ids),
                     "owned_scene_ordinals_json": json.dumps(batch.scene_ordinals),
@@ -531,6 +597,11 @@ async def _execute_reader_journey_legacy(
                     "batch_count": batch.batch_count,
                     "audit_type": batch.audit_type,
                     "invocation_request_type": invocation_kind,
+                    "paragraph_ids": [
+                        pid
+                        for scene in batch_scenes
+                        for pid in _paragraph_ids_for_scene(scene, paragraphs, position)
+                    ],
                 }
                 paragraph_ids_by_scene = {
                     scene.id: _paragraph_ids_for_scene(scene, paragraphs, position)

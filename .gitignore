@@ -104,3 +104,6 @@ secrets/
 license_private_keys/
 *_ed25519_private*
 *.ed25519.priv
+
+# Local forensics (never commit)
+**/runtime/forensics/

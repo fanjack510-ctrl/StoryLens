@@ -62,6 +62,11 @@ from app.services.reader_journey_v2_compatibility import (
     enrich_result_compatibility,
     is_v2_contract,
 )
+from app.services.analysis_integrity_guard import (
+    redact_visualization_for_integrity,
+    scan_reader_journey_integrity,
+)
+from app.services.analysis_grounding import ERROR_RUN_SCOPE
 
 
 router = APIRouter(prefix="/api/v1")
@@ -129,8 +134,10 @@ def _serialize_result(session: Session, journey_run: ReaderJourneyRun) -> Reader
         deterministic = json.loads(summary.deterministic_statistics_json or "{}")
         diagnosis = summary.one_sentence_diagnosis
     visualization = None
+    integrity_payload = scan_reader_journey_integrity(session, journey_run=journey_run)
     if journey_run.status == "succeeded":
         visualization = build_reader_journey_visualization(session, journey_run)
+        visualization = redact_visualization_for_integrity(visualization, integrity_payload)
     contract_version = journey_run.scene_contract_version
     compat = enrich_result_compatibility(
         {},
@@ -187,6 +194,9 @@ def _serialize_result(session: Session, journey_run: ReaderJourneyRun) -> Reader
         completed_at=journey_run.completed_at,
         v2_question_lifecycle=v2_lifecycle,
         v2_scene_diagnoses=v2_diagnoses,
+        integrity=integrity_payload,
+        integrity_status=str(integrity_payload.get("integrity_status") or ""),
+        trusted=bool(integrity_payload.get("trusted")),
     )
 
 
@@ -305,8 +315,35 @@ async def create_reader_journey(
 )
 def get_reader_journey_for_run(
     run_id: int,
+    book_id: int | None = None,
+    chapter_id: int | None = None,
     session: Session = Depends(get_db),
 ) -> ReaderJourneyResultResponse | None:
+    analysis_run = session.get(AnalysisRun, run_id)
+    if analysis_run is None:
+        raise error(404, "ANALYSIS_RUN_NOT_FOUND", "分析运行不存在")
+    if chapter_id is not None and str(analysis_run.subject_id) != str(chapter_id):
+        raise error(
+            409,
+            ERROR_RUN_SCOPE,
+            "analysis_run与chapter不匹配",
+            analysis_run_id=run_id,
+            chapter_id=chapter_id,
+        )
+    if book_id is not None:
+        chapter = (
+            session.get(Chapter, int(analysis_run.subject_id))
+            if str(analysis_run.subject_id).isdigit()
+            else None
+        )
+        if chapter is None or int(chapter.book_id) != int(book_id):
+            raise error(
+                409,
+                ERROR_RUN_SCOPE,
+                "analysis_run与book不匹配",
+                analysis_run_id=run_id,
+                book_id=book_id,
+            )
     journey_run = session.scalar(
         select(ReaderJourneyRun)
         .where(ReaderJourneyRun.analysis_run_id == run_id)
@@ -314,6 +351,10 @@ def get_reader_journey_for_run(
     )
     if journey_run is None:
         return None
+    if book_id is not None and int(journey_run.book_id) != int(book_id):
+        raise error(409, ERROR_RUN_SCOPE, "reader journey与book不匹配", book_id=book_id)
+    if chapter_id is not None and int(journey_run.chapter_id) != int(chapter_id):
+        raise error(409, ERROR_RUN_SCOPE, "reader journey与chapter不匹配", chapter_id=chapter_id)
     return _serialize_result(session, journey_run)
 
 

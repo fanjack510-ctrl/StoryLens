@@ -597,3 +597,6 @@ class ReaderJourneyResultResponse(BaseModel):
     # v2.0 optional payload (present only for contract 2.x runs; never auto-billed).
     v2_question_lifecycle: list[dict[str, object]] | None = None
     v2_scene_diagnoses: list[dict[str, object]] | None = None
+    integrity: dict[str, object] | None = None
+    integrity_status: str | None = None
+    trusted: bool | None = None

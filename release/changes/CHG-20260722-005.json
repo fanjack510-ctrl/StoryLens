@@ -1,0 +1,58 @@
+{
+  "id": "CHG-20260722-005",
+  "title": "P0: Reader Journey context/grounding integrity (prevent cross-book contamination)",
+  "type": "fix",
+  "base_version": "1.0.3",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "reader-journey",
+    "analysis-integrity",
+    "desktop-shell"
+  ],
+  "files": [
+    "apps/api/app/services/analysis_context_fingerprint.py",
+    "apps/api/app/services/analysis_grounding.py",
+    "apps/api/app/services/analysis_integrity_guard.py",
+    "apps/api/app/api/v1/reader_journey.py",
+    "apps/api/app/services/structured_output.py",
+    "apps/api/app/services/reader_journey_pipeline.py",
+    "apps/desktop/src/pages/BookRoutePage.tsx",
+    "apps/desktop/src/components/readerJourney/JourneySceneDetailPanel.tsx"
+  ],
+  "user_summary": "Reader Journey出现非当前小说内容且错误结论绑定当前段落证据，暂停污染Artifact展示并加强来源指纹与校验。",
+  "technical_summary": "Read-time Journey integrity scan (fingerprint + claim/evidence grounding); scope 409; request analysis_scope in hash; frontend scoped query keys; redact polluted scene details without mutating Run#9 payloads.",
+  "acceptance_criteria": [
+    "污染Artifact不展示为可信结果",
+    "request作用域与正文hash可校验",
+    "Run#9不删除不覆盖"
+  ],
+  "tests": [
+    "apps/api/tests/test_analysis_integrity_p0_local.py",
+    "apps/desktop/src/components/readerJourney/JourneySceneIntegrityGate.test.tsx"
+  ],
+  "verification_evidence": [
+    "Reader Journey出现非当前小说内容",
+    "错误结论绑定当前Paragraph ID",
+    "Artifact来源和证据校验不足",
+    "可能存在缓存、查询作用域、异步绑定或Provider上下文污染",
+    "Run #9暂停作为可信结果使用"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "P0",
+  "head_inclusion": null,
+  "created_at": "2026-07-22T05:49:31Z",
+  "updated_at": "2026-07-22T06:01:36Z"
+}

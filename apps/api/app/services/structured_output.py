@@ -574,6 +574,32 @@ async def generate_validated(
             )
 
             active_schema = JourneyEvidenceRepairPatchResult
+        scope_binding = {}
+        if isinstance(input_snapshot, dict):
+            for key in (
+                "book_id",
+                "chapter_id",
+                "analysis_run_id",
+                "scene_ids",
+                "paragraph_ids",
+                "owned_scene_ids_json",
+                "profiles_target",
+                "exact_input_content_hash",
+                "prompt_version",
+                "contract_version",
+                "formula_version",
+                "analysis_mode",
+            ):
+                if key in input_snapshot:
+                    scope_binding[key] = input_snapshot.get(key)
+            # Prefer explicit content hash; else digest snapshot for binding.
+            if "exact_input_content_hash" not in scope_binding:
+                import hashlib as _hashlib
+                import json as _json
+
+                scope_binding["exact_input_content_hash"] = _hashlib.sha256(
+                    _json.dumps(input_snapshot, ensure_ascii=False, sort_keys=True).encode("utf-8")
+                ).hexdigest()
         request = ModelRequest(
             messages=messages,
             model=authorized_model,
@@ -581,6 +607,7 @@ async def generate_validated(
             response_schema=active_schema.model_json_schema(),
             response_format_mode=invocation_capabilities.structured_output_mode,
             enable_thinking=False,
+            extra_body={"analysis_scope": scope_binding} if scope_binding else {},
         )
         mapped_policy_type = map_invocation_type(
             task_type,

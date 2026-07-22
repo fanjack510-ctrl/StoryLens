@@ -228,9 +228,14 @@ export function BookRoutePage() {
 
   const sceneComplete = isSceneAnalysisComplete(progress.run);
   const journey = useQuery({
-    queryKey: ["reader-journey", analysisRunId],
-    queryFn: () => analysisApi.readerJourney(analysisRunId!),
+    queryKey: ["reader-journey", bookId, chapterId, analysisRunId],
+    queryFn: () =>
+      analysisApi.readerJourney(analysisRunId!, {
+        bookId,
+        chapterId,
+      }),
     enabled: !!analysisRunId && (progress.uiState === "succeeded" || sceneComplete),
+    placeholderData: undefined,
     refetchInterval: (q) => {
       const status = q.state.data?.status;
       if (
@@ -1012,7 +1017,7 @@ export function BookRoutePage() {
                       });
                     } finally {
                       void qc.invalidateQueries({
-                        queryKey: ["reader-journey", analysisRunId],
+                        queryKey: ["reader-journey"],
                       });
                       void journey.refetch();
                       void progress.refresh();
@@ -1057,7 +1062,7 @@ export function BookRoutePage() {
                           }
                         } finally {
                           void qc.invalidateQueries({
-                            queryKey: ["reader-journey", analysisRunId],
+                            queryKey: ["reader-journey"],
                           });
                           void journey.refetch();
                           void progress.refresh();
@@ -1080,7 +1085,7 @@ export function BookRoutePage() {
                   run={progress.run}
                   variant="card"
                   onContinued={() => {
-                    void qc.invalidateQueries({ queryKey: ["reader-journey", analysisRunId] });
+                    void qc.invalidateQueries({ queryKey: ["reader-journey"] });
                     void journey.refetch();
                     void progress.refresh();
                   }}
