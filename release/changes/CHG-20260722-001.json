@@ -23,6 +23,12 @@
       "message": "Isolate StoryLens Pro test and production license public keys (CHG-20260722-001).",
       "primary": false,
       "multi_change_reason": "test/prod key isolation follow-up"
+    },
+    {
+      "sha": "f7d6b0e46f0ae63350edc991c161335871109b65",
+      "message": "Install StoryLens Pro production public key storylens-pro-1-prod-001 (CHG-20260722-001).",
+      "primary": false,
+      "multi_change_reason": "production public key install"
     }
   ],
   "modules": [
@@ -79,5 +85,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-22T00:58:28Z",
-  "updated_at": "2026-07-22T01:46:09Z"
+  "updated_at": "2026-07-22T01:46:10Z"
 }
