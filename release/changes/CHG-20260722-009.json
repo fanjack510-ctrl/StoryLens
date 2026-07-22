@@ -1,0 +1,32 @@
+{
+  "id": "CHG-20260722-009",
+  "title": "Restore continuous reader journey momentum line",
+  "type": "fix",
+  "base_version": "1.0.4",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [],
+  "files": [],
+  "user_summary": "Reader Journey阅读动力曲线仅显示独立点、缺少折线连线，阶段卡数值正常但主曲线被拆成单点。",
+  "technical_summary": "",
+  "acceptance_criteria": [],
+  "tests": [],
+  "verification_evidence": [],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": null,
+  "created_at": "2026-07-22T14:13:53Z",
+  "updated_at": "2026-07-22T14:13:53Z"
+}

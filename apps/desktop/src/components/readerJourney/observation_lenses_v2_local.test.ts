@@ -14,6 +14,7 @@ import {
   getObservationLens,
   isLegacyUncalibratedVisualization,
   mainCurveSeries,
+  equalWeightMainCurveSeries,
   pacingFitLabel,
   pacingSegmentLabel,
   valenceDirection,
@@ -235,7 +236,7 @@ describe("overlay limits", () => {
 });
 
 describe("beat auxiliary nodes", () => {
-  it("excludes beat from main curve equal-weight vertices", () => {
+  it("excludes beat from equal-weight means but keeps Beat on the visual polyline", () => {
     const viz = minimalViz([
       { scene_ordinal: 1, role: "core", scores: { reading_momentum: 80 } as never },
       {
@@ -249,7 +250,10 @@ describe("beat auxiliary nodes", () => {
     ]);
     const lines = buildLensChartLines(viz, "composite");
     const main = mainCurveSeries(lines[0].series);
-    expect(main.map((p) => p.scene_ordinal)).toEqual([1, 3]);
+    expect(main.map((p) => p.scene_ordinal)).toEqual([1, 2, 3]);
+    expect(equalWeightMainCurveSeries(lines[0].series).map((p) => p.scene_ordinal)).toEqual([
+      1, 3,
+    ]);
     expect(lines[0].series).toHaveLength(3);
   });
 });
@@ -447,7 +451,7 @@ describe("CHG-20260721-012 verification matrix", () => {
     expect(lines.map((l) => l.id)).toEqual(["hook", "payoff"]);
   });
 
-  it("6-7) Beat / silence fragment does not become equal-weight main vertex", () => {
+  it("6-7) Beat remains on polyline; equal-weight means still skip Beat", () => {
     const viz = minimalViz([
       { scene_ordinal: 1, role: "core", scores: { reading_momentum: 80 } as never },
       {
@@ -460,8 +464,9 @@ describe("CHG-20260721-012 verification matrix", () => {
       },
       { scene_ordinal: 3, role: "core", scores: { reading_momentum: 78 } as never },
     ]);
-    const main = mainCurveSeries(buildLensChartLines(viz, "composite")[0].series);
-    expect(main.map((p) => p.scene_ordinal)).toEqual([1, 3]);
+    const series = buildLensChartLines(viz, "composite")[0].series;
+    expect(mainCurveSeries(series).map((p) => p.scene_ordinal)).toEqual([1, 2, 3]);
+    expect(equalWeightMainCurveSeries(series).map((p) => p.scene_ordinal)).toEqual([1, 3]);
   });
 
   it("8-10) diagnosis labels for stagnation / empty spin / empty hook", () => {

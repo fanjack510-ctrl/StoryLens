@@ -306,14 +306,30 @@ export function buildLensChartLines(
   return lines.slice(0, lens.isPairedHookPayoff ? 2 : overlayComposite ? 2 : 1);
 }
 
-/** Main polyline series excludes Beat equal-weight vertices. */
-export function mainCurveSeries(series: JourneyCurvePoint[]): JourneyCurvePoint[] {
+/** Equal-weight vertices for chapter/phase means — Beat importance is excluded. */
+export function equalWeightMainCurveSeries(
+  series: JourneyCurvePoint[],
+): JourneyCurvePoint[] {
   return series.filter((point) => {
     const flag = (point as { include_in_main_curve?: boolean }).include_in_main_curve;
     if (flag === false) return false;
     if ((point as { node_type?: string }).node_type === "beat") return false;
     return true;
   });
+}
+
+/**
+ * Polyline vertices for the reading-momentum (and other lens) chart line.
+ *
+ * Importance role "beat" still belongs on the continuous narrative line when the
+ * point has a finite metric value. Otherwise a short chapter with one Core and
+ * two Beat-classified Scenes collapses to a single point and draws no stroke.
+ *
+ * Non-chart annotations should never enter `series` in the first place; null
+ * values still break the path via buildLinePathD.
+ */
+export function mainCurveSeries(series: JourneyCurvePoint[]): JourneyCurvePoint[] {
+  return series.filter((point) => resolveMetricValue(point) != null);
 }
 
 export function valenceDirection(node: JourneySceneNode): "up" | "down" | "flat" {

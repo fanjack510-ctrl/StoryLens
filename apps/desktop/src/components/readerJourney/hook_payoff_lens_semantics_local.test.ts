@@ -3,7 +3,7 @@
  * Presentation/binding only; no weight retuning.
  */
 import { describe, expect, it } from "vitest";
-import { buildLensChartLines, mainCurveSeries } from "./observationLenses";
+import { buildLensChartLines, mainCurveSeries, equalWeightMainCurveSeries } from "./observationLenses";
 import { buildLinePathD, resolveMetricValue } from "./journeyChartScales";
 import { buildSegmentMarkers } from "./journeySegmentMarkers";
 import {
@@ -303,7 +303,7 @@ describe("question lifecycle + diagnosis filter", () => {
 });
 
 describe("Beat exclusion and phase averages", () => {
-  it("excludes Beat from main polyline equal-weight vertices", () => {
+  it("keeps Beat on visual polyline; equal-weight means still skip Beat", () => {
     const viz = minimalViz([
       { scene_ordinal: 1, scores: { hook: 70, payoff: 20 } as never },
       {
@@ -316,8 +316,10 @@ describe("Beat exclusion and phase averages", () => {
       { scene_ordinal: 3, scores: { hook: 40, payoff: 60 } as never },
     ]);
     const lines = buildLensChartLines(viz, "hook_payoff");
-    const main = mainCurveSeries(lines[0].series);
-    expect(main.map((p) => p.scene_ordinal)).toEqual([1, 3]);
+    expect(mainCurveSeries(lines[0].series).map((p) => p.scene_ordinal)).toEqual([1, 2, 3]);
+    expect(equalWeightMainCurveSeries(lines[0].series).map((p) => p.scene_ordinal)).toEqual([
+      1, 3,
+    ]);
   });
 
   it("phase averages ignore Beat nodes", () => {
