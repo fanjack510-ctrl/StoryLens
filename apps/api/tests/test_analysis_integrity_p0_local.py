@@ -175,10 +175,34 @@ def test_classify_legacy_and_failed():
     assert classify_integrity_status([], fingerprint_state="missing_legacy") == "legacy_unverified"
     from app.services.analysis_grounding import GroundingIssue
 
-    issues = [
+    soft = [
         GroundingIssue(code=ERROR_EVIDENCE_CLAIM, message="x", scene_id=1, scene_ordinal=5)
     ]
-    assert classify_integrity_status(issues, fingerprint_state="missing_legacy") == "data_integrity_failed"
+    # Soft claim issues on legacy artifacts become partial, not whole-Journey hard-fail.
+    assert classify_integrity_status(soft, fingerprint_state="missing_legacy") == "partially_trusted"
+    assert classify_integrity_status([], fingerprint_state="missing_legacy") == "legacy_unverified"
+
+    severe = [
+        GroundingIssue(
+            code=ERROR_EVIDENCE_SCOPE,
+            message="证据段落不属于当前Book",
+            scene_id=1,
+            scene_ordinal=5,
+            paragraph_ids=["B0002-C0001-P0001"],
+        )
+    ]
+    assert classify_integrity_status(severe, fingerprint_state="missing_legacy") == "data_integrity_failed"
+    assert (
+        classify_integrity_status(soft, fingerprint_state="ok") == "partially_trusted"
+    )
+    assert classify_integrity_status([], fingerprint_state="mismatch") == "data_integrity_failed"
+
+
+def test_craft_commentary_is_not_treated_as_story_entities():
+    from app.services.analysis_grounding import is_craft_commentary_text
+
+    assert is_craft_commentary_text("典型的强钩子开头，通过非常规视角吸引读者继续阅读。")
+    assert not is_craft_commentary_text("齐夏查看卡片，揭示自己为说谎者。")
 
 
 def test_provider_messages_are_request_local():

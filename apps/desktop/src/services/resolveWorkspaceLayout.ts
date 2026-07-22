@@ -96,17 +96,23 @@ export function resolveWorkspaceLayout(args: {
       args.journeyStatus === "running" ||
       args.journeyStatus === "scene_profiles_running" ||
       args.journeyStatus === "chapter_synthesis_running" ||
-      args.inFlight && !args.journeyAvailable
+      (args.inFlight && !args.journeyAvailable)
     ) {
       mainContentState = "pending_generation";
     } else if (
       args.journeyIntegrityStatus === "data_integrity_failed" ||
-      args.journeyIntegrityStatus === "invalid_context" ||
-      args.journeyTrusted === false
+      args.journeyIntegrityStatus === "invalid_context"
     ) {
+      // Only hard-fail statuses block the whole Journey pane.
       mainContentState = "invalid_artifact";
-    } else if (args.journeyAvailable) mainContentState = "ready";
-    else if (args.journeyQueryStatus === "success") mainContentState = "unavailable";
+    } else if (
+      args.journeyAvailable ||
+      args.journeyIntegrityStatus === "legacy_unverified" ||
+      args.journeyIntegrityStatus === "partially_trusted" ||
+      args.journeyIntegrityStatus === "trusted"
+    ) {
+      mainContentState = "ready";
+    } else if (args.journeyQueryStatus === "success") mainContentState = "unavailable";
     else mainContentState = "loading";
   } else if (activeTab === "scene") {
     mainContentState = args.sceneAvailable || args.chapterComplete || args.inFlight ? "ready" : "loading";

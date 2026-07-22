@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { WorkspaceJourneyPane } from "./WorkspaceJourneyPane";
 import {
   mapUrlToActiveTab,
@@ -9,6 +9,8 @@ import {
 vi.mock("./ReaderJourneyWorkspace", () => ({
   ReaderJourneyWorkspace: () => <div data-testid="mock-journey-workspace">journey-shell</div>,
 }));
+
+afterEach(cleanup);
 
 describe("resolveWorkspaceLayout", () => {
   it("maps reader-journey URL to journey tab inside one workspace", () => {
@@ -103,6 +105,41 @@ describe("resolveWorkspaceLayout", () => {
       }).mainContentState,
     ).toBe("request_error");
   });
+
+  it("keeps legacy_unverified journey ready instead of hard-blocking", () => {
+    const layout = resolveWorkspaceLayout({
+      requestedView: "result",
+      requestedTab: "reader-journey",
+      userPinnedTab: null,
+      chapterComplete: true,
+      inFlight: false,
+      sceneAvailable: true,
+      journeyAvailable: true,
+      journeyStatus: "succeeded",
+      journeyQueryStatus: "success",
+      journeyIntegrityStatus: "legacy_unverified",
+      journeyTrusted: false,
+    });
+    expect(layout.mainContentState).toBe("ready");
+  });
+
+  it("hard-blocks only data_integrity_failed", () => {
+    expect(
+      resolveWorkspaceLayout({
+        requestedView: "result",
+        requestedTab: "reader-journey",
+        userPinnedTab: null,
+        chapterComplete: true,
+        inFlight: false,
+        sceneAvailable: true,
+        journeyAvailable: true,
+        journeyStatus: "succeeded",
+        journeyQueryStatus: "success",
+        journeyIntegrityStatus: "data_integrity_failed",
+        journeyTrusted: false,
+      }).mainContentState,
+    ).toBe("invalid_artifact");
+  });
 });
 
 describe("WorkspaceJourneyPane", () => {
@@ -121,6 +158,42 @@ describe("WorkspaceJourneyPane", () => {
     expect(screen.getByTestId("workspace-journey-pane")).toHaveAttribute("data-state", "loading");
     expect(screen.queryByText("分析结果暂时无法加载")).not.toBeInTheDocument();
     expect(screen.queryByTestId("chapter-result-open-independent")).not.toBeInTheDocument();
+  });
+
+  it("shows legacy banner without blocking chart", () => {
+    render(
+      <WorkspaceJourneyPane
+        bookId={11}
+        chapterId={1224}
+        analysisRunId={11}
+        journey={
+          {
+            status: "succeeded",
+            journey_run_id: 10,
+            integrity_status: "legacy_unverified",
+            trusted: false,
+            integrity: { status: "legacy_unverified", legacy_warning: "旧版分析尚未完成来源校验，仅供参考。" },
+            visualization: {
+              scene_nodes: [
+                {
+                  scene_ordinal: 1,
+                  scores: { reading_momentum: 1, plot_progress: 1 },
+                  engagement: { engagement_score: 1 },
+                },
+              ],
+              phases: [{ ordinal: 1 }],
+              curve_series: { curiosity: [{ scene_ordinal: 1, value: 1 }] },
+            },
+          } as any
+        }
+        mainContentState="ready"
+        onRetry={() => undefined}
+        onReading={() => undefined}
+      />,
+    );
+    expect(screen.getByTestId("workspace-journey-legacy-banner")).toBeInTheDocument();
+    expect(screen.getByTestId("mock-journey-workspace")).toBeInTheDocument();
+    expect(screen.queryByTestId("workspace-journey-integrity-banner")).not.toBeInTheDocument();
   });
 
   it("shows invalid artifact without independent page CTA", () => {

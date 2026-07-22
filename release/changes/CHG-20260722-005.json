@@ -26,10 +26,12 @@
     "apps/api/app/services/structured_output.py",
     "apps/api/app/services/reader_journey_pipeline.py",
     "apps/desktop/src/pages/BookRoutePage.tsx",
-    "apps/desktop/src/components/readerJourney/JourneySceneDetailPanel.tsx"
+    "apps/desktop/src/components/readerJourney/JourneySceneDetailPanel.tsx",
+    "apps/desktop/src/services/resolveWorkspaceLayout.ts",
+    "apps/desktop/src/components/readerJourney/WorkspaceJourneyPane.tsx"
   ],
   "user_summary": "Reader Journey出现非当前小说内容且错误结论绑定当前段落证据，暂停污染Artifact展示并加强来源指纹与校验。",
-  "technical_summary": "Read-time Journey integrity scan (fingerprint + claim/evidence grounding); scope 409; request analysis_scope in hash; frontend scoped query keys; redact polluted scene details without mutating Run#9 payloads.",
+  "technical_summary": "Graded Journey integrity: trusted/partially_trusted/legacy_unverified/data_integrity_failed; legacy without fingerprint shows with warning; soft claim heuristics only when fingerprint ok; severe wrong-book/context mismatch still blocks; field/scene redaction for partial.",
   "acceptance_criteria": [
     "污染Artifact不展示为可信结果",
     "request作用域与正文hash可校验",
@@ -44,7 +46,13 @@
     "错误结论绑定当前Paragraph ID",
     "Artifact来源和证据校验不足",
     "可能存在缓存、查询作用域、异步绑定或Provider上下文污染",
-    "Run #9暂停作为可信结果使用"
+    "Run #9暂停作为可信结果使用",
+    "Run #8真实跨上下文污染必须阻断",
+    "完整性校验上线后多个Journey被整体阻断",
+    "需要区分legacy、partial和严重污染",
+    "单节点/单字段失败不得阻断全部Journey",
+    "实体抽取把分析套话误判为跨书实体导致系统性误伤",
+    "全库Journey缺少fingerprint时不得一律data_integrity_failed"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -61,5 +69,5 @@
   "blocker_level": "P0",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-22T05:49:31Z",
-  "updated_at": "2026-07-22T06:02:08Z"
+  "updated_at": "2026-07-22T07:42:38Z"
 }

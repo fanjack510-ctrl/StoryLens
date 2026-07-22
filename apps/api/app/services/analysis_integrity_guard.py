@@ -16,10 +16,15 @@ from app.services.analysis_context_fingerprint import (
 )
 from app.services.analysis_grounding import (
     ERROR_CONTEXT_MISMATCH,
+    ERROR_EVIDENCE_CLAIM,
+    ERROR_EVIDENCE_SCOPE,
+    ERROR_GROUNDING_ENTITY,
     GroundingIssue,
     GroundingReport,
     classify_integrity_status,
     extract_paragraph_ids,
+    is_craft_commentary_text,
+    is_severe_grounding_issue,
     validate_claim_entities_against_evidence,
     validate_entities_in_scene_or_aliases,
     validate_evidence_scope,
@@ -239,6 +244,11 @@ def scan_journey_profile_grounding(
                     scene_ordinal=profile.scene_ordinal,
                 )
             )
+            # Claim↔entity heuristics are only reliable once a fingerprint exists.
+            # Legacy artifacts without fingerprint still get wrong-book scope checks,
+            # but craft-language false positives must not block whole journeys.
+            if fingerprint_state != "ok":
+                continue
             issues.extend(
                 validate_claim_entities_against_evidence(
                     claim_text=item_claim,
@@ -250,11 +260,10 @@ def scan_journey_profile_grounding(
                     min_unsupported_entities=1,
                 )
             )
-            # Entity check only against cited evidence + full scene aliases.
             issues.extend(
                 validate_entities_in_scene_or_aliases(
                     claim_text=item_claim,
-                    scene_text="\n".join(text_by_id.get(pid, "") for pid in cited),
+                    scene_text="\n".join(text_by_id.get(pid, "") for pid in cited) + "\n" + scene_text,
                     alias_texts=[scene_text],
                     scene_id=scene.id,
                     scene_ordinal=profile.scene_ordinal,
@@ -264,7 +273,7 @@ def scan_journey_profile_grounding(
             )
 
     status = classify_integrity_status(issues, fingerprint_state=fingerprint_state)
-    ok = status in {"trusted", "legacy_unverified"}
+    ok = status in {"trusted", "legacy_unverified", "partially_trusted"}
     return GroundingReport(
         ok=ok,
         integrity_status=status,
@@ -272,6 +281,47 @@ def scan_journey_profile_grounding(
         fingerprint=fingerprint,
         fingerprint_state=fingerprint_state,
     )
+
+
+def _field_results_from_issues(issues: list[GroundingIssue]) -> list[dict[str, Any]]:
+    by_field: dict[str, list[GroundingIssue]] = {}
+    for issue in issues:
+        key = issue.field_path or "_scene"
+        by_field.setdefault(key, []).append(issue)
+    out: list[dict[str, Any]] = []
+    for field_name, field_issues in by_field.items():
+        severe = any(is_severe_grounding_issue(i) for i in field_issues)
+        out.append(
+            {
+                "field_name": field_name,
+                "status": "failed" if severe else "degraded",
+                "evidence_status": "failed",
+                "display_policy": "hide_scene" if severe else "hide_field",
+                "error_codes": sorted({i.code for i in field_issues}),
+            }
+        )
+    return out
+
+
+def _aggregate_overall_status(scene_statuses: list[str]) -> str:
+    if not scene_statuses:
+        return "legacy_unverified"
+    failed = [s for s in scene_statuses if s in {"data_integrity_failed", "invalid_context"}]
+    partial = [s for s in scene_statuses if s == "partially_trusted"]
+    legacy = [s for s in scene_statuses if s == "legacy_unverified"]
+    trusted = [s for s in scene_statuses if s == "trusted"]
+    # Multiple severely polluted core scenes → hard fail.
+    if len(failed) >= 2 or (len(failed) >= 1 and len(failed) / max(1, len(scene_statuses)) >= 0.5):
+        return "data_integrity_failed"
+    if len(failed) == 1:
+        return "partially_trusted"
+    if partial:
+        return "partially_trusted"
+    if legacy and not trusted:
+        return "legacy_unverified"
+    if legacy and trusted:
+        return "partially_trusted"
+    return "trusted"
 
 
 def scan_reader_journey_integrity(
@@ -287,13 +337,7 @@ def scan_reader_journey_integrity(
         )
     )
     scene_reports: list[dict[str, Any]] = []
-    worst = "trusted"
-    rank = {
-        "trusted": 0,
-        "legacy_unverified": 1,
-        "data_integrity_failed": 2,
-        "invalid_context": 3,
-    }
+    field_results: list[dict[str, Any]] = []
     for profile in profiles:
         report = scan_journey_profile_grounding(
             session,
@@ -305,63 +349,144 @@ def scan_reader_journey_integrity(
             contract_version=journey_run.scene_contract_version,
             formula_version=journey_run.formula_version,
         )
-        if rank.get(report.integrity_status, 0) > rank.get(worst, 0):
-            worst = report.integrity_status
+        fields = _field_results_from_issues(report.issues)
+        for item in fields:
+            item = dict(item)
+            item["scene_id"] = profile.scene_id
+            item["scene_ordinal"] = profile.scene_ordinal
+            field_results.append(item)
+        safe = report.integrity_status in {"trusted", "legacy_unverified", "partially_trusted"}
         scene_reports.append(
             {
                 "scene_id": profile.scene_id,
                 "scene_ordinal": profile.scene_ordinal,
                 "integrity_status": report.integrity_status,
+                "status": report.integrity_status,
                 "fingerprint_state": report.fingerprint_state,
                 "fingerprint_digest": fingerprint_digest_short(report.fingerprint),
                 "issue_codes": sorted({i.code for i in report.issues}),
+                "failed_fields": [f["field_name"] for f in fields],
+                "error_codes": sorted({i.code for i in report.issues}),
                 "issue_count": len(report.issues),
-                "display_allowed": report.ok and report.integrity_status != "invalid_context",
+                "safe_to_display": safe,
+                "display_allowed": safe,
+                "field_results": fields,
             }
         )
 
-    blocked = [s for s in scene_reports if not s["display_allowed"] or s["integrity_status"] in {
-        "data_integrity_failed",
-        "invalid_context",
-    }]
+    overall = _aggregate_overall_status([s["integrity_status"] for s in scene_reports])
+    blocked = [
+        s
+        for s in scene_reports
+        if s["integrity_status"] in {"data_integrity_failed", "invalid_context"}
+    ]
+    display_policy = {
+        "trusted": "show_full",
+        "partially_trusted": "show_partial",
+        "legacy_unverified": "show_legacy",
+        "data_integrity_failed": "block",
+        "invalid_context": "block",
+    }.get(overall, "block")
+
+    legacy_warning = None
+    user_message = None
+    if overall == "legacy_unverified":
+        legacy_warning = "旧版分析尚未完成来源校验，仅供参考。"
+        user_message = legacy_warning
+    elif overall == "partially_trusted":
+        user_message = "部分分析结果未通过校验，受影响内容已单独隐藏。"
+    elif overall in {"data_integrity_failed", "invalid_context"}:
+        user_message = "检测到分析内容可能不属于当前正文，已停止展示不可信结果。"
+
     return {
-        "integrity_status": worst if profiles else "legacy_unverified",
-        "trusted": worst == "trusted",
-        "untrusted": worst in {"data_integrity_failed", "invalid_context"},
-        "legacy_unverified": worst == "legacy_unverified",
+        "integrity_status": overall,
+        "overall_status": overall,
+        "overall_display_policy": display_policy,
+        "trusted": overall == "trusted",
+        "partially_trusted": overall == "partially_trusted",
+        "untrusted": overall in {"data_integrity_failed", "invalid_context"},
+        "legacy_unverified": overall == "legacy_unverified",
+        "legacy_warning": legacy_warning,
         "blocked_scene_count": len(blocked),
+        "blocked_sections": [
+            {
+                "scene_id": s["scene_id"],
+                "scene_ordinal": s["scene_ordinal"],
+                "reason": s["integrity_status"],
+                "error_codes": s["error_codes"],
+            }
+            for s in blocked
+        ],
         "scene_reports": scene_reports,
-        "user_message": (
-            "检测到分析结果与当前正文不一致，已暂停展示。"
-            if worst in {"data_integrity_failed", "invalid_context"}
-            else (
-                "旧版结果未完成来源校验，仅可只读查看，不可升级为正式叙事资产。"
-                if worst == "legacy_unverified"
-                else None
+        "scene_integrity": scene_reports,
+        "field_integrity": field_results,
+        "integrity_summary": {
+            "scene_count": len(scene_reports),
+            "blocked_scene_count": len(blocked),
+            "field_issue_count": len(field_results),
+            "fingerprint_missing": all(
+                s.get("fingerprint_state") == "missing_legacy" for s in scene_reports
             )
-        ),
+            if scene_reports
+            else True,
+        },
+        "user_message": user_message,
         "error_code": (
-            "ANALYSIS_CONTEXT_MISMATCH"
-            if worst == "invalid_context"
-            else ("DATA_INTEGRITY_FAILED" if worst == "data_integrity_failed" else None)
+            "DATA_INTEGRITY_FAILED"
+            if overall in {"data_integrity_failed", "invalid_context"}
+            else None
         ),
     }
+
+
+def is_chart_eligible_node(node: dict[str, Any] | None) -> bool:
+    """Chart series consume numeric scene nodes; markers/summaries are not required to have scores."""
+    if not node or not isinstance(node, dict):
+        return False
+    if node.get("integrity_blocked"):
+        return False
+    node_type = str(node.get("node_type") or node.get("role") or "scene").lower()
+    non_chart = {
+        "phase_summary",
+        "separator",
+        "annotation",
+        "hook_event",
+        "payoff_event",
+        "diagnostic_marker",
+        "redacted_placeholder",
+        "legacy_summary",
+    }
+    if node_type in non_chart:
+        return False
+    scores = node.get("scores")
+    engagement = node.get("engagement")
+    return isinstance(scores, dict) or isinstance(engagement, dict)
 
 
 def redact_visualization_for_integrity(
     visualization: dict[str, Any] | None,
     integrity: dict[str, Any],
 ) -> dict[str, Any] | None:
-    """Hide contaminated scene detail fields while keeping shell structure."""
+    """Apply graded redaction. Never wipe an entire legacy/partial journey for soft issues."""
     if not visualization or not isinstance(visualization, dict):
         return visualization
-    if not integrity.get("untrusted"):
-        # Still annotate legacy
-        out = dict(visualization)
-        out["integrity"] = {
-            "status": integrity.get("integrity_status"),
-            "legacy_unverified": bool(integrity.get("legacy_unverified")),
-        }
+
+    status = str(integrity.get("integrity_status") or "")
+    out = dict(visualization)
+    out["integrity"] = {
+        "status": status,
+        "overall_display_policy": integrity.get("overall_display_policy"),
+        "legacy_unverified": bool(integrity.get("legacy_unverified")),
+        "partially_trusted": bool(integrity.get("partially_trusted")),
+        "legacy_warning": integrity.get("legacy_warning"),
+        "user_message": integrity.get("user_message"),
+        "error_code": integrity.get("error_code"),
+        "blocked_scene_count": integrity.get("blocked_scene_count"),
+        "blocked_sections": integrity.get("blocked_sections"),
+    }
+
+    # Legacy + trusted: keep full visualization (legacy shows warning only).
+    if status in {"trusted", "legacy_unverified"}:
         return out
 
     blocked = {
@@ -369,29 +494,33 @@ def redact_visualization_for_integrity(
         for s in integrity.get("scene_reports", [])
         if s.get("integrity_status") in {"data_integrity_failed", "invalid_context"}
     }
-    pause_all = False
+    hide_fields_by_scene: dict[int, set[str]] = {}
+    for fr in integrity.get("field_integrity") or []:
+        if fr.get("display_policy") != "hide_field":
+            continue
+        ord_ = int(fr.get("scene_ordinal") or 0)
+        name = str(fr.get("field_name") or "")
+        # hooks[0] → hooks
+        base = name.split("[", 1)[0]
+        hide_fields_by_scene.setdefault(ord_, set()).add(base)
+
     nodes = []
     for node in visualization.get("scene_nodes") or []:
         if not isinstance(node, dict):
             continue
         ordinal = int(node.get("scene_ordinal") or 0)
-        if pause_all or ordinal in blocked:
+        if status in {"data_integrity_failed", "invalid_context"} and ordinal in blocked:
             nodes.append(
                 {
                     "scene_id": node.get("scene_id"),
                     "scene_ordinal": ordinal,
                     "role": node.get("role"),
+                    "node_type": node.get("node_type") or "redacted_placeholder",
                     "integrity_blocked": True,
-                    "integrity_status": next(
-                        (
-                            s["integrity_status"]
-                            for s in integrity.get("scene_reports", [])
-                            if int(s["scene_ordinal"]) == ordinal
-                        ),
-                        "data_integrity_failed",
-                    ),
+                    "integrity_status": "data_integrity_failed",
+                    "chart_eligible": False,
                     "title": "分析结果校验未通过",
-                    "overview": "检测到部分结论与当前正文不一致，相关结果已暂停展示。",
+                    "overview": "该项暂不展示",
                     "hooks": [],
                     "payoffs": [],
                     "questions": [],
@@ -399,14 +528,29 @@ def redact_visualization_for_integrity(
                     "evidence": [],
                 }
             )
-        else:
-            nodes.append(node)
-    out = dict(visualization)
+            continue
+        if status == "partially_trusted" and ordinal in blocked:
+            # Isolate one severe scene but keep chart shell fields if present.
+            redacted = dict(node)
+            for key in ("hooks", "payoffs", "questions", "techniques", "evidence"):
+                redacted[key] = []
+            redacted["overview"] = "该项暂不展示"
+            redacted["integrity_blocked"] = True
+            redacted["integrity_status"] = "data_integrity_failed"
+            redacted["chart_eligible"] = is_chart_eligible_node(node)
+            nodes.append(redacted)
+            continue
+        if status == "partially_trusted":
+            redacted = dict(node)
+            for field_name in hide_fields_by_scene.get(ordinal, set()):
+                if field_name in redacted and isinstance(redacted[field_name], list):
+                    redacted[field_name] = []
+            redacted["chart_eligible"] = is_chart_eligible_node(redacted)
+            nodes.append(redacted)
+            continue
+        annotated = dict(node)
+        annotated["chart_eligible"] = is_chart_eligible_node(annotated)
+        nodes.append(annotated)
+
     out["scene_nodes"] = nodes
-    out["integrity"] = {
-        "status": integrity.get("integrity_status"),
-        "error_code": integrity.get("error_code"),
-        "user_message": integrity.get("user_message"),
-        "blocked_scene_count": integrity.get("blocked_scene_count"),
-    }
     return out

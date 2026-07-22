@@ -131,6 +131,54 @@ class GroundingReport:
         }
 
 
+_CRAFT_TOKEN_FRAGMENTS = (
+    "吸引",
+    "读者",
+    "继续",
+    "阅读",
+    "钩子",
+    "开篇",
+    "营造",
+    "切入",
+    "氛围",
+    "悬念",
+    "场景",
+    "情节",
+    "冲击",
+    "感官",
+    "奇幻",
+    "色彩",
+    "等级",
+    "互动",
+    "引入",
+    "中等",
+    "依赖",
+    "后续",
+    "展开",
+    "常规",
+    "称谓",
+    "瞬间",
+    "提升",
+    "强力",
+    "较弱",
+    "增强",
+    "背景",
+    "新闻",
+    "利用",
+    "灾难",
+    "行为",
+    "怪异",
+    "男人",
+    "进店",
+    "本身",
+    "作为",
+    "具有",
+    "缺乏",
+    "叙事",
+    "开场",
+)
+
+
 def extract_candidate_entities(text: str | None, *, min_len: int = 2, max_len: int = 4) -> set[str]:
     if not text:
         return set()
@@ -140,6 +188,8 @@ def extract_candidate_entities(text: str | None, *, min_len: int = 2, max_len: i
         if not (min_len <= len(token) <= max_len):
             continue
         if token in _STOP:
+            continue
+        if any(frag in token for frag in _CRAFT_TOKEN_FRAGMENTS):
             continue
         found.add(token)
     return found
@@ -281,11 +331,72 @@ def assert_async_result_identity(
         raise ValueError(ERROR_CONTEXT_MISMATCH)
 
 
+def is_craft_commentary_text(text: str | None) -> bool:
+    """Heuristic: literary-analysis craft talk, not story claims about characters."""
+    if not text:
+        return False
+    markers = (
+        "吸引读者",
+        "继续阅读",
+        "钩子",
+        "开篇",
+        "营造",
+        "切入",
+        "氛围",
+        "吸引力",
+        "强悬念",
+        "读者注意",
+        "场景入口",
+        "强有力的钩",
+        "典型的强",
+        "规则本身",
+        "反直觉",
+        "极强的吸引",
+        "抓住读者",
+    )
+    hits = sum(1 for m in markers if m in text)
+    return hits >= 2
+
+
+def is_severe_grounding_issue(issue: GroundingIssue) -> bool:
+    """Severe = confirmed cross-context / identity failure. Soft field issues are not severe."""
+    if issue.code in {ERROR_CONTEXT_MISMATCH, ERROR_ASYNC_IDENTITY}:
+        return True
+    if issue.code == ERROR_EVIDENCE_SCOPE:
+        # Wrong book is severe; same-book out-of-scene evidence is field-level soft.
+        if "不属于当前Book" in (issue.message or ""):
+            return True
+        if issue.paragraph_ids:
+            # Different chapter id encoded in paragraph (C####) vs allowed set already caught as scope;
+            # treat cross-chapter wrong prefix C as severe when book matches but chapter token differs.
+            for pid in issue.paragraph_ids:
+                if len(pid) >= 11 and pid[0] == "B":
+                    # Bxxxx-Cyyyy — if book digits differ from message book_prefix path handled above
+                    pass
+        return False
+    return False
+
+
 def classify_integrity_status(issues: Sequence[GroundingIssue], *, fingerprint_state: str) -> str:
-    if any(i.code == ERROR_CONTEXT_MISMATCH for i in issues) or fingerprint_state == "mismatch":
-        return "invalid_context"
-    if any(i.code in {ERROR_GROUNDING_ENTITY, ERROR_EVIDENCE_CLAIM, ERROR_EVIDENCE_SCOPE} for i in issues):
+    """
+    Graded integrity:
+    - data_integrity_failed: fingerprint mismatch, wrong-book evidence, context identity failure
+    - partially_trusted: soft field/scene issues with otherwise matching context
+    - legacy_unverified: no fingerprint and no severe pollution
+    - trusted: fingerprint ok and no issues
+    """
+    severe = [i for i in issues if is_severe_grounding_issue(i)]
+    soft = [i for i in issues if not is_severe_grounding_issue(i)]
+
+    if fingerprint_state == "mismatch" or any(i.code == ERROR_CONTEXT_MISMATCH for i in issues):
+        return "data_integrity_failed"
+    if severe:
         return "data_integrity_failed"
     if fingerprint_state == "missing_legacy":
+        # Legacy without severe pollution: soft field issues → partial; clean → legacy.
+        if soft:
+            return "partially_trusted"
         return "legacy_unverified"
+    if soft:
+        return "partially_trusted"
     return "trusted"

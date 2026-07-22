@@ -147,7 +147,7 @@ export function WorkspaceJourneyPane({
       >
         <div className="shell-banner" data-testid="workspace-journey-integrity-banner">
           <strong>阅读旅程结果校验未通过</strong>
-          <span>检测到部分结论与当前正文不一致，受影响详情已暂停展示。</span>
+          <span>检测到分析内容可能不属于当前正文，已停止展示不可信结果。</span>
         </div>
         <details data-testid="workspace-journey-tech-details">
           <summary>查看技术详情</summary>
@@ -161,17 +161,8 @@ export function WorkspaceJourneyPane({
             {journey?.journey_run_id ? ` · journey_run_id=${journey.journey_run_id}` : ""}
           </p>
         </details>
-        {/* Never mount chart shell on redacted/incomplete nodes — that caused render crash. */}
-        {chartSafe && journey?.visualization ? (
-          <ReaderJourneyWorkspace
-            visualization={journey.visualization}
-            analysisRunId={analysisRunId}
-            journeyRunId={journey.journey_run_id}
-            onLocateEvidence={() => undefined}
-          />
-        ) : (
-          <JourneyActions onReading={onReading} onViewScene={onViewScene} />
-        )}
+        {/* Hard-fail Journey: never mount chart shell; keep structured block page. */}
+        <JourneyActions onReading={onReading} onViewScene={onViewScene} />
       </div>
     );
   }
@@ -199,21 +190,46 @@ export function WorkspaceJourneyPane({
         data-state="invalid_artifact"
       >
         <strong>阅读旅程结果校验未通过</strong>
-        <span>可视化结构不完整，暂不展示不可信内容。</span>
+        <span>检测到分析内容可能不属于当前正文，已停止展示不可信结果。</span>
         <JourneyActions onReading={onReading} onViewScene={onViewScene} />
       </div>
     );
   }
+
+  const integrityStatus =
+    (journey as { integrity_status?: string } | null)?.integrity_status ||
+    (journey as { integrity?: { status?: string } } | null)?.integrity?.status ||
+    null;
+  const legacyWarning =
+    (journey as { integrity?: { legacy_warning?: string } } | null)?.integrity?.legacy_warning ||
+    (integrityStatus === "legacy_unverified"
+      ? "旧版分析尚未完成来源校验，仅供参考。"
+      : null);
+  const partialWarning =
+    integrityStatus === "partially_trusted"
+      ? "部分分析结果未通过校验，受影响内容已单独隐藏。"
+      : null;
 
   return (
     <div
       className="workspace-journey-pane"
       data-testid="workspace-journey-pane"
       data-state="ready"
+      data-integrity={integrityStatus || undefined}
       data-book-id={bookId}
       data-chapter-id={chapterId ?? undefined}
       data-analysis-run={analysisRunId}
     >
+      {legacyWarning ? (
+        <div className="shell-banner" data-testid="workspace-journey-legacy-banner">
+          <strong>{legacyWarning}</strong>
+        </div>
+      ) : null}
+      {partialWarning ? (
+        <div className="shell-banner" data-testid="workspace-journey-partial-banner">
+          <strong>{partialWarning}</strong>
+        </div>
+      ) : null}
       <ReaderJourneyWorkspace
         visualization={journey.visualization}
         analysisRunId={analysisRunId}
