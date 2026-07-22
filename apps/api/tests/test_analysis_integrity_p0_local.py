@@ -205,6 +205,32 @@ def test_craft_commentary_is_not_treated_as_story_entities():
     assert not is_craft_commentary_text("齐夏查看卡片，揭示自己为说谎者。")
 
 
+def test_chart_eligible_ignores_phase_summary_without_scores():
+    from app.services.analysis_integrity_guard import is_chart_eligible_node
+
+    assert is_chart_eligible_node({"node_type": "phase_summary"}) is False
+    assert is_chart_eligible_node({"node_type": "annotation"}) is False
+    assert is_chart_eligible_node({"node_type": "scene", "scores": {"reading_momentum": 1}}) is True
+    assert is_chart_eligible_node({"node_type": "scene", "integrity_blocked": True}) is False
+
+
+def test_cross_chapter_wrong_book_prefix_is_severe():
+    from app.services.analysis_grounding import GroundingIssue, is_severe_grounding_issue
+
+    severe = GroundingIssue(
+        code=ERROR_EVIDENCE_SCOPE,
+        message="证据段落不属于当前Book",
+        paragraph_ids=["B0002-C0001-P0001"],
+    )
+    soft = GroundingIssue(
+        code=ERROR_EVIDENCE_SCOPE,
+        message="证据段落不在当前Scene允许范围内",
+        paragraph_ids=["B0001-C0001-P0099"],
+    )
+    assert is_severe_grounding_issue(severe) is True
+    assert is_severe_grounding_issue(soft) is False
+
+
 def test_provider_messages_are_request_local():
     """HTTP adapter must build payload from the current request only."""
     from app.model_gateway.providers.openai_compatible import OpenAICompatibleProvider

@@ -187,10 +187,10 @@ export function WorkspaceJourneyPane({
       <div
         className="workspace-journey-pane state"
         data-testid="workspace-journey-pane"
-        data-state="invalid_artifact"
+        data-state="unavailable"
       >
-        <strong>阅读旅程结果校验未通过</strong>
-        <span>检测到分析内容可能不属于当前正文，已停止展示不可信结果。</span>
+        <strong>阅读旅程曲线暂不可绘制</strong>
+        <span>当前可视化缺少可用于图表的数值节点，其余结构未作为污染结论处理。</span>
         <JourneyActions onReading={onReading} onViewScene={onViewScene} />
       </div>
     );
