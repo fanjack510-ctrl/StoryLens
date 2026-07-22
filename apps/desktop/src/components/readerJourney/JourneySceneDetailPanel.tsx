@@ -64,6 +64,7 @@ import {
   getNarrativeLoops,
   getScenePayoffClaim,
 } from "./narrativeLoopView";
+import { isTautologyContinueDrive } from "./readerJourneyLensExplanation";
 import {
   formatLensBindingCaption,
   resolveLensMetricBinding,
@@ -436,7 +437,8 @@ export function JourneySceneDetailPanel({
                           </p>
                           {node.primary_hook.known ? <p>已知：{node.primary_hook.known}</p> : null}
                           {node.primary_hook.gap ? <p>缺口：{node.primary_hook.gap}</p> : null}
-                          {node.primary_hook.continue_drive ? (
+                          {node.primary_hook.continue_drive &&
+                          !isTautologyContinueDrive(node.primary_hook.continue_drive) ? (
                             <p>继续动力：{node.primary_hook.continue_drive}</p>
                           ) : null}
                           {node.primary_hook.next_handoff ? (
@@ -1195,11 +1197,11 @@ export function JourneyMarkerInspectorPanel({
                 <p>Scene {node.scene_ordinal}</p>
               </JourneyInspectorSection>
               {hook?.type ? (
-                <JourneyInspectorSection title="Hook 类型">
+                <JourneyInspectorSection title="钩子类型">
                   <p>{hookTypeZh(hook.type)}</p>
                 </JourneyInspectorSection>
               ) : null}
-              {hook?.continue_drive ? (
+              {hook?.continue_drive && !isTautologyContinueDrive(hook.continue_drive) ? (
                 <JourneyInspectorSection title="预期读者反应">
                   <p>{hook.continue_drive}</p>
                 </JourneyInspectorSection>
@@ -1212,7 +1214,7 @@ export function JourneyMarkerInspectorPanel({
                 <JourneyInspectorEmptyState kind="no-section" testId="empty-hook-followup" />
               )}
               {evidenceId && onLocateEvidence ? (
-                <JourneyInspectorSection title="Evidence">
+                <JourneyInspectorSection title="正文证据">
                   <JourneyEvidenceList
                     rows={[
                       {

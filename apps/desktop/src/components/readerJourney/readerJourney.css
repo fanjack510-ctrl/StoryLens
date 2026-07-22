@@ -3536,3 +3536,125 @@ body.journey-pane-resizing[data-row-resize="true"] * {
 .journey-overview-curve:has(.journey-toolbar-region-with-lenses) .journey-phase-strip {
   margin-top: 0;
 }
+
+/* CHG-20260722-012: progressive lens explanation + hook/payoff dual-rail */
+.journey-lens-explanation {
+  display: grid;
+  gap: 6px;
+  margin: 4px 0 8px;
+  min-width: 0;
+}
+.journey-lens-explanation-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+}
+.journey-lens-one-liner {
+  margin: 0;
+  flex: 1;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--muted, #5c655f);
+  max-width: 42em;
+}
+.journey-lens-how-to-trigger {
+  flex-shrink: 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent, #3d6b58);
+  font-size: 12px;
+  padding: 2px 4px;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.journey-lens-how-to-panel {
+  margin: 0;
+  padding: 6px 8px 6px 22px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text, #1f2421);
+  background: var(--surface2, #f4f1ea);
+  border-radius: 6px;
+}
+.journey-minimal-legend,
+.journey-hook-payoff-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+  color: var(--muted, #5c655f);
+  white-space: nowrap;
+}
+.journey-loop-inconsistent-banner {
+  margin: 0;
+  padding: 6px 10px;
+  font-size: 12px;
+  color: #6b5a2a;
+  background: #f7f0d8;
+  border-radius: 6px;
+}
+.journey-pacing-fit-note {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--muted, #5c655f);
+}
+.hook-payoff-timeline {
+  width: 100%;
+  overflow-x: auto;
+  min-height: 168px;
+}
+.hook-payoff-timeline-svg {
+  width: 100%;
+  min-width: 480px;
+  height: 168px;
+}
+.hook-payoff-rail-label {
+  font-size: 11px;
+  fill: #6a736c;
+}
+.hook-payoff-rail-line {
+  stroke: #d5d0c6;
+  stroke-width: 1;
+}
+.hook-payoff-link {
+  stroke: #7a8f82;
+  stroke-width: 1.5;
+  opacity: 0.85;
+}
+.hook-payoff-link.is-muted,
+.hook-payoff-node.is-muted {
+  opacity: 0.28;
+}
+.hook-payoff-node-dot {
+  fill: #3d6b58;
+  stroke: #fff;
+  stroke-width: 1.5;
+}
+.hook-payoff-node--partial .hook-payoff-node-dot {
+  fill: #8a7a4a;
+}
+.hook-payoff-node--full .hook-payoff-node-dot {
+  fill: #3d6b58;
+}
+.hook-payoff-node--reversal .hook-payoff-node-dot {
+  fill: #6b5a7a;
+}
+.hook-payoff-node--transformed .hook-payoff-node-dot {
+  fill: #4a6a8a;
+}
+.hook-payoff-node--open .hook-payoff-node-dot {
+  fill: transparent;
+  stroke: #3d6b58;
+}
+.hook-payoff-node-label {
+  font-size: 10px;
+  fill: #3a403c;
+}
+.hook-payoff-node.is-active .hook-payoff-node-dot {
+  stroke: #1f3d30;
+  stroke-width: 2.5;
+}

@@ -216,7 +216,9 @@ export function HookList({
             </b>
             {item.known ? <p>已知：{item.known}</p> : null}
             {item.gap ? <p>缺口：{item.gap}</p> : null}
-            {item.continue_drive ? <p>续读动力：{item.continue_drive}</p> : null}
+            {item.continue_drive && !/^(继续阅读|继续读下去|继续往下读|想继续读|继续读)$/.test(item.continue_drive.replace(/\s+/g, "")) ? (
+              <p>续读动力：{item.continue_drive}</p>
+            ) : null}
             {item.next_handoff ? <p>下场承接：{item.next_handoff}</p> : null}
             <EvidenceButtons ids={item.evidence_paragraph_ids} onLocate={onLocateEvidence} />
           </li>

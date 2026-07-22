@@ -1,0 +1,56 @@
+{
+  "id": "CHG-20260722-012",
+  "title": "Simplify Reader Journey chart explanations and hook-payoff visualization",
+  "type": "improvement",
+  "base_version": "1.0.4",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "desktop"
+  ],
+  "files": [
+    "apps/desktop/src/components/readerJourney/readerJourneyLensExplanation.ts",
+    "apps/desktop/src/components/readerJourney/JourneyLensExplanationChrome.tsx",
+    "apps/desktop/src/components/readerJourney/hookPayoffTimelineModel.ts",
+    "apps/desktop/src/components/readerJourney/HookPayoffTimeline.tsx",
+    "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.tsx",
+    "apps/desktop/src/components/readerJourney/observationLenses.ts",
+    "apps/desktop/src/components/readerJourney/JourneySceneDetailPanel.tsx",
+    "apps/desktop/src/components/readerJourney/sceneDetailFields.tsx",
+    "apps/desktop/src/components/readerJourney/readerJourney.css"
+  ],
+  "user_summary": "Reader Journey曲线说明难懂、钩子回报被画成双分数线、节奏速度与适配混淆、技术字段外露，且metric URL不同步。",
+  "technical_summary": "Presentation-only: ReaderJourneyLensExplanation progressive chrome; HookPayoffTimeline dual-rail from NarrativeLoopView; pacing fit note; lens/loop URL sync with metric; inspector tautology/tech cleanup. Depends on CHG-20260722-011. No algorithm/prompt/NarrativeLoop fact-rule changes.",
+  "acceptance_criteria": [
+    "Each lens shows one-liner and max-3 how-to-read",
+    "Hook/Payoff uses dual-rail from NarrativeLoopView not dual score curves",
+    "lens and loop URL restore on refresh; metric updates with lens",
+    "VERSION 1.0.4; no algorithm/tag/baseline/build/push/model"
+  ],
+  "tests": [
+    "apps/desktop/src/components/readerJourney/readerJourneyLensExplanation.test.tsx",
+    "apps/desktop/src/components/readerJourney/journeyLensUrlSync.test.tsx"
+  ],
+  "verification_evidence": [
+    "Audit: dual score curves for hook/payoff; lens local-only so refresh reset; pacing fit as numeric distance; tech EN fields in inspector.",
+    "Depends CHG-20260722-011 NarrativeLoopView.",
+    "Local vitest lens explanation + URL sync + related; typecheck/lint/version green."
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "P1",
+  "head_inclusion": null,
+  "created_at": "2026-07-22T15:08:25Z",
+  "updated_at": "2026-07-22T15:19:19Z"
+}

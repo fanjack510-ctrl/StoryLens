@@ -43,6 +43,18 @@ import {
   type ObservationLensId,
 } from "./observationLenses";
 import {
+  lensIdFromMetric,
+  metricForLens,
+  parseLensParam,
+} from "./readerJourneyLensExplanation";
+import { JourneyLensExplanationChrome } from "./JourneyLensExplanationChrome";
+import { HookPayoffTimeline } from "./HookPayoffTimeline";
+import { buildHookPayoffTimelineModel } from "./hookPayoffTimelineModel";
+import {
+  getNarrativeLoopConsistency,
+  getNarrativeLoops,
+} from "./narrativeLoopView";
+import {
   formatLensBindingCaption,
   formatLensPhaseScoreLabel,
   phaseAverageForLens,
@@ -223,9 +235,23 @@ export function ReaderJourneyWorkspace({
   const [selectedSceneOrdinalInternal, setSelectedSceneOrdinalInternal] = useState<number | null>(
     null,
   );
-  const [metricInternal, setMetricInternal] = useState<JourneyCurveMetric>("engagement");
-  const [observationLens, setObservationLens] =
-    useState<ObservationLensId>(DEFAULT_OBSERVATION_LENS);
+  const [metricInternal, setMetricInternal] = useState<JourneyCurveMetric>(() => {
+    const fromUrl = searchParams.get("metric");
+    if (fromUrl === "engagement" || fromUrl === "valence" || fromUrl === "arousal" || fromUrl === "curiosity" || fromUrl === "tension" || fromUrl === "payoff" || fromUrl === "hook" || fromUrl === "dropoff_risk") {
+      return fromUrl;
+    }
+    return "engagement";
+  });
+  const [observationLens, setObservationLens] = useState<ObservationLensId>(() => {
+    return (
+      parseLensParam(searchParams.get("lens")) ??
+      lensIdFromMetric(searchParams.get("metric")) ??
+      DEFAULT_OBSERVATION_LENS
+    );
+  });
+  const [selectedLoopId, setSelectedLoopId] = useState<string | null>(
+    () => searchParams.get("loop"),
+  );
   const [overlayComposite, setOverlayComposite] = useState(false);
   const [analysisInfoOpen, setAnalysisInfoOpen] = useState(false);
   const [exportStatus, setExportStatus] = useState<"idle" | "exporting" | "succeeded" | "failed">(
@@ -537,7 +563,13 @@ export function ReaderJourneyWorkspace({
     setInspectorCollapsedPref(!inspectorCollapsed);
   };
 
-  const expandInspector = () => setInspectorCollapsedPref(false);
+  const expandInspector = useCallback(() => {
+    setInspectorCollapsed(false);
+    writeLocalPref(UI_PREF_KEYS.inspectorCollapsed, false);
+    if (layoutMode === "narrow") {
+      setNarrowPane("inspector");
+    }
+  }, [layoutMode]);
 
   /** Narrow drawer is open only when the inspector tab is active and not collapsed. */
   const narrowDrawerOpen =
@@ -675,17 +707,85 @@ export function ReaderJourneyWorkspace({
     expandInspector();
   };
 
+  const syncLensLoopToUrl = useCallback(
+    (lens: ObservationLensId, loopId: string | null, metricKey?: JourneyCurveMetric) => {
+      setSearchParams(
+        (prev) => {
+          const params = new URLSearchParams(prev);
+          params.set("lens", lens);
+          params.set("metric", metricKey ?? metricForLens(lens));
+          if (loopId) params.set("loop", loopId);
+          else params.delete("loop");
+          return params;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
+
   const handleMetricChange = (key: JourneyCurveMetric) => {
     if (controlledMetric === undefined) {
       setMetricInternal(key);
     }
+    const nextLens = lensIdFromMetric(key);
+    setObservationLens(nextLens);
+    syncLensLoopToUrl(nextLens, selectedLoopId, key);
     onSelectionChange?.({ selectedMetric: key, source: "journey_rhythm" });
   };
 
   const handleObservationLensChange = (lens: ObservationLensId) => {
     setObservationLens(lens);
     if (lens === "hook_payoff") setOverlayComposite(false);
+    const nextMetric = metricForLens(lens);
+    if (controlledMetric === undefined) {
+      setMetricInternal(nextMetric);
+    }
+    syncLensLoopToUrl(lens, selectedLoopId, nextMetric);
+    onSelectionChange?.({ selectedMetric: nextMetric, source: "journey_rhythm" });
   };
+
+  const handleSelectLoop = useCallback(
+    (loopId: string, sceneOrdinal: number) => {
+      setSelectedLoopId(loopId);
+      syncLensLoopToUrl(observationLens, loopId);
+      if (!isControlled) {
+        setSelectedSceneOrdinalInternal(sceneOrdinal);
+      }
+      onSelectionChange?.({
+        activeSceneOrdinal: sceneOrdinal,
+        source: "journey_hook",
+      });
+      expandInspector();
+    },
+    [observationLens, syncLensLoopToUrl, isControlled, onSelectionChange, expandInspector],
+  );
+
+  useEffect(() => {
+    const lensFromUrl = parseLensParam(searchParams.get("lens"));
+    const loopFromUrl = searchParams.get("loop");
+    if (lensFromUrl && lensFromUrl !== observationLens) {
+      setObservationLens(lensFromUrl);
+    }
+    if (loopFromUrl !== selectedLoopId) {
+      setSelectedLoopId(loopFromUrl);
+    }
+    if (loopFromUrl) {
+      const loops = getNarrativeLoops(visualization);
+      if (!loops.some((loop) => loop.loop_id === loopFromUrl)) {
+        setSelectedLoopId(null);
+        setSearchParams(
+          (prev) => {
+            const params = new URLSearchParams(prev);
+            params.delete("loop");
+            return params;
+          },
+          { replace: true },
+        );
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- URL is source of truth for back/forward
+  }, [searchParams]);
 
   const handleLocateEvidence = (paragraphId: string, node?: JourneySceneNode) => {
     onLocateEvidence(paragraphId);
@@ -1480,6 +1580,24 @@ export function ReaderJourneyWorkspace({
             </p>
           )}
 
+          <JourneyLensExplanationChrome
+            lensId={observationLens}
+            overlayCompare={overlayComposite}
+            hookPayoffStats={
+              isHookPayoffLens(observationLens)
+                ? buildHookPayoffTimelineModel(visualization, {
+                    selectedLoopId,
+                    selectedSceneOrdinal,
+                  }).stats
+                : null
+            }
+            inconsistentWarning={
+              isHookPayoffLens(observationLens)
+                ? getNarrativeLoopConsistency(visualization)?.user_message || null
+                : null
+            }
+          />
+
           {/* Chart shell: viewport only (toolbar is above phase strip) */}
           <div
             className="journey-chart-shell"
@@ -1498,6 +1616,14 @@ export function ReaderJourneyWorkspace({
                 data-plot-area-height={plotAreaHeightPx(heightPreset)}
                 style={{ minHeight: chartHeight, height: chartHeight, flex: "0 0 auto" }}
               >
+                {isHookPayoffLens(observationLens) ? (
+                  <HookPayoffTimeline
+                    visualization={visualization}
+                    selectedLoopId={selectedLoopId}
+                    selectedSceneOrdinal={selectedSceneOrdinal}
+                    onSelectLoop={handleSelectLoop}
+                  />
+                ) : (
                 <CanonicalJourneyChart
                   visualization={visualization}
                   metric={metric}
@@ -1572,7 +1698,13 @@ export function ReaderJourneyWorkspace({
                     });
                   }}
                 />
+                )}
               </section>
+              {observationLens === "pacing" ? (
+                <p className="journey-pacing-fit-note" data-testid="journey-pacing-fit-note">
+                  下方适配轨表示节奏是否合适，不表示与主线的数值距离。
+                </p>
+              ) : null}
 
               <JourneyDiagnosisBand
                 diagnoses={sceneDiagnoses}
@@ -1608,19 +1740,10 @@ export function ReaderJourneyWorkspace({
               </section>
 
               <div className="journey-curve-legend" data-testid="journey-curve-legend">
-                <span data-legend="active-scene">当前场景</span>
-                <span data-legend="hook-key">钩子</span>
-                <span data-legend="payoff">回报</span>
-                <span data-legend="risk">流失风险</span>
-                {markerMode === "full" && (
-                  <>
-                    <span data-legend="answered">已回答问题</span>
-                    <span data-legend="transformed">问题升级</span>
-                    <span data-legend="secondary">次级节点</span>
-                    <span data-legend="beat">节拍节点</span>
-                    <span data-legend="derived">派生标记</span>
-                  </>
-                )}
+                <span data-legend="scene">● 场景</span>
+                <span data-legend="beat">• 节拍</span>
+                <span data-legend="selection">┆ 当前选择</span>
+                <span data-legend="risk">■ 风险提醒</span>
               </div>
             </div>
           </div>

@@ -6,6 +6,7 @@ import type {
   ReaderJourneyVisualization,
 } from "../../types/readerJourneyVisualization";
 import { resolveMetricValue } from "./journeyChartScales";
+import { getLensExplanation } from "./readerJourneyLensExplanation";
 
 export type ObservationLensId =
   | "composite"
@@ -78,19 +79,19 @@ export const OBSERVATION_LENSES: ObservationLensDef[] = [
 
 export const DEFAULT_OBSERVATION_LENS: ObservationLensId = "composite";
 
-/** One-line hint for the active lens (shown under toolbar, not inside a menu). */
+/** @deprecated Prefer getLensExplanation(id).one_line_summary */
 export const OBSERVATION_LENS_HINTS_ZH: Record<ObservationLensId, string> = {
-  composite: "观察整章阅读动力的起伏",
-  plot_progress: "观察故事状态是否持续发生变化",
-  reading_tension: "观察好奇、压力与情绪投入",
-  emotion: "观察情绪强度、方向及转变",
-  hook_payoff: "观察问题建立、推进与兑现",
-  pacing: "观察叙事速度与场景任务是否匹配",
+  composite: "读者是否愿意继续往下读。线越高，继续阅读的动力通常越强。",
+  plot_progress: "故事状态发生了多大变化，包括目标、冲突、信息和人物选择。",
+  reading_tension: "读者有多担心、期待或想知道下一步会发生什么。",
+  emotion: "读者在当前节点感受到的情绪有多强，只表示强弱，不表示好坏。",
+  hook_payoff:
+    "钩子提出读者想知道的问题，回报给出答案、结果或新的变化。连线表示它们之间的承接。",
+  pacing: "叙述推进得有多快。快慢本身没有好坏，要看是否适合当前场景任务。",
 };
 
 export function getObservationLensHint(id: ObservationLensId | string | null | undefined): string {
-  const lens = getObservationLens(id);
-  return OBSERVATION_LENS_HINTS_ZH[lens.id];
+  return getLensExplanation(id).one_line_summary;
 }
 
 export function getObservationLens(id: ObservationLensId | string | null | undefined): ObservationLensDef {
