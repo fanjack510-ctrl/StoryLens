@@ -384,4 +384,10 @@ export type ReaderJourneyVisualization = {
     status: string;
     strength?: number;
   }>;
+  /** Unified NarrativeLoopView projection (additive; absent on older cached payloads). */
+  narrative_loops?: Array<Record<string, unknown>>;
+  narrative_loop_risks?: Array<Record<string, unknown>>;
+  scene_payoff_claims?: Record<string, Record<string, unknown>>;
+  narrative_loop_consistency?: Record<string, unknown>;
+  narrative_loop_view_version?: string;
 };

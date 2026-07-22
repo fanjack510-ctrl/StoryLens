@@ -23,6 +23,7 @@ from app.db.models import (
 from app.schemas.reader_journey import SceneReaderJourneyProfileItem
 from app.services.reader_journey_engagement import compute_engagement, load_formula_config
 from app.services.reader_journey_progress import load_revision_scenes
+from app.services.narrative_loop_view import build_narrative_loop_bundle
 from app.services.reader_journey_question_lifecycle import (
     build_question_chains,
     diagnose_dropped_high_strength_questions,
@@ -1000,6 +1001,40 @@ def _apply_v2_presentation_overrides(
                 node["role"] = "core"
 
 
+def _narrative_loop_fields(
+    *,
+    profiles: list[SceneReaderJourneyProfileItem],
+    ranked_chains: list[dict[str, Any]],
+    question_lifecycle: list[dict[str, Any]],
+    risk_intervals: list[dict[str, Any]],
+    journey_run: ReaderJourneyRun,
+) -> dict[str, Any]:
+    """Additive NarrativeLoopView projection — does not mutate stored artifacts."""
+    fingerprint = hashlib.sha256(
+        f"{journey_run.id}:{journey_run.analysis_run_id}:{journey_run.scene_contract_version}:"
+        f"{len(profiles)}".encode()
+    ).hexdigest()[:16]
+    bundle = build_narrative_loop_bundle(
+        profiles,
+        question_chains=ranked_chains,
+        question_lifecycle=question_lifecycle,
+        legacy_risk_intervals=risk_intervals,
+        book_id=journey_run.book_id,
+        chapter_id=journey_run.chapter_id,
+        analysis_run_id=journey_run.analysis_run_id,
+        journey_run_id=journey_run.id,
+        scene_contract_version=journey_run.scene_contract_version,
+        artifact_fingerprint=fingerprint,
+    )
+    return {
+        "narrative_loops": bundle["narrative_loops"],
+        "narrative_loop_risks": bundle["narrative_loop_risks"],
+        "scene_payoff_claims": bundle["scene_payoff_claims"],
+        "narrative_loop_consistency": bundle["consistency_report"],
+        "narrative_loop_view_version": bundle["narrative_loop_view_version"],
+    }
+
+
 def _question_lifecycle_from_summary(
     summary: ChapterReaderJourneySummary | None,
 ) -> list[dict[str, Any]]:
@@ -1430,6 +1465,7 @@ def build_reader_journey_visualization(
         "role_counts": role_counts,
         "classifications": classification_rows,
     }
+    question_lifecycle = _question_lifecycle_from_summary(summary)
 
     return {
         "visualization_version": VISUALIZATION_VERSION,
@@ -1509,5 +1545,12 @@ def build_reader_journey_visualization(
             "engagement_formula_version": str(formula.get("version", "1.0")),
         },
         "calibration_status": _calibration_status(journey_run),
-        "question_lifecycle": _question_lifecycle_from_summary(summary),
+        "question_lifecycle": question_lifecycle,
+        **_narrative_loop_fields(
+            profiles=profiles,
+            ranked_chains=ranked_chains,
+            question_lifecycle=question_lifecycle,
+            risk_intervals=risk_intervals,
+            journey_run=journey_run,
+        ),
     }

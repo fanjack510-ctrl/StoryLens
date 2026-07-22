@@ -11,6 +11,7 @@ import type { ObservationLensId } from "./observationLenses";
 import { nodeScoreRecord } from "./observationLenses";
 import type { DiagnosisBandLabel, SceneDiagnosisLike } from "./diagnosisBandModel";
 import { mapDiagnosisCodeToBandLabel, primaryBandLabelForScene } from "./diagnosisBandModel";
+import { formatPayoffClaimLabel, getScenePayoffClaim } from "./narrativeLoopView";
 
 export const HOOK_STRENGTH_LABEL = "钩子强度";
 export const PAYOFF_STRENGTH_LABEL = "本场回报强度";
@@ -87,7 +88,8 @@ export function payoffPlainLanguage(payoff: number | null | undefined): string {
   if (payoff <= 0) return "本场未提供有效兑现。";
   if (payoff < 40) return "本场提供少量线索或部分回答，核心问题仍未兑现。";
   if (payoff < 70) return "本场完成部分兑现，核心问题仍未完全回收。";
-  return "本场对前文问题完成较强兑现。";
+  // High score alone is not a deterministic 有效兑现 claim.
+  return "本场回报分数较高，需结合回报实体与证据核对。";
 }
 
 export function lifecycleStatusLabelZh(status: string | null | undefined): string {
@@ -177,7 +179,7 @@ export function buildHookPayoffSceneSummary(
     hook,
     payoff,
     lifecycleStatusLabel,
-    payoffPlainText: payoffPlainLanguage(payoff),
+    payoffPlainText: formatPayoffClaimLabel(getScenePayoffClaim(visualization, node.scene_ordinal), payoff),
     dataStatus,
   };
 }

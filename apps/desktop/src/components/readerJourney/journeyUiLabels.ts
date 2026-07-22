@@ -309,6 +309,8 @@ export function formatJourneySelectionType(kind: string | null | undefined): str
 /** Raw risk_type codes → Chinese (presentation only; keys unchanged). */
 export const RISK_TYPE_LABELS_ZH: Record<string, string> = {
   consecutive_no_payoff: "连续场景缺少有效回报",
+  open_narrative_loop: "开放问题尚未兑现",
+  narrative_loop_inconsistent: "叙事关系识别不一致",
   low_engagement: "阅读牵引持续偏低",
   low_reading_momentum: "阅读动力持续偏低",
   momentum_decline: "阅读动力连续下降",
@@ -353,6 +355,10 @@ export function formatJourneyRiskSummary(input: {
   if (input.risk_type === "consecutive_no_payoff" && start != null && end != null) {
     const spanText = span != null && span > 1 ? `连续${span}个场景` : "连续场景";
     return `场景 ${start}—${end} ${spanText}缺少明显回报，可能降低阅读动力。`;
+  }
+  if (input.risk_type === "open_narrative_loop" || input.risk_type === "narrative_loop_inconsistent") {
+    const rawLoop = typeof input.summary === "string" ? input.summary.trim() : "";
+    if (rawLoop) return rawLoop;
   }
 
   const raw = typeof input.summary === "string" ? input.summary.trim() : "";

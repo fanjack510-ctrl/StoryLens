@@ -50,12 +50,20 @@ import {
   isHookPayoffLens,
   lifecycleStatusLabelZh,
   otherDiagnosesForHookPayoffLens,
-  payoffPlainLanguage,
   questionsForScene,
   sceneRoleInLifecycle,
 } from "./hookPayoffLensModel";
 import { primaryBandLabelForScene } from "./diagnosisBandModel";
 import type { SceneDiagnosisLike } from "./diagnosisBandModel";
+import {
+  formatPayoffClaimLabel,
+  formatHookHandoffFromLoops,
+  formatOpenLoopRiskSummary,
+  getNarrativeLoopConsistency,
+  getNarrativeLoopRisks,
+  getNarrativeLoops,
+  getScenePayoffClaim,
+} from "./narrativeLoopView";
 import {
   formatLensBindingCaption,
   resolveLensMetricBinding,
@@ -433,6 +441,21 @@ export function JourneySceneDetailPanel({
                           ) : null}
                           {node.primary_hook.next_handoff ? (
                             <p>下一场承接：{node.primary_hook.next_handoff}</p>
+                          ) : visualization ? (
+                            (() => {
+                              const handoff = formatHookHandoffFromLoops(
+                                getNarrativeLoops(visualization),
+                                node.scene_ordinal,
+                              );
+                              if (handoff.text) {
+                                return <p>下一场承接：{handoff.text}</p>;
+                              }
+                              return (
+                                <p className="journey-inspector-hint">
+                                  {handoff.hint || "当前钩子尚未识别出明确的后续承接。"}
+                                </p>
+                              );
+                            })()
                           ) : (
                             <p className="journey-inspector-hint">
                               当前钩子尚未识别出明确的后续承接。
@@ -531,7 +554,7 @@ function HookPayoffLifecycleSection({
       <JourneyInspectorSection title="钩子与回报解读" testId="scene-hook-payoff-combo">
         <p data-testid="scene-hook-payoff-combo-text">{combo}</p>
         <p className="journey-inspector-hint" data-testid="scene-payoff-plain">
-          {payoffPlainLanguage(payoff)}
+          {formatPayoffClaimLabel(getScenePayoffClaim(visualization, node.scene_ordinal), payoff)}
         </p>
       </JourneyInspectorSection>
       <JourneyInspectorSection title="问题生命周期" testId="scene-question-lifecycle">
@@ -707,15 +730,51 @@ export function JourneyPhaseDetailPanel({
     return uniqueQuestions(last?.reader_question_out ?? []);
   }, [nodes]);
 
-  const overlappingRisks = useMemo(
-    () =>
-      visualization.risk_intervals.filter(
-        (interval) =>
-          interval.end_scene_ordinal >= phase.start_scene_ordinal &&
-          interval.start_scene_ordinal <= phase.end_scene_ordinal,
-      ),
-    [visualization.risk_intervals, phase.start_scene_ordinal, phase.end_scene_ordinal],
-  );
+  const overlappingRisks = useMemo(() => {
+    const loopRisks = getNarrativeLoopRisks(visualization)
+      .filter((risk) => {
+        const start = Number(risk.start_scene_ordinal ?? 0);
+        const end = Number(risk.end_scene_ordinal ?? start);
+        return end >= phase.start_scene_ordinal && start <= phase.end_scene_ordinal;
+      })
+      .map((risk) => ({
+        risk_type: risk.risk_type,
+        start_scene_ordinal: Number(risk.start_scene_ordinal ?? phase.start_scene_ordinal),
+        end_scene_ordinal: Number(risk.end_scene_ordinal ?? risk.start_scene_ordinal ?? phase.end_scene_ordinal),
+        span: Number(risk.span ?? 1),
+        summary: formatOpenLoopRiskSummary(risk),
+        trigger: risk.loop_id,
+        needs_review: risk.risk_type === "narrative_loop_inconsistent",
+      }));
+    const consistency = getNarrativeLoopConsistency(visualization);
+    const legacy = visualization.risk_intervals.filter((interval) => {
+      const overlaps =
+        interval.end_scene_ordinal >= phase.start_scene_ordinal &&
+        interval.start_scene_ordinal <= phase.end_scene_ordinal;
+      if (!overlaps) return false;
+      // Prefer NarrativeLoopView open-loop risks over score/empty-array consecutive_no_payoff.
+      if (interval.risk_type === "consecutive_no_payoff" && loopRisks.length) return false;
+      if (
+        interval.risk_type === "consecutive_no_payoff" &&
+        consistency?.status === "inconsistent"
+      ) {
+        return false;
+      }
+      return true;
+    });
+    if (consistency?.status === "inconsistent" && !loopRisks.some((r) => r.risk_type === "narrative_loop_inconsistent")) {
+      loopRisks.unshift({
+        risk_type: "narrative_loop_inconsistent",
+        start_scene_ordinal: phase.start_scene_ordinal,
+        end_scene_ordinal: phase.end_scene_ordinal,
+        span: Math.max(1, phase.end_scene_ordinal - phase.start_scene_ordinal + 1),
+        summary: consistency.user_message || "当前关系识别结果不一致，暂不作为确定结论",
+        trigger: "narrative_loop_consistency",
+        needs_review: true,
+      });
+    }
+    return [...loopRisks, ...legacy];
+  }, [visualization, phase.start_scene_ordinal, phase.end_scene_ordinal]);
 
   const avgCognitive = useMemo(() => {
     if (!nodes.length) return null;
@@ -909,6 +968,7 @@ export function JourneyPhaseDetailPanel({
                             <details className="journey-tech-details">
                               <summary>技术详情</summary>
                               <code>{interval.risk_type}</code>
+                              {interval.trigger ? <p>{interval.trigger}</p> : null}
                             </details>
                           </li>
                         ))}

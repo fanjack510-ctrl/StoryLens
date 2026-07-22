@@ -16,6 +16,7 @@ import {
   type PacingFitLabel,
 } from "./observationLenses";
 import { formatJourneyScore } from "./journeyUiLabels";
+import { getScenePayoffClaim } from "./narrativeLoopView";
 
 export type LensMetricBinding = {
   fieldKey: string;
@@ -119,6 +120,24 @@ export function resolveLensMetricBinding(
   if (lens.id === "hook_payoff") {
     const hook = node ? resolveNodeFieldValue(node, "hook") : null;
     const payoff = node ? resolveNodeFieldValue(node, "payoff") : null;
+    const claim = node ? getScenePayoffClaim(visualization, node.scene_ordinal) : null;
+    let payoffText = "本场回报 —";
+    if (payoff != null) {
+      if (claim && !claim.deterministic) {
+        payoffText = `本场回报 ${Math.round(payoff)} · ${claim.label}`;
+      } else if (claim?.claim === "full") {
+        payoffText = `本场回报 ${Math.round(payoff)} · 有效兑现`;
+      } else if (claim?.claim === "partial" || (claim == null && payoff >= 40 && payoff < 70)) {
+        payoffText = `本场回报 ${Math.round(payoff)} · 部分兑现`;
+      } else if (claim?.claim === "none" || payoff < 40) {
+        payoffText = `本场回报 ${Math.round(payoff)} · 未兑现`;
+      } else if (payoff >= 70) {
+        // Score-only high payoff without deterministic claim — never assert 有效兑现.
+        payoffText = `本场回报 ${Math.round(payoff)} · 关系待核对`;
+      } else {
+        payoffText = `本场回报 ${Math.round(payoff)}`;
+      }
+    }
     return {
       fieldKey: "hook",
       labelZh: "钩子强度",
@@ -128,14 +147,7 @@ export function resolveLensMetricBinding(
           fieldKey: "payoff",
           labelZh: "本场回报强度",
           value: payoff,
-          text:
-            payoff == null
-              ? "本场回报 —"
-              : payoff >= 70
-                ? `本场回报 ${Math.round(payoff)} · 有效兑现`
-                : payoff >= 40
-                  ? `本场回报 ${Math.round(payoff)} · 部分兑现`
-                  : `本场回报 ${Math.round(payoff)} · 未兑现`,
+          text: payoffText,
         },
       ],
     };

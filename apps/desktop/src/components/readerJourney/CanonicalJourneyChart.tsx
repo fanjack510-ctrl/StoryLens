@@ -44,6 +44,7 @@ import {
 } from "./observationLenses";
 import { resolveNodeVisualStyle } from "./journeyNodeDiagnosisStyle";
 import { buildSegmentMarkers } from "./journeySegmentMarkers";
+import { getScenePayoffClaim } from "./narrativeLoopView";
 import {
   HOOK_STRENGTH_LABEL,
   PAYOFF_NOT_CUMULATIVE_HINT,
@@ -227,6 +228,13 @@ export function CanonicalJourneyChart({
 
   const segmentMarkers = useMemo(() => {
     if (!lensId) return [];
+    const verifiedFullPayoffScenes = new Set<number>();
+    for (const node of nodes) {
+      const claim = getScenePayoffClaim(visualization, node.scene_ordinal);
+      if (claim?.deterministic && claim.claim === "full") {
+        verifiedFullPayoffScenes.add(node.scene_ordinal);
+      }
+    }
     return buildSegmentMarkers(
       nodes.map((node) => ({
         scene_ordinal: node.scene_ordinal,
@@ -242,9 +250,9 @@ export function CanonicalJourneyChart({
         arousal:
           ((node.scores.arousal_start ?? 0) + (node.scores.arousal_end ?? 0)) / 2,
       })),
-      { lensId },
+      { lensId, verifiedFullPayoffScenes },
     );
-  }, [lensId, nodes]);
+  }, [lensId, nodes, visualization]);
 
   const pacingSegments = useMemo(() => {
     if (lensId !== "pacing") return [];
