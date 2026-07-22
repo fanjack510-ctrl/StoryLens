@@ -71,6 +71,7 @@ from app.services.cloud_budget import daily_usage
 from app.services.cloud_pricing import pricing_status
 from app.services.credentials.base import CredentialStore
 from app.services.credentials.service import get_credential_store
+from app.services.analysis_execution_plan import build_analysis_execution_plan
 from app.services.provider_eligibility import (
     ProviderEligibilityService,
     evaluate_manual_boundary_candidate,
@@ -514,6 +515,27 @@ async def providers(
             })
         )
     return result
+
+
+@router.get("/analysis-execution-plan")
+def get_analysis_execution_plan(
+    mode: str = "BALANCED",
+    gateway: ModelGateway = Depends(get_model_gateway),
+    session: Session = Depends(get_db),
+    store: CredentialStore = Depends(get_credential_store),
+) -> dict:
+    """Zero-network start-analysis readiness plan (SSOT for dialog gate)."""
+    from app.services.provider_runtime import bind_gateway_runtime
+
+    bind_gateway_runtime(gateway, session, store)
+    plan = build_analysis_execution_plan(
+        session,
+        gateway=gateway,
+        store=store,
+        mode=mode,
+        pricing_path=Path("config/cloud_pricing.json"),
+    )
+    return plan.as_dict()
 
 
 def _preflight_estimate(session: Session, chapter_id: int) -> tuple[int, int, float]:

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { providersApi } from "../../services/providersApi";
 import { analysisApi } from "../../services/analysisApi";
 import { settingsApi } from "../../services/settingsApi";
@@ -15,6 +15,7 @@ import {
   DEFAULT_AI_SERVICE_ID,
   buildAiServiceViewModel,
 } from "../../services/aiServiceViewModel";
+import { invalidateAiQueries } from "../../services/aiServiceConfig";
 import { BUDGET_ERROR_USER_COPY } from "../../services/budgetErrorCopy";
 import {
   estimateFullPipelineRequests,
@@ -459,6 +460,7 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
   const [submitState, setSubmitState] = useState<"idle" | "checking" | "creating" | "created" | "failed">("idle");
   const clientRequestId = useRef(crypto.randomUUID());
   const dialogRef = useRef<HTMLDivElement>(null);
+  const queryClient = useQueryClient();
   const providers = useQuery({
     queryKey: ["providers"], queryFn: providersApi.list, refetchOnMount: "always", staleTime: 0,
   });
@@ -482,6 +484,13 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
     refetchOnMount: "always",
     staleTime: 0,
   });
+  const executionPlanQuery = useQuery({
+    queryKey: ["analysis-execution-plan", analysisModePreset, DEFAULT_AI_SERVICE_ID],
+    queryFn: () => analysisApi.executionPlan(analysisModePreset),
+    refetchOnMount: "always",
+    staleTime: 0,
+  });
+  const executionPlan = executionPlanQuery.data;
   const evaluated = useMemo(() => (providers.data || []).map((item) => ({
     item, eligibility: manualBoundaryEligibility(item),
   })), [providers.data]);
@@ -502,6 +511,9 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
   );
 
   const unavailableReason = useMemo(() => {
+    if (executionPlan?.user_message && !executionPlan.can_start) {
+      return executionPlan.user_message;
+    }
     if (eligible.length > 0) return null;
     const target =
       (providers.data || []).find((p) => p.name === DEFAULT_AI_SERVICE_ID) ||
@@ -518,9 +530,29 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
     ) {
       return "凭据已失效";
     }
-    if (blockers.length) return "当前 AI 服务不支持此分析";
-    return "当前 AI 服务不支持此分析";
-  }, [eligible.length, providers.data, cloud.data?.enabled, configuration.data?.credential_state]);
+    if (blockers.includes("provider_unhealthy") || blockers.includes("provider_health_stale")) {
+      return "Provider暂时不可用，请重新验证连接";
+    }
+    if (blockers.includes("budget_unavailable")) return "当前额度不足";
+    if (blockers.length) {
+      const first = blockers[0];
+      const mapped: Record<string, string> = {
+        provider_not_configured: "尚未配置AI服务",
+        provider_disconnected: "AI 服务尚未连接",
+        boundary_candidates_not_supported: "当前服务不支持场景边界分析",
+        pricing_unavailable: "计价配置不可用",
+      };
+      return mapped[first] || "当前无法开始分析";
+    }
+    return "当前无法开始分析";
+  }, [
+    eligible.length,
+    providers.data,
+    cloud.data?.enabled,
+    configuration.data?.credential_state,
+    executionPlan?.user_message,
+    executionPlan?.can_start,
+  ]);
 
   const aiView = useMemo(
     () =>
@@ -528,15 +560,32 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
         provider: developerMode ? selected || defaultProvider : defaultProvider,
         configuration: configuration.data,
         cloudEnabled: cloud.data?.enabled ?? true,
-        providerEligible: eligible.some((p) => p.name === (defaultProvider?.name || DEFAULT_AI_SERVICE_ID)),
+        providerEligible:
+          executionPlan?.can_start === true ||
+          eligible.some((p) => p.name === (defaultProvider?.name || DEFAULT_AI_SERVICE_ID)),
       }),
-    [developerMode, selected, defaultProvider, configuration.data, cloud.data?.enabled, eligible],
+    [
+      developerMode,
+      selected,
+      defaultProvider,
+      configuration.data,
+      cloud.data?.enabled,
+      eligible,
+      executionPlan?.can_start,
+    ],
   );
+
+  // Backend ExecutionPlan is SSOT; developer mode may still pick any eligible provider.
+  const planAllowsStart = executionPlan
+    ? executionPlan.can_start
+    : aiView.canStartAnalysis && eligible.length > 0;
 
   useEffect(() => {
     if (developerMode) {
       if (eligible.length === 1 && provider !== eligible[0].name) {
         setProvider(eligible[0].name);
+      } else if (eligible.length === 0 && planAllowsStart && provider !== DEFAULT_AI_SERVICE_ID) {
+        setProvider(DEFAULT_AI_SERVICE_ID);
       }
       return;
     }
@@ -548,16 +597,17 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
       setProvider(preferred);
     }
     if (mode !== "cloud") setMode("cloud");
-  }, [developerMode, eligible, provider, mode]);
+  }, [developerMode, eligible, provider, mode, planAllowsStart]);
 
   useEffect(() => {
     if (provider && !eligible.some((item) => item.name === provider)) {
       if (developerMode) {
         if (eligible.length === 1) setProvider(eligible[0].name);
+        else if (planAllowsStart) setProvider(DEFAULT_AI_SERVICE_ID);
         else setProvider("");
       }
     }
-  }, [eligible, provider, developerMode]);
+  }, [eligible, provider, developerMode, planAllowsStart]);
 
   useEffect(() => {
     setPreflight(null);
@@ -695,11 +745,11 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
         worstCase: null,
       });
     }
-    if (!developerMode && !aiView.canStartAnalysis) {
+    if (!developerMode && !planAllowsStart) {
       list.push({
         dimension: "provider",
         title: "Qwen 尚未连接",
-        userMessage: "AI 服务尚未连接，请先完成连接测试。",
+        userMessage: unavailableReason || "AI 服务尚未连接，请先完成连接测试。",
         required: null,
         available: null,
         shortfall: null,
@@ -749,7 +799,8 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
   }, [
     developerMode,
     aiView.apiKeyConfigured,
-    aiView.canStartAnalysis,
+    planAllowsStart,
+    unavailableReason,
     stage1RequestShortfall,
     preflight,
     stage1Estimated,
@@ -762,14 +813,18 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
   ]);
 
   const requestOnly = requestOnlyShortfall(createBlockers);
-  const busy = submitState === "checking" || submitState === "creating" || providers.isFetching;
+  const busy = submitState === "checking" || submitState === "creating" || providers.isFetching || executionPlanQuery.isFetching;
 
   // Ordinary: hard-disable only when Stage-1 estimated path cannot start.
   // Request-only shortfall shows recovery panel (temp auth); token/cost remain hard.
-  const providerUnavailable = eligible.length === 0 || !provider;
+  // Developer: prefer eligible list, but do not ignore a backend plan that says can_start
+  // (stale cached_failure must not strand a verified Settings configuration).
+  const providerUnavailable = developerMode
+    ? ((eligible.length === 0 && !planAllowsStart) || !provider)
+    : !planAllowsStart || !provider;
   const hardCreateBlocked = tokenBlocked || costBlocked
     || (budgetBlocked && !requestOnly)
-    || (!developerMode && (!aiView.canStartAnalysis || !consent));
+    || (!developerMode && (!planAllowsStart || !consent));
   const effectiveSubmitDisabled = developerMode
     ? busy || (budgetBlocked && !requestOnly) || providerUnavailable
     : busy || hardCreateBlocked || providerUnavailable;
@@ -789,7 +844,7 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
     if (providerUnavailable) {
       return unavailableReason || (developerMode ? "请选择可用 Provider" : "AI 服务尚未连接");
     }
-    if (!developerMode && !aiView.canStartAnalysis) {
+    if (!developerMode && !planAllowsStart) {
       return unavailableReason || "AI 服务尚未连接";
     }
     if ((mode === "cloud" || mode === "hybrid") && !consent) {
@@ -807,7 +862,7 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
     submitState,
     providerUnavailable,
     developerMode,
-    aiView.canStartAnalysis,
+    planAllowsStart,
     unavailableReason,
     mode,
     consent,
@@ -834,8 +889,8 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
     if (providerUnavailable) {
       return setMessage(unavailableReason || "当前没有可用的 AI 服务，请前往设置配置。");
     }
-    if (!developerMode && !aiView.canStartAnalysis) {
-      return setMessage("AI服务尚未连接，请前往设置完成配置。");
+    if (!developerMode && !planAllowsStart) {
+      return setMessage(unavailableReason || "AI服务尚未连接，请前往设置完成配置。");
     }
     if ((mode === "cloud" || mode === "hybrid") && !consent) return setMessage("请先确认云端传输同意。");
     if (!provider) {
@@ -845,7 +900,11 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
           : unavailableReason || "AI服务尚未连接。",
       );
     }
-    if (!developerMode && eligible.every((item) => item.name !== provider)) {
+    if (
+      !developerMode
+      && !planAllowsStart
+      && eligible.every((item) => item.name !== provider)
+    ) {
       return setMessage(unavailableReason || "当前没有可用的 AI 服务，请前往设置配置。");
     }
     if (budgetBlocked && !allowance) return setMessage(formatBudgetGaps(preflight) || "当前Stage 1预算不足。");
@@ -1017,7 +1076,15 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
                 data-testid="start-analysis-refresh-status"
                 disabled={providers.isFetching}
                 onClick={async () => {
-                  await providers.refetch();
+                  await invalidateAiQueries(queryClient);
+                  await Promise.all([
+                    providers.refetch(),
+                    executionPlanQuery.refetch(),
+                    configuration.refetch(),
+                    cloud.refetch(),
+                    cloudUsage.refetch(),
+                    budgetSettings.refetch(),
+                  ]);
                   setMessage(developerMode ? "Provider 状态已刷新。" : "服务状态已刷新。");
                 }}
               >
@@ -1027,12 +1094,12 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
 
             {!developerMode && (
               <div className="ai-service-summary" data-testid="start-analysis-ai-summary">
-                {aiView.canStartAnalysis && eligible.length > 0 ? (
+                {planAllowsStart ? (
                   <>
                     <p data-testid="start-analysis-ai-connected">
                       <b>{aiView.serviceDisplayName}</b>
                       {" · "}
-                      {aiView.modelDisplayName}
+                      {executionPlan?.selected_model || aiView.modelDisplayName}
                     </p>
                     <p className="ai-connected-label">已连接</p>
                     <Link
@@ -1065,7 +1132,7 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
 
             {developerMode && (
               <>
-                {eligible.length === 0 ? (
+                {eligible.length === 0 && !planAllowsStart ? (
                   <div data-testid="start-analysis-no-provider">
                     <p>{unavailableReason || "当前没有可用 Provider"}</p>
                     <Link to="/settings?tab=ai&focus=api_key" onClick={onClose}>
@@ -1081,10 +1148,15 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
                       onChange={(event) => setProvider(event.target.value)}
                       data-testid="start-analysis-provider-select"
                     >
-                      {eligible.length > 1 && <option value="">请选择</option>}
-                      {eligible.map((item) => (
+                      {(eligible.length > 1 || (eligible.length === 0 && planAllowsStart)) && (
+                        <option value="">请选择</option>
+                      )}
+                      {(eligible.length > 0
+                        ? eligible
+                        : (providers.data || []).filter((p) => p.name === DEFAULT_AI_SERVICE_ID)
+                      ).map((item) => (
                         <option key={item.name} value={item.name}>
-                          {formatProviderOptionLabel(item, eligible)}
+                          {formatProviderOptionLabel(item, eligible.length ? eligible : [item])}
                         </option>
                       ))}
                     </select>

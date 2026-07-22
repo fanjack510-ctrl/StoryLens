@@ -26,6 +26,25 @@ export const analysisApi = {
       method: "POST",
       body: JSON.stringify(payload),
     }),
+  executionPlan: (mode: string = "BALANCED") =>
+    api<{
+      mode: string;
+      selected_provider: string;
+      selected_model: string;
+      configured: boolean;
+      credential_available: boolean;
+      connection_verified: boolean;
+      supported_stages: string[];
+      missing_stages: string[];
+      blockers: string[];
+      unsupported_reason: string | null;
+      user_message: string | null;
+      can_start: boolean;
+      health_state: string | null;
+      health_source: string | null;
+      provider_state_version: string | null;
+      capability_schema_version: string;
+    }>(`/api/v1/analysis-execution-plan?mode=${encodeURIComponent(mode)}`),
   retry: (run: number) =>
     api(`/api/v1/analysis-runs/${run}/retry`, { method: "POST" }),
   resumeSceneAnalysis: (

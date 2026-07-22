@@ -191,6 +191,7 @@ export async function invalidateAiQueries(qc: QueryClient) {
     qc.invalidateQueries({ queryKey: ["cloud-budget"] }),
     qc.invalidateQueries({ queryKey: ["provider-config"] }),
     qc.invalidateQueries({ queryKey: ["recommended-qwen-setup"] }),
+    qc.invalidateQueries({ queryKey: ["analysis-execution-plan"] }),
   ]);
 }
 
