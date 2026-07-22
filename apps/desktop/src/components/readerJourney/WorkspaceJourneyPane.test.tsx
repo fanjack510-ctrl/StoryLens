@@ -1,16 +1,48 @@
+import type { ReactElement } from "react";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MemoryRouter } from "react-router-dom";
 import { WorkspaceJourneyPane } from "./WorkspaceJourneyPane";
 import {
   mapUrlToActiveTab,
   resolveWorkspaceLayout,
 } from "../../services/resolveWorkspaceLayout";
 
-vi.mock("./ReaderJourneyWorkspace", () => ({
-  ReaderJourneyWorkspace: () => <div data-testid="mock-journey-workspace">journey-shell</div>,
+vi.mock("./ReaderJourneySyncWorkspace", () => ({
+  ReaderJourneySyncWorkspace: ({ variant }: { variant?: string }) => (
+    <div data-testid="journey-sync-workspace" data-variant={variant}>
+      <div data-testid="journey-sync-mode-toggle">
+        <button type="button" data-testid="journey-mode-sync">
+          正文对照
+        </button>
+        <button type="button" data-testid="journey-mode-journey">
+          旅程视图
+        </button>
+        <button type="button" data-testid="journey-mode-reading">
+          仅看正文
+        </button>
+      </div>
+    </div>
+  ),
+}));
+
+vi.mock("../../services/analysisApi", () => ({
+  analysisApi: {
+    results: vi.fn(async () => ({ scenes: [] })),
+  },
 }));
 
 afterEach(cleanup);
+
+function renderPane(ui: ReactElement) {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={qc}>
+      <MemoryRouter>{ui}</MemoryRouter>
+    </QueryClientProvider>,
+  );
+}
 
 describe("resolveWorkspaceLayout", () => {
   it("maps reader-journey URL to journey tab inside one workspace", () => {
@@ -144,7 +176,7 @@ describe("resolveWorkspaceLayout", () => {
 
 describe("WorkspaceJourneyPane", () => {
   it("does not show temporary-load error while loading", () => {
-    render(
+    renderPane(
       <WorkspaceJourneyPane
         bookId={9}
         chapterId={1220}
@@ -160,8 +192,8 @@ describe("WorkspaceJourneyPane", () => {
     expect(screen.queryByTestId("chapter-result-open-independent")).not.toBeInTheDocument();
   });
 
-  it("shows legacy banner without blocking chart", () => {
-    render(
+  it("shows legacy banner and restores internal mode switcher", () => {
+    renderPane(
       <WorkspaceJourneyPane
         bookId={11}
         chapterId={1224}
@@ -192,12 +224,14 @@ describe("WorkspaceJourneyPane", () => {
       />,
     );
     expect(screen.getByTestId("workspace-journey-legacy-banner")).toBeInTheDocument();
-    expect(screen.getByTestId("mock-journey-workspace")).toBeInTheDocument();
+    expect(screen.getByTestId("journey-sync-workspace")).toHaveAttribute("data-variant", "workspace");
+    expect(screen.getByTestId("journey-mode-sync")).toHaveTextContent("正文对照");
+    expect(screen.getByTestId("journey-mode-reading")).toHaveTextContent("仅看正文");
     expect(screen.queryByTestId("workspace-journey-integrity-banner")).not.toBeInTheDocument();
   });
 
   it("shows invalid artifact without independent page CTA", () => {
-    render(
+    renderPane(
       <WorkspaceJourneyPane
         bookId={9}
         chapterId={1220}
@@ -221,8 +255,7 @@ describe("WorkspaceJourneyPane", () => {
       />,
     );
     expect(screen.getByTestId("workspace-journey-integrity-banner")).toBeInTheDocument();
-    // Redacted nodes must not mount chart workspace (would crash on scores).
-    expect(screen.queryByTestId("mock-journey-workspace")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("journey-sync-workspace")).not.toBeInTheDocument();
     expect(screen.queryByTestId("chapter-result-open-independent")).not.toBeInTheDocument();
   });
 });

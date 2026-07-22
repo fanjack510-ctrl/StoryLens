@@ -829,17 +829,6 @@ export function BookRoutePage() {
                 查看最近分析
               </Link>
             )}
-            {/* Compat hooks for older tests / secondary entry points */}
-            {view === "result" ? (
-              <button
-                type="button"
-                className="secondary"
-                data-testid="book-view-reading"
-                onClick={() => setView("reading", "user")}
-              >
-                正文阅读
-              </button>
-            ) : null}
             {(compositionUiState === "succeeded" ||
               compositionUiState === "awaiting_reader_journey_start" ||
               compositionUiState === "reader_journey_processing") &&
@@ -1109,6 +1098,7 @@ export function BookRoutePage() {
                   <WorkspaceJourneyPane
                     bookId={bookId}
                     chapterId={chapterId}
+                    chapterTitle={chapterTitle}
                     analysisRunId={analysisRunId}
                     journey={journey.data}
                     mainContentState={workspaceLayout.mainContentState}

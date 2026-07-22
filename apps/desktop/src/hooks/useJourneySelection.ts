@@ -8,14 +8,13 @@ import type {
   JourneySelectionState,
 } from "../types/journeySelection";
 import type { SceneResultItem } from "../types";
+import {
+  applyJourneyViewToSearchParams,
+  resolveJourneyPageModeFromSearch,
+} from "../components/readerJourney/journeyViewMode";
 
 const DEFAULT_METRIC: JourneyCurveMetric = "engagement";
 const SCROLL_SUPPRESS_MS = 600;
-
-function parseMode(value: string | null): JourneyPageMode {
-  if (value === "journey" || value === "reading" || value === "sync") return value;
-  return "sync";
-}
 
 function parseMetric(value: string | null): JourneyCurveMetric {
   const allowed: JourneyCurveMetric[] = [
@@ -57,7 +56,7 @@ export function useJourneySelection({ scenes, enabled = true }: Options) {
       Number.isFinite(parsedOrdinal) ? parsedOrdinal : null,
     );
     return {
-      pageMode: parseMode(searchParams.get("mode")),
+      pageMode: resolveJourneyPageModeFromSearch(searchParams),
       activePhaseId: null,
       activeSceneId: sceneItem ? sceneItem.scene.id : null,
       activeSceneOrdinal: sceneItem ? sceneItem.scene.ordinal : null,
@@ -77,7 +76,7 @@ export function useJourneySelection({ scenes, enabled = true }: Options) {
       params.set("tab", "reader-journey");
 
       const mode = patch.pageMode ?? state.pageMode;
-      params.set("mode", mode);
+      applyJourneyViewToSearchParams(params, mode);
 
       const sceneOrdinal = patch.activeSceneOrdinal ?? state.activeSceneOrdinal;
       if (sceneOrdinal != null) params.set("scene", String(sceneOrdinal));
@@ -254,7 +253,7 @@ export function useJourneySelection({ scenes, enabled = true }: Options) {
         activeSceneOrdinal: ordinal,
         activeSceneId: item.scene.id,
         activeParagraphId: searchParams.get("paragraph") ?? item.scene.start_paragraph_id,
-        pageMode: parseMode(searchParams.get("mode")),
+        pageMode: resolveJourneyPageModeFromSearch(searchParams),
         selectedMetric: parseMetric(searchParams.get("metric")),
         selectedQuestionClusterId: searchParams.get("cluster"),
         selectionSource: "url",

@@ -1,14 +1,18 @@
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import type { ReaderJourneyResult } from "../../types";
+import { analysisApi } from "../../services/analysisApi";
 import {
   hasChartSafeJourneyNodes,
   hasUsableJourneyVisualization,
 } from "./hasUsableJourneyVisualization";
-import { ReaderJourneyWorkspace } from "./ReaderJourneyWorkspace";
+import { ReaderJourneySyncWorkspace } from "./ReaderJourneySyncWorkspace";
 import type { WorkspaceMainState } from "../../services/resolveWorkspaceLayout";
 
 type Props = {
   bookId: number;
   chapterId: number | null;
+  chapterTitle?: string;
   analysisRunId: number;
   journey: ReaderJourneyResult | null | undefined;
   mainContentState: WorkspaceMainState;
@@ -40,11 +44,12 @@ function JourneyActions({
 
 /**
  * Journey content for the unified Book workspace MainContentPane.
- * Does not embed the legacy standalone AnalysisResultsPage shell.
+ * Restores compare / journey / text-only modes via ReaderJourneySyncWorkspace.
  */
 export function WorkspaceJourneyPane({
   bookId,
   chapterId,
+  chapterTitle = "本章",
   analysisRunId,
   journey,
   mainContentState,
@@ -52,6 +57,19 @@ export function WorkspaceJourneyPane({
   onReading,
   onViewScene,
 }: Props) {
+  const [syncTab, setSyncTab] = useState<"structure" | "evidence" | "history" | "overview" | "journey">(
+    "journey",
+  );
+
+  const results = useQuery({
+    queryKey: ["run-results", analysisRunId],
+    queryFn: () => analysisApi.results(analysisRunId),
+    enabled: Number.isFinite(analysisRunId) && mainContentState === "ready",
+    retry: false,
+  });
+
+  const scenes = useMemo(() => results.data?.scenes ?? [], [results.data?.scenes]);
+
   if (mainContentState === "loading" || mainContentState === "idle") {
     return (
       <div className="workspace-journey-pane state" data-testid="workspace-journey-pane" data-state="loading">
@@ -161,7 +179,6 @@ export function WorkspaceJourneyPane({
             {journey?.journey_run_id ? ` · journey_run_id=${journey.journey_run_id}` : ""}
           </p>
         </details>
-        {/* Hard-fail Journey: never mount chart shell; keep structured block page. */}
         <JourneyActions onReading={onReading} onViewScene={onViewScene} />
       </div>
     );
@@ -196,6 +213,19 @@ export function WorkspaceJourneyPane({
     );
   }
 
+  if (!chapterId) {
+    return (
+      <div
+        className="workspace-journey-pane state"
+        data-testid="workspace-journey-pane"
+        data-state="unavailable"
+      >
+        <strong>缺少章节上下文，无法打开正文对照</strong>
+        <JourneyActions onReading={onReading} onViewScene={onViewScene} />
+      </div>
+    );
+  }
+
   const integrityStatus =
     (journey as { integrity_status?: string } | null)?.integrity_status ||
     (journey as { integrity?: { status?: string } } | null)?.integrity?.status ||
@@ -217,7 +247,7 @@ export function WorkspaceJourneyPane({
       data-state="ready"
       data-integrity={integrityStatus || undefined}
       data-book-id={bookId}
-      data-chapter-id={chapterId ?? undefined}
+      data-chapter-id={chapterId}
       data-analysis-run={analysisRunId}
     >
       {legacyWarning ? (
@@ -230,11 +260,14 @@ export function WorkspaceJourneyPane({
           <strong>{partialWarning}</strong>
         </div>
       ) : null}
-      <ReaderJourneyWorkspace
+      <ReaderJourneySyncWorkspace
+        chapterId={chapterId}
+        chapterTitle={chapterTitle}
+        scenes={scenes}
         visualization={journey.visualization}
-        analysisRunId={analysisRunId}
-        journeyRunId={journey.journey_run_id}
-        onLocateEvidence={() => undefined}
+        tab={syncTab}
+        onTabChange={setSyncTab}
+        variant="workspace"
       />
     </div>
   );

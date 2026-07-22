@@ -71,6 +71,14 @@ vi.mock("../components/chapterResult/EmbeddedAnalysisResultShell", () => ({
   ),
 }));
 
+vi.mock("../components/readerJourney/ReaderJourneySyncWorkspace", () => ({
+  ReaderJourneySyncWorkspace: () => (
+    <div data-testid="journey-sync-workspace">
+      <div data-testid="journey-sync-mode-toggle">sync-modes</div>
+    </div>
+  ),
+}));
+
 vi.mock("../components/readerJourney/ReaderJourneyWorkspace", () => ({
   ReaderJourneyWorkspace: ({ analysisRunId }: { analysisRunId?: number }) => (
     <div data-testid="mock-reader-journey-workspace" data-analysis-run={analysisRunId}>

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { WorkspaceJourneyPane } from "./WorkspaceJourneyPane";
 
 /**
@@ -25,19 +26,22 @@ describe("WorkspaceJourneyPane integrity-redacted Run#8", () => {
       },
     } as any;
 
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     expect(() =>
       render(
-        <MemoryRouter>
-          <WorkspaceJourneyPane
-            bookId={9}
-            chapterId={1220}
-            analysisRunId={8}
-            journey={journey}
-            mainContentState="invalid_artifact"
-            onRetry={() => undefined}
-            onReading={() => undefined}
-          />
-        </MemoryRouter>,
+        <QueryClientProvider client={qc}>
+          <MemoryRouter>
+            <WorkspaceJourneyPane
+              bookId={9}
+              chapterId={1220}
+              analysisRunId={8}
+              journey={journey}
+              mainContentState="invalid_artifact"
+              onRetry={() => undefined}
+              onReading={() => undefined}
+            />
+          </MemoryRouter>
+        </QueryClientProvider>,
       ),
     ).not.toThrow();
 
@@ -46,5 +50,6 @@ describe("WorkspaceJourneyPane integrity-redacted Run#8", () => {
       "invalid_artifact",
     );
     expect(screen.getByTestId("workspace-journey-integrity-banner")).toBeInTheDocument();
+    expect(screen.queryByTestId("journey-sync-workspace")).not.toBeInTheDocument();
   });
 });
