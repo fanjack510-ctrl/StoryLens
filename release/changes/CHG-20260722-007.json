@@ -3,16 +3,45 @@
   "title": "Fix configured AI provider start-analysis gate",
   "type": "fix",
   "base_version": "1.0.4",
-  "status": "registered",
+  "status": "tested",
   "include_in_next_release": true,
-  "commits": [],
-  "modules": [],
-  "files": [],
+  "commits": [
+    {
+      "sha": "a387a00aa3fdf6330c82f565f2aa56767b0af58a",
+      "message": "fix: restore configured AI provider start availability",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "api",
+    "desktop"
+  ],
+  "files": [
+    "apps/api/app/services/provider_eligibility.py",
+    "apps/api/app/services/analysis_execution_plan.py",
+    "apps/api/app/api/v1/analysis.py",
+    "apps/desktop/src/components/analysis/StartAnalysisDialog.tsx",
+    "apps/desktop/src/services/analysisApi.ts",
+    "apps/desktop/src/services/aiServiceConfig.ts"
+  ],
   "user_summary": "AI服务已配置且模式可选时，开始分析仍误报当前AI服务不支持此分析，导致无法启动分析。",
-  "technical_summary": "",
-  "acceptance_criteria": [],
-  "tests": [],
-  "verification_evidence": [],
+  "technical_summary": "Settings validation_snapshot success was ignored by start gate when latest ModelInvocation was cached_failure; frontend collapsed all blockers to 当前AI服务不支持此分析. Fix: durable snapshot overrides stale cached_failure in provider_eligibility; AnalysisExecutionPlan SSOT endpoint; StartAnalysisDialog gates on plan.can_start with differentiated reasons; refresh invalidates analysis-execution-plan.",
+  "acceptance_criteria": [
+    "Verified Settings snapshot + configured plus can_start true for FAST/BALANCED/QUALITY/CUSTOM",
+    "Stale cached_failure alone no longer blocks when validation snapshot matches",
+    "Start button uses ExecutionPlan.can_start; refresh invalidates plan queries; no blanket 不支持此分析",
+    "VERSION remains 1.0.4; no tag/baseline/build/push/model calls"
+  ],
+  "tests": [
+    "apps/api/tests/test_analysis_execution_plan_local.py",
+    "apps/desktop/src/components/analysis/StartAnalysisDialog.test.tsx"
+  ],
+  "verification_evidence": [
+    "1.0.4 install manual: AI configured, modes selectable, consent checked, start disabled with 当前AI服务不支持此分析; tech details showed aliyun_qwen_plus unhealthy cached_failure provider_unhealthy while max/flash expected unsupported.",
+    "Root cause: start gate used provider list manual_boundary_candidate_eligible filtered by cached_failure; Settings READY used ai_service_validation_snapshot that did not clear that failure.",
+    "Coverage: execution-plan pytest (8) + StartAnalysisDialog/providerEligibility/aiServiceViewModel vitest (50); production packaged and browser_local_production share same backend evaluate_manual_boundary_candidate + execution plan (no data-dir/credential-key changes)."
+  ],
   "data_compatibility": {
     "database_changed": false,
     "migration_required": false,
@@ -25,8 +54,8 @@
     "updater_impact": false,
     "breaking_change": false
   },
-  "blocker_level": null,
-  "head_inclusion": null,
+  "blocker_level": "P0",
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-22T13:23:02Z",
-  "updated_at": "2026-07-22T13:23:02Z"
+  "updated_at": "2026-07-22T13:44:58Z"
 }
