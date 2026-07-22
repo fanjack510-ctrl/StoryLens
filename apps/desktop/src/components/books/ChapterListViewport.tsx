@@ -88,7 +88,12 @@ export function ChapterListViewport({
         </div>
       ) : null}
 
-      <div className="workspace-chapter-list" ref={listRef} data-testid="workspace-chapter-list">
+      <div
+        className="workspace-chapter-list"
+        ref={listRef}
+        data-testid="chapter-list-scroll-region"
+        data-chapter-list="workspace-chapter-list"
+      >
         {front.map((c) => {
           const title = c.display_title || c.title;
           return (

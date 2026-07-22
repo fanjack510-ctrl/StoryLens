@@ -163,6 +163,8 @@ export function applyNavigateToChapterReading(
 
 export function scrollReadingPaneToTop(): void {
   const pane =
+    document.querySelector<HTMLElement>('[data-testid="reading-content-scroll-region"]') ||
+    document.querySelector<HTMLElement>(".reading-content-scroll-region") ||
     document.querySelector<HTMLElement>(".workspace-reader") ||
     document.querySelector<HTMLElement>(".book-shell-simplified .reader") ||
     document.querySelector<HTMLElement>(".workspace-reading-canvas");

@@ -2624,6 +2624,18 @@ a {
   min-width: 0;
   overflow: hidden;
 }
+/* Pure reading (no progress panel): this wrapper was previously unstyled, so
+   height:100% on .workspace resolved against content size, ancestors clipped
+   with overflow:hidden, and neither chapter list nor reader became scrollports. */
+.book-shell-workspace {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+}
 .book-shell-simplified .workspace {
   flex: 1 1 auto;
   height: 100%;
@@ -2850,10 +2862,13 @@ a {
 
 .book-shell-simplified .workspace.workspace-content {
   display: grid;
-  grid-template-columns: 240px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 240px) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   background: var(--surface);
   min-height: 0;
   height: 100%;
+  overflow: hidden;
+  align-content: stretch;
 }
 .book-shell-simplified .workspace.workspace-content:has(.analysis-pane .artifact) {
   grid-template-columns: 240px minmax(0, 1fr) minmax(340px, 360px);
@@ -2949,12 +2964,18 @@ a {
   gap: 4px;
 }
 .workspace-nav-section--chapters {
+  display: flex;
+  flex-direction: column;
   flex: 1 1 auto;
   min-height: 0;
+  overflow: hidden;
 }
 .workspace-nav-section:not(.workspace-nav-section--chapters) {
+  display: flex;
+  flex-direction: column;
   flex: 0 1 auto;
   max-height: 28%;
+  min-height: 0;
   overflow: hidden;
 }
 .workspace-chapter-heading-row {
@@ -2995,6 +3016,7 @@ a {
   flex: 1 1 auto;
   overflow-x: hidden;
   overflow-y: auto;
+  overscroll-behavior: contain;
   scrollbar-gutter: stable;
   scrollbar-width: thin;
 }
@@ -3136,7 +3158,25 @@ a {
   min-width: 0;
   min-height: 0;
   height: 100%;
-  overflow: auto;
+  overflow: hidden;
+}
+.reading-content-scroll-region {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+}
+.reading-content-scroll-region::-webkit-scrollbar {
+  width: 8px;
+}
+.reading-content-scroll-region::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.22);
+  border-radius: 999px;
 }
 .workspace-reading-canvas {
   width: 100%;
@@ -3230,18 +3270,31 @@ a {
     display: none !important;
   }
   .book-shell-simplified .workspace-reader {
-    display: block !important;
+    display: flex !important;
+    flex-direction: column !important;
     width: 100% !important;
     max-width: none !important;
     min-width: 0 !important;
+    min-height: 0 !important;
+    height: 100% !important;
     box-sizing: border-box;
+    overflow: hidden !important;
   }
   .book-shell-simplified article.reader {
-    display: block !important;
+    display: flex !important;
+    flex-direction: column !important;
     width: 100% !important;
     max-width: none !important;
     min-width: 0 !important;
+    min-height: 0 !important;
+    height: 100% !important;
     box-sizing: border-box;
+    overflow: hidden !important;
+  }
+  .book-shell-simplified .reading-content-scroll-region {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
   }
   .book-shell-simplified .workspace-inspector:has(.artifact),
   .book-shell-simplified .analysis-pane:has(.artifact) {

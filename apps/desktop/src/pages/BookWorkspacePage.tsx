@@ -273,6 +273,10 @@ export function BookWorkspacePage() {
           </button>
         </div>
 
+        <div
+          className="reading-content-scroll-region"
+          data-testid="reading-content-scroll-region"
+        >
         <div className="workspace-reading-canvas">
           <header className="workspace-reading-header">
             <p className="eyebrow workspace-reading-label">正文阅读</p>
@@ -372,6 +376,7 @@ export function BookWorkspacePage() {
               onSelect={selectChapter}
             />
           ) : null}
+        </div>
         </div>
       </article>
 

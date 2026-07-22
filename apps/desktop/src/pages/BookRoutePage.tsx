@@ -1108,7 +1108,10 @@ export function BookRoutePage() {
             ) : null}
 
             {!noChapters && !bootstrappingChapter && activeTab === "text" ? (
-              <div className="book-shell-workspace">
+              <div
+                className="book-shell-workspace"
+                data-testid="reading-workspace-body"
+              >
                 <BookWorkspacePage />
               </div>
             ) : null}
