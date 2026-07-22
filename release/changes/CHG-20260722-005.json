@@ -5,7 +5,14 @@
   "base_version": "1.0.3",
   "status": "registered",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "8ec07dcee983af07ab80fc1b3227e13f216f8d57",
+      "message": "Guard Reader Journey against claim/evidence and context integrity failures (CHG-20260722-005).",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "reader-journey",
     "analysis-integrity",
@@ -52,7 +59,7 @@
     "breaking_change": false
   },
   "blocker_level": "P0",
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-22T05:49:31Z",
-  "updated_at": "2026-07-22T06:01:36Z"
+  "updated_at": "2026-07-22T06:01:37Z"
 }
