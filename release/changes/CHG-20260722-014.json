@@ -1,0 +1,59 @@
+{
+  "id": "CHG-20260722-014",
+  "title": "Simplify Reader Journey terminology and explanations",
+  "type": "improvement",
+  "base_version": "1.0.4",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "desktop"
+  ],
+  "files": [
+    "apps/desktop/src/components/readerJourney/readerJourneyLensExplanation.ts",
+    "apps/desktop/src/components/readerJourney/observationLenses.ts",
+    "apps/desktop/src/components/readerJourney/journeyUiLabels.ts",
+    "apps/desktop/src/components/readerJourney/JourneyChartToolbar.tsx",
+    "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.tsx",
+    "apps/desktop/src/components/readerJourney/JourneySceneDetailPanel.tsx",
+    "apps/desktop/src/components/readerJourney/JourneyDiagnosisBand.tsx",
+    "apps/desktop/src/components/readerJourney/HookPayoffTimeline.tsx",
+    "apps/desktop/src/components/readerJourney/StructuredChapterTextPane.tsx",
+    "apps/desktop/src/components/readerJourney/diagnosisBandModel.ts",
+    "apps/desktop/src/components/readerJourney/hookPayoffLensModel.ts"
+  ],
+  "user_summary": "普通用户难以快速理解曲线、节点与悬念回应关系；需统一通俗中文术语与说明，不改算法。",
+  "technical_summary": "Presentation-only: unify lens titles/explanations/legends in ReaderJourneyLensExplanation; Scene/Beat Chinese formatters; Hook→悬念 Payoff→回应 Dropoff→阅读阻力; diagnosis/resistance ordinary copy; detail panel section labels; no algorithm/prompt/artifact changes.",
+  "acceptance_criteria": [
+    "Lens names match frozen Chinese set",
+    "how_to_read max 3; Scene/Beat no English mix in ordinary UI",
+    "流失风险 absent from ordinary UI; 阅读阻力 with optional reason",
+    "VERSION 1.0.4; no model/build/publish/push"
+  ],
+  "tests": [
+    "apps/desktop/src/components/readerJourney/readerJourneyTerminology.test.ts",
+    "apps/desktop/src/components/readerJourney/journeyUiLabels.test.ts",
+    "apps/desktop/src/components/readerJourney/readerJourneyLensExplanation.test.tsx",
+    "apps/desktop/src/components/readerJourney/observation_lenses_v2_local.test.ts"
+  ],
+  "verification_evidence": [
+    "vitest terminology + related suites: 77 passed",
+    "tsc/eslint/version/registry/git diff --check green"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "P2",
+  "head_inclusion": null,
+  "created_at": "2026-07-22T16:00:00Z",
+  "updated_at": "2026-07-22T16:10:00Z"
+}

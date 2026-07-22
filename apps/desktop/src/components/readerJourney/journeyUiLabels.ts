@@ -3,13 +3,13 @@
 import type { JourneyCurveMetric } from "../../types/readerJourneyVisualization";
 
 export const METRIC_LABELS_ZH: Record<JourneyCurveMetric, string> = {
-  engagement: "阅读牵引",
+  engagement: "综合阅读",
   valence: "情绪正负",
-  arousal: "情绪唤醒",
-  curiosity: "好奇",
-  tension: "紧张",
-  payoff: "回报",
-  hook: "钩子",
+  arousal: "情绪强度",
+  curiosity: "剧情推进",
+  tension: "阅读张力",
+  payoff: "回应",
+  hook: "悬念",
   dropoff_risk: "阅读阻力",
 };
 
@@ -18,12 +18,12 @@ export const COMPACT_METRIC_SWITCHER: {
   key: JourneyCurveMetric | "emotion";
   label: string;
 }[] = [
-  { key: "engagement", label: "阅读牵引" },
+  { key: "engagement", label: "综合阅读" },
   { key: "emotion", label: "情绪" },
-  { key: "curiosity", label: "好奇" },
-  { key: "tension", label: "紧张" },
-  { key: "payoff", label: "回报" },
-  { key: "hook", label: "钩子" },
+  { key: "curiosity", label: "剧情推进" },
+  { key: "tension", label: "阅读张力" },
+  { key: "payoff", label: "回应" },
+  { key: "hook", label: "悬念" },
   { key: "dropoff_risk", label: "阅读阻力" },
 ];
 
@@ -56,9 +56,55 @@ export const ALL_METRIC_KEYS: JourneyCurveMetric[] = [
 ];
 
 export const ROLE_LABELS_ZH: Record<string, string> = {
-  core: "核心节点",
-  secondary: "次级节点",
-  beat: "节拍节点",
+  core: "核心场景",
+  secondary: "过渡场景",
+  beat: "过渡",
+};
+
+/** Beat / scene_role ordinary qualifiers (never show English keys). */
+export const SCENE_ROLE_LABELS_ZH: Record<string, string> = {
+  setup: "铺垫",
+  escalation: "升级",
+  investigation: "追查",
+  reveal: "信息揭示",
+  information: "信息揭示",
+  climax: "高潮",
+  aftermath: "收束",
+  transition: "过渡",
+  open_end: "开放收束",
+  closed_end: "封闭收束",
+  beat: "过渡",
+  core: "核心场景",
+  secondary: "过渡场景",
+};
+
+/** Ordinary response-degree labels. */
+export const RESPONSE_DEGREE_LABELS_ZH: Record<string, string> = {
+  partial: "部分回应",
+  full: "明确回应",
+  reversal: "反转回应",
+  transformed: "转化为新问题",
+  transformed_question: "转化为新问题",
+  score_inferred: "候选回应",
+};
+
+export const READING_RESISTANCE_HOVER =
+  "这里可能让部分读者暂时失去继续阅读的动力。";
+
+export const READING_RESISTANCE_REASON_ZH: Record<string, string> = {
+  weak_progress: "推进较弱",
+  insufficient_response: "回应不足",
+  long_transition: "过渡偏长",
+  information_repeat: "信息重复",
+  emotion_break: "情绪中断",
+  unclear_goal: "目标不清",
+  over_explanation: "说明过多",
+  stalled_suspense: "悬念停滞",
+  over_fragmented: "场景可能切得过细",
+  推进偏弱: "推进较弱",
+  推进较弱: "推进较弱",
+  回应不足: "回应不足",
+  过渡偏长: "过渡偏长",
 };
 
 /** Internal lifecycle / status enums → Chinese UI labels. */
@@ -90,8 +136,33 @@ export const QUESTION_LIFECYCLE_ZH: Record<string, string> = {
 };
 
 export function roleLabelZh(role: string | undefined | null): string {
-  if (!role) return "节点";
-  return ROLE_LABELS_ZH[role] ?? role;
+  if (!role) return "场景";
+  const key = String(role).trim().toLowerCase();
+  return ROLE_LABELS_ZH[key] ?? SCENE_ROLE_LABELS_ZH[key] ?? "场景";
+}
+
+export function sceneRoleLabelZh(role: string | undefined | null): string {
+  if (!role) return "";
+  const key = String(role).trim().toLowerCase();
+  return SCENE_ROLE_LABELS_ZH[key] ?? ROLE_LABELS_ZH[key] ?? "";
+}
+
+export function responseDegreeLabelZh(degree: string | undefined | null): string {
+  if (!degree) return "回应";
+  const key = String(degree).trim().toLowerCase();
+  return RESPONSE_DEGREE_LABELS_ZH[key] ?? degree;
+}
+
+/** Left-rail / marker label: 阅读阻力 or 阅读阻力｜主原因. */
+export function formatReadingResistanceLabel(
+  reasonCodeOrZh?: string | null,
+): string {
+  if (!reasonCodeOrZh) return "阅读阻力";
+  const key = String(reasonCodeOrZh).trim();
+  const reason = READING_RESISTANCE_REASON_ZH[key] ?? (key.includes("｜") ? null : key);
+  if (!reason || reason === "阅读阻力") return "阅读阻力";
+  const short = reason.replace(/^阅读阻力[｜|]/, "").trim();
+  return short ? `阅读阻力｜${short}` : "阅读阻力";
 }
 
 export function lifecycleLabelZh(status: string | undefined | null): string {
@@ -105,50 +176,55 @@ export function questionLifecycleZh(status: string | undefined | null): string {
 }
 
 export const PAYOFF_TYPE_ZH: Record<string, string> = {
-  mystery: "悬念兑现",
-  emotional: "情绪回报",
-  information: "信息回报",
-  relationship: "关系回报",
-  plot: "情节回报",
-  stage: "阶段回报",
+  mystery: "悬念回应",
+  emotional: "情绪回应",
+  information: "信息回应",
+  relationship: "关系回应",
+  plot: "情节回应",
+  stage: "阶段回应",
+  partial: "部分回应",
+  full: "明确回应",
+  reversal: "反转回应",
+  transformed_question: "转化为新问题",
 };
 
 export const HOOK_TYPE_ZH: Record<string, string> = {
-  mystery: "悬念钩子",
-  threat: "威胁钩子",
-  emotional: "情绪钩子",
-  information: "信息钩子",
-  chapter_end: "章尾钩子",
+  mystery: "悬念",
+  threat: "威胁悬念",
+  emotional: "情绪悬念",
+  information: "信息悬念",
+  chapter_end: "章末悬念",
+  danger: "危险悬念",
 };
 
 export const SCORE_TOOLTIPS_ZH: Record<string, string> = {
-  engagement: "预测读者对本场的持续阅读牵引强度",
-  curiosity: "本场激发的好奇与求知驱动",
-  tension: "本场紧张与冲突强度",
-  payoff: "本场兑现信息/情绪回报的强度",
-  hook: "本场留下继续阅读钩子的强度",
-  dropoff_risk: "连续缺少回报、节奏骤降或认知负担过高，可能降低读者继续阅读的意愿。",
+  engagement: "读者继续阅读的动力",
+  curiosity: "故事状态变化幅度",
+  tension: "担心、期待与悬念强弱",
+  payoff: "本场对前文问题的回应强度",
+  hook: "本场建立的悬念强度",
+  dropoff_risk: READING_RESISTANCE_HOVER,
 };
 
 /** Short one-line hints for MetricSelectorPanel (v4.2). Presentation only. */
 export const METRIC_HINTS_ZH: Record<JourneyCurveMetric, string> = {
-  engagement: "持续阅读牵引强度",
-  curiosity: "好奇与求知驱动",
-  tension: "紧张与冲突强度",
-  payoff: "信息或情绪回报",
-  hook: "继续阅读的钩子",
-  dropoff_risk: "连续缺少回报、节奏骤降或认知负担过高，可能降低读者继续阅读的意愿。",
+  engagement: "继续阅读动力",
+  curiosity: "剧情推进幅度",
+  tension: "阅读张力强弱",
+  payoff: "对前文问题的回应",
+  hook: "新建立的悬念",
+  dropoff_risk: READING_RESISTANCE_HOVER,
   valence: "情绪正负倾向",
-  arousal: "情绪唤醒程度",
+  arousal: "情绪强弱",
 };
 
 export function payoffTypeZh(type: string | undefined | null): string {
-  if (!type) return "回报";
-  return PAYOFF_TYPE_ZH[type] ?? type;
+  if (!type) return "回应";
+  return PAYOFF_TYPE_ZH[type] ?? responseDegreeLabelZh(type);
 }
 
 export function hookTypeZh(type: string | undefined | null): string {
-  if (!type) return "钩子";
+  if (!type) return "悬念";
   return HOOK_TYPE_ZH[type] ?? type;
 }
 
@@ -162,16 +238,16 @@ export const PRIMARY_JOURNEY_METRICS = [
 
 /** User-facing primary metric labels (does not rename underlying metric keys). */
 export const PRIMARY_METRIC_LABELS_ZH: Record<(typeof PRIMARY_JOURNEY_METRICS)[number], string> = {
-  engagement: "阅读牵引",
+  engagement: "综合阅读",
   arousal: "情绪强度",
-  tension: "节奏变化",
-  hook: "钩子强度",
+  tension: "阅读张力",
+  hook: "悬念",
 };
 
 export const PRIMARY_METRIC_HINTS_ZH: Record<(typeof PRIMARY_JOURNEY_METRICS)[number], string> = {
   engagement: "读者继续阅读的动力",
-  arousal: "场景带来的情绪波动",
-  tension: "叙事推进速度与密度",
+  arousal: "场景带来的情绪强弱",
+  tension: "担心、期待与悬念强弱",
   hook: "悬念、问题和期待程度",
 };
 
@@ -299,8 +375,8 @@ export function formatJourneySelectionType(kind: string | null | undefined): str
     curve: "曲线",
     metric: "指标",
     question: "问题",
-    hook: "钩子",
-    payoff: "回报",
+    hook: "悬念",
+    payoff: "回应",
     risk: "阅读阻力",
   };
   return map[key] ?? "未知";
@@ -308,24 +384,24 @@ export function formatJourneySelectionType(kind: string | null | undefined): str
 
 /** Raw risk_type codes → Chinese (presentation only; keys unchanged). */
 export const RISK_TYPE_LABELS_ZH: Record<string, string> = {
-  consecutive_no_payoff: "连续场景缺少有效回报",
-  open_narrative_loop: "开放问题尚未兑现",
-  narrative_loop_inconsistent: "叙事关系识别不一致",
-  low_engagement: "阅读牵引持续偏低",
+  consecutive_no_payoff: "连续场景缺少有效回应",
+  open_narrative_loop: "开放问题尚未回应",
+  narrative_loop_inconsistent: "识别存在分歧",
+  low_engagement: "综合阅读持续偏低",
   low_reading_momentum: "阅读动力持续偏低",
   momentum_decline: "阅读动力连续下降",
-  unpaid_hook: "高钩子未兑现",
+  unpaid_hook: "高悬念未回应",
   high_dropoff_risk: "阅读阻力偏高",
   reading_resistance: "阅读阻力",
   high_cognitive_load: "认知负担偏高",
   dropped_question: "高强度问题未承接",
-  over_fragmented_beats: "节拍过碎，节奏可能断裂",
+  over_fragmented_beats: "场景可能切得过细",
   slow_progress: "推进过慢",
-  weak_hook: "钩子偏弱",
-  over_explanation: "解释过多",
-  repetition: "重复拖沓",
-  fragmented_scene: "场景过碎",
-  low_payoff: "回报不足",
+  weak_hook: "悬念偏弱",
+  over_explanation: "说明过多",
+  repetition: "信息重复",
+  fragmented_scene: "场景可能切得过细",
+  low_payoff: "回应不足",
   other: "其他阅读阻力",
 };
 
@@ -355,7 +431,7 @@ export function formatJourneyRiskSummary(input: {
 
   if (input.risk_type === "consecutive_no_payoff" && start != null && end != null) {
     const spanText = span != null && span > 1 ? `连续${span}个场景` : "连续场景";
-    return `场景 ${start}—${end} ${spanText}缺少明显回报，可能降低阅读动力。`;
+    return `场景 ${start}—${end} ${spanText}缺少明显回应，可能降低阅读动力。`;
   }
   if (input.risk_type === "open_narrative_loop" || input.risk_type === "narrative_loop_inconsistent") {
     const rawLoop = typeof input.summary === "string" ? input.summary.trim() : "";
@@ -368,8 +444,12 @@ export function formatJourneyRiskSummary(input: {
       .replace(/\bScene\b/g, "场景")
       .replace(/\breading_momentum\b/gi, "阅读动力")
       .replace(/\bengagement\b/gi, "阅读动力")
-      .replace(/\bpayoff\b/gi, "回报")
-      .replace(/\bBeat\b/g, "节拍");
+      .replace(/\bpayoff\b/gi, "回应")
+      .replace(/\bhook\b/gi, "悬念")
+      .replace(/\bBeat\b/g, "节拍")
+      .replace(/流失风险/g, "阅读阻力")
+      .replace(/钩子/g, "悬念")
+      .replace(/回报/g, "回应");
   }
   if (start != null && end != null) {
     return `场景 ${start}—${end}：${typeLabel}。`;
@@ -379,17 +459,17 @@ export function formatJourneyRiskSummary(input: {
 
 /** Compact score nouns for phase/scene cards (presentation only). */
 export const METRIC_SCORE_SHORT_ZH: Record<JourneyCurveMetric, string> = {
-  engagement: "牵引",
+  engagement: "综合",
   valence: "正负",
-  arousal: "唤醒",
-  curiosity: "好奇",
-  tension: "节奏",
-  payoff: "回报",
-  hook: "钩子",
-  dropoff_risk: "风险",
+  arousal: "情绪",
+  curiosity: "推进",
+  tension: "张力",
+  payoff: "回应",
+  hook: "悬念",
+  dropoff_risk: "阻力",
 };
 
-/** e.g. 「节奏 66」「钩子 48」— never bare numbers. */
+/** e.g. 「张力 66」「悬念 48」— never bare numbers. */
 export function formatMetricScoreLabel(
   metric: JourneyCurveMetric,
   value: number | null | undefined,
@@ -470,11 +550,34 @@ export function formatJourneySceneLabel(
   const hasOrdinal =
     typeof ordinal === "number" && Number.isFinite(ordinal) && ordinal > 0;
   const ordinalText = hasOrdinal
-    ? `场景 ${String(Math.trunc(ordinal)).padStart(2, "0")}`
+    ? `场景${String(Math.trunc(ordinal)).padStart(2, "0")}`
     : "场景";
   const name = typeof title === "string" ? title.trim() : "";
   if (name && !isDirtyDisplayToken(name) && !/^Scene\s*#?undefined$/i.test(name)) {
     return `${ordinalText} · ${name}`;
   }
   return ordinalText;
+}
+
+/** Ordinary Scene/Beat node title — never "Scene 7 · 节拍节点". */
+export function formatJourneyNodeLabel(
+  ordinal: number | null | undefined,
+  options: {
+    role?: string | null;
+    sceneRole?: string | null;
+    nodeType?: string | null;
+  } = {},
+): string {
+  const hasOrdinal =
+    typeof ordinal === "number" && Number.isFinite(ordinal) && ordinal > 0;
+  const pad = hasOrdinal ? String(Math.trunc(ordinal!)).padStart(2, "0") : null;
+  const role = String(options.role || options.nodeType || "").toLowerCase();
+  const isBeat = role === "beat" || options.nodeType === "beat";
+  const qualifier =
+    sceneRoleLabelZh(options.sceneRole) ||
+    (isBeat ? "过渡" : roleLabelZh(options.role || (isBeat ? "beat" : "core")));
+  if (!pad) {
+    return isBeat ? `节拍 · ${qualifier}` : `场景 · ${qualifier}`;
+  }
+  return isBeat ? `节拍${pad} · ${qualifier}` : `场景${pad} · ${qualifier}`;
 }

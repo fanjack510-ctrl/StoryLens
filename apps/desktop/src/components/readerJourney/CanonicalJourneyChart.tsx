@@ -980,8 +980,8 @@ export function CanonicalJourneyChart({
                       {formatJourneyMetricLabel(metric)}：
                       {formatJourneyScore(tooltipScore)}
                     </div>
-                    {tooltipHook?.summary ? <div>钩子：{tooltipHook.summary}</div> : null}
-                    {tooltipPayoff?.summary ? <div>回报：{tooltipPayoff.summary}</div> : null}
+                    {tooltipHook?.summary ? <div>悬念：{tooltipHook.summary}</div> : null}
+                    {tooltipPayoff?.summary ? <div>回应：{tooltipPayoff.summary}</div> : null}
                     {tooltipRisk?.summary || tooltipRisk?.risk_type ? (
                       <div>
                         阅读阻力：

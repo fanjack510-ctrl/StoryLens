@@ -13,14 +13,14 @@ export type DiagnosisBandLabel =
   | "张力不足"
   | "情绪不足"
   | "张力过载"
-  | "钩子建立"
-  | "钩子不足"
-  | "兑现延迟"
-  | "空钩子"
-  | "有效兑现"
+  | "悬念建立"
+  | "悬念不足"
+  | "回应延迟"
+  | "空悬念"
+  | "明确回应"
   | "突然揭晓"
   | "表达不清"
-  | "切分异常"
+  | "场景可能切得过细"
   | "数据不足"
   | "旧版数据"
   | "多项风险";
@@ -36,13 +36,13 @@ const CODE_TO_LABEL: Record<string, DiagnosisBandLabel> = {
   weak_emotional_investment: "情绪不足",
   suspended_tension: "张力不足",
   tension_overload: "张力过载",
-  weak_hook: "钩子不足",
-  empty_hook: "空钩子",
-  delayed_payoff: "兑现延迟",
+  weak_hook: "悬念不足",
+  empty_hook: "空悬念",
+  delayed_payoff: "回应延迟",
   abrupt_reveal: "突然揭晓",
-  effective_payoff: "有效兑现",
+  effective_payoff: "明确回应",
   unclear_expression: "表达不清",
-  scene_boundary_anomaly: "切分异常",
+  scene_boundary_anomaly: "场景可能切得过细",
   low_confidence: "数据不足",
   information_overload: "张力过载",
 };
@@ -86,11 +86,11 @@ function isBeatDiag(diag: SceneDiagnosisLike): boolean {
  * Missing primary_diagnosis must NOT become 「正常」.
  */
 export function primaryBandLabelForScene(diag: SceneDiagnosisLike): DiagnosisBandLabel {
-  // Beat defaults to 辅助节拍 (not 正常 / 切分异常 as primary band copy).
+  // Beat defaults to 辅助节拍 (not 正常 / 场景切分 as primary band copy).
   if (isBeatDiag(diag)) return "辅助节拍";
 
   if (diag.insufficientData) return "数据不足";
-  if (diag.data_quality_issue === "scene_boundary_anomaly") return "切分异常";
+  if (diag.data_quality_issue === "scene_boundary_anomaly") return "场景可能切得过细";
   if (diag.data_quality_issue) return "数据不足";
 
   const secondary = diag.secondary_diagnoses ?? [];
@@ -100,7 +100,7 @@ export function primaryBandLabelForScene(diag: SceneDiagnosisLike): DiagnosisBan
   if (mapped) return mapped;
 
   const positive = mapDiagnosisCodeToBandLabel(diag.positive_mechanism);
-  if (positive === "有效兑现") return "有效兑现";
+  if (positive === "明确回应") return "明确回应";
 
   if (
     typeof diag.plot_progress === "number" &&

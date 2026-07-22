@@ -58,13 +58,13 @@ export function HookPayoffTimeline({
         data-testid="hook-payoff-timeline-svg"
         viewBox={`0 0 ${width} ${height}`}
         role="img"
-        aria-label="钩子与回报双轨关系图"
+        aria-label="悬念与回应双轨关系图"
       >
         <text x={8} y={topY + 4} className="hook-payoff-rail-label">
-          问题与钩子
+          悬念
         </text>
         <text x={8} y={bottomY + 4} className="hook-payoff-rail-label">
-          回应与兑现
+          回应
         </text>
         <line
           x1={padX}

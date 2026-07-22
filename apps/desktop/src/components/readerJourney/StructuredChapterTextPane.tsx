@@ -243,30 +243,30 @@ export const StructuredChapterTextPane = forwardRef<StructuredChapterTextPaneHan
                       onClick={() => onSelectScene(s.id)}
                     >
                       <span className="structured-scene-ordinal">
-                        Scene {s.ordinal}
+                        {role === "beat" ? `节拍${String(s.ordinal).padStart(2, "0")}` : `场景${String(s.ordinal).padStart(2, "0")}`}
                       </span>
                       <span className={`structured-scene-role role-${role}`}>
                         {roleLabelZh(role)}
                       </span>
                       {phaseOrdinal != null && (
-                        <span className="structured-scene-phase">Phase {phaseOrdinal}</span>
+                        <span className="structured-scene-phase">阶段{phaseOrdinal}</span>
                       )}
                       <span className="structured-scene-range" hidden>
                         {techTitle}
                       </span>
                       <span className="structured-scene-badges">
                         {hookOrdinals.has(s.ordinal) && (
-                          <span className="badge-hook" title="钩子标记">
-                            钩子
+                          <span className="badge-hook" title="悬念标记">
+                            悬念
                           </span>
                         )}
                         {payoffOrdinals.has(s.ordinal) && (
-                          <span className="badge-payoff" title="回报标记">
-                            回报
+                          <span className="badge-payoff" title="回应标记">
+                            回应
                           </span>
                         )}
                         {riskOrdinals.has(s.ordinal) && (
-                          <span className="badge-risk" title="连续缺少回报、节奏骤降或认知负担过高，可能降低读者继续阅读的意愿。">
+                          <span className="badge-risk" title="这里可能让部分读者暂时失去继续阅读的动力。">
                             阅读阻力
                           </span>
                         )}

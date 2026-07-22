@@ -1,5 +1,6 @@
 /**
  * Unified Reader Journey lens explanations — presentation only.
+ * Single source of truth for ordinary-user titles, summaries, and legends.
  * Does not change formulas, scores, or NarrativeLoopView fact rules.
  */
 
@@ -20,11 +21,21 @@ export type ReaderJourneyLensExplanation = {
   metric_id: JourneyCurveMetric;
 };
 
-const NUMERIC_LEGEND: Array<{ key: string; label: string }> = [
+/** Numeric lenses: one-line legend (≤1 row). */
+export const NUMERIC_LENS_LEGEND: Array<{ key: string; label: string }> = [
   { key: "scene", label: "● 场景" },
   { key: "beat", label: "• 节拍" },
   { key: "selection", label: "┆ 当前选择" },
   { key: "risk", label: "■ 阅读阻力" },
+];
+
+/** 悬念与回应 lens legend (≤1 row). */
+export const HOOK_PAYOFF_LENS_LEGEND: Array<{ key: string; label: string }> = [
+  { key: "new_hook", label: "● 新悬念" },
+  { key: "partial", label: "◐ 部分回应" },
+  { key: "full", label: "● 明确回应" },
+  { key: "reversal", label: "◆ 反转回应" },
+  { key: "probable_link", label: "┄ 较可信承接" },
 ];
 
 export const READER_JOURNEY_LENS_EXPLANATIONS: Record<
@@ -33,18 +44,18 @@ export const READER_JOURNEY_LENS_EXPLANATIONS: Record<
 > = {
   composite: {
     lens_id: "composite",
-    title: "综合阅读动力",
+    title: "综合阅读",
     one_line_summary: "读者是否愿意继续往下读。线越高，继续阅读的动力通常越强。",
     how_to_read: [
       "高点：当前节点更容易吸引继续阅读。",
       "低点：需要检查，但不代表一定写得差。",
-      "要结合剧情推进、张力和回报一起判断。",
+      "要结合剧情推进、张力和回应一起判断。",
     ],
     y_axis_semantics: "继续阅读动力强弱",
     high_meaning: "当前节点更容易吸引继续阅读",
     low_meaning: "继续阅读动力偏弱，需要结合上下文检查",
     caution: "数值高低不直接等于作品好坏。",
-    legend_items: NUMERIC_LEGEND,
+    legend_items: NUMERIC_LENS_LEGEND,
     metric_id: "engagement",
   },
   plot_progress: {
@@ -60,7 +71,7 @@ export const READER_JOURNEY_LENS_EXPLANATIONS: Record<
     high_meaning: "故事发生了实质变化",
     low_meaning: "可能是过渡、停顿或信息不足",
     caution: "数值高低不直接等于作品好坏。",
-    legend_items: NUMERIC_LEGEND,
+    legend_items: NUMERIC_LENS_LEGEND,
     metric_id: "curiosity",
   },
   reading_tension: {
@@ -76,7 +87,7 @@ export const READER_JOURNEY_LENS_EXPLANATIONS: Record<
     high_meaning: "危险、悬念或不确定性增强",
     low_meaning: "可能是换气或阶段性安全",
     caution: "数值高低不直接等于作品好坏。",
-    legend_items: NUMERIC_LEGEND,
+    legend_items: NUMERIC_LENS_LEGEND,
     metric_id: "tension",
   },
   emotion: {
@@ -92,7 +103,7 @@ export const READER_JOURNEY_LENS_EXPLANATIONS: Record<
     high_meaning: "情绪反应强烈",
     low_meaning: "情绪较平静或尚未建立",
     caution: "只表示强弱，不表示正面或负面。",
-    legend_items: NUMERIC_LEGEND,
+    legend_items: NUMERIC_LENS_LEGEND,
     metric_id: "arousal",
   },
   pacing: {
@@ -102,23 +113,23 @@ export const READER_JOURNEY_LENS_EXPLANATIONS: Record<
     how_to_read: [
       "高点：动作、信息或句子推进更快。",
       "低点：停留、观察或心理描写更多。",
-      "必须结合“节奏适配”判断是否合适。",
+      "必须结合下方“节奏适配”判断是否合适。",
     ],
     y_axis_semantics: "叙述推进快慢",
     high_meaning: "动作、信息或句子推进更快",
     low_meaning: "停留、观察或心理描写更多",
-    caution: "节奏适配是分类判断，不是与主线的数值距离。",
+    caution: "适配表示速度是否适合当前场景，不表示与曲线的距离。",
     legend_items: [
-      ...NUMERIC_LEGEND,
-      { key: "pacing_fit", label: "适配轨：合适 / 偏快 / 偏慢" },
+      ...NUMERIC_LENS_LEGEND,
+      { key: "pacing_fit", label: "适配：合适 / 偏快 / 偏慢 / 无法判断" },
     ],
     metric_id: "engagement",
   },
   hook_payoff: {
     lens_id: "hook_payoff",
-    title: "钩子与回报",
+    title: "悬念与回应",
     one_line_summary:
-      "钩子提出读者想知道的问题，回报给出答案、结果或新的变化。连线表示它们之间的承接。",
+      "悬念提出读者想知道的问题，回应给出答案、结果或新的变化。连线表示它们之间的承接。",
     how_to_read: [
       "上轨表示读者开始等待的答案。",
       "下轨表示后续给出的回应。",
@@ -127,20 +138,15 @@ export const READER_JOURNEY_LENS_EXPLANATIONS: Record<
     y_axis_semantics: "问题建立与回应关系（非双分数曲线）",
     high_meaning: "问题已建立或得到回应",
     low_meaning: "问题仍在等待回应",
-    caution: "当前关系识别不一致时，不作为确定结论。",
-    legend_items: [
-      { key: "new_hook", label: "● 新钩子" },
-      { key: "partial", label: "◐ 部分回应" },
-      { key: "full", label: "● 完整兑现" },
-      { key: "reversal", label: "◆ 反转式兑现" },
-      { key: "transformed", label: "↗ 转化为新问题" },
-      { key: "link", label: "─ 承接关系" },
-    ],
+    caution: "识别存在分歧时，不作为确定结论。",
+    legend_items: HOOK_PAYOFF_LENS_LEGEND,
     metric_id: "hook",
   },
 };
 
-/** Overlay-compare uses composite semantics with a compare-focused summary. */
+/** Overlay / 指标对比 — uses composite semantics with compare-focused summary. */
+export const OVERLAY_COMPARE_TITLE = "指标对比";
+
 export const OVERLAY_COMPARE_SUMMARY =
   "比较两个指标是否同步，例如写得很快，读者动力是否真的提高。";
 
@@ -149,6 +155,9 @@ export const OVERLAY_COMPARE_HOW_TO_READ: [string, string, string] = [
   "明显分离：需要检查快而无效或慢而有力。",
   "两条线的数值不能简单相减。",
 ];
+
+export const ALL_METRICS_LABEL = "全部指标";
+export const CURRENT_PHASE_LABEL = "当前阶段";
 
 export function getLensExplanation(
   lensId: ObservationLensId | string | null | undefined,

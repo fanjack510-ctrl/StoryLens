@@ -53,7 +53,7 @@ export const OBSERVATION_LENSES: ObservationLensDef[] = [
   },
   {
     id: "emotion",
-    labelZh: "情绪旅程",
+    labelZh: "情绪强度",
     primaryKey: "arousal",
     allowsOverlayWithComposite: true,
     isPairedHookPayoff: false,
@@ -61,7 +61,7 @@ export const OBSERVATION_LENSES: ObservationLensDef[] = [
   },
   {
     id: "hook_payoff",
-    labelZh: "钩子回报",
+    labelZh: "悬念与回应",
     primaryKey: "hook",
     allowsOverlayWithComposite: false,
     isPairedHookPayoff: true,
@@ -69,7 +69,7 @@ export const OBSERVATION_LENSES: ObservationLensDef[] = [
   },
   {
     id: "pacing",
-    labelZh: "节奏",
+    labelZh: "节奏速度",
     primaryKey: "pacing_speed",
     allowsOverlayWithComposite: true,
     isPairedHookPayoff: false,
@@ -79,14 +79,14 @@ export const OBSERVATION_LENSES: ObservationLensDef[] = [
 
 export const DEFAULT_OBSERVATION_LENS: ObservationLensId = "composite";
 
-/** @deprecated Prefer getLensExplanation(id).one_line_summary */
+/** @deprecated Prefer getLensExplanation(id).one_line_summary — keep in sync with frozen copy. */
 export const OBSERVATION_LENS_HINTS_ZH: Record<ObservationLensId, string> = {
   composite: "读者是否愿意继续往下读。线越高，继续阅读的动力通常越强。",
   plot_progress: "故事状态发生了多大变化，包括目标、冲突、信息和人物选择。",
   reading_tension: "读者有多担心、期待或想知道下一步会发生什么。",
   emotion: "读者在当前节点感受到的情绪有多强，只表示强弱，不表示好坏。",
   hook_payoff:
-    "钩子提出读者想知道的问题，回报给出答案、结果或新的变化。连线表示它们之间的承接。",
+    "悬念提出读者想知道的问题，回应给出答案、结果或新的变化。连线表示它们之间的承接。",
   pacing: "叙述推进得有多快。快慢本身没有好坏，要看是否适合当前场景任务。",
 };
 
@@ -343,7 +343,6 @@ export function valenceDirection(node: JourneySceneNode): "up" | "down" | "flat"
   return "flat";
 }
 
-export type PacingFitLabel = "偏慢" | "合适" | "偏快";
 export type PacingSegmentLabel = "加速" | "减速" | "变化不明显";
 
 /** Role target midpoints used when backend targets are absent (legacy). */
@@ -359,15 +358,21 @@ const PACING_ROLE_BANDS: Record<string, [number, number]> = {
   closed_end: [30, 60],
 };
 
+export type PacingFitLabel = "合适" | "偏快" | "偏慢" | "无法判断";
+
 /**
  * Node label for whether pacing_speed fits scene_role.
  * Prefer backend pacing_fit when present; never treat fit as identical to speed.
+ * Beat fit must not be expressed as vertical distance on the main curve.
  */
 export function pacingFitLabel(
-  pacingSpeed: number,
+  pacingSpeed: number | null | undefined,
   sceneRole: string | undefined | null,
   pacingFitScore?: number | null,
 ): PacingFitLabel {
+  if (typeof pacingSpeed !== "number" || !Number.isFinite(pacingSpeed)) {
+    return "无法判断";
+  }
   const band = PACING_ROLE_BANDS[sceneRole ?? ""] ?? [40, 70];
   if (typeof pacingFitScore === "number" && Number.isFinite(pacingFitScore)) {
     if (pacingFitScore >= 70) return "合适";
@@ -375,6 +380,7 @@ export function pacingFitLabel(
       if (pacingSpeed < (band[0] + band[1]) / 2) return "偏慢";
       return "偏快";
     }
+    return "合适";
   }
   if (pacingSpeed < band[0]) return "偏慢";
   if (pacingSpeed > band[1]) return "偏快";

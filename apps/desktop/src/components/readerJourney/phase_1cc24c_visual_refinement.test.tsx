@@ -102,7 +102,7 @@ describe("Phase 1C-C.2.4C visual refinement", () => {
   });
 
   it("simplifies scene titles and localizes roles/markers", () => {
-    expect(roleLabelZh("secondary")).toBe("次级节点");
+    expect(roleLabelZh("secondary")).toBe("过渡场景");
     const scenes = [makeScene(12)];
     const paragraphs = [
       {
@@ -137,13 +137,13 @@ describe("Phase 1C-C.2.4C visual refinement", () => {
       />,
     );
     const header = screen.getByTestId("structured-scene-header-12");
-    expect(header.textContent).toMatch(/核心节点|次级节点|节拍节点/);
-    expect(header).toHaveTextContent("Phase");
-    expect(header.textContent).not.toMatch(/B0001-C0002-P0060/);
+    expect(header.textContent).toMatch(/核心场景|过渡场景|过渡/);
+    expect(header).toHaveTextContent("阶段");
+    expect(header.textContent).not.toMatch(/Phase\s|Scene\s|B0001-C0002-P0060/);
     const marker = header.querySelector(".badge-hook, .badge-payoff, .badge-risk");
     if (marker) {
       expect(marker.getAttribute("title")).toBeTruthy();
-      expect(marker.textContent).toMatch(/钩子|回报|阅读阻力|流失风险|风险/);
+      expect(marker.textContent).toMatch(/悬念|回应|阅读阻力/);
     }
   });
 
@@ -170,6 +170,6 @@ describe("Phase 1C-C.2.4C visual refinement", () => {
     fireEvent.click(screen.getByTestId("journey-marker-full"));
     expect(screen.getByTestId("journey-marker-full").className).toContain("active");
     expect(screen.getByTestId("scene-detail-panel-questions")).toBeInTheDocument();
-    expect(screen.getByTestId("scene-detail-title")).toHaveTextContent("场景 12");
+    expect(screen.getByTestId("scene-detail-title")).toHaveTextContent("场景12");
   });
 });

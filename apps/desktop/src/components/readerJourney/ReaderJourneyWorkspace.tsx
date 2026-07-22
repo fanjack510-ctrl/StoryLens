@@ -73,7 +73,8 @@ import {
   JourneyQuestionInspectorPanel,
   JourneySceneDetailPanel,
 } from "./JourneySceneDetailPanel";
-import { roleLabelZh, formatJourneyPhaseLabel, resolvePhaseSummaryDisplay, formatJourneySceneLabel } from "./journeyUiLabels";
+import { roleLabelZh, formatJourneyPhaseLabel, resolvePhaseSummaryDisplay, formatJourneySceneLabel, formatJourneyNodeLabel } from "./journeyUiLabels";
+import { getLensExplanation } from "./readerJourneyLensExplanation";
 import {
   CANONICAL_OVERVIEW_MODE,
   OVERVIEW_MODE_PARAM,
@@ -1702,7 +1703,7 @@ export function ReaderJourneyWorkspace({
               </section>
               {observationLens === "pacing" ? (
                 <p className="journey-pacing-fit-note" data-testid="journey-pacing-fit-note">
-                  下方适配轨表示节奏是否合适，不表示与主线的数值距离。
+                  适配表示速度是否适合当前场景，不表示与曲线的距离。
                 </p>
               ) : null}
 
@@ -1732,18 +1733,27 @@ export function ReaderJourneyWorkspace({
                     }`}
                     data-testid={`journey-rhythm-dot-${node.scene_ordinal}`}
                     data-role={node.role}
-                    title={`Scene ${node.scene_ordinal} · ${roleLabelZh(node.role)}`}
-                    aria-label={`Scene ${node.scene_ordinal}`}
+                    title={formatJourneyNodeLabel(node.scene_ordinal, {
+                      role: node.role,
+                      sceneRole: node.scene_role,
+                      nodeType: node.node_type,
+                    })}
+                    aria-label={formatJourneyNodeLabel(node.scene_ordinal, {
+                      role: node.role,
+                      sceneRole: node.scene_role,
+                      nodeType: node.node_type,
+                    })}
                     onClick={() => handleSelectScene(node, "journey_rhythm")}
                   />
                 ))}
               </section>
 
               <div className="journey-curve-legend" data-testid="journey-curve-legend">
-                <span data-legend="scene">● 场景</span>
-                <span data-legend="beat">• 节拍</span>
-                <span data-legend="selection">┆ 当前选择</span>
-                <span data-legend="risk">■ 阅读阻力</span>
+                {getLensExplanation(observationLens).legend_items.map((item) => (
+                  <span key={item.key} data-legend={item.key}>
+                    {item.label}
+                  </span>
+                ))}
               </div>
             </div>
           </div>
@@ -1829,12 +1839,12 @@ export function ReaderJourneyWorkspace({
                 type="button"
                 className="journey-insight-item journey-insight-clickable journey-summary-card"
                 data-testid="summary-card-peak"
-                title={`Scene ${peakOrdinal} · ${summary.peaks.engagement_peak.value}`}
+                title={`${formatJourneySceneLabel(peakOrdinal)} · ${summary.peaks.engagement_peak.value}`}
                 onClick={handleInsightPeak}
               >
                 <span>峰值场景</span>
                 <b>
-                  场景 {peakOrdinal} · {summary.peaks.engagement_peak.value}
+                  {formatJourneySceneLabel(peakOrdinal)} · {summary.peaks.engagement_peak.value}
                 </b>
               </button>
               <span className="journey-insight-sep" aria-hidden="true">
@@ -1844,7 +1854,7 @@ export function ReaderJourneyWorkspace({
                 type="button"
                 className="journey-insight-item journey-insight-clickable journey-summary-card"
                 data-testid="summary-card-weak"
-                title={`${weakIntervalDisplay(summary)} · 最低点 Scene ${valleyOrdinal}`}
+                title={`${weakIntervalDisplay(summary)} · 最低点 ${formatJourneySceneLabel(valleyOrdinal)}`}
                 onClick={handleInsightValley}
               >
                 <span>薄弱区间</span>
@@ -1860,14 +1870,18 @@ export function ReaderJourneyWorkspace({
                   data-testid="summary-card-hook"
                   title={
                     strongestHook?.summary ||
-                    (strongestHook ? `Scene ${strongestHook.scene_ordinal}` : undefined)
+                    (strongestHook
+                      ? formatJourneySceneLabel(strongestHook.scene_ordinal)
+                      : undefined)
                   }
                   onClick={handleInsightHook}
                 >
-                  <span>章尾钩子</span>
+                  <span>章末悬念</span>
                   <b>
                     {strongestHook?.summary ||
-                      (strongestHook ? `Scene ${strongestHook.scene_ordinal}` : "—")}
+                      (strongestHook
+                        ? formatJourneySceneLabel(strongestHook.scene_ordinal)
+                        : "—")}
                   </b>
                 </button>
               ) : (
@@ -1875,7 +1889,7 @@ export function ReaderJourneyWorkspace({
                   className="journey-insight-item journey-insight-static journey-summary-card journey-summary-card-primary"
                   data-testid="summary-card-hook"
                 >
-                  <span>章尾钩子</span>
+                  <span>章末悬念</span>
                   <b>—</b>
                 </div>
               )}

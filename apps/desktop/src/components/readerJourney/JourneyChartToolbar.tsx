@@ -372,10 +372,27 @@ export function JourneyChartToolbar({
               className={`journey-toolbar-btn ${overlayComposite ? "active" : ""}`}
               data-testid="journey-overlay-composite"
               aria-pressed={overlayComposite}
-              title="叠加对比：综合阅读 + 当前镜头（最多两条线）"
+              title="指标对比：综合阅读 + 当前镜头（最多两条线）"
               onClick={() => onOverlayCompositeChange(!overlayComposite)}
             >
-              叠加对比
+              指标对比
+            </button>
+          ) : null}
+          {useLenses ? (
+            <button
+              type="button"
+              className="journey-toolbar-btn"
+              data-testid="journey-all-metrics"
+              title="全部指标"
+              onClick={() => {
+                /* Metrics remain available via hidden legacy menu for audits; reveal on demand. */
+                const hidden = document.querySelector(
+                  '[data-testid="journey-metric-select"]',
+                ) as HTMLElement | null;
+                hidden?.click();
+              }}
+            >
+              全部指标
             </button>
           ) : null}
           {useLenses ? (

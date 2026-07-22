@@ -50,21 +50,21 @@ describe("journeyUiLabels display formatters", () => {
   });
 
   it("maps metrics and scores safely", () => {
-    expect(formatJourneyMetricLabel("engagement")).toBe("阅读牵引");
+    expect(formatJourneyMetricLabel("engagement")).toBe("综合阅读");
     expect(formatJourneyMetricLabel("arousal")).toBe("情绪强度");
-    expect(formatJourneyMetricLabel("tension")).toBe("节奏变化");
-    expect(formatJourneyMetricLabel("hook")).toBe("钩子强度");
+    expect(formatJourneyMetricLabel("tension")).toBe("阅读张力");
+    expect(formatJourneyMetricLabel("hook")).toBe("悬念");
     expect(formatJourneyMetricLabel("dropoff_risk")).toBe("阅读阻力");
     expect(formatJourneyMetricLabel("nope")).toBe("未知指标");
     expect(formatJourneyScore(76.4)).toBe("76");
     expect(formatJourneyScore(undefined)).toBe("—");
     expect(formatJourneyScore(Number.NaN)).toBe("—");
-    expect(formatPhaseMetricScoreLabel("engagement", 48)).toBe("阅读牵引 48");
+    expect(formatPhaseMetricScoreLabel("engagement", 48)).toBe("综合阅读 48");
     expect(PRIMARY_JOURNEY_METRICS).toEqual(["engagement", "arousal", "tension", "hook"]);
   });
 
   it("maps risk types without changing keys", () => {
-    expect(formatJourneyRiskTypeLabel("consecutive_no_payoff")).toBe("连续场景缺少有效回报");
+    expect(formatJourneyRiskTypeLabel("consecutive_no_payoff")).toBe("连续场景缺少有效回应");
     expect(
       formatJourneyRiskSummary({
         risk_type: "consecutive_no_payoff",
@@ -80,12 +80,12 @@ describe("journeyUiLabels display formatters", () => {
         end_scene_ordinal: 9,
         span: 2,
       }),
-    ).toContain("缺少明显回报");
+    ).toContain("缺少明显回应");
     expect(formatJourneySelectionType("risk")).toBe("阅读阻力");
   });
 
   it("formats scene / selection / status without dirty tokens", () => {
-    expect(formatJourneySceneLabel(4, "地下仓库")).toBe("场景 04 · 地下仓库");
+    expect(formatJourneySceneLabel(4, "地下仓库")).toBe("场景04 · 地下仓库");
     expect(formatJourneySceneLabel(undefined)).toBe("场景");
     expect(formatJourneySelectionType("phase")).toBe("阶段");
     expect(formatJourneySelectionType("scene")).toBe("场景");

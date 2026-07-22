@@ -5,7 +5,7 @@
 
 import type { ReaderJourneyVisualization } from "../../types/readerJourneyVisualization";
 
-export const INCONSISTENT_USER_MESSAGE = "当前关系识别结果不一致，暂不作为确定结论";
+export const INCONSISTENT_USER_MESSAGE = "识别存在分歧";
 export const HARD_BLOCK_USER_MESSAGE = "当前关系识别存在严重冲突，暂不作为确定结论。";
 export const SOFT_CONFLICT_USER_MESSAGE =
   "系统找到较可信的承接，但部分分析结果仍存在分歧。";

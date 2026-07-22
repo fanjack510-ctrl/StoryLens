@@ -13,10 +13,10 @@ import type { DiagnosisBandLabel, SceneDiagnosisLike } from "./diagnosisBandMode
 import { mapDiagnosisCodeToBandLabel, primaryBandLabelForScene } from "./diagnosisBandModel";
 import { formatPayoffClaimLabel, getScenePayoffClaim } from "./narrativeLoopView";
 
-export const HOOK_STRENGTH_LABEL = "钩子强度";
-export const PAYOFF_STRENGTH_LABEL = "本场回报强度";
+export const HOOK_STRENGTH_LABEL = "悬念强度";
+export const PAYOFF_STRENGTH_LABEL = "本场回应强度";
 export const PAYOFF_NOT_CUMULATIVE_HINT =
-  "回报表示本场对前文问题的兑现强度，不是累计完成比例。";
+  "回应表示本场对前文问题的处理强度，不是累计完成比例。";
 
 export type HookPayoffDataStatus = "v2_native" | "legacy" | "missing";
 
@@ -41,11 +41,11 @@ export type HookPayoffSceneSummary = {
 
 /** Diagnosis labels allowed as primary band on hook/payoff lens. */
 export const HOOK_PAYOFF_PRIMARY_BAND_LABELS = new Set<DiagnosisBandLabel>([
-  "钩子建立",
-  "钩子不足",
-  "兑现延迟",
-  "空钩子",
-  "有效兑现",
+  "悬念建立",
+  "悬念不足",
+  "回应延迟",
+  "空悬念",
+  "明确回应",
   "突然揭晓",
   "数据不足",
   "旧版数据",
@@ -84,12 +84,12 @@ export function resolveHookPayoffDataStatus(
 }
 
 export function payoffPlainLanguage(payoff: number | null | undefined): string {
-  if (payoff == null || !Number.isFinite(payoff)) return "本场回报数据不足。";
+  if (payoff == null || !Number.isFinite(payoff)) return "本场回应数据不足。";
   if (payoff <= 0) return "本场未提供有效兑现。";
   if (payoff < 40) return "本场提供少量线索或部分回答，核心问题仍未兑现。";
   if (payoff < 70) return "本场完成部分兑现，核心问题仍未完全回收。";
   // High score alone is not a deterministic 有效兑现 claim.
-  return "本场回报分数较高，需结合回报实体与证据核对。";
+  return "本场回应分数较高，需结合回应实体与证据核对。";
 }
 
 export function lifecycleStatusLabelZh(status: string | null | undefined): string {
@@ -185,9 +185,9 @@ export function buildHookPayoffSceneSummary(
 }
 
 export function formatHookPayoffSceneCaption(summary: HookPayoffSceneSummary): string {
-  const hookText = summary.hook == null ? "钩子 —" : `钩子 ${Math.round(summary.hook)}`;
+  const hookText = summary.hook == null ? "悬念 —" : `悬念 ${Math.round(summary.hook)}`;
   const payoffText =
-    summary.payoff == null ? "回报 —" : `回报 ${Math.round(summary.payoff)}`;
+    summary.payoff == null ? "回应 —" : `回应 ${Math.round(summary.payoff)}`;
   return `场景 S${String(summary.sceneOrdinal).padStart(2, "0")} · ${hookText} · ${payoffText} · ${summary.lifecycleStatusLabel}`;
 }
 
@@ -196,7 +196,7 @@ export function hookPayoffCombinationExplanation(
   payoff: number | null | undefined,
 ): string {
   if (hook == null || payoff == null) {
-    return "本场钩子/回报数据不足，暂不能给出组合解释。";
+    return "本场悬念/回应数据不足，暂不能给出组合解释。";
   }
   const highHook = hook >= 65;
   const lowHook = hook < 40;
@@ -219,7 +219,7 @@ export function hookPayoffCombinationExplanation(
   if (lowHook && lowPayoff) {
     return "本场缺少明确的新期待和兑现，需要结合场景任务判断是否为有效过渡。";
   }
-  return "本场钩子与回报处于中位，宜结合问题生命周期判断推进或兑现角色。";
+  return "本场悬念与回应处于中位，宜结合问题生命周期判断推进或回应角色。";
 }
 
 export function primaryBandLabelForHookPayoffLens(diag: SceneDiagnosisLike): DiagnosisBandLabel {
@@ -255,7 +255,7 @@ export function primaryBandLabelForHookPayoffLens(diag: SceneDiagnosisLike): Dia
   if (diag.positive_mechanism) {
     const mapped = mapDiagnosisCodeToBandLabel(diag.positive_mechanism);
     if (mapped && HOOK_PAYOFF_PRIMARY_BAND_LABELS.has(mapped)) return mapped;
-    if (diag.positive_mechanism === "effective_payoff") return "有效兑现";
+    if (diag.positive_mechanism === "effective_payoff") return "明确回应";
   }
 
   const fallback = primaryBandLabelForScene(diag);
@@ -332,13 +332,13 @@ export function buildHookPayoffChapterBullets(
   const bullets = [
     {
       kind: "advantage" as const,
-      text: `主要钩子建立区段：S${setupScene.scene_ordinal} 钩子约 ${Math.round(
+      text: `主要悬念建立区段：S${setupScene.scene_ordinal} 悬念约 ${Math.round(
         nodeScoreRecord(setupScene).hook ?? 0,
       )}，本章问题多在此前后被建立或强化。`,
     },
     {
       kind: "key_span" as const,
-      text: `主要兑现区段：S${payoffScene.scene_ordinal} 本场回报约 ${Math.round(
+      text: `主要回应区段：S${payoffScene.scene_ordinal} 本场回应约 ${Math.round(
         nodeScoreRecord(payoffScene).payoff ?? 0,
       )}；已兑现问题 ${paidCount} 个。`,
     },

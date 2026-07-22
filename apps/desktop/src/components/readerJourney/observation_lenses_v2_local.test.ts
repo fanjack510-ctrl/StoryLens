@@ -301,7 +301,7 @@ describe("hook/payoff dual lines", () => {
 describe("diagnosis band", () => {
   it("maps primary codes to Chinese band labels and expands secondary", () => {
     expect(mapDiagnosisCodeToBandLabel("plot_stagnation")).toBe("剧情停滞");
-    expect(mapDiagnosisCodeToBandLabel("empty_hook")).toBe("空钩子");
+    expect(mapDiagnosisCodeToBandLabel("empty_hook")).toBe("空悬念");
     const primary = primaryBandLabelForScene({
       scene_ordinal: 3,
       primary_diagnosis: "weak_progress",
@@ -313,16 +313,16 @@ describe("diagnosis band", () => {
         scene_ordinal: 3,
         secondary_diagnoses: ["weak_hook", "pacing_too_slow"],
       }),
-    ).toEqual(["钩子不足", "节奏偏慢"]);
+    ).toEqual(["悬念不足", "节奏偏慢"]);
   });
 
-  it("marks boundary anomalies as 切分异常", () => {
+  it("marks boundary anomalies as 场景可能切得过细", () => {
     expect(
       primaryBandLabelForScene({
         scene_ordinal: 8,
         data_quality_issue: "scene_boundary_anomaly",
       }),
-    ).toBe("切分异常");
+    ).toBe("场景可能切得过细");
   });
 
   it("does not default missing diagnosis to 正常", () => {
@@ -472,8 +472,8 @@ describe("CHG-20260721-012 verification matrix", () => {
   it("8-10) diagnosis labels for stagnation / empty spin / empty hook", () => {
     expect(mapDiagnosisCodeToBandLabel("plot_stagnation")).toBe("剧情停滞");
     expect(mapDiagnosisCodeToBandLabel("empty_fast_pacing")).toBe("空转");
-    expect(mapDiagnosisCodeToBandLabel("empty_hook")).toBe("空钩子");
-    expect(mapDiagnosisCodeToBandLabel("delayed_payoff")).toBe("兑现延迟");
+    expect(mapDiagnosisCodeToBandLabel("empty_hook")).toBe("空悬念");
+    expect(mapDiagnosisCodeToBandLabel("delayed_payoff")).toBe("回应延迟");
   });
 
   it("11-12) peak narrative explains mechanism and keeps evidence hooks", () => {
@@ -601,7 +601,7 @@ describe("lens card binding + reading_momentum terminology", () => {
 
     expect(readingMomentumLabelZh(viz)).toBe("阅读动力");
     expect(formatLensPhaseScoreLabel(viz, "composite", 68)).toContain("阅读动力");
-    expect(formatLensPhaseScoreLabel(viz, "composite", 68)).not.toContain("阅读牵引");
+    expect(formatLensPhaseScoreLabel(viz, "composite", 68)).not.toContain("综合阅读");
     expect(formatLensPhaseScoreLabel(viz, "plot_progress", 58)).toContain("剧情推进");
     expect(formatLensPhaseScoreLabel(viz, "reading_tension", 66)).toContain("阅读张力");
 
@@ -618,7 +618,7 @@ describe("lens card binding + reading_momentum terminology", () => {
       const seriesVal = seriesValueAtOrdinal(viz, lensId, 1);
       const binding = resolveLensMetricBinding(viz, lensId, viz.scene_nodes[0]);
       expect(binding.value).toBe(seriesVal);
-      expect(formatLensBindingCaption(binding)).not.toMatch(/阅读牵引|engagement<40/);
+      expect(formatLensBindingCaption(binding)).not.toMatch(/综合阅读|engagement<40/);
     }
 
     const pacing = resolveLensMetricBinding(viz, "pacing", viz.scene_nodes[0]);

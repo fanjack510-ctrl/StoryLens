@@ -3,6 +3,7 @@ import type { ObservationLensId } from "./observationLenses";
 import {
   OVERLAY_COMPARE_HOW_TO_READ,
   OVERLAY_COMPARE_SUMMARY,
+  OVERLAY_COMPARE_TITLE,
   getLensExplanation,
 } from "./readerJourneyLensExplanation";
 import type { HookPayoffChapterStats } from "./hookPayoffTimelineModel";
@@ -24,9 +25,10 @@ export function JourneyLensExplanationChrome({
   const [open, setOpen] = useState(false);
   const panelId = useId();
   const explanation = getLensExplanation(lensId);
+  const title = overlayCompare ? OVERLAY_COMPARE_TITLE : explanation.title;
   const summary = overlayCompare ? OVERLAY_COMPARE_SUMMARY : explanation.one_line_summary;
   const howTo = overlayCompare ? OVERLAY_COMPARE_HOW_TO_READ : explanation.how_to_read;
-  const legend = explanation.legend_items;
+  const legend = overlayCompare ? explanation.legend_items : explanation.legend_items;
 
   return (
     <div className="journey-lens-explanation" data-testid="journey-lens-explanation" data-lens={lensId}>
@@ -56,6 +58,8 @@ export function JourneyLensExplanationChrome({
       ) : null}
       <div className="journey-lens-explanation-row">
         <p className="journey-lens-one-liner" data-testid="journey-lens-one-liner">
+          <strong data-testid="journey-lens-title">{title}</strong>
+          {" · "}
           {summary}
         </p>
         <button
