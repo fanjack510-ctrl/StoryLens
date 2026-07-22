@@ -4,21 +4,20 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { booksApi } from "../services/booksApi";
 import { analysisApi } from "../services/analysisApi";
 import { formatSceneDisplayLabel } from "../services/formatSceneDisplayLabel";
+import {
+  adjacentBodyChapters,
+  applyNavigateToChapterReading,
+  bodyChapters,
+  scrollReadingPaneToTop,
+} from "../services/chapterNavigation";
 import { useUiStore } from "../stores/uiStore";
 import { Empty, ErrorState, Loading, Badge } from "../components/common/States";
 import { StateView } from "../components/ui/StateView";
 import { StartAnalysisDialog } from "../components/analysis/StartAnalysisDialog";
 import { ReparseDialog } from "../components/books/ReparseDialog";
+import { ChapterListViewport } from "../components/books/ChapterListViewport";
+import { ChapterAdjacentNav } from "../components/books/ChapterAdjacentNav";
 
-function chapterOrdinalLabel(c: {
-  section_type: string;
-  chapter_number_normalized?: number;
-  chapter_index: number;
-}) {
-  if (c.section_type === "front_matter") return "资料";
-  const n = c.chapter_number_normalized || c.chapter_index;
-  return String(n).padStart(2, "0");
-}
 
 function fileExtLabel(name?: string) {
   if (!name) return null;
@@ -103,28 +102,22 @@ export function BookWorkspacePage() {
     [chapters.data, chapter],
   );
   const formatLabel = fileExtLabel(book.data?.source_file_name);
-  const chapterCount = chapters.data?.length;
+  const bodyCount = bodyChapters(chapters.data).length;
+  const chapterCount = bodyCount || chapters.data?.length;
+  const adjacent = useMemo(
+    () => adjacentBodyChapters(chapters.data, chapter),
+    [chapters.data, chapter],
+  );
+  const chapterMissing =
+    Boolean(chapterFromUrl) &&
+    Boolean(chapters.data?.length) &&
+    !chapters.data?.some((c) => c.id === chapterFromUrl);
 
   const selectChapter = (id: number) => {
     setChapter(id);
-    setSearchParams(
-      () => {
-        const next = new URLSearchParams();
-        next.set("chapter", String(id));
-        next.set("view", "reading");
-        return next;
-      },
-      { replace: false },
-    );
+    applyNavigateToChapterReading(setSearchParams, id);
+    scrollReadingPaneToTop();
   };
-
-  useEffect(() => {
-    if (!chapter || !chapterListRef.current) return;
-    const el = chapterListRef.current.querySelector<HTMLElement>(
-      `.workspace-chapter-item[data-chapter-id="${chapter}"]`,
-    );
-    el?.scrollIntoView({ block: "nearest", inline: "nearest" });
-  }, [chapter, chapters.data]);
 
   const locate = async (id: number) => {
     const rows = await analysisApi.evidence(id);
@@ -202,28 +195,19 @@ export function BookWorkspacePage() {
           )}
         </div>
 
-        <div className="workspace-nav-section">
-          <h3 className="workspace-nav-label">章节</h3>
-          <div className="workspace-chapter-list" ref={chapterListRef}>
-            {chapters.data?.map((c) => {
-              const title = c.display_title || c.title;
-              return (
-                <button
-                  type="button"
-                  className={`workspace-chapter-item${chapter === c.id ? " selected" : ""}`}
-                  data-chapter-id={c.id}
-                  onClick={() => selectChapter(c.id)}
-                  key={c.id}
-                  title={title}
-                >
-                  <span className="workspace-chapter-num">
-                    {chapterOrdinalLabel(c)}
-                  </span>
-                  <span className="workspace-chapter-title">{title}</span>
-                </button>
-              );
-            })}
+        <div className="workspace-nav-section workspace-nav-section--chapters">
+          <div className="workspace-chapter-heading-row">
+            <h3 className="workspace-nav-label">章节</h3>
+            {bodyCount > 0 ? (
+              <span className="workspace-chapter-count-hint">{bodyCount} 章</span>
+            ) : null}
           </div>
+          <ChapterListViewport
+            chapters={chapters.data || []}
+            currentChapterId={chapter}
+            onSelect={selectChapter}
+            listRef={chapterListRef}
+          />
         </div>
 
         <div className="workspace-nav-section">
@@ -292,7 +276,30 @@ export function BookWorkspacePage() {
         <div className="workspace-reading-canvas">
           <header className="workspace-reading-header">
             <p className="eyebrow workspace-reading-label">正文阅读</p>
-            {!chapter ? (
+            {chapterMissing ? (
+              <StateView
+                kind="empty"
+                title="当前章节不存在或已失效"
+                description="请返回第一章，或回到书库重新打开书籍。"
+                data-testid="workspace-chapter-missing"
+                primaryAction={{
+                  label: "返回第一章",
+                  testId: "workspace-goto-first-chapter",
+                  onClick: () => {
+                    const first = bodyChapters(chapters.data)[0];
+                    if (first) selectChapter(first.id);
+                  },
+                }}
+                secondaryAction={{
+                  label: "返回书库",
+                  testId: "workspace-back-library-missing",
+                  variant: "secondary",
+                  onClick: () => {
+                    window.location.href = "/library";
+                  },
+                }}
+              />
+            ) : !chapter ? (
               <StateView
                 kind="empty"
                 title="选择一个章节开始阅读"
@@ -303,6 +310,15 @@ export function BookWorkspacePage() {
                 {chapterTitle}
               </h1>
             )}
+            {!chapterMissing && chapter ? (
+              <ChapterAdjacentNav
+                compact
+                prev={adjacent.prev}
+                next={adjacent.next}
+                chapters={chapters.data || []}
+                onSelect={selectChapter}
+              />
+            ) : null}
           </header>
 
           {(paragraphs.data?.total || 0) > 2000 && (
@@ -310,7 +326,7 @@ export function BookWorkspacePage() {
           )}
 
           <div className="prose workspace-prose" style={{ fontSize, lineHeight }}>
-            {!chapter ? null : paragraphs.isLoading ? (
+            {chapterMissing || !chapter ? null : paragraphs.isLoading ? (
               <StateView
                 kind="loading"
                 title="正在载入章节"
@@ -347,6 +363,15 @@ export function BookWorkspacePage() {
               </button>
             )}
           </div>
+
+          {!chapterMissing && chapter ? (
+            <ChapterAdjacentNav
+              prev={adjacent.prev}
+              next={adjacent.next}
+              chapters={chapters.data || []}
+              onSelect={selectChapter}
+            />
+          ) : null}
         </div>
       </article>
 

@@ -10,6 +10,13 @@ import { StartAnalysisDialog } from "../components/analysis/StartAnalysisDialog"
 import { BoundaryReviewPanel } from "../components/analysis/BoundaryReviewPanel";
 import { ConfirmBoundaryDivisionPanel } from "../components/analysis/ConfirmBoundaryDivisionPanel";
 import { ReparseDialog } from "../components/books/ReparseDialog";
+import { ChapterNavigatorDrawer } from "../components/books/ChapterNavigatorDrawer";
+import {
+  applyNavigateToChapterReading,
+  bodyChapters,
+  buildChapterReadingSearchParams,
+  scrollReadingPaneToTop,
+} from "../services/chapterNavigation";
 import { UnifiedAnalysisRecoveryCard } from "../components/chapterAnalysis/UnifiedAnalysisRecoveryCard";
 import { ChapterAnalysisProgressPanel } from "../components/chapterAnalysis/ChapterAnalysisProgressPanel";
 import { ReaderJourneyProgressCard } from "../components/chapterAnalysis/ReaderJourneyProgressCard";
@@ -177,12 +184,7 @@ export function BookRoutePage() {
       });
       if (!match) return;
       setSearchParams(
-        () => {
-          const next = new URLSearchParams();
-          next.set("chapter", String(match.id));
-          next.set("view", "reading");
-          return next;
-        },
+        () => buildChapterReadingSearchParams(match.id),
         { replace: false },
       );
       userPinnedViewRef.current = "reading";
@@ -510,34 +512,11 @@ export function BookRoutePage() {
     setCatalogOpen(false);
     userPinnedViewRef.current = "reading";
     userPinnedTabRef.current = "text";
-    setSearchParams(
-      () => {
-        const next = new URLSearchParams();
-        next.set("chapter", String(id));
-        next.set("view", "reading");
-        // Omit analysisRun / result tabs — discovery may bind status later without switching tabs.
-        return next;
-      },
-      { replace: false },
-    );
+    applyNavigateToChapterReading(setSearchParams, id);
+    scrollReadingPaneToTop();
   };
 
   const openCatalogOrFocusNav = () => {
-    const list = document.querySelector<HTMLElement>(
-      ".book-shell-body .workspace-chapter-list",
-    );
-    const visible =
-      list &&
-      list.getBoundingClientRect().width > 40 &&
-      getComputedStyle(list).visibility !== "hidden";
-    if (visible && list) {
-      list.scrollIntoView({ block: "nearest", inline: "nearest" });
-      const selected =
-        list.querySelector<HTMLElement>(".workspace-chapter-item.selected") ||
-        list.querySelector<HTMLElement>(".workspace-chapter-item");
-      selected?.focus();
-      return;
-    }
     setCatalogOpen(true);
   };
 
@@ -550,8 +529,55 @@ export function BookRoutePage() {
     return () => window.removeEventListener("keydown", onKey);
   }, [catalogOpen]);
 
+  useEffect(() => {
+    if (catalogOpen || dialog || reparseOpen || chapterInfoOpen || budgetModalOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (!event.altKey || event.shiftKey || event.ctrlKey || event.metaKey) return;
+      if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+      const target = event.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+      const body = bodyChapters(chapters.data);
+      if (!chapterId || !body.length) return;
+      const idx = body.findIndex((c) => c.id === chapterId);
+      if (idx < 0) return;
+      const next =
+        event.key === "ArrowLeft"
+          ? idx > 0
+            ? body[idx - 1]
+            : null
+          : idx < body.length - 1
+            ? body[idx + 1]
+            : null;
+      if (!next) return;
+      event.preventDefault();
+      setCatalogOpen(false);
+      userPinnedViewRef.current = "reading";
+      userPinnedTabRef.current = "text";
+      applyNavigateToChapterReading(setSearchParams, next.id);
+      scrollReadingPaneToTop();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [
+    catalogOpen,
+    dialog,
+    reparseOpen,
+    chapterInfoOpen,
+    budgetModalOpen,
+    chapters.data,
+    chapterId,
+    setSearchParams,
+  ]);
+
   const bookTitle = book.data?.title || "书籍";
-  const chapterCount = (chapters.data || []).length;
 
   const moreItems =
     view === "result"
@@ -1243,63 +1269,14 @@ export function BookRoutePage() {
         </div>
       )}
 
-      {catalogOpen && (
-        <div
-          className="chapter-catalog-drawer"
-          data-testid="chapter-catalog-drawer"
-          onClick={(event) => {
-            if (event.target === event.currentTarget) setCatalogOpen(false);
-          }}
-        >
-          <div
-            className="chapter-catalog-panel"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="chapter-catalog-title"
-          >
-            <div className="chapter-catalog-head">
-              <h3 id="chapter-catalog-title">章节目录</h3>
-              <button
-                type="button"
-                className="chapter-catalog-close"
-                aria-label="关闭"
-                data-testid="chapter-catalog-close"
-                onClick={() => setCatalogOpen(false)}
-              >
-                ×
-              </button>
-            </div>
-            <div className="chapter-catalog-context">
-              <strong className="chapter-catalog-book" title={bookTitle}>
-                {bookTitle}
-              </strong>
-              <span className="chapter-catalog-count">共 {chapterCount} 章</span>
-            </div>
-            <div className="chapter-catalog-list">
-              {(chapters.data || []).map((c) => {
-                const title = c.display_title || c.title;
-                const num =
-                  c.section_type === "front_matter"
-                    ? "资料"
-                    : String(c.chapter_number_normalized || c.chapter_index).padStart(2, "0");
-                return (
-                  <button
-                    key={c.id}
-                    type="button"
-                    className={`chapter-catalog-item${c.id === chapterId ? " active" : ""}`}
-                    data-testid={`catalog-chapter-${c.id}`}
-                    title={title}
-                    onClick={() => selectChapterFromCatalog(c.id)}
-                  >
-                    <span className="chapter-catalog-item-num">{num}</span>
-                    <span className="chapter-catalog-item-title">{title}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
+      <ChapterNavigatorDrawer
+        open={catalogOpen}
+        bookTitle={bookTitle}
+        chapters={chapters.data || []}
+        currentChapterId={chapterId}
+        onClose={() => setCatalogOpen(false)}
+        onSelectChapter={selectChapterFromCatalog}
+      />
 
       {budgetModalOpen &&
       progress.run &&

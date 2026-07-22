@@ -186,14 +186,24 @@ describe("BookWorkspacePage polish", () => {
     expect(screen.getByText("边界")).toBeInTheDocument();
   });
 
-  it("shows no-chapter StateView when chapters list is empty", async () => {
-    vi.mocked(booksApi.chapters).mockResolvedValue([]);
-    renderWorkspace();
-    expect(await screen.findByTestId("workspace-no-chapter")).toHaveTextContent(
-      "选择一个章节开始阅读",
-    );
-    expect(screen.queryByRole("heading", { name: /第一章/ })).toBeNull();
-    expect(screen.queryByText("潮汐涌起。")).toBeNull();
+  it("shows previous/next chapter controls and disables at ends", async () => {
+    renderWorkspace("/books/1?chapter=1&view=reading");
+    expect(await screen.findByTestId("chapter-adjacent-nav")).toBeInTheDocument();
+    const prevButtons = screen.getAllByTestId("chapter-prev");
+    const nextButtons = screen.getAllByTestId("chapter-next");
+    expect(prevButtons[0]).toBeDisabled();
+    expect(nextButtons[0]).toBeEnabled();
+    fireEvent.click(nextButtons[0]);
+    await waitFor(() => {
+      expect(booksApi.paragraphs).toHaveBeenCalledWith(2, 0, 200);
+    });
+  });
+
+  it("disables next on the last chapter", async () => {
+    renderWorkspace("/books/1?chapter=2&view=reading");
+    await screen.findByTestId("chapter-adjacent-nav");
+    const nextButtons = screen.getAllByTestId("chapter-next");
+    expect(nextButtons.some((b) => (b as HTMLButtonElement).disabled)).toBe(true);
   });
 
   it("shows loading state without body paragraphs", async () => {
