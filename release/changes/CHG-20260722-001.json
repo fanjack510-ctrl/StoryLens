@@ -3,9 +3,16 @@
   "title": "Afdian offline StoryLens Pro license activation V1",
   "type": "feature",
   "base_version": "1.0.3",
-  "status": "registered",
+  "status": "tested",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "fe419880681a774d876173bebebdb75d6d6232a5",
+      "message": "Add Afdian offline StoryLens Pro license activation (CHG-20260722-001).",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "api",
     "desktop",
@@ -50,7 +57,7 @@
     "breaking_change": false
   },
   "blocker_level": null,
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-22T00:58:28Z",
-  "updated_at": "2026-07-22T01:16:44Z"
+  "updated_at": "2026-07-22T01:17:06Z"
 }
