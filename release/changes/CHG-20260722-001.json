@@ -29,6 +29,12 @@
       "message": "Install StoryLens Pro production public key storylens-pro-1-prod-001 (CHG-20260722-001).",
       "primary": false,
       "multi_change_reason": "production public key install"
+    },
+    {
+      "sha": "8e722cc9fd2de70736bf798db44de05a1e255271",
+      "message": "Configure Afdian Pro purchase URL with HTTPS-only open guard (CHG-20260722-001).",
+      "primary": false,
+      "multi_change_reason": "afdian product URL"
     }
   ],
   "modules": [
@@ -86,5 +92,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-22T00:58:28Z",
-  "updated_at": "2026-07-22T02:28:19Z"
+  "updated_at": "2026-07-22T02:28:20Z"
 }
