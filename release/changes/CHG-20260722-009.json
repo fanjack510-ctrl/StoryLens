@@ -3,16 +3,39 @@
   "title": "Restore continuous reader journey momentum line",
   "type": "fix",
   "base_version": "1.0.4",
-  "status": "registered",
+  "status": "tested",
   "include_in_next_release": true,
-  "commits": [],
-  "modules": [],
-  "files": [],
+  "commits": [
+    {
+      "sha": "24418b7680fe3e045465f601b8865a9019c46563",
+      "message": "fix: restore continuous reader journey momentum line",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "desktop"
+  ],
+  "files": [
+    "apps/desktop/src/components/readerJourney/observationLenses.ts",
+    "apps/desktop/src/components/readerJourney/readingMomentumLine.test.ts"
+  ],
   "user_summary": "Reader Journey阅读动力曲线仅显示独立点、缺少折线连线，阶段卡数值正常但主曲线被拆成单点。",
-  "technical_summary": "",
-  "acceptance_criteria": [],
-  "tests": [],
-  "verification_evidence": [],
+  "technical_summary": "Real journey run1 (65/59/54): S1 core, S2/S3 classified beat so mainCurveSeries kept only one point and SVG path had no L segments. Fix: polyline includes all finite-value scene points; equalWeightMainCurveSeries retains beat exclusion for means. Custom SVG chart (not Recharts/ECharts).",
+  "acceptance_criteria": [
+    "One continuous reading_momentum polyline across three phase scenes even when two are beat-classified",
+    "Equal-weight means still skip Beat; null momentum still breaks path",
+    "VERSION remains 1.0.4; no algorithm/tag/baseline/build/push/model"
+  ],
+  "tests": [
+    "apps/desktop/src/components/readerJourney/readingMomentumLine.test.ts",
+    "apps/desktop/src/components/readerJourney/observation_lenses_v2_local.test.ts"
+  ],
+  "verification_evidence": [
+    "Manual: phase cards 开端65/发展59/收束54, S1-S3 points visible, no polyline; S2/S3 auxiliary beat markers.",
+    "DB run1 visualization: S1 core include=true; S2/S3 beat include=false; mainCurveSeries length 1 before fix.",
+    "Local vitest readingMomentumLine + lens suites; typecheck/lint/version/registry green."
+  ],
   "data_compatibility": {
     "database_changed": false,
     "migration_required": false,
@@ -25,8 +48,8 @@
     "updater_impact": false,
     "breaking_change": false
   },
-  "blocker_level": null,
-  "head_inclusion": null,
+  "blocker_level": "P1",
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-22T14:13:53Z",
-  "updated_at": "2026-07-22T14:13:53Z"
+  "updated_at": "2026-07-22T14:22:10Z"
 }
