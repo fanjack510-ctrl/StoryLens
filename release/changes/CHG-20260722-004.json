@@ -3,9 +3,16 @@
   "title": "Confirm-only scene boundary division",
   "type": "fix",
   "base_version": "1.0.3",
-  "status": "registered",
+  "status": "tested",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "4cf04ec856dd9b61dcc2c4ec3055ec05c5df0dd0",
+      "message": "Replace per-candidate boundary review with confirm-only scene division (CHG-20260722-004).",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "boundary-review",
     "desktop-shell"
@@ -45,7 +52,7 @@
     "breaking_change": false
   },
   "blocker_level": null,
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-22T05:26:48Z",
-  "updated_at": "2026-07-22T05:34:13Z"
+  "updated_at": "2026-07-22T05:34:37Z"
 }
