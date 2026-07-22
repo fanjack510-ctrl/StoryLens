@@ -289,14 +289,14 @@ export function ChapterAnalysisProgressPanel({
 
       {uiState === "boundary_review_required" && (
         <div className="chapter-analysis-boundary" data-testid="chapter-analysis-boundary">
-          <p>需要确认场景边界后才能继续场景分析。</p>
+          <p>请确认场景划分后继续分析。</p>
           <button
             type="button"
             className="primary"
             data-testid="chapter-analysis-review-boundary"
             onClick={onReviewBoundary}
           >
-            审阅场景边界
+            确认场景划分
           </button>
         </div>
       )}

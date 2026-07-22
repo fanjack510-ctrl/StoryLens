@@ -2,7 +2,7 @@ import hashlib
 import json
 from datetime import datetime, timezone
 
-from sqlalchemy import func, select
+from sqlalchemy import desc, func, select
 from sqlalchemy.orm import Session
 from sqlalchemy.orm import sessionmaker
 
@@ -360,6 +360,81 @@ def confirm_review(
     for item in decisions:
         item.final_boundary = item.user_decision in {"accept", "manually_added"}
     session.flush()
+    return _persist_confirmed_revision(session, review, confirmed_by)
+
+
+def confirm_review_from_final_proposal(
+    session: Session,
+    review: BoundaryReviewSession,
+    *,
+    confirmed_by: str,
+    proposal_fingerprint: str,
+) -> tuple[BoundaryRevision, list[Scene], bool]:
+    """Confirm using auto-built proposal. Returns (revision, scenes, idempotent_replay)."""
+    from app.services.final_boundary_proposal import (
+        apply_final_proposal_decisions,
+        build_final_boundary_proposal,
+    )
+
+    if review.status == "confirmed":
+        existing = session.scalar(
+            select(BoundaryRevision)
+            .where(BoundaryRevision.review_session_id == review.id)
+            .order_by(desc(BoundaryRevision.id))
+        )
+        if existing is None:
+            raise ValueError("review is confirmed without revision")
+        run = session.get(AnalysisRun, review.analysis_run_id)
+        run_marker: dict = {}
+        if run is not None:
+            try:
+                run_marker = json.loads(run.raw_output or "{}")
+                if not isinstance(run_marker, dict):
+                    run_marker = {}
+            except json.JSONDecodeError:
+                run_marker = {}
+        prior_fp = run_marker.get("final_proposal_fingerprint")
+        if prior_fp == proposal_fingerprint:
+            scenes = list(
+                session.scalars(
+                    select(Scene)
+                    .where(Scene.boundary_revision_id == existing.id)
+                    .order_by(Scene.ordinal)
+                )
+            )
+            return existing, scenes, True
+        raise ValueError("review is not confirmable")
+
+    if review.status in {"cancelled", "superseded"}:
+        raise ValueError("review is not confirmable")
+
+    proposal = build_final_boundary_proposal(session, review)
+    if proposal.validation_status != "valid":
+        raise ValueError(proposal.unresolved_reason or "proposal unresolved")
+    if proposal.proposal_fingerprint != proposal_fingerprint:
+        raise ValueError("proposal fingerprint mismatch")
+
+    apply_final_proposal_decisions(session, review, proposal)
+    revision, scenes = _persist_confirmed_revision(session, review, confirmed_by)
+    run = session.get(AnalysisRun, review.analysis_run_id)
+    if run is not None:
+        try:
+            payload = json.loads(run.raw_output or "{}")
+            if not isinstance(payload, dict):
+                payload = {}
+        except json.JSONDecodeError:
+            payload = {}
+        payload["kind"] = payload.get("kind") or "chapter_pipeline"
+        payload["final_proposal_fingerprint"] = proposal_fingerprint
+        payload["boundary_review_mode"] = "confirm_only"
+        run.raw_output = json.dumps(payload, ensure_ascii=False, sort_keys=True)
+        session.commit()
+    return revision, scenes, False
+
+
+def _persist_confirmed_revision(
+    session: Session, review: BoundaryReviewSession, confirmed_by: str
+) -> tuple[BoundaryRevision, list[Scene]]:
     paragraphs, boundary_ids, ranges = preview_ranges(session, review)
     revision_number = (
         session.scalar(
@@ -369,6 +444,13 @@ def confirm_review(
         )
         or 0
     ) + 1
+    decisions = list(
+        session.scalars(
+            select(BoundaryReviewDecision).where(
+                BoundaryReviewDecision.review_session_id == review.id
+            )
+        )
+    )
     sources = {
         item.left_paragraph_id: (
             "user_added"
@@ -389,7 +471,7 @@ def confirm_review(
         revision_number=revision_number,
         final_boundaries_json=json.dumps(
             [
-                {"after_paragraph_id": item, "source": sources[item]}
+                {"after_paragraph_id": item, "source": sources.get(item, "model_accepted")}
                 for item in boundary_ids
             ],
             ensure_ascii=False,

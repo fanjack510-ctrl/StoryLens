@@ -89,7 +89,7 @@ export function uiStateLabel(state: ChapterAnalysisUiState): string {
     case "running":
       return "正在分析本章";
     case "boundary_review_required":
-      return "需要确认场景边界";
+      return "需要确认场景划分";
     case "provider_recovery":
       return "分析已暂停";
     case "partial":

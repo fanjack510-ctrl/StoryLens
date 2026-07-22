@@ -188,6 +188,22 @@ export const analysisApi = {
     api<any>(`/api/v1/boundary-reviews/${review}/confirm`, {
       method: "POST", body: JSON.stringify({ confirmed_by }),
     }),
+  finalBoundaryProposal: (review: number) =>
+    api<any>(`/api/v1/boundary-reviews/${review}/final-proposal`),
+  confirmFinalBoundaryProposal: (
+    review: number,
+    payload: {
+      confirmed_by: string;
+      proposal_fingerprint: string;
+      client_request_id?: string;
+    },
+  ) =>
+    api<any>(`/api/v1/boundary-reviews/${review}/confirm-final-proposal`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  cancelBoundaryReview: (review: number) =>
+    api(`/api/v1/boundary-reviews/${review}/cancel`, { method: "POST" }),
   readerJourneyPreflight: (runId: number, payload?: { cloud_consent?: boolean }) =>
     api<import("../types").ReaderJourneyPreflight>(
       `/api/v1/analysis-runs/${runId}/reader-journey/preflight`,

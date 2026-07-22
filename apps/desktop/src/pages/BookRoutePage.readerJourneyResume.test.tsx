@@ -104,6 +104,12 @@ vi.mock("../components/analysis/StartAnalysisDialog", () => ({
 vi.mock("../components/analysis/BoundaryReviewPanel", () => ({
   BoundaryReviewPanel: () => null,
 }));
+vi.mock("../components/analysis/ConfirmBoundaryDivisionPanel", () => ({
+  ConfirmBoundaryDivisionPanel: () => (
+    <div data-testid="confirm-boundary-division">confirm-boundary-stub</div>
+  ),
+}));
+
 
 function succeededRun() {
   return {

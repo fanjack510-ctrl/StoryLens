@@ -8,6 +8,7 @@ import { ReadingSettingsPopover } from "../components/layout/ReadingSettingsPopo
 import { ResultViewSwitcher } from "../components/layout/ResultViewSwitcher";
 import { StartAnalysisDialog } from "../components/analysis/StartAnalysisDialog";
 import { BoundaryReviewPanel } from "../components/analysis/BoundaryReviewPanel";
+import { ConfirmBoundaryDivisionPanel } from "../components/analysis/ConfirmBoundaryDivisionPanel";
 import { ReparseDialog } from "../components/books/ReparseDialog";
 import { UnifiedAnalysisRecoveryCard } from "../components/chapterAnalysis/UnifiedAnalysisRecoveryCard";
 import { ChapterAnalysisProgressPanel } from "../components/chapterAnalysis/ChapterAnalysisProgressPanel";
@@ -18,6 +19,7 @@ import { useCurrentPageAnalysisProgress } from "../hooks/useCurrentPageAnalysisP
 import { analysisApi } from "../services/analysisApi";
 import { analysisRecoveryApi } from "../services/analysisRecoveryApi";
 import { booksApi } from "../services/booksApi";
+import { isConfirmOnlyBoundaryReview } from "../services/boundaryReviewMode";
 import {
   getOrCreateJourneyClientRequestId,
   isSceneAnalysisComplete,
@@ -359,6 +361,13 @@ export function BookRoutePage() {
     compositionUiState === "reader_journey_processing";
 
   useEffect(() => {
+    if (progress.uiState === "boundary_review_required" && analysisRunId) {
+      setReviewOpen(true);
+      setPanelCollapsed(false);
+    }
+  }, [progress.uiState, analysisRunId]);
+
+  useEffect(() => {
     if (progress.uiState !== "awaiting_budget_adjustment" || !progress.run) return;
     const runId = progress.run.id;
     if (seenBudgetModalRef.current.has(runId)) return;
@@ -540,7 +549,7 @@ export function BookRoutePage() {
           },
           {
             id: "boundary",
-            label: "高级边界审阅",
+            label: "确认场景划分",
             group: "操作",
             testId: "book-more-boundary-review",
             onSelect: () => setReviewOpen(true),
@@ -563,7 +572,7 @@ export function BookRoutePage() {
           },
           {
             id: "boundary-review",
-            label: "场景边界审阅",
+            label: "确认场景划分",
             group: "查看",
             testId: "book-more-boundary-review",
             onSelect: () => setReviewOpen(true),
@@ -861,24 +870,52 @@ export function BookRoutePage() {
 
       {reviewOpen && chapterId ? (
         <div className="shell-review-focus" data-testid="shell-boundary-review">
-          <BoundaryReviewPanel
-            bookId={bookId}
-            chapterId={chapterId}
-            chapterTitle={chapterTitle}
-            onExit={() => setReviewOpen(false)}
-            onConfirmed={({ runId, budgetBlocked }) => {
-              if (runId) bindAnalysisRun(runId);
-              setReviewOpen(false);
-              setPanelCollapsed(false);
-              setView("progress");
-              if (budgetBlocked && runId) {
-                seenBudgetModalRef.current.add(runId);
-                setBudgetModalRunId(runId);
-                setBudgetModalOpen(true);
-              }
-              void progress.refresh();
-            }}
-          />
+          {isConfirmOnlyBoundaryReview() ? (
+            <ConfirmBoundaryDivisionPanel
+              bookId={bookId}
+              chapterId={chapterId}
+              chapterTitle={chapterTitle}
+              onExit={() => {
+                setReviewOpen(false);
+                void progress.refresh();
+              }}
+              onReidentify={() => {
+                setReviewOpen(false);
+                setDialog(true);
+              }}
+              onConfirmed={({ runId, budgetBlocked }) => {
+                if (runId) bindAnalysisRun(runId);
+                setReviewOpen(false);
+                setPanelCollapsed(false);
+                setView("progress");
+                if (budgetBlocked && runId) {
+                  seenBudgetModalRef.current.add(runId);
+                  setBudgetModalRunId(runId);
+                  setBudgetModalOpen(true);
+                }
+                void progress.refresh();
+              }}
+            />
+          ) : (
+            <BoundaryReviewPanel
+              bookId={bookId}
+              chapterId={chapterId}
+              chapterTitle={chapterTitle}
+              onExit={() => setReviewOpen(false)}
+              onConfirmed={({ runId, budgetBlocked }) => {
+                if (runId) bindAnalysisRun(runId);
+                setReviewOpen(false);
+                setPanelCollapsed(false);
+                setView("progress");
+                if (budgetBlocked && runId) {
+                  seenBudgetModalRef.current.add(runId);
+                  setBudgetModalRunId(runId);
+                  setBudgetModalOpen(true);
+                }
+                void progress.refresh();
+              }}
+            />
+          )}
         </div>
       ) : (
         <div
