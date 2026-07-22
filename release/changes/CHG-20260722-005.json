@@ -3,7 +3,7 @@
   "title": "P0: Reader Journey context/grounding integrity (prevent cross-book contamination)",
   "type": "fix",
   "base_version": "1.0.3",
-  "status": "registered",
+  "status": "tested",
   "include_in_next_release": true,
   "commits": [
     {
@@ -61,5 +61,5 @@
   "blocker_level": "P0",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-22T05:49:31Z",
-  "updated_at": "2026-07-22T06:01:37Z"
+  "updated_at": "2026-07-22T06:02:08Z"
 }
