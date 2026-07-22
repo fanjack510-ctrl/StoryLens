@@ -17,6 +17,12 @@
       "message": "Mark CHG-20260722-001 tested after Pro license local verification.",
       "primary": false,
       "multi_change_reason": "status mark"
+    },
+    {
+      "sha": "ce1df1e4e6145058c535a51b06899959b1114381",
+      "message": "Isolate StoryLens Pro test and production license public keys (CHG-20260722-001).",
+      "primary": false,
+      "multi_change_reason": "test/prod key isolation follow-up"
     }
   ],
   "modules": [
@@ -72,5 +78,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-22T00:58:28Z",
-  "updated_at": "2026-07-22T01:27:56Z"
+  "updated_at": "2026-07-22T01:28:20Z"
 }
