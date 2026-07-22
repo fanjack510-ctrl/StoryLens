@@ -179,13 +179,27 @@ describe("StoryLens Pro entitlement UI", () => {
     await waitFor(() => {
       expect(screen.getByTestId("license-edition-label")).toHaveTextContent("免费版");
     });
-    // Wait until snapshot commerce is applied (buyUrl non-empty).
     await waitFor(() => {
       expect(entitlementApi.snapshot).toHaveBeenCalled();
     });
     fireEvent.click(screen.getByTestId("license-buy-pro"));
     await waitFor(() => {
       expect(openExternal.openExternalUrl).toHaveBeenCalledWith("https://afdian.com/item/demo");
+    });
+  });
+
+  it("buy failure shows unconfigured copy without field names", async () => {
+    vi.spyOn(openExternal, "openExternalUrl").mockResolvedValue({
+      ok: false,
+      code: "COMMERCE_URL_MISSING",
+      message: "专业版购买地址尚未配置。",
+    });
+    wrap(<LicenseSettingsCard />);
+    await waitFor(() => screen.getByTestId("license-buy-pro"));
+    fireEvent.click(screen.getByTestId("license-buy-pro"));
+    await waitFor(() => {
+      expect(screen.getByTestId("license-message")).toHaveTextContent("专业版购买地址尚未配置。");
+      expect(screen.queryByText(/afdian_product_url/i)).not.toBeInTheDocument();
     });
   });
 

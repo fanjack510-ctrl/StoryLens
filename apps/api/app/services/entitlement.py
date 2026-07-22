@@ -109,11 +109,35 @@ def public_keys_by_id(
     return out
 
 
+def is_safe_https_commerce_url(url: str) -> bool:
+    """Allow only remote https purchase URLs (no localhost / non-https schemes)."""
+    raw = (url or "").strip()
+    if not raw:
+        return False
+    lower = raw.lower()
+    if lower.startswith(("javascript:", "file:", "data:", "vbscript:", "http:")):
+        return False
+    try:
+        from urllib.parse import urlparse
+
+        parsed = urlparse(raw)
+    except Exception:  # noqa: BLE001
+        return False
+    if parsed.scheme.lower() != "https":
+        return False
+    host = (parsed.hostname or "").lower()
+    if not host or host in {"localhost", "127.0.0.1", "::1"} or host.endswith(".localhost"):
+        return False
+    return True
+
+
 def commerce_config(config: dict[str, Any] | None = None) -> dict[str, Any]:
     cfg = config if config is not None else load_license_config()
     commerce = cfg.get("commerce") or {}
+    raw_url = str(commerce.get("afdian_product_url") or "").strip()
+    safe_url = raw_url if is_safe_https_commerce_url(raw_url) else ""
     return {
-        "afdian_product_url": str(commerce.get("afdian_product_url") or "").strip(),
+        "afdian_product_url": safe_url,
         "product_code": str(commerce.get("product_code") or "storylens_pro"),
         "product_label": str(commerce.get("product_label") or "StoryLens Pro"),
     }

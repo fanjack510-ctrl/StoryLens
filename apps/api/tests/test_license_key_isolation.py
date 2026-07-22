@@ -195,3 +195,16 @@ def test_repo_has_no_private_keys_or_real_code_files() -> None:
         assert "config" not in path.parts
     # Tracked production config must not embed SLP1 codes.
     assert "SLP1-" not in prod
+
+
+def test_production_commerce_url_is_https_afdian() -> None:
+    data = json.loads(PROD_CONFIG.read_text(encoding="utf-8"))
+    url = str((data.get("commerce") or {}).get("afdian_product_url") or "")
+    assert url.startswith("https://")
+    assert "afdian.com" in url
+    assert entitlement.is_safe_https_commerce_url(url) is True
+    assert entitlement.is_safe_https_commerce_url("javascript:alert(1)") is False
+    assert entitlement.is_safe_https_commerce_url("https://localhost/x") is False
+    assert entitlement.is_safe_https_commerce_url("") is False
+    monkey_cfg = {"commerce": {"afdian_product_url": "javascript:alert(1)"}}
+    assert entitlement.commerce_config(monkey_cfg)["afdian_product_url"] == ""

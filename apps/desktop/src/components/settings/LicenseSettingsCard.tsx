@@ -47,8 +47,9 @@ export function LicenseSettingsCard() {
   const onBuy = async () => {
     const result = await openExternalUrl(buyUrl);
     if (!result.ok) {
-      setMessage(result.message || "无法打开购买页。");
-      setErrorCode("COMMERCE_URL_MISSING");
+      // User-facing copy only — never expose config field names or raw exceptions.
+      setMessage(result.message || "专业版购买地址尚未配置。");
+      setErrorCode(result.code || "COMMERCE_URL_MISSING");
     }
   };
 
