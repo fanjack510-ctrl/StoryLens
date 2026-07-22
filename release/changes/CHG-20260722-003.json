@@ -17,6 +17,12 @@
       "message": "Keep Book workspace during Scene→Journey instead of view=result (CHG-20260722-003).",
       "primary": false,
       "multi_change_reason": "Frontend nav follow-up: keep Book workspace tabs/progress until chapter_complete"
+    },
+    {
+      "sha": "c2ac597913b48fefffb930bf0216a5c1c426373b",
+      "message": "Unify Book workspace Journey/Scene panes; stop dual layout (CHG-20260722-003).",
+      "primary": false,
+      "multi_change_reason": "Unify single Book Workspace; fix Journey load states and dual Scene layout"
     }
   ],
   "modules": [
@@ -96,5 +102,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-22T04:41:55Z",
-  "updated_at": "2026-07-22T07:00:00Z"
+  "updated_at": "2026-07-22T07:01:46Z"
 }
