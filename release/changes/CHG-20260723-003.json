@@ -11,6 +11,12 @@
       "message": "fix: redesign reader journey hook resolution summary",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "1802f3a17a966e5ffceb68012c6aaa47f3247cfb",
+      "message": "docs: mark CHG-20260723-003 tested for hook resolution UX",
+      "primary": false,
+      "multi_change_reason": "registry status for CHG-20260723-003"
     }
   ],
   "modules": [
@@ -61,5 +67,5 @@
   "blocker_level": "P1",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T01:35:00Z",
-  "updated_at": "2026-07-23T01:42:22Z"
+  "updated_at": "2026-07-23T01:42:23Z"
 }
