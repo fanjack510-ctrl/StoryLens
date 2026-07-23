@@ -34,6 +34,23 @@ class StageStatus(StrEnum):
     CANCELLED = "cancelled"
 
 
+class RunStatus(StrEnum):
+    """Narrative staged-run status constants (AnalysisRun.status string column).
+
+    Not a DB enum — legacy scene-pipeline statuses continue to coexist as free
+    strings (e.g. boundary_candidates_running). pause ≠ failed; interrupted ≠ failed.
+    """
+
+    PENDING = "pending"
+    QUEUED = "queued"
+    RUNNING = "running"
+    PAUSED = "paused"
+    INTERRUPTED = "interrupted"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+
+
 class AnalysisType(StrEnum):
     """Compatible + Phase 1 whole-book placeholders only.
 

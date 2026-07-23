@@ -7,20 +7,26 @@
   "include_in_next_release": true,
   "commits": [
     {
-      "sha": "f9f7e1f567fa97afeef1130f8eaf004b96406d30",
+      "sha": "584dba9039f51d3425a04c16c79375f616271dae",
       "message": "feat: prototype narrative pattern map contract",
       "primary": true,
       "multi_change_reason": null
     },
     {
-      "sha": "8be8ed6d186271cfdba1f67ba1339070a3724394",
+      "sha": "437d105e5fcd8054beb2bf3f6631bfb99ab1d45c",
       "message": "docs: sync CHG-20260723-014 registry after pattern map readiness",
       "primary": false,
       "multi_change_reason": null
     },
     {
-      "sha": "456a008c266b97648dab88d4da2b03b889f233f0",
+      "sha": "3438075dc1e2591f2410a3ac35022cd685180f08",
       "message": "docs: attach registry sync commit for CHG-20260723-014",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "f2d4021c9bd4c9791fffe223153a30866cadd94f",
+      "message": "docs: finalize CHG-20260723-014 commit list",
       "primary": false,
       "multi_change_reason": null
     }
@@ -72,7 +78,7 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T07:20:00Z",
-  "updated_at": "2026-07-23T07:50:48Z",
+  "updated_at": "2026-07-23T08:20:00Z",
   "parallel_plan": {
     "role": "agent_c",
     "branch": "feature/narrative-pattern-readiness",

@@ -44,7 +44,7 @@ Also records marker `baseline_1_0_5`.
 Added: `content_hash VARCHAR(64) NULL` + indexes.
 
 ### book_snapshots
-`id`, `book_id` FK, `content_hash`, counts, `snapshot_status`, `source_fingerprint`, `created_at`  
+`id`, `book_id` FK, `content_hash`, counts, `snapshot_status`, `source_fingerprint` (source fingerprint only), `error_code`, `error_message`, `created_at`
 Unique `(book_id, content_hash)`.
 
 ### book_snapshot_chapters
@@ -68,7 +68,8 @@ Per-run stage rows; unique `(run_id, stage_key)`; `cost` is `FLOAT` (aligned wit
 - `AnalysisScopeType`: chapter | chapter_range | book  
 - `SnapshotStatus`: building | completed | failed | invalid  
 - `StageStatus`: pending | running | paused | interrupted | completed | failed | skipped | cancelled  
-- `AnalysisType`: scene_pipeline | whole_book_native | whole_book_enhanced  
+- `RunStatus` (Phase 1A): pending | queued | running | paused | interrupted | completed | failed | cancelled
+- `AnalysisType`: scene_pipeline | whole_book_native | whole_book_enhanced
 
 `INVALID` snapshot: completed snapshot that failed integrity / book mismatch — not a building retry state.
 
@@ -86,7 +87,11 @@ Under `apps/api/app/narrative_core/contracts/`:
 | `SnapshotValidationGateway` | Agent A implements; **Agent B consumes only** |
 | `AnalysisRunService` / `AnalysisRunStageRepository` | Agent B |
 
-Pure hash helpers already implemented: `canonicalize_text`, `calculate_text_hash` in `hash_canon.py`.
+Pure hash helpers in `hash_canon.py` (Phase 1A unified book hash):
+
+- `canonicalize_text`, `calculate_text_hash` (body canonicalization frozen)
+- `BookHashChapterInput(chapter_order, title, content_hash)`
+- `calculate_book_content_hash(chapters)` — **sole public book hash entry**
 
 ---
 

@@ -701,6 +701,8 @@ class BookSnapshot(Base):
     character_count: Mapped[int] = mapped_column(Integer, default=0)
     snapshot_status: Mapped[str] = mapped_column(String(32), default="building", index=True)
     source_fingerprint: Mapped[str] = mapped_column(String(64), default="")
+    error_code: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
     chapters: Mapped[list["BookSnapshotChapter"]] = relationship(

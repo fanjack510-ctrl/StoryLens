@@ -1219,31 +1219,84 @@ async def _execute(session: Session, gateway: ModelGateway, run: AnalysisRun) ->
 
 
 def mark_interrupted_runs_failed(session: Session) -> None:
+    """Sidecar startup recovery with Phase 1A staged-run compatibility.
+
+    A. Staged narrative runs (have analysis_run_stages AND a running stage):
+       running stages → interrupted; run → interrupted; checkpoints preserved;
+       not permanently failed; no automatic model re-invoke.
+
+    B. Legacy chapter / no-stage runs:
+       keep prior failed semantics for running/queued statuses.
+    """
+    from app.db.models import AnalysisRunStage
+    from app.narrative_core.enums import RunStatus, StageStatus
+
     now = datetime.now(timezone.utc)
-    session.execute(
-        update(AnalysisRun)
-        .where(AnalysisRun.status.in_(["running", "boundary_candidates_running", "scene_analysis_running"]))
-        .values(
-            status="failed",
-            error_code="PROCESS_INTERRUPTED",
-            error_message="应用重启时任务仍在运行",
-            completed_at=now,
+
+    staged_with_running: set[int] = set(
+        session.scalars(
+            select(AnalysisRunStage.run_id).where(
+                AnalysisRunStage.status == StageStatus.RUNNING
+            )
+        ).all()
+    )
+    # Also treat any run that already has stage rows as staged for queued/running
+    # recovery when it is in the interrupt candidate set below.
+    staged_run_ids: set[int] = set(
+        session.scalars(select(AnalysisRunStage.run_id).distinct()).all()
+    )
+
+    active_statuses = ("running", "boundary_candidates_running", "scene_analysis_running")
+    candidates = list(
+        session.scalars(
+            select(AnalysisRun).where(
+                AnalysisRun.status.in_([*active_statuses, "queued"])
+            )
         )
     )
-    session.execute(
-        update(AnalysisRun)
-        .where(AnalysisRun.status == "queued")
-        .values(
-            status="failed",
-            error_code="PROCESS_INTERRUPTED_BEFORE_START",
-            error_message="应用重启前任务仍在队列中，无法自动恢复",
-            completed_at=now,
-        )
-    )
+
+    for run in candidates:
+        is_staged = run.id in staged_run_ids
+        has_running_stage = run.id in staged_with_running
+        if is_staged and (has_running_stage or run.status in active_statuses):
+            # Soft interrupt for phased runs — do not rewrite completed/pending stages.
+            for stage in session.scalars(
+                select(AnalysisRunStage).where(AnalysisRunStage.run_id == run.id)
+            ):
+                if stage.status == StageStatus.RUNNING:
+                    stage.status = StageStatus.INTERRUPTED
+                    stage.error_code = "PROCESS_INTERRUPTED"
+                    stage.error_message = "应用重启时阶段仍在运行"
+                    stage.completed_at = None
+            if run.status not in (
+                RunStatus.COMPLETED,
+                RunStatus.FAILED,
+                RunStatus.CANCELLED,
+            ):
+                run.status = RunStatus.INTERRUPTED
+                run.error_code = "PROCESS_INTERRUPTED"
+                run.error_message = "应用重启时任务仍在运行；阶段可 resume"
+                run.completed_at = None
+            continue
+
+        # Legacy / no-stage path — preserve historical failed recovery.
+        if run.status in active_statuses:
+            run.status = "failed"
+            run.error_code = "PROCESS_INTERRUPTED"
+            run.error_message = "应用重启时任务仍在运行"
+            run.completed_at = now
+        elif run.status == "queued":
+            run.status = "failed"
+            run.error_code = "PROCESS_INTERRUPTED_BEFORE_START"
+            run.error_message = "应用重启前任务仍在队列中，无法自动恢复"
+            run.completed_at = now
+
     session.commit()
     from app.services.budget_reservation import release_run_reservation
 
     for run in session.scalars(
         select(AnalysisRun).where(AnalysisRun.error_code == "PROCESS_INTERRUPTED")
     ):
-        release_run_reservation(session, run.id)
+        # Only release reservations for permanently failed legacy runs.
+        if run.status == "failed":
+            release_run_reservation(session, run.id)

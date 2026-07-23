@@ -5,7 +5,14 @@
   "base_version": "1.0.5",
   "status": "tested",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "76857f6576fe2d5a4d1aa31821da004686bee627",
+      "message": "feat: implement narrative snapshot foundation",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "narrative_core",
     "migration ledger",
@@ -27,7 +34,7 @@
     "docs/architecture/narrative-intelligence-core/phase1a-snapshot-verification.md"
   ],
   "user_summary": "Migration ledger, content hash backfill, and Book Snapshot create/reuse/validate for Narrative Phase 1A.",
-  "technical_summary": "Implemented MigrationLedgerService, ContentHashServiceImpl, BookSnapshot repository/service and SnapshotValidationGateway against Phase 1P schema. Migrations 001-003 checksum semantics use NarrativeCoreError. Commit attach deferred to Integration.",
+  "technical_summary": "Implemented MigrationLedgerService, ContentHashServiceImpl, BookSnapshot repository/service and SnapshotValidationGateway against Phase 1P schema. Migrations 001-003 checksum semantics use NarrativeCoreError. Integration remapped commit to cherry-pick SHA on integration/narrative-phase1a.",
   "acceptance_criteria": [
     "Fork from Phase 1P final commit",
     "Do not modify models.py schema without Integration",
@@ -41,7 +48,8 @@
     "apps/api/tests/test_narrative_phase1p_contract.py"
   ],
   "verification_evidence": [
-    "pytest directed narrative snapshot/hash/ledger + phase1p contract: 26 passed"
+    "pytest directed narrative snapshot/hash/ledger + phase1p contract passed on integration",
+    "original Agent A HEAD 7863ba885bcc631e11e1eba1aa3980d15979d4c8 cherry-picked as 76857f6576fe2d5a4d1aa31821da004686bee627"
   ],
   "data_compatibility": {
     "database_changed": true,
@@ -56,9 +64,9 @@
     "breaking_change": false
   },
   "blocker_level": null,
-  "head_inclusion": "EXISTS_NOT_INCLUDED",
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T07:20:00Z",
-  "updated_at": "2026-07-23T08:00:00Z",
+  "updated_at": "2026-07-23T08:20:00Z",
   "parallel_plan": {
     "role": "agent_a",
     "branch": "feature/narrative-phase1a-snapshot",

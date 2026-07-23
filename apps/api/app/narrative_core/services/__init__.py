@@ -6,11 +6,7 @@ run scope, and run stage lifecycle.
 
 from app.narrative_core.services.hash_backfill import ContentHashServiceImpl
 from app.narrative_core.services.migration_ledger import MigrationLedgerService
-from app.narrative_core.services.run_scope_service import (
-    RunScopeService,
-    StubSnapshotValidationGateway,
-    make_stub_completed_snapshot,
-)
+from app.narrative_core.services.run_scope_service import RunScopeService
 from app.narrative_core.services.run_stage_repository import (
     CHECKPOINT_SCHEMA,
     CHECKPOINT_VERSION,
@@ -31,8 +27,6 @@ __all__ = [
     "BookSnapshotServiceImpl",
     "SnapshotValidationGatewayImpl",
     "RunScopeService",
-    "StubSnapshotValidationGateway",
-    "make_stub_completed_snapshot",
     "RunStageRepository",
     "RunStageService",
     "SimulatedStageRunner",
@@ -40,3 +34,6 @@ __all__ = [
     "CHECKPOINT_VERSION",
     "validate_checkpoint_payload",
 ]
+
+# StubSnapshotValidationGateway / make_stub_completed_snapshot remain importable
+# from run_scope_service for tests only — not re-exported as production defaults.

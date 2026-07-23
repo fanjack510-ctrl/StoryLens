@@ -27,7 +27,13 @@ class BookSnapshotRepository(Protocol):
     def mark_snapshot_completed(self, snapshot_id: int) -> Any:
         ...
 
-    def mark_snapshot_failed(self, snapshot_id: int, *, error_code: str | None = None) -> Any:
+    def mark_snapshot_failed(
+        self,
+        snapshot_id: int,
+        *,
+        error_code: str | None = None,
+        error_message: str | None = None,
+    ) -> Any:
         ...
 
 

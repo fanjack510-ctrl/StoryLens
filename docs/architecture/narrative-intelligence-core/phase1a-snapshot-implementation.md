@@ -21,7 +21,9 @@ Reuse Phase 1P `canonicalize_text` / `calculate_text_hash`:
   `{order}:{title_len}:{title}:{chapter_content_hash}` joined by LF, then SHA-256  
   (avoids boundary ambiguity; includes order + title + chapter hash)
 
-Protocol `calculate_book_content_hash(chapter_hashes)` remains implemented with length-prefixed hash lines for contract compliance. Snapshot `content_hash` uses the richer aggregate form.
+Protocol `calculate_book_content_hash` now takes `Sequence[BookHashChapterInput]`
+(`chapter_order`, `title`, `content_hash`) — the sole public book hash entry.
+Snapshot `content_hash` uses this unified aggregate form.
 
 Import/reparse hook: `ContentHashServiceImpl.refresh_hashes_after_import_or_reparse(book_id)`.
 

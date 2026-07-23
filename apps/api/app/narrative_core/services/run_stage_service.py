@@ -12,10 +12,11 @@ from sqlalchemy.orm import Session
 
 from app.db.models import AnalysisRun
 from app.narrative_core.contracts.snapshot import SnapshotValidationGateway
-from app.narrative_core.enums import AnalysisScopeType, AnalysisType, StageStatus
+from app.narrative_core.enums import AnalysisScopeType, AnalysisType, RunStatus, StageStatus
 from app.narrative_core.errors import NarrativeCoreError, NarrativeCoreErrorCode
 from app.narrative_core.services.run_scope_service import RunScopeService
 from app.narrative_core.services.run_stage_repository import RunStageRepository
+from app.narrative_core.services.snapshot_service import SnapshotValidationGatewayImpl
 
 
 class RunStageService:
@@ -30,9 +31,15 @@ class RunStageService:
         stage_repository: RunStageRepository | None = None,
     ) -> None:
         self._session = session
-        self._scope = scope_service or RunScopeService(
-            session, snapshot_gateway=snapshot_gateway
-        )
+        # Production default: real SnapshotValidationGatewayImpl (Agent A).
+        # Tests may inject StubSnapshotValidationGateway explicitly.
+        if scope_service is not None:
+            self._scope = scope_service
+        else:
+            gateway = snapshot_gateway
+            if gateway is None:
+                gateway = SnapshotValidationGatewayImpl(session)
+            self._scope = RunScopeService(session, snapshot_gateway=gateway)
         self._stages = stage_repository or RunStageRepository(session)
 
     # ----- Scope (AnalysisRunService) -----
@@ -115,9 +122,12 @@ class RunStageService:
                     run_id, stage.stage_key, StageStatus.PAUSED
                 )
             # pending / completed / failed / interrupted unchanged
-        # Keep run status non-failed; use paused when previously running/queued.
-        if run.status not in ("completed", "failed", "cancelled"):
-            run.status = "paused"
+        if run.status not in (
+            RunStatus.COMPLETED,
+            RunStatus.FAILED,
+            RunStatus.CANCELLED,
+        ):
+            run.status = RunStatus.PAUSED
             run.error_code = None
         self._session.commit()
         self._session.refresh(run)
@@ -141,8 +151,10 @@ class RunStageService:
                     run_id, stage.stage_key, StageStatus.RUNNING
                 )
                 resumed_any = True
-        if run.status == "paused" or (resumed_any and run.status != "failed"):
-            run.status = "running"
+        if run.status == RunStatus.PAUSED or (
+            resumed_any and run.status != RunStatus.FAILED
+        ):
+            run.status = RunStatus.RUNNING
             run.error_code = None
             run.error_message = None
         self._session.commit()
@@ -150,12 +162,7 @@ class RunStageService:
         return run
 
     def mark_interrupted(self, run_id: int) -> AnalysisRun:
-        """Mark only running stages as interrupted. Do not permanently fail the run.
-
-        Integration Issue: existing sidecar startup still calls
-        `mark_interrupted_runs_failed`, which marks AnalysisRun rows failed.
-        This method intentionally does not rewrite that global behavior.
-        """
+        """Mark only running stages as interrupted. Do not permanently fail the run."""
         run = self._require_run(run_id)
         for stage in self._stages.get_run_stages(run_id):
             if StageStatus(stage.status) == StageStatus.RUNNING:
@@ -167,9 +174,12 @@ class RunStageService:
                     error_message="run interrupted by environment stop",
                 )
             # completed / pending / paused / failed unchanged
-        if run.status not in ("completed", "failed", "cancelled"):
-            # Soft interrupt signal — not a permanent analysis failure.
-            run.status = "interrupted"
+        if run.status not in (
+            RunStatus.COMPLETED,
+            RunStatus.FAILED,
+            RunStatus.CANCELLED,
+        ):
+            run.status = RunStatus.INTERRUPTED
             if run.error_code != "PROCESS_INTERRUPTED":
                 run.error_code = "PROCESS_INTERRUPTED"
                 run.error_message = "run interrupted; stages may be resumed"
@@ -205,8 +215,13 @@ class RunStageService:
             error_message=None,
         )
         run = self._require_run(run_id)
-        if run.status in ("failed", "interrupted", "paused", "queued"):
-            run.status = "running"
+        if run.status in (
+            RunStatus.FAILED,
+            RunStatus.INTERRUPTED,
+            RunStatus.PAUSED,
+            RunStatus.QUEUED,
+        ):
+            run.status = RunStatus.RUNNING
             run.error_code = None
             run.error_message = None
             run.completed_at = None
@@ -248,7 +263,6 @@ class SimulatedStageRunner:
     def checkpoint(self, run_id: int, stage_key: str, payload: dict[str, Any]) -> Any:
         """Persist checkpoint_json with schema/version; no model I/O."""
         return self._service.write_checkpoint(run_id, stage_key, payload)
-
 
     def pause(self, run_id: int) -> AnalysisRun:
         return self._service.pause_run(run_id)

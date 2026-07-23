@@ -263,7 +263,7 @@ class RunScopeService:
 
 
 class StubSnapshotValidationGateway:
-    """Contract-compatible gateway for tests until Agent A ships the real service.
+    """Test-only gateway stub. Production must use SnapshotValidationGatewayImpl.
 
     Reads BookSnapshot rows only; does not build snapshots or fork snapshot business logic.
     """

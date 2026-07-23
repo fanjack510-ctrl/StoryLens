@@ -1,7 +1,8 @@
 """Content hash backfill and book aggregate hashing (Agent A).
 
-Uses Phase 1P frozen ``canonicalize_text`` / ``calculate_text_hash``.
-Does not modify live Book/Chapter/Paragraph text — only ``content_hash`` columns.
+Uses Phase 1P / Phase 1A frozen ``canonicalize_text`` / ``calculate_text_hash`` /
+``calculate_book_content_hash``. Does not modify live Book/Chapter/Paragraph text —
+only ``content_hash`` columns.
 """
 
 from __future__ import annotations
@@ -12,7 +13,12 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.db.models import Book, Chapter, Paragraph
-from app.narrative_core.hash_canon import calculate_text_hash, canonicalize_text
+from app.narrative_core.hash_canon import (
+    BookHashChapterInput,
+    calculate_book_content_hash,
+    calculate_text_hash,
+    encode_book_hash_chapter_record,
+)
 
 
 def build_chapter_content_text(paragraphs: Sequence[Paragraph]) -> str:
@@ -22,16 +28,18 @@ def build_chapter_content_text(paragraphs: Sequence[Paragraph]) -> str:
 
 
 def encode_chapter_aggregate_record(order: int, title: str, content_hash: str) -> str:
-    """Length-prefixed chapter record to avoid cross-boundary hash ambiguity.
-
-    Format: ``{order}:{title_len}:{title}:{content_hash}``
-    """
-    title_c = canonicalize_text(title or "")
-    return f"{order}:{len(title_c)}:{title_c}:{content_hash}"
+    """Compatibility wrapper around ``encode_book_hash_chapter_record``."""
+    return encode_book_hash_chapter_record(
+        BookHashChapterInput(
+            chapter_order=order,
+            title=title,
+            content_hash=content_hash,
+        )
+    )
 
 
 class ContentHashServiceImpl:
-    """Implements ``ContentHashService`` Protocol plus book aggregate helper."""
+    """Implements ``ContentHashService`` Protocol."""
 
     def __init__(self, session: Session) -> None:
         self._session = session
@@ -42,29 +50,11 @@ class ContentHashServiceImpl:
     def calculate_text_hash(self, text: str) -> str:
         return calculate_text_hash(text)
 
-    def calculate_book_content_hash(self, chapter_hashes: Sequence[str]) -> str:
-        """Protocol method: aggregate ordered chapter content hashes with boundaries.
-
-        Each hash is length-prefixed so ``["ab","c"]`` ≠ ``["a","bc"]``.
-        """
-        lines = [f"{len(item)}:{item}" for item in chapter_hashes]
-        return calculate_text_hash("\n".join(lines))
-
-    def calculate_book_aggregate_hash(
-        self,
-        chapters: Sequence[tuple[int, str, str]],
+    def calculate_book_content_hash(
+        self, chapters: Sequence[BookHashChapterInput]
     ) -> str:
-        """Book content hash from stable (order, title, content_hash) records.
-
-        Required by Phase 1A snapshot rules. Protocol ``calculate_book_content_hash``
-        only accepts hash strings; this richer form is the snapshot source of truth.
-        """
-        ordered = sorted(chapters, key=lambda item: item[0])
-        lines = [
-            encode_chapter_aggregate_record(order, title, content_hash)
-            for order, title, content_hash in ordered
-        ]
-        return calculate_text_hash("\n".join(lines))
+        """Delegate to the sole public book hash contract in hash_canon."""
+        return calculate_book_content_hash(chapters)
 
     def backfill_content_hashes(self, book_id: int | None = None) -> dict:
         """Persist paragraph/chapter content_hash values. Idempotent for unchanged text.
@@ -122,7 +112,7 @@ class ContentHashServiceImpl:
                 .order_by(Chapter.chapter_index)
             )
         )
-        records: list[tuple[int, str, str]] = []
+        records: list[BookHashChapterInput] = []
         for chapter in chapters:
             digest = chapter.content_hash
             if not digest:
@@ -130,8 +120,14 @@ class ContentHashServiceImpl:
                 digest = calculate_text_hash(content_text)
                 chapter.content_hash = digest
             title = chapter.display_title or chapter.title or ""
-            records.append((chapter.chapter_index, title, digest))
-        return self.calculate_book_aggregate_hash(records)
+            records.append(
+                BookHashChapterInput(
+                    chapter_order=chapter.chapter_index,
+                    title=title,
+                    content_hash=digest,
+                )
+            )
+        return self.calculate_book_content_hash(records)
 
     def refresh_hashes_after_import_or_reparse(self, book_id: int) -> dict:
         """Public hook for import/reparse paths to refresh persisted hashes."""

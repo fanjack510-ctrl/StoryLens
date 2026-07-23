@@ -8,7 +8,12 @@ from sqlalchemy import create_engine, event, select
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.db.models import Base, Book, Chapter, Paragraph
-from app.narrative_core.hash_canon import calculate_text_hash
+from app.narrative_core.hash_canon import (
+    BookHashChapterInput,
+    calculate_book_content_hash,
+    calculate_text_hash,
+    encode_book_hash_chapter_record,
+)
 from app.narrative_core.services.hash_backfill import (
     ContentHashServiceImpl,
     encode_chapter_aggregate_record,
@@ -102,25 +107,51 @@ def test_crlf_lf_hash_consistent() -> None:
     assert canonicalize_text("a\rb\r\nc") == "a\nb\nc"
 
 
-def test_book_aggregate_hash_stable_and_unambiguous(tmp_path) -> None:
+def test_book_content_hash_stable_title_order_body(tmp_path) -> None:
     session, engine = _session(tmp_path)
     service = ContentHashServiceImpl(session)
     h1 = calculate_text_hash("body-a")
     h2 = calculate_text_hash("body-b")
-    chapters = [(1, "Title A", h1), (2, "Title B", h2)]
-    digest = service.calculate_book_aggregate_hash(chapters)
-    assert digest == service.calculate_book_aggregate_hash(list(reversed(chapters)))
-    # Boundary ambiguity avoided for Protocol method.
-    assert service.calculate_book_content_hash(["ab", "c"]) != service.calculate_book_content_hash(
-        ["a", "bc"]
+    chapters = [
+        BookHashChapterInput(1, "Title A", h1),
+        BookHashChapterInput(2, "Title B", h2),
+    ]
+    digest = service.calculate_book_content_hash(chapters)
+    assert digest == service.calculate_book_content_hash(list(reversed(chapters)))
+    assert digest == calculate_book_content_hash(chapters)
+
+    # Title change alters book hash.
+    alt_title = service.calculate_book_content_hash(
+        [
+            BookHashChapterInput(1, "Other", h1),
+            BookHashChapterInput(2, "Title B", h2),
+        ]
     )
-    # Title participates in aggregate.
-    alt = service.calculate_book_aggregate_hash([(1, "Other", h1), (2, "Title B", h2)])
-    assert alt != digest
-    # Length-prefixed record is deterministic.
+    assert alt_title != digest
+
+    # Chapter order change alters book hash.
+    alt_order = service.calculate_book_content_hash(
+        [
+            BookHashChapterInput(2, "Title A", h1),
+            BookHashChapterInput(1, "Title B", h2),
+        ]
+    )
+    assert alt_order != digest
+
+    # Body hash change alters book hash.
+    alt_body = service.calculate_book_content_hash(
+        [
+            BookHashChapterInput(1, "Title A", calculate_text_hash("body-a-changed")),
+            BookHashChapterInput(2, "Title B", h2),
+        ]
+    )
+    assert alt_body != digest
+
+    assert encode_book_hash_chapter_record(chapters[0]).startswith("1:")
     assert encode_chapter_aggregate_record(1, "Title A", h1).startswith("1:")
     session.close()
     engine.dispose()
+
 
 def test_refresh_after_import_or_reparse(tmp_path) -> None:
     session, engine = _session(tmp_path)

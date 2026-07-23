@@ -150,6 +150,8 @@ CREATE TABLE book_snapshots (
     character_count INTEGER NOT NULL DEFAULT 0,
     snapshot_status VARCHAR(32) NOT NULL DEFAULT 'building',
     source_fingerprint VARCHAR(64) NOT NULL DEFAULT '',
+    error_code VARCHAR(100),
+    error_message TEXT,
     created_at DATETIME NOT NULL,
     FOREIGN KEY(book_id) REFERENCES books (id) ON DELETE CASCADE,
     UNIQUE (book_id, content_hash)
@@ -278,6 +280,8 @@ def migrate_narrative_20260723_003_book_snapshots(engine: Engine) -> None:
                         character_count INTEGER NOT NULL DEFAULT 0,
                         snapshot_status VARCHAR(32) NOT NULL DEFAULT 'building',
                         source_fingerprint VARCHAR(64) NOT NULL DEFAULT '',
+                        error_code VARCHAR(100),
+                        error_message TEXT,
                         created_at DATETIME NOT NULL,
                         FOREIGN KEY(book_id) REFERENCES books (id) ON DELETE CASCADE,
                         UNIQUE (book_id, content_hash)
@@ -303,6 +307,19 @@ def migrate_narrative_20260723_003_book_snapshots(engine: Engine) -> None:
                     "ON book_snapshots (book_id, snapshot_status)"
                 )
             )
+        else:
+            # Phase 1A pre-release schema correction: add dedicated error columns
+            # without a new migration_id. Idempotent ADD COLUMN.
+            rows = connection.execute(text("PRAGMA table_info(book_snapshots)")).fetchall()
+            existing_cols = {str(row[1]) for row in rows}
+            if "error_code" not in existing_cols:
+                connection.execute(
+                    text("ALTER TABLE book_snapshots ADD COLUMN error_code VARCHAR(100)")
+                )
+            if "error_message" not in existing_cols:
+                connection.execute(
+                    text("ALTER TABLE book_snapshots ADD COLUMN error_message TEXT")
+                )
         if "book_snapshot_chapters" not in names:
             connection.execute(
                 text(

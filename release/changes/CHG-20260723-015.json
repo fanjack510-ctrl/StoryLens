@@ -9,24 +9,62 @@
   "modules": [
     "integration",
     "narrative_core",
-    "testing"
+    "testing",
+    "documentation",
+    "change registry"
   ],
-  "files": [],
-  "user_summary": "Pre-registered for integrating Agent A/B/C outputs and verifying Phase 1A contracts.",
-  "technical_summary": "Planned: merge conflict resolution, migration order fixes if needed, cross-module fixtures, integration tests, Change commit attachment completion. Starts only after A/B/C land.",
+  "files": [
+    "apps/api/app/narrative_core/hash_canon.py",
+    "apps/api/app/narrative_core/enums.py",
+    "apps/api/app/narrative_core/contracts/hash.py",
+    "apps/api/app/narrative_core/migrations/runner.py",
+    "apps/api/app/narrative_core/services/hash_backfill.py",
+    "apps/api/app/narrative_core/services/snapshot_repository.py",
+    "apps/api/app/narrative_core/services/snapshot_service.py",
+    "apps/api/app/narrative_core/services/run_stage_service.py",
+    "apps/api/app/services/scene_pipeline.py",
+    "apps/api/app/db/models.py",
+    "apps/api/tests/test_narrative_phase1a_integration.py",
+    "docs/architecture/narrative-intelligence-core/README.md",
+    "docs/architecture/narrative-intelligence-core/phase1a-integration-report.md",
+    "docs/architecture/narrative-intelligence-core/phase1a-integrated-migration-verification.md",
+    "docs/architecture/narrative-intelligence-core/phase1a-snapshot-runstage-end-to-end.md",
+    "docs/architecture/narrative-intelligence-core/phase1a-known-limitations.md",
+    "release/changes/CHG-20260723-012.json",
+    "release/changes/CHG-20260723-013.json",
+    "release/changes/CHG-20260723-014.json",
+    "release/changes/CHG-20260723-015.json"
+  ],
+  "user_summary": "Integrates Agent A/B/C Phase 1A outputs, unifies Book Hash Contract, corrects Snapshot error fields, wires real Snapshot gateway, and adds staged/legacy sidecar interrupt compatibility.",
+  "technical_summary": "Cherry-picked A→B→C onto integration/narrative-phase1a from e983e72. Integration fixes: BookHashChapterInput contract, migration 003 error_code/error_message (no new migration_id), RunStageService defaults to SnapshotValidationGatewayImpl, mark_interrupted_runs_failed dual-path, RunStatus constants, cross-module integration tests and docs.",
   "acceptance_criteria": [
     "Merge from Phase 1P commit + A/B/C branches",
     "Cross-module integration tests pass",
     "No VERSION bump without release Change",
     "Do not mark verified without user acceptance"
   ],
-  "tests": [],
-  "verification_evidence": [],
+  "tests": [
+    "apps/api/tests/test_narrative_migration_ledger.py",
+    "apps/api/tests/test_narrative_hash_backfill.py",
+    "apps/api/tests/test_narrative_snapshot_service.py",
+    "apps/api/tests/test_narrative_phase1p_contract.py",
+    "apps/api/tests/test_narrative_run_scope.py",
+    "apps/api/tests/test_narrative_run_stage.py",
+    "apps/api/tests/test_narrative_phase1a_integration.py",
+    "apps/desktop: npm run typecheck",
+    "apps/desktop: npx vitest run src/features/narrativePattern"
+  ],
+  "verification_evidence": [
+    "pytest directed A+B+integration: 62 passed",
+    "vitest narrativePattern: 16 passed; typecheck clean",
+    "version_manager check passed (1.0.5)",
+    "Integration corrections documented in phase1a-integration-report.md"
+  ],
   "data_compatibility": {
-    "database_changed": false,
-    "migration_required": false,
+    "database_changed": true,
+    "migration_required": true,
     "user_data_compatible": true,
-    "notes": "Integration may add follow-up migrations only with new migration_id if required."
+    "notes": "Revised unreleased migration 003 to add snapshot error columns; no new migration_id. Legacy AnalysisRun rows remain readable."
   },
   "release_impact": {
     "requires_reanalysis": false,
@@ -37,7 +75,7 @@
   "blocker_level": null,
   "head_inclusion": "EXISTS_NOT_INCLUDED",
   "created_at": "2026-07-23T07:20:00Z",
-  "updated_at": "2026-07-23T07:20:00Z",
+  "updated_at": "2026-07-23T08:20:00Z",
   "parallel_plan": {
     "role": "integration",
     "branch": "integration/narrative-phase1a",
@@ -56,7 +94,15 @@
     "forbidden": [
       "start before A/B/C complete",
       "push/publish",
-      "mark verified without user acceptance"
+      "mark verified without user acceptance",
+      "Phase 1B / whole-book analysis"
+    ],
+    "integration_corrections": [
+      "Book Hash Contract unified",
+      "Snapshot error_code/error_message",
+      "Real SnapshotValidationGatewayImpl default",
+      "Sidecar staged/legacy interrupt compatibility",
+      "RunStatus constants"
     ]
   }
 }

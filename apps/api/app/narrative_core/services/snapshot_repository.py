@@ -15,6 +15,18 @@ from app.db.models import utc_now
 from app.narrative_core.enums import SnapshotStatus
 
 
+def _sanitize_error_message(message: str | None, *, max_len: int = 500) -> str | None:
+    """Store a short diagnostic message — never full user body text."""
+    if message is None:
+        return None
+    text = str(message).replace("\r\n", "\n").replace("\r", "\n").strip()
+    if not text:
+        return None
+    if len(text) > max_len:
+        return text[: max_len - 3] + "..."
+    return text
+
+
 class BookSnapshotRepositoryImpl:
     """Implements ``BookSnapshotRepository`` Protocol."""
 
@@ -32,6 +44,8 @@ class BookSnapshotRepositoryImpl:
             character_count=int(fields.get("character_count", 0)),
             snapshot_status=str(fields.get("snapshot_status", SnapshotStatus.BUILDING)),
             source_fingerprint=str(fields.get("source_fingerprint", "")),
+            error_code=fields.get("error_code"),
+            error_message=_sanitize_error_message(fields.get("error_message")),
             created_at=fields.get("created_at") or utc_now(),
         )
         self._session.add(snapshot)
@@ -77,6 +91,7 @@ class BookSnapshotRepositoryImpl:
                     BookSnapshotChapter.paragraphs
                 )
             )
+            .execution_options(populate_existing=True)
         )
 
     def find_completed_snapshot(
@@ -94,6 +109,7 @@ class BookSnapshotRepositoryImpl:
                     BookSnapshotChapter.paragraphs
                 )
             )
+            .execution_options(populate_existing=True)
         )
 
     def find_by_book_and_hash(
@@ -110,6 +126,7 @@ class BookSnapshotRepositoryImpl:
                     BookSnapshotChapter.paragraphs
                 )
             )
+            .execution_options(populate_existing=True)
         )
 
     def validate_completed_snapshot(self, snapshot_id: int) -> bool:
@@ -125,24 +142,56 @@ class BookSnapshotRepositoryImpl:
         if snapshot is None:
             raise ValueError(f"snapshot not found: {snapshot_id}")
         snapshot.snapshot_status = SnapshotStatus.COMPLETED
+        snapshot.error_code = None
+        snapshot.error_message = None
         self._session.flush()
         return snapshot
 
     def mark_snapshot_failed(
-        self, snapshot_id: int, *, error_code: str | None = None
+        self,
+        snapshot_id: int,
+        *,
+        error_code: str | None = None,
+        error_message: str | None = None,
     ) -> BookSnapshot:
         snapshot = self.get_snapshot(snapshot_id)
         if snapshot is None:
             raise ValueError(f"snapshot not found: {snapshot_id}")
         snapshot.snapshot_status = SnapshotStatus.FAILED
         if error_code:
-            # No dedicated error column on frozen ORM; encode in fingerprint suffix.
-            fingerprint = snapshot.source_fingerprint or ""
-            marker = f"error:{error_code}"
-            if marker not in fingerprint:
-                snapshot.source_fingerprint = (
-                    f"{fingerprint}|{marker}" if fingerprint else marker
-                )
+            snapshot.error_code = str(error_code)[:100]
+        if error_message is not None:
+            snapshot.error_message = _sanitize_error_message(error_message)
+        elif error_code and not snapshot.error_message:
+            snapshot.error_message = _sanitize_error_message(str(error_code))
+        # source_fingerprint remains the source fingerprint only.
+        self._session.flush()
+        return snapshot
+
+    def mark_snapshot_invalid(
+        self,
+        snapshot_id: int,
+        *,
+        error_code: str | None = None,
+        error_message: str | None = None,
+    ) -> BookSnapshot:
+        snapshot = self.get_snapshot(snapshot_id)
+        if snapshot is None:
+            raise ValueError(f"snapshot not found: {snapshot_id}")
+        snapshot.snapshot_status = SnapshotStatus.INVALID
+        if error_code:
+            snapshot.error_code = str(error_code)[:100]
+        if error_message is not None:
+            snapshot.error_message = _sanitize_error_message(error_message)
+        self._session.flush()
+        return snapshot
+
+    def clear_snapshot_errors(self, snapshot_id: int) -> BookSnapshot:
+        snapshot = self.get_snapshot(snapshot_id)
+        if snapshot is None:
+            raise ValueError(f"snapshot not found: {snapshot_id}")
+        snapshot.error_code = None
+        snapshot.error_message = None
         self._session.flush()
         return snapshot
 

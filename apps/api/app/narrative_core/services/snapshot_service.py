@@ -26,7 +26,7 @@ from app.db.models import (
 )
 from app.narrative_core.enums import SnapshotStatus
 from app.narrative_core.errors import NarrativeCoreError, NarrativeCoreErrorCode
-from app.narrative_core.hash_canon import calculate_text_hash
+from app.narrative_core.hash_canon import BookHashChapterInput, calculate_text_hash
 from app.narrative_core.services.hash_backfill import (
     ContentHashServiceImpl,
     build_chapter_content_text,
@@ -73,6 +73,8 @@ class BookSnapshotServiceImpl:
             prior.paragraph_count = 0
             prior.character_count = 0
             prior.source_fingerprint = book.source_file_hash or ""
+            prior.error_code = None
+            prior.error_message = None
             self._session.flush()
             return self._build_into_snapshot(prior, book_id, content_hash)
 
@@ -103,6 +105,8 @@ class BookSnapshotServiceImpl:
             self._clear_snapshot_children(winner)
             winner.snapshot_status = SnapshotStatus.BUILDING
             winner.source_fingerprint = book.source_file_hash or ""
+            winner.error_code = None
+            winner.error_message = None
             self._session.flush()
             return self._build_into_snapshot(winner, book_id, content_hash)
 
@@ -127,6 +131,7 @@ class BookSnapshotServiceImpl:
             self._session.delete(chapter)
         self._session.flush()
         snapshot.chapters.clear()
+        self._session.expire(snapshot, ["chapters"])
 
     def _build_into_snapshot(
         self, snapshot: BookSnapshot, book_id: int, content_hash: str
@@ -198,8 +203,16 @@ class BookSnapshotServiceImpl:
         except Exception as exc:
             code = getattr(exc, "code", None)
             error_code = str(code) if code is not None else type(exc).__name__
+            # Never persist full user body text in error fields.
+            short_message = str(exc)
+            if len(short_message) > 500:
+                short_message = short_message[:497] + "..."
             try:
-                self._repo.mark_snapshot_failed(snapshot.id, error_code=error_code)
+                self._repo.mark_snapshot_failed(
+                    snapshot.id,
+                    error_code=error_code,
+                    error_message=short_message,
+                )
                 self._session.flush()
             except Exception:
                 pass
@@ -225,7 +238,7 @@ class BookSnapshotServiceImpl:
             return self._fail_integrity(snapshot, mark_invalid)
 
         paragraph_count = 0
-        aggregate_records: list[tuple[int, str, str]] = []
+        aggregate_records: list[BookHashChapterInput] = []
 
         for chapter in chapters:
             paragraphs = sorted(chapter.paragraphs, key=lambda item: item.paragraph_order)
@@ -234,7 +247,11 @@ class BookSnapshotServiceImpl:
             if calculate_text_hash(text) != chapter.content_hash:
                 return self._fail_integrity(snapshot, mark_invalid)
             aggregate_records.append(
-                (chapter.chapter_order, chapter.title or "", chapter.content_hash)
+                BookHashChapterInput(
+                    chapter_order=chapter.chapter_order,
+                    title=chapter.title or "",
+                    content_hash=chapter.content_hash,
+                )
             )
 
             for paragraph in paragraphs:
@@ -249,7 +266,7 @@ class BookSnapshotServiceImpl:
         if snapshot.paragraph_count and snapshot.paragraph_count != paragraph_count:
             return self._fail_integrity(snapshot, mark_invalid)
 
-        expected_hash = self._hashes.calculate_book_aggregate_hash(aggregate_records)
+        expected_hash = self._hashes.calculate_book_content_hash(aggregate_records)
         if expected_hash != snapshot.content_hash:
             return self._fail_integrity(snapshot, mark_invalid)
 
@@ -258,6 +275,8 @@ class BookSnapshotServiceImpl:
     def _fail_integrity(self, snapshot: BookSnapshot, mark_invalid: bool) -> bool:
         if mark_invalid and snapshot.snapshot_status == SnapshotStatus.COMPLETED:
             snapshot.snapshot_status = SnapshotStatus.INVALID
+            snapshot.error_code = NarrativeCoreErrorCode.SNAPSHOT_INTEGRITY_FAILED.value
+            snapshot.error_message = "snapshot integrity validation failed"
             self._session.flush()
         return False
 
