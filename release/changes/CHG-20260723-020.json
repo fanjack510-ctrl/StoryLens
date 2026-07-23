@@ -3,9 +3,16 @@
   "title": "Phase 1B Integration",
   "type": "improvement",
   "base_version": "1.0.5",
-  "status": "registered",
+  "status": "tested",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "1d1fb9dc028dadb0b67eb1a2ac513a22c8c6570a",
+      "message": "feat: integrate narrative phase1b asset foundation",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "narrative_core",
     "database",
@@ -68,9 +75,9 @@
     "breaking_change": false
   },
   "blocker_level": null,
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T08:33:16Z",
-  "updated_at": "2026-07-23T10:22:44Z",
+  "updated_at": "2026-07-23T10:30:24Z",
   "parallel_plan": {
     "role": "integration",
     "branch": "integration/narrative-phase1b",
