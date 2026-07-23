@@ -3,9 +3,16 @@
   "title": "Simplify Reader Journey workspace information hierarchy",
   "type": "fix",
   "base_version": "1.0.4",
-  "status": "registered",
+  "status": "tested",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "4cf755d1e4a10170cec86215c88d92039d2ca90f",
+      "message": "fix: simplify reader journey workspace information hierarchy",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "desktop"
   ],
@@ -48,5 +55,5 @@
   "blocker_level": "P1",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T03:06:52Z",
-  "updated_at": "2026-07-23T03:14:03Z"
+  "updated_at": "2026-07-23T03:16:30Z"
 }
