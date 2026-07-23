@@ -3,9 +3,16 @@
   "title": "Agent J Preflight / Run UX",
   "type": "feature",
   "base_version": "1.0.5",
-  "status": "registered",
+  "status": "tested",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "74dbcd903944b3f1126dcced0884c4940111265e",
+      "message": "feat: implement whole book preflight and run ux prototype",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "narrative_core",
     "desktop/wholeBook"
@@ -52,9 +59,9 @@
     "breaking_change": false
   },
   "blocker_level": null,
-  "head_inclusion": "NOT_FOUND",
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T13:23:33Z",
-  "updated_at": "2026-07-23T14:10:00Z",
+  "updated_at": "2026-07-23T14:15:00Z",
   "parallel_plan": {
     "role": "agent_j",
     "branch": "feature/narrative-phase1d-run-ux",
