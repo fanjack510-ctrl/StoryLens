@@ -48,18 +48,9 @@ export function SettingsAppearanceTab() {
       </header>
 
       <section className="settings-zone" data-testid="appearance-theme-zone">
-        <label className="settings-field">
-          <span>主题</span>
-          <select
-            value={ui.theme}
-            onChange={(e) => ui.setTheme(e.target.value as "light" | "dark")}
-            aria-label="主题"
-          >
-            <option value="light">浅色</option>
-            <option value="dark">深色</option>
-          </select>
-          <small className="hint">选择浅色或深色界面。</small>
-        </label>
+        <p className="hint" data-testid="appearance-theme-relocated-hint">
+          界面主题可在页面右上角切换。
+        </p>
       </section>
 
       <section className="settings-zone" data-testid="appearance-reading-zone">

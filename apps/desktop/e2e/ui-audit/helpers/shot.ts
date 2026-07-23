@@ -161,16 +161,16 @@ export async function setTheme(page: Page, theme: "light" | "dark") {
   await applyProductTheme(page, theme);
 }
 
-/** Switch theme through the real product shell toggle (Zustand → `.app[data-theme]`). */
+/** Switch theme through the real product shell control (Zustand → `.app[data-theme]`). */
 export async function applyProductTheme(page: Page, theme: "light" | "dark") {
   const shell = page.getByTestId("app-shell");
   await shell.waitFor({ timeout: 10_000 });
   const current = await shell.getAttribute("data-theme");
   if (current === theme) return;
-  const toggle = page.locator(".theme-toggle-btn");
-  await expect(toggle).toBeVisible();
-  // Prefer DOM click so modal/backdrops cannot block the real product toggle handler.
-  await toggle.evaluate((el: HTMLButtonElement) => el.click());
+  const trigger = page.getByTestId("appearance-theme-trigger");
+  await expect(trigger).toBeVisible();
+  await trigger.click();
+  await page.getByTestId(`appearance-theme-option-${theme}`).click();
   await expect(shell).toHaveAttribute("data-theme", theme, { timeout: 5_000 });
 }
 

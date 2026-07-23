@@ -1,1 +1,36 @@
-<div id="root"></div><script type="module" src="/src/main.tsx"></script>
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>StoryLens</title>
+    <!-- Pre-hydration theme: avoid light flash before React mounts. -->
+    <script>
+      (function () {
+        try {
+          var KEY = "storylens.appearance.theme";
+          var LEGACY = ["storylens.theme", "storylens.ui.theme", "theme"];
+          var raw = localStorage.getItem(KEY);
+          if (raw !== "light" && raw !== "dark") {
+            for (var i = 0; i < LEGACY.length; i++) {
+              var v = localStorage.getItem(LEGACY[i]);
+              if (v === "light" || v === "dark") {
+                raw = v;
+                break;
+              }
+            }
+          }
+          if (raw === "light" || raw === "dark") {
+            document.documentElement.dataset.theme = raw;
+            document.documentElement.classList.toggle("theme-dark", raw === "dark");
+            document.documentElement.classList.toggle("theme-light", raw === "light");
+          }
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

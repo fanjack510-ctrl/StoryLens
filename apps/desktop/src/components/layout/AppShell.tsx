@@ -8,6 +8,7 @@ import { useUiStore } from "../../stores/uiStore";
 import { DocumentTitleSync } from "../product/DocumentTitleSync";
 import { ProductEditionBadge } from "../product/ProductEditionBadge";
 import { DevelopmentNavigationGroup } from "./DevelopmentNavigationGroup";
+import { AppearanceThemeMenu } from "./AppearanceThemeMenu";
 
 const PRIMARY_NAV: Array<[string, string, string]> = [
   ["/library", "我的书库", "▤"],
@@ -29,7 +30,7 @@ export function AppShell() {
   const navigate = useNavigate();
   const appVersion = useAppVersion();
   const edition = useProductEdition();
-  const { theme, setTheme } = useUiStore();
+  const theme = useUiStore((s) => s.theme);
   const runtime = useRuntimeInfo();
   const webShell = isLocalWebShell(runtime.data);
   const health = useQuery({
@@ -38,8 +39,6 @@ export function AppShell() {
     refetchInterval: 15000,
   });
   const service = serviceLabel(health);
-  const nextTheme = theme === "light" ? "dark" : "light";
-  const themeLabel = nextTheme === "dark" ? "切换到深色模式" : "切换到浅色模式";
   const techTitle = [
     health.isSuccess ? "后端：已连接" : health.isLoading || health.isFetching ? "后端：连接中" : "后端：离线",
     health.data?.database ? `DB ${health.data.database}` : null,
@@ -83,19 +82,7 @@ export function AppShell() {
         </button>
         <div className="context">小说叙事洞察与创作平台</div>
         <div className="top-status">
-          <button
-            type="button"
-            className="theme-toggle-btn"
-            onClick={() => setTheme(nextTheme)}
-            aria-label={themeLabel}
-            title={themeLabel}
-            aria-pressed={theme === "dark"}
-            data-theme-current={theme}
-          >
-            <span className="theme-toggle-icon" aria-hidden="true">
-              {theme === "light" ? "◐" : "◑"}
-            </span>
-          </button>
+          <AppearanceThemeMenu />
         </div>
       </header>
       <aside className="app-nav" data-testid="primary-nav">

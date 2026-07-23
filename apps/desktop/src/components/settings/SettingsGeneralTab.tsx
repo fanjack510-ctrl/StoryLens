@@ -61,17 +61,9 @@ export function SettingsGeneralTab() {
       </header>
 
       <div className="settings-fields">
-        <label className="settings-field">
-          <span>主题</span>
-          <select
-            value={ui.theme}
-            onChange={(e) => ui.setTheme(e.target.value as "light" | "dark")}
-            aria-label="主题"
-          >
-            <option value="light">亮色</option>
-            <option value="dark">暗色</option>
-          </select>
-        </label>
+        <p className="hint" data-testid="appearance-theme-relocated-hint">
+          界面主题可在页面右上角切换。
+        </p>
 
         <label className="settings-field">
           <span>正文字号 · {ui.fontSize}px</span>
