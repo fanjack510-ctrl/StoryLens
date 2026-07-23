@@ -11,6 +11,12 @@
       "message": "feat: implement mock run recovery and reliability",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "af344e5df3712cc3e77c637fa48eceeec6a9ac71",
+      "message": "docs: attach recovery commit to CHG-20260723-034",
+      "primary": false,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -68,7 +74,7 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T15:04:12Z",
-  "updated_at": "2026-07-23T15:49:12Z",
+  "updated_at": "2026-07-23T15:49:40Z",
   "parallel_plan": {
     "role": "agent_o",
     "branch": "feature/narrative-phase2a-recovery",
