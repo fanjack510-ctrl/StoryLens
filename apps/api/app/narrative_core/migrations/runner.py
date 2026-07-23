@@ -692,30 +692,151 @@ def _exec_sql_script(engine: Engine, script: str) -> None:
             connection.execute(text(statement))
 
 
+def _ensure_narrative_006_indexes(engine: Engine) -> None:
+    """Idempotent indexes for Entity / Alias (safe after create_all or CREATE TABLE)."""
+    with engine.begin() as connection:
+        for statement in (
+            "CREATE INDEX IF NOT EXISTS ix_narrative_entities_book_id "
+            "ON narrative_entities (book_id)",
+            "CREATE INDEX IF NOT EXISTS ix_narrative_entities_entity_type "
+            "ON narrative_entities (entity_type)",
+            "CREATE INDEX IF NOT EXISTS ix_narrative_entities_book_type "
+            "ON narrative_entities (book_id, entity_type)",
+            "CREATE INDEX IF NOT EXISTS ix_narrative_entities_book_normalized "
+            "ON narrative_entities (book_id, normalized_name)",
+            "CREATE INDEX IF NOT EXISTS ix_narrative_entity_aliases_entity_id "
+            "ON narrative_entity_aliases (entity_id)",
+            "CREATE INDEX IF NOT EXISTS ix_narrative_entity_aliases_normalized "
+            "ON narrative_entity_aliases (normalized_alias)",
+            "CREATE INDEX IF NOT EXISTS ix_narrative_entity_aliases_source_run_id "
+            "ON narrative_entity_aliases (source_run_id)",
+            "CREATE INDEX IF NOT EXISTS ix_narrative_entity_aliases_source_snapshot_id "
+            "ON narrative_entity_aliases (source_snapshot_id)",
+        ):
+            connection.execute(text(statement))
+
+
 def migrate_narrative_20260723_006_narrative_entities_aliases(engine: Engine) -> None:
+    """Agent D: narrative_entities + narrative_entity_aliases.
+
+    Idempotent: skips CREATE when tables already exist (e.g. Base.metadata.create_all),
+    always ensures indexes, records ledger checksum only after successful DDL path.
+    No historical character/entity backfill.
+    """
     checksum = migration_checksum(SQL_006)
     names = _table_names(engine)
-    if "narrative_entities" not in names:
-        _exec_sql_script(engine, SQL_006)
-        with engine.begin() as connection:
-            connection.execute(
-                text(
-                    "CREATE INDEX IF NOT EXISTS ix_narrative_entities_book_id "
-                    "ON narrative_entities (book_id)"
-                )
+    try:
+        if "narrative_entities" not in names or "narrative_entity_aliases" not in names:
+            # Full script creates both tables; if only one missing, still safe —
+            # CREATE TABLE will fail if the other already exists, so create missing
+            # pieces individually when partially present.
+            if "narrative_entities" not in names and "narrative_entity_aliases" not in names:
+                _exec_sql_script(engine, SQL_006)
+            else:
+                with engine.begin() as connection:
+                    if "narrative_entities" not in names:
+                        connection.execute(
+                            text(
+                                """
+                                CREATE TABLE narrative_entities (
+                                    id INTEGER NOT NULL PRIMARY KEY,
+                                    book_id INTEGER NOT NULL,
+                                    entity_type VARCHAR(64) NOT NULL,
+                                    canonical_name VARCHAR(500) NOT NULL,
+                                    normalized_name VARCHAR(500) NOT NULL,
+                                    lifecycle_status VARCHAR(32) NOT NULL DEFAULT 'active',
+                                    is_locked INTEGER NOT NULL DEFAULT 0,
+                                    locked_at DATETIME,
+                                    created_by VARCHAR(64),
+                                    created_at DATETIME NOT NULL,
+                                    updated_at DATETIME NOT NULL,
+                                    FOREIGN KEY(book_id) REFERENCES books (id) ON DELETE CASCADE
+                                )
+                                """
+                            )
+                        )
+                    if "narrative_entity_aliases" not in names:
+                        connection.execute(
+                            text(
+                                """
+                                CREATE TABLE narrative_entity_aliases (
+                                    id INTEGER NOT NULL PRIMARY KEY,
+                                    entity_id INTEGER NOT NULL,
+                                    alias_text VARCHAR(500) NOT NULL,
+                                    normalized_alias VARCHAR(500) NOT NULL,
+                                    alias_type VARCHAR(32) NOT NULL DEFAULT 'display',
+                                    source_run_id INTEGER,
+                                    source_snapshot_id INTEGER,
+                                    review_status VARCHAR(32) NOT NULL DEFAULT 'candidate',
+                                    is_locked INTEGER NOT NULL DEFAULT 0,
+                                    created_at DATETIME NOT NULL,
+                                    updated_at DATETIME NOT NULL,
+                                    FOREIGN KEY(entity_id) REFERENCES narrative_entities (id) ON DELETE CASCADE,
+                                    FOREIGN KEY(source_run_id) REFERENCES analysis_runs (id) ON DELETE SET NULL,
+                                    FOREIGN KEY(source_snapshot_id) REFERENCES book_snapshots (id) ON DELETE SET NULL,
+                                    UNIQUE (entity_id, normalized_alias)
+                                )
+                                """
+                            )
+                        )
+        # Tables must exist before index / ledger success.
+        names_after = _table_names(engine)
+        if (
+            "narrative_entities" not in names_after
+            or "narrative_entity_aliases" not in names_after
+        ):
+            raise NarrativeCoreError(
+                NarrativeCoreErrorCode.MIGRATION_BASELINE_INVALID,
+                "006 failed: narrative_entities / narrative_entity_aliases missing after DDL",
             )
-            connection.execute(
-                text(
-                    "CREATE INDEX IF NOT EXISTS ix_narrative_entities_book_type "
-                    "ON narrative_entities (book_id, entity_type)"
-                )
+        required_entity_cols = {
+            "id",
+            "book_id",
+            "entity_type",
+            "canonical_name",
+            "normalized_name",
+            "lifecycle_status",
+            "is_locked",
+            "locked_at",
+            "created_by",
+            "created_at",
+            "updated_at",
+        }
+        required_alias_cols = {
+            "id",
+            "entity_id",
+            "alias_text",
+            "normalized_alias",
+            "alias_type",
+            "source_run_id",
+            "source_snapshot_id",
+            "review_status",
+            "is_locked",
+            "created_at",
+            "updated_at",
+        }
+        entity_cols = _column_names(engine, "narrative_entities")
+        alias_cols = _column_names(engine, "narrative_entity_aliases")
+        if not required_entity_cols.issubset(entity_cols):
+            raise NarrativeCoreError(
+                NarrativeCoreErrorCode.MIGRATION_BASELINE_INVALID,
+                f"006 entity columns incomplete: missing={sorted(required_entity_cols - entity_cols)}",
             )
-            connection.execute(
-                text(
-                    "CREATE INDEX IF NOT EXISTS ix_narrative_entity_aliases_entity_id "
-                    "ON narrative_entity_aliases (entity_id)"
-                )
+        if not required_alias_cols.issubset(alias_cols):
+            raise NarrativeCoreError(
+                NarrativeCoreErrorCode.MIGRATION_BASELINE_INVALID,
+                f"006 alias columns incomplete: missing={sorted(required_alias_cols - alias_cols)}",
             )
+        _ensure_narrative_006_indexes(engine)
+    except NarrativeCoreError:
+        raise
+    except Exception as exc:
+        # Failure must not reach _record_applied.
+        raise NarrativeCoreError(
+            NarrativeCoreErrorCode.MIGRATION_BASELINE_INVALID,
+            f"006 narrative entities/aliases migration failed: {exc}",
+        ) from exc
+
     _ensure_schema_migrations_table(engine)
     _record_applied(engine, MIGRATION_NARRATIVE_ENTITIES_ALIASES, checksum)
 
