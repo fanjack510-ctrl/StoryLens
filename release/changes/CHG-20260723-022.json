@@ -17,6 +17,12 @@
       "message": "docs: attach primary commit to CHG-20260723-022",
       "primary": false,
       "multi_change_reason": null
+    },
+    {
+      "sha": "587c84cbb62fb6df57d3874c0c9e9da56990f7ef",
+      "message": "docs: close CHG-20260723-022 commit attachment loop",
+      "primary": false,
+      "multi_change_reason": null
     }
   ],
   "modules": [
