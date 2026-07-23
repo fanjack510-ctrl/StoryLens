@@ -11,6 +11,12 @@
       "message": "feat: integrate narrative phase1b asset foundation",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "708062ca5070bd2c585618fdc77beef10b2403cc",
+      "message": "docs: mark CHG-20260723-020 tested for phase1b integration",
+      "primary": false,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -77,7 +83,7 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T08:33:16Z",
-  "updated_at": "2026-07-23T10:30:24Z",
+  "updated_at": "2026-07-23T10:31:03Z",
   "parallel_plan": {
     "role": "integration",
     "branch": "integration/narrative-phase1b",
