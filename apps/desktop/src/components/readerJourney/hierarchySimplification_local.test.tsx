@@ -35,9 +35,43 @@ describe("Reader Journey hierarchy simplification", () => {
     expect(within(lenses).getAllByRole("radio")).toHaveLength(OBSERVATION_LENSES.length);
     expect(screen.getByTestId("journey-lens-composite")).toHaveAttribute("aria-current", "true");
     expect(screen.getByTestId("journey-unified-legend")).toBeInTheDocument();
+    expect(screen.getByTestId("journey-unified-legend")).toHaveAttribute(
+      "data-legend-placement",
+      "above-chart",
+    );
     expect(screen.getByTestId("journey-lens-one-liner")).toBeInTheDocument();
+
+    const legend = screen.getByTestId("journey-unified-legend");
+    const phase = screen.getByTestId("journey-phase-strip-wrap");
+    const shell = screen.getByTestId("journey-chart-shell");
+    const explain = screen.getByTestId("journey-lens-explanation-with-tools");
+    expect(
+      explain.compareDocumentPosition(phase) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      phase.compareDocumentPosition(legend) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      legend.compareDocumentPosition(shell) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
 
     fireEvent.click(screen.getByTestId("journey-more-chart-settings"));
     expect(screen.getByTestId("journey-analysis-info")).toBeInTheDocument();
+  });
+
+  it("hides empty phase cards on 钩子回收 lens", () => {
+    render(
+      <MemoryRouter initialEntries={["/?overview=curve&lens=hook_payoff"]}>
+        <ReaderJourneyWorkspace
+          visualization={buildFixture13Scenes()}
+          onLocateEvidence={vi.fn()}
+        />
+      </MemoryRouter>,
+    );
+    expect(screen.getByTestId("journey-lens-hook_payoff")).toHaveAttribute("aria-current", "true");
+    expect(screen.queryByTestId("journey-phase-strip-wrap")).not.toBeInTheDocument();
+    expect(screen.getByTestId("journey-lens-one-liner").textContent).toContain(
+      "建立了哪些钩子",
+    );
   });
 });

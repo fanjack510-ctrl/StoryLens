@@ -3555,6 +3555,19 @@ body.journey-pane-resizing[data-row-resize="true"] * {
   margin-top: 6px;
 }
 
+/* Centered directly above the journey curve (after phase cards). */
+.journey-unified-legend.journey-chart-legend-above {
+  align-items: center;
+  justify-content: center;
+  margin: 10px 0 6px;
+  text-align: center;
+}
+
+.journey-unified-legend.journey-chart-legend-above .journey-metric-legend,
+.journey-unified-legend.journey-chart-legend-above .journey-minimal-legend {
+  justify-content: center;
+}
+
 .journey-minimal-legend {
   display: flex;
   flex-wrap: wrap;
@@ -3610,6 +3623,10 @@ body.journey-pane-resizing[data-row-resize="true"] * {
   line-height: 1.45;
   color: var(--muted, #5c655f);
   max-width: 42em;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
 }
 .journey-lens-how-to-trigger {
   flex-shrink: 0;

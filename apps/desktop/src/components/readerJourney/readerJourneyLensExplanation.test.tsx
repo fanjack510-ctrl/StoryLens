@@ -9,7 +9,7 @@ import {
   parseLensParam,
   shortPlainTitle,
 } from "./readerJourneyLensExplanation";
-import { JourneyLensExplanationChrome } from "./JourneyLensExplanationChrome";
+import { JourneyChartLegend, JourneyLensExplanationChrome } from "./JourneyLensExplanationChrome";
 import {
   buildHookPayoffChapterStats,
   buildHookPayoffTimelineModel,
@@ -52,12 +52,20 @@ describe("readerJourneyLensExplanation", () => {
 });
 
 describe("JourneyLensExplanationChrome", () => {
-  it("renders one-liner and unified legend without 怎么看 panel", () => {
+  it("renders one-liner without 怎么看 panel; legend is separate above-chart component", () => {
     render(<JourneyLensExplanationChrome lensId="composite" />);
     expect(screen.getByTestId("journey-lens-one-liner").textContent).toContain("不代表一定写得差");
     expect(screen.getByTestId("journey-lens-title").textContent).toBe("综合阅读动力");
     expect(screen.queryByTestId("journey-lens-how-to-trigger")).not.toBeInTheDocument();
     expect(screen.queryByTestId("journey-lens-how-to-panel")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("journey-unified-legend")).not.toBeInTheDocument();
+
+    cleanup();
+    render(<JourneyChartLegend lensId="composite" />);
+    expect(screen.getByTestId("journey-unified-legend")).toHaveAttribute(
+      "data-legend-placement",
+      "above-chart",
+    );
     expect(screen.getByTestId("journey-minimal-legend").textContent).toContain("场景");
   });
 
@@ -73,6 +81,29 @@ describe("JourneyLensExplanationChrome", () => {
     expect(screen.getByTestId("journey-hook-payoff-stats")).toBeInTheDocument();
     expect(screen.getByTestId("journey-loop-inconsistent-banner").textContent).toContain(
       "严重冲突",
+    );
+  });
+});
+
+describe("unified lens one-liners", () => {
+  it("matches product copy for all six lenses", () => {
+    expect(getLensExplanation("composite").one_line_summary).toBe(
+      "线越高，读者继续阅读的动力通常越强；低点需要结合场景作用判断，不代表一定写得差。",
+    );
+    expect(getLensExplanation("plot_progress").one_line_summary).toBe(
+      "线越高，事件、目标或冲突向前推进得越明显；低点可能是铺垫、停顿或信息消化。",
+    );
+    expect(getLensExplanation("reading_tension").one_line_summary).toBe(
+      "线越高，读者感受到的等待、危险或不确定性越强。",
+    );
+    expect(getLensExplanation("emotion").one_line_summary).toBe(
+      "线越高，当前节点带来的情绪感受越强，只表示强弱，不表示好坏。",
+    );
+    expect(getLensExplanation("hook_payoff").one_line_summary).toBe(
+      "查看本章建立了哪些钩子，以及它们是否已回收、部分回收或尚未回收。",
+    );
+    expect(getLensExplanation("pacing").one_line_summary).toBe(
+      "线越高，叙事推进越快；快慢需要与当前场景任务匹配。",
     );
   });
 });

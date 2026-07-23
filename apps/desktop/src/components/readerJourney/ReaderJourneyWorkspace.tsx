@@ -43,7 +43,10 @@ import {
   PHASE_PRIMARY_ONLY_HINT_PREFIX,
   SAME_METRIC_EXIT_MESSAGE,
 } from "./readerJourneyLensExplanation";
-import { JourneyLensExplanationChrome } from "./JourneyLensExplanationChrome";
+import {
+  JourneyChartLegend,
+  JourneyLensExplanationChrome,
+} from "./JourneyLensExplanationChrome";
 import { JourneyComparisonTools } from "./JourneyComparisonTools";
 import {
   buildComparisonState,
@@ -1358,7 +1361,29 @@ export function ReaderJourneyWorkspace({
           exportBusy={exportStatus === "exporting"}
           analysisInfoContent={analysisInfoMeta}
         />
-        {/* Phase navigation — after toolbar (+ optional MetricSelectorPanel), before chart shell */}
+        {/* Order: one-liner → phase cards (numeric only) → centered legend → curve */}
+          <div className="journey-lens-explanation-with-tools" data-testid="journey-lens-explanation-with-tools">
+            <JourneyLensExplanationChrome
+              lensId={observationLens}
+              overlayCompare={false}
+              comparisonActive={comparisonState.mode === "active"}
+              primaryMetricLabel={comparisonState.primaryLabel}
+              compareMetricLabel={comparisonState.compareLabel}
+              hookPayoffStats={null}
+              inconsistentWarning={null}
+              showLegend={false}
+            />
+            <JourneyComparisonTools
+              observationLens={observationLens}
+              compareWith={compareWith}
+              onCompareWithChange={handleCompareWithChange}
+              resetViewEnabled={resetViewEnabled}
+              onResetView={() => syncViewToUrl(1, sceneCount)}
+              liveMessage={compareLiveMessage}
+            />
+          </div>
+
+        {!isHookPayoffLens(observationLens) ? (
         <section className="journey-phase-strip-wrap" data-testid="journey-phase-strip-wrap">
           {comparisonState.mode === "active" ? (
             <p
@@ -1410,10 +1435,11 @@ export function ReaderJourneyWorkspace({
               const phaseSummary = resolvePhaseSummaryDisplay(phase.summary, phase.title);
               const phaseMetric =
                 phaseMetricAverages.get(phase.ordinal) ?? phase.average_engagement;
-              // Hook-resolution lens: no legacy avg hook/payoff phase cards.
-              const avgText = isHookPayoffLens(observationLens)
-                ? ""
-                : formatLensPhaseScoreLabel(visualization, observationLens, phaseMetric);
+              const avgText = formatLensPhaseScoreLabel(
+                visualization,
+                observationLens,
+                phaseMetric,
+              );
               const phaseDesc = phaseSummary;
               return (
                 <button
@@ -1441,6 +1467,7 @@ export function ReaderJourneyWorkspace({
             })}
           </div>
         </section>
+        ) : null}
 
           {selectedSceneOrdinal != null && selectedLensBinding != null && (
             <p className="journey-active-scene-caption" data-testid="journey-active-scene-caption">
@@ -1455,27 +1482,15 @@ export function ReaderJourneyWorkspace({
             </p>
           )}
 
-          <div className="journey-lens-explanation-with-tools" data-testid="journey-lens-explanation-with-tools">
-            <JourneyLensExplanationChrome
-              lensId={observationLens}
-              overlayCompare={false}
-              comparisonActive={comparisonState.mode === "active"}
-              primaryMetricLabel={comparisonState.primaryLabel}
-              compareMetricLabel={comparisonState.compareLabel}
-              hookPayoffStats={null}
-              inconsistentWarning={null}
-            />
-            <JourneyComparisonTools
-              observationLens={observationLens}
-              compareWith={compareWith}
-              onCompareWithChange={handleCompareWithChange}
-              resetViewEnabled={resetViewEnabled}
-              onResetView={() => syncViewToUrl(1, sceneCount)}
-              liveMessage={compareLiveMessage}
-            />
-          </div>
+          <JourneyChartLegend
+            lensId={observationLens}
+            primaryMetricLabel={comparisonState.primaryLabel}
+            compareMetricLabel={
+              comparisonState.mode === "active" ? comparisonState.compareLabel : null
+            }
+          />
 
-          {/* Chart shell: viewport only (toolbar is above phase strip) */}
+          {/* Chart shell: viewport only; legend sits immediately above */}
           <div
             className="journey-chart-shell"
             data-testid="journey-chart-shell"

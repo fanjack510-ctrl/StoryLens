@@ -14,9 +14,11 @@ type Props = {
   compareMetricLabel?: string | null;
   hookPayoffStats?: HookPayoffChapterStats | null;
   inconsistentWarning?: string | null;
+  /** When false, omit node/metric legends (rendered above the chart instead). */
+  showLegend?: boolean;
 };
 
-/** Compact lens title + one-liner + single legend set (no duplicate 怎么看 panel). */
+/** Compact lens title + one-liner from unified explanation config. */
 export function JourneyLensExplanationChrome({
   lensId,
   overlayCompare = false,
@@ -25,6 +27,7 @@ export function JourneyLensExplanationChrome({
   compareMetricLabel = null,
   hookPayoffStats = null,
   inconsistentWarning = null,
+  showLegend = false,
 }: Props) {
   const explanation = getLensExplanation(lensId);
   const title = explanation.chart_title || explanation.title;
@@ -66,31 +69,57 @@ export function JourneyLensExplanationChrome({
         {" · "}
         {summary}
       </p>
-      <div className="journey-unified-legend" data-testid="journey-unified-legend">
-        {lensId !== "hook_payoff" ? (
-          <ul
-            className="journey-metric-legend"
-            data-testid="journey-metric-legend"
-            aria-label="指标图例"
-          >
-            <li data-legend="primary">绿色实线：{primaryLabel}</li>
-            {showCompareLegend ? (
-              <li data-legend="compare">紫色虚线：{compareMetricLabel}</li>
-            ) : null}
-          </ul>
-        ) : null}
+      {showLegend ? (
+        <JourneyChartLegend
+          lensId={lensId}
+          primaryMetricLabel={primaryLabel}
+          compareMetricLabel={showCompareLegend ? compareMetricLabel : null}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+/** Single centered legend placed directly above the journey curve. */
+export function JourneyChartLegend({
+  lensId,
+  primaryMetricLabel = null,
+  compareMetricLabel = null,
+}: {
+  lensId: ObservationLensId;
+  primaryMetricLabel?: string | null;
+  compareMetricLabel?: string | null;
+}) {
+  const explanation = getLensExplanation(lensId);
+  const primaryLabel = primaryMetricLabel || explanation.title;
+  const showMetricLines = Boolean(compareMetricLabel) && lensId !== "hook_payoff";
+  return (
+    <div
+      className="journey-unified-legend journey-chart-legend-above"
+      data-testid="journey-unified-legend"
+      data-legend-placement="above-chart"
+    >
+      {showMetricLines ? (
         <ul
-          className="journey-minimal-legend"
-          data-testid="journey-minimal-legend"
-          aria-label="节点图例"
+          className="journey-metric-legend"
+          data-testid="journey-metric-legend"
+          aria-label="指标图例"
         >
-          {explanation.legend_items.map((item) => (
-            <li key={item.key} data-legend={item.key}>
-              {item.label}
-            </li>
-          ))}
+          <li data-legend="primary">绿色实线：{primaryLabel}</li>
+          <li data-legend="compare">紫色虚线：{compareMetricLabel}</li>
         </ul>
-      </div>
+      ) : null}
+      <ul
+        className="journey-minimal-legend"
+        data-testid="journey-minimal-legend"
+        aria-label="节点图例"
+      >
+        {explanation.legend_items.map((item) => (
+          <li key={item.key} data-legend={item.key}>
+            {item.label}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

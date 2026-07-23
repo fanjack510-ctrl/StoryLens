@@ -661,19 +661,7 @@ export function CanonicalJourneyChart({
               data-line-label={lensLines?.[1]?.labelZh ?? ""}
             />
           ) : null}
-          {lensLines && lensLines.length > 1 ? (
-            <g data-testid="journey-compare-legend" aria-label="对比图例">
-              <text x={padLeft} y={padTop - 8} className="journey-compare-legend-text" fontSize={11} fill="var(--muted)">
-                {`绿色实线：${lensLines[0]?.labelZh || "当前指标"}  紫色虚线：${lensLines[1]?.labelZh || "对比指标"}`}
-              </text>
-            </g>
-          ) : lensLines && lensLines.length === 1 ? (
-            <g data-testid="journey-primary-legend" aria-label="主指标图例">
-              <text x={padLeft} y={padTop - 8} className="journey-compare-legend-text" fontSize={11} fill="var(--muted)">
-                {`绿色实线：${lensLines[0]?.labelZh || "当前指标"}`}
-              </text>
-            </g>
-          ) : null}
+          {/* In-chart SVG legends removed: single HTML legend sits centered above the curve. */}
           {segmentMarkers.map((marker) => {
             const x1 = xFor(marker.fromOrdinal);
             const x2 = xFor(marker.toOrdinal);

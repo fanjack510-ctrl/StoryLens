@@ -50,9 +50,9 @@ export const READER_JOURNEY_LENS_EXPLANATIONS: Record<
     one_line_summary:
       "线越高，读者继续阅读的动力通常越强；低点需要结合场景作用判断，不代表一定写得差。",
     how_to_read: [
-      "曲线节点：单个场景或节拍的综合阅读动力。",
-      "阶段卡：该阶段的平均或汇总，不等于某一个节点。",
-      "章节摘要：整章总体判断，不是单点分数。",
+      "高点：继续阅读动力偏强。",
+      "低点：需结合场景作用判断，不代表写得差。",
+      "阶段卡显示该阶段汇总，不等于单点。",
     ],
     y_axis_semantics: "强 · 中 · 弱",
     high_meaning: "继续阅读动力偏强",
@@ -64,10 +64,11 @@ export const READER_JOURNEY_LENS_EXPLANATIONS: Record<
   plot_progress: {
     lens_id: "plot_progress",
     title: "剧情推进",
-    one_line_summary: "故事状态发生了多大变化，包括目标、冲突、信息和人物选择。",
+    one_line_summary:
+      "线越高，事件、目标或冲突向前推进得越明显；低点可能是铺垫、停顿或信息消化。",
     how_to_read: [
       "高点：故事发生了实质变化。",
-      "低点：可能是过渡、停顿或信息不足。",
+      "低点：可能是铺垫、停顿或信息消化。",
       "速度快不等于剧情推进强。",
     ],
     y_axis_semantics: "故事状态变化幅度",
@@ -80,7 +81,7 @@ export const READER_JOURNEY_LENS_EXPLANATIONS: Record<
   reading_tension: {
     lens_id: "reading_tension",
     title: "阅读张力",
-    one_line_summary: "读者有多担心、期待或想知道下一步会发生什么。",
+    one_line_summary: "线越高，读者感受到的等待、危险或不确定性越强。",
     how_to_read: [
       "高点：危险、悬念或不确定性增强。",
       "低点：可能是换气或阶段性安全。",
@@ -96,7 +97,8 @@ export const READER_JOURNEY_LENS_EXPLANATIONS: Record<
   emotion: {
     lens_id: "emotion",
     title: "情绪强度",
-    one_line_summary: "读者在当前节点感受到的情绪有多强，只表示强弱，不表示好坏。",
+    one_line_summary:
+      "线越高，当前节点带来的情绪感受越强，只表示强弱，不表示好坏。",
     how_to_read: [
       "高点：情绪反应强烈。",
       "低点：情绪较平静或尚未建立。",
@@ -112,11 +114,11 @@ export const READER_JOURNEY_LENS_EXPLANATIONS: Record<
   pacing: {
     lens_id: "pacing",
     title: "节奏速度",
-    one_line_summary: "叙述推进得有多快。快慢本身没有好坏，要看是否适合当前场景任务。",
+    one_line_summary: "线越高，叙事推进越快；快慢需要与当前场景任务匹配。",
     how_to_read: [
       "高点：动作、信息或句子推进更快。",
       "低点：停留、观察或心理描写更多。",
-      "必须结合下方“节奏适配”判断是否合适。",
+      "快慢需与当前场景任务匹配。",
     ],
     y_axis_semantics: "叙述推进快慢",
     high_meaning: "动作、信息或句子推进更快",
@@ -133,7 +135,7 @@ export const READER_JOURNEY_LENS_EXPLANATIONS: Record<
     title: "钩子回收",
     chart_title: "钩子总览",
     one_line_summary:
-      "先看钩子总览的一句话结论与总线，再按清单逐条查看证据；每个钩子只有一个主状态。",
+      "查看本章建立了哪些钩子，以及它们是否已回收、部分回收或尚未回收。",
     how_to_read: [
       "实线已回收，虚线部分回收，灰线未回收。",
       "每个钩子独占一行，冲突仅作轻量附加标记。",
