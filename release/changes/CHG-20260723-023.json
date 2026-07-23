@@ -5,7 +5,14 @@
   "base_version": "1.0.5",
   "status": "tested",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "77ea37e770da238ddf3c604422c203a7fadb67ec",
+      "message": "feat: implement backend capability foundation",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "narrative_core",
     "api/routers",
