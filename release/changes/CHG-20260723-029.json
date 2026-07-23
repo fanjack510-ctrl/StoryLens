@@ -5,7 +5,14 @@
   "base_version": "1.0.5",
   "status": "tested",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "8b730c7f1401563d60443bd36f6a3ddb658b4b0e",
+      "message": "feat: implement narrative review and structure map prototypes",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "narrative_core",
     "desktop/wholeBook"
@@ -61,9 +68,9 @@
     "breaking_change": false
   },
   "blocker_level": null,
-  "head_inclusion": "NOT_FOUND",
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T13:23:33Z",
-  "updated_at": "2026-07-23T14:10:00Z",
+  "updated_at": "2026-07-23T14:07:55Z",
   "parallel_plan": {
     "role": "agent_l",
     "branch": "feature/narrative-phase1d-review-map",
