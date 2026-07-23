@@ -3,8 +3,8 @@
   "title": "Fix frontend build gate and stale-dist startup",
   "type": "fix",
   "base_version": "1.0.4",
-  "status": "ready",
-  "include_in_next_release": true,
+  "status": "released",
+  "include_in_next_release": false,
   "commits": [
     {
       "sha": "9cd806100a18498967fa7263ea88ecc535ff366d",
@@ -76,5 +76,5 @@
   "blocker_level": "P0",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T00:14:34Z",
-  "updated_at": "2026-07-23T05:17:03Z"
+  "updated_at": "2026-07-23T05:40:46Z"
 }

@@ -3,8 +3,8 @@
   "title": "Move persistent appearance selector to global app header",
   "type": "fix",
   "base_version": "1.0.4",
-  "status": "ready",
-  "include_in_next_release": true,
+  "status": "released",
+  "include_in_next_release": false,
   "commits": [
     {
       "sha": "ab3df3f7fda771864b582b8900a21ab833c6caa9",
@@ -70,5 +70,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T04:08:55Z",
-  "updated_at": "2026-07-23T05:17:05Z"
+  "updated_at": "2026-07-23T05:40:47Z"
 }

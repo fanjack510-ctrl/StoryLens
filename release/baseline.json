@@ -1,13 +1,13 @@
 {
-  "version": "1.0.4",
-  "git_tag": "v1.0.4",
-  "git_commit": "86fb7e5d0df20694092a459d0edd7926d1a6dc18",
+  "version": "1.0.5",
+  "git_tag": "v1.0.5",
+  "git_commit": "34d9128a53bcd155462f2a2ffa7f372a90dac41c",
   "status": "verified",
-  "released_at": "2026-07-22T13:02:01Z",
+  "released_at": "2026-07-23T05:40:48Z",
   "channel": "manual-upgrade-only",
-  "installer_sha256": "6D379C9E39932DF362EDE1CA421B0E100108EBF7C191A5CE03C29B35987330CA",
+  "installer_sha256": "6476C8C14968885E45C1172865590DD2E13ED6CBA83069B4D0BA258129DC89F4",
   "updater_sha256": null,
   "manifest_url": "manual-upgrade-only",
-  "notes": "StoryLens 1.0.4 local baseline seal after Phase A gates + Windows build/smoke + 1.0.3 data migrate create_db check. Updater artifacts skipped_no_secret; no push/publish.",
+  "notes": "StoryLens 1.0.5 local baseline seal after Phase A gates + Windows build/smoke + 1.0.4 data create_db on copied DB. Updater artifacts skipped_no_secret; manual-upgrade-only; no push/publish. baseline.verified means engineering gates, not per-Change end-user manual acceptance.",
   "legacy_source_baseline": false
 }

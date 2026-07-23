@@ -3,8 +3,8 @@
   "title": "Fix long-book chapter navigation and pure-reading scroll",
   "type": "fix",
   "base_version": "1.0.4",
-  "status": "ready",
-  "include_in_next_release": true,
+  "status": "released",
+  "include_in_next_release": false,
   "commits": [
     {
       "sha": "f3afc0e42a3f1c081b332228e5ceafc00cff083a",
@@ -84,5 +84,5 @@
   "blocker_level": "P1",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-22T14:05:53Z",
-  "updated_at": "2026-07-23T05:17:00Z"
+  "updated_at": "2026-07-23T05:40:44Z"
 }

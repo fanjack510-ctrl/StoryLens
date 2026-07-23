@@ -3,8 +3,8 @@
   "title": "Separate Reader Journey chart tools and make comparison mode explicit",
   "type": "fix",
   "base_version": "1.0.4",
-  "status": "ready",
-  "include_in_next_release": true,
+  "status": "released",
+  "include_in_next_release": false,
   "commits": [
     {
       "sha": "5ae56e6ceae2d0da22a2fe38a1d4357e078108a9",
@@ -72,5 +72,5 @@
   "blocker_level": "P1",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T02:26:18Z",
-  "updated_at": "2026-07-23T05:17:04Z"
+  "updated_at": "2026-07-23T05:40:46Z"
 }

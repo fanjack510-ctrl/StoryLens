@@ -3,8 +3,8 @@
   "title": "Reconcile and rank hook-payoff relationships",
   "type": "fix",
   "base_version": "1.0.4",
-  "status": "ready",
-  "include_in_next_release": true,
+  "status": "released",
+  "include_in_next_release": false,
   "commits": [
     {
       "sha": "694818063b8c632a89b280ee9f05a439efb4d12c",
@@ -69,5 +69,5 @@
   "blocker_level": "P1",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-22T15:36:09Z",
-  "updated_at": "2026-07-23T05:17:02Z"
+  "updated_at": "2026-07-23T05:40:45Z"
 }

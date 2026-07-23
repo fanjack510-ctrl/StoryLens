@@ -3,8 +3,8 @@
   "title": "Smooth chapter switching and fix long-book chapter list overlap",
   "type": "fix",
   "base_version": "1.0.4",
-  "status": "ready",
-  "include_in_next_release": true,
+  "status": "released",
+  "include_in_next_release": false,
   "commits": [
     {
       "sha": "14296d420df5b13009e11596d4d2588453b8de57",
@@ -72,5 +72,5 @@
   "blocker_level": "P1",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T01:44:00Z",
-  "updated_at": "2026-07-23T05:17:04Z"
+  "updated_at": "2026-07-23T05:40:46Z"
 }

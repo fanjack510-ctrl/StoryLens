@@ -3,8 +3,8 @@
   "title": "Restore continuous reader journey momentum line",
   "type": "fix",
   "base_version": "1.0.4",
-  "status": "ready",
-  "include_in_next_release": true,
+  "status": "released",
+  "include_in_next_release": false,
   "commits": [
     {
       "sha": "24418b7680fe3e045465f601b8865a9019c46563",
@@ -52,5 +52,5 @@
   "blocker_level": "P1",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-22T14:13:53Z",
-  "updated_at": "2026-07-23T05:17:00Z"
+  "updated_at": "2026-07-23T05:40:44Z"
 }

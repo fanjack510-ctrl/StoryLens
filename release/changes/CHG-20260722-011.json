@@ -3,8 +3,8 @@
   "title": "Unify narrative loop interpretation",
   "type": "fix",
   "base_version": "1.0.4",
-  "status": "ready",
-  "include_in_next_release": true,
+  "status": "released",
+  "include_in_next_release": false,
   "commits": [
     {
       "sha": "d47a9540193f7fb3200db67de64b4424b82c9c0e",
@@ -64,5 +64,5 @@
   "blocker_level": "P1",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-22T14:51:15Z",
-  "updated_at": "2026-07-23T05:17:01Z"
+  "updated_at": "2026-07-23T05:40:45Z"
 }
