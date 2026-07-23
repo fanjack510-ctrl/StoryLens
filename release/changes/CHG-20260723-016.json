@@ -11,6 +11,12 @@
       "message": "feat: establish narrative phase1b asset contracts",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "7e9c15f8c13525980b46a024abcc37a9aa9d70d0",
+      "message": "docs: mark CHG-20260723-016 tested for phase1b asset contracts",
+      "primary": false,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -66,7 +72,7 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T08:33:16Z",
-  "updated_at": "2026-07-23T08:45:40Z",
+  "updated_at": "2026-07-23T08:46:02Z",
   "parallel_plan": {
     "role": "phase1bp",
     "branch": "feature/narrative-phase1b-contract",
