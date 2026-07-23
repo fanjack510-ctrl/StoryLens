@@ -3,9 +3,16 @@
   "title": "Redesign Reader Journey hook resolution summary",
   "type": "fix",
   "base_version": "1.0.4",
-  "status": "registered",
+  "status": "tested",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "80b4a9b0642dfe5ebb001c2d62e5e07e7c80e280",
+      "message": "fix: redesign reader journey hook resolution summary",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "desktop"
   ],
@@ -36,7 +43,9 @@
     "apps/desktop/src/components/readerJourney/readerJourneyTerminology.test.ts",
     "apps/desktop/src/components/readerJourney/readerJourneyLensExplanation.test.tsx"
   ],
-  "verification_evidence": [],
+  "verification_evidence": [
+    "Local Vitest hookResolutionModel/HookPayoffTimeline/terminology/lens/workspace 81 passed; typecheck; lint; version_manager check; change_registry check; git diff --check. No model/install/publish/push."
+  ],
   "data_compatibility": {
     "database_changed": false,
     "migration_required": false,
@@ -50,7 +59,7 @@
     "breaking_change": false
   },
   "blocker_level": "P1",
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T01:35:00Z",
-  "updated_at": "2026-07-23T01:45:00Z"
+  "updated_at": "2026-07-23T01:42:22Z"
 }
