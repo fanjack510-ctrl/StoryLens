@@ -55,7 +55,7 @@ describe("JourneyLensExplanationChrome", () => {
   it("renders one-liner without 怎么看 panel; legend is separate above-chart component", () => {
     render(<JourneyLensExplanationChrome lensId="composite" />);
     expect(screen.getByTestId("journey-lens-one-liner").textContent).toContain("不代表一定写得差");
-    expect(screen.getByTestId("journey-lens-title").textContent).toBe("综合阅读动力");
+    expect(screen.getByTestId("journey-lens-title").textContent).toBe("综合阅读");
     expect(screen.queryByTestId("journey-lens-how-to-trigger")).not.toBeInTheDocument();
     expect(screen.queryByTestId("journey-lens-how-to-panel")).not.toBeInTheDocument();
     expect(screen.queryByTestId("journey-unified-legend")).not.toBeInTheDocument();
@@ -77,7 +77,8 @@ describe("JourneyLensExplanationChrome", () => {
         inconsistentWarning="当前关系识别存在严重冲突，暂不作为确定结论。"
       />,
     );
-    expect(screen.getByTestId("journey-lens-title").textContent).toMatch(/钩子/);
+    expect(screen.getByTestId("journey-lens-title").textContent).toBe("钩子回收");
+    expect(screen.getByTestId("journey-lens-one-liner").textContent).toMatch(/^钩子回收：/);
     expect(screen.getByTestId("journey-hook-payoff-stats")).toBeInTheDocument();
     expect(screen.getByTestId("journey-loop-inconsistent-banner").textContent).toContain(
       "严重冲突",

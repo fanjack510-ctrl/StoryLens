@@ -8,9 +8,6 @@ import {
 } from "./comparisonState";
 import {
   CHANGE_COMPARE_LABEL,
-  EXIT_COMPARE_LABEL,
-  OVERLAY_COMPARE_TITLE,
-  RESET_VIEW_LABEL,
   START_COMPARE_LABEL,
 } from "./readerJourneyLensExplanation";
 import { getObservationLens, type ObservationLensId } from "./observationLenses";
@@ -25,8 +22,8 @@ type Props = {
 };
 
 /**
- * Chart tools outside the main Lens bar: 对比分析 + 重置视图,
- * plus a persistent comparison status strip when active.
+ * Comparison status strip only (when active).
+ * Enter / exit compare live on the unified topbar — not a secondary tool rail.
  */
 export function JourneyComparisonTools({
   observationLens,
@@ -38,22 +35,16 @@ export function JourneyComparisonTools({
 }: Props) {
   const lens = getObservationLens(observationLens);
   const comparison: ComparisonState = buildComparisonState(observationLens, compareWith);
-  const compareEnabled = !lens.isPairedHookPayoff;
   const [panelOpen, setPanelOpen] = useState(false);
   const [pending, setPending] = useState<CompareMetricKey | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const panelTitleId = useId();
-  const triggerId = useId();
 
   useEffect(() => {
     if (!panelOpen) setPending(null);
   }, [panelOpen]);
 
-  useEffect(() => {
-    if (!compareEnabled && panelOpen) setPanelOpen(false);
-  }, [compareEnabled, panelOpen]);
-
-  if (!compareEnabled && !resetViewEnabled && !liveMessage) {
+  if (comparison.mode !== "active" && !liveMessage && !resetViewEnabled) {
     return null;
   }
 
@@ -75,11 +66,6 @@ export function JourneyComparisonTools({
     setPanelOpen(false);
     setPending(null);
     triggerRef.current?.focus();
-  };
-
-  const exitCompare = () => {
-    onCompareWithChange(null);
-    setPanelOpen(false);
   };
 
   const selectorPanel = (
@@ -125,7 +111,7 @@ export function JourneyComparisonTools({
       <div className="journey-compare-picker-actions">
         <button
           type="button"
-          className="journey-tool-btn"
+          className="journey-toolbar-btn"
           data-testid="journey-compare-cancel"
           onClick={cancelPanel}
         >
@@ -133,7 +119,7 @@ export function JourneyComparisonTools({
         </button>
         <button
           type="button"
-          className="journey-tool-btn journey-tool-btn-primary"
+          className="journey-toolbar-btn journey-lens-segment active"
           data-testid="journey-compare-confirm"
           disabled={!pending || pending === lens.primaryKey}
           onClick={confirmStart}
@@ -142,26 +128,6 @@ export function JourneyComparisonTools({
         </button>
       </div>
     </div>
-  );
-
-  const compareTrigger = (
-    <button
-      type="button"
-      ref={triggerRef}
-      id={triggerId}
-      className={`journey-tool-btn${comparison.mode === "active" ? " is-active" : ""}`}
-      data-testid={
-        comparison.mode === "active" ? "journey-comparison-change" : "journey-overlay-composite"
-      }
-      data-compare-with={comparison.mode === "active" ? comparison.compareMetric : ""}
-      aria-pressed={comparison.mode === "active"}
-      aria-expanded={panelOpen}
-      aria-label={comparison.mode === "active" ? CHANGE_COMPARE_LABEL : OVERLAY_COMPARE_TITLE}
-      title={comparison.mode === "active" ? CHANGE_COMPARE_LABEL : OVERLAY_COMPARE_TITLE}
-      onClick={() => openPanel(!panelOpen)}
-    >
-      {comparison.mode === "active" ? CHANGE_COMPARE_LABEL : OVERLAY_COMPARE_TITLE}
-    </button>
   );
 
   return (
@@ -181,18 +147,13 @@ export function JourneyComparisonTools({
           role="status"
           aria-label={`对比模式：${comparison.primaryLabel} 与 ${comparison.compareLabel}`}
         >
-          <span
-            hidden
-            data-testid="journey-overlay-composite"
-            data-compare-with={comparison.compareMetric}
-          />
           <div className="journey-comparison-active" data-testid="journey-comparison-active">
             <strong>对比模式：</strong>
             {comparison.primaryLabel} × {comparison.compareLabel}
           </div>
           <ul className="journey-comparison-line-legend" data-testid="journey-comparison-line-legend">
-            <li data-line="primary">● 绿色实线：{comparison.primaryLabel}</li>
-            <li data-line="compare">┄ 紫色虚线：{comparison.compareLabel}</li>
+            <li data-line="primary">绿色实线：{comparison.primaryLabel}</li>
+            <li data-line="compare">紫色虚线：{comparison.compareLabel}</li>
           </ul>
           <div className="journey-comparison-actions">
             <JourneyPopover
@@ -201,74 +162,39 @@ export function JourneyComparisonTools({
               align="end"
               data-testid="journey-compare-select-menu"
               menuLabel="选择对比指标"
-              trigger={compareTrigger}
+              trigger={
+                <button
+                  type="button"
+                  ref={triggerRef}
+                  className="journey-toolbar-btn journey-lens-segment"
+                  data-testid="journey-comparison-change"
+                  data-compare-with={comparison.compareMetric}
+                  aria-expanded={panelOpen}
+                  aria-label={CHANGE_COMPARE_LABEL}
+                  title={CHANGE_COMPARE_LABEL}
+                  onClick={() => openPanel(!panelOpen)}
+                >
+                  {CHANGE_COMPARE_LABEL}
+                </button>
+              }
             >
               {selectorPanel}
             </JourneyPopover>
-            <button
-              type="button"
-              className="journey-tool-btn"
-              data-testid="journey-comparison-exit"
-              aria-label={EXIT_COMPARE_LABEL}
-              onClick={exitCompare}
-            >
-              {EXIT_COMPARE_LABEL}
-            </button>
-            <button
-              type="button"
-              className="journey-tool-btn"
-              hidden
-              data-testid="journey-compare-none"
-              onClick={exitCompare}
-            >
-              {EXIT_COMPARE_LABEL}
-            </button>
           </div>
-        </div>
-      ) : compareEnabled || resetViewEnabled ? (
-        <div
-          className="journey-chart-analysis-tools"
-          data-testid="journey-chart-analysis-tools"
-          data-comparison-mode="inactive"
-        >
-          {compareEnabled ? (
-            <JourneyPopover
-              open={panelOpen}
-              onOpenChange={openPanel}
-              align="end"
-              data-testid="journey-compare-select-menu"
-              menuLabel="选择对比指标"
-              trigger={compareTrigger}
-            >
-              {selectorPanel}
-            </JourneyPopover>
-          ) : null}
-          {resetViewEnabled ? (
-            <button
-              type="button"
-              className="journey-tool-btn"
-              data-testid="journey-zoom-fit-all"
-              title={RESET_VIEW_LABEL}
-              aria-label={RESET_VIEW_LABEL}
-              onClick={onResetView}
-            >
-              {RESET_VIEW_LABEL}
-            </button>
-          ) : null}
         </div>
       ) : null}
 
-      {comparison.mode === "active" && resetViewEnabled ? (
+      {resetViewEnabled ? (
         <div className="journey-chart-analysis-tools-secondary">
           <button
             type="button"
-            className="journey-tool-btn"
+            className="journey-toolbar-btn journey-lens-segment"
             data-testid="journey-zoom-fit-all"
-            title={RESET_VIEW_LABEL}
-            aria-label={RESET_VIEW_LABEL}
+            title="重置视图"
+            aria-label="重置视图"
             onClick={onResetView}
           >
-            {RESET_VIEW_LABEL}
+            重置视图
           </button>
         </div>
       ) : null}

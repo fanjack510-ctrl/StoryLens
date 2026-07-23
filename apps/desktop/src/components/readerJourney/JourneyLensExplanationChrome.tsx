@@ -30,7 +30,7 @@ export function JourneyLensExplanationChrome({
   showLegend = false,
 }: Props) {
   const explanation = getLensExplanation(lensId);
-  const title = explanation.chart_title || explanation.title;
+  const title = explanation.title;
   const summary =
     overlayCompare && comparisonActive
       ? OVERLAY_COMPARE_SUMMARY
@@ -66,7 +66,7 @@ export function JourneyLensExplanationChrome({
       ) : null}
       <p className="journey-lens-one-liner" data-testid="journey-lens-one-liner">
         <strong data-testid="journey-lens-title">{title}</strong>
-        {" · "}
+        {"："}
         {summary}
       </p>
       {showLegend ? (

@@ -391,18 +391,65 @@ body.journey-pane-resizing[data-row-resize="true"] * {
 /* Professional horizontal toolbar */
 .journey-curve-toolbar.journey-viz-toolbar {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: var(--journey-button-gap);
   min-height: var(--journey-toolbar-height);
   height: auto;
   flex: 0 0 auto;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   min-width: 0;
   padding: 0;
   border: none;
   background: transparent;
   row-gap: 8px;
+}
+
+/* Unified topbar: lenses left, actions right — same visual tier */
+.journey-topbar {
+  width: 100%;
+  min-width: 0;
+}
+
+.journey-topbar__row,
+.journey-curve-toolbar.journey-topbar__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: nowrap;
+}
+
+.journey-topbar__lenses-wrap,
+.journey-topbar .journey-toolbar-left {
+  min-width: 0;
+  flex-wrap: nowrap;
+}
+
+.journey-topbar__lenses,
+.journey-topbar .journey-lens-select-inline {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.journey-topbar .journey-lens-selector-list {
+  display: flex;
+  gap: 10px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  flex-wrap: nowrap;
+}
+
+.journey-topbar__actions,
+.journey-topbar .journey-toolbar-right {
+  display: flex;
+  gap: 10px;
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  margin-left: 0;
+  align-items: center;
 }
 
 .journey-toolbar-left,
@@ -3516,8 +3563,9 @@ body.journey-pane-resizing[data-row-resize="true"] * {
 
 .journey-lens-segment {
   flex: 0 0 auto;
-  min-height: 34px;
-  padding: 6px 14px;
+  min-height: var(--journey-button-height, 36px);
+  height: var(--journey-button-height, 36px);
+  padding: 0 14px;
   border: 1.5px solid var(--color-brand, #2f6f4e);
   border-radius: 8px;
   background: #fff;

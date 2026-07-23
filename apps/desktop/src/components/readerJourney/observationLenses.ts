@@ -81,13 +81,12 @@ export const DEFAULT_OBSERVATION_LENS: ObservationLensId = "composite";
 
 /** @deprecated Prefer getLensExplanation(id).one_line_summary — keep in sync with frozen copy. */
 export const OBSERVATION_LENS_HINTS_ZH: Record<ObservationLensId, string> = {
-  composite:
-    "线越高，读者继续阅读的动力通常越强；低点需要结合场景作用判断，不代表一定写得差。",
-  plot_progress: "故事状态发生了多大变化，包括目标、冲突、信息和人物选择。",
-  reading_tension: "读者有多担心、期待或想知道下一步会发生什么。",
-  emotion: "读者在当前节点感受到的情绪有多强，只表示强弱，不表示好坏。",
-  hook_payoff: "钩子让读者产生期待，回报在后面给出答案、结果或新的变化。",
-  pacing: "叙述推进得有多快。快慢本身没有好坏，要看是否适合当前场景任务。",
+  composite: getLensExplanation("composite").one_line_summary,
+  plot_progress: getLensExplanation("plot_progress").one_line_summary,
+  reading_tension: getLensExplanation("reading_tension").one_line_summary,
+  emotion: getLensExplanation("emotion").one_line_summary,
+  hook_payoff: getLensExplanation("hook_payoff").one_line_summary,
+  pacing: getLensExplanation("pacing").one_line_summary,
 };
 
 export function getObservationLensHint(id: ObservationLensId | string | null | undefined): string {

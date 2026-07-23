@@ -1,6 +1,6 @@
 /**
  * Local Vitest: Reader Journey lens selector is inline (no overlay dropdown).
- * Covers selection, selected state, hints, and non-overlap layout at key widths.
+ * Covers selection, selected state, and non-overlap layout at key widths.
  */
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { readFileSync } from "node:fs";
@@ -9,11 +9,7 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ReaderJourneyWorkspace } from "./ReaderJourneyWorkspace";
 import { buildFixture13Scenes } from "./mockVisualizationFixtures";
-import {
-  OBSERVATION_LENSES,
-  OBSERVATION_LENS_HINTS_ZH,
-  getObservationLensHint,
-} from "./observationLenses";
+import { OBSERVATION_LENSES, getObservationLensHint } from "./observationLenses";
 
 const toolbarSource = readFileSync(resolve(__dirname, "./JourneyChartToolbar.tsx"), "utf8");
 const css = readFileSync(resolve(__dirname, "./readerJourney.css"), "utf8");
@@ -47,10 +43,13 @@ function renderAtWidth(width: number) {
     value(this: HTMLElement) {
       const testId = this.getAttribute("data-testid") || "";
       if (testId === "journey-lens-select-menu" || testId === "journey-lens-selector-list") {
-        return rect(40, 8, Math.min(width - 16, 720), 72);
+        return rect(40, 8, Math.min(width - 200, 720), 40);
       }
-      if (testId === "journey-toolbar-region") {
-        return rect(8, 8, width - 16, 110);
+      if (testId === "journey-toolbar-region" || testId === "journey-curve-toolbar") {
+        return rect(8, 8, width - 16, 48);
+      }
+      if (testId === "journey-toolbar-right") {
+        return rect(12, width - 220, 200, 40);
       }
       if (testId === "journey-phase-strip" || testId === "journey-phase-strip-wrap") {
         return rect(130, 8, width - 16, 110);
@@ -87,13 +86,13 @@ describe("Reader Journey inline lens selector (no overlay)", () => {
     expect(toolbarSource).toMatch(/data-lens-layout="inline-segmented"/);
     expect(toolbarSource).toMatch(/journey-lens-segmented/);
     expect(toolbarSource).not.toMatch(/journey-lens-select-menu[\s\S]{0,80}JourneyPopover/);
-    expect(toolbarSource).toMatch(/journey-lens-active-hint/);
-    expect(css).toMatch(/\.journey-lens-selector-list[\s\S]{0,120}flex-wrap:\s*wrap/);
-    expect(css).toMatch(/\.journey-lens-selector-list[\s\S]{0,160}position:\s*static/);
-    expect(css).toMatch(/\.journey-toolbar-region-with-lenses[\s\S]{0,80}margin-bottom:\s*12px/);
+    expect(toolbarSource).not.toMatch(/更多操作/);
+    expect(toolbarSource).not.toMatch(/journey-lens-active-hint/);
+    expect(css).toMatch(/\.journey-topbar\s+\.journey-lens-selector-list[\s\S]*overflow-x:\s*auto/);
+    expect(css).toMatch(/\.journey-topbar__row[\s\S]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s+auto/);
   });
 
-  it("renders all six lenses inline with clear selected state", () => {
+  it("renders all six lenses inline with clear selected state and one named explanation", () => {
     renderAtWidth(1440);
     const group = screen.getByTestId("journey-lens-select");
     expect(group).toHaveAttribute("role", "radiogroup");
@@ -110,8 +109,9 @@ describe("Reader Journey inline lens selector (no overlay)", () => {
     }
     expect(screen.getByTestId("journey-lens-composite")).toHaveClass("active");
     expect(screen.getByTestId("journey-lens-composite")).toHaveAttribute("aria-checked", "true");
-    expect(screen.getByTestId("journey-lens-active-hint")).toHaveTextContent(
-      OBSERVATION_LENS_HINTS_ZH.composite,
+    expect(screen.queryByTestId("journey-lens-active-hint")).not.toBeInTheDocument();
+    expect(screen.getByTestId("journey-lens-one-liner").textContent).toBe(
+      `综合阅读：${getObservationLensHint("composite")}`,
     );
   });
 
@@ -124,8 +124,8 @@ describe("Reader Journey inline lens selector (no overlay)", () => {
     );
     expect(screen.getByTestId("journey-lens-plot_progress")).toHaveClass("active");
     expect(screen.getByTestId("journey-lens-composite")).not.toHaveClass("active");
-    expect(screen.getByTestId("journey-lens-active-hint")).toHaveTextContent(
-      getObservationLensHint("plot_progress"),
+    expect(screen.getByTestId("journey-lens-one-liner").textContent).toBe(
+      `剧情推进：${getObservationLensHint("plot_progress")}`,
     );
     expect(screen.queryByTestId("journey-lens-select-menu-panel")).not.toBeInTheDocument();
     const overlay = document.getElementById("journey-overlay-root");
@@ -133,7 +133,6 @@ describe("Reader Journey inline lens selector (no overlay)", () => {
       expect(overlay.querySelector('[data-testid="journey-lens-select-menu-panel"]')).toBeNull();
       expect(overlay.querySelector('[data-testid="journey-lens-selector-list"]')).toBeNull();
     }
-    // Lens list itself must remain in-flow under the toolbar region.
     expect(
       screen.getByTestId("journey-toolbar-region").contains(
         screen.getByTestId("journey-lens-selector-list"),
@@ -148,17 +147,18 @@ describe("Reader Journey inline lens selector (no overlay)", () => {
       const lens = screen.getByTestId("journey-lens-select-menu").getBoundingClientRect();
       const phases = screen.getByTestId("journey-phase-strip-wrap").getBoundingClientRect();
       const chart = screen.getByTestId("journey-chart-shell").getBoundingClientRect();
+      const actions = screen.getByTestId("journey-toolbar-right").getBoundingClientRect();
       expect(overlaps(lens, phases)).toBe(false);
       expect(overlaps(lens, chart)).toBe(false);
       expect(lens.bottom).toBeLessThanOrEqual(phases.top);
       expect(phases.bottom).toBeLessThanOrEqual(chart.top);
-      // All six lens buttons remain operable in the toolbar region.
+      expect(actions.right).toBeLessThanOrEqual(width);
       const toolbar = screen.getByTestId("journey-toolbar-region");
       for (const lensDef of OBSERVATION_LENSES) {
         expect(within(toolbar).getByTestId(`journey-lens-${lensDef.id}`)).toBeEnabled();
       }
-      expect(within(toolbar).queryByTestId("journey-overlay-composite")).not.toBeInTheDocument();
-      expect(screen.getByTestId("journey-overlay-composite")).toBeInTheDocument();
+      expect(within(toolbar).getByTestId("journey-overlay-composite")).toBeInTheDocument();
+      expect(within(toolbar).getByTestId("journey-inspector-toggle")).toBeInTheDocument();
       expect(screen.queryByTestId("journey-zoom-fit-all")).not.toBeInTheDocument();
       expect(within(toolbar).getByTestId("journey-zoom-focus-phase")).not.toBeVisible();
       expect(within(toolbar).getByTestId("journey-all-metrics")).not.toBeVisible();

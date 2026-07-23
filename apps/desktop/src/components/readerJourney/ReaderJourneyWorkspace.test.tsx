@@ -58,24 +58,25 @@ describe("ReaderJourneyWorkspace", () => {
     expect(screen.getByTestId("journey-detail-drawer")).toHaveTextContent("场景14");
     expect(screen.getByTestId("scene-detail-tab-questions")).toHaveTextContent(/问题|为什么/);
 
+    expect(screen.getByTestId("journey-overlay-composite")).toHaveTextContent("对比分析");
+    expect(screen.queryByTestId("journey-more-chart-settings")).not.toBeInTheDocument();
+
     fireEvent.click(screen.getByTestId("journey-metric-select"));
     fireEvent.click(screen.getByTestId("journey-metric-hook"));
     expect(screen.getByTestId("journey-metric-select")).toHaveTextContent("钩子");
-
-    fireEvent.click(screen.getByTestId("journey-more-chart-settings"));
-    expect(screen.getByTestId("journey-export-png")).toBeInTheDocument();
+    expect(screen.queryByTestId("journey-overlay-composite")).not.toBeInTheDocument();
     expect(screen.queryByTestId("journey-overview-mode-tabs")).not.toBeInTheDocument();
   });
 
-  it("keeps analysis info under 更多操作 only; no marker toggles in ordinary UI", () => {
+  it("does not expose 更多操作 or analysis info in ordinary topbar", () => {
     renderJourney(
       <ReaderJourneyWorkspace visualization={visualization} onLocateEvidence={vi.fn()} />,
     );
     expect(screen.queryByTestId("journey-marker-compact")).not.toBeInTheDocument();
     expect(screen.queryByTestId("journey-marker-full")).not.toBeInTheDocument();
     expect(screen.queryByTestId("journey-analysis-info-popover")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByTestId("journey-more-chart-settings"));
-    expect(screen.getByTestId("journey-analysis-info").textContent).toMatch(/visualization v1\.1/);
+    expect(screen.queryByTestId("journey-more-chart-settings")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("journey-analysis-info")).not.toBeInTheDocument();
   });
 
   it("does not expose full marker mode controls", () => {

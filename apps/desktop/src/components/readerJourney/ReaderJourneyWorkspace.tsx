@@ -1307,6 +1307,8 @@ export function ReaderJourneyWorkspace({
           observationLens={observationLens}
           onObservationLensChange={handleObservationLensChange}
           overlayComposite={overlayComposite}
+          compareWith={compareWith}
+          onCompareWithChange={handleCompareWithChange}
           heightPreset={heightPreset}
           onHeightPresetChange={handleHeightPresetChange}
           yDomainMode={yDomainMode}
@@ -1359,9 +1361,8 @@ export function ReaderJourneyWorkspace({
           narrowLayout={layoutMode === "narrow"}
           onExportPng={() => void handleExport()}
           exportBusy={exportStatus === "exporting"}
-          analysisInfoContent={analysisInfoMeta}
         />
-        {/* Order: one-liner → phase cards (numeric only) → centered legend → curve */}
+        {/* Order: one-liner → compare status (if any) → phase cards → legend → curve */}
           <div className="journey-lens-explanation-with-tools" data-testid="journey-lens-explanation-with-tools">
             <JourneyLensExplanationChrome
               lensId={observationLens}

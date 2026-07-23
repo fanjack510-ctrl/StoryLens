@@ -10,7 +10,7 @@ afterEach(() => {
   document.getElementById("journey-overlay-root")?.remove();
 });
 
-describe("对比分析 mode + tools separation", () => {
+describe("对比分析 mode + unified topbar", () => {
   it("does not draw secondary line without compareWith", () => {
     const viz = buildFixture13Scenes();
     expect(buildLensChartLines(viz, "composite")).toHaveLength(1);
@@ -24,7 +24,7 @@ describe("对比分析 mode + tools separation", () => {
     expect(lines[1].labelZh).toMatch(/情绪/);
   });
 
-  it("keeps analysis tools out of the Lens list", () => {
+  it("places 对比分析 on the topbar right, not a secondary tool rail", () => {
     render(
       <MemoryRouter initialEntries={["/?overview=curve"]}>
         <ReaderJourneyWorkspace
@@ -34,15 +34,18 @@ describe("对比分析 mode + tools separation", () => {
       </MemoryRouter>,
     );
     const lenses = screen.getByTestId("journey-lens-selector-list");
+    const actions = screen.getByTestId("journey-toolbar-right");
     expect(within(lenses).queryByText("对比分析")).not.toBeInTheDocument();
-    expect(within(lenses).queryByText("对比指标")).not.toBeInTheDocument();
     expect(within(lenses).queryByText("重置视图")).not.toBeInTheDocument();
-    expect(within(lenses).queryByText("适配全图")).not.toBeInTheDocument();
+    expect(within(actions).getByTestId("journey-overlay-composite")).toHaveTextContent(
+      "对比分析",
+    );
     expect(screen.getByTestId("journey-chart-tools")).toHaveAttribute(
       "data-tools-relocated",
-      "true",
+      "topbar",
     );
-    expect(screen.getByTestId("journey-chart-analysis-tools").textContent).toMatch(/对比分析/);
+    expect(screen.queryByTestId("journey-chart-analysis-tools")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("journey-more-chart-settings")).not.toBeInTheDocument();
   });
 
   it("requires confirm before entering compare mode", () => {
@@ -58,14 +61,16 @@ describe("对比分析 mode + tools separation", () => {
     fireEvent.click(screen.getByTestId("journey-overlay-composite"));
     expect(screen.getByTestId("journey-compare-primary-label").textContent).toMatch(/情绪强度/);
     fireEvent.click(screen.getByTestId("journey-compare-reading_momentum"));
-    // Pending only — not active yet
     expect(screen.queryByTestId("journey-comparison-toolbar")).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId("journey-compare-confirm"));
     expect(screen.getByTestId("journey-comparison-toolbar")).toBeInTheDocument();
     expect(screen.getByTestId("journey-comparison-active").textContent).toMatch(
       /情绪强度.*综合阅读动力/,
     );
-    expect(screen.getByTestId("journey-comparison-exit")).toBeInTheDocument();
+    expect(
+      within(screen.getByTestId("journey-toolbar-right")).getByTestId("journey-comparison-exit"),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("journey-comparison-change")).toHaveTextContent("更换指标");
     expect(screen.getAllByTestId("journey-curve-path-secondary").length).toBeGreaterThan(0);
   });
 
@@ -85,7 +90,7 @@ describe("对比分析 mode + tools separation", () => {
     expect(screen.queryByTestId("journey-curve-path-secondary")).not.toBeInTheDocument();
   });
 
-  it("restores compare from URL and exits via fixed exit control", () => {
+  it("restores compare from URL and exits via topbar exit control", () => {
     render(
       <MemoryRouter initialEntries={["/?overview=curve&lens=composite&compareWith=arousal"]}>
         <ReaderJourneyWorkspace
@@ -102,12 +107,14 @@ describe("对比分析 mode + tools separation", () => {
       "data-compare-with",
       "arousal",
     );
-    fireEvent.click(screen.getByTestId("journey-comparison-exit"));
+    fireEvent.click(
+      within(screen.getByTestId("journey-toolbar-right")).getByTestId("journey-comparison-exit"),
+    );
     expect(screen.queryByTestId("journey-comparison-toolbar")).not.toBeInTheDocument();
     expect(screen.queryByTestId("journey-curve-path-secondary")).not.toBeInTheDocument();
   });
 
-  it("hides compare tools on hook_payoff and clears compare", () => {
+  it("hides compare on hook_payoff and clears compare", () => {
     render(
       <MemoryRouter initialEntries={["/?overview=curve&lens=composite&compareWith=arousal"]}>
         <ReaderJourneyWorkspace
@@ -120,7 +127,8 @@ describe("对比分析 mode + tools separation", () => {
     fireEvent.click(screen.getByTestId("journey-lens-hook_payoff"));
     expect(screen.queryByTestId("journey-comparison-toolbar")).not.toBeInTheDocument();
     expect(screen.queryByTestId("journey-overlay-composite")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("journey-chart-analysis-tools")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("journey-comparison-exit")).not.toBeInTheDocument();
+    expect(screen.getByTestId("journey-inspector-toggle")).toBeInTheDocument();
   });
 
   it("auto-exits when switching to the same primary as compare", () => {
