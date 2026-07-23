@@ -3,24 +3,56 @@
   "title": "Agent M Backend Mock Run",
   "type": "feature",
   "base_version": "1.0.5",
-  "status": "registered",
+  "status": "tested",
   "include_in_next_release": true,
   "commits": [],
   "modules": [
     "narrative_core/services",
     "routers"
   ],
-  "files": [],
-  "user_summary": "Backend Mock Run Service, Executor, Task Registry, Lab API (from Phase 2A-P).",
-  "technical_summary": "Backend Mock Run Service, Executor, InProcess Task Registry, Lab API, Stage Orchestrator wiring. No frontend.",
-  "acceptance_criteria": [],
-  "tests": [],
-  "verification_evidence": [],
+  "files": [
+    "apps/api/app/narrative_core/services/mock_lab_authorization_service.py",
+    "apps/api/app/narrative_core/services/mock_run_metadata.py",
+    "apps/api/app/narrative_core/services/mock_run_state_service.py",
+    "apps/api/app/narrative_core/services/mock_whole_book_run_service.py",
+    "apps/api/app/narrative_core/services/mock_whole_book_run_executor.py",
+    "apps/api/app/narrative_core/services/in_process_mock_run_task_registry.py",
+    "apps/api/app/routers/whole_book_mock_lab_runs.py",
+    "apps/api/tests/test_narrative_phase2a_mock_run_backend.py",
+    "docs/architecture/narrative-intelligence-core/phase2a-backend-mock-run-implementation.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-mock-run-service.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-mock-executor-implementation.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-task-registry-implementation.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-lab-api-implementation.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-backend-verification.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-run-backend-implementation.md",
+    "release/changes/CHG-20260723-032.json"
+  ],
+  "user_summary": "Backend Mock Lab whole-book run create/control, in-process executor, task registry, and Lab API (non-production).",
+  "technical_summary": "Implements MockLabAuthorizationService, MockWholeBookRunService, DefaultMockWholeBookRunExecutor, InProcessMockRunTaskRegistry, and whole_book_mock_lab_runs router. Metadata in validated_output JSON; no migrations; main.py registration deferred to Integration.",
+  "acceptance_criteria": [
+    "Lab default closed; production/non-loopback/no-marker/non-mock engine rejected",
+    "Create sequence fail-closed with no pre-create persistence",
+    "Idempotency + active-run conflict + metadata schema/version",
+    "Executor pause/resume/cancel/retry; completed stages not re-run",
+    "Candidates only; budget deny writes nothing; no model calls",
+    "Lab API DTO without body/prompt; formal run create remains disabled",
+    "Targeted tests 27 passed; version_manager/change_registry/git diff --check clean"
+  ],
+  "tests": [
+    "apps/api/tests/test_narrative_phase2a_mock_run_backend.py"
+  ],
+  "verification_evidence": [
+    "py -3.12 -m pytest apps/api/tests/test_narrative_phase2a_mock_run_backend.py -q → 27 passed",
+    "python scripts/version_manager.py check",
+    "python scripts/change_registry.py check",
+    "git diff --check"
+  ],
   "data_compatibility": {
     "database_changed": false,
     "migration_required": false,
     "user_data_compatible": true,
-    "notes": ""
+    "notes": "Mock metadata stored in existing AnalysisRun.validated_output JSON; no schema migration."
   },
   "release_impact": {
     "requires_reanalysis": false,
@@ -31,7 +63,7 @@
   "blocker_level": null,
   "head_inclusion": null,
   "created_at": "2026-07-23T15:04:11Z",
-  "updated_at": "2026-07-23T15:11:59Z",
+  "updated_at": "2026-07-23T15:50:00Z",
   "parallel_plan": {
     "role": "agent_m",
     "branch": "feature/narrative-phase2a-run-backend",
@@ -51,5 +83,8 @@
     ],
     "file_ownership": "docs/architecture/narrative-intelligence-core/phase2a-parallel-file-ownership.json"
   },
-  "file_ownership": "docs/architecture/narrative-intelligence-core/phase2a-parallel-file-ownership.json"
+  "file_ownership": "docs/architecture/narrative-intelligence-core/phase2a-parallel-file-ownership.json",
+  "integration_issues": [
+    "Lab router not registered in apps/api/app/main.py (Integration ownership CHG-20260723-035)"
+  ]
 }
