@@ -3,9 +3,16 @@
   "title": "Phase 2A-P Run Shell Contract",
   "type": "feature",
   "base_version": "1.0.5",
-  "status": "registered",
+  "status": "tested",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "612cb314d52deedb7228cce814154ab3bccc80eb",
+      "message": "feat: establish narrative phase2a mock run contracts",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "narrative_core/run_shell_contract",
     "desktop/wholeBook/runShell/contracts",
@@ -75,7 +82,7 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T15:04:11Z",
-  "updated_at": "2026-07-23T15:11:59Z",
+  "updated_at": "2026-07-23T15:15:00Z",
   "parallel_plan": {
     "role": "phase2a_p",
     "branch": "feature/narrative-phase2a-run-shell-contract",
