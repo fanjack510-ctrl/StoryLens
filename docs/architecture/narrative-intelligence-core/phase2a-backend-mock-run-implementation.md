@@ -1,7 +1,7 @@
 # Phase 2A Backend Mock Run Implementation (Agent M)
 
-Change: `CHG-20260723-032`  
-Branch: `feature/narrative-phase2a-run-backend`  
+Change: `CHG-20260723-032`
+Branch: `feature/narrative-phase2a-run-backend`
 Baseline: Phase 2A-P HEAD (`1e8112f…`)
 
 ## Scope delivered

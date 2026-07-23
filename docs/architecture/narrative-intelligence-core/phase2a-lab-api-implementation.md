@@ -4,7 +4,7 @@
 
 `apps/api/app/routers/whole_book_mock_lab_runs.py`
 
-Prefix: `/api/v1/labs/whole-book-runs`  
+Prefix: `/api/v1/labs/whole-book-runs`
 OpenAPI tags: `labs`, `non-production`, `mock-whole-book-run`
 
 ## Routes
@@ -27,6 +27,6 @@ OpenAPI tags: `labs`, `non-production`, `mock-whole-book-run`
 
 ## Integration Issue
 
-**Not registered in `apps/api/app/main.py`** — Integration ownership (`CHG-20260723-035`).  
-Constant: `INTEGRATION_ISSUE_MAIN_PY_ROUTER_REGISTRATION`.  
+**Not registered in `apps/api/app/main.py`** — Integration ownership (`CHG-20260723-035`).
+Constant: `INTEGRATION_ISSUE_MAIN_PY_ROUTER_REGISTRATION`.
 Tests mount the router directly via `FastAPI.include_router`.
