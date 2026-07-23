@@ -11,6 +11,12 @@
       "message": "feat: establish narrative phase2b private engine contracts",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "667cc66a66272c048f2bc85a8debdbbc2a906d0a",
+      "message": "docs: attach primary commit to CHG-20260723-036",
+      "primary": true,
+      "multi_change_reason": "Attach status/metadata follow-up commit after mark tested"
     }
   ],
   "modules": [
@@ -88,7 +94,7 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T22:38:45Z",
-  "updated_at": "2026-07-23T22:41:58Z",
+  "updated_at": "2026-07-23T22:42:56Z",
   "parallel_plan": {
     "role": "phase2b_p",
     "branch": "feature/narrative-phase2b-core-engine-contract",
