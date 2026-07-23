@@ -21,6 +21,7 @@ import {
   buildFixture30Scenes,
 } from "./mockVisualizationFixtures";
 import { ReaderJourneyWorkspace } from "./ReaderJourneyWorkspace";
+import { getJourneyExportButton } from "./journeyTestHelpers";
 
 const css = readFileSync(resolve(__dirname, "./readerJourney.css"), "utf8");
 const workspaceSource = readFileSync(
@@ -65,14 +66,6 @@ function renderWorkspace(viz = buildFixture13Scenes(), width = 1600) {
 }
 
 
-function openExportMenu() {
-  const more = screen.queryByTestId("journey-more-chart-settings");
-  if (more && !screen.queryByTestId("journey-export-png")) {
-    fireEvent.click(more);
-  }
-  return screen.getByTestId("journey-export-png");
-}
-
 describe("Reader Journey Workspace Layout v4.0", () => {
   afterEach(() => {
     cleanup();
@@ -107,18 +100,16 @@ describe("Reader Journey Workspace Layout v4.0", () => {
     expect(TOOL_RAIL_WIDTH_PX).toBe(0);
   });
 
-  it("shows full Chinese toolbar labels", () => {
+  it("shows unified topbar labels", () => {
     renderWorkspace(buildFixture13Scenes(), 1600);
     expect(screen.getByTestId("journey-curve-toolbar")).toBeInTheDocument();
-    // 重置视图 only appears when the viewport is narrowed — full chapter hides it.
     expect(screen.queryByTestId("journey-zoom-fit-all")).not.toBeInTheDocument();
     expect(screen.getByTestId("journey-zoom-focus-phase")).not.toBeVisible();
     expect(screen.getByTestId("journey-inspector-toggle")).toHaveTextContent("展开详情");
-    expect(openExportMenu()).toHaveTextContent("导出 PNG");
-    expect(screen.getByTestId("journey-more-chart-settings")).toHaveTextContent(
-      "更多操作",
-    );
+    expect(getJourneyExportButton()).toHaveTextContent("导出 PNG");
+    expect(screen.queryByTestId("journey-more-chart-settings")).not.toBeInTheDocument();
     expect(screen.getByTestId("journey-overlay-composite")).toHaveTextContent("对比分析");
+    expect(screen.getByTestId("journey-toolbar-region")).toHaveAttribute("data-topbar", "unified");
   });
 
   it("keeps Chart Y 0—100 and plot floors from v3.0", () => {
@@ -201,11 +192,10 @@ describe("Reader Journey Workspace Layout v4.0", () => {
     expect(workspaceSource).not.toMatch(/JourneyResizableSplit/);
   });
 
-  it("opens more settings menu via portal host", () => {
+  it("removed more-settings menu from unified topbar", () => {
     renderWorkspace(buildFixture13Scenes(), 1600);
-    fireEvent.click(screen.getByTestId("journey-more-chart-settings"));
-    expect(screen.getByTestId("journey-more-menu-panel")).toBeInTheDocument();
-    expect(screen.getByTestId("journey-chart-height-standard")).toBeInTheDocument();
+    expect(screen.queryByTestId("journey-more-chart-settings")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("journey-more-menu-panel")).not.toBeInTheDocument();
   });
 
   it("does not modify semantic contract strings in workspace", () => {

@@ -287,20 +287,12 @@ describe("Reader Journey Resizable Workspace v4.1", () => {
     );
   });
 
-  it("more settings restores both pane defaults without changing scene URL", () => {
+  it("removed more-settings pane reset from unified topbar", () => {
     renderWorkspace(buildFixture13Scenes(), 1600);
     openInspector();
     fireEvent.keyDown(screen.getByTestId("journey-splitter-source"), { key: "End" });
-    fireEvent.click(screen.getByTestId("journey-more-chart-settings"));
-    fireEvent.click(screen.getByTestId("journey-reset-pane-widths"));
-    expect(screen.getByTestId("journey-splitter-source")).toHaveAttribute(
-      "aria-valuenow",
-      "300",
-    );
-    expect(screen.getByTestId("journey-splitter-inspector")).toHaveAttribute(
-      "aria-valuenow",
-      "360",
-    );
+    expect(screen.queryByTestId("journey-more-chart-settings")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("journey-reset-pane-widths")).not.toBeInTheDocument();
   });
 
   it("protects MainPane minimum width when side panes expand", () => {

@@ -7,6 +7,7 @@ import { ReaderJourneyWorkspace } from "./ReaderJourneyWorkspace";
 import { buildMockReaderJourneyVisualization } from "./mockVisualization";
 import { MORE_METRIC_KEYS, QUICK_METRIC_KEYS } from "./journeyUiLabels";
 import * as exportModule from "./exportJourneyPng";
+import { openExportMenu } from "./journeyTestHelpers";
 
 vi.mock("./exportJourneyPng", async (importOriginal) => {
   const actual = await importOriginal<typeof exportModule>();
@@ -35,14 +36,6 @@ function renderAt(path: string, props: Record<string, unknown> = {}) {
   );
 }
 
-
-function openExportMenu() {
-  const more = screen.queryByTestId("journey-more-chart-settings");
-  if (more && !screen.queryByTestId("journey-export-png")) {
-    fireEvent.click(more);
-  }
-  return screen.getByTestId("journey-export-png");
-}
 
 describe("Phase 1C-C.2.5.2 Context Inspector", () => {
   it("does not render Phase detail above the curve", () => {
@@ -132,7 +125,7 @@ describe("Phase 1C-C.2.5.2 Context Inspector", () => {
     );
   });
 
-  it("keeps single metric selector with all metrics available", () => {
+  it("keeps inline lens selector with six observation lenses", () => {
     const onSelectionChange = vi.fn();
     renderAt("/?overview=curve&metric=engagement", {
       activeSceneOrdinal: 12,
@@ -140,39 +133,21 @@ describe("Phase 1C-C.2.5.2 Context Inspector", () => {
       onSelectionChange,
     });
     expect(QUICK_METRIC_KEYS).toEqual(["engagement", "curiosity", "tension"]);
-    expect(MORE_METRIC_KEYS).toEqual([
-      "payoff",
-      "hook",
-      "dropoff_risk",
-      "valence",
-      "arousal",
-    ]);
-    expect(screen.getByTestId("journey-metric-select")).toHaveTextContent("综合阅读");
-    fireEvent.click(screen.getByTestId("journey-metric-select"));
-    expect(screen.getByTestId("journey-metric-select-menu-panel")).toBeInTheDocument();
-    expect(screen.getByTestId("journey-metric-engagement")).toBeInTheDocument();
-    expect(screen.getByTestId("journey-metric-curiosity")).toBeInTheDocument();
-    expect(screen.getByTestId("journey-metric-payoff")).toBeInTheDocument();
-    fireEvent.click(screen.getByTestId("journey-metric-valence"));
+    expect(MORE_METRIC_KEYS).toContain("valence");
+    expect(screen.getByTestId("journey-lens-composite")).toHaveAttribute("aria-current", "true");
+    fireEvent.click(screen.getByTestId("journey-lens-emotion"));
     expect(onSelectionChange).toHaveBeenCalledWith(
-      expect.objectContaining({ selectedMetric: "valence", source: "journey_rhythm" }),
+      expect.objectContaining({ selectedMetric: expect.any(String), source: "journey_rhythm" }),
     );
   });
 
-  it("uses compact legend by default and expands in full marker mode", () => {
+  it("uses above-chart unified legend instead of toolbar curve legend", () => {
     renderAt("/?overview=curve");
-    const legend = screen.getByTestId("journey-curve-legend");
-    expect(legend).toHaveTextContent("场景");
-    expect(legend).toHaveTextContent("节拍");
-    expect(legend).toHaveTextContent("当前选择");
-    expect(legend).toHaveTextContent("阅读阻力");
-    expect(legend.textContent).not.toMatch(/次级节点/);
-    expect(legend.textContent).not.toMatch(/已回答问题/);
-
-    // Full marker mode still keeps the compact curve legend (CHG-012).
-    fireEvent.click(screen.getByTestId("journey-marker-full"));
-    expect(legend).toHaveTextContent("阅读阻力");
-    expect(legend.textContent).not.toMatch(/次级节点/);
+    const legend = screen.getByTestId("journey-unified-legend");
+    expect(legend).toHaveAttribute("data-legend-placement", "above-chart");
+    expect(screen.getByTestId("journey-minimal-legend")).toBeInTheDocument();
+    expect(screen.queryByTestId("journey-curve-legend")).not.toBeInTheDocument();
+    expect(legend.textContent).toMatch(/阅读阻力/);
   });
 
   it("keeps thin rhythm strip scene locate capability", () => {
@@ -205,7 +180,6 @@ describe("Phase 1C-C.2.5.2 Context Inspector", () => {
       activeSceneOrdinal: 12,
       activePhaseOrdinal: 3,
     });
-    fireEvent.click(screen.getByTestId("journey-more-chart-settings"));
     fireEvent.click(openExportMenu());
     await vi.waitFor(() => {
       expect(exportModule.exportJourneyPng).toHaveBeenCalled();

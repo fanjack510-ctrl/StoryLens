@@ -307,12 +307,12 @@ describe("Phase 1D-A single-chapter journey template governance", () => {
     const fixture = fixtures[0];
     const vizBefore = fixture.visualization;
     const first = renderCanonical(fixture, { marker: "v2.7-base" });
-    const textBefore = first.container.querySelector('[data-testid="journey-analysis-title"]')
+    const textBefore = first.container.querySelector('[data-testid="journey-export-title"]')
       ?.textContent;
     first.unmount();
 
     const second = renderCanonical(fixture, { marker: "v2.7-changed-stand-in" });
-    const textAfter = second.container.querySelector('[data-testid="journey-analysis-title"]')
+    const textAfter = second.container.querySelector('[data-testid="journey-export-title"]')
       ?.textContent;
     const marker = second.container
       .querySelector("[data-template-marker]")

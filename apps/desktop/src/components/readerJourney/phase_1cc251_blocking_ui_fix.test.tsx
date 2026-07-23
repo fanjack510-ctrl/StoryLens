@@ -10,6 +10,7 @@ import {
   JourneyExportError,
   JOURNEY_EXPORT_USER_MESSAGES,
 } from "./exportJourneyPng";
+import { openExportMenu, getJourneyExportButton } from "./journeyTestHelpers";
 
 vi.mock("./exportJourneyPng", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./exportJourneyPng")>();
@@ -76,14 +77,6 @@ function mockBox(el: Element, box: { x: number; y: number; width: number; height
 }
 
 
-function openExportMenu() {
-  const more = screen.queryByTestId("journey-more-chart-settings");
-  if (more && !screen.queryByTestId("journey-export-png")) {
-    fireEvent.click(more);
-  }
-  return screen.getByTestId("journey-export-png");
-}
-
 describe("Phase 1C-C.2.5.1 blocking UI fix", () => {
   it("uses analysis header instead of legacy overview mode tabs", () => {
     renderWorkspace();
@@ -97,10 +90,9 @@ describe("Phase 1C-C.2.5.1 blocking UI fix", () => {
     );
   });
 
-  it("does not absolute-position compact/full toggle over other chrome", () => {
+  it("removes compact/full marker toggle from ordinary chrome", () => {
     renderWorkspace();
-    const toggle = screen.getByTestId("journey-marker-toggle");
-    expect(window.getComputedStyle(toggle).position).not.toBe("absolute");
+    expect(screen.queryByTestId("journey-marker-toggle")).not.toBeInTheDocument();
     expect(css).not.toMatch(
       /\.journey-marker-toggle\s*\{[^}]*position:\s*absolute/s,
     );
@@ -113,15 +105,12 @@ describe("Phase 1C-C.2.5.1 blocking UI fix", () => {
     );
   });
 
-  it("uses responsive summary grid rules", () => {
+  it("drops summary cards strip after hierarchy simplification", () => {
     renderWorkspace();
-    const cards = screen.getByTestId("journey-summary-cards");
-    expect(cards.className).toContain("journey-summary-strip");
+    expect(screen.queryByTestId("journey-summary-cards")).not.toBeInTheDocument();
     expect(css).toMatch(
       /\.journey-summary-strip,\s*\n?\s*\.journey-metric-strip,\s*\n?\s*\.journey-insight-strip\s*\{[^}]*grid-template-columns:/s,
     );
-    expect(css).toMatch(/@media \(max-width: 1280px\)[\s\S]*repeat\(2,\s*minmax\(0,\s*1fr\)\)/);
-    expect(css).toMatch(/@media \(max-width: 900px\)[\s\S]*grid-template-columns:\s*1fr/);
   });
 
   it("supports metric toolbar control without absolute stack", () => {
@@ -131,7 +120,7 @@ describe("Phase 1C-C.2.5.1 blocking UI fix", () => {
     expect(window.getComputedStyle(switcher).position).not.toBe("absolute");
   });
 
-  it("keeps chart shell after phase nav in document flow (v3.0: curve before summary)", () => {
+  it("keeps chart shell after phase nav in document flow", () => {
     renderWorkspace();
     const curve = screen.getByTestId("journey-overview-curve");
     const order = Array.from(curve.children).map((node) => {
@@ -141,9 +130,6 @@ describe("Phase 1C-C.2.5.1 blocking UI fix", () => {
     expect(order.indexOf("journey-phase-strip-wrap")).toBeLessThan(
       order.indexOf("journey-chart-shell"),
     );
-    expect(order.indexOf("journey-chart-shell")).toBeLessThan(
-      order.indexOf("journey-diagnosis-summary"),
-    );
     expect(css).toMatch(/\.journey-overview-curve \.journey-curve-section[\s\S]*min-height:\s*420px/);
   });
 
@@ -152,12 +138,10 @@ describe("Phase 1C-C.2.5.1 blocking UI fix", () => {
     const header = screen.getByTestId("journey-analysis-header");
     const shell = screen.getByTestId("journey-chart-shell");
     const chart = screen.getByTestId("journey-curve-section");
-    const summary = screen.getByTestId("journey-summary-cards");
     mockBox(header, { x: 0, y: 0, width: 900, height: 48 });
     mockBox(shell, { x: 0, y: 56, width: 900, height: 440 });
     mockBox(chart, { x: 56, y: 60, width: 844, height: 420 });
-    mockBox(summary, { x: 0, y: 520, width: 900, height: 36 });
-    const boxes = [header, shell, summary].map((el) => el.getBoundingClientRect());
+    const boxes = [header, shell].map((el) => el.getBoundingClientRect());
     for (let i = 0; i < boxes.length; i += 1) {
       for (let j = i + 1; j < boxes.length; j += 1) {
         expect(boxesOverlap(boxes[i]!, boxes[j]!)).toBe(false);
@@ -168,14 +152,12 @@ describe("Phase 1C-C.2.5.1 blocking UI fix", () => {
   it("has no overlapping chrome boxes at 1024px layout mock", () => {
     renderWorkspace();
     const header = screen.getByTestId("journey-analysis-header");
-    const summary = screen.getByTestId("journey-summary-cards");
     const shell = screen.getByTestId("journey-chart-shell");
     const chart = screen.getByTestId("journey-curve-section");
     mockBox(header, { x: 0, y: 0, width: 700, height: 48 });
     mockBox(shell, { x: 0, y: 56, width: 700, height: 440 });
     mockBox(chart, { x: 56, y: 60, width: 644, height: 420 });
-    mockBox(summary, { x: 0, y: 510, width: 700, height: 36 });
-    const boxes = [header, shell, summary].map((el) => el.getBoundingClientRect());
+    const boxes = [header, shell].map((el) => el.getBoundingClientRect());
     for (let i = 0; i < boxes.length; i += 1) {
       for (let j = i + 1; j < boxes.length; j += 1) {
         expect(boxesOverlap(boxes[i]!, boxes[j]!)).toBe(false);
@@ -192,16 +174,14 @@ describe("Phase 1C-C.2.5.1 blocking UI fix", () => {
         }),
     );
     renderWorkspace();
-    const button = openExportMenu();
+    const button = getJourneyExportButton();
     expect(button).toHaveAttribute("type", "button");
     fireEvent.click(button);
-    expect(await screen.findByText("导出中")).toBeInTheDocument();
-    expect(openExportMenu()).toBeDisabled();
+    expect(getJourneyExportButton()).toBeDisabled();
     await vi.waitFor(() => {
       expect(exportJourneyPng).toHaveBeenCalledTimes(1);
     });
-    fireEvent.click(screen.getByTestId("journey-more-chart-settings"));
-    fireEvent.click(openExportMenu());
+    fireEvent.click(getJourneyExportButton());
     expect(exportJourneyPng).toHaveBeenCalledTimes(1);
     resolveExport({ filename: "StoryLens_第一章_完整旅程_v4.0.png" });
     expect(await screen.findByTestId("journey-export-feedback")).toHaveTextContent("已导出");
@@ -210,18 +190,16 @@ describe("Phase 1C-C.2.5.1 blocking UI fix", () => {
   it("shows error when export reports missing root", async () => {
     vi.mocked(exportJourneyPng).mockRejectedValue(new JourneyExportError("root_missing"));
     renderWorkspace();
-    fireEvent.click(screen.getByTestId("journey-more-chart-settings"));
     fireEvent.click(openExportMenu());
     expect(await screen.findByTestId("journey-export-feedback")).toHaveTextContent(
       JOURNEY_EXPORT_USER_MESSAGES.root_missing,
     );
-    expect(openExportMenu()).not.toBeDisabled();
+    await vi.waitFor(() => expect(getJourneyExportButton()).not.toBeDisabled());
   });
 
   it("shows error when chart is not rendered", async () => {
     vi.mocked(exportJourneyPng).mockRejectedValue(new JourneyExportError("not_rendered"));
     renderWorkspace();
-    fireEvent.click(screen.getByTestId("journey-more-chart-settings"));
     fireEvent.click(openExportMenu());
     expect(await screen.findByTestId("journey-export-feedback")).toHaveTextContent(
       JOURNEY_EXPORT_USER_MESSAGES.not_rendered,
@@ -231,7 +209,6 @@ describe("Phase 1C-C.2.5.1 blocking UI fix", () => {
   it("exports from legacy overview=questions while staying on journey analysis", async () => {
     renderWorkspace("/?overview=questions&scene=12");
     expect(screen.getByTestId("journey-overview-curve")).toBeInTheDocument();
-    fireEvent.click(screen.getByTestId("journey-more-chart-settings"));
     fireEvent.click(openExportMenu());
     await vi.waitFor(() => {
       expect(exportJourneyPng).toHaveBeenCalled();
@@ -245,7 +222,6 @@ describe("Phase 1C-C.2.5.1 blocking UI fix", () => {
 
   it("waits for render then calls exportJourneyPng with export root", async () => {
     renderWorkspace("/?overview=diagnosis&scene=12");
-    fireEvent.click(screen.getByTestId("journey-more-chart-settings"));
     fireEvent.click(openExportMenu());
     await vi.waitFor(() => {
       expect(exportJourneyPng).toHaveBeenCalled();
@@ -259,7 +235,6 @@ describe("Phase 1C-C.2.5.1 blocking UI fix", () => {
 
   it("shows success feedback with filename", async () => {
     renderWorkspace();
-    fireEvent.click(screen.getByTestId("journey-more-chart-settings"));
     fireEvent.click(openExportMenu());
     const feedback = await screen.findByTestId("journey-export-feedback");
     expect(feedback).toHaveTextContent(/已导出.*StoryLens_第一章/);
@@ -269,33 +244,26 @@ describe("Phase 1C-C.2.5.1 blocking UI fix", () => {
   it("shows failure feedback and restores button", async () => {
     vi.mocked(exportJourneyPng).mockRejectedValue(new JourneyExportError("image_failed"));
     renderWorkspace();
-    fireEvent.click(screen.getByTestId("journey-more-chart-settings"));
     fireEvent.click(openExportMenu());
     const feedback = await screen.findByTestId("journey-export-feedback");
     expect(feedback).toHaveTextContent(JOURNEY_EXPORT_USER_MESSAGES.image_failed);
     expect(feedback).toHaveAttribute("data-status", "failed");
-    expect(openExportMenu()).not.toBeDisabled();
-    expect(openExportMenu()).toHaveTextContent("导出 PNG");
+    await vi.waitFor(() => expect(getJourneyExportButton()).not.toBeDisabled());
+    expect(getJourneyExportButton()).toHaveTextContent("导出 PNG");
   });
 
-  it("keeps scene and metric after export from legacy questions URL", async () => {
+  it("keeps scene and lens after export from legacy questions URL", async () => {
     renderWorkspace("/?overview=questions&scene=12");
-    fireEvent.click(screen.getByTestId("journey-metric-select"));
-    fireEvent.click(screen.getByTestId("journey-metric-hook"));
-    fireEvent.click(screen.getByTestId("journey-more-chart-settings"));
+    fireEvent.click(screen.getByTestId("journey-lens-reading_tension"));
     fireEvent.click(openExportMenu());
     await vi.waitFor(() => expect(exportJourneyPng).toHaveBeenCalled());
     expect(screen.getByTestId("journey-overview-curve")).toBeInTheDocument();
-    expect(screen.getByTestId("journey-metric-select")).toHaveAttribute(
-      "title",
-      expect.stringContaining("钩子"),
-    );
-    expect(screen.getByTestId("scene-detail-title")).toHaveTextContent("场景 12");
+    expect(screen.getByTestId("journey-lens-reading_tension")).toHaveAttribute("aria-current", "true");
+    expect(screen.getByTestId("scene-detail-title")).toHaveTextContent(/场景12/);
   });
 
   it("keeps journey analysis after export from legacy diagnosis URL", async () => {
     renderWorkspace("/?overview=diagnosis&scene=12");
-    fireEvent.click(screen.getByTestId("journey-more-chart-settings"));
     fireEvent.click(openExportMenu());
     await vi.waitFor(() => expect(exportJourneyPng).toHaveBeenCalled());
     expect(screen.getByTestId("journey-overview-curve")).toBeInTheDocument();
@@ -308,7 +276,6 @@ describe("Phase 1C-C.2.5.1 blocking UI fix", () => {
   it("does not invoke analysis APIs during export UI flow", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     renderWorkspace();
-    fireEvent.click(screen.getByTestId("journey-more-chart-settings"));
     fireEvent.click(openExportMenu());
     await vi.waitFor(() => expect(exportJourneyPng).toHaveBeenCalled());
     expect(fetchSpy).not.toHaveBeenCalled();

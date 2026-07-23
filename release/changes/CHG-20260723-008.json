@@ -1,0 +1,44 @@
+{
+  "id": "CHG-20260723-008",
+  "title": "Seal StoryLens 1.0.5 release baseline",
+  "type": "build",
+  "base_version": "1.0.4",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "release governance",
+    "versioning",
+    "Windows packaging",
+    "smoke validation",
+    "database upgrade validation",
+    "baseline metadata"
+  ],
+  "files": [],
+  "user_summary": "将当前已完成的功能修复固化为 StoryLens 1.0.5 正式本地基线（安装包、Smoke、数据升级验证、本地 tag，不推送不公开发布）。",
+  "technical_summary": "Seal 1.0.5 local baseline: Phase A full gates at VERSION 1.0.4, freeze pool, bump to 1.0.5, Windows build/smoke, copy-only DB upgrade, baseline/tag/bundle, prepare next collecting pool. No push/publish.",
+  "acceptance_criteria": [
+    "Full automated gates green before VERSION bump",
+    "Windows installer built and smoked",
+    "1.0.4 DB copy upgrade verified",
+    "Local annotated tag v1.0.5; no push"
+  ],
+  "tests": [],
+  "verification_evidence": [],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "No schema downgrade; user LocalAppData StoryLens DB remains compatible via create_db/migrations on copy."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": null,
+  "created_at": "2026-07-23T04:43:07Z",
+  "updated_at": "2026-07-23T04:43:59Z"
+}

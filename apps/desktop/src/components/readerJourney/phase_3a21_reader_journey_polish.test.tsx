@@ -118,13 +118,13 @@ describe("Reader Journey 3A.2.1 polish", () => {
       />,
     );
     fireEvent.click(screen.getByTestId("journey-curve-node-4"));
-    expect(screen.getByTestId("scene-detail-title").textContent).toMatch(/场景 04/);
+    expect(screen.getByTestId("scene-detail-title").textContent).toMatch(/场景04/);
     expect(screen.queryByTestId("journey-inspector-close")).toBeNull();
     expect(screen.getAllByTestId("journey-collapse-inspector").length).toBe(1);
     expect(screen.getByTestId("journey-collapse-inspector")).toHaveTextContent("收起详情");
     const detailText = screen.getByTestId("journey-detail-pane").textContent || "";
     expect(detailText).not.toMatch(/\bPhase\b|所属 Phase|相关Scene|Scene 4 summary|Scene 4 写作启示/);
-    expect(detailText).toMatch(/场景 04|进一步推进|控制信息密度/);
+    expect(detailText).toMatch(/场景04|进一步推进|控制信息密度/);
   });
 
   it("phase cards never render a lone period or ellipsis description", () => {

@@ -64,7 +64,7 @@ describe("Phase 1C-C.2.4B Scene detail information architecture", () => {
       </MemoryRouter>,
     );
     expect(screen.getByTestId("scene-detail-panel-questions")).toBeInTheDocument();
-    expect(screen.getByTestId("scene-detail-title")).toHaveTextContent("场景 08");
+    expect(screen.getByTestId("scene-detail-title")).toHaveTextContent(/场景08/);
   });
 
   it("renders hook fields and writing takeaways without crashing", () => {

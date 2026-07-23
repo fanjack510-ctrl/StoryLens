@@ -68,7 +68,7 @@ describe("Phase 1C-C.2.7 Context Inspector hierarchy", () => {
   it("renders unified Scene Inspector header with at most 2 pills", () => {
     render(<JourneySceneDetailPanel node={node9} onLocateEvidence={vi.fn()} />);
     expect(screen.getByTestId("journey-inspector-header")).toBeInTheDocument();
-    expect(screen.getByTestId("scene-detail-title")).toHaveTextContent("场景 09");
+    expect(screen.getByTestId("scene-detail-title")).toHaveTextContent(/场景09/);
     const pills = screen.queryAllByTestId("journey-inspector-pill");
     expect(pills.length).toBeLessThanOrEqual(2);
   });

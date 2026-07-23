@@ -4,7 +4,7 @@
   "type": "fix",
   "base_version": "1.0.3",
   "status": "released",
-  "include_in_next_release": true,
+  "include_in_next_release": false,
   "commits": [
     {
       "sha": "4cf04ec856dd9b61dcc2c4ec3055ec05c5df0dd0",
@@ -60,5 +60,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-22T05:26:48Z",
-  "updated_at": "2026-07-22T13:01:00Z"
+  "updated_at": "2026-07-23T04:43:22Z"
 }

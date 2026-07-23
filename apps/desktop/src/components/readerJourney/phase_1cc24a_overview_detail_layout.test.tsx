@@ -43,7 +43,7 @@ describe("Phase 1C-C.2.4A overview–detail layout", () => {
     expect(screen.getByTestId("journey-phase-strip")).toBeInTheDocument();
     expect(screen.getByTestId("journey-curve-svg")).toBeInTheDocument();
     expect(screen.getByTestId("journey-active-scene-guide")).toBeInTheDocument();
-    expect(screen.getByTestId("journey-detail-drawer")).toHaveTextContent("场景 12");
+    expect(screen.getByTestId("journey-detail-drawer")).toHaveTextContent(/场景12/);
 
     expect(css).toMatch(/journey-workspace-split/);
     expect(css).toMatch(/journey-resizable-split/);
@@ -75,7 +75,7 @@ describe("Phase 1C-C.2.4A overview–detail layout", () => {
     }
     expect(screen.getByTestId("journey-x-label-1")).toHaveTextContent("S1");
     expect(screen.getByTestId("journey-x-label-14")).toHaveTextContent("S14");
-    expect(screen.getByTestId("journey-metric-select")).toHaveTextContent("阅读牵引");
+    expect(screen.getByTestId("journey-lens-composite")).toHaveAttribute("aria-current", "true");
   });
 
   it("marks active scene with guide and larger node without changing selection API", () => {
@@ -97,13 +97,12 @@ describe("Phase 1C-C.2.4A overview–detail layout", () => {
     );
   });
 
-  it("shows marker legend and hook tier attributes", () => {
+  it("shows above-chart legend and hook tier attributes", () => {
     renderJourney(
       <ReaderJourneyWorkspace visualization={visualization} onLocateEvidence={vi.fn()} />,
     );
-    expect(screen.getByTestId("journey-curve-legend")).toHaveTextContent("钩子");
-    fireEvent.click(screen.getByTestId("journey-marker-full"));
-    expect(screen.getByTestId("journey-curve-legend")).toHaveTextContent("次级节点");
+    expect(screen.getByTestId("journey-unified-legend")).toBeInTheDocument();
+    expect(screen.queryByTestId("journey-curve-legend")).not.toBeInTheDocument();
     const endNode = screen.getByTestId("journey-curve-node-14");
     expect(endNode.getAttribute("data-hook-tier")).toBe("chapter");
   });

@@ -34,7 +34,7 @@ describe("CHG-014/002 Reader Journey terminology", () => {
       "钩子回收",
       "节奏速度",
     ]);
-    expect(OVERLAY_COMPARE_TITLE).toBe("对比指标");
+    expect(OVERLAY_COMPARE_TITLE).toBe("对比分析");
     expect(ALL_METRICS_LABEL).toBe("全部指标");
     expect(CURRENT_PHASE_LABEL).toBe("当前阶段");
   });

@@ -110,7 +110,6 @@ describe("DEFECT-012 adaptive phase UI compatibility", () => {
         />
       </MemoryRouter>,
     );
-    fireEvent.click(screen.getByTestId("journey-more-chart-settings"));
     fireEvent.click(screen.getByTestId("journey-export-png"));
     await waitFor(() => expect(exportJourneyPng).toHaveBeenCalled());
     await waitFor(() =>
@@ -127,7 +126,6 @@ describe("DEFECT-012 adaptive phase UI compatibility", () => {
         />
       </MemoryRouter>,
     );
-    fireEvent.click(screen.getByTestId("journey-more-chart-settings"));
     fireEvent.click(screen.getByTestId("journey-export-png"));
     await waitFor(() => expect(exportJourneyPng).toHaveBeenCalled());
     await waitFor(() =>

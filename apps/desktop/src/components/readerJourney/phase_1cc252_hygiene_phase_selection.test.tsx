@@ -65,6 +65,6 @@ describe("Phase 1C-C.2.5.2-Hygiene phase selection thaw v2-2", () => {
         source: "journey_scene",
       }),
     );
-    expect(screen.getByTestId("scene-detail-title")).toHaveTextContent("场景 10");
+    expect(screen.getByTestId("scene-detail-title")).toHaveTextContent(/场景10/);
   });
 });

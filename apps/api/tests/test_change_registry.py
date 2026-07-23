@@ -19,6 +19,8 @@ def _run(root: Path, *args: str) -> subprocess.CompletedProcess[str]:
         cwd=ROOT,
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         check=False,
     )
 
@@ -33,9 +35,11 @@ def _git(root: Path, *args: str) -> str:
         ["git", "-C", str(root), *args],
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         check=True,
     )
-    return proc.stdout.strip()
+    return (proc.stdout or "").strip()
 
 
 def _seed_registry(root: Path, version: str = "1.0.2") -> str:

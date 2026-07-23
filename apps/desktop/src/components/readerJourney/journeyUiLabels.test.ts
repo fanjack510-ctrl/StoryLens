@@ -53,7 +53,7 @@ describe("journeyUiLabels display formatters", () => {
     expect(formatJourneyMetricLabel("engagement")).toBe("综合阅读");
     expect(formatJourneyMetricLabel("arousal")).toBe("情绪强度");
     expect(formatJourneyMetricLabel("tension")).toBe("阅读张力");
-    expect(formatJourneyMetricLabel("hook")).toBe("悬念");
+    expect(formatJourneyMetricLabel("hook")).toBe("钩子");
     expect(formatJourneyMetricLabel("dropoff_risk")).toBe("阅读阻力");
     expect(formatJourneyMetricLabel("nope")).toBe("未知指标");
     expect(formatJourneyScore(76.4)).toBe("76");

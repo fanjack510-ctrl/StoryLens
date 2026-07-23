@@ -175,9 +175,9 @@ describe("hook/payoff line field binding", () => {
       { scene_ordinal: 2, scores: { hook: 45, payoff: 70 } as never },
     ]);
     const lines = buildLensChartLines(viz, "hook_payoff");
-    expect(lines[0].labelZh).toBe(HOOK_STRENGTH_LABEL);
+    expect(lines[0].labelZh).toBe("钩子强度");
     expect(lines[0].style).toBe("solid");
-    expect(lines[1].labelZh).toBe(PAYOFF_STRENGTH_LABEL);
+    expect(lines[1].labelZh).toBe("回报强度");
     expect(lines[1].style).toBe("dashed");
     expect(lines[0].series.map((p) => resolveMetricValue(p))).toEqual([80, 45]);
     expect(lines[1].series.map((p) => resolveMetricValue(p))).toEqual([20, 70]);
@@ -212,8 +212,8 @@ describe("hook/payoff line field binding", () => {
 
 describe("legend / caption / combo copy", () => {
   it("exposes fixed legend strings and non-cumulative hint", () => {
-    expect(HOOK_STRENGTH_LABEL).toBe("钩子强度");
-    expect(PAYOFF_STRENGTH_LABEL).toBe("本场回报强度");
+    expect(HOOK_STRENGTH_LABEL).toBe("悬念强度");
+    expect(PAYOFF_STRENGTH_LABEL).toBe("本场回应强度");
     expect(PAYOFF_NOT_CUMULATIVE_HINT).toContain("不是累计完成比例");
   });
 
@@ -223,8 +223,8 @@ describe("legend / caption / combo copy", () => {
     expect(summary).not.toBeNull();
     const caption = formatHookPayoffSceneCaption(summary!);
     expect(caption).toContain("场景 S01");
-    expect(caption).toContain("钩子 50");
-    expect(caption).toContain("回报 30");
+    expect(caption).toContain("悬念 50");
+    expect(caption).toContain("回应 30");
     expect(caption).not.toMatch(/完成\s*30%/);
     expect(payoffPlainLanguage(30)).toContain("核心问题仍未兑现");
   });
@@ -265,7 +265,7 @@ describe("question lifecycle + diagnosis filter", () => {
         primary_diagnosis: "plot_stagnation",
         secondary_diagnoses: ["empty_hook"],
       }),
-    ).toBe("空钩子");
+    ).toBe("空悬念");
     expect(
       primaryBandLabelForHookPayoffLens({
         scene_ordinal: 3,

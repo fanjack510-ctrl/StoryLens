@@ -2,7 +2,7 @@
  * Local structural audit for Reader Journey UI cleanup (this round only).
  * No Playwright / full screenshot pack — DOM + source contracts only.
  */
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { MemoryRouter } from "react-router-dom";
@@ -10,6 +10,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ReaderJourneyWorkspace } from "./ReaderJourneyWorkspace";
 import { buildFixture13Scenes } from "./mockVisualizationFixtures";
 import { formatMetricScoreLabel } from "./journeyUiLabels";
+import { expectRemovedHierarchyChrome } from "./journeyTestHelpers";
 
 const toolbarSource = readFileSync(resolve(__dirname, "./JourneyChartToolbar.tsx"), "utf8");
 const modeSwitcherSource = readFileSync(resolve(__dirname, "./JourneyModeSwitcher.tsx"), "utf8");
@@ -33,7 +34,7 @@ describe("Reader Journey UI cleanup local audit", () => {
     expect(shellSource).not.toMatch(/小说拆解工作台/);
   });
 
-  it("toolbar primary row: lenses · tools · details · more; phase/all-metrics hidden", () => {
+  it("unified topbar: lenses left, 收起详情 + 对比分析 right; no more menu", () => {
     render(
       <MemoryRouter initialEntries={["/?overview=curve&scene=3"]}>
         <ReaderJourneyWorkspace
@@ -43,21 +44,20 @@ describe("Reader Journey UI cleanup local audit", () => {
         />
       </MemoryRouter>,
     );
+    expectRemovedHierarchyChrome();
     const toolbar = screen.getByTestId("journey-curve-toolbar");
+    const actions = screen.getByTestId("journey-toolbar-right");
     expect(within(toolbar).getByTestId("journey-lens-select")).toBeInTheDocument();
     expect(within(toolbar).queryByTestId("journey-zoom-fit-all")).not.toBeInTheDocument();
-    expect(within(toolbar).queryByTestId("journey-overlay-composite")).not.toBeInTheDocument();
-    expect(screen.getByTestId("journey-overlay-composite")).toHaveTextContent("对比分析");
-    expect(screen.queryByTestId("journey-zoom-fit-all")).not.toBeInTheDocument();
+    expect(within(actions).getByTestId("journey-overlay-composite")).toHaveTextContent("对比分析");
+    expect(within(actions).getByTestId("journey-inspector-toggle")).toHaveTextContent(/详情/);
     expect(within(toolbar).getByTestId("journey-zoom-focus-phase")).not.toBeVisible();
     expect(within(toolbar).getByTestId("journey-all-metrics")).not.toBeVisible();
-    expect(within(toolbar).getByTestId("journey-inspector-toggle")).toHaveTextContent(/详情/);
-    expect(within(toolbar).getByTestId("journey-more-chart-settings")).toHaveTextContent("更多操作");
-    expect(within(toolbar).queryByTestId("journey-export-png")).not.toBeInTheDocument();
     expect(within(toolbar).queryByTestId("journey-source-toggle")).not.toBeInTheDocument();
+    expect(screen.getByTestId("journey-toolbar-region")).toHaveAttribute("data-topbar", "unified");
   });
 
-  it("more actions popover holds export / height / Y / reset items", () => {
+  it("keeps hidden export trigger off the removed more-actions menu", () => {
     render(
       <MemoryRouter initialEntries={["/?overview=curve"]}>
         <ReaderJourneyWorkspace
@@ -67,16 +67,9 @@ describe("Reader Journey UI cleanup local audit", () => {
         />
       </MemoryRouter>,
     );
-    fireEvent.click(screen.getByTestId("journey-more-chart-settings"));
-    const panel = screen.getByTestId("journey-more-menu-panel");
-    expect(within(panel).getByTestId("journey-export-png")).toHaveTextContent("导出 PNG");
-    expect(within(panel).getByTestId("journey-chart-height-controls")).toBeInTheDocument();
-    expect(within(panel).getByTestId("journey-y-domain-fixed")).toHaveTextContent("固定 0—100");
-    expect(within(panel).getByTestId("journey-y-domain-focus")).toHaveTextContent("聚焦数据");
-    expect(within(panel).getByTestId("journey-zoom-reset")).toHaveTextContent("恢复默认");
-    expect(within(panel).getByTestId("journey-reset-pane-widths")).toHaveTextContent(
-      "恢复默认栏宽",
-    );
+    const exportBtn = screen.getByTestId("journey-export-png");
+    expect(exportBtn).not.toBeVisible();
+    expect(within(screen.getByTestId("journey-curve-toolbar")).queryByTestId("journey-export-png")).not.toBeInTheDocument();
   });
 
   it("phase cards use semantic scores and no 当前 badge", () => {

@@ -147,16 +147,16 @@ describe("Phase 1C-C.2.4C visual refinement", () => {
     }
   });
 
-  it("shows four summary cards on the journey analysis view", () => {
+  it("drops summary cards from the journey analysis view", () => {
     renderJourney(
       <ReaderJourneyWorkspace visualization={visualization} onLocateEvidence={vi.fn()} />,
     );
-    expect(screen.getByTestId("journey-summary-cards").querySelectorAll("[data-testid^='summary-card-']")).toHaveLength(4);
+    expect(screen.queryByTestId("journey-summary-cards")).not.toBeInTheDocument();
     expect(screen.getByTestId("journey-overview-curve")).toBeInTheDocument();
     expect(screen.queryByTestId("journey-expanded-diagnosis")).not.toBeInTheDocument();
   });
 
-  it("explains compact/full modes without losing scene selection", () => {
+  it("keeps scene selection without marker mode toggles", () => {
     renderJourney(
       <ReaderJourneyWorkspace
         visualization={visualization}
@@ -164,12 +164,10 @@ describe("Phase 1C-C.2.4C visual refinement", () => {
         activeSceneOrdinal={12}
       />,
     );
-    expect(screen.getByTestId("journey-marker-compact")).toHaveTextContent("精简标记");
+    expect(screen.queryByTestId("journey-marker-compact")).not.toBeInTheDocument();
     expect(screen.queryByTestId("journey-layer-banner")).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId("scene-detail-tab-questions"));
-    fireEvent.click(screen.getByTestId("journey-marker-full"));
-    expect(screen.getByTestId("journey-marker-full").className).toContain("active");
     expect(screen.getByTestId("scene-detail-panel-questions")).toBeInTheDocument();
-    expect(screen.getByTestId("scene-detail-title")).toHaveTextContent("场景12");
+    expect(screen.getByTestId("scene-detail-title")).toHaveTextContent(/场景12/);
   });
 });

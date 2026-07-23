@@ -88,31 +88,22 @@ describe("Reader Journey Visualization v2.9 (superseded by v3.0)", () => {
     );
   });
 
-  it("hides zoom in/out for 鈮?5 scenes; shows for 30", () => {
+  it("hides zoom in/out for ≤15 scenes; compatibility nodes remain hidden for 30", () => {
     expect(showsZoomControls(13)).toBe(false);
     expect(showsZoomControls(30)).toBe(true);
     renderWorkspace(buildFixture13Scenes());
-    fireEvent.click(screen.getByTestId("journey-more-chart-settings"));
-    expect(screen.queryByTestId("journey-zoom-in")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("journey-more-chart-settings")).not.toBeInTheDocument();
+    expect(screen.getByTestId("journey-zoom-in")).not.toBeVisible();
     cleanup();
     renderWorkspace(buildFixture30Scenes());
-    fireEvent.click(screen.getByTestId("journey-more-chart-settings"));
-    expect(screen.getByTestId("journey-zoom-in")).toBeEnabled();
+    expect(screen.getByTestId("journey-zoom-in")).toBeInTheDocument();
   });
 
-  it("moves height / focus-data into more settings (not primary toolbar)", () => {
+  it("removed height / focus-data from ordinary topbar with more menu", () => {
     renderWorkspace();
     expect(screen.queryByTestId("journey-chart-height-expanded")).not.toBeInTheDocument();
     expect(screen.queryByTestId("journey-y-domain-focus")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByTestId("journey-more-chart-settings"));
-    expect(screen.getByTestId("journey-chart-height-expanded")).toBeInTheDocument();
-    expect(screen.getByTestId("journey-y-domain-focus")).toBeInTheDocument();
-    fireEvent.click(screen.getByTestId("journey-chart-height-expanded"));
-    expect(screen.getByTestId("journey-curve-svg").getAttribute("height")).toBe("548");
-    expect(screen.getByTestId("journey-curve-section")).toHaveAttribute(
-      "data-plot-area-height",
-      "480",
-    );
+    expect(screen.queryByTestId("journey-more-chart-settings")).not.toBeInTheDocument();
   });
 
   it("renders all 13 scene nodes with full Y ticks and no chart overflow-y scroll", () => {
