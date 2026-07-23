@@ -56,13 +56,15 @@ class WholeBookStageContext:
     run_stage_id: int | None = None
     checkpoint: dict[str, Any] = field(default_factory=dict)
     configuration_fingerprint: str = ""
-    # Injected Protocol handles (Agent G wires real adapters).
+    # Injected Protocol handles (Integration: relation_writer is first-class).
     snapshot_reader: Any | None = None
     asset_writer: Any | None = None
+    relation_writer: Any | None = None
     artifact_writer: Any | None = None
     conflict_sink: Any | None = None
     cancellation_token: Any | None = None
     budget_guard: Any | None = None
+    # Non-core extension bag only — do not inject formal Protocol deps here.
     extra: dict[str, Any] = field(default_factory=dict)
 
 

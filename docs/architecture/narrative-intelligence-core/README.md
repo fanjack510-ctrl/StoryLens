@@ -16,13 +16,13 @@ StoryLens 叙事智能核心文档索引。当前基线：`VERSION=1.0.5`。
 | Phase 1B Agent E | CHG-20260723-018 | verified | Asset / Version / Evidence |
 | Phase 1B Agent F | CHG-20260723-019 | verified | Relation / Evidence / Conflict |
 | Phase 1B Integration | CHG-20260723-020 | verified | 006–010 联调 / Entity→Asset→Relation |
-| Phase 1C-P | CHG-20260723-021 | tested | Engine / Capability / Quota Contract |
-| Phase 1C Agent G | CHG-20260723-022 | registered | WholeBook Engine / Mock |
-| Phase 1C Agent H | CHG-20260723-023 | registered | Backend Capability / License / Quota |
-| Phase 1C Agent I | CHG-20260723-024 | registered | Frontend Capability Client |
-| Phase 1C Integration | CHG-20260723-025 | registered | Engine + Capability e2e |
+| Phase 1C-P | CHG-20260723-021 | verified | Engine / Capability / Quota Contract |
+| Phase 1C Agent G | CHG-20260723-022 | tested | WholeBook Engine / Mock |
+| Phase 1C Agent H | CHG-20260723-023 | tested | Backend Capability / License / Quota |
+| Phase 1C Agent I | CHG-20260723-024 | tested | Frontend Capability Client |
+| Phase 1C Integration | CHG-20260723-025 | tested | Engine + Capability e2e |
 
-\* 017–020 已 `verified`。Phase 1C-P（021）上限 `tested`；022–025 为 `registered`。硬边界：`PRO_CAPABILITIES_SHIPPED=false`；无真实引擎 / 无模型调用。
+\* 017–021 已 `verified`（021 于 Integration 升为 verified）。022–024 保持 `tested`；025 上限 `tested`（非 ready/released）。硬边界：`PRO_CAPABILITIES_SHIPPED=false`；无真实引擎 / 无模型调用。
 
 ## Phase 1P / 1A
 
@@ -80,3 +80,12 @@ StoryLens 叙事智能核心文档索引。当前基线：`VERSION=1.0.5`。
 - [phase1c-parallel-file-ownership.md](./phase1c-parallel-file-ownership.md)
 - [phase1c-parallel-file-ownership.json](./phase1c-parallel-file-ownership.json)
 - [phase1c-contract-verification.md](./phase1c-contract-verification.md)
+
+## Phase 1C Integration
+
+- [phase1c-integration-report.md](./phase1c-integration-report.md)
+- [phase1c-engine-capability-e2e.md](./phase1c-engine-capability-e2e.md)
+- [phase1c-capability-api-verification.md](./phase1c-capability-api-verification.md)
+- [phase1c-whole-book-preflight.md](./phase1c-whole-book-preflight.md)
+- [phase1c-mock-production-isolation.md](./phase1c-mock-production-isolation.md)
+- [phase1c-known-limitations.md](./phase1c-known-limitations.md)

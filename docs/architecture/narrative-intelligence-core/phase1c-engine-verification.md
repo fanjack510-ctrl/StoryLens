@@ -39,7 +39,8 @@ git diff --check
 | ID | Summary |
 |----|---------|
 | II-ENGINE-001 | WholeBook ArtifactWriter lacks dedicated stage-typed artifact contract; adapter reuses `analysis_artifacts` without schema expansion. |
-| II-ENGINE-002 | Frozen `WholeBookStageContext` has no `relation_writer` field; Agent G injects via `extra["relation_writer"]` pending contract additive review. |
+| II-ENGINE-001 | **RESOLVED (CHG-025):** `WholeBookStageArtifactEnvelope` on existing `analysis_artifacts`. |
+| II-ENGINE-002 | **RESOLVED (CHG-025):** `relation_writer` is a first-class `WholeBookStageContext` field. |
 
 ## Explicit non-goals verified
 

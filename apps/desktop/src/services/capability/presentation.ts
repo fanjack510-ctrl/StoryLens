@@ -20,6 +20,7 @@ export type CapabilityPresentationState =
   | "license_expired"
   | "license_invalid"
   | "offline_unavailable"
+  | "mode_not_supported"
   | "unknown";
 
 export type CapabilityPresentation = {
@@ -42,6 +43,7 @@ const DEFAULT_MESSAGES: Record<CapabilityPresentationState, string> = {
   license_expired: "授权已过期，请续期后再使用",
   license_invalid: "授权无效，请重新激活后再试",
   offline_unavailable: "离线状态下无法验证授权",
+  mode_not_supported: "当前分析模式不受支持",
   unknown: "暂时无法确认该功能的授权状态",
 };
 
@@ -86,6 +88,8 @@ export function presentationStateFromDecision(
       return "license_invalid";
     case "CAPABILITY_OFFLINE_NOT_ALLOWED":
       return "offline_unavailable";
+    case "CAPABILITY_MODE_NOT_SUPPORTED":
+      return "mode_not_supported";
     case "CAPABILITY_UNKNOWN":
     default:
       if (decision.availability === "preview" || decision.previewOnly) return "preview";
@@ -158,11 +162,16 @@ export function getCapabilityPresentation(
     (state === "not_licensed" ||
       state === "license_expired" ||
       state === "license_invalid");
+  // preview_visible=true shows preview affordance even when not_shipped / not startable.
+  const previewVisible = metadata?.previewVisible === true;
   const showPreviewAction =
-    !foundation && (state === "preview" || decision.availability === "preview");
+    !foundation &&
+    (state === "preview" ||
+      decision.availability === "preview" ||
+      (previewVisible && (state === "not_shipped" || decision.previewOnly === true)));
 
-  const disabled =
-    state !== "available" && !(state === "preview" && decision.allowed);
+  // Never startable unless backend Decision.allowed === true.
+  const disabled = decision.allowed !== true;
 
   return {
     capabilityKey: key,

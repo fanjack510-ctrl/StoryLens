@@ -77,8 +77,7 @@ class WholeBookStageOrchestrator:
     ) -> WholeBookStageContext:
         row = self._stage_row(int(request.run_id), stage_key)
         extra = dict(request.extra)
-        if self.relation_writer is not None:
-            extra["relation_writer"] = self.relation_writer
+        # Non-core mock helpers only — relation_writer is a formal context field.
         if self.asset_writer is not None and getattr(self.asset_writer, "created_asset_ids", None):
             ids = list(self.asset_writer.created_asset_ids)
             if len(ids) >= 2:
@@ -96,6 +95,7 @@ class WholeBookStageOrchestrator:
             configuration_fingerprint=request.configuration_fingerprint,
             snapshot_reader=self.snapshot_reader,
             asset_writer=self.asset_writer,
+            relation_writer=self.relation_writer,
             artifact_writer=self.artifact_writer,
             conflict_sink=self.conflict_sink,
             cancellation_token=self.cancellation_token,

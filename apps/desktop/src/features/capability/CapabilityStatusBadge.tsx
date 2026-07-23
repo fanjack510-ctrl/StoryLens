@@ -11,6 +11,7 @@ const STATE_LABEL: Record<CapabilityPresentationState, string> = {
   license_expired: "授权过期",
   license_invalid: "授权无效",
   offline_unavailable: "离线不可用",
+  mode_not_supported: "模式不支持",
   unknown: "状态未知",
 };
 

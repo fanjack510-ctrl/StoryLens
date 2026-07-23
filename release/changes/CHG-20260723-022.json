@@ -7,20 +7,26 @@
   "include_in_next_release": true,
   "commits": [
     {
-      "sha": "4a3d83d0a421a453aa63917e4897ca6434f6ac30",
+      "sha": "3f4a0ed8099f2f39adad23bab16df677fb97589d",
       "message": "feat: implement whole book engine mock foundation",
       "primary": true,
-      "multi_change_reason": null
+      "multi_change_reason": "cherry-picked onto integration/narrative-phase1c from Agent G primary 4a3d83d"
     },
     {
-      "sha": "ea43c30060b1f3634507d2ed1725613ee2356a3e",
+      "sha": "a192e34511e6b6f301fbe7855adc8fda04b5fe38",
       "message": "docs: attach primary commit to CHG-20260723-022",
       "primary": false,
       "multi_change_reason": null
     },
     {
-      "sha": "587c84cbb62fb6df57d3874c0c9e9da56990f7ef",
+      "sha": "c41638cc77f066ff5fd7a042326864b4a5c42368",
       "message": "docs: close CHG-20260723-022 commit attachment loop",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "8153b958945080feba78cc4cb20339417f8678e5",
+      "message": "docs: finalize CHG-20260723-022 commit attachments",
       "primary": false,
       "multi_change_reason": null
     }
@@ -55,12 +61,10 @@
     "apps/api/tests/test_narrative_phase1c_engine.py"
   ],
   "verification_evidence": [
-    "pytest apps/api/tests/test_narrative_phase1c_engine.py -q --noconftest (30 passed)",
+    "pytest apps/api/tests/test_narrative_phase1c_engine.py -q --noconftest (29 passed; registry reattached on integration)",
     "pytest apps/api/tests/test_narrative_phase1cp_contract.py -q --noconftest (16 passed)",
     "python scripts/version_manager.py check",
-    "python scripts/change_registry.py check",
-    "git diff --check",
-    "docs/architecture/narrative-intelligence-core/phase1c-engine-verification.md"
+    "git diff --check"
   ],
   "parallel_plan": {
     "role": "agent_g",
@@ -80,8 +84,8 @@
     "file_ownership": "docs/architecture/narrative-intelligence-core/phase1c-parallel-file-ownership.json"
   },
   "integration_issues": [
-    "II-ENGINE-001 ArtifactWriter reuses analysis_artifacts; no WholeBook stage-typed artifact schema",
-    "II-ENGINE-002 WholeBookStageContext lacks relation_writer field; injected via extra pending contract review"
+    "II-ENGINE-001 RESOLVED in CHG-025: WholeBookStageArtifactEnvelope on analysis_artifacts",
+    "II-ENGINE-002 RESOLVED in CHG-025: relation_writer is first-class WholeBookStageContext field"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -98,5 +102,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T11:46:12Z",
-  "updated_at": "2026-07-23T12:19:47Z"
+  "updated_at": "2026-07-23T13:00:00Z"
 }

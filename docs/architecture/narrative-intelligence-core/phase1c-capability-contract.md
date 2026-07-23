@@ -4,15 +4,21 @@ Unified canonical capability keys replacing scattered Pro / VIP strings.
 
 ## Canonical keys (`CapabilityKey`)
 
-| Key | Shipped (1C-P) | License | Pro-gated run |
-|-----|----------------|---------|---------------|
-| `whole_book_analysis` | false | yes | **yes** |
-| `narrative_asset_library` | false | no | **no** (foundation storage) |
-| `story_lab` | false | yes | yes |
-| `cross_book_search` | false | yes | yes |
-| `advanced_export` | false | yes | yes |
+| Key | Shipped (1C) | preview_visible | License | Pro-gated run |
+|-----|--------------|-----------------|---------|---------------|
+| `whole_book_analysis` | false | **true** (availability=preview) | yes | **yes** |
+| `narrative_asset_library` | false | false | no | **no** (foundation storage) |
+| `story_lab` | false | false | yes | yes |
+| `cross_book_search` | false | false | yes | yes |
+| `advanced_export` | false | false | yes | yes |
 
 Aligns with backend `CANONICAL_FEATURES` / desktop `PRO_FEATURE_KEYS`.
+`preview_visible=true` does **not** imply `allowed=true`. Default Decision remains
+`CAPABILITY_NOT_SHIPPED` / `allowed=false`.
+
+Unsupported analysis mode uses `CAPABILITY_MODE_NOT_SUPPORTED` (not
+`CAPABILITY_UNKNOWN`). Unknown capability keys still use `CAPABILITY_UNKNOWN`.
+Modes are never CapabilityKeys.
 
 ## Service Protocol (`CapabilityService`)
 

@@ -22,8 +22,8 @@ CAPABILITY_REGISTRY: dict[CapabilityKey, CapabilityMetadata] = {
         description="全书结构化叙事分析流水线（Pro；未发货）。",
         shipped=False,
         requires_license=True,
-        availability=CapabilityAvailability.UNAVAILABLE,
-        preview_visible=False,
+        availability=CapabilityAvailability.PREVIEW,
+        preview_visible=True,
         supported_modes=(
             WholeBookAnalysisMode.NATIVE,
             WholeBookAnalysisMode.ENHANCED,

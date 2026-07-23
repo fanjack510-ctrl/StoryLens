@@ -245,7 +245,7 @@ def test_10_unsupported_mode() -> None:
     )
     decision = svc.evaluate_mode(CapabilityKey.WHOLE_BOOK_ANALYSIS, "not_a_mode")
     assert decision.allowed is False
-    assert decision.reason_code == CapabilityReasonCode.CAPABILITY_UNKNOWN
+    assert decision.reason_code == CapabilityReasonCode.CAPABILITY_MODE_NOT_SUPPORTED
 
 
 # ---------------------------------------------------------------------------
@@ -494,7 +494,10 @@ def test_25_get_capabilities() -> None:
     assert keys == {k.value for k in CapabilityKey}
     whole = next(item for item in body["items"] if item["key"] == "whole_book_analysis")
     assert whole["shipped"] is False
+    assert whole["preview_visible"] is True
+    assert whole["availability"] == "preview"
     assert whole["decision"]["reason_code"] == "CAPABILITY_NOT_SHIPPED"
+    assert whole["decision"]["allowed"] is False
     serialized = str(body)
     assert "signed_license" not in serialized
     assert "private_key" not in serialized.lower()

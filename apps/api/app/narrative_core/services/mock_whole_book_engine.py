@@ -20,6 +20,10 @@ from app.narrative_core.contracts.whole_book_dto import (
     require_consistency_fields,
     validate_request_shape,
 )
+from app.narrative_core.contracts.whole_book_artifact import (
+    WHOLE_BOOK_STAGE_ARTIFACT_TYPE,
+    build_whole_book_stage_artifact_envelope,
+)
 from app.narrative_core.enums import (
     AssetType,
     CapabilityKey,
@@ -348,16 +352,35 @@ class MockWholeBookAnalysisEngine:
             asset_ids, relation_ids, conflict_ids = self._write_mock_candidates(context)
 
         if context.artifact_writer is not None:
+            envelope = build_whole_book_stage_artifact_envelope(
+                run_id=int(context.run_id),
+                run_stage_id=context.run_stage_id,
+                stage_key=stage_key.value,
+                engine_id=MOCK_ENGINE_ID,
+                engine_version=MOCK_ENGINE_VERSION,
+                book_id=int(context.book_id),
+                book_snapshot_id=int(context.book_snapshot_id),
+                analysis_mode=(
+                    context.analysis_mode.value
+                    if hasattr(context.analysis_mode, "value")
+                    else str(context.analysis_mode)
+                ),
+                status=StageStatus.COMPLETED.value,
+                mock=True,
+                synthetic=True,
+                non_production=True,
+                output_refs=(),
+                created_asset_version_ids=tuple(asset_ids),
+                created_relation_version_ids=tuple(relation_ids),
+                conflict_ids=tuple(conflict_ids),
+                checkpoint_summary={"status": "completed", "mock": True},
+                warnings=tuple(warnings),
+                metrics=self._base_metrics(stage_key, status="completed"),
+            )
             artifact_id = context.artifact_writer.write_artifact(
                 int(context.run_id),
-                f"mock_{stage_key.value}",
-                {
-                    "stage_key": stage_key.value,
-                    "mock": True,
-                    "synthetic": True,
-                    "non_production": True,
-                    "engine_id": MOCK_ENGINE_ID,
-                },
+                WHOLE_BOOK_STAGE_ARTIFACT_TYPE,
+                envelope.to_payload(),
             )
             artifact_ids.append(int(artifact_id))
 
@@ -405,7 +428,10 @@ class MockWholeBookAnalysisEngine:
         self, context: WholeBookStageContext
     ) -> tuple[list[int], list[int], list[int]]:
         asset_writer = context.asset_writer
-        relation_writer = context.extra.get("relation_writer")
+        relation_writer = context.relation_writer
+        if relation_writer is None:
+            # Compatibility: older test fixtures may still stash via extra.
+            relation_writer = context.extra.get("relation_writer")
 
         structure = asset_writer.write_asset_candidate(
             {

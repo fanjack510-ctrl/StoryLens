@@ -110,18 +110,17 @@ def require_whole_book_run_permission(
         CapabilityKey.WHOLE_BOOK_ANALYSIS, mode
     )
     checks.append("mode")
-    if not mode_decision.allowed and mode_decision.reason_code == CapabilityReasonCode.CAPABILITY_UNKNOWN:
-        # Mode not in supported_modes (or invalid) — prefer mode error when shipped path.
+    if (
+        not mode_decision.allowed
+        and mode_decision.reason_code == CapabilityReasonCode.CAPABILITY_MODE_NOT_SUPPORTED
+    ):
         meta = capability_service.get_capability_metadata(CapabilityKey.WHOLE_BOOK_ANALYSIS)
-        if mode not in meta.supported_modes or str(analysis_mode) not in {
-            m.value for m in meta.supported_modes
-        }:
-            # If capability itself is not shipped, fall through to capability deny.
-            if meta.shipped:
-                raise NarrativeCoreError(
-                    NarrativeCoreErrorCode.WHOLE_BOOK_MODE_NOT_SUPPORTED,
-                    mode_decision.display_message,
-                )
+        # If capability itself is not shipped, fall through to capability deny.
+        if meta.shipped:
+            raise NarrativeCoreError(
+                NarrativeCoreErrorCode.WHOLE_BOOK_MODE_NOT_SUPPORTED,
+                mode_decision.display_message,
+            )
 
     decision = capability_service.evaluate_capability(
         CapabilityKey.WHOLE_BOOK_ANALYSIS, context=ctx
@@ -249,6 +248,13 @@ def preflight_whole_book_run(
         ),
         engine_id=None,
         stage_count=0,
+        run_creation_enabled=False,
+        requested_mode=mode.value,
+        capability_decision={
+            "capability_key": CapabilityKey.WHOLE_BOOK_ANALYSIS.value,
+            "allowed": capability.allowed,
+            "reason_code": capability.reason_code.value,
+        },
         notes={
             "run_creation_enabled": False,
             "guard_allowed": result.allowed,

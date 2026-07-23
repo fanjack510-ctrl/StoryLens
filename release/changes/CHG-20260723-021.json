@@ -3,7 +3,7 @@
   "title": "Phase 1C-P: WholeBook Engine / Capability Contract",
   "type": "feature",
   "base_version": "1.0.5",
-  "status": "tested",
+  "status": "verified",
   "include_in_next_release": true,
   "commits": [
     {

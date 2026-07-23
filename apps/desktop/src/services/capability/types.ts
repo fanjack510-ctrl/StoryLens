@@ -11,7 +11,8 @@ export type CapabilityReasonCode =
   | "CAPABILITY_LICENSE_INVALID"
   | "CAPABILITY_AVAILABLE"
   | "CAPABILITY_PREVIEW_ONLY"
-  | "CAPABILITY_UNKNOWN";
+  | "CAPABILITY_UNKNOWN"
+  | "CAPABILITY_MODE_NOT_SUPPORTED";
 
 export type WholeBookAnalysisMode = "whole_book_native" | "whole_book_enhanced";
 

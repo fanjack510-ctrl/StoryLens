@@ -7,14 +7,20 @@
   "include_in_next_release": true,
   "commits": [
     {
-      "sha": "77ea37e770da238ddf3c604422c203a7fadb67ec",
+      "sha": "0cc8a4c52a6df759209998144d9afa343f8f13f5",
       "message": "feat: implement backend capability foundation",
       "primary": true,
+      "multi_change_reason": "cherry-picked onto integration/narrative-phase1c from Agent H primary 77ea37e"
+    },
+    {
+      "sha": "4cc571e819db524dddc9c95f8aa55ef7d4b461f3",
+      "message": "docs: attach primary commit to CHG-20260723-023",
+      "primary": false,
       "multi_change_reason": null
     },
     {
-      "sha": "3b11c9142fe3ab7165f06555c2dfaf2e783d6689",
-      "message": "docs: attach primary commit to CHG-20260723-023",
+      "sha": "dfc4bd29f393512de2f31309c20ff15f91b874d8",
+      "message": "docs: close CHG-20260723-023 commit attachment loop",
       "primary": false,
       "multi_change_reason": null
     }
@@ -53,8 +59,8 @@
     "apps/api/tests/test_narrative_phase1c_capability_backend.py"
   ],
   "verification_evidence": [
-    "py -3.11 -m pytest apps/api/tests/test_narrative_phase1c_capability_backend.py -q --noconftest → 36 passed",
-    "py -3.11 -m pytest apps/api/tests/test_pro_license_local.py -q --noconftest → 10 passed"
+    "D:\\Dstorylens\\.venv\\Scripts\\python.exe -m pytest apps/api/tests/test_narrative_phase1c_capability_backend.py -q --noconftest → 36 passed",
+    "D:\\Dstorylens\\.venv\\Scripts\\python.exe -m pytest apps/api/tests/test_pro_license_local.py -q --noconftest → 10 passed"
   ],
   "parallel_plan": {
     "role": "agent_h",
@@ -86,7 +92,7 @@
     "breaking_change": false
   },
   "blocker_level": null,
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T11:46:12Z",
-  "updated_at": "2026-07-23T12:50:00Z"
+  "updated_at": "2026-07-23T13:00:00Z"
 }

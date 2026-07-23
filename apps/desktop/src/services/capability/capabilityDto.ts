@@ -30,6 +30,7 @@ const REASON_CODES = new Set<CapabilityReasonCode>([
   "CAPABILITY_AVAILABLE",
   "CAPABILITY_PREVIEW_ONLY",
   "CAPABILITY_UNKNOWN",
+  "CAPABILITY_MODE_NOT_SUPPORTED",
 ]);
 
 const MODES = new Set<WholeBookAnalysisMode>([

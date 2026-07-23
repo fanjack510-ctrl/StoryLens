@@ -400,9 +400,9 @@ class DefaultCapabilityService:
             return CapabilityDecision(
                 capability_key=resolved,
                 allowed=False,
-                reason_code=CapabilityReasonCode.CAPABILITY_UNKNOWN,
+                reason_code=CapabilityReasonCode.CAPABILITY_MODE_NOT_SUPPORTED,
                 availability=metadata.availability,
-                display_message=f"Unsupported analysis mode: {mode}",
+                display_message=f"分析模式不受支持: {mode}",
                 supported_modes=metadata.supported_modes,
                 metadata=metadata,
             )
@@ -411,9 +411,12 @@ class DefaultCapabilityService:
             return CapabilityDecision(
                 capability_key=resolved,
                 allowed=False,
-                reason_code=CapabilityReasonCode.CAPABILITY_UNKNOWN,
+                reason_code=CapabilityReasonCode.CAPABILITY_MODE_NOT_SUPPORTED,
                 availability=metadata.availability,
-                display_message=f"Mode not supported by capability metadata: {mode_resolved.value}",
+                display_message=(
+                    f"分析模式不受支持: {mode_resolved.value}（该能力仅支持 "
+                    f"{', '.join(m.value for m in metadata.supported_modes)}）"
+                ),
                 supported_modes=metadata.supported_modes,
                 metadata=metadata,
             )

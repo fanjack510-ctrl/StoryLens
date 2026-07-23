@@ -19,9 +19,15 @@ Frozen stage catalog and runtime envelopes for WholeBook pipeline.
 
 - `WholeBookStageDefinition` — catalog entry + `depends_on`
 - `WholeBookStagePlan` — mode + ordered stages
-- `WholeBookStageContext` — run/book/snapshot/mode/capability (no book text)
+- `WholeBookStageContext` — run/book/snapshot/mode/capability + first-class writers
+  (`snapshot_reader`, `asset_writer`, `relation_writer`, `artifact_writer`,
+  `conflict_sink`, `cancellation_token`, `budget_guard`); `extra` is non-core only
 - `WholeBookStageResult` — status, write counts, metrics
+- `WholeBookStageArtifactEnvelope` — frozen stage artifact payload
+  (`artifact_type=whole_book_stage_result` on existing `analysis_artifacts`)
 
-Source: `apps/api/app/narrative_core/whole_book_stages.py`, `contracts/stage.py`.
+Source: `apps/api/app/narrative_core/whole_book_stages.py`, `contracts/stage.py`,
+`contracts/whole_book_artifact.py`.
 
+Integration (CHG-025) owns Stage Context / Artifact envelope corrections.
 Agent G owns stage plan execution tests beyond contract freeze.

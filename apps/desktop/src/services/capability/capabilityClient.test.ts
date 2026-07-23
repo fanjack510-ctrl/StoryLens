@@ -434,5 +434,73 @@ describe("Phase 1C capability frontend foundation", () => {
       expect(p.showUpgradeAction).toBe(false);
       expect(p.message).toMatch(/基础/);
     });
+
+    it("mode not supported has dedicated presentation state", () => {
+      const p = getCapabilityPresentation("whole_book_analysis", {
+        capabilityKey: "whole_book_analysis",
+        allowed: false,
+        reasonCode: "CAPABILITY_MODE_NOT_SUPPORTED",
+        availability: "preview",
+        displayMessage: "分析模式不受支持: chapter_only",
+        supportedModes: ["whole_book_native", "whole_book_enhanced"],
+      });
+      expect(p.state).toBe("mode_not_supported");
+      expect(p.disabled).toBe(true);
+      expect(p.message).toContain("不受支持");
+    });
+
+    it("preview_visible not shipped is visible but not startable", () => {
+      const p = getCapabilityPresentation(
+        "whole_book_analysis",
+        {
+          capabilityKey: "whole_book_analysis",
+          allowed: false,
+          reasonCode: "CAPABILITY_NOT_SHIPPED",
+          availability: "preview",
+          previewOnly: true,
+          displayMessage: "该功能尚未发布",
+        },
+        {
+          key: "whole_book_analysis",
+          displayName: "整书分析",
+          description: "…",
+          shipped: false,
+          requiresLicense: true,
+          availability: "preview",
+          previewVisible: true,
+          supportedModes: ["whole_book_native", "whole_book_enhanced"],
+        },
+      );
+      expect(p.state).toBe("not_shipped");
+      expect(p.disabled).toBe(true);
+      expect(p.showPreviewAction).toBe(true);
+      expect(p.message).toMatch(/尚未发布|预览/);
+    });
+  });
+
+  describe("backend payload fixtures", () => {
+    it("parses real backend list envelope", async () => {
+      const { BACKEND_CAPABILITIES_LIST_WIRE } = await import("./backendPayload.fixture");
+      const list = parseCapabilityList(BACKEND_CAPABILITIES_LIST_WIRE);
+      const whole = list.find((m) => m.key === "whole_book_analysis");
+      expect(whole?.previewVisible).toBe(true);
+      expect(whole?.shipped).toBe(false);
+      expect(whole?.availability).toBe("preview");
+    });
+
+    it("parses backend decision allowed=false as-is", async () => {
+      const { BACKEND_WHOLE_BOOK_DECISION } = await import("./backendPayload.fixture");
+      expect(BACKEND_WHOLE_BOOK_DECISION.allowed).toBe(false);
+      expect(presentationStateFromDecision(BACKEND_WHOLE_BOOK_DECISION)).toBe("not_shipped");
+    });
+
+    it("parses mode-not-supported decision", async () => {
+      const { BACKEND_MODE_NOT_SUPPORTED_DECISION } = await import(
+        "./backendPayload.fixture"
+      );
+      const parsed = parseCapabilityDecision(BACKEND_MODE_NOT_SUPPORTED_DECISION);
+      expect(parsed.reasonCode).toBe("CAPABILITY_MODE_NOT_SUPPORTED");
+      expect(presentationStateFromDecision(parsed)).toBe("mode_not_supported");
+    });
   });
 });

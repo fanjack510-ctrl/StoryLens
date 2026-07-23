@@ -3,7 +3,7 @@
   "title": "Phase 1C Integration",
   "type": "improvement",
   "base_version": "1.0.5",
-  "status": "registered",
+  "status": "tested",
   "include_in_next_release": true,
   "commits": [],
   "modules": [
@@ -11,18 +11,60 @@
     "desktop/capability",
     "api/routers"
   ],
-  "files": [],
+  "files": [
+    "apps/api/app/narrative_core/contracts/stage.py",
+    "apps/api/app/narrative_core/contracts/whole_book_artifact.py",
+    "apps/api/app/narrative_core/contracts/api_dto.py",
+    "apps/api/app/narrative_core/capability_registry.py",
+    "apps/api/app/narrative_core/enums.py",
+    "apps/api/app/narrative_core/services/capability_service.py",
+    "apps/api/app/narrative_core/services/mock_whole_book_engine.py",
+    "apps/api/app/narrative_core/services/whole_book_engine_adapters.py",
+    "apps/api/app/narrative_core/services/whole_book_stage_orchestrator.py",
+    "apps/api/app/narrative_core/services/whole_book_preflight.py",
+    "apps/api/app/narrative_core/services/whole_book_request_chain.py",
+    "apps/api/app/narrative_core/services/run_permission_guard.py",
+    "apps/api/app/routers/whole_book_preflight.py",
+    "apps/api/app/main.py",
+    "apps/api/tests/test_narrative_phase1c_integration.py",
+    "apps/desktop/src/services/capability/",
+    "apps/desktop/src/features/capability/",
+    "docs/architecture/narrative-intelligence-core/phase1c-integration-report.md",
+    "docs/architecture/narrative-intelligence-core/phase1c-engine-capability-e2e.md",
+    "docs/architecture/narrative-intelligence-core/phase1c-capability-api-verification.md",
+    "docs/architecture/narrative-intelligence-core/phase1c-whole-book-preflight.md",
+    "docs/architecture/narrative-intelligence-core/phase1c-mock-production-isolation.md",
+    "docs/architecture/narrative-intelligence-core/phase1c-known-limitations.md",
+    "release/changes/CHG-20260723-021.json",
+    "release/changes/CHG-20260723-022.json",
+    "release/changes/CHG-20260723-023.json",
+    "release/changes/CHG-20260723-024.json",
+    "release/changes/CHG-20260723-025.json"
+  ],
   "user_summary": "Integrate Engine + Capability backend + frontend; e2e verification.",
-  "technical_summary": "Merge Agent G/H/I branches; enable whole-book preflight/run routes only when capability shipped flag allows; integration tests.",
+  "technical_summary": "Cherry-pick Agent G/H/I onto integration/narrative-phase1c from a275e83; promote relation_writer; freeze WholeBookStageArtifactEnvelope; preview_visible=true; CAPABILITY_MODE_NOT_SUPPORTED; read-only preflight API; test request chain; frontend backend fixtures. PRO_CAPABILITIES_SHIPPED and WHOLE_BOOK_RUNS_ENDPOINT_DISABLED unchanged.",
   "acceptance_criteria": [
     "Depends on CHG-022, CHG-023, CHG-024 tested",
     "Cross-worktree merge conflicts resolved per ownership JSON",
-    "PRO_CAPABILITIES_SHIPPED remains false until product release decision"
+    "PRO_CAPABILITIES_SHIPPED remains false until product release decision",
+    "WHOLE_BOOK_RUNS_ENDPOINT_DISABLED remains true",
+    "PRODUCTION_DEFAULT_ENGINE_ID remains None"
   ],
   "tests": [
-    "apps/api/tests/test_narrative_phase1c_integration.py"
+    "apps/api/tests/test_narrative_phase1c_integration.py",
+    "apps/api/tests/test_narrative_phase1c_engine.py",
+    "apps/api/tests/test_narrative_phase1c_capability_backend.py",
+    "apps/desktop/src/services/capability/capabilityClient.test.ts"
   ],
-  "verification_evidence": [],
+  "verification_evidence": [
+    "D:\\Dstorylens\\.venv\\Scripts\\python.exe -m pytest apps/api/tests/test_narrative_phase1c_integration.py -q --noconftest → 17 passed",
+    "pytest engine 29 passed (registry reattached), contract 16, capability backend 36, pro license 10",
+    "1A/1B snapshot/run/asset 34 + relation 15 passed",
+    "npm run typecheck; vitest capability 37 passed",
+    "python scripts/check_capability_keys.py ok",
+    "python scripts/version_manager.py check ok",
+    "python scripts/change_registry.py check"
+  ],
   "parallel_plan": {
     "role": "integration",
     "branch": "integration/narrative-phase1c",
@@ -39,11 +81,15 @@
     ],
     "file_ownership": "docs/architecture/narrative-intelligence-core/phase1c-parallel-file-ownership.json"
   },
+  "integration_issues": [
+    "II-ENGINE-001 resolved: WholeBookStageArtifactEnvelope",
+    "II-ENGINE-002 resolved: relation_writer first-class field"
+  ],
   "data_compatibility": {
     "database_changed": false,
     "migration_required": false,
     "user_data_compatible": true,
-    "notes": ""
+    "notes": "No schema changes; Artifact envelope reuses analysis_artifacts."
   },
   "release_impact": {
     "requires_reanalysis": false,
@@ -54,5 +100,5 @@
   "blocker_level": null,
   "head_inclusion": null,
   "created_at": "2026-07-23T11:46:12Z",
-  "updated_at": "2026-07-23T12:00:00Z"
+  "updated_at": "2026-07-23T13:05:00Z"
 }

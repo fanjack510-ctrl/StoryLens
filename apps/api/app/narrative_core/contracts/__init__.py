@@ -10,6 +10,7 @@ from app.narrative_core.contracts.api_dto import (
     CapabilityListItemDTO,
     WHOLE_BOOK_RUNS_ENDPOINT_DISABLED,
     WholeBookPreflightDTO,
+    WholeBookPreflightRequestDTO,
 )
 from app.narrative_core.contracts.asset import NarrativeAssetService
 from app.narrative_core.contracts.capability import (
@@ -53,6 +54,13 @@ from app.narrative_core.contracts.stage import (
     WholeBookStageDefinition,
     WholeBookStagePlan,
     WholeBookStageResult,
+)
+from app.narrative_core.contracts.whole_book_artifact import (
+    WHOLE_BOOK_STAGE_ARTIFACT_SCHEMA,
+    WHOLE_BOOK_STAGE_ARTIFACT_TYPE,
+    WHOLE_BOOK_STAGE_ARTIFACT_VERSION,
+    WholeBookStageArtifactEnvelope,
+    build_whole_book_stage_artifact_envelope,
 )
 from app.narrative_core.contracts.whole_book_dto import (
     WholeBookAnalysisRequest,
@@ -100,7 +108,13 @@ __all__ = [
     "CapabilityListItemDTO",
     "CapabilityDecisionDTO",
     "WholeBookPreflightDTO",
+    "WholeBookPreflightRequestDTO",
     "WHOLE_BOOK_RUNS_ENDPOINT_DISABLED",
+    "WHOLE_BOOK_STAGE_ARTIFACT_TYPE",
+    "WHOLE_BOOK_STAGE_ARTIFACT_SCHEMA",
+    "WHOLE_BOOK_STAGE_ARTIFACT_VERSION",
+    "WholeBookStageArtifactEnvelope",
+    "build_whole_book_stage_artifact_envelope",
     *evidence_exports,
     *quota_exports,
 ]

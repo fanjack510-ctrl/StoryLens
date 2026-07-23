@@ -12,6 +12,11 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.db.models import AnalysisArtifact, AnalysisRun, Book, BookSnapshot
+from app.narrative_core.contracts.whole_book_artifact import (
+    WHOLE_BOOK_STAGE_ARTIFACT_SCHEMA,
+    WHOLE_BOOK_STAGE_ARTIFACT_TYPE,
+    WHOLE_BOOK_STAGE_ARTIFACT_VERSION,
+)
 from app.narrative_core.enums import (
     AssetType,
     ConflictType,
@@ -233,11 +238,10 @@ class NarrativeRelationWriterAdapter:
 
 
 class ArtifactWriterAdapter:
-    """Minimal artifact writer using legacy analysis_artifacts.
+    """Artifact writer using legacy analysis_artifacts + WholeBookStageArtifactEnvelope.
 
-    Integration Issue II-ENGINE-001: WholeBook stage artifact contract lacks
-    dedicated typed columns / stage_key binding; this adapter reuses the
-    existing AnalysisArtifact table without schema expansion.
+    No dedicated WholeBook artifact table. Payload is refs/summary only.
+    Does not create Narrative Assets.
     """
 
     def __init__(self, session: Session) -> None:
@@ -246,27 +250,61 @@ class ArtifactWriterAdapter:
 
     def write_artifact(self, run_id: int, artifact_type: str, payload: dict[str, Any]) -> int:
         marked = dict(payload)
+        artifact_type = str(artifact_type or WHOLE_BOOK_STAGE_ARTIFACT_TYPE)
+        if artifact_type == WHOLE_BOOK_STAGE_ARTIFACT_TYPE:
+            if not marked.get("schema"):
+                raise NarrativeCoreError(
+                    NarrativeCoreErrorCode.WHOLE_BOOK_REQUEST_INVALID,
+                    "whole_book_stage_result artifact requires schema",
+                )
+            if not marked.get("version"):
+                raise NarrativeCoreError(
+                    NarrativeCoreErrorCode.WHOLE_BOOK_REQUEST_INVALID,
+                    "whole_book_stage_result artifact requires version",
+                )
+            if marked.get("schema") != WHOLE_BOOK_STAGE_ARTIFACT_SCHEMA:
+                raise NarrativeCoreError(
+                    NarrativeCoreErrorCode.WHOLE_BOOK_REQUEST_INVALID,
+                    f"unexpected artifact schema: {marked.get('schema')}",
+                )
+            # Never persist full novel / evidence bodies in artifacts.
+            for forbidden in ("full_text", "body", "chapter_text", "evidence_text", "novel_text"):
+                if forbidden in marked and marked[forbidden]:
+                    raise NarrativeCoreError(
+                        NarrativeCoreErrorCode.WHOLE_BOOK_REQUEST_INVALID,
+                        f"artifact must not contain {forbidden}",
+                    )
         marked.setdefault("mock", True)
         marked.setdefault("synthetic", True)
         marked.setdefault("non_production", True)
+        marked.setdefault("schema", WHOLE_BOOK_STAGE_ARTIFACT_SCHEMA)
+        marked.setdefault("version", WHOLE_BOOK_STAGE_ARTIFACT_VERSION)
         row = AnalysisArtifact(
             run_id=int(run_id),
-            artifact_type=str(artifact_type),
-            subject_type=str(marked.get("subject_type") or "whole_book_mock"),
-            subject_id=str(marked.get("subject_id") or str(run_id)),
-            schema_version=str(marked.get("schema_version") or "whole_book_mock_v0"),
-            prompt_version=str(marked.get("prompt_version") or "none-mock"),
+            artifact_type=artifact_type,
+            subject_type=str(marked.get("subject_type") or "whole_book_stage"),
+            subject_id=str(
+                marked.get("subject_id")
+                or marked.get("run_stage_id")
+                or marked.get("stage_key")
+                or str(run_id)
+            ),
+            schema_version=str(marked.get("version") or WHOLE_BOOK_STAGE_ARTIFACT_VERSION),
+            prompt_version=str(marked.get("prompt_version") or "none"),
             payload_json=json.dumps(marked, ensure_ascii=False),
             confidence=float(marked.get("confidence", 0.0) or 0.0),
-            validation_status="mock_synthetic",
+            validation_status=(
+                "mock_synthetic" if marked.get("mock") else str(marked.get("status") or "ok")
+            ),
         )
         self._session.add(row)
         self._session.flush()
         self.calls.append(
             {
                 "run_id": int(run_id),
-                "artifact_type": str(artifact_type),
+                "artifact_type": artifact_type,
                 "artifact_id": int(row.id),
+                "mock": bool(marked.get("mock")),
             }
         )
         return int(row.id)
