@@ -17,6 +17,12 @@
       "message": "docs: mark CHG-20260723-005 tested for comparison mode UX",
       "primary": false,
       "multi_change_reason": "registry status for CHG-20260723-005"
+    },
+    {
+      "sha": "188b6d22216ee61e7074abcf072b88853789725b",
+      "message": "docs: set CHG-20260723-005 status to tested",
+      "primary": false,
+      "multi_change_reason": "status transition to tested"
     }
   ],
   "modules": [
@@ -65,5 +71,5 @@
   "blocker_level": "P1",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T02:26:18Z",
-  "updated_at": "2026-07-23T02:40:29Z"
+  "updated_at": "2026-07-23T02:40:30Z"
 }
