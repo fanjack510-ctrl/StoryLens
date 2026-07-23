@@ -620,8 +620,7 @@ export function BookRoutePage() {
             group: "导出",
             testId: "book-more-export-png",
             onSelect: () => {
-              clickResults('[data-testid="journey-more-chart-settings"]');
-              queueMicrotask(() => clickResults('[data-testid="journey-export-png"]'));
+              clickResults('[data-testid="journey-export-png"]');
             },
           },
           {

@@ -1868,6 +1868,17 @@ export function ReaderJourneyWorkspace({
         />
       </div>
 
+      <button
+        type="button"
+        hidden
+        aria-hidden="true"
+        data-testid="journey-export-png"
+        disabled={exportStatus === "exporting"}
+        onClick={() => void handleExport()}
+      >
+        导出 PNG
+      </button>
+
       {exportMessage && (
         <div
           className="journey-export-feedback"
