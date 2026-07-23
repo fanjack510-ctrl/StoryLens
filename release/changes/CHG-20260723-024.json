@@ -3,9 +3,16 @@
   "title": "Agent I: Frontend Capability Client / Pro presentation",
   "type": "feature",
   "base_version": "1.0.5",
-  "status": "registered",
+  "status": "tested",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "17bbd83f1bc3f614d08a433a2554e8284a810fc4",
+      "message": "feat: implement frontend capability foundation",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "desktop/capability"
   ],
