@@ -3,25 +3,46 @@
   "title": "Agent G: WholeBook Engine Interface / Mock",
   "type": "feature",
   "base_version": "1.0.5",
-  "status": "registered",
+  "status": "tested",
   "include_in_next_release": true,
   "commits": [],
   "modules": [
     "narrative_core"
   ],
-  "files": [],
+  "files": [
+    "apps/api/app/narrative_core/services/mock_whole_book_engine.py",
+    "apps/api/app/narrative_core/services/whole_book_engine_registry.py",
+    "apps/api/app/narrative_core/services/whole_book_stage_plan.py",
+    "apps/api/app/narrative_core/services/whole_book_engine_adapters.py",
+    "apps/api/app/narrative_core/services/whole_book_stage_orchestrator.py",
+    "apps/api/tests/test_narrative_phase1c_engine.py",
+    "docs/architecture/narrative-intelligence-core/phase1c-engine-implementation.md",
+    "docs/architecture/narrative-intelligence-core/phase1c-mock-engine-boundary.md",
+    "docs/architecture/narrative-intelligence-core/phase1c-stage-orchestrator.md",
+    "docs/architecture/narrative-intelligence-core/phase1c-engine-verification.md",
+    "release/changes/CHG-20260723-022.json"
+  ],
   "user_summary": "Expand Mock Engine, stage plan execution, registry beyond contract stub.",
-  "technical_summary": "Agent G implements WholeBookAnalysisEngine against frozen Protocol; extends mock_whole_book_engine and whole_book_engine_registry.",
+  "technical_summary": "Agent G implements WholeBookAnalysisEngine against frozen Protocol; expands mock engine, registry/factory, stage plan builder, I/O adapters, and test orchestrator. Candidate-only synthetic writes; no model calls; production factory refuses Mock.",
   "acceptance_criteria": [
     "Fork from feature/narrative-phase1c-contract final HEAD",
     "Do not modify Phase 1C-P contract files",
     "No real model calls until Integration approval",
-    "Stage plan tests cover resume/cancel paths"
+    "Stage plan tests cover resume/cancel paths",
+    "Registry/Factory unique engine_id with mock-only production default",
+    "Mock outputs marked mock/synthetic/non-production and never canonical"
   ],
   "tests": [
     "apps/api/tests/test_narrative_phase1c_engine.py"
   ],
-  "verification_evidence": [],
+  "verification_evidence": [
+    "pytest apps/api/tests/test_narrative_phase1c_engine.py -q --noconftest (30 passed)",
+    "pytest apps/api/tests/test_narrative_phase1cp_contract.py -q --noconftest (16 passed)",
+    "python scripts/version_manager.py check",
+    "python scripts/change_registry.py check",
+    "git diff --check",
+    "docs/architecture/narrative-intelligence-core/phase1c-engine-verification.md"
+  ],
   "parallel_plan": {
     "role": "agent_g",
     "branch": "feature/narrative-phase1c-engine",
@@ -39,6 +60,10 @@
     ],
     "file_ownership": "docs/architecture/narrative-intelligence-core/phase1c-parallel-file-ownership.json"
   },
+  "integration_issues": [
+    "II-ENGINE-001 ArtifactWriter reuses analysis_artifacts; no WholeBook stage-typed artifact schema",
+    "II-ENGINE-002 WholeBookStageContext lacks relation_writer field; injected via extra pending contract review"
+  ],
   "data_compatibility": {
     "database_changed": false,
     "migration_required": false,
@@ -54,5 +79,5 @@
   "blocker_level": null,
   "head_inclusion": null,
   "created_at": "2026-07-23T11:46:12Z",
-  "updated_at": "2026-07-23T12:00:00Z"
+  "updated_at": "2026-07-23T12:15:00Z"
 }
