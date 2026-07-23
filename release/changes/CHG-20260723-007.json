@@ -17,6 +17,12 @@
       "message": "docs: mark CHG-20260723-007 tested for header theme persistence.",
       "primary": false,
       "multi_change_reason": "registry status for CHG-20260723-007"
+    },
+    {
+      "sha": "ad386d1f1adbb84ac40a32b6732b78a8fe8254cd",
+      "message": "docs: set CHG-20260723-007 status to tested.",
+      "primary": false,
+      "multi_change_reason": "status implemented→tested"
     }
   ],
   "modules": [],
@@ -63,5 +69,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T04:08:55Z",
-  "updated_at": "2026-07-23T04:13:07Z"
+  "updated_at": "2026-07-23T04:13:08Z"
 }
