@@ -11,6 +11,12 @@
       "message": "feat: implement narrative relations and conflicts",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "2eb156250c924f181274b9624822f67e13cb4668",
+      "message": "docs: attach registry sync commit to CHG-20260723-019",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -65,7 +71,7 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T08:33:16Z",
-  "updated_at": "2026-07-23T09:04:04Z",
+  "updated_at": "2026-07-23T09:04:17Z",
   "parallel_plan": {
     "role": "agent_f",
     "branch": "feature/narrative-phase1b-relations",
