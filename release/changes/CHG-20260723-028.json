@@ -11,6 +11,12 @@
       "message": "feat: implement whole book result projections",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "032744997df10b694e6bd2c5aaf328142f2a09cd",
+      "message": "chore: attach CHG-20260723-028 commit metadata",
+      "primary": false,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -63,7 +69,7 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T13:23:33Z",
-  "updated_at": "2026-07-23T13:58:43Z",
+  "updated_at": "2026-07-23T14:00:10Z",
   "parallel_plan": {
     "role": "agent_k",
     "branch": "feature/narrative-phase1d-result-projection",
