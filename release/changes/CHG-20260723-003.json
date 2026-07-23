@@ -34,29 +34,32 @@
     "apps/desktop/src/components/readerJourney/HookPayoffTimeline.tsx",
     "apps/desktop/src/components/readerJourney/hookPayoffTimeline.css",
     "apps/desktop/src/components/readerJourney/HookPayoffTimeline.test.tsx",
+    "apps/desktop/src/components/readerJourney/hookResolutionEvidence.test.tsx",
     "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.tsx",
     "apps/desktop/src/components/readerJourney/observationLenses.ts",
     "apps/desktop/src/components/readerJourney/readerJourneyLensExplanation.ts",
     "apps/desktop/src/components/readerJourney/JourneySceneDetailPanel.tsx"
   ],
-  "user_summary": "钩子与回报结果页缺乏主结论与冲突前置，图文重叠混杂，同一钩子多状态并存导致无法理解。",
-  "technical_summary": "Presentation-only hook resolution model with singular main status (已回收/部分回收/未回收) and additive conflict; result page structure conclusion→conflicts→bus→list; UI rename to 钩子回收.",
+  "user_summary": "钩子回收结果页信息过密：独立冲突提醒占用过大、暴露内部 ID 与英文技术日志，并与总览/清单重复。实机收口后只保留钩子总览与钩子清单，冲突降为轻量附加状态。",
+  "technical_summary": "Remove standalone 冲突提醒 block from ordinary UI; merge chapter verdict into 钩子总览 (one-line verdict + compact stats + bus); keep conflict data in model; list drops ID column; evidence panel shows plain-language divergence with tech under folded 分析信息; hide avg hook/payoff phase cards on hook_payoff lens. Main-status rules unchanged.",
   "acceptance_criteria": [
-    "A+B+C=N stats with conflict additive",
-    "Each hook has one main status even under conflict",
-    "Conflict reminder precedes overview",
-    "One lane per hook with solid/dashed/gray lines",
-    "Detail list with locate action",
-    "Ordinary UI uses 钩子回收 wording"
+    "Ordinary page has only 钩子总览 and 钩子清单 (no standalone 冲突提醒)",
+    "Conflict facts retained in model; conflict count in compact stats when >0",
+    "Bus shows light 有冲突 mark without extra line type",
+    "List columns: 钩子|提出位置|回收结果|回收位置|冲突|操作; no ordinary ID column",
+    "查看证据 shows plain conflict language; tech only in folded 分析信息",
+    "No avg 钩子/回报 phase cards on 钩子回收 lens",
+    "A+B+C=N invariant; conflict additive; main status rules unchanged"
   ],
   "tests": [
     "apps/desktop/src/components/readerJourney/hookResolutionModel.test.ts",
     "apps/desktop/src/components/readerJourney/HookPayoffTimeline.test.tsx",
-    "apps/desktop/src/components/readerJourney/readerJourneyTerminology.test.ts",
+    "apps/desktop/src/components/readerJourney/hookResolutionEvidence.test.tsx",
+    "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.test.tsx",
     "apps/desktop/src/components/readerJourney/readerJourneyLensExplanation.test.tsx"
   ],
   "verification_evidence": [
-    "Local Vitest hookResolutionModel/HookPayoffTimeline/terminology/lens/workspace 81 passed; typecheck; lint; version_manager check; change_registry check; git diff --check. No model/install/publish/push."
+    "Local Vitest hookResolutionModel/HookPayoffTimeline/evidence/workspace/lensExplanation passed; typecheck; lint; version_manager check; change_registry check; git diff --check. No model/install/publish/push/VERSION bump."
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -73,5 +76,5 @@
   "blocker_level": "P1",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T01:35:00Z",
-  "updated_at": "2026-07-23T01:42:23Z"
+  "updated_at": "2026-07-23T02:10:00Z"
 }

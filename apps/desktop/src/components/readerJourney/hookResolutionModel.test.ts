@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import type { ReaderJourneyVisualization } from "../../types/readerJourneyVisualization";
 import {
   assertMainStatusPartition,
+  buildChapterVerdict,
   buildHookResolutionModel,
+  conflictDivergencePlain,
   resolveHookMainStatus,
 } from "./hookResolutionModel";
 
@@ -113,6 +115,51 @@ describe("hookResolutionModel main status + stats", () => {
     );
     expect(model.conflicts).toHaveLength(1);
     expect(model.rows.every((r) => Boolean(r.main_status))).toBe(true);
+    expect(model.verdict).toMatch(
+      /本章建立 3 个钩子，已回收 1 个，部分回收 1 个，未回收 1 个，其中 1 个存在判定冲突/,
+    );
+    const conflictRow = model.rows.find((r) => r.loop_id === "L2");
+    expect(conflictRow?.has_conflict).toBe(true);
+    expect(conflictRow?.conflict_divergence_plain).toBeTruthy();
+    expect(conflictRow?.why_judgment_plain).toMatch(/部分回应/);
+  });
+
+  it("maps payoff_score empty payoffs[] to ordinary Chinese", () => {
+    const plain = conflictDivergencePlain({
+      loop_id: "q5",
+      question: "冲突",
+      open_from_scene: 1,
+      hook: [{ scene_ordinal: 1 }],
+      payoffs: [],
+      status: "open",
+      display_status: "open",
+      soft_conflict: true,
+      consistency_status: "soft_conflict",
+      conflicts: [
+        {
+          code: "payoff_score_without_entity",
+          message: "Scene 5: payoff_score=80 but payoffs[] is empty",
+        },
+      ],
+      primary_relation: {
+        grade: "candidate",
+        payoff_ref: { scene_ordinal: 5, type: "score_inferred", source_type: "score_inferred" },
+      },
+    } as never);
+    expect(plain).toMatch(/分数提示可能存在回报/);
+    expect(plain).not.toMatch(/payoff_score/);
+  });
+
+  it("buildChapterVerdict hides conflict clause when zero", () => {
+    expect(
+      buildChapterVerdict({
+        established: 2,
+        resolved: 1,
+        partial: 0,
+        unresolved: 1,
+        conflict: 0,
+      }),
+    ).toBe("本章建立 2 个钩子，已回收 1 个，部分回收 0 个，未回收 1 个。");
   });
 
   it("gives one main status even under hard conflict", () => {

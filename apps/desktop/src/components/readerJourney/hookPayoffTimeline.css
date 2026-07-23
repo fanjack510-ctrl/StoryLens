@@ -1,20 +1,18 @@
 .hook-resolution-panel {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
   min-width: 0;
   width: 100%;
   color: var(--text, #111);
 }
 
 .hook-resolution-panel h3 {
-  margin: 0 0 8px;
+  margin: 0 0 6px;
   font-size: 14px;
   font-weight: 650;
 }
 
-.hook-resolution-conclusion,
-.hook-resolution-conflicts,
 .hook-resolution-overview,
 .hook-resolution-list {
   min-width: 0;
@@ -23,7 +21,7 @@
 .hook-resolution-stats {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 14px;
+  gap: 6px 14px;
   margin: 0 0 8px;
   padding: 0;
   list-style: none;
@@ -32,9 +30,9 @@
 }
 
 .hook-resolution-verdict {
-  margin: 0;
+  margin: 0 0 6px;
   font-size: 14px;
-  line-height: 1.5;
+  line-height: 1.45;
 }
 
 .hook-resolution-empty {
@@ -43,32 +41,8 @@
   color: var(--muted, #6b7280);
 }
 
-.hook-resolution-conflicts {
-  padding: 10px 12px;
-  border: 1px solid #f0c4a0;
-  border-radius: 8px;
-  background: #fff7ed;
-}
-
-.hook-resolution-conflicts ul {
-  margin: 8px 0 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.hook-resolution-conflicts li {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  font-size: 12px;
-  line-height: 1.4;
-}
-
 .hook-resolution-bus-scroll {
-  max-height: calc(6 * 44px + 36px);
+  max-height: calc(6 * 40px + 32px);
   overflow: auto;
   border: 1px solid var(--line, #e5e7eb);
   border-radius: 8px;
@@ -83,10 +57,10 @@
 
 .hook-resolution-axis {
   display: grid;
-  grid-template-columns: minmax(72px, 110px) minmax(0, 1fr) 88px;
+  grid-template-columns: minmax(72px, 110px) minmax(0, 1fr) 96px;
   gap: 8px;
   align-items: center;
-  padding: 6px 10px;
+  padding: 4px 10px;
   border-bottom: 1px solid var(--line, #e5e7eb);
   font-size: 11px;
   color: var(--muted, #6b7280);
@@ -115,11 +89,11 @@
 
 .hook-resolution-lane {
   display: grid;
-  grid-template-columns: minmax(72px, 110px) minmax(0, 1fr) 88px;
+  grid-template-columns: minmax(72px, 110px) minmax(0, 1fr) 96px;
   gap: 8px;
   align-items: center;
-  min-height: 44px;
-  padding: 4px 10px;
+  min-height: 40px;
+  padding: 2px 10px;
   border: 0;
   border-bottom: 1px solid var(--line, #e5e7eb);
   background: transparent;
@@ -146,7 +120,7 @@
 
 .hook-resolution-lane-rail {
   position: relative;
-  height: 28px;
+  height: 26px;
   min-width: 0;
 }
 
@@ -181,11 +155,11 @@
   position: absolute;
   top: 50%;
   transform: translate(-50%, -50%);
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   border-radius: 999px;
-  font-size: 11px;
-  line-height: 22px;
+  font-size: 10px;
+  line-height: 20px;
   text-align: center;
   background: #fff;
   border: 1px solid var(--line, #d1d5db);
@@ -206,6 +180,10 @@
 .hook-resolution-node--open-end {
   border-color: #9ca3af;
   color: #6b7280;
+}
+
+.hook-resolution-node.has-conflict {
+  box-shadow: 0 0 0 1.5px #d97706;
 }
 
 .hook-resolution-lane-status {
@@ -255,6 +233,30 @@
 
 .hook-resolution-locate:hover {
   border-color: #2f6f4e;
+}
+
+.hook-resolution-evidence {
+  margin-bottom: 10px;
+}
+
+.hook-resolution-evidence p {
+  margin: 0 0 8px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.hook-resolution-evidence details {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--muted, #6b7280);
+}
+
+.hook-resolution-evidence pre {
+  margin: 6px 0 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 11px;
+  line-height: 1.4;
 }
 
 /* Legacy class hooks kept for older tests that target stats. */

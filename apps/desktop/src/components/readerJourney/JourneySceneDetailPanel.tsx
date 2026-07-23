@@ -70,6 +70,10 @@ import {
   resolveLensMetricBinding,
   readingMomentumLabelZh,
 } from "./lensMetricBinding";
+import {
+  findHookResolutionRow,
+  type HookResolutionRow,
+} from "./hookResolutionModel";
 
 export type SceneDetailTab =
   | "overview"
@@ -96,7 +100,37 @@ type Props = {
   visualization?: ReaderJourneyVisualization | null;
   observationLensLabel?: string | null;
   observationLens?: ObservationLensId | null;
+  /** When set on 钩子回收 lens, show ordinary-language hook resolution evidence. */
+  selectedLoopId?: string | null;
 };
+
+function HookResolutionEvidenceSection({ row }: { row: HookResolutionRow }) {
+  return (
+    <JourneyInspectorSection title="当前结论" testId="hook-resolution-evidence">
+      <div className="hook-resolution-evidence">
+        <p data-testid="hook-resolution-evidence-conclusion">{row.main_label}。</p>
+        <p data-testid="hook-resolution-evidence-why">
+          <b>为什么这样判断</b>
+          <br />
+          {row.why_judgment_plain}
+        </p>
+        {row.has_conflict && row.conflict_divergence_plain ? (
+          <p data-testid="hook-resolution-evidence-divergence">
+            <b>判定分歧</b>
+            <br />
+            {row.conflict_divergence_plain}
+          </p>
+        ) : null}
+        {row.conflict_tech_reason ? (
+          <details data-testid="hook-resolution-evidence-tech">
+            <summary>分析信息</summary>
+            <pre>{row.conflict_tech_reason}</pre>
+          </details>
+        ) : null}
+      </div>
+    </JourneyInspectorSection>
+  );
+}
 
 function scoreValue(node: JourneySceneNode, key: (typeof CORE_SCORE_KEYS)[number]): number {
   if (key === "reading_momentum") {
@@ -119,12 +153,20 @@ export function JourneySceneDetailPanel({
   visualization = null,
   observationLensLabel = null,
   observationLens = DEFAULT_OBSERVATION_LENS,
+  selectedLoopId = null,
 }: Props) {
   const [tab, setTab] = useState<SceneDetailTab>("overview");
 
   useEffect(() => {
     // Keep tab across Scene switches.
   }, [node.scene_ordinal]);
+
+  const hookResolutionRow = useMemo(() => {
+    if (!visualization || !isHookPayoffLens(observationLens) || !selectedLoopId) {
+      return null;
+    }
+    return findHookResolutionRow(visualization, selectedLoopId);
+  }, [visualization, observationLens, selectedLoopId]);
 
   const evidenceRows = useMemo(() => {
     const rows: EvidenceRow[] = [];
@@ -260,6 +302,9 @@ export function JourneySceneDetailPanel({
         <div className="scene-detail-tab-panel" data-testid={`scene-detail-panel-${tab}`}>
           {tab === "overview" && (
             <div data-testid="scene-detail-overview">
+              {hookResolutionRow ? (
+                <HookResolutionEvidenceSection row={hookResolutionRow} />
+              ) : null}
               {conclusion ? (
                 <JourneyPrimaryConclusion text={conclusion} testId="scene-primary-conclusion" />
               ) : null}

@@ -31,7 +31,6 @@ import {
   buildHookPayoffSceneSummary,
   formatHookPayoffSceneCaption,
   isHookPayoffLens,
-  phaseHookPayoffAverages,
 } from "./hookPayoffLensModel";
 import {
   DEFAULT_OBSERVATION_LENS,
@@ -1200,6 +1199,7 @@ export function ReaderJourneyWorkspace({
             visualization={visualization}
             observationLensLabel={lensDef.labelZh}
             observationLens={observationLens}
+            selectedLoopId={isHookPayoffLens(observationLens) ? selectedLoopId : null}
             onLocateEvidence={(id) => handleLocateEvidence(id, selectedNode)}
             onOpenInSceneList={
               onSelectScene ? () => onSelectScene(selectedNode.scene_id) : undefined
@@ -1569,22 +1569,11 @@ export function ReaderJourneyWorkspace({
               const phaseSummary = resolvePhaseSummaryDisplay(phase.summary, phase.title);
               const phaseMetric =
                 phaseMetricAverages.get(phase.ordinal) ?? phase.average_engagement;
-              const hookPayoffAvg = isHookPayoffLens(observationLens)
-                ? phaseHookPayoffAverages(visualization, phase)
-                : null;
-              const avgText = hookPayoffAvg
-                ? [
-                    hookPayoffAvg.avgHook == null
-                      ? "平均钩子 —"
-                      : `平均钩子 ${Math.round(hookPayoffAvg.avgHook)}`,
-                    hookPayoffAvg.avgPayoff == null
-                      ? "平均回报 —"
-                      : `平均回报 ${Math.round(hookPayoffAvg.avgPayoff)}`,
-                  ].join(" · ")
+              // Hook-resolution lens: no legacy avg hook/payoff phase cards.
+              const avgText = isHookPayoffLens(observationLens)
+                ? ""
                 : formatLensPhaseScoreLabel(visualization, observationLens, phaseMetric);
-              const phaseDesc = hookPayoffAvg
-                ? `状态：${hookPayoffAvg.statusLabel}`
-                : phaseSummary;
+              const phaseDesc = phaseSummary;
               return (
                 <button
                   key={phase.ordinal}

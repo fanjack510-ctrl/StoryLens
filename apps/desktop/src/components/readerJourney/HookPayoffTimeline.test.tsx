@@ -95,7 +95,7 @@ function vizWithLoops(): ReaderJourneyVisualization {
 afterEach(() => cleanup());
 
 describe("Hook resolution result page", () => {
-  it("shows conclusion, conflict block, one lane per hook, and list", () => {
+  it("shows overview + list only; no standalone conflict block or ID column", () => {
     const onSelect = vi.fn();
     render(
       <HookPayoffTimeline
@@ -104,32 +104,59 @@ describe("Hook resolution result page", () => {
         onSelectLoop={onSelect}
       />,
     );
-    expect(screen.getByTestId("hook-resolution-conclusion")).toBeInTheDocument();
+    expect(screen.getByTestId("hook-resolution-overview")).toBeInTheDocument();
+    expect(screen.queryByTestId("hook-resolution-conclusion")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("hook-resolution-conflicts")).not.toBeInTheDocument();
+    expect(screen.queryByText("冲突提醒")).not.toBeInTheDocument();
+
+    expect(screen.getByTestId("hook-resolution-verdict").textContent).toMatch(
+      /本章建立 3 个钩子，已回收 1 个，部分回收 1 个，未回收 1 个，其中 1 个存在判定冲突/,
+    );
     expect(screen.getByTestId("hook-payoff-stats").textContent).toMatch(/建立钩子 3/);
     expect(screen.getByTestId("hook-payoff-stats").textContent).toMatch(/已回收 1/);
     expect(screen.getByTestId("hook-payoff-stats").textContent).toMatch(/部分回收 1/);
     expect(screen.getByTestId("hook-payoff-stats").textContent).toMatch(/未回收 1/);
     expect(screen.getByTestId("hook-payoff-stats").textContent).toMatch(/有冲突 1/);
-    expect(screen.getByTestId("hook-resolution-conflicts")).toBeInTheDocument();
-    expect(screen.getByTestId("hook-resolution-verdict").textContent).toBeTruthy();
 
     const lanes = screen.getAllByTestId("hook-payoff-loop-row");
     expect(lanes).toHaveLength(3);
     expect(lanes[0]).toHaveAttribute("data-main-status", "partial");
     expect(lanes[0]).toHaveAttribute("data-line-style", "dashed");
+    expect(lanes[0]).toHaveAttribute("data-has-conflict", "true");
+    expect(within(lanes[0]).getByTestId("hook-resolution-lane-status").textContent).toMatch(
+      /部分回收｜有冲突/,
+    );
     expect(lanes[1]).toHaveAttribute("data-line-style", "solid");
     expect(lanes[2]).toHaveAttribute("data-line-style", "gray");
     expect(within(lanes[2]).getByTestId("hook-resolution-node-unresolved")).toBeInTheDocument();
-    expect(screen.getByTestId("hook-payoff-timeline")).toHaveAttribute(
-      "data-layout",
-      "hook-resolution",
-    );
+
+    const table = screen.getByTestId("hook-resolution-table");
+    expect(table.textContent).not.toMatch(/\bID\b/);
+    expect(within(table).queryByText("L1")).not.toBeInTheDocument();
+    expect(within(table).queryByText("L2")).not.toBeInTheDocument();
+    expect(within(table).getByText("提出位置")).toBeInTheDocument();
+    expect(within(table).getByText("回收结果")).toBeInTheDocument();
 
     const listRows = screen.getAllByTestId("hook-resolution-list-row");
     expect(listRows).toHaveLength(3);
+    expect(listRows[0].textContent).toMatch(/有/);
     expect(listRows[2].textContent).toMatch(/本章未回收/);
     fireEvent.click(within(listRows[0]).getByTestId("hook-resolution-locate"));
     expect(onSelect).toHaveBeenCalled();
+  });
+
+  it("hides conflict stat when conflict count is zero", () => {
+    const viz = vizWithLoops();
+    (viz as { narrative_loops: Array<{ soft_conflict?: boolean; consistency_status?: string; conflicts?: unknown[] }> }).narrative_loops =
+      (viz as { narrative_loops: Array<Record<string, unknown>> }).narrative_loops.map((loop) => ({
+        ...loop,
+        soft_conflict: false,
+        consistency_status: "consistent",
+        conflicts: [],
+      }));
+    render(<HookPayoffTimeline visualization={viz} />);
+    expect(screen.queryByTestId("hook-stat-conflict")).not.toBeInTheDocument();
+    expect(screen.getByTestId("hook-resolution-verdict").textContent).not.toMatch(/判定冲突/);
   });
 
   it("shows empty state without bus lanes", () => {
@@ -138,5 +165,6 @@ describe("Hook resolution result page", () => {
     render(<HookPayoffTimeline visualization={empty} />);
     expect(screen.getByTestId("hook-resolution-empty")).toBeInTheDocument();
     expect(screen.queryAllByTestId("hook-payoff-loop-row")).toHaveLength(0);
+    expect(screen.queryByTestId("hook-resolution-conflicts")).not.toBeInTheDocument();
   });
 });

@@ -70,7 +70,7 @@ describe("JourneyLensExplanationChrome", () => {
         inconsistentWarning="当前关系识别存在严重冲突，暂不作为确定结论。"
       />,
     );
-    expect(screen.getByTestId("journey-lens-title").textContent).toMatch(/钩子回收/);
+    expect(screen.getByTestId("journey-lens-title").textContent).toMatch(/钩子/);
     expect(screen.getByTestId("journey-hook-payoff-stats")).toBeInTheDocument();
     expect(screen.getByTestId("journey-loop-inconsistent-banner").textContent).toContain(
       "严重冲突",

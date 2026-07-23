@@ -131,13 +131,13 @@ export const READER_JOURNEY_LENS_EXPLANATIONS: Record<
   hook_payoff: {
     lens_id: "hook_payoff",
     title: "钩子回收",
-    chart_title: "钩子回收总览",
+    chart_title: "钩子总览",
     one_line_summary:
-      "先看本章回收结论，再看冲突提醒与总览线；每个钩子只有一个主状态。",
+      "先看钩子总览的一句话结论与总线，再按清单逐条查看证据；每个钩子只有一个主状态。",
     how_to_read: [
       "实线已回收，虚线部分回收，灰线未回收。",
-      "每个钩子独占一行，长说明放清单。",
-      "有冲突仍先给主结论，再看冲突提醒。",
+      "每个钩子独占一行，冲突仅作轻量附加标记。",
+      "有冲突时主结论不变，详情在「查看证据」中说明。",
     ],
     y_axis_semantics: "钩子提出与回收关系（非分数曲线）",
     high_meaning: "问题已建立或得到回收",
