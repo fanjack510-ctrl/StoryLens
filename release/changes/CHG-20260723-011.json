@@ -3,9 +3,16 @@
   "title": "Phase 1P: Narrative parallel contracts and shared schema skeleton",
   "type": "database",
   "base_version": "1.0.5",
-  "status": "registered",
+  "status": "tested",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "55908899edb77d56a3fb6f6ef4c35e8dd58ea3cc",
+      "message": "feat: establish narrative phase1 parallel contracts",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "architecture",
     "database",
@@ -63,7 +70,7 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T07:20:00Z",
-  "updated_at": "2026-07-23T07:22:45Z",
+  "updated_at": "2026-07-23T07:23:35Z",
   "parallel_plan": {
     "role": "phase1p",
     "branch": "feature/narrative-phase1-contract",
