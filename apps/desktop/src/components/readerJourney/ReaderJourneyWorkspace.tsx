@@ -25,20 +25,15 @@ import {
   resolveMetricValue,
   zoomViewWindow,
 } from "./journeyChartScales";
-import { buildChapterSummaryBullets } from "./journeyChapterSummary";
 import {
-  buildHookPayoffChapterBullets,
   buildHookPayoffSceneSummary,
   formatHookPayoffSceneCaption,
   isHookPayoffLens,
 } from "./hookPayoffLensModel";
 import {
   DEFAULT_OBSERVATION_LENS,
-  V2_LOCAL_FIXTURE_BANNER,
-  V2_NATIVE_REAL_BANNER,
   getObservationLens,
   isLegacyUncalibratedVisualization,
-  resolveJourneyTopBanner,
   type ObservationLensId,
 } from "./observationLenses";
 import {
@@ -47,7 +42,6 @@ import {
   parseLensParam,
   PHASE_PRIMARY_ONLY_HINT_PREFIX,
   SAME_METRIC_EXIT_MESSAGE,
-  getLensExplanation,
 } from "./readerJourneyLensExplanation";
 import { JourneyLensExplanationChrome } from "./JourneyLensExplanationChrome";
 import { JourneyComparisonTools } from "./JourneyComparisonTools";
@@ -180,44 +174,6 @@ type Props = {
   onSourceCollapsedChange?: (collapsed: boolean) => void;
 };
 
-function riskIntervalLabel(interval: {
-  start_scene_ordinal: number;
-  end_scene_ordinal: number;
-  span?: number;
-}): string {
-  return `Scene ${interval.start_scene_ordinal}—${interval.end_scene_ordinal} (span ${interval.span ?? interval.end_scene_ordinal - interval.start_scene_ordinal + 1})`;
-}
-
-function weakIntervalDisplay(summary: {
-  max_low_payoff_interval?:
-    | string
-    | {
-        start_scene_ordinal?: number;
-        end_scene_ordinal?: number;
-        span?: number;
-      }
-    | null;
-  weak_interval?: string | null;
-}): string {
-  const interval = summary.max_low_payoff_interval;
-  if (typeof interval === "string" && interval.trim()) {
-    return interval;
-  }
-  if (
-    interval &&
-    typeof interval === "object" &&
-    interval.start_scene_ordinal != null &&
-    interval.end_scene_ordinal != null
-  ) {
-    return riskIntervalLabel({
-      start_scene_ordinal: interval.start_scene_ordinal,
-      end_scene_ordinal: interval.end_scene_ordinal,
-      span: interval.span,
-    }).replace(/ \(span.*\)$/, "");
-  }
-  return summary.weak_interval || "—";
-}
-
 export function ReaderJourneyWorkspace({
   visualization,
   chapterTitle,
@@ -237,7 +193,7 @@ export function ReaderJourneyWorkspace({
   const workspaceRef = useRef<HTMLDivElement>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const overviewMode = parseOverviewMode(searchParams.get("overview"));
-  const [markerMode, setMarkerMode] = useState<"compact" | "full">("compact");
+  const markerMode = "compact" as const;
   const [selectedPhaseInternal, setSelectedPhaseInternal] = useState<number | null>(null);
   const [selectedSceneOrdinalInternal, setSelectedSceneOrdinalInternal] = useState<number | null>(
     null,
@@ -270,7 +226,6 @@ export function ReaderJourneyWorkspace({
   });
   const overlayComposite = Boolean(compareWith);
   const [compareLiveMessage, setCompareLiveMessage] = useState<string | null>(null);
-  const [analysisInfoOpen, setAnalysisInfoOpen] = useState(false);
   const [exportStatus, setExportStatus] = useState<"idle" | "exporting" | "succeeded" | "failed">(
     "idle",
   );
@@ -286,9 +241,6 @@ export function ReaderJourneyWorkspace({
   );
   const [sourceCollapsedInternal] = useState(() =>
     readLocalPref<boolean>(UI_PREF_KEYS.sourceCollapsed, false),
-  );
-  const [insightExpanded, setInsightExpanded] = useState(() =>
-    readLocalPref<boolean>(UI_PREF_KEYS.insightStripExpanded, false),
   );
   const [preferredSourceWidth, setPreferredSourceWidth] = useState(() =>
     sanitizePreferredWidth(
@@ -455,9 +407,6 @@ export function ReaderJourneyWorkspace({
     controlledPhaseOrdinal !== undefined ? controlledPhaseOrdinal : selectedPhaseInternal;
   const metric = controlledMetric ?? metricInternal;
   const lensDef = getObservationLens(observationLens);
-  const topBanner = resolveJourneyTopBanner(visualization);
-  const isV2LocalFixtureBanner = topBanner === V2_LOCAL_FIXTURE_BANNER;
-  const isV2NativeRealBanner = topBanner === V2_NATIVE_REAL_BANNER;
   const sceneDiagnoses: SceneDiagnosisLike[] = useMemo(
     () =>
       visualization.scene_nodes.map((node) => ({
@@ -482,12 +431,6 @@ export function ReaderJourneyWorkspace({
       })),
     [visualization],
   );
-  const chapterSummaryBullets = useMemo(() => {
-    if (isHookPayoffLens(observationLens)) {
-      return buildHookPayoffChapterBullets(visualization);
-    }
-    return buildChapterSummaryBullets(visualization, sceneDiagnoses);
-  }, [visualization, sceneDiagnoses, observationLens]);
 
   const expandedClusterId = controlledClusterId ?? null;
 
@@ -670,67 +613,6 @@ export function ReaderJourneyWorkspace({
       strip.scrollTo({ left: Math.max(0, cardRight - strip.clientWidth), behavior: "smooth" });
     }
   }, [selectedPhase]);
-
-  const primaryCluster = useMemo(() => {
-    const clusters =
-      (visualization.visible_question_clusters?.length
-        ? visualization.visible_question_clusters
-        : visualization.question_clusters) ?? [];
-    return clusters[0] ?? null;
-  }, [visualization.question_clusters, visualization.visible_question_clusters]);
-
-  const peakOrdinal = summary.peaks.engagement_peak.scene_ordinal;
-  const valleyOrdinal = summary.peaks.engagement_valley.scene_ordinal;
-  const strongestHook = summary.strongest_hook;
-  const tractionClickable = Boolean(primaryCluster?.cluster_id);
-  const hookClickable = Boolean(strongestHook && strongestHook.scene_ordinal != null);
-
-  const handleInsightTraction = () => {
-    if (!primaryCluster?.cluster_id) return;
-    onSelectionChange?.({
-      selectedQuestionClusterId: primaryCluster.cluster_id,
-      source: "journey_cluster",
-    });
-    commitSelectionIntent({
-      source: "question-cluster",
-      inspector: "question",
-      clusterId: primaryCluster.cluster_id,
-    });
-    expandInspector();
-  };
-
-  const handleInsightPeak = () => {
-    const node = nodes.find((item) => item.scene_ordinal === peakOrdinal);
-    if (node) handleSelectScene(node, "journey_scene");
-  };
-
-  const handleInsightValley = () => {
-    const node = nodes.find((item) => item.scene_ordinal === valleyOrdinal);
-    if (node) handleSelectScene(node, "journey_scene");
-  };
-
-  const handleInsightHook = () => {
-    if (!strongestHook?.scene_ordinal) return;
-    const node = nodes.find((item) => item.scene_ordinal === strongestHook.scene_ordinal);
-    if (!node) return;
-    if (!isControlled) {
-      setSelectedSceneOrdinalInternal(node.scene_ordinal);
-    }
-    onSelectionChange?.({
-      activeSceneOrdinal: node.scene_ordinal,
-      activePhaseOrdinal: node.phase_ordinal ?? undefined,
-      source: "journey_scene",
-    });
-    const evidenceId = strongestHook.evidence_paragraph_ids?.[0];
-    commitSelectionIntent({
-      source: "hook",
-      inspector: "hook",
-      sceneOrdinal: node.scene_ordinal,
-      phaseId: node.phase_ordinal,
-      paragraphId: evidenceId ?? undefined,
-    });
-    expandInspector();
-  };
 
   const syncLensLoopToUrl = useCallback(
     (
@@ -1386,95 +1268,9 @@ export function ReaderJourneyWorkspace({
           hidden={showNarrowTabs && narrowPane !== "main"}
           aria-hidden={showNarrowTabs && narrowPane !== "main" ? true : undefined}
         >
-      <header className="journey-analysis-header" data-testid="journey-analysis-header">
-        {topBanner ? (
-          <p
-            className="journey-legacy-banner"
-            data-testid={
-              isV2NativeRealBanner
-                ? "journey-v2-native-real-banner"
-                : isV2LocalFixtureBanner
-                  ? "journey-v2-local-fixture-banner"
-                  : "journey-legacy-uncalibrated-banner"
-            }
-            role="status"
-          >
-            {topBanner}
-          </p>
-        ) : null}
-        {chapterSummaryBullets.length > 0 ? (
-          <ul
-            className="journey-chapter-summary-bullets"
-            data-testid="journey-chapter-summary-bullets"
-          >
-            {chapterSummaryBullets.map((bullet) => (
-              <li key={bullet.kind} data-kind={bullet.kind}>
-                {bullet.text}
-              </li>
-            ))}
-          </ul>
-        ) : null}
-        <div className="journey-analysis-titles">
-          <h2 className="journey-analysis-title" data-testid="journey-analysis-title">
-            阅读旅程
-          </h2>
-          <p className="journey-analysis-subtitle" data-testid="journey-analysis-subtitle" title={chapterHeading}>
-            {chapterHeading}
-          </p>
-          <p className="journey-analysis-meta" data-testid="journey-analysis-meta">
-            {sceneCount > 0 ? `${sceneCount} 个场景` : "— 个场景"}
-            {" · "}
-            {visualization.phases.length > 0
-              ? `${visualization.phases.length} 个阶段`
-              : "— 个阶段"}
-            {" · "}
-            观察读者在本章中的情绪、节奏、牵引力与钩子变化
-          </p>
-        </div>
-        <div className="journey-analysis-tools" data-testid="journey-analysis-tools">
-          <div className="journey-marker-toggle" data-testid="journey-marker-toggle">
-            <button
-              type="button"
-              className={markerMode === "compact" ? "active" : ""}
-              data-testid="journey-marker-compact"
-              title="精简标记：突出主要阅读结构，仅显示关键场景、钩子、回报和问题簇。"
-              onClick={() => setMarkerMode("compact")}
-            >
-              精简标记
-            </button>
-            <button
-              type="button"
-              className={markerMode === "full" ? "active" : ""}
-              data-testid="journey-marker-full"
-              title="完整标记：显示全部分析节点及派生依据。"
-              onClick={() => setMarkerMode("full")}
-            >
-              完整标记
-            </button>
-          </div>
-          <div className="journey-analysis-info-wrap">
-            <button
-              type="button"
-              data-testid="journey-analysis-info"
-              className={analysisInfoOpen ? "active" : ""}
-              aria-expanded={analysisInfoOpen}
-              onClick={() => setAnalysisInfoOpen((value) => !value)}
-            >
-              分析信息
-            </button>
-            {analysisInfoOpen && (
-              <div
-                className="journey-analysis-info-popover"
-                data-testid="journey-analysis-info-popover"
-                role="dialog"
-              >
-                <div className="journey-export-meta" data-testid="journey-export-meta">
-                  {analysisInfoMeta}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+      <header className="journey-analysis-header" data-testid="journey-analysis-header" hidden>
+        {/* Ordinary UI: header/banner/markers/analysis-info removed (CHG-20260723-006).
+            Keep a hidden shell for export/layout audits that still query the testid. */}
       </header>
 
       <div
@@ -1560,6 +1356,7 @@ export function ReaderJourneyWorkspace({
           narrowLayout={layoutMode === "narrow"}
           onExportPng={() => void handleExport()}
           exportBusy={exportStatus === "exporting"}
+          analysisInfoContent={analysisInfoMeta}
         />
         {/* Phase navigation — after toolbar (+ optional MetricSelectorPanel), before chart shell */}
         <section className="journey-phase-strip-wrap" data-testid="journey-phase-strip-wrap">
@@ -1837,14 +1634,6 @@ export function ReaderJourneyWorkspace({
                   />
                 ))}
               </section>
-
-              <div className="journey-curve-legend" data-testid="journey-curve-legend">
-                {getLensExplanation(observationLens).legend_items.map((item) => (
-                  <span key={item.key} data-legend={item.key}>
-                    {item.label}
-                  </span>
-                ))}
-              </div>
             </div>
           </div>
 
@@ -1877,115 +1666,6 @@ export function ReaderJourneyWorkspace({
           </div>
         ) : null}
 
-        {/* Compact one-line insight strip (below curve to free hero space) */}
-        <section className="journey-diagnosis journey-diagnosis-inline" data-testid="journey-diagnosis-summary">
-          <div
-            className={`journey-insight-strip journey-summary-cards journey-summary-strip journey-summary-oneline ${insightExpanded ? "expanded" : ""}`}
-            data-testid="journey-summary-cards"
-            data-insight-strip="true"
-            data-expanded={insightExpanded ? "true" : "false"}
-          >
-            <button
-              type="button"
-              className="journey-insight-oneline-toggle"
-              data-testid="journey-insight-oneline-toggle"
-              aria-expanded={insightExpanded}
-              onClick={() => {
-                setInsightExpanded((prev) => {
-                  const next = !prev;
-                  writeLocalPref(UI_PREF_KEYS.insightStripExpanded, next);
-                  return next;
-                });
-              }}
-            >
-              {insightExpanded ? "收起摘要" : "章节摘要"}
-            </button>
-            <div className="journey-insight-oneline-body">
-              {tractionClickable ? (
-                <button
-                  type="button"
-                  className="journey-insight-item journey-insight-clickable journey-summary-card journey-summary-card-primary"
-                  data-testid="summary-card-traction"
-                  title={summary.primary_cluster_title ?? summary.primary_traction}
-                  onClick={handleInsightTraction}
-                >
-                  <span>核心牵引</span>
-                  <b>{summary.primary_cluster_title ?? summary.primary_traction}</b>
-                </button>
-              ) : (
-                <div
-                  className="journey-insight-item journey-insight-static journey-summary-card journey-summary-card-primary"
-                  data-testid="summary-card-traction"
-                  title={summary.primary_cluster_title ?? summary.primary_traction}
-                >
-                  <span>核心牵引</span>
-                  <b>{summary.primary_cluster_title ?? summary.primary_traction}</b>
-                </div>
-              )}
-              <span className="journey-insight-sep" aria-hidden="true">
-                |
-              </span>
-              <button
-                type="button"
-                className="journey-insight-item journey-insight-clickable journey-summary-card"
-                data-testid="summary-card-peak"
-                title={`${formatJourneySceneLabel(peakOrdinal)} · ${summary.peaks.engagement_peak.value}`}
-                onClick={handleInsightPeak}
-              >
-                <span>峰值场景</span>
-                <b>
-                  {formatJourneySceneLabel(peakOrdinal)} · {summary.peaks.engagement_peak.value}
-                </b>
-              </button>
-              <span className="journey-insight-sep" aria-hidden="true">
-                |
-              </span>
-              <button
-                type="button"
-                className="journey-insight-item journey-insight-clickable journey-summary-card"
-                data-testid="summary-card-weak"
-                title={`${weakIntervalDisplay(summary)} · 最低点 ${formatJourneySceneLabel(valleyOrdinal)}`}
-                onClick={handleInsightValley}
-              >
-                <span>薄弱区间</span>
-                <b>{weakIntervalDisplay(summary)}</b>
-              </button>
-              <span className="journey-insight-sep" aria-hidden="true">
-                |
-              </span>
-              {hookClickable ? (
-                <button
-                  type="button"
-                  className="journey-insight-item journey-insight-clickable journey-summary-card journey-summary-card-primary"
-                  data-testid="summary-card-hook"
-                  title={
-                    strongestHook?.summary ||
-                    (strongestHook
-                      ? formatJourneySceneLabel(strongestHook.scene_ordinal)
-                      : undefined)
-                  }
-                  onClick={handleInsightHook}
-                >
-                  <span>章末悬念</span>
-                  <b>
-                    {strongestHook?.summary ||
-                      (strongestHook
-                        ? formatJourneySceneLabel(strongestHook.scene_ordinal)
-                        : "—")}
-                  </b>
-                </button>
-              ) : (
-                <div
-                  className="journey-insight-item journey-insight-static journey-summary-card journey-summary-card-primary"
-                  data-testid="summary-card-hook"
-                >
-                  <span>章末悬念</span>
-                  <b>—</b>
-                </div>
-              )}
-            </div>
-          </div>
-        </section>
           </div>
           </div>
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cleanup, render, screen, fireEvent } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import {
   READER_JOURNEY_LENS_EXPLANATIONS,
   getLensExplanation,
@@ -52,13 +52,12 @@ describe("readerJourneyLensExplanation", () => {
 });
 
 describe("JourneyLensExplanationChrome", () => {
-  it("renders one-liner, how-to panel with max three items, and minimal legend", () => {
+  it("renders one-liner and unified legend without 怎么看 panel", () => {
     render(<JourneyLensExplanationChrome lensId="composite" />);
     expect(screen.getByTestId("journey-lens-one-liner").textContent).toContain("不代表一定写得差");
     expect(screen.getByTestId("journey-lens-title").textContent).toBe("综合阅读动力");
-    fireEvent.click(screen.getByTestId("journey-lens-how-to-trigger"));
-    const panel = screen.getByTestId("journey-lens-how-to-panel");
-    expect(panel.querySelectorAll("li")).toHaveLength(3);
+    expect(screen.queryByTestId("journey-lens-how-to-trigger")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("journey-lens-how-to-panel")).not.toBeInTheDocument();
     expect(screen.getByTestId("journey-minimal-legend").textContent).toContain("场景");
   });
 

@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useId, useState, type ReactNode } from "react";
 import type { JourneyCurveMetric } from "../../types/readerJourneyVisualization";
 import { JourneyPopover } from "./JourneyPopover";
 import {
@@ -50,6 +50,8 @@ type Props = {
   exportBusy?: boolean;
   compactActions?: boolean;
   narrowLayout?: boolean;
+  /** Optional tech diagnostics under 更多操作 (not a top-level ordinary button). */
+  analysisInfoContent?: ReactNode;
 };
 
 /**
@@ -82,6 +84,7 @@ export function JourneyChartToolbar({
   onToggleInspector,
   onExportPng,
   exportBusy = false,
+  analysisInfoContent = null,
 }: Props) {
   const [metricOpen, setMetricOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -140,6 +143,7 @@ export function JourneyChartToolbar({
                 data-testid={`journey-lens-${item.id}`}
                 className={`journey-toolbar-btn journey-lens-segment ${selected ? "active" : ""}`}
                 aria-checked={selected}
+                aria-current={selected ? "true" : undefined}
                 aria-label={item.labelZh}
                 title={item.labelZh}
                 onClick={() => handleLensSelect(item.id)}
@@ -316,6 +320,18 @@ export function JourneyChartToolbar({
           </button>
         ) : null}
       </div>
+      {analysisInfoContent ? (
+        <div className="journey-anchored-menu-group" data-testid="journey-more-analysis-info">
+          <div className="journey-anchored-menu-group-label">分析信息</div>
+          <div
+            className="journey-export-meta"
+            data-testid="journey-analysis-info"
+            data-analysis-info="more-menu"
+          >
+            {analysisInfoContent}
+          </div>
+        </div>
+      ) : null}
     </>
   );
 
