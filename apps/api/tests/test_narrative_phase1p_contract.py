@@ -17,7 +17,14 @@ from app.narrative_core.stage_transitions import (
 
 def test_migration_ids_are_unique() -> None:
     assert_unique_migration_ids()
-    assert len(NARRATIVE_MIGRATION_ORDER) == 5
+    assert len(NARRATIVE_MIGRATION_ORDER) == 10
+    assert NARRATIVE_MIGRATION_ORDER[:5] == (
+        "20260723_001_schema_migrations",
+        "20260723_002_content_hashes",
+        "20260723_003_book_snapshots",
+        "20260723_004_analysis_run_scope",
+        "20260723_005_analysis_run_stages",
+    )
 
 
 def test_orm_table_names_unique() -> None:

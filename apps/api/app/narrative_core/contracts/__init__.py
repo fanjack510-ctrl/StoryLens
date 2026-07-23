@@ -1,10 +1,17 @@
-"""Protocol contracts for Narrative Intelligence Core (Phase 1P).
+"""Protocol contracts for Narrative Intelligence Core (Phase 1P + Phase 1B-P).
 
-Implementations belong to Agent A (ledger/hash/snapshot) and Agent B (run/stage).
+Phase 1A: Agent A (ledger/hash/snapshot), Agent B (run/stage).
+Phase 1B: Agent D (entity), Agent E (asset), Agent F (relation/conflict).
 """
 
+from app.narrative_core.contracts.asset import NarrativeAssetService
+from app.narrative_core.contracts.entity import NarrativeEntityService
 from app.narrative_core.contracts.hash import ContentHashService
 from app.narrative_core.contracts.migration_ledger import MigrationLedger
+from app.narrative_core.contracts.relation import (
+    AnalysisConflictService,
+    NarrativeRelationService,
+)
 from app.narrative_core.contracts.run import AnalysisRunService, AnalysisRunStageRepository
 from app.narrative_core.contracts.snapshot import (
     BookSnapshotRepository,
@@ -20,4 +27,8 @@ __all__ = [
     "SnapshotValidationGateway",
     "AnalysisRunService",
     "AnalysisRunStageRepository",
+    "NarrativeEntityService",
+    "NarrativeAssetService",
+    "NarrativeRelationService",
+    "AnalysisConflictService",
 ]

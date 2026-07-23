@@ -3,7 +3,7 @@
   "title": "Phase 1P: Narrative parallel contracts and shared schema skeleton",
   "type": "database",
   "base_version": "1.0.5",
-  "status": "tested",
+  "status": "verified",
   "include_in_next_release": true,
   "commits": [
     {
@@ -59,7 +59,8 @@
     "git diff --check"
   ],
   "verification_evidence": [
-    "Local contract tests on temp SQLite; simulated 1.0.5 upgrade preserves analysis_runs row 42"
+    "Local contract tests on temp SQLite; simulated 1.0.5 upgrade preserves analysis_runs row 42",
+    "Phase 1A Integration user verification accepted 2026-07-23; status advanced to verified (not ready/released)."
   ],
   "data_compatibility": {
     "database_changed": true,
@@ -76,7 +77,7 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T07:20:00Z",
-  "updated_at": "2026-07-23T07:23:35Z",
+  "updated_at": "2026-07-23T08:43:10Z",
   "parallel_plan": {
     "role": "phase1p",
     "branch": "feature/narrative-phase1-contract",

@@ -11,6 +11,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -809,3 +810,335 @@ class AnalysisRunStage(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utc_now, onupdate=utc_now
     )
+
+
+# ---------------------------------------------------------------------------
+# Phase 1B-P — Narrative Entity / Asset / Relation skeleton (shared ORM).
+# Agents D/E/F must NOT alter these table structures; implement services only.
+# ---------------------------------------------------------------------------
+
+
+class NarrativeEntity(Base):
+    """Stable narrative entity identity (not a model interpretation)."""
+
+    __tablename__ = "narrative_entities"
+    __table_args__ = (
+        Index("ix_narrative_entities_book_type", "book_id", "entity_type"),
+        Index("ix_narrative_entities_book_normalized", "book_id", "normalized_name"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    book_id: Mapped[int] = mapped_column(ForeignKey("books.id", ondelete="CASCADE"), index=True)
+    entity_type: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    canonical_name: Mapped[str] = mapped_column(String(500), nullable=False)
+    normalized_name: Mapped[str] = mapped_column(String(500), nullable=False)
+    lifecycle_status: Mapped[str] = mapped_column(String(32), nullable=False, default="active")
+    is_locked: Mapped[bool] = mapped_column(default=False)
+    locked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_by: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now
+    )
+
+    aliases: Mapped[list["NarrativeEntityAlias"]] = relationship(
+        back_populates="entity",
+        cascade="all, delete-orphan",
+    )
+
+
+class NarrativeEntityAlias(Base):
+    __tablename__ = "narrative_entity_aliases"
+    __table_args__ = (
+        UniqueConstraint(
+            "entity_id",
+            "normalized_alias",
+            name="uq_narrative_entity_aliases_entity_normalized",
+        ),
+        Index("ix_narrative_entity_aliases_normalized", "normalized_alias"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    entity_id: Mapped[int] = mapped_column(
+        ForeignKey("narrative_entities.id", ondelete="CASCADE"), index=True
+    )
+    alias_text: Mapped[str] = mapped_column(String(500), nullable=False)
+    normalized_alias: Mapped[str] = mapped_column(String(500), nullable=False)
+    alias_type: Mapped[str] = mapped_column(String(32), nullable=False, default="display")
+    source_run_id: Mapped[int | None] = mapped_column(
+        ForeignKey("analysis_runs.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    source_snapshot_id: Mapped[int | None] = mapped_column(
+        ForeignKey("book_snapshots.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    review_status: Mapped[str] = mapped_column(String(32), nullable=False, default="candidate")
+    is_locked: Mapped[bool] = mapped_column(default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now
+    )
+
+    entity: Mapped[NarrativeEntity] = relationship(back_populates="aliases")
+
+
+class NarrativeAsset(Base):
+    """Stable narrative asset identity — interpretations live on versions."""
+
+    __tablename__ = "narrative_assets"
+    __table_args__ = (
+        UniqueConstraint("book_id", "asset_key", name="uq_narrative_assets_book_key"),
+        Index("ix_narrative_assets_book_lifecycle", "book_id", "lifecycle_status"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    book_id: Mapped[int] = mapped_column(ForeignKey("books.id", ondelete="CASCADE"), index=True)
+    asset_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    lifecycle_status: Mapped[str] = mapped_column(String(32), nullable=False, default="active")
+    is_locked: Mapped[bool] = mapped_column(default=False)
+    locked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    superseded_by_asset_id: Mapped[int | None] = mapped_column(
+        ForeignKey("narrative_assets.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    stale_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    stale_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now
+    )
+
+    versions: Mapped[list["NarrativeAssetVersion"]] = relationship(
+        back_populates="asset",
+        cascade="all, delete-orphan",
+    )
+
+
+class NarrativeAssetVersion(Base):
+    """One analysis or user-correction interpretation of a stable Asset."""
+
+    __tablename__ = "narrative_asset_versions"
+    __table_args__ = (
+        Index("ix_narrative_asset_versions_asset_review", "asset_id", "review_status"),
+        Index("ix_narrative_asset_versions_snapshot", "book_snapshot_id"),
+        # Partial unique: at most one canonical version per asset (SQLite).
+        Index(
+            "uq_narrative_asset_versions_one_canonical",
+            "asset_id",
+            unique=True,
+            sqlite_where=text("is_canonical = 1"),
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    asset_id: Mapped[int] = mapped_column(
+        ForeignKey("narrative_assets.id", ondelete="CASCADE"), index=True
+    )
+    run_id: Mapped[int | None] = mapped_column(
+        ForeignKey("analysis_runs.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    book_snapshot_id: Mapped[int | None] = mapped_column(
+        ForeignKey("book_snapshots.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    asset_type: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    title: Mapped[str] = mapped_column(String(500), nullable=False, default="")
+    summary: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    narrative_function: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    attributes_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
+    confidence: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    importance: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    source_fingerprint: Mapped[str] = mapped_column(String(64), nullable=False, default="")
+    origin_type: Mapped[str] = mapped_column(String(32), nullable=False, default="model")
+    review_status: Mapped[str] = mapped_column(String(32), nullable=False, default="candidate")
+    is_canonical: Mapped[bool] = mapped_column(default=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+    asset: Mapped[NarrativeAsset] = relationship(back_populates="versions")
+    evidence: Mapped[list["NarrativeAssetEvidence"]] = relationship(
+        back_populates="asset_version",
+        cascade="all, delete-orphan",
+    )
+
+
+class NarrativeAssetEvidence(Base):
+    """Evidence bound to an Asset Version + completed Book Snapshot paragraph."""
+
+    __tablename__ = "narrative_asset_evidence"
+    __table_args__ = (
+        CheckConstraint("start_offset >= 0", name="ck_nae_start_offset_nonneg"),
+        CheckConstraint("end_offset >= start_offset", name="ck_nae_end_ge_start"),
+        Index("ix_narrative_asset_evidence_version", "asset_version_id"),
+        Index("ix_narrative_asset_evidence_snapshot", "book_snapshot_id"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    asset_version_id: Mapped[int] = mapped_column(
+        ForeignKey("narrative_asset_versions.id", ondelete="CASCADE"), index=True
+    )
+    book_snapshot_id: Mapped[int] = mapped_column(
+        ForeignKey("book_snapshots.id", ondelete="CASCADE"), index=True
+    )
+    snapshot_chapter_id: Mapped[int] = mapped_column(
+        ForeignKey("book_snapshot_chapters.id", ondelete="CASCADE"), index=True
+    )
+    snapshot_paragraph_id: Mapped[int] = mapped_column(
+        ForeignKey("book_snapshot_paragraphs.id", ondelete="CASCADE"), index=True
+    )
+    source_scene_id: Mapped[int | None] = mapped_column(
+        ForeignKey("scenes.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    paragraph_content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    start_offset: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    end_offset: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    evidence_role: Mapped[str] = mapped_column(String(32), nullable=False, default="support")
+    evidence_label: Mapped[str] = mapped_column(String(500), nullable=False, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+    asset_version: Mapped[NarrativeAssetVersion] = relationship(back_populates="evidence")
+
+
+class NarrativeRelation(Base):
+    """Stable relation identity between two Assets (endpoints never mutate)."""
+
+    __tablename__ = "narrative_relations"
+    __table_args__ = (
+        UniqueConstraint("book_id", "relation_key", name="uq_narrative_relations_book_key"),
+        Index("ix_narrative_relations_source", "source_asset_id"),
+        Index("ix_narrative_relations_target", "target_asset_id"),
+        CheckConstraint(
+            "source_asset_id != target_asset_id",
+            name="ck_narrative_relations_distinct_ends",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    book_id: Mapped[int] = mapped_column(ForeignKey("books.id", ondelete="CASCADE"), index=True)
+    source_asset_id: Mapped[int] = mapped_column(
+        ForeignKey("narrative_assets.id", ondelete="CASCADE"), index=True
+    )
+    target_asset_id: Mapped[int] = mapped_column(
+        ForeignKey("narrative_assets.id", ondelete="CASCADE"), index=True
+    )
+    relation_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    lifecycle_status: Mapped[str] = mapped_column(String(32), nullable=False, default="active")
+    is_locked: Mapped[bool] = mapped_column(default=False)
+    locked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    superseded_by_relation_id: Mapped[int | None] = mapped_column(
+        ForeignKey("narrative_relations.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    stale_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    stale_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now
+    )
+
+    versions: Mapped[list["NarrativeRelationVersion"]] = relationship(
+        back_populates="relation",
+        cascade="all, delete-orphan",
+    )
+
+
+class NarrativeRelationVersion(Base):
+    __tablename__ = "narrative_relation_versions"
+    __table_args__ = (
+        Index("ix_narrative_relation_versions_rel_review", "relation_id", "review_status"),
+        Index("ix_narrative_relation_versions_snapshot", "book_snapshot_id"),
+        Index(
+            "uq_narrative_relation_versions_one_canonical",
+            "relation_id",
+            unique=True,
+            sqlite_where=text("is_canonical = 1"),
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    relation_id: Mapped[int] = mapped_column(
+        ForeignKey("narrative_relations.id", ondelete="CASCADE"), index=True
+    )
+    run_id: Mapped[int | None] = mapped_column(
+        ForeignKey("analysis_runs.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    book_snapshot_id: Mapped[int | None] = mapped_column(
+        ForeignKey("book_snapshots.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    relation_type: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    summary: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    attributes_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
+    confidence: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    importance: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    source_fingerprint: Mapped[str] = mapped_column(String(64), nullable=False, default="")
+    origin_type: Mapped[str] = mapped_column(String(32), nullable=False, default="model")
+    review_status: Mapped[str] = mapped_column(String(32), nullable=False, default="candidate")
+    is_canonical: Mapped[bool] = mapped_column(default=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+    relation: Mapped[NarrativeRelation] = relationship(back_populates="versions")
+    evidence: Mapped[list["NarrativeRelationEvidence"]] = relationship(
+        back_populates="relation_version",
+        cascade="all, delete-orphan",
+    )
+
+
+class NarrativeRelationEvidence(Base):
+    __tablename__ = "narrative_relation_evidence"
+    __table_args__ = (
+        CheckConstraint("start_offset >= 0", name="ck_nre_start_offset_nonneg"),
+        CheckConstraint("end_offset >= start_offset", name="ck_nre_end_ge_start"),
+        Index("ix_narrative_relation_evidence_version", "relation_version_id"),
+        Index("ix_narrative_relation_evidence_snapshot", "book_snapshot_id"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    relation_version_id: Mapped[int] = mapped_column(
+        ForeignKey("narrative_relation_versions.id", ondelete="CASCADE"), index=True
+    )
+    book_snapshot_id: Mapped[int] = mapped_column(
+        ForeignKey("book_snapshots.id", ondelete="CASCADE"), index=True
+    )
+    snapshot_chapter_id: Mapped[int] = mapped_column(
+        ForeignKey("book_snapshot_chapters.id", ondelete="CASCADE"), index=True
+    )
+    snapshot_paragraph_id: Mapped[int] = mapped_column(
+        ForeignKey("book_snapshot_paragraphs.id", ondelete="CASCADE"), index=True
+    )
+    source_scene_id: Mapped[int | None] = mapped_column(
+        ForeignKey("scenes.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    paragraph_content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    start_offset: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    end_offset: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    evidence_role: Mapped[str] = mapped_column(String(32), nullable=False, default="support")
+    evidence_label: Mapped[str] = mapped_column(String(500), nullable=False, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+    relation_version: Mapped[NarrativeRelationVersion] = relationship(back_populates="evidence")
+
+
+class AnalysisConflict(Base):
+    """Persisted analysis conflicts — no auto-adjudication in Phase 1B-P."""
+
+    __tablename__ = "analysis_conflicts"
+    __table_args__ = (
+        Index("ix_analysis_conflicts_book_status", "book_id", "status"),
+        Index("ix_analysis_conflicts_run", "run_id"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    book_id: Mapped[int] = mapped_column(ForeignKey("books.id", ondelete="CASCADE"), index=True)
+    run_id: Mapped[int | None] = mapped_column(
+        ForeignKey("analysis_runs.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    book_snapshot_id: Mapped[int | None] = mapped_column(
+        ForeignKey("book_snapshots.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    conflict_type: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    left_ref_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    left_ref_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    right_ref_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    right_ref_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    severity: Mapped[str] = mapped_column(String(32), nullable=False, default="warning")
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="open", index=True)
+    resolution_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
+    resolved_by: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)

@@ -1,0 +1,57 @@
+{
+  "id": "CHG-20260723-020",
+  "title": "Phase 1B Integration",
+  "type": "improvement",
+  "base_version": "1.0.5",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "narrative_core"
+  ],
+  "files": [],
+  "user_summary": "Integrate migrations 006-010 and Entity-Asset-Relation end-to-end verification.",
+  "technical_summary": "Pre-registered parallel Change. Implements services for role=integration; migration ownership 006-010 e2e. Fork from Phase 1B-P HEAD only. Do not edit models.py table structures.",
+  "acceptance_criteria": [
+    "Fork from feature/narrative-phase1b-contract final HEAD",
+    "Do not modify models.py table structures",
+    "Stay within file ownership JSON"
+  ],
+  "tests": [],
+  "verification_evidence": [],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": null,
+  "created_at": "2026-07-23T08:33:16Z",
+  "updated_at": "2026-07-23T08:43:10Z",
+  "parallel_plan": {
+    "role": "integration",
+    "branch": "integration/narrative-phase1b",
+    "worktree": "D:\\\\Dstorylens-wt-narrative-phase1b-integration",
+    "depends_on": [
+      "CHG-20260723-017",
+      "CHG-20260723-018",
+      "CHG-20260723-019"
+    ],
+    "blocks": [],
+    "forbidden": [
+      "models.py schema edits",
+      "VERSION bump",
+      "push/publish",
+      "Pattern product route"
+    ],
+    "file_ownership": "docs/architecture/narrative-intelligence-core/phase1b-parallel-file-ownership.json",
+    "migration_scope": "006-010 e2e"
+  }
+}

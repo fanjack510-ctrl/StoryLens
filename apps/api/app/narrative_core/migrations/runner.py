@@ -14,10 +14,15 @@ from sqlalchemy.engine import Engine
 from app.narrative_core.errors import NarrativeCoreError, NarrativeCoreErrorCode
 from app.narrative_core.migrations import (
     BASELINE_MARKER_ID,
+    MIGRATION_ANALYSIS_CONFLICTS,
     MIGRATION_ANALYSIS_RUN_SCOPE,
     MIGRATION_ANALYSIS_RUN_STAGES,
     MIGRATION_BOOK_SNAPSHOTS,
     MIGRATION_CONTENT_HASHES,
+    MIGRATION_NARRATIVE_ASSET_EVIDENCE,
+    MIGRATION_NARRATIVE_ASSETS_VERSIONS,
+    MIGRATION_NARRATIVE_ENTITIES_ALIASES,
+    MIGRATION_NARRATIVE_RELATIONS_VERSIONS_EVIDENCE,
     MIGRATION_SCHEMA_MIGRATIONS,
     migration_checksum,
 )
@@ -473,10 +478,357 @@ def migrate_narrative_20260723_005_analysis_run_stages(engine: Engine) -> None:
 
 
 def apply_narrative_phase1p_migrations(engine: Engine) -> None:
-    """Apply Phase 1P shared skeleton migrations in frozen order."""
+    """Apply Phase 1P shared skeleton migrations in frozen order (001–005)."""
     register_baseline_1_0_5(engine)
     migrate_narrative_20260723_001_schema_migrations(engine)
     migrate_narrative_20260723_002_content_hashes(engine)
     migrate_narrative_20260723_003_book_snapshots(engine)
     migrate_narrative_20260723_004_analysis_run_scope(engine)
     migrate_narrative_20260723_005_analysis_run_stages(engine)
+
+
+# ---------------------------------------------------------------------------
+# Phase 1B-P — Migration DDL skeleton (006–010). Checksum = SQL_* body.
+# Agent D owns 006 refinements; Agent E owns 007–008; Agent F owns 009–010.
+# Do not renumber; do not insert migrations between these IDs.
+# ---------------------------------------------------------------------------
+
+SQL_006 = """
+CREATE TABLE narrative_entities (
+    id INTEGER NOT NULL PRIMARY KEY,
+    book_id INTEGER NOT NULL,
+    entity_type VARCHAR(64) NOT NULL,
+    canonical_name VARCHAR(500) NOT NULL,
+    normalized_name VARCHAR(500) NOT NULL,
+    lifecycle_status VARCHAR(32) NOT NULL DEFAULT 'active',
+    is_locked INTEGER NOT NULL DEFAULT 0,
+    locked_at DATETIME,
+    created_by VARCHAR(64),
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL,
+    FOREIGN KEY(book_id) REFERENCES books (id) ON DELETE CASCADE
+);
+CREATE TABLE narrative_entity_aliases (
+    id INTEGER NOT NULL PRIMARY KEY,
+    entity_id INTEGER NOT NULL,
+    alias_text VARCHAR(500) NOT NULL,
+    normalized_alias VARCHAR(500) NOT NULL,
+    alias_type VARCHAR(32) NOT NULL DEFAULT 'display',
+    source_run_id INTEGER,
+    source_snapshot_id INTEGER,
+    review_status VARCHAR(32) NOT NULL DEFAULT 'candidate',
+    is_locked INTEGER NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL,
+    FOREIGN KEY(entity_id) REFERENCES narrative_entities (id) ON DELETE CASCADE,
+    FOREIGN KEY(source_run_id) REFERENCES analysis_runs (id) ON DELETE SET NULL,
+    FOREIGN KEY(source_snapshot_id) REFERENCES book_snapshots (id) ON DELETE SET NULL,
+    UNIQUE (entity_id, normalized_alias)
+);
+"""
+
+SQL_007 = """
+CREATE TABLE narrative_assets (
+    id INTEGER NOT NULL PRIMARY KEY,
+    book_id INTEGER NOT NULL,
+    asset_key VARCHAR(128) NOT NULL,
+    lifecycle_status VARCHAR(32) NOT NULL DEFAULT 'active',
+    is_locked INTEGER NOT NULL DEFAULT 0,
+    locked_at DATETIME,
+    superseded_by_asset_id INTEGER,
+    stale_at DATETIME,
+    stale_reason TEXT,
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL,
+    FOREIGN KEY(book_id) REFERENCES books (id) ON DELETE CASCADE,
+    FOREIGN KEY(superseded_by_asset_id) REFERENCES narrative_assets (id) ON DELETE SET NULL,
+    UNIQUE (book_id, asset_key)
+);
+CREATE TABLE narrative_asset_versions (
+    id INTEGER NOT NULL PRIMARY KEY,
+    asset_id INTEGER NOT NULL,
+    run_id INTEGER,
+    book_snapshot_id INTEGER,
+    asset_type VARCHAR(64) NOT NULL,
+    title VARCHAR(500) NOT NULL DEFAULT '',
+    summary TEXT NOT NULL DEFAULT '',
+    narrative_function TEXT NOT NULL DEFAULT '',
+    attributes_json TEXT NOT NULL DEFAULT '{}',
+    confidence FLOAT NOT NULL DEFAULT 0,
+    importance FLOAT NOT NULL DEFAULT 0,
+    source_fingerprint VARCHAR(64) NOT NULL DEFAULT '',
+    origin_type VARCHAR(32) NOT NULL DEFAULT 'model',
+    review_status VARCHAR(32) NOT NULL DEFAULT 'candidate',
+    is_canonical INTEGER NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL,
+    FOREIGN KEY(asset_id) REFERENCES narrative_assets (id) ON DELETE CASCADE,
+    FOREIGN KEY(run_id) REFERENCES analysis_runs (id) ON DELETE SET NULL,
+    FOREIGN KEY(book_snapshot_id) REFERENCES book_snapshots (id) ON DELETE SET NULL
+);
+CREATE UNIQUE INDEX uq_narrative_asset_versions_one_canonical
+    ON narrative_asset_versions (asset_id) WHERE is_canonical = 1;
+"""
+
+SQL_008 = """
+CREATE TABLE narrative_asset_evidence (
+    id INTEGER NOT NULL PRIMARY KEY,
+    asset_version_id INTEGER NOT NULL,
+    book_snapshot_id INTEGER NOT NULL,
+    snapshot_chapter_id INTEGER NOT NULL,
+    snapshot_paragraph_id INTEGER NOT NULL,
+    source_scene_id INTEGER,
+    paragraph_content_hash VARCHAR(64) NOT NULL,
+    start_offset INTEGER NOT NULL DEFAULT 0,
+    end_offset INTEGER NOT NULL DEFAULT 0,
+    evidence_role VARCHAR(32) NOT NULL DEFAULT 'support',
+    evidence_label VARCHAR(500) NOT NULL DEFAULT '',
+    created_at DATETIME NOT NULL,
+    FOREIGN KEY(asset_version_id) REFERENCES narrative_asset_versions (id) ON DELETE CASCADE,
+    FOREIGN KEY(book_snapshot_id) REFERENCES book_snapshots (id) ON DELETE CASCADE,
+    FOREIGN KEY(snapshot_chapter_id) REFERENCES book_snapshot_chapters (id) ON DELETE CASCADE,
+    FOREIGN KEY(snapshot_paragraph_id) REFERENCES book_snapshot_paragraphs (id) ON DELETE CASCADE,
+    FOREIGN KEY(source_scene_id) REFERENCES scenes (id) ON DELETE SET NULL,
+    CHECK (start_offset >= 0),
+    CHECK (end_offset >= start_offset)
+);
+"""
+
+SQL_009 = """
+CREATE TABLE narrative_relations (
+    id INTEGER NOT NULL PRIMARY KEY,
+    book_id INTEGER NOT NULL,
+    source_asset_id INTEGER NOT NULL,
+    target_asset_id INTEGER NOT NULL,
+    relation_key VARCHAR(128) NOT NULL,
+    lifecycle_status VARCHAR(32) NOT NULL DEFAULT 'active',
+    is_locked INTEGER NOT NULL DEFAULT 0,
+    locked_at DATETIME,
+    superseded_by_relation_id INTEGER,
+    stale_at DATETIME,
+    stale_reason TEXT,
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL,
+    FOREIGN KEY(book_id) REFERENCES books (id) ON DELETE CASCADE,
+    FOREIGN KEY(source_asset_id) REFERENCES narrative_assets (id) ON DELETE CASCADE,
+    FOREIGN KEY(target_asset_id) REFERENCES narrative_assets (id) ON DELETE CASCADE,
+    FOREIGN KEY(superseded_by_relation_id) REFERENCES narrative_relations (id) ON DELETE SET NULL,
+    UNIQUE (book_id, relation_key),
+    CHECK (source_asset_id != target_asset_id)
+);
+CREATE TABLE narrative_relation_versions (
+    id INTEGER NOT NULL PRIMARY KEY,
+    relation_id INTEGER NOT NULL,
+    run_id INTEGER,
+    book_snapshot_id INTEGER,
+    relation_type VARCHAR(64) NOT NULL,
+    summary TEXT NOT NULL DEFAULT '',
+    attributes_json TEXT NOT NULL DEFAULT '{}',
+    confidence FLOAT NOT NULL DEFAULT 0,
+    importance FLOAT NOT NULL DEFAULT 0,
+    source_fingerprint VARCHAR(64) NOT NULL DEFAULT '',
+    origin_type VARCHAR(32) NOT NULL DEFAULT 'model',
+    review_status VARCHAR(32) NOT NULL DEFAULT 'candidate',
+    is_canonical INTEGER NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL,
+    FOREIGN KEY(relation_id) REFERENCES narrative_relations (id) ON DELETE CASCADE,
+    FOREIGN KEY(run_id) REFERENCES analysis_runs (id) ON DELETE SET NULL,
+    FOREIGN KEY(book_snapshot_id) REFERENCES book_snapshots (id) ON DELETE SET NULL
+);
+CREATE UNIQUE INDEX uq_narrative_relation_versions_one_canonical
+    ON narrative_relation_versions (relation_id) WHERE is_canonical = 1;
+CREATE TABLE narrative_relation_evidence (
+    id INTEGER NOT NULL PRIMARY KEY,
+    relation_version_id INTEGER NOT NULL,
+    book_snapshot_id INTEGER NOT NULL,
+    snapshot_chapter_id INTEGER NOT NULL,
+    snapshot_paragraph_id INTEGER NOT NULL,
+    source_scene_id INTEGER,
+    paragraph_content_hash VARCHAR(64) NOT NULL,
+    start_offset INTEGER NOT NULL DEFAULT 0,
+    end_offset INTEGER NOT NULL DEFAULT 0,
+    evidence_role VARCHAR(32) NOT NULL DEFAULT 'support',
+    evidence_label VARCHAR(500) NOT NULL DEFAULT '',
+    created_at DATETIME NOT NULL,
+    FOREIGN KEY(relation_version_id) REFERENCES narrative_relation_versions (id) ON DELETE CASCADE,
+    FOREIGN KEY(book_snapshot_id) REFERENCES book_snapshots (id) ON DELETE CASCADE,
+    FOREIGN KEY(snapshot_chapter_id) REFERENCES book_snapshot_chapters (id) ON DELETE CASCADE,
+    FOREIGN KEY(snapshot_paragraph_id) REFERENCES book_snapshot_paragraphs (id) ON DELETE CASCADE,
+    FOREIGN KEY(source_scene_id) REFERENCES scenes (id) ON DELETE SET NULL,
+    CHECK (start_offset >= 0),
+    CHECK (end_offset >= start_offset)
+);
+"""
+
+SQL_010 = """
+CREATE TABLE analysis_conflicts (
+    id INTEGER NOT NULL PRIMARY KEY,
+    book_id INTEGER NOT NULL,
+    run_id INTEGER,
+    book_snapshot_id INTEGER,
+    conflict_type VARCHAR(64) NOT NULL,
+    left_ref_type VARCHAR(64) NOT NULL,
+    left_ref_id VARCHAR(64) NOT NULL,
+    right_ref_type VARCHAR(64) NOT NULL,
+    right_ref_id VARCHAR(64) NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    severity VARCHAR(32) NOT NULL DEFAULT 'warning',
+    status VARCHAR(32) NOT NULL DEFAULT 'open',
+    resolution_json TEXT NOT NULL DEFAULT '{}',
+    resolved_by VARCHAR(64),
+    resolved_at DATETIME,
+    created_at DATETIME NOT NULL,
+    FOREIGN KEY(book_id) REFERENCES books (id) ON DELETE CASCADE,
+    FOREIGN KEY(run_id) REFERENCES analysis_runs (id) ON DELETE SET NULL,
+    FOREIGN KEY(book_snapshot_id) REFERENCES book_snapshots (id) ON DELETE SET NULL
+);
+"""
+
+
+def _exec_sql_script(engine: Engine, script: str) -> None:
+    """Execute multi-statement DDL script (SQLite)."""
+    statements = [part.strip() for part in script.split(";") if part.strip()]
+    with engine.begin() as connection:
+        for statement in statements:
+            connection.execute(text(statement))
+
+
+def migrate_narrative_20260723_006_narrative_entities_aliases(engine: Engine) -> None:
+    checksum = migration_checksum(SQL_006)
+    names = _table_names(engine)
+    if "narrative_entities" not in names:
+        _exec_sql_script(engine, SQL_006)
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS ix_narrative_entities_book_id "
+                    "ON narrative_entities (book_id)"
+                )
+            )
+            connection.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS ix_narrative_entities_book_type "
+                    "ON narrative_entities (book_id, entity_type)"
+                )
+            )
+            connection.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS ix_narrative_entity_aliases_entity_id "
+                    "ON narrative_entity_aliases (entity_id)"
+                )
+            )
+    _ensure_schema_migrations_table(engine)
+    _record_applied(engine, MIGRATION_NARRATIVE_ENTITIES_ALIASES, checksum)
+
+
+def migrate_narrative_20260723_007_narrative_assets_versions(engine: Engine) -> None:
+    checksum = migration_checksum(SQL_007)
+    if "narrative_assets" not in _table_names(engine):
+        _exec_sql_script(engine, SQL_007)
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS ix_narrative_assets_book_id "
+                    "ON narrative_assets (book_id)"
+                )
+            )
+            connection.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS ix_narrative_asset_versions_asset_id "
+                    "ON narrative_asset_versions (asset_id)"
+                )
+            )
+            connection.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS ix_narrative_asset_versions_asset_review "
+                    "ON narrative_asset_versions (asset_id, review_status)"
+                )
+            )
+    _ensure_schema_migrations_table(engine)
+    _record_applied(engine, MIGRATION_NARRATIVE_ASSETS_VERSIONS, checksum)
+
+
+def migrate_narrative_20260723_008_narrative_asset_evidence(engine: Engine) -> None:
+    checksum = migration_checksum(SQL_008)
+    if "narrative_asset_evidence" not in _table_names(engine):
+        _exec_sql_script(engine, SQL_008)
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS ix_narrative_asset_evidence_version "
+                    "ON narrative_asset_evidence (asset_version_id)"
+                )
+            )
+            connection.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS ix_narrative_asset_evidence_snapshot "
+                    "ON narrative_asset_evidence (book_snapshot_id)"
+                )
+            )
+    _ensure_schema_migrations_table(engine)
+    _record_applied(engine, MIGRATION_NARRATIVE_ASSET_EVIDENCE, checksum)
+
+
+def migrate_narrative_20260723_009_narrative_relations_versions_evidence(
+    engine: Engine,
+) -> None:
+    checksum = migration_checksum(SQL_009)
+    names = _table_names(engine)
+    if "narrative_relations" not in names:
+        _exec_sql_script(engine, SQL_009)
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS ix_narrative_relations_book_id "
+                    "ON narrative_relations (book_id)"
+                )
+            )
+            connection.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS ix_narrative_relation_versions_relation_id "
+                    "ON narrative_relation_versions (relation_id)"
+                )
+            )
+            connection.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS ix_narrative_relation_evidence_version "
+                    "ON narrative_relation_evidence (relation_version_id)"
+                )
+            )
+    _ensure_schema_migrations_table(engine)
+    _record_applied(engine, MIGRATION_NARRATIVE_RELATIONS_VERSIONS_EVIDENCE, checksum)
+
+
+def migrate_narrative_20260723_010_analysis_conflicts(engine: Engine) -> None:
+    checksum = migration_checksum(SQL_010)
+    if "analysis_conflicts" not in _table_names(engine):
+        _exec_sql_script(engine, SQL_010)
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS ix_analysis_conflicts_book_status "
+                    "ON analysis_conflicts (book_id, status)"
+                )
+            )
+            connection.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS ix_analysis_conflicts_run "
+                    "ON analysis_conflicts (run_id)"
+                )
+            )
+    _ensure_schema_migrations_table(engine)
+    _record_applied(engine, MIGRATION_ANALYSIS_CONFLICTS, checksum)
+
+
+def apply_narrative_phase1bp_migrations(engine: Engine) -> None:
+    """Apply Phase 1B-P skeleton migrations 006–010 (after Phase 1P 001–005)."""
+    apply_narrative_phase1p_migrations(engine)
+    migrate_narrative_20260723_006_narrative_entities_aliases(engine)
+    migrate_narrative_20260723_007_narrative_assets_versions(engine)
+    migrate_narrative_20260723_008_narrative_asset_evidence(engine)
+    migrate_narrative_20260723_009_narrative_relations_versions_evidence(engine)
+    migrate_narrative_20260723_010_analysis_conflicts(engine)
+
+
+def apply_narrative_migrations(engine: Engine) -> None:
+    """Apply all frozen narrative migrations (Phase 1P + Phase 1B-P)."""
+    apply_narrative_phase1bp_migrations(engine)
