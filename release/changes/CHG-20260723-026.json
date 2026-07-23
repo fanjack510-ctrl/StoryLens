@@ -17,6 +17,12 @@
       "message": "docs: attach primary commit to CHG-20260723-026",
       "primary": false,
       "multi_change_reason": null
+    },
+    {
+      "sha": "5d8645923e533e0412f5706836a93bb6f4c436c5",
+      "message": "docs: close CHG-20260723-026 commit attachment loop",
+      "primary": false,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -82,7 +88,7 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T13:23:32Z",
-  "updated_at": "2026-07-23T13:33:03Z",
+  "updated_at": "2026-07-23T13:33:05Z",
   "parallel_plan": {
     "role": "phase1d_p",
     "branch": "feature/narrative-phase1d-product-contract",
