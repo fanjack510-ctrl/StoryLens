@@ -45,8 +45,10 @@ describe("Reader Journey UI cleanup local audit", () => {
     );
     const toolbar = screen.getByTestId("journey-curve-toolbar");
     expect(within(toolbar).getByTestId("journey-lens-select")).toBeInTheDocument();
-    expect(within(toolbar).getByTestId("journey-zoom-fit-all")).toHaveTextContent("适配全图");
-    expect(within(toolbar).getByTestId("journey-overlay-composite")).toHaveTextContent("对比指标");
+    expect(within(toolbar).queryByTestId("journey-zoom-fit-all")).not.toBeInTheDocument();
+    expect(within(toolbar).queryByTestId("journey-overlay-composite")).not.toBeInTheDocument();
+    expect(screen.getByTestId("journey-overlay-composite")).toHaveTextContent("对比分析");
+    expect(screen.queryByTestId("journey-zoom-fit-all")).not.toBeInTheDocument();
     expect(within(toolbar).getByTestId("journey-zoom-focus-phase")).not.toBeVisible();
     expect(within(toolbar).getByTestId("journey-all-metrics")).not.toBeVisible();
     expect(within(toolbar).getByTestId("journey-inspector-toggle")).toHaveTextContent(/详情/);

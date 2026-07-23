@@ -168,7 +168,8 @@ describe("Reader Journey Visualization v3.0", () => {
     renderWorkspace();
     expect(screen.queryByTestId("journey-chart-tool-rail")).not.toBeInTheDocument();
     expect(screen.getByTestId("journey-curve-toolbar")).toBeInTheDocument();
-    expect(screen.getByTestId("journey-zoom-fit-all")).toBeInTheDocument();
+    expect(screen.getByTestId("journey-overlay-composite")).toBeInTheDocument();
+    expect(screen.queryByTestId("journey-zoom-fit-all")).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId("journey-more-chart-settings"));
     expect(screen.getByTestId("journey-export-png")).toBeInTheDocument();
     expect(css).toMatch(/\.journey-chart-tool-rail\s*\{[^}]*display:\s*none/);

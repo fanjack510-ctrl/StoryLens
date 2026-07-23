@@ -393,6 +393,11 @@ export function CanonicalJourneyChart({
   const tooltipPoint =
     hover != null ? series.find((p) => p.scene_ordinal === hover.ordinal) : undefined;
   const tooltipScore = resolveMetricValue(tooltipPoint);
+  const tooltipComparePoint =
+    hover != null && secondarySeries
+      ? secondarySeries.find((p) => p.scene_ordinal === hover.ordinal)
+      : undefined;
+  const tooltipCompareScore = resolveMetricValue(tooltipComparePoint);
 
   return (
     <div
@@ -659,7 +664,13 @@ export function CanonicalJourneyChart({
           {lensLines && lensLines.length > 1 ? (
             <g data-testid="journey-compare-legend" aria-label="对比图例">
               <text x={padLeft} y={padTop - 8} className="journey-compare-legend-text" fontSize={11} fill="var(--muted)">
-                {`实线：${lensLines[0]?.labelZh || "当前指标"}  虚线：${lensLines[1]?.labelZh || "对比指标"}`}
+                {`绿色实线：${lensLines[0]?.labelZh || "当前指标"}  紫色虚线：${lensLines[1]?.labelZh || "对比指标"}`}
+              </text>
+            </g>
+          ) : lensLines && lensLines.length === 1 ? (
+            <g data-testid="journey-primary-legend" aria-label="主指标图例">
+              <text x={padLeft} y={padTop - 8} className="journey-compare-legend-text" fontSize={11} fill="var(--muted)">
+                {`绿色实线：${lensLines[0]?.labelZh || "当前指标"}`}
               </text>
             </g>
           ) : null}
@@ -981,9 +992,11 @@ export function CanonicalJourneyChart({
                   (() => {
                     const lensExpl = getLensExplanation(lensId);
                     const scoreNoun =
-                      lensId === "composite"
+                      lensLines?.[0]?.labelZh ||
+                      (lensId === "composite"
                         ? lensExpl.chart_title || "综合阅读动力"
-                        : lensExpl.title || formatJourneyMetricLabel(metric);
+                        : lensExpl.title || formatJourneyMetricLabel(metric));
+                    const compareNoun = lensLines?.[1]?.labelZh || null;
                     const roles = buildSceneRoleTags(visualization, tooltipNode.scene_ordinal);
                     const roleText = roles.map((r) => r.label).join(" · ") || "无特定叙事作用标签";
                     const reason =
@@ -996,9 +1009,18 @@ export function CanonicalJourneyChart({
                           {formatJourneySceneLabel(tooltipNode.scene_ordinal)}
                           {tooltipNode.role ? ` · ${roleLabelZh(tooltipNode.role)}` : ""}
                         </div>
-                        <div>
-                          {scoreNoun}：{formatJourneyScore(tooltipScore)}
+                        <div data-testid="journey-tooltip-primary-metric">
+                          {scoreNoun}：
+                          {tooltipScore == null ? "暂无数据" : formatJourneyScore(tooltipScore)}
                         </div>
+                        {compareNoun ? (
+                          <div data-testid="journey-tooltip-compare-metric">
+                            {compareNoun}：
+                            {tooltipCompareScore == null
+                              ? "暂无数据"
+                              : formatJourneyScore(tooltipCompareScore)}
+                          </div>
+                        ) : null}
                         <div>
                           节点类型：
                           {tooltipNode.node_type === "beat" || tooltipNode.role === "beat"

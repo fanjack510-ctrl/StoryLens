@@ -3,34 +3,42 @@ import type { ObservationLensId } from "./observationLenses";
 import {
   OVERLAY_COMPARE_HOW_TO_READ,
   OVERLAY_COMPARE_SUMMARY,
-  OVERLAY_COMPARE_TITLE,
   getLensExplanation,
 } from "./readerJourneyLensExplanation";
 import type { HookPayoffChapterStats } from "./hookPayoffTimelineModel";
 
 type Props = {
   lensId: ObservationLensId;
+  /** @deprecated Kept for call-site compat; title no longer switches to overlay label. */
   overlayCompare?: boolean;
+  comparisonActive?: boolean;
+  primaryMetricLabel?: string | null;
+  compareMetricLabel?: string | null;
   hookPayoffStats?: HookPayoffChapterStats | null;
   inconsistentWarning?: string | null;
 };
 
-/** Layer 1 one-liner + Layer 2 "怎么看" (max 3) + optional hook/payoff stats. */
+/** Layer 1 one-liner + Layer 2 "怎么看" (max 3) + metric/node legends. */
 export function JourneyLensExplanationChrome({
   lensId,
   overlayCompare = false,
+  comparisonActive = false,
+  primaryMetricLabel = null,
+  compareMetricLabel = null,
   hookPayoffStats = null,
   inconsistentWarning = null,
 }: Props) {
   const [open, setOpen] = useState(false);
   const panelId = useId();
   const explanation = getLensExplanation(lensId);
-  const title = overlayCompare
-    ? OVERLAY_COMPARE_TITLE
-    : explanation.chart_title || explanation.title;
-  const summary = overlayCompare ? OVERLAY_COMPARE_SUMMARY : explanation.one_line_summary;
-  const howTo = overlayCompare ? OVERLAY_COMPARE_HOW_TO_READ : explanation.how_to_read;
-  const legend = overlayCompare ? explanation.legend_items : explanation.legend_items;
+  const title = explanation.chart_title || explanation.title;
+  const summary = overlayCompare && comparisonActive
+    ? OVERLAY_COMPARE_SUMMARY
+    : explanation.one_line_summary;
+  const howTo =
+    overlayCompare && comparisonActive ? OVERLAY_COMPARE_HOW_TO_READ : explanation.how_to_read;
+  const primaryLabel = primaryMetricLabel || explanation.title;
+  const showCompareLegend = Boolean(comparisonActive && compareMetricLabel);
 
   return (
     <div className="journey-lens-explanation" data-testid="journey-lens-explanation" data-lens={lensId}>
@@ -86,8 +94,20 @@ export function JourneyLensExplanationChrome({
           ))}
         </ol>
       ) : null}
+      {lensId !== "hook_payoff" ? (
+        <ul
+          className="journey-metric-legend"
+          data-testid="journey-metric-legend"
+          aria-label="指标图例"
+        >
+          <li data-legend="primary">绿色实线：{primaryLabel}</li>
+          {showCompareLegend ? (
+            <li data-legend="compare">紫色虚线：{compareMetricLabel}</li>
+          ) : null}
+        </ul>
+      ) : null}
       <ul className="journey-minimal-legend" data-testid="journey-minimal-legend">
-        {legend.map((item) => (
+        {explanation.legend_items.map((item) => (
           <li key={item.key} data-legend={item.key}>
             {item.label}
           </li>

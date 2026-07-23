@@ -9,11 +9,6 @@ import {
 } from "./journeyUiLabels";
 import type { ChartHeightPreset, YDomainMode } from "./journeyVisualizationConfig";
 import {
-  COMPARE_METRIC_LABEL,
-  FIT_ALL_LABEL,
-  OVERLAY_COMPARE_TITLE,
-} from "./readerJourneyLensExplanation";
-import {
   DEFAULT_OBSERVATION_LENS,
   OBSERVATION_LENSES,
   getObservationLens,
@@ -24,13 +19,12 @@ import {
 type Props = {
   metric: JourneyCurveMetric;
   onMetricChange: (metric: JourneyCurveMetric) => void;
-  /** Observation lens (v2). When set, primary selector shows lenses instead of raw metrics. */
   observationLens?: ObservationLensId;
   onObservationLensChange?: (lens: ObservationLensId) => void;
-  /** @deprecated Prefer compareWith — kept for call-site compat during transition. */
+  /** @deprecated Prefer compareWith — kept for call-site compat. */
   overlayComposite?: boolean;
   onOverlayCompositeChange?: (enabled: boolean) => void;
-  /** Explicit secondary metric for 对比指标 (null = no purple line). */
+  /** @deprecated Compare UI moved to JourneyComparisonTools. */
   compareWith?: JourneyCurveMetric | null;
   onCompareWithChange?: (metric: JourneyCurveMetric | null) => void;
   heightPreset: ChartHeightPreset;
@@ -40,32 +34,27 @@ type Props = {
   canPanZoom: boolean;
   showBrush: boolean;
   showZoomControls: boolean;
-  onFitAll: () => void;
+  /** @deprecated Reset view moved to JourneyComparisonTools. */
+  onFitAll?: () => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
   onFocusPhase: () => void;
   onResetView: () => void;
-  /** Restore Source/Inspector preferred pane widths to defaults (does not change Scene/URL). */
   onResetPaneWidths?: () => void;
   inspectorCollapsed: boolean;
   onToggleInspector: () => void;
-  /** @deprecated Source visibility is controlled by top mode switch (正文对照/旅程视图/仅看正文). */
   sourceCollapsed?: boolean;
-  /** @deprecated Removed — duplicates top mode switch. */
   onToggleSource?: () => void;
-  /** @deprecated Always false — source toggle removed from Journey toolbar. */
   showSourceToggle?: boolean;
   onExportPng: () => void;
   exportBusy?: boolean;
-  /** When true, collapse secondary actions into 更多 (narrow widths). */
   compactActions?: boolean;
-  /** Unused — metric menu is always compact popover. Kept for call-site compat. */
   narrowLayout?: boolean;
 };
 
 /**
- * Compact chart toolbar: inline lens segmented control · phase fit · details · more.
- * Lens options stay in document flow (wrap pushes content down) — never overlay the chart.
+ * Lens navigation toolbar only.
+ * Chart tools (对比分析 / 重置视图) render beside the chart explanation.
  */
 export function JourneyChartToolbar({
   metric,
@@ -96,21 +85,21 @@ export function JourneyChartToolbar({
 }: Props) {
   const [metricOpen, setMetricOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
-  const [compareOpen, setCompareOpen] = useState(false);
   const metricTriggerId = useId();
   const moreTriggerId = useId();
-  const compareTriggerId = useId();
   const lensHintId = useId();
 
   void overlayComposite;
   void onOverlayCompositeChange;
-  void onFocusPhase;
+  void compareWith;
+  void onCompareWithChange;
+  void onFitAll;
 
   const useLenses = typeof onObservationLensChange === "function";
   const lensDef = getObservationLens(observationLens);
   const lensHint = getObservationLensHint(observationLens);
   const metricLabel = formatJourneyMetricLabel(metric);
-  const compareEnabled = typeof onCompareWithChange === "function" && !lensDef.isPairedHookPayoff;
+  const inspectorLabel = inspectorCollapsed ? "展开详情" : "收起详情";
 
   const handleMetricSelect = (key: JourneyCurveMetric) => {
     onMetricChange(key);
@@ -120,81 +109,6 @@ export function JourneyChartToolbar({
   const handleLensSelect = (id: ObservationLensId) => {
     onObservationLensChange?.(id);
   };
-
-  const inspectorLabel = inspectorCollapsed ? "展开详情" : "收起详情";
-
-  const compareMenu = compareEnabled ? (
-    <JourneyPopover
-      open={compareOpen}
-      onOpenChange={(open) => {
-        setCompareOpen(open);
-        if (open) {
-          setMoreOpen(false);
-          setMetricOpen(false);
-        }
-      }}
-      align="end"
-      data-testid="journey-compare-select-menu"
-      menuLabel={COMPARE_METRIC_LABEL}
-      trigger={
-        <button
-          type="button"
-          id={compareTriggerId}
-          className={`journey-toolbar-btn ${compareWith ? "active" : ""}`}
-          data-testid="journey-overlay-composite"
-          data-compare-with={compareWith || ""}
-          aria-pressed={Boolean(compareWith)}
-          title={COMPARE_METRIC_LABEL}
-          aria-expanded={compareOpen}
-          onClick={() => setCompareOpen((v) => !v)}
-        >
-          {OVERLAY_COMPARE_TITLE}
-        </button>
-      }
-    >
-      <div role="listbox" aria-label={COMPARE_METRIC_LABEL} data-testid="journey-compare-selector-list">
-        <button
-          type="button"
-          role="option"
-          className={!compareWith ? "active" : ""}
-          data-testid="journey-compare-none"
-          aria-selected={!compareWith}
-          onClick={() => {
-            onCompareWithChange?.(null);
-            setCompareOpen(false);
-          }}
-        >
-          退出对比
-        </button>
-        {(
-          [
-            ["reading_momentum", "综合阅读动力"],
-            ["plot_progress", "剧情推进"],
-            ["reading_tension", "阅读张力"],
-            ["arousal", "情绪强度"],
-            ["pacing_speed", "节奏速度"],
-          ] as const
-        )
-          .filter(([key]) => key !== lensDef.primaryKey)
-          .map(([key, label]) => (
-            <button
-              key={key}
-              type="button"
-              role="option"
-              className={compareWith === key ? "active" : ""}
-              data-testid={`journey-compare-${key}`}
-              aria-selected={compareWith === key}
-              onClick={() => {
-                onCompareWithChange?.(key as JourneyCurveMetric);
-                setCompareOpen(false);
-              }}
-            >
-              {label}
-            </button>
-          ))}
-      </div>
-    </JourneyPopover>
-  ) : null;
 
   const lensSegmented = (
     <div
@@ -244,9 +158,7 @@ export function JourneyChartToolbar({
       open={metricOpen}
       onOpenChange={(open) => {
         setMetricOpen(open);
-        if (open) {
-          setMoreOpen(false);
-        }
+        if (open) setMoreOpen(false);
       }}
       align="start"
       data-testid="journey-metric-select-menu"
@@ -314,7 +226,6 @@ export function JourneyChartToolbar({
           disabled={exportBusy}
           onClick={() => {
             onExportPng();
-            // Keep menu open while exporting so「导出中」status remains visible.
           }}
         >
           {exportBusy ? "导出中" : "导出 PNG"}
@@ -453,7 +364,7 @@ export function JourneyChartToolbar({
         data-testid="journey-curve-toolbar"
         data-visualization-version="4.2"
         role="toolbar"
-        aria-label="图表工具栏"
+        aria-label="分析维度"
       >
         <div className="journey-toolbar-left" data-testid="journey-metric-switcher">
           {useLenses ? lensSegmented : metricMenu}
@@ -463,18 +374,13 @@ export function JourneyChartToolbar({
             </span>
           ) : null}
         </div>
-        <div className="journey-toolbar-tools" data-testid="journey-chart-tools">
-          {compareMenu}
-          <button
-            type="button"
-            className="journey-toolbar-btn"
-            data-testid="journey-zoom-fit-all"
-            title={FIT_ALL_LABEL}
-            onClick={onFitAll}
-          >
-            {FIT_ALL_LABEL}
-          </button>
-        </div>
+        {/* Chart tools moved out of the Lens row — keep empty slot for layout audits. */}
+        <div
+          className="journey-toolbar-tools journey-toolbar-tools-empty"
+          data-testid="journey-chart-tools"
+          data-tools-relocated="true"
+          aria-hidden="true"
+        />
         <div className="journey-toolbar-right" data-testid="journey-toolbar-right">
           <button
             type="button"
@@ -487,7 +393,6 @@ export function JourneyChartToolbar({
           </button>
           {moreMenu}
         </div>
-        {/* Legacy selector compatibility — phase focus removed from ordinary UI */}
         <div data-testid="journey-zoom-controls" hidden aria-hidden="true" />
         <button
           type="button"
@@ -511,7 +416,6 @@ export function JourneyChartToolbar({
           {lensHint}
         </p>
       ) : null}
-      {/* Keep metric key list reachable for static audits */}
       <span hidden aria-hidden="true" data-testid="journey-metric-keys-audit">
         {ALL_METRIC_KEYS.join(",")}
       </span>

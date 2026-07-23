@@ -157,8 +157,9 @@ describe("Reader Journey inline lens selector (no overlay)", () => {
       for (const lensDef of OBSERVATION_LENSES) {
         expect(within(toolbar).getByTestId(`journey-lens-${lensDef.id}`)).toBeEnabled();
       }
-      expect(within(toolbar).getByTestId("journey-overlay-composite")).toBeInTheDocument();
-      expect(within(toolbar).getByTestId("journey-zoom-fit-all")).toBeInTheDocument();
+      expect(within(toolbar).queryByTestId("journey-overlay-composite")).not.toBeInTheDocument();
+      expect(screen.getByTestId("journey-overlay-composite")).toBeInTheDocument();
+      expect(screen.queryByTestId("journey-zoom-fit-all")).not.toBeInTheDocument();
       expect(within(toolbar).getByTestId("journey-zoom-focus-phase")).not.toBeVisible();
       expect(within(toolbar).getByTestId("journey-all-metrics")).not.toBeVisible();
     },

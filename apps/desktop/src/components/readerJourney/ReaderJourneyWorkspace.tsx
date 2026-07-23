@@ -45,8 +45,18 @@ import {
   lensIdFromMetric,
   metricForLens,
   parseLensParam,
+  PHASE_PRIMARY_ONLY_HINT_PREFIX,
+  SAME_METRIC_EXIT_MESSAGE,
+  getLensExplanation,
 } from "./readerJourneyLensExplanation";
 import { JourneyLensExplanationChrome } from "./JourneyLensExplanationChrome";
+import { JourneyComparisonTools } from "./JourneyComparisonTools";
+import {
+  buildComparisonState,
+  resolveCompareAfterLensChange,
+  sanitizeCompareMetric,
+  type CompareMetricKey,
+} from "./comparisonState";
 import { HookPayoffTimeline } from "./HookPayoffTimeline";
 import {
   getNarrativeLoops,
@@ -71,7 +81,6 @@ import {
   JourneySceneDetailPanel,
 } from "./JourneySceneDetailPanel";
 import { roleLabelZh, formatJourneyPhaseLabel, resolvePhaseSummaryDisplay, formatJourneySceneLabel, formatJourneyNodeLabel } from "./journeyUiLabels";
-import { getLensExplanation } from "./readerJourneyLensExplanation";
 import {
   CANONICAL_OVERVIEW_MODE,
   OVERVIEW_MODE_PARAM,
@@ -250,20 +259,17 @@ export function ReaderJourneyWorkspace({
   const [selectedLoopId, setSelectedLoopId] = useState<string | null>(
     () => searchParams.get("loop"),
   );
-  const [compareWith, setCompareWith] = useState<JourneyCurveMetric | null>(() => {
+  const [compareWith, setCompareWith] = useState<CompareMetricKey | null>(() => {
     const raw = searchParams.get("compareWith");
-    if (!raw) return null;
-    const allowed = new Set([
-      "reading_momentum",
-      "plot_progress",
-      "reading_tension",
-      "arousal",
-      "pacing_speed",
-      "engagement",
-    ]);
-    return allowed.has(raw) ? (raw as JourneyCurveMetric) : null;
+    const lens =
+      parseLensParam(searchParams.get("lens")) ??
+      lensIdFromMetric(searchParams.get("metric")) ??
+      DEFAULT_OBSERVATION_LENS;
+    const primary = getObservationLens(lens).primaryKey;
+    return sanitizeCompareMetric(raw, primary);
   });
   const overlayComposite = Boolean(compareWith);
+  const [compareLiveMessage, setCompareLiveMessage] = useState<string | null>(null);
   const [analysisInfoOpen, setAnalysisInfoOpen] = useState(false);
   const [exportStatus, setExportStatus] = useState<"idle" | "exporting" | "succeeded" | "failed">(
     "idle",
@@ -493,6 +499,10 @@ export function ReaderJourneyWorkspace({
     [nodes, selectedSceneOrdinal],
   );
 
+  const comparisonState = useMemo(
+    () => buildComparisonState(observationLens, compareWith),
+    [observationLens, compareWith],
+  );
   const phaseStripRef = useRef<HTMLDivElement>(null);
   const chartHeight = chartHeightPx(heightPreset);
   const series = useMemo(
@@ -514,6 +524,10 @@ export function ReaderJourneyWorkspace({
     }
     return initialView;
   });
+
+  const resetViewEnabled =
+    !isHookPayoffLens(observationLens) &&
+    (viewWindow.start !== 1 || viewWindow.end !== sceneCount);
 
   useEffect(() => {
     setViewWindow(defaultViewWindow(sceneCount));
@@ -723,7 +737,8 @@ export function ReaderJourneyWorkspace({
       lens: ObservationLensId,
       loopId: string | null,
       metricKey?: JourneyCurveMetric,
-      compareKey?: JourneyCurveMetric | null,
+      compareKey?: CompareMetricKey | null,
+      options?: { replace?: boolean },
     ) => {
       setSearchParams(
         (prev) => {
@@ -733,20 +748,26 @@ export function ReaderJourneyWorkspace({
           if (loopId) params.set("loop", loopId);
           else params.delete("loop");
           const compare = compareKey === undefined ? compareWith : compareKey;
-          if (compare && lens !== "hook_payoff") params.set("compareWith", compare);
+          const primary = getObservationLens(lens).primaryKey;
+          const cleaned =
+            compare && lens !== "hook_payoff"
+              ? sanitizeCompareMetric(compare, primary)
+              : null;
+          if (cleaned) params.set("compareWith", cleaned);
           else params.delete("compareWith");
           return params;
         },
-        { replace: true },
+        { replace: options?.replace ?? true },
       );
     },
     [setSearchParams, compareWith],
   );
 
   const handleCompareWithChange = useCallback(
-    (next: JourneyCurveMetric | null) => {
+    (next: CompareMetricKey | null) => {
       setCompareWith(next);
-      syncLensLoopToUrl(observationLens, selectedLoopId, metric, next);
+      setCompareLiveMessage(null);
+      syncLensLoopToUrl(observationLens, selectedLoopId, metric, next, { replace: false });
     },
     [syncLensLoopToUrl, observationLens, selectedLoopId, metric],
   );
@@ -757,23 +778,27 @@ export function ReaderJourneyWorkspace({
     }
     const nextLens = lensIdFromMetric(key);
     setObservationLens(nextLens);
-    syncLensLoopToUrl(nextLens, selectedLoopId, key);
+    const resolved = resolveCompareAfterLensChange(nextLens, compareWith);
+    setCompareWith(resolved.compare);
+    if (resolved.exitedSameMetric) setCompareLiveMessage(SAME_METRIC_EXIT_MESSAGE);
+    syncLensLoopToUrl(nextLens, selectedLoopId, key, resolved.compare);
     onSelectionChange?.({ selectedMetric: key, source: "journey_rhythm" });
   };
 
   const handleObservationLensChange = (lens: ObservationLensId) => {
     setObservationLens(lens);
-    if (lens === "hook_payoff") setCompareWith(null);
+    const resolved = resolveCompareAfterLensChange(lens, compareWith);
+    setCompareWith(resolved.compare);
+    if (resolved.exitedSameMetric) {
+      setCompareLiveMessage(SAME_METRIC_EXIT_MESSAGE);
+    } else if (lens === "hook_payoff") {
+      setCompareLiveMessage(null);
+    }
     const nextMetric = metricForLens(lens);
     if (controlledMetric === undefined) {
       setMetricInternal(nextMetric);
     }
-    syncLensLoopToUrl(
-      lens,
-      selectedLoopId,
-      nextMetric,
-      lens === "hook_payoff" ? null : compareWith,
-    );
+    syncLensLoopToUrl(lens, selectedLoopId, nextMetric, resolved.compare);
     onSelectionChange?.({ selectedMetric: nextMetric, source: "journey_rhythm" });
   };
 
@@ -803,15 +828,27 @@ export function ReaderJourneyWorkspace({
     if (loopFromUrl !== selectedLoopId) {
       setSelectedLoopId(loopFromUrl);
     }
-    const nextCompare =
-      compareFromUrl &&
-      ["reading_momentum", "plot_progress", "reading_tension", "arousal", "pacing_speed", "engagement"].includes(
-        compareFromUrl,
-      )
-        ? (compareFromUrl as JourneyCurveMetric)
-        : null;
+    const lensForCompare =
+      (lensFromUrl && lensFromUrl) ||
+      observationLens;
+    const primary = getObservationLens(lensForCompare).primaryKey;
+    const nextCompare = sanitizeCompareMetric(compareFromUrl, primary);
     if (nextCompare !== compareWith) {
       setCompareWith(nextCompare);
+    }
+    if (compareFromUrl && !nextCompare && compareFromUrl !== null) {
+      // Clear illegal / same-as-primary compare from URL.
+      setSearchParams(
+        (prev) => {
+          const params = new URLSearchParams(prev);
+          if (params.get("compareWith")) {
+            params.delete("compareWith");
+            return params;
+          }
+          return prev;
+        },
+        { replace: true },
+      );
     }
     if (loopFromUrl) {
       const loops = getNarrativeLoops(visualization);
@@ -1471,8 +1508,6 @@ export function ReaderJourneyWorkspace({
           observationLens={observationLens}
           onObservationLensChange={handleObservationLensChange}
           overlayComposite={overlayComposite}
-          compareWith={compareWith}
-          onCompareWithChange={handleCompareWithChange}
           heightPreset={heightPreset}
           onHeightPresetChange={handleHeightPresetChange}
           yDomainMode={yDomainMode}
@@ -1528,6 +1563,15 @@ export function ReaderJourneyWorkspace({
         />
         {/* Phase navigation — after toolbar (+ optional MetricSelectorPanel), before chart shell */}
         <section className="journey-phase-strip-wrap" data-testid="journey-phase-strip-wrap">
+          {comparisonState.mode === "active" ? (
+            <p
+              className="journey-phase-primary-only-hint"
+              data-testid="journey-phase-primary-only-hint"
+            >
+              {PHASE_PRIMARY_ONLY_HINT_PREFIX}
+              {comparisonState.primaryLabel}
+            </p>
+          ) : null}
           <label
             className="journey-phase-mobile-select-wrap"
             data-testid="journey-phase-mobile-select-wrap"
@@ -1614,12 +1658,25 @@ export function ReaderJourneyWorkspace({
             </p>
           )}
 
-          <JourneyLensExplanationChrome
-            lensId={observationLens}
-            overlayCompare={overlayComposite}
-            hookPayoffStats={null}
-            inconsistentWarning={null}
-          />
+          <div className="journey-lens-explanation-with-tools" data-testid="journey-lens-explanation-with-tools">
+            <JourneyLensExplanationChrome
+              lensId={observationLens}
+              overlayCompare={false}
+              comparisonActive={comparisonState.mode === "active"}
+              primaryMetricLabel={comparisonState.primaryLabel}
+              compareMetricLabel={comparisonState.compareLabel}
+              hookPayoffStats={null}
+              inconsistentWarning={null}
+            />
+            <JourneyComparisonTools
+              observationLens={observationLens}
+              compareWith={compareWith}
+              onCompareWithChange={handleCompareWithChange}
+              resetViewEnabled={resetViewEnabled}
+              onResetView={() => syncViewToUrl(1, sceneCount)}
+              liveMessage={compareLiveMessage}
+            />
+          </div>
 
           {/* Chart shell: viewport only (toolbar is above phase strip) */}
           <div

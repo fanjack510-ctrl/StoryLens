@@ -10,7 +10,7 @@ afterEach(() => {
   document.getElementById("journey-overlay-root")?.remove();
 });
 
-describe("对比指标 compareWith URL + chart lines", () => {
+describe("对比分析 mode + tools separation", () => {
   it("does not draw secondary line without compareWith", () => {
     const viz = buildFixture13Scenes();
     expect(buildLensChartLines(viz, "composite")).toHaveLength(1);
@@ -22,29 +22,9 @@ describe("对比指标 compareWith URL + chart lines", () => {
     const lines = buildLensChartLines(viz, "composite", { compareWith: "arousal" });
     expect(lines).toHaveLength(2);
     expect(lines[1].labelZh).toMatch(/情绪/);
-    expect(lines.map((l) => l.id)[0]).not.toBe(lines.map((l) => l.id)[1]);
   });
 
-  it("restores compareWith from URL and clears on 退出对比", () => {
-    render(
-      <MemoryRouter initialEntries={["/?overview=curve&lens=composite&compareWith=arousal"]}>
-        <ReaderJourneyWorkspace
-          visualization={buildFixture13Scenes()}
-          onLocateEvidence={vi.fn()}
-        />
-      </MemoryRouter>,
-    );
-    const compareBtn = screen.getByTestId("journey-overlay-composite");
-    expect(compareBtn).toHaveAttribute("data-compare-with", "arousal");
-    fireEvent.click(compareBtn);
-    fireEvent.click(screen.getByTestId("journey-compare-none"));
-    expect(screen.getByTestId("journey-overlay-composite")).toHaveAttribute(
-      "data-compare-with",
-      "",
-    );
-  });
-
-  it("keeps 对比指标 in tools, not as a main lens", () => {
+  it("keeps analysis tools out of the Lens list", () => {
     render(
       <MemoryRouter initialEntries={["/?overview=curve"]}>
         <ReaderJourneyWorkspace
@@ -54,10 +34,133 @@ describe("对比指标 compareWith URL + chart lines", () => {
       </MemoryRouter>,
     );
     const lenses = screen.getByTestId("journey-lens-selector-list");
+    expect(within(lenses).queryByText("对比分析")).not.toBeInTheDocument();
     expect(within(lenses).queryByText("对比指标")).not.toBeInTheDocument();
-    expect(within(lenses).queryByText("全部指标")).not.toBeInTheDocument();
-    expect(within(lenses).queryByText("当前阶段")).not.toBeInTheDocument();
-    expect(screen.getByTestId("journey-chart-tools")).toHaveTextContent("对比指标");
-    expect(screen.getByTestId("journey-chart-tools")).toHaveTextContent("适配全图");
+    expect(within(lenses).queryByText("重置视图")).not.toBeInTheDocument();
+    expect(within(lenses).queryByText("适配全图")).not.toBeInTheDocument();
+    expect(screen.getByTestId("journey-chart-tools")).toHaveAttribute(
+      "data-tools-relocated",
+      "true",
+    );
+    expect(screen.getByTestId("journey-chart-analysis-tools").textContent).toMatch(/对比分析/);
+  });
+
+  it("requires confirm before entering compare mode", () => {
+    render(
+      <MemoryRouter initialEntries={["/?overview=curve&lens=emotion"]}>
+        <ReaderJourneyWorkspace
+          visualization={buildFixture13Scenes()}
+          onLocateEvidence={vi.fn()}
+        />
+      </MemoryRouter>,
+    );
+    expect(screen.queryByTestId("journey-comparison-toolbar")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("journey-overlay-composite"));
+    expect(screen.getByTestId("journey-compare-primary-label").textContent).toMatch(/情绪强度/);
+    fireEvent.click(screen.getByTestId("journey-compare-reading_momentum"));
+    // Pending only — not active yet
+    expect(screen.queryByTestId("journey-comparison-toolbar")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("journey-compare-confirm"));
+    expect(screen.getByTestId("journey-comparison-toolbar")).toBeInTheDocument();
+    expect(screen.getByTestId("journey-comparison-active").textContent).toMatch(
+      /情绪强度.*综合阅读动力/,
+    );
+    expect(screen.getByTestId("journey-comparison-exit")).toBeInTheDocument();
+    expect(screen.getAllByTestId("journey-curve-path-secondary").length).toBeGreaterThan(0);
+  });
+
+  it("cancel does not activate compare", () => {
+    render(
+      <MemoryRouter initialEntries={["/?overview=curve&lens=emotion"]}>
+        <ReaderJourneyWorkspace
+          visualization={buildFixture13Scenes()}
+          onLocateEvidence={vi.fn()}
+        />
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByTestId("journey-overlay-composite"));
+    fireEvent.click(screen.getByTestId("journey-compare-reading_momentum"));
+    fireEvent.click(screen.getByTestId("journey-compare-cancel"));
+    expect(screen.queryByTestId("journey-comparison-toolbar")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("journey-curve-path-secondary")).not.toBeInTheDocument();
+  });
+
+  it("restores compare from URL and exits via fixed exit control", () => {
+    render(
+      <MemoryRouter initialEntries={["/?overview=curve&lens=composite&compareWith=arousal"]}>
+        <ReaderJourneyWorkspace
+          visualization={buildFixture13Scenes()}
+          onLocateEvidence={vi.fn()}
+        />
+      </MemoryRouter>,
+    );
+    expect(screen.getByTestId("journey-comparison-toolbar")).toHaveAttribute(
+      "data-compare-with",
+      "arousal",
+    );
+    expect(screen.getByTestId("journey-overlay-composite")).toHaveAttribute(
+      "data-compare-with",
+      "arousal",
+    );
+    fireEvent.click(screen.getByTestId("journey-comparison-exit"));
+    expect(screen.queryByTestId("journey-comparison-toolbar")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("journey-curve-path-secondary")).not.toBeInTheDocument();
+  });
+
+  it("hides compare tools on hook_payoff and clears compare", () => {
+    render(
+      <MemoryRouter initialEntries={["/?overview=curve&lens=composite&compareWith=arousal"]}>
+        <ReaderJourneyWorkspace
+          visualization={buildFixture13Scenes()}
+          onLocateEvidence={vi.fn()}
+        />
+      </MemoryRouter>,
+    );
+    expect(screen.getByTestId("journey-comparison-toolbar")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("journey-lens-hook_payoff"));
+    expect(screen.queryByTestId("journey-comparison-toolbar")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("journey-overlay-composite")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("journey-chart-analysis-tools")).not.toBeInTheDocument();
+  });
+
+  it("auto-exits when switching to the same primary as compare", () => {
+    render(
+      <MemoryRouter initialEntries={["/?overview=curve&lens=emotion&compareWith=reading_momentum"]}>
+        <ReaderJourneyWorkspace
+          visualization={buildFixture13Scenes()}
+          onLocateEvidence={vi.fn()}
+        />
+      </MemoryRouter>,
+    );
+    expect(screen.getByTestId("journey-comparison-toolbar")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("journey-lens-composite"));
+    expect(screen.queryByTestId("journey-comparison-toolbar")).not.toBeInTheDocument();
+    expect(screen.getByTestId("journey-compare-live").textContent).toMatch(/对比模式已结束/);
+  });
+
+  it("shows phase primary-only hint while comparing", () => {
+    render(
+      <MemoryRouter initialEntries={["/?overview=curve&lens=emotion&compareWith=reading_momentum"]}>
+        <ReaderJourneyWorkspace
+          visualization={buildFixture13Scenes()}
+          onLocateEvidence={vi.fn()}
+        />
+      </MemoryRouter>,
+    );
+    expect(screen.getByTestId("journey-phase-primary-only-hint").textContent).toMatch(
+      /阶段摘要仅显示主指标：情绪强度/,
+    );
+  });
+
+  it("hides reset view when viewport is already full", () => {
+    render(
+      <MemoryRouter initialEntries={["/?overview=curve&lens=emotion"]}>
+        <ReaderJourneyWorkspace
+          visualization={buildFixture13Scenes()}
+          onLocateEvidence={vi.fn()}
+        />
+      </MemoryRouter>,
+    );
+    expect(screen.queryByTestId("journey-zoom-fit-all")).not.toBeInTheDocument();
   });
 });

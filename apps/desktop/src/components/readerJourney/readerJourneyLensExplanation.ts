@@ -148,22 +148,29 @@ export const READER_JOURNEY_LENS_EXPLANATIONS: Record<
   },
 };
 
-/** Overlay / 对比指标 — uses composite semantics with compare-focused summary. */
-export const OVERLAY_COMPARE_TITLE = "对比指标";
+/** Overlay / 对比分析 — chart tool (not a Lens). */
+export const OVERLAY_COMPARE_TITLE = "对比分析";
 
 export const OVERLAY_COMPARE_SUMMARY =
-  "选择第二条指标与当前镜头对照。未选择时不显示对比曲线。";
+  "选择第二个指标与当前主指标对照。确认后才进入对比模式。";
 
 export const OVERLAY_COMPARE_HOW_TO_READ: [string, string, string] = [
-  "两线同步：速度与作用大致一致。",
-  "明显分离：需要检查快而无效或慢而有力。",
-  "两条线的数值不能简单相减。",
+  "绿色实线是当前主指标，紫色虚线是对比指标。",
+  "两线同步或分离帮助对照节奏与作用，数值不能简单相减。",
+  "可随时更换对比指标或退出对比。",
 ];
 
 export const ALL_METRICS_LABEL = "全部指标";
 export const CURRENT_PHASE_LABEL = "当前阶段";
-export const FIT_ALL_LABEL = "适配全图";
-export const COMPARE_METRIC_LABEL = "对比指标";
+/** @deprecated Prefer RESET_VIEW_LABEL */
+export const FIT_ALL_LABEL = "重置视图";
+export const RESET_VIEW_LABEL = "重置视图";
+export const COMPARE_METRIC_LABEL = "选择对比指标";
+export const EXIT_COMPARE_LABEL = "退出对比";
+export const CHANGE_COMPARE_LABEL = "更换指标";
+export const START_COMPARE_LABEL = "开始对比";
+export const SAME_METRIC_EXIT_MESSAGE = "主指标与对比指标相同，对比模式已结束。";
+export const PHASE_PRIMARY_ONLY_HINT_PREFIX = "阶段摘要仅显示主指标：";
 
 export function getLensExplanation(
   lensId: ObservationLensId | string | null | undefined,
