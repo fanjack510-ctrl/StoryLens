@@ -32,9 +32,15 @@
     },
     {
       "sha": "dbd0ee8dc8e98eb231b1f5428d4f820f63396eb5",
-      "message": "docs: attach primary commit to CHG-20260723-033 (temporary HEAD; integration commit pending for main.py/runtime/E2E/docs)",
+      "message": "docs: attach primary commit to CHG-20260723-033",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "c23b09555f3e4715dea7b99b42380c3696c0a9f8",
+      "message": "feat: integrate narrative phase2a mock run shell",
       "primary": true,
-      "multi_change_reason": "Integration-only wiring commit not yet on branch; replace primary when feat: wire phase2a integration lands"
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -86,12 +92,16 @@
     "apps/desktop/src/features/wholeBook/runShell/__tests__/ (Agent N Vitest regression)"
   ],
   "verification_evidence": [
-    "pytest apps/api/tests/test_narrative_phase2a_integration.py -q → (Integration to fill pass count)",
-    "pytest apps/api/tests/test_narrative_phase2a_mock_run_backend.py apps/api/tests/test_narrative_phase2a_recovery.py apps/api/tests/test_narrative_phase2ap_contract.py -q → regression",
-    "npx vitest run src/features/wholeBook/runShell/__tests__ (apps/desktop) → Agent N regression",
-    "python scripts/version_manager.py check",
-    "python scripts/change_registry.py check",
-    "git diff --check"
+    "D:\\Dstorylens\\.venv\\Scripts\\python.exe -m pytest apps/api/tests/test_narrative_phase2ap_contract.py -q --noconftest → 33 passed",
+    "D:\\Dstorylens\\.venv\\Scripts\\python.exe -m pytest apps/api/tests/test_narrative_phase2a_mock_run_backend.py -q -k \"not change_registry and not git_diff\" → 25 passed",
+    "D:\\Dstorylens\\.venv\\Scripts\\python.exe -m pytest apps/api/tests/test_narrative_phase2a_recovery.py -q -k \"not change_registry and not git_diff\" → 31 passed",
+    "D:\\Dstorylens\\.venv\\Scripts\\python.exe -m pytest apps/api/tests/test_narrative_phase2a_integration.py -q → 18 passed",
+    "D:\\Dstorylens\\.venv\\Scripts\\python.exe -m pytest phase1c/1d suite -q --noconftest → 87 passed (2 registry/git_diff only)",
+    "npx vitest run src/features/wholeBook/runShell → 29 passed (4 files)",
+    "python scripts/version_manager.py check → Version check passed: 1.0.5",
+    "python scripts/change_registry.py check → passed",
+    "python scripts/check_capability_keys.py → ok",
+    "git diff --check → clean"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -108,7 +118,7 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T15:04:12Z",
-  "updated_at": "2026-07-23T16:30:00Z",
+  "updated_at": "2026-07-23T16:45:00Z",
   "parallel_plan": {
     "role": "integration",
     "branch": "integration/narrative-phase2a",
