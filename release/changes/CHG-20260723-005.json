@@ -11,6 +11,12 @@
       "message": "fix: clarify reader journey comparison mode",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "ab3af600bfb860dc2e04b290789e76ce64905ef9",
+      "message": "docs: mark CHG-20260723-005 tested for comparison mode UX",
+      "primary": false,
+      "multi_change_reason": "registry status for CHG-20260723-005"
     }
   ],
   "modules": [
