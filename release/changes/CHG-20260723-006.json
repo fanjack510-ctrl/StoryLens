@@ -41,6 +41,12 @@
       "message": "docs: sync CHG-20260723-006 registry after unified topbar.",
       "primary": false,
       "multi_change_reason": "registry status for unified topbar"
+    },
+    {
+      "sha": "043e2e7ce6f8ffb2c9d3a6ca82b6f5153126a8ff",
+      "message": "fix: make reader journey lens switching atomic (CHG-20260723-006).",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -111,5 +117,5 @@
   "blocker_level": "P1",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T03:06:52Z",
-  "updated_at": "2026-07-23T03:57:14Z"
+  "updated_at": "2026-07-23T03:57:30Z"
 }
