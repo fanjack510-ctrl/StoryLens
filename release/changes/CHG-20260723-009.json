@@ -3,9 +3,16 @@
   "title": "Fix Reader Journey PNG export after more-menu removal",
   "type": "fix",
   "base_version": "1.0.4",
-  "status": "registered",
+  "status": "tested",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "2ad6f3ce733023db1dcad5e795a4610561289e48",
+      "message": "fix: restore Reader Journey PNG export after more-menu removal (CHG-20260723-009).",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "desktop-shell",
     "reader-journey"
@@ -22,9 +29,12 @@
     "No journey-more-chart-settings restored"
   ],
   "tests": [
-    "npm run test -- --run (apps/desktop)"
+    "npm run test -- --run (apps/desktop)",
+    "playwright: smoke/scroll/chapter e2e"
   ],
-  "verification_evidence": [],
+  "verification_evidence": [
+    "Phase A vitest 877 pass; book/results more-menu export clicks journey-export-png only; no more-menu restored"
+  ],
   "data_compatibility": {
     "database_changed": false,
     "migration_required": false,
@@ -38,7 +48,7 @@
     "breaking_change": false
   },
   "blocker_level": null,
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T05:07:01Z",
-  "updated_at": "2026-07-23T05:07:37Z"
+  "updated_at": "2026-07-23T05:15:53Z"
 }
