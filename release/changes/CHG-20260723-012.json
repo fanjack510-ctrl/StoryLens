@@ -3,7 +3,7 @@
   "title": "Agent A: Migration ledger, content hashes, Book Snapshot",
   "type": "database",
   "base_version": "1.0.5",
-  "status": "registered",
+  "status": "tested",
   "include_in_next_release": true,
   "commits": [],
   "modules": [
@@ -12,22 +12,42 @@
     "content hash",
     "book snapshot"
   ],
-  "files": [],
-  "user_summary": "Pre-registered for Agent A snapshot/hash/ledger implementation after Phase 1P.",
-  "technical_summary": "Planned: implement MigrationLedger, hash backfill, BookSnapshot repository/service against Phase 1P schema. Must not renumber migrations or edit RunStage services.",
+  "files": [
+    "apps/api/app/narrative_core/services/migration_ledger.py",
+    "apps/api/app/narrative_core/services/hash_backfill.py",
+    "apps/api/app/narrative_core/services/snapshot_repository.py",
+    "apps/api/app/narrative_core/services/snapshot_service.py",
+    "apps/api/app/narrative_core/services/__init__.py",
+    "apps/api/app/narrative_core/migrations/runner.py",
+    "apps/api/tests/test_narrative_migration_ledger.py",
+    "apps/api/tests/test_narrative_hash_backfill.py",
+    "apps/api/tests/test_narrative_snapshot_service.py",
+    "docs/architecture/narrative-intelligence-core/phase1a-migration-ledger-implementation.md",
+    "docs/architecture/narrative-intelligence-core/phase1a-snapshot-implementation.md",
+    "docs/architecture/narrative-intelligence-core/phase1a-snapshot-verification.md"
+  ],
+  "user_summary": "Migration ledger, content hash backfill, and Book Snapshot create/reuse/validate for Narrative Phase 1A.",
+  "technical_summary": "Implemented MigrationLedgerService, ContentHashServiceImpl, BookSnapshot repository/service and SnapshotValidationGateway against Phase 1P schema. Migrations 001-003 checksum semantics use NarrativeCoreError. Commit attach deferred to Integration.",
   "acceptance_criteria": [
     "Fork from Phase 1P final commit",
     "Do not modify models.py schema without Integration",
     "Use frozen SnapshotStatus and hash_canon",
     "Provide SnapshotValidationGateway for Agent B"
   ],
-  "tests": [],
-  "verification_evidence": [],
+  "tests": [
+    "apps/api/tests/test_narrative_migration_ledger.py",
+    "apps/api/tests/test_narrative_hash_backfill.py",
+    "apps/api/tests/test_narrative_snapshot_service.py",
+    "apps/api/tests/test_narrative_phase1p_contract.py"
+  ],
+  "verification_evidence": [
+    "pytest directed narrative snapshot/hash/ledger + phase1p contract: 26 passed"
+  ],
   "data_compatibility": {
     "database_changed": true,
     "migration_required": false,
     "user_data_compatible": true,
-    "notes": "Uses Phase 1P migrations; may add service-level backfill on temp DBs only until Integration."
+    "notes": "Uses Phase 1P migrations; service-level backfill on demand; no Alembic."
   },
   "release_impact": {
     "requires_reanalysis": false,
@@ -38,7 +58,7 @@
   "blocker_level": null,
   "head_inclusion": "EXISTS_NOT_INCLUDED",
   "created_at": "2026-07-23T07:20:00Z",
-  "updated_at": "2026-07-23T07:20:00Z",
+  "updated_at": "2026-07-23T08:00:00Z",
   "parallel_plan": {
     "role": "agent_a",
     "branch": "feature/narrative-phase1a-snapshot",

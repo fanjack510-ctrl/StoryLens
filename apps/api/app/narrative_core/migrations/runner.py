@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from sqlalchemy import inspect, text
 from sqlalchemy.engine import Engine
 
+from app.narrative_core.errors import NarrativeCoreError, NarrativeCoreErrorCode
 from app.narrative_core.migrations import (
     BASELINE_MARKER_ID,
     MIGRATION_ANALYSIS_RUN_SCOPE,
@@ -71,8 +72,9 @@ def _record_applied(engine: Engine, migration_id: str, checksum: str) -> None:
     existing = _get_applied_checksum(engine, migration_id)
     if existing is not None:
         if existing != checksum:
-            raise RuntimeError(
-                f"MIGRATION_CHECKSUM_MISMATCH: {migration_id} stored={existing} expected={checksum}"
+            raise NarrativeCoreError(
+                NarrativeCoreErrorCode.MIGRATION_CHECKSUM_MISMATCH,
+                f"{migration_id} stored={existing} expected={checksum}",
             )
         return
     with engine.begin() as connection:
@@ -100,7 +102,10 @@ def register_baseline_1_0_5(engine: Engine) -> None:
     existing = _get_applied_checksum(engine, BASELINE_MARKER_ID)
     if existing is not None:
         if existing != checksum:
-            raise RuntimeError("MIGRATION_BASELINE_INVALID: baseline_1_0_5 checksum mismatch")
+            raise NarrativeCoreError(
+                NarrativeCoreErrorCode.MIGRATION_BASELINE_INVALID,
+                "baseline_1_0_5 checksum mismatch",
+            )
         return
     with engine.begin() as connection:
         connection.execute(
