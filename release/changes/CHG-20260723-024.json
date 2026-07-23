@@ -11,6 +11,12 @@
       "message": "feat: implement frontend capability foundation",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "84cd5f62252c97e74df1b50792d4d5912ced697c",
+      "message": "docs: attach primary commit to CHG-20260723-024",
+      "primary": false,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -84,5 +90,5 @@
   "blocker_level": null,
   "head_inclusion": null,
   "created_at": "2026-07-23T11:46:12Z",
-  "updated_at": "2026-07-23T12:20:00Z"
+  "updated_at": "2026-07-23T12:30:00Z"
 }
