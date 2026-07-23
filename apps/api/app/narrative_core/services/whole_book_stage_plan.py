@@ -23,6 +23,23 @@ REQUIRED_SCAFFOLD_STAGES: frozenset[WholeBookStageKey] = frozenset(
     }
 )
 
+# ---------------------------------------------------------------------------
+# Dual mapping contract (do not collapse into one table):
+#
+# 1) ENGINE_MODULE_PLANNING_STAGES / MODULE_TO_STAGES
+#    Engine planning mapping — which primary *analysis* stages to schedule
+#    when a module is requested. Scaffold stages are added separately via
+#    REQUIRED_SCAFFOLD_STAGES + DAG close in build_whole_book_stage_plan.
+#
+# 2) product_contract.keys.MODULE_STAGE_DEPENDENCIES
+#    Product result dependency mapping — which stages must be considered when
+#    aggregating WholeBookModuleStatus / Envelope.source_stage_keys for the
+#    result page. This is many-to-many and intentionally broader than (1).
+#
+# Result projection (Phase 1D Agent K) MUST use MODULE_STAGE_DEPENDENCIES for
+# status aggregation. Engine plan builders MUST use MODULE_TO_STAGES.
+# ---------------------------------------------------------------------------
+
 # Module → analysis stages (scaffold stages added separately).
 MODULE_TO_STAGES: Mapping[WholeBookModuleKey, tuple[WholeBookStageKey, ...]] = {
     WholeBookModuleKey.BOOK_OVERVIEW: (WholeBookStageKey.ANALYZE_STRUCTURE,),
@@ -40,6 +57,11 @@ MODULE_TO_STAGES: Mapping[WholeBookModuleKey, tuple[WholeBookStageKey, ...]] = {
     WholeBookModuleKey.BASIC_TIMELINE: (WholeBookStageKey.ANALYZE_CAUSALITY_TIMELINE,),
     WholeBookModuleKey.DIAGNOSTICS: (WholeBookStageKey.GENERATE_DIAGNOSTICS,),
 }
+
+# Public alias clarifying Engine vs Product mapping roles.
+ENGINE_MODULE_PLANNING_STAGES: Mapping[WholeBookModuleKey, tuple[WholeBookStageKey, ...]] = (
+    MODULE_TO_STAGES
+)
 
 _CATALOG_BY_KEY: dict[WholeBookStageKey, WholeBookStageDefinition] = {
     stage.stage_key: stage for stage in WHOLE_BOOK_STAGE_CATALOG
@@ -171,6 +193,7 @@ def build_whole_book_stage_plan(
 __all__ = [
     "REQUIRED_SCAFFOLD_STAGES",
     "MODULE_TO_STAGES",
+    "ENGINE_MODULE_PLANNING_STAGES",
     "build_whole_book_stage_plan",
     "detect_dependency_cycle",
     "stage_definitions_to_run_stage_keys",

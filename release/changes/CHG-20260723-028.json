@@ -12,18 +12,40 @@
   ],
   "files": [
     "apps/api/app/narrative_core/services/whole_book_result_projection.py",
+    "apps/api/app/narrative_core/services/whole_book_stage_plan.py",
+    "apps/api/app/routers/whole_book_results.py",
+    "apps/api/tests/test_narrative_phase1d_result_projection.py",
+    "docs/architecture/narrative-intelligence-core/phase1d-result-projection-implementation.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-module-status-aggregation.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-result-api-readonly.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-result-projection-performance.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-result-projection-verification.md",
     "release/changes/CHG-20260723-028.json"
   ],
-  "user_summary": "Result index, module result DTO projection, read-only result API skeleton.",
-  "technical_summary": "Result projection + read-only result API skeleton.",
-  "acceptance_criteria": [],
-  "tests": [],
-  "verification_evidence": [],
+  "user_summary": "整书结果索引、模块 Envelope 投影与只读 Result API 骨架。",
+  "technical_summary": "WholeBookResultIndexService read-only projection over RunStage/Asset/Relation/Evidence/Conflict; module status aggregation via MODULE_STAGE_DEPENDENCIES; Envelope builders for 11 modules; Pattern projection inputs; whole_book_results router implemented but not registered in main.py.",
+  "acceptance_criteria": [
+    "Result Index binds run + snapshot",
+    "Module status covers not_requested/pending/running/partial/completed/failed/stale/blocked",
+    "Engine planning vs product dependency mappings explicitly distinguished",
+    "Envelope schema/version + typed payloads; no full body / raw model JSON",
+    "Read-only API skeleton exists; Integration mounts router",
+    "Directed tests pass without full release gate"
+  ],
+  "tests": [
+    "apps/api/tests/test_narrative_phase1d_result_projection.py"
+  ],
+  "verification_evidence": [
+    "pytest apps/api/tests/test_narrative_phase1d_result_projection.py -q => 26 passed",
+    "scripts/version_manager.py check",
+    "scripts/change_registry.py check",
+    "git diff --check"
+  ],
   "data_compatibility": {
     "database_changed": false,
     "migration_required": false,
     "user_data_compatible": true,
-    "notes": ""
+    "notes": "In-memory/computed projection only; no new tables."
   },
   "release_impact": {
     "requires_reanalysis": false,
@@ -34,7 +56,7 @@
   "blocker_level": null,
   "head_inclusion": "NOT_FOUND",
   "created_at": "2026-07-23T13:23:33Z",
-  "updated_at": "2026-07-23T13:29:56Z",
+  "updated_at": "2026-07-23T14:00:00Z",
   "parallel_plan": {
     "role": "agent_k",
     "branch": "feature/narrative-phase1d-result-projection",
@@ -52,6 +74,9 @@
       "VERSION bump",
       "push/build/publish"
     ],
-    "file_ownership": "docs/architecture/narrative-intelligence-core/phase1d-parallel-file-ownership.json"
+    "file_ownership": "docs/architecture/narrative-intelligence-core/phase1d-parallel-file-ownership.json",
+    "integration_issues": [
+      "Register apps/api/app/routers/whole_book_results.py in apps/api/app/main.py (shared registration owned by Integration)"
+    ]
   }
 }
