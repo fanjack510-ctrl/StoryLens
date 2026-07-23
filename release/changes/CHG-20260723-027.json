@@ -12,18 +12,38 @@
   ],
   "files": [
     "apps/desktop/src/features/wholeBook/runUx/",
+    "docs/architecture/narrative-intelligence-core/phase1d-run-ux-implementation.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-preflight-ux.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-module-selection-ux.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-run-progress-ux.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-run-ux-verification.md",
     "release/changes/CHG-20260723-027.json"
   ],
-  "user_summary": "Preflight, mode/module selection, run progress and control UX prototype.",
-  "technical_summary": "Preflight/mode/module/run progress UX prototype only.",
-  "acceptance_criteria": [],
-  "tests": [],
-  "verification_evidence": [],
+  "user_summary": "Preflight, mode/module selection, stage plan and run progress control UX prototype (real whole-book Run remains disabled).",
+  "technical_summary": "Isolated runUx feature: Phase 1C preflight client adapter, mode/module/stage plan UI, fixture-driven run progress and mock pause/resume/retry/cancel. run_creation_enabled remains false; no product nav registration.",
+  "acceptance_criteria": [
+    "Preflight client uses POST .../preflight only and fail-closes on transport errors",
+    "run_creation_enabled stays false; start button disabled; no force start",
+    "Native/Enhanced mode selection respects supported_modes from backend/fixture",
+    "Eleven modules with shared dependency resolution; module!=stage",
+    "Run progress consumes allowed_actions; mock pause/resume/retry/cancel only",
+    "Isolated lab entry not added to formal navigation",
+    "Focused Vitest + typecheck + version/change registry checks pass"
+  ],
+  "tests": [
+    "apps/desktop/src/features/wholeBook/runUx/__tests__/preflightClient.test.ts",
+    "apps/desktop/src/features/wholeBook/runUx/__tests__/preflightView.test.tsx",
+    "apps/desktop/src/features/wholeBook/runUx/__tests__/runProgress.test.tsx",
+    "apps/desktop/src/features/wholeBook/runUx/__tests__/dtoGuardTheme.test.tsx"
+  ],
+  "verification_evidence": [
+    "docs/architecture/narrative-intelligence-core/phase1d-run-ux-verification.md"
+  ],
   "data_compatibility": {
     "database_changed": false,
     "migration_required": false,
     "user_data_compatible": true,
-    "notes": ""
+    "notes": "UI prototype only; no schema or production run endpoint changes."
   },
   "release_impact": {
     "requires_reanalysis": false,
@@ -34,7 +54,7 @@
   "blocker_level": null,
   "head_inclusion": "NOT_FOUND",
   "created_at": "2026-07-23T13:23:33Z",
-  "updated_at": "2026-07-23T13:29:56Z",
+  "updated_at": "2026-07-23T14:10:00Z",
   "parallel_plan": {
     "role": "agent_j",
     "branch": "feature/narrative-phase1d-run-ux",
