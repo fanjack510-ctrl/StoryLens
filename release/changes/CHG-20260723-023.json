@@ -3,7 +3,7 @@
   "title": "Agent H: Backend Capability / License / Quota",
   "type": "feature",
   "base_version": "1.0.5",
-  "status": "tested",
+  "status": "verified",
   "include_in_next_release": true,
   "commits": [
     {
@@ -60,7 +60,8 @@
   ],
   "verification_evidence": [
     "D:\\Dstorylens\\.venv\\Scripts\\python.exe -m pytest apps/api/tests/test_narrative_phase1c_capability_backend.py -q --noconftest → 36 passed",
-    "D:\\Dstorylens\\.venv\\Scripts\\python.exe -m pytest apps/api/tests/test_pro_license_local.py -q --noconftest → 10 passed"
+    "D:\\Dstorylens\\.venv\\Scripts\\python.exe -m pytest apps/api/tests/test_pro_license_local.py -q --noconftest → 10 passed",
+    "Python 3.12.10; OpenSSL 3.0.16; Phase 1C directed integration tests 83 passed; 1 soupsieve optional-dep warning; version check passed; registry check passed; git diff --check passed; human verification at integration/narrative-phase1c@44a9dcf"
   ],
   "parallel_plan": {
     "role": "agent_h",
@@ -94,5 +95,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T11:46:12Z",
-  "updated_at": "2026-07-23T13:00:00Z"
+  "updated_at": "2026-07-23T13:23:19Z"
 }

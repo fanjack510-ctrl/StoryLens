@@ -1,0 +1,57 @@
+{
+  "id": "CHG-20260723-027",
+  "title": "Agent J Preflight / Run UX",
+  "type": "feature",
+  "base_version": "1.0.5",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "narrative_core",
+    "desktop/wholeBook"
+  ],
+  "files": [
+    "apps/desktop/src/features/wholeBook/runUx/",
+    "release/changes/CHG-20260723-027.json"
+  ],
+  "user_summary": "Preflight, mode/module selection, run progress and control UX prototype.",
+  "technical_summary": "Preflight/mode/module/run progress UX prototype only.",
+  "acceptance_criteria": [],
+  "tests": [],
+  "verification_evidence": [],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "NOT_FOUND",
+  "created_at": "2026-07-23T13:23:33Z",
+  "updated_at": "2026-07-23T13:29:56Z",
+  "parallel_plan": {
+    "role": "agent_j",
+    "branch": "feature/narrative-phase1d-run-ux",
+    "worktree": "D:\\\\Dstorylens-wt-narrative-run-ux",
+    "depends_on": [
+      "CHG-20260723-026"
+    ],
+    "blocks": [
+      "CHG-20260723-030"
+    ],
+    "forbidden": [
+      "real model calls",
+      "open production whole-book run create",
+      "modify product_contract owned by Phase 1D-P without Integration",
+      "VERSION bump",
+      "push/build/publish"
+    ],
+    "file_ownership": "docs/architecture/narrative-intelligence-core/phase1d-parallel-file-ownership.json"
+  }
+}

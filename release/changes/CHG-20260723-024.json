@@ -3,7 +3,7 @@
   "title": "Agent I: Frontend Capability Client / Pro presentation",
   "type": "feature",
   "base_version": "1.0.5",
-  "status": "tested",
+  "status": "verified",
   "include_in_next_release": true,
   "commits": [
     {
@@ -63,7 +63,8 @@
   ],
   "verification_evidence": [
     "docs/architecture/narrative-intelligence-core/phase1c-capability-frontend-verification.md",
-    "npx vitest run src/services/capability src/features/capability (integration)"
+    "npx vitest run src/services/capability src/features/capability (integration)",
+    "Python 3.12.10; OpenSSL 3.0.16; Phase 1C directed integration tests 83 passed; 1 soupsieve optional-dep warning; version check passed; registry check passed; git diff --check passed; human verification at integration/narrative-phase1c@44a9dcf"
   ],
   "parallel_plan": {
     "role": "agent_i",
@@ -97,5 +98,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T11:46:12Z",
-  "updated_at": "2026-07-23T13:00:00Z"
+  "updated_at": "2026-07-23T13:23:20Z"
 }

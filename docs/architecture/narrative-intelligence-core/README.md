@@ -17,12 +17,17 @@ StoryLens 叙事智能核心文档索引。当前基线：`VERSION=1.0.5`。
 | Phase 1B Agent F | CHG-20260723-019 | verified | Relation / Evidence / Conflict |
 | Phase 1B Integration | CHG-20260723-020 | verified | 006–010 联调 / Entity→Asset→Relation |
 | Phase 1C-P | CHG-20260723-021 | verified | Engine / Capability / Quota Contract |
-| Phase 1C Agent G | CHG-20260723-022 | tested | WholeBook Engine / Mock |
-| Phase 1C Agent H | CHG-20260723-023 | tested | Backend Capability / License / Quota |
-| Phase 1C Agent I | CHG-20260723-024 | tested | Frontend Capability Client |
-| Phase 1C Integration | CHG-20260723-025 | tested | Engine + Capability e2e |
+| Phase 1C Agent G | CHG-20260723-022 | verified | WholeBook Engine / Mock |
+| Phase 1C Agent H | CHG-20260723-023 | verified | Backend Capability / License / Quota |
+| Phase 1C Agent I | CHG-20260723-024 | verified | Frontend Capability Client |
+| Phase 1C Integration | CHG-20260723-025 | verified | Engine + Capability e2e |
+| Phase 1D-P | CHG-20260723-026 | tested | Product Contract freeze |
+| Phase 1D Agent J | CHG-20260723-027 | registered | Preflight / Run UX |
+| Phase 1D Agent K | CHG-20260723-028 | registered | Result DTO / Projection |
+| Phase 1D Agent L | CHG-20260723-029 | registered | Evidence / Review / Map |
+| Phase 1D Integration | CHG-20260723-030 | registered | Phase 1D Integration |
 
-\* 017–021 已 `verified`（021 于 Integration 升为 verified）。022–024 保持 `tested`；025 上限 `tested`（非 ready/released）。硬边界：`PRO_CAPABILITIES_SHIPPED=false`；无真实引擎 / 无模型调用。
+\* 022–025 已人工验证为 `verified`（不得 ready/released）。CHG-026 上限 `tested`；027–030 预登记 `registered`。硬边界见下。
 
 ## Phase 1P / 1A
 
@@ -65,7 +70,8 @@ StoryLens 叙事智能核心文档索引。当前基线：`VERSION=1.0.5`。
 - 不得建立 Narrative Pattern 数据表或接入正式路由
 - 不得修改 `VERSION`、Tag `v1.0.5`、`release/1.0.5` baseline
 - Integration **可**修订未发布的 migration 006（含 `superseded_by_entity_id`）及对应 ORM；Agents D/E/F 日常不得擅自改 `models.py` 表结构
-- Phase 1C：`PRO_CAPABILITIES_SHIPPED=false`；`POST whole-book-runs` 禁用直至 Integration
+- Phase 1C / 1D：`PRO_CAPABILITIES_SHIPPED=false`；`WHOLE_BOOK_RUNS_ENDPOINT_DISABLED=true`；`PRODUCTION_DEFAULT_ENGINE_ID=None`
+- Phase 1D：Preflight ≠ Run creation；Native/Enhanced 是模式不是产品；无 force-start；无 migrations / Pattern 表 / push / build / publish
 
 ## Phase 1C-P Contract
 
@@ -89,3 +95,20 @@ StoryLens 叙事智能核心文档索引。当前基线：`VERSION=1.0.5`。
 - [phase1c-whole-book-preflight.md](./phase1c-whole-book-preflight.md)
 - [phase1c-mock-production-isolation.md](./phase1c-mock-production-isolation.md)
 - [phase1c-known-limitations.md](./phase1c-known-limitations.md)
+
+## Phase 1D-P Product Contract
+
+- [phase1d-product-flow.md](./phase1d-product-flow.md)
+- [phase1d-preflight-page-contract.md](./phase1d-preflight-page-contract.md)
+- [phase1d-run-progress-contract.md](./phase1d-run-progress-contract.md)
+- [phase1d-result-information-architecture.md](./phase1d-result-information-architecture.md)
+- [phase1d-result-envelope.md](./phase1d-result-envelope.md)
+- [phase1d-module-result-contracts.md](./phase1d-module-result-contracts.md)
+- [phase1d-evidence-review-contract.md](./phase1d-evidence-review-contract.md)
+- [phase1d-conflict-center-contract.md](./phase1d-conflict-center-contract.md)
+- [phase1d-structure-map-projection.md](./phase1d-structure-map-projection.md)
+- [phase1d-api-contract.md](./phase1d-api-contract.md)
+- [phase1d-release-scope.md](./phase1d-release-scope.md)
+- [phase1d-parallel-file-ownership.md](./phase1d-parallel-file-ownership.md)
+- [phase1d-parallel-file-ownership.json](./phase1d-parallel-file-ownership.json)
+- [phase1d-contract-verification.md](./phase1d-contract-verification.md)

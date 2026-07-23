@@ -3,7 +3,7 @@
   "title": "Phase 1C Integration",
   "type": "improvement",
   "base_version": "1.0.5",
-  "status": "tested",
+  "status": "verified",
   "include_in_next_release": true,
   "commits": [
     {
@@ -76,7 +76,15 @@
     "npm run typecheck; vitest capability 37 passed",
     "python scripts/check_capability_keys.py ok",
     "python scripts/version_manager.py check ok",
-    "python scripts/change_registry.py check"
+    "python scripts/change_registry.py check",
+    "Python 3.12.10; OpenSSL 3.0.16; Phase 1C directed integration tests 83 passed; 1 soupsieve optional-dep warning; version check passed; registry check passed; git diff --check passed; human verification at integration/narrative-phase1c@44a9dcf",
+    "Human verification @ integration/narrative-phase1c 44a9dcf: Python 3.12.10",
+    "OpenSSL 3.0.16",
+    "Phase 1C directed integration tests 83 passed",
+    "1 soupsieve optional-dependency warning",
+    "version check passed",
+    "registry check passed",
+    "git diff --check passed"
   ],
   "parallel_plan": {
     "role": "integration",
@@ -113,5 +121,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T11:46:12Z",
-  "updated_at": "2026-07-23T13:10:30Z"
+  "updated_at": "2026-07-23T13:29:56Z"
 }
