@@ -17,6 +17,12 @@
       "message": "docs: attach registry sync commit to CHG-20260723-019",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "d61e811e44a34fe37275adcae5c0aa28a1c01c11",
+      "message": "docs: close CHG-20260723-019 commit attachment loop",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -71,7 +77,7 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T08:33:16Z",
-  "updated_at": "2026-07-23T09:04:17Z",
+  "updated_at": "2026-07-23T09:04:18Z",
   "parallel_plan": {
     "role": "agent_f",
     "branch": "feature/narrative-phase1b-relations",
