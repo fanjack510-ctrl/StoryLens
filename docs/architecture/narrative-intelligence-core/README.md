@@ -21,13 +21,13 @@ StoryLens 叙事智能核心文档索引。当前基线：`VERSION=1.0.5`。
 | Phase 1C Agent H | CHG-20260723-023 | verified | Backend Capability / License / Quota |
 | Phase 1C Agent I | CHG-20260723-024 | verified | Frontend Capability Client |
 | Phase 1C Integration | CHG-20260723-025 | verified | Engine + Capability e2e |
-| Phase 1D-P | CHG-20260723-026 | tested | Product Contract freeze |
-| Phase 1D Agent J | CHG-20260723-027 | registered | Preflight / Run UX |
-| Phase 1D Agent K | CHG-20260723-028 | registered | Result DTO / Projection |
-| Phase 1D Agent L | CHG-20260723-029 | registered | Evidence / Review / Map |
-| Phase 1D Integration | CHG-20260723-030 | registered | Phase 1D Integration |
+| Phase 1D-P | CHG-20260723-026 | verified | Product Contract freeze |
+| Phase 1D Agent J | CHG-20260723-027 | tested | Preflight / Run UX |
+| Phase 1D Agent K | CHG-20260723-028 | tested | Result DTO / Projection |
+| Phase 1D Agent L | CHG-20260723-029 | tested | Evidence / Review / Map |
+| Phase 1D Integration | CHG-20260723-030 | tested | Phase 1D Integration |
 
-\* 022–025 已人工验证为 `verified`（不得 ready/released）。CHG-026 上限 `tested`；027–030 预登记 `registered`。硬边界见下。
+\* 022–025 / 026 已为 `verified`（不得 ready/released）。027–030 上限 `tested`。硬边界见下。
 
 ## Phase 1P / 1A
 
@@ -112,3 +112,19 @@ StoryLens 叙事智能核心文档索引。当前基线：`VERSION=1.0.5`。
 - [phase1d-parallel-file-ownership.md](./phase1d-parallel-file-ownership.md)
 - [phase1d-parallel-file-ownership.json](./phase1d-parallel-file-ownership.json)
 - [phase1d-contract-verification.md](./phase1d-contract-verification.md)
+
+## Phase 1D Integration
+
+- [phase1d-integration-report.md](./phase1d-integration-report.md)
+- [phase1d-preflight-result-e2e.md](./phase1d-preflight-result-e2e.md)
+- [phase1d-module-stage-dependency-boundary.md](./phase1d-module-stage-dependency-boundary.md)
+- [phase1d-result-api-verification.md](./phase1d-result-api-verification.md)
+- [phase1d-evidence-review-integration.md](./phase1d-evidence-review-integration.md)
+- [phase1d-structure-map-integration.md](./phase1d-structure-map-integration.md)
+- [phase1d-known-limitations.md](./phase1d-known-limitations.md)
+
+## Agent J / K / L implementation notes
+
+- Run UX: [phase1d-run-ux-implementation.md](./phase1d-run-ux-implementation.md)
+- Result Projection: [phase1d-result-projection-implementation.md](./phase1d-result-projection-implementation.md)
+- Review / Map: [phase1d-review-map-implementation.md](./phase1d-review-map-implementation.md)

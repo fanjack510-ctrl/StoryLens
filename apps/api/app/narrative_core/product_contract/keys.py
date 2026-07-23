@@ -1,7 +1,11 @@
-"""Shared product keys and module→stage dependency contract (Phase 1D-P).
+"""Shared product keys and module→stage dependency contract (Phase 1D-P / 1D Integration).
 
 UI module keys must never be used as Engine Stage keys.
 Module ↔ Stage is many-to-many; resolution auto-closes required stages.
+
+Two intentional mappings (do not collapse):
+- ENGINE_MODULE_PLANNING_STAGES (whole_book_stage_plan) — execution plan seeds
+- PRODUCT_MODULE_STAGE_DEPENDENCIES (this module) — result status / viewability
 """
 
 from __future__ import annotations
@@ -13,9 +17,9 @@ from app.narrative_core.product_contract.enums import ResultNavSectionKey
 
 WHOLE_BOOK_MODULE_KEYS: tuple[WholeBookModuleKey, ...] = tuple(WholeBookModuleKey)
 
-# Product-frozen module → required stages (not 1:1 with UI modules).
-# Stage DAG closing still applies at plan-build time.
-MODULE_STAGE_DEPENDENCIES: dict[WholeBookModuleKey, tuple[WholeBookStageKey, ...]] = {
+# Product Result Dependencies — which stages gate module result status / Envelope.
+# Must remain a subset of Engine Planning Closure (see mapping_consistency).
+PRODUCT_MODULE_STAGE_DEPENDENCIES: dict[WholeBookModuleKey, tuple[WholeBookStageKey, ...]] = {
     WholeBookModuleKey.BOOK_OVERVIEW: (
         WholeBookStageKey.BUILD_FULLTEXT_INDEX,
     ),
@@ -69,6 +73,9 @@ MODULE_STAGE_DEPENDENCIES: dict[WholeBookModuleKey, tuple[WholeBookStageKey, ...
     ),
 }
 
+# Deprecated alias — prefer PRODUCT_MODULE_STAGE_DEPENDENCIES.
+MODULE_STAGE_DEPENDENCIES = PRODUCT_MODULE_STAGE_DEPENDENCIES
+
 # Result page navigation (product IA). Module keys map into sections.
 RESULT_NAV_SECTIONS: tuple[tuple[ResultNavSectionKey, tuple[WholeBookModuleKey, ...]], ...] = (
     (ResultNavSectionKey.OVERVIEW, (WholeBookModuleKey.BOOK_OVERVIEW,)),
@@ -100,8 +107,6 @@ FUTURE_API_ROUTES: tuple[str, ...] = (
     "POST /api/v1/whole-book-runs/{run_id}/resume",
     "POST /api/v1/whole-book-runs/{run_id}/cancel",
     "POST /api/v1/whole-book-runs/{run_id}/stages/{stage_key}/retry",
-    "GET /api/v1/whole-book-runs/{run_id}/results",
-    "GET /api/v1/whole-book-runs/{run_id}/results/{module_key}",
     "GET /api/v1/narrative-assets/{asset_id}/evidence",
     "POST /api/v1/narrative-review-actions",
     "GET /api/v1/books/{book_id}/analysis-conflicts",
@@ -111,6 +116,8 @@ EXISTING_API_ROUTES: tuple[str, ...] = (
     "GET /api/v1/capabilities",
     "GET /api/v1/capabilities/{key}",
     "POST /api/v1/books/{book_id}/whole-book-runs/preflight",
+    "GET /api/v1/whole-book-runs/{run_id}/results",
+    "GET /api/v1/whole-book-runs/{run_id}/results/{module_key}",
 )
 
 
@@ -141,13 +148,13 @@ def resolve_modules_with_dependencies(
 
     stages: list[WholeBookStageKey] = []
     for module in modules:
-        for stage in MODULE_STAGE_DEPENDENCIES[module]:
+        for stage in PRODUCT_MODULE_STAGE_DEPENDENCIES[module]:
             if stage not in stages:
                 stages.append(stage)
 
     notes: list[str] = []
     for module in modules:
-        deps = MODULE_STAGE_DEPENDENCIES[module]
+        deps = PRODUCT_MODULE_STAGE_DEPENDENCIES[module]
         notes.append(
             f"module {module.value} requires stages: "
             + ", ".join(s.value for s in deps)

@@ -82,6 +82,9 @@ export const FIXTURE_PREFLIGHT: WholeBookPreflightPageModel = {
   confirmation_required: true,
   auto_fill_notes: ["module book_overview requires stages: build_fulltext_index"],
   force_start_allowed: false,
+  backend_run_creation_enabled: false,
+  client_run_creation_enabled: false,
+  effective_run_creation_enabled: false,
 };
 
 export const FIXTURE_RUN_VIEW: WholeBookRunViewState = {

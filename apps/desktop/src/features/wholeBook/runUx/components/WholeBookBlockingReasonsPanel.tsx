@@ -1,14 +1,23 @@
 export type WholeBookBlockingReasonsPanelProps = {
   blockingReasons: readonly string[];
   warnings?: readonly string[];
+  /** Prefer effective; kept for backward-compatible prop name. */
   runCreationEnabled: boolean;
+  backendRunCreationEnabled?: boolean;
+  clientRunCreationEnabled?: boolean;
+  effectiveRunCreationEnabled?: boolean;
 };
 
 export function WholeBookBlockingReasonsPanel({
   blockingReasons,
   warnings = [],
   runCreationEnabled,
+  backendRunCreationEnabled,
+  clientRunCreationEnabled,
+  effectiveRunCreationEnabled,
 }: WholeBookBlockingReasonsPanelProps) {
+  const effective =
+    effectiveRunCreationEnabled ?? runCreationEnabled;
   return (
     <section
       className="wb-run-ux__section"
@@ -22,13 +31,31 @@ export function WholeBookBlockingReasonsPanel({
         role="status"
         aria-live="polite"
       >
-        run_creation_enabled：
-        <strong>{runCreationEnabled ? "true" : "false"}</strong>
-        {runCreationEnabled ? "" : "（当前阶段必须保持禁用）"}
+        effective_run_creation_enabled：
+        <strong>{effective ? "true" : "false"}</strong>
+        {effective ? "" : "（当前阶段必须保持禁用）"}
       </p>
+      <dl className="wb-kv" data-testid="run-creation-flag-breakdown">
+        <div>
+          <dt>backend_run_creation_enabled</dt>
+          <dd>
+            {String(
+              backendRunCreationEnabled ?? runCreationEnabled ?? false,
+            )}
+          </dd>
+        </div>
+        <div>
+          <dt>client_run_creation_enabled</dt>
+          <dd>{String(clientRunCreationEnabled ?? false)}</dd>
+        </div>
+        <div>
+          <dt>effective_run_creation_enabled</dt>
+          <dd>{String(effective)}</dd>
+        </div>
+      </dl>
       {blockingReasons.length > 0 ? (
         <div className="wb-blocking" role="alert">
-          <strong>阻断原因</strong>
+          <strong>阻断原因（后端）</strong>
           <ul data-testid="blocking-reasons-list">
             {blockingReasons.map((reason) => (
               <li key={reason} className="wb-blocking__item">

@@ -113,10 +113,11 @@ describe("wholeBookPreflightClient", () => {
       ...FIXTURE_PHASE1C_PREFLIGHT_RESPONSE,
       run_creation_enabled: true,
     });
+    expect(mapped.model.backend_run_creation_enabled).toBe(true);
+    expect(mapped.model.client_run_creation_enabled).toBe(false);
+    expect(mapped.model.effective_run_creation_enabled).toBe(false);
     expect(mapped.model.run_creation_enabled).toBe(false);
-    expect(mapped.model.blocking_reasons).toContain(
-      "CLIENT_IGNORED_RUN_CREATION_TRUE",
-    );
+    expect(mapped.model.warnings).toContain("CLIENT_RUN_CREATION_DISABLED");
   });
 
   it("never calls create-run path from this module", () => {

@@ -151,6 +151,9 @@ def _sample_preflight(**overrides: object) -> WholeBookPreflightPageModel:
         "run_creation_enabled": False,
         "confirmation_required": True,
         "force_start_allowed": False,
+        "backend_run_creation_enabled": False,
+        "client_run_creation_enabled": False,
+        "effective_run_creation_enabled": False,
     }
     base.update(overrides)
     return WholeBookPreflightPageModel(**base)  # type: ignore[arg-type]

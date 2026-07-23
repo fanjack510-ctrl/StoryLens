@@ -51,8 +51,10 @@ class WholeBookPreflightRequestDTO:
 
 @dataclass(frozen=True, slots=True)
 class WholeBookPreflightDTO:
-    """Read-only preflight response (Phase 1C Integration).
+    """Transport DTO — backend HTTP Preflight response (Phase 1C / 1D).
 
+    Data-of-record for preflight facts. Does **not** carry page-only derived
+    fields (those belong on WholeBookPreflightPageModel after Mapper).
     Always returns run_creation_enabled=False under production defaults.
     """
 
@@ -75,3 +77,7 @@ class WholeBookPreflightDTO:
     engine_id: str | None = None
     stage_count: int = 0
     notes: dict[str, Any] | None = None
+
+
+# Frozen Transport DTO name (Phase 1D Integration). Same shape as WholeBookPreflightDTO.
+WholeBookPreflightResponseDto = WholeBookPreflightDTO

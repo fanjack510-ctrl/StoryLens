@@ -7,16 +7,22 @@
   "include_in_next_release": true,
   "commits": [
     {
-      "sha": "8b730c7f1401563d60443bd36f6a3ddb658b4b0e",
+      "sha": "9256dd1ef471a8d265a2f68329aa0c3e0fb7711a",
       "message": "feat: implement narrative review and structure map prototypes",
       "primary": true,
-      "multi_change_reason": null
+      "multi_change_reason": "integration cherry-pick of Agent L primary onto integration/narrative-phase1d"
     },
     {
-      "sha": "297a3abd80f28963e8e1b600d224730df87f3d67",
+      "sha": "917de6c56afbbc8aa7b2c41c868d4185cda8c684",
       "message": "docs: attach primary commit to CHG-20260723-029",
       "primary": false,
-      "multi_change_reason": null
+      "multi_change_reason": "integration cherry-pick"
+    },
+    {
+      "sha": "925532a10b5fc08a5c83f3463f5465a2be0cefd2",
+      "message": "docs: close CHG-20260723-029 commit attachment loop",
+      "primary": false,
+      "multi_change_reason": "integration cherry-pick"
     }
   ],
   "modules": [
@@ -41,10 +47,10 @@
     "release/changes/CHG-20260723-029.json"
   ],
   "user_summary": "Evidence drawer, review actions, conflict center, structure map projection adapter.",
-  "technical_summary": "Evidence Read Service, Review Action Adapter, Conflict Center projector, Structure Map Projection (no Pattern tables/algorithms); isolated FE prototypes under wholeBook/review and structureMap.",
+  "technical_summary": "Evidence Read Service, Review Action Adapter, Conflict Center projector, Structure Map via NarrativeProjectionSource (no Pattern tables); isolated FE prototypes under wholeBook/review and structureMap. Review write route remains unregistered.",
   "acceptance_criteria": [
     "Evidence read via Snapshot Reader with integrity statuses and deep links",
-    "Review actions: confirm/correct/reject/lock/unlock/mark_stale/resolve/dismiss with expected_version + idempotency",
+    "Review actions adapter exists; production write route not registered (Phase 2E)",
     "Conflict Center list/compare; blocking never auto-resolved",
     "Structure Map projection default canonical; candidates explicit; 100/250 limits",
     "FE prototypes isolated; no formal result nav; no new graph deps"
@@ -54,12 +60,9 @@
     "apps/desktop/src/features/wholeBook/review/reviewMapPrototype.test.tsx"
   ],
   "verification_evidence": [
-    "pytest apps/api/tests/test_narrative_phase1d_review_map.py -q → 7 passed",
-    "vitest run reviewMapPrototype + narrativePattern → passed",
-    "tsc -b → passed",
-    "python scripts/version_manager.py check → passed",
-    "python scripts/change_registry.py check → passed",
-    "git diff --check → passed; tsbuildinfo restored"
+    "pytest apps/api/tests/test_narrative_phase1d_review_map.py -q → passed",
+    "vitest run review + structureMap + narrativePattern → passed",
+    "Integration: Structure Map uses NarrativeProjectionSource"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -76,7 +79,7 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T13:23:33Z",
-  "updated_at": "2026-07-23T14:09:13Z",
+  "updated_at": "2026-07-23T14:40:00Z",
   "parallel_plan": {
     "role": "agent_l",
     "branch": "feature/narrative-phase1d-review-map",
@@ -99,11 +102,11 @@
   "integration_issues": [
     {
       "id": "II-REVIEW-ROUTE-001",
-      "summary": "Wire NarrativeReviewActionAdapter to POST /api/v1/narrative-review-actions without Pro gating; keep Run create disabled."
+      "summary": "DEFERRED to Phase 2E: do not register POST /api/v1/narrative-review-actions in production main router."
     },
     {
       "id": "II-STRUCTURE-DIR-001",
-      "summary": "Decide whether to rename narrativePattern → structureMap after Phase 1D merge; keep dual exports during transition."
+      "summary": "Keep dual exports narrativePattern + structureMap; Structure Map consumes NarrativeProjectionSource."
     }
   ]
 }

@@ -1,6 +1,6 @@
 import {
   EVIDENCE_INTEGRITY_STATUSES,
-  MODULE_STAGE_DEPENDENCIES,
+  PRODUCT_MODULE_STAGE_DEPENDENCIES,
   NARRATIVE_REVIEW_ACTIONS,
   RUN_ALLOWED_ACTIONS,
   WHOLE_BOOK_ANALYSIS_MODES,
@@ -74,7 +74,7 @@ export function resolveModulesWithDependencies(
   const stages: string[] = [];
   const notes: string[] = [];
   for (const module of modules) {
-    const deps = MODULE_STAGE_DEPENDENCIES[module];
+    const deps = PRODUCT_MODULE_STAGE_DEPENDENCIES[module];
     notes.push(`module ${module} requires stages: ${deps.join(", ")}`);
     for (const stage of deps) {
       if (!stages.includes(stage)) stages.push(stage);
@@ -87,8 +87,22 @@ export function assertPreflightGuard(model: WholeBookPreflightPageModel): void {
   if (model.force_start_allowed !== false) {
     throw new Error("force_start_allowed must be false");
   }
-  if (model.run_creation_enabled && model.blocking_reasons.length > 0) {
-    throw new Error("run_creation_enabled cannot be true with blocking_reasons");
+  const expected =
+    model.backend_run_creation_enabled && model.client_run_creation_enabled;
+  if (model.effective_run_creation_enabled !== expected) {
+    throw new Error(
+      "effective_run_creation_enabled must equal backend AND client flags",
+    );
+  }
+  if (model.run_creation_enabled !== model.effective_run_creation_enabled) {
+    throw new Error(
+      "run_creation_enabled must equal effective_run_creation_enabled",
+    );
+  }
+  if (model.effective_run_creation_enabled && model.blocking_reasons.length > 0) {
+    throw new Error(
+      "effective_run_creation_enabled cannot be true with blocking_reasons",
+    );
   }
 }
 

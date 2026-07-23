@@ -117,8 +117,10 @@ export const RESULT_NAV_SECTION_KEYS = [
 
 export type ResultNavSectionKey = (typeof RESULT_NAV_SECTION_KEYS)[number];
 
-/** Product-frozen module → required engine stages (not UI stage keys). */
-export const MODULE_STAGE_DEPENDENCIES: Record<
+/** Product Result Dependencies — stages that gate module result status / viewability.
+ * Frontend must not maintain a third Engine Planning table; use backend stage_plan.
+ */
+export const PRODUCT_MODULE_STAGE_DEPENDENCIES: Record<
   WholeBookModuleKey,
   readonly string[]
 > = {
@@ -161,6 +163,9 @@ export const MODULE_STAGE_DEPENDENCIES: Record<
     "verify_evidence",
   ],
 };
+
+/** @deprecated Prefer PRODUCT_MODULE_STAGE_DEPENDENCIES */
+export const MODULE_STAGE_DEPENDENCIES = PRODUCT_MODULE_STAGE_DEPENDENCIES;
 
 export const STRUCTURE_MAP_DEFAULT_MAX_NODES = 100;
 export const STRUCTURE_MAP_DEFAULT_MAX_EDGES = 250;

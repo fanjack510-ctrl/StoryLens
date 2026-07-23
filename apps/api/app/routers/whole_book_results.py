@@ -1,4 +1,4 @@
-"""Read-only whole-book result HTTP API (Phase 1D Agent K).
+"""Read-only whole-book result HTTP API (Phase 1D Agent K / Integration).
 
 Routes (frozen contract):
   GET /api/v1/whole-book-runs/{run_id}/results
@@ -7,8 +7,7 @@ Routes (frozen contract):
 Does not create Runs/Stages, does not call Engine/models, does not mutate Assets.
 Loopback origin guard applies via app middleware when mounted.
 
-Integration Issue: router is implemented here but NOT registered in app.main
-(shared registration entry owned by Integration CHG-030).
+Registered in app.main by Phase 1D Integration (CHG-20260723-030).
 """
 
 from __future__ import annotations

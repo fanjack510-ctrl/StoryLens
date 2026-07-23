@@ -26,22 +26,20 @@ REQUIRED_SCAFFOLD_STAGES: frozenset[WholeBookStageKey] = frozenset(
 # ---------------------------------------------------------------------------
 # Dual mapping contract (do not collapse into one table):
 #
-# 1) ENGINE_MODULE_PLANNING_STAGES / MODULE_TO_STAGES
-#    Engine planning mapping — which primary *analysis* stages to schedule
-#    when a module is requested. Scaffold stages are added separately via
-#    REQUIRED_SCAFFOLD_STAGES + DAG close in build_whole_book_stage_plan.
+# 1) ENGINE_MODULE_PLANNING_STAGES
+#    Engine planning seeds — primary *analysis* stages to schedule when a
+#    module is requested. Scaffold + DAG close applied in build_whole_book_stage_plan.
 #
-# 2) product_contract.keys.MODULE_STAGE_DEPENDENCIES
-#    Product result dependency mapping — which stages must be considered when
-#    aggregating WholeBookModuleStatus / Envelope.source_stage_keys for the
-#    result page. This is many-to-many and intentionally broader than (1).
+# 2) PRODUCT_MODULE_STAGE_DEPENDENCIES (product_contract.keys)
+#    Product result dependencies — stages that gate module status / viewability.
+#    Must be a subset of Engine Planning Closure (validated in mapping_consistency).
 #
-# Result projection (Phase 1D Agent K) MUST use MODULE_STAGE_DEPENDENCIES for
-# status aggregation. Engine plan builders MUST use MODULE_TO_STAGES.
+# Result projection MUST use PRODUCT_MODULE_STAGE_DEPENDENCIES.
+# Engine plan builders MUST use ENGINE_MODULE_PLANNING_STAGES.
 # ---------------------------------------------------------------------------
 
-# Module → analysis stages (scaffold stages added separately).
-MODULE_TO_STAGES: Mapping[WholeBookModuleKey, tuple[WholeBookStageKey, ...]] = {
+# Module → analysis stage seeds (scaffold stages added separately).
+ENGINE_MODULE_PLANNING_STAGES: Mapping[WholeBookModuleKey, tuple[WholeBookStageKey, ...]] = {
     WholeBookModuleKey.BOOK_OVERVIEW: (WholeBookStageKey.ANALYZE_STRUCTURE,),
     WholeBookModuleKey.STRUCTURE_STAGES: (WholeBookStageKey.ANALYZE_STRUCTURE,),
     WholeBookModuleKey.CHAPTER_FUNCTIONS: (WholeBookStageKey.ANALYZE_STRUCTURE,),
@@ -58,10 +56,8 @@ MODULE_TO_STAGES: Mapping[WholeBookModuleKey, tuple[WholeBookStageKey, ...]] = {
     WholeBookModuleKey.DIAGNOSTICS: (WholeBookStageKey.GENERATE_DIAGNOSTICS,),
 }
 
-# Public alias clarifying Engine vs Product mapping roles.
-ENGINE_MODULE_PLANNING_STAGES: Mapping[WholeBookModuleKey, tuple[WholeBookStageKey, ...]] = (
-    MODULE_TO_STAGES
-)
+# Deprecated alias — prefer ENGINE_MODULE_PLANNING_STAGES.
+MODULE_TO_STAGES = ENGINE_MODULE_PLANNING_STAGES
 
 _CATALOG_BY_KEY: dict[WholeBookStageKey, WholeBookStageDefinition] = {
     stage.stage_key: stage for stage in WHOLE_BOOK_STAGE_CATALOG
@@ -167,7 +163,7 @@ def build_whole_book_stage_plan(
                     NarrativeCoreErrorCode.WHOLE_BOOK_MODULE_NOT_SUPPORTED,
                     f"engine does not support module: {module.value}",
                 )
-            selected.update(MODULE_TO_STAGES.get(module, ()))
+            selected.update(ENGINE_MODULE_PLANNING_STAGES.get(module, ()))
         selected |= REQUIRED_SCAFFOLD_STAGES
         # Catalog entries marked required stay even if not mapped from modules.
         for stage in WHOLE_BOOK_STAGE_CATALOG:
@@ -192,8 +188,8 @@ def build_whole_book_stage_plan(
 
 __all__ = [
     "REQUIRED_SCAFFOLD_STAGES",
-    "MODULE_TO_STAGES",
     "ENGINE_MODULE_PLANNING_STAGES",
+    "MODULE_TO_STAGES",
     "build_whole_book_stage_plan",
     "detect_dependency_cycle",
     "stage_definitions_to_run_stage_keys",

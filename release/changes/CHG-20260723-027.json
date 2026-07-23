@@ -7,10 +7,16 @@
   "include_in_next_release": true,
   "commits": [
     {
-      "sha": "74dbcd903944b3f1126dcced0884c4940111265e",
+      "sha": "b58e9ecbd1d5d2167806a6b128e8837a8ece1d1e",
       "message": "feat: implement whole book preflight and run ux prototype",
       "primary": true,
-      "multi_change_reason": null
+      "multi_change_reason": "integration cherry-pick of Agent J primary onto integration/narrative-phase1d"
+    },
+    {
+      "sha": "268c0d7c1a1c34bf4c37d4bca1ae5a1d8e99c13e",
+      "message": "docs: attach primary commit to CHG-20260723-027",
+      "primary": false,
+      "multi_change_reason": "integration cherry-pick of Agent J attach commit"
     }
   ],
   "modules": [
@@ -27,10 +33,10 @@
     "release/changes/CHG-20260723-027.json"
   ],
   "user_summary": "Preflight, mode/module selection, stage plan and run progress control UX prototype (real whole-book Run remains disabled).",
-  "technical_summary": "Isolated runUx feature: Phase 1C preflight client adapter, mode/module/stage plan UI, fixture-driven run progress and mock pause/resume/retry/cancel. run_creation_enabled remains false; no product nav registration.",
+  "technical_summary": "Isolated runUx feature: Phase 1C preflight client adapter, mode/module/stage plan UI, fixture-driven run progress and mock pause/resume/retry/cancel. backend/client/effective run_creation flags; start remains disabled; no product nav registration.",
   "acceptance_criteria": [
     "Preflight client uses POST .../preflight only and fail-closes on transport errors",
-    "run_creation_enabled stays false; start button disabled; no force start",
+    "effective_run_creation_enabled stays false; start button disabled; no force start",
     "Native/Enhanced mode selection respects supported_modes from backend/fixture",
     "Eleven modules with shared dependency resolution; module!=stage",
     "Run progress consumes allowed_actions; mock pause/resume/retry/cancel only",
@@ -44,7 +50,8 @@
     "apps/desktop/src/features/wholeBook/runUx/__tests__/dtoGuardTheme.test.tsx"
   ],
   "verification_evidence": [
-    "docs/architecture/narrative-intelligence-core/phase1d-run-ux-verification.md"
+    "docs/architecture/narrative-intelligence-core/phase1d-run-ux-verification.md",
+    "Phase 1D Integration retest: vitest runUx + phase1dIntegration"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -61,7 +68,7 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T13:23:33Z",
-  "updated_at": "2026-07-23T14:15:00Z",
+  "updated_at": "2026-07-23T14:40:00Z",
   "parallel_plan": {
     "role": "agent_j",
     "branch": "feature/narrative-phase1d-run-ux",

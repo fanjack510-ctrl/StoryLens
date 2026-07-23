@@ -70,6 +70,15 @@ export interface PreflightEstimatedUsageDto {
   currency: string;
 }
 
+/**
+ * Page Model — Mapper-derived from Transport DTO (WholeBookPreflightResponseDto).
+ *
+ * Run creation flags (Phase 1D Integration):
+ * - backend_run_creation_enabled: raw backend value (never overwritten)
+ * - client_run_creation_enabled: RUN_CREATE_ENABLED_IN_CLIENT
+ * - effective_run_creation_enabled: backend AND client
+ * - run_creation_enabled: alias of effective (legacy; prefer effective)
+ */
 export interface WholeBookPreflightPageModel {
   book: PreflightBookStatusDto;
   snapshot: PreflightSnapshotStatusDto;
@@ -84,9 +93,23 @@ export interface WholeBookPreflightPageModel {
   estimated_usage: PreflightEstimatedUsageDto;
   blocking_reasons: string[];
   warnings: string[];
+  /** @deprecated Prefer effective_run_creation_enabled */
   run_creation_enabled: boolean;
   confirmation_required: boolean;
   auto_fill_notes: string[];
   /** Must always be false — no force-start bypass. */
   force_start_allowed: false;
+  backend_run_creation_enabled: boolean;
+  client_run_creation_enabled: boolean;
+  effective_run_creation_enabled: boolean;
 }
+
+/** Transport DTO shape consumed by Mapper (snake_case HTTP body). */
+export type WholeBookPreflightResponseDto = {
+  book_id: number;
+  analysis_mode?: string;
+  run_creation_enabled?: boolean;
+  blocking_reasons?: string[];
+  warnings?: string[];
+  [key: string]: unknown;
+};

@@ -1,7 +1,7 @@
-"""Phase 1D Agent L — Narrative Structure Map Projection.
+"""Phase 1D Agent L / Integration — Narrative Structure Map Projection.
 
-Projection only from Asset / Relation versions. No Pattern tables. No new facts.
-Does not write narrative facts to the database.
+Projection only via NarrativeProjectionSource (Result Projection inputs).
+No Pattern tables. No new facts. Does not write narrative facts to the database.
 """
 
 from __future__ import annotations
@@ -9,17 +9,10 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import select
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import Session
 
-from app.db.models import (
-    NarrativeAsset,
-    NarrativeAssetVersion,
-    NarrativeRelation,
-    NarrativeRelationVersion,
-)
-from app.narrative_core.enums import AssetLifecycleStatus, ConflictStatus
 from app.narrative_core.product_contract.enums import StructureMapViewMode
+from app.narrative_core.product_contract.result_envelope import ReviewSummaryDto
 from app.narrative_core.product_contract.structure_map import (
     STRUCTURE_MAP_DEFAULT_MAX_EDGES,
     STRUCTURE_MAP_DEFAULT_MAX_NODES,
@@ -29,11 +22,12 @@ from app.narrative_core.product_contract.structure_map import (
     StructureMapFiltersDto,
     StructureMapNodeDto,
 )
-from app.narrative_core.services.conflict_service import AnalysisConflictServiceImpl
-from app.narrative_core.services.pattern_projection import (
-    _parse_attributes_json,
-    _parse_id_list,
-    _chapter_ids_from_evidence,
+from app.narrative_core.services.narrative_projection_source import NarrativeProjectionSource
+from app.narrative_core.services.whole_book_result_projection import (
+    ConflictSummaryDto,
+    ProjectionAssetRow,
+    ProjectionRelationRow,
+    WholeBookResultIndexService,
 )
 
 PROJECTION_VERSION = "phase1d-structure-map-1"
@@ -56,7 +50,6 @@ def _views_for_asset_type(asset_type: str) -> tuple[StructureMapViewMode, ...]:
     key = str(asset_type or "").lower()
     if key in _VIEW_BY_ASSET_TYPE:
         return _VIEW_BY_ASSET_TYPE[key]
-    # Default: appear in all three views so projection is usable without typed assets.
     return (
         StructureMapViewMode.STRUCTURE_STAGES,
         StructureMapViewMode.STORYLINES,
@@ -64,17 +57,71 @@ def _views_for_asset_type(asset_type: str) -> tuple[StructureMapViewMode, ...]:
     )
 
 
+def _merge_asset_rows(
+    canonical: tuple[ProjectionAssetRow, ...],
+    candidates: tuple[ProjectionAssetRow, ...],
+) -> tuple[ProjectionAssetRow, ...]:
+    by_version: dict[int, ProjectionAssetRow] = {int(a.version_id): a for a in canonical}
+    for row in candidates:
+        by_version.setdefault(int(row.version_id), row)
+    return tuple(by_version.values())
+
+
+def _merge_relation_rows(
+    canonical: tuple[ProjectionRelationRow, ...],
+    candidates: tuple[ProjectionRelationRow, ...],
+) -> tuple[ProjectionRelationRow, ...]:
+    by_version: dict[int, ProjectionRelationRow] = {
+        int(r.version_id): r for r in canonical
+    }
+    for row in candidates:
+        by_version.setdefault(int(row.version_id), row)
+    return tuple(by_version.values())
+
+
+def _as_review_dict(summary: ReviewSummaryDto | dict[str, Any]) -> dict[str, Any]:
+    if isinstance(summary, dict):
+        return dict(summary)
+    return {
+        "candidate_count": int(getattr(summary, "candidate_count", 0) or 0),
+        "confirmed_count": int(getattr(summary, "confirmed_count", 0) or 0),
+        "corrected_count": int(getattr(summary, "corrected_count", 0) or 0),
+        "rejected_count": int(getattr(summary, "rejected_count", 0) or 0),
+        "locked_count": int(getattr(summary, "locked_count", 0) or 0),
+        "stale_count": int(getattr(summary, "stale_count", 0) or 0),
+    }
+
+
+def _as_conflict_dict(
+    summary: ConflictSummaryDto | dict[str, Any],
+) -> dict[str, Any]:
+    if isinstance(summary, dict):
+        return dict(summary)
+    return {
+        "total": int(getattr(summary, "total", 0) or 0),
+        "open": int(getattr(summary, "open", 0) or 0),
+        "open_count": int(getattr(summary, "open", 0) or 0),
+        "blocking": int(getattr(summary, "blocking", 0) or 0),
+        "warning": int(getattr(summary, "warning", 0) or 0),
+        "info": int(getattr(summary, "info", 0) or 0),
+        "conflict_ids": list(getattr(summary, "conflict_ids", ()) or ()),
+        "blocking_auto_resolve_forbidden": True,
+    }
+
+
 class NarrativeStructureMapProjectionService:
-    """Build NarrativeStructureMapProjectionDto from Asset/Relation data."""
+    """Build NarrativeStructureMapProjectionDto via NarrativeProjectionSource."""
 
     def __init__(
         self,
         session: Session,
         *,
-        conflict_service: AnalysisConflictServiceImpl | None = None,
+        projection_source: NarrativeProjectionSource | None = None,
     ) -> None:
         self._session = session
-        self._conflicts = conflict_service or AnalysisConflictServiceImpl(session)
+        self._source: NarrativeProjectionSource = projection_source or WholeBookResultIndexService(
+            session
+        )
 
     def project(
         self,
@@ -94,106 +141,119 @@ class NarrativeStructureMapProjectionService:
         assert include_candidates in (True, False)
         mode = StructureMapViewMode(view_mode)
         bid = int(book_id)
+        snap = int(book_snapshot_id or 0)
+        if snap <= 0:
+            raise ValueError("book_snapshot_id is required for Structure Map projection")
 
-        asset_rows = self._load_asset_versions(bid, include_candidates=include_candidates)
-        relation_rows = self._load_relation_versions(
-            bid, include_candidates=include_candidates
+        if include_candidates:
+            canonical_assets = self._source.get_canonical_assets_for_projection(
+                book_id=bid,
+                book_snapshot_id=snap,
+                run_id=source_run_id,
+                limit=max(max_nodes * 2, max_nodes),
+            )
+            candidate_assets = self._source.get_candidate_assets_for_projection(
+                book_id=bid,
+                book_snapshot_id=snap,
+                run_id=source_run_id,
+                limit=max(max_nodes * 2, max_nodes),
+            )
+            assets = _merge_asset_rows(canonical_assets, candidate_assets)
+            canonical_relations = self._source.get_canonical_relations_for_projection(
+                book_id=bid,
+                book_snapshot_id=snap,
+                run_id=source_run_id,
+                limit=max(max_edges * 2, max_edges),
+            )
+            candidate_relations = self._source.get_candidate_relations_for_projection(
+                book_id=bid,
+                book_snapshot_id=snap,
+                run_id=source_run_id,
+                limit=max(max_edges * 2, max_edges),
+            )
+            relations = _merge_relation_rows(canonical_relations, candidate_relations)
+        else:
+            assets = self._source.get_canonical_assets_for_projection(
+                book_id=bid,
+                book_snapshot_id=snap,
+                run_id=source_run_id,
+                limit=max(max_nodes * 2, max_nodes),
+            )
+            relations = self._source.get_canonical_relations_for_projection(
+                book_id=bid,
+                book_snapshot_id=snap,
+                run_id=source_run_id,
+                limit=max(max_edges * 2, max_edges),
+            )
+
+        # Rejected must not appear in default/canonical projection inputs.
+        assets = tuple(a for a in assets if str(a.review_status).lower() != "rejected")
+        relations = tuple(r for r in relations if str(r.review_status).lower() != "rejected")
+
+        review_summary = _as_review_dict(
+            self._source.get_review_summary(
+                book_id=bid, book_snapshot_id=snap, run_id=source_run_id
+            )
         )
-
-        conflict_version_ids = self._conflicted_version_ids(bid)
-        review_summary, conflict_summary = self._summaries(
-            bid, asset_rows, relation_rows, conflict_version_ids
+        conflict_summary = _as_conflict_dict(
+            self._source.get_conflict_summary(
+                book_id=bid, book_snapshot_id=snap, run_id=source_run_id
+            )
         )
 
         nodes: list[StructureMapNodeDto] = []
         evidence_index: dict[str, tuple[str, ...]] = {}
         node_meta: dict[str, dict[str, Any]] = {}
+        asset_version_ids: list[int] = []
 
-        resolved_snapshot = book_snapshot_id
-        for asset, version, evidence in asset_rows:
-            if resolved_snapshot is None and version.book_snapshot_id is not None:
-                resolved_snapshot = int(version.book_snapshot_id)
-            chapter_ids = _chapter_ids_from_evidence(
-                self._session,
-                snapshot_chapter_ids={int(e.snapshot_chapter_id) for e in evidence},
-            )
-            attrs = _parse_attributes_json(version.attributes_json)
-            entity_ids = _parse_id_list(attrs, "entity_ids")
-            storyline_ids = _parse_id_list(attrs, "storyline_ids")
-            views = _views_for_asset_type(str(version.asset_type))
-            if mode not in views and mode not in (
-                StructureMapViewMode.STRUCTURE_STAGES,
-                StructureMapViewMode.STORYLINES,
-                StructureMapViewMode.CHARACTER_GROWTH,
-            ):
-                continue
-            # Filter by view: keep if asset declares the view OR has no specific restriction
-            # (all three default). Already handled by _views_for_asset_type.
+        for asset in assets:
+            views = _views_for_asset_type(str(asset.asset_type))
             if mode not in views:
                 continue
-
-            node_id = f"asset:{asset.id}:v:{version.id}"
-            stale = asset.lifecycle_status == AssetLifecycleStatus.STALE.value or (
-                asset.stale_at is not None
-            )
-            in_conflict = int(version.id) in conflict_version_ids
             searchable = " ".join(
                 [
-                    str(version.title or ""),
-                    str(version.asset_type or ""),
-                    str(version.review_status or ""),
+                    str(asset.title or ""),
+                    str(asset.asset_type or ""),
+                    str(asset.review_status or ""),
                     "locked" if asset.is_locked else "unlocked",
-                    "stale" if stale else "fresh",
-                    "conflict" if in_conflict else "",
-                    f"conf:{float(version.confidence or 0.0):.2f}",
-                    " ".join(f"entity:{e}" for e in entity_ids),
-                    " ".join(f"storyline:{s}" for s in storyline_ids),
+                    "stale" if asset.stale else "fresh",
+                    f"conf:{float(asset.confidence or 0.0):.2f}",
+                    " ".join(f"entity:{e}" for e in asset.entity_ids),
+                    " ".join(f"storyline:{s}" for s in asset.storyline_ids),
                 ]
             ).lower()
             if search_query and search_query.lower() not in searchable:
                 continue
 
-            chapter_range: tuple[int | None, int | None] = (None, None)
-            if chapter_ids:
-                chapter_range = (min(chapter_ids), max(chapter_ids))
-
+            node_id = f"asset:{asset.asset_id}:v:{asset.version_id}"
             nodes.append(
                 StructureMapNodeDto(
                     node_id=node_id,
-                    node_type=str(version.asset_type),
-                    title=str(version.title or f"Asset {asset.id}"),
-                    asset_id=int(asset.id),
-                    asset_version_id=int(version.id),
-                    is_canonical=bool(version.is_canonical),
+                    node_type=str(asset.asset_type),
+                    title=str(asset.title or f"Asset {asset.asset_id}"),
+                    asset_id=int(asset.asset_id),
+                    asset_version_id=int(asset.version_id),
+                    is_canonical=bool(asset.is_canonical),
                     view_modes=views,
-                    chapter_range=chapter_range,
+                    chapter_range=asset.chapter_range,
                     parent_id=None,
-                    evidence_count=len(evidence),
+                    evidence_count=int(asset.evidence_count),
                     collapsed=False,
                     searchable_text=searchable,
                 )
             )
             node_meta[node_id] = {
-                "confidence": float(version.confidence or 0.0),
-                "review_status": str(version.review_status),
+                "confidence": float(asset.confidence or 0.0),
+                "review_status": str(asset.review_status),
                 "lock_status": "locked" if asset.is_locked else "unlocked",
-                "stale": stale,
-                "conflict": in_conflict,
-                "entity_ids": list(entity_ids),
-                "storyline_ids": list(storyline_ids),
-                "chapter_ids": list(chapter_ids),
+                "stale": bool(asset.stale),
+                "conflict": False,
+                "entity_ids": list(asset.entity_ids),
+                "storyline_ids": list(asset.storyline_ids),
+                "chapter_ids": [],
             }
-            if not lazy_evidence:
-                evidence_index[node_id] = tuple(
-                    f"asset_evidence:{e.id}" for e in evidence
-                )
-            else:
-                # Lazy: only keys, load body via EvidenceReadService on demand.
-                evidence_index[node_id] = tuple(
-                    f"asset_evidence:{e.id}" for e in evidence
-                )
+            asset_version_ids.append(int(asset.version_id))
 
-        # Parent linking for storyline/character views via attributes parent_asset_id
         asset_id_to_node = {
             n.asset_id: n.node_id for n in nodes if n.asset_id is not None
         }
@@ -201,7 +261,6 @@ class NarrativeStructureMapProjectionService:
         for n in nodes:
             parent_id = None
             meta = node_meta.get(n.node_id, {})
-            # Heuristic: first storyline_id matching another asset node
             for sid in meta.get("storyline_ids") or []:
                 cand = asset_id_to_node.get(int(sid))
                 if cand and cand != n.node_id:
@@ -224,33 +283,60 @@ class NarrativeStructureMapProjectionService:
                 )
             )
         nodes = linked_nodes
-
         node_ids = {n.node_id for n in nodes}
+
         edges: list[StructureMapEdgeDto] = []
-        for relation, version, evidence in relation_rows:
+        relation_version_ids: list[int] = []
+        for relation in relations:
             src = asset_id_to_node.get(int(relation.source_asset_id))
             tgt = asset_id_to_node.get(int(relation.target_asset_id))
             if src is None or tgt is None:
                 continue
             if src not in node_ids or tgt not in node_ids:
                 continue
-            edge_id = f"relation:{relation.id}:v:{version.id}"
+            edge_id = f"relation:{relation.relation_id}:v:{relation.version_id}"
             edges.append(
                 StructureMapEdgeDto(
                     edge_id=edge_id,
                     source_node_id=src,
                     target_node_id=tgt,
-                    relation_id=int(relation.id),
-                    relation_version_id=int(version.id),
-                    is_canonical=bool(version.is_canonical),
-                    edge_type=str(version.relation_type),
-                    evidence_count=len(evidence),
-                    label=str(version.summary or version.relation_type or ""),
+                    relation_id=int(relation.relation_id),
+                    relation_version_id=int(relation.version_id),
+                    is_canonical=bool(relation.is_canonical),
+                    edge_type=str(relation.relation_type),
+                    evidence_count=int(relation.evidence_count),
+                    label=str(relation.relation_type or ""),
                 )
             )
-            evidence_index[edge_id] = tuple(
-                f"relation_evidence:{e.id}" for e in evidence
+            relation_version_ids.append(int(relation.version_id))
+
+        # Lazy evidence index: ids/hashes only via Projection Source (no full body).
+        evidence_entries = self._source.get_evidence_index(
+            book_id=bid,
+            book_snapshot_id=snap,
+            asset_version_ids=asset_version_ids,
+            relation_version_ids=relation_version_ids,
+            limit=500,
+        )
+        by_target: dict[tuple[str, int], list[str]] = {}
+        for entry in evidence_entries:
+            key = (entry.evidence_type, int(entry.target_version_id))
+            by_target.setdefault(key, []).append(
+                f"{entry.evidence_type}:{entry.evidence_id}"
             )
+        for n in nodes:
+            if n.asset_version_id is None:
+                continue
+            refs = by_target.get(("asset_evidence", int(n.asset_version_id)), [])
+            evidence_index[n.node_id] = tuple(refs)
+            if not lazy_evidence:
+                # Still no body — only ids (lazy load body via EvidenceReadService).
+                evidence_index[n.node_id] = tuple(refs)
+        for e in edges:
+            if e.relation_version_id is None:
+                continue
+            refs = by_target.get(("relation_evidence", int(e.relation_version_id)), [])
+            evidence_index[e.edge_id] = tuple(refs)
 
         truncated_nodes = False
         truncated_edges = False
@@ -258,8 +344,14 @@ class NarrativeStructureMapProjectionService:
             nodes = nodes[:max_nodes]
             truncated_nodes = True
             kept = {n.node_id for n in nodes}
-            edges = [e for e in edges if e.source_node_id in kept and e.target_node_id in kept]
-            evidence_index = {k: v for k, v in evidence_index.items() if k in kept or k.startswith("relation:")}
+            edges = [
+                e for e in edges if e.source_node_id in kept and e.target_node_id in kept
+            ]
+            evidence_index = {
+                k: v
+                for k, v in evidence_index.items()
+                if k in kept or k.startswith("relation:")
+            }
         if len(edges) > max_edges:
             edges = edges[:max_edges]
             truncated_edges = True
@@ -283,15 +375,24 @@ class NarrativeStructureMapProjectionService:
             "lazy_evidence": lazy_evidence,
             "writes_database_facts": False,
             "pattern_orm_table": False,
+            "projection_source": "NarrativeProjectionSource",
         }
         conflict_summary = {
             **conflict_summary,
             "blocking_auto_resolve_forbidden": True,
         }
 
+        # Mark conflicted nodes from conflict_ids when available (version ids may appear).
+        conflict_ids = set(int(x) for x in conflict_summary.get("conflict_ids") or [])
+        if conflict_ids:
+            for n in nodes:
+                meta = node_meta.get(n.node_id)
+                if meta is not None and n.asset_version_id in conflict_ids:
+                    meta["conflict"] = True
+
         return NarrativeStructureMapProjectionDto(
             book_id=bid,
-            book_snapshot_id=int(resolved_snapshot or 0),
+            book_snapshot_id=snap,
             source_run_id=source_run_id,
             projection_version=PROJECTION_VERSION,
             root_nodes=tuple(nodes),
@@ -304,112 +405,8 @@ class NarrativeStructureMapProjectionService:
             schema=STRUCTURE_MAP_PROJECTION_SCHEMA,
         )
 
-    # ------------------------------------------------------------------
 
-    def _load_asset_versions(
-        self, book_id: int, *, include_candidates: bool
-    ) -> list[tuple[NarrativeAsset, NarrativeAssetVersion, list]]:
-        stmt = (
-            select(NarrativeAssetVersion)
-            .join(NarrativeAsset, NarrativeAssetVersion.asset_id == NarrativeAsset.id)
-            .where(NarrativeAsset.book_id == book_id)
-            .options(
-                selectinload(NarrativeAssetVersion.asset),
-                selectinload(NarrativeAssetVersion.evidence),
-            )
-            .order_by(NarrativeAsset.id.asc(), NarrativeAssetVersion.id.asc())
-        )
-        if not include_candidates:
-            stmt = stmt.where(NarrativeAssetVersion.is_canonical.is_(True))
-        versions = list(self._session.scalars(stmt).all())
-        out: list[tuple[NarrativeAsset, NarrativeAssetVersion, list]] = []
-        seen_assets: set[int] = set()
-        for version in versions:
-            asset = version.asset
-            if include_candidates:
-                # Prefer canonical per asset; also include non-canonical if flagged.
-                key = int(asset.id)
-                if version.is_canonical:
-                    seen_assets.add(key)
-                elif key in seen_assets and not include_candidates:
-                    continue
-            out.append((asset, version, list(version.evidence)))
-        return out
-
-    def _load_relation_versions(
-        self, book_id: int, *, include_candidates: bool
-    ) -> list[tuple[NarrativeRelation, NarrativeRelationVersion, list]]:
-        stmt = (
-            select(NarrativeRelationVersion)
-            .join(
-                NarrativeRelation,
-                NarrativeRelationVersion.relation_id == NarrativeRelation.id,
-            )
-            .where(NarrativeRelation.book_id == book_id)
-            .options(
-                selectinload(NarrativeRelationVersion.relation),
-                selectinload(NarrativeRelationVersion.evidence),
-            )
-            .order_by(NarrativeRelation.id.asc(), NarrativeRelationVersion.id.asc())
-        )
-        if not include_candidates:
-            stmt = stmt.where(NarrativeRelationVersion.is_canonical.is_(True))
-        versions = list(self._session.scalars(stmt).all())
-        return [
-            (version.relation, version, list(version.evidence)) for version in versions
-        ]
-
-    def _conflicted_version_ids(self, book_id: int) -> set[int]:
-        ids: set[int] = set()
-        for row in self._conflicts.list_analysis_conflicts(
-            book_id, status=ConflictStatus.OPEN.value
-        ):
-            for ref_type, ref_id in (
-                (row.left_ref_type, row.left_ref_id),
-                (row.right_ref_type, row.right_ref_id),
-            ):
-                if str(ref_type) in {
-                    "asset_version",
-                    "narrative_asset_version",
-                    "relation_version",
-                    "narrative_relation_version",
-                }:
-                    try:
-                        ids.add(int(ref_id))
-                    except (TypeError, ValueError):
-                        continue
-        return ids
-
-    def _summaries(
-        self,
-        book_id: int,
-        asset_rows: list,
-        relation_rows: list,
-        conflict_version_ids: set[int],
-    ) -> tuple[dict[str, Any], dict[str, Any]]:
-        review_counts = {
-            "candidate_count": 0,
-            "confirmed_count": 0,
-            "corrected_count": 0,
-            "rejected_count": 0,
-            "locked_count": 0,
-            "stale_count": 0,
-        }
-        for asset, version, _ev in asset_rows:
-            status = str(version.review_status)
-            key = f"{status}_count"
-            if key in review_counts:
-                review_counts[key] += 1
-            if asset.is_locked:
-                review_counts["locked_count"] += 1
-            if asset.stale_at is not None or asset.lifecycle_status == AssetLifecycleStatus.STALE.value:
-                review_counts["stale_count"] += 1
-        open_conflicts = self._conflicts.list_analysis_conflicts(
-            book_id, status=ConflictStatus.OPEN.value
-        )
-        conflict_summary = {
-            "open_count": len(open_conflicts),
-            "conflicted_version_count": len(conflict_version_ids),
-            "relation_count": len(relation_rows),
-        }
-        return review_counts, conflict_summary
+__all__ = [
+    "PROJECTION_VERSION",
+    "NarrativeStructureMapProjectionService",
+]

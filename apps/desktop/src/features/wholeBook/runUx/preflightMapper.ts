@@ -1,6 +1,9 @@
 /**
- * Maps Phase 1C preflight HTTP response → WholeBookPreflightPageModel.
- * Does not recompute capability/quota/engine/run_creation_enabled.
+ * Maps Transport DTO (WholeBookPreflightResponseDto / Phase 1C HTTP) → PageModel.
+ *
+ * - Does not recompute capability/quota/engine allowed flags.
+ * - Preserves backend_run_creation_enabled; ANDs with client gate for effective.
+ * - Fail-closed on missing required fields / unknown modules when strict.
  */
 
 import {
@@ -19,6 +22,7 @@ import type {
   PreflightStagePlanItemDto,
   WholeBookPreflightPageModel,
 } from "../contracts/preflight";
+import { RUN_CREATE_ENABLED_IN_CLIENT } from "./constants";
 import type { Phase1cPreflightApiResponse, StagePlanPreviewRow } from "./types";
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -44,17 +48,25 @@ function asNullableNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
-function parseModules(raw: unknown): WholeBookModuleKey[] {
+function parseModules(raw: unknown, failUnknown = false): WholeBookModuleKey[] {
   if (!Array.isArray(raw)) return [];
   const out: WholeBookModuleKey[] = [];
   for (const item of raw) {
-    if (typeof item === "string" && isWholeBookModuleKey(item)) out.push(item);
+    if (typeof item !== "string") continue;
+    if (isWholeBookModuleKey(item)) {
+      out.push(item);
+    } else if (failUnknown) {
+      throw new Error(`UNKNOWN_MODULE:${item}`);
+    }
   }
   return out;
 }
 
-function parseMode(raw: unknown): WholeBookAnalysisMode {
+function parseMode(raw: unknown, failUnknown = false): WholeBookAnalysisMode {
   if (typeof raw === "string" && isWholeBookAnalysisMode(raw)) return raw;
+  if (failUnknown && typeof raw === "string" && raw.length > 0) {
+    throw new Error(`UNKNOWN_MODE:${raw}`);
+  }
   return "whole_book_native";
 }
 
@@ -70,8 +82,6 @@ export function extractSupportedModes(
     );
     if (modes.length > 0) return modes;
   }
-  // Backend may omit modes while still advertising both catalog modes via notes —
-  // never invent "allowed"; only list known catalog modes for UI disable logic.
   return [...WHOLE_BOOK_ANALYSIS_MODES];
 }
 
@@ -118,9 +128,28 @@ function toContractStagePlan(rows: StagePlanPreviewRow[]): PreflightStagePlanIte
   }));
 }
 
+function withRunCreationFlags(
+  backend: boolean,
+  client: boolean = RUN_CREATE_ENABLED_IN_CLIENT,
+): Pick<
+  WholeBookPreflightPageModel,
+  | "backend_run_creation_enabled"
+  | "client_run_creation_enabled"
+  | "effective_run_creation_enabled"
+  | "run_creation_enabled"
+> {
+  const effective = Boolean(backend) && Boolean(client);
+  return {
+    backend_run_creation_enabled: Boolean(backend),
+    client_run_creation_enabled: Boolean(client),
+    effective_run_creation_enabled: effective,
+    run_creation_enabled: effective,
+  };
+}
+
 /**
  * Fail-closed deny model used when transport fails.
- * Never sets run_creation_enabled / capability.allowed to true.
+ * Never sets effective_run_creation_enabled / capability.allowed to true.
  */
 export function failClosedPreflightModel(
   bookId: number,
@@ -188,10 +217,10 @@ export function failClosedPreflightModel(
     },
     blocking_reasons: [reasonCode, "PREFLIGHT_TRANSPORT_FAILED"],
     warnings: [message],
-    run_creation_enabled: false,
     confirmation_required: true,
     auto_fill_notes: [],
     force_start_allowed: false,
+    ...withRunCreationFlags(false),
   };
   assertPreflightGuard(model);
   return model;
@@ -205,6 +234,17 @@ export function mapPhase1cPreflightToPageModel(
   stage_plan_rows: StagePlanPreviewRow[];
   supported_modes: WholeBookAnalysisMode[];
 } {
+  // Fail-closed: required transport fields.
+  if (typeof response.book_id !== "number") {
+    throw new Error("PREFLIGHT_DTO_MISSING_BOOK_ID");
+  }
+  if (!Array.isArray(response.blocking_reasons)) {
+    throw new Error("PREFLIGHT_DTO_MISSING_BLOCKING_REASONS");
+  }
+  if (typeof response.run_creation_enabled !== "boolean") {
+    throw new Error("PREFLIGHT_DTO_MISSING_RUN_CREATION_ENABLED");
+  }
+
   const bookExtra = asRecord(response.book);
   const snapExtra = asRecord(response.snapshot);
   const capabilityRaw = asRecord(response.capability);
@@ -215,15 +255,15 @@ export function mapPhase1cPreflightToPageModel(
   const usageRaw = asRecord(response.estimated_usage);
   const notes = asRecord(response.notes);
 
-  const analysisMode = parseMode(response.analysis_mode);
+  const analysisMode = parseMode(response.analysis_mode, true);
   const requested =
     requestedModules && requestedModules.length > 0
       ? requestedModules
-      : parseModules(response.requested_modules).length > 0
-        ? parseModules(response.requested_modules)
-        : parseModules(notes.requested_modules);
+      : parseModules(response.requested_modules, true).length > 0
+        ? parseModules(response.requested_modules, true)
+        : parseModules(notes.requested_modules, true);
 
-  const resolvedFromApi = parseModules(response.resolved_modules);
+  const resolvedFromApi = parseModules(response.resolved_modules, true);
   const resolved =
     resolvedFromApi.length > 0
       ? resolvedFromApi
@@ -239,11 +279,7 @@ export function mapPhase1cPreflightToPageModel(
         ).notes;
 
   const directStages = new Set(
-    requested.flatMap((m) => {
-      // Display-only: which stages are explicitly required by selected modules.
-      // Uses shared MODULE_STAGE_DEPENDENCIES via resolveModulesWithDependencies.
-      return resolveModulesWithDependencies([m]).stages;
-    }),
+    requested.flatMap((m) => resolveModulesWithDependencies([m]).stages),
   );
   const allStages = new Set(
     resolveModulesWithDependencies(
@@ -268,14 +304,18 @@ export function mapPhase1cPreflightToPageModel(
     ? [...response.blocking_reasons]
     : [];
   const warnings = Array.isArray(response.warnings) ? [...response.warnings] : [];
-  if (snapshotMissing && !warnings.some((w) => w.includes("快照") || w.includes("snapshot"))) {
+  if (
+    snapshotMissing &&
+    !warnings.some((w) => w.includes("快照") || w.includes("snapshot"))
+  ) {
     warnings.push("需要建立快照（Preflight 不会自动创建 Snapshot）");
   }
 
-  // Backend is sole authority — never flip to true on the client.
-  const runCreationEnabled = false;
-  if (response.run_creation_enabled === true) {
-    blocking.push("CLIENT_IGNORED_RUN_CREATION_TRUE");
+  // Preserve backend raw value; client gate ANDed for effective.
+  const backendRunCreation = Boolean(response.run_creation_enabled);
+  const runFlags = withRunCreationFlags(backendRunCreation);
+  if (backendRunCreation && !runFlags.client_run_creation_enabled) {
+    warnings.push("CLIENT_RUN_CREATION_DISABLED");
   }
 
   const model: WholeBookPreflightPageModel = {
@@ -283,7 +323,9 @@ export function mapPhase1cPreflightToPageModel(
       book_id: asNumber(response.book_id),
       title: asString(
         bookExtra.title ?? response.title,
-        blocking.includes("BOOK_NOT_FOUND") ? "未知书籍" : `Book #${response.book_id}`,
+        blocking.includes("BOOK_NOT_FOUND")
+          ? "未知书籍"
+          : `Book #${response.book_id}`,
       ),
       chapter_count: asNumber(bookExtra.chapter_count ?? response.chapter_count),
       paragraph_count: asNumber(
@@ -296,10 +338,9 @@ export function mapPhase1cPreflightToPageModel(
       current_snapshot_id: asNullableNumber(
         bookExtra.current_snapshot_id ?? response.book_snapshot_id,
       ),
-      snapshot_created_at: asString(
-        bookExtra.snapshot_created_at ?? snapExtra.created_at,
-        "",
-      ) || null,
+      snapshot_created_at:
+        asString(bookExtra.snapshot_created_at ?? snapExtra.created_at, "") ||
+        null,
       body_changed_since_snapshot: asBool(
         bookExtra.body_changed_since_snapshot,
         false,
@@ -327,11 +368,7 @@ export function mapPhase1cPreflightToPageModel(
         capabilityRaw.capability_key ?? decisionRaw.capability_key,
         "whole_book_analysis",
       ),
-      // Pass-through only — never recompute allowed on the client.
-      allowed: asBool(
-        capabilityRaw.allowed ?? decisionRaw.allowed,
-        false,
-      ),
+      allowed: asBool(capabilityRaw.allowed ?? decisionRaw.allowed, false),
       reason_code: asString(
         capabilityRaw.reason_code ?? decisionRaw.reason_code,
         "CAPABILITY_UNKNOWN",
@@ -348,7 +385,6 @@ export function mapPhase1cPreflightToPageModel(
       ),
     },
     quota: {
-      // Pass-through only — never recompute quota on the client.
       allowed: asBool(quotaRaw.allowed, false),
       reason_code: asString(quotaRaw.reason_code ?? quotaRaw.reasonCode, ""),
       remaining: asRecord(quotaRaw.remaining),
@@ -360,7 +396,6 @@ export function mapPhase1cPreflightToPageModel(
         (typeof engineRaw.production_default_engine_id === "string"
           ? engineRaw.production_default_engine_id
           : null),
-      // Pass-through production_engine_available — never invent availability.
       available: asBool(engineRaw.production_engine_available, false),
       supports_mode: asBool(
         engineRaw.supports_mode,
@@ -404,15 +439,17 @@ export function mapPhase1cPreflightToPageModel(
     },
     blocking_reasons: blocking,
     warnings,
-    run_creation_enabled: runCreationEnabled,
     confirmation_required: asBool(response.confirmation_required, true),
     auto_fill_notes: autoFillNotes,
     force_start_allowed: false,
+    ...runFlags,
   };
 
   assertPreflightGuard(model);
-  if (model.run_creation_enabled) {
-    throw new Error("run_creation_enabled must remain false in Phase 1D");
+  if (model.effective_run_creation_enabled) {
+    throw new Error(
+      "effective_run_creation_enabled must remain false in Phase 1D",
+    );
   }
 
   return {

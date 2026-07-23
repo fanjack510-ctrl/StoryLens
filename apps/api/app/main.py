@@ -18,6 +18,7 @@ from app.api.v1.boundary_reviews import router as boundary_review_router
 from app.api.v1.reader_journey import router as reader_journey_router
 from app.routers.capabilities import router as capabilities_router
 from app.routers.whole_book_preflight import router as whole_book_preflight_router
+from app.routers.whole_book_results import router as whole_book_results_router
 from app.core.config import get_settings
 from app.core.paths import is_web_production_mode
 from app.core.sidecar_control import request_shutdown, shutdown_token
@@ -90,6 +91,8 @@ app.include_router(boundary_review_router)
 app.include_router(reader_journey_router)
 app.include_router(capabilities_router)
 app.include_router(whole_book_preflight_router)
+# Phase 1D Integration: read-only result projection (no run create / no review writes).
+app.include_router(whole_book_results_router)
 
 
 @app.middleware("http")

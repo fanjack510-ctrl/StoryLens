@@ -93,7 +93,14 @@ class PreflightEstimatedUsageDto:
 
 @dataclass(frozen=True, slots=True)
 class WholeBookPreflightPageModel:
-    """Frontend Preflight page model — must not create a production Run."""
+    """Frontend Preflight page model — must not create a production Run.
+
+    Run-creation flags (Phase 1D Integration freeze):
+    - backend_run_creation_enabled: raw Transport DTO value (never overwritten)
+    - client_run_creation_enabled: compile-time client gate (default False)
+    - effective_run_creation_enabled: backend AND client
+    - run_creation_enabled: alias of effective (legacy field; prefer effective)
+    """
 
     book: PreflightBookStatusDto
     snapshot: PreflightSnapshotStatusDto
@@ -112,10 +119,25 @@ class WholeBookPreflightPageModel:
     confirmation_required: bool = True
     auto_fill_notes: tuple[str, ...] = ()
     force_start_allowed: bool = False  # MUST remain False — no bypass button
+    backend_run_creation_enabled: bool = False
+    client_run_creation_enabled: bool = False
+    effective_run_creation_enabled: bool = False
 
     def __post_init__(self) -> None:
         if self.force_start_allowed:
             raise ValueError("force_start_allowed must remain False")
+        expected = bool(self.backend_run_creation_enabled) and bool(
+            self.client_run_creation_enabled
+        )
+        if self.effective_run_creation_enabled != expected:
+            raise ValueError(
+                "effective_run_creation_enabled must equal "
+                "backend_run_creation_enabled AND client_run_creation_enabled"
+            )
+        if self.run_creation_enabled != self.effective_run_creation_enabled:
+            raise ValueError(
+                "run_creation_enabled must equal effective_run_creation_enabled"
+            )
 
 
 def build_resolved_modules(

@@ -94,17 +94,25 @@ export function WholeBookPreflightView({
     model.warnings.some(
       (w) => w.includes("快照") || w.toLowerCase().includes("snapshot"),
     );
-  const startDisabled = true; // Phase 1D: always disabled; no force start
+  const startDisabled = !model.effective_run_creation_enabled; // Phase 1D: always false
   const startReason = model.blocking_reasons.length
     ? model.blocking_reasons.join("；")
-    : "run_creation_enabled=false";
+    : "effective_run_creation_enabled=false";
 
   return (
     <div
       className="wb-run-ux__panel"
       data-testid="whole-book-preflight-view"
       data-status={model.blocking_reasons.length ? "blocked" : "preview"}
-      data-run-creation-enabled={model.run_creation_enabled ? "true" : "false"}
+      data-run-creation-enabled={
+        model.effective_run_creation_enabled ? "true" : "false"
+      }
+      data-backend-run-creation-enabled={
+        model.backend_run_creation_enabled ? "true" : "false"
+      }
+      data-client-run-creation-enabled={
+        model.client_run_creation_enabled ? "true" : "false"
+      }
     >
       <header className="wb-run-ux__header">
         <h1>整书分析 Preflight（原型）</h1>
@@ -226,7 +234,10 @@ export function WholeBookPreflightView({
         <WholeBookBlockingReasonsPanel
           blockingReasons={model.blocking_reasons}
           warnings={model.warnings}
-          runCreationEnabled={model.run_creation_enabled}
+          runCreationEnabled={model.effective_run_creation_enabled}
+          backendRunCreationEnabled={model.backend_run_creation_enabled}
+          clientRunCreationEnabled={model.client_run_creation_enabled}
+          effectiveRunCreationEnabled={model.effective_run_creation_enabled}
         />
 
         <div className="wb-confirm-actions" data-testid="preflight-actions">

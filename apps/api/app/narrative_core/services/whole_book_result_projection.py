@@ -47,7 +47,7 @@ from app.narrative_core.enums import (
 from app.narrative_core.errors import NarrativeCoreError, NarrativeCoreErrorCode
 from app.narrative_core.product_contract.enums import WholeBookModuleStatus
 from app.narrative_core.product_contract.keys import (
-    MODULE_STAGE_DEPENDENCIES,
+    PRODUCT_MODULE_STAGE_DEPENDENCIES,
     WHOLE_BOOK_MODULE_KEYS,
 )
 from app.narrative_core.product_contract.module_results import (
@@ -85,9 +85,8 @@ from app.narrative_core.services.whole_book_stage_plan import (
 # ---------------------------------------------------------------------------
 
 # Product result dependency mapping — authoritative for module status / Envelope.
-PRODUCT_MODULE_STAGE_DEPENDENCIES: Mapping[
-    WholeBookModuleKey, tuple[WholeBookStageKey, ...]
-] = MODULE_STAGE_DEPENDENCIES
+# Re-exported from product_contract.keys (single source of truth).
+# Values must remain a subset of Engine Planning Closure.
 
 # Re-export Engine planning mapping for callers that need both sides documented.
 # Values live in whole_book_stage_plan (Phase 1C); do not duplicate rows here.

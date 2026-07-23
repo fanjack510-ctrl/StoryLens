@@ -122,9 +122,9 @@ export const wholeBookPreflightClient = {
         request.requested_modules,
       );
       assertPreflightGuard(mapped.model);
-      if (mapped.model.run_creation_enabled !== false) {
+      if (mapped.model.effective_run_creation_enabled !== false) {
         throw new PreflightClientError(
-          "run_creation_enabled 必须为 false",
+          "effective_run_creation_enabled 必须为 false",
           "DTO_INVALID",
         );
       }
@@ -156,8 +156,8 @@ export const wholeBookPreflightClient = {
 
 export type WholeBookPreflightClient = typeof wholeBookPreflightClient;
 
-/** Hard guard — this module must never call create-run. */
-export const WHOLE_BOOK_RUN_CREATE_PATH = "/api/v1/books/{book_id}/whole-book-runs";
-export const WHOLE_BOOK_PREFLIGHT_PATH =
-  "/api/v1/books/{book_id}/whole-book-runs/preflight";
-export const RUN_CREATE_ENABLED_IN_CLIENT = false;
+export {
+  RUN_CREATE_ENABLED_IN_CLIENT,
+  WHOLE_BOOK_PREFLIGHT_PATH,
+  WHOLE_BOOK_RUN_CREATE_PATH,
+} from "./constants";

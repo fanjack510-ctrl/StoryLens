@@ -106,8 +106,11 @@ export function WholeBookRunUxLabPage({
             mode === "whole_book_enhanced"
               ? FIXTURE_PREFLIGHT_ENRICHED.source_coverage
               : mapped.model.source_coverage,
-          run_creation_enabled: false,
           force_start_allowed: false,
+          backend_run_creation_enabled: mapped.model.backend_run_creation_enabled,
+          client_run_creation_enabled: mapped.model.client_run_creation_enabled,
+          effective_run_creation_enabled: false,
+          run_creation_enabled: false,
         });
         setStageRows(
           mapped.stage_plan_rows.length
