@@ -159,7 +159,8 @@ describe("Reader Journey inline lens selector (no overlay)", () => {
       }
       expect(within(toolbar).getByTestId("journey-overlay-composite")).toBeInTheDocument();
       expect(within(toolbar).getByTestId("journey-zoom-fit-all")).toBeInTheDocument();
-      expect(within(toolbar).getByTestId("journey-zoom-focus-phase")).toBeInTheDocument();
+      expect(within(toolbar).getByTestId("journey-zoom-focus-phase")).not.toBeVisible();
+      expect(within(toolbar).getByTestId("journey-all-metrics")).not.toBeVisible();
     },
   );
 });

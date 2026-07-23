@@ -61,7 +61,7 @@ export const OBSERVATION_LENSES: ObservationLensDef[] = [
   },
   {
     id: "hook_payoff",
-    labelZh: "悬念与回应",
+    labelZh: "钩子与回报",
     primaryKey: "hook",
     allowsOverlayWithComposite: false,
     isPairedHookPayoff: true,
@@ -81,12 +81,12 @@ export const DEFAULT_OBSERVATION_LENS: ObservationLensId = "composite";
 
 /** @deprecated Prefer getLensExplanation(id).one_line_summary — keep in sync with frozen copy. */
 export const OBSERVATION_LENS_HINTS_ZH: Record<ObservationLensId, string> = {
-  composite: "读者是否愿意继续往下读。线越高，继续阅读的动力通常越强。",
+  composite:
+    "线越高，读者继续阅读的动力通常越强；低点需要结合场景作用判断，不代表一定写得差。",
   plot_progress: "故事状态发生了多大变化，包括目标、冲突、信息和人物选择。",
   reading_tension: "读者有多担心、期待或想知道下一步会发生什么。",
   emotion: "读者在当前节点感受到的情绪有多强，只表示强弱，不表示好坏。",
-  hook_payoff:
-    "悬念提出读者想知道的问题，回应给出答案、结果或新的变化。连线表示它们之间的承接。",
+  hook_payoff: "钩子让读者产生期待，回报在后面给出答案、结果或新的变化。",
   pacing: "叙述推进得有多快。快慢本身没有好坏，要看是否适合当前场景任务。",
 };
 
@@ -208,24 +208,25 @@ function seriesFromCurve(
 export function buildLensChartLines(
   visualization: ReaderJourneyVisualization,
   lensId: ObservationLensId,
-  options: { overlayComposite?: boolean } = {},
+  options: {
+    overlayComposite?: boolean;
+    /** Explicit secondary metric for 对比指标 tool. */
+    compareWith?: string | null;
+  } = {},
 ): ChartLineSpec[] {
-  const overlayComposite = Boolean(options.overlayComposite);
+  const compareWith = options.compareWith || null;
   const lens = getObservationLens(lensId);
   const lines: ChartLineSpec[] = [];
 
   if (lens.id === "composite") {
     lines.push({
       id: "reading_momentum",
-      labelZh: "阅读动力",
+      labelZh: "综合阅读动力",
       series: seriesFromNodes(visualization, (n) => nodeScores(n).reading_momentum),
       style: "solid",
       includeInMainPolyline: true,
     });
-    return lines;
-  }
-
-  if (lens.id === "plot_progress") {
+  } else if (lens.id === "plot_progress") {
     lines.push({
       id: "plot_progress",
       labelZh: "剧情推进",
@@ -261,7 +262,6 @@ export function buildLensChartLines(
       labelZh: "钩子强度",
       series: seriesFromNodes(visualization, (n) => {
         const value = nodeScores(n).hook;
-        // Explicit 0 is valid; missing key stays undefined (line break, no carry-forward).
         return typeof value === "number" && Number.isFinite(value) ? value : undefined;
       }),
       style: "solid",
@@ -269,7 +269,7 @@ export function buildLensChartLines(
     });
     lines.push({
       id: "payoff",
-      labelZh: "本场回报强度",
+      labelZh: "回报强度",
       series: seriesFromNodes(visualization, (n) => {
         const value = nodeScores(n).payoff;
         return typeof value === "number" && Number.isFinite(value) ? value : undefined;
@@ -278,7 +278,6 @@ export function buildLensChartLines(
       includeInMainPolyline: true,
     });
   } else if (lens.id === "pacing") {
-    // pacing_speed drives the polyline; pacing_fit is a node/segment semantic, not the same score.
     lines.push({
       id: "pacing_speed",
       labelZh: "节奏速度",
@@ -288,23 +287,69 @@ export function buildLensChartLines(
     });
   }
 
-  // Overlay: composite + current lens only (max 2). Hook/payoff already paired — no third line.
+  // Explicit compare metric only — never silently add a nameless purple line.
+  // Legacy overlayComposite maps to compareWith=reading_momentum for older call sites.
+  const effectiveCompare =
+    compareWith ||
+    (options.overlayComposite && lens.allowsOverlayWithComposite && !lens.isPairedHookPayoff
+      ? "reading_momentum"
+      : null);
   if (
-    overlayComposite &&
-    lens.allowsOverlayWithComposite &&
+    effectiveCompare &&
     !lens.isPairedHookPayoff &&
-    lines.length === 1
+    lines.length === 1 &&
+    effectiveCompare !== lines[0].id &&
+    effectiveCompare !== lens.primaryKey
   ) {
-    lines.unshift({
-      id: "reading_momentum",
-      labelZh: "阅读动力",
-      series: seriesFromNodes(visualization, (n) => nodeScores(n).reading_momentum),
-      style: "dashed",
-      includeInMainPolyline: true,
-    });
+    const secondary = seriesForCompareMetric(visualization, effectiveCompare);
+    if (secondary) {
+      lines.push(secondary);
+    }
   }
 
-  return lines.slice(0, lens.isPairedHookPayoff ? 2 : overlayComposite ? 2 : 1);
+  return lines.slice(0, lens.isPairedHookPayoff ? 2 : 2);
+}
+
+function seriesForCompareMetric(
+  visualization: ReaderJourneyVisualization,
+  metricKey: string,
+): ChartLineSpec | null {
+  const labelMap: Record<string, string> = {
+    reading_momentum: "综合阅读动力",
+    engagement: "综合阅读动力",
+    plot_progress: "剧情推进",
+    reading_tension: "阅读张力",
+    arousal: "情绪强度",
+    pacing_speed: "节奏速度",
+    curiosity: "好奇",
+    tension: "张力",
+    hook: "钩子强度",
+    payoff: "回报强度",
+  };
+  const labelZh = labelMap[metricKey] || metricKey;
+  if (metricKey === "arousal") {
+    return {
+      id: metricKey,
+      labelZh,
+      series: seriesFromCurve(visualization, "arousal").map((point, index) => {
+        const node = visualization.scene_nodes[index];
+        if (!node) return point;
+        const scores = nodeScores(node);
+        const arousal = averageDefined(scores.arousal_start, scores.arousal_end);
+        return pointFromNode(node, arousal ?? resolveMetricValue(point) ?? undefined);
+      }),
+      style: "dashed",
+      includeInMainPolyline: true,
+    };
+  }
+  const key = metricKey === "engagement" ? "reading_momentum" : metricKey;
+  return {
+    id: metricKey,
+    labelZh,
+    series: seriesFromNodes(visualization, (n) => nodeScores(n)[key]),
+    style: "dashed",
+    includeInMainPolyline: true,
+  };
 }
 
 /** Equal-weight vertices for chapter/phase means — Beat importance is excluded. */

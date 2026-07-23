@@ -9,6 +9,11 @@ import {
 } from "./journeyUiLabels";
 import type { ChartHeightPreset, YDomainMode } from "./journeyVisualizationConfig";
 import {
+  COMPARE_METRIC_LABEL,
+  FIT_ALL_LABEL,
+  OVERLAY_COMPARE_TITLE,
+} from "./readerJourneyLensExplanation";
+import {
   DEFAULT_OBSERVATION_LENS,
   OBSERVATION_LENSES,
   getObservationLens,
@@ -22,8 +27,12 @@ type Props = {
   /** Observation lens (v2). When set, primary selector shows lenses instead of raw metrics. */
   observationLens?: ObservationLensId;
   onObservationLensChange?: (lens: ObservationLensId) => void;
+  /** @deprecated Prefer compareWith — kept for call-site compat during transition. */
   overlayComposite?: boolean;
   onOverlayCompositeChange?: (enabled: boolean) => void;
+  /** Explicit secondary metric for 对比指标 (null = no purple line). */
+  compareWith?: JourneyCurveMetric | null;
+  onCompareWithChange?: (metric: JourneyCurveMetric | null) => void;
   heightPreset: ChartHeightPreset;
   onHeightPresetChange: (preset: ChartHeightPreset) => void;
   yDomainMode: YDomainMode;
@@ -65,6 +74,8 @@ export function JourneyChartToolbar({
   onObservationLensChange,
   overlayComposite = false,
   onOverlayCompositeChange,
+  compareWith = null,
+  onCompareWithChange,
   heightPreset,
   onHeightPresetChange,
   yDomainMode,
@@ -85,14 +96,21 @@ export function JourneyChartToolbar({
 }: Props) {
   const [metricOpen, setMetricOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [compareOpen, setCompareOpen] = useState(false);
   const metricTriggerId = useId();
   const moreTriggerId = useId();
+  const compareTriggerId = useId();
   const lensHintId = useId();
+
+  void overlayComposite;
+  void onOverlayCompositeChange;
+  void onFocusPhase;
 
   const useLenses = typeof onObservationLensChange === "function";
   const lensDef = getObservationLens(observationLens);
   const lensHint = getObservationLensHint(observationLens);
   const metricLabel = formatJourneyMetricLabel(metric);
+  const compareEnabled = typeof onCompareWithChange === "function" && !lensDef.isPairedHookPayoff;
 
   const handleMetricSelect = (key: JourneyCurveMetric) => {
     onMetricChange(key);
@@ -104,6 +122,79 @@ export function JourneyChartToolbar({
   };
 
   const inspectorLabel = inspectorCollapsed ? "展开详情" : "收起详情";
+
+  const compareMenu = compareEnabled ? (
+    <JourneyPopover
+      open={compareOpen}
+      onOpenChange={(open) => {
+        setCompareOpen(open);
+        if (open) {
+          setMoreOpen(false);
+          setMetricOpen(false);
+        }
+      }}
+      align="end"
+      data-testid="journey-compare-select-menu"
+      menuLabel={COMPARE_METRIC_LABEL}
+      trigger={
+        <button
+          type="button"
+          id={compareTriggerId}
+          className={`journey-toolbar-btn ${compareWith ? "active" : ""}`}
+          data-testid="journey-overlay-composite"
+          data-compare-with={compareWith || ""}
+          aria-pressed={Boolean(compareWith)}
+          title={COMPARE_METRIC_LABEL}
+          aria-expanded={compareOpen}
+          onClick={() => setCompareOpen((v) => !v)}
+        >
+          {OVERLAY_COMPARE_TITLE}
+        </button>
+      }
+    >
+      <div role="listbox" aria-label={COMPARE_METRIC_LABEL} data-testid="journey-compare-selector-list">
+        <button
+          type="button"
+          role="option"
+          className={!compareWith ? "active" : ""}
+          data-testid="journey-compare-none"
+          aria-selected={!compareWith}
+          onClick={() => {
+            onCompareWithChange?.(null);
+            setCompareOpen(false);
+          }}
+        >
+          退出对比
+        </button>
+        {(
+          [
+            ["reading_momentum", "综合阅读动力"],
+            ["plot_progress", "剧情推进"],
+            ["reading_tension", "阅读张力"],
+            ["arousal", "情绪强度"],
+            ["pacing_speed", "节奏速度"],
+          ] as const
+        )
+          .filter(([key]) => key !== lensDef.primaryKey)
+          .map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              role="option"
+              className={compareWith === key ? "active" : ""}
+              data-testid={`journey-compare-${key}`}
+              aria-selected={compareWith === key}
+              onClick={() => {
+                onCompareWithChange?.(key as JourneyCurveMetric);
+                setCompareOpen(false);
+              }}
+            >
+              {label}
+            </button>
+          ))}
+      </div>
+    </JourneyPopover>
+  ) : null;
 
   const lensSegmented = (
     <div
@@ -366,55 +457,22 @@ export function JourneyChartToolbar({
       >
         <div className="journey-toolbar-left" data-testid="journey-metric-switcher">
           {useLenses ? lensSegmented : metricMenu}
-          {useLenses && onOverlayCompositeChange ? (
-            <button
-              type="button"
-              className={`journey-toolbar-btn ${overlayComposite ? "active" : ""}`}
-              data-testid="journey-overlay-composite"
-              aria-pressed={overlayComposite}
-              title="指标对比：综合阅读 + 当前镜头（最多两条线）"
-              onClick={() => onOverlayCompositeChange(!overlayComposite)}
-            >
-              指标对比
-            </button>
-          ) : null}
-          {useLenses ? (
-            <button
-              type="button"
-              className="journey-toolbar-btn"
-              data-testid="journey-all-metrics"
-              title="全部指标"
-              onClick={() => {
-                /* Metrics remain available via hidden legacy menu for audits; reveal on demand. */
-                const hidden = document.querySelector(
-                  '[data-testid="journey-metric-select"]',
-                ) as HTMLElement | null;
-                hidden?.click();
-              }}
-            >
-              全部指标
-            </button>
-          ) : null}
           {useLenses ? (
             <span hidden aria-hidden="true">
               {metricMenu}
             </span>
           ) : null}
+        </div>
+        <div className="journey-toolbar-tools" data-testid="journey-chart-tools">
+          {compareMenu}
           <button
             type="button"
             className="journey-toolbar-btn"
             data-testid="journey-zoom-fit-all"
+            title={FIT_ALL_LABEL}
             onClick={onFitAll}
           >
-            适应全部
-          </button>
-          <button
-            type="button"
-            className="journey-toolbar-btn"
-            data-testid="journey-zoom-focus-phase"
-            onClick={onFocusPhase}
-          >
-            当前阶段
+            {FIT_ALL_LABEL}
           </button>
         </div>
         <div className="journey-toolbar-right" data-testid="journey-toolbar-right">
@@ -429,8 +487,20 @@ export function JourneyChartToolbar({
           </button>
           {moreMenu}
         </div>
-        {/* Legacy selector compatibility */}
+        {/* Legacy selector compatibility — phase focus removed from ordinary UI */}
         <div data-testid="journey-zoom-controls" hidden aria-hidden="true" />
+        <button
+          type="button"
+          hidden
+          aria-hidden="true"
+          data-testid="journey-zoom-focus-phase"
+          onClick={onFocusPhase}
+        >
+          当前阶段
+        </button>
+        <button type="button" hidden aria-hidden="true" data-testid="journey-all-metrics">
+          全部指标
+        </button>
       </div>
       {useLenses ? (
         <p

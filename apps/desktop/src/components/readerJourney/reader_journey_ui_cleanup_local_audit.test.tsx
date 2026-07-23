@@ -33,7 +33,7 @@ describe("Reader Journey UI cleanup local audit", () => {
     expect(shellSource).not.toMatch(/小说拆解工作台/);
   });
 
-  it("toolbar primary row is compact: metric · fit · phase · details · more", () => {
+  it("toolbar primary row: lenses · tools · details · more; phase/all-metrics hidden", () => {
     render(
       <MemoryRouter initialEntries={["/?overview=curve&scene=3"]}>
         <ReaderJourneyWorkspace
@@ -44,9 +44,11 @@ describe("Reader Journey UI cleanup local audit", () => {
       </MemoryRouter>,
     );
     const toolbar = screen.getByTestId("journey-curve-toolbar");
-    expect(within(toolbar).getByTestId("journey-metric-select")).toHaveTextContent(/指标/);
-    expect(within(toolbar).getByTestId("journey-zoom-fit-all")).toBeInTheDocument();
-    expect(within(toolbar).getByTestId("journey-zoom-focus-phase")).toHaveTextContent("当前阶段");
+    expect(within(toolbar).getByTestId("journey-lens-select")).toBeInTheDocument();
+    expect(within(toolbar).getByTestId("journey-zoom-fit-all")).toHaveTextContent("适配全图");
+    expect(within(toolbar).getByTestId("journey-overlay-composite")).toHaveTextContent("对比指标");
+    expect(within(toolbar).getByTestId("journey-zoom-focus-phase")).not.toBeVisible();
+    expect(within(toolbar).getByTestId("journey-all-metrics")).not.toBeVisible();
     expect(within(toolbar).getByTestId("journey-inspector-toggle")).toHaveTextContent(/详情/);
     expect(within(toolbar).getByTestId("journey-more-chart-settings")).toHaveTextContent("更多操作");
     expect(within(toolbar).queryByTestId("journey-export-png")).not.toBeInTheDocument();
@@ -76,7 +78,7 @@ describe("Reader Journey UI cleanup local audit", () => {
   });
 
   it("phase cards use semantic scores and no 当前 badge", () => {
-    expect(formatMetricScoreLabel("tension", 66)).toBe("节奏 66");
+    expect(formatMetricScoreLabel("tension", 66)).toBe("张力 66");
     expect(formatMetricScoreLabel("hook", 48)).toBe("钩子 48");
     render(
       <MemoryRouter initialEntries={["/?overview=curve&phase=2"]}>

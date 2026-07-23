@@ -51,7 +51,8 @@ describe("readerJourneyLensExplanation", () => {
 describe("JourneyLensExplanationChrome", () => {
   it("renders one-liner, how-to panel with max three items, and minimal legend", () => {
     render(<JourneyLensExplanationChrome lensId="composite" />);
-    expect(screen.getByTestId("journey-lens-one-liner").textContent).toContain("继续往下读");
+    expect(screen.getByTestId("journey-lens-one-liner").textContent).toContain("不代表一定写得差");
+    expect(screen.getByTestId("journey-lens-title").textContent).toBe("综合阅读动力");
     fireEvent.click(screen.getByTestId("journey-lens-how-to-trigger"));
     const panel = screen.getByTestId("journey-lens-how-to-panel");
     expect(panel.querySelectorAll("li")).toHaveLength(3);

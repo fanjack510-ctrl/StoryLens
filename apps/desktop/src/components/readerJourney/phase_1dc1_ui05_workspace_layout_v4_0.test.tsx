@@ -110,15 +110,14 @@ describe("Reader Journey Workspace Layout v4.0", () => {
   it("shows full Chinese toolbar labels", () => {
     renderWorkspace(buildFixture13Scenes(), 1600);
     expect(screen.getByTestId("journey-curve-toolbar")).toBeInTheDocument();
-    expect(screen.getByTestId("journey-zoom-fit-all")).toHaveTextContent("适应全部");
-    expect(screen.getByTestId("journey-zoom-focus-phase")).toHaveTextContent("当前阶段");
+    expect(screen.getByTestId("journey-zoom-fit-all")).toHaveTextContent("适配全图");
+    expect(screen.getByTestId("journey-zoom-focus-phase")).not.toBeVisible();
     expect(screen.getByTestId("journey-inspector-toggle")).toHaveTextContent("展开详情");
     expect(openExportMenu()).toHaveTextContent("导出 PNG");
     expect(screen.getByTestId("journey-more-chart-settings")).toHaveTextContent(
       "更多操作",
     );
-    expect(screen.getByTestId("journey-metric-select")).toHaveTextContent("指标");
-    expect(screen.getByTestId("journey-metric-select")).toHaveTextContent("阅读牵引");
+    expect(screen.getByTestId("journey-overlay-composite")).toHaveTextContent("对比指标");
   });
 
   it("keeps Chart Y 0—100 and plot floors from v3.0", () => {

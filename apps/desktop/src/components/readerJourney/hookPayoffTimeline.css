@@ -1,0 +1,130 @@
+.hook-payoff-timeline--rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  width: 100%;
+}
+
+.hook-payoff-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  font-size: 12px;
+  color: var(--muted, #6b7280);
+}
+
+.hook-payoff-warning {
+  margin: 0;
+  font-size: 12px;
+  color: #9a3412;
+}
+
+.hook-payoff-rows-scroll {
+  max-height: calc(4 * 52px + 8px);
+  overflow: auto;
+  border: 1px solid var(--line, #e5e7eb);
+  border-radius: 8px;
+  background: var(--surface, #fff);
+}
+
+.hook-payoff-rows-track {
+  display: flex;
+  flex-direction: column;
+  min-width: 100%;
+}
+
+.hook-payoff-row {
+  display: grid;
+  grid-template-columns: minmax(88px, 120px) minmax(0, 1fr) 72px;
+  align-items: center;
+  gap: 8px;
+  min-height: 52px;
+  padding: 6px 10px;
+  border: 0;
+  border-bottom: 1px solid var(--line, #e5e7eb);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  color: var(--text, #111);
+}
+
+.hook-payoff-row:last-child {
+  border-bottom: 0;
+}
+
+.hook-payoff-row.is-muted {
+  opacity: 0.55;
+}
+
+.hook-payoff-row.is-active {
+  opacity: 1;
+  background: rgba(34, 120, 90, 0.06);
+}
+
+.hook-payoff-row-question {
+  font-size: 12px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hook-payoff-row-rail {
+  position: relative;
+  height: 36px;
+  min-width: 0;
+}
+
+.hook-payoff-row-node {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  max-width: 96px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background: var(--bg, #f8faf9);
+  border: 1px solid var(--line, #d1d5db);
+  z-index: 2;
+}
+
+.hook-payoff-row-node--hook {
+  border-color: #2f6f5e;
+}
+
+.hook-payoff-row-node--payoff {
+  border-color: #7c5cbf;
+}
+
+.hook-payoff-row-link {
+  position: absolute;
+  top: 50%;
+  height: 0;
+  border-top: 2px solid #6b7280;
+  transform: translateY(-50%);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.hook-payoff-row-link--solid {
+  border-top-style: solid;
+}
+
+.hook-payoff-row-link--dashed {
+  border-top-style: dashed;
+}
+
+.hook-payoff-row-link--dotted {
+  border-top-style: dotted;
+}
+
+.hook-payoff-row-status {
+  font-size: 11px;
+  color: var(--muted, #6b7280);
+  text-align: right;
+}

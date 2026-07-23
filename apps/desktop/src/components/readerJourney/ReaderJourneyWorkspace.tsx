@@ -253,7 +253,20 @@ export function ReaderJourneyWorkspace({
   const [selectedLoopId, setSelectedLoopId] = useState<string | null>(
     () => searchParams.get("loop"),
   );
-  const [overlayComposite, setOverlayComposite] = useState(false);
+  const [compareWith, setCompareWith] = useState<JourneyCurveMetric | null>(() => {
+    const raw = searchParams.get("compareWith");
+    if (!raw) return null;
+    const allowed = new Set([
+      "reading_momentum",
+      "plot_progress",
+      "reading_tension",
+      "arousal",
+      "pacing_speed",
+      "engagement",
+    ]);
+    return allowed.has(raw) ? (raw as JourneyCurveMetric) : null;
+  });
+  const overlayComposite = Boolean(compareWith);
   const [analysisInfoOpen, setAnalysisInfoOpen] = useState(false);
   const [exportStatus, setExportStatus] = useState<"idle" | "exporting" | "succeeded" | "failed">(
     "idle",
@@ -709,7 +722,12 @@ export function ReaderJourneyWorkspace({
   };
 
   const syncLensLoopToUrl = useCallback(
-    (lens: ObservationLensId, loopId: string | null, metricKey?: JourneyCurveMetric) => {
+    (
+      lens: ObservationLensId,
+      loopId: string | null,
+      metricKey?: JourneyCurveMetric,
+      compareKey?: JourneyCurveMetric | null,
+    ) => {
       setSearchParams(
         (prev) => {
           const params = new URLSearchParams(prev);
@@ -717,12 +735,23 @@ export function ReaderJourneyWorkspace({
           params.set("metric", metricKey ?? metricForLens(lens));
           if (loopId) params.set("loop", loopId);
           else params.delete("loop");
+          const compare = compareKey === undefined ? compareWith : compareKey;
+          if (compare && lens !== "hook_payoff") params.set("compareWith", compare);
+          else params.delete("compareWith");
           return params;
         },
         { replace: true },
       );
     },
-    [setSearchParams],
+    [setSearchParams, compareWith],
+  );
+
+  const handleCompareWithChange = useCallback(
+    (next: JourneyCurveMetric | null) => {
+      setCompareWith(next);
+      syncLensLoopToUrl(observationLens, selectedLoopId, metric, next);
+    },
+    [syncLensLoopToUrl, observationLens, selectedLoopId, metric],
   );
 
   const handleMetricChange = (key: JourneyCurveMetric) => {
@@ -737,12 +766,17 @@ export function ReaderJourneyWorkspace({
 
   const handleObservationLensChange = (lens: ObservationLensId) => {
     setObservationLens(lens);
-    if (lens === "hook_payoff") setOverlayComposite(false);
+    if (lens === "hook_payoff") setCompareWith(null);
     const nextMetric = metricForLens(lens);
     if (controlledMetric === undefined) {
       setMetricInternal(nextMetric);
     }
-    syncLensLoopToUrl(lens, selectedLoopId, nextMetric);
+    syncLensLoopToUrl(
+      lens,
+      selectedLoopId,
+      nextMetric,
+      lens === "hook_payoff" ? null : compareWith,
+    );
     onSelectionChange?.({ selectedMetric: nextMetric, source: "journey_rhythm" });
   };
 
@@ -765,11 +799,22 @@ export function ReaderJourneyWorkspace({
   useEffect(() => {
     const lensFromUrl = parseLensParam(searchParams.get("lens"));
     const loopFromUrl = searchParams.get("loop");
+    const compareFromUrl = searchParams.get("compareWith");
     if (lensFromUrl && lensFromUrl !== observationLens) {
       setObservationLens(lensFromUrl);
     }
     if (loopFromUrl !== selectedLoopId) {
       setSelectedLoopId(loopFromUrl);
+    }
+    const nextCompare =
+      compareFromUrl &&
+      ["reading_momentum", "plot_progress", "reading_tension", "arousal", "pacing_speed", "engagement"].includes(
+        compareFromUrl,
+      )
+        ? (compareFromUrl as JourneyCurveMetric)
+        : null;
+    if (nextCompare !== compareWith) {
+      setCompareWith(nextCompare);
     }
     if (loopFromUrl) {
       const loops = getNarrativeLoops(visualization);
@@ -1428,7 +1473,8 @@ export function ReaderJourneyWorkspace({
           observationLens={observationLens}
           onObservationLensChange={handleObservationLensChange}
           overlayComposite={overlayComposite}
-          onOverlayCompositeChange={setOverlayComposite}
+          compareWith={compareWith}
+          onCompareWithChange={handleCompareWithChange}
           heightPreset={heightPreset}
           onHeightPresetChange={handleHeightPresetChange}
           yDomainMode={yDomainMode}
@@ -1630,6 +1676,7 @@ export function ReaderJourneyWorkspace({
                   metric={metric}
                   observationLens={observationLens}
                   overlayComposite={overlayComposite}
+                  compareWith={compareWith}
                   chartHeight={chartHeight}
                   yDomainMode={yDomainMode}
                   viewStart={viewWindow.start}
@@ -2054,6 +2101,7 @@ export function ReaderJourneyWorkspace({
           metric={metric}
           observationLens={observationLens}
           overlayComposite={overlayComposite}
+          compareWith={compareWith}
           chartHeight={chartHeightPx("standard")}
           yDomainMode="fixed_0_100"
           viewStart={1}

@@ -1,0 +1,65 @@
+{
+  "id": "CHG-20260723-002",
+  "title": "Clarify Reader Journey roles and simplify lens navigation",
+  "type": "fix",
+  "base_version": "1.0.4",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "desktop"
+  ],
+  "files": [
+    "apps/desktop/src/components/readerJourney/sceneCardRoleTags.ts",
+    "apps/desktop/src/components/readerJourney/sceneCardRoleTags.test.ts",
+    "apps/desktop/src/components/readerJourney/StructuredChapterTextPane.tsx",
+    "apps/desktop/src/components/readerJourney/HookPayoffTimeline.tsx",
+    "apps/desktop/src/components/readerJourney/hookPayoffTimeline.css",
+    "apps/desktop/src/components/readerJourney/HookPayoffTimeline.test.tsx",
+    "apps/desktop/src/components/readerJourney/JourneyChartToolbar.tsx",
+    "apps/desktop/src/components/readerJourney/CanonicalJourneyChart.tsx",
+    "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.tsx",
+    "apps/desktop/src/components/readerJourney/observationLenses.ts",
+    "apps/desktop/src/components/readerJourney/readerJourneyLensExplanation.ts",
+    "apps/desktop/src/components/readerJourney/journeyUiLabels.ts",
+    "apps/desktop/src/components/readerJourney/JourneyLensExplanationChrome.tsx",
+    "apps/desktop/src/components/readerJourney/JourneySceneDetailPanel.tsx",
+    "apps/desktop/src/components/readerJourney/compareWithUrl_local.test.tsx"
+  ],
+  "user_summary": "场景卡几乎固定显示悬念/回应/阅读阻力；综合阅读含义不清；钩子回报图重叠；指标对比与全部指标/当前阶段等入口混乱。",
+  "technical_summary": "Scene role tags from NarrativeLoopView facts (max 2); rename 悬念与回应→钩子与回报; composite chart title/y-axis/hover; one-loop-per-row HookPayoffTimeline; split 对比指标/适配全图 into chart tools; explicit compareWith URL; hide 全部指标/当前阶段 from ordinary UI.",
+  "acceptance_criteria": [
+    "场景卡只显示真实成立的钩子/回报/阅读阻力，最多两枚",
+    "综合阅读动力一句话与纵轴强弱语义可读",
+    "钩子与回报一Loop一行且可横向滚动",
+    "主Lens不含指标对比/全部指标/当前阶段/适应全部",
+    "对比指标需显式选择且有图例与URL恢复",
+    "VERSION保持1.0.4，不改tag/baseline，不调用模型"
+  ],
+  "tests": [
+    "apps/desktop/src/components/readerJourney/sceneCardRoleTags.test.ts",
+    "apps/desktop/src/components/readerJourney/HookPayoffTimeline.test.tsx",
+    "apps/desktop/src/components/readerJourney/compareWithUrl_local.test.tsx",
+    "apps/desktop/src/components/readerJourney/readerJourneyTerminology.test.ts",
+    "apps/desktop/src/components/readerJourney/observation_lenses_v2_local.test.ts",
+    "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.test.tsx",
+    "apps/desktop/src/components/readerJourney/reader_journey_ui_cleanup_local_audit.test.tsx"
+  ],
+  "verification_evidence": [],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "Presentation-only; no artifact/schema/prompt/formula changes."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "P1",
+  "head_inclusion": null,
+  "created_at": "2026-07-23T00:49:44Z",
+  "updated_at": "2026-07-23T01:10:00Z"
+}

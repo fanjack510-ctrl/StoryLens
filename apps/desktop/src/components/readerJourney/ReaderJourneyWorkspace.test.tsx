@@ -51,13 +51,13 @@ describe("ReaderJourneyWorkspace", () => {
       beatNode.querySelector("circle")?.getAttribute("r"),
     );
 
+    fireEvent.click(screen.getByTestId("journey-curve-node-14"));
+    expect(screen.getByTestId("journey-detail-drawer")).toHaveTextContent("场景14");
+    expect(screen.getByTestId("scene-detail-tab-questions")).toHaveTextContent(/问题|为什么/);
+
     fireEvent.click(screen.getByTestId("journey-metric-select"));
     fireEvent.click(screen.getByTestId("journey-metric-hook"));
-    expect(screen.getByTestId("journey-metric-select")).toHaveTextContent("钩子强度");
-
-    fireEvent.click(screen.getByTestId("journey-curve-node-14"));
-    expect(screen.getByTestId("journey-detail-drawer")).toHaveTextContent("场景 14");
-    expect(screen.getByTestId("scene-detail-tab-questions")).toHaveTextContent("问题链");
+    expect(screen.getByTestId("journey-metric-select")).toHaveTextContent("钩子");
 
     fireEvent.click(screen.getByTestId("journey-more-chart-settings"));
     expect(screen.getByTestId("journey-export-png")).toBeInTheDocument();
@@ -96,7 +96,7 @@ describe("ReaderJourneyWorkspace", () => {
     );
     expect(screen.getByTestId("journey-overview-curve")).toBeInTheDocument();
     expect(screen.queryByTestId("journey-cluster-toggle-qcl-primary")).not.toBeInTheDocument();
-    expect(screen.getByTestId("scene-detail-tab-questions")).toHaveTextContent("问题链");
+    expect(screen.getByTestId("scene-detail-tab-questions")).toHaveTextContent(/问题|为什么/);
   });
 
   it("shows compact chapter summary cards", () => {
@@ -106,7 +106,7 @@ describe("ReaderJourneyWorkspace", () => {
     expect(screen.getByTestId("summary-card-traction")).toHaveTextContent("核心牵引");
     expect(screen.getByTestId("summary-card-peak")).toHaveTextContent("峰值");
     expect(screen.getByTestId("summary-card-weak")).toHaveTextContent("薄弱区间");
-    expect(screen.getByTestId("summary-card-hook")).toHaveTextContent("章尾钩子");
+    expect(screen.getByTestId("summary-card-hook").textContent).toMatch(/章[尾末]悬念|章尾钩子/);
   });
 
   it("shows diagnosis summary on the single journey analysis view", () => {
@@ -199,7 +199,7 @@ describe("ReaderJourneyWorkspace", () => {
     const collapse = screen.getAllByTestId("journey-collapse-inspector")[0];
     fireEvent.click(collapse!);
     expect(screen.getByTestId("journey-inspector-summary-expand")).toBeInTheDocument();
-    expect(screen.getByTestId("journey-inspector-summary-text").textContent).toMatch(/场景 04/);
+    expect(screen.getByTestId("journey-inspector-summary-text").textContent).toMatch(/场景\s*04/);
     fireEvent.click(screen.getByTestId("journey-inspector-summary-expand"));
     expect(screen.getByTestId("journey-detail-pane")).toBeInTheDocument();
   });

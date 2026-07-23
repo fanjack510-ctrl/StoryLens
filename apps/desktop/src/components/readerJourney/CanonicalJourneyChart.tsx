@@ -11,7 +11,7 @@ import type {
   JourneySceneNode,
   ReaderJourneyVisualization,
 } from "../../types/readerJourneyVisualization";
-import { formatJourneyMetricLabel, formatJourneyPhaseLabel, formatJourneySceneLabel, formatJourneyScore, formatJourneyRiskSummary, roleLabelZh } from "./journeyUiLabels";
+import { formatJourneyMetricLabel, formatJourneySceneLabel, formatJourneyScore, roleLabelZh } from "./journeyUiLabels";
 import { PHASE_BAND_COLORS } from "./journeyVisualTokens";
 import {
   buildLinePathD,
@@ -45,6 +45,8 @@ import {
 import { resolveNodeVisualStyle } from "./journeyNodeDiagnosisStyle";
 import { buildSegmentMarkers } from "./journeySegmentMarkers";
 import { getScenePayoffClaim } from "./narrativeLoopView";
+import { buildSceneRoleTags } from "./sceneCardRoleTags";
+import { getLensExplanation } from "./readerJourneyLensExplanation";
 import {
   HOOK_STRENGTH_LABEL,
   PAYOFF_NOT_CUMULATIVE_HINT,
@@ -73,6 +75,8 @@ export type CanonicalJourneyChartProps = {
   /** When set, chart renders observation-lens series instead of raw metric alone. */
   observationLens?: ObservationLensId;
   overlayComposite?: boolean;
+  /** Explicit secondary metric id for named compare line. */
+  compareWith?: string | null;
   chartHeight: number;
   yDomainMode: YDomainMode;
   viewStart: number;
@@ -115,6 +119,7 @@ export function CanonicalJourneyChart({
   metric,
   observationLens,
   overlayComposite = false,
+  compareWith = null,
   chartHeight,
   yDomainMode,
   viewStart,
@@ -135,8 +140,11 @@ export function CanonicalJourneyChart({
   const lensId = observationLens;
   const lensLines = useMemo(() => {
     if (!lensId) return null;
-    return buildLensChartLines(visualization, lensId, { overlayComposite });
-  }, [visualization, lensId, overlayComposite]);
+    return buildLensChartLines(visualization, lensId, {
+      overlayComposite,
+      compareWith,
+    });
+  }, [visualization, lensId, overlayComposite, compareWith]);
   const series = useMemo(
     () => lensLines?.[0]?.series ?? visualization.curve_series[metric] ?? [],
     [lensLines, visualization.curve_series, metric],
@@ -385,22 +393,6 @@ export function CanonicalJourneyChart({
   const tooltipPoint =
     hover != null ? series.find((p) => p.scene_ordinal === hover.ordinal) : undefined;
   const tooltipScore = resolveMetricValue(tooltipPoint);
-  const tooltipPhase =
-    tooltipNode?.phase_ordinal != null
-      ? visualization.phases.find((p) => p.ordinal === tooltipNode.phase_ordinal)
-      : undefined;
-  const tooltipHook = visualization.hook_markers.find(
-    (m) => m.scene_ordinal === hover?.ordinal,
-  );
-  const tooltipPayoff = visualization.payoff_markers.find(
-    (m) => m.scene_ordinal === hover?.ordinal,
-  );
-  const tooltipRisk = visualization.risk_intervals.find(
-    (r) =>
-      hover != null &&
-      hover.ordinal >= r.start_scene_ordinal &&
-      hover.ordinal <= r.end_scene_ordinal,
-  );
 
   return (
     <div
@@ -579,10 +571,25 @@ export function CanonicalJourneyChart({
           />
           {yScale.ticks.map((tick) => {
             const y = yScale.yForValue(tick);
+            const semantic =
+              lensId === "composite"
+                ? tick >= 75
+                  ? "强"
+                  : tick <= 25
+                    ? "弱"
+                    : tick === 50
+                      ? "中"
+                      : null
+                : null;
+            const label =
+              lensId === "composite" && semantic
+                ? semantic
+                : String(tick);
             return (
               <g
                 key={`y-tick-${tick}`}
                 data-testid={exportFullJourney ? undefined : `journey-y-tick-${tick}`}
+                data-y-semantic={semantic || undefined}
               >
                 <line
                   x1={CHART_PAD.left}
@@ -598,7 +605,7 @@ export function CanonicalJourneyChart({
                   textAnchor="end"
                   className="journey-axis-label"
                 >
-                  {tick}
+                  {label}
                 </text>
               </g>
             );
@@ -646,7 +653,15 @@ export function CanonicalJourneyChart({
               strokeDasharray="6 4"
               data-testid="journey-curve-path-secondary"
               data-line-id={lensLines?.[1]?.id ?? "secondary"}
+              data-line-label={lensLines?.[1]?.labelZh ?? ""}
             />
+          ) : null}
+          {lensLines && lensLines.length > 1 ? (
+            <g data-testid="journey-compare-legend" aria-label="对比图例">
+              <text x={padLeft} y={padTop - 8} className="journey-compare-legend-text" fontSize={11} fill="var(--muted)">
+                {`实线：${lensLines[0]?.labelZh || "当前指标"}  虚线：${lensLines[1]?.labelZh || "对比指标"}`}
+              </text>
+            </g>
           ) : null}
           {segmentMarkers.map((marker) => {
             const x1 = xFor(marker.fromOrdinal);
@@ -909,7 +924,7 @@ export function CanonicalJourneyChart({
               x={Math.min(Math.max(hover.x - 90, 4), chartWidth - 220)}
               y={Math.max(hover.y - (lensId === "hook_payoff" ? 160 : 110), 4)}
               width={lensId === "hook_payoff" ? 220 : 196}
-              height={lensId === "hook_payoff" ? 168 : 108}
+              height={lensId === "hook_payoff" ? 168 : 128}
               data-testid="journey-node-tooltip"
             >
               <div
@@ -963,42 +978,38 @@ export function CanonicalJourneyChart({
                     );
                   })()
                 ) : (
-                  <>
-                    <div>
-                      {formatJourneySceneLabel(tooltipNode.scene_ordinal)}
-                      {tooltipNode.role ? ` · ${roleLabelZh(tooltipNode.role)}` : ""}
-                    </div>
-                    <div>
-                      阶段{" "}
-                      {tooltipPhase
-                        ? formatJourneyPhaseLabel(tooltipPhase.title)
-                        : tooltipNode.phase_ordinal != null
-                          ? String(tooltipNode.phase_ordinal)
-                          : "—"}
-                    </div>
-                    <div>
-                      {formatJourneyMetricLabel(metric)}：
-                      {formatJourneyScore(tooltipScore)}
-                    </div>
-                    {tooltipHook?.summary ? <div>悬念：{tooltipHook.summary}</div> : null}
-                    {tooltipPayoff?.summary ? <div>回应：{tooltipPayoff.summary}</div> : null}
-                    {tooltipRisk?.summary || tooltipRisk?.risk_type ? (
-                      <div>
-                        阅读阻力：
-                        {formatJourneyRiskSummary({
-                          risk_type: tooltipRisk?.risk_type,
-                          summary: tooltipRisk?.summary,
-                          start_scene_ordinal: tooltipRisk?.start_scene_ordinal,
-                          end_scene_ordinal: tooltipRisk?.end_scene_ordinal,
-                          span: tooltipRisk?.span,
-                        })}
-                        <details className="journey-tech-details">
-                          <summary>技术详情</summary>
-                          <code>{tooltipRisk?.risk_type ?? "—"}</code>
-                        </details>
-                      </div>
-                    ) : null}
-                  </>
+                  (() => {
+                    const lensExpl = getLensExplanation(lensId);
+                    const scoreNoun =
+                      lensId === "composite"
+                        ? lensExpl.chart_title || "综合阅读动力"
+                        : lensExpl.title || formatJourneyMetricLabel(metric);
+                    const roles = buildSceneRoleTags(visualization, tooltipNode.scene_ordinal);
+                    const roleText = roles.map((r) => r.label).join(" · ") || "无特定叙事作用标签";
+                    const reason =
+                      roles[0]?.title ||
+                      tooltipNode.scene_value_summary ||
+                      lensExpl.caution;
+                    return (
+                      <>
+                        <div>
+                          {formatJourneySceneLabel(tooltipNode.scene_ordinal)}
+                          {tooltipNode.role ? ` · ${roleLabelZh(tooltipNode.role)}` : ""}
+                        </div>
+                        <div>
+                          {scoreNoun}：{formatJourneyScore(tooltipScore)}
+                        </div>
+                        <div>
+                          节点类型：
+                          {tooltipNode.node_type === "beat" || tooltipNode.role === "beat"
+                            ? "节拍"
+                            : "场景"}
+                        </div>
+                        <div>叙事作用：{roleText}</div>
+                        <div>主要原因：{String(reason).slice(0, 48)}</div>
+                      </>
+                    );
+                  })()
                 )}
               </div>
             </foreignObject>

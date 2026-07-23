@@ -23,7 +23,7 @@ import {
   responseDegreeLabelZh,
 } from "./journeyUiLabels";
 
-describe("CHG-014 Reader Journey terminology", () => {
+describe("CHG-014/002 Reader Journey terminology", () => {
   it("exposes exact ordinary lens names", () => {
     const labels = OBSERVATION_LENSES.map((l) => l.labelZh);
     expect(labels).toEqual([
@@ -31,10 +31,10 @@ describe("CHG-014 Reader Journey terminology", () => {
       "剧情推进",
       "阅读张力",
       "情绪强度",
-      "悬念与回应",
+      "钩子与回报",
       "节奏速度",
     ]);
-    expect(OVERLAY_COMPARE_TITLE).toBe("指标对比");
+    expect(OVERLAY_COMPARE_TITLE).toBe("对比指标");
     expect(ALL_METRICS_LABEL).toBe("全部指标");
     expect(CURRENT_PHASE_LABEL).toBe("当前阶段");
   });
@@ -50,7 +50,8 @@ describe("CHG-014 Reader Journey terminology", () => {
       expect(lens.legend_items.length).toBeGreaterThan(0);
       expect(getLensExplanation(lens.lens_id).title).toBe(lens.title);
     }
-    expect(getLensExplanation("hook_payoff").title).toBe("悬念与回应");
+    expect(getLensExplanation("hook_payoff").title).toBe("钩子与回报");
+    expect(getLensExplanation("composite").one_line_summary).toContain("不代表一定写得差");
     expect(getLensExplanation("emotion").title).toBe("情绪强度");
     expect(getLensExplanation("pacing").title).toBe("节奏速度");
   });
@@ -70,13 +71,13 @@ describe("CHG-014 Reader Journey terminology", () => {
   });
 
   it("maps ordinary terminology without English tech fields", () => {
-    expect(formatJourneyMetricLabel("hook")).toBe("悬念");
-    expect(formatJourneyMetricLabel("payoff")).toBe("回应");
+    expect(formatJourneyMetricLabel("hook")).toBe("钩子");
+    expect(formatJourneyMetricLabel("payoff")).toBe("回报");
     expect(formatJourneyMetricLabel("dropoff_risk")).toBe("阅读阻力");
-    expect(responseDegreeLabelZh("partial")).toBe("部分回应");
-    expect(responseDegreeLabelZh("full")).toBe("明确回应");
-    expect(responseDegreeLabelZh("reversal")).toBe("反转回应");
-    expect(responseDegreeLabelZh("transformed_question")).toBe("转化为新问题");
+    expect(responseDegreeLabelZh("partial")).toBe("部分回报");
+    expect(responseDegreeLabelZh("full")).toBe("明确回报");
+    expect(responseDegreeLabelZh("reversal")).toBe("反转回报");
+    expect(responseDegreeLabelZh("transformed_question")).toBe("转化回报");
   });
 
   it("does not show 流失风险 in ordinary labels", () => {
@@ -100,13 +101,13 @@ describe("CHG-014 Reader Journey terminology", () => {
     expect(["合适", "偏快", "偏慢", "无法判断"]).toContain(pacingFitLabel(90, "aftermath"));
   });
 
-  it("keeps legends to one compact row for numeric and suspense lenses", () => {
+  it("keeps legends to one compact row for numeric and hook/payoff lenses", () => {
     expect(NUMERIC_LENS_LEGEND.map((i) => i.label).join("")).toContain("阅读阻力");
     expect(HOOK_PAYOFF_LENS_LEGEND.map((i) => i.label)).toEqual([
-      "● 新悬念",
-      "◐ 部分回应",
-      "● 明确回应",
-      "◆ 反转回应",
+      "● 新钩子",
+      "◐ 部分回报",
+      "● 明确回报",
+      "◆ 反转回报",
       "┄ 较可信承接",
     ]);
     expect(NUMERIC_LENS_LEGEND.length).toBeLessThanOrEqual(5);

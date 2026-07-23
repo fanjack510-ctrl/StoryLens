@@ -8,8 +8,8 @@ export const METRIC_LABELS_ZH: Record<JourneyCurveMetric, string> = {
   arousal: "情绪强度",
   curiosity: "剧情推进",
   tension: "阅读张力",
-  payoff: "回应",
-  hook: "悬念",
+  payoff: "回报",
+  hook: "钩子",
   dropoff_risk: "阅读阻力",
 };
 
@@ -80,12 +80,12 @@ export const SCENE_ROLE_LABELS_ZH: Record<string, string> = {
 
 /** Ordinary response-degree labels. */
 export const RESPONSE_DEGREE_LABELS_ZH: Record<string, string> = {
-  partial: "部分回应",
-  full: "明确回应",
-  reversal: "反转回应",
-  transformed: "转化为新问题",
-  transformed_question: "转化为新问题",
-  score_inferred: "候选回应",
+  partial: "部分回报",
+  full: "明确回报",
+  reversal: "反转回报",
+  transformed: "转化回报",
+  transformed_question: "转化回报",
+  score_inferred: "候选回报",
 };
 
 export const READING_RESISTANCE_HOVER =
@@ -176,33 +176,33 @@ export function questionLifecycleZh(status: string | undefined | null): string {
 }
 
 export const PAYOFF_TYPE_ZH: Record<string, string> = {
-  mystery: "悬念回应",
-  emotional: "情绪回应",
-  information: "信息回应",
-  relationship: "关系回应",
-  plot: "情节回应",
-  stage: "阶段回应",
-  partial: "部分回应",
-  full: "明确回应",
-  reversal: "反转回应",
+  mystery: "悬念回报",
+  emotional: "情绪回报",
+  information: "信息回报",
+  relationship: "关系回报",
+  plot: "情节回报",
+  stage: "阶段回报",
+  partial: "部分回报",
+  full: "明确回报",
+  reversal: "反转回报",
   transformed_question: "转化为新问题",
 };
 
 export const HOOK_TYPE_ZH: Record<string, string> = {
-  mystery: "悬念",
-  threat: "威胁悬念",
-  emotional: "情绪悬念",
-  information: "信息悬念",
-  chapter_end: "章末悬念",
-  danger: "危险悬念",
+  mystery: "钩子",
+  threat: "威胁钩子",
+  emotional: "情绪钩子",
+  information: "信息钩子",
+  chapter_end: "章末钩子",
+  danger: "危险钩子",
 };
 
 export const SCORE_TOOLTIPS_ZH: Record<string, string> = {
   engagement: "读者继续阅读的动力",
   curiosity: "故事状态变化幅度",
   tension: "担心、期待与悬念强弱",
-  payoff: "本场对前文问题的回应强度",
-  hook: "本场建立的悬念强度",
+  payoff: "本场对前文问题的回报强度",
+  hook: "本场建立的钩子强度",
   dropoff_risk: READING_RESISTANCE_HOVER,
 };
 
@@ -241,14 +241,14 @@ export const PRIMARY_METRIC_LABELS_ZH: Record<(typeof PRIMARY_JOURNEY_METRICS)[n
   engagement: "综合阅读",
   arousal: "情绪强度",
   tension: "阅读张力",
-  hook: "悬念",
+  hook: "钩子",
 };
 
 export const PRIMARY_METRIC_HINTS_ZH: Record<(typeof PRIMARY_JOURNEY_METRICS)[number], string> = {
   engagement: "读者继续阅读的动力",
   arousal: "场景带来的情绪强弱",
   tension: "担心、期待与悬念强弱",
-  hook: "悬念、问题和期待程度",
+  hook: "钩子、问题和期待程度",
 };
 
 /** Fixed phase role explanations when backend summary is missing (not plot conclusions). */
@@ -464,8 +464,8 @@ export const METRIC_SCORE_SHORT_ZH: Record<JourneyCurveMetric, string> = {
   arousal: "情绪",
   curiosity: "推进",
   tension: "张力",
-  payoff: "回应",
-  hook: "悬念",
+  payoff: "回报",
+  hook: "钩子",
   dropoff_risk: "阻力",
 };
 

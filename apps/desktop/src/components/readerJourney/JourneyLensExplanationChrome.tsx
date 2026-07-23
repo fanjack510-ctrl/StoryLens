@@ -25,7 +25,9 @@ export function JourneyLensExplanationChrome({
   const [open, setOpen] = useState(false);
   const panelId = useId();
   const explanation = getLensExplanation(lensId);
-  const title = overlayCompare ? OVERLAY_COMPARE_TITLE : explanation.title;
+  const title = overlayCompare
+    ? OVERLAY_COMPARE_TITLE
+    : explanation.chart_title || explanation.title;
   const summary = overlayCompare ? OVERLAY_COMPARE_SUMMARY : explanation.one_line_summary;
   const howTo = overlayCompare ? OVERLAY_COMPARE_HOW_TO_READ : explanation.how_to_read;
   const legend = overlayCompare ? explanation.legend_items : explanation.legend_items;

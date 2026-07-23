@@ -10,6 +10,8 @@ import type { JourneyCurveMetric } from "../../types/readerJourneyVisualization"
 export type ReaderJourneyLensExplanation = {
   lens_id: ObservationLensId;
   title: string;
+  /** Optional chart heading; falls back to title. */
+  chart_title?: string;
   one_line_summary: string;
   how_to_read: [string, string, string];
   y_axis_semantics: string;
@@ -29,12 +31,12 @@ export const NUMERIC_LENS_LEGEND: Array<{ key: string; label: string }> = [
   { key: "risk", label: "■ 阅读阻力" },
 ];
 
-/** 悬念与回应 lens legend (≤1 row). */
+/** 钩子与回报 lens legend (≤1 row). */
 export const HOOK_PAYOFF_LENS_LEGEND: Array<{ key: string; label: string }> = [
-  { key: "new_hook", label: "● 新悬念" },
-  { key: "partial", label: "◐ 部分回应" },
-  { key: "full", label: "● 明确回应" },
-  { key: "reversal", label: "◆ 反转回应" },
+  { key: "new_hook", label: "● 新钩子" },
+  { key: "partial", label: "◐ 部分回报" },
+  { key: "full", label: "● 明确回报" },
+  { key: "reversal", label: "◆ 反转回报" },
   { key: "probable_link", label: "┄ 较可信承接" },
 ];
 
@@ -45,15 +47,17 @@ export const READER_JOURNEY_LENS_EXPLANATIONS: Record<
   composite: {
     lens_id: "composite",
     title: "综合阅读",
-    one_line_summary: "读者是否愿意继续往下读。线越高，继续阅读的动力通常越强。",
+    chart_title: "综合阅读动力",
+    one_line_summary:
+      "线越高，读者继续阅读的动力通常越强；低点需要结合场景作用判断，不代表一定写得差。",
     how_to_read: [
-      "高点：当前节点更容易吸引继续阅读。",
-      "低点：需要检查，但不代表一定写得差。",
-      "要结合剧情推进、张力和回应一起判断。",
+      "曲线节点：单个场景或节拍的综合阅读动力。",
+      "阶段卡：该阶段的平均或汇总，不等于某一个节点。",
+      "章节摘要：整章总体判断，不是单点分数。",
     ],
-    y_axis_semantics: "继续阅读动力强弱",
-    high_meaning: "当前节点更容易吸引继续阅读",
-    low_meaning: "继续阅读动力偏弱，需要结合上下文检查",
+    y_axis_semantics: "强 · 中 · 弱",
+    high_meaning: "继续阅读动力偏强",
+    low_meaning: "继续阅读动力偏弱，需结合场景作用判断",
     caution: "数值高低不直接等于作品好坏。",
     legend_items: NUMERIC_LENS_LEGEND,
     metric_id: "engagement",
@@ -127,28 +131,28 @@ export const READER_JOURNEY_LENS_EXPLANATIONS: Record<
   },
   hook_payoff: {
     lens_id: "hook_payoff",
-    title: "悬念与回应",
+    title: "钩子与回报",
     one_line_summary:
-      "悬念提出读者想知道的问题，回应给出答案、结果或新的变化。连线表示它们之间的承接。",
+      "钩子让读者产生期待，回报在后面给出答案、结果或新的变化。",
     how_to_read: [
-      "上轨表示读者开始等待的答案。",
-      "下轨表示后续给出的回应。",
+      "每一行是一条问题链：钩子 → 发展 → 回报。",
+      "实线/虚线/点线表示关系可信程度。",
       "没有连线的问题仍然开放，不一定代表缺陷。",
     ],
-    y_axis_semantics: "问题建立与回应关系（非双分数曲线）",
-    high_meaning: "问题已建立或得到回应",
-    low_meaning: "问题仍在等待回应",
+    y_axis_semantics: "问题建立与回报关系（非双分数曲线）",
+    high_meaning: "问题已建立或得到回报",
+    low_meaning: "问题仍在等待回报",
     caution: "识别存在分歧时，不作为确定结论。",
     legend_items: HOOK_PAYOFF_LENS_LEGEND,
     metric_id: "hook",
   },
 };
 
-/** Overlay / 指标对比 — uses composite semantics with compare-focused summary. */
-export const OVERLAY_COMPARE_TITLE = "指标对比";
+/** Overlay / 对比指标 — uses composite semantics with compare-focused summary. */
+export const OVERLAY_COMPARE_TITLE = "对比指标";
 
 export const OVERLAY_COMPARE_SUMMARY =
-  "比较两个指标是否同步，例如写得很快，读者动力是否真的提高。";
+  "选择第二条指标与当前镜头对照。未选择时不显示对比曲线。";
 
 export const OVERLAY_COMPARE_HOW_TO_READ: [string, string, string] = [
   "两线同步：速度与作用大致一致。",
@@ -158,6 +162,8 @@ export const OVERLAY_COMPARE_HOW_TO_READ: [string, string, string] = [
 
 export const ALL_METRICS_LABEL = "全部指标";
 export const CURRENT_PHASE_LABEL = "当前阶段";
+export const FIT_ALL_LABEL = "适配全图";
+export const COMPARE_METRIC_LABEL = "对比指标";
 
 export function getLensExplanation(
   lensId: ObservationLensId | string | null | undefined,
