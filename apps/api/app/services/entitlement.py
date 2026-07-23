@@ -258,9 +258,30 @@ def entitlement_snapshot(session: Session) -> dict[str, Any]:
 
 
 def can_use_feature(session: Session, feature_key: str) -> dict[str, Any]:
+    """Compatibility adapter → CapabilityService (Phase 1C).
+
+    Preserves the historical response shape. License entitlement (not full
+    shipped/quota gate) drives ``enabled`` so existing Pro activation UX and
+    non-Pro paths keep working. Unknown / unmapped legacy keys never authorize.
+    """
+
+    from app.narrative_core.capability_legacy import (
+        LEGACY_VIP_FEATURE_KEYS,
+        map_legacy_feature_key,
+    )
+    from app.narrative_core.enums import CapabilityKey, CapabilityReasonCode
+    from app.narrative_core.services.capability_service import (
+        DefaultCapabilityService,
+        decision_to_compat_gate,
+        resolve_capability_key,
+    )
+
     snap = entitlement_snapshot(session)
-    enabled = bool(snap["pro_active"] and snap["features"].get(feature_key))
-    if feature_key not in PRO_FEATURES:
+    raw = (feature_key or "").strip()
+
+    # Unknown key: not canonical and not a known legacy VIP key → deny.
+    canonical_values = {item.value for item in CapabilityKey} | set(PRO_FEATURES)
+    if raw not in canonical_values and raw not in LEGACY_VIP_FEATURE_KEYS:
         return {
             "enabled": False,
             "reason": "FEATURE_UNKNOWN",
@@ -269,26 +290,45 @@ def can_use_feature(session: Session, feature_key: str) -> dict[str, Any]:
             "license_id": snap["license_id"],
             "major_version": snap["major_version"],
             "feature_key": feature_key,
+            "capability_reason_code": CapabilityReasonCode.CAPABILITY_UNKNOWN.value,
         }
-    if enabled:
+
+    if raw in LEGACY_VIP_FEATURE_KEYS:
+        mapping = map_legacy_feature_key(raw)
+        if mapping.capability_key is None:
+            return {
+                "enabled": False,
+                "reason": "FEATURE_UNKNOWN",
+                "source": "none",
+                "edition": snap["edition"],
+                "license_id": snap["license_id"],
+                "major_version": snap["major_version"],
+                "feature_key": feature_key,
+                "capability_reason_code": CapabilityReasonCode.CAPABILITY_UNKNOWN.value,
+            }
+
+    resolved = resolve_capability_key(raw)
+    if resolved is None:
         return {
-            "enabled": True,
-            "reason": None,
-            "source": "signed_local_license",
+            "enabled": False,
+            "reason": "FEATURE_UNKNOWN",
+            "source": "none",
             "edition": snap["edition"],
             "license_id": snap["license_id"],
             "major_version": snap["major_version"],
             "feature_key": feature_key,
+            "capability_reason_code": CapabilityReasonCode.CAPABILITY_UNKNOWN.value,
         }
-    return {
-        "enabled": False,
-        "reason": "PRO_LICENSE_REQUIRED",
-        "source": "none",
-        "edition": snap["edition"],
-        "license_id": None,
-        "major_version": None,
-        "feature_key": feature_key,
-    }
+
+    service = DefaultCapabilityService(session)
+    decision = service.evaluate_capability(resolved)
+    return decision_to_compat_gate(
+        decision,
+        feature_key=feature_key,
+        license_id=snap.get("license_id"),
+        major_version=snap.get("major_version"),
+        edition=str(snap.get("edition") or "free"),
+    )
 
 
 def activate_license_code(session: Session, raw_code: str) -> dict[str, Any]:

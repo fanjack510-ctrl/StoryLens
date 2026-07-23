@@ -3,16 +3,33 @@
   "title": "Agent H: Backend Capability / License / Quota",
   "type": "feature",
   "base_version": "1.0.5",
-  "status": "registered",
+  "status": "tested",
   "include_in_next_release": true,
   "commits": [],
   "modules": [
     "narrative_core",
-    "api/routers"
+    "api/routers",
+    "services/entitlement"
   ],
-  "files": [],
+  "files": [
+    "apps/api/app/narrative_core/services/capability_service.py",
+    "apps/api/app/narrative_core/services/quota_service.py",
+    "apps/api/app/narrative_core/services/capability_api_payloads.py",
+    "apps/api/app/narrative_core/services/run_permission_guard.py",
+    "apps/api/app/routers/capabilities.py",
+    "apps/api/app/routers/__init__.py",
+    "apps/api/app/services/entitlement.py",
+    "apps/api/app/main.py",
+    "apps/api/tests/test_narrative_phase1c_capability_backend.py",
+    "docs/architecture/narrative-intelligence-core/phase1c-capability-backend-implementation.md",
+    "docs/architecture/narrative-intelligence-core/phase1c-license-compatibility.md",
+    "docs/architecture/narrative-intelligence-core/phase1c-quota-skeleton.md",
+    "docs/architecture/narrative-intelligence-core/phase1c-run-permission-guard.md",
+    "docs/architecture/narrative-intelligence-core/phase1c-capability-backend-verification.md",
+    "release/changes/CHG-20260723-023.json"
+  ],
   "user_summary": "Implement CapabilityService, license mapping, quota skeleton, capability API routes.",
-  "technical_summary": "Agent H implements CapabilityService Protocol; wires entitlement to CapabilityDecision; quota reserve/commit; list capabilities API. whole-book-runs remain disabled until Integration.",
+  "technical_summary": "Agent H implements DefaultCapabilityService + InMemoryQuotaService; wires can_use_feature compatibility adapter; adds GET /capabilities routes; require_whole_book_run_permission defaults to deny. whole-book-runs remain disabled; PRO_CAPABILITIES_SHIPPED stays false; no Quota DB tables.",
   "acceptance_criteria": [
     "Fork from feature/narrative-phase1c-contract final HEAD",
     "Use frozen capability_registry metadata",
@@ -22,7 +39,10 @@
   "tests": [
     "apps/api/tests/test_narrative_phase1c_capability_backend.py"
   ],
-  "verification_evidence": [],
+  "verification_evidence": [
+    "py -3.11 -m pytest apps/api/tests/test_narrative_phase1c_capability_backend.py -q --noconftest → 36 passed",
+    "py -3.11 -m pytest apps/api/tests/test_pro_license_local.py -q --noconftest → 10 passed"
+  ],
   "parallel_plan": {
     "role": "agent_h",
     "branch": "feature/narrative-phase1c-capability-backend",
@@ -44,7 +64,7 @@
     "database_changed": false,
     "migration_required": false,
     "user_data_compatible": true,
-    "notes": ""
+    "notes": "Quota is memory_non_production only; no commercial quota tables."
   },
   "release_impact": {
     "requires_reanalysis": false,
@@ -55,5 +75,5 @@
   "blocker_level": null,
   "head_inclusion": null,
   "created_at": "2026-07-23T11:46:12Z",
-  "updated_at": "2026-07-23T12:00:00Z"
+  "updated_at": "2026-07-23T12:45:00Z"
 }
