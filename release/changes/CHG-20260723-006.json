@@ -47,6 +47,12 @@
       "message": "fix: make reader journey lens switching atomic (CHG-20260723-006).",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "a9a853d155a1f4c0799a0ae13c664a0b4a1eb9d9",
+      "message": "docs: sync CHG-20260723-006 registry after lens click race fix.",
+      "primary": false,
+      "multi_change_reason": "registry status for lens click race fix"
     }
   ],
   "modules": [
@@ -117,5 +123,5 @@
   "blocker_level": "P1",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T03:06:52Z",
-  "updated_at": "2026-07-23T03:57:30Z"
+  "updated_at": "2026-07-23T03:57:31Z"
 }
