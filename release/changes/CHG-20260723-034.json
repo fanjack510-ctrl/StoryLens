@@ -5,7 +5,14 @@
   "base_version": "1.0.5",
   "status": "registered",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "a253652da04741b4d9e4fa769404d79f781d3a3b",
+      "message": "feat: implement mock run recovery and reliability",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "narrative_core/services"
   ],
@@ -59,9 +66,9 @@
     "breaking_change": false
   },
   "blocker_level": null,
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T15:04:12Z",
-  "updated_at": "2026-07-23T15:45:00Z",
+  "updated_at": "2026-07-23T15:49:12Z",
   "parallel_plan": {
     "role": "agent_o",
     "branch": "feature/narrative-phase2a-recovery",
