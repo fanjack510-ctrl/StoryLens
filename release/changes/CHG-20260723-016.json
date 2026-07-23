@@ -17,6 +17,12 @@
       "message": "docs: mark CHG-20260723-016 tested for phase1b asset contracts",
       "primary": false,
       "multi_change_reason": null
+    },
+    {
+      "sha": "10657669aa33149d3e94ca0d1342fe55c0963a5d",
+      "message": "docs: attach registry sync commit to CHG-20260723-016",
+      "primary": false,
+      "multi_change_reason": null
     }
   ],
   "modules": [
