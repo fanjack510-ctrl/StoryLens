@@ -11,6 +11,12 @@
       "message": "fix: smooth chapter switching and fix long-book chapter list overlap",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "1688923eb20cc6ea595f9797d210785136296946",
+      "message": "docs: mark CHG-20260723-004 tested for smooth chapter switch",
+      "primary": false,
+      "multi_change_reason": "registry status for CHG-20260723-004"
     }
   ],
   "modules": [
