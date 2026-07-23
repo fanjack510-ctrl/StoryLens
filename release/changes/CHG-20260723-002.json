@@ -17,6 +17,12 @@
       "message": "docs: mark CHG-20260723-002 tested for Reader Journey UX",
       "primary": false,
       "multi_change_reason": "registry status for CHG-20260723-002"
+    },
+    {
+      "sha": "796f577aeefe866ea5ba5ce1eb16b5c877557f21",
+      "message": "docs: sync CHG-20260723-002 commit list",
+      "primary": false,
+      "multi_change_reason": "final registry attachment for CHG-20260723-002"
     }
   ],
   "modules": [
@@ -76,5 +82,5 @@
   "blocker_level": "P1",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T00:49:44Z",
-  "updated_at": "2026-07-23T01:05:54Z"
+  "updated_at": "2026-07-23T01:06:22Z"
 }
