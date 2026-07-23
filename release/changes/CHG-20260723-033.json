@@ -9,12 +9,47 @@
   "modules": [
     "desktop/wholeBook/runShell"
   ],
-  "files": [],
-  "user_summary": "Frontend WholeBookMockRunLab, polling, progress, controls (from Phase 2A-P).",
-  "technical_summary": "Frontend WholeBookMockRunLab, client, polling, progress, controls, partial results. No backend run impl.",
-  "acceptance_criteria": [],
-  "tests": [],
-  "verification_evidence": [],
+  "files": [
+    "apps/desktop/src/features/wholeBook/runShell/client/",
+    "apps/desktop/src/features/wholeBook/runShell/polling/",
+    "apps/desktop/src/features/wholeBook/runShell/progress/",
+    "apps/desktop/src/features/wholeBook/runShell/controls/",
+    "apps/desktop/src/features/wholeBook/runShell/lab/",
+    "apps/desktop/src/features/wholeBook/runShell/__tests__/",
+    "apps/desktop/src/features/wholeBook/runShell/index.ts",
+    "apps/desktop/src/features/wholeBook/index.ts",
+    "docs/architecture/narrative-intelligence-core/phase2a-frontend-mock-lab-implementation.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-mock-run-client.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-polling-implementation.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-run-controls-implementation.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-partial-results-lab.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-frontend-verification.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-run-frontend-implementation.md",
+    "release/changes/CHG-20260723-033.json"
+  ],
+  "user_summary": "Frontend WholeBookMockRunLab with Mock Run client, polling, progress, controls, and Lab partial results.",
+  "technical_summary": "Agent N implements isolated Mock Lab UI/client/polling/controls/partial results against Phase 2A-P contracts. Lab-only routes; no formal Run API; no product router wiring; no backend edits.",
+  "acceptance_criteria": [
+    "Mock client only calls /api/v1/labs/whole-book-runs/* with Lab marker on writes",
+    "WholeBookMockRunLab isolated; production start disabled; mock banner visible",
+    "Polling respects intervals, visibility, backoff, terminal stop, stale discard",
+    "Controls consume allowed_actions; failures re-fetch backend state",
+    "Partial results mark candidate/partial/mock; Evidence and Structure Map on demand",
+    "Focused Vitest + typecheck + version_manager + change_registry + git diff --check"
+  ],
+  "tests": [
+    "apps/desktop/src/features/wholeBook/runShell/__tests__/mockWholeBookRunClient.test.ts",
+    "apps/desktop/src/features/wholeBook/runShell/__tests__/mockRunPollingController.test.ts",
+    "apps/desktop/src/features/wholeBook/runShell/__tests__/WholeBookMockRunLab.test.tsx",
+    "apps/desktop/src/features/wholeBook/runShell/__tests__/noFormalEntry.test.ts"
+  ],
+  "verification_evidence": [
+    "npm run typecheck (apps/desktop) PASS",
+    "npx vitest run src/features/wholeBook/runShell/__tests__ — 29 passed",
+    "python scripts/version_manager.py check",
+    "python scripts/change_registry.py check",
+    "git diff --check"
+  ],
   "data_compatibility": {
     "database_changed": false,
     "migration_required": false,
@@ -30,7 +65,7 @@
   "blocker_level": null,
   "head_inclusion": null,
   "created_at": "2026-07-23T15:04:11Z",
-  "updated_at": "2026-07-23T15:11:59Z",
+  "updated_at": "2026-07-23T15:50:00Z",
   "parallel_plan": {
     "role": "agent_n",
     "branch": "feature/narrative-phase2a-run-frontend",
@@ -50,5 +85,10 @@
     ],
     "file_ownership": "docs/architecture/narrative-intelligence-core/phase2a-parallel-file-ownership.json"
   },
-  "file_ownership": "docs/architecture/narrative-intelligence-core/phase2a-parallel-file-ownership.json"
+  "file_ownership": "docs/architecture/narrative-intelligence-core/phase2a-parallel-file-ownership.json",
+  "integration_issues": [
+    "II-N-001: Lab router registration in apps/api/app/main.py is Integration (CHG-035) ownership — frontend client assumes Lab API exists when Lab enabled.",
+    "II-N-002: WHOLE_BOOK_MOCK_LAB_ENABLED remains false by default; Lab UI requires explicit labEnabled prop or future env toggle by Integration.",
+    "II-N-003: Result API router mount remains Integration concern; Lab result client uses Phase 1D paths when available."
+  ]
 }
