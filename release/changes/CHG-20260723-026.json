@@ -11,6 +11,12 @@
       "message": "feat: establish narrative phase1d product contracts",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "a028161619eb77c1507ca6043552214da82aea82",
+      "message": "docs: attach primary commit to CHG-20260723-026",
+      "primary": false,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -76,7 +82,7 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T13:23:32Z",
-  "updated_at": "2026-07-23T13:31:39Z",
+  "updated_at": "2026-07-23T13:33:03Z",
   "parallel_plan": {
     "role": "phase1d_p",
     "branch": "feature/narrative-phase1d-product-contract",
