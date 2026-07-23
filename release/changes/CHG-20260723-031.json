@@ -11,6 +11,12 @@
       "message": "feat: establish narrative phase2a mock run contracts",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "66abcf995206769dd25f9e0dfdda658987f0bec3",
+      "message": "docs: attach primary commit to CHG-20260723-031",
+      "primary": false,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -82,7 +88,7 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T15:04:11Z",
-  "updated_at": "2026-07-23T15:15:00Z",
+  "updated_at": "2026-07-23T15:16:11Z",
   "parallel_plan": {
     "role": "phase2a_p",
     "branch": "feature/narrative-phase2a-run-shell-contract",
