@@ -17,6 +17,12 @@
       "message": "docs: mark CHG-20260723-003 tested for hook resolution UX",
       "primary": false,
       "multi_change_reason": "registry status for CHG-20260723-003"
+    },
+    {
+      "sha": "2027bbc91fda0419e1c2a6311e87791dfdb5b594",
+      "message": "docs: sync CHG-20260723-003 commit list",
+      "primary": false,
+      "multi_change_reason": "final registry attachment for CHG-20260723-003"
     }
   ],
   "modules": [
