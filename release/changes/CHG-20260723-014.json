@@ -11,6 +11,12 @@
       "message": "feat: prototype narrative pattern map contract",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "8be8ed6d186271cfdba1f67ba1339070a3724394",
+      "message": "docs: sync CHG-20260723-014 registry after pattern map readiness",
+      "primary": false,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -60,7 +66,7 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T07:20:00Z",
-  "updated_at": "2026-07-23T07:50:36Z",
+  "updated_at": "2026-07-23T07:50:37Z",
   "parallel_plan": {
     "role": "agent_c",
     "branch": "feature/narrative-pattern-readiness",
