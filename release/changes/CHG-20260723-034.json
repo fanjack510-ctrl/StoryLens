@@ -1,0 +1,54 @@
+{
+  "id": "CHG-20260723-034",
+  "title": "Agent O Recovery and Reliability",
+  "type": "feature",
+  "base_version": "1.0.5",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "narrative_core/services"
+  ],
+  "files": [],
+  "user_summary": "Recovery, idempotency, concurrency, audit, mock quota/budget (from Phase 2A-P).",
+  "technical_summary": "Recovery, idempotency, concurrency, audit, mock quota/budget, fault injection. No formal frontend layout.",
+  "acceptance_criteria": [],
+  "tests": [],
+  "verification_evidence": [],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": null,
+  "created_at": "2026-07-23T15:04:12Z",
+  "updated_at": "2026-07-23T15:11:59Z",
+  "parallel_plan": {
+    "role": "agent_o",
+    "branch": "feature/narrative-phase2a-recovery",
+    "worktree": "D:\\\\Dstorylens-wt-narrative-run-recovery",
+    "depends_on": [
+      "CHG-20260723-031"
+    ],
+    "blocks": [
+      "CHG-20260723-035"
+    ],
+    "forbidden": [
+      "real engine/model/prompt",
+      "flip production gates",
+      "migrations",
+      "VERSION bump",
+      "push/build/publish"
+    ],
+    "file_ownership": "docs/architecture/narrative-intelligence-core/phase2a-parallel-file-ownership.json"
+  },
+  "file_ownership": "docs/architecture/narrative-intelligence-core/phase2a-parallel-file-ownership.json"
+}

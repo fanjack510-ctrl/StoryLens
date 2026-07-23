@@ -22,12 +22,17 @@ StoryLens 叙事智能核心文档索引。当前基线：`VERSION=1.0.5`。
 | Phase 1C Agent I | CHG-20260723-024 | verified | Frontend Capability Client |
 | Phase 1C Integration | CHG-20260723-025 | verified | Engine + Capability e2e |
 | Phase 1D-P | CHG-20260723-026 | verified | Product Contract freeze |
-| Phase 1D Agent J | CHG-20260723-027 | tested | Preflight / Run UX |
-| Phase 1D Agent K | CHG-20260723-028 | tested | Result DTO / Projection |
-| Phase 1D Agent L | CHG-20260723-029 | tested | Evidence / Review / Map |
-| Phase 1D Integration | CHG-20260723-030 | tested | Phase 1D Integration |
+| Phase 1D Agent J | CHG-20260723-027 | verified | Preflight / Run UX |
+| Phase 1D Agent K | CHG-20260723-028 | verified | Result DTO / Projection |
+| Phase 1D Agent L | CHG-20260723-029 | verified | Evidence / Review / Map |
+| Phase 1D Integration | CHG-20260723-030 | verified | Phase 1D Integration |
+| Phase 2A-P | CHG-20260723-031 | tested | Mock Run Shell Contract freeze |
+| Phase 2A Agent M | CHG-20260723-032 | registered | Backend Mock Run |
+| Phase 2A Agent N | CHG-20260723-033 | registered | Frontend Mock Run Lab |
+| Phase 2A Agent O | CHG-20260723-034 | registered | Recovery / Reliability |
+| Phase 2A Integration | CHG-20260723-035 | registered | Phase 2A Integration |
 
-\* 022–025 / 026 已为 `verified`（不得 ready/released）。027–030 上限 `tested`。硬边界见下。
+\* 022–030 已为 `verified`（不得 ready/released）。031 上限 `tested`；032–035 保持 `registered`。硬边界见下。
 
 ## Phase 1P / 1A
 
@@ -70,8 +75,9 @@ StoryLens 叙事智能核心文档索引。当前基线：`VERSION=1.0.5`。
 - 不得建立 Narrative Pattern 数据表或接入正式路由
 - 不得修改 `VERSION`、Tag `v1.0.5`、`release/1.0.5` baseline
 - Integration **可**修订未发布的 migration 006（含 `superseded_by_entity_id`）及对应 ORM；Agents D/E/F 日常不得擅自改 `models.py` 表结构
-- Phase 1C / 1D：`PRO_CAPABILITIES_SHIPPED=false`；`WHOLE_BOOK_RUNS_ENDPOINT_DISABLED=true`；`PRODUCTION_DEFAULT_ENGINE_ID=None`
+- Phase 1C / 1D / 2A：`PRO_CAPABILITIES_SHIPPED=false`；`WHOLE_BOOK_RUNS_ENDPOINT_DISABLED=true`；`PRODUCTION_DEFAULT_ENGINE_ID=None`
 - Phase 1D：Preflight ≠ Run creation；Native/Enhanced 是模式不是产品；无 force-start；无 migrations / Pattern 表 / push / build / publish
+- Phase 2A：`WHOLE_BOOK_MOCK_LAB_ENABLED` 默认 `false`；仅 Lab 路径；无真实 Engine/模型/Prompt；无 Celery/Redis/WebSocket；无新 Migration
 
 ## Phase 1C-P Contract
 
@@ -128,3 +134,26 @@ StoryLens 叙事智能核心文档索引。当前基线：`VERSION=1.0.5`。
 - Run UX: [phase1d-run-ux-implementation.md](./phase1d-run-ux-implementation.md)
 - Result Projection: [phase1d-result-projection-implementation.md](./phase1d-result-projection-implementation.md)
 - Review / Map: [phase1d-review-map-implementation.md](./phase1d-review-map-implementation.md)
+
+## Phase 2A-P Mock Run Shell Contract
+
+- [phase2a-run-shell-overview.md](./phase2a-run-shell-overview.md)
+- [phase2a-mock-lab-security.md](./phase2a-mock-lab-security.md)
+- [phase2a-run-creation-contract.md](./phase2a-run-creation-contract.md)
+- [phase2a-run-state-machine.md](./phase2a-run-state-machine.md)
+- [phase2a-stage-lifecycle.md](./phase2a-stage-lifecycle.md)
+- [phase2a-mock-executor-contract.md](./phase2a-mock-executor-contract.md)
+- [phase2a-task-registry-contract.md](./phase2a-task-registry-contract.md)
+- [phase2a-mock-run-api.md](./phase2a-mock-run-api.md)
+- [phase2a-frontend-lab-contract.md](./phase2a-frontend-lab-contract.md)
+- [phase2a-polling-contract.md](./phase2a-polling-contract.md)
+- [phase2a-partial-result-contract.md](./phase2a-partial-result-contract.md)
+- [phase2a-run-actions-contract.md](./phase2a-run-actions-contract.md)
+- [phase2a-idempotency-concurrency.md](./phase2a-idempotency-concurrency.md)
+- [phase2a-recovery-contract.md](./phase2a-recovery-contract.md)
+- [phase2a-mock-quota-budget.md](./phase2a-mock-quota-budget.md)
+- [phase2a-error-contract.md](./phase2a-error-contract.md)
+- [phase2a-audit-contract.md](./phase2a-audit-contract.md)
+- [phase2a-parallel-file-ownership.md](./phase2a-parallel-file-ownership.md)
+- [phase2a-parallel-file-ownership.json](./phase2a-parallel-file-ownership.json)
+- [phase2a-contract-verification.md](./phase2a-contract-verification.md)
