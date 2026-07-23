@@ -29,6 +29,12 @@
       "message": "docs: sync CHG-20260723-006 registry after hierarchy finish.",
       "primary": false,
       "multi_change_reason": "registry status for CHG-20260723-006 finish"
+    },
+    {
+      "sha": "978d2b66ff8ec33b32e63fc8644ea8ac66e46bee",
+      "message": "fix: unify Reader Journey topbar lenses with detail/compare actions (CHG-20260723-006).",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -92,5 +98,5 @@
   "blocker_level": "P1",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T03:06:52Z",
-  "updated_at": "2026-07-23T03:50:03Z"
+  "updated_at": "2026-07-23T03:50:41Z"
 }
