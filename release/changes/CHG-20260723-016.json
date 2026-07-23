@@ -3,9 +3,16 @@
   "title": "Phase 1B-P: Narrative Asset Contract skeleton",
   "type": "database",
   "base_version": "1.0.5",
-  "status": "registered",
+  "status": "tested",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "0d14c2b59324b21cc22a8448100c06a4fff48ec6",
+      "message": "feat: establish narrative phase1b asset contracts",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "narrative_core",
     "database",
@@ -57,9 +64,9 @@
     "breaking_change": false
   },
   "blocker_level": null,
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T08:33:16Z",
-  "updated_at": "2026-07-23T08:43:10Z",
+  "updated_at": "2026-07-23T08:45:40Z",
   "parallel_plan": {
     "role": "phase1bp",
     "branch": "feature/narrative-phase1b-contract",
