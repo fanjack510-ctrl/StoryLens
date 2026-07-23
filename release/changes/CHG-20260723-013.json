@@ -3,9 +3,16 @@
   "title": "Agent B: AnalysisRun scope, stages, and status service",
   "type": "feature",
   "base_version": "1.0.5",
-  "status": "registered",
+  "status": "tested",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "afba7adc81a07d8133bbf15cb30aed644b1ec2dc",
+      "message": "feat: implement narrative run stage foundation",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "narrative_core",
     "analysis run scope",
@@ -55,15 +62,19 @@
     "breaking_change": false
   },
   "blocker_level": null,
-  "head_inclusion": "EXISTS_NOT_INCLUDED",
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T07:20:00Z",
-  "updated_at": "2026-07-23T15:40:00Z",
+  "updated_at": "2026-07-23T07:46:06Z",
   "parallel_plan": {
     "role": "agent_b",
     "branch": "feature/narrative-phase1a-runstage",
     "worktree": "D:\\Dstorylens-wt-narrative-runstage",
-    "depends_on": ["CHG-20260723-011"],
-    "blocks": ["CHG-20260723-015"],
+    "depends_on": [
+      "CHG-20260723-011"
+    ],
+    "blocks": [
+      "CHG-20260723-015"
+    ],
     "exclusive_paths": [
       "apps/api/app/narrative_core/services/run_scope_service.py",
       "apps/api/app/narrative_core/services/run_stage_repository.py",
