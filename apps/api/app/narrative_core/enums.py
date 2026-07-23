@@ -227,3 +227,99 @@ class ConflictRefType(StrEnum):
     # Legacy values accepted at validation boundary only (map alias → entity_alias).
     ALIAS = "alias"
     EVIDENCE = "evidence"
+
+
+# ---------------------------------------------------------------------------
+# Phase 1C-P — Capability / WholeBook Engine contracts (frozen)
+# ---------------------------------------------------------------------------
+
+
+class CapabilityKey(StrEnum):
+    """Canonical Pro capability keys (backend + desktop entitlementApi).
+
+    Extensible later; agents must not scatter string literals for these five.
+    """
+
+    WHOLE_BOOK_ANALYSIS = "whole_book_analysis"
+    NARRATIVE_ASSET_LIBRARY = "narrative_asset_library"
+    STORY_LAB = "story_lab"
+    CROSS_BOOK_SEARCH = "cross_book_search"
+    ADVANCED_EXPORT = "advanced_export"
+
+
+class CapabilityAvailability(StrEnum):
+    UNAVAILABLE = "unavailable"
+    PREVIEW = "preview"
+    AVAILABLE = "available"
+
+
+class CapabilityReasonCode(StrEnum):
+    CAPABILITY_NOT_SHIPPED = "CAPABILITY_NOT_SHIPPED"
+    CAPABILITY_NOT_LICENSED = "CAPABILITY_NOT_LICENSED"
+    CAPABILITY_QUOTA_EXCEEDED = "CAPABILITY_QUOTA_EXCEEDED"
+    CAPABILITY_OFFLINE_NOT_ALLOWED = "CAPABILITY_OFFLINE_NOT_ALLOWED"
+    CAPABILITY_LICENSE_EXPIRED = "CAPABILITY_LICENSE_EXPIRED"
+    CAPABILITY_LICENSE_INVALID = "CAPABILITY_LICENSE_INVALID"
+    CAPABILITY_AVAILABLE = "CAPABILITY_AVAILABLE"
+    CAPABILITY_PREVIEW_ONLY = "CAPABILITY_PREVIEW_ONLY"
+    CAPABILITY_UNKNOWN = "CAPABILITY_UNKNOWN"
+
+
+class WholeBookAnalysisMode(StrEnum):
+    """Analysis modes for whole-book runs — NOT separate capability keys."""
+
+    NATIVE = "whole_book_native"
+    ENHANCED = "whole_book_enhanced"
+
+    @classmethod
+    def from_analysis_type(cls, analysis_type: AnalysisType | str) -> WholeBookAnalysisMode:
+        value = analysis_type.value if isinstance(analysis_type, AnalysisType) else str(analysis_type)
+        if value == AnalysisType.WHOLE_BOOK_NATIVE:
+            return cls.NATIVE
+        if value == AnalysisType.WHOLE_BOOK_ENHANCED:
+            return cls.ENHANCED
+        raise ValueError(f"unsupported whole-book analysis mode: {value}")
+
+
+class WholeBookModuleKey(StrEnum):
+    BOOK_OVERVIEW = "book_overview"
+    STRUCTURE_STAGES = "structure_stages"
+    CHAPTER_FUNCTIONS = "chapter_functions"
+    STORYLINES = "storylines"
+    CHARACTERS = "characters"
+    CHARACTER_ARCS = "character_arcs"
+    RELATIONSHIPS = "relationships"
+    HOOKS_PAYOFFS = "hooks_payoffs"
+    CAUSAL_CHAIN = "causal_chain"
+    BASIC_TIMELINE = "basic_timeline"
+    DIAGNOSTICS = "diagnostics"
+
+
+class WholeBookStageKey(StrEnum):
+    BUILD_FULLTEXT_INDEX = "build_fulltext_index"
+    RESOLVE_ENTITIES = "resolve_entities"
+    ANALYZE_STRUCTURE = "analyze_structure"
+    ANALYZE_STORYLINES = "analyze_storylines"
+    ANALYZE_CHARACTERS = "analyze_characters"
+    ANALYZE_HOOKS = "analyze_hooks"
+    ANALYZE_CAUSALITY_TIMELINE = "analyze_causality_timeline"
+    GENERATE_DIAGNOSTICS = "generate_diagnostics"
+    VERIFY_EVIDENCE = "verify_evidence"
+    PERSIST_NARRATIVE_ASSETS = "persist_narrative_assets"
+
+
+class QuotaPolicyKind(StrEnum):
+    NONE = "none"
+    PER_BOOK = "per_book"
+    PER_DAY = "per_day"
+    CONCURRENT_RUNS = "concurrent_runs"
+    CHARACTER_LIMIT = "character_limit"
+    TOKEN_BUDGET = "token_budget"
+    COST_BUDGET = "cost_budget"
+
+
+class CostClass(StrEnum):
+    FREE = "free"
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"

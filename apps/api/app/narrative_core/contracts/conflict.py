@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from typing import Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 
-from app.narrative_core.services.conflict_service import ConflictCreateRequest
+if TYPE_CHECKING:
+    from app.narrative_core.services.conflict_service import ConflictCreateRequest
 
 
 class AnalysisConflictSink(Protocol):

@@ -1,0 +1,107 @@
+{
+  "id": "CHG-20260723-021",
+  "title": "Phase 1C-P: WholeBook Engine / Capability Contract",
+  "type": "feature",
+  "base_version": "1.0.5",
+  "status": "tested",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "narrative_core",
+    "desktop/capability"
+  ],
+  "files": [
+    "apps/api/app/narrative_core/enums.py",
+    "apps/api/app/narrative_core/errors.py",
+    "apps/api/app/narrative_core/capability_registry.py",
+    "apps/api/app/narrative_core/capability_legacy.py",
+    "apps/api/app/narrative_core/whole_book_stages.py",
+    "apps/api/app/narrative_core/contracts/__init__.py",
+    "apps/api/app/narrative_core/contracts/capability.py",
+    "apps/api/app/narrative_core/contracts/quota.py",
+    "apps/api/app/narrative_core/contracts/engine.py",
+    "apps/api/app/narrative_core/contracts/stage.py",
+    "apps/api/app/narrative_core/contracts/engine_io.py",
+    "apps/api/app/narrative_core/contracts/whole_book_dto.py",
+    "apps/api/app/narrative_core/contracts/api_dto.py",
+    "apps/api/app/narrative_core/services/mock_whole_book_engine.py",
+    "apps/api/app/narrative_core/services/whole_book_engine_registry.py",
+    "apps/desktop/src/services/capability/types.ts",
+    "apps/desktop/src/services/capability/keys.ts",
+    "apps/desktop/src/services/capability/legacyMapper.ts",
+    "apps/desktop/src/services/capability/index.ts",
+    "apps/api/tests/test_narrative_phase1cp_contract.py",
+    "docs/architecture/narrative-intelligence-core/phase1c-engine-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase1c-stage-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase1c-capability-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase1c-quota-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase1c-engine-asset-boundary.md",
+    "docs/architecture/narrative-intelligence-core/phase1c-frontend-capability-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase1c-api-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase1c-migration-and-compatibility.md",
+    "docs/architecture/narrative-intelligence-core/phase1c-parallel-file-ownership.md",
+    "docs/architecture/narrative-intelligence-core/phase1c-parallel-file-ownership.json",
+    "docs/architecture/narrative-intelligence-core/phase1c-contract-verification.md",
+    "docs/architecture/narrative-intelligence-core/README.md",
+    "release/changes/CHG-20260723-021.json"
+  ],
+  "user_summary": "Freeze Engine, Stage, Capability, Quota contracts for Agents G/H/I.",
+  "technical_summary": "Phase 1C-P contract freeze: CapabilityKey unification, WholeBook engine/stage Protocols, mock registry, frontend capability types, legacy VIP mapper, DTO-only API skeleton. No DB migration, no live whole-book routes, PRO_CAPABILITIES_SHIPPED stays false.",
+  "acceptance_criteria": [
+    "Five canonical CapabilityKey values match backend and desktop keys.ts",
+    "WholeBook stage DAG frozen with unique keys and valid dependencies",
+    "shipped=false registry returns CAPABILITY_NOT_SHIPPED via evaluate_from_metadata",
+    "Legacy VIP FEATURE_KEYS map conflict-free to CapabilityKey",
+    "Public narrative asset APIs documented as not Pro-gated",
+    "Mock engine execute_stage completes without model or book text",
+    "POST whole-book-runs not registered; WHOLE_BOOK_RUNS_ENDPOINT_DISABLED",
+    "Parallel ownership JSON lists real paths for G/H/I/Integration"
+  ],
+  "tests": [
+    "apps/api/tests/test_narrative_phase1cp_contract.py"
+  ],
+  "verification_evidence": [
+    "pytest apps/api/tests/test_narrative_phase1cp_contract.py -q --noconftest (16 passed)",
+    "python scripts/version_manager.py check",
+    "python scripts/change_registry.py check",
+    "git diff --check",
+    "docs/architecture/narrative-intelligence-core/phase1c-contract-verification.md"
+  ],
+  "parallel_plan": {
+    "role": "phase1c_p",
+    "branch": "feature/narrative-phase1c-contract",
+    "worktree": "D:\\\\Dstorylens-wt-narrative-phase1c-contract",
+    "depends_on": [
+      "CHG-20260723-020"
+    ],
+    "blocks": [
+      "CHG-20260723-022",
+      "CHG-20260723-023",
+      "CHG-20260723-024"
+    ],
+    "forbidden": [
+      "models.py schema edits",
+      "VERSION bump",
+      "PRO_CAPABILITIES_SHIPPED=true",
+      "push/publish/build",
+      "real WholeBook engine algorithms"
+    ],
+    "file_ownership": "docs/architecture/narrative-intelligence-core/phase1c-parallel-file-ownership.json"
+  },
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "Contract-only; no schema changes."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": null,
+  "created_at": "2026-07-23T11:46:11Z",
+  "updated_at": "2026-07-23T12:00:00Z"
+}

@@ -64,6 +64,10 @@ V1.0 发布就绪审计：`audits/v1.0/`。
 构建前端：`.\scripts\build-release.ps1`（调用 `build_desktop.ps1`；正式版本以 `tauri.conf.json` / `set_version.ps1` 为准）。
 构建 Windows 安装包：`.\scripts\build_windows_release.ps1`。
 
+### Narrative Intelligence Core（Phase 1C）
+
+阶段状态与 Contract 文档见 [`docs/architecture/narrative-intelligence-core/README.md`](docs/architecture/narrative-intelligence-core/README.md)。Phase 1C-P（CHG-021）已冻结 Engine / Capability / Quota 契约；`PRO_CAPABILITIES_SHIPPED=false`；无真实整书引擎。
+
 ### 主要 API（摘要）
 
 - `POST /api/v1/books/import`

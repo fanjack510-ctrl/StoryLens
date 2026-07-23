@@ -1,0 +1,58 @@
+{
+  "id": "CHG-20260723-024",
+  "title": "Agent I: Frontend Capability Client / Pro presentation",
+  "type": "feature",
+  "base_version": "1.0.5",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "desktop/capability"
+  ],
+  "files": [],
+  "user_summary": "Implement capabilityClient, capabilityStore, isolated Pro presentation components.",
+  "technical_summary": "Agent I builds on frozen capability/types.ts and keys.ts; does not set PRO_CAPABILITIES_SHIPPED=true or create full whole-book UI pages.",
+  "acceptance_criteria": [
+    "Fork from feature/narrative-phase1c-contract final HEAD",
+    "Use CAPABILITY_KEYS from capability/keys.ts",
+    "Do not break existing entitlementApi",
+    "No formal whole-book product pages in this change"
+  ],
+  "tests": [
+    "apps/desktop/src/services/capability/capabilityClient.test.ts"
+  ],
+  "verification_evidence": [],
+  "parallel_plan": {
+    "role": "agent_i",
+    "branch": "feature/narrative-phase1c-capability-frontend",
+    "worktree": "D:\\\\Dstorylens-wt-capability-frontend",
+    "depends_on": [
+      "CHG-20260723-021"
+    ],
+    "blocks": [
+      "CHG-20260723-025"
+    ],
+    "forbidden": [
+      "PRO_CAPABILITIES_SHIPPED=true",
+      "VERSION bump",
+      "modify capability/types.ts keys.ts legacyMapper.ts owned by Phase 1C-P"
+    ],
+    "file_ownership": "docs/architecture/narrative-intelligence-core/phase1c-parallel-file-ownership.json"
+  },
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": null,
+  "created_at": "2026-07-23T11:46:12Z",
+  "updated_at": "2026-07-23T12:00:00Z"
+}
