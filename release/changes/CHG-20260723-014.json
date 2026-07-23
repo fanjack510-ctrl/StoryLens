@@ -17,6 +17,12 @@
       "message": "docs: sync CHG-20260723-014 registry after pattern map readiness",
       "primary": false,
       "multi_change_reason": null
+    },
+    {
+      "sha": "456a008c266b97648dab88d4da2b03b889f233f0",
+      "message": "docs: attach registry sync commit for CHG-20260723-014",
+      "primary": false,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -66,7 +72,7 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T07:20:00Z",
-  "updated_at": "2026-07-23T07:50:37Z",
+  "updated_at": "2026-07-23T07:50:48Z",
   "parallel_plan": {
     "role": "agent_c",
     "branch": "feature/narrative-pattern-readiness",
