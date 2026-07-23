@@ -11,6 +11,12 @@
       "message": "fix: fail-fast web start and block stale frontend dist",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "806d7a36b3e0ed343728c0b8c82c64dc780cd750",
+      "message": "docs: mark CHG-20260723-001 tested for build gate",
+      "primary": false,
+      "multi_change_reason": "registry status for CHG-20260723-001"
     }
   ],
   "modules": [
@@ -63,5 +69,5 @@
   "blocker_level": "P0",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T00:14:34Z",
-  "updated_at": "2026-07-23T00:20:54Z"
+  "updated_at": "2026-07-23T00:21:03Z"
 }
