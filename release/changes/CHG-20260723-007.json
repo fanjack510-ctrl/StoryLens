@@ -5,7 +5,14 @@
   "base_version": "1.0.4",
   "status": "registered",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "ab3df3f7fda771864b582b8900a21ab833c6caa9",
+      "message": "fix: move persistent theme selector to app header (CHG-20260723-007).",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [],
   "files": [
     "apps/desktop/src/lib/appearanceTheme.ts",
@@ -48,7 +55,7 @@
     "breaking_change": false
   },
   "blocker_level": null,
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T04:08:55Z",
-  "updated_at": "2026-07-23T04:11:53Z"
+  "updated_at": "2026-07-23T04:12:26Z"
 }
