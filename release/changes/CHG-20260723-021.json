@@ -11,6 +11,12 @@
       "message": "feat: establish narrative phase1c engine capability contracts",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "e8a3278558005b17710db0d58a7701f640638b8f",
+      "message": "docs: attach primary commit to CHG-20260723-021",
+      "primary": false,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -110,5 +116,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T11:46:11Z",
-  "updated_at": "2026-07-23T11:55:07Z"
+  "updated_at": "2026-07-23T11:55:45Z"
 }
