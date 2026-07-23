@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ReaderJourneyVisualization } from "../../types/readerJourneyVisualization";
 import {
-  HARD_BLOCK_USER_MESSAGE,
   SOFT_CONFLICT_USER_MESSAGE,
   formatHookHandoffFromLoops,
   formatOpenLoopRiskSummary,

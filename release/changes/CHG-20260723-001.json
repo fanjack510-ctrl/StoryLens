@@ -1,0 +1,59 @@
+{
+  "id": "CHG-20260723-001",
+  "title": "Fix frontend build gate and stale-dist startup",
+  "type": "fix",
+  "base_version": "1.0.4",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "desktop",
+    "api",
+    "scripts"
+  ],
+  "files": [
+    "apps/desktop/src/components/readerJourney/journeyChapterSummary.ts",
+    "apps/desktop/src/components/readerJourney/diagnosisBandModel.ts",
+    "apps/desktop/src/components/readerJourney/narrativeLoopView.test.ts",
+    "apps/desktop/src/components/readerJourney/journeyChapterSummary.test.ts",
+    "apps/desktop/scripts/write-dist-build-meta.mjs",
+    "apps/desktop/package.json",
+    "scripts/start_storylens_web.ps1",
+    "apps/api/app/services/runtime_info.py",
+    "apps/api/tests/test_start_storylens_web_build_gate.py",
+    "apps/api/tests/test_local_web_production.py"
+  ],
+  "user_summary": "前端构建失败后仍用旧dist启动，导致实机看不到已提交的滚动与旅程界面修复。",
+  "technical_summary": "Fail-fast start_storylens_web on npm build failure; write/require storylens-frontend-build.json (source_commit/build_time/version); runtime exposes frontend_source_commit; fix journeyChapterSummary to use scene_boundary_anomaly code; remove unused HARD_BLOCK import.",
+  "acceptance_criteria": [
+    "npm build failure does not start web or serve stale dist",
+    "stale dist meta blocks SkipBuild start",
+    "runtime returns frontend_source_commit",
+    "journeyChapterSummary uses scene_boundary_anomaly code"
+  ],
+  "tests": [
+    "apps/desktop/src/components/readerJourney/journeyChapterSummary.test.ts",
+    "apps/desktop/src/components/readerJourney/narrativeLoopView.test.ts",
+    "apps/api/tests/test_start_storylens_web_build_gate.py",
+    "apps/api/tests/test_local_web_production.py"
+  ],
+  "verification_evidence": [
+    "Ancestors confirmed: 63b0434/d47a954/3a03db6/6948180/3426457. typecheck+lint green. vitest 49. pytest build-gate 5 passed 1 skipped. npm run build wrote meta. start fail-fast + stale dist gates."
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "P0",
+  "head_inclusion": null,
+  "created_at": "2026-07-23T00:14:34Z",
+  "updated_at": "2026-07-23T00:20:44Z"
+}

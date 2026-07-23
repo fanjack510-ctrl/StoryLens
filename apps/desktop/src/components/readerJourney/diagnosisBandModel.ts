@@ -74,6 +74,14 @@ export function mapDiagnosisCodeToBandLabel(
   return CODE_TO_LABEL[code] ?? null;
 }
 
+/** Stable internal code check — never compare localized band labels. */
+export function isSceneBoundaryAnomalyDiagnosis(diag: SceneDiagnosisLike): boolean {
+  return (
+    diag.data_quality_issue === "scene_boundary_anomaly" ||
+    diag.primary_diagnosis === "scene_boundary_anomaly"
+  );
+}
+
 function isBeatDiag(diag: SceneDiagnosisLike): boolean {
   if (diag.role === "beat") return true;
   if (diag.node_type === "beat") return true;

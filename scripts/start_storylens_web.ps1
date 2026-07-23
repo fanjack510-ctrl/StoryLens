@@ -1,13 +1,14 @@
 ﻿param(
   [int]$Port = 8765,
   [switch]$SkipBuild,
-  [switch]$NoBrowser
+  [switch]$NoBrowser,
+  [string]$ProjectRoot = ''
 )
 # StoryLens local web: HTTP + static SPA only.
 # Product progress uses HTTP polling (not WebSocket/SSE). Pass --ws none so Uvicorn
 # does not import optional websockets.* (broken/incomplete installs must not block boot).
 $ErrorActionPreference = 'Stop'
-$Root = Split-Path -Parent $PSScriptRoot
+$Root = if ($ProjectRoot) { (Resolve-Path -LiteralPath $ProjectRoot).Path } else { Split-Path -Parent $PSScriptRoot }
 Set-Location $Root
 
 $runtimeDir = Join-Path $env:LOCALAPPDATA 'StoryLens\runtime'
@@ -16,6 +17,7 @@ $stateFile = Join-Path $runtimeDir 'web_server.json'
 $outLog = Join-Path $runtimeDir 'web_server.out.log'
 $errLog = Join-Path $runtimeDir 'web_server.err.log'
 $url = "http://127.0.0.1:$Port"
+$frontendBuildMetaName = 'storylens-frontend-build.json'
 
 function Get-PortOwner([int]$ListenPort) {
   $conn = Get-NetTCPConnection -LocalPort $ListenPort -State Listen -ErrorAction SilentlyContinue |
@@ -78,6 +80,56 @@ function Fail-WebStart([string]$UserMessage, [System.Diagnostics.Process]$Proc =
   throw $UserMessage
 }
 
+function Get-GitHead([string]$RepoRoot) {
+  try {
+    $head = (& git -C $RepoRoot rev-parse HEAD 2>$null)
+    if ($LASTEXITCODE -ne 0) { return $null }
+    return ([string]$head).Trim()
+  } catch {
+    return $null
+  }
+}
+
+function Read-FrontendBuildMeta([string]$DistDir) {
+  $metaPath = Join-Path $DistDir $frontendBuildMetaName
+  if (-not (Test-Path -LiteralPath $metaPath)) { return $null }
+  try {
+    return (Get-Content -LiteralPath $metaPath -Raw -Encoding utf8 | ConvertFrom-Json)
+  } catch {
+    return $null
+  }
+}
+
+function Assert-FrontendDistFresh([string]$DistDir, [string]$IndexPath) {
+  if (-not (Test-Path -LiteralPath $IndexPath)) {
+    throw "Frontend dist missing: $IndexPath"
+  }
+  $indexItem = Get-Item -LiteralPath $IndexPath
+  Write-Host ("Frontend dist/index.html last write: {0:o}" -f $indexItem.LastWriteTimeUtc)
+
+  $assetsDir = Join-Path $DistDir 'assets'
+  if (Test-Path -LiteralPath $assetsDir) {
+    $asset = Get-ChildItem -LiteralPath $assetsDir -File -ErrorAction SilentlyContinue |
+      Sort-Object LastWriteTimeUtc -Descending |
+      Select-Object -First 1
+    if ($asset) {
+      Write-Host ("Frontend assets latest: {0} @ {1:o}" -f $asset.Name, $asset.LastWriteTimeUtc)
+    }
+  }
+
+  $head = Get-GitHead $Root
+  $meta = Read-FrontendBuildMeta $DistDir
+  if (-not $meta -or -not $meta.source_commit) {
+    throw "前端 dist 缺少构建身份 ($frontendBuildMetaName)。请重新执行前端构建后再启动，未启动 StoryLens。"
+  }
+  if ($head -and ($meta.source_commit -ne $head)) {
+    throw ("前端 dist 不是当前源码（dist={0} HEAD={1}）。请重新构建后再启动，未启动 StoryLens。" -f $meta.source_commit, $head)
+  }
+  Write-Host ("Frontend source_commit: {0}" -f $meta.source_commit)
+  if ($meta.build_time) { Write-Host ("Frontend build_time: {0}" -f $meta.build_time) }
+  if ($meta.application_version) { Write-Host ("Frontend application_version: {0}" -f $meta.application_version) }
+}
+
 # Idempotent reuse: healthy existing web server
 if (Test-StoryLensHealth $url) {
   try {
@@ -85,6 +137,9 @@ if (Test-StoryLensHealth $url) {
     Write-Host "StoryLens local web already running."
     Write-Host "URL: $url"
     Write-Host "Runtime: $($rt.runtime_mode) | data: $($rt.data_directory)"
+    if ($rt.frontend_source_commit) {
+      Write-Host "Frontend source_commit: $($rt.frontend_source_commit)"
+    }
   } catch {
     Write-Host "StoryLens already healthy at $url"
   }
@@ -106,19 +161,26 @@ Assert-PythonBootModules $python
 
 $dist = Join-Path $Root 'apps\desktop\dist'
 $index = Join-Path $dist 'index.html'
-if (-not $SkipBuild -or -not (Test-Path $index)) {
+$mustBuild = (-not $SkipBuild) -or (-not (Test-Path -LiteralPath $index))
+if ($mustBuild) {
   Write-Host 'Building frontend production assets...'
   Push-Location (Join-Path $Root 'apps\desktop')
+  $buildExit = 0
   try {
     $env:VITE_API_BASE_URL = ''
     npm run build
+    $buildExit = $LASTEXITCODE
   } finally {
     Pop-Location
   }
+  if ($buildExit -ne 0) {
+    Clear-WebRuntimeState
+    Write-Host '前端构建失败，未启动StoryLens'
+    exit $buildExit
+  }
 }
-if (-not (Test-Path $index)) {
-  throw "Frontend dist missing: $index"
-}
+
+Assert-FrontendDistFresh $dist $index
 
 $env:STORYLENS_WEB_MODE = '1'
 $env:STORYLENS_APP_ENV = 'production'
@@ -160,6 +222,7 @@ if (-not $ok) {
 $listenPid = Get-PortOwner $Port
 if (-not $listenPid) { $listenPid = [int]$launcher.Id }
 
+$meta = Read-FrontendBuildMeta $dist
 @{
   schema = 'storylens-web-1'
   pid = $listenPid
@@ -168,6 +231,8 @@ if (-not $listenPid) { $listenPid = [int]$launcher.Id }
   url = $url
   started_at = (Get-Date).ToString('o')
   frontend_dist = $dist
+  frontend_source_commit = $(if ($meta) { [string]$meta.source_commit } else { $null })
+  frontend_build_time = $(if ($meta) { [string]$meta.build_time } else { $null })
   ws = 'none'
 } | ConvertTo-Json | Set-Content $stateFile -Encoding utf8
 

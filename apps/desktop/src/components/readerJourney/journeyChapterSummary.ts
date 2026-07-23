@@ -2,6 +2,7 @@
 
 import type { ReaderJourneyVisualization } from "../../types/readerJourneyVisualization";
 import {
+  isSceneBoundaryAnomalyDiagnosis,
   primaryBandLabelForScene,
   type SceneDiagnosisLike,
 } from "./diagnosisBandModel";
@@ -60,10 +61,12 @@ export function buildChapterSummaryBullets(
     )}。${peak.scene_value_summary ? `机制：${peak.scene_value_summary}` : ""}`.trim(),
   });
 
-  const problemText =
-    valleyLabel === "切分异常"
-      ? `主要问题：S${valley.scene_ordinal} 存在切分异常（数据质量），不归因于作品节奏。`
-      : `主要问题：S${valley.scene_ordinal} 表现为${valleyLabel}，需回看证据与前后蓄积。`;
+  const valleyBoundaryAnomaly = valleyDiag
+    ? isSceneBoundaryAnomalyDiagnosis(valleyDiag)
+    : false;
+  const problemText = valleyBoundaryAnomaly
+    ? `主要问题：S${valley.scene_ordinal} 表现为${valleyLabel}（数据质量），不归因于作品节奏。`
+    : `主要问题：S${valley.scene_ordinal} 表现为${valleyLabel}，需回看证据与前后蓄积。`;
   bullets.push({ kind: "problem", text: problemText });
 
   const start = Math.min(peak.scene_ordinal, payoffScene?.scene_ordinal ?? peak.scene_ordinal);

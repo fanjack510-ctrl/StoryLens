@@ -99,6 +99,16 @@ def web_dist(tmp_path: Path) -> Path:
         encoding="utf-8",
     )
     (assets / "app.js").write_text("console.log('ok')", encoding="utf-8")
+    (dist / "storylens-frontend-build.json").write_text(
+        json.dumps(
+            {
+                "source_commit": "abc123frontend",
+                "build_time": "2026-07-23T00:00:00Z",
+                "application_version": "1.0.4",
+            }
+        ),
+        encoding="utf-8",
+    )
     return dist
 
 
@@ -127,6 +137,9 @@ def test_runtime_mode_browser_local_production(web_client: TestClient) -> None:
     assert payload["desktop_capabilities"]["native_updater"] is False
     assert payload["web_capabilities"]["browser_zoom"] is True
     assert "StoryLens" in payload["data_directory"] or payload["data_directory"]
+    assert payload["frontend_source_commit"] == "abc123frontend"
+    assert payload["frontend_build_time"] == "2026-07-23T00:00:00Z"
+    assert payload["frontend_application_version"] == "1.0.4"
 
 
 def test_health_endpoint(web_client: TestClient) -> None:

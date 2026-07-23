@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import json
 import os
+from pathlib import Path
 from typing import Any
 
 from app import __version__
@@ -12,6 +14,49 @@ from app.services.config_runtime_profile import (
     resolve_runtime_mode,
 )
 from app.services.credentials.base import CredentialStore
+from app.services.spa_static import resolve_frontend_dist
+
+FRONTEND_BUILD_META_NAME = "storylens-frontend-build.json"
+
+
+def _read_frontend_build_meta(dist: Path | None = None) -> dict[str, Any]:
+    """Public, non-sensitive frontend build identity from dist metadata."""
+    root = dist if dist is not None else resolve_frontend_dist()
+    if root is None:
+        return {
+            "frontend_source_commit": None,
+            "frontend_build_time": None,
+            "frontend_application_version": None,
+        }
+    meta_path = root / FRONTEND_BUILD_META_NAME
+    if not meta_path.is_file():
+        return {
+            "frontend_source_commit": None,
+            "frontend_build_time": None,
+            "frontend_application_version": None,
+        }
+    try:
+        payload = json.loads(meta_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {
+            "frontend_source_commit": None,
+            "frontend_build_time": None,
+            "frontend_application_version": None,
+        }
+    if not isinstance(payload, dict):
+        return {
+            "frontend_source_commit": None,
+            "frontend_build_time": None,
+            "frontend_application_version": None,
+        }
+    commit = payload.get("source_commit")
+    build_time = payload.get("build_time")
+    app_ver = payload.get("application_version")
+    return {
+        "frontend_source_commit": commit if isinstance(commit, str) and commit else None,
+        "frontend_build_time": build_time if isinstance(build_time, str) and build_time else None,
+        "frontend_application_version": app_ver if isinstance(app_ver, str) and app_ver else None,
+    }
 
 
 def _shell_kind() -> str:
@@ -42,6 +87,7 @@ def build_runtime_payload(store: CredentialStore | None = None) -> dict[str, Any
     shell = _shell_kind()
     web = shell.startswith("browser_")
     production_web = shell == "browser_local_production"
+    frontend_meta = _read_frontend_build_meta()
     return {
         "runtime_mode": mode,
         "shell": shell,
@@ -74,4 +120,5 @@ def build_runtime_payload(store: CredentialStore | None = None) -> dict[str, Any
         },
         "config_profile": profile,
         "is_local_web_production": production_web,
+        **frontend_meta,
     }
