@@ -11,6 +11,12 @@
       "message": "release: green Phase A gates for StoryLens 1.0.5 seal (CHG-20260723-008).",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "4554d5400fb95f1cd69195e1e3071d3436b32088",
+      "message": "release: bump StoryLens to 1.0.5",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -54,5 +60,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T04:43:07Z",
-  "updated_at": "2026-07-23T05:17:05Z"
+  "updated_at": "2026-07-23T05:22:44Z"
 }
