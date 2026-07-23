@@ -1,0 +1,108 @@
+{
+  "baseline_version": "1.0.5",
+  "baseline_commit": "ddae7ee4910ab35a443e47fc1ffad4928e7a5543",
+  "phase1p_change": "CHG-20260723-011",
+  "phase1p": [
+    "apps/api/app/narrative_core/__init__.py",
+    "apps/api/app/narrative_core/enums.py",
+    "apps/api/app/narrative_core/errors.py",
+    "apps/api/app/narrative_core/hash_canon.py",
+    "apps/api/app/narrative_core/stage_transitions.py",
+    "apps/api/app/narrative_core/contracts/__init__.py",
+    "apps/api/app/narrative_core/contracts/migration_ledger.py",
+    "apps/api/app/narrative_core/contracts/hash.py",
+    "apps/api/app/narrative_core/contracts/snapshot.py",
+    "apps/api/app/narrative_core/contracts/run.py",
+    "apps/api/app/narrative_core/migrations/__init__.py",
+    "apps/api/app/narrative_core/migrations/runner.py",
+    "apps/api/app/db/models.py",
+    "apps/api/app/db/session.py",
+    "apps/api/tests/test_narrative_phase1p_contract.py",
+    "docs/architecture/narrative-intelligence-core/phase1-parallel-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase1-migration-plan.md",
+    "docs/architecture/narrative-intelligence-core/phase1-parallel-file-ownership.md",
+    "docs/architecture/narrative-intelligence-core/phase1-parallel-file-ownership.json",
+    "docs/architecture/narrative-intelligence-core/phase1-contract-verification.md",
+    "docs/architecture/README.md",
+    "release/changes/CHG-20260723-011.json",
+    "release/changes/CHG-20260723-012.json",
+    "release/changes/CHG-20260723-013.json",
+    "release/changes/CHG-20260723-014.json",
+    "release/changes/CHG-20260723-015.json",
+    "release/unreleased.json"
+  ],
+  "agent_a": [
+    "apps/api/app/narrative_core/services/hash_backfill.py",
+    "apps/api/app/narrative_core/services/snapshot_repository.py",
+    "apps/api/app/narrative_core/services/snapshot_service.py",
+    "apps/api/app/narrative_core/services/migration_ledger.py",
+    "apps/api/app/narrative_core/migrations/runner.py",
+    "apps/api/tests/test_narrative_snapshot_service.py",
+    "apps/api/tests/test_narrative_hash_backfill.py",
+    "apps/api/tests/test_narrative_migration_ledger.py",
+    "docs/architecture/narrative-intelligence-core/phase1a-snapshot.md",
+    "release/changes/CHG-20260723-012.json"
+  ],
+  "agent_b": [
+    "apps/api/app/narrative_core/services/run_scope_service.py",
+    "apps/api/app/narrative_core/services/run_stage_repository.py",
+    "apps/api/app/narrative_core/services/run_stage_service.py",
+    "apps/api/app/narrative_core/migrations/runner.py",
+    "apps/api/tests/test_narrative_run_scope.py",
+    "apps/api/tests/test_narrative_run_stage.py",
+    "docs/architecture/narrative-intelligence-core/phase1a-runstage.md",
+    "release/changes/CHG-20260723-013.json"
+  ],
+  "agent_c": [
+    "docs/architecture/narrative-intelligence-core/phase0b-pattern-map-readiness.md",
+    "apps/desktop/src/features/narrativePattern/README.md",
+    "apps/desktop/src/features/narrativePattern/contracts/patternMap.draft.ts",
+    "apps/desktop/src/features/narrativePattern/mocks/",
+    "release/changes/CHG-20260723-014.json"
+  ],
+  "integration": [
+    "apps/api/tests/test_narrative_phase1a_integration.py",
+    "docs/architecture/narrative-intelligence-core/phase1a-integration-report.md",
+    "release/changes/CHG-20260723-015.json",
+    "release/unreleased.json"
+  ],
+  "shared_read_only": [
+    "apps/api/app/narrative_core/enums.py",
+    "apps/api/app/narrative_core/errors.py",
+    "apps/api/app/narrative_core/hash_canon.py",
+    "apps/api/app/narrative_core/stage_transitions.py",
+    "apps/api/app/narrative_core/contracts/",
+    "apps/api/app/db/models.py",
+    "apps/api/app/db/session.py",
+    "docs/architecture/narrative-intelligence-core/phase1-parallel-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase1-migration-plan.md",
+    "docs/architecture/narrative-intelligence-core/phase1-parallel-file-ownership.md",
+    "docs/architecture/narrative-intelligence-core/phase1-parallel-file-ownership.json"
+  ],
+  "branches": {
+    "phase1p": "feature/narrative-phase1-contract",
+    "agent_a": "feature/narrative-phase1a-snapshot",
+    "agent_b": "feature/narrative-phase1a-runstage",
+    "agent_c": "feature/narrative-pattern-readiness",
+    "integration": "integration/narrative-phase1a"
+  },
+  "worktrees": {
+    "phase1p": "D:\\Dstorylens-wt-narrative-contract",
+    "agent_a": "D:\\Dstorylens-wt-narrative-snapshot",
+    "agent_b": "D:\\Dstorylens-wt-narrative-runstage",
+    "agent_c": "D:\\Dstorylens-wt-pattern-audit",
+    "integration": "D:\\Dstorylens-wt-narrative-integration"
+  },
+  "migration_ownership": {
+    "20260723_001_schema_migrations": "agent_a",
+    "20260723_002_content_hashes": "agent_a",
+    "20260723_003_book_snapshots": "agent_a",
+    "20260723_004_analysis_run_scope": "agent_b",
+    "20260723_005_analysis_run_stages": "agent_b"
+  },
+  "notes": [
+    "CHG-20260723-010 reserved by Phase 0 audit branch; Phase 1P starts at 011.",
+    "runner.py is dual-owned by line range: Agent A migrations 001-003, Agent B 004-005.",
+    "Agent B must use SnapshotValidationGateway; do not fork snapshot logic."
+  ]
+}

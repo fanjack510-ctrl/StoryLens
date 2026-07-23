@@ -16,3 +16,13 @@ V1.0 Baseline technical architecture set. **Subsequent optimizations must refere
 | [10-open-source-checklist.md](./10-open-source-checklist.md) | 开源检查清单 |
 
 Related: [docs/audits](../audits/), [docs/release/v1.0-baseline-notes.md](../release/v1.0-baseline-notes.md), tag `storylens-v1.0-baseline`.
+
+## Narrative Intelligence Core
+
+| Doc | Title |
+|-----|-------|
+| [narrative-intelligence-core/phase1-parallel-contract.md](./narrative-intelligence-core/phase1-parallel-contract.md) | Phase 1P 并行 Contract 冻结 |
+| [narrative-intelligence-core/phase1-migration-plan.md](./narrative-intelligence-core/phase1-migration-plan.md) | Migration 编号与顺序 |
+| [narrative-intelligence-core/phase1-parallel-file-ownership.md](./narrative-intelligence-core/phase1-parallel-file-ownership.md) | 文件所有权 |
+| [narrative-intelligence-core/phase1-parallel-file-ownership.json](./narrative-intelligence-core/phase1-parallel-file-ownership.json) | 文件所有权（机器可读） |
+| [narrative-intelligence-core/phase1-contract-verification.md](./narrative-intelligence-core/phase1-contract-verification.md) | Phase 1P 验证记录 |

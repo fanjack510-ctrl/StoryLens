@@ -1,0 +1,62 @@
+{
+  "id": "CHG-20260723-015",
+  "title": "Phase 1A integration verification",
+  "type": "improvement",
+  "base_version": "1.0.5",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "integration",
+    "narrative_core",
+    "testing"
+  ],
+  "files": [],
+  "user_summary": "Pre-registered for integrating Agent A/B/C outputs and verifying Phase 1A contracts.",
+  "technical_summary": "Planned: merge conflict resolution, migration order fixes if needed, cross-module fixtures, integration tests, Change commit attachment completion. Starts only after A/B/C land.",
+  "acceptance_criteria": [
+    "Merge from Phase 1P commit + A/B/C branches",
+    "Cross-module integration tests pass",
+    "No VERSION bump without release Change",
+    "Do not mark verified without user acceptance"
+  ],
+  "tests": [],
+  "verification_evidence": [],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "Integration may add follow-up migrations only with new migration_id if required."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "EXISTS_NOT_INCLUDED",
+  "created_at": "2026-07-23T07:20:00Z",
+  "updated_at": "2026-07-23T07:20:00Z",
+  "parallel_plan": {
+    "role": "integration",
+    "branch": "integration/narrative-phase1a",
+    "worktree": "D:\\Dstorylens-wt-narrative-integration",
+    "depends_on": [
+      "CHG-20260723-011",
+      "CHG-20260723-012",
+      "CHG-20260723-013",
+      "CHG-20260723-014"
+    ],
+    "blocks": [],
+    "exclusive_paths": [
+      "apps/api/tests/test_narrative_phase1a_integration.py",
+      "docs/architecture/narrative-intelligence-core/phase1a-integration-report.md"
+    ],
+    "forbidden": [
+      "start before A/B/C complete",
+      "push/publish",
+      "mark verified without user acceptance"
+    ]
+  }
+}

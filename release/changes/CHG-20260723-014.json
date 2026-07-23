@@ -1,0 +1,58 @@
+{
+  "id": "CHG-20260723-014",
+  "title": "Agent C: Narrative structure map readiness audit",
+  "type": "documentation",
+  "base_version": "1.0.5",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "architecture",
+    "documentation",
+    "frontend contract draft"
+  ],
+  "files": [],
+  "user_summary": "Pre-registered for Agent C pattern-map readiness audit and frontend DTO drafts.",
+  "technical_summary": "Planned: readiness audit docs, Pattern Map DTO draft, mock JSON, visualization tech spike. Must not modify production DB models or migrations.",
+  "acceptance_criteria": [
+    "Fork from Phase 1P final commit",
+    "No changes to apps/api/app/db/models.py",
+    "No migration edits",
+    "Drafts only under apps/desktop/src/features/narrativePattern/"
+  ],
+  "tests": [],
+  "verification_evidence": [],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "Documentation and frontend drafts only."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "EXISTS_NOT_INCLUDED",
+  "created_at": "2026-07-23T07:20:00Z",
+  "updated_at": "2026-07-23T07:20:00Z",
+  "parallel_plan": {
+    "role": "agent_c",
+    "branch": "feature/narrative-pattern-readiness",
+    "worktree": "D:\\Dstorylens-wt-pattern-audit",
+    "depends_on": ["CHG-20260723-011"],
+    "blocks": ["CHG-20260723-015"],
+    "exclusive_paths": [
+      "docs/architecture/narrative-intelligence-core/phase0b-pattern-map-readiness.md",
+      "apps/desktop/src/features/narrativePattern/"
+    ],
+    "forbidden": [
+      "database model changes",
+      "migrations",
+      "model calls",
+      "Pro shipping flag"
+    ]
+  }
+}

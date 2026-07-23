@@ -1,0 +1,59 @@
+{
+  "id": "CHG-20260723-013",
+  "title": "Agent B: AnalysisRun scope, stages, and status service",
+  "type": "feature",
+  "base_version": "1.0.5",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "narrative_core",
+    "analysis run scope",
+    "analysis run stages"
+  ],
+  "files": [],
+  "user_summary": "Pre-registered for Agent B run scope and stage state service after Phase 1P.",
+  "technical_summary": "Planned: implement scoped run creation/validation, stage transitions, pause/resume/interrupted/retry against frozen stage matrix. Must consume SnapshotValidationGateway; must not fork snapshot logic.",
+  "acceptance_criteria": [
+    "Fork from Phase 1P final commit",
+    "Implement frozen stage transition matrix only",
+    "Book scope requires completed snapshot via gateway",
+    "Do not modify snapshot tables/services"
+  ],
+  "tests": [],
+  "verification_evidence": [],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "Uses Phase 1P analysis_run_* skeleton; service-layer only unless Integration approves DDL."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "EXISTS_NOT_INCLUDED",
+  "created_at": "2026-07-23T07:20:00Z",
+  "updated_at": "2026-07-23T07:20:00Z",
+  "parallel_plan": {
+    "role": "agent_b",
+    "branch": "feature/narrative-phase1a-runstage",
+    "worktree": "D:\\Dstorylens-wt-narrative-runstage",
+    "depends_on": ["CHG-20260723-011"],
+    "blocks": ["CHG-20260723-015"],
+    "exclusive_paths": [
+      "apps/api/app/narrative_core/services/run_scope_service.py",
+      "apps/api/app/narrative_core/services/run_stage_repository.py",
+      "apps/api/app/narrative_core/services/run_stage_service.py"
+    ],
+    "forbidden": [
+      "second snapshot implementation",
+      "extend stage status enum without Change",
+      "whole-book model calls",
+      "modify models.py"
+    ]
+  }
+}

@@ -1,6 +1,17 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, Float, ForeignKey, Integer, LargeBinary, String, Text, UniqueConstraint
+from sqlalchemy import (
+    CheckConstraint,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    LargeBinary,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -53,6 +64,8 @@ class Chapter(Base):
     chapter_title: Mapped[str] = mapped_column(String(500), default="")
     display_title: Mapped[str] = mapped_column(String(600), default="")
     source_title_line: Mapped[str] = mapped_column(String(600), default="")
+    # Phase 1P: persisted chapter text hash (nullable until Agent A backfill).
+    content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
 
     book: Mapped[Book] = relationship(back_populates="chapters")
     paragraphs: Mapped[list["Paragraph"]] = relationship(
@@ -89,6 +102,8 @@ class Paragraph(Base):
     char_start: Mapped[int] = mapped_column(Integer)
     char_end: Mapped[int] = mapped_column(Integer)
     source_page: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # Phase 1P: persisted paragraph text hash (nullable until Agent A backfill).
+    content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
 
     chapter: Mapped[Chapter] = relationship(back_populates="paragraphs")
 
@@ -144,6 +159,23 @@ class AnalysisRun(Base):
     recovered_from_run_id: Mapped[int | None] = mapped_column(
         ForeignKey("analysis_runs.id", ondelete="SET NULL"), nullable=True, index=True
     )
+    # Phase 1P narrative scope skeleton (nullable for 1.0.5 row compatibility).
+    # Legacy chapter binding remains subject_type/subject_id — there is no chapter_id column.
+    analysis_type: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    scope_type: Mapped[str | None] = mapped_column(String(32), nullable=True, index=True)
+    book_id: Mapped[int | None] = mapped_column(
+        ForeignKey("books.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    start_chapter_id: Mapped[int | None] = mapped_column(
+        ForeignKey("chapters.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    end_chapter_id: Mapped[int | None] = mapped_column(
+        ForeignKey("chapters.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    book_snapshot_id: Mapped[int | None] = mapped_column(
+        ForeignKey("book_snapshots.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    configuration_fingerprint: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
 
 class Scene(Base):
@@ -631,3 +663,147 @@ class ReaderJourneyRevision(Base):
     revised_by: Mapped[str] = mapped_column(String(255))
     revision_payload_json: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+
+# ---------------------------------------------------------------------------
+# Phase 1P Narrative Intelligence Core shared schema skeleton
+# Agents A/B must not redefine these tables; implement services against them.
+# ---------------------------------------------------------------------------
+
+
+class SchemaMigration(Base):
+    """Applied narrative / phase migration ledger (Phase 1P)."""
+
+    __tablename__ = "schema_migrations"
+
+    migration_id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    checksum: Mapped[str] = mapped_column(String(64), nullable=False)
+    app_version: Mapped[str] = mapped_column(String(32), nullable=False, default="1.0.5")
+    applied_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+
+class BookSnapshot(Base):
+    __tablename__ = "book_snapshots"
+    __table_args__ = (
+        UniqueConstraint(
+            "book_id",
+            "content_hash",
+            name="uq_book_snapshots_book_content_hash",
+        ),
+        Index("ix_book_snapshots_book_status", "book_id", "snapshot_status"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    book_id: Mapped[int] = mapped_column(ForeignKey("books.id", ondelete="CASCADE"), index=True)
+    content_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    chapter_count: Mapped[int] = mapped_column(Integer, default=0)
+    paragraph_count: Mapped[int] = mapped_column(Integer, default=0)
+    character_count: Mapped[int] = mapped_column(Integer, default=0)
+    snapshot_status: Mapped[str] = mapped_column(String(32), default="building", index=True)
+    source_fingerprint: Mapped[str] = mapped_column(String(64), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+    chapters: Mapped[list["BookSnapshotChapter"]] = relationship(
+        back_populates="snapshot",
+        cascade="all, delete-orphan",
+        order_by="BookSnapshotChapter.chapter_order",
+    )
+
+
+class BookSnapshotChapter(Base):
+    __tablename__ = "book_snapshot_chapters"
+    __table_args__ = (
+        UniqueConstraint(
+            "snapshot_id",
+            "chapter_order",
+            name="uq_book_snapshot_chapters_order",
+        ),
+        UniqueConstraint(
+            "snapshot_id",
+            "source_chapter_id",
+            name="uq_book_snapshot_chapters_source",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    snapshot_id: Mapped[int] = mapped_column(
+        ForeignKey("book_snapshots.id", ondelete="CASCADE"), index=True
+    )
+    source_chapter_id: Mapped[int] = mapped_column(
+        ForeignKey("chapters.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    chapter_order: Mapped[int] = mapped_column(Integer, nullable=False)
+    title: Mapped[str] = mapped_column(String(600), default="")
+    content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    content_text: Mapped[str] = mapped_column(Text, nullable=False, default="")
+
+    snapshot: Mapped[BookSnapshot] = relationship(back_populates="chapters")
+    paragraphs: Mapped[list["BookSnapshotParagraph"]] = relationship(
+        back_populates="snapshot_chapter",
+        cascade="all, delete-orphan",
+        order_by="BookSnapshotParagraph.paragraph_order",
+    )
+
+
+class BookSnapshotParagraph(Base):
+    __tablename__ = "book_snapshot_paragraphs"
+    __table_args__ = (
+        UniqueConstraint(
+            "snapshot_chapter_id",
+            "paragraph_order",
+            name="uq_book_snapshot_paragraphs_order",
+        ),
+        CheckConstraint("start_offset >= 0", name="ck_bsp_start_offset_nonneg"),
+        CheckConstraint("end_offset >= start_offset", name="ck_bsp_end_ge_start"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    snapshot_id: Mapped[int] = mapped_column(
+        ForeignKey("book_snapshots.id", ondelete="CASCADE"), index=True
+    )
+    snapshot_chapter_id: Mapped[int] = mapped_column(
+        ForeignKey("book_snapshot_chapters.id", ondelete="CASCADE"), index=True
+    )
+    source_paragraph_id: Mapped[str | None] = mapped_column(String(32), nullable=True, index=True)
+    stable_paragraph_id: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    paragraph_order: Mapped[int] = mapped_column(Integer, nullable=False)
+    start_offset: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    end_offset: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+
+    snapshot_chapter: Mapped[BookSnapshotChapter] = relationship(back_populates="paragraphs")
+
+
+class AnalysisRunStage(Base):
+    __tablename__ = "analysis_run_stages"
+    __table_args__ = (
+        UniqueConstraint("run_id", "stage_key", name="uq_analysis_run_stages_run_key"),
+        CheckConstraint("stage_order >= 0", name="ck_ars_stage_order_nonneg"),
+        CheckConstraint("attempt_count >= 0", name="ck_ars_attempt_count_nonneg"),
+        Index("ix_analysis_run_stages_run_order", "run_id", "stage_order"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    run_id: Mapped[int] = mapped_column(
+        ForeignKey("analysis_runs.id", ondelete="CASCADE"), index=True
+    )
+    stage_key: Mapped[str] = mapped_column(String(64), nullable=False)
+    stage_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending", index=True)
+    input_fingerprint: Mapped[str] = mapped_column(String(64), default="")
+    output_artifact_id: Mapped[int | None] = mapped_column(
+        ForeignKey("analysis_artifacts.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    checkpoint_json: Mapped[str] = mapped_column(Text, default="{}")
+    attempt_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    token_input: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    token_output: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    cost: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    error_code: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now
+    )
