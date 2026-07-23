@@ -17,6 +17,12 @@
       "message": "docs: sync CHG-20260723-013 registry after tested mark",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "cae05aec7850f1a833baf3c67e0ff3800c2a91f1",
+      "message": "docs: attach registry sync commit to CHG-20260723-013",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -70,7 +76,7 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T07:20:00Z",
-  "updated_at": "2026-07-23T07:46:36Z",
+  "updated_at": "2026-07-23T07:46:37Z",
   "parallel_plan": {
     "role": "agent_b",
     "branch": "feature/narrative-phase1a-runstage",
