@@ -17,6 +17,12 @@
       "message": "docs: mark CHG-20260723-001 tested for build gate",
       "primary": false,
       "multi_change_reason": "registry status for CHG-20260723-001"
+    },
+    {
+      "sha": "15b3af2c886b88ef9fc95a08c107e131036e77ab",
+      "message": "docs: attach registry commit for CHG-20260723-001",
+      "primary": false,
+      "multi_change_reason": "final registry attachment for CHG-20260723-001"
     }
   ],
   "modules": [
@@ -69,5 +75,5 @@
   "blocker_level": "P0",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T00:14:34Z",
-  "updated_at": "2026-07-23T00:21:03Z"
+  "updated_at": "2026-07-23T00:21:45Z"
 }
