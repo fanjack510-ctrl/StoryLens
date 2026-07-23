@@ -9,19 +9,42 @@
   "modules": [
     "desktop/capability"
   ],
-  "files": [],
-  "user_summary": "Implement capabilityClient, capabilityStore, isolated Pro presentation components.",
-  "technical_summary": "Agent I builds on frozen capability/types.ts and keys.ts; does not set PRO_CAPABILITIES_SHIPPED=true or create full whole-book UI pages.",
+  "files": [
+    "apps/desktop/src/services/capability/capabilityClient.ts",
+    "apps/desktop/src/services/capability/capabilityDto.ts",
+    "apps/desktop/src/services/capability/capabilityStore.ts",
+    "apps/desktop/src/services/capability/presentation.ts",
+    "apps/desktop/src/services/capability/legacyCompatibility.ts",
+    "apps/desktop/src/services/capability/contractKeys.fixture.ts",
+    "apps/desktop/src/services/capability/capabilityClient.test.ts",
+    "apps/desktop/src/services/capability/capabilityComponents.test.tsx",
+    "apps/desktop/src/services/capability/index.ts",
+    "apps/desktop/src/features/capability/",
+    "apps/desktop/src/components/capability/index.ts",
+    "scripts/check_capability_keys.py",
+    "docs/architecture/narrative-intelligence-core/phase1c-capability-frontend-implementation.md",
+    "docs/architecture/narrative-intelligence-core/phase1c-legacy-vip-audit.md",
+    "docs/architecture/narrative-intelligence-core/phase1c-capability-presentation.md",
+    "docs/architecture/narrative-intelligence-core/phase1c-capability-frontend-verification.md"
+  ],
+  "user_summary": "Implement capabilityClient, capabilityStore, legacy compatibility helpers, and isolated Pro presentation components.",
+  "technical_summary": "Agent I builds on frozen capability/types.ts and keys.ts; does not set PRO_CAPABILITIES_SHIPPED=true or create full whole-book UI pages. allowed comes only from backend Decision with fail-closed offline/network fallbacks.",
   "acceptance_criteria": [
     "Fork from feature/narrative-phase1c-contract final HEAD",
     "Use CAPABILITY_KEYS from capability/keys.ts",
     "Do not break existing entitlementApi",
-    "No formal whole-book product pages in this change"
+    "No formal whole-book product pages in this change",
+    "hasCapability defaults false; offline never grants",
+    "Legacy VIP boolean never becomes allowed"
   ],
   "tests": [
-    "apps/desktop/src/services/capability/capabilityClient.test.ts"
+    "apps/desktop/src/services/capability/capabilityClient.test.ts",
+    "apps/desktop/src/services/capability/capabilityComponents.test.tsx",
+    "scripts/check_capability_keys.py"
   ],
-  "verification_evidence": [],
+  "verification_evidence": [
+    "docs/architecture/narrative-intelligence-core/phase1c-capability-frontend-verification.md"
+  ],
   "parallel_plan": {
     "role": "agent_i",
     "branch": "feature/narrative-phase1c-capability-frontend",
@@ -35,7 +58,7 @@
     "forbidden": [
       "PRO_CAPABILITIES_SHIPPED=true",
       "VERSION bump",
-      "modify capability/types.ts keys.ts legacyMapper.ts owned by Phase 1C-P"
+      "modify capability/types.ts keys.ts owned by Phase 1C-P"
     ],
     "file_ownership": "docs/architecture/narrative-intelligence-core/phase1c-parallel-file-ownership.json"
   },
@@ -54,5 +77,5 @@
   "blocker_level": null,
   "head_inclusion": null,
   "created_at": "2026-07-23T11:46:12Z",
-  "updated_at": "2026-07-23T12:00:00Z"
+  "updated_at": "2026-07-23T12:20:00Z"
 }

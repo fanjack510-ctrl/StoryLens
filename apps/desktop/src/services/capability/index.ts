@@ -1,14 +1,22 @@
 /**
- * Phase 1C-P capability contract exports.
+ * Phase 1C-P capability contract exports + Agent I client/store/presentation.
  *
  * Agent I owns:
- * - capabilityClient.ts (API + evaluate flows)
- * - capabilityStore.ts (React state)
- * - Pro presentation components (isolated)
+ * - capabilityClient.ts
+ * - capabilityStore.ts
+ * - presentation.ts
+ * - legacyCompatibility.ts
+ * - Pro presentation components (features/capability)
  *
  * Do NOT set PRO_CAPABILITIES_SHIPPED=true in productEdition.ts until product ships.
  */
 
 export * from "./types";
-export * from "./keys";
+export { CAPABILITY_KEYS, PRO_CAPABILITY_KEYS, isCapabilityKey } from "./keys";
 export * from "./legacyMapper";
+export * from "./capabilityDto";
+export * from "./capabilityClient";
+export * from "./capabilityStore";
+export * from "./presentation";
+export * from "./legacyCompatibility";
+export * from "./contractKeys.fixture";
