@@ -3,6 +3,7 @@
 **Change:** CHG-20260723-015  
 **Branch:** `integration/narrative-phase1a`  
 **Worktree:** `D:\Dstorylens-wt-narrative-integration`  
+**HEAD (integration commit):** `6b87884205905fb4d1e2153d56409d338c9d93a4`  
 **Source:** `e983e7279d4c72655334017da114ce572e41b0e0` (`feature/narrative-phase1-contract`)  
 **VERSION:** 1.0.5
 

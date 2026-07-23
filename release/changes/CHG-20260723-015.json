@@ -3,9 +3,16 @@
   "title": "Phase 1A integration verification",
   "type": "improvement",
   "base_version": "1.0.5",
-  "status": "registered",
+  "status": "tested",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "6b87884205905fb4d1e2153d56409d338c9d93a4",
+      "message": "feat: integrate narrative phase1a foundation",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "integration",
     "narrative_core",
@@ -73,9 +80,9 @@
     "breaking_change": false
   },
   "blocker_level": null,
-  "head_inclusion": "EXISTS_NOT_INCLUDED",
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T07:20:00Z",
-  "updated_at": "2026-07-23T08:20:00Z",
+  "updated_at": "2026-07-23T08:18:04Z",
   "parallel_plan": {
     "role": "integration",
     "branch": "integration/narrative-phase1a",
