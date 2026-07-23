@@ -86,7 +86,7 @@ export function createMockWholeBookRunClient(deps: MockWholeBookRunClientDeps = 
     init?: RequestInit & { withMarker?: boolean },
   ): Promise<T> {
     assertNotFormalCreate(path);
-    const withMarker = init?.withMarker !== false && method !== "GET";
+    const withMarker = init?.withMarker !== false;
     const headers: Record<string, string> = {
       ...(withMarker ? labMarkerHeaders() : {}),
       ...((init?.headers as Record<string, string>) ?? {}),
@@ -149,7 +149,6 @@ export function createMockWholeBookRunClient(deps: MockWholeBookRunClientDeps = 
         const raw = await labRequest<unknown>(
           "GET",
           `${LAB_API_BASE}/${runId}`,
-          { withMarker: false },
         );
         return assertRunView(raw);
       } catch (error) {
@@ -179,7 +178,6 @@ export function createMockWholeBookRunClient(deps: MockWholeBookRunClientDeps = 
       const raw = await labRequest<unknown>(
         "GET",
         `${LAB_API_BASE}/${runId}/stages`,
-        { withMarker: false },
       );
       return assertStagesResponse(raw);
     },

@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+import logging
 import os
 import uuid
 
@@ -19,14 +20,27 @@ from app.api.v1.reader_journey import router as reader_journey_router
 from app.routers.capabilities import router as capabilities_router
 from app.routers.whole_book_preflight import router as whole_book_preflight_router
 from app.routers.whole_book_results import router as whole_book_results_router
+from app.routers import whole_book_mock_lab_runs as mock_lab_runs
 from app.core.config import get_settings
 from app.core.paths import is_web_production_mode
 from app.core.sidecar_control import request_shutdown, shutdown_token
 from app.db.session import SessionLocal, create_db
 from app.middleware.local_origin import LocalOriginGuardMiddleware, SecurityHeadersMiddleware
+from app.narrative_core.services import mock_whole_book_run_runtime as _mock_lab_runtime_mod
+from app.narrative_core.services.mock_lab_authorization_service import (
+    is_mock_lab_enabled_from_env,
+)
+from app.narrative_core.services.mock_run_recovery_service import MockRunStartupRecoveryAdapter
+from app.narrative_core.services.mock_whole_book_run_runtime import (
+    create_mock_lab_runtime,
+    log_lab_startup_status,
+    should_register_mock_lab_router,
+)
 from app.services.instance_lock import acquire_instance_lock, release_instance_lock
 from app.services.scene_pipeline import mark_interrupted_runs_failed
 from app.services.spa_static import mount_spa
+
+logger = logging.getLogger(__name__)
 
 
 def _cors_origins() -> list[str]:
@@ -55,122 +69,198 @@ def _bind_port() -> int:
     return 8765 if is_web_production_mode() else 8000
 
 
-@asynccontextmanager
-async def lifespan(_: FastAPI):
-    # Prefer one writer on the production SQLite root when running local web.
-    if is_web_production_mode() and os.environ.get(
-        "STORYLENS_DISABLE_INSTANCE_LOCK", ""
-    ).lower() not in {"1", "true", "yes"}:
-        acquire_instance_lock(port=_bind_port(), shell="browser_local_production")
-    try:
-        create_db()
-        with SessionLocal() as session:
-            mark_interrupted_runs_failed(session)
-        yield
-    finally:
-        if is_web_production_mode():
-            release_instance_lock()
+def _resolve_environment(environment: str | None = None) -> str:
+    if environment is not None:
+        return str(environment).strip().lower()
+    return str(
+        os.environ.get("STORYLENS_APP_ENV")
+        or os.environ.get("APP_ENV")
+        or os.environ.get("ENVIRONMENT")
+        or "development"
+    ).strip().lower()
 
 
-app = FastAPI(title="StoryLens API", version=__version__, lifespan=lifespan)
-app.add_middleware(SecurityHeadersMiddleware)
-app.add_middleware(LocalOriginGuardMiddleware)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=_cors_origins(),
-    allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-app.include_router(api_v1_router)
-# Recovery Center owns GET recovery-plan + POST recover (unified/legacy dispatch).
-app.include_router(analysis_recovery_router, prefix="/api/v1")
-app.include_router(analysis_router)
-app.include_router(desktop_router)
-app.include_router(boundary_review_router)
-app.include_router(reader_journey_router)
-app.include_router(capabilities_router)
-app.include_router(whole_book_preflight_router)
-# Phase 1D Integration: read-only result projection (no run create / no review writes).
-app.include_router(whole_book_results_router)
+def _resolve_lab_enabled(lab_enabled: bool | None = None) -> bool:
+    if lab_enabled is not None:
+        return bool(lab_enabled)
+    return is_mock_lab_enabled_from_env()
 
 
-@app.middleware("http")
-async def request_trace(request: Request, call_next):
-    request_id = request.headers.get("x-request-id") or uuid.uuid4().hex[:16]
-    request.state.request_id = request_id
-    response = await call_next(request)
-    response.headers["x-request-id"] = request_id
-    return response
+def _set_default_mock_lab_runtime(runtime) -> None:
+    with _mock_lab_runtime_mod._lock:
+        _mock_lab_runtime_mod._default_runtime = runtime
 
 
-@app.exception_handler(HTTPException)
-async def http_error(_: Request, exc: HTTPException) -> JSONResponse:
-    if isinstance(exc.detail, dict) and "error_code" in exc.detail:
-        content = dict(exc.detail)
-        content["request_id"] = getattr(_.state, "request_id", None)
-        content.setdefault("retryable", False)
-        content.setdefault("user_action_hint", None)
-        return JSONResponse(status_code=exc.status_code, content=content)
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={"error_code": "HTTP_ERROR", "message": str(exc.detail), "details": {}},
+def _make_lifespan(*, environment: str | None = None, lab_enabled: bool | None = None):
+    env = _resolve_environment(environment)
+    lab_on = _resolve_lab_enabled(lab_enabled)
+
+    @asynccontextmanager
+    async def lifespan(_: FastAPI):
+        # Prefer one writer on the production SQLite root when running local web.
+        if is_web_production_mode() and os.environ.get(
+            "STORYLENS_DISABLE_INSTANCE_LOCK", ""
+        ).lower() not in {"1", "true", "yes"}:
+            acquire_instance_lock(port=_bind_port(), shell="browser_local_production")
+        try:
+            create_db()
+            with SessionLocal() as session:
+                mark_interrupted_runs_failed(session)
+            log_lab_startup_status(environment=env, lab_enabled=lab_on)
+            try:
+                MockRunStartupRecoveryAdapter(
+                    SessionLocal,
+                    lab_enabled=lab_on,
+                ).reconcile()
+            except Exception:  # noqa: BLE001 — never block startup
+                logger.exception(
+                    "mock lab startup recovery reconcile failed (non-blocking)"
+                )
+            yield
+        finally:
+            if is_web_production_mode():
+                release_instance_lock()
+
+    return lifespan
+
+
+def _configure_middleware_and_routers(app: FastAPI) -> None:
+    app.add_middleware(SecurityHeadersMiddleware)
+    app.add_middleware(LocalOriginGuardMiddleware)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=_cors_origins(),
+        allow_credentials=False,
+        allow_methods=["*"],
+        allow_headers=["*"],
     )
+    app.include_router(api_v1_router)
+    # Recovery Center owns GET recovery-plan + POST recover (unified/legacy dispatch).
+    app.include_router(analysis_recovery_router, prefix="/api/v1")
+    app.include_router(analysis_router)
+    app.include_router(desktop_router)
+    app.include_router(boundary_review_router)
+    app.include_router(reader_journey_router)
+    app.include_router(capabilities_router)
+    app.include_router(whole_book_preflight_router)
+    # Phase 1D Integration: read-only result projection (no run create / no review writes).
+    app.include_router(whole_book_results_router)
 
 
-@app.exception_handler(RequestValidationError)
-async def validation_error(request: Request, exc: RequestValidationError) -> JSONResponse:
-    return JSONResponse(status_code=422, content={
-        "error_code": "REQUEST_VALIDATION_ERROR",
-        "message": "请求字段校验失败。",
-        "details": exc.errors(),
-        "request_id": getattr(request.state, "request_id", None),
-        "retryable": False,
-        "user_action_hint": "请刷新页面后重新提交；若仍失败，请查看字段诊断。",
-    })
+def mount_mock_lab_if_enabled(
+    app: FastAPI,
+    *,
+    environment: str | None = None,
+    lab_enabled: bool | None = None,
+    runtime=None,
+    session_factory=None,
+) -> bool:
+    """Conditionally mount Mock Lab router and wire default runtime."""
+    env = _resolve_environment(environment)
+    lab_on = _resolve_lab_enabled(lab_enabled)
+    if not should_register_mock_lab_router(environment=env, lab_enabled=lab_on):
+        return False
+    if runtime is not None:
+        _set_default_mock_lab_runtime(runtime)
+    else:
+        create_mock_lab_runtime(
+            environment=env,
+            lab_enabled=lab_on,
+            session_factory=session_factory or SessionLocal,
+            set_as_default=True,
+        )
+    app.include_router(mock_lab_runs.router)
+    return True
 
 
-@app.get("/health")
-def health() -> dict[str, str]:
-    with SessionLocal() as session:
-        session.execute(text("SELECT 1"))
-    return {
-        "status": "ok",
-        "service": "storylens-api",
-        "database": "ok",
-        "default_provider": get_settings().default_model_provider,
-    }
+def _register_app_handlers(app: FastAPI) -> None:
+    @app.middleware("http")
+    async def request_trace(request: Request, call_next):
+        request_id = request.headers.get("x-request-id") or uuid.uuid4().hex[:16]
+        request.state.request_id = request_id
+        response = await call_next(request)
+        response.headers["x-request-id"] = request_id
+        return response
+
+    @app.exception_handler(HTTPException)
+    async def http_error(_: Request, exc: HTTPException) -> JSONResponse:
+        if isinstance(exc.detail, dict) and "error_code" in exc.detail:
+            content = dict(exc.detail)
+            content["request_id"] = getattr(_.state, "request_id", None)
+            content.setdefault("retryable", False)
+            content.setdefault("user_action_hint", None)
+            return JSONResponse(status_code=exc.status_code, content=content)
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"error_code": "HTTP_ERROR", "message": str(exc.detail), "details": {}},
+        )
+
+    @app.exception_handler(RequestValidationError)
+    async def validation_error(request: Request, exc: RequestValidationError) -> JSONResponse:
+        return JSONResponse(status_code=422, content={
+            "error_code": "REQUEST_VALIDATION_ERROR",
+            "message": "请求字段校验失败。",
+            "details": exc.errors(),
+            "request_id": getattr(request.state, "request_id", None),
+            "retryable": False,
+            "user_action_hint": "请刷新页面后重新提交；若仍失败，请查看字段诊断。",
+        })
+
+    @app.get("/health")
+    def health() -> dict[str, str]:
+        with SessionLocal() as session:
+            session.execute(text("SELECT 1"))
+        return {
+            "status": "ok",
+            "service": "storylens-api",
+            "database": "ok",
+            "default_provider": get_settings().default_model_provider,
+        }
+
+    def _client_is_loopback(request: Request) -> bool:
+        host = (request.client.host if request.client else "") or ""
+        # "testclient" is Starlette/FastAPI TestClient's in-process peer, not a network client.
+        return host in {"127.0.0.1", "::1", "localhost", "testclient"}
+
+    @app.post("/internal/shutdown")
+    def internal_shutdown(
+        request: Request,
+        authorization: str | None = Header(default=None),
+    ) -> dict[str, str]:
+        """Desktop-owned graceful stop. Loopback + optional bearer token only."""
+        if not _client_is_loopback(request):
+            raise HTTPException(status_code=403, detail="Shutdown allowed from loopback only")
+        expected = shutdown_token()
+        if expected:
+            provided = ""
+            if authorization and authorization.lower().startswith("bearer "):
+                provided = authorization[7:].strip()
+            if provided != expected:
+                raise HTTPException(status_code=401, detail="Invalid shutdown token")
+        request_shutdown()
+        return {"status": "shutting_down"}
+
+    @app.get("/api/v1/system/capabilities")
+    def system_capabilities() -> dict[str, str]:
+        return {"capability_schema_version": "1c-a-2"}
 
 
-def _client_is_loopback(request: Request) -> bool:
-    host = (request.client.host if request.client else "") or ""
-    # "testclient" is Starlette/FastAPI TestClient's in-process peer, not a network client.
-    return host in {"127.0.0.1", "::1", "localhost", "testclient"}
+def create_app(*, environment: str | None = None, lab_enabled: bool | None = None) -> FastAPI:
+    app = FastAPI(
+        title="StoryLens API",
+        version=__version__,
+        lifespan=_make_lifespan(environment=environment, lab_enabled=lab_enabled),
+    )
+    _configure_middleware_and_routers(app)
+    mount_mock_lab_if_enabled(
+        app,
+        environment=environment,
+        lab_enabled=lab_enabled,
+        session_factory=SessionLocal,
+    )
+    _register_app_handlers(app)
+    mount_spa(app)
+    return app
 
 
-@app.post("/internal/shutdown")
-def internal_shutdown(
-    request: Request,
-    authorization: str | None = Header(default=None),
-) -> dict[str, str]:
-    """Desktop-owned graceful stop. Loopback + optional bearer token only."""
-    if not _client_is_loopback(request):
-        raise HTTPException(status_code=403, detail="Shutdown allowed from loopback only")
-    expected = shutdown_token()
-    if expected:
-        provided = ""
-        if authorization and authorization.lower().startswith("bearer "):
-            provided = authorization[7:].strip()
-        if provided != expected:
-            raise HTTPException(status_code=401, detail="Invalid shutdown token")
-    request_shutdown()
-    return {"status": "shutting_down"}
-
-
-@app.get("/api/v1/system/capabilities")
-def system_capabilities() -> dict[str, str]:
-    return {"capability_schema_version": "1c-a-2"}
-
-
-# SPA catch-all must be last so API routes keep precedence.
-mount_spa(app)
+app = create_app()

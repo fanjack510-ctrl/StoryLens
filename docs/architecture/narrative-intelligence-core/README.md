@@ -26,13 +26,13 @@ StoryLens 叙事智能核心文档索引。当前基线：`VERSION=1.0.5`。
 | Phase 1D Agent K | CHG-20260723-028 | verified | Result DTO / Projection |
 | Phase 1D Agent L | CHG-20260723-029 | verified | Evidence / Review / Map |
 | Phase 1D Integration | CHG-20260723-030 | verified | Phase 1D Integration |
-| Phase 2A-P | CHG-20260723-031 | tested | Mock Run Shell Contract freeze |
-| Phase 2A Agent M | CHG-20260723-032 | registered | Backend Mock Run |
-| Phase 2A Agent N | CHG-20260723-033 | registered | Frontend Mock Run Lab |
-| Phase 2A Agent O | CHG-20260723-034 | registered | Recovery / Reliability |
-| Phase 2A Integration | CHG-20260723-035 | registered | Phase 2A Integration |
+| Phase 2A-P | CHG-20260723-031 | verified | Mock Run Shell Contract freeze |
+| Phase 2A Agent M | CHG-20260723-032 | tested | Backend Mock Run |
+| Phase 2A Agent N | CHG-20260723-033 | tested | Frontend Mock Run Lab |
+| Phase 2A Agent O | CHG-20260723-034 | tested | Recovery / Reliability |
+| Phase 2A Integration | CHG-20260723-035 | tested | Phase 2A Integration |
 
-\* 022–030 已为 `verified`（不得 ready/released）。031 上限 `tested`；032–035 保持 `registered`。硬边界见下。
+\* 022–031 已为 `verified`（不得 ready/released）。032–035 上限 `tested`（不得 ready/released）。硬边界见下。
 
 ## Phase 1P / 1A
 
@@ -157,3 +157,14 @@ StoryLens 叙事智能核心文档索引。当前基线：`VERSION=1.0.5`。
 - [phase2a-parallel-file-ownership.md](./phase2a-parallel-file-ownership.md)
 - [phase2a-parallel-file-ownership.json](./phase2a-parallel-file-ownership.json)
 - [phase2a-contract-verification.md](./phase2a-contract-verification.md)
+
+## Phase 2A Integration
+
+- [phase2a-integration-report.md](./phase2a-integration-report.md)
+- [phase2a-runtime-composition.md](./phase2a-runtime-composition.md)
+- [phase2a-lab-router-security.md](./phase2a-lab-router-security.md)
+- [phase2a-metadata-idempotency-boundary.md](./phase2a-metadata-idempotency-boundary.md)
+- [phase2a-executor-recovery-e2e.md](./phase2a-executor-recovery-e2e.md)
+- [phase2a-frontend-backend-contract.md](./phase2a-frontend-backend-contract.md)
+- [phase2a-production-isolation-verification.md](./phase2a-production-isolation-verification.md)
+- [phase2a-known-limitations.md](./phase2a-known-limitations.md)

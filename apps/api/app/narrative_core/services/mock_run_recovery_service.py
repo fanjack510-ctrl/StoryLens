@@ -52,15 +52,24 @@ def _utc_now() -> datetime:
 
 
 def _is_mock_lab_run(run: AnalysisRun) -> bool:
-    if run.analysis_type and "whole_book" in str(run.analysis_type):
+    from app.narrative_core.services.mock_run_metadata import is_mock_lab_run_metadata
+
+    if is_mock_lab_run_metadata(run.validated_output):
         return True
-    if run.task_type in {"whole_book_mock", "mock_whole_book", "whole_book_native"}:
+    if run.task_type in {
+        "whole_book_mock",
+        "mock_whole_book",
+        "whole_book_native",
+        "whole_book_mock_lab",
+    }:
         return True
     if run.client_request_id and str(run.client_request_id).startswith("mock_lab:"):
         return True
-    # Heuristic: staged whole-book runs with mock engine marker in prompt_version.
     if run.prompt_version and "mock" in str(run.prompt_version).lower():
         return True
+    if run.analysis_type and "whole_book" in str(run.analysis_type):
+        # Prefer metadata; heuristic only if metadata absent.
+        return bool(run.validated_output) and "mock_lab" in str(run.validated_output).lower()
     return False
 
 
@@ -735,16 +744,25 @@ class MockRunRecoveryService:
                 detail_code="SNAPSHOT_NOT_COMPLETED",
             )
 
-        # Engine id/version markers: model = mock:<engine_id>@<version>
-        # prompt_version may also carry engine_version for Lab runs.
+        # Engine id/version: prefer mock metadata envelope; fallback to model marker.
         run_engine_id = MOCK_ENGINE_ID
-        run_engine_version = run.prompt_version or MOCK_ENGINE_VERSION
-        if run.model and str(run.model).startswith("mock:"):
-            rest = str(run.model)[5:]
-            if "@" in rest:
-                run_engine_id, run_engine_version = rest.split("@", 1)
-            else:
-                run_engine_id = rest
+        run_engine_version = MOCK_ENGINE_VERSION
+        try:
+            from app.narrative_core.services.mock_run_metadata import parse_metadata_json
+
+            meta = parse_metadata_json(run.validated_output)
+            run_engine_id = str(meta.get("engine_id") or run_engine_id)
+            run_engine_version = str(meta.get("engine_version") or run_engine_version)
+        except Exception:  # noqa: BLE001 — fall back to model field
+            if run.model and str(run.model).startswith("mock:"):
+                rest = str(run.model)[5:]
+                if "@" in rest:
+                    run_engine_id, run_engine_version = rest.split("@", 1)
+                else:
+                    run_engine_id = rest
+            elif run.model == MOCK_ENGINE_ID:
+                run_engine_id = MOCK_ENGINE_ID
+                run_engine_version = MOCK_ENGINE_VERSION
         if run_engine_id != self._engine_id or run_engine_version != self._engine_version:
             raise_mock_run_error(
                 MockRunErrorCode.MOCK_RUN_ENGINE_VERSION_MISMATCH, run_id=run.id

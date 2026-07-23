@@ -1,13 +1,16 @@
-"""Mock whole-book run metadata helpers (Phase 2A Agent M).
+"""Mock whole-book run metadata helpers (Phase 2A Agent M + Integration).
 
-Persists Lab metadata in existing AnalysisRun.validated_output JSON.
+Persists Lab metadata in existing AnalysisRun.validated_output JSON under the
+frozen nested envelope key ``mock_whole_book_run_metadata``.
 No new DB columns / migrations. Schema/version required; silent field drop forbidden.
+Merge writes preserve other validated_output keys.
 """
 
 from __future__ import annotations
 
 import hashlib
 import json
+from datetime import datetime, timezone
 from typing import Any, Mapping, Sequence
 
 from app.narrative_core.run_shell_contract.create_run import (
@@ -20,6 +23,7 @@ from app.narrative_core.run_shell_contract.mock_lab import MOCK_ENGINE_ID, MOCK_
 
 # Documented: existing Text JSON columns are sufficient — no Schema Issue.
 METADATA_STORAGE_COLUMN = "validated_output"
+METADATA_ENVELOPE_KEY = "mock_whole_book_run_metadata"
 METADATA_SCHEMA_SUFFICIENT = True
 METADATA_SCHEMA_ISSUES: tuple[str, ...] = ()
 
@@ -53,6 +57,27 @@ REQUIRED_METADATA_KEYS: frozenset[str] = frozenset(
     }
 )
 
+# Keys written into the nested metadata node (not result artifacts / checkpoints).
+_ALL_METADATA_WRITE_KEYS: frozenset[str] = frozenset(
+    {
+        *REQUIRED_METADATA_KEYS,
+        "preflight_fingerprint",
+        "mock_profile",
+        "requested_by",
+        "idempotency_key",
+        "idempotency_payload_hash",
+        "state_version",
+        "storage_column",
+        "synthetic",
+        "created_at",
+        "source",
+    }
+)
+
+
+def _utc_now_iso() -> str:
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
 
 def build_mock_run_metadata(
     *,
@@ -70,6 +95,7 @@ def build_mock_run_metadata(
     idempotency_key: str,
     idempotency_payload_hash: str,
     state_version: int = 0,
+    created_at: str | None = None,
     extra: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     core = MockRunPersistenceMetadata(
@@ -103,6 +129,7 @@ def build_mock_run_metadata(
         "engine_version": core.engine_version,
         "configuration_fingerprint": core.configuration_fingerprint,
         "mock": True,
+        "synthetic": True,
         "non_production": True,
         "source": core.source,
         "preflight_fingerprint": str(preflight_fingerprint),
@@ -111,6 +138,7 @@ def build_mock_run_metadata(
         "idempotency_key": str(idempotency_key),
         "idempotency_payload_hash": str(idempotency_payload_hash),
         "state_version": int(state_version),
+        "created_at": created_at or _utc_now_iso(),
         "storage_column": METADATA_STORAGE_COLUMN,
     }
     if extra:
@@ -122,23 +150,6 @@ def build_mock_run_metadata(
                 )
             payload.setdefault(key, value)
     return payload
-
-
-def serialize_metadata(metadata: Mapping[str, Any]) -> str:
-    validate_mock_run_metadata(metadata)
-    return json.dumps(dict(metadata), ensure_ascii=False, sort_keys=True)
-
-
-def parse_metadata_json(raw: str | None) -> dict[str, Any]:
-    if raw is None or not str(raw).strip():
-        raise MockRunMetadataError(MockRunErrorCode.MOCK_RUN_NON_MOCK_TARGET)
-    try:
-        data = json.loads(raw)
-    except json.JSONDecodeError as exc:
-        raise MockRunMetadataError(MockRunErrorCode.MOCK_RUN_NON_MOCK_TARGET) from exc
-    if not isinstance(data, dict):
-        raise MockRunMetadataError(MockRunErrorCode.MOCK_RUN_NON_MOCK_TARGET)
-    return validate_mock_run_metadata(data)
 
 
 def validate_mock_run_metadata(data: Mapping[str, Any]) -> dict[str, Any]:
@@ -183,6 +194,76 @@ def validate_mock_run_metadata(data: Mapping[str, Any]) -> dict[str, Any]:
     return dict(data)
 
 
+def extract_metadata_from_validated_output(data: Mapping[str, Any]) -> dict[str, Any]:
+    """Extract nested envelope or accept flat Agent-M layout for read compat."""
+    if not isinstance(data, dict):
+        raise MockRunMetadataError(MockRunErrorCode.MOCK_RUN_NON_MOCK_TARGET)
+    nested = data.get(METADATA_ENVELOPE_KEY)
+    if nested is not None:
+        if not isinstance(nested, dict):
+            raise MockRunMetadataError(
+                MockRunErrorCode.MOCK_RUN_NON_MOCK_TARGET,
+                "mock_whole_book_run_metadata must be an object",
+            )
+        return validate_mock_run_metadata(nested)
+    # Flat layout (Agent M primary writes before Integration envelope freeze).
+    if data.get("schema") == MOCK_RUN_METADATA_SCHEMA:
+        return validate_mock_run_metadata(data)
+    raise MockRunMetadataError(MockRunErrorCode.MOCK_RUN_NON_MOCK_TARGET)
+
+
+def merge_mock_metadata_into_validated_output(
+    existing_raw: str | None,
+    metadata: Mapping[str, Any],
+) -> str:
+    """Merge nested metadata into validated_output without wiping other keys."""
+    base: dict[str, Any] = {}
+    if existing_raw is not None and str(existing_raw).strip():
+        try:
+            parsed = json.loads(existing_raw)
+        except json.JSONDecodeError as exc:
+            raise MockRunMetadataError(
+                MockRunErrorCode.MOCK_RUN_NON_MOCK_TARGET,
+                "validated_output is not valid JSON",
+            ) from exc
+        if not isinstance(parsed, dict):
+            raise MockRunMetadataError(
+                MockRunErrorCode.MOCK_RUN_NON_MOCK_TARGET,
+                "validated_output must be a JSON object",
+            )
+        base = dict(parsed)
+
+    inner = validate_mock_run_metadata(dict(metadata))
+
+    # Migrate flat Agent-M layout → nested envelope while preserving extras.
+    if METADATA_ENVELOPE_KEY not in base and base.get("schema") == MOCK_RUN_METADATA_SCHEMA:
+        extras = {k: v for k, v in base.items() if k not in _ALL_METADATA_WRITE_KEYS}
+        base = extras
+
+    base[METADATA_ENVELOPE_KEY] = inner
+    return json.dumps(base, ensure_ascii=False, sort_keys=True)
+
+
+def serialize_metadata(
+    metadata: Mapping[str, Any],
+    *,
+    existing_validated_output: str | None = None,
+) -> str:
+    return merge_mock_metadata_into_validated_output(existing_validated_output, metadata)
+
+
+def parse_metadata_json(raw: str | None) -> dict[str, Any]:
+    if raw is None or not str(raw).strip():
+        raise MockRunMetadataError(MockRunErrorCode.MOCK_RUN_NON_MOCK_TARGET)
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise MockRunMetadataError(MockRunErrorCode.MOCK_RUN_NON_MOCK_TARGET) from exc
+    if not isinstance(data, dict):
+        raise MockRunMetadataError(MockRunErrorCode.MOCK_RUN_NON_MOCK_TARGET)
+    return extract_metadata_from_validated_output(data)
+
+
 def is_mock_lab_run_metadata(raw: str | None) -> bool:
     try:
         parse_metadata_json(raw)
@@ -215,14 +296,17 @@ def hash_create_payload(
 
 
 __all__ = [
+    "METADATA_ENVELOPE_KEY",
     "METADATA_SCHEMA_ISSUES",
     "METADATA_SCHEMA_SUFFICIENT",
     "METADATA_STORAGE_COLUMN",
     "REQUIRED_METADATA_KEYS",
     "MockRunMetadataError",
     "build_mock_run_metadata",
+    "extract_metadata_from_validated_output",
     "hash_create_payload",
     "is_mock_lab_run_metadata",
+    "merge_mock_metadata_into_validated_output",
     "parse_metadata_json",
     "serialize_metadata",
     "validate_mock_run_metadata",

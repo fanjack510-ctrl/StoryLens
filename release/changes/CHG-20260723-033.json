@@ -3,13 +3,19 @@
   "title": "Agent N Frontend Mock Run Lab",
   "type": "feature",
   "base_version": "1.0.5",
-  "status": "implemented",
+  "status": "tested",
   "include_in_next_release": true,
   "commits": [
     {
-      "sha": "d006a7235fb04ea281ca52299b46063ee497a9eb",
+      "sha": "08d2897cc1c7401758b2906909ffb49111404d32",
       "message": "feat: implement whole book mock run lab",
       "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "dbd0ee8dc8e98eb231b1f5428d4f820f63396eb5",
+      "message": "docs: attach primary commit to CHG-20260723-033",
+      "primary": false,
       "multi_change_reason": null
     }
   ],
@@ -72,7 +78,7 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T15:04:11Z",
-  "updated_at": "2026-07-23T15:50:55Z",
+  "updated_at": "2026-07-23T16:30:00Z",
   "parallel_plan": {
     "role": "agent_n",
     "branch": "feature/narrative-phase2a-run-frontend",
@@ -94,8 +100,7 @@
   },
   "file_ownership": "docs/architecture/narrative-intelligence-core/phase2a-parallel-file-ownership.json",
   "integration_issues": [
-    "II-N-001: Lab router registration in apps/api/app/main.py is Integration (CHG-035) ownership — frontend client assumes Lab API exists when Lab enabled.",
-    "II-N-002: WHOLE_BOOK_MOCK_LAB_ENABLED remains false by default; Lab UI requires explicit labEnabled prop or future env toggle by Integration.",
-    "II-N-003: Result API router mount remains Integration concern; Lab result client uses Phase 1D paths when available."
+    "II-N-002: WHOLE_BOOK_MOCK_LAB_ENABLED remains false by default; Lab UI requires explicit labEnabled prop or env toggle (Integration wires backend gate in main.py).",
+    "II-N-003: Result API router mount confirmed by Integration; Lab result client uses Phase 1D paths."
   ]
 }

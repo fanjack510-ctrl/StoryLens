@@ -102,6 +102,11 @@ class DefaultMockWholeBookRunExecutor:
         engine: MockWholeBookAnalysisEngine | None = None,
         hooks: MockExecutorTestHooks | None = None,
         lab_hooks_allowed: bool = True,
+        idempotency: Any | None = None,
+        concurrency: Any | None = None,
+        budget_guard: Any | None = None,
+        audit: Any | None = None,
+        fault_injection: Any | None = None,
     ) -> None:
         self._session = session
         self._stages = stage_service or RunStageService(session)
@@ -135,6 +140,12 @@ class DefaultMockWholeBookRunExecutor:
         self._hooks = hooks or MockExecutorTestHooks()
         self._lab_hooks_allowed = bool(lab_hooks_allowed)
         self._started: set[int] = set()
+        # Optional Agent O wiring (Integration composition root).
+        self._idempotency = idempotency
+        self._concurrency = concurrency
+        self._mock_budget = budget_guard
+        self._audit = audit
+        self._fault = fault_injection
 
     # ----- Protocol -----
 
@@ -170,7 +181,7 @@ class DefaultMockWholeBookRunExecutor:
         except MockRunStateError as exc:
             raise MockExecutorError(exc.error.code, run_id=int(run.id)) from exc
         meta["state_version"] = result.version
-        run.validated_output = serialize_metadata(meta)
+        run.validated_output = serialize_metadata(meta, existing_validated_output=run.validated_output)
         run.status = RunStatus.RUNNING.value
         self._registry.register(int(run.id))
         self._registry.mark_running(int(run.id))
@@ -411,7 +422,7 @@ class DefaultMockWholeBookRunExecutor:
         )
 
     def recover(self, run_id: int) -> MockExecutorActionResult:
-        """Mark interrupted only — no silent auto-continue (Agent O owns recovery core)."""
+        """Mark interrupted only ??no silent auto-continue (Agent O owns recovery core)."""
         run, meta = self._require_mock_run(run_id)
         current = map_db_status_to_view(str(run.status))
         if current in {
@@ -663,7 +674,7 @@ class DefaultMockWholeBookRunExecutor:
                 StageStatus.INTERRUPTED,
                 StageStatus.FAILED,
             }:
-                # Do not auto-execute FAILED here — requires retry.
+                # Do not auto-execute FAILED here ??requires retry.
                 if st == StageStatus.FAILED:
                     return None
                 return str(stage.stage_key)
@@ -699,7 +710,7 @@ class DefaultMockWholeBookRunExecutor:
                 metadata=meta,
             )
             meta["state_version"] = result.version
-            run.validated_output = serialize_metadata(meta)
+            run.validated_output = serialize_metadata(meta, existing_validated_output=run.validated_output)
             run.status = to_state.value if to_state != WholeBookRunViewStatus.PENDING else RunStatus.PENDING.value
             self._session.commit()
         except MockRunStateError as exc:
@@ -715,7 +726,7 @@ class DefaultMockWholeBookRunExecutor:
 
     def _check_cancel_after(self, run_id: int) -> None:
         if self._registry.is_cancel_requested(run_id):
-            # Soft signal — cancel() applies terminal transition.
+            # Soft signal ??cancel() applies terminal transition.
             self._cancel.cancel()
 
 

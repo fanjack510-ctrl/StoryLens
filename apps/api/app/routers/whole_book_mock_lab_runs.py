@@ -1,7 +1,8 @@
-"""Mock Lab whole-book run HTTP API (Phase 2A Agent M).
+"""Mock Lab whole-book run HTTP API (Phase 2A Agent M + Integration).
 
 Routes under /api/v1/labs/whole-book-runs.
-Not registered in main.py here — Integration owns app wiring (report Integration Issue).
+Conditionally registered by Integration in apps/api/app/main.py when
+environment is development/test AND WHOLE_BOOK_MOCK_LAB_ENABLED=true.
 Production POST /api/v1/books/{book_id}/whole-book-runs remains disabled.
 """
 
@@ -9,7 +10,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -32,13 +33,15 @@ from app.narrative_core.run_shell_contract.mock_lab import (
 )
 from app.narrative_core.contracts.api_dto import WHOLE_BOOK_RUNS_ENDPOINT_DISABLED
 from app.narrative_core.services.mock_lab_authorization_service import (
-    MockLabAuthorizationService,
     is_loopback_host,
     request_marker_present,
 )
 from app.narrative_core.services.mock_whole_book_run_executor import (
     DefaultMockWholeBookRunExecutor,
     MockExecutorError,
+)
+from app.narrative_core.services.mock_whole_book_run_runtime import (
+    get_default_mock_lab_runtime,
 )
 from app.narrative_core.services.mock_whole_book_run_service import (
     MockWholeBookRunError,
@@ -50,11 +53,11 @@ router = APIRouter(
     tags=list(OPENAPI_LAB_TAGS),
 )
 
-# Integration Issue: router exists but is not included in apps/api/app/main.py
-# (main.py is Integration ownership). Tests mount this router directly.
+# Historical note (resolved by CHG-20260723-035 Integration wiring).
 INTEGRATION_ISSUE_MAIN_PY_ROUTER_REGISTRATION = (
-    "Lab router whole_book_mock_lab_runs is implemented but not registered in "
-    "apps/api/app/main.py (Integration ownership CHG-20260723-035)."
+    "Lab router whole_book_mock_lab_runs is conditionally registered in "
+    "apps/api/app/main.py when development/test + WHOLE_BOOK_MOCK_LAB_ENABLED=true "
+    "(CHG-20260723-035)."
 )
 
 
@@ -158,10 +161,16 @@ def _require_write_lab_gate(request: Request) -> None:
 
 
 def get_run_service(session: Session = Depends(get_db)) -> MockWholeBookRunService:
+    runtime = get_default_mock_lab_runtime()
+    if runtime is not None:
+        return runtime.build_run_service(session)
     return MockWholeBookRunService(session)
 
 
 def get_executor(session: Session = Depends(get_db)) -> DefaultMockWholeBookRunExecutor:
+    runtime = get_default_mock_lab_runtime()
+    if runtime is not None:
+        return runtime.build_executor(session, lab_hooks_allowed=True)
     return DefaultMockWholeBookRunExecutor(session, lab_hooks_allowed=True)
 
 
@@ -219,7 +228,6 @@ def get_mock_whole_book_run(
     request: Request,
     service: MockWholeBookRunService = Depends(get_run_service),
 ) -> dict[str, Any]:
-    # Reads still require Lab enabled + marker for isolation.
     _require_write_lab_gate(request)
     try:
         service.authorize(
@@ -243,7 +251,15 @@ def get_mock_whole_book_run_stages(
             loopback=is_loopback_host(_client_host(request)),
             request_marker_present=True,
         )
-        return {"run_id": int(run_id), "stages": service.get_run_stages(int(run_id))}
+        run_view = service.get_run(int(run_id))
+        return {
+            "run_id": int(run_id),
+            "mock": True,
+            "non_production": True,
+            "stages": run_view.get("stages") or service.get_run_stages(int(run_id)),
+            "updated_at": run_view.get("updated_at"),
+            "version": run_view.get("version") or run_view.get("state_version") or 0,
+        }
     except MockWholeBookRunError as exc:
         raise _error_response(exc) from exc
 
@@ -258,10 +274,7 @@ def pause_mock_whole_book_run(
     _require_write_lab_gate(request)
     payload = body or MockRunActionBody()
     try:
-        service.authorize(
-            loopback=True,
-            request_marker_present=True,
-        )
+        service.authorize(loopback=True, request_marker_present=True)
         return service.pause_run(
             int(run_id),
             expected_state=payload.expected_state,
@@ -338,7 +351,6 @@ def retry_mock_whole_book_stage(
             expected_version=payload.expected_version,
             operation_idempotency_key=payload.operation_idempotency_key,
         )
-        # Execute the retried stage once via executor.
         executor.execute_next_stage(int(run_id))
         return result
     except (MockWholeBookRunError, MockExecutorError) as exc:
@@ -359,6 +371,8 @@ def lab_contract_assertions() -> dict[str, Any]:
 
 __all__ = [
     "INTEGRATION_ISSUE_MAIN_PY_ROUTER_REGISTRATION",
+    "get_executor",
+    "get_run_service",
     "lab_contract_assertions",
     "router",
 ]

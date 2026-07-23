@@ -3,18 +3,24 @@
   "title": "Agent O Recovery and Reliability",
   "type": "feature",
   "base_version": "1.0.5",
-  "status": "registered",
+  "status": "tested",
   "include_in_next_release": true,
   "commits": [
     {
-      "sha": "a253652da04741b4d9e4fa769404d79f781d3a3b",
+      "sha": "208adc474746aae2c28d138008b179e3c532a5ef",
       "message": "feat: implement mock run recovery and reliability",
       "primary": true,
       "multi_change_reason": null
     },
     {
-      "sha": "af344e5df3712cc3e77c637fa48eceeec6a9ac71",
+      "sha": "5461cb12dc7e07d8078df79476be18ff6a87ca0c",
       "message": "docs: attach recovery commit to CHG-20260723-034",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "32ee45a8f9168e8934b8f5adcbaaac9cd26d77fc",
+      "message": "docs: sync CHG-20260723-034 commit list",
       "primary": false,
       "multi_change_reason": null
     }
@@ -74,7 +80,7 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T15:04:12Z",
-  "updated_at": "2026-07-23T15:49:40Z",
+  "updated_at": "2026-07-23T16:30:00Z",
   "parallel_plan": {
     "role": "agent_o",
     "branch": "feature/narrative-phase2a-recovery",
@@ -96,8 +102,7 @@
   },
   "file_ownership": "docs/architecture/narrative-intelligence-core/phase2a-parallel-file-ownership.json",
   "integration_issues": [
-    "Wire MockRunStartupRecoveryAdapter into apps/api/app/main.py during CHG-035 (do not auto-resume).",
-    "AnalysisRun has no metadata_json; durable idempotency deferred (Schema Issue).",
-    "Agent M Mock Run Service merge required before Lab API end-to-end wiring."
+    "Create idempotency durable via validated_output envelope (Integration CHG-035); operation idempotency remains process-local.",
+    "MockRunStartupRecoveryAdapter wired in main.py lifespan reconcile (CHG-035); no silent auto-resume."
   ]
 }

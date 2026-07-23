@@ -7,20 +7,26 @@
   "include_in_next_release": true,
   "commits": [
     {
-      "sha": "088f26498cf48a199860afe1069d9402983f4864",
+      "sha": "b948c844aeae613d5dd1c7477be97418e411de73",
       "message": "docs: strip trailing whitespace in phase2a backend docs",
       "primary": false,
       "multi_change_reason": null
     },
     {
-      "sha": "506b99a7be42d9aabfd8279fce92b889d30366f7",
+      "sha": "8b08f386ded2af5466ec655bbea4a47c1fba5841",
       "message": "feat: implement backend mock whole book runs",
       "primary": true,
       "multi_change_reason": null
     },
     {
-      "sha": "e415b41cc8c70ed42b628deb469bf70b1be03ac4",
+      "sha": "ea44052b65b9862ee0dedbb22da48c0ae8c1a8d7",
       "message": "docs: attach primary commit to CHG-20260723-032",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "8cac9e47b30863804a2498289994acf30bce5075",
+      "message": "docs: close CHG-20260723-032 commit attachment loop",
       "primary": false,
       "multi_change_reason": null
     }
@@ -82,7 +88,7 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T15:04:11Z",
-  "updated_at": "2026-07-23T15:50:53Z",
+  "updated_at": "2026-07-23T16:30:00Z",
   "parallel_plan": {
     "role": "agent_m",
     "branch": "feature/narrative-phase2a-run-backend",
@@ -102,8 +108,5 @@
     ],
     "file_ownership": "docs/architecture/narrative-intelligence-core/phase2a-parallel-file-ownership.json"
   },
-  "file_ownership": "docs/architecture/narrative-intelligence-core/phase2a-parallel-file-ownership.json",
-  "integration_issues": [
-    "Lab router not registered in apps/api/app/main.py (Integration ownership CHG-20260723-035)"
-  ]
+  "file_ownership": "docs/architecture/narrative-intelligence-core/phase2a-parallel-file-ownership.json"
 }
