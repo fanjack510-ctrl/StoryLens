@@ -7,34 +7,58 @@
   "include_in_next_release": true,
   "commits": [],
   "modules": [
-    "narrative_core"
+    "narrative_core",
+    "database",
+    "architecture"
   ],
-  "files": [],
-  "user_summary": "Implement Relation versioning, evidence, and Analysis Conflict contracts.",
-  "technical_summary": "Pre-registered parallel Change. Implements services for role=agent_f; migration ownership 009-010. Fork from Phase 1B-P HEAD only. Do not edit models.py table structures.",
+  "files": [
+    "apps/api/app/narrative_core/migrations/runner.py",
+    "apps/api/app/narrative_core/services/__init__.py",
+    "apps/api/app/narrative_core/services/relation_repository.py",
+    "apps/api/app/narrative_core/services/relation_service.py",
+    "apps/api/app/narrative_core/services/conflict_service.py",
+    "apps/api/tests/test_narrative_relation_service.py",
+    "apps/api/tests/test_narrative_conflict_service.py",
+    "docs/architecture/narrative-intelligence-core/phase1b-relation-version-implementation.md",
+    "docs/architecture/narrative-intelligence-core/phase1b-relation-evidence-implementation.md",
+    "docs/architecture/narrative-intelligence-core/phase1b-analysis-conflict-implementation.md",
+    "docs/architecture/narrative-intelligence-core/phase1b-relation-verification.md",
+    "release/changes/CHG-20260723-019.json"
+  ],
+  "user_summary": "Implement Relation versioning, evidence validation, and Analysis Conflict services for Phase 1B.",
+  "technical_summary": "Owns migrations 009-010 refinements; NarrativeRelationServiceImpl with stable relation_key, canonical/lock/stale/supersede; Relation Evidence via SnapshotValidationGateway; AnalysisConflictServiceImpl with ConflictCreateRequest for Agent E/Integration.",
   "acceptance_criteria": [
     "Fork from feature/narrative-phase1b-contract final HEAD",
     "Do not modify models.py table structures",
-    "Stay within file ownership JSON"
+    "Stay within file ownership JSON",
+    "Migrations 009/010 idempotent with checksum ledger",
+    "Canonical requires support evidence; locked blocks model canonical"
   ],
-  "tests": [],
-  "verification_evidence": [],
+  "tests": [
+    "pytest apps/api/tests/test_narrative_relation_service.py apps/api/tests/test_narrative_conflict_service.py (19 passed)",
+    "python scripts/version_manager.py check",
+    "python scripts/change_registry.py check",
+    "git diff --check"
+  ],
+  "verification_evidence": [
+    "Directed SQLite tests cover create/confirm/correct/reject/lock/canonical/evidence/conflict lifecycle; old DB upgrade path; FK and partial unique canonical integrity"
+  ],
   "data_compatibility": {
-    "database_changed": false,
-    "migration_required": false,
+    "database_changed": true,
+    "migration_required": true,
     "user_data_compatible": true,
-    "notes": ""
+    "notes": "Additive narrative_relations/versions/evidence and analysis_conflicts only; no history backfill; no dual-write."
   },
   "release_impact": {
     "requires_reanalysis": false,
-    "requires_restart": false,
+    "requires_restart": true,
     "updater_impact": false,
     "breaking_change": false
   },
   "blocker_level": null,
   "head_inclusion": null,
   "created_at": "2026-07-23T08:33:16Z",
-  "updated_at": "2026-07-23T08:43:10Z",
+  "updated_at": "2026-07-23T09:05:00Z",
   "parallel_plan": {
     "role": "agent_f",
     "branch": "feature/narrative-phase1b-relations",

@@ -4,6 +4,7 @@ Phase 1A: migration ledger, content hash backfill, book snapshot,
 run scope, and run stage lifecycle.
 Phase 1B Agent D: narrative entity / alias repository and service.
 Phase 1B Agent E: narrative asset / version / evidence.
+Phase 1B Agent F: relation / evidence / analysis conflict.
 """
 
 from app.narrative_core.services.asset_evidence_service import NarrativeAssetEvidenceService
@@ -12,6 +13,10 @@ from app.narrative_core.services.asset_service import (
     AssetCanonicalConflictRequest,
     AssetMutationResult,
     NarrativeAssetService,
+)
+from app.narrative_core.services.conflict_service import (
+    AnalysisConflictServiceImpl,
+    ConflictCreateRequest,
 )
 from app.narrative_core.services.entity_repository import (
     NarrativeEntityRepository,
@@ -23,6 +28,8 @@ from app.narrative_core.services.entity_service import (
 )
 from app.narrative_core.services.hash_backfill import ContentHashServiceImpl
 from app.narrative_core.services.migration_ledger import MigrationLedgerService
+from app.narrative_core.services.relation_repository import NarrativeRelationRepository
+from app.narrative_core.services.relation_service import NarrativeRelationServiceImpl
 from app.narrative_core.services.run_scope_service import RunScopeService
 from app.narrative_core.services.run_stage_repository import (
     CHECKPOINT_SCHEMA,
@@ -59,6 +66,10 @@ __all__ = [
     "NarrativeAssetEvidenceService",
     "AssetCanonicalConflictRequest",
     "AssetMutationResult",
+    "NarrativeRelationRepository",
+    "NarrativeRelationServiceImpl",
+    "AnalysisConflictServiceImpl",
+    "ConflictCreateRequest",
 ]
 
 # StubSnapshotValidationGateway / make_stub_completed_snapshot remain importable

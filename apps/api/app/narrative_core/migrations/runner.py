@@ -920,50 +920,54 @@ def migrate_narrative_20260723_008_narrative_asset_evidence(engine: Engine) -> N
 def migrate_narrative_20260723_009_narrative_relations_versions_evidence(
     engine: Engine,
 ) -> None:
+    """Agent F: narrative_relations / versions / evidence (idempotent, no backfill)."""
     checksum = migration_checksum(SQL_009)
     names = _table_names(engine)
     if "narrative_relations" not in names:
         _exec_sql_script(engine, SQL_009)
         with engine.begin() as connection:
-            connection.execute(
-                text(
-                    "CREATE INDEX IF NOT EXISTS ix_narrative_relations_book_id "
-                    "ON narrative_relations (book_id)"
-                )
-            )
-            connection.execute(
-                text(
-                    "CREATE INDEX IF NOT EXISTS ix_narrative_relation_versions_relation_id "
-                    "ON narrative_relation_versions (relation_id)"
-                )
-            )
-            connection.execute(
-                text(
-                    "CREATE INDEX IF NOT EXISTS ix_narrative_relation_evidence_version "
-                    "ON narrative_relation_evidence (relation_version_id)"
-                )
-            )
+            for statement in (
+                "CREATE INDEX IF NOT EXISTS ix_narrative_relations_book_id "
+                "ON narrative_relations (book_id)",
+                "CREATE INDEX IF NOT EXISTS ix_narrative_relations_source "
+                "ON narrative_relations (source_asset_id)",
+                "CREATE INDEX IF NOT EXISTS ix_narrative_relations_target "
+                "ON narrative_relations (target_asset_id)",
+                "CREATE INDEX IF NOT EXISTS ix_narrative_relation_versions_relation_id "
+                "ON narrative_relation_versions (relation_id)",
+                "CREATE INDEX IF NOT EXISTS ix_narrative_relation_versions_rel_review "
+                "ON narrative_relation_versions (relation_id, review_status)",
+                "CREATE INDEX IF NOT EXISTS ix_narrative_relation_versions_snapshot "
+                "ON narrative_relation_versions (book_snapshot_id)",
+                "CREATE INDEX IF NOT EXISTS ix_narrative_relation_evidence_version "
+                "ON narrative_relation_evidence (relation_version_id)",
+                "CREATE INDEX IF NOT EXISTS ix_narrative_relation_evidence_snapshot "
+                "ON narrative_relation_evidence (book_snapshot_id)",
+            ):
+                connection.execute(text(statement))
     _ensure_schema_migrations_table(engine)
     _record_applied(engine, MIGRATION_NARRATIVE_RELATIONS_VERSIONS_EVIDENCE, checksum)
 
 
 def migrate_narrative_20260723_010_analysis_conflicts(engine: Engine) -> None:
+    """Agent F: analysis_conflicts (idempotent, no auto-adjudication, no backfill)."""
     checksum = migration_checksum(SQL_010)
     if "analysis_conflicts" not in _table_names(engine):
         _exec_sql_script(engine, SQL_010)
         with engine.begin() as connection:
-            connection.execute(
-                text(
-                    "CREATE INDEX IF NOT EXISTS ix_analysis_conflicts_book_status "
-                    "ON analysis_conflicts (book_id, status)"
-                )
-            )
-            connection.execute(
-                text(
-                    "CREATE INDEX IF NOT EXISTS ix_analysis_conflicts_run "
-                    "ON analysis_conflicts (run_id)"
-                )
-            )
+            for statement in (
+                "CREATE INDEX IF NOT EXISTS ix_analysis_conflicts_book_status "
+                "ON analysis_conflicts (book_id, status)",
+                "CREATE INDEX IF NOT EXISTS ix_analysis_conflicts_run "
+                "ON analysis_conflicts (run_id)",
+                "CREATE INDEX IF NOT EXISTS ix_analysis_conflicts_book_id "
+                "ON analysis_conflicts (book_id)",
+                "CREATE INDEX IF NOT EXISTS ix_analysis_conflicts_conflict_type "
+                "ON analysis_conflicts (conflict_type)",
+                "CREATE INDEX IF NOT EXISTS ix_analysis_conflicts_status "
+                "ON analysis_conflicts (status)",
+            ):
+                connection.execute(text(statement))
     _ensure_schema_migrations_table(engine)
     _record_applied(engine, MIGRATION_ANALYSIS_CONFLICTS, checksum)
 
