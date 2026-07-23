@@ -3,7 +3,7 @@
   "title": "Phase 1B-P: Narrative Asset Contract skeleton",
   "type": "database",
   "base_version": "1.0.5",
-  "status": "tested",
+  "status": "verified",
   "include_in_next_release": true,
   "commits": [
     {
@@ -61,7 +61,9 @@
     "git diff --check"
   ],
   "verification_evidence": [
-    "Local contract tests on temp SQLite; simulated Phase 1A upgrade preserves analysis_runs row 42 and artifact; canonical partial unique indexes enforce one canonical version"
+    "Local contract tests on temp SQLite; simulated Phase 1A upgrade preserves analysis_runs row 42 and artifact; canonical partial unique indexes enforce one canonical version",
+    "User confirmed Phase 1B-P Contract acceptance; Agents D/E/F forked and completed; Integration CHG-020 in progress",
+    "docs/architecture/narrative-intelligence-core/phase1b-contract-verification.md"
   ],
   "data_compatibility": {
     "database_changed": true,
@@ -78,7 +80,7 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T08:33:16Z",
-  "updated_at": "2026-07-23T08:46:02Z",
+  "updated_at": "2026-07-23T10:22:44Z",
   "parallel_plan": {
     "role": "phase1bp",
     "branch": "feature/narrative-phase1b-contract",

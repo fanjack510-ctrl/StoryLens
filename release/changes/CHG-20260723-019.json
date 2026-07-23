@@ -7,19 +7,31 @@
   "include_in_next_release": true,
   "commits": [
     {
-      "sha": "8ab59c91c3272ec9a7d525f4829051660453977b",
+      "sha": "052cd0e74a1d2e4fa01be0215bc69d8dfaff67e9",
       "message": "feat: implement narrative relations and conflicts",
       "primary": true,
       "multi_change_reason": null
     },
     {
-      "sha": "2eb156250c924f181274b9624822f67e13cb4668",
+      "sha": "23c9c3a278b5f388b641fbd2d493371bc59ebb39",
       "message": "docs: attach registry sync commit to CHG-20260723-019",
       "primary": false,
       "multi_change_reason": null
     },
     {
-      "sha": "d61e811e44a34fe37275adcae5c0aa28a1c01c11",
+      "sha": "a8e6b70d993e36430d0451e27e467679396c49ac",
+      "message": "docs: close CHG-20260723-019 commit attachment loop",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "cb5d603481a5a6aceb111eabe28499053372a9eb",
+      "message": "docs: finalize CHG-20260723-019 commit attachments",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "a5a8229ab6bd722c7a27e6222ff6079ca383716b",
       "message": "docs: close CHG-20260723-019 commit attachment loop",
       "primary": false,
       "multi_change_reason": null
@@ -60,7 +72,8 @@
     "git diff --check"
   ],
   "verification_evidence": [
-    "Directed SQLite tests cover create/confirm/correct/reject/lock/canonical/evidence/conflict lifecycle; old DB upgrade path; FK and partial unique canonical integrity"
+    "Directed SQLite tests cover create/confirm/correct/reject/lock/canonical/evidence/conflict lifecycle; old DB upgrade path; FK and partial unique canonical integrity",
+    "Agent F source SHA 8ab59c9..f9a7b08 (feature/narrative-phase1b-relations); Integration cherry-picks 052cd0e..a5a8229."
   ],
   "data_compatibility": {
     "database_changed": true,
@@ -77,7 +90,7 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T08:33:16Z",
-  "updated_at": "2026-07-23T09:04:18Z",
+  "updated_at": "2026-07-23T10:26:49Z",
   "parallel_plan": {
     "role": "agent_f",
     "branch": "feature/narrative-phase1b-relations",

@@ -16,6 +16,19 @@ class NarrativeEntityService(Protocol):
     ) -> Any:
         """Create stable Entity identity. review/candidate does not live here."""
 
+    def get_entity(self, entity_id: int) -> Any:
+        ...
+
+    def list_entities(
+        self,
+        book_id: int,
+        *,
+        entity_type: str | None = None,
+        lifecycle_status: str | None = None,
+        include_inactive: bool = False,
+    ) -> list[Any]:
+        ...
+
     def add_alias_candidate(
         self,
         entity_id: int,
@@ -26,6 +39,9 @@ class NarrativeEntityService(Protocol):
         source_snapshot_id: int | None = None,
     ) -> Any:
         """Model-discovered names become Alias candidates; never overwrite canonical_name."""
+
+    def list_entity_aliases(self, entity_id: int) -> list[Any]:
+        ...
 
     def confirm_alias(self, alias_id: int) -> Any:
         ...
@@ -39,8 +55,22 @@ class NarrativeEntityService(Protocol):
     def unlock_entity(self, entity_id: int) -> Any:
         ...
 
+    def archive_entity(self, entity_id: int) -> Any:
+        ...
+
+    def supersede_entity(
+        self, entity_id: int, *, superseded_by_entity_id: int | None = None
+    ) -> Any:
+        ...
+
     def find_entity_by_alias(self, book_id: int, alias_text: str) -> Any | None:
         ...
 
-    def merge_entities(self, survivor_id: int, absorbed_id: int) -> Any:
-        """Frozen semantic only in Phase 1B-P — complex merge deferred to Agent D/Integration."""
+    def merge_entities(
+        self,
+        source_entity_id: int,
+        target_entity_id: int,
+        *,
+        actor: str = "user",
+    ) -> Any:
+        """Merge source identity into target; source becomes superseded."""

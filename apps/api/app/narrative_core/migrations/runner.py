@@ -503,10 +503,12 @@ CREATE TABLE narrative_entities (
     lifecycle_status VARCHAR(32) NOT NULL DEFAULT 'active',
     is_locked INTEGER NOT NULL DEFAULT 0,
     locked_at DATETIME,
+    superseded_by_entity_id INTEGER,
     created_by VARCHAR(64),
     created_at DATETIME NOT NULL,
     updated_at DATETIME NOT NULL,
-    FOREIGN KEY(book_id) REFERENCES books (id) ON DELETE CASCADE
+    FOREIGN KEY(book_id) REFERENCES books (id) ON DELETE CASCADE,
+    FOREIGN KEY(superseded_by_entity_id) REFERENCES narrative_entities (id) ON DELETE SET NULL
 );
 CREATE TABLE narrative_entity_aliases (
     id INTEGER NOT NULL PRIMARY KEY,
@@ -704,6 +706,8 @@ def _ensure_narrative_006_indexes(engine: Engine) -> None:
             "ON narrative_entities (book_id, entity_type)",
             "CREATE INDEX IF NOT EXISTS ix_narrative_entities_book_normalized "
             "ON narrative_entities (book_id, normalized_name)",
+            "CREATE INDEX IF NOT EXISTS ix_narrative_entities_superseded_by_entity_id "
+            "ON narrative_entities (superseded_by_entity_id)",
             "CREATE INDEX IF NOT EXISTS ix_narrative_entity_aliases_entity_id "
             "ON narrative_entity_aliases (entity_id)",
             "CREATE INDEX IF NOT EXISTS ix_narrative_entity_aliases_normalized "
@@ -747,10 +751,12 @@ def migrate_narrative_20260723_006_narrative_entities_aliases(engine: Engine) ->
                                     lifecycle_status VARCHAR(32) NOT NULL DEFAULT 'active',
                                     is_locked INTEGER NOT NULL DEFAULT 0,
                                     locked_at DATETIME,
+                                    superseded_by_entity_id INTEGER,
                                     created_by VARCHAR(64),
                                     created_at DATETIME NOT NULL,
                                     updated_at DATETIME NOT NULL,
-                                    FOREIGN KEY(book_id) REFERENCES books (id) ON DELETE CASCADE
+                                    FOREIGN KEY(book_id) REFERENCES books (id) ON DELETE CASCADE,
+                                    FOREIGN KEY(superseded_by_entity_id) REFERENCES narrative_entities (id) ON DELETE SET NULL
                                 )
                                 """
                             )
@@ -798,6 +804,7 @@ def migrate_narrative_20260723_006_narrative_entities_aliases(engine: Engine) ->
             "lifecycle_status",
             "is_locked",
             "locked_at",
+            "superseded_by_entity_id",
             "created_by",
             "created_at",
             "updated_at",
@@ -817,6 +824,15 @@ def migrate_narrative_20260723_006_narrative_entities_aliases(engine: Engine) ->
         }
         entity_cols = _column_names(engine, "narrative_entities")
         alias_cols = _column_names(engine, "narrative_entity_aliases")
+        if "superseded_by_entity_id" not in entity_cols:
+            with engine.begin() as connection:
+                connection.execute(
+                    text(
+                        "ALTER TABLE narrative_entities "
+                        "ADD COLUMN superseded_by_entity_id INTEGER"
+                    )
+                )
+            entity_cols = _column_names(engine, "narrative_entities")
         if not required_entity_cols.issubset(entity_cols):
             raise NarrativeCoreError(
                 NarrativeCoreErrorCode.MIGRATION_BASELINE_INVALID,

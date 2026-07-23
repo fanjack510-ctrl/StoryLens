@@ -1,4 +1,4 @@
-"""Frozen asset_key / relation_key generation Contract (Phase 1B-P).
+"""Frozen asset_key / relation_key generation Contract (Phase 1B-P / Integration).
 
 Does NOT implement entity disambiguation or whole-book analysis.
 Agents E/F must call these helpers — never Python hash(), never DB auto-id alone.
@@ -8,11 +8,29 @@ from __future__ import annotations
 
 import hashlib
 import re
+import unicodedata
 
 
 def _normalize_key_token(value: str) -> str:
-    collapsed = re.sub(r"\s+", " ", (value or "").strip().lower())
-    return collapsed
+    """Normalize identity tokens for keys and entity/alias names.
+
+    Rules (Integration frozen):
+    1. Unicode whitespace unified via NFKC category collapse
+    2. Leading/trailing whitespace stripped
+    3. Contiguous ordinary whitespace collapsed to a single space
+    4. Case folded via ``casefold()`` (not ``lower()``)
+    5. No simplified/traditional Chinese conversion
+    6. No pinyin conversion
+    7. Punctuation is kept (not stripped)
+    8. No nickname guessing
+    9. No role-name-specific rules
+    10. CJK characters and digits remain distinctive
+    """
+    text = unicodedata.normalize("NFKC", value or "")
+    # Unify all Unicode whitespace to ordinary space, then collapse.
+    text = "".join(" " if ch.isspace() else ch for ch in text)
+    collapsed = re.sub(r" +", " ", text.strip())
+    return collapsed.casefold()
 
 
 def build_asset_key(
@@ -52,17 +70,29 @@ def build_relation_key(
     book_id: int,
     source_asset_id: int,
     target_asset_id: int,
-    relation_type: str,
+    identity_fingerprint: str,
     disambiguator: str = "",
 ) -> str:
-    """Build a stable narrative relation_key (endpoints are stable Asset ids)."""
+    """Build a stable narrative relation_key (endpoints are stable Asset ids).
+
+    ``identity_fingerprint`` expresses stable relation identity chosen by the
+    caller. The underlying key tool must NOT couple the Version-level
+    ``relation_type`` field to stable identity. Callers may include a
+    normalized semantic type inside ``identity_fingerprint`` when that type
+    is itself part of stable identity. Summary never participates.
+
+    A→B differs from B→A. Books are isolated via ``book_id``.
+    """
+    fingerprint = _normalize_key_token(identity_fingerprint)
+    if not fingerprint:
+        raise ValueError("identity_fingerprint must not be empty after normalization")
     payload = "|".join(
         [
             "narrative_relation",
             str(int(book_id)),
             str(int(source_asset_id)),
             str(int(target_asset_id)),
-            _normalize_key_token(relation_type),
+            fingerprint,
             _normalize_key_token(disambiguator),
         ]
     )
@@ -71,5 +101,5 @@ def build_relation_key(
 
 
 def normalize_entity_name(name: str) -> str:
-    """Canonical normalized_name / normalized_alias helper."""
+    """Canonical normalized_name / normalized_alias helper (casefold)."""
     return _normalize_key_token(name)

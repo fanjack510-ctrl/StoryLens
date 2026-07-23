@@ -20,6 +20,25 @@ class NarrativeAssetService(Protocol):
     ) -> Any:
         """Create stable Asset + first candidate version. Does not auto-canonical."""
 
+    def get_asset(self, asset_id: int) -> Any:
+        ...
+
+    def get_asset_versions(self, asset_id: int) -> list[Any]:
+        ...
+
+    def list_assets(
+        self,
+        book_id: int,
+        *,
+        include_archived: bool = False,
+        include_superseded: bool = False,
+        include_stale: bool = True,
+        asset_type: str | None = None,
+        limit: int | None = None,
+        offset: int = 0,
+    ) -> list[Any]:
+        ...
+
     def add_asset_version(
         self,
         asset_id: int,
@@ -63,6 +82,9 @@ class NarrativeAssetService(Protocol):
     def mark_asset_stale(self, asset_id: int, *, reason: str) -> Any:
         ...
 
+    def clear_asset_stale(self, asset_id: int) -> Any:
+        ...
+
     def supersede_asset(self, asset_id: int, *, superseded_by_asset_id: int) -> Any:
         """Supersede stable identity — not the same as retaining an old version."""
 
@@ -71,3 +93,9 @@ class NarrativeAssetService(Protocol):
 
     def validate_asset_evidence(self, evidence_id: int) -> bool:
         """Must reuse Phase 1A SnapshotValidationGateway / snapshot paragraph APIs."""
+
+    def list_asset_version_evidence(self, asset_version_id: int) -> Any:
+        ...
+
+    def remove_candidate_evidence(self, evidence_id: int, *, actor: str = "model") -> None:
+        ...

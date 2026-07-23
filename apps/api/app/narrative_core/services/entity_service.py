@@ -9,7 +9,7 @@ Rules:
 - Entity lock is orthogonal to Alias review_status.
 - archived / superseded are soft lifecycle states (not physical delete).
 - Formal alias lookup is book-scoped and returns ambiguity — never silent pick.
-- merge_entities is unsupported until Schema gains superseded_by_entity_id.
+- merge_entities transfers aliases and records superseded_by_entity_id.
 """
 
 from __future__ import annotations
@@ -32,6 +32,21 @@ from app.narrative_core.services.entity_repository import (
     NarrativeEntityRepository,
     normalize_alias_text,
 )
+
+_ALIAS_REVIEW_RANK = {
+    AliasReviewStatus.REJECTED: 0,
+    AliasReviewStatus.CANDIDATE: 1,
+    AliasReviewStatus.CONFIRMED: 2,
+}
+
+
+@dataclass(frozen=True)
+class EntityMergeResult:
+    """Auditable merge outcome — source superseded, target retains identity."""
+
+    source: NarrativeEntity
+    target: NarrativeEntity
+    actor: str
 
 
 @dataclass(frozen=True)
@@ -142,12 +157,13 @@ class NarrativeEntityServiceImpl:
         entity.lifecycle_status = EntityLifecycleStatus.ARCHIVED
         return self._repo.save_entity(entity)
 
-    def supersede_entity(self, entity_id: int) -> NarrativeEntity:
-        """Mark identity superseded (soft).
-
-        Schema has no ``superseded_by_entity_id`` — target link is not recorded.
-        See Integration Issue II-ENTITY-001 / merge boundary doc.
-        """
+    def supersede_entity(
+        self,
+        entity_id: int,
+        *,
+        superseded_by_entity_id: int | None = None,
+    ) -> NarrativeEntity:
+        """Mark identity superseded (soft). Optionally record target lineage."""
         entity = self.get_entity(entity_id)
         if entity.lifecycle_status == EntityLifecycleStatus.SUPERSEDED:
             return entity  # idempotent
@@ -156,38 +172,93 @@ class NarrativeEntityServiceImpl:
                 NarrativeCoreErrorCode.ENTITY_NOT_ACTIVE,
                 f"cannot supersede archived entity: {entity_id}",
             )
+        if superseded_by_entity_id is not None:
+            target_id = int(superseded_by_entity_id)
+            if target_id == entity.id:
+                raise NarrativeCoreError(
+                    NarrativeCoreErrorCode.ENTITY_MERGE_CONFLICT,
+                    "entity cannot supersede itself",
+                )
+            target = self.get_entity(target_id)
+            if target.book_id != entity.book_id:
+                raise NarrativeCoreError(
+                    NarrativeCoreErrorCode.ENTITY_MERGE_CONFLICT,
+                    "supersede target must belong to the same book",
+                )
+            entity.superseded_by_entity_id = target.id
         entity.lifecycle_status = EntityLifecycleStatus.SUPERSEDED
         return self._repo.save_entity(entity)
 
-    def merge_entities(self, survivor_id: int, absorbed_id: int) -> Any:
-        """Frozen semantic only — Schema cannot record superseded target.
+    def merge_entities(
+        self,
+        source_entity_id: int,
+        target_entity_id: int,
+        *,
+        actor: str = "user",
+    ) -> EntityMergeResult:
+        """Merge source into target: transfer aliases, supersede source."""
+        source_id = int(source_entity_id)
+        target_id = int(target_entity_id)
+        if source_id == target_id:
+            raise NarrativeCoreError(
+                NarrativeCoreErrorCode.ENTITY_MERGE_CONFLICT,
+                "merge_entities: source and target must differ",
+            )
 
-        ``narrative_entities`` has no ``superseded_by_entity_id`` (unlike Asset /
-        Relation). Without that column, a safe merge that preserves target
-        lineage cannot be implemented without altering ``models.py``.
-        """
-        # Validate inputs exist so callers get ENTITY_NOT_FOUND vs unsupported.
-        if int(survivor_id) == int(absorbed_id):
+        source = self.get_entity(source_id)
+        target = self.get_entity(target_id)
+        if source.book_id != target.book_id:
             raise NarrativeCoreError(
-                NarrativeCoreErrorCode.ENTITY_MERGE_NOT_SUPPORTED,
-                "merge_entities: source and target must differ; "
-                "full merge unsupported without superseded_by_entity_id",
+                NarrativeCoreErrorCode.ENTITY_MERGE_CONFLICT,
+                "merge_entities: entities must belong to the same book",
             )
-        survivor = self.get_entity(survivor_id)
-        absorbed = self.get_entity(absorbed_id)
-        if survivor.book_id != absorbed.book_id:
+        if target.lifecycle_status != EntityLifecycleStatus.ACTIVE:
             raise NarrativeCoreError(
-                NarrativeCoreErrorCode.ENTITY_MERGE_NOT_SUPPORTED,
-                "merge_entities: entities must belong to the same book; "
-                "full merge unsupported without superseded_by_entity_id",
+                NarrativeCoreErrorCode.ENTITY_NOT_ACTIVE,
+                f"merge target must be active: {target_id}",
             )
-        raise NarrativeCoreError(
-            NarrativeCoreErrorCode.ENTITY_MERGE_NOT_SUPPORTED,
-            "merge_entities is not supported in Phase 1B Agent D: "
-            "narrative_entities lacks superseded_by_entity_id; "
-            "refusing to mutate aliases or lifecycle without target lineage. "
-            "See II-ENTITY-001.",
-        )
+        if source.lifecycle_status == EntityLifecycleStatus.SUPERSEDED:
+            raise NarrativeCoreError(
+                NarrativeCoreErrorCode.ENTITY_MERGE_CONFLICT,
+                f"source entity already superseded: {source_id}",
+            )
+        if source.lifecycle_status == EntityLifecycleStatus.ARCHIVED:
+            raise NarrativeCoreError(
+                NarrativeCoreErrorCode.ENTITY_NOT_ACTIVE,
+                f"cannot merge archived source entity: {source_id}",
+            )
+
+        try:
+            with self._session.begin_nested():
+                target_aliases = {
+                    a.normalized_alias: a
+                    for a in self._repo.list_entity_aliases(target.id)
+                }
+                for source_alias in list(self._repo.list_entity_aliases(source.id)):
+                    existing = target_aliases.get(source_alias.normalized_alias)
+                    if existing is None:
+                        source_alias.entity_id = target.id
+                        self._repo.save_alias(source_alias)
+                        target_aliases[source_alias.normalized_alias] = source_alias
+                    else:
+                        self._merge_alias_rows(
+                            source_alias=source_alias,
+                            target_alias=existing,
+                        )
+
+                source.lifecycle_status = EntityLifecycleStatus.SUPERSEDED
+                source.superseded_by_entity_id = target.id
+                self._repo.save_entity(source)
+                self._repo.save_entity(target)
+        except NarrativeCoreError:
+            raise
+        except IntegrityError as exc:
+            raise NarrativeCoreError(
+                NarrativeCoreErrorCode.ENTITY_MERGE_CONFLICT,
+                f"merge_entities failed integrity check: {exc}",
+            ) from exc
+
+        return EntityMergeResult(source=source, target=target, actor=actor)
 
     # ------------------------------------------------------------------
     # Alias review
@@ -365,3 +436,94 @@ class NarrativeEntityServiceImpl:
             return AliasType(value).value
         except ValueError:
             return AliasType.OTHER.value
+
+    @staticmethod
+    def _alias_rank(review_status: str) -> int:
+        try:
+            status = AliasReviewStatus(review_status)
+        except ValueError:
+            return 0
+        return _ALIAS_REVIEW_RANK.get(status, 0)
+
+    def _merge_alias_rows(
+        self,
+        *,
+        source_alias: NarrativeEntityAlias,
+        target_alias: NarrativeEntityAlias,
+    ) -> None:
+        """Resolve duplicate normalized_alias during merge."""
+        source_rank = self._alias_rank(source_alias.review_status)
+        target_rank = self._alias_rank(target_alias.review_status)
+
+        if source_rank > target_rank:
+            winner, loser = source_alias, target_alias
+            winner_on_target = False
+        elif target_rank > source_rank:
+            winner, loser = target_alias, source_alias
+            winner_on_target = True
+        elif source_alias.is_locked and not target_alias.is_locked:
+            winner, loser = source_alias, target_alias
+            winner_on_target = False
+        elif target_alias.is_locked and not source_alias.is_locked:
+            winner, loser = target_alias, source_alias
+            winner_on_target = True
+        elif source_alias.is_locked and target_alias.is_locked:
+            if source_alias.review_status != target_alias.review_status:
+                raise NarrativeCoreError(
+                    NarrativeCoreErrorCode.ENTITY_MERGE_CONFLICT,
+                    "locked aliases with conflicting review_status",
+                )
+            winner, loser = target_alias, source_alias
+            winner_on_target = True
+        else:
+            winner, loser = target_alias, source_alias
+            winner_on_target = True
+
+        if winner is source_alias and not winner_on_target:
+            if target_alias.is_locked and (
+                target_alias.review_status != source_alias.review_status
+                or not source_alias.is_locked
+            ):
+                raise NarrativeCoreError(
+                    NarrativeCoreErrorCode.ENTITY_MERGE_CONFLICT,
+                    "cannot downgrade or unlock locked target alias",
+                )
+            target_alias.alias_text = source_alias.alias_text
+            target_alias.alias_type = source_alias.alias_type
+            target_alias.review_status = source_alias.review_status
+            target_alias.is_locked = source_alias.is_locked or target_alias.is_locked
+            if source_alias.source_run_id is not None:
+                target_alias.source_run_id = source_alias.source_run_id
+            if source_alias.source_snapshot_id is not None:
+                target_alias.source_snapshot_id = source_alias.source_snapshot_id
+            self._repo.save_alias(target_alias)
+            self._drop_losing_alias(loser, winner)
+            return
+
+        if not self._loser_may_be_dropped(loser, winner):
+            raise NarrativeCoreError(
+                NarrativeCoreErrorCode.ENTITY_MERGE_CONFLICT,
+                "locked alias cannot be dropped without preserving status on winner",
+            )
+        self._drop_losing_alias(loser, winner)
+
+    @staticmethod
+    def _loser_may_be_dropped(
+        loser: NarrativeEntityAlias,
+        winner: NarrativeEntityAlias,
+    ) -> bool:
+        if not loser.is_locked:
+            return True
+        return (
+            winner.is_locked
+            and winner.review_status == loser.review_status
+        )
+
+    def _drop_losing_alias(
+        self,
+        loser: NarrativeEntityAlias,
+        winner: NarrativeEntityAlias,
+    ) -> None:
+        if loser.id == winner.id:
+            return
+        self._repo.delete_alias(loser)

@@ -20,13 +20,21 @@ from app.narrative_core.asset_key import build_asset_key
 from app.narrative_core.enums import (
     AssetLifecycleStatus,
     ConflictRefType,
+    ConflictSeverity,
     ConflictType,
+    EvidenceRole,
     OriginType,
     ReviewStatus,
 )
 from app.narrative_core.errors import NarrativeCoreError, NarrativeCoreErrorCode
 from app.narrative_core.services.asset_evidence_service import NarrativeAssetEvidenceService
 from app.narrative_core.services.asset_repository import NarrativeAssetRepository
+from app.narrative_core.services.conflict_service import ConflictCreateRequest
+from app.narrative_core.services.conflict_sink import (
+    AnalysisConflictSink,
+    AnalysisConflictSinkImpl,
+)
+from app.narrative_core.services.version_binding import validate_version_run_snapshot_binding
 
 
 _CANONICAL_ELIGIBLE = frozenset({ReviewStatus.CONFIRMED, ReviewStatus.CORRECTED})
@@ -58,6 +66,7 @@ class AssetMutationResult:
     asset: NarrativeAsset
     version: NarrativeAssetVersion
     conflict_request: AssetCanonicalConflictRequest | None = None
+    conflict_id: int | None = None
     canonical_switched: bool = False
 
 
@@ -70,12 +79,14 @@ class NarrativeAssetService:
         *,
         repository: NarrativeAssetRepository | None = None,
         evidence_service: NarrativeAssetEvidenceService | None = None,
+        conflict_sink: AnalysisConflictSink | None = None,
     ) -> None:
         self._session = session
         self._repo = repository or NarrativeAssetRepository(session)
         self._evidence = evidence_service or NarrativeAssetEvidenceService(
             session, repository=self._repo
         )
+        self._conflict_sink = conflict_sink or AnalysisConflictSinkImpl(session)
 
     # ------------------------------------------------------------------
     # Asset key helpers (stable SHA-256 via frozen build_asset_key)
@@ -162,6 +173,17 @@ class NarrativeAssetService:
                 if asset is None or not reuse_existing_key:
                     raise
 
+        origin = str(fields.get("origin_type", OriginType.MODEL))
+        if run_id is not None or book_snapshot_id is not None:
+            validate_version_run_snapshot_binding(
+                self._session,
+                book_id=int(book_id),
+                run_id=run_id,
+                book_snapshot_id=book_snapshot_id,
+                origin_type=origin,
+                require_snapshot_for_formal=False,
+            )
+
         version = self._repo.create_version(
             asset.id,
             asset_type=asset_type,
@@ -172,7 +194,7 @@ class NarrativeAssetService:
             confidence=float(fields.get("confidence", 0.0) or 0.0),
             importance=float(fields.get("importance", 0.0) or 0.0),
             source_fingerprint=str(fields.get("source_fingerprint", "") or ""),
-            origin_type=str(fields.get("origin_type", OriginType.MODEL)),
+            origin_type=origin,
             review_status=ReviewStatus.CANDIDATE,
             is_canonical=False,
             run_id=run_id,
@@ -196,6 +218,15 @@ class NarrativeAssetService:
     ) -> NarrativeAssetVersion:
         asset = self._require_asset(asset_id)
         status = ReviewStatus(str(review_status))
+        if run_id is not None or book_snapshot_id is not None:
+            validate_version_run_snapshot_binding(
+                self._session,
+                book_id=int(asset.book_id),
+                run_id=run_id,
+                book_snapshot_id=book_snapshot_id,
+                origin_type=str(origin_type),
+                require_snapshot_for_formal=False,
+            )
         # New versions are never auto-canonical; confirm/correct own the switch.
         version = self._repo.create_version(
             asset.id,
@@ -274,7 +305,8 @@ class NarrativeAssetService:
                 f"rejected version {version.id} cannot be confirmed/canonical",
             )
 
-        version.review_status = ReviewStatus.CONFIRMED
+        if version.review_status == ReviewStatus.CANDIDATE:
+            version.review_status = ReviewStatus.CONFIRMED
         self._session.flush()
 
         if not make_canonical:
@@ -303,6 +335,18 @@ class NarrativeAssetService:
                 f"version {based_on_version_id} does not belong to asset {asset_id}",
             )
 
+        snapshot_id = fields.get("book_snapshot_id", base.book_snapshot_id)
+        run_id = fields.get("run_id")
+        if run_id is not None or snapshot_id is not None:
+            validate_version_run_snapshot_binding(
+                self._session,
+                book_id=int(asset.book_id),
+                run_id=run_id,
+                book_snapshot_id=snapshot_id,
+                origin_type=OriginType.USER.value,
+                require_snapshot_for_formal=False,
+            )
+
         corrected = self._repo.create_version(
             asset.id,
             asset_type=str(fields.get("asset_type", base.asset_type)),
@@ -322,8 +366,8 @@ class NarrativeAssetService:
             origin_type=OriginType.USER,
             review_status=ReviewStatus.CORRECTED,
             is_canonical=False,
-            run_id=fields.get("run_id"),
-            book_snapshot_id=fields.get("book_snapshot_id", base.book_snapshot_id),
+            run_id=run_id,
+            book_snapshot_id=snapshot_id,
         )
         # Prior version rows are retained forever.
         if not make_canonical:
@@ -366,24 +410,30 @@ class NarrativeAssetService:
                 f"version {version.id} review_status={version.review_status}",
             )
 
+        self._require_canonical_snapshot(version)
+        self._require_support_evidence(version)
+
         current = self._repo.get_canonical_version(asset.id)
 
-        # Locked asset: model must not switch canonical — return ConflictRequest.
+        # Locked asset: model must not switch canonical — record conflict.
         if actor == "model" and asset.is_locked:
+            conflict_req = AssetCanonicalConflictRequest(
+                book_id=asset.book_id,
+                asset_id=asset.id,
+                locked_canonical_version_id=None if current is None else current.id,
+                candidate_version_id=version.id,
+                conflict_type=ConflictType.LOCKED_ASSET_VS_NEW_RUN,
+                description=(
+                    f"model attempted canonical switch on locked asset {asset.id}"
+                ),
+                reason="asset_locked",
+            )
+            conflict_id = self._record_asset_conflict(conflict_req, version=version)
             return AssetMutationResult(
                 asset=asset,
                 version=version,
-                conflict_request=AssetCanonicalConflictRequest(
-                    book_id=asset.book_id,
-                    asset_id=asset.id,
-                    locked_canonical_version_id=None if current is None else current.id,
-                    candidate_version_id=version.id,
-                    conflict_type=ConflictType.LOCKED_ASSET_VS_NEW_RUN,
-                    description=(
-                        f"model attempted canonical switch on locked asset {asset.id}"
-                    ),
-                    reason="asset_locked",
-                ),
+                conflict_request=conflict_req,
+                conflict_id=conflict_id,
                 canonical_switched=False,
             )
 
@@ -394,21 +444,24 @@ class NarrativeAssetService:
             and current.id != version.id
             and current.review_status in _USER_PROTECTED
         ):
+            conflict_req = AssetCanonicalConflictRequest(
+                book_id=asset.book_id,
+                asset_id=asset.id,
+                locked_canonical_version_id=current.id,
+                candidate_version_id=version.id,
+                conflict_type=ConflictType.DUPLICATE_ASSET_CANDIDATE,
+                description=(
+                    f"model must not replace user {current.review_status} "
+                    f"canonical version {current.id}"
+                ),
+                reason="user_protected_canonical",
+            )
+            conflict_id = self._record_asset_conflict(conflict_req, version=version)
             return AssetMutationResult(
                 asset=asset,
                 version=version,
-                conflict_request=AssetCanonicalConflictRequest(
-                    book_id=asset.book_id,
-                    asset_id=asset.id,
-                    locked_canonical_version_id=current.id,
-                    candidate_version_id=version.id,
-                    conflict_type=ConflictType.DUPLICATE_ASSET_CANDIDATE,
-                    description=(
-                        f"model must not replace user {current.review_status} "
-                        f"canonical version {current.id}"
-                    ),
-                    reason="user_protected_canonical",
-                ),
+                conflict_request=conflict_req,
+                conflict_id=conflict_id,
                 canonical_switched=False,
             )
 
@@ -527,6 +580,71 @@ class NarrativeAssetService:
 
     def remove_candidate_evidence(self, evidence_id: int, *, actor: str = "model") -> None:
         self._evidence.remove_candidate_evidence(evidence_id, actor=actor)
+
+    def _record_asset_conflict(
+        self,
+        request: AssetCanonicalConflictRequest,
+        *,
+        version: NarrativeAssetVersion,
+    ) -> int:
+        left_id = (
+            str(request.locked_canonical_version_id)
+            if request.locked_canonical_version_id is not None
+            else str(request.asset_id)
+        )
+        left_type = (
+            ConflictRefType.ASSET_VERSION.value
+            if request.locked_canonical_version_id is not None
+            else ConflictRefType.ASSET.value
+        )
+        return self._conflict_sink.record_conflict(
+            ConflictCreateRequest(
+                book_id=request.book_id,
+                conflict_type=request.conflict_type,
+                left_ref_type=left_type,
+                left_ref_id=left_id,
+                right_ref_type=ConflictRefType.ASSET_VERSION.value,
+                right_ref_id=str(request.candidate_version_id),
+                description=request.description,
+                severity=ConflictSeverity.BLOCKING.value,
+                run_id=version.run_id,
+                book_snapshot_id=version.book_snapshot_id,
+            )
+        )
+
+    def _require_support_evidence(self, version: NarrativeAssetVersion) -> None:
+        has_support = False
+        has_non_support = False
+        for evidence in self._repo.list_evidence_for_version(version.id):
+            if evidence.evidence_role == EvidenceRole.SUPPORT.value:
+                has_support = True
+            elif evidence.evidence_role in {
+                EvidenceRole.CONTEXT.value,
+                EvidenceRole.CONTRADICT.value,
+            }:
+                has_non_support = True
+        if has_support:
+            return
+        if has_non_support:
+            raise NarrativeCoreError(
+                NarrativeCoreErrorCode.CANONICAL_EVIDENCE_REQUIRED,
+                (
+                    f"canonical asset version {version.id} requires support evidence; "
+                    "context/contradict alone is insufficient"
+                ),
+            )
+        raise NarrativeCoreError(
+            NarrativeCoreErrorCode.CANONICAL_EVIDENCE_REQUIRED,
+            f"canonical asset version {version.id} requires at least one support evidence",
+        )
+
+    @staticmethod
+    def _require_canonical_snapshot(version: NarrativeAssetVersion) -> None:
+        if version.book_snapshot_id is None:
+            raise NarrativeCoreError(
+                NarrativeCoreErrorCode.VERSION_SNAPSHOT_REQUIRED,
+                f"canonical asset version {version.id} requires book_snapshot_id",
+            )
 
     # ------------------------------------------------------------------
     # Internals

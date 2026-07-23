@@ -214,11 +214,16 @@ class ConflictRefType(StrEnum):
     """Polymorphic reference kinds used by analysis_conflicts left/right refs."""
 
     ENTITY = "entity"
-    ALIAS = "alias"
+    ENTITY_ALIAS = "entity_alias"
     ASSET = "asset"
     ASSET_VERSION = "asset_version"
     RELATION = "relation"
     RELATION_VERSION = "relation_version"
-    EVIDENCE = "evidence"
+    ASSET_EVIDENCE = "asset_evidence"
+    RELATION_EVIDENCE = "relation_evidence"
     SNAPSHOT = "snapshot"
     RUN = "run"
+
+    # Legacy values accepted at validation boundary only (map alias → entity_alias).
+    ALIAS = "alias"
+    EVIDENCE = "evidence"

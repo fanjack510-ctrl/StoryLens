@@ -9,9 +9,9 @@ import pytest
 from sqlalchemy import create_engine, event, inspect, select, text
 from sqlalchemy.orm import Session, sessionmaker
 
-from app.db.models import Base, Book, NarrativeAsset, NarrativeAssetVersion
+from app.db.models import Base, Book, Chapter, NarrativeAsset, NarrativeAssetVersion, Paragraph
 from app.narrative_core.asset_key import build_asset_key
-from app.narrative_core.enums import AssetLifecycleStatus, AssetType, ReviewStatus
+from app.narrative_core.enums import AssetLifecycleStatus, AssetType, EvidenceRole, ReviewStatus, SnapshotStatus
 from app.narrative_core.errors import NarrativeCoreError, NarrativeCoreErrorCode
 from app.narrative_core.migrations import NARRATIVE_MIGRATION_ORDER, migration_checksum
 from app.narrative_core.migrations.runner import (
@@ -22,10 +22,12 @@ from app.narrative_core.migrations.runner import (
     migrate_narrative_20260723_007_narrative_assets_versions,
     migrate_narrative_20260723_008_narrative_asset_evidence,
 )
+from app.db.models import AnalysisConflict
 from app.narrative_core.services.asset_service import (
     AssetCanonicalConflictRequest,
     NarrativeAssetService,
 )
+from app.narrative_core.services.snapshot_service import BookSnapshotServiceImpl
 
 
 def _fk_engine(url: str):
@@ -56,8 +58,64 @@ def _seed_book(session: Session, *, suffix: str = "") -> Book:
         created_at=datetime.now(timezone.utc),
     )
     session.add(book)
+    session.flush()
+    chapter = Chapter(
+        book_id=book.id,
+        chapter_index=1,
+        title="第一章",
+        display_title="第一章",
+        chapter_title="第一章",
+        source_title_line="第一章",
+        word_count=10,
+    )
+    session.add(chapter)
+    session.flush()
+    session.add(
+        Paragraph(
+            id=f"B{book.id:04d}-C0001-P0001",
+            book_id=book.id,
+            chapter_id=chapter.id,
+            paragraph_index=1,
+            raw_text="证据段落甲",
+            normalized_text="证据段落甲",
+            char_start=0,
+            char_end=5,
+        )
+    )
     session.commit()
     return book
+
+
+def _completed_snapshot(session: Session, book_id: int):
+    snapshot = BookSnapshotServiceImpl(session).create_or_reuse_snapshot(book_id)
+    session.commit()
+    assert snapshot.snapshot_status == SnapshotStatus.COMPLETED
+    chapter = sorted(snapshot.chapters, key=lambda c: c.chapter_order)[0]
+    paragraph = sorted(chapter.paragraphs, key=lambda p: p.paragraph_order)[0]
+    return snapshot, chapter, paragraph
+
+
+def _prepare_confirmable(
+    session: Session,
+    service: NarrativeAssetService,
+    book: Book,
+    version: NarrativeAssetVersion,
+) -> None:
+    snapshot, chapter, paragraph = _completed_snapshot(session, book.id)
+    if version.book_snapshot_id is None:
+        version.book_snapshot_id = snapshot.id
+        session.flush()
+    para_text = BookSnapshotServiceImpl(session).get_snapshot_paragraph_text(paragraph.id)
+    service.attach_asset_evidence(
+        version.id,
+        book_snapshot_id=snapshot.id,
+        snapshot_chapter_id=chapter.id,
+        snapshot_paragraph_id=paragraph.id,
+        paragraph_content_hash=paragraph.content_hash,
+        start_offset=0,
+        end_offset=min(2, len(para_text)),
+        evidence_role=EvidenceRole.SUPPORT.value,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -243,6 +301,7 @@ def test_add_version_and_confirm_canonical(tmp_path) -> None:
         )
         session.flush()
         assert v2.is_canonical is False
+        _prepare_confirmable(session, service, book, v2)
         confirmed = service.confirm_asset_version(v2.id, make_canonical=True, actor="user")
         session.commit()
         assert confirmed.canonical_switched is True
@@ -265,6 +324,7 @@ def test_correct_creates_new_version(tmp_path) -> None:
             title="线索原版",
             identity_fingerprint="clue:1",
         )
+        _prepare_confirmable(session, service, book, created.version)
         service.confirm_asset_version(created.version.id, actor="user")
         base_id = created.version.id
         corrected = service.correct_asset(
@@ -273,7 +333,10 @@ def test_correct_creates_new_version(tmp_path) -> None:
             title="线索修正",
             summary="用户纠正",
             actor="user",
+            make_canonical=False,
         )
+        _prepare_confirmable(session, service, book, corrected.version)
+        service.confirm_asset_version(corrected.version.id, actor="user")
         session.commit()
         assert corrected.version.id != base_id
         assert corrected.version.review_status == ReviewStatus.CORRECTED
@@ -320,6 +383,8 @@ def test_at_most_one_canonical_per_asset(tmp_path) -> None:
         v2 = service.add_asset_version(
             created.asset.id, asset_type=AssetType.GOAL, title="目标2"
         )
+        _prepare_confirmable(session, service, book, v1)
+        _prepare_confirmable(session, service, book, v2)
         service.confirm_asset_version(v1.id, actor="user")
         service.confirm_asset_version(v2.id, actor="user")
         session.commit()
@@ -340,6 +405,7 @@ def test_model_cannot_replace_user_confirmed_canonical(tmp_path) -> None:
             title="用户确认版",
             identity_fingerprint="reveal:1",
         )
+        _prepare_confirmable(session, service, book, created.version)
         service.confirm_asset_version(created.version.id, actor="user")
         model_v = service.add_asset_version(
             created.asset.id,
@@ -347,6 +413,7 @@ def test_model_cannot_replace_user_confirmed_canonical(tmp_path) -> None:
             title="新模型版",
             origin_type="model",
         )
+        _prepare_confirmable(session, service, book, model_v)
         # Model path: confirm as model after marking confirmed would be atypical;
         # simulate model trying to promote a confirmed-eligible version.
         model_v.review_status = ReviewStatus.CONFIRMED
@@ -373,6 +440,7 @@ def test_locked_blocks_model_canonical_allows_candidate(tmp_path) -> None:
             title="锁定资产",
             identity_fingerprint="conflict:lock",
         )
+        _prepare_confirmable(session, service, book, created.version)
         service.confirm_asset_version(created.version.id, actor="user")
         service.lock_asset(created.asset.id)
 
@@ -385,10 +453,15 @@ def test_locked_blocks_model_canonical_allows_candidate(tmp_path) -> None:
 
         candidate.review_status = ReviewStatus.CONFIRMED
         session.flush()
+        _prepare_confirmable(session, service, book, candidate)
         result = service.confirm_asset_version(candidate.id, actor="model")
         assert result.canonical_switched is False
         assert result.conflict_request is not None
         assert result.conflict_request.reason == "asset_locked"
+        assert result.conflict_id is not None
+        conflict = session.get(AnalysisConflict, result.conflict_id)
+        assert conflict is not None
+        assert conflict.status == "open"
         canon = service.get_canonical_asset_version(created.asset.id)
         assert canon is not None and canon.id == created.version.id
     engine.dispose()
@@ -517,12 +590,16 @@ def test_concurrent_confirm_one_canonical(tmp_path) -> None:
         )
         session.commit()
         asset_id = created.asset.id
+        book_id = book.id
         v1_id, v2_id = v1.id, v2.id
 
     def _confirm(version_id: int) -> str:
         with factory() as s:
             svc = NarrativeAssetService(s)
-            # begin immediate-ish via nested + commit
+            book = s.get(Book, book_id)
+            version = s.get(NarrativeAssetVersion, version_id)
+            assert book is not None and version is not None
+            _prepare_confirmable(s, svc, book, version)
             result = svc.confirm_asset_version(version_id, actor="user")
             s.commit()
             return "switched" if result.canonical_switched else "skipped"
@@ -557,6 +634,7 @@ def test_canonical_switch_rollback_on_failure(tmp_path) -> None:
             title="回滚基线",
             identity_fingerprint="event:rollback",
         )
+        _prepare_confirmable(session, service, book, created.version)
         service.confirm_asset_version(created.version.id, actor="user")
         session.commit()
         baseline_id = created.version.id

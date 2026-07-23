@@ -493,7 +493,10 @@ def test_asset_key_not_python_hash() -> None:
     assert key_a != key_c
     assert key_a.startswith("na_")
     rel = build_relation_key(
-        book_id=1, source_asset_id=1, target_asset_id=2, relation_type="causes"
+        book_id=1,
+        source_asset_id=1,
+        target_asset_id=2,
+        identity_fingerprint="causes",
     )
     assert rel.startswith("nr_")
     assert normalize_entity_name("  A  B ") == "a b"

@@ -1,4 +1,4 @@
-"""Relation / Version / Evidence / Conflict Protocol contracts (Agent F implements)."""
+"""Relation / Version / Evidence Protocol contracts (Agent F implements)."""
 
 from __future__ import annotations
 
@@ -16,9 +16,26 @@ class NarrativeRelationService(Protocol):
         summary: str = "",
         run_id: int | None = None,
         book_snapshot_id: int | None = None,
+        identity_fingerprint: str | None = None,
         **fields: Any,
     ) -> Any:
         """Create stable Relation + first candidate version. Endpoints are Asset ids."""
+
+    def get_relation(self, relation_id: int) -> Any:
+        ...
+
+    def get_relation_versions(self, relation_id: int) -> list[Any]:
+        ...
+
+    def list_relations(
+        self,
+        book_id: int,
+        *,
+        lifecycle_status: str | None = None,
+        source_asset_id: int | None = None,
+        target_asset_id: int | None = None,
+    ) -> list[Any]:
+        ...
 
     def add_relation_version(
         self,
@@ -63,6 +80,9 @@ class NarrativeRelationService(Protocol):
     def mark_relation_stale(self, relation_id: int, *, reason: str) -> Any:
         ...
 
+    def clear_relation_stale(self, relation_id: int) -> Any:
+        ...
+
     def supersede_relation(
         self, relation_id: int, *, superseded_by_relation_id: int
     ) -> Any:
@@ -76,38 +96,7 @@ class NarrativeRelationService(Protocol):
     def validate_relation_evidence(self, evidence_id: int) -> bool:
         """Must reuse Phase 1A Snapshot capabilities — no second text-reader."""
 
-
-class AnalysisConflictService(Protocol):
-    def create_analysis_conflict(
-        self,
-        book_id: int,
-        *,
-        conflict_type: str,
-        left_ref_type: str,
-        left_ref_id: str,
-        right_ref_type: str,
-        right_ref_id: str,
-        description: str = "",
-        severity: str = "warning",
-        run_id: int | None = None,
-        book_snapshot_id: int | None = None,
-    ) -> Any:
-        """Record conflict only — no automatic adjudication in Phase 1B-P."""
-
-    def resolve_analysis_conflict(
-        self,
-        conflict_id: int,
-        *,
-        resolved_by: str,
-        resolution_json: str = "{}",
-    ) -> Any:
-        ...
-
-    def dismiss_analysis_conflict(
-        self,
-        conflict_id: int,
-        *,
-        resolved_by: str,
-        resolution_json: str = "{}",
-    ) -> Any:
+    def list_relation_version_evidence(
+        self, relation_version_id: int
+    ) -> list[Any]:
         ...

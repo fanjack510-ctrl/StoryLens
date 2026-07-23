@@ -1,38 +1,28 @@
-# Phase 1B — Entity / Alias Merge Boundary (Agent D)
+# Phase 1B — Entity / Alias Merge Boundary (Agent D + Integration)
 
-**Change:** CHG-20260723-017
+**Change:** CHG-20260723-017, CHG-20260723-020
 
-## Schema check
+## Schema (post-Integration)
 
 | Column / capability | `NarrativeEntity` | `NarrativeAsset` / `NarrativeRelation` |
 |---------------------|-------------------|----------------------------------------|
 | `lifecycle_status` including `superseded` | yes | yes |
-| `superseded_by_*_id` target lineage | **no** | yes |
+| `superseded_by_*_id` target lineage | **yes** (`superseded_by_entity_id`) | yes |
 
-Frozen ORM (`models.py`) for Entity has **no** `superseded_by_entity_id`. Agent D must not alter table structure or invent JSON surrogate fields.
+Migration `20260723_006` includes `superseded_by_entity_id` (revised pre-release checksum).
 
-## Decision
+## Implemented merge
 
-`merge_entities(survivor_id, absorbed_id)` **returns** `NarrativeCoreError(ENTITY_MERGE_NOT_SUPPORTED)` after validating:
+`merge_entities(source_id, target_id)`:
 
-1. ids differ
-2. both entities exist
-3. same `book_id`
+1. Validates ids differ, same `book_id`, target active, source not archived/superseded
+2. Moves non-duplicate aliases to target (dedupe by `normalized_alias`)
+3. Sets source `lifecycle_status=superseded`, `superseded_by_entity_id=target.id`
+4. Does **not** rewrite Asset `attributes_json` entity references
 
-It does **not**:
+## Still deferred
 
-- move aliases
-- mark source superseded/archived
-- rewrite Asset `attributes_json`
-- fabricate a target pointer
+- Auto-update Asset/Relation entity links on merge
+- Bulk supersede of Assets tied to merged entity
 
-Rationale: without persisted superseded-target lineage, a “successful” merge would lose auditability and violate Phase 1B-P review/lock versioning semantics (`superseded` + `superseded_by_*_id`).
-
-## Partial lifecycle still available
-
-- `archive_entity` — soft archive
-- `supersede_entity` — sets `lifecycle_status=superseded` **without** recording target (documented limitation; full supersede-with-target deferred)
-
-## Integration follow-up
-
-See **II-ENTITY-001** in [phase1b-entity-alias-verification.md](./phase1b-entity-alias-verification.md): add `superseded_by_entity_id` in a future coordinated schema Change, then implement transactional merge (alias dedupe move, retain confirmed/locked, no canonical auto-overwrite).
+See [phase1b-known-limitations.md](./phase1b-known-limitations.md).

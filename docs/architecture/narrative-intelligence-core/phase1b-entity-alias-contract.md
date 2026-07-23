@@ -10,9 +10,12 @@
 - `entity_type` (extensible string contract; minimum: character, location, organization, faction, object, concept, timeline_entity, unknown)
 - `canonical_name` / `normalized_name`
 - `lifecycle_status`: `active` | `superseded` | `archived`
+- `superseded_by_entity_id` — set by `merge_entities` (Integration / migration 006)
 - `is_locked` / `locked_at` (orthogonal to Alias review)
 
 Do **not** put `candidate` / `confirmed` on Entity lifecycle.
+
+Alias lookup uses casefold normalization (`normalize_alias_text`: NFKC + casefold).
 
 ## Alias
 
@@ -29,7 +32,7 @@ Do **not** put `candidate` / `confirmed` on Entity lifecycle.
 
 - `create_entity`, `add_alias_candidate`, `confirm_alias`, `reject_alias`
 - `lock_entity`, `unlock_entity`, `find_entity_by_alias`
-- `merge_entities` — semantic frozen only; complex merge not implemented in Phase 1B-P
+- `merge_entities` — transfers aliases to target, marks source `superseded` + `superseded_by_entity_id`; does not rewrite Asset refs
 
 ## Forbidden
 

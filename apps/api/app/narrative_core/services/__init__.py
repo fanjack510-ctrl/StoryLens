@@ -18,16 +18,26 @@ from app.narrative_core.services.conflict_service import (
     AnalysisConflictServiceImpl,
     ConflictCreateRequest,
 )
+from app.narrative_core.services.conflict_sink import (
+    AnalysisConflictSink,
+    AnalysisConflictSinkImpl,
+    NullAnalysisConflictSink,
+)
 from app.narrative_core.services.entity_repository import (
     NarrativeEntityRepository,
     normalize_alias_text,
 )
 from app.narrative_core.services.entity_service import (
     AliasLookupResult,
+    EntityMergeResult,
     NarrativeEntityServiceImpl,
 )
 from app.narrative_core.services.hash_backfill import ContentHashServiceImpl
 from app.narrative_core.services.migration_ledger import MigrationLedgerService
+from app.narrative_core.services.pattern_projection import (
+    PatternProjectionInput,
+    build_pattern_projection_input,
+)
 from app.narrative_core.services.relation_repository import NarrativeRelationRepository
 from app.narrative_core.services.relation_service import NarrativeRelationServiceImpl
 from app.narrative_core.services.run_scope_service import RunScopeService
@@ -60,6 +70,7 @@ __all__ = [
     "NarrativeEntityRepository",
     "NarrativeEntityServiceImpl",
     "AliasLookupResult",
+    "EntityMergeResult",
     "normalize_alias_text",
     "NarrativeAssetRepository",
     "NarrativeAssetService",
@@ -70,6 +81,11 @@ __all__ = [
     "NarrativeRelationServiceImpl",
     "AnalysisConflictServiceImpl",
     "ConflictCreateRequest",
+    "AnalysisConflictSink",
+    "AnalysisConflictSinkImpl",
+    "NullAnalysisConflictSink",
+    "PatternProjectionInput",
+    "build_pattern_projection_input",
 ]
 
 # StubSnapshotValidationGateway / make_stub_completed_snapshot remain importable

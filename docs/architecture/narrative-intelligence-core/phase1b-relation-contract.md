@@ -9,7 +9,7 @@
 
 If endpoints change → create a **new** Relation identity (do not mutate old Relation versions' endpoints).
 
-`relation_key` via `build_relation_key` (SHA-256; no Python `hash()`).
+`relation_key` via `build_relation_key(book_id, source_asset_id, target_asset_id, identity_fingerprint)` — SHA-256 hex digest; no Python `hash()`. Caller should pass a stable `identity_fingerprint`; omitting it creates an independent key via random UUID.
 
 ## Version
 

@@ -198,5 +198,9 @@ class NarrativeEntityRepository:
             )
         )
 
+    def delete_alias(self, alias: NarrativeEntityAlias) -> None:
+        self._session.delete(alias)
+        self._session.flush()
+
     def count_aliases_for_entity(self, entity_id: int) -> int:
         return len(self.list_entity_aliases(entity_id))

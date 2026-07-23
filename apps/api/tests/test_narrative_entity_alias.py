@@ -343,14 +343,17 @@ def test_supersede_entity_status_only(tmp_path) -> None:
     with factory() as session:
         book = _seed_book(session)
         svc = NarrativeEntityServiceImpl(session)
-        entity = svc.create_entity(
+        source = svc.create_entity(
             book.id, entity_type=EntityType.FACTION, canonical_name="黑风寨"
         )
+        target = svc.create_entity(
+            book.id, entity_type=EntityType.FACTION, canonical_name="青云寨"
+        )
         session.commit()
-        superseded = svc.supersede_entity(entity.id)
+        superseded = svc.supersede_entity(source.id, superseded_by_entity_id=target.id)
         assert superseded.lifecycle_status == EntityLifecycleStatus.SUPERSEDED
-        # No superseded_by column on model.
-        assert not hasattr(NarrativeEntity, "superseded_by_entity_id")
+        assert superseded.superseded_by_entity_id == target.id
+        assert hasattr(NarrativeEntity, "superseded_by_entity_id")
     engine.dispose()
 
 
@@ -517,60 +520,113 @@ def test_normalization_preserves_cjk_and_digits(tmp_path) -> None:
     assert normalize_alias_text("Hero  42") == "hero 42"
     assert normalize_alias_text("甲1号") == "甲1号"
     assert "丰" in normalize_alias_text("张三丰")
+    # Casefold (English)
+    assert normalize_alias_text("McDonald") == "mcdonald"
+    assert normalize_alias_text("Hello-World!") == "hello-world!"
+    assert normalize_alias_text("  甲  乙  ") == "甲 乙"
 
 
 # ---------------------------------------------------------------------------
-# merge_entities boundary
+# merge_entities
 # ---------------------------------------------------------------------------
 
 
-def test_merge_entities_explicitly_unsupported(tmp_path) -> None:
+def test_merge_entities_success_transfers_aliases(tmp_path) -> None:
     factory, engine = _factory(tmp_path)
     with factory() as session:
         book = _seed_book(session)
         svc = NarrativeEntityServiceImpl(session)
-        a = svc.create_entity(
+        source = svc.create_entity(
             book.id, entity_type=EntityType.CHARACTER, canonical_name="源"
         )
-        b = svc.create_entity(
+        target = svc.create_entity(
             book.id, entity_type=EntityType.CHARACTER, canonical_name="目标"
         )
-        alias = svc.add_alias_candidate(a.id, alias_text="源别名")
+        alias = svc.add_alias_candidate(source.id, alias_text="源别名")
         svc.confirm_alias(alias.id)
         session.commit()
+        result = svc.merge_entities(source.id, target.id)
+        session.commit()
+        assert result.target.id == target.id
+        assert result.source.lifecycle_status == EntityLifecycleStatus.SUPERSEDED
+        assert result.source.superseded_by_entity_id == target.id
+        assert target.canonical_name == "目标"
+        target_aliases = svc.list_entity_aliases(target.id)
+        norms = {a.normalized_alias for a in target_aliases}
+        assert normalize_alias_text("源别名") in norms
+        assert svc.get_entity(source.id).lifecycle_status == EntityLifecycleStatus.SUPERSEDED
+    engine.dispose()
+
+
+def test_merge_entities_alias_conflict_locked(tmp_path) -> None:
+    factory, engine = _factory(tmp_path)
+    with factory() as session:
+        book = _seed_book(session)
+        svc = NarrativeEntityServiceImpl(session)
+        source = svc.create_entity(
+            book.id, entity_type=EntityType.CHARACTER, canonical_name="甲"
+        )
+        target = svc.create_entity(
+            book.id, entity_type=EntityType.CHARACTER, canonical_name="乙"
+        )
+        sa = svc.add_alias_candidate(source.id, alias_text="共享别称")
+        ta = svc.add_alias_candidate(target.id, alias_text="共享别称")
+        svc.confirm_alias(sa.id)
+        svc.reject_alias(ta.id)
+        svc.lock_alias(ta.id)
+        session.commit()
         with pytest.raises(NarrativeCoreError) as exc_info:
-            svc.merge_entities(b.id, a.id)
-        assert exc_info.value.code == NarrativeCoreErrorCode.ENTITY_MERGE_NOT_SUPPORTED
-        # No mutation / rollback of pre-merge state.
-        session.refresh(a)
-        session.refresh(alias)
-        assert a.lifecycle_status == EntityLifecycleStatus.ACTIVE
-        assert alias.entity_id == a.id
-        assert alias.review_status == AliasReviewStatus.CONFIRMED
+            svc.merge_entities(source.id, target.id)
+        assert exc_info.value.code == NarrativeCoreErrorCode.ENTITY_MERGE_CONFLICT
+        session.expire_all()
+        assert svc.get_entity(source.id).lifecycle_status == EntityLifecycleStatus.ACTIVE
     engine.dispose()
 
 
 def test_merge_entities_failure_leaves_db_unchanged(tmp_path) -> None:
-    """Transaction failure path: unsupported merge must not mutate rows."""
+    """Transaction failure path: alias conflict must roll back all mutations."""
     factory, engine = _factory(tmp_path)
     with factory() as session:
         book = _seed_book(session)
         svc = NarrativeEntityServiceImpl(session)
-        survivor = svc.create_entity(
+        target = svc.create_entity(
             book.id, entity_type=EntityType.CHARACTER, canonical_name="存活"
         )
-        absorbed = svc.create_entity(
+        source = svc.create_entity(
             book.id, entity_type=EntityType.CHARACTER, canonical_name="吸收"
         )
+        sa = svc.add_alias_candidate(source.id, alias_text="冲突名")
+        ta = svc.add_alias_candidate(target.id, alias_text="冲突名")
+        svc.confirm_alias(sa.id)
+        svc.lock_alias(sa.id)
+        svc.lock_alias(ta.id)
         session.commit()
-        try:
-            with session.begin_nested():
-                svc.merge_entities(survivor.id, absorbed.id)
-        except NarrativeCoreError as exc:
-            assert exc.code == NarrativeCoreErrorCode.ENTITY_MERGE_NOT_SUPPORTED
+        with pytest.raises(NarrativeCoreError) as exc:
+            svc.merge_entities(source.id, target.id)
+        assert exc.value.code == NarrativeCoreErrorCode.ENTITY_MERGE_CONFLICT
         session.expire_all()
-        assert svc.get_entity(survivor.id).lifecycle_status == EntityLifecycleStatus.ACTIVE
-        assert svc.get_entity(absorbed.id).lifecycle_status == EntityLifecycleStatus.ACTIVE
+        assert svc.get_entity(target.id).lifecycle_status == EntityLifecycleStatus.ACTIVE
+        assert svc.get_entity(source.id).lifecycle_status == EntityLifecycleStatus.ACTIVE
+    engine.dispose()
+
+
+def test_merge_entities_casefold_dedupes_aliases(tmp_path) -> None:
+    factory, engine = _factory(tmp_path)
+    with factory() as session:
+        book = _seed_book(session)
+        svc = NarrativeEntityServiceImpl(session)
+        source = svc.create_entity(
+            book.id, entity_type=EntityType.CHARACTER, canonical_name="Case"
+        )
+        target = svc.create_entity(
+            book.id, entity_type=EntityType.CHARACTER, canonical_name="Target"
+        )
+        svc.add_alias_candidate(source.id, alias_text="  Hero  ")
+        session.commit()
+        svc.merge_entities(source.id, target.id)
+        session.commit()
+        norms = {a.normalized_alias for a in svc.list_entity_aliases(target.id)}
+        assert norms == {normalize_alias_text("Hero")}
     engine.dispose()
 
 

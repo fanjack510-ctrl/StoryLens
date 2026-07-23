@@ -5,7 +5,14 @@
   "base_version": "1.0.5",
   "status": "tested",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "b7bab58584e3ab082536f31f4484c53d8a9ac025",
+      "message": "feat: implement narrative entities and aliases",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "narrative_core"
   ],
@@ -22,7 +29,7 @@
     "release/changes/CHG-20260723-017.json"
   ],
   "user_summary": "Implement Entity and Alias repository/service and migration 006.",
-  "technical_summary": "Migration 006 idempotent apply + checksum; Entity/Alias CRUD, lock, archive, supersede (soft); Alias candidate/confirm/reject/lock; book-scoped ambiguous lookup; merge_entities explicitly unsupported without superseded_by_entity_id.",
+  "technical_summary": "Migration 006 + Entity/Alias service; Integration adds superseded_by_entity_id and merge_entities.",
   "acceptance_criteria": [
     "Fork from feature/narrative-phase1b-contract final HEAD",
     "Do not modify models.py table structures",
@@ -39,7 +46,8 @@
     "python scripts/version_manager.py check",
     "python scripts/change_registry.py check",
     "git diff --check",
-    "docs/architecture/narrative-intelligence-core/phase1b-entity-alias-verification.md"
+    "docs/architecture/narrative-intelligence-core/phase1b-entity-alias-verification.md",
+    "Agent D source SHA a68e828 (feature/narrative-phase1b-entities); Integration cherry-pick b7bab58."
   ],
   "data_compatibility": {
     "database_changed": true,
@@ -54,9 +62,9 @@
     "breaking_change": false
   },
   "blocker_level": null,
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T08:33:16Z",
-  "updated_at": "2026-07-23T09:00:00Z",
+  "updated_at": "2026-07-23T10:26:41Z",
   "parallel_plan": {
     "role": "agent_d",
     "branch": "feature/narrative-phase1b-entities",
@@ -77,9 +85,9 @@
     "migration_scope": "006"
   },
   "integration_issues": [
-    "II-ENTITY-001 missing superseded_by_entity_id",
-    "II-ENTITY-002 additive error codes review",
-    "II-ENTITY-003 normalize lower vs casefold",
-    "II-ENTITY-004 Protocol surface lag"
+    "II-ENTITY-001 RESOLVED superseded_by_entity_id + merge_entities",
+    "II-ENTITY-002 RESOLVED additive error codes reviewed in Integration",
+    "II-ENTITY-003 RESOLVED casefold normalization",
+    "II-ENTITY-004 RESOLVED Protocol surface synced"
   ]
 }

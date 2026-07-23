@@ -5,7 +5,14 @@
   "base_version": "1.0.5",
   "status": "tested",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "ddce64872f5529fa5a3877f35a24ce430fcbe3cc",
+      "message": "feat: implement narrative assets and evidence",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "narrative_core"
   ],
@@ -24,7 +31,7 @@
     "release/changes/CHG-20260723-018.json"
   ],
   "user_summary": "Implement Asset versioning, lock, and Snapshot-bound evidence validation.",
-  "technical_summary": "Agent E implements NarrativeAssetRepository/Service/EvidenceService; refines migrations 007-008 (idempotent indexes + partial unique canonical); reuses Phase 1A SnapshotValidationGateway; returns AssetCanonicalConflictRequest instead of writing analysis_conflicts.",
+  "technical_summary": "Agent E implements NarrativeAssetRepository/Service/EvidenceService; refines migrations 007-008; Integration wires Conflict Sink and canonical support-evidence gates.",
   "acceptance_criteria": [
     "Fork from feature/narrative-phase1b-contract final HEAD",
     "Do not modify models.py table structures",
@@ -43,7 +50,8 @@
     "pytest apps/api/tests/test_narrative_asset_service.py apps/api/tests/test_narrative_asset_evidence.py — 24 passed",
     "scripts/version_manager.py check",
     "scripts/change_registry.py check",
-    "git diff --check"
+    "git diff --check",
+    "Agent E source SHA 92854a1 (feature/narrative-phase1b-assets); Integration cherry-pick ddce648."
   ],
   "data_compatibility": {
     "database_changed": true,
@@ -58,9 +66,9 @@
     "breaking_change": false
   },
   "blocker_level": null,
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T08:33:16Z",
-  "updated_at": "2026-07-23T09:05:00Z",
+  "updated_at": "2026-07-23T10:26:43Z",
   "parallel_plan": {
     "role": "agent_e",
     "branch": "feature/narrative-phase1b-assets",

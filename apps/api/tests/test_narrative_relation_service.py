@@ -384,16 +384,28 @@ def test_relation_book_id_mismatch_fails(tmp_path) -> None:
 
 def test_direction_key_stable_and_asymmetric(tmp_path) -> None:
     ab = build_relation_key(
-        book_id=1, source_asset_id=10, target_asset_id=20, relation_type="causes"
+        book_id=1,
+        source_asset_id=10,
+        target_asset_id=20,
+        identity_fingerprint="causes",
     )
     ab2 = build_relation_key(
-        book_id=1, source_asset_id=10, target_asset_id=20, relation_type="causes"
+        book_id=1,
+        source_asset_id=10,
+        target_asset_id=20,
+        identity_fingerprint="causes",
     )
     ba = build_relation_key(
-        book_id=1, source_asset_id=20, target_asset_id=10, relation_type="causes"
+        book_id=1,
+        source_asset_id=20,
+        target_asset_id=10,
+        identity_fingerprint="causes",
     )
     other_book = build_relation_key(
-        book_id=2, source_asset_id=10, target_asset_id=20, relation_type="causes"
+        book_id=2,
+        source_asset_id=10,
+        target_asset_id=20,
+        identity_fingerprint="causes",
     )
     assert ab == ab2
     assert ab != ba

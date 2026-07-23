@@ -23,6 +23,8 @@ from app.db.models import (
 from app.narrative_core.asset_key import build_relation_key
 from app.narrative_core.contracts.snapshot import SnapshotValidationGateway
 from app.narrative_core.enums import (
+    ConflictRefType,
+    ConflictSeverity,
     EvidenceRole,
     OriginType,
     RelationLifecycleStatus,
@@ -30,12 +32,17 @@ from app.narrative_core.enums import (
     ReviewStatus,
 )
 from app.narrative_core.errors import NarrativeCoreError, NarrativeCoreErrorCode
-from app.narrative_core.services.conflict_service import (
-    AnalysisConflictServiceImpl,
-    ConflictCreateRequest,
+from app.narrative_core.services.conflict_service import ConflictCreateRequest
+from app.narrative_core.services.conflict_sink import (
+    AnalysisConflictSink,
+    AnalysisConflictSinkImpl,
 )
 from app.narrative_core.services.relation_repository import NarrativeRelationRepository
 from app.narrative_core.services.snapshot_service import SnapshotValidationGatewayImpl
+from app.narrative_core.services.version_binding import (
+    assert_evidence_matches_version_snapshot,
+    validate_version_run_snapshot_binding,
+)
 
 
 def _utc_now() -> datetime:
@@ -50,12 +57,12 @@ class NarrativeRelationServiceImpl:
         session: Session,
         *,
         snapshot_gateway: SnapshotValidationGateway | None = None,
-        conflict_service: AnalysisConflictServiceImpl | None = None,
+        conflict_sink: AnalysisConflictSink | None = None,
     ) -> None:
         self._session = session
         self._repo = NarrativeRelationRepository(session)
         self._snapshot = snapshot_gateway or SnapshotValidationGatewayImpl(session)
-        self._conflicts = conflict_service or AnalysisConflictServiceImpl(session)
+        self._conflict_sink = conflict_sink or AnalysisConflictSinkImpl(session)
 
     # ------------------------------------------------------------------
     # Stable Relation + Versions
@@ -71,6 +78,7 @@ class NarrativeRelationServiceImpl:
         summary: str = "",
         run_id: int | None = None,
         book_snapshot_id: int | None = None,
+        identity_fingerprint: str | None = None,
         disambiguator: str = "",
         **fields: Any,
     ) -> NarrativeRelation:
@@ -84,11 +92,26 @@ class NarrativeRelationServiceImpl:
                 "source_asset_id and target_asset_id must be distinct",
             )
 
+        fingerprint = (identity_fingerprint or "").strip()
+        if not fingerprint:
+            fingerprint = f"independent:{uuid.uuid4().hex}"
+
+        origin = str(fields.get("origin_type", OriginType.MODEL.value))
+        if run_id is not None or book_snapshot_id is not None:
+            validate_version_run_snapshot_binding(
+                self._session,
+                book_id=int(book_id),
+                run_id=run_id,
+                book_snapshot_id=book_snapshot_id,
+                origin_type=origin,
+                require_snapshot_for_formal=False,
+            )
+
         relation_key = self._allocate_relation_key(
             book_id=book_id,
             source_asset_id=source.id,
             target_asset_id=target.id,
-            relation_type=relation_type,
+            identity_fingerprint=fingerprint,
             disambiguator=disambiguator,
         )
         relation = self._repo.create_relation(
@@ -127,6 +150,15 @@ class NarrativeRelationServiceImpl:
         relation = self.get_relation(relation_id)
         self._validate_relation_type(relation_type)
         status = ReviewStatus(review_status)
+        if run_id is not None or book_snapshot_id is not None:
+            validate_version_run_snapshot_binding(
+                self._session,
+                book_id=int(relation.book_id),
+                run_id=run_id,
+                book_snapshot_id=book_snapshot_id,
+                origin_type=str(origin_type),
+                require_snapshot_for_formal=False,
+            )
         # Locked relation still allows candidate versions (model or user).
         if (
             relation.is_locked
@@ -236,6 +268,17 @@ class NarrativeRelationServiceImpl:
             )
         relation_type = str(fields.get("relation_type", base.relation_type))
         self._validate_relation_type(relation_type)
+        snapshot_id = fields.get("book_snapshot_id", base.book_snapshot_id)
+        run_id = fields.get("run_id")
+        if run_id is not None or snapshot_id is not None:
+            validate_version_run_snapshot_binding(
+                self._session,
+                book_id=int(relation.book_id),
+                run_id=run_id,
+                book_snapshot_id=snapshot_id,
+                origin_type=OriginType.USER.value,
+                require_snapshot_for_formal=False,
+            )
         version = self._repo.add_version(
             relation.id,
             relation_type=relation_type,
@@ -249,8 +292,8 @@ class NarrativeRelationServiceImpl:
             origin_type=OriginType.USER.value,
             review_status=ReviewStatus.CORRECTED.value,
             is_canonical=False,
-            run_id=fields.get("run_id"),
-            book_snapshot_id=fields.get("book_snapshot_id", base.book_snapshot_id),
+            run_id=run_id,
+            book_snapshot_id=snapshot_id,
         )
         if make_canonical:
             self._switch_canonical(relation, version, actor=actor)
@@ -333,6 +376,10 @@ class NarrativeRelationServiceImpl:
         binding = self._validate_evidence_fields(
             book_id=relation.book_id, **evidence_fields
         )
+        assert_evidence_matches_version_snapshot(
+            version_snapshot_id=version.book_snapshot_id,
+            evidence_snapshot_id=int(binding["book_snapshot_id"]),
+        )
         evidence = self._repo.add_evidence(
             version.id,
             book_snapshot_id=binding["book_snapshot_id"],
@@ -387,7 +434,7 @@ class NarrativeRelationServiceImpl:
         book_id: int,
         source_asset_id: int,
         target_asset_id: int,
-        relation_type: str,
+        identity_fingerprint: str,
         disambiguator: str,
     ) -> str:
         """Stable SHA-256 key; collide → prefer new candidate (disambiguator)."""
@@ -395,7 +442,7 @@ class NarrativeRelationServiceImpl:
             book_id=book_id,
             source_asset_id=source_asset_id,
             target_asset_id=target_asset_id,
-            relation_type=relation_type,
+            identity_fingerprint=identity_fingerprint,
             disambiguator=disambiguator,
         )
         existing = self._repo.find_by_relation_key(book_id, key)
@@ -406,7 +453,7 @@ class NarrativeRelationServiceImpl:
             book_id=book_id,
             source_asset_id=source_asset_id,
             target_asset_id=target_asset_id,
-            relation_type=relation_type,
+            identity_fingerprint=identity_fingerprint,
             disambiguator=f"{disambiguator}:{uuid.uuid4().hex[:12]}",
         )
 
@@ -487,19 +534,19 @@ class NarrativeRelationServiceImpl:
             )
         if relation.is_locked and actor == "model":
             # Record conflict for Integration / UI; do not switch.
-            self._conflicts.create_from_request(
+            self._conflict_sink.record_conflict(
                 ConflictCreateRequest(
                     book_id=relation.book_id,
                     conflict_type="relation_conflict",
-                    left_ref_type="relation",
+                    left_ref_type=ConflictRefType.RELATION.value,
                     left_ref_id=str(relation.id),
-                    right_ref_type="relation_version",
+                    right_ref_type=ConflictRefType.RELATION_VERSION.value,
                     right_ref_id=str(version.id),
                     description=(
                         f"locked relation blocks model canonical switch "
                         f"for version {version.id}"
                     ),
-                    severity="blocking",
+                    severity=ConflictSeverity.BLOCKING.value,
                     run_id=version.run_id,
                     book_snapshot_id=version.book_snapshot_id,
                 )
@@ -620,18 +667,18 @@ class NarrativeRelationServiceImpl:
         """Helper for Integration: locked Relation vs new model candidate."""
         relation = self.get_relation(relation_id)
         version = self._require_version(candidate_version_id)
-        return self._conflicts.create_from_request(
+        return self._conflict_sink.record_conflict(
             ConflictCreateRequest(
                 book_id=relation.book_id,
                 conflict_type="locked_asset_vs_new_run",
-                left_ref_type="relation",
+                left_ref_type=ConflictRefType.RELATION.value,
                 left_ref_id=str(relation.id),
-                right_ref_type="relation_version",
+                right_ref_type=ConflictRefType.RELATION_VERSION.value,
                 right_ref_id=str(version.id),
                 description=(
                     f"locked relation {relation.id} vs candidate version {version.id}"
                 ),
-                severity="blocking",
+                severity=ConflictSeverity.BLOCKING.value,
                 run_id=run_id or version.run_id,
                 book_snapshot_id=version.book_snapshot_id,
             )

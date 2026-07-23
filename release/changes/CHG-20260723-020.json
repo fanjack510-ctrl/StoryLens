@@ -7,34 +7,70 @@
   "include_in_next_release": true,
   "commits": [],
   "modules": [
-    "narrative_core"
+    "narrative_core",
+    "database",
+    "architecture"
   ],
-  "files": [],
-  "user_summary": "Integrate migrations 006-010 and Entity-Asset-Relation end-to-end verification.",
-  "technical_summary": "Pre-registered parallel Change. Implements services for role=integration; migration ownership 006-010 e2e. Fork from Phase 1B-P HEAD only. Do not edit models.py table structures.",
+  "files": [
+    "apps/api/app/db/models.py",
+    "apps/api/app/narrative_core/asset_key.py",
+    "apps/api/app/narrative_core/migrations/runner.py",
+    "apps/api/app/narrative_core/services/entity_service.py",
+    "apps/api/app/narrative_core/services/asset_service.py",
+    "apps/api/app/narrative_core/services/relation_service.py",
+    "apps/api/app/narrative_core/services/conflict_service.py",
+    "apps/api/app/narrative_core/services/conflict_sink.py",
+    "apps/api/app/narrative_core/services/pattern_projection.py",
+    "apps/api/tests/test_narrative_phase1b_integration.py",
+    "docs/architecture/narrative-intelligence-core/phase1b-integration-report.md",
+    "release/changes/CHG-20260723-020.json"
+  ],
+  "user_summary": "Integrate Phase 1B Entity/Asset/Relation foundation with conflict sink and end-to-end verification.",
+  "technical_summary": "Integrate Agent D/E/F: migration 006-010 e2e; Entity superseded_by_entity_id + merge_entities; casefold normalization; Relation identity_fingerprint keys; AnalysisConflictSink; Version/Evidence/Snapshot consistency; canonical support-evidence gates; Protocol sync; Pattern projection adapter; E2E tests.",
   "acceptance_criteria": [
     "Fork from feature/narrative-phase1b-contract final HEAD",
     "Do not modify models.py table structures",
-    "Stay within file ownership JSON"
+    "Stay within file ownership JSON",
+    "Cherry-pick D then E then F from Phase 1B-P HEAD",
+    "Migration 001-010 sequential upgrade + idempotent",
+    "Entity merge_entities + superseded_by_entity_id",
+    "casefold normalization",
+    "Relation identity_fingerprint keys",
+    "Conflict Sink persists Asset/Relation lock conflicts",
+    "Canonical requires support Evidence",
+    "E2E Entity-Asset-Relation + Pattern projection",
+    "No Phase 2 / no model calls / VERSION stays 1.0.5"
   ],
-  "tests": [],
-  "verification_evidence": [],
+  "tests": [
+    "apps/api/tests/test_narrative_phase1b_integration.py",
+    "apps/api/tests/test_narrative_entity_alias.py",
+    "apps/api/tests/test_narrative_asset_service.py",
+    "apps/api/tests/test_narrative_asset_evidence.py",
+    "apps/api/tests/test_narrative_relation_service.py",
+    "apps/api/tests/test_narrative_conflict_service.py"
+  ],
+  "verification_evidence": [
+    "pytest apps/api/tests/test_narrative_phase1b_integration.py -q --noconftest (10 passed)",
+    "pytest Agent D/E/F suites (67 passed)",
+    "pytest Phase 1A snapshot/run_scope/run_stage (35 passed)",
+    "docs/architecture/narrative-intelligence-core/phase1b-integration-report.md"
+  ],
   "data_compatibility": {
-    "database_changed": false,
-    "migration_required": false,
+    "database_changed": true,
+    "migration_required": true,
     "user_data_compatible": true,
-    "notes": ""
+    "notes": "Migration 006 revised in Integration (unpublished): added superseded_by_entity_id; checksum changed for new installs. Existing Phase 1A DBs upgrade 006-010 idempotently. No historical backfill."
   },
   "release_impact": {
     "requires_reanalysis": false,
-    "requires_restart": false,
+    "requires_restart": true,
     "updater_impact": false,
     "breaking_change": false
   },
   "blocker_level": null,
   "head_inclusion": null,
   "created_at": "2026-07-23T08:33:16Z",
-  "updated_at": "2026-07-23T08:43:10Z",
+  "updated_at": "2026-07-23T10:22:44Z",
   "parallel_plan": {
     "role": "integration",
     "branch": "integration/narrative-phase1b",

@@ -27,6 +27,7 @@ from app.narrative_core.services.snapshot_service import (
     BookSnapshotServiceImpl,
     SnapshotValidationGatewayImpl,
 )
+from app.narrative_core.services.version_binding import assert_evidence_matches_version_snapshot
 
 
 _FORMAL_REVIEW = frozenset({ReviewStatus.CONFIRMED, ReviewStatus.CORRECTED})
@@ -77,6 +78,10 @@ class NarrativeAssetEvidenceService:
 
         binding = self._coerce_binding(evidence_fields)
         self._validate_binding_against_snapshot(asset, binding)
+        assert_evidence_matches_version_snapshot(
+            version_snapshot_id=version.book_snapshot_id,
+            evidence_snapshot_id=int(binding.book_snapshot_id),
+        )
 
         return self._repo.create_evidence(
             version.id,
@@ -112,6 +117,10 @@ class NarrativeAssetEvidenceService:
             source_scene_id=evidence.source_scene_id,
         )
         self._validate_binding_against_snapshot(asset, binding)
+        assert_evidence_matches_version_snapshot(
+            version_snapshot_id=version.book_snapshot_id,
+            evidence_snapshot_id=int(evidence.book_snapshot_id),
+        )
         return True
 
     def list_asset_version_evidence(

@@ -387,6 +387,7 @@ def test_model_cannot_remove_confirmed_canonical_evidence(tmp_path) -> None:
             asset_type=AssetType.REVEAL,
             title="正式证据",
             identity_fingerprint="reveal:formal",
+            book_snapshot_id=snapshot.id,
         )
         evidence = assets.attach_asset_evidence(
             created.version.id,
@@ -438,6 +439,7 @@ def test_locked_formal_evidence_not_model_modifiable(tmp_path) -> None:
             asset_type=AssetType.EVENT,
             title="锁定正式",
             identity_fingerprint="event:lock-ev",
+            book_snapshot_id=snapshot.id,
         )
         assets.attach_asset_evidence(
             created.version.id,
