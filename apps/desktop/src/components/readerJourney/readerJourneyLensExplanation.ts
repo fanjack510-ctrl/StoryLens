@@ -215,6 +215,26 @@ export function parseLensParam(value: string | null | undefined): ObservationLen
   return null;
 }
 
+/**
+ * Single resolver for active lens from URL.
+ * Prefer explicit `lens`; fall back to legacy `metric` only when lens is absent/invalid.
+ */
+export function resolveJourneyLensFromSearch(
+  lensParam: string | null | undefined,
+  metricParam: string | null | undefined,
+  fallback: ObservationLensId = "composite",
+): ObservationLensId {
+  return parseLensParam(lensParam) ?? lensIdFromMetric(metricParam) ?? fallback;
+}
+
+/**
+ * Canonical metric for a lens (URL write). When lens is authoritative and metric conflicts,
+ * metric is rewritten to this value — never the reverse for a valid lens.
+ */
+export function canonicalMetricForLens(lensId: ObservationLensId): JourneyCurveMetric {
+  return metricForLens(lensId);
+}
+
 /** Drop tautological continue-drive copy like「继续阅读」。 */
 export function isTautologyContinueDrive(text: string | null | undefined): boolean {
   if (!text) return true;

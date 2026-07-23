@@ -180,7 +180,13 @@ export function ReaderJourneySyncWorkspace({
     evidenceParagraphIds?: string[];
     source?: typeof state.selectionSource;
   }) => {
-    if (patch.selectedMetric) setMetric(patch.selectedMetric);
+    if (patch.selectedMetric) {
+      // Workspace already atomically wrote lens+metric to the URL for rhythm/lens clicks.
+      // Only mirror local controlled metric — a second URL write races and snaps the lens back.
+      setMetric(patch.selectedMetric, {
+        syncUrl: patch.source !== "journey_rhythm",
+      });
+    }
     if (patch.selectedQuestionClusterId !== undefined) {
       setCluster(patch.selectedQuestionClusterId);
     }

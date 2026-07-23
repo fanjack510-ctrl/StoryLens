@@ -31,14 +31,14 @@ import {
   isHookPayoffLens,
 } from "./hookPayoffLensModel";
 import {
-  DEFAULT_OBSERVATION_LENS,
   getObservationLens,
   isLegacyUncalibratedVisualization,
   type ObservationLensId,
 } from "./observationLenses";
 import {
+  canonicalMetricForLens,
   lensIdFromMetric,
-  metricForLens,
+  resolveJourneyLensFromSearch,
   parseLensParam,
   PHASE_PRIMARY_ONLY_HINT_PREFIX,
   SAME_METRIC_EXIT_MESSAGE,
@@ -202,28 +202,41 @@ export function ReaderJourneyWorkspace({
     null,
   );
   const [metricInternal, setMetricInternal] = useState<JourneyCurveMetric>(() => {
+    const lens = resolveJourneyLensFromSearch(
+      searchParams.get("lens"),
+      searchParams.get("metric"),
+    );
     const fromUrl = searchParams.get("metric");
-    if (fromUrl === "engagement" || fromUrl === "valence" || fromUrl === "arousal" || fromUrl === "curiosity" || fromUrl === "tension" || fromUrl === "payoff" || fromUrl === "hook" || fromUrl === "dropoff_risk") {
+    if (
+      fromUrl === "engagement" ||
+      fromUrl === "valence" ||
+      fromUrl === "arousal" ||
+      fromUrl === "curiosity" ||
+      fromUrl === "tension" ||
+      fromUrl === "payoff" ||
+      fromUrl === "hook" ||
+      fromUrl === "dropoff_risk"
+    ) {
+      // Valid lens wins over a conflicting legacy metric on first paint.
+      const canonical = canonicalMetricForLens(lens);
+      if (parseLensParam(searchParams.get("lens"))) return canonical;
       return fromUrl;
     }
-    return "engagement";
+    return canonicalMetricForLens(lens);
   });
-  const [observationLens, setObservationLens] = useState<ObservationLensId>(() => {
-    return (
-      parseLensParam(searchParams.get("lens")) ??
-      lensIdFromMetric(searchParams.get("metric")) ??
-      DEFAULT_OBSERVATION_LENS
-    );
-  });
+  /** Optimistic mirror; URL is the durable source of truth for active lens. */
+  const [observationLens, setObservationLens] = useState<ObservationLensId>(() =>
+    resolveJourneyLensFromSearch(searchParams.get("lens"), searchParams.get("metric")),
+  );
   const [selectedLoopId, setSelectedLoopId] = useState<string | null>(
     () => searchParams.get("loop"),
   );
   const [compareWith, setCompareWith] = useState<CompareMetricKey | null>(() => {
     const raw = searchParams.get("compareWith");
-    const lens =
-      parseLensParam(searchParams.get("lens")) ??
-      lensIdFromMetric(searchParams.get("metric")) ??
-      DEFAULT_OBSERVATION_LENS;
+    const lens = resolveJourneyLensFromSearch(
+      searchParams.get("lens"),
+      searchParams.get("metric"),
+    );
     const primary = getObservationLens(lens).primaryKey;
     return sanitizeCompareMetric(raw, primary);
   });
@@ -628,8 +641,9 @@ export function ReaderJourneyWorkspace({
       setSearchParams(
         (prev) => {
           const params = new URLSearchParams(prev);
+          const nextMetric = metricKey ?? canonicalMetricForLens(lens);
           params.set("lens", lens);
-          params.set("metric", metricKey ?? metricForLens(lens));
+          params.set("metric", nextMetric);
           if (loopId) params.set("loop", loopId);
           else params.delete("loop");
           const compare = compareKey === undefined ? compareWith : compareKey;
@@ -658,12 +672,13 @@ export function ReaderJourneyWorkspace({
   );
 
   const handleMetricChange = (key: JourneyCurveMetric) => {
+    const nextLens = lensIdFromMetric(key);
+    const resolved = resolveCompareAfterLensChange(nextLens, compareWith);
+    // One atomic URL commit — mirrors update after / with the same values.
+    setObservationLens(nextLens);
     if (controlledMetric === undefined) {
       setMetricInternal(key);
     }
-    const nextLens = lensIdFromMetric(key);
-    setObservationLens(nextLens);
-    const resolved = resolveCompareAfterLensChange(nextLens, compareWith);
     setCompareWith(resolved.compare);
     if (resolved.exitedSameMetric) setCompareLiveMessage(SAME_METRIC_EXIT_MESSAGE);
     syncLensLoopToUrl(nextLens, selectedLoopId, key, resolved.compare);
@@ -671,17 +686,19 @@ export function ReaderJourneyWorkspace({
   };
 
   const handleObservationLensChange = (lens: ObservationLensId) => {
-    setObservationLens(lens);
+    if (lens === observationLens) return;
     const resolved = resolveCompareAfterLensChange(lens, compareWith);
+    const nextMetric = canonicalMetricForLens(lens);
+    // Optimistic UI + single atomic URL write (lens + metric + compare).
+    setObservationLens(lens);
+    if (controlledMetric === undefined) {
+      setMetricInternal(nextMetric);
+    }
     setCompareWith(resolved.compare);
     if (resolved.exitedSameMetric) {
       setCompareLiveMessage(SAME_METRIC_EXIT_MESSAGE);
     } else if (lens === "hook_payoff") {
       setCompareLiveMessage(null);
-    }
-    const nextMetric = metricForLens(lens);
-    if (controlledMetric === undefined) {
-      setMetricInternal(nextMetric);
     }
     syncLensLoopToUrl(lens, selectedLoopId, nextMetric, resolved.compare);
     onSelectionChange?.({ selectedMetric: nextMetric, source: "journey_rhythm" });
@@ -704,37 +721,75 @@ export function ReaderJourneyWorkspace({
   );
 
   useEffect(() => {
-    const lensFromUrl = parseLensParam(searchParams.get("lens"));
+    const resolvedLens = resolveJourneyLensFromSearch(
+      searchParams.get("lens"),
+      searchParams.get("metric"),
+    );
     const loopFromUrl = searchParams.get("loop");
     const compareFromUrl = searchParams.get("compareWith");
-    if (lensFromUrl && lensFromUrl !== observationLens) {
-      setObservationLens(lensFromUrl);
+    const metricFromUrl = searchParams.get("metric");
+    const canonicalMetric = canonicalMetricForLens(resolvedLens);
+    const hasExplicitLens = Boolean(parseLensParam(searchParams.get("lens")));
+
+    // One-way: URL → local mirrors (back/forward + external URL writers).
+    if (resolvedLens !== observationLens) {
+      setObservationLens(resolvedLens);
     }
     if (loopFromUrl !== selectedLoopId) {
       setSelectedLoopId(loopFromUrl);
     }
-    const lensForCompare =
-      (lensFromUrl && lensFromUrl) ||
-      observationLens;
-    const primary = getObservationLens(lensForCompare).primaryKey;
+    if (controlledMetric === undefined && metricFromUrl) {
+      const allowed = [
+        "engagement",
+        "valence",
+        "arousal",
+        "curiosity",
+        "tension",
+        "payoff",
+        "hook",
+        "dropoff_risk",
+      ] as const;
+      if ((allowed as readonly string[]).includes(metricFromUrl)) {
+        const nextMetric = hasExplicitLens
+          ? canonicalMetric
+          : (metricFromUrl as JourneyCurveMetric);
+        if (nextMetric !== metricInternal) {
+          setMetricInternal(nextMetric);
+        }
+      }
+    }
+
+    const primary = getObservationLens(resolvedLens).primaryKey;
     const nextCompare = sanitizeCompareMetric(compareFromUrl, primary);
     if (nextCompare !== compareWith) {
       setCompareWith(nextCompare);
     }
-    if (compareFromUrl && !nextCompare && compareFromUrl !== null) {
-      // Clear illegal / same-as-primary compare from URL.
+
+    // Normalize once: illegal compare, or conflicting metric under an explicit lens.
+    let needsNormalize = false;
+    if (compareFromUrl && !nextCompare) needsNormalize = true;
+    if (hasExplicitLens && metricFromUrl && metricFromUrl !== canonicalMetric) {
+      needsNormalize = true;
+    }
+    if (needsNormalize) {
       setSearchParams(
         (prev) => {
           const params = new URLSearchParams(prev);
-          if (params.get("compareWith")) {
-            params.delete("compareWith");
-            return params;
+          let changed = false;
+          if (hasExplicitLens && params.get("metric") !== canonicalMetric) {
+            params.set("metric", canonicalMetric);
+            changed = true;
           }
-          return prev;
+          if (params.get("compareWith") && !sanitizeCompareMetric(params.get("compareWith"), primary)) {
+            params.delete("compareWith");
+            changed = true;
+          }
+          return changed ? params : prev;
         },
         { replace: true },
       );
     }
+
     if (loopFromUrl) {
       const loops = getNarrativeLoops(visualization);
       if (!loops.some((loop) => loop.loop_id === loopFromUrl)) {
@@ -742,6 +797,7 @@ export function ReaderJourneyWorkspace({
         setSearchParams(
           (prev) => {
             const params = new URLSearchParams(prev);
+            if (!params.get("loop")) return prev;
             params.delete("loop");
             return params;
           },
