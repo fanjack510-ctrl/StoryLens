@@ -11,6 +11,12 @@
       "message": "feat: establish narrative phase1 parallel contracts",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "c5f835fb1c784b7f8ea1245438114fd846818edd",
+      "message": "docs: mark CHG-20260723-011 tested for phase1 parallel contracts",
+      "primary": false,
+      "multi_change_reason": null
     }
   ],
   "modules": [
