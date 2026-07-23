@@ -17,6 +17,12 @@
       "message": "docs: mark CHG-20260723-004 tested for smooth chapter switch",
       "primary": false,
       "multi_change_reason": "registry status for CHG-20260723-004"
+    },
+    {
+      "sha": "f5fb089ed4e356367bb2342bd4799e7d76d8cdfb",
+      "message": "docs: sync CHG-20260723-004 commit list",
+      "primary": false,
+      "multi_change_reason": "final registry attachment for CHG-20260723-004"
     }
   ],
   "modules": [
@@ -65,5 +71,5 @@
   "blocker_level": "P1",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T01:44:00Z",
-  "updated_at": "2026-07-23T01:54:08Z"
+  "updated_at": "2026-07-23T01:54:09Z"
 }
