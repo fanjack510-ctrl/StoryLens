@@ -17,6 +17,12 @@
       "message": "docs: mark CHG-20260723-020 tested for phase1b integration",
       "primary": false,
       "multi_change_reason": null
+    },
+    {
+      "sha": "c83a9e66b04e5c91bc5d62d74e33ecd97013bbe0",
+      "message": "docs: attach registry sync commit to CHG-20260723-020",
+      "primary": false,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -83,7 +89,7 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T08:33:16Z",
-  "updated_at": "2026-07-23T10:31:03Z",
+  "updated_at": "2026-07-23T10:31:43Z",
   "parallel_plan": {
     "role": "integration",
     "branch": "integration/narrative-phase1b",
