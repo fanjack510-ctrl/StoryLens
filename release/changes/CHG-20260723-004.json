@@ -3,7 +3,7 @@
   "title": "Smooth chapter switching and fix long-book chapter list overlap",
   "type": "fix",
   "base_version": "1.0.4",
-  "status": "tested",
+  "status": "ready",
   "include_in_next_release": true,
   "commits": [
     {
@@ -54,7 +54,8 @@
     "apps/desktop/e2e/chapter_switch_smoothness.spec.ts"
   ],
   "verification_evidence": [
-    "Vitest BookWorkspace/chapterList/prefetch 18 passed; Playwright chapter_switch_smoothness 1 passed; typecheck; lint; version/registry/diff-check. No model/install/publish/push."
+    "Vitest BookWorkspace/chapterList/prefetch 18 passed; Playwright chapter_switch_smoothness 1 passed; typecheck; lint; version/registry/diff-check. No model/install/publish/push.",
+    "1.0.5 Phase A engineering gates (not per-item user manual acceptance): pytest 760 passed/50 skipped; vitest 877 passed; typecheck; lint; frontend build; check_project; template governance; playwright smoke+scroll+chapter; focused theme/lens/comparison vitest."
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -71,5 +72,5 @@
   "blocker_level": "P1",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T01:44:00Z",
-  "updated_at": "2026-07-23T01:54:09Z"
+  "updated_at": "2026-07-23T05:17:04Z"
 }

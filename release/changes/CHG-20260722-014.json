@@ -3,7 +3,7 @@
   "title": "Simplify Reader Journey terminology and explanations",
   "type": "improvement",
   "base_version": "1.0.4",
-  "status": "tested",
+  "status": "ready",
   "include_in_next_release": true,
   "commits": [
     {
@@ -45,7 +45,8 @@
   ],
   "verification_evidence": [
     "vitest terminology + related suites: 77 passed",
-    "tsc/eslint/version/registry/git diff --check green"
+    "tsc/eslint/version/registry/git diff --check green",
+    "1.0.5 Phase A engineering gates (not per-item user manual acceptance): pytest 760 passed/50 skipped; vitest 877 passed; typecheck; lint; frontend build; check_project; template governance; playwright smoke+scroll+chapter; focused theme/lens/comparison vitest."
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -62,5 +63,5 @@
   "blocker_level": "P2",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-22T16:00:00Z",
-  "updated_at": "2026-07-22T16:07:38Z"
+  "updated_at": "2026-07-23T05:17:03Z"
 }

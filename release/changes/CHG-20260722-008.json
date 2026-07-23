@@ -3,7 +3,7 @@
   "title": "Fix long-book chapter navigation and pure-reading scroll",
   "type": "fix",
   "base_version": "1.0.4",
-  "status": "tested",
+  "status": "ready",
   "include_in_next_release": true,
   "commits": [
     {
@@ -66,7 +66,8 @@
     "After Playwright 1440x900 /books/3?chapter=4&view=reading: chapter clientHeight=527 scrollHeight=3076; reading clientHeight=736 scrollHeight=7312; independent scrollTops 480 vs 400; bodyScroll=0; screenshots in audits/chg-20260722-008-reading-scroll/.",
     "Clipping ancestor: overflow:hidden on book-shell-body/main while unconstrained .book-shell-workspace grew; missing min-height:0/flex on that wrapper and grid row minmax(0,1fr).",
     "Real scroll containers: [data-testid=chapter-list-scroll-region] and [data-testid=reading-content-scroll-region].",
-    "Playwright e2e reading_workspace_scroll.spec.ts 3 passed (1440 independent scroll, 1024+drawer, 150%/200% zoom)."
+    "Playwright e2e reading_workspace_scroll.spec.ts 3 passed (1440 independent scroll, 1024+drawer, 150%/200% zoom).",
+    "1.0.5 Phase A engineering gates (not per-item user manual acceptance): pytest 760 passed/50 skipped; vitest 877 passed; typecheck; lint; frontend build; check_project; template governance; playwright smoke+scroll+chapter; focused theme/lens/comparison vitest."
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -83,5 +84,5 @@
   "blocker_level": "P1",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-22T14:05:53Z",
-  "updated_at": "2026-07-22T16:24:07Z"
+  "updated_at": "2026-07-23T05:17:00Z"
 }

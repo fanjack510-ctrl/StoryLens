@@ -3,7 +3,7 @@
   "title": "Unify narrative loop interpretation",
   "type": "fix",
   "base_version": "1.0.4",
-  "status": "tested",
+  "status": "ready",
   "include_in_next_release": true,
   "commits": [
     {
@@ -46,7 +46,8 @@
   "verification_evidence": [
     "Manual: chart 有效兑现 at S3/S5/S8 while risk said payoffs empty and hook had no handoff.",
     "Root: score path vs entity path; V2 persist payoffs=[]; chains ignore hook identity.",
-    "Local pytest narrative_loop_view 7 passed; vitest narrativeLoopView+lens+labels 25 passed; typecheck/lint/version/diff-check green."
+    "Local pytest narrative_loop_view 7 passed; vitest narrativeLoopView+lens+labels 25 passed; typecheck/lint/version/diff-check green.",
+    "1.0.5 Phase A engineering gates (not per-item user manual acceptance): pytest 760 passed/50 skipped; vitest 877 passed; typecheck; lint; frontend build; check_project; template governance; playwright smoke+scroll+chapter; focused theme/lens/comparison vitest."
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -63,5 +64,5 @@
   "blocker_level": "P1",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-22T14:51:15Z",
-  "updated_at": "2026-07-22T15:03:09Z"
+  "updated_at": "2026-07-23T05:17:01Z"
 }

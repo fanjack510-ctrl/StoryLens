@@ -3,7 +3,7 @@
   "title": "Fix configured AI provider start-analysis gate",
   "type": "fix",
   "base_version": "1.0.4",
-  "status": "tested",
+  "status": "ready",
   "include_in_next_release": true,
   "commits": [
     {
@@ -52,7 +52,8 @@
   "verification_evidence": [
     "1.0.4 install manual: AI configured, modes selectable, consent checked, start disabled with 当前AI服务不支持此分析; tech details showed aliyun_qwen_plus unhealthy cached_failure provider_unhealthy while max/flash expected unsupported.",
     "Root cause: start gate used provider list manual_boundary_candidate_eligible filtered by cached_failure; Settings READY used ai_service_validation_snapshot that did not clear that failure.",
-    "Coverage: execution-plan pytest (8) + StartAnalysisDialog/providerEligibility/aiServiceViewModel vitest (50); production packaged and browser_local_production share same backend evaluate_manual_boundary_candidate + execution plan (no data-dir/credential-key changes)."
+    "Coverage: execution-plan pytest (8) + StartAnalysisDialog/providerEligibility/aiServiceViewModel vitest (50); production packaged and browser_local_production share same backend evaluate_manual_boundary_candidate + execution plan (no data-dir/credential-key changes).",
+    "1.0.5 Phase A engineering gates (not per-item user manual acceptance): pytest 760 passed/50 skipped; vitest 877 passed; typecheck; lint; frontend build; check_project; template governance; playwright smoke+scroll+chapter; focused theme/lens/comparison vitest."
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -69,5 +70,5 @@
   "blocker_level": "P0",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-22T13:23:02Z",
-  "updated_at": "2026-07-22T13:45:49Z"
+  "updated_at": "2026-07-23T05:17:00Z"
 }

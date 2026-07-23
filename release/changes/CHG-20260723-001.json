@@ -3,7 +3,7 @@
   "title": "Fix frontend build gate and stale-dist startup",
   "type": "fix",
   "base_version": "1.0.4",
-  "status": "tested",
+  "status": "ready",
   "include_in_next_release": true,
   "commits": [
     {
@@ -58,7 +58,8 @@
   ],
   "verification_evidence": [
     "Ancestors confirmed: 63b0434/d47a954/3a03db6/6948180/3426457. typecheck+lint green. vitest 49. pytest build-gate 5 passed 1 skipped. npm run build wrote meta. start fail-fast + stale dist gates.",
-    "Post-commit npm rebuild + browser_local_production restart; runtime frontend_source_commit equals HEAD."
+    "Post-commit npm rebuild + browser_local_production restart; runtime frontend_source_commit equals HEAD.",
+    "1.0.5 Phase A engineering gates (not per-item user manual acceptance): pytest 760 passed/50 skipped; vitest 877 passed; typecheck; lint; frontend build; check_project; template governance; playwright smoke+scroll+chapter; focused theme/lens/comparison vitest."
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -75,5 +76,5 @@
   "blocker_level": "P0",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T00:14:34Z",
-  "updated_at": "2026-07-23T00:21:45Z"
+  "updated_at": "2026-07-23T05:17:03Z"
 }

@@ -3,7 +3,7 @@
   "title": "Restore continuous reader journey momentum line",
   "type": "fix",
   "base_version": "1.0.4",
-  "status": "tested",
+  "status": "ready",
   "include_in_next_release": true,
   "commits": [
     {
@@ -34,7 +34,8 @@
   "verification_evidence": [
     "Manual: phase cards 开端65/发展59/收束54, S1-S3 points visible, no polyline; S2/S3 auxiliary beat markers.",
     "DB run1 visualization: S1 core include=true; S2/S3 beat include=false; mainCurveSeries length 1 before fix.",
-    "Local vitest readingMomentumLine + lens suites; typecheck/lint/version/registry green."
+    "Local vitest readingMomentumLine + lens suites; typecheck/lint/version/registry green.",
+    "1.0.5 Phase A engineering gates (not per-item user manual acceptance): pytest 760 passed/50 skipped; vitest 877 passed; typecheck; lint; frontend build; check_project; template governance; playwright smoke+scroll+chapter; focused theme/lens/comparison vitest."
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -51,5 +52,5 @@
   "blocker_level": "P1",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-22T14:13:53Z",
-  "updated_at": "2026-07-22T14:22:10Z"
+  "updated_at": "2026-07-23T05:17:00Z"
 }

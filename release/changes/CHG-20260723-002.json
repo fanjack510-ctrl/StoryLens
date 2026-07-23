@@ -3,7 +3,7 @@
   "title": "Clarify Reader Journey roles and simplify lens navigation",
   "type": "fix",
   "base_version": "1.0.4",
-  "status": "tested",
+  "status": "ready",
   "include_in_next_release": true,
   "commits": [
     {
@@ -65,7 +65,8 @@
     "apps/desktop/src/components/readerJourney/reader_journey_ui_cleanup_local_audit.test.tsx"
   ],
   "verification_evidence": [
-    "Local Vitest (sceneCardRoleTags/HookPayoffTimeline/compareWithUrl/terminology/lenses/workspace/cleanup) 93 passed; npm run typecheck; npm run lint; version_manager check; change_registry check; git diff --check. No model/install/publish/push."
+    "Local Vitest (sceneCardRoleTags/HookPayoffTimeline/compareWithUrl/terminology/lenses/workspace/cleanup) 93 passed; npm run typecheck; npm run lint; version_manager check; change_registry check; git diff --check. No model/install/publish/push.",
+    "1.0.5 Phase A engineering gates (not per-item user manual acceptance): pytest 760 passed/50 skipped; vitest 877 passed; typecheck; lint; frontend build; check_project; template governance; playwright smoke+scroll+chapter; focused theme/lens/comparison vitest."
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -82,5 +83,5 @@
   "blocker_level": "P1",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T00:49:44Z",
-  "updated_at": "2026-07-23T01:06:22Z"
+  "updated_at": "2026-07-23T05:17:03Z"
 }

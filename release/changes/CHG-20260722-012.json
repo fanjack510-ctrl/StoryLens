@@ -3,7 +3,7 @@
   "title": "Simplify Reader Journey chart explanations and hook-payoff visualization",
   "type": "improvement",
   "base_version": "1.0.4",
-  "status": "tested",
+  "status": "ready",
   "include_in_next_release": true,
   "commits": [
     {
@@ -42,7 +42,8 @@
   "verification_evidence": [
     "Audit: dual score curves for hook/payoff; lens local-only so refresh reset; pacing fit as numeric distance; tech EN fields in inspector.",
     "Depends CHG-20260722-011 NarrativeLoopView.",
-    "Local vitest lens explanation + URL sync + related; typecheck/lint/version green."
+    "Local vitest lens explanation + URL sync + related; typecheck/lint/version green.",
+    "1.0.5 Phase A engineering gates (not per-item user manual acceptance): pytest 760 passed/50 skipped; vitest 877 passed; typecheck; lint; frontend build; check_project; template governance; playwright smoke+scroll+chapter; focused theme/lens/comparison vitest."
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -59,5 +60,5 @@
   "blocker_level": "P1",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-22T15:08:25Z",
-  "updated_at": "2026-07-22T15:20:36Z"
+  "updated_at": "2026-07-23T05:17:02Z"
 }
