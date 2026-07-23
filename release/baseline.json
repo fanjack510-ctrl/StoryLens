@@ -1,7 +1,7 @@
 {
   "version": "1.0.5",
   "git_tag": "v1.0.5",
-  "git_commit": "34d9128a53bcd155462f2a2ffa7f372a90dac41c",
+  "git_commit": "d98f1a690e478338003a7b302c856c90c5d95f08",
   "status": "verified",
   "released_at": "2026-07-23T05:40:48Z",
   "channel": "manual-upgrade-only",
