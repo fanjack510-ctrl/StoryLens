@@ -8,6 +8,7 @@ import {
   chaptersInRange,
   frontMatterChapters,
   rangeContainingOrdinal,
+  scrollChapterListItemIntoViewIfNeeded,
   type ChapterRange,
 } from "../../services/chapterNavigation";
 
@@ -15,6 +16,7 @@ type Props = {
   chapters: Chapter[];
   currentChapterId: number;
   onSelect: (chapterId: number) => void;
+  onPrefetch?: (chapterId: number) => void;
   listRef?: React.RefObject<HTMLDivElement | null>;
 };
 
@@ -22,6 +24,7 @@ export function ChapterListViewport({
   chapters,
   currentChapterId,
   onSelect,
+  onPrefetch,
   listRef: externalRef,
 }: Props) {
   const internalRef = useRef<HTMLDivElement>(null);
@@ -41,12 +44,7 @@ export function ChapterListViewport({
   const visible = chaptersInRange(chapters, activeRange || ranges[0] || null);
 
   useEffect(() => {
-    const root = listRef.current;
-    if (!root || !currentChapterId) return;
-    const el = root.querySelector<HTMLElement>(
-      `.workspace-chapter-item[data-chapter-id="${currentChapterId}"]`,
-    );
-    el?.scrollIntoView({ block: "center", inline: "nearest" });
+    scrollChapterListItemIntoViewIfNeeded(listRef.current, currentChapterId);
   }, [currentChapterId, activeRange, listRef, visible.length]);
 
   if (!chapters.length) {
@@ -58,6 +56,31 @@ export function ChapterListViewport({
       </div>
     );
   }
+
+  const renderRow = (c: Chapter, opts: { key: string; ordinal?: number | null; kind: "front" | "chapter" }) => {
+    const title = c.display_title || c.title;
+    const label = chapterListLabel(c, opts.ordinal);
+    const selected = currentChapterId === c.id;
+    return (
+      <button
+        type="button"
+        className={`workspace-chapter-item workspace-chapter-item--${opts.kind}${selected ? " selected" : ""}`}
+        data-chapter-id={c.id}
+        data-row-kind={opts.kind}
+        data-testid={selected ? "workspace-chapter-item-selected" : undefined}
+        onClick={() => onSelect(c.id)}
+        onMouseEnter={() => onPrefetch?.(c.id)}
+        onFocus={() => onPrefetch?.(c.id)}
+        key={opts.key}
+        title={title}
+        aria-label={`${label} ${title}`}
+        aria-current={selected ? "true" : undefined}
+      >
+        <span className="workspace-chapter-num">{label}</span>
+        <span className="workspace-chapter-title">{title}</span>
+      </button>
+    );
+  };
 
   return (
     <div className="workspace-chapter-viewport" data-testid="workspace-chapter-viewport">
@@ -94,38 +117,12 @@ export function ChapterListViewport({
         data-testid="chapter-list-scroll-region"
         data-chapter-list="workspace-chapter-list"
       >
-        {front.map((c) => {
-          const title = c.display_title || c.title;
-          return (
-            <button
-              type="button"
-              className={`workspace-chapter-item${currentChapterId === c.id ? " selected" : ""}`}
-              data-chapter-id={c.id}
-              onClick={() => onSelect(c.id)}
-              key={`front-${c.id}`}
-              title={title}
-            >
-              <span className="workspace-chapter-num">{chapterListLabel(c)}</span>
-              <span className="workspace-chapter-title">{title}</span>
-            </button>
-          );
-        })}
+        {front.map((c) =>
+          renderRow(c, { key: `front-${c.id}`, kind: "front" }),
+        )}
         {visible.map((c) => {
-          const title = c.display_title || c.title;
           const ordinal = bodyOrdinalOf(chapters, c.id);
-          return (
-            <button
-              type="button"
-              className={`workspace-chapter-item${currentChapterId === c.id ? " selected" : ""}`}
-              data-chapter-id={c.id}
-              onClick={() => onSelect(c.id)}
-              key={c.id}
-              title={title}
-            >
-              <span className="workspace-chapter-num">{chapterListLabel(c, ordinal)}</span>
-              <span className="workspace-chapter-title">{title}</span>
-            </button>
-          );
+          return renderRow(c, { key: String(c.id), ordinal, kind: "chapter" });
         })}
       </div>
     </div>

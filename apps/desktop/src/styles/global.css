@@ -3096,20 +3096,30 @@ a {
   display: grid;
   grid-template-columns: 36px minmax(0, 1fr);
   gap: 8px;
-  align-items: start;
+  align-items: center;
   width: 100%;
   border: 0;
   background: transparent;
   color: var(--text);
   text-align: left;
-  padding: 8px 8px;
+  padding: 0 8px;
   border-radius: 6px;
   cursor: pointer;
   min-height: 36px;
+  height: 36px;
+  max-height: 36px;
+  box-sizing: border-box;
+  overflow: hidden;
+  flex: 0 0 36px;
 }
 .workspace-scene-item {
   grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
+  height: auto;
+  max-height: none;
+  min-height: 36px;
+  padding: 8px 8px;
+  flex: 0 0 auto;
+  overflow: visible;
 }
 .workspace-chapter-item:hover,
 .workspace-scene-item:hover {
@@ -3125,9 +3135,19 @@ a {
   color: var(--muted);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-  padding-top: 1px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.workspace-chapter-title,
+.workspace-chapter-title {
+  font-size: 14px;
+  line-height: 20px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  word-break: normal;
+  display: block;
+}
 .workspace-scene-name {
   font-size: 14px;
   line-height: 1.4;
@@ -3137,6 +3157,7 @@ a {
   -webkit-box-orient: vertical;
   word-break: break-word;
   white-space: normal;
+  min-width: 0;
 }
 .workspace-scene-empty {
   padding: 8px 4px !important;
@@ -3178,6 +3199,51 @@ a {
   background: rgba(0, 0, 0, 0.22);
   border-radius: 999px;
 }
+
+.workspace-chapter-switch-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  padding: 0;
+  min-height: 18px;
+  font-size: 12px;
+  color: var(--muted, #6b7280);
+  flex-shrink: 0;
+}
+
+.workspace-chapter-switch-bar {
+  display: inline-block;
+  width: 72px;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent, #2f6f4e), transparent);
+  animation: workspace-chapter-switch-pulse 1s linear infinite;
+}
+
+@keyframes workspace-chapter-switch-pulse {
+  0% { opacity: 0.35; }
+  50% { opacity: 1; }
+  100% { opacity: 0.35; }
+}
+
+.workspace-prose {
+  transition: opacity 140ms ease;
+}
+
+.workspace-prose--switching {
+  opacity: 0.72;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workspace-prose {
+    transition: none;
+  }
+  .workspace-chapter-switch-bar {
+    animation: none;
+  }
+}
+
 .workspace-reading-canvas {
   width: 100%;
   max-width: 100%;

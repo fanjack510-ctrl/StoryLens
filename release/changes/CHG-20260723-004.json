@@ -1,0 +1,54 @@
+{
+  "id": "CHG-20260723-004",
+  "title": "Smooth chapter switching and fix long-book chapter list overlap",
+  "type": "fix",
+  "base_version": "1.0.4",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "desktop"
+  ],
+  "files": [
+    "apps/desktop/src/pages/BookWorkspacePage.tsx",
+    "apps/desktop/src/pages/BookRoutePage.tsx",
+    "apps/desktop/src/components/books/ChapterListViewport.tsx",
+    "apps/desktop/src/components/books/ChapterAdjacentNav.tsx",
+    "apps/desktop/src/services/chapterNavigation.ts",
+    "apps/desktop/src/services/chapterParagraphPrefetch.ts",
+    "apps/desktop/src/styles/global.css",
+    "apps/desktop/e2e/chapter_switch_smoothness.spec.ts"
+  ],
+  "user_summary": "纯正文切章页面抖动；1291章长篇左侧标题换行压住下一章。",
+  "technical_summary": "Keep previous chapter body with React Query keepPreviousData; defer reading scrollTop until new body commits; nearest-only chapter list locate; adjacent/hover paragraph prefetch with concurrency limit; fixed 36px single-line ellipsis chapter rows.",
+  "acceptance_criteria": [
+    "切章时工作台与左栏不 remount",
+    "旧正文保留至新正文可用",
+    "左侧 scrollTop 不无必要跳动",
+    "章节标题单行省略不重叠",
+    "相邻章节预取且不预取全书"
+  ],
+  "tests": [
+    "apps/desktop/src/pages/BookWorkspacePage.test.tsx",
+    "apps/desktop/src/services/chapterParagraphPrefetch.test.ts",
+    "apps/desktop/src/services/chapterListViewport_local.test.tsx",
+    "apps/desktop/e2e/chapter_switch_smoothness.spec.ts"
+  ],
+  "verification_evidence": [],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "Reading UI only; no analysis/prompt/Reader Journey changes."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "P1",
+  "head_inclusion": null,
+  "created_at": "2026-07-23T01:44:00Z",
+  "updated_at": "2026-07-23T02:00:00Z"
+}

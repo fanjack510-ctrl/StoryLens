@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { booksApi } from "../services/booksApi";
 import { analysisApi } from "../services/analysisApi";
 import { formatSceneDisplayLabel } from "../services/formatSceneDisplayLabel";
@@ -10,6 +10,10 @@ import {
   bodyChapters,
   scrollReadingPaneToTop,
 } from "../services/chapterNavigation";
+import {
+  prefetchAdjacentChapterParagraphs,
+  prefetchChapterParagraphs,
+} from "../services/chapterParagraphPrefetch";
 import { useUiStore } from "../stores/uiStore";
 import { Empty, ErrorState, Loading, Badge } from "../components/common/States";
 import { StateView } from "../components/ui/StateView";
@@ -42,9 +46,11 @@ export function BookWorkspacePage() {
   const [dialog, setDialog] = useState(false);
   const [offset, setOffset] = useState(0);
   const [loaded, setLoaded] = useState<any[]>([]);
+  const [displayedChapterId, setDisplayedChapterId] = useState(0);
   const [diagnostics, setDiagnostics] = useState<any>();
   const [reparseOpen, setReparseOpen] = useState(false);
   const chapterListRef = useRef<HTMLDivElement>(null);
+  const pendingScrollTopRef = useRef(false);
   const qc = useQueryClient();
   const { fontSize, lineHeight, setReading, demo } = useUiStore();
   const book = useQuery({
@@ -71,21 +77,47 @@ export function BookWorkspacePage() {
   }, [chapters.data, chapter, chapterFromUrl]);
   useEffect(() => {
     setOffset(0);
-    setLoaded([]);
+    pendingScrollTopRef.current = true;
+    // Keep previous `loaded` until the new chapter body is ready (no blank flash).
   }, [chapter]);
   const paragraphs = useQuery({
     queryKey: ["paragraphs", chapter, offset],
     queryFn: () => booksApi.paragraphs(chapter, offset, 200),
     enabled: !!chapter,
+    placeholderData: keepPreviousData,
   });
   useEffect(() => {
-    if (paragraphs.data)
-      setLoaded((current) =>
-        offset === 0
-          ? paragraphs.data.items
-          : [...current, ...paragraphs.data.items],
-      );
-  }, [paragraphs.data, offset]);
+    if (!paragraphs.data || paragraphs.isPlaceholderData) return;
+    setLoaded((current) =>
+      offset === 0
+        ? paragraphs.data.items
+        : [...current, ...paragraphs.data.items],
+    );
+    if (offset === 0) {
+      setDisplayedChapterId(chapter);
+      if (pendingScrollTopRef.current) {
+        pendingScrollTopRef.current = false;
+        requestAnimationFrame(() => {
+          scrollReadingPaneToTop();
+        });
+      }
+    }
+  }, [paragraphs.data, paragraphs.isPlaceholderData, offset, chapter]);
+  const adjacent = useMemo(
+    () => adjacentBodyChapters(chapters.data, chapter),
+    [chapters.data, chapter],
+  );
+  useEffect(() => {
+    if (!chapter || paragraphs.isPlaceholderData || paragraphs.isFetching) return;
+    prefetchAdjacentChapterParagraphs(qc, adjacent.prev?.id, adjacent.next?.id);
+  }, [
+    chapter,
+    paragraphs.isPlaceholderData,
+    paragraphs.isFetching,
+    adjacent.prev?.id,
+    adjacent.next?.id,
+    qc,
+  ]);
   const scenes = useQuery({
     queryKey: ["scenes", chapter],
     queryFn: () => analysisApi.scenes(chapter),
@@ -104,19 +136,33 @@ export function BookWorkspacePage() {
   const formatLabel = fileExtLabel(book.data?.source_file_name);
   const bodyCount = bodyChapters(chapters.data).length;
   const chapterCount = bodyCount || chapters.data?.length;
-  const adjacent = useMemo(
-    () => adjacentBodyChapters(chapters.data, chapter),
-    [chapters.data, chapter],
-  );
   const chapterMissing =
     Boolean(chapterFromUrl) &&
     Boolean(chapters.data?.length) &&
     !chapters.data?.some((c) => c.id === chapterFromUrl);
 
+  const switchingChapter =
+    Boolean(chapter) &&
+    (paragraphs.isFetching || paragraphs.isPlaceholderData) &&
+    loaded.length > 0 &&
+    displayedChapterId !== 0 &&
+    displayedChapterId !== chapter;
+
+  const showInitialLoading =
+    Boolean(chapter) &&
+    !chapterMissing &&
+    paragraphs.isLoading &&
+    loaded.length === 0 &&
+    !paragraphs.isPlaceholderData;
+
   const selectChapter = (id: number) => {
+    if (id === chapter) return;
     setChapter(id);
     applyNavigateToChapterReading(setSearchParams, id);
-    scrollReadingPaneToTop();
+  };
+
+  const handlePrefetchChapter = (id: number) => {
+    prefetchChapterParagraphs(qc, id);
   };
 
   const locate = async (id: number) => {
@@ -141,10 +187,12 @@ export function BookWorkspacePage() {
 
   const bookTitle = book.data?.title || "选择一本书";
   const chapterTitle = currentChapter?.display_title || currentChapter?.title;
+  const switchingOrdinal =
+    bodyChapters(chapters.data).findIndex((c) => c.id === chapter) + 1;
 
   return (
-    <section className="workspace workspace-content">
-      <aside className="structure-pane workspace-book-nav">
+    <section className="workspace workspace-content" data-testid="book-workspace-page">
+      <aside className="structure-pane workspace-book-nav" data-testid="workspace-book-nav">
         <div className="pane-head workspace-book-info">
           <small>当前书籍</small>
           <h2 className="workspace-book-title" title={bookTitle}>
@@ -206,6 +254,7 @@ export function BookWorkspacePage() {
             chapters={chapters.data || []}
             currentChapterId={chapter}
             onSelect={selectChapter}
+            onPrefetch={handlePrefetchChapter}
             listRef={chapterListRef}
           />
         </div>
@@ -321,22 +370,41 @@ export function BookWorkspacePage() {
                 next={adjacent.next}
                 chapters={chapters.data || []}
                 onSelect={selectChapter}
+                onPrefetch={handlePrefetchChapter}
               />
             ) : null}
           </header>
+
+          {switchingChapter ? (
+            <div
+              className="workspace-chapter-switch-hint"
+              data-testid="workspace-chapter-switching"
+              role="status"
+            >
+              <span className="workspace-chapter-switch-bar" aria-hidden="true" />
+              <span>
+                正在打开第{switchingOrdinal > 0 ? switchingOrdinal : ""}章…
+              </span>
+            </div>
+          ) : null}
 
           {(paragraphs.data?.total || 0) > 2000 && (
             <p className="notice">当前章节异常偏大，可能需要重新识别章节。</p>
           )}
 
-          <div className="prose workspace-prose" style={{ fontSize, lineHeight }}>
-            {chapterMissing || !chapter ? null : paragraphs.isLoading ? (
+          <div
+            className={`prose workspace-prose${switchingChapter ? " workspace-prose--switching" : ""}`}
+            style={{ fontSize, lineHeight }}
+            data-displayed-chapter={displayedChapterId || undefined}
+            data-target-chapter={chapter || undefined}
+          >
+            {chapterMissing || !chapter ? null : showInitialLoading ? (
               <StateView
                 kind="loading"
                 title="正在载入章节"
                 data-testid="workspace-chapter-loading"
               />
-            ) : paragraphs.error ? (
+            ) : paragraphs.error && !loaded.length ? (
               <ErrorState error={paragraphs.error} />
             ) : loaded.length ? (
               loaded.slice(Math.max(0, loaded.length - 600)).map((p) => (
@@ -361,7 +429,7 @@ export function BookWorkspacePage() {
                 data-testid="workspace-empty-body"
               />
             )}
-            {paragraphs.data?.has_more && (
+            {paragraphs.data?.has_more && !paragraphs.isPlaceholderData && (
               <button onClick={() => setOffset(offset + paragraphs.data!.limit)}>
                 继续加载正文
               </button>
@@ -374,6 +442,7 @@ export function BookWorkspacePage() {
               next={adjacent.next}
               chapters={chapters.data || []}
               onSelect={selectChapter}
+              onPrefetch={handlePrefetchChapter}
             />
           ) : null}
         </div>

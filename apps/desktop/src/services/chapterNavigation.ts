@@ -171,11 +171,26 @@ export function scrollReadingPaneToTop(): void {
   if (pane) {
     pane.scrollTop = 0;
   }
-  try {
-    if (typeof window.scrollTo === "function") {
-      window.scrollTo(0, 0);
-    }
-  } catch {
-    // jsdom may not implement scrollTo
-  }
+  // Do not scroll window/body — reading pane owns vertical scroll.
+}
+
+/**
+ * Scroll chapter list item into view only when outside the list viewport.
+ * Uses nearest so an already-visible selection does not jump the list.
+ */
+export function scrollChapterListItemIntoViewIfNeeded(
+  listRoot: HTMLElement | null | undefined,
+  chapterId: number | null | undefined,
+): boolean {
+  if (!listRoot || !chapterId) return false;
+  const el = listRoot.querySelector<HTMLElement>(
+    `.workspace-chapter-item[data-chapter-id="${chapterId}"]`,
+  );
+  if (!el) return false;
+  const rootRect = listRoot.getBoundingClientRect();
+  const elRect = el.getBoundingClientRect();
+  const fullyVisible = elRect.top >= rootRect.top && elRect.bottom <= rootRect.bottom;
+  if (fullyVisible) return false;
+  el.scrollIntoView({ block: "nearest", inline: "nearest" });
+  return true;
 }

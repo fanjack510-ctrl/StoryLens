@@ -15,7 +15,6 @@ import {
   applyNavigateToChapterReading,
   bodyChapters,
   buildChapterReadingSearchParams,
-  scrollReadingPaneToTop,
 } from "../services/chapterNavigation";
 import { UnifiedAnalysisRecoveryCard } from "../components/chapterAnalysis/UnifiedAnalysisRecoveryCard";
 import { ChapterAnalysisProgressPanel } from "../components/chapterAnalysis/ChapterAnalysisProgressPanel";
@@ -513,7 +512,7 @@ export function BookRoutePage() {
     userPinnedViewRef.current = "reading";
     userPinnedTabRef.current = "text";
     applyNavigateToChapterReading(setSearchParams, id);
-    scrollReadingPaneToTop();
+    // Reading pane scrollTop resets after new chapter body commits in BookWorkspacePage.
   };
 
   const openCatalogOrFocusNav = () => {
@@ -562,7 +561,6 @@ export function BookRoutePage() {
       userPinnedViewRef.current = "reading";
       userPinnedTabRef.current = "text";
       applyNavigateToChapterReading(setSearchParams, next.id);
-      scrollReadingPaneToTop();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);

@@ -6,6 +6,7 @@ type Props = {
   next: Chapter | null;
   chapters: Chapter[];
   onSelect: (chapterId: number) => void;
+  onPrefetch?: (chapterId: number) => void;
   compact?: boolean;
 };
 
@@ -22,6 +23,7 @@ export function ChapterAdjacentNav({
   next,
   chapters,
   onSelect,
+  onPrefetch,
   compact = false,
 }: Props) {
   if (!prev && !next) return null;
@@ -37,6 +39,8 @@ export function ChapterAdjacentNav({
         data-testid="chapter-prev"
         disabled={!prev}
         title={prev ? labelFor(chapters, prev) : undefined}
+        onMouseEnter={() => prev && onPrefetch?.(prev.id)}
+        onFocus={() => prev && onPrefetch?.(prev.id)}
         onClick={() => prev && onSelect(prev.id)}
       >
         <span className="chapter-adjacent-dir">上一章</span>
@@ -50,6 +54,8 @@ export function ChapterAdjacentNav({
         data-testid="chapter-next"
         disabled={!next}
         title={next ? labelFor(chapters, next) : undefined}
+        onMouseEnter={() => next && onPrefetch?.(next.id)}
+        onFocus={() => next && onPrefetch?.(next.id)}
         onClick={() => next && onSelect(next.id)}
       >
         <span className="chapter-adjacent-dir">下一章</span>
