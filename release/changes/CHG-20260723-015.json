@@ -11,6 +11,12 @@
       "message": "feat: integrate narrative phase1a foundation",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "f8cde35ec9e6fd75d8110ddd4ec291a5be316891",
+      "message": "docs: finalize CHG-20260723-015 registry after tested mark",
+      "primary": false,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -82,7 +88,7 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T07:20:00Z",
-  "updated_at": "2026-07-23T08:18:04Z",
+  "updated_at": "2026-07-23T08:18:36Z",
   "parallel_plan": {
     "role": "integration",
     "branch": "integration/narrative-phase1a",
