@@ -23,6 +23,12 @@
       "message": "docs: sync CHG-20260723-003 commit list",
       "primary": false,
       "multi_change_reason": "final registry attachment for CHG-20260723-003"
+    },
+    {
+      "sha": "263e7789d5556384ccd3271fbd033255bfbe6b9d",
+      "message": "﻿fix: densify hook resolution page to overview + list",
+      "primary": false,
+      "multi_change_reason": "real-device densify follow-up for same hook resolution page"
     }
   ],
   "modules": [
@@ -76,5 +82,5 @@
   "blocker_level": "P1",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T01:35:00Z",
-  "updated_at": "2026-07-23T02:10:00Z"
+  "updated_at": "2026-07-23T02:08:22Z"
 }
