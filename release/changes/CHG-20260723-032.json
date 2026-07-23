@@ -5,7 +5,20 @@
   "base_version": "1.0.5",
   "status": "tested",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "088f26498cf48a199860afe1069d9402983f4864",
+      "message": "docs: strip trailing whitespace in phase2a backend docs",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "506b99a7be42d9aabfd8279fce92b889d30366f7",
+      "message": "feat: implement backend mock whole book runs",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "narrative_core/services",
     "routers"
@@ -61,9 +74,9 @@
     "breaking_change": false
   },
   "blocker_level": null,
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T15:04:11Z",
-  "updated_at": "2026-07-23T15:50:00Z",
+  "updated_at": "2026-07-23T15:52:00Z",
   "parallel_plan": {
     "role": "agent_m",
     "branch": "feature/narrative-phase2a-run-backend",
