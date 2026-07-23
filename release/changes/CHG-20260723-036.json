@@ -1,0 +1,108 @@
+{
+  "id": "CHG-20260723-036",
+  "title": "Phase 2B-P Private Engine Contract",
+  "type": "feature",
+  "base_version": "1.0.5",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "narrative_core/private_engine_contract",
+    "desktop/wholeBook/privateEngineContracts",
+    "docs"
+  ],
+  "files": [
+    "apps/api/app/narrative_core/private_engine_contract/",
+    "apps/desktop/src/features/wholeBook/privateEngineContracts/",
+    "apps/api/tests/test_narrative_phase2bp_contract.py",
+    "docs/architecture/narrative-intelligence-core/phase2b-private-engine-boundary.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-engine-manifest-loader.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-provider-gateway.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-prompt-pack-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-context-pipeline.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-context-unit-bundle.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-evidence-pipeline.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-module-execution-spec.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-first-four-modules.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-output-validation.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-candidate-persistence.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-native-enhanced.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-quality-model-routing.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-data-handling-privacy.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-checkpoint-recovery.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-budget-usage.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-error-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-algorithm-generality.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-evaluation-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-language-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-parallel-file-ownership.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-parallel-file-ownership.json",
+    "docs/architecture/narrative-intelligence-core/phase2b-contract-verification.md",
+    "docs/architecture/narrative-intelligence-core/README.md",
+    "docs/architecture/README.md",
+    "release/changes/CHG-20260723-036.json",
+    "release/changes/CHG-20260723-037.json",
+    "release/changes/CHG-20260723-038.json",
+    "release/changes/CHG-20260723-039.json",
+    "release/changes/CHG-20260723-040.json"
+  ],
+  "user_summary": "Freeze Phase 2B private whole-book engine, context/evidence, and first-four module contracts without enabling production runs.",
+  "technical_summary": "Freeze Phase 2B-P public contracts: Private Engine Manifest/Loader/Protocol, Provider Gateway, Prompt Pack Manifest, Context/Evidence pipelines, Module Execution Spec and first-four modules, validation/candidate/checkpoint/quality/privacy/evaluation contracts, Fake fixtures, FE error parity, ownership docs. No real algorithms, formal prompts, model calls, migrations, or production run enablement.",
+  "acceptance_criteria": [
+    "Public/private/provider boundary frozen; no private algorithms in public contract dir",
+    "Manifest/Loader/Protocol/Provider/Prompt Pack contracts + Fake fixtures",
+    "Context Unit/Bundle and Evidence Candidate/Validator contracts",
+    "Module Execution Spec authority with Planning/Producer/Result derived views for first four modules",
+    "Validation/Candidate/Checkpoint/Quality/Privacy/Evaluation/Language/Generality contracts",
+    "Production gates unchanged; Mock Lab default false; no migrations",
+    "CHG-037–040 registered; ownership documented; contract tests pass"
+  ],
+  "tests": [
+    "apps/api/tests/test_narrative_phase2bp_contract.py"
+  ],
+  "verification_evidence": [
+    "pytest apps/api/tests/test_narrative_phase2bp_contract.py -q --noconftest → 63 passed",
+    "python scripts/version_manager.py check",
+    "python scripts/change_registry.py check",
+    "git diff --check"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "Contract/DTO/Protocol freeze only; no ORM or schema changes."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": null,
+  "created_at": "2026-07-23T22:38:45Z",
+  "updated_at": "2026-07-24T00:00:00Z",
+  "parallel_plan": {
+    "role": "phase2b_p",
+    "branch": "feature/narrative-phase2b-core-engine-contract",
+    "worktree": "D:\\\\Dstorylens-wt-narrative-phase2b-contract",
+    "depends_on": [
+      "CHG-20260723-035"
+    ],
+    "blocks": [
+      "CHG-20260723-037",
+      "CHG-20260723-038",
+      "CHG-20260723-039",
+      "CHG-20260723-040"
+    ],
+    "forbidden": [
+      "real engine/model/prompt",
+      "open production whole-book run",
+      "migrations",
+      "VERSION bump",
+      "push/build/publish"
+    ],
+    "file_ownership": "docs/architecture/narrative-intelligence-core/phase2b-parallel-file-ownership.json"
+  },
+  "file_ownership": "docs/architecture/narrative-intelligence-core/phase2b-parallel-file-ownership.json"
+}

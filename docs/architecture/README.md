@@ -26,3 +26,26 @@ Related: [docs/audits](../audits/), [docs/release/v1.0-baseline-notes.md](../rel
 | [narrative-intelligence-core/phase1-parallel-file-ownership.md](./narrative-intelligence-core/phase1-parallel-file-ownership.md) | 文件所有权 |
 | [narrative-intelligence-core/phase1-parallel-file-ownership.json](./narrative-intelligence-core/phase1-parallel-file-ownership.json) | 文件所有权（机器可读） |
 | [narrative-intelligence-core/phase1-contract-verification.md](./narrative-intelligence-core/phase1-contract-verification.md) | Phase 1P 验证记录 |
+| [narrative-intelligence-core/phase2b-private-engine-boundary.md](./narrative-intelligence-core/phase2b-private-engine-boundary.md) | Phase 2B-P Public/Private/Provider 边界 |
+| [narrative-intelligence-core/phase2b-engine-manifest-loader.md](./narrative-intelligence-core/phase2b-engine-manifest-loader.md) | Phase 2B-P Manifest / Loader |
+| [narrative-intelligence-core/phase2b-provider-gateway.md](./narrative-intelligence-core/phase2b-provider-gateway.md) | Phase 2B-P Provider Gateway |
+| [narrative-intelligence-core/phase2b-prompt-pack-contract.md](./narrative-intelligence-core/phase2b-prompt-pack-contract.md) | Phase 2B-P Prompt Pack Manifest |
+| [narrative-intelligence-core/phase2b-context-pipeline.md](./narrative-intelligence-core/phase2b-context-pipeline.md) | Phase 2B-P Context Pipeline |
+| [narrative-intelligence-core/phase2b-context-unit-bundle.md](./narrative-intelligence-core/phase2b-context-unit-bundle.md) | Phase 2B-P Context Unit / Levels |
+| [narrative-intelligence-core/phase2b-evidence-pipeline.md](./narrative-intelligence-core/phase2b-evidence-pipeline.md) | Phase 2B-P Evidence Pipeline |
+| [narrative-intelligence-core/phase2b-module-execution-spec.md](./narrative-intelligence-core/phase2b-module-execution-spec.md) | Phase 2B-P Module Execution Spec |
+| [narrative-intelligence-core/phase2b-first-four-modules.md](./narrative-intelligence-core/phase2b-first-four-modules.md) | Phase 2B-P 首批四模块 |
+| [narrative-intelligence-core/phase2b-output-validation.md](./narrative-intelligence-core/phase2b-output-validation.md) | Phase 2B-P Output Validation |
+| [narrative-intelligence-core/phase2b-candidate-persistence.md](./narrative-intelligence-core/phase2b-candidate-persistence.md) | Phase 2B-P Candidate Persistence |
+| [narrative-intelligence-core/phase2b-native-enhanced.md](./narrative-intelligence-core/phase2b-native-enhanced.md) | Phase 2B-P Native / Enhanced |
+| [narrative-intelligence-core/phase2b-quality-model-routing.md](./narrative-intelligence-core/phase2b-quality-model-routing.md) | Phase 2B-P Quality / Model Route |
+| [narrative-intelligence-core/phase2b-data-handling-privacy.md](./narrative-intelligence-core/phase2b-data-handling-privacy.md) | Phase 2B-P Data Handling / Consent |
+| [narrative-intelligence-core/phase2b-checkpoint-recovery.md](./narrative-intelligence-core/phase2b-checkpoint-recovery.md) | Phase 2B-P Checkpoint / Recovery |
+| [narrative-intelligence-core/phase2b-budget-usage.md](./narrative-intelligence-core/phase2b-budget-usage.md) | Phase 2B-P Budget / Usage |
+| [narrative-intelligence-core/phase2b-error-contract.md](./narrative-intelligence-core/phase2b-error-contract.md) | Phase 2B-P Error Codes |
+| [narrative-intelligence-core/phase2b-algorithm-generality.md](./narrative-intelligence-core/phase2b-algorithm-generality.md) | Phase 2B-P Algorithm Generality |
+| [narrative-intelligence-core/phase2b-evaluation-contract.md](./narrative-intelligence-core/phase2b-evaluation-contract.md) | Phase 2B-P Evaluation Contract |
+| [narrative-intelligence-core/phase2b-language-contract.md](./narrative-intelligence-core/phase2b-language-contract.md) | Phase 2B-P Language Contract |
+| [narrative-intelligence-core/phase2b-parallel-file-ownership.md](./narrative-intelligence-core/phase2b-parallel-file-ownership.md) | Phase 2B-P 文件所有权 |
+| [narrative-intelligence-core/phase2b-parallel-file-ownership.json](./narrative-intelligence-core/phase2b-parallel-file-ownership.json) | Phase 2B-P 文件所有权（机器可读） |
+| [narrative-intelligence-core/phase2b-contract-verification.md](./narrative-intelligence-core/phase2b-contract-verification.md) | Phase 2B-P 61 项验证清单 |

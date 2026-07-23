@@ -1,0 +1,63 @@
+{
+  "id": "CHG-20260723-038",
+  "title": "Agent Q Context and Evidence Pipeline",
+  "type": "feature",
+  "base_version": "1.0.5",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "narrative_core/services",
+    "context_evidence_pipeline"
+  ],
+  "files": [],
+  "user_summary": "Implement snapshot context units, context bundle, evidence candidates, and evidence validator without model calls.",
+  "technical_summary": "Agent Q implements Snapshot Context Pipeline, Context Units/Bundle, Evidence Candidate index helpers, Evidence Validator, and Native/Enhanced context preparation. Must not call models or invent book-specific rules.",
+  "acceptance_criteria": [
+    "Completed Snapshot is sole fact source",
+    "Context Bundle binds snapshot/chapter/paragraph hashes",
+    "Evidence Validator checks hash/offset/role without model calls",
+    "Derived summary cannot be final original evidence",
+    "No FTS5/vector/Neo4j/new tables"
+  ],
+  "tests": [],
+  "verification_evidence": [],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "On-demand reads and temporary cache only; no second full-text copy table."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": null,
+  "created_at": "2026-07-23T22:38:45Z",
+  "updated_at": "2026-07-24T00:00:00Z",
+  "parallel_plan": {
+    "role": "agent_q",
+    "branch": "feature/narrative-phase2b-context-evidence",
+    "worktree": "D:\\\\Dstorylens-wt-narrative-context-evidence",
+    "depends_on": [
+      "CHG-20260723-036"
+    ],
+    "blocks": [
+      "CHG-20260723-040"
+    ],
+    "forbidden": [
+      "model calls",
+      "formal prompts",
+      "book-specific algorithm branches",
+      "FTS5/vector/Neo4j",
+      "new migrations",
+      "VERSION bump",
+      "push/build/publish"
+    ],
+    "file_ownership": "docs/architecture/narrative-intelligence-core/phase2b-parallel-file-ownership.json"
+  },
+  "file_ownership": "docs/architecture/narrative-intelligence-core/phase2b-parallel-file-ownership.json"
+}

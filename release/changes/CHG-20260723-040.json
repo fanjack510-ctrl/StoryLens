@@ -1,0 +1,62 @@
+{
+  "id": "CHG-20260723-040",
+  "title": "Phase 2B Integration",
+  "type": "feature",
+  "base_version": "1.0.5",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "integration",
+    "narrative_core/services",
+    "docs"
+  ],
+  "files": [],
+  "user_summary": "Merge P/Q/R private engine foundation, compose runtime, and verify fake provider E2E without opening production runs.",
+  "technical_summary": "Integration merges Agent P/Q/R, composes runtime, runs Fake Provider E2E across Context→Evidence→Module→Candidate, verifies Module Spec consistency, updates Change Registry/README, and keeps production gates closed.",
+  "acceptance_criteria": [
+    "P/Q/R merged on integration/narrative-phase2b",
+    "Fake Provider E2E Context→Evidence→Module→Candidate",
+    "Module Spec Planning/Producer/Result consistency",
+    "Production gates unchanged; formal create still disabled",
+    "Change Registry and ownership docs updated"
+  ],
+  "tests": [],
+  "verification_evidence": [],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "Composition and integration tests only."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": null,
+  "created_at": "2026-07-23T22:38:45Z",
+  "updated_at": "2026-07-24T00:00:00Z",
+  "parallel_plan": {
+    "role": "integration",
+    "branch": "integration/narrative-phase2b",
+    "worktree": "D:\\\\Dstorylens-wt-narrative-phase2b-integration",
+    "depends_on": [
+      "CHG-20260723-037",
+      "CHG-20260723-038",
+      "CHG-20260723-039"
+    ],
+    "blocks": [],
+    "forbidden": [
+      "real engine/model/prompt",
+      "flip production gates",
+      "migrations",
+      "VERSION bump",
+      "push/build/publish"
+    ],
+    "file_ownership": "docs/architecture/narrative-intelligence-core/phase2b-parallel-file-ownership.json"
+  },
+  "file_ownership": "docs/architecture/narrative-intelligence-core/phase2b-parallel-file-ownership.json"
+}

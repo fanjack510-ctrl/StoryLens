@@ -1,0 +1,63 @@
+{
+  "id": "CHG-20260723-037",
+  "title": "Agent P Private Engine Runtime",
+  "type": "feature",
+  "base_version": "1.0.5",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "narrative_core/services",
+    "private_engine_runtime"
+  ],
+  "files": [],
+  "user_summary": "Implement private engine loader, signature verify, provider gateway adapter, and fake private engine runtime foundation.",
+  "technical_summary": "Agent P implements Manifest Loader, signature verification interface, Provider Gateway adapter, Engine Runtime Adapter, and Fake Private Engine. Must not implement formal analysis algorithms or formal prompts.",
+  "acceptance_criteria": [
+    "Loader verifies signature/protocol/app version before load",
+    "Production never degrades to Mock",
+    "Provider Gateway used for all inference; credentials never in DTOs",
+    "Fake Private Engine for tests only; no real binary load in this phase",
+    "No formal prompts or real model calls"
+  ],
+  "tests": [],
+  "verification_evidence": [],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "Runtime adapters only; no new tables."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": null,
+  "created_at": "2026-07-23T22:38:45Z",
+  "updated_at": "2026-07-24T00:00:00Z",
+  "parallel_plan": {
+    "role": "agent_p",
+    "branch": "feature/narrative-phase2b-engine-runtime",
+    "worktree": "D:\\\\Dstorylens-wt-narrative-engine-runtime",
+    "depends_on": [
+      "CHG-20260723-036"
+    ],
+    "blocks": [
+      "CHG-20260723-040"
+    ],
+    "forbidden": [
+      "formal analysis algorithm",
+      "formal prompt body",
+      "real model calls",
+      "open production run",
+      "migrations",
+      "VERSION bump",
+      "push/build/publish"
+    ],
+    "file_ownership": "docs/architecture/narrative-intelligence-core/phase2b-parallel-file-ownership.json"
+  },
+  "file_ownership": "docs/architecture/narrative-intelligence-core/phase2b-parallel-file-ownership.json"
+}

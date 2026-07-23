@@ -1,0 +1,65 @@
+{
+  "id": "CHG-20260723-039",
+  "title": "Agent R First Real Modules and Evaluation",
+  "type": "feature",
+  "base_version": "1.0.5",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "narrative_core/services",
+    "module_runners",
+    "evaluation"
+  ],
+  "files": [],
+  "user_summary": "Implement first-four module runner skeletons, output validators, candidate builders, fake prompt packs, and evaluation harness.",
+  "technical_summary": "Agent R implements Module Runner skeletons for book_overview/structure_stages/chapter_functions/storylines, Output Validator, Candidate Builder, Fake Prompt Pack, and Evaluation Harness. Must not write formal prompts or call real models.",
+  "acceptance_criteria": [
+    "Four Module Runner skeletons follow WholeBookModuleRunner Protocol",
+    "Output validation before candidate persistence",
+    "Candidates only; no auto confirm/lock/canonical",
+    "Fake Prompt Pack only; no formal prompt bodies in public repo",
+    "Evaluation harness with synthetic/metamorphic fixtures"
+  ],
+  "tests": [],
+  "verification_evidence": [],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "Candidate write paths only; no schema migration."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": null,
+  "created_at": "2026-07-23T22:38:45Z",
+  "updated_at": "2026-07-24T00:00:00Z",
+  "parallel_plan": {
+    "role": "agent_r",
+    "branch": "feature/narrative-phase2b-core-modules",
+    "worktree": "D:\\\\Dstorylens-wt-narrative-core-modules",
+    "depends_on": [
+      "CHG-20260723-036"
+    ],
+    "blocks": [
+      "CHG-20260723-040"
+    ],
+    "forbidden": [
+      "formal prompt bodies",
+      "real model calls",
+      "auto confirm/lock/canonical",
+      "copyrighted full novels as fixtures",
+      "open production run",
+      "migrations",
+      "VERSION bump",
+      "push/build/publish"
+    ],
+    "file_ownership": "docs/architecture/narrative-intelligence-core/phase2b-parallel-file-ownership.json"
+  },
+  "file_ownership": "docs/architecture/narrative-intelligence-core/phase2b-parallel-file-ownership.json"
+}
