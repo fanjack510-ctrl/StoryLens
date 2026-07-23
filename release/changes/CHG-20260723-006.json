@@ -23,6 +23,12 @@
       "message": "fix: finish Reader Journey hierarchy copy, phases, legend placement (CHG-20260723-006).",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "ec14b4c45f98e21c7b7ef9448f500e0cf946124a",
+      "message": "docs: sync CHG-20260723-006 registry after hierarchy finish.",
+      "primary": false,
+      "multi_change_reason": "registry status for CHG-20260723-006 finish"
     }
   ],
   "modules": [
