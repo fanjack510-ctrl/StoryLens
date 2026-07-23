@@ -3,27 +3,53 @@
   "title": "Agent E: Narrative Asset / Version / Evidence",
   "type": "feature",
   "base_version": "1.0.5",
-  "status": "registered",
+  "status": "tested",
   "include_in_next_release": true,
   "commits": [],
   "modules": [
     "narrative_core"
   ],
-  "files": [],
+  "files": [
+    "apps/api/app/narrative_core/services/asset_repository.py",
+    "apps/api/app/narrative_core/services/asset_service.py",
+    "apps/api/app/narrative_core/services/asset_evidence_service.py",
+    "apps/api/app/narrative_core/services/__init__.py",
+    "apps/api/app/narrative_core/migrations/runner.py",
+    "apps/api/tests/test_narrative_asset_service.py",
+    "apps/api/tests/test_narrative_asset_evidence.py",
+    "docs/architecture/narrative-intelligence-core/phase1b-asset-version-implementation.md",
+    "docs/architecture/narrative-intelligence-core/phase1b-asset-evidence-implementation.md",
+    "docs/architecture/narrative-intelligence-core/phase1b-asset-verification.md",
+    "docs/architecture/narrative-intelligence-core/phase1b-asset-key-boundary.md",
+    "release/changes/CHG-20260723-018.json"
+  ],
   "user_summary": "Implement Asset versioning, lock, and Snapshot-bound evidence validation.",
-  "technical_summary": "Pre-registered parallel Change. Implements services for role=agent_e; migration ownership 007-008. Fork from Phase 1B-P HEAD only. Do not edit models.py table structures.",
+  "technical_summary": "Agent E implements NarrativeAssetRepository/Service/EvidenceService; refines migrations 007-008 (idempotent indexes + partial unique canonical); reuses Phase 1A SnapshotValidationGateway; returns AssetCanonicalConflictRequest instead of writing analysis_conflicts.",
   "acceptance_criteria": [
     "Fork from feature/narrative-phase1b-contract final HEAD",
     "Do not modify models.py table structures",
-    "Stay within file ownership JSON"
+    "Stay within file ownership JSON",
+    "Migrations 007/008 idempotent with stable checksum",
+    "Candidate never auto-canonical; confirmed/corrected may switch; rejected may not",
+    "At most one canonical version per asset (transaction + partial unique index)",
+    "Locked asset blocks model canonical switch but allows candidates",
+    "Evidence validated via Phase 1A Snapshot gateway only"
   ],
-  "tests": [],
-  "verification_evidence": [],
+  "tests": [
+    "apps/api/tests/test_narrative_asset_service.py",
+    "apps/api/tests/test_narrative_asset_evidence.py"
+  ],
+  "verification_evidence": [
+    "pytest apps/api/tests/test_narrative_asset_service.py apps/api/tests/test_narrative_asset_evidence.py — 24 passed",
+    "scripts/version_manager.py check",
+    "scripts/change_registry.py check",
+    "git diff --check"
+  ],
   "data_compatibility": {
-    "database_changed": false,
-    "migration_required": false,
+    "database_changed": true,
+    "migration_required": true,
     "user_data_compatible": true,
-    "notes": ""
+    "notes": "Additive tables narrative_assets / narrative_asset_versions / narrative_asset_evidence via migrations 007-008. No historical JSON backfill. Old DBs upgrade idempotently."
   },
   "release_impact": {
     "requires_reanalysis": false,
@@ -34,7 +60,7 @@
   "blocker_level": null,
   "head_inclusion": null,
   "created_at": "2026-07-23T08:33:16Z",
-  "updated_at": "2026-07-23T08:43:10Z",
+  "updated_at": "2026-07-23T09:05:00Z",
   "parallel_plan": {
     "role": "agent_e",
     "branch": "feature/narrative-phase1b-assets",

@@ -842,49 +842,77 @@ def migrate_narrative_20260723_006_narrative_entities_aliases(engine: Engine) ->
 
 
 def migrate_narrative_20260723_007_narrative_assets_versions(engine: Engine) -> None:
+    """Create narrative_assets / narrative_asset_versions + canonical partial unique index.
+
+    Idempotent: skips CREATE TABLE when primary table already exists (e.g. after
+    ``Base.metadata.create_all``), always ensures supporting indexes, then records
+    the ledger only after successful DDL. SQL body checksum is stable.
+    """
     checksum = migration_checksum(SQL_007)
     if "narrative_assets" not in _table_names(engine):
         _exec_sql_script(engine, SQL_007)
-        with engine.begin() as connection:
-            connection.execute(
-                text(
-                    "CREATE INDEX IF NOT EXISTS ix_narrative_assets_book_id "
-                    "ON narrative_assets (book_id)"
-                )
+    # Ensure indexes even when tables came from create_all (SQL body skipped).
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                "CREATE INDEX IF NOT EXISTS ix_narrative_assets_book_id "
+                "ON narrative_assets (book_id)"
             )
-            connection.execute(
-                text(
-                    "CREATE INDEX IF NOT EXISTS ix_narrative_asset_versions_asset_id "
-                    "ON narrative_asset_versions (asset_id)"
-                )
+        )
+        connection.execute(
+            text(
+                "CREATE INDEX IF NOT EXISTS ix_narrative_assets_book_lifecycle "
+                "ON narrative_assets (book_id, lifecycle_status)"
             )
-            connection.execute(
-                text(
-                    "CREATE INDEX IF NOT EXISTS ix_narrative_asset_versions_asset_review "
-                    "ON narrative_asset_versions (asset_id, review_status)"
-                )
+        )
+        connection.execute(
+            text(
+                "CREATE INDEX IF NOT EXISTS ix_narrative_asset_versions_asset_id "
+                "ON narrative_asset_versions (asset_id)"
             )
+        )
+        connection.execute(
+            text(
+                "CREATE INDEX IF NOT EXISTS ix_narrative_asset_versions_asset_review "
+                "ON narrative_asset_versions (asset_id, review_status)"
+            )
+        )
+        connection.execute(
+            text(
+                "CREATE INDEX IF NOT EXISTS ix_narrative_asset_versions_snapshot "
+                "ON narrative_asset_versions (book_snapshot_id)"
+            )
+        )
+        # Partial unique: at most one canonical version per asset.
+        connection.execute(
+            text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS "
+                "uq_narrative_asset_versions_one_canonical "
+                "ON narrative_asset_versions (asset_id) WHERE is_canonical = 1"
+            )
+        )
     _ensure_schema_migrations_table(engine)
     _record_applied(engine, MIGRATION_NARRATIVE_ASSETS_VERSIONS, checksum)
 
 
 def migrate_narrative_20260723_008_narrative_asset_evidence(engine: Engine) -> None:
+    """Create narrative_asset_evidence. Idempotent; ledger only after success."""
     checksum = migration_checksum(SQL_008)
     if "narrative_asset_evidence" not in _table_names(engine):
         _exec_sql_script(engine, SQL_008)
-        with engine.begin() as connection:
-            connection.execute(
-                text(
-                    "CREATE INDEX IF NOT EXISTS ix_narrative_asset_evidence_version "
-                    "ON narrative_asset_evidence (asset_version_id)"
-                )
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                "CREATE INDEX IF NOT EXISTS ix_narrative_asset_evidence_version "
+                "ON narrative_asset_evidence (asset_version_id)"
             )
-            connection.execute(
-                text(
-                    "CREATE INDEX IF NOT EXISTS ix_narrative_asset_evidence_snapshot "
-                    "ON narrative_asset_evidence (book_snapshot_id)"
-                )
+        )
+        connection.execute(
+            text(
+                "CREATE INDEX IF NOT EXISTS ix_narrative_asset_evidence_snapshot "
+                "ON narrative_asset_evidence (book_snapshot_id)"
             )
+        )
     _ensure_schema_migrations_table(engine)
     _record_applied(engine, MIGRATION_NARRATIVE_ASSET_EVIDENCE, checksum)
 
