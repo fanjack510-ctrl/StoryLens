@@ -3,7 +3,7 @@
   "title": "Agent L Evidence / Review / Pattern Map",
   "type": "feature",
   "base_version": "1.0.5",
-  "status": "registered",
+  "status": "tested",
   "include_in_next_release": true,
   "commits": [],
   "modules": [
@@ -11,20 +11,48 @@
     "desktop/wholeBook"
   ],
   "files": [
+    "apps/api/app/narrative_core/services/evidence_read_service.py",
+    "apps/api/app/narrative_core/services/review_action_adapter.py",
+    "apps/api/app/narrative_core/services/conflict_center_service.py",
+    "apps/api/app/narrative_core/services/structure_map_projection.py",
+    "apps/api/tests/test_narrative_phase1d_review_map.py",
     "apps/desktop/src/features/wholeBook/review/",
     "apps/desktop/src/features/wholeBook/structureMap/",
+    "docs/architecture/narrative-intelligence-core/phase1d-evidence-read-implementation.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-review-action-adapter.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-conflict-center-prototype.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-structure-map-projection-implementation.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-pattern-structure-map-boundary.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-review-map-verification.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-review-map-implementation.md",
     "release/changes/CHG-20260723-029.json"
   ],
   "user_summary": "Evidence drawer, review actions, conflict center, structure map projection adapter.",
-  "technical_summary": "Evidence/Review/Conflict/Map adapters; no algorithms.",
-  "acceptance_criteria": [],
-  "tests": [],
-  "verification_evidence": [],
+  "technical_summary": "Evidence Read Service, Review Action Adapter, Conflict Center projector, Structure Map Projection (no Pattern tables/algorithms); isolated FE prototypes under wholeBook/review and structureMap.",
+  "acceptance_criteria": [
+    "Evidence read via Snapshot Reader with integrity statuses and deep links",
+    "Review actions: confirm/correct/reject/lock/unlock/mark_stale/resolve/dismiss with expected_version + idempotency",
+    "Conflict Center list/compare; blocking never auto-resolved",
+    "Structure Map projection default canonical; candidates explicit; 100/250 limits",
+    "FE prototypes isolated; no formal result nav; no new graph deps"
+  ],
+  "tests": [
+    "apps/api/tests/test_narrative_phase1d_review_map.py",
+    "apps/desktop/src/features/wholeBook/review/reviewMapPrototype.test.tsx"
+  ],
+  "verification_evidence": [
+    "pytest apps/api/tests/test_narrative_phase1d_review_map.py -q → 7 passed",
+    "vitest run reviewMapPrototype + narrativePattern → passed",
+    "tsc -b → passed",
+    "python scripts/version_manager.py check → passed",
+    "python scripts/change_registry.py check → passed",
+    "git diff --check → passed; tsbuildinfo restored"
+  ],
   "data_compatibility": {
     "database_changed": false,
     "migration_required": false,
     "user_data_compatible": true,
-    "notes": ""
+    "notes": "No migrations; no Pattern tables; projection does not write narrative facts."
   },
   "release_impact": {
     "requires_reanalysis": false,
@@ -35,7 +63,7 @@
   "blocker_level": null,
   "head_inclusion": "NOT_FOUND",
   "created_at": "2026-07-23T13:23:33Z",
-  "updated_at": "2026-07-23T13:29:56Z",
+  "updated_at": "2026-07-23T14:10:00Z",
   "parallel_plan": {
     "role": "agent_l",
     "branch": "feature/narrative-phase1d-review-map",
@@ -54,5 +82,15 @@
       "push/build/publish"
     ],
     "file_ownership": "docs/architecture/narrative-intelligence-core/phase1d-parallel-file-ownership.json"
-  }
+  },
+  "integration_issues": [
+    {
+      "id": "II-REVIEW-ROUTE-001",
+      "summary": "Wire NarrativeReviewActionAdapter to POST /api/v1/narrative-review-actions without Pro gating; keep Run create disabled."
+    },
+    {
+      "id": "II-STRUCTURE-DIR-001",
+      "summary": "Decide whether to rename narrativePattern → structureMap after Phase 1D merge; keep dual exports during transition."
+    }
+  ]
 }
