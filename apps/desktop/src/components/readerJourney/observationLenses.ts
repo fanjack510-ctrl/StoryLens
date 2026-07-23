@@ -61,7 +61,7 @@ export const OBSERVATION_LENSES: ObservationLensDef[] = [
   },
   {
     id: "hook_payoff",
-    labelZh: "钩子与回报",
+    labelZh: "钩子回收",
     primaryKey: "hook",
     allowsOverlayWithComposite: false,
     isPairedHookPayoff: true,

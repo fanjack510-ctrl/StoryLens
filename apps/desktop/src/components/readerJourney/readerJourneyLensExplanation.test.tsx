@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { cleanup, render, screen, fireEvent } from "@testing-library/react";
 import {
   READER_JOURNEY_LENS_EXPLANATIONS,
   getLensExplanation,
@@ -16,6 +16,9 @@ import {
 } from "./hookPayoffTimelineModel";
 import type { NarrativeLoopView } from "./narrativeLoopView";
 import type { ReaderJourneyVisualization } from "../../types/readerJourneyVisualization";
+import { afterEach } from "vitest";
+
+afterEach(() => cleanup());
 
 describe("readerJourneyLensExplanation", () => {
   it("provides one-line summary and at most three how-to-read items for every lens", () => {
@@ -59,7 +62,7 @@ describe("JourneyLensExplanationChrome", () => {
     expect(screen.getByTestId("journey-minimal-legend").textContent).toContain("场景");
   });
 
-  it("shows hook/payoff stats and inconsistent banner", () => {
+  it("keeps optional legacy chrome stats when explicitly passed", () => {
     render(
       <JourneyLensExplanationChrome
         lensId="hook_payoff"
@@ -67,7 +70,8 @@ describe("JourneyLensExplanationChrome", () => {
         inconsistentWarning="当前关系识别存在严重冲突，暂不作为确定结论。"
       />,
     );
-    expect(screen.getByTestId("journey-hook-payoff-stats").textContent).toContain("本章建立问题：3");
+    expect(screen.getByTestId("journey-lens-title").textContent).toMatch(/钩子回收/);
+    expect(screen.getByTestId("journey-hook-payoff-stats")).toBeInTheDocument();
     expect(screen.getByTestId("journey-loop-inconsistent-banner").textContent).toContain(
       "严重冲突",
     );

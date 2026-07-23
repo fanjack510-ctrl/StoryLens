@@ -159,7 +159,7 @@ describe("Phase 1C-C.2.6 journey analysis focused view", () => {
     fireEvent.click(screen.getByTestId("scene-detail-tab-overview"));
     expect(screen.getByTestId("scene-detail-panel-overview")).toBeInTheDocument();
     fireEvent.click(screen.getByTestId("journey-phase-1"));
-    expect(screen.getByTestId("phase-detail-tab-questions")).toHaveTextContent("钩子与回报");
+    expect(screen.getByTestId("phase-detail-tab-questions")).toHaveTextContent("钩子回收");
     expect(screen.getByTestId("phase-detail-tab-risks")).toHaveTextContent("阅读阻力");
   });
 

@@ -31,7 +31,7 @@ describe("CHG-014/002 Reader Journey terminology", () => {
       "剧情推进",
       "阅读张力",
       "情绪强度",
-      "钩子与回报",
+      "钩子回收",
       "节奏速度",
     ]);
     expect(OVERLAY_COMPARE_TITLE).toBe("对比指标");
@@ -50,7 +50,7 @@ describe("CHG-014/002 Reader Journey terminology", () => {
       expect(lens.legend_items.length).toBeGreaterThan(0);
       expect(getLensExplanation(lens.lens_id).title).toBe(lens.title);
     }
-    expect(getLensExplanation("hook_payoff").title).toBe("钩子与回报");
+    expect(getLensExplanation("hook_payoff").title).toBe("钩子回收");
     expect(getLensExplanation("composite").one_line_summary).toContain("不代表一定写得差");
     expect(getLensExplanation("emotion").title).toBe("情绪强度");
     expect(getLensExplanation("pacing").title).toBe("节奏速度");
@@ -104,11 +104,10 @@ describe("CHG-014/002 Reader Journey terminology", () => {
   it("keeps legends to one compact row for numeric and hook/payoff lenses", () => {
     expect(NUMERIC_LENS_LEGEND.map((i) => i.label).join("")).toContain("阅读阻力");
     expect(HOOK_PAYOFF_LENS_LEGEND.map((i) => i.label)).toEqual([
-      "● 新钩子",
-      "◐ 部分回报",
-      "● 明确回报",
-      "◆ 反转回报",
-      "┄ 较可信承接",
+      "━ 已回收",
+      "┄ 部分回收",
+      "─ 未回收",
+      "⚠ 有冲突",
     ]);
     expect(NUMERIC_LENS_LEGEND.length).toBeLessThanOrEqual(5);
     expect(HOOK_PAYOFF_LENS_LEGEND.length).toBeLessThanOrEqual(5);

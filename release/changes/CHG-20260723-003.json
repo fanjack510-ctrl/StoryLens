@@ -1,0 +1,56 @@
+{
+  "id": "CHG-20260723-003",
+  "title": "Redesign Reader Journey hook resolution summary",
+  "type": "fix",
+  "base_version": "1.0.4",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "desktop"
+  ],
+  "files": [
+    "apps/desktop/src/components/readerJourney/hookResolutionModel.ts",
+    "apps/desktop/src/components/readerJourney/hookResolutionModel.test.ts",
+    "apps/desktop/src/components/readerJourney/HookPayoffTimeline.tsx",
+    "apps/desktop/src/components/readerJourney/hookPayoffTimeline.css",
+    "apps/desktop/src/components/readerJourney/HookPayoffTimeline.test.tsx",
+    "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.tsx",
+    "apps/desktop/src/components/readerJourney/observationLenses.ts",
+    "apps/desktop/src/components/readerJourney/readerJourneyLensExplanation.ts",
+    "apps/desktop/src/components/readerJourney/JourneySceneDetailPanel.tsx"
+  ],
+  "user_summary": "钩子与回报结果页缺乏主结论与冲突前置，图文重叠混杂，同一钩子多状态并存导致无法理解。",
+  "technical_summary": "Presentation-only hook resolution model with singular main status (已回收/部分回收/未回收) and additive conflict; result page structure conclusion→conflicts→bus→list; UI rename to 钩子回收.",
+  "acceptance_criteria": [
+    "A+B+C=N stats with conflict additive",
+    "Each hook has one main status even under conflict",
+    "Conflict reminder precedes overview",
+    "One lane per hook with solid/dashed/gray lines",
+    "Detail list with locate action",
+    "Ordinary UI uses 钩子回收 wording"
+  ],
+  "tests": [
+    "apps/desktop/src/components/readerJourney/hookResolutionModel.test.ts",
+    "apps/desktop/src/components/readerJourney/HookPayoffTimeline.test.tsx",
+    "apps/desktop/src/components/readerJourney/readerJourneyTerminology.test.ts",
+    "apps/desktop/src/components/readerJourney/readerJourneyLensExplanation.test.tsx"
+  ],
+  "verification_evidence": [],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "Presentation-only over NarrativeLoopView; no prompt/formula/artifact changes."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "P1",
+  "head_inclusion": null,
+  "created_at": "2026-07-23T01:35:00Z",
+  "updated_at": "2026-07-23T01:45:00Z"
+}

@@ -546,7 +546,7 @@ function HookPayoffLifecycleSection({
 
   return (
     <>
-      <JourneyInspectorSection title="钩子与回报解读" testId="scene-hook-payoff-combo">
+      <JourneyInspectorSection title="钩子回收解读" testId="scene-hook-payoff-combo">
         <p data-testid="scene-hook-payoff-combo-text">{combo}</p>
         <p className="journey-inspector-hint" data-testid="scene-payoff-plain">
           {formatPayoffClaimLabel(getScenePayoffClaim(visualization, node.scene_ordinal), payoff)}
@@ -632,7 +632,7 @@ export type PhaseDetailTab = "overview" | "questions" | "risks" | "scenes";
 
 const PHASE_TABS: { id: PhaseDetailTab; label: string; testId: string }[] = [
   { id: "overview", label: "阶段概览", testId: "phase-detail-tab-overview" },
-  { id: "questions", label: "钩子与回报", testId: "phase-detail-tab-questions" },
+  { id: "questions", label: "钩子回收", testId: "phase-detail-tab-questions" },
   { id: "risks", label: "阅读阻力", testId: "phase-detail-tab-risks" },
   { id: "scenes", label: "相关场景", testId: "phase-detail-tab-scenes" },
 ];

@@ -31,13 +31,12 @@ export const NUMERIC_LENS_LEGEND: Array<{ key: string; label: string }> = [
   { key: "risk", label: "■ 阅读阻力" },
 ];
 
-/** 钩子与回报 lens legend (≤1 row). */
+/** 钩子回收 lens legend (≤1 row). */
 export const HOOK_PAYOFF_LENS_LEGEND: Array<{ key: string; label: string }> = [
-  { key: "new_hook", label: "● 新钩子" },
-  { key: "partial", label: "◐ 部分回报" },
-  { key: "full", label: "● 明确回报" },
-  { key: "reversal", label: "◆ 反转回报" },
-  { key: "probable_link", label: "┄ 较可信承接" },
+  { key: "resolved", label: "━ 已回收" },
+  { key: "partial", label: "┄ 部分回收" },
+  { key: "unresolved", label: "─ 未回收" },
+  { key: "conflict", label: "⚠ 有冲突" },
 ];
 
 export const READER_JOURNEY_LENS_EXPLANATIONS: Record<
@@ -131,18 +130,19 @@ export const READER_JOURNEY_LENS_EXPLANATIONS: Record<
   },
   hook_payoff: {
     lens_id: "hook_payoff",
-    title: "钩子与回报",
+    title: "钩子回收",
+    chart_title: "钩子回收总览",
     one_line_summary:
-      "钩子让读者产生期待，回报在后面给出答案、结果或新的变化。",
+      "先看本章回收结论，再看冲突提醒与总览线；每个钩子只有一个主状态。",
     how_to_read: [
-      "每一行是一条问题链：钩子 → 发展 → 回报。",
-      "实线/虚线/点线表示关系可信程度。",
-      "没有连线的问题仍然开放，不一定代表缺陷。",
+      "实线已回收，虚线部分回收，灰线未回收。",
+      "每个钩子独占一行，长说明放清单。",
+      "有冲突仍先给主结论，再看冲突提醒。",
     ],
-    y_axis_semantics: "问题建立与回报关系（非双分数曲线）",
-    high_meaning: "问题已建立或得到回报",
-    low_meaning: "问题仍在等待回报",
-    caution: "识别存在分歧时，不作为确定结论。",
+    y_axis_semantics: "钩子提出与回收关系（非分数曲线）",
+    high_meaning: "问题已建立或得到回收",
+    low_meaning: "问题仍在等待回收",
+    caution: "识别存在分歧时，冲突是附加说明，不取代主结论。",
     legend_items: HOOK_PAYOFF_LENS_LEGEND,
     metric_id: "hook",
   },

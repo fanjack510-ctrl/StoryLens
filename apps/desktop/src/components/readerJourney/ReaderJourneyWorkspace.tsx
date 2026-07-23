@@ -49,9 +49,7 @@ import {
 } from "./readerJourneyLensExplanation";
 import { JourneyLensExplanationChrome } from "./JourneyLensExplanationChrome";
 import { HookPayoffTimeline } from "./HookPayoffTimeline";
-import { buildHookPayoffTimelineModel } from "./hookPayoffTimelineModel";
 import {
-  getNarrativeLoopConsistency,
   getNarrativeLoops,
 } from "./narrativeLoopView";
 import {
@@ -1630,19 +1628,8 @@ export function ReaderJourneyWorkspace({
           <JourneyLensExplanationChrome
             lensId={observationLens}
             overlayCompare={overlayComposite}
-            hookPayoffStats={
-              isHookPayoffLens(observationLens)
-                ? buildHookPayoffTimelineModel(visualization, {
-                    selectedLoopId,
-                    selectedSceneOrdinal,
-                  }).stats
-                : null
-            }
-            inconsistentWarning={
-              isHookPayoffLens(observationLens)
-                ? getNarrativeLoopConsistency(visualization)?.user_message || null
-                : null
-            }
+            hookPayoffStats={null}
+            inconsistentWarning={null}
           />
 
           {/* Chart shell: viewport only (toolbar is above phase strip) */}
@@ -1655,13 +1642,22 @@ export function ReaderJourneyWorkspace({
             <div
               className="journey-chart-viewport"
               data-testid="journey-chart-viewport"
-              style={{ minHeight: chartHeight }}
+              style={{
+                minHeight: chartHeight,
+                ...(isHookPayoffLens(observationLens)
+                  ? { height: "auto", overflow: "auto" }
+                  : null),
+              }}
             >
               <section
                 className="journey-curve-section"
                 data-testid="journey-curve-section"
                 data-plot-area-height={plotAreaHeightPx(heightPreset)}
-                style={{ minHeight: chartHeight, height: chartHeight, flex: "0 0 auto" }}
+                style={
+                  isHookPayoffLens(observationLens)
+                    ? { minHeight: chartHeight, height: "auto", flex: "0 0 auto" }
+                    : { minHeight: chartHeight, height: chartHeight, flex: "0 0 auto" }
+                }
               >
                 {isHookPayoffLens(observationLens) ? (
                   <HookPayoffTimeline
@@ -1669,6 +1665,7 @@ export function ReaderJourneyWorkspace({
                     selectedLoopId={selectedLoopId}
                     selectedSceneOrdinal={selectedSceneOrdinal}
                     onSelectLoop={handleSelectLoop}
+                    onLocateEvidence={(id) => handleLocateEvidence(id, selectedNode)}
                   />
                 ) : (
                 <CanonicalJourneyChart
