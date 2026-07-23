@@ -3,9 +3,16 @@
   "title": "Agent K Result DTO / Projection",
   "type": "feature",
   "base_version": "1.0.5",
-  "status": "registered",
+  "status": "implemented",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "9c0b8305ce53132aec0e3a8f00bdd850e8873bdc",
+      "message": "feat: implement whole book result projections",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "narrative_core",
     "desktop/wholeBook"
@@ -54,9 +61,9 @@
     "breaking_change": false
   },
   "blocker_level": null,
-  "head_inclusion": "NOT_FOUND",
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T13:23:33Z",
-  "updated_at": "2026-07-23T14:00:00Z",
+  "updated_at": "2026-07-23T13:58:43Z",
   "parallel_plan": {
     "role": "agent_k",
     "branch": "feature/narrative-phase1d-result-projection",
