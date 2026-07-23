@@ -15,13 +15,13 @@
     {
       "sha": "2eb156250c924f181274b9624822f67e13cb4668",
       "message": "docs: attach registry sync commit to CHG-20260723-019",
-      "primary": true,
+      "primary": false,
       "multi_change_reason": null
     },
     {
       "sha": "d61e811e44a34fe37275adcae5c0aa28a1c01c11",
       "message": "docs: close CHG-20260723-019 commit attachment loop",
-      "primary": true,
+      "primary": false,
       "multi_change_reason": null
     }
   ],
