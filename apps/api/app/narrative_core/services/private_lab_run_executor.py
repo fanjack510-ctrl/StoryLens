@@ -543,6 +543,55 @@ class PrivateLabRunExecutor:
                 provider_kind = "fake" if not live_requested else str(
                     meta.get("provider_key") or "aliyun_qwen_plus"
                 )
+                engine_id_hint = self._runtime_engine_id(runtime)
+                engine_version_hint = str(
+                    getattr(getattr(runtime, "fake_engine", None), "engine_version", "")
+                    or "0.1.0-dev"
+                )
+                # Prefer private runner engine id when bound.
+                private_runners = getattr(runtime, "private_runners", None) or {}
+                bound_runner = private_runners.get(module_key) or next(
+                    iter(private_runners.values()), None
+                )
+                if bound_runner is not None:
+                    engine_id_hint = str(
+                        getattr(bound_runner, "engine_id", None) or engine_id_hint
+                    )
+                    engine_version_hint = str(
+                        getattr(bound_runner, "engine_version", None) or engine_version_hint
+                    )
+                if live_requested:
+                    from app.narrative_core.services.provider_backed_module_result import (
+                        build_provider_backed_module_result,
+                    )
+
+                    try:
+                        provider_result = build_provider_backed_module_result(
+                            module_key=module_key,
+                            structured_output=synthetic,
+                            provider_usage=provider_usage,
+                            engine_id=engine_id_hint,
+                            engine_version=engine_version_hint,
+                            provider_key=provider_kind,
+                            model_id=str(meta.get("model_id") or provider_usage.get("model_id") or ""),
+                        )
+                    except ValueError as exc:
+                        raise PrivateWholeBookLabRunError(
+                            PrivateEngineLabDenyReason.PRIVATE_ENGINE_LAB_OPERATION_NOT_ALLOWED,
+                            run_id=int(run.id),
+                            detail_code=str(exc.args[0] if exc.args else "PROVIDER_RESULT_BINDING_FAILED"),
+                        ) from exc
+                    provider_policy = provider_result.to_provider_policy()
+                    if output_fp is None or not str(output_fp).strip():
+                        output_fp = provider_result.output_fingerprint
+                else:
+                    # Dry / non-live: fixture channel retained for lab harnesses.
+                    provider_policy = {
+                        "provider_kind": provider_kind,
+                        "model_route": "lab-route",
+                        "synthetic_output": synthetic or {"synthetic": True, "partial": True},
+                        "evidence_candidates": evidence_candidates,
+                    }
                 pipeline = runtime.execute_module_pipeline(
                     module_key=WholeBookModuleKey(module_key),
                     book_id=int(run.book_id or 0),
@@ -553,12 +602,7 @@ class PrivateLabRunExecutor:
                     configuration_fingerprint_value=str(
                         meta.get("configuration_fingerprint") or "private-lab-cfg"
                     ),
-                    provider_policy={
-                        "provider_kind": provider_kind,
-                        "model_route": "lab-route",
-                        "synthetic_output": synthetic or {"synthetic": True, "partial": True},
-                        "evidence_candidates": evidence_candidates,
-                    },
+                    provider_policy=provider_policy,
                     analysis_mode=WholeBookAnalysisMode(
                         str(meta.get("analysis_mode") or "native")
                     ),

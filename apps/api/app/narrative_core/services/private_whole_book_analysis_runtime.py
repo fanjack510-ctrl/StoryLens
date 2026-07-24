@@ -699,13 +699,36 @@ class PrivateWholeBookAnalysisRuntime:
 
         # Module runner path (DTO-shaped) via Provider Gateway.
         engine_result = runner.execute(translated)
-        usage_flags = {
-            "fake": not self.private_modules_bound,
-            "synthetic": not self.private_modules_bound
-            or bool((engine_result.module_outputs or {}).get("synthetic", False)),
-            "private_modules_bound": self.private_modules_bound,
-            "lab_mode": self.lab_mode,
-        }
+        provider_policy = dict(provider_policy or {})
+        provider_attempt = dict(provider_policy.get("provider_attempt") or {})
+        provider_backed = bool(provider_policy.get("provider_backed"))
+        if provider_backed:
+            # Live / FAKE_HTTP_TEST: never mark synthetic from Fake adapter defaults.
+            usage_flags = {
+                "fake": False,
+                "synthetic": False,
+                "provider_backed": True,
+                "private_modules_bound": self.private_modules_bound,
+                "lab_mode": self.lab_mode,
+                "engine_kind": str(
+                    (engine_result.usage or {}).get("engine_kind")
+                    or provider_attempt.get("engine_kind")
+                    or "PRIVATE_REAL"
+                ),
+                "transport_kind": provider_attempt.get("transport_kind")
+                or (engine_result.usage or {}).get("transport_kind"),
+                "provider_request_id": provider_attempt.get("provider_request_id")
+                or (engine_result.usage or {}).get("provider_request_id"),
+            }
+        else:
+            usage_flags = {
+                "fake": not self.private_modules_bound,
+                "synthetic": not self.private_modules_bound
+                or bool((engine_result.module_outputs or {}).get("synthetic", False)),
+                "private_modules_bound": self.private_modules_bound,
+                "lab_mode": self.lab_mode,
+                "provider_backed": False,
+            }
         guarded = self.runtime_adapter.translate_result(
             PrivateEngineExecutionResult(
                 schema=engine_result.schema,

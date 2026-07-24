@@ -368,28 +368,40 @@ class Phase1BCandidatePersistenceSink:
 
         self.session.flush()
         candidate_written = len(asset_version_ids) > 0 or len(relation_version_ids) > 0
+        asset_version_written = len(asset_version_ids) > 0
         evidence_written = len(evidence_ids) > 0
         artifact_written = artifact_id is not None
         # orm_written = formal candidate objects written (never artifact-only).
         orm_written = candidate_written
-        # Complete business persistence requires candidates + evidence + artifact.
+        # Complete business persistence: provider-backed non-synthetic candidates +
+        # evidence + artifact. Artifact-only never counts as complete.
         persistence_complete = bool(
             orm_written
             and candidate_written
+            and asset_version_written
             and evidence_written
             and artifact_written
             and not built.rejected
+            and not built.synthetic
         )
         return {
             "recorded": True,
             "orm_written": orm_written,
             "persistence_complete": persistence_complete,
             "candidate_written": candidate_written,
+            "asset_version_written": asset_version_written,
             "evidence_written": evidence_written,
             "artifact_written": artifact_written,
             "relation_written": len(relation_version_ids) > 0,
             "orm_transaction_committed": True,
             "fallback_used": False,
+            "provider_backed": bool(
+                (built.stage_artifact.payload if built.stage_artifact else {}).get(
+                    "provider_backed"
+                )
+            )
+            if built.stage_artifact is not None
+            else False,
             "auto_confirm": False,
             "auto_lock": False,
             "canonical_overwrite": False,

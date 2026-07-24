@@ -173,6 +173,27 @@ class ModuleCandidateBuilder:
 
         pack_id = prompt_pack_id or self.default_prompt_pack_id
         pack_version = prompt_pack_version or self.default_prompt_pack_version
+        usage = dict(result.usage or {})
+        engine_id = str(result.engine_id or self.engine_id)
+        engine_version = str(result.engine_version or self.engine_version)
+        is_synthetic = bool((result.module_outputs or {}).get("synthetic", False))
+        if mock and "fake.signed" in engine_id:
+            is_synthetic = True
+        is_fake = bool(mock) or "fake.signed" in engine_id or bool(
+            (result.module_outputs or {}).get("fake", False)
+        )
+        provider_backed = bool(
+            usage.get("provider_backed")
+            or usage.get("transport_kind") in {"REAL_HTTP", "FAKE_HTTP_TEST"}
+            or usage.get("provider_request_id")
+        )
+        if provider_backed:
+            is_synthetic = False
+            is_fake = False
+        engine_kind = str(
+            usage.get("engine_kind")
+            or ("PRIVATE_REAL" if provider_backed or not is_fake else "TEST_FAKE")
+        )
         output_fp = compute_output_fingerprint(
             {
                 "module_outputs": result.module_outputs,
@@ -181,6 +202,8 @@ class ModuleCandidateBuilder:
                 "evidence_candidates": [
                     getattr(e, "candidate_id", str(e)) for e in result.evidence_candidates
                 ],
+                "engine_id": engine_id,
+                "provider_request_id": usage.get("provider_request_id"),
             }
         )
         refs = tuple(evidence_refs) or tuple(
@@ -194,8 +217,8 @@ class ModuleCandidateBuilder:
                 run_id=run_id,
                 run_stage_id=run_stage_id,
                 book_snapshot_id=book_snapshot_id,
-                engine_id=self.engine_id,
-                engine_version=self.engine_version,
+                engine_id=engine_id,
+                engine_version=engine_version,
                 module_key=module_key,
                 module_version=module_version,
                 prompt_pack_id=pack_id,
@@ -215,9 +238,11 @@ class ModuleCandidateBuilder:
         for idx, asset in enumerate(result.asset_candidates):
             payload = dict(asset) if isinstance(asset, Mapping) else {"value": asset}
             payload.setdefault("review_status", "candidate")
-            payload.setdefault("synthetic", True)
-            payload.setdefault("fake", True)
+            payload.setdefault("synthetic", is_synthetic)
+            payload.setdefault("fake", is_fake)
             payload.setdefault("non_production", True)
+            if provider_backed:
+                payload["provider_backed"] = True
             asset_commands.append(
                 AssetCandidateCommand(
                     write_kind="candidate_asset_version",
@@ -231,8 +256,8 @@ class ModuleCandidateBuilder:
         for relation in result.relation_candidates:
             payload = dict(relation) if isinstance(relation, Mapping) else {"value": relation}
             payload.setdefault("review_status", "candidate")
-            payload.setdefault("synthetic", True)
-            payload.setdefault("fake", True)
+            payload.setdefault("synthetic", is_synthetic)
+            payload.setdefault("fake", is_fake)
             relation_commands.append(
                 RelationCandidateCommand(
                     write_kind="candidate_relation_version",
@@ -249,7 +274,7 @@ class ModuleCandidateBuilder:
                 payload = dict(evidence)
             else:
                 payload = {"value": str(evidence)}
-            payload.setdefault("synthetic", True)
+            payload.setdefault("synthetic", is_synthetic)
             evidence_commands.append(
                 EvidenceCandidateCommand(
                     write_kind="evidence",
@@ -261,7 +286,7 @@ class ModuleCandidateBuilder:
         conflict_commands: list[ConflictCandidateCommand] = []
         for conflict in result.conflict_candidates:
             payload = dict(conflict) if isinstance(conflict, Mapping) else {"value": conflict}
-            payload.setdefault("synthetic", True)
+            payload.setdefault("synthetic", is_synthetic)
             conflict_commands.append(
                 ConflictCandidateCommand(
                     write_kind="conflict_candidate",
@@ -270,25 +295,45 @@ class ModuleCandidateBuilder:
                 )
             )
 
+        artifact_payload: dict[str, Any] = {
+            "module_key": module_key,
+            "module_version": module_version,
+            "stage_key": result.stage_key,
+            "status": result.status,
+            "output_fingerprint": output_fp,
+            "synthetic": is_synthetic,
+            "fake": is_fake,
+            "non_production": True,
+            "provider_backed": provider_backed,
+            "engine_kind": engine_kind,
+            "module_outputs_summary": {
+                "keys": sorted(str(k) for k in result.module_outputs.keys()),
+                "fake": is_fake,
+                "synthetic": is_synthetic,
+            },
+        }
+        for meta_key in ("transport_kind", "provider_request_id"):
+            if usage.get(meta_key) is not None:
+                artifact_payload[meta_key] = usage[meta_key]
+        if provider_backed and (
+            not asset_commands or not evidence_commands
+        ):
+            # Incomplete provider-backed result — diagnostic only, never Live success.
+            artifact_payload["diagnostic"] = True
+            artifact_payload["completed"] = False
+            artifact_payload["persistence_complete"] = False
+            if artifact_payload.get("status") in {"completed", "completed_partial"}:
+                artifact_payload["status"] = "diagnostic_failed"
+
         artifact = StageArtifactPayload(
             write_kind="stage_artifact",
             contract=_contract("stage_artifact"),
-            payload={
-                "module_key": module_key,
-                "module_version": module_version,
-                "stage_key": result.stage_key,
-                "status": result.status,
-                "output_fingerprint": output_fp,
-                "synthetic": True,
-                "fake": True,
-                "non_production": True,
-                "module_outputs_summary": {
-                    "keys": sorted(str(k) for k in result.module_outputs.keys()),
-                    "fake": bool(result.module_outputs.get("fake", True)),
-                },
-            },
+            payload=artifact_payload,
         )
 
+        notes = ["candidate_commands_only", "no_orm_write"]
+        if provider_backed:
+            notes.append("provider_backed")
         return ModuleCandidateBuildResult(
             asset_commands=tuple(asset_commands),
             relation_commands=tuple(relation_commands),
@@ -301,8 +346,8 @@ class ModuleCandidateBuilder:
             auto_confirm=False,
             auto_lock=False,
             canonical_overwrite=False,
-            synthetic=True,
-            notes=("candidate_commands_only", "no_orm_write"),
+            synthetic=is_synthetic,
+            notes=tuple(notes),
         )
 
 
