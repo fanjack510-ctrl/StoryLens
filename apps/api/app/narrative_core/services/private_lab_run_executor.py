@@ -451,6 +451,10 @@ class PrivateLabRunExecutor:
                 )
 
         runtime: Any | None = None
+        context_bundle_hash: str | None = None
+        citation_paragraph_units: list[dict[str, Any]] = []
+        allowed_citation_ids: tuple[str, ...] = ()
+        citation_catalog: Any | None = None
         if live_requested and self._runtime_factory is not None:
             runtime = self._runtime_factory(
                 session=self._session,
@@ -470,6 +474,40 @@ class PrivateLabRunExecutor:
                     run_id=int(run.id),
                     detail_code=str(exc),
                 ) from exc
+            # CHG-058: build Context Bundle before Provider so CitationCatalog IDs match enrich.
+            if hasattr(runtime, "build_native_context_bundle") and str(module_key) == "book_overview":
+                _wb, contract = runtime.build_native_context_bundle(
+                    book_id=int(run.book_id or 0),
+                    book_snapshot_id=int(run.book_snapshot_id or 0),
+                    module_keys=(module_key,),
+                )
+                context_bundle_hash = str(getattr(contract, "bundle_hash", "") or "")
+                meta["context_bundle_hash"] = context_bundle_hash
+                from app.narrative_core.private_engine_contract.context import (
+                    make_context_bundle_ref,
+                )
+                from app.narrative_core.services.citation_catalog_v2 import (
+                    build_catalog_from_paragraph_units,
+                )
+
+                meta["context_bundle_ref"] = make_context_bundle_ref(context_bundle_hash)
+                # Mirror enrich paragraph units (locator + length filler).
+                if hasattr(runtime, "_paragraph_units_for_citation_catalog"):
+                    citation_paragraph_units = list(
+                        runtime._paragraph_units_for_citation_catalog(  # noqa: SLF001
+                            contract=contract,
+                            book_snapshot_id=int(run.book_snapshot_id or 0),
+                            selected_paragraph_ids=None,
+                        )
+                    )
+                if citation_paragraph_units and context_bundle_hash:
+                    citation_catalog = build_catalog_from_paragraph_units(
+                        context_bundle_hash=context_bundle_hash,
+                        snapshot_id=int(run.book_snapshot_id or 0),
+                        paragraph_units=citation_paragraph_units,
+                        context_bundle_ref=str(meta.get("context_bundle_ref") or ""),
+                    )
+                    allowed_citation_ids = tuple(citation_catalog.citation_ids)
 
         usage = self._provider.execute_module(
             module_key=module_key,
@@ -481,6 +519,10 @@ class PrivateLabRunExecutor:
                 "dry_run": effective_dry_run,
                 "consent_valid": True,
                 "estimate_valid": True,
+                "context_bundle_hash": context_bundle_hash,
+                "citation_paragraph_units": citation_paragraph_units,
+                "allowed_citation_ids": list(allowed_citation_ids),
+                "citation_catalog": citation_catalog,
             },
             cancellation_ref=cancellation_ref,
         )
@@ -689,6 +731,38 @@ class PrivateLabRunExecutor:
                     provider_policy = provider_result.to_provider_policy()
                     if output_fp is None or not str(output_fp).strip():
                         output_fp = provider_result.output_fingerprint
+                    # CHG-058: bind V2 schema label + catalog into private mapper channel.
+                    structured_pol = dict(
+                        provider_policy.get("provider_structured_output") or {}
+                    )
+                    if str(structured_pol.get("contract_version") or "").lower() == "v2" or any(
+                        isinstance(structured_pol.get(f), dict)
+                        and "citation_ids" in (structured_pol.get(f) or {})
+                        for f in (
+                            "logline",
+                            "premise",
+                            "central_question",
+                            "primary_conflict",
+                            "structure_summary",
+                            "ending_state",
+                        )
+                    ):
+                        structured_pol.setdefault("schema", "BookOverviewResultV2")
+                        structured_pol.setdefault("contract_version", "v2")
+                        provider_policy["provider_structured_output"] = structured_pol
+                        provider_policy["evidence_contract_version"] = "v2"
+                        if context_bundle_hash:
+                            provider_policy["context_bundle_hash"] = context_bundle_hash
+                        if citation_paragraph_units:
+                            provider_policy["citation_paragraph_units"] = list(
+                                citation_paragraph_units
+                            )
+                        if allowed_citation_ids:
+                            provider_policy["allowed_citation_ids"] = list(
+                                allowed_citation_ids
+                            )
+                        if citation_catalog is not None:
+                            provider_policy["citation_catalog"] = citation_catalog
                 else:
                     # Dry / non-live: fixture channel retained for lab harnesses.
                     provider_policy = {

@@ -268,6 +268,9 @@ class ResolvedProviderPayload:
     # Schema repair (max 1) authorized by estimate/consent budget.
     allow_schema_repair: bool = True
     max_repair_count: int = 1
+    # CHG-058: process-local citation catalog for V2 Live validation (never logged).
+    citation_catalog: Any | None = None
+    allowed_citation_ids: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         if self.allow_tools:

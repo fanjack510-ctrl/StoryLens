@@ -622,17 +622,48 @@ class PrivateLabProviderExecutionServiceAdapter:
         response_schema = None
         response_schema_ref = getattr(bundle, "response_schema_ref", None)
         response_format_mode = "json_object"
+        citation_catalog = None
+        allowed_citation_ids: tuple[str, ...] = ()
         if str(module_key) == "book_overview":
-            from app.narrative_core.services.book_overview_output_contract import (
-                SCHEMA_REF,
-                book_overview_result_json_schema,
-                provider_output_constraint_text,
+            # CHG-058: bind BookOverviewResultV2 + CitationCatalog (no V1 evidence_refs).
+            from app.narrative_core.services.book_overview_output_contract_v2 import (
+                SCHEMA_REF as SCHEMA_REF_V2,
+                book_overview_result_v2_json_schema,
+                provider_output_constraint_text_v2,
+            )
+            from app.narrative_core.services.citation_catalog_v2 import (
+                build_catalog_from_paragraph_units,
             )
 
-            response_schema = book_overview_result_json_schema()
-            response_schema_ref = SCHEMA_REF
-            # Append output constraint to the last user message (schema-derived).
-            constraint = provider_output_constraint_text()
+            citation_catalog = request.get("citation_catalog")
+            raw_ids = request.get("allowed_citation_ids") or ()
+            if citation_catalog is None:
+                units = list(request.get("citation_paragraph_units") or ())
+                bundle_hash = str(
+                    request.get("context_bundle_hash")
+                    or getattr(bundle, "context_bundle_hash", None)
+                    or "ctx-lab"
+                )
+                if units:
+                    citation_catalog = build_catalog_from_paragraph_units(
+                        context_bundle_hash=bundle_hash,
+                        snapshot_id=book_snapshot_id,
+                        paragraph_units=units,
+                    )
+            if citation_catalog is not None:
+                ids = getattr(citation_catalog, "citation_ids", ())
+                allowed_citation_ids = tuple(ids() if callable(ids) else ids)
+            elif raw_ids:
+                allowed_citation_ids = tuple(str(x) for x in raw_ids)
+
+            response_schema = book_overview_result_v2_json_schema(
+                citation_ids=allowed_citation_ids,
+                catalog=citation_catalog,
+            )
+            response_schema_ref = SCHEMA_REF_V2
+            constraint = provider_output_constraint_text_v2(
+                citation_ids=allowed_citation_ids
+            )
             msgs = [dict(m) for m in messages]
             if msgs and msgs[-1].get("role") == "user":
                 content = str(msgs[-1].get("content") or "")
@@ -648,6 +679,8 @@ class PrivateLabProviderExecutionServiceAdapter:
             allow_tools=False,
             allow_schema_repair=True,
             max_repair_count=1,
+            citation_catalog=citation_catalog,
+            allowed_citation_ids=allowed_citation_ids,
         )
         self.last_payloads.append(
             {

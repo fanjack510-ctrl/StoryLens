@@ -251,6 +251,16 @@ class DefaultModuleOutputValidator:
             "semantic_claim_source_fields",
             "evidence_source_field_count",
             "evidence_source_item_count",
+            # CHG-058 Citation V2 markers
+            "contract_version",
+            "overall_confidence",
+            "mapper_key",
+            "mapper_status",
+            "failure_code",
+            "source_schema",
+            "claim_count",
+            "evidence_ref_count",
+            "output_contract_id",
         }
         unknown_fields = [
             k for k in dto_payload.keys() if k not in allowed and k not in meta_allowed

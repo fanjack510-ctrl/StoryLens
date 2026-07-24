@@ -3,7 +3,7 @@
   "title": "Context Citation and Claim Evidence Contract V2",
   "type": "feature",
   "base_version": "1.0.5",
-  "status": "tested",
+  "status": "implemented",
   "include_in_next_release": true,
   "commits": [
     {
@@ -58,12 +58,11 @@
     "apps/api/tests/test_narrative_phase2br1_citation_v2_boundary.py",
     "apps/api/tests/test_narrative_phase2br1_v2_no_legacy_fallback.py",
     "apps/api/tests/test_public_citation_contract_boundary.py",
-    "apps/api/tests/test_narrative_phase2br1_provider_attempt_preservation.py"
+    "apps/api/tests/test_narrative_phase2br1_provider_attempt_preservation.py",
+    "apps/api/tests/test_narrative_phase2br1_citation_v2_http_replay.py",
+    "apps/api/tests/test_narrative_phase2br1_citation_v2_fail_closed.py"
   ],
-  "verification_evidence": [
-    "Directed pytest: 11 passed for four CHG-058 test modules",
-    "scripts/check_live_citation_v2_boundary.py OK"
-  ],
+  "verification_evidence": [],
   "data_compatibility": {
     "database_changed": false,
     "migration_required": false,

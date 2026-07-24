@@ -1,0 +1,25 @@
+{
+  "id": "fake-http-v2-valid-1",
+  "object": "chat.completion",
+  "model": "qwen3.7-plus",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\"contract_version\": \"v2\", \"logline\": {\"value\": \"合成一句话总览\", \"status\": \"observed\", \"citation_ids\": [\"{{CITATION_ID_1}}\"], \"confidence\": 0.8}, \"premise\": {\"value\": \"合成故事前提\", \"status\": \"observed\", \"citation_ids\": [\"{{CITATION_ID_1}}\"], \"confidence\": 0.78}, \"central_question\": {\"value\": \"主角能否化解合成冲突？\", \"status\": \"observed\", \"citation_ids\": [\"{{CITATION_ID_1}}\"], \"confidence\": 0.76}, \"primary_conflict\": {\"value\": \"职责与私心的合成张力\", \"status\": \"observed\", \"citation_ids\": [\"{{CITATION_ID_1}}\"], \"confidence\": 0.77}, \"structure_summary\": {\"value\": \"开端加压、中段升级、收束抉择\", \"status\": \"observed\", \"citation_ids\": [\"{{CITATION_ID_1}}\"], \"confidence\": 0.75}, \"ending_state\": {\"value\": \"悬而未决但已承诺\", \"status\": \"inferred\", \"citation_ids\": [\"{{CITATION_ID_1}}\"], \"confidence\": 0.7}, \"overall_confidence\": 0.76}"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 5125,
+    "completion_tokens": 420,
+    "total_tokens": 5545,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    }
+  },
+  "http_status": 200,
+  "request_id": "fake-http-v2-valid-1"
+}

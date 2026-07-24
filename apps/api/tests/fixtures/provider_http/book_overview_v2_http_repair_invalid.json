@@ -1,0 +1,22 @@
+{
+  "id": "fake-http-v2-repair-invalid-1",
+  "object": "chat.completion",
+  "model": "qwen3.7-plus",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\"contract_version\": \"v2\", \"logline\": {\"value\": \"仍无效的合成总览\", \"status\": \"observed\", \"citation_ids\": [\"CIT-DEADBEEF-0001\"], \"confidence\": 0.8}, \"premise\": {\"value\": \"仍无效的合成前提\", \"status\": \"observed\", \"citation_ids\": [\"CIT-DEADBEEF-0001\"], \"confidence\": 0.78}, \"central_question\": {\"value\": \"仍无效的合成问题？\", \"status\": \"observed\", \"citation_ids\": [\"CIT-DEADBEEF-0001\"], \"confidence\": 0.76}, \"primary_conflict\": {\"value\": \"仍无效的合成冲突\", \"status\": \"observed\", \"citation_ids\": [\"CIT-DEADBEEF-0001\"], \"confidence\": 0.77}, \"structure_summary\": {\"value\": \"仍无效的合成结构\", \"status\": \"observed\", \"citation_ids\": [\"CIT-DEADBEEF-0001\"], \"confidence\": 0.75}, \"ending_state\": {\"value\": \"仍无效的合成结局\", \"status\": \"inferred\", \"citation_ids\": [\"CIT-DEADBEEF-0001\"], \"confidence\": 0.7}, \"overall_confidence\": 0.76}"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 5200,
+    "completion_tokens": 430,
+    "total_tokens": 5630
+  },
+  "http_status": 200,
+  "request_id": "fake-http-v2-repair-invalid-1"
+}
