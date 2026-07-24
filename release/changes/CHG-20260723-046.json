@@ -4,10 +4,16 @@
   "include_in_next_release": true,
   "commits": [
     {
-      "sha": "9f45f6656c59024e7a814f40d914b1d75b85e03a",
+      "sha": "327d5e32f19bdca47b539ac4ac3f8e65e74d61dc",
       "message": "feat: implement provider context and cost readiness",
       "primary": true,
-      "multi_change_reason": null
+      "multi_change_reason": "Cherry-pick onto integration/narrative-phase2br1"
+    },
+    {
+      "sha": "a3780b86d9bead7d127a2879476023b19df74110",
+      "message": "docs: attach CHG-20260723-046 commit and mark tested",
+      "primary": true,
+      "multi_change_reason": "Cherry-pick docs onto integration"
     }
   ],
   "data_compatibility": {
@@ -25,7 +31,7 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-24T02:25:41Z",
-  "updated_at": "2026-07-24T02:52:00Z",
+  "updated_at": "2026-07-24T03:32:34Z",
   "file_ownership": "docs/architecture/narrative-intelligence-core/phase2br1-parallel-file-ownership.json",
   "id": "CHG-20260723-046",
   "title": "Agent U Provider Context and Cost",
@@ -53,7 +59,7 @@
     "release/changes/CHG-20260723-046.json"
   ],
   "user_summary": "Implement Provider Input Bundle resolver, Data Transfer Manifest, real token/cost estimates, consent/budget guards, and Bailian resolved-payload support.",
-  "technical_summary": "Agent U: public Protocol/DTO/Estimate/Guards/Fake resolver; Bailian consumes ResolvedProviderPayload via Capturing transport in tests; private message assembly + structured repair. No Candidate Persistence, Lab Run Service, main.py, or live HTTP.",
+  "technical_summary": "Agent U: public Protocol/DTO/Estimate/Guards/Fake resolver; Bailian consumes ResolvedProviderPayload via Capturing transport in tests; private message assembly + structured repair. No Candidate Persistence, Lab Run Service, main.py, or live HTTP. Agent U original feature HEAD dd47b277a26a18119f183282b642ffad2965a806 (9f45f66+dd47b27); integration cherry-picks recorded below. Dropped non-ancestor SHAs: 9f45f6656c59024e7a814f40d914b1d75b85e03a",
   "acceptance_criteria": [
     "Resolved messages replace instruction_ref/input_bundle_ref-only live payload",
     "Manifest and Estimate drive consent",

@@ -4,28 +4,34 @@
   "include_in_next_release": true,
   "commits": [
     {
-      "sha": "a6c1fa8f6b771973449d6eaf13f2d59efa33a99f",
+      "sha": "c210171986abdcfef824c2c50ec78895669ccc7c",
       "message": "feat: implement private lab runtime and persistence",
       "primary": true,
-      "multi_change_reason": null
+      "multi_change_reason": "Cherry-pick onto integration/narrative-phase2br1"
     },
     {
-      "sha": "d3569b88a41fc429aecffc2343f3e059cfda2a8b",
+      "sha": "9d51e0b0132998640f9d550102a4fb6ff860e43d",
       "message": "docs: attach CHG-20260723-047 public commit",
       "primary": true,
-      "multi_change_reason": "Attach status/metadata follow-up"
+      "multi_change_reason": "Cherry-pick docs onto integration"
     },
     {
-      "sha": "ad5703607fd8870b6121ef1f709054a1f6adb51e",
+      "sha": "8718dc8bdf59a262fe66dfac1107cfa811278f61",
       "message": "docs: fix CHG-20260723-047 commit object shape",
       "primary": true,
-      "multi_change_reason": "Fix commit object shape for registry"
+      "multi_change_reason": "Cherry-pick docs onto integration"
     },
     {
-      "sha": "2d433ab220b3c83317eef63f188bdeaf0ae43709",
+      "sha": "33f6e8e29682832feeaadeb4f411a7044b0d1f41",
       "message": "docs: sync final CHG-20260723-047 commit list",
       "primary": true,
-      "multi_change_reason": "Sync final commit list"
+      "multi_change_reason": "Cherry-pick docs onto integration"
+    },
+    {
+      "sha": "28dfd685626d658f070508c63cc17638fd521682",
+      "message": "docs: include final sync sha on CHG-20260723-047",
+      "primary": true,
+      "multi_change_reason": "Cherry-pick docs onto integration"
     }
   ],
   "data_compatibility": {
@@ -43,7 +49,7 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-24T02:25:41Z",
-  "updated_at": "2026-07-24T03:00:00Z",
+  "updated_at": "2026-07-24T03:32:35Z",
   "file_ownership": "docs/architecture/narrative-intelligence-core/phase2br1-parallel-file-ownership.json",
   "id": "CHG-20260723-047",
   "title": "Agent V Private Lab Runtime and Persistence",
@@ -74,7 +80,7 @@
     "docs/architecture/narrative-intelligence-core/phase2br1-private-lab-runtime-limitations.md"
   ],
   "user_summary": "Wire Private Lab HTTP to AnalysisRun/Stages, sequential four modules, and Phase 1B candidate/evidence persistence.",
-  "technical_summary": "Agent V: AnalysisRun-backed Private Lab run service/executor/registry/recovery; U-compatible Ports; Phase1B persistence method surface; sequential first-four modules; Result API readable. Private commit f2089a712be11b70fb57fc8823b1a9a99771ac91. No Bailian message assembly. main.py mount deferred to Integration.",
+  "technical_summary": "Agent V: AnalysisRun-backed Private Lab run service/executor/registry/recovery; U-compatible Ports; Phase1B persistence method surface; sequential first-four modules; Result API readable. Private commit f2089a712be11b70fb57fc8823b1a9a99771ac91. No Bailian message assembly. main.py mount deferred to Integration. Agent V original feature HEAD d64c11d6d1e3c5f0833141cff54d83602b01588c; integration cherry-picks recorded below. Dropped non-ancestor SHAs: a6c1fa8f6b771973449d6eaf13f2d59efa33a99f,d3569b88a41fc429aecffc2343f3e059cfda2a8b,ad5703607fd8870b6121ef1f709054a1f6adb51e,2d433ab220b3c83317eef63f188bdeaf0ae43709",
   "acceptance_criteria": [
     "Lab create produces AnalysisRun and stages",
     "Sequential four modules under Lab",
