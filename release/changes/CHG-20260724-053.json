@@ -17,6 +17,12 @@
       "message": "docs: mark CHG-20260724-053 tested",
       "primary": true,
       "multi_change_reason": "docs tested marker"
+    },
+    {
+      "sha": "1b8d042b6c66f6e5c6d679b697ecf780fb67ba76",
+      "message": "docs: attach tested marker for CHG-20260724-053",
+      "primary": true,
+      "multi_change_reason": "attach tested marker"
     }
   ],
   "modules": [
@@ -64,5 +70,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-24T07:59:00Z",
-  "updated_at": "2026-07-24T08:35:29Z"
+  "updated_at": "2026-07-24T08:35:30Z"
 }
