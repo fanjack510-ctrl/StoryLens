@@ -59,6 +59,12 @@
       "message": "fix: render citation catalog ids in live provider prompts",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "f121d3d84d5661134c0ceefa95c133a8d234108b",
+      "message": "docs: attach CHG-058 prompt-render fix commit",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
