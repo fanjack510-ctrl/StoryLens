@@ -89,6 +89,12 @@
       "message": "docs: attach CHG-058 named-test and prompt-render Integration SHAs",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "0160be61ee6bb24655ae545fb74e601b78b8e15c",
+      "message": "docs: close CHG-058 named-test attachment loop",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -150,5 +156,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-24T15:35:15Z",
-  "updated_at": "2026-07-24T16:34:45Z"
+  "updated_at": "2026-07-24T16:34:46Z"
 }
