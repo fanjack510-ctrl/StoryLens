@@ -20,6 +20,12 @@
       "message": "docs: close CHG-20260723-044 commit attachment loop",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "0439c1c1f9d9a1d069d8c9cbb025a22bb7c1b138",
+      "message": "docs: sync final CHG-20260723-044 commit list",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "data_compatibility": {
@@ -37,7 +43,7 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-24T01:13:16Z",
-  "updated_at": "2026-07-24T02:05:55Z",
+  "updated_at": "2026-07-24T02:05:56Z",
   "file_ownership": "docs/architecture/narrative-intelligence-core/phase2br-parallel-file-ownership.json",
   "id": "CHG-20260723-044",
   "title": "Phase 2B-R Integration",
