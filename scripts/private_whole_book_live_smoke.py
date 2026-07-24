@@ -28,12 +28,30 @@ PRIVATE_LAB_ENV = "WHOLE_BOOK_PRIVATE_ENGINE_LAB_ENABLED"
 
 
 def _safe_print(title: str, payload: dict) -> None:
-    banned = ("text", "prompt", "messages", "api_key", "credential", "authorization", "bearer")
-    blob = json.dumps(payload, ensure_ascii=False)
-    lower = blob.lower()
-    for token in banned:
-        if token in lower and token in ("api_key", "credential", "authorization", "bearer"):
-            raise SystemExit(f"refusing to print payload containing {token}")
+    """Refuse secret-bearing *keys* (exact), not status labels like credential_present."""
+
+    banned_exact = {"api_key", "credential", "authorization", "bearer", "prompt", "messages", "text"}
+
+    def _walk(obj: object, path: str = "") -> str | None:
+        if isinstance(obj, dict):
+            for key, value in obj.items():
+                key_l = str(key).lower()
+                here = f"{path}.{key}" if path else str(key)
+                if key_l in banned_exact:
+                    return here
+                hit = _walk(value, here)
+                if hit:
+                    return hit
+        elif isinstance(obj, (list, tuple)):
+            for i, item in enumerate(obj):
+                hit = _walk(item, f"{path}[{i}]")
+                if hit:
+                    return hit
+        return None
+
+    bad = _walk(payload)
+    if bad:
+        raise SystemExit(f"refusing to print payload containing secret key at {bad}")
     print(f"== {title} ==")
     print(json.dumps(payload, ensure_ascii=False, indent=2))
 
@@ -92,122 +110,139 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     # Import late so --help works without full app. Env must already be set.
+    from app.db.session import SessionLocal
     from app.narrative_core.services.private_whole_book_live_readiness_runtime import (
         create_live_readiness_runtime,
     )
 
-    runtime = create_live_readiness_runtime(
-        environment="development",
-        lab_enabled=True,
-        dry_run=True,  # default; Create request carries dry_run=false for Live
-        allow_network=None,  # derived from Probe + Lab + env
-        allow_fake_resolver=False,
-        auto_wire_credentials=True,
-    )
-    if live and not runtime.allow_network:
-        print(
-            json.dumps(
-                {
-                    "status": "security_gate_failed",
-                    "deny_reason": "allow_network_false",
-                    "note": "Runtime did not authorize network; not a Provider failure.",
-                    "live_probe": probe,
-                    "lab_enabled": runtime.lab_enabled,
-                    "http_calls": 0,
-                },
-                ensure_ascii=False,
-                indent=2,
-            ),
-            file=sys.stderr,
+    session = SessionLocal()
+    try:
+        runtime = create_live_readiness_runtime(
+            environment="development",
+            lab_enabled=True,
+            dry_run=True,  # default; Create request carries dry_run=false for Live
+            allow_network=None,  # derived from Probe + Lab + env
+            session=session,
+            allow_fake_resolver=False,
+            auto_wire_credentials=True,
         )
-        return 4
-
-    assert runtime.estimate is not None
-    assert runtime.preflight is not None
-    pre = runtime.preflight.preflight(
-        book_id=int(args.book_id),
-        book_snapshot_id=int(args.snapshot_id),
-        configuration_fingerprint="live-smoke-cfg",
-        requested_modules=modules,
-    )
-    _safe_print(
-        "preflight",
-        {
-            "ok": pre.ok,
-            "fingerprint": pre.fingerprint,
-            "reason_code": pre.reason_code,
-            "run_created": False,
-            "details_keys": sorted(pre.details.keys()),
-            "resolver_is_fake": runtime.uses_fake_resolver,
-            "allow_network": runtime.allow_network,
-        },
-    )
-    if not pre.ok:
-        return 1
-
-    est = runtime.estimate.estimate(
-        book_id=int(args.book_id),
-        book_snapshot_id=int(args.snapshot_id),
-        configuration_fingerprint="live-smoke-cfg",
-        provider_key="aliyun_qwen_plus",
-        model_id="qwen3.7-plus",
-        quality_profile="balanced",
-        requested_modules=modules,
-        preflight_fingerprint=pre.fingerprint,
-    )
-    cached = runtime.estimate._cache.get(est.fingerprint) or {}
-    _safe_print(
-        "estimate",
-        {
-            "fingerprint": est.fingerprint,
-            "consent_fingerprint": cached.get("consent_fingerprint"),
-            "data_transfer_manifest_hash": est.data_transfer_manifest_hash,
-            "usage_summary": dict(est.usage_summary),
-            "cost_summary": dict(est.cost_summary),
-            "module_keys": list(est.module_keys),
-            "live": live,
-            "probe": probe,
-            "create_dry_run": not live,
-            "allow_network": runtime.allow_network,
-        },
-    )
-
-    if not args.yes:
-        prompt = "Confirm create Private Lab Run? [y/N] "
-        if live:
-            prompt = "Confirm REAL LIVE Provider call? Type YES: "
-        answer = input(prompt).strip()
-        if live and answer != "YES":
-            print("aborted")
-            return 3
-        if not live and answer.lower() not in {"y", "yes"}:
-            print("aborted")
-            return 3
-
-    print(
-        json.dumps(
-            {
-                "status": "ready",
-                "note": (
-                    "Harness stops before create when run without app DB session. "
-                    "Wire through HTTP Lab for full create/execute with "
-                    f"dry_run={str(not live).lower()}. "
-                    "Run is never auto-deleted."
+        runtime.bind_session(session)
+        if live and not runtime.allow_network:
+            print(
+                json.dumps(
+                    {
+                        "status": "security_gate_failed",
+                        "deny_reason": "allow_network_false",
+                        "note": "Runtime did not authorize network; not a Provider failure.",
+                        "live_probe": probe,
+                        "lab_enabled": runtime.lab_enabled,
+                        "http_calls": 0,
+                    },
+                    ensure_ascii=False,
+                    indent=2,
                 ),
-                "cancel_supported": True,
-                "check_results": bool(args.check_results),
-                "live_executed": False,
-                "http_calls": 0,
+                file=sys.stderr,
+            )
+            return 4
+
+        assert runtime.estimate is not None
+        assert runtime.preflight is not None
+        pre = runtime.preflight.preflight(
+            book_id=int(args.book_id),
+            book_snapshot_id=int(args.snapshot_id),
+            configuration_fingerprint="live-smoke-cfg",
+            requested_modules=modules,
+        )
+        _safe_print(
+            "preflight",
+            {
+                "ok": pre.ok,
+                "fingerprint": pre.fingerprint,
+                "reason_code": pre.reason_code,
+                "run_created": False,
+                "details_keys": sorted(pre.details.keys()),
+                "credential_status": pre.details.get("credential_status"),
+                "resolver_is_fake": runtime.uses_fake_resolver,
+                "allow_network": runtime.allow_network,
+            },
+        )
+        if not pre.ok:
+            return 1
+
+        est = runtime.estimate.estimate(
+            book_id=int(args.book_id),
+            book_snapshot_id=int(args.snapshot_id),
+            configuration_fingerprint="live-smoke-cfg",
+            provider_key="aliyun_qwen_plus",
+            model_id="qwen3.7-plus",
+            quality_profile="balanced",
+            requested_modules=modules,
+            preflight_fingerprint=pre.fingerprint,
+        )
+        cached = runtime.estimate._cache.get(est.fingerprint) or {}
+        primary = cached.get("primary_manifest")
+        chapter_ids = list(getattr(primary, "selected_chapter_ids", ()) or ())
+        paragraph_ids = list(getattr(primary, "selected_paragraph_ids", ()) or ())
+        _safe_print(
+            "estimate",
+            {
+                "fingerprint": est.fingerprint,
+                "consent_fingerprint": cached.get("consent_fingerprint"),
+                "data_transfer_manifest_hash": est.data_transfer_manifest_hash,
+                "usage_summary": dict(est.usage_summary),
+                "cost_summary": dict(est.cost_summary),
+                "selection_summary": {
+                    "selected_chapter_ids": chapter_ids,
+                    "selected_paragraph_count": len(paragraph_ids),
+                    "source_character_count": getattr(primary, "source_character_count", None),
+                    "context_bundle_hash": getattr(primary, "context_bundle_hash", None),
+                },
+                "module_keys": list(est.module_keys),
+                "live": live,
+                "probe": probe,
                 "create_dry_run": not live,
                 "allow_network": runtime.allow_network,
             },
-            ensure_ascii=False,
-            indent=2,
         )
-    )
-    if args.cancel:
-        print("cancel: cooperative cancel would be issued after create (not executed here)")
-    return 0
+
+        if not args.yes:
+            prompt = "Confirm create Private Lab Run? [y/N] "
+            if live:
+                prompt = "Confirm REAL LIVE Provider call? Type YES: "
+            answer = input(prompt).strip()
+            if live and answer != "YES":
+                print("aborted")
+                return 3
+            if not live and answer.lower() not in {"y", "yes"}:
+                print("aborted")
+                return 3
+
+        print(
+            json.dumps(
+                {
+                    "status": "ready",
+                    "note": (
+                        "Harness completed Dry Preflight/Estimate only. "
+                        "Create/execute requires explicit confirmation and "
+                        f"dry_run={str(not live).lower()}. "
+                        "Run is never auto-deleted."
+                    ),
+                    "cancel_supported": True,
+                    "check_results": bool(args.check_results),
+                    "live_executed": False,
+                    "http_calls": 0,
+                    "create_dry_run": not live,
+                    "allow_network": runtime.allow_network,
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
+        if args.cancel:
+            print("cancel: cooperative cancel would be issued after create (not executed here)")
+        return 0
+    finally:
+        session.close()
 
 
 if __name__ == "__main__":
