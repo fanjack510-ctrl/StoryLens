@@ -3,9 +3,22 @@
   "title": "BookOverview Provider Output Contract Enforcement",
   "type": "fix",
   "base_version": "1.0.5",
-  "status": "registered",
+  "status": "tested",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "a2c0ec417cea7af0e9ec1460618d5d092b99e92c",
+      "message": "fix: consume validated book overview module results",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "2cf6999ce9031900c3266a2a090a9a7532f93595",
+      "message": "docs: mark CHG-20260724-057 tested",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "narrative_core",
     "private_engine_lab"
@@ -25,7 +38,8 @@
     "apps/api/tests/test_public_provider_boundary.py"
   ],
   "verification_evidence": [
-    "retry5/run_id=1 retained read-only as undeclared wrapper evidence; Private HEAD 17491525e11095aaa733b18baf0b91527f352446"
+    "retry5/run_id=1 retained read-only as undeclared wrapper evidence; Private HEAD 17491525e11095aaa733b18baf0b91527f352446",
+    "Public Fix a2c0ec417cea7af0e9ec1460618d5d092b99e92c + 2cf6999; Private Fix 17491525e11095aaa733b18baf0b91527f352446; HTTP replay no-repair/single-repair/repair-failed passed; Public boundary OK; check_project/version/capability passed; VERSION=1.0.5; no Migration; no real Bailian."
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -40,7 +54,7 @@
     "breaking_change": false
   },
   "blocker_level": null,
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-24T13:06:00Z",
-  "updated_at": "2026-07-24T13:22:28Z"
+  "updated_at": "2026-07-24T13:22:46Z"
 }
