@@ -7,10 +7,16 @@
   "include_in_next_release": true,
   "commits": [
     {
-      "sha": "5fcd72e49e6d7263eee293c4989487721ef4407e",
+      "sha": "df1f981315bb855222dc08b7a2c5dbe44da7f890",
       "message": "fix: persist typed book overview candidates",
       "primary": true,
-      "multi_change_reason": null
+      "multi_change_reason": "Integration cherry-pick retarget"
+    },
+    {
+      "sha": "d528778143c144e8da69a0fc2e8798577681145f",
+      "message": "docs: mark CHG-20260724-056 tested",
+      "primary": false,
+      "multi_change_reason": "Integration cherry-pick retarget"
     }
   ],
   "modules": [
@@ -29,7 +35,7 @@
     "tests/test_book_overview_result_mapping.py"
   ],
   "user_summary": "Map typed BookOverviewResultDto semantic fields to Private/Public candidates so live book_overview can persist Asset/Evidence.",
-  "technical_summary": "Root cause A+B+F: Live Bailian structured output did not feed Private Candidate projection (claim_count=0). BookOverviewResultDto has no claims[]; runner only emitted candidates from top-level logline aliases and Public ModuleCandidateBuilder ignored typed DTO fields. Added BookOverviewResultMapper registry (unwrap nested/schema wrappers, camelCase→snake_case, semantic claims with evidence retention) + diagnostics (semantic_claim_count/dto_mapper_*). Failed retry4 run_id=1 retained read-only as evidence (SHA256 main 4cdefb72…; WAL dirty).",
+  "technical_summary": "Root cause A+B+F: Live Bailian structured output did not feed Private Candidate projection (claim_count=0). BookOverviewResultDto has no claims[]; runner only emitted candidates from top-level logline aliases and Public ModuleCandidateBuilder ignored typed DTO fields. Added BookOverviewResultMapper registry (unwrap nested/schema wrappers, camelCase→snake_case, semantic claims with evidence retention) + diagnostics (semantic_claim_count/dto_mapper_*). Failed retry4 run_id=1 retained read-only as evidence (SHA256 main 4cdefb72…; WAL dirty). Private Integration HEAD faa885acf5230e5f83ae4abe0c3daa874093e129; Public Integration cherry-picks df1f981315bb855222dc08b7a2c5dbe44da7f890/d528778143c144e8da69a0fc2e8798577681145f.",
   "acceptance_criteria": [
     "Typed BookOverviewResultDto (flat/nested/camelCase) yields semantic_claim_count≥1, private/public candidates≥1, evidence refs preserved, ORM Asset/Version/Evidence/Artifact written, persistence_complete=true; empty semantic fields and unknown targets fail closed."
   ],
@@ -40,7 +46,8 @@
   ],
   "verification_evidence": [
     "Private: test_book_overview_result_mapping + phase2br1 suites 57+13 passed. Public: book_overview_dto_mapping + related phase2br1 151 passed. check_project/version_manager/change_registry/capability_keys passed. VERSION=1.0.5. No Migration. No real Bailian.",
-    "failure evidence DB: storylens-live-smoke-retry4-20260724-192056.db run_id=1 failure_boundary was CANDIDATE_COMMAND_EMPTY after REAL_HTTP; fingerprint ffb8c9f4…; Asset/Evidence/Artifact=0."
+    "failure evidence DB: storylens-live-smoke-retry4-20260724-192056.db run_id=1 failure_boundary was CANDIDATE_COMMAND_EMPTY after REAL_HTTP; fingerprint ffb8c9f4…; Asset/Evidence/Artifact=0.",
+    "Private Integration HEAD faa885acf5230e5f83ae4abe0c3daa874093e129 (cherry-pick of 3f68827049416e541b1fcb84c7897a825ef907d9). Public Integration commits df1f981315bb855222dc08b7a2c5dbe44da7f890/d528778143c144e8da69a0fc2e8798577681145f."
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -57,5 +64,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-24T12:16:24Z",
-  "updated_at": "2026-07-24T12:31:52Z"
+  "updated_at": "2026-07-24T12:32:13Z"
 }
