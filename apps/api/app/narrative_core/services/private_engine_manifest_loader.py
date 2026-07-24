@@ -41,6 +41,7 @@ from app.narrative_core.services.private_engine_signature import (
     PrivateEnginePackageVerifier,
     PromptPackPackageVerifier,
     deterministic_fake_signature,
+    evaluate_dev_lab_signature,
     is_fake_or_test_engine_id,
     validate_package_hash_format,
 )
@@ -498,14 +499,32 @@ class PromptPackCompatibilityValidator:
                 raise private_engine_error(PrivateEngineErrorCode.PROMPT_PACK_INCOMPATIBLE)
 
 
+def try_import_private_engine_entry() -> Any | None:
+    """Dev/Lab hook: import private package entry if installed.
+
+    Public App never vendors private sources; discovery stays Manifest-driven.
+    """
+    try:
+        from storylens_private_engine.runtime.entry import (  # type: ignore[import-not-found]
+            create_private_engine_entry,
+        )
+    except Exception:
+        return None
+    try:
+        return create_private_engine_entry()
+    except Exception:
+        return None
+
+
 @dataclass
 class DefaultPrivateWholeBookEngineLoader:
-    """Default loader: Fake Signed packages only in this phase. No real binaries."""
+    """Default loader: Fake Signed packages; Lab/dev may load private package entry."""
 
     repository: PrivateEngineManifestRepository
     verifier: PrivateEnginePackageVerifier | None = None
     app_version: str = "1.0.5"
     production: bool = False
+    lab_dev_private_package_load: bool = False
     _loaded: dict[str, FakeSignedEngineHandle] = field(default_factory=dict, init=False)
     _engines: dict[str, Any] = field(default_factory=dict, init=False)
 
@@ -515,6 +534,8 @@ class DefaultPrivateWholeBookEngineLoader:
                 app_version=self.app_version,
                 production=self.production,
             )
+        if self.production and self.lab_dev_private_package_load:
+            raise ValueError("production loader must not enable lab private package load")
 
     def discover(self) -> Sequence[PrivateWholeBookEngineManifest]:
         return self.repository.discover_manifests()
@@ -556,7 +577,39 @@ class DefaultPrivateWholeBookEngineLoader:
                 detail_code="no_mock_fallback",
             )
         assert self.verifier is not None
-        self.verifier.verify_package(manifest, signature=inspection.signature)
+        if (
+            not manifest.signed
+            and self.lab_dev_private_package_load
+            and evaluate_dev_lab_signature(
+                signed=manifest.signed,
+                non_production=manifest.non_production,
+                lab_authorized=True,
+                production=False,
+            )
+        ):
+            # Lab/dev unsigned non_production package: skip fake signature verify.
+            validate_package_hash_format(
+                manifest.package_hash,
+                allow_fake_prefix=True,
+            )
+        else:
+            self.verifier.verify_package(manifest, signature=inspection.signature)
+
+        # Lab/dev: prefer installed private package entry when authorized.
+        if self.lab_dev_private_package_load:
+            private_entry = try_import_private_engine_entry()
+            if private_entry is not None:
+                self._engines[engine_id] = private_entry
+                # Opaque handle stays FakeSignedEngineHandle-compatible (no real binary).
+                handle = FakeSignedEngineHandle(
+                    engine_id=manifest.engine_id,
+                    engine_version=manifest.engine_version,
+                    fake=True,
+                    real_binary=False,
+                    loaded=True,
+                )
+                self._loaded[engine_id] = handle
+                return handle
 
         # Lazily construct Fake engine instance (no real DLL/EXE/wheel).
         from app.narrative_core.services.fake_private_whole_book_engine import (

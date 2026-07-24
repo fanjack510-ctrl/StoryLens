@@ -21,6 +21,7 @@ from app.routers.capabilities import router as capabilities_router
 from app.routers.whole_book_preflight import router as whole_book_preflight_router
 from app.routers.whole_book_results import router as whole_book_results_router
 from app.routers import whole_book_mock_lab_runs as mock_lab_runs
+from app.routers import whole_book_private_engine_lab_runs as private_engine_lab_runs
 from app.core.config import get_settings
 from app.core.paths import is_web_production_mode
 from app.core.sidecar_control import request_shutdown, shutdown_token
@@ -29,6 +30,10 @@ from app.middleware.local_origin import LocalOriginGuardMiddleware, SecurityHead
 from app.narrative_core.services import mock_whole_book_run_runtime as _mock_lab_runtime_mod
 from app.narrative_core.services.mock_lab_authorization_service import (
     is_mock_lab_enabled_from_env,
+)
+from app.narrative_core.services.private_engine_lab_authorization_service import (
+    is_private_engine_lab_enabled_from_env,
+    should_register_private_engine_lab_router,
 )
 from app.narrative_core.services.mock_run_recovery_service import MockRunStartupRecoveryAdapter
 from app.narrative_core.services.mock_whole_book_run_runtime import (
@@ -86,14 +91,26 @@ def _resolve_lab_enabled(lab_enabled: bool | None = None) -> bool:
     return is_mock_lab_enabled_from_env()
 
 
+def _resolve_private_engine_lab_enabled(lab_enabled: bool | None = None) -> bool:
+    if lab_enabled is not None:
+        return bool(lab_enabled)
+    return is_private_engine_lab_enabled_from_env()
+
+
 def _set_default_mock_lab_runtime(runtime) -> None:
     with _mock_lab_runtime_mod._lock:
         _mock_lab_runtime_mod._default_runtime = runtime
 
 
-def _make_lifespan(*, environment: str | None = None, lab_enabled: bool | None = None):
+def _make_lifespan(
+    *,
+    environment: str | None = None,
+    lab_enabled: bool | None = None,
+    private_engine_lab_enabled: bool | None = None,
+):
     env = _resolve_environment(environment)
     lab_on = _resolve_lab_enabled(lab_enabled)
+    private_lab_on = _resolve_private_engine_lab_enabled(private_engine_lab_enabled)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
@@ -107,6 +124,11 @@ def _make_lifespan(*, environment: str | None = None, lab_enabled: bool | None =
             with SessionLocal() as session:
                 mark_interrupted_runs_failed(session)
             log_lab_startup_status(environment=env, lab_enabled=lab_on)
+            if private_lab_on:
+                logger.info(
+                    "private engine lab enabled for environment=%s (non-production only)",
+                    env,
+                )
             try:
                 MockRunStartupRecoveryAdapter(
                     SessionLocal,
@@ -170,6 +192,21 @@ def mount_mock_lab_if_enabled(
             set_as_default=True,
         )
     app.include_router(mock_lab_runs.router)
+    return True
+
+
+def mount_private_engine_lab_if_enabled(
+    app: FastAPI,
+    *,
+    environment: str | None = None,
+    lab_enabled: bool | None = None,
+) -> bool:
+    """Conditionally mount Private Engine Lab router (distinct from Mock Lab)."""
+    env = _resolve_environment(environment)
+    lab_on = _resolve_private_engine_lab_enabled(lab_enabled)
+    if not should_register_private_engine_lab_router(environment=env, lab_enabled=lab_on):
+        return False
+    app.include_router(private_engine_lab_runs.router)
     return True
 
 
@@ -245,11 +282,20 @@ def _register_app_handlers(app: FastAPI) -> None:
         return {"capability_schema_version": "1c-a-2"}
 
 
-def create_app(*, environment: str | None = None, lab_enabled: bool | None = None) -> FastAPI:
+def create_app(
+    *,
+    environment: str | None = None,
+    lab_enabled: bool | None = None,
+    private_engine_lab_enabled: bool | None = None,
+) -> FastAPI:
     app = FastAPI(
         title="StoryLens API",
         version=__version__,
-        lifespan=_make_lifespan(environment=environment, lab_enabled=lab_enabled),
+        lifespan=_make_lifespan(
+            environment=environment,
+            lab_enabled=lab_enabled,
+            private_engine_lab_enabled=private_engine_lab_enabled,
+        ),
     )
     _configure_middleware_and_routers(app)
     mount_mock_lab_if_enabled(
@@ -257,6 +303,11 @@ def create_app(*, environment: str | None = None, lab_enabled: bool | None = Non
         environment=environment,
         lab_enabled=lab_enabled,
         session_factory=SessionLocal,
+    )
+    mount_private_engine_lab_if_enabled(
+        app,
+        environment=environment,
+        lab_enabled=private_engine_lab_enabled,
     )
     _register_app_handlers(app)
     mount_spa(app)

@@ -394,3 +394,49 @@ def assert_no_private_key_material(payload: Mapping[str, object]) -> None:
         if any(token in lowered for token in ("private_key", "secret_key", "signing_key")):
             raise ValueError(f"private key material must not be persisted: {key}")
         _ = banned
+
+
+@dataclass(frozen=True, slots=True)
+class DevLabSignaturePolicy:
+    """Dev/Lab-only signature policy hooks (Phase 2B-R Agent S).
+
+    Production must still reject unsigned packages. This policy never claims
+    production-grade signing and never stores private keys.
+    """
+
+    allow_unsigned_non_production: bool = False
+    production: bool = False
+    lab_authorized: bool = False
+
+    def __post_init__(self) -> None:
+        if self.production and self.allow_unsigned_non_production:
+            raise ValueError("production must not allow unsigned packages")
+        if self.production and self.lab_authorized:
+            raise ValueError("production must not use Private Lab signature policy")
+
+    def may_load_unsigned(self, *, signed: bool, non_production: bool) -> bool:
+        if self.production:
+            return False
+        if signed:
+            return True
+        return bool(
+            self.lab_authorized
+            and self.allow_unsigned_non_production
+            and non_production
+        )
+
+
+def evaluate_dev_lab_signature(
+    *,
+    signed: bool,
+    non_production: bool,
+    lab_authorized: bool,
+    production: bool = False,
+) -> bool:
+    """Return True when unsigned non_production package may load in Lab/dev."""
+    policy = DevLabSignaturePolicy(
+        allow_unsigned_non_production=True,
+        production=production,
+        lab_authorized=lab_authorized,
+    )
+    return policy.may_load_unsigned(signed=signed, non_production=non_production)
