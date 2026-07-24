@@ -2,7 +2,14 @@
   "type": "feature",
   "base_version": "1.0.5",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "e7523d03810b8a851301f5dc017c86c78c31be1a",
+      "message": "feat: integrate narrative phase2br private runtime and real modules",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "data_compatibility": {
     "database_changed": false,
     "migration_required": false,
@@ -16,13 +23,13 @@
     "breaking_change": false
   },
   "blocker_level": null,
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-24T01:13:16Z",
-  "updated_at": "2026-07-24T02:10:00Z",
+  "updated_at": "2026-07-24T02:05:38Z",
   "file_ownership": "docs/architecture/narrative-intelligence-core/phase2br-parallel-file-ownership.json",
   "id": "CHG-20260723-044",
   "title": "Phase 2B-R Integration",
-  "status": "implemented",
+  "status": "tested",
   "modules": [
     "integration",
     "private_lab",
@@ -56,7 +63,13 @@
     "apps/api/tests/test_narrative_phase2br_private_runtime.py",
     "apps/api/tests/test_narrative_phase2br_real_modules.py"
   ],
-  "verification_evidence": [],
+  "verification_evidence": [
+    "pytest apps/api/tests/test_narrative_phase2br_integration.py + private_runtime + real_modules → 38 passed",
+    "private tests/test_private_runtime_foundation.py + test_first_four_modules.py → 17 passed",
+    "scripts/check_project.py / change_registry / capability / git diff --check",
+    "gates: VERSION=1.0.5 PRO_CAPABILITIES_SHIPPED=false WHOLE_BOOK_RUNS_ENDPOINT_DISABLED=True PRODUCTION_DEFAULT_ENGINE_ID=None MOCK_LAB=False PRIVATE_LAB=False; no new migrations",
+    "Live Smoke deferred — status capped at tested (not verified)"
+  ],
   "private_engine": {
     "repo": "D:\\\\Dstorylens-private-engine",
     "branch": "integration/narrative-phase2br",
