@@ -162,6 +162,9 @@ class FakeHttpProviderTransport:
                 "transport_kind": self.transport_kind.value,
                 "host": self.host,
                 "call_index": idx,
+                "request_id": request_id,
+                "input_tokens": int(self.input_tokens),
+                "output_tokens": int(self.output_tokens),
                 "has_response_schema": response_schema is not None,
                 "response_schema_title": (
                     (response_schema or {}).get("title")

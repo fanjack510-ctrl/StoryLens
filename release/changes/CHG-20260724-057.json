@@ -5,32 +5,7 @@
   "base_version": "1.0.5",
   "status": "tested",
   "include_in_next_release": true,
-  "commits": [
-    {
-      "sha": "285cae8fa5b5c73a1b1574b9ef3f20fc8571d613",
-      "message": "docs: finalize CHG-20260724-057 tested status",
-      "primary": true,
-      "multi_change_reason": "Integration cherry-pick retarget"
-    },
-    {
-      "sha": "49fcd1d9dba3f37fd66b7e663a2bf671da6546fd",
-      "message": "fix: consume validated book overview module results",
-      "primary": true,
-      "multi_change_reason": null
-    },
-    {
-      "sha": "85d904bf1346dae52d1b00b4e65470e4aaf2bb35",
-      "message": "docs: retarget CHG-20260724-057 commits to Integration SHAs",
-      "primary": true,
-      "multi_change_reason": null
-    },
-    {
-      "sha": "c1735d4af44135acc59161022d10e445334e0433",
-      "message": "docs: retarget CHG-20260724-057 commits to Integration SHAs",
-      "primary": true,
-      "multi_change_reason": null
-    }
-  ],
+  "commits": [],
   "modules": [
     "narrative_core",
     "private_engine_lab"
@@ -38,26 +13,41 @@
   "files": [
     "apps/api/app/narrative_core/services/book_overview_output_contract.py",
     "apps/api/app/narrative_core/services/whole_book_provider_gateway.py",
+    "apps/api/app/narrative_core/private_engine_contract/data_transfer.py",
+    "apps/api/app/narrative_core/private_engine_contract/model_invocation_authority.py",
+    "apps/api/app/narrative_core/services/private_lab_run_executor.py",
+    "apps/api/app/narrative_core/services/private_lab_service_adapters.py",
+    "apps/api/app/narrative_core/services/private_whole_book_analysis_runtime.py",
+    "apps/api/app/narrative_core/services/provider_transport_kind.py",
+    "apps/api/app/routers/whole_book_private_engine_lab_runs.py",
+    "apps/api/tests/test_narrative_phase2br1_chg057_acceptance_closure.py",
     "scripts/check_public_provider_boundary.py"
   ],
-  "user_summary": "Enforce flat BookOverviewResultDto; reject undeclared wrappers/evidence_map; allow one budgeted schema repair.",
-  "technical_summary": "Enforce flat BookOverviewResultDto as sole provider output. Exact top-level reject for book_overview/evidence_map/synthetic wrappers; DTO-generated JSON Schema; one budgeted schema repair; Public boundary scan; FakeHttp HTTP replay fixtures; Estimate repair cost fields; reference null/empty rules for book_overview-only.",
+  "user_summary": "Enforce flat BookOverviewResultDto; reject undeclared wrappers/evidence_map; allow one budgeted schema repair; close Router/Create acceptance.",
+  "technical_summary": "Enforce flat BookOverviewResultDto as sole provider output. Exact top-level reject for book_overview/evidence_map/synthetic wrappers; DTO-generated JSON Schema; one budgeted schema repair; Estimate HTTP projects repair budget; Consent fingerprint includes repair strategy; Stage provider_attempt is Lab Live authority (not model_invocations); quote rejection fail-closed before ORM; Router/Create A/B/C acceptance suite.",
   "acceptance_criteria": [
-    "Flat DTO HTTP replay succeeds with repair_count=0; envelope triggers one repair then succeeds; repair failure fail-closed; evidence_map never parsed; Public boundary check passes."
+    "Router/Create scenario A flat DTO no repair persists ORM and Result completed",
+    "Router/Create scenario B envelope one repair persists; dual attempt auditable via Stage provider_attempt",
+    "Router/Create scenario C repair exhausted fail-closed with zero business rows",
+    "Estimate HTTP exposes repair budget fields; fingerprint rejects stale create",
+    "STAGE_PROVIDER_ATTEMPT_IS_AUTHORITATIVE; model_invocations=0 on Lab Live path",
+    "F1-F8 fail-closed equivalence covered; alias tests not counted"
   ],
   "tests": [
+    "apps/api/tests/test_narrative_phase2br1_chg057_acceptance_closure.py",
     "apps/api/tests/test_narrative_phase2br1_http_replay_no_repair.py",
     "apps/api/tests/test_public_provider_boundary.py"
   ],
   "verification_evidence": [
-    "retry5/run_id=1 retained read-only as undeclared wrapper evidence; Private HEAD 17491525e11095aaa733b18baf0b91527f352446",
-    "Public Fix a2c0ec417cea7af0e9ec1460618d5d092b99e92c + 2cf6999; Private Fix 17491525e11095aaa733b18baf0b91527f352446; HTTP replay no-repair/single-repair/repair-failed passed; Public boundary OK; check_project/version/capability passed; VERSION=1.0.5; no Migration; no real Bailian."
+    "Acceptance suite 15 passed (Router A/B/C + Estimate HTTP + authority + F1-F8).",
+    "Related Public directed tests passed from repo root; Private 23 passed.",
+    "Gates: check_project/version/capability/public_provider_boundary OK; VERSION=1.0.5; no Migration; no real Bailian."
   ],
   "data_compatibility": {
     "database_changed": false,
     "migration_required": false,
     "user_data_compatible": true,
-    "notes": "No Migration. Undeclared provider envelopes are rejected (no evidence_map contract)."
+    "notes": "No Migration. Undeclared provider envelopes are rejected (no evidence_map contract). Lab Live ledger is Stage provider_attempt."
   },
   "release_impact": {
     "requires_reanalysis": false,
@@ -66,7 +56,7 @@
     "breaking_change": false
   },
   "blocker_level": null,
-  "head_inclusion": "INCLUDED",
+  "head_inclusion": "PENDING_INTEGRATION",
   "created_at": "2026-07-24T13:06:00Z",
-  "updated_at": "2026-07-24T13:26:57Z"
+  "updated_at": "2026-07-24T15:05:00Z"
 }

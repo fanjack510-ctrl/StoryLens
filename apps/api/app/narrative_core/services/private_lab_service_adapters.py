@@ -722,7 +722,11 @@ class PrivateLabProviderExecutionServiceAdapter:
             token_budget=bundle.token_budget or 2048,
             cost_budget=bundle.cost_budget,
             timeout_policy={"timeout_seconds": 30},
-            retry_policy={"max_retries": 1},
+            retry_policy={
+                # BookOverview schema repair is internal (max 1). Outer gateway must not
+                # re-issue additional Live HTTP attempts for the same module call.
+                "max_retries": 0 if str(module_key) == "book_overview" else 1
+            },
             cancellation_ref=cancellation_ref,
             data_handling_policy=dict(bundle.data_handling_policy),
             metadata={
@@ -760,16 +764,80 @@ class PrivateLabProviderExecutionServiceAdapter:
                 resp = live_gw.execute(inference, resolved_payload=payload)
             except Exception as exc:  # noqa: BLE001
                 detail = getattr(exc, "detail_code", None) or type(exc).__name__
+                audit = dict(getattr(live_gw, "last_provider_attempt_audit", None) or {})
+                if not audit:
+                    try:
+                        adapter = live_gw.registry.get(PRIVATE_LAB_FIRST_PROVIDER_KEY)
+                        audit = dict(
+                            getattr(adapter, "last_provider_attempt_audit", None) or {}
+                        )
+                    except Exception:  # noqa: BLE001
+                        audit = {}
+                # Prefer transport call log when adapter audit missing.
+                transport = None
+                try:
+                    adapter = live_gw.registry.get(PRIVATE_LAB_FIRST_PROVIDER_KEY)
+                    transport = getattr(adapter, "transport", None)
+                except Exception:  # noqa: BLE001
+                    transport = self.live_transport
+                transport = transport or self.live_transport
+                calls = list(getattr(transport, "calls", None) or [])
+                if calls and not audit.get("provider_request_ids"):
+                    ids = [str(c.get("request_id")) for c in calls if c.get("request_id")]
+                    audit = {
+                        "transport_kind": getattr(
+                            getattr(transport, "transport_kind", None), "value", None
+                        )
+                        or "FAKE_HTTP_TEST",
+                        "provider_request_ids": ids,
+                        "provider_request_id": ids[-1] if ids else None,
+                        "input_tokens": sum(int(c.get("input_tokens") or 0) for c in calls),
+                        "output_tokens": sum(int(c.get("output_tokens") or 0) for c in calls),
+                        "retry_count": max(0, len(calls) - 1),
+                        "attempt_count": len(calls),
+                        "attempts": [
+                            {
+                                "attempt_index": i,
+                                "provider_request_id": c.get("request_id"),
+                                "input_tokens": c.get("input_tokens"),
+                                "output_tokens": c.get("output_tokens"),
+                            }
+                            for i, c in enumerate(calls)
+                        ],
+                        "http": True,
+                        "live": True,
+                        "usage_source": "provider_response",
+                        "live_request_confirmed": True,
+                        "synthetic_success": False,
+                    }
+                if calls:
+                    self.http_calls += 1
+                usage_payload = {
+                    "http": bool(audit.get("http") or calls),
+                    "live": True,
+                    "authorization_fingerprint": auth.authorization_fingerprint,
+                    "synthetic_success": False,
+                    "detail_code": str(detail),
+                    "transport_kind": audit.get("transport_kind"),
+                    "provider_request_id": audit.get("provider_request_id"),
+                    "provider_request_ids": list(audit.get("provider_request_ids") or []),
+                    "input_tokens": audit.get("input_tokens"),
+                    "output_tokens": audit.get("output_tokens"),
+                    "actual_cost": audit.get("actual_cost"),
+                    "retry_count": audit.get("retry_count"),
+                    "attempt_count": audit.get("attempt_count"),
+                    "attempts": list(audit.get("attempts") or []),
+                    "http_status": audit.get("http_status"),
+                    "provider_host": audit.get("host"),
+                    "usage_source": audit.get("usage_source") or "provider_response",
+                    "live_request_confirmed": bool(audit.get("live_request_confirmed")),
+                    "provider_attempted": bool(calls or audit.get("provider_request_ids")),
+                    "failure_code": audit.get("failure_code") or str(detail),
+                }
                 return PrivateLabProviderUsageResult(
                     module_key=module_key,
                     status="provider_failed",
-                    usage={
-                        "http": False,
-                        "live": True,
-                        "authorization_fingerprint": auth.authorization_fingerprint,
-                        "synthetic_success": False,
-                        "detail_code": str(detail),
-                    },
+                    usage=usage_payload,
                 )
             self.http_calls += 1
             if getattr(resp, "status", "") != "success":
@@ -814,6 +882,8 @@ class PrivateLabProviderExecutionServiceAdapter:
                     "live_request_confirmed": True,
                     "transport_kind": transport_kind,
                     "provider_request_id": provider_request_id,
+                    "provider_request_ids": list(audit.get("provider_request_ids") or []),
+                    "attempts": list(audit.get("attempts") or []),
                     "http_status": audit.get("http_status"),
                     "provider_host": audit.get("host"),
                     "usage_source": audit.get("usage_source") or "provider_response",
@@ -826,6 +896,8 @@ class PrivateLabProviderExecutionServiceAdapter:
                     "authorization_fingerprint": auth.authorization_fingerprint,
                     "effective_dry_run": False,
                     "synthetic_success": False,
+                    "output_contract": audit.get("output_contract"),
+                    "provider_attempted": True,
                 },
                 output_fingerprint=f"live-{module_key}-{bundle.bundle_fingerprint[:8]}",
                 structured_output=structured,

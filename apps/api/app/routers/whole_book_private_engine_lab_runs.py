@@ -353,6 +353,7 @@ def private_lab_estimate(
     cached = runtime.estimate._cache.get(result.fingerprint) or {}
     consent_fp = str(cached.get("consent_fingerprint") or "")
     primary = cached.get("primary_manifest")
+    module_estimates = list(cached.get("module_estimates") or [])
     selection: dict[str, Any] = {}
     if primary is not None and hasattr(primary, "safe_dict"):
         safe = primary.safe_dict()
@@ -366,7 +367,23 @@ def private_lab_estimate(
             "sends_derived_text": safe.get("sends_derived_text"),
             "retention_policy": safe.get("retention_policy"),
         }
-    # Safe response — no bodies / prompts / credentials / messages
+    # CHG-057: project repair budget from module estimate safe_dict (no prompts/bodies).
+    primary_est: dict[str, Any] = {}
+    for est in module_estimates:
+        if isinstance(est, dict) and est.get("module_key") == "book_overview":
+            primary_est = est
+            break
+    if not primary_est and module_estimates and isinstance(module_estimates[0], dict):
+        primary_est = module_estimates[0]
+    usage = dict(result.usage_summary)
+    cost = dict(result.cost_summary)
+    repair_policy = primary_est.get("repair_policy")
+    repair_policy_version = primary_est.get("repair_policy_version")
+    max_repair_count = primary_est.get("max_repair_count")
+    expected_no_repair_cost = primary_est.get("expected_no_repair_cost")
+    max_one_repair_cost = primary_est.get("max_one_repair_cost")
+    max_total_authorized_cost = primary_est.get("max_total_authorized_cost")
+    # Safe response — no bodies / prompts / credentials / messages / raw schema
     return {
         "fingerprint": result.fingerprint,
         "estimate_fingerprint": result.fingerprint,
@@ -376,8 +393,18 @@ def private_lab_estimate(
         "model_id": result.model_id,
         "quality_profile": result.quality_profile,
         "module_keys": list(result.module_keys),
-        "usage_summary": dict(result.usage_summary),
-        "cost_summary": dict(result.cost_summary),
+        "usage_summary": usage,
+        "cost_summary": cost,
+        "estimated_input_tokens": usage.get("estimated_input_tokens"),
+        "estimated_output_tokens": usage.get("estimated_output_tokens"),
+        "estimated_total_tokens": usage.get("estimated_total_tokens"),
+        "pricing_version": cost.get("pricing_version"),
+        "repair_policy": repair_policy,
+        "repair_policy_version": repair_policy_version,
+        "max_repair_count": max_repair_count,
+        "expected_no_repair_cost": expected_no_repair_cost,
+        "max_one_repair_cost": max_one_repair_cost,
+        "max_total_authorized_cost": max_total_authorized_cost,
         "data_transfer_manifest_hash": result.data_transfer_manifest_hash,
         "selection_summary": selection,
         "private_lab": True,

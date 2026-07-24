@@ -440,6 +440,62 @@ class PrivateLabRunExecutor:
                 detail_code="MODULE_CANCELLED",
             )
         if usage.status in {"security_denied", "provider_failed", "budget_denied"}:
+            provider_usage = dict(usage.usage or {})
+            # CHG-057: retain Stage provider_attempt authority even when Live fails after calls.
+            if provider_usage.get("provider_attempted") or provider_usage.get(
+                "provider_request_ids"
+            ):
+                token_in = int(provider_usage.get("input_tokens") or 0)
+                token_out = int(provider_usage.get("output_tokens") or 0)
+                cost_val = provider_usage.get("actual_cost")
+                if cost_val is None:
+                    cost_val = provider_usage.get("cost")
+                accumulate: dict[str, Any] = {
+                    "token_input": token_in,
+                    "token_output": token_out,
+                }
+                if cost_val is not None:
+                    accumulate["cost"] = float(cost_val)
+                self._stages.write_checkpoint(
+                    int(run.id),
+                    stage.stage_key,
+                    {
+                        "schema": "narrative_run_stage_checkpoint",
+                        "version": "1",
+                        "stage_key": stage.stage_key,
+                        "module_key": module_key,
+                        "private_lab": True,
+                        "non_production": True,
+                        "attempt": int(getattr(stage, "attempt_count", 0) or 0),
+                        "checkpoint_kind": "provider_attempt",
+                        "provider_attempted": True,
+                        "transport_kind": provider_usage.get("transport_kind"),
+                        "provider_host": provider_usage.get("provider_host")
+                        or provider_usage.get("host"),
+                        "provider_request_id": provider_usage.get("provider_request_id"),
+                        "provider_request_ids": list(
+                            provider_usage.get("provider_request_ids") or []
+                        ),
+                        "attempts": list(provider_usage.get("attempts") or []),
+                        "http_status": provider_usage.get("http_status"),
+                        "latency_ms": provider_usage.get("latency_ms"),
+                        "input_tokens": provider_usage.get("input_tokens"),
+                        "output_tokens": provider_usage.get("output_tokens"),
+                        "retry_count": provider_usage.get("retry_count"),
+                        "finish_reason": provider_usage.get("finish_reason"),
+                        "usage_source": provider_usage.get("usage_source"),
+                        "actual_cost": cost_val,
+                        "response_received": True,
+                        "live_request_confirmed": provider_usage.get(
+                            "live_request_confirmed"
+                        ),
+                        "effective_dry_run": effective_dry_run,
+                        "failure_code": provider_usage.get("failure_code")
+                        or provider_usage.get("detail_code"),
+                        "provider_status": usage.status,
+                    },
+                    **accumulate,
+                )
             raise PrivateWholeBookLabRunError(
                 PrivateEngineLabDenyReason.PRIVATE_ENGINE_LAB_OPERATION_NOT_ALLOWED,
                 run_id=int(run.id),
@@ -476,6 +532,10 @@ class PrivateLabRunExecutor:
                 "provider_host": provider_usage.get("provider_host")
                 or provider_usage.get("host"),
                 "provider_request_id": provider_usage.get("provider_request_id"),
+                "provider_request_ids": list(
+                    provider_usage.get("provider_request_ids") or []
+                ),
+                "attempts": list(provider_usage.get("attempts") or []),
                 "http_status": provider_usage.get("http_status"),
                 "latency_ms": provider_usage.get("latency_ms"),
                 "input_tokens": provider_usage.get("input_tokens"),
@@ -492,6 +552,7 @@ class PrivateLabRunExecutor:
                 "validation_started": False,
                 "live_request_confirmed": provider_usage.get("live_request_confirmed"),
                 "effective_dry_run": effective_dry_run,
+                "output_contract": provider_usage.get("output_contract"),
             },
             **accumulate,
         )

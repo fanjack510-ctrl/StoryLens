@@ -56,6 +56,10 @@ CONSENT_FINGERPRINT_FIELDS: tuple[str, ...] = (
     "estimated_input_tokens",
     "estimated_output_tokens",
     "estimated_cost_expected",
+    # Repair budget strategy — estimate_fingerprint already embeds repair_policy_version.
+    "estimate_fingerprint",
+    "repair_policy_version",
+    "max_repair_count",
 )
 
 
@@ -231,6 +235,10 @@ class DataTransferManifestBuilder:
         generated_at: datetime | None = None,
     ) -> WholeBookDataTransferManifest:
         ts = generated_at or datetime(2026, 7, 24, 0, 0, 0, tzinfo=timezone.utc)
+        # Derive repair policy from estimate fingerprint coupling (CHG-057).
+        # book_overview estimate_fingerprint embeds repair_policy_version + max_repair_count.
+        repair_policy_version = "1.0.0" if module_key == "book_overview" else "none"
+        max_repair_count = 1 if module_key == "book_overview" else 0
         draft_fields = {
             "book_id": book_id,
             "book_snapshot_id": book_snapshot_id,
@@ -251,6 +259,9 @@ class DataTransferManifestBuilder:
             "estimated_input_tokens": estimated_input_tokens,
             "estimated_output_tokens": estimated_output_tokens,
             "estimated_cost_expected": estimated_cost_expected,
+            "estimate_fingerprint": estimate_fingerprint,
+            "repair_policy_version": repair_policy_version,
+            "max_repair_count": max_repair_count,
         }
         consent_fp = self.consent.compute(draft_fields)
         manifest = WholeBookDataTransferManifest(
@@ -312,6 +323,8 @@ def normalize_consent_fields(fields: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def manifest_consent_payload(manifest: WholeBookDataTransferManifest) -> dict[str, Any]:
+    repair_policy_version = "1.0.0" if manifest.module_key == "book_overview" else "none"
+    max_repair_count = 1 if manifest.module_key == "book_overview" else 0
     return {
         "book_id": manifest.book_id,
         "book_snapshot_id": manifest.book_snapshot_id,
@@ -332,4 +345,7 @@ def manifest_consent_payload(manifest: WholeBookDataTransferManifest) -> dict[st
         "estimated_input_tokens": manifest.estimated_input_tokens,
         "estimated_output_tokens": manifest.estimated_output_tokens,
         "estimated_cost_expected": manifest.estimated_cost_expected,
+        "estimate_fingerprint": manifest.estimate_fingerprint,
+        "repair_policy_version": repair_policy_version,
+        "max_repair_count": max_repair_count,
     }

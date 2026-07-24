@@ -398,6 +398,8 @@ class BailianOpenAICompatibleProviderAdapter:
     payload_registry: ProviderPayloadRegistry = field(default_factory=lambda: PAYLOAD_REGISTRY)
     _ephemeral_credential: str | None = field(default=None, repr=False)
     last_raw_response_retained: bool = False
+    # Safe live attempt audit retained across success/failure for Stage authority (CHG-057).
+    last_provider_attempt_audit: dict[str, Any] | None = None
 
     def estimate(self, request: ProviderInferenceRequest) -> ProviderEstimate:
         _assert_request_safe(request)
@@ -645,6 +647,65 @@ class BailianOpenAICompatibleProviderAdapter:
                     detail_code=type(exc).__name__,
                 ) from None
 
+        def _publish_attempt_audit(
+            *,
+            ids: list[str],
+            token_input: int,
+            token_output: int,
+            retry_count: int,
+            http_status_value: Any,
+            host_value: Any,
+            finish_reason_value: Any,
+            cost_value: float | None = None,
+            failure_code: str | None = None,
+            transport_kind_value: Any = None,
+        ) -> None:
+            attempts: list[dict[str, Any]] = []
+            # Prefer FakeHttp recorded calls when present for per-attempt audit.
+            call_log = list(getattr(transport, "calls", None) or [])
+            for i, call in enumerate(call_log):
+                rid = None
+                if isinstance(call, dict):
+                    rid = call.get("request_id")
+                if not rid and i < len(ids):
+                    rid = ids[i]
+                attempts.append(
+                    {
+                        "attempt_index": i,
+                        "provider_request_id": rid,
+                        "call_index": (call or {}).get("call_index", i)
+                        if isinstance(call, dict)
+                        else i,
+                    }
+                )
+            if not attempts and ids:
+                attempts = [
+                    {"attempt_index": i, "provider_request_id": rid}
+                    for i, rid in enumerate(ids)
+                ]
+            self.last_provider_attempt_audit = {
+                "transport_kind": transport_kind_value
+                or getattr(effective_kind, "value", None)
+                or str(effective_kind),
+                "provider_request_ids": list(ids),
+                "provider_request_id": ids[-1] if ids else None,
+                "input_tokens": int(token_input),
+                "output_tokens": int(token_output),
+                "retry_count": int(retry_count),
+                "http_status": http_status_value if http_status_value is not None else 200,
+                "host": host_value,
+                "finish_reason": finish_reason_value,
+                "usage_source": "provider_response",
+                "live_request_confirmed": True,
+                "actual_cost": cost_value,
+                "attempt_count": len(ids) if ids else len(attempts),
+                "attempts": attempts,
+                "failure_code": failure_code,
+                "http": True,
+                "live": True,
+                "synthetic_success": False,
+            }
+
         response = _call_transport(messages)
         raw_text = getattr(response, "text", None) or ""
         structured = _parse_structured_text(raw_text)
@@ -656,12 +717,34 @@ class BailianOpenAICompatibleProviderAdapter:
                 json_repaired = True
             else:
                 self.last_raw_response_retained = False
+                rid0 = getattr(response, "request_id", None)
+                _publish_attempt_audit(
+                    ids=[str(rid0)] if rid0 else [],
+                    token_input=int(getattr(response, "input_tokens", 0) or 0),
+                    token_output=int(getattr(response, "output_tokens", 0) or 0),
+                    retry_count=0,
+                    http_status_value=getattr(response, "http_status", None),
+                    host_value=getattr(response, "host", None),
+                    finish_reason_value=getattr(response, "finish_reason", None),
+                    failure_code="repair_rejected",
+                )
                 raise private_engine_error(
                     PrivateEngineErrorCode.PROVIDER_RESPONSE_INVALID,
                     detail_code="repair_rejected",
                 )
         if structured is None:
             self.last_raw_response_retained = False
+            rid0 = getattr(response, "request_id", None)
+            _publish_attempt_audit(
+                ids=[str(rid0)] if rid0 else [],
+                token_input=int(getattr(response, "input_tokens", 0) or 0),
+                token_output=int(getattr(response, "output_tokens", 0) or 0),
+                retry_count=0,
+                http_status_value=getattr(response, "http_status", None),
+                host_value=getattr(response, "host", None),
+                finish_reason_value=getattr(response, "finish_reason", None),
+                failure_code="STRUCTURED_OUTPUT_NOT_OBJECT",
+            )
             raise private_engine_error(PrivateEngineErrorCode.PROVIDER_RESPONSE_INVALID)
 
         token_in = int(getattr(response, "input_tokens", 0) or 0)
@@ -675,6 +758,16 @@ class BailianOpenAICompatibleProviderAdapter:
         finish_reason = getattr(response, "finish_reason", None)
         host = getattr(response, "host", None) or "dashscope.aliyuncs.com"
         model_out = getattr(response, "model", None) or self.model_id
+        # Seed audit after first successful transport response (may be updated on repair).
+        _publish_attempt_audit(
+            ids=list(provider_request_ids),
+            token_input=token_in,
+            token_output=token_out,
+            retry_count=0,
+            http_status_value=http_status,
+            host_value=host,
+            finish_reason_value=finish_reason,
+        )
 
         contract_diag: dict[str, Any] = {
             "output_contract_id": OUTPUT_CONTRACT_ID if enforce_book_overview else None,
@@ -710,6 +803,16 @@ class BailianOpenAICompatibleProviderAdapter:
                 allow_repair = bool(getattr(payload, "allow_schema_repair", True)) and max_repairs >= 1
                 if not allow_repair:
                     self.last_raw_response_retained = False
+                    _publish_attempt_audit(
+                        ids=list(provider_request_ids),
+                        token_input=token_in,
+                        token_output=token_out,
+                        retry_count=0,
+                        http_status_value=http_status,
+                        host_value=host,
+                        finish_reason_value=finish_reason,
+                        failure_code=str(validation.failure_code or "contract_rejected"),
+                    )
                     raise private_engine_error(
                         PrivateEngineErrorCode.PROVIDER_RESPONSE_INVALID,
                         detail_code=str(validation.failure_code or "contract_rejected"),
@@ -741,9 +844,29 @@ class BailianOpenAICompatibleProviderAdapter:
                 finish_reason = getattr(repair_response, "finish_reason", None) or finish_reason
                 host = getattr(repair_response, "host", None) or host
                 model_out = getattr(repair_response, "model", None) or model_out
+                _publish_attempt_audit(
+                    ids=list(provider_request_ids),
+                    token_input=token_in,
+                    token_output=token_out,
+                    retry_count=1,
+                    http_status_value=http_status,
+                    host_value=host,
+                    finish_reason_value=finish_reason,
+                )
                 if repair_structured is None:
                     contract_diag["repair_status"] = "FAILED"
                     contract_diag["repaired_contract_status"] = "FAILED"
+                    _publish_attempt_audit(
+                        ids=list(provider_request_ids),
+                        token_input=token_in,
+                        token_output=token_out,
+                        retry_count=1,
+                        http_status_value=http_status,
+                        host_value=host,
+                        finish_reason_value=finish_reason,
+                        cost_value=self._resolve_cost(token_in, token_out),
+                        failure_code=FAILURE_REPAIR_EXHAUSTED,
+                    )
                     raise private_engine_error(
                         PrivateEngineErrorCode.PROVIDER_RESPONSE_INVALID,
                         detail_code=FAILURE_REPAIR_EXHAUSTED,
@@ -768,11 +891,23 @@ class BailianOpenAICompatibleProviderAdapter:
                 )
                 if not repair_validation.ok:
                     contract_diag["repair_status"] = "FAILED"
+                    fail_code = str(
+                        repair_validation.failure_code or FAILURE_REPAIR_EXHAUSTED
+                    )
+                    _publish_attempt_audit(
+                        ids=list(provider_request_ids),
+                        token_input=token_in,
+                        token_output=token_out,
+                        retry_count=1,
+                        http_status_value=http_status,
+                        host_value=host,
+                        finish_reason_value=finish_reason,
+                        cost_value=self._resolve_cost(token_in, token_out),
+                        failure_code=fail_code,
+                    )
                     raise private_engine_error(
                         PrivateEngineErrorCode.PROVIDER_RESPONSE_INVALID,
-                        detail_code=str(
-                            repair_validation.failure_code or FAILURE_REPAIR_EXHAUSTED
-                        ),
+                        detail_code=fail_code,
                     )
                 structured = dict(repair_validation.typed_payload or {})
                 contract_diag["repair_status"] = "SUCCESS"
@@ -800,6 +935,16 @@ class BailianOpenAICompatibleProviderAdapter:
             )
         provider_request_id = provider_request_ids[-1]
         cost = self._resolve_cost(token_in, token_out)
+        _publish_attempt_audit(
+            ids=list(provider_request_ids),
+            token_input=token_in,
+            token_output=token_out,
+            retry_count=schema_repair_count,
+            http_status_value=http_status,
+            host_value=host,
+            finish_reason_value=finish_reason,
+            cost_value=cost,
+        )
         structured_out = dict(structured)
         if json_repaired:
             structured_out["repaired"] = True
@@ -820,6 +965,7 @@ class BailianOpenAICompatibleProviderAdapter:
             "schema_repair_count": schema_repair_count,
             "response_schema_ref": SCHEMA_REF if enforce_book_overview else request.response_schema_ref,
             "output_contract": contract_diag if enforce_book_overview else None,
+            "attempts": list((self.last_provider_attempt_audit or {}).get("attempts") or []),
         }
         return ProviderInferenceResponse(
             request_id=request.request_id,

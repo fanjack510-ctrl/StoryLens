@@ -1131,7 +1131,32 @@ class PrivateWholeBookAnalysisRuntime:
         persist_summary: Mapping[str, Any] = {"recorded": False}
         if persist:
             # ORM only after evidence validated / commands built.
-            if validation.accepted and not getattr(built, "rejected", False):
+            # Fail-closed: quote/locator rejection must never leave half-written assets.
+            quote_rejected = int(getattr(diag, "quote_resolution_rejected_count", 0) or 0) > 0
+            unresolved_evidence = (
+                int(getattr(diag, "provider_evidence_ref_count", 0) or 0) > 0
+                and int(getattr(diag, "evidence_id_resolved_count", 0) or 0) < 1
+                and quote_rejected
+            )
+            if quote_rejected or unresolved_evidence:
+                if not diag.failure_boundary:
+                    diag.failure_boundary = "EVIDENCE_VALIDATION_REJECTED"
+                    diag.failure_code = str(
+                        (diag.evidence_rejection_codes or ["QUOTE_RESOLUTION_FAILED"])[0]
+                    )
+                # Force evidence invalid so candidate/persist paths stay closed.
+                if validation.evidence_valid:
+                    diag.evidence_valid_count = 0
+                    diag.evidence_rejected_count = max(
+                        1, int(getattr(diag, "evidence_rejected_count", 0) or 0)
+                    )
+            allow_persist = (
+                validation.accepted
+                and not getattr(built, "rejected", False)
+                and not quote_rejected
+                and not unresolved_evidence
+            )
+            if allow_persist:
                 diag.persistence_attempted = True
                 diag.transaction_started = True
                 try:
