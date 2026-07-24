@@ -17,6 +17,12 @@
       "message": "docs: mark CHG-059 tested after directed citation V2 closure",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "6558daf558ee6e0e190cd74a08ec6f25cd0dcaf0",
+      "message": "fix: project execution context binding on lab estimate",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -58,5 +64,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-24T17:18:07Z",
-  "updated_at": "2026-07-24T17:56:00Z"
+  "updated_at": "2026-07-24T18:01:46Z"
 }
