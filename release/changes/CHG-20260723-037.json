@@ -10,7 +10,22 @@
     "narrative_core/services",
     "private_engine_runtime"
   ],
-  "files": [],
+  "files": [
+    "apps/api/app/narrative_core/services/private_engine_manifest_loader.py",
+    "apps/api/app/narrative_core/services/private_engine_signature.py",
+    "apps/api/app/narrative_core/services/private_engine_runtime_adapter.py",
+    "apps/api/app/narrative_core/services/fake_private_whole_book_engine.py",
+    "apps/api/app/narrative_core/services/whole_book_provider_gateway.py",
+    "apps/api/tests/test_narrative_phase2b_engine_runtime.py",
+    "docs/architecture/narrative-intelligence-core/phase2b-engine-runtime-implementation.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-manifest-repository.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-package-verification.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-runtime-adapter.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-fake-private-engine.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-provider-gateway-implementation.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-credential-boundary.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-engine-runtime-verification.md"
+  ],
   "user_summary": "Implement private engine loader, signature verify, provider gateway adapter, and fake private engine runtime foundation.",
   "technical_summary": "Agent P implements Manifest Loader, signature verification interface, Provider Gateway adapter, Engine Runtime Adapter, and Fake Private Engine. Must not implement formal analysis algorithms or formal prompts.",
   "acceptance_criteria": [
@@ -20,8 +35,13 @@
     "Fake Private Engine for tests only; no real binary load in this phase",
     "No formal prompts or real model calls"
   ],
-  "tests": [],
-  "verification_evidence": [],
+  "tests": [
+    "apps/api/tests/test_narrative_phase2b_engine_runtime.py"
+  ],
+  "verification_evidence": [
+    "pytest apps/api/tests/test_narrative_phase2b_engine_runtime.py: 43 passed",
+    "scripts/check_project.py passed; version_manager check passed; change_registry check passed"
+  ],
   "data_compatibility": {
     "database_changed": false,
     "migration_required": false,
@@ -37,7 +57,7 @@
   "blocker_level": null,
   "head_inclusion": null,
   "created_at": "2026-07-23T22:38:45Z",
-  "updated_at": "2026-07-24T00:00:00Z",
+  "updated_at": "2026-07-24T00:18:38Z",
   "parallel_plan": {
     "role": "agent_p",
     "branch": "feature/narrative-phase2b-engine-runtime",
