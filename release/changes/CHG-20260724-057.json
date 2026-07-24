@@ -7,10 +7,16 @@
   "include_in_next_release": true,
   "commits": [
     {
-      "sha": "2a4e38a575264cf9dd02f31ec57de4cbe825d183",
+      "sha": "4e489cece996776134fd0286383f13ecce563cb3",
       "message": "fix: close CHG-057 BookOverview acceptance via Router Create path",
       "primary": true,
-      "multi_change_reason": null
+      "multi_change_reason": "Integration cherry-pick retarget"
+    },
+    {
+      "sha": "6b0a52e775ef119e8594aa81e26af254423b8df1",
+      "message": "docs: attach CHG-057 acceptance-closure commit",
+      "primary": false,
+      "multi_change_reason": "Integration cherry-pick retarget"
     }
   ],
   "modules": [
@@ -46,9 +52,9 @@
     "apps/api/tests/test_public_provider_boundary.py"
   ],
   "verification_evidence": [
-    "Acceptance suite 15 passed (Router A/B/C + Estimate HTTP + authority + F1-F8).",
-    "Related Public directed tests passed from repo root; Private 23 passed.",
-    "Gates: check_project/version/capability/public_provider_boundary OK; VERSION=1.0.5; no Migration; no real Bailian."
+    "Integration Public HEAD 6b0a52e775ef119e8594aa81e26af254423b8df1; Private HEAD 4a9c1f1439803cf00f444d38e1954bb4e275c046",
+    "Acceptance suite 15 passed on Integration; Private contract/mapping 16 passed",
+    "Gates: version 1.0.5, capability ok, public_provider_boundary OK; no Migration; runtime_code_changed=true; retry7 dry Estimate Provider HTTP=0"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -65,5 +71,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-24T13:06:00Z",
-  "updated_at": "2026-07-24T15:01:28Z"
+  "updated_at": "2026-07-24T15:05:42Z"
 }
