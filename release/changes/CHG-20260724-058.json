@@ -71,6 +71,18 @@
       "message": "docs: close CHG-058 prompt-render attachment loop",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "63af42cabadfdcc596d3847ddcb402a60cea793a",
+      "message": "test: add named citation repair persistence and attempt append tests",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "2049b67b9dac3b1fd60ab649143f682477b56f92",
+      "message": "docs: include final CHG-058 prompt-render attachment sha",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -132,5 +144,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-24T15:35:15Z",
-  "updated_at": "2026-07-24T16:28:58Z"
+  "updated_at": "2026-07-24T16:34:44Z"
 }
