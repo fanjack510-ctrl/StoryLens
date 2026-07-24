@@ -17,6 +17,12 @@
       "message": "fix: preserve provider attempts across pipeline checkpoints",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "946b2c6e758d325578eee4d92a86a616b38efa7b",
+      "message": "docs: record CHG-058 commit attachments and tested status",
+      "primary": false,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -73,5 +79,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-24T15:35:15Z",
-  "updated_at": "2026-07-24T15:47:20Z"
+  "updated_at": "2026-07-24T15:47:45Z"
 }
