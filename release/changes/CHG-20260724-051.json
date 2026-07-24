@@ -11,6 +11,12 @@
       "message": "fix: use real transport and orm persistence for live runs",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "90250ec4d8ef3110a2fb1e2dc6f98131340cdef8",
+      "message": "docs: mark CHG-20260724-051 tested after transport/persistence fix",
+      "primary": false,
+      "multi_change_reason": null
     }
   ],
   "modules": [],
@@ -35,5 +41,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-24T05:58:03Z",
-  "updated_at": "2026-07-24T06:06:57Z"
+  "updated_at": "2026-07-24T06:06:58Z"
 }
