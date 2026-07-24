@@ -8,6 +8,12 @@
       "message": "feat: integrate narrative phase2br private runtime and real modules",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "2629c6384893a12f489f58ea16f0e97f1e5da930",
+      "message": "docs: attach CHG-20260723-044 and mark tested",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "data_compatibility": {
@@ -25,7 +31,7 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-24T01:13:16Z",
-  "updated_at": "2026-07-24T02:05:38Z",
+  "updated_at": "2026-07-24T02:05:54Z",
   "file_ownership": "docs/architecture/narrative-intelligence-core/phase2br-parallel-file-ownership.json",
   "id": "CHG-20260723-044",
   "title": "Phase 2B-R Integration",
