@@ -29,6 +29,12 @@
       "message": "docs: attach CHG-058 http replay test commit",
       "primary": false,
       "multi_change_reason": null
+    },
+    {
+      "sha": "c5a4df36d3bc0165e5e9cd936c3e6f198a1e84d1",
+      "message": "docs: retarget CHG-058 commits to Integration SHAs",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -88,7 +94,7 @@
     "breaking_change": false
   },
   "blocker_level": null,
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-24T15:35:15Z",
-  "updated_at": "2026-07-24T16:14:02Z"
+  "updated_at": "2026-07-24T16:17:26Z"
 }
