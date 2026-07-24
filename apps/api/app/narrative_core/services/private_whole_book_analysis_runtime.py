@@ -481,11 +481,23 @@ class PrivateWholeBookAnalysisRuntime:
                     para_len = view.paragraph_lengths.get(pid)
                     if para_len is not None:
                         end = int(para_len)
-                # Prefer empty text for catalog build when body unavailable (locator-only).
-                # Slice rules still work with empty → single zero-length or length-based unit.
+                # Runtime-only body for Prompt Citation rendering (never diagnostics/logs).
                 text = ""
-                if end > 0:
-                    # Synthetic filler for offset spans only — never logged / diagnosed.
+                if self.session is not None:
+                    try:
+                        from app.narrative_core.services.snapshot_service import (
+                            SnapshotService,
+                        )
+
+                        text = SnapshotService(self.session).get_snapshot_paragraph_text(
+                            int(pid)
+                        )
+                        if not end:
+                            end = len(text)
+                    except Exception:  # noqa: BLE001
+                        text = ""
+                if not text and end > 0:
+                    # Locator-length filler only when Snapshot body unavailable.
                     text = "x" * end
                 units.append(
                     {

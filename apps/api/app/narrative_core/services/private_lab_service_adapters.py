@@ -667,8 +667,48 @@ class PrivateLabProviderExecutionServiceAdapter:
             msgs = [dict(m) for m in messages]
             if msgs and msgs[-1].get("role") == "user":
                 content = str(msgs[-1].get("content") or "")
-                if "Output contract:" not in content:
-                    msgs[-1]["content"] = content.rstrip() + "\n\n" + constraint
+                # CHG-058: replace unlabeled source with [CIT-...] tagged units.
+                if citation_catalog is not None and allowed_citation_ids:
+                    try:
+                        from storylens_private_engine.citation.prompt_render import (
+                            citation_system_rules,
+                            render_cited_source_blocks,
+                        )
+
+                        cited = "\n\n".join(render_cited_source_blocks(citation_catalog))
+                        cited_section = (
+                            "<cited_sources>\n"
+                            f"{cited}\n"
+                            "</cited_sources>\n\n"
+                            f"{constraint}"
+                        )
+                        # Keep prior system/user framing; replace untrusted blob when present.
+                        if "<untrusted_source_data>" in content:
+                            import re
+
+                            content = re.sub(
+                                r"<untrusted_source_data>[\s\S]*?</untrusted_source_data>",
+                                cited_section,
+                                content,
+                                count=1,
+                            )
+                        else:
+                            content = content.rstrip() + "\n\n" + cited_section
+                        # Ensure system message carries V2 citation rules once.
+                        if msgs[0].get("role") == "system":
+                            sys_content = str(msgs[0].get("content") or "")
+                            if "Citation Evidence Contract V2" not in sys_content:
+                                msgs[0]["content"] = (
+                                    sys_content.rstrip()
+                                    + "\n\n"
+                                    + citation_system_rules()
+                                )
+                    except Exception:  # noqa: BLE001
+                        if "Output contract:" not in content:
+                            content = content.rstrip() + "\n\n" + constraint
+                elif "Output contract:" not in content:
+                    content = content.rstrip() + "\n\n" + constraint
+                msgs[-1]["content"] = content
             messages = tuple(msgs)
         payload = ResolvedProviderPayload(
             messages=messages,
@@ -692,6 +732,26 @@ class PrivateLabProviderExecutionServiceAdapter:
                 "ref_only": False,
                 "source_untrusted": True,
                 "bundle_fingerprint": bundle.bundle_fingerprint,
+                "evidence_contract_version": (
+                    "v2" if str(module_key) == "book_overview" else None
+                ),
+                "cited_sources_injected": bool(
+                    str(module_key) == "book_overview"
+                    and citation_catalog is not None
+                    and any(
+                        "<cited_sources>" in str(m.get("content") or "")
+                        for m in messages
+                    )
+                ),
+                "prompt_citation_ids": list(allowed_citation_ids),
+                "prompt_has_citation_brackets": bool(
+                    allowed_citation_ids
+                    and any(
+                        f"[{cid}]" in str(m.get("content") or "")
+                        for cid in allowed_citation_ids
+                        for m in messages
+                    )
+                ),
             }
         )
 
