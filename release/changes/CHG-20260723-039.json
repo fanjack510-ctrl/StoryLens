@@ -7,16 +7,22 @@
   "include_in_next_release": true,
   "commits": [
     {
-      "sha": "f63b9f6f88e59dfa1898cc82447ee68e0094a7e7",
+      "sha": "dfe264433393d3e08d706a7648eb31fe59d0a3cc",
       "message": "feat: implement first whole book module foundations",
       "primary": true,
-      "multi_change_reason": null
+      "multi_change_reason": "Cherry-pick Agent R primary onto integration/narrative-phase2b (agent SHA f63b9f6)"
     },
     {
-      "sha": "35fee2bbe25b5dffceda805efe182cf340623af5",
+      "sha": "029f5a91b2f9ab9175b4c28c8b2706a885dc0709",
       "message": "docs: attach primary commit to CHG-20260723-039",
-      "primary": true,
-      "multi_change_reason": "Attach status/metadata follow-up commit after mark tested"
+      "primary": false,
+      "multi_change_reason": "Cherry-pick Agent R docs onto integration (agent SHA 35fee2b)"
+    },
+    {
+      "sha": "1c1761866d9456157aa13a81a7cd33fa17d5683d",
+      "message": "docs: close CHG-20260723-039 commit attachment loop",
+      "primary": false,
+      "multi_change_reason": "Cherry-pick Agent R docs onto integration (agent SHA 856d18e)"
     }
   ],
   "modules": [
@@ -77,7 +83,7 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T22:38:45Z",
-  "updated_at": "2026-07-24T00:24:24Z",
+  "updated_at": "2026-07-24T00:51:47Z",
   "parallel_plan": {
     "role": "agent_r",
     "branch": "feature/narrative-phase2b-core-modules",

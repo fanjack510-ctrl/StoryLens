@@ -7,16 +7,22 @@
   "include_in_next_release": true,
   "commits": [
     {
-      "sha": "f522352fa463c1780f2ff848db2f9587719da874",
+      "sha": "22ae9622486b3243b478491575a0345b71e3d5be",
       "message": "feat: implement whole book context and evidence pipeline",
       "primary": true,
-      "multi_change_reason": null
+      "multi_change_reason": "Cherry-pick Agent Q primary onto integration/narrative-phase2b (agent SHA f522352)"
     },
     {
-      "sha": "bfbee8e100a9b64141cd5dec9987b2ff1c7de46b",
+      "sha": "7b911d5c965d0c05a557d6a78adddf27beaabf5a",
       "message": "docs: mark CHG-20260723-038 tested with commit attachment",
       "primary": false,
-      "multi_change_reason": "registry status closeout"
+      "multi_change_reason": "Cherry-pick Agent Q docs onto integration (agent SHA bfbee8e)"
+    },
+    {
+      "sha": "dec819b4debd781899f787bfb7939e8ca8fa0638",
+      "message": "docs: close CHG-20260723-038 commit attachment loop",
+      "primary": false,
+      "multi_change_reason": "Cherry-pick Agent Q docs onto integration (agent SHA 5f85c9c)"
     }
   ],
   "modules": [
@@ -71,7 +77,7 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T22:38:45Z",
-  "updated_at": "2026-07-24T00:23:45Z",
+  "updated_at": "2026-07-24T00:51:47Z",
   "parallel_plan": {
     "role": "agent_q",
     "branch": "feature/narrative-phase2b-context-evidence",

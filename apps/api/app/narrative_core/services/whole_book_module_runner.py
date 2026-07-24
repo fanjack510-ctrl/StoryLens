@@ -550,6 +550,7 @@ class BaseWholeBookModuleRunner:
     checkpoint_builder: ModuleCheckpointBuilder = field(default_factory=ModuleCheckpointBuilder)
     checkpoint_validator: ModuleCheckpointValidator = field(default_factory=ModuleCheckpointValidator)
     context_pipeline: FakeContextPipeline = field(default_factory=FakeContextPipeline)
+    context_bundles: dict[str, ContextBundle] = field(default_factory=dict)
     emitted_output_fingerprints: set[str] = field(default_factory=set)
     cancelled: set[str] = field(default_factory=set)
     budget_remaining: bool = True
@@ -1041,8 +1042,13 @@ class BaseWholeBookModuleRunner:
         return {}
 
     def _resolve_context_bundle(self, request: PrivateEngineExecutionRequest) -> ContextBundle:
-        # Ref format: fake-bundle:... or synthetic://bundle/{book}/{snap}
+        # Prefer Integration-injected contract bundles (mapped from Q runtime bundles).
         ref = request.context_bundle_ref
+        if ref in self.context_bundles:
+            return self.context_bundles[ref]
+        if request.configuration_fingerprint in self.context_bundles:
+            return self.context_bundles[request.configuration_fingerprint]
+        # Ref format: fake-bundle:... or synthetic://bundle/{book}/{snap}
         if ref.startswith("synthetic://bundle/"):
             parts = ref.split("/")
             book_id = int(parts[-2]) if len(parts) >= 2 else request.book_id
@@ -1250,15 +1256,21 @@ def build_first_four_fake_runners(
     *,
     prompt_pack: FakePromptPackServiceManifest | None = None,
     gateway: WholeBookProviderGateway | None = None,
+    output_validator: DefaultModuleOutputValidator | None = None,
+    context_bundles: dict[str, ContextBundle] | None = None,
 ) -> dict[WholeBookModuleKey, BaseWholeBookModuleRunner]:
     pack = prompt_pack or build_fake_prompt_pack()
     adapter = ModuleProviderExecutionAdapter(gateway=gateway or FakeProviderGateway())
     registry = build_default_module_spec_registry()
-    common = {
+    common: dict[str, Any] = {
         "registry": registry,
         "prompt_pack": pack,
         "provider_adapter": adapter,
     }
+    if output_validator is not None:
+        common["output_validator"] = output_validator
+    if context_bundles is not None:
+        common["context_bundles"] = dict(context_bundles)
     return {
         WholeBookModuleKey.BOOK_OVERVIEW: FakeBookOverviewRunner(**common),
         WholeBookModuleKey.STRUCTURE_STAGES: FakeStructureStagesRunner(**common),

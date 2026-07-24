@@ -649,4 +649,16 @@ def assert_snapshot_completed(snapshot: BookSnapshot) -> None:
 @dataclass
 class UnitBuildConfig:
     source_language: str = "unknown"
-    grouping: Mapping[str, Any] = field(default_factory=lambda: dict(GENERIC_LONG_CHAPTER_GROUPING))
+    grouping: Mapping[str, Any] = field(
+        default_factory=lambda: dict(GENERIC_LONG_CHAPTER_GROUPING)
+    )
+
+    @classmethod
+    def from_grouping_policy(cls, policy: Any, *, source_language: str = "unknown") -> UnitBuildConfig:
+        """Build from ParagraphGroupingPolicy when available (Integration wiring)."""
+
+        if hasattr(policy, "to_grouping_dict"):
+            return cls(source_language=source_language, grouping=policy.to_grouping_dict())
+        if isinstance(policy, Mapping):
+            return cls(source_language=source_language, grouping=dict(policy))
+        return cls(source_language=source_language)

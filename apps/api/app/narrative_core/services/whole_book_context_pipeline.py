@@ -731,11 +731,16 @@ class WholeBookContextBundleBuilder:
         mode: ContextMode = ContextMode.NATIVE,
         extra_units: Sequence[WholeBookContextUnit] = (),
         warnings: Sequence[str] = (),
+        grouping: Mapping[str, Any] | None = None,
     ) -> WholeBookContextBundle:
-        self._pipeline._unit_config = UnitBuildConfig(source_language=source_language)
+        grouping_cfg = dict(grouping) if grouping is not None else dict(self._pipeline._unit_config.grouping)
+        self._pipeline._unit_config = UnitBuildConfig(
+            source_language=source_language,
+            grouping=grouping_cfg,
+        )
         self._pipeline._builder = ContextUnitBuilder(
             source_language=source_language,
-            grouping=self._pipeline._unit_config.grouping,
+            grouping=grouping_cfg,
         )
 
         prepared = self._pipeline.prepare_snapshot(book_id, book_snapshot_id)

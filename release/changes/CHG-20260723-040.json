@@ -3,17 +3,98 @@
   "title": "Phase 2B Integration",
   "type": "feature",
   "base_version": "1.0.5",
-  "status": "registered",
+  "status": "implemented",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "208b5b56f2b4db18a9f13154fc5d153a50c0bb79",
+      "message": "feat: implement private engine runtime foundation",
+      "primary": false,
+      "multi_change_reason": "Mounted from CHG-20260723-037 cherry-pick on integration branch"
+    },
+    {
+      "sha": "6857e19dd03a6b82a19c9c5ca2fa43dff68f5519",
+      "message": "docs: attach CHG-20260723-037 and mark tested",
+      "primary": false,
+      "multi_change_reason": "Mounted from CHG-20260723-037 cherry-pick on integration branch"
+    },
+    {
+      "sha": "a18b3c924e014685cab0a115fe8a3e29c46e2f77",
+      "message": "docs: close CHG-20260723-037 commit attachment loop",
+      "primary": false,
+      "multi_change_reason": "Mounted from CHG-20260723-037 cherry-pick on integration branch"
+    },
+    {
+      "sha": "22ae9622486b3243b478491575a0345b71e3d5be",
+      "message": "feat: implement whole book context and evidence pipeline",
+      "primary": false,
+      "multi_change_reason": "Mounted from CHG-20260723-038 cherry-pick on integration branch"
+    },
+    {
+      "sha": "7b911d5c965d0c05a557d6a78adddf27beaabf5a",
+      "message": "docs: mark CHG-20260723-038 tested with commit attachment",
+      "primary": false,
+      "multi_change_reason": "Mounted from CHG-20260723-038 cherry-pick on integration branch"
+    },
+    {
+      "sha": "dec819b4debd781899f787bfb7939e8ca8fa0638",
+      "message": "docs: close CHG-20260723-038 commit attachment loop",
+      "primary": false,
+      "multi_change_reason": "Mounted from CHG-20260723-038 cherry-pick on integration branch"
+    },
+    {
+      "sha": "dfe264433393d3e08d706a7648eb31fe59d0a3cc",
+      "message": "feat: implement first whole book module foundations",
+      "primary": false,
+      "multi_change_reason": "Mounted from CHG-20260723-039 cherry-pick on integration branch"
+    },
+    {
+      "sha": "029f5a91b2f9ab9175b4c28c8b2706a885dc0709",
+      "message": "docs: attach primary commit to CHG-20260723-039",
+      "primary": false,
+      "multi_change_reason": "Mounted from CHG-20260723-039 cherry-pick on integration branch"
+    },
+    {
+      "sha": "1c1761866d9456157aa13a81a7cd33fa17d5683d",
+      "message": "docs: close CHG-20260723-039 commit attachment loop",
+      "primary": false,
+      "multi_change_reason": "Mounted from CHG-20260723-039 cherry-pick on integration branch"
+    }
+  ],
   "modules": [
     "integration",
     "narrative_core/services",
     "docs"
   ],
-  "files": [],
+  "files": [
+    "apps/api/app/narrative_core/services/private_whole_book_analysis_runtime.py",
+    "apps/api/app/narrative_core/services/whole_book_context_bundle_mapper.py",
+    "apps/api/app/narrative_core/services/paragraph_grouping_policy.py",
+    "apps/api/app/narrative_core/services/evidence_validator_runtime_adapter.py",
+    "apps/api/app/narrative_core/services/candidate_persistence_adapter.py",
+    "apps/api/app/narrative_core/services/auxiliary_context_source.py",
+    "apps/api/app/narrative_core/services/whole_book_module_runner.py",
+    "apps/api/app/narrative_core/services/whole_book_context_pipeline.py",
+    "apps/api/app/narrative_core/services/whole_book_context_units.py",
+    "apps/api/tests/test_narrative_phase2b_integration.py",
+    "docs/architecture/narrative-intelligence-core/phase2b-integration-report.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-runtime-composition.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-context-bundle-mapping.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-module-registry-runtime.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-provider-runner-integration.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-evidence-validation-integration.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-fake-provider-e2e.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-production-isolation-verification.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-known-limitations.md",
+    "docs/architecture/narrative-intelligence-core/README.md",
+    "release/changes/CHG-20260723-036.json",
+    "release/changes/CHG-20260723-037.json",
+    "release/changes/CHG-20260723-038.json",
+    "release/changes/CHG-20260723-039.json",
+    "release/changes/CHG-20260723-040.json"
+  ],
   "user_summary": "Merge P/Q/R private engine foundation, compose runtime, and verify fake provider E2E without opening production runs.",
-  "technical_summary": "Integration merges Agent P/Q/R, composes runtime, runs Fake Provider E2E across Context→Evidence→Module→Candidate, verifies Module Spec consistency, updates Change Registry/README, and keeps production gates closed.",
+  "technical_summary": "Integration cherry-picks Agent P/Q/R onto integration/narrative-phase2b from f2ce37a; composes PrivateWholeBookAnalysisRuntime; WholeBookContextBundleMapper; ParagraphGroupingPolicy; DefaultWholeBookProviderGateway wiring; DefaultEvidenceValidatorRuntimeAdapter; Fake Provider E2E across first-four modules; production isolation proofs. No formal prompts/models/migrations/VERSION bump.",
   "acceptance_criteria": [
     "P/Q/R merged on integration/narrative-phase2b",
     "Fake Provider E2E Context→Evidence→Module→Candidate",
@@ -21,7 +102,13 @@
     "Production gates unchanged; formal create still disabled",
     "Change Registry and ownership docs updated"
   ],
-  "tests": [],
+  "tests": [
+    "apps/api/tests/test_narrative_phase2b_integration.py",
+    "apps/api/tests/test_narrative_phase2bp_contract.py",
+    "apps/api/tests/test_narrative_phase2b_engine_runtime.py",
+    "apps/api/tests/test_narrative_phase2b_context_evidence.py",
+    "apps/api/tests/test_narrative_phase2b_core_modules.py"
+  ],
   "verification_evidence": [],
   "data_compatibility": {
     "database_changed": false,
@@ -36,9 +123,9 @@
     "breaking_change": false
   },
   "blocker_level": null,
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T22:38:45Z",
-  "updated_at": "2026-07-24T00:00:00Z",
+  "updated_at": "2026-07-24T00:51:47Z",
   "parallel_plan": {
     "role": "integration",
     "branch": "integration/narrative-phase2b",

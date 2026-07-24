@@ -1,0 +1,741 @@
+"""Private Whole-Book Analysis Runtime — Phase 2B Integration composition root.
+
+Unique wiring of Agent P (engine/provider) + Q (context/evidence) + R (modules).
+Synthetic / non-production only. Production must not construct Fake runtime.
+No global mutable production singleton. No License/Credential/frontend access.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any, Mapping, Sequence
+
+from sqlalchemy.orm import Session
+
+from app.narrative_core.enums import WholeBookAnalysisMode, WholeBookModuleKey
+from app.narrative_core.private_engine_contract.context import ContextBundle
+from app.narrative_core.private_engine_contract.errors import (
+    PrivateEngineError,
+    PrivateEngineErrorCode,
+    private_engine_error,
+)
+from app.narrative_core.private_engine_contract.evidence import EvidenceCandidate
+from app.narrative_core.private_engine_contract.module_spec import FIRST_FOUR_MODULE_KEYS
+from app.narrative_core.private_engine_contract.protocol import (
+    PrivateEngineExecutionRequest,
+    PrivateEngineExecutionResult,
+    assert_request_has_no_forbidden_fields,
+)
+from app.narrative_core.private_engine_contract.quality import (
+    DEFAULT_QUALITY_PROFILES,
+    QualityProfileKey,
+    WholeBookQualityProfile,
+)
+from app.narrative_core.services.auxiliary_context_source import (
+    AuxiliaryContextSource,
+    EmptyAuxiliaryContextSource,
+)
+from app.narrative_core.services.candidate_persistence_adapter import (
+    CandidatePersistenceAdapter,
+    RecordingCandidatePersistenceSink,
+    summarize_commands,
+)
+from app.narrative_core.services.evidence_validator_runtime_adapter import (
+    DefaultEvidenceValidatorRuntimeAdapter,
+)
+from app.narrative_core.services.fake_private_whole_book_engine import FakePrivateWholeBookEngine
+from app.narrative_core.services.fake_prompt_pack import (
+    FakePromptPackServiceManifest,
+    build_fake_prompt_pack,
+    reject_fake_prompt_pack_in_production,
+)
+from app.narrative_core.services.paragraph_grouping_policy import (
+    ParagraphGroupingPolicy,
+    default_paragraph_grouping_policy,
+)
+from app.narrative_core.private_engine_contract.evidence import build_coverage_report
+from app.narrative_core.private_engine_contract.manifest import fake_private_manifest
+from app.narrative_core.private_engine_contract.prompt_pack import fake_prompt_pack_manifest
+from app.narrative_core.services.private_engine_manifest_loader import (
+    DefaultPrivateWholeBookEngineLoader,
+    PrivateEngineManifestRepository,
+    PromptPackCompatibilityValidator,
+    PromptPackManifestRepository,
+    write_fake_engine_package,
+    write_fake_prompt_pack,
+)
+from app.narrative_core.services.private_engine_runtime_adapter import (
+    PrivateWholeBookEngineRuntimeAdapter,
+)
+from app.narrative_core.services.private_engine_signature import (
+    PrivateEnginePackageVerifier,
+    PromptPackPackageVerifier,
+)
+from app.narrative_core.services.whole_book_candidate_builder import ModuleCandidateBuilder
+from app.narrative_core.services.whole_book_context_bundle_mapper import WholeBookContextBundleMapper
+from app.narrative_core.services.whole_book_context_pipeline import (
+    ContextMode,
+    DefaultWholeBookContextPipeline,
+    EnhancedWholeBookContextProvider,
+    HierarchicalContextPlanner,
+    InMemoryContextBundleCache,
+    NativeWholeBookContextProvider,
+    WholeBookContextBundle,
+    WholeBookContextBundleBuilder,
+    WholeBookContextIndex,
+    configuration_fingerprint,
+)
+from app.narrative_core.services.whole_book_context_units import (
+    SnapshotTextResolver,
+    UnitBuildConfig,
+)
+from app.narrative_core.services.whole_book_evaluation_harness import WholeBookEvaluationHarness
+from app.narrative_core.services.whole_book_evidence_pipeline import (
+    EvidenceCandidateBuilder,
+    EvidenceCoverageCalculator,
+)
+from app.narrative_core.services.whole_book_evidence_validator import (
+    DefaultEvidenceValidator,
+    EvidenceValidatorSnapshotView,
+)
+from app.narrative_core.services.whole_book_module_output_validator import (
+    DefaultModuleOutputValidator,
+    ModuleOutputValidationInput,
+    ReferenceResolver,
+)
+from app.narrative_core.services.whole_book_module_runner import (
+    BaseWholeBookModuleRunner,
+    ModuleCheckpointBuilder,
+    ModuleCheckpointValidator,
+    ModuleProviderExecutionAdapter,
+    WholeBookModuleSpecRegistry,
+    build_default_module_spec_registry,
+    build_first_four_fake_runners,
+    make_execution_request,
+)
+from app.narrative_core.services.whole_book_provider_gateway import (
+    DefaultWholeBookProviderGateway,
+    FakeProviderAdapter,
+    NoCredentialFakeResolver,
+    ProviderCredentialResolver,
+)
+
+RUNTIME_SCHEMA = "storylens.phase2b.private_analysis_runtime"
+RUNTIME_VERSION = "1.0.0"
+
+
+def _quality_profile(key: str | QualityProfileKey = "balanced") -> WholeBookQualityProfile:
+    profile_key = key if isinstance(key, QualityProfileKey) else QualityProfileKey(key)
+    return next(p for p in DEFAULT_QUALITY_PROFILES if p.profile_key == profile_key)
+
+
+@dataclass(frozen=True, slots=True)
+class ModulePipelineResultDTO:
+    """Integration Result DTO — Fake/synthetic, never canonical."""
+
+    schema: str
+    version: str
+    module_key: str
+    module_version: str
+    status: str
+    context_bundle_hash: str
+    configuration_fingerprint: str
+    contract_bundle: ContextBundle
+    runtime_bundle_mode: str
+    engine_result: PrivateEngineExecutionResult
+    validation: Mapping[str, Any]
+    evidence_coverage: Mapping[str, Any]
+    candidate_summary: Mapping[str, Any]
+    checkpoint: Mapping[str, Any] | None
+    usage: Mapping[str, Any]
+    fake: bool = True
+    synthetic: bool = True
+    non_production: bool = True
+    canonical: bool = False
+    asset_written: bool = False
+    network: bool = False
+    model_called: bool = False
+    formal_prompt: bool = False
+
+
+@dataclass
+class PrivateWholeBookAnalysisRuntime:
+    """Unique Phase 2B composition root (injectable; no production default Fake)."""
+
+    schema: str = RUNTIME_SCHEMA
+    version: str = RUNTIME_VERSION
+    production: bool = False
+    synthetic: bool = True
+    non_production: bool = True
+
+    # Agent P
+    package_root: Path | None = None
+    manifest_repository: PrivateEngineManifestRepository | None = None
+    engine_package_verifier: PrivateEnginePackageVerifier | None = None
+    prompt_pack_package_verifier: PromptPackPackageVerifier | None = None
+    engine_loader: DefaultPrivateWholeBookEngineLoader | None = None
+    runtime_adapter: PrivateWholeBookEngineRuntimeAdapter | None = None
+    provider_gateway: DefaultWholeBookProviderGateway | None = None
+    credential_resolver: ProviderCredentialResolver = field(default_factory=NoCredentialFakeResolver)
+    fake_engine: FakePrivateWholeBookEngine | None = None
+    fake_provider: FakeProviderAdapter | None = None
+
+    # Agent Q
+    session: Session | None = None
+    grouping_policy: ParagraphGroupingPolicy = field(default_factory=default_paragraph_grouping_policy)
+    context_pipeline: DefaultWholeBookContextPipeline | None = None
+    text_resolver: SnapshotTextResolver | None = None
+    context_index: WholeBookContextIndex | None = None
+    context_bundle_builder: WholeBookContextBundleBuilder | None = None
+    context_planner: HierarchicalContextPlanner = field(default_factory=HierarchicalContextPlanner)
+    native_context_provider: NativeWholeBookContextProvider | None = None
+    enhanced_context_provider: EnhancedWholeBookContextProvider | None = None
+    evidence_builder: EvidenceCandidateBuilder = field(default_factory=EvidenceCandidateBuilder)
+    evidence_validator: DefaultEvidenceValidator = field(default_factory=DefaultEvidenceValidator)
+    evidence_coverage: EvidenceCoverageCalculator = field(default_factory=EvidenceCoverageCalculator)
+    context_cache: InMemoryContextBundleCache = field(default_factory=InMemoryContextBundleCache)
+    auxiliary_source: AuxiliaryContextSource = field(default_factory=EmptyAuxiliaryContextSource)
+
+    # Agent R
+    module_registry: WholeBookModuleSpecRegistry = field(default_factory=build_default_module_spec_registry)
+    module_runners: dict[WholeBookModuleKey, BaseWholeBookModuleRunner] = field(default_factory=dict)
+    output_validator: DefaultModuleOutputValidator | None = None
+    candidate_builder: ModuleCandidateBuilder = field(default_factory=ModuleCandidateBuilder)
+    checkpoint_builder: ModuleCheckpointBuilder = field(default_factory=ModuleCheckpointBuilder)
+    checkpoint_validator: ModuleCheckpointValidator = field(default_factory=ModuleCheckpointValidator)
+    evaluation_harness: WholeBookEvaluationHarness | None = None
+    prompt_pack: FakePromptPackServiceManifest | None = None
+
+    # Integration adapters
+    bundle_mapper: WholeBookContextBundleMapper = field(default_factory=WholeBookContextBundleMapper)
+    evidence_adapter: DefaultEvidenceValidatorRuntimeAdapter | None = None
+    persistence: CandidatePersistenceAdapter = field(default_factory=RecordingCandidatePersistenceSink)
+
+    # Runtime state
+    contract_bundles: dict[str, ContextBundle] = field(default_factory=dict)
+    runtime_bundles: dict[str, WholeBookContextBundle] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if self.production:
+            # Production composition must never build Fake runtime.
+            raise RuntimeError("PrivateWholeBookAnalysisRuntime forbids production=True Fake composition")
+        if not self.non_production or not self.synthetic:
+            raise RuntimeError("Phase 2B runtime must remain synthetic/non_production")
+        self.module_registry.validate()
+        if self.prompt_pack is None:
+            self.prompt_pack = build_fake_prompt_pack()
+        if self.evidence_adapter is None:
+            self.evidence_adapter = DefaultEvidenceValidatorRuntimeAdapter(validator=self.evidence_validator)
+        if self.output_validator is None:
+            self.output_validator = DefaultModuleOutputValidator(
+                evidence_validator=self.evidence_adapter
+            )
+        if self.provider_gateway is None:
+            self.fake_provider = self.fake_provider or FakeProviderAdapter()
+            self.provider_gateway = DefaultWholeBookProviderGateway(
+                credential_resolver=self.credential_resolver,
+            )
+            # Ensure Fake adapter is the registered one we track.
+            assert self.provider_gateway.registry is not None
+            self.provider_gateway.registry.register(self.fake_provider)
+        if self.fake_engine is None:
+            self.fake_engine = FakePrivateWholeBookEngine()
+        if self.runtime_adapter is None:
+            self.runtime_adapter = PrivateWholeBookEngineRuntimeAdapter(
+                engine=self.fake_engine,
+                loader=self.engine_loader,
+                prompt_pack=self.prompt_pack.manifest if self.prompt_pack else None,
+            )
+        if not self.module_runners:
+            self.module_runners = build_first_four_fake_runners(
+                prompt_pack=self.prompt_pack,
+                gateway=self.provider_gateway,
+                output_validator=self.output_validator,
+            )
+        else:
+            for runner in self.module_runners.values():
+                runner.output_validator = self.output_validator
+                if runner.provider_adapter is None:
+                    runner.provider_adapter = ModuleProviderExecutionAdapter(gateway=self.provider_gateway)
+                else:
+                    runner.provider_adapter.gateway = self.provider_gateway
+        if self.evaluation_harness is None:
+            self.evaluation_harness = WholeBookEvaluationHarness()
+        if self.session is not None:
+            self._wire_session(self.session)
+
+    def _wire_session(self, session: Session) -> None:
+        grouping = self.grouping_policy.to_grouping_dict()
+        unit_config = UnitBuildConfig(grouping=grouping)
+        self.context_pipeline = DefaultWholeBookContextPipeline(session, unit_config=unit_config)
+        self.text_resolver = self.context_pipeline.text_resolver
+        self.context_bundle_builder = WholeBookContextBundleBuilder(session)
+        self.context_bundle_builder.pipeline._unit_config = unit_config
+        self.context_bundle_builder.pipeline._builder = self.context_pipeline._builder
+        self.native_context_provider = NativeWholeBookContextProvider(session)
+        self.enhanced_context_provider = EnhancedWholeBookContextProvider(session)
+
+    def bind_session(self, session: Session) -> None:
+        self.session = session
+        self._wire_session(session)
+
+    def register_evidence_view(self, view: EvidenceValidatorSnapshotView) -> None:
+        assert self.evidence_adapter is not None
+        self.evidence_adapter.register_view(view)
+
+    def build_native_context_bundle(
+        self,
+        *,
+        book_id: int,
+        book_snapshot_id: int,
+        module_keys: Sequence[str],
+        provider_context_limit: int = 8_000,
+        quality_profile_key: str = "balanced",
+        source_language: str = "zh",
+    ) -> tuple[WholeBookContextBundle, ContextBundle]:
+        if self.context_bundle_builder is None:
+            raise RuntimeError("session required for native context")
+        profile = _quality_profile(quality_profile_key)
+        specs = tuple(self.module_registry.get(k) for k in module_keys)
+        grouping = self.grouping_policy.with_overrides(
+            provider_context_limit=provider_context_limit,
+            quality_profile_key=quality_profile_key,
+        ).to_grouping_dict()
+        runtime_bundle = self.context_bundle_builder.build(
+            book_id=book_id,
+            book_snapshot_id=book_snapshot_id,
+            module_specs=specs,
+            provider_context_limit=provider_context_limit,
+            quality_profile=profile,
+            source_language=source_language,
+            analysis_mode=WholeBookAnalysisMode.NATIVE,
+            mode=ContextMode.NATIVE,
+            grouping=grouping,
+        )
+        contract = self.bundle_mapper.to_contract(runtime_bundle)
+        ref = f"ctx-bundle:{contract.bundle_hash}"
+        self.contract_bundles[ref] = contract
+        self.contract_bundles[contract.bundle_hash] = contract
+        self.runtime_bundles[ref] = runtime_bundle
+        cache_key = InMemoryContextBundleCache.make_key(
+            snapshot_content_hash=runtime_bundle.snapshot_content_hash,
+            pipeline_version=runtime_bundle.pipeline_version,
+            module_spec_versions=tuple(
+                (
+                    self.module_registry.get(k).module_key.value,
+                    self.module_registry.get(k).module_version,
+                )
+                for k in module_keys
+            ),
+            quality_profile_key=runtime_bundle.quality_profile_key,
+            configuration_fingerprint=runtime_bundle.configuration_fingerprint,
+        )
+        self.context_cache.put(cache_key, runtime_bundle)
+        for runner in self.module_runners.values():
+            runner.context_bundles[ref] = contract
+            runner.context_bundles[contract.bundle_hash] = contract
+        return runtime_bundle, contract
+
+    def build_enhanced_context_bundle(
+        self,
+        *,
+        book_id: int,
+        book_snapshot_id: int,
+        module_keys: Sequence[str],
+        provider_context_limit: int = 8_000,
+        quality_profile_key: str = "balanced",
+        source_language: str = "zh",
+    ) -> tuple[WholeBookContextBundle, ContextBundle]:
+        if self.enhanced_context_provider is None or self.context_bundle_builder is None:
+            raise RuntimeError("session required for enhanced context")
+        profile = _quality_profile(quality_profile_key)
+        specs = tuple(self.module_registry.get(k) for k in module_keys)
+        grouping = self.grouping_policy.with_overrides(
+            provider_context_limit=provider_context_limit,
+            quality_profile_key=quality_profile_key,
+        ).to_grouping_dict()
+        aux = self.auxiliary_source.load_auxiliary(
+            book_id=book_id, book_snapshot_id=book_snapshot_id
+        )
+        warnings = list(aux.warnings)
+        if aux.missing:
+            warnings.append("enhanced_degraded_missing_aux")
+        if aux.stale:
+            warnings.append("enhanced_aux_stale_marked")
+        runtime_bundle = self.context_bundle_builder.build(
+            book_id=book_id,
+            book_snapshot_id=book_snapshot_id,
+            module_specs=specs,
+            provider_context_limit=provider_context_limit,
+            quality_profile=profile,
+            source_language=source_language,
+            analysis_mode=WholeBookAnalysisMode.ENHANCED,
+            mode=ContextMode.ENHANCED,
+            extra_units=aux.extra_units,
+            warnings=tuple(warnings),
+            grouping=grouping,
+        )
+        # Attach aux inventory into coverage notes without embedding bodies.
+        notes = runtime_bundle.coverage.notes + tuple(
+            f"aux:{r.kind}:{r.reason}:stale={r.stale}:excluded={r.excluded}" for r in aux.aux_refs
+        )
+        from dataclasses import replace
+
+        from app.narrative_core.services.whole_book_context_pipeline import ContextCoverage
+
+        coverage = ContextCoverage(
+            chapter_units=runtime_bundle.coverage.chapter_units,
+            scene_units=runtime_bundle.coverage.scene_units,
+            paragraph_group_units=runtime_bundle.coverage.paragraph_group_units,
+            evidence_window_units=runtime_bundle.coverage.evidence_window_units,
+            derived_summary_units=runtime_bundle.coverage.derived_summary_units,
+            levels_included=runtime_bundle.coverage.levels_included,
+            degraded=True if aux.missing or aux.stale else runtime_bundle.coverage.degraded,
+            notes=notes,
+        )
+        runtime_bundle = replace(runtime_bundle, coverage=coverage, warnings=tuple(warnings))
+        contract = self.bundle_mapper.to_contract(runtime_bundle)
+        ref = f"ctx-bundle:{contract.bundle_hash}"
+        self.contract_bundles[ref] = contract
+        self.contract_bundles[contract.bundle_hash] = contract
+        self.runtime_bundles[ref] = runtime_bundle
+        for runner in self.module_runners.values():
+            runner.context_bundles[ref] = contract
+            runner.context_bundles[contract.bundle_hash] = contract
+        return runtime_bundle, contract
+
+    def prepare_engine_packages(self, package_root: Path) -> Mapping[str, Any]:
+        """Write Fake signed engine + prompt pack under package_root (test only)."""
+
+        self.package_root = package_root
+        engine_manifest = fake_private_manifest(signed=True, non_production=True)
+        engine_dir = write_fake_engine_package(package_root, engine_manifest, include_signature=True)
+        pack_manifest = fake_prompt_pack_manifest().manifest
+        pack_dir = write_fake_prompt_pack(package_root, pack_manifest, include_signature=True)
+        self.manifest_repository = PrivateEngineManifestRepository(package_root)
+        self.engine_package_verifier = PrivateEnginePackageVerifier(production=False)
+        self.prompt_pack_package_verifier = PromptPackPackageVerifier(production=False)
+        self.engine_loader = DefaultPrivateWholeBookEngineLoader(
+            repository=self.manifest_repository,
+            verifier=self.engine_package_verifier,
+            production=False,
+        )
+        handle = self.engine_loader.load(engine_manifest.engine_id)
+        engine_id = handle.engine_id
+        self.fake_engine = self.engine_loader.get_loaded_engine(engine_id) or FakePrivateWholeBookEngine(
+            manifest=engine_manifest
+        )
+        self.runtime_adapter = PrivateWholeBookEngineRuntimeAdapter(
+            engine=self.fake_engine,
+            loader=self.engine_loader,
+            prompt_pack_repository=PromptPackManifestRepository(package_root),
+            prompt_pack_validator=PromptPackCompatibilityValidator(),
+            prompt_pack=self.prompt_pack.manifest if self.prompt_pack else None,
+        )
+        return {
+            "engine_ref": str(engine_dir),
+            "prompt_pack_ref": str(pack_dir),
+            "engine_id": engine_id,
+            "fake": True,
+            "signed": True,
+            "non_production": True,
+        }
+
+    def execute_module_pipeline(
+        self,
+        *,
+        module_key: WholeBookModuleKey | str,
+        book_id: int,
+        book_snapshot_id: int,
+        run_id: int = 1,
+        run_stage_id: int | None = None,
+        context_bundle_ref: str,
+        configuration_fingerprint_value: str,
+        provider_policy: Mapping[str, Any] | None = None,
+        source_language: str = "zh",
+        output_locale: str = "zh-CN",
+        analysis_mode: WholeBookAnalysisMode = WholeBookAnalysisMode.NATIVE,
+        require_evidence_for_acceptance: bool = False,
+        persist: bool = True,
+    ) -> ModulePipelineResultDTO:
+        key = module_key if isinstance(module_key, WholeBookModuleKey) else WholeBookModuleKey(module_key)
+        if key not in FIRST_FOUR_MODULE_KEYS and key not in self.module_runners:
+            raise private_engine_error(PrivateEngineErrorCode.MODULE_NOT_SUPPORTED)
+        runner = self.module_runners[key]
+        pack = self.prompt_pack
+        assert pack is not None
+        contract = self.contract_bundles.get(context_bundle_ref)
+        if contract is None:
+            raise private_engine_error(PrivateEngineErrorCode.CONTEXT_BUNDLE_INVALID)
+        runner.context_bundles[context_bundle_ref] = contract
+
+        request = make_execution_request(
+            module_key=key,
+            run_id=run_id,
+            book_id=book_id,
+            book_snapshot_id=book_snapshot_id,
+            source_language=source_language,
+            output_locale=output_locale,
+            prompt_pack_ref=f"{pack.manifest.prompt_pack_id}@{pack.manifest.prompt_pack_version}",
+            context_bundle_ref=context_bundle_ref,
+            configuration_fingerprint=configuration_fingerprint_value,
+            provider_policy=provider_policy or {"provider_kind": "fake", "model_route": "fake-route"},
+            analysis_mode=analysis_mode,
+        )
+        assert_request_has_no_forbidden_fields(request)
+        assert self.runtime_adapter is not None
+        # Adapter validates request / prompt / budget / cancel boundaries first.
+        translated = self.runtime_adapter.translate_request(request)
+
+        # Fake engine health must not execute analysis.
+        _ = self.runtime_adapter.health_check()
+
+        # Module runner path (DTO-shaped) via Provider Gateway → Fake Provider.
+        engine_result = runner.execute(translated)
+        guarded = self.runtime_adapter.translate_result(
+            PrivateEngineExecutionResult(
+                schema=engine_result.schema,
+                version=engine_result.version,
+                engine_id=engine_result.engine_id,
+                engine_version=engine_result.engine_version,
+                stage_key=engine_result.stage_key,
+                attempt=engine_result.attempt,
+                status=engine_result.status,
+                module_outputs=engine_result.module_outputs,
+                evidence_candidates=engine_result.evidence_candidates,
+                asset_candidates=engine_result.asset_candidates,
+                relation_candidates=engine_result.relation_candidates,
+                conflict_candidates=engine_result.conflict_candidates,
+                checkpoint=engine_result.checkpoint,
+                usage={**dict(engine_result.usage), "fake": True, "synthetic": True},
+                warnings=engine_result.warnings,
+                validation_summary=engine_result.validation_summary,
+                generated_at=engine_result.generated_at,
+            )
+        )
+
+        # Output validation with Q evidence validator.
+        assert self.output_validator is not None
+        evidence = tuple(
+            e for e in guarded.evidence_candidates if isinstance(e, EvidenceCandidate)
+        )
+        validation = self.output_validator.validate(
+            ModuleOutputValidationInput(
+                module_key=key,
+                module_outputs=guarded.module_outputs,
+                evidence_candidates=evidence,
+                book_id=book_id,
+                book_snapshot_id=book_snapshot_id,
+                expected_book_id=book_id,
+                expected_book_snapshot_id=book_snapshot_id,
+                resolver=ReferenceResolver(
+                    asset_ids=frozenset(
+                        int(x) for x in guarded.module_outputs.get("resolver_asset_ids", ()) or ()
+                    ),
+                    entity_ids=frozenset(
+                        int(x) for x in guarded.module_outputs.get("resolver_entity_ids", ()) or ()
+                    ),
+                    storyline_ids=frozenset(
+                        int(x) for x in guarded.module_outputs.get("resolver_storyline_ids", ()) or ()
+                    ),
+                    chapter_ids=frozenset(
+                        int(x) for x in guarded.module_outputs.get("resolver_chapter_ids", ()) or ()
+                    ),
+                    output_refs=frozenset(
+                        str(x) for x in guarded.module_outputs.get("resolver_output_refs", ()) or ()
+                    ),
+                ),
+                require_evidence_for_acceptance=require_evidence_for_acceptance,
+            )
+        )
+        coverage = build_coverage_report(
+            module_key=key.value,
+            required_claims=int(guarded.module_outputs.get("required_claims", 1) or 1),
+            evidenced_claims=int(
+                guarded.module_outputs.get(
+                    "evidenced_claims", len(evidence) if validation.evidence_valid else 0
+                )
+                or 0
+            ),
+            missing_target_refs=tuple(validation.invalid_refs),
+        )
+        # Keep Q calculator available for claim-binding harnesses (not unused).
+        _ = self.evidence_coverage
+        # Candidate commands — only when accepted (force_accept fixtures for Fake E2E).
+        built = self.candidate_builder.build(
+            result=guarded,
+            validation=validation,
+            run_id=run_id,
+            run_stage_id=run_stage_id,
+            book_snapshot_id=book_snapshot_id,
+            module_key=key.value,
+            module_version=runner.spec.module_version,
+            configuration_fingerprint=configuration_fingerprint_value,
+            prompt_pack_id=pack.manifest.prompt_pack_id,
+            prompt_pack_version=pack.manifest.prompt_pack_version,
+            mock=True,
+        )
+        persist_summary: Mapping[str, Any] = {"recorded": False}
+        if persist:
+            persist_summary = self.persistence.persist_commands(built)
+
+        runtime_bundle = self.runtime_bundles.get(context_bundle_ref)
+        return ModulePipelineResultDTO(
+            schema="storylens.phase2b.module_pipeline_result",
+            version="1.0.0",
+            module_key=key.value,
+            module_version=runner.spec.module_version,
+            status=guarded.status,
+            context_bundle_hash=contract.bundle_hash,
+            configuration_fingerprint=configuration_fingerprint_value,
+            contract_bundle=contract,
+            runtime_bundle_mode=runtime_bundle.mode.value if runtime_bundle else "unknown",
+            engine_result=guarded,
+            validation={
+                "accepted": validation.accepted,
+                "schema_valid": validation.schema_valid,
+                "references_valid": validation.references_valid,
+                "evidence_valid": validation.evidence_valid,
+                "snapshot_valid": validation.snapshot_valid,
+                "duplicate_summary": validation.duplicate_summary,
+                "conflict_summary": validation.conflict_summary,
+                "error_code": validation.error_code,
+                "warnings": list(validation.warnings),
+            },
+            evidence_coverage={
+                "required_claims": coverage.required_claims,
+                "evidenced_claims": coverage.evidenced_claims,
+                "coverage_ratio": coverage.coverage_ratio,
+                "incomplete": coverage.incomplete,
+            },
+            candidate_summary={**summarize_commands(built), "persist": dict(persist_summary)},
+            checkpoint=None
+            if guarded.checkpoint is None
+            else {
+                "protocol_version": guarded.checkpoint.protocol_version,
+                "engine_id": guarded.checkpoint.engine_id,
+                "engine_version": guarded.checkpoint.engine_version,
+                "module_key": guarded.checkpoint.module_key,
+                "module_version": guarded.checkpoint.module_version,
+                "stage_key": guarded.checkpoint.stage_key,
+                "attempt": guarded.checkpoint.attempt,
+                "prompt_pack_id": guarded.checkpoint.prompt_pack_id,
+                "prompt_pack_version": guarded.checkpoint.prompt_pack_version,
+                "context_bundle_hash": guarded.checkpoint.context_bundle_hash,
+                "configuration_fingerprint": guarded.checkpoint.configuration_fingerprint,
+                "book_snapshot_id": guarded.checkpoint.book_snapshot_id,
+                "integrity_hash": guarded.checkpoint.integrity_hash,
+            },
+            usage=dict(guarded.usage),
+            fake=True,
+            synthetic=True,
+            non_production=True,
+            canonical=False,
+            asset_written=False,
+            network=False,
+            model_called=False,
+            formal_prompt=False,
+        )
+
+    def assert_production_isolation(self) -> Mapping[str, Any]:
+        """Prove production gates reject Fake engine/pack and never Mock-fallback."""
+
+        from app.narrative_core.contracts.api_dto import WHOLE_BOOK_RUNS_ENDPOINT_DISABLED
+        from app.narrative_core.run_shell_contract.mock_lab import WHOLE_BOOK_MOCK_LAB_ENABLED
+        from app.narrative_core.services.whole_book_engine_registry import (
+            PRODUCTION_DEFAULT_ENGINE_ID,
+        )
+
+        errors: list[str] = []
+        # Production loader must reject Fake.
+        if self.package_root is not None:
+            prod_loader = DefaultPrivateWholeBookEngineLoader(
+                repository=PrivateEngineManifestRepository(self.package_root),
+                production=True,
+            )
+            try:
+                prod_loader.load("fake.signed.private_engine")
+                errors.append("production_loaded_fake_engine")
+            except PrivateEngineError as exc:
+                if exc.code != PrivateEngineErrorCode.PRIVATE_ENGINE_NOT_FOUND:
+                    errors.append(f"unexpected_prod_engine_error:{exc.code}")
+        if self.prompt_pack is not None:
+            try:
+                reject_fake_prompt_pack_in_production(self.prompt_pack, production=True)
+                errors.append("production_accepted_fake_prompt_pack")
+            except RuntimeError:
+                pass
+        try:
+            create_private_whole_book_analysis_runtime(production=True)
+            errors.append("production_fake_runtime_constructed")
+        except RuntimeError:
+            pass
+        if PRODUCTION_DEFAULT_ENGINE_ID is not None:
+            errors.append("PRODUCTION_DEFAULT_ENGINE_ID_not_none")
+        if WHOLE_BOOK_RUNS_ENDPOINT_DISABLED is not True:
+            errors.append("WHOLE_BOOK_RUNS_ENDPOINT_DISABLED_not_true")
+        if WHOLE_BOOK_MOCK_LAB_ENABLED is not False:
+            errors.append("WHOLE_BOOK_MOCK_LAB_ENABLED_not_false")
+        return {
+            "ok": not errors,
+            "errors": errors,
+            "production_default_engine_id": PRODUCTION_DEFAULT_ENGINE_ID,
+            "whole_book_runs_endpoint_disabled": WHOLE_BOOK_RUNS_ENDPOINT_DISABLED,
+            "mock_lab_enabled_default": WHOLE_BOOK_MOCK_LAB_ENABLED,
+            "fake_runtime_forbidden_in_production": True,
+            "network": False,
+            "model_called": False,
+            "formal_prompt": False,
+        }
+
+
+def create_private_whole_book_analysis_runtime(
+    *,
+    session: Session | None = None,
+    production: bool = False,
+    package_root: Path | None = None,
+    grouping_policy: ParagraphGroupingPolicy | None = None,
+    auxiliary_source: AuxiliaryContextSource | None = None,
+    persistence: CandidatePersistenceAdapter | None = None,
+) -> PrivateWholeBookAnalysisRuntime:
+    """Factory — tests inject isolated runtimes. Production must not call with Fake."""
+
+    if production:
+        raise RuntimeError("production must not construct Fake PrivateWholeBookAnalysisRuntime")
+    runtime = PrivateWholeBookAnalysisRuntime(
+        production=False,
+        synthetic=True,
+        non_production=True,
+        grouping_policy=grouping_policy or default_paragraph_grouping_policy(),
+        auxiliary_source=auxiliary_source or EmptyAuxiliaryContextSource(),
+        persistence=persistence or RecordingCandidatePersistenceSink(),
+    )
+    if session is not None:
+        runtime.bind_session(session)
+    if package_root is not None:
+        runtime.prepare_engine_packages(package_root)
+    return runtime
+
+
+# Aliases matching composition naming options in the brief.
+PrivateEngineRuntimeContainer = PrivateWholeBookAnalysisRuntime
+PrivateWholeBookRuntime = PrivateWholeBookAnalysisRuntime
+
+
+PRIVATE_WHOLE_BOOK_RUNTIME_ALIASES = (
+    "PrivateWholeBookAnalysisRuntime",
+    "PrivateEngineRuntimeContainer",
+    "PrivateWholeBookRuntime",
+)
+
+__all__ = [
+    "ModulePipelineResultDTO",
+    "PRIVATE_WHOLE_BOOK_RUNTIME_ALIASES",
+    "PrivateEngineRuntimeContainer",
+    "PrivateWholeBookAnalysisRuntime",
+    "PrivateWholeBookRuntime",
+    "RUNTIME_SCHEMA",
+    "RUNTIME_VERSION",
+    "create_private_whole_book_analysis_runtime",
+]

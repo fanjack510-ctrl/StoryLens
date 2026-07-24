@@ -7,16 +7,22 @@
   "include_in_next_release": true,
   "commits": [
     {
-      "sha": "b6c60b59113f57eb333d347548bee6bb5f5f54e3",
+      "sha": "208b5b56f2b4db18a9f13154fc5d153a50c0bb79",
       "message": "feat: implement private engine runtime foundation",
       "primary": true,
-      "multi_change_reason": null
+      "multi_change_reason": "Cherry-pick Agent P primary onto integration/narrative-phase2b (agent SHA b6c60b5)"
     },
     {
-      "sha": "209521f27bad6bca6f5435b76c678f1e3abf29f3",
+      "sha": "6857e19dd03a6b82a19c9c5ca2fa43dff68f5519",
       "message": "docs: attach CHG-20260723-037 and mark tested",
       "primary": false,
-      "multi_change_reason": null
+      "multi_change_reason": "Cherry-pick Agent P docs onto integration (agent SHA 209521f)"
+    },
+    {
+      "sha": "a18b3c924e014685cab0a115fe8a3e29c46e2f77",
+      "message": "docs: close CHG-20260723-037 commit attachment loop",
+      "primary": false,
+      "multi_change_reason": "Cherry-pick Agent P docs onto integration (agent SHA dbe6aca)"
     }
   ],
   "modules": [
@@ -70,7 +76,7 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T22:38:45Z",
-  "updated_at": "2026-07-24T00:21:13Z",
+  "updated_at": "2026-07-24T00:51:47Z",
   "parallel_plan": {
     "role": "agent_p",
     "branch": "feature/narrative-phase2b-engine-runtime",

@@ -3,8 +3,9 @@
 Ordered pipeline: Schema → DTO → Reference → Evidence → Book/Snapshot →
 Duplicate → Conflict → Accepted.
 
-Depends on EvidenceValidator Protocol; Agent Q real validator is not merged yet,
-so Fake/Contract fixtures are used here. No ORM writes; no full raw response storage.
+Depends on EvidenceValidator Protocol. Unit tests keep FakeEvidenceValidator;
+Phase 2B Integration injects Agent Q DefaultEvidenceValidator via
+DefaultEvidenceValidatorRuntimeAdapter. No ORM writes; no full raw response storage.
 """
 
 from __future__ import annotations

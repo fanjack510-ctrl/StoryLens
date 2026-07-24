@@ -31,13 +31,13 @@ StoryLens 叙事智能核心文档索引。当前基线：`VERSION=1.0.5`。
 | Phase 2A Agent N | CHG-20260723-033 | tested | Frontend Mock Run Lab |
 | Phase 2A Agent O | CHG-20260723-034 | tested | Recovery / Reliability |
 | Phase 2A Integration | CHG-20260723-035 | tested | Phase 2A Integration |
-| Phase 2B-P | CHG-20260723-036 | tested | Private Engine / Context / Evidence / Module Contract freeze |
-| Phase 2B Agent P | CHG-20260723-037 | registered | Private Engine Runtime |
-| Phase 2B Agent Q | CHG-20260723-038 | registered | Context and Evidence Pipeline |
-| Phase 2B Agent R | CHG-20260723-039 | registered | First Real Modules and Evaluation |
-| Phase 2B Integration | CHG-20260723-040 | registered | Phase 2B Integration |
+| Phase 2B-P | CHG-20260723-036 | verified | Private Engine / Context / Evidence / Module Contract freeze |
+| Phase 2B Agent P | CHG-20260723-037 | tested | Private Engine Runtime |
+| Phase 2B Agent Q | CHG-20260723-038 | tested | Context and Evidence Pipeline |
+| Phase 2B Agent R | CHG-20260723-039 | tested | First Real Modules and Evaluation |
+| Phase 2B Integration | CHG-20260723-040 | tested | Phase 2B Integration |
 
-\* 022–031 已为 `verified`（不得 ready/released）。032–035 上限 `tested`（不得仅凭自动测试升为 verified；等待 Mock Lab 人工验收）。036 上限 `tested`；037–040 保持 `registered`。硬边界见下。
+\* 022–031 已为 `verified`（不得 ready/released）。032–035 上限 `tested`（不得仅凭自动测试升为 verified；等待 Mock Lab 人工验收）。036 已为 `verified`（不得 ready/released）。037–040 上限 `tested`（不得仅凭自动测试升为 verified；等待 Private Engine 人工验收）。硬边界见下。
 
 ## Phase 1P / 1A
 
@@ -200,3 +200,15 @@ StoryLens 叙事智能核心文档索引。当前基线：`VERSION=1.0.5`。
 - [phase2b-parallel-file-ownership.md](./phase2b-parallel-file-ownership.md)
 - [phase2b-parallel-file-ownership.json](./phase2b-parallel-file-ownership.json)
 - [phase2b-contract-verification.md](./phase2b-contract-verification.md)
+
+## Phase 2B Integration
+
+- [phase2b-integration-report.md](./phase2b-integration-report.md)
+- [phase2b-runtime-composition.md](./phase2b-runtime-composition.md)
+- [phase2b-context-bundle-mapping.md](./phase2b-context-bundle-mapping.md)
+- [phase2b-module-registry-runtime.md](./phase2b-module-registry-runtime.md)
+- [phase2b-provider-runner-integration.md](./phase2b-provider-runner-integration.md)
+- [phase2b-evidence-validation-integration.md](./phase2b-evidence-validation-integration.md)
+- [phase2b-fake-provider-e2e.md](./phase2b-fake-provider-e2e.md)
+- [phase2b-production-isolation-verification.md](./phase2b-production-isolation-verification.md)
+- [phase2b-known-limitations.md](./phase2b-known-limitations.md)

@@ -3,7 +3,7 @@
   "title": "Phase 2B-P Private Engine Contract",
   "type": "feature",
   "base_version": "1.0.5",
-  "status": "tested",
+  "status": "verified",
   "include_in_next_release": true,
   "commits": [
     {
@@ -77,7 +77,8 @@
     "pytest apps/api/tests/test_narrative_phase2bp_contract.py -q --noconftest → 63 passed",
     "python scripts/version_manager.py check",
     "python scripts/change_registry.py check",
-    "git diff --check"
+    "git diff --check",
+    "Phase 2B Integration verified contract freeze on integration/narrative-phase2b at source f2ce37a; gates unchanged; no ready/released."
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -94,7 +95,7 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T22:38:45Z",
-  "updated_at": "2026-07-23T22:42:56Z",
+  "updated_at": "2026-07-24T00:51:47Z",
   "parallel_plan": {
     "role": "phase2b_p",
     "branch": "feature/narrative-phase2b-core-engine-contract",
