@@ -7,26 +7,32 @@
   "include_in_next_release": true,
   "commits": [
     {
-      "sha": "36f1807c46002102885224a31591d02f5dc3b70c",
+      "sha": "f35690c96105486713799432658cd07c5c2cd992",
       "message": "fix: use real transport and orm persistence for live runs",
       "primary": true,
       "multi_change_reason": null
     },
     {
-      "sha": "90250ec4d8ef3110a2fb1e2dc6f98131340cdef8",
+      "sha": "c74f4d9e80f01cee89b63dbdf0a45de58a7ddbdb",
       "message": "docs: mark CHG-20260724-051 tested after transport/persistence fix",
       "primary": false,
       "multi_change_reason": null
     },
     {
-      "sha": "c9f4393b1db4ea934b989da9036a5f0a05094ac9",
+      "sha": "06118aa834ea617688c280d4428ab5b6d6793ca1",
       "message": "docs: sync CHG-20260724-051 commit attachments",
       "primary": false,
       "multi_change_reason": null
     },
     {
-      "sha": "25161834266c955b7f210e41de4960464220426c",
+      "sha": "d5fdca95f04c24d32599aa36c47d20cf75198985",
       "message": "docs: complete CHG-20260724-051 tested metadata",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "e090534b0d6cecff1b849c7b9aa8c5d9550a7eb9",
+      "message": "docs: attach final CHG-20260724-051 metadata commit",
       "primary": false,
       "multi_change_reason": null
     }
@@ -71,5 +77,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-24T05:58:03Z",
-  "updated_at": "2026-07-24T06:08:23Z"
+  "updated_at": "2026-07-24T06:10:12Z"
 }
