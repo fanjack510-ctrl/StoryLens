@@ -454,12 +454,22 @@ class ContextUnitBuilder:
         )
 
     def build_paragraph_group_units(
-        self, chapter: ChapterNormalizeRecord
+        self,
+        chapter: ChapterNormalizeRecord,
+        *,
+        paragraph_texts: Sequence[str] | None = None,
     ) -> tuple[WholeBookContextUnit, ...]:
-        """Generic long-chapter grouping from config — not book-specific thresholds."""
+        """Generic long-chapter grouping from config — not book-specific thresholds.
+
+        When ``paragraph_texts`` is provided (formal Snapshot path), ``content_hash``
+        matches ``SnapshotTextResolver`` for PARAGRAPH_GROUP
+        (``hash(\"\\n\".join(texts))``). Synth/index-only callers may omit texts.
+        """
         ids = chapter.snapshot_paragraph_ids
         if not ids:
             return ()
+        if paragraph_texts is not None and len(paragraph_texts) != len(ids):
+            raise ValueError("paragraph_texts length must match snapshot_paragraph_ids")
         hashes = chapter.paragraph_hashes
         stables = chapter.stable_paragraph_ids
         units: list[WholeBookContextUnit] = []
@@ -471,14 +481,19 @@ class ContextUnitBuilder:
             slice_ids = ids[start:end]
             slice_hashes = hashes[start:end]
             slice_stables = stables[start:end]
-            content_hash = content_hash_for_parts(slice_hashes)
-            # Character estimate from offsets when available; else hash-only.
-            if chapter.paragraph_offsets and end <= len(chapter.paragraph_offsets):
-                char_count = sum(
-                    max(0, o[1] - o[0]) for o in chapter.paragraph_offsets[start:end]
-                )
+            if paragraph_texts is not None:
+                slice_texts = tuple(paragraph_texts[start:end])
+                content_hash = content_hash_for_parts(slice_texts)
+                char_count = sum(len(t) for t in slice_texts) + max(0, len(slice_texts) - 1)
             else:
-                char_count = 0
+                # Structural fingerprint for synth/index fixtures (no TextRef resolve).
+                content_hash = content_hash_for_parts(slice_hashes)
+                if chapter.paragraph_offsets and end <= len(chapter.paragraph_offsets):
+                    char_count = sum(
+                        max(0, o[1] - o[0]) for o in chapter.paragraph_offsets[start:end]
+                    )
+                else:
+                    char_count = 0
             text_ref = SnapshotTextRef(
                 kind=TextRefKind.PARAGRAPH_GROUP,
                 book_id=chapter.book_id,

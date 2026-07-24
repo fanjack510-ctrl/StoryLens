@@ -86,6 +86,8 @@ def main(argv: list[str] | None = None) -> int:
         lab_enabled=True,
         dry_run=not live,
         allow_network=live,
+        allow_fake_resolver=False,
+        auto_wire_credentials=True,
     )
     # Estimate via adapters without DB session for dry summary when possible.
     assert runtime.estimate is not None

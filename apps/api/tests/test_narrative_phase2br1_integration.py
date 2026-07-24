@@ -231,6 +231,8 @@ def integ_env(tmp_path, network_deny):
         allow_network=False,
         session=session,
         transport=transport,
+        allow_fake_resolver=False,
+        auto_wire_credentials=False,
     )
     live_runtime_mod._default_runtime = runtime  # noqa: SLF001 — test DI injection
 
@@ -499,6 +501,8 @@ def test_03_client_booleans_cannot_bypass_server_gates(integ_env, network_deny) 
         session=integ_env["session"],
         credential_adapter=missing_cred,
         transport=integ_env["transport"],
+        allow_fake_resolver=False,
+        auto_wire_credentials=False,
     )
     security = resolve_server_security_status(
         credential_resolver=missing_cred,
@@ -542,6 +546,8 @@ def test_03_client_booleans_cannot_bypass_server_gates(integ_env, network_deny) 
         credential_adapter=missing_cred,
         force_deny_budget=True,
         transport=integ_env["transport"],
+        allow_fake_resolver=False,
+        auto_wire_credentials=False,
     )
     sec_budget = resolve_server_security_status(
         credential_resolver=runtime_budget.credential_adapter,
@@ -582,6 +588,8 @@ def test_03_client_booleans_cannot_bypass_server_gates(integ_env, network_deny) 
         credential_adapter=missing_cred,
         force_deny_budget=False,
         transport=integ_env["transport"],
+        allow_fake_resolver=False,
+        auto_wire_credentials=False,
     )
     _pre, _est, create = _http_create_flow(
         integ_env["client"], integ_env, idem="http-bypass-cred", dry_run=False
@@ -602,6 +610,8 @@ def test_03_client_booleans_cannot_bypass_server_gates(integ_env, network_deny) 
         credential_adapter=missing_cred,
         force_deny_budget=True,
         transport=integ_env["transport"],
+        allow_fake_resolver=False,
+        auto_wire_credentials=False,
     )
     _pre2, _est2, create_b = _http_create_flow(
         integ_env["client"], integ_env, idem="http-bypass-budget", dry_run=True
@@ -945,6 +955,8 @@ def test_09_cancel_and_budget_zero_provider_http(integ_env) -> None:
         transport=CapturingProviderTransport(
             stub=StubTransportResponse(text='{"ok":true}', input_tokens=1, output_tokens=1)
         ),
+        allow_fake_resolver=False,
+        auto_wire_credentials=False,
     )
     usage = runtime_b.provider_execution.execute_module(
         module_key="book_overview",

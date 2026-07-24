@@ -1,8 +1,9 @@
-"""Unique Live Readiness Runtime composition (Phase 2B-R1 Integration).
+"""Unique Live Readiness Runtime composition (Phase 2B-R1 Integration / CHG-049).
 
 Wires Agent U (provider/context/cost) + Agent V (Lab run/persistence) behind Protocols.
-Production must not construct an enabled instance. No global mutable singleton.
-Tests construct isolated containers.
+Formal HTTP Lab defaults to PrivateProviderInputBundleResolver + Credential Adapter.
+Fake resolver is opt-in for explicit tests only — never a silent fallback.
+Production must not construct an enabled instance.
 """
 
 from __future__ import annotations
@@ -18,6 +19,10 @@ from app.narrative_core.run_shell_contract.private_engine_lab import (
 from app.narrative_core.services.data_transfer_consent_guard import (
     PrivateEngineDataTransferConsentGuard,
     PrivateEngineProviderBudgetGuard,
+)
+from app.narrative_core.services.formal_private_provider_input_resolver import (
+    FormalPrivateProviderInputBundleResolverAdapter,
+    FormalPrivateResolverUnavailable,
 )
 from app.narrative_core.services.in_process_private_lab_task_registry import (
     InProcessPrivateLabTaskRegistry,
@@ -72,7 +77,7 @@ class PrivateWholeBookLiveReadinessRuntime:
     consent_guard: PrivateEngineDataTransferConsentGuard = field(
         default_factory=PrivateEngineDataTransferConsentGuard
     )
-    resolver: Any = field(default_factory=FakeProviderInputBundleResolver)
+    resolver: Any = None
     estimate_service: WholeBookProviderEstimateService = field(
         default_factory=WholeBookProviderEstimateService
     )
@@ -82,19 +87,29 @@ class PrivateWholeBookLiveReadinessRuntime:
     concurrency: PrivateLabConcurrencyGuard = field(default_factory=PrivateLabConcurrencyGuard)
     idempotency: PrivateLabCreateIdempotency = field(default_factory=PrivateLabCreateIdempotency)
     runtime_factory: Callable[..., Any] | None = None
+    allow_fake_resolver: bool = False
     _production_forbidden: bool = field(default=True, init=False, repr=False)
 
     def assert_not_production_enabled(self) -> None:
         if self.environment == "production" and self.lab_enabled:
             raise RuntimeError("LiveReadinessRuntime must not be enabled in production")
 
+    def bind_session(self, session: Session) -> None:
+        """Bind DB session onto preflight + formal resolver (required for Snapshot context)."""
+
+        if self.preflight is not None:
+            self.preflight.session = session
+        resolver = self.resolver
+        bind = getattr(resolver, "bind_session", None)
+        if callable(bind):
+            bind(session)
+
     def build_run_service(self, session: Session) -> PrivateWholeBookLabRunService:
         self.assert_not_production_enabled()
         assert self.preflight is not None
         assert self.estimate is not None
         assert self.consent is not None
-        # Bind session onto preflight for snapshot checks
-        self.preflight.session = session
+        self.bind_session(session)
         return PrivateWholeBookLabRunService(
             session,
             auth=PrivateEngineLabAuthorizationService(
@@ -111,6 +126,7 @@ class PrivateWholeBookLiveReadinessRuntime:
     def build_executor(self, session: Session) -> PrivateLabRunExecutor:
         self.assert_not_production_enabled()
         assert self.provider_execution is not None
+        self.bind_session(session)
         return PrivateLabRunExecutor(
             session,
             task_registry=self.task_registry or get_default_private_lab_task_registry(),
@@ -121,6 +137,46 @@ class PrivateWholeBookLiveReadinessRuntime:
 
     def build_recovery(self, session: Session) -> PrivateLabRecoveryService:
         return PrivateLabRecoveryService(session)
+
+    @property
+    def uses_fake_resolver(self) -> bool:
+        return isinstance(self.resolver, FakeProviderInputBundleResolver) or bool(
+            getattr(self.resolver, "is_fake", False)
+        )
+
+
+def _resolve_lab_resolver(
+    *,
+    allow_fake_resolver: bool,
+    resolver: Any | None,
+    session: Session | None,
+) -> Any:
+    if resolver is not None:
+        if isinstance(resolver, FakeProviderInputBundleResolver) and not allow_fake_resolver:
+            raise FormalPrivateResolverUnavailable(
+                "FakeProviderInputBundleResolver refused without allow_fake_resolver=True"
+            )
+        if session is not None and hasattr(resolver, "bind_session"):
+            resolver.bind_session(session)
+        return resolver
+    if allow_fake_resolver:
+        return FakeProviderInputBundleResolver()
+    # Formal path — fail closed if private package missing.
+    return FormalPrivateProviderInputBundleResolverAdapter(session=session)
+
+
+def _resolve_credential_adapter(
+    *,
+    credential_adapter: ExistingCredentialServiceAdapter | None,
+    auto_wire_credentials: bool,
+) -> ExistingCredentialServiceAdapter | None:
+    if credential_adapter is not None:
+        return credential_adapter
+    if not auto_wire_credentials:
+        return None
+    from app.services.credentials.service import get_credential_store
+
+    return ExistingCredentialServiceAdapter(store=get_credential_store(), enabled=True)
 
 
 def create_live_readiness_runtime(
@@ -135,14 +191,36 @@ def create_live_readiness_runtime(
     capability_ok_fn: Callable[[], bool] | None = None,
     runtime_factory: Callable[..., Any] | None = None,
     force_deny_budget: bool = False,
+    allow_fake_resolver: bool = False,
+    resolver: Any | None = None,
+    auto_wire_credentials: bool | None = None,
 ) -> PrivateWholeBookLiveReadinessRuntime:
-    """Factory for Integration / tests. Production callers must keep lab_enabled=False."""
+    """Factory for Integration / HTTP Lab / tests.
+
+    Formal defaults (allow_fake_resolver=False):
+    - PrivateProviderInputBundleResolver via Formal adapter
+    - Credential adapter auto-wired unless explicitly disabled
+    Tests may pass allow_fake_resolver=True or an explicit Fake resolver.
+    """
 
     enabled = WHOLE_BOOK_PRIVATE_ENGINE_LAB_ENABLED if lab_enabled is None else bool(lab_enabled)
     if environment == "production":
         enabled = False
 
-    resolver = FakeProviderInputBundleResolver()
+    if auto_wire_credentials is None:
+        # Formal Lab always wires credentials; Fake-test paths opt out unless provided.
+        auto_wire_credentials = not allow_fake_resolver
+
+    resolved_resolver = _resolve_lab_resolver(
+        allow_fake_resolver=allow_fake_resolver,
+        resolver=resolver,
+        session=session,
+    )
+    cred = _resolve_credential_adapter(
+        credential_adapter=credential_adapter,
+        auto_wire_credentials=bool(auto_wire_credentials),
+    )
+
     estimate_service = WholeBookProviderEstimateService()
     budget = PrivateEngineProviderBudgetGuard(force_deny=force_deny_budget)
     consent_guard = PrivateEngineDataTransferConsentGuard()
@@ -163,13 +241,11 @@ def create_live_readiness_runtime(
         lab_enabled=enabled,
         capability_ok_fn=capability_ok_fn,
         credential_status_fn=(
-            (lambda pk: bool(credential_adapter and credential_adapter.enabled and credential_adapter.resolve(pk)))
-            if credential_adapter is not None
-            else None
+            (lambda pk: bool(cred and cred.enabled and cred.resolve(pk))) if cred is not None else None
         ),
     )
     estimate = PrivateLabEstimateServiceAdapter(
-        resolver=resolver,
+        resolver=resolved_resolver,
         estimate_service=estimate_service,
     )
     consent = PrivateLabConsentServiceAdapter(
@@ -179,12 +255,12 @@ def create_live_readiness_runtime(
         ignore_client_consent_boolean=True,
     )
     provider_exec = PrivateLabProviderExecutionServiceAdapter(
-        resolver=resolver,
+        resolver=resolved_resolver,
         budget_guard=budget,
         dry_run=dry_run,
         allow_network=bool(allow_network) and not dry_run,
         transport=capture,
-        credential_resolver=credential_adapter,
+        credential_resolver=cred,
     )
 
     return PrivateWholeBookLiveReadinessRuntime(
@@ -198,11 +274,12 @@ def create_live_readiness_runtime(
         provider_execution=provider_exec,
         budget_guard=budget,
         consent_guard=consent_guard,
-        resolver=resolver,
+        resolver=resolved_resolver,
         estimate_service=estimate_service,
-        credential_adapter=credential_adapter,
+        credential_adapter=cred,
         transport=capture,
         runtime_factory=runtime_factory,
+        allow_fake_resolver=allow_fake_resolver,
     )
 
 
@@ -212,10 +289,10 @@ _default_runtime: PrivateWholeBookLiveReadinessRuntime | None = None
 
 def get_or_create_default_live_readiness_runtime(
     *,
-    environment: str = "test",
+    environment: str = "development",
     lab_enabled: bool = True,
 ) -> PrivateWholeBookLiveReadinessRuntime:
-    """Lazy Lab DI helper. Callers in production must not enable."""
+    """Lazy Lab DI helper for HTTP router — formal resolver + credentials, no Fake."""
 
     global _default_runtime
     if _default_runtime is None:
@@ -224,7 +301,13 @@ def get_or_create_default_live_readiness_runtime(
             lab_enabled=lab_enabled,
             dry_run=True,
             allow_network=False,
+            allow_fake_resolver=False,
+            auto_wire_credentials=True,
         )
+        if _default_runtime.uses_fake_resolver:
+            raise FormalPrivateResolverUnavailable(
+                "default Lab runtime must not use FakeProviderInputBundleResolver"
+            )
     return _default_runtime
 
 

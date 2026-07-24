@@ -577,7 +577,17 @@ class DefaultWholeBookContextPipeline:
         rows = chapters if chapters is not None else self._chapters
         units: list[WholeBookContextUnit] = []
         for ch in rows:
-            units.extend(self._builder.build_paragraph_group_units(ch))
+            # Resolve paragraph bodies from Snapshot so group content_hash matches
+            # SnapshotTextResolver (hash of "\n".join(texts)), not hash-of-hashes.
+            paragraph_texts = tuple(
+                self._snapshots.get_snapshot_paragraph_text(pid)
+                for pid in ch.snapshot_paragraph_ids
+            )
+            units.extend(
+                self._builder.build_paragraph_group_units(
+                    ch, paragraph_texts=paragraph_texts
+                )
+            )
         return sort_context_units_deterministically(units)
 
     def build_context_index(

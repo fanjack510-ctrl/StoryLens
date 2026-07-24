@@ -250,7 +250,13 @@ def _error_response(exc: PrivateWholeBookLabRunError) -> HTTPException:
 
 
 def _lab_runtime():
-    return get_or_create_default_live_readiness_runtime(environment="test", lab_enabled=True)
+    # Development/test Lab composition — formal resolver + credentials (CHG-049).
+    from app.core.config import get_settings
+
+    env = str(getattr(get_settings(), "app_env", None) or "development")
+    if env not in {"development", "test", "dev"}:
+        env = "development"
+    return get_or_create_default_live_readiness_runtime(environment=env, lab_enabled=True)
 
 
 def get_run_service(session: Session = Depends(get_db)) -> PrivateWholeBookLabRunService:
@@ -284,13 +290,19 @@ def private_lab_preflight(
     _require_write_lab_gate(request, dry_run=True)
     runtime = _lab_runtime()
     assert runtime.preflight is not None
-    runtime.preflight.session = session
+    runtime.bind_session(session)
     result = runtime.preflight.preflight(
         book_id=int(body.book_id),
         book_snapshot_id=int(body.book_snapshot_id),
         configuration_fingerprint=body.configuration_fingerprint,
         requested_modules=tuple(body.requested_modules),
     )
+    details = dict(result.details)
+    # Safety: never surface secrets; normalize credential to PRESENT/MISSING only.
+    if "credential_present" in details:
+        details["credential_status"] = (
+            "PRESENT" if details.get("credential_present") else "MISSING"
+        )
     return {
         "ok": result.ok,
         "fingerprint": result.fingerprint,
@@ -298,11 +310,12 @@ def private_lab_preflight(
         "book_snapshot_id": result.book_snapshot_id,
         "snapshot_content_hash": result.snapshot_content_hash,
         "reason_code": result.reason_code,
-        "details": dict(result.details),
+        "details": details,
         "private_lab": True,
         "non_production": True,
         "run_created": False,
         "can_enter_estimate": bool(result.ok and result.details.get("can_enter_estimate")),
+        "resolver_is_fake": bool(runtime.uses_fake_resolver),
     }
 
 
@@ -316,7 +329,7 @@ def private_lab_estimate(
     runtime = _lab_runtime()
     assert runtime.preflight is not None
     assert runtime.estimate is not None
-    runtime.preflight.session = session
+    runtime.bind_session(session)
     pre = runtime.preflight.preflight(
         book_id=int(body.book_id),
         book_snapshot_id=int(body.book_snapshot_id),
@@ -337,6 +350,20 @@ def private_lab_estimate(
     )
     cached = runtime.estimate._cache.get(result.fingerprint) or {}
     consent_fp = str(cached.get("consent_fingerprint") or "")
+    primary = cached.get("primary_manifest")
+    selection: dict[str, Any] = {}
+    if primary is not None and hasattr(primary, "safe_dict"):
+        safe = primary.safe_dict()
+        selection = {
+            "selected_chapter_ids": safe.get("selected_chapter_ids"),
+            "selected_paragraph_ids": safe.get("selected_paragraph_ids"),
+            "selected_context_unit_ids": safe.get("selected_context_unit_ids"),
+            "source_character_count": safe.get("source_character_count"),
+            "context_bundle_hash": safe.get("context_bundle_hash"),
+            "sends_source_text": safe.get("sends_source_text"),
+            "sends_derived_text": safe.get("sends_derived_text"),
+            "retention_policy": safe.get("retention_policy"),
+        }
     # Safe response — no bodies / prompts / credentials / messages
     return {
         "fingerprint": result.fingerprint,
@@ -350,12 +377,14 @@ def private_lab_estimate(
         "usage_summary": dict(result.usage_summary),
         "cost_summary": dict(result.cost_summary),
         "data_transfer_manifest_hash": result.data_transfer_manifest_hash,
+        "selection_summary": selection,
         "private_lab": True,
         "non_production": True,
         "run_created": False,
         "tokens_hardcoded": False,
         "cost_hardcoded": False,
         "calls_provider": False,
+        "resolver_is_fake": bool(runtime.uses_fake_resolver),
     }
 
 
