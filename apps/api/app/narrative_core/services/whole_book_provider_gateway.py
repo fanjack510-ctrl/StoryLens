@@ -1,8 +1,10 @@
-"""WholeBook Provider Gateway foundation (Phase 2B / 2B-R).
+"""WholeBook Provider Gateway foundation (Phase 2B / 2B-R / 2B-R1).
 
 Fake Provider remains default. Bailian OpenAI-compatible adapter is available
 under Private Engine Lab authorization only. Credentials resolve only at
 execute boundary; never enter Request DTOs or logs.
+
+Phase 2B-R1: live path consumes ResolvedProviderPayload messages (not ref-only).
 """
 
 from __future__ import annotations
@@ -29,6 +31,10 @@ from app.narrative_core.private_engine_contract.provider_gateway import (
     ProviderInferenceRequest,
     ProviderInferenceResponse,
 )
+from app.narrative_core.private_engine_contract.provider_input import (
+    ProviderInputBundle,
+    ResolvedProviderPayload,
+)
 from app.narrative_core.run_shell_contract.private_engine_lab import (
     PRIVATE_LAB_FIRST_MODEL_ID,
     PRIVATE_LAB_FIRST_PROVIDER_KEY,
@@ -37,6 +43,99 @@ from app.narrative_core.run_shell_contract.private_engine_lab import (
 from app.services.credentials.base import CredentialStore
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class ProviderPayloadRegistry:
+    """Process-local binding of resolved payloads — never persisted / logged."""
+
+    _bindings: dict[str, ResolvedProviderPayload] = field(default_factory=dict)
+
+    def bind(self, request_id: str, payload: ResolvedProviderPayload) -> None:
+        if not request_id.strip():
+            raise ValueError("request_id is required")
+        self._bindings[request_id] = payload
+
+    def take(self, request_id: str) -> ResolvedProviderPayload | None:
+        return self._bindings.pop(request_id, None)
+
+    def get(self, request_id: str) -> ResolvedProviderPayload | None:
+        return self._bindings.get(request_id)
+
+    def clear(self) -> None:
+        self._bindings.clear()
+
+
+PAYLOAD_REGISTRY = ProviderPayloadRegistry()
+
+
+@dataclass
+class StubTransportResponse:
+    text: str
+    model: str | None = None
+    request_id: str | None = None
+    input_tokens: int = 0
+    output_tokens: int = 0
+    finish_reason: str | None = "stop"
+
+
+@dataclass
+class CapturingProviderTransport:
+    """Test transport: captures messages, returns stub — never opens HTTP."""
+
+    stub: StubTransportResponse | None = None
+    calls: list[dict[str, Any]] = field(default_factory=list)
+    raise_timeout: bool = False
+    cancelled_refs: set[str] = field(default_factory=set)
+
+    def generate(
+        self,
+        *,
+        messages: list[dict[str, str]],
+        model: str,
+        response_format_mode: str,
+        max_tokens: int | None,
+        timeout_seconds: int,
+        cancellation_ref: str | None = None,
+    ) -> StubTransportResponse:
+        # Capture structure only — do not store full message bodies in long-lived logs.
+        self.calls.append(
+            {
+                "message_count": len(messages),
+                "roles": [m.get("role") for m in messages],
+                "model": model,
+                "response_format_mode": response_format_mode,
+                "max_tokens": max_tokens,
+                "timeout_seconds": timeout_seconds,
+                "has_system": any(m.get("role") == "system" for m in messages),
+                "has_user": any(m.get("role") == "user" for m in messages),
+                "total_chars": sum(len(m.get("content") or "") for m in messages),
+            }
+        )
+        if cancellation_ref and cancellation_ref in self.cancelled_refs:
+            raise private_engine_error(PrivateEngineErrorCode.PROVIDER_CANCELLED)
+        if self.raise_timeout:
+            raise private_engine_error(PrivateEngineErrorCode.PROVIDER_TIMEOUT)
+        if self.stub is None:
+            raise private_engine_error(
+                PrivateEngineErrorCode.PROVIDER_UNAVAILABLE,
+                detail_code="transport_stub_missing",
+            )
+        return self.stub
+
+
+@runtime_checkable
+class ProviderTransport(Protocol):
+    def generate(
+        self,
+        *,
+        messages: list[dict[str, str]],
+        model: str,
+        response_format_mode: str,
+        max_tokens: int | None,
+        timeout_seconds: int,
+        cancellation_ref: str | None = None,
+    ) -> Any: ...
 
 # Default gateway path forbids network. Lab factory may authorize explicitly.
 _NETWORK_FORBIDDEN_DEFAULT = True
@@ -274,6 +373,7 @@ class BailianOpenAICompatibleProviderAdapter:
 
     Wraps existing OpenAICompatibleProvider. Default dry_run=True (no live HTTP).
     Live calls require allow_network + live probe env + credential at gateway boundary.
+    Adapter does not read Snapshot ORM or Prompt files — only ResolvedProviderPayload.
     """
 
     provider_kind: str = PRIVATE_LAB_FIRST_PROVIDER_KEY
@@ -282,16 +382,38 @@ class BailianOpenAICompatibleProviderAdapter:
     allow_network: bool = False
     cancelled: set[str] = field(default_factory=set)
     calls: int = 0
+    transport: Any | None = None
+    pricing_resolver: Any | None = None
+    output_repairer: Any | None = None
+    payload_registry: ProviderPayloadRegistry = field(default_factory=lambda: PAYLOAD_REGISTRY)
     _ephemeral_credential: str | None = field(default=None, repr=False)
+    last_raw_response_retained: bool = False
 
     def estimate(self, request: ProviderInferenceRequest) -> ProviderEstimate:
         _assert_request_safe(request)
-        # Conservative dry estimate; pricing bridge may refine later.
+        payload = self.payload_registry.get(request.request_id)
+        if payload is not None and payload.input_bundle is not None:
+            from app.narrative_core.services.whole_book_provider_estimate_service import (
+                ProviderPricingResolver,
+                WholeBookProviderEstimateService,
+            )
+
+            pricing = self.pricing_resolver or ProviderPricingResolver()
+            result = WholeBookProviderEstimateService(pricing=pricing).estimate(payload.input_bundle)
+            return ProviderEstimate(
+                request_id=request.request_id,
+                estimated_input_tokens=result.estimated_input_tokens,
+                estimated_output_tokens=result.estimated_output_tokens,
+                estimated_cost=result.cost.cost_expected,
+                within_budget=result.context_limit_ok,
+            )
+        # Without resolved payload, refuse classic 512/256 Live placeholder.
+        approx_in = max(64, int(request.token_budget or 0) or 64)
         return ProviderEstimate(
             request_id=request.request_id,
-            estimated_input_tokens=int(request.token_budget or 512),
-            estimated_output_tokens=256,
-            estimated_cost=0.0,
+            estimated_input_tokens=approx_in,
+            estimated_output_tokens=1024,
+            estimated_cost=None,
             within_budget=True,
         )
 
@@ -302,6 +424,8 @@ class BailianOpenAICompatibleProviderAdapter:
             raise private_engine_error(PrivateEngineErrorCode.PROVIDER_CANCELLED)
 
         if self.dry_run or not self.allow_network or not _live_probe_enabled():
+            # Dry path may still validate resolved payload shape when bound.
+            payload = self.payload_registry.get(request.request_id)
             structured = {
                 "dry_run": True,
                 "provider_kind": self.provider_kind,
@@ -309,6 +433,7 @@ class BailianOpenAICompatibleProviderAdapter:
                 "schema_ref": request.response_schema_ref,
                 "task_type": request.task_type,
                 "synthetic": False,
+                "resolved_payload_bound": payload is not None,
             }
             _validate_structured_output(structured, require_synthetic=False)
             return ProviderInferenceResponse(
@@ -344,12 +469,25 @@ class BailianOpenAICompatibleProviderAdapter:
         self,
         request: ProviderInferenceRequest,
         credential: str | None,
+        *,
+        resolved_payload: ResolvedProviderPayload | None = None,
     ) -> ProviderInferenceResponse:
+        if resolved_payload is not None:
+            self.payload_registry.bind(request.request_id, resolved_payload)
         self._ephemeral_credential = credential
         try:
             return self.execute(request)
         finally:
             self._ephemeral_credential = None
+
+    def execute_with_resolved_payload(
+        self,
+        request: ProviderInferenceRequest,
+        payload: ResolvedProviderPayload,
+        *,
+        credential: str | None = None,
+    ) -> ProviderInferenceResponse:
+        return self.execute_with_credential(request, credential, resolved_payload=payload)
 
     def _execute_live(
         self,
@@ -357,6 +495,119 @@ class BailianOpenAICompatibleProviderAdapter:
         *,
         api_key: str,
     ) -> ProviderInferenceResponse:
+        if request.cancellation_ref and request.cancellation_ref in self.cancelled:
+            raise private_engine_error(PrivateEngineErrorCode.PROVIDER_CANCELLED)
+
+        payload = self.payload_registry.get(request.request_id)
+        if payload is None:
+            raise private_engine_error(
+                PrivateEngineErrorCode.PROVIDER_POLICY_INVALID,
+                detail_code="resolved_payload_required",
+            )
+        messages = [dict(m) for m in payload.messages]
+        if not messages or messages[0].get("role") != "system":
+            raise private_engine_error(
+                PrivateEngineErrorCode.PROVIDER_POLICY_INVALID,
+                detail_code="system_instruction_required",
+            )
+        timeout_seconds = int(request.timeout_policy.get("timeout_seconds") or 0)
+        if timeout_seconds <= 0:
+            try:
+                from app.core.config import get_settings
+
+                timeout_seconds = int(get_settings().aliyun_timeout_seconds)
+            except Exception:  # noqa: BLE001
+                timeout_seconds = 60
+        response_format = payload.response_format_mode or "json_object"
+
+        transport = self.transport
+        if transport is None:
+            transport = self._build_live_http_transport(api_key=api_key)
+
+        try:
+            response = transport.generate(
+                messages=messages,
+                model=self.model_id,
+                response_format_mode=response_format,
+                max_tokens=request.token_budget,
+                timeout_seconds=timeout_seconds,
+                cancellation_ref=request.cancellation_ref,
+            )
+        except Exception as exc:
+            # Never include messages / credentials / body in error surfaces.
+            if isinstance(exc, type(private_engine_error(PrivateEngineErrorCode.PROVIDER_CANCELLED))):
+                raise
+            from app.narrative_core.private_engine_contract.errors import PrivateEngineError
+
+            if isinstance(exc, PrivateEngineError):
+                raise
+            raise private_engine_error(
+                PrivateEngineErrorCode.PROVIDER_UNAVAILABLE,
+                detail_code=type(exc).__name__,
+            ) from None
+
+        raw_text = getattr(response, "text", None) or ""
+        structured = _parse_structured_text(raw_text)
+        repaired = False
+        if structured is None and self.output_repairer is not None:
+            repair_result = self.output_repairer.repair(raw_text)
+            if getattr(repair_result, "ok", False) and getattr(repair_result, "payload", None):
+                structured = dict(repair_result.payload)
+                repaired = True
+            else:
+                # repair failure — hard reject, never forge success
+                self.last_raw_response_retained = False
+                raise private_engine_error(
+                    PrivateEngineErrorCode.PROVIDER_RESPONSE_INVALID,
+                    detail_code="repair_rejected",
+                )
+        if structured is None:
+            self.last_raw_response_retained = False
+            raise private_engine_error(PrivateEngineErrorCode.PROVIDER_RESPONSE_INVALID)
+
+        _validate_structured_output(structured, require_synthetic=False)
+        # Raw response must not enter Artifact / FE — drop immediately.
+        self.last_raw_response_retained = False
+        del raw_text
+        # Consume binding after successful parse so body does not linger.
+        self.payload_registry.take(request.request_id)
+
+        token_in = int(getattr(response, "input_tokens", 0) or 0)
+        token_out = int(getattr(response, "output_tokens", 0) or 0)
+        cost = self._resolve_cost(token_in, token_out)
+        return ProviderInferenceResponse(
+            request_id=request.request_id,
+            provider_kind=self.provider_kind,
+            model_id=getattr(response, "model", None) or self.model_id,
+            provider_request_id=getattr(response, "request_id", None),
+            status="success",
+            structured_output={**structured, "repaired": repaired} if repaired else structured,
+            token_input=token_in,
+            token_output=token_out,
+            cost=cost,
+            latency_ms=0,
+            finish_reason=getattr(response, "finish_reason", None),
+            retry_count=0,
+            validation_status="schema_ok_repaired" if repaired else "schema_ok",
+            received_at=datetime(2026, 7, 24, 0, 0, 0),
+        )
+
+    def _resolve_cost(self, token_in: int, token_out: int) -> float | None:
+        resolver = self.pricing_resolver
+        if resolver is None:
+            from app.narrative_core.services.whole_book_provider_estimate_service import (
+                ProviderPricingResolver,
+            )
+
+            resolver = ProviderPricingResolver()
+        return resolver.cost_from_usage(
+            model_id=self.model_id,
+            input_tokens=token_in,
+            output_tokens=token_out,
+        )
+
+    def _build_live_http_transport(self, *, api_key: str) -> Any:
+        """Real HTTP transport — only used when live probe + network authorized."""
         from app.core.config import get_settings
         from app.model_gateway.base import ModelRequest
         from app.model_gateway.providers.openai_compatible import OpenAICompatibleProvider
@@ -386,55 +637,51 @@ class BailianOpenAICompatibleProviderAdapter:
             region="cn-beijing",
             supports_scene_analysis=True,
         )
-        # Instruction / source isolation: refs only — never merge credentials.
-        messages = [
-            {
-                "role": "system",
-                "content": f"instruction_ref={request.system_instruction_ref}",
-            },
-            {
-                "role": "user",
-                "content": f"input_bundle_ref={request.input_bundle_ref}",
-            },
-        ]
-        model_req = ModelRequest(
-            messages=messages,
-            model=self.model_id,
-            response_format_mode="json_object",
-            max_tokens=request.token_budget,
-        )
-        response = _run_async(provider.generate(model_req))
-        structured = _parse_structured_text(response.text)
-        if structured is None:
-            raise private_engine_error(PrivateEngineErrorCode.PROVIDER_RESPONSE_INVALID)
-        _validate_structured_output(structured, require_synthetic=False)
-        return ProviderInferenceResponse(
-            request_id=request.request_id,
-            provider_kind=self.provider_kind,
-            model_id=response.model or self.model_id,
-            provider_request_id=response.request_id,
-            status="success",
-            structured_output=structured,
-            token_input=int(response.input_tokens or 0),
-            token_output=int(response.output_tokens or 0),
-            cost=None,
-            latency_ms=0,
-            finish_reason=response.finish_reason,
-            retry_count=0,
-            validation_status="schema_ok",
-            received_at=datetime(2026, 7, 24, 0, 0, 0),
-        )
+
+        class _HttpTransport:
+            def generate(
+                self,
+                *,
+                messages: list[dict[str, str]],
+                model: str,
+                response_format_mode: str,
+                max_tokens: int | None,
+                timeout_seconds: int,
+                cancellation_ref: str | None = None,
+            ) -> StubTransportResponse:
+                _ = timeout_seconds, cancellation_ref
+                model_req = ModelRequest(
+                    messages=messages,
+                    model=model,
+                    response_format_mode=response_format_mode or "json_object",
+                    max_tokens=max_tokens,
+                )
+                response = _run_async(provider.generate(model_req))
+                return StubTransportResponse(
+                    text=response.text or "",
+                    model=response.model or model,
+                    request_id=response.request_id,
+                    input_tokens=int(response.input_tokens or 0),
+                    output_tokens=int(response.output_tokens or 0),
+                    finish_reason=response.finish_reason,
+                )
+
+        return _HttpTransport()
 
     def cancel(self, cancellation_ref: str) -> bool:
         self.cancelled.add(cancellation_ref)
+        if self.transport is not None and hasattr(self.transport, "cancelled_refs"):
+            self.transport.cancelled_refs.add(cancellation_ref)
         return True
 
     def health_check(self) -> ProviderGatewayHealth:
-        details = ["bailian_adapter", f"model={self.model_id}"]
+        details = ["bailian_adapter", f"model={self.model_id}", "resolved_payload_required"]
         if self.dry_run or not self.allow_network or not _live_probe_enabled():
             details.extend(["dry_run", "no_live_http"])
         else:
             details.append("live_probe_enabled")
+        if self.transport is not None:
+            details.append("custom_transport")
         return ProviderGatewayHealth(
             provider_kind=self.provider_kind,
             healthy=True,
@@ -469,6 +716,7 @@ class DefaultWholeBookProviderGateway:
     registry: ProviderAdapterRegistry | None = None
     allow_network: bool = False
     lab_network_authorized: bool = False
+    payload_registry: ProviderPayloadRegistry = field(default_factory=lambda: PAYLOAD_REGISTRY)
     _cancelled: set[str] = field(default_factory=set)
 
     def __post_init__(self) -> None:
@@ -485,8 +733,16 @@ class DefaultWholeBookProviderGateway:
                     BailianOpenAICompatibleProviderAdapter(
                         dry_run=True,
                         allow_network=bool(self.allow_network),
+                        payload_registry=self.payload_registry,
                     )
                 )
+
+    def bind_resolved_payload(
+        self,
+        request_id: str,
+        payload: ResolvedProviderPayload,
+    ) -> None:
+        self.payload_registry.bind(request_id, payload)
 
     def validate_policy(self, policy: Mapping[str, Any]) -> None:
         _assert_no_credentials(policy)
@@ -535,7 +791,12 @@ class DefaultWholeBookProviderGateway:
                 )
         return estimate
 
-    def execute(self, request: ProviderInferenceRequest) -> ProviderInferenceResponse:
+    def execute(
+        self,
+        request: ProviderInferenceRequest,
+        *,
+        resolved_payload: ResolvedProviderPayload | None = None,
+    ) -> ProviderInferenceResponse:
         _assert_request_safe(request)
         self.validate_policy(
             {
@@ -545,6 +806,8 @@ class DefaultWholeBookProviderGateway:
         )
         if request.cancellation_ref and request.cancellation_ref in self._cancelled:
             raise private_engine_error(PrivateEngineErrorCode.PROVIDER_CANCELLED)
+        if resolved_payload is not None:
+            self.bind_resolved_payload(request.request_id, resolved_payload)
 
         # Credential resolve at boundary only — never inject into request DTO.
         secret = self.credential_resolver.resolve(request.provider_kind)
@@ -554,12 +817,16 @@ class DefaultWholeBookProviderGateway:
             retry_limit = int(request.retry_policy.get("max_retries") or 0)
             retry_count = 0
             last_error: Exception | None = None
+            estimated_tokens = 16
+            bound = self.payload_registry.get(request.request_id)
+            if bound is not None and bound.input_bundle is not None:
+                estimated_tokens = max(16, bound.input_bundle.source_character_count() // 2)
             while retry_count <= retry_limit:
                 if request.cancellation_ref and request.cancellation_ref in self._cancelled:
                     raise private_engine_error(PrivateEngineErrorCode.PROVIDER_CANCELLED)
                 if self.budget_guard is not None:
                     ok = self.budget_guard.check_budget(
-                        stage_key=request.task_type, estimated_tokens=16
+                        stage_key=request.task_type, estimated_tokens=estimated_tokens
                     )
                     if not ok:
                         raise private_engine_error(PrivateEngineErrorCode.PROVIDER_BUDGET_EXCEEDED)
@@ -608,9 +875,12 @@ class DefaultWholeBookProviderGateway:
                     retry_count += 1
                     if retry_count > retry_limit:
                         break
+                    # Cancel after failure must block retry.
+                    if request.cancellation_ref and request.cancellation_ref in self._cancelled:
+                        raise private_engine_error(PrivateEngineErrorCode.PROVIDER_CANCELLED) from exc
                     if self.budget_guard is not None:
                         ok = self.budget_guard.check_budget(
-                            stage_key=request.task_type, estimated_tokens=16
+                            stage_key=request.task_type, estimated_tokens=estimated_tokens
                         )
                         if not ok:
                             raise private_engine_error(
@@ -656,6 +926,8 @@ def create_lab_provider_gateway(
     budget_guard: BudgetGuard | None = None,
     enable_credential_adapter: bool = False,
     credential_store: CredentialStore | None = None,
+    transport: Any | None = None,
+    payload_registry: ProviderPayloadRegistry | None = None,
 ) -> DefaultWholeBookProviderGateway:
     """Factory for Private Engine Lab — keeps default Fake gateway network-closed."""
 
@@ -670,12 +942,15 @@ def create_lab_provider_gateway(
     else:
         resolver = NoCredentialFakeResolver()
 
+    registry_obj = payload_registry or ProviderPayloadRegistry()
     registry = ProviderAdapterRegistry()
     registry.register(FakeProviderAdapter())
     registry.register(
         BailianOpenAICompatibleProviderAdapter(
             dry_run=dry_run,
             allow_network=bool(allow_network) and not dry_run,
+            transport=transport,
+            payload_registry=registry_obj,
         )
     )
     return DefaultWholeBookProviderGateway(
@@ -684,6 +959,7 @@ def create_lab_provider_gateway(
         registry=registry,
         allow_network=bool(allow_network) and not dry_run,
         lab_network_authorized=True,
+        payload_registry=registry_obj,
     )
 
 

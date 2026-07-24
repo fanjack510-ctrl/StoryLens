@@ -7,7 +7,7 @@
     "database_changed": false,
     "migration_required": false,
     "user_data_compatible": true,
-    "notes": "No schema/migration in Phase 2B-R1 plan."
+    "notes": "No schema/migration. Provider context/estimate/consent readiness only."
   },
   "release_impact": {
     "requires_reanalysis": false,
@@ -18,19 +18,35 @@
   "blocker_level": null,
   "head_inclusion": null,
   "created_at": "2026-07-24T02:25:41Z",
-  "updated_at": "2026-07-24T02:25:41Z",
+  "updated_at": "2026-07-24T02:50:00Z",
   "file_ownership": "docs/architecture/narrative-intelligence-core/phase2br1-parallel-file-ownership.json",
   "id": "CHG-20260723-046",
   "title": "Agent U Provider Context and Cost",
-  "status": "registered",
+  "status": "tested",
   "modules": [
     "provider_gateway",
     "provider_estimate",
-    "data_transfer"
+    "data_transfer",
+    "provider_input",
+    "private_engine_contract"
   ],
-  "files": [],
-  "user_summary": "Implement Provider Input Bundle resolver, Data Transfer Manifest, real token/cost estimates, and Bailian live payload assembly.",
-  "technical_summary": "Agent U: public Protocol/DTO/Estimate/Guards/Fake resolver; private message assembly and repair; fix ref-only _execute_live. No Candidate Persistence or Lab Run Service.",
+  "files": [
+    "apps/api/app/narrative_core/private_engine_contract/provider_input.py",
+    "apps/api/app/narrative_core/private_engine_contract/data_transfer.py",
+    "apps/api/app/narrative_core/private_engine_contract/provider_estimate.py",
+    "apps/api/app/narrative_core/private_engine_contract/__init__.py",
+    "apps/api/app/narrative_core/services/whole_book_provider_gateway.py",
+    "apps/api/app/narrative_core/services/whole_book_provider_estimate_service.py",
+    "apps/api/app/narrative_core/services/provider_input_bundle_resolver.py",
+    "apps/api/app/narrative_core/services/data_transfer_consent_guard.py",
+    "apps/api/tests/test_narrative_phase2br1_provider_context_cost.py",
+    "docs/architecture/narrative-intelligence-core/phase2br1-provider-context-cost-implementation.md",
+    "docs/architecture/narrative-intelligence-core/phase2br1-provider-context-cost-verification.md",
+    "docs/architecture/narrative-intelligence-core/phase2br1-provider-context-cost-limitations.md",
+    "release/changes/CHG-20260723-046.json"
+  ],
+  "user_summary": "Implement Provider Input Bundle resolver, Data Transfer Manifest, real token/cost estimates, consent/budget guards, and Bailian resolved-payload support.",
+  "technical_summary": "Agent U: public Protocol/DTO/Estimate/Guards/Fake resolver; Bailian consumes ResolvedProviderPayload via Capturing transport in tests; private message assembly + structured repair. No Candidate Persistence, Lab Run Service, main.py, or live HTTP.",
   "acceptance_criteria": [
     "Resolved messages replace instruction_ref/input_bundle_ref-only live payload",
     "Manifest and Estimate drive consent",
@@ -39,9 +55,35 @@
     "No module narrative algorithm ownership"
   ],
   "tests": [
-    "apps/api/tests/test_narrative_phase2br1_provider_context_cost.py"
+    "apps/api/tests/test_narrative_phase2br1_provider_context_cost.py",
+    "scripts/check_project.py",
+    "scripts/version_manager.py check",
+    "scripts/change_registry.py check",
+    "scripts/check_capability_keys.py",
+    "git diff --check"
   ],
-  "verification_evidence": [],
+  "verification_evidence": [
+    "apps/api/tests/test_narrative_phase2br1_provider_context_cost.py passed",
+    "private tests/test_provider_context_assembly.py passed",
+    "private commit 042a26d7dcd5eef01e302eb057a568153131b35c"
+  ],
+  "private_commits": [
+    {
+      "repo": "storylens-private-engine",
+      "sha": "042a26d7dcd5eef01e302eb057a568153131b35c",
+      "message": "feat: implement private provider context assembly",
+      "worktree": "D:\\\\Dstorylens-private-engine-wt-provider-context-cost",
+      "branch": "feature/phase2br1-provider-context-cost"
+    }
+  ],
+  "security_boundaries": [
+    "ProviderInputBundle ephemeral in-process only",
+    "safe_dict omits novel text / messages / instructions",
+    "Credential resolve at execute boundary only",
+    "Unknown pricing blocks auto-confirm",
+    "No live HTTP / no formal Run / Private Lab default off",
+    "No Migration / VERSION / gate flips"
+  ],
   "parallel_plan": {
     "role": "agent_u",
     "branch": "feature/narrative-phase2br1-provider-context-cost",
