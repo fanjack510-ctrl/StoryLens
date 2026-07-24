@@ -11,6 +11,12 @@
       "message": "feat: implement private engine runtime foundation",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "209521f27bad6bca6f5435b76c678f1e3abf29f3",
+      "message": "docs: attach CHG-20260723-037 and mark tested",
+      "primary": false,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -64,7 +70,7 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T22:38:45Z",
-  "updated_at": "2026-07-24T00:19:03Z",
+  "updated_at": "2026-07-24T00:21:13Z",
   "parallel_plan": {
     "role": "agent_p",
     "branch": "feature/narrative-phase2b-engine-runtime",
