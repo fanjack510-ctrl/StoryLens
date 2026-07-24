@@ -242,6 +242,42 @@ class PrivateLabRunExecutor:
                 self._module_results[int(run_id)] = results
                 if module_result.get("output_fingerprint"):
                     self._completed_module_fps[fp_key] = str(module_result["output_fingerprint"])
+                # Live business module must not complete Stage/Run on soft failures.
+                if not bool(meta.get("dry_run", True)):
+                    if module_result.get("status") != "success":
+                        self._stages.transition_stage(
+                            int(run_id),
+                            stage_key,
+                            StageStatus.FAILED,
+                            error_code="LIVE_MODULE_NOT_SUCCESS",
+                            error_message=str(module_result.get("status"))[:200],
+                        )
+                        try:
+                            self._state.transition(
+                                run,
+                                to_state=WholeBookRunViewStatus.FAILED,
+                                expected_state=map_db_status_to_view(str(run.status)),
+                                expected_version=int(meta.get("state_version", 0) or 0),
+                                metadata=meta,
+                                operation_idempotency_key=f"fail:{module_key}",
+                            )
+                        except Exception:  # noqa: BLE001
+                            run.status = RunStatus.FAILED.value
+                        self._registry.mark_finished(int(run_id))
+                        self._concurrency.note_run_status(
+                            int(run_id), WholeBookRunViewStatus.FAILED.value
+                        )
+                        self._session.commit()
+                        return PrivateLabExecutorActionResult(
+                            run_id=int(run_id),
+                            status=WholeBookRunViewStatus.FAILED.value,
+                            applied=True,
+                            detail={
+                                "failed_module": module_key,
+                                "module_results": results,
+                                "partial": True,
+                            },
+                        )
 
             # Refresh stage after modules
             stage = next(
@@ -251,7 +287,42 @@ class PrivateLabRunExecutor:
             if stage and StageStatus(stage.status) == StageStatus.RUNNING:
                 self._stages.transition_stage(int(run_id), stage_key, StageStatus.COMPLETED)
 
-        # All done
+        # All done — Live requires every requested module success + usage/ORM.
+        if not bool(meta.get("dry_run", True)):
+            live_ok = True
+            for mr in results:
+                if mr.get("status") != "success":
+                    live_ok = False
+                if not (mr.get("usage") or {}).get("provider_request_id"):
+                    live_ok = False
+                if not (mr.get("persistence_summary") or {}).get("orm_written"):
+                    live_ok = False
+                if int((mr.get("evidence_summary") or {}).get("count") or 0) < 1:
+                    live_ok = False
+            if not live_ok:
+                try:
+                    self._state.transition(
+                        run,
+                        to_state=WholeBookRunViewStatus.FAILED,
+                        expected_state=map_db_status_to_view(str(run.status)),
+                        expected_version=int(meta.get("state_version", 0) or 0),
+                        metadata=meta,
+                        operation_idempotency_key="executor_live_incomplete",
+                    )
+                except Exception:  # noqa: BLE001
+                    run.status = RunStatus.FAILED.value
+                self._registry.mark_finished(int(run_id))
+                self._concurrency.note_run_status(
+                    int(run_id), WholeBookRunViewStatus.FAILED.value
+                )
+                self._session.commit()
+                return PrivateLabExecutorActionResult(
+                    run_id=int(run_id),
+                    status=WholeBookRunViewStatus.FAILED.value,
+                    applied=True,
+                    detail={"module_results": results, "live_incomplete": True},
+                )
+
         try:
             result = self._state.transition(
                 run,
@@ -310,7 +381,17 @@ class PrivateLabRunExecutor:
         module_key: str,
         cancellation_ref: str | None,
     ) -> dict[str, Any]:
-        # Provider Port first (Fake — no HTTP)
+        live_requested = not bool(meta.get("dry_run", True))
+
+        # Live must have ORM persistence capability before any Provider call.
+        if live_requested:
+            if self._use_recording_persistence or self._runtime_factory is None:
+                raise PrivateWholeBookLabRunError(
+                    PrivateEngineLabDenyReason.PRIVATE_ENGINE_LAB_OPERATION_NOT_ALLOWED,
+                    run_id=int(run.id),
+                    detail_code="LIVE_PERSISTENCE_CAPABILITY_MISSING",
+                )
+
         usage = self._provider.execute_module(
             module_key=module_key,
             request={
@@ -319,6 +400,8 @@ class PrivateLabRunExecutor:
                 "book_snapshot_id": int(run.book_snapshot_id or 0),
                 "configuration_fingerprint": meta.get("configuration_fingerprint"),
                 "dry_run": bool(meta.get("dry_run", True)),
+                "consent_valid": True,
+                "estimate_valid": True,
             },
             cancellation_ref=cancellation_ref,
         )
@@ -328,67 +411,138 @@ class PrivateLabRunExecutor:
                 run_id=int(run.id),
                 detail_code="MODULE_CANCELLED",
             )
+        if usage.status in {"security_denied", "provider_failed", "budget_denied"}:
+            raise PrivateWholeBookLabRunError(
+                PrivateEngineLabDenyReason.PRIVATE_ENGINE_LAB_OPERATION_NOT_ALLOWED,
+                run_id=int(run.id),
+                detail_code=f"MODULE_{str(usage.status).upper()}",
+            )
 
-        # Optional runtime pipeline (synthetic / lab dry)
-        persistence_summary: Mapping[str, Any] = {"orm_written": False}
-        validation_summary = {"accepted": True, "schema_valid": True}
-        evidence_summary = {"validated": True, "count": 0}
+        persistence_summary: dict[str, Any] = {"orm_written": False}
+        validation_summary: dict[str, Any] = {"accepted": False, "schema_valid": False}
+        evidence_summary: dict[str, Any] = {"validated": False, "count": 0}
+        output_fp = usage.output_fingerprint
+        pipeline_status = "failed"
+
         if self._runtime_factory is not None:
             runtime = self._runtime_factory(
                 session=self._session,
                 book_id=int(run.book_id or 0),
                 use_phase1b_persistence=not self._use_recording_persistence,
             )
-            # Prefer synthetic provider_policy from Fake Port structured_output
             synthetic = dict(usage.structured_output or {})
             evidence_candidates = list(synthetic.get("evidence_candidates") or [])
-            # Build minimal context via runtime if available
             try:
-                if hasattr(runtime, "build_native_context_bundle"):
-                    wb, contract = runtime.build_native_context_bundle(
-                        book_id=int(run.book_id or 0),
-                        book_snapshot_id=int(run.book_snapshot_id or 0),
-                    )
-                    ref = getattr(contract, "context_bundle_ref", None) or f"bundle:{run.id}"
-                    if hasattr(runtime, "bind_session"):
-                        runtime.bind_session(self._session)
-                    pipeline = runtime.execute_module_pipeline(
-                        module_key=WholeBookModuleKey(module_key),
-                        book_id=int(run.book_id or 0),
-                        book_snapshot_id=int(run.book_snapshot_id or 0),
+                if hasattr(runtime, "bind_session"):
+                    runtime.bind_session(self._session)
+                if not hasattr(runtime, "build_native_context_bundle"):
+                    raise RuntimeError("runtime_missing_context_builder")
+                _wb, contract = runtime.build_native_context_bundle(
+                    book_id=int(run.book_id or 0),
+                    book_snapshot_id=int(run.book_snapshot_id or 0),
+                    module_keys=(module_key,),
+                )
+                ref = getattr(contract, "context_bundle_ref", None) or f"bundle:{run.id}"
+                provider_kind = "fake" if not live_requested else str(
+                    meta.get("provider_key") or "aliyun_qwen_plus"
+                )
+                pipeline = runtime.execute_module_pipeline(
+                    module_key=WholeBookModuleKey(module_key),
+                    book_id=int(run.book_id or 0),
+                    book_snapshot_id=int(run.book_snapshot_id or 0),
+                    run_id=int(run.id),
+                    run_stage_id=int(stage.id),
+                    context_bundle_ref=str(ref),
+                    configuration_fingerprint_value=str(
+                        meta.get("configuration_fingerprint") or "private-lab-cfg"
+                    ),
+                    provider_policy={
+                        "provider_kind": provider_kind,
+                        "model_route": "lab-route",
+                        "synthetic_output": synthetic or {"synthetic": True, "partial": True},
+                        "evidence_candidates": evidence_candidates,
+                    },
+                    analysis_mode=WholeBookAnalysisMode(
+                        str(meta.get("analysis_mode") or "native")
+                    ),
+                    persist=True,
+                )
+                pipeline_status = str(getattr(pipeline, "status", "") or "")
+                validation_summary = dict(getattr(pipeline, "validation", {}) or {})
+                coverage = dict(getattr(pipeline, "evidence_coverage", {}) or {})
+                cand = dict(getattr(pipeline, "candidate_summary", {}) or {})
+                persist = dict(cand.get("persist") or {})
+                persistence_summary = {
+                    "orm_written": bool(persist.get("orm_written")),
+                    "fallback": persist.get("fallback"),
+                    "asset_count": persist.get("asset_count") or cand.get("asset_count"),
+                    "evidence_count": persist.get("evidence_count"),
+                    "rejected": bool(cand.get("rejected")),
+                }
+                engine_result = getattr(pipeline, "engine_result", None)
+                ev_count = len(getattr(engine_result, "evidence_candidates", ()) or ())
+                if ev_count == 0:
+                    ev_count = int(coverage.get("evidenced_claims") or 0)
+                evidence_summary = {
+                    "validated": bool(validation_summary.get("evidence_valid", False)),
+                    "count": int(ev_count),
+                    "coverage_incomplete": bool(coverage.get("incomplete", False)),
+                }
+                if getattr(pipeline, "output_fingerprint", None):
+                    output_fp = str(pipeline.output_fingerprint)
+                elif getattr(engine_result, "output_fingerprint", None):
+                    output_fp = str(engine_result.output_fingerprint)
+                # Live path: never accept port_only / recording fallback.
+                if live_requested and (
+                    persist.get("fallback") == "port_only"
+                    or self._use_recording_persistence
+                    or not persist.get("orm_written")
+                ):
+                    raise PrivateWholeBookLabRunError(
+                        PrivateEngineLabDenyReason.PRIVATE_ENGINE_LAB_OPERATION_NOT_ALLOWED,
                         run_id=int(run.id),
-                        run_stage_id=int(stage.id),
-                        context_bundle_ref=str(ref),
-                        configuration_fingerprint_value=str(
-                            meta.get("configuration_fingerprint") or "private-lab-cfg"
-                        ),
-                        provider_policy={
-                            "provider_kind": "fake",
-                            "model_route": "lab-fake-route",
-                            "synthetic_output": synthetic or {"synthetic": True, "partial": True},
-                            "evidence_candidates": evidence_candidates,
-                        },
-                        analysis_mode=WholeBookAnalysisMode(
-                            str(meta.get("analysis_mode") or "native")
-                        ),
-                        persist=True,
+                        detail_code="LIVE_ORM_PERSISTENCE_REQUIRED",
                     )
-                    persistence_summary = dict(getattr(pipeline, "persistence_summary", {}) or {})
-                    validation_summary = dict(getattr(pipeline, "validation_summary", {}) or validation_summary)
-                    evidence_summary = {
-                        "validated": True,
-                        "count": len(getattr(pipeline, "evidence_candidates", ()) or ()),
-                    }
-                    if getattr(pipeline, "output_fingerprint", None):
-                        output_fp = str(pipeline.output_fingerprint)
-                _ = wb
-            except Exception:
-                # Fall back to Port-only synthetic result (still no HTTP)
-                persistence_summary = {"orm_written": False, "fallback": "port_only"}
+            except PrivateWholeBookLabRunError:
+                raise
+            except Exception as exc:  # noqa: BLE001
+                if live_requested:
+                    raise PrivateWholeBookLabRunError(
+                        PrivateEngineLabDenyReason.PRIVATE_ENGINE_LAB_OPERATION_NOT_ALLOWED,
+                        run_id=int(run.id),
+                        detail_code=f"LIVE_PIPELINE_FAILED:{type(exc).__name__}",
+                    ) from exc
+                # Dry-only: Port-only synthetic result (still no HTTP).
+                persistence_summary = {
+                    "orm_written": False,
+                    "fallback": "port_only",
+                    "detail": type(exc).__name__,
+                }
+                validation_summary = {"accepted": True, "schema_valid": True, "dry_fallback": True}
+                evidence_summary = {"validated": True, "count": 0}
 
-        output_fp = locals().get("output_fp") or usage.output_fingerprint
+        if live_requested:
+            self._assert_live_module_success(
+                usage_status=usage.status,
+                usage=dict(usage.usage),
+                validation_summary=validation_summary,
+                evidence_summary=evidence_summary,
+                persistence_summary=persistence_summary,
+                pipeline_status=pipeline_status,
+                run_id=int(run.id),
+            )
 
-        # Checkpoint per module
+        # Bind usage onto AnalysisRunStage (accumulate).
+        token_in = int(usage.usage.get("input_tokens") or 0)
+        token_out = int(usage.usage.get("output_tokens") or 0)
+        cost_val = usage.usage.get("actual_cost")
+        accumulate: dict[str, Any] = {
+            "token_input": token_in,
+            "token_output": token_out,
+        }
+        if cost_val is not None:
+            accumulate["cost"] = float(cost_val)
+
         self._stages.write_checkpoint(
             int(run.id),
             stage.stage_key,
@@ -401,14 +555,19 @@ class PrivateLabRunExecutor:
                 "private_lab": True,
                 "non_production": True,
                 "attempt": int(getattr(stage, "attempt_count", 0) or 0),
+                "provider_request_id": usage.usage.get("provider_request_id"),
+                "transport_kind": usage.usage.get("transport_kind"),
+                "http_status": usage.usage.get("http_status"),
+                "usage_source": usage.usage.get("usage_source"),
             },
+            **accumulate,
         )
 
         return {
             "module_key": module_key,
             "stage_key": stage.stage_key,
             "run_stage_id": int(stage.id),
-            "status": usage.status,
+            "status": "success" if (not live_requested or usage.status == "success") else usage.status,
             "output_fingerprint": output_fp,
             "usage": dict(usage.usage),
             "validation_summary": validation_summary,
@@ -417,13 +576,54 @@ class PrivateLabRunExecutor:
             "raw_response_absent": True,
             "prompt_absent": True,
             "credential_absent": True,
-            "http": False,
+            "http": bool(usage.usage.get("http")),
             "private_lab": True,
             "non_production": True,
             "candidate_only": True,
             "auto_canonical": False,
             "auto_lock": False,
         }
+
+    def _assert_live_module_success(
+        self,
+        *,
+        usage_status: str,
+        usage: Mapping[str, Any],
+        validation_summary: Mapping[str, Any],
+        evidence_summary: Mapping[str, Any],
+        persistence_summary: Mapping[str, Any],
+        pipeline_status: str,
+        run_id: int,
+    ) -> None:
+        def _fail(code: str) -> None:
+            raise PrivateWholeBookLabRunError(
+                PrivateEngineLabDenyReason.PRIVATE_ENGINE_LAB_OPERATION_NOT_ALLOWED,
+                run_id=run_id,
+                detail_code=code,
+            )
+
+        if usage_status != "success":
+            _fail(f"LIVE_PROVIDER_STATUS_{usage_status.upper()}")
+        if usage.get("transport_kind") == "CAPTURING_TEST":
+            _fail("LIVE_CAPTURING_TRANSPORT")
+        if not usage.get("provider_request_id"):
+            _fail("LIVE_PROVIDER_REQUEST_ID_MISSING")
+        if not usage.get("live_request_confirmed"):
+            _fail("LIVE_REQUEST_NOT_CONFIRMED")
+        if usage.get("synthetic_success"):
+            _fail("LIVE_SYNTHETIC_SUCCESS_FORBIDDEN")
+        if not validation_summary.get("accepted"):
+            _fail("LIVE_VALIDATION_NOT_ACCEPTED")
+        if int(evidence_summary.get("count") or 0) < 1:
+            _fail("LIVE_EVIDENCE_REQUIRED")
+        if evidence_summary.get("coverage_incomplete"):
+            _fail("LIVE_EVIDENCE_COVERAGE_INCOMPLETE")
+        if not persistence_summary.get("orm_written"):
+            _fail("LIVE_ORM_WRITTEN_REQUIRED")
+        if persistence_summary.get("fallback"):
+            _fail("LIVE_PERSISTENCE_FALLBACK_FORBIDDEN")
+        if pipeline_status in {"failed", "cancelled"}:
+            _fail(f"LIVE_PIPELINE_{pipeline_status.upper()}")
 
     def _cancel_terminal(
         self,

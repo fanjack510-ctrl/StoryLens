@@ -471,6 +471,8 @@ class PrivateLabProviderExecutionServiceAdapter:
     dry_run: bool = True
     allow_network: bool = False
     transport: Any | None = None
+    live_transport: Any | None = None
+    explicit_test_transport_override: bool = False
     credential_resolver: Any | None = None
     environment: str = "development"
     lab_enabled: bool = True
@@ -481,6 +483,7 @@ class PrivateLabProviderExecutionServiceAdapter:
     _gateway: Any | None = field(default=None, repr=False)
 
     def __post_init__(self) -> None:
+        # Capturing is dry/test default only — never the Live transport.
         if self.transport is None:
             self.transport = CapturingProviderTransport(
                 stub=StubTransportResponse(
@@ -489,6 +492,7 @@ class PrivateLabProviderExecutionServiceAdapter:
                     request_id="capture-stub",
                     input_tokens=32,
                     output_tokens=16,
+                    transport_kind="CAPTURING_TEST",
                 )
             )
         if self.credential_resolver is None:
@@ -536,18 +540,41 @@ class PrivateLabProviderExecutionServiceAdapter:
         )
 
     def _live_gateway(self) -> Any:
-        """Gateway/Adapter with dry_run=false + allow_network=true for authorized Live.
+        """Gateway for authorized Live — never reuses Capturing dry transport.
 
-        Budget already re-checked in execute_module; omit incompatible Lab budget guard
-        from gateway spend recording to keep Adapter/Gateway/Transport auth consistent.
+        REAL_HTTP: transport=None so Bailian builds formal DashScope transport.
+        FAKE_HTTP_TEST: only via live_transport + test override.
         """
 
+        from app.narrative_core.services.provider_transport_kind import (
+            ProviderTransportKind,
+            is_capturing_transport,
+            live_transport_allowed,
+        )
+
+        candidate = self.live_transport
+        if candidate is None:
+            # Do not reuse dry Capturing instance.
+            if is_capturing_transport(self.transport):
+                candidate = None
+            else:
+                candidate = self.transport
+        ok, deny, kind = live_transport_allowed(
+            transport=candidate,
+            environment=self.environment,
+            explicit_test_override=bool(self.explicit_test_transport_override),
+        )
+        if not ok:
+            raise RuntimeError(f"live_transport_rejected:{deny}")
+        live_transport = candidate if kind != ProviderTransportKind.REAL_HTTP else None
+        if kind == ProviderTransportKind.FAKE_HTTP_TEST:
+            live_transport = candidate
         return create_lab_provider_gateway(
             dry_run=False,
             allow_network=True,
             credential_resolver=self.credential_resolver,
             budget_guard=None,
-            transport=self.transport,
+            transport=live_transport,
         )
 
     def execute_module(
@@ -679,24 +706,45 @@ class PrivateLabProviderExecutionServiceAdapter:
                 "requested_dry_run": auth.requested_dry_run,
                 "effective_dry_run": auth.effective_dry_run,
                 "authorization_fingerprint": auth.authorization_fingerprint,
+                "environment": self.environment,
+                "explicit_test_transport_override": bool(
+                    self.explicit_test_transport_override
+                ),
             },
         )
 
         if not auth.effective_dry_run:
-            # Authorized Live — Gateway/Bailian/Transport share effective_dry_run=false.
-            live_gw = self._live_gateway()
+            # Authorized Live — never Capturing; REAL_HTTP or FAKE_HTTP_TEST only.
+            try:
+                live_gw = self._live_gateway()
+            except Exception as exc:  # noqa: BLE001
+                return PrivateLabProviderUsageResult(
+                    module_key=module_key,
+                    status="security_denied",
+                    usage={
+                        "http": False,
+                        "live": False,
+                        "deny_reason": "live_transport_rejected",
+                        "detail": type(exc).__name__,
+                        "authorization_fingerprint": auth.authorization_fingerprint,
+                        "effective_dry_run": True,
+                        "synthetic_success": False,
+                    },
+                )
             live_gw.bind_resolved_payload(inference.request_id, payload)
             try:
                 resp = live_gw.execute(inference, resolved_payload=payload)
-            except Exception:
+            except Exception as exc:  # noqa: BLE001
+                detail = getattr(exc, "detail_code", None) or type(exc).__name__
                 return PrivateLabProviderUsageResult(
                     module_key=module_key,
                     status="provider_failed",
                     usage={
-                        "http": True,
+                        "http": False,
                         "live": True,
                         "authorization_fingerprint": auth.authorization_fingerprint,
                         "synthetic_success": False,
+                        "detail_code": str(detail),
                     },
                 )
             self.http_calls += 1
@@ -709,6 +757,28 @@ class PrivateLabProviderExecutionServiceAdapter:
                         "live": True,
                         "authorization_fingerprint": auth.authorization_fingerprint,
                         "synthetic_success": False,
+                        "provider_request_id": getattr(resp, "provider_request_id", None),
+                    },
+                )
+            structured = dict(getattr(resp, "structured_output", None) or {})
+            audit = dict(structured.pop("_provider_audit", None) or {})
+            transport_kind = audit.get("transport_kind")
+            provider_request_id = (
+                getattr(resp, "provider_request_id", None)
+                or audit.get("provider_request_id")
+            )
+            if transport_kind == "CAPTURING_TEST" or not provider_request_id:
+                return PrivateLabProviderUsageResult(
+                    module_key=module_key,
+                    status="provider_failed",
+                    usage={
+                        "http": False,
+                        "live": True,
+                        "deny_reason": "live_usage_not_confirmed",
+                        "transport_kind": transport_kind,
+                        "provider_request_id": provider_request_id,
+                        "authorization_fingerprint": auth.authorization_fingerprint,
+                        "synthetic_success": False,
                     },
                 )
             return PrivateLabProviderUsageResult(
@@ -717,15 +787,24 @@ class PrivateLabProviderExecutionServiceAdapter:
                 usage={
                     "http": True,
                     "live": True,
+                    "live_request_confirmed": True,
+                    "transport_kind": transport_kind,
+                    "provider_request_id": provider_request_id,
+                    "http_status": audit.get("http_status"),
+                    "provider_host": audit.get("host"),
+                    "usage_source": audit.get("usage_source") or "provider_response",
                     "input_tokens": getattr(resp, "token_input", None),
                     "output_tokens": getattr(resp, "token_output", None),
                     "actual_cost": getattr(resp, "cost", None),
+                    "latency_ms": getattr(resp, "latency_ms", None),
+                    "finish_reason": getattr(resp, "finish_reason", None),
+                    "retry_count": getattr(resp, "retry_count", 0),
                     "authorization_fingerprint": auth.authorization_fingerprint,
                     "effective_dry_run": False,
                     "synthetic_success": False,
                 },
                 output_fingerprint=f"live-{module_key}-{bundle.bundle_fingerprint[:8]}",
-                structured_output=dict(getattr(resp, "structured_output", None) or {}),
+                structured_output=structured,
             )
 
         # Live was requested but gates failed — explicit deny, never Fake Success.

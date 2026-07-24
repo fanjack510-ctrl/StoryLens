@@ -171,11 +171,23 @@ def test_probe_true_allow_network_false_fail_closed(monkeypatch: pytest.MonkeyPa
 
 def test_authorized_live_uses_injected_transport_once(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("WHOLE_BOOK_PRIVATE_PROVIDER_LIVE_PROBE", "true")
-    transport = _capturing()
+    from app.narrative_core.services.provider_transport_kind import FakeHttpProviderTransport
+
+    fake_http = FakeHttpProviderTransport(
+        stub_text='{"ok":true,"partial":false,"items":[{"claim":"overview"}],'
+        '"evidence_candidates":[{"claim_id":"c1","chapter_id":"1","stable_paragraph_id":"1"}]}',
+        request_id="fake-http-live-1",
+        input_tokens=1800,
+        output_tokens=220,
+        http_status=200,
+    )
+    capturing = _capturing()
     rt = create_live_readiness_runtime(
-        environment="development",
+        environment="test",
         lab_enabled=True,
-        transport=transport,
+        transport=capturing,
+        live_transport=fake_http,
+        explicit_test_transport_override=True,
         credential_adapter=_cred(True),
         allow_fake_resolver=True,
         resolver=FakeProviderInputBundleResolver(),
@@ -191,13 +203,40 @@ def test_authorized_live_uses_injected_transport_once(monkeypatch: pytest.Monkey
     assert result.usage.get("http") is True
     assert result.usage.get("live") is True
     assert result.usage.get("synthetic_success") is False
+    assert result.usage.get("transport_kind") == "FAKE_HTTP_TEST"
+    assert result.usage.get("provider_request_id") == "fake-http-live-1"
+    assert result.usage.get("input_tokens") == 1800
+    assert result.usage.get("output_tokens") == 220
     assert pe.http_calls == 1
-    assert len(transport.calls) == 1
+    assert len(fake_http.calls) == 1
+    assert len(capturing.calls) == 0  # Capturing must not be reused on Live
     assert pe.last_authorization is not None
     assert pe.last_authorization.effective_dry_run is False
     assert pe.last_authorization.requested_dry_run is False
     assert pe.last_payloads[-1]["ref_only"] is False
     assert pe.last_payloads[-1]["has_system"] is True
+
+
+def test_authorized_live_rejects_capturing_transport(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("WHOLE_BOOK_PRIVATE_PROVIDER_LIVE_PROBE", "true")
+    capturing = _capturing()
+    pe = PrivateLabProviderExecutionServiceAdapter(
+        resolver=FakeProviderInputBundleResolver(),
+        allow_network=True,
+        transport=capturing,
+        live_transport=capturing,  # explicitly wrong
+        credential_resolver=_cred(True),
+        environment="development",
+        lab_enabled=True,
+    )
+    result = pe.execute_module(
+        module_key="book_overview",
+        request={"book_id": 1, "book_snapshot_id": 1, "dry_run": False},
+    )
+    assert result.status == "security_denied"
+    assert result.usage.get("deny_reason") == "live_transport_rejected"
+    assert pe.http_calls == 0
+    assert len(capturing.calls) == 0
 
 
 def test_production_probe_true_zero_http(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -326,14 +365,23 @@ def test_request_dry_run_reaches_adapter_and_matches_gateway(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("WHOLE_BOOK_PRIVATE_PROVIDER_LIVE_PROBE", "true")
-    transport = _capturing()
+    from app.narrative_core.services.provider_transport_kind import FakeHttpProviderTransport
+
+    fake_http = FakeHttpProviderTransport(
+        stub_text='{"ok":true,"items":[]}',
+        request_id="req-dry-pass",
+        input_tokens=900,
+        output_tokens=100,
+    )
     pe = PrivateLabProviderExecutionServiceAdapter(
         resolver=FakeProviderInputBundleResolver(),
         dry_run=True,  # composition default dry
         allow_network=True,
-        transport=transport,
+        transport=_capturing(),
+        live_transport=fake_http,
+        explicit_test_transport_override=True,
         credential_resolver=_cred(True),
-        environment="development",
+        environment="test",
         lab_enabled=True,
     )
     result = pe.execute_module(
@@ -345,6 +393,7 @@ def test_request_dry_run_reaches_adapter_and_matches_gateway(
     assert pe.last_authorization.requested_dry_run is False
     assert pe.last_authorization.effective_dry_run is False
     assert pe.http_calls == 1
+    assert result.usage.get("transport_kind") == "FAKE_HTTP_TEST"
 
 
 def test_runtime_cache_rebuilds_when_probe_toggles(
@@ -389,21 +438,21 @@ def test_runtime_cache_rebuilds_when_database_url_changes(
 
 def test_provider_failure_not_fake_success(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("WHOLE_BOOK_PRIVATE_PROVIDER_LIVE_PROBE", "true")
+    from app.narrative_core.services.provider_transport_kind import FakeHttpProviderTransport
 
-    class _Boom:
-        call_count = 0
-
-        def generate(self, **kwargs):  # noqa: ANN003
-            self.call_count += 1
-            raise RuntimeError("transport_boom")
-
-    boom = _Boom()
+    boom = FakeHttpProviderTransport(
+        stub_text="{}",
+        request_id="boom-1",
+        raise_error=True,
+    )
     pe = PrivateLabProviderExecutionServiceAdapter(
         resolver=FakeProviderInputBundleResolver(),
         allow_network=True,
-        transport=boom,
+        transport=_capturing(),
+        live_transport=boom,
+        explicit_test_transport_override=True,
         credential_resolver=_cred(True),
-        environment="development",
+        environment="test",
         lab_enabled=True,
     )
     result = pe.execute_module(
@@ -412,6 +461,7 @@ def test_provider_failure_not_fake_success(monkeypatch: pytest.MonkeyPatch) -> N
     )
     assert result.status == "provider_failed"
     assert result.usage.get("synthetic_success") is False
+    assert boom.calls  # attempted once, no Capturing fallback
 
 
 def test_authorization_formula_effective_dry() -> None:

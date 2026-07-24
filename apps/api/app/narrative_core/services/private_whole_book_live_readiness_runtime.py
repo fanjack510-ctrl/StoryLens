@@ -245,6 +245,8 @@ def create_live_readiness_runtime(
     session: Session | None = None,
     credential_adapter: ExistingCredentialServiceAdapter | None = None,
     transport: Any | None = None,
+    live_transport: Any | None = None,
+    explicit_test_transport_override: bool = False,
     capability_ok_fn: Callable[[], bool] | None = None,
     runtime_factory: Callable[..., Any] | None = None,
     force_deny_budget: bool = False,
@@ -307,6 +309,7 @@ def create_live_readiness_runtime(
             request_id="live-readiness-stub",
             input_tokens=24,
             output_tokens=12,
+            transport_kind="CAPTURING_TEST",
         )
     )
 
@@ -335,6 +338,8 @@ def create_live_readiness_runtime(
         dry_run=bool(dry_run),
         allow_network=bool(allow_net),
         transport=capture,
+        live_transport=live_transport,
+        explicit_test_transport_override=bool(explicit_test_transport_override),
         credential_resolver=cred,
         environment=env,
         lab_enabled=enabled,

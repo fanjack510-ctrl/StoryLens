@@ -76,7 +76,10 @@ def _provider_request(**overrides: Any) -> ProviderInferenceRequest:
         retry_policy={"max_retries": 1},
         cancellation_ref="cancel-u-1",
         data_handling_policy={"execution_location": "cloud", "sends_source_text": True},
-        metadata={},
+        metadata={
+            "environment": "test",
+            "explicit_test_transport_override": True,
+        },
     )
     base.update(overrides)
     return ProviderInferenceRequest(**base)
@@ -350,6 +353,21 @@ class _FakeRepairer:
         return R(ok=False, payload=None, reason="repair_rejected")
 
 
+def _fake_http_transport(**kwargs: Any) -> FakeHttpProviderTransport:
+    from app.narrative_core.services.provider_transport_kind import FakeHttpProviderTransport
+
+    defaults: dict[str, Any] = dict(
+        stub_text='{"title":"ok","synthetic":false}',
+        model=PRIVATE_LAB_FIRST_MODEL_ID,
+        request_id="stub-1",
+        input_tokens=120,
+        output_tokens=40,
+        http_status=200,
+    )
+    defaults.update(kwargs)
+    return FakeHttpProviderTransport(**defaults)
+
+
 def _live_adapter(**kwargs: Any) -> BailianOpenAICompatibleProviderAdapter:
     transport = kwargs.pop("transport", None)
     repairer = kwargs.pop("output_repairer", None)
@@ -366,14 +384,11 @@ def _live_adapter(**kwargs: Any) -> BailianOpenAICompatibleProviderAdapter:
 
 def test_19_20_21_adapter_uses_resolved_payload_and_json_object() -> None:
     bundle = _bundle()
-    transport = CapturingProviderTransport(
-        stub=StubTransportResponse(
-            text='{"title":"ok","synthetic":false}',
-            model=PRIVATE_LAB_FIRST_MODEL_ID,
-            request_id="stub-1",
-            input_tokens=120,
-            output_tokens=40,
-        )
+    transport = _fake_http_transport(
+        stub_text='{"title":"ok","synthetic":false}',
+        request_id="stub-1",
+        input_tokens=120,
+        output_tokens=40,
     )
     adapter = _live_adapter(transport=transport)
     payload = ResolvedProviderPayload(
@@ -383,7 +398,9 @@ def test_19_20_21_adapter_uses_resolved_payload_and_json_object() -> None:
     )
     try:
         resp = adapter.execute_with_resolved_payload(
-            _provider_request(),
+            _provider_request(
+                metadata={"environment": "test", "explicit_test_transport_override": True}
+            ),
             payload,
             credential="sk-test-not-logged",
         )
@@ -394,21 +411,33 @@ def test_19_20_21_adapter_uses_resolved_payload_and_json_object() -> None:
         assert transport.calls[0]["response_format_mode"] == "json_object"
         assert transport.calls[0]["has_system"] is True
         assert transport.calls[0]["has_user"] is True
-        # Captured structure only — no full message bodies stored.
         assert "content" not in transport.calls[0]
     finally:
         os.environ.pop(PRIVATE_PROVIDER_LIVE_PROBE_ENV, None)
 
 
 def test_22_timeout_propagated() -> None:
-    transport = CapturingProviderTransport(raise_timeout=True)
+    from app.narrative_core.private_engine_contract.errors import (
+        PrivateEngineErrorCode,
+        private_engine_error,
+    )
+    from app.narrative_core.services.provider_transport_kind import FakeHttpProviderTransport
+
+    class _TimeoutHttp(FakeHttpProviderTransport):
+        def generate(self, **kwargs):  # noqa: ANN003
+            self.calls.append({"timeout": True})
+            raise private_engine_error(PrivateEngineErrorCode.PROVIDER_TIMEOUT)
+
+    transport = _TimeoutHttp(stub_text="{}", request_id="t-1")
     adapter = _live_adapter(transport=transport)
     bundle = _bundle()
     payload = ResolvedProviderPayload(messages=bundle.transport_messages(), input_bundle=bundle)
     try:
         with pytest.raises(PrivateEngineError) as exc:
             adapter.execute_with_resolved_payload(
-                _provider_request(),
+                _provider_request(
+                    metadata={"environment": "test", "explicit_test_transport_override": True}
+                ),
                 payload,
                 credential="sk-test",
             )
@@ -418,9 +447,7 @@ def test_22_timeout_propagated() -> None:
 
 
 def test_23_cancel_during_transport() -> None:
-    transport = CapturingProviderTransport(
-        stub=StubTransportResponse(text='{"ok":true}'),
-    )
+    transport = _fake_http_transport(stub_text='{"ok":true}', request_id="cancel-stub")
     adapter = _live_adapter(transport=transport)
     adapter.cancel("cancel-u-1")
     bundle = _bundle()
@@ -439,8 +466,11 @@ def test_23_cancel_during_transport() -> None:
 
 def test_24_25_26_invalid_json_repair_success_and_reject() -> None:
     # repair success
-    transport = CapturingProviderTransport(
-        stub=StubTransportResponse(text='```json\n{"title":"ok"}\n```', input_tokens=10, output_tokens=5)
+    transport = _fake_http_transport(
+        stub_text='```json\n{"title":"ok"}\n```',
+        input_tokens=10,
+        output_tokens=5,
+        request_id="repair-ok",
     )
     adapter = _live_adapter(transport=transport, output_repairer=_FakeRepairer(accept=True))
     bundle = _bundle()
@@ -456,7 +486,7 @@ def test_24_25_26_invalid_json_repair_success_and_reject() -> None:
         os.environ.pop(PRIVATE_PROVIDER_LIVE_PROBE_ENV, None)
 
     # invalid + repair reject
-    transport2 = CapturingProviderTransport(stub=StubTransportResponse(text="NOT_JSON"))
+    transport2 = _fake_http_transport(stub_text="NOT_JSON", request_id="repair-bad")
     adapter2 = _live_adapter(transport=transport2, output_repairer=_FakeRepairer(accept=False))
     try:
         with pytest.raises(PrivateEngineError) as exc:
@@ -472,8 +502,11 @@ def test_24_25_26_invalid_json_repair_success_and_reject() -> None:
 
 
 def test_27_raw_response_not_retained_as_artifact() -> None:
-    transport = CapturingProviderTransport(
-        stub=StubTransportResponse(text='{"title":"ok"}', input_tokens=1, output_tokens=1)
+    transport = _fake_http_transport(
+        stub_text='{"title":"ok"}',
+        input_tokens=1,
+        output_tokens=1,
+        request_id="raw-1",
     )
     adapter = _live_adapter(transport=transport)
     bundle = _bundle()

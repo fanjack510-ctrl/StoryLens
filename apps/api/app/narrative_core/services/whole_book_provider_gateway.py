@@ -77,16 +77,26 @@ class StubTransportResponse:
     input_tokens: int = 0
     output_tokens: int = 0
     finish_reason: str | None = "stop"
+    http_status: int | None = None
+    transport_kind: str | None = None
+    latency_ms: int | None = None
+    host: str | None = None
 
 
 @dataclass
 class CapturingProviderTransport:
-    """Test transport: captures messages, returns stub — never opens HTTP."""
+    """Test/dry transport: captures messages, returns stub — never opens HTTP.
+
+    Forbidden on authorized Live (CHG-051).
+    """
 
     stub: StubTransportResponse | None = None
     calls: list[dict[str, Any]] = field(default_factory=list)
     raise_timeout: bool = False
     cancelled_refs: set[str] = field(default_factory=set)
+    transport_kind: str = "CAPTURING_TEST"
+    test_only: bool = True
+    network_capable: bool = False
 
     def generate(
         self,
@@ -520,9 +530,34 @@ class BailianOpenAICompatibleProviderAdapter:
                 timeout_seconds = 60
         response_format = payload.response_format_mode or "json_object"
 
+        from app.narrative_core.services.provider_transport_kind import (
+            ProviderTransportKind,
+            is_capturing_transport,
+            live_transport_allowed,
+            transport_kind_of,
+        )
+
         transport = self.transport
-        if transport is None:
+        if is_capturing_transport(transport):
+            raise private_engine_error(
+                PrivateEngineErrorCode.PROVIDER_POLICY_INVALID,
+                detail_code="capturing_transport_forbidden_on_live",
+            )
+        ok, deny, effective_kind = live_transport_allowed(
+            transport=transport,
+            environment=str((request.metadata or {}).get("environment") or "development"),
+            explicit_test_override=bool(
+                (request.metadata or {}).get("explicit_test_transport_override")
+            ),
+        )
+        if not ok:
+            raise private_engine_error(
+                PrivateEngineErrorCode.PROVIDER_POLICY_INVALID,
+                detail_code=str(deny or "live_transport_rejected"),
+            )
+        if transport is None or transport_kind_of(transport) is None:
             transport = self._build_live_http_transport(api_key=api_key)
+            effective_kind = ProviderTransportKind.REAL_HTTP
 
         try:
             response = transport.generate(
@@ -574,18 +609,36 @@ class BailianOpenAICompatibleProviderAdapter:
 
         token_in = int(getattr(response, "input_tokens", 0) or 0)
         token_out = int(getattr(response, "output_tokens", 0) or 0)
+        provider_request_id = getattr(response, "request_id", None)
+        http_status = getattr(response, "http_status", None)
+        if not provider_request_id:
+            raise private_engine_error(
+                PrivateEngineErrorCode.PROVIDER_RESPONSE_INVALID,
+                detail_code="provider_request_id_missing",
+            )
         cost = self._resolve_cost(token_in, token_out)
+        structured_out = {**structured, "repaired": repaired} if repaired else dict(structured)
+        # Safe audit markers — never credentials / messages / prompt body.
+        structured_out["_provider_audit"] = {
+            "transport_kind": getattr(response, "transport_kind", None)
+            or effective_kind.value,
+            "provider_request_id": provider_request_id,
+            "http_status": http_status if http_status is not None else 200,
+            "host": getattr(response, "host", None) or "dashscope.aliyuncs.com",
+            "usage_source": "provider_response",
+            "live_request_confirmed": True,
+        }
         return ProviderInferenceResponse(
             request_id=request.request_id,
             provider_kind=self.provider_kind,
             model_id=getattr(response, "model", None) or self.model_id,
-            provider_request_id=getattr(response, "request_id", None),
+            provider_request_id=provider_request_id,
             status="success",
-            structured_output={**structured, "repaired": repaired} if repaired else structured,
+            structured_output=structured_out,
             token_input=token_in,
             token_output=token_out,
             cost=cost,
-            latency_ms=0,
+            latency_ms=int(getattr(response, "latency_ms", 0) or 0),
             finish_reason=getattr(response, "finish_reason", None),
             retry_count=0,
             validation_status="schema_ok_repaired" if repaired else "schema_ok",
@@ -639,6 +692,11 @@ class BailianOpenAICompatibleProviderAdapter:
         )
 
         class _HttpTransport:
+            transport_kind = "REAL_HTTP"
+            test_only = False
+            network_capable = True
+            host = "dashscope.aliyuncs.com"
+
             def generate(
                 self,
                 *,
@@ -664,6 +722,9 @@ class BailianOpenAICompatibleProviderAdapter:
                     input_tokens=int(response.input_tokens or 0),
                     output_tokens=int(response.output_tokens or 0),
                     finish_reason=response.finish_reason,
+                    http_status=200,
+                    transport_kind="REAL_HTTP",
+                    host="dashscope.aliyuncs.com",
                 )
 
         return _HttpTransport()
