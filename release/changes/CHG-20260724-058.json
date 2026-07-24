@@ -65,6 +65,12 @@
       "message": "docs: attach CHG-058 prompt-render fix commit",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "3368a5363b61d52477c095d96159d3837dfaa71c",
+      "message": "docs: close CHG-058 prompt-render attachment loop",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -126,5 +132,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-24T15:35:15Z",
-  "updated_at": "2026-07-24T16:28:57Z"
+  "updated_at": "2026-07-24T16:28:58Z"
 }
