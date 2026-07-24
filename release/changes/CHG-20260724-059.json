@@ -3,16 +3,38 @@
   "title": "Direct Citation V2 Contract Closure",
   "type": "fix",
   "base_version": "1.0.5",
-  "status": "registered",
+  "status": "tested",
   "include_in_next_release": true,
-  "commits": [],
-  "modules": [],
+  "commits": [
+    {
+      "sha": "e128a8a95e41cd843ac34fcdd6dcd6337c2d9760",
+      "message": "fix: bind execution context and targeted citation repair",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "apps/api/narrative_core",
+    "storylens_private_engine/citation"
+  ],
   "files": [],
   "user_summary": "Freeze Estimate/Consent/Create execution context, field-level claim diagnostics, FieldRequirementPolicy, exact citation error codes, targeted repair, and independent provider business attempts for book_overview.",
-  "technical_summary": "",
-  "acceptance_criteria": [],
-  "tests": [],
-  "verification_evidence": [],
+  "technical_summary": "ExecutionContextBinding freeze; FieldRequirementPolicy/ContextCapabilities; claim_contract_diagnostics; precise REQUIRED_CLAIM_* codes; targeted repair with full catalog; independent book_overview_initial/contract_repair attempts; Formal context_bundle_ref reuse.",
+  "acceptance_criteria": [
+    "Estimate/Executor fingerprints match before Provider",
+    "Core fields never not_observed without repair",
+    "Contract HTTP-OK failures are not provider_failed"
+  ],
+  "tests": [
+    "apps/api/tests/test_narrative_phase2br1_citation_v2_http_replay.py::A-H",
+    "apps/api/tests/test_execution_context_binding_chg059.py",
+    "private:tests/test_field_requirement_policy.py"
+  ],
+  "verification_evidence": [
+    "private_commit=0cfd52e90a0d3796d2b271f82398b78e823f1eb2",
+    "public_commit=e128a8a95e41cd843ac34fcdd6dcd6337c2d9760",
+    "http_scenarios_A_H=passed"
+  ],
   "data_compatibility": {
     "database_changed": false,
     "migration_required": false,
@@ -26,7 +48,7 @@
     "breaking_change": false
   },
   "blocker_level": null,
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-24T17:18:07Z",
-  "updated_at": "2026-07-24T17:18:07Z"
+  "updated_at": "2026-07-24T17:49:51Z"
 }
