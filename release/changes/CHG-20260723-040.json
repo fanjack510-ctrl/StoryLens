@@ -3,7 +3,7 @@
   "title": "Phase 2B Integration",
   "type": "feature",
   "base_version": "1.0.5",
-  "status": "implemented",
+  "status": "tested",
   "include_in_next_release": true,
   "commits": [
     {
@@ -59,6 +59,12 @@
       "message": "docs: close CHG-20260723-039 commit attachment loop",
       "primary": false,
       "multi_change_reason": "Mounted from CHG-20260723-039 cherry-pick on integration branch"
+    },
+    {
+      "sha": "d322c03af5ce761254f3bf1d83a75ba3e99ab86e",
+      "message": "feat: integrate narrative phase2b private engine foundation",
+      "primary": true,
+      "multi_change_reason": "Integration primary commit for CHG-20260723-040"
     }
   ],
   "modules": [
@@ -109,7 +115,12 @@
     "apps/api/tests/test_narrative_phase2b_context_evidence.py",
     "apps/api/tests/test_narrative_phase2b_core_modules.py"
   ],
-  "verification_evidence": [],
+  "verification_evidence": [
+    "pytest apps/api/tests/test_narrative_phase2b_integration.py -q → 16 passed",
+    "pytest phase2bp/P/Q/R directed suites + phase2a/1d regressions",
+    "scripts/change_registry.py check passed",
+    "scripts/check_project.py / version_manager / check_capability_keys / git diff --check"
+  ],
   "data_compatibility": {
     "database_changed": false,
     "migration_required": false,
@@ -125,7 +136,7 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T22:38:45Z",
-  "updated_at": "2026-07-24T00:51:47Z",
+  "updated_at": "2026-07-24T00:59:13Z",
   "parallel_plan": {
     "role": "integration",
     "branch": "integration/narrative-phase2b",
