@@ -3,9 +3,16 @@
   "title": "Agent Q Context and Evidence Pipeline",
   "type": "feature",
   "base_version": "1.0.5",
-  "status": "registered",
+  "status": "tested",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "f522352fa463c1780f2ff848db2f9587719da874",
+      "message": "feat: implement whole book context and evidence pipeline",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "narrative_core/services",
     "context_evidence_pipeline"
@@ -56,9 +63,9 @@
     "breaking_change": false
   },
   "blocker_level": null,
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T22:38:45Z",
-  "updated_at": "2026-07-24T00:21:17Z",
+  "updated_at": "2026-07-24T00:22:23Z",
   "parallel_plan": {
     "role": "agent_q",
     "branch": "feature/narrative-phase2b-context-evidence",
