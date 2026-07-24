@@ -7,10 +7,16 @@
   "include_in_next_release": true,
   "commits": [
     {
-      "sha": "dbae120bff73806fb9fbd0c49aab73e6b3985ba1",
+      "sha": "66152abe166e3cb9cad12f32f5d51b6389a4b04e",
       "message": "fix: resolve live evidence targets before persistence",
       "primary": true,
-      "multi_change_reason": null
+      "multi_change_reason": "Integration cherry-pick retarget"
+    },
+    {
+      "sha": "17cf294b98d7af8ca9df5d93ed3d59cd58e2b3f9",
+      "message": "docs: mark CHG-20260724-055 tested",
+      "primary": false,
+      "multi_change_reason": "Integration cherry-pick retarget"
     }
   ],
   "modules": [
@@ -28,7 +34,7 @@
     "apps/api/tests/test_narrative_phase2br1_live_persistence_boundary.py"
   ],
   "user_summary": "Resolve Provider DTO evidence target aliases such as book_overview.claim after Candidate Output Ref Registry, enrich Context-visible evidence keys into Snapshot locators, and persist Asset/Version/Evidence/Artifact without relaxing validators.",
-  "technical_summary": "failure_boundary=EVIDENCE_VALIDATION_REJECTED: target_output_ref=book_overview.claim not in known_output_refs before Candidate Registry. Fixed via build_candidate_output_refs + resolve_provider_output_ref (claim→.out primary alias; AMBIGUOUS without disambiguation) + SnapshotQuoteIndex (model-visible paragraph keys) + LiveModulePipelineDiagnostics. Validator hash/offset/cross-snapshot unchanged. Schema not relaxed. Private 62e44c0 preserves provider_output_ref.",
+  "technical_summary": "failure_boundary=EVIDENCE_VALIDATION_REJECTED: target_output_ref=book_overview.claim not in known_output_refs before Candidate Registry. Fixed via build_candidate_output_refs + resolve_provider_output_ref (claim→.out primary alias; AMBIGUOUS without disambiguation) + SnapshotQuoteIndex + LiveModulePipelineDiagnostics. Validator hash/offset/cross-snapshot unchanged. Schema not relaxed. Private Integration d34e796474a9f9c9319f30abf9f9717599c0c934; Public Integration cherry-picks 66152ab/17cf294.",
   "acceptance_criteria": [
     "Bailian DTO evidence_refs with book_overview.claim resolve after Candidate Registry; Valid Evidence≥1; Asset/Version/Evidence/Artifact written; persistence_complete=true; rejected evidence never starts ORM transaction."
   ],
@@ -37,7 +43,8 @@
     "apps/api/tests/test_narrative_phase2br1_provider_result_binding.py"
   ],
   "verification_evidence": [
-    "Public 147 passed (live_persistence_boundary+provider_result_binding+provenance+context+transport+network+smoke_di+provider_context_cost+private_lab+integration). Private 46 passed (+8 boundary). Gates: version 1.0.5, registry ok, capability ok, diff --check clean. failure_boundary=EVIDENCE_VALIDATION_REJECTED (book_overview.claim). Private commit 62e44c077242dc902f7f732521f2848e302b195a. Public commit dbae120bff73806fb9fbd0c49aab73e6b3985ba1."
+    "Public Integration 147 passed after cherry-pick. Private Integration 46 passed. failure_boundary=EVIDENCE_VALIDATION_REJECTED (book_overview.claim unknown before Candidate Registry). Output Ref primary alias + Quote Index; Validator/Schema not relaxed. Private Integration HEAD d34e796474a9f9c9319f30abf9f9717599c0c934. Public Integration HEAD pending retarget commit.",
+    "retry4 Dry Preflight/Estimate ok: chars=7000, pricing known, HTTP=0, Run=0, resolver_is_fake=false. DB storylens-live-smoke-retry4-20260724-192056.db SHA256=4cdefb728252dba4e0b29ae547f78b76638303fd3c8a51c911faf170d489ca68 integrity=ok hash12=7efc81332df2."
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -54,5 +61,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-24T10:01:26Z",
-  "updated_at": "2026-07-24T11:19:16Z"
+  "updated_at": "2026-07-24T11:23:37Z"
 }
