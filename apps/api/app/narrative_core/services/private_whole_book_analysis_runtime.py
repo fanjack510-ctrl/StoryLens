@@ -1,7 +1,9 @@
-"""Private Whole-Book Analysis Runtime — Phase 2B Integration composition root.
+"""Private Whole-Book Analysis Runtime — Phase 2B-R Integration composition root.
 
-Unique wiring of Agent P (engine/provider) + Q (context/evidence) + R (modules).
-Synthetic / non-production only. Production must not construct Fake runtime.
+Wires Agent S (Lab provider / runtime) + Agent T (four modules / Phase1B sink).
+Default path remains Fake + Recording sink for tests.
+Lab path (non-production only): create_lab_provider_gateway + private adapters
++ optional Phase1BCandidatePersistenceSink. Production must not construct Fake.
 No global mutable production singleton. No License/Credential/frontend access.
 """
 
@@ -38,6 +40,7 @@ from app.narrative_core.services.auxiliary_context_source import (
 )
 from app.narrative_core.services.candidate_persistence_adapter import (
     CandidatePersistenceAdapter,
+    Phase1BCandidatePersistenceSink,
     RecordingCandidatePersistenceSink,
     summarize_commands,
 )
@@ -112,6 +115,7 @@ from app.narrative_core.services.whole_book_module_runner import (
     WholeBookModuleSpecRegistry,
     build_default_module_spec_registry,
     build_first_four_fake_runners,
+    build_private_module_runner_adapters,
     make_execution_request,
 )
 from app.narrative_core.services.whole_book_provider_gateway import (
@@ -119,10 +123,29 @@ from app.narrative_core.services.whole_book_provider_gateway import (
     FakeProviderAdapter,
     NoCredentialFakeResolver,
     ProviderCredentialResolver,
+    create_lab_provider_gateway,
 )
 
 RUNTIME_SCHEMA = "storylens.phase2b.private_analysis_runtime"
 RUNTIME_VERSION = "1.0.0"
+
+
+def try_load_first_four_private_runners(
+    *,
+    gateway: Any | None = None,
+) -> Mapping[str, Any] | None:
+    """Optional private package import — never vendors private sources into public tree."""
+
+    try:
+        from storylens_private_engine.modules import (  # type: ignore[import-not-found]
+            build_first_four_private_runners,
+        )
+    except Exception:
+        return None
+    try:
+        return build_first_four_private_runners(gateway=gateway)
+    except Exception:
+        return None
 
 
 def _quality_profile(key: str | QualityProfileKey = "balanced") -> WholeBookQualityProfile:
@@ -161,15 +184,17 @@ class ModulePipelineResultDTO:
 
 @dataclass
 class PrivateWholeBookAnalysisRuntime:
-    """Unique Phase 2B composition root (injectable; no production default Fake)."""
+    """Phase 2B-R composition root (injectable; no production default Fake)."""
 
     schema: str = RUNTIME_SCHEMA
     version: str = RUNTIME_VERSION
     production: bool = False
     synthetic: bool = True
     non_production: bool = True
+    lab_mode: bool = False
+    private_modules_bound: bool = False
 
-    # Agent P
+    # Agent P / S
     package_root: Path | None = None
     manifest_repository: PrivateEngineManifestRepository | None = None
     engine_package_verifier: PrivateEnginePackageVerifier | None = None
@@ -197,7 +222,7 @@ class PrivateWholeBookAnalysisRuntime:
     context_cache: InMemoryContextBundleCache = field(default_factory=InMemoryContextBundleCache)
     auxiliary_source: AuxiliaryContextSource = field(default_factory=EmptyAuxiliaryContextSource)
 
-    # Agent R
+    # Agent R / T
     module_registry: WholeBookModuleSpecRegistry = field(default_factory=build_default_module_spec_registry)
     module_runners: dict[WholeBookModuleKey, BaseWholeBookModuleRunner] = field(default_factory=dict)
     output_validator: DefaultModuleOutputValidator | None = None
@@ -206,6 +231,8 @@ class PrivateWholeBookAnalysisRuntime:
     checkpoint_validator: ModuleCheckpointValidator = field(default_factory=ModuleCheckpointValidator)
     evaluation_harness: WholeBookEvaluationHarness | None = None
     prompt_pack: FakePromptPackServiceManifest | None = None
+    private_runners: Mapping[str, Any] | None = None
+    fallback_to_fake: bool = True
 
     # Integration adapters
     bundle_mapper: WholeBookContextBundleMapper = field(default_factory=WholeBookContextBundleMapper)
@@ -220,8 +247,10 @@ class PrivateWholeBookAnalysisRuntime:
         if self.production:
             # Production composition must never build Fake runtime.
             raise RuntimeError("PrivateWholeBookAnalysisRuntime forbids production=True Fake composition")
-        if not self.non_production or not self.synthetic:
-            raise RuntimeError("Phase 2B runtime must remain synthetic/non_production")
+        if not self.non_production:
+            raise RuntimeError("Phase 2B-R runtime must remain non_production")
+        if not self.lab_mode and not self.synthetic:
+            raise RuntimeError("default Fake path must remain synthetic")
         self.module_registry.validate()
         if self.prompt_pack is None:
             self.prompt_pack = build_fake_prompt_pack()
@@ -232,13 +261,17 @@ class PrivateWholeBookAnalysisRuntime:
                 evidence_validator=self.evidence_adapter
             )
         if self.provider_gateway is None:
-            self.fake_provider = self.fake_provider or FakeProviderAdapter()
-            self.provider_gateway = DefaultWholeBookProviderGateway(
-                credential_resolver=self.credential_resolver,
-            )
-            # Ensure Fake adapter is the registered one we track.
-            assert self.provider_gateway.registry is not None
-            self.provider_gateway.registry.register(self.fake_provider)
+            if self.lab_mode:
+                self.provider_gateway = create_lab_provider_gateway(dry_run=True)
+                self.fake_provider = FakeProviderAdapter()
+            else:
+                self.fake_provider = self.fake_provider or FakeProviderAdapter()
+                self.provider_gateway = DefaultWholeBookProviderGateway(
+                    credential_resolver=self.credential_resolver,
+                )
+                # Ensure Fake adapter is the registered one we track.
+                assert self.provider_gateway.registry is not None
+                self.provider_gateway.registry.register(self.fake_provider)
         if self.fake_engine is None:
             self.fake_engine = FakePrivateWholeBookEngine()
         if self.runtime_adapter is None:
@@ -248,11 +281,26 @@ class PrivateWholeBookAnalysisRuntime:
                 prompt_pack=self.prompt_pack.manifest if self.prompt_pack else None,
             )
         if not self.module_runners:
-            self.module_runners = build_first_four_fake_runners(
-                prompt_pack=self.prompt_pack,
-                gateway=self.provider_gateway,
-                output_validator=self.output_validator,
-            )
+            private = self.private_runners
+            if private is None and self.lab_mode:
+                private = try_load_first_four_private_runners(gateway=self.provider_gateway)
+            if private:
+                self.module_runners = build_private_module_runner_adapters(
+                    private_runners=private,
+                    prompt_pack=self.prompt_pack,
+                    gateway=self.provider_gateway,
+                    fallback_to_fake=self.fallback_to_fake,
+                )
+                self.private_modules_bound = True
+                self.synthetic = False
+            else:
+                self.module_runners = build_first_four_fake_runners(
+                    prompt_pack=self.prompt_pack,
+                    gateway=self.provider_gateway,
+                    output_validator=self.output_validator,
+                )
+                self.private_modules_bound = False
+                self.synthetic = True
         else:
             for runner in self.module_runners.values():
                 runner.output_validator = self.output_validator
@@ -480,7 +528,16 @@ class PrivateWholeBookAnalysisRuntime:
             prompt_pack_ref=f"{pack.manifest.prompt_pack_id}@{pack.manifest.prompt_pack_version}",
             context_bundle_ref=context_bundle_ref,
             configuration_fingerprint=configuration_fingerprint_value,
-            provider_policy=provider_policy or {"provider_kind": "fake", "model_route": "fake-route"},
+            provider_policy=provider_policy
+            or (
+                {"provider_kind": "fake", "model_route": "fake-route"}
+                if not self.private_modules_bound
+                else {
+                    "provider_kind": "fake",
+                    "model_route": "lab-fake-route",
+                    "quality_profile": "balanced",
+                }
+            ),
             analysis_mode=analysis_mode,
         )
         assert_request_has_no_forbidden_fields(request)
@@ -491,8 +548,15 @@ class PrivateWholeBookAnalysisRuntime:
         # Fake engine health must not execute analysis.
         _ = self.runtime_adapter.health_check()
 
-        # Module runner path (DTO-shaped) via Provider Gateway → Fake Provider.
+        # Module runner path (DTO-shaped) via Provider Gateway.
         engine_result = runner.execute(translated)
+        usage_flags = {
+            "fake": not self.private_modules_bound,
+            "synthetic": not self.private_modules_bound
+            or bool((engine_result.module_outputs or {}).get("synthetic", False)),
+            "private_modules_bound": self.private_modules_bound,
+            "lab_mode": self.lab_mode,
+        }
         guarded = self.runtime_adapter.translate_result(
             PrivateEngineExecutionResult(
                 schema=engine_result.schema,
@@ -508,7 +572,7 @@ class PrivateWholeBookAnalysisRuntime:
                 relation_candidates=engine_result.relation_candidates,
                 conflict_candidates=engine_result.conflict_candidates,
                 checkpoint=engine_result.checkpoint,
-                usage={**dict(engine_result.usage), "fake": True, "synthetic": True},
+                usage={**dict(engine_result.usage), **usage_flags},
                 warnings=engine_result.warnings,
                 validation_summary=engine_result.validation_summary,
                 generated_at=engine_result.generated_at,
@@ -574,13 +638,14 @@ class PrivateWholeBookAnalysisRuntime:
             configuration_fingerprint=configuration_fingerprint_value,
             prompt_pack_id=pack.manifest.prompt_pack_id,
             prompt_pack_version=pack.manifest.prompt_pack_version,
-            mock=True,
+            mock=not self.private_modules_bound,
         )
         persist_summary: Mapping[str, Any] = {"recorded": False}
         if persist:
             persist_summary = self.persistence.persist_commands(built)
 
         runtime_bundle = self.runtime_bundles.get(context_bundle_ref)
+        is_fake = not self.private_modules_bound
         return ModulePipelineResultDTO(
             schema="storylens.phase2b.module_pipeline_result",
             version="1.0.0",
@@ -628,11 +693,11 @@ class PrivateWholeBookAnalysisRuntime:
                 "integrity_hash": guarded.checkpoint.integrity_hash,
             },
             usage=dict(guarded.usage),
-            fake=True,
-            synthetic=True,
+            fake=is_fake,
+            synthetic=is_fake or bool(guarded.module_outputs.get("synthetic", False)),
             non_production=True,
             canonical=False,
-            asset_written=False,
+            asset_written=bool(persist_summary.get("orm_written")),
             network=False,
             model_called=False,
             formal_prompt=False,
@@ -643,6 +708,9 @@ class PrivateWholeBookAnalysisRuntime:
 
         from app.narrative_core.contracts.api_dto import WHOLE_BOOK_RUNS_ENDPOINT_DISABLED
         from app.narrative_core.run_shell_contract.mock_lab import WHOLE_BOOK_MOCK_LAB_ENABLED
+        from app.narrative_core.run_shell_contract.private_engine_lab import (
+            WHOLE_BOOK_PRIVATE_ENGINE_LAB_ENABLED,
+        )
         from app.narrative_core.services.whole_book_engine_registry import (
             PRODUCTION_DEFAULT_ENGINE_ID,
         )
@@ -677,12 +745,15 @@ class PrivateWholeBookAnalysisRuntime:
             errors.append("WHOLE_BOOK_RUNS_ENDPOINT_DISABLED_not_true")
         if WHOLE_BOOK_MOCK_LAB_ENABLED is not False:
             errors.append("WHOLE_BOOK_MOCK_LAB_ENABLED_not_false")
+        if WHOLE_BOOK_PRIVATE_ENGINE_LAB_ENABLED is not False:
+            errors.append("WHOLE_BOOK_PRIVATE_ENGINE_LAB_ENABLED_not_false")
         return {
             "ok": not errors,
             "errors": errors,
             "production_default_engine_id": PRODUCTION_DEFAULT_ENGINE_ID,
             "whole_book_runs_endpoint_disabled": WHOLE_BOOK_RUNS_ENDPOINT_DISABLED,
             "mock_lab_enabled_default": WHOLE_BOOK_MOCK_LAB_ENABLED,
+            "private_engine_lab_enabled_default": WHOLE_BOOK_PRIVATE_ENGINE_LAB_ENABLED,
             "fake_runtime_forbidden_in_production": True,
             "network": False,
             "model_called": False,
@@ -698,24 +769,77 @@ def create_private_whole_book_analysis_runtime(
     grouping_policy: ParagraphGroupingPolicy | None = None,
     auxiliary_source: AuxiliaryContextSource | None = None,
     persistence: CandidatePersistenceAdapter | None = None,
+    lab_mode: bool = False,
+    private_runners: Mapping[str, Any] | None = None,
+    use_phase1b_persistence: bool = False,
+    book_id: int | None = None,
+    lab_dry_run: bool = True,
+    fallback_to_fake: bool = True,
 ) -> PrivateWholeBookAnalysisRuntime:
-    """Factory — tests inject isolated runtimes. Production must not call with Fake."""
+    """Factory — tests inject isolated runtimes. Production must not call with Fake.
+
+    Default: Fake runners + Recording sink.
+    Lab mode: create_lab_provider_gateway + optional private runners + optional Phase1B sink.
+    """
 
     if production:
         raise RuntimeError("production must not construct Fake PrivateWholeBookAnalysisRuntime")
+
+    sink: CandidatePersistenceAdapter
+    if persistence is not None:
+        sink = persistence
+    elif use_phase1b_persistence:
+        if session is None or book_id is None:
+            raise ValueError("Phase1B persistence requires session and book_id")
+        sink = Phase1BCandidatePersistenceSink(session, book_id=book_id)
+    else:
+        sink = RecordingCandidatePersistenceSink()
+
+    gateway = None
+    if lab_mode:
+        gateway = create_lab_provider_gateway(dry_run=lab_dry_run)
+
+    # Lab or explicit private runners: still non-production; synthetic flipped when bound.
+    effective_lab = bool(lab_mode or private_runners is not None)
     runtime = PrivateWholeBookAnalysisRuntime(
         production=False,
         synthetic=True,
         non_production=True,
+        lab_mode=effective_lab,
         grouping_policy=grouping_policy or default_paragraph_grouping_policy(),
         auxiliary_source=auxiliary_source or EmptyAuxiliaryContextSource(),
-        persistence=persistence or RecordingCandidatePersistenceSink(),
+        persistence=sink,
+        provider_gateway=gateway,
+        private_runners=private_runners,
+        fallback_to_fake=fallback_to_fake,
     )
     if session is not None:
         runtime.bind_session(session)
     if package_root is not None:
         runtime.prepare_engine_packages(package_root)
     return runtime
+
+
+def create_lab_private_whole_book_analysis_runtime(
+    *,
+    session: Session | None = None,
+    book_id: int | None = None,
+    use_phase1b_persistence: bool = True,
+    lab_dry_run: bool = True,
+    private_runners: Mapping[str, Any] | None = None,
+    fallback_to_fake: bool = True,
+) -> PrivateWholeBookAnalysisRuntime:
+    """Private Engine Lab composition — non-production only; no live calls by default."""
+
+    return create_private_whole_book_analysis_runtime(
+        session=session,
+        lab_mode=True,
+        lab_dry_run=lab_dry_run,
+        private_runners=private_runners,
+        use_phase1b_persistence=use_phase1b_persistence and session is not None and book_id is not None,
+        book_id=book_id,
+        fallback_to_fake=fallback_to_fake,
+    )
 
 
 # Aliases matching composition naming options in the brief.
@@ -737,5 +861,7 @@ __all__ = [
     "PrivateWholeBookRuntime",
     "RUNTIME_SCHEMA",
     "RUNTIME_VERSION",
+    "create_lab_private_whole_book_analysis_runtime",
     "create_private_whole_book_analysis_runtime",
+    "try_load_first_four_private_runners",
 ]

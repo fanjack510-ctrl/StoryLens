@@ -18,19 +18,32 @@
   "blocker_level": null,
   "head_inclusion": null,
   "created_at": "2026-07-24T01:13:16Z",
-  "updated_at": "2026-07-24T01:13:16Z",
+  "updated_at": "2026-07-24T02:10:00Z",
   "file_ownership": "docs/architecture/narrative-intelligence-core/phase2br-parallel-file-ownership.json",
   "id": "CHG-20260723-044",
   "title": "Phase 2B-R Integration",
-  "status": "registered",
+  "status": "implemented",
   "modules": [
     "integration",
     "private_lab",
     "candidate_persistence"
   ],
-  "files": [],
+  "files": [
+    "apps/api/app/narrative_core/services/private_whole_book_analysis_runtime.py",
+    "apps/api/app/narrative_core/services/whole_book_module_runner.py",
+    "apps/api/app/main.py",
+    "apps/api/tests/test_narrative_phase2br_integration.py",
+    "docs/architecture/narrative-intelligence-core/phase2br-integration-report.md",
+    "docs/architecture/narrative-intelligence-core/phase2br-known-limitations.md",
+    "docs/architecture/narrative-intelligence-core/phase2br-production-isolation-verification.md",
+    "docs/architecture/narrative-intelligence-core/README.md",
+    "docs/architecture/README.md",
+    "release/changes/CHG-20260723-042.json",
+    "release/changes/CHG-20260723-043.json",
+    "release/changes/CHG-20260723-044.json"
+  ],
   "user_summary": "Integrate private runtime, real modules, Private Lab, Provider E2E, and candidate persistence; keep status tested until Live Smoke.",
-  "technical_summary": "Merge public+private S/T; compose PrivateWholeBookAnalysisRuntime; Private Lab; Provider E2E under Lab; candidate persistence; directed eval; manual Live Smoke gate for verified.",
+  "technical_summary": "Cherry-pick public S then T onto integration/narrative-phase2br; compose PrivateWholeBookAnalysisRuntime with Fake default + Lab path (create_lab_provider_gateway, build_private_module_runner_adapters / build_first_four_private_runners, Phase1BCandidatePersistenceSink). Private Lab mount gated. Directed eval in test_narrative_phase2br_integration.py. Private HEAD composition follow-up recorded separately.",
   "acceptance_criteria": [
     "Composition root wires real private engine under Lab only",
     "Four modules real path under Lab",
@@ -39,9 +52,20 @@
     "Status max tested until Live Smoke"
   ],
   "tests": [
-    "apps/api/tests/test_narrative_phase2br_integration.py"
+    "apps/api/tests/test_narrative_phase2br_integration.py",
+    "apps/api/tests/test_narrative_phase2br_private_runtime.py",
+    "apps/api/tests/test_narrative_phase2br_real_modules.py"
   ],
   "verification_evidence": [],
+  "private_engine": {
+    "repo": "D:\\\\Dstorylens-private-engine",
+    "branch": "integration/narrative-phase2br",
+    "worktree": "D:\\\\Dstorylens-private-engine-wt-integration",
+    "commit": "61cdc3ad184c00e0ab19bcc87b61149293fc3598",
+    "engine_id": "storylens.private.whole_book.dev",
+    "engine_version": "0.1.0-dev",
+    "notes": "Private S+T at 10c19fc; Integration composition follow-up 61cdc3a (create_composed_private_engine_entry)"
+  },
   "parallel_plan": {
     "role": "integration",
     "branch": "integration/narrative-phase2br",

@@ -55,3 +55,6 @@ Related: [docs/audits](../audits/), [docs/release/v1.0-baseline-notes.md](../rel
 | [narrative-intelligence-core/phase2br-live-analysis-safety.md](./narrative-intelligence-core/phase2br-live-analysis-safety.md) | Phase 2B-R Private Lab 安全门禁 |
 | [narrative-intelligence-core/phase2br-parallel-file-ownership.md](./narrative-intelligence-core/phase2br-parallel-file-ownership.md) | Phase 2B-R 文件所有权 |
 | [narrative-intelligence-core/phase2br-parallel-file-ownership.json](./narrative-intelligence-core/phase2br-parallel-file-ownership.json) | Phase 2B-R 文件所有权（机器可读） |
+| [narrative-intelligence-core/phase2br-integration-report.md](./narrative-intelligence-core/phase2br-integration-report.md) | Phase 2B-R Integration 报告 |
+| [narrative-intelligence-core/phase2br-known-limitations.md](./narrative-intelligence-core/phase2br-known-limitations.md) | Phase 2B-R 已知限制 |
+| [narrative-intelligence-core/phase2br-production-isolation-verification.md](./narrative-intelligence-core/phase2br-production-isolation-verification.md) | Phase 2B-R 生产隔离验证 |

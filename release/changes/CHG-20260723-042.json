@@ -4,28 +4,34 @@
   "include_in_next_release": true,
   "commits": [
     {
-      "sha": "8d193e6ff0738298263d84f4060e1556b5bc124d",
+      "sha": "233c13769e7121a408d2155b11b89426112b95dc",
       "message": "feat: implement private engine runtime and provider lab foundation",
       "primary": true,
-      "multi_change_reason": null
+      "multi_change_reason": "Mounted from CHG-20260723-042 cherry-pick on integration/narrative-phase2br (agent tip c37e302)"
     },
     {
-      "sha": "e4128a46cd2735b3bbf6bff3116f42ac90fffa4b",
+      "sha": "5cdf494459ee4e6d7cbb11ab9e1272bac6c3ee09",
       "message": "docs: attach CHG-20260723-042 and mark tested",
       "primary": false,
-      "multi_change_reason": "Attach status/metadata follow-up commit after mark tested"
+      "multi_change_reason": "Mounted from CHG-20260723-042 cherry-pick on integration branch"
     },
     {
-      "sha": "2960588761d0fac144de62a3a55be5da3a305343",
+      "sha": "801e31feb98ab827e1f9eec202188396b167c986",
       "message": "docs: close CHG-20260723-042 commit attachment loop",
       "primary": false,
-      "multi_change_reason": "Close commit attachment loop after tested mark"
+      "multi_change_reason": "Mounted from CHG-20260723-042 cherry-pick on integration branch"
     },
     {
-      "sha": "354a846ede312c2f62dbf7cee94e5c66d6d578ad",
+      "sha": "2428b7803553e036b9b908226fa3a4944573c78e",
       "message": "docs: sync final CHG-20260723-042 commit list",
       "primary": false,
-      "multi_change_reason": "Sync final commit list entry"
+      "multi_change_reason": "Mounted from CHG-20260723-042 cherry-pick on integration branch"
+    },
+    {
+      "sha": "6a66cd8d11cadea236a667cb5b065a6d9280b27e",
+      "message": "docs: finalize CHG-20260723-042 commit attachments",
+      "primary": false,
+      "multi_change_reason": "Mounted from CHG-20260723-042 cherry-pick on integration branch"
     }
   ],
   "data_compatibility": {
@@ -43,7 +49,7 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-24T01:13:16Z",
-  "updated_at": "2026-07-24T01:47:27Z",
+  "updated_at": "2026-07-24T02:10:00Z",
   "file_ownership": "docs/architecture/narrative-intelligence-core/phase2br-parallel-file-ownership.json",
   "id": "CHG-20260723-042",
   "title": "Private Runtime and Provider Implementation",
@@ -66,7 +72,7 @@
     "release/changes/CHG-20260723-042.json"
   ],
   "user_summary": "Implement private engine runtime foundation, first real Provider adapter, and Private Engine Lab gates without four-module algorithms.",
-  "technical_summary": "Agent S: private repo package skeleton (runtime entry, empty prompt pack loader, QualityProfile route tables, structured repair), Bailian ProviderAdapter behind Gateway with Fake retained, ExistingCredentialServiceAdapter + CloudBudgetGuardBridge at execute boundary, Private Engine Lab (default false) with dry Fake/dry Bailian probes. No four-module algorithms. No production gate flips. Private commit e57da9bb28bf568c2646b1869b95c42be6e034e1.",
+  "technical_summary": "Agent S: private repo package skeleton (runtime entry, empty prompt pack loader, QualityProfile route tables, structured repair), Bailian ProviderAdapter behind Gateway with Fake retained, ExistingCredentialServiceAdapter + CloudBudgetGuardBridge at execute boundary, Private Engine Lab (default false) with dry Fake/dry Bailian probes. No four-module algorithms. No production gate flips. Private commit e57da9bb28bf568c2646b1869b95c42be6e034e1. Public commits remounted via cherry-pick on integration/narrative-phase2br.",
   "acceptance_criteria": [
     "Private package loadable via Manifest/Loader in Lab",
     "aliyun_qwen_plus adapter behind Gateway; Fake remains",
@@ -78,8 +84,7 @@
     "apps/api/tests/test_narrative_phase2br_private_runtime.py"
   ],
   "verification_evidence": [
-    "pytest apps/api/tests/test_narrative_phase2br_private_runtime.py -q → 17 passed",
-    "scripts/check_project.py / version_manager / change_registry / check_capability_keys / git diff --check passed",
+    "pytest apps/api/tests/test_narrative_phase2br_private_runtime.py -q → passed on integration",
     "gates: VERSION=1.0.5 PRO_CAPABILITIES_SHIPPED=false WHOLE_BOOK_RUNS_ENDPOINT_DISABLED=True PRODUCTION_DEFAULT_ENGINE_ID=None MOCK_LAB=False PRIVATE_LAB=False"
   ],
   "private_engine": {
@@ -94,6 +99,9 @@
       "quality_profile": "balanced"
     }
   },
+  "notes": [
+    "Agent branch tip c37e302c050f633b4b309b0cba49471f36fb5463; integration mounts cherry-pick SHAs"
+  ],
   "parallel_plan": {
     "role": "agent_s",
     "branch": "feature/narrative-phase2br-private-runtime",

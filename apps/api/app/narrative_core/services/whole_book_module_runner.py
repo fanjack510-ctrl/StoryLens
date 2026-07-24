@@ -1331,6 +1331,18 @@ class PrivateModuleRunnerAdapter(BaseWholeBookModuleRunner):
         outputs.setdefault("orm_access", False)
         outputs.setdefault("credential_read", False)
         outputs.setdefault("direct_provider_http", False)
+        # Public validator expects claim counts; private runners may emit claim-name tuples.
+        for claim_key in ("required_claims", "evidenced_claims"):
+            raw = outputs.get(claim_key)
+            if isinstance(raw, (list, tuple)):
+                outputs[f"{claim_key}_refs"] = tuple(raw)
+                outputs[claim_key] = len(raw)
+        checkpoint = result.checkpoint
+        if checkpoint is not None and not hasattr(checkpoint, "protocol_version"):
+            # Private package may return a mapping; coerce via public builder.
+            checkpoint = self.build_checkpoint(request)
+        elif checkpoint is None:
+            checkpoint = self.build_checkpoint(request)
         return PrivateEngineExecutionResult(
             schema=result.schema,
             version=result.version,
@@ -1344,7 +1356,7 @@ class PrivateModuleRunnerAdapter(BaseWholeBookModuleRunner):
             asset_candidates=result.asset_candidates,
             relation_candidates=result.relation_candidates,
             conflict_candidates=result.conflict_candidates,
-            checkpoint=result.checkpoint or self.build_checkpoint(request),
+            checkpoint=checkpoint,
             usage=dict(result.usage or {}),
             warnings=tuple(result.warnings or ()) + ("private_module_adapter",),
             validation_summary=dict(result.validation_summary or {}),

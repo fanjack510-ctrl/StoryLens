@@ -4,28 +4,34 @@
   "include_in_next_release": true,
   "commits": [
     {
-      "sha": "8845a2039d3283d047e20d916e5eb025d7286ac8",
+      "sha": "8468db4bc342cdfabe33a0441c8a29adf5a0d57c",
       "message": "feat: implement first four real whole-book module runners",
       "primary": true,
-      "multi_change_reason": null
+      "multi_change_reason": "Mounted from CHG-20260723-043 cherry-pick on integration/narrative-phase2br (agent tip 6bc3421)"
     },
     {
-      "sha": "da67a4a7f81760105e0003217eb56963010ded7b",
+      "sha": "f0b66427be0179bb7351961fb8e50d8ca2506256",
       "message": "chore: attach CHG-20260723-043 and mark tested",
-      "primary": true,
-      "multi_change_reason": null
+      "primary": false,
+      "multi_change_reason": "Mounted from CHG-20260723-043 cherry-pick on integration branch"
     },
     {
-      "sha": "aaad8bec31fe874c25b5dc5793e58b64ae8f5e40",
+      "sha": "2eb9d8f4280f10683cb5abd3094140a4bdacdaaf",
       "message": "chore: sync CHG-20260723-043 commit attachment",
-      "primary": true,
-      "multi_change_reason": null
+      "primary": false,
+      "multi_change_reason": "Mounted from CHG-20260723-043 cherry-pick on integration branch"
     },
     {
-      "sha": "f82b9facce27cb196a36abb78bf7b2ea1f850dfe",
+      "sha": "09bd1266b36b68fe3f6bd300382b44caa3f52f7c",
       "message": "chore: finalize CHG-20260723-043 commit list",
-      "primary": true,
-      "multi_change_reason": null
+      "primary": false,
+      "multi_change_reason": "Mounted from CHG-20260723-043 cherry-pick on integration branch"
+    },
+    {
+      "sha": "044d98f26f209c00c3df43e26469d7c7395806b2",
+      "message": "chore: close CHG-20260723-043 commit attachment loop",
+      "primary": false,
+      "multi_change_reason": "Mounted from CHG-20260723-043 cherry-pick on integration branch"
     }
   ],
   "data_compatibility": {
@@ -43,7 +49,7 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-24T01:13:16Z",
-  "updated_at": "2026-07-24T01:51:00Z",
+  "updated_at": "2026-07-24T02:10:00Z",
   "file_ownership": "docs/architecture/narrative-intelligence-core/phase2br-parallel-file-ownership.json",
   "id": "CHG-20260723-043",
   "title": "First Four Real Modules Implementation",
@@ -66,7 +72,7 @@
     "release/changes/CHG-20260723-043.json"
   ],
   "user_summary": "Implement private four-module runners, Prompt Packs, evidence/context strategies, and Phase 1B candidate persistence adapter without Provider HTTP.",
-  "technical_summary": "Agent T: private runners for book_overview/structure_stages/chapter_functions/storylines; formal Prompt Packs; context/evidence policies; Phase1BCandidatePersistenceSink over existing services. Fake runners retained. Public PrivateModuleRunnerAdapter delegates via Protocol. No Provider HTTP, Loader, Lab, Migration, or gate flips.",
+  "technical_summary": "Agent T: private runners for book_overview/structure_stages/chapter_functions/storylines; formal Prompt Packs; context/evidence policies; Phase1BCandidatePersistenceSink over existing services. Fake runners retained. Public PrivateModuleRunnerAdapter delegates via Protocol. No Provider HTTP, Loader, Lab, Migration, or gate flips. Public commits remounted via cherry-pick on integration/narrative-phase2br.",
   "acceptance_criteria": [
     "Four private runners with Evidence and partial support",
     "Prompt Packs private-only; public metadata only",
@@ -79,17 +85,24 @@
     "private:tests/test_first_four_modules.py"
   ],
   "verification_evidence": [
-    "pytest apps/api/tests/test_narrative_phase2br_real_modules.py → 11 passed",
-    "pytest private tests/test_first_four_modules.py → 8 passed",
-    "scripts/check_project.py → passed (VERSION 1.0.5)"
+    "pytest apps/api/tests/test_narrative_phase2br_real_modules.py → passed on integration",
+    "pytest private tests/test_first_four_modules.py → passed",
+    "scripts/check_project.py → VERSION 1.0.5"
   ],
   "notes": [
-    "Private repo branch feature/narrative-phase2br-real-modules worktree D:\\\\Dstorylens-private-engine-wt-modules",
+    "Agent branch tip 6bc3421711784a0e1f619951a84eac2daff1e055; integration mounts cherry-pick SHAs",
     "Private base commit (Agent S): e57da9bb28bf568c2646b1869b95c42be6e034e1",
     "Private commit: 10c19fc57f8ef4a694704215831223c0649eb0a6",
     "Schema: no new Migration; attributes_json/payload_json carry run_stage_id + engine/module/prompt versions + fingerprints",
     "Evidence rows lack run_id — bound via parent Asset/Relation version only (documented, not a blocker for candidate writes)"
   ],
+  "private_engine": {
+    "repo": "D:\\\\Dstorylens-private-engine",
+    "branch": "feature/narrative-phase2br-real-modules",
+    "commit": "10c19fc57f8ef4a694704215831223c0649eb0a6",
+    "engine_id": "storylens.private.whole_book.dev",
+    "engine_version": "0.1.0-dev"
+  },
   "parallel_plan": {
     "role": "agent_t",
     "branch": "feature/narrative-phase2br-real-modules",
@@ -104,16 +117,14 @@
       "CHG-20260723-044"
     ],
     "forbidden": [
-      "provider HTTP",
-      "credential in DTO",
-      "open production run",
-      "migrations",
+      "Provider HTTP in modules",
+      "formal whole-book run enable",
+      "migrations unless escalated",
       "VERSION bump",
       "push/build/publish"
     ]
   },
-  "gates_confirmed": {
-    "VERSION": "1.0.5",
+  "gates": {
     "PRO_CAPABILITIES_SHIPPED": false,
     "WHOLE_BOOK_RUNS_ENDPOINT_DISABLED": true,
     "PRODUCTION_DEFAULT_ENGINE_ID": null,
