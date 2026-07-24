@@ -13,7 +13,13 @@
       "sha": "d3569b88a41fc429aecffc2343f3e059cfda2a8b",
       "message": "docs: attach CHG-20260723-047 public commit",
       "primary": true,
-      "multi_change_reason": "Attach commit list after primary implementation"
+      "multi_change_reason": "Attach status/metadata follow-up"
+    },
+    {
+      "sha": "ad5703607fd8870b6121ef1f709054a1f6adb51e",
+      "message": "docs: fix CHG-20260723-047 commit object shape",
+      "primary": true,
+      "multi_change_reason": "Fix commit object shape for registry"
     }
   ],
   "data_compatibility": {
