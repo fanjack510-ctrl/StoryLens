@@ -442,7 +442,24 @@ class PrivateLabRunExecutor:
                     book_snapshot_id=int(run.book_snapshot_id or 0),
                     module_keys=(module_key,),
                 )
-                ref = getattr(contract, "context_bundle_ref", None) or f"bundle:{run.id}"
+                from app.narrative_core.private_engine_contract.context import (
+                    make_context_bundle_ref,
+                )
+
+                # Single source of truth — never invent bundle:{run_id}.
+                ref = make_context_bundle_ref(contract.bundle_hash)
+                if ref not in getattr(runtime, "contract_bundles", {}):
+                    raise PrivateWholeBookLabRunError(
+                        PrivateEngineLabDenyReason.PRIVATE_ENGINE_LAB_OPERATION_NOT_ALLOWED,
+                        run_id=int(run.id),
+                        detail_code="CONTEXT_BUNDLE_REF_NOT_REGISTERED",
+                    )
+                # Persist formal ref into run metadata for resume/audit (no new columns).
+                meta["context_bundle_ref"] = ref
+                meta["context_bundle_hash"] = str(contract.bundle_hash)
+                meta["context_pipeline_version"] = str(
+                    getattr(contract, "pipeline_version", "") or ""
+                )
                 provider_kind = "fake" if not live_requested else str(
                     meta.get("provider_key") or "aliyun_qwen_plus"
                 )
@@ -474,10 +491,18 @@ class PrivateLabRunExecutor:
                 persist = dict(cand.get("persist") or {})
                 persistence_summary = {
                     "orm_written": bool(persist.get("orm_written")),
-                    "fallback": persist.get("fallback"),
-                    "asset_count": persist.get("asset_count") or cand.get("asset_count"),
+                    "persistence_complete": bool(persist.get("persistence_complete")),
+                    "candidate_written": bool(persist.get("candidate_written")),
+                    "evidence_written": bool(persist.get("evidence_written")),
+                    "artifact_written": bool(persist.get("artifact_written")),
+                    "fallback": persist.get("fallback") or persist.get("fallback_used"),
+                    "fallback_used": bool(persist.get("fallback_used") or persist.get("fallback")),
+                    "asset_count": persist.get("asset_count")
+                    if persist.get("asset_count") is not None
+                    else cand.get("asset_count"),
                     "evidence_count": persist.get("evidence_count"),
                     "rejected": bool(cand.get("rejected")),
+                    "context_bundle_ref": ref,
                 }
                 engine_result = getattr(pipeline, "engine_result", None)
                 ev_count = len(getattr(engine_result, "evidence_candidates", ()) or ())
@@ -492,11 +517,14 @@ class PrivateLabRunExecutor:
                     output_fp = str(pipeline.output_fingerprint)
                 elif getattr(engine_result, "output_fingerprint", None):
                     output_fp = str(engine_result.output_fingerprint)
-                # Live path: never accept port_only / recording fallback.
+                # Live path: never accept port_only / recording fallback / artifact-only.
                 if live_requested and (
                     persist.get("fallback") == "port_only"
+                    or persist.get("fallback_used")
                     or self._use_recording_persistence
+                    or not persist.get("persistence_complete")
                     or not persist.get("orm_written")
+                    or not persist.get("candidate_written")
                 ):
                     raise PrivateWholeBookLabRunError(
                         PrivateEngineLabDenyReason.PRIVATE_ENGINE_LAB_OPERATION_NOT_ALLOWED,
@@ -620,7 +648,13 @@ class PrivateLabRunExecutor:
             _fail("LIVE_EVIDENCE_COVERAGE_INCOMPLETE")
         if not persistence_summary.get("orm_written"):
             _fail("LIVE_ORM_WRITTEN_REQUIRED")
-        if persistence_summary.get("fallback"):
+        if persistence_summary.get("persistence_complete") is False:
+            _fail("LIVE_PERSISTENCE_INCOMPLETE")
+        if persistence_summary.get("candidate_written") is False:
+            _fail("LIVE_CANDIDATE_REQUIRED")
+        if persistence_summary.get("evidence_written") is False:
+            _fail("LIVE_EVIDENCE_ORM_REQUIRED")
+        if persistence_summary.get("fallback") or persistence_summary.get("fallback_used"):
             _fail("LIVE_PERSISTENCE_FALLBACK_FORBIDDEN")
         if pipeline_status in {"failed", "cancelled"}:
             _fail(f"LIVE_PIPELINE_{pipeline_status.upper()}")

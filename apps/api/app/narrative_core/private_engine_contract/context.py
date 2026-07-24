@@ -12,6 +12,36 @@ from typing import Any, Mapping, Protocol, Sequence, runtime_checkable
 CONTEXT_PIPELINE_VERSION = "1.0.0"
 CONTEXT_SCHEMA = "storylens.whole_book_context"
 CONTEXT_SCHEMA_VERSION = "1.0.0"
+CONTEXT_BUNDLE_REF_PREFIX = "ctx-bundle:"
+
+
+def make_context_bundle_ref(bundle_hash: str) -> str:
+    """Canonical registry key for a Context Bundle (single source of truth)."""
+
+    digest = str(bundle_hash or "").strip()
+    if not digest:
+        raise ValueError("bundle_hash is required for context_bundle_ref")
+    if digest.startswith(CONTEXT_BUNDLE_REF_PREFIX):
+        return digest
+    return f"{CONTEXT_BUNDLE_REF_PREFIX}{digest}"
+
+
+def parse_context_bundle_hash(context_bundle_ref: str) -> str:
+    """Extract content hash from a canonical context_bundle_ref."""
+
+    ref = str(context_bundle_ref or "").strip()
+    if not ref:
+        raise ValueError("context_bundle_ref is required")
+    if ref.startswith(CONTEXT_BUNDLE_REF_PREFIX):
+        digest = ref[len(CONTEXT_BUNDLE_REF_PREFIX) :].strip()
+    else:
+        # Explicit reject of legacy Executor-only bundle:{run_id} inventing.
+        if ref.startswith("bundle:"):
+            raise ValueError("legacy bundle:{run_id} context_bundle_ref is not allowed")
+        digest = ref
+    if not digest:
+        raise ValueError("context_bundle_ref has empty hash")
+    return digest
 
 
 class ContextUnitType(StrEnum):

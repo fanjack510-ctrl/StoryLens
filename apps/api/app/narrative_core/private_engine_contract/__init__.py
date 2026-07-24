@@ -28,6 +28,7 @@ from app.narrative_core.private_engine_contract.checkpoint import (
     build_fake_checkpoint,
 )
 from app.narrative_core.private_engine_contract.context import (
+    CONTEXT_BUNDLE_REF_PREFIX,
     CONTEXT_LEVEL_DESCRIPTIONS,
     CONTEXT_PIPELINE_METHODS,
     CONTEXT_PIPELINE_VERSION,
@@ -226,6 +227,7 @@ __all__ = [
     "BOOK_OVERVIEW_SPEC",
     "CHAPTER_FUNCTIONS_SPEC",
     "CHECKPOINT_REJECT_REASONS",
+    "CONTEXT_BUNDLE_REF_PREFIX",
     "CONTEXT_LEVEL_DESCRIPTIONS",
     "CONTEXT_PIPELINE_METHODS",
     "CONTEXT_PIPELINE_VERSION",
@@ -296,6 +298,8 @@ __all__ = [
     "FakeModuleOutputValidator",
     "FakeModuleRunner",
     "FakePrivateWholeBookEngineLoader",
+    "make_context_bundle_ref",
+    "parse_context_bundle_hash",
     "FakePromptPackBody",
     "FakePromptPackManifest",
     "FakeProviderGateway",

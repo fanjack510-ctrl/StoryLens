@@ -323,14 +323,122 @@ class PrivateWholeBookAnalysisRuntime:
         self.context_bundle_builder.pipeline._builder = self.context_pipeline._builder
         self.native_context_provider = NativeWholeBookContextProvider(session)
         self.enhanced_context_provider = EnhancedWholeBookContextProvider(session)
+        self.evidence_validator = DefaultEvidenceValidator(session=session)
+        if self.evidence_adapter is not None:
+            self.evidence_adapter.validator = self.evidence_validator
 
     def bind_session(self, session: Session) -> None:
         self.session = session
         self._wire_session(session)
 
+    def _ensure_evidence_view(self, *, book_id: int, book_snapshot_id: int) -> None:
+        """Register Snapshot view for Evidence Validator (Live ORM path)."""
+
+        if self.session is None or self.evidence_adapter is None:
+            return
+        try:
+            if getattr(self.evidence_validator, "_session", None) is None:
+                self.evidence_validator = DefaultEvidenceValidator(session=self.session)
+                self.evidence_adapter.validator = self.evidence_validator
+            view = self.evidence_validator.build_view_from_session(
+                book_id=int(book_id),
+                book_snapshot_id=int(book_snapshot_id),
+                known_output_refs=(),
+            )
+            self.register_evidence_view(view)
+        except Exception:  # noqa: BLE001
+            return
+
     def register_evidence_view(self, view: EvidenceValidatorSnapshotView) -> None:
         assert self.evidence_adapter is not None
         self.evidence_adapter.register_view(view)
+
+    def _enrich_evidence_from_snapshot_view(
+        self,
+        evidence: Sequence[EvidenceCandidate],
+        *,
+        book_id: int,
+        book_snapshot_id: int,
+    ) -> tuple[EvidenceCandidate, ...]:
+        """Fill missing paragraph hash/ids from registered Snapshot view.
+
+        Does not invent locators — only completes fields already bound by Provider
+        stable_paragraph_id / chapter / paragraph identifiers present in the Snapshot.
+        """
+
+        if not evidence:
+            return ()
+        self._ensure_evidence_view(book_id=book_id, book_snapshot_id=book_snapshot_id)
+        view = None
+        if self.evidence_adapter is not None:
+            view = self.evidence_adapter.views_by_snapshot.get(int(book_snapshot_id))
+            if (
+                view is None
+                and self.evidence_adapter.snapshot_view is not None
+                and int(self.evidence_adapter.snapshot_view.book_snapshot_id)
+                == int(book_snapshot_id)
+            ):
+                view = self.evidence_adapter.snapshot_view
+        if view is None:
+            return tuple(evidence)
+
+        stable_to_pid = {str(v): int(k) for k, v in view.stable_paragraph_ids.items()}
+        # Also allow numeric-string stable ids that equal paragraph PK.
+        for pid in view.paragraph_ids:
+            stable_to_pid.setdefault(str(pid), int(pid))
+
+        enriched: list[EvidenceCandidate] = []
+        for ev in evidence:
+            pid = ev.snapshot_paragraph_id
+            if pid is None and ev.stable_paragraph_id:
+                pid = stable_to_pid.get(str(ev.stable_paragraph_id))
+            chapter = ev.snapshot_chapter_id
+            if pid is not None and chapter is None:
+                chapter = view.paragraph_chapter.get(int(pid))
+            content_hash = ev.paragraph_content_hash
+            if pid is not None and (not content_hash or content_hash == "missing"):
+                content_hash = str(view.paragraph_hashes.get(int(pid)) or content_hash or "")
+            stable = ev.stable_paragraph_id
+            if pid is not None and not stable:
+                stable = view.stable_paragraph_ids.get(int(pid))
+            start = ev.start_offset
+            end = ev.end_offset
+            if pid is not None and start is None and end is None:
+                para_len = view.paragraph_lengths.get(int(pid))
+                if para_len is not None and para_len > 0:
+                    start, end = 0, int(para_len)
+            if (
+                pid == ev.snapshot_paragraph_id
+                and chapter == ev.snapshot_chapter_id
+                and content_hash == ev.paragraph_content_hash
+                and stable == ev.stable_paragraph_id
+                and start == ev.start_offset
+                and end == ev.end_offset
+            ):
+                enriched.append(ev)
+                continue
+            enriched.append(
+                EvidenceCandidate(
+                    candidate_id=ev.candidate_id,
+                    book_snapshot_id=ev.book_snapshot_id,
+                    snapshot_chapter_id=chapter,
+                    snapshot_paragraph_id=pid,
+                    stable_paragraph_id=str(stable) if stable is not None else None,
+                    paragraph_content_hash=str(content_hash or ""),
+                    start_offset=start,
+                    end_offset=end,
+                    evidence_role=ev.evidence_role,
+                    target_module_key=ev.target_module_key,
+                    target_output_ref=ev.target_output_ref,
+                    extraction_method=ev.extraction_method,
+                    confidence=ev.confidence,
+                    source_context_unit_id=ev.source_context_unit_id,
+                    book_id=ev.book_id if ev.book_id is not None else book_id,
+                    preview=ev.preview,
+                    from_derived_summary=ev.from_derived_summary,
+                )
+            )
+        return tuple(enriched)
 
     def build_native_context_bundle(
         self,
@@ -362,10 +470,13 @@ class PrivateWholeBookAnalysisRuntime:
             grouping=grouping,
         )
         contract = self.bundle_mapper.to_contract(runtime_bundle)
-        ref = f"ctx-bundle:{contract.bundle_hash}"
+        from app.narrative_core.private_engine_contract.context import make_context_bundle_ref
+
+        ref = make_context_bundle_ref(contract.bundle_hash)
         self.contract_bundles[ref] = contract
         self.contract_bundles[contract.bundle_hash] = contract
         self.runtime_bundles[ref] = runtime_bundle
+        self._ensure_evidence_view(book_id=book_id, book_snapshot_id=book_snapshot_id)
         cache_key = InMemoryContextBundleCache.make_key(
             snapshot_content_hash=runtime_bundle.snapshot_content_hash,
             pipeline_version=runtime_bundle.pipeline_version,
@@ -444,10 +555,13 @@ class PrivateWholeBookAnalysisRuntime:
         )
         runtime_bundle = replace(runtime_bundle, coverage=coverage, warnings=tuple(warnings))
         contract = self.bundle_mapper.to_contract(runtime_bundle)
-        ref = f"ctx-bundle:{contract.bundle_hash}"
+        from app.narrative_core.private_engine_contract.context import make_context_bundle_ref
+
+        ref = make_context_bundle_ref(contract.bundle_hash)
         self.contract_bundles[ref] = contract
         self.contract_bundles[contract.bundle_hash] = contract
         self.runtime_bundles[ref] = runtime_bundle
+        self._ensure_evidence_view(book_id=book_id, book_snapshot_id=book_snapshot_id)
         for runner in self.module_runners.values():
             runner.context_bundles[ref] = contract
             runner.context_bundles[contract.bundle_hash] = contract
@@ -513,10 +627,44 @@ class PrivateWholeBookAnalysisRuntime:
         runner = self.module_runners[key]
         pack = self.prompt_pack
         assert pack is not None
-        contract = self.contract_bundles.get(context_bundle_ref)
+        from app.narrative_core.private_engine_contract.context import (
+            make_context_bundle_ref,
+            parse_context_bundle_hash,
+        )
+
+        # Fail closed on legacy / unknown refs — no silent multi-key aliasing.
+        try:
+            if str(context_bundle_ref).startswith("bundle:"):
+                raise private_engine_error(
+                    PrivateEngineErrorCode.CONTEXT_BUNDLE_INVALID,
+                    detail_code="LEGACY_BUNDLE_RUN_ID_REF_FORBIDDEN",
+                )
+            # Accept either full ref or raw hash (hash must already be registered).
+            if context_bundle_ref in self.contract_bundles:
+                resolved_ref = str(context_bundle_ref)
+            else:
+                resolved_ref = make_context_bundle_ref(parse_context_bundle_hash(str(context_bundle_ref)))
+        except ValueError as exc:
+            raise private_engine_error(
+                PrivateEngineErrorCode.CONTEXT_BUNDLE_INVALID,
+                detail_code="CONTEXT_BUNDLE_REF_INVALID",
+            ) from exc
+        contract = self.contract_bundles.get(resolved_ref)
         if contract is None:
-            raise private_engine_error(PrivateEngineErrorCode.CONTEXT_BUNDLE_INVALID)
+            raise private_engine_error(
+                PrivateEngineErrorCode.CONTEXT_BUNDLE_INVALID,
+                detail_code="CONTEXT_BUNDLE_REF_NOT_REGISTERED",
+            )
+        if int(contract.book_snapshot_id) != int(book_snapshot_id) or int(contract.book_id) != int(
+            book_id
+        ):
+            raise private_engine_error(
+                PrivateEngineErrorCode.CONTEXT_BUNDLE_INVALID,
+                detail_code="CONTEXT_BUNDLE_SNAPSHOT_MISMATCH",
+            )
+        context_bundle_ref = resolved_ref
         runner.context_bundles[context_bundle_ref] = contract
+        runner.context_bundles[contract.bundle_hash] = contract
 
         request = make_execution_request(
             module_key=key,
@@ -581,8 +729,30 @@ class PrivateWholeBookAnalysisRuntime:
 
         # Output validation with Q evidence validator.
         assert self.output_validator is not None
-        evidence = tuple(
-            e for e in guarded.evidence_candidates if isinstance(e, EvidenceCandidate)
+        evidence = self._enrich_evidence_from_snapshot_view(
+            tuple(e for e in guarded.evidence_candidates if isinstance(e, EvidenceCandidate)),
+            book_id=book_id,
+            book_snapshot_id=book_snapshot_id,
+        )
+        # Keep enriched evidence on the guarded result for candidate builder.
+        guarded = PrivateEngineExecutionResult(
+            schema=guarded.schema,
+            version=guarded.version,
+            engine_id=guarded.engine_id,
+            engine_version=guarded.engine_version,
+            stage_key=guarded.stage_key,
+            attempt=guarded.attempt,
+            status=guarded.status,
+            module_outputs=guarded.module_outputs,
+            evidence_candidates=evidence,
+            asset_candidates=guarded.asset_candidates,
+            relation_candidates=guarded.relation_candidates,
+            conflict_candidates=guarded.conflict_candidates,
+            checkpoint=guarded.checkpoint,
+            usage=guarded.usage,
+            warnings=guarded.warnings,
+            validation_summary=guarded.validation_summary,
+            generated_at=guarded.generated_at,
         )
         validation = self.output_validator.validate(
             ModuleOutputValidationInput(
@@ -607,7 +777,19 @@ class PrivateWholeBookAnalysisRuntime:
                         int(x) for x in guarded.module_outputs.get("resolver_chapter_ids", ()) or ()
                     ),
                     output_refs=frozenset(
-                        str(x) for x in guarded.module_outputs.get("resolver_output_refs", ()) or ()
+                        {
+                            *(
+                                str(x)
+                                for x in guarded.module_outputs.get("resolver_output_refs", ())
+                                or ()
+                            ),
+                            *(
+                                str(a.get("output_ref"))
+                                for a in guarded.asset_candidates
+                                if isinstance(a, Mapping) and a.get("output_ref")
+                            ),
+                            f"{key.value}.out",
+                        }
                     ),
                 ),
                 require_evidence_for_acceptance=require_evidence_for_acceptance,

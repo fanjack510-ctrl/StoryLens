@@ -367,9 +367,29 @@ class Phase1BCandidatePersistenceSink:
                 )
 
         self.session.flush()
+        candidate_written = len(asset_version_ids) > 0 or len(relation_version_ids) > 0
+        evidence_written = len(evidence_ids) > 0
+        artifact_written = artifact_id is not None
+        # orm_written = formal candidate objects written (never artifact-only).
+        orm_written = candidate_written
+        # Complete business persistence requires candidates + evidence + artifact.
+        persistence_complete = bool(
+            orm_written
+            and candidate_written
+            and evidence_written
+            and artifact_written
+            and not built.rejected
+        )
         return {
             "recorded": True,
-            "orm_written": True,
+            "orm_written": orm_written,
+            "persistence_complete": persistence_complete,
+            "candidate_written": candidate_written,
+            "evidence_written": evidence_written,
+            "artifact_written": artifact_written,
+            "relation_written": len(relation_version_ids) > 0,
+            "orm_transaction_committed": True,
+            "fallback_used": False,
             "auto_confirm": False,
             "auto_lock": False,
             "canonical_overwrite": False,
@@ -379,7 +399,7 @@ class Phase1BCandidatePersistenceSink:
             "relation_count": len(relation_version_ids),
             "evidence_count": len(evidence_ids),
             "conflict_count": len(conflict_ids),
-            "has_stage_artifact": artifact_id is not None,
+            "has_stage_artifact": artifact_written,
             "asset_version_ids": asset_version_ids,
             "relation_version_ids": relation_version_ids,
             "evidence_ids": evidence_ids,
@@ -392,6 +412,13 @@ class Phase1BCandidatePersistenceSink:
         return {
             "recorded": True,
             "orm_written": False,
+            "persistence_complete": False,
+            "candidate_written": False,
+            "evidence_written": False,
+            "artifact_written": False,
+            "relation_written": False,
+            "orm_transaction_committed": False,
+            "fallback_used": False,
             "auto_confirm": False,
             "auto_lock": False,
             "canonical_overwrite": False,

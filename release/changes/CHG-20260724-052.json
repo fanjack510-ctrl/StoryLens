@@ -1,0 +1,58 @@
+{
+  "id": "CHG-20260724-052",
+  "title": "Phase 2B-R1 Context Binding and Candidate Translation Fix",
+  "type": "fix",
+  "base_version": "1.0.5",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "narrative_core",
+    "private_engine_lab",
+    "private_engine"
+  ],
+  "files": [
+    "apps/api/app/narrative_core/private_engine_contract/context.py",
+    "apps/api/app/narrative_core/services/private_lab_run_executor.py",
+    "apps/api/app/narrative_core/services/private_engine_runtime_adapter.py",
+    "apps/api/app/narrative_core/services/private_whole_book_analysis_runtime.py",
+    "apps/api/app/narrative_core/services/candidate_persistence_adapter.py",
+    "apps/api/app/narrative_core/services/whole_book_module_runner.py",
+    "apps/api/tests/test_narrative_phase2br1_context_candidate_binding.py"
+  ],
+  "user_summary": "Bind executor context_bundle_ref to registry format and preserve asset/relation candidates through translate_result for ORM persistence.",
+  "technical_summary": "Root causes: (1) Executor invented bundle:{run_id} while Runtime registered ctx-bundle:{hash}; product path needed harness alias. (2) translate_result cleared asset/relation candidates so Phase1B never wrote Asset/Version/Evidence; orm_written true from artifact-only. Fix: make_context_bundle_ref single source; Executor/Runtime use Registry ref only; translate_result preserves candidates; book_overview maps structured claims to Candidate Assets; evidence coercion+snapshot enrichment; persistence_complete requires candidate+evidence+artifact; empty_dto rejected. Private@84f530d05d2f5f84aae5db67d51594c0e3da7e48",
+  "acceptance_criteria": [
+    "Formal ctx-bundle:{hash} only; no bundle:{run_id}; no harness alias",
+    "translate_result preserves asset/relation candidates",
+    "book_overview FakeHttp product path writes Asset>=1 Version>=1 Evidence>=1 with persistence_complete",
+    "artifact-only / empty candidates / zero evidence cannot complete"
+  ],
+  "tests": [
+    "apps/api/tests/test_narrative_phase2br1_context_candidate_binding.py",
+    "apps/api/tests/test_narrative_phase2br1_live_transport_persistence.py",
+    "apps/api/tests/test_narrative_phase2br1_live_network_gate.py",
+    "apps/api/tests/test_narrative_phase2br1_provider_context_cost.py",
+    "apps/api/tests/test_narrative_phase2br1_private_lab_runtime.py",
+    "apps/api/tests/test_narrative_phase2br1_integration.py"
+  ],
+  "verification_evidence": [
+    "Public directed 112 passed. Private directed 39 passed. Gates: check_project/version/change_registry/capability_keys/git diff --check OK. Zero real Provider HTTP."
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "No schema/migration. Context ref and persistence summary carried in existing run metadata / summary dicts."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": null,
+  "created_at": "2026-07-24T06:50:31Z",
+  "updated_at": "2026-07-24T07:20:00Z"
+}

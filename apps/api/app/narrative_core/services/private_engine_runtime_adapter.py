@@ -92,8 +92,8 @@ def _coerce_private_entry_result(
         status=str(raw.get("status") or "modules_not_implemented"),
         module_outputs=dict(raw.get("module_outputs") or {}),
         evidence_candidates=tuple(raw.get("evidence_candidates") or ()),
-        asset_candidates=(),
-        relation_candidates=(),
+        asset_candidates=tuple(raw.get("asset_candidates") or ()),
+        relation_candidates=tuple(raw.get("relation_candidates") or ()),
         conflict_candidates=tuple(raw.get("conflict_candidates") or ()),
         checkpoint=raw.get("checkpoint"),
         usage=dict(raw.get("usage") or {}),
@@ -253,7 +253,27 @@ class PrivateWholeBookEngineRuntimeAdapter:
         return bool(self.engine.cancel(cancellation_ref))
 
     def translate_result(self, result: PrivateEngineExecutionResult) -> PrivateEngineExecutionResult:
+        """Guard secrets/canonical flags while preserving candidate payloads for persistence.
+
+        CHG-052: must not unconditionally clear asset_candidates / relation_candidates.
+        Canonical / auto-write still forbidden — ModuleCandidateBuilder + Phase1B sink only.
+        """
+
         guarded = _guard_result_dto(result)
+        outputs = dict(guarded.module_outputs)
+        assets = tuple(guarded.asset_candidates or ())
+        relations = tuple(guarded.relation_candidates or ())
+        if not assets and isinstance(outputs.get("asset_candidates"), (list, tuple)):
+            assets = tuple(outputs.get("asset_candidates") or ())
+        if not relations and isinstance(outputs.get("relation_candidates"), (list, tuple)):
+            relations = tuple(outputs.get("relation_candidates") or ())
+        warnings = list(guarded.warnings or ())
+        if "not_canonical" not in warnings:
+            warnings.append("not_canonical")
+        summary = dict(guarded.validation_summary or {})
+        summary["canonical"] = False
+        # Do not force accepted=False here — DefaultModuleOutputValidator is authoritative.
+        summary.setdefault("asset_written", False)
         return PrivateEngineExecutionResult(
             schema=guarded.schema,
             version=guarded.version,
@@ -262,20 +282,15 @@ class PrivateWholeBookEngineRuntimeAdapter:
             stage_key=guarded.stage_key,
             attempt=guarded.attempt,
             status=guarded.status,
-            module_outputs=dict(guarded.module_outputs),
+            module_outputs=outputs,
             evidence_candidates=guarded.evidence_candidates,
-            asset_candidates=(),
-            relation_candidates=(),
+            asset_candidates=assets,
+            relation_candidates=relations,
             conflict_candidates=guarded.conflict_candidates,
             checkpoint=guarded.checkpoint,
             usage=dict(guarded.usage),
-            warnings=tuple(list(guarded.warnings) + ["not_canonical", "no_asset_write"]),
-            validation_summary={
-                **dict(guarded.validation_summary),
-                "accepted": False,
-                "canonical": False,
-                "asset_written": False,
-            },
+            warnings=tuple(warnings),
+            validation_summary=summary,
             generated_at=guarded.generated_at,
         )
 

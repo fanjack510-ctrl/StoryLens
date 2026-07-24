@@ -219,6 +219,25 @@ class DefaultModuleOutputValidator:
             "chapter_mode",
             "storyline_type",
             "status",
+            # Private Lab / private-engine adapter markers (non-DTO).
+            "private_adapter",
+            "private_engine",
+            "private_module_adapter",
+            "engine_id",
+            "engine_version",
+            "coverage",
+            "credential_read",
+            "direct_provider_http",
+            "orm_access",
+            "force_three_act",
+            "prompt_pack_id",
+            "allow_unknown_or_multiple_protagonists",
+            "force_single_protagonist",
+            "protagonist_asset_ids",
+            "required_claims_refs",
+            "evidenced_claims_refs",
+            "evidence_candidates",
+            "accepted",
         }
         unknown_fields = [
             k for k in dto_payload.keys() if k not in allowed and k not in meta_allowed
@@ -349,6 +368,10 @@ class DefaultModuleOutputValidator:
 
         # 8) Accepted
         accepted = schema_valid and references_valid and evidence_valid and snapshot_valid
+        if outputs.get("empty_dto") is True and outputs.get("force_accept") is not True:
+            accepted = False
+            warnings.append("empty_dto_not_accepted")
+            error_code = error_code or PrivateEngineErrorCode.MODULE_OUTPUT_SCHEMA_INVALID.value
         if outputs.get("fake") is True and outputs.get("force_accept") is not True:
             # Fake/synthetic outputs are never production-accepted unless explicitly forced in tests.
             accepted = False

@@ -1301,6 +1301,92 @@ class PrivateModuleRunnerPort(Protocol):
     def health_check(self, module_key: WholeBookModuleKey | str) -> ModuleRunnerHealth: ...
 
 
+# ---------------------------------------------------------------------------
+# Private module adapter
+# ---------------------------------------------------------------------------
+
+
+def _coerce_evidence_candidates(
+    raw: Any,
+    *,
+    module_key: WholeBookModuleKey,
+    request: PrivateEngineExecutionRequest,
+) -> tuple[EvidenceCandidate, ...]:
+    """Normalize private dict/locator payloads into EvidenceCandidate DTOs."""
+
+    def _as_optional_int(value: Any) -> int | None:
+        if value is None or value == "":
+            return None
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return None
+
+    out: list[EvidenceCandidate] = []
+    for item in raw or ():
+        if isinstance(item, EvidenceCandidate):
+            out.append(item)
+            continue
+        if not isinstance(item, Mapping):
+            continue
+        role_raw = item.get("evidence_role", item.get("role", EvidenceRole.SUPPORT))
+        try:
+            role = (
+                role_raw
+                if isinstance(role_raw, EvidenceRole)
+                else EvidenceRole(str(role_raw or EvidenceRole.SUPPORT.value))
+            )
+        except ValueError:
+            role = EvidenceRole.SUPPORT
+        chapter_id = _as_optional_int(
+            item.get("snapshot_chapter_id", item.get("chapter_id"))
+        )
+        paragraph_id = _as_optional_int(
+            item.get("snapshot_paragraph_id", item.get("paragraph_id"))
+        )
+        stable = item.get("stable_paragraph_id")
+        content_hash = item.get("paragraph_content_hash")
+        # Leave hash empty when absent so runtime can enrich from Snapshot view;
+        # never invent a fake hash string.
+        out.append(
+            EvidenceCandidate(
+                candidate_id=str(
+                    item.get("candidate_id")
+                    or item.get("evidence_id")
+                    or item.get("claim_id")
+                    or "ev"
+                ),
+                book_snapshot_id=int(
+                    item.get("book_snapshot_id") or request.book_snapshot_id or 0
+                ),
+                snapshot_chapter_id=chapter_id,
+                snapshot_paragraph_id=paragraph_id,
+                stable_paragraph_id=str(stable) if stable is not None else None,
+                paragraph_content_hash=str(content_hash) if content_hash else "",
+                start_offset=item.get("start_offset"),
+                end_offset=item.get("end_offset"),
+                evidence_role=role,
+                target_module_key=module_key,
+                target_output_ref=str(
+                    item.get("target_output_ref")
+                    or item.get("output_ref")
+                    or f"{module_key.value}.out"
+                ),
+                extraction_method=str(item.get("extraction_method") or "provider_locator"),
+                confidence=item.get("confidence"),
+                source_context_unit_id=(
+                    str(item["source_context_unit_id"])
+                    if item.get("source_context_unit_id") is not None
+                    else None
+                ),
+                book_id=int(item.get("book_id") or request.book_id or 0),
+                preview=str(item.get("preview") or "")[:160],
+                from_derived_summary=bool(item.get("from_derived_summary", False)),
+            )
+        )
+    return tuple(out)
+
+
 @dataclass
 class PrivateModuleRunnerAdapter(BaseWholeBookModuleRunner):
     """Thin public adapter: delegates execute/validate/evidence to a private Protocol runner.
@@ -1343,6 +1429,11 @@ class PrivateModuleRunnerAdapter(BaseWholeBookModuleRunner):
             checkpoint = self.build_checkpoint(request)
         elif checkpoint is None:
             checkpoint = self.build_checkpoint(request)
+        evidence = _coerce_evidence_candidates(
+            result.evidence_candidates,
+            module_key=self.module_key,
+            request=request,
+        )
         return PrivateEngineExecutionResult(
             schema=result.schema,
             version=result.version,
@@ -1352,10 +1443,10 @@ class PrivateModuleRunnerAdapter(BaseWholeBookModuleRunner):
             attempt=result.attempt,
             status=result.status,
             module_outputs=outputs,
-            evidence_candidates=result.evidence_candidates,
-            asset_candidates=result.asset_candidates,
-            relation_candidates=result.relation_candidates,
-            conflict_candidates=result.conflict_candidates,
+            evidence_candidates=evidence,
+            asset_candidates=tuple(result.asset_candidates or ()),
+            relation_candidates=tuple(result.relation_candidates or ()),
+            conflict_candidates=tuple(result.conflict_candidates or ()),
             checkpoint=checkpoint,
             usage=dict(result.usage or {}),
             warnings=tuple(result.warnings or ()) + ("private_module_adapter",),
