@@ -3,9 +3,16 @@
   "title": "Phase 2B-R1 Context Binding and Candidate Translation Fix",
   "type": "fix",
   "base_version": "1.0.5",
-  "status": "registered",
+  "status": "tested",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "0d2259aaf202bbeaa7e95d6bf1fc5ec8ab910555",
+      "message": "fix: bind context bundles to candidate persistence",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "narrative_core",
     "private_engine_lab",
@@ -52,7 +59,7 @@
     "breaking_change": false
   },
   "blocker_level": null,
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-24T06:50:31Z",
-  "updated_at": "2026-07-24T07:20:00Z"
+  "updated_at": "2026-07-24T07:17:59Z"
 }
