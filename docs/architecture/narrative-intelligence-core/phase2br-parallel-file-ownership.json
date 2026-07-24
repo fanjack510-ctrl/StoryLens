@@ -1,0 +1,301 @@
+{
+  "baseline_version": "1.0.5",
+  "baseline_commit": "737617f2576a49c94d539e665484a4cdba55a6a5",
+  "source_branch": "integration/narrative-phase2b",
+  "plan_change": "CHG-20260723-041",
+  "protocol_id": "storylens.private_engine.v1",
+  "public_repo": "D:\\\\Dstorylens",
+  "private_repo_planned": "D:\\\\Dstorylens-private-engine",
+  "private_repo_exists_at_plan": false,
+  "dev_topology": "private_python_package",
+  "release_topology_prep": "signed_private_sidecar_or_remote_service",
+  "first_provider": {
+    "provider_key": "aliyun_qwen_plus",
+    "model_id": "qwen3.7-plus",
+    "quality_profile": "balanced",
+    "family": "aliyun_qwen"
+  },
+  "private_lab": {
+    "env": "WHOLE_BOOK_PRIVATE_ENGINE_LAB_ENABLED",
+    "default": false,
+    "header": "X-StoryLens-Private-Engine-Lab",
+    "header_value": "1",
+    "path_prefix": "/api/v1/labs/private-whole-book-runs"
+  },
+  "agents": {
+    "plan": {
+      "change": "CHG-20260723-041",
+      "branch": "feature/narrative-phase2br-implementation-plan",
+      "worktree": "D:\\\\Dstorylens-wt-narrative-phase2br-plan",
+      "status_target": "tested"
+    },
+    "agent_s": {
+      "change": "CHG-20260723-042",
+      "branch": "feature/narrative-phase2br-private-runtime",
+      "worktree": "D:\\\\Dstorylens-wt-narrative-private-runtime",
+      "private_repo": "D:\\\\Dstorylens-private-engine",
+      "status_target": "registered",
+      "role": "Private Runtime and Provider Implementation"
+    },
+    "agent_t": {
+      "change": "CHG-20260723-043",
+      "branch": "feature/narrative-phase2br-real-modules",
+      "worktree": "D:\\\\Dstorylens-wt-narrative-real-modules",
+      "private_repo": "D:\\\\Dstorylens-private-engine",
+      "private_isolation": "separate_worktree_or_branch_from_agent_s",
+      "status_target": "registered",
+      "role": "First Four Real Modules Implementation"
+    },
+    "integration": {
+      "change": "CHG-20260723-044",
+      "branch": "integration/narrative-phase2br",
+      "worktree": "D:\\\\Dstorylens-wt-narrative-phase2br-integration",
+      "status_target": "registered",
+      "role": "Phase 2B-R Integration"
+    }
+  },
+  "public_agent_s": [
+    {
+      "path": "apps/api/app/narrative_core/services/whole_book_provider_gateway.py",
+      "status": "exists"
+    },
+    {
+      "path": "apps/api/app/narrative_core/services/private_engine_manifest_loader.py",
+      "status": "exists"
+    },
+    {
+      "path": "apps/api/app/narrative_core/services/private_engine_signature.py",
+      "status": "exists"
+    },
+    {
+      "path": "apps/api/app/narrative_core/services/private_engine_runtime_adapter.py",
+      "status": "exists"
+    },
+    {
+      "path": "apps/api/app/narrative_core/services/fake_private_whole_book_engine.py",
+      "status": "exists"
+    },
+    {
+      "path": "apps/api/app/narrative_core/services/fake_prompt_pack.py",
+      "status": "exists"
+    },
+    {
+      "path": "apps/api/app/narrative_core/run_shell_contract/private_engine_lab.py",
+      "status": "planned"
+    },
+    {
+      "path": "apps/api/app/narrative_core/services/private_engine_lab_authorization_service.py",
+      "status": "planned"
+    },
+    {
+      "path": "apps/api/app/routers/whole_book_private_engine_lab_runs.py",
+      "status": "planned"
+    },
+    {
+      "path": "apps/api/tests/test_narrative_phase2br_private_runtime.py",
+      "status": "planned"
+    },
+    {
+      "path": "release/changes/CHG-20260723-042.json",
+      "status": "planned"
+    }
+  ],
+  "private_agent_s": [
+    {
+      "path": "README.md",
+      "status": "planned"
+    },
+    {
+      "path": "pyproject.toml",
+      "status": "planned"
+    },
+    {
+      "path": "src/storylens_private_engine/__init__.py",
+      "status": "planned"
+    },
+    {
+      "path": "src/storylens_private_engine/runtime/entry.py",
+      "status": "planned"
+    },
+    {
+      "path": "src/storylens_private_engine/prompt_pack/loader.py",
+      "status": "planned"
+    },
+    {
+      "path": "src/storylens_private_engine/prompt_pack/manifest.py",
+      "status": "planned"
+    },
+    {
+      "path": "src/storylens_private_engine/provider_routing/policy.py",
+      "status": "planned"
+    },
+    {
+      "path": "src/storylens_private_engine/repair/structured_repair.py",
+      "status": "planned"
+    }
+  ],
+  "public_agent_t": [
+    {
+      "path": "apps/api/app/narrative_core/services/whole_book_module_runner.py",
+      "status": "exists"
+    },
+    {
+      "path": "apps/api/app/narrative_core/services/whole_book_module_output_validator.py",
+      "status": "exists"
+    },
+    {
+      "path": "apps/api/app/narrative_core/services/whole_book_candidate_builder.py",
+      "status": "exists"
+    },
+    {
+      "path": "apps/api/app/narrative_core/services/candidate_persistence_adapter.py",
+      "status": "exists"
+    },
+    {
+      "path": "apps/api/app/narrative_core/services/whole_book_evaluation_harness.py",
+      "status": "exists"
+    },
+    {
+      "path": "apps/api/app/narrative_core/services/evidence_validator_runtime_adapter.py",
+      "status": "exists"
+    },
+    {
+      "path": "apps/api/tests/test_narrative_phase2br_real_modules.py",
+      "status": "planned"
+    },
+    {
+      "path": "release/changes/CHG-20260723-043.json",
+      "status": "planned"
+    }
+  ],
+  "private_agent_t": [
+    {
+      "path": "src/storylens_private_engine/modules/book_overview/",
+      "status": "planned"
+    },
+    {
+      "path": "src/storylens_private_engine/modules/structure_stages/",
+      "status": "planned"
+    },
+    {
+      "path": "src/storylens_private_engine/modules/chapter_functions/",
+      "status": "planned"
+    },
+    {
+      "path": "src/storylens_private_engine/modules/storylines/",
+      "status": "planned"
+    },
+    {
+      "path": "src/storylens_private_engine/prompt_packs/book_overview/",
+      "status": "planned"
+    },
+    {
+      "path": "src/storylens_private_engine/prompt_packs/structure_stages/",
+      "status": "planned"
+    },
+    {
+      "path": "src/storylens_private_engine/prompt_packs/chapter_functions/",
+      "status": "planned"
+    },
+    {
+      "path": "src/storylens_private_engine/prompt_packs/storylines/",
+      "status": "planned"
+    },
+    {
+      "path": "src/storylens_private_engine/prompt_packs/_shared/",
+      "status": "planned"
+    },
+    {
+      "path": "src/storylens_private_engine/context/strategy.py",
+      "status": "planned"
+    },
+    {
+      "path": "src/storylens_private_engine/evidence/selection.py",
+      "status": "planned"
+    },
+    {
+      "path": "src/storylens_private_engine/validation/module_extra.py",
+      "status": "planned"
+    }
+  ],
+  "integration_shared": [
+    {
+      "path": "apps/api/app/narrative_core/services/private_whole_book_analysis_runtime.py",
+      "status": "exists"
+    },
+    {
+      "path": "apps/api/app/narrative_core/services/whole_book_context_bundle_mapper.py",
+      "status": "exists"
+    },
+    {
+      "path": "apps/api/app/narrative_core/services/paragraph_grouping_policy.py",
+      "status": "exists"
+    },
+    {
+      "path": "apps/api/app/main.py",
+      "status": "exists",
+      "risk": "Lab mount only under gates"
+    },
+    {
+      "path": "apps/api/tests/test_narrative_phase2br_integration.py",
+      "status": "planned"
+    },
+    {
+      "path": "release/changes/CHG-20260723-044.json",
+      "status": "planned"
+    },
+    {
+      "path": "docs/architecture/README.md",
+      "status": "exists"
+    },
+    {
+      "path": "docs/architecture/narrative-intelligence-core/README.md",
+      "status": "exists"
+    }
+  ],
+  "forbidden_parallel": [
+    "VERSION",
+    "apps/api/app/db/models.py",
+    "apps/api/app/narrative_core/migrations/",
+    "apps/desktop/src/services/productEdition.ts",
+    "flip WHOLE_BOOK_RUNS_ENDPOINT_DISABLED",
+    "flip PRO_CAPABILITIES_SHIPPED",
+    "set PRODUCTION_DEFAULT_ENGINE_ID",
+    "enable WHOLE_BOOK_MOCK_LAB_ENABLED by default",
+    "release/1.0.5/",
+    "same private working directory for S and T"
+  ],
+  "change_registry_ownership": {
+    "CHG-20260723-041": "plan",
+    "CHG-20260723-042": "agent_s",
+    "CHG-20260723-043": "agent_t",
+    "CHG-20260723-044": "integration"
+  },
+  "readme_ownership": "plan_seeds_then_integration",
+  "router_ownership": {
+    "mock_lab": "read_only",
+    "private_engine_lab": "agent_s_draft_integration_land",
+    "formal_whole_book_runs": "forbidden_enable"
+  },
+  "provider_registry_ownership": {
+    "model_gateway/registry.py": "agent_s_if_needed_announce",
+    "whole_book_provider_gateway.py": "agent_s"
+  },
+  "prompt_pack_manifest_ownership": {
+    "public_metadata": "agent_s_and_integration",
+    "private_bodies": "agent_t",
+    "loader": "agent_s"
+  },
+  "module_registry_ownership": {
+    "private_engine_contract/module_spec.py": "read_only_unless_integration",
+    "whole_book_module_runner.py": "agent_t_public_adapters",
+    "private_module_runners": "agent_t"
+  },
+  "gates_must_remain": {
+    "PRO_CAPABILITIES_SHIPPED": false,
+    "WHOLE_BOOK_RUNS_ENDPOINT_DISABLED": true,
+    "PRODUCTION_DEFAULT_ENGINE_ID": null,
+    "WHOLE_BOOK_MOCK_LAB_ENABLED": false,
+    "VERSION": "1.0.5"
+  }
+}

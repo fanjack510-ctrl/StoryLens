@@ -1,0 +1,88 @@
+{
+  "type": "feature",
+  "base_version": "1.0.5",
+  "include_in_next_release": true,
+  "commits": [],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "No schema/migration in Phase 2B-R plan or planned Agents unless blocked and escalated."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": null,
+  "created_at": "2026-07-24T01:13:16Z",
+  "updated_at": "2026-07-24T01:13:16Z",
+  "file_ownership": "docs/architecture/narrative-intelligence-core/phase2br-parallel-file-ownership.json",
+  "id": "CHG-20260723-041",
+  "title": "Phase 2B-R Implementation Plan",
+  "status": "registered",
+  "modules": [
+    "docs",
+    "release/changes"
+  ],
+  "files": [
+    "docs/architecture/narrative-intelligence-core/phase2br-implementation-plan.md",
+    "docs/architecture/narrative-intelligence-core/phase2br-private-repository-boundary.md",
+    "docs/architecture/narrative-intelligence-core/phase2br-provider-and-budget-plan.md",
+    "docs/architecture/narrative-intelligence-core/phase2br-live-analysis-safety.md",
+    "docs/architecture/narrative-intelligence-core/phase2br-parallel-file-ownership.md",
+    "docs/architecture/narrative-intelligence-core/phase2br-parallel-file-ownership.json",
+    "docs/architecture/narrative-intelligence-core/README.md",
+    "docs/architecture/README.md",
+    "release/changes/CHG-20260723-041.json",
+    "release/changes/CHG-20260723-042.json",
+    "release/changes/CHG-20260723-043.json",
+    "release/changes/CHG-20260723-044.json",
+    "release/unreleased.json",
+    "scripts/check_phase2br_plan_static.py"
+  ],
+  "user_summary": "Plan Phase 2B-R real engine implementation, private repo boundary, provider path, Private Lab, and S/T ownership without enabling production runs.",
+  "technical_summary": "Audit Phase 2B Integration capabilities; choose private Python package topology for development and signed sidecar/remote for release prep; select aliyun_qwen_plus/qwen3.7-plus as first real Provider; plan Private Engine Lab gates; plan four-module real runners and Phase 1B candidate persistence adapter; register CHG-042–044. No formal prompts, model calls, algorithms, migrations, or gate flips.",
+  "acceptance_criteria": [
+    "Code-backed capability audit documented",
+    "Private repo boundary and topology chosen",
+    "First Provider route selected from registry/config",
+    "Private Lab gates planned distinct from Mock Lab",
+    "S/T/Integration file ownership precise",
+    "CHG-041–044 registered; gates/VERSION unchanged",
+    "Static checks prove no formal prompt/model/migration"
+  ],
+  "tests": [
+    "scripts/check_project.py",
+    "scripts/version_manager.py check",
+    "scripts/change_registry.py check",
+    "scripts/check_capability_keys.py",
+    "git diff --check",
+    "scripts/check_phase2br_plan_static.py"
+  ],
+  "verification_evidence": [],
+  "parallel_plan": {
+    "role": "phase2br_plan",
+    "branch": "feature/narrative-phase2br-implementation-plan",
+    "worktree": "D:\\\\Dstorylens-wt-narrative-phase2br-plan",
+    "depends_on": [
+      "CHG-20260723-040"
+    ],
+    "blocks": [
+      "CHG-20260723-042",
+      "CHG-20260723-043",
+      "CHG-20260723-044"
+    ],
+    "forbidden": [
+      "formal prompt bodies",
+      "real model calls",
+      "real algorithms",
+      "open production run",
+      "migrations",
+      "VERSION bump",
+      "push/build/publish"
+    ]
+  }
+}

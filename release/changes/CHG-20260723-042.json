@@ -1,0 +1,64 @@
+{
+  "type": "feature",
+  "base_version": "1.0.5",
+  "include_in_next_release": true,
+  "commits": [],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "No schema/migration in Phase 2B-R plan or planned Agents unless blocked and escalated."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": null,
+  "created_at": "2026-07-24T01:13:16Z",
+  "updated_at": "2026-07-24T01:13:16Z",
+  "file_ownership": "docs/architecture/narrative-intelligence-core/phase2br-parallel-file-ownership.json",
+  "id": "CHG-20260723-042",
+  "title": "Private Runtime and Provider Implementation",
+  "status": "registered",
+  "modules": [
+    "private_engine_runtime",
+    "provider_gateway",
+    "private_engine_lab"
+  ],
+  "files": [],
+  "user_summary": "Implement private engine runtime foundation, first real Provider adapter, and Private Engine Lab gates without four-module algorithms.",
+  "technical_summary": "Agent S: private repo package skeleton, runtime entry, prompt pack loader, Bailian ProviderAdapter, credential/budget bridge, Private Lab authorization and router. No four-module business algorithms. No production gate flips.",
+  "acceptance_criteria": [
+    "Private package loadable via Manifest/Loader in Lab",
+    "aliyun_qwen_plus adapter behind Gateway; Fake remains",
+    "Credential never in module DTO",
+    "Private Lab default false; formal Run still disabled",
+    "No formal module algorithms"
+  ],
+  "tests": [
+    "apps/api/tests/test_narrative_phase2br_private_runtime.py"
+  ],
+  "verification_evidence": [],
+  "parallel_plan": {
+    "role": "agent_s",
+    "branch": "feature/narrative-phase2br-private-runtime",
+    "worktree": "D:\\\\Dstorylens-wt-narrative-private-runtime",
+    "private_repo": "D:\\\\Dstorylens-private-engine",
+    "depends_on": [
+      "CHG-20260723-041"
+    ],
+    "blocks": [
+      "CHG-20260723-044"
+    ],
+    "forbidden": [
+      "four module algorithms",
+      "formal whole-book run enable",
+      "migrations",
+      "VERSION bump",
+      "push/build/publish"
+    ]
+  }
+}

@@ -36,8 +36,12 @@ StoryLens 叙事智能核心文档索引。当前基线：`VERSION=1.0.5`。
 | Phase 2B Agent Q | CHG-20260723-038 | tested | Context and Evidence Pipeline |
 | Phase 2B Agent R | CHG-20260723-039 | tested | First Real Modules and Evaluation |
 | Phase 2B Integration | CHG-20260723-040 | tested | Phase 2B Integration |
+| Phase 2B-R Plan | CHG-20260723-041 | tested | Real engine implementation plan / private boundary audit |
+| Phase 2B-R Agent S | CHG-20260723-042 | registered | Private Runtime and Provider |
+| Phase 2B-R Agent T | CHG-20260723-043 | registered | First Four Real Modules |
+| Phase 2B-R Integration | CHG-20260723-044 | registered | Phase 2B-R Integration |
 
-\* 022–031 已为 `verified`（不得 ready/released）。032–035 上限 `tested`（不得仅凭自动测试升为 verified；等待 Mock Lab 人工验收）。036 已为 `verified`（不得 ready/released）。037–040 上限 `tested`（不得仅凭自动测试升为 verified；等待 Private Engine 人工验收）。硬边界见下。
+\* 022–031 已为 `verified`（不得 ready/released）。032–035 上限 `tested`（不得仅凭自动测试升为 verified；等待 Mock Lab 人工验收）。036 已为 `verified`（不得 ready/released）。037–040 上限 `tested`（不得仅凭自动测试升为 verified；等待 Private Engine 人工验收）。041 上限 `tested`（计划阶段；无 Live Smoke）。042–044 从 `registered` 起；Integration 自动测试后上限 `tested`；`verified` 仅在 Live Smoke 后。硬边界见下。
 
 ## Phase 1P / 1A
 
@@ -84,6 +88,7 @@ StoryLens 叙事智能核心文档索引。当前基线：`VERSION=1.0.5`。
 - Phase 1D：Preflight ≠ Run creation；Native/Enhanced 是模式不是产品；无 force-start；无 migrations / Pattern 表 / push / build / publish
 - Phase 2A：`WHOLE_BOOK_MOCK_LAB_ENABLED` 默认 `false`；仅 Lab 路径；无真实 Engine/模型/Prompt；无 Celery/Redis/WebSocket；无新 Migration
 - Phase 2B-P：仅公共契约 / Fake；无正式算法与正式 Prompt；无模型调用；生产整书 Run 仍禁用；无 FTS5 / 向量库 / Neo4j / 新表；高价值逻辑在私有 Sidecar/服务端
+- Phase 2B-R Plan：仅审计与计划文档；私有仓库路径规划；不写正式 Prompt；不调模型；不开放正式 Run；`WHOLE_BOOK_PRIVATE_ENGINE_LAB_ENABLED` 规划默认 false
 
 ## Phase 1C-P Contract
 
@@ -212,3 +217,12 @@ StoryLens 叙事智能核心文档索引。当前基线：`VERSION=1.0.5`。
 - [phase2b-fake-provider-e2e.md](./phase2b-fake-provider-e2e.md)
 - [phase2b-production-isolation-verification.md](./phase2b-production-isolation-verification.md)
 - [phase2b-known-limitations.md](./phase2b-known-limitations.md)
+
+## Phase 2B-R Implementation Plan
+
+- [phase2br-implementation-plan.md](./phase2br-implementation-plan.md)
+- [phase2br-private-repository-boundary.md](./phase2br-private-repository-boundary.md)
+- [phase2br-provider-and-budget-plan.md](./phase2br-provider-and-budget-plan.md)
+- [phase2br-live-analysis-safety.md](./phase2br-live-analysis-safety.md)
+- [phase2br-parallel-file-ownership.md](./phase2br-parallel-file-ownership.md)
+- [phase2br-parallel-file-ownership.json](./phase2br-parallel-file-ownership.json)
