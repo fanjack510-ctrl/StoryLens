@@ -11,6 +11,12 @@
       "message": "fix: use real context and credentials in private lab",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "4254ec8b0336cb692b778a1854fbfac12b85eefc",
+      "message": "docs: mark CHG-20260724-049 tested after DI fix verification",
+      "primary": false,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -55,5 +61,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-24T04:29:40Z",
-  "updated_at": "2026-07-24T04:49:46Z"
+  "updated_at": "2026-07-24T04:49:47Z"
 }
