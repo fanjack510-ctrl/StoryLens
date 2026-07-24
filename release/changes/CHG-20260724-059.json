@@ -1,0 +1,32 @@
+{
+  "id": "CHG-20260724-059",
+  "title": "Direct Citation V2 Contract Closure",
+  "type": "fix",
+  "base_version": "1.0.5",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [],
+  "files": [],
+  "user_summary": "Freeze Estimate/Consent/Create execution context, field-level claim diagnostics, FieldRequirementPolicy, exact citation error codes, targeted repair, and independent provider business attempts for book_overview.",
+  "technical_summary": "",
+  "acceptance_criteria": [],
+  "tests": [],
+  "verification_evidence": [],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": null,
+  "created_at": "2026-07-24T17:18:07Z",
+  "updated_at": "2026-07-24T17:18:07Z"
+}

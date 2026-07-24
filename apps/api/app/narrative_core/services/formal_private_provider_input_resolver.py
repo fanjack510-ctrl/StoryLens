@@ -81,7 +81,11 @@ class FormalPrivateProviderInputBundleResolverAdapter:
     _pipeline: DefaultWholeBookContextPipeline | None = field(default=None, repr=False)
     _bundle_builder: WholeBookContextBundleBuilder | None = field(default=None, repr=False)
     _private: Any | None = field(default=None, repr=False)
+    _last_resolve_meta: dict[str, Any] = field(default_factory=dict, repr=False)
     is_fake: bool = field(default=False, init=False)
+
+    def last_resolve_meta(self) -> dict[str, Any]:
+        return dict(self._last_resolve_meta or {})
 
     def __post_init__(self) -> None:
         # Construct private resolver eagerly so missing package fails at composition time.
@@ -200,7 +204,35 @@ class FormalPrivateProviderInputBundleResolverAdapter:
                 "user_consent_required": True,
             },
         )
-        return _assembled_to_public_bundle(assembled)
+        bundle = _assembled_to_public_bundle(assembled)
+        # CHG-059: retain last resolve metadata for ExecutionContextBinding (no bodies).
+        from app.narrative_core.services.execution_context_binding import (
+            extract_chapter_orders_from_units,
+        )
+
+        selected_orders, all_orders = extract_chapter_orders_from_units(
+            getattr(contract, "units", ()) or (),
+            selected_chapter_ids=bundle.selected_chapter_ids,
+        )
+        self._last_resolve_meta = {
+            "context_bundle_hash": bundle.context_bundle_hash,
+            "selected_chapter_ids": list(bundle.selected_chapter_ids),
+            "selected_paragraph_ids": list(bundle.selected_paragraph_ids),
+            "selected_context_unit_ids": list(bundle.selected_context_unit_ids),
+            "source_character_count": bundle.source_character_count(),
+            "batch_index": int(getattr(assembled, "batch_index", 0) or 0),
+            "batch_count": int(getattr(assembled, "batch_count", 1) or 1),
+            "selected_chapter_orders": list(selected_orders),
+            "all_chapter_orders": list(all_orders),
+            "provider_context_limit": int(self.provider_context_limit),
+            "bundle_fingerprint": bundle.bundle_fingerprint,
+            "prompt_pack_version": bundle.prompt_pack_version,
+        }
+        self._last_contract = contract
+        return bundle
+
+    def last_contract(self) -> Any | None:
+        return getattr(self, "_last_contract", None)
 
     def estimate(self, bundle: ProviderInputBundle, **kwargs: Any) -> ProviderEstimateResult:
         return self.estimate_service.estimate(bundle, **kwargs)

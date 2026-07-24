@@ -385,6 +385,10 @@ class PrivateWholeBookLabRunService:
 
         payload_hash = hash_create_payload(create_payload)
         created_at = _utc_now_iso()
+        execution_binding_payload = None
+        getter = getattr(self._estimate, "cached_execution_context_binding", None)
+        if callable(getter):
+            execution_binding_payload = getter(request.estimate_fingerprint)
         metadata = build_private_lab_run_metadata(
             book_id=int(book.id),
             snapshot_id=int(snapshot.id),
@@ -413,6 +417,7 @@ class PrivateWholeBookLabRunService:
                 "preflight_fingerprint": request.preflight_fingerprint,
                 "modules_implemented": True,
                 "source": PRIVATE_ENGINE_LAB_SOURCE,
+                "execution_context_binding": execution_binding_payload,
             },
         )
 

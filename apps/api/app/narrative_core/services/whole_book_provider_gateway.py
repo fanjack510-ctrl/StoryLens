@@ -685,6 +685,9 @@ class BailianOpenAICompatibleProviderAdapter:
             cost_value: float | None = None,
             failure_code: str | None = None,
             transport_kind_value: Any = None,
+            output_contract: Mapping[str, Any] | None = None,
+            claim_diags_initial: list[dict[str, Any]] | None = None,
+            claim_diags_repair: list[dict[str, Any]] | None = None,
         ) -> None:
             attempts: list[dict[str, Any]] = []
             # Prefer FakeHttp recorded calls when present for per-attempt audit.
@@ -709,6 +712,41 @@ class BailianOpenAICompatibleProviderAdapter:
                     {"attempt_index": i, "provider_request_id": rid}
                     for i, rid in enumerate(ids)
                 ]
+            oc = dict(output_contract or {})
+            if claim_diags_initial is not None:
+                oc["claim_contract_diagnostics_initial"] = list(claim_diags_initial)
+                oc["provider_attempts_claim_diagnostics_initial"] = list(
+                    claim_diags_initial
+                )
+            if claim_diags_repair is not None:
+                oc["claim_contract_diagnostics_repair"] = list(claim_diags_repair)
+                oc["provider_attempts_claim_diagnostics_repair"] = list(
+                    claim_diags_repair
+                )
+            enriched_attempts: list[dict[str, Any]] = []
+            for a in attempts:
+                idx = int(a.get("attempt_index") or 0)
+                kind = (
+                    "book_overview_initial"
+                    if idx == 0
+                    else "book_overview_contract_repair"
+                )
+                diags = (
+                    list(claim_diags_initial or [])
+                    if idx == 0
+                    else list(claim_diags_repair or [])
+                )
+                enriched_attempts.append(
+                    {
+                        **a,
+                        "operation_kind": kind,
+                        "parent_attempt_index": None if idx == 0 else 0,
+                        "transport_retry_count": 0,
+                        "attempt_status": "failed" if failure_code else "ok",
+                        "validation_error_codes": [failure_code] if failure_code else [],
+                        "claim_contract_diagnostics": diags,
+                    }
+                )
             self.last_provider_attempt_audit = {
                 "transport_kind": transport_kind_value
                 or getattr(effective_kind, "value", None)
@@ -717,7 +755,9 @@ class BailianOpenAICompatibleProviderAdapter:
                 "provider_request_id": ids[-1] if ids else None,
                 "input_tokens": int(token_input),
                 "output_tokens": int(token_output),
-                "retry_count": int(retry_count),
+                # CHG-059: transport_retry_count only — business repair is a separate attempt.
+                "retry_count": 0,
+                "transport_retry_count": 0,
                 "http_status": http_status_value if http_status_value is not None else 200,
                 "host": host_value,
                 "finish_reason": finish_reason_value,
@@ -725,11 +765,13 @@ class BailianOpenAICompatibleProviderAdapter:
                 "live_request_confirmed": True,
                 "actual_cost": cost_value,
                 "attempt_count": len(ids) if ids else len(attempts),
-                "attempts": attempts,
+                "attempts": enriched_attempts,
                 "failure_code": failure_code,
                 "http": True,
                 "live": True,
                 "synthetic_success": False,
+                "business_repair_count": max(0, (len(ids) - 1) if ids else 0),
+                "output_contract": oc or None,
             }
 
         response = _call_transport(messages)
@@ -840,14 +882,42 @@ class BailianOpenAICompatibleProviderAdapter:
 
         if enforce_book_overview_v2:
             candidate = strip_provider_audit(structured)
+            caps_payload = dict(getattr(payload, "context_capabilities", None) or {})
             validation = validate_book_overview_provider_output_v2(
                 candidate,
                 catalog=getattr(payload, "citation_catalog", None),
                 allowed_citation_ids=tuple(
                     getattr(payload, "allowed_citation_ids", ()) or ()
                 ),
+                capabilities=caps_payload,
             )
             contract_diag.update(dict(validation.diagnostics))
+            initial_claim_diags: list[dict[str, Any]] = []
+            repair_claim_diags: list[dict[str, Any]] = []
+            try:
+                from storylens_private_engine.citation import get_last_claim_diagnostics
+
+                initial_claim_diags = [
+                    d.safe_dict() if hasattr(d, "safe_dict") else dict(d)
+                    for d in get_last_claim_diagnostics()
+                ]
+            except Exception:  # noqa: BLE001
+                initial_claim_diags = []
+            if not initial_claim_diags:
+                initial_claim_diags = list(
+                    (validation.diagnostics or {}).get("claim_contract_diagnostics")
+                    or (validation.diagnostics or {}).get(
+                        "provider_attempts_claim_diagnostics"
+                    )
+                    or []
+                )
+            if initial_claim_diags:
+                contract_diag["claim_contract_diagnostics_initial"] = list(
+                    initial_claim_diags
+                )
+                contract_diag["provider_attempts_claim_diagnostics_initial"] = list(
+                    initial_claim_diags
+                )
             if not validation.ok:
                 contract_diag["initial_contract_failure_code"] = validation.failure_code
                 max_repairs = min(
@@ -866,6 +936,8 @@ class BailianOpenAICompatibleProviderAdapter:
                         host_value=host,
                         finish_reason_value=finish_reason,
                         failure_code=str(validation.failure_code or "contract_rejected"),
+                        output_contract=contract_diag,
+                        claim_diags_initial=initial_claim_diags,
                     )
                     raise private_engine_error(
                         PrivateEngineErrorCode.PROVIDER_RESPONSE_INVALID,
@@ -873,12 +945,23 @@ class BailianOpenAICompatibleProviderAdapter:
                     )
                 contract_diag["repair_attempted"] = True
                 contract_diag["repair_status"] = "ATTEMPTED"
+                failed_diags: list[dict[str, Any]] = [
+                    d for d in initial_claim_diags if d.get("validation_status") == "FAIL"
+                ]
+                passed = [
+                    str(d.get("claim_field") or "")
+                    for d in initial_claim_diags
+                    if d.get("validation_status") != "FAIL"
+                ]
                 repair_msg = repair_instruction_text_v2(
                     failure_code=str(validation.failure_code or "CONTRACT_FAILED"),
                     observed_fields=validation.observed_top_level_fields,
                     citation_ids=tuple(
                         getattr(payload, "allowed_citation_ids", ()) or ()
                     ),
+                    failed_diagnostics=failed_diags,
+                    passed_fields=passed,
+                    capabilities=caps_payload,
                 )
                 repair_messages = [dict(m) for m in messages] + [
                     {"role": "user", "content": repair_msg}
@@ -900,15 +983,6 @@ class BailianOpenAICompatibleProviderAdapter:
                 finish_reason = getattr(repair_response, "finish_reason", None) or finish_reason
                 host = getattr(repair_response, "host", None) or host
                 model_out = getattr(repair_response, "model", None) or model_out
-                _publish_attempt_audit(
-                    ids=list(provider_request_ids),
-                    token_input=token_in,
-                    token_output=token_out,
-                    retry_count=1,
-                    http_status_value=http_status,
-                    host_value=host,
-                    finish_reason_value=finish_reason,
-                )
                 if repair_structured is None:
                     contract_diag["repair_status"] = "FAILED"
                     contract_diag["repaired_contract_status"] = "FAILED"
@@ -922,6 +996,9 @@ class BailianOpenAICompatibleProviderAdapter:
                         finish_reason_value=finish_reason,
                         cost_value=self._resolve_cost(token_in, token_out),
                         failure_code=FAILURE_REPAIR_EXHAUSTED_V2,
+                        output_contract=contract_diag,
+                        claim_diags_initial=initial_claim_diags,
+                        claim_diags_repair=[],
                     )
                     raise private_engine_error(
                         PrivateEngineErrorCode.PROVIDER_RESPONSE_INVALID,
@@ -934,7 +1011,23 @@ class BailianOpenAICompatibleProviderAdapter:
                     allowed_citation_ids=tuple(
                         getattr(payload, "allowed_citation_ids", ()) or ()
                     ),
+                    capabilities=caps_payload,
                 )
+                try:
+                    from storylens_private_engine.citation import get_last_claim_diagnostics
+
+                    repair_claim_diags = [
+                        d.safe_dict() if hasattr(d, "safe_dict") else dict(d)
+                        for d in get_last_claim_diagnostics()
+                    ]
+                    contract_diag["claim_contract_diagnostics_repair"] = list(
+                        repair_claim_diags
+                    )
+                    contract_diag["provider_attempts_claim_diagnostics_repair"] = list(
+                        repair_claim_diags
+                    )
+                except Exception:  # noqa: BLE001
+                    repair_claim_diags = []
                 contract_diag["repaired_contract_status"] = (
                     "SUCCESS" if repair_validation.ok else "FAILED"
                 )
@@ -948,6 +1041,8 @@ class BailianOpenAICompatibleProviderAdapter:
                             "repair_attempted",
                             "repair_count",
                             "repair_status",
+                            "claim_contract_diagnostics_initial",
+                            "provider_attempts_claim_diagnostics_initial",
                         }
                     }
                 )
@@ -966,6 +1061,9 @@ class BailianOpenAICompatibleProviderAdapter:
                         finish_reason_value=finish_reason,
                         cost_value=self._resolve_cost(token_in, token_out),
                         failure_code=fail_code,
+                        output_contract=contract_diag,
+                        claim_diags_initial=initial_claim_diags,
+                        claim_diags_repair=repair_claim_diags,
                     )
                     raise private_engine_error(
                         PrivateEngineErrorCode.PROVIDER_RESPONSE_INVALID,
@@ -1135,6 +1233,21 @@ class BailianOpenAICompatibleProviderAdapter:
             host_value=host,
             finish_reason_value=finish_reason,
             cost_value=cost,
+            output_contract=contract_diag if enforce_any else None,
+            claim_diags_initial=list(
+                (contract_diag or {}).get("claim_contract_diagnostics_initial")
+                or (contract_diag or {}).get("provider_attempts_claim_diagnostics_initial")
+                or []
+            )
+            if enforce_book_overview_v2
+            else None,
+            claim_diags_repair=list(
+                (contract_diag or {}).get("claim_contract_diagnostics_repair")
+                or (contract_diag or {}).get("provider_attempts_claim_diagnostics_repair")
+                or []
+            )
+            if enforce_book_overview_v2 and schema_repair_count
+            else None,
         )
         structured_out = dict(structured)
         if json_repaired:

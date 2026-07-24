@@ -271,6 +271,8 @@ class ResolvedProviderPayload:
     # CHG-058: process-local citation catalog for V2 Live validation (never logged).
     citation_catalog: Any | None = None
     allowed_citation_ids: tuple[str, ...] = ()
+    # CHG-059: server-derived capabilities for FieldRequirementPolicy / Repair.
+    context_capabilities: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if self.allow_tools:

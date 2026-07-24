@@ -269,14 +269,78 @@ class PrivateLabEstimateServiceAdapter:
                 quality_profile=quality_profile,
                 source_blocks=blocks,
             )
+            resolve_meta = {}
+            if hasattr(self.resolver, "last_resolve_meta"):
+                resolve_meta = dict(self.resolver.last_resolve_meta() or {})
             est = self.estimate_service.estimate(bundle)
             manifest = self.resolver.build_transfer_manifest(
                 bundle,
                 estimate=est,
                 snapshot_content_hash=self.snapshot_content_hash,
             )
+            # CHG-059: freeze ExecutionContextBinding at Estimate (no body text).
+            execution_binding = None
+            if str(module_key) == "book_overview":
+                try:
+                    from app.narrative_core.services.execution_context_binding import (
+                        build_execution_context_binding,
+                    )
+
+                    caps: dict[str, Any] = {}
+                    try:
+                        from storylens_private_engine.citation import (
+                            build_field_requirement_policy,
+                            derive_context_capabilities,
+                        )
+
+                        capabilities = derive_context_capabilities(
+                            selected_chapter_orders=tuple(
+                                resolve_meta.get("selected_chapter_orders") or ()
+                            ),
+                            all_chapter_orders=tuple(
+                                resolve_meta.get("all_chapter_orders") or ()
+                            ),
+                            selected_paragraph_count=len(bundle.selected_paragraph_ids),
+                            batch_index=int(resolve_meta.get("batch_index") or 0),
+                            batch_count=int(resolve_meta.get("batch_count") or 1),
+                            full_book_default=False,
+                        )
+                        caps = capabilities.safe_dict()
+                        _ = build_field_requirement_policy(capabilities)
+                    except Exception:  # noqa: BLE001
+                        caps = {}
+                    execution_binding = build_execution_context_binding(
+                        book_id=int(book_id),
+                        snapshot_id=int(book_snapshot_id),
+                        module_key=module_key,
+                        selected_chapter_ids=bundle.selected_chapter_ids,
+                        selected_paragraph_ids=bundle.selected_paragraph_ids,
+                        selected_unit_refs=bundle.selected_context_unit_ids,
+                        context_bundle_hash=bundle.context_bundle_hash,
+                        prompt_input_fingerprint=str(
+                            resolve_meta.get("bundle_fingerprint")
+                            or bundle.bundle_fingerprint
+                        ),
+                        source_character_count=bundle.source_character_count(),
+                        citation_entry_count=0,  # filled after catalog build at execute
+                        provider_context_limit=resolve_meta.get("provider_context_limit"),
+                        batch_index=int(resolve_meta.get("batch_index") or 0),
+                        batch_count=int(resolve_meta.get("batch_count") or 1),
+                        selected_chapter_orders=tuple(
+                            resolve_meta.get("selected_chapter_orders") or ()
+                        ),
+                        all_chapter_orders=tuple(
+                            resolve_meta.get("all_chapter_orders") or ()
+                        ),
+                        context_capabilities=caps,
+                    )
+                except Exception:  # noqa: BLE001
+                    execution_binding = None
             module_estimates.append(est.safe_dict())
             manifests.append(manifest)
+            if execution_binding is not None:
+                # Stash on loop — primary module binding wins for book_overview.
+                self._pending_binding = execution_binding
             total_in += int(est.estimated_input_tokens)
             total_out += int(est.estimated_output_tokens)
             if est.cost.pricing_status == "unknown" or est.cost.cost_expected is None:
@@ -355,7 +419,13 @@ class PrivateLabEstimateServiceAdapter:
             "module_estimates": module_estimates,
             "consent_fingerprint": consent_fp,
             "primary_manifest": primary,
+            "execution_context_binding": (
+                self._pending_binding.safe_dict()
+                if getattr(self, "_pending_binding", None) is not None
+                else None
+            ),
         }
+        self._pending_binding = None
         return result
 
     def validate_fingerprint(
@@ -372,6 +442,14 @@ class PrivateLabEstimateServiceAdapter:
             return None
         return entry.get("primary_manifest")
 
+    def cached_execution_context_binding(
+        self, estimate_fingerprint: str
+    ) -> dict[str, Any] | None:
+        entry = self._cache.get(str(estimate_fingerprint))
+        if not entry:
+            return None
+        raw = entry.get("execution_context_binding")
+        return dict(raw) if isinstance(raw, dict) else None
 
 @dataclass
 class PrivateLabConsentServiceAdapter:
@@ -661,8 +739,41 @@ class PrivateLabProviderExecutionServiceAdapter:
                 catalog=citation_catalog,
             )
             response_schema_ref = SCHEMA_REF_V2
+            caps = dict(request.get("context_capabilities") or {})
+            policy_text = None
+            try:
+                from storylens_private_engine.citation import (
+                    build_field_requirement_policy,
+                )
+                from storylens_private_engine.citation.field_policy import (
+                    ContextCapabilities,
+                )
+
+                caps_obj = ContextCapabilities(
+                    can_assess_core_overview=bool(
+                        caps.get("can_assess_core_overview", True)
+                    ),
+                    can_assess_structure_progression=bool(
+                        caps.get("can_assess_structure_progression", False)
+                    ),
+                    can_assess_ending_state=bool(
+                        caps.get("can_assess_ending_state", False)
+                    ),
+                    full_book_coverage=bool(caps.get("full_book_coverage", False)),
+                    batch_index=int(caps.get("batch_index") or 0),
+                    batch_count=int(caps.get("batch_count") or 1),
+                    selected_chapter_count=int(caps.get("selected_chapter_count") or 0),
+                    total_chapter_count=int(caps.get("total_chapter_count") or 0),
+                    covers_first_chapter=bool(caps.get("covers_first_chapter", False)),
+                    covers_last_chapter=bool(caps.get("covers_last_chapter", False)),
+                    structural_span_ratio=float(caps.get("structural_span_ratio") or 0.0),
+                )
+                policy_text = build_field_requirement_policy(caps_obj).prompt_rules_text()
+            except Exception:  # noqa: BLE001
+                policy_text = None
             constraint = provider_output_constraint_text_v2(
-                citation_ids=allowed_citation_ids
+                citation_ids=allowed_citation_ids,
+                policy_text=policy_text,
             )
             msgs = [dict(m) for m in messages]
             if msgs and msgs[-1].get("role") == "user":
@@ -673,6 +784,12 @@ class PrivateLabProviderExecutionServiceAdapter:
                         from storylens_private_engine.citation.prompt_render import (
                             citation_system_rules,
                             render_cited_source_blocks,
+                        )
+                        from storylens_private_engine.citation import (
+                            build_field_requirement_policy,
+                        )
+                        from storylens_private_engine.citation.field_policy import (
+                            ContextCapabilities,
                         )
 
                         cited = "\n\n".join(render_cited_source_blocks(citation_catalog))
@@ -698,10 +815,47 @@ class PrivateLabProviderExecutionServiceAdapter:
                         if msgs[0].get("role") == "system":
                             sys_content = str(msgs[0].get("content") or "")
                             if "Citation Evidence Contract V2" not in sys_content:
+                                try:
+                                    caps_obj = ContextCapabilities(
+                                        can_assess_core_overview=bool(
+                                            caps.get("can_assess_core_overview", True)
+                                        ),
+                                        can_assess_structure_progression=bool(
+                                            caps.get(
+                                                "can_assess_structure_progression", False
+                                            )
+                                        ),
+                                        can_assess_ending_state=bool(
+                                            caps.get("can_assess_ending_state", False)
+                                        ),
+                                        full_book_coverage=bool(
+                                            caps.get("full_book_coverage", False)
+                                        ),
+                                        batch_index=int(caps.get("batch_index") or 0),
+                                        batch_count=int(caps.get("batch_count") or 1),
+                                        selected_chapter_count=int(
+                                            caps.get("selected_chapter_count") or 0
+                                        ),
+                                        total_chapter_count=int(
+                                            caps.get("total_chapter_count") or 0
+                                        ),
+                                        covers_first_chapter=bool(
+                                            caps.get("covers_first_chapter", False)
+                                        ),
+                                        covers_last_chapter=bool(
+                                            caps.get("covers_last_chapter", False)
+                                        ),
+                                        structural_span_ratio=float(
+                                            caps.get("structural_span_ratio") or 0.0
+                                        ),
+                                    )
+                                    rules = citation_system_rules(
+                                        build_field_requirement_policy(caps_obj)
+                                    )
+                                except Exception:  # noqa: BLE001
+                                    rules = citation_system_rules()
                                 msgs[0]["content"] = (
-                                    sys_content.rstrip()
-                                    + "\n\n"
-                                    + citation_system_rules()
+                                    sys_content.rstrip() + "\n\n" + rules
                                 )
                     except Exception:  # noqa: BLE001
                         if "Output contract:" not in content:
@@ -721,6 +875,7 @@ class PrivateLabProviderExecutionServiceAdapter:
             max_repair_count=1,
             citation_catalog=citation_catalog,
             allowed_citation_ids=allowed_citation_ids,
+            context_capabilities=dict(request.get("context_capabilities") or {}),
         )
         self.last_payloads.append(
             {
@@ -920,7 +1075,9 @@ class PrivateLabProviderExecutionServiceAdapter:
                     "input_tokens": audit.get("input_tokens"),
                     "output_tokens": audit.get("output_tokens"),
                     "actual_cost": audit.get("actual_cost"),
-                    "retry_count": audit.get("retry_count"),
+                    "retry_count": 0,
+                    "transport_retry_count": 0,
+                    "business_repair_count": audit.get("business_repair_count"),
                     "attempt_count": audit.get("attempt_count"),
                     "attempts": list(audit.get("attempts") or []),
                     "http_status": audit.get("http_status"),
@@ -929,10 +1086,61 @@ class PrivateLabProviderExecutionServiceAdapter:
                     "live_request_confirmed": bool(audit.get("live_request_confirmed")),
                     "provider_attempted": bool(calls or audit.get("provider_request_ids")),
                     "failure_code": audit.get("failure_code") or str(detail),
+                    "output_contract": audit.get("output_contract"),
+                    "claim_contract_diagnostics_initial": list(
+                        (audit.get("output_contract") or {}).get(
+                            "claim_contract_diagnostics_initial"
+                        )
+                        or (audit.get("output_contract") or {}).get(
+                            "provider_attempts_claim_diagnostics_initial"
+                        )
+                        or []
+                    ),
+                    "claim_contract_diagnostics_repair": list(
+                        (audit.get("output_contract") or {}).get(
+                            "claim_contract_diagnostics_repair"
+                        )
+                        or (audit.get("output_contract") or {}).get(
+                            "provider_attempts_claim_diagnostics_repair"
+                        )
+                        or []
+                    ),
                 }
+                # CHG-059: HTTP OK + contract failure is not provider_failed.
+                detail_s = str(detail or "")
+                citation_codes = {
+                    "UNKNOWN_CITATION_ID",
+                    "STALE_CITATION_ID",
+                    "CITATION_CATALOG_MISMATCH",
+                    "REQUIRED_CLAIM_CITATION_EMPTY",
+                    "MISSING_REQUIRED_CITATION",
+                }
+                contract_codes = {
+                    "REQUIRED_CLAIM_NOT_OBSERVED",
+                    "REQUIRED_CLAIM_VALUE_EMPTY",
+                    "CLAIM_STATUS_CITATION_CONFLICT",
+                    "OPTIONAL_CLAIM_STATUS_INVALID",
+                    "DTO_VALIDATION_FAILED",
+                    "EMPTY_SEMANTIC_CLAIM",
+                    "STRUCTURED_OUTPUT_NOT_OBJECT",
+                    "UNDECLARED_TOP_LEVEL_FIELDS",
+                    "MISSING_REQUIRED_FIELDS",
+                    "contract_rejected",
+                }
+                if detail_s in {"REPAIR_EXHAUSTED", "repair_exhausted"} or (
+                    detail_s in citation_codes | contract_codes
+                    and int(audit.get("business_repair_count") or 0) >= 1
+                ):
+                    status = "repair_exhausted"
+                elif detail_s in citation_codes:
+                    status = "citation_validation_failed"
+                elif detail_s in contract_codes:
+                    status = "contract_validation_failed"
+                else:
+                    status = "provider_failed"
                 return PrivateLabProviderUsageResult(
                     module_key=module_key,
-                    status="provider_failed",
+                    status=status,
                     usage=usage_payload,
                 )
             self.http_calls += 1
@@ -993,6 +1201,24 @@ class PrivateLabProviderExecutionServiceAdapter:
                     "effective_dry_run": False,
                     "synthetic_success": False,
                     "output_contract": audit.get("output_contract"),
+                    "claim_contract_diagnostics_initial": list(
+                        (audit.get("output_contract") or {}).get(
+                            "claim_contract_diagnostics_initial"
+                        )
+                        or (audit.get("output_contract") or {}).get(
+                            "provider_attempts_claim_diagnostics_initial"
+                        )
+                        or []
+                    ),
+                    "claim_contract_diagnostics_repair": list(
+                        (audit.get("output_contract") or {}).get(
+                            "claim_contract_diagnostics_repair"
+                        )
+                        or (audit.get("output_contract") or {}).get(
+                            "provider_attempts_claim_diagnostics_repair"
+                        )
+                        or []
+                    ),
                     "provider_attempted": True,
                 },
                 output_fingerprint=f"live-{module_key}-{bundle.bundle_fingerprint[:8]}",

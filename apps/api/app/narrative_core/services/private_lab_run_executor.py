@@ -73,9 +73,26 @@ def _provider_attempt_record(
 ) -> dict[str, Any]:
     """Safe provider attempt row for append-only checkpoint namespace (no bodies)."""
 
+    operation_kind = str(
+        (extra or {}).get("operation_kind")
+        or provider_usage.get("operation_kind")
+        or (
+            "book_overview_initial"
+            if attempt_kind in {"initial", "book_overview_initial"}
+            else (
+                "book_overview_contract_repair"
+                if "repair" in str(attempt_kind)
+                else attempt_kind
+            )
+        )
+    )
     record = {
         "attempt_index": int(attempt_index),
         "attempt_kind": str(attempt_kind),
+        "operation_kind": operation_kind,
+        "parent_attempt_index": (extra or {}).get("parent_attempt_index")
+        if extra
+        else provider_usage.get("parent_attempt_index"),
         "module_key": module_key,
         "stage_key": stage_key,
         "checkpoint_kind": "provider_attempt",
@@ -92,12 +109,23 @@ def _provider_attempt_record(
         "input_tokens": provider_usage.get("input_tokens"),
         "output_tokens": provider_usage.get("output_tokens"),
         "cached_tokens": provider_usage.get("cached_tokens"),
-        "retry_count": provider_usage.get("retry_count"),
+        "transport_retry_count": int(
+            provider_usage.get("transport_retry_count")
+            or 0
+        ),
+        "retry_count": 0,  # CHG-059: business repair is not transport retry
         "actual_cost": cost_val,
         "pricing_version": provider_usage.get("pricing_version"),
         "attempt_status": provider_usage.get("attempt_status")
         or provider_usage.get("provider_status")
         or "success",
+        "validation_status": provider_usage.get("validation_status"),
+        "validation_error_codes": list(
+            provider_usage.get("validation_error_codes") or []
+        ),
+        "claim_contract_diagnostics": list(
+            provider_usage.get("claim_contract_diagnostics") or []
+        ),
         "error_code": provider_usage.get("failure_code")
         or provider_usage.get("detail_code")
         or provider_usage.get("provider_error_code"),
@@ -107,8 +135,98 @@ def _provider_attempt_record(
         "live_request_confirmed": provider_usage.get("live_request_confirmed"),
     }
     if extra:
-        record.update(dict(extra))
+        record.update({k: v for k, v in dict(extra).items() if k != "operation_kind"})
+        record["operation_kind"] = operation_kind
     return record
+
+
+def _expand_provider_business_attempts(
+    *,
+    module_key: str,
+    stage_key: str,
+    provider_usage: Mapping[str, Any],
+    cost_val: Any,
+    effective_dry_run: bool,
+) -> list[dict[str, Any]]:
+    """Expand gateway nested attempts into independent Stage provider_attempts rows."""
+
+    nested = list(provider_usage.get("attempts") or [])
+    ids = list(provider_usage.get("provider_request_ids") or [])
+    if not nested and ids:
+        nested = [{"attempt_index": i, "provider_request_id": rid} for i, rid in enumerate(ids)]
+    if not nested:
+        return [
+            _provider_attempt_record(
+                module_key=module_key,
+                stage_key=stage_key,
+                attempt_index=0,
+                attempt_kind="book_overview_initial",
+                provider_usage=provider_usage,
+                cost_val=cost_val,
+                effective_dry_run=effective_dry_run,
+                extra={"operation_kind": "book_overview_initial"},
+            )
+        ]
+    out: list[dict[str, Any]] = []
+    for i, item in enumerate(nested):
+        kind = str(
+            item.get("operation_kind")
+            or ("book_overview_initial" if i == 0 else "book_overview_contract_repair")
+        )
+        row_usage = dict(provider_usage)
+        row_usage["provider_request_id"] = item.get("provider_request_id") or (
+            ids[i] if i < len(ids) else None
+        )
+        row_usage["provider_request_ids"] = [
+            row_usage["provider_request_id"]
+        ] if row_usage.get("provider_request_id") else []
+        row_usage["operation_kind"] = kind
+        row_usage["parent_attempt_index"] = None if i == 0 else 0
+        row_usage["attempt_status"] = item.get("attempt_status") or row_usage.get(
+            "attempt_status"
+        )
+        row_usage["validation_error_codes"] = list(
+            item.get("validation_error_codes")
+            or provider_usage.get("validation_error_codes")
+            or []
+        )
+        # Prefer per-attempt claim diagnostics when present.
+        key = f"claim_contract_diagnostics_{'initial' if i == 0 else 'repair'}"
+        oc = dict(provider_usage.get("output_contract") or {})
+        if provider_usage.get(key):
+            row_usage["claim_contract_diagnostics"] = list(provider_usage.get(key) or [])
+        elif item.get("claim_contract_diagnostics"):
+            row_usage["claim_contract_diagnostics"] = list(
+                item.get("claim_contract_diagnostics") or []
+            )
+        elif i == 0 and oc.get("claim_contract_diagnostics_initial"):
+            row_usage["claim_contract_diagnostics"] = list(
+                oc.get("claim_contract_diagnostics_initial")
+                or oc.get("provider_attempts_claim_diagnostics_initial")
+                or []
+            )
+        elif i > 0 and oc.get("claim_contract_diagnostics_repair"):
+            row_usage["claim_contract_diagnostics"] = list(
+                oc.get("claim_contract_diagnostics_repair")
+                or oc.get("provider_attempts_claim_diagnostics_repair")
+                or []
+            )
+        out.append(
+            _provider_attempt_record(
+                module_key=module_key,
+                stage_key=stage_key,
+                attempt_index=i,
+                attempt_kind=kind,
+                provider_usage=row_usage,
+                cost_val=cost_val if i == len(nested) - 1 else None,
+                effective_dry_run=effective_dry_run,
+                extra={
+                    "operation_kind": kind,
+                    "parent_attempt_index": None if i == 0 else 0,
+                },
+            )
+        )
+    return out
 
 
 @dataclass(frozen=True, slots=True)
@@ -474,32 +592,116 @@ class PrivateLabRunExecutor:
                     run_id=int(run.id),
                     detail_code=str(exc),
                 ) from exc
-            # CHG-058: build Context Bundle before Provider so CitationCatalog IDs match enrich.
-            if hasattr(runtime, "build_native_context_bundle") and str(module_key) == "book_overview":
-                _wb, contract = runtime.build_native_context_bundle(
-                    book_id=int(run.book_id or 0),
-                    book_snapshot_id=int(run.book_snapshot_id or 0),
-                    module_keys=(module_key,),
-                )
-                context_bundle_hash = str(getattr(contract, "bundle_hash", "") or "")
-                meta["context_bundle_hash"] = context_bundle_hash
+            # CHG-059: rebuild Context using frozen ExecutionContextBinding (never full-unit None).
+            if str(module_key) == "book_overview":
                 from app.narrative_core.private_engine_contract.context import (
                     make_context_bundle_ref,
                 )
                 from app.narrative_core.services.citation_catalog_v2 import (
                     build_catalog_from_paragraph_units,
                 )
+                from app.narrative_core.services.execution_context_binding import (
+                    EXECUTION_CONTEXT_FINGERPRINT_MISMATCH,
+                    binding_from_safe_dict,
+                    compute_selection_fingerprint,
+                    verify_execution_context_fingerprints,
+                )
+                from app.narrative_core.services.formal_private_provider_input_resolver import (
+                    FormalPrivateProviderInputBundleResolverAdapter,
+                )
 
-                meta["context_bundle_ref"] = make_context_bundle_ref(context_bundle_hash)
-                # Mirror enrich paragraph units (locator + length filler).
-                if hasattr(runtime, "_paragraph_units_for_citation_catalog"):
-                    citation_paragraph_units = list(
-                        runtime._paragraph_units_for_citation_catalog(  # noqa: SLF001
-                            contract=contract,
-                            book_snapshot_id=int(run.book_snapshot_id or 0),
-                            selected_paragraph_ids=None,
-                        )
+                raw_binding = meta.get("execution_context_binding")
+                formal = FormalPrivateProviderInputBundleResolverAdapter(
+                    session=self._session,
+                    provider_context_limit=int(
+                        (raw_binding or {}).get("provider_context_limit") or 120_000
                     )
+                    if isinstance(raw_binding, dict)
+                    else 120_000,
+                )
+                formal_bundle = formal.resolve(
+                    request_id=f"exec-bind-{int(run.id)}-{module_key}",
+                    book_id=int(run.book_id or 0),
+                    book_snapshot_id=int(run.book_snapshot_id or 0),
+                    module_key=str(module_key),
+                    context_bundle_hash=str(
+                        (raw_binding or {}).get("context_bundle_hash") or ""
+                    )
+                    if isinstance(raw_binding, dict)
+                    else "ctx-lab",
+                    provider_key=str(meta.get("provider_key") or "dashscope"),
+                    model_id=str(meta.get("model_id") or "qwen-plus"),
+                    quality_profile=str(meta.get("quality_profile") or "balanced"),
+                )
+                if isinstance(raw_binding, dict):
+                    expected_binding = binding_from_safe_dict(raw_binding)
+                else:
+                    raise PrivateWholeBookLabRunError(
+                        PrivateEngineLabDenyReason.PRIVATE_ENGINE_LAB_OPERATION_NOT_ALLOWED,
+                        run_id=int(run.id),
+                        detail_code="EXECUTION_CONTEXT_BINDING_MISSING",
+                    )
+                context_bundle_hash = str(formal_bundle.context_bundle_hash)
+                meta["context_bundle_hash"] = context_bundle_hash
+                meta["context_bundle_ref"] = make_context_bundle_ref(context_bundle_hash)
+
+                selected_pids = tuple(
+                    int(x) for x in expected_binding.selected_paragraph_ids
+                )
+                if not selected_pids:
+                    raise PrivateWholeBookLabRunError(
+                        PrivateEngineLabDenyReason.PRIVATE_ENGINE_LAB_OPERATION_NOT_ALLOWED,
+                        run_id=int(run.id),
+                        detail_code="EXECUTION_CONTEXT_SELECTION_EMPTY",
+                    )
+                # Formal rebuild selection must match frozen Estimate refs (non-circular).
+                formal_pids = tuple(
+                    str(x) for x in (formal_bundle.selected_paragraph_ids or ())
+                )
+                expected_pids = tuple(
+                    str(x) for x in expected_binding.selected_paragraph_ids
+                )
+                if not formal_pids or formal_pids != expected_pids:
+                    raise PrivateWholeBookLabRunError(
+                        PrivateEngineLabDenyReason.PRIVATE_ENGINE_LAB_OPERATION_NOT_ALLOWED,
+                        run_id=int(run.id),
+                        detail_code=EXECUTION_CONTEXT_FINGERPRINT_MISMATCH,
+                    )
+                # Prefer Formal contract (same builder as Estimate) for catalog + enrich.
+                contract = formal.last_contract()
+                if contract is None and hasattr(runtime, "build_native_context_bundle"):
+                    limit = int(expected_binding.provider_context_limit or 120_000)
+                    _wb, contract = runtime.build_native_context_bundle(
+                        book_id=int(run.book_id or 0),
+                        book_snapshot_id=int(run.book_snapshot_id or 0),
+                        module_keys=(module_key,),
+                        provider_context_limit=limit,
+                    )
+                if contract is None or not hasattr(
+                    runtime, "_paragraph_units_for_citation_catalog"
+                ):
+                    raise PrivateWholeBookLabRunError(
+                        PrivateEngineLabDenyReason.PRIVATE_ENGINE_LAB_OPERATION_NOT_ALLOWED,
+                        run_id=int(run.id),
+                        detail_code="CITATION_CATALOG_CONTEXT_UNAVAILABLE",
+                    )
+                # Register Formal hash → contract so enrich/pipeline resolve the same bundle.
+                if hasattr(runtime, "contract_bundles"):
+                    runtime.contract_bundles[meta["context_bundle_ref"]] = contract
+                    runtime.contract_bundles[context_bundle_hash] = contract
+                for runner in getattr(runtime, "module_runners", {}).values():
+                    if hasattr(runner, "context_bundles"):
+                        runner.context_bundles[meta["context_bundle_ref"]] = contract
+                        runner.context_bundles[context_bundle_hash] = contract
+                citation_paragraph_units = list(
+                    runtime._paragraph_units_for_citation_catalog(  # noqa: SLF001
+                        contract=contract,
+                        book_snapshot_id=int(run.book_snapshot_id or 0),
+                        selected_paragraph_ids=selected_pids,
+                    )
+                )
+                catalog_fp = ""
+                schema_fp = ""
                 if citation_paragraph_units and context_bundle_hash:
                     citation_catalog = build_catalog_from_paragraph_units(
                         context_bundle_hash=context_bundle_hash,
@@ -508,6 +710,56 @@ class PrivateLabRunExecutor:
                         context_bundle_ref=str(meta.get("context_bundle_ref") or ""),
                     )
                     allowed_citation_ids = tuple(citation_catalog.citation_ids)
+                    catalog_fp = str(
+                        getattr(citation_catalog, "catalog_fingerprint", "") or ""
+                    )
+                    try:
+                        from storylens_private_engine.citation import (
+                            book_overview_result_v2_json_schema,
+                            dynamic_schema_fingerprint,
+                        )
+
+                        schema = book_overview_result_v2_json_schema(citation_catalog)
+                        meta_base = {k: v for k, v in schema.items() if k != "x_storylens"}
+                        schema_fp = dynamic_schema_fingerprint(meta_base)
+                    except Exception:  # noqa: BLE001
+                        schema_fp = ""
+
+                actual_selection_fp = compute_selection_fingerprint(
+                    selected_chapter_ids=formal_bundle.selected_chapter_ids,
+                    selected_paragraph_ids=formal_bundle.selected_paragraph_ids,
+                    selected_unit_refs=formal_bundle.selected_context_unit_ids,
+                    selection_policy_version=expected_binding.selection_policy_version,
+                )
+                check = verify_execution_context_fingerprints(
+                    expected=expected_binding,
+                    actual_selection_fingerprint=actual_selection_fp,
+                    actual_context_bundle_hash=context_bundle_hash,
+                    actual_citation_catalog_fingerprint=catalog_fp,
+                    actual_prompt_input_fingerprint=str(
+                        formal_bundle.bundle_fingerprint
+                        or expected_binding.prompt_input_fingerprint
+                    ),
+                    actual_dynamic_schema_fingerprint=schema_fp,
+                    executor_selection_count=len(selected_pids),
+                    executor_catalog_count=len(allowed_citation_ids),
+                )
+                meta["execution_context_diagnostics"] = dict(check.diagnostics)
+                if citation_catalog is not None:
+                    # Backfill catalog fingerprint onto binding diagnostics for Attempt audits.
+                    meta["citation_catalog_fingerprint"] = catalog_fp
+                    meta["dynamic_schema_fingerprint"] = schema_fp
+                    meta["context_capabilities"] = dict(
+                        expected_binding.context_capabilities or {}
+                    )
+                if not check.ok:
+                    raise PrivateWholeBookLabRunError(
+                        PrivateEngineLabDenyReason.PRIVATE_ENGINE_LAB_OPERATION_NOT_ALLOWED,
+                        run_id=int(run.id),
+                        detail_code=str(
+                            check.failure_code or EXECUTION_CONTEXT_FINGERPRINT_MISMATCH
+                        ),
+                    )
 
         usage = self._provider.execute_module(
             module_key=module_key,
@@ -523,6 +775,17 @@ class PrivateLabRunExecutor:
                 "citation_paragraph_units": citation_paragraph_units,
                 "allowed_citation_ids": list(allowed_citation_ids),
                 "citation_catalog": citation_catalog,
+                "context_capabilities": dict(
+                    meta.get("context_capabilities")
+                    or (
+                        (meta.get("execution_context_binding") or {}).get(
+                            "context_capabilities"
+                        )
+                        if isinstance(meta.get("execution_context_binding"), dict)
+                        else {}
+                    )
+                    or {}
+                ),
             },
             cancellation_ref=cancellation_ref,
         )
@@ -532,7 +795,14 @@ class PrivateLabRunExecutor:
                 run_id=int(run.id),
                 detail_code="MODULE_CANCELLED",
             )
-        if usage.status in {"security_denied", "provider_failed", "budget_denied"}:
+        if usage.status in {
+            "security_denied",
+            "provider_failed",
+            "budget_denied",
+            "contract_validation_failed",
+            "citation_validation_failed",
+            "repair_exhausted",
+        }:
             provider_usage = dict(usage.usage or {})
             # CHG-057: retain Stage provider_attempt authority even when Live fails after calls.
             if provider_usage.get("provider_attempted") or provider_usage.get(
@@ -549,6 +819,13 @@ class PrivateLabRunExecutor:
                 }
                 if cost_val is not None:
                     accumulate["cost"] = float(cost_val)
+                expanded = _expand_provider_business_attempts(
+                    module_key=module_key,
+                    stage_key=stage.stage_key,
+                    provider_usage=provider_usage,
+                    cost_val=cost_val,
+                    effective_dry_run=effective_dry_run,
+                )
                 self._stages.write_checkpoint(
                     int(run.id),
                     stage.stage_key,
@@ -567,23 +844,8 @@ class PrivateLabRunExecutor:
                         "http_status": provider_usage.get("http_status"),
                         "usage_source": provider_usage.get("usage_source"),
                         "provider_status": usage.status,
+                        "provider_attempts": expanded,
                     },
-                    append_provider_attempt=_provider_attempt_record(
-                        module_key=module_key,
-                        stage_key=stage.stage_key,
-                        attempt_index=int(getattr(stage, "attempt_count", 0) or 0),
-                        attempt_kind="initial",
-                        provider_usage=provider_usage,
-                        cost_val=cost_val,
-                        effective_dry_run=effective_dry_run,
-                        extra={
-                            "attempt_status": usage.status,
-                            "error_code": provider_usage.get("failure_code")
-                            or provider_usage.get("detail_code"),
-                            "provider_status": usage.status,
-                            "attempts": list(provider_usage.get("attempts") or []),
-                        },
-                    ),
                     **accumulate,
                 )
             raise PrivateWholeBookLabRunError(
@@ -605,6 +867,13 @@ class PrivateLabRunExecutor:
         if cost_val is not None:
             accumulate["cost"] = float(cost_val)
 
+        expanded_ok = _expand_provider_business_attempts(
+            module_key=module_key,
+            stage_key=stage.stage_key,
+            provider_usage=provider_usage,
+            cost_val=cost_val,
+            effective_dry_run=effective_dry_run,
+        )
         self._stages.write_checkpoint(
             int(run.id),
             stage.stage_key,
@@ -623,23 +892,8 @@ class PrivateLabRunExecutor:
                 "http_status": provider_usage.get("http_status"),
                 "usage_source": provider_usage.get("usage_source"),
                 "output_contract": provider_usage.get("output_contract"),
+                "provider_attempts": expanded_ok,
             },
-            append_provider_attempt=_provider_attempt_record(
-                module_key=module_key,
-                stage_key=stage.stage_key,
-                attempt_index=int(getattr(stage, "attempt_count", 0) or 0),
-                attempt_kind="initial",
-                provider_usage=provider_usage,
-                cost_val=cost_val,
-                effective_dry_run=effective_dry_run,
-                extra={
-                    "attempts": list(provider_usage.get("attempts") or []),
-                    "provider_error_code": provider_usage.get("provider_error_code"),
-                    "provider_error_class": provider_usage.get("provider_error_class"),
-                    "validation_started": False,
-                    "output_contract": provider_usage.get("output_contract"),
-                },
-            ),
             **accumulate,
         )
 
@@ -664,17 +918,39 @@ class PrivateLabRunExecutor:
                     runtime.bind_session(self._session)
                 if not hasattr(runtime, "build_native_context_bundle"):
                     raise RuntimeError("runtime_missing_context_builder")
-                _wb, contract = runtime.build_native_context_bundle(
-                    book_id=int(run.book_id or 0),
-                    book_snapshot_id=int(run.book_snapshot_id or 0),
-                    module_keys=(module_key,),
-                )
                 from app.narrative_core.private_engine_contract.context import (
                     make_context_bundle_ref,
                 )
 
-                # Single source of truth — never invent bundle:{run_id}.
-                ref = make_context_bundle_ref(contract.bundle_hash)
+                # CHG-059: reuse frozen Formal context when already bound for book_overview.
+                frozen_hash = str(
+                    context_bundle_hash
+                    or meta.get("context_bundle_hash")
+                    or ""
+                )
+                frozen_ref = str(meta.get("context_bundle_ref") or "")
+                if (
+                    str(module_key) == "book_overview"
+                    and frozen_hash
+                    and frozen_hash != "context-hash-ok"
+                    and frozen_ref
+                    and frozen_ref in getattr(runtime, "contract_bundles", {})
+                ):
+                    ref = frozen_ref
+                    contract = runtime.contract_bundles[frozen_ref]
+                    if hasattr(runtime, "_ensure_evidence_view"):
+                        runtime._ensure_evidence_view(  # noqa: SLF001
+                            book_id=int(run.book_id or 0),
+                            book_snapshot_id=int(run.book_snapshot_id or 0),
+                        )
+                else:
+                    _wb, contract = runtime.build_native_context_bundle(
+                        book_id=int(run.book_id or 0),
+                        book_snapshot_id=int(run.book_snapshot_id or 0),
+                        module_keys=(module_key,),
+                    )
+                    # Single source of truth — never invent bundle:{run_id}.
+                    ref = make_context_bundle_ref(contract.bundle_hash)
                 if ref not in getattr(runtime, "contract_bundles", {}):
                     raise PrivateWholeBookLabRunError(
                         PrivateEngineLabDenyReason.PRIVATE_ENGINE_LAB_OPERATION_NOT_ALLOWED,
@@ -683,7 +959,9 @@ class PrivateLabRunExecutor:
                     )
                 # Persist formal ref into run metadata for resume/audit (no new columns).
                 meta["context_bundle_ref"] = ref
-                meta["context_bundle_hash"] = str(contract.bundle_hash)
+                meta["context_bundle_hash"] = str(
+                    getattr(contract, "bundle_hash", None) or frozen_hash or ""
+                )
                 meta["context_pipeline_version"] = str(
                     getattr(contract, "pipeline_version", "") or ""
                 )
