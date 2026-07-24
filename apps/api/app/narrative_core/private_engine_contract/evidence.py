@@ -33,6 +33,8 @@ class EvidenceCandidate:
     book_id: int | None = None
     preview: str = ""
     from_derived_summary: bool = False
+    # Provider DTO alias before Public canonicalization (audit only; never a gate).
+    provider_output_ref: str | None = None
 
     def __post_init__(self) -> None:
         if self.evidence_role not in (

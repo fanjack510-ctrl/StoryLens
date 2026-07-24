@@ -1312,7 +1312,12 @@ def _coerce_evidence_candidates(
     module_key: WholeBookModuleKey,
     request: PrivateEngineExecutionRequest,
 ) -> tuple[EvidenceCandidate, ...]:
-    """Normalize private dict/locator payloads into EvidenceCandidate DTOs."""
+    """Normalize private dict/locator payloads into EvidenceCandidate DTOs.
+
+    Preserves Provider DTO aliases (e.g. ``{module}.claim``) on
+    ``provider_output_ref`` / ``target_output_ref``. Canonicalization happens
+    later in ``execute_module_pipeline`` after Candidate Output Ref Registry.
+    """
 
     def _as_optional_int(value: Any) -> int | None:
         if value is None or value == "":
@@ -1322,12 +1327,39 @@ def _coerce_evidence_candidates(
         except (TypeError, ValueError):
             return None
 
+    claim_alias = f"{module_key.value}.claim"
     out: list[EvidenceCandidate] = []
     for item in raw or ():
         if isinstance(item, EvidenceCandidate):
             out.append(item)
             continue
         if not isinstance(item, Mapping):
+            # Opaque string ref may be a model-visible paragraph / evidence key.
+            token = str(item).strip()
+            if not token:
+                continue
+            out.append(
+                EvidenceCandidate(
+                    candidate_id=token,
+                    book_snapshot_id=int(request.book_snapshot_id or 0),
+                    snapshot_chapter_id=None,
+                    snapshot_paragraph_id=None,
+                    stable_paragraph_id=token,
+                    paragraph_content_hash="",
+                    start_offset=None,
+                    end_offset=None,
+                    evidence_role=EvidenceRole.SUPPORT,
+                    target_module_key=module_key,
+                    target_output_ref=claim_alias,
+                    extraction_method="provider_ref_string",
+                    confidence=None,
+                    source_context_unit_id=None,
+                    book_id=int(request.book_id or 0),
+                    preview="",
+                    from_derived_summary=False,
+                    provider_output_ref=claim_alias,
+                )
+            )
             continue
         role_raw = item.get("evidence_role", item.get("role", EvidenceRole.SUPPORT))
         try:
@@ -1346,13 +1378,20 @@ def _coerce_evidence_candidates(
         )
         stable = item.get("stable_paragraph_id")
         content_hash = item.get("paragraph_content_hash")
-        # Leave hash empty when absent so runtime can enrich from Snapshot view;
-        # never invent a fake hash string.
+        preview = str(item.get("preview") or item.get("quote") or item.get("text") or "")[:160]
+        provider_ref = str(
+            item.get("provider_output_ref")
+            or item.get("target_output_ref")
+            or item.get("output_ref")
+            or item.get("target")
+            or claim_alias
+        )
         out.append(
             EvidenceCandidate(
                 candidate_id=str(
                     item.get("candidate_id")
                     or item.get("evidence_id")
+                    or item.get("evidence_key")
                     or item.get("claim_id")
                     or "ev"
                 ),
@@ -1367,11 +1406,7 @@ def _coerce_evidence_candidates(
                 end_offset=item.get("end_offset"),
                 evidence_role=role,
                 target_module_key=module_key,
-                target_output_ref=str(
-                    item.get("target_output_ref")
-                    or item.get("output_ref")
-                    or f"{module_key.value}.out"
-                ),
+                target_output_ref=provider_ref,
                 extraction_method=str(item.get("extraction_method") or "provider_locator"),
                 confidence=item.get("confidence"),
                 source_context_unit_id=(
@@ -1380,8 +1415,9 @@ def _coerce_evidence_candidates(
                     else None
                 ),
                 book_id=int(item.get("book_id") or request.book_id or 0),
-                preview=str(item.get("preview") or "")[:160],
+                preview=preview,
                 from_derived_summary=bool(item.get("from_derived_summary", False)),
+                provider_output_ref=provider_ref,
             )
         )
     return tuple(out)

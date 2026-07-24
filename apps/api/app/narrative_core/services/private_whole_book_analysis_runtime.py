@@ -99,6 +99,20 @@ from app.narrative_core.services.whole_book_evidence_pipeline import (
     EvidenceCandidateBuilder,
     EvidenceCoverageCalculator,
 )
+from app.narrative_core.services.live_module_pipeline_diagnostics import (
+    LiveModulePipelineDiagnostics,
+    fingerprint_structured_output,
+    infer_failure_boundary,
+    merge_rejection_codes,
+)
+from app.narrative_core.services.output_ref_resolution import (
+    build_candidate_output_refs,
+    canonicalize_evidence_target_ref,
+)
+from app.narrative_core.services.quote_resolution import (
+    SnapshotQuoteIndex,
+    resolve_evidence_locator,
+)
 from app.narrative_core.services.whole_book_evidence_validator import (
     DefaultEvidenceValidator,
     EvidenceValidatorSnapshotView,
@@ -181,6 +195,7 @@ class ModulePipelineResultDTO:
     network: bool = False
     model_called: bool = False
     formal_prompt: bool = False
+    pipeline_diagnostics: Mapping[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -360,11 +375,17 @@ class PrivateWholeBookAnalysisRuntime:
         *,
         book_id: int,
         book_snapshot_id: int,
+        module_key: str,
+        registered_refs: Sequence[str],
+        asset_candidates: Sequence[Any],
+        selected_paragraph_ids: Sequence[int] | None = None,
+        selected_chapter_ids: Sequence[int] | None = None,
+        diagnostics: LiveModulePipelineDiagnostics | None = None,
     ) -> tuple[EvidenceCandidate, ...]:
-        """Fill missing paragraph hash/ids from registered Snapshot view.
+        """Canonicalize target refs then resolve Context/Snapshot locators.
 
-        Does not invent locators — only completes fields already bound by Provider
-        stable_paragraph_id / chapter / paragraph identifiers present in the Snapshot.
+        Order: Output Ref Registry → target canonicalize → quote/key enrich.
+        Does not invent locators; ambiguous matches are rejected (not first-hit).
         """
 
         if not evidence:
@@ -380,44 +401,118 @@ class PrivateWholeBookAnalysisRuntime:
                 == int(book_snapshot_id)
             ):
                 view = self.evidence_adapter.snapshot_view
-        if view is None:
-            return tuple(evidence)
 
-        stable_to_pid = {str(v): int(k) for k, v in view.stable_paragraph_ids.items()}
-        # Also allow numeric-string stable ids that equal paragraph PK.
-        for pid in view.paragraph_ids:
-            stable_to_pid.setdefault(str(pid), int(pid))
+        quote_index: SnapshotQuoteIndex | None = None
+        if self.session is not None:
+            try:
+                quote_index = SnapshotQuoteIndex.build_from_session(
+                    self.session,
+                    book_snapshot_id=int(book_snapshot_id),
+                    view=view,
+                    selected_paragraph_ids=selected_paragraph_ids,
+                    selected_chapter_ids=selected_chapter_ids,
+                )
+            except Exception:  # noqa: BLE001
+                quote_index = None
 
         enriched: list[EvidenceCandidate] = []
         for ev in evidence:
+            provider_ref = str(ev.provider_output_ref or ev.target_output_ref or "")
+            resolution = canonicalize_evidence_target_ref(
+                {
+                    "provider_output_ref": provider_ref,
+                    "target_output_ref": provider_ref,
+                    "target_module_key": str(
+                        getattr(ev.target_module_key, "value", ev.target_module_key)
+                    ),
+                    "claim_key": None,
+                    "candidate_id": ev.candidate_id,
+                },
+                module_key=module_key,
+                registered_refs=registered_refs,
+                asset_candidates=asset_candidates,
+            )
+            if diagnostics is not None:
+                if resolution.resolution_status == "RESOLVED":
+                    diagnostics.target_ref_resolved_count += 1
+                else:
+                    diagnostics.target_ref_rejected_count += 1
+                    diagnostics.evidence_rejection_codes = merge_rejection_codes(
+                        list(diagnostics.evidence_rejection_codes)
+                        + [resolution.resolution_code]
+                    )
+
+            canonical = resolution.canonical_output_ref or ev.target_output_ref
             pid = ev.snapshot_paragraph_id
-            if pid is None and ev.stable_paragraph_id:
-                pid = stable_to_pid.get(str(ev.stable_paragraph_id))
             chapter = ev.snapshot_chapter_id
-            if pid is not None and chapter is None:
-                chapter = view.paragraph_chapter.get(int(pid))
             content_hash = ev.paragraph_content_hash
-            if pid is not None and (not content_hash or content_hash == "missing"):
-                content_hash = str(view.paragraph_hashes.get(int(pid)) or content_hash or "")
             stable = ev.stable_paragraph_id
-            if pid is not None and not stable:
-                stable = view.stable_paragraph_ids.get(int(pid))
             start = ev.start_offset
             end = ev.end_offset
-            if pid is not None and start is None and end is None:
-                para_len = view.paragraph_lengths.get(int(pid))
-                if para_len is not None and para_len > 0:
-                    start, end = 0, int(para_len)
-            if (
-                pid == ev.snapshot_paragraph_id
-                and chapter == ev.snapshot_chapter_id
-                and content_hash == ev.paragraph_content_hash
-                and stable == ev.stable_paragraph_id
-                and start == ev.start_offset
-                and end == ev.end_offset
-            ):
-                enriched.append(ev)
-                continue
+
+            if quote_index is not None:
+                quote_result = resolve_evidence_locator(
+                    quote_index,
+                    {
+                        "evidence_key": ev.candidate_id,
+                        "stable_paragraph_id": ev.stable_paragraph_id,
+                        "snapshot_paragraph_id": ev.snapshot_paragraph_id,
+                        "snapshot_chapter_id": ev.snapshot_chapter_id,
+                        "preview": ev.preview,
+                        "paragraph_content_hash": ev.paragraph_content_hash or None,
+                        "start_offset": ev.start_offset,
+                        "end_offset": ev.end_offset,
+                    },
+                    expected_snapshot_id=int(book_snapshot_id),
+                )
+                if quote_result.status == "resolved":
+                    if diagnostics is not None:
+                        diagnostics.quote_resolution_success_count += 1
+                    pid = quote_result.paragraph_id
+                    chapter = quote_result.chapter_id
+                    stable = quote_result.stable_paragraph_id
+                    content_hash = quote_result.paragraph_content_hash or content_hash
+                    start = quote_result.start_offset
+                    end = quote_result.end_offset
+                elif (
+                    ev.snapshot_paragraph_id is None
+                    and not ev.stable_paragraph_id
+                    and not (ev.preview or "").strip()
+                ):
+                    # No locator material — leave unresolved; validator will reject.
+                    if diagnostics is not None:
+                        diagnostics.quote_resolution_rejected_count += 1
+                        if quote_result.failure_code:
+                            diagnostics.evidence_rejection_codes = merge_rejection_codes(
+                                list(diagnostics.evidence_rejection_codes)
+                                + [quote_result.failure_code]
+                            )
+                elif quote_result.failure_code and quote_result.status == "rejected":
+                    # Had locator hints but resolution failed — keep rejection code.
+                    if diagnostics is not None:
+                        diagnostics.quote_resolution_rejected_count += 1
+                        diagnostics.evidence_rejection_codes = merge_rejection_codes(
+                            list(diagnostics.evidence_rejection_codes)
+                            + [quote_result.failure_code]
+                        )
+            elif view is not None:
+                # Fallback: stable/paragraph id completion without quote index.
+                stable_to_pid = {str(v): int(k) for k, v in view.stable_paragraph_ids.items()}
+                for existing_pid in view.paragraph_ids:
+                    stable_to_pid.setdefault(str(existing_pid), int(existing_pid))
+                if pid is None and stable:
+                    pid = stable_to_pid.get(str(stable))
+                if pid is not None and chapter is None:
+                    chapter = view.paragraph_chapter.get(int(pid))
+                if pid is not None and (not content_hash or content_hash == "missing"):
+                    content_hash = str(view.paragraph_hashes.get(int(pid)) or "")
+                if pid is not None and not stable:
+                    stable = view.stable_paragraph_ids.get(int(pid))
+                if pid is not None and start is None and end is None:
+                    para_len = view.paragraph_lengths.get(int(pid))
+                    if para_len is not None and para_len > 0:
+                        start, end = 0, int(para_len)
+
             enriched.append(
                 EvidenceCandidate(
                     candidate_id=ev.candidate_id,
@@ -430,13 +525,14 @@ class PrivateWholeBookAnalysisRuntime:
                     end_offset=end,
                     evidence_role=ev.evidence_role,
                     target_module_key=ev.target_module_key,
-                    target_output_ref=ev.target_output_ref,
+                    target_output_ref=str(canonical),
                     extraction_method=ev.extraction_method,
                     confidence=ev.confidence,
                     source_context_unit_id=ev.source_context_unit_id,
                     book_id=ev.book_id if ev.book_id is not None else book_id,
                     preview=ev.preview,
                     from_derived_summary=ev.from_derived_summary,
+                    provider_output_ref=provider_ref or ev.provider_output_ref,
                 )
             )
         return tuple(enriched)
@@ -751,13 +847,76 @@ class PrivateWholeBookAnalysisRuntime:
             )
         )
 
-        # Output validation with Q evidence validator.
+        # --- CHG-055 pipeline: Candidate Registry → target resolve → enrich → validate → persist
+        diag = LiveModulePipelineDiagnostics(
+            module_key=key.value,
+            run_id=int(run_id),
+            stage_id=int(run_stage_id) if run_stage_id is not None else None,
+        )
+        structured = dict(
+            provider_policy.get("provider_structured_output")
+            or (guarded.module_outputs or {})
+            or {}
+        )
+        diag.structured_output_present = bool(structured)
+        diag.structured_output_schema = str(
+            structured.get("schema")
+            or (guarded.module_outputs or {}).get("schema")
+            or "BookOverviewResultDto"
+        )
+        diag.structured_output_fingerprint = fingerprint_structured_output(structured)
+        outputs = dict(guarded.module_outputs or {})
+        claim_count = 0
+        for claim_name in ("logline", "overview", "premise", "primary_conflict"):
+            if str(outputs.get(claim_name) or structured.get(claim_name) or "").strip():
+                claim_count += 1
+        diag.claim_count = claim_count
+        provider_refs = outputs.get("evidence_refs") or structured.get("evidence_refs") or ()
+        diag.provider_evidence_ref_count = len(tuple(provider_refs or ()))
+        diag.private_candidate_count = len(tuple(guarded.asset_candidates or ()))
+        diag.public_candidate_count = len(tuple(guarded.asset_candidates or ()))
+        diag.evidence_coercion_input_count = len(tuple(guarded.evidence_candidates or ()))
+
+        registered_refs = build_candidate_output_refs(
+            module_key=key.value,
+            asset_candidates=tuple(guarded.asset_candidates or ()),
+            extra_refs=tuple(
+                str(x) for x in outputs.get("resolver_output_refs", ()) or ()
+            ),
+        )
+        diag.candidate_output_ref_count = len(registered_refs)
+
+        selected_paragraph_ids = tuple(
+            int(x) for x in (getattr(contract, "selected_paragraph_ids", None) or ())
+        ) or None
+        selected_chapter_ids = tuple(
+            int(x) for x in (getattr(contract, "selected_chapter_ids", None) or ())
+        ) or None
+        # Context Bundle may expose paragraph ids via units metadata.
+        if selected_paragraph_ids is None:
+            unit_pids: list[int] = []
+            for unit in getattr(contract, "units", ()) or ():
+                for pid in getattr(unit, "snapshot_paragraph_ids", ()) or ():
+                    try:
+                        unit_pids.append(int(pid))
+                    except (TypeError, ValueError):
+                        continue
+            selected_paragraph_ids = tuple(unit_pids) or None
+
         assert self.output_validator is not None
         evidence = self._enrich_evidence_from_snapshot_view(
             tuple(e for e in guarded.evidence_candidates if isinstance(e, EvidenceCandidate)),
             book_id=book_id,
             book_snapshot_id=book_snapshot_id,
+            module_key=key.value,
+            registered_refs=registered_refs,
+            asset_candidates=tuple(guarded.asset_candidates or ()),
+            selected_paragraph_ids=selected_paragraph_ids,
+            selected_chapter_ids=selected_chapter_ids,
+            diagnostics=diag,
         )
+        diag.evidence_coercion_output_count = len(evidence)
+
         # Keep enriched evidence on the guarded result for candidate builder.
         guarded = PrivateEngineExecutionResult(
             schema=guarded.schema,
@@ -800,25 +959,29 @@ class PrivateWholeBookAnalysisRuntime:
                     chapter_ids=frozenset(
                         int(x) for x in guarded.module_outputs.get("resolver_chapter_ids", ()) or ()
                     ),
-                    output_refs=frozenset(
-                        {
-                            *(
-                                str(x)
-                                for x in guarded.module_outputs.get("resolver_output_refs", ())
-                                or ()
-                            ),
-                            *(
-                                str(a.get("output_ref"))
-                                for a in guarded.asset_candidates
-                                if isinstance(a, Mapping) and a.get("output_ref")
-                            ),
-                            f"{key.value}.out",
-                        }
-                    ),
+                    output_refs=frozenset(registered_refs),
                 ),
                 require_evidence_for_acceptance=require_evidence_for_acceptance,
             )
         )
+        if validation.evidence_valid:
+            diag.evidence_valid_count = len(evidence)
+            diag.evidence_rejected_count = 0
+        else:
+            diag.evidence_valid_count = 0
+            diag.evidence_rejected_count = max(1, len(evidence))
+            # Pull safe codes from validator when available.
+            issues = getattr(getattr(validation, "evidence_report", None), "issues", ()) or ()
+            codes = [str(getattr(i, "code", "") or "") for i in issues]
+            if not codes and validation.error_code:
+                codes = [str(validation.error_code)]
+            diag.evidence_rejection_codes = merge_rejection_codes(
+                list(diag.evidence_rejection_codes) + codes
+            )
+            if not diag.failure_boundary:
+                diag.failure_boundary = "EVIDENCE_VALIDATION_REJECTED"
+                diag.failure_code = str(validation.error_code or "EVIDENCE_REJECTED")
+
         coverage = build_coverage_report(
             module_key=key.value,
             required_claims=int(guarded.module_outputs.get("required_claims", 1) or 1),
@@ -846,9 +1009,63 @@ class PrivateWholeBookAnalysisRuntime:
             prompt_pack_version=pack.manifest.prompt_pack_version,
             mock=not self.private_modules_bound,
         )
+        diag.candidate_command_count = len(tuple(getattr(built, "asset_commands", ()) or ()))
+        diag.evidence_command_count = len(tuple(getattr(built, "evidence_commands", ()) or ()))
+        if getattr(built, "rejected", False) and diag.candidate_command_count < 1:
+            diag.failure_boundary = diag.failure_boundary or "CANDIDATE_COMMAND_EMPTY"
+            diag.failure_code = diag.failure_code or "CANDIDATE_BUILD_REJECTED"
+
         persist_summary: Mapping[str, Any] = {"recorded": False}
         if persist:
-            persist_summary = self.persistence.persist_commands(built)
+            # ORM only after evidence validated / commands built.
+            if validation.accepted and not getattr(built, "rejected", False):
+                diag.persistence_attempted = True
+                diag.transaction_started = True
+                try:
+                    persist_summary = self.persistence.persist_commands(built)
+                    if persist_summary.get("orm_transaction_committed") or persist_summary.get(
+                        "orm_written"
+                    ):
+                        diag.transaction_committed = True
+                    if persist_summary.get("rejected") or persist_summary.get("deny_reason"):
+                        diag.transaction_rolled_back = True
+                        diag.transaction_committed = False
+                        diag.failure_boundary = "ORM_TRANSACTION_ROLLBACK"
+                        diag.failure_code = str(
+                            persist_summary.get("deny_reason") or "PERSIST_DENIED"
+                        )
+                except Exception as exc:  # noqa: BLE001
+                    diag.transaction_rolled_back = True
+                    diag.transaction_committed = False
+                    diag.failure_boundary = "ORM_TRANSACTION_ROLLBACK"
+                    diag.failure_code = type(exc).__name__
+                    raise
+            else:
+                persist_summary = {
+                    "recorded": False,
+                    "orm_written": False,
+                    "persistence_complete": False,
+                    "candidate_written": False,
+                    "evidence_written": False,
+                    "artifact_written": False,
+                    "skipped_reason": "evidence_or_candidate_rejected",
+                }
+                diag.persistence_attempted = False
+                diag.transaction_started = False
+
+        diag.asset_written_count = int(persist_summary.get("asset_count") or 0)
+        diag.version_written_count = int(
+            persist_summary.get("asset_count")
+            or len(persist_summary.get("asset_version_ids") or ())
+            or 0
+        )
+        diag.evidence_written_count = int(persist_summary.get("evidence_count") or 0)
+        diag.artifact_written_count = (
+            1 if persist_summary.get("artifact_written") or persist_summary.get("has_stage_artifact") else 0
+        )
+        diag.failure_boundary = infer_failure_boundary(diag)
+        if diag.failure_boundary and not diag.failure_code:
+            diag.failure_code = diag.failure_boundary
 
         runtime_bundle = self.runtime_bundles.get(context_bundle_ref)
         is_fake = not self.private_modules_bound
@@ -907,6 +1124,7 @@ class PrivateWholeBookAnalysisRuntime:
             network=False,
             model_called=False,
             formal_prompt=False,
+            pipeline_diagnostics=diag.to_safe_dict(),
         )
 
     def assert_production_isolation(self) -> Mapping[str, Any]:

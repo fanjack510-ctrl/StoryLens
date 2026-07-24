@@ -1,0 +1,49 @@
+{
+  "id": "CHG-20260724-055",
+  "title": "Live Candidate Evidence Persistence Boundary Fix",
+  "type": "fix",
+  "base_version": "1.0.5",
+  "status": "implemented",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "narrative_core",
+    "private_engine_lab"
+  ],
+  "files": [
+    "apps/api/app/narrative_core/services/output_ref_resolution.py",
+    "apps/api/app/narrative_core/services/quote_resolution.py",
+    "apps/api/app/narrative_core/services/live_module_pipeline_diagnostics.py",
+    "apps/api/app/narrative_core/services/private_whole_book_analysis_runtime.py",
+    "apps/api/app/narrative_core/services/whole_book_module_runner.py",
+    "apps/api/app/narrative_core/services/private_lab_run_executor.py",
+    "apps/api/app/narrative_core/private_engine_contract/evidence.py",
+    "apps/api/tests/test_narrative_phase2br1_live_persistence_boundary.py"
+  ],
+  "user_summary": "Resolve Provider DTO evidence target aliases such as book_overview.claim after Candidate Output Ref Registry, enrich Context-visible evidence keys into Snapshot locators, and persist Asset/Version/Evidence/Artifact without relaxing validators.",
+  "technical_summary": "failure_boundary=EVIDENCE_VALIDATION_REJECTED caused by unknown target_output_ref=book_overview.claim before Candidate Registry. Added build_candidate_output_refs / resolve_provider_output_ref / SnapshotQuoteIndex / LiveModulePipelineDiagnostics. Primary alias book_overview.claim→book_overview.out when registered; ambiguous multi-candidate without claim_key still rejected. Evidence Validator hash/offset/cross-snapshot rules unchanged. Schema not relaxed. Private companion preserves provider_output_ref.",
+  "acceptance_criteria": [
+    "Bailian DTO evidence_refs with book_overview.claim resolve after Candidate Registry; Valid Evidence≥1; Asset/Version/Evidence/Artifact written; persistence_complete=true; rejected evidence never starts ORM transaction."
+  ],
+  "tests": [
+    "apps/api/tests/test_narrative_phase2br1_live_persistence_boundary.py",
+    "apps/api/tests/test_narrative_phase2br1_provider_result_binding.py"
+  ],
+  "verification_evidence": [],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "No Migration. Failed retry3 DB retained read-only as CHG-055 reproduction evidence."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": null,
+  "created_at": "2026-07-24T10:01:26Z",
+  "updated_at": "2026-07-24T11:20:00Z"
+}

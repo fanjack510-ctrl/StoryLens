@@ -641,6 +641,26 @@ class PrivateLabRunExecutor:
                     "engine_kind": engine_kind.value,
                     "synthetic": pipeline_synthetic,
                 }
+                pipeline_diagnostics = dict(getattr(pipeline, "pipeline_diagnostics", {}) or {})
+                if pipeline_diagnostics:
+                    persistence_summary["pipeline_diagnostics"] = pipeline_diagnostics
+                    # Safe stage checkpoint so failures remain diagnosable without Migration.
+                    self._stages.write_checkpoint(
+                        int(run.id),
+                        stage.stage_key,
+                        {
+                            "schema": "narrative_run_stage_checkpoint",
+                            "version": "1",
+                            "stage_key": stage.stage_key,
+                            "module_key": module_key,
+                            "checkpoint_kind": "pipeline_diagnostics",
+                            "private_lab": True,
+                            "non_production": True,
+                            "pipeline_diagnostics": pipeline_diagnostics,
+                            "provider_request_id": provider_usage.get("provider_request_id"),
+                            "transport_kind": provider_usage.get("transport_kind"),
+                        },
+                    )
                 ev_count = len(getattr(engine_result, "evidence_candidates", ()) or ())
                 if ev_count == 0:
                     ev_count = int(coverage.get("evidenced_claims") or 0)
