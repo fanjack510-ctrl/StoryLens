@@ -8,6 +8,12 @@
       "message": "docs: plan narrative phase2br real engine implementation",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "3e42bb2f08646b08056177eb39727de2bd0e2677",
+      "message": "docs: attach CHG-20260723-041 and mark tested",
+      "primary": true,
+      "multi_change_reason": "Attach status/metadata follow-up after mark tested"
     }
   ],
   "data_compatibility": {
