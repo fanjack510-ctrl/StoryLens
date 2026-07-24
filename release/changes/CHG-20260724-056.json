@@ -5,7 +5,14 @@
   "base_version": "1.0.5",
   "status": "tested",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "5fcd72e49e6d7263eee293c4989487721ef4407e",
+      "message": "fix: persist typed book overview candidates",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "narrative_core",
     "private_engine",
@@ -48,7 +55,7 @@
     "breaking_change": false
   },
   "blocker_level": null,
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-24T12:16:24Z",
-  "updated_at": "2026-07-24T12:35:00Z"
+  "updated_at": "2026-07-24T12:31:52Z"
 }
