@@ -11,6 +11,12 @@
       "message": "fix: preserve live provider provenance and failure state",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "666c4464f37f468658b31279978abe58fac05f41",
+      "message": "docs: mark CHG-20260724-053 tested",
+      "primary": true,
+      "multi_change_reason": "docs tested marker"
     }
   ],
   "modules": [
@@ -58,5 +64,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-24T07:59:00Z",
-  "updated_at": "2026-07-24T08:34:16Z"
+  "updated_at": "2026-07-24T08:35:29Z"
 }
