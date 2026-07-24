@@ -1,0 +1,54 @@
+{
+  "type": "feature",
+  "base_version": "1.0.5",
+  "include_in_next_release": true,
+  "commits": [],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "No schema/migration in Phase 2B-R1 plan."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": null,
+  "created_at": "2026-07-24T02:25:41Z",
+  "updated_at": "2026-07-24T02:25:41Z",
+  "file_ownership": "docs/architecture/narrative-intelligence-core/phase2br1-parallel-file-ownership.json",
+  "id": "CHG-20260723-048",
+  "title": "Phase 2B-R1 Integration",
+  "status": "registered",
+  "modules": [
+    "integration",
+    "private_lab",
+    "live_smoke_harness"
+  ],
+  "files": [],
+  "user_summary": "Integrate U/V live readiness, composition, Private Lab E2E dry path, and Live Smoke harness gates.",
+  "technical_summary": "Merge public+private U/V; composition root; Lab mount; directed E2E; Live Smoke harness default dry. Status max tested until manual Live Smoke.",
+  "acceptance_criteria": [
+    "Composition wires resolver + Lab run + persistence",
+    "Dry E2E passes; live opt-in only",
+    "Production gates unchanged",
+    "Status max tested until Live Smoke"
+  ],
+  "tests": [
+    "apps/api/tests/test_narrative_phase2br1_integration.py"
+  ],
+  "verification_evidence": [],
+  "parallel_plan": {
+    "role": "integration",
+    "branch": "integration/narrative-phase2br1",
+    "worktree": "D:\\\\Dstorylens-wt-narrative-phase2br1-integration",
+    "private_worktree": "D:\\\\Dstorylens-private-engine-wt-phase2br1-integration",
+    "depends_on": [
+      "CHG-20260723-046",
+      "CHG-20260723-047"
+    ]
+  }
+}

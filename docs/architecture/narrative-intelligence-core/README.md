@@ -40,8 +40,12 @@ StoryLens 叙事智能核心文档索引。当前基线：`VERSION=1.0.5`。
 | Phase 2B-R Agent S | CHG-20260723-042 | tested | Private Runtime and Provider |
 | Phase 2B-R Agent T | CHG-20260723-043 | tested | First Four Real Modules |
 | Phase 2B-R Integration | CHG-20260723-044 | tested | Phase 2B-R Integration |
+| Phase 2B-R1 Plan | CHG-20260723-045 | tested | Live Provider readiness plan |
+| Phase 2B-R1 Agent U | CHG-20260723-046 | registered | Provider Context and Cost |
+| Phase 2B-R1 Agent V | CHG-20260723-047 | registered | Private Lab Runtime and Persistence |
+| Phase 2B-R1 Integration | CHG-20260723-048 | registered | Phase 2B-R1 Integration |
 
-\* 022–031 已为 `verified`（不得 ready/released）。032–035 上限 `tested`（不得仅凭自动测试升为 verified；等待 Mock Lab 人工验收）。036 已为 `verified`（不得 ready/released）。037–040 上限 `tested`（不得仅凭自动测试升为 verified；等待 Private Engine 人工验收）。041 上限 `tested`（计划阶段；无 Live Smoke）。042–044 从 `registered` 起；Integration 自动测试后上限 `tested`；`verified` 仅在 Live Smoke 后。硬边界见下。
+\* 022–031 已为 `verified`（不得 ready/released）。032–040 / 041–044 上限 `tested`（完整 Live Smoke 前不得升 verified）。045 上限 `tested`。046–048 从 `registered` 起；R1 Integration 后上限 `tested`。硬边界见下。
 
 ## Phase 1P / 1A
 
@@ -89,6 +93,7 @@ StoryLens 叙事智能核心文档索引。当前基线：`VERSION=1.0.5`。
 - Phase 2A：`WHOLE_BOOK_MOCK_LAB_ENABLED` 默认 `false`；仅 Lab 路径；无真实 Engine/模型/Prompt；无 Celery/Redis/WebSocket；无新 Migration
 - Phase 2B-P：仅公共契约 / Fake；无正式算法与正式 Prompt；无模型调用；生产整书 Run 仍禁用；无 FTS5 / 向量库 / Neo4j / 新表；高价值逻辑在私有 Sidecar/服务端
 - Phase 2B-R Plan：仅审计与计划文档；私有仓库路径规划；不写正式 Prompt；不调模型；不开放正式 Run；`WHOLE_BOOK_PRIVATE_ENGINE_LAB_ENABLED` 规划默认 false
+- Phase 2B-R1 Plan：修复 Live 就绪缺口的实现计划；不得 live Provider、不得改正式 Prompt、不得写 Candidate/AnalysisRun
 
 ## Phase 1C-P Contract
 
@@ -229,3 +234,12 @@ StoryLens 叙事智能核心文档索引。当前基线：`VERSION=1.0.5`。
 - [phase2br-integration-report.md](./phase2br-integration-report.md)
 - [phase2br-known-limitations.md](./phase2br-known-limitations.md)
 - [phase2br-production-isolation-verification.md](./phase2br-production-isolation-verification.md)
+
+## Phase 2B-R1 Live Readiness Plan
+
+- [phase2br1-live-readiness-plan.md](./phase2br1-live-readiness-plan.md)
+- [phase2br1-provider-payload-estimate.md](./phase2br1-provider-payload-estimate.md)
+- [phase2br1-private-lab-persistence.md](./phase2br1-private-lab-persistence.md)
+- [phase2br1-parallel-file-ownership.md](./phase2br1-parallel-file-ownership.md)
+- [phase2br1-parallel-file-ownership.json](./phase2br1-parallel-file-ownership.json)
+- [phase2br1-plan-verification.md](./phase2br1-plan-verification.md)

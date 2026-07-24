@@ -1,0 +1,125 @@
+{
+  "baseline_version": "1.0.5",
+  "public_baseline_commit": "a8349c44b2b7ecebccb46b512ab77f1d8a0524c4",
+  "public_source_branch": "integration/narrative-phase2br",
+  "private_baseline_commit": "61cdc3ad184c00e0ab19bcc87b61149293fc3598",
+  "private_repo_root": "D:\\\\Dstorylens-private-engine",
+  "private_audit_worktree": "D:\\\\Dstorylens-private-engine-wt-integration",
+  "plan_change": "CHG-20260723-045",
+  "first_provider": {
+    "provider_key": "aliyun_qwen_plus",
+    "model_id": "qwen3.7-plus",
+    "quality_profile": "balanced"
+  },
+  "gates_must_remain": {
+    "VERSION": "1.0.5",
+    "PRO_CAPABILITIES_SHIPPED": false,
+    "WHOLE_BOOK_RUNS_ENDPOINT_DISABLED": true,
+    "PRODUCTION_DEFAULT_ENGINE_ID": null,
+    "WHOLE_BOOK_MOCK_LAB_ENABLED": false,
+    "WHOLE_BOOK_PRIVATE_ENGINE_LAB_ENABLED": false
+  },
+  "agents": {
+    "plan": {
+      "change": "CHG-20260723-045",
+      "branch": "feature/narrative-phase2br1-live-readiness-plan",
+      "worktree": "D:\\\\Dstorylens-wt-narrative-phase2br1-plan",
+      "status_target": "tested"
+    },
+    "agent_u": {
+      "change": "CHG-20260723-046",
+      "public_branch": "feature/narrative-phase2br1-provider-context-cost",
+      "public_worktree": "D:\\\\Dstorylens-wt-narrative-provider-context-cost",
+      "private_branch": "feature/phase2br1-provider-context-cost",
+      "private_worktree": "D:\\\\Dstorylens-private-engine-wt-provider-context-cost",
+      "status_target": "registered",
+      "role": "Provider Context and Cost"
+    },
+    "agent_v": {
+      "change": "CHG-20260723-047",
+      "public_branch": "feature/narrative-phase2br1-private-lab-runtime",
+      "public_worktree": "D:\\\\Dstorylens-wt-narrative-private-lab-runtime",
+      "private_branch": "feature/phase2br1-private-lab-runtime",
+      "private_worktree": "D:\\\\Dstorylens-private-engine-wt-private-lab-runtime",
+      "status_target": "registered",
+      "role": "Private Lab Runtime and Persistence"
+    },
+    "integration": {
+      "change": "CHG-20260723-048",
+      "public_branch": "integration/narrative-phase2br1",
+      "public_worktree": "D:\\\\Dstorylens-wt-narrative-phase2br1-integration",
+      "private_branch": "integration/phase2br1",
+      "private_worktree": "D:\\\\Dstorylens-private-engine-wt-phase2br1-integration",
+      "status_target": "registered",
+      "role": "Phase 2B-R1 Integration"
+    }
+  },
+  "public_agent_u": [
+    {"path": "apps/api/app/narrative_core/private_engine_contract/provider_input.py", "status": "planned"},
+    {"path": "apps/api/app/narrative_core/private_engine_contract/data_transfer.py", "status": "planned"},
+    {"path": "apps/api/app/narrative_core/private_engine_contract/provider_estimate.py", "status": "planned"},
+    {"path": "apps/api/app/narrative_core/services/whole_book_provider_gateway.py", "status": "exists"},
+    {"path": "apps/api/app/narrative_core/services/whole_book_provider_estimate_service.py", "status": "planned"},
+    {"path": "apps/api/app/narrative_core/services/provider_input_bundle_resolver.py", "status": "planned"},
+    {"path": "apps/api/app/narrative_core/services/data_transfer_consent_guard.py", "status": "planned"},
+    {"path": "apps/api/tests/test_narrative_phase2br1_provider_context_cost.py", "status": "planned"},
+    {"path": "release/changes/CHG-20260723-046.json", "status": "planned"}
+  ],
+  "private_agent_u": [
+    {"path": "src/storylens_private_engine/provider_input/resolver.py", "status": "planned"},
+    {"path": "src/storylens_private_engine/provider_input/messages.py", "status": "planned"},
+    {"path": "src/storylens_private_engine/prompt_pack/loader.py", "status": "exists"},
+    {"path": "src/storylens_private_engine/context/strategy.py", "status": "exists"},
+    {"path": "src/storylens_private_engine/repair/structured_repair.py", "status": "exists"},
+    {"path": "src/storylens_private_engine/provider_routing/policy.py", "status": "exists"}
+  ],
+  "public_agent_v": [
+    {"path": "apps/api/app/routers/whole_book_private_engine_lab_runs.py", "status": "exists"},
+    {"path": "apps/api/app/narrative_core/services/private_engine_lab_run_service.py", "status": "planned"},
+    {"path": "apps/api/app/narrative_core/services/private_engine_lab_authorization_service.py", "status": "exists"},
+    {"path": "apps/api/app/narrative_core/services/candidate_persistence_adapter.py", "status": "exists"},
+    {"path": "apps/api/app/narrative_core/services/run_stage_service.py", "status": "exists"},
+    {"path": "apps/api/app/narrative_core/services/run_scope_service.py", "status": "exists"},
+    {"path": "apps/api/tests/test_narrative_phase2br1_private_lab_runtime.py", "status": "planned"},
+    {"path": "release/changes/CHG-20260723-047.json", "status": "planned"}
+  ],
+  "private_agent_v": [
+    {"path": "src/storylens_private_engine/modules/book_overview/runner.py", "status": "exists"},
+    {"path": "src/storylens_private_engine/modules/structure_stages/runner.py", "status": "exists"},
+    {"path": "src/storylens_private_engine/modules/chapter_functions/runner.py", "status": "exists"},
+    {"path": "src/storylens_private_engine/modules/storylines/runner.py", "status": "exists"},
+    {"path": "src/storylens_private_engine/modules/_shared/pipeline.py", "status": "exists"},
+    {"path": "src/storylens_private_engine/evidence/selection.py", "status": "exists"},
+    {"path": "src/storylens_private_engine/validation/module_extra.py", "status": "exists"}
+  ],
+  "integration_shared": [
+    {"path": "apps/api/app/narrative_core/services/private_whole_book_analysis_runtime.py", "status": "exists"},
+    {"path": "apps/api/app/main.py", "status": "exists"},
+    {"path": "apps/api/app/model_gateway/registry.py", "status": "exists"},
+    {"path": "docs/architecture/README.md", "status": "exists"},
+    {"path": "docs/architecture/narrative-intelligence-core/README.md", "status": "exists"},
+    {"path": "apps/api/tests/test_narrative_phase2br1_integration.py", "status": "planned"},
+    {"path": "release/changes/CHG-20260723-048.json", "status": "planned"}
+  ],
+  "no_write_overlap_pairs": [
+    ["public_agent_u", "public_agent_v"],
+    ["private_agent_u", "private_agent_v"]
+  ],
+  "forbidden_parallel": [
+    "VERSION",
+    "apps/api/app/db/models.py",
+    "apps/api/app/narrative_core/migrations/",
+    "flip WHOLE_BOOK_RUNS_ENDPOINT_DISABLED",
+    "flip PRO_CAPABILITIES_SHIPPED",
+    "set PRODUCTION_DEFAULT_ENGINE_ID",
+    "enable labs by default",
+    "same private working directory for U and V",
+    "formal Prompt body wholesale rewrite in plan phase"
+  ],
+  "change_registry_ownership": {
+    "CHG-20260723-045": "plan",
+    "CHG-20260723-046": "agent_u",
+    "CHG-20260723-047": "agent_v",
+    "CHG-20260723-048": "integration"
+  }
+}

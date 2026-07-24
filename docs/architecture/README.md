@@ -58,3 +58,9 @@ Related: [docs/audits](../audits/), [docs/release/v1.0-baseline-notes.md](../rel
 | [narrative-intelligence-core/phase2br-integration-report.md](./narrative-intelligence-core/phase2br-integration-report.md) | Phase 2B-R Integration 报告 |
 | [narrative-intelligence-core/phase2br-known-limitations.md](./narrative-intelligence-core/phase2br-known-limitations.md) | Phase 2B-R 已知限制 |
 | [narrative-intelligence-core/phase2br-production-isolation-verification.md](./narrative-intelligence-core/phase2br-production-isolation-verification.md) | Phase 2B-R 生产隔离验证 |
+| [narrative-intelligence-core/phase2br1-live-readiness-plan.md](./narrative-intelligence-core/phase2br1-live-readiness-plan.md) | Phase 2B-R1 Live 就绪计划 |
+| [narrative-intelligence-core/phase2br1-provider-payload-estimate.md](./narrative-intelligence-core/phase2br1-provider-payload-estimate.md) | Phase 2B-R1 Provider Payload / Estimate |
+| [narrative-intelligence-core/phase2br1-private-lab-persistence.md](./narrative-intelligence-core/phase2br1-private-lab-persistence.md) | Phase 2B-R1 Private Lab Persistence |
+| [narrative-intelligence-core/phase2br1-parallel-file-ownership.md](./narrative-intelligence-core/phase2br1-parallel-file-ownership.md) | Phase 2B-R1 文件所有权 |
+| [narrative-intelligence-core/phase2br1-parallel-file-ownership.json](./narrative-intelligence-core/phase2br1-parallel-file-ownership.json) | Phase 2B-R1 文件所有权（机器可读） |
+| [narrative-intelligence-core/phase2br1-plan-verification.md](./narrative-intelligence-core/phase2br1-plan-verification.md) | Phase 2B-R1 计划验证 |
