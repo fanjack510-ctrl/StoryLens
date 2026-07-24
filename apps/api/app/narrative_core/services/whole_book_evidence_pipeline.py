@@ -186,6 +186,32 @@ def make_candidate_id(
 class EvidenceCandidateBuilder:
     """Build EvidenceCandidate from explicit inputs only — no model selection."""
 
+    def __init__(self, *, private_selection_hook: Any | None = None) -> None:
+        # Thin hook only — proprietary evidence selection stays in private package.
+        self._private_selection_hook = private_selection_hook
+
+    def set_private_selection_hook(self, hook: Any | None) -> None:
+        self._private_selection_hook = hook
+
+    def apply_private_selection(
+        self,
+        candidates: Sequence[EvidenceCandidate],
+        *,
+        module_key: str | WholeBookModuleKey | None = None,
+    ) -> tuple[EvidenceCandidate, ...]:
+        """Optional private ranking/filter; never invents paragraph offsets."""
+
+        hook = self._private_selection_hook
+        if hook is None:
+            return tuple(candidates)
+        if hasattr(hook, "select_evidence"):
+            selected = hook.select_evidence(
+                candidates=tuple(candidates), module_key=module_key
+            )
+            if selected is not None:
+                return tuple(selected)
+        return tuple(candidates)
+
     def from_explicit_paragraph(
         self, inp: ExplicitParagraphEvidenceInput
     ) -> EvidenceCandidate:

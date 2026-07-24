@@ -16,7 +16,7 @@ import hashlib
 import json
 from dataclasses import asdict, dataclass, field, is_dataclass
 from datetime import datetime
-from typing import Any, Mapping, MutableMapping, Sequence
+from typing import Any, Mapping, MutableMapping, Protocol, Sequence, runtime_checkable
 
 from app.narrative_core.enums import (
     EvidenceRole,
@@ -1279,6 +1279,159 @@ def build_first_four_fake_runners(
     }
 
 
+# ---------------------------------------------------------------------------
+# Private runner adapters (Phase 2B-R / CHG-043)
+# ---------------------------------------------------------------------------
+
+
+@runtime_checkable
+class PrivateModuleRunnerPort(Protocol):
+    """Public Protocol port for private package runners — no HTTP / credentials."""
+
+    def execute(self, request: PrivateEngineExecutionRequest) -> PrivateEngineExecutionResult: ...
+
+    def validate_output(
+        self, result: PrivateEngineExecutionResult
+    ) -> ModuleOutputValidationReport: ...
+
+    def collect_evidence(
+        self, request: PrivateEngineExecutionRequest
+    ) -> tuple[EvidenceCandidate, ...]: ...
+
+    def health_check(self, module_key: WholeBookModuleKey | str) -> ModuleRunnerHealth: ...
+
+
+@dataclass
+class PrivateModuleRunnerAdapter(BaseWholeBookModuleRunner):
+    """Thin public adapter: delegates execute/validate/evidence to a private Protocol runner.
+
+    Fake runners remain available. Proprietary strategy stays in the private package.
+    Modules must not call Provider HTTP or CredentialStore directly — only Gateway Protocol.
+    """
+
+    private_runner: PrivateModuleRunnerPort | None = None
+    fallback_to_fake: bool = True
+
+    def execute(self, request: PrivateEngineExecutionRequest) -> PrivateEngineExecutionResult:
+        if self.private_runner is None:
+            if not self.fallback_to_fake:
+                raise private_engine_error(PrivateEngineErrorCode.MODULE_NOT_SUPPORTED)
+            return super().execute(request)
+        self.validate_request(request)
+        if request.cancellation_ref and request.cancellation_ref in self.cancelled:
+            raise private_engine_error(PrivateEngineErrorCode.PROVIDER_CANCELLED)
+        if not self.budget_remaining:
+            raise private_engine_error(PrivateEngineErrorCode.PROVIDER_BUDGET_EXCEEDED)
+        result = self.private_runner.execute(request)
+        # Public adapter never flips Fake→production markers; private owns markers.
+        outputs = dict(result.module_outputs or {})
+        outputs.setdefault("module_key", self.module_key.value)
+        outputs.setdefault("module_version", self.spec.module_version)
+        outputs.setdefault("private_adapter", True)
+        outputs.setdefault("orm_access", False)
+        outputs.setdefault("credential_read", False)
+        outputs.setdefault("direct_provider_http", False)
+        return PrivateEngineExecutionResult(
+            schema=result.schema,
+            version=result.version,
+            engine_id=result.engine_id,
+            engine_version=result.engine_version,
+            stage_key=result.stage_key,
+            attempt=result.attempt,
+            status=result.status,
+            module_outputs=outputs,
+            evidence_candidates=result.evidence_candidates,
+            asset_candidates=result.asset_candidates,
+            relation_candidates=result.relation_candidates,
+            conflict_candidates=result.conflict_candidates,
+            checkpoint=result.checkpoint or self.build_checkpoint(request),
+            usage=dict(result.usage or {}),
+            warnings=tuple(result.warnings or ()) + ("private_module_adapter",),
+            validation_summary=dict(result.validation_summary or {}),
+            generated_at=result.generated_at,
+        )
+
+    def validate_output(self, result: PrivateEngineExecutionResult) -> ModuleOutputValidationReport:
+        if self.private_runner is not None and hasattr(self.private_runner, "validate_output"):
+            return self.private_runner.validate_output(result)
+        return super().validate_output(result)
+
+    def collect_evidence(
+        self, request: PrivateEngineExecutionRequest
+    ) -> tuple[EvidenceCandidate, ...]:
+        if self.private_runner is not None and hasattr(self.private_runner, "collect_evidence"):
+            return self.private_runner.collect_evidence(request)
+        return super().collect_evidence(request)
+
+    def health_check(self, module_key: WholeBookModuleKey | str) -> ModuleRunnerHealth:
+        if self.private_runner is not None and hasattr(self.private_runner, "health_check"):
+            h = self.private_runner.health_check(module_key)
+            return ModuleRunnerHealth(
+                module_key=str(getattr(h, "module_key", module_key)),
+                healthy=bool(getattr(h, "healthy", True)),
+                prompt_pack_version=getattr(h, "prompt_pack_version", None),
+                details=tuple(getattr(h, "details", ()) or ()) + ("private_adapter",),
+            )
+        base = super().health_check(module_key)
+        return ModuleRunnerHealth(
+            module_key=base.module_key,
+            healthy=base.healthy,
+            prompt_pack_version=base.prompt_pack_version,
+            details=base.details + ("private_adapter_unbound",),
+        )
+
+    def _empty_dto(self) -> Any:
+        key = self.module_key
+        if key == WholeBookModuleKey.BOOK_OVERVIEW:
+            return empty_book_overview_dto()
+        if key == WholeBookModuleKey.STRUCTURE_STAGES:
+            return empty_structure_stages_dto()
+        if key == WholeBookModuleKey.CHAPTER_FUNCTIONS:
+            return empty_chapter_functions_dto()
+        if key == WholeBookModuleKey.STORYLINES:
+            return empty_storylines_dto()
+        raise NotImplementedError(key)
+
+    def _default_synthetic_dto(self, fixture: Mapping[str, Any]) -> Any:
+        _ = fixture
+        return self._empty_dto()
+
+
+def build_private_module_runner_adapters(
+    *,
+    private_runners: Mapping[WholeBookModuleKey | str, PrivateModuleRunnerPort] | None = None,
+    prompt_pack: FakePromptPackServiceManifest | None = None,
+    gateway: WholeBookProviderGateway | None = None,
+    fallback_to_fake: bool = True,
+) -> dict[WholeBookModuleKey, PrivateModuleRunnerAdapter]:
+    """Compose public adapters over optional private Protocol runners."""
+
+    pack = prompt_pack or build_fake_prompt_pack()
+    adapter = ModuleProviderExecutionAdapter(gateway=gateway or FakeProviderGateway())
+    registry = build_default_module_spec_registry()
+    runners_map: dict[str, PrivateModuleRunnerPort] = {}
+    for key, runner in dict(private_runners or {}).items():
+        token = key.value if isinstance(key, WholeBookModuleKey) else str(key)
+        runners_map[token] = runner
+
+    out: dict[WholeBookModuleKey, PrivateModuleRunnerAdapter] = {}
+    for module_key in (
+        WholeBookModuleKey.BOOK_OVERVIEW,
+        WholeBookModuleKey.STRUCTURE_STAGES,
+        WholeBookModuleKey.CHAPTER_FUNCTIONS,
+        WholeBookModuleKey.STORYLINES,
+    ):
+        out[module_key] = PrivateModuleRunnerAdapter(
+            module_key=module_key,
+            registry=registry,
+            prompt_pack=pack,
+            provider_adapter=adapter,
+            private_runner=runners_map.get(module_key.value),
+            fallback_to_fake=fallback_to_fake,
+        )
+    return out
+
+
 def make_execution_request(
     *,
     module_key: WholeBookModuleKey = WholeBookModuleKey.BOOK_OVERVIEW,
@@ -1336,9 +1489,12 @@ __all__ = [
     "ModuleCheckpointBuilder",
     "ModuleCheckpointValidator",
     "ModuleProviderExecutionAdapter",
+    "PrivateModuleRunnerAdapter",
+    "PrivateModuleRunnerPort",
     "WholeBookModuleSpecRegistry",
     "build_default_module_spec_registry",
     "build_first_four_fake_runners",
+    "build_private_module_runner_adapters",
     "empty_book_overview_dto",
     "empty_chapter_functions_dto",
     "empty_storylines_dto",

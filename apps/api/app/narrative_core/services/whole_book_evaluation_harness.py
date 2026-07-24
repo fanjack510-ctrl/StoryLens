@@ -461,6 +461,36 @@ class WholeBookEvaluationHarness:
     runners: Mapping[WholeBookModuleKey, BaseWholeBookModuleRunner] = field(
         default_factory=build_first_four_fake_runners
     )
+    # Phase 2B-V prep hooks — synthetic/authorized fixtures only; no user-book corpus.
+    phase2bv_hooks: dict[str, Any] = field(default_factory=dict)
+
+    def register_phase2bv_hook(self, name: str, hook: Any) -> None:
+        if not name or not str(name).strip():
+            raise ValueError("hook name required")
+        self.phase2bv_hooks[str(name)] = hook
+
+    def attach_private_runners(
+        self, runners: Mapping[WholeBookModuleKey, BaseWholeBookModuleRunner]
+    ) -> None:
+        """Prep hook for Phase 2B-V: swap Fake runners for private Protocol adapters."""
+
+        self.runners = dict(runners)
+        self.metamorphic.runners = dict(runners)
+
+    def phase2bv_prep_summary(self) -> Mapping[str, Any]:
+        return {
+            "phase": "2B-V-prep",
+            "non_production": True,
+            "copyrighted_novel_corpus": False,
+            "fixture_schemes": ("synthetic://", "authorized://", "public_domain://"),
+            "runner_keys": sorted(k.value for k in self.runners),
+            "hooks": sorted(self.phase2bv_hooks),
+            "claims": (
+                "contract_and_fake_or_private_adapter_only",
+                "not_real_analysis_accuracy",
+                "no_user_book_collection",
+            ),
+        }
 
     def build_suite(self) -> WholeBookEvaluationSuite:
         # Extend contract fake suite with additional synthetic categories.

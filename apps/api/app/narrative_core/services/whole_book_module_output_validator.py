@@ -133,6 +133,11 @@ class DefaultModuleOutputValidator:
 
     evidence_validator: EvidenceValidator = field(default_factory=FakeEvidenceValidator)
     pipeline: tuple[str, ...] = OUTPUT_VALIDATION_PIPELINE
+    # Thin hook for private module_extra supplements (CHG-043); proprietary rules stay private.
+    module_extra_hook: Any | None = None
+
+    def set_module_extra_hook(self, hook: Any | None) -> None:
+        self.module_extra_hook = hook
 
     def validate(self, inp: ModuleOutputValidationInput) -> ModuleOutputValidationReport:
         module_key = _as_module_key(inp.module_key)
@@ -349,6 +354,23 @@ class DefaultModuleOutputValidator:
             accepted = False
             warnings.append("fake_output_not_production_accepted")
             error_code = error_code or PrivateEngineErrorCode.MODULE_EVIDENCE_INSUFFICIENT.value
+
+        # Optional private module_extra supplements (thin public hook only).
+        if self.module_extra_hook is not None and hasattr(self.module_extra_hook, "validate"):
+            extra = self.module_extra_hook.validate(module_key.value, outputs)
+            if isinstance(extra, Mapping):
+                if extra.get("schema_valid") is False:
+                    schema_valid = False
+                    accepted = False
+                if extra.get("references_valid") is False:
+                    references_valid = False
+                    accepted = False
+                if extra.get("evidence_valid") is False and outputs.get("partial") is not True:
+                    evidence_valid = False
+                    accepted = False
+                for note in extra.get("notes") or ():
+                    warnings.append(str(note))
+
         if not accepted and error_code is None:
             error_code = PrivateEngineErrorCode.MODULE_EVIDENCE_INSUFFICIENT.value
 

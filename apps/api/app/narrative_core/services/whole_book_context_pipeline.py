@@ -458,6 +458,7 @@ class DefaultWholeBookContextPipeline:
         snapshot_service: BookSnapshotServiceImpl | None = None,
         unit_config: UnitBuildConfig | None = None,
         text_resolver: SnapshotTextResolver | None = None,
+        private_strategy_hook: Any | None = None,
     ) -> None:
         self._session = session
         self._snapshots = snapshot_service or BookSnapshotServiceImpl(session)
@@ -471,6 +472,13 @@ class DefaultWholeBookContextPipeline:
         )
         self._prepared: Mapping[str, Any] | None = None
         self._chapters: tuple[ChapterNormalizeRecord, ...] = ()
+        # Thin hook only — proprietary context strategy stays in private package.
+        self._private_strategy_hook = private_strategy_hook
+
+    def set_private_strategy_hook(self, hook: Any | None) -> None:
+        """Inject private context strategy (Protocol callable). Public keeps generic pipeline."""
+
+        self._private_strategy_hook = hook
 
     @property
     def text_resolver(self) -> SnapshotTextResolver:
@@ -596,7 +604,6 @@ class DefaultWholeBookContextPipeline:
         units: Sequence[WholeBookContextUnit],
         level: ContextLevel | int,
     ) -> Sequence[WholeBookContextUnit]:
-        _ = module_key
         lvl = int(level)
         if lvl == 0:
             filtered = [
@@ -620,7 +627,15 @@ class DefaultWholeBookContextPipeline:
             filtered = [u for u in units if u.unit_type == ContextUnitType.EVIDENCE_WINDOW]
         else:
             filtered = list(units)
-        return sort_context_units_deterministically(filtered)
+        ordered = sort_context_units_deterministically(filtered)
+        hook = self._private_strategy_hook
+        if hook is not None and hasattr(hook, "select_module_units"):
+            selected = hook.select_module_units(
+                module_key=module_key, units=ordered, level=lvl
+            )
+            if selected is not None:
+                return sort_context_units_deterministically(tuple(selected))
+        return ordered
 
     def build_context_bundle(
         self,

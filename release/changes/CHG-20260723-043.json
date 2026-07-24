@@ -7,7 +7,7 @@
     "database_changed": false,
     "migration_required": false,
     "user_data_compatible": true,
-    "notes": "No schema/migration in Phase 2B-R plan or planned Agents unless blocked and escalated."
+    "notes": "No schema/migration. Provenance bound via existing Asset/Relation version columns + attributes_json and AnalysisArtifact.payload_json. Evidence tables have no run_id column — provenance via parent version only."
   },
   "release_impact": {
     "requires_reanalysis": false,
@@ -18,19 +18,30 @@
   "blocker_level": null,
   "head_inclusion": null,
   "created_at": "2026-07-24T01:13:16Z",
-  "updated_at": "2026-07-24T01:13:16Z",
+  "updated_at": "2026-07-24T01:45:00Z",
   "file_ownership": "docs/architecture/narrative-intelligence-core/phase2br-parallel-file-ownership.json",
   "id": "CHG-20260723-043",
   "title": "First Four Real Modules Implementation",
-  "status": "registered",
+  "status": "tested",
   "modules": [
     "module_runners",
     "prompt_packs",
-    "candidate_persistence"
+    "candidate_persistence",
+    "context_strategy",
+    "evidence_selection"
   ],
-  "files": [],
-  "user_summary": "Implement private four-module runners, Prompt Packs, evidence/context strategies, and candidate persistence adapter without Provider HTTP.",
-  "technical_summary": "Agent T: private runners for book_overview/structure_stages/chapter_functions/storylines; Prompt Packs; context/evidence policies; Phase 1B CandidatePersistence sink. No Provider HTTP or Loader ownership.",
+  "files": [
+    "apps/api/app/narrative_core/services/candidate_persistence_adapter.py",
+    "apps/api/app/narrative_core/services/whole_book_module_runner.py",
+    "apps/api/app/narrative_core/services/whole_book_module_output_validator.py",
+    "apps/api/app/narrative_core/services/whole_book_context_pipeline.py",
+    "apps/api/app/narrative_core/services/whole_book_evidence_pipeline.py",
+    "apps/api/app/narrative_core/services/whole_book_evaluation_harness.py",
+    "apps/api/tests/test_narrative_phase2br_real_modules.py",
+    "release/changes/CHG-20260723-043.json"
+  ],
+  "user_summary": "Implement private four-module runners, Prompt Packs, evidence/context strategies, and Phase 1B candidate persistence adapter without Provider HTTP.",
+  "technical_summary": "Agent T: private runners for book_overview/structure_stages/chapter_functions/storylines; formal Prompt Packs; context/evidence policies; Phase1BCandidatePersistenceSink over existing services. Fake runners retained. Public PrivateModuleRunnerAdapter delegates via Protocol. No Provider HTTP, Loader, Lab, Migration, or gate flips.",
   "acceptance_criteria": [
     "Four private runners with Evidence and partial support",
     "Prompt Packs private-only; public metadata only",
@@ -39,16 +50,30 @@
     "No migrations unless escalated blocker"
   ],
   "tests": [
-    "apps/api/tests/test_narrative_phase2br_real_modules.py"
+    "apps/api/tests/test_narrative_phase2br_real_modules.py",
+    "private:tests/test_first_four_modules.py"
   ],
-  "verification_evidence": [],
+  "verification_evidence": [
+    "pytest apps/api/tests/test_narrative_phase2br_real_modules.py → 11 passed",
+    "pytest private tests/test_first_four_modules.py → 8 passed",
+    "scripts/check_project.py → passed (VERSION 1.0.5)"
+  ],
+  "notes": [
+    "Private repo branch feature/narrative-phase2br-real-modules worktree D:\\\\Dstorylens-private-engine-wt-modules",
+    "Private base commit (Agent S): e57da9bb28bf568c2646b1869b95c42be6e034e1",
+    "Private commit: 10c19fc57f8ef4a694704215831223c0649eb0a6",
+    "Schema: no new Migration; attributes_json/payload_json carry run_stage_id + engine/module/prompt versions + fingerprints",
+    "Evidence rows lack run_id — bound via parent Asset/Relation version only (documented, not a blocker for candidate writes)"
+  ],
   "parallel_plan": {
     "role": "agent_t",
     "branch": "feature/narrative-phase2br-real-modules",
     "worktree": "D:\\\\Dstorylens-wt-narrative-real-modules",
     "private_repo": "D:\\\\Dstorylens-private-engine",
+    "private_worktree": "D:\\\\Dstorylens-private-engine-wt-modules",
     "depends_on": [
-      "CHG-20260723-041"
+      "CHG-20260723-041",
+      "CHG-20260723-042"
     ],
     "blocks": [
       "CHG-20260723-044"
@@ -61,5 +86,12 @@
       "VERSION bump",
       "push/build/publish"
     ]
+  },
+  "gates_confirmed": {
+    "VERSION": "1.0.5",
+    "PRO_CAPABILITIES_SHIPPED": false,
+    "WHOLE_BOOK_RUNS_ENDPOINT_DISABLED": true,
+    "PRODUCTION_DEFAULT_ENGINE_ID": null,
+    "WHOLE_BOOK_MOCK_LAB_ENABLED": false
   }
 }
