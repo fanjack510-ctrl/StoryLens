@@ -13,7 +13,12 @@ from app.narrative_core.product_contract.keys import (
     WHOLE_BOOK_MODULE_KEYS,
     resolve_modules_with_dependencies,
 )
-from app.narrative_core.product_contract.module_results import MODULE_RESULT_DTO_BY_KEY
+from app.narrative_core.product_contract.module_results import (
+    MODULE_RESULT_DTO_BY_KEY,
+    BookOverviewResultV2,
+    ClaimStatus,
+    CitedClaimDto,
+)
 from app.narrative_core.product_contract.preflight import WholeBookPreflightPageModel
 from app.narrative_core.product_contract.result_envelope import WholeBookResultEnvelope
 from app.narrative_core.product_contract.review import NarrativeReviewActionRequest
@@ -26,6 +31,9 @@ from app.narrative_core.product_contract.structure_map import (
 )
 
 __all__ = [
+    "BookOverviewResultV2",
+    "ClaimStatus",
+    "CitedClaimDto",
     "ConflictCenterItemDto",
     "MODULE_RESULT_DTO_BY_KEY",
     "MODULE_STAGE_DEPENDENCIES",

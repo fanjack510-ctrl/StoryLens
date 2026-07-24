@@ -1,0 +1,64 @@
+{
+  "id": "CHG-20260724-058",
+  "title": "Context Citation and Claim Evidence Contract V2",
+  "type": "feature",
+  "base_version": "1.0.5",
+  "status": "implemented",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "narrative_core.product_contract",
+    "narrative_core.services.citation_catalog_v2",
+    "narrative_core.services.citation_evidence_enrichment_v2",
+    "narrative_core.services.private_whole_book_analysis_runtime",
+    "narrative_core.services.run_stage_repository"
+  ],
+  "files": [
+    "apps/api/app/narrative_core/product_contract/module_results.py",
+    "apps/api/app/narrative_core/product_contract/__init__.py",
+    "apps/api/app/narrative_core/services/citation_catalog_v2.py",
+    "apps/api/app/narrative_core/services/citation_evidence_enrichment_v2.py",
+    "apps/api/app/narrative_core/services/live_module_pipeline_diagnostics.py",
+    "apps/api/app/narrative_core/services/private_whole_book_analysis_runtime.py",
+    "apps/api/app/narrative_core/services/run_stage_repository.py",
+    "apps/api/app/narrative_core/services/run_stage_service.py",
+    "apps/api/app/narrative_core/services/private_lab_run_executor.py",
+    "apps/api/app/narrative_core/private_engine_contract/provider_estimate.py",
+    "apps/api/app/narrative_core/services/private_lab_service_adapters.py",
+    "scripts/check_live_citation_v2_boundary.py"
+  ],
+  "user_summary": "Replace free-form evidence IDs with Context Citation Catalog–bound claim citations for whole-book analysis.",
+  "technical_summary": "Public V2 DTOs (CitedClaimDto/BookOverviewResultV2), CitationCatalog wrappers, citation enrichment (no quote fallback), append-only provider_attempts checkpoint namespaces, estimate evidence_contract_version=v2.",
+  "acceptance_criteria": [
+    "V2 enrich path resolves citation_id via CitationCatalog only",
+    "V2 path does not call quote_resolution / SnapshotQuoteIndex",
+    "provider_attempts preserved across pipeline_diagnostics checkpoint writes",
+    "Estimate safe_dict exposes evidence_contract_version=v2 and citation repair policy"
+  ],
+  "tests": [
+    "apps/api/tests/test_narrative_phase2br1_citation_v2_boundary.py",
+    "apps/api/tests/test_narrative_phase2br1_v2_no_legacy_fallback.py",
+    "apps/api/tests/test_public_citation_contract_boundary.py",
+    "apps/api/tests/test_narrative_phase2br1_provider_attempt_preservation.py"
+  ],
+  "verification_evidence": [
+    "Directed pytest: 11 passed for four CHG-058 test modules",
+    "scripts/check_live_citation_v2_boundary.py OK"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "No migrations; checkpoint_json namespaces merge in-place."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": null,
+  "created_at": "2026-07-24T15:35:15Z",
+  "updated_at": "2026-07-24T16:00:00Z"
+}

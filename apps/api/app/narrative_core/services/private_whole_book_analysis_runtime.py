@@ -100,10 +100,19 @@ from app.narrative_core.services.whole_book_evidence_pipeline import (
     EvidenceCoverageCalculator,
 )
 from app.narrative_core.services.live_module_pipeline_diagnostics import (
+    CitationEvidencePipelineDiagnostics,
     LiveModulePipelineDiagnostics,
     fingerprint_structured_output,
     infer_failure_boundary,
     merge_rejection_codes,
+)
+from app.narrative_core.services.citation_catalog_v2 import (
+    EVIDENCE_CONTRACT_VERSION,
+    build_catalog_from_paragraph_units,
+    fingerprints_match,
+)
+from app.narrative_core.services.citation_evidence_enrichment_v2 import (
+    enrich_evidence_from_citation_catalog,
 )
 from app.narrative_core.services.output_ref_resolution import (
     build_candidate_output_refs,
@@ -368,6 +377,126 @@ class PrivateWholeBookAnalysisRuntime:
     def register_evidence_view(self, view: EvidenceValidatorSnapshotView) -> None:
         assert self.evidence_adapter is not None
         self.evidence_adapter.register_view(view)
+
+    @staticmethod
+    def _is_evidence_contract_v2(
+        provider_policy: Mapping[str, Any] | None,
+        structured: Mapping[str, Any] | None,
+        outputs: Mapping[str, Any] | None,
+    ) -> bool:
+        """Detect Citation Evidence Contract V2 for Live enrich path."""
+
+        policy = dict(provider_policy or {})
+        struct = dict(structured or {})
+        out = dict(outputs or {})
+        for source in (policy, out, struct):
+            ver = str(source.get("evidence_contract_version") or "").strip().lower()
+            if ver == "v2":
+                return True
+            schema = str(
+                source.get("schema")
+                or source.get("structured_output_schema")
+                or source.get("dto_schema_id")
+                or ""
+            )
+            if "BookOverviewResultV2" in schema:
+                return True
+            if str(source.get("contract_version") or "").strip().lower() == "v2":
+                return True
+        # Structural hint: CitedClaim-shaped fields
+        for field_name in (
+            "logline",
+            "premise",
+            "central_question",
+            "primary_conflict",
+            "structure_summary",
+            "ending_state",
+        ):
+            value = struct.get(field_name)
+            if isinstance(value, Mapping) and (
+                "citation_ids" in value or "status" in value
+            ):
+                return True
+        return False
+
+    def _paragraph_units_for_citation_catalog(
+        self,
+        *,
+        contract: Any,
+        book_snapshot_id: int,
+        selected_paragraph_ids: Sequence[int] | None,
+    ) -> list[dict[str, Any]]:
+        """Build paragraph unit dicts for CitationCatalog from Context Bundle + view."""
+
+        units: list[dict[str, Any]] = []
+        view = None
+        if self.evidence_adapter is not None:
+            view = self.evidence_adapter.views_by_snapshot.get(int(book_snapshot_id))
+            if (
+                view is None
+                and self.evidence_adapter.snapshot_view is not None
+                and int(self.evidence_adapter.snapshot_view.book_snapshot_id)
+                == int(book_snapshot_id)
+            ):
+                view = self.evidence_adapter.snapshot_view
+
+        selected = (
+            {int(x) for x in selected_paragraph_ids}
+            if selected_paragraph_ids is not None
+            else None
+        )
+        seen: set[int] = set()
+        for unit in getattr(contract, "units", ()) or ():
+            chapter_id = getattr(unit, "snapshot_chapter_id", None)
+            pids = tuple(getattr(unit, "snapshot_paragraph_ids", ()) or ())
+            stables = tuple(getattr(unit, "stable_paragraph_ids", ()) or ())
+            hashes = tuple(
+                (getattr(unit, "metadata", {}) or {}).get("paragraph_hashes") or ()
+            )
+            for idx, pid_raw in enumerate(pids):
+                try:
+                    pid = int(pid_raw)
+                except (TypeError, ValueError):
+                    continue
+                if selected is not None and pid not in selected:
+                    continue
+                if pid in seen:
+                    continue
+                seen.add(pid)
+                stable = stables[idx] if idx < len(stables) else None
+                content_hash = ""
+                if idx < len(hashes):
+                    content_hash = str(hashes[idx] or "")
+                if view is not None:
+                    content_hash = str(
+                        view.paragraph_hashes.get(pid) or content_hash or ""
+                    )
+                    if chapter_id is None:
+                        chapter_id = view.paragraph_chapter.get(pid)
+                    if stable is None:
+                        stable = view.stable_paragraph_ids.get(pid)
+                start = 0
+                end = 0
+                if view is not None:
+                    para_len = view.paragraph_lengths.get(pid)
+                    if para_len is not None:
+                        end = int(para_len)
+                # Prefer empty text for catalog build when body unavailable (locator-only).
+                # Slice rules still work with empty → single zero-length or length-based unit.
+                text = ""
+                if end > 0:
+                    # Synthetic filler for offset spans only — never logged / diagnosed.
+                    text = "x" * end
+                units.append(
+                    {
+                        "chapter_id": chapter_id,
+                        "paragraph_id": pid,
+                        "stable_paragraph_id": str(stable) if stable is not None else str(pid),
+                        "content_hash": content_hash or "missing",
+                        "text": text,
+                    }
+                )
+        return units
 
     def _enrich_evidence_from_snapshot_view(
         self,
@@ -847,19 +976,29 @@ class PrivateWholeBookAnalysisRuntime:
             )
         )
 
-        # --- CHG-055 pipeline: Candidate Registry → target resolve → enrich → validate → persist
-        diag = LiveModulePipelineDiagnostics(
-            module_key=key.value,
-            run_id=int(run_id),
-            stage_id=int(run_stage_id) if run_stage_id is not None else None,
-        )
+        # --- CHG-055/058 pipeline: Candidate Registry → target resolve → enrich → validate → persist
         structured = dict(
             provider_policy.get("provider_structured_output")
             or (guarded.module_outputs or {})
             or {}
         )
-        diag.structured_output_present = bool(structured)
         outputs = dict(guarded.module_outputs or {})
+        use_v2 = self._is_evidence_contract_v2(provider_policy, structured, outputs)
+        if use_v2:
+            diag = CitationEvidencePipelineDiagnostics(
+                module_key=key.value,
+                run_id=int(run_id),
+                stage_id=int(run_stage_id) if run_stage_id is not None else None,
+                evidence_contract_version=EVIDENCE_CONTRACT_VERSION,
+                citation_contract_version=EVIDENCE_CONTRACT_VERSION,
+            )
+        else:
+            diag = LiveModulePipelineDiagnostics(
+                module_key=key.value,
+                run_id=int(run_id),
+                stage_id=int(run_stage_id) if run_stage_id is not None else None,
+            )
+        diag.structured_output_present = bool(structured)
         # CHG-057: schema label only after real DTO validation / mapper success.
         schema_label_verified = bool(
             outputs.get("schema_label_verified")
@@ -1004,17 +1143,60 @@ class PrivateWholeBookAnalysisRuntime:
             selected_paragraph_ids = tuple(unit_pids) or None
 
         assert self.output_validator is not None
-        evidence = self._enrich_evidence_from_snapshot_view(
-            tuple(e for e in guarded.evidence_candidates if isinstance(e, EvidenceCandidate)),
-            book_id=book_id,
-            book_snapshot_id=book_snapshot_id,
-            module_key=key.value,
-            registered_refs=registered_refs,
-            asset_candidates=tuple(guarded.asset_candidates or ()),
-            selected_paragraph_ids=selected_paragraph_ids,
-            selected_chapter_ids=selected_chapter_ids,
-            diagnostics=diag,
+        raw_evidence = tuple(
+            e for e in guarded.evidence_candidates if isinstance(e, EvidenceCandidate)
         )
+        if use_v2:
+            paragraph_units = self._paragraph_units_for_citation_catalog(
+                contract=contract,
+                book_snapshot_id=book_snapshot_id,
+                selected_paragraph_ids=selected_paragraph_ids,
+            )
+            catalog = build_catalog_from_paragraph_units(
+                context_bundle_hash=str(getattr(contract, "bundle_hash", "") or ""),
+                snapshot_id=int(book_snapshot_id),
+                paragraph_units=paragraph_units,
+                context_bundle_ref=str(context_bundle_ref),
+            )
+            diag.catalog_id = catalog.catalog_id
+            diag.catalog_entry_count = len(catalog.entries)
+            diag.catalog_fingerprint = catalog.catalog_fingerprint
+            diag.prompt_catalog_fingerprint = catalog.catalog_fingerprint
+            diag.schema_catalog_fingerprint = catalog.catalog_fingerprint
+            diag.resolver_catalog_fingerprint = catalog.catalog_fingerprint
+            diag.catalog_fingerprints_match = fingerprints_match(catalog)
+            evidence = enrich_evidence_from_citation_catalog(
+                raw_evidence,
+                catalog=catalog,
+                book_id=book_id,
+                book_snapshot_id=book_snapshot_id,
+                module_key=key.value,
+                registered_refs=registered_refs,
+                asset_candidates=tuple(guarded.asset_candidates or ()),
+                diagnostics=diag,
+            )
+            # Citation resolve failure blocks quote fallback (already not called).
+            if int(getattr(diag, "citation_rejected_count", 0) or 0) > 0:
+                if not diag.failure_boundary:
+                    diag.failure_boundary = "EVIDENCE_VALIDATION_REJECTED"
+                    codes = list(
+                        getattr(diag, "rejection_codes", None)
+                        or getattr(diag, "evidence_rejection_codes", None)
+                        or []
+                    )
+                    diag.failure_code = str(codes[0] if codes else "CITATION_RESOLVE_FAILED")
+        else:
+            evidence = self._enrich_evidence_from_snapshot_view(
+                raw_evidence,
+                book_id=book_id,
+                book_snapshot_id=book_snapshot_id,
+                module_key=key.value,
+                registered_refs=registered_refs,
+                asset_candidates=tuple(guarded.asset_candidates or ()),
+                selected_paragraph_ids=selected_paragraph_ids,
+                selected_chapter_ids=selected_chapter_ids,
+                diagnostics=diag,
+            )
         diag.evidence_coercion_output_count = len(evidence)
 
         # Keep enriched evidence on the guarded result for candidate builder.
@@ -1133,17 +1315,26 @@ class PrivateWholeBookAnalysisRuntime:
             # ORM only after evidence validated / commands built.
             # Fail-closed: quote/locator rejection must never leave half-written assets.
             quote_rejected = int(getattr(diag, "quote_resolution_rejected_count", 0) or 0) > 0
+            citation_rejected = int(getattr(diag, "citation_rejected_count", 0) or 0) > 0
             unresolved_evidence = (
                 int(getattr(diag, "provider_evidence_ref_count", 0) or 0) > 0
                 and int(getattr(diag, "evidence_id_resolved_count", 0) or 0) < 1
-                and quote_rejected
+                and (quote_rejected or citation_rejected)
             )
-            if quote_rejected or unresolved_evidence:
+            if quote_rejected or citation_rejected or unresolved_evidence:
                 if not diag.failure_boundary:
                     diag.failure_boundary = "EVIDENCE_VALIDATION_REJECTED"
-                    diag.failure_code = str(
-                        (diag.evidence_rejection_codes or ["QUOTE_RESOLUTION_FAILED"])[0]
-                    )
+                    if citation_rejected:
+                        codes = list(
+                            getattr(diag, "rejection_codes", None)
+                            or getattr(diag, "evidence_rejection_codes", None)
+                            or ["CITATION_RESOLVE_FAILED"]
+                        )
+                        diag.failure_code = str(codes[0])
+                    else:
+                        diag.failure_code = str(
+                            (diag.evidence_rejection_codes or ["QUOTE_RESOLUTION_FAILED"])[0]
+                        )
                 # Force evidence invalid so candidate/persist paths stay closed.
                 if validation.evidence_valid:
                     diag.evidence_valid_count = 0
@@ -1154,6 +1345,7 @@ class PrivateWholeBookAnalysisRuntime:
                 validation.accepted
                 and not getattr(built, "rejected", False)
                 and not quote_rejected
+                and not citation_rejected
                 and not unresolved_evidence
             )
             if allow_persist:

@@ -324,6 +324,9 @@ class PrivateLabEstimateServiceAdapter:
             "estimated_total_tokens": total_in + total_out,
             "tokens_hardcoded": False,
             "module_count": len(modules),
+            "evidence_contract_version": "v2",
+            "repair_policy": "book_overview.schema_and_citation_repair",
+            "max_repair_count": 1,
         }
         cost_summary: dict[str, Any] = {
             "source": "provider_pricing_resolver",

@@ -28,6 +28,69 @@ class BookOverviewResultDto:
     confidence: float | None = None
 
 
+# --- Citation Evidence Contract V2 (CHG-058) — alongside V1, not a replacement ---
+
+
+class ClaimStatus:
+    """Claim status string constants (product DTO; not a DB enum)."""
+
+    OBSERVED = "observed"
+    INFERRED = "inferred"
+    NOT_OBSERVED = "not_observed"
+
+
+CLAIM_STATUS_VALUES: tuple[str, ...] = (
+    ClaimStatus.OBSERVED,
+    ClaimStatus.INFERRED,
+    ClaimStatus.NOT_OBSERVED,
+)
+
+
+@dataclass(frozen=True, slots=True)
+class CitedClaimDto:
+    value: str | None
+    status: str
+    citation_ids: tuple[str, ...] = ()
+    confidence: float | None = None
+
+    def __post_init__(self) -> None:
+        status = str(self.status or "").strip()
+        if status not in CLAIM_STATUS_VALUES:
+            raise ValueError(f"invalid claim status: {self.status!r}")
+        object.__setattr__(self, "status", status)
+        ids = tuple(str(x) for x in (self.citation_ids or ()))
+        object.__setattr__(self, "citation_ids", ids)
+        nonempty = isinstance(self.value, str) and bool(self.value.strip())
+        if status in (ClaimStatus.OBSERVED, ClaimStatus.INFERRED):
+            if not nonempty:
+                raise ValueError("observed/inferred claim requires non-empty value")
+            if not ids:
+                raise ValueError("observed/inferred claim requires at least one citation_id")
+        elif status == ClaimStatus.NOT_OBSERVED:
+            if ids:
+                raise ValueError("not_observed claim must not carry citation_ids")
+            if nonempty:
+                raise ValueError("not_observed claim must not carry a content value")
+
+
+@dataclass(frozen=True, slots=True)
+class BookOverviewResultV2:
+    """Claim-bound BookOverview contract (evidence_contract_version=v2)."""
+
+    logline: CitedClaimDto
+    premise: CitedClaimDto
+    central_question: CitedClaimDto
+    primary_conflict: CitedClaimDto
+    structure_summary: CitedClaimDto
+    ending_state: CitedClaimDto
+    contract_version: str = "v2"
+    overall_confidence: float | None = None
+
+    def __post_init__(self) -> None:
+        if str(self.contract_version or "") != "v2":
+            raise ValueError("BookOverviewResultV2.contract_version must be 'v2'")
+
+
 @dataclass(frozen=True, slots=True)
 class StructureStageItemDto:
     stage_id: str

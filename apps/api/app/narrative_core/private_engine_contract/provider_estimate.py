@@ -122,9 +122,14 @@ class ProviderEstimateResult:
             "context_limit_ok": self.context_limit_ok,
             "degrade_suggestion": self.degrade_suggestion,
             "max_retries": self.max_retries,
-            "repair_policy": "book_overview.schema_repair" if self.module_key == "book_overview" else "none",
+            "repair_policy": (
+                "book_overview.schema_and_citation_repair"
+                if self.module_key == "book_overview"
+                else "none"
+            ),
             "max_repair_count": min(1, int(self.max_retries)),
             "repair_policy_version": "1.0.0",
+            "evidence_contract_version": "v2",
             "expected_no_repair_cost": self.cost.cost_expected,
             "max_one_repair_cost": self.cost.max_retry_cost,
             "max_total_authorized_cost": max_total,

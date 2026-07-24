@@ -75,6 +75,30 @@ class LiveModulePipelineDiagnostics:
     schema_label_verified: bool | None = None
     undeclared_top_level_fields: list[str] = field(default_factory=list)
     evidence_id_resolved_count: int = 0
+    # CHG-058 Citation Evidence Contract V2 (safe counters; no claim/citation bodies).
+    evidence_contract_version: str | None = None
+    citation_contract_version: str | None = None
+    catalog_id: str | None = None
+    catalog_entry_count: int = 0
+    catalog_fingerprint: str | None = None
+    prompt_catalog_fingerprint: str | None = None
+    schema_catalog_fingerprint: str | None = None
+    resolver_catalog_fingerprint: str | None = None
+    catalog_fingerprints_match: bool | None = None
+    observed_claim_count: int = 0
+    inferred_claim_count: int = 0
+    not_observed_claim_count: int = 0
+    provider_citation_count: int = 0
+    unique_provider_citation_count: int = 0
+    citation_resolved_count: int = 0
+    citation_rejected_count: int = 0
+    stale_citation_count: int = 0
+    unknown_citation_count: int = 0
+    catalog_mismatch_count: int = 0
+    locator_validation_count: int = 0
+    locator_rejected_count: int = 0
+    critical_claims_without_citation_count: int = 0
+    persistence_complete: bool | None = None
 
     def to_safe_dict(self) -> dict[str, Any]:
         payload = asdict(self)
@@ -93,6 +117,22 @@ class LiveModulePipelineDiagnostics:
                 "text",
             }:
                 payload.pop(key, None)
+        return payload
+
+
+@dataclass
+class CitationEvidencePipelineDiagnostics(LiveModulePipelineDiagnostics):
+    """V2 citation evidence pipeline diagnostics (extends Live counters)."""
+
+    rejection_codes: list[str] = field(default_factory=list)
+
+    def to_safe_dict(self) -> dict[str, Any]:
+        payload = super().to_safe_dict()
+        # Prefer rejection_codes alias when V2 path populated it.
+        if self.rejection_codes and not payload.get("evidence_rejection_codes"):
+            payload["evidence_rejection_codes"] = list(self.rejection_codes)
+        elif self.rejection_codes:
+            payload["rejection_codes"] = list(self.rejection_codes)
         return payload
 
 
@@ -137,6 +177,11 @@ def infer_failure_boundary(diag: LiveModulePipelineDiagnostics) -> str | None:
     if diag.target_ref_rejected_count > 0 and diag.target_ref_resolved_count < 1:
         return "EVIDENCE_VALIDATION_REJECTED"
     if diag.quote_resolution_rejected_count > 0 and diag.quote_resolution_success_count < 1:
+        return "EVIDENCE_VALIDATION_REJECTED"
+    if (
+        int(getattr(diag, "citation_rejected_count", 0) or 0) > 0
+        and int(getattr(diag, "citation_resolved_count", 0) or 0) < 1
+    ):
         return "EVIDENCE_VALIDATION_REJECTED"
     if diag.evidence_valid_count < 1 and diag.evidence_rejected_count > 0:
         return "EVIDENCE_VALIDATION_REJECTED"
