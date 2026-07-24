@@ -47,6 +47,12 @@
       "message": "docs: close CHG-20260724-058 retarget attachment loop",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "afc6480a51111e2bb8d6f4e0726c8e8aad01c357",
+      "message": "docs: finalize CHG-20260724-058 Integration commit list",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -108,5 +114,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-24T15:35:15Z",
-  "updated_at": "2026-07-24T16:17:46Z"
+  "updated_at": "2026-07-24T16:17:47Z"
 }
