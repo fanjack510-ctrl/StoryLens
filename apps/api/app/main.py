@@ -138,6 +138,24 @@ def _make_lifespan(
                 logger.exception(
                     "mock lab startup recovery reconcile failed (non-blocking)"
                 )
+            if private_lab_on:
+                try:
+                    from app.narrative_core.services.private_lab_recovery_service import (
+                        PrivateLabRecoveryService,
+                    )
+
+                    with SessionLocal() as session:
+                        result = PrivateLabRecoveryService(session).startup_reconcile()
+                    logger.info(
+                        "private lab startup recovery: scanned=%s interrupted=%s auto_resumed=%s",
+                        result.scanned,
+                        len(result.interrupted_run_ids),
+                        result.auto_resumed,
+                    )
+                except Exception:  # noqa: BLE001 — never block startup; never auto-resume
+                    logger.exception(
+                        "private lab startup recovery reconcile failed (non-blocking)"
+                    )
             yield
         finally:
             if is_web_production_mode():

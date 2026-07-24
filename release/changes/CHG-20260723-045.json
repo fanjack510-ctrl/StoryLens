@@ -31,11 +31,11 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-24T02:25:41Z",
-  "updated_at": "2026-07-24T02:28:46Z",
+  "updated_at": "2026-07-24T03:27:31Z",
   "file_ownership": "docs/architecture/narrative-intelligence-core/phase2br1-parallel-file-ownership.json",
   "id": "CHG-20260723-045",
   "title": "Phase 2B-R1 Live Readiness Plan",
-  "status": "tested",
+  "status": "verified",
   "modules": [
     "docs",
     "release/changes"
@@ -74,7 +74,9 @@
     "scripts/check_capability_keys.py",
     "git diff --check"
   ],
-  "verification_evidence": [],
+  "verification_evidence": [
+    "phase2br1 plan consumed by Integration CHG-048; U/V/Integration cherry-picks complete; public dry E2E 145 passed"
+  ],
   "parallel_plan": {
     "role": "phase2br1_plan",
     "branch": "feature/narrative-phase2br1-live-readiness-plan",

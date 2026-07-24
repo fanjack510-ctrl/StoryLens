@@ -40,12 +40,12 @@ StoryLens 叙事智能核心文档索引。当前基线：`VERSION=1.0.5`。
 | Phase 2B-R Agent S | CHG-20260723-042 | tested | Private Runtime and Provider |
 | Phase 2B-R Agent T | CHG-20260723-043 | tested | First Four Real Modules |
 | Phase 2B-R Integration | CHG-20260723-044 | tested | Phase 2B-R Integration |
-| Phase 2B-R1 Plan | CHG-20260723-045 | tested | Live Provider readiness plan |
-| Phase 2B-R1 Agent U | CHG-20260723-046 | registered | Provider Context and Cost |
-| Phase 2B-R1 Agent V | CHG-20260723-047 | registered | Private Lab Runtime and Persistence |
-| Phase 2B-R1 Integration | CHG-20260723-048 | registered | Phase 2B-R1 Integration |
+| Phase 2B-R1 Plan | CHG-20260723-045 | verified | Live Provider readiness plan |
+| Phase 2B-R1 Agent U | CHG-20260723-046 | tested | Provider Context and Cost |
+| Phase 2B-R1 Agent V | CHG-20260723-047 | tested | Private Lab Runtime and Persistence |
+| Phase 2B-R1 Integration | CHG-20260723-048 | tested | Phase 2B-R1 Integration |
 
-\* 022–031 已为 `verified`（不得 ready/released）。032–040 / 041–044 上限 `tested`（完整 Live Smoke 前不得升 verified）。045 上限 `tested`。046–048 从 `registered` 起；R1 Integration 后上限 `tested`。硬边界见下。
+\* 022–031 已为 `verified`（不得 ready/released）。032–040 / 041–044 上限 `tested`（完整 Live Smoke 前不得升 verified）。045 已 `verified`。046–047 保持 `tested`。048 Integration 上限 `tested`。硬边界见下。
 
 ## Phase 1P / 1A
 
@@ -243,3 +243,12 @@ StoryLens 叙事智能核心文档索引。当前基线：`VERSION=1.0.5`。
 - [phase2br1-parallel-file-ownership.md](./phase2br1-parallel-file-ownership.md)
 - [phase2br1-parallel-file-ownership.json](./phase2br1-parallel-file-ownership.json)
 - [phase2br1-plan-verification.md](./phase2br1-plan-verification.md)
+
+## Phase 2B-R1 Integration
+
+- [phase2br1-integration-report.md](./phase2br1-integration-report.md)
+- [phase2br1-runtime-composition.md](./phase2br1-runtime-composition.md)
+- [phase2br1-live-smoke-readiness.md](./phase2br1-live-smoke-readiness.md)
+- [phase2br1-known-limitations.md](./phase2br1-known-limitations.md)
+- [phase2br1-provider-context-cost-implementation.md](./phase2br1-provider-context-cost-implementation.md)
+- [phase2br1-private-lab-runtime-implementation.md](./phase2br1-private-lab-runtime-implementation.md)

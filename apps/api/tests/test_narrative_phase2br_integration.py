@@ -294,6 +294,10 @@ def test_private_lab_router_mount_gated() -> None:
             "data_transfer_consented": True,
             "user_confirmed": True,
             "credential_present": True,
+            "preflight_fingerprint": "x",
+            "estimate_fingerprint": "x",
+            "consent_fingerprint": "x",
+            "data_transfer_manifest_hash": "x",
         },
         headers={PRIVATE_ENGINE_LAB_REQUEST_MARKER_HEADER: "1"},
     )
@@ -301,25 +305,26 @@ def test_private_lab_router_mount_gated() -> None:
 
     app_on = create_app(environment="development", private_engine_lab_enabled=True)
     client_on = TestClient(app_on)
-    ok = client_on.post(
+    # Integration: fingerprints required — incomplete body must not create a Run.
+    incomplete = client_on.post(
         "/api/v1/labs/private-whole-book-runs",
         json={
             "book_id": 1,
             "book_snapshot_id": 1,
             "dry_run": True,
-            "data_transfer_consented": True,
-            "user_confirmed": True,
-            "credential_present": True,
-            "capability_ok": True,
-            "budget_ok": True,
         },
         headers={PRIVATE_ENGINE_LAB_REQUEST_MARKER_HEADER: "1"},
     )
-    assert ok.status_code == 200
-    body = ok.json()
-    assert body["private_engine_lab"] is True
-    assert body["formal_run_disabled"] is True
-    assert body["dry_run"] is True
+    assert incomplete.status_code == 422
+    contract = client_on.get(
+        "/api/v1/labs/private-whole-book-runs/_meta/contract",
+        headers={PRIVATE_ENGINE_LAB_REQUEST_MARKER_HEADER: "1"},
+    )
+    assert contract.status_code == 200
+    body = contract.json()
+    assert body["WHOLE_BOOK_RUNS_ENDPOINT_DISABLED"] is True
+    assert body["PRIVATE_ENGINE_LAB_API_PREFIX"] == "/api/v1/labs/private-whole-book-runs"
+    assert body["shell_only"] is False
 
     prod = create_app(environment="production", private_engine_lab_enabled=True)
     assert mount_private_engine_lab_if_enabled(prod, environment="production", lab_enabled=True) is False

@@ -45,16 +45,20 @@ from app.narrative_core.services.private_engine_lab_run_service import (
     PrivateWholeBookLabRunError,
     PrivateWholeBookLabRunService,
 )
-from app.narrative_core.services.private_lab_ports import (
-    FakePrivateLabConsentValidationPort,
-    FakePrivateLabEstimatePort,
-    FakePrivateLabPreflightPort,
-    FakePrivateLabProviderExecutionPort,
-)
 from app.narrative_core.services.private_lab_run_executor import PrivateLabRunExecutor
 from app.narrative_core.services.in_process_private_lab_task_registry import (
     get_default_private_lab_task_registry,
     reset_default_private_lab_task_registry,
+)
+from app.narrative_core.services.private_lab_service_adapters import (
+    resolve_server_security_status,
+)
+from app.narrative_core.services.private_whole_book_analysis_runtime import (
+    create_lab_private_whole_book_analysis_runtime,
+)
+from app.narrative_core.services.private_whole_book_live_readiness_runtime import (
+    get_or_create_default_live_readiness_runtime,
+    reset_default_live_readiness_runtime_for_tests,
 )
 
 router = APIRouter(
@@ -77,17 +81,46 @@ class CreatePrivateEngineLabRunBody(BaseModel):
         default_factory=lambda: list(PRIVATE_LAB_FIRST_FOUR_MODULE_ORDER)
     )
     dry_run: bool = True
-    data_transfer_consented: bool = True
-    user_confirmed: bool = True
-    credential_present: bool = False
-    budget_ok: bool = True
-    capability_ok: bool = True
+    # Deprecated client self-attestation — live create ignores these; dry-run compat only.
+    data_transfer_consented: bool = Field(
+        default=True,
+        description="DEPRECATED: server rebuilds consent; ignored for live create",
+        json_schema_extra={"deprecated": True},
+    )
+    user_confirmed: bool = Field(
+        default=True,
+        description="User explicit confirm flag — still required; not a security proof alone",
+    )
+    credential_present: bool = Field(
+        default=False,
+        description="DEPRECATED: server resolves credential status",
+        json_schema_extra={"deprecated": True},
+    )
+    budget_ok: bool = Field(
+        default=True,
+        description="DEPRECATED: server BudgetGuard decides",
+        json_schema_extra={"deprecated": True},
+    )
+    capability_ok: bool = Field(
+        default=True,
+        description="DEPRECATED: server Capability Service decides",
+        json_schema_extra={"deprecated": True},
+    )
     configuration_fingerprint: str = Field(default="private-lab-cfg", min_length=1)
     idempotency_key: str = Field(default="private-lab", min_length=1, max_length=128)
-    preflight_fingerprint: str = Field(default="preflight-fp-ok", min_length=1)
-    estimate_fingerprint: str = Field(default="estimate-fp-ok", min_length=1)
-    consent_fingerprint: str = Field(default="consent-fp-ok", min_length=1)
-    data_transfer_manifest_hash: str = Field(default="manifest-hash-ok", min_length=1)
+    create_idempotency_key: str | None = Field(
+        default=None,
+        max_length=128,
+        description="Alias for idempotency_key",
+    )
+    preflight_fingerprint: str = Field(min_length=1)
+    estimate_fingerprint: str = Field(min_length=1)
+    consent_fingerprint: str = Field(min_length=1)
+    data_transfer_manifest_hash: str = Field(min_length=1)
+    expected_manifest_hash: str | None = Field(
+        default=None,
+        description="Optional alias; compared to server-rebuilt manifest hash",
+    )
     context_bundle_hash: str = Field(default="context-hash-ok", min_length=1)
     prompt_pack_id: str = "private.lab.pack"
     prompt_pack_version: str = "1.0.0"
@@ -216,33 +249,43 @@ def _error_response(exc: PrivateWholeBookLabRunError) -> HTTPException:
     )
 
 
+def _lab_runtime():
+    return get_or_create_default_live_readiness_runtime(environment="test", lab_enabled=True)
+
+
 def get_run_service(session: Session = Depends(get_db)) -> PrivateWholeBookLabRunService:
-    return PrivateWholeBookLabRunService(
-        session,
-        auth=PrivateEngineLabAuthorizationService(lab_enabled=True),
-        task_registry=get_default_private_lab_task_registry(),
-        preflight_port=FakePrivateLabPreflightPort(),
-        estimate_port=FakePrivateLabEstimatePort(),
-        consent_port=FakePrivateLabConsentValidationPort(),
-    )
+    runtime = _lab_runtime()
+    return runtime.build_run_service(session)
 
 
 def get_executor(session: Session = Depends(get_db)) -> PrivateLabRunExecutor:
-    return PrivateLabRunExecutor(
-        session,
-        task_registry=get_default_private_lab_task_registry(),
-        provider_port=FakePrivateLabProviderExecutionPort(),
-    )
+    runtime = _lab_runtime()
+
+    def _runtime_factory(**kwargs: Any) -> Any:
+        return create_lab_private_whole_book_analysis_runtime(
+            session=kwargs.get("session"),
+            book_id=kwargs.get("book_id"),
+            use_phase1b_persistence=bool(kwargs.get("use_phase1b_persistence", True)),
+            lab_dry_run=True,
+            fallback_to_fake=True,
+        )
+
+    if runtime.runtime_factory is None:
+        runtime.runtime_factory = _runtime_factory
+    return runtime.build_executor(session)
 
 
 @router.post("/preflight", summary="Private Lab preflight (no Run)")
 def private_lab_preflight(
     body: PrivateLabPreflightBody,
     request: Request,
+    session: Session = Depends(get_db),
 ) -> dict[str, Any]:
     _require_write_lab_gate(request, dry_run=True)
-    port = FakePrivateLabPreflightPort()
-    result = port.preflight(
+    runtime = _lab_runtime()
+    assert runtime.preflight is not None
+    runtime.preflight.session = session
+    result = runtime.preflight.preflight(
         book_id=int(body.book_id),
         book_snapshot_id=int(body.book_snapshot_id),
         configuration_fingerprint=body.configuration_fingerprint,
@@ -255,9 +298,11 @@ def private_lab_preflight(
         "book_snapshot_id": result.book_snapshot_id,
         "snapshot_content_hash": result.snapshot_content_hash,
         "reason_code": result.reason_code,
+        "details": dict(result.details),
         "private_lab": True,
         "non_production": True,
         "run_created": False,
+        "can_enter_estimate": bool(result.ok and result.details.get("can_enter_estimate")),
     }
 
 
@@ -265,10 +310,22 @@ def private_lab_preflight(
 def private_lab_estimate(
     body: PrivateLabEstimateBody,
     request: Request,
+    session: Session = Depends(get_db),
 ) -> dict[str, Any]:
     _require_write_lab_gate(request, dry_run=True)
-    port = FakePrivateLabEstimatePort()
-    result = port.estimate(
+    runtime = _lab_runtime()
+    assert runtime.preflight is not None
+    assert runtime.estimate is not None
+    runtime.preflight.session = session
+    pre = runtime.preflight.preflight(
+        book_id=int(body.book_id),
+        book_snapshot_id=int(body.book_snapshot_id),
+        configuration_fingerprint=body.configuration_fingerprint,
+        requested_modules=tuple(body.requested_modules),
+    )
+    if pre.snapshot_content_hash:
+        runtime.estimate.snapshot_content_hash = str(pre.snapshot_content_hash)
+    result = runtime.estimate.estimate(
         book_id=int(body.book_id),
         book_snapshot_id=int(body.book_snapshot_id),
         configuration_fingerprint=body.configuration_fingerprint,
@@ -276,10 +333,15 @@ def private_lab_estimate(
         model_id=body.model_id,
         quality_profile=body.quality_profile,
         requested_modules=tuple(body.requested_modules),
-        preflight_fingerprint=body.preflight_fingerprint,
+        preflight_fingerprint=body.preflight_fingerprint or pre.fingerprint,
     )
+    cached = runtime.estimate._cache.get(result.fingerprint) or {}
+    consent_fp = str(cached.get("consent_fingerprint") or "")
+    # Safe response — no bodies / prompts / credentials / messages
     return {
         "fingerprint": result.fingerprint,
+        "estimate_fingerprint": result.fingerprint,
+        "consent_fingerprint": consent_fp,
         "configuration_fingerprint": result.configuration_fingerprint,
         "provider_key": result.provider_key,
         "model_id": result.model_id,
@@ -293,6 +355,7 @@ def private_lab_estimate(
         "run_created": False,
         "tokens_hardcoded": False,
         "cost_hardcoded": False,
+        "calls_provider": False,
     }
 
 
@@ -306,16 +369,38 @@ def create_private_engine_lab_run(
     service: PrivateWholeBookLabRunService = Depends(get_run_service),
     executor: PrivateLabRunExecutor = Depends(get_executor),
 ) -> dict[str, Any]:
+    runtime = _lab_runtime()
+    # Server-side security — client booleans are not authoritative for live create.
+    security = resolve_server_security_status(
+        credential_resolver=runtime.credential_adapter,
+        budget_guard=runtime.budget_guard,
+        capability_ok=True,  # Lab path: capability gated by Lab flag + env, not client bool
+        estimated_tokens=0,
+        estimated_cost=None,
+    )
+    if body.dry_run:
+        # Dry-run: credential not required; still do not trust client budget/capability lies
+        # when server budget is force-denied.
+        cred_present = False
+        budget_ok = security.budget_ok
+        capability_ok = security.capability_ok
+    else:
+        cred_present = security.credential_present
+        budget_ok = security.budget_ok
+        capability_ok = security.capability_ok
+
     _require_write_lab_gate(
         request,
         dry_run=bool(body.dry_run),
-        credential_present=bool(body.credential_present),
-        data_transfer_consented=bool(body.data_transfer_consented),
-        budget_ok=bool(body.budget_ok),
-        capability_ok=bool(body.capability_ok),
+        credential_present=cred_present,
+        data_transfer_consented=True,  # consent proven by fingerprint match below
+        budget_ok=budget_ok,
+        capability_ok=capability_ok,
         user_confirmed=bool(body.user_confirmed),
     )
     host = _client_host(request)
+    idem = body.create_idempotency_key or body.idempotency_key
+    manifest_hash = body.expected_manifest_hash or body.data_transfer_manifest_hash
     try:
         result = service.create_run(
             CreatePrivateLabRunRequest(
@@ -324,11 +409,11 @@ def create_private_engine_lab_run(
                 analysis_mode=body.analysis_mode,
                 requested_modules=tuple(body.requested_modules),
                 configuration_fingerprint=body.configuration_fingerprint,
-                idempotency_key=body.idempotency_key,
+                idempotency_key=idem,
                 preflight_fingerprint=body.preflight_fingerprint,
                 estimate_fingerprint=body.estimate_fingerprint,
                 consent_fingerprint=body.consent_fingerprint,
-                data_transfer_manifest_hash=body.data_transfer_manifest_hash,
+                data_transfer_manifest_hash=manifest_hash,
                 context_bundle_hash=body.context_bundle_hash,
                 prompt_pack_id=body.prompt_pack_id,
                 prompt_pack_version=body.prompt_pack_version,
@@ -338,11 +423,11 @@ def create_private_engine_lab_run(
                 output_locale=body.output_locale,
                 source_language=body.source_language,
                 dry_run=bool(body.dry_run),
-                data_transfer_consented=bool(body.data_transfer_consented),
+                data_transfer_consented=True,
                 user_confirmed=bool(body.user_confirmed),
-                credential_present=bool(body.credential_present),
-                budget_ok=bool(body.budget_ok),
-                capability_ok=bool(body.capability_ok),
+                credential_present=cred_present,
+                budget_ok=budget_ok,
+                capability_ok=capability_ok,
             ),
             loopback=is_loopback_host(host),
             request_marker_present=private_engine_lab_request_marker_present(request.headers),
@@ -372,6 +457,12 @@ def create_private_engine_lab_run(
         "shell_only": False,
         "private_engine_lab": True,
         "dry_run": bool(body.dry_run),
+        "server_security": {
+            "credential_present": cred_present,
+            "budget_ok": budget_ok,
+            "capability_ok": capability_ok,
+            "client_booleans_authoritative": False,
+        },
         **exec_detail,
     }
 
@@ -516,8 +607,9 @@ def lab_contract_assertions() -> dict[str, Any]:
 
 
 def reset_private_engine_lab_sessions_for_tests() -> None:
-    """Compat shim — AnalysisRun-backed Lab no longer uses in-memory sessions."""
+    """Compat shim — reset task registry + live readiness runtime DI."""
     reset_default_private_lab_task_registry()
+    reset_default_live_readiness_runtime_for_tests()
 
 
 __all__ = [

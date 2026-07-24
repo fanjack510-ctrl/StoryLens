@@ -643,6 +643,34 @@ def test_production_openapi_unregistered() -> None:
 
 def test_http_api_create_get_stages(lab_env) -> None:
     client: TestClient = lab_env["client"]
+    # Integration wires real U adapters — fingerprints must come from preflight/estimate.
+    pre = client.post(
+        "/api/v1/labs/private-whole-book-runs/preflight",
+        headers=MARKER,
+        json={
+            "book_id": lab_env["book"].id,
+            "book_snapshot_id": lab_env["snapshot"].id,
+            "configuration_fingerprint": "cfg-http-1",
+        },
+    )
+    assert pre.status_code == 200, pre.text
+    assert pre.json()["run_created"] is False
+    assert pre.json()["ok"] is True
+    preflight_fp = pre.json()["fingerprint"]
+    est = client.post(
+        "/api/v1/labs/private-whole-book-runs/estimate",
+        headers=MARKER,
+        json={
+            "book_id": lab_env["book"].id,
+            "book_snapshot_id": lab_env["snapshot"].id,
+            "configuration_fingerprint": "cfg-http-1",
+            "preflight_fingerprint": preflight_fp,
+        },
+    )
+    assert est.status_code == 200, est.text
+    assert est.json()["tokens_hardcoded"] is False
+    assert est.json()["cost_hardcoded"] is False
+    est_body = est.json()
     resp = client.post(
         "/api/v1/labs/private-whole-book-runs",
         headers=MARKER,
@@ -650,7 +678,13 @@ def test_http_api_create_get_stages(lab_env) -> None:
             "book_id": lab_env["book"].id,
             "book_snapshot_id": lab_env["snapshot"].id,
             "idempotency_key": "http-create-1",
+            "configuration_fingerprint": "cfg-http-1",
+            "preflight_fingerprint": preflight_fp,
+            "estimate_fingerprint": est_body["fingerprint"],
+            "consent_fingerprint": est_body["consent_fingerprint"],
+            "data_transfer_manifest_hash": est_body["data_transfer_manifest_hash"],
             "auto_start": True,
+            "dry_run": True,
         },
     )
     assert resp.status_code == 200, resp.text
@@ -658,6 +692,7 @@ def test_http_api_create_get_stages(lab_env) -> None:
     assert data["private_lab"] is True
     assert data["modules_implemented"] is True
     assert data["shell_only"] is False
+    assert data["server_security"]["client_booleans_authoritative"] is False
     run_id = data["run_id"]
     g = client.get(f"/api/v1/labs/private-whole-book-runs/{run_id}", headers=MARKER)
     assert g.status_code == 200
@@ -666,30 +701,6 @@ def test_http_api_create_get_stages(lab_env) -> None:
     )
     assert stages.status_code == 200
     assert len(stages.json()["stages"]) == 10
-    pre = client.post(
-        "/api/v1/labs/private-whole-book-runs/preflight",
-        headers=MARKER,
-        json={
-            "book_id": lab_env["book"].id,
-            "book_snapshot_id": lab_env["snapshot"].id,
-            "configuration_fingerprint": "cfg",
-        },
-    )
-    assert pre.status_code == 200
-    assert pre.json()["run_created"] is False
-    est = client.post(
-        "/api/v1/labs/private-whole-book-runs/estimate",
-        headers=MARKER,
-        json={
-            "book_id": lab_env["book"].id,
-            "book_snapshot_id": lab_env["snapshot"].id,
-            "configuration_fingerprint": "cfg",
-            "preflight_fingerprint": "preflight-fp-ok",
-        },
-    )
-    assert est.status_code == 200
-    assert est.json()["tokens_hardcoded"] is False
-    assert est.json()["cost_hardcoded"] is False
 
 
 def test_contract_and_mock_unaffected() -> None:
