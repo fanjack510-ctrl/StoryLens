@@ -2,7 +2,14 @@
   "type": "feature",
   "base_version": "1.0.5",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "fc40b0e840fb45b3dcc26517f29d6d4486750af0",
+      "message": "feat: integrate phase2br1 live provider readiness",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "data_compatibility": {
     "database_changed": false,
     "migration_required": false,
@@ -18,11 +25,11 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-24T02:25:41Z",
-  "updated_at": "2026-07-24T03:27:31Z",
+  "updated_at": "2026-07-24T03:27:50Z",
   "file_ownership": "docs/architecture/narrative-intelligence-core/phase2br1-parallel-file-ownership.json",
   "id": "CHG-20260723-048",
   "title": "Phase 2B-R1 Integration",
-  "status": "registered",
+  "status": "tested",
   "modules": [
     "integration",
     "private_lab",
