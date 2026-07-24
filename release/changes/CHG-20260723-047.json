@@ -20,6 +20,12 @@
       "message": "docs: fix CHG-20260723-047 commit object shape",
       "primary": true,
       "multi_change_reason": "Fix commit object shape for registry"
+    },
+    {
+      "sha": "2d433ab220b3c83317eef63f188bdeaf0ae43709",
+      "message": "docs: sync final CHG-20260723-047 commit list",
+      "primary": true,
+      "multi_change_reason": "Sync final commit list"
     }
   ],
   "data_compatibility": {
