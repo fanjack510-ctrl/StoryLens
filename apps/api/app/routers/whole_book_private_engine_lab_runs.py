@@ -407,6 +407,11 @@ def private_lab_estimate(
         "max_total_authorized_cost": max_total_authorized_cost,
         "data_transfer_manifest_hash": result.data_transfer_manifest_hash,
         "selection_summary": selection,
+        "execution_context_binding": (
+            dict(cached.get("execution_context_binding") or {})
+            if isinstance(cached.get("execution_context_binding"), dict)
+            else None
+        ),
         "private_lab": True,
         "non_production": True,
         "run_created": False,
