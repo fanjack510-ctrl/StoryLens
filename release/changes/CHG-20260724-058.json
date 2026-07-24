@@ -83,6 +83,12 @@
       "message": "docs: include final CHG-058 prompt-render attachment sha",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "cb9401a4784b16260d7ff0bc48333a3f3dc75bde",
+      "message": "docs: attach CHG-058 named-test and prompt-render Integration SHAs",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -144,5 +150,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-24T15:35:15Z",
-  "updated_at": "2026-07-24T16:34:44Z"
+  "updated_at": "2026-07-24T16:34:45Z"
 }
