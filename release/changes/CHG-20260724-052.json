@@ -7,12 +7,6 @@
   "include_in_next_release": true,
   "commits": [
     {
-      "sha": "0d2259aaf202bbeaa7e95d6bf1fc5ec8ab910555",
-      "message": "fix: bind context bundles to candidate persistence",
-      "primary": true,
-      "multi_change_reason": null
-    },
-    {
       "sha": "d5af01a5a0e047a9a103c67d06798b2e655bed4d",
       "message": "fix: bind context bundles to candidate persistence",
       "primary": true,
@@ -21,25 +15,31 @@
     {
       "sha": "fc078e1e10643a27fda0ae21c75466c81cdf83cb",
       "message": "docs: mark CHG-20260724-052 tested after context/candidate fix",
-      "primary": true,
+      "primary": false,
       "multi_change_reason": null
     },
     {
       "sha": "4fbac04aa618a5f0c7dfe4b863792558ac2dedcd",
       "message": "docs: retarget CHG-20260724-052 commits to integration cherry-picks",
-      "primary": true,
+      "primary": false,
       "multi_change_reason": null
     },
     {
       "sha": "6a6c4b9ecb99a867dc9e33e5d89575e935b5858b",
       "message": "docs: attach Integration retarget commit to CHG-20260724-052",
-      "primary": true,
+      "primary": false,
       "multi_change_reason": null
     },
     {
       "sha": "6b611f4af2a2c992c79489d45a2841d33de3bbcc",
       "message": "docs: attach final CHG-20260724-052 Integration metadata commit",
-      "primary": true,
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "0d9a7b08b351a547d65a67bd53f8cb55f1e082bb",
+      "message": "docs: sync final CHG-20260724-052 attachment",
+      "primary": false,
       "multi_change_reason": null
     }
   ],
