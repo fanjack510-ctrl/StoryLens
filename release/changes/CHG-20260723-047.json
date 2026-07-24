@@ -7,7 +7,7 @@
     "database_changed": false,
     "migration_required": false,
     "user_data_compatible": true,
-    "notes": "No schema/migration in Phase 2B-R1 plan."
+    "notes": "No schema/migration. Evidence run provenance via Version/attributes_json/artifact payload."
   },
   "release_impact": {
     "requires_reanalysis": false,
@@ -18,19 +18,38 @@
   "blocker_level": null,
   "head_inclusion": null,
   "created_at": "2026-07-24T02:25:41Z",
-  "updated_at": "2026-07-24T02:25:41Z",
+  "updated_at": "2026-07-24T03:30:00Z",
   "file_ownership": "docs/architecture/narrative-intelligence-core/phase2br1-parallel-file-ownership.json",
   "id": "CHG-20260723-047",
   "title": "Agent V Private Lab Runtime and Persistence",
-  "status": "registered",
+  "status": "tested",
   "modules": [
     "private_engine_lab",
     "candidate_persistence",
-    "run_stage"
+    "run_stage",
+    "private_lab_run_service",
+    "private_lab_executor",
+    "whole_book_results"
   ],
-  "files": [],
+  "files": [
+    "apps/api/app/routers/whole_book_private_engine_lab_runs.py",
+    "apps/api/app/narrative_core/services/private_engine_lab_run_service.py",
+    "apps/api/app/narrative_core/services/private_lab_ports.py",
+    "apps/api/app/narrative_core/services/private_lab_run_metadata.py",
+    "apps/api/app/narrative_core/services/private_lab_run_executor.py",
+    "apps/api/app/narrative_core/services/private_lab_run_state_service.py",
+    "apps/api/app/narrative_core/services/private_lab_idempotency.py",
+    "apps/api/app/narrative_core/services/private_lab_recovery_service.py",
+    "apps/api/app/narrative_core/services/in_process_private_lab_task_registry.py",
+    "apps/api/app/narrative_core/services/candidate_persistence_adapter.py",
+    "apps/api/app/narrative_core/run_shell_contract/private_engine_lab.py",
+    "apps/api/tests/test_narrative_phase2br1_private_lab_runtime.py",
+    "docs/architecture/narrative-intelligence-core/phase2br1-private-lab-runtime-implementation.md",
+    "docs/architecture/narrative-intelligence-core/phase2br1-private-lab-runtime-verification.md",
+    "docs/architecture/narrative-intelligence-core/phase2br1-private-lab-runtime-limitations.md"
+  ],
   "user_summary": "Wire Private Lab HTTP to AnalysisRun/Stages, sequential four modules, and Phase 1B candidate/evidence persistence.",
-  "technical_summary": "Agent V: expand Lab router beyond shell; Lab run service; Phase1B persistence guarantees; sequential module execution. No Bailian message assembly.",
+  "technical_summary": "Agent V: AnalysisRun-backed Private Lab run service/executor/registry/recovery; U-compatible Ports; Phase1B persistence method surface; sequential first-four modules; Result API readable. Private commit f2089a712be11b70fb57fc8823b1a9a99771ac91. No Bailian message assembly. main.py mount deferred to Integration.",
   "acceptance_criteria": [
     "Lab create produces AnalysisRun and stages",
     "Sequential four modules under Lab",
@@ -41,12 +60,30 @@
   "tests": [
     "apps/api/tests/test_narrative_phase2br1_private_lab_runtime.py"
   ],
-  "verification_evidence": [],
+  "verification_evidence": [
+    "pytest apps/api/tests/test_narrative_phase2br1_private_lab_runtime.py -q → 26 passed",
+    "private tests/test_phase2br1_private_lab_runtime_wiring.py → 7 passed",
+    "private commit: f2089a712be11b70fb57fc8823b1a9a99771ac91"
+  ],
+  "persistence_boundary": {
+    "sink": "Phase1BCandidatePersistenceSink",
+    "services": [
+      "NarrativeAssetService",
+      "NarrativeRelationServiceImpl",
+      "ConflictService/AnalysisConflictSinkAdapter",
+      "ArtifactWriterAdapter",
+      "DefaultEvidenceValidator (via runtime path)"
+    ],
+    "no_direct_orm_scatter": true,
+    "no_migration": true,
+    "candidate_only": true
+  },
   "parallel_plan": {
     "role": "agent_v",
     "branch": "feature/narrative-phase2br1-private-lab-runtime",
     "worktree": "D:\\\\Dstorylens-wt-narrative-private-lab-runtime",
     "private_worktree": "D:\\\\Dstorylens-private-engine-wt-private-lab-runtime",
+    "private_commit": "f2089a712be11b70fb57fc8823b1a9a99771ac91",
     "depends_on": [
       "CHG-20260723-045"
     ],

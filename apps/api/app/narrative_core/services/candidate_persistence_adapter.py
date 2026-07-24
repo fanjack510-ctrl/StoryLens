@@ -188,6 +188,105 @@ class Phase1BCandidatePersistenceSink:
         if self.relation_service is None:
             self.relation_service = NarrativeRelationServiceImpl(self.session)
 
+    # ----- Explicit Lab-facing methods (Phase 2B-R1 Agent V) -----
+
+    def persist_entities(self, built: ModuleCandidateBuildResult) -> Mapping[str, Any]:
+        """Entity candidates are not first-class in Phase1B sink — no-op summary."""
+
+        return {
+            "orm_written": False,
+            "entity_count": 0,
+            "note": "entity persistence deferred to NarrativeEntityService when commands present",
+            "auto_confirm": False,
+            "auto_lock": False,
+            "canonical_overwrite": False,
+        }
+
+    def persist_assets(self, commands: Sequence[AssetCandidateCommand]) -> list[int]:
+        ids: list[int] = []
+        with self.session.begin_nested():
+            for cmd in commands:
+                version_id, _ = self._write_asset(cmd)
+                ids.append(version_id)
+        self.session.flush()
+        return ids
+
+    def persist_relations(self, commands: Sequence[RelationCandidateCommand]) -> list[int]:
+        ids: list[int] = []
+        with self.session.begin_nested():
+            for cmd in commands:
+                ids.append(self._write_relation(cmd))
+        self.session.flush()
+        return ids
+
+    def persist_asset_evidence(
+        self,
+        commands: Sequence[EvidenceCandidateCommand],
+        *,
+        asset_version_ids: Sequence[int],
+        output_ref_to_asset_version: Mapping[str, int] | None = None,
+    ) -> list[int]:
+        ids: list[int] = []
+        mapping = dict(output_ref_to_asset_version or {})
+        with self.session.begin_nested():
+            for cmd in commands:
+                eid = self._write_evidence(
+                    cmd,
+                    asset_version_ids=asset_version_ids,
+                    relation_version_ids=(),
+                    output_ref_to_asset_version=mapping,
+                )
+                if eid is not None:
+                    ids.append(eid)
+        self.session.flush()
+        return ids
+
+    def persist_relation_evidence(
+        self,
+        commands: Sequence[EvidenceCandidateCommand],
+        *,
+        relation_version_ids: Sequence[int],
+    ) -> list[int]:
+        ids: list[int] = []
+        with self.session.begin_nested():
+            for cmd in commands:
+                eid = self._write_evidence(
+                    cmd,
+                    asset_version_ids=(),
+                    relation_version_ids=relation_version_ids,
+                    output_ref_to_asset_version={},
+                )
+                if eid is not None:
+                    ids.append(eid)
+        self.session.flush()
+        return ids
+
+    def persist_conflicts(self, commands: Sequence[ConflictCandidateCommand]) -> list[int]:
+        ids: list[int] = []
+        with self.session.begin_nested():
+            for cmd in commands:
+                ids.append(self._write_conflict(cmd))
+        self.session.flush()
+        return ids
+
+    def persist_stage_artifact(
+        self,
+        artifact: StageArtifactPayload,
+        *,
+        asset_version_ids: Sequence[int] = (),
+        relation_version_ids: Sequence[int] = (),
+        conflict_ids: Sequence[int] = (),
+    ) -> int:
+        with self.session.begin_nested():
+            artifact_id = self._write_stage_artifact(
+                artifact,
+                asset_version_ids=asset_version_ids,
+                relation_version_ids=relation_version_ids,
+                conflict_ids=conflict_ids,
+            )
+        self.session.flush()
+        return int(artifact_id)
+
     def persist_commands(self, built: ModuleCandidateBuildResult) -> Mapping[str, Any]:
         self.calls.append(built)
         if built.auto_confirm or built.auto_lock or built.canonical_overwrite:
@@ -203,6 +302,30 @@ class Phase1BCandidatePersistenceSink:
             return self._denied_summary(built, reason="rejected_validation")
         if not self.budget_remaining:
             return self._denied_summary(built, reason="budget_denied")
+
+        # Idempotent duplicate: same output fingerprint already persisted this sink session.
+        for prev in self.calls[:-1]:
+            if (
+                prev.output_fingerprint
+                and prev.output_fingerprint == built.output_fingerprint
+                and not prev.rejected
+            ):
+                return {
+                    "recorded": True,
+                    "orm_written": False,
+                    "duplicate": True,
+                    "auto_confirm": False,
+                    "auto_lock": False,
+                    "canonical_overwrite": False,
+                    "synthetic": built.synthetic,
+                    "rejected": False,
+                    "asset_count": 0,
+                    "relation_count": 0,
+                    "evidence_count": 0,
+                    "conflict_count": 0,
+                    "has_stage_artifact": False,
+                    "output_fingerprint": built.output_fingerprint,
+                }
 
         asset_version_ids: list[int] = []
         relation_version_ids: list[int] = []

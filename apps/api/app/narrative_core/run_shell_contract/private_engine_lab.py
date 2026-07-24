@@ -41,6 +41,20 @@ class PrivateEngineLabDenyReason(StrEnum):
     PRIVATE_ENGINE_LAB_CAPABILITY_DENIED = "PRIVATE_ENGINE_LAB_CAPABILITY_DENIED"
     PRIVATE_ENGINE_LAB_CONCURRENCY_LIMIT = "PRIVATE_ENGINE_LAB_CONCURRENCY_LIMIT"
     PRIVATE_ENGINE_LAB_CONFIRM_REQUIRED = "PRIVATE_ENGINE_LAB_CONFIRM_REQUIRED"
+    PRIVATE_ENGINE_LAB_PREFLIGHT_REJECTED = "PRIVATE_ENGINE_LAB_PREFLIGHT_REJECTED"
+    PRIVATE_ENGINE_LAB_ESTIMATE_FINGERPRINT_MISMATCH = (
+        "PRIVATE_ENGINE_LAB_ESTIMATE_FINGERPRINT_MISMATCH"
+    )
+    PRIVATE_ENGINE_LAB_CONSENT_FINGERPRINT_MISMATCH = (
+        "PRIVATE_ENGINE_LAB_CONSENT_FINGERPRINT_MISMATCH"
+    )
+    PRIVATE_ENGINE_LAB_SNAPSHOT_INVALID = "PRIVATE_ENGINE_LAB_SNAPSHOT_INVALID"
+    PRIVATE_ENGINE_LAB_NOT_PRIVATE_RUN = "PRIVATE_ENGINE_LAB_NOT_PRIVATE_RUN"
+    PRIVATE_ENGINE_LAB_IDEMPOTENCY_CONFLICT = "PRIVATE_ENGINE_LAB_IDEMPOTENCY_CONFLICT"
+    PRIVATE_ENGINE_LAB_STATE_CONFLICT = "PRIVATE_ENGINE_LAB_STATE_CONFLICT"
+    PRIVATE_ENGINE_LAB_OPERATION_NOT_ALLOWED = "PRIVATE_ENGINE_LAB_OPERATION_NOT_ALLOWED"
+    PRIVATE_ENGINE_LAB_CHECKPOINT_INVALID = "PRIVATE_ENGINE_LAB_CHECKPOINT_INVALID"
+    PRIVATE_ENGINE_LAB_RUN_NOT_FOUND = "PRIVATE_ENGINE_LAB_RUN_NOT_FOUND"
 
 
 PRIVATE_ENGINE_LAB_DENY_MESSAGES: dict[PrivateEngineLabDenyReason, str] = {
@@ -74,6 +88,36 @@ PRIVATE_ENGINE_LAB_DENY_MESSAGES: dict[PrivateEngineLabDenyReason, str] = {
     ),
     PrivateEngineLabDenyReason.PRIVATE_ENGINE_LAB_CONFIRM_REQUIRED: (
         "Explicit user confirm is required before starting Private Engine Lab."
+    ),
+    PrivateEngineLabDenyReason.PRIVATE_ENGINE_LAB_PREFLIGHT_REJECTED: (
+        "Private Engine Lab preflight was rejected."
+    ),
+    PrivateEngineLabDenyReason.PRIVATE_ENGINE_LAB_ESTIMATE_FINGERPRINT_MISMATCH: (
+        "Estimate fingerprint does not match the Lab create request."
+    ),
+    PrivateEngineLabDenyReason.PRIVATE_ENGINE_LAB_CONSENT_FINGERPRINT_MISMATCH: (
+        "Consent fingerprint does not match the data-transfer manifest."
+    ),
+    PrivateEngineLabDenyReason.PRIVATE_ENGINE_LAB_SNAPSHOT_INVALID: (
+        "Book snapshot is missing, incomplete, or not bound to the book."
+    ),
+    PrivateEngineLabDenyReason.PRIVATE_ENGINE_LAB_NOT_PRIVATE_RUN: (
+        "Target AnalysisRun is not a Private Engine Lab run."
+    ),
+    PrivateEngineLabDenyReason.PRIVATE_ENGINE_LAB_IDEMPOTENCY_CONFLICT: (
+        "Idempotency key conflict for Private Engine Lab create."
+    ),
+    PrivateEngineLabDenyReason.PRIVATE_ENGINE_LAB_STATE_CONFLICT: (
+        "Private Engine Lab run state/version conflict."
+    ),
+    PrivateEngineLabDenyReason.PRIVATE_ENGINE_LAB_OPERATION_NOT_ALLOWED: (
+        "Operation is not allowed for the current Private Engine Lab run state."
+    ),
+    PrivateEngineLabDenyReason.PRIVATE_ENGINE_LAB_CHECKPOINT_INVALID: (
+        "Private Engine Lab checkpoint is invalid or incompatible."
+    ),
+    PrivateEngineLabDenyReason.PRIVATE_ENGINE_LAB_RUN_NOT_FOUND: (
+        "Private Engine Lab run was not found."
     ),
 }
 
@@ -225,4 +269,37 @@ OPENAPI_PRIVATE_ENGINE_LAB_TAGS: tuple[str, ...] = (
     "labs",
     "non-production",
     "private-engine-lab",
+)
+
+
+# --- Phase 2B-R1 Agent V: Lab run create / metadata (no U estimate logic) ---
+
+PRIVATE_LAB_ENGINE_ID = "storylens.private.whole_book.dev"
+PRIVATE_LAB_ENGINE_VERSION = "0.1.0-dev"
+PRIVATE_LAB_RUN_METADATA_SCHEMA = "private_whole_book_lab_run_metadata"
+PRIVATE_LAB_RUN_METADATA_VERSION = "1.0.0"
+PRIVATE_LAB_RUN_METADATA_ENVELOPE_KEY = "private_whole_book_lab_run_metadata"
+PRIVATE_LAB_TASK_TYPE = "whole_book_private_lab"
+
+CREATE_PRIVATE_LAB_RUN_SEQUENCE: tuple[str, ...] = (
+    "authorize",
+    "validate_preflight_result",
+    "validate_estimate_fingerprint",
+    "validate_consent_fingerprint",
+    "validate_credential_status",
+    "validate_budget_status",
+    "validate_snapshot_completed",
+    "bind_snapshot_book",
+    "reserve_concurrency",
+    "create_analysis_run",
+    "create_analysis_run_stages",
+    "register_execution_task",
+    "start_executor",
+)
+
+PRIVATE_LAB_FIRST_FOUR_MODULE_ORDER: tuple[str, ...] = (
+    "book_overview",
+    "structure_stages",
+    "chapter_functions",
+    "storylines",
 )

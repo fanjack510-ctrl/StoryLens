@@ -220,6 +220,8 @@ def test_should_register_private_lab_router() -> None:
 
 
 def test_private_lab_router_mount_and_dry_create() -> None:
+    """Phase 2B-R1: Lab mount + auth gate; AnalysisRun create needs DB (see CHG-047 tests)."""
+
     reset_private_engine_lab_sessions_for_tests()
     app = create_app(
         environment="development",
@@ -234,41 +236,20 @@ def test_private_lab_router_mount_and_dry_create() -> None:
             "book_id": 1,
             "book_snapshot_id": 1,
             "dry_run": True,
+            "auto_start": False,
         },
     )
     # Without marker → 403
     assert denied.status_code == 403
 
-    created = client.post(
-        "/api/v1/labs/private-whole-book-runs",
-        headers=headers,
-        json={
-            "book_id": 1,
-            "book_snapshot_id": 1,
-            "dry_run": True,
-        },
-    )
-    assert created.status_code == 200
-    body = created.json()
-    assert body["private_engine_lab"] is True
-    assert body["mock_lab"] is False
-    assert body["dry_run"] is True
-    assert body["formal_run_disabled"] is True
-    assert body["modules_implemented"] is False
-    assert body["provider_key"] == PRIVATE_LAB_FIRST_PROVIDER_KEY
-
-    got = client.get(
-        f"/api/v1/labs/private-whole-book-runs/{body['lab_run_id']}",
-        headers=headers,
-    )
-    assert got.status_code == 200
-    cancelled = client.post(
-        f"/api/v1/labs/private-whole-book-runs/{body['lab_run_id']}/cancel",
-        headers=headers,
-        json={"confirm_cancel": True},
-    )
-    assert cancelled.status_code == 200
-    assert cancelled.json()["status"] == "cancelled"
+    contract = client.get("/api/v1/labs/private-whole-book-runs/_meta/contract", headers=headers)
+    assert contract.status_code == 200
+    meta = contract.json()
+    assert meta["WHOLE_BOOK_RUNS_ENDPOINT_DISABLED"] is True
+    assert meta["shell_only"] is False
+    assert meta["modules_implemented"] is True
+    assert meta["FIRST_PROVIDER_KEY"] == PRIVATE_LAB_FIRST_PROVIDER_KEY
+    assert meta["WHOLE_BOOK_PRIVATE_ENGINE_LAB_ENABLED_DEFAULT"] is False
 
 
 def test_private_lab_not_mounted_when_disabled() -> None:
