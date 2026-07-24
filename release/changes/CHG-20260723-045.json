@@ -8,6 +8,12 @@
       "message": "docs: plan phase2br1 live provider readiness",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "dd8391edcfb632b8c8fb0d89b154d608e04d1886",
+      "message": "docs: attach CHG-20260723-045 and mark tested",
+      "primary": true,
+      "multi_change_reason": "Attach status/metadata follow-up after mark tested"
     }
   ],
   "data_compatibility": {
@@ -25,7 +31,7 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-24T02:25:41Z",
-  "updated_at": "2026-07-24T02:28:45Z",
+  "updated_at": "2026-07-24T02:28:46Z",
   "file_ownership": "docs/architecture/narrative-intelligence-core/phase2br1-parallel-file-ownership.json",
   "id": "CHG-20260723-045",
   "title": "Phase 2B-R1 Live Readiness Plan",
