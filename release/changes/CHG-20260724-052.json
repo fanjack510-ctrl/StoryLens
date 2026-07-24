@@ -35,6 +35,12 @@
       "message": "docs: attach Integration retarget commit to CHG-20260724-052",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "6b611f4af2a2c992c79489d45a2841d33de3bbcc",
+      "message": "docs: attach final CHG-20260724-052 Integration metadata commit",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -86,5 +92,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-24T06:50:31Z",
-  "updated_at": "2026-07-24T07:22:47Z"
+  "updated_at": "2026-07-24T07:23:07Z"
 }
