@@ -7,14 +7,20 @@
   "include_in_next_release": true,
   "commits": [
     {
-      "sha": "dfa75351b32e787c7bb58ca8ea8cf6f51ad528f1",
+      "sha": "282fa8c127f07c6a9cbe3e390f092c2ce2505f3b",
       "message": "fix: enable explicitly authorized private lab live calls",
       "primary": true,
       "multi_change_reason": null
     },
     {
-      "sha": "72819f062caeed5b5fb13a59e7f1329fcc711999",
+      "sha": "0a4248d19c7f295564deaa77f4780d2d2fb04962",
       "message": "docs: mark CHG-20260724-050 tested after live network gate verification",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "c0de92a211b1510097af9c40605fb55e20f4a17f",
+      "message": "docs: sync CHG-20260724-050 commit attachments",
       "primary": false,
       "multi_change_reason": null
     }
@@ -58,5 +64,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-24T05:09:30Z",
-  "updated_at": "2026-07-24T05:17:33Z"
+  "updated_at": "2026-07-24T05:22:01Z"
 }

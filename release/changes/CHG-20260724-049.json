@@ -7,14 +7,20 @@
   "include_in_next_release": true,
   "commits": [
     {
-      "sha": "a89514c020edc59b71293d638aba9fb2d7b25b27",
+      "sha": "1e6a10a9fefe5a9b4cd2e1dc9ea1a779a3ffb833",
       "message": "fix: use real context and credentials in private lab",
       "primary": true,
       "multi_change_reason": null
     },
     {
-      "sha": "4254ec8b0336cb692b778a1854fbfac12b85eefc",
+      "sha": "cc5f33e361e28a3f91d8c8efaafb51b22486a016",
       "message": "docs: mark CHG-20260724-049 tested after DI fix verification",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "65f4aa43a154f76eb8f591e6342fab1cd286b8cb",
+      "message": "docs: sync CHG-20260724-049 commit attachments",
       "primary": false,
       "multi_change_reason": null
     }
@@ -61,5 +67,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-24T04:29:40Z",
-  "updated_at": "2026-07-24T04:49:47Z"
+  "updated_at": "2026-07-24T05:22:01Z"
 }
