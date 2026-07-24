@@ -7,20 +7,26 @@
   "include_in_next_release": true,
   "commits": [
     {
-      "sha": "f968cea8eedfe56ba2998f588ff00ebd7b884ec9",
+      "sha": "3dbcbf4929749500a9e1c546cfec005e6ebdc03c",
       "message": "fix: persist provider-backed narrative candidates",
       "primary": true,
-      "multi_change_reason": null
+      "multi_change_reason": "Integration retarget"
     },
     {
-      "sha": "8a4962f36fa6a40eae07448f663d4be735bbddbc",
+      "sha": "2b754612470626116575235d953ade4c07514012",
       "message": "docs: mark CHG-20260724-054 tested",
       "primary": false,
       "multi_change_reason": null
     },
     {
-      "sha": "799e11130369e0edc12d95a7d3bab1852939e2e5",
+      "sha": "02b46f1f880f689021b3570c0da0244ae06e99e4",
       "message": "docs: attach tested marker for CHG-20260724-054",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "0c5310fedf2f67661937e71df74eca917efe94bf",
+      "message": "docs: finalize CHG-20260724-054 registry",
       "primary": false,
       "multi_change_reason": null
     }
@@ -38,7 +44,7 @@
     "apps/api/tests/test_narrative_phase2br1_provider_result_binding.py"
   ],
   "user_summary": "Bind REAL/FAKE_HTTP provider structured output into formal private module results and Phase1B candidates; forbid Live fake.signed/synthetic success artifacts.",
-  "technical_summary": "Live provider structured_output binds via ProviderBackedPrivateModuleResult (provider_backed channel) instead of synthetic_output fixture; ModuleCandidateBuilder uses result.engine_id/synthetic=false; persistence_complete requires non-synthetic candidate+evidence+artifact. Evidence DB retry2 SHA256=D5B1655EF3D4248A11D7597FC54291420FA5811F1CCB72F4CB03E20773F4FEB0 (integrity ok, run_id=1 retained). Private companion 43870d176c15af9b88595aea12eeea20a3bcfb18.",
+  "technical_summary": "Live provider structured_output binds via ProviderBackedPrivateModuleResult (provider_backed channel) instead of synthetic_output fixture; ModuleCandidateBuilder uses result.engine_id/synthetic=false; persistence_complete requires non-synthetic candidate+evidence+artifact. Evidence DB retry2 SHA256=D5B1655EF3D4248A11D7597FC54291420FA5811F1CCB72F4CB03E20773F4FEB0 (integrity ok, run_id=1 retained). Private companion 43870d176c15af9b88595aea12eeea20a3bcfb18. Integration Public cherry-picks; Private Integration HEAD cd1a2c08935527a1b92089aca45b974b99002e16.",
   "acceptance_criteria": [
     "Provider FakeHttp structured output becomes PRIVATE_REAL module result; fake.signed never used for Live artifact; Asset/Version/Evidence written; persistence_complete=true; empty/fallback paths never completed."
   ],
@@ -48,7 +54,8 @@
     "apps/api/tests/test_narrative_phase2br1_context_candidate_binding.py"
   ],
   "verification_evidence": [
-    "Public 130 passed (provider_result_binding+provenance+context_binding+live_transport+network_gate+smoke_di+provider_context_cost+private_lab_runtime+integration). Private 38 passed. Gates: version 1.0.5, registry ok, capability ok, diff --check clean. Private commit 43870d176c15af9b88595aea12eeea20a3bcfb18. Failed Live evidence retained: storylens-live-smoke-retry2-20260724-164206.db run_id=1 SHA256=D5B1655E...FEB0."
+    "Public 130 passed (provider_result_binding+provenance+context_binding+live_transport+network_gate+smoke_di+provider_context_cost+private_lab_runtime+integration). Private 38 passed. Gates: version 1.0.5, registry ok, capability ok, diff --check clean. Private commit 43870d176c15af9b88595aea12eeea20a3bcfb18. Failed Live evidence retained: storylens-live-smoke-retry2-20260724-164206.db run_id=1 SHA256=D5B1655E...FEB0.",
+    "Cherry-picked to Integration; Private HEAD cd1a2c08935527a1b92089aca45b974b99002e16; failed Live evidence DB retry2 retained run_id=1."
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -65,5 +72,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-24T08:59:02Z",
-  "updated_at": "2026-07-24T09:17:12Z"
+  "updated_at": "2026-07-24T09:18:47Z"
 }
