@@ -7,8 +7,14 @@
   "include_in_next_release": true,
   "commits": [
     {
-      "sha": "e128a8a95e41cd843ac34fcdd6dcd6337c2d9760",
+      "sha": "862cb0184aab0aa7d62e649d3fab4f7124d5a3f4",
       "message": "fix: bind execution context and targeted citation repair",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "c053966a9bd81fafadb3219e7b1e5a86c9a59135",
+      "message": "docs: mark CHG-059 tested after directed citation V2 closure",
       "primary": true,
       "multi_change_reason": null
     }
@@ -31,8 +37,10 @@
     "private:tests/test_field_requirement_policy.py"
   ],
   "verification_evidence": [
-    "private_commit=0cfd52e90a0d3796d2b271f82398b78e823f1eb2",
-    "public_commit=e128a8a95e41cd843ac34fcdd6dcd6337c2d9760",
+    "fix_branch_public=e128a8a95e41cd843ac34fcdd6dcd6337c2d9760",
+    "fix_branch_private=0cfd52e90a0d3796d2b271f82398b78e823f1eb2",
+    "integration_public=c053966a9bd81fafadb3219e7b1e5a86c9a59135",
+    "integration_private=5f8257041b78319beb0921e068a450822257f541",
     "http_scenarios_A_H=passed"
   ],
   "data_compatibility": {
@@ -50,5 +58,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-24T17:18:07Z",
-  "updated_at": "2026-07-24T17:49:51Z"
+  "updated_at": "2026-07-24T17:56:00Z"
 }
