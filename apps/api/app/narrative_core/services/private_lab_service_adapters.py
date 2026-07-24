@@ -29,6 +29,10 @@ from app.narrative_core.run_shell_contract.private_engine_lab import (
 from app.narrative_core.services.private_engine_lab_authorization_service import (
     is_private_provider_live_probe_enabled,
 )
+from app.narrative_core.services.provider_execution_authorization import (
+    ProviderExecutionAuthorization,
+    compute_provider_execution_authorization,
+)
 from app.narrative_core.services.data_transfer_consent_guard import (
     PrivateEngineDataTransferConsentGuard,
     PrivateEngineProviderBudgetGuard,
@@ -455,8 +459,9 @@ class PrivateLabConsentServiceAdapter:
 class PrivateLabProviderExecutionServiceAdapter:
     """PrivateLabProviderExecutionPort → DefaultWholeBookProviderGateway + Bailian.
 
-    Default: dry_run + Capturing/injected transport — never silent Fake success for live.
-    Network requires all live gates; missing any gate → zero HTTP.
+    Default composition: dry_run default + Capturing transport.
+    Live requires request.dry_run=false AND runtime allow_network AND Live Probe
+    AND remaining security gates (CHG-050). Never silent Fake success for denied Live.
     """
 
     resolver: Any = field(default_factory=FakeProviderInputBundleResolver)
@@ -467,9 +472,12 @@ class PrivateLabProviderExecutionServiceAdapter:
     allow_network: bool = False
     transport: Any | None = None
     credential_resolver: Any | None = None
+    environment: str = "development"
+    lab_enabled: bool = True
     http_calls: int = 0
     cancelled: set[str] = field(default_factory=set)
     last_payloads: list[dict[str, Any]] = field(default_factory=list, repr=False)
+    last_authorization: ProviderExecutionAuthorization | None = field(default=None, repr=False)
     _gateway: Any | None = field(default=None, repr=False)
 
     def __post_init__(self) -> None:
@@ -485,11 +493,60 @@ class PrivateLabProviderExecutionServiceAdapter:
             )
         if self.credential_resolver is None:
             self.credential_resolver = NoCredentialFakeResolver()
+        # Composition gateway stays dry-capable; Live rebuilds per authorization.
         self._gateway = create_lab_provider_gateway(
-            dry_run=self.dry_run,
-            allow_network=bool(self.allow_network) and not self.dry_run,
+            dry_run=True,
+            allow_network=False,
             credential_resolver=self.credential_resolver,
             budget_guard=self.budget_guard,
+            transport=self.transport,
+        )
+
+    def _build_authorization(
+        self,
+        *,
+        request: Mapping[str, Any],
+        cancellation_ref: str | None,
+        budget_valid: bool,
+        credential_valid: bool,
+    ) -> ProviderExecutionAuthorization:
+        if "dry_run" in request:
+            requested_dry = bool(request.get("dry_run"))
+        else:
+            requested_dry = bool(self.dry_run)
+        consent_valid = bool(request.get("consent_valid", True))
+        estimate_valid = bool(request.get("estimate_valid", True))
+        provider_route_valid = bool(request.get("provider_route_valid", True))
+        provider_health_allowed = bool(request.get("provider_health_allowed", True))
+        return compute_provider_execution_authorization(
+            environment=str(request.get("environment") or self.environment),
+            private_lab_enabled=bool(request.get("lab_enabled", self.lab_enabled)),
+            live_probe_enabled=is_private_provider_live_probe_enabled(),
+            allow_network=bool(self.allow_network),
+            requested_dry_run=requested_dry,
+            consent_valid=consent_valid,
+            estimate_valid=estimate_valid,
+            budget_valid=budget_valid,
+            credential_valid=credential_valid,
+            cancellation_requested=bool(
+                cancellation_ref and cancellation_ref in self.cancelled
+            ),
+            provider_route_valid=provider_route_valid,
+            provider_health_allowed=provider_health_allowed,
+        )
+
+    def _live_gateway(self) -> Any:
+        """Gateway/Adapter with dry_run=false + allow_network=true for authorized Live.
+
+        Budget already re-checked in execute_module; omit incompatible Lab budget guard
+        from gateway spend recording to keep Adapter/Gateway/Transport auth consistent.
+        """
+
+        return create_lab_provider_gateway(
+            dry_run=False,
+            allow_network=True,
+            credential_resolver=self.credential_resolver,
+            budget_guard=None,
             transport=self.transport,
         )
 
@@ -501,22 +558,23 @@ class PrivateLabProviderExecutionServiceAdapter:
         cancellation_ref: str | None = None,
     ) -> PrivateLabProviderUsageResult:
         if cancellation_ref and cancellation_ref in self.cancelled:
+            auth = self._build_authorization(
+                request={**dict(request), "dry_run": False},
+                cancellation_ref=cancellation_ref,
+                budget_valid=True,
+                credential_valid=True,
+            )
+            self.last_authorization = auth
             return PrivateLabProviderUsageResult(
                 module_key=module_key,
                 status="cancelled",
                 cancellation_honored=True,
-                usage={"http": False, "cancelled": True},
+                usage={
+                    "http": False,
+                    "cancelled": True,
+                    "authorization_fingerprint": auth.authorization_fingerprint,
+                },
             )
-
-        live_ok = (
-            (not self.dry_run)
-            and bool(self.allow_network)
-            and is_private_provider_live_probe_enabled()
-        )
-        if not live_ok:
-            # Dry / gated path: assemble real payload structure, capture via transport
-            # without opening network. Never return synthetic-success without capture.
-            pass
 
         book_id = int(request.get("book_id") or 0)
         book_snapshot_id = int(request.get("book_snapshot_id") or 0)
@@ -537,7 +595,6 @@ class PrivateLabProviderExecutionServiceAdapter:
             response_format_mode="json_object",
             allow_tools=False,
         )
-        # Structure-only capture for tests — never store bodies in last_payloads.
         self.last_payloads.append(
             {
                 "module_key": module_key,
@@ -551,13 +608,59 @@ class PrivateLabProviderExecutionServiceAdapter:
             }
         )
 
+        tokens = bundle.source_character_count() // 2 + 64
+        budget = self.budget_guard.check(
+            estimated_tokens=tokens,
+            estimated_cost=None,
+            cancellation_ref=cancellation_ref,
+            stage_key=module_key,
+        )
+        if not budget.allowed:
+            auth = self._build_authorization(
+                request=request,
+                cancellation_ref=cancellation_ref,
+                budget_valid=False,
+                credential_valid=True,
+            )
+            self.last_authorization = auth
+            return PrivateLabProviderUsageResult(
+                module_key=module_key,
+                status="budget_denied",
+                usage={
+                    "http": False,
+                    "reason": budget.reason,
+                    "authorization_fingerprint": auth.authorization_fingerprint,
+                    "deny_reason": auth.deny_reason or "budget_denied",
+                },
+            )
+
+        cred_ok = False
+        if self.credential_resolver is not None:
+            secret = self.credential_resolver.resolve(PRIVATE_LAB_FIRST_PROVIDER_KEY)
+            cred_ok = bool(secret)
+            secret = None
+
+        requested_dry = auth_requested_dry(request, self.dry_run)
+        auth = self._build_authorization(
+            request=request,
+            cancellation_ref=cancellation_ref,
+            budget_valid=True,
+            # Intentional dry does not require credential at execute boundary.
+            credential_valid=True if requested_dry else cred_ok,
+        )
+        self.last_authorization = auth
+
         from app.narrative_core.private_engine_contract.provider_gateway import (
             ProviderInferenceRequest,
         )
 
         inference = ProviderInferenceRequest(
             request_id=f"lab-{module_key}-{book_id}",
-            provider_kind=PRIVATE_LAB_FIRST_PROVIDER_KEY if not self.dry_run else "fake",
+            provider_kind=(
+                PRIVATE_LAB_FIRST_PROVIDER_KEY
+                if not auth.effective_dry_run
+                else "fake"
+            ),
             model_route="balanced",
             task_type=f"module:{module_key}",
             system_instruction_ref=bundle.system_instruction_ref,
@@ -571,38 +674,42 @@ class PrivateLabProviderExecutionServiceAdapter:
             retry_policy={"max_retries": 1},
             cancellation_ref=cancellation_ref,
             data_handling_policy=dict(bundle.data_handling_policy),
-            metadata={"module_key": module_key, "dry_run": self.dry_run},
+            metadata={
+                "module_key": module_key,
+                "requested_dry_run": auth.requested_dry_run,
+                "effective_dry_run": auth.effective_dry_run,
+                "authorization_fingerprint": auth.authorization_fingerprint,
+            },
         )
 
-        # Budget re-check before every execute / retry
-        tokens = bundle.source_character_count() // 2 + 64
-        budget = self.budget_guard.check(
-            estimated_tokens=tokens,
-            estimated_cost=None,
-            cancellation_ref=cancellation_ref,
-            stage_key=module_key,
-        )
-        if not budget.allowed:
-            return PrivateLabProviderUsageResult(
-                module_key=module_key,
-                status="budget_denied",
-                usage={"http": False, "reason": budget.reason},
-            )
-
-        if live_ok:
-            # Live path: bind payload + Bailian. Still requires credential at boundary.
-            self._gateway.bind_resolved_payload(inference.request_id, payload)
+        if not auth.effective_dry_run:
+            # Authorized Live — Gateway/Bailian/Transport share effective_dry_run=false.
+            live_gw = self._live_gateway()
+            live_gw.bind_resolved_payload(inference.request_id, payload)
             try:
-                resp = self._gateway.execute(inference, resolved_payload=payload)
-            finally:
-                # Ensure bodies are not retained beyond execute.
-                pass
+                resp = live_gw.execute(inference, resolved_payload=payload)
+            except Exception:
+                return PrivateLabProviderUsageResult(
+                    module_key=module_key,
+                    status="provider_failed",
+                    usage={
+                        "http": True,
+                        "live": True,
+                        "authorization_fingerprint": auth.authorization_fingerprint,
+                        "synthetic_success": False,
+                    },
+                )
             self.http_calls += 1
             if getattr(resp, "status", "") != "success":
                 return PrivateLabProviderUsageResult(
                     module_key=module_key,
                     status=str(getattr(resp, "status", "failed")),
-                    usage={"http": True, "live": True},
+                    usage={
+                        "http": True,
+                        "live": True,
+                        "authorization_fingerprint": auth.authorization_fingerprint,
+                        "synthetic_success": False,
+                    },
                 )
             return PrivateLabProviderUsageResult(
                 module_key=module_key,
@@ -613,12 +720,30 @@ class PrivateLabProviderExecutionServiceAdapter:
                     "input_tokens": getattr(resp, "token_input", None),
                     "output_tokens": getattr(resp, "token_output", None),
                     "actual_cost": getattr(resp, "cost", None),
+                    "authorization_fingerprint": auth.authorization_fingerprint,
+                    "effective_dry_run": False,
+                    "synthetic_success": False,
                 },
                 output_fingerprint=f"live-{module_key}-{bundle.bundle_fingerprint[:8]}",
                 structured_output=dict(getattr(resp, "structured_output", None) or {}),
             )
 
-        # Dry path: capture via transport without network; prefer Fake adapter route.
+        # Live was requested but gates failed — explicit deny, never Fake Success.
+        if not auth.requested_dry_run and auth.deny_reason:
+            return PrivateLabProviderUsageResult(
+                module_key=module_key,
+                status="security_denied",
+                usage={
+                    "http": False,
+                    "live": False,
+                    "deny_reason": auth.deny_reason,
+                    "authorization_fingerprint": auth.authorization_fingerprint,
+                    "effective_dry_run": True,
+                    "synthetic_success": False,
+                },
+            )
+
+        # Intentional dry path: Capturing / Fake only — zero network.
         if hasattr(self.transport, "generate"):
             try:
                 self.transport.generate(
@@ -639,6 +764,9 @@ class PrivateLabProviderExecutionServiceAdapter:
                 "dry_run": True,
                 "live_probe": is_private_provider_live_probe_enabled(),
                 "tokens_from_payload": True,
+                "authorization_fingerprint": auth.authorization_fingerprint,
+                "effective_dry_run": True,
+                "requested_dry_run": auth.requested_dry_run,
             },
             output_fingerprint=f"dry-{module_key}-{bundle.bundle_fingerprint[:8]}",
             structured_output={
@@ -658,6 +786,11 @@ class PrivateLabProviderExecutionServiceAdapter:
             return True
         return False
 
+
+def auth_requested_dry(request: Mapping[str, Any], default_dry: bool) -> bool:
+    if "dry_run" in request:
+        return bool(request.get("dry_run"))
+    return bool(default_dry)
 
 def resolve_server_security_status(
     *,

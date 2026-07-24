@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""Private Whole-Book Live Smoke harness (Phase 2B-R1 Integration).
+"""Private Whole-Book Live Smoke harness (Phase 2B-R1 / CHG-050).
 
 Default: dry-run only. Real Live requires explicit --live AND Live Probe env.
+Environment must be set before Runtime construction / API start.
 Never prints novel body, prompt body, or credentials.
 Does not mutate permanent environment variables.
 Does not auto-delete Runs.
+Does not auto-enable Probe.
 This Integration must not execute real Live in CI.
 """
 
@@ -22,6 +24,7 @@ if str(API_ROOT) not in sys.path:
     sys.path.insert(0, str(API_ROOT))
 
 PRIVATE_PROBE_ENV = "WHOLE_BOOK_PRIVATE_PROVIDER_LIVE_PROBE"
+PRIVATE_LAB_ENV = "WHOLE_BOOK_PRIVATE_ENGINE_LAB_ENABLED"
 
 
 def _safe_print(title: str, payload: dict) -> None:
@@ -68,15 +71,27 @@ def main(argv: list[str] | None = None) -> int:
         "yes",
         "on",
     }
+    lab = str(os.environ.get(PRIVATE_LAB_ENV, "")).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
     if live and not probe:
         print(
-            f"Real Live refused: set {PRIVATE_PROBE_ENV}=1 explicitly "
+            f"Real Live refused: set {PRIVATE_PROBE_ENV}=1 explicitly before Runtime "
             "(CI Integration must not do this).",
             file=sys.stderr,
         )
         return 2
+    if live and not lab:
+        print(
+            f"Real Live refused: set {PRIVATE_LAB_ENV}=true before Runtime.",
+            file=sys.stderr,
+        )
+        return 2
 
-    # Import late so --help works without full app.
+    # Import late so --help works without full app. Env must already be set.
     from app.narrative_core.services.private_whole_book_live_readiness_runtime import (
         create_live_readiness_runtime,
     )
@@ -84,12 +99,29 @@ def main(argv: list[str] | None = None) -> int:
     runtime = create_live_readiness_runtime(
         environment="development",
         lab_enabled=True,
-        dry_run=not live,
-        allow_network=live,
+        dry_run=True,  # default; Create request carries dry_run=false for Live
+        allow_network=None,  # derived from Probe + Lab + env
         allow_fake_resolver=False,
         auto_wire_credentials=True,
     )
-    # Estimate via adapters without DB session for dry summary when possible.
+    if live and not runtime.allow_network:
+        print(
+            json.dumps(
+                {
+                    "status": "security_gate_failed",
+                    "deny_reason": "allow_network_false",
+                    "note": "Runtime did not authorize network; not a Provider failure.",
+                    "live_probe": probe,
+                    "lab_enabled": runtime.lab_enabled,
+                    "http_calls": 0,
+                },
+                ensure_ascii=False,
+                indent=2,
+            ),
+            file=sys.stderr,
+        )
+        return 4
+
     assert runtime.estimate is not None
     assert runtime.preflight is not None
     pre = runtime.preflight.preflight(
@@ -106,6 +138,8 @@ def main(argv: list[str] | None = None) -> int:
             "reason_code": pre.reason_code,
             "run_created": False,
             "details_keys": sorted(pre.details.keys()),
+            "resolver_is_fake": runtime.uses_fake_resolver,
+            "allow_network": runtime.allow_network,
         },
     )
     if not pre.ok:
@@ -133,7 +167,8 @@ def main(argv: list[str] | None = None) -> int:
             "module_keys": list(est.module_keys),
             "live": live,
             "probe": probe,
-            "dry_run": not live,
+            "create_dry_run": not live,
+            "allow_network": runtime.allow_network,
         },
     )
 
@@ -155,13 +190,16 @@ def main(argv: list[str] | None = None) -> int:
                 "status": "ready",
                 "note": (
                     "Harness stops before create when run without app DB session. "
-                    "Wire through HTTP Lab for full create/execute. "
+                    "Wire through HTTP Lab for full create/execute with "
+                    f"dry_run={str(not live).lower()}. "
                     "Run is never auto-deleted."
                 ),
                 "cancel_supported": True,
                 "check_results": bool(args.check_results),
                 "live_executed": False,
                 "http_calls": 0,
+                "create_dry_run": not live,
+                "allow_network": runtime.allow_network,
             },
             ensure_ascii=False,
             indent=2,
