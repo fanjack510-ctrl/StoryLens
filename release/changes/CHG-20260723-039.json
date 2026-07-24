@@ -11,9 +11,28 @@
     "module_runners",
     "evaluation"
   ],
-  "files": [],
+  "files": [
+    "apps/api/app/narrative_core/services/whole_book_module_runner.py",
+    "apps/api/app/narrative_core/services/whole_book_module_output_validator.py",
+    "apps/api/app/narrative_core/services/whole_book_candidate_builder.py",
+    "apps/api/app/narrative_core/services/fake_prompt_pack.py",
+    "apps/api/app/narrative_core/services/whole_book_evaluation_harness.py",
+    "apps/api/tests/test_narrative_phase2b_core_modules.py",
+    "docs/architecture/narrative-intelligence-core/phase2b-core-modules-implementation.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-module-runtime-implementation.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-module-spec-registry.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-fake-module-runners.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-fake-prompt-pack.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-module-output-validator.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-module-candidate-builder.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-module-checkpoint.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-evaluation-harness.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-metamorphic-testing.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-core-modules-verification.md",
+    "release/changes/CHG-20260723-039.json"
+  ],
   "user_summary": "Implement first-four module runner skeletons, output validators, candidate builders, fake prompt packs, and evaluation harness.",
-  "technical_summary": "Agent R implements Module Runner skeletons for book_overview/structure_stages/chapter_functions/storylines, Output Validator, Candidate Builder, Fake Prompt Pack, and Evaluation Harness. Must not write formal prompts or call real models.",
+  "technical_summary": "Agent R implements Module Spec Registry, BaseWholeBookModuleRunner, four Fake runners (book_overview/structure_stages/chapter_functions/storylines), ModuleProviderExecutionAdapter (Fake gateway), DefaultModuleOutputValidator, ModuleCandidateBuilder, Fake Prompt Pack, Checkpoint builder/validator, and Evaluation/Metamorphic harness. No formal prompts, no real model calls, candidates only.",
   "acceptance_criteria": [
     "Four Module Runner skeletons follow WholeBookModuleRunner Protocol",
     "Output validation before candidate persistence",
@@ -21,8 +40,15 @@
     "Fake Prompt Pack only; no formal prompt bodies in public repo",
     "Evaluation harness with synthetic/metamorphic fixtures"
   ],
-  "tests": [],
-  "verification_evidence": [],
+  "tests": [
+    "apps/api/tests/test_narrative_phase2b_core_modules.py"
+  ],
+  "verification_evidence": [
+    "pytest apps/api/tests/test_narrative_phase2b_core_modules.py -q --noconftest → 59 passed",
+    "python scripts/version_manager.py check",
+    "python scripts/change_registry.py check",
+    "git diff --check"
+  ],
   "data_compatibility": {
     "database_changed": false,
     "migration_required": false,
@@ -38,7 +64,7 @@
   "blocker_level": null,
   "head_inclusion": null,
   "created_at": "2026-07-23T22:38:45Z",
-  "updated_at": "2026-07-24T00:00:00Z",
+  "updated_at": "2026-07-24T00:20:00Z",
   "parallel_plan": {
     "role": "agent_r",
     "branch": "feature/narrative-phase2b-core-modules",
