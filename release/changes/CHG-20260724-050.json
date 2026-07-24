@@ -23,6 +23,12 @@
       "message": "docs: sync CHG-20260724-050 commit attachments",
       "primary": false,
       "multi_change_reason": null
+    },
+    {
+      "sha": "3e4ea9c35ab824311eb043c5e46916256b3570f7",
+      "message": "docs: retarget CHG-049/050 commits to integration cherry-picks",
+      "primary": false,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -64,5 +70,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-24T05:09:30Z",
-  "updated_at": "2026-07-24T05:22:01Z"
+  "updated_at": "2026-07-24T05:24:27Z"
 }
