@@ -66,6 +66,21 @@ from app.narrative_core.services.whole_book_provider_gateway import (
     ExistingCredentialServiceAdapter,
     StubTransportResponse,
 )
+from app.narrative_core.services.private_whole_book_analysis_runtime import (
+    create_lab_private_whole_book_analysis_runtime,
+)
+
+
+def _default_lab_runtime_factory(**kwargs: Any) -> Any:
+    live = not bool(kwargs.get("dry_run", True))
+    return create_lab_private_whole_book_analysis_runtime(
+        session=kwargs.get("session"),
+        book_id=kwargs.get("book_id"),
+        use_phase1b_persistence=bool(kwargs.get("use_phase1b_persistence", True)),
+        lab_dry_run=not live,
+        fallback_to_fake=not live,
+        require_private_real=live,
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -368,7 +383,7 @@ def create_live_readiness_runtime(
         estimate_service=estimate_service,
         credential_adapter=cred,
         transport=capture,
-        runtime_factory=runtime_factory,
+        runtime_factory=runtime_factory or _default_lab_runtime_factory,
         allow_fake_resolver=allow_fake_resolver,
         security_cache_key=cache_key,
     )

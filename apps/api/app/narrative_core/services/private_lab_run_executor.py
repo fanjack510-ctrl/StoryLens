@@ -36,6 +36,12 @@ from app.narrative_core.services.private_engine_lab_run_service import (
     PrivateWholeBookLabRunError,
     modules_for_stage,
 )
+from app.narrative_core.services.live_engine_kind import (
+    LiveEngineKind,
+    assert_live_private_real,
+    classify_live_engine_kind,
+)
+from app.narrative_core.services.private_engine_signature import is_fake_or_test_engine_id
 from app.narrative_core.services.private_lab_idempotency import PrivateLabConcurrencyGuard
 from app.narrative_core.services.private_lab_ports import (
     FakePrivateLabProviderExecutionPort,
@@ -382,6 +388,7 @@ class PrivateLabRunExecutor:
         cancellation_ref: str | None,
     ) -> dict[str, Any]:
         live_requested = not bool(meta.get("dry_run", True))
+        effective_dry_run = bool(meta.get("dry_run", True))
 
         # Live must have ORM persistence capability before any Provider call.
         if live_requested:
@@ -392,6 +399,27 @@ class PrivateLabRunExecutor:
                     detail_code="LIVE_PERSISTENCE_CAPABILITY_MISSING",
                 )
 
+        runtime: Any | None = None
+        if live_requested and self._runtime_factory is not None:
+            runtime = self._runtime_factory(
+                session=self._session,
+                book_id=int(run.book_id or 0),
+                use_phase1b_persistence=not self._use_recording_persistence,
+                dry_run=effective_dry_run,
+            )
+            try:
+                assert_live_private_real(
+                    engine_id=self._runtime_engine_id(runtime),
+                    private_modules_bound=bool(getattr(runtime, "private_modules_bound", False)),
+                    synthetic=bool(getattr(runtime, "synthetic", True)),
+                )
+            except RuntimeError as exc:
+                raise PrivateWholeBookLabRunError(
+                    PrivateEngineLabDenyReason.PRIVATE_ENGINE_LAB_OPERATION_NOT_ALLOWED,
+                    run_id=int(run.id),
+                    detail_code=str(exc),
+                ) from exc
+
         usage = self._provider.execute_module(
             module_key=module_key,
             request={
@@ -399,7 +427,7 @@ class PrivateLabRunExecutor:
                 "book_id": int(run.book_id or 0),
                 "book_snapshot_id": int(run.book_snapshot_id or 0),
                 "configuration_fingerprint": meta.get("configuration_fingerprint"),
-                "dry_run": bool(meta.get("dry_run", True)),
+                "dry_run": effective_dry_run,
                 "consent_valid": True,
                 "estimate_valid": True,
             },
@@ -418,6 +446,56 @@ class PrivateLabRunExecutor:
                 detail_code=f"MODULE_{str(usage.status).upper()}",
             )
 
+        provider_usage = dict(usage.usage or {})
+        token_in = int(provider_usage.get("input_tokens") or 0)
+        token_out = int(provider_usage.get("output_tokens") or 0)
+        cost_val = provider_usage.get("actual_cost")
+        if cost_val is None:
+            cost_val = provider_usage.get("cost")
+        accumulate: dict[str, Any] = {
+            "token_input": token_in,
+            "token_output": token_out,
+        }
+        if cost_val is not None:
+            accumulate["cost"] = float(cost_val)
+
+        self._stages.write_checkpoint(
+            int(run.id),
+            stage.stage_key,
+            {
+                "schema": "narrative_run_stage_checkpoint",
+                "version": "1",
+                "stage_key": stage.stage_key,
+                "module_key": module_key,
+                "private_lab": True,
+                "non_production": True,
+                "attempt": int(getattr(stage, "attempt_count", 0) or 0),
+                "checkpoint_kind": "provider_attempt",
+                "provider_attempted": True,
+                "transport_kind": provider_usage.get("transport_kind"),
+                "provider_host": provider_usage.get("provider_host")
+                or provider_usage.get("host"),
+                "provider_request_id": provider_usage.get("provider_request_id"),
+                "http_status": provider_usage.get("http_status"),
+                "latency_ms": provider_usage.get("latency_ms"),
+                "input_tokens": provider_usage.get("input_tokens"),
+                "output_tokens": provider_usage.get("output_tokens"),
+                "cached_tokens": provider_usage.get("cached_tokens"),
+                "retry_count": provider_usage.get("retry_count"),
+                "finish_reason": provider_usage.get("finish_reason"),
+                "usage_source": provider_usage.get("usage_source"),
+                "actual_cost": cost_val,
+                "pricing_version": provider_usage.get("pricing_version"),
+                "provider_error_code": provider_usage.get("provider_error_code"),
+                "provider_error_class": provider_usage.get("provider_error_class"),
+                "response_received": provider_usage.get("response_received", True),
+                "validation_started": False,
+                "live_request_confirmed": provider_usage.get("live_request_confirmed"),
+                "effective_dry_run": effective_dry_run,
+            },
+            **accumulate,
+        )
+
         persistence_summary: dict[str, Any] = {"orm_written": False}
         validation_summary: dict[str, Any] = {"accepted": False, "schema_valid": False}
         evidence_summary: dict[str, Any] = {"validated": False, "count": 0}
@@ -425,11 +503,13 @@ class PrivateLabRunExecutor:
         pipeline_status = "failed"
 
         if self._runtime_factory is not None:
-            runtime = self._runtime_factory(
-                session=self._session,
-                book_id=int(run.book_id or 0),
-                use_phase1b_persistence=not self._use_recording_persistence,
-            )
+            if runtime is None:
+                runtime = self._runtime_factory(
+                    session=self._session,
+                    book_id=int(run.book_id or 0),
+                    use_phase1b_persistence=not self._use_recording_persistence,
+                    dry_run=effective_dry_run,
+                )
             synthetic = dict(usage.structured_output or {})
             evidence_candidates = list(synthetic.get("evidence_candidates") or [])
             try:
@@ -489,6 +569,16 @@ class PrivateLabRunExecutor:
                 coverage = dict(getattr(pipeline, "evidence_coverage", {}) or {})
                 cand = dict(getattr(pipeline, "candidate_summary", {}) or {})
                 persist = dict(cand.get("persist") or {})
+                engine_result = getattr(pipeline, "engine_result", None)
+                engine_id = str(getattr(engine_result, "engine_id", "") or self._runtime_engine_id(runtime))
+                pipeline_synthetic = bool(getattr(pipeline, "synthetic", False)) or bool(
+                    (getattr(engine_result, "module_outputs", {}) or {}).get("synthetic", False)
+                )
+                engine_kind = classify_live_engine_kind(
+                    engine_id=engine_id,
+                    private_modules_bound=bool(getattr(runtime, "private_modules_bound", False)),
+                    synthetic=pipeline_synthetic,
+                )
                 persistence_summary = {
                     "orm_written": bool(persist.get("orm_written")),
                     "persistence_complete": bool(persist.get("persistence_complete")),
@@ -503,8 +593,10 @@ class PrivateLabRunExecutor:
                     "evidence_count": persist.get("evidence_count"),
                     "rejected": bool(cand.get("rejected")),
                     "context_bundle_ref": ref,
+                    "engine_id": engine_id,
+                    "engine_kind": engine_kind.value,
+                    "synthetic": pipeline_synthetic,
                 }
-                engine_result = getattr(pipeline, "engine_result", None)
                 ev_count = len(getattr(engine_result, "evidence_candidates", ()) or ())
                 if ev_count == 0:
                     ev_count = int(coverage.get("evidenced_claims") or 0)
@@ -517,6 +609,16 @@ class PrivateLabRunExecutor:
                     output_fp = str(pipeline.output_fingerprint)
                 elif getattr(engine_result, "output_fingerprint", None):
                     output_fp = str(engine_result.output_fingerprint)
+                if live_requested and (
+                    pipeline_synthetic
+                    or is_fake_or_test_engine_id(engine_id)
+                    or engine_kind != LiveEngineKind.PRIVATE_REAL
+                ):
+                    raise PrivateWholeBookLabRunError(
+                        PrivateEngineLabDenyReason.PRIVATE_ENGINE_LAB_OPERATION_NOT_ALLOWED,
+                        run_id=int(run.id),
+                        detail_code="LIVE_SYNTHETIC_ARTIFACT_FORBIDDEN",
+                    )
                 # Live path: never accept port_only / recording fallback / artifact-only.
                 if live_requested and (
                     persist.get("fallback") == "port_only"
@@ -535,10 +637,12 @@ class PrivateLabRunExecutor:
                 raise
             except Exception as exc:  # noqa: BLE001
                 if live_requested:
+                    detail = getattr(exc, "args", ("",))[0]
+                    code = str(detail) if detail else f"LIVE_PIPELINE_FAILED:{type(exc).__name__}"
                     raise PrivateWholeBookLabRunError(
                         PrivateEngineLabDenyReason.PRIVATE_ENGINE_LAB_OPERATION_NOT_ALLOWED,
                         run_id=int(run.id),
-                        detail_code=f"LIVE_PIPELINE_FAILED:{type(exc).__name__}",
+                        detail_code=code,
                     ) from exc
                 # Dry-only: Port-only synthetic result (still no HTTP).
                 persistence_summary = {
@@ -552,24 +656,13 @@ class PrivateLabRunExecutor:
         if live_requested:
             self._assert_live_module_success(
                 usage_status=usage.status,
-                usage=dict(usage.usage),
+                usage=provider_usage,
                 validation_summary=validation_summary,
                 evidence_summary=evidence_summary,
                 persistence_summary=persistence_summary,
                 pipeline_status=pipeline_status,
                 run_id=int(run.id),
             )
-
-        # Bind usage onto AnalysisRunStage (accumulate).
-        token_in = int(usage.usage.get("input_tokens") or 0)
-        token_out = int(usage.usage.get("output_tokens") or 0)
-        cost_val = usage.usage.get("actual_cost")
-        accumulate: dict[str, Any] = {
-            "token_input": token_in,
-            "token_output": token_out,
-        }
-        if cost_val is not None:
-            accumulate["cost"] = float(cost_val)
 
         self._stages.write_checkpoint(
             int(run.id),
@@ -583,10 +676,10 @@ class PrivateLabRunExecutor:
                 "private_lab": True,
                 "non_production": True,
                 "attempt": int(getattr(stage, "attempt_count", 0) or 0),
-                "provider_request_id": usage.usage.get("provider_request_id"),
-                "transport_kind": usage.usage.get("transport_kind"),
-                "http_status": usage.usage.get("http_status"),
-                "usage_source": usage.usage.get("usage_source"),
+                "provider_request_id": provider_usage.get("provider_request_id"),
+                "transport_kind": provider_usage.get("transport_kind"),
+                "http_status": provider_usage.get("http_status"),
+                "usage_source": provider_usage.get("usage_source"),
             },
             **accumulate,
         )
@@ -597,20 +690,41 @@ class PrivateLabRunExecutor:
             "run_stage_id": int(stage.id),
             "status": "success" if (not live_requested or usage.status == "success") else usage.status,
             "output_fingerprint": output_fp,
-            "usage": dict(usage.usage),
+            "usage": dict(provider_usage),
             "validation_summary": validation_summary,
             "evidence_summary": evidence_summary,
             "persistence_summary": dict(persistence_summary),
             "raw_response_absent": True,
             "prompt_absent": True,
             "credential_absent": True,
-            "http": bool(usage.usage.get("http")),
+            "http": bool(provider_usage.get("http")),
             "private_lab": True,
             "non_production": True,
             "candidate_only": True,
             "auto_canonical": False,
             "auto_lock": False,
         }
+
+    @staticmethod
+    def _runtime_engine_id(runtime: Any) -> str:
+        private = getattr(runtime, "private_runners", None) or {}
+        for runner in private.values():
+            engine_id = str(getattr(runner, "engine_id", "") or "")
+            if engine_id:
+                return engine_id
+        if bool(getattr(runtime, "private_modules_bound", False)):
+            for runner in (getattr(runtime, "module_runners", {}) or {}).values():
+                delegate = getattr(runner, "private_runner", None) or getattr(
+                    runner, "_private_runner", None
+                )
+                if delegate is not None:
+                    engine_id = str(getattr(delegate, "engine_id", "") or "")
+                    if engine_id:
+                        return engine_id
+        fake = getattr(runtime, "fake_engine", None)
+        if fake is not None:
+            return str(getattr(fake, "engine_id", "") or "")
+        return ""
 
     def _assert_live_module_success(
         self,
@@ -658,6 +772,11 @@ class PrivateLabRunExecutor:
             _fail("LIVE_PERSISTENCE_FALLBACK_FORBIDDEN")
         if pipeline_status in {"failed", "cancelled"}:
             _fail(f"LIVE_PIPELINE_{pipeline_status.upper()}")
+        engine_kind = persistence_summary.get("engine_kind")
+        if engine_kind is not None and engine_kind != LiveEngineKind.PRIVATE_REAL.value:
+            _fail("LIVE_ENGINE_KIND_NOT_PRIVATE_REAL")
+        if persistence_summary.get("synthetic") is True:
+            _fail("LIVE_SYNTHETIC_ARTIFACT_FORBIDDEN")
 
     def _cancel_terminal(
         self,

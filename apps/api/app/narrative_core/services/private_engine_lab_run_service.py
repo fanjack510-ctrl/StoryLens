@@ -98,7 +98,12 @@ class PrivateWholeBookLabRunError(Exception):
         self.run_id = run_id
         self.stage_key = stage_key
         self.detail_code = detail_code
-        self.message = message or reason.value
+        if message is not None:
+            self.message = message
+        elif detail_code:
+            self.message = f"{reason.value}:{detail_code}"
+        else:
+            self.message = reason.value
         super().__init__(self.message)
 
 

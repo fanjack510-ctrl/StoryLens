@@ -50,6 +50,8 @@ from app.narrative_core.product_contract.keys import (
     PRODUCT_MODULE_STAGE_DEPENDENCIES,
     WHOLE_BOOK_MODULE_KEYS,
 )
+from app.narrative_core.private_engine_contract.module_spec import MODULE_PRODUCER_STAGES
+from app.narrative_core.services.private_engine_signature import is_fake_or_test_engine_id
 from app.narrative_core.product_contract.module_results import (
     MODULE_RESULT_DTO_BY_KEY,
     BasicTimelineResultDto,
@@ -440,6 +442,22 @@ def infer_requested_modules(
     return tuple(inferred)
 
 
+def module_status_stage_dependencies(
+    module_key: WholeBookModuleKey,
+) -> tuple[WholeBookStageKey, ...]:
+    """Product deps unioned with producer stages for status aggregation only."""
+
+    product = PRODUCT_MODULE_STAGE_DEPENDENCIES[module_key]
+    producer = MODULE_PRODUCER_STAGES.get(module_key, ())
+    seen: set[WholeBookStageKey] = set()
+    merged: list[WholeBookStageKey] = []
+    for stage in (*product, *producer):
+        if stage not in seen:
+            seen.add(stage)
+            merged.append(stage)
+    return tuple(merged)
+
+
 def aggregate_module_status(
     *,
     module_key: WholeBookModuleKey,
@@ -454,7 +472,7 @@ def aggregate_module_status(
     if module_key not in requested:
         return WholeBookModuleStatus.NOT_REQUESTED
 
-    deps = PRODUCT_MODULE_STAGE_DEPENDENCIES[module_key]
+    deps = module_status_stage_dependencies(module_key)
     statuses = [stage_status.get(dep.value) for dep in deps]
     present = [s for s in statuses if s is not None]
     missing = len(present) < len(deps)
@@ -492,6 +510,8 @@ def aggregate_module_status(
     if present and all(s in completed_like for s in present) and not missing:
         if stale:
             return WholeBookModuleStatus.STALE
+        if not has_usable_output:
+            return WholeBookModuleStatus.FAILED
         return WholeBookModuleStatus.COMPLETED
 
     if has_usable_output and any(s == StageStatus.COMPLETED for s in present):
@@ -545,7 +565,7 @@ class WholeBookResultIndexService:
                 stale=bool(ctx["module_stale"][module]),
                 partial=status == WholeBookModuleStatus.PARTIAL,
                 source_stage_keys=tuple(
-                    s.value for s in PRODUCT_MODULE_STAGE_DEPENDENCIES[module]
+                    s.value for s in module_status_stage_dependencies(module)
                 ),
                 evidence_count=int(ctx["module_evidence_count"].get(module, 0)),
                 conflict_count=int(ctx["module_conflict_count"].get(module, 0)),
@@ -1251,6 +1271,8 @@ class WholeBookResultIndexService:
     ) -> bool:
         key = module.value
         for payload in payloads:
+            if not self._artifact_usable_for_output(payload):
+                continue
             produced = payload.get("checkpoint_summary", {}).get("produced_module_keys")
             if isinstance(produced, list) and key in produced:
                 return True
@@ -1258,6 +1280,18 @@ class WholeBookResultIndexService:
             if isinstance(refs, list) and any(key in str(r) for r in refs):
                 return True
         return False
+
+    @staticmethod
+    def _artifact_usable_for_output(payload: Mapping[str, Any]) -> bool:
+        if bool(payload.get("synthetic", False)):
+            return False
+        engine_id = str(payload.get("engine_id") or "")
+        if engine_id and is_fake_or_test_engine_id(engine_id):
+            return False
+        status = str(payload.get("status") or "").strip().lower()
+        if status in {"diagnostic_failed", "failed", "diagnostic"}:
+            return False
+        return True
 
     def _module_stale(
         self,
@@ -1394,7 +1428,7 @@ class WholeBookResultIndexService:
             module_status=status,
             generated_at=_utc_now_iso(),
             source_stage_keys=tuple(
-                s.value for s in PRODUCT_MODULE_STAGE_DEPENDENCIES[module]
+                s.value for s in module_status_stage_dependencies(module)
             ),
             source_artifact_ids=tuple(ctx["artifact_ids"]),
             asset_ids=tuple(a.asset_id for a in assets),

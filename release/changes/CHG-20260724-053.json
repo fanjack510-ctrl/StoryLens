@@ -1,0 +1,85 @@
+{
+  "id": "CHG-20260724-053",
+  "title": "Phase 2B-R1 Live Private Engine Provenance and Failure Projection Fix",
+  "type": "fix",
+  "base_version": "1.0.5",
+  "status": "tested",
+  "include_in_next_release": true,
+  "commits": [
+    {
+      "sha": "778240ea10b3c3be787a11771a21ed55b1c7fcdd",
+      "message": "fix: preserve live provider provenance and failure state",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "058624664b416dd03e3f5a57d01428c77c220563",
+      "message": "chore: mark CHG-20260724-053 tested",
+      "primary": true,
+      "multi_change_reason": "registry status update for same change"
+    },
+    {
+      "sha": "94f6c058a28b2d89e15b6b07bbd1194c2ca6a5ca",
+      "message": "fix: preserve live provider provenance and failure state",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "683b7e48a3f8fc785decd0315a04b7aa3cac54c5",
+      "message": "fix: keep lab run error detail_code without EOL churn",
+      "primary": true,
+      "multi_change_reason": "minimal restore of private_engine_lab_run_service after accidental EOL rewrite"
+    },
+    {
+      "sha": "c925bf0b3ca4aad269772f17a0c1900efbe788b0",
+      "message": "chore: attach restore commit to CHG-20260724-053",
+      "primary": true,
+      "multi_change_reason": "registry attach for restore"
+    }
+  ],
+  "modules": [
+    "narrative_core",
+    "private_engine_lab"
+  ],
+  "files": [
+    "apps/api/app/narrative_core/services/live_engine_kind.py",
+    "apps/api/app/narrative_core/services/private_whole_book_analysis_runtime.py",
+    "apps/api/app/narrative_core/services/private_lab_run_executor.py",
+    "apps/api/app/narrative_core/services/private_whole_book_live_readiness_runtime.py",
+    "apps/api/app/narrative_core/services/whole_book_result_projection.py",
+    "apps/api/app/narrative_core/services/candidate_persistence_adapter.py",
+    "apps/api/app/narrative_core/services/private_engine_lab_run_service.py",
+    "apps/api/app/routers/whole_book_private_engine_lab_runs.py",
+    "apps/api/tests/test_narrative_phase2br1_live_engine_provenance.py"
+  ],
+  "user_summary": "修复 Live 路径误用 Fake Engine、失败后 Provider Attempt 丢失，以及业务 Stage 失败时 Result 仍投影为 completed。",
+  "technical_summary": "Live path binds PRIVATE_REAL engine (no fake.signed fallback); provider attempt checkpoint before pipeline assert; Result aggregation unions MODULE_PRODUCER_STAGES and requires usable output for COMPLETED. Evidence: failed retry DB run_id=1 SHA256=B70A7540… (integrity ok).",
+  "acceptance_criteria": [
+    "Live refuses fake.signed.private_engine; provider attempt auditable on later fail; business Stage failed projects module failed; FakeHttp product path PRIVATE_REAL + persistence_complete."
+  ],
+  "tests": [
+    "apps/api/tests/test_narrative_phase2br1_live_engine_provenance.py",
+    "apps/api/tests/test_narrative_phase2br1_context_candidate_binding.py",
+    "apps/api/tests/test_narrative_phase2br1_live_transport_persistence.py",
+    "apps/api/tests/test_narrative_phase2br1_private_lab_runtime.py"
+  ],
+  "verification_evidence": [
+    "Public 121 passed (provenance+context_binding+live_transport+network_gate+smoke_di+provider_context_cost+private_lab_runtime+integration). Private 44 passed. Gates: version 1.0.5, registry ok, capability ok, diff --check clean. Private commit 3c9660a086b2572f5b655970aa51e8a690eb6fad. Failed Live evidence retained: storylens-live-smoke-retry-20260724-143728.db run_id=1."
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "No schema/migration. Failed retry DB retained read-only as CHG-053 reproduction evidence."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-24T07:59:00Z",
+  "updated_at": "2026-07-24T08:26:38Z"
+}

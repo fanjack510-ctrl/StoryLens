@@ -677,9 +677,22 @@ class Phase1BCandidatePersistenceSink:
             metrics={
                 "module_key": contract.module_key,
                 "private_engine": contract.private_engine,
+                **{
+                    k: payload[k]
+                    for k in (
+                        "engine_kind",
+                        "transport_kind",
+                        "provider_request_id",
+                    )
+                    if payload.get(k) is not None
+                },
             },
         )
+        artifact_status = str(payload.get("status") or "completed")
+        if bool(payload.get("diagnostic")) and artifact_status == "completed":
+            artifact_status = "diagnostic_failed"
         marked = envelope.to_payload()
+        marked["status"] = artifact_status
         marked["prompt_version"] = contract.prompt_pack_version
         marked["module_version"] = contract.module_version
         marked["subject_id"] = str(contract.run_stage_id or contract.module_key)

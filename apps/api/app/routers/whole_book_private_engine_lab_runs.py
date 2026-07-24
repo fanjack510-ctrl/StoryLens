@@ -268,12 +268,14 @@ def get_executor(session: Session = Depends(get_db)) -> PrivateLabRunExecutor:
     runtime = _lab_runtime()
 
     def _runtime_factory(**kwargs: Any) -> Any:
+        live = not bool(kwargs.get("dry_run", True))
         return create_lab_private_whole_book_analysis_runtime(
             session=kwargs.get("session"),
             book_id=kwargs.get("book_id"),
             use_phase1b_persistence=bool(kwargs.get("use_phase1b_persistence", True)),
-            lab_dry_run=True,
-            fallback_to_fake=True,
+            lab_dry_run=not live,
+            fallback_to_fake=not live,
+            require_private_real=live,
         )
 
     if runtime.runtime_factory is None:

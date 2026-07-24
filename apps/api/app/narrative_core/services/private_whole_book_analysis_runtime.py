@@ -74,6 +74,7 @@ from app.narrative_core.services.private_engine_runtime_adapter import (
 from app.narrative_core.services.private_engine_signature import (
     PrivateEnginePackageVerifier,
     PromptPackPackageVerifier,
+    is_fake_or_test_engine_id,
 )
 from app.narrative_core.services.whole_book_candidate_builder import ModuleCandidateBuilder
 from app.narrative_core.services.whole_book_context_bundle_mapper import WholeBookContextBundleMapper
@@ -957,6 +958,7 @@ def create_private_whole_book_analysis_runtime(
     book_id: int | None = None,
     lab_dry_run: bool = True,
     fallback_to_fake: bool = True,
+    require_private_real: bool = False,
 ) -> PrivateWholeBookAnalysisRuntime:
     """Factory — tests inject isolated runtimes. Production must not call with Fake.
 
@@ -981,8 +983,15 @@ def create_private_whole_book_analysis_runtime(
     if lab_mode:
         gateway = create_lab_provider_gateway(dry_run=lab_dry_run)
 
+    effective_private_runners = private_runners
+    if require_private_real:
+        effective_private_runners = try_load_first_four_private_runners(gateway=gateway)
+        if effective_private_runners is None:
+            raise RuntimeError("LIVE_PRIVATE_ENGINE_PACKAGE_MISSING")
+        fallback_to_fake = False
+
     # Lab or explicit private runners: still non-production; synthetic flipped when bound.
-    effective_lab = bool(lab_mode or private_runners is not None)
+    effective_lab = bool(lab_mode or effective_private_runners is not None)
     runtime = PrivateWholeBookAnalysisRuntime(
         production=False,
         synthetic=True,
@@ -992,13 +1001,24 @@ def create_private_whole_book_analysis_runtime(
         auxiliary_source=auxiliary_source or EmptyAuxiliaryContextSource(),
         persistence=sink,
         provider_gateway=gateway,
-        private_runners=private_runners,
+        private_runners=effective_private_runners,
         fallback_to_fake=fallback_to_fake,
     )
     if session is not None:
         runtime.bind_session(session)
     if package_root is not None:
         runtime.prepare_engine_packages(package_root)
+    if require_private_real:
+        if not runtime.private_modules_bound:
+            raise RuntimeError("LIVE_SYNTHETIC_ENGINE_FORBIDDEN")
+        bound_engine_id = ""
+        private = runtime.private_runners or {}
+        for runner in private.values():
+            bound_engine_id = str(getattr(runner, "engine_id", "") or "")
+            if bound_engine_id:
+                break
+        if not bound_engine_id or is_fake_or_test_engine_id(bound_engine_id):
+            raise RuntimeError("LIVE_SYNTHETIC_ENGINE_FORBIDDEN")
     return runtime
 
 
@@ -1010,6 +1030,7 @@ def create_lab_private_whole_book_analysis_runtime(
     lab_dry_run: bool = True,
     private_runners: Mapping[str, Any] | None = None,
     fallback_to_fake: bool = True,
+    require_private_real: bool = False,
 ) -> PrivateWholeBookAnalysisRuntime:
     """Private Engine Lab composition — non-production only; no live calls by default."""
 
@@ -1021,6 +1042,7 @@ def create_lab_private_whole_book_analysis_runtime(
         use_phase1b_persistence=use_phase1b_persistence and session is not None and book_id is not None,
         book_id=book_id,
         fallback_to_fake=fallback_to_fake,
+        require_private_real=require_private_real,
     )
 
 
