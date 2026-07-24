@@ -14,6 +14,12 @@
       "message": "docs: attach CHG-20260723-041 and mark tested",
       "primary": true,
       "multi_change_reason": "Attach status/metadata follow-up after mark tested"
+    },
+    {
+      "sha": "146087f0bce11c6b94dbad6fbf93dcbec1a54b77",
+      "message": "docs: close CHG-20260723-041 commit attachment loop",
+      "primary": false,
+      "multi_change_reason": "Close commit attachment loop"
     }
   ],
   "data_compatibility": {
@@ -31,7 +37,7 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-24T01:13:16Z",
-  "updated_at": "2026-07-24T01:16:48Z",
+  "updated_at": "2026-07-24T01:16:58Z",
   "file_ownership": "docs/architecture/narrative-intelligence-core/phase2br-parallel-file-ownership.json",
   "id": "CHG-20260723-041",
   "title": "Phase 2B-R Implementation Plan",
