@@ -7,20 +7,20 @@
   "include_in_next_release": true,
   "commits": [
     {
-      "sha": "a2c0ec417cea7af0e9ec1460618d5d092b99e92c",
+      "sha": "285cae8fa5b5c73a1b1574b9ef3f20fc8571d613",
+      "message": "docs: finalize CHG-20260724-057 tested status",
+      "primary": true,
+      "multi_change_reason": "Integration cherry-pick retarget"
+    },
+    {
+      "sha": "49fcd1d9dba3f37fd66b7e663a2bf671da6546fd",
       "message": "fix: consume validated book overview module results",
       "primary": true,
       "multi_change_reason": null
     },
     {
-      "sha": "2cf6999ce9031900c3266a2a090a9a7532f93595",
-      "message": "docs: mark CHG-20260724-057 tested",
-      "primary": true,
-      "multi_change_reason": null
-    },
-    {
-      "sha": "285cae8fa5b5c73a1b1574b9ef3f20fc8571d613",
-      "message": "docs: finalize CHG-20260724-057 tested status",
+      "sha": "85d904bf1346dae52d1b00b4e65470e4aaf2bb35",
+      "message": "docs: retarget CHG-20260724-057 commits to Integration SHAs",
       "primary": true,
       "multi_change_reason": null
     }
@@ -62,5 +62,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-24T13:06:00Z",
-  "updated_at": "2026-07-24T13:23:02Z"
+  "updated_at": "2026-07-24T13:26:56Z"
 }
