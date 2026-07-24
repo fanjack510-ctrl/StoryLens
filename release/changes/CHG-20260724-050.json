@@ -11,6 +11,12 @@
       "message": "fix: enable explicitly authorized private lab live calls",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "72819f062caeed5b5fb13a59e7f1329fcc711999",
+      "message": "docs: mark CHG-20260724-050 tested after live network gate verification",
+      "primary": false,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -52,5 +58,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-24T05:09:30Z",
-  "updated_at": "2026-07-24T05:17:32Z"
+  "updated_at": "2026-07-24T05:17:33Z"
 }
