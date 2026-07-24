@@ -7,22 +7,28 @@
   "include_in_next_release": true,
   "commits": [
     {
-      "sha": "73fc51f2b8898991901172b84fef0c531477c25c",
+      "sha": "1420fdc0f916ca213fe64926e73612268b3adb3a",
       "message": "fix: preserve live provider provenance and failure state",
       "primary": true,
       "multi_change_reason": null
     },
     {
-      "sha": "666c4464f37f468658b31279978abe58fac05f41",
+      "sha": "f1ef844e70d67ea2cde73a5376e8aa196d7baf11",
       "message": "docs: mark CHG-20260724-053 tested",
-      "primary": true,
-      "multi_change_reason": "docs tested marker"
+      "primary": false,
+      "multi_change_reason": null
     },
     {
-      "sha": "1b8d042b6c66f6e5c6d679b697ecf780fb67ba76",
+      "sha": "875e7ddbc1faf8e5ec3f2303d0aa6c6d338d746a",
       "message": "docs: attach tested marker for CHG-20260724-053",
-      "primary": true,
-      "multi_change_reason": "attach tested marker"
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "0d9c811e0cf9e845d98444fd811eb0d691b6e351",
+      "message": "docs: finalize CHG-20260724-053 registry",
+      "primary": false,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -41,7 +47,7 @@
     "apps/api/tests/test_narrative_phase2br1_live_engine_provenance.py"
   ],
   "user_summary": "修复 Live 路径误用 Fake Engine、失败后 Provider Attempt 丢失，以及业务 Stage 失败时 Result 仍投影为 completed。",
-  "technical_summary": "Live path binds PRIVATE_REAL engine (no fake.signed fallback); provider attempt checkpoint before pipeline assert; Result aggregation unions MODULE_PRODUCER_STAGES and requires usable output for COMPLETED. Evidence: failed retry DB run_id=1 SHA256=B70A7540… (integrity ok). Private companion commit 3c9660a086b2572f5b655970aa51e8a690eb6fad.",
+  "technical_summary": "Live path binds PRIVATE_REAL engine (no fake.signed fallback); provider attempt checkpoint before pipeline assert; Result aggregation unions MODULE_PRODUCER_STAGES and requires usable output for COMPLETED. Evidence: failed retry DB run_id=1 SHA256=B70A7540… (integrity ok). Private companion commit 3c9660a086b2572f5b655970aa51e8a690eb6fad. Integration Public HEAD will include cherry-picks; Private Integration HEAD 7295dc46f4cc2c241470885a934a7354f4d7a7d2.",
   "acceptance_criteria": [
     "Live refuses fake.signed.private_engine; provider attempt auditable on later fail; business Stage failed projects module failed; FakeHttp product path PRIVATE_REAL + persistence_complete."
   ],
@@ -53,7 +59,8 @@
   ],
   "verification_evidence": [
     "Public 121 passed (provenance+context_binding+live_transport+network_gate+smoke_di+provider_context_cost+private_lab_runtime+integration). Private 44 passed. Gates: version 1.0.5, registry ok, capability ok, diff --check clean. Private commit 3c9660a086b2572f5b655970aa51e8a690eb6fad. Failed Live evidence retained: storylens-live-smoke-retry-20260724-143728.db run_id=1.",
-    "Private Integration companion: 3c9660a086b2572f5b655970aa51e8a690eb6fad (recorded in evidence only)."
+    "Private Integration companion: 3c9660a086b2572f5b655970aa51e8a690eb6fad (recorded in evidence only).",
+    "Cherry-picked to Integration; Private HEAD 7295dc46f4cc2c241470885a934a7354f4d7a7d2; failed Live evidence DB retained run_id=1."
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -70,5 +77,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-24T07:59:00Z",
-  "updated_at": "2026-07-24T08:35:30Z"
+  "updated_at": "2026-07-24T08:37:30Z"
 }
