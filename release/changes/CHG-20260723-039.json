@@ -11,6 +11,12 @@
       "message": "feat: implement first whole book module foundations",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "35fee2bbe25b5dffceda805efe182cf340623af5",
+      "message": "docs: attach primary commit to CHG-20260723-039",
+      "primary": true,
+      "multi_change_reason": "Attach status/metadata follow-up commit after mark tested"
     }
   ],
   "modules": [
@@ -71,7 +77,7 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-23T22:38:45Z",
-  "updated_at": "2026-07-24T00:23:19Z",
+  "updated_at": "2026-07-24T00:24:24Z",
   "parallel_plan": {
     "role": "agent_r",
     "branch": "feature/narrative-phase2b-core-modules",
