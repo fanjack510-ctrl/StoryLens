@@ -104,10 +104,18 @@ class RunStageService:
         run_id: int,
         stage_key: str,
         checkpoint: dict[str, Any] | str,
+        *,
+        replace: bool = False,
+        append_provider_attempt: Any | None = None,
         **accumulate_fields: Any,
     ) -> Any:
         stage = self._stages.write_checkpoint(
-            run_id, stage_key, checkpoint, **accumulate_fields
+            run_id,
+            stage_key,
+            checkpoint,
+            replace=replace,
+            append_provider_attempt=append_provider_attempt,
+            **accumulate_fields,
         )
         self._session.commit()
         self._session.refresh(stage)

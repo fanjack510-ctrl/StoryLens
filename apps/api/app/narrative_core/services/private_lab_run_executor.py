@@ -60,6 +60,57 @@ from app.narrative_core.product_contract.enums import WholeBookRunViewStatus
 from app.narrative_core.services.run_stage_service import RunStageService
 
 
+def _provider_attempt_record(
+    *,
+    module_key: str,
+    stage_key: str,
+    attempt_index: int,
+    attempt_kind: str,
+    provider_usage: Mapping[str, Any],
+    cost_val: Any,
+    effective_dry_run: bool,
+    extra: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Safe provider attempt row for append-only checkpoint namespace (no bodies)."""
+
+    record = {
+        "attempt_index": int(attempt_index),
+        "attempt_kind": str(attempt_kind),
+        "module_key": module_key,
+        "stage_key": stage_key,
+        "checkpoint_kind": "provider_attempt",
+        "provider_attempted": True,
+        "provider_request_id": provider_usage.get("provider_request_id"),
+        "provider_request_ids": list(provider_usage.get("provider_request_ids") or []),
+        "provider_host": provider_usage.get("provider_host") or provider_usage.get("host"),
+        "transport_kind": provider_usage.get("transport_kind"),
+        "http_status": provider_usage.get("http_status"),
+        "response_received": provider_usage.get("response_received", True),
+        "finish_reason": provider_usage.get("finish_reason"),
+        "latency_ms": provider_usage.get("latency_ms"),
+        "usage_source": provider_usage.get("usage_source"),
+        "input_tokens": provider_usage.get("input_tokens"),
+        "output_tokens": provider_usage.get("output_tokens"),
+        "cached_tokens": provider_usage.get("cached_tokens"),
+        "retry_count": provider_usage.get("retry_count"),
+        "actual_cost": cost_val,
+        "pricing_version": provider_usage.get("pricing_version"),
+        "attempt_status": provider_usage.get("attempt_status")
+        or provider_usage.get("provider_status")
+        or "success",
+        "error_code": provider_usage.get("failure_code")
+        or provider_usage.get("detail_code")
+        or provider_usage.get("provider_error_code"),
+        "started_at": provider_usage.get("started_at"),
+        "completed_at": provider_usage.get("completed_at"),
+        "effective_dry_run": effective_dry_run,
+        "live_request_confirmed": provider_usage.get("live_request_confirmed"),
+    }
+    if extra:
+        record.update(dict(extra))
+    return record
+
+
 @dataclass(frozen=True, slots=True)
 class PrivateLabExecutorActionResult:
     run_id: int
@@ -469,31 +520,28 @@ class PrivateLabRunExecutor:
                         "attempt": int(getattr(stage, "attempt_count", 0) or 0),
                         "checkpoint_kind": "provider_attempt",
                         "provider_attempted": True,
-                        "transport_kind": provider_usage.get("transport_kind"),
-                        "provider_host": provider_usage.get("provider_host")
-                        or provider_usage.get("host"),
                         "provider_request_id": provider_usage.get("provider_request_id"),
-                        "provider_request_ids": list(
-                            provider_usage.get("provider_request_ids") or []
-                        ),
-                        "attempts": list(provider_usage.get("attempts") or []),
+                        "transport_kind": provider_usage.get("transport_kind"),
                         "http_status": provider_usage.get("http_status"),
-                        "latency_ms": provider_usage.get("latency_ms"),
-                        "input_tokens": provider_usage.get("input_tokens"),
-                        "output_tokens": provider_usage.get("output_tokens"),
-                        "retry_count": provider_usage.get("retry_count"),
-                        "finish_reason": provider_usage.get("finish_reason"),
                         "usage_source": provider_usage.get("usage_source"),
-                        "actual_cost": cost_val,
-                        "response_received": True,
-                        "live_request_confirmed": provider_usage.get(
-                            "live_request_confirmed"
-                        ),
-                        "effective_dry_run": effective_dry_run,
-                        "failure_code": provider_usage.get("failure_code")
-                        or provider_usage.get("detail_code"),
                         "provider_status": usage.status,
                     },
+                    append_provider_attempt=_provider_attempt_record(
+                        module_key=module_key,
+                        stage_key=stage.stage_key,
+                        attempt_index=int(getattr(stage, "attempt_count", 0) or 0),
+                        attempt_kind="initial",
+                        provider_usage=provider_usage,
+                        cost_val=cost_val,
+                        effective_dry_run=effective_dry_run,
+                        extra={
+                            "attempt_status": usage.status,
+                            "error_code": provider_usage.get("failure_code")
+                            or provider_usage.get("detail_code"),
+                            "provider_status": usage.status,
+                            "attempts": list(provider_usage.get("attempts") or []),
+                        },
+                    ),
                     **accumulate,
                 )
             raise PrivateWholeBookLabRunError(
@@ -528,32 +576,28 @@ class PrivateLabRunExecutor:
                 "attempt": int(getattr(stage, "attempt_count", 0) or 0),
                 "checkpoint_kind": "provider_attempt",
                 "provider_attempted": True,
-                "transport_kind": provider_usage.get("transport_kind"),
-                "provider_host": provider_usage.get("provider_host")
-                or provider_usage.get("host"),
                 "provider_request_id": provider_usage.get("provider_request_id"),
-                "provider_request_ids": list(
-                    provider_usage.get("provider_request_ids") or []
-                ),
-                "attempts": list(provider_usage.get("attempts") or []),
+                "transport_kind": provider_usage.get("transport_kind"),
                 "http_status": provider_usage.get("http_status"),
-                "latency_ms": provider_usage.get("latency_ms"),
-                "input_tokens": provider_usage.get("input_tokens"),
-                "output_tokens": provider_usage.get("output_tokens"),
-                "cached_tokens": provider_usage.get("cached_tokens"),
-                "retry_count": provider_usage.get("retry_count"),
-                "finish_reason": provider_usage.get("finish_reason"),
                 "usage_source": provider_usage.get("usage_source"),
-                "actual_cost": cost_val,
-                "pricing_version": provider_usage.get("pricing_version"),
-                "provider_error_code": provider_usage.get("provider_error_code"),
-                "provider_error_class": provider_usage.get("provider_error_class"),
-                "response_received": provider_usage.get("response_received", True),
-                "validation_started": False,
-                "live_request_confirmed": provider_usage.get("live_request_confirmed"),
-                "effective_dry_run": effective_dry_run,
                 "output_contract": provider_usage.get("output_contract"),
             },
+            append_provider_attempt=_provider_attempt_record(
+                module_key=module_key,
+                stage_key=stage.stage_key,
+                attempt_index=int(getattr(stage, "attempt_count", 0) or 0),
+                attempt_kind="initial",
+                provider_usage=provider_usage,
+                cost_val=cost_val,
+                effective_dry_run=effective_dry_run,
+                extra={
+                    "attempts": list(provider_usage.get("attempts") or []),
+                    "provider_error_code": provider_usage.get("provider_error_code"),
+                    "provider_error_class": provider_usage.get("provider_error_class"),
+                    "validation_started": False,
+                    "output_contract": provider_usage.get("output_contract"),
+                },
+            ),
             **accumulate,
         )
 
@@ -706,6 +750,7 @@ class PrivateLabRunExecutor:
                 if pipeline_diagnostics:
                     persistence_summary["pipeline_diagnostics"] = pipeline_diagnostics
                     # Safe stage checkpoint so failures remain diagnosable without Migration.
+                    # Merge into pipeline_diagnostics namespace — do not wipe provider_attempts.
                     self._stages.write_checkpoint(
                         int(run.id),
                         stage.stage_key,
@@ -718,6 +763,13 @@ class PrivateLabRunExecutor:
                             "private_lab": True,
                             "non_production": True,
                             "pipeline_diagnostics": pipeline_diagnostics,
+                            "persistence_summary": {
+                                "orm_written": persistence_summary.get("orm_written"),
+                                "persistence_complete": persistence_summary.get(
+                                    "persistence_complete"
+                                ),
+                                "engine_kind": persistence_summary.get("engine_kind"),
+                            },
                             "provider_request_id": provider_usage.get("provider_request_id"),
                             "transport_kind": provider_usage.get("transport_kind"),
                         },

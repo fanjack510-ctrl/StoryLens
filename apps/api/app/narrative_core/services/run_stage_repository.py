@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
-from typing import Any, Sequence
+from typing import Any, Mapping, Sequence
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -31,9 +31,86 @@ _TERMINAL_FOR_COMPLETED_AT = frozenset(
 
 _ACCUMULATE_FIELDS = frozenset({"token_input", "token_output", "cost"})
 
+# CHG-058: checkpoint namespaces that must merge rather than wholesale replace.
+CHECKPOINT_MERGE_NAMESPACES = frozenset(
+    {
+        "provider_attempts",
+        "pipeline_diagnostics",
+        "persistence_summary",
+        "result_projection",
+    }
+)
+
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _load_checkpoint_dict(raw: str | dict[str, Any] | None) -> dict[str, Any]:
+    if raw is None:
+        return {}
+    if isinstance(raw, dict):
+        return dict(raw)
+    text = str(raw).strip() or "{}"
+    try:
+        parsed = json.loads(text)
+    except json.JSONDecodeError:
+        return {}
+    return dict(parsed) if isinstance(parsed, dict) else {}
+
+
+def merge_checkpoint_namespaces(
+    existing: Mapping[str, Any] | None,
+    incoming: Mapping[str, Any] | None,
+    *,
+    append_provider_attempt: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Merge checkpoint payloads preserving provider_attempts append-only list.
+
+    pipeline_diagnostics / persistence_summary / result_projection update their
+    own keys without wiping sibling namespaces.
+    """
+
+    merged: dict[str, Any] = dict(existing or {})
+    payload = dict(incoming or {})
+
+    # Append-only provider attempts (explicit single attempt and/or list).
+    attempts: list[Any] = list(merged.get("provider_attempts") or [])
+    if append_provider_attempt is not None:
+        attempts.append(dict(append_provider_attempt))
+    incoming_attempts = payload.pop("provider_attempts", None)
+    if isinstance(incoming_attempts, list):
+        for item in incoming_attempts:
+            if isinstance(item, Mapping):
+                attempts.append(dict(item))
+            else:
+                attempts.append(item)
+    elif isinstance(incoming_attempts, Mapping):
+        attempts.append(dict(incoming_attempts))
+
+    for key in ("pipeline_diagnostics", "persistence_summary", "result_projection"):
+        if key not in payload:
+            continue
+        value = payload.pop(key)
+        if isinstance(value, Mapping):
+            base = dict(merged.get(key) or {}) if isinstance(merged.get(key), Mapping) else {}
+            base.update(dict(value))
+            merged[key] = base
+        else:
+            merged[key] = value
+
+    # Remaining top-level keys overwrite (schema/version/stage_key/etc.).
+    for key, value in payload.items():
+        if key in CHECKPOINT_MERGE_NAMESPACES:
+            continue
+        merged[key] = value
+
+    if attempts:
+        merged["provider_attempts"] = attempts
+    elif "provider_attempts" not in merged:
+        # Keep empty list absent unless previously present.
+        pass
+    return merged
 
 
 def validate_checkpoint_payload(payload: dict[str, Any] | str | None) -> str:
@@ -265,9 +342,18 @@ class RunStageRepository:
         run_id: int,
         stage_key: str,
         checkpoint: dict[str, Any] | str,
+        *,
+        replace: bool = False,
+        append_provider_attempt: Mapping[str, Any] | None = None,
         **accumulate_fields: Any,
     ) -> AnalysisRunStage:
-        """Write a verifiable checkpoint without requiring a status change."""
+        """Write a verifiable checkpoint without requiring a status change.
+
+        By default merges into existing checkpoint_json namespaces so that
+        ``provider_attempts`` appends and ``pipeline_diagnostics`` updates do
+        not wipe each other (CHG-058). Pass ``replace=True`` for legacy full
+        overwrite behavior.
+        """
         stage = self.get_stage(run_id, stage_key)
         if stage is None:
             raise NarrativeCoreError(
@@ -279,7 +365,20 @@ class RunStageRepository:
                 NarrativeCoreErrorCode.COMPLETED_STAGE_CANNOT_RETRY,
                 "cannot overwrite checkpoint on completed stage",
             )
-        stage.checkpoint_json = validate_checkpoint_payload(checkpoint)
+        if replace:
+            stage.checkpoint_json = validate_checkpoint_payload(checkpoint)
+        else:
+            existing = _load_checkpoint_dict(stage.checkpoint_json)
+            if isinstance(checkpoint, str):
+                incoming = _load_checkpoint_dict(checkpoint)
+            else:
+                incoming = dict(checkpoint or {})
+            merged = merge_checkpoint_namespaces(
+                existing,
+                incoming,
+                append_provider_attempt=append_provider_attempt,
+            )
+            stage.checkpoint_json = validate_checkpoint_payload(merged)
         for key, value in accumulate_fields.items():
             if key in _ACCUMULATE_FIELDS:
                 current_value = getattr(stage, key)
