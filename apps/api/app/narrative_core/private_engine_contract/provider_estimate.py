@@ -81,6 +81,14 @@ class ProviderEstimateResult:
             raise ValueError("placeholder 512/256 estimate is forbidden for live readiness")
 
     def safe_dict(self) -> dict[str, Any]:
+        expected = self.cost.cost_expected
+        max_retry = self.cost.max_retry_cost
+        max_total = None
+        if expected is not None:
+            max_total = round(
+                float(expected) + float(max_retry or 0.0),
+                8,
+            )
         return {
             "schema": self.schema,
             "version": self.version,
@@ -104,6 +112,9 @@ class ProviderEstimateResult:
                 "max_retry_cost": self.cost.max_retry_cost,
                 "input_cost_expected": self.cost.input_cost_expected,
                 "output_cost_expected": self.cost.output_cost_expected,
+                "expected_no_repair_cost": self.cost.cost_expected,
+                "max_one_repair_cost": self.cost.max_retry_cost,
+                "max_total_authorized_cost": max_total,
             },
             "estimate_fingerprint": self.estimate_fingerprint,
             "prompt_tokens_included": self.prompt_tokens_included,
@@ -111,6 +122,12 @@ class ProviderEstimateResult:
             "context_limit_ok": self.context_limit_ok,
             "degrade_suggestion": self.degrade_suggestion,
             "max_retries": self.max_retries,
+            "repair_policy": "book_overview.schema_repair" if self.module_key == "book_overview" else "none",
+            "max_repair_count": min(1, int(self.max_retries)),
+            "repair_policy_version": "1.0.0",
+            "expected_no_repair_cost": self.cost.cost_expected,
+            "max_one_repair_cost": self.cost.max_retry_cost,
+            "max_total_authorized_cost": max_total,
         }
 
 
@@ -131,6 +148,8 @@ def estimate_fingerprint_for(
     output_policy_version: str,
     prompt_pack_version: str = "",
     context_bundle_hash: str = "",
+    repair_policy_version: str = "1.0.0",
+    max_repair_count: int = 1,
 ) -> str:
     payload = {
         "request_id": request_id,
@@ -144,6 +163,8 @@ def estimate_fingerprint_for(
         "output_policy_version": output_policy_version,
         "prompt_pack_version": prompt_pack_version,
         "context_bundle_hash": context_bundle_hash,
+        "repair_policy_version": repair_policy_version,
+        "max_repair_count": int(max_repair_count),
     }
     raw = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()

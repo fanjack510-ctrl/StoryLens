@@ -57,6 +57,24 @@ class LiveModulePipelineDiagnostics:
     artifact_written_count: int = 0
     failure_boundary: str | None = None
     failure_code: str | None = None
+    # CHG-057 provider output contract diagnostics (safe counters only).
+    output_contract_id: str | None = None
+    output_contract_version: str | None = None
+    provider_output_mode: str | None = None
+    strict_schema_enabled: bool | None = None
+    exact_contract_status: str | None = None
+    initial_contract_failure_code: str | None = None
+    repair_allowed: bool | None = None
+    repair_attempted: bool | None = None
+    repair_count: int = 0
+    repair_status: str | None = None
+    repaired_contract_status: str | None = None
+    dto_runtime_type: str | None = None
+    dto_schema_id: str | None = None
+    dto_validation_status: str | None = None
+    schema_label_verified: bool | None = None
+    undeclared_top_level_fields: list[str] = field(default_factory=list)
+    evidence_id_resolved_count: int = 0
 
     def to_safe_dict(self) -> dict[str, Any]:
         payload = asdict(self)

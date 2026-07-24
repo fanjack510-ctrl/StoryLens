@@ -98,9 +98,12 @@ def live_transport_allowed(
 class FakeHttpProviderTransport:
     """Test-only transport that simulates the formal HTTP boundary (no internet)."""
 
-    stub_text: str
+    stub_text: str = ""
+    # Optional multi-response queue for schema-repair replay (first call, repair call, …).
+    stub_texts: list[str] = field(default_factory=list)
     model: str = "qwen3.7-plus"
     request_id: str = "fake-http-req-1"
+    request_ids: list[str] = field(default_factory=list)
     input_tokens: int = 5125
     output_tokens: int = 420
     http_status: int = 200
@@ -113,6 +116,7 @@ class FakeHttpProviderTransport:
     transport_kind: ProviderTransportKind = ProviderTransportKind.FAKE_HTTP_TEST
     test_only: bool = True
     network_capable: bool = True
+    _call_index: int = 0
 
     def generate(
         self,
@@ -123,10 +127,26 @@ class FakeHttpProviderTransport:
         max_tokens: int | None,
         timeout_seconds: int,
         cancellation_ref: str | None = None,
+        response_schema: Mapping[str, Any] | None = None,
     ) -> Any:
         from app.narrative_core.services.whole_book_provider_gateway import (
             StubTransportResponse,
         )
+
+        idx = int(self._call_index)
+        self._call_index = idx + 1
+        queue = list(self.stub_texts) if self.stub_texts else [self.stub_text]
+        if idx >= len(queue):
+            text = queue[-1] if queue else self.stub_text
+        else:
+            text = queue[idx]
+        req_ids = list(self.request_ids) if self.request_ids else []
+        if req_ids and idx < len(req_ids):
+            request_id = req_ids[idx]
+        elif idx == 0:
+            request_id = self.request_id
+        else:
+            request_id = f"{self.request_id}-repair-{idx}"
 
         self.calls.append(
             {
@@ -141,6 +161,13 @@ class FakeHttpProviderTransport:
                 "total_chars": sum(len(m.get("content") or "") for m in messages),
                 "transport_kind": self.transport_kind.value,
                 "host": self.host,
+                "call_index": idx,
+                "has_response_schema": response_schema is not None,
+                "response_schema_title": (
+                    (response_schema or {}).get("title")
+                    if isinstance(response_schema, Mapping)
+                    else None
+                ),
             }
         )
         if cancellation_ref and cancellation_ref in self.cancelled_refs:
@@ -161,9 +188,9 @@ class FakeHttpProviderTransport:
                 detail_code="fake_http_forced_failure",
             )
         return StubTransportResponse(
-            text=self.stub_text,
+            text=text,
             model=model or self.model,
-            request_id=self.request_id,
+            request_id=request_id,
             input_tokens=int(self.input_tokens),
             output_tokens=int(self.output_tokens),
             finish_reason=self.finish_reason,

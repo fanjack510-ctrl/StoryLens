@@ -528,14 +528,71 @@ class BailianOpenAICompatibleProviderAdapter:
                 timeout_seconds = int(get_settings().aliyun_timeout_seconds)
             except Exception:  # noqa: BLE001
                 timeout_seconds = 60
-        response_format = payload.response_format_mode or "json_object"
 
+        from app.narrative_core.services.book_overview_output_contract import (
+            FAILURE_REPAIR_EXHAUSTED,
+            MAX_REPAIR_COUNT,
+            OUTPUT_CONTRACT_ID,
+            OUTPUT_CONTRACT_VERSION,
+            REPAIR_POLICY_VERSION,
+            SCHEMA_ID,
+            SCHEMA_REF,
+            book_overview_result_json_schema,
+            book_overview_schema_fingerprint,
+            repair_instruction_text,
+            strip_provider_audit,
+            validate_book_overview_provider_output,
+        )
         from app.narrative_core.services.provider_transport_kind import (
             ProviderTransportKind,
             is_capturing_transport,
             live_transport_allowed,
             transport_kind_of,
         )
+
+        module_key = ""
+        if payload.input_bundle is not None:
+            module_key = str(getattr(payload.input_bundle, "module_key", "") or "")
+        schema_ref = str(
+            getattr(payload, "response_schema_ref", None)
+            or request.response_schema_ref
+            or ""
+        )
+        schema_title = None
+        if isinstance(payload.response_schema, Mapping):
+            schema_title = payload.response_schema.get("title")
+        # Enforce flat BookOverviewResultDto only when the formal schema is bound.
+        enforce_book_overview = module_key in {"book_overview", "BOOK_OVERVIEW"} and (
+            schema_title == "BookOverviewResultDto"
+            or schema_ref.endswith("BookOverviewResultDto")
+            or schema_ref.endswith("dto://BookOverviewResultDto")
+        )
+        response_schema = (
+            dict(payload.response_schema)
+            if isinstance(payload.response_schema, Mapping)
+            else None
+        )
+        if enforce_book_overview and response_schema is None:
+            response_schema = book_overview_result_json_schema()
+        response_format = payload.response_format_mode or "json_object"
+        strict_schema_enabled = False
+        if enforce_book_overview and response_schema is not None:
+            # Prefer json_schema when adapter/transport supports it; else json_object + DTO validate.
+            if response_format in {"json_schema", "native_json_schema"}:
+                strict_schema_enabled = True
+            else:
+                try:
+                    from app.core.config import get_settings
+
+                    mode = str(get_settings().aliyun_structured_output_mode or "json_object")
+                except Exception:  # noqa: BLE001
+                    mode = "json_object"
+                if mode in {"json_schema", "native_json_schema"}:
+                    response_format = mode
+                    strict_schema_enabled = True
+                else:
+                    response_format = "json_object"
+                    strict_schema_enabled = False
 
         transport = self.transport
         if is_capturing_transport(transport):
@@ -559,38 +616,45 @@ class BailianOpenAICompatibleProviderAdapter:
             transport = self._build_live_http_transport(api_key=api_key)
             effective_kind = ProviderTransportKind.REAL_HTTP
 
-        try:
-            response = transport.generate(
-                messages=messages,
-                model=self.model_id,
-                response_format_mode=response_format,
-                max_tokens=request.token_budget,
-                timeout_seconds=timeout_seconds,
-                cancellation_ref=request.cancellation_ref,
-            )
-        except Exception as exc:
-            # Never include messages / credentials / body in error surfaces.
-            if isinstance(exc, type(private_engine_error(PrivateEngineErrorCode.PROVIDER_CANCELLED))):
-                raise
-            from app.narrative_core.private_engine_contract.errors import PrivateEngineError
+        def _call_transport(call_messages: list[dict[str, str]]) -> Any:
+            try:
+                kwargs: dict[str, Any] = {
+                    "messages": call_messages,
+                    "model": self.model_id,
+                    "response_format_mode": response_format,
+                    "max_tokens": request.token_budget,
+                    "timeout_seconds": timeout_seconds,
+                    "cancellation_ref": request.cancellation_ref,
+                }
+                # Optional response_schema — FakeHttp and REAL_HTTP accept it.
+                try:
+                    return transport.generate(**kwargs, response_schema=response_schema)
+                except TypeError:
+                    return transport.generate(**kwargs)
+            except Exception as exc:
+                if isinstance(
+                    exc, type(private_engine_error(PrivateEngineErrorCode.PROVIDER_CANCELLED))
+                ):
+                    raise
+                from app.narrative_core.private_engine_contract.errors import PrivateEngineError
 
-            if isinstance(exc, PrivateEngineError):
-                raise
-            raise private_engine_error(
-                PrivateEngineErrorCode.PROVIDER_UNAVAILABLE,
-                detail_code=type(exc).__name__,
-            ) from None
+                if isinstance(exc, PrivateEngineError):
+                    raise
+                raise private_engine_error(
+                    PrivateEngineErrorCode.PROVIDER_UNAVAILABLE,
+                    detail_code=type(exc).__name__,
+                ) from None
 
+        response = _call_transport(messages)
         raw_text = getattr(response, "text", None) or ""
         structured = _parse_structured_text(raw_text)
-        repaired = False
+        json_repaired = False
         if structured is None and self.output_repairer is not None:
             repair_result = self.output_repairer.repair(raw_text)
             if getattr(repair_result, "ok", False) and getattr(repair_result, "payload", None):
                 structured = dict(repair_result.payload)
-                repaired = True
+                json_repaired = True
             else:
-                # repair failure — hard reject, never forge success
                 self.last_raw_response_retained = False
                 raise private_engine_error(
                     PrivateEngineErrorCode.PROVIDER_RESPONSE_INVALID,
@@ -600,48 +664,177 @@ class BailianOpenAICompatibleProviderAdapter:
             self.last_raw_response_retained = False
             raise private_engine_error(PrivateEngineErrorCode.PROVIDER_RESPONSE_INVALID)
 
-        _validate_structured_output(structured, require_synthetic=False)
+        token_in = int(getattr(response, "input_tokens", 0) or 0)
+        token_out = int(getattr(response, "output_tokens", 0) or 0)
+        latency_ms = int(getattr(response, "latency_ms", 0) or 0)
+        provider_request_ids: list[str] = []
+        provider_request_id = getattr(response, "request_id", None)
+        if provider_request_id:
+            provider_request_ids.append(str(provider_request_id))
+        http_status = getattr(response, "http_status", None)
+        finish_reason = getattr(response, "finish_reason", None)
+        host = getattr(response, "host", None) or "dashscope.aliyuncs.com"
+        model_out = getattr(response, "model", None) or self.model_id
+
+        contract_diag: dict[str, Any] = {
+            "output_contract_id": OUTPUT_CONTRACT_ID if enforce_book_overview else None,
+            "output_contract_version": OUTPUT_CONTRACT_VERSION if enforce_book_overview else None,
+            "provider_output_mode": response_format,
+            "strict_schema_enabled": strict_schema_enabled,
+            "response_format_supported": True,
+            "response_format_payload_fingerprint": (
+                book_overview_schema_fingerprint() if enforce_book_overview else None
+            ),
+            "schema_id": SCHEMA_ID if enforce_book_overview else None,
+            "schema_version": OUTPUT_CONTRACT_VERSION if enforce_book_overview else None,
+            "repair_allowed": bool(getattr(payload, "allow_schema_repair", True)),
+            "repair_attempted": False,
+            "repair_count": 0,
+            "repair_status": "NOT_NEEDED",
+            "initial_contract_failure_code": None,
+            "repair_policy_version": REPAIR_POLICY_VERSION if enforce_book_overview else None,
+        }
+        schema_repair_count = 0
+        validation_status = "schema_ok"
+
+        if enforce_book_overview:
+            candidate = strip_provider_audit(structured)
+            validation = validate_book_overview_provider_output(candidate)
+            contract_diag.update(dict(validation.diagnostics))
+            if not validation.ok:
+                contract_diag["initial_contract_failure_code"] = validation.failure_code
+                max_repairs = min(
+                    MAX_REPAIR_COUNT,
+                    int(getattr(payload, "max_repair_count", MAX_REPAIR_COUNT) or 0),
+                )
+                allow_repair = bool(getattr(payload, "allow_schema_repair", True)) and max_repairs >= 1
+                if not allow_repair:
+                    self.last_raw_response_retained = False
+                    raise private_engine_error(
+                        PrivateEngineErrorCode.PROVIDER_RESPONSE_INVALID,
+                        detail_code=str(validation.failure_code or "contract_rejected"),
+                    )
+                # One budgeted schema repair — regenerate flat DTO; never parse evidence_map.
+                contract_diag["repair_attempted"] = True
+                contract_diag["repair_status"] = "ATTEMPTED"
+                repair_msg = repair_instruction_text(
+                    failure_code=str(validation.failure_code or "CONTRACT_FAILED"),
+                    observed_fields=validation.observed_top_level_fields,
+                )
+                repair_messages = [dict(m) for m in messages] + [
+                    {"role": "user", "content": repair_msg}
+                ]
+                repair_response = _call_transport(repair_messages)
+                schema_repair_count = 1
+                contract_diag["repair_count"] = 1
+                repair_raw = getattr(repair_response, "text", None) or ""
+                repair_structured = _parse_structured_text(repair_raw)
+                self.last_raw_response_retained = False
+                del repair_raw
+                token_in += int(getattr(repair_response, "input_tokens", 0) or 0)
+                token_out += int(getattr(repair_response, "output_tokens", 0) or 0)
+                latency_ms += int(getattr(repair_response, "latency_ms", 0) or 0)
+                repair_rid = getattr(repair_response, "request_id", None)
+                if repair_rid:
+                    provider_request_ids.append(str(repair_rid))
+                http_status = getattr(repair_response, "http_status", None) or http_status
+                finish_reason = getattr(repair_response, "finish_reason", None) or finish_reason
+                host = getattr(repair_response, "host", None) or host
+                model_out = getattr(repair_response, "model", None) or model_out
+                if repair_structured is None:
+                    contract_diag["repair_status"] = "FAILED"
+                    contract_diag["repaired_contract_status"] = "FAILED"
+                    raise private_engine_error(
+                        PrivateEngineErrorCode.PROVIDER_RESPONSE_INVALID,
+                        detail_code=FAILURE_REPAIR_EXHAUSTED,
+                    )
+                repair_candidate = strip_provider_audit(repair_structured)
+                repair_validation = validate_book_overview_provider_output(repair_candidate)
+                contract_diag["repaired_contract_status"] = (
+                    "SUCCESS" if repair_validation.ok else "FAILED"
+                )
+                contract_diag.update(
+                    {
+                        k: v
+                        for k, v in dict(repair_validation.diagnostics).items()
+                        if k
+                        not in {
+                            "initial_contract_failure_code",
+                            "repair_attempted",
+                            "repair_count",
+                            "repair_status",
+                        }
+                    }
+                )
+                if not repair_validation.ok:
+                    contract_diag["repair_status"] = "FAILED"
+                    raise private_engine_error(
+                        PrivateEngineErrorCode.PROVIDER_RESPONSE_INVALID,
+                        detail_code=str(
+                            repair_validation.failure_code or FAILURE_REPAIR_EXHAUSTED
+                        ),
+                    )
+                structured = dict(repair_validation.typed_payload or {})
+                contract_diag["repair_status"] = "SUCCESS"
+                contract_diag["dto_schema_id"] = SCHEMA_ID
+                contract_diag["schema_label_verified"] = True
+                validation_status = "schema_ok_contract_repaired"
+            else:
+                structured = dict(validation.typed_payload or {})
+                contract_diag["dto_schema_id"] = SCHEMA_ID
+                contract_diag["schema_label_verified"] = True
+                validation_status = "schema_ok"
+        else:
+            _validate_structured_output(structured, require_synthetic=False)
+
         # Raw response must not enter Artifact / FE — drop immediately.
         self.last_raw_response_retained = False
         del raw_text
         # Consume binding after successful parse so body does not linger.
         self.payload_registry.take(request.request_id)
 
-        token_in = int(getattr(response, "input_tokens", 0) or 0)
-        token_out = int(getattr(response, "output_tokens", 0) or 0)
-        provider_request_id = getattr(response, "request_id", None)
-        http_status = getattr(response, "http_status", None)
-        if not provider_request_id:
+        if not provider_request_ids:
             raise private_engine_error(
                 PrivateEngineErrorCode.PROVIDER_RESPONSE_INVALID,
                 detail_code="provider_request_id_missing",
             )
+        provider_request_id = provider_request_ids[-1]
         cost = self._resolve_cost(token_in, token_out)
-        structured_out = {**structured, "repaired": repaired} if repaired else dict(structured)
-        # Safe audit markers — never credentials / messages / prompt body.
+        structured_out = dict(structured)
+        if json_repaired:
+            structured_out["repaired"] = True
+        # Safe audit markers — never credentials / messages / prompt body / raw response.
         structured_out["_provider_audit"] = {
             "transport_kind": getattr(response, "transport_kind", None)
             or effective_kind.value,
             "provider_request_id": provider_request_id,
+            "provider_request_ids": list(provider_request_ids),
             "http_status": http_status if http_status is not None else 200,
-            "host": getattr(response, "host", None) or "dashscope.aliyuncs.com",
+            "host": host,
             "usage_source": "provider_response",
             "live_request_confirmed": True,
+            "finish_reason": finish_reason,
+            "latency_ms": latency_ms,
+            "cached_tokens": 0,
+            "retry_count": schema_repair_count,
+            "schema_repair_count": schema_repair_count,
+            "response_schema_ref": SCHEMA_REF if enforce_book_overview else request.response_schema_ref,
+            "output_contract": contract_diag if enforce_book_overview else None,
         }
         return ProviderInferenceResponse(
             request_id=request.request_id,
             provider_kind=self.provider_kind,
-            model_id=getattr(response, "model", None) or self.model_id,
+            model_id=model_out,
             provider_request_id=provider_request_id,
             status="success",
             structured_output=structured_out,
             token_input=token_in,
             token_output=token_out,
             cost=cost,
-            latency_ms=int(getattr(response, "latency_ms", 0) or 0),
-            finish_reason=getattr(response, "finish_reason", None),
-            retry_count=0,
-            validation_status="schema_ok_repaired" if repaired else "schema_ok",
+            latency_ms=latency_ms,
+            finish_reason=finish_reason,
+            retry_count=schema_repair_count,
+            validation_status=validation_status,
             received_at=datetime(2026, 7, 24, 0, 0, 0),
         )
 
@@ -706,12 +899,14 @@ class BailianOpenAICompatibleProviderAdapter:
                 max_tokens: int | None,
                 timeout_seconds: int,
                 cancellation_ref: str | None = None,
+                response_schema: Mapping[str, Any] | None = None,
             ) -> StubTransportResponse:
                 _ = timeout_seconds, cancellation_ref
                 model_req = ModelRequest(
                     messages=messages,
                     model=model,
                     response_format_mode=response_format_mode or "json_object",
+                    response_schema=dict(response_schema) if response_schema else None,
                     max_tokens=max_tokens,
                 )
                 response = _run_async(provider.generate(model_req))
@@ -725,6 +920,7 @@ class BailianOpenAICompatibleProviderAdapter:
                     http_status=200,
                     transport_kind="REAL_HTTP",
                     host="dashscope.aliyuncs.com",
+                    latency_ms=int(getattr(response, "latency_ms", 0) or 0),
                 )
 
         return _HttpTransport()

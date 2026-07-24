@@ -616,11 +616,35 @@ class PrivateLabProviderExecutionServiceAdapter:
             quality_profile=str(request.get("quality_profile") or "balanced"),
         )
         messages = bundle.transport_messages()
+        response_schema = None
+        response_schema_ref = getattr(bundle, "response_schema_ref", None)
+        response_format_mode = "json_object"
+        if str(module_key) == "book_overview":
+            from app.narrative_core.services.book_overview_output_contract import (
+                SCHEMA_REF,
+                book_overview_result_json_schema,
+                provider_output_constraint_text,
+            )
+
+            response_schema = book_overview_result_json_schema()
+            response_schema_ref = SCHEMA_REF
+            # Append output constraint to the last user message (schema-derived).
+            constraint = provider_output_constraint_text()
+            msgs = [dict(m) for m in messages]
+            if msgs and msgs[-1].get("role") == "user":
+                content = str(msgs[-1].get("content") or "")
+                if "Output contract:" not in content:
+                    msgs[-1]["content"] = content.rstrip() + "\n\n" + constraint
+            messages = tuple(msgs)
         payload = ResolvedProviderPayload(
             messages=messages,
             input_bundle=bundle,
-            response_format_mode="json_object",
+            response_format_mode=response_format_mode,
+            response_schema=response_schema,
+            response_schema_ref=response_schema_ref,
             allow_tools=False,
+            allow_schema_repair=True,
+            max_repair_count=1,
         )
         self.last_payloads.append(
             {

@@ -271,6 +271,10 @@ class DefaultModuleOutputValidator:
             error_code = error_code or PrivateEngineErrorCode.MODULE_OUTPUT_REFERENCE_INVALID.value
 
         resolver = inp.resolver
+        module_key_value = (
+            module_key.value if isinstance(module_key, WholeBookModuleKey) else str(module_key)
+        )
+        book_overview_refs = module_key_value == WholeBookModuleKey.BOOK_OVERVIEW.value
         for key, value in dto_payload.items():
             if key.endswith("_asset_id") and value is not None:
                 try:
@@ -279,14 +283,30 @@ class DefaultModuleOutputValidator:
                     references_valid = False
                     invalid_refs.append(f"{key}:{value}")
                     continue
-                if resolver.asset_ids and asset_id not in resolver.asset_ids:
+                if book_overview_refs:
+                    # Null allowed; fabricated IDs fail even when resolver is empty.
+                    if asset_id not in resolver.asset_ids:
+                        references_valid = False
+                        invalid_refs.append(f"{key}:{asset_id}")
+                elif resolver.asset_ids and asset_id not in resolver.asset_ids:
                     references_valid = False
                     invalid_refs.append(f"{key}:{asset_id}")
             if key in {"major_storyline_ids", "primary_storyline_ids"} and value:
                 for sid in value:
-                    if resolver.storyline_ids and int(sid) not in resolver.storyline_ids:
+                    try:
+                        storyline_id = int(sid)
+                    except (TypeError, ValueError):
                         references_valid = False
                         invalid_refs.append(f"{key}:{sid}")
+                        continue
+                    known = resolver.storyline_ids or resolver.asset_ids
+                    if book_overview_refs:
+                        if storyline_id not in known:
+                            references_valid = False
+                            invalid_refs.append(f"{key}:{storyline_id}")
+                    elif known and storyline_id not in known:
+                        references_valid = False
+                        invalid_refs.append(f"{key}:{storyline_id}")
             if key in {"character_focus_ids", "involved_entity_ids"} and value:
                 for eid in value:
                     if resolver.entity_ids and int(eid) not in resolver.entity_ids:

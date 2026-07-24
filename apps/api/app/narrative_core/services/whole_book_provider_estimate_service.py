@@ -202,6 +202,8 @@ class WholeBookProviderEstimateService:
             output_policy_version=OUTPUT_TOKEN_POLICY_VERSION,
             prompt_pack_version=bundle.prompt_pack_version,
             context_bundle_hash=bundle.context_bundle_hash,
+            repair_policy_version="1.0.0",
+            max_repair_count=max_retries,
         )
         return ProviderEstimateResult(
             schema=PROVIDER_ESTIMATE_SCHEMA,

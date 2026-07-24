@@ -174,8 +174,14 @@ def test_authorized_live_uses_injected_transport_once(monkeypatch: pytest.Monkey
     from app.narrative_core.services.provider_transport_kind import FakeHttpProviderTransport
 
     fake_http = FakeHttpProviderTransport(
-        stub_text='{"ok":true,"partial":false,"items":[{"claim":"overview"}],'
-        '"evidence_candidates":[{"claim_id":"c1","chapter_id":"1","stable_paragraph_id":"1"}]}',
+        stub_text=(
+            '{"logline":"Synthetic overview","premise":"Synthetic premise",'
+            '"central_question":"Q?","primary_conflict":"C",'
+            '"protagonist_asset_id":null,"major_storyline_ids":[],'
+            '"structure_summary":"S","ending_state":"open",'
+            '"evidence_refs":[{"evidence_id":"ev-1","evidence_role":"support"}],'
+            '"confidence":0.5}'
+        ),
         request_id="fake-http-live-1",
         input_tokens=1800,
         output_tokens=220,
@@ -368,7 +374,14 @@ def test_request_dry_run_reaches_adapter_and_matches_gateway(
     from app.narrative_core.services.provider_transport_kind import FakeHttpProviderTransport
 
     fake_http = FakeHttpProviderTransport(
-        stub_text='{"ok":true,"items":[]}',
+        stub_text=(
+            '{"logline":"Synthetic overview","premise":"Synthetic premise",'
+            '"central_question":"Q?","primary_conflict":"C",'
+            '"protagonist_asset_id":null,"major_storyline_ids":[],'
+            '"structure_summary":"S","ending_state":"open",'
+            '"evidence_refs":[{"evidence_id":"ev-1","evidence_role":"support"}],'
+            '"confidence":0.5}'
+        ),
         request_id="req-dry-pass",
         input_tokens=900,
         output_tokens=100,

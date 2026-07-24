@@ -86,17 +86,18 @@ def _fake_http(**kwargs) -> FakeHttpProviderTransport:
     defaults = dict(
         stub_text=json.dumps(
             {
-                "overview": "test overview",
-                "partial": False,
-                "items": [{"id": "a1"}],
-                "evidence_candidates": [
-                    {
-                        "claim_id": "overview-1",
-                        "chapter_id": "1",
-                        "stable_paragraph_id": "1",
-                        "role": "support",
-                    }
+                "logline": "Synthetic overview for transport test",
+                "premise": "Synthetic premise",
+                "central_question": "Will the conflict resolve?",
+                "primary_conflict": "Synthetic conflict",
+                "protagonist_asset_id": None,
+                "major_storyline_ids": [],
+                "structure_summary": "Synthetic structure",
+                "ending_state": "open",
+                "evidence_refs": [
+                    {"evidence_id": "ev-1", "evidence_role": "support"}
                 ],
+                "confidence": 0.5,
             }
         ),
         request_id="fake-http-1",

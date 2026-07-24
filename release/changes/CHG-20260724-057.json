@@ -1,0 +1,46 @@
+{
+  "id": "CHG-20260724-057",
+  "title": "BookOverview Provider Output Contract Enforcement",
+  "type": "fix",
+  "base_version": "1.0.5",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "narrative_core",
+    "private_engine_lab"
+  ],
+  "files": [
+    "apps/api/app/narrative_core/services/book_overview_output_contract.py",
+    "apps/api/app/narrative_core/services/whole_book_provider_gateway.py",
+    "scripts/check_public_provider_boundary.py"
+  ],
+  "user_summary": "Enforce flat BookOverviewResultDto; reject undeclared wrappers/evidence_map; allow one budgeted schema repair.",
+  "technical_summary": "Enforce flat BookOverviewResultDto as sole provider output. Exact top-level reject for book_overview/evidence_map/synthetic wrappers; DTO-generated JSON Schema; one budgeted schema repair; Public boundary scan; FakeHttp HTTP replay fixtures; Estimate repair cost fields; reference null/empty rules for book_overview-only.",
+  "acceptance_criteria": [
+    "Flat DTO HTTP replay succeeds with repair_count=0; envelope triggers one repair then succeeds; repair failure fail-closed; evidence_map never parsed; Public boundary check passes."
+  ],
+  "tests": [
+    "apps/api/tests/test_narrative_phase2br1_http_replay_no_repair.py",
+    "apps/api/tests/test_public_provider_boundary.py"
+  ],
+  "verification_evidence": [
+    "retry5/run_id=1 retained read-only as undeclared wrapper evidence; Private HEAD 17491525e11095aaa733b18baf0b91527f352446"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "No Migration. Undeclared provider envelopes are rejected (no evidence_map contract)."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": null,
+  "created_at": "2026-07-24T13:06:00Z",
+  "updated_at": "2026-07-24T13:22:28Z"
+}

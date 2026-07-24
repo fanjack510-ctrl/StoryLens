@@ -281,7 +281,9 @@ def test_typed_dto_maps_and_persists(bind_env) -> None:
     assert "credential" not in safe.lower()
 
 
-def test_nested_and_camel_case_dto_persists(bind_env) -> None:
+def test_nested_wrapper_rejected_fail_closed(bind_env) -> None:
+    """CHG-057: undeclared BookOverviewResultDto wrapper must not be unwrapped."""
+
     sp = bind_env["paragraph"]
     structured = {
         "BookOverviewResultDto": {
@@ -300,6 +302,33 @@ def test_nested_and_camel_case_dto_persists(bind_env) -> None:
             ],
             "synthetic": False,
         }
+    }
+    pipeline, _ = _run_pipeline(bind_env, structured)
+    diag = dict(pipeline.pipeline_diagnostics or {})
+    assert int(diag.get("semantic_claim_count") or 0) == 0
+    assert int(diag.get("private_candidate_count") or 0) == 0
+    assert diag.get("transaction_committed") is not True
+
+
+def test_flat_camel_case_aliases_persist(bind_env) -> None:
+    sp = bind_env["paragraph"]
+    structured = {
+        "logline": "camel合成总览",
+        "premise": "camel合成前提",
+        "centralQuestion": "camel合成问题",
+        "primaryConflict": "camel合成冲突",
+        "structureSummary": "camel合成结构",
+        "endingState": "unknown",
+        "protagonist_asset_id": None,
+        "major_storyline_ids": [],
+        "evidenceRefs": [
+            {
+                "evidenceId": str(sp.id),
+                "evidenceRole": "support",
+                "targetOutputRef": "book_overview.claim",
+            }
+        ],
+        "confidence": 0.55,
     }
     pipeline, _ = _run_pipeline(bind_env, structured)
     diag = dict(pipeline.pipeline_diagnostics or {})

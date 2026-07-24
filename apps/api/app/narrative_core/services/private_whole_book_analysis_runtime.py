@@ -860,14 +860,55 @@ class PrivateWholeBookAnalysisRuntime:
         )
         diag.structured_output_present = bool(structured)
         outputs = dict(guarded.module_outputs or {})
-        diag.structured_output_schema = str(
-            outputs.get("schema")
-            or structured.get("schema")
-            or "BookOverviewResultDto"
+        # CHG-057: schema label only after real DTO validation / mapper success.
+        schema_label_verified = bool(
+            outputs.get("schema_label_verified")
+            or outputs.get("dto_mapper_status") in {"mapped", "SUCCESS", "success"}
         )
-        diag.structured_output_fingerprint = fingerprint_structured_output(structured)
+        audit = structured.get("_provider_audit") if isinstance(structured.get("_provider_audit"), Mapping) else {}
+        contract_meta = audit.get("output_contract") if isinstance(audit, Mapping) else None
+        if isinstance(contract_meta, Mapping):
+            diag.output_contract_id = contract_meta.get("output_contract_id")
+            diag.output_contract_version = contract_meta.get("output_contract_version")
+            diag.provider_output_mode = contract_meta.get("provider_output_mode")
+            diag.strict_schema_enabled = contract_meta.get("strict_schema_enabled")
+            diag.exact_contract_status = contract_meta.get("exact_contract_status")
+            diag.initial_contract_failure_code = contract_meta.get(
+                "initial_contract_failure_code"
+            )
+            diag.repair_allowed = contract_meta.get("repair_allowed")
+            diag.repair_attempted = bool(contract_meta.get("repair_attempted"))
+            diag.repair_count = int(contract_meta.get("repair_count") or 0)
+            diag.repair_status = contract_meta.get("repair_status")
+            diag.repaired_contract_status = contract_meta.get("repaired_contract_status")
+            diag.dto_validation_status = contract_meta.get("dto_validation_status")
+            diag.dto_schema_id = contract_meta.get("dto_schema_id")
+            diag.dto_runtime_type = contract_meta.get("dto_runtime_type")
+            diag.schema_label_verified = bool(
+                contract_meta.get("schema_label_verified") or schema_label_verified
+            )
+            undeclared = contract_meta.get("undeclared_top_level_fields") or []
+            if isinstance(undeclared, (list, tuple)):
+                diag.undeclared_top_level_fields = [str(x) for x in undeclared]
+            if contract_meta.get("schema_label_verified"):
+                schema_label_verified = True
+        else:
+            diag.schema_label_verified = schema_label_verified
+        if schema_label_verified:
+            diag.structured_output_schema = str(
+                outputs.get("schema")
+                or diag.dto_schema_id
+                or "BookOverviewResultDto"
+            )
+        else:
+            diag.structured_output_schema = None
+        diag.structured_output_fingerprint = fingerprint_structured_output(
+            {k: v for k, v in structured.items() if k not in {"_provider_audit", "repaired"}}
+        )
         diag.structured_output_runtime_type = str(
-            outputs.get("structured_output_runtime_type") or type(structured).__name__
+            outputs.get("structured_output_runtime_type")
+            or diag.dto_runtime_type
+            or type(structured).__name__
         )
         top_fields = outputs.get("structured_output_top_level_fields")
         if isinstance(top_fields, (list, tuple)):

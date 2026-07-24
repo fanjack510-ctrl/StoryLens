@@ -262,13 +262,20 @@ class ResolvedProviderPayload:
     messages: tuple[dict[str, str], ...]
     input_bundle: ProviderInputBundle | None = None
     response_format_mode: str = "json_object"
+    response_schema: Mapping[str, Any] | None = None
+    response_schema_ref: str | None = None
     allow_tools: bool = False
+    # Schema repair (max 1) authorized by estimate/consent budget.
+    allow_schema_repair: bool = True
+    max_repair_count: int = 1
 
     def __post_init__(self) -> None:
         if self.allow_tools:
             raise ValueError("provider payload must forbid tools/network from model")
         if not self.messages:
             raise ValueError("resolved provider payload requires messages")
+        if int(self.max_repair_count) < 0 or int(self.max_repair_count) > 1:
+            raise ValueError("max_repair_count must be 0 or 1")
 
 
 @runtime_checkable
