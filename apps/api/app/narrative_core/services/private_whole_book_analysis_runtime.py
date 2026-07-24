@@ -859,23 +859,82 @@ class PrivateWholeBookAnalysisRuntime:
             or {}
         )
         diag.structured_output_present = bool(structured)
+        outputs = dict(guarded.module_outputs or {})
         diag.structured_output_schema = str(
-            structured.get("schema")
-            or (guarded.module_outputs or {}).get("schema")
+            outputs.get("schema")
+            or structured.get("schema")
             or "BookOverviewResultDto"
         )
         diag.structured_output_fingerprint = fingerprint_structured_output(structured)
-        outputs = dict(guarded.module_outputs or {})
-        claim_count = 0
-        for claim_name in ("logline", "overview", "premise", "primary_conflict"):
-            if str(outputs.get(claim_name) or structured.get(claim_name) or "").strip():
-                claim_count += 1
+        diag.structured_output_runtime_type = str(
+            outputs.get("structured_output_runtime_type") or type(structured).__name__
+        )
+        top_fields = outputs.get("structured_output_top_level_fields")
+        if isinstance(top_fields, (list, tuple)):
+            diag.structured_output_top_level_fields = [str(x) for x in top_fields]
+        else:
+            diag.structured_output_top_level_fields = sorted(str(k) for k in structured.keys())
+        nonempty = outputs.get("structured_output_nonempty_fields")
+        if isinstance(nonempty, (list, tuple)):
+            diag.structured_output_nonempty_fields = [str(x) for x in nonempty]
+        diag.dto_mapper_key = (
+            str(outputs.get("dto_mapper_key") or "") or None
+        )
+        diag.dto_mapper_status = (
+            str(outputs.get("dto_mapper_status") or "") or None
+        )
+        diag.dto_mapper_failure_code = (
+            str(outputs.get("dto_mapper_failure_code") or "") or None
+        )
+        diag.semantic_source_field_count = int(
+            outputs.get("semantic_source_field_count") or 0
+        )
+        diag.semantic_source_item_count = int(
+            outputs.get("semantic_source_item_count") or 0
+        )
+        diag.semantic_claim_count = int(outputs.get("semantic_claim_count") or 0)
+        src_fields = outputs.get("semantic_claim_source_fields") or ()
+        if isinstance(src_fields, (list, tuple)):
+            diag.semantic_claim_source_fields = [str(x) for x in src_fields]
+        diag.evidence_source_field_count = int(
+            outputs.get("evidence_source_field_count") or 0
+        )
+        diag.evidence_source_item_count = int(
+            outputs.get("evidence_source_item_count") or 0
+        )
+        claim_count = diag.semantic_claim_count
+        if claim_count < 1:
+            for claim_name in (
+                "logline",
+                "overview",
+                "premise",
+                "primary_conflict",
+                "central_question",
+                "structure_summary",
+                "ending_state",
+            ):
+                if str(outputs.get(claim_name) or structured.get(claim_name) or "").strip():
+                    claim_count += 1
         diag.claim_count = claim_count
-        provider_refs = outputs.get("evidence_refs") or structured.get("evidence_refs") or ()
+        provider_refs = (
+            outputs.get("evidence_refs")
+            or structured.get("evidence_refs")
+            or structured.get("evidenceRefs")
+            or ()
+        )
         diag.provider_evidence_ref_count = len(tuple(provider_refs or ()))
         diag.private_candidate_count = len(tuple(guarded.asset_candidates or ()))
         diag.public_candidate_count = len(tuple(guarded.asset_candidates or ()))
         diag.evidence_coercion_input_count = len(tuple(guarded.evidence_candidates or ()))
+        if (
+            diag.structured_output_present
+            and diag.private_candidate_count < 1
+            and not diag.failure_boundary
+        ):
+            diag.failure_boundary = "PRIVATE_TRANSLATION_EMPTY"
+            diag.failure_code = str(
+                diag.dto_mapper_failure_code or "CANDIDATE_BUILD_REJECTED"
+            )
 
         registered_refs = build_candidate_output_refs(
             module_key=key.value,
@@ -982,14 +1041,27 @@ class PrivateWholeBookAnalysisRuntime:
                 diag.failure_boundary = "EVIDENCE_VALIDATION_REJECTED"
                 diag.failure_code = str(validation.error_code or "EVIDENCE_REJECTED")
 
+        def _claim_count(value: Any, default: int = 1) -> int:
+            if isinstance(value, (list, tuple, set)):
+                return len(value) if value else default
+            if value is None:
+                return default
+            try:
+                return int(value)
+            except (TypeError, ValueError):
+                return default
+
         coverage = build_coverage_report(
             module_key=key.value,
-            required_claims=int(guarded.module_outputs.get("required_claims", 1) or 1),
-            evidenced_claims=int(
+            required_claims=_claim_count(
+                guarded.module_outputs.get("required_claims", 1), default=1
+            ),
+            evidenced_claims=_claim_count(
                 guarded.module_outputs.get(
-                    "evidenced_claims", len(evidence) if validation.evidence_valid else 0
-                )
-                or 0
+                    "evidenced_claims",
+                    len(evidence) if validation.evidence_valid else 0,
+                ),
+                default=0,
             ),
             missing_target_refs=tuple(validation.invalid_refs),
         )

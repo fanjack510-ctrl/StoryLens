@@ -238,6 +238,19 @@ class DefaultModuleOutputValidator:
             "evidenced_claims_refs",
             "evidence_candidates",
             "accepted",
+            "schema",
+            "dto_mapper_key",
+            "dto_mapper_status",
+            "dto_mapper_failure_code",
+            "structured_output_runtime_type",
+            "structured_output_top_level_fields",
+            "structured_output_nonempty_fields",
+            "semantic_source_field_count",
+            "semantic_source_item_count",
+            "semantic_claim_count",
+            "semantic_claim_source_fields",
+            "evidence_source_field_count",
+            "evidence_source_item_count",
         }
         unknown_fields = [
             k for k in dto_payload.keys() if k not in allowed and k not in meta_allowed
@@ -306,9 +319,23 @@ class DefaultModuleOutputValidator:
         if not evidence_valid:
             error_code = error_code or PrivateEngineErrorCode.MODULE_EVIDENCE_INSUFFICIENT.value
 
-        required_claims = int(outputs.get("required_claims", 1 if inp.evidence_candidates else 0) or 0)
-        evidenced_claims = int(
-            outputs.get("evidenced_claims", len(inp.evidence_candidates) if evidence_valid else 0) or 0
+        def _as_claim_count(value: Any, default: int = 0) -> int:
+            if isinstance(value, (list, tuple, set)):
+                return len(value)
+            if value is None:
+                return default
+            try:
+                return int(value)
+            except (TypeError, ValueError):
+                return default
+
+        required_claims = _as_claim_count(
+            outputs.get("required_claims"),
+            default=1 if inp.evidence_candidates else 0,
+        )
+        evidenced_claims = _as_claim_count(
+            outputs.get("evidenced_claims"),
+            default=len(inp.evidence_candidates) if evidence_valid else 0,
         )
         coverage = build_coverage_report(
             module_key=module_key.value,

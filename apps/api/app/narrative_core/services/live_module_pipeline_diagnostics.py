@@ -19,7 +19,19 @@ class LiveModulePipelineDiagnostics:
     structured_output_present: bool = False
     structured_output_schema: str | None = None
     structured_output_fingerprint: str | None = None
+    structured_output_runtime_type: str | None = None
+    structured_output_top_level_fields: list[str] = field(default_factory=list)
+    structured_output_nonempty_fields: list[str] = field(default_factory=list)
     claim_count: int = 0
+    semantic_source_field_count: int = 0
+    semantic_source_item_count: int = 0
+    semantic_claim_count: int = 0
+    semantic_claim_source_fields: list[str] = field(default_factory=list)
+    evidence_source_field_count: int = 0
+    evidence_source_item_count: int = 0
+    dto_mapper_key: str | None = None
+    dto_mapper_status: str | None = None
+    dto_mapper_failure_code: str | None = None
     provider_evidence_ref_count: int = 0
     private_candidate_count: int = 0
     public_candidate_count: int = 0
@@ -96,6 +108,10 @@ def infer_failure_boundary(diag: LiveModulePipelineDiagnostics) -> str | None:
         return diag.failure_boundary
     if not diag.structured_output_present:
         return "PROVIDER_RESULT_EMPTY"
+    if diag.dto_mapper_status == "rejected" or (
+        diag.semantic_source_field_count >= 1 and diag.semantic_claim_count < 1
+    ):
+        return "PRIVATE_TRANSLATION_EMPTY"
     if diag.private_candidate_count < 1:
         return "PRIVATE_TRANSLATION_EMPTY"
     if diag.public_candidate_count < 1:
