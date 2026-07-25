@@ -203,7 +203,8 @@
     "STEP 2.2: D-Audit PASS; Public 987a337 Private d29fa44; fixture hash ecf419c6...; Flag default off; WHOLE_BOOK_RUNS_ENDPOINT_DISABLED=True; VERSION=1.0.5; no push",
     "STEP 2.3-I0: Public pytest I0+walking+flag+contract 47 passed with Private PYTHONPATH; Private 22 passed; no silent Fixture downgrade; Flag default false",
     "STEP 2.3: A/B/C merged; I0 parity; no Live Provider; Flag default off; WHOLE_BOOK_RUNS_ENDPOINT_DISABLED=True; VERSION=1.0.5; no push",
-    "STEP 2.G3 PASSED; evidence release/evidence/CHG-20260725-003/night-run/gate-2g3.md; WAITING_FOR_DETAILED_STEP_2_4_PROMPT=YES; no Live Provider; no Windows build"
+    "STEP 2.G3 PASSED; evidence release/evidence/CHG-20260725-003/night-run/gate-2g3.md; WAITING_FOR_DETAILED_STEP_2_4_PROMPT=YES; no Live Provider; no Windows build",
+    "STEP 2.G4 PASSED; evidence release/evidence/CHG-20260725-003/night-run/gate-2g4.md; offline Private+Fake failure matrix; no Live Provider; no Windows"
   ],
   "data_compatibility": {
     "database_changed": true,
@@ -220,5 +221,5 @@
   "blocker_level": "P0",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-25T13:31:37Z",
-  "updated_at": "2026-07-25T17:10:20Z"
+  "updated_at": "2026-07-25T22:47:31Z"
 }
