@@ -5,7 +5,26 @@
   "base_version": "1.0.5",
   "status": "registered",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "3af10c78b0398db60d75d119eb7f3a4644b67f1f",
+      "message": "feat: add Structure Stages V2 product DTOs and output contract",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "b225bda977a53f95361ecb862d6fb771da7a29db",
+      "message": "feat: wire Structure Stages V2 lab path through persistence and Result API",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "827271c7111c6dd2264e24b54836da282f610c16",
+      "message": "test: add Structure Stages V2 FakeHttp product scenarios A-J",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "apps/api/narrative_core",
     "storylens_private_engine/structure"
@@ -20,8 +39,13 @@
     "gates pass; Dry Health/Preflight/Estimate only; Provider HTTP=0",
     "Change status tested max; include_in_next_release=true"
   ],
-  "tests": [],
-  "verification_evidence": [],
+  "tests": [
+    "apps/api/tests/test_narrative_phase2br1_structure_stages_v2_http_replay.py (A-J FakeHttp)",
+    "apps/api/tests/test_narrative_phase2br1_citation_v2_http_replay.py::test_citation_v2_scenario_a_valid_no_repair"
+  ],
+  "verification_evidence": [
+    "FakeHttp A-J green; book_overview scenario A regression green; gates check_project/version/change_registry/capability/public_provider/live_citation_v2/diff-check pass; no real Provider"
+  ],
   "data_compatibility": {
     "database_changed": false,
     "migration_required": false,
@@ -35,7 +59,7 @@
     "breaking_change": false
   },
   "blocker_level": null,
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-25T02:35:55Z",
-  "updated_at": "2026-07-25T02:36:24Z"
+  "updated_at": "2026-07-25T03:54:54Z"
 }
