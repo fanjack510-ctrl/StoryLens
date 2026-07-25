@@ -23,6 +23,12 @@
       "message": "fix: project execution context binding on lab estimate",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "0a6292f0de05e352f220894cb1e0be62f1583ce5",
+      "message": "docs: attach CHG-059 real Live success evidence",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -69,5 +75,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-24T17:18:07Z",
-  "updated_at": "2026-07-25T00:15:45Z"
+  "updated_at": "2026-07-25T00:16:36Z"
 }
