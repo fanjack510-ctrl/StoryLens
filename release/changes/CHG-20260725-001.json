@@ -53,6 +53,12 @@
       "message": "docs: advance CHG-20260725-001 registered to tested",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "439698cd0d6a7fe06c382360fb1fbcfe4a3bb94a",
+      "message": "docs: retarget CHG-20260725-001 commits to Integration SHAs",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -102,5 +108,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-25T02:35:55Z",
-  "updated_at": "2026-07-25T04:13:49Z"
+  "updated_at": "2026-07-25T04:15:20Z"
 }
