@@ -365,8 +365,8 @@ def test_private_adapter_failure(api_env, monkeypatch: pytest.MonkeyPatch):
 
     original_init = NativeOverviewService.__init__
 
-    def patched_init(self, session, *, adapter=None, engine_id=FIXTURE_ENGINE_ID):  # noqa: ANN001
-        original_init(self, session, adapter=Boom(), engine_id=engine_id)
+    def patched_init(self, session, *, adapter=None, engine_id=FIXTURE_ENGINE_ID, **kwargs):  # noqa: ANN001
+        original_init(self, session, adapter=Boom(), engine_id=engine_id, **kwargs)
 
     monkeypatch.setattr(NativeOverviewService, "__init__", patched_init)
 

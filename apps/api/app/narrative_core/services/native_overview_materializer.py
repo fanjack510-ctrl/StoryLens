@@ -376,21 +376,38 @@ class NativeOverviewMaterializer:
     @staticmethod
     def _locate_quote(text: str, quote: str) -> tuple[str, int, int]:
         raw = str(quote or "")
+        if not raw:
+            raise NativeOverviewError(
+                WholeBookOverviewErrorCode.EVIDENCE_INVALID.value,
+                "evidence quote is empty",
+            )
         start = text.find(raw)
         if start >= 0:
             return raw, start, start + len(raw)
-        # Normalized fallback — still require substring of original text.
+        # Allow whitespace-normalized match only when the normalized quote is a
+        # contiguous substring of the normalized paragraph — still refuse forge.
         norm_text = normalize_quote(text)
         norm_quote = normalize_quote(raw)
         if norm_quote and norm_quote in norm_text:
-            # Map back approximately via first raw character cluster.
-            approx = text.find(raw.strip()[: max(1, min(8, len(raw.strip())))])
+            # Prefer exact contiguous raw match after collapsing internal spaces
+            # by scanning for the first significant token.
+            token = raw.strip().split()[0] if raw.strip().split() else raw.strip()
+            approx = text.find(token) if token else -1
             if approx >= 0:
-                end = min(len(text), approx + max(len(raw), 1))
+                # Reconstruct end by consuming the same number of non-space chars.
+                needed = len(norm_quote.replace(" ", ""))
+                seen = 0
+                end = approx
+                while end < len(text) and seen < needed:
+                    if not text[end].isspace():
+                        seen += 1
+                    end += 1
                 return text[approx:end], approx, end
-        start = 0
-        end = min(len(text), max(1, len(raw) if raw else 1))
-        return text[start:end], start, end
+        raise NativeOverviewError(
+            WholeBookOverviewErrorCode.EVIDENCE_INVALID.value,
+            "evidence quote not found in paragraph text",
+            details={"quote_preview": raw[:80]},
+        )
 
 
 __all__ = [
