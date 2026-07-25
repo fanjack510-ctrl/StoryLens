@@ -23,6 +23,18 @@
       "message": "test: add Structure Stages V2 FakeHttp product scenarios A-J",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "0dff030031691cf5ce6f60e078e1b4824f100387",
+      "message": "docs: attach Structure Stages V2 Public commits to CHG-20260725-001",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "9e13acf12e0ccf9588b8698511ef53b0f8c6c2a0",
+      "message": "docs: include registry attach SHA for CHG-20260725-001",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -61,5 +73,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-25T02:35:55Z",
-  "updated_at": "2026-07-25T03:54:54Z"
+  "updated_at": "2026-07-25T03:56:36Z"
 }
