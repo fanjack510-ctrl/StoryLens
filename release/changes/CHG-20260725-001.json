@@ -65,6 +65,12 @@
       "message": "docs: attach Integration tip to CHG-20260725-001",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "98aababe549e12d34f02c42c7f88ec2b817af3f9",
+      "message": "docs: finalize CHG-20260725-001 Integration tip attach",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -114,5 +120,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-25T02:35:55Z",
-  "updated_at": "2026-07-25T04:16:54Z"
+  "updated_at": "2026-07-25T04:18:43Z"
 }
