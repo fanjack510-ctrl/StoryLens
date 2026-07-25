@@ -16,6 +16,7 @@ from app.narrative_core.private_engine_contract.candidate import (
     CandidatePersistenceContract,
     assert_no_forbidden_auto_actions,
 )
+from app.narrative_core.product_contract.module_results import normalize_coverage_scope_wire
 from app.narrative_core.private_engine_contract.protocol import PrivateEngineExecutionResult
 from app.narrative_core.private_engine_contract.validation import ModuleOutputValidationReport
 
@@ -315,6 +316,65 @@ class ModuleCandidateBuilder:
         for meta_key in ("transport_kind", "provider_request_id"):
             if usage.get(meta_key) is not None:
                 artifact_payload[meta_key] = usage[meta_key]
+
+        module_outputs = dict(result.module_outputs or {})
+        contract_ver = str(module_outputs.get("contract_version") or "").lower()
+        evidence_ver = str(
+            module_outputs.get("evidence_contract_version")
+            or usage.get("evidence_contract_version")
+            or ""
+        ).lower()
+        is_ss_v2 = module_key == "structure_stages" and (
+            contract_ver == "v2"
+            or evidence_ver == "v2"
+            or str(module_outputs.get("schema") or "") == "StructureStagesResultV2"
+        )
+        if is_ss_v2:
+            banned_keys = frozenset(
+                {
+                    "prompt",
+                    "credential",
+                    "raw_response",
+                    "messages",
+                    "full_text",
+                    "prompt_body",
+                    "system_prompt",
+                }
+            )
+
+            def _scrub_mapping(value: Any) -> Any:
+                if isinstance(value, Mapping):
+                    return {
+                        str(k): _scrub_mapping(v)
+                        for k, v in value.items()
+                        if str(k) not in banned_keys
+                    }
+                if isinstance(value, (list, tuple)):
+                    return [_scrub_mapping(v) for v in value]
+                return value
+
+            artifact_payload["contract_version"] = "v2"
+            artifact_payload["evidence_contract_version"] = "v2"
+            artifact_payload["provider_backed"] = provider_backed
+            artifact_payload["synthetic"] = False if provider_backed else is_synthetic
+            if module_outputs.get("coverage_scope") is not None:
+                artifact_payload["coverage_scope"] = normalize_coverage_scope_wire(
+                    module_outputs.get("coverage_scope")
+                )
+            if module_outputs.get("stages") is not None:
+                artifact_payload["stages"] = _scrub_mapping(module_outputs.get("stages"))
+            if module_outputs.get("turning_points") is not None:
+                artifact_payload["turning_points"] = _scrub_mapping(
+                    module_outputs.get("turning_points")
+                )
+            catalog_fp = module_outputs.get("catalog_fingerprint") or usage.get(
+                "catalog_fingerprint"
+            )
+            if catalog_fp:
+                artifact_payload["catalog_fingerprint"] = catalog_fp
+            if provider_backed and asset_commands and evidence_commands:
+                artifact_payload["persistence_complete"] = True
+
         if provider_backed and (
             not asset_commands or not evidence_commands
         ):

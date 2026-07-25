@@ -60,6 +60,13 @@ from app.narrative_core.product_contract.enums import WholeBookRunViewStatus
 from app.narrative_core.services.run_stage_service import RunStageService
 
 
+def _module_attempt_kinds(module_key: str) -> tuple[str, str]:
+    mk = str(module_key)
+    if mk == "structure_stages":
+        return "structure_stages_initial", "structure_stages_contract_repair"
+    return "book_overview_initial", "book_overview_contract_repair"
+
+
 def _provider_attempt_record(
     *,
     module_key: str,
@@ -73,14 +80,15 @@ def _provider_attempt_record(
 ) -> dict[str, Any]:
     """Safe provider attempt row for append-only checkpoint namespace (no bodies)."""
 
+    initial_kind, repair_kind = _module_attempt_kinds(module_key)
     operation_kind = str(
         (extra or {}).get("operation_kind")
         or provider_usage.get("operation_kind")
         or (
-            "book_overview_initial"
-            if attempt_kind in {"initial", "book_overview_initial"}
+            initial_kind
+            if attempt_kind in {"initial", initial_kind}
             else (
-                "book_overview_contract_repair"
+                repair_kind
                 if "repair" in str(attempt_kind)
                 else attempt_kind
             )
@@ -152,6 +160,7 @@ def _expand_provider_business_attempts(
 
     nested = list(provider_usage.get("attempts") or [])
     ids = list(provider_usage.get("provider_request_ids") or [])
+    initial_kind, repair_kind = _module_attempt_kinds(module_key)
     if not nested and ids:
         nested = [{"attempt_index": i, "provider_request_id": rid} for i, rid in enumerate(ids)]
     if not nested:
@@ -160,18 +169,18 @@ def _expand_provider_business_attempts(
                 module_key=module_key,
                 stage_key=stage_key,
                 attempt_index=0,
-                attempt_kind="book_overview_initial",
+                attempt_kind=initial_kind,
                 provider_usage=provider_usage,
                 cost_val=cost_val,
                 effective_dry_run=effective_dry_run,
-                extra={"operation_kind": "book_overview_initial"},
+                extra={"operation_kind": initial_kind},
             )
         ]
     out: list[dict[str, Any]] = []
     for i, item in enumerate(nested):
         kind = str(
             item.get("operation_kind")
-            or ("book_overview_initial" if i == 0 else "book_overview_contract_repair")
+            or (initial_kind if i == 0 else repair_kind)
         )
         row_usage = dict(provider_usage)
         row_usage["provider_request_id"] = item.get("provider_request_id") or (
@@ -593,7 +602,7 @@ class PrivateLabRunExecutor:
                     detail_code=str(exc),
                 ) from exc
             # CHG-059: rebuild Context using frozen ExecutionContextBinding (never full-unit None).
-            if str(module_key) == "book_overview":
+            if str(module_key) in {"book_overview", "structure_stages"}:
                 from app.narrative_core.private_engine_contract.context import (
                     make_context_bundle_ref,
                 )
@@ -714,12 +723,24 @@ class PrivateLabRunExecutor:
                         getattr(citation_catalog, "catalog_fingerprint", "") or ""
                     )
                     try:
-                        from storylens_private_engine.citation import (
-                            book_overview_result_v2_json_schema,
-                            dynamic_schema_fingerprint,
-                        )
+                        if str(module_key) == "structure_stages":
+                            from app.narrative_core.services.structure_stages_output_contract_v2 import (
+                                structure_stages_result_v2_json_schema,
+                            )
+                            from storylens_private_engine.citation import (
+                                dynamic_schema_fingerprint,
+                            )
 
-                        schema = book_overview_result_v2_json_schema(citation_catalog)
+                            schema = structure_stages_result_v2_json_schema(
+                                catalog=citation_catalog
+                            )
+                        else:
+                            from storylens_private_engine.citation import (
+                                book_overview_result_v2_json_schema,
+                                dynamic_schema_fingerprint,
+                            )
+
+                            schema = book_overview_result_v2_json_schema(citation_catalog)
                         meta_base = {k: v for k, v in schema.items() if k != "x_storylens"}
                         schema_fp = dynamic_schema_fingerprint(meta_base)
                     except Exception:  # noqa: BLE001
@@ -930,7 +951,7 @@ class PrivateLabRunExecutor:
                 )
                 frozen_ref = str(meta.get("context_bundle_ref") or "")
                 if (
-                    str(module_key) == "book_overview"
+                    str(module_key) in {"book_overview", "structure_stages"}
                     and frozen_hash
                     and frozen_hash != "context-hash-ok"
                     and frozen_ref
@@ -1009,22 +1030,39 @@ class PrivateLabRunExecutor:
                     provider_policy = provider_result.to_provider_policy()
                     if output_fp is None or not str(output_fp).strip():
                         output_fp = provider_result.output_fingerprint
-                    # CHG-058: bind V2 schema label + catalog into private mapper channel.
+                    # CHG-058/001: bind V2 schema label + catalog into private mapper channel.
                     structured_pol = dict(
                         provider_policy.get("provider_structured_output") or {}
                     )
-                    if str(structured_pol.get("contract_version") or "").lower() == "v2" or any(
-                        isinstance(structured_pol.get(f), dict)
-                        and "citation_ids" in (structured_pol.get(f) or {})
-                        for f in (
-                            "logline",
-                            "premise",
-                            "central_question",
-                            "primary_conflict",
-                            "structure_summary",
-                            "ending_state",
+                    _bo_v2_fields = (
+                        "logline",
+                        "premise",
+                        "central_question",
+                        "primary_conflict",
+                        "structure_summary",
+                        "ending_state",
+                    )
+                    is_bo_v2 = str(module_key) == "book_overview" and (
+                        str(structured_pol.get("contract_version") or "").lower() == "v2"
+                        or any(
+                            isinstance(structured_pol.get(f), dict)
+                            and "citation_ids" in (structured_pol.get(f) or {})
+                            for f in _bo_v2_fields
                         )
-                    ):
+                    )
+                    stages_raw = structured_pol.get("stages")
+                    is_ss_v2 = str(module_key) == "structure_stages" and (
+                        str(structured_pol.get("contract_version") or "").lower() == "v2"
+                        or "StructureStagesResultV2"
+                        in str(structured_pol.get("schema") or "")
+                        or (
+                            isinstance(stages_raw, list)
+                            and stages_raw
+                            and isinstance(stages_raw[0], dict)
+                            and isinstance(stages_raw[0].get("summary"), dict)
+                        )
+                    )
+                    if is_bo_v2:
                         structured_pol.setdefault("schema", "BookOverviewResultV2")
                         structured_pol.setdefault("contract_version", "v2")
                         provider_policy["provider_structured_output"] = structured_pol
@@ -1041,6 +1079,72 @@ class PrivateLabRunExecutor:
                             )
                         if citation_catalog is not None:
                             provider_policy["citation_catalog"] = citation_catalog
+                    elif is_ss_v2:
+                        from app.narrative_core.services.citation_catalog_v2 import (
+                            catalog_for_private_engine,
+                        )
+                        from app.narrative_core.services.structure_stages_output_contract_v2 import (
+                            resolve_structure_context_capabilities,
+                        )
+                        from app.narrative_core.services.structure_stages_result_mapper_v2 import (
+                            map_structure_stages_result_v2,
+                            mapping_diagnostics,
+                        )
+
+                        private_catalog = catalog_for_private_engine(citation_catalog)
+                        ss_caps_dict = dict(
+                            meta.get("context_capabilities")
+                            or (
+                                (meta.get("execution_context_binding") or {}).get(
+                                    "context_capabilities"
+                                )
+                                if isinstance(meta.get("execution_context_binding"), dict)
+                                else {}
+                            )
+                            or {}
+                        )
+                        ss_caps_obj = resolve_structure_context_capabilities(ss_caps_dict)
+
+                        mapped = map_structure_stages_result_v2(
+                            structured_pol,
+                            catalog=citation_catalog,
+                            capabilities=ss_caps_dict or None,
+                        )
+                        structured_pol = dict(structured_pol)
+                        structured_pol.update(dict(mapped.normalized))
+                        structured_pol.update(mapping_diagnostics(mapped))
+                        structured_pol["asset_candidates"] = list(mapped.asset_candidates)
+                        structured_pol["evidence_candidates"] = list(mapped.evidence_refs)
+                        structured_pol["evidence_refs"] = list(mapped.evidence_refs)
+                        structured_pol.setdefault("schema", "StructureStagesResultV2")
+                        structured_pol.setdefault("contract_version", "v2")
+                        provider_policy["provider_structured_output"] = structured_pol
+                        provider_policy["evidence_contract_version"] = "v2"
+                        if mapped.resolver_output_refs:
+                            provider_policy["resolver_output_refs"] = list(
+                                mapped.resolver_output_refs
+                            )
+                        if context_bundle_hash:
+                            provider_policy["context_bundle_hash"] = context_bundle_hash
+                        if citation_paragraph_units:
+                            provider_policy["citation_paragraph_units"] = list(
+                                citation_paragraph_units
+                            )
+                        if allowed_citation_ids:
+                            provider_policy["allowed_citation_ids"] = list(
+                                allowed_citation_ids
+                            )
+                        if citation_catalog is not None:
+                            provider_policy["citation_catalog"] = private_catalog
+                        if ss_caps_obj is not None:
+                            provider_policy["structure_context_capabilities"] = ss_caps_obj
+                        if ss_caps_dict:
+                            provider_policy["context_capabilities"] = ss_caps_dict
+                        if meta.get("citation_catalog_fingerprint"):
+                            structured_pol["catalog_fingerprint"] = meta[
+                                "citation_catalog_fingerprint"
+                            ]
+                            provider_policy["provider_structured_output"] = structured_pol
                 else:
                     # Dry / non-live: fixture channel retained for lab harnesses.
                     provider_policy = {
@@ -1080,12 +1184,14 @@ class PrivateLabRunExecutor:
                     private_modules_bound=bool(getattr(runtime, "private_modules_bound", False)),
                     synthetic=pipeline_synthetic,
                 )
+                artifact_id = persist.get("artifact_id")
                 persistence_summary = {
                     "orm_written": bool(persist.get("orm_written")),
                     "persistence_complete": bool(persist.get("persistence_complete")),
                     "candidate_written": bool(persist.get("candidate_written")),
                     "evidence_written": bool(persist.get("evidence_written")),
                     "artifact_written": bool(persist.get("artifact_written")),
+                    "artifact_id": artifact_id,
                     "fallback": persist.get("fallback") or persist.get("fallback_used"),
                     "fallback_used": bool(persist.get("fallback_used") or persist.get("fallback")),
                     "asset_count": persist.get("asset_count")
@@ -1098,6 +1204,9 @@ class PrivateLabRunExecutor:
                     "engine_kind": engine_kind.value,
                     "synthetic": pipeline_synthetic,
                 }
+                if artifact_id is not None and persist.get("artifact_written"):
+                    stage.output_artifact_id = int(artifact_id)
+                    self._session.flush()
                 pipeline_diagnostics = dict(getattr(pipeline, "pipeline_diagnostics", {}) or {})
                 if pipeline_diagnostics:
                     persistence_summary["pipeline_diagnostics"] = pipeline_diagnostics

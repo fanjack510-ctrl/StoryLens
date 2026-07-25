@@ -280,7 +280,7 @@ class PrivateLabEstimateServiceAdapter:
             )
             # CHG-059: freeze ExecutionContextBinding at Estimate (no body text).
             execution_binding = None
-            if str(module_key) == "book_overview":
+            if str(module_key) in {"book_overview", "structure_stages"}:
                 try:
                     from app.narrative_core.services.execution_context_binding import (
                         build_execution_context_binding,
@@ -288,25 +288,50 @@ class PrivateLabEstimateServiceAdapter:
 
                     caps: dict[str, Any] = {}
                     try:
-                        from storylens_private_engine.citation import (
-                            build_field_requirement_policy,
-                            derive_context_capabilities,
-                        )
+                        if str(module_key) == "structure_stages":
+                            from storylens_private_engine.citation import (
+                                build_structure_field_requirement_policy,
+                                derive_structure_context_capabilities,
+                            )
 
-                        capabilities = derive_context_capabilities(
-                            selected_chapter_orders=tuple(
-                                resolve_meta.get("selected_chapter_orders") or ()
-                            ),
-                            all_chapter_orders=tuple(
-                                resolve_meta.get("all_chapter_orders") or ()
-                            ),
-                            selected_paragraph_count=len(bundle.selected_paragraph_ids),
-                            batch_index=int(resolve_meta.get("batch_index") or 0),
-                            batch_count=int(resolve_meta.get("batch_count") or 1),
-                            full_book_default=False,
-                        )
-                        caps = capabilities.safe_dict()
-                        _ = build_field_requirement_policy(capabilities)
+                            capabilities = derive_structure_context_capabilities(
+                                selected_chapter_orders=tuple(
+                                    resolve_meta.get("selected_chapter_orders") or ()
+                                ),
+                                all_chapter_orders=tuple(
+                                    resolve_meta.get("all_chapter_orders") or ()
+                                ),
+                                selected_paragraph_count=len(
+                                    bundle.selected_paragraph_ids
+                                ),
+                                batch_index=int(resolve_meta.get("batch_index") or 0),
+                                batch_count=int(resolve_meta.get("batch_count") or 1),
+                                full_book_default=False,
+                            )
+                            caps = capabilities.safe_dict()
+                            _ = build_structure_field_requirement_policy(capabilities)
+                        else:
+                            from storylens_private_engine.citation import (
+                                build_field_requirement_policy,
+                                derive_context_capabilities,
+                            )
+
+                            capabilities = derive_context_capabilities(
+                                selected_chapter_orders=tuple(
+                                    resolve_meta.get("selected_chapter_orders") or ()
+                                ),
+                                all_chapter_orders=tuple(
+                                    resolve_meta.get("all_chapter_orders") or ()
+                                ),
+                                selected_paragraph_count=len(
+                                    bundle.selected_paragraph_ids
+                                ),
+                                batch_index=int(resolve_meta.get("batch_index") or 0),
+                                batch_count=int(resolve_meta.get("batch_count") or 1),
+                                full_book_default=False,
+                            )
+                            caps = capabilities.safe_dict()
+                            _ = build_field_requirement_policy(capabilities)
                     except Exception:  # noqa: BLE001
                         caps = {}
                     execution_binding = build_execution_context_binding(
@@ -339,7 +364,7 @@ class PrivateLabEstimateServiceAdapter:
             module_estimates.append(est.safe_dict())
             manifests.append(manifest)
             if execution_binding is not None:
-                # Stash on loop — primary module binding wins for book_overview.
+                # Stash on loop — primary module binding wins for V2 modules.
                 self._pending_binding = execution_binding
             total_in += int(est.estimated_input_tokens)
             total_out += int(est.estimated_output_tokens)
@@ -381,6 +406,12 @@ class PrivateLabEstimateServiceAdapter:
             if len(modules) == 1 and module_estimates:
                 estimate_fp = str(module_estimates[0].get("estimate_fingerprint") or aggregate_fp)
 
+        primary_module = str(modules[0]) if len(modules) == 1 else ""
+        repair_policy = (
+            "structure_stages.schema_and_citation_repair"
+            if primary_module == "structure_stages"
+            else "book_overview.schema_and_citation_repair"
+        )
         usage_summary: dict[str, Any] = {
             "source": "whole_book_provider_estimate_service",
             "estimated_input_tokens": total_in,
@@ -389,7 +420,7 @@ class PrivateLabEstimateServiceAdapter:
             "tokens_hardcoded": False,
             "module_count": len(modules),
             "evidence_contract_version": "v2",
-            "repair_policy": "book_overview.schema_and_citation_repair",
+            "repair_policy": repair_policy,
             "max_repair_count": 1,
         }
         cost_summary: dict[str, Any] = {
@@ -864,6 +895,135 @@ class PrivateLabProviderExecutionServiceAdapter:
                     content = content.rstrip() + "\n\n" + constraint
                 msgs[-1]["content"] = content
             messages = tuple(msgs)
+        elif str(module_key) == "structure_stages":
+            # CHG-20260725-001: bind StructureStagesResultV2 + CitationCatalog.
+            from app.narrative_core.services.citation_catalog_v2 import (
+                build_catalog_from_paragraph_units,
+            )
+            from app.narrative_core.services.structure_stages_output_contract_v2 import (
+                SCHEMA_REF as SCHEMA_REF_SS_V2,
+                provider_output_constraint_text_v2 as ss_provider_output_constraint_text_v2,
+                structure_stages_result_v2_json_schema,
+            )
+
+            citation_catalog = request.get("citation_catalog")
+            raw_ids = request.get("allowed_citation_ids") or ()
+            if citation_catalog is None:
+                units = list(request.get("citation_paragraph_units") or ())
+                bundle_hash = str(
+                    request.get("context_bundle_hash")
+                    or getattr(bundle, "context_bundle_hash", None)
+                    or "ctx-lab"
+                )
+                if units:
+                    citation_catalog = build_catalog_from_paragraph_units(
+                        context_bundle_hash=bundle_hash,
+                        snapshot_id=book_snapshot_id,
+                        paragraph_units=units,
+                    )
+            if citation_catalog is not None:
+                ids = getattr(citation_catalog, "citation_ids", ())
+                allowed_citation_ids = tuple(ids() if callable(ids) else ids)
+            elif raw_ids:
+                allowed_citation_ids = tuple(str(x) for x in raw_ids)
+
+            response_schema = structure_stages_result_v2_json_schema(
+                citation_ids=allowed_citation_ids,
+                catalog=citation_catalog,
+            )
+            response_schema_ref = SCHEMA_REF_SS_V2
+            caps = dict(request.get("context_capabilities") or {})
+            policy_text = None
+            try:
+                from storylens_private_engine.citation import (
+                    build_structure_field_requirement_policy,
+                    derive_structure_context_capabilities,
+                )
+
+                caps_obj = derive_structure_context_capabilities(
+                    selected_chapter_orders=tuple(caps.get("selected_chapter_orders") or ()),
+                    all_chapter_orders=tuple(caps.get("all_chapter_orders") or ()),
+                    selected_paragraph_count=int(caps.get("selected_paragraph_count") or 0),
+                    batch_index=int(caps.get("batch_index") or 0),
+                    batch_count=int(caps.get("batch_count") or 1),
+                    full_book_default=bool(caps.get("full_book_coverage", False)),
+                )
+                policy_text = build_structure_field_requirement_policy(
+                    caps_obj
+                ).prompt_rules_text()
+            except Exception:  # noqa: BLE001
+                policy_text = None
+            constraint = ss_provider_output_constraint_text_v2(
+                citation_ids=allowed_citation_ids,
+                policy_text=policy_text,
+            )
+            msgs = [dict(m) for m in messages]
+            if msgs and msgs[-1].get("role") == "user":
+                content = str(msgs[-1].get("content") or "")
+                if citation_catalog is not None and allowed_citation_ids:
+                    try:
+                        from storylens_private_engine.citation import (
+                            build_structure_field_requirement_policy,
+                            derive_structure_context_capabilities,
+                            structure_citation_system_rules,
+                        )
+                        from storylens_private_engine.citation.prompt_render import (
+                            render_cited_source_blocks,
+                        )
+
+                        cited = "\n\n".join(render_cited_source_blocks(citation_catalog))
+                        cited_section = (
+                            "<cited_sources>\n"
+                            f"{cited}\n"
+                            "</cited_sources>\n\n"
+                            f"{constraint}"
+                        )
+                        if "<untrusted_source_data>" in content:
+                            import re
+
+                            content = re.sub(
+                                r"<untrusted_source_data>[\s\S]*?</untrusted_source_data>",
+                                cited_section,
+                                content,
+                                count=1,
+                            )
+                        else:
+                            content = content.rstrip() + "\n\n" + cited_section
+                        if msgs[0].get("role") == "system":
+                            sys_content = str(msgs[0].get("content") or "")
+                            if "Structure Stages" not in sys_content:
+                                try:
+                                    caps_obj = derive_structure_context_capabilities(
+                                        selected_chapter_orders=tuple(
+                                            caps.get("selected_chapter_orders") or ()
+                                        ),
+                                        all_chapter_orders=tuple(
+                                            caps.get("all_chapter_orders") or ()
+                                        ),
+                                        selected_paragraph_count=int(
+                                            caps.get("selected_paragraph_count") or 0
+                                        ),
+                                        batch_index=int(caps.get("batch_index") or 0),
+                                        batch_count=int(caps.get("batch_count") or 1),
+                                        full_book_default=bool(
+                                            caps.get("full_book_coverage", False)
+                                        ),
+                                    )
+                                    rules = structure_citation_system_rules(
+                                        build_structure_field_requirement_policy(caps_obj)
+                                    )
+                                except Exception:  # noqa: BLE001
+                                    rules = structure_citation_system_rules()
+                                msgs[0]["content"] = (
+                                    sys_content.rstrip() + "\n\n" + rules
+                                )
+                    except Exception:  # noqa: BLE001
+                        if "Output contract:" not in content:
+                            content = content.rstrip() + "\n\n" + constraint
+                elif "Output contract:" not in content:
+                    content = content.rstrip() + "\n\n" + constraint
+                msgs[-1]["content"] = content
+            messages = tuple(msgs)
         payload = ResolvedProviderPayload(
             messages=messages,
             input_bundle=bundle,
@@ -877,6 +1037,7 @@ class PrivateLabProviderExecutionServiceAdapter:
             allowed_citation_ids=allowed_citation_ids,
             context_capabilities=dict(request.get("context_capabilities") or {}),
         )
+        _v2_evidence_modules = {"book_overview", "structure_stages"}
         self.last_payloads.append(
             {
                 "module_key": module_key,
@@ -888,10 +1049,10 @@ class PrivateLabProviderExecutionServiceAdapter:
                 "source_untrusted": True,
                 "bundle_fingerprint": bundle.bundle_fingerprint,
                 "evidence_contract_version": (
-                    "v2" if str(module_key) == "book_overview" else None
+                    "v2" if str(module_key) in _v2_evidence_modules else None
                 ),
                 "cited_sources_injected": bool(
-                    str(module_key) == "book_overview"
+                    str(module_key) in _v2_evidence_modules
                     and citation_catalog is not None
                     and any(
                         "<cited_sources>" in str(m.get("content") or "")
@@ -974,9 +1135,11 @@ class PrivateLabProviderExecutionServiceAdapter:
             cost_budget=bundle.cost_budget,
             timeout_policy={"timeout_seconds": 30},
             retry_policy={
-                # BookOverview schema repair is internal (max 1). Outer gateway must not
+                # V2 schema repair is internal (max 1). Outer gateway must not
                 # re-issue additional Live HTTP attempts for the same module call.
-                "max_retries": 0 if str(module_key) == "book_overview" else 1
+                "max_retries": 0
+                if str(module_key) in {"book_overview", "structure_stages"}
+                else 1
             },
             cancellation_ref=cancellation_ref,
             data_handling_policy=dict(bundle.data_handling_policy),

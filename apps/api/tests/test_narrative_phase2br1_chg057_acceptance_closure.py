@@ -572,9 +572,12 @@ def _create_and_start(
     *,
     idem: str,
     expect_create_ok: bool = True,
+    modules: tuple[str, ...] = ("book_overview",),
 ) -> tuple[Any, Any, Any, Any]:
     client: TestClient = env["client"]
-    pre, est, create = _http_flow(client, env, idem=idem, dry_run=False, auto_start=False)
+    pre, est, create = _http_flow(
+        client, env, idem=idem, dry_run=False, auto_start=False, modules=modules
+    )
     if expect_create_ok:
         assert pre.status_code == 200, pre.text
         assert est.status_code == 200, est.text

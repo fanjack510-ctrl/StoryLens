@@ -132,6 +132,9 @@ from app.narrative_core.services.whole_book_module_output_validator import (
     ReferenceResolver,
 )
 from app.narrative_core.services.whole_book_module_runner import (
+    _coerce_evidence_candidates,
+)
+from app.narrative_core.services.whole_book_module_runner import (
     BaseWholeBookModuleRunner,
     ModuleCheckpointBuilder,
     ModuleCheckpointValidator,
@@ -401,6 +404,8 @@ class PrivateWholeBookAnalysisRuntime:
             )
             if "BookOverviewResultV2" in schema:
                 return True
+            if "StructureStagesResultV2" in schema:
+                return True
             if str(source.get("contract_version") or "").strip().lower() == "v2":
                 return True
         # Structural hint: CitedClaim-shaped fields
@@ -417,6 +422,16 @@ class PrivateWholeBookAnalysisRuntime:
                 "citation_ids" in value or "status" in value
             ):
                 return True
+        stages = struct.get("stages")
+        if isinstance(stages, list):
+            for stage in stages:
+                if not isinstance(stage, Mapping):
+                    continue
+                summary = stage.get("summary")
+                if isinstance(summary, Mapping) and (
+                    "citation_ids" in summary or "status" in summary
+                ):
+                    return True
         return False
 
     def _paragraph_units_for_citation_catalog(
@@ -936,6 +951,99 @@ class PrivateWholeBookAnalysisRuntime:
 
         # Module runner path (DTO-shaped) via Provider Gateway.
         engine_result = runner.execute(translated)
+        structured_pre = dict(provider_policy.get("provider_structured_output") or {})
+        outputs_pre = dict(engine_result.module_outputs or {})
+        if key == WholeBookModuleKey.STRUCTURE_STAGES and self._is_evidence_contract_v2(
+            provider_policy, structured_pre, outputs_pre
+        ):
+            weak_candidates = len(tuple(engine_result.asset_candidates or ())) < 1
+            weak_evidence = len(tuple(engine_result.evidence_candidates or ())) < 1
+            if weak_candidates or weak_evidence:
+                from app.narrative_core.services.structure_stages_output_contract_v2 import (
+                    resolve_structure_context_capabilities,
+                )
+                from app.narrative_core.services.structure_stages_result_mapper_v2 import (
+                    map_structure_stages_result_v2,
+                    mapping_diagnostics,
+                )
+
+                pre_assets = tuple(structured_pre.get("asset_candidates") or ())
+                pre_evidence = tuple(
+                    structured_pre.get("evidence_candidates")
+                    or structured_pre.get("evidence_refs")
+                    or ()
+                )
+                caps = provider_policy.get("structure_context_capabilities")
+                if caps is None:
+                    caps = resolve_structure_context_capabilities(
+                        provider_policy.get("context_capabilities")
+                    )
+                payload = dict(structured_pre or outputs_pre)
+                mapped = map_structure_stages_result_v2(
+                    payload,
+                    catalog=provider_policy.get("citation_catalog"),
+                    capabilities=caps,
+                )
+                if mapped.status == "mapped" and (
+                    mapped.asset_candidates or mapped.evidence_refs
+                ):
+                    merged_outputs = dict(outputs_pre)
+                    merged_outputs.update(dict(mapped.normalized))
+                    merged_outputs.update(mapping_diagnostics(mapped))
+                    engine_result = PrivateEngineExecutionResult(
+                        schema=engine_result.schema,
+                        version=engine_result.version,
+                        engine_id=engine_result.engine_id,
+                        engine_version=engine_result.engine_version,
+                        stage_key=engine_result.stage_key,
+                        attempt=engine_result.attempt,
+                        status=engine_result.status,
+                        module_outputs=merged_outputs,
+                        evidence_candidates=tuple(mapped.evidence_refs)
+                        or engine_result.evidence_candidates,
+                        asset_candidates=tuple(mapped.asset_candidates)
+                        or engine_result.asset_candidates,
+                        relation_candidates=engine_result.relation_candidates,
+                        conflict_candidates=engine_result.conflict_candidates,
+                        checkpoint=engine_result.checkpoint,
+                        usage=engine_result.usage,
+                        warnings=engine_result.warnings,
+                        validation_summary=engine_result.validation_summary,
+                        generated_at=engine_result.generated_at,
+                    )
+                elif pre_assets or pre_evidence:
+                    merged_outputs = dict(outputs_pre)
+                    merged_outputs.update(
+                        {
+                            k: structured_pre[k]
+                            for k in (
+                                "asset_candidates",
+                                "evidence_candidates",
+                                "evidence_refs",
+                                "resolver_output_refs",
+                            )
+                            if k in structured_pre
+                        }
+                    )
+                    engine_result = PrivateEngineExecutionResult(
+                        schema=engine_result.schema,
+                        version=engine_result.version,
+                        engine_id=engine_result.engine_id,
+                        engine_version=engine_result.engine_version,
+                        stage_key=engine_result.stage_key,
+                        attempt=engine_result.attempt,
+                        status=engine_result.status,
+                        module_outputs=merged_outputs,
+                        evidence_candidates=pre_evidence or engine_result.evidence_candidates,
+                        asset_candidates=pre_assets or engine_result.asset_candidates,
+                        relation_candidates=engine_result.relation_candidates,
+                        conflict_candidates=engine_result.conflict_candidates,
+                        checkpoint=engine_result.checkpoint,
+                        usage=engine_result.usage,
+                        warnings=engine_result.warnings,
+                        validation_summary=engine_result.validation_summary,
+                        generated_at=engine_result.generated_at,
+                    )
         provider_policy = dict(provider_policy or {})
         provider_attempt = dict(provider_policy.get("provider_attempt") or {})
         provider_backed = bool(provider_policy.get("provider_backed"))
@@ -997,6 +1105,15 @@ class PrivateWholeBookAnalysisRuntime:
         outputs = dict(guarded.module_outputs or {})
         use_v2 = self._is_evidence_contract_v2(provider_policy, structured, outputs)
         if use_v2:
+            # Provider structured payload carries the V2 DTO; runner envelopes add markers only.
+            outputs = {**structured, **outputs}
+            if (
+                len(tuple(guarded.asset_candidates or ())) > 0
+                and len(tuple(guarded.evidence_candidates or ())) > 0
+            ):
+                # Provider repair/mapper success must not inherit stale empty_dto passthrough markers.
+                outputs.pop("empty_dto", None)
+        if use_v2:
             diag = CitationEvidencePipelineDiagnostics(
                 module_key=key.value,
                 run_id=int(run_id),
@@ -1049,7 +1166,11 @@ class PrivateWholeBookAnalysisRuntime:
             diag.structured_output_schema = str(
                 outputs.get("schema")
                 or diag.dto_schema_id
-                or "BookOverviewResultDto"
+                or (
+                    "StructureStagesResultV2"
+                    if key == WholeBookModuleKey.STRUCTURE_STAGES and use_v2
+                    else "BookOverviewResultDto"
+                )
             )
         else:
             diag.structured_output_schema = None
@@ -1128,12 +1249,78 @@ class PrivateWholeBookAnalysisRuntime:
                 diag.dto_mapper_failure_code or "CANDIDATE_BUILD_REJECTED"
             )
 
+        output_extra = tuple(str(x) for x in outputs.get("resolver_output_refs", ()) or ())
+        policy_extra = tuple(
+            str(x) for x in (provider_policy or {}).get("resolver_output_refs", ()) or ()
+        )
+        structured_extra: tuple[str, ...] = ()
+        if use_v2 and key == WholeBookModuleKey.STRUCTURE_STAGES:
+            from app.narrative_core.services.structure_stages_result_mapper_v2 import (
+                formal_structure_stages_output_refs,
+            )
+
+            stage_keys_list = [
+                str(x).strip()
+                for x in (outputs.get("stage_keys") or ())
+                if str(x).strip()
+            ]
+            tp_keys_list = [
+                str(x).strip()
+                for x in (outputs.get("turning_point_keys") or ())
+                if str(x).strip()
+            ]
+            stages_for_refs: list[Mapping[str, Any]] = []
+            for index, stage in enumerate(
+                s for s in (outputs.get("stages") or ()) if isinstance(s, Mapping)
+            ):
+                stage_dict = dict(stage)
+                if not str(stage_dict.get("stage_key") or "").strip():
+                    if index < len(stage_keys_list):
+                        stage_dict["stage_key"] = stage_keys_list[index]
+                stages_for_refs.append(stage_dict)
+            tps_for_refs: list[Mapping[str, Any]] = []
+            for index, tp in enumerate(
+                t for t in (outputs.get("turning_points") or ()) if isinstance(t, Mapping)
+            ):
+                tp_dict = dict(tp)
+                if not str(tp_dict.get("turning_point_key") or "").strip():
+                    if index < len(tp_keys_list):
+                        tp_dict["turning_point_key"] = tp_keys_list[index]
+                tps_for_refs.append(tp_dict)
+            structured_extra = formal_structure_stages_output_refs(
+                stages=stages_for_refs,
+                turning_points=tps_for_refs,
+            )
+        refs_from_evidence: list[str] = []
+        for item in guarded.evidence_candidates or ():
+            if isinstance(item, Mapping):
+                ref = str(
+                    item.get("provider_output_ref")
+                    or item.get("target_output_ref")
+                    or ""
+                ).strip()
+            else:
+                ref = str(
+                    getattr(item, "provider_output_ref", None)
+                    or getattr(item, "target_output_ref", None)
+                    or ""
+                ).strip()
+            if ref:
+                refs_from_evidence.append(ref)
+        for item in outputs.get("evidence_candidates") or ():
+            if isinstance(item, Mapping):
+                ref = str(
+                    item.get("provider_output_ref")
+                    or item.get("target_output_ref")
+                    or ""
+                ).strip()
+                if ref:
+                    refs_from_evidence.append(ref)
+        evidence_extra = tuple(dict.fromkeys(refs_from_evidence).keys()) if use_v2 else ()
         registered_refs = build_candidate_output_refs(
             module_key=key.value,
             asset_candidates=tuple(guarded.asset_candidates or ()),
-            extra_refs=tuple(
-                str(x) for x in outputs.get("resolver_output_refs", ()) or ()
-            ),
+            extra_refs=output_extra + policy_extra + structured_extra + evidence_extra,
         )
         diag.candidate_output_ref_count = len(registered_refs)
 
@@ -1155,8 +1342,10 @@ class PrivateWholeBookAnalysisRuntime:
             selected_paragraph_ids = tuple(unit_pids) or None
 
         assert self.output_validator is not None
-        raw_evidence = tuple(
-            e for e in guarded.evidence_candidates if isinstance(e, EvidenceCandidate)
+        raw_evidence = _coerce_evidence_candidates(
+            guarded.evidence_candidates,
+            module_key=key,
+            request=request,
         )
         if use_v2:
             paragraph_units = self._paragraph_units_for_citation_catalog(
@@ -1234,7 +1423,7 @@ class PrivateWholeBookAnalysisRuntime:
         validation = self.output_validator.validate(
             ModuleOutputValidationInput(
                 module_key=key,
-                module_outputs=guarded.module_outputs,
+                module_outputs=outputs,
                 evidence_candidates=evidence,
                 book_id=book_id,
                 book_snapshot_id=book_snapshot_id,
@@ -1303,8 +1492,27 @@ class PrivateWholeBookAnalysisRuntime:
         # Keep Q calculator available for claim-binding harnesses (not unused).
         _ = self.evidence_coverage
         # Candidate commands — only when accepted (force_accept fixtures for Fake E2E).
+        guarded_for_build = PrivateEngineExecutionResult(
+            schema=guarded.schema,
+            version=guarded.version,
+            engine_id=guarded.engine_id,
+            engine_version=guarded.engine_version,
+            stage_key=guarded.stage_key,
+            attempt=guarded.attempt,
+            status=guarded.status,
+            module_outputs=outputs,
+            evidence_candidates=guarded.evidence_candidates,
+            asset_candidates=guarded.asset_candidates,
+            relation_candidates=guarded.relation_candidates,
+            conflict_candidates=guarded.conflict_candidates,
+            checkpoint=guarded.checkpoint,
+            usage=guarded.usage,
+            warnings=guarded.warnings,
+            validation_summary=guarded.validation_summary,
+            generated_at=guarded.generated_at,
+        )
         built = self.candidate_builder.build(
-            result=guarded,
+            result=guarded_for_build,
             validation=validation,
             run_id=run_id,
             run_stage_id=run_stage_id,

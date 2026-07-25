@@ -30,6 +30,7 @@ from app.narrative_core.private_engine_contract.validation import (
 from app.narrative_core.product_contract.module_results import (
     MODULE_RESULT_DTO_BY_KEY,
     assert_payload_keys_for_module,
+    resolve_module_result_dto_class,
 )
 
 
@@ -91,8 +92,26 @@ def _as_module_key(module_key: WholeBookModuleKey | str) -> WholeBookModuleKey:
     return module_key if isinstance(module_key, WholeBookModuleKey) else WholeBookModuleKey(module_key)
 
 
-def _dto_field_names(module_key: WholeBookModuleKey) -> frozenset[str]:
-    dto_cls = MODULE_RESULT_DTO_BY_KEY[module_key]
+def _validator_dto_class(
+    module_key: WholeBookModuleKey,
+    payload: Mapping[str, Any] | None = None,
+) -> type:
+    """Resolve V2 DTO classes only for structure_stages; preserve book_overview V1 guard."""
+
+    if module_key == WholeBookModuleKey.STRUCTURE_STAGES and payload is not None:
+        return resolve_module_result_dto_class(module_key, payload)
+    return MODULE_RESULT_DTO_BY_KEY[module_key]
+
+
+def _dto_field_names(
+    module_key: WholeBookModuleKey,
+    payload: Mapping[str, Any] | None = None,
+) -> frozenset[str]:
+    dto_cls = (
+        _validator_dto_class(module_key, payload)
+        if payload is not None
+        else MODULE_RESULT_DTO_BY_KEY[module_key]
+    )
     return frozenset(f.name for f in fields(dto_cls))
 
 
@@ -161,16 +180,21 @@ class DefaultModuleOutputValidator:
 
         # Prefer nested dto payload when present.
         dto_payload = outputs.get("dto") if isinstance(outputs.get("dto"), Mapping) else outputs
+        dto_cls = _validator_dto_class(module_key, dict(dto_payload))
 
         # 2) Module DTO validation
         try:
-            assert_payload_keys_for_module(module_key, dict(dto_payload))
+            assert_payload_keys_for_module(
+                module_key,
+                dict(dto_payload),
+                dto_cls=dto_cls,
+            )
         except ValueError as exc:
             schema_valid = False
             missing_fields.extend(str(exc).split(":")[-1].strip(" []").replace("'", "").split(", "))
             error_code = error_code or PrivateEngineErrorCode.MODULE_OUTPUT_SCHEMA_INVALID.value
 
-        allowed = _dto_field_names(module_key)
+        allowed = _dto_field_names(module_key, dto_payload)
         # Meta markers allowed alongside DTO fields in runner envelopes.
         meta_allowed = {
             "fake",
@@ -253,7 +277,14 @@ class DefaultModuleOutputValidator:
             "evidence_source_item_count",
             # CHG-058 Citation V2 markers
             "contract_version",
+            "evidence_contract_version",
             "overall_confidence",
+            "analysis_confidence",
+            "confidence",
+            "coverage_scope",
+            "limitations",
+            "context_capabilities",
+            "evidence_refs",
             "mapper_key",
             "mapper_status",
             "failure_code",
@@ -261,6 +292,20 @@ class DefaultModuleOutputValidator:
             "claim_count",
             "evidence_ref_count",
             "output_contract_id",
+            # Structure Stages V2 runner projection extras
+            "variable_stage_count",
+            "require_chapter_ranges",
+            "turning_points_require_evidence",
+            "stage_keys",
+            "turning_point_keys",
+            "output_ref",
+            "canonical_output_ref",
+            "v1_fallback",
+            "catalog_fingerprint",
+            "catalog_id",
+            "output_fingerprint",
+            "schema_label_verified",
+            "resolver_output_refs",
         }
         unknown_fields = [
             k for k in dto_payload.keys() if k not in allowed and k not in meta_allowed

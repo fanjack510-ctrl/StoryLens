@@ -68,8 +68,10 @@ from app.narrative_core.product_contract.module_results import (
     StructureStagesResultDto,
     TimelineItemDto,
     StructureStageItemDto,
+    TurningPointDto,
     DiagnosticItemDto,
     assert_payload_keys_for_module,
+    normalize_coverage_scope_wire,
 )
 from app.narrative_core.product_contract.result_envelope import (
     RESULT_ENVELOPE_SCHEMA,
@@ -1393,6 +1395,7 @@ class WholeBookResultIndexService:
             relations=relations,
             entities=entities,
             used_candidate=used_candidate or view == "candidate",
+            artifact_payloads=ctx.get("artifact_payloads") or (),
         )
         validate_module_payload(module, payload)
 
@@ -1464,6 +1467,53 @@ class WholeBookResultIndexService:
                 break
         return tuple(refs)
 
+    def _structure_stages_v2_artifact(
+        self, artifact_payloads: Sequence[dict[str, Any]]
+    ) -> dict[str, Any] | None:
+        for payload in artifact_payloads:
+            if str(payload.get("module_key") or "") != WholeBookModuleKey.STRUCTURE_STAGES.value:
+                continue
+            if not self._artifact_usable_for_output(payload):
+                continue
+            if str(payload.get("contract_version") or "").lower() == "v2":
+                return payload
+            stages = payload.get("stages")
+            if isinstance(stages, list) and stages:
+                first = stages[0]
+                if isinstance(first, dict) and isinstance(first.get("summary"), dict):
+                    return payload
+        return None
+
+    @staticmethod
+    def _turning_points_from_v2_artifact(
+        artifact: Mapping[str, Any],
+    ) -> tuple[TurningPointDto, ...]:
+        raw = artifact.get("turning_points") or ()
+        if not isinstance(raw, (list, tuple)):
+            return ()
+        out: list[TurningPointDto] = []
+        for idx, item in enumerate(raw):
+            if not isinstance(item, Mapping):
+                continue
+            desc = item.get("description") if isinstance(item.get("description"), Mapping) else {}
+            summary = str(desc.get("value") or item.get("label") or "").strip()
+            chapter_id = item.get("chapter_id")
+            try:
+                chapter_id_val = int(chapter_id) if chapter_id is not None else None
+            except (TypeError, ValueError):
+                chapter_id_val = None
+            out.append(
+                TurningPointDto(
+                    turning_point_id=str(
+                        item.get("turning_point_key") or item.get("turning_point_id") or f"tp-{idx + 1}"
+                    ),
+                    label=str(item.get("label") or ""),
+                    chapter_id=chapter_id_val,
+                    summary=summary,
+                )
+            )
+        return tuple(out)
+
     def _project_module_payload(
         self,
         module: WholeBookModuleKey,
@@ -1472,6 +1522,7 @@ class WholeBookResultIndexService:
         relations: Sequence[ProjectionRelationRow],
         entities: Sequence[NarrativeEntity],
         used_candidate: bool,
+        artifact_payloads: Sequence[dict[str, Any]] = (),
     ) -> dict[str, Any]:
         if module == WholeBookModuleKey.BOOK_OVERVIEW:
             storylines = [a for a in assets if a.asset_type == AssetType.STORYLINE.value]
@@ -1496,6 +1547,70 @@ class WholeBookResultIndexService:
             return payload
 
         if module == WholeBookModuleKey.STRUCTURE_STAGES:
+            v2_artifact = self._structure_stages_v2_artifact(artifact_payloads)
+            if v2_artifact is not None:
+                turning_points = self._turning_points_from_v2_artifact(v2_artifact)
+                stages = []
+                ranges = []
+                for idx, asset in enumerate(assets[:MAX_PAYLOAD_ITEMS]):
+                    stages.append(
+                        StructureStageItemDto(
+                            stage_id=str(asset.asset_id),
+                            label=asset.title or asset.asset_key,
+                            chapter_range=asset.chapter_range,
+                            narrative_function=asset.narrative_function,
+                            order=idx,
+                        )
+                    )
+                    ranges.append(asset.chapter_range)
+                if not stages and isinstance(v2_artifact.get("stages"), list):
+                    for idx, stage in enumerate(v2_artifact.get("stages") or ()):
+                        if not isinstance(stage, Mapping):
+                            continue
+                        summary = (
+                            stage.get("summary")
+                            if isinstance(stage.get("summary"), Mapping)
+                            else {}
+                        )
+                        cr_raw = stage.get("chapter_range")
+                        if isinstance(cr_raw, (list, tuple)) and len(cr_raw) == 2:
+                            chapter_range = (cr_raw[0], cr_raw[1])
+                        else:
+                            chapter_range = (None, None)
+                        stages.append(
+                            StructureStageItemDto(
+                                stage_id=str(stage.get("stage_key") or f"stage-{idx + 1}"),
+                                label=str(stage.get("label") or stage.get("stage_key") or ""),
+                                chapter_range=chapter_range,
+                                narrative_function=str(stage.get("narrative_function") or ""),
+                                order=int(stage.get("order") or idx),
+                            )
+                        )
+                        ranges.append(chapter_range)
+                dto = StructureStagesResultDto(
+                    stages=tuple(stages),
+                    turning_points=turning_points,
+                    act_or_phase_labels=tuple(s.label for s in stages),
+                    chapter_ranges=tuple(ranges),
+                    narrative_function="",
+                    evidence_refs=self._evidence_refs_from_assets(assets),
+                    confidence=(
+                        sum(a.confidence for a in assets) / len(assets) if assets else None
+                    ),
+                )
+                payload = _dto_to_dict(dto)
+                payload["contract_version"] = "v2"
+                payload["coverage_scope"] = normalize_coverage_scope_wire(
+                    v2_artifact.get("coverage_scope")
+                )
+                if isinstance(v2_artifact.get("stages"), list):
+                    payload["stages_v2"] = list(v2_artifact.get("stages") or ())
+                if isinstance(v2_artifact.get("turning_points"), list):
+                    payload["turning_points_v2"] = list(
+                        v2_artifact.get("turning_points") or ()
+                    )
+                return payload
+
             stages = []
             ranges = []
             for idx, asset in enumerate(assets[:MAX_PAYLOAD_ITEMS]):

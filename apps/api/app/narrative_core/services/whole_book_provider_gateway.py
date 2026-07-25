@@ -558,6 +558,19 @@ class BailianOpenAICompatibleProviderAdapter:
             repair_instruction_text_v2,
             validate_book_overview_provider_output_v2,
         )
+        from app.narrative_core.services.structure_stages_output_contract_v2 import (
+            FAILURE_REPAIR_EXHAUSTED as FAILURE_REPAIR_EXHAUSTED_SS_V2,
+            MAX_REPAIR_COUNT as MAX_REPAIR_COUNT_SS_V2,
+            OUTPUT_CONTRACT_ID as OUTPUT_CONTRACT_ID_SS_V2,
+            OUTPUT_CONTRACT_VERSION as OUTPUT_CONTRACT_VERSION_SS_V2,
+            REPAIR_POLICY_VERSION as REPAIR_POLICY_VERSION_SS_V2,
+            SCHEMA_ID as SCHEMA_ID_SS_V2,
+            SCHEMA_REF as SCHEMA_REF_SS_V2,
+            is_structure_stages_v2_schema_bound,
+            repair_instruction_text_v2 as ss_repair_instruction_text_v2,
+            structure_stages_result_v2_json_schema,
+            validate_structure_stages_provider_output_v2,
+        )
         from app.narrative_core.services.provider_transport_kind import (
             ProviderTransportKind,
             is_capturing_transport,
@@ -580,6 +593,12 @@ class BailianOpenAICompatibleProviderAdapter:
         enforce_book_overview_v2 = module_key in {"book_overview", "BOOK_OVERVIEW"} and (
             is_book_overview_v2_schema_bound(schema_ref=schema_ref, schema_title=schema_title)
         )
+        enforce_structure_stages_v2 = module_key in {
+            "structure_stages",
+            "STRUCTURE_STAGES",
+        } and is_structure_stages_v2_schema_bound(
+            schema_ref=schema_ref, schema_title=schema_title
+        )
         # Enforce flat BookOverviewResultDto only when the formal V1 schema is bound.
         enforce_book_overview = (
             (not enforce_book_overview_v2)
@@ -600,11 +619,20 @@ class BailianOpenAICompatibleProviderAdapter:
                 citation_ids=tuple(getattr(payload, "allowed_citation_ids", ()) or ()),
                 catalog=getattr(payload, "citation_catalog", None),
             )
+        if enforce_structure_stages_v2 and response_schema is None:
+            response_schema = structure_stages_result_v2_json_schema(
+                citation_ids=tuple(getattr(payload, "allowed_citation_ids", ()) or ()),
+                catalog=getattr(payload, "citation_catalog", None),
+            )
         if enforce_book_overview and response_schema is None:
             response_schema = book_overview_result_json_schema()
         response_format = payload.response_format_mode or "json_object"
         strict_schema_enabled = False
-        if (enforce_book_overview or enforce_book_overview_v2) and response_schema is not None:
+        if (
+            enforce_book_overview
+            or enforce_book_overview_v2
+            or enforce_structure_stages_v2
+        ) and response_schema is not None:
             # Prefer json_schema when adapter/transport supports it; else json_object + DTO validate.
             if response_format in {"json_schema", "native_json_schema"}:
                 strict_schema_enabled = True
@@ -724,13 +752,19 @@ class BailianOpenAICompatibleProviderAdapter:
                     claim_diags_repair
                 )
             enriched_attempts: list[dict[str, Any]] = []
+            if module_key in {"structure_stages", "STRUCTURE_STAGES"}:
+                initial_kind, repair_kind = (
+                    "structure_stages_initial",
+                    "structure_stages_contract_repair",
+                )
+            else:
+                initial_kind, repair_kind = (
+                    "book_overview_initial",
+                    "book_overview_contract_repair",
+                )
             for a in attempts:
                 idx = int(a.get("attempt_index") or 0)
-                kind = (
-                    "book_overview_initial"
-                    if idx == 0
-                    else "book_overview_contract_repair"
-                )
+                kind = initial_kind if idx == 0 else repair_kind
                 diags = (
                     list(claim_diags_initial or [])
                     if idx == 0
@@ -837,17 +871,29 @@ class BailianOpenAICompatibleProviderAdapter:
             finish_reason_value=finish_reason,
         )
 
-        enforce_any = enforce_book_overview or enforce_book_overview_v2
+        enforce_any = (
+            enforce_book_overview
+            or enforce_book_overview_v2
+            or enforce_structure_stages_v2
+        )
         contract_diag: dict[str, Any] = {
             "output_contract_id": (
-                OUTPUT_CONTRACT_ID_V2
-                if enforce_book_overview_v2
-                else (OUTPUT_CONTRACT_ID if enforce_book_overview else None)
+                OUTPUT_CONTRACT_ID_SS_V2
+                if enforce_structure_stages_v2
+                else (
+                    OUTPUT_CONTRACT_ID_V2
+                    if enforce_book_overview_v2
+                    else (OUTPUT_CONTRACT_ID if enforce_book_overview else None)
+                )
             ),
             "output_contract_version": (
-                OUTPUT_CONTRACT_VERSION_V2
-                if enforce_book_overview_v2
-                else (OUTPUT_CONTRACT_VERSION if enforce_book_overview else None)
+                OUTPUT_CONTRACT_VERSION_SS_V2
+                if enforce_structure_stages_v2
+                else (
+                    OUTPUT_CONTRACT_VERSION_V2
+                    if enforce_book_overview_v2
+                    else (OUTPUT_CONTRACT_VERSION if enforce_book_overview else None)
+                )
             ),
             "provider_output_mode": response_format,
             "strict_schema_enabled": strict_schema_enabled,
@@ -856,14 +902,22 @@ class BailianOpenAICompatibleProviderAdapter:
                 book_overview_schema_fingerprint() if enforce_book_overview else None
             ),
             "schema_id": (
-                SCHEMA_ID_V2
-                if enforce_book_overview_v2
-                else (SCHEMA_ID if enforce_book_overview else None)
+                SCHEMA_ID_SS_V2
+                if enforce_structure_stages_v2
+                else (
+                    SCHEMA_ID_V2
+                    if enforce_book_overview_v2
+                    else (SCHEMA_ID if enforce_book_overview else None)
+                )
             ),
             "schema_version": (
-                OUTPUT_CONTRACT_VERSION_V2
-                if enforce_book_overview_v2
-                else (OUTPUT_CONTRACT_VERSION if enforce_book_overview else None)
+                OUTPUT_CONTRACT_VERSION_SS_V2
+                if enforce_structure_stages_v2
+                else (
+                    OUTPUT_CONTRACT_VERSION_V2
+                    if enforce_book_overview_v2
+                    else (OUTPUT_CONTRACT_VERSION if enforce_book_overview else None)
+                )
             ),
             "repair_allowed": bool(getattr(payload, "allow_schema_repair", True)),
             "repair_attempted": False,
@@ -871,11 +925,19 @@ class BailianOpenAICompatibleProviderAdapter:
             "repair_status": "NOT_NEEDED",
             "initial_contract_failure_code": None,
             "repair_policy_version": (
-                REPAIR_POLICY_VERSION_V2
-                if enforce_book_overview_v2
-                else (REPAIR_POLICY_VERSION if enforce_book_overview else None)
+                REPAIR_POLICY_VERSION_SS_V2
+                if enforce_structure_stages_v2
+                else (
+                    REPAIR_POLICY_VERSION_V2
+                    if enforce_book_overview_v2
+                    else (REPAIR_POLICY_VERSION if enforce_book_overview else None)
+                )
             ),
-            "evidence_contract_version": "v2" if enforce_book_overview_v2 else None,
+            "evidence_contract_version": (
+                "v2"
+                if enforce_book_overview_v2 or enforce_structure_stages_v2
+                else None
+            ),
         }
         schema_repair_count = 0
         validation_status = "schema_ok"
@@ -1079,6 +1141,156 @@ class BailianOpenAICompatibleProviderAdapter:
                 contract_diag["dto_schema_id"] = SCHEMA_ID_V2
                 contract_diag["schema_label_verified"] = True
                 validation_status = "schema_ok"
+        elif enforce_structure_stages_v2:
+            candidate = strip_provider_audit(structured)
+            caps_payload = dict(getattr(payload, "context_capabilities", None) or {})
+            validation = validate_structure_stages_provider_output_v2(
+                candidate,
+                catalog=getattr(payload, "citation_catalog", None),
+                allowed_citation_ids=tuple(
+                    getattr(payload, "allowed_citation_ids", ()) or ()
+                ),
+                capabilities=caps_payload,
+            )
+            contract_diag.update(dict(validation.diagnostics))
+            initial_claim_diags: list[dict[str, Any]] = []
+            repair_claim_diags: list[dict[str, Any]] = []
+            if not validation.ok:
+                contract_diag["initial_contract_failure_code"] = validation.failure_code
+                max_repairs = min(
+                    MAX_REPAIR_COUNT_SS_V2,
+                    int(
+                        getattr(payload, "max_repair_count", MAX_REPAIR_COUNT_SS_V2) or 0
+                    ),
+                )
+                allow_repair = bool(getattr(payload, "allow_schema_repair", True)) and max_repairs >= 1
+                if not allow_repair:
+                    self.last_raw_response_retained = False
+                    _publish_attempt_audit(
+                        ids=list(provider_request_ids),
+                        token_input=token_in,
+                        token_output=token_out,
+                        retry_count=0,
+                        http_status_value=http_status,
+                        host_value=host,
+                        finish_reason_value=finish_reason,
+                        failure_code=str(validation.failure_code or "contract_rejected"),
+                        output_contract=contract_diag,
+                        claim_diags_initial=initial_claim_diags,
+                    )
+                    raise private_engine_error(
+                        PrivateEngineErrorCode.PROVIDER_RESPONSE_INVALID,
+                        detail_code=str(validation.failure_code or "contract_rejected"),
+                    )
+                contract_diag["repair_attempted"] = True
+                contract_diag["repair_status"] = "ATTEMPTED"
+                repair_msg = ss_repair_instruction_text_v2(
+                    failure_code=str(validation.failure_code or "CONTRACT_FAILED"),
+                    observed_fields=validation.observed_top_level_fields,
+                    citation_ids=tuple(
+                        getattr(payload, "allowed_citation_ids", ()) or ()
+                    ),
+                    capabilities=caps_payload,
+                )
+                repair_messages = [dict(m) for m in messages] + [
+                    {"role": "user", "content": repair_msg}
+                ]
+                repair_response = _call_transport(repair_messages)
+                schema_repair_count = 1
+                contract_diag["repair_count"] = 1
+                repair_raw = getattr(repair_response, "text", None) or ""
+                repair_structured = _parse_structured_text(repair_raw)
+                self.last_raw_response_retained = False
+                del repair_raw
+                token_in += int(getattr(repair_response, "input_tokens", 0) or 0)
+                token_out += int(getattr(repair_response, "output_tokens", 0) or 0)
+                latency_ms += int(getattr(repair_response, "latency_ms", 0) or 0)
+                repair_rid = getattr(repair_response, "request_id", None)
+                if repair_rid:
+                    provider_request_ids.append(str(repair_rid))
+                http_status = getattr(repair_response, "http_status", None) or http_status
+                finish_reason = getattr(repair_response, "finish_reason", None) or finish_reason
+                host = getattr(repair_response, "host", None) or host
+                model_out = getattr(repair_response, "model", None) or model_out
+                if repair_structured is None:
+                    contract_diag["repair_status"] = "FAILED"
+                    contract_diag["repaired_contract_status"] = "FAILED"
+                    _publish_attempt_audit(
+                        ids=list(provider_request_ids),
+                        token_input=token_in,
+                        token_output=token_out,
+                        retry_count=1,
+                        http_status_value=http_status,
+                        host_value=host,
+                        finish_reason_value=finish_reason,
+                        cost_value=self._resolve_cost(token_in, token_out),
+                        failure_code=FAILURE_REPAIR_EXHAUSTED_SS_V2,
+                        output_contract=contract_diag,
+                        claim_diags_initial=initial_claim_diags,
+                        claim_diags_repair=[],
+                    )
+                    raise private_engine_error(
+                        PrivateEngineErrorCode.PROVIDER_RESPONSE_INVALID,
+                        detail_code=FAILURE_REPAIR_EXHAUSTED_SS_V2,
+                    )
+                repair_candidate = strip_provider_audit(repair_structured)
+                repair_validation = validate_structure_stages_provider_output_v2(
+                    repair_candidate,
+                    catalog=getattr(payload, "citation_catalog", None),
+                    allowed_citation_ids=tuple(
+                        getattr(payload, "allowed_citation_ids", ()) or ()
+                    ),
+                    capabilities=caps_payload,
+                )
+                contract_diag["repaired_contract_status"] = (
+                    "SUCCESS" if repair_validation.ok else "FAILED"
+                )
+                contract_diag.update(
+                    {
+                        k: v
+                        for k, v in dict(repair_validation.diagnostics).items()
+                        if k
+                        not in {
+                            "initial_contract_failure_code",
+                            "repair_attempted",
+                            "repair_count",
+                            "repair_status",
+                        }
+                    }
+                )
+                if not repair_validation.ok:
+                    contract_diag["repair_status"] = "FAILED"
+                    fail_code = str(
+                        repair_validation.failure_code or FAILURE_REPAIR_EXHAUSTED_SS_V2
+                    )
+                    _publish_attempt_audit(
+                        ids=list(provider_request_ids),
+                        token_input=token_in,
+                        token_output=token_out,
+                        retry_count=1,
+                        http_status_value=http_status,
+                        host_value=host,
+                        finish_reason_value=finish_reason,
+                        cost_value=self._resolve_cost(token_in, token_out),
+                        failure_code=fail_code,
+                        output_contract=contract_diag,
+                        claim_diags_initial=initial_claim_diags,
+                        claim_diags_repair=repair_claim_diags,
+                    )
+                    raise private_engine_error(
+                        PrivateEngineErrorCode.PROVIDER_RESPONSE_INVALID,
+                        detail_code=fail_code,
+                    )
+                structured = dict(repair_validation.typed_payload or {})
+                contract_diag["repair_status"] = "SUCCESS"
+                contract_diag["dto_schema_id"] = SCHEMA_ID_SS_V2
+                contract_diag["schema_label_verified"] = True
+                validation_status = "schema_ok_contract_repaired"
+            else:
+                structured = dict(validation.typed_payload or {})
+                contract_diag["dto_schema_id"] = SCHEMA_ID_SS_V2
+                contract_diag["schema_label_verified"] = True
+                validation_status = "schema_ok"
         elif enforce_book_overview:
             candidate = strip_provider_audit(structured)
             validation = validate_book_overview_provider_output(candidate)
@@ -1239,14 +1451,14 @@ class BailianOpenAICompatibleProviderAdapter:
                 or (contract_diag or {}).get("provider_attempts_claim_diagnostics_initial")
                 or []
             )
-            if enforce_book_overview_v2
+            if enforce_book_overview_v2 or enforce_structure_stages_v2
             else None,
             claim_diags_repair=list(
                 (contract_diag or {}).get("claim_contract_diagnostics_repair")
                 or (contract_diag or {}).get("provider_attempts_claim_diagnostics_repair")
                 or []
             )
-            if enforce_book_overview_v2 and schema_repair_count
+            if (enforce_book_overview_v2 or enforce_structure_stages_v2) and schema_repair_count
             else None,
         )
         structured_out = dict(structured)
@@ -1268,9 +1480,13 @@ class BailianOpenAICompatibleProviderAdapter:
             "retry_count": schema_repair_count,
             "schema_repair_count": schema_repair_count,
             "response_schema_ref": (
-                SCHEMA_REF_V2
-                if enforce_book_overview_v2
-                else (SCHEMA_REF if enforce_book_overview else request.response_schema_ref)
+                SCHEMA_REF_SS_V2
+                if enforce_structure_stages_v2
+                else (
+                    SCHEMA_REF_V2
+                    if enforce_book_overview_v2
+                    else (SCHEMA_REF if enforce_book_overview else request.response_schema_ref)
+                )
             ),
             "output_contract": contract_diag if enforce_any else None,
             "attempts": list((self.last_provider_attempt_audit or {}).get("attempts") or []),

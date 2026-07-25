@@ -707,7 +707,24 @@ class Phase1BCandidatePersistenceSink:
         marked["status"] = artifact_status
         marked["prompt_version"] = contract.prompt_pack_version
         marked["module_version"] = contract.module_version
+        marked["module_key"] = contract.module_key
         marked["subject_id"] = str(contract.run_stage_id or contract.module_key)
+        if contract.module_key == "structure_stages":
+            for key in (
+                "contract_version",
+                "evidence_contract_version",
+                "coverage_scope",
+                "stages",
+                "turning_points",
+                "limitations",
+                "context_capabilities",
+                "analysis_confidence",
+                "catalog_fingerprint",
+                "provider_backed",
+                "persistence_complete",
+            ):
+                if payload.get(key) is not None:
+                    marked[key] = payload[key]
         assert self.artifact_writer is not None
         return int(
             self.artifact_writer.write_artifact(
