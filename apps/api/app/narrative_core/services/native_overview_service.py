@@ -1,4 +1,4 @@
-﻿"""Native Overview production orchestrator (STEP 2.3-A2/A3/A4).
+"""Native Overview production orchestrator (STEP 2.3-A2/A3/A4).
 
 Resumable multi-window Snapshot → Window → Adapter → Materialize → Projection.
 Fixture execution is gated by ``is_pro_native_overview_enabled()``;
@@ -34,6 +34,7 @@ from app.narrative_core.contracts.pro_native_overview_flags import (
     FIXTURE_ENGINE_ID,
     FIXTURE_ENGINE_VERSION,
     FIXTURE_PROMPT_VERSION,
+    PRIVATE_NATIVE_OVERVIEW_ENGINE_ID,
     WALKING_SKELETON_USER_NOTICE,
     is_pro_native_overview_enabled,
 )
@@ -95,6 +96,7 @@ from app.narrative_core.services.native_overview_errors import (
     NATIVE_OVERVIEW_UNAVAILABLE_CODE,
     NativeOverviewError,
 )
+from app.narrative_core.services.native_overview_exception_map import map_engine_exception
 from app.narrative_core.services.native_overview_fixture_adapter import (
     compute_window_input_hash,
     empty_prior_state,
@@ -119,6 +121,8 @@ from app.services import entitlement
 
 OVERVIEW_PROJECTION_ARTIFACT_TYPE = "whole_book_overview_projection"
 CONTROL_ARTIFACT_TYPE = "whole_book_overview_control"
+PRIVATE_NATIVE_ENGINE_VERSION = "native-overview-1"
+PRIVATE_NATIVE_PROMPT_VERSION = "native-overview-window-v1"
 
 _PREPARING_STAGE_KEYS = frozenset(
     {
@@ -185,6 +189,27 @@ class NativeOverviewService:
         self._snapshots = BookSnapshotServiceImpl(session)
         self._accounting = OverviewProviderAccounting(session)
         self._materializer = NativeOverviewMaterializer(session)
+
+    def _engine_provider_name(self) -> str:
+        return self._engine_id
+
+    def _engine_version_label(self) -> str:
+        adapter = self._adapter
+        version = getattr(adapter, "engine_version", None) if adapter is not None else None
+        if version:
+            return str(version)
+        if self._engine_id == PRIVATE_NATIVE_OVERVIEW_ENGINE_ID:
+            return PRIVATE_NATIVE_ENGINE_VERSION
+        return FIXTURE_ENGINE_VERSION
+
+    def _prompt_version_label(self) -> str:
+        adapter = self._adapter
+        version = getattr(adapter, "prompt_version", None) if adapter is not None else None
+        if version:
+            return str(version)
+        if self._engine_id == PRIVATE_NATIVE_OVERVIEW_ENGINE_ID:
+            return PRIVATE_NATIVE_PROMPT_VERSION
+        return FIXTURE_PROMPT_VERSION
 
     def _require_adapter(self) -> WholeBookOverviewEngineAdapter:
         if self._engine_load_error is not None:
@@ -357,12 +382,12 @@ class NativeOverviewService:
             task_type="whole_book_overview",
             subject_type="book",
             subject_id=str(book_id),
-            provider=FIXTURE_ENGINE_ID,
-            model=FIXTURE_ENGINE_VERSION,
-            prompt_version=FIXTURE_PROMPT_VERSION,
+            provider=self._engine_provider_name(),
+            model=self._engine_version_label(),
+            prompt_version=self._prompt_version_label(),
             schema_version=CONTRACT_VERSION,
             input_hash=snapshot.content_hash or "",
-            prompt_hash=FIXTURE_PROMPT_VERSION,
+            prompt_hash=self._prompt_version_label(),
             status=RunStatus.PENDING.value,
             progress_current=0,
             progress_total=1,
@@ -461,12 +486,7 @@ class NativeOverviewService:
             self._fail_run(run, exc)
             raise
         except Exception as exc:  # noqa: BLE001
-            wrapped = NativeOverviewError(
-                WholeBookOverviewErrorCode.PRIVATE_ENGINE_UNAVAILABLE.value,
-                f"Fixture adapter / execution failed: {exc}",
-                details={"cause": type(exc).__name__},
-                run_id=str(run.id),
-            )
+            wrapped = map_engine_exception(exc, run_id=str(run.id))
             self._fail_run(run, wrapped)
             raise wrapped from exc
 
@@ -839,22 +859,21 @@ class NativeOverviewService:
                 )
                 raise
             except Exception as exc:  # noqa: BLE001
-                validate_window_transition(window.status, WindowStatus.FAILED)
-                window.status = WindowStatus.FAILED.value
-                window.error_code = WholeBookOverviewErrorCode.PRIVATE_ENGINE_UNAVAILABLE.value
-                window.error_detail = str(exc)
-                window.completed_at = utc_now()
-                self._record_attempt_safe(
-                    run, window, prompt=prompt, status="failed", error_message=str(exc)
-                )
-                raise NativeOverviewError(
-                    WholeBookOverviewErrorCode.PRIVATE_ENGINE_UNAVAILABLE.value,
-                    f"Fixture adapter / window execution failed: {exc}",
+                wrapped = map_engine_exception(
+                    exc,
                     run_id=str(run.id),
                     stage_key=stage.stage_key,
                     window_index=window.window_index,
-                    details={"cause": type(exc).__name__},
-                ) from exc
+                )
+                validate_window_transition(window.status, WindowStatus.FAILED)
+                window.status = WindowStatus.FAILED.value
+                window.error_code = wrapped.code
+                window.error_detail = wrapped.message
+                window.completed_at = utc_now()
+                self._record_attempt_safe(
+                    run, window, prompt=prompt, status="failed", error_message=wrapped.message
+                )
+                raise wrapped from exc
 
             validate_window_transition(window.status, WindowStatus.COMPLETED)
             window.status = WindowStatus.COMPLETED.value
@@ -1022,8 +1041,8 @@ class NativeOverviewService:
             run_id=str(run.id),
             book_id=str(run.book_id),
             snapshot_id=str(run.book_snapshot_id),
-            engine_version=FIXTURE_ENGINE_VERSION,
-            prompt_version=FIXTURE_PROMPT_VERSION,
+            engine_version=self._engine_version_label(),
+            prompt_version=self._prompt_version_label(),
             entities=entities,
             assets=assets,
             evidence=evidence,
@@ -1041,11 +1060,8 @@ class NativeOverviewService:
         except NativeOverviewError:
             raise
         except Exception as exc:  # noqa: BLE001
-            raise NativeOverviewError(
-                WholeBookOverviewErrorCode.PRIVATE_ENGINE_UNAVAILABLE.value,
-                run_id=str(run.id),
-                stage_key=stage.stage_key,
-                details={"cause": type(exc).__name__},
+            raise map_engine_exception(
+                exc, run_id=str(run.id), stage_key=stage.stage_key
             ) from exc
 
         overview_body = OverviewBodyDTO(
@@ -1105,10 +1121,15 @@ class NativeOverviewService:
             "overview": overview_body.model_dump(mode="json"),
             "coverage": coverage.model_dump(mode="json"),
             "evidence_index": [e.model_dump(mode="json") for e in evidence_index],
-            "warnings": list(projection.warnings) or [FIXTURE_DEVELOPMENT_WARNING],
-            "engine_id": FIXTURE_ENGINE_ID,
-            "engine_version": FIXTURE_ENGINE_VERSION,
-            "prompt_version": FIXTURE_PROMPT_VERSION,
+            "warnings": list(projection.warnings)
+            or (
+                [FIXTURE_DEVELOPMENT_WARNING]
+                if self._engine_id == FIXTURE_ENGINE_ID
+                else []
+            ),
+            "engine_id": self._engine_provider_name(),
+            "engine_version": self._engine_version_label(),
+            "prompt_version": self._prompt_version_label(),
             "generated_at": generated_at.isoformat(),
             "contract_version": CONTRACT_VERSION,
         }
@@ -1118,7 +1139,7 @@ class NativeOverviewService:
             subject_type="book",
             subject_id=str(run.book_id),
             schema_version=CONTRACT_VERSION,
-            prompt_version=FIXTURE_PROMPT_VERSION,
+            prompt_version=self._prompt_version_label(),
             payload_json=json.dumps(payload, ensure_ascii=False),
             confidence=0.85,
             validation_status="valid",
@@ -1133,12 +1154,12 @@ class NativeOverviewService:
         windows = self._list_windows(int(run.id))
         stage.checkpoint_json = json.dumps(
             {
-                "engine_id": FIXTURE_ENGINE_ID,
-                "engine_version": FIXTURE_ENGINE_VERSION,
-                "prompt_version": FIXTURE_PROMPT_VERSION,
+                "engine_id": self._engine_provider_name(),
+                "engine_version": self._engine_version_label(),
+                "prompt_version": self._prompt_version_label(),
                 "fixture": self._engine_id == FIXTURE_ENGINE_ID,
-                "walking_skeleton": True,
-                "production_ready": False,
+                "walking_skeleton": self._engine_id == FIXTURE_ENGINE_ID,
+                "production_ready": self._engine_id == PRIVATE_NATIVE_OVERVIEW_ENGINE_ID,
                 "windows_total": len(windows),
             },
             ensure_ascii=False,
@@ -1395,8 +1416,8 @@ class NativeOverviewService:
                 book_id=str(run.book_id),
                 snapshot_id=str(run.book_snapshot_id),
                 mode=WholeBookAnalysisMode.NATIVE,
-                engine_version=FIXTURE_ENGINE_VERSION,
-                prompt_version=FIXTURE_PROMPT_VERSION,
+                engine_version=self._engine_version_label(),
+                prompt_version=self._prompt_version_label(),
             ),
             window=WindowSlice(
                 window_id=f"w-{window.window_index}",
@@ -1475,6 +1496,11 @@ class NativeOverviewService:
         if self._transport is None and status == "succeeded":
             return
         try:
+            already_invoked = (
+                self._transport is not None
+                and self._engine_id == PRIVATE_NATIVE_OVERVIEW_ENGINE_ID
+                and status == "succeeded"
+            )
             self._accounting.record_window_attempt(
                 run,
                 window,
@@ -1482,6 +1508,7 @@ class NativeOverviewService:
                 prompt=prompt,
                 status=status,
                 error_message=error_message,
+                transport_already_invoked=already_invoked,
             )
         except Exception:  # noqa: BLE001
             pass
@@ -1655,7 +1682,7 @@ class NativeOverviewService:
                 subject_type="book",
                 subject_id=str(run.book_id),
                 schema_version=CONTRACT_VERSION,
-                prompt_version=FIXTURE_PROMPT_VERSION,
+                prompt_version=self._prompt_version_label(),
                 payload_json=json.dumps(payload, ensure_ascii=False),
                 confidence=1.0,
                 validation_status="valid",
@@ -1817,9 +1844,12 @@ class NativeOverviewService:
             message=message,
         )
 
-    @staticmethod
-    def _config_fingerprint() -> str:
-        raw = f"{FIXTURE_ENGINE_ID}|{FIXTURE_ENGINE_VERSION}|{FIXTURE_PROMPT_VERSION}"
+    def _config_fingerprint(self) -> str:
+        raw = (
+            f"{self._engine_provider_name()}|"
+            f"{self._engine_version_label()}|"
+            f"{self._prompt_version_label()}"
+        )
         return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
