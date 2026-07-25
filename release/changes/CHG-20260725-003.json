@@ -29,16 +29,33 @@
       "message": "docs: attach STEP 1.2 governance commit to CHG-20260725-003",
       "primary": false,
       "multi_change_reason": "docs attach of governance register commit"
+    },
+    {
+      "sha": "b4b29f2a85a3565b670a7ee46cdf7afd99def039",
+      "message": "docs(architecture): freeze StoryLens whole-book Pro architecture",
+      "primary": true,
+      "multi_change_reason": "STEP 1.3 architecture freeze docs and ADRs"
     }
   ],
   "modules": [
     "apps/api/capability_registry",
     "apps/desktop/wholeBookInsights",
-    "release/changes"
+    "release/changes",
+    "docs/architecture",
+    "docs/architecture/adr"
   ],
-  "files": [],
+  "files": [
+    "docs/architecture/storylens-whole-book-architecture.md",
+    "docs/architecture/storylens-public-private-boundary.md",
+    "docs/architecture/storylens-step-roadmap.md",
+    "docs/architecture/adr/ADR-001-single-business-database.md",
+    "docs/architecture/adr/ADR-002-whole-book-native-source-of-truth.md",
+    "docs/architecture/adr/ADR-003-unified-narrative-assets.md",
+    "docs/architecture/adr/ADR-004-whole-book-runtime-and-analysis-passes.md",
+    "docs/architecture/adr/ADR-005-long-text-index-strategy.md"
+  ],
   "user_summary": "建立 StoryLens 首个基于完整小说原文的 Pro 原生整书功能，并在正式开发前纠正现有章节聚合洞察的产品定位。",
-  "technical_summary": "STEP 1.2 product-semantics precondition COMPLETE for Integration. active_substep=STEP 1.2 done; next STEP 1.3 architecture freeze. Public Base was 5515b2a; Private Base 727f886 unchanged. Free 1.0.5 zero-break. pro_whole_book_insights repositioned as Chapter Asset Aggregation Insights / 章节聚合洞察 (not whole_book_native). STEP 2 still owns native overview.",
+  "technical_summary": "STEP 1.2 product-semantics COMPLETE. STEP 1.3 architecture freeze COMPLETE. active_substep=STEP 1.3 done; next=STEP 2.0 scope lock (do not auto-enter). Public Base at freeze docs: see architecture commit. Private Base unchanged 727f886. Free 1.0.5 zero-break. Architecture docs: docs/architecture/storylens-whole-book-architecture.md, storylens-public-private-boundary.md, storylens-step-roadmap.md, docs/architecture/adr/ADR-001..005. Decisions: single SQLite business DB; Public owns persistence; Private owns algorithms/candidates only; original text+Snapshot first SoT; whole_book_native/enhanced; 7-layer target architecture; unified Entity/Asset/Relation/Evidence; candidate lifecycle; production call chain; global narrative state principles; 5-Pass maps to 10-stage (do not delete stages); long-term SQLite+FTS5 (not in STEP 2); 1.1.0 = Native Overview only. pro_whole_book_insights remains Chapter Asset Aggregation Insights. Status remains implemented (not tested/verified).",
   "acceptance_criteria": [],
   "tests": [
     "apps/api/tests/test_pro_whole_book_insights_gate.py (7 passed)",
@@ -46,13 +63,14 @@
     "apps/desktop LibraryPage+library_book_delete_local (18 passed)"
   ],
   "verification_evidence": [
-    "STEP 1.2 Integration: cherry-pick A 4e4561c + C 2f6ca24; Agent D PASS both; capability key/API/route unchanged; VERSION=1.0.5; no push"
+    "STEP 1.2 Integration: cherry-pick A 4e4561c + C 2f6ca24; Agent D PASS both; capability key/API/route unchanged; VERSION=1.0.5; no push",
+    "STEP 1.3 Architecture Review PASS (no P0); docs path existence OK; git diff --check OK; CHG-003 remains implemented; VERSION=1.0.5; no push"
   ],
   "data_compatibility": {
     "database_changed": false,
     "migration_required": false,
     "user_data_compatible": true,
-    "notes": "STEP 1.2 only renames/clarifies product semantics; API path, capability key, DTO, DB unchanged. Native overview is STEP 2."
+    "notes": "Architecture freeze only. No code/DTO/Migration/API/VERSION/Push. Native Overview is STEP 2. FTS5 deferred to STEP 3.4. Structure WIP not merged."
   },
   "release_impact": {
     "requires_reanalysis": false,
@@ -63,5 +81,5 @@
   "blocker_level": "P0",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-25T13:31:37Z",
-  "updated_at": "2026-07-25T13:42:45Z"
+  "updated_at": "2026-07-25T14:05:18Z"
 }
