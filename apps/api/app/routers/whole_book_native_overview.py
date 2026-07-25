@@ -1,7 +1,7 @@
-"""Native Overview walking-skeleton HTTP API (STEP 2.2-A).
+"""Native Overview walking-skeleton HTTP API (STEP 2.3-A2).
 
-Create / Get Run / Get Overview. Preflight stays on whole_book_preflight router
-(extended to return contract PreflightResponse for book_overview).
+Create / Get Run / Get Overview / Retry / Resume.
+Preflight stays on whole_book_preflight router.
 
 Gated by ``is_pro_native_overview_enabled()``. Does not flip
 WHOLE_BOOK_RUNS_ENDPOINT_DISABLED.
@@ -16,7 +16,11 @@ from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.narrative_core.contracts.whole_book_overview_v1 import CreateRunRequest
+from app.narrative_core.contracts.whole_book_overview_v1 import (
+    CreateRunRequest,
+    ResumeRunRequest,
+    RetryRunRequest,
+)
 from app.narrative_core.services.native_overview_service import (
     NativeOverviewError,
     NativeOverviewService,
@@ -89,6 +93,54 @@ def get_native_overview(
 ) -> dict[str, Any]:
     try:
         return service.get_overview(int(run_id)).model_dump(mode="json")
+    except NativeOverviewError as exc:
+        _raise(exc)
+        raise  # pragma: no cover
+
+
+@router.post("/whole-book-runs/{run_id}/retry")
+def retry_native_overview_run(
+    run_id: int,
+    body: dict[str, Any] | None = None,
+    service: NativeOverviewService = Depends(_service),
+) -> dict[str, Any]:
+    try:
+        request = RetryRunRequest.model_validate(body or {})
+    except ValidationError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error_code": "WHOLE_BOOK_REQUEST_INVALID",
+                "message": "invalid retry run request",
+                "details": {"errors": exc.errors()},
+            },
+        ) from exc
+    try:
+        return service.retry_run(int(run_id), request).model_dump(mode="json")
+    except NativeOverviewError as exc:
+        _raise(exc)
+        raise  # pragma: no cover
+
+
+@router.post("/whole-book-runs/{run_id}/resume")
+def resume_native_overview_run(
+    run_id: int,
+    body: dict[str, Any] | None = None,
+    service: NativeOverviewService = Depends(_service),
+) -> dict[str, Any]:
+    try:
+        request = ResumeRunRequest.model_validate(body or {})
+    except ValidationError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error_code": "WHOLE_BOOK_REQUEST_INVALID",
+                "message": "invalid resume run request",
+                "details": {"errors": exc.errors()},
+            },
+        ) from exc
+    try:
+        return service.resume_run(int(run_id), request).model_dump(mode="json")
     except NativeOverviewError as exc:
         _raise(exc)
         raise  # pragma: no cover

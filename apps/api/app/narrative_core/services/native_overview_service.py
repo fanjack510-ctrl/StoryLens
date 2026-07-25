@@ -1,8 +1,8 @@
-"""Native Overview walking-skeleton orchestrator (STEP 2.2-A).
+﻿"""Native Overview production orchestrator (STEP 2.3-A2/A3/A4).
 
-Service boundary only — routers stay thin. Fixture execution is gated by
-``is_pro_native_overview_enabled()``; WHOLE_BOOK_RUNS_ENDPOINT_DISABLED stays True
-for the legacy whole-book analysis create path.
+Resumable multi-window Snapshot → Window → Adapter → Materialize → Projection.
+Fixture execution is gated by ``is_pro_native_overview_enabled()``;
+``WHOLE_BOOK_RUNS_ENDPOINT_DISABLED`` stays True for the legacy create path.
 """
 
 from __future__ import annotations
@@ -37,11 +37,7 @@ from app.narrative_core.contracts.pro_native_overview_flags import (
     WALKING_SKELETON_USER_NOTICE,
     is_pro_native_overview_enabled,
 )
-from app.narrative_core.contracts.whole_book_overview_errors import (
-    WHOLE_BOOK_OVERVIEW_ERROR_META,
-    WholeBookOverviewErrorCode,
-    overview_error_payload,
-)
+from app.narrative_core.contracts.whole_book_overview_errors import WholeBookOverviewErrorCode
 from app.narrative_core.contracts.whole_book_overview_state_machine import (
     OVERVIEW_PRODUCTION_STAGE_ORDER,
     validate_overview_run_transition,
@@ -50,6 +46,7 @@ from app.narrative_core.contracts.whole_book_overview_state_machine import (
 )
 from app.narrative_core.contracts.whole_book_overview_v1 import (
     CONTRACT_VERSION,
+    ChapterRef,
     CoverageDTO,
     CreateRunRequest,
     CreateRunResponse,
@@ -58,26 +55,28 @@ from app.narrative_core.contracts.whole_book_overview_v1 import (
     OverviewApiResponse,
     OverviewBodyDTO,
     OverviewBookSummary,
+    OverviewRunRef,
     OverviewRunSummary,
     OverviewSnapshotSummary,
     PreflightBlockingError,
     PreflightResponse,
     PriorStateV1,
     ProgressDTO,
+    ResumeRunRequest,
+    RetryResumeRunResponse,
+    RetryRunRequest,
     RunActionsDTO,
     RunStatusResponse,
+    StateDeltaV1,
     WholeBookOverviewProjectionCandidateV1,
     WholeBookOverviewSynthesisInputV1,
     WholeBookOverviewWindowInputV1,
     WholeBookOverviewWindowResultV1,
-    OverviewRunRef,
-    ChapterRef,
     WindowParagraph,
     WindowSlice,
 )
 from app.narrative_core.enums import (
     AnalysisType,
-    OriginType,
     OverviewProductionStageKey,
     RunStatus,
     StageStatus,
@@ -85,11 +84,27 @@ from app.narrative_core.enums import (
     WholeBookModuleKey,
     WindowStatus,
 )
-from app.narrative_core.services.asset_evidence_service import NarrativeAssetEvidenceService
-from app.narrative_core.services.asset_service import NarrativeAssetService
-from app.narrative_core.services.entity_service import NarrativeEntityServiceImpl
+from app.narrative_core.services.native_overview_context_windows import (
+    OverviewWindowBudget,
+    SnapshotParagraphRef,
+    assert_full_coverage,
+    build_overview_windows,
+    estimate_window_count,
+)
+from app.narrative_core.services.native_overview_errors import (
+    NATIVE_OVERVIEW_UNAVAILABLE_CODE,
+    NativeOverviewError,
+)
 from app.narrative_core.services.native_overview_fixture_adapter import (
+    compute_window_input_hash,
     empty_prior_state,
+)
+from app.narrative_core.services.native_overview_materializer import (
+    NativeOverviewMaterializer,
+    merge_prior_with_delta,
+)
+from app.narrative_core.services.native_overview_provider_accounting import (
+    OverviewProviderAccounting,
 )
 from app.narrative_core.services.snapshot_service import BookSnapshotServiceImpl
 from app.narrative_core.services.whole_book_overview_engine_loader import (
@@ -97,64 +112,29 @@ from app.narrative_core.services.whole_book_overview_engine_loader import (
     load_overview_engine,
 )
 from app.narrative_core.services.whole_book_overview_engine_protocol import (
+    ProviderTransport,
     WholeBookOverviewEngineAdapter,
 )
 from app.services import entitlement
 
 OVERVIEW_PROJECTION_ARTIFACT_TYPE = "whole_book_overview_projection"
-NATIVE_OVERVIEW_UNAVAILABLE_CODE = "PRO_NATIVE_OVERVIEW_UNAVAILABLE"
 
+_PREPARING_STAGE_KEYS = frozenset(
+    {
+        OverviewProductionStageKey.SNAPSHOT_PREFLIGHT,
+        OverviewProductionStageKey.BUILD_CONTEXT_WINDOWS,
+    }
+)
 
-class NativeOverviewError(Exception):
-    def __init__(
-        self,
-        code: str,
-        message: str | None = None,
-        *,
-        http_status: int | None = None,
-        details: dict[str, Any] | None = None,
-        run_id: str | None = None,
-        stage_key: str | None = None,
-        window_index: int | None = None,
-    ) -> None:
-        self.code = code
-        self.details = details or {}
-        self.run_id = run_id
-        self.stage_key = stage_key
-        self.window_index = window_index
-        try:
-            meta = WHOLE_BOOK_OVERVIEW_ERROR_META[WholeBookOverviewErrorCode(code)]
-            self.http_status = http_status if http_status is not None else meta["http_status"]
-            self.message = message or meta["user_message"]
-            self.retryable = meta["retryable"]
-        except ValueError:
-            self.http_status = http_status if http_status is not None else 503
-            self.message = message or "原生全书概览不可用。"
-            self.retryable = False
-        super().__init__(self.message)
-
-    def as_envelope(self) -> dict[str, Any]:
-        try:
-            return overview_error_payload(
-                self.code,
-                message=self.message,
-                details=self.details,
-                run_id=self.run_id,
-                stage_key=self.stage_key,
-                window_index=self.window_index,
-            )
-        except ValueError:
-            return {
-                "error": {
-                    "code": self.code,
-                    "message": self.message,
-                    "retryable": self.retryable,
-                    "details": self.details,
-                    "run_id": self.run_id,
-                    "stage_key": self.stage_key,
-                    "window_index": self.window_index,
-                }
-            }
+# Re-export for routers / tests.
+__all__ = [
+    "NATIVE_OVERVIEW_UNAVAILABLE_CODE",
+    "NativeOverviewError",
+    "NativeOverviewService",
+    "OVERVIEW_PROJECTION_ARTIFACT_TYPE",
+    "require_native_overview_enabled",
+    "require_pro_license",
+]
 
 
 def require_native_overview_enabled() -> None:
@@ -177,7 +157,7 @@ def require_pro_license(session: Session) -> None:
 
 
 class NativeOverviewService:
-    """Orchestrates Snapshot → Window → Fixture Adapter → Materialize → Projection."""
+    """Orchestrates Snapshot → Windows → Adapter → Materialize → Projection."""
 
     def __init__(
         self,
@@ -185,9 +165,13 @@ class NativeOverviewService:
         *,
         adapter: WholeBookOverviewEngineAdapter | None = None,
         engine_id: str = FIXTURE_ENGINE_ID,
+        transport: ProviderTransport | None = None,
+        window_budget: OverviewWindowBudget | None = None,
     ) -> None:
         self._session = session
         self._engine_id = engine_id
+        self._transport = transport
+        self._window_budget = window_budget
         self._engine_load_error: EngineLoadError | None = None
         if adapter is not None:
             self._adapter: WholeBookOverviewEngineAdapter | None = adapter
@@ -198,9 +182,8 @@ class NativeOverviewService:
                 self._adapter = None
                 self._engine_load_error = exc
         self._snapshots = BookSnapshotServiceImpl(session)
-        self._entities = NarrativeEntityServiceImpl(session)
-        self._assets = NarrativeAssetService(session)
-        self._evidence = NarrativeAssetEvidenceService(session)
+        self._accounting = OverviewProviderAccounting(session)
+        self._materializer = NativeOverviewMaterializer(session)
 
     def _require_adapter(self) -> WholeBookOverviewEngineAdapter:
         if self._engine_load_error is not None:
@@ -295,11 +278,15 @@ class NativeOverviewService:
                 )
             )
 
-        run_enabled = flag_on and license_allowed and paragraph_count > 0 and not blocking
-        # When only flag/license/content errors exist, still disable create.
         run_enabled = bool(flag_on and license_allowed and paragraph_count > 0 and character_count > 0)
         if blocking:
             run_enabled = False
+
+        estimated_windows = estimate_window_count(
+            paragraph_count,
+            character_count=character_count,
+            budget=self._window_budget,
+        )
 
         return PreflightResponse(
             book_id=str(book.id),
@@ -310,7 +297,7 @@ class NativeOverviewService:
             provider_configured=False,
             license_allowed=license_allowed,
             mode=WholeBookAnalysisMode.NATIVE,
-            estimated_windows=1 if paragraph_count > 0 else 0,
+            estimated_windows=estimated_windows,
             estimated_tokens=0,
             estimated_cost=0.0,
             currency="CNY",
@@ -404,11 +391,9 @@ class NativeOverviewService:
             )
         self._session.flush()
 
-        # Execute synchronously for STEP 2.2 walking skeleton.
         try:
             self.execute_run(int(run.id))
         except NativeOverviewError:
-            # Persist failed run/stages before the request session may roll back.
             self._session.commit()
             raise
         self._session.commit()
@@ -421,24 +406,39 @@ class NativeOverviewService:
             raise NativeOverviewError(WholeBookOverviewErrorCode.RUN_NOT_FOUND.value)
 
         try:
-            self._transition_run(run, RunStatus.PREPARING)
+            if run.status == RunStatus.PENDING.value:
+                self._transition_run(run, RunStatus.PREPARING)
+
             self._run_stage(run, OverviewProductionStageKey.SNAPSHOT_PREFLIGHT, self._stage_snapshot)
-            self._transition_run(run, RunStatus.ANALYZING)
-            window = self._run_stage(
-                run, OverviewProductionStageKey.BUILD_CONTEXT_WINDOWS, self._stage_build_window
+            self._run_stage(
+                run,
+                OverviewProductionStageKey.BUILD_CONTEXT_WINDOWS,
+                self._stage_build_windows,
             )
-            window_result = self._run_stage(
+
+            if run.status == RunStatus.PREPARING.value:
+                self._transition_run(run, RunStatus.ANALYZING)
+
+            self._run_stage(
                 run,
                 OverviewProductionStageKey.EXTRACT_OVERVIEW_FACTS,
-                lambda r, s: self._stage_extract(r, s, window),
+                self._stage_extract_windows,
             )
-            self._transition_run(run, RunStatus.MATERIALIZING)
+
+            if run.status == RunStatus.ANALYZING.value:
+                self._transition_run(run, RunStatus.MATERIALIZING)
+
             materialization = self._run_stage(
                 run,
                 OverviewProductionStageKey.MATERIALIZE_ASSETS,
-                lambda r, s: self._stage_materialize(r, s, window_result),
+                self._stage_materialize_windows,
             )
-            self._transition_run(run, RunStatus.SYNTHESIZING)
+            if materialization is None:
+                materialization = self._aggregate_materialization(run)
+
+            if run.status == RunStatus.MATERIALIZING.value:
+                self._transition_run(run, RunStatus.SYNTHESIZING)
+
             self._run_stage(
                 run,
                 OverviewProductionStageKey.GENERATE_OVERVIEW_PROJECTION,
@@ -446,8 +446,11 @@ class NativeOverviewService:
             )
             self._run_stage(run, OverviewProductionStageKey.FINALIZE, self._stage_finalize)
             self._transition_run(run, RunStatus.COMPLETED)
+            windows = self._list_windows(int(run.id))
+            completed = sum(1 for w in windows if w.status == WindowStatus.COMPLETED.value)
             run.completed_at = utc_now()
-            run.progress_current = 1
+            run.progress_current = completed
+            run.progress_total = max(len(windows), 1)
             run.error_code = None
             run.error_message = None
             run.retryable = False
@@ -466,6 +469,65 @@ class NativeOverviewService:
             self._fail_run(run, wrapped)
             raise wrapped from exc
 
+    def retry_run(self, run_id: int, request: RetryRunRequest) -> RetryResumeRunResponse:
+        require_native_overview_enabled()
+        run = self._require_overview_run(run_id)
+        if run.status == RunStatus.COMPLETED.value:
+            raise NativeOverviewError(
+                WholeBookOverviewErrorCode.RUN_ALREADY_COMPLETED.value,
+                run_id=str(run.id),
+            )
+        if run.status != RunStatus.FAILED.value:
+            raise NativeOverviewError(
+                WholeBookOverviewErrorCode.RUN_NOT_RETRYABLE.value,
+                run_id=str(run.id),
+                details={"status": run.status},
+            )
+
+        del request  # client_request_id reserved for idempotency; landing uses checkpoints
+        landing = self._retry_landing_status(run)
+        run.error_code = None
+        run.error_message = None
+        run.retryable = False
+        run.completed_at = None
+        self._clear_failed_stage_errors(run)
+        self._transition_run(run, landing)
+
+        try:
+            self.execute_run(int(run.id))
+        except NativeOverviewError:
+            self._session.commit()
+            raise
+        self._session.commit()
+        self._session.refresh(run)
+        return self._to_retry_resume_response(
+            run,
+            message="Retry accepted; completed windows will be skipped.",
+        )
+
+    def resume_run(self, run_id: int, request: ResumeRunRequest) -> RetryResumeRunResponse:
+        require_native_overview_enabled()
+        run = self._require_overview_run(run_id)
+        if run.status != RunStatus.PAUSED.value:
+            raise NativeOverviewError(
+                WholeBookOverviewErrorCode.RUN_NOT_RESUMABLE.value,
+                run_id=str(run.id),
+                details={"status": run.status},
+            )
+        del request
+        self._transition_run(run, RunStatus.ANALYZING)
+        try:
+            self.execute_run(int(run.id))
+        except NativeOverviewError:
+            self._session.commit()
+            raise
+        self._session.commit()
+        self._session.refresh(run)
+        return self._to_retry_resume_response(
+            run,
+            message="Resume accepted; continuing from paused checkpoint.",
+        )
+
     # ------------------------------------------------------------------
     # Read APIs
     # ------------------------------------------------------------------
@@ -473,18 +535,15 @@ class NativeOverviewService:
     def get_run(self, run_id: int) -> RunStatusResponse:
         require_native_overview_enabled()
         run = self._require_overview_run(run_id)
-        windows = list(
-            self._session.scalars(
-                select(WholeBookRunWindow)
-                .where(WholeBookRunWindow.run_id == run.id)
-                .order_by(WholeBookRunWindow.window_index)
-            )
-        )
+        windows = self._list_windows(int(run.id))
         completed = sum(1 for w in windows if w.status == WindowStatus.COMPLETED.value)
         total = len(windows)
-        percent = 100.0 if total and completed == total and run.status == RunStatus.COMPLETED.value else (
-            (completed / total * 100.0) if total else 0.0
+        percent = (
+            100.0
+            if total and completed == total and run.status == RunStatus.COMPLETED.value
+            else ((completed / total * 100.0) if total else 0.0)
         )
+        usage = self._accounting.run_usage_totals(int(run.id))
         current_stage = self._current_stage_key(run)
         error_code = None
         if run.error_code:
@@ -492,6 +551,8 @@ class NativeOverviewService:
                 error_code = WholeBookOverviewErrorCode(run.error_code)
             except ValueError:
                 error_code = None
+        can_resume = run.status == RunStatus.PAUSED.value
+        can_retry = bool(run.retryable) and run.status == RunStatus.FAILED.value
         return RunStatusResponse(
             run_id=str(run.id),
             book_id=str(run.book_id),
@@ -504,22 +565,22 @@ class NativeOverviewService:
                 completed_windows=completed,
                 total_windows=total,
                 percent=percent,
-                current_window_index=0 if windows else None,
+                current_window_index=self._current_window_index(windows),
                 failed_window_index=next(
                     (w.window_index for w in windows if w.status == WindowStatus.FAILED.value),
                     None,
                 ),
             ),
             estimated_tokens=0,
-            actual_tokens=0,
+            actual_tokens=int(usage.get("actual_tokens") or 0),
             estimated_cost=0.0,
-            actual_cost=0.0,
+            actual_cost=float(usage.get("actual_cost") or 0.0),
             provider=run.provider,
             model=run.model,
             error=run.error_message,
             error_code=error_code,
             retryable=bool(run.retryable),
-            actions=RunActionsDTO(can_retry=bool(run.retryable), can_resume=False),
+            actions=RunActionsDTO(can_retry=can_retry, can_resume=can_resume),
             created_at=run.created_at,
             started_at=run.started_at,
             completed_at=run.completed_at,
@@ -601,18 +662,18 @@ class NativeOverviewService:
         )
         return snapshot
 
-    def _stage_build_window(
+    def _stage_build_windows(
         self, run: AnalysisRun, stage: AnalysisRunStage
-    ) -> WholeBookRunWindow:
+    ) -> list[WholeBookRunWindow]:
         assert run.book_snapshot_id is not None
-        paragraphs = list(
+        snap_paragraphs = list(
             self._session.scalars(
                 select(BookSnapshotParagraph)
                 .where(BookSnapshotParagraph.snapshot_id == int(run.book_snapshot_id))
                 .order_by(BookSnapshotParagraph.paragraph_order)
             )
         )
-        if not paragraphs:
+        if not snap_paragraphs:
             raise NativeOverviewError(WholeBookOverviewErrorCode.BOOK_CONTENT_EMPTY.value)
 
         chapters = {
@@ -623,290 +684,278 @@ class NativeOverviewService:
                 )
             )
         }
-        first = paragraphs[0]
-        last = paragraphs[-1]
-        start_chapter = chapters.get(first.snapshot_chapter_id)
-        end_chapter = chapters.get(last.snapshot_chapter_id)
-        source_ids = [p.stable_paragraph_id or p.source_paragraph_id or str(p.id) for p in paragraphs]
-        # Build temporary WindowParagraph list for hash (must match Private rule).
-        from app.narrative_core.contracts.whole_book_overview_v1 import WindowParagraph as WP
-
-        hash_paras: list[WP] = []
-        for p in paragraphs:
-            ch = chapters.get(p.snapshot_chapter_id)
-            chapter_id = str(
-                ch.source_chapter_id if ch and ch.source_chapter_id else p.snapshot_chapter_id
-            )
-            text = self._snapshots.get_snapshot_paragraph_text(p.id)
-            hash_paras.append(
-                WP(
-                    paragraph_id=p.stable_paragraph_id or p.source_paragraph_id or str(p.id),
-                    chapter_id=chapter_id,
-                    paragraph_index=int(p.paragraph_order),
-                    text=text,
-                )
-            )
-        from app.narrative_core.services.native_overview_fixture_adapter import (
-            compute_window_input_hash,
-        )
-
-        input_hash = compute_window_input_hash(hash_paras)
-
-        window = WholeBookRunWindow(
-            run_id=run.id,
-            window_index=0,
-            start_paragraph_id=source_ids[0],
-            end_paragraph_id=source_ids[-1],
-            start_chapter_id=start_chapter.source_chapter_id if start_chapter else None,
-            end_chapter_id=end_chapter.source_chapter_id if end_chapter else None,
-            input_hash=input_hash,
-            status=WindowStatus.PENDING.value,
-            attempt_count=0,
-            state_version_before=0,
-            checkpoint_json=json.dumps(
-                {
-                    "paragraph_ids": source_ids,
-                    "snapshot_paragraph_ids": [p.id for p in paragraphs],
-                    "cross_chapter": True,
-                },
-                ensure_ascii=False,
-            ),
-        )
-        self._session.add(window)
-        self._session.flush()
-        stage.checkpoint_json = json.dumps(
-            {"window_id": window.id, "window_index": 0, "paragraph_count": len(paragraphs)},
-            ensure_ascii=False,
-        )
-        return window
-
-    def _stage_extract(
-        self,
-        run: AnalysisRun,
-        stage: AnalysisRunStage,
-        window: WholeBookRunWindow,
-    ) -> WholeBookOverviewWindowResultV1:
-        validate_window_transition(window.status, WindowStatus.RUNNING)
-        window.status = WindowStatus.RUNNING.value
-        window.attempt_count = int(window.attempt_count or 0) + 1
-        window.started_at = utc_now()
-        self._session.flush()
-
-        window_input = self._build_window_input(run, window)
+        refs = self._to_snapshot_refs(snap_paragraphs, chapters)
         try:
-            result = self._require_adapter().analyze_window(window_input)
-            # Re-validate frozen contract shape
-            result = WholeBookOverviewWindowResultV1.model_validate(result.model_dump())
-        except NativeOverviewError:
-            raise
-        except Exception as exc:  # noqa: BLE001
-            validate_window_transition(window.status, WindowStatus.FAILED)
-            window.status = WindowStatus.FAILED.value
-            window.error_code = WholeBookOverviewErrorCode.PRIVATE_ENGINE_UNAVAILABLE.value
-            window.error_detail = str(exc)
-            window.completed_at = utc_now()
+            planned = build_overview_windows(refs, budget=self._window_budget)
+            assert_full_coverage(planned, refs)
+        except ValueError as exc:
             raise NativeOverviewError(
-                WholeBookOverviewErrorCode.PRIVATE_ENGINE_UNAVAILABLE.value,
+                WholeBookOverviewErrorCode.WINDOW_BUILD_FAILED.value,
+                str(exc),
                 run_id=str(run.id),
                 stage_key=stage.stage_key,
-                window_index=window.window_index,
-                details={"cause": type(exc).__name__},
             ) from exc
 
-        validate_window_transition(window.status, WindowStatus.COMPLETED)
-        window.status = WindowStatus.COMPLETED.value
-        window.completed_at = utc_now()
-        window.checkpoint_json = json.dumps(
-            {
-                **json.loads(window.checkpoint_json or "{}"),
-                "candidate_entity_count": len(result.candidate_entities),
-                "candidate_asset_count": len(result.candidate_assets),
-                "candidate_evidence_count": len(result.candidate_evidence),
-            },
-            ensure_ascii=False,
-        )
-        stage.checkpoint_json = json.dumps(
-            {"window_id": window.id, "input_hash": result.input_hash},
-            ensure_ascii=False,
-        )
-        # Stash result for materialize via stage checkpoint (small fixture payload).
-        stage.checkpoint_json = json.dumps(
-            {
-                "window_result": result.model_dump(mode="json"),
-                "window_id": window.id,
-            },
-            ensure_ascii=False,
-        )
-        self._session.flush()
-        return result
+        existing = self._list_windows(int(run.id))
+        by_hash = {w.input_hash: w for w in existing if w.input_hash}
+        by_index = {int(w.window_index): w for w in existing}
+        windows: list[WholeBookRunWindow] = []
 
-    def _stage_materialize(
-        self,
-        run: AnalysisRun,
-        stage: AnalysisRunStage,
-        window_result: WholeBookOverviewWindowResultV1,
-    ) -> dict[str, Any]:
-        assert run.book_id is not None and run.book_snapshot_id is not None
-        snapshot_id = int(run.book_snapshot_id)
-        book_id = int(run.book_id)
+        for plan in planned:
+            order_map = {pid: i for i, pid in enumerate(plan.snapshot_paragraph_ids)}
+            slice_paras = [p for p in snap_paragraphs if p.id in set(plan.snapshot_paragraph_ids)]
+            slice_paras.sort(key=lambda p: order_map.get(p.id, 0))
+            hash_paras = self._window_paragraphs_for_slice(slice_paras, chapters)
+            input_hash = compute_window_input_hash(hash_paras)
 
-        para_by_stable = {
-            (p.stable_paragraph_id or p.source_paragraph_id or ""): p
-            for p in self._session.scalars(
-                select(BookSnapshotParagraph).where(
-                    BookSnapshotParagraph.snapshot_id == snapshot_id
-                )
-            )
-        }
-        # Also index by source_paragraph_id and numeric string id
-        for p in list(para_by_stable.values()):
-            if p.source_paragraph_id:
-                para_by_stable[p.source_paragraph_id] = p
-            para_by_stable[str(p.id)] = p
+            reused = by_hash.get(input_hash) or by_index.get(int(plan.window_index))
+            if reused is not None:
+                windows.append(reused)
+                continue
 
-        evidence_by_id = {e.evidence_id: e for e in window_result.candidate_evidence}
-        entity_map: dict[str, int] = {}
-        asset_version_map: dict[str, int] = {}
-        evidence_rows: list[dict[str, Any]] = []
-
-        with self._session.begin_nested():
-            for ent in window_result.candidate_entities:
-                entity = self._entities.create_entity(
-                    book_id,
-                    entity_type=ent.entity_type,
-                    canonical_name=ent.canonical_name,
-                    created_by=FIXTURE_ENGINE_ID,
-                )
-                entity_map[ent.candidate_id] = int(entity.id)
-                for alias in ent.aliases:
-                    self._entities.add_alias_candidate(
-                        entity.id,
-                        alias_text=alias,
-                        source_run_id=run.id,
-                        source_snapshot_id=snapshot_id,
-                    )
-
-            for asset in window_result.candidate_assets:
-                result = self._assets.create_candidate_asset(
-                    book_id,
-                    asset_type=asset.asset_type,
-                    title=asset.title or asset.candidate_id,
-                    summary=asset.summary,
-                    run_id=run.id,
-                    book_snapshot_id=snapshot_id,
-                    identity_fingerprint=asset.deduplication_key or asset.candidate_id,
-                    confidence=asset.confidence,
-                    origin_type=OriginType.SYSTEM,
-                    attributes_json=json.dumps(
-                        {
-                            "candidate_id": asset.candidate_id,
-                            "engine_id": FIXTURE_ENGINE_ID,
-                            "engine_version": FIXTURE_ENGINE_VERSION,
-                            "fixture": True,
-                        },
-                        ensure_ascii=False,
-                    ),
-                    source_fingerprint=asset.deduplication_key or asset.candidate_id,
-                )
-                asset_version_map[asset.candidate_id] = int(result.version.id)
-
-                for ev_id in asset.evidence_refs:
-                    cand_ev = evidence_by_id.get(ev_id)
-                    if cand_ev is None:
-                        continue
-                    snap_para = para_by_stable.get(cand_ev.paragraph_id)
-                    if snap_para is None:
-                        raise NativeOverviewError(
-                            WholeBookOverviewErrorCode.EVIDENCE_INVALID.value,
-                            f"evidence paragraph not in snapshot: {cand_ev.paragraph_id}",
-                            run_id=str(run.id),
-                        )
-                    text = self._snapshots.get_snapshot_paragraph_text(snap_para.id)
-                    quote = cand_ev.quote
-                    start = text.find(quote)
-                    if start < 0:
-                        start = 0
-                        end = min(len(text), max(1, len(quote)))
-                        quote = text[start:end]
-                    else:
-                        end = start + len(quote)
-                    row = self._evidence.attach_asset_evidence(
-                        result.version.id,
-                        book_snapshot_id=snapshot_id,
-                        snapshot_chapter_id=int(snap_para.snapshot_chapter_id),
-                        snapshot_paragraph_id=int(snap_para.id),
-                        paragraph_content_hash=snap_para.content_hash,
-                        start_offset=start,
-                        end_offset=end,
-                        evidence_role=cand_ev.evidence_role or "support",
-                        evidence_label=cand_ev.evidence_id,
-                        actor="model",
-                    )
-                    evidence_rows.append(
-                        {
-                            "evidence_id": cand_ev.evidence_id,
-                            "db_id": row.id,
-                            "paragraph_id": cand_ev.paragraph_id,
-                            "chapter_id": cand_ev.chapter_id,
-                            "quote": quote,
-                            "confidence": cand_ev.confidence,
-                            "snapshot_paragraph_id": snap_para.id,
-                            "source_paragraph_id": snap_para.source_paragraph_id,
-                            "stable_paragraph_id": snap_para.stable_paragraph_id,
-                            "content_hash": snap_para.content_hash,
-                            "chapter_index": None,
-                            "paragraph_index": snap_para.paragraph_order,
-                            "asset_candidate_id": asset.candidate_id,
-                        }
-                    )
-
-            state = WholeBookRunStateVersion(
+            window = WholeBookRunWindow(
                 run_id=run.id,
-                version_number=1,
-                after_window_index=0,
-                state_json=json.dumps(
+                window_index=int(plan.window_index),
+                start_paragraph_id=plan.start_paragraph_id,
+                end_paragraph_id=plan.end_paragraph_id,
+                start_chapter_id=plan.start_chapter_id,
+                end_chapter_id=plan.end_chapter_id,
+                input_hash=input_hash,
+                status=WindowStatus.PENDING.value,
+                attempt_count=0,
+                state_version_before=0,
+                checkpoint_json=json.dumps(
                     {
-                        "entities": entity_map,
-                        "assets": asset_version_map,
-                        "state_delta": window_result.state_delta.model_dump(mode="json"),
+                        "paragraph_ids": list(plan.paragraph_ids),
+                        "snapshot_paragraph_ids": list(plan.snapshot_paragraph_ids),
+                        "cross_chapter": plan.cross_chapter,
+                        "character_count": plan.character_count,
+                        "token_estimate": plan.token_estimate,
                     },
                     ensure_ascii=False,
                 ),
-                state_hash=hashlib.sha256(
-                    json.dumps(sorted(entity_map.items())).encode("utf-8")
-                ).hexdigest(),
-                source_stage_key=OverviewProductionStageKey.MATERIALIZE_ASSETS.value,
             )
-            self._session.add(state)
-
-            window = self._session.scalar(
-                select(WholeBookRunWindow).where(
-                    WholeBookRunWindow.run_id == run.id,
-                    WholeBookRunWindow.window_index == 0,
-                )
-            )
-            if window is not None:
-                window.state_version_after = 1
+            self._session.add(window)
+            windows.append(window)
 
         self._session.flush()
+        run.progress_total = max(len(windows), 1)
+        run.progress_current = sum(
+            1 for w in windows if w.status == WindowStatus.COMPLETED.value
+        )
+        stage.checkpoint_json = json.dumps(
+            {
+                "window_count": len(windows),
+                "window_indexes": [w.window_index for w in windows],
+                "paragraph_count": len(snap_paragraphs),
+            },
+            ensure_ascii=False,
+        )
+        return windows
+
+    def _stage_extract_windows(
+        self, run: AnalysisRun, stage: AnalysisRunStage
+    ) -> list[WholeBookOverviewWindowResultV1]:
+        windows = self._list_windows(int(run.id))
+        if not windows:
+            raise NativeOverviewError(
+                WholeBookOverviewErrorCode.WINDOW_BUILD_FAILED.value,
+                "no windows to extract",
+                run_id=str(run.id),
+                stage_key=stage.stage_key,
+            )
+        total_windows = len(windows)
+        results: list[WholeBookOverviewWindowResultV1] = []
+
+        for window in windows:
+            if window.status == WindowStatus.COMPLETED.value:
+                loaded = self._load_window_result(window)
+                if loaded is not None:
+                    results.append(loaded)
+                continue
+
+            if window.status == WindowStatus.RUNNING.value:
+                validate_window_transition(window.status, WindowStatus.FAILED)
+                window.status = WindowStatus.FAILED.value
+                self._session.flush()
+
+            if window.status not in {WindowStatus.PENDING.value, WindowStatus.FAILED.value}:
+                continue
+
+            validate_window_transition(window.status, WindowStatus.RUNNING)
+            window.status = WindowStatus.RUNNING.value
+            window.attempt_count = int(window.attempt_count or 0) + 1
+            window.started_at = utc_now()
+            window.error_code = None
+            window.error_detail = None
+            self._session.flush()
+
+            prior_state = self._latest_prior_state(
+                int(run.id), before_window_index=int(window.window_index)
+            )
+            window_input = self._build_window_input(
+                run,
+                window,
+                prior_state=prior_state,
+                total_windows=total_windows,
+            )
+            prompt = f"overview-window:{window.window_index}:{window.input_hash}"
+
+            try:
+                result = self._require_adapter().analyze_window(
+                    window_input, transport=self._transport
+                )
+                result = WholeBookOverviewWindowResultV1.model_validate(result.model_dump())
+            except NativeOverviewError as exc:
+                validate_window_transition(window.status, WindowStatus.FAILED)
+                window.status = WindowStatus.FAILED.value
+                window.error_code = exc.code
+                window.error_detail = exc.message
+                window.completed_at = utc_now()
+                self._record_attempt_safe(
+                    run, window, prompt=prompt, status="failed", error_message=exc.message
+                )
+                raise
+            except Exception as exc:  # noqa: BLE001
+                validate_window_transition(window.status, WindowStatus.FAILED)
+                window.status = WindowStatus.FAILED.value
+                window.error_code = WholeBookOverviewErrorCode.WINDOW_EXECUTION_FAILED.value
+                window.error_detail = str(exc)
+                window.completed_at = utc_now()
+                self._record_attempt_safe(
+                    run, window, prompt=prompt, status="failed", error_message=str(exc)
+                )
+                raise NativeOverviewError(
+                    WholeBookOverviewErrorCode.WINDOW_EXECUTION_FAILED.value,
+                    run_id=str(run.id),
+                    stage_key=stage.stage_key,
+                    window_index=window.window_index,
+                    details={"cause": type(exc).__name__},
+                ) from exc
+
+            validate_window_transition(window.status, WindowStatus.COMPLETED)
+            window.status = WindowStatus.COMPLETED.value
+            window.completed_at = utc_now()
+            checkpoint = json.loads(window.checkpoint_json or "{}")
+            checkpoint["window_result"] = result.model_dump(mode="json")
+            checkpoint["state_delta"] = result.state_delta.model_dump(mode="json")
+            checkpoint["candidate_entity_count"] = len(result.candidate_entities)
+            checkpoint["candidate_asset_count"] = len(result.candidate_assets)
+            checkpoint["candidate_evidence_count"] = len(result.candidate_evidence)
+            window.checkpoint_json = json.dumps(checkpoint, ensure_ascii=False)
+            self._record_attempt_safe(run, window, prompt=prompt, status="succeeded")
+            self._session.flush()
+            results.append(result)
+            run.progress_current = sum(
+                1 for w in windows if w.status == WindowStatus.COMPLETED.value
+            )
+
+        stage.checkpoint_json = json.dumps(
+            {
+                "windows_completed": sum(
+                    1 for w in windows if w.status == WindowStatus.COMPLETED.value
+                ),
+                "windows_total": total_windows,
+            },
+            ensure_ascii=False,
+        )
+        self._session.flush()
+        return results
+
+    def _stage_materialize_windows(
+        self, run: AnalysisRun, stage: AnalysisRunStage
+    ) -> dict[str, Any]:
+        windows = self._list_windows(int(run.id))
+        entity_map: dict[str, int] = {}
+        asset_version_map: dict[str, int] = {}
+        evidence_rows: list[dict[str, Any]] = []
+        window_results: list[WholeBookOverviewWindowResultV1] = []
+        stats_acc: dict[str, int] = {
+            "created_entities": 0,
+            "reused_entities": 0,
+            "created_assets": 0,
+            "reused_assets": 0,
+            "created_evidence": 0,
+            "reused_evidence": 0,
+        }
+
+        for window in windows:
+            if window.status != WindowStatus.COMPLETED.value:
+                continue
+            result = self._load_window_result(window)
+            if result is None:
+                raise NativeOverviewError(
+                    WholeBookOverviewErrorCode.MATERIALIZATION_FAILED.value,
+                    f"missing window_result checkpoint for window {window.window_index}",
+                    run_id=str(run.id),
+                    window_index=window.window_index,
+                )
+            window_results.append(result)
+
+            if window.state_version_after is not None:
+                state = self._session.scalar(
+                    select(WholeBookRunStateVersion).where(
+                        WholeBookRunStateVersion.run_id == run.id,
+                        WholeBookRunStateVersion.version_number == int(window.state_version_after),
+                    )
+                )
+                if state is not None:
+                    payload = json.loads(state.state_json or "{}")
+                    entity_map.update(
+                        {str(k): int(v) for k, v in (payload.get("entities") or {}).items()}
+                    )
+                    asset_version_map.update(
+                        {str(k): int(v) for k, v in (payload.get("assets") or {}).items()}
+                    )
+                continue
+
+            prior = self._materializer.load_prior_state(int(run.id))
+            window.state_version_before = int(prior.state_version)
+            try:
+                mat = self._materializer.materialize_window(
+                    run, window, result, prior_state=prior
+                )
+            except NativeOverviewError:
+                raise
+            except Exception as exc:  # noqa: BLE001
+                raise NativeOverviewError(
+                    WholeBookOverviewErrorCode.MATERIALIZATION_FAILED.value,
+                    run_id=str(run.id),
+                    stage_key=stage.stage_key,
+                    window_index=window.window_index,
+                    details={"cause": type(exc).__name__},
+                ) from exc
+
+            entity_map.update(mat["entity_map"])
+            asset_version_map.update(mat["asset_version_map"])
+            evidence_rows.extend(mat["evidence_rows"])
+            for key, value in (mat.get("stats") or {}).items():
+                if key in stats_acc:
+                    stats_acc[key] += int(value)
+
+        aggregate = {
+            "window_results": window_results,
+            "evidence_rows": evidence_rows,
+            "entity_map": entity_map,
+            "asset_version_map": asset_version_map,
+            "stats": stats_acc,
+        }
         stage.checkpoint_json = json.dumps(
             {
                 "entity_count": len(entity_map),
                 "asset_count": len(asset_version_map),
                 "evidence_count": len(evidence_rows),
-                "window_result": window_result.model_dump(mode="json"),
-                "evidence_rows": evidence_rows,
+                "windows_materialized": len(window_results),
                 "entity_map": entity_map,
                 "asset_version_map": asset_version_map,
+                "evidence_rows": evidence_rows,
+                "window_results": [r.model_dump(mode="json") for r in window_results],
+                "stats": stats_acc,
             },
             ensure_ascii=False,
         )
-        return {
-            "window_result": window_result,
-            "evidence_rows": evidence_rows,
-            "entity_map": entity_map,
-            "asset_version_map": asset_version_map,
-        }
+        self._session.flush()
+        return aggregate
 
     def _stage_projection(
         self,
@@ -914,8 +963,37 @@ class NativeOverviewService:
         stage: AnalysisRunStage,
         materialization: dict[str, Any],
     ) -> AnalysisArtifact:
-        window_result: WholeBookOverviewWindowResultV1 = materialization["window_result"]
-        evidence_rows: list[dict[str, Any]] = materialization["evidence_rows"]
+        window_results: list[WholeBookOverviewWindowResultV1] = list(
+            materialization.get("window_results") or []
+        )
+        if not window_results:
+            for window in self._list_windows(int(run.id)):
+                loaded = self._load_window_result(window)
+                if loaded is not None:
+                    window_results.append(loaded)
+        evidence_rows: list[dict[str, Any]] = list(materialization.get("evidence_rows") or [])
+
+        entities: list[dict[str, Any]] = []
+        assets: list[dict[str, Any]] = []
+        evidence: list[dict[str, Any]] = []
+        selected_evidence = []
+        seen_evidence: set[str] = set()
+        for wr in window_results:
+            entities.extend(e.model_dump(mode="json") for e in wr.candidate_entities)
+            assets.extend(a.model_dump(mode="json") for a in wr.candidate_assets)
+            for ev in wr.candidate_evidence:
+                evidence.append(ev.model_dump(mode="json"))
+                if ev.evidence_id not in seen_evidence:
+                    seen_evidence.add(ev.evidence_id)
+                    selected_evidence.append(ev)
+
+        final_state = self._materializer.load_prior_state(int(run.id))
+        if final_state.state_version == 0 and window_results:
+            prior = empty_prior_state()
+            for wr in window_results:
+                prior = merge_prior_with_delta(prior, wr.state_delta)
+            final_state = prior
+
         synthesis_input = WholeBookOverviewSynthesisInputV1(
             contract_version=CONTRACT_VERSION,
             run_id=str(run.id),
@@ -923,26 +1001,17 @@ class NativeOverviewService:
             snapshot_id=str(run.book_snapshot_id),
             engine_version=FIXTURE_ENGINE_VERSION,
             prompt_version=FIXTURE_PROMPT_VERSION,
-            entities=[
-                e.model_dump(mode="json") for e in window_result.candidate_entities
-            ],
-            assets=[
-                a.model_dump(mode="json") for a in window_result.candidate_assets
-            ],
-            evidence=[
-                ev.model_dump(mode="json") for ev in window_result.candidate_evidence
-            ],
-            final_state=PriorStateV1.model_validate(
-                {
-                    **window_result.state_delta.model_dump(mode="json"),
-                    "state_version": 1,
-                }
-            ),
+            entities=entities,
+            assets=assets,
+            evidence=evidence,
+            final_state=final_state,
             snapshot_meta={"snapshot_id": run.book_snapshot_id},
-            selected_evidence=list(window_result.candidate_evidence),
+            selected_evidence=selected_evidence,
         )
         try:
-            projection = self._require_adapter().synthesize_overview(synthesis_input)
+            projection = self._require_adapter().synthesize_overview(
+                synthesis_input, transport=self._transport
+            )
             projection = WholeBookOverviewProjectionCandidateV1.model_validate(
                 projection.model_dump()
             )
@@ -972,7 +1041,9 @@ class NativeOverviewService:
             synopsis=projection.synopsis,
         )
 
-        # Coverage: single cross-chapter window covering all snapshot paragraphs.
+        windows = self._list_windows(int(run.id))
+        windows_total = len(windows)
+        windows_completed = sum(1 for w in windows if w.status == WindowStatus.COMPLETED.value)
         para_total = int(
             self._session.scalar(
                 select(func.count())
@@ -981,16 +1052,31 @@ class NativeOverviewService:
             )
             or 0
         )
+        covered_ids: set[str] = set()
+        for window in windows:
+            if window.status != WindowStatus.COMPLETED.value:
+                continue
+            checkpoint = json.loads(window.checkpoint_json or "{}")
+            covered_ids.update(str(pid) for pid in (checkpoint.get("paragraph_ids") or []))
+        covered_count = len(covered_ids) if covered_ids else (
+            para_total if windows_completed == windows_total and windows_total else 0
+        )
+        all_done = windows_total > 0 and windows_completed == windows_total
         coverage = CoverageDTO(
             original_paragraphs_total=para_total,
-            original_paragraphs_covered=para_total,
-            original_coverage_percent=100.0 if para_total else 0.0,
-            windows_total=1,
-            windows_completed=1,
-            evidence_count=len(evidence_rows),
+            original_paragraphs_covered=para_total if all_done else covered_count,
+            original_coverage_percent=100.0
+            if all_done and para_total
+            else (round(covered_count / para_total * 100.0, 6) if para_total else 0.0),
+            windows_total=windows_total,
+            windows_completed=windows_completed,
+            evidence_count=len(evidence_rows) or len(seen_evidence),
         )
 
         evidence_index = self._build_evidence_index(run, evidence_rows)
+        if not evidence_index and selected_evidence:
+            evidence_index = self._build_evidence_index_from_candidates(run, selected_evidence)
+
         generated_at = utc_now()
         payload = {
             "overview": overview_body.model_dump(mode="json"),
@@ -1021,14 +1107,16 @@ class NativeOverviewService:
         return artifact
 
     def _stage_finalize(self, run: AnalysisRun, stage: AnalysisRunStage) -> None:
+        windows = self._list_windows(int(run.id))
         stage.checkpoint_json = json.dumps(
             {
                 "engine_id": FIXTURE_ENGINE_ID,
                 "engine_version": FIXTURE_ENGINE_VERSION,
                 "prompt_version": FIXTURE_PROMPT_VERSION,
-                "fixture": True,
+                "fixture": self._engine_id == FIXTURE_ENGINE_ID,
                 "walking_skeleton": True,
                 "production_ready": False,
+                "windows_total": len(windows),
             },
             ensure_ascii=False,
         )
@@ -1037,17 +1125,158 @@ class NativeOverviewService:
     # Helpers
     # ------------------------------------------------------------------
 
-    def _build_window_input(
-        self, run: AnalysisRun, window: WholeBookRunWindow
-    ) -> WholeBookOverviewWindowInputV1:
-        assert run.book_snapshot_id is not None
-        snap_paragraphs = list(
+    def _list_windows(self, run_id: int) -> list[WholeBookRunWindow]:
+        return list(
             self._session.scalars(
-                select(BookSnapshotParagraph)
-                .where(BookSnapshotParagraph.snapshot_id == int(run.book_snapshot_id))
-                .order_by(BookSnapshotParagraph.paragraph_order)
+                select(WholeBookRunWindow)
+                .where(WholeBookRunWindow.run_id == int(run_id))
+                .order_by(WholeBookRunWindow.window_index)
             )
         )
+
+    def _load_window_result(
+        self, window: WholeBookRunWindow
+    ) -> WholeBookOverviewWindowResultV1 | None:
+        checkpoint = json.loads(window.checkpoint_json or "{}")
+        raw = checkpoint.get("window_result")
+        if not isinstance(raw, dict):
+            return None
+        return WholeBookOverviewWindowResultV1.model_validate(raw)
+
+    def _latest_prior_state(
+        self, run_id: int, *, before_window_index: int | None = None
+    ) -> PriorStateV1:
+        """Prefer materialized state; else chain state_delta from completed window checkpoints."""
+
+        if before_window_index is None or before_window_index > 0:
+            row = self._session.scalar(
+                select(WholeBookRunStateVersion)
+                .where(WholeBookRunStateVersion.run_id == int(run_id))
+                .order_by(WholeBookRunStateVersion.version_number.desc())
+            )
+            if row is not None:
+                after_idx = int(row.after_window_index or -1)
+                if before_window_index is None or after_idx < int(before_window_index):
+                    payload = json.loads(row.state_json or "{}")
+                    prior_raw = payload.get("prior_state")
+                    if isinstance(prior_raw, dict):
+                        return PriorStateV1.model_validate(prior_raw)
+                    return PriorStateV1(state_version=int(row.version_number or 0))
+
+        prior = empty_prior_state()
+        for window in self._list_windows(run_id):
+            if before_window_index is not None and int(window.window_index) >= int(
+                before_window_index
+            ):
+                break
+            if window.status != WindowStatus.COMPLETED.value:
+                continue
+            checkpoint = json.loads(window.checkpoint_json or "{}")
+            delta_raw = checkpoint.get("state_delta")
+            if isinstance(delta_raw, dict):
+                delta = StateDeltaV1.model_validate(delta_raw)
+            else:
+                result = self._load_window_result(window)
+                if result is None:
+                    continue
+                delta = result.state_delta
+            prior = merge_prior_with_delta(prior, delta)
+
+        # Pre-materialize extract chaining: prior for window k uses state_version = k.
+        if before_window_index is not None:
+            return PriorStateV1.model_validate(
+                {
+                    **prior.model_dump(mode="json"),
+                    "state_version": int(before_window_index),
+                }
+            )
+        return prior
+
+    def _aggregate_materialization(self, run: AnalysisRun) -> dict[str, Any]:
+        stage = self._session.scalar(
+            select(AnalysisRunStage).where(
+                AnalysisRunStage.run_id == run.id,
+                AnalysisRunStage.stage_key
+                == OverviewProductionStageKey.MATERIALIZE_ASSETS.value,
+            )
+        )
+        if stage is not None and stage.checkpoint_json:
+            data = json.loads(stage.checkpoint_json or "{}")
+            if data.get("window_results") is not None or data.get("entity_map") is not None:
+                window_results = [
+                    WholeBookOverviewWindowResultV1.model_validate(row)
+                    for row in (data.get("window_results") or [])
+                ]
+                if not window_results:
+                    for window in self._list_windows(int(run.id)):
+                        loaded = self._load_window_result(window)
+                        if loaded is not None:
+                            window_results.append(loaded)
+                return {
+                    "window_results": window_results,
+                    "evidence_rows": list(data.get("evidence_rows") or []),
+                    "entity_map": dict(data.get("entity_map") or {}),
+                    "asset_version_map": dict(data.get("asset_version_map") or {}),
+                    "stats": dict(data.get("stats") or {}),
+                }
+
+        window_results: list[WholeBookOverviewWindowResultV1] = []
+        entity_map: dict[str, int] = {}
+        asset_version_map: dict[str, int] = {}
+        for window in self._list_windows(int(run.id)):
+            loaded = self._load_window_result(window)
+            if loaded is not None:
+                window_results.append(loaded)
+            if window.state_version_after is None:
+                continue
+            state = self._session.scalar(
+                select(WholeBookRunStateVersion).where(
+                    WholeBookRunStateVersion.run_id == run.id,
+                    WholeBookRunStateVersion.version_number == int(window.state_version_after),
+                )
+            )
+            if state is None:
+                continue
+            payload = json.loads(state.state_json or "{}")
+            entity_map.update({str(k): int(v) for k, v in (payload.get("entities") or {}).items()})
+            asset_version_map.update(
+                {str(k): int(v) for k, v in (payload.get("assets") or {}).items()}
+            )
+        return {
+            "window_results": window_results,
+            "evidence_rows": [],
+            "entity_map": entity_map,
+            "asset_version_map": asset_version_map,
+            "stats": {},
+        }
+
+    def _build_window_input(
+        self,
+        run: AnalysisRun,
+        window: WholeBookRunWindow,
+        *,
+        prior_state: PriorStateV1,
+        total_windows: int,
+    ) -> WholeBookOverviewWindowInputV1:
+        assert run.book_snapshot_id is not None
+        checkpoint = json.loads(window.checkpoint_json or "{}")
+        snap_ids = [int(x) for x in (checkpoint.get("snapshot_paragraph_ids") or [])]
+        if not snap_ids:
+            raise NativeOverviewError(
+                WholeBookOverviewErrorCode.WINDOW_BUILD_FAILED.value,
+                "window checkpoint missing snapshot_paragraph_ids",
+                run_id=str(run.id),
+                window_index=window.window_index,
+            )
+
+        snap_paragraphs = list(
+            self._session.scalars(
+                select(BookSnapshotParagraph).where(BookSnapshotParagraph.id.in_(snap_ids))
+            )
+        )
+        order_map = {pid: i for i, pid in enumerate(snap_ids)}
+        snap_paragraphs.sort(key=lambda p: order_map.get(int(p.id), 0))
+
         chapters = {
             c.id: c
             for c in self._session.scalars(
@@ -1061,7 +1290,9 @@ class NativeOverviewService:
         paras: list[WindowParagraph] = []
         for p in snap_paragraphs:
             ch = chapters.get(p.snapshot_chapter_id)
-            chapter_id = str(ch.source_chapter_id if ch and ch.source_chapter_id else p.snapshot_chapter_id)
+            chapter_id = str(
+                ch.source_chapter_id if ch and ch.source_chapter_id else p.snapshot_chapter_id
+            )
             if p.snapshot_chapter_id not in seen_chapters:
                 seen_chapters.add(p.snapshot_chapter_id)
                 chapter_refs.append(
@@ -1080,6 +1311,13 @@ class NativeOverviewService:
                     text=text,
                 )
             )
+        if not paras:
+            raise NativeOverviewError(
+                WholeBookOverviewErrorCode.BOOK_CONTENT_EMPTY.value,
+                run_id=str(run.id),
+                window_index=window.window_index,
+            )
+
         return WholeBookOverviewWindowInputV1(
             contract_version=CONTRACT_VERSION,
             run=OverviewRunRef(
@@ -1093,7 +1331,7 @@ class NativeOverviewService:
             window=WindowSlice(
                 window_id=f"w-{window.window_index}",
                 window_index=int(window.window_index),
-                total_windows=1,
+                total_windows=max(1, int(total_windows)),
                 start_paragraph_id=window.start_paragraph_id,
                 end_paragraph_id=window.end_paragraph_id,
                 chapter_refs=chapter_refs,
@@ -1101,13 +1339,86 @@ class NativeOverviewService:
                 input_hash=window.input_hash,
                 status=WindowStatus(window.status) if window.status else WindowStatus.RUNNING,
             ),
-            prior_state=empty_prior_state(),
+            prior_state=prior_state,
         )
+
+    def _to_snapshot_refs(
+        self,
+        paragraphs: list[BookSnapshotParagraph],
+        chapters: dict[Any, BookSnapshotChapter],
+    ) -> list[SnapshotParagraphRef]:
+        refs: list[SnapshotParagraphRef] = []
+        for p in paragraphs:
+            ch = chapters.get(p.snapshot_chapter_id)
+            chapter_id = str(
+                ch.source_chapter_id if ch and ch.source_chapter_id else p.snapshot_chapter_id
+            )
+            text = self._snapshots.get_snapshot_paragraph_text(p.id)
+            refs.append(
+                SnapshotParagraphRef(
+                    snapshot_paragraph_id=int(p.id),
+                    paragraph_id=p.stable_paragraph_id or p.source_paragraph_id or str(p.id),
+                    chapter_id=chapter_id,
+                    source_chapter_id=(
+                        int(ch.source_chapter_id)
+                        if ch and ch.source_chapter_id is not None
+                        else None
+                    ),
+                    paragraph_order=int(p.paragraph_order),
+                    text=text,
+                    content_hash=str(p.content_hash or ""),
+                )
+            )
+        return refs
+
+    def _window_paragraphs_for_slice(
+        self,
+        paragraphs: list[BookSnapshotParagraph],
+        chapters: dict[Any, BookSnapshotChapter],
+    ) -> list[WindowParagraph]:
+        paras: list[WindowParagraph] = []
+        for p in paragraphs:
+            ch = chapters.get(p.snapshot_chapter_id)
+            chapter_id = str(
+                ch.source_chapter_id if ch and ch.source_chapter_id else p.snapshot_chapter_id
+            )
+            text = self._snapshots.get_snapshot_paragraph_text(p.id)
+            paras.append(
+                WindowParagraph(
+                    paragraph_id=p.stable_paragraph_id or p.source_paragraph_id or str(p.id),
+                    chapter_id=chapter_id,
+                    paragraph_index=int(p.paragraph_order),
+                    text=text,
+                )
+            )
+        return paras
+
+    def _record_attempt_safe(
+        self,
+        run: AnalysisRun,
+        window: WholeBookRunWindow,
+        *,
+        prompt: str,
+        status: str,
+        error_message: str | None = None,
+    ) -> None:
+        if self._transport is None and status == "succeeded":
+            return
+        try:
+            self._accounting.record_window_attempt(
+                run,
+                window,
+                transport=self._transport,
+                prompt=prompt,
+                status=status,
+                error_message=error_message,
+            )
+        except Exception:  # noqa: BLE001
+            pass
 
     def _build_evidence_index(
         self, run: AnalysisRun, evidence_rows: list[dict[str, Any]]
     ) -> list[EvidenceIndexEntry]:
-        # Deduplicate by evidence_id (same evidence may attach to multiple assets).
         seen: set[str] = set()
         index: list[EvidenceIndexEntry] = []
         for row in evidence_rows:
@@ -1124,7 +1435,9 @@ class NativeOverviewService:
                 EvidenceIndexEntry(
                     evidence_id=eid,
                     chapter_id=str(row.get("chapter_id") or ""),
-                    paragraph_id=str(row.get("stable_paragraph_id") or row.get("paragraph_id") or ""),
+                    paragraph_id=str(
+                        row.get("stable_paragraph_id") or row.get("paragraph_id") or ""
+                    ),
                     quote=str(row.get("quote") or ""),
                     evidence_role="support",
                     confidence=float(row.get("confidence") or 0),
@@ -1148,6 +1461,36 @@ class NativeOverviewService:
             )
         return index
 
+    def _build_evidence_index_from_candidates(
+        self, run: AnalysisRun, candidates: list[Any]
+    ) -> list[EvidenceIndexEntry]:
+        index: list[EvidenceIndexEntry] = []
+        seen: set[str] = set()
+        for cand in candidates:
+            eid = str(cand.evidence_id)
+            if eid in seen:
+                continue
+            seen.add(eid)
+            index.append(
+                EvidenceIndexEntry(
+                    evidence_id=eid,
+                    chapter_id=str(cand.chapter_id),
+                    paragraph_id=str(cand.paragraph_id),
+                    quote=str(cand.quote),
+                    evidence_role=str(cand.evidence_role or "support"),
+                    confidence=float(cand.confidence or 0),
+                    snapshot_id=str(run.book_snapshot_id),
+                    source_run_id=str(run.id),
+                    deep_link=EvidenceDeepLink(
+                        book_id=str(run.book_id),
+                        chapter_id=str(cand.chapter_id),
+                        paragraph_id=str(cand.paragraph_id),
+                        integrity_status="ok",
+                    ),
+                )
+            )
+        return index
+
     def _run_stage(self, run: AnalysisRun, key: OverviewProductionStageKey, fn):  # noqa: ANN001
         stage = self._session.scalar(
             select(AnalysisRunStage).where(
@@ -1161,10 +1504,21 @@ class NativeOverviewService:
                 f"missing stage {key.value}",
                 run_id=str(run.id),
             )
+        if stage.status == StageStatus.COMPLETED.value:
+            return None
+
+        if stage.status == StageStatus.RUNNING.value:
+            validate_overview_stage_transition(stage.status, StageStatus.FAILED)
+            stage.status = StageStatus.FAILED.value
+            stage.completed_at = utc_now()
+            self._session.flush()
+
         validate_overview_stage_transition(stage.status, StageStatus.RUNNING)
         stage.status = StageStatus.RUNNING.value
         stage.attempt_count = int(stage.attempt_count or 0) + 1
         stage.started_at = utc_now()
+        stage.error_code = None
+        stage.error_message = None
         self._session.flush()
         try:
             result = fn(run, stage)
@@ -1181,6 +1535,8 @@ class NativeOverviewService:
             raise
 
     def _transition_run(self, run: AnalysisRun, target: RunStatus) -> None:
+        if run.status == target.value:
+            return
         validate_overview_run_transition(run.status, target)
         run.status = target.value
         self._session.flush()
@@ -1200,7 +1556,6 @@ class NativeOverviewService:
         run.error_message = exc.message
         run.retryable = True
         run.completed_at = utc_now()
-        # Mark current running stage failed if any
         stage = self._session.scalar(
             select(AnalysisRunStage).where(
                 AnalysisRunStage.run_id == run.id,
@@ -1213,6 +1568,33 @@ class NativeOverviewService:
             stage.error_message = exc.message
             stage.completed_at = utc_now()
         self._session.flush()
+
+    def _retry_landing_status(self, run: AnalysisRun) -> RunStatus:
+        for key in OVERVIEW_PRODUCTION_STAGE_ORDER:
+            stage = self._session.scalar(
+                select(AnalysisRunStage).where(
+                    AnalysisRunStage.run_id == run.id,
+                    AnalysisRunStage.stage_key == key.value,
+                )
+            )
+            if stage is None:
+                continue
+            if stage.status != StageStatus.COMPLETED.value:
+                if key in _PREPARING_STAGE_KEYS:
+                    return RunStatus.PREPARING
+                return RunStatus.ANALYZING
+        return RunStatus.ANALYZING
+
+    def _clear_failed_stage_errors(self, run: AnalysisRun) -> None:
+        stages = list(
+            self._session.scalars(
+                select(AnalysisRunStage).where(AnalysisRunStage.run_id == run.id)
+            )
+        )
+        for stage in stages:
+            if stage.status == StageStatus.FAILED.value:
+                stage.error_code = None
+                stage.error_message = None
 
     def _find_by_client_request_id(self, book_id: int, client_request_id: str) -> AnalysisRun | None:
         return self._session.scalar(
@@ -1249,12 +1631,20 @@ class NativeOverviewService:
                 return OverviewProductionStageKey(stage.stage_key)
         return OverviewProductionStageKey.SNAPSHOT_PREFLIGHT if stages else None
 
+    @staticmethod
+    def _current_window_index(windows: list[WholeBookRunWindow]) -> int | None:
+        if not windows:
+            return None
+        for window in windows:
+            if window.status == WindowStatus.RUNNING.value:
+                return int(window.window_index)
+        for window in windows:
+            if window.status in {WindowStatus.PENDING.value, WindowStatus.FAILED.value}:
+                return int(window.window_index)
+        return int(windows[-1].window_index)
+
     def _to_create_response(self, run: AnalysisRun) -> CreateRunResponse:
-        windows = list(
-            self._session.scalars(
-                select(WholeBookRunWindow).where(WholeBookRunWindow.run_id == run.id)
-            )
-        )
+        windows = self._list_windows(int(run.id))
         completed = sum(1 for w in windows if w.status == WindowStatus.COMPLETED.value)
         total = max(len(windows), 1)
         return CreateRunResponse(
@@ -1268,10 +1658,46 @@ class NativeOverviewService:
             progress=ProgressDTO(
                 completed_windows=completed,
                 total_windows=total,
-                percent=100.0 if run.status == RunStatus.COMPLETED.value else 0.0,
-                current_window_index=0 if windows else None,
+                percent=100.0
+                if run.status == RunStatus.COMPLETED.value
+                else ((completed / total * 100.0) if total else 0.0),
+                current_window_index=self._current_window_index(windows),
             ),
             created_at=run.created_at,
+        )
+
+    def _to_retry_resume_response(
+        self, run: AnalysisRun, *, message: str
+    ) -> RetryResumeRunResponse:
+        windows = self._list_windows(int(run.id))
+        completed = sum(1 for w in windows if w.status == WindowStatus.COMPLETED.value)
+        total = len(windows)
+        percent = (
+            100.0
+            if total and completed == total and run.status == RunStatus.COMPLETED.value
+            else ((completed / total * 100.0) if total else 0.0)
+        )
+        can_resume = run.status == RunStatus.PAUSED.value
+        can_retry = bool(run.retryable) and run.status == RunStatus.FAILED.value
+        return RetryResumeRunResponse(
+            run_id=str(run.id),
+            book_id=str(run.book_id),
+            snapshot_id=str(run.book_snapshot_id),
+            status=RunStatus(run.status),
+            current_stage=self._current_stage_key(run),
+            progress=ProgressDTO(
+                completed_windows=completed,
+                total_windows=total,
+                percent=percent,
+                current_window_index=self._current_window_index(windows),
+                failed_window_index=next(
+                    (w.window_index for w in windows if w.status == WindowStatus.FAILED.value),
+                    None,
+                ),
+            ),
+            retryable=bool(run.retryable),
+            actions=RunActionsDTO(can_retry=can_retry, can_resume=can_resume),
+            message=message,
         )
 
     @staticmethod
