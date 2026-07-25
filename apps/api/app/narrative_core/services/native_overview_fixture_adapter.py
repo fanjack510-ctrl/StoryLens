@@ -16,7 +16,8 @@ Swap point (Integration / PYTHONPATH):
 
 from __future__ import annotations
 
-from typing import Protocol, runtime_checkable
+import hashlib
+from typing import Any, Mapping, Protocol, Sequence, runtime_checkable
 
 from app.narrative_core.contracts.pro_native_overview_flags import (
     FIXTURE_DEVELOPMENT_WARNING,
@@ -33,9 +34,40 @@ from app.narrative_core.contracts.whole_book_overview_v1 import (
     WholeBookOverviewSynthesisInputV1,
     WholeBookOverviewWindowInputV1,
     WholeBookOverviewWindowResultV1,
+    WindowParagraph,
     WindowQualityV1,
 )
 from app.narrative_core.enums import OverviewFieldStatus
+
+
+def compute_window_input_hash(paragraphs: Sequence[WindowParagraph | Mapping[str, Any]]) -> str:
+    """Stable SHA-256 hex — must match Private fixture_adapter.compute_window_input_hash."""
+
+    normalized: list[tuple[int, str, str]] = []
+    for raw in paragraphs:
+        if isinstance(raw, WindowParagraph):
+            pid = raw.paragraph_id
+            text = raw.text
+            idx = raw.paragraph_index
+        elif isinstance(raw, Mapping):
+            pid = str(raw.get("paragraph_id") or "")
+            text = str(raw.get("text") or "")
+            idx = int(raw.get("paragraph_index") or 0)
+        else:
+            pid = str(getattr(raw, "paragraph_id", "") or "")
+            text = str(getattr(raw, "text", "") or "")
+            idx = int(getattr(raw, "paragraph_index", 0) or 0)
+        normalized.append((idx, pid, text))
+    normalized.sort(key=lambda item: (item[0], item[1]))
+    payload = "".join(f"{pid}\n{text}\n" for _, pid, text in normalized)
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def normalize_input_hash(value: str) -> str:
+    text = (value or "").strip()
+    if text.lower().startswith("sha256:"):
+        return text[7:].strip()
+    return text
 
 
 @runtime_checkable
@@ -265,7 +297,12 @@ class FakeFixtureAdapter:
 
 
 class _PrivateBridgeAdapter:
-    """Adapts Private module functions to NativeOverviewFixtureAdapter."""
+    """Adapts Private module functions to NativeOverviewFixtureAdapter.
+
+    Public and Private ship separate Pydantic class objects for the same wire
+    shape. Always cross the boundary via ``model_dump`` / ``model_validate`` so
+    Private never sees Public isinstance mismatches (e.g. WindowParagraph).
+    """
 
     def __init__(self, run_window_fn, run_synthesis_fn) -> None:  # noqa: ANN001
         self._run_window = run_window_fn
@@ -274,18 +311,30 @@ class _PrivateBridgeAdapter:
     def run_window(
         self, window_input: WholeBookOverviewWindowInputV1
     ) -> WholeBookOverviewWindowResultV1:
-        raw = self._run_window(window_input)
-        if isinstance(raw, WholeBookOverviewWindowResultV1):
-            return raw
-        return WholeBookOverviewWindowResultV1.model_validate(raw)
+        from storylens_private_engine.contracts.whole_book_overview_v1 import (  # type: ignore
+            WholeBookOverviewWindowInputV1 as PrivateWindowInput,
+        )
+
+        private_req = PrivateWindowInput.model_validate(
+            window_input.model_dump(mode="json")
+        )
+        raw = self._run_window(private_req)
+        payload = raw.model_dump(mode="json") if hasattr(raw, "model_dump") else raw
+        return WholeBookOverviewWindowResultV1.model_validate(payload)
 
     def run_synthesis(
         self, synthesis_input: WholeBookOverviewSynthesisInputV1
     ) -> WholeBookOverviewProjectionCandidateV1:
-        raw = self._run_synthesis(synthesis_input)
-        if isinstance(raw, WholeBookOverviewProjectionCandidateV1):
-            return raw
-        return WholeBookOverviewProjectionCandidateV1.model_validate(raw)
+        from storylens_private_engine.contracts.whole_book_overview_v1 import (  # type: ignore
+            WholeBookOverviewSynthesisInputV1 as PrivateSynthesisInput,
+        )
+
+        private_req = PrivateSynthesisInput.model_validate(
+            synthesis_input.model_dump(mode="json")
+        )
+        raw = self._run_synthesis(private_req)
+        payload = raw.model_dump(mode="json") if hasattr(raw, "model_dump") else raw
+        return WholeBookOverviewProjectionCandidateV1.model_validate(payload)
 
 
 def try_import_private_fixture_adapter() -> NativeOverviewFixtureAdapter | None:

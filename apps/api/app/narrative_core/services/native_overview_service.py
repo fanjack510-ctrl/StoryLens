@@ -62,6 +62,7 @@ from app.narrative_core.contracts.whole_book_overview_v1 import (
     OverviewSnapshotSummary,
     PreflightBlockingError,
     PreflightResponse,
+    PriorStateV1,
     ProgressDTO,
     RunActionsDTO,
     RunStatusResponse,
@@ -597,7 +598,29 @@ class NativeOverviewService:
         start_chapter = chapters.get(first.snapshot_chapter_id)
         end_chapter = chapters.get(last.snapshot_chapter_id)
         source_ids = [p.stable_paragraph_id or p.source_paragraph_id or str(p.id) for p in paragraphs]
-        input_hash = hashlib.sha256("|".join(source_ids).encode("utf-8")).hexdigest()
+        # Build temporary WindowParagraph list for hash (must match Private rule).
+        from app.narrative_core.contracts.whole_book_overview_v1 import WindowParagraph as WP
+
+        hash_paras: list[WP] = []
+        for p in paragraphs:
+            ch = chapters.get(p.snapshot_chapter_id)
+            chapter_id = str(
+                ch.source_chapter_id if ch and ch.source_chapter_id else p.snapshot_chapter_id
+            )
+            text = self._snapshots.get_snapshot_paragraph_text(p.id)
+            hash_paras.append(
+                WP(
+                    paragraph_id=p.stable_paragraph_id or p.source_paragraph_id or str(p.id),
+                    chapter_id=chapter_id,
+                    paragraph_index=int(p.paragraph_order),
+                    text=text,
+                )
+            )
+        from app.narrative_core.services.native_overview_fixture_adapter import (
+            compute_window_input_hash,
+        )
+
+        input_hash = compute_window_input_hash(hash_paras)
 
         window = WholeBookRunWindow(
             run_id=run.id,
@@ -868,10 +891,21 @@ class NativeOverviewService:
             snapshot_id=str(run.book_snapshot_id),
             engine_version=FIXTURE_ENGINE_VERSION,
             prompt_version=FIXTURE_PROMPT_VERSION,
-            entities=[{"candidate_id": e.candidate_id} for e in window_result.candidate_entities],
-            assets=[{"candidate_id": a.candidate_id} for a in window_result.candidate_assets],
-            evidence=[{"evidence_id": e.evidence_id} for e in window_result.candidate_evidence],
-            final_state=empty_prior_state(),
+            entities=[
+                e.model_dump(mode="json") for e in window_result.candidate_entities
+            ],
+            assets=[
+                a.model_dump(mode="json") for a in window_result.candidate_assets
+            ],
+            evidence=[
+                ev.model_dump(mode="json") for ev in window_result.candidate_evidence
+            ],
+            final_state=PriorStateV1.model_validate(
+                {
+                    **window_result.state_delta.model_dump(mode="json"),
+                    "state_version": 1,
+                }
+            ),
             snapshot_meta={"snapshot_id": run.book_snapshot_id},
             selected_evidence=list(window_result.candidate_evidence),
         )
