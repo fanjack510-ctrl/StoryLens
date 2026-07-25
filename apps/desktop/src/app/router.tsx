@@ -10,6 +10,7 @@ import { CasesPage } from "../pages/CasesPage";
 import { ProvidersPage } from "../pages/ProvidersPage";
 import { SettingsPage } from "../pages/SettingsPage";
 import { WholeBookInsightsPage } from "../pages/WholeBookInsightsPage";
+import { ProNativeOverviewPage } from "../pages/ProNativeOverviewPage";
 import { NotFoundPage, RouteErrorPage } from "../pages/RouteErrorPages";
 
 const routeErrorElement = <RouteErrorPage />;
@@ -26,6 +27,11 @@ export const router = createBrowserRouter([
       {
         path: "/books/:bookId/whole-book-insights",
         element: <WholeBookInsightsPage />,
+        errorElement: routeErrorElement,
+      },
+      {
+        path: "/books/:bookId/pro-native-overview",
+        element: <ProNativeOverviewPage />,
         errorElement: routeErrorElement,
       },
       { path: "/tasks", element: <TasksPage />, errorElement: routeErrorElement },
