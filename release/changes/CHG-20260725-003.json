@@ -41,6 +41,18 @@
       "message": "docs(release): freeze StoryLens 1.1.0 native overview scope",
       "primary": true,
       "multi_change_reason": "STEP 2.0 1.1.0 scope freeze document"
+    },
+    {
+      "sha": "c79e4e9eb8a29fed97502e7d32957e11358be826",
+      "message": "feat(pro-contract): freeze native whole-book overview contracts and storage",
+      "primary": true,
+      "multi_change_reason": "STEP 2.1 Public contract/DB/DTO/fixture freeze"
+    },
+    {
+      "sha": "2a88cbaefbeb090845c112dd184b3baf5066081a",
+      "message": "fix(pro-contract): close C-Review P0 on overview evidence and retry DTOs",
+      "primary": true,
+      "multi_change_reason": "STEP 2.1 C-Review P0 close (evidence_index + retry/resume DTOs)"
     }
   ],
   "modules": [
@@ -54,7 +66,9 @@
     "docs/contracts",
     "docs/releases",
     "packages/contracts/fixtures",
-    "release/changes"
+    "release/changes",
+    "packages/contracts/fixtures/whole_book_overview_v1",
+    "apps/api/db"
   ],
   "files": [
     "apps/api/app/db/models.py",
@@ -79,7 +93,7 @@
     "packages/contracts/fixtures/whole_book_overview_v1/"
   ],
   "user_summary": "建立 StoryLens 首个基于完整小说原文的 Pro 原生整书功能，并在正式开发前纠正现有章节聚合洞察的产品定位。",
-  "technical_summary": "STEP 1.2–2.0 COMPLETE. STEP 2.1 contract+DB freeze COMPLETE on feature/step2-1-contracts. Added OverviewProductionStageKey / WindowStatus / OverviewFieldStatus; additive RunStatus (preparing/analyzing/materializing/synthesizing). New tables whole_book_run_windows + whole_book_run_state_versions via migration 20260725_011. Reuse analysis_artifacts for Overview projection (no dedicated overview fact SoT). DTOs/errors/state-machine/fixtures under contracts. Formal POST create remains disabled. next=STEP 2.2 walking skeleton (do not auto-enter). VERSION stays 1.0.5; status remains implemented.",
+  "technical_summary": "STEP 1.2-2.0 COMPLETE. STEP 2.1 contract+DB freeze COMPLETE. active_substep=STEP 2.1 done; next=STEP 2.2 orchestrator (do not auto-enter). Public Integration HEAD after 2.1: 2a88cba; Private Integration HEAD: 1504ba2. Frozen: docs/contracts x4; Public DTOs/errors/state_machine; migration 20260725_011; ORM whole_book_run_windows + whole_book_run_state_versions; Private engine schemas; fixtures combined_sha256=ecf419c6e79bcc4fc899b116e9e5b7c9b8810de9cba70fec9d0f61282f635d55. Reviews: A/B/C/D PASS (2.G1 GO). Formal create remains disabled (WHOLE_BOOK_RUNS_ENDPOINT_DISABLED). Status remains implemented (not tested/verified). VERSION stays 1.0.5; unreleased.target_version stays null.",
   "acceptance_criteria": [
     "Pro Native Whole-Book Overview end-to-end with Snapshot+Evidence+License+Retry+restart persistence",
     "Free 1.0.5 zero-break and 1.0.5 DB copy upgrade",
@@ -89,19 +103,22 @@
     "apps/api/tests/test_pro_whole_book_insights_gate.py (7 passed)",
     "apps/desktop wholeBookInsights+router.smoke vitest (7 passed)",
     "apps/desktop LibraryPage+library_book_delete_local (18 passed)",
-    "apps/api/tests/test_whole_book_overview_contract_v1.py + migration order asserts (26 passed targeted)"
+    "apps/api/tests/test_whole_book_overview_contract_v1.py + migration order asserts (26 passed targeted)",
+    "apps/api/tests/test_whole_book_overview_contract_v1.py (24 passed)",
+    "private tests/test_whole_book_overview_contract_v1.py (9 passed)"
   ],
   "verification_evidence": [
     "STEP 1.2 Integration: cherry-pick A 4e4561c + C 2f6ca24; Agent D PASS both; capability key/API/route unchanged; VERSION=1.0.5; no push",
     "STEP 1.3 Architecture Review PASS (no P0); docs path existence OK; git diff --check OK; CHG-003 remains implemented; VERSION=1.0.5; no push",
     "STEP 2.0 Scope Review PASS; path docs/releases/storylens-1.1.0-scope.md; git diff --check OK; CHG-003 remains implemented; no VERSION bump; no push",
-    "STEP 2.1 Public: contract docs + DTO/enum/error/state-machine + migration 011 + fixtures; pytest targeted 26 passed; VERSION=1.0.5; no push; status remains implemented"
+    "STEP 2.1 Public: contract docs + DTO/enum/error/state-machine + migration 011 + fixtures; pytest targeted 26 passed; VERSION=1.0.5; no push; status remains implemented",
+    "STEP 2.1: A-Review PASS; B-Review PASS; C-Review PASS (after P0 fix); D-Audit PASS / 2.G1 GO; Public pytest 24; Private pytest 9; fixture hash match ecf419c6...; VERSION=1.0.5; no push"
   ],
   "data_compatibility": {
     "database_changed": true,
     "migration_required": true,
     "user_data_compatible": true,
-    "notes": "Additive migration 20260725_011_whole_book_overview_runtime only. Reuses book_snapshots/analysis_runs/analysis_run_stages/narrative_*/analysis_artifacts/model_invocations. Free 1.0.5 tables not renamed/deleted. Formal Overview orchestrator not wired."
+    "notes": "Additive migration 011 only (windows + state_versions). No Free table deletes. Formal create still disabled. Structure WIP not merged."
   },
   "release_impact": {
     "requires_reanalysis": false,
@@ -112,5 +129,5 @@
   "blocker_level": "P0",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-25T13:31:37Z",
-  "updated_at": "2026-07-25T14:42:24Z"
+  "updated_at": "2026-07-25T14:59:59Z"
 }
