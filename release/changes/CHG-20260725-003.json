@@ -125,6 +125,12 @@
       "message": "test(pro-ui): cover native overview production states and Free smoke",
       "primary": true,
       "multi_change_reason": "STEP 2.3-C UI tests"
+    },
+    {
+      "sha": "a79db690469de48944f2b5390d9bc5d33eba46eb",
+      "message": "docs: attach STEP 2.3 A/B/C Integration commits to CHG-20260725-003",
+      "primary": false,
+      "multi_change_reason": "docs attach STEP 2.3"
     }
   ],
   "modules": [
@@ -213,5 +219,5 @@
   "blocker_level": "P0",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-25T13:31:37Z",
-  "updated_at": "2026-07-25T16:59:43Z"
+  "updated_at": "2026-07-25T16:59:44Z"
 }
