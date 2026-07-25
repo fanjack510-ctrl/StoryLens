@@ -28,6 +28,19 @@ BOOK_ACTIVE_JOURNEY_STATUSES = (
     "chapter_synthesis_running",
 )
 
+# Pro native whole-book Overview (subject_type=book) — block delete while active.
+BOOK_ACTIVE_WHOLE_BOOK_STATUSES = (
+    "pending",
+    "queued",
+    "running",
+    "preparing",
+    "analyzing",
+    "materializing",
+    "synthesizing",
+    "paused",
+    "interrupted",
+)
+
 
 class BookNotFoundError(LookupError):
     pass
@@ -73,7 +86,18 @@ def count_active_tasks(session: Session, book_id: int) -> int:
             )
         )
     )
-    return analysis_count + journey_count
+    whole_book_count = len(
+        list(
+            session.scalars(
+                select(AnalysisRun.id).where(
+                    AnalysisRun.subject_type == "book",
+                    AnalysisRun.subject_id == str(book_id),
+                    AnalysisRun.status.in_(BOOK_ACTIVE_WHOLE_BOOK_STATUSES),
+                )
+            )
+        )
+    )
+    return analysis_count + journey_count + whole_book_count
 
 
 def _delete_analysis_runs_for_book(session: Session, book_id: int) -> int:

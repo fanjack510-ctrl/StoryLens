@@ -229,6 +229,29 @@ def test_active_task_blocks_delete():
     assert session.scalar(select(func.count()).select_from(AnalysisRun)) == 1
 
 
+def test_active_whole_book_native_run_blocks_delete():
+    session = _session()
+    book = _make_book(session)
+    session.add(
+        AnalysisRun(
+            task_type="whole_book_overview",
+            subject_type="book",
+            subject_id=str(book.id),
+            provider="private-native-overview-v1",
+            model="native-overview-1",
+            prompt_version="native-overview-window-v1",
+            schema_version="1.0",
+            input_hash="abc",
+            status="analyzing",
+        )
+    )
+    session.commit()
+    with pytest.raises(BookHasActiveTasksError):
+        delete_book(session, book.id)
+    assert session.get(Book, book.id) is not None
+    assert session.scalar(select(func.count()).select_from(AnalysisRun)) == 1
+
+
 def test_failed_delete_rolls_back_on_active_after_child():
     """Active task leaves all rows intact (no partial delete)."""
     session = _session()
