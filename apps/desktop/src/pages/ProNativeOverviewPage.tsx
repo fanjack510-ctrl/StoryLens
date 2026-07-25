@@ -59,6 +59,18 @@ function mapUiErrorCode(error: unknown): string {
         ? "FEATURE_DISABLED"
         : error.code;
     }
+    // Preserve frozen overview wire codes for recovery UI (STEP 2.4).
+    if (
+      error.code.startsWith("PROVIDER_") ||
+      error.code.startsWith("PRIVATE_ENGINE_") ||
+      error.code === "EVIDENCE_INVALID" ||
+      error.code === "CITATION_INVALID" ||
+      error.code === "MATERIALIZATION_FAILED" ||
+      error.code === "RUN_FAILED" ||
+      error.code === "SNAPSHOT_CHANGED"
+    ) {
+      return error.code;
+    }
     return error.code || "HTTP_ERROR";
   }
   if (error instanceof Error && /fetch|network|Failed to fetch/i.test(error.message)) {
@@ -83,7 +95,19 @@ function ErrorPanel({
     RUN_FAILED: "运行失败",
     OVERVIEW_NOT_READY: "概览尚未就绪",
     EVIDENCE_MISSING: "缺少证据",
+    EVIDENCE_INVALID: "证据无效",
+    CITATION_INVALID: "引用无效",
+    MATERIALIZATION_FAILED: "结果落库失败",
     API_UNAVAILABLE: "分析服务不可用",
+    PROVIDER_TIMEOUT: "模型响应超时",
+    PROVIDER_RATE_LIMITED: "模型请求过于频繁",
+    PROVIDER_UNAVAILABLE: "模型服务暂不可用",
+    PROVIDER_OUTPUT_INVALID: "模型输出无法解析",
+    PROVIDER_OUTPUT_EMPTY: "模型返回为空",
+    PROVIDER_NOT_CONFIGURED: "尚未配置模型",
+    PRIVATE_ENGINE_UNAVAILABLE: "分析引擎不可用",
+    PRIVATE_ENGINE_INCOMPATIBLE: "分析引擎不兼容",
+    SNAPSHOT_CHANGED: "书籍内容已变更",
   };
   return (
     <section

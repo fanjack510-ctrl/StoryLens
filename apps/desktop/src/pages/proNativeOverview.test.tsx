@@ -606,4 +606,21 @@ describe("Pro Native Overview UI (STEP 2.3-C)", () => {
     });
     expect(screen.getByTestId("pro-native-overview-retry")).toBeInTheDocument();
   });
+
+  it("maps PROVIDER_TIMEOUT to dedicated recovery copy", async () => {
+    stubEntitlements(true);
+    const { ApiError } = await import("../services/apiClient");
+    preflightSpy.mockRejectedValue(
+      new ApiError("PROVIDER_TIMEOUT", "模型响应超时，请稍后重试。", 504),
+    );
+    renderApp("/books/1/pro-native-overview");
+    await waitFor(() => {
+      expect(screen.getByTestId("pro-native-overview-error")).toHaveAttribute(
+        "data-error-code",
+        "PROVIDER_TIMEOUT",
+      );
+    });
+    expect(screen.getByText("模型响应超时")).toBeInTheDocument();
+    expect(screen.getByTestId("pro-native-overview-retry")).toBeInTheDocument();
+  });
 });
