@@ -589,6 +589,62 @@ def private_citation_available() -> bool:
     return bool(_PRIVATE_AVAILABLE)
 
 
+class _PrivateEngineCatalogAdapter:
+    """Adapt public ``CitationCatalog`` (property ``citation_ids``) for private engine API."""
+
+    __slots__ = ("_catalog",)
+
+    def __init__(self, catalog: CitationCatalog) -> None:
+        self._catalog = catalog
+
+    def citation_ids(self) -> tuple[str, ...]:
+        return tuple(self._catalog.citation_ids)
+
+    def by_citation_id(self) -> dict[str, CitationCatalogEntry]:
+        return dict(self._catalog.by_citation_id())
+
+    @property
+    def catalog_id(self) -> str:
+        return self._catalog.catalog_id
+
+    @property
+    def catalog_version(self) -> str:
+        return self._catalog.catalog_version
+
+    @property
+    def context_bundle_hash(self) -> str:
+        return self._catalog.context_bundle_hash
+
+    @property
+    def snapshot_id(self) -> int | str:
+        return self._catalog.snapshot_id
+
+    @property
+    def context_bundle_ref(self) -> str | None:
+        return self._catalog.context_bundle_ref
+
+    @property
+    def entries(self) -> tuple[CitationCatalogEntry, ...]:
+        return self._catalog.entries
+
+    @property
+    def catalog_fingerprint(self) -> str:
+        return self._catalog.catalog_fingerprint
+
+
+def catalog_for_private_engine(catalog: Any | None) -> Any | None:
+    """Return a private-engine-compatible catalog view (``citation_ids()`` callable)."""
+
+    if catalog is None:
+        return None
+    ids = getattr(catalog, "citation_ids", None)
+    if callable(ids):
+        return catalog
+    if hasattr(catalog, "entries") and hasattr(catalog, "catalog_id"):
+        return _PrivateEngineCatalogAdapter(catalog)
+    return catalog
+
+
 __all__ = [
     "BUNDLE_HASH_PREFIX_LEN",
     "CATALOG_VERSION",
@@ -612,6 +668,7 @@ __all__ = [
     "ResolvedCitationLocator",
     "build_catalog_from_paragraph_units",
     "bundle_hash_prefix",
+    "catalog_for_private_engine",
     "compute_catalog_fingerprint",
     "fingerprints_match",
     "format_citation_id",

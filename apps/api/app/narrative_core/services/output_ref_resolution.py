@@ -1,8 +1,9 @@
 """Candidate output-ref registry and provider alias resolution (CHG-055).
 
 Provider DTO aliases such as ``book_overview.claim`` are never treated as
-unconditional canonical refs. Resolution runs only after Candidate output refs
-are registered for the current module/run/snapshot.
+unconditional canonical refs. Formal refs such as
+``structure_stages.stage.{key}.boundary.start`` resolve via ``extra_refs`` once
+registered by the V2 mapper.
 """
 
 from __future__ import annotations

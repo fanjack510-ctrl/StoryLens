@@ -43,6 +43,10 @@ FAKE_RESPONSE_SCHEMA_REFS: Mapping[str, str] = {
     "storylines": "dto://StorylinesResultDto",
 }
 
+FAKE_RESPONSE_SCHEMA_REFS_V2: Mapping[str, str] = {
+    "structure_stages": "dto://StructureStagesResultV2",
+}
+
 SUPPORTED_LOCALES: tuple[str, ...] = ("zh-CN", "en-US")
 SUPPORTED_SOURCE_LANGUAGES: tuple[str, ...] = ("zh", "en", "mixed", "auto", "unknown")
 
@@ -73,6 +77,21 @@ class FakeResponseSchemaRefs:
         if not ref:
             raise KeyError(f"no fake response schema ref for {key}")
         return ref
+
+
+def fake_response_schema_ref(
+    module_key: WholeBookModuleKey | str,
+    *,
+    contract_version: str | None = None,
+) -> str:
+    """Resolve fake schema ref; V2 create paths may prefer StructureStagesResultV2."""
+
+    key = module_key.value if isinstance(module_key, WholeBookModuleKey) else str(module_key)
+    if str(contract_version or "").lower() == "v2":
+        v2_ref = FAKE_RESPONSE_SCHEMA_REFS_V2.get(key)
+        if v2_ref:
+            return v2_ref
+    return FakeResponseSchemaRefs().get(key)
 
 
 def compute_fake_prompt_pack_hash(
@@ -242,6 +261,7 @@ fake_prompt_pack_manifest = contract_fake_prompt_pack_manifest
 __all__ = [
     "FAKE_INSTRUCTION_REFS",
     "FAKE_RESPONSE_SCHEMA_REFS",
+    "FAKE_RESPONSE_SCHEMA_REFS_V2",
     "FakePromptInstructionRefs",
     "FakePromptPackServiceManifest",
     "FakeResponseSchemaRefs",
@@ -252,5 +272,6 @@ __all__ = [
     "compute_fake_prompt_pack_hash",
     "compute_fake_prompt_pack_signature",
     "fake_prompt_pack_manifest",
+    "fake_response_schema_ref",
     "reject_fake_prompt_pack_in_production",
 ]

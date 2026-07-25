@@ -17,7 +17,12 @@ from app.narrative_core.product_contract.module_results import (
     MODULE_RESULT_DTO_BY_KEY,
     BookOverviewResultV2,
     ClaimStatus,
+    CitedBoundaryDto,
     CitedClaimDto,
+    CoverageScope,
+    StructureStageV2,
+    StructureStagesResultV2,
+    TurningPointV2,
 )
 from app.narrative_core.product_contract.preflight import WholeBookPreflightPageModel
 from app.narrative_core.product_contract.result_envelope import WholeBookResultEnvelope
@@ -33,13 +38,18 @@ from app.narrative_core.product_contract.structure_map import (
 __all__ = [
     "BookOverviewResultV2",
     "ClaimStatus",
+    "CitedBoundaryDto",
     "CitedClaimDto",
     "ConflictCenterItemDto",
+    "CoverageScope",
     "MODULE_RESULT_DTO_BY_KEY",
     "MODULE_STAGE_DEPENDENCIES",
     "NarrativeReviewActionRequest",
     "NarrativeStructureMapProjectionDto",
     "RESULT_NAV_SECTIONS",
+    "StructureStageV2",
+    "StructureStagesResultV2",
+    "TurningPointV2",
     "WHOLE_BOOK_MODULE_KEYS",
     "WholeBookEvidenceRefDto",
     "WholeBookPreflightPageModel",
