@@ -375,3 +375,94 @@ def test_happy_path_with_monkeypatched_engine(client, license_keypair, monkeypat
     assert scene_row["function_tags"] == ["事件推进"]
     assert scene_row["deep_link"]["chapter_id"] == chapter.id
     assert scene_row["deep_link"]["paragraph_id"] == scene.start_paragraph_id
+
+
+def test_capability_key_and_aggregation_semantics_unchanged() -> None:
+    """Capability key stays stable; copy describes chapter aggregation, not native whole-book."""
+    from app.narrative_core.capability_registry import get_capability_metadata
+    from app.narrative_core.enums import CapabilityKey
+
+    assert CapabilityKey.PRO_WHOLE_BOOK_INSIGHTS.value == "pro_whole_book_insights"
+    meta = get_capability_metadata(CapabilityKey.PRO_WHOLE_BOOK_INSIGHTS)
+    assert meta.key == CapabilityKey.PRO_WHOLE_BOOK_INSIGHTS
+    assert meta.key.value == "pro_whole_book_insights"
+    assert meta.display_name == "章节聚合洞察"
+    assert meta.shipped is True
+    assert meta.requires_license is True
+
+    description = meta.description
+    assert "章节聚合" in description
+    assert "单章" in description
+    assert "聚合" in description
+    assert "Chapter Asset Aggregation Insights" in description
+    # Explicit non-claims: aggregation only; not native whole-book / full-text analysis.
+    assert "不直接分析全书原文" in description
+    assert "不表示原生整书" in description
+    assert "全文分析" not in description
+    assert "原生整书分析已完成" not in description
+    assert "原生全书分析已完成" not in description
+
+
+def test_pro_license_gate_allows_after_activation(client, license_keypair, monkeypatch):
+    """Free denied above; with Pro license the gate lets the request through to the engine."""
+    from app.db.session import get_session_factory
+    from app.main import app
+    from app.narrative_core.services import whole_book_insights_service as svc_mod
+
+    monkeypatch.setattr(
+        svc_mod,
+        "try_import_whole_book_insights_engine",
+        lambda: _FakeWholeBookInsightsEngine(),
+    )
+
+    factory = app.dependency_overrides[get_session_factory]()
+    with factory() as session:
+        book, *_ = _seed_completed_chapter(session)
+        _activate_pro(session, license_keypair)
+
+    resp = client.get(f"/api/v1/books/{book.id}/pro/whole-book-insights")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["data_source"]["capability_key"] == "pro_whole_book_insights"
+    assert "schema" in body
+    assert body["schema"] == "storylens.whole_book_insights.result.v1"
+
+
+def test_api_path_and_dto_shape_stable(client, license_keypair, monkeypatch):
+    """API path and response DTO contract remain intact after semantics copy changes."""
+    from app.db.session import get_session_factory
+    from app.main import app
+    from app.narrative_core.services import whole_book_insights_service as svc_mod
+
+    monkeypatch.setattr(
+        svc_mod,
+        "try_import_whole_book_insights_engine",
+        lambda: _FakeWholeBookInsightsEngine(),
+    )
+
+    factory = app.dependency_overrides[get_session_factory]()
+    with factory() as session:
+        book, *_ = _seed_completed_chapter(session)
+        _activate_pro(session, license_keypair)
+
+    path = f"/api/v1/books/{book.id}/pro/whole-book-insights"
+    resp = client.get(path)
+    assert resp.status_code == 200
+    body = resp.json()
+    for key in (
+        "schema",
+        "book_id",
+        "coverage",
+        "journey_curve",
+        "pacing",
+        "peaks",
+        "valleys",
+        "hooks",
+        "payoffs",
+        "functions",
+        "diagnostics",
+        "chapters",
+        "data_source",
+    ):
+        assert key in body, f"missing DTO field: {key}"
+    assert body["data_source"]["api_alias"] == "pro.whole_book_insights"

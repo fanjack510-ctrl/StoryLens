@@ -87,8 +87,12 @@ CAPABILITY_REGISTRY: dict[CapabilityKey, CapabilityMetadata] = {
     ),
     CapabilityKey.PRO_WHOLE_BOOK_INSIGHTS: CapabilityMetadata(
         key=CapabilityKey.PRO_WHOLE_BOOK_INSIGHTS,
-        display_name="全书洞察",
-        description="基于单章分析聚合的 Pro 全书洞察工作台（覆盖率、旅程、节奏、钩子/回报、章节功能与诊断）。",
+        display_name="章节聚合洞察",
+        description=(
+            "Chapter Asset Aggregation Insights / 章节聚合洞察："
+            "基于已经完成的单章精细分析资产，对章节覆盖、阅读旅程、节奏、钩子、回报和章节功能进行聚合展示。"
+            "不直接分析全书原文，也不表示原生整书/全书分析能力已完成。"
+        ),
         shipped=True,
         requires_license=True,
         availability=CapabilityAvailability.AVAILABLE,

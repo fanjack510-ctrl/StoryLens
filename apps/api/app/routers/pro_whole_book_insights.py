@@ -1,4 +1,7 @@
-"""Pro Whole-Book Insights API."""
+"""Pro Chapter Asset Aggregation Insights API (capability key: pro_whole_book_insights).
+
+Aggregates completed single-chapter analysis assets; does not run native whole-book text analysis.
+"""
 
 from __future__ import annotations
 
@@ -12,7 +15,14 @@ from app.narrative_core.services.whole_book_insights_service import compute_whol
 router = APIRouter(prefix="/api/v1", tags=["pro-whole-book-insights"])
 
 
-@router.get("/books/{book_id}/pro/whole-book-insights")
+@router.get(
+    "/books/{book_id}/pro/whole-book-insights",
+    summary="章节聚合洞察",
+    description=(
+        "基于已完成的单章精细分析资产聚合展示章节覆盖、阅读旅程、节奏、钩子、回报与章节功能。"
+        "不直接分析全书原文；不等于原生整书分析。"
+    ),
+)
 def get_whole_book_insights(book_id: int, session: Session = Depends(get_db)) -> dict:
     try:
         return compute_whole_book_insights(session, book_id)

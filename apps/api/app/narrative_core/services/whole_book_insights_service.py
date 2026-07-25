@@ -1,4 +1,8 @@
-"""Pro Whole-Book Insights service — license gate + private engine delegation."""
+"""Pro Chapter Asset Aggregation Insights service — license gate + private engine.
+
+Capability key remains ``pro_whole_book_insights``. Aggregates completed single-chapter
+analysis assets; does not perform native whole-book / full-text analysis.
+"""
 
 from __future__ import annotations
 
@@ -36,7 +40,7 @@ def _require_pro_license(session: Session) -> None:
     if decision.reason_code == CapabilityReasonCode.CAPABILITY_NOT_LICENSED:
         raise WholeBookInsightsError(
             WholeBookInsightsErrorCode.PRO_LICENSE_REQUIRED,
-            "StoryLens Pro license required for whole-book insights.",
+            "StoryLens Pro license required for chapter asset aggregation insights.",
         )
     if decision.reason_code in {
         CapabilityReasonCode.CAPABILITY_NOT_SHIPPED,
@@ -44,7 +48,7 @@ def _require_pro_license(session: Session) -> None:
     }:
         raise WholeBookInsightsError(
             WholeBookInsightsErrorCode.PRO_CAPABILITY_NOT_AVAILABLE,
-            "Whole-book insights capability is not available in this build.",
+            "Chapter asset aggregation insights capability is not available in this build.",
         )
     if decision.reason_code in {
         CapabilityReasonCode.CAPABILITY_LICENSE_EXPIRED,
@@ -56,7 +60,7 @@ def _require_pro_license(session: Session) -> None:
         )
     raise WholeBookInsightsError(
         WholeBookInsightsErrorCode.PRO_CAPABILITY_NOT_AVAILABLE,
-        decision.display_message or "Whole-book insights is not available.",
+        decision.display_message or "Chapter asset aggregation insights is not available.",
     )
 
 
@@ -94,7 +98,7 @@ def compute_whole_book_insights(
     if resolved_engine is None:
         raise WholeBookInsightsError(
             WholeBookInsightsErrorCode.PRIVATE_ENGINE_UNAVAILABLE,
-            "Private whole-book insights engine is not installed.",
+            "Private chapter asset aggregation insights engine is not installed.",
         )
 
     try:
