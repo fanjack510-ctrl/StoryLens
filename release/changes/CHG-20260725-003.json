@@ -89,6 +89,12 @@
       "message": "docs: attach STEP 2.2 walking-skeleton commits to CHG-20260725-003",
       "primary": false,
       "multi_change_reason": "docs attach of STEP 2.2 Integration evidence"
+    },
+    {
+      "sha": "3970e36a7899dadd8ef3db16d86947d924822af5",
+      "message": "feat(pro-runtime): close STEP 2.3-I0 Adapter Protocol and Engine Loader",
+      "primary": true,
+      "multi_change_reason": "STEP 2.3-I0 Adapter Parity + Engine Loader"
     }
   ],
   "modules": [
@@ -132,7 +138,7 @@
     "packages/contracts/fixtures/whole_book_overview_v1/"
   ],
   "user_summary": "建立 StoryLens 首个基于完整小说原文的 Pro 原生整书功能，并在正式开发前纠正现有章节聚合洞察的产品定位。",
-  "technical_summary": "STEP 1.2-2.1 COMPLETE. STEP 2.2 walking skeleton COMPLETE. active_substep=STEP 2.2 done; next=STEP 2.3 multi-agent parallel (do not auto-enter). Public HEAD 987a337; Private HEAD d29fa44. Feature flag PRO_NATIVE_OVERVIEW_ENABLED default false; Fixture engine fixture-native-overview-v1 / walking-skeleton-1 / fixture-no-prompt. Closed loop: Preflight→Create→Snapshot→6 Stages→1 cross-chapter Window→Private Fixture Adapter→Entity/Asset/Evidence/StateVersion/Projection→Get Run/Overview→UI→Evidence deep link→new Session reread; idempotent client_request_id; Free 403. Reviews A/B/C delivered; D-Audit PASS / 2.G2 YES. Status remains implemented (not tested/verified — real Provider is STEP 2.5). VERSION stays 1.0.5.",
+  "technical_summary": "STEP 2.3-I0 PASSED. Unified WholeBookOverviewEngineAdapter + Engine Loader (fixture-native-overview-v1 / private-native-overview-v1). Public Fake removed; ending asset_type=consequence. Fixture hash unchanged. Next: STEP 2.3-A/B/C parallel (do not skip I0). Status remains implemented. VERSION 1.0.5.",
   "acceptance_criteria": [
     "Pro Native Whole-Book Overview end-to-end with Snapshot+Evidence+License+Retry+restart persistence",
     "Free 1.0.5 zero-break and 1.0.5 DB copy upgrade",
@@ -155,7 +161,8 @@
     "STEP 2.0 Scope Review PASS; path docs/releases/storylens-1.1.0-scope.md; git diff --check OK; CHG-003 remains implemented; no VERSION bump; no push",
     "STEP 2.1 Public: contract docs + DTO/enum/error/state-machine + migration 011 + fixtures; pytest targeted 26 passed; VERSION=1.0.5; no push; status remains implemented",
     "STEP 2.1: A-Review PASS; B-Review PASS; C-Review PASS (after P0 fix); D-Audit PASS / 2.G1 GO; Public pytest 24; Private pytest 9; fixture hash match ecf419c6...; VERSION=1.0.5; no push",
-    "STEP 2.2: D-Audit PASS; Public 987a337 Private d29fa44; fixture hash ecf419c6...; Flag default off; WHOLE_BOOK_RUNS_ENDPOINT_DISABLED=True; VERSION=1.0.5; no push"
+    "STEP 2.2: D-Audit PASS; Public 987a337 Private d29fa44; fixture hash ecf419c6...; Flag default off; WHOLE_BOOK_RUNS_ENDPOINT_DISABLED=True; VERSION=1.0.5; no push",
+    "STEP 2.3-I0: Public pytest I0+walking+flag+contract 47 passed with Private PYTHONPATH; Private 22 passed; no silent Fixture downgrade; Flag default false"
   ],
   "data_compatibility": {
     "database_changed": true,
@@ -172,5 +179,5 @@
   "blocker_level": "P0",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-25T13:31:37Z",
-  "updated_at": "2026-07-25T15:57:25Z"
+  "updated_at": "2026-07-25T16:10:48Z"
 }
