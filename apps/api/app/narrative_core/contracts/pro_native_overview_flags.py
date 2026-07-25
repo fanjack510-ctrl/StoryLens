@@ -38,6 +38,10 @@ FIXTURE_ENGINE_ID = "fixture-native-overview-v1"
 FIXTURE_ENGINE_VERSION = "walking-skeleton-1"
 FIXTURE_PROMPT_VERSION = "fixture-no-prompt"
 
+# Formal Private engine id (implemented in STEP 2.3-B). Loader must not silently
+# fall back to Fixture when this id is requested.
+PRIVATE_NATIVE_OVERVIEW_ENGINE_ID = "private-native-overview-v1"
+
 FIXTURE_DEVELOPMENT_WARNING = (
     "Fixture execution does not call a provider."
 )

@@ -89,11 +89,16 @@ from app.narrative_core.services.asset_evidence_service import NarrativeAssetEvi
 from app.narrative_core.services.asset_service import NarrativeAssetService
 from app.narrative_core.services.entity_service import NarrativeEntityServiceImpl
 from app.narrative_core.services.native_overview_fixture_adapter import (
-    NativeOverviewFixtureAdapter,
     empty_prior_state,
-    get_fixture_adapter,
 )
 from app.narrative_core.services.snapshot_service import BookSnapshotServiceImpl
+from app.narrative_core.services.whole_book_overview_engine_loader import (
+    EngineLoadError,
+    load_overview_engine,
+)
+from app.narrative_core.services.whole_book_overview_engine_protocol import (
+    WholeBookOverviewEngineAdapter,
+)
 from app.services import entitlement
 
 OVERVIEW_PROJECTION_ARTIFACT_TYPE = "whole_book_overview_projection"
@@ -178,14 +183,39 @@ class NativeOverviewService:
         self,
         session: Session,
         *,
-        adapter: NativeOverviewFixtureAdapter | None = None,
+        adapter: WholeBookOverviewEngineAdapter | None = None,
+        engine_id: str = FIXTURE_ENGINE_ID,
     ) -> None:
         self._session = session
-        self._adapter = adapter or get_fixture_adapter()
+        self._engine_id = engine_id
+        self._engine_load_error: EngineLoadError | None = None
+        if adapter is not None:
+            self._adapter: WholeBookOverviewEngineAdapter | None = adapter
+        else:
+            try:
+                self._adapter = load_overview_engine(engine_id)
+            except EngineLoadError as exc:
+                self._adapter = None
+                self._engine_load_error = exc
         self._snapshots = BookSnapshotServiceImpl(session)
         self._entities = NarrativeEntityServiceImpl(session)
         self._assets = NarrativeAssetService(session)
         self._evidence = NarrativeAssetEvidenceService(session)
+
+    def _require_adapter(self) -> WholeBookOverviewEngineAdapter:
+        if self._engine_load_error is not None:
+            err = self._engine_load_error
+            raise NativeOverviewError(
+                err.code,
+                err.message,
+                details=err.details or {"engine_id": self._engine_id},
+            )
+        if self._adapter is None:
+            raise NativeOverviewError(
+                WholeBookOverviewErrorCode.PRIVATE_ENGINE_UNAVAILABLE.value,
+                details={"engine_id": self._engine_id},
+            )
+        return self._adapter
 
     # ------------------------------------------------------------------
     # Preflight
@@ -664,9 +694,11 @@ class NativeOverviewService:
 
         window_input = self._build_window_input(run, window)
         try:
-            result = self._adapter.run_window(window_input)
+            result = self._require_adapter().analyze_window(window_input)
             # Re-validate frozen contract shape
             result = WholeBookOverviewWindowResultV1.model_validate(result.model_dump())
+        except NativeOverviewError:
+            raise
         except Exception as exc:  # noqa: BLE001
             validate_window_transition(window.status, WindowStatus.FAILED)
             window.status = WindowStatus.FAILED.value
@@ -910,10 +942,12 @@ class NativeOverviewService:
             selected_evidence=list(window_result.candidate_evidence),
         )
         try:
-            projection = self._adapter.run_synthesis(synthesis_input)
+            projection = self._require_adapter().synthesize_overview(synthesis_input)
             projection = WholeBookOverviewProjectionCandidateV1.model_validate(
                 projection.model_dump()
             )
+        except NativeOverviewError:
+            raise
         except Exception as exc:  # noqa: BLE001
             raise NativeOverviewError(
                 WholeBookOverviewErrorCode.PRIVATE_ENGINE_UNAVAILABLE.value,

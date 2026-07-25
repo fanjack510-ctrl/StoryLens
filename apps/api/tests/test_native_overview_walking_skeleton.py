@@ -41,13 +41,15 @@ from app.narrative_core.contracts.whole_book_overview_fixture_hash import (
 from app.narrative_core.contracts.whole_book_overview_v1 import CreateRunRequest
 from app.narrative_core.enums import OverviewProductionStageKey, RunStatus, WindowStatus
 from app.narrative_core.services.native_overview_fixture_adapter import (
-    FakeFixtureAdapter,
-    get_fixture_adapter,
+    load_private_fixture_engine_adapter,
 )
 from app.narrative_core.services.native_overview_seed import seed_short_book_v1
 from app.narrative_core.services.native_overview_service import (
     OVERVIEW_PROJECTION_ARTIFACT_TYPE,
     NativeOverviewService,
+)
+from app.narrative_core.services.whole_book_overview_engine_protocol import (
+    WholeBookOverviewEngineAdapter,
 )
 from app.services import entitlement
 from app.services.license_crypto import (
@@ -350,16 +352,21 @@ def test_client_request_id_idempotent(api_env):
 
 
 def test_private_adapter_failure(api_env, monkeypatch: pytest.MonkeyPatch):
-    class Boom(FakeFixtureAdapter):
-        def run_window(self, window_input):  # noqa: ANN001
+    class Boom:
+        engine_id = FIXTURE_ENGINE_ID
+
+        def analyze_window(self, payload, transport=None):  # noqa: ANN001
+            raise RuntimeError("fixture boom")
+
+        def synthesize_overview(self, payload, transport=None):  # noqa: ANN001
             raise RuntimeError("fixture boom")
 
     book_id = _seed_pro_book(api_env)
 
     original_init = NativeOverviewService.__init__
 
-    def patched_init(self, session, *, adapter=None):  # noqa: ANN001
-        original_init(self, session, adapter=Boom())
+    def patched_init(self, session, *, adapter=None, engine_id=FIXTURE_ENGINE_ID):  # noqa: ANN001
+        original_init(self, session, adapter=Boom(), engine_id=engine_id)
 
     monkeypatch.setattr(NativeOverviewService, "__init__", patched_init)
 
@@ -458,9 +465,26 @@ def test_free_book_chapter_paragraph_read_regression(api_env):
     assert len(paras.json()["items"] if isinstance(paras.json(), dict) else paras.json()) >= 2
 
 
-def test_adapter_swap_point_defaults_to_fake():
-    adapter = get_fixture_adapter(force_fake=True)
-    assert isinstance(adapter, FakeFixtureAdapter)
+def test_fixture_engine_loads_via_loader():
+    from app.narrative_core.services.whole_book_overview_engine_loader import (
+        load_overview_engine,
+    )
+
+    adapter = load_overview_engine(FIXTURE_ENGINE_ID)
+    assert adapter.engine_id == FIXTURE_ENGINE_ID
+    assert isinstance(adapter, WholeBookOverviewEngineAdapter)
+
+
+def test_force_fake_removed():
+    from app.narrative_core.services.native_overview_fixture_adapter import (
+        get_fixture_adapter,
+    )
+    from app.narrative_core.services.whole_book_overview_engine_loader import (
+        EngineLoadError,
+    )
+
+    with pytest.raises(EngineLoadError):
+        get_fixture_adapter(force_fake=True)
 
 
 def test_create_run_request_validates():
