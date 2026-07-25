@@ -24,6 +24,7 @@ from app.narrative_core.migrations import (
     MIGRATION_NARRATIVE_ENTITIES_ALIASES,
     MIGRATION_NARRATIVE_RELATIONS_VERSIONS_EVIDENCE,
     MIGRATION_SCHEMA_MIGRATIONS,
+    MIGRATION_WHOLE_BOOK_OVERVIEW_RUNTIME,
     migration_checksum,
 )
 
@@ -988,6 +989,133 @@ def migrate_narrative_20260723_010_analysis_conflicts(engine: Engine) -> None:
     _record_applied(engine, MIGRATION_ANALYSIS_CONFLICTS, checksum)
 
 
+SQL_011 = """
+CREATE TABLE whole_book_run_windows (
+    id INTEGER NOT NULL PRIMARY KEY,
+    run_id INTEGER NOT NULL,
+    window_index INTEGER NOT NULL,
+    start_paragraph_id VARCHAR(64) NOT NULL DEFAULT '',
+    end_paragraph_id VARCHAR(64) NOT NULL DEFAULT '',
+    start_chapter_id INTEGER,
+    end_chapter_id INTEGER,
+    input_hash VARCHAR(64) NOT NULL DEFAULT '',
+    status VARCHAR(32) NOT NULL DEFAULT 'pending',
+    attempt_count INTEGER NOT NULL DEFAULT 0,
+    state_version_before INTEGER,
+    state_version_after INTEGER,
+    provider_attempt_id INTEGER,
+    token_input INTEGER NOT NULL DEFAULT 0,
+    token_output INTEGER NOT NULL DEFAULT 0,
+    cost FLOAT NOT NULL DEFAULT 0,
+    error_code VARCHAR(100),
+    error_detail TEXT,
+    checkpoint_json TEXT NOT NULL DEFAULT '{}',
+    started_at DATETIME,
+    completed_at DATETIME,
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL,
+    FOREIGN KEY(run_id) REFERENCES analysis_runs (id) ON DELETE CASCADE,
+    FOREIGN KEY(start_chapter_id) REFERENCES chapters (id) ON DELETE SET NULL,
+    FOREIGN KEY(end_chapter_id) REFERENCES chapters (id) ON DELETE SET NULL,
+    FOREIGN KEY(provider_attempt_id) REFERENCES model_invocations (id) ON DELETE SET NULL,
+    UNIQUE (run_id, window_index),
+    UNIQUE (run_id, input_hash)
+);
+CREATE TABLE whole_book_run_state_versions (
+    id INTEGER NOT NULL PRIMARY KEY,
+    run_id INTEGER NOT NULL,
+    version_number INTEGER NOT NULL,
+    after_window_index INTEGER,
+    state_json TEXT NOT NULL DEFAULT '{}',
+    state_hash VARCHAR(64) NOT NULL DEFAULT '',
+    source_stage_key VARCHAR(64),
+    created_at DATETIME NOT NULL,
+    FOREIGN KEY(run_id) REFERENCES analysis_runs (id) ON DELETE CASCADE,
+    UNIQUE (run_id, version_number)
+);
+"""
+
+
+def migrate_narrative_20260725_011_whole_book_overview_runtime(engine: Engine) -> None:
+    """STEP 2.1: window execution + recoverable state versions (idempotent)."""
+    checksum = migration_checksum(SQL_011)
+    names = _table_names(engine)
+    if "whole_book_run_windows" not in names or "whole_book_run_state_versions" not in names:
+        # Partial apply: only create missing tables from SQL_011.
+        with engine.begin() as connection:
+            if "whole_book_run_windows" not in names:
+                connection.execute(
+                    text(
+                        """
+                        CREATE TABLE whole_book_run_windows (
+                            id INTEGER NOT NULL PRIMARY KEY,
+                            run_id INTEGER NOT NULL,
+                            window_index INTEGER NOT NULL,
+                            start_paragraph_id VARCHAR(64) NOT NULL DEFAULT '',
+                            end_paragraph_id VARCHAR(64) NOT NULL DEFAULT '',
+                            start_chapter_id INTEGER,
+                            end_chapter_id INTEGER,
+                            input_hash VARCHAR(64) NOT NULL DEFAULT '',
+                            status VARCHAR(32) NOT NULL DEFAULT 'pending',
+                            attempt_count INTEGER NOT NULL DEFAULT 0,
+                            state_version_before INTEGER,
+                            state_version_after INTEGER,
+                            provider_attempt_id INTEGER,
+                            token_input INTEGER NOT NULL DEFAULT 0,
+                            token_output INTEGER NOT NULL DEFAULT 0,
+                            cost FLOAT NOT NULL DEFAULT 0,
+                            error_code VARCHAR(100),
+                            error_detail TEXT,
+                            checkpoint_json TEXT NOT NULL DEFAULT '{}',
+                            started_at DATETIME,
+                            completed_at DATETIME,
+                            created_at DATETIME NOT NULL,
+                            updated_at DATETIME NOT NULL,
+                            FOREIGN KEY(run_id) REFERENCES analysis_runs (id) ON DELETE CASCADE,
+                            FOREIGN KEY(start_chapter_id) REFERENCES chapters (id) ON DELETE SET NULL,
+                            FOREIGN KEY(end_chapter_id) REFERENCES chapters (id) ON DELETE SET NULL,
+                            FOREIGN KEY(provider_attempt_id) REFERENCES model_invocations (id) ON DELETE SET NULL,
+                            UNIQUE (run_id, window_index),
+                            UNIQUE (run_id, input_hash)
+                        )
+                        """
+                    )
+                )
+            if "whole_book_run_state_versions" not in names:
+                connection.execute(
+                    text(
+                        """
+                        CREATE TABLE whole_book_run_state_versions (
+                            id INTEGER NOT NULL PRIMARY KEY,
+                            run_id INTEGER NOT NULL,
+                            version_number INTEGER NOT NULL,
+                            after_window_index INTEGER,
+                            state_json TEXT NOT NULL DEFAULT '{}',
+                            state_hash VARCHAR(64) NOT NULL DEFAULT '',
+                            source_stage_key VARCHAR(64),
+                            created_at DATETIME NOT NULL,
+                            FOREIGN KEY(run_id) REFERENCES analysis_runs (id) ON DELETE CASCADE,
+                            UNIQUE (run_id, version_number)
+                        )
+                        """
+                    )
+                )
+    with engine.begin() as connection:
+        for statement in (
+            "CREATE INDEX IF NOT EXISTS ix_wb_run_windows_run_id "
+            "ON whole_book_run_windows (run_id)",
+            "CREATE INDEX IF NOT EXISTS ix_wb_run_windows_run_status "
+            "ON whole_book_run_windows (run_id, status)",
+            "CREATE INDEX IF NOT EXISTS ix_wb_run_windows_status "
+            "ON whole_book_run_windows (status)",
+            "CREATE INDEX IF NOT EXISTS ix_wb_run_state_versions_run_id "
+            "ON whole_book_run_state_versions (run_id)",
+        ):
+            connection.execute(text(statement))
+    _ensure_schema_migrations_table(engine)
+    _record_applied(engine, MIGRATION_WHOLE_BOOK_OVERVIEW_RUNTIME, checksum)
+
+
 def apply_narrative_phase1bp_migrations(engine: Engine) -> None:
     """Apply Phase 1B-P skeleton migrations 006–010 (after Phase 1P 001–005)."""
     apply_narrative_phase1p_migrations(engine)
@@ -998,6 +1126,12 @@ def apply_narrative_phase1bp_migrations(engine: Engine) -> None:
     migrate_narrative_20260723_010_analysis_conflicts(engine)
 
 
-def apply_narrative_migrations(engine: Engine) -> None:
-    """Apply all frozen narrative migrations (Phase 1P + Phase 1B-P)."""
+def apply_narrative_overview_migrations(engine: Engine) -> None:
+    """Apply STEP 2.1 overview runtime migration (after Phase 1B-P)."""
     apply_narrative_phase1bp_migrations(engine)
+    migrate_narrative_20260725_011_whole_book_overview_runtime(engine)
+
+
+def apply_narrative_migrations(engine: Engine) -> None:
+    """Apply all frozen narrative migrations (Phase 1P + 1B-P + Overview)."""
+    apply_narrative_overview_migrations(engine)

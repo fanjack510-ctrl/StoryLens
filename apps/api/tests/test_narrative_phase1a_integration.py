@@ -106,7 +106,7 @@ def _seed_book(session: Session, *, suffix: str = "") -> Book:
 
 
 def test_migrations_001_to_005_order_idempotent_and_checksum(tmp_path) -> None:
-    assert NARRATIVE_MIGRATION_ORDER == (
+    assert NARRATIVE_MIGRATION_ORDER[:5] == (
         "20260723_001_schema_migrations",
         "20260723_002_content_hashes",
         "20260723_003_book_snapshots",

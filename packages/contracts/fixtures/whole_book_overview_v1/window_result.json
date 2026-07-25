@@ -1,0 +1,82 @@
+{
+  "candidate_assets": [
+    {
+      "asset_type": "goal",
+      "candidate_id": "ca-1",
+      "confidence": 0.7,
+      "deduplication_key": "goal:find_bell",
+      "evidence_refs": [
+        "ev-1"
+      ],
+      "object_candidate_ids": [],
+      "subject_candidate_ids": [
+        "ce-1"
+      ],
+      "summary": "主角想弄清钟声从何处传来",
+      "title": "寻找钟声来源"
+    }
+  ],
+  "candidate_entities": [
+    {
+      "aliases": [
+        "他"
+      ],
+      "candidate_id": "ce-1",
+      "canonical_name": "林远",
+      "confidence": 0.9,
+      "description": "雨巷中的主角",
+      "entity_type": "character",
+      "evidence_refs": [
+        "ev-1"
+      ]
+    }
+  ],
+  "candidate_evidence": [
+    {
+      "chapter_id": "c1",
+      "confidence": 0.95,
+      "evidence_id": "ev-1",
+      "evidence_role": "support",
+      "paragraph_id": "p2",
+      "quote": "他听见远处钟声。",
+      "supports_candidate_ids": [
+        "ce-1",
+        "ca-1"
+      ]
+    }
+  ],
+  "contract_version": "1.0",
+  "input_hash": "sha256:window-0",
+  "quality": {
+    "confidence": 0.8,
+    "repair_attempted": false,
+    "repair_succeeded": false
+  },
+  "run_id": "101",
+  "state_delta": {
+    "aliases": [],
+    "central_question_candidates": [],
+    "characters": [
+      {
+        "candidate_id": "ce-1",
+        "name": "林远"
+      }
+    ],
+    "climax_candidates": [],
+    "conflict_candidates": [],
+    "ending_state_candidates": [],
+    "goal_candidates": [
+      {
+        "candidate_id": "ca-1"
+      }
+    ],
+    "major_event_candidates": [],
+    "protagonist_candidates": [
+      {
+        "candidate_id": "ce-1"
+      }
+    ]
+  },
+  "warnings": [],
+  "window_id": "w-0"
+}

@@ -1145,3 +1145,79 @@ class AnalysisConflict(Base):
     resolved_by: Mapped[str | None] = mapped_column(String(64), nullable=True)
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+
+# ---------------------------------------------------------------------------
+# STEP 2.1 — Native Whole-Book Overview runtime (minimal additive tables)
+# ---------------------------------------------------------------------------
+
+
+class WholeBookRunWindow(Base):
+    """Window execution rows for native Overview production runs."""
+
+    __tablename__ = "whole_book_run_windows"
+    __table_args__ = (
+        UniqueConstraint("run_id", "window_index", name="uq_wb_run_windows_run_index"),
+        UniqueConstraint("run_id", "input_hash", name="uq_wb_run_windows_run_input_hash"),
+        CheckConstraint("window_index >= 0", name="ck_wb_run_windows_index_nonneg"),
+        CheckConstraint("attempt_count >= 0", name="ck_wb_run_windows_attempt_nonneg"),
+        Index("ix_wb_run_windows_run_status", "run_id", "status"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    run_id: Mapped[int] = mapped_column(
+        ForeignKey("analysis_runs.id", ondelete="CASCADE"), index=True
+    )
+    window_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    start_paragraph_id: Mapped[str] = mapped_column(String(64), nullable=False, default="")
+    end_paragraph_id: Mapped[str] = mapped_column(String(64), nullable=False, default="")
+    start_chapter_id: Mapped[int | None] = mapped_column(
+        ForeignKey("chapters.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    end_chapter_id: Mapped[int | None] = mapped_column(
+        ForeignKey("chapters.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    input_hash: Mapped[str] = mapped_column(String(64), nullable=False, default="")
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending", index=True)
+    attempt_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    state_version_before: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    state_version_after: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    provider_attempt_id: Mapped[int | None] = mapped_column(
+        ForeignKey("model_invocations.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    token_input: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    token_output: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    cost: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    error_code: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    error_detail: Mapped[str | None] = mapped_column(Text, nullable=True)
+    checkpoint_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now
+    )
+
+
+class WholeBookRunStateVersion(Base):
+    """Recoverable minimal global state after window materialization."""
+
+    __tablename__ = "whole_book_run_state_versions"
+    __table_args__ = (
+        UniqueConstraint(
+            "run_id", "version_number", name="uq_wb_run_state_versions_run_version"
+        ),
+        CheckConstraint("version_number >= 0", name="ck_wb_run_state_version_nonneg"),
+        Index("ix_wb_run_state_versions_run", "run_id"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    run_id: Mapped[int] = mapped_column(
+        ForeignKey("analysis_runs.id", ondelete="CASCADE"), index=True
+    )
+    version_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    after_window_index: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    state_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
+    state_hash: Mapped[str] = mapped_column(String(64), nullable=False, default="")
+    source_stage_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)

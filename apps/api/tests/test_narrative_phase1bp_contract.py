@@ -66,10 +66,11 @@ def _fk_engine(url: str):
 
 def test_migration_ids_001_to_010_unique_and_ordered() -> None:
     assert_unique_migration_ids()
-    assert len(NARRATIVE_MIGRATION_ORDER) == 10
+    assert len(NARRATIVE_MIGRATION_ORDER) == 11
     assert NARRATIVE_MIGRATION_ORDER[0] == "20260723_001_schema_migrations"
     assert NARRATIVE_MIGRATION_ORDER[5] == "20260723_006_narrative_entities_aliases"
     assert NARRATIVE_MIGRATION_ORDER[9] == "20260723_010_analysis_conflicts"
+    assert NARRATIVE_MIGRATION_ORDER[10] == "20260725_011_whole_book_overview_runtime"
     # 001–005 unchanged
     assert NARRATIVE_MIGRATION_ORDER[:5] == (
         "20260723_001_schema_migrations",
@@ -101,7 +102,10 @@ def test_create_all_on_empty_temp_db(tmp_path) -> None:
         ).fetchall()
     applied = {row[0] for row in rows}
     for mid in NARRATIVE_MIGRATION_ORDER:
+        if mid == "20260725_011_whole_book_overview_runtime":
+            continue  # applied via apply_narrative_overview_migrations / apply_narrative_migrations
         assert mid in applied
+    assert "20260725_011_whole_book_overview_runtime" not in applied
 
 
 def test_upgrade_from_simulated_phase1a_preserves_old_run(tmp_path) -> None:

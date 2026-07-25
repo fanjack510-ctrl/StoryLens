@@ -1,0 +1,17 @@
+{
+  "blocking_errors": [],
+  "book_id": "1",
+  "chapter_count": 2,
+  "character_count": 1200,
+  "currency": "CNY",
+  "estimated_cost": 0.12,
+  "estimated_tokens": 8000,
+  "estimated_windows": 2,
+  "license_allowed": true,
+  "mode": "whole_book_native",
+  "paragraph_count": 4,
+  "provider_configured": true,
+  "run_creation_enabled": false,
+  "snapshot_required": true,
+  "warnings": []
+}

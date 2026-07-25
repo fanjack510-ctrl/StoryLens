@@ -67,9 +67,9 @@ def create_db() -> None:
     Base.metadata.create_all(bind=engine)
     # Phase 1P narrative shared skeleton (upgrade path + ledger). After create_all so
     # fresh DBs already have ORM tables; migrators remain idempotent for 1.0.5 upgrades.
-    from app.narrative_core.migrations.runner import apply_narrative_phase1bp_migrations
+    from app.narrative_core.migrations.runner import apply_narrative_migrations
 
-    apply_narrative_phase1bp_migrations(engine)
+    apply_narrative_migrations(engine)
 
 
 def migrate_phase_license_v1(target_engine) -> None:

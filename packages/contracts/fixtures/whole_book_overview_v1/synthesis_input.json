@@ -1,0 +1,71 @@
+{
+  "assets": [
+    {
+      "asset_type": "goal",
+      "id": "a1",
+      "title": "寻找钟声来源"
+    }
+  ],
+  "book_id": "1",
+  "contract_version": "1.0",
+  "engine_version": "overview-engine-1.0",
+  "entities": [
+    {
+      "entity_type": "character",
+      "id": "e1",
+      "name": "林远"
+    }
+  ],
+  "evidence": [
+    {
+      "id": "ev-1",
+      "paragraph_id": "p2"
+    }
+  ],
+  "final_state": {
+    "aliases": [],
+    "central_question_candidates": [],
+    "characters": [
+      {
+        "candidate_id": "ce-1",
+        "name": "林远"
+      }
+    ],
+    "climax_candidates": [],
+    "conflict_candidates": [],
+    "ending_state_candidates": [],
+    "goal_candidates": [
+      {
+        "candidate_id": "ca-1"
+      }
+    ],
+    "major_event_candidates": [],
+    "protagonist_candidates": [
+      {
+        "candidate_id": "ce-1"
+      }
+    ],
+    "state_version": 2
+  },
+  "prompt_version": "overview-prompt-1.0",
+  "run_id": "101",
+  "selected_evidence": [
+    {
+      "chapter_id": "c1",
+      "confidence": 0.95,
+      "evidence_id": "ev-1",
+      "evidence_role": "support",
+      "paragraph_id": "p2",
+      "quote": "他听见远处钟声。",
+      "supports_candidate_ids": [
+        "ce-1",
+        "ca-1"
+      ]
+    }
+  ],
+  "snapshot_id": "55",
+  "snapshot_meta": {
+    "chapter_count": 2,
+    "paragraph_count": 4
+  }
+}

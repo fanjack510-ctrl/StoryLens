@@ -39,11 +39,18 @@ class RunStatus(StrEnum):
 
     Not a DB enum — legacy scene-pipeline statuses continue to coexist as free
     strings (e.g. boundary_candidates_running). pause ≠ failed; interrupted ≠ failed.
+
+    STEP 2.1 additive Overview production statuses (preparing/analyzing/
+    materializing/synthesizing). Keep queued/running/interrupted for Free.
     """
 
     PENDING = "pending"
     QUEUED = "queued"
     RUNNING = "running"
+    PREPARING = "preparing"
+    ANALYZING = "analyzing"
+    MATERIALIZING = "materializing"
+    SYNTHESIZING = "synthesizing"
     PAUSED = "paused"
     INTERRUPTED = "interrupted"
     COMPLETED = "completed"
@@ -298,6 +305,8 @@ class WholeBookModuleKey(StrEnum):
 
 
 class WholeBookStageKey(StrEnum):
+    """Legacy Lab / multi-module 10-stage keys — do not delete or renumber."""
+
     BUILD_FULLTEXT_INDEX = "build_fulltext_index"
     RESOLVE_ENTITIES = "resolve_entities"
     ANALYZE_STRUCTURE = "analyze_structure"
@@ -308,6 +317,36 @@ class WholeBookStageKey(StrEnum):
     GENERATE_DIAGNOSTICS = "generate_diagnostics"
     VERIFY_EVIDENCE = "verify_evidence"
     PERSIST_NARRATIVE_ASSETS = "persist_narrative_assets"
+
+
+class OverviewProductionStageKey(StrEnum):
+    """1.1.0 native Overview production stages (separate from WholeBookStageKey)."""
+
+    SNAPSHOT_PREFLIGHT = "snapshot_preflight"
+    BUILD_CONTEXT_WINDOWS = "build_context_windows"
+    EXTRACT_OVERVIEW_FACTS = "extract_overview_facts"
+    MATERIALIZE_ASSETS = "materialize_assets"
+    GENERATE_OVERVIEW_PROJECTION = "generate_overview_projection"
+    FINALIZE = "finalize"
+
+
+class WindowStatus(StrEnum):
+    """Whole-book window execution status (whole_book_run_windows.status)."""
+
+    PENDING = "pending"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    SKIPPED = "skipped"
+
+
+class OverviewFieldStatus(StrEnum):
+    """Structured Overview field support status (projection / API)."""
+
+    SUPPORTED = "supported"
+    LOW_CONFIDENCE = "low_confidence"
+    INSUFFICIENT_EVIDENCE = "insufficient_evidence"
+    CONFLICTED = "conflicted"
 
 
 class QuotaPolicyKind(StrEnum):

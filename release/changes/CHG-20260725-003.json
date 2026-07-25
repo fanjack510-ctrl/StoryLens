@@ -45,25 +45,41 @@
   ],
   "modules": [
     "apps/api/capability_registry",
+    "apps/api/db/models",
+    "apps/api/narrative_core/contracts",
+    "apps/api/narrative_core/migrations",
     "apps/desktop/wholeBookInsights",
-    "release/changes",
     "docs/architecture",
     "docs/architecture/adr",
-    "docs/releases"
+    "docs/contracts",
+    "docs/releases",
+    "packages/contracts/fixtures",
+    "release/changes"
   ],
   "files": [
-    "docs/architecture/storylens-whole-book-architecture.md",
-    "docs/architecture/storylens-public-private-boundary.md",
-    "docs/architecture/storylens-step-roadmap.md",
+    "apps/api/app/db/models.py",
+    "apps/api/app/narrative_core/contracts/whole_book_overview_errors.py",
+    "apps/api/app/narrative_core/contracts/whole_book_overview_state_machine.py",
+    "apps/api/app/narrative_core/contracts/whole_book_overview_v1.py",
+    "apps/api/app/narrative_core/enums.py",
+    "apps/api/app/narrative_core/migrations/runner.py",
     "docs/architecture/adr/ADR-001-single-business-database.md",
     "docs/architecture/adr/ADR-002-whole-book-native-source-of-truth.md",
     "docs/architecture/adr/ADR-003-unified-narrative-assets.md",
     "docs/architecture/adr/ADR-004-whole-book-runtime-and-analysis-passes.md",
     "docs/architecture/adr/ADR-005-long-text-index-strategy.md",
-    "docs/releases/storylens-1.1.0-scope.md"
+    "docs/architecture/storylens-public-private-boundary.md",
+    "docs/architecture/storylens-step-roadmap.md",
+    "docs/architecture/storylens-whole-book-architecture.md",
+    "docs/contracts/storylens-1.1.0-native-overview-contract.md",
+    "docs/contracts/storylens-1.1.0-native-overview-database.md",
+    "docs/contracts/storylens-1.1.0-native-overview-error-codes.md",
+    "docs/contracts/storylens-1.1.0-native-overview-state-machine.md",
+    "docs/releases/storylens-1.1.0-scope.md",
+    "packages/contracts/fixtures/whole_book_overview_v1/"
   ],
   "user_summary": "建立 StoryLens 首个基于完整小说原文的 Pro 原生整书功能，并在正式开发前纠正现有章节聚合洞察的产品定位。",
-  "technical_summary": "STEP 1.2 semantics COMPLETE. STEP 1.3 architecture COMPLETE. STEP 2.0 scope freeze COMPLETE. active_substep=STEP 2.0 done; next=STEP 2.1 contract+DB freeze (do not auto-enter). 1.1.0 sole new feature: Pro Native Whole-Book Overview (原生全书概览). Scope doc: docs/releases/storylens-1.1.0-scope.md. Must Have: entry/run/snapshot/windows/private overview engine/materialize/projection/evidence/license/retry/resume/Free regression/Windows publish. Non-Goals: other 10 modules productization, FTS5, Structure WIP, asset editor, journey, etc. Acceptance: see scope §4 checkboxes and §14 human UAT; P0 blockers in scope §10. Public Base at STEP 2.0 start eaa278d; Private Base 727f886. Status remains implemented (not tested/verified). VERSION stays 1.0.5; unreleased.target_version stays null.",
+  "technical_summary": "STEP 1.2–2.0 COMPLETE. STEP 2.1 contract+DB freeze COMPLETE on feature/step2-1-contracts. Added OverviewProductionStageKey / WindowStatus / OverviewFieldStatus; additive RunStatus (preparing/analyzing/materializing/synthesizing). New tables whole_book_run_windows + whole_book_run_state_versions via migration 20260725_011. Reuse analysis_artifacts for Overview projection (no dedicated overview fact SoT). DTOs/errors/state-machine/fixtures under contracts. Formal POST create remains disabled. next=STEP 2.2 walking skeleton (do not auto-enter). VERSION stays 1.0.5; status remains implemented.",
   "acceptance_criteria": [
     "Pro Native Whole-Book Overview end-to-end with Snapshot+Evidence+License+Retry+restart persistence",
     "Free 1.0.5 zero-break and 1.0.5 DB copy upgrade",
@@ -72,18 +88,20 @@
   "tests": [
     "apps/api/tests/test_pro_whole_book_insights_gate.py (7 passed)",
     "apps/desktop wholeBookInsights+router.smoke vitest (7 passed)",
-    "apps/desktop LibraryPage+library_book_delete_local (18 passed)"
+    "apps/desktop LibraryPage+library_book_delete_local (18 passed)",
+    "apps/api/tests/test_whole_book_overview_contract_v1.py + migration order asserts (26 passed targeted)"
   ],
   "verification_evidence": [
     "STEP 1.2 Integration: cherry-pick A 4e4561c + C 2f6ca24; Agent D PASS both; capability key/API/route unchanged; VERSION=1.0.5; no push",
     "STEP 1.3 Architecture Review PASS (no P0); docs path existence OK; git diff --check OK; CHG-003 remains implemented; VERSION=1.0.5; no push",
-    "STEP 2.0 Scope Review PASS; path docs/releases/storylens-1.1.0-scope.md; git diff --check OK; CHG-003 remains implemented; no VERSION bump; no push"
+    "STEP 2.0 Scope Review PASS; path docs/releases/storylens-1.1.0-scope.md; git diff --check OK; CHG-003 remains implemented; no VERSION bump; no push",
+    "STEP 2.1 Public: contract docs + DTO/enum/error/state-machine + migration 011 + fixtures; pytest targeted 26 passed; VERSION=1.0.5; no push; status remains implemented"
   ],
   "data_compatibility": {
-    "database_changed": false,
-    "migration_required": false,
+    "database_changed": true,
+    "migration_required": true,
     "user_data_compatible": true,
-    "notes": "Scope freeze only. No Migration/DTO/API/code. Formal Run remains disabled until later STEP 2.x. Structure WIP not merged."
+    "notes": "Additive migration 20260725_011_whole_book_overview_runtime only. Reuses book_snapshots/analysis_runs/analysis_run_stages/narrative_*/analysis_artifacts/model_invocations. Free 1.0.5 tables not renamed/deleted. Formal Overview orchestrator not wired."
   },
   "release_impact": {
     "requires_reanalysis": false,
@@ -94,5 +112,5 @@
   "blocker_level": "P0",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-25T13:31:37Z",
-  "updated_at": "2026-07-25T14:18:27Z"
+  "updated_at": "2026-07-25T14:42:24Z"
 }

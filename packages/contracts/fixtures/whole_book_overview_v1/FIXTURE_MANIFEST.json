@@ -1,0 +1,19 @@
+{
+  "combined_sha256": "9807e34c7c3e6595f51129c747e05b83b7719ac9260538666b229a6508d6066b",
+  "contract_version": "1.0",
+  "files": {
+    "create_run_request.json": "ef337eb15c3e93442370644affeb04fe07f72b28e8962a476e364bca201b7904",
+    "create_run_response.json": "35305c12896aa4ea5e7fafcad3774942efaacfac200f41935e95b6bc6501a133",
+    "error_cases.json": "c9485ca5b2cdc1ef17d6d2917abb8ca862fb696ebc890775296fd20d855abd3f",
+    "invalid_evidence.json": "75ab9d0db4f2101adc74472bd5caf765eb09902a12d0f1dcf6377ef08d79dc13",
+    "overview_api_response.json": "c5db4f86e6e8a1e53f80bbc171711356e81ac478f20c00ed2582071885866af6",
+    "preflight_response.json": "f6b19a8f541ea2849b7136ee830c7e6a185e6c653bffcf56d61e84827be01fe9",
+    "projection_candidate.json": "b71ec5e762b0691682b1143db6b0ff180377db8362e10273429479aad2aabd7c",
+    "run_status_analyzing.json": "f5bd13959d13a58a68cd9a35ab3c1ed70fafd50f39d8dcfb5e0daa19b5562f40",
+    "run_status_failed.json": "a9dd9b247196e4b8597ab46640a0bfe72027e890c83974513fe60ec0ccefacd2",
+    "synthesis_input.json": "42b566f756c1197199901782b45014b5519066881cecd1499fac2a8ecb094401",
+    "window_input.json": "68297c52ec7e3943256e283082583ae2a00c106caab9a7f400a0e06a4656106f",
+    "window_result.json": "dbc77ef2e893ddf2b4cbf56808bafd994eb853fc9c9e22388ce37948df169d82"
+  },
+  "fixture_set": "whole_book_overview_v1"
+}

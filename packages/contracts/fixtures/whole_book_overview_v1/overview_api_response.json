@@ -1,0 +1,53 @@
+{
+  "book": {
+    "book_id": "1",
+    "title": "雨巷"
+  },
+  "contract_version": "1.0",
+  "coverage": {
+    "evidence_count": 1,
+    "original_coverage_percent": 100,
+    "original_paragraphs_covered": 4,
+    "original_paragraphs_total": 4,
+    "windows_completed": 2,
+    "windows_total": 2
+  },
+  "engine_version": "overview-engine-1.0",
+  "evidence_index": [
+    {
+      "chapter_id": "c1",
+      "evidence_id": "ev-1",
+      "paragraph_id": "p2",
+      "quote": "他听见远处钟声。"
+    }
+  ],
+  "generated_at": "2026-07-25T12:30:00Z",
+  "overview": {
+    "logline": {
+      "confidence": 0.6,
+      "evidence_refs": [
+        "ev-1"
+      ],
+      "status": "supported",
+      "value": "雨巷中，林远循着钟声寻找真相。"
+    },
+    "protagonist": {
+      "confidence": 0.9,
+      "evidence_refs": [
+        "ev-1"
+      ],
+      "status": "supported",
+      "value": "林远"
+    }
+  },
+  "prompt_version": "overview-prompt-1.0",
+  "run": {
+    "run_id": "101",
+    "status": "completed"
+  },
+  "snapshot": {
+    "snapshot_id": "55",
+    "status": "completed"
+  },
+  "warnings": []
+}
