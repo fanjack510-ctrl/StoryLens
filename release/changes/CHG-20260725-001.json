@@ -59,6 +59,12 @@
       "message": "docs: retarget CHG-20260725-001 commits to Integration SHAs",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "6b8e81ffc50cdebe101e8cd92b0b017666ba1611",
+      "message": "docs: attach Integration tip to CHG-20260725-001",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -108,5 +114,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-25T02:35:55Z",
-  "updated_at": "2026-07-25T04:15:20Z"
+  "updated_at": "2026-07-25T04:16:54Z"
 }
