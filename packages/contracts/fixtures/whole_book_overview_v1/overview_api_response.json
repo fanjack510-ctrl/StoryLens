@@ -16,9 +16,22 @@
   "evidence_index": [
     {
       "chapter_id": "c1",
+      "confidence": 0.9,
+      "deep_link": {
+        "book_id": "1",
+        "chapter_id": "c1",
+        "chapter_index": 1,
+        "content_hash": "abc123",
+        "integrity_status": "ok",
+        "paragraph_id": "p2",
+        "paragraph_index": 2
+      },
       "evidence_id": "ev-1",
+      "evidence_role": "support",
       "paragraph_id": "p2",
-      "quote": "他听见远处钟声。"
+      "quote": "他听见远处钟声。",
+      "snapshot_id": "55",
+      "source_run_id": "101"
     }
   ],
   "generated_at": "2026-07-25T12:30:00Z",

@@ -63,6 +63,8 @@ class ProgressDTO(_StrictModel):
     completed_windows: int = Field(ge=0, default=0)
     total_windows: int = Field(ge=0, default=0)
     percent: float = Field(ge=0, le=100, default=0)
+    current_window_index: int | None = Field(default=None, ge=0)
+    failed_window_index: int | None = Field(default=None, ge=0)
 
 
 class CreateRunResponse(_StrictModel):
@@ -75,6 +77,11 @@ class CreateRunResponse(_StrictModel):
     current_stage: OverviewProductionStageKey | None = None
     progress: ProgressDTO
     created_at: datetime
+
+
+class RunActionsDTO(_StrictModel):
+    can_retry: bool = False
+    can_resume: bool = False
 
 
 class RunStatusResponse(_StrictModel):
@@ -95,9 +102,15 @@ class RunStatusResponse(_StrictModel):
     error: str | None = None
     error_code: WholeBookOverviewErrorCode | None = None
     retryable: bool = False
+    actions: RunActionsDTO = Field(default_factory=RunActionsDTO)
     created_at: datetime
     started_at: datetime | None = None
     completed_at: datetime | None = None
+
+
+class PreflightBlockingError(_StrictModel):
+    code: WholeBookOverviewErrorCode | str
+    message: str
 
 
 class PreflightResponse(_StrictModel):
@@ -116,8 +129,35 @@ class PreflightResponse(_StrictModel):
     estimated_cost: float = Field(ge=0, default=0)
     currency: str = "CNY"
     warnings: list[str] = Field(default_factory=list)
-    blocking_errors: list[str] = Field(default_factory=list)
+    blocking_errors: list[PreflightBlockingError | str] = Field(default_factory=list)
     run_creation_enabled: bool = False
+
+
+class RetryRunRequest(_StrictModel):
+    """POST /api/v1/whole-book-runs/{run_id}/retry — failed runs only."""
+
+    client_request_id: str = Field(min_length=1)
+    reason: str | None = None
+
+
+class ResumeRunRequest(_StrictModel):
+    """POST /api/v1/whole-book-runs/{run_id}/resume — paused runs only."""
+
+    client_request_id: str = Field(min_length=1)
+
+
+class RetryResumeRunResponse(_StrictModel):
+    """Shared response for retry/resume — returns updated run status snapshot."""
+
+    run_id: str
+    book_id: str
+    snapshot_id: str
+    status: RunStatus
+    current_stage: OverviewProductionStageKey | None = None
+    progress: ProgressDTO
+    retryable: bool = False
+    actions: RunActionsDTO = Field(default_factory=RunActionsDTO)
+    message: str = ""
 
 
 class OverviewField(_StrictModel):
@@ -164,14 +204,56 @@ class OverviewBodyDTO(_StrictModel):
     synopsis: OverviewField | None = None
 
 
+class OverviewRunSummary(_StrictModel):
+    run_id: str
+    status: RunStatus
+    mode: WholeBookAnalysisMode | None = None
+    module_key: WholeBookModuleKey | None = None
+    current_stage: OverviewProductionStageKey | None = None
+
+
+class OverviewBookSummary(_StrictModel):
+    book_id: str
+    title: str = ""
+
+
+class OverviewSnapshotSummary(_StrictModel):
+    snapshot_id: str
+    status: str = "completed"
+
+
+class EvidenceDeepLink(_StrictModel):
+    """UI jump target — paragraph_id is stable; index/hash optional integrity aids."""
+
+    book_id: str | None = None
+    chapter_id: str
+    chapter_index: int | None = Field(default=None, ge=0)
+    paragraph_id: str
+    paragraph_index: int | None = Field(default=None, ge=0)
+    content_hash: str | None = None
+    integrity_status: str | None = None
+
+
+class EvidenceIndexEntry(_StrictModel):
+    evidence_id: str
+    chapter_id: str
+    paragraph_id: str
+    quote: str = ""
+    evidence_role: str = "support"
+    confidence: float = Field(ge=0, le=1, default=0)
+    snapshot_id: str | None = None
+    source_run_id: str | None = None
+    deep_link: EvidenceDeepLink
+
+
 class OverviewApiResponse(_StrictModel):
-    run: dict[str, Any]
-    book: dict[str, Any]
-    snapshot: dict[str, Any]
+    run: OverviewRunSummary
+    book: OverviewBookSummary
+    snapshot: OverviewSnapshotSummary
     coverage: CoverageDTO
     overview: OverviewBodyDTO
     warnings: list[str] = Field(default_factory=list)
-    evidence_index: list[dict[str, Any]] = Field(default_factory=list)
+    evidence_index: list[EvidenceIndexEntry] = Field(default_factory=list)
     generated_at: datetime
     engine_version: str
     prompt_version: str
@@ -182,10 +264,18 @@ class ErrorDetail(_StrictModel):
     code: WholeBookOverviewErrorCode
     message: str
     retryable: bool
+    allow_retry: bool | None = None
+    requires_user_action: bool = False
     details: dict[str, Any] = Field(default_factory=dict)
     run_id: str | None = None
     stage_key: str | None = None
     window_index: int | None = None
+
+    @model_validator(mode="after")
+    def _default_allow_retry(self) -> ErrorDetail:
+        if self.allow_retry is None:
+            self.allow_retry = self.retryable
+        return self
 
 
 class ErrorEnvelope(_StrictModel):

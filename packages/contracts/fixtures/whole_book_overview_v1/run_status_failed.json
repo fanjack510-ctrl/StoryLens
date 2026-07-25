@@ -1,4 +1,8 @@
 {
+  "actions": {
+    "can_resume": false,
+    "can_retry": true
+  },
   "actual_cost": 0.06,
   "actual_tokens": 4100,
   "book_id": "1",
@@ -14,6 +18,8 @@
   "module_key": "book_overview",
   "progress": {
     "completed_windows": 1,
+    "current_window_index": 1,
+    "failed_window_index": 1,
     "percent": 50,
     "total_windows": 2
   },

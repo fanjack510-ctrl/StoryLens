@@ -1,12 +1,12 @@
 # StoryLens 1.1.0 — Native Whole-Book Overview Contract
 
-**Status:** Frozen (STEP 2.1)  
-**Contract version:** `1.0`  
-**Change:** CHG-20260725-003  
-**Step:** STEP-2.1  
+**Status:** Frozen (STEP 2.1)
+**Contract version:** `1.0`
+**Change:** CHG-20260725-003
+**Step:** STEP-2.1
 
-> 冻结 Public API、Public↔Private 交换 DTO、幂等规则与可量化验收条件。  
-> **不实现** Orchestrator / Provider / Materializer / UI / Prompt。  
+> 冻结 Public API、Public↔Private 交换 DTO、幂等规则与可量化验收条件。
+> **不实现** Orchestrator / Provider / Materializer / UI / Prompt。
 > 正式 `POST` 创建端点可保持 `WHOLE_BOOK_RUNS_ENDPOINT_DISABLED=True`；本文件只冻结契约形状。
 
 ## Related docs
@@ -69,20 +69,27 @@ Includes progress, token/cost estimates vs actuals, provider/model, error + `ret
 
 ### Retry / Resume
 
-`POST .../retry` · `POST .../resume`
+`POST /api/v1/whole-book-runs/{run_id}/retry` · `POST /api/v1/whole-book-runs/{run_id}/resume`
+
+Frozen DTOs:
+
+- Request: `RetryRunRequest` / `ResumeRunRequest` — required `client_request_id` (idempotency key; may reuse create-run id); retry may include optional `reason`
+- Response: `RetryResumeRunResponse` — `run_id`, `book_id`, `snapshot_id`, `status`, `progress`, `retryable`, `actions` (`RunActionsDTO`: `can_retry` / `can_resume`)
+
+Rules:
 
 - `failed` → retry; `paused` → resume.
 - Completed is not retryable (`RUN_ALREADY_COMPLETED`).
 - Retry must not re-call Provider for completed windows.
 - Retry must not create a new Snapshot.
 - Invalid Snapshot rejects resume (`SNAPSHOT_INVALID` / `SNAPSHOT_CONTENT_CHANGED`).
-- Retry requests are idempotent.
+- Retry / resume requests are idempotent under the same `client_request_id`.
 
 ### Get Overview
 
 `GET /api/v1/whole-book-runs/{run_id}/overview`
 
-Only when `status=completed` (or an explicitly allowed partial-result policy later).  
+Only when `status=completed` (or an explicitly allowed partial-result policy later).
 **Must not** reuse the chapter-aggregation insights API as native Overview.
 
 ---
@@ -91,7 +98,7 @@ Only when `status=completed` (or an explicitly allowed partial-result policy lat
 
 ### Window input — `WholeBookOverviewWindowInputV1`
 
-Contains run ref, window slice (paragraph texts from **bound Snapshot** only), prior minimal global state, constraints.  
+Contains run ref, window slice (paragraph texts from **bound Snapshot** only), prior minimal global state, constraints.
 Must **not** pass DB sessions, Windows paths, API keys, license files, or ORM objects.
 
 ### Window result — `WholeBookOverviewWindowResultV1`
@@ -100,7 +107,7 @@ Candidate entities / assets / evidence, state_delta (1.1.0 min fields only), war
 
 ### Synthesis — `WholeBookOverviewSynthesisInputV1`
 
-Materialized / validated assets + entities + evidence + final state + snapshot meta.  
+Materialized / validated assets + entities + evidence + final state + snapshot meta.
 Must **not** dump all window fulltext unstructured.
 
 ### Projection — `WholeBookOverviewProjectionCandidateV1`
@@ -109,7 +116,13 @@ Structured Overview fields, each as `{value, confidence, evidence_refs, status}`
 
 ### Product Overview API — `OverviewApiResponse`
 
-Separated from Private projection candidate. Includes `coverage` with original paragraph coverage (Native completed ⇒ `original_coverage_percent = 100`).
+Separated from Private projection candidate. Includes:
+
+- Typed `run` / `book` / `snapshot` summaries
+- `coverage` with original paragraph coverage (Native completed ⇒ `original_coverage_percent = 100`)
+- `evidence_index: EvidenceIndexEntry[]` with `evidence_role`, `confidence`, `snapshot_id`, `source_run_id`, and `deep_link` (`chapter_id`, `paragraph_id`, `paragraph_index`, optional `content_hash` / `integrity_status`) for UI jumps
+
+Must **not** reuse the chapter-aggregation insights API (`/pro/whole-book-insights`).
 
 ---
 
@@ -145,7 +158,7 @@ See [error-codes](./storylens-1.1.0-native-overview-error-codes.md).
 
 ## Transaction boundary (window)
 
-Prefer one transaction for: Entity/Alias merge + Asset/Version + Evidence + Usage/ProviderAttempt + Run State Version + Window Checkpoint.  
+Prefer one transaction for: Entity/Alias merge + Asset/Version + Evidence + Usage/ProviderAttempt + Run State Version + Window Checkpoint.
 
 If ProviderAttempt must persist before the call: record `started → succeeded/failed`; never mark window completed on provider failure; do not lose cost facts on rollback; do not double-bill without a ledger trail.
 
@@ -194,6 +207,6 @@ On 1.0.5-like schema upgrade: book/chapter/paragraph/run counts preserved; new t
 
 ## Fixtures
 
-Canonical: `packages/contracts/fixtures/whole_book_overview_v1/`  
-Manifest: `FIXTURE_MANIFEST.json` (`contract_version` + per-file sha256 + `combined_sha256`).  
+Canonical: `packages/contracts/fixtures/whole_book_overview_v1/`
+Manifest: `FIXTURE_MANIFEST.json` (`contract_version` + per-file sha256 + `combined_sha256`).
 Private must mirror fixtures and verify the same hashes.

@@ -1,0 +1,4 @@
+{
+  "client_request_id": "retry-req-001",
+  "reason": "provider_timeout"
+}
