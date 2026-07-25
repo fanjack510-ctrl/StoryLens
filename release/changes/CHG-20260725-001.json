@@ -77,6 +77,12 @@
       "message": "docs: attach final Integration tip to CHG-20260725-001",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "622e589ef774819ee05cd1236e6d5d831d8378d6",
+      "message": "fix: materialize Structure Stages Citation Catalog at Estimate",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -97,7 +103,8 @@
     "apps/api/tests/test_narrative_phase2br1_structure_stages_v2_http_replay.py (A-J FakeHttp)",
     "apps/api/tests/test_narrative_phase2br1_citation_v2_http_replay.py::test_citation_v2_scenario_a_valid_no_repair",
     "apps/api/tests/test_narrative_phase2br1_structure_stages_v2_http_replay.py::A-J",
-    "private:tests/test_structure_stages_result_v2_schema.py"
+    "private:tests/test_structure_stages_result_v2_schema.py",
+    "apps/api/tests/test_narrative_phase2br1_structure_stages_catalog_estimate.py"
   ],
   "verification_evidence": [
     "FakeHttp A-J green; book_overview scenario A regression green; gates check_project/version/change_registry/capability/public_provider/live_citation_v2/diff-check pass; no real Provider",
@@ -109,7 +116,11 @@
     "dry_provider_http=0",
     "dry_create_not_executed=true",
     "integration_public_head=ac9633905aab140bcfd29c527d4c171b21a5d449",
-    "integration_private_head=5dabfd5eb0d08e03d4fff6adb5d845a16811a39f"
+    "integration_private_head=5dabfd5eb0d08e03d4fff6adb5d845a16811a39f",
+    "catalog_gap_closure=Estimate_materializes_structure_stages_catalog",
+    "catalog_estimate_tests=5passed",
+    "structure_A_J_regression=13passed",
+    "integration_public_head=622e589ef774819ee05cd1236e6d5d831d8378d6"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -126,5 +137,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-25T02:35:55Z",
-  "updated_at": "2026-07-25T04:18:44Z"
+  "updated_at": "2026-07-25T04:34:02Z"
 }
