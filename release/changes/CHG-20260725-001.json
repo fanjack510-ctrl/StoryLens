@@ -1,0 +1,41 @@
+{
+  "id": "CHG-20260725-001",
+  "title": "Structure Stages V2 Contract and Product Closure",
+  "type": "feature",
+  "base_version": "1.0.5",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "apps/api/narrative_core",
+    "storylens_private_engine/structure"
+  ],
+  "files": [],
+  "user_summary": "Freeze Structure Stages V2 contract; Private/Public implementation; FakeHttp product path; failure matrix; Integration; Dry Live candidate prep. No real Provider Live Create.",
+  "technical_summary": "StructureStagesResultV2 parallel stages/turning_points; Structure FieldRequirementPolicy; Structure ContextCapabilities; Citation Catalog V2 reuse; Targeted Repair max1; Mapper formal keys; Output Ref registry; STRUCTURE_STAGE Asset+Artifact; V1 read-only; FakeHttp product A-J; Integration; Dry Live candidate. No real Live Create.",
+  "acceptance_criteria": [
+    "Private V2 DTO/Schema/Policy/Capabilities/Citation/Repair/Mapper/Attempts/no-fallback",
+    "Public product scenarios A-J via FakeHttpRouter path",
+    "book_overview regression unchanged",
+    "gates pass; Dry Health/Preflight/Estimate only; Provider HTTP=0",
+    "Change status tested max; include_in_next_release=true"
+  ],
+  "tests": [],
+  "verification_evidence": [],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": null,
+  "created_at": "2026-07-25T02:35:55Z",
+  "updated_at": "2026-07-25T02:36:24Z"
+}
