@@ -53,6 +53,12 @@
       "message": "fix(pro-contract): close C-Review P0 on overview evidence and retry DTOs",
       "primary": true,
       "multi_change_reason": "STEP 2.1 C-Review P0 close (evidence_index + retry/resume DTOs)"
+    },
+    {
+      "sha": "03f000e1a75bf3bd9f16c7d563fca78d68b733e3",
+      "message": "docs: attach STEP 2.1 contract freeze commits to CHG-20260725-003",
+      "primary": false,
+      "multi_change_reason": "docs attach of STEP 2.1 Integration commits"
     }
   ],
   "modules": [
@@ -129,5 +135,5 @@
   "blocker_level": "P0",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-25T13:31:37Z",
-  "updated_at": "2026-07-25T14:59:59Z"
+  "updated_at": "2026-07-25T15:00:35Z"
 }
