@@ -83,6 +83,12 @@
       "message": "fix: materialize Structure Stages Citation Catalog at Estimate",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "c3bc77e774340bd92a0282f3e873885fd40ca678",
+      "message": "docs: record Structure Stages Catalog Estimate gap closure on CHG-001",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -137,5 +143,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-25T02:35:55Z",
-  "updated_at": "2026-07-25T04:34:02Z"
+  "updated_at": "2026-07-25T04:34:03Z"
 }
