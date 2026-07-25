@@ -746,6 +746,45 @@ class PrivateLabRunExecutor:
                     except Exception:  # noqa: BLE001
                         schema_fp = ""
 
+                # CHG-20260725-001: Structure Stages Catalog must match Estimate freeze
+                # via the shared materializer (same units / hash / schema path).
+                if str(module_key) == "structure_stages":
+                    from app.narrative_core.services.citation_catalog_materialization import (
+                        materialize_structure_stages_estimate_catalog,
+                    )
+
+                    remat = materialize_structure_stages_estimate_catalog(
+                        session=self._session,
+                        contract=contract,
+                        book_snapshot_id=int(run.book_snapshot_id or 0),
+                        context_bundle_hash=str(
+                            expected_binding.context_bundle_hash or context_bundle_hash
+                        ),
+                        selected_paragraph_ids=expected_binding.selected_paragraph_ids,
+                        context_bundle_ref=str(meta.get("context_bundle_ref") or ""),
+                    )
+                    if remat is None or remat.catalog is None:
+                        raise PrivateWholeBookLabRunError(
+                            PrivateEngineLabDenyReason.PRIVATE_ENGINE_LAB_OPERATION_NOT_ALLOWED,
+                            run_id=int(run.id),
+                            detail_code="STRUCTURE_STAGES_CATALOG_MATERIALIZATION_FAILED",
+                        )
+                    citation_catalog = remat.catalog
+                    allowed_citation_ids = tuple(remat.citation_ids)
+                    catalog_fp = remat.catalog_fingerprint
+                    schema_fp = remat.dynamic_schema_fingerprint
+                    # Keep paragraph units aligned with materializer for Provider path.
+                    from app.narrative_core.services.citation_catalog_materialization import (
+                        build_citation_paragraph_units_from_contract,
+                    )
+
+                    citation_paragraph_units = build_citation_paragraph_units_from_contract(
+                        session=self._session,
+                        contract=contract,
+                        book_snapshot_id=int(run.book_snapshot_id or 0),
+                        selected_paragraph_ids=selected_pids,
+                    )
+
                 actual_selection_fp = compute_selection_fingerprint(
                     selected_chapter_ids=formal_bundle.selected_chapter_ids,
                     selected_paragraph_ids=formal_bundle.selected_paragraph_ids,

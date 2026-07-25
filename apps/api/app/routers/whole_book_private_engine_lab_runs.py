@@ -412,6 +412,11 @@ def private_lab_estimate(
             if isinstance(cached.get("execution_context_binding"), dict)
             else None
         ),
+        "catalog_materialization": (
+            dict(cached.get("catalog_materialization") or {})
+            if isinstance(cached.get("catalog_materialization"), dict)
+            else None
+        ),
         "private_lab": True,
         "non_production": True,
         "run_created": False,

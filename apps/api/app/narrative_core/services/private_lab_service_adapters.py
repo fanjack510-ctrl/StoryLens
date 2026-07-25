@@ -334,6 +334,48 @@ class PrivateLabEstimateServiceAdapter:
                             _ = build_field_requirement_policy(capabilities)
                     except Exception:  # noqa: BLE001
                         caps = {}
+                    citation_entry_count = 0
+                    citation_catalog_fingerprint = ""
+                    dynamic_schema_fingerprint = ""
+                    catalog_materialization: dict[str, Any] | None = None
+                    # CHG-20260725-001: Structure Stages freezes Catalog at Estimate.
+                    # book_overview keeps prior Estimate behavior (catalog at Execute).
+                    if str(module_key) == "structure_stages":
+                        try:
+                            from app.narrative_core.services.citation_catalog_materialization import (
+                                materialize_structure_stages_estimate_catalog,
+                            )
+
+                            contract = None
+                            if hasattr(self.resolver, "last_contract"):
+                                contract = self.resolver.last_contract()
+                            session = getattr(self.resolver, "session", None)
+                            mat = materialize_structure_stages_estimate_catalog(
+                                session=session,
+                                contract=contract,
+                                book_snapshot_id=int(book_snapshot_id),
+                                context_bundle_hash=str(bundle.context_bundle_hash),
+                                selected_paragraph_ids=bundle.selected_paragraph_ids,
+                                context_bundle_ref=str(
+                                    getattr(bundle, "context_bundle_ref", None)
+                                    or bundle.context_bundle_hash
+                                ),
+                            )
+                            if mat is not None:
+                                citation_entry_count = int(mat.catalog_entry_count)
+                                citation_catalog_fingerprint = str(
+                                    mat.catalog_fingerprint
+                                )
+                                dynamic_schema_fingerprint = str(
+                                    mat.dynamic_schema_fingerprint
+                                )
+                                catalog_materialization = mat.safe_dict()
+                                self._pending_catalog_materialization = mat
+                        except Exception:  # noqa: BLE001
+                            citation_entry_count = 0
+                            citation_catalog_fingerprint = ""
+                            dynamic_schema_fingerprint = ""
+                            catalog_materialization = None
                     execution_binding = build_execution_context_binding(
                         book_id=int(book_id),
                         snapshot_id=int(book_snapshot_id),
@@ -342,12 +384,14 @@ class PrivateLabEstimateServiceAdapter:
                         selected_paragraph_ids=bundle.selected_paragraph_ids,
                         selected_unit_refs=bundle.selected_context_unit_ids,
                         context_bundle_hash=bundle.context_bundle_hash,
+                        citation_catalog_fingerprint=citation_catalog_fingerprint,
                         prompt_input_fingerprint=str(
                             resolve_meta.get("bundle_fingerprint")
                             or bundle.bundle_fingerprint
                         ),
+                        dynamic_schema_fingerprint=dynamic_schema_fingerprint,
                         source_character_count=bundle.source_character_count(),
-                        citation_entry_count=0,  # filled after catalog build at execute
+                        citation_entry_count=citation_entry_count,
                         provider_context_limit=resolve_meta.get("provider_context_limit"),
                         batch_index=int(resolve_meta.get("batch_index") or 0),
                         batch_count=int(resolve_meta.get("batch_count") or 1),
@@ -359,6 +403,9 @@ class PrivateLabEstimateServiceAdapter:
                         ),
                         context_capabilities=caps,
                     )
+                    if catalog_materialization is not None:
+                        # Stash for Estimate cache / Consent projection (no body).
+                        self._pending_catalog_materialization_safe = catalog_materialization
                 except Exception:  # noqa: BLE001
                     execution_binding = None
             module_estimates.append(est.safe_dict())
@@ -455,8 +502,13 @@ class PrivateLabEstimateServiceAdapter:
                 if getattr(self, "_pending_binding", None) is not None
                 else None
             ),
+            "catalog_materialization": getattr(
+                self, "_pending_catalog_materialization_safe", None
+            ),
         }
         self._pending_binding = None
+        self._pending_catalog_materialization = None
+        self._pending_catalog_materialization_safe = None
         return result
 
     def validate_fingerprint(
@@ -481,6 +533,16 @@ class PrivateLabEstimateServiceAdapter:
             return None
         raw = entry.get("execution_context_binding")
         return dict(raw) if isinstance(raw, dict) else None
+
+    def cached_catalog_materialization(
+        self, estimate_fingerprint: str
+    ) -> dict[str, Any] | None:
+        entry = self._cache.get(str(estimate_fingerprint))
+        if not entry:
+            return None
+        raw = entry.get("catalog_materialization")
+        return dict(raw) if isinstance(raw, dict) else None
+
 
 @dataclass
 class PrivateLabConsentServiceAdapter:
