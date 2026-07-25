@@ -19,6 +19,7 @@ from app.api.v1.boundary_reviews import router as boundary_review_router
 from app.api.v1.reader_journey import router as reader_journey_router
 from app.routers.capabilities import router as capabilities_router
 from app.routers.whole_book_preflight import router as whole_book_preflight_router
+from app.routers.whole_book_native_overview import router as whole_book_native_overview_router
 from app.routers.whole_book_results import router as whole_book_results_router
 from app.routers.pro_whole_book_insights import router as pro_whole_book_insights_router
 from app.routers import whole_book_mock_lab_runs as mock_lab_runs
@@ -184,6 +185,7 @@ def _configure_middleware_and_routers(app: FastAPI) -> None:
     app.include_router(reader_journey_router)
     app.include_router(capabilities_router)
     app.include_router(whole_book_preflight_router)
+    app.include_router(whole_book_native_overview_router)
     # Phase 1D Integration: read-only result projection (no run create / no review writes).
     app.include_router(whole_book_results_router)
     app.include_router(pro_whole_book_insights_router)
