@@ -100,6 +100,7 @@ export const PRO_CAPABILITY_LABELS: Record<string, string> = {
   story_lab: "故事实验台",
   cross_book_search: "跨书检索",
   advanced_export: "进阶导出",
+  pro_whole_book_insights: "全书洞察",
 };
 
 /** V1 Pro capabilities are unlocked by license but not yet shipped as product features. */

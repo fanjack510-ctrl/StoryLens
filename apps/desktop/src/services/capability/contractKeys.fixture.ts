@@ -9,6 +9,7 @@ export const PHASE1C_CONTRACT_CAPABILITY_KEYS = [
   "story_lab",
   "cross_book_search",
   "advanced_export",
+  "pro_whole_book_insights",
 ] as const;
 
 export const PHASE1C_CONTRACT_ANALYSIS_MODES = [

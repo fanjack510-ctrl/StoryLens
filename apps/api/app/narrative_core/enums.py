@@ -245,6 +245,7 @@ class CapabilityKey(StrEnum):
     STORY_LAB = "story_lab"
     CROSS_BOOK_SEARCH = "cross_book_search"
     ADVANCED_EXPORT = "advanced_export"
+    PRO_WHOLE_BOOK_INSIGHTS = "pro_whole_book_insights"
 
 
 class CapabilityAvailability(StrEnum):

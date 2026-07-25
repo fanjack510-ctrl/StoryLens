@@ -1,0 +1,45 @@
+{
+  "id": "CHG-20260725-002",
+  "title": "StoryLens Pro Whole-Book Insights Core",
+  "type": "feature",
+  "base_version": "1.0.5",
+  "status": "tested",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "apps/api/pro_whole_book_insights",
+    "apps/desktop/wholeBookInsights",
+    "capability/pro_whole_book_insights"
+  ],
+  "files": [],
+  "user_summary": "基于已有单章分析结果，提供 Pro 全书洞察工作台核心端到端能力（覆盖率、旅程、节奏、钩子/回报、章节功能、诊断与 Deep Link）。",
+  "technical_summary": "Public Pro Whole-Book Insights core: capability pro_whole_book_insights with backend license gate; input builder from completed chapter analysis + reader journey; optional private engine import (no public algorithm fallback); GET /api/v1/books/{book_id}/pro/whole-book-insights; minimal desktop entry + page with coverage/journey/deep-link. No migration. Provider HTTP=0.",
+  "acceptance_criteria": [],
+  "tests": [
+    "apps/api/tests/test_pro_whole_book_insights_gate.py (4 passed)",
+    "apps/desktop/src/pages/wholeBookInsights.test.tsx (2 passed)",
+    "private: tests/test_whole_book_insights_engine_v1.py (6 passed)"
+  ],
+  "verification_evidence": [
+    "PRIVATE_PACKAGING_FEASIBLE via PYTHONPATH import probe (health OK / missing clear fail)",
+    "pytest test_pro_whole_book_insights_gate.py -> 4 passed",
+    "vitest wholeBookInsights.test.tsx -> 2 passed",
+    "private pytest test_whole_book_insights_engine_v1.py -> 6 passed"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "No DB migration; on-demand compute from existing chapter/journey rows."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": null,
+  "created_at": "2026-07-25T06:12:09Z",
+  "updated_at": "2026-07-25T06:12:09Z"
+}

@@ -6,6 +6,7 @@ export const PRO_FEATURE_KEYS = [
   "story_lab",
   "cross_book_search",
   "advanced_export",
+  "pro_whole_book_insights",
 ] as const;
 
 export type ProFeatureKey = (typeof PRO_FEATURE_KEYS)[number];

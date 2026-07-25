@@ -85,6 +85,17 @@ CAPABILITY_REGISTRY: dict[CapabilityKey, CapabilityMetadata] = {
         preview_visible=False,
         estimated_cost_class=CostClass.LOW,
     ),
+    CapabilityKey.PRO_WHOLE_BOOK_INSIGHTS: CapabilityMetadata(
+        key=CapabilityKey.PRO_WHOLE_BOOK_INSIGHTS,
+        display_name="全书洞察",
+        description="基于单章分析聚合的 Pro 全书洞察工作台（覆盖率、旅程、节奏、钩子/回报、章节功能与诊断）。",
+        shipped=True,
+        requires_license=True,
+        availability=CapabilityAvailability.AVAILABLE,
+        preview_visible=True,
+        estimated_cost_class=CostClass.MEDIUM,
+        offline_allowed=True,
+    ),
 }
 
 

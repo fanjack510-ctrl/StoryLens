@@ -32,7 +32,7 @@ class CapabilityApiError(Exception):
 
 
 def metadata_payload(meta: CapabilityMetadata) -> dict[str, Any]:
-    return {
+    payload = {
         "key": meta.key.value,
         "display_name": meta.display_name,
         "label": meta.label,
@@ -57,6 +57,9 @@ def metadata_payload(meta: CapabilityMetadata) -> dict[str, Any]:
             for policy in meta.quota_policies
         ],
     }
+    if meta.key == CapabilityKey.PRO_WHOLE_BOOK_INSIGHTS:
+        payload["api_aliases"] = ["pro.whole_book_insights"]
+    return payload
 
 
 def quota_payload(quota: QuotaDecision | None) -> dict[str, Any] | None:

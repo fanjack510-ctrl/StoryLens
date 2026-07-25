@@ -23,7 +23,8 @@ export type CapabilityKey =
   | "narrative_asset_library"
   | "story_lab"
   | "cross_book_search"
-  | "advanced_export";
+  | "advanced_export"
+  | "pro_whole_book_insights";
 
 export type QuotaDecisionDto = {
   allowed: boolean;

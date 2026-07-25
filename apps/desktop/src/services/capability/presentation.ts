@@ -61,6 +61,8 @@ function notLicensedMessage(key: CapabilityKey): string {
       return "当前授权不包含跨书检索";
     case "advanced_export":
       return "当前授权不包含进阶导出";
+    case "pro_whole_book_insights":
+      return "当前授权不包含全书洞察";
     case "narrative_asset_library":
       return "叙事资产库为基础能力，无需专业版锁定";
     default:

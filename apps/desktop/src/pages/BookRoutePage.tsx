@@ -21,6 +21,7 @@ import { ChapterAnalysisProgressPanel } from "../components/chapterAnalysis/Chap
 import { ReaderJourneyProgressCard } from "../components/chapterAnalysis/ReaderJourneyProgressCard";
 import { EmbeddedAnalysisResultShell } from "../components/chapterResult/EmbeddedAnalysisResultShell";
 import { WorkspaceJourneyPane } from "../components/readerJourney/WorkspaceJourneyPane";
+import { WholeBookInsightsEntry } from "../components/wholeBookInsights/WholeBookInsightsEntry";
 import { StateView } from "../components/ui/StateView";
 import { useCurrentPageAnalysisProgress } from "../hooks/useCurrentPageAnalysisProgress";
 import { analysisApi } from "../services/analysisApi";
@@ -86,6 +87,7 @@ export function BookRoutePage() {
   const [panelCollapsed, setPanelCollapsed] = useState(false);
   const [budgetModalOpen, setBudgetModalOpen] = useState(false);
   const [budgetModalRunId, setBudgetModalRunId] = useState<number | null>(null);
+  const [insightsUpgradeOpen, setInsightsUpgradeOpen] = useState(false);
   /** In-memory only: survives polling, clears on full page refresh/remount. */
   const seenBudgetModalRef = useRef<Set<number>>(new Set());
   /** User-initiated shell view; prevents non-essential system redirects. */
@@ -852,6 +854,12 @@ export function BookRoutePage() {
             {!noChapters && !bootstrappingChapter && view !== "result" ? (
               <ReadingSettingsPopover />
             ) : null}
+            {!noChapters && !bootstrappingChapter ? (
+              <WholeBookInsightsEntry
+                bookId={bookId}
+                onUpgrade={() => setInsightsUpgradeOpen(true)}
+              />
+            ) : null}
             {!noChapters && !bootstrappingChapter && panelCollapsed && analysisRunId ? (
               <button
                 type="button"
@@ -1300,6 +1308,18 @@ export function BookRoutePage() {
             setBudgetModalRunId(null);
           }}
         />
+      ) : null}
+
+      {insightsUpgradeOpen ? (
+        <div className="shell-banner" data-testid="whole-book-insights-upgrade-prompt">
+          <p>全书洞察为 StoryLens Pro 功能。激活专业版授权后可聚合全书覆盖率、旅程曲线与诊断。</p>
+          <button type="button" className="primary" onClick={() => navigate("/settings")}>
+            查看授权说明
+          </button>
+          <button type="button" className="secondary" onClick={() => setInsightsUpgradeOpen(false)}>
+            关闭
+          </button>
+        </div>
       ) : null}
 
       {dialog && chapterId ? (

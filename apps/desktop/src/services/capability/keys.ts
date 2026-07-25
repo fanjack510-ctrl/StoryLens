@@ -6,6 +6,7 @@ export const CAPABILITY_KEYS = [
   "story_lab",
   "cross_book_search",
   "advanced_export",
+  "pro_whole_book_insights",
 ] as const;
 
 export type CapabilityKey = (typeof CAPABILITY_KEYS)[number];

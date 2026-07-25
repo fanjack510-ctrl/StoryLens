@@ -27,6 +27,7 @@ CANONICAL_FEATURES = (
     "story_lab",
     "cross_book_search",
     "advanced_export",
+    "pro_whole_book_insights",
 )
 
 
