@@ -28,8 +28,8 @@
     "apps/desktop/src/app/router.tsx",
     "apps/desktop/src/app/router.smoke.test.tsx"
   ],
-  "user_summary": "基于已有单章分析结果，提供 Pro 全书洞察工作台核心端到端能力（覆盖率、旅程、节奏、钩子/回报、章节功能、诊断与 Deep Link）。",
-  "technical_summary": "Public Pro Whole-Book Insights core: capability pro_whole_book_insights with backend license gate; input builder from completed chapter analysis + reader journey; optional private engine import (no public algorithm fallback); GET /api/v1/books/{book_id}/pro/whole-book-insights; minimal desktop entry + page with coverage/journey/deep-link. No migration. Provider HTTP=0.",
+  "user_summary": "基于已完成的单章精细分析结果，提供 Pro 章节聚合洞察（章节资产覆盖、旅程、节奏、钩子/回报、章节功能与诊断）。不属于原生整书分析。",
+  "technical_summary": "FINAL PRODUCT POSITIONING: Chapter Asset Aggregation Insights (章节聚合洞察). Capability source: completed single-chapter analysis assets only. NOT native whole-book analysis / NOT whole_book_native pipeline. Public Pro aggregation page: capability key pro_whole_book_insights remains; backend license gate; input from completed chapter analysis + reader journey; optional private aggregation engine; GET /api/v1/books/{book_id}/pro/whole-book-insights. No migration. Provider HTTP=0. Verification limit: human acceptance must use 章节聚合洞察 criteria only; must NOT enter verified under 原生整书分析 criteria.",
   "acceptance_criteria": [],
   "tests": [
     "apps/api/tests/test_pro_whole_book_insights_gate.py (4 passed)",
@@ -43,13 +43,14 @@
     "pytest test_pro_whole_book_insights_gate.py -> 4 passed",
     "vitest wholeBookInsights.test.tsx -> 2 passed",
     "private pytest test_whole_book_insights_engine_v1.py -> 6 passed",
-    "P0 hotfix: restore missing RouteErrorPage/NotFoundPage import in router.tsx; npm run typecheck OK; vitest router.smoke+wholeBookInsights 3 passed"
+    "P0 hotfix: restore missing RouteErrorPage/NotFoundPage import in router.tsx; npm run typecheck OK; vitest router.smoke+wholeBookInsights 3 passed",
+    "POSITIONING CLARIFIED (STEP 1.2): final product name=章节聚合洞察 / Chapter Asset Aggregation Insights; status remains tested; verification must NOT treat this as native whole-book analysis."
   ],
   "data_compatibility": {
     "database_changed": false,
     "migration_required": false,
     "user_data_compatible": true,
-    "notes": "No DB migration; on-demand compute from existing chapter/journey rows."
+    "notes": "Chapter Asset Aggregation Insights only; not native whole-book. No DB migration; on-demand from existing chapter/journey rows."
   },
   "release_impact": {
     "requires_reanalysis": false,
@@ -60,5 +61,5 @@
   "blocker_level": "P0",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-25T06:12:09Z",
-  "updated_at": "2026-07-25T11:56:16Z"
+  "updated_at": "2026-07-25T13:31:55Z"
 }

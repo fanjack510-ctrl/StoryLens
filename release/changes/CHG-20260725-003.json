@@ -1,0 +1,36 @@
+{
+  "id": "CHG-20260725-003",
+  "title": "Pro Native Whole-Book Overview Production Slice",
+  "type": "feature",
+  "base_version": "1.0.5",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "apps/api/capability_registry",
+    "apps/desktop/wholeBookInsights",
+    "release/changes"
+  ],
+  "files": [],
+  "user_summary": "建立 StoryLens 首个基于完整小说原文的 Pro 原生整书功能，并在正式开发前纠正现有章节聚合洞察的产品定位。",
+  "technical_summary": "STEP 1.2 is a product-semantics precondition (not native overview implementation). STEP 2 implements Pro Native Whole-Book Overview. Public Base: 5515b2a3905886fc9b99d091c3a39771d20a84cd. Private Base: 727f886ead297a3af2019354f2f56352cf22a9d4. Free 1.0.5 (v1.0.5 / release/1.0.5 / ddae7ee) must remain zero-break. Current pro_whole_book_insights is Chapter Asset Aggregation Insights (not whole_book_native / not native whole-book engine). active_substep=STEP 1.2.",
+  "acceptance_criteria": [],
+  "tests": [],
+  "verification_evidence": [],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "STEP 1.2 only renames/clarifies product semantics; API path, capability key, DTO, DB unchanged. Native overview is STEP 2."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "P0",
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-25T13:31:37Z",
+  "updated_at": "2026-07-25T13:31:54Z"
+}
