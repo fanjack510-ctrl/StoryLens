@@ -3,7 +3,7 @@
   "title": "Structure Stages V2 Contract and Product Closure",
   "type": "feature",
   "base_version": "1.0.5",
-  "status": "registered",
+  "status": "tested",
   "include_in_next_release": true,
   "commits": [
     {
@@ -78,5 +78,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-25T02:35:55Z",
-  "updated_at": "2026-07-25T04:10:38Z"
+  "updated_at": "2026-07-25T04:10:57Z"
 }
