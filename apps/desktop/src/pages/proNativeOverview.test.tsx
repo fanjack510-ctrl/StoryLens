@@ -12,6 +12,12 @@ import type {
   RunStatusResponse,
 } from "../services/proNativeOverviewApi";
 import { overviewEvidenceHref } from "../services/proNativeOverviewDeepLink";
+import {
+  FIXTURE_ENGINE_ID,
+  FIXTURE_ENGINE_LABEL,
+  FORMAL_ENGINE_LABEL,
+  PRIVATE_NATIVE_OVERVIEW_ENGINE_ID,
+} from "../services/proNativeOverviewFlag";
 import { useOnboardingStore } from "../stores/onboardingStore";
 
 const flagState = vi.hoisted(() => ({ enabled: true }));
@@ -38,6 +44,8 @@ const preflightSpy = vi.spyOn(proNativeOverviewApiMod.proNativeOverviewApi, "pre
 const createSpy = vi.spyOn(proNativeOverviewApiMod.proNativeOverviewApi, "createRun");
 const getRunSpy = vi.spyOn(proNativeOverviewApiMod.proNativeOverviewApi, "getRun");
 const getOverviewSpy = vi.spyOn(proNativeOverviewApiMod.proNativeOverviewApi, "getOverview");
+const retrySpy = vi.spyOn(proNativeOverviewApiMod.proNativeOverviewApi, "retryRun");
+const resumeSpy = vi.spyOn(proNativeOverviewApiMod.proNativeOverviewApi, "resumeRun");
 
 const booksList = vi.fn();
 
@@ -159,6 +167,9 @@ function basePreflight(
     warnings: [],
     blocking_errors: [],
     run_creation_enabled: true,
+    engine_id: FIXTURE_ENGINE_ID,
+    provider_id: "fixture",
+    model_id: FIXTURE_ENGINE_ID,
     ...overrides,
   };
 }
@@ -170,8 +181,21 @@ function analyzingRun(overrides: Partial<RunStatusResponse> = {}): RunStatusResp
     snapshot_id: "55",
     status: "analyzing",
     current_stage: "extract_overview_facts",
-    progress: { completed_windows: 1, total_windows: 2, percent: 50 },
+    progress: {
+      completed_windows: 1,
+      total_windows: 2,
+      current_window_index: 1,
+    },
+    estimated_tokens: 8000,
+    actual_tokens: 1200,
+    estimated_cost: 0.12,
+    actual_cost: 0.02,
+    currency: "CNY",
+    provider: "fixture",
+    model: FIXTURE_ENGINE_ID,
+    engine_id: FIXTURE_ENGINE_ID,
     retryable: false,
+    actions: { can_retry: false, can_resume: false },
     error: null,
     error_code: null,
     ...overrides,
@@ -230,9 +254,9 @@ function completedOverview(): OverviewApiResponse {
       },
       logline: {
         value: "雨巷中，林远循着钟声寻找真相。",
-        confidence: 0.6,
-        evidence_refs: ["ev-1"],
-        status: "supported",
+        confidence: 0.4,
+        evidence_refs: ["ev-1", "ev-2"],
+        status: "conflicted",
       },
       synopsis: {
         value: "短篇概要",
@@ -256,6 +280,7 @@ function completedOverview(): OverviewApiResponse {
       },
     ],
     generated_at: "2026-07-25T12:30:00Z",
+    engine_id: FIXTURE_ENGINE_ID,
     engine_version: "walking-skeleton-1",
     prompt_version: "fixture-no-prompt",
     contract_version: "1.0",
@@ -263,7 +288,13 @@ function completedOverview(): OverviewApiResponse {
   };
 }
 
-describe("Pro Native Overview UI (§11.9)", () => {
+async function consentAndStart() {
+  await screen.findByTestId("pro-native-overview-preflight");
+  await fireEvent.click(screen.getByTestId("pro-native-overview-consent-checkbox"));
+  await fireEvent.click(screen.getByTestId("pro-native-overview-start"));
+}
+
+describe("Pro Native Overview UI (STEP 2.3-C)", () => {
   afterEach(() => {
     cleanup();
     vi.unstubAllGlobals();
@@ -276,6 +307,8 @@ describe("Pro Native Overview UI (§11.9)", () => {
     createSpy.mockReset();
     getRunSpy.mockReset();
     getOverviewSpy.mockReset();
+    retrySpy.mockReset();
+    resumeSpy.mockReset();
     booksList.mockReset();
     stubEntitlements(false);
     useOnboardingStore.setState({ status: "completed" });
@@ -304,7 +337,7 @@ describe("Pro Native Overview UI (§11.9)", () => {
     expect(preflightSpy).not.toHaveBeenCalled();
   });
 
-  it("shows preflight counts, mode, engine, license, and walking notice", async () => {
+  it("shows complete preflight + consent with Fixture engine labeling", async () => {
     stubEntitlements(true);
     preflightSpy.mockResolvedValue(basePreflight());
     renderApp("/books/1/pro-native-overview");
@@ -312,18 +345,58 @@ describe("Pro Native Overview UI (§11.9)", () => {
     expect(panel).toHaveTextContent("章节数：2");
     expect(panel).toHaveTextContent("段落数：4");
     expect(panel).toHaveTextContent("字符数：1200");
-    expect(panel).toHaveTextContent("模式：原生整书");
-    expect(panel).toHaveTextContent("Engine：Fixture Development Mode");
-    expect(panel).toHaveTextContent("已允许（Pro）");
+    expect(screen.getByTestId("pro-native-overview-preflight-windows")).toHaveTextContent(
+      "预估窗口：2",
+    );
+    expect(screen.getByTestId("pro-native-overview-preflight-tokens")).toHaveTextContent("8000");
+    expect(screen.getByTestId("pro-native-overview-preflight-cost")).toHaveTextContent("0.1200");
+    expect(screen.getByTestId("pro-native-overview-preflight-provider")).toHaveTextContent(
+      "fixture",
+    );
+    expect(screen.getByTestId("pro-native-overview-preflight-model")).toHaveTextContent(
+      FIXTURE_ENGINE_ID,
+    );
+    expect(screen.getByTestId("pro-native-overview-preflight-engine")).toHaveTextContent(
+      FIXTURE_ENGINE_LABEL,
+    );
+    expect(screen.getByTestId("pro-native-overview-engine-badge")).toHaveAttribute(
+      "data-engine-kind",
+      "fixture",
+    );
     expect(screen.getByTestId("pro-native-overview-walking-notice")).toHaveTextContent(
       "当前为行走骨架验证，不调用真实 AI Provider。",
     );
+    expect(screen.getByTestId("pro-native-overview-consent")).toBeInTheDocument();
+    expect(screen.getByTestId("pro-native-overview-start")).toBeDisabled();
     expect(screen.getByTestId("pro-native-overview-product-distinction")).toHaveTextContent(
       "章节聚合洞察",
     );
   });
 
-  it("create run moves to running progress", async () => {
+  it("labels formal engine distinctly from Fixture", async () => {
+    stubEntitlements(true);
+    preflightSpy.mockResolvedValue(
+      basePreflight({
+        engine_id: PRIVATE_NATIVE_OVERVIEW_ENGINE_ID,
+        provider_id: "aliyun_qwen",
+        model_id: "qwen-plus",
+        provider_configured: true,
+      }),
+    );
+    renderApp("/books/1/pro-native-overview");
+    await screen.findByTestId("pro-native-overview-preflight");
+    expect(screen.getByTestId("pro-native-overview-engine-badge")).toHaveAttribute(
+      "data-engine-kind",
+      "formal",
+    );
+    expect(screen.getByTestId("pro-native-overview-preflight-engine")).toHaveTextContent(
+      FORMAL_ENGINE_LABEL,
+    );
+    expect(screen.getByTestId("pro-native-overview-formal-notice")).toBeInTheDocument();
+    expect(screen.queryByTestId("pro-native-overview-walking-notice")).not.toBeInTheDocument();
+  });
+
+  it("create run requires consent then moves to multi-stage progress", async () => {
     stubEntitlements(true);
     preflightSpy.mockResolvedValue(basePreflight());
     createSpy.mockResolvedValue({
@@ -331,12 +404,11 @@ describe("Pro Native Overview UI (§11.9)", () => {
       book_id: "1",
       snapshot_id: "55",
       status: "pending",
-      progress: { completed_windows: 0, total_windows: 2, percent: 0 },
+      progress: { completed_windows: 0, total_windows: 2 },
     });
     getRunSpy.mockResolvedValue(analyzingRun());
     renderApp("/books/1/pro-native-overview");
-    await screen.findByTestId("pro-native-overview-preflight");
-    await fireEvent.click(screen.getByTestId("pro-native-overview-start"));
+    await consentAndStart();
     await waitFor(() => expect(createSpy).toHaveBeenCalled());
     await waitFor(() => expect(getRunSpy).toHaveBeenCalledWith("101"));
     expect(await screen.findByTestId("pro-native-overview-status")).toHaveTextContent(
@@ -345,21 +417,44 @@ describe("Pro Native Overview UI (§11.9)", () => {
     expect(screen.getByTestId("pro-native-overview-window-progress")).toHaveTextContent(
       "1 / 2",
     );
+    expect(screen.getByTestId("pro-native-overview-window-progress").textContent).not.toMatch(
+      /%/,
+    );
+    expect(screen.getByTestId("pro-native-overview-tokens")).toHaveTextContent("8000");
+    expect(screen.getByTestId("pro-native-overview-cost")).toHaveTextContent("0.1200");
+    expect(
+      screen.getByTestId("pro-native-overview-stage-item-extract_overview_facts"),
+    ).toHaveAttribute("data-stage-state", "current");
+    expect(
+      screen.getByTestId("pro-native-overview-stage-item-snapshot_preflight"),
+    ).toHaveAttribute("data-stage-state", "done");
   });
 
-  it("shows completed result fields with confidence and evidence", async () => {
+  it("shows completed result field statuses, evidence, and native coverage", async () => {
     stubEntitlements(true);
     getRunSpy.mockResolvedValue(analyzingRun({ status: "completed", current_stage: "finalize" }));
     getOverviewSpy.mockResolvedValue(completedOverview());
     renderApp("/books/1/pro-native-overview?run_id=101");
     const result = await screen.findByTestId("pro-native-overview-result");
     expect(result).toHaveTextContent("林远");
-    expect(screen.getByTestId("pro-native-overview-field-protagonist")).toHaveTextContent(
-      "置信度：0.90",
+    expect(screen.getByTestId("pro-native-overview-field-protagonist-status")).toHaveTextContent(
+      "已支持",
     );
+    expect(
+      screen.getByTestId("pro-native-overview-field-key_turning_points-status"),
+    ).toHaveTextContent("低置信度");
     expect(
       screen.getByTestId("pro-native-overview-field-ending_state-insufficient"),
     ).toHaveTextContent("暂未能可靠判断");
+    expect(screen.getByTestId("pro-native-overview-field-logline-status")).toHaveTextContent(
+      "存在冲突",
+    );
+    expect(screen.getByTestId("pro-native-overview-field-logline-conflicted")).toBeInTheDocument();
+    const coverage = screen.getByTestId("pro-native-overview-coverage");
+    expect(coverage).toHaveTextContent("段落覆盖：4 / 4");
+    expect(screen.getByTestId("pro-native-overview-coverage-note")).toHaveTextContent(
+      "章节聚合洞察",
+    );
     const evidence = screen.getByTestId("pro-native-overview-evidence-protagonist");
     expect(evidence).toHaveAttribute(
       "href",
@@ -371,7 +466,7 @@ describe("Pro Native Overview UI (§11.9)", () => {
     );
   });
 
-  it("shows failed run state with retryable flag", async () => {
+  it("failed run exposes retry API action", async () => {
     stubEntitlements(true);
     getRunSpy.mockResolvedValue(
       analyzingRun({
@@ -379,15 +474,52 @@ describe("Pro Native Overview UI (§11.9)", () => {
         error: "窗口分析执行失败",
         error_code: "WINDOW_EXECUTION_FAILED",
         retryable: true,
+        actions: { can_retry: true, can_resume: false },
+        progress: {
+          completed_windows: 1,
+          total_windows: 2,
+          failed_window_index: 1,
+        },
       }),
     );
+    retrySpy.mockResolvedValue({
+      run_id: "101",
+      book_id: "1",
+      snapshot_id: "55",
+      status: "analyzing",
+      progress: { completed_windows: 1, total_windows: 2 },
+      retryable: false,
+      actions: { can_retry: false, can_resume: false },
+    });
     renderApp("/books/1/pro-native-overview?run_id=101");
-    await waitFor(() => expect(getRunSpy).toHaveBeenCalledWith("101"));
-    expect(await screen.findByTestId("pro-native-overview-retryable")).toHaveTextContent(
-      "是",
-    );
+    expect(await screen.findByTestId("pro-native-overview-retryable")).toHaveTextContent("是");
     const err = await screen.findByTestId("pro-native-overview-error");
     expect(err).toHaveAttribute("data-error-code", "RUN_FAILED");
+    await fireEvent.click(screen.getByTestId("pro-native-overview-retry-run"));
+    await waitFor(() => expect(retrySpy).toHaveBeenCalledWith("101", expect.any(Object)));
+  });
+
+  it("paused run exposes resume API action", async () => {
+    stubEntitlements(true);
+    getRunSpy.mockResolvedValue(
+      analyzingRun({
+        status: "paused",
+        actions: { can_retry: false, can_resume: true },
+      }),
+    );
+    resumeSpy.mockResolvedValue({
+      run_id: "101",
+      book_id: "1",
+      snapshot_id: "55",
+      status: "analyzing",
+      progress: { completed_windows: 1, total_windows: 2 },
+      retryable: false,
+      actions: { can_retry: false, can_resume: false },
+    });
+    renderApp("/books/1/pro-native-overview?run_id=101");
+    expect(await screen.findByTestId("pro-native-overview-resumable")).toHaveTextContent("是");
+    await fireEvent.click(screen.getByTestId("pro-native-overview-resume-run"));
+    await waitFor(() => expect(resumeSpy).toHaveBeenCalledWith("101", expect.any(Object)));
   });
 
   it("evidence deep link uses existing reader query shape", () => {
@@ -449,5 +581,29 @@ describe("Pro Native Overview UI (§11.9)", () => {
     expect(await screen.findByTestId("book-row-1")).toBeInTheDocument();
     expect(screen.getByTestId("library-search")).toBeInTheDocument();
     expect(createSpy).not.toHaveBeenCalled();
+  });
+
+  it("insights route smoke remains distinct from native overview", async () => {
+    stubEntitlements(true);
+    renderApp("/books/1/whole-book-insights");
+    expect(await screen.findByText("insights-page")).toBeInTheDocument();
+    expect(screen.queryByTestId("pro-native-overview-page")).not.toBeInTheDocument();
+    expect(preflightSpy).not.toHaveBeenCalled();
+  });
+
+  it("preflight error surfaces recoverable error panel", async () => {
+    stubEntitlements(true);
+    const { ApiError } = await import("../services/apiClient");
+    preflightSpy.mockRejectedValue(
+      new ApiError("BOOK_CONTENT_EMPTY", "书籍没有可用于分析的正文段落。", 400),
+    );
+    renderApp("/books/1/pro-native-overview");
+    await waitFor(() => {
+      expect(screen.getByTestId("pro-native-overview-error")).toHaveAttribute(
+        "data-error-code",
+        "BOOK_EMPTY",
+      );
+    });
+    expect(screen.getByTestId("pro-native-overview-retry")).toBeInTheDocument();
   });
 });
