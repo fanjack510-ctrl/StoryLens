@@ -7,26 +7,50 @@
   "include_in_next_release": true,
   "commits": [
     {
-      "sha": "3af10c78b0398db60d75d119eb7f3a4644b67f1f",
+      "sha": "b0879a3c4f97844b86f47a86be58cb6ae2fb5131",
       "message": "feat: add Structure Stages V2 product DTOs and output contract",
       "primary": true,
       "multi_change_reason": null
     },
     {
-      "sha": "b225bda977a53f95361ecb862d6fb771da7a29db",
+      "sha": "5a12352408d8a984d429e9efd76aceb1b220f29a",
       "message": "feat: wire Structure Stages V2 lab path through persistence and Result API",
       "primary": true,
       "multi_change_reason": null
     },
     {
-      "sha": "827271c7111c6dd2264e24b54836da282f610c16",
+      "sha": "713e510d3969086f04647e6a0a22579f0761f995",
       "message": "test: add Structure Stages V2 FakeHttp product scenarios A-J",
       "primary": true,
       "multi_change_reason": null
     },
     {
-      "sha": "0dff030031691cf5ce6f60e078e1b4824f100387",
+      "sha": "495f88699ce433ef1bca711ffbb965969dee6d55",
       "message": "docs: attach Structure Stages V2 Public commits to CHG-20260725-001",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "62a8141e925c194ba4452872e407757cc7520267",
+      "message": "docs: include registry attach SHA for CHG-20260725-001",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "04a02919c72a0e9b736b3c05aa5a4393c1b44b9c",
+      "message": "docs: fix CHG-20260725-001 commit list ancestry",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "bb1dc26038364fea3d9876a177de4b42d52dcd94",
+      "message": "docs: mark CHG-20260725-001 tested after Structure Stages V2 Integration",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "ac9633905aab140bcfd29c527d4c171b21a5d449",
+      "message": "docs: advance CHG-20260725-001 registered to tested",
       "primary": true,
       "multi_change_reason": null
     }
@@ -53,15 +77,15 @@
   ],
   "verification_evidence": [
     "FakeHttp A-J green; book_overview scenario A regression green; gates check_project/version/change_registry/capability/public_provider/live_citation_v2/diff-check pass; no real Provider",
-    "integration_public_head=04a02919c72a0e9b736b3c05aa5a4393c1b44b9c",
-    "integration_private_head=5dabfd5eb0d08e03d4fff6adb5d845a16811a39f",
     "public_scenarios_A_J=13passed",
     "private_directed=48passed",
     "gates=all_passed",
     "dry_db=data/runtime/live-smoke/storylens-live-smoke-structure-stages-20260725-120747.db",
     "dry_summary=data/runtime/live-smoke/structure-stages-dry-summary.json",
     "dry_provider_http=0",
-    "dry_create_not_executed=true"
+    "dry_create_not_executed=true",
+    "integration_public_head=ac9633905aab140bcfd29c527d4c171b21a5d449",
+    "integration_private_head=5dabfd5eb0d08e03d4fff6adb5d845a16811a39f"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -78,5 +102,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-25T02:35:55Z",
-  "updated_at": "2026-07-25T04:10:57Z"
+  "updated_at": "2026-07-25T04:13:49Z"
 }
