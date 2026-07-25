@@ -2,6 +2,17 @@
 
 StoryLens 叙事智能核心文档索引。当前基线：`VERSION=1.0.5`。
 
+## 产品级架构真值（STEP 1.3）
+
+Phase 文档记录分阶段契约与实现史。**产品级整书架构冻结**见：
+
+- [../storylens-whole-book-architecture.md](../storylens-whole-book-architecture.md)
+- [../storylens-public-private-boundary.md](../storylens-public-private-boundary.md)
+- [../storylens-step-roadmap.md](../storylens-step-roadmap.md)
+- [../adr/](../adr/)
+
+若 Phase 文档与上述真值冲突，以 STEP 1.3 真值与 ADR 为准。
+
 ## 阶段状态
 
 | Phase | Change | 状态 | 说明 |
