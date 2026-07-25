@@ -111,7 +111,38 @@ def test_fixture_engine_implements_protocol() -> None:
     assert adapter.engine_id == FIXTURE_ENGINE_ID
 
 
-def test_private_native_engine_missing_does_not_silent_fallback() -> None:
+def test_private_native_engine_loads_when_present() -> None:
+    """With Private on PYTHONPATH, formal engine must load — never silently become Fixture."""
+
+    engine = load_overview_engine(PRIVATE_NATIVE_OVERVIEW_ENGINE_ID)
+    assert engine.engine_id == PRIVATE_NATIVE_OVERVIEW_ENGINE_ID
+    assert engine.engine_id != FIXTURE_ENGINE_ID
+
+
+def test_private_native_engine_missing_does_not_silent_fallback(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import builtins
+    import sys
+
+    # Drop cached module so the next import hits our blocker.
+    sys.modules.pop(
+        "storylens_private_engine.modules.book_overview.native_engine", None
+    )
+    real_import = builtins.__import__
+
+    def blocked(name, globals=None, locals=None, fromlist=(), level=0):  # noqa: ANN001
+        fl = fromlist or ()
+        if name == "storylens_private_engine.modules.book_overview.native_engine":
+            raise ImportError("blocked for I0 test")
+        if (
+            name == "storylens_private_engine.modules.book_overview"
+            and "native_engine" in fl
+        ):
+            raise ImportError("blocked for I0 test")
+        return real_import(name, globals, locals, fromlist, level)
+
+    monkeypatch.setattr(builtins, "__import__", blocked)
     with pytest.raises(EngineLoadError) as exc:
         load_overview_engine(PRIVATE_NATIVE_OVERVIEW_ENGINE_ID)
     assert exc.value.code == WholeBookOverviewErrorCode.PRIVATE_ENGINE_UNAVAILABLE.value
