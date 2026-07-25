@@ -15,8 +15,16 @@
 - 仅在 `prepare-next-release --confirm` 或等效正式流程中生成/定稿目标版本文件
 - 日常开发不得提前把 `VERSION` 改成下一版本
 
+## 范围冻结文档
+
+- `docs/releases/storylens-<VERSION>-scope.md`：版本产品/工程范围锁定（STEP 范围门禁产出）
+- 范围文档**不等于**正式发布说明；不得因写 scope 而提前 bump `VERSION`
+
 ## 现有文档
 
 | 文件 | 说明 |
 |------|------|
-| `1.0.3.md` | 下一正式版本规划基线（当前 `VERSION` 仍为 1.0.2，尚未 bump） |
+| `storylens-1.1.0-scope.md` | 1.1.0 Pro 原生全书概览范围锁定（STEP 2.0；`VERSION` 仍为 1.0.5） |
+| `1.0.5.md` | 1.0.5 发布说明 / 基线 |
+| `1.0.4.md` | 1.0.4 发布说明 |
+| `1.0.3.md` | 历史发布说明 |
