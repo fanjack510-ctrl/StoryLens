@@ -118,6 +118,7 @@ from app.narrative_core.services.whole_book_overview_engine_protocol import (
 from app.services import entitlement
 
 OVERVIEW_PROJECTION_ARTIFACT_TYPE = "whole_book_overview_projection"
+CONTROL_ARTIFACT_TYPE = "whole_book_overview_control"
 
 _PREPARING_STAGE_KEYS = frozenset(
     {
@@ -471,7 +472,15 @@ class NativeOverviewService:
 
     def retry_run(self, run_id: int, request: RetryRunRequest) -> RetryResumeRunResponse:
         require_native_overview_enabled()
+        require_pro_license(self._session)
         run = self._require_overview_run(run_id)
+
+        prior = self._find_control_action(int(run.id), "retry", request.client_request_id)
+        if prior is not None:
+            return self._to_retry_resume_response(
+                run, message="idempotent retry replay"
+            )
+
         if run.status == RunStatus.COMPLETED.value:
             raise NativeOverviewError(
                 WholeBookOverviewErrorCode.RUN_ALREADY_COMPLETED.value,
@@ -484,7 +493,6 @@ class NativeOverviewService:
                 details={"status": run.status},
             )
 
-        del request  # client_request_id reserved for idempotency; landing uses checkpoints
         landing = self._retry_landing_status(run)
         run.error_code = None
         run.error_message = None
@@ -498,29 +506,43 @@ class NativeOverviewService:
         except NativeOverviewError:
             self._session.commit()
             raise
+        self._remember_control_action(run, "retry", request.client_request_id)
         self._session.commit()
         self._session.refresh(run)
         return self._to_retry_resume_response(
             run,
-            message="Retry accepted; completed windows will be skipped.",
+            message=request.reason or "Retry accepted; completed windows will be skipped.",
         )
 
     def resume_run(self, run_id: int, request: ResumeRunRequest) -> RetryResumeRunResponse:
         require_native_overview_enabled()
+        require_pro_license(self._session)
         run = self._require_overview_run(run_id)
+
+        prior = self._find_control_action(int(run.id), "resume", request.client_request_id)
+        if prior is not None:
+            return self._to_retry_resume_response(
+                run, message="idempotent resume replay"
+            )
+
+        if run.status == RunStatus.COMPLETED.value:
+            raise NativeOverviewError(
+                WholeBookOverviewErrorCode.RUN_ALREADY_COMPLETED.value,
+                run_id=str(run.id),
+            )
         if run.status != RunStatus.PAUSED.value:
             raise NativeOverviewError(
                 WholeBookOverviewErrorCode.RUN_NOT_RESUMABLE.value,
                 run_id=str(run.id),
                 details={"status": run.status},
             )
-        del request
         self._transition_run(run, RunStatus.ANALYZING)
         try:
             self.execute_run(int(run.id))
         except NativeOverviewError:
             self._session.commit()
             raise
+        self._remember_control_action(run, "resume", request.client_request_id)
         self._session.commit()
         self._session.refresh(run)
         return self._to_retry_resume_response(
@@ -819,14 +841,15 @@ class NativeOverviewService:
             except Exception as exc:  # noqa: BLE001
                 validate_window_transition(window.status, WindowStatus.FAILED)
                 window.status = WindowStatus.FAILED.value
-                window.error_code = WholeBookOverviewErrorCode.WINDOW_EXECUTION_FAILED.value
+                window.error_code = WholeBookOverviewErrorCode.PRIVATE_ENGINE_UNAVAILABLE.value
                 window.error_detail = str(exc)
                 window.completed_at = utc_now()
                 self._record_attempt_safe(
                     run, window, prompt=prompt, status="failed", error_message=str(exc)
                 )
                 raise NativeOverviewError(
-                    WholeBookOverviewErrorCode.WINDOW_EXECUTION_FAILED.value,
+                    WholeBookOverviewErrorCode.PRIVATE_ENGINE_UNAVAILABLE.value,
+                    f"Fixture adapter / window execution failed: {exc}",
                     run_id=str(run.id),
                     stage_key=stage.stage_key,
                     window_index=window.window_index,
@@ -1124,6 +1147,53 @@ class NativeOverviewService:
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
+
+    def _find_control_action(
+        self, run_id: int, action: str, client_request_id: str
+    ) -> dict[str, Any] | None:
+        """Idempotent retry/resume lookup keyed by client_request_id (no schema change)."""
+
+        stage = self._session.scalar(
+            select(AnalysisRunStage).where(
+                AnalysisRunStage.run_id == int(run_id),
+                AnalysisRunStage.stage_key
+                == OverviewProductionStageKey.SNAPSHOT_PREFLIGHT.value,
+            )
+        )
+        if stage is None:
+            return None
+        try:
+            data = json.loads(stage.checkpoint_json or "{}")
+        except json.JSONDecodeError:
+            return None
+        actions = data.get("control_actions") or {}
+        entry = actions.get(f"{action}:{client_request_id}")
+        return entry if isinstance(entry, dict) else None
+
+    def _remember_control_action(
+        self, run: AnalysisRun, action: str, client_request_id: str
+    ) -> None:
+        stage = self._session.scalar(
+            select(AnalysisRunStage).where(
+                AnalysisRunStage.run_id == run.id,
+                AnalysisRunStage.stage_key
+                == OverviewProductionStageKey.SNAPSHOT_PREFLIGHT.value,
+            )
+        )
+        if stage is None:
+            return
+        try:
+            data = json.loads(stage.checkpoint_json or "{}")
+        except json.JSONDecodeError:
+            data = {}
+        actions = dict(data.get("control_actions") or {})
+        actions[f"{action}:{client_request_id}"] = {
+            "status": run.status,
+            "recorded_at": utc_now().isoformat(),
+        }
+        data["control_actions"] = actions
+        stage.checkpoint_json = json.dumps(data, ensure_ascii=False)
+        self._session.flush()
 
     def _list_windows(self, run_id: int) -> list[WholeBookRunWindow]:
         return list(
@@ -1568,6 +1638,53 @@ class NativeOverviewService:
             stage.error_message = exc.message
             stage.completed_at = utc_now()
         self._session.flush()
+
+    def _remember_control_action(
+        self, run: AnalysisRun, action: str, client_request_id: str
+    ) -> None:
+        payload = {
+            "action": action,
+            "client_request_id": client_request_id,
+            "status": run.status,
+            "run_id": run.id,
+        }
+        self._session.add(
+            AnalysisArtifact(
+                run_id=run.id,
+                artifact_type=CONTROL_ARTIFACT_TYPE,
+                subject_type="book",
+                subject_id=str(run.book_id),
+                schema_version=CONTRACT_VERSION,
+                prompt_version=FIXTURE_PROMPT_VERSION,
+                payload_json=json.dumps(payload, ensure_ascii=False),
+                confidence=1.0,
+                validation_status="valid",
+            )
+        )
+        self._session.flush()
+
+    def _find_control_action(
+        self, run_id: int, action: str, client_request_id: str
+    ) -> AnalysisArtifact | None:
+        rows = list(
+            self._session.scalars(
+                select(AnalysisArtifact).where(
+                    AnalysisArtifact.run_id == int(run_id),
+                    AnalysisArtifact.artifact_type == CONTROL_ARTIFACT_TYPE,
+                )
+            )
+        )
+        for row in rows:
+            try:
+                payload = json.loads(row.payload_json or "{}")
+            except json.JSONDecodeError:
+                continue
+            if (
+                payload.get("action") == action
+                and payload.get("client_request_id") == client_request_id
+            ):
+                return row
+        return None
 
     def _retry_landing_status(self, run: AnalysisRun) -> RunStatus:
         for key in OVERVIEW_PRODUCTION_STAGE_ORDER:
