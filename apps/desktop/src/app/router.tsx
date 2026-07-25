@@ -10,6 +10,7 @@ import { CasesPage } from "../pages/CasesPage";
 import { ProvidersPage } from "../pages/ProvidersPage";
 import { SettingsPage } from "../pages/SettingsPage";
 import { WholeBookInsightsPage } from "../pages/WholeBookInsightsPage";
+import { NotFoundPage, RouteErrorPage } from "../pages/RouteErrorPages";
 
 const routeErrorElement = <RouteErrorPage />;
 
