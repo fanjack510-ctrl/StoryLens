@@ -1312,7 +1312,9 @@ export function BookRoutePage() {
 
       {insightsUpgradeOpen ? (
         <div className="shell-banner" data-testid="whole-book-insights-upgrade-prompt">
-          <p>全书洞察为 StoryLens Pro 功能。激活专业版授权后可聚合全书覆盖率、旅程曲线与诊断。</p>
+          <p>
+            章节聚合洞察为 StoryLens Pro 功能。激活专业版授权后，可基于已完成的单章精细分析结果聚合章节资产覆盖、旅程曲线与诊断。
+          </p>
           <button type="button" className="primary" onClick={() => navigate("/settings")}>
             查看授权说明
           </button>

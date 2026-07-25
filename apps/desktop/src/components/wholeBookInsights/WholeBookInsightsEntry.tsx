@@ -19,7 +19,7 @@ export function WholeBookInsightsEntry({ bookId, onUpgrade }: Props) {
         data-testid="whole-book-insights-entry-pro"
         to={`/books/${bookId}/whole-book-insights`}
       >
-        全书洞察 <Badge>Pro</Badge>
+        章节聚合洞察 <Badge>Pro</Badge>
       </Link>
     );
   }
@@ -31,7 +31,7 @@ export function WholeBookInsightsEntry({ bookId, onUpgrade }: Props) {
       data-testid="whole-book-insights-entry-free"
       onClick={onUpgrade}
     >
-      全书洞察 <Badge>Pro</Badge>
+      章节聚合洞察 <Badge>Pro</Badge>
     </button>
   );
 }

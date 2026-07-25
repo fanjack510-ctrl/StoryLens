@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { ErrorState, Loading } from "../components/common/States";
@@ -8,6 +9,14 @@ import {
   type WholeBookInsightsDeepLink,
 } from "../services/wholeBookInsightsApi";
 import { booksApi } from "../services/booksApi";
+
+const MISSING_CHAPTER_PREVIEW = 20;
+const LOW_COVERAGE_RATIO = 0.25;
+
+const PAGE_TITLE = "章节聚合洞察";
+const PAGE_SUBTITLE = "基于已完成单章分析结果的精细资产覆盖和聚合视图";
+const PAGE_EXPLANATION =
+  "基于已经完成的单章精细分析结果，对章节覆盖、阅读旅程、节奏、钩子、回报和章节功能进行聚合展示。";
 
 function chapterResultHref(bookId: number, chapter: WholeBookInsightsChapterRow, link: WholeBookInsightsDeepLink) {
   const params = new URLSearchParams();
@@ -25,13 +34,38 @@ function chapterResultHref(bookId: number, chapter: WholeBookInsightsChapterRow,
   return `/books/${bookId}?${params.toString()}`;
 }
 
+function coveragePercent(valid: number, total: number): number {
+  if (total <= 0) return 0;
+  return Math.round((valid / total) * 100);
+}
+
+function diagnosticSummary(item: unknown): string {
+  if (typeof item === "string") return item;
+  if (item && typeof item === "object") {
+    const record = item as Record<string, unknown>;
+    const code = typeof record.code === "string" ? record.code : null;
+    const message =
+      typeof record.message === "string"
+        ? record.message
+        : typeof record.summary === "string"
+          ? record.summary
+          : typeof record.detail === "string"
+            ? record.detail
+            : null;
+    if (code && message) return `${code}：${message}`;
+    if (message) return message;
+    if (code) return code;
+  }
+  return "诊断项";
+}
+
 function JourneyCurveSvg({
   points,
 }: {
   points: Array<{ chapter_index: number; tension: number; hook: number; payoff: number }>;
 }) {
   if (!points.length) {
-    return <p className="muted">暂无可用旅程曲线数据</p>;
+    return <p className="muted">暂无可用旅程曲线数据（需更多已完成精细单章分析）</p>;
   }
   const width = 640;
   const height = 180;
@@ -49,7 +83,7 @@ function JourneyCurveSvg({
     <svg
       viewBox={`0 0 ${width} ${height}`}
       role="img"
-      aria-label="全书阅读旅程曲线"
+      aria-label="章节阅读旅程曲线"
       data-testid="whole-book-insights-journey-curve"
       className="whole-book-insights-curve"
     >
@@ -61,12 +95,42 @@ function JourneyCurveSvg({
   );
 }
 
+function ChapterRow({
+  bookId,
+  chapter,
+}: {
+  bookId: number;
+  chapter: WholeBookInsightsChapterRow;
+}) {
+  return (
+    <li>
+      <strong>
+        {chapter.chapter_index}. {chapter.display_title || chapter.chapter_title}
+      </strong>
+      {" — "}
+      {chapter.is_valid ? "已纳入聚合" : "尚未完成精细单章分析"}
+      {chapter.is_valid && chapter.scenes[0]?.deep_link ? (
+        <>
+          {" · "}
+          <Link
+            to={chapterResultHref(bookId, chapter, chapter.scenes[0].deep_link)}
+            data-testid={`whole-book-insights-chapter-link-${chapter.chapter_id}`}
+          >
+            查看章节结果
+          </Link>
+        </>
+      ) : null}
+    </li>
+  );
+}
+
 export function WholeBookInsightsPage() {
   const params = useParams();
   const navigate = useNavigate();
   const bookId = Number(params.bookId || 0);
   const edition = useProductEdition();
   const isPro = edition.loaded && edition.is_pro;
+  const [showAllMissing, setShowAllMissing] = useState(false);
 
   const book = useQuery({
     queryKey: ["book", bookId],
@@ -81,11 +145,26 @@ export function WholeBookInsightsPage() {
     retry: false,
   });
 
+  const chapters = insights.data?.chapters || [];
+  const { validChapters, missingChapters } = useMemo(() => {
+    const valid: WholeBookInsightsChapterRow[] = [];
+    const missing: WholeBookInsightsChapterRow[] = [];
+    for (const chapter of chapters) {
+      if (chapter.is_valid) valid.push(chapter);
+      else missing.push(chapter);
+    }
+    return { validChapters: valid, missingChapters: missing };
+  }, [chapters]);
+
   if (!isPro) {
     return (
       <section className="whole-book-insights-page" data-testid="whole-book-insights-upgrade">
-        <h1>全书洞察</h1>
-        <p>StoryLens Pro 功能：基于已完成单章分析聚合全书覆盖率、旅程曲线、节奏与诊断。</p>
+        <h1>{PAGE_TITLE}</h1>
+        <p className="muted">{PAGE_SUBTITLE}</p>
+        <p>
+          StoryLens Pro 功能：{PAGE_EXPLANATION}
+          激活专业版授权后可使用。
+        </p>
         <button type="button" className="primary" onClick={() => navigate("/settings")}>
           查看授权说明
         </button>
@@ -106,7 +185,7 @@ export function WholeBookInsightsPage() {
       "WHOLE_BOOK_INSIGHTS_ERROR";
     return (
       <section className="whole-book-insights-page" data-testid="whole-book-insights-error">
-        <h1>全书洞察</h1>
+        <h1>{PAGE_TITLE}</h1>
         <ErrorState error={new Error(String(code))} />
         <Link className="secondary" to={`/books/${bookId}`}>
           返回书籍
@@ -117,12 +196,22 @@ export function WholeBookInsightsPage() {
 
   const data = insights.data!;
   const coverage = data.coverage;
+  const percent = coveragePercent(coverage.valid_chapters, coverage.total_chapters);
+  const isLowCoverage =
+    coverage.total_chapters === 0 ||
+    coverage.valid_chapters === 0 ||
+    coverage.valid_chapters / Math.max(coverage.total_chapters, 1) < LOW_COVERAGE_RATIO;
+  const visibleMissing = showAllMissing
+    ? missingChapters
+    : missingChapters.slice(0, MISSING_CHAPTER_PREVIEW);
+  const diagnostics = data.diagnostics || [];
 
   return (
     <section className="whole-book-insights-page" data-testid="whole-book-insights-page">
       <header className="whole-book-insights-header">
         <div>
-          <h1>全书洞察</h1>
+          <h1>{PAGE_TITLE}</h1>
+          <p className="muted">{PAGE_SUBTITLE}</p>
           <p className="muted">{book.data?.title || `书籍 #${bookId}`}</p>
         </div>
         <Link className="secondary" to={`/books/${bookId}`}>
@@ -130,15 +219,37 @@ export function WholeBookInsightsPage() {
         </Link>
       </header>
 
+      <p data-testid="whole-book-insights-explanation">{PAGE_EXPLANATION}</p>
+
       <section data-testid="whole-book-insights-coverage">
-        <h2>覆盖率</h2>
+        <h2>章节资产覆盖</h2>
         <p>
-          有效章节 {coverage.valid_chapters} / {coverage.total_chapters}
-          {coverage.invalid_chapters > 0
-            ? `（${coverage.invalid_chapters} 章缺少完整场景分析或阅读旅程）`
-            : null}
+          已完成精细单章分析：{coverage.valid_chapters} / {coverage.total_chapters} 章
         </p>
+        <p>章节资产覆盖率：{percent}%</p>
+        <p className="muted" data-testid="whole-book-insights-coverage-note">
+          小说原文仍完整保存在 StoryLens 中；这里显示的是精细单章分析资产覆盖，不是原文覆盖。
+        </p>
+        {coverage.invalid_chapters > 0 ? (
+          <p className="muted">
+            其中 {coverage.invalid_chapters} 章尚未完成精细单章分析，暂未纳入聚合。
+          </p>
+        ) : null}
       </section>
+
+      {isLowCoverage ? (
+        <section
+          className="notice"
+          data-testid="whole-book-insights-low-coverage"
+        >
+          <p>
+            当前仅有少量章节完成了精细单章分析，聚合视图会偏稀疏——这不代表系统故障，也不代表对未分析章节已有原生全书理解。
+          </p>
+          <p>
+            请先在各章完成单章精细分析；完成的章节越多，章节覆盖、阅读旅程、节奏、钩子与回报的聚合会越完整。
+          </p>
+        </section>
+      ) : null}
 
       <section>
         <h2>旅程曲线</h2>
@@ -164,14 +275,20 @@ export function WholeBookInsightsPage() {
         </ul>
       </section>
 
-      <section>
+      <section data-testid="whole-book-insights-diagnostics">
         <h2>诊断</h2>
-        {(data.diagnostics || []).length ? (
-          <ul>
-            {(data.diagnostics || []).map((item, index) => (
-              <li key={index}>{typeof item === "string" ? item : JSON.stringify(item)}</li>
-            ))}
-          </ul>
+        {diagnostics.length ? (
+          <>
+            <ul data-testid="whole-book-insights-diagnostics-summary">
+              {diagnostics.map((item, index) => (
+                <li key={index}>{diagnosticSummary(item)}</li>
+              ))}
+            </ul>
+            <details data-testid="whole-book-insights-diagnostics-details">
+              <summary>开发者详情</summary>
+              <pre className="muted">{JSON.stringify(diagnostics, null, 2)}</pre>
+            </details>
+          </>
         ) : (
           <p className="muted">暂无额外诊断</p>
         )}
@@ -179,28 +296,39 @@ export function WholeBookInsightsPage() {
 
       <section data-testid="whole-book-insights-chapter-list">
         <h2>章节列表</h2>
-        <ul>
-          {(data.chapters || []).map((chapter) => (
-            <li key={chapter.chapter_id}>
-              <strong>
-                {chapter.chapter_index}. {chapter.display_title || chapter.chapter_title}
-              </strong>
-              {" — "}
-              {chapter.is_valid ? "已纳入" : "未纳入"}
-              {chapter.is_valid && chapter.scenes[0]?.deep_link ? (
-                <>
-                  {" · "}
-                  <Link
-                    to={chapterResultHref(bookId, chapter, chapter.scenes[0].deep_link)}
-                    data-testid={`whole-book-insights-chapter-link-${chapter.chapter_id}`}
-                  >
-                    查看章节结果
-                  </Link>
-                </>
-              ) : null}
-            </li>
-          ))}
-        </ul>
+        {validChapters.length ? (
+          <>
+            <h3>已纳入聚合</h3>
+            <ul>
+              {validChapters.map((chapter) => (
+                <ChapterRow key={chapter.chapter_id} bookId={bookId} chapter={chapter} />
+              ))}
+            </ul>
+          </>
+        ) : (
+          <p className="muted">尚无已纳入聚合的章节。</p>
+        )}
+
+        {missingChapters.length ? (
+          <div data-testid="whole-book-insights-missing-chapters">
+            <h3>尚未完成精细单章分析（{missingChapters.length}）</h3>
+            <ul>
+              {visibleMissing.map((chapter) => (
+                <ChapterRow key={chapter.chapter_id} bookId={bookId} chapter={chapter} />
+              ))}
+            </ul>
+            {missingChapters.length > MISSING_CHAPTER_PREVIEW ? (
+              <button
+                type="button"
+                className="secondary"
+                data-testid="whole-book-insights-missing-toggle"
+                onClick={() => setShowAllMissing((v) => !v)}
+              >
+                {showAllMissing ? "收起" : "查看全部"}
+              </button>
+            ) : null}
+          </div>
+        ) : null}
       </section>
 
       <section>
