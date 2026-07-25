@@ -3,7 +3,7 @@
   "title": "Pro Native Whole-Book Overview Production Slice",
   "type": "feature",
   "base_version": "1.0.5",
-  "status": "registered",
+  "status": "implemented",
   "include_in_next_release": true,
   "commits": [
     {
@@ -11,6 +11,24 @@
       "message": "docs(release): register native overview slice and clarify insights positioning",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "4e4561ce104fc06a98526da367d97dc63ffc2790",
+      "message": "fix(pro-insights): clarify chapter aggregation capability semantics",
+      "primary": true,
+      "multi_change_reason": "STEP 1.2 backend capability semantics (Agent A)"
+    },
+    {
+      "sha": "2f6ca24a09b3c1e5c3213864fb41dc907b1b2098",
+      "message": "fix(pro-insights): reposition UI as chapter aggregation insights",
+      "primary": true,
+      "multi_change_reason": "STEP 1.2 frontend product semantics (Agent C)"
+    },
+    {
+      "sha": "540233eaadd05e43c5cccb1c46c186d5cd360279",
+      "message": "docs: attach STEP 1.2 governance commit to CHG-20260725-003",
+      "primary": false,
+      "multi_change_reason": "docs attach of governance register commit"
     }
   ],
   "modules": [
@@ -20,10 +38,16 @@
   ],
   "files": [],
   "user_summary": "建立 StoryLens 首个基于完整小说原文的 Pro 原生整书功能，并在正式开发前纠正现有章节聚合洞察的产品定位。",
-  "technical_summary": "STEP 1.2 is a product-semantics precondition (not native overview implementation). STEP 2 implements Pro Native Whole-Book Overview. Public Base: 5515b2a3905886fc9b99d091c3a39771d20a84cd. Private Base: 727f886ead297a3af2019354f2f56352cf22a9d4. Free 1.0.5 (v1.0.5 / release/1.0.5 / ddae7ee) must remain zero-break. Current pro_whole_book_insights is Chapter Asset Aggregation Insights (not whole_book_native / not native whole-book engine). active_substep=STEP 1.2.",
+  "technical_summary": "STEP 1.2 product-semantics precondition COMPLETE for Integration. active_substep=STEP 1.2 done; next STEP 1.3 architecture freeze. Public Base was 5515b2a; Private Base 727f886 unchanged. Free 1.0.5 zero-break. pro_whole_book_insights repositioned as Chapter Asset Aggregation Insights / 章节聚合洞察 (not whole_book_native). STEP 2 still owns native overview.",
   "acceptance_criteria": [],
-  "tests": [],
-  "verification_evidence": [],
+  "tests": [
+    "apps/api/tests/test_pro_whole_book_insights_gate.py (7 passed)",
+    "apps/desktop wholeBookInsights+router.smoke vitest (7 passed)",
+    "apps/desktop LibraryPage+library_book_delete_local (18 passed)"
+  ],
+  "verification_evidence": [
+    "STEP 1.2 Integration: cherry-pick A 4e4561c + C 2f6ca24; Agent D PASS both; capability key/API/route unchanged; VERSION=1.0.5; no push"
+  ],
   "data_compatibility": {
     "database_changed": false,
     "migration_required": false,
@@ -39,5 +63,5 @@
   "blocker_level": "P0",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-25T13:31:37Z",
-  "updated_at": "2026-07-25T13:32:13Z"
+  "updated_at": "2026-07-25T13:42:45Z"
 }
