@@ -1,49 +1,33 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ErrorState, Loading } from "../components/common/States";
+import { ProNativeOverviewResult } from "../components/proNativeOverview/ProNativeOverviewResult";
 import { useProductEdition } from "../hooks/useProductEdition";
 import { ApiError } from "../services/apiClient";
 import { booksApi } from "../services/booksApi";
-import { firstEvidenceHref } from "../services/proNativeOverviewDeepLink";
 import {
-  FIXTURE_CREATE_DEFAULTS,
+  newClientRequestId,
   proNativeOverviewApi,
-  type OverviewField,
+  resolveCreateBinding,
   type PreflightBlockingError,
   type ProNativeOverviewPreflight,
+  type RunStatusResponse,
 } from "../services/proNativeOverviewApi";
 import {
   isProNativeOverviewUiEnabled,
+  resolveEnginePresentation,
   WALKING_SKELETON_USER_NOTICE,
+  type EnginePresentation,
 } from "../services/proNativeOverviewFlag";
+import {
+  buildStageList,
+  overviewStageLabel,
+} from "../services/proNativeOverviewStages";
 
 const PAGE_TITLE = "Pro 原生全书概览";
-const PAGE_SUBTITLE = "基于完整小说原文的原生整书概览（行走骨架）";
+const PAGE_SUBTITLE = "基于完整小说原文的原生整书概览";
 const MODE_LABEL = "原生整书";
-const ENGINE_LABEL = "Fixture Development Mode";
-
-const RESULT_FIELDS: Array<{ key: keyof ResultFieldMap; label: string }> = [
-  { key: "protagonist", label: "主角" },
-  { key: "protagonist_core_goal", label: "主角核心目标" },
-  { key: "primary_conflict", label: "全书主要矛盾" },
-  { key: "central_question", label: "核心悬念或核心问题" },
-  { key: "key_turning_points", label: "关键转折" },
-  { key: "ending_state", label: "结局状态" },
-  { key: "logline", label: "一句话故事" },
-  { key: "synopsis", label: "全书概要" },
-];
-
-type ResultFieldMap = {
-  protagonist?: OverviewField | null;
-  protagonist_core_goal?: OverviewField | null;
-  primary_conflict?: OverviewField | null;
-  central_question?: OverviewField | null;
-  key_turning_points?: OverviewField | null;
-  ending_state?: OverviewField | null;
-  logline?: OverviewField | null;
-  synopsis?: OverviewField | null;
-};
 
 function blockingMessage(item: PreflightBlockingError | string): string {
   if (typeof item === "string") return item;
@@ -51,23 +35,14 @@ function blockingMessage(item: PreflightBlockingError | string): string {
   return item.message || item.code || "阻塞错误";
 }
 
-function formatFieldValue(value: unknown): string {
-  if (value == null || value === "") return "";
-  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
-    return String(value);
-  }
-  try {
-    return JSON.stringify(value);
-  } catch {
-    return String(value);
-  }
+function formatMoney(value: number | null | undefined, currency = "CNY"): string {
+  if (value == null || Number.isNaN(Number(value))) return "—";
+  return `${Number(value).toFixed(4)} ${currency}`;
 }
 
-function isInsufficient(field: OverviewField | null | undefined): boolean {
-  if (!field) return true;
-  if (field.status === "insufficient_evidence") return true;
-  const text = formatFieldValue(field.value).trim();
-  return !text;
+function formatTokens(value: number | null | undefined): string {
+  if (value == null || Number.isNaN(Number(value))) return "—";
+  return String(value);
 }
 
 function mapUiErrorCode(error: unknown): string {
@@ -128,63 +103,15 @@ function ErrorPanel({
   );
 }
 
-function OverviewFieldCard({
-  bookId,
-  label,
-  fieldKey,
-  field,
-  evidenceIndex,
-}: {
-  bookId: number;
-  label: string;
-  fieldKey: string;
-  field: OverviewField | null | undefined;
-  evidenceIndex: Parameters<typeof firstEvidenceHref>[2];
-}) {
-  const insufficient = isInsufficient(field);
-  const href = firstEvidenceHref(bookId, field?.evidence_refs, evidenceIndex);
-  const confidence =
-    typeof field?.confidence === "number" ? field.confidence.toFixed(2) : "—";
-
+function EngineBadge({ engine }: { engine: EnginePresentation }) {
   return (
-    <article
-      className="pro-native-overview-field"
-      data-testid={`pro-native-overview-field-${fieldKey}`}
-      data-status={field?.status || "missing"}
+    <span
+      data-testid="pro-native-overview-engine-badge"
+      data-engine-kind={engine.kind}
     >
-      <header>
-        <h3>{label}</h3>
-        <p className="muted">置信度：{confidence}</p>
-      </header>
-      {insufficient ? (
-        <p data-testid={`pro-native-overview-field-${fieldKey}-insufficient`}>
-          暂未能可靠判断
-        </p>
-      ) : (
-        <p data-testid={`pro-native-overview-field-${fieldKey}-value`}>
-          {formatFieldValue(field?.value)}
-        </p>
-      )}
-      {href ? (
-        <Link
-          className="secondary"
-          to={href}
-          data-testid={`pro-native-overview-evidence-${fieldKey}`}
-        >
-          Evidence
-        </Link>
-      ) : (
-        <button
-          type="button"
-          className="secondary"
-          disabled
-          data-testid={`pro-native-overview-evidence-${fieldKey}-missing`}
-          title="缺少可跳转证据"
-        >
-          Evidence
-        </button>
-      )}
-    </article>
+      {engine.label}
+      {engine.engineId ? `（${engine.engineId}）` : ""}
+    </span>
   );
 }
 
@@ -199,11 +126,16 @@ function PreflightPanel({
   onStart: () => void;
   startError: string | null;
 }) {
+  const [consented, setConsented] = useState(false);
+  const binding = resolveCreateBinding(preflight);
+  const engine = binding.engine;
+  const currency = preflight.currency || "CNY";
   const blocking = preflight.blocking_errors || [];
   const canStart =
     blocking.length === 0 &&
     preflight.license_allowed !== false &&
-    (preflight.paragraph_count ?? 0) > 0;
+    (preflight.paragraph_count ?? 0) > 0 &&
+    consented;
 
   return (
     <section data-testid="pro-native-overview-preflight">
@@ -212,16 +144,53 @@ function PreflightPanel({
         <li>章节数：{preflight.chapter_count}</li>
         <li>段落数：{preflight.paragraph_count}</li>
         <li>字符数：{preflight.character_count}</li>
+        <li data-testid="pro-native-overview-preflight-windows">
+          预估窗口：{preflight.estimated_windows ?? 0}
+        </li>
+        <li data-testid="pro-native-overview-preflight-tokens">
+          预估 Token：{formatTokens(preflight.estimated_tokens)}
+        </li>
+        <li data-testid="pro-native-overview-preflight-cost">
+          预估费用：{formatMoney(preflight.estimated_cost, currency)}
+        </li>
+        <li data-testid="pro-native-overview-preflight-provider">
+          Provider：{binding.provider_id}
+          {preflight.provider_configured === false ? "（未配置）" : ""}
+        </li>
+        <li data-testid="pro-native-overview-preflight-model">
+          Model：{binding.model_id}
+        </li>
         <li>模式：{MODE_LABEL}</li>
-        <li>Engine：{ENGINE_LABEL}</li>
+        <li data-testid="pro-native-overview-preflight-engine">
+          Engine：<EngineBadge engine={engine} />
+        </li>
         <li>
           授权：
           {preflight.license_allowed ? "已允许（Pro）" : "未授权 / 不允许"}
         </li>
       </ul>
-      <p className="notice" data-testid="pro-native-overview-walking-notice">
-        {WALKING_SKELETON_USER_NOTICE}
-      </p>
+
+      {engine.isFixture ? (
+        <p className="notice" data-testid="pro-native-overview-walking-notice">
+          {WALKING_SKELETON_USER_NOTICE}
+        </p>
+      ) : (
+        <p className="notice" data-testid="pro-native-overview-formal-notice">
+          当前绑定正式概览引擎，将按 Provider/Model 执行（非 Fixture 开发模式）。
+        </p>
+      )}
+
+      {preflight.warnings?.length ? (
+        <div data-testid="pro-native-overview-warnings">
+          <h3>警告</h3>
+          <ul>
+            {preflight.warnings.map((warning, index) => (
+              <li key={index}>{warning}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
       {blocking.length ? (
         <div data-testid="pro-native-overview-blocking-errors">
           <h3>阻塞错误</h3>
@@ -234,6 +203,22 @@ function PreflightPanel({
       ) : (
         <p className="muted">无阻塞错误</p>
       )}
+
+      <label className="consent" data-testid="pro-native-overview-consent">
+        <input
+          type="checkbox"
+          checked={consented}
+          data-testid="pro-native-overview-consent-checkbox"
+          onChange={(event) => setConsented(event.target.checked)}
+        />
+        <span>
+          我确认启动「Pro 原生全书概览」，并了解预估 Token（
+          {formatTokens(preflight.estimated_tokens)}）与费用（
+          {formatMoney(preflight.estimated_cost, currency)}），以及当前 Engine 为{" "}
+          {engine.label}。
+        </span>
+      </label>
+
       {startError ? <p data-testid="pro-native-overview-start-error">{startError}</p> : null}
       <button
         type="button"
@@ -248,16 +233,152 @@ function PreflightPanel({
   );
 }
 
+function ProgressPanel({
+  run,
+  runId,
+  onRefresh,
+  onRetry,
+  onResume,
+  actionPending,
+  actionError,
+}: {
+  run: RunStatusResponse;
+  runId: string;
+  onRefresh: () => void;
+  onRetry: () => void;
+  onResume: () => void;
+  actionPending: boolean;
+  actionError: string | null;
+}) {
+  const stages = buildStageList(run.current_stage, run.status);
+  const currency = run.currency || "CNY";
+  const engine = resolveEnginePresentation(run.engine_id, run.model);
+  const completedWindows = run.progress?.completed_windows ?? 0;
+  const totalWindows = run.progress?.total_windows ?? 0;
+  const canRetry =
+    Boolean(run.actions?.can_retry) || (run.status === "failed" && Boolean(run.retryable));
+  const canResume =
+    Boolean(run.actions?.can_resume) || run.status === "paused";
+
+  return (
+    <section data-testid="pro-native-overview-progress">
+      <h2>运行进度</h2>
+      <ul>
+        <li data-testid="pro-native-overview-status">状态：{run.status}</li>
+        <li data-testid="pro-native-overview-stage">
+          阶段：{overviewStageLabel(run.current_stage)}
+          {run.current_stage ? `（${run.current_stage}）` : ""}
+        </li>
+        <li data-testid="pro-native-overview-window-progress">
+          窗口进度：{completedWindows} / {totalWindows}
+        </li>
+        {run.progress?.current_window_index != null ? (
+          <li data-testid="pro-native-overview-current-window">
+            当前窗口索引：{run.progress.current_window_index}
+          </li>
+        ) : null}
+        {run.progress?.failed_window_index != null ? (
+          <li data-testid="pro-native-overview-failed-window">
+            失败窗口索引：{run.progress.failed_window_index}
+          </li>
+        ) : null}
+        <li data-testid="pro-native-overview-tokens">
+          Token：预估 {formatTokens(run.estimated_tokens)} / 实际{" "}
+          {formatTokens(run.actual_tokens)}
+        </li>
+        <li data-testid="pro-native-overview-cost">
+          费用：预估 {formatMoney(run.estimated_cost, currency)} / 实际{" "}
+          {formatMoney(run.actual_cost, currency)}
+        </li>
+        <li data-testid="pro-native-overview-run-provider">
+          Provider：{run.provider || "—"} · Model：{run.model || "—"}
+        </li>
+        <li data-testid="pro-native-overview-run-engine">
+          Engine：<EngineBadge engine={engine} />
+        </li>
+        <li data-testid="pro-native-overview-retryable">
+          可重试：{run.retryable || canRetry ? "是" : "否"}
+        </li>
+        <li data-testid="pro-native-overview-resumable">
+          可恢复：{canResume ? "是" : "否"}
+        </li>
+        {run.error ? (
+          <li data-testid="pro-native-overview-run-error">错误：{run.error}</li>
+        ) : null}
+      </ul>
+
+      <div data-testid="pro-native-overview-stage-list">
+        <h3>阶段列表</h3>
+        <ol>
+          {stages.map((stage) => (
+            <li
+              key={stage.key}
+              data-testid={`pro-native-overview-stage-item-${stage.key}`}
+              data-stage-state={stage.state}
+            >
+              {stage.label}
+              {stage.state === "current" ? "（进行中）" : ""}
+              {stage.state === "done" ? "（完成）" : ""}
+            </li>
+          ))}
+        </ol>
+      </div>
+
+      {actionError ? (
+        <p data-testid="pro-native-overview-action-error">{actionError}</p>
+      ) : null}
+
+      <div className="pro-native-overview-actions">
+        <button
+          type="button"
+          className="secondary"
+          data-testid="pro-native-overview-refresh"
+          onClick={onRefresh}
+        >
+          刷新
+        </button>
+        {canRetry ? (
+          <button
+            type="button"
+            className="primary"
+            data-testid="pro-native-overview-retry-run"
+            disabled={actionPending}
+            onClick={onRetry}
+          >
+            {actionPending ? "重试中…" : "Retry 失败运行"}
+          </button>
+        ) : null}
+        {canResume ? (
+          <button
+            type="button"
+            className="primary"
+            data-testid="pro-native-overview-resume-run"
+            disabled={actionPending}
+            onClick={onResume}
+          >
+            {actionPending ? "恢复中…" : "Resume 暂停运行"}
+          </button>
+        ) : null}
+      </div>
+      <p className="muted" data-testid="pro-native-overview-run-id">
+        Run：{runId}
+      </p>
+    </section>
+  );
+}
+
 export function ProNativeOverviewPage() {
   const params = useParams();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const queryClient = useQueryClient();
   const bookId = Number(params.bookId || 0);
   const runId = searchParams.get("run_id");
   const edition = useProductEdition();
   const isPro = edition.loaded && edition.is_pro;
   const flagOn = isProNativeOverviewUiEnabled();
   const [startError, setStartError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const book = useQuery({
     queryKey: ["book", bookId],
@@ -301,14 +422,11 @@ export function ProNativeOverviewPage() {
   const createMutation = useMutation({
     mutationFn: async () => {
       const pf = preflight.data;
-      const clientRequestId =
-        typeof crypto !== "undefined" && "randomUUID" in crypto
-          ? crypto.randomUUID()
-          : `overview-${Date.now()}`;
+      const binding = resolveCreateBinding(pf);
       return proNativeOverviewApi.createRun(bookId, {
-        provider_id: FIXTURE_CREATE_DEFAULTS.provider_id,
-        model_id: FIXTURE_CREATE_DEFAULTS.model_id,
-        client_request_id: clientRequestId,
+        provider_id: binding.provider_id,
+        model_id: binding.model_id,
+        client_request_id: newClientRequestId(),
         consent: {
           estimated_tokens: pf?.estimated_tokens ?? 0,
           estimated_cost: pf?.estimated_cost ?? 0,
@@ -336,6 +454,49 @@ export function ProNativeOverviewPage() {
     },
   });
 
+  const retryMutation = useMutation({
+    mutationFn: async () => {
+      if (!runId) throw new Error("missing run_id");
+      return proNativeOverviewApi.retryRun(runId, {
+        client_request_id: newClientRequestId("overview-retry"),
+        reason: "ui_retry",
+      });
+    },
+    onSuccess: async () => {
+      setActionError(null);
+      await queryClient.invalidateQueries({ queryKey: ["pro-native-overview-run", runId] });
+      await runQuery.refetch();
+    },
+    onError: (error) => {
+      setActionError(
+        error instanceof Error
+          ? `${mapUiErrorCode(error)}：${error.message}`
+          : String(error),
+      );
+    },
+  });
+
+  const resumeMutation = useMutation({
+    mutationFn: async () => {
+      if (!runId) throw new Error("missing run_id");
+      return proNativeOverviewApi.resumeRun(runId, {
+        client_request_id: newClientRequestId("overview-resume"),
+      });
+    },
+    onSuccess: async () => {
+      setActionError(null);
+      await queryClient.invalidateQueries({ queryKey: ["pro-native-overview-run", runId] });
+      await runQuery.refetch();
+    },
+    onError: (error) => {
+      setActionError(
+        error instanceof Error
+          ? `${mapUiErrorCode(error)}：${error.message}`
+          : String(error),
+      );
+    },
+  });
+
   const backLink = useMemo(
     () => (
       <Link className="secondary" to={`/books/${bookId}`} data-testid="pro-native-overview-back">
@@ -358,6 +519,10 @@ export function ProNativeOverviewPage() {
     );
   }
 
+  if (!edition.loaded || book.isLoading || (!runId && isPro && preflight.isLoading)) {
+    return <Loading />;
+  }
+
   if (!isPro) {
     return (
       <section className="pro-native-overview-page" data-testid="pro-native-overview-upgrade">
@@ -373,10 +538,6 @@ export function ProNativeOverviewPage() {
         {backLink}
       </section>
     );
-  }
-
-  if (book.isLoading || (!runId && preflight.isLoading)) {
-    return <Loading />;
   }
 
   if (!runId && preflight.isError) {
@@ -401,6 +562,7 @@ export function ProNativeOverviewPage() {
   const run = runQuery.data;
   const runFailed = run?.status === "failed";
   const runCompleted = run?.status === "completed";
+  const actionPending = retryMutation.isPending || resumeMutation.isPending;
 
   return (
     <section className="pro-native-overview-page" data-testid="pro-native-overview-page">
@@ -426,8 +588,7 @@ export function ProNativeOverviewPage() {
       ) : null}
 
       {runId ? (
-        <section data-testid="pro-native-overview-progress">
-          <h2>运行进度</h2>
+        <>
           {runQuery.isLoading ? <Loading /> : null}
           {runQuery.isError ? (
             <ErrorPanel
@@ -441,40 +602,20 @@ export function ProNativeOverviewPage() {
             />
           ) : null}
           {run ? (
-            <>
-              <ul>
-                <li data-testid="pro-native-overview-status">状态：{run.status}</li>
-                <li data-testid="pro-native-overview-stage">
-                  阶段：{run.current_stage || "—"}
-                </li>
-                <li data-testid="pro-native-overview-window-progress">
-                  窗口进度：
-                  {run.progress?.completed_windows ?? 0} / {run.progress?.total_windows ?? 0}
-                  {typeof run.progress?.percent === "number"
-                    ? `（${run.progress.percent}%）`
-                    : ""}
-                </li>
-                <li data-testid="pro-native-overview-retryable">
-                  可重试：{run.retryable ? "是" : "否"}
-                </li>
-                {run.error ? (
-                  <li data-testid="pro-native-overview-run-error">错误：{run.error}</li>
-                ) : null}
-              </ul>
-              <button
-                type="button"
-                className="secondary"
-                data-testid="pro-native-overview-refresh"
-                onClick={() => {
-                  void runQuery.refetch();
-                  if (runCompleted) void overviewQuery.refetch();
-                }}
-              >
-                刷新
-              </button>
-            </>
+            <ProgressPanel
+              run={run}
+              runId={runId}
+              onRefresh={() => {
+                void runQuery.refetch();
+                if (runCompleted) void overviewQuery.refetch();
+              }}
+              onRetry={() => retryMutation.mutate()}
+              onResume={() => resumeMutation.mutate()}
+              actionPending={actionPending}
+              actionError={actionError}
+            />
           ) : null}
-        </section>
+        </>
       ) : null}
 
       {runFailed ? (
@@ -482,10 +623,8 @@ export function ProNativeOverviewPage() {
           code="RUN_FAILED"
           message={run?.error || run?.error_code || "原生全书概览运行失败"}
           onRetry={
-            run?.retryable
-              ? () => {
-                  void runQuery.refetch();
-                }
+            run?.retryable || run?.actions?.can_retry
+              ? () => retryMutation.mutate()
               : undefined
           }
         />
@@ -510,23 +649,7 @@ export function ProNativeOverviewPage() {
       ) : null}
 
       {overviewQuery.data ? (
-        <section data-testid="pro-native-overview-result">
-          <h2>概览结果</h2>
-          <p className="muted">
-            Engine：{overviewQuery.data.engine_version || ENGINE_LABEL} ·{" "}
-            {WALKING_SKELETON_USER_NOTICE}
-          </p>
-          {RESULT_FIELDS.map(({ key, label }) => (
-            <OverviewFieldCard
-              key={key}
-              bookId={bookId}
-              label={label}
-              fieldKey={key}
-              field={overviewQuery.data.overview?.[key]}
-              evidenceIndex={overviewQuery.data.evidence_index}
-            />
-          ))}
-        </section>
+        <ProNativeOverviewResult bookId={bookId} data={overviewQuery.data} />
       ) : null}
 
       {createMutation.isError && !runId ? (
