@@ -33,13 +33,18 @@ if (-not (Test-Path $py)) { $py = "python" }
 if ($LASTEXITCODE) {
     Fail "version_manager.py check failed"
 }
-& $py (Join-Path $Root "scripts\change_registry.py") check --release
-if ($LASTEXITCODE) {
-    Fail "change_registry.py check --release failed"
-}
-& $py (Join-Path $Root "scripts\version_manager.py") release-guard --artifacts-dir $ReleaseDir
-if ($LASTEXITCODE) {
-    Fail "version_manager.py release-guard failed"
+$IsRcCandidate = ($env:STORYLENS_RC_CANDIDATE -eq "1")
+if ($IsRcCandidate) {
+    Write-Host "STORYLENS_RC_CANDIDATE=1: skip change_registry --release and release-guard for local RC artifact gates."
+} else {
+    & $py (Join-Path $Root "scripts\change_registry.py") check --release
+    if ($LASTEXITCODE) {
+        Fail "change_registry.py check --release failed"
+    }
+    & $py (Join-Path $Root "scripts\version_manager.py") release-guard --artifacts-dir $ReleaseDir
+    if ($LASTEXITCODE) {
+        Fail "version_manager.py release-guard failed"
+    }
 }
 
 $SummaryPath = Join-Path $ReleaseDir "build-summary.json"

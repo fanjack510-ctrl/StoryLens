@@ -59,6 +59,23 @@ for pkg in ("uvicorn", "fastapi", "starlette", "sqlalchemy", "pydantic", "anyio"
 
 hiddenimports += collect_submodules("app")
 
+# Optional Private Native Overview Engine (closed-source package).
+# Must be importable in the build venv (e.g. pip install -e ../private-engine).
+# Never silently invent a Fixture default; absence means loader returns UNAVAILABLE.
+try:
+    import storylens_private_engine  # noqa: F401
+
+    hiddenimports += collect_submodules("storylens_private_engine")
+    try:
+        priv = collect_all("storylens_private_engine")
+        datas += priv[0]
+        hiddenimports += priv[1]
+        hiddenimports += priv[2]
+    except Exception:
+        pass
+except Exception:
+    pass
+
 a = Analysis(
     [str(SPECDIR / "sidecar_main.py")],
     pathex=[str(SPECDIR), str(REPO)],
