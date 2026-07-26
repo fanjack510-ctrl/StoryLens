@@ -78,11 +78,17 @@ User need not set system environment variables
 
 ```text
 RC2 Version：1.1.0-rc.2
-RC2 Installer：(filled after build)
-RC2 SHA-256：(filled after build)
+RC2 Installer：D:\Dstorylens-wt-narrative-phase2br1-integration\dist\release\StoryLens_1.1.0-rc.2_x64-setup.exe
+RC2 SHA-256：F6156504CBCD24F417A629855E25699B897869F222CB9BE91C29F0F3241116D4
+RC2 Size：42071169 bytes
+Public HEAD at fix：9c1578014491699ec52f10ae4c274f74c3ca3c77
+Build note：tauri/nsis OK; first collect hit file lock on storylens-api.exe; artifacts collected after process cleanup. Formal VERSION restored to 1.0.5.
+
 RC1 Installer preserved：
   dist/release/archive/StoryLens_1.1.0-rc.1_x64-setup.exe
+  (also retained under apps/desktop/src-tauri/target/release/bundle/nsis/)
   SHA-256：6873BC614558221CFD9E3D89B0DBCBB8028C5AA393C202F009D48945C0956013
+  MATCH：YES
 ```
 
 ## Defects

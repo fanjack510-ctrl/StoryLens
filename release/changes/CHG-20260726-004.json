@@ -53,6 +53,12 @@
       "message": "fix(windows): wire Private native overview for 1.1.0-rc.1 G7",
       "primary": true,
       "multi_change_reason": "STEP 2.G7 Private HTTP default + Windows RC"
+    },
+    {
+      "sha": "9c1578014491699ec52f10ae4c274f74c3ca3c77",
+      "message": "fix(ui): expose Free native overview entry on RC builds",
+      "primary": true,
+      "multi_change_reason": "STEP 2.8-FIX-1 native overview entry"
     }
   ],
   "modules": [],
@@ -70,14 +76,16 @@
     "test_native_overview_free_entitlement + walking/flag/insights/license: 39 passed",
     "desktop proNativeOverview+router+insights vitest: 24 passed; typecheck OK",
     "private native_overview directed: 38 passed",
-    "STEP 2.G7 Free Windows Smoke: Private engine + Free entitlement on RC sidecar PASSED"
+    "STEP 2.G7 Free Windows Smoke: Private engine + Free entitlement on RC sidecar PASSED",
+    "STEP 2.8-FIX-1: proNativeOverview dual-entry routes + flag tests 27 passed; free entitlement 5 passed"
   ],
   "verification_evidence": [
     "STEP 2.5R-GATE PASS; Free native entitlement; Private closed-source unchanged",
     "release/evidence/CHG-20260726-004/gate-2g6-free-entitlement-supplement.md",
     "ORIGINAL gate-2g6.md preserved under CHG-003 night-run",
     "release/evidence/CHG-20260726-004/gate-2g7-free-windows-reference.md",
-    "release/evidence/CHG-20260725-003/night-run/gate-2g7.md"
+    "release/evidence/CHG-20260725-003/night-run/gate-2g7.md",
+    "release/evidence/CHG-20260726-004/manual-acceptance/native-overview-entry-fix.md"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -94,5 +102,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-26T02:22:00Z",
-  "updated_at": "2026-07-26T03:31:31Z"
+  "updated_at": "2026-07-26T04:02:14Z"
 }
