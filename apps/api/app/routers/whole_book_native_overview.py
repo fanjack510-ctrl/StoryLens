@@ -11,11 +11,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import ValidationError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, sessionmaker
 
-from app.db.session import get_db
+from app.db.session import get_db, get_session_factory
 from app.narrative_core.contracts.whole_book_overview_v1 import (
     CreateRunRequest,
     ResumeRunRequest,
@@ -28,6 +28,7 @@ from app.narrative_core.services.native_overview_service import (
     NativeOverviewError,
     NativeOverviewService,
 )
+from app.services.native_overview_background import execute_native_overview_run_background
 
 router = APIRouter(prefix="/api/v1", tags=["whole-book-native-overview"])
 
@@ -56,8 +57,10 @@ def _raise(exc: NativeOverviewError) -> None:
 @router.post("/books/{book_id}/whole-book-runs", status_code=201)
 def create_native_overview_run(
     book_id: int,
+    background: BackgroundTasks,
     body: dict[str, Any] | None = None,
     session: Session = Depends(get_db),
+    session_factory: sessionmaker[Session] = Depends(get_session_factory),
 ) -> dict[str, Any]:
     try:
         request = CreateRunRequest.model_validate(body or {})
@@ -77,10 +80,18 @@ def create_native_overview_run(
             provider_id=request.provider_id,
             model_id=request.model_id,
         )
-        response = bound.create_run(int(book_id), request)
+        # Defer execute_run so HTTP returns Run ID without waiting for all windows.
+        response = bound.create_run(int(book_id), request, defer_execution=True)
     except NativeOverviewError as exc:
         _raise(exc)
         raise  # pragma: no cover
+    background.add_task(
+        execute_native_overview_run_background,
+        session_factory,
+        int(response.run_id),
+        provider_id=request.provider_id,
+        model_id=request.model_id,
+    )
     return response.model_dump(mode="json")
 
 
@@ -121,7 +132,7 @@ def retry_native_overview_run(
             status_code=422,
             detail={
                 "error_code": "WHOLE_BOOK_REQUEST_INVALID",
-                "message": "invalid retry run request",
+                "message": "invalid retry request",
                 "details": {"errors": exc.errors()},
             },
         ) from exc
@@ -145,7 +156,7 @@ def resume_native_overview_run(
             status_code=422,
             detail={
                 "error_code": "WHOLE_BOOK_REQUEST_INVALID",
-                "message": "invalid resume run request",
+                "message": "invalid resume request",
                 "details": {"errors": exc.errors()},
             },
         ) from exc

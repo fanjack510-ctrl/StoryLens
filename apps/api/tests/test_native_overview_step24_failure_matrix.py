@@ -75,8 +75,8 @@ CREATE_BODY = {
     "model_id": "native-overview-1",
     "client_request_id": "req-step24-001",
     "consent": {
-        "estimated_tokens": 0,
-        "estimated_cost": 0.0,
+        "estimated_tokens": 1200,
+        "estimated_cost": 0.02,
         "currency": "CNY",
         "confirmed": True,
     },
@@ -462,8 +462,9 @@ def test_provider_failure_matrix_maps_private_codes(
         )
         assert run is not None
         assert run.status == RunStatus.FAILED.value
-        assert run.provider == PRIVATE_NATIVE_OVERVIEW_ENGINE_ID
+        # Private path stores AI binding identity (not Fixture engine id).
         assert run.provider != FIXTURE_ENGINE_ID
+        assert run.provider == "aliyun_qwen_plus"
         windows = list(
             session.scalars(
                 select(WholeBookRunWindow).where(WholeBookRunWindow.run_id == run.id)
@@ -546,7 +547,8 @@ def test_private_engine_unavailable_on_import_failure(api_env, monkeypatch):
             )
         )
         assert run is not None
-        assert run.provider == PRIVATE_NATIVE_OVERVIEW_ENGINE_ID
+        assert run.provider != FIXTURE_ENGINE_ID
+        assert run.provider == "aliyun_qwen_plus"
         asset_count = session.scalar(
             select(func.count())
             .select_from(NarrativeAssetVersion)
@@ -707,6 +709,61 @@ def test_accounting_no_double_invoke_on_timeout(api_env):
     assert transport.call_count == 1
 
 
+def test_accounting_preserves_provider_text_on_parse_failure(api_env):
+    """FIX-3B: failure accounting must not overwrite Provider text / zero tokens."""
+
+    factory = api_env["factory"]
+    with factory() as session:
+        book = seed_short_book_v1(session)
+        session.commit()
+        book_id = int(book.id)
+        _activate_pro(session, api_env["license_keypair"])
+
+    prose = "Sure — here is a prose analysis without any JSON object."
+    transport = FakeTransport(
+        responses=[
+            {
+                "text": prose,
+                "input_tokens": 111,
+                "output_tokens": 22,
+                "total_tokens": 133,
+                "estimated_cost": 0.0033,
+                "currency": "CNY",
+                "request_id": "fix3b-preserve-1",
+                "http_status_code": 200,
+            }
+        ]
+    )
+    with factory() as session:
+        service = NativeOverviewService(
+            session,
+            engine_id=PRIVATE_NATIVE_OVERVIEW_ENGINE_ID,
+            transport=transport,
+        )
+        with pytest.raises(NativeOverviewError) as exc:
+            service.create_run(
+                book_id,
+                CreateRunRequest.model_validate(
+                    {**CREATE_BODY, "client_request_id": "req-acct-preserve"}
+                ),
+            )
+        session.commit()
+        assert exc.value.code == "PROVIDER_OUTPUT_INVALID"
+        run = session.scalar(select(AnalysisRun).order_by(AnalysisRun.id.desc()))
+        assert run is not None
+        assert run.status == "failed"
+        inv = session.scalar(
+            select(ModelInvocation).where(ModelInvocation.run_id == run.id)
+        )
+        assert inv is not None
+        assert inv.input_tokens == 111
+        assert inv.output_tokens == 22
+        assert abs(float(inv.estimated_cost or 0) - 0.0033) < 1e-9
+        assert prose in (inv.raw_response_text or "")
+        assert inv.error_message
+        assert run.failed_invocation_id == inv.id
+
+
 def test_private_fake_happy_path_one_window(api_env):
     """Offline private engine through Public orchestrator (AdaptiveFakeTransport)."""
 
@@ -738,7 +795,8 @@ def test_private_fake_happy_path_one_window(api_env):
     with factory() as session:
         run = session.get(AnalysisRun, run_id)
         assert run is not None
-        assert run.provider == PRIVATE_NATIVE_OVERVIEW_ENGINE_ID
+        assert run.provider != FIXTURE_ENGINE_ID
+        assert run.provider == "aliyun_qwen_plus"
         assert run.status == RunStatus.COMPLETED.value
         windows = list(
             session.scalars(

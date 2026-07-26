@@ -164,6 +164,90 @@ def _build_scene_validation_detail(
 
 
 def serialize_run(session: Session, run: AnalysisRun) -> AnalysisRunResponse:
+    # Whole-book overview runs are not chapter scene pipelines — skip heavy enrichment
+    # so Task Center listing never depends on Provider / journey / checkpoint paths.
+    if (run.task_type or "") == "whole_book_overview" or (run.subject_type or "") == "book":
+        base = AnalysisRunResponse.model_validate(run)
+        failed_invocation = None
+        failed_window_index = None
+        inv_id = run.failed_invocation_id
+        if inv_id is None:
+            # Fallback: latest failed window's provider attempt.
+            from app.db.models import WholeBookRunWindow
+
+            failed_win = session.scalar(
+                select(WholeBookRunWindow)
+                .where(
+                    WholeBookRunWindow.run_id == run.id,
+                    WholeBookRunWindow.status == "failed",
+                )
+                .order_by(WholeBookRunWindow.window_index.asc())
+            )
+            if failed_win is not None:
+                failed_window_index = int(failed_win.window_index)
+                inv_id = failed_win.provider_attempt_id
+        else:
+            from app.db.models import WholeBookRunWindow
+
+            failed_win = session.scalar(
+                select(WholeBookRunWindow)
+                .where(
+                    WholeBookRunWindow.run_id == run.id,
+                    WholeBookRunWindow.status == "failed",
+                )
+                .order_by(WholeBookRunWindow.window_index.asc())
+            )
+            if failed_win is not None:
+                failed_window_index = int(failed_win.window_index)
+        if inv_id is not None:
+            inv = session.get(ModelInvocation, inv_id)
+            if inv is not None:
+                parsed_meta: dict = {}
+                try:
+                    raw_parsed = json.loads(inv.parsed_response_json or "{}")
+                    if isinstance(raw_parsed, dict):
+                        parsed_meta = raw_parsed
+                except json.JSONDecodeError:
+                    parsed_meta = {}
+                failed_invocation = {
+                    "id": inv.id,
+                    "invocation_kind": inv.invocation_kind,
+                    "attempt_no": inv.attempt_no,
+                    "http_request_sent": inv.http_request_sent,
+                    "http_status": inv.http_status_code,
+                    "http_status_code": inv.http_status_code,
+                    "json_valid": inv.parsed_response_json is not None,
+                    "schema_valid": inv.error_code
+                    not in {"PROVIDER_OUTPUT_INVALID", "SCHEMA_VALIDATION_FAILED"},
+                    "error_code": inv.error_code,
+                    "error_message": inv.error_message,
+                    "finish_reason": inv.finish_reason,
+                    "input_tokens": inv.input_tokens,
+                    "output_tokens": inv.output_tokens,
+                    "total_tokens": inv.total_tokens,
+                    "estimated_cost": inv.estimated_cost,
+                    "latency_ms": inv.latency_ms,
+                    "request_id": inv.request_id,
+                    "provider_name": inv.provider_name,
+                    "model_name": inv.model_name,
+                    "repair_attempted": bool(parsed_meta.get("repair_attempted")),
+                    "text_len": parsed_meta.get("text_len"),
+                    "has_json_fence": parsed_meta.get("has_json_fence"),
+                }
+        return base.model_copy(
+            update={
+                "current_stage": run.failed_stage or run.status,
+                "effective_status": run.status,
+                "actual_failed_stage": run.failed_stage,
+                "chapter_complete": False,
+                "scene_pipeline_complete": False,
+                "failed_invocation": failed_invocation,
+                "failed_invocation_id": inv_id or run.failed_invocation_id,
+                "failed_scene_index": failed_window_index,
+                "validation_error_code": run.error_code,
+            }
+        )
+
     block = _load_budget_block(run)
     reservation = session.scalar(
         select(CloudBudgetReservation)
@@ -439,7 +523,15 @@ def list_analysis_runs(
         query = query.where(AnalysisRun.provider == provider)
     if book_id is not None:
         chapter_ids = select(Chapter.id).where(Chapter.book_id == book_id)
-        query = query.where(AnalysisRun.subject_id.in_(chapter_ids))
+        book_subject = str(int(book_id))
+        query = query.where(
+            (AnalysisRun.subject_id.in_(chapter_ids))
+            | (
+                (AnalysisRun.subject_type == "book")
+                & (AnalysisRun.subject_id == book_subject)
+            )
+            | (AnalysisRun.book_id == int(book_id))
+        )
     runs = list(
         session.scalars(
             query.order_by(desc(AnalysisRun.created_at)).offset(offset).limit(min(limit, 200))

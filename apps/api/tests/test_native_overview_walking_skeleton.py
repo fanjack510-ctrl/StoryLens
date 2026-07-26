@@ -207,9 +207,39 @@ def test_free_native_create_allowed(api_env):
     )
     assert resp.status_code == 201, resp.text
     body = resp.json()
-    assert body["status"] == "completed"
+    # HTTP create must return Run ID without waiting for full overview execution.
+    assert body.get("run_id")
+    assert body["status"] in {
+        RunStatus.PENDING.value,
+        RunStatus.PREPARING.value,
+        RunStatus.RUNNING.value,
+        RunStatus.COMPLETED.value,
+    }
     assert body["mode"] == "whole_book_native"
     assert body.get("error_code") != "PRO_LICENSE_REQUIRED"
+    run_id = int(body["run_id"])
+    got = api_env["client"].get(f"/api/v1/whole-book-runs/{run_id}")
+    assert got.status_code == 200
+    # TestClient drains BackgroundTasks before returning; fixture short book completes.
+    assert got.json()["status"] == RunStatus.COMPLETED.value
+
+
+def test_create_run_returns_run_id_without_sync_full_book(api_env):
+    """Create Run HTTP body must not require synchronous full-book completion."""
+    book_id = _seed_pro_book(api_env)
+    resp = api_env["client"].post(
+        f"/api/v1/books/{book_id}/whole-book-runs",
+        json={**CREATE_BODY, "client_request_id": "async-create-boundary"},
+    )
+    assert resp.status_code == 201, resp.text
+    body = resp.json()
+    assert body.get("run_id")
+    # Deferred create serializes PENDING before BackgroundTasks execute.
+    assert body["status"] == RunStatus.PENDING.value
+    run_id = int(body["run_id"])
+    status = api_env["client"].get(f"/api/v1/whole-book-runs/{run_id}")
+    assert status.status_code == 200
+    assert status.json()["status"] == RunStatus.COMPLETED.value
 
 
 def test_feature_flag_off(api_env, monkeypatch: pytest.MonkeyPatch):
@@ -241,11 +271,16 @@ def test_create_run_happy_path(api_env):
     )
     assert resp.status_code == 201, resp.text
     body = resp.json()
-    assert body["status"] == RunStatus.COMPLETED.value
+    assert body["status"] == RunStatus.PENDING.value
     assert body["mode"] == "whole_book_native"
     assert body["module_key"] == "book_overview"
     run_id = int(body["run_id"])
     snapshot_id = int(body["snapshot_id"])
+
+    # BackgroundTasks complete fixture short-book before TestClient returns.
+    status = api_env["client"].get(f"/api/v1/whole-book-runs/{run_id}")
+    assert status.status_code == 200
+    assert status.json()["status"] == RunStatus.COMPLETED.value
 
     factory = api_env["factory"]
     with factory() as session:
@@ -383,8 +418,13 @@ def test_private_adapter_failure(api_env, monkeypatch: pytest.MonkeyPatch):
         f"/api/v1/books/{book_id}/whole-book-runs",
         json={**CREATE_BODY, "client_request_id": "req-fail-001"},
     )
-    assert resp.status_code == 503
-    assert resp.json()["error_code"] == "PRIVATE_ENGINE_UNAVAILABLE"
+    # Create returns Run ID immediately; fixture boom fails in background execute.
+    assert resp.status_code == 201, resp.text
+    run_id = int(resp.json()["run_id"])
+    failed = api_env["client"].get(f"/api/v1/whole-book-runs/{run_id}")
+    assert failed.status_code == 200
+    assert failed.json()["status"] == RunStatus.FAILED.value
+    assert failed.json()["error_code"] == "PRIVATE_ENGINE_UNAVAILABLE"
 
     factory = api_env["factory"]
     with factory() as session:

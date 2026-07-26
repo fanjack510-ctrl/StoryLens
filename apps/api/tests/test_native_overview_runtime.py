@@ -182,8 +182,11 @@ def test_multi_window_run_full_coverage(api_env):
     )
     assert resp.status_code == 201, resp.text
     body = resp.json()
-    assert body["status"] == RunStatus.COMPLETED.value
+    assert body["status"] == RunStatus.PENDING.value
     run_id = int(body["run_id"])
+    got = api_env["client"].get(f"/api/v1/whole-book-runs/{run_id}")
+    assert got.status_code == 200
+    assert got.json()["status"] == RunStatus.COMPLETED.value
 
     factory = api_env["factory"]
     with factory() as session:
@@ -262,6 +265,7 @@ def test_retry_skips_completed_windows(api_env, monkeypatch: pytest.MonkeyPatch)
                 payload, transport
             )
 
+    Flaky.calls = 0
     original_init = NativeOverviewService.__init__
 
     def flaky_init(self, session, *, adapter=None, engine_id=FIXTURE_ENGINE_ID, **kwargs):  # noqa: ANN001
@@ -269,7 +273,7 @@ def test_retry_skips_completed_windows(api_env, monkeypatch: pytest.MonkeyPatch)
             self,
             session,
             adapter=Flaky(),
-            engine_id=engine_id,
+            engine_id=FIXTURE_ENGINE_ID,
             transport=transport,
             window_budget=api_env["budget"],
         )
@@ -280,7 +284,11 @@ def test_retry_skips_completed_windows(api_env, monkeypatch: pytest.MonkeyPatch)
         f"/api/v1/books/{book_id}/whole-book-runs",
         json={**CREATE_BODY, "client_request_id": "req-retry-fail"},
     )
-    assert failed.status_code == 503
+    assert failed.status_code == 201, failed.text
+    run_id = int(failed.json()["run_id"])
+    failed_status = api_env["client"].get(f"/api/v1/whole-book-runs/{run_id}")
+    assert failed_status.status_code == 200
+    assert failed_status.json()["status"] == RunStatus.FAILED.value
     factory = api_env["factory"]
     with factory() as session:
         run = session.scalar(
@@ -301,13 +309,13 @@ def test_retry_skips_completed_windows(api_env, monkeypatch: pytest.MonkeyPatch)
         completed_attempts_before = int(windows[0].attempt_count or 0)
         provider_calls_before = transport.call_count
 
-    # Restore healthy service for retry.
+    # Restore healthy Fixture service for retry (HTTP retry defaults to Private).
     def healthy_init(self, session, *, adapter=None, engine_id=FIXTURE_ENGINE_ID, **kwargs):  # noqa: ANN001
         original_init(
             self,
             session,
             adapter=None,
-            engine_id=engine_id,
+            engine_id=FIXTURE_ENGINE_ID,
             transport=transport,
             window_budget=api_env["budget"],
         )

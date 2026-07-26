@@ -55,7 +55,7 @@ class AliyunNativeOverviewTransport:
     provider_name: str = "aliyun_qwen_plus"
     model: str = "qwen3.6-flash"
     timeout_seconds: int = 90
-    max_output_tokens: int = 2048
+    max_output_tokens: int = 4096
     max_auto_retries: int = 1  # STEP 2.5 hard cap (extra attempts after first)
     temperature: float = 0.2
     call_log: list[dict[str, Any]] | None = None
@@ -169,6 +169,7 @@ class AliyunNativeOverviewTransport:
                     "provider": self.provider_name,
                     "latency_ms": latency_ms,
                     "http_status_code": response.http_status_code,
+                    "finish_reason": getattr(response, "finish_reason", None),
                     "attempt_no": attempts,
                 }
                 assert self.call_log is not None

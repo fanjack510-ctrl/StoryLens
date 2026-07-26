@@ -134,7 +134,7 @@ WHOLE_BOOK_OVERVIEW_ERROR_META: dict[WholeBookOverviewErrorCode, OverviewErrorMe
     WholeBookOverviewErrorCode.PROVIDER_OUTPUT_INVALID: {
         "http_status": 422,
         "retryable": True,
-        "user_message": "模型输出未通过契约校验，可重试该窗口。",
+        "user_message": "模型返回的分析结果格式不符合要求，任务未完成。",
         "keep_run": True,
         "allow_retry": True,
         "requires_user_action": False,

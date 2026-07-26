@@ -157,13 +157,9 @@ class OverviewProviderAccounting:
         if response is not None:
             resolved = dict(response)
         elif isinstance(transport, RecordingFakeTransport):
-            # Never re-invoke request(). Fixture path synthesizes Attempt facts;
-            # Private+RecordingFake reuses the call the engine just made.
-            if (
-                transport_already_invoked
-                and transport.calls
-                and status == "succeeded"
-            ):
+            # Never re-invoke request(). When the engine already called transport,
+            # reuse that response for BOTH success and failure accounting.
+            if transport_already_invoked and transport.calls:
                 last = transport.calls[-1]
                 resolved = dict(last.response)
                 resolved_latency = int(last.latency_ms)
@@ -177,21 +173,38 @@ class OverviewProviderAccounting:
                 resolved = dict(synthetic.response)
                 resolved_latency = int(synthetic.latency_ms)
         else:
-            # Private FakeTransport or other: harvest last logged response if any.
+            # Private FakeTransport / Live: harvest last logged response if any.
+            # Never re-invoke transport.request() (would double-bill / double-consume).
             resolved = self._harvest_transport_response(transport, options, status=status)
-            if status != "succeeded":
-                resolved = {
-                    "input_tokens": int(resolved.get("input_tokens") or options.get("input_tokens") or 0),
-                    "output_tokens": 0,
-                    "total_tokens": int(resolved.get("input_tokens") or options.get("input_tokens") or 0),
-                    "estimated_cost": 0.0,
-                    "currency": str(resolved.get("currency") or "CNY"),
-                    "request_id": str(
-                        resolved.get("request_id")
-                        or f"failed-{window.window_index}-{window.attempt_count}"
-                    ),
-                    "text": str(error_message or resolved.get("text") or ""),
-                }
+
+        # On failure, preserve real Provider text/tokens/cost for diagnostics and
+        # settlement. Do NOT overwrite response text with the error message
+        # (historical Run #5/#6 lost raw output this way).
+        if status != "succeeded":
+            preserved_text = str(resolved.get("text") or resolved.get("content") or "")
+            input_tokens_h = int(
+                resolved.get("input_tokens") or options.get("input_tokens") or 0
+            )
+            output_tokens_h = int(resolved.get("output_tokens") or 0)
+            cost_h = float(resolved.get("estimated_cost") or 0.0)
+            resolved = {
+                **dict(resolved),
+                "input_tokens": input_tokens_h,
+                "output_tokens": output_tokens_h,
+                "total_tokens": int(
+                    resolved.get("total_tokens") or (input_tokens_h + output_tokens_h)
+                ),
+                "estimated_cost": cost_h,
+                "currency": str(resolved.get("currency") or "CNY"),
+                "request_id": str(
+                    resolved.get("request_id")
+                    or f"failed-{window.window_index}-{window.attempt_count}"
+                ),
+                "text": preserved_text,
+                "parse_error_message": str(error_message or "")[:500],
+                "finish_reason": resolved.get("finish_reason"),
+                "http_status_code": resolved.get("http_status_code"),
+            }
 
         input_tokens = int(resolved.get("input_tokens") or options.get("input_tokens") or 0)
         output_tokens = int(resolved.get("output_tokens") or options.get("output_tokens") or 0)
@@ -202,6 +215,22 @@ class OverviewProviderAccounting:
         ).hexdigest()
 
         attempt_no = int(window.attempt_count or 0) or 1
+        raw_text = str(resolved.get("text") or "")
+        # Cap persisted raw body for DB safety; keep enough for parse diagnostics.
+        raw_persist = raw_text if len(raw_text) <= 200_000 else raw_text[:200_000]
+        parsed_payload = {
+            k: v
+            for k, v in dict(resolved).items()
+            if k not in {"text", "content"} or (isinstance(v, str) and len(v) <= 4000)
+        }
+        if "text" in resolved and isinstance(resolved.get("text"), str):
+            t = str(resolved.get("text") or "")
+            parsed_payload["text_len"] = len(t)
+            parsed_payload["text_head"] = t[:80]
+            parsed_payload["text_tail"] = t[-80:] if t else ""
+            parsed_payload["has_json_fence"] = "```" in t
+        if error_message:
+            parsed_payload["parse_error_message"] = str(error_message)[:500]
         invocation = ModelInvocation(
             run_id=int(run.id),
             task_type="whole_book_overview_window",
@@ -220,11 +249,15 @@ class OverviewProviderAccounting:
                 },
                 ensure_ascii=False,
             ),
-            raw_response_text=str(resolved.get("text") or error_message or ""),
-            parsed_response_json=json.dumps(dict(resolved), ensure_ascii=False),
+            raw_response_text=raw_persist,
+            parsed_response_json=json.dumps(parsed_payload, ensure_ascii=False),
             status=status,
             latency_ms=resolved_latency,
-            http_status_code=200 if status == "succeeded" else None,
+            http_status_code=(
+                int(resolved["http_status_code"])
+                if resolved.get("http_status_code") is not None
+                else (200 if status == "succeeded" else None)
+            ),
             response_model_name=str(resolved.get("model") or run.model),
             input_tokens=input_tokens,
             output_tokens=output_tokens,
@@ -232,7 +265,14 @@ class OverviewProviderAccounting:
             request_id=str(resolved.get("request_id") or ""),
             estimated_cost=cost,
             currency=str(resolved.get("currency") or "CNY"),
-            pricing_version="fixture-accounting-v1",
+            pricing_version=str(resolved.get("pricing_version") or "fixture-accounting-v1"),
+            finish_reason=(
+                str(resolved.get("finish_reason"))
+                if resolved.get("finish_reason") is not None
+                else None
+            ),
+            error_code="PROVIDER_OUTPUT_INVALID" if status != "succeeded" else None,
+            error_message=str(error_message or "")[:500] if status != "succeeded" else None,
             created_at=utc_now(),
         )
         self._session.add(invocation)
@@ -255,14 +295,67 @@ class OverviewProviderAccounting:
         if transport is not None and hasattr(transport, "call_log"):
             log = getattr(transport, "call_log")
             if isinstance(log, list) and log:
+                entries: list[Mapping[str, Any]] = []
                 last = log[-1]
                 if isinstance(last, Mapping):
-                    resp = last.get("response")
-                    if isinstance(resp, Mapping):
-                        return dict(resp)
+                    entries.append(last)
+                    last_opts = last.get("model_options")
+                    if (
+                        isinstance(last_opts, Mapping)
+                        and str(last_opts.get("stage") or "") == "analyze_window_repair"
+                        and len(log) >= 2
+                        and isinstance(log[-2], Mapping)
+                    ):
+                        entries.insert(0, log[-2])
+                input_tokens = 0
+                output_tokens = 0
+                total_tokens = 0
+                cost = 0.0
+                text = ""
+                finish_reason = None
+                http_status = None
+                request_id = ""
+                model = None
+                repair_attempted = len(entries) > 1
+                for entry in entries:
+                    resp = entry.get("response") if isinstance(entry, Mapping) else None
+                    if not isinstance(resp, Mapping):
+                        continue
+                    input_tokens += int(resp.get("input_tokens") or 0)
+                    output_tokens += int(resp.get("output_tokens") or 0)
+                    total_tokens += int(
+                        resp.get("total_tokens")
+                        or (
+                            int(resp.get("input_tokens") or 0)
+                            + int(resp.get("output_tokens") or 0)
+                        )
+                    )
+                    cost += float(resp.get("estimated_cost") or 0.0)
+                    text = str(resp.get("text") or resp.get("content") or text)
+                    if resp.get("finish_reason") is not None:
+                        finish_reason = resp.get("finish_reason")
+                    if resp.get("http_status_code") is not None:
+                        http_status = resp.get("http_status_code")
+                    request_id = str(resp.get("request_id") or request_id)
+                    model = resp.get("model") or model
+                if input_tokens or output_tokens or text:
+                    return {
+                        "input_tokens": input_tokens,
+                        "output_tokens": output_tokens,
+                        "total_tokens": total_tokens or (input_tokens + output_tokens),
+                        "estimated_cost": cost,
+                        "currency": "CNY",
+                        "request_id": request_id,
+                        "text": text,
+                        "finish_reason": finish_reason,
+                        "http_status_code": http_status,
+                        "model": model,
+                        "repair_attempted": repair_attempted,
+                    }
         input_tokens = int(options.get("input_tokens") or 0)
-        output_tokens = int(options.get("output_tokens") or 0) if status == "succeeded" else 0
-        cost = float(options.get("cost") or 0.0) if status == "succeeded" else 0.0
+        # Prefer harvested / option tokens even on failure; never invent cost.
+        output_tokens = int(options.get("output_tokens") or 0)
+        cost = float(options.get("cost") or 0.0)
         return {
             "input_tokens": input_tokens,
             "output_tokens": output_tokens,

@@ -38,7 +38,10 @@ from app.narrative_core.contracts.pro_native_overview_flags import (
     WALKING_SKELETON_USER_NOTICE,
     is_pro_native_overview_enabled,
 )
-from app.narrative_core.contracts.whole_book_overview_errors import WholeBookOverviewErrorCode
+from app.narrative_core.contracts.whole_book_overview_errors import (
+    WHOLE_BOOK_OVERVIEW_ERROR_META,
+    WholeBookOverviewErrorCode,
+)
 from app.narrative_core.contracts.whole_book_overview_state_machine import (
     OVERVIEW_PRODUCTION_STAGE_ORDER,
     validate_overview_run_transition,
@@ -409,7 +412,13 @@ class NativeOverviewService:
     # Create + execute
     # ------------------------------------------------------------------
 
-    def create_run(self, book_id: int, request: CreateRunRequest) -> CreateRunResponse:
+    def create_run(
+        self,
+        book_id: int,
+        request: CreateRunRequest,
+        *,
+        defer_execution: bool = False,
+    ) -> CreateRunResponse:
         require_native_overview_enabled()
 
         book = self._session.get(Book, int(book_id))
@@ -513,13 +522,19 @@ class NativeOverviewService:
             )
         self._session.flush()
 
-        try:
-            self.execute_run(int(run.id))
-        except NativeOverviewError:
-            self._session.commit()
-            raise
+        # HTTP create returns immediately; production path schedules execute_run
+        # via BackgroundTasks. Direct service callers (directed tests) keep
+        # inline execution unless defer_execution=True.
         self._session.commit()
         self._session.refresh(run)
+        if not defer_execution:
+            try:
+                self.execute_run(int(run.id))
+            except NativeOverviewError:
+                self._session.commit()
+                raise
+            self._session.commit()
+            self._session.refresh(run)
         return self._to_create_response(run)
 
     def execute_run(self, run_id: int) -> AnalysisRun:
@@ -1590,12 +1605,14 @@ class NativeOverviewService:
         if self._transport is None and status == "succeeded":
             return
         try:
+            # Private engine always calls transport.request before parse/repair.
+            # Mark invoked on BOTH success and failure so Live call_log is harvested
+            # instead of synthesizing empty text / zero cost.
             already_invoked = (
                 self._transport is not None
                 and self._engine_id == PRIVATE_NATIVE_OVERVIEW_ENGINE_ID
-                and status == "succeeded"
             )
-            self._accounting.record_window_attempt(
+            invocation = self._accounting.record_window_attempt(
                 run,
                 window,
                 transport=self._transport,
@@ -1604,6 +1621,9 @@ class NativeOverviewService:
                 error_message=error_message,
                 transport_already_invoked=already_invoked,
             )
+            if status != "succeeded" and invocation is not None:
+                run.failed_invocation_id = int(invocation.id)
+                self._session.flush()
         except Exception:  # noqa: BLE001
             pass
 
@@ -1744,7 +1764,18 @@ class NativeOverviewService:
         except ValueError:
             run.status = RunStatus.FAILED.value
         run.error_code = exc.code
-        run.error_message = exc.message
+        # Keep technical detail for developers; surface Chinese UX copy to Task Center.
+        technical = exc.message
+        try:
+            meta = WHOLE_BOOK_OVERVIEW_ERROR_META[WholeBookOverviewErrorCode(exc.code)]
+            run.error_message = meta["user_message"]
+            run.user_action_hint = meta["user_message"]
+        except ValueError:
+            run.error_message = technical
+        run.root_error_code = exc.code
+        run.root_error_message = technical
+        if exc.stage_key:
+            run.failed_stage = exc.stage_key
         run.retryable = True
         run.completed_at = utc_now()
         stage = self._session.scalar(
@@ -1756,8 +1787,10 @@ class NativeOverviewService:
         if stage is not None:
             stage.status = StageStatus.FAILED.value
             stage.error_code = exc.code
-            stage.error_message = exc.message
+            stage.error_message = technical
             stage.completed_at = utc_now()
+            if not run.failed_stage:
+                run.failed_stage = stage.stage_key
         self._session.flush()
 
     def _remember_control_action(

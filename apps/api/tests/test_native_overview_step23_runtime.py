@@ -427,7 +427,7 @@ def test_api_retry_and_overview(api_env, monkeypatch):
     original_init = NativeOverviewService.__init__
 
     def patched(self, session, *, adapter=None, engine_id=FIXTURE_ENGINE_ID, **kwargs):  # noqa: ANN001
-        original_init(self, session, adapter=boom, engine_id=engine_id, **kwargs)
+        original_init(self, session, adapter=boom, engine_id=FIXTURE_ENGINE_ID, **kwargs)
 
     monkeypatch.setattr(NativeOverviewService, "__init__", patched)
 
@@ -435,14 +435,22 @@ def test_api_retry_and_overview(api_env, monkeypatch):
         f"/api/v1/books/{book_id}/whole-book-runs",
         json={**CREATE_BODY, "client_request_id": "req-api-retry"},
     )
-    assert fail.status_code == 503
-    run_id = None
+    assert fail.status_code == 201, fail.text
+    run_id = int(fail.json()["run_id"])
+    failed_status = api_env["client"].get(f"/api/v1/whole-book-runs/{run_id}")
+    assert failed_status.status_code == 200
+    assert failed_status.json()["status"] == RunStatus.FAILED.value
     with factory() as session:
         run = session.scalar(
             select(AnalysisRun).where(AnalysisRun.client_request_id == "req-api-retry")
         )
         assert run is not None
         run_id = int(run.id)
+
+    def healthy(self, session, *, adapter=None, engine_id=FIXTURE_ENGINE_ID, **kwargs):  # noqa: ANN001
+        original_init(self, session, adapter=None, engine_id=FIXTURE_ENGINE_ID, **kwargs)
+
+    monkeypatch.setattr(NativeOverviewService, "__init__", healthy)
 
     retry = api_env["client"].post(
         f"/api/v1/whole-book-runs/{run_id}/retry",
