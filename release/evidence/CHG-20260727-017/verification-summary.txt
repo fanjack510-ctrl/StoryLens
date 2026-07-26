@@ -1,0 +1,13 @@
+﻿CHG-20260727-017 verification
+
+ORIGINAL 5 FAILURES: 0
+RC7 TARGETED VITEST: 140 passed
+TYPECHECK: PASS
+GIT DIFF CHECK: PASS
+REAL PROVIDER CALLS: 0
+SIDECAR BUILD COUNT: 0
+INSTALLER BUILD COUNT: 0
+
+TASKSPAGE: succeeded without journey -> view-results / view=result
+PARTIAL: scene_analysis_partial -> view-detail
+LOCAL: available shows 本地模型; unavailable does not
