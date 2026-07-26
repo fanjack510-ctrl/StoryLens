@@ -1,4 +1,4 @@
-﻿# STEP 2.G6 Gate Evidence
+# STEP 2.G6 Gate Evidence
 
 **Change:** CHG-20260725-003  
 **Step:** STEP 2.6  
@@ -7,7 +7,7 @@
 **Finished:** 2026-07-26T10:15:00+08:00  
 **Verdict:** PASSED
 
-## Integration HEADs (at gate close)
+## Integration HEADs (gate content commit; tip may include registry attach)
 
 | Repo | HEAD |
 |------|------|
