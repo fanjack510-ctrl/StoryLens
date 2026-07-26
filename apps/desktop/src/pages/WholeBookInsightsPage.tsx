@@ -9,6 +9,7 @@ import {
   type WholeBookInsightsDeepLink,
 } from "../services/wholeBookInsightsApi";
 import { booksApi } from "../services/booksApi";
+import { PRO_CAPABILITIES_SHIPPED } from "../services/productEdition";
 
 const MISSING_CHAPTER_PREVIEW = 20;
 const LOW_COVERAGE_RATIO = 0.25;
@@ -131,17 +132,18 @@ export function WholeBookInsightsPage() {
   const edition = useProductEdition();
   const isPro = edition.loaded && edition.is_pro;
   const [showAllMissing, setShowAllMissing] = useState(false);
+  const shipped = PRO_CAPABILITIES_SHIPPED;
 
   const book = useQuery({
     queryKey: ["book", bookId],
     queryFn: () => booksApi.detail(bookId),
-    enabled: bookId > 0,
+    enabled: shipped && bookId > 0,
   });
 
   const insights = useQuery({
     queryKey: ["whole-book-insights", bookId],
     queryFn: () => wholeBookInsightsApi.fetch(bookId),
-    enabled: bookId > 0 && isPro,
+    enabled: shipped && bookId > 0 && isPro,
     retry: false,
   });
 
@@ -155,6 +157,27 @@ export function WholeBookInsightsPage() {
     }
     return { validChapters: valid, missingChapters: missing };
   }, [chapters]);
+
+  // CHG-20260727-016: 1.1.0 single-chapter release keeps aggregate insights unshipped.
+  if (!shipped) {
+    return (
+      <section
+        className="whole-book-insights-page"
+        data-testid="whole-book-insights-coming-soon"
+      >
+        <h1>{PAGE_TITLE}</h1>
+        <p data-testid="whole-book-insights-coming-soon-message">
+          该功能正在完善中，当前版本暂未开放。
+        </p>
+        <p className="muted">
+          本版本聚焦单章导入、场景确认与单章结构化分析。
+        </p>
+        <Link className="secondary" to={`/books/${bookId}`} data-testid="whole-book-insights-back">
+          返回书籍
+        </Link>
+      </section>
+    );
+  }
 
   if (!isPro) {
     return (

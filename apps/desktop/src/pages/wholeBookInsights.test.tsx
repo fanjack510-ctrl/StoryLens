@@ -7,6 +7,17 @@ import { WholeBookInsightsPage } from "../pages/WholeBookInsightsPage";
 import * as wholeBookInsightsApiMod from "../services/wholeBookInsightsApi";
 import type { WholeBookInsightsChapterRow, WholeBookInsightsResult } from "../services/wholeBookInsightsApi";
 
+vi.mock("../services/productEdition", async () => {
+  const actual = await vi.importActual<typeof import("../services/productEdition")>(
+    "../services/productEdition",
+  );
+  return {
+    ...actual,
+    // Existing page tests need shipped=true; release-scope test overrides via dynamic import if needed.
+    PRO_CAPABILITIES_SHIPPED: true,
+  };
+});
+
 const fetchSpy = vi.spyOn(wholeBookInsightsApiMod.wholeBookInsightsApi, "fetch");
 
 function renderWithRouter(ui: React.ReactElement, initial = "/books/1?chapter=2&view=reading") {
@@ -151,18 +162,15 @@ describe("Whole-Book Insights desktop entry", () => {
     stubEntitlements(false);
   });
 
-  it("free entry shows upgrade prompt and does not fetch insights API", async () => {
+  it("book workspace never shows chapter aggregation entry (1.1.0 release scope)", async () => {
     const { useDeveloperModeStore } = await import("../stores/developerModeStore");
     useDeveloperModeStore.getState().setDeveloperMode(true);
     renderWithRouter(<BookRoutePage />);
-    const entry = await screen.findByTestId("whole-book-insights-entry-free");
-    expect(entry).toHaveTextContent("章节聚合洞察");
-    expect(entry).not.toHaveTextContent("全书洞察");
-    await fireEvent.click(entry);
-    const prompt = await screen.findByTestId("whole-book-insights-upgrade-prompt");
-    expect(prompt).toHaveTextContent("章节聚合洞察");
-    expect(prompt).not.toHaveTextContent("全书洞察");
-    expect(fetchSpy).not.toHaveBeenCalled();
+    await screen.findByTestId("shell-start-analysis");
+    expect(screen.queryByTestId("whole-book-insights-entry-free")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("whole-book-insights-entry-pro")).not.toBeInTheDocument();
+    expect(screen.queryByText("章节聚合洞察")).not.toBeInTheDocument();
+    expect(screen.queryByText("章节聚合洞察 Pro")).not.toBeInTheDocument();
     useDeveloperModeStore.getState().setDeveloperMode(false);
   });
 

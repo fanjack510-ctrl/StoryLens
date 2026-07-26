@@ -76,9 +76,9 @@ try {
     if ($LASTEXITCODE) { throw "version_manager set $RcVersion failed" }
 
     $env:STORYLENS_RC_CANDIDATE = "1"
-    # Bake Native Overview UI into RC frontend without changing repo default false.
-    $env:VITE_PRO_NATIVE_OVERVIEW_ENABLED = "true"
-    $env:PRO_NATIVE_OVERVIEW_ENABLED = "true"
+    # CHG-20260727-016: 1.1.0 ships single-chapter scope — do NOT bake Native Overview on.
+    Remove-Item Env:VITE_PRO_NATIVE_OVERVIEW_ENABLED -ErrorAction SilentlyContinue
+    Remove-Item Env:PRO_NATIVE_OVERVIEW_ENABLED -ErrorAction SilentlyContinue
     # Do not force updater signing for local RC.
     Remove-Item Env:STORYLENS_SIGN_UPDATER -ErrorAction SilentlyContinue
     Remove-Item Env:TAURI_SIGNING_PRIVATE_KEY -ErrorAction SilentlyContinue
@@ -100,7 +100,7 @@ try {
             }
     }
 
-    Log "Invoke build_windows_release.ps1 (RC candidate mode; Native Overview UI baked on)"
+    Log "Invoke build_windows_release.ps1 (RC candidate mode; Native Overview UI baked OFF)"
     & (Join-Path $Root "scripts\build_windows_release.ps1")
     if ($LASTEXITCODE) { throw "build_windows_release.ps1 failed" }
 
@@ -129,7 +129,7 @@ try {
         "Formal VERSION restored to: 1.0.5",
         "Private Engine: $PrivateEnginePath",
         "STORYLENS_RC_CANDIDATE: 1",
-        "VITE_PRO_NATIVE_OVERVIEW_ENABLED (RC bake): true",
+        "VITE_PRO_NATIVE_OVERVIEW_ENABLED (RC bake): false",
         "Live Provider: NO",
         "",
         "## Log",

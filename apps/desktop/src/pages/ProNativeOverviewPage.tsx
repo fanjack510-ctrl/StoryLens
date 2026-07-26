@@ -695,12 +695,17 @@ export function ProNativeOverviewPage() {
 
   if (!flagOn) {
     return (
-      <section className="pro-native-overview-page" data-testid="pro-native-overview-feature-disabled">
-        <h1>{PAGE_TITLE}</h1>
-        <ErrorPanel
-          code="FEATURE_DISABLED"
-          message="原生全书概览功能未启用（UI feature flag 关闭）。正式版本启用前不可用。"
-        />
+      <section
+        className="pro-native-overview-page"
+        data-testid="pro-native-overview-coming-soon"
+      >
+        <h1>原生全书概览</h1>
+        <p data-testid="pro-native-overview-coming-soon-message">
+          该功能正在完善中，当前版本暂未开放。
+        </p>
+        <p className="muted">
+          本版本聚焦单章导入、场景确认与单章结构化分析。全书概览将在后续版本开放。
+        </p>
         {backLink}
       </section>
     );

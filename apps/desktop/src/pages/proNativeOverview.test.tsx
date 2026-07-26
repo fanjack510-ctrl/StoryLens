@@ -788,13 +788,16 @@ describe("Pro Native Overview UI (STEP 2.3-C)", () => {
     expect(screen.queryByTestId("whole-book-insights-entry-free")).not.toBeInTheDocument();
   });
 
-  it("flag-off direct URL shows feature disabled, not white screen", async () => {
+  it("flag-off direct URL shows coming-soon page, not white screen or start CTA", async () => {
     flagState.enabled = false;
     stubEntitlements(false);
     renderApp("/books/1/pro-native-overview");
-    const page = await screen.findByTestId("pro-native-overview-feature-disabled");
-    expect(page).toHaveTextContent("功能未启用");
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("原生全书概览");
+    const page = await screen.findByTestId("pro-native-overview-coming-soon");
+    expect(page).toHaveTextContent("该功能正在完善中，当前版本暂未开放");
+    expect(screen.queryByTestId("pro-native-overview-start")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("pro-native-overview-feature-disabled")).not.toBeInTheDocument();
+    expect(screen.queryByText(/FEATURE_DISABLED|PRO_NATIVE_OVERVIEW_UNAVAILABLE/)).not.toBeInTheDocument();
+    expect(createSpy).not.toHaveBeenCalled();
   });
 
   it("book workspace still renders with overview entry (no white screen)", async () => {

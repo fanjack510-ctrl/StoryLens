@@ -21,6 +21,7 @@ import {
   normalizeRunLifecycle,
   resolveTaskCenterPrimaryAction,
 } from "../services/runLifecycle";
+import { isProNativeOverviewUiEnabled } from "../services/proNativeOverviewFlag";
 import "./tasksPage.css";
 
 type RecoveryState = "idle" | "checking" | "creating_recovery" | "created" | "failed";
@@ -625,7 +626,11 @@ export function TasksPage() {
     return statusLabel[run.status] || "处理中";
   };
   const filteredRuns = useMemo(() => {
+    const nativeOverviewVisible = isProNativeOverviewUiEnabled();
     const matchesStatusFilter = (run: any): boolean => {
+      if (!nativeOverviewVisible && isNativeOverviewRun(run)) {
+        return false;
+      }
       if (statusFilter === "all") return true;
       if (statusFilter === "paused") {
         return (

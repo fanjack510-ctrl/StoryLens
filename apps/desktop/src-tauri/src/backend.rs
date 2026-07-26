@@ -236,12 +236,9 @@ fn spawn_sidecar(
         .stdout(Stdio::null())
         .stderr(Stdio::piped());
 
-    // RC candidates (semver pre-release) enable Native Overview for acceptance without
-    // permanently flipping the repository default PRO_NATIVE_OVERVIEW_ENABLED=false.
-    // Formal non-RC builds keep the env unset unless the operator sets it explicitly.
-    if app_version.to_ascii_lowercase().contains("-rc") {
-        cmd.env("PRO_NATIVE_OVERVIEW_ENABLED", "true");
-    }
+    // CHG-20260727-016: do not force PRO_NATIVE_OVERVIEW_ENABLED for RC builds.
+    // Repository / formal default remains off; set the env explicitly for internal validation.
+    let _ = app_version;
 
     #[cfg(windows)]
     {

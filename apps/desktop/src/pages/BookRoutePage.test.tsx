@@ -228,6 +228,11 @@ describe("Book chapter shell", () => {
       fontSize: 17,
       lineHeight: 1.9,
     });
+    vi.mocked(analysisApi.runs).mockResolvedValue([]);
+    vi.mocked(analysisApi.readerJourney).mockResolvedValue({
+      status: "missing",
+      visualization: null,
+    } as any);
     vi.mocked(analysisApi.run).mockResolvedValue({
       id: 77,
       subject_id: "2",

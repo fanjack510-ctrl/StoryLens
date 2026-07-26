@@ -1,0 +1,49 @@
+{
+  "id": "CHG-20260727-016",
+  "title": "Hide native overview from single-chapter 1.1.0 release scope",
+  "type": "improvement",
+  "base_version": "1.0.5",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "apps/desktop",
+    "apps/api",
+    "scripts"
+  ],
+  "files": [
+    "apps/desktop/src/pages/ProNativeOverviewPage.tsx",
+    "apps/desktop/src/pages/BookRoutePage.tsx",
+    "apps/desktop/src/pages/TasksPage.tsx",
+    "apps/desktop/src/components/wholeBookInsights/WholeBookInsightsEntry.tsx",
+    "apps/desktop/src-tauri/src/backend.rs",
+    "scripts/build_windows_rc.ps1"
+  ],
+  "user_summary": "正式版本暂时隐藏原生全书概览等入口，保留单章分析发布范围。",
+  "technical_summary": "Hide native overview / chapter aggregate / independent journey entries for 1.1.0 single-chapter release; coming-soon page; filter task center; stop RC bake forcing flags on.",
+  "acceptance_criteria": [
+    "Normal UI hides native overview, chapter aggregate Pro, independent reader journey entry",
+    "Direct native route shows coming soon without create/start",
+    "Task center hides historical native overview runs in normal mode",
+    "Native create blocked when flag off",
+    "Chapter primary action and re-entry still work"
+  ],
+  "tests": [],
+  "verification_evidence": [],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": null,
+  "created_at": "2026-07-26T18:43:19Z",
+  "updated_at": "2026-07-26T18:43:37Z"
+}
