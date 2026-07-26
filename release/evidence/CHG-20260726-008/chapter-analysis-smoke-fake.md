@@ -90,3 +90,13 @@ LOCAL RUNTIME GATE = PASSED
 RC5 BUILD ALLOWED = YES
 verified = NO
 ```
+
+## RC5 installer (post-gate)
+
+| Item | Value |
+|------|-------|
+| Installer | dist/release/StoryLens_1.1.0-rc.5_x64-setup.exe |
+| SHA-256 | 39AFC5F70C73505C0A9B32605544637F3B63BC3F802E758B67A0426D532BF8CF |
+| RC5 BUILD COUNT | 1 |
+| Formal VERSION after build | 1.0.5 |
+| Build log | elease/evidence/CHG-20260726-008/windows-build-log-1.1.0-rc.5.md |
