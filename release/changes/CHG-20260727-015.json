@@ -11,6 +11,12 @@
       "message": "fix(native-overview): present formal projection results",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "c0a56b71f38cd410816fe07c4123da606a188502",
+      "message": "docs(release): sync CHG-20260727-015 to tested",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -58,7 +64,7 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-26T18:25:21Z",
-  "updated_at": "2026-07-26T18:34:14Z",
+  "updated_at": "2026-07-26T18:34:42Z",
   "verification": {
     "method": "temp DB copy + Fake pytest/vitest + PowerShell zero-cost verify",
     "script": "release/evidence/CHG-20260727-015/verify-native-result-presentation.ps1",
