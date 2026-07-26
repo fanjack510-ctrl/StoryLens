@@ -1,0 +1,39 @@
+﻿{
+    "step":  "2.8-RC6-GATE-AND-BUILD",
+    "display_version":  "1.1.0-rc.6",
+    "formal_version":  "1.0.5",
+    "build_time":  "2026-07-27T00:49:30.9208056+08:00",
+    "public_head":  "6b8a546cf8b8387fcacaa2f89297960c774c49fe",
+    "private_head":  "30d8dad8cd649e832999874f7bf16cc1661cf221",
+    "public_branch":  "integration/narrative-phase2br1",
+    "private_branch":  "integration/phase2br1",
+    "installer":  "D:\\Dstorylens-wt-narrative-phase2br1-integration\\dist\\release\\StoryLens_1.1.0-rc.6_x64-setup.exe",
+    "installer_sha256":  "2712761069AF603F1BFFF305FAD65810A2FE49082919AAC06D27A99CEB4D4EC7",
+    "gui_sha256":  "E281CF61AC255AC607D2EB4D0DA20F72A23EAF37F4C8EC2D4675A06A68321550",
+    "sidecar_sha256":  "DBAB880F272DC5A87FFAE8A3BED81ACB73EC1B40EC24EDB710C1699C6CE317E5",
+    "sidecar_matches_prebuild":  true,
+    "private_runtime_sha256":  "F958FC45E49F6CDC88B381B883CB834D75292D65DC920F4BD791B3745141DB26",
+    "sidecar_build_count":  1,
+    "installer_build_count":  1,
+    "real_provider_calls_during_gate":  0,
+    "frontend_asset_checks":  {
+                                  "has_native_overview":  true,
+                                  "has_view_progress":  true,
+                                  "has_view_result":  true,
+                                  "has_reanalyze":  true,
+                                  "has_chapter_agg_insight_string":  true,
+                                  "has_standalone_reader_journey_button_label":  false,
+                                  "production_toolbar_note":  "Ordinary book toolbar: ReadingSettings + ProNativeOverviewEntry + primary chapter action + OverflowMenu; WholeBookInsightsEntry only when developerMode"
+                              },
+    "frontend_asset":  "index-CMEvstpq.js",
+    "changes_included":  [
+                             "CHG-20260726-009",
+                             "CHG-20260726-010",
+                             "CHG-20260726-011",
+                             "CHG-20260726-012",
+                             "CHG-20260726-013"
+                         ],
+    "fake_default":  "OFF",
+    "fixture_default":  "OFF",
+    "credentials_included":  false
+}
