@@ -10,7 +10,7 @@ Finished: 2026-07-26T11:30:00+08:00
 ## HEADs / governance
 
 ```text
-Public HEAD (at G7 close): eb0815cee96ff00de6b3dc31781b68cbf6a9e22e
+Public HEAD (at G7 close): e8600c2c7172aa05052fcb24b89525fe02c792c5
 Private HEAD: 48072775773a09f4dc849096ba314e4fa0487c58
 
 Formal VERSION: 1.0.5 (restored after RC override; never permanently changed)
