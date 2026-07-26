@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>StoryLens</title>
-    <!-- Pre-hydration theme: avoid light flash before React mounts. -->
+    <!-- Pre-hydration theme + interface zoom: avoid flash before React mounts. -->
     <script>
       (function () {
         try {
@@ -26,6 +26,15 @@
             document.documentElement.classList.toggle("theme-light", raw === "light");
           }
         } catch (e) {}
+        try {
+          var ZOOM_KEY = "storylens.appearance.interfaceZoom";
+          var allowed = { "80": 1, "90": 1, "100": 1, "110": 1, "125": 1, "150": 1 };
+          var z = localStorage.getItem(ZOOM_KEY);
+          if (!z || !allowed[z]) z = "100";
+          var factor = String(Number(z) / 100);
+          document.documentElement.style.setProperty("--storylens-interface-zoom", factor);
+          document.documentElement.style.zoom = factor;
+        } catch (e2) {}
       })();
     </script>
   </head>

@@ -1,4 +1,10 @@
 import { useState } from "react";
+import {
+  DEFAULT_INTERFACE_ZOOM,
+  INTERFACE_ZOOM_LEVELS,
+  stepInterfaceZoom,
+  type InterfaceZoomPercent,
+} from "../../lib/interfaceZoom";
 import { useUiStore } from "../../stores/uiStore";
 import { settingsApi } from "../../services/settingsApi";
 import { useAdvancedSettingsStore } from "../../stores/advancedSettingsStore";
@@ -53,9 +59,79 @@ export function SettingsAppearanceTab() {
         </p>
       </section>
 
+      <section className="settings-zone" data-testid="appearance-interface-zoom-zone">
+        <div className="settings-field" data-testid="interface-zoom-control">
+          <span>界面缩放 · {ui.interfaceZoom}%</span>
+          <div className="settings-zoom-row">
+            <button
+              type="button"
+              className="secondary"
+              data-testid="interface-zoom-decrease"
+              aria-label="缩小界面"
+              disabled={ui.interfaceZoom <= INTERFACE_ZOOM_LEVELS[0]}
+              onClick={() => void ui.setInterfaceZoom(stepInterfaceZoom(ui.interfaceZoom, -1))}
+            >
+              −
+            </button>
+            <select
+              data-testid="interface-zoom-select"
+              aria-label="界面缩放"
+              value={ui.interfaceZoom}
+              onChange={(e) =>
+                void ui.setInterfaceZoom(Number(e.target.value) as InterfaceZoomPercent)
+              }
+            >
+              {INTERFACE_ZOOM_LEVELS.map((level) => (
+                <option key={level} value={level}>
+                  {level}%
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className="secondary"
+              data-testid="interface-zoom-increase"
+              aria-label="放大界面"
+              disabled={
+                ui.interfaceZoom >= INTERFACE_ZOOM_LEVELS[INTERFACE_ZOOM_LEVELS.length - 1]
+              }
+              onClick={() => void ui.setInterfaceZoom(stepInterfaceZoom(ui.interfaceZoom, 1))}
+            >
+              +
+            </button>
+            <button
+              type="button"
+              className="secondary"
+              data-testid="interface-zoom-reset"
+              onClick={() => void ui.setInterfaceZoom(DEFAULT_INTERFACE_ZOOM)}
+            >
+              恢复 100%
+            </button>
+          </div>
+          <div className="settings-zoom-presets" role="group" aria-label="界面缩放预设">
+            {INTERFACE_ZOOM_LEVELS.map((level) => (
+              <button
+                key={level}
+                type="button"
+                className={level === ui.interfaceZoom ? "primary" : "secondary"}
+                data-testid={`interface-zoom-preset-${level}`}
+                aria-pressed={level === ui.interfaceZoom}
+                onClick={() => void ui.setInterfaceZoom(level)}
+              >
+                {level}%
+              </button>
+            ))}
+          </div>
+          <small className="hint">
+            同时调整导航栏、按钮、文字、图表和内容区域的显示大小。快捷键：Ctrl + / Ctrl - /
+            Ctrl 0。与下方「正文字号」相互独立。
+          </small>
+        </div>
+      </section>
+
       <section className="settings-zone" data-testid="appearance-reading-zone">
         <label className="settings-field">
-          <span>字体大小 · {ui.fontSize}px</span>
+          <span>正文字号 · {ui.fontSize}px</span>
           <input
             type="range"
             min={14}

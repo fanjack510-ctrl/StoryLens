@@ -356,3 +356,25 @@
     grid-template-columns: 1fr;
   }
 }
+.settings-zoom-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.35rem 0 0.5rem;
+}
+
+.settings-zoom-row select {
+  min-width: 5.5rem;
+}
+
+.settings-zoom-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.35rem 0 0.25rem;
+}
+
+.settings-zoom-presets button {
+  min-width: 3.25rem;
+}
