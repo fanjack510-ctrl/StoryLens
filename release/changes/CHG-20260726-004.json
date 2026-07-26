@@ -29,6 +29,12 @@
       "message": "docs(test): amend free and Windows gates for native overview",
       "primary": false,
       "multi_change_reason": "STEP 2.5R gate amendments + G6 supplement"
+    },
+    {
+      "sha": "bfb42ef72f00f8b19afa03b602e1ce36a8f76f8a",
+      "message": "docs: mark CHG-20260726-004 implemented with STEP 2.5R evidence",
+      "primary": false,
+      "multi_change_reason": "STEP 2.5R registry mark"
     }
   ],
   "modules": [],
@@ -67,5 +73,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-26T02:22:00Z",
-  "updated_at": "2026-07-26T02:28:27Z"
+  "updated_at": "2026-07-26T02:28:28Z"
 }
