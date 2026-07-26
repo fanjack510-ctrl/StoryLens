@@ -389,7 +389,8 @@ def test_completed_run_not_retryable(api_env):
     assert retry.json()["error_code"] == "RUN_ALREADY_COMPLETED"
 
 
-def test_free_regression_403_and_book_reads(api_env):
+def test_free_regression_native_allowed_and_book_reads(api_env):
+    """CHG-20260726-004: Free native create allowed; Free book reads unchanged."""
     factory = api_env["factory"]
     with factory() as session:
         book = seed_short_book_v1(session)
@@ -397,14 +398,13 @@ def test_free_regression_403_and_book_reads(api_env):
         book_id = int(book.id)
 
     client: TestClient = api_env["client"]
-    denied = client.post(
+    created = client.post(
         f"/api/v1/books/{book_id}/whole-book-runs",
-        json={**CREATE_BODY, "client_request_id": "req-free-deny"},
+        json={**CREATE_BODY, "client_request_id": "req-free-allow"},
     )
-    assert denied.status_code == 403
-    assert denied.json()["error_code"] == "PRO_LICENSE_REQUIRED"
+    assert created.status_code == 201, created.text
+    assert created.json().get("error_code") != "PRO_LICENSE_REQUIRED"
 
-    # Free book/chapter/paragraph reads still work without Pro.
     book = client.get(f"/api/v1/books/{book_id}")
     assert book.status_code == 200
     chapters = client.get(f"/api/v1/books/{book_id}/chapters")

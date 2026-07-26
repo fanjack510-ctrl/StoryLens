@@ -188,7 +188,8 @@ def test_preflight_native_overview(api_env):
     assert body["blocking_errors"] == []
 
 
-def test_free_403(api_env):
+def test_free_native_create_allowed(api_env):
+    """CHG-20260726-004: Free users may create native overview runs (no Pro license)."""
     factory = api_env["factory"]
     with factory() as session:
         book = seed_short_book_v1(session)
@@ -198,9 +199,11 @@ def test_free_403(api_env):
         f"/api/v1/books/{book_id}/whole-book-runs",
         json=CREATE_BODY,
     )
-    assert resp.status_code == 403
+    assert resp.status_code == 201, resp.text
     body = resp.json()
-    assert body["error_code"] == "PRO_LICENSE_REQUIRED"
+    assert body["status"] == "completed"
+    assert body["mode"] == "whole_book_native"
+    assert body.get("error_code") != "PRO_LICENSE_REQUIRED"
 
 
 def test_feature_flag_off(api_env, monkeypatch: pytest.MonkeyPatch):

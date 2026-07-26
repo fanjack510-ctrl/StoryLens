@@ -19,7 +19,14 @@ CAPABILITY_REGISTRY: dict[CapabilityKey, CapabilityMetadata] = {
     CapabilityKey.WHOLE_BOOK_ANALYSIS: CapabilityMetadata(
         key=CapabilityKey.WHOLE_BOOK_ANALYSIS,
         display_name="整书分析",
-        description="全书结构化叙事分析流水线（Pro；未发货）。",
+        description=(
+            "全书结构化叙事分析流水线。"
+            "Legacy internal capability key retained for compatibility. "
+            "Current entitlement in StoryLens 1.1.x: whole_book_native + book_overview "
+            "is FREE (see NativeOverviewService); whole_book_enhanced remains Pro "
+            "and starts product-wise at 1.2.0. Capability still marked requires_license "
+            "for Enhanced / future advanced modes — do not treat NATIVE overview as Pro-only."
+        ),
         shipped=False,
         requires_license=True,
         availability=CapabilityAvailability.PREVIEW,

@@ -549,7 +549,8 @@ def test_materializer_rejects_invalid_evidence(api_env):
         assert exc.value.code == "EVIDENCE_INVALID"
 
 
-def test_free_user_still_403(api_env):
+def test_free_user_native_create_allowed(api_env):
+    """CHG-20260726-004: Free entitlement for native overview create."""
     factory = api_env["factory"]
     with factory() as session:
         book = seed_short_book_v1(session)
@@ -559,8 +560,8 @@ def test_free_user_still_403(api_env):
         f"/api/v1/books/{book_id}/whole-book-runs",
         json=CREATE_BODY,
     )
-    assert resp.status_code == 403
-    assert resp.json()["error_code"] == "PRO_LICENSE_REQUIRED"
+    assert resp.status_code == 201, resp.text
+    assert resp.json().get("error_code") != "PRO_LICENSE_REQUIRED"
 
 
 def test_preflight_estimates_multi_windows(api_env):

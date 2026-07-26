@@ -117,8 +117,6 @@ from app.narrative_core.services.whole_book_overview_engine_protocol import (
     ProviderTransport,
     WholeBookOverviewEngineAdapter,
 )
-from app.services import entitlement
-
 OVERVIEW_PROJECTION_ARTIFACT_TYPE = "whole_book_overview_projection"
 CONTROL_ARTIFACT_TYPE = "whole_book_overview_control"
 PRIVATE_NATIVE_ENGINE_VERSION = "native-overview-1"
@@ -153,12 +151,16 @@ def require_native_overview_enabled() -> None:
 
 
 def require_pro_license(session: Session) -> None:
-    snap = entitlement.entitlement_snapshot(session)
-    if not snap.get("pro_active"):
-        raise NativeOverviewError(
-            WholeBookOverviewErrorCode.PRO_LICENSE_REQUIRED.value,
-            details={"edition": snap.get("edition")},
-        )
+    """Deprecated for native overview (CHG-20260726-004).
+
+    Native ``whole_book_native`` + ``book_overview`` is FREE in StoryLens 1.1.x.
+    Kept as a no-op export so older call sites/tests can still import the symbol.
+    Future Pro modes (e.g. ``whole_book_enhanced``) must use CapabilityService /
+    entitlement gates instead — do not delete ``PRO_LICENSE_REQUIRED``.
+    """
+
+    _ = session
+    return None
 
 
 class NativeOverviewService:
@@ -232,7 +234,10 @@ class NativeOverviewService:
 
     def preflight(self, book_id: int) -> PreflightResponse:
         book = self._session.get(Book, int(book_id))
-        license_allowed = bool(entitlement.entitlement_snapshot(self._session).get("pro_active"))
+        # CHG-20260726-004: native overview entitlement is FREE in 1.1.x.
+        # ``license_allowed`` means product entitlement allows this feature
+        # (not "Pro edition active").
+        license_allowed = True
         flag_on = is_pro_native_overview_enabled()
 
         if book is None:
@@ -289,13 +294,6 @@ class NativeOverviewService:
                 )
             )
             warnings.append("Feature flag PRO_NATIVE_OVERVIEW_ENABLED is off.")
-        if not license_allowed:
-            blocking.append(
-                PreflightBlockingError(
-                    code=WholeBookOverviewErrorCode.PRO_LICENSE_REQUIRED,
-                    message="需要有效的 StoryLens Pro 授权才能创建原生全书概览。",
-                )
-            )
         if paragraph_count <= 0 or character_count <= 0:
             blocking.append(
                 PreflightBlockingError(
@@ -338,7 +336,6 @@ class NativeOverviewService:
 
     def create_run(self, book_id: int, request: CreateRunRequest) -> CreateRunResponse:
         require_native_overview_enabled()
-        require_pro_license(self._session)
 
         book = self._session.get(Book, int(book_id))
         if book is None:
@@ -492,7 +489,6 @@ class NativeOverviewService:
 
     def retry_run(self, run_id: int, request: RetryRunRequest) -> RetryResumeRunResponse:
         require_native_overview_enabled()
-        require_pro_license(self._session)
         run = self._require_overview_run(run_id)
 
         prior = self._find_control_action(int(run.id), "retry", request.client_request_id)
@@ -536,7 +532,6 @@ class NativeOverviewService:
 
     def resume_run(self, run_id: int, request: ResumeRunRequest) -> RetryResumeRunResponse:
         require_native_overview_enabled()
-        require_pro_license(self._session)
         run = self._require_overview_run(run_id)
 
         prior = self._find_control_action(int(run.id), "resume", request.client_request_id)

@@ -5,7 +5,14 @@
   "base_version": "1.0.5",
   "status": "registered",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "6382f0cc171a20a352acd948d7bf8086ef94938f",
+      "message": "docs(release): reposition native overview as free in 1.1.x",
+      "primary": true,
+      "multi_change_reason": "STEP 2.5R governance docs"
+    }
+  ],
   "modules": [],
   "files": [],
   "user_summary": "将原生全书概览在 1.1.x 调整为 Free；Private Engine 继续闭源；Pro 起点改为 1.2.0。CHG-003 负责技术实现，本 Change 只调整产品授权边界。",
@@ -32,7 +39,7 @@
     "breaking_change": false
   },
   "blocker_level": null,
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-26T02:22:00Z",
-  "updated_at": "2026-07-26T02:22:15Z"
+  "updated_at": "2026-07-26T02:28:23Z"
 }
