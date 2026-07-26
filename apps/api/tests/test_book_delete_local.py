@@ -252,6 +252,28 @@ def test_active_whole_book_native_run_blocks_delete():
     assert session.scalar(select(func.count()).select_from(AnalysisRun)) == 1
 
 
+def test_completed_whole_book_native_run_allows_delete():
+    session = _session()
+    book = _make_book(session)
+    book_id = int(book.id)
+    session.add(
+        AnalysisRun(
+            task_type="whole_book_overview",
+            subject_type="book",
+            subject_id=str(book.id),
+            provider="private-native-overview-v1",
+            model="native-overview-1",
+            prompt_version="native-overview-window-v1",
+            schema_version="1.0",
+            input_hash="abc",
+            status="completed",
+        )
+    )
+    session.commit()
+    delete_book(session, book_id)
+    assert session.get(Book, book_id) is None
+
+
 def test_failed_delete_rolls_back_on_active_after_child():
     """Active task leaves all rows intact (no partial delete)."""
     session = _session()

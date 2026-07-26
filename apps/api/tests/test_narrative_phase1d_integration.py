@@ -299,19 +299,25 @@ def test_result_router_registered_openapi_and_review_write_absent() -> None:
     assert "/api/v1/whole-book-runs/{run_id}/results" in paths
     assert "/api/v1/whole-book-runs/{run_id}/results/{module_key}" in paths
     assert "/api/v1/narrative-review-actions" not in paths
-    # Create run still absent from OpenAPI as production create.
-    assert "/api/v1/books/{book_id}/whole-book-runs" not in paths or "post" not in (
-        paths.get("/api/v1/books/{book_id}/whole-book-runs") or {}
-    )
+    # CHG-20260725-003: Pro native overview registers POST create, but the
+    # legacy whole-book create flag remains disabled (see next test).
+    create_path = "/api/v1/books/{book_id}/whole-book-runs"
+    create_ops = paths.get(create_path) or {}
+    if "post" in create_ops:
+        tags = set(create_ops["post"].get("tags") or [])
+        assert "whole-book-native-overview" in tags
 
 
 def test_preflight_still_read_only_and_run_create_disabled() -> None:
     assert WHOLE_BOOK_RUNS_ENDPOINT_DISABLED is True
-    # Production create route must not be registered.
     client = TestClient(app)
     paths = client.get("/openapi.json").json().get("paths", {})
     create_path = "/api/v1/books/{book_id}/whole-book-runs"
-    assert create_path not in paths or "post" not in (paths.get(create_path) or {})
+    create_ops = paths.get(create_path) or {}
+    # Legacy lab/product create stays disabled; native overview may expose POST.
+    if "post" in create_ops:
+        tags = set(create_ops["post"].get("tags") or [])
+        assert "whole-book-native-overview" in tags
     assert "/api/v1/books/{book_id}/whole-book-runs/preflight" in paths
 
 
