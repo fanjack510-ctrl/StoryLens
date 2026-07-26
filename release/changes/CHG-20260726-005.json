@@ -11,6 +11,12 @@
       "message": "feat(appearance): add global interface zoom",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "87c9dc07c525aa7b668c1365e82d9151fcdaf568",
+      "message": "docs(release): mark CHG-20260726-005 implemented",
+      "primary": false,
+      "multi_change_reason": "registry mark implemented"
     }
   ],
   "modules": [
@@ -57,5 +63,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-26T04:04:31Z",
-  "updated_at": "2026-07-26T04:10:31Z"
+  "updated_at": "2026-07-26T04:11:37Z"
 }
