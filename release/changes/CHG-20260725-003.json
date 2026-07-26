@@ -131,6 +131,12 @@
       "message": "docs: attach STEP 2.3 A/B/C Integration commits to CHG-20260725-003",
       "primary": false,
       "multi_change_reason": "docs attach STEP 2.3"
+    },
+    {
+      "sha": "3def68a1725b1df42fef3948b081125a97d252e6",
+      "message": "test(free): add STEP 2.6 upgrade, import, and delete regression coverage",
+      "primary": true,
+      "multi_change_reason": "STEP 2.6 Free regression tests"
     }
   ],
   "modules": [
@@ -174,7 +180,7 @@
     "packages/contracts/fixtures/whole_book_overview_v1/"
   ],
   "user_summary": "建立 StoryLens 首个基于完整小说原文的 Pro 原生整书功能，并在正式开发前纠正现有章节聚合洞察的产品定位。",
-  "technical_summary": "STEP 2.3 COMPLETE (offline). I0 Adapter Parity closed. Public multi-window orchestrator + retry/resume + materializer + accounting. Private private-native-overview-v1 with ProviderTransport (FakeTransport tests; no Live). UI preflight/consent/progress/retry/result/evidence. Fixture hash unchanged. Flag default false. Status remains implemented (not tested/verified — no real Provider Live / novel UAT). Next: STEP 2.4 (do not auto-enter). VERSION 1.0.5.",
+  "technical_summary": "STEP 2.G6 PASSED (Free 1.0.5 regression). DB upgrade+repeat startup OK; TXT/DOCX/EPUB import+original file protection OK; delete protection OK; chapter aggregation + Free suites OK. Public full pytest BASELINE_FAILURE_ONLY (CHG-002 + pre-native lab failures); Private 200; Desktop 1034; typecheck OK. No new Live API (cost still ¥0.0958008). Flag default false. Status remains implemented. Next: STEP 2.7 Windows candidate (do not auto-enter). VERSION 1.0.5.",
   "acceptance_criteria": [
     "Pro Native Whole-Book Overview end-to-end with Snapshot+Evidence+License+Retry+restart persistence",
     "Free 1.0.5 zero-break and 1.0.5 DB copy upgrade",
@@ -192,7 +198,9 @@
     "apps/desktop proNativeOverview Vitest (17 passed)",
     "STEP 2.3 Public directed pytest 74 passed (Private PYTHONPATH)",
     "Private native+fixture+contract 37 passed",
-    "Desktop proNativeOverview Vitest 25 passed"
+    "Desktop proNativeOverview Vitest 25 passed",
+    "STEP 2.6: test_step26_free_upgrade + test_import_docx_epub + delete completed-run + phase1d OpenAPI native create (34 directed Free passed)",
+    "STEP 2.6: Private full pytest 200 passed; Desktop Vitest 1034; typecheck OK; Public full BASELINE_FAILURE_ONLY"
   ],
   "verification_evidence": [
     "STEP 1.2 Integration: cherry-pick A 4e4561c + C 2f6ca24; Agent D PASS both; capability key/API/route unchanged; VERSION=1.0.5; no push",
@@ -205,7 +213,8 @@
     "STEP 2.3: A/B/C merged; I0 parity; no Live Provider; Flag default off; WHOLE_BOOK_RUNS_ENDPOINT_DISABLED=True; VERSION=1.0.5; no push",
     "STEP 2.G3 PASSED; evidence release/evidence/CHG-20260725-003/night-run/gate-2g3.md; WAITING_FOR_DETAILED_STEP_2_4_PROMPT=YES; no Live Provider; no Windows build",
     "STEP 2.G4 PASSED; evidence release/evidence/CHG-20260725-003/night-run/gate-2g4.md; offline Private+Fake failure matrix; no Live Provider; no Windows",
-    "STEP 2.G5 PASSED; Live1+Live2 private-native-overview-v1 + aliyun_qwen_plus/qwen3.6-flash; actual_cost_cny=0.0958008; ledger release/evidence/CHG-20260725-003/night-run/provider-cost-ledger.json; gate-2g5.md; VALIDATION_MODEL_DIFFERS=YES; Live3 NOT_RUN; next STEP 2.6"
+    "STEP 2.G5 PASSED; Live1+Live2 private-native-overview-v1 + aliyun_qwen_plus/qwen3.6-flash; actual_cost_cny=0.0958008; ledger release/evidence/CHG-20260725-003/night-run/provider-cost-ledger.json; gate-2g5.md; VALIDATION_MODEL_DIFFERS=YES; Live3 NOT_RUN; next STEP 2.6",
+    "STEP 2.G6 PASSED; Free/upgrade/import/delete/insights; Public BASELINE_FAILURE_ONLY; Private 200; Desktop 1034; typecheck OK; new Live cost ¥0; evidence gate-2g6.md; status remains implemented; next STEP 2.7"
   ],
   "data_compatibility": {
     "database_changed": true,
@@ -222,5 +231,5 @@
   "blocker_level": "P0",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-25T13:31:37Z",
-  "updated_at": "2026-07-26T01:12:37Z"
+  "updated_at": "2026-07-26T02:08:44Z"
 }
