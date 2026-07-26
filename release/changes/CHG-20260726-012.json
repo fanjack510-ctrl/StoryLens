@@ -35,6 +35,12 @@
       "message": "docs(release): attach evidence commit to CHG-20260726-012",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "133760d44502b0a2f59ea6ff25f594605b30def4",
+      "message": "docs(release): sync CHG-20260726-012 attach-commit metadata",
+      "primary": true,
+      "multi_change_reason": "registry attach-commit metadata sync"
     }
   ],
   "modules": [
@@ -72,5 +78,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-26T15:34:12Z",
-  "updated_at": "2026-07-26T16:35:49Z"
+  "updated_at": "2026-07-26T16:35:50Z"
 }
