@@ -7,6 +7,7 @@ Never branches on book title, character name, or hard-coded scene ids.
 from __future__ import annotations
 
 import json
+import os
 import re
 import unicodedata
 from dataclasses import dataclass, field
@@ -16,16 +17,39 @@ from typing import Any, Iterable, Literal, Mapping, Sequence
 
 from app.services.validation_errors import StructuralValidationError
 
-def _repo_root() -> Path:
-    here = Path(__file__).resolve()
-    for parent in here.parents:
-        if (parent / "config" / "scene_evidence_validation.json").exists():
-            return parent
-    return here.parents[4]
+_CONFIG_FILENAME = "scene_evidence_validation.json"
 
 
-REPO_ROOT = _repo_root()
-CONFIG_PATH = REPO_ROOT / "config" / "scene_evidence_validation.json"
+def resolve_evidence_validation_config_path() -> Path:
+    """Resolve formal scene evidence validation config (cwd-independent).
+
+    Priority (reuses ``app.core.paths`` layout; never ``%LOCALAPPDATA%/config``):
+    1. ``STORYLENS_CONFIG_DIR`` / filename when that file exists
+    2. User data override: ``user_data_layout()["config"]`` / filename
+    3. Bundled / repo default: ``resource_root()`` / ``config`` / filename
+    """
+    from app.core.paths import resource_root, user_data_layout
+
+    config_dir = (os.environ.get("STORYLENS_CONFIG_DIR") or "").strip()
+    if config_dir:
+        explicit = Path(config_dir).expanduser() / _CONFIG_FILENAME
+        if explicit.is_file():
+            return explicit.resolve()
+
+    user_cfg = user_data_layout()["config"] / _CONFIG_FILENAME
+    if user_cfg.is_file():
+        return user_cfg.resolve()
+
+    bundled = resource_root() / "config" / _CONFIG_FILENAME
+    if bundled.is_file():
+        return bundled.resolve()
+
+    raise FileNotFoundError(
+        f"Missing required config {_CONFIG_FILENAME}; looked in "
+        f"STORYLENS_CONFIG_DIR, {user_data_layout()['config']}, and "
+        f"{resource_root() / 'config'}"
+    )
+
 
 FieldClass = Literal["local", "holistic", "hybrid", "unknown"]
 
@@ -93,10 +117,15 @@ class SceneEvidenceValidationError(StructuralValidationError):
 
 @lru_cache(maxsize=1)
 def load_evidence_validation_config() -> dict[str, Any]:
-    raw = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+    path = resolve_evidence_validation_config_path()
+    raw = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(raw, dict):
         raise RuntimeError("scene_evidence_validation.json must be an object")
     return raw
+
+
+def clear_evidence_validation_config_cache() -> None:
+    load_evidence_validation_config.cache_clear()
 
 
 def field_class_for(field_name: str, config: Mapping[str, Any] | None = None) -> FieldClass:
