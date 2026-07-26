@@ -1,0 +1,35 @@
+{
+  "currency": "CNY",
+  "absolute_limit_cny": 10.0,
+  "execution_limit_cny": 9.0,
+  "actual_cost_cny": 0.0127896,
+  "reserved_cost_cny": 0.0,
+  "attempts": [
+    {
+      "attempt_id": "att-84b99eddd0bc",
+      "run_id": "",
+      "stage_key": "analyze_window",
+      "window_index": null,
+      "provider": "aliyun_qwen_plus",
+      "model": "qwen3.6-flash",
+      "estimated_input_tokens": 2234,
+      "maximum_output_tokens": 2048,
+      "input_price": 1.2,
+      "output_price": 7.2,
+      "worst_case_cost_cny": 0.0174264,
+      "actual_before_cny": 0.0,
+      "reserved_before_cny": 0.0,
+      "projected_total_cny": 0.0174264,
+      "allowed": true,
+      "created_at": "2026-07-26T01:08:41.558017+00:00",
+      "status": "succeeded",
+      "actual_input_tokens": 1370,
+      "actual_output_tokens": 1548,
+      "actual_cost_cny": 0.0127896,
+      "error_code": null,
+      "finished_at": "2026-07-26T01:08:52.664608+00:00",
+      "cumulative_actual_cny": 0.0127896,
+      "cumulative_reserved_cny": 0.0
+    }
+  ]
+}
