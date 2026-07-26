@@ -3,9 +3,16 @@
   "title": "Raise Native Overview live output ceiling to 8192",
   "type": "fix",
   "base_version": "1.0.5",
-  "status": "registered",
+  "status": "tested",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "4474958d5304e7480057107c31e774665afed56f",
+      "message": "fix(native-overview): raise live output ceiling to 8192",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "apps/api"
   ],
@@ -38,7 +45,7 @@
     "breaking_change": false
   },
   "blocker_level": null,
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-26T15:05:42Z",
-  "updated_at": "2026-07-26T15:12:15Z"
+  "updated_at": "2026-07-26T15:12:16Z"
 }
