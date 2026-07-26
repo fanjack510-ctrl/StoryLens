@@ -3,7 +3,7 @@
   "title": "Fix cloud routing and native overview preflight in Windows RC",
   "type": "fix",
   "base_version": "1.0.5",
-  "status": "implemented",
+  "status": "tested",
   "include_in_next_release": true,
   "commits": [
     {
@@ -41,10 +41,12 @@
   ],
   "tests": [
     "pytest execution_mode + native_overview_ai_binding + walking + free: 30 passed",
-    "vitest taskCenterErrors + proNativeOverview: 20 passed; typecheck pass"
+    "vitest taskCenterErrors + proNativeOverview: 20 passed; typecheck pass",
+    "RC3 Windows build 1.1.0-rc.3 PASS; SHA-256 08B7E752244CC033C29299BE263DBAFB48A0C877A14B47DBA00574B44749FB76"
   ],
   "verification_evidence": [
-    "release/evidence/CHG-20260726-006/rc2-blockers-and-fix.md"
+    "release/evidence/CHG-20260726-006/rc2-blockers-and-fix.md",
+    "release/evidence/CHG-20260726-006/rc3-candidate.md"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -61,5 +63,5 @@
   "blocker_level": "P0",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-26T04:28:05Z",
-  "updated_at": "2026-07-26T04:38:20Z"
+  "updated_at": "2026-07-26T04:46:31Z"
 }
