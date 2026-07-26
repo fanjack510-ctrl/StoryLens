@@ -1,0 +1,3 @@
+﻿TARGETED TESTS: 5 passed
+PART A: PASS outgoing_max_tokens=8192 real_calls=0
+PART B: PASS finish=stop out=4626 parser=PASS schema=PASS cost=0.047392

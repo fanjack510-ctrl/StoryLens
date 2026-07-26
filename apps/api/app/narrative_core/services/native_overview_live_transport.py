@@ -55,7 +55,7 @@ class AliyunNativeOverviewTransport:
     provider_name: str = "aliyun_qwen_plus"
     model: str = "qwen3.6-flash"
     timeout_seconds: int = 90
-    max_output_tokens: int = 4096
+    max_output_tokens: int = 8192
     max_auto_retries: int = 1  # STEP 2.5 hard cap (extra attempts after first)
     temperature: float = 0.2
     call_log: list[dict[str, Any]] | None = None

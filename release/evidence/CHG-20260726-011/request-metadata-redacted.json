@@ -1,0 +1,19 @@
+{
+  "provider": "aliyun_qwen_plus",
+  "model": "qwen3.7-plus",
+  "window_id": 2075,
+  "window_index": 0,
+  "body_sha256": "1bdeda15d9419df48f6e862d64d4d740508a5cc336bd52970e0a0779fd11a1db",
+  "prompt_sha256": "3ce882b5c417c9cfe3bd213c36d8e6ed391dafc3d429f76379411a3b925aa31d",
+  "max_tokens_source": "PRODUCT DEFAULT",
+  "product_default_max_output_tokens": 8192,
+  "script_explicit_max_output_tokens": null,
+  "temperature": 0.2,
+  "response_format": {
+    "type": "json_object"
+  },
+  "enable_thinking": false,
+  "timeout": 90,
+  "retry": 0,
+  "api_key": "REDACTED"
+}
