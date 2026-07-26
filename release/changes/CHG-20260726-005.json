@@ -17,6 +17,12 @@
       "message": "docs(release): mark CHG-20260726-005 implemented",
       "primary": false,
       "multi_change_reason": "registry mark implemented"
+    },
+    {
+      "sha": "a4b21790fc11fa0e76f4146dcf801caec1198711",
+      "message": "docs(release): attach mark commit to CHG-20260726-005",
+      "primary": false,
+      "multi_change_reason": "attach mark commit metadata"
     }
   ],
   "modules": [
@@ -63,5 +69,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-26T04:04:31Z",
-  "updated_at": "2026-07-26T04:11:37Z"
+  "updated_at": "2026-07-26T04:11:56Z"
 }
