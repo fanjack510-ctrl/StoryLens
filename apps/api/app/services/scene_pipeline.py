@@ -2,7 +2,7 @@ import hashlib
 import json
 from datetime import datetime, timezone
 
-from sqlalchemy import select, update
+from sqlalchemy import or_, select, update
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import get_settings
@@ -1218,20 +1218,59 @@ async def _execute(session: Session, gateway: ModelGateway, run: AnalysisRun) ->
     return False
 
 
-def mark_interrupted_runs_failed(session: Session) -> None:
+# Worker-bound scene-pipeline statuses: no live Sidecar worker after process exit.
+# Do NOT include user-wait states (awaiting_boundary_review, boundary_confirmed*,
+# awaiting_provider_recovery) — those have no background worker to resume.
+_STARTUP_INTERRUPT_WORKER_STATUSES = (
+    "running",
+    "boundary_candidates_running",
+    "scene_analysis_running",
+)
+
+# Terminal statuses that startup recovery must never rewrite.
+_STARTUP_PRESERVE_TERMINAL_STATUSES = frozenset(
+    {
+        "succeeded",
+        "failed",
+        "failed_provider",
+        "failed_structural",
+        "cancelled",
+        "review_cancelled",
+        "completed",
+    }
+)
+
+
+def mark_interrupted_runs_failed(session: Session) -> dict[str, int]:
     """Sidecar startup recovery with Phase 1A staged-run compatibility.
 
-    A. Staged narrative runs (have analysis_run_stages AND a running stage):
+    Desktop single-instance semantics (Plan B): leftover worker-bound runs cannot
+    safely auto-resume after process exit — mark them interrupted/failed with
+    PROCESS_INTERRUPTED* and close leftover reservations.
+
+    A. Staged narrative runs (have analysis_run_stages):
        running stages → interrupted; run → interrupted; checkpoints preserved;
-       not permanently failed; no automatic model re-invoke.
+       not permanently failed; no automatic model re-invoke; reservations kept
+       for resume.
 
     B. Legacy chapter / no-stage runs:
-       keep prior failed semantics for running/queued statuses.
+       worker-bound / queued → failed + PROCESS_INTERRUPTED*; release reservations.
+
+    C. Orphan active reservations (run_id IS NULL or expired): release remaining.
+
+    Idempotent: second call does not re-mutate already-terminal recovered runs.
     """
-    from app.db.models import AnalysisRunStage
+    from app.db.models import AnalysisRunStage, CloudBudgetReservation
     from app.narrative_core.enums import RunStatus, StageStatus
+    from app.services.budget_reservation import (
+        release_reservation,
+        release_run_reservation,
+    )
 
     now = datetime.now(timezone.utc)
+    touched_failed_run_ids: list[int] = []
+    touched_interrupted_run_ids: list[int] = []
+    released_reservation_ids: list[int] = []
 
     staged_with_running: set[int] = set(
         session.scalars(
@@ -1246,7 +1285,7 @@ def mark_interrupted_runs_failed(session: Session) -> None:
         session.scalars(select(AnalysisRunStage.run_id).distinct()).all()
     )
 
-    active_statuses = ("running", "boundary_candidates_running", "scene_analysis_running")
+    active_statuses = _STARTUP_INTERRUPT_WORKER_STATUSES
     candidates = list(
         session.scalars(
             select(AnalysisRun).where(
@@ -1256,6 +1295,8 @@ def mark_interrupted_runs_failed(session: Session) -> None:
     )
 
     for run in candidates:
+        if run.status in _STARTUP_PRESERVE_TERMINAL_STATUSES:
+            continue
         is_staged = run.id in staged_run_ids
         has_running_stage = run.id in staged_with_running
         if is_staged and (has_running_stage or run.status in active_statuses):
@@ -1277,26 +1318,57 @@ def mark_interrupted_runs_failed(session: Session) -> None:
                 run.error_code = "PROCESS_INTERRUPTED"
                 run.error_message = "应用重启时任务仍在运行；阶段可 resume"
                 run.completed_at = None
+                touched_interrupted_run_ids.append(int(run.id))
             continue
 
-        # Legacy / no-stage path — preserve historical failed recovery.
+        # Legacy / no-stage path — permanently fail worker-bound leftovers.
         if run.status in active_statuses:
             run.status = "failed"
             run.error_code = "PROCESS_INTERRUPTED"
             run.error_message = "应用重启时任务仍在运行"
             run.completed_at = now
+            touched_failed_run_ids.append(int(run.id))
         elif run.status == "queued":
             run.status = "failed"
             run.error_code = "PROCESS_INTERRUPTED_BEFORE_START"
             run.error_message = "应用重启前任务仍在队列中，无法自动恢复"
             run.completed_at = now
+            touched_failed_run_ids.append(int(run.id))
 
     session.commit()
-    from app.services.budget_reservation import release_run_reservation
 
-    for run in session.scalars(
-        select(AnalysisRun).where(AnalysisRun.error_code == "PROCESS_INTERRUPTED")
-    ):
-        # Only release reservations for permanently failed legacy runs.
-        if run.status == "failed":
-            release_run_reservation(session, run.id)
+    # Release only runs transitioned on this invocation (idempotent vs historical rows).
+    for run_id in touched_failed_run_ids:
+        before = list(
+            session.scalars(
+                select(CloudBudgetReservation.id).where(
+                    CloudBudgetReservation.run_id == run_id,
+                    CloudBudgetReservation.status == "active",
+                )
+            )
+        )
+        release_run_reservation(session, run_id)
+        released_reservation_ids.extend(int(x) for x in before)
+
+    # Orphan create-time reservations (run_id never attached) and expired actives.
+    orphan_or_expired = list(
+        session.scalars(
+            select(CloudBudgetReservation).where(
+                CloudBudgetReservation.status == "active",
+                or_(
+                    CloudBudgetReservation.run_id.is_(None),
+                    CloudBudgetReservation.expires_at <= now,
+                ),
+            )
+        )
+    )
+    for reservation in orphan_or_expired:
+        rid = int(reservation.id)
+        release_reservation(session, rid)
+        released_reservation_ids.append(rid)
+
+    return {
+        "failed_runs": len(touched_failed_run_ids),
+        "interrupted_runs": len(touched_interrupted_run_ids),
+        "released_reservations": len(released_reservation_ids),
+    }

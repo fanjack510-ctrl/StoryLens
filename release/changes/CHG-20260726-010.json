@@ -1,0 +1,47 @@
+{
+  "id": "CHG-20260726-010",
+  "title": "Recover interrupted analysis runs on startup",
+  "type": "fix",
+  "base_version": "1.0.5",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "apps/api"
+  ],
+  "files": [
+    "apps/api/app/services/scene_pipeline.py",
+    "apps/api/tests/test_stale_run_startup_recovery_local.py"
+  ],
+  "user_summary": "应用异常退出后将遗留非终态 AnalysisRun 与费用预留安全闭合，避免启动中残留与 SQLite 锁。",
+  "technical_summary": "Harden mark_interrupted_runs_failed: release only runs touched this invocation; close orphan/expired active reservations; keep user-wait statuses.",
+  "acceptance_criteria": [
+    "Startup marks boundary_candidates_running as failed+PROCESS_INTERRUPTED and releases reservation",
+    "Recovery is idempotent; Fake Create Run returns quickly without DB lock"
+  ],
+  "tests": [
+    "apps/api/tests/test_stale_run_startup_recovery_local.py (6 passed)",
+    "test_hardening.py::test_run_time_state_and_interruption",
+    "test_narrative_phase1a_integration.py::test_sidecar_interrupt_compat_staged_vs_legacy"
+  ],
+  "verification_evidence": [
+    "release/evidence/CHG-20260726-010/verify-result.json",
+    "release/evidence/CHG-20260726-010/verify-stale-run-recovery.ps1"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": null,
+  "created_at": "2026-07-26T14:37:25Z",
+  "updated_at": "2026-07-26T14:48:42Z"
+}

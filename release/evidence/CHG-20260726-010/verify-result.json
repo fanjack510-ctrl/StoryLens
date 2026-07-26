@@ -1,0 +1,30 @@
+﻿{
+    "health_http":  200,
+    "analysis_runs_http":  200,
+    "run10_after_status":  "failed",
+    "run10_after_error":  "PROCESS_INTERRUPTED",
+    "reservation_after":  [
+                              {
+                                  "id":  13,
+                                  "status":  "released",
+                                  "remaining_cost":  0.0,
+                                  "consumed_cost":  0.063016,
+                                  "released_cost":  0.041698,
+                                  "released_at":  "2026-07-26 14:15:30.404607"
+                              },
+                              {
+                                  "id":  14,
+                                  "status":  "released",
+                                  "remaining_cost":  0.0,
+                                  "consumed_cost":  0.0,
+                                  "released_cost":  0.1,
+                                  "released_at":  "2026-07-26 14:48:10.721084"
+                              }
+                          ],
+    "recovery_idempotent":  true,
+    "new_run_id":  12,
+    "create_ms":  486,
+    "database_lock_errors":  0,
+    "temp_db":  "C:\\Users\\msi\\AppData\\Local\\Temp\\storylens-fix-run01-20260726-224805\\database\\storylens.db",
+    "passed":  true
+}
