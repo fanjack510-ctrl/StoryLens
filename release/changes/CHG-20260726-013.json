@@ -3,9 +3,22 @@
   "title": "Commit Native Overview progress checkpoints for live polling",
   "type": "fix",
   "base_version": "1.0.5",
-  "status": "registered",
+  "status": "tested",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "f55b1b74132c3be9a9d9d2b81a23de8be6beff77",
+      "message": "fix(native-overview): commit visible progress checkpoints",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "1234fa7e51ba9bfa5f627ec76473988a87baf36c",
+      "message": "docs(release): mark CHG-20260726-013 tested after progress fix",
+      "primary": true,
+      "multi_change_reason": "registry status update"
+    }
+  ],
   "modules": [
     "apps/api"
   ],
@@ -44,5 +57,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-26T16:15:36Z",
-  "updated_at": "2026-07-26T16:27:57Z"
+  "updated_at": "2026-07-26T16:28:19Z"
 }
