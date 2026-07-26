@@ -11,6 +11,18 @@
       "message": "fix(native-overview): extend live provider timeout",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "9c63544123fed42c65e834e6d4412f68dba07fd8",
+      "message": "docs(release): mark CHG-20260726-012 tested after timeout fix",
+      "primary": true,
+      "multi_change_reason": "registry status update after implementation commit"
+    },
+    {
+      "sha": "ba6c0ace309773ce1477cfa3e36d62258aab4c25",
+      "message": "docs(release): attach docs commit to CHG-20260726-012",
+      "primary": true,
+      "multi_change_reason": "registry attach-commit metadata sync"
     }
   ],
   "modules": [
@@ -48,5 +60,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-26T15:34:12Z",
-  "updated_at": "2026-07-26T15:39:47Z"
+  "updated_at": "2026-07-26T15:40:29Z"
 }
