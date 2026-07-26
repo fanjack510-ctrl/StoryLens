@@ -5,7 +5,14 @@
   "base_version": "1.0.5",
   "status": "tested",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "13cc770b7cfc23a576e2f8f1c3d3292308bc1101",
+      "message": "test(chapter-analysis): add development smoke fake transport",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "apps/api",
     "chapter_analysis",
@@ -49,7 +56,7 @@
     "breaking_change": false
   },
   "blocker_level": null,
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-26T13:06:00Z",
-  "updated_at": "2026-07-26T13:40:00Z"
+  "updated_at": "2026-07-26T13:37:26Z"
 }

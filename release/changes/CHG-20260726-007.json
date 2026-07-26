@@ -5,7 +5,14 @@
   "base_version": "1.0.5",
   "status": "implemented",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "7dd1e64d97eaba7ee102ee45d9add9147bd739c3",
+      "message": "fix(book-actions): use one chapter primary action",
+      "primary": false,
+      "multi_change_reason": "remove duplicate workspace CTA"
+    }
+  ],
   "modules": [
     "apps/desktop"
   ],
@@ -45,7 +52,7 @@
     "breaking_change": false
   },
   "blocker_level": "P1",
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-26T10:55:28Z",
-  "updated_at": "2026-07-26T12:20:00Z"
+  "updated_at": "2026-07-26T13:37:26Z"
 }
