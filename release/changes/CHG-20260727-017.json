@@ -3,7 +3,7 @@
   "title": "Restore completed result routing and local provider option for RC7 gate",
   "type": "fix",
   "base_version": "1.0.5",
-  "status": "tested",
+  "status": "verified",
   "include_in_next_release": true,
   "commits": [
     {
@@ -25,7 +25,9 @@
   ],
   "user_summary": "修复任务中心已完成结果路由与开始分析本地模型选项，解除 RC7 门禁阻塞。",
   "technical_summary": "Treat chapter succeeded as completed lifecycle for result routing; map scene_analysis_partial to detail CTA; stop premature local→cloud mode coerce when local providers exist.",
-  "acceptance_criteria": [],
+  "acceptance_criteria": [
+    "RC7 install acceptance PASSED; completed result routing and local model option verified"
+  ],
   "tests": [
     "apps/desktop/src/pages/TasksPage.test.tsx",
     "apps/desktop/src/components/analysis/StartAnalysisDialog.test.tsx",
@@ -35,7 +37,9 @@
     "apps/desktop/src/pages/proNativeOverview.test.tsx"
   ],
   "verification_evidence": [
-    "release/evidence/CHG-20260727-017/verification-summary.txt"
+    "release/evidence/CHG-20260727-017/verification-summary.txt",
+    "release/evidence/RC7/security-audit-summary.txt",
+    "release/evidence/RC7/installed-acceptance-summary.txt"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -52,5 +56,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-26T19:22:37Z",
-  "updated_at": "2026-07-26T19:30:41Z"
+  "updated_at": "2026-07-26T20:14:35Z"
 }
