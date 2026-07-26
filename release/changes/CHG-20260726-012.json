@@ -23,6 +23,12 @@
       "message": "docs(release): attach docs commit to CHG-20260726-012",
       "primary": true,
       "multi_change_reason": "registry attach-commit metadata sync"
+    },
+    {
+      "sha": "20b9a2c3b9be2436bd20b6d20e3b16d250d1b6d6",
+      "message": "docs(evidence): add redacted CHG-012/e2e proofs for RC6 gate",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -60,5 +66,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-26T15:34:12Z",
-  "updated_at": "2026-07-26T15:40:29Z"
+  "updated_at": "2026-07-26T16:35:35Z"
 }
