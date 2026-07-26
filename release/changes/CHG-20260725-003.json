@@ -155,6 +155,12 @@
       "message": "docs(evidence): align gate-2g6 Public HEAD",
       "primary": false,
       "multi_change_reason": "STEP 2.6 gate HEAD align"
+    },
+    {
+      "sha": "4ce02b7a0d1928daaba41bfaac00741a3cc42bbf",
+      "message": "docs(evidence): restore UTF-8 gate-2g6 content",
+      "primary": false,
+      "multi_change_reason": "STEP 2.6 restored gate-2g6"
     }
   ],
   "modules": [
@@ -249,5 +255,5 @@
   "blocker_level": "P0",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-25T13:31:37Z",
-  "updated_at": "2026-07-26T02:09:56Z"
+  "updated_at": "2026-07-26T02:10:36Z"
 }
