@@ -1,0 +1,440 @@
+{
+  "contract_version": "1.0",
+  "candidate_entities": [
+    {
+      "candidate_id": "char_chen_ling",
+      "entity_type": "character",
+      "canonical_name": "陈伶",
+      "aliases": [],
+      "description": "A central character who experiences confusion about his identity, interacts with others like Han Meng and Li Xiuchun, and is associated with theatrical elements and 'Disasters'.",
+      "confidence": 0.95,
+      "evidence_refs": [
+        "ev_004",
+        "ev_018",
+        "ev_029",
+        "ev_032",
+        "ev_034"
+      ]
+    },
+    {
+      "candidate_id": "char_han_meng",
+      "entity_type": "character",
+      "canonical_name": "韩蒙",
+      "aliases": [
+        "韩蒙长官"
+      ],
+      "description": "An authority figure, referred to as 'Officer' or 'Commander', who takes action such as pulling a trigger.",
+      "confidence": 0.9,
+      "evidence_refs": [
+        "ev_012",
+        "ev_020"
+      ]
+    },
+    {
+      "candidate_id": "char_li_xiuchun",
+      "entity_type": "character",
+      "canonical_name": "李秀春",
+      "aliases": [],
+      "description": "A character who speculates about the strength of a 'Disaster'.",
+      "confidence": 0.85,
+      "evidence_refs": [
+        "ev_010"
+      ]
+    },
+    {
+      "candidate_id": "char_chen_yan",
+      "entity_type": "character",
+      "canonical_name": "陈宴",
+      "aliases": [
+        "阿宴"
+      ],
+      "description": "A character associated with a specific opera robe and mentioned in relation to Chen Ling's potential actions.",
+      "confidence": 0.85,
+      "evidence_refs": [
+        "ev_015",
+        "ev_021"
+      ]
+    },
+    {
+      "candidate_id": "char_chu_muyun",
+      "entity_type": "character",
+      "canonical_name": "楚牧云",
+      "aliases": [],
+      "description": "A character who shows surprise upon hearing a statement.",
+      "confidence": 0.85,
+      "evidence_refs": [
+        "ev_024"
+      ]
+    },
+    {
+      "candidate_id": "char_qian_fan",
+      "entity_type": "character",
+      "canonical_name": "钱凡",
+      "aliases": [],
+      "description": "A character who speaks and then leaves.",
+      "confidence": 0.85,
+      "evidence_refs": [
+        "ev_027"
+      ]
+    },
+    {
+      "candidate_id": "loc_hanshuang_street",
+      "entity_type": "location",
+      "canonical_name": "寒霜街",
+      "aliases": [],
+      "description": "A street where screams were heard and which is subject to search tasks.",
+      "confidence": 0.9,
+      "evidence_refs": [
+        "ev_008",
+        "ev_009",
+        "ev_022"
+      ]
+    },
+    {
+      "candidate_id": "other_chen_directing_rules",
+      "entity_type": "other",
+      "canonical_name": "《陈氏编导法则》",
+      "aliases": [],
+      "description": "A set of rules or a book, specifically mentioning Article 9.",
+      "confidence": 0.8,
+      "evidence_refs": [
+        "ev_007"
+      ]
+    }
+  ],
+  "candidate_assets": [
+    {
+      "candidate_id": "asset_identity_crisis",
+      "asset_type": "conflict",
+      "title": "Identity Confusion",
+      "summary": "Chen Ling questions his own identity, wondering if he is a ghost.",
+      "subject_candidate_ids": [
+        "char_chen_ling"
+      ],
+      "object_candidate_ids": [],
+      "confidence": 0.8,
+      "evidence_refs": [
+        "ev_002",
+        "ev_003"
+      ],
+      "deduplication_key": "chen_ling_identity_question"
+    },
+    {
+      "candidate_id": "asset_disaster_encounter",
+      "asset_type": "event",
+      "title": "Encounter with Disaster",
+      "summary": "References to a 'Disaster' being killed or searched for on Hanshuang Street.",
+      "subject_candidate_ids": [
+        "char_li_xiuchun",
+        "char_han_meng"
+      ],
+      "object_candidate_ids": [
+        "loc_hanshuang_street"
+      ],
+      "confidence": 0.75,
+      "evidence_refs": [
+        "ev_010",
+        "ev_022"
+      ],
+      "deduplication_key": "disaster_event_hanshuang"
+    },
+    {
+      "candidate_id": "asset_audience_expectation",
+      "asset_type": "other",
+      "title": "Audience Expectation Value",
+      "summary": "A metric or system element indicating '+20' audience expectation.",
+      "subject_candidate_ids": [
+        "char_chen_ling"
+      ],
+      "object_candidate_ids": [],
+      "confidence": 0.7,
+      "evidence_refs": [
+        "ev_033"
+      ],
+      "deduplication_key": "audience_expectation_system"
+    }
+  ],
+  "candidate_evidence": [
+    {
+      "evidence_id": "ev_002",
+      "paragraph_id": "B0001-C0002-P0001",
+      "chapter_id": "2",
+      "quote": "“我……是谁？”",
+      "evidence_role": "support",
+      "confidence": 0.9,
+      "supports_candidate_ids": [
+        "asset_identity_crisis"
+      ]
+    },
+    {
+      "evidence_id": "ev_003",
+      "paragraph_id": "B0001-C0003-P0001",
+      "chapter_id": "3",
+      "quote": "“是……鬼吗？”",
+      "evidence_role": "support",
+      "confidence": 0.9,
+      "supports_candidate_ids": [
+        "asset_identity_crisis"
+      ]
+    },
+    {
+      "evidence_id": "ev_004",
+      "paragraph_id": "B0001-C0004-P0001",
+      "chapter_id": "4",
+      "quote": "陈伶的瞳孔骤然收缩！",
+      "evidence_role": "support",
+      "confidence": 0.95,
+      "supports_candidate_ids": [
+        "char_chen_ling"
+      ]
+    },
+    {
+      "evidence_id": "ev_007",
+      "paragraph_id": "B0001-C0007-P0001",
+      "chapter_id": "7",
+      "quote": "《陈氏编导法则》第九条——",
+      "evidence_role": "support",
+      "confidence": 0.9,
+      "supports_candidate_ids": [
+        "other_chen_directing_rules"
+      ]
+    },
+    {
+      "evidence_id": "ev_008",
+      "paragraph_id": "B0001-C0008-P0001",
+      "chapter_id": "8",
+      "quote": "那天下午，寒霜街上的惨叫声几乎没有停过。",
+      "evidence_role": "support",
+      "confidence": 0.9,
+      "supports_candidate_ids": [
+        "loc_hanshuang_street"
+      ]
+    },
+    {
+      "evidence_id": "ev_009",
+      "paragraph_id": "B0001-C0009-P0001",
+      "chapter_id": "9",
+      "quote": "寒霜街。",
+      "evidence_role": "support",
+      "confidence": 0.9,
+      "supports_candidate_ids": [
+        "loc_hanshuang_street"
+      ]
+    },
+    {
+      "evidence_id": "ev_010",
+      "paragraph_id": "B0001-C0010-P0001",
+      "chapter_id": "10",
+      "quote": "“也有可能是那只‘灾厄’太弱……一斧头就彻底砍死了。”李秀春又提出一种可能。",
+      "evidence_role": "support",
+      "confidence": 0.9,
+      "supports_candidate_ids": [
+        "char_li_xiuchun",
+        "asset_disaster_encounter"
+      ]
+    },
+    {
+      "evidence_id": "ev_012",
+      "paragraph_id": "B0001-C0012-P0001",
+      "chapter_id": "12",
+      "quote": "这句话落下的瞬间，韩蒙扣动扳机。",
+      "evidence_role": "support",
+      "confidence": 0.9,
+      "supports_candidate_ids": [
+        "char_han_meng"
+      ]
+    },
+    {
+      "evidence_id": "ev_015",
+      "paragraph_id": "B0001-C0015-P0001",
+      "chapter_id": "15",
+      "quote": "这件戏袍，确实是陈宴的。",
+      "evidence_role": "support",
+      "confidence": 0.9,
+      "supports_candidate_ids": [
+        "char_chen_yan"
+      ]
+    },
+    {
+      "evidence_id": "ev_018",
+      "paragraph_id": "B0001-C0018-P0001",
+      "chapter_id": "18",
+      "quote": "初晨的阳光洒在陈伶脸上，他睫毛轻颤，缓缓睁开眼眸……",
+      "evidence_role": "support",
+      "confidence": 0.95,
+      "supports_candidate_ids": [
+        "char_chen_ling"
+      ]
+    },
+    {
+      "evidence_id": "ev_020",
+      "paragraph_id": "B0001-C0020-P0001",
+      "chapter_id": "20",
+      "quote": "“……韩蒙长官。”",
+      "evidence_role": "support",
+      "confidence": 0.9,
+      "supports_candidate_ids": [
+        "char_han_meng"
+      ]
+    },
+    {
+      "evidence_id": "ev_021",
+      "paragraph_id": "B0001-C0021-P0001",
+      "chapter_id": "21",
+      "quote": "“他应该回去找阿宴了。”",
+      "evidence_role": "support",
+      "confidence": 0.85,
+      "supports_candidate_ids": [
+        "char_chen_yan"
+      ]
+    },
+    {
+      "evidence_id": "ev_022",
+      "paragraph_id": "B0001-C0022-P0001",
+      "chapter_id": "22",
+      "quote": "“总之，你这两天的任务，就是搜索这条街道，看有没有遗落废墟下面的灾厄毛发，或者其他不寻常的东西……”",
+      "evidence_role": "support",
+      "confidence": 0.85,
+      "supports_candidate_ids": [
+        "loc_hanshuang_street",
+        "asset_disaster_encounter"
+      ]
+    },
+    {
+      "evidence_id": "ev_024",
+      "paragraph_id": "B0001-C0024-P0001",
+      "chapter_id": "24",
+      "quote": "听到这句话，楚牧云的眼中闪过一抹诧异。",
+      "evidence_role": "support",
+      "confidence": 0.9,
+      "supports_candidate_ids": [
+        "char_chu_muyun"
+      ]
+    },
+    {
+      "evidence_id": "ev_027",
+      "paragraph_id": "B0001-C0027-P0001",
+      "chapter_id": "27",
+      "quote": "钱凡说完这句话，就走了。",
+      "evidence_role": "support",
+      "confidence": 0.9,
+      "supports_candidate_ids": [
+        "char_qian_fan"
+      ]
+    },
+    {
+      "evidence_id": "ev_029",
+      "paragraph_id": "B0001-C0029-P0001",
+      "chapter_id": "29",
+      "quote": "听到这句话，陈伶终于将酒杯放回地上，在表格的一栏写上一行字：",
+      "evidence_role": "support",
+      "confidence": 0.95,
+      "supports_candidate_ids": [
+        "char_chen_ling"
+      ]
+    },
+    {
+      "evidence_id": "ev_032",
+      "paragraph_id": "B0001-C0032-P0001",
+      "chapter_id": "32",
+      "quote": "陈伶一边想着，一边走出门外，几片雪白划过他的眼前，",
+      "evidence_role": "support",
+      "confidence": 0.95,
+      "supports_candidate_ids": [
+        "char_chen_ling"
+      ]
+    },
+    {
+      "evidence_id": "ev_033",
+      "paragraph_id": "B0001-C0033-P0001",
+      "chapter_id": "33",
+      "quote": "【观众期待值+20】",
+      "evidence_role": "support",
+      "confidence": 0.9,
+      "supports_candidate_ids": [
+        "asset_audience_expectation"
+      ]
+    },
+    {
+      "evidence_id": "ev_034",
+      "paragraph_id": "B0001-C0034-P0001",
+      "chapter_id": "34",
+      "quote": "陈伶没有来过这里。",
+      "evidence_role": "support",
+      "confidence": 0.95,
+      "supports_candidate_ids": [
+        "char_chen_ling"
+      ]
+    }
+  ],
+  "state_delta": {
+    "characters": [
+      {
+        "candidate_id": "char_chen_ling",
+        "update_type": "add"
+      },
+      {
+        "candidate_id": "char_han_meng",
+        "update_type": "add"
+      },
+      {
+        "candidate_id": "char_li_xiuchun",
+        "update_type": "add"
+      },
+      {
+        "candidate_id": "char_chen_yan",
+        "update_type": "add"
+      },
+      {
+        "candidate_id": "char_chu_muyun",
+        "update_type": "add"
+      },
+      {
+        "candidate_id": "char_qian_fan",
+        "update_type": "add"
+      }
+    ],
+    "aliases": [
+      {
+        "candidate_id": "char_han_meng",
+        "alias": "韩蒙长官"
+      },
+      {
+        "candidate_id": "char_chen_yan",
+        "alias": "阿宴"
+      }
+    ],
+    "protagonist_candidates": [
+      {
+        "candidate_id": "char_chen_ling"
+      }
+    ],
+    "goal_candidates": [],
+    "conflict_candidates": [
+      {
+        "candidate_id": "asset_identity_crisis"
+      }
+    ],
+    "central_question_candidates": [
+      {
+        "candidate_id": "asset_identity_crisis"
+      }
+    ],
+    "major_event_candidates": [
+      {
+        "candidate_id": "asset_disaster_encounter"
+      }
+    ],
+    "climax_candidates": [],
+    "ending_state_candidates": []
+  },
+  "warnings": [
+    "Window contains only first paragraphs of many chapters, limiting context for deep plot analysis.",
+    "Some character relationships are inferred from brief mentions."
+  ],
+  "quality": {
+    "confidence": 0.85,
+    "repair_attempted": false,
+    "repair_succeeded": false
+  }
+}

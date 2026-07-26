@@ -1,0 +1,23 @@
+{
+  "provider": "aliyun_qwen_plus",
+  "model": "qwen3.7-plus",
+  "window_id": 2075,
+  "window_index": 0,
+  "input_characters": 576,
+  "paragraph_count": 40,
+  "body_sha256": "1bdeda15d9419df48f6e862d64d4d740508a5cc336bd52970e0a0779fd11a1db",
+  "window_payload_sha256": "35fc989c1b588badf2983c4b6ac84b77b5deaef231626f2f5e529a8eaa157c19",
+  "prompt_hash": "3ce882b5c417c9cfe3bd213c36d8e6ed391dafc3d429f76379411a3b925aa31d",
+  "prompt_sha256": "3ce882b5c417c9cfe3bd213c36d8e6ed391dafc3d429f76379411a3b925aa31d",
+  "max_output_tokens": 8192,
+  "temperature": 0.2,
+  "response_format": {
+    "type": "json_object"
+  },
+  "enable_thinking": false,
+  "timeout": 90,
+  "retry": 0,
+  "stream": false,
+  "api_key_present": true,
+  "api_key_value": "REDACTED"
+}
