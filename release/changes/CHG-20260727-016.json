@@ -3,9 +3,16 @@
   "title": "Hide native overview from single-chapter 1.1.0 release scope",
   "type": "improvement",
   "base_version": "1.0.5",
-  "status": "registered",
+  "status": "tested",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "a5a46e5068e7bf5d4d70a36d1f10595a40770c09",
+      "message": "chore(release): hide native overview from single-chapter release",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "apps/desktop",
     "apps/api",
@@ -17,7 +24,10 @@
     "apps/desktop/src/pages/TasksPage.tsx",
     "apps/desktop/src/components/wholeBookInsights/WholeBookInsightsEntry.tsx",
     "apps/desktop/src-tauri/src/backend.rs",
-    "scripts/build_windows_rc.ps1"
+    "scripts/build_windows_rc.ps1",
+    "apps/desktop/src/pages/singleChapterReleaseScope.test.tsx",
+    "apps/api/tests/test_native_overview_release_scope_local.py",
+    "release/evidence/CHG-20260727-016/verify-single-chapter-release-scope.ps1"
   ],
   "user_summary": "正式版本暂时隐藏原生全书概览等入口，保留单章分析发布范围。",
   "technical_summary": "Hide native overview / chapter aggregate / independent journey entries for 1.1.0 single-chapter release; coming-soon page; filter task center; stop RC bake forcing flags on.",
@@ -28,8 +38,19 @@
     "Native create blocked when flag off",
     "Chapter primary action and re-entry still work"
   ],
-  "tests": [],
-  "verification_evidence": [],
+  "tests": [
+    "apps/api/tests/test_native_overview_release_scope_local.py",
+    "apps/desktop/src/pages/singleChapterReleaseScope.test.tsx",
+    "apps/desktop/src/pages/proNativeOverview.test.tsx",
+    "apps/desktop/src/pages/BookRoutePage.test.tsx",
+    "apps/desktop/src/pages/wholeBookInsights.test.tsx",
+    "apps/desktop/src/services/chapterPrimaryAction.test.ts",
+    "apps/desktop/src/services/runLifecycle.test.ts",
+    "release/evidence/CHG-20260727-016/verify-single-chapter-release-scope.ps1"
+  ],
+  "verification_evidence": [
+    "release/evidence/CHG-20260727-016/verification-summary.txt"
+  ],
   "data_compatibility": {
     "database_changed": false,
     "migration_required": false,
@@ -43,7 +64,7 @@
     "breaking_change": false
   },
   "blocker_level": null,
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-26T18:43:19Z",
-  "updated_at": "2026-07-26T18:43:37Z"
+  "updated_at": "2026-07-26T18:59:49Z"
 }
