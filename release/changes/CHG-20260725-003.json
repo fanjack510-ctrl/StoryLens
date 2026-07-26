@@ -161,6 +161,12 @@
       "message": "docs(evidence): restore UTF-8 gate-2g6 content",
       "primary": false,
       "multi_change_reason": "STEP 2.6 restored gate-2g6"
+    },
+    {
+      "sha": "3c301e2bfc87200b29e8d579115d03d6a1bb90a2",
+      "message": "docs(evidence): rewrite gate-2g6 with ASCII-safe UTF-8",
+      "primary": false,
+      "multi_change_reason": "STEP 2.6 final gate-2g6"
     }
   ],
   "modules": [
@@ -255,5 +261,5 @@
   "blocker_level": "P0",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-25T13:31:37Z",
-  "updated_at": "2026-07-26T02:10:36Z"
+  "updated_at": "2026-07-26T02:11:37Z"
 }
