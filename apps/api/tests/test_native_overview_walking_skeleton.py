@@ -183,10 +183,13 @@ def test_preflight_native_overview(api_env):
     assert body["paragraph_count"] == 4
     assert body["license_allowed"] is True
     assert body["run_creation_enabled"] is True
-    assert body["estimated_tokens"] == 0
-    assert body["estimated_cost"] == 0.0
+    # CHG-20260726-006: non-empty books must not present silent zero estimates.
+    assert body["estimated_tokens"] > 0
+    assert float(body["estimated_cost"]) > 0
     # Product HTTP preflight defaults to Private (Fixture is explicit opt-in only).
     assert body.get("engine_id") == PRIVATE_NATIVE_OVERVIEW_ENGINE_ID
+    assert body.get("provider_id") == "aliyun_qwen_plus"
+    assert body.get("model_id")
     assert FIXTURE_DEVELOPMENT_WARNING not in body["warnings"]
     assert body["blocking_errors"] == []
 

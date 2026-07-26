@@ -724,7 +724,11 @@ export function TasksPage() {
         {runs.isLoading ? (
           <Loading />
         ) : runs.error ? (
-          <ErrorState error={runs.error} />
+          <ErrorState
+            error={runs.error as Error}
+            classifyTaskErrors
+            retry={() => void runs.refetch()}
+          />
         ) : filteredRuns.length ? (
           <table>
             <thead>

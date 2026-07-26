@@ -280,16 +280,27 @@ export function resolveCreateBinding(preflight?: ProNativeOverviewPreflight | nu
       engine,
     };
   }
+  const providerCandidate =
+    preflight?.provider_id || preflight?.provider || "";
+  const modelCandidate = preflight?.model_id || preflight?.model || "";
+  // Never send Engine identity as AI provider/model on create.
+  const providerLooksLikeEngine =
+    !providerCandidate ||
+    providerCandidate === PRIVATE_NATIVE_OVERVIEW_ENGINE_ID ||
+    providerCandidate === FIXTURE_ENGINE_ID ||
+    providerCandidate.startsWith("private-") ||
+    providerCandidate.startsWith("fixture");
+  const modelLooksLikeEngine =
+    !modelCandidate ||
+    modelCandidate === PRIVATE_NATIVE_OVERVIEW_ENGINE_ID ||
+    modelCandidate === FIXTURE_ENGINE_ID ||
+    modelCandidate.startsWith("private-") ||
+    modelCandidate.startsWith("fixture") ||
+    modelCandidate === engine.engineId;
+
   return {
-    provider_id:
-      preflight?.provider_id ||
-      preflight?.provider ||
-      PRIVATE_NATIVE_OVERVIEW_ENGINE_ID,
-    model_id:
-      preflight?.model_id ||
-      preflight?.model ||
-      engine.engineId ||
-      PRIVATE_NATIVE_OVERVIEW_ENGINE_ID,
+    provider_id: providerLooksLikeEngine ? "aliyun_qwen_plus" : providerCandidate,
+    model_id: modelLooksLikeEngine ? "qwen3.7-plus" : modelCandidate,
     engine,
   };
 }

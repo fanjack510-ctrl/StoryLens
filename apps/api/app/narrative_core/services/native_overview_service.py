@@ -312,20 +312,25 @@ class NativeOverviewService:
                 )
             )
 
-        run_enabled = bool(flag_on and license_allowed and paragraph_count > 0 and character_count > 0)
-        if blocking:
-            run_enabled = False
-
         estimated_windows = estimate_window_count(
             paragraph_count,
             character_count=character_count,
             budget=self._window_budget,
         )
 
-        provider_configured = False
+        from app.services.native_overview_ai_binding import (
+            estimate_native_overview_usage,
+            resolve_native_overview_ai_binding,
+        )
+
+        ai = resolve_native_overview_ai_binding(self._session)
         if self._engine_id == FIXTURE_ENGINE_ID:
+            provider_id = FIXTURE_ENGINE_ID
+            model_id = self._engine_version_label()
             provider_configured = True
         else:
+            provider_id = ai.provider_id
+            model_id = ai.model_id
             try:
                 from app.narrative_core.services.native_overview_http_factory import (
                     is_cloud_provider_configured_for_native_overview,
@@ -334,6 +339,50 @@ class NativeOverviewService:
                 provider_configured = is_cloud_provider_configured_for_native_overview()
             except Exception:  # noqa: BLE001
                 provider_configured = False
+
+        usage = estimate_native_overview_usage(
+            character_count=character_count,
+            estimated_windows=estimated_windows,
+            model_id=ai.model_id,
+        )
+        estimated_tokens = int(usage["estimated_total_tokens"] or 0)
+        estimated_cost = (
+            float(usage["estimated_cost"])
+            if usage.get("estimated_cost") is not None
+            else 0.0
+        )
+        currency = str(usage.get("currency") or "CNY")
+
+        # Paid Private path: never present a silent zero estimate as actionable.
+        if (
+            self._engine_id != FIXTURE_ENGINE_ID
+            and character_count > 0
+            and estimated_windows > 0
+            and (
+                estimated_tokens <= 0
+                or not usage.get("pricing_available")
+                or usage.get("estimated_cost") is None
+                or float(usage["estimated_cost"]) <= 0
+            )
+        ):
+            blocking.append(
+                PreflightBlockingError(
+                    code="COST_ESTIMATE_UNAVAILABLE",
+                    message=(
+                        "暂时无法可靠估算本次分析的 Token 和费用，"
+                        "请检查模型价格或 Provider 配置后重试。"
+                    ),
+                )
+            )
+            estimated_cost = 0.0
+
+        run_enabled = bool(
+            flag_on
+            and license_allowed
+            and paragraph_count > 0
+            and character_count > 0
+            and not blocking
+        )
 
         return PreflightResponse(
             book_id=str(book.id),
@@ -345,15 +394,15 @@ class NativeOverviewService:
             license_allowed=license_allowed,
             mode=WholeBookAnalysisMode.NATIVE,
             estimated_windows=estimated_windows,
-            estimated_tokens=0,
-            estimated_cost=0.0,
-            currency="CNY",
+            estimated_tokens=estimated_tokens,
+            estimated_cost=estimated_cost,
+            currency=currency,
             warnings=warnings,
             blocking_errors=blocking,
             run_creation_enabled=run_enabled,
             engine_id=self._engine_id,
-            provider_id=self._engine_id,
-            model_id=self._engine_version_label(),
+            provider_id=provider_id,
+            model_id=model_id,
         )
 
     # ------------------------------------------------------------------
@@ -393,6 +442,27 @@ class NativeOverviewService:
         if not request.consent.confirmed:
             raise NativeOverviewError(WholeBookOverviewErrorCode.USER_CONSENT_REQUIRED.value)
 
+        from app.services.native_overview_ai_binding import (
+            resolve_native_overview_ai_binding,
+        )
+
+        ai = resolve_native_overview_ai_binding(self._session)
+        create_provider = request.provider_id
+        create_model = request.model_id
+        if self._engine_id != FIXTURE_ENGINE_ID:
+            create_provider = ai.provider_id
+            create_model = ai.model_id
+            # Refuse silent zero-cost consent for paid Private path.
+            if (
+                int(request.consent.estimated_tokens or 0) <= 0
+                or float(request.consent.estimated_cost or 0) <= 0
+            ):
+                raise NativeOverviewError(
+                    "COST_ESTIMATE_UNAVAILABLE",
+                    "暂时无法可靠估算本次分析的 Token 和费用，请检查模型价格或 Provider 配置后重试。",
+                    http_status=422,
+                )
+
         existing = self._find_by_client_request_id(book_id, request.client_request_id)
         if existing is not None:
             return self._to_create_response(existing)
@@ -405,8 +475,8 @@ class NativeOverviewService:
             task_type="whole_book_overview",
             subject_type="book",
             subject_id=str(book_id),
-            provider=self._engine_provider_name(),
-            model=self._engine_version_label(),
+            provider=create_provider if self._engine_id != FIXTURE_ENGINE_ID else self._engine_provider_name(),
+            model=create_model if self._engine_id != FIXTURE_ENGINE_ID else self._engine_version_label(),
             prompt_version=self._prompt_version_label(),
             schema_version=CONTRACT_VERSION,
             input_hash=snapshot.content_hash or "",
@@ -423,6 +493,9 @@ class NativeOverviewService:
             cloud_consent=bool(request.consent.confirmed),
             cloud_consent_at=now if request.consent.confirmed else None,
             started_at=now,
+            execution_mode="cloud" if self._engine_id != FIXTURE_ENGINE_ID else "local",
+            analysis_mode="automatic",
+            sends_content_to_cloud=self._engine_id != FIXTURE_ENGINE_ID,
         )
         self._session.add(run)
         self._session.flush()

@@ -689,6 +689,28 @@ async def provider_health(
     return (await provider.health()).model_dump()
 
 
+def _effective_mode_for_provider(
+    session: Session,
+    gateway: ModelGateway,
+    provider_is_cloud: bool,
+    configured_mode: str | None,
+) -> str:
+    from app.services.execution_mode import (
+        cloud_enabled_from_session,
+        resolve_effective_execution_mode,
+    )
+
+    local_available = any(
+        (not p.capabilities().cloud) and p.capabilities().enabled for p in gateway.providers()
+    )
+    return resolve_effective_execution_mode(
+        provider_is_cloud=provider_is_cloud,
+        cloud_enabled=cloud_enabled_from_session(session),
+        configured_execution_mode=configured_mode,
+        local_provider_available=local_available,
+    )
+
+
 def create_run_record(
     session: Session,
     chapter: Chapter,
@@ -705,12 +727,17 @@ def create_run_record(
     capabilities = provider.capabilities()
     if not capabilities.cloud and not capabilities.enabled:
         raise error(422, "PROVIDER_DISABLED", "模型 Provider 未启用")
+    effective_mode = _effective_mode_for_provider(
+        session, gateway, bool(capabilities.cloud), request.execution_mode
+    )
+    # Persist / validate the effective mode (coerce stale local for cloud providers).
+    request.execution_mode = effective_mode  # type: ignore[assignment]
     if capabilities.cloud:
-        if request.execution_mode not in {"cloud", "hybrid"}:
+        if effective_mode not in {"cloud", "hybrid"}:
             raise error(422, "CLOUD_MODE_REQUIRED", "云端 Provider 需要 cloud 或 hybrid 模式")
         if not request.cloud_consent:
             raise error(422, "CLOUD_CONSENT_REQUIRED", "发送正文到云端前必须明确同意")
-    elif request.execution_mode in {"cloud", "hybrid"}:
+    elif effective_mode in {"cloud", "hybrid"}:
         raise error(422, "LOCAL_PROVIDER_MODE_MISMATCH", "本地 Provider 不会自动切换到云端")
     paragraphs = list(
         session.scalars(
@@ -787,12 +814,16 @@ async def create_analysis_run(
             return AnalysisRunAccepted(run_id=existing_request.id, status=existing_request.status)
     provider = gateway.get(request.provider_name)
     ProviderRuntimeService.bind_gateway(gateway, session, store)
-    if provider.capabilities().cloud:
-        if request.execution_mode not in {"cloud", "hybrid"}:
+    capabilities = provider.capabilities()
+    effective_mode = _effective_mode_for_provider(
+        session, gateway, bool(capabilities.cloud), request.execution_mode
+    )
+    request.execution_mode = effective_mode  # type: ignore[assignment]
+    if capabilities.cloud:
+        if effective_mode not in {"cloud", "hybrid"}:
             raise error(422, "CLOUD_MODE_REQUIRED", "云端 Provider 需要 cloud 或 hybrid 模式")
         if not request.cloud_consent:
             raise error(422, "CLOUD_CONSENT_REQUIRED", "发送正文到云端前必须明确同意")
-    capabilities = provider.capabilities()
     if not capabilities.enabled:
         raise error(422, "PROVIDER_DISABLED", "模型 Provider 未启用")
     health = None if capabilities.cloud else await provider.health()

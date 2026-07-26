@@ -587,6 +587,18 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
       } else if (eligible.length === 0 && planAllowsStart && provider !== DEFAULT_AI_SERVICE_ID) {
         setProvider(DEFAULT_AI_SERVICE_ID);
       }
+      // Cloud provider + stale local mode → coerce to cloud (RC2 CLOUD_MODE_REQUIRED).
+      const selectedCaps = (providers.data || []).find((p) => p.name === provider)?.capabilities;
+      if (selectedCaps?.cloud && mode === "local") {
+        setMode("cloud");
+      } else if (
+        !provider &&
+        planAllowsStart &&
+        mode === "local" &&
+        (providers.data || []).some((p) => p.name === DEFAULT_AI_SERVICE_ID && p.capabilities?.cloud)
+      ) {
+        setMode("cloud");
+      }
       return;
     }
     const preferred =
@@ -597,7 +609,7 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
       setProvider(preferred);
     }
     if (mode !== "cloud") setMode("cloud");
-  }, [developerMode, eligible, provider, mode, planAllowsStart]);
+  }, [developerMode, eligible, provider, mode, planAllowsStart, providers.data]);
 
   useEffect(() => {
     if (provider && !eligible.some((item) => item.name === provider)) {
@@ -975,6 +987,7 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
         BUDGET_NOT_AVAILABLE: "当前无法计算本次分析费用",
         MODEL_PRICING_NOT_FOUND: "当前模型缺少计价信息",
         CLOUD_CONSENT_REQUIRED: "请确认当前章节正文将发送至云端模型服务。",
+        CLOUD_MODE_REQUIRED: "云端 Provider 需要 cloud 或 hybrid 执行模式，请重试或检查设置。",
         PROVIDER_STATE_CHANGED: "服务状态已经变化，请刷新后重新确认。",
         FULL_PIPELINE_HARD_BUDGET_INSUFFICIENT:
           "费用或Token预算不足以覆盖完整分析。临时技术请求授权不能突破每日费用上限。",
@@ -985,7 +998,10 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
         CLOUD_COST_LIMIT_EXCEEDED: BUDGET_ERROR_USER_COPY.CLOUD_COST_LIMIT_EXCEEDED,
         CLOUD_BUDGET_EXCEEDED: BUDGET_ERROR_USER_COPY.CLOUD_BUDGET_EXCEEDED,
       };
-      const isNetwork = !("status" in (error || {}));
+      const isNetwork =
+        error instanceof ApiError
+          ? error.status === 0 || error.code === "BACKEND_OFFLINE"
+          : !(error && typeof error === "object" && "status" in error);
       const primary = isNetwork
         ? "无法连接StoryLens后端，请确认服务正在运行。"
         : messages[error.code] || error.message || "任务提交失败。";

@@ -15,6 +15,7 @@ import {
 } from "../services/proNativeOverviewApi";
 import {
   isProNativeOverviewUiEnabled,
+  PRIVATE_NATIVE_OVERVIEW_ENGINE_ID,
   resolveEnginePresentation,
   WALKING_SKELETON_USER_NOTICE,
   type EnginePresentation,
@@ -177,20 +178,29 @@ function PreflightPanel({
         <li data-testid="pro-native-overview-preflight-cost">
           预估费用：{formatMoney(preflight.estimated_cost, currency)}
         </li>
+        <li data-testid="pro-native-overview-preflight-engine">
+          分析引擎：<EngineBadge engine={engine} />
+        </li>
+        <li data-testid="pro-native-overview-preflight-engine-id">
+          Engine ID：{engine.engineId || preflight.engine_id || "—"}
+        </li>
         <li data-testid="pro-native-overview-preflight-provider">
-          Provider：{binding.provider_id}
+          AI 服务：
+          {binding.provider_id === "aliyun_qwen_plus" ? "阿里云百炼" : binding.provider_id}
           {preflight.provider_configured === false ? "（未配置）" : ""}
         </li>
+        <li data-testid="pro-native-overview-preflight-provider-id">
+          Provider ID：{binding.provider_id}
+        </li>
         <li data-testid="pro-native-overview-preflight-model">
-          Model：{binding.model_id}
+          模型：{binding.model_id}
         </li>
-        <li>模式：{MODE_LABEL}</li>
-        <li data-testid="pro-native-overview-preflight-engine">
-          Engine：<EngineBadge engine={engine} />
+        <li data-testid="pro-native-overview-preflight-execution-mode">
+          执行模式：云端
         </li>
-        <li>
-          授权：
-          {preflight.license_allowed ? "已允许（Pro）" : "未授权 / 不允许"}
+        <li>分析模式：{MODE_LABEL}</li>
+        <li data-testid="pro-native-overview-preflight-entitlement">
+          功能权限：{preflight.license_allowed === false ? "不可用" : "免费可用"}
         </li>
       </ul>
 
@@ -276,7 +286,13 @@ function ProgressPanel({
 }) {
   const stages = buildStageList(run.current_stage, run.status);
   const currency = run.currency || "CNY";
-  const engine = resolveEnginePresentation(run.engine_id, run.model);
+  const engine = resolveEnginePresentation(
+    run.engine_id ||
+      (run.provider === "aliyun_qwen_plus" || run.provider === "aliyun"
+        ? PRIVATE_NATIVE_OVERVIEW_ENGINE_ID
+        : run.provider),
+    run.engine_id ? run.model : undefined,
+  );
   const completedWindows = run.progress?.completed_windows ?? 0;
   const totalWindows = run.progress?.total_windows ?? 0;
   const canRetry =

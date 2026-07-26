@@ -43,13 +43,17 @@ def resolve_native_overview_engine_id(
     return default
 
 
-def _build_transport_for_engine(engine_id: str) -> Any | None:
+def _build_transport_for_engine(
+    engine_id: str,
+    *,
+    model_id: str | None = None,
+) -> Any | None:
     if engine_id == FIXTURE_ENGINE_ID:
         return None
     if is_native_overview_smoke_fake_enabled():
         return NativeOverviewSmokeFakeTransport()
     # Product Live path (G5). Missing key → engine raises PROVIDER_NOT_CONFIGURED.
-    return AliyunNativeOverviewTransport()
+    return AliyunNativeOverviewTransport(model=model_id or "qwen3.7-plus")
 
 
 def build_native_overview_service(
@@ -58,8 +62,15 @@ def build_native_overview_service(
     provider_id: str | None = None,
     model_id: str | None = None,
 ) -> NativeOverviewService:
+    from app.services.native_overview_ai_binding import (
+        is_engine_identity,
+        resolve_native_overview_ai_binding,
+    )
+
     engine_id = resolve_native_overview_engine_id(provider_id, model_id)
-    transport = _build_transport_for_engine(engine_id)
+    ai = resolve_native_overview_ai_binding(session)
+    resolved_model = model_id if model_id and not is_engine_identity(model_id) else ai.model_id
+    transport = _build_transport_for_engine(engine_id, model_id=resolved_model)
     return NativeOverviewService(
         session,
         engine_id=engine_id,
