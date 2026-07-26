@@ -3,9 +3,16 @@
   "title": "Recover interrupted analysis runs on startup",
   "type": "fix",
   "base_version": "1.0.5",
-  "status": "registered",
+  "status": "tested",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "35cf97bc8cd7117945a30481464a4b802cf0c5ba",
+      "message": "fix(runtime): recover interrupted analysis runs on startup",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "apps/api"
   ],
@@ -41,7 +48,7 @@
     "breaking_change": false
   },
   "blocker_level": null,
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-26T14:37:25Z",
-  "updated_at": "2026-07-26T14:48:42Z"
+  "updated_at": "2026-07-26T14:48:59Z"
 }
