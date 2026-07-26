@@ -11,7 +11,7 @@
 
 | Repo | HEAD |
 |------|------|
-| Public | `f8f44643a8770d7d49bb75badb93cdf62d15519a` (+ STEP 2.6 test/evidence commits) |
+| Public | `3a21cc75f0963ed38ab3666011c0dcee654314f2` |
 | Private | `48072775773a09f4dc849096ba314e4fa0487c58` |
 
 ```text
