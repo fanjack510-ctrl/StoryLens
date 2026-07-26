@@ -317,22 +317,18 @@ describe("Pro Native Overview UI (STEP 2.3-C)", () => {
   it("distinguishes entry naming from 章节聚合洞察", async () => {
     stubEntitlements(false);
     renderApp("/books/1?chapter=2&view=reading");
-    const insights = await screen.findByTestId("whole-book-insights-entry-free");
     const overview = await screen.findByTestId("pro-native-overview-entry-free");
-    expect(insights).toHaveTextContent("章节聚合洞察");
-    expect(insights).not.toHaveTextContent("原生全书概览");
     expect(overview).toHaveTextContent("原生全书概览");
     expect(overview).not.toHaveTextContent("Pro 原生全书概览");
     expect(overview).not.toHaveTextContent("章节聚合洞察");
+    // Standard workspace hides chapter aggregation and standalone journey start.
+    expect(screen.queryByTestId("whole-book-insights-entry-free")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("reader-journey-entry-analyze")).not.toBeInTheDocument();
+    expect(screen.getByTestId("shell-start-analysis")).toHaveTextContent("开始分析");
     // Separate routes — Native must not share Aggregation path.
     expect(overview).toHaveAttribute("href", "/books/1/pro-native-overview");
     expect(overview.getAttribute("href")).not.toContain("whole-book-insights");
-    // Free Aggregation keeps Pro gate (button); Native Free entry is a Link.
-    expect(insights.tagName.toLowerCase()).toBe("button");
     expect(overview.tagName.toLowerCase()).toBe("a");
-    // Discoverability: Native Overview appears before Chapter Aggregation in the toolbar.
-    const position = overview.compareDocumentPosition(insights);
-    expect(position & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it("free entry opens native overview preflight without Pro upgrade prompt", async () => {
@@ -444,6 +440,92 @@ describe("Pro Native Overview UI (STEP 2.3-C)", () => {
     expect(
       screen.getByTestId("pro-native-overview-stage-item-snapshot_preflight"),
     ).toHaveAttribute("data-stage-state", "done");
+  });
+
+  it("resets starting state when create fails", async () => {
+    stubEntitlements(true);
+    preflightSpy.mockResolvedValue(basePreflight());
+    const { ApiError } = await import("../services/apiClient");
+    createSpy.mockRejectedValue(
+      new ApiError(
+        "CREATE_TIMEOUT",
+        "创建任务超时：服务未在合理时间内返回 Run ID。",
+        0,
+      ),
+    );
+    renderApp("/books/1/pro-native-overview");
+    await consentAndStart();
+    expect(await screen.findByTestId("pro-native-overview-start-error")).toHaveTextContent(
+      "CREATE_TIMEOUT",
+    );
+    expect(screen.getByTestId("pro-native-overview-start")).toHaveTextContent(
+      "开始原生全书概览",
+    );
+    expect(screen.getByTestId("pro-native-overview-start")).not.toBeDisabled();
+  });
+
+  it("shows 查看任务 when an active overview run already exists", async () => {
+    stubEntitlements(true);
+    preflightSpy.mockResolvedValue(basePreflight());
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo) => {
+        const href = String(input);
+        if (href.includes("/api/v1/entitlements")) {
+          return new Response(
+            JSON.stringify({
+              edition: "free",
+              edition_label: "免费版",
+              pro_active: false,
+              features: { pro_whole_book_insights: false },
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          );
+        }
+        if (href.includes("/api/v1/analysis-runs")) {
+          return new Response(
+            JSON.stringify([
+              {
+                id: 909,
+                subject_id: "1",
+                subject_type: "book",
+                task_type: "whole_book_overview",
+                book_id: 1,
+                status: "running",
+                provider: "fixture",
+                model: "fixture",
+                progress_current: 0,
+                progress_total: 1,
+                execution_mode: "local",
+                cloud_consent: true,
+                sends_content_to_cloud: false,
+                retryable: false,
+                created_at: "2026-01-01T00:00:00Z",
+                reusable_checkpoint_count: 0,
+                conflicted_checkpoint_count: 0,
+                checkpoint_total_count: 0,
+                checkpoint_available: false,
+              },
+            ]),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          );
+        }
+        if (href.includes("/api/v1/books/1") && !href.includes("whole-book")) {
+          return new Response(JSON.stringify({ id: 1, title: "测试书" }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        return new Response("{}", { status: 200 });
+      }),
+    );
+    getRunSpy.mockResolvedValue(analyzingRun({ run_id: "909" }));
+    renderApp("/books/1/pro-native-overview");
+    expect(await screen.findByTestId("pro-native-overview-view-active")).toHaveTextContent(
+      "查看任务",
+    );
+    await fireEvent.click(screen.getByTestId("pro-native-overview-view-active"));
+    await waitFor(() => expect(getRunSpy).toHaveBeenCalledWith("909"));
   });
 
   it("shows completed result field statuses, evidence, and native coverage", async () => {
@@ -560,9 +642,10 @@ describe("Pro Native Overview UI (STEP 2.3-C)", () => {
     flagState.enabled = false;
     stubEntitlements(false);
     renderApp("/books/1?chapter=2&view=reading");
-    await screen.findByTestId("whole-book-insights-entry-free");
+    await screen.findByTestId("shell-start-analysis");
     expect(screen.queryByTestId("pro-native-overview-entry-pro")).not.toBeInTheDocument();
     expect(screen.queryByTestId("pro-native-overview-entry-free")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("whole-book-insights-entry-free")).not.toBeInTheDocument();
   });
 
   it("flag-off direct URL shows feature disabled, not white screen", async () => {
@@ -578,7 +661,7 @@ describe("Pro Native Overview UI (STEP 2.3-C)", () => {
     stubEntitlements(false);
     renderApp("/books/1?chapter=2&view=reading");
     expect(await screen.findByTestId("pro-native-overview-entry-free")).toBeInTheDocument();
-    expect(screen.getByTestId("whole-book-insights-entry-free")).toBeInTheDocument();
+    expect(screen.queryByTestId("whole-book-insights-entry-free")).not.toBeInTheDocument();
     expect(document.body.textContent?.trim().length).toBeGreaterThan(0);
   });
 

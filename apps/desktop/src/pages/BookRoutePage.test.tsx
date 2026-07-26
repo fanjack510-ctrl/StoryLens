@@ -259,6 +259,10 @@ describe("Book chapter shell", () => {
     renderBook();
     expect(screen.getByTestId("book-chapter-shell")).toBeInTheDocument();
     expect(screen.getByTestId("shell-start-analysis")).toBeInTheDocument();
+    expect(screen.getByTestId("shell-start-analysis")).toHaveTextContent("开始分析");
+    expect(screen.queryByTestId("reader-journey-entry-analyze")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("whole-book-insights-entry-pro")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("whole-book-insights-entry-free")).not.toBeInTheDocument();
     expect(document.querySelector(".analysis-pane .artifact")).toBeNull();
   });
 
@@ -610,7 +614,8 @@ describe("Book chapter shell", () => {
     expect(screen.queryByTestId("chapter-analysis-complete-banner")).not.toBeInTheDocument();
     expect(screen.getByTestId("book-chapter-shell")).toHaveAttribute("data-analysis-run", "77");
     expect(screen.getByTestId("chapter-analysis-progress")).toBeInTheDocument();
-    fireEvent.click(screen.getByTestId("book-view-result"));
+    expect(screen.getByTestId("shell-view-analysis-progress")).toHaveTextContent("查看分析进度");
+    fireEvent.click(screen.getByTestId("banner-continue-reader-journey"));
     await waitFor(() => {
       expect(screen.getByTestId("book-chapter-shell")).toHaveAttribute("data-view", "result");
     });

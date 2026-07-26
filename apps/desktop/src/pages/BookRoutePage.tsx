@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BookWorkspacePage } from "./BookWorkspacePage";
 import { CompactToolbar } from "../components/layout/CompactToolbar";
@@ -38,10 +38,12 @@ import {
   resolveChapterWorkspaceView,
   type WorkspaceView,
 } from "../services/chapterJourneyComposition";
+import { resolveChapterPrimaryAction } from "../services/chapterPrimaryAction";
 import {
   resolveWorkspaceLayout,
   type WorkspaceActiveTab,
 } from "../services/resolveWorkspaceLayout";
+import { useDeveloperModeStore } from "../stores/developerModeStore";
 import { useUiStore } from "../stores/uiStore";
 
 type ChapterView = WorkspaceView;
@@ -72,6 +74,7 @@ export function BookRoutePage() {
   const bookId = Number(params.bookId || 1);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const developerMode = useDeveloperModeStore((s) => s.developerMode);
   const [dialog, setDialog] = useState(false);
   const [reparseOpen, setReparseOpen] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
@@ -670,6 +673,27 @@ export function BookRoutePage() {
           },
         ]
       : [
+          ...(hasJourney
+            ? [
+                {
+                  id: "reader-journey-view",
+                  label: "查看读者旅程",
+                  group: "查看",
+                  testId: "book-more-reader-journey-view",
+                  onSelect: () => {
+                    if (analysisRunId) {
+                      setResultTab("journey", "user");
+                      return;
+                    }
+                    if (latestSucceeded) {
+                      navigate(
+                        `/analysis-runs/${latestSucceeded.id}/results?tab=reader-journey`,
+                      );
+                    }
+                  },
+                },
+              ]
+            : []),
           {
             id: "full-text",
             label: "完整正文",
@@ -731,6 +755,28 @@ export function BookRoutePage() {
           progress.uiState === "boundary_review_required" ||
           progress.uiState === "awaiting_budget_adjustment"),
     );
+
+  const primaryAction = resolveChapterPrimaryAction({
+    hasChapter: Boolean(chapterId) && !noChapters && !bootstrappingChapter,
+    run: progress.run,
+    composition: compositionUiState,
+    chapterComplete,
+    inFlight: chapterInFlight,
+  });
+
+  const onPrimaryAction = () => {
+    if (primaryAction.kind === "start" || primaryAction.kind === "reanalyze") {
+      setDialog(true);
+      return;
+    }
+    if (primaryAction.kind === "progress") {
+      setView("progress", "user");
+      return;
+    }
+    if (primaryAction.kind === "result") {
+      setResultTab("analysis", "user");
+    }
+  };
 
   const readingToolbarTitle = (
     <div className="workspace-toolbar-identity">
@@ -808,45 +854,18 @@ export function BookRoutePage() {
           )
         }
         primary={
-          noChapters || bootstrappingChapter ? null : analysisRunId &&
-            (sceneComplete ||
-              chapterInFlight ||
-              chapterComplete ||
-              view === "progress" ||
-              view === "result") ? (
-            <WorkspaceViewSwitcher
-              active={
-                activeTab === "journey" ? "journey" : activeTab === "scene" ? "analysis" : "reading"
-              }
-              analysisAvailable={sceneComplete || chapterComplete || Boolean(analysisRunId)}
-              journeyAvailable={hasJourney || chapterComplete}
-              journeyInProgress={
-                chapterInFlight ||
-                compositionUiState === "reader_journey_processing" ||
-                compositionUiState === "awaiting_reader_journey_start" ||
-                view === "progress"
-              }
-              onChange={(tab) => {
-                if (tab === "reading") {
-                  setView("reading", "user");
-                  return;
-                }
-                if (tab === "analysis") {
-                  setResultTab("analysis", "user");
-                  return;
-                }
-                setResultTab("journey", "user");
-              }}
-            />
-          ) : (
+          noChapters || bootstrappingChapter || primaryAction.kind === "none" ? null : (
             <button
               type="button"
               className="primary"
-              data-testid="shell-start-analysis"
-              disabled={startAnalysisDisabled}
-              onClick={() => setDialog(true)}
+              data-testid={primaryAction.testId}
+              disabled={
+                (primaryAction.kind === "start" || primaryAction.kind === "reanalyze") &&
+                startAnalysisDisabled
+              }
+              onClick={onPrimaryAction}
             >
-              开始分析
+              {primaryAction.label}
             </button>
           )
         }
@@ -855,11 +874,42 @@ export function BookRoutePage() {
             {!noChapters && !bootstrappingChapter && view !== "result" ? (
               <ReadingSettingsPopover />
             ) : null}
-            {/* Native Overview (Free) before Chapter Aggregation Insights (Pro) — separate routes. */}
             {!noChapters && !bootstrappingChapter ? (
               <ProNativeOverviewEntry bookId={bookId} />
             ) : null}
-            {!noChapters && !bootstrappingChapter ? (
+            {!noChapters &&
+            !bootstrappingChapter &&
+            (chapterInFlight ||
+              chapterComplete ||
+              sceneComplete ||
+              view === "progress" ||
+              view === "result") ? (
+              <WorkspaceViewSwitcher
+                active={
+                  activeTab === "journey" ? "journey" : activeTab === "scene" ? "analysis" : "reading"
+                }
+                analysisAvailable={sceneComplete || chapterComplete || Boolean(analysisRunId)}
+                journeyAvailable={hasJourney || chapterComplete}
+                journeyInProgress={
+                  chapterInFlight ||
+                  compositionUiState === "reader_journey_processing" ||
+                  compositionUiState === "awaiting_reader_journey_start" ||
+                  view === "progress"
+                }
+                onChange={(tab) => {
+                  if (tab === "reading") {
+                    setView("reading", "user");
+                    return;
+                  }
+                  if (tab === "analysis") {
+                    setResultTab("analysis", "user");
+                    return;
+                  }
+                  setResultTab("journey", "user");
+                }}
+              />
+            ) : null}
+            {developerMode && !noChapters && !bootstrappingChapter ? (
               <WholeBookInsightsEntry
                 bookId={bookId}
                 onUpgrade={() => setInsightsUpgradeOpen(true)}
@@ -878,31 +928,6 @@ export function BookRoutePage() {
                 展开分析面板
               </button>
             ) : null}
-            {!noChapters && !bootstrappingChapter && latestSucceeded && !analysisRunId && (
-              <Link
-                className="secondary"
-                data-testid="view-recent-analysis"
-                to={`/analysis-runs/${latestSucceeded.id}/results`}
-              >
-                查看最近分析
-              </Link>
-            )}
-            {!noChapters &&
-              !bootstrappingChapter &&
-              (compositionUiState === "succeeded" ||
-                compositionUiState === "awaiting_reader_journey_start" ||
-                compositionUiState === "reader_journey_processing") &&
-              analysisRunId &&
-              view === "reading" && (
-                <button
-                  type="button"
-                  className="secondary"
-                  data-testid="book-view-result"
-                  onClick={() => setResultTab("analysis", "user")}
-                >
-                  查看场景分析
-                </button>
-              )}
           </>
         }
         tertiary={<OverflowMenu data-testid="book-more-menu" items={moreItems} />}

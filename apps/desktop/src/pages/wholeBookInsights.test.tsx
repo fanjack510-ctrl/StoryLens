@@ -152,6 +152,8 @@ describe("Whole-Book Insights desktop entry", () => {
   });
 
   it("free entry shows upgrade prompt and does not fetch insights API", async () => {
+    const { useDeveloperModeStore } = await import("../stores/developerModeStore");
+    useDeveloperModeStore.getState().setDeveloperMode(true);
     renderWithRouter(<BookRoutePage />);
     const entry = await screen.findByTestId("whole-book-insights-entry-free");
     expect(entry).toHaveTextContent("章节聚合洞察");
@@ -161,6 +163,16 @@ describe("Whole-Book Insights desktop entry", () => {
     expect(prompt).toHaveTextContent("章节聚合洞察");
     expect(prompt).not.toHaveTextContent("全书洞察");
     expect(fetchSpy).not.toHaveBeenCalled();
+    useDeveloperModeStore.getState().setDeveloperMode(false);
+  });
+
+  it("standard workspace hides chapter aggregation entry", async () => {
+    const { useDeveloperModeStore } = await import("../stores/developerModeStore");
+    useDeveloperModeStore.getState().setDeveloperMode(false);
+    renderWithRouter(<BookRoutePage />);
+    await screen.findByTestId("shell-start-analysis");
+    expect(screen.queryByTestId("whole-book-insights-entry-free")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("whole-book-insights-entry-pro")).not.toBeInTheDocument();
   });
 
   it("pro page uses chapter aggregation title and coverage copy", async () => {
