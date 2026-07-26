@@ -17,7 +17,11 @@ def execute_native_overview_run_background(
     provider_id: str | None = None,
     model_id: str | None = None,
 ) -> None:
-    """Open a fresh session and continue a deferred Native Overview run."""
+    """Open a fresh session and continue a deferred Native Overview run.
+
+    Uses ``commit_progress=True`` so stage/window checkpoints are visible to
+    other Sessions while Provider/Fake work runs outside a long write txn.
+    """
 
     from app.narrative_core.services.native_overview_http_factory import (
         build_native_overview_service,
@@ -31,10 +35,15 @@ def execute_native_overview_run_background(
                 provider_id=provider_id,
                 model_id=model_id,
             )
-            service.execute_run(int(run_id))
+            # Explicit progress commits — do not change default execute_run callers.
+            service.execute_run(int(run_id), commit_progress=True)
             session.commit()
         except NativeOverviewError as exc:
-            session.commit()
+            # Failure path may already have checkpoint-committed; final commit is safe.
+            try:
+                session.commit()
+            except Exception:  # noqa: BLE001
+                session.rollback()
             logger.warning(
                 "native_overview_background_failed run_id=%s code=%s",
                 run_id,
@@ -53,6 +62,7 @@ def execute_native_overview_run_background(
                         RunStatus.COMPLETED.value,
                         RunStatus.FAILED.value,
                         RunStatus.CANCELLED.value,
+                        RunStatus.INTERRUPTED.value,
                     }:
                         run.status = RunStatus.FAILED.value
                         run.error_code = "NATIVE_OVERVIEW_BACKGROUND_FAILED"

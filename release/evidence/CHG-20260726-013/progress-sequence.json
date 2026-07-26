@@ -1,0 +1,53 @@
+{
+  "E2E_VERIFICATION": "COMPLETED",
+  "HEALTH": "N/A(service-level)",
+  "CREATE_RUN": 201,
+  "TOTAL_WINDOWS_EARLY_VISIBLE": true,
+  "OBSERVED_0_N": true,
+  "OBSERVED_1_N": true,
+  "OBSERVED_2_N": true,
+  "FINAL": "completed 3/3",
+  "PROGRESS_JUMPS_DIRECTLY_0_0_TO_N_N": false,
+  "WINDOW_INVOCATION_RESULT_CONSISTENCY": true,
+  "RESULT_API": true,
+  "RESULT_ERROR": null,
+  "DATABASE_LOCK_ERRORS": 0,
+  "REAL_PROVIDER_CALLS": 0,
+  "FORMAL_DATABASE_WRITES": 0,
+  "FAKE_WINDOW_COUNT": 3,
+  "ADAPTER_CALLS": 3,
+  "OBSERVED_STATUS_SEQUENCE": [
+    {
+      "status": "pending",
+      "stage": "snapshot_preflight",
+      "completed": 0,
+      "total": 0
+    },
+    {
+      "status": "analyzing",
+      "stage": "extract_overview_facts",
+      "completed": 0,
+      "total": 3
+    },
+    {
+      "status": "analyzing",
+      "stage": "extract_overview_facts",
+      "completed": 1,
+      "total": 3
+    },
+    {
+      "status": "analyzing",
+      "stage": "extract_overview_facts",
+      "completed": 2,
+      "total": 3
+    },
+    {
+      "status": "completed",
+      "completed": 3,
+      "total": 3,
+      "stage": "finalize"
+    }
+  ],
+  "TEMP_DATABASE": "C:\\Users\\msi\\AppData\\Local\\Temp\\storylens-chg013-seq-1785083253.db",
+  "PASS": true
+}

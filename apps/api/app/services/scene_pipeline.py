@@ -1225,6 +1225,11 @@ _STARTUP_INTERRUPT_WORKER_STATUSES = (
     "running",
     "boundary_candidates_running",
     "scene_analysis_running",
+    # Native Overview progress checkpoints make these durable mid-run.
+    "preparing",
+    "analyzing",
+    "materializing",
+    "synthesizing",
 )
 
 # Terminal statuses that startup recovery must never rewrite.

@@ -194,6 +194,15 @@ class NativeOverviewService:
         self._snapshots = BookSnapshotServiceImpl(session)
         self._accounting = OverviewProviderAccounting(session)
         self._materializer = NativeOverviewMaterializer(session)
+        # Explicit opt-in: Background path sets True via execute_run(commit_progress=...).
+        self._commit_progress = False
+
+    def _checkpoint_commit(self) -> None:
+        """Commit a stable progress snapshot when Background progress mode is on."""
+
+        if not self._commit_progress:
+            return
+        self._session.commit()
 
     def _engine_provider_name(self) -> str:
         return self._engine_id
@@ -537,9 +546,23 @@ class NativeOverviewService:
             self._session.refresh(run)
         return self._to_create_response(run)
 
-    def execute_run(self, run_id: int) -> AnalysisRun:
+    def execute_run(self, run_id: int, *, commit_progress: bool = False) -> AnalysisRun:
+        """Run overview production stages.
+
+        ``commit_progress=False`` (default): preserve single-transaction behavior for
+        inline callers (create without defer, retry/resume).
+
+        ``commit_progress=True`` (Background path): commit after windows are built,
+        before each Provider call, after each window success/failure, and after
+        finalize — so other Sessions can poll live progress without a long write txn
+        during Provider wait.
+        """
+
+        previous_flag = self._commit_progress
+        self._commit_progress = bool(commit_progress)
         run = self._session.get(AnalysisRun, int(run_id))
         if run is None:
+            self._commit_progress = previous_flag
             raise NativeOverviewError(WholeBookOverviewErrorCode.RUN_NOT_FOUND.value)
 
         try:
@@ -556,11 +579,18 @@ class NativeOverviewService:
             if run.status == RunStatus.PREPARING.value:
                 self._transition_run(run, RunStatus.ANALYZING)
 
+            # Windows exist + analyzing: pollers must see 0/N (not 0/0).
+            self._session.flush()
+            self._checkpoint_commit()
+
             self._run_stage(
                 run,
                 OverviewProductionStageKey.EXTRACT_OVERVIEW_FACTS,
                 self._stage_extract_windows,
             )
+            # All windows committed — expose N/N before materialize/projection work.
+            self._session.flush()
+            self._checkpoint_commit()
 
             if run.status == RunStatus.ANALYZING.value:
                 self._transition_run(run, RunStatus.MATERIALIZING)
@@ -592,14 +622,17 @@ class NativeOverviewService:
             run.error_message = None
             run.retryable = False
             self._session.flush()
+            self._checkpoint_commit()
             return run
         except NativeOverviewError as exc:
-            self._fail_run(run, exc)
+            self._fail_run_with_progress(run, exc)
             raise
         except Exception as exc:  # noqa: BLE001
             wrapped = map_engine_exception(exc, run_id=str(run.id))
-            self._fail_run(run, wrapped)
+            self._fail_run_with_progress(run, wrapped)
             raise wrapped from exc
+        finally:
+            self._commit_progress = previous_flag
 
     def retry_run(self, run_id: int, request: RetryRunRequest) -> RetryResumeRunResponse:
         require_native_overview_enabled()
@@ -915,6 +948,9 @@ class NativeOverviewService:
                 run_id=str(run.id),
                 stage_key=stage.stage_key,
             )
+        # Make extract stage RUNNING visible before the first Provider wait.
+        self._session.flush()
+        self._checkpoint_commit()
         total_windows = len(windows)
         results: list[WholeBookOverviewWindowResultV1] = []
 
@@ -940,6 +976,8 @@ class NativeOverviewService:
             window.error_code = None
             window.error_detail = None
             self._session.flush()
+            # Release SQLite write lock before Provider/Fake wait.
+            self._checkpoint_commit()
 
             prior_state = self._latest_prior_state(
                 int(run.id), before_window_index=int(window.window_index)
@@ -958,6 +996,13 @@ class NativeOverviewService:
                 )
                 result = WholeBookOverviewWindowResultV1.model_validate(result.model_dump())
             except NativeOverviewError as exc:
+                if self._commit_progress:
+                    try:
+                        self._session.rollback()
+                    except Exception:  # noqa: BLE001
+                        pass
+                    window = self._session.get(WholeBookRunWindow, int(window.id)) or window
+                    run = self._session.get(AnalysisRun, int(run.id)) or run
                 validate_window_transition(window.status, WindowStatus.FAILED)
                 window.status = WindowStatus.FAILED.value
                 window.error_code = exc.code
@@ -966,6 +1011,8 @@ class NativeOverviewService:
                 self._record_attempt_safe(
                     run, window, prompt=prompt, status="failed", error_message=exc.message
                 )
+                self._session.flush()
+                self._checkpoint_commit()
                 raise
             except Exception as exc:  # noqa: BLE001
                 wrapped = map_engine_exception(
@@ -974,6 +1021,13 @@ class NativeOverviewService:
                     stage_key=stage.stage_key,
                     window_index=window.window_index,
                 )
+                if self._commit_progress:
+                    try:
+                        self._session.rollback()
+                    except Exception:  # noqa: BLE001
+                        pass
+                    window = self._session.get(WholeBookRunWindow, int(window.id)) or window
+                    run = self._session.get(AnalysisRun, int(run.id)) or run
                 validate_window_transition(window.status, WindowStatus.FAILED)
                 window.status = WindowStatus.FAILED.value
                 window.error_code = wrapped.code
@@ -982,6 +1036,8 @@ class NativeOverviewService:
                 self._record_attempt_safe(
                     run, window, prompt=prompt, status="failed", error_message=wrapped.message
                 )
+                self._session.flush()
+                self._checkpoint_commit()
                 raise wrapped from exc
 
             validate_window_transition(window.status, WindowStatus.COMPLETED)
@@ -997,9 +1053,13 @@ class NativeOverviewService:
             self._record_attempt_safe(run, window, prompt=prompt, status="succeeded")
             self._session.flush()
             results.append(result)
+            # Refresh window list statuses for progress (same objects mutated above).
             run.progress_current = sum(
                 1 for w in windows if w.status == WindowStatus.COMPLETED.value
             )
+            run.progress_total = max(total_windows, 1)
+            self._session.flush()
+            self._checkpoint_commit()
 
         stage.checkpoint_json = json.dumps(
             {
@@ -1751,6 +1811,21 @@ class NativeOverviewService:
         validate_overview_run_transition(run.status, target)
         run.status = target.value
         self._session.flush()
+
+    def _fail_run_with_progress(self, run: AnalysisRun, exc: NativeOverviewError) -> None:
+        """Persist failure; when commit_progress is on, use a short committed txn."""
+
+        if not self._commit_progress:
+            self._fail_run(run, exc)
+            return
+        # Drop any partial uncommitted work, then write a durable failure snapshot.
+        try:
+            self._session.rollback()
+        except Exception:  # noqa: BLE001
+            pass
+        run = self._session.get(AnalysisRun, int(run.id)) or run
+        self._fail_run(run, exc)
+        self._session.commit()
 
     def _fail_run(self, run: AnalysisRun, exc: NativeOverviewError) -> None:
         try:
