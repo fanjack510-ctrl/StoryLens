@@ -3,9 +3,16 @@
   "title": "Fix scene evidence validation config path for packaged sidecar",
   "type": "fix",
   "base_version": "1.0.5",
-  "status": "registered",
+  "status": "tested",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "0c7c933d0463c0905ad66da6e02e7d4ca839c6ad",
+      "message": "fix(runtime): resolve scene validation config in packaged mode",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "apps/api"
   ],
@@ -40,7 +47,7 @@
     "breaking_change": false
   },
   "blocker_level": null,
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-26T14:26:17Z",
-  "updated_at": "2026-07-26T14:32:21Z"
+  "updated_at": "2026-07-26T14:32:36Z"
 }
