@@ -26,10 +26,19 @@ from app.services.extractors import EmptyDocumentError, InvalidFileTypeError
 router = APIRouter(prefix="/api/v1")
 
 
-def error(status_code: int, code: str, message: str) -> HTTPException:
+def error(
+    status_code: int,
+    code: str,
+    message: str,
+    details: dict | None = None,
+) -> HTTPException:
     return HTTPException(
         status_code=status_code,
-        detail={"error_code": code, "message": message, "details": {}},
+        detail={
+            "error_code": code,
+            "message": message,
+            "details": dict(details or {}),
+        },
     )
 
 

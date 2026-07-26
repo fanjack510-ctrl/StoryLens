@@ -10,6 +10,7 @@ import {
   PROVIDER_ELIGIBILITY_MISSING,
 } from "../../services/providerEligibility";
 import { ApiError } from "../../services/apiClient";
+import { existingRunDetailsFromError } from "../../services/runLifecycle";
 import { useDeveloperModeStore } from "../../stores/developerModeStore";
 import {
   DEFAULT_AI_SERVICE_ID,
@@ -445,7 +446,18 @@ function HardBudgetBlockers({ blockers }: { blockers: CreateBudgetBlocker[] }) {
   );
 }
 
-export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapterId: number; onClose: () => void; onCreated?: (runId: number) => void }) {
+export function StartAnalysisDialog({
+  chapterId,
+  onClose,
+  onCreated,
+}: {
+  chapterId: number;
+  onClose: () => void;
+  onCreated?: (
+    runId: number,
+    meta?: { existing?: boolean; status?: string; taskType?: string },
+  ) => void;
+}) {
   const developerMode = useDeveloperModeStore((s) => s.developerMode);
   const [mode, setMode] = useState(developerMode ? "local" : "cloud");
   const [provider, setProvider] = useState(developerMode ? "" : DEFAULT_AI_SERVICE_ID);
@@ -970,6 +982,26 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
       onClose();
       if (onCreated) onCreated(run.run_id); else window.location.href = `/tasks?run_id=${run.run_id}`;
     } catch (error: any) {
+      const existing = existingRunDetailsFromError(
+        error instanceof ApiError
+          ? { code: error.code, detail: error.detail }
+          : { code: error?.code, detail: error?.detail || error?.details },
+      );
+      if (existing) {
+        setSubmitState("created");
+        setMessage("该章节已有分析任务，已为你打开现有任务。");
+        onClose();
+        if (onCreated) {
+          onCreated(existing.existing_run_id, {
+            existing: true,
+            status: existing.existing_run_status,
+            taskType: existing.existing_run_type,
+          });
+        } else {
+          window.location.href = `/tasks?run_id=${existing.existing_run_id}`;
+        }
+        return;
+      }
       setSubmitState("failed");
       const dimGaps = formatBudgetGaps({
         exceeded_dimensions: error.exceededDimensions || error.detail?.exceeded_dimensions,
@@ -989,6 +1021,7 @@ export function StartAnalysisDialog({ chapterId, onClose, onCreated }: { chapter
         CLOUD_CONSENT_REQUIRED: "请确认当前章节正文将发送至云端模型服务。",
         CLOUD_MODE_REQUIRED: "云端 Provider 需要 cloud 或 hybrid 执行模式，请重试或检查设置。",
         PROVIDER_STATE_CHANGED: "服务状态已经变化，请刷新后重新确认。",
+        ANALYSIS_RUN_EXISTS: "该章节已有相同 Provider 的运行记录。",
         FULL_PIPELINE_HARD_BUDGET_INSUFFICIENT:
           "费用或Token预算不足以覆盖完整分析。临时技术请求授权不能突破每日费用上限。",
         INSUFFICIENT_BUDGET_RESERVATION:

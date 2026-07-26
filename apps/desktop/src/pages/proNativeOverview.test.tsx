@@ -464,7 +464,7 @@ describe("Pro Native Overview UI (STEP 2.3-C)", () => {
     expect(screen.getByTestId("pro-native-overview-start")).not.toBeDisabled();
   });
 
-  it("shows 查看任务 when an active overview run already exists", async () => {
+  it("shows 查看分析进度 when an active overview run already exists", async () => {
     stubEntitlements(true);
     preflightSpy.mockResolvedValue(basePreflight());
     vi.stubGlobal(
@@ -491,7 +491,7 @@ describe("Pro Native Overview UI (STEP 2.3-C)", () => {
                 subject_type: "book",
                 task_type: "whole_book_overview",
                 book_id: 1,
-                status: "running",
+                status: "analyzing",
                 provider: "fixture",
                 model: "fixture",
                 progress_current: 0,
@@ -522,7 +522,7 @@ describe("Pro Native Overview UI (STEP 2.3-C)", () => {
     getRunSpy.mockResolvedValue(analyzingRun({ run_id: "909" }));
     renderApp("/books/1/pro-native-overview");
     expect(await screen.findByTestId("pro-native-overview-view-active")).toHaveTextContent(
-      "查看任务",
+      "查看分析进度",
     );
     await fireEvent.click(screen.getByTestId("pro-native-overview-view-active"));
     await waitFor(() => expect(getRunSpy).toHaveBeenCalledWith("909"));

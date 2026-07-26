@@ -25,23 +25,15 @@ import {
   buildStageList,
   overviewStageLabel,
 } from "../services/proNativeOverviewStages";
+import {
+  normalizeRunLifecycle,
+  selectNativeOverviewReentryRun,
+} from "../services/runLifecycle";
 
 const PAGE_TITLE = "原生全书概览";
 const PAGE_SUBTITLE =
   "直接分析完整小说原文，不需要提前完成全部单章分析。StoryLens 功能免费；第三方模型 API 费用由用户账户承担。";
 const MODE_LABEL = "原生整书";
-
-const ACTIVE_OVERVIEW_STATUSES = new Set([
-  "pending",
-  "preparing",
-  "running",
-  "queued",
-  "paused",
-]);
-
-function isActiveOverviewStatus(status: string | null | undefined): boolean {
-  return Boolean(status && ACTIVE_OVERVIEW_STATUSES.has(String(status).toLowerCase()));
-}
 
 function blockingMessage(item: PreflightBlockingError | string): string {
   if (typeof item === "string") return item;
@@ -160,14 +152,22 @@ function PreflightPanel({
   onStart,
   startError,
   activeRunId,
+  completedRunId,
+  failedRunId,
   onViewActiveRun,
+  onViewCompletedRun,
+  onViewFailedRun,
 }: {
   preflight: ProNativeOverviewPreflight;
   starting: boolean;
   onStart: () => void;
   startError: string | null;
   activeRunId?: string | null;
+  completedRunId?: string | null;
+  failedRunId?: string | null;
   onViewActiveRun?: () => void;
+  onViewCompletedRun?: () => void;
+  onViewFailedRun?: () => void;
 }) {
   const [consented, setConsented] = useState(false);
   const binding = resolveCreateBinding(preflight);
@@ -175,6 +175,8 @@ function PreflightPanel({
   const currency = preflight.currency || "CNY";
   const blocking = preflight.blocking_errors || [];
   const canStart =
+    !activeRunId &&
+    !completedRunId &&
     blocking.length === 0 &&
     preflight.license_allowed !== false &&
     (preflight.paragraph_count ?? 0) > 0 &&
@@ -265,7 +267,49 @@ function PreflightPanel({
             data-testid="pro-native-overview-view-active"
             onClick={onViewActiveRun}
           >
-            查看任务
+            查看分析进度
+          </button>
+        </div>
+      ) : completedRunId ? (
+        <div className="notice" data-testid="pro-native-overview-completed-run">
+          <p>已有完成的原生全书概览任务 #{completedRunId}。</p>
+          <button
+            type="button"
+            className="primary"
+            data-testid="pro-native-overview-view-completed"
+            onClick={onViewCompletedRun}
+          >
+            查看分析结果
+          </button>
+          <button
+            type="button"
+            className="secondary"
+            data-testid="pro-native-overview-reanalyze"
+            disabled={starting || blocking.length > 0}
+            onClick={onStart}
+          >
+            {starting ? "启动中…" : "重新分析"}
+          </button>
+        </div>
+      ) : failedRunId ? (
+        <div className="notice" data-testid="pro-native-overview-failed-run">
+          <p>最近一次原生全书概览任务 #{failedRunId} 未成功完成。</p>
+          <button
+            type="button"
+            className="secondary"
+            data-testid="pro-native-overview-view-failed"
+            onClick={onViewFailedRun}
+          >
+            查看详情
+          </button>
+          <button
+            type="button"
+            className="primary"
+            data-testid="pro-native-overview-retry-failed"
+            disabled={starting}
+            onClick={onStart}
+          >
+            {starting ? "启动中…" : "重新分析"}
           </button>
         </div>
       ) : (
@@ -297,6 +341,9 @@ function PreflightPanel({
           </button>
         </>
       )}
+      {startError && (activeRunId || completedRunId || failedRunId) ? (
+        <p data-testid="pro-native-overview-start-error">{startError}</p>
+      ) : null}
     </section>
   );
 }
@@ -472,15 +519,34 @@ export function ProNativeOverviewPage() {
     retry: false,
   });
 
-  const activeOverviewRunId = useMemo(() => {
-    const rows = bookRuns.data || [];
-    const active = rows.find(
-      (run) =>
-        (run.task_type === "whole_book_overview" || run.subject_type === "book") &&
-        isActiveOverviewStatus(run.status),
+  const reentryOverviewRun = useMemo(
+    () => selectNativeOverviewReentryRun(bookRuns.data, bookId),
+    [bookRuns.data, bookId],
+  );
+  const reentryPhase = normalizeRunLifecycle(reentryOverviewRun);
+  const activeOverviewRunId =
+    reentryPhase === "active" && reentryOverviewRun
+      ? String(reentryOverviewRun.id)
+      : null;
+  const completedOverviewRunId =
+    reentryPhase === "completed" && reentryOverviewRun
+      ? String(reentryOverviewRun.id)
+      : null;
+  const failedOverviewRunId =
+    (reentryPhase === "failed" || reentryPhase === "cancelled") && reentryOverviewRun
+      ? String(reentryOverviewRun.id)
+      : null;
+
+  const navigateToRun = (id: string) => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.set("run_id", id);
+        return next;
+      },
+      { replace: true },
     );
-    return active ? String(active.id) : null;
-  }, [bookRuns.data]);
+  };
 
   const runQuery = useQuery({
     queryKey: ["pro-native-overview-run", runId],
@@ -506,6 +572,12 @@ export function ProNativeOverviewPage() {
 
   const createMutation = useMutation({
     mutationFn: async () => {
+      // Race-safe: re-fetch runs before POST; never create when active exists.
+      const latest = await analysisApi.runs({ book_id: bookId });
+      const active = selectNativeOverviewReentryRun(latest, bookId);
+      if (active && normalizeRunLifecycle(active) === "active") {
+        return { run_id: String(active.id), reused_existing: true as const };
+      }
       const pf = preflight.data;
       const binding = resolveCreateBinding(pf);
       const CREATE_TIMEOUT_MS = 15_000;
@@ -540,7 +612,8 @@ export function ProNativeOverviewPage() {
         }, CREATE_TIMEOUT_MS);
       });
       try {
-        return await Promise.race([createPromise, timeoutPromise]);
+        const created = await Promise.race([createPromise, timeoutPromise]);
+        return { ...created, reused_existing: false as const };
       } finally {
         if (timer) clearTimeout(timer);
       }
@@ -682,16 +755,19 @@ export function ProNativeOverviewPage() {
           onStart={() => createMutation.mutate()}
           startError={startError}
           activeRunId={activeOverviewRunId}
+          completedRunId={completedOverviewRunId}
+          failedRunId={failedOverviewRunId}
           onViewActiveRun={() => {
             if (!activeOverviewRunId) return;
-            setSearchParams(
-              (prev) => {
-                const next = new URLSearchParams(prev);
-                next.set("run_id", activeOverviewRunId);
-                return next;
-              },
-              { replace: true },
-            );
+            navigateToRun(activeOverviewRunId);
+          }}
+          onViewCompletedRun={() => {
+            if (!completedOverviewRunId) return;
+            navigateToRun(completedOverviewRunId);
+          }}
+          onViewFailedRun={() => {
+            if (!failedOverviewRunId) return;
+            navigateToRun(failedOverviewRunId);
           }}
         />
       ) : null}

@@ -976,7 +976,19 @@ async def create_analysis_run(
             .order_by(desc(AnalysisRun.id))
         )
         if existing is not None:
-            raise error(409, "ANALYSIS_RUN_EXISTS", "该章节已有相同 Provider 的运行记录")
+            chapter_book_id = int(chapter.book_id) if chapter.book_id is not None else None
+            raise error(
+                409,
+                "ANALYSIS_RUN_EXISTS",
+                "该章节已有相同 Provider 的运行记录",
+                details={
+                    "existing_run_id": int(existing.id),
+                    "existing_run_status": str(existing.status or ""),
+                    "existing_run_type": str(existing.task_type or ""),
+                    "book_id": chapter_book_id,
+                    "chapter_id": int(chapter_id),
+                },
+            )
     reservation = None
     if provider.capabilities().cloud:
         cloud_row = session.get(ApplicationSetting, "cloud_enabled")

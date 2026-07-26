@@ -9,10 +9,12 @@ import {
   isChapterAnalysisComplete,
   isChapterAnalysisInFlight,
 } from "./chapterJourneyComposition";
+import { normalizeRunLifecycle } from "./runLifecycle";
 
 export type ChapterPrimaryActionKind =
   | "start"
   | "progress"
+  | "confirm"
   | "result"
   | "reanalyze"
   | "none";
@@ -26,6 +28,7 @@ export type ChapterPrimaryAction = {
 const LABELS: Record<Exclude<ChapterPrimaryActionKind, "none">, string> = {
   start: "开始分析",
   progress: "查看分析进度",
+  confirm: "继续确认场景",
   result: "查看分析结果",
   reanalyze: "重新分析",
 };
@@ -33,6 +36,7 @@ const LABELS: Record<Exclude<ChapterPrimaryActionKind, "none">, string> = {
 const TEST_IDS: Record<Exclude<ChapterPrimaryActionKind, "none">, string> = {
   start: "shell-start-analysis",
   progress: "shell-view-analysis-progress",
+  confirm: "shell-continue-boundary-confirm",
   result: "shell-view-analysis-result",
   reanalyze: "shell-reanalyze",
 };
@@ -44,8 +48,11 @@ function action(kind: Exclude<ChapterPrimaryActionKind, "none">): ChapterPrimary
 /**
  * Resolve the single primary chapter-analysis button.
  *
- * Priority: failed/cancelled → reanalyze; in-flight → progress;
- * completed → result; otherwise → start.
+ * Priority: failed/cancelled → reanalyze; awaiting review → confirm;
+ * in-flight → progress; completed → result; otherwise → start.
+ *
+ * When `lifecycleRun` is provided (discovered without URL bind), prefer
+ * shared lifecycle over composition-only idle state.
  */
 export function resolveChapterPrimaryAction(args: {
   hasChapter: boolean;
@@ -53,14 +60,20 @@ export function resolveChapterPrimaryAction(args: {
   composition: ChapterAnalysisUiState;
   chapterComplete: boolean;
   inFlight: boolean;
+  /** Optional discovered run when URL has no analysisRun. */
+  lifecycleRun?: Run | null;
 }): ChapterPrimaryAction {
   if (!args.hasChapter) {
     return { kind: "none", label: "", testId: "" };
   }
 
   const { run, composition, chapterComplete, inFlight } = args;
+  const lifecycleSource = args.lifecycleRun ?? run;
+  const phase = normalizeRunLifecycle(lifecycleSource);
 
   if (
+    phase === "failed" ||
+    phase === "cancelled" ||
     composition === "failed" ||
     composition === "cancelled" ||
     run?.status === "failed" ||
@@ -73,12 +86,20 @@ export function resolveChapterPrimaryAction(args: {
   }
 
   if (
+    phase === "awaiting_user" ||
+    composition === "boundary_review_required" ||
+    lifecycleSource?.status === "awaiting_boundary_review"
+  ) {
+    return action("confirm");
+  }
+
+  if (
+    phase === "active" ||
     inFlight ||
     isChapterAnalysisInFlight(run, composition) ||
     composition === "running" ||
     composition === "creating" ||
     composition === "partial" ||
-    composition === "boundary_review_required" ||
     composition === "provider_recovery" ||
     composition === "awaiting_budget_adjustment" ||
     composition === "aborted_by_limit" ||
@@ -89,6 +110,7 @@ export function resolveChapterPrimaryAction(args: {
   }
 
   if (
+    phase === "completed" ||
     chapterComplete ||
     isChapterAnalysisComplete(run) ||
     composition === "succeeded"

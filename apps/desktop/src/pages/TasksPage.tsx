@@ -16,6 +16,11 @@ import {
 import { isSceneAnalysisComplete } from "../services/chapterJourneyComposition";
 import { maybeTrackAnalysisCompleted } from "../services/telemetry/analysisRunTelemetry";
 import { formatRunProgress } from "../services/runProgressDisplay";
+import {
+  isNativeOverviewRun,
+  normalizeRunLifecycle,
+  resolveTaskCenterPrimaryAction,
+} from "../services/runLifecycle";
 import "./tasksPage.css";
 
 type RecoveryState = "idle" | "checking" | "creating_recovery" | "created" | "failed";
@@ -169,8 +174,8 @@ function badgeToneForRun(run: any): string {
   if (isBudgetPauseRun(run) || run.status === "awaiting_provider_recovery") {
     return "warning";
   }
-  if (run.status === "succeeded") {
-    if (run.chapter_complete === true) return "success";
+  if (run.status === "succeeded" || run.status === "completed") {
+    if (run.chapter_complete === true || run.status === "completed") return "success";
     if (isSceneAnalysisComplete(run)) return "warning";
     return "success";
   }
@@ -309,7 +314,7 @@ export function TasksPage() {
     await qc.invalidateQueries({ queryKey: ["runs"] });
   };
   const openChapterProgress = async (run: any) => {
-    if (run.task_type === "whole_book_overview" || run.subject_type === "book") {
+    if (isNativeOverviewRun(run) || run.task_type === "whole_book_overview" || run.subject_type === "book") {
       const bookId = Number(run.book_id || run.subject_id);
       if (Number.isFinite(bookId) && bookId > 0) {
         navigate(`/books/${bookId}/pro-native-overview?run_id=${run.id}`);
@@ -345,7 +350,7 @@ export function TasksPage() {
     run: any,
     tab: "reader-journey" | "analysis" = "analysis",
   ) => {
-    if (run.task_type === "whole_book_overview" || run.subject_type === "book") {
+    if (isNativeOverviewRun(run) || run.task_type === "whole_book_overview" || run.subject_type === "book") {
       const bookId = Number(run.book_id || run.subject_id);
       if (Number.isFinite(bookId) && bookId > 0) {
         navigate(`/books/${bookId}/pro-native-overview?run_id=${run.id}`);
@@ -652,6 +657,12 @@ export function TasksPage() {
           [
             "queued",
             "running",
+            "pending",
+            "preparing",
+            "analyzing",
+            "materializing",
+            "synthesizing",
+            "paused",
             "boundary_candidates_running",
             "scene_analysis_running",
             "awaiting_boundary_review",
@@ -659,7 +670,9 @@ export function TasksPage() {
             "scene_analysis_partial",
             "boundary_candidates_partial",
           ].includes(run.status) ||
-          run.effective_status === "journey_running"
+          run.effective_status === "journey_running" ||
+          normalizeRunLifecycle(run) === "active" ||
+          normalizeRunLifecycle(run) === "awaiting_user"
         );
       }
       return true;
@@ -782,17 +795,27 @@ export function TasksPage() {
             </thead>
             <tbody>
               {filteredRuns.map((run: any) => {
-                const moreItems = run.status === "succeeded" ? [] : buildRowMoreItems(run);
-                const showDetailButton =
-                  [
-                    "failed",
-                    "failed_structural",
-                    "failed_provider",
-                    "boundary_candidates_partial",
-                    "boundary_confirmed_budget_blocked",
-                    "scene_analysis_partial",
-                    "aborted_by_limit",
-                  ].includes(run.status) || isBudgetPauseRun(run);
+                const phase = normalizeRunLifecycle(run, {
+                  treatSucceededAsCompleted:
+                    isNativeOverviewRun(run) || run.chapter_complete === true,
+                });
+                const primary = resolveTaskCenterPrimaryAction(run);
+                const moreItems = buildRowMoreItems(run).filter(
+                  (item) => item.id !== "recover" || phase === "failed" || phase === "active",
+                );
+                const onPrimary = () => {
+                  if (primary.kind === "confirm" || primary.kind === "progress") {
+                    void openChapterProgress(run);
+                    return;
+                  }
+                  if (primary.kind === "result") {
+                    void openChapterResult(run, "analysis");
+                    return;
+                  }
+                  if (primary.kind === "detail") {
+                    openDetail(run);
+                  }
+                };
                 return (
                 <tr
                   key={run.id}
@@ -856,32 +879,25 @@ export function TasksPage() {
                   </td>
                   <td>{run.created_at ? new Date(run.created_at).toLocaleString() : "—"}</td>
                   <td>
-                    {run.status === "succeeded" ? (
-                      <SucceededRunRowActions
-                        run={run}
-                        busy={navBusyRunId === run.id}
-                        onOpen={(tab) => void openChapterResult(run, tab)}
-                      />
-                    ) : (
-                      <div className="tasks-row-actions">
-                        {showDetailButton && (
-                          <button
-                            type="button"
-                            className="secondary"
-                            data-testid={`view-detail-${run.id}`}
-                            onClick={() => openDetail(run)}
-                          >
-                            查看详情
-                          </button>
-                        )}
-                        {moreItems.length > 0 && (
-                          <OverflowMenu
-                            data-testid={`run-more-${run.id}`}
-                            items={moreItems}
-                          />
-                        )}
-                      </div>
-                    )}
+                    <div className="tasks-row-actions">
+                      {primary.kind !== "none" ? (
+                        <button
+                          type="button"
+                          className="primary"
+                          data-testid={primary.testId}
+                          disabled={navBusyRunId === run.id}
+                          onClick={onPrimary}
+                        >
+                          {primary.label}
+                        </button>
+                      ) : null}
+                      {moreItems.length > 0 && (
+                        <OverflowMenu
+                          data-testid={`run-more-${run.id}`}
+                          items={moreItems}
+                        />
+                      )}
+                    </div>
                   </td>
                 </tr>
               );

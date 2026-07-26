@@ -40,6 +40,12 @@ import {
 } from "../services/chapterJourneyComposition";
 import { resolveChapterPrimaryAction } from "../services/chapterPrimaryAction";
 import {
+  chapterProgressHref,
+  chapterResultHref,
+  discoverActiveChapterRun,
+} from "../services/discoverActiveChapterRun";
+import { normalizeRunLifecycle } from "../services/runLifecycle";
+import {
   resolveWorkspaceLayout,
   type WorkspaceActiveTab,
 } from "../services/resolveWorkspaceLayout";
@@ -402,6 +408,11 @@ export function BookRoutePage() {
   }, [chapters.data, chapterId, progress.run?.subject_id]);
 
   const runs = Array.isArray(recentRuns.data) ? recentRuns.data : [];
+  const discoveredChapterRun = useMemo(
+    () => (analysisRunId ? null : discoverActiveChapterRun(runs, chapterId)),
+    [analysisRunId, runs, chapterId],
+  );
+  const lifecycleChapterRun = progress.run ?? discoveredChapterRun;
   const latestSucceeded = runs.find(
     (run) =>
       run.status === "succeeded" && chapterId && String(run.subject_id) === String(chapterId),
@@ -499,13 +510,24 @@ export function BookRoutePage() {
     );
   };
 
-  const bindAnalysisRun = (runId: number) => {
+  const bindAnalysisRun = (
+    runId: number,
+    meta?: { existing?: boolean; status?: string; taskType?: string },
+  ) => {
     setPanelCollapsed(false);
+    const phase = normalizeRunLifecycle({
+      status: meta?.status || "scene_analysis_running",
+      task_type: meta?.taskType || "scene_pipeline",
+      subject_type: "chapter",
+      chapter_complete: meta?.status === "succeeded",
+    } as any);
+    const view =
+      phase === "completed" ? "result" : "progress";
     setSearchParams(
       (prev) => {
         const next = new URLSearchParams(prev);
         next.set("analysisRun", String(runId));
-        next.set("view", "progress");
+        next.set("view", view);
         if (chapterId) next.set("chapter", String(chapterId));
         return next;
       },
@@ -762,6 +784,7 @@ export function BookRoutePage() {
     composition: compositionUiState,
     chapterComplete,
     inFlight: chapterInFlight,
+    lifecycleRun: lifecycleChapterRun,
   });
 
   const onPrimaryAction = () => {
@@ -769,12 +792,40 @@ export function BookRoutePage() {
       setDialog(true);
       return;
     }
-    if (primaryAction.kind === "progress") {
-      setView("progress", "user");
+    const targetRun = lifecycleChapterRun;
+    if (!targetRun || !chapterId) return;
+    if (primaryAction.kind === "confirm" || primaryAction.kind === "progress") {
+      // Bind URL only on click — do not auto-rewrite reading URL on load.
+      setSearchParams(
+        () => {
+          const params = new URLSearchParams(
+            chapterProgressHref({
+              bookId,
+              chapterId,
+              analysisRunId: targetRun.id,
+            }).split("?")[1] || "",
+          );
+          return params;
+        },
+        { replace: false },
+      );
+      setPanelCollapsed(false);
       return;
     }
     if (primaryAction.kind === "result") {
-      setResultTab("analysis", "user");
+      setSearchParams(
+        () => {
+          const params = new URLSearchParams(
+            chapterResultHref({
+              bookId,
+              chapterId,
+              analysisRunId: targetRun.id,
+            }).split("?")[1] || "",
+          );
+          return params;
+        },
+        { replace: false },
+      );
     }
   };
 
@@ -1358,8 +1409,8 @@ export function BookRoutePage() {
         <StartAnalysisDialog
           chapterId={chapterId}
           onClose={() => setDialog(false)}
-          onCreated={(runId) => {
-            bindAnalysisRun(runId);
+          onCreated={(runId, meta) => {
+            bindAnalysisRun(runId, meta);
             setDialog(false);
           }}
         />

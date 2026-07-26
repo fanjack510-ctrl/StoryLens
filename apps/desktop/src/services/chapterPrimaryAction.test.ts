@@ -85,6 +85,32 @@ describe("resolveChapterPrimaryAction", () => {
     expect(a.label).toBe("重新分析");
   });
 
+  it("shows 继续确认场景 when awaiting boundary review", () => {
+    const a = resolveChapterPrimaryAction({
+      hasChapter: true,
+      run: null,
+      composition: "idle",
+      chapterComplete: false,
+      inFlight: false,
+      lifecycleRun: run({ status: "awaiting_boundary_review" }),
+    });
+    expect(a.kind).toBe("confirm");
+    expect(a.label).toBe("继续确认场景");
+  });
+
+  it("shows 查看分析进度 for discovered scene_analysis_running without URL bind", () => {
+    const a = resolveChapterPrimaryAction({
+      hasChapter: true,
+      run: null,
+      composition: "idle",
+      chapterComplete: false,
+      inFlight: false,
+      lifecycleRun: run({ status: "scene_analysis_running" }),
+    });
+    expect(a.kind).toBe("progress");
+    expect(a.label).toBe("查看分析进度");
+  });
+
   it("does not invent a second journey start action", () => {
     const a = resolveChapterPrimaryAction({
       hasChapter: true,
