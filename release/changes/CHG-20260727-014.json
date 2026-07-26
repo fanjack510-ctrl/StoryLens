@@ -3,9 +3,16 @@
   "title": "Restore unified analysis task re-entry across book, overview, and task center",
   "type": "fix",
   "base_version": "1.0.5",
-  "status": "registered",
+  "status": "tested",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "75f4dff89e804bd79d08747881e657161d28ee98",
+      "message": "fix(tasks): restore analysis task re-entry",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "apps/desktop",
     "apps/api"
@@ -57,9 +64,9 @@
     "breaking_change": false
   },
   "blocker_level": null,
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-26T17:15:59Z",
-  "updated_at": "2026-07-26T17:35:03Z",
+  "updated_at": "2026-07-26T17:36:42Z",
   "verification": {
     "method": "temp DB copy + Fake pytest/vitest + PowerShell zero-cost verify",
     "script": "release/evidence/CHG-20260727-014/verify-task-reentry.ps1",
