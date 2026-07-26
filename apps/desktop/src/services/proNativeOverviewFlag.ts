@@ -68,15 +68,36 @@ export function resolveEnginePresentation(
   };
 }
 
-/** Desktop presentation gate — reads Vite/Electron env when present. */
-export function isProNativeOverviewUiEnabled(): boolean {
-  const raw =
-    (typeof import.meta !== "undefined" &&
-      (import.meta as ImportMeta & { env?: Record<string, string> }).env?.[
-        "VITE_PRO_NATIVE_OVERVIEW_ENABLED"
-      ]) ||
-    (typeof process !== "undefined" && process.env?.[PRO_NATIVE_OVERVIEW_ENABLED_ENV]) ||
-    "false";
-  const value = String(raw).trim().toLowerCase();
+function envFlagTruthy(raw: unknown): boolean {
+  const value = String(raw ?? "")
+    .trim()
+    .toLowerCase();
   return value === "1" || value === "true" || value === "yes" || value === "on";
+}
+
+/**
+ * Desktop presentation gate.
+ * Priority: Vite import.meta env → build-time define (RC may bake true) → process env.
+ * Repository / non-RC production default remains false.
+ */
+export function isProNativeOverviewUiEnabled(): boolean {
+  const fromVite =
+    typeof import.meta !== "undefined"
+      ? (import.meta as ImportMeta & { env?: Record<string, string> }).env?.[
+          "VITE_PRO_NATIVE_OVERVIEW_ENABLED"
+        ]
+      : undefined;
+  if (fromVite !== undefined && String(fromVite).trim() !== "") {
+    return envFlagTruthy(fromVite);
+  }
+  if (
+    typeof __STORYLENS_PRO_NATIVE_OVERVIEW_ENABLED__ !== "undefined" &&
+    __STORYLENS_PRO_NATIVE_OVERVIEW_ENABLED__ === true
+  ) {
+    return true;
+  }
+  if (typeof process !== "undefined" && process.env?.[PRO_NATIVE_OVERVIEW_ENABLED_ENV]) {
+    return envFlagTruthy(process.env[PRO_NATIVE_OVERVIEW_ENABLED_ENV]);
+  }
+  return false;
 }

@@ -225,6 +225,7 @@ fn spawn_sidecar(
     log_dir: &PathBuf,
     shutdown_token: &str,
     baseline_path_pids: HashSet<u32>,
+    app_version: &str,
 ) -> Result<SidecarLifecycle, BackendError> {
     let _ = std::fs::create_dir_all(log_dir);
     let mut cmd = Command::new(path);
@@ -234,6 +235,13 @@ fn spawn_sidecar(
         .env("STORYLENS_SHUTDOWN_TOKEN", shutdown_token)
         .stdout(Stdio::null())
         .stderr(Stdio::piped());
+
+    // RC candidates (semver pre-release) enable Native Overview for acceptance without
+    // permanently flipping the repository default PRO_NATIVE_OVERVIEW_ENABLED=false.
+    // Formal non-RC builds keep the env unset unless the operator sets it explicitly.
+    if app_version.to_ascii_lowercase().contains("-rc") {
+        cmd.env("PRO_NATIVE_OVERVIEW_ENABLED", "true");
+    }
 
     #[cfg(windows)]
     {
@@ -567,6 +575,8 @@ pub fn start_backend(app: &AppHandle) -> Result<(), BackendError> {
 
     let mut ready_life: Option<SidecarLifecycle> = None;
 
+    let app_version = app.package_info().version.to_string();
+
     for attempt in 0..MAX_PORT_ATTEMPTS {
         let port = find_free_port()?;
         let token = random_shutdown_token();
@@ -576,6 +586,7 @@ pub fn start_backend(app: &AppHandle) -> Result<(), BackendError> {
             &log_dir,
             &token,
             baseline_path_pids.clone(),
+            &app_version,
         )?;
 
         {

@@ -6,7 +6,7 @@
 #
 # Does NOT Push / Tag / Release / permanently bump VERSION.
 param(
-    [string]$RcVersion = "1.1.0-rc.1",
+    [string]$RcVersion = "1.1.0-rc.2",
     [string]$PrivateEnginePath = "D:\Dstorylens-private-engine-wt-phase2br1-integration",
     [string]$BuildLog = ""
 )
@@ -16,7 +16,9 @@ $Root = Resolve-Path (Join-Path $PSScriptRoot "..")
 Set-Location $Root
 
 if (-not $BuildLog) {
-    $BuildLog = Join-Path $Root "release\evidence\CHG-20260725-003\night-run\windows-build-log.md"
+    # Do not overwrite RC1 G7 build log when building a later RC.
+    $safeRc = ($RcVersion -replace "[^\w\.-]", "_")
+    $BuildLog = Join-Path $Root "release\evidence\CHG-20260726-004\manual-acceptance\windows-build-log-$safeRc.md"
 }
 
 $FormalVersion = (Get-Content -LiteralPath (Join-Path $Root "VERSION") -Raw -Encoding UTF8).Trim()
@@ -73,11 +75,31 @@ try {
     if ($LASTEXITCODE) { throw "version_manager set $RcVersion failed" }
 
     $env:STORYLENS_RC_CANDIDATE = "1"
+    # Bake Native Overview UI into RC frontend without changing repo default false.
+    $env:VITE_PRO_NATIVE_OVERVIEW_ENABLED = "true"
+    $env:PRO_NATIVE_OVERVIEW_ENABLED = "true"
     # Do not force updater signing for local RC.
     Remove-Item Env:STORYLENS_SIGN_UPDATER -ErrorAction SilentlyContinue
     Remove-Item Env:TAURI_SIGNING_PRIVATE_KEY -ErrorAction SilentlyContinue
 
-    Log "Invoke build_windows_release.ps1 (RC candidate mode)"
+    # Preserve prior RC installers (do not overwrite RC1 when building RC2).
+    $releaseDir = Join-Path $Root "dist\release"
+    $archiveDir = Join-Path $releaseDir "archive"
+    if (Test-Path $releaseDir) {
+        New-Item -ItemType Directory -Force -Path $archiveDir | Out-Null
+        Get-ChildItem -Path $releaseDir -Filter "StoryLens_*-setup.exe" -File -ErrorAction SilentlyContinue |
+            ForEach-Object {
+                $dest = Join-Path $archiveDir $_.Name
+                if (-not (Test-Path $dest)) {
+                    Log "Archiving prior installer $($_.Name)"
+                    Copy-Item -Force $_.FullName $dest
+                } else {
+                    Log "Archive already has $($_.Name); leave untouched"
+                }
+            }
+    }
+
+    Log "Invoke build_windows_release.ps1 (RC candidate mode; Native Overview UI baked on)"
     & (Join-Path $Root "scripts\build_windows_release.ps1")
     if ($LASTEXITCODE) { throw "build_windows_release.ps1 failed" }
 
@@ -94,6 +116,8 @@ try {
 } finally {
     try { Restore-FormalVersion } catch { Log "RESTORE WARNING: $_" }
     $env:STORYLENS_RC_CANDIDATE = $null
+    Remove-Item Env:VITE_PRO_NATIVE_OVERVIEW_ENABLED -ErrorAction SilentlyContinue
+    Remove-Item Env:PRO_NATIVE_OVERVIEW_ENABLED -ErrorAction SilentlyContinue
     $finished = (Get-Date).ToString("o")
     $md = @(
         "# Windows RC Build Log",
@@ -104,6 +128,7 @@ try {
         "Formal VERSION restored to: 1.0.5",
         "Private Engine: $PrivateEnginePath",
         "STORYLENS_RC_CANDIDATE: 1",
+        "VITE_PRO_NATIVE_OVERVIEW_ENABLED (RC bake): true",
         "Live Provider: NO",
         "",
         "## Log",

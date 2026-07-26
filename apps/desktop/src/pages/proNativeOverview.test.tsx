@@ -324,6 +324,15 @@ describe("Pro Native Overview UI (STEP 2.3-C)", () => {
     expect(overview).toHaveTextContent("原生全书概览");
     expect(overview).not.toHaveTextContent("Pro 原生全书概览");
     expect(overview).not.toHaveTextContent("章节聚合洞察");
+    // Separate routes — Native must not share Aggregation path.
+    expect(overview).toHaveAttribute("href", "/books/1/pro-native-overview");
+    expect(overview.getAttribute("href")).not.toContain("whole-book-insights");
+    // Free Aggregation keeps Pro gate (button); Native Free entry is a Link.
+    expect(insights.tagName.toLowerCase()).toBe("button");
+    expect(overview.tagName.toLowerCase()).toBe("a");
+    // Discoverability: Native Overview appears before Chapter Aggregation in the toolbar.
+    const position = overview.compareDocumentPosition(insights);
+    expect(position & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it("free entry opens native overview preflight without Pro upgrade prompt", async () => {

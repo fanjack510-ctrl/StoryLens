@@ -855,14 +855,15 @@ export function BookRoutePage() {
             {!noChapters && !bootstrappingChapter && view !== "result" ? (
               <ReadingSettingsPopover />
             ) : null}
+            {/* Native Overview (Free) before Chapter Aggregation Insights (Pro) — separate routes. */}
+            {!noChapters && !bootstrappingChapter ? (
+              <ProNativeOverviewEntry bookId={bookId} />
+            ) : null}
             {!noChapters && !bootstrappingChapter ? (
               <WholeBookInsightsEntry
                 bookId={bookId}
                 onUpgrade={() => setInsightsUpgradeOpen(true)}
               />
-            ) : null}
-            {!noChapters && !bootstrappingChapter ? (
-              <ProNativeOverviewEntry bookId={bookId} />
             ) : null}
             {!noChapters && !bootstrappingChapter && panelCollapsed && analysisRunId ? (
               <button

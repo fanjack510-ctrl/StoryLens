@@ -9,10 +9,21 @@ const pkg = JSON.parse(readFileSync(resolve(rootDir, "package.json"), "utf-8")) 
   version: string;
 };
 
+const nativeOverviewUiEnabled = (() => {
+  const raw =
+    process.env.VITE_PRO_NATIVE_OVERVIEW_ENABLED ||
+    process.env.PRO_NATIVE_OVERVIEW_ENABLED ||
+    "false";
+  const value = String(raw).trim().toLowerCase();
+  return value === "1" || value === "true" || value === "yes" || value === "on";
+})();
+
 export default defineConfig({
   plugins: [react()],
   define: {
     __STORYLENS_APP_VERSION__: JSON.stringify(pkg.version),
+    // RC builds set VITE_PRO_NATIVE_OVERVIEW_ENABLED=true; repo default remains false.
+    __STORYLENS_PRO_NATIVE_OVERVIEW_ENABLED__: JSON.stringify(nativeOverviewUiEnabled),
   },
   server: { port: 1420, strictPort: true },
   test: {
