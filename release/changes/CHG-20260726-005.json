@@ -3,7 +3,7 @@
   "title": "Add global interface zoom controls",
   "type": "improvement",
   "base_version": "1.0.5",
-  "status": "implemented",
+  "status": "tested",
   "include_in_next_release": true,
   "commits": [
     {
@@ -64,7 +64,8 @@
     "desktop typecheck: pass",
     "vitest interfaceZoom + SettingsAppearanceZoom: 10 passed; typecheck pass",
     "RC2 Windows build 1.1.0-rc.2 PASS; SHA-256 467373BCDCB6B0E9E998DC6C32186883F43AA7B678C74DE5489F1FFA99DEC635",
-    "vitest interfaceZoom + SettingsAppearanceZoom + shortcuts: 13 passed; typecheck pass; vite production build pass"
+    "vitest interfaceZoom + SettingsAppearanceZoom + shortcuts: 13 passed; typecheck pass; vite production build pass",
+    "RC3 rebuild with default zoom 80%: SHA-256 4A15EE5265A0978E2D83029C190C7ECFF023003D7A88B5F2F064409D11983FA8"
   ],
   "verification_evidence": [
     "release/changes/CHG-20260726-005.json",
@@ -86,5 +87,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-26T04:04:31Z",
-  "updated_at": "2026-07-26T04:51:22Z"
+  "updated_at": "2026-07-26T05:00:10Z"
 }

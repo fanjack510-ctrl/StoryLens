@@ -26,3 +26,12 @@ typecheckï¼špass
 vite production buildï¼špass
 git diff --checkï¼špass
 ```
+
+## RC3 rebuild (includes default 80%)
+
+```text
+Installer£ºdist\release\StoryLens_1.1.0-rc.3_x64-setup.exe
+SHA-256£º4A15EE5265A0978E2D83029C190C7ECFF023003D7A88B5F2F064409D11983FA8
+Public HEAD£ºa0668b050bc8ca0ba7e02904047630e00535a570
+Formal VERSION£º1.0.5
+```
