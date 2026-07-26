@@ -3,7 +3,7 @@
   "title": "Make Native Whole-Book Overview Free in StoryLens 1.1.x",
   "type": "improvement",
   "base_version": "1.0.5",
-  "status": "registered",
+  "status": "implemented",
   "include_in_next_release": true,
   "commits": [
     {
@@ -23,6 +23,12 @@
       "message": "fix(product): remove Pro paywall from native overview",
       "primary": true,
       "multi_change_reason": "STEP 2.5R frontend product"
+    },
+    {
+      "sha": "51d034cb0c22c68ebf730a8605565a57eeb8a923",
+      "message": "docs(test): amend free and Windows gates for native overview",
+      "primary": false,
+      "multi_change_reason": "STEP 2.5R gate amendments + G6 supplement"
     }
   ],
   "modules": [],
@@ -36,13 +42,21 @@
     "UI removes Pro paywall for Native Overview",
     "Private Engine has no license dependency"
   ],
-  "tests": [],
-  "verification_evidence": [],
+  "tests": [
+    "test_native_overview_free_entitlement + walking/flag/insights/license: 39 passed",
+    "desktop proNativeOverview+router+insights vitest: 24 passed; typecheck OK",
+    "private native_overview directed: 38 passed"
+  ],
+  "verification_evidence": [
+    "STEP 2.5R-GATE PASS; Free native entitlement; Private closed-source unchanged",
+    "release/evidence/CHG-20260726-004/gate-2g6-free-entitlement-supplement.md",
+    "ORIGINAL gate-2g6.md preserved under CHG-003 night-run"
+  ],
   "data_compatibility": {
     "database_changed": false,
     "migration_required": false,
     "user_data_compatible": true,
-    "notes": ""
+    "notes": "No schema/API/DTO/contract changes; entitlement/UI/docs only."
   },
   "release_impact": {
     "requires_reanalysis": false,
@@ -53,5 +67,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-26T02:22:00Z",
-  "updated_at": "2026-07-26T02:28:26Z"
+  "updated_at": "2026-07-26T02:28:27Z"
 }
