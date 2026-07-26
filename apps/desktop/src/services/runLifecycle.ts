@@ -82,12 +82,13 @@ export function taskFamily(run: Run | Record<string, unknown> | null | undefined
 /**
  * Normalize a backend status (+ optional run fields) into a lifecycle phase.
  *
- * For chapter runs: `succeeded` without chapter_complete stays **active**
- * (journey / partial pipeline still in progress) unless caller forces completed.
+ * CHG-20260727-017: chapter `succeeded` / `completed` are always **completed**.
+ * Missing Reader Journey must not keep the run in progress — journey is an
+ * optional result tab, not a routing prerequisite.
  */
 export function normalizeRunLifecycle(
   run: Run | Record<string, unknown> | null | undefined,
-  opts?: { treatSucceededAsCompleted?: boolean },
+  _opts?: { treatSucceededAsCompleted?: boolean },
 ): RunLifecyclePhase {
   if (!run) return "none";
   const status = String((run as any).status || "").toLowerCase();
@@ -99,13 +100,6 @@ export function normalizeRunLifecycle(
   if (AWAITING_USER_STATUSES.has(status)) return "awaiting_user";
 
   if (COMPLETED_STATUSES.has(status)) {
-    if (status === "succeeded" && !opts?.treatSucceededAsCompleted) {
-      const chapterComplete = (run as any).chapter_complete === true;
-      if (isChapterAnalysisRun(run) && !chapterComplete) {
-        // Scene done or mid-journey — still re-enter via progress.
-        return "active";
-      }
-    }
     return "completed";
   }
 
@@ -226,10 +220,15 @@ export type TaskCenterPrimaryAction = {
 };
 
 export function resolveTaskCenterPrimaryAction(run: Run | Record<string, unknown>): TaskCenterPrimaryAction {
-  const phase = normalizeRunLifecycle(run as Run, {
-    treatSucceededAsCompleted: isNativeOverviewRun(run) || (run as any).chapter_complete === true,
-  });
+  const status = String((run as any).status || "").toLowerCase();
   const id = Number((run as any).id || 0);
+
+  // Recoverable partial scene analysis opens the detail/recovery panel (not progress nav).
+  if (status === "scene_analysis_partial" || status === "boundary_candidates_partial") {
+    return { kind: "detail", label: "查看详情", testId: `view-detail-${id}` };
+  }
+
+  const phase = normalizeRunLifecycle(run as Run);
 
   if (phase === "awaiting_user") {
     return { kind: "confirm", label: "继续确认", testId: `continue-confirm-${id}` };

@@ -1,0 +1,49 @@
+{
+  "id": "CHG-20260727-017",
+  "title": "Restore completed result routing and local provider option for RC7 gate",
+  "type": "fix",
+  "base_version": "1.0.5",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "apps/desktop"
+  ],
+  "files": [
+    "apps/desktop/src/services/runLifecycle.ts",
+    "apps/desktop/src/services/chapterPrimaryAction.ts",
+    "apps/desktop/src/pages/TasksPage.tsx",
+    "apps/desktop/src/components/analysis/StartAnalysisDialog.tsx",
+    "apps/desktop/src/pages/proNativeOverview.test.tsx"
+  ],
+  "user_summary": "修复任务中心已完成结果路由与开始分析本地模型选项，解除 RC7 门禁阻塞。",
+  "technical_summary": "Treat chapter succeeded as completed lifecycle for result routing; map scene_analysis_partial to detail CTA; stop premature local→cloud mode coerce when local providers exist.",
+  "acceptance_criteria": [],
+  "tests": [
+    "apps/desktop/src/pages/TasksPage.test.tsx",
+    "apps/desktop/src/components/analysis/StartAnalysisDialog.test.tsx",
+    "apps/desktop/src/services/runLifecycle.test.ts",
+    "apps/desktop/src/services/chapterPrimaryAction.test.ts",
+    "apps/desktop/src/pages/BookRoutePage.test.tsx",
+    "apps/desktop/src/pages/proNativeOverview.test.tsx"
+  ],
+  "verification_evidence": [
+    "release/evidence/CHG-20260727-017/verification-summary.txt"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": null,
+  "created_at": "2026-07-26T19:22:37Z",
+  "updated_at": "2026-07-26T19:30:39Z"
+}

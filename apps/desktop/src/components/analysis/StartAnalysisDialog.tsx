@@ -600,6 +600,8 @@ export function StartAnalysisDialog({
         setProvider(DEFAULT_AI_SERVICE_ID);
       }
       // Cloud provider + stale local mode → coerce to cloud (RC2 CLOUD_MODE_REQUIRED).
+      // Do not coerce while providers are still loading, or when a local-capable
+      // provider is available for developer local mode (CHG-20260727-017).
       const selectedCaps = (providers.data || []).find((p) => p.name === provider)?.capabilities;
       if (selectedCaps?.cloud && mode === "local") {
         setMode("cloud");
@@ -607,6 +609,8 @@ export function StartAnalysisDialog({
         !provider &&
         planAllowsStart &&
         mode === "local" &&
+        Array.isArray(providers.data) &&
+        eligible.length === 0 &&
         (providers.data || []).some((p) => p.name === DEFAULT_AI_SERVICE_ID && p.capabilities?.cloud)
       ) {
         setMode("cloud");

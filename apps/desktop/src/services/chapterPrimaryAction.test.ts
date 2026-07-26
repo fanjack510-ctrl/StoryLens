@@ -119,7 +119,19 @@ describe("resolveChapterPrimaryAction", () => {
       chapterComplete: false,
       inFlight: true,
     });
-    expect(a.kind).toBe("progress");
+    expect(a.kind).toBe("result");
+    expect(a.label).toBe("查看分析结果");
     expect(a.label).not.toMatch(/读者旅程/);
+  });
+
+  it("succeeded without journey still routes to result", () => {
+    const a = resolveChapterPrimaryAction({
+      hasChapter: true,
+      run: run({ status: "succeeded", chapter_complete: false }),
+      composition: "succeeded",
+      chapterComplete: false,
+      inFlight: false,
+    });
+    expect(a.kind).toBe("result");
   });
 });

@@ -619,7 +619,8 @@ describe("Book chapter shell", () => {
     expect(screen.queryByTestId("chapter-analysis-complete-banner")).not.toBeInTheDocument();
     expect(screen.getByTestId("book-chapter-shell")).toHaveAttribute("data-analysis-run", "77");
     expect(screen.getByTestId("chapter-analysis-progress")).toBeInTheDocument();
-    expect(screen.getByTestId("shell-view-analysis-progress")).toHaveTextContent("查看分析进度");
+    // CHG-20260727-017: succeeded without journey still exposes result CTA (journey is optional).
+    expect(screen.getByTestId("shell-view-analysis-result")).toHaveTextContent("查看分析结果");
     fireEvent.click(screen.getByTestId("banner-continue-reader-journey"));
     await waitFor(() => {
       expect(screen.getByTestId("book-chapter-shell")).toHaveAttribute("data-view", "result");

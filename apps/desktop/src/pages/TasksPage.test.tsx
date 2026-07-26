@@ -612,7 +612,7 @@ describe("TasksPage Scene Analysis 恢复", () => {
     expect(await screen.findByTestId("unified-recovery-fix-continue")).toBeInTheDocument();
   });
 
-  it("succeeded Run无旅程时显示继续生成阅读旅程且不显示复制错误", async () => {
+  it("succeeded Run无旅程时显示查看结果且可继续生成阅读旅程", async () => {
     const done = {
       ...failedRun55,
       status: "succeeded",
@@ -630,7 +630,7 @@ describe("TasksPage Scene Analysis 恢复", () => {
     vi.mocked(analysisApi.invocations).mockResolvedValue([]);
     vi.mocked(analysisApi.readerJourney).mockResolvedValue(null);
     renderPage();
-    expect(await screen.findByTestId("view-results-55")).toHaveTextContent("查看详情");
+    expect(await screen.findByTestId("view-results-55")).toHaveTextContent("查看结果");
     fireEvent.click(screen.getByTestId("run-more-55-trigger"));
     expect(screen.getByTestId("unified-recover-open-55")).toHaveTextContent(
       "继续生成阅读旅程",

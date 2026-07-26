@@ -174,6 +174,14 @@ describe("开始分析人工审阅入口", () => {
     expect(await screen.findByRole("option", { name: /本地模型/ })).toBeInTheDocument();
     expect(screen.queryByRole("option", { name: /阿里云百炼/ })).not.toBeInTheDocument();
   });
+  it("本地 Provider 不可用时不显示可选择的本地模型", async () => {
+    vi.mocked(providersApi.list).mockResolvedValue([plus] as any);
+    renderDialog();
+    await screen.findByLabelText("执行方式");
+    await waitFor(() => {
+      expect(screen.queryByRole("option", { name: /本地模型/ })).not.toBeInTheDocument();
+    });
+  });
   it("云端模式显示非默认且关闭自动路由的Plus", async () => {
     renderDialog();
     fireEvent.change(screen.getByLabelText("执行方式"), { target: { value: "cloud" } });

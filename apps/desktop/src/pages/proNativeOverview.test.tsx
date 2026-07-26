@@ -691,7 +691,7 @@ describe("Pro Native Overview UI (STEP 2.3-C)", () => {
     );
     getOverviewSpy.mockResolvedValue(
       completedOverview({
-        engine_id: null,
+        engine_id: undefined,
         engine_version: "native-overview-1",
       }),
     );

@@ -65,7 +65,13 @@ describe("normalizeRunLifecycle", () => {
     ).toBe("completed");
   });
 
-  it("maps succeeded → completed when treatSucceededAsCompleted", () => {
+  it("maps succeeded → completed even without chapter_complete", () => {
+    expect(
+      normalizeRunLifecycle(run({ id: 1, status: "succeeded", chapter_complete: false })),
+    ).toBe("completed");
+  });
+
+  it("maps succeeded → completed when treatSucceededAsCompleted (compat)", () => {
     expect(
       normalizeRunLifecycle(run({ id: 1, status: "succeeded", chapter_complete: true }), {
         treatSucceededAsCompleted: true,
@@ -169,6 +175,20 @@ describe("task center primary action", () => {
       }),
     );
     expect(a.label).toBe("查看进度");
+  });
+
+  it("chapter succeeded without journey → 查看结果", () => {
+    const a = resolveTaskCenterPrimaryAction(
+      run({ id: 55, status: "succeeded", chapter_complete: false }),
+    );
+    expect(a.testId).toBe("view-results-55");
+    expect(a.label).toBe("查看结果");
+  });
+
+  it("scene_analysis_partial → 查看详情", () => {
+    const a = resolveTaskCenterPrimaryAction(run({ id: 55, status: "scene_analysis_partial" }));
+    expect(a.testId).toBe("view-detail-55");
+    expect(a.label).toBe("查看详情");
   });
 
   it("scene active → 查看进度", () => {

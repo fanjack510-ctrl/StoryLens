@@ -93,6 +93,18 @@ export function resolveChapterPrimaryAction(args: {
     return action("confirm");
   }
 
+  // CHG-20260727-017: succeeded/completed → result even if journey tab is still optional/pending.
+  if (
+    phase === "completed" ||
+    chapterComplete ||
+    isChapterAnalysisComplete(run) ||
+    composition === "succeeded" ||
+    lifecycleSource?.status === "succeeded" ||
+    lifecycleSource?.status === "completed"
+  ) {
+    return action("result");
+  }
+
   if (
     phase === "active" ||
     inFlight ||
@@ -107,15 +119,6 @@ export function resolveChapterPrimaryAction(args: {
     composition === "reader_journey_processing"
   ) {
     return action("progress");
-  }
-
-  if (
-    phase === "completed" ||
-    chapterComplete ||
-    isChapterAnalysisComplete(run) ||
-    composition === "succeeded"
-  ) {
-    return action("result");
   }
 
   return action("start");

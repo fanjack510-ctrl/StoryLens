@@ -733,7 +733,21 @@ export function TasksPage() {
         label: "修复并继续",
         testId: `unified-recover-open-${run.id}`,
         disabled: navBusyRunId === run.id,
-        onSelect: () => void openChapterProgress(run),
+        onSelect: () => void openDetail(run),
+      });
+    }
+    // Optional Reader Journey continue — never gates primary result routing.
+    if (
+      run.status === "succeeded" &&
+      isSceneAnalysisComplete(run) &&
+      run.chapter_complete !== true
+    ) {
+      items.push({
+        id: "journey-continue",
+        label: "继续生成阅读旅程",
+        testId: `unified-recover-open-${run.id}`,
+        disabled: navBusyRunId === run.id,
+        onSelect: () => void openChapterResult(run, "reader-journey"),
       });
     }
     if (run.status !== "succeeded") {
@@ -800,14 +814,18 @@ export function TasksPage() {
             </thead>
             <tbody>
               {filteredRuns.map((run: any) => {
-                const phase = normalizeRunLifecycle(run, {
-                  treatSucceededAsCompleted:
-                    isNativeOverviewRun(run) || run.chapter_complete === true,
-                });
+                const phase = normalizeRunLifecycle(run);
                 const primary = resolveTaskCenterPrimaryAction(run);
-                const moreItems = buildRowMoreItems(run).filter(
-                  (item) => item.id !== "recover" || phase === "failed" || phase === "active",
-                );
+                const status = String(run.status || "").toLowerCase();
+                const moreItems = buildRowMoreItems(run).filter((item) => {
+                  if (item.id !== "recover") return true;
+                  return (
+                    phase === "failed" ||
+                    phase === "active" ||
+                    status === "scene_analysis_partial" ||
+                    status === "boundary_candidates_partial"
+                  );
+                });
                 const onPrimary = () => {
                   if (primary.kind === "confirm" || primary.kind === "progress") {
                     void openChapterProgress(run);
