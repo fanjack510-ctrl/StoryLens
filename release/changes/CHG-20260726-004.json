@@ -17,6 +17,12 @@
       "message": "fix(entitlement): allow free native whole-book overview",
       "primary": true,
       "multi_change_reason": "STEP 2.5R backend entitlement"
+    },
+    {
+      "sha": "93129e5d3207a59d73392cc6c94ec42fb8037471",
+      "message": "fix(product): remove Pro paywall from native overview",
+      "primary": true,
+      "multi_change_reason": "STEP 2.5R frontend product"
     }
   ],
   "modules": [],
@@ -47,5 +53,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-26T02:22:00Z",
-  "updated_at": "2026-07-26T02:28:25Z"
+  "updated_at": "2026-07-26T02:28:26Z"
 }

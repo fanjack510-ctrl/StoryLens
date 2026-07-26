@@ -1,5 +1,17 @@
 # StoryLens Cursor Prompt｜STEP 2.7 Windows 1.1.0 发布候选验证
 
+```text
+AMENDED BY CHG-20260726-004
+```
+
+```text
+Amendment: Windows Smoke must use Free Native Overview (no VIP required).
+RC may enable Feature Flag via test config. Provider must be configured.
+Do not require activating VIP to enter native whole-book overview.
+Still verify License system loads and future Pro capabilities remain protected.
+Prerequisite: EFFECTIVE STEP 2.G6 PASSED UNDER CHG-20260726-004.
+```
+
 ## 1. 任务标识
 
 ```text
@@ -7,17 +19,17 @@ STEP：2.7
 阶段名称：Windows 发布候选验证
 版本目标：StoryLens 1.1.0
 候选标识：1.1.0-rc.1
-Change ID：CHG-20260725-003
+Change ID：CHG-20260725-003 (+ entitlement CHG-20260726-004)
 主轨道：I
 协作轨道：A / C
 审计轨道：D
-前置门禁：STEP 2.G6 = PASSED
+前置门禁：EFFECTIVE STEP 2.G6 = PASSED UNDER CHG-20260726-004
 目标门禁：STEP 2.G7
 ```
 
 唯一目标：
 
-> 在不正式发布、不修改正式版本治理状态的前提下，生成并验证本地 Windows 发布候选。
+> 在不正式发布、不修改正式版本治理状态的前提下，生成并验证本地 Windows 发布候选（含 Free 原生全书概览 Smoke）。
 
 ---
 
@@ -255,30 +267,30 @@ release/evidence/CHG-20260725-003/night-run/windows-build-log.md
 
 ---
 
-## 11. Pro Smoke
+## 11. Free Native Overview Smoke + Pro Protection
 
-### License
+### Free Native Overview Smoke（CHG-20260726-004）
 
-* Free 状态不可创建；
-* 有效测试 Pro 授权可进入；
-* 后端 403 有效；
-* 前端提示正确。
+* 无 VIP License；
+* Feature Flag 使用 RC 测试配置开启；
+* Provider 配置有效；
+* Free 用户可进入「原生全书概览」；
+* 可 Preflight / 创建 Run（或读取 G5 completed / Fake Transport）；
+* Evidence 可跳转；
+* 重启可读取；
+* **不得**要求激活 VIP 才能进入原生全书概览。
+
+### License / Future Pro Protection
+
+* License 系统仍可加载；
+* 未来 Pro Capability（如章节聚合洞察）无授权仍受保护；
+* 不需要在 1.1.0 开发新 Pro 销售页。
 
 ### Provider
 
 * 读取现有测试 Provider 配置；
 * 不在日志输出 Key；
 * 不永久修改默认配置。
-
-### 原生全书概览
-
-优先使用 STEP 2.G5 已生成的 completed 数据验证：
-
-* Run 读取；
-* Overview 读取；
-* Evidence；
-* Deep Link；
-* 重启读取。
 
 如需要在安装包中重新执行 Live：
 

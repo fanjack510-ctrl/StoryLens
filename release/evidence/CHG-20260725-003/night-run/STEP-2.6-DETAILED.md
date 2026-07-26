@@ -1,22 +1,35 @@
 # StoryLens Cursor Prompt｜STEP 2.6 Free 1.0.5 全面回归与升级验证
 
+```text
+AMENDED BY CHG-20260726-004
+```
+
+```text
+Amendment: Native Whole-Book Overview is FREE in StoryLens 1.1.x.
+Do not require Pro License / VIP for native overview Preflight / Create / Get / Retry.
+Do not expect PRO_LICENSE_REQUIRED for Free native overview.
+Still require Feature Flag, Provider, Consent, Budget, and protect future Pro capabilities.
+Original gate evidence gate-2g6.md remains historical (old Pro entitlement standard)
+and must not be rewritten; Free entitlement proof lives under CHG-20260726-004 supplement.
+```
+
 ## 1. 任务标识
 
 ```text
 STEP：2.6
 阶段名称：Free 1.0.5 全面回归与升级验证
 版本目标：StoryLens 1.1.0
-Change ID：CHG-20260725-003
+Change ID：CHG-20260725-003 (+ entitlement CHG-20260726-004)
 主轨道：I
 协作轨道：A / C
 审计轨道：D
-前置门禁：STEP 2.G5 = PASSED
-目标门禁：STEP 2.G6
+前置门禁：STEP 2.G5 = PASSED；STEP 2.5R-GATE = PASSED（若执行 Free 边界修订）
+目标门禁：STEP 2.G6（+ Free Entitlement Supplement when CHG-004 applies）
 ```
 
 唯一目标：
 
-> 证明 Pro 原生全书概览没有破坏 Free 1.0.5、旧数据库、导入、书库、单章分析和桌面既有行为。
+> 证明原生全书概览（1.1.x Free）没有破坏 Free 1.0.5、旧数据库、导入、书库、单章分析和桌面既有行为，且 Free 用户在门禁满足时可使用原生概览。
 
 ---
 
@@ -238,9 +251,12 @@ Scene Count
 * 行距；
 * 开发者模式；
 * Telemetry Consent；
-* Free / VIP 状态；
-* Pro Native Overview 授权；
-* 无授权后端 403。
+* Free / VIP 状态（License 系统仍可用）；
+* **Native Overview Free Entitlement（CHG-20260726-004）：**
+  * Free Preflight / Create / Get / Overview / Retry 允许（Flag+Provider+Consent+Budget 满足时）；
+  * 不得返回 `PRO_LICENSE_REQUIRED`；
+  * Feature Flag false 仍拒绝；
+  * 未来 Pro Capability（如 `pro_whole_book_insights` / Enhanced）无授权仍拒绝。
 
 ---
 
