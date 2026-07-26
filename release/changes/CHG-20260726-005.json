@@ -3,7 +3,7 @@
   "title": "Add global interface zoom controls",
   "type": "improvement",
   "base_version": "1.0.5",
-  "status": "tested",
+  "status": "implemented",
   "include_in_next_release": true,
   "commits": [
     {
@@ -43,24 +43,27 @@
     "apps/desktop/index.html",
     "apps/desktop/src-tauri/capabilities/default.json"
   ],
-  "user_summary": "在设置-外观中增加界面缩放，并支持 Ctrl+/-/0；导航栏、正文区域外的整站 UI 同步缩放，正文字号与行距保持独立。",
-  "technical_summary": "Add browser-like global interface zoom via Tauri Webview.setZoom (CSS zoom fallback). Settings key storylens.appearance.interfaceZoom; levels 80/90/100/110/125/150; default 100; Ctrl+/Ctrl+=/Ctrl-/Ctrl+0; early apply in index.html; reading fontSize/lineHeight remain independent. Targets 1.1.0-rc.2 with STEP 2.8-FIX.",
+  "user_summary": "在设置-外观中增加界面缩放（默认80%），并支持 Ctrl+/-/0；合法已保存偏好不覆盖。",
+  "technical_summary": "Add browser-like global interface zoom via Tauri Webview.setZoom (CSS zoom fallback). Settings key storylens.appearance.interfaceZoom; levels 80/90/100/110/125/150. Default interface zoom changed from 100% to 80%. Existing valid user preferences are preserved. Reset and Ctrl+0 restore the product default of 80%. Early apply in index.html; reading fontSize/lineHeight remain independent. Targets 1.1.0-rc.3.",
   "acceptance_criteria": [
     "Settings Appearance shows 界面缩放 with 80-150 presets",
     "Ctrl+Plus / Ctrl+Equal / Ctrl+Minus / Ctrl+0 work; clamp at ends",
     "Zoom persists in localStorage and restores on restart",
     "正文字号 and 行距 remain independent",
-    "No DB/Migration/API/Private Engine changes"
+    "No DB/Migration/API/Private Engine changes",
+    "Default / missing / invalid → 80%; existing valid prefs preserved; reset and Ctrl+0 → 80%; 100% still selectable"
   ],
   "tests": [
     "vitest interfaceZoom.test.ts + SettingsAppearanceZoom.test.tsx: 10 passed",
     "desktop typecheck: pass",
     "vitest interfaceZoom + SettingsAppearanceZoom: 10 passed; typecheck pass",
-    "RC2 Windows build 1.1.0-rc.2 PASS; SHA-256 467373BCDCB6B0E9E998DC6C32186883F43AA7B678C74DE5489F1FFA99DEC635"
+    "RC2 Windows build 1.1.0-rc.2 PASS; SHA-256 467373BCDCB6B0E9E998DC6C32186883F43AA7B678C74DE5489F1FFA99DEC635",
+    "vitest interfaceZoom + SettingsAppearanceZoom + shortcuts: 13 passed; typecheck pass; vite production build pass"
   ],
   "verification_evidence": [
     "release/changes/CHG-20260726-005.json",
-    "release/evidence/CHG-20260726-005/interface-zoom-rc2.md"
+    "release/evidence/CHG-20260726-005/interface-zoom-rc2.md",
+    "release/evidence/CHG-20260726-005/interface-zoom-default-80.md"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -77,5 +80,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-26T04:04:31Z",
-  "updated_at": "2026-07-26T04:22:17Z"
+  "updated_at": "2026-07-26T04:51:05Z"
 }

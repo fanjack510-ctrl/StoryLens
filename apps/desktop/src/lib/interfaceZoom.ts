@@ -11,7 +11,8 @@ export const INTERFACE_ZOOM_LEVELS = [80, 90, 100, 110, 125, 150] as const;
 
 export type InterfaceZoomPercent = (typeof INTERFACE_ZOOM_LEVELS)[number];
 
-export const DEFAULT_INTERFACE_ZOOM: InterfaceZoomPercent = 100;
+/** Product default for first launch / missing / invalid stored values. */
+export const DEFAULT_INTERFACE_ZOOM: InterfaceZoomPercent = 80;
 
 export type InterfaceZoomApplyMode = "tauri_webview" | "css_zoom";
 

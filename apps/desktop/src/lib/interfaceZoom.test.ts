@@ -40,14 +40,17 @@ describe("interfaceZoom", () => {
     vi.restoreAllMocks();
   });
 
-  it("defaults to 100 and accepts discrete levels", () => {
-    expect(parseInterfaceZoom(undefined)).toBe(100);
-    expect(parseInterfaceZoom("bogus")).toBe(100);
-    expect(parseInterfaceZoom(99)).toBe(100);
+  it("defaults to 80 and accepts discrete levels including 100", () => {
+    expect(DEFAULT_INTERFACE_ZOOM).toBe(80);
+    expect(parseInterfaceZoom(undefined)).toBe(80);
+    expect(parseInterfaceZoom("")).toBe(80);
+    expect(parseInterfaceZoom("bogus")).toBe(80);
+    expect(parseInterfaceZoom(99)).toBe(80);
     for (const level of INTERFACE_ZOOM_LEVELS) {
       expect(parseInterfaceZoom(level)).toBe(level);
       expect(parseInterfaceZoom(String(level))).toBe(level);
     }
+    expect(INTERFACE_ZOOM_LEVELS).toContain(100);
   });
 
   it("persists and restores zoom percent", () => {
@@ -57,9 +60,15 @@ describe("interfaceZoom", () => {
     expect(readInterfaceZoom(storage)).toBe(125);
   });
 
-  it("falls back to 100 for illegal stored values", () => {
-    const storage = memoryStorage({ [INTERFACE_ZOOM_STORAGE_KEY]: "133" });
-    expect(readInterfaceZoom(storage)).toBe(DEFAULT_INTERFACE_ZOOM);
+  it("preserves existing valid saved 100 and 125", () => {
+    expect(readInterfaceZoom(memoryStorage({ [INTERFACE_ZOOM_STORAGE_KEY]: "100" }))).toBe(100);
+    expect(readInterfaceZoom(memoryStorage({ [INTERFACE_ZOOM_STORAGE_KEY]: "125" }))).toBe(125);
+  });
+
+  it("falls back to 80 for missing or illegal stored values", () => {
+    expect(readInterfaceZoom(memoryStorage())).toBe(80);
+    expect(readInterfaceZoom(memoryStorage({ [INTERFACE_ZOOM_STORAGE_KEY]: "133" }))).toBe(80);
+    expect(readInterfaceZoom(memoryStorage({ [INTERFACE_ZOOM_STORAGE_KEY]: "" }))).toBe(80);
   });
 
   it("steps within bounds", () => {

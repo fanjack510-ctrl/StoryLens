@@ -105,7 +105,7 @@ export function SettingsAppearanceTab() {
               data-testid="interface-zoom-reset"
               onClick={() => void ui.setInterfaceZoom(DEFAULT_INTERFACE_ZOOM)}
             >
-              恢复 100%
+              恢复默认（80%）
             </button>
           </div>
           <div className="settings-zoom-presets" role="group" aria-label="界面缩放预设">
@@ -124,7 +124,7 @@ export function SettingsAppearanceTab() {
           </div>
           <small className="hint">
             同时调整导航栏、按钮、文字、图表和内容区域的显示大小。快捷键：Ctrl + / Ctrl - /
-            Ctrl 0。与下方「正文字号」相互独立。
+            Ctrl 0（恢复默认 80%）。与下方「正文字号」相互独立。
           </small>
         </div>
       </section>
