@@ -11,6 +11,12 @@
       "message": "fix(runtime): cloud routing, overview preflight, task errors",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "ba5d38306f78fa8a486be59f6312da7f5766393e",
+      "message": "docs(release): mark CHG-20260726-006 implemented",
+      "primary": false,
+      "multi_change_reason": "registry mark implemented"
     }
   ],
   "modules": [
@@ -55,5 +61,5 @@
   "blocker_level": "P0",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-26T04:28:05Z",
-  "updated_at": "2026-07-26T04:37:54Z"
+  "updated_at": "2026-07-26T04:38:20Z"
 }
