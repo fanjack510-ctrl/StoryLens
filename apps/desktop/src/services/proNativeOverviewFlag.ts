@@ -14,6 +14,7 @@ export const PRIVATE_NATIVE_OVERVIEW_ENGINE_ID = "private-native-overview-v1";
 
 export const FIXTURE_ENGINE_LABEL = "Fixture Development Mode";
 export const FORMAL_ENGINE_LABEL = "Formal Overview Engine";
+export const UNKNOWN_ENGINE_LABEL = "引擎信息不可用";
 
 export const WALKING_SKELETON_USER_NOTICE =
   "当前为行走骨架验证，不调用真实 AI Provider。";
@@ -21,34 +22,61 @@ export const WALKING_SKELETON_USER_NOTICE =
 export const FIXTURE_DEVELOPMENT_WARNING =
   "Fixture execution does not call a provider.";
 
-export type EnginePresentationKind = "fixture" | "formal" | "unknown";
+/** Product presentation kinds for result / preflight badges. */
+export type EnginePresentationKind = "formal" | "walking_skeleton" | "unknown";
 
 export type EnginePresentation = {
   kind: EnginePresentationKind;
   label: string;
+  /** True only for real fixture / walking-skeleton engines. */
   isFixture: boolean;
+  /** Alias of isFixture — when true, walking-skeleton notice may show. */
+  showWalkingSkeletonNotice: boolean;
   engineId: string | null;
 };
 
-/** Resolve Fixture vs formal engine labeling from engine_id (or model_id fallback). */
+export type ResolveEnginePresentationInput = {
+  engineId?: string | null;
+  modelId?: string | null;
+  engineVersion?: string | null;
+  contractVersion?: string | null;
+};
+
+function isWalkingSkeletonId(id: string): boolean {
+  if (id === FIXTURE_ENGINE_ID || id.startsWith("fixture-")) return true;
+  if (id.includes("walking-skeleton") || id.includes("walking_skeleton")) return true;
+  return false;
+}
+
+/**
+ * Resolve formal vs walking-skeleton vs unknown from engine identity.
+ * Missing engine_id must NOT claim "no Provider was called".
+ */
 export function resolveEnginePresentation(
-  engineId?: string | null,
+  engineIdOrInput?: string | null | ResolveEnginePresentationInput,
   modelId?: string | null,
 ): EnginePresentation {
-  const id = (engineId || modelId || "").trim();
+  const input: ResolveEnginePresentationInput =
+    engineIdOrInput != null && typeof engineIdOrInput === "object"
+      ? engineIdOrInput
+      : { engineId: engineIdOrInput, modelId };
+
+  const id = (input.engineId || input.modelId || "").trim();
   if (!id) {
     return {
       kind: "unknown",
-      label: "Engine 未指定",
+      label: UNKNOWN_ENGINE_LABEL,
       isFixture: false,
+      showWalkingSkeletonNotice: false,
       engineId: null,
     };
   }
-  if (id === FIXTURE_ENGINE_ID || id.startsWith("fixture-")) {
+  if (isWalkingSkeletonId(id)) {
     return {
-      kind: "fixture",
+      kind: "walking_skeleton",
       label: FIXTURE_ENGINE_LABEL,
       isFixture: true,
+      showWalkingSkeletonNotice: true,
       engineId: id,
     };
   }
@@ -57,13 +85,16 @@ export function resolveEnginePresentation(
       kind: "formal",
       label: FORMAL_ENGINE_LABEL,
       isFixture: false,
+      showWalkingSkeletonNotice: false,
       engineId: id,
     };
   }
+  // Unknown non-empty id: treat as formal-capable production binding, not skeleton.
   return {
     kind: "formal",
     label: FORMAL_ENGINE_LABEL,
     isFixture: false,
+    showWalkingSkeletonNotice: false,
     engineId: id,
   };
 }

@@ -262,6 +262,8 @@ class OverviewApiResponse(_StrictModel):
     engine_version: str
     prompt_version: str
     contract_version: str = CONTRACT_VERSION
+    # Optional for legacy projections that predate engine identity on the wire.
+    engine_id: str | None = None
 
 
 class ErrorDetail(_StrictModel):

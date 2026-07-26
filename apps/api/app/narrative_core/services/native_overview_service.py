@@ -806,6 +806,18 @@ class NativeOverviewService:
             if run.book_snapshot_id
             else None
         )
+        raw_engine_id = payload.get("engine_id")
+        engine_id = (
+            str(raw_engine_id).strip()
+            if raw_engine_id is not None and str(raw_engine_id).strip()
+            else None
+        )
+        raw_contract = payload.get("contract_version")
+        contract_version = (
+            str(raw_contract).strip()
+            if raw_contract is not None and str(raw_contract).strip()
+            else CONTRACT_VERSION
+        )
         return OverviewApiResponse(
             run=OverviewRunSummary(
                 run_id=str(run.id),
@@ -827,9 +839,10 @@ class NativeOverviewService:
             warnings=list(payload.get("warnings") or [FIXTURE_DEVELOPMENT_WARNING]),
             evidence_index=evidence_index,
             generated_at=_parse_dt(payload.get("generated_at")) or utc_now(),
+            engine_id=engine_id,
             engine_version=str(payload.get("engine_version") or FIXTURE_ENGINE_VERSION),
             prompt_version=str(payload.get("prompt_version") or FIXTURE_PROMPT_VERSION),
-            contract_version=CONTRACT_VERSION,
+            contract_version=contract_version,
         )
 
     # ------------------------------------------------------------------

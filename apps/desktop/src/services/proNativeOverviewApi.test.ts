@@ -219,9 +219,23 @@ describe("proNativeOverviewDeepLink", () => {
 describe("proNativeOverviewFlag / stages", () => {
   it("labels fixture vs formal engines distinctly", () => {
     expect(resolveEnginePresentation(FIXTURE_ENGINE_ID).label).toBe(FIXTURE_ENGINE_LABEL);
+    expect(resolveEnginePresentation(FIXTURE_ENGINE_ID).kind).toBe("walking_skeleton");
+    expect(resolveEnginePresentation(FIXTURE_ENGINE_ID).showWalkingSkeletonNotice).toBe(true);
     expect(resolveEnginePresentation(PRIVATE_NATIVE_OVERVIEW_ENGINE_ID).label).toBe(
       FORMAL_ENGINE_LABEL,
     );
+    expect(resolveEnginePresentation(PRIVATE_NATIVE_OVERVIEW_ENGINE_ID).kind).toBe("formal");
+    expect(
+      resolveEnginePresentation(PRIVATE_NATIVE_OVERVIEW_ENGINE_ID).showWalkingSkeletonNotice,
+    ).toBe(false);
+  });
+
+  it("unknown engine does not claim walking skeleton / no provider", () => {
+    const unknown = resolveEnginePresentation(null);
+    expect(unknown.kind).toBe("unknown");
+    expect(unknown.label).toBe("引擎信息不可用");
+    expect(unknown.showWalkingSkeletonNotice).toBe(false);
+    expect(unknown.isFixture).toBe(false);
   });
 
   it("builds multi-stage list without inventing percentages", () => {

@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { firstEvidenceHref } from "../../services/proNativeOverviewDeepLink";
+import { formatOverviewValue } from "../../services/formatOverviewValue";
 import type {
   CoverageDTO,
   OverviewApiResponse,
@@ -13,44 +14,48 @@ import {
 import { fieldStatusLabel } from "../../services/proNativeOverviewStages";
 
 const RESULT_FIELDS: Array<{ key: keyof ResultFieldMap; label: string }> = [
+  { key: "novel_type", label: "小说类型" },
+  { key: "narrative_features", label: "叙事特征" },
+  { key: "core_setting", label: "核心设定" },
   { key: "protagonist", label: "主角" },
   { key: "protagonist_core_goal", label: "主角核心目标" },
-  { key: "primary_conflict", label: "全书主要矛盾" },
-  { key: "central_question", label: "核心悬念或核心问题" },
-  { key: "key_turning_points", label: "关键转折" },
-  { key: "ending_state", label: "结局状态" },
+  { key: "primary_conflict", label: "主要矛盾" },
+  { key: "central_question", label: "核心悬念" },
+  { key: "synopsis", label: "故事概述" },
   { key: "logline", label: "一句话故事" },
-  { key: "synopsis", label: "全书概要" },
+  { key: "key_turning_points", label: "关键转折" },
+  { key: "climax", label: "高潮" },
+  { key: "resolved_problem", label: "最终解决" },
+  { key: "ending_state", label: "结局状态" },
 ];
 
 type ResultFieldMap = {
+  novel_type?: OverviewField | null;
+  narrative_features?: OverviewField | null;
+  core_setting?: OverviewField | null;
   protagonist?: OverviewField | null;
   protagonist_core_goal?: OverviewField | null;
   primary_conflict?: OverviewField | null;
   central_question?: OverviewField | null;
   key_turning_points?: OverviewField | null;
+  climax?: OverviewField | null;
+  resolved_problem?: OverviewField | null;
   ending_state?: OverviewField | null;
   logline?: OverviewField | null;
   synopsis?: OverviewField | null;
 };
 
-function formatFieldValue(value: unknown): string {
-  if (value == null || value === "") return "";
-  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
-    return String(value);
-  }
-  try {
-    return JSON.stringify(value);
-  } catch {
-    return String(value);
-  }
-}
-
 function isInsufficient(field: OverviewField | null | undefined): boolean {
   if (!field) return true;
   if (field.status === "insufficient_evidence") return true;
-  const text = formatFieldValue(field.value).trim();
-  return !text;
+  const formatted = formatOverviewValue(field.value);
+  return formatted.kind === "empty" || formatted.kind === "unsupported";
+}
+
+function hasUnsupportedCandidate(field: OverviewField | null | undefined): boolean {
+  if (!field || field.status !== "insufficient_evidence") return false;
+  const formatted = formatOverviewValue(field.value);
+  return formatted.kind === "text" || formatted.kind === "list";
 }
 
 function EngineBadge({ engine }: { engine: EnginePresentation }) {
@@ -62,6 +67,55 @@ function EngineBadge({ engine }: { engine: EnginePresentation }) {
       {engine.label}
       {engine.engineId ? `（${engine.engineId}）` : ""}
     </span>
+  );
+}
+
+function FieldValueBody({
+  fieldKey,
+  field,
+}: {
+  fieldKey: string;
+  field: OverviewField | null | undefined;
+}) {
+  const insufficient = isInsufficient(field);
+  if (insufficient) {
+    return (
+      <>
+        <p data-testid={`pro-native-overview-field-${fieldKey}-insufficient`}>
+          暂未能可靠判断
+        </p>
+        {hasUnsupportedCandidate(field) ? (
+          <p
+            className="muted"
+            data-testid={`pro-native-overview-field-${fieldKey}-candidate-note`}
+          >
+            存在候选内容，但证据引用不足
+          </p>
+        ) : null}
+      </>
+    );
+  }
+  const formatted = formatOverviewValue(field?.value);
+  if (formatted.kind === "list") {
+    return (
+      <ul data-testid={`pro-native-overview-field-${fieldKey}-value`}>
+        {formatted.items.map((item) => (
+          <li key={item}>{item}</li>
+        ))}
+      </ul>
+    );
+  }
+  if (formatted.kind === "unsupported") {
+    return (
+      <p data-testid={`pro-native-overview-field-${fieldKey}-insufficient`}>
+        结果格式暂不支持
+      </p>
+    );
+  }
+  return (
+    <p data-testid={`pro-native-overview-field-${fieldKey}-value`}>
+      {formatted.kind === "text" ? formatted.text : ""}
+    </p>
   );
 }
 
@@ -101,15 +155,7 @@ function OverviewFieldCard({
           置信度：{confidence}
         </p>
       </header>
-      {insufficient ? (
-        <p data-testid={`pro-native-overview-field-${fieldKey}-insufficient`}>
-          暂未能可靠判断
-        </p>
-      ) : (
-        <p data-testid={`pro-native-overview-field-${fieldKey}-value`}>
-          {formatFieldValue(field?.value)}
-        </p>
-      )}
+      <FieldValueBody fieldKey={fieldKey} field={field} />
       {status === "conflicted" ? (
         <p className="notice" data-testid={`pro-native-overview-field-${fieldKey}-conflicted`}>
           证据存在冲突，请核对原文后再采信。
@@ -173,14 +219,18 @@ type Props = {
 
 /** Evidence-backed overview fields + native-only coverage panel (STEP 2.3-C3). */
 export function ProNativeOverviewResult({ bookId, data }: Props) {
-  const engine = resolveEnginePresentation(data.engine_id);
+  const engine = resolveEnginePresentation({
+    engineId: data.engine_id,
+    engineVersion: data.engine_version,
+    contractVersion: data.contract_version,
+  });
   return (
     <section data-testid="pro-native-overview-result">
       <h2>概览结果</h2>
       <p className="muted" data-testid="pro-native-overview-result-engine">
         Engine：
         <EngineBadge engine={engine} /> · version {data.engine_version || "—"}
-        {engine.isFixture || !data.engine_id ? <> · {WALKING_SKELETON_USER_NOTICE}</> : null}
+        {engine.showWalkingSkeletonNotice ? <> · {WALKING_SKELETON_USER_NOTICE}</> : null}
       </p>
       {data.coverage ? <CoveragePanel coverage={data.coverage} /> : null}
       {RESULT_FIELDS.map(({ key, label }) => (

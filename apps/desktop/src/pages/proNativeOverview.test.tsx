@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -202,8 +202,10 @@ function analyzingRun(overrides: Partial<RunStatusResponse> = {}): RunStatusResp
   };
 }
 
-function completedOverview(): OverviewApiResponse {
-  return {
+function completedOverview(
+  overrides: Partial<OverviewApiResponse> = {},
+): OverviewApiResponse {
+  const base: OverviewApiResponse = {
     run: { run_id: "101", status: "completed" },
     book: { book_id: "1", title: "测试书" },
     snapshot: { snapshot_id: "55", status: "completed" },
@@ -216,6 +218,24 @@ function completedOverview(): OverviewApiResponse {
       evidence_count: 1,
     },
     overview: {
+      novel_type: {
+        value: "悬疑",
+        confidence: 0.9,
+        evidence_refs: ["ev-1"],
+        status: "supported",
+      },
+      narrative_features: {
+        value: ["第一人称", "短篇"],
+        confidence: 0.85,
+        evidence_refs: ["ev-1"],
+        status: "supported",
+      },
+      core_setting: {
+        value: "雨巷",
+        confidence: 0.8,
+        evidence_refs: ["ev-1"],
+        status: "supported",
+      },
       protagonist: {
         value: "林远",
         confidence: 0.9,
@@ -245,6 +265,18 @@ function completedOverview(): OverviewApiResponse {
         confidence: 0.5,
         evidence_refs: ["ev-1"],
         status: "low_confidence",
+      },
+      climax: {
+        value: null,
+        confidence: 0,
+        evidence_refs: [],
+        status: "insufficient_evidence",
+      },
+      resolved_problem: {
+        value: null,
+        confidence: 0,
+        evidence_refs: [],
+        status: "insufficient_evidence",
       },
       ending_state: {
         value: null,
@@ -285,6 +317,18 @@ function completedOverview(): OverviewApiResponse {
     prompt_version: "fixture-no-prompt",
     contract_version: "1.0",
     warnings: [],
+  };
+  return {
+    ...base,
+    ...overrides,
+    overview: {
+      ...base.overview,
+      ...(overrides.overview || {}),
+    },
+    coverage: {
+      ...base.coverage,
+      ...(overrides.coverage || {}),
+    },
   };
 }
 
@@ -368,7 +412,7 @@ describe("Pro Native Overview UI (STEP 2.3-C)", () => {
     );
     expect(screen.getByTestId("pro-native-overview-engine-badge")).toHaveAttribute(
       "data-engine-kind",
-      "fixture",
+      "walking_skeleton",
     );
     expect(screen.getByTestId("pro-native-overview-walking-notice")).toHaveTextContent(
       "当前为行走骨架验证，不调用真实 AI Provider。",
@@ -535,6 +579,13 @@ describe("Pro Native Overview UI (STEP 2.3-C)", () => {
     renderApp("/books/1/pro-native-overview?run_id=101");
     const result = await screen.findByTestId("pro-native-overview-result");
     expect(result).toHaveTextContent("林远");
+    expect(screen.getByTestId("pro-native-overview-field-novel_type")).toHaveTextContent("小说类型");
+    expect(screen.getByTestId("pro-native-overview-field-narrative_features")).toHaveTextContent(
+      "叙事特征",
+    );
+    expect(screen.getByTestId("pro-native-overview-field-core_setting")).toHaveTextContent(
+      "核心设定",
+    );
     expect(screen.getByTestId("pro-native-overview-field-protagonist-status")).toHaveTextContent(
       "已支持",
     );
@@ -562,6 +613,95 @@ describe("Pro Native Overview UI (STEP 2.3-C)", () => {
         content_hash: "abc123",
       }),
     );
+  });
+
+  it("presents formal projection without walking-skeleton mislabel", async () => {
+    stubEntitlements(true);
+    getRunSpy.mockResolvedValue(
+      analyzingRun({
+        status: "completed",
+        current_stage: "finalize",
+        engine_id: PRIVATE_NATIVE_OVERVIEW_ENGINE_ID,
+        provider: "aliyun_qwen_plus",
+        model: "qwen3.7-plus",
+      }),
+    );
+    getOverviewSpy.mockResolvedValue(
+      completedOverview({
+        engine_id: PRIVATE_NATIVE_OVERVIEW_ENGINE_ID,
+        engine_version: "native-overview-1",
+        overview: {
+          protagonist: {
+            value: ["齐夏"],
+            confidence: 0.95,
+            evidence_refs: ["ev-1"],
+            status: "supported",
+          },
+          key_turning_points: {
+            value: ["候选转折"],
+            confidence: 0,
+            evidence_refs: [],
+            status: "insufficient_evidence",
+          },
+        },
+      }),
+    );
+    renderApp("/books/1/pro-native-overview?run_id=14");
+    const result = await screen.findByTestId("pro-native-overview-result");
+    expect(result).toHaveTextContent(FORMAL_ENGINE_LABEL);
+    expect(result).not.toHaveTextContent("Engine 未指定");
+    expect(result).not.toHaveTextContent("引擎信息不可用");
+    expect(result).not.toHaveTextContent("当前为行走骨架验证");
+    expect(
+      within(result).getByTestId("pro-native-overview-engine-badge"),
+    ).toHaveAttribute("data-engine-kind", "formal");
+    expect(within(result).getByTestId("pro-native-overview-field-novel_type-value")).toHaveTextContent(
+      "悬疑",
+    );
+    expect(
+      within(result).getByTestId("pro-native-overview-field-narrative_features-value"),
+    ).toHaveTextContent("第一人称、短篇");
+    expect(within(result).getByTestId("pro-native-overview-field-core_setting-value")).toHaveTextContent(
+      "雨巷",
+    );
+    expect(within(result).getByTestId("pro-native-overview-field-protagonist-value")).toHaveTextContent(
+      "齐夏",
+    );
+    expect(
+      within(result).getByTestId("pro-native-overview-field-protagonist-value"),
+    ).not.toHaveTextContent('["齐夏"]');
+    expect(
+      within(result).getByTestId("pro-native-overview-field-key_turning_points-insufficient"),
+    ).toHaveTextContent("暂未能可靠判断");
+    expect(
+      within(result).getByTestId("pro-native-overview-field-key_turning_points-candidate-note"),
+    ).toHaveTextContent("证据引用不足");
+  });
+
+  it("unknown engine shows unavailable label without provider denial", async () => {
+    stubEntitlements(true);
+    getRunSpy.mockResolvedValue(
+      analyzingRun({
+        status: "completed",
+        current_stage: "finalize",
+        engine_id: undefined,
+        provider: "aliyun_qwen_plus",
+        model: "qwen3.7-plus",
+      }),
+    );
+    getOverviewSpy.mockResolvedValue(
+      completedOverview({
+        engine_id: null,
+        engine_version: "native-overview-1",
+      }),
+    );
+    renderApp("/books/1/pro-native-overview?run_id=101");
+    const result = await screen.findByTestId("pro-native-overview-result");
+    expect(within(result).getByTestId("pro-native-overview-engine-badge")).toHaveTextContent(
+      "引擎信息不可用",
+    );
+    expect(result).not.toHaveTextContent("当前为行走骨架验证");
+    expect(result).not.toHaveTextContent("不调用真实 AI Provider");
   });
 
   it("failed run exposes retry API action", async () => {
