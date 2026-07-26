@@ -29,6 +29,12 @@
       "message": "docs(evidence): add redacted CHG-012/e2e proofs for RC6 gate",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "09051ca695875c4535be93b5aa3c6382ed16b642",
+      "message": "docs(release): attach evidence commit to CHG-20260726-012",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -66,5 +72,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-26T15:34:12Z",
-  "updated_at": "2026-07-26T16:35:35Z"
+  "updated_at": "2026-07-26T16:35:49Z"
 }
