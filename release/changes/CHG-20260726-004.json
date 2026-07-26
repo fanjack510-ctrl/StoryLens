@@ -11,6 +11,12 @@
       "message": "docs(release): reposition native overview as free in 1.1.x",
       "primary": true,
       "multi_change_reason": "STEP 2.5R governance docs"
+    },
+    {
+      "sha": "0d52a16cbba5746ef4bb87b5e42da876364acb68",
+      "message": "fix(entitlement): allow free native whole-book overview",
+      "primary": true,
+      "multi_change_reason": "STEP 2.5R backend entitlement"
     }
   ],
   "modules": [],
@@ -41,5 +47,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-26T02:22:00Z",
-  "updated_at": "2026-07-26T02:28:23Z"
+  "updated_at": "2026-07-26T02:28:25Z"
 }

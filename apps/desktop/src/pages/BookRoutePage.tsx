@@ -89,7 +89,6 @@ export function BookRoutePage() {
   const [budgetModalOpen, setBudgetModalOpen] = useState(false);
   const [budgetModalRunId, setBudgetModalRunId] = useState<number | null>(null);
   const [insightsUpgradeOpen, setInsightsUpgradeOpen] = useState(false);
-  const [overviewUpgradeOpen, setOverviewUpgradeOpen] = useState(false);
   /** In-memory only: survives polling, clears on full page refresh/remount. */
   const seenBudgetModalRef = useRef<Set<number>>(new Set());
   /** User-initiated shell view; prevents non-essential system redirects. */
@@ -863,10 +862,7 @@ export function BookRoutePage() {
               />
             ) : null}
             {!noChapters && !bootstrappingChapter ? (
-              <ProNativeOverviewEntry
-                bookId={bookId}
-                onUpgrade={() => setOverviewUpgradeOpen(true)}
-              />
+              <ProNativeOverviewEntry bookId={bookId} />
             ) : null}
             {!noChapters && !bootstrappingChapter && panelCollapsed && analysisRunId ? (
               <button
@@ -1327,20 +1323,6 @@ export function BookRoutePage() {
             查看授权说明
           </button>
           <button type="button" className="secondary" onClick={() => setInsightsUpgradeOpen(false)}>
-            关闭
-          </button>
-        </div>
-      ) : null}
-
-      {overviewUpgradeOpen ? (
-        <div className="shell-banner" data-testid="pro-native-overview-upgrade-prompt">
-          <p>
-            Pro 原生全书概览为 StoryLens Pro 功能，基于完整小说原文生成概览（与「章节聚合洞察」不同）。激活专业版授权后可使用。
-          </p>
-          <button type="button" className="primary" onClick={() => navigate("/settings")}>
-            查看授权说明
-          </button>
-          <button type="button" className="secondary" onClick={() => setOverviewUpgradeOpen(false)}>
             关闭
           </button>
         </div>

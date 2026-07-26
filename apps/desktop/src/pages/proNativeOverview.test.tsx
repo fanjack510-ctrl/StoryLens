@@ -315,30 +315,32 @@ describe("Pro Native Overview UI (STEP 2.3-C)", () => {
   });
 
   it("distinguishes entry naming from 章节聚合洞察", async () => {
-    stubEntitlements(true);
+    stubEntitlements(false);
     renderApp("/books/1?chapter=2&view=reading");
-    const insights = await screen.findByTestId("whole-book-insights-entry-pro");
-    const overview = await screen.findByTestId("pro-native-overview-entry-pro");
+    const insights = await screen.findByTestId("whole-book-insights-entry-free");
+    const overview = await screen.findByTestId("pro-native-overview-entry-free");
     expect(insights).toHaveTextContent("章节聚合洞察");
-    expect(insights).not.toHaveTextContent("Pro 原生全书概览");
-    expect(overview).toHaveTextContent("Pro 原生全书概览");
+    expect(insights).not.toHaveTextContent("原生全书概览");
+    expect(overview).toHaveTextContent("原生全书概览");
+    expect(overview).not.toHaveTextContent("Pro 原生全书概览");
     expect(overview).not.toHaveTextContent("章节聚合洞察");
   });
 
-  it("free entry shows Pro license prompt without create API", async () => {
+  it("free entry opens native overview preflight without Pro upgrade prompt", async () => {
+    preflightSpy.mockResolvedValue(basePreflight());
     renderApp("/books/1?chapter=2&view=reading");
     const entry = await screen.findByTestId("pro-native-overview-entry-free");
-    expect(entry).toHaveTextContent("Pro 原生全书概览");
+    expect(entry).toHaveTextContent("原生全书概览");
     await fireEvent.click(entry);
-    const prompt = await screen.findByTestId("pro-native-overview-upgrade-prompt");
-    expect(prompt).toHaveTextContent("Pro 原生全书概览");
-    expect(prompt).toHaveTextContent("章节聚合洞察");
+    expect(await screen.findByTestId("pro-native-overview-preflight")).toBeInTheDocument();
+    expect(screen.queryByTestId("pro-native-overview-upgrade-prompt")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("pro-native-overview-upgrade")).not.toBeInTheDocument();
+    await waitFor(() => expect(preflightSpy).toHaveBeenCalled());
     expect(createSpy).not.toHaveBeenCalled();
-    expect(preflightSpy).not.toHaveBeenCalled();
   });
 
   it("shows complete preflight + consent with Fixture engine labeling", async () => {
-    stubEntitlements(true);
+    stubEntitlements(false);
     preflightSpy.mockResolvedValue(basePreflight());
     renderApp("/books/1/pro-native-overview");
     const panel = await screen.findByTestId("pro-native-overview-preflight");
@@ -367,10 +369,15 @@ describe("Pro Native Overview UI (STEP 2.3-C)", () => {
       "当前为行走骨架验证，不调用真实 AI Provider。",
     );
     expect(screen.getByTestId("pro-native-overview-consent")).toBeInTheDocument();
+    expect(screen.getByTestId("pro-native-overview-consent")).toHaveTextContent(
+      "第三方模型",
+    );
     expect(screen.getByTestId("pro-native-overview-start")).toBeDisabled();
     expect(screen.getByTestId("pro-native-overview-product-distinction")).toHaveTextContent(
       "章节聚合洞察",
     );
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("原生全书概览");
+    expect(screen.getByRole("heading", { level: 1 })).not.toHaveTextContent("Pro 原生全书概览");
   });
 
   it("labels formal engine distinctly from Fixture", async () => {
@@ -542,27 +549,27 @@ describe("Pro Native Overview UI (STEP 2.3-C)", () => {
 
   it("hides formal entry when feature flag is off", async () => {
     flagState.enabled = false;
-    stubEntitlements(true);
+    stubEntitlements(false);
     renderApp("/books/1?chapter=2&view=reading");
-    await screen.findByTestId("whole-book-insights-entry-pro");
+    await screen.findByTestId("whole-book-insights-entry-free");
     expect(screen.queryByTestId("pro-native-overview-entry-pro")).not.toBeInTheDocument();
     expect(screen.queryByTestId("pro-native-overview-entry-free")).not.toBeInTheDocument();
   });
 
   it("flag-off direct URL shows feature disabled, not white screen", async () => {
     flagState.enabled = false;
-    stubEntitlements(true);
+    stubEntitlements(false);
     renderApp("/books/1/pro-native-overview");
     const page = await screen.findByTestId("pro-native-overview-feature-disabled");
     expect(page).toHaveTextContent("功能未启用");
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Pro 原生全书概览");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("原生全书概览");
   });
 
   it("book workspace still renders with overview entry (no white screen)", async () => {
-    stubEntitlements(true);
+    stubEntitlements(false);
     renderApp("/books/1?chapter=2&view=reading");
-    expect(await screen.findByTestId("pro-native-overview-entry-pro")).toBeInTheDocument();
-    expect(screen.getByTestId("whole-book-insights-entry-pro")).toBeInTheDocument();
+    expect(await screen.findByTestId("pro-native-overview-entry-free")).toBeInTheDocument();
+    expect(screen.getByTestId("whole-book-insights-entry-free")).toBeInTheDocument();
     expect(document.body.textContent?.trim().length).toBeGreaterThan(0);
   });
 

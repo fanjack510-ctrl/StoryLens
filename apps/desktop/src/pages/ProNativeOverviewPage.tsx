@@ -1,9 +1,8 @@
 import { useMemo, useState } from "react";
-import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ErrorState, Loading } from "../components/common/States";
 import { ProNativeOverviewResult } from "../components/proNativeOverview/ProNativeOverviewResult";
-import { useProductEdition } from "../hooks/useProductEdition";
 import { ApiError } from "../services/apiClient";
 import { booksApi } from "../services/booksApi";
 import {
@@ -25,8 +24,9 @@ import {
   overviewStageLabel,
 } from "../services/proNativeOverviewStages";
 
-const PAGE_TITLE = "Pro 原生全书概览";
-const PAGE_SUBTITLE = "基于完整小说原文的原生整书概览";
+const PAGE_TITLE = "原生全书概览";
+const PAGE_SUBTITLE =
+  "直接分析完整小说原文，不需要提前完成全部单章分析。StoryLens 功能免费；第三方模型 API 费用由用户账户承担。";
 const MODE_LABEL = "原生整书";
 
 function blockingMessage(item: PreflightBlockingError | string): string {
@@ -236,10 +236,10 @@ function PreflightPanel({
           onChange={(event) => setConsented(event.target.checked)}
         />
         <span>
-          我确认启动「Pro 原生全书概览」，并了解预估 Token（
+          我确认启动「原生全书概览」，并了解预估 Token（
           {formatTokens(preflight.estimated_tokens)}）与费用（
-          {formatMoney(preflight.estimated_cost, currency)}），以及当前 Engine 为{" "}
-          {engine.label}。
+          {formatMoney(preflight.estimated_cost, currency)}）将由第三方模型
+          Provider 账户承担，以及当前 Engine 为 {engine.label}。
         </span>
       </label>
 
@@ -393,13 +393,10 @@ function ProgressPanel({
 
 export function ProNativeOverviewPage() {
   const params = useParams();
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const bookId = Number(params.bookId || 0);
   const runId = searchParams.get("run_id");
-  const edition = useProductEdition();
-  const isPro = edition.loaded && edition.is_pro;
   const flagOn = isProNativeOverviewUiEnabled();
   const [startError, setStartError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -413,14 +410,14 @@ export function ProNativeOverviewPage() {
   const preflight = useQuery({
     queryKey: ["pro-native-overview-preflight", bookId],
     queryFn: () => proNativeOverviewApi.preflight(bookId),
-    enabled: bookId > 0 && flagOn && isPro && !runId,
+    enabled: bookId > 0 && flagOn && !runId,
     retry: false,
   });
 
   const runQuery = useQuery({
     queryKey: ["pro-native-overview-run", runId],
     queryFn: () => proNativeOverviewApi.getRun(runId!),
-    enabled: Boolean(runId) && flagOn && isPro,
+    enabled: Boolean(runId) && flagOn,
     retry: false,
     refetchInterval: (query) => {
       const status = query.state.data?.status;
@@ -435,11 +432,7 @@ export function ProNativeOverviewPage() {
   const overviewQuery = useQuery({
     queryKey: ["pro-native-overview-result", runId],
     queryFn: () => proNativeOverviewApi.getOverview(runId!),
-    enabled:
-      Boolean(runId) &&
-      flagOn &&
-      isPro &&
-      runQuery.data?.status === "completed",
+    enabled: Boolean(runId) && flagOn && runQuery.data?.status === "completed",
     retry: false,
   });
 
@@ -536,32 +529,15 @@ export function ProNativeOverviewPage() {
         <h1>{PAGE_TITLE}</h1>
         <ErrorPanel
           code="FEATURE_DISABLED"
-          message="Pro 原生全书概览功能未启用（UI feature flag 关闭）。"
+          message="原生全书概览功能未启用（UI feature flag 关闭）。正式版本启用前不可用。"
         />
         {backLink}
       </section>
     );
   }
 
-  if (!edition.loaded || book.isLoading || (!runId && isPro && preflight.isLoading)) {
+  if (book.isLoading || (!runId && preflight.isLoading)) {
     return <Loading />;
-  }
-
-  if (!isPro) {
-    return (
-      <section className="pro-native-overview-page" data-testid="pro-native-overview-upgrade">
-        <h1>{PAGE_TITLE}</h1>
-        <p className="muted">{PAGE_SUBTITLE}</p>
-        <ErrorPanel
-          code="PRO_REQUIRED"
-          message="Pro 原生全书概览为 StoryLens Pro 功能。激活专业版授权后可使用。此入口与「章节聚合洞察」不同。"
-        />
-        <button type="button" className="primary" onClick={() => navigate("/settings")}>
-          查看授权说明
-        </button>
-        {backLink}
-      </section>
-    );
   }
 
   if (!runId && preflight.isError) {
@@ -596,7 +572,7 @@ export function ProNativeOverviewPage() {
           <p className="muted">{PAGE_SUBTITLE}</p>
           <p className="muted">{book.data?.title || `书籍 #${bookId}`}</p>
           <p className="muted" data-testid="pro-native-overview-product-distinction">
-            本页是「Pro 原生全书概览」，不是「章节聚合洞察」。
+            本页是「原生全书概览」，不是「章节聚合洞察」。
           </p>
         </div>
         {backLink}
