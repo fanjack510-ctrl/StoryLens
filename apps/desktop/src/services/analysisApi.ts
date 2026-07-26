@@ -1,4 +1,4 @@
-import { api, ApiError, getApiBase } from "./apiClient";
+import { api, ApiError, getApiBase, waitForApiReady } from "./apiClient";
 import { normalizeInvocations } from "./normalizeInvocations";
 import type { Run, RunResults, Scene, SceneParagraphs, SceneResultItem } from "../types";
 export const analysisApi = {
@@ -6,6 +6,8 @@ export const analysisApi = {
     method: "POST", body: JSON.stringify(payload),
   }),
   runs: async (params?: { book_id?: number }) => {
+    // Wait for Sidecar base before starting the list timeout clock.
+    await waitForApiReady(60_000);
     const LIST_TIMEOUT_MS = 10_000;
     const qs =
       params?.book_id != null && Number.isFinite(params.book_id)

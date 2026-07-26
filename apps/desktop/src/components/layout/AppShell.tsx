@@ -1,8 +1,13 @@
+import { useEffect, useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useAppVersion } from "../../lib/useAppVersion";
 import { useProductEdition } from "../../hooks/useProductEdition";
-import { api } from "../../services/apiClient";
+import { api, onApiBaseChange } from "../../services/apiClient";
+import {
+  formatRuntimeFingerprint,
+  getRuntimeFingerprint,
+} from "../../services/runtimeFingerprint";
 import { isLocalWebShell, useRuntimeInfo } from "../../services/runtimeCapabilities";
 import { useUiStore } from "../../stores/uiStore";
 import { DocumentTitleSync } from "../product/DocumentTitleSync";
@@ -38,6 +43,15 @@ export function AppShell() {
   const theme = useUiStore((s) => s.theme);
   const runtime = useRuntimeInfo();
   const webShell = isLocalWebShell(runtime.data);
+  const [devFingerprint, setDevFingerprint] = useState(() =>
+    import.meta.env.DEV ? formatRuntimeFingerprint() : "",
+  );
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    const refresh = () => setDevFingerprint(formatRuntimeFingerprint(getRuntimeFingerprint()));
+    refresh();
+    return onApiBaseChange(() => refresh());
+  }, []);
   const health = useQuery({
     queryKey: ["health"],
     queryFn: () => api<Record<string, string>>("/health"),
@@ -48,6 +62,7 @@ export function AppShell() {
     health.isSuccess ? "后端：已连接" : health.isLoading || health.isFetching ? "后端：连接中" : "后端：离线",
     health.data?.database ? `DB ${health.data.database}` : null,
     runtime.data?.runtime_mode ? `mode ${runtime.data.runtime_mode}` : null,
+    import.meta.env.DEV ? `fp ${getRuntimeFingerprint().publicHead}` : null,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -134,6 +149,15 @@ export function AppShell() {
           <p className="nav-version" data-testid="app-footer">
             {webShell ? "本地网页版" : "StoryLens"} · {appVersion}
           </p>
+          {import.meta.env.DEV && devFingerprint ? (
+            <p
+              className="nav-dev-fingerprint"
+              data-testid="runtime-dev-fingerprint"
+              title={getRuntimeFingerprint().apiBase}
+            >
+              {devFingerprint}
+            </p>
+          ) : null}
         </div>
       </aside>
       <main>

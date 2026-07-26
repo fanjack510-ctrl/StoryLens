@@ -1,3 +1,10 @@
+/**
+ * Single Sidecar API base URL source of truth for desktop.
+ *
+ * All Health / Books / Tasks / Analysis / Overview traffic must go through
+ * getApiBase() after setApiBase / refreshApiBaseFromTauri.
+ */
+
 let apiBase =
   typeof import.meta.env.VITE_API_BASE_URL === "string" && import.meta.env.VITE_API_BASE_URL.length > 0
     ? import.meta.env.VITE_API_BASE_URL
@@ -8,18 +15,82 @@ let apiBase =
         : "";
 
 let refreshInFlight: Promise<string | null> | null = null;
+let readyWaiters: Array<(base: string) => void> = [];
+const changeListeners = new Set<(base: string) => void>();
+
+function isTauriRuntime(): boolean {
+  return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+}
 
 export function getApiBase(): string {
   return apiBase;
 }
 
+/** True when browser-dev default is set, or Tauri/production has an injected base. */
+export function isApiBaseReady(): boolean {
+  if (import.meta.env.DEV && !isTauriRuntime()) {
+    return Boolean(apiBase);
+  }
+  // Production web shell uses same-origin relative paths (empty string).
+  if (!isTauriRuntime() && !import.meta.env.DEV) {
+    return true;
+  }
+  // Tauri must have an absolute http(s) Sidecar base.
+  return /^https?:\/\//i.test(apiBase);
+}
+
+export function onApiBaseChange(listener: (base: string) => void): () => void {
+  changeListeners.add(listener);
+  return () => {
+    changeListeners.delete(listener);
+  };
+}
+
+function notifyApiBaseChanged(next: string): void {
+  for (const listener of changeListeners) {
+    try {
+      listener(next);
+    } catch {
+      // ignore listener errors
+    }
+  }
+  if (isApiBaseReady()) {
+    const waiters = readyWaiters;
+    readyWaiters = [];
+    for (const resolve of waiters) resolve(next);
+  }
+}
+
 export function setApiBase(url: string): void {
-  apiBase = url.replace(/\/$/, "");
+  const next = url.replace(/\/$/, "");
+  if (next === apiBase) return;
+  apiBase = next;
+  notifyApiBaseChanged(apiBase);
+}
+
+/** Block until Sidecar base is usable (Tauri) or resolve immediately (browser/web). */
+export async function waitForApiReady(timeoutMs = 60_000): Promise<string> {
+  if (isApiBaseReady()) return apiBase;
+  if (!isTauriRuntime()) {
+    // Browser / Vitest: keep DEV default; production web uses "".
+    return apiBase;
+  }
+  await refreshApiBaseFromTauri();
+  if (isApiBaseReady()) return apiBase;
+  return new Promise<string>((resolve, reject) => {
+    const timer = window.setTimeout(() => {
+      reject(new ApiError("BACKEND_OFFLINE", "本地分析服务地址尚未就绪", 0, {}, undefined, true));
+    }, timeoutMs);
+    readyWaiters.push((base) => {
+      window.clearTimeout(timer);
+      resolve(base);
+    });
+  });
 }
 
 /** Re-read current Sidecar base from Tauri (no-op in browser / when already in flight). */
 export async function refreshApiBaseFromTauri(): Promise<string | null> {
-  if (typeof window === "undefined" || !("__TAURI_INTERNALS__" in window)) {
+  if (!isTauriRuntime()) {
     return apiBase || null;
   }
   if (refreshInFlight) return refreshInFlight;
@@ -82,6 +153,23 @@ function unwrapErrorPayload(payload: any): Record<string, any> {
 }
 
 export async function api<T>(path: string, options?: RequestInit): Promise<T> {
+  if (isTauriRuntime() && !isApiBaseReady()) {
+    try {
+      await waitForApiReady(15_000);
+    } catch (error) {
+      if (error instanceof ApiError) throw error;
+      throw new ApiError(
+        "BACKEND_OFFLINE",
+        "无法连接本地分析服务",
+        0,
+        { cause: "api_base_not_ready", api_base: getApiBase() },
+        undefined,
+        true,
+        "请确认 StoryLens 已完全启动；若刚打开，请稍等片刻后重试。若仍失败，请重启应用。",
+      );
+    }
+  }
+
   let response: Response;
   const attempt = async (): Promise<Response> =>
     fetch(`${getApiBase()}${path}`, {
@@ -98,7 +186,7 @@ export async function api<T>(path: string, options?: RequestInit): Promise<T> {
   } catch (first) {
     // Sidecar may have rebound to a new port after restart — refresh once.
     const refreshed = await refreshApiBaseFromTauri();
-    if (refreshed) {
+    if (refreshed && isApiBaseReady()) {
       try {
         response = await attempt();
       } catch {

@@ -1766,6 +1766,15 @@ html[data-theme="dark"] .appearance-theme-panel button.is-selected,
   font-size: 11px;
   color: #8a938c;
 }
+.app-shell-simplified .nav-dev-fingerprint {
+  margin: 0;
+  padding: 0 10px 8px;
+  font-size: 10px;
+  line-height: 1.35;
+  color: #6f7a72;
+  word-break: break-all;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
 .app-shell-simplified .app-footer-minimal {
   display: none;
 }
