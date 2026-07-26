@@ -1,9 +1,10 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ErrorState, Loading } from "../components/common/States";
 import { ProNativeOverviewResult } from "../components/proNativeOverview/ProNativeOverviewResult";
 import { ApiError } from "../services/apiClient";
+import { analysisApi } from "../services/analysisApi";
 import { booksApi } from "../services/booksApi";
 import {
   newClientRequestId,
@@ -30,6 +31,18 @@ const PAGE_SUBTITLE =
   "直接分析完整小说原文，不需要提前完成全部单章分析。StoryLens 功能免费；第三方模型 API 费用由用户账户承担。";
 const MODE_LABEL = "原生整书";
 
+const ACTIVE_OVERVIEW_STATUSES = new Set([
+  "pending",
+  "preparing",
+  "running",
+  "queued",
+  "paused",
+]);
+
+function isActiveOverviewStatus(status: string | null | undefined): boolean {
+  return Boolean(status && ACTIVE_OVERVIEW_STATUSES.has(String(status).toLowerCase()));
+}
+
 function blockingMessage(item: PreflightBlockingError | string): string {
   if (typeof item === "string") return item;
   if (item.code && item.message) return `${item.code}：${item.message}`;
@@ -48,6 +61,7 @@ function formatTokens(value: number | null | undefined): string {
 
 function mapUiErrorCode(error: unknown): string {
   if (error instanceof ApiError) {
+    if (error.code === "CREATE_TIMEOUT") return "CREATE_TIMEOUT";
     if (error.code === "BACKEND_OFFLINE" || error.status === 0) return "API_UNAVAILABLE";
     if (error.code === "PRO_LICENSE_REQUIRED") return "PRO_REQUIRED";
     if (error.code === "BOOK_CONTENT_EMPTY") return "BOOK_EMPTY";
@@ -145,11 +159,15 @@ function PreflightPanel({
   starting,
   onStart,
   startError,
+  activeRunId,
+  onViewActiveRun,
 }: {
   preflight: ProNativeOverviewPreflight;
   starting: boolean;
   onStart: () => void;
   startError: string | null;
+  activeRunId?: string | null;
+  onViewActiveRun?: () => void;
 }) {
   const [consented, setConsented] = useState(false);
   const binding = resolveCreateBinding(preflight);
@@ -238,31 +256,47 @@ function PreflightPanel({
         <p className="muted">无阻塞错误</p>
       )}
 
-      <label className="consent" data-testid="pro-native-overview-consent">
-        <input
-          type="checkbox"
-          checked={consented}
-          data-testid="pro-native-overview-consent-checkbox"
-          onChange={(event) => setConsented(event.target.checked)}
-        />
-        <span>
-          我确认启动「原生全书概览」，并了解预估 Token（
-          {formatTokens(preflight.estimated_tokens)}）与费用（
-          {formatMoney(preflight.estimated_cost, currency)}）将由第三方模型
-          Provider 账户承担，以及当前 Engine 为 {engine.label}。
-        </span>
-      </label>
+      {activeRunId ? (
+        <div className="notice" data-testid="pro-native-overview-active-run">
+          <p>已有进行中的原生全书概览任务 #{activeRunId}。</p>
+          <button
+            type="button"
+            className="primary"
+            data-testid="pro-native-overview-view-active"
+            onClick={onViewActiveRun}
+          >
+            查看任务
+          </button>
+        </div>
+      ) : (
+        <>
+          <label className="consent" data-testid="pro-native-overview-consent">
+            <input
+              type="checkbox"
+              checked={consented}
+              data-testid="pro-native-overview-consent-checkbox"
+              onChange={(event) => setConsented(event.target.checked)}
+            />
+            <span>
+              我确认启动「原生全书概览」，并了解预估 Token（
+              {formatTokens(preflight.estimated_tokens)}）与费用（
+              {formatMoney(preflight.estimated_cost, currency)}）将由第三方模型
+              Provider 账户承担，以及当前 Engine 为 {engine.label}。
+            </span>
+          </label>
 
-      {startError ? <p data-testid="pro-native-overview-start-error">{startError}</p> : null}
-      <button
-        type="button"
-        className="primary"
-        data-testid="pro-native-overview-start"
-        disabled={!canStart || starting}
-        onClick={onStart}
-      >
-        {starting ? "启动中…" : "开始原生全书概览"}
-      </button>
+          {startError ? <p data-testid="pro-native-overview-start-error">{startError}</p> : null}
+          <button
+            type="button"
+            className="primary"
+            data-testid="pro-native-overview-start"
+            disabled={!canStart || starting}
+            onClick={onStart}
+          >
+            {starting ? "启动中…" : "开始原生全书概览"}
+          </button>
+        </>
+      )}
     </section>
   );
 }
@@ -416,6 +450,7 @@ export function ProNativeOverviewPage() {
   const flagOn = isProNativeOverviewUiEnabled();
   const [startError, setStartError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const createRequestIdRef = useRef<string | null>(null);
 
   const book = useQuery({
     queryKey: ["book", bookId],
@@ -429,6 +464,23 @@ export function ProNativeOverviewPage() {
     enabled: bookId > 0 && flagOn && !runId,
     retry: false,
   });
+
+  const bookRuns = useQuery({
+    queryKey: ["runs", "native-overview", bookId],
+    queryFn: () => analysisApi.runs({ book_id: bookId }),
+    enabled: bookId > 0 && flagOn && !runId,
+    retry: false,
+  });
+
+  const activeOverviewRunId = useMemo(() => {
+    const rows = bookRuns.data || [];
+    const active = rows.find(
+      (run) =>
+        (run.task_type === "whole_book_overview" || run.subject_type === "book") &&
+        isActiveOverviewStatus(run.status),
+    );
+    return active ? String(active.id) : null;
+  }, [bookRuns.data]);
 
   const runQuery = useQuery({
     queryKey: ["pro-native-overview-run", runId],
@@ -456,10 +508,14 @@ export function ProNativeOverviewPage() {
     mutationFn: async () => {
       const pf = preflight.data;
       const binding = resolveCreateBinding(pf);
-      return proNativeOverviewApi.createRun(bookId, {
+      const CREATE_TIMEOUT_MS = 15_000;
+      if (!createRequestIdRef.current) {
+        createRequestIdRef.current = newClientRequestId();
+      }
+      const createPromise = proNativeOverviewApi.createRun(bookId, {
         provider_id: binding.provider_id,
         model_id: binding.model_id,
-        client_request_id: newClientRequestId(),
+        client_request_id: createRequestIdRef.current,
         consent: {
           estimated_tokens: pf?.estimated_tokens ?? 0,
           estimated_cost: pf?.estimated_cost ?? 0,
@@ -467,9 +523,31 @@ export function ProNativeOverviewPage() {
           confirmed: true,
         },
       });
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timer = setTimeout(() => {
+          reject(
+            new ApiError(
+              "CREATE_TIMEOUT",
+              "创建任务超时：服务未在合理时间内返回 Run ID。请重试或前往任务中心查看是否已创建。",
+              0,
+              {},
+              undefined,
+              true,
+              "请稍后重试；若任务中心已有运行中任务，请打开该任务。",
+            ),
+          );
+        }, CREATE_TIMEOUT_MS);
+      });
+      try {
+        return await Promise.race([createPromise, timeoutPromise]);
+      } finally {
+        if (timer) clearTimeout(timer);
+      }
     },
     onSuccess: (created) => {
       setStartError(null);
+      createRequestIdRef.current = null;
       setSearchParams(
         (prev) => {
           const next = new URLSearchParams(prev);
@@ -484,6 +562,9 @@ export function ProNativeOverviewPage() {
       setStartError(
         error instanceof Error ? `${code}：${error.message}` : String(error),
       );
+    },
+    onSettled: () => {
+      // Ensure React Query clears isPending even if callers forget branches.
     },
   });
 
@@ -600,6 +681,18 @@ export function ProNativeOverviewPage() {
           starting={createMutation.isPending}
           onStart={() => createMutation.mutate()}
           startError={startError}
+          activeRunId={activeOverviewRunId}
+          onViewActiveRun={() => {
+            if (!activeOverviewRunId) return;
+            setSearchParams(
+              (prev) => {
+                const next = new URLSearchParams(prev);
+                next.set("run_id", activeOverviewRunId);
+                return next;
+              },
+              { replace: true },
+            );
+          }}
         />
       ) : null}
 

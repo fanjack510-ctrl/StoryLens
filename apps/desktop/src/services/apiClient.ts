@@ -7,12 +7,38 @@ let apiBase =
         ? "http://127.0.0.1:8000"
         : "";
 
+let refreshInFlight: Promise<string | null> | null = null;
+
 export function getApiBase(): string {
   return apiBase;
 }
 
 export function setApiBase(url: string): void {
   apiBase = url.replace(/\/$/, "");
+}
+
+/** Re-read current Sidecar base from Tauri (no-op in browser / when already in flight). */
+export async function refreshApiBaseFromTauri(): Promise<string | null> {
+  if (typeof window === "undefined" || !("__TAURI_INTERNALS__" in window)) {
+    return apiBase || null;
+  }
+  if (refreshInFlight) return refreshInFlight;
+  refreshInFlight = (async () => {
+    try {
+      const { invoke } = await import("@tauri-apps/api/core");
+      const next = await invoke<string>("get_api_base");
+      if (typeof next === "string" && next.trim()) {
+        setApiBase(next.trim());
+        return apiBase;
+      }
+    } catch {
+      // keep previous base
+    } finally {
+      refreshInFlight = null;
+    }
+    return apiBase || null;
+  })();
+  return refreshInFlight;
 }
 
 export class ApiError extends Error {
@@ -57,8 +83,8 @@ function unwrapErrorPayload(payload: any): Record<string, any> {
 
 export async function api<T>(path: string, options?: RequestInit): Promise<T> {
   let response: Response;
-  try {
-    response = await fetch(`${getApiBase()}${path}`, {
+  const attempt = async (): Promise<Response> =>
+    fetch(`${getApiBase()}${path}`, {
       ...options,
       headers: {
         ...(options?.body instanceof FormData
@@ -67,16 +93,36 @@ export async function api<T>(path: string, options?: RequestInit): Promise<T> {
         ...options?.headers,
       },
     });
-  } catch {
-    throw new ApiError(
-      "BACKEND_OFFLINE",
-      "无法连接本地分析服务",
-      0,
-      {},
-      undefined,
-      true,
-      "请确认 StoryLens 已完全启动；若刚打开，请稍等片刻后重试。若仍失败，请重启应用。",
-    );
+  try {
+    response = await attempt();
+  } catch (first) {
+    // Sidecar may have rebound to a new port after restart — refresh once.
+    const refreshed = await refreshApiBaseFromTauri();
+    if (refreshed) {
+      try {
+        response = await attempt();
+      } catch {
+        throw new ApiError(
+          "BACKEND_OFFLINE",
+          "无法连接本地分析服务",
+          0,
+          { cause: first instanceof Error ? first.name : "fetch_failed", api_base: getApiBase() },
+          undefined,
+          true,
+          "请确认 StoryLens 已完全启动；若刚打开，请稍等片刻后重试。若仍失败，请重启应用。",
+        );
+      }
+    } else {
+      throw new ApiError(
+        "BACKEND_OFFLINE",
+        "无法连接本地分析服务",
+        0,
+        { cause: first instanceof Error ? first.name : "fetch_failed", api_base: getApiBase() },
+        undefined,
+        true,
+        "请确认 StoryLens 已完全启动；若刚打开，请稍等片刻后重试。若仍失败，请重启应用。",
+      );
+    }
   }
   if (!response.ok) {
     let payload: any = {};

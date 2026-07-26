@@ -299,6 +299,9 @@ export type SceneParagraphs = {
 export type Run = {
   id: number;
   subject_id: string;
+  subject_type?: string;
+  task_type?: string;
+  book_id?: number | null;
   provider: string;
   model: string;
   status: string;

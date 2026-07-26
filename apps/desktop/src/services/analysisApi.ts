@@ -1,11 +1,40 @@
-import { api, getApiBase } from "./apiClient";
+import { api, ApiError, getApiBase } from "./apiClient";
 import { normalizeInvocations } from "./normalizeInvocations";
 import type { Run, RunResults, Scene, SceneParagraphs, SceneResultItem } from "../types";
 export const analysisApi = {
   preflight: (payload: any) => api<any>("/api/v1/analysis-runs/preflight", {
     method: "POST", body: JSON.stringify(payload),
   }),
-  runs: () => api<Run[]>("/api/v1/analysis-runs"),
+  runs: async (params?: { book_id?: number }) => {
+    const LIST_TIMEOUT_MS = 10_000;
+    const qs =
+      params?.book_id != null && Number.isFinite(params.book_id)
+        ? `?book_id=${encodeURIComponent(String(params.book_id))}`
+        : "";
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      return await Promise.race([
+        api<Run[]>(`/api/v1/analysis-runs${qs}`),
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(() => {
+            reject(
+              new ApiError(
+                "TASK_LIST_TIMEOUT",
+                "任务列表加载超时，请重试。",
+                0,
+                {},
+                undefined,
+                true,
+                "请稍后重试；若刚启动应用，请等待本地服务就绪。",
+              ),
+            );
+          }, LIST_TIMEOUT_MS);
+        }),
+      ]);
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  },
   run: (id: number) => api<Run>(`/api/v1/analysis-runs/${id}`),
   results: (runId: number) =>
     api<RunResults>(`/api/v1/analysis-runs/${runId}/results`),

@@ -20,8 +20,13 @@ function serviceLabel(health: {
   isFetching: boolean;
   isSuccess: boolean;
   isError: boolean;
+  failureCount: number;
 }): { text: string; tone: "ok" | "off" | "pending" } {
-  if (health.isSuccess) return { text: "本地服务正常", tone: "ok" };
+  // Prefer live error over a stale prior success (Sidecar bounce / port change).
+  if (health.isError && health.failureCount > 0 && !health.isFetching) {
+    return { text: "本地服务离线", tone: "off" };
+  }
+  if (health.isSuccess && !health.isError) return { text: "本地服务正常", tone: "ok" };
   if (health.isLoading || health.isFetching) return { text: "正在连接", tone: "pending" };
   return { text: "本地服务离线", tone: "off" };
 }

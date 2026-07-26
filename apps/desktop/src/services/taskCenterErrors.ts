@@ -12,11 +12,31 @@ export type TaskCenterErrorView = {
 /** Map task-list failures without collapsing business errors into "offline". */
 export function mapTaskCenterError(error: unknown): TaskCenterErrorView {
   if (error instanceof ApiError) {
-    if (error.code === "BACKEND_OFFLINE" || error.status === 0) {
+    if (error.code === "TASK_LIST_TIMEOUT") {
+      return {
+        code: "TASK_LIST_TIMEOUT",
+        title: "无法读取数据",
+        message: error.message || "任务列表加载超时，请重试。",
+        httpStatus: 0,
+        requestId: error.requestId,
+        retryable: true,
+      };
+    }
+    if (error.code === "BACKEND_OFFLINE") {
       return {
         code: "LOCAL_SERVICE_UNAVAILABLE",
         title: "无法读取数据",
         message: "无法连接本地分析服务",
+        httpStatus: 0,
+        requestId: error.requestId,
+        retryable: true,
+      };
+    }
+    if (error.status === 0) {
+      return {
+        code: "NETWORK_UNREACHABLE",
+        title: "无法读取数据",
+        message: error.message || "网络不可达，无法连接本地分析服务",
         httpStatus: 0,
         requestId: error.requestId,
         retryable: true,

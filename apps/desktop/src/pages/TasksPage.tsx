@@ -291,8 +291,11 @@ export function TasksPage() {
   const qc = useQueryClient();
   const runs = useQuery({
     queryKey: ["runs"],
-    queryFn: analysisApi.runs,
+    queryFn: () => analysisApi.runs(),
     refetchInterval: 5000,
+    retry: 1,
+    // Avoid infinite spinner if a request stalls; surface error/empty instead.
+    networkMode: "always",
   });
 
   useEffect(() => {
@@ -306,6 +309,13 @@ export function TasksPage() {
     await qc.invalidateQueries({ queryKey: ["runs"] });
   };
   const openChapterProgress = async (run: any) => {
+    if (run.task_type === "whole_book_overview" || run.subject_type === "book") {
+      const bookId = Number(run.book_id || run.subject_id);
+      if (Number.isFinite(bookId) && bookId > 0) {
+        navigate(`/books/${bookId}/pro-native-overview?run_id=${run.id}`);
+        return;
+      }
+    }
     const chapterId = Number(run.subject_id);
     if (!Number.isFinite(chapterId) || chapterId <= 0) {
       setDetail(run);
@@ -335,6 +345,13 @@ export function TasksPage() {
     run: any,
     tab: "reader-journey" | "analysis" = "analysis",
   ) => {
+    if (run.task_type === "whole_book_overview" || run.subject_type === "book") {
+      const bookId = Number(run.book_id || run.subject_id);
+      if (Number.isFinite(bookId) && bookId > 0) {
+        navigate(`/books/${bookId}/pro-native-overview?run_id=${run.id}`);
+        return;
+      }
+    }
     const chapterId = Number(run.subject_id);
     if (!Number.isFinite(chapterId) || chapterId <= 0) {
       setDetail(run);
@@ -540,6 +557,8 @@ export function TasksPage() {
 
   const statusLabel: Record<string, string> = {
     queued: "排队中",
+    pending: "排队中",
+    preparing: "准备中",
     running: "进行中",
     boundary_candidates_running: "正在生成边界候选",
     awaiting_boundary_review: "等待边界审阅",
@@ -553,14 +572,29 @@ export function TasksPage() {
     failed_structural: "结构校验失败",
     failed_provider: "服务请求失败",
     succeeded: "已完成",
+    completed: "已完成",
     cancelled: "已取消",
     review_cancelled: "已取消",
     review_expired: "审阅已过期",
     failed: "失败",
   };
+  const overviewUserError = (run: any): string | null => {
+    const code = run?.error_code || run?.root_error_code;
+    if (code === "PROVIDER_OUTPUT_INVALID") {
+      return "模型返回的分析结果格式不符合要求，任务未完成。";
+    }
+    if (code === "PROVIDER_OUTPUT_EMPTY") {
+      return "模型返回空结果，任务未完成。";
+    }
+    return null;
+  };
   const runStatusLabel = (run: any) => {
     if (isBudgetPauseRun(run)) return "分析已暂停";
     if (run.status === "awaiting_provider_recovery") return "分析已暂停";
+    if (run.task_type === "whole_book_overview" || run.subject_type === "book") {
+      if (run.status === "completed") return "已完成";
+      if (run.status === "failed") return "失败";
+    }
     if (run.status === "succeeded") {
       if (run.chapter_complete === true) return "已完成";
       if (run.effective_status === "journey_running" || run.journey_status) {
@@ -605,7 +639,10 @@ export function TasksPage() {
         );
       }
       if (statusFilter === "succeeded") {
-        return run.status === "succeeded" && run.chapter_complete === true;
+        return (
+          (run.status === "succeeded" && run.chapter_complete === true) ||
+          run.status === "completed"
+        );
       }
       if (statusFilter === "cancelled") {
         return run.status === "cancelled" || run.status === "review_cancelled";
@@ -962,7 +999,50 @@ export function TasksPage() {
                 <h3>错误信息</h3>
                 <dl>
                   <dt>错误说明</dt>
-                  <dd>{detail.root_error_message || detail.error_message || "无"}</dd>
+                  <dd>
+                    {overviewUserError(detail) ||
+                      detail.error_message ||
+                      detail.root_error_message ||
+                      "无"}
+                  </dd>
+                  {detail.root_error_message &&
+                  detail.root_error_message !== detail.error_message ? (
+                    <>
+                      <dt>开发者详情</dt>
+                      <dd>{detail.root_error_message}</dd>
+                    </>
+                  ) : null}
+                  {detail.failed_stage ? (
+                    <>
+                      <dt>失败阶段</dt>
+                      <dd>{detail.failed_stage}</dd>
+                    </>
+                  ) : null}
+                  {(detail.task_type === "whole_book_overview" ||
+                    detail.subject_type === "book") &&
+                  detail.failed_scene_index != null ? (
+                    <>
+                      <dt>失败窗口</dt>
+                      <dd>#{detail.failed_scene_index}</dd>
+                    </>
+                  ) : null}
+                  {(detail.task_type === "whole_book_overview" ||
+                    detail.subject_type === "book") ? (
+                    <>
+                      <dt>Provider</dt>
+                      <dd>{detail.provider || "无"}</dd>
+                      <dt>Model</dt>
+                      <dd>{detail.model || "无"}</dd>
+                      <dt>是否执行 Repair</dt>
+                      <dd>
+                        {detail.failed_invocation?.repair_attempted === true
+                          ? "是"
+                          : detail.failed_invocation
+                            ? "否"
+                            : "未知"}
+                      </dd>
+                    </>
+                  ) : null}
                   {detail.validation_error_code ? (
                     <>
                       <dt>校验码</dt>
