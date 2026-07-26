@@ -35,6 +35,12 @@
       "message": "docs: mark CHG-20260726-004 implemented with STEP 2.5R evidence",
       "primary": false,
       "multi_change_reason": "STEP 2.5R registry mark"
+    },
+    {
+      "sha": "b6c690361a3be167f813b1f52bfe3ae84c93cf5f",
+      "message": "docs(evidence): stamp CHG-004 heads on G6 free entitlement supplement",
+      "primary": false,
+      "multi_change_reason": "STEP 2.5R supplement HEAD stamp"
     }
   ],
   "modules": [],
@@ -73,5 +79,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-26T02:22:00Z",
-  "updated_at": "2026-07-26T02:28:28Z"
+  "updated_at": "2026-07-26T02:28:57Z"
 }
