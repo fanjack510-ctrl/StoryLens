@@ -3,8 +3,16 @@
 **Change:** CHG-20260726-004  
 **Gate:** Free Entitlement Supplement to STEP 2.G6  
 **Started:** 2026-07-26T10:20:00+08:00  
-**Finished:** 2026-07-26T10:35:00+08:00  
+**Finished:** 2026-07-26T10:40:00+08:00  
 **Verdict:** PASSED
+
+```text
+Supplement Public HEAD (after CHG-004 commits)：
+50058fe13c2c154d2edd7aeb650203ba61bdfe67
+
+Private HEAD (unchanged)：
+48072775773a09f4dc849096ba314e4fa0487c58
+```
 
 ## Original Gate (unchanged historical evidence)
 
