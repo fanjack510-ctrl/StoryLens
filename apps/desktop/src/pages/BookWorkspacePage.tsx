@@ -17,7 +17,6 @@ import {
 import { useUiStore } from "../stores/uiStore";
 import { Empty, ErrorState, Loading, Badge } from "../components/common/States";
 import { StateView } from "../components/ui/StateView";
-import { StartAnalysisDialog } from "../components/analysis/StartAnalysisDialog";
 import { ReparseDialog } from "../components/books/ReparseDialog";
 import { ChapterListViewport } from "../components/books/ChapterListViewport";
 import { ChapterAdjacentNav } from "../components/books/ChapterAdjacentNav";
@@ -43,7 +42,6 @@ export function BookWorkspacePage() {
   const [chapter, setChapter] = useState(chapterFromUrl || 0);
   const [selectedScene, setScene] = useState<any>();
   const [evidence, setEvidence] = useState<string[]>([]);
-  const [dialog, setDialog] = useState(false);
   const [offset, setOffset] = useState(0);
   const [loaded, setLoaded] = useState<any[]>([]);
   const [displayedChapterId, setDisplayedChapterId] = useState(0);
@@ -313,13 +311,6 @@ export function BookWorkspacePage() {
             行距
           </button>
           <button onClick={() => setEvidence([])}>完整正文</button>
-          <button
-            className="primary"
-            onClick={() => setDialog(true)}
-            disabled={!chapter}
-          >
-            开始分析
-          </button>
         </div>
 
         <div
@@ -492,15 +483,6 @@ export function BookWorkspacePage() {
         </div>
       </aside>
 
-      {dialog && (
-        <StartAnalysisDialog
-          chapterId={chapter}
-          onClose={() => setDialog(false)}
-          onCreated={(runId) => {
-            location.href = `/tasks?run_id=${runId}`;
-          }}
-        />
-      )}
       {reparseOpen && (
         <ReparseDialog
           bookId={bookId}
