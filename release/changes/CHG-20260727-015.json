@@ -64,7 +64,7 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-26T18:25:21Z",
-  "updated_at": "2026-07-26T18:58:23Z",
+  "updated_at": "2026-07-26T19:13:10Z",
   "verification": {
     "method": "temp DB copy + Fake pytest/vitest + PowerShell zero-cost verify",
     "script": "release/evidence/CHG-20260727-015/verify-native-result-presentation.ps1",
@@ -74,7 +74,8 @@
     "installer_builds": 0,
     "notes": "Reuses Run #14 Artifact #38; no rematerialize",
     "release_scope": "deferred / not included in 1.1.0",
-    "deferral_reason": "正式投影结果仍存在中文化、产品化、栏目完整性和可读性问题，不满足普通用户发布标准。"
+    "deferral_reason": "正式投影结果仍存在中文化、产品化、栏目完整性和可读性问题，不满足普通用户发布标准。",
+    "included_in_1_1_0": false
   },
   "release_notes": {}
 }

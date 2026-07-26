@@ -3,7 +3,7 @@
   "title": "Hide native overview from single-chapter 1.1.0 release scope",
   "type": "improvement",
   "base_version": "1.0.5",
-  "status": "tested",
+  "status": "verified",
   "include_in_next_release": true,
   "commits": [
     {
@@ -55,7 +55,8 @@
     "release/evidence/CHG-20260727-016/verify-single-chapter-release-scope.ps1"
   ],
   "verification_evidence": [
-    "release/evidence/CHG-20260727-016/verification-summary.txt"
+    "release/evidence/CHG-20260727-016/verification-summary.txt",
+    "release/evidence/RC7/single-chapter-release-verification.md"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -72,5 +73,15 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-26T18:43:19Z",
-  "updated_at": "2026-07-26T19:00:45Z"
+  "updated_at": "2026-07-26T19:13:11Z",
+  "verification": {
+    "method": "zero-cost PowerShell + Vitest/pytest + product scope acceptance for single-chapter release",
+    "script": "release/evidence/CHG-20260727-016/verify-single-chapter-release-scope.ps1",
+    "real_provider_calls": 0,
+    "formal_db_writes": 0,
+    "new_runs_created": 0,
+    "installer_builds": 0,
+    "rc7_scope": "included in 1.1.0-rc.7 single-chapter release",
+    "notes": "Native overview / chapter aggregate / independent journey entries hidden; create blocked; chapter re-entry preserved."
+  }
 }
