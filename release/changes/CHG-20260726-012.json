@@ -1,0 +1,45 @@
+{
+  "id": "CHG-20260726-012",
+  "title": "Extend Native Overview live provider timeout to 180s",
+  "type": "fix",
+  "base_version": "1.0.5",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "apps/api"
+  ],
+  "files": [
+    "apps/api/app/narrative_core/services/native_overview_live_transport.py",
+    "apps/api/tests/test_native_overview_live_timeout_local.py"
+  ],
+  "user_summary": "将 Native Overview Live Transport 默认超时从 90 秒提高到 180 秒，降低长输出窗口 ReadTimeout。",
+  "technical_summary": "Raise AliyunNativeOverviewTransport.timeout_seconds 90→180 only; httpx connect stays 30; max_auto_retries and max_output_tokens unchanged.",
+  "acceptance_criteria": [
+    "Native timeout_seconds=180; httpx connect=30 read/write=180 pool=30; explicit 60 override works; other feature timeouts unchanged; W3 single-window Live script ready"
+  ],
+  "tests": [
+    "apps/api/tests/test_native_overview_live_timeout_local.py (5 passed)"
+  ],
+  "verification_evidence": [
+    "release/evidence/CHG-20260726-012/part-a-parameter-check.json",
+    "release/evidence/CHG-20260726-012/w3-fingerprint.json",
+    "release/evidence/CHG-20260726-012/verify-timeout-window-once.ps1"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-26T15:34:12Z",
+  "updated_at": "2026-07-26T15:38:46Z"
+}

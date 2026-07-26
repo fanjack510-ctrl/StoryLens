@@ -1,0 +1,13 @@
+{
+  "native_timeout_seconds": 180,
+  "httpx_connect": 30.0,
+  "httpx_read": 180.0,
+  "httpx_write": 180.0,
+  "httpx_pool": 30.0,
+  "max_output_tokens": 8192,
+  "max_auto_retries_class_default": 1,
+  "aliyun_public_timeout_seconds": 300,
+  "local_llama_timeout_seconds": 300,
+  "real_provider_calls": 0,
+  "passed": true
+}
