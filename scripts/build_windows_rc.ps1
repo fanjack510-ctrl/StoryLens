@@ -65,7 +65,8 @@ try {
     }
 
     Log "Install Private Engine editable into build venv"
-    & $py -m pip install -e $PrivateEnginePath
+    # --no-build-isolation: avoid flaky mirror fetches of setuptools during PEP517 isolation
+    & $py -m pip install -e $PrivateEnginePath --no-build-isolation
     if ($LASTEXITCODE) { throw "pip install private engine failed" }
     & $py -c "import storylens_private_engine; print('private_engine_ok', storylens_private_engine.__file__)"
     if ($LASTEXITCODE) { throw "private engine import failed after install" }
