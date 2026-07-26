@@ -32,6 +32,7 @@ from app.narrative_core.contracts.pro_native_overview_flags import (
     FIXTURE_DEVELOPMENT_WARNING,
     FIXTURE_ENGINE_ID,
     FIXTURE_ENGINE_VERSION,
+    PRIVATE_NATIVE_OVERVIEW_ENGINE_ID,
     is_pro_native_overview_enabled,
 )
 from app.narrative_core.contracts.whole_book_overview_fixture_hash import (
@@ -184,7 +185,9 @@ def test_preflight_native_overview(api_env):
     assert body["run_creation_enabled"] is True
     assert body["estimated_tokens"] == 0
     assert body["estimated_cost"] == 0.0
-    assert FIXTURE_DEVELOPMENT_WARNING in body["warnings"]
+    # Product HTTP preflight defaults to Private (Fixture is explicit opt-in only).
+    assert body.get("engine_id") == PRIVATE_NATIVE_OVERVIEW_ENGINE_ID
+    assert FIXTURE_DEVELOPMENT_WARNING not in body["warnings"]
     assert body["blocking_errors"] == []
 
 

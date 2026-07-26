@@ -241,6 +241,11 @@ class NativeOverviewService:
         flag_on = is_pro_native_overview_enabled()
 
         if book is None:
+            missing_warnings = (
+                [FIXTURE_DEVELOPMENT_WARNING, WALKING_SKELETON_USER_NOTICE]
+                if self._engine_id == FIXTURE_ENGINE_ID
+                else []
+            )
             return PreflightResponse(
                 book_id=str(book_id),
                 chapter_count=0,
@@ -253,7 +258,7 @@ class NativeOverviewService:
                 estimated_windows=0,
                 estimated_tokens=0,
                 estimated_cost=0.0,
-                warnings=[FIXTURE_DEVELOPMENT_WARNING, WALKING_SKELETON_USER_NOTICE],
+                warnings=missing_warnings,
                 blocking_errors=[
                     PreflightBlockingError(
                         code=WholeBookOverviewErrorCode.BOOK_NOT_FOUND,
@@ -261,6 +266,9 @@ class NativeOverviewService:
                     )
                 ],
                 run_creation_enabled=False,
+                engine_id=self._engine_id,
+                provider_id=self._engine_id,
+                model_id=self._engine_version_label(),
             )
 
         chapter_count = int(
@@ -285,7 +293,9 @@ class NativeOverviewService:
         )
 
         blocking: list[PreflightBlockingError | str] = []
-        warnings = [FIXTURE_DEVELOPMENT_WARNING, WALKING_SKELETON_USER_NOTICE]
+        warnings: list[str] = []
+        if self._engine_id == FIXTURE_ENGINE_ID:
+            warnings = [FIXTURE_DEVELOPMENT_WARNING, WALKING_SKELETON_USER_NOTICE]
         if not flag_on:
             blocking.append(
                 PreflightBlockingError(
@@ -312,13 +322,26 @@ class NativeOverviewService:
             budget=self._window_budget,
         )
 
+        provider_configured = False
+        if self._engine_id == FIXTURE_ENGINE_ID:
+            provider_configured = True
+        else:
+            try:
+                from app.narrative_core.services.native_overview_http_factory import (
+                    is_cloud_provider_configured_for_native_overview,
+                )
+
+                provider_configured = is_cloud_provider_configured_for_native_overview()
+            except Exception:  # noqa: BLE001
+                provider_configured = False
+
         return PreflightResponse(
             book_id=str(book.id),
             chapter_count=chapter_count,
             paragraph_count=paragraph_count,
             character_count=character_count,
             snapshot_required=True,
-            provider_configured=False,
+            provider_configured=provider_configured,
             license_allowed=license_allowed,
             mode=WholeBookAnalysisMode.NATIVE,
             estimated_windows=estimated_windows,
@@ -328,6 +351,9 @@ class NativeOverviewService:
             warnings=warnings,
             blocking_errors=blocking,
             run_creation_enabled=run_enabled,
+            engine_id=self._engine_id,
+            provider_id=self._engine_id,
+            model_id=self._engine_version_label(),
         )
 
     # ------------------------------------------------------------------

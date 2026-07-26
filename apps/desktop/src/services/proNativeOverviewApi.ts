@@ -9,6 +9,7 @@ import {
   FIXTURE_ENGINE_LABEL,
   FIXTURE_ENGINE_VERSION,
   FIXTURE_PROMPT_VERSION,
+  PRIVATE_NATIVE_OVERVIEW_ENGINE_ID,
   resolveEnginePresentation,
 } from "./proNativeOverviewFlag";
 
@@ -265,11 +266,12 @@ export function resolveCreateBinding(preflight?: ProNativeOverviewPreflight | nu
   model_id: string;
   engine: ReturnType<typeof resolveEnginePresentation>;
 } {
+  // Product default is Private; Fixture only when preflight/engine explicitly says so.
   const engineId =
     preflight?.engine_id ||
     preflight?.model_id ||
     preflight?.model ||
-    FIXTURE_CREATE_DEFAULTS.engine_id;
+    PRIVATE_NATIVE_OVERVIEW_ENGINE_ID;
   const engine = resolveEnginePresentation(engineId, preflight?.model_id || preflight?.model);
   if (engine.isFixture) {
     return {
@@ -280,8 +282,14 @@ export function resolveCreateBinding(preflight?: ProNativeOverviewPreflight | nu
   }
   return {
     provider_id:
-      preflight?.provider_id || preflight?.provider || FIXTURE_CREATE_DEFAULTS.provider_id,
-    model_id: preflight?.model_id || preflight?.model || engine.engineId || FIXTURE_CREATE_DEFAULTS.model_id,
+      preflight?.provider_id ||
+      preflight?.provider ||
+      PRIVATE_NATIVE_OVERVIEW_ENGINE_ID,
+    model_id:
+      preflight?.model_id ||
+      preflight?.model ||
+      engine.engineId ||
+      PRIVATE_NATIVE_OVERVIEW_ENGINE_ID,
     engine,
   };
 }

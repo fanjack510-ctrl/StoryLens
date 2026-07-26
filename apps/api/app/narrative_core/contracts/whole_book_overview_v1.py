@@ -131,6 +131,10 @@ class PreflightResponse(_StrictModel):
     warnings: list[str] = Field(default_factory=list)
     blocking_errors: list[PreflightBlockingError | str] = Field(default_factory=list)
     run_creation_enabled: bool = False
+    # Product engine identity for UI create binding (Private default; Fixture opt-in).
+    engine_id: str | None = None
+    provider_id: str | None = None
+    model_id: str | None = None
 
 
 class RetryRunRequest(_StrictModel):

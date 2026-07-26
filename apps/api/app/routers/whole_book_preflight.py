@@ -20,7 +20,9 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.narrative_core.enums import WholeBookAnalysisMode, WholeBookModuleKey
 from app.narrative_core.services.capability_service import DefaultCapabilityService
-from app.narrative_core.services.native_overview_service import NativeOverviewService
+from app.narrative_core.services.native_overview_http_factory import (
+    build_native_overview_service,
+)
 from app.narrative_core.services.whole_book_preflight import (
     build_whole_book_preflight,
     preflight_response_dict,
@@ -52,7 +54,11 @@ def whole_book_run_preflight(
     payload = dict(body or {})
 
     if _is_native_overview_preflight(payload):
-        return NativeOverviewService(session).preflight(int(book_id)).model_dump(mode="json")
+        return (
+            build_native_overview_service(session)
+            .preflight(int(book_id))
+            .model_dump(mode="json")
+        )
 
     if "analysis_mode" not in payload and "requested_mode" not in payload and "mode" not in payload:
         raise HTTPException(

@@ -21,6 +21,9 @@ from app.narrative_core.contracts.whole_book_overview_v1 import (
     ResumeRunRequest,
     RetryRunRequest,
 )
+from app.narrative_core.services.native_overview_http_factory import (
+    build_native_overview_service,
+)
 from app.narrative_core.services.native_overview_service import (
     NativeOverviewError,
     NativeOverviewService,
@@ -30,7 +33,8 @@ router = APIRouter(prefix="/api/v1", tags=["whole-book-native-overview"])
 
 
 def _service(session: Session = Depends(get_db)) -> NativeOverviewService:
-    return NativeOverviewService(session)
+    # Product HTTP default: Private engine (never silent Fixture).
+    return build_native_overview_service(session)
 
 
 def _raise(exc: NativeOverviewError) -> None:
@@ -53,7 +57,7 @@ def _raise(exc: NativeOverviewError) -> None:
 def create_native_overview_run(
     book_id: int,
     body: dict[str, Any] | None = None,
-    service: NativeOverviewService = Depends(_service),
+    session: Session = Depends(get_db),
 ) -> dict[str, Any]:
     try:
         request = CreateRunRequest.model_validate(body or {})
@@ -67,7 +71,13 @@ def create_native_overview_run(
             },
         ) from exc
     try:
-        response = service.create_run(int(book_id), request)
+        # Resolve engine from request: Private product default; Fixture opt-in only.
+        bound = build_native_overview_service(
+            session,
+            provider_id=request.provider_id,
+            model_id=request.model_id,
+        )
+        response = bound.create_run(int(book_id), request)
     except NativeOverviewError as exc:
         _raise(exc)
         raise  # pragma: no cover

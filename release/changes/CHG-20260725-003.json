@@ -3,7 +3,7 @@
   "title": "Pro Native Whole-Book Overview Production Slice",
   "type": "feature",
   "base_version": "1.0.5",
-  "status": "implemented",
+  "status": "tested",
   "include_in_next_release": true,
   "commits": [
     {
@@ -236,7 +236,9 @@
     "Private native+fixture+contract 37 passed",
     "Desktop proNativeOverview Vitest 25 passed",
     "STEP 2.6: test_step26_free_upgrade + test_import_docx_epub + delete completed-run + phase1d OpenAPI native create (34 directed Free passed)",
-    "STEP 2.6: Private full pytest 200 passed; Desktop Vitest 1034; typecheck OK; Public full BASELINE_FAILURE_ONLY"
+    "STEP 2.6: Private full pytest 200 passed; Desktop Vitest 1034; typecheck OK; Public full BASELINE_FAILURE_ONLY",
+    "STEP 2.G7: Windows RC 1.1.0-rc.1 build + smoke_windows_rc_2g7 FAKE Private engine PASSED",
+    "STEP 2.G7: test_native_overview_http_factory + free entitlement + walking skeleton directed PASSED"
   ],
   "verification_evidence": [
     "STEP 1.2 Integration: cherry-pick A 4e4561c + C 2f6ca24; Agent D PASS both; capability key/API/route unchanged; VERSION=1.0.5; no push",
@@ -250,7 +252,10 @@
     "STEP 2.G3 PASSED; evidence release/evidence/CHG-20260725-003/night-run/gate-2g3.md; WAITING_FOR_DETAILED_STEP_2_4_PROMPT=YES; no Live Provider; no Windows build",
     "STEP 2.G4 PASSED; evidence release/evidence/CHG-20260725-003/night-run/gate-2g4.md; offline Private+Fake failure matrix; no Live Provider; no Windows",
     "STEP 2.G5 PASSED; Live1+Live2 private-native-overview-v1 + aliyun_qwen_plus/qwen3.6-flash; actual_cost_cny=0.0958008; ledger release/evidence/CHG-20260725-003/night-run/provider-cost-ledger.json; gate-2g5.md; VALIDATION_MODEL_DIFFERS=YES; Live3 NOT_RUN; next STEP 2.6",
-    "STEP 2.G6 PASSED; Free/upgrade/import/delete/insights; Public BASELINE_FAILURE_ONLY; Private 200; Desktop 1034; typecheck OK; new Live cost ¥0; evidence gate-2g6.md; status remains implemented; next STEP 2.7"
+    "STEP 2.G6 PASSED; Free/upgrade/import/delete/insights; Public BASELINE_FAILURE_ONLY; Private 200; Desktop 1034; typecheck OK; new Live cost ¥0; evidence gate-2g6.md; status remains implemented; next STEP 2.7",
+    "release/evidence/CHG-20260725-003/night-run/gate-2g7.md",
+    "release/evidence/CHG-20260725-003/night-run/windows-rc-2g7-smoke.json",
+    "release/evidence/CHG-20260725-003/night-run/windows-build-log.md"
   ],
   "data_compatibility": {
     "database_changed": true,
@@ -267,5 +272,5 @@
   "blocker_level": "P0",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-25T13:31:37Z",
-  "updated_at": "2026-07-26T02:13:40Z"
+  "updated_at": "2026-07-26T03:30:14Z"
 }

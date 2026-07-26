@@ -3,7 +3,7 @@
   "title": "Make Native Whole-Book Overview Free in StoryLens 1.1.x",
   "type": "improvement",
   "base_version": "1.0.5",
-  "status": "implemented",
+  "status": "tested",
   "include_in_next_release": true,
   "commits": [
     {
@@ -57,12 +57,15 @@
   "tests": [
     "test_native_overview_free_entitlement + walking/flag/insights/license: 39 passed",
     "desktop proNativeOverview+router+insights vitest: 24 passed; typecheck OK",
-    "private native_overview directed: 38 passed"
+    "private native_overview directed: 38 passed",
+    "STEP 2.G7 Free Windows Smoke: Private engine + Free entitlement on RC sidecar PASSED"
   ],
   "verification_evidence": [
     "STEP 2.5R-GATE PASS; Free native entitlement; Private closed-source unchanged",
     "release/evidence/CHG-20260726-004/gate-2g6-free-entitlement-supplement.md",
-    "ORIGINAL gate-2g6.md preserved under CHG-003 night-run"
+    "ORIGINAL gate-2g6.md preserved under CHG-003 night-run",
+    "release/evidence/CHG-20260726-004/gate-2g7-free-windows-reference.md",
+    "release/evidence/CHG-20260725-003/night-run/gate-2g7.md"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -79,5 +82,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-26T02:22:00Z",
-  "updated_at": "2026-07-26T02:28:57Z"
+  "updated_at": "2026-07-26T03:30:14Z"
 }
