@@ -58,6 +58,21 @@ def provider_eligibility(
     enabled = bool(row.enabled) if row and capabilities.cloud else capabilities.enabled
     configured = bool(row and (row.base_url or row.workspace_id)) if capabilities.cloud else True
     connected = bool(row and not row.disconnected) if capabilities.cloud else healthy
+    from app.services.chapter_analysis_smoke_fake_transport import (
+        chapter_smoke_fake_readiness_override,
+    )
+
+    if chapter_smoke_fake_readiness_override() and capabilities.cloud:
+        # Transport-only smoke: do not require live HTTP credential/health.
+        credential = True
+        connected = True if row is not None else connected
+        healthy = True
+        if row is not None and not configured:
+            # Allow create when a ProviderConfiguration row exists even without
+            # a real workspace — smoke never dials the network.
+            configured = True
+            if not enabled:
+                enabled = True
     manual_blockers: list[str] = []
     if capabilities.cloud and not cloud_enabled:
         manual_blockers.append("cloud_master_switch_off")
@@ -255,6 +270,13 @@ def evaluate_manual_boundary_candidate(
     ):
         runtime_state = "healthy"
         health_source = "validation_snapshot"
+    from app.services.chapter_analysis_smoke_fake_transport import (
+        chapter_smoke_fake_readiness_override,
+    )
+
+    if chapter_smoke_fake_readiness_override():
+        runtime_state = "healthy"
+        health_source = "chapter_analysis_smoke_fake"
     result = provider_eligibility(
         session,
         provider_name=provider_name,

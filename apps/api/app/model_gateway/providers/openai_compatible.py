@@ -224,6 +224,16 @@ class OpenAICompatibleProvider(ModelProvider):
                 status="disabled",
                 detail="provider_disabled",
             )
+        from app.services.chapter_analysis_smoke_fake_transport import (
+            is_chapter_analysis_smoke_fake_enabled,
+        )
+
+        if is_chapter_analysis_smoke_fake_enabled():
+            return ProviderHealth(
+                provider_name=self.name,
+                status="healthy",
+                detail="chapter_analysis_smoke_fake",
+            )
         try:
             async with httpx.AsyncClient(timeout=self._timeout()) as client:
                 response = await client.get(
@@ -249,6 +259,17 @@ class OpenAICompatibleProvider(ModelProvider):
                 retryable=False,
                 transport_kind=TRANSPORT_DISABLED,
                 user_action_hint=user_hint_for(TRANSPORT_DISABLED, "PROVIDER_DISABLED"),
+            )
+        from app.services.chapter_analysis_smoke_fake_transport import (
+            chapter_smoke_fake_generate,
+            is_chapter_analysis_smoke_fake_enabled,
+        )
+
+        if is_chapter_analysis_smoke_fake_enabled():
+            return await chapter_smoke_fake_generate(
+                request,
+                provider_name=self.name,
+                default_model=self.default_model,
             )
         model = request.model or self.default_model
         payload = {
