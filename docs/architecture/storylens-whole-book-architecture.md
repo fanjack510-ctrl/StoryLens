@@ -1,14 +1,16 @@
-# StoryLens Whole-Book Pro Architecture（正式真值）
+# StoryLens Whole-Book Architecture（正式真值）
 
-**Status:** Frozen (STEP 1.3)  
-**Change:** CHG-20260725-003  
-**Date:** 2026-07-25  
+**Status:** Frozen (STEP 1.3); **AMENDED BY CHG-20260726-004**  
+**Change:** CHG-20260725-003 + CHG-20260726-004  
+**Date:** 2026-07-25 / amended 2026-07-26  
 **Public Base:** `9f53d4a6349fb76a90465aefc402ed2ee874a94b`  
 **Private Base:** `727f886ead297a3af2019354f2f56352cf22a9d4`  
 **Free Baseline:** `v1.0.5` / `release/1.0.5` / `ddae7ee4910ab35a443e47fc1ffad4928e7a5543`
 
-> 本文是 StoryLens Pro 整书能力的**产品级架构真值**。  
-> Phase 1P–2BR1 分阶段文档（`docs/architecture/narrative-intelligence-core/`）继续作为历史实现与契约记录；若与本文冲突，**以本文与同目录 ADR 为准**。
+> 本文是 StoryLens 整书能力的**产品级架构真值**。  
+> Phase 1P–2BR1 分阶段文档（`docs/architecture/narrative-intelligence-core/`）继续作为历史实现与契约记录；若与本文冲突，**以本文与同目录 ADR 为准**。  
+> **Private ≠ Paid：** Private Engine 表示闭源组件边界；Free / Pro 表示产品授权层级。  
+> **1.1.x：** Native Whole-Book Overview 为 Free；**1.2.0：** Pro 正式起点。
 
 **相关文档：**
 
@@ -48,17 +50,19 @@ Free 是免费开源**单章分析**正式基线，已包含：
 
 **规则：** 上述能力不得在 Pro 中重新定义为“新增功能”。Pro 只增加基于完整原文的整书能力。
 
-### 2.2 Pro 1.1.0 起
+### 2.2 StoryLens 1.1.0（Free Native Overview）
 
-从 1.1.0 起增加基于完整原文的整书能力。
+从 1.1.0 起增加基于完整原文的整书能力（**产品 Free**）。
 
-**1.1.0 唯一正式 Pro 产品切片：**
+**1.1.0 唯一正式新增功能：**
 
 ```text
-原生全书概览（Native Whole-Book Overview）
+原生全书概览（Native Whole-Book Overview）— FREE in 1.1.x
+Private Native Overview Engine — CLOSED SOURCE
 ```
 
-它**不**代表 11 项整书功能全部完成，也**不**等于现有「章节聚合洞察」。
+它**不**代表全部整书 Pro 模块完成，也**不**等于现有「章节聚合洞察」。  
+Pro 增强（`whole_book_enhanced` 等）从 **1.2.0** 起作为产品起点；已免费的原生概览不得收回为 Pro 专属。
 
 ### 2.3 章节聚合洞察（Current，非原生整书）
 

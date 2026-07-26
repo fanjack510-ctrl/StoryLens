@@ -1,0 +1,38 @@
+{
+  "id": "CHG-20260726-004",
+  "title": "Make Native Whole-Book Overview Free in StoryLens 1.1.x",
+  "type": "improvement",
+  "base_version": "1.0.5",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [],
+  "files": [],
+  "user_summary": "将原生全书概览在 1.1.x 调整为 Free；Private Engine 继续闭源；Pro 起点改为 1.2.0。CHG-003 负责技术实现，本 Change 只调整产品授权边界。",
+  "technical_summary": "CHG-20260725-003 owns Native Overview technical implementation. This change only repositions entitlement: Native Overview is FREE in 1.1.x; Private Engine remains closed-source; Pro product start is 1.2.0. API/Route/DTO/DB/Migration/Contract/Engine ID/Feature Flag key unchanged. Do not re-run STEP 2.G3-G5. STEP 2.6/2.7 must use amended Free entitlement gates.",
+  "acceptance_criteria": [
+    "Native Overview Free Allowed without Pro License",
+    "Feature Flag / Provider / Consent / Budget gates remain",
+    "Future Pro capabilities still gated",
+    "UI removes Pro paywall for Native Overview",
+    "Private Engine has no license dependency"
+  ],
+  "tests": [],
+  "verification_evidence": [],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": null,
+  "created_at": "2026-07-26T02:22:00Z",
+  "updated_at": "2026-07-26T02:22:15Z"
+}

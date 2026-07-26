@@ -1,15 +1,29 @@
 # StoryLens 1.1.0 Scope Freeze（范围锁定）
 
-**Status:** Frozen (STEP 2.0)  
+**Status:** Frozen (STEP 2.0); **AMENDED BY CHG-20260726-004** (Free entitlement)  
 **Version target:** 1.1.0（尚未 bump `VERSION`；当前源码仍为 `1.0.5`）  
-**Change:** CHG-20260725-003  
-**Date:** 2026-07-25  
+**Change:** CHG-20260725-003 (tech) + CHG-20260726-004 (Free / Pro boundary)  
+**Date:** 2026-07-25 / amended 2026-07-26  
 **Architecture truth:** [storylens-whole-book-architecture.md](../architecture/storylens-whole-book-architecture.md)  
 **Public Base (STEP 2.0 start):** `eaa278d419aac847321254f32a4424db139b814d`  
 **Private Base:** `727f886ead297a3af2019354f2f56352cf22a9d4`  
 **Free baseline:** `v1.0.5` / `release/1.0.5` / `ddae7ee4910ab35a443e47fc1ffad4928e7a5543`
 
 > 本文冻结 **1.1.0 产品与工程范围**。本文不是功能实现，也不替代正式发布说明 `docs/releases/1.1.0.md`（后者仅在 `prepare-next-release` 后生成）。
+
+**Product boundary (CHG-20260726-004):**
+
+```text
+StoryLens 1.1.0 唯一新增功能：Free 原生全书概览
+Public 客户端：开源
+原生全书概览使用权：免费
+Private Native Overview Engine：闭源
+第三方 Provider API 费用：由用户账户承担
+Pro 正式起点：1.2.0（不得在 1.2.0 把已免费的原生概览收回为 Pro 专属）
+```
+
+对外建议表述：StoryLens 客户端开源，原生全书概览免费使用；部分分析引擎组件以闭源方式随产品提供。  
+不得声称「原生全书概览全部开源」或「整套 StoryLens 完全开源」。
 
 ---
 
@@ -18,8 +32,9 @@
 ### 1.1 唯一正式新增功能
 
 ```text
-中文：Pro 原生全书概览
-英文：Pro Native Whole-Book Overview
+中文：原生全书概览
+英文：Native Whole-Book Overview
+Entitlement：FREE（StoryLens 1.1.x）
 ```
 
 用户**无需**预先执行全部单章分析。  
@@ -27,34 +42,34 @@
 
 ### 1.2 “完整”的含义
 
-完整 = **原生全书概览**具备产品闭环，**不是** 11 个 Pro 模块全部完成。
+完整 = **原生全书概览**具备产品闭环，**不是** 全部 Pro 模块完成。
 
 必须同时满足：
 
 ```text
-入口完整 · 执行完整 · 数据完整 · 错误完整 · 恢复完整 · 结果完整 · Evidence 完整 · 授权完整 · 发布完整
+入口完整 · 执行完整 · 数据完整 · 错误完整 · 恢复完整 · 结果完整 · Evidence 完整 · 门禁完整 · 发布完整
 ```
 
 ### 1.3 命名隔离（不得混名）
 
 | 名称 | 含义 |
 |------|------|
-| **Pro 原生全书概览** | 直接分析完整小说原文，不要求提前完成全部单章分析 |
-| **章节聚合洞察** | 聚合已完成的单章精细分析资产（既有能力，独立页面保留） |
+| **原生全书概览** | 直接分析完整小说原文，不要求提前完成全部单章分析（1.1.x Free） |
+| **章节聚合洞察** | 聚合已完成的单章精细分析资产（既有 Pro 能力，独立页面保留） |
+| **Private Engine** | 闭源实现边界；Private ≠ Paid |
 
 ---
 
 ## 2. 用户流程（冻结）
 
 1. 用户已导入小说（TXT / DOCX / EPUB）→ 稳定 `Book` / `Chapter` / `Paragraph`。  
-2. 在书籍工作区点击 **「Pro 原生全书概览」**。  
+2. 在书籍工作区点击 **「原生全书概览」**（Free；无需 Pro License）。  
 3. 进入 **分析前检查页（Preflight）**，至少显示：  
    - 小说名称、章节数、段落数、总字数  
    - 分析模式（1.1.0 默认 `whole_book_native`）  
    - Provider、Model  
-   - 预计 Token、预计费用  
-   - Pro 授权状态  
-   - 原文完整性状态  
+   - 预计 Token、预计费用（第三方 API，由用户账户承担）  
+   - Feature Flag / 原文完整性状态  
 4. 用户确认后创建 **正式 Whole-Book Run**。  
 5. 展示进度 / 错误 / Retry。  
 6. 完成后展示 Overview 结果与 Evidence；可跳转段落；重启后可重新打开 Completed Result。
@@ -66,7 +81,7 @@
 ## 3. 正式执行链（冻结）
 
 ```text
-Pro License / Capability 校验
+Feature Flag + Provider/Consent/Budget 校验（Native Overview 不要求 Pro License）
 → 冻结 Book Snapshot
 → 创建 Whole-Book Run
 → 创建真实 Run Stages

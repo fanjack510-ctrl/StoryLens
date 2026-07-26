@@ -1,7 +1,7 @@
 # StoryLens Step 路线图与 Cursor Prompt 模板（正式真值）
 
-**Status:** Frozen (STEP 1.3)  
-**Change:** CHG-20260725-003  
+**Status:** Frozen (STEP 1.3); **AMENDED BY CHG-20260726-004**  
+**Change:** CHG-20260725-003 + CHG-20260726-004  
 
 配套总架构：[storylens-whole-book-architecture.md](./storylens-whole-book-architecture.md)
 
@@ -13,16 +13,18 @@
 |------|----------|------|
 | STEP 0 | 1.0.5 Free | Free 基线封存 |
 | STEP 1 | 1.1.0 前置 | 架构收敛（含 1.1 现场冻结、1.2 语义纠正、1.3 架构冻结） |
-| STEP 2 | **1.1.0** | 原生全书概览（唯一正式 Pro 切片） |
-| STEP 2.9 | 1.1.1 | 稳定版 |
-| STEP 3 | 1.2.0 | 统一叙事事实底座 |
+| STEP 2 | **1.1.0** | Free Native Whole-Book Overview（唯一正式新增功能） |
+| STEP 2.9 | 1.1.1 | Free Stabilization |
+| STEP 3 | 1.2.0 | Pro Foundation（统一叙事事实层 + Enhanced 基础） |
 | STEP 4 | 1.3.0 | 结构、故事线、章节功能 |
 | STEP 5 | 1.4.0 | 人物动力系统 |
 | STEP 6 | 1.5.0 | 钩子、因果、双时间线 |
-| STEP 7 | 1.6.0 | Pro V1 综合完成（含原生整书阅读旅程等） |
-| STEP 8 | 2.0.0 | 叙事资产与辅助创作平台 |
+| STEP 7 | 1.6.0 | Pro V1 综合完成 |
+| STEP 8 | 2.0.0 | 叙事资产、灵感库、故事实验台 |
 
-> STEP 2 = 1.1.0。Overview 是首个完整 Pro 产品切片，**不**代表 Pro V1 全部完成。
+> STEP 2 = StoryLens 1.1.0 Free Native Whole-Book Overview。  
+> Private Engine 继续闭源（Private ≠ Paid）。  
+> Pro 正式起点 = 1.2.0；已在 1.1.x 免费开放的原生概览不得在 1.2.0 收回为 Pro 专属。
 
 ---
 
