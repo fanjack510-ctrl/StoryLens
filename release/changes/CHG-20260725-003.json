@@ -173,6 +173,18 @@
       "message": "docs(evidence): sync gate-2g6 Public HEAD to tip",
       "primary": false,
       "multi_change_reason": "STEP 2.6 tip sync"
+    },
+    {
+      "sha": "93c2ec9754b2df800e72792581e75189ef0c6b6b",
+      "message": "fix(windows): wire Private native overview for 1.1.0-rc.1 G7",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "2ce6dce12f9a97d94fb21a20d6fe5879fbeed310",
+      "message": "docs(evidence): stamp Public HEAD on STEP 2.G7 gate",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -272,5 +284,5 @@
   "blocker_level": "P0",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-25T13:31:37Z",
-  "updated_at": "2026-07-26T03:30:14Z"
+  "updated_at": "2026-07-26T03:30:45Z"
 }

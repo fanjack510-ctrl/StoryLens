@@ -41,6 +41,18 @@
       "message": "docs(evidence): stamp CHG-004 heads on G6 free entitlement supplement",
       "primary": false,
       "multi_change_reason": "STEP 2.5R supplement HEAD stamp"
+    },
+    {
+      "sha": "a73bf703d37d2ff8aaac8b986b0131b2b227e872",
+      "message": "build(windows): add local 1.1.0-rc.1 RC candidate packaging path",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "93c2ec9754b2df800e72792581e75189ef0c6b6b",
+      "message": "fix(windows): wire Private native overview for 1.1.0-rc.1 G7",
+      "primary": true,
+      "multi_change_reason": "STEP 2.G7 Private HTTP default + Windows RC"
     }
   ],
   "modules": [],
@@ -82,5 +94,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-26T02:22:00Z",
-  "updated_at": "2026-07-26T03:30:14Z"
+  "updated_at": "2026-07-26T03:31:31Z"
 }
