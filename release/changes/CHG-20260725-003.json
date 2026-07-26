@@ -149,6 +149,12 @@
       "message": "docs(evidence): stamp final Public HEAD on gate-2g6",
       "primary": false,
       "multi_change_reason": "STEP 2.6 gate HEAD stamp"
+    },
+    {
+      "sha": "4e6e30586487c62766828fec973d8ae7d04384f2",
+      "message": "docs(evidence): align gate-2g6 Public HEAD",
+      "primary": false,
+      "multi_change_reason": "STEP 2.6 gate HEAD align"
     }
   ],
   "modules": [
@@ -243,5 +249,5 @@
   "blocker_level": "P0",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-25T13:31:37Z",
-  "updated_at": "2026-07-26T02:09:32Z"
+  "updated_at": "2026-07-26T02:09:56Z"
 }
