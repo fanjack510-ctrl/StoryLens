@@ -107,3 +107,7 @@ license_private_keys/
 
 # Local forensics (never commit)
 **/runtime/forensics/
+
+# STEP 2.5 Live temp artifacts (do not commit)
+release/evidence/CHG-20260725-003/night-run/*.db
+release/evidence/CHG-20260725-003/night-run/_tmp_license_public_keys.live.json

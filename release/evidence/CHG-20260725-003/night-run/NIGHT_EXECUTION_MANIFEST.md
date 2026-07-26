@@ -63,7 +63,7 @@ gate-2g7.md Result=PASSED
 |------|--------|
 | STEP 2.G3 | PASSED (`gate-2g3.md`) |
 | STEP 2.G4 | PASSED (`gate-2g4.md`) |
-| STEP 2.G5 | NOT STARTED |
+| STEP 2.G5 | PASSED (`gate-2g5.md`) |
 | STEP 2.G6 | NOT STARTED |
 | STEP 2.G7 | NOT STARTED |
 
