@@ -23,6 +23,12 @@
       "message": "docs(release): attach mark commit to CHG-20260726-005",
       "primary": false,
       "multi_change_reason": "attach mark commit metadata"
+    },
+    {
+      "sha": "c6853b14c7b941f49720b65f95a196c5a4e4358f",
+      "message": "docs(evidence): record interface zoom RC2 candidate",
+      "primary": false,
+      "multi_change_reason": "RC2 evidence + build script resilience"
     }
   ],
   "modules": [
@@ -71,5 +77,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-26T04:04:31Z",
-  "updated_at": "2026-07-26T04:22:00Z"
+  "updated_at": "2026-07-26T04:22:17Z"
 }
