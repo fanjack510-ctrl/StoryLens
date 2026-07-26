@@ -143,6 +143,12 @@
       "message": "docs(evidence): record STEP 2.G6 Free 1.0.5 regression gate",
       "primary": false,
       "multi_change_reason": "STEP 2.6 gate evidence"
+    },
+    {
+      "sha": "8351d81a09abdfbafc006c0fd7b89a4be33680c1",
+      "message": "docs(evidence): stamp final Public HEAD on gate-2g6",
+      "primary": false,
+      "multi_change_reason": "STEP 2.6 gate HEAD stamp"
     }
   ],
   "modules": [
@@ -237,5 +243,5 @@
   "blocker_level": "P0",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-25T13:31:37Z",
-  "updated_at": "2026-07-26T02:08:45Z"
+  "updated_at": "2026-07-26T02:09:32Z"
 }
