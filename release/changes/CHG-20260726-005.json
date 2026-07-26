@@ -35,6 +35,12 @@
       "message": "fix(appearance): default interface zoom to 80%",
       "primary": true,
       "multi_change_reason": "default zoom 80% product decision"
+    },
+    {
+      "sha": "8abb74914ce7db2499ffa10d3cc0ccbc7d23df84",
+      "message": "docs(evidence): record zoom default 80% on RC3",
+      "primary": false,
+      "multi_change_reason": "RC3 zoom80 evidence"
     }
   ],
   "modules": [
@@ -87,5 +93,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-26T04:04:31Z",
-  "updated_at": "2026-07-26T05:00:10Z"
+  "updated_at": "2026-07-26T05:00:11Z"
 }
