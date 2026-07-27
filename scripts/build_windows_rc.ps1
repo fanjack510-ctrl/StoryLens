@@ -74,7 +74,8 @@ try {
     if ($LASTEXITCODE) { throw "private engine import failed after install" }
 
     Log "Temporary version override -> $RcVersion"
-    & $py (Join-Path $Root "scripts\version_manager.py") set $RcVersion
+    # Formal 1.1.0 → 1.1.0-rc.N is a SemVer 'downgrade'; allow only for RC packaging override.
+    & $py (Join-Path $Root "scripts\version_manager.py") set $RcVersion --allow-downgrade
     if ($LASTEXITCODE) { throw "version_manager set $RcVersion failed" }
 
     $env:STORYLENS_RC_CANDIDATE = "1"
