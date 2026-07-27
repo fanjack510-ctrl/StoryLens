@@ -78,6 +78,23 @@ describe("mapChapterCompositionState", () => {
       }),
     ).toBe("awaiting_reader_journey_start");
   });
+
+  it("prefers parent journey_running over stale failed journey GET", () => {
+    expect(
+      mapChapterCompositionState(
+        run({
+          id: 5,
+          effective_status: "journey_running",
+          journey_status: "scene_profiles_running",
+          journey_run_id: 42,
+        }),
+        {
+          status: "failed",
+          journey_run_id: 9,
+        },
+      ),
+    ).toBe("reader_journey_processing");
+  });
 });
 
 describe("isSceneAnalysisComplete", () => {

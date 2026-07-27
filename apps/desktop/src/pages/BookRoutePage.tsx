@@ -45,10 +45,24 @@ import {
 } from "../services/discoverActiveChapterRun";
 import { normalizeRunLifecycle } from "../services/runLifecycle";
 import {
+  resolveJourneyPageState,
+  shouldPollJourneyResult,
+  type JourneyPageView,
+} from "../services/resolveJourneyPageState";
+import {
   resolveWorkspaceLayout,
   type WorkspaceActiveTab,
 } from "../services/resolveWorkspaceLayout";
 import { useUiStore } from "../stores/uiStore";
+import type { ReaderJourneyResult } from "../types";
+
+type JourneyQueryPayload = ReaderJourneyResult & {
+  __fetchSeq?: number;
+  updated_at?: string | null;
+  retryable?: boolean | null;
+  error_code?: string | null;
+  user_error_message?: string | null;
+};
 
 type ChapterView = WorkspaceView;
 
@@ -230,28 +244,40 @@ export function BookRoutePage() {
   ]);
 
   const sceneComplete = isSceneAnalysisComplete(progress.run);
+  const journeyFetchSeqRef = useRef(0);
+  const appliedJourneyMetaRef = useRef<{
+    seq: number;
+    updatedAt: string | null;
+    journeyId: number | null;
+  }>({ seq: 0, updatedAt: null, journeyId: null });
+  const stableJourneyPageViewRef = useRef<JourneyPageView>("unknown");
+
   const journey = useQuery({
     queryKey: ["reader-journey", bookId, chapterId, analysisRunId],
-    queryFn: () =>
-      analysisApi.readerJourney(analysisRunId!, {
+    queryFn: async (): Promise<JourneyQueryPayload> => {
+      const seq = ++journeyFetchSeqRef.current;
+      const data = await analysisApi.readerJourney(analysisRunId!, {
         bookId,
         chapterId: chapterId!,
-      }),
+      });
+      return { ...(data as JourneyQueryPayload), __fetchSeq: seq };
+    },
     enabled: Number.isFinite(bookId) && !!analysisRunId && !!chapterId,
     placeholderData: undefined,
     retry: false,
     refetchInterval: (q) => {
       const status = q.state.data?.status;
       if (
-        status &&
-        ["queued", "running", "scene_profiles_running", "chapter_synthesis_running"].includes(
-          status,
-        )
+        shouldPollJourneyResult({
+          journeyStatus: status,
+          parentJourneyStatus: progress.run?.journey_status,
+          effectiveStatus: progress.run?.effective_status,
+          sceneComplete,
+          pageView: stableJourneyPageViewRef.current,
+        })
       ) {
         return 2000;
       }
-      // Keep polling while scenes are done but journey row not yet created (auto-start lag).
-      if (sceneComplete && !status) return 2000;
       return false;
     },
   });
@@ -337,23 +363,168 @@ export function BookRoutePage() {
     );
   }, [analysisRunId, progress.run, compositionUiState, requestedView, setSearchParams]);
 
-  const journeyRunId = journey.data?.journey_run_id ?? null;
-  const journeyFailed = Boolean(
-    journey.data?.status &&
-      ["failed", "scene_profiles_partial", "budget_blocked"].includes(journey.data.status),
-  );
+  const boundJourneyRunId =
+    progress.run?.journey_run_id ??
+    appliedJourneyMetaRef.current.journeyId ??
+    journey.data?.journey_run_id ??
+    null;
+  const journeyRunId = boundJourneyRunId;
+
+  const journeyPageView = useMemo((): JourneyPageView => {
+    const data = journey.data as JourneyQueryPayload | undefined;
+    const seq = data?.__fetchSeq ?? null;
+    const responseJourneyId = data?.journey_run_id ?? null;
+    const currentJourneyId =
+      progress.run?.journey_run_id ??
+      appliedJourneyMetaRef.current.journeyId ??
+      responseJourneyId;
+    const finalArtifactAvailable = Boolean(
+      progress.run?.journey_result_available === true ||
+        progress.run?.chapter_complete === true ||
+        (data?.status === "succeeded" && data.visualization) ||
+        hasJourney,
+    );
+    const resolved = resolveJourneyPageState({
+      currentJourneyId,
+      responseJourneyId,
+      journeyStatus: data?.status,
+      parentJourneyStatus: progress.run?.journey_status,
+      effectiveStatus: progress.run?.effective_status,
+      errorCode:
+        (data as { error_code?: string } | undefined)?.error_code ??
+        progress.run?.journey_error_code ??
+        progress.run?.error_code ??
+        null,
+      retryable:
+        (data as { retryable?: boolean } | undefined)?.retryable ??
+        progress.run?.journey_retryable ??
+        null,
+      finalArtifactAvailable,
+      chapterComplete:
+        progress.run?.chapter_complete === true || compositionUiState === "succeeded",
+      temporaryFetchError: Boolean(
+        journey.isError &&
+          !journeyScopeMismatch &&
+          !String((journey.error as { message?: string } | null)?.message || "").includes(
+            "ANALYSIS_RUN_SCOPE_MISMATCH",
+          ),
+      ),
+      requestSequence: seq,
+      appliedSequence: appliedJourneyMetaRef.current.seq || null,
+      responseUpdatedAt: data?.updated_at ?? null,
+      appliedUpdatedAt: appliedJourneyMetaRef.current.updatedAt,
+    });
+    if (resolved == null) {
+      return stableJourneyPageViewRef.current;
+    }
+    // Successful / active / completed responses clear sticky failure view.
+    stableJourneyPageViewRef.current = resolved;
+    if (seq != null && (appliedJourneyMetaRef.current.seq === 0 || seq >= appliedJourneyMetaRef.current.seq)) {
+      appliedJourneyMetaRef.current = {
+        seq,
+        updatedAt: data?.updated_at ?? appliedJourneyMetaRef.current.updatedAt,
+        journeyId: responseJourneyId ?? appliedJourneyMetaRef.current.journeyId,
+      };
+    }
+    return resolved;
+  }, [
+    journey.data,
+    journey.isError,
+    journey.error,
+    journeyScopeMismatch,
+    progress.run,
+    compositionUiState,
+    hasJourney,
+  ]);
+
+  const journeyFailed = journeyPageView === "terminal_failed";
+  const journeyInterrupted = journeyPageView === "interrupted";
+  const journeyTemporaryError = journeyPageView === "temporary_error";
+  const journeyActiveView =
+    journeyPageView === "active" || compositionUiState === "reader_journey_processing";
+
   const journeyProgress = useQuery({
     queryKey: ["reader-journey-progress", journeyRunId],
     queryFn: () => analysisApi.readerJourneyProgress(journeyRunId!),
     enabled:
       !!journeyRunId &&
-      (compositionUiState === "reader_journey_processing" ||
-        Boolean(
-          journey.data?.status &&
-            ["failed", "scene_profiles_partial", "budget_blocked"].includes(journey.data.status),
-        )),
-    refetchInterval: compositionUiState === "reader_journey_processing" ? 2000 : false,
+      (journeyActiveView || journeyFailed || journeyInterrupted || journeyTemporaryError),
+    refetchInterval:
+      journeyActiveView || journeyTemporaryError || compositionUiState === "reader_journey_processing"
+        ? 2000
+        : false,
   });
+
+  // Progress status can refine the page view (e.g. fresher running counts) without
+  // letting an older failed journey GET stick.
+  const journeyPageViewWithProgress = useMemo((): JourneyPageView => {
+    const progressStatus = journeyProgress.data?.status ?? null;
+    if (!progressStatus) return journeyPageView;
+    const data = journey.data as JourneyQueryPayload | undefined;
+    const refined = resolveJourneyPageState({
+      currentJourneyId:
+        progress.run?.journey_run_id ??
+        journeyProgress.data?.journey_run_id ??
+        data?.journey_run_id,
+      responseJourneyId: journeyProgress.data?.journey_run_id ?? data?.journey_run_id,
+      journeyStatus: data?.status,
+      progressStatus,
+      parentJourneyStatus: progress.run?.journey_status,
+      effectiveStatus: progress.run?.effective_status,
+      errorCode:
+        journeyProgress.data?.root_error_code ??
+        (data as { error_code?: string } | undefined)?.error_code ??
+        progress.run?.journey_error_code ??
+        null,
+      retryable:
+        journeyProgress.data?.retryable ??
+        (data as { retryable?: boolean } | undefined)?.retryable ??
+        progress.run?.journey_retryable ??
+        null,
+      finalArtifactAvailable: Boolean(
+        progress.run?.journey_result_available === true ||
+          progress.run?.chapter_complete === true ||
+          (data?.status === "succeeded" && data.visualization) ||
+          hasJourney,
+      ),
+      chapterComplete:
+        progress.run?.chapter_complete === true || compositionUiState === "succeeded",
+      temporaryFetchError: journeyTemporaryError && journeyProgress.isError,
+      requestSequence: data?.__fetchSeq ?? null,
+      appliedSequence: appliedJourneyMetaRef.current.seq || null,
+    });
+    if (refined == null) return journeyPageView;
+    stableJourneyPageViewRef.current = refined;
+    return refined;
+  }, [
+    journeyPageView,
+    journeyProgress.data,
+    journeyProgress.isError,
+    journey.data,
+    progress.run,
+    compositionUiState,
+    hasJourney,
+    journeyTemporaryError,
+  ]);
+
+  const showJourneyTerminalFailed = journeyPageViewWithProgress === "terminal_failed";
+  const showJourneyInterrupted = journeyPageViewWithProgress === "interrupted";
+  const showJourneyTemporaryError = journeyPageViewWithProgress === "temporary_error";
+  const showJourneyActive =
+    journeyPageViewWithProgress === "active" ||
+    compositionUiState === "reader_journey_processing";
+  const showJourneyAwaiting =
+    !showJourneyTerminalFailed &&
+    !showJourneyInterrupted &&
+    !showJourneyTemporaryError &&
+    !showJourneyActive &&
+    compositionUiState === "awaiting_reader_journey_start";
+  const showJourneyResult =
+    !showJourneyTerminalFailed &&
+    !showJourneyInterrupted &&
+    !showJourneyTemporaryError &&
+    !showJourneyActive &&
+    !showJourneyAwaiting;
 
   // After full chapter success from an in-flight pipeline, open Journey once.
   // Do not auto-open when landing on historical complete runs from book home / chapter pick.
@@ -1201,7 +1372,15 @@ export function BookRoutePage() {
 
             {!noChapters && !bootstrappingChapter && activeTab === "journey" && analysisRunId ? (
               <>
-                {journeyFailed ? (
+                {showJourneyTemporaryError ? (
+                  <StateView
+                    kind="loading"
+                    data-testid="journey-temporary-error"
+                    title="暂时无法读取最新进度"
+                    description="正在重新连接，已完成的场景分析不会受到影响。"
+                  />
+                ) : null}
+                {showJourneyTerminalFailed ? (
                   <StateView
                     kind="error"
                     data-testid="journey-failed"
@@ -1229,6 +1408,12 @@ export function BookRoutePage() {
                               });
                             }
                           } finally {
+                            stableJourneyPageViewRef.current = "unknown";
+                            appliedJourneyMetaRef.current = {
+                              seq: 0,
+                              updatedAt: null,
+                              journeyId: journeyRunId,
+                            };
                             void qc.invalidateQueries({
                               queryKey: ["reader-journey"],
                             });
@@ -1245,9 +1430,57 @@ export function BookRoutePage() {
                     }}
                   />
                 ) : null}
-                {!journeyFailed &&
-                compositionUiState === "awaiting_reader_journey_start" &&
-                progress.run ? (
+                {showJourneyInterrupted ? (
+                  <StateView
+                    kind="error"
+                    data-testid="journey-interrupted"
+                    title="阅读旅程已中断"
+                    description="已完成的场景分析不会受到影响，可从任务详情继续处理。"
+                    primaryAction={{
+                      label: "查看详情",
+                      testId: "journey-interrupted-task-details",
+                      onClick: () => navigate(`/tasks?run_id=${analysisRunId}`),
+                    }}
+                    secondaryAction={{
+                      label: "重新生成",
+                      testId: "journey-interrupted-retry",
+                      onClick: () => {
+                        void (async () => {
+                          try {
+                            if (journeyRunId) {
+                              await analysisApi.resumeReaderJourney(journeyRunId, {
+                                client_request_id: getOrCreateJourneyClientRequestId(analysisRunId),
+                                cloud_consent: true,
+                                confirmed: true,
+                              });
+                            } else if (progress.run) {
+                              await analysisRecoveryApi.recover(progress.run.id, {
+                                client_request_id: getOrCreateJourneyClientRequestId(analysisRunId),
+                                cloud_consent: true,
+                                confirmed: true,
+                                recovery_mode: "unified",
+                                resume: true,
+                              });
+                            }
+                          } finally {
+                            stableJourneyPageViewRef.current = "unknown";
+                            appliedJourneyMetaRef.current = {
+                              seq: 0,
+                              updatedAt: null,
+                              journeyId: journeyRunId,
+                            };
+                            void qc.invalidateQueries({
+                              queryKey: ["reader-journey"],
+                            });
+                            void journey.refetch();
+                            void progress.refresh();
+                          }
+                        })();
+                      },
+                    }}
+                  />
+                ) : null}
+                {showJourneyAwaiting && progress.run ? (
                   <UnifiedAnalysisRecoveryCard
                     run={progress.run}
                     variant="card"
@@ -1258,22 +1491,22 @@ export function BookRoutePage() {
                     }}
                   />
                 ) : null}
-                {!journeyFailed && compositionUiState === "reader_journey_processing" ? (
+                {showJourneyActive ? (
                   <ReaderJourneyProgressCard
                     analysisRunId={analysisRunId}
                     progress={journeyProgress.data}
                     loading={journeyProgress.isLoading && !journeyProgress.data}
                     errorMessage={
-                      journeyProgress.data?.user_error_message ||
-                      journeyProgress.data?.root_error_message ||
-                      null
+                      showJourneyTemporaryError
+                        ? "暂时无法读取最新进度"
+                        : journeyProgress.data?.user_error_message ||
+                          journeyProgress.data?.root_error_message ||
+                          null
                     }
                     onViewTaskDetails={() => navigate(`/tasks?run_id=${analysisRunId}`)}
                   />
                 ) : null}
-                {!journeyFailed &&
-                compositionUiState !== "awaiting_reader_journey_start" &&
-                compositionUiState !== "reader_journey_processing" ? (
+                {showJourneyResult ? (
                   <WorkspaceJourneyPane
                     bookId={bookId}
                     chapterId={chapterId!}

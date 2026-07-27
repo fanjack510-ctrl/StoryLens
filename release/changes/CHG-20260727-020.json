@@ -1,0 +1,48 @@
+{
+  "id": "CHG-20260727-020",
+  "title": "Prevent stale Reader Journey failure progress state",
+  "type": "fix",
+  "base_version": "1.1.0",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "apps/desktop"
+  ],
+  "files": [
+    "apps/desktop/src/services/resolveJourneyPageState.ts",
+    "apps/desktop/src/pages/BookRoutePage.tsx",
+    "apps/desktop/src/services/chapterJourneyComposition.ts"
+  ],
+  "user_summary": "修复阅读旅程实际仍在运行或已完成时，进度页错误显示生成失败的状态竞争问题。",
+  "technical_summary": "Add resolveJourneyPageState with request-sequence / journey-id / artifact priority so stale failed Journey GETs cannot cover active or completed journeys; distinguish temporary reconnect errors from terminal failure.",
+  "acceptance_criteria": [
+    "Stale failed Journey GET cannot show 阅读旅程生成失败 while parent is journey_running or completed with artifact",
+    "Temporary API errors show 暂时无法读取最新进度 without 重新生成",
+    "Run #4 completed journey 8/8 final artifact reused with zero Provider calls"
+  ],
+  "tests": [
+    "apps/desktop/src/services/resolveJourneyPageState.test.ts",
+    "apps/desktop/src/pages/BookRoutePage.readerJourneyResume.test.tsx"
+  ],
+  "verification_evidence": [
+    "release/evidence/CHG-20260727-020/verify-journey-progress-state.ps1",
+    "release/evidence/CHG-20260727-020/verify-output.txt"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": null,
+  "created_at": "2026-07-27T02:01:26Z",
+  "updated_at": "2026-07-27T02:10:25Z"
+}

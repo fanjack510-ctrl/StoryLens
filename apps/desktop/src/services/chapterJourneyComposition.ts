@@ -43,11 +43,16 @@ export function mapChapterCompositionState(
     return "succeeded";
   }
 
-  const journeyStatus = journey?.status || run?.journey_status || null;
-  if (journeyStatus && JOURNEY_ACTIVE.has(journeyStatus)) {
+  // Prefer live parent AnalysisRun journey signals over a stale journey GET failure.
+  if (run?.effective_status === "journey_running") {
     return "reader_journey_processing";
   }
-  if (run?.effective_status === "journey_running") {
+  if (run?.journey_status && JOURNEY_ACTIVE.has(run.journey_status)) {
+    return "reader_journey_processing";
+  }
+
+  const journeyStatus = journey?.status || run?.journey_status || null;
+  if (journeyStatus && JOURNEY_ACTIVE.has(journeyStatus)) {
     return "reader_journey_processing";
   }
   // null / missing / failed / partial → user can start or resume journey

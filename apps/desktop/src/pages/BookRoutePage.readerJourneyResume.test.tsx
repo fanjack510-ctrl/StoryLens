@@ -283,7 +283,7 @@ describe("BookRoutePage reader journey resume entry", () => {
     expect(analysisApi.readerJourneyProgress).toHaveBeenCalledWith(42);
   });
 
-  it("shows journey failed StateView instead of recovery card when journey failed", async () => {
+  it("shows journey interrupted StateView for retryable journey failure", async () => {
     vi.mocked(analysisApi.readerJourney).mockResolvedValue({
       journey_run_id: 42,
       analysis_run_id: 5,
@@ -314,17 +314,97 @@ describe("BookRoutePage reader journey resume entry", () => {
     });
     fireEvent.click(screen.getByTestId("workspace-tab-journey"));
     await waitFor(() => {
+      expect(screen.getByTestId("journey-interrupted")).toBeInTheDocument();
+    });
+    expect(screen.getByTestId("journey-interrupted")).toHaveTextContent("阅读旅程已中断");
+    expect(screen.getByTestId("journey-interrupted-task-details")).toHaveTextContent("查看详情");
+    expect(screen.queryByTestId("journey-failed")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("mock-embedded-results")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("reader-journey-progress-card")).not.toBeInTheDocument();
+  });
+
+  it("shows terminal journey failed StateView when failure is not retryable", async () => {
+    vi.mocked(analysisApi.readerJourney).mockResolvedValue({
+      journey_run_id: 42,
+      analysis_run_id: 5,
+      status: "failed",
+      user_error_message: "阅读旅程生成失败",
+      retryable: false,
+      formula_version: "v1",
+      phases: [],
+      scene_profiles: [],
+    } as any);
+    vi.mocked(analysisApi.readerJourneyProgress).mockResolvedValue({
+      journey_run_id: 42,
+      analysis_run_id: 5,
+      status: "failed",
+      total_scene_count: 13,
+      completed_scene_count: 2,
+      remaining_scene_count: 11,
+      completed_scene_ids: [],
+      remaining_scene_ids: [],
+      phase_count: 0,
+      has_chapter_summary: false,
+      retryable: false,
+      user_error_message: "阅读旅程生成失败",
+    });
+    renderBook("/books/1?chapter=2&analysisRun=5&view=progress");
+    await waitFor(() => {
+      expect(screen.getByTestId("workspace-tab-journey")).toBeEnabled();
+    });
+    fireEvent.click(screen.getByTestId("workspace-tab-journey"));
+    await waitFor(() => {
       expect(screen.getByTestId("journey-failed")).toBeInTheDocument();
     });
     expect(screen.getByTestId("journey-failed")).toHaveTextContent("阅读旅程生成失败");
-    expect(screen.getByTestId("journey-failed")).toHaveTextContent(
-      "已完成的场景分析不会受到影响。",
-    );
     expect(screen.getByTestId("journey-failed-retry")).toHaveTextContent("重新生成");
     expect(screen.getByTestId("journey-failed-task-details")).toHaveTextContent("查看任务详情");
-    // Progress panel may still offer recovery; the main result pane must not.
-    expect(screen.queryByTestId("mock-embedded-results")).not.toBeInTheDocument();
     expect(screen.queryByTestId("reader-journey-progress-card")).not.toBeInTheDocument();
+  });
+
+  it("does not show failure banner when parent says journey is still running", async () => {
+    vi.mocked(analysisApi.run).mockResolvedValue(
+      succeededRun({
+        effective_status: "journey_running",
+        journey_status: "scene_profiles_running",
+        journey_run_id: 42,
+        journey_completed_scene_count: 4,
+        journey_total_scene_count: 13,
+        scene_pipeline_complete: true,
+      }),
+    );
+    vi.mocked(analysisApi.readerJourney).mockResolvedValue({
+      journey_run_id: 42,
+      analysis_run_id: 5,
+      status: "failed",
+      retryable: false,
+      formula_version: "v1",
+      phases: [],
+      scene_profiles: [],
+    } as any);
+    vi.mocked(analysisApi.readerJourneyProgress).mockResolvedValue({
+      journey_run_id: 42,
+      analysis_run_id: 5,
+      status: "scene_profiles_running",
+      total_scene_count: 13,
+      completed_scene_count: 4,
+      remaining_scene_count: 9,
+      completed_scene_ids: [],
+      remaining_scene_ids: [],
+      phase_count: 0,
+      has_chapter_summary: false,
+      retryable: true,
+    });
+    renderBook("/books/1?chapter=2&analysisRun=5&view=progress");
+    await waitFor(() => {
+      expect(screen.getByTestId("workspace-tab-journey")).toBeEnabled();
+    });
+    fireEvent.click(screen.getByTestId("workspace-tab-journey"));
+    await waitFor(() => {
+      expect(screen.getByTestId("reader-journey-progress-card")).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId("journey-failed")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("journey-interrupted")).not.toBeInTheDocument();
   });
 
   it("reading banner does not claim full completion without journey", async () => {
