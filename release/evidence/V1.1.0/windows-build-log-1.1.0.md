@@ -1,15 +1,11 @@
-﻿# Windows Stable 1.1.0 Build Log
+# Windows Stable 1.1.0 Build Log
 
-Build source HEAD: c4ff5c951c1b4e324a661cc128974b6026edff14
+Started: 2026-07-27T11:03:29.7730201+08:00
+Finished: 2026-07-27T11:08:37.6636098+08:00
+Build source HEAD: 1a129ee7572ba115d8a94e0026f2e06ae04646c5
 Private HEAD: 30d8dad8cd649e832999874f7bf16cc1661cf221
 Formal/Display version: 1.1.0
 Release scope: SINGLE CHAPTER ONLY
-Sidecar build count: 1
-Installer build count: 1
-Installer: dist/release/StoryLens_1.1.0_x64-setup.exe
-Installer SHA-256: F817EFD32A8A02FD9A0B2C3B1A999E9409A7B3FD6C1246EC8AF1EA971E778671
-Sidecar SHA-256: 448A9F6F17EC4BFC4E6B03DF4DDF9CB51AB2F4B6B79F0F93F3A7739798648126
-Note: STORYLENS_RC_CANDIDATE=1 used only to skip unfrozen change_registry --release / release-guard for local pre-acceptance packaging. Product VERSION and installer filename are formal 1.1.0 (not an RC string).
-Native Overview bake: OFF
-Fake/Fixture: OFF
-Push/Tag/GitHub Release: NO
+STORYLENS_RC_CANDIDATE: 1 (skip unfrozen registry release-guard only; product version remains 1.1.0)
+Exit: 0
+

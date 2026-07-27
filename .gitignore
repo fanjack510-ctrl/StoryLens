@@ -118,3 +118,5 @@ release/evidence/**/_smoke2/
 release/evidence/**/_nsis-extract/
 release/evidence/**/_work/
 
+
+release/evidence/**/_smoke-install/

@@ -1,0 +1,12 @@
+﻿V1.1.0 PREBUILD GATE: PASS
+BUILD SOURCE HEAD: 1a129ee7572ba115d8a94e0026f2e06ae04646c5
+Formal VERSION: 1.1.0
+Security public tree secrets: 0
+Git history secrets: 0
+pytest: PASS
+vitest: PASS (88)
+typecheck: PASS
+CHG-019 verify: PASS
+CHG-020 verify: PASS
+git diff --check: PASS
+Registry note: STORYLENS_RC_CANDIDATE=1 used to skip unfrozen 1.0.5 pool release-guard; product VERSION/filename remain formal 1.1.0.
