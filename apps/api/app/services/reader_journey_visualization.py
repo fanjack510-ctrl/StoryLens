@@ -954,6 +954,7 @@ def _apply_v2_presentation_overrides(
         score_patch = scores_by_ordinal.get(key) if isinstance(scores_by_ordinal, dict) else None
         if isinstance(score_patch, dict):
             scores = dict(node.get("scores") or {})
+            nullable_fields = {"pacing_fit", "hook_payoff_fit"}
             for field in (
                 "reading_momentum",
                 "plot_progress",
@@ -962,12 +963,20 @@ def _apply_v2_presentation_overrides(
                 "pacing_fit",
                 "hook",
                 "payoff",
+                "hook_payoff_fit",
                 "emotional_investment",
                 "clarity",
                 "dropoff_risk",
+                "pacing_fit_status",
+                "pacing_fit_reason_code",
+                "hook_payoff_fit_status",
+                "hook_payoff_fit_reason_code",
             ):
-                if field in score_patch and score_patch[field] is not None:
-                    scores[field] = score_patch[field]
+                if field not in score_patch:
+                    continue
+                value = score_patch[field]
+                if value is not None or field in nullable_fields:
+                    scores[field] = value
             node["scores"] = scores
             if "reading_momentum" in score_patch and score_patch["reading_momentum"] is not None:
                 engagement = dict(node.get("engagement") or {})

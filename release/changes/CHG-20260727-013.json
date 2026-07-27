@@ -1,0 +1,111 @@
+{
+  "id": "CHG-20260727-013",
+  "title": "Reader Journey V2 节奏适配配置加载与派生可靠性修复",
+  "type": "fix",
+  "base_version": "1.1.0",
+  "status": "verified",
+  "include_in_next_release": true,
+  "commits": [
+    {
+      "sha": "796edb6453802f7196347214ab06f465571dc8a3",
+      "message": "Add V2 config reliability tests and deterministic re-finalize repair tool.",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "a4e55262e33b6a8cee1248d230338016f7659e2f",
+      "message": "Fix V2 role-target config loading and pacing_fit fail-safe derivation.",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "927c85a6fd988707250fab1fe8042e9828fc63fb",
+      "message": "Register CHG-20260727-013 for V2 pacing_fit config loading fix.",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "38d7b5fccf96fbc694d53219f75af30326607e5e",
+      "message": "Record CHG-20260727-013 implementation and test evidence.",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "7032c8969e1e4682cba90e485e471b487cc2de67",
+      "message": "Mark CHG-20260727-013 implemented and tested with evidence.",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "cba11b225ee8cb8894d1937167bee9429b1b8f0b",
+      "message": "Attach final CHG-20260727-013 commit in registry.",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "apps/api/app/services/reader_journey_v2_derivation.py",
+    "apps/api/app/services/reader_journey_v2_mapping.py",
+    "apps/api/app/core/paths.py",
+    "apps/api/storylens-api.spec",
+    "config/scene_role_targets.json",
+    "config/reader_journey_formulas_v2.json"
+  ],
+  "files": [
+    "apps/api/app/services/reader_journey_v2_config.py",
+    "apps/api/app/services/reader_journey_v2_derivation.py",
+    "apps/api/app/services/reader_journey_v2_mapping.py",
+    "apps/api/app/services/reader_journey_v2_finalize.py",
+    "apps/api/app/services/reader_journey_v2_persist.py",
+    "apps/api/app/services/reader_journey_v2_diagnosis.py",
+    "apps/api/app/services/reader_journey_v2_execution.py",
+    "apps/api/app/services/reader_journey_visualization.py",
+    "apps/api/app/schemas/reader_journey_v2.py",
+    "apps/api/storylens-api.spec",
+    "scripts/repair_reader_journey_v2_refinalize.py",
+    "apps/api/tests/test_reader_journey_v2_config_reliability_local.py",
+    "apps/api/tests/test_reader_journey_v2_packaging_datas_local.py"
+  ],
+  "user_summary": "修复安装态未加载 scene_role_targets 导致 pacing_fit 全部变为90、界面全显示合适的问题",
+  "technical_summary": "安装态未打包/未以 resource_root 加载 scene_role_targets.json，loader 静默空表后 compute_pacing_fit 回退 [0,100]，导致 pacing_fit 全为 90。本 Change 修复资源定位、校验、失败可见性，并提供 deterministic re-finalize。",
+  "acceptance_criteria": [
+    "开发/测试/安装态均以 cwd 无关方式加载 scene_role_targets 与 formulas_v2",
+    "配置缺失或非法时不得产生虚假 pacing_fit=90",
+    "PyInstaller 产物包含所需 V2 配置文件",
+    "显式 run 的 deterministic re-finalize dry-run/apply 可修复存量错误 fit",
+    "不修改正式 AppData；不调用真实 Provider"
+  ],
+  "tests": [
+    "apps/api/tests/test_reader_journey_v2_config_reliability_local.py",
+    "apps/api/tests/test_reader_journey_v2_packaging_datas_local.py",
+    "apps/api/tests/test_reader_journey_v2_local.py",
+    "apps/api/tests/test_reader_journey_v2_pipeline_wiring_local.py",
+    "isolated dry-run/apply re-finalize on AppData copy run_id=1"
+  ],
+  "verification_evidence": [
+    "isolated re-finalize fits 40/90/90/50/80/90/40/80/50",
+    "formal AppData pacing_fit remains all 90 (untouched)",
+    "provider_calls=0",
+    "second re-finalize idempotent changed_scene_count=0",
+    "resource_root loading; no [0,100] fallback; isolated re-finalize fits 40/90/90/50/80/90/40/80/50",
+    "56 passed V2 local/config/packaging/pipeline tests; isolated dry-run+apply idempotent; formal AppData untouched",
+    "install-state rebuild storylens-api.exe SHA256 F2711BA9... embeds scene_role_targets+formulas_v2 hash-matched",
+    "CWD probe 5/5 bundled loaded; isolated re-finalize+API fits 40/90/90/50/80/90/40/80/50; formal AppData untouched; provider_calls=0"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "派生字段 pacing_fit 可为 null（unavailable）；旧客户端在无 fit 时回退本地 band 标签。不自动改写用户库；需显式 repair apply。"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "P0",
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-27T05:11:48Z",
+  "updated_at": "2026-07-27T05:52:30Z"
+}

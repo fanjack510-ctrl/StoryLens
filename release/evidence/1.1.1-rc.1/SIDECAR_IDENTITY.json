@@ -1,0 +1,14 @@
+﻿{
+    "size_bytes":  39086610,
+    "arch":  "x86_64",
+    "validated_private_head":  "30d8dad8cd649e832999874f7bf16cc1661cf221",
+    "validated_sidecar_sha256":  "4F7FD23B003BC7FBC8ABBC7128C83FE020682EA0C71A69570F4635CE6F590A51",
+    "os":  "win32 10.0.19045",
+    "python":  "3.12.10",
+    "note":  "PyInstaller completed once; outer wrapper stderr abort before copy; copy completed without rebuild",
+    "dist_sidecar_sha256":  "4F7FD23B003BC7FBC8ABBC7128C83FE020682EA0C71A69570F4635CE6F590A51",
+    "sidecar_build_count":  1,
+    "validated_public_head":  "e373ed2e25d7b32d3c06689d637a17958a89797c",
+    "validated_sidecar_path":  "D:\\Dstorylens-wt-narrative-phase2br1-integration\\apps\\desktop\\src-tauri\\binaries\\storylens-api-x86_64-pc-windows-msvc.exe",
+    "pyinstaller":  "6.21.0"
+}

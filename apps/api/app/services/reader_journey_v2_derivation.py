@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
 from typing import Any
@@ -12,19 +11,37 @@ from app.schemas.reader_journey_v2 import (
     FORMULA_VERSION_V2,
     SceneReaderJourneyProfileItemV2,
 )
+from app.services.reader_journey_v2_config import (
+    FitComputation,
+    REASON_TARGETS_INVALID,
+    REASON_TARGETS_MISSING,
+    RoleTargetsBundle,
+    load_formula_v2_bundle,
+    load_scene_role_targets_bundle,
+    role_metric_band,
+    role_pacing_band,
+)
 from app.services.reader_journey_v2_mapping import (
     apply_profile_mapped_scores,
     load_formula_v2_config,
     mapped_or_zero,
 )
 
-DEFAULT_ROLE_TARGETS_PATH = Path("config/scene_role_targets.json")
 
+def load_scene_role_targets(path: Path | None = None) -> dict[str, Any]:
+    """Load and validate scene role targets (cwd-independent).
 
-def load_scene_role_targets(path: Path = DEFAULT_ROLE_TARGETS_PATH) -> dict[str, Any]:
-    if not path.exists():
-        return {"version": "1.0", "roles": {}}
-    return json.loads(path.read_text(encoding="utf-8"))
+    Raises ``FileNotFoundError`` / ``ValueError`` when config cannot be used.
+    Prefer :func:`load_scene_role_targets_bundle` when callers must degrade safely.
+    """
+    bundle = load_scene_role_targets_bundle(explicit=path)
+    if not bundle.ok or bundle.config is None:
+        status = bundle.provenance.status
+        err = bundle.provenance.error or status
+        if status == "missing":
+            raise FileNotFoundError(err)
+        raise ValueError(err)
+    return dict(bundle.config)
 
 
 def _clamp_0_100(value: float | Decimal) -> float:
@@ -70,16 +87,108 @@ def compute_reading_tension(profile: SceneReaderJourneyProfileItemV2, *, weights
     return _clamp_0_100(total)
 
 
+def compute_pacing_fit_result(
+    profile: SceneReaderJourneyProfileItemV2,
+    *,
+    role_targets: dict[str, Any] | None,
+    formula_config: dict[str, Any],
+    targets_load_status: str | None = None,
+) -> FitComputation:
+    """Compute pacing_fit or return unavailable — never falls back to [0, 100]."""
+    if role_targets is None or targets_load_status in {"missing", "invalid"}:
+        reason = (
+            REASON_TARGETS_INVALID
+            if targets_load_status == "invalid"
+            else REASON_TARGETS_MISSING
+        )
+        flag = (
+            "scene_role_targets_invalid"
+            if reason == REASON_TARGETS_INVALID
+            else "scene_role_targets_missing"
+        )
+        return FitComputation(
+            value=None,
+            status="unavailable",
+            reason_code=reason,
+            quality_flags=(flag, "pacing_fit_unavailable"),
+        )
+    band_or_fail = role_pacing_band(role_targets, profile.scene_role)
+    if isinstance(band_or_fail, FitComputation):
+        return band_or_fail
+    value = fit_to_band(
+        mapped_or_zero(profile.pacing_speed), band_or_fail, config=formula_config
+    )
+    return FitComputation(value=value, status="ok", reason_code=None, quality_flags=())
+
+
 def compute_pacing_fit(
     profile: SceneReaderJourneyProfileItemV2,
     *,
     role_targets: dict[str, Any],
     formula_config: dict[str, Any],
-) -> float:
+) -> float | None:
+    result = compute_pacing_fit_result(
+        profile, role_targets=role_targets, formula_config=formula_config
+    )
+    return result.value
+
+
+def compute_hook_payoff_fit_result(
+    profile: SceneReaderJourneyProfileItemV2,
+    *,
+    role_targets: dict[str, Any] | None,
+    formula_config: dict[str, Any],
+    targets_load_status: str | None = None,
+) -> FitComputation:
+    if role_targets is None or targets_load_status in {"missing", "invalid"}:
+        reason = (
+            REASON_TARGETS_INVALID
+            if targets_load_status == "invalid"
+            else REASON_TARGETS_MISSING
+        )
+        flag = (
+            "scene_role_targets_invalid"
+            if reason == REASON_TARGETS_INVALID
+            else "scene_role_targets_missing"
+        )
+        return FitComputation(
+            value=None,
+            status="unavailable",
+            reason_code=reason,
+            quality_flags=(flag, "pacing_fit_unavailable"),
+        )
     roles = role_targets.get("roles") or {}
+    if not isinstance(roles, dict) or profile.scene_role not in roles:
+        return FitComputation(
+            value=None,
+            status="unavailable",
+            reason_code="scene_role_not_found",
+            quality_flags=("scene_role_not_found", "pacing_fit_unavailable"),
+        )
     role_cfg = roles.get(profile.scene_role) or {}
-    band = role_cfg.get("pacing_speed") or [0, 100]
-    return fit_to_band(mapped_or_zero(profile.pacing_speed), band, config=formula_config)
+    if not isinstance(role_cfg, dict):
+        return FitComputation(
+            value=None,
+            status="unavailable",
+            reason_code=REASON_TARGETS_INVALID,
+            quality_flags=("scene_role_targets_invalid", "pacing_fit_unavailable"),
+        )
+    hook_band_or = role_metric_band(role_targets, profile.scene_role, "hook")
+    payoff_band_or = role_metric_band(role_targets, profile.scene_role, "payoff")
+    if isinstance(hook_band_or, FitComputation):
+        return hook_band_or
+    if isinstance(payoff_band_or, FitComputation):
+        return payoff_band_or
+    hook_w = float(role_cfg.get("hook_weight", 0.5))
+    payoff_w = float(role_cfg.get("payoff_weight", 0.5))
+    hook_fit = fit_to_band(mapped_or_zero(profile.hook), hook_band_or, config=formula_config)
+    payoff_fit = fit_to_band(mapped_or_zero(profile.payoff), payoff_band_or, config=formula_config)
+    return FitComputation(
+        value=_clamp_0_100(hook_fit * hook_w + payoff_fit * payoff_w),
+        status="ok",
+        reason_code=None,
+        quality_flags=(),
+    )
 
 
 def compute_hook_payoff_fit(
@@ -87,16 +196,11 @@ def compute_hook_payoff_fit(
     *,
     role_targets: dict[str, Any],
     formula_config: dict[str, Any],
-) -> float:
-    roles = role_targets.get("roles") or {}
-    role_cfg = roles.get(profile.scene_role) or {}
-    hook_band = role_cfg.get("hook") or [0, 100]
-    payoff_band = role_cfg.get("payoff") or [0, 100]
-    hook_w = float(role_cfg.get("hook_weight", 0.5))
-    payoff_w = float(role_cfg.get("payoff_weight", 0.5))
-    hook_fit = fit_to_band(mapped_or_zero(profile.hook), hook_band, config=formula_config)
-    payoff_fit = fit_to_band(mapped_or_zero(profile.payoff), payoff_band, config=formula_config)
-    return _clamp_0_100(hook_fit * hook_w + payoff_fit * payoff_w)
+) -> float | None:
+    result = compute_hook_payoff_fit_result(
+        profile, role_targets=role_targets, formula_config=formula_config
+    )
+    return result.value
 
 
 def compute_penalties(profile: SceneReaderJourneyProfileItemV2, *, config: dict[str, Any]) -> tuple[float, float, float]:
@@ -124,22 +228,27 @@ def compute_reading_momentum(
     *,
     plot_progress: float,
     reading_tension: float,
-    pacing_fit: float,
-    hook_payoff_fit: float,
+    pacing_fit: float | None,
+    hook_payoff_fit: float | None,
     clarity_penalty: float,
     cognitive_load_penalty: float,
     redundancy_penalty: float,
     weights: dict[str, float],
 ) -> float:
-    total = (
-        plot_progress * float(weights.get("plot_progress", 0.30))
-        + reading_tension * float(weights.get("reading_tension", 0.25))
-        + pacing_fit * float(weights.get("pacing_fit", 0.20))
-        + hook_payoff_fit * float(weights.get("hook_payoff_fit", 0.25))
-        - clarity_penalty
-        - cognitive_load_penalty
-        - redundancy_penalty
-    )
+    """Weighted momentum; renormalize when role-fit terms are unavailable."""
+    parts: list[tuple[float, float]] = [
+        (plot_progress, float(weights.get("plot_progress", 0.30))),
+        (reading_tension, float(weights.get("reading_tension", 0.25))),
+    ]
+    if pacing_fit is not None:
+        parts.append((float(pacing_fit), float(weights.get("pacing_fit", 0.20))))
+    if hook_payoff_fit is not None:
+        parts.append((float(hook_payoff_fit), float(weights.get("hook_payoff_fit", 0.25))))
+    weight_sum = sum(weight for _, weight in parts)
+    if weight_sum <= 0:
+        return 0.0
+    total = sum(value * weight for value, weight in parts) / weight_sum
+    total -= clarity_penalty + cognitive_load_penalty + redundancy_penalty
     return _clamp_0_100(total)
 
 
@@ -211,37 +320,67 @@ def apply_dropoff_adjustments(
     return result
 
 
+def _resolve_role_targets(
+    role_targets: dict[str, Any] | RoleTargetsBundle | None,
+) -> tuple[dict[str, Any] | None, RoleTargetsBundle | None, str | None]:
+    if isinstance(role_targets, RoleTargetsBundle):
+        if role_targets.ok and role_targets.config is not None:
+            return dict(role_targets.config), role_targets, role_targets.provenance.status
+        return None, role_targets, role_targets.provenance.status
+    if isinstance(role_targets, dict):
+        return role_targets, None, "loaded"
+    bundle = load_scene_role_targets_bundle()
+    if bundle.ok and bundle.config is not None:
+        return dict(bundle.config), bundle, bundle.provenance.status
+    return None, bundle, bundle.provenance.status
+
+
 def derive_scene_metrics(
     profile: SceneReaderJourneyProfileItemV2,
     *,
     formula_config: dict[str, Any] | None = None,
-    role_targets: dict[str, Any] | None = None,
+    role_targets: dict[str, Any] | RoleTargetsBundle | None = None,
 ) -> tuple[SceneReaderJourneyProfileItemV2, DerivedMetricsV2]:
-    cfg = formula_config or load_formula_v2_config()
-    roles = role_targets or load_scene_role_targets()
+    if formula_config is None:
+        cfg = load_formula_v2_bundle().config
+    else:
+        cfg = formula_config
+    roles, _role_bundle, targets_status = _resolve_role_targets(role_targets)
     scored = apply_profile_mapped_scores(profile, config=cfg)
     weight_block = cfg.get("weights") or {}
     plot = compute_plot_progress(scored, weights=weight_block.get("plot_progress") or {})
     tension = compute_reading_tension(scored, weights=weight_block.get("reading_tension") or {})
-    pacing = compute_pacing_fit(scored, role_targets=roles, formula_config=cfg)
-    hook_payoff = compute_hook_payoff_fit(scored, role_targets=roles, formula_config=cfg)
+    pacing_result = compute_pacing_fit_result(
+        scored,
+        role_targets=roles,
+        formula_config=cfg,
+        targets_load_status=targets_status,
+    )
+    hook_result = compute_hook_payoff_fit_result(
+        scored,
+        role_targets=roles,
+        formula_config=cfg,
+        targets_load_status=targets_status,
+    )
     clarity_p, cognitive_p, redundancy_p = compute_penalties(scored, config=cfg)
     momentum = compute_reading_momentum(
         plot_progress=plot,
         reading_tension=tension,
-        pacing_fit=pacing,
-        hook_payoff_fit=hook_payoff,
+        pacing_fit=pacing_result.value,
+        hook_payoff_fit=hook_result.value,
         clarity_penalty=clarity_p,
         cognitive_load_penalty=cognitive_p,
         redundancy_penalty=redundancy_p,
         weights=weight_block.get("reading_momentum") or {},
     )
     dropoff = base_dropoff_risk(momentum)
+    pacing_fit_value = None if pacing_result.value is None else _round1(pacing_result.value)
+    hook_payoff_value = None if hook_result.value is None else _round1(hook_result.value)
     derived = DerivedMetricsV2(
         plot_progress=_round1(plot),
         reading_tension=_round1(tension),
-        pacing_fit=_round1(pacing),
-        hook_payoff_fit=_round1(hook_payoff),
+        pacing_fit=pacing_fit_value,
+        hook_payoff_fit=hook_payoff_value,
         clarity_penalty=_round1(clarity_p),
         cognitive_load_penalty=_round1(cognitive_p),
         redundancy_penalty=_round1(redundancy_p),
@@ -249,6 +388,9 @@ def derive_scene_metrics(
         dropoff_risk=_round1(dropoff),
         formula_version=str(cfg.get("version", FORMULA_VERSION_V2)),
     )
+    quality_issue = scored.data_quality_issue
+    if pacing_result.status == "unavailable" and quality_issue is None:
+        quality_issue = "pacing_fit_unavailable"
     updated = scored.model_copy(
         update={
             "plot_progress": derived.plot_progress,
@@ -259,6 +401,11 @@ def derive_scene_metrics(
             "dropoff_risk": derived.dropoff_risk,
             "include_in_main_curve": scored.node_type != "beat",
             "include_in_chapter_mean": scored.node_type != "beat",
+            "pacing_fit_status": pacing_result.status,
+            "pacing_fit_reason_code": pacing_result.reason_code,
+            "hook_payoff_fit_status": hook_result.status,
+            "hook_payoff_fit_reason_code": hook_result.reason_code,
+            "data_quality_issue": quality_issue,
         }
     )
     return updated, derived
@@ -268,13 +415,20 @@ def derive_chapter_profiles(
     profiles: list[SceneReaderJourneyProfileItemV2],
     *,
     formula_config: dict[str, Any] | None = None,
-    role_targets: dict[str, Any] | None = None,
+    role_targets: dict[str, Any] | RoleTargetsBundle | None = None,
 ) -> list[SceneReaderJourneyProfileItemV2]:
-    cfg = formula_config or load_formula_v2_config()
-    roles = role_targets or load_scene_role_targets()
+    if formula_config is None:
+        cfg = load_formula_v2_bundle().config
+    else:
+        cfg = formula_config
+    roles_input = role_targets
+    if roles_input is None:
+        roles_input = load_scene_role_targets_bundle()
     derived_list: list[SceneReaderJourneyProfileItemV2] = []
     for profile in sorted(profiles, key=lambda item: item.scene_ordinal):
-        updated, _ = derive_scene_metrics(profile, formula_config=cfg, role_targets=roles)
+        updated, _ = derive_scene_metrics(
+            profile, formula_config=cfg, role_targets=roles_input
+        )
         derived_list.append(updated)
     return apply_dropoff_adjustments(derived_list, config=cfg)
 
