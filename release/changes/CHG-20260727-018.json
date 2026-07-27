@@ -23,6 +23,12 @@
       "message": "docs(release): record StoryLens 1.1.0 formal build evidence",
       "primary": true,
       "multi_change_reason": "formal build evidence after BUILD SOURCE"
+    },
+    {
+      "sha": "4485a6476dd2a79936c6ad7a6f9a5d71e312cab7",
+      "message": "docs(release): record StoryLens 1.1.0 formal build evidence",
+      "primary": true,
+      "multi_change_reason": "formal build evidence after BUILD SOURCE"
     }
   ],
   "modules": [
@@ -77,5 +83,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-27T00:18:49Z",
-  "updated_at": "2026-07-27T03:12:34Z"
+  "updated_at": "2026-07-27T03:12:57Z"
 }
