@@ -1,6 +1,0 @@
-2026-07-27 09:36:39,903 INFO __main__ StoryLens sidecar starting data_dir=D:\Dstorylens-wt-narrative-phase2br1-integration\release\evidence\RC8\_smoke database_url=sqlite:///D:/Dstorylens-wt-narrative-phase2br1-integration/release/evidence/RC8/_smoke/smoke.db
-2026-07-27 09:36:43,185 INFO uvicorn.error Started server process [27000]
-2026-07-27 09:36:43,187 INFO uvicorn.error Waiting for application startup.
-2026-07-27 09:36:43,464 INFO storylens.mock_lab_runtime whole_book_mock_lab status=enabled=False environment=production router_registered=False
-2026-07-27 09:36:43,469 INFO uvicorn.error Application startup complete.
-2026-07-27 09:36:43,471 INFO uvicorn.error Uvicorn running on http://127.0.0.1:52807 (Press CTRL+C to quit)
