@@ -11,6 +11,12 @@
       "message": "fix(journey): recover interrupted reader journey tasks",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "8d5a4170199f17fc651cc78c14ed5e69f85ffd15",
+      "message": "docs(release): mark CHG-20260727-019 tested",
+      "primary": true,
+      "multi_change_reason": "registry status tested evidence update for same CHG-019"
     }
   ],
   "modules": [
@@ -54,5 +60,5 @@
   "blocker_level": "P0",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-27T00:53:16Z",
-  "updated_at": "2026-07-27T01:02:36Z"
+  "updated_at": "2026-07-27T01:02:47Z"
 }
