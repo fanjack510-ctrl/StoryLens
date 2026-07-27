@@ -1,18 +1,21 @@
 # 叙镜 StoryLens
 
-**StoryLens（叙镜）** 是面向小说作者与写作学习者的本地优先 AI 拆书、结构化分析与读者旅程可视化工具。
+**StoryLens（叙镜）** 是面向小说创作者的本地优先 AI 拆书与结构化分析工具。
 
-## V1.0（Community RC）你需要知道的
+## StoryLens 1.1.0 你需要知道的
+
+StoryLens 1.1.0 是面向小说创作者的**单章小说拆解与分析**版本。
 
 | 项 | 说明 |
 |----|------|
-| 是什么 | 单章导入 → 场景边界审阅 → Scene Analysis → Reader Journey → 导出 |
-| 正式范围 | 单章阅读与分析、边界审阅、旅程图表 / Inspector / Evidence、PNG·JSON·Markdown 导出、任务恢复、本地持久化、**自带 Qwen Key** |
-| 数据位置 | 本机 `data/storylens.db`；运行时 `data/runtime/`（勿提交） |
-| AI 服务 | **必须自备**阿里云百炼 Qwen API Key（BYOK） |
+| 是什么 | 小说导入 → 章节阅读 → 场景边界审阅 → 单章结构化分析 → 任务进度 / 结果查看 |
+| 正式范围 | **SINGLE CHAPTER ONLY**：书库与导入、章节阅读、场景边界识别与人工确认、单章分析、任务中心、失败/取消/恢复/重试、本地与云端模型配置、预算与费用控制 |
+| 暂未开放 | 原生全书概览、章节聚合洞察、独立读者旅程分析入口（直接访问全书路由显示「该功能正在完善中」） |
+| 数据位置 | 本机用户数据目录；运行时数据勿提交到 Git |
+| AI 服务 | **必须自行填写**模型服务 API Key；软件**不内置**开发者个人 API Key |
+| 原始文件 | 用户原始 TXT / DOCX / EPUB **不会被软件删除** |
 | 云端账号 | StoryLens **不提供**云端账号 |
-| 费用 | 由你的 **阿里云账户** 承担 |
-| 普通模式正式支持 | 仅 **阿里云百炼 · Qwen**（`aliyun_qwen_plus` / 默认 `qwen3.7-plus`；`auto_route=false`；Flash fallback 关闭） |
+| 费用 | 由你的模型服务账户承担 |
 | 平台 | Windows 10/11（PowerShell 脚本）；桌面栈 React + Vite + Tauri |
 
 开源许可证尚未选定，见 [`docs/license-selection-notes.md`](docs/license-selection-notes.md)。**请勿**期望仓库中已有 `LICENSE` 文件。

@@ -1,0 +1,54 @@
+{
+  "id": "CHG-20260727-018",
+  "title": "Prepare StoryLens 1.1.0 stable release metadata and build",
+  "type": "build",
+  "base_version": "1.0.5",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "apps/desktop",
+    "apps/api",
+    "scripts"
+  ],
+  "files": [
+    "VERSION",
+    "README.md",
+    "docs/releases/1.1.0.md",
+    "apps/desktop/package.json",
+    "apps/desktop/src-tauri/tauri.conf.json",
+    "apps/desktop/src-tauri/Cargo.toml",
+    "pyproject.toml",
+    "apps/api/app/__init__.py",
+    "apps/desktop/src/pages/WholeBookInsightsPage.tsx",
+    "apps/desktop/src/components/wholeBookInsights/WholeBookInsightsEntry.tsx"
+  ],
+  "user_summary": "正式版 1.1.0 版本晋升、构建配置与发布证据，不新增业务功能。",
+  "technical_summary": "Promote formal VERSION and synced packaging metadata to 1.1.0; single-chapter release notes/README positioning; no business logic changes.",
+  "acceptance_criteria": [
+    "Formal display/installer/runtime version 1.1.0; single-chapter scope retained; no RC strings in production metadata"
+  ],
+  "tests": [
+    "targeted pytest 25 passed; vitest 140 passed; typecheck; version_manager check"
+  ],
+  "verification_evidence": [
+    "D:/StoryLens-Local-Evidence/V1.1.0-gate-20260727/gate-pytest.txt",
+    "D:/StoryLens-Local-Evidence/V1.1.0-gate-20260727/gate-vitest.txt"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": null,
+  "created_at": "2026-07-27T00:18:49Z",
+  "updated_at": "2026-07-27T00:25:38Z"
+}

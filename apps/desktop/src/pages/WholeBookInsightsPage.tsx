@@ -158,7 +158,7 @@ export function WholeBookInsightsPage() {
     return { validChapters: valid, missingChapters: missing };
   }, [chapters]);
 
-  // CHG-20260727-016: 1.1.0 single-chapter release keeps aggregate insights unshipped.
+  // CHG-20260727-016: single-chapter release keeps aggregate insights unshipped.
   if (!shipped) {
     return (
       <section
