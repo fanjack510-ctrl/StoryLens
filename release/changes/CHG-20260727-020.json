@@ -17,6 +17,12 @@
       "message": "docs(release): mark CHG-20260727-020 tested",
       "primary": true,
       "multi_change_reason": "registry status tested evidence update for same CHG-020"
+    },
+    {
+      "sha": "fb81cc65543970c2ad6ce8247fa926cc23dbf35c",
+      "message": "docs(release): verify CHG-020 and open RC9 packaging gate",
+      "primary": true,
+      "multi_change_reason": "CHG-020 verified evidence + RC9 prebuild gate"
     }
   ],
   "modules": [
@@ -58,5 +64,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-27T02:01:26Z",
-  "updated_at": "2026-07-27T02:18:28Z"
+  "updated_at": "2026-07-27T02:19:56Z"
 }
