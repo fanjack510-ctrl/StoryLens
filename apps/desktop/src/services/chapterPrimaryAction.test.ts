@@ -119,8 +119,9 @@ describe("resolveChapterPrimaryAction", () => {
       chapterComplete: false,
       inFlight: true,
     });
-    expect(a.kind).toBe("result");
-    expect(a.label).toBe("查看分析结果");
+    // CHG-019: awaiting journey is in-flight progress, not a separate "start journey" CTA.
+    expect(a.kind).toBe("progress");
+    expect(a.label).toBe("查看分析进度");
     expect(a.label).not.toMatch(/读者旅程/);
   });
 

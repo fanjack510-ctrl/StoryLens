@@ -450,7 +450,7 @@ export function BookRoutePage() {
       !!journeyRunId &&
       (journeyActiveView || journeyFailed || journeyInterrupted || journeyTemporaryError),
     refetchInterval:
-      journeyActiveView || journeyTemporaryError || compositionUiState === "reader_journey_processing"
+      journeyActiveView || journeyTemporaryError
         ? 2000
         : false,
   });
