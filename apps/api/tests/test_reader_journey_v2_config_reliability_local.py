@@ -240,6 +240,10 @@ def test_simulate_install_layout_datas(tmp_path, monkeypatch):
         src = REPO_ROOT / "config" / name
         (cfg_dir / name).write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
     monkeypatch.setattr("app.core.paths.resource_root", lambda: tmp_path)
+    # Isolate from developer AppData / prior install configs.
+    empty_user = tmp_path / "user_data"
+    empty_user.mkdir()
+    monkeypatch.setenv("STORYLENS_DATA_DIR", str(empty_user))
     foreign = tmp_path / "cwd_elsewhere"
     foreign.mkdir()
     monkeypatch.chdir(foreign)
