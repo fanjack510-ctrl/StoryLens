@@ -8,6 +8,10 @@ from app.schemas.reader_journey_v2 import (
     FORMULA_VERSION_V2,
     SceneReaderJourneyProfileItemV2,
 )
+from app.services.reader_journey_v2_config import (
+    load_formula_v2_bundle,
+    load_scene_role_targets_bundle,
+)
 from app.services.reader_journey_v2_derivation import (
     chapter_mean_reading_momentum,
     derive_chapter_profiles,
@@ -19,13 +23,45 @@ from app.services.reader_journey_v2_question_lifecycle import (
 )
 
 
+def build_config_provenance_block() -> dict[str, Any]:
+    """Public (path-free) provenance for role targets + formulas_v2."""
+    roles = load_scene_role_targets_bundle()
+    formulas = load_formula_v2_bundle()
+    quality_flags: list[str] = []
+    quality_flags.extend(roles.provenance.quality_flags)
+    quality_flags.extend(formulas.provenance.quality_flags)
+    return {
+        "scene_role_targets": roles.provenance.to_public_dict(),
+        "formulas_v2": formulas.provenance.to_public_dict(),
+        "quality_flags": sorted(set(quality_flags)),
+        "derivation_formula_version": FORMULA_VERSION_V2,
+        "role_targets_ready": roles.ok,
+    }
+
+
 def finalize_v2_profiles(
     profiles: list[SceneReaderJourneyProfileItemV2],
 ) -> tuple[list[SceneReaderJourneyProfileItemV2], dict[str, Any]]:
     """Map levels, derive metrics/dropoff, build lifecycle + diagnoses."""
-    derived = derive_chapter_profiles(profiles)
+    role_bundle = load_scene_role_targets_bundle()
+    formula_bundle = load_formula_v2_bundle()
+    derived = derive_chapter_profiles(
+        profiles,
+        formula_config=formula_bundle.config,
+        role_targets=role_bundle,
+    )
     lifecycle = build_question_lifecycle(derived)
     diagnoses = diagnose_chapter(derived, lifecycle=lifecycle)
+    provenance = {
+        "scene_role_targets": role_bundle.provenance.to_public_dict(),
+        "formulas_v2": formula_bundle.provenance.to_public_dict(),
+        "quality_flags": sorted(
+            set(role_bundle.provenance.quality_flags)
+            | set(formula_bundle.provenance.quality_flags)
+        ),
+        "derivation_formula_version": FORMULA_VERSION_V2,
+        "role_targets_ready": role_bundle.ok,
+    }
     stats: dict[str, Any] = {
         "formula_version": FORMULA_VERSION_V2,
         "contract_family": "reader_journey_v2",
@@ -39,5 +75,6 @@ def finalize_v2_profiles(
         "beat_count": sum(1 for item in derived if item.node_type == "beat"),
         # Explicitly document removal of legacy consecutive-no-payoff floor.
         "legacy_consecutive_no_payoff_floor_applied": False,
+        "config_provenance": provenance,
     }
     return derived, stats

@@ -157,6 +157,11 @@ class SceneReaderJourneyProfileItemV2(BaseModel):
     include_in_main_curve: bool | None = None
     include_in_chapter_mean: bool | None = None
     data_quality_issue: str | None = None
+    # Fit availability (CHG-20260727-013). Null/absent on legacy artifacts.
+    pacing_fit_status: Literal["ok", "unavailable"] | None = None
+    pacing_fit_reason_code: str | None = None
+    hook_payoff_fit_status: Literal["ok", "unavailable"] | None = None
+    hook_payoff_fit_reason_code: str | None = None
     # Persistence/integrity metadata written by pipeline; not model output.
     source_context_fingerprint: str | None = None
 
@@ -236,8 +241,8 @@ class DerivedMetricsV2(BaseModel):
     model_config = ConfigDict(extra="forbid")
     plot_progress: float
     reading_tension: float
-    pacing_fit: float
-    hook_payoff_fit: float
+    pacing_fit: float | None = None
+    hook_payoff_fit: float | None = None
     clarity_penalty: float
     cognitive_load_penalty: float
     redundancy_penalty: float

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any
 
@@ -11,8 +10,10 @@ from app.schemas.reader_journey_v2 import (
     ScoredLevelField,
     SceneReaderJourneyProfileItemV2,
 )
-
-DEFAULT_FORMULA_V2_PATH = Path("config/reader_journey_formulas_v2.json")
+from app.services.reader_journey_v2_config import (
+    embedded_formula_v2_defaults,
+    load_formula_v2_bundle,
+)
 
 DEFAULT_LEVEL_MAP = {
     0: 10,
@@ -25,14 +26,15 @@ DEFAULT_LEVEL_MAP = {
 DEFAULT_NO_EVIDENCE_CAP = 40
 
 
-def load_formula_v2_config(path: Path = DEFAULT_FORMULA_V2_PATH) -> dict[str, Any]:
-    if not path.exists():
-        return {
-            "version": "2.0",
-            "level_to_mapped_score": {str(k): v for k, v in DEFAULT_LEVEL_MAP.items()},
-            "no_evidence_mapped_score_cap": DEFAULT_NO_EVIDENCE_CAP,
-        }
-    return json.loads(path.read_text(encoding="utf-8"))
+def load_formula_v2_config(path: Path | None = None) -> dict[str, Any]:
+    """Load formulas_v2 via cwd-independent resolver.
+
+    ``path`` when provided is treated as an explicit file override.
+    Missing/invalid files fall back to embedded defaults (never CWD-relative
+    empty dict masquerading as production config).
+    """
+    bundle = load_formula_v2_bundle(explicit=path)
+    return dict(bundle.config)
 
 
 def level_to_mapped_score(
@@ -85,3 +87,16 @@ def mapped_or_zero(field: ScoredLevelField | None) -> float:
     if field.mapped_score is None:
         return float(level_to_mapped_score(field.level, has_evidence=bool(field.evidence_paragraph_ids)))
     return float(field.mapped_score)
+
+
+# Re-export for callers that previously imported defaults from mapping.
+__all__ = [
+    "DEFAULT_LEVEL_MAP",
+    "DEFAULT_NO_EVIDENCE_CAP",
+    "apply_mapped_scores",
+    "apply_profile_mapped_scores",
+    "embedded_formula_v2_defaults",
+    "level_to_mapped_score",
+    "load_formula_v2_config",
+    "mapped_or_zero",
+]

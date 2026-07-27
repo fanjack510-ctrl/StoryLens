@@ -161,8 +161,15 @@ def build_v2_scene_score_patch(profile: SceneReaderJourneyProfileItemV2) -> dict
         "reading_tension": profile.reading_tension,
         "pacing_speed": mapped_or_zero(profile.pacing_speed),
         "pacing_fit": profile.pacing_fit,
+        "pacing_fit_status": profile.pacing_fit_status or (
+            "unavailable" if profile.pacing_fit is None else "ok"
+        ),
+        "pacing_fit_reason_code": profile.pacing_fit_reason_code,
         "hook": mapped_or_zero(profile.hook),
         "payoff": mapped_or_zero(profile.payoff),
+        "hook_payoff_fit": profile.hook_payoff_fit,
+        "hook_payoff_fit_status": profile.hook_payoff_fit_status,
+        "hook_payoff_fit_reason_code": profile.hook_payoff_fit_reason_code,
         "emotional_investment": mapped_or_zero(profile.emotional_investment),
         "clarity": mapped_or_zero(profile.clarity),
         "dropoff_risk": profile.dropoff_risk,
@@ -207,6 +214,7 @@ def build_v2_deterministic_statistics(
         "diagnoses_origin": DIAGNOSES_ORIGIN_PROGRAM,
         "prewritten_scores": False,
         "prewritten_diagnoses": False,
+        "config_provenance": finalize_stats.get("config_provenance") or {},
     }
 
 

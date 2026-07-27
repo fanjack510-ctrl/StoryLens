@@ -158,6 +158,10 @@ def _load_v2_profiles_from_artifacts(
             "hook_payoff_fit",
             "reading_momentum",
             "dropoff_risk",
+            "pacing_fit_status",
+            "pacing_fit_reason_code",
+            "hook_payoff_fit_status",
+            "hook_payoff_fit_reason_code",
         ):
             payload.pop(key, None)
         profile = SceneReaderJourneyProfileItemV2.model_validate(payload)

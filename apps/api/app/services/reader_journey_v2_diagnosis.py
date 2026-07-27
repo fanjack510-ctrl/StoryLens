@@ -54,7 +54,7 @@ def diagnose_scene(
     plot = float(profile.plot_progress or 0.0)
     tension = float(profile.reading_tension or 0.0)
     pacing = mapped_or_zero(profile.pacing_speed)
-    pacing_fit = float(profile.pacing_fit or 0.0)
+    pacing_fit = float(profile.pacing_fit) if profile.pacing_fit is not None else None
     momentum = float(profile.reading_momentum or 0.0)
     hook = mapped_or_zero(profile.hook)
     payoff = mapped_or_zero(profile.payoff)
@@ -77,10 +77,10 @@ def diagnose_scene(
     if plot < 30:
         codes.append("plot_stagnation" if plot < 20 else "weak_progress")
         metrics.append("plot_progress")
-    if pacing_fit < 50 and pacing < 40:
+    if pacing_fit is not None and pacing_fit < 50 and pacing < 40:
         codes.append("pacing_too_slow")
         metrics.append("pacing_speed")
-    if pacing_fit < 50 and pacing > 80:
+    if pacing_fit is not None and pacing_fit < 50 and pacing > 80:
         codes.append("pacing_too_fast")
         metrics.append("pacing_speed")
     if cognitive > 75 and info > 70:
