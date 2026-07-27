@@ -5,7 +5,26 @@
   "base_version": "1.1.0",
   "status": "registered",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "796edb6453802f7196347214ab06f465571dc8a3",
+      "message": "Add V2 config reliability tests and deterministic re-finalize repair tool.",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "a4e55262e33b6a8cee1248d230338016f7659e2f",
+      "message": "Fix V2 role-target config loading and pacing_fit fail-safe derivation.",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "927c85a6fd988707250fab1fe8042e9828fc63fb",
+      "message": "Register CHG-20260727-013 for V2 pacing_fit config loading fix.",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "apps/api/app/services/reader_journey_v2_derivation.py",
     "apps/api/app/services/reader_journey_v2_mapping.py",
@@ -64,7 +83,7 @@
     "breaking_change": false
   },
   "blocker_level": "P0",
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-27T05:11:48Z",
-  "updated_at": "2026-07-27T05:11:48Z"
+  "updated_at": "2026-07-27T05:23:57Z"
 }
