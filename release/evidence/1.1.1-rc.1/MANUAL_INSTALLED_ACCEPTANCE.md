@@ -3,7 +3,7 @@
 Installer:
 `D:\Dstorylens-wt-narrative-phase2br1-integration\dist\release\StoryLens_1.1.1-rc.1_x64-setup.exe`
 
-SHA-256: 7C7348576397A1DC08DE7CEF6831F0036A332F7308DF10288C7F38AF9BD56916
+SHA-256: DEEB00F87C77B3FCD4B1CE320DBBA53FAAF644738D6635F7016674C910AE5982
 
 This step does **not** auto-install. Formal AppData / GUI / Sidecar remain untouched until you install.
 
