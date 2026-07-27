@@ -29,6 +29,12 @@
       "message": "docs(release): record corrected 1.1.1-rc.1 final HEAD",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "231ddeddd35c703114d5438aaaf97635b2f9a57d",
+      "message": "chore(release): prepare StoryLens 1.1.1",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -84,5 +90,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-27T08:35:48Z",
-  "updated_at": "2026-07-27T12:41:46Z"
+  "updated_at": "2026-07-27T12:42:29Z"
 }
