@@ -1,0 +1,23 @@
+RC9 PREBUILD GATE: PASS
+
+Formal VERSION: 1.1.0
+Display target: 1.1.0-rc.9
+Release scope: SINGLE CHAPTER ONLY
+CHG-019: verified
+CHG-020: verified
+CHG-018: tested (blocked for stable; not in RC packaging gate)
+RC8: BLOCKED / SUPERSEDED BY RC9
+
+version_manager check: PASS
+git diff --check: PASS
+pytest recovery (9): PASS
+vitest stale+lifecycle (47): PASS
+typescript typecheck: PASS
+CHG-020 zero-cost verify: PASS
+CHG-019 zero-cost verify: PASS
+Native Overview bake: OFF (env unset; RC script clears VITE/PRO flags)
+Fake/Fixture defaults: OFF for RC packaging
+
+Note: change_registry daily check may still report VERSION 1.1.0 vs unreleased/baseline 1.0.5
+(pre-existing on release/1.1.0). RC build uses STORYLENS_RC_CANDIDATE=1.
+No Push/Tag/Release/formal 1.1.0 build.

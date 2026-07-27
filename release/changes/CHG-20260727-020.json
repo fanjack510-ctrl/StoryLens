@@ -3,7 +3,7 @@
   "title": "Prevent stale Reader Journey failure progress state",
   "type": "fix",
   "base_version": "1.1.0",
-  "status": "tested",
+  "status": "verified",
   "include_in_next_release": true,
   "commits": [
     {
@@ -40,7 +40,8 @@
   ],
   "verification_evidence": [
     "release/evidence/CHG-20260727-020/verify-journey-progress-state.ps1",
-    "release/evidence/CHG-20260727-020/verify-output.txt"
+    "release/evidence/CHG-20260727-020/verify-output.txt",
+    "release/evidence/CHG-20260727-020/manual-source-verification.md"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -57,5 +58,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-27T02:01:26Z",
-  "updated_at": "2026-07-27T02:11:22Z"
+  "updated_at": "2026-07-27T02:18:28Z"
 }
