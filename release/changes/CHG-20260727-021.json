@@ -17,6 +17,12 @@
       "message": "fix(release): align RC1 gate tests with CHG-019 chapter CTA",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "a51459e84c4e83b68ca92bb7bb105683d93223a6",
+      "message": "docs(release): record 1.1.1-rc.1 final HEAD in evidence report",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -69,5 +75,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-27T08:35:48Z",
-  "updated_at": "2026-07-27T10:34:20Z"
+  "updated_at": "2026-07-27T10:34:56Z"
 }
