@@ -1,0 +1,28 @@
+{
+  "cases": [
+    {
+      "error": {
+        "code": "PRO_LICENSE_REQUIRED",
+        "details": {},
+        "message": "需要有效的 StoryLens Pro 授权才能创建原生全书概览。",
+        "retryable": false,
+        "run_id": null,
+        "stage_key": null,
+        "window_index": null
+      }
+    },
+    {
+      "error": {
+        "code": "WINDOW_EXECUTION_FAILED",
+        "details": {
+          "reason": "provider_timeout"
+        },
+        "message": "窗口分析执行失败，可重试未完成窗口。",
+        "retryable": true,
+        "run_id": "101",
+        "stage_key": "extract_overview_facts",
+        "window_index": 1
+      }
+    }
+  ]
+}

@@ -7,6 +7,7 @@ import type { ReactElement } from "react";
 import { ReaderJourneyWorkspace } from "./ReaderJourneyWorkspace";
 import { buildMockReaderJourneyVisualization } from "./mockVisualization";
 import { exportJourneyPng } from "./exportJourneyPng";
+import { openExportMenu } from "./journeyTestHelpers";
 
 vi.mock("./exportJourneyPng", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./exportJourneyPng")>();
@@ -30,14 +31,6 @@ function renderAt(ui: ReactElement, initial: string) {
   return render(<MemoryRouter initialEntries={[initial]}>{ui}</MemoryRouter>);
 }
 
-
-function openExportMenu() {
-  const more = screen.queryByTestId("journey-more-chart-settings");
-  if (more && !screen.queryByTestId("journey-export-png")) {
-    fireEvent.click(more);
-  }
-  return screen.getByTestId("journey-export-png");
-}
 
 describe("Phase 1C-C.2.6.2 compact phase navigation strip", () => {
   it("shows Phase 1-4 with two primary rows each", () => {
@@ -87,7 +80,7 @@ describe("Phase 1C-C.2.6.2 compact phase navigation strip", () => {
     );
     const card = screen.getByTestId("journey-phase-2");
     expect(card).toHaveTextContent(/推进/);
-    expect(within(card).getByTestId("journey-phase-avg-2")).toHaveTextContent("阅读牵引 58");
+    expect(within(card).getByTestId("journey-phase-avg-2").textContent).toMatch(/阅读动力\s+\d+/);
     expect(card.textContent).not.toMatch(/平均牵引/);
     expect(card.textContent).not.toMatch(/核心问题/);
     expect(card.textContent).not.toMatch(/阶段回报/);
@@ -110,7 +103,7 @@ describe("Phase 1C-C.2.6.2 compact phase navigation strip", () => {
     expect(within(card).queryByTestId("journey-phase-current-badge")).not.toBeInTheDocument();
     expect(card.querySelectorAll(".journey-phase-card-head")).toHaveLength(1);
     expect(card.querySelectorAll(".journey-phase-card-desc")).toHaveLength(1);
-    expect(within(card).getByTestId("journey-phase-avg-3").textContent).toMatch(/阅读牵引/);
+    expect(within(card).getByTestId("journey-phase-avg-3").textContent).toMatch(/阅读动力/);
     expect(within(card).getByTestId("journey-phase-avg-3").textContent).not.toMatch(/当前/);
   });
 

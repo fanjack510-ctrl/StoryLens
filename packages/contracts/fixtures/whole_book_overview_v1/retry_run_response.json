@@ -1,0 +1,20 @@
+{
+  "actions": {
+    "can_resume": false,
+    "can_retry": true
+  },
+  "book_id": "1",
+  "current_stage": "extract_overview_facts",
+  "message": "Retry accepted; completed windows will be skipped.",
+  "progress": {
+    "completed_windows": 1,
+    "current_window_index": 1,
+    "failed_window_index": 1,
+    "percent": 50,
+    "total_windows": 2
+  },
+  "retryable": true,
+  "run_id": "101",
+  "snapshot_id": "55",
+  "status": "analyzing"
+}

@@ -1,0 +1,86 @@
+{
+  "id": "CHG-20260727-014",
+  "title": "Restore unified analysis task re-entry across book, overview, and task center",
+  "type": "fix",
+  "base_version": "1.0.5",
+  "status": "verified",
+  "include_in_next_release": true,
+  "commits": [
+    {
+      "sha": "75f4dff89e804bd79d08747881e657161d28ee98",
+      "message": "fix(tasks): restore analysis task re-entry",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "21233a17befd5ea4ff5db18345a3d35fb075310c",
+      "message": "docs(release): sync CHG-20260727-014 to tested",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "apps/desktop",
+    "apps/api"
+  ],
+  "files": [
+    "apps/desktop/src/services/runLifecycle.ts",
+    "apps/desktop/src/services/chapterPrimaryAction.ts",
+    "apps/desktop/src/services/discoverActiveChapterRun.ts",
+    "apps/desktop/src/pages/BookRoutePage.tsx",
+    "apps/desktop/src/components/proNativeOverview/ProNativeOverviewEntry.tsx",
+    "apps/desktop/src/pages/ProNativeOverviewPage.tsx",
+    "apps/desktop/src/pages/TasksPage.tsx",
+    "apps/desktop/src/components/analysis/StartAnalysisDialog.tsx",
+    "apps/api/app/api/v1/router.py",
+    "apps/api/app/api/v1/analysis.py"
+  ],
+  "user_summary": "修复书籍页、原生全书概览与任务中心的任务重新进入断链，并扩展409已有任务详情以便自动跳转。",
+  "technical_summary": "Shared runLifecycle semantics; book/native/task-center re-entry CTAs; ANALYSIS_RUN_EXISTS details + StartAnalysisDialog redirect; create race guard for native overview.",
+  "acceptance_criteria": [
+    "Run #12 completed → view native overview result",
+    "Run #13 scene_analysis_running + confirmed review → chapter progress",
+    "Run #14 analyzing → native progress; no duplicate create",
+    "409 ANALYSIS_RUN_EXISTS includes existing_run_id and frontend redirects",
+    "Run #12/#13/#14 re-entry CTAs and routes",
+    "409 ANALYSIS_RUN_EXISTS includes existing_run_id; frontend redirects",
+    "Native overview blocks duplicate create when active exists"
+  ],
+  "tests": [
+    "apps/api/tests/test_analysis_run_exists_details_local.py",
+    "apps/desktop/src/services/runLifecycle.test.ts",
+    "apps/desktop/src/services/chapterPrimaryAction.test.ts",
+    "apps/desktop/src/services/discoverActiveChapterRun.test.ts",
+    "apps/desktop/src/pages/proNativeOverview.test.tsx",
+    "release/evidence/CHG-20260727-014/verify-task-reentry.ps1"
+  ],
+  "verification_evidence": [
+    "release/evidence/CHG-20260727-014/verification-summary.txt"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-26T17:15:59Z",
+  "updated_at": "2026-07-26T19:13:10Z",
+  "verification": {
+    "method": "temp DB copy + Fake pytest/vitest + PowerShell zero-cost verify",
+    "script": "release/evidence/CHG-20260727-014/verify-task-reentry.ps1",
+    "real_provider_calls": 0,
+    "formal_db_writes": 0,
+    "new_runs_created": 0,
+    "installer_builds": 0,
+    "notes": "Formal DB #14 already completed at verify time; active-duplicate covered by unit/integration tests | RC7: remains verified and in single-chapter release scope",
+    "rc7_scope": "included in 1.1.0-rc.7 single-chapter release"
+  }
+}

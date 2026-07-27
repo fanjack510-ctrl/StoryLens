@@ -41,6 +41,39 @@ import {
   WritingTakeawayList,
   normalizeWritingTakeawayList,
 } from "./sceneDetailFields";
+import { buildSceneNarrative } from "./journeySceneNarrative";
+import type { ObservationLensId } from "./observationLenses";
+import { DEFAULT_OBSERVATION_LENS } from "./observationLenses";
+import {
+  getQuestionLifecycle,
+  hookPayoffCombinationExplanation,
+  isHookPayoffLens,
+  lifecycleStatusLabelZh,
+  otherDiagnosesForHookPayoffLens,
+  questionsForScene,
+  sceneRoleInLifecycle,
+} from "./hookPayoffLensModel";
+import { primaryBandLabelForScene } from "./diagnosisBandModel";
+import type { SceneDiagnosisLike } from "./diagnosisBandModel";
+import {
+  formatPayoffClaimLabel,
+  formatHookHandoffFromLoops,
+  formatOpenLoopRiskSummary,
+  getNarrativeLoopConsistency,
+  getNarrativeLoopRisks,
+  getNarrativeLoops,
+  getScenePayoffClaim,
+} from "./narrativeLoopView";
+import { isTautologyContinueDrive } from "./readerJourneyLensExplanation";
+import {
+  formatLensBindingCaption,
+  resolveLensMetricBinding,
+  readingMomentumLabelZh,
+} from "./lensMetricBinding";
+import {
+  findHookResolutionRow,
+  type HookResolutionRow,
+} from "./hookResolutionModel";
 
 export type SceneDetailTab =
   | "overview"
@@ -50,24 +83,61 @@ export type SceneDetailTab =
   | "evidence";
 
 const TABS: { id: SceneDetailTab; label: string; testId: string }[] = [
-  { id: "overview", label: "概览", testId: "scene-detail-tab-overview" },
-  { id: "questions", label: "问题链", testId: "scene-detail-tab-questions" },
-  { id: "payoffs", label: "回报与钩子", testId: "scene-detail-tab-payoffs" },
-  { id: "techniques", label: "写作技法", testId: "scene-detail-tab-techniques" },
-  { id: "evidence", label: "证据", testId: "scene-detail-tab-evidence" },
+  { id: "overview", label: "节点结论", testId: "scene-detail-tab-overview" },
+  { id: "questions", label: "为什么", testId: "scene-detail-tab-questions" },
+  { id: "payoffs", label: "前后承接", testId: "scene-detail-tab-payoffs" },
+  { id: "evidence", label: "正文证据", testId: "scene-detail-tab-evidence" },
+  { id: "techniques", label: "分析信息", testId: "scene-detail-tab-techniques" },
 ];
 
-const CORE_SCORE_KEYS = ["engagement", "curiosity", "tension"] as const;
+const CORE_SCORE_KEYS = ["reading_momentum", "curiosity", "tension"] as const;
 
 type Props = {
   node: JourneySceneNode;
   onLocateEvidence: (paragraphId: string) => void;
   onClose?: () => void;
   onOpenInSceneList?: () => void;
+  visualization?: ReaderJourneyVisualization | null;
+  observationLensLabel?: string | null;
+  observationLens?: ObservationLensId | null;
+  /** When set on 钩子回收 lens, show ordinary-language hook resolution evidence. */
+  selectedLoopId?: string | null;
 };
 
+function HookResolutionEvidenceSection({ row }: { row: HookResolutionRow }) {
+  return (
+    <JourneyInspectorSection title="当前结论" testId="hook-resolution-evidence">
+      <div className="hook-resolution-evidence">
+        <p data-testid="hook-resolution-evidence-conclusion">{row.main_label}。</p>
+        <p data-testid="hook-resolution-evidence-why">
+          <b>为什么这样判断</b>
+          <br />
+          {row.why_judgment_plain}
+        </p>
+        {row.has_conflict && row.conflict_divergence_plain ? (
+          <p data-testid="hook-resolution-evidence-divergence">
+            <b>判定分歧</b>
+            <br />
+            {row.conflict_divergence_plain}
+          </p>
+        ) : null}
+        {row.conflict_tech_reason ? (
+          <details data-testid="hook-resolution-evidence-tech">
+            <summary>分析信息</summary>
+            <pre>{row.conflict_tech_reason}</pre>
+          </details>
+        ) : null}
+      </div>
+    </JourneyInspectorSection>
+  );
+}
+
 function scoreValue(node: JourneySceneNode, key: (typeof CORE_SCORE_KEYS)[number]): number {
-  if (key === "engagement") return Number(node.engagement?.engagement_score ?? 0);
+  if (key === "reading_momentum") {
+    return Number(
+      node.scores?.reading_momentum ?? node.engagement?.engagement_score ?? 0,
+    );
+  }
   return Number(node.scores?.[key] ?? 0);
 }
 
@@ -80,12 +150,23 @@ export function JourneySceneDetailPanel({
   onLocateEvidence,
   onClose,
   onOpenInSceneList,
+  visualization = null,
+  observationLensLabel = null,
+  observationLens = DEFAULT_OBSERVATION_LENS,
+  selectedLoopId = null,
 }: Props) {
   const [tab, setTab] = useState<SceneDetailTab>("overview");
 
   useEffect(() => {
     // Keep tab across Scene switches.
   }, [node.scene_ordinal]);
+
+  const hookResolutionRow = useMemo(() => {
+    if (!visualization || !isHookPayoffLens(observationLens) || !selectedLoopId) {
+      return null;
+    }
+    return findHookResolutionRow(visualization, selectedLoopId);
+  }, [visualization, observationLens, selectedLoopId]);
 
   const evidenceRows = useMemo(() => {
     const rows: EvidenceRow[] = [];
@@ -103,19 +184,19 @@ export function JourneySceneDetailPanel({
       push(q.evidence_paragraph_ids, q.question ?? "回答", "question");
     }
     for (const p of node.payoffs ?? []) {
-      push(p.evidence_paragraph_ids, p.summary ?? "回报", "payoff");
+      push(p.evidence_paragraph_ids, p.summary ?? "回应", "payoff");
     }
     for (const h of node.hooks ?? []) {
-      push(h.evidence_paragraph_ids, h.summary ?? "钩子", "hook");
+      push(h.evidence_paragraph_ids, h.summary ?? "悬念", "hook");
     }
     if (node.primary_hook) {
-      push(node.primary_hook.evidence_paragraph_ids, node.primary_hook.summary ?? "主钩子", "hook");
+      push(node.primary_hook.evidence_paragraph_ids, node.primary_hook.summary ?? "主悬念", "hook");
     }
     for (const t of node.techniques ?? []) {
       push(t.evidence_paragraph_ids, t.name ?? "技法", "technique");
     }
     for (const r of node.risk_points ?? []) {
-      push(r.evidence_paragraph_ids, r.summary ?? "流失风险", "risk");
+      push(r.evidence_paragraph_ids, r.summary ?? "阅读阻力", "risk");
     }
     const seen = new Set<string>();
     return rows.filter((row) => {
@@ -125,6 +206,47 @@ export function JourneySceneDetailPanel({
       return true;
     });
   }, [node]);
+
+  if ((node as { integrity_blocked?: boolean }).integrity_blocked) {
+    return (
+      <JourneyInspectorShell testId="journey-scene-integrity-blocked">
+        <JourneyInspectorHeader
+          title="分析结果校验未通过"
+          meta={formatJourneySceneLabel(node.scene_ordinal)}
+        />
+        <JourneyInspectorBody>
+          <p data-testid="journey-integrity-message">
+            {(node as { overview?: string }).overview ||
+              "检测到部分结论与当前正文不一致，相关结果已暂停展示。"}
+          </p>
+          <div className="journey-integrity-actions">
+            <button type="button" className="secondary" data-testid="journey-integrity-details">
+              查看校验详情
+            </button>
+            <button
+              type="button"
+              className="secondary"
+              data-testid="journey-integrity-regen"
+              disabled
+              title="需用户确认后才会调用模型"
+            >
+              重新生成受影响结果
+            </button>
+            {onClose ? (
+              <button type="button" className="ghost" onClick={onClose}>
+                返回正文
+              </button>
+            ) : null}
+          </div>
+          <p className="secondary" data-testid="journey-integrity-tech">
+            error_code=
+            {(node as { integrity_status?: string }).integrity_status || "DATA_INTEGRITY_FAILED"}
+            {typeof node.scene_id === "number" ? ` · scene_id=${node.scene_id}` : ""}
+          </p>
+        </JourneyInspectorBody>
+      </JourneyInspectorShell>
+    );
+  }
 
   const hasQuestions =
     (node.reader_question_in?.length ?? 0) +
@@ -143,9 +265,17 @@ export function JourneySceneDetailPanel({
 
   const coreMetrics = CORE_SCORE_KEYS.map((key) => ({
     key,
-    label: key === "engagement" ? METRIC_LABELS_ZH.engagement : METRIC_LABELS_ZH[key],
+    label:
+      key === "reading_momentum"
+        ? visualization
+          ? readingMomentumLabelZh(visualization)
+          : "阅读动力"
+        : METRIC_LABELS_ZH[key as keyof typeof METRIC_LABELS_ZH] ?? key,
     value: Math.max(0, Math.min(100, scoreValue(node, key))),
-    title: SCORE_TOOLTIPS_ZH[key],
+        title:
+          key === "reading_momentum"
+            ? "综合阅读"
+            : SCORE_TOOLTIPS_ZH[key],
   }));
 
   return (
@@ -172,12 +302,73 @@ export function JourneySceneDetailPanel({
         <div className="scene-detail-tab-panel" data-testid={`scene-detail-panel-${tab}`}>
           {tab === "overview" && (
             <div data-testid="scene-detail-overview">
+              {hookResolutionRow ? (
+                <HookResolutionEvidenceSection row={hookResolutionRow} />
+              ) : null}
               {conclusion ? (
                 <JourneyPrimaryConclusion text={conclusion} testId="scene-primary-conclusion" />
               ) : null}
               <JourneyInspectorSection title="场景概览" testId="scene-overview-level">
                 <p>{role}</p>
               </JourneyInspectorSection>
+              {(node.primary_diagnosis || node.positive_mechanism || node.data_quality_issue) && (
+                <JourneyInspectorSection title="诊断" testId="scene-overview-diagnosis">
+                  <p data-testid="scene-primary-diagnosis">
+                    主诊断：
+                    {primaryBandLabelForScene({
+                      scene_ordinal: node.scene_ordinal,
+                      primary_diagnosis: node.primary_diagnosis,
+                      secondary_diagnoses: node.secondary_diagnoses,
+                      positive_mechanism: node.positive_mechanism,
+                      data_quality_issue: node.data_quality_issue,
+                    })}
+                  </p>
+                  {node.secondary_diagnoses?.length ? (
+                    <p data-testid="scene-secondary-diagnoses">
+                      次要：{node.secondary_diagnoses.join(" · ")}
+                    </p>
+                  ) : null}
+                  {node.positive_mechanism ? (
+                    <p data-testid="scene-positive-mechanism">
+                      正向机制：{node.positive_mechanism}
+                    </p>
+                  ) : null}
+                  {node.data_quality_issue ? (
+                    <p data-testid="scene-data-quality-issue">
+                      数据质量：{node.data_quality_issue}
+                    </p>
+                  ) : null}
+                  <p>置信度：{Math.round((node.confidence ?? 0) * 100)}%</p>
+                </JourneyInspectorSection>
+              )}
+              {visualization ? (
+                <JourneyInspectorSection title="高低点叙事" testId="scene-overview-narrative">
+                  {(() => {
+                    const narrative = buildSceneNarrative(visualization, node);
+                    return (
+                      <ul data-testid="scene-narrative-list">
+                        <li>{narrative.whyHighOrLow}</li>
+                        <li>{narrative.narrativeTechnique}</li>
+                        <li>{narrative.priorSetup}</li>
+                        <li>{narrative.laterPayoff}</li>
+                      </ul>
+                    );
+                  })()}
+                  {observationLensLabel && visualization ? (
+                    <p data-testid="scene-current-lens-score">
+                      当前镜头：{observationLensLabel}
+                      {" · "}
+                      {formatLensBindingCaption(
+                        resolveLensMetricBinding(
+                          visualization,
+                          observationLens ?? DEFAULT_OBSERVATION_LENS,
+                          node,
+                        ),
+                      )}
+                    </p>
+                  ) : null}
+                </JourneyInspectorSection>
+              ) : null}
               {node.phase_ordinal != null ? (
                 <JourneyInspectorSection title="所属阶段" testId="scene-overview-phase">
                   <p>阶段 {node.phase_ordinal}</p>
@@ -192,7 +383,7 @@ export function JourneySceneDetailPanel({
                 <JourneyCompactMetrics items={coreMetrics} testId="scene-detail-score-bars" />
               </JourneyInspectorSection>
               {riskText ? (
-                <JourneyInspectorSection title="核心流失风险" testId="scene-overview-risk">
+                <JourneyInspectorSection title="核心阅读阻力" testId="scene-overview-risk">
                   <p>{riskText}</p>
                 </JourneyInspectorSection>
               ) : null}
@@ -256,7 +447,13 @@ export function JourneySceneDetailPanel({
 
           {tab === "payoffs" && (
             <div data-testid="scene-detail-payoffs">
-              {!hasPayoffs && !hasHooks ? (
+              {visualization && isHookPayoffLens(observationLens) ? (
+                <HookPayoffLifecycleSection
+                  visualization={visualization}
+                  node={node}
+                />
+              ) : null}
+              {!hasPayoffs && !hasHooks && !(visualization && isHookPayoffLens(observationLens)) ? (
                 <JourneyInspectorEmptyState
                   kind="no-hook-payoff"
                   testId="empty-hook-payoff"
@@ -278,11 +475,27 @@ export function JourneySceneDetailPanel({
                           </p>
                           {node.primary_hook.known ? <p>已知：{node.primary_hook.known}</p> : null}
                           {node.primary_hook.gap ? <p>缺口：{node.primary_hook.gap}</p> : null}
-                          {node.primary_hook.continue_drive ? (
+                          {node.primary_hook.continue_drive &&
+                          !isTautologyContinueDrive(node.primary_hook.continue_drive) ? (
                             <p>继续动力：{node.primary_hook.continue_drive}</p>
                           ) : null}
                           {node.primary_hook.next_handoff ? (
                             <p>下一场承接：{node.primary_hook.next_handoff}</p>
+                          ) : visualization ? (
+                            (() => {
+                              const handoff = formatHookHandoffFromLoops(
+                                getNarrativeLoops(visualization),
+                                node.scene_ordinal,
+                              );
+                              if (handoff.text) {
+                                return <p>下一场承接：{handoff.text}</p>;
+                              }
+                              return (
+                                <p className="journey-inspector-hint">
+                                  {handoff.hint || "当前钩子尚未识别出明确的后续承接。"}
+                                </p>
+                              );
+                            })()
                           ) : (
                             <p className="journey-inspector-hint">
                               当前钩子尚未识别出明确的后续承接。
@@ -301,7 +514,7 @@ export function JourneySceneDetailPanel({
                           <b>{payoffTypeZh(node.primary_payoff.type)}</b>
                           <p>{node.primary_payoff.summary || "—"}</p>
                           {node.primary_payoff.strength != null ? (
-                            <small>强度 {node.primary_payoff.strength}</small>
+                            <small>本场强度 {node.primary_payoff.strength}</small>
                           ) : null}
                         </article>
                       ) : null}
@@ -350,12 +563,122 @@ export function JourneySceneDetailPanel({
   );
 }
 
+function HookPayoffLifecycleSection({
+  visualization,
+  node,
+}: {
+  visualization: ReaderJourneyVisualization;
+  node: JourneySceneNode;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const lifecycle = getQuestionLifecycle(visualization);
+  const related = questionsForScene(lifecycle, node.scene_ordinal);
+  const primary = related[0];
+  const others = related.slice(1);
+  const hook = typeof node.scores?.hook === "number" ? node.scores.hook : null;
+  const payoff = typeof node.scores?.payoff === "number" ? node.scores.payoff : null;
+  const combo = hookPayoffCombinationExplanation(hook, payoff);
+  const diagLike: SceneDiagnosisLike = {
+    scene_ordinal: node.scene_ordinal,
+    primary_diagnosis: node.primary_diagnosis,
+    secondary_diagnoses: node.secondary_diagnoses,
+    positive_mechanism: node.positive_mechanism,
+    role: node.role,
+    node_type: node.node_type,
+    include_in_main_curve: node.include_in_main_curve,
+  };
+  const otherDiag = otherDiagnosesForHookPayoffLens(diagLike);
+
+  return (
+    <>
+      <JourneyInspectorSection title="钩子回收解读" testId="scene-hook-payoff-combo">
+        <p data-testid="scene-hook-payoff-combo-text">{combo}</p>
+        <p className="journey-inspector-hint" data-testid="scene-payoff-plain">
+          {formatPayoffClaimLabel(getScenePayoffClaim(visualization, node.scene_ordinal), payoff)}
+        </p>
+      </JourneyInspectorSection>
+      <JourneyInspectorSection title="问题生命周期" testId="scene-question-lifecycle">
+        {!related.length ? (
+          <p data-testid="scene-question-lifecycle-empty">
+            本场未关联到明确的问题生命周期。
+          </p>
+        ) : (
+          <>
+            {primary ? (
+              <article
+                className="journey-lifecycle-card"
+                data-testid={`scene-lifecycle-${primary.question_id}`}
+              >
+                <p>
+                  <b>
+                    {primary.question_id}：{primary.question_text}
+                  </b>
+                </p>
+                <p>
+                  S{primary.setup_scene} 建立问题
+                  {(primary.development_scenes || []).map((s) => ` → S${s} 推进`).join("")}
+                  {primary.payoff_scene != null
+                    ? ` → S${primary.payoff_scene} ${
+                        primary.status === "paid_off" ? "完成兑现" : "部分兑现"
+                      }`
+                    : ""}
+                </p>
+                <p>当前状态：{lifecycleStatusLabelZh(primary.status)}</p>
+                <p>
+                  本场作用：{sceneRoleInLifecycle(primary, node.scene_ordinal)}
+                </p>
+                {typeof primary.strength === "number" ? (
+                  <p>confidence / strength：{primary.strength}</p>
+                ) : null}
+              </article>
+            ) : null}
+            {others.length > 0 ? (
+              <details
+                open={expanded}
+                onToggle={(e) => setExpanded((e.target as HTMLDetailsElement).open)}
+                data-testid="scene-lifecycle-others"
+              >
+                <summary>其他关联问题（{others.length}）</summary>
+                {others.map((item) => (
+                  <article key={item.question_id} className="journey-lifecycle-card">
+                    <p>
+                      <b>
+                        {item.question_id}：{item.question_text}
+                      </b>
+                    </p>
+                    <p>
+                      建立 S{item.setup_scene}
+                      {item.payoff_scene != null ? ` · 兑现 S${item.payoff_scene}` : ""}
+                      {" · "}
+                      {lifecycleStatusLabelZh(item.status)}
+                      {" · 本场："}
+                      {sceneRoleInLifecycle(item, node.scene_ordinal)}
+                    </p>
+                  </article>
+                ))}
+              </details>
+            ) : null}
+          </>
+        )}
+      </JourneyInspectorSection>
+      {otherDiag.length > 0 ? (
+        <JourneyInspectorSection title="其他诊断" testId="scene-other-diagnoses">
+          <p>{otherDiag.join(" · ")}</p>
+          <p className="journey-inspector-hint">
+            主诊断标签：{primaryBandLabelForScene(diagLike)}（非钩子回报主标签时收纳于此）
+          </p>
+        </JourneyInspectorSection>
+      ) : null}
+    </>
+  );
+}
+
 export type PhaseDetailTab = "overview" | "questions" | "risks" | "scenes";
 
 const PHASE_TABS: { id: PhaseDetailTab; label: string; testId: string }[] = [
   { id: "overview", label: "阶段概览", testId: "phase-detail-tab-overview" },
-  { id: "questions", label: "问题与回报", testId: "phase-detail-tab-questions" },
-  { id: "risks", label: "流失风险", testId: "phase-detail-tab-risks" },
+  { id: "questions", label: "钩子回收", testId: "phase-detail-tab-questions" },
+  { id: "risks", label: "阅读阻力", testId: "phase-detail-tab-risks" },
   { id: "scenes", label: "相关场景", testId: "phase-detail-tab-scenes" },
 ];
 
@@ -447,15 +770,51 @@ export function JourneyPhaseDetailPanel({
     return uniqueQuestions(last?.reader_question_out ?? []);
   }, [nodes]);
 
-  const overlappingRisks = useMemo(
-    () =>
-      visualization.risk_intervals.filter(
-        (interval) =>
-          interval.end_scene_ordinal >= phase.start_scene_ordinal &&
-          interval.start_scene_ordinal <= phase.end_scene_ordinal,
-      ),
-    [visualization.risk_intervals, phase.start_scene_ordinal, phase.end_scene_ordinal],
-  );
+  const overlappingRisks = useMemo(() => {
+    const loopRisks = getNarrativeLoopRisks(visualization)
+      .filter((risk) => {
+        const start = Number(risk.start_scene_ordinal ?? 0);
+        const end = Number(risk.end_scene_ordinal ?? start);
+        return end >= phase.start_scene_ordinal && start <= phase.end_scene_ordinal;
+      })
+      .map((risk) => ({
+        risk_type: risk.risk_type,
+        start_scene_ordinal: Number(risk.start_scene_ordinal ?? phase.start_scene_ordinal),
+        end_scene_ordinal: Number(risk.end_scene_ordinal ?? risk.start_scene_ordinal ?? phase.end_scene_ordinal),
+        span: Number(risk.span ?? 1),
+        summary: formatOpenLoopRiskSummary(risk),
+        trigger: risk.loop_id,
+        needs_review: risk.risk_type === "narrative_loop_inconsistent",
+      }));
+    const consistency = getNarrativeLoopConsistency(visualization);
+    const legacy = visualization.risk_intervals.filter((interval) => {
+      const overlaps =
+        interval.end_scene_ordinal >= phase.start_scene_ordinal &&
+        interval.start_scene_ordinal <= phase.end_scene_ordinal;
+      if (!overlaps) return false;
+      // Prefer NarrativeLoopView open-loop risks over score/empty-array consecutive_no_payoff.
+      if (interval.risk_type === "consecutive_no_payoff" && loopRisks.length) return false;
+      if (
+        interval.risk_type === "consecutive_no_payoff" &&
+        consistency?.status === "inconsistent"
+      ) {
+        return false;
+      }
+      return true;
+    });
+    if (consistency?.status === "inconsistent" && !loopRisks.some((r) => r.risk_type === "narrative_loop_inconsistent")) {
+      loopRisks.unshift({
+        risk_type: "narrative_loop_inconsistent",
+        start_scene_ordinal: phase.start_scene_ordinal,
+        end_scene_ordinal: phase.end_scene_ordinal,
+        span: Math.max(1, phase.end_scene_ordinal - phase.start_scene_ordinal + 1),
+        summary: consistency.user_message || "当前关系识别结果不一致，暂不作为确定结论",
+        trigger: "narrative_loop_consistency",
+        needs_review: true,
+      });
+    }
+    return [...loopRisks, ...legacy];
+  }, [visualization, phase.start_scene_ordinal, phase.end_scene_ordinal]);
 
   const avgCognitive = useMemo(() => {
     if (!nodes.length) return null;
@@ -622,7 +981,7 @@ export function JourneyPhaseDetailPanel({
                     </JourneyInspectorSection>
                   ) : null}
                   {overlappingRisks.length ? (
-                    <JourneyInspectorSection title="流失风险区间">
+                    <JourneyInspectorSection title="阅读阻力区间">
                       <ul className="phase-detail-list" data-testid="phase-detail-risk-list">
                         {overlappingRisks.map((interval) => (
                           <li
@@ -649,6 +1008,7 @@ export function JourneyPhaseDetailPanel({
                             <details className="journey-tech-details">
                               <summary>技术详情</summary>
                               <code>{interval.risk_type}</code>
+                              {interval.trigger ? <p>{interval.trigger}</p> : null}
                             </details>
                           </li>
                         ))}
@@ -780,11 +1140,11 @@ export function JourneyMarkerInspectorPanel({
     return (
       <JourneyInspectorShell testId="journey-risk-inspector" className="journey-inspector-panel">
         <JourneyInspectorHeader
-          title="流失风险"
+          title="阅读阻力"
           meta={
             riskInterval
               ? `场景 ${riskInterval.start_scene_ordinal}—${riskInterval.end_scene_ordinal}`
-              : "流失风险"
+              : "阅读阻力"
           }
           pills={
             riskInterval?.risk_type
@@ -803,13 +1163,40 @@ export function JourneyMarkerInspectorPanel({
                 </p>
               </JourneyInspectorSection>
               {riskInterval.trigger ? (
-                <JourneyInspectorSection title="流失风险依据">
+                <JourneyInspectorSection title="阅读阻力依据">
                   <p>{riskInterval.trigger}</p>
+                </JourneyInspectorSection>
+              ) : null}
+              {riskInterval.field_used ? (
+                <JourneyInspectorSection title="使用的字段">
+                  <p data-testid="risk-field-used">{riskInterval.field_used}</p>
+                </JourneyInspectorSection>
+              ) : null}
+              <JourneyInspectorSection title="实际 Scene 范围">
+                <p data-testid="risk-scene-range">
+                  S{riskInterval.start_scene_ordinal}—S{riskInterval.end_scene_ordinal}
+                  {typeof riskInterval.span === "number" ? `（跨度 ${riskInterval.span}）` : ""}
+                </p>
+              </JourneyInspectorSection>
+              {riskInterval.penalties?.length ? (
+                <JourneyInspectorSection title="附加惩罚">
+                  <ul data-testid="risk-penalties">
+                    {riskInterval.penalties.map((penalty) => (
+                      <li key={`${penalty.code}-${penalty.amount}`}>
+                        {penalty.label ?? penalty.code}：+{penalty.amount}
+                      </li>
+                    ))}
+                  </ul>
+                </JourneyInspectorSection>
+              ) : null}
+              {typeof riskInterval.final_risk === "number" ? (
+                <JourneyInspectorSection title="最终风险值">
+                  <p data-testid="risk-final-value">{Math.round(riskInterval.final_risk)}</p>
                 </JourneyInspectorSection>
               ) : null}
               <JourneyInspectorSection title="可能影响">
                 <p>
-                  连续缺少回报、节奏骤降或认知负担过高，可能降低读者继续阅读的意愿。属于提示性判断，并非确定性失败。
+                  阅读动力偏低、连续下降或高钩子未兑现，可能降低读者继续阅读的意愿。属于提示性判断，并非确定性失败。
                 </p>
               </JourneyInspectorSection>
               <details className="journey-tech-details">
@@ -831,8 +1218,8 @@ export function JourneyMarkerInspectorPanel({
     return (
       <JourneyInspectorShell testId="journey-hook-inspector" className="journey-inspector-panel">
         <JourneyInspectorHeader
-          title={summary || "Hook 详情"}
-          meta={node ? `Hook · Scene ${node.scene_ordinal}` : "Hook"}
+          title={summary || "悬念详情"}
+          meta={node ? formatJourneySceneLabel(node.scene_ordinal) : "悬念"}
           pills={hook?.type ? [hookTypeZh(hook.type)] : []}
           onClose={onClose}
           locateLabel={evidenceId && onLocateEvidence ? "定位正文" : undefined}
@@ -841,36 +1228,39 @@ export function JourneyMarkerInspectorPanel({
           }
         />
         <JourneyInspectorBody>
-          {summary ? <JourneyPrimaryConclusion text={summary} /> : null}
+          {summary ? (
+            <JourneyInspectorSection title="发生了什么">
+              <JourneyPrimaryConclusion text={summary} />
+            </JourneyInspectorSection>
+          ) : null}
           {node ? (
             <>
-              <JourneyInspectorSection title="所属 Scene">
-                <p>Scene {node.scene_ordinal}</p>
+              <JourneyInspectorSection title="为什么形成悬念">
+                <p>{hook?.gap || hookTypeZh(hook?.type) || "本场提出了读者想继续确认的问题。"}</p>
               </JourneyInspectorSection>
-              {hook?.type ? (
-                <JourneyInspectorSection title="Hook 类型">
-                  <p>{hookTypeZh(hook.type)}</p>
-                </JourneyInspectorSection>
-              ) : null}
-              {hook?.continue_drive ? (
-                <JourneyInspectorSection title="预期读者反应">
-                  <p>{hook.continue_drive}</p>
-                </JourneyInspectorSection>
-              ) : null}
+              <JourneyInspectorSection title="读者正在等待什么">
+                <p>
+                  {hook?.continue_drive && !isTautologyContinueDrive(hook.continue_drive)
+                    ? hook.continue_drive
+                    : "读者想知道后续会如何回应。"}
+                </p>
+              </JourneyInspectorSection>
               {hook?.next_handoff ? (
-                <JourneyInspectorSection title="后续承接">
+                <JourneyInspectorSection title="后续如何承接">
                   <p>{hook.next_handoff}</p>
                 </JourneyInspectorSection>
               ) : (
-                <JourneyInspectorEmptyState kind="no-section" testId="empty-hook-followup" />
+                <JourneyInspectorSection title="后续如何承接">
+                  <p>当前尚未识别出明确后续承接。</p>
+                </JourneyInspectorSection>
               )}
               {evidenceId && onLocateEvidence ? (
-                <JourneyInspectorSection title="Evidence">
+                <JourneyInspectorSection title="正文证据">
                   <JourneyEvidenceList
                     rows={[
                       {
                         paragraphId: evidenceId,
-                        conclusion: summary || "钩子",
+                        conclusion: summary || "悬念",
                         kind: "hook",
                       },
                     ]}
@@ -878,6 +1268,11 @@ export function JourneyMarkerInspectorPanel({
                   />
                 </JourneyInspectorSection>
               ) : null}
+              <details className="journey-tech-details" data-testid="hook-analysis-info">
+                <summary>分析信息</summary>
+                <p>所属场景：{formatJourneySceneLabel(node.scene_ordinal)}</p>
+                {hook?.type ? <p>类型代码：{hook.type}</p> : null}
+              </details>
             </>
           ) : (
             <JourneyInspectorEmptyState kind="no-selection" testId="empty-hook-node" />
@@ -889,31 +1284,62 @@ export function JourneyMarkerInspectorPanel({
 
   // payoff
   const summary = (payoff?.summary || "").trim();
+  const evidenceId = payoff?.evidence_paragraph_ids?.[0];
   return (
     <JourneyInspectorShell testId="journey-payoff-inspector" className="journey-inspector-panel">
       <JourneyInspectorHeader
-        title={summary || "Payoff 详情"}
-        meta={node ? `Payoff · Scene ${node.scene_ordinal}` : "Payoff"}
+        title={summary || "回应详情"}
+        meta={node ? formatJourneySceneLabel(node.scene_ordinal) : "回应"}
         pills={payoff?.type ? [payoffTypeZh(payoff.type)] : []}
         onClose={onClose}
+        locateLabel={evidenceId && onLocateEvidence ? "定位正文" : undefined}
+        onLocate={
+          evidenceId && onLocateEvidence ? () => onLocateEvidence(evidenceId) : undefined
+        }
       />
       <JourneyInspectorBody>
-        {summary ? <JourneyPrimaryConclusion text={summary} /> : null}
+        <JourneyInspectorSection title="回应了什么">
+          {summary ? <JourneyPrimaryConclusion text={summary} /> : <p>尚未识别出明确回应摘要。</p>}
+        </JourneyInspectorSection>
         {node ? (
           <>
-            <JourneyInspectorSection title="所属 Scene">
-              <p>Scene {node.scene_ordinal}</p>
+            <JourneyInspectorSection title="如何回应">
+              <p>{payoffTypeZh(payoff?.type) || "本场对前文问题作出了处理。"}</p>
             </JourneyInspectorSection>
-            {payoff?.strength != null ? (
-              <JourneyInspectorSection title="回报强度">
-                <p>{payoff.strength}</p>
-              </JourneyInspectorSection>
-            ) : null}
-            <JourneyInspectorSection title="前置 Hook">
-              <p className="journey-inspector-hint" data-testid="empty-payoff-hook">
-                当前回报未关联到明确的前置 Hook。
+            <JourneyInspectorSection title="对读者的作用">
+              <p>
+                {payoff?.strength != null
+                  ? `回应强度约 ${payoff.strength}，帮助读者确认或部分确认前文悬念。`
+                  : "帮助读者确认或部分确认前文悬念。"}
               </p>
             </JourneyInspectorSection>
+            <JourneyInspectorSection title="仍未回答">
+              <p data-testid="empty-payoff-hook">
+                若问题仍未完全回收，后续仍可能继续等待。
+              </p>
+            </JourneyInspectorSection>
+            <JourneyInspectorSection title="原悬念和当前回应证据">
+              {evidenceId && onLocateEvidence ? (
+                <JourneyEvidenceList
+                  rows={[
+                    {
+                      paragraphId: evidenceId,
+                      conclusion: summary || "回应",
+                      kind: "payoff",
+                    },
+                  ]}
+                  onLocateEvidence={onLocateEvidence}
+                />
+              ) : (
+                <p>当前回应未关联到明确正文证据。</p>
+              )}
+            </JourneyInspectorSection>
+            <details className="journey-tech-details" data-testid="payoff-analysis-info">
+              <summary>分析信息</summary>
+              <p>所属场景：{formatJourneySceneLabel(node.scene_ordinal)}</p>
+              {payoff?.type ? <p>类型代码：{payoff.type}</p> : null}
+              {payoff?.strength != null ? <p>强度：{payoff.strength}</p> : null}
+            </details>
           </>
         ) : (
           <JourneyInspectorEmptyState kind="no-selection" testId="empty-payoff-node" />

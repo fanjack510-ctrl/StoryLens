@@ -32,6 +32,7 @@ from app.schemas.settings import (
     CloudSettings,
     CloudSettingsUpdate,
     CloudUsageSummary,
+    ConfigRuntimeProfile,
     DemoSettings,
     ProviderConfigurationResponse,
     ProviderConfigurationUpdate,
@@ -42,15 +43,18 @@ from app.schemas.settings import (
     RecommendedQwenSetupRequest,
     RecommendedQwenSetupResponse,
 )
+from app.services.config_runtime_profile import build_config_runtime_profile
 from app.services.credentials.base import CredentialStore
 from app.services.credentials.service import get_credential_store
 from app.services.cloud_budget import daily_usage
 from app.services.cloud_pricing import pricing_status
 from app.services.recommended_ai_setup import (
+    CLOUD_BODY_CONSENT_KEY,
     configure_recommended_qwen,
     get_recommended_qwen_status,
     repair_recommended_qwen,
 )
+from app.services.runtime_info import build_runtime_payload
 
 router = APIRouter(prefix="/api/v1")
 CLOUD_KEY = "cloud_enabled"
@@ -227,7 +231,14 @@ def _bootstrap_aliyun_row(session: Session, provider_name: str) -> ProviderConfi
     )
 
 
-def _recommended_setup_response(result) -> RecommendedQwenSetupResponse:
+def _recommended_setup_response(
+    result,
+    *,
+    session: Session,
+    store: CredentialStore,
+) -> RecommendedQwenSetupResponse:
+    consent = setting(session, CLOUD_BODY_CONSENT_KEY, False)
+    profile = ConfigRuntimeProfile.model_validate(build_config_runtime_profile(store))
     return RecommendedQwenSetupResponse(
         ok=result.ok,
         user_message=result.user_message,
@@ -245,6 +256,18 @@ def _recommended_setup_response(result) -> RecommendedQwenSetupResponse:
         model_service_validated=bool(getattr(result, "model_validated", False)),
         analysis_ready=bool(getattr(result, "analysis_ready", False)),
         readiness_reasons=list(getattr(result, "readiness_reasons", []) or []),
+        http_status=getattr(result, "http_status", None),
+        error_category=getattr(result, "error_category", None),
+        retryable=getattr(result, "retryable", None),
+        config_profile=profile,
+        cloud_body_consent=bool(getattr(result, "cloud_body_consent", consent)),
+        connection_ui_state=getattr(result, "connection_ui_state", None),
+        connection_ui_label=getattr(result, "connection_ui_label", None),
+        connection_ui_reason=getattr(result, "connection_ui_reason", None),
+        validated_at=getattr(result, "validated_at", None),
+        validated_at_display=getattr(result, "validated_at_display", None),
+        validated_model=getattr(result, "validated_model", None),
+        validation_snapshot=getattr(result, "validation_snapshot", None),
     )
 
 
@@ -257,7 +280,70 @@ def get_recommended_qwen_setup(
     store: CredentialStore = Depends(get_credential_store),
     gateway: ModelGateway = Depends(get_model_gateway),
 ):
-    return _recommended_setup_response(get_recommended_qwen_status(session, store, gateway))
+    return _recommended_setup_response(
+        get_recommended_qwen_status(session, store, gateway),
+        session=session,
+        store=store,
+    )
+
+
+@router.get("/settings/config-profile", response_model=ConfigRuntimeProfile)
+def get_config_runtime_profile(
+    store: CredentialStore = Depends(get_credential_store),
+) -> ConfigRuntimeProfile:
+    return ConfigRuntimeProfile.model_validate(build_config_runtime_profile(store))
+
+
+@router.get("/runtime")
+def get_runtime(store: CredentialStore = Depends(get_credential_store)) -> dict:
+    """Read-only shell / capability description for desktop and local web."""
+    return build_runtime_payload(store)
+
+
+@router.get("/entitlements")
+def get_entitlements(session: Session = Depends(get_db)) -> dict:
+    from app.services.entitlement import entitlement_snapshot
+
+    return entitlement_snapshot(session)
+
+
+@router.get("/entitlements/features/{feature_key}")
+def get_feature_entitlement(feature_key: str, session: Session = Depends(get_db)) -> dict:
+    from app.services.entitlement import can_use_feature
+
+    return can_use_feature(session, feature_key)
+
+
+class LicenseActivateRequest(BaseModel):
+    license_code: str
+
+
+@router.post("/licenses/activate")
+def activate_license(value: LicenseActivateRequest, session: Session = Depends(get_db)) -> dict:
+    from app.services.entitlement import activate_license_code
+    from app.services.license_crypto import LicenseError
+
+    try:
+        return activate_license_code(session, value.license_code)
+    except LicenseError as exc:
+        raise error(400, exc.code, exc.message) from exc
+
+
+@router.post("/system/open-data-directory")
+def open_data_directory() -> dict[str, object]:
+    """Open the local data folder in the OS file manager (loopback API only)."""
+    root = user_data_root()
+    root.mkdir(parents=True, exist_ok=True)
+    try:
+        if platform.system() == "Windows":
+            subprocess.Popen(["explorer", str(root)])  # noqa: S603
+        elif platform.system() == "Darwin":
+            subprocess.Popen(["open", str(root)])  # noqa: S603
+        else:
+            subprocess.Popen(["xdg-open", str(root)])  # noqa: S603
+    except OSError as exc:
+        raise error(500, "OPEN_DATA_DIR_FAILED", f"无法打开数据目录：{exc}") from exc
+    return {"ok": True, "path": str(root)}
 
 
 @router.post(
@@ -279,7 +365,7 @@ def post_recommended_qwen_setup(
         cloud_body_consent=value.cloud_body_consent,
         persist=value.persist,
     )
-    return _recommended_setup_response(result)
+    return _recommended_setup_response(result, session=session, store=store)
 
 
 @router.post(
@@ -298,7 +384,7 @@ def post_recommended_qwen_repair(
         gateway=gateway,
         cloud_body_consent=value.cloud_body_consent,
     )
-    return _recommended_setup_response(result)
+    return _recommended_setup_response(result, session=session, store=store)
 
 
 @router.get(
@@ -576,9 +662,12 @@ def routing_preview(gateway: ModelGateway = Depends(get_model_gateway)):
 
 @router.get("/system/diagnostics")
 def diagnostics(
-    session: Session = Depends(get_db), gateway: ModelGateway = Depends(get_model_gateway)
+    session: Session = Depends(get_db),
+    gateway: ModelGateway = Depends(get_model_gateway),
+    store: CredentialStore = Depends(get_credential_store),
 ):
     session.execute(text("SELECT 1"))
+    profile = build_config_runtime_profile(store)
     return {
         "fastapi": "ok",
         "sqlite": "ok",
@@ -588,6 +677,9 @@ def diagnostics(
             for item in gateway.providers()
         ],
         "data_directory": str(user_data_root()),
+        "database_path": profile["database_path"],
+        "app_env": profile["app_env"],
+        "config_profile": profile,
         "recent_error": None,
     }
 

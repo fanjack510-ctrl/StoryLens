@@ -1,0 +1,39 @@
+{
+  "version": "1.0",
+  "description": "Cross-type anonymous categories — same base levels, varying scene_role only.",
+  "base_levels": {
+    "goal_progress": 3,
+    "conflict_change": 3,
+    "state_change": 3,
+    "information_gain": 3,
+    "character_agency": 3,
+    "causal_coherence": 3,
+    "curiosity": 3,
+    "tension": 3,
+    "emotional_investment": 3,
+    "pacing_speed": 3,
+    "hook": 3,
+    "payoff": 3,
+    "setup_consistency": 3,
+    "question_lifecycle": 3,
+    "emotional_valence_start": 3,
+    "emotional_valence_end": 3,
+    "arousal_start": 3,
+    "arousal_end": 3,
+    "clarity": 4,
+    "cognitive_load": 2,
+    "redundancy": 1
+  },
+  "categories": [
+    { "id": "mystery_investigation", "scene_role": "investigation" },
+    { "id": "horror_threat", "scene_role": "escalation" },
+    { "id": "emotion_conflict", "scene_role": "escalation" },
+    { "id": "action_chase", "scene_role": "climax" },
+    { "id": "daily_setup", "scene_role": "setup" },
+    { "id": "worldbuilding", "scene_role": "transition" },
+    { "id": "reveal_twist", "scene_role": "reveal" },
+    { "id": "emotion_aftermath", "scene_role": "aftermath" },
+    { "id": "open_chapter_end", "scene_role": "open_end" },
+    { "id": "closed_resolution", "scene_role": "closed_end" }
+  ]
+}

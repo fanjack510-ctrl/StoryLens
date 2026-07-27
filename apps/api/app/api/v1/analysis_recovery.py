@@ -45,20 +45,8 @@ from app.services.credentials.service import get_credential_store
 from app.services.provider_eligibility import evaluate_manual_boundary_candidate
 from app.services.staged_budget import estimate_stage1_boundary
 from app.services.boundary_review_service import analyze_confirmed_review
-from app.services.reader_journey_batch_planner import PLANNER_VERSION
-from app.services.reader_journey_engagement import load_formula_config
 from app.services.reader_journey_pipeline import execute_reader_journey
-from app.services.reader_journey_progress import (
-    find_recoverable_journey_run,
-    load_revision_scenes,
-    require_completed_scene_analysis,
-)
-from app.schemas.reader_journey import (
-    CHAPTER_CONTRACT_VERSION,
-    CHAPTER_PROMPT_VERSION,
-    SCENE_CONTRACT_VERSION,
-    SCENE_PROMPT_VERSION,
-)
+
 
 router = APIRouter(tags=["analysis-recovery"])
 
@@ -152,9 +140,19 @@ def recover_analysis_run(
         background.add_task(analyze_confirmed_review, session_factory, gateway, review.id)
 
     def _start_journey() -> int | None:
+        """Resume/create journey on the same AnalysisRun (idempotent with auto-pipeline)."""
+        from app.services.chapter_analysis_completion import (
+            ensure_auto_reader_journey_row,
+            is_scene_pipeline_complete,
+            mark_scenes_complete_awaiting_journey,
+        )
+
         fresh = session.get(AnalysisRun, run_id)
         if fresh is None or fresh.status != "succeeded":
             return None
+        if not is_scene_pipeline_complete(session, fresh):
+            return None
+        # Prefer client_request_id match, then shared auto row / recoverable row.
         existing = session.scalar(
             select(ReaderJourneyRun).where(
                 ReaderJourneyRun.analysis_run_id == fresh.id,
@@ -162,41 +160,119 @@ def recover_analysis_run(
             )
         )
         if existing is not None:
-            return int(existing.id)
-        recoverable = find_recoverable_journey_run(session, fresh.id)
-        if recoverable is not None:
-            return int(recoverable.id)
-        _revision, scenes = load_revision_scenes(session, fresh.id)
-        require_completed_scene_analysis(session, fresh, scenes)
-        chapter = session.get(Chapter, int(fresh.subject_id))
-        formula = load_formula_config()
-        journey_run = ReaderJourneyRun(
-            analysis_run_id=fresh.id,
-            book_id=chapter.book_id if chapter else 0,
-            chapter_id=int(fresh.subject_id),
-            status="queued",
-            current_stage=None,
-            provider_name=fresh.provider,
-            model_name=fresh.model,
-            scene_prompt_version=SCENE_PROMPT_VERSION,
-            chapter_prompt_version=CHAPTER_PROMPT_VERSION,
-            scene_contract_version=SCENE_CONTRACT_VERSION,
-            chapter_contract_version=CHAPTER_CONTRACT_VERSION,
-            planner_version=PLANNER_VERSION,
-            formula_version=str(formula.get("version", "1.0")),
-            genre=str(formula.get("default_genre", "suspense")),
-            total_scene_count=len(scenes),
-            completed_scene_count=0,
-            remaining_scene_count=len(scenes),
-            completed_scene_ids_json="[]",
-            remaining_scene_ids_json=json.dumps([s.id for s in scenes]),
-            cloud_consent=request.cloud_consent,
-            client_request_id=request.client_request_id,
+            journey_run = existing
+        else:
+            mark_scenes_complete_awaiting_journey(session, fresh)
+            journey_run = ensure_auto_reader_journey_row(
+                session, fresh, cloud_consent=request.cloud_consent
+            )
+            if journey_run is None:
+                return None
+            # Allow explicit recover client id to alias the auto row without a second create.
+            if (
+                journey_run.client_request_id
+                and journey_run.client_request_id != request.client_request_id
+                and journey_run.status
+                in {
+                    "queued",
+                    "failed",
+                    "scene_profiles_partial",
+                    "budget_blocked",
+                    "aborted_by_limit",
+                }
+            ):
+                pass
+        if journey_run.status == "succeeded":
+            session.commit()
+            return int(journey_run.id)
+
+        from app.services.reader_journey_recovery import (
+            JOURNEY_ACTIVE_WORKER_STATUSES,
+            reclaim_stale_journey_if_needed,
         )
-        session.add(journey_run)
+
+        if journey_run.status in JOURNEY_ACTIVE_WORKER_STATUSES:
+            reclaim_stale_journey_if_needed(session, journey_run)
+            session.refresh(journey_run)
+
+        if journey_run.status in {
+            "failed",
+            "scene_profiles_partial",
+            "budget_blocked",
+            "aborted_by_limit",
+        }:
+            journey_run.status = "queued"
+            journey_run.completed_at = None
+        if journey_run.status in {
+            "running",
+            "scene_profiles_running",
+            "chapter_synthesis_running",
+            "summary_running",
+            "phase_analysis_running",
+        }:
+            # Healthy in-flight worker — do not double-enqueue.
+            session.commit()
+            return int(journey_run.id)
         session.commit()
         background.add_task(execute_reader_journey, session_factory, gateway, journey_run.id)
         return int(journey_run.id)
+
+    def _resume_boundary() -> int | None:
+        from app.api.v1.analysis import (
+            _continue_from_checkpoints_impl,
+            _evaluate_recovery_provider,
+        )
+        from app.schemas.scene import BoundaryRecoveryContinueRequest
+        from fastapi import HTTPException
+
+        fresh = session.get(AnalysisRun, run_id)
+        if fresh is None:
+            return None
+        if fresh.status in {"boundary_candidates_running", "running", "queued"}:
+            return int(fresh.id)
+        existing = session.scalar(
+            select(AnalysisRun)
+            .where(
+                AnalysisRun.recovered_from_run_id == fresh.id,
+                AnalysisRun.status.in_(
+                    [
+                        "queued",
+                        "running",
+                        "boundary_candidates_running",
+                        "boundary_candidates_partial",
+                        "awaiting_boundary_review",
+                        "boundary_confirmed",
+                        "scene_analysis_running",
+                        "succeeded",
+                    ]
+                ),
+            )
+            .order_by(desc(AnalysisRun.id))
+        )
+        if existing is not None:
+            return int(existing.id)
+        _provider, eligibility = _evaluate_recovery_provider(
+            session, fresh, gateway, store
+        )
+        legacy = BoundaryRecoveryContinueRequest(
+            client_request_id=request.client_request_id,
+            cloud_consent=request.cloud_consent,
+            confirmed=True,
+            provider_state_version=str(eligibility.get("provider_state_version") or ""),
+        )
+        try:
+            result = _continue_from_checkpoints_impl(
+                run_id,
+                legacy,
+                background,
+                session,
+                gateway,
+                session_factory,
+                store,
+            )
+        except HTTPException:
+            return None
+        return int(getattr(result, "run_id", None) or 0) or None
 
     return execute_unified_recover(
         session,
@@ -206,6 +282,9 @@ def recover_analysis_run(
         store,
         background_resume_scene=_resume_scene if request.resume and request.confirmed else None,
         background_start_journey=_start_journey if request.resume and request.confirmed else None,
+        background_resume_boundary=_resume_boundary
+        if request.resume and request.confirmed
+        else None,
     )
 
 

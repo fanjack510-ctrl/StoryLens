@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "notes": "Production verification keys only. Never include test-dev keys. Private keys never ship in this repository.",
+  "keys": [
+    {
+      "key_id": "storylens-pro-1-prod-001",
+      "signature_version": 1,
+      "algorithm": "ed25519",
+      "environment": "production",
+      "public_key_b64url": "saZLt7GNDDK_OrAkQLdF8xck8MyZlx7NC1HHlokLsno",
+      "status": "active"
+    }
+  ],
+  "commerce": {
+    "afdian_product_url": "https://afdian.com/item/5fa7eeba857211f1b8fc52540025c377",
+    "product_code": "storylens_pro",
+    "product_label": "StoryLens Pro 1.x"
+  }
+}

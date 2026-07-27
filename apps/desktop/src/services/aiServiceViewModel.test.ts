@@ -115,6 +115,35 @@ describe("aiServiceViewModel", () => {
     expect(vm.canStartAnalysis).toBe(true);
   });
 
+  it("prefers configuration.enabled over registry capabilities.enabled=false", () => {
+    const vm = buildAiServiceViewModel({
+      provider: {
+        name: "aliyun_qwen_plus",
+        configured: true,
+        connected: true,
+        healthy: true,
+        capabilities: { enabled: false, cloud: true },
+        manual_boundary_candidate_eligible: true,
+      },
+      configuration: {
+        credential_state: "configured",
+        enabled: true,
+        disconnected: false,
+        connection_state: "connected",
+      },
+      cloudEnabled: true,
+      providerEligible: true,
+    });
+    expect(vm.providerEnabled).toBe(true);
+    expect(vm.userStatusCode).toBe("healthy");
+  });
+
+  it("maps HTTP 429 to rate_limited user label", () => {
+    const mapped = mapTransportOrHttpError({ code: "PROVIDER_HTTP_ERROR", status: 429 });
+    expect(mapped.userLabel).toContain("限流");
+    expect(mapped.rawCode).toContain("PROVIDER_HTTP_ERROR");
+  });
+
   it("does not treat failed transport as connected", () => {
     const vm = buildAiServiceViewModel({
       provider: {

@@ -1,0 +1,6 @@
+PASS=True
+SEQUENCE=[{'status': 'pending', 'stage': 'snapshot_preflight', 'completed': 0, 'total': 0}, {'status': 'analyzing', 'stage': 'extract_overview_facts', 'completed': 0, 'total': 3}, {'status': 'analyzing', 'stage': 'extract_overview_facts', 'completed': 1, 'total': 3}, {'status': 'analyzing', 'stage': 'extract_overview_facts', 'completed': 2, 'total': 3}, {'status': 'completed', 'completed': 3, 'total': 3, 'stage': 'finalize'}]
+FAKE_WINDOW_COUNT=3
+REAL_PROVIDER_CALLS=0
+FORMAL_DATABASE_WRITES=0
+DATABASE_LOCK_ERRORS=0

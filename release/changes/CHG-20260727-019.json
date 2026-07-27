@@ -1,0 +1,72 @@
+{
+  "id": "CHG-20260727-019",
+  "title": "Recover interrupted reader journey tasks and unify composite task status",
+  "type": "fix",
+  "base_version": "1.1.0",
+  "status": "verified",
+  "include_in_next_release": true,
+  "commits": [
+    {
+      "sha": "26abc3e9339f2acaa16afd25c184479d1472cb46",
+      "message": "fix(journey): recover interrupted reader journey tasks",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "8d5a4170199f17fc651cc78c14ed5e69f85ffd15",
+      "message": "docs(release): mark CHG-20260727-019 tested",
+      "primary": true,
+      "multi_change_reason": "registry status tested evidence update for same CHG-019"
+    },
+    {
+      "sha": "23f6f4ec3c7b541e35df045a36f829d40bb48368",
+      "message": "docs(release): verify CHG-019 and enable RC8 packaging from 1.1.0",
+      "primary": true,
+      "multi_change_reason": "CHG-019 verified evidence + RC8 prebuild gate"
+    }
+  ],
+  "modules": [
+    "apps/api",
+    "apps/desktop"
+  ],
+  "files": [
+    "apps/api/app/services/reader_journey_recovery.py",
+    "apps/api/app/services/scene_pipeline.py",
+    "apps/api/app/services/reader_journey_pipeline.py",
+    "apps/api/app/api/v1/reader_journey.py",
+    "apps/desktop/src/services/compositeRunLifecycle.ts",
+    "apps/desktop/src/services/runLifecycle.ts",
+    "apps/desktop/src/services/runProgressDisplay.ts"
+  ],
+  "user_summary": "修复阅读旅程异常中断后假运行、无法恢复，以及任务中心状态/进度/CTA不一致的问题。",
+  "technical_summary": "Isolate Reader Journey worker failures, recover orphan running journeys on Sidecar startup as JOURNEY_INTERRUPTED retryable, allow resume, and unify task-center lifecycle/progress/CTA so Parent succeeded cannot show 查看结果 while Journey is active or interrupted.",
+  "acceptance_criteria": [
+    "Orphan Journey#1 recovers to JOURNEY_INTERRUPTED retryable without Provider calls",
+    "Task center shows journey progress and 查看进度/查看详情 correctly",
+    "Manual: user resume reaches scene_profiles_running; task center shows 阅读旅程 0/7 + 查看进度; 2 invocations from user start only"
+  ],
+  "tests": [
+    "apps/api/tests/test_reader_journey_startup_recovery_local.py",
+    "apps/desktop/src/services/compositeRunLifecycle.test.ts"
+  ],
+  "verification_evidence": [
+    "release/evidence/CHG-20260727-019/verification-result.txt",
+    "release/evidence/CHG-20260727-019/manual-source-verification.md"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "P0",
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-27T00:53:16Z",
+  "updated_at": "2026-07-27T01:27:20Z"
+}

@@ -1,0 +1,68 @@
+{
+  "version": "1.0",
+  "roles": {
+    "setup": {
+      "pacing_speed": [35, 60],
+      "hook": [40, 75],
+      "payoff": [10, 40],
+      "hook_weight": 0.55,
+      "payoff_weight": 0.45
+    },
+    "escalation": {
+      "pacing_speed": [55, 80],
+      "hook": [50, 85],
+      "payoff": [20, 55],
+      "hook_weight": 0.60,
+      "payoff_weight": 0.40
+    },
+    "investigation": {
+      "pacing_speed": [40, 70],
+      "hook": [45, 80],
+      "payoff": [25, 60],
+      "hook_weight": 0.50,
+      "payoff_weight": 0.50
+    },
+    "reveal": {
+      "pacing_speed": [50, 75],
+      "hook": [30, 70],
+      "payoff": [60, 95],
+      "hook_weight": 0.35,
+      "payoff_weight": 0.65
+    },
+    "climax": {
+      "pacing_speed": [70, 95],
+      "hook": [40, 80],
+      "payoff": [70, 100],
+      "hook_weight": 0.30,
+      "payoff_weight": 0.70
+    },
+    "aftermath": {
+      "pacing_speed": [25, 55],
+      "hook": [20, 55],
+      "payoff": [40, 75],
+      "hook_weight": 0.35,
+      "payoff_weight": 0.65
+    },
+    "transition": {
+      "pacing_speed": [30, 60],
+      "hook": [25, 60],
+      "payoff": [15, 45],
+      "hook_weight": 0.50,
+      "payoff_weight": 0.50
+    },
+    "open_end": {
+      "pacing_speed": [40, 70],
+      "hook": [70, 100],
+      "payoff": [10, 40],
+      "hook_weight": 0.75,
+      "payoff_weight": 0.25
+    },
+    "closed_end": {
+      "pacing_speed": [30, 60],
+      "hook": [10, 40],
+      "payoff": [65, 100],
+      "hook_weight": 0.25,
+      "payoff_weight": 0.75
+    }
+  }
+}

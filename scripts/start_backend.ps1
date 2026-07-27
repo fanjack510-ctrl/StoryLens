@@ -31,7 +31,8 @@ if(Test-Path "$runtime/backend.json"){
 $existing=Get-PortOwner $Port
 if($existing){throw "Port $Port is already in use by PID $existing."}
 $out="$runtime/backend.out.log";$err="$runtime/backend.err.log"
-$launcher=Start-Process .\.venv\Scripts\python.exe -ArgumentList @('-m','uvicorn','app.main:app','--app-dir','apps/api','--host','127.0.0.1','--port',"$Port") -RedirectStandardOutput $out -RedirectStandardError $err -WindowStyle Hidden -PassThru
+# --ws none: StoryLens uses HTTP polling for tasks/progress; do not require websockets.
+$launcher=Start-Process .\.venv\Scripts\python.exe -ArgumentList @('-m','uvicorn','app.main:app','--app-dir','apps/api','--host','127.0.0.1','--port',"$Port",'--ws','none') -RedirectStandardOutput $out -RedirectStandardError $err -WindowStyle Hidden -PassThru
 $deadline=(Get-Date).AddSeconds(30);$ok=$false
 do{
   try{Invoke-RestMethod "http://127.0.0.1:$Port/health" -TimeoutSec 2|Out-Null;$ok=$true}

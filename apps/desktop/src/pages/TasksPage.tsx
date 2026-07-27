@@ -16,6 +16,12 @@ import {
 import { isSceneAnalysisComplete } from "../services/chapterJourneyComposition";
 import { maybeTrackAnalysisCompleted } from "../services/telemetry/analysisRunTelemetry";
 import { formatRunProgress } from "../services/runProgressDisplay";
+import {
+  isNativeOverviewRun,
+  normalizeRunLifecycle,
+  resolveTaskCenterPrimaryAction,
+} from "../services/runLifecycle";
+import { isProNativeOverviewUiEnabled } from "../services/proNativeOverviewFlag";
 import "./tasksPage.css";
 
 type RecoveryState = "idle" | "checking" | "creating_recovery" | "created" | "failed";
@@ -169,7 +175,11 @@ function badgeToneForRun(run: any): string {
   if (isBudgetPauseRun(run) || run.status === "awaiting_provider_recovery") {
     return "warning";
   }
-  if (run.status === "succeeded") return "success";
+  if (run.status === "succeeded" || run.status === "completed") {
+    if (run.chapter_complete === true || run.status === "completed") return "success";
+    if (isSceneAnalysisComplete(run)) return "warning";
+    return "success";
+  }
   if (
     run.status === "failed" ||
     run.status === "failed_structural" ||
@@ -228,7 +238,7 @@ function SucceededRunRowActions({
   } else if (sceneDone) {
     moreItems.push({
       id: "fix-continue",
-      label: "修复并继续",
+      label: "继续生成阅读旅程",
       testId: `unified-recover-open-${run.id}`,
       onSelect: () => onOpen("reader-journey"),
       disabled: busy,
@@ -276,22 +286,22 @@ export function TasksPage() {
   const [clientRequestId] = useState(
     () => globalThis.crypto?.randomUUID?.() || `recover-${Date.now()}`,
   );
-  const [sceneResumePreflight, setSceneResumePreflight] = useState<any>();
-  const [sceneResumeConsent, setSceneResumeConsent] = useState(false);
-  const [sceneResumeState, setSceneResumeState] = useState<SceneResumeState>("idle");
-  const [sceneResumeError, setSceneResumeError] = useState<RecoveryErrorView>();
-  const [offlineReplayState, setOfflineReplayState] = useState<OfflineReplayState>("idle");
-  const [offlineReplayMessage, setOfflineReplayMessage] = useState<string>();
-  const [offlineReplayError, setOfflineReplayError] = useState<RecoveryErrorView>();
-  const [sceneResumeClientId, setSceneResumeClientId] = useState(
-    () => globalThis.crypto?.randomUUID?.() || `scene-resume-${Date.now()}`,
-  );
+  const [, setSceneResumePreflight] = useState<any>();
+  const [, setSceneResumeConsent] = useState(false);
+  const [, setSceneResumeState] = useState<SceneResumeState>("idle");
+  const [, setSceneResumeError] = useState<RecoveryErrorView>();
+  const [, setOfflineReplayState] = useState<OfflineReplayState>("idle");
+  const [, setOfflineReplayMessage] = useState<string>();
+  const [, setOfflineReplayError] = useState<RecoveryErrorView>();
   const [navBusyRunId, setNavBusyRunId] = useState<number | null>(null);
   const qc = useQueryClient();
   const runs = useQuery({
     queryKey: ["runs"],
-    queryFn: analysisApi.runs,
+    queryFn: () => analysisApi.runs(),
     refetchInterval: 5000,
+    retry: 1,
+    // Avoid infinite spinner if a request stalls; surface error/empty instead.
+    networkMode: "always",
   });
 
   useEffect(() => {
@@ -305,6 +315,13 @@ export function TasksPage() {
     await qc.invalidateQueries({ queryKey: ["runs"] });
   };
   const openChapterProgress = async (run: any) => {
+    if (isNativeOverviewRun(run) || run.task_type === "whole_book_overview" || run.subject_type === "book") {
+      const bookId = Number(run.book_id || run.subject_id);
+      if (Number.isFinite(bookId) && bookId > 0) {
+        navigate(`/books/${bookId}/pro-native-overview?run_id=${run.id}`);
+        return;
+      }
+    }
     const chapterId = Number(run.subject_id);
     if (!Number.isFinite(chapterId) || chapterId <= 0) {
       setDetail(run);
@@ -334,6 +351,13 @@ export function TasksPage() {
     run: any,
     tab: "reader-journey" | "analysis" = "analysis",
   ) => {
+    if (isNativeOverviewRun(run) || run.task_type === "whole_book_overview" || run.subject_type === "book") {
+      const bookId = Number(run.book_id || run.subject_id);
+      if (Number.isFinite(bookId) && bookId > 0) {
+        navigate(`/books/${bookId}/pro-native-overview?run_id=${run.id}`);
+        return;
+      }
+    }
     const chapterId = Number(run.subject_id);
     if (!Number.isFinite(chapterId) || chapterId <= 0) {
       setDetail(run);
@@ -396,138 +420,6 @@ export function TasksPage() {
     } catch (error) {
       setRecoveryError(toRecoveryError(error));
       setRecoveryState("failed");
-    }
-  };
-  const continueSceneAnalysis = async () => {
-    if (!detail) return;
-    if (sceneResumeState === "checking" || sceneResumeState === "resuming") return;
-    if (detail.offline_replay_available) {
-      setSceneResumeState("failed");
-      setSceneResumeError({
-        code: "OFFLINE_REPLAY_PREFERRED",
-        message: "已有可离线恢复的模型响应，请先离线重放，避免重复费用。",
-        hint: "点击「离线恢复失败Scene」；只有离线不可用时才继续云端调用。",
-        httpStatus: 409,
-        retryable: false,
-      });
-      return;
-    }
-    const attempts = detail.failed_scene_http_attempts ?? 0;
-    const maxAttempts = detail.scene_analysis_max_http_attempts ?? 4;
-    if (attempts >= maxAttempts) {
-      setSceneResumeState("failed");
-      setSceneResumeError({
-        code: "SCENE_ANALYSIS_ATTEMPT_LIMIT",
-        message: `失败Scene已达 HTTP 尝试上限（${attempts}/${maxAttempts}），拒绝再次付费调用。`,
-        hint: "请使用离线恢复，或查看失败Scene详情后再决定。",
-        httpStatus: 409,
-        retryable: false,
-      });
-      return;
-    }
-    if (!sceneResumeConsent) {
-      setSceneResumeState("failed");
-      setSceneResumeError({
-        code: "CLOUD_CONSENT_REQUIRED",
-        message: "尚未确认发送未完成Scene正文到云端。",
-        hint: "请勾选云端同意后再继续Scene Analysis。",
-        httpStatus: 422,
-        retryable: false,
-      });
-      return;
-    }
-    setSceneResumeError(undefined);
-    setSceneResumeState("checking");
-    try {
-      const fresh = await analysisApi.sceneAnalysisResumePreflight(detail.id, {
-        cloud_consent: true,
-      });
-      setSceneResumePreflight(fresh);
-      if (!fresh.eligible || !fresh.within_budget) {
-        setSceneResumeState("failed");
-        setSceneResumeError({
-          code: fresh.blockers?.includes("budget_unavailable") || !fresh.within_budget
-            ? "INSUFFICIENT_BUDGET_RESERVATION"
-            : "PROVIDER_NOT_ELIGIBLE",
-          message: !fresh.within_budget
-            ? (() => {
-                const need = fresh.worst_case_requests;
-                const left = fresh.remaining_budget?.requests;
-                if (typeof need === "number" && typeof left === "number") {
-                  return `请求不足：最多需要 ${need} 次，当前剩余 ${left} 次。`;
-                }
-                return BUDGET_ERROR_USER_COPY.INSUFFICIENT_BUDGET_RESERVATION;
-              })()
-            : `Provider ${fresh.provider_name} 当前不可用`,
-          hint: (fresh.blockers || [])
-            .map((item: string) => BLOCKER_LABELS[item] || item)
-            .join("；") || "请检查Provider与预算后重试",
-          httpStatus: 409,
-          retryable: Boolean(fresh.within_budget === false),
-          providerName: fresh.provider_name,
-          blockers: fresh.blockers,
-        });
-        return;
-      }
-      setSceneResumeState("resuming");
-      await analysisApi.resumeSceneAnalysis(detail.id, {
-        client_request_id: sceneResumeClientId,
-        cloud_consent: true,
-        confirmed: true,
-        provider_state_version: fresh.provider_state_version,
-      });
-      setSceneResumeState("done");
-      setHighlightRunId(detail.id);
-      setSceneResumeClientId(
-        globalThis.crypto?.randomUUID?.() || `scene-resume-${Date.now()}`,
-      );
-      await qc.invalidateQueries({ queryKey: ["runs"] });
-      const updated = await analysisApi.run(detail.id);
-      setDetail(updated);
-      window.setTimeout(() => setDetail(undefined), 900);
-    } catch (error) {
-      setSceneResumeState("failed");
-      setSceneResumeError(toRecoveryError(error));
-      try {
-        const updated = await analysisApi.run(detail.id);
-        setDetail(updated);
-        await qc.invalidateQueries({ queryKey: ["runs"] });
-      } catch {
-        /* keep existing detail */
-      }
-    }
-  };
-  const offlineReplayFailedScene = async () => {
-    if (!detail) return;
-    if (offlineReplayState === "replaying" || sceneResumeState === "resuming") return;
-    setOfflineReplayError(undefined);
-    setOfflineReplayMessage(undefined);
-    setOfflineReplayState("replaying");
-    try {
-      const result = await analysisApi.replaySceneAnalysisOffline(detail.id, {
-        scene_id: detail.failed_scene_id ?? detail.historical_failed_scene_id,
-        invocation_id: detail.historical_failed_invocation_id ?? detail.failed_invocation_id,
-        confirmed: true,
-        client_request_id: sceneResumeClientId,
-      });
-      setOfflineReplayState("succeeded");
-      setOfflineReplayMessage(result.message);
-      setHighlightRunId(detail.id);
-      await qc.invalidateQueries({ queryKey: ["runs"] });
-      const updated = await analysisApi.run(detail.id);
-      setDetail(updated);
-      setSceneResumePreflight(undefined);
-      if (updated.scene_analysis_resume_available) {
-        setSceneResumePreflight(
-          await analysisApi.sceneAnalysisResumePreflight(updated.id, { cloud_consent: true }),
-        );
-      }
-      if (result.remaining_scene_count === 0) {
-        window.setTimeout(() => setDetail(undefined), 900);
-      }
-    } catch (error) {
-      setOfflineReplayState("failed");
-      setOfflineReplayError(toRecoveryError(error));
     }
   };
   const continueFromCheckpoints = async () => {
@@ -671,6 +563,8 @@ export function TasksPage() {
 
   const statusLabel: Record<string, string> = {
     queued: "排队中",
+    pending: "排队中",
+    preparing: "准备中",
     running: "进行中",
     boundary_candidates_running: "正在生成边界候选",
     awaiting_boundary_review: "等待边界审阅",
@@ -684,61 +578,120 @@ export function TasksPage() {
     failed_structural: "结构校验失败",
     failed_provider: "服务请求失败",
     succeeded: "已完成",
+    completed: "已完成",
     cancelled: "已取消",
     review_cancelled: "已取消",
     review_expired: "审阅已过期",
     failed: "失败",
   };
+  const overviewUserError = (run: any): string | null => {
+    const code = run?.error_code || run?.root_error_code;
+    if (code === "PROVIDER_OUTPUT_INVALID") {
+      return "模型返回的分析结果格式不符合要求，任务未完成。";
+    }
+    if (code === "PROVIDER_OUTPUT_EMPTY") {
+      return "模型返回空结果，任务未完成。";
+    }
+    return null;
+  };
   const runStatusLabel = (run: any) => {
     if (isBudgetPauseRun(run)) return "分析已暂停";
     if (run.status === "awaiting_provider_recovery") return "分析已暂停";
-    if (run.status === "succeeded" && isSceneAnalysisComplete(run)) {
-      return "场景分析已完成";
+    if (run.task_type === "whole_book_overview" || run.subject_type === "book") {
+      if (run.status === "completed") return "已完成";
+      if (run.status === "failed") return "失败";
+    }
+    const phase = normalizeRunLifecycle(run);
+    if (phase === "active") {
+      const js = String(run.journey_status || "");
+      if (
+        [
+          "queued",
+          "running",
+          "scene_profiles_running",
+          "chapter_synthesis_running",
+          "summary_running",
+          "phase_analysis_running",
+        ].includes(js) ||
+        run.effective_status === "journey_running"
+      ) {
+        return "正在生成阅读旅程";
+      }
+      if (run.effective_status === "partial_complete") {
+        return "场景分析已完成";
+      }
+    }
+    if (phase === "interrupted") {
+      return "阅读旅程已中断";
+    }
+    if (run.status === "succeeded") {
+      if (run.chapter_complete === true || phase === "completed") return "已完成";
+      if (isSceneAnalysisComplete(run) || run.effective_status === "partial_complete") {
+        return "场景分析已完成";
+      }
+      return "已完成";
     }
     return statusLabel[run.status] || "处理中";
   };
-  const matchesStatusFilter = (run: any): boolean => {
-    if (statusFilter === "all") return true;
-    if (statusFilter === "paused") {
-      return (
-        isBudgetPauseRun(run) ||
-        run.status === "awaiting_provider_recovery" ||
-        run.status === "boundary_confirmed_budget_blocked" ||
-        run.status === "aborted_by_limit"
-      );
-    }
-    if (statusFilter === "failed") {
-      return (
-        !isBudgetPauseRun(run) &&
-        ["failed", "failed_structural", "failed_provider"].includes(run.status)
-      );
-    }
-    if (statusFilter === "succeeded") return run.status === "succeeded";
-    if (statusFilter === "cancelled") {
-      return run.status === "cancelled" || run.status === "review_cancelled";
-    }
-    if (statusFilter === "running") {
-      return [
-        "queued",
-        "running",
-        "boundary_candidates_running",
-        "scene_analysis_running",
-        "awaiting_boundary_review",
-        "boundary_confirmed",
-        "scene_analysis_partial",
-        "boundary_candidates_partial",
-      ].includes(run.status);
-    }
-    return true;
-  };
-  const filteredRuns = useMemo(
-    () => (runs.data ?? []).filter(matchesStatusFilter),
-    [runs.data, statusFilter],
-  );
-  const sceneResumeBusy =
-    sceneResumeState === "checking" || sceneResumeState === "resuming";
-  const offlineReplayBusy = offlineReplayState === "replaying";
-  const needsOfflineReplayFirst = Boolean(detail?.offline_replay_available);
+  const filteredRuns = useMemo(() => {
+    const nativeOverviewVisible = isProNativeOverviewUiEnabled();
+    const matchesStatusFilter = (run: any): boolean => {
+      if (!nativeOverviewVisible && isNativeOverviewRun(run)) {
+        return false;
+      }
+      if (statusFilter === "all") return true;
+      if (statusFilter === "paused") {
+        return (
+          isBudgetPauseRun(run) ||
+          run.status === "awaiting_provider_recovery" ||
+          run.status === "boundary_confirmed_budget_blocked" ||
+          run.status === "aborted_by_limit" ||
+          run.effective_status === "partial_complete" ||
+          run.effective_status === "journey_failed"
+        );
+      }
+      if (statusFilter === "failed") {
+        return (
+          !isBudgetPauseRun(run) &&
+          ["failed", "failed_structural", "failed_provider"].includes(run.status)
+        );
+      }
+      if (statusFilter === "succeeded") {
+        return (
+          (run.status === "succeeded" && run.chapter_complete === true) ||
+          run.status === "completed"
+        );
+      }
+      if (statusFilter === "cancelled") {
+        return run.status === "cancelled" || run.status === "review_cancelled";
+      }
+      if (statusFilter === "running") {
+        return (
+          [
+            "queued",
+            "running",
+            "pending",
+            "preparing",
+            "analyzing",
+            "materializing",
+            "synthesizing",
+            "paused",
+            "boundary_candidates_running",
+            "scene_analysis_running",
+            "awaiting_boundary_review",
+            "boundary_confirmed",
+            "scene_analysis_partial",
+            "boundary_candidates_partial",
+          ].includes(run.status) ||
+          run.effective_status === "journey_running" ||
+          normalizeRunLifecycle(run) === "active" ||
+          normalizeRunLifecycle(run) === "awaiting_user"
+        );
+      }
+      return true;
+    };
+    return (runs.data ?? []).filter(matchesStatusFilter);
+  }, [runs.data, statusFilter]);
   const showDetectionRecovery = Boolean(
     detail?.detection_recovery_available && detail?.remaining_detection_batch_count > 0,
   );
@@ -788,7 +741,21 @@ export function TasksPage() {
         label: "修复并继续",
         testId: `unified-recover-open-${run.id}`,
         disabled: navBusyRunId === run.id,
-        onSelect: () => void openChapterProgress(run),
+        onSelect: () => void openDetail(run),
+      });
+    }
+    // Optional Reader Journey continue — never gates primary result routing.
+    if (
+      run.status === "succeeded" &&
+      isSceneAnalysisComplete(run) &&
+      run.chapter_complete !== true
+    ) {
+      items.push({
+        id: "journey-continue",
+        label: "继续生成阅读旅程",
+        testId: `unified-recover-open-${run.id}`,
+        disabled: navBusyRunId === run.id,
+        onSelect: () => void openChapterResult(run, "reader-journey"),
       });
     }
     if (run.status !== "succeeded") {
@@ -834,7 +801,11 @@ export function TasksPage() {
         {runs.isLoading ? (
           <Loading />
         ) : runs.error ? (
-          <ErrorState error={runs.error} />
+          <ErrorState
+            error={runs.error as Error}
+            classifyTaskErrors
+            retry={() => void runs.refetch()}
+          />
         ) : filteredRuns.length ? (
           <table>
             <thead>
@@ -851,17 +822,31 @@ export function TasksPage() {
             </thead>
             <tbody>
               {filteredRuns.map((run: any) => {
-                const moreItems = run.status === "succeeded" ? [] : buildRowMoreItems(run);
-                const showDetailButton =
-                  [
-                    "failed",
-                    "failed_structural",
-                    "failed_provider",
-                    "boundary_candidates_partial",
-                    "boundary_confirmed_budget_blocked",
-                    "scene_analysis_partial",
-                    "aborted_by_limit",
-                  ].includes(run.status) || isBudgetPauseRun(run);
+                const phase = normalizeRunLifecycle(run);
+                const primary = resolveTaskCenterPrimaryAction(run);
+                const status = String(run.status || "").toLowerCase();
+                const moreItems = buildRowMoreItems(run).filter((item) => {
+                  if (item.id !== "recover") return true;
+                  return (
+                    phase === "failed" ||
+                    phase === "active" ||
+                    status === "scene_analysis_partial" ||
+                    status === "boundary_candidates_partial"
+                  );
+                });
+                const onPrimary = () => {
+                  if (primary.kind === "confirm" || primary.kind === "progress") {
+                    void openChapterProgress(run);
+                    return;
+                  }
+                  if (primary.kind === "result") {
+                    void openChapterResult(run, "analysis");
+                    return;
+                  }
+                  if (primary.kind === "detail") {
+                    openDetail(run);
+                  }
+                };
                 return (
                 <tr
                   key={run.id}
@@ -925,32 +910,25 @@ export function TasksPage() {
                   </td>
                   <td>{run.created_at ? new Date(run.created_at).toLocaleString() : "—"}</td>
                   <td>
-                    {run.status === "succeeded" ? (
-                      <SucceededRunRowActions
-                        run={run}
-                        busy={navBusyRunId === run.id}
-                        onOpen={(tab) => void openChapterResult(run, tab)}
-                      />
-                    ) : (
-                      <div className="tasks-row-actions">
-                        {showDetailButton && (
-                          <button
-                            type="button"
-                            className="secondary"
-                            data-testid={`view-detail-${run.id}`}
-                            onClick={() => openDetail(run)}
-                          >
-                            查看详情
-                          </button>
-                        )}
-                        {moreItems.length > 0 && (
-                          <OverflowMenu
-                            data-testid={`run-more-${run.id}`}
-                            items={moreItems}
-                          />
-                        )}
-                      </div>
-                    )}
+                    <div className="tasks-row-actions">
+                      {primary.kind !== "none" ? (
+                        <button
+                          type="button"
+                          className="primary"
+                          data-testid={primary.testId}
+                          disabled={navBusyRunId === run.id}
+                          onClick={onPrimary}
+                        >
+                          {primary.label}
+                        </button>
+                      ) : null}
+                      {moreItems.length > 0 && (
+                        <OverflowMenu
+                          data-testid={`run-more-${run.id}`}
+                          items={moreItems}
+                        />
+                      )}
+                    </div>
                   </td>
                 </tr>
               );
@@ -1068,7 +1046,50 @@ export function TasksPage() {
                 <h3>错误信息</h3>
                 <dl>
                   <dt>错误说明</dt>
-                  <dd>{detail.root_error_message || detail.error_message || "无"}</dd>
+                  <dd>
+                    {overviewUserError(detail) ||
+                      detail.error_message ||
+                      detail.root_error_message ||
+                      "无"}
+                  </dd>
+                  {detail.root_error_message &&
+                  detail.root_error_message !== detail.error_message ? (
+                    <>
+                      <dt>开发者详情</dt>
+                      <dd>{detail.root_error_message}</dd>
+                    </>
+                  ) : null}
+                  {detail.failed_stage ? (
+                    <>
+                      <dt>失败阶段</dt>
+                      <dd>{detail.failed_stage}</dd>
+                    </>
+                  ) : null}
+                  {(detail.task_type === "whole_book_overview" ||
+                    detail.subject_type === "book") &&
+                  detail.failed_scene_index != null ? (
+                    <>
+                      <dt>失败窗口</dt>
+                      <dd>#{detail.failed_scene_index}</dd>
+                    </>
+                  ) : null}
+                  {(detail.task_type === "whole_book_overview" ||
+                    detail.subject_type === "book") ? (
+                    <>
+                      <dt>Provider</dt>
+                      <dd>{detail.provider || "无"}</dd>
+                      <dt>Model</dt>
+                      <dd>{detail.model || "无"}</dd>
+                      <dt>是否执行 Repair</dt>
+                      <dd>
+                        {detail.failed_invocation?.repair_attempted === true
+                          ? "是"
+                          : detail.failed_invocation
+                            ? "否"
+                            : "未知"}
+                      </dd>
+                    </>
+                  ) : null}
                   {detail.validation_error_code ? (
                     <>
                       <dt>校验码</dt>

@@ -1,0 +1,61 @@
+{
+  "id": "CHG-20260726-013",
+  "title": "Commit Native Overview progress checkpoints for live polling",
+  "type": "fix",
+  "base_version": "1.0.5",
+  "status": "tested",
+  "include_in_next_release": true,
+  "commits": [
+    {
+      "sha": "f55b1b74132c3be9a9d9d2b81a23de8be6beff77",
+      "message": "fix(native-overview): commit visible progress checkpoints",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "1234fa7e51ba9bfa5f627ec76473988a87baf36c",
+      "message": "docs(release): mark CHG-20260726-013 tested after progress fix",
+      "primary": true,
+      "multi_change_reason": "registry status update"
+    }
+  ],
+  "modules": [
+    "apps/api"
+  ],
+  "files": [
+    "apps/api/app/services/native_overview_background.py",
+    "apps/api/app/narrative_core/services/native_overview_service.py",
+    "apps/api/app/services/scene_pipeline.py",
+    "apps/api/tests/test_native_overview_live_progress_local.py"
+  ],
+  "user_summary": "Native Overview 后台按阶段/窗口提交进度，轮询可实时看到 0/N、1/N…N/N。",
+  "technical_summary": "Background execute_run(commit_progress=True) commits after window build, before each Provider wait, after each window success/failure, and after finalize. Startup interrupt statuses include preparing/analyzing/materializing/synthesizing.",
+  "acceptance_criteria": [
+    "Poll sees 0/N then 1/N..N/N without jumping 0/0 to N/N; Provider wait holds no long write txn; PROCESS_INTERRUPTED preserves completed windows"
+  ],
+  "tests": [
+    "apps/api/tests/test_native_overview_live_progress_local.py (7 passed)",
+    "apps/api/tests/test_stale_run_startup_recovery_local.py"
+  ],
+  "verification_evidence": [
+    "release/evidence/CHG-20260726-013/progress-sequence.json",
+    "release/evidence/CHG-20260726-013/verification-summary.txt",
+    "release/evidence/CHG-20260726-013/verify-native-overview-live-progress.ps1"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-26T16:15:36Z",
+  "updated_at": "2026-07-26T16:28:19Z"
+}

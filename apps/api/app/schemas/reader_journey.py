@@ -318,6 +318,8 @@ class SceneReaderJourneyProfileItem(BaseModel):
     writing_takeaways: list[WritingTakeaway] = Field(default_factory=list, max_length=2)
     confidence: float = Field(ge=0, le=1)
     evidence_paragraph_ids: list[str] = Field(default_factory=list, max_length=16)
+    # Persistence/integrity metadata written by pipeline; not model output.
+    source_context_fingerprint: str | None = None
 
     @field_validator("scene_value_summary")
     @classmethod
@@ -412,6 +414,8 @@ class ReaderJourneyPreflightResponse(BaseModel):
     planner_version: str | None = None
     scene_prompt_version: str | None = None
     scene_contract_version: str | None = None
+    pipeline_id: str | None = None
+    source_mode: str | None = None
     batch_plan: list[str] = Field(default_factory=list)
     recovery_mode: bool = False
     existing_journey_run_id: int | None = None
@@ -579,6 +583,11 @@ class ReaderJourneyResultResponse(BaseModel):
     scene_prompt_version: str
     chapter_prompt_version: str
     formula_version: str
+    scene_contract_version: str | None = None
+    contract_version: str | None = None
+    calibration_status_label: str | None = None
+    legacy_uncalibrated: bool = False
+    display_mode: str | None = None
     phases: list[ReaderJourneyPhaseSummary]
     scene_profiles: list[ReaderJourneyProfileSummary]
     chapter_summary: dict[str, object] | None = None
@@ -587,3 +596,9 @@ class ReaderJourneyResultResponse(BaseModel):
     visualization: dict[str, object] | None = None
     created_at: datetime | None = None
     completed_at: datetime | None = None
+    # v2.0 optional payload (present only for contract 2.x runs; never auto-billed).
+    v2_question_lifecycle: list[dict[str, object]] | None = None
+    v2_scene_diagnoses: list[dict[str, object]] | None = None
+    integrity: dict[str, object] | None = None
+    integrity_status: str | None = None
+    trusted: bool | None = None

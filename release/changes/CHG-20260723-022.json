@@ -1,0 +1,108 @@
+{
+  "id": "CHG-20260723-022",
+  "title": "Agent G: WholeBook Engine Interface / Mock",
+  "type": "feature",
+  "base_version": "1.0.5",
+  "status": "verified",
+  "include_in_next_release": true,
+  "commits": [
+    {
+      "sha": "3f4a0ed8099f2f39adad23bab16df677fb97589d",
+      "message": "feat: implement whole book engine mock foundation",
+      "primary": true,
+      "multi_change_reason": "cherry-picked onto integration/narrative-phase1c from Agent G primary 4a3d83d"
+    },
+    {
+      "sha": "a192e34511e6b6f301fbe7855adc8fda04b5fe38",
+      "message": "docs: attach primary commit to CHG-20260723-022",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "c41638cc77f066ff5fd7a042326864b4a5c42368",
+      "message": "docs: close CHG-20260723-022 commit attachment loop",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "8153b958945080feba78cc4cb20339417f8678e5",
+      "message": "docs: finalize CHG-20260723-022 commit attachments",
+      "primary": false,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "narrative_core"
+  ],
+  "files": [
+    "apps/api/app/narrative_core/services/mock_whole_book_engine.py",
+    "apps/api/app/narrative_core/services/whole_book_engine_registry.py",
+    "apps/api/app/narrative_core/services/whole_book_stage_plan.py",
+    "apps/api/app/narrative_core/services/whole_book_engine_adapters.py",
+    "apps/api/app/narrative_core/services/whole_book_stage_orchestrator.py",
+    "apps/api/tests/test_narrative_phase1c_engine.py",
+    "docs/architecture/narrative-intelligence-core/phase1c-engine-implementation.md",
+    "docs/architecture/narrative-intelligence-core/phase1c-mock-engine-boundary.md",
+    "docs/architecture/narrative-intelligence-core/phase1c-stage-orchestrator.md",
+    "docs/architecture/narrative-intelligence-core/phase1c-engine-verification.md",
+    "release/changes/CHG-20260723-022.json"
+  ],
+  "user_summary": "Expand Mock Engine, stage plan execution, registry beyond contract stub.",
+  "technical_summary": "Agent G implements WholeBookAnalysisEngine against frozen Protocol; expands mock engine, registry/factory, stage plan builder, I/O adapters, and test orchestrator. Candidate-only synthetic writes; no model calls; production factory refuses Mock.",
+  "acceptance_criteria": [
+    "Fork from feature/narrative-phase1c-contract final HEAD",
+    "Do not modify Phase 1C-P contract files",
+    "No real model calls until Integration approval",
+    "Stage plan tests cover resume/cancel paths",
+    "Registry/Factory unique engine_id with mock-only production default",
+    "Mock outputs marked mock/synthetic/non-production and never canonical"
+  ],
+  "tests": [
+    "apps/api/tests/test_narrative_phase1c_engine.py"
+  ],
+  "verification_evidence": [
+    "pytest apps/api/tests/test_narrative_phase1c_engine.py -q --noconftest (29 passed; registry reattached on integration)",
+    "pytest apps/api/tests/test_narrative_phase1cp_contract.py -q --noconftest (16 passed)",
+    "python scripts/version_manager.py check",
+    "git diff --check",
+    "Python 3.12.10; OpenSSL 3.0.16; Phase 1C directed integration tests 83 passed; 1 soupsieve optional-dep warning; version check passed; registry check passed; git diff --check passed",
+    "Python 3.12.10; OpenSSL 3.0.16; Phase 1C directed integration tests 83 passed; 1 soupsieve optional-dep warning; version check passed; registry check passed; git diff --check passed; human verification at integration/narrative-phase1c@44a9dcf"
+  ],
+  "parallel_plan": {
+    "role": "agent_g",
+    "branch": "feature/narrative-phase1c-engine",
+    "worktree": "D:\\\\Dstorylens-wt-narrative-engine",
+    "depends_on": [
+      "CHG-20260723-021"
+    ],
+    "blocks": [
+      "CHG-20260723-025"
+    ],
+    "forbidden": [
+      "models.py schema edits",
+      "VERSION bump",
+      "modify contracts/*.py owned by Phase 1C-P"
+    ],
+    "file_ownership": "docs/architecture/narrative-intelligence-core/phase1c-parallel-file-ownership.json"
+  },
+  "integration_issues": [
+    "II-ENGINE-001 RESOLVED in CHG-025: WholeBookStageArtifactEnvelope on analysis_artifacts",
+    "II-ENGINE-002 RESOLVED in CHG-025: relation_writer is first-class WholeBookStageContext field"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-23T11:46:12Z",
+  "updated_at": "2026-07-23T13:23:19Z"
+}

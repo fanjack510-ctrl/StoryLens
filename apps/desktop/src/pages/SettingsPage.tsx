@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useAdvancedSettingsStore } from "../stores/advancedSettingsStore";
+import { useDeveloperModeStore } from "../stores/developerModeStore";
 import { SettingsAiServiceTab } from "../components/settings/SettingsAiServiceTab";
 import { SettingsUsageCostTab } from "../components/settings/SettingsUsageCostTab";
 import { SettingsDataStorageTab } from "../components/settings/SettingsDataStorageTab";
 import { SettingsPrivacyUpdateTab } from "../components/settings/SettingsPrivacyUpdateTab";
-import { SettingsLicenseTab } from "../components/settings/SettingsLicenseTab";
 import { SettingsAppearanceTab } from "../components/settings/SettingsAppearanceTab";
 import { SettingsAdvancedTab } from "../components/settings/SettingsAdvancedTab";
+import { SettingsLicenseTab } from "../components/settings/SettingsLicenseTab";
 import "../components/settings/settings.css";
 
 type TabId =
@@ -15,32 +16,33 @@ type TabId =
   | "cost"
   | "data"
   | "privacy"
-  | "license"
   | "appearance"
   | "advanced"
   | "general"
-  | "budget";
+  | "budget"
+  | "license";
 
 const BASE_TABS: Array<{ id: TabId; label: string }> = [
-  { id: "ai", label: "AI 服务" },
+  { id: "ai", label: "AI与模型" },
   { id: "cost", label: "使用额度" },
-  { id: "data", label: "数据与存储" },
+  { id: "data", label: "数据与备份" },
   { id: "privacy", label: "隐私与更新" },
-  { id: "license", label: "授权与会员" },
+  { id: "license", label: "授权与专业版" },
   { id: "appearance", label: "外观" },
 ];
 
-function normalizeTab(raw: string | null, showAdvanced: boolean): TabId {
+/** Map legacy / hidden tab ids without dropping deep-link compatibility. */
+export function normalizeSettingsTab(raw: string | null, showDeveloper: boolean): TabId {
   if (raw === "general") return "appearance";
   if (raw === "budget") return "cost";
-  if (raw === "advanced") return showAdvanced ? "advanced" : "ai";
+  if (raw === "advanced") return showDeveloper ? "advanced" : "ai";
   if (
     raw === "ai" ||
     raw === "cost" ||
     raw === "data" ||
     raw === "privacy" ||
-    raw === "license" ||
-    raw === "appearance"
+    raw === "appearance" ||
+    raw === "license"
   ) {
     return raw;
   }
@@ -49,28 +51,39 @@ function normalizeTab(raw: string | null, showAdvanced: boolean): TabId {
 
 export function SettingsPage() {
   const showAdvanced = useAdvancedSettingsStore((s) => s.showAdvancedSettings);
-  const [searchParams] = useSearchParams();
+  const developerMode = useDeveloperModeStore((s) => s.developerMode);
+  const showDeveloper = showAdvanced || developerMode;
+  const [searchParams, setSearchParams] = useSearchParams();
   const [tab, setTab] = useState<TabId>(() =>
-    normalizeTab(searchParams.get("tab"), showAdvanced),
+    normalizeSettingsTab(searchParams.get("tab"), showDeveloper),
   );
 
   useEffect(() => {
-    setTab(normalizeTab(searchParams.get("tab"), showAdvanced));
-  }, [searchParams, showAdvanced]);
+    setTab(normalizeSettingsTab(searchParams.get("tab"), showDeveloper));
+  }, [searchParams, showDeveloper]);
 
-  const tabs = showAdvanced
-    ? [...BASE_TABS, { id: "advanced" as const, label: "高级设置" }]
+  const tabs = showDeveloper
+    ? [...BASE_TABS, { id: "advanced" as const, label: "开发者设置" }]
     : BASE_TABS;
 
-  const activeTab = tab === "advanced" && !showAdvanced ? "ai" : tab;
+  const activeTab = tab === "advanced" && !showDeveloper ? "ai" : tab;
   const focus = searchParams.get("focus");
+
+  const selectTab = (id: TabId) => {
+    const next = normalizeSettingsTab(id, showDeveloper);
+    setTab(next);
+    const params = new URLSearchParams(searchParams);
+    params.set("tab", next);
+    if (next !== "ai") params.delete("focus");
+    setSearchParams(params, { replace: true });
+  };
 
   return (
     <section className="page settings-page" data-testid="settings-page">
       <div className="page-title settings-page-title">
         <div>
           <h1>设置</h1>
-          <p>配置 AI 服务、费用、数据与外观。多数技术项由软件自动处理。</p>
+          <p>管理模型、用量、数据、隐私与外观。</p>
         </div>
       </div>
 
@@ -82,7 +95,7 @@ export function SettingsPage() {
             className={activeTab === item.id ? "active" : ""}
             data-testid={`settings-tab-${item.id}`}
             aria-selected={activeTab === item.id}
-            onClick={() => setTab(item.id)}
+            onClick={() => selectTab(item.id)}
           >
             {item.label}
           </button>
@@ -101,7 +114,7 @@ export function SettingsPage() {
         {activeTab === "privacy" && <SettingsPrivacyUpdateTab />}
         {activeTab === "license" && <SettingsLicenseTab />}
         {activeTab === "appearance" && <SettingsAppearanceTab />}
-        {activeTab === "advanced" && showAdvanced && <SettingsAdvancedTab />}
+        {activeTab === "advanced" && showDeveloper && <SettingsAdvancedTab />}
       </div>
     </section>
   );

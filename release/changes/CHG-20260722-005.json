@@ -1,0 +1,92 @@
+{
+  "id": "CHG-20260722-005",
+  "title": "P0: Reader Journey context/grounding integrity (prevent cross-book contamination)",
+  "type": "fix",
+  "base_version": "1.0.3",
+  "status": "released",
+  "include_in_next_release": false,
+  "commits": [
+    {
+      "sha": "8ec07dcee983af07ab80fc1b3227e13f216f8d57",
+      "message": "Guard Reader Journey against claim/evidence and context integrity failures (CHG-20260722-005).",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "a75686403d1675973aa54769093133f9285adcd8",
+      "message": "Grade Journey integrity: legacy/partial vs severe pollution (CHG-20260722-005).",
+      "primary": false,
+      "multi_change_reason": "Graded integrity states to stop over-blocking legacy Journeys"
+    },
+    {
+      "sha": "bc69e4e5c90e40f7ea39c357cff34511d8a78611",
+      "message": "Align chart eligibility with node_type; keep graded integrity (CHG-20260722-005).",
+      "primary": false,
+      "multi_change_reason": "Chart eligibility by node_type; avoid false pollution UI"
+    }
+  ],
+  "modules": [
+    "reader-journey",
+    "analysis-integrity",
+    "desktop-shell"
+  ],
+  "files": [
+    "apps/api/app/services/analysis_context_fingerprint.py",
+    "apps/api/app/services/analysis_grounding.py",
+    "apps/api/app/services/analysis_integrity_guard.py",
+    "apps/api/app/api/v1/reader_journey.py",
+    "apps/api/app/services/structured_output.py",
+    "apps/api/app/services/reader_journey_pipeline.py",
+    "apps/desktop/src/pages/BookRoutePage.tsx",
+    "apps/desktop/src/components/readerJourney/JourneySceneDetailPanel.tsx",
+    "apps/desktop/src/services/resolveWorkspaceLayout.ts",
+    "apps/desktop/src/components/readerJourney/WorkspaceJourneyPane.tsx",
+    "apps/desktop/src/components/readerJourney/hasUsableJourneyVisualization.ts",
+    "apps/desktop/src/components/readerJourney/hasUsableJourneyVisualization.test.ts"
+  ],
+  "user_summary": "Reader Journey出现非当前小说内容且错误结论绑定当前段落证据，暂停污染Artifact展示并加强来源指纹与校验。",
+  "technical_summary": "Graded Journey integrity: trusted/partially_trusted/legacy_unverified/data_integrity_failed; legacy without fingerprint shows with warning; soft claim heuristics only when fingerprint ok; severe wrong-book/context mismatch still blocks; field/scene redaction for partial.",
+  "acceptance_criteria": [
+    "污染Artifact不展示为可信结果",
+    "request作用域与正文hash可校验",
+    "Run#9不删除不覆盖"
+  ],
+  "tests": [
+    "apps/api/tests/test_analysis_integrity_p0_local.py",
+    "apps/desktop/src/components/readerJourney/JourneySceneIntegrityGate.test.tsx",
+    "apps/desktop/src/components/readerJourney/hasUsableJourneyVisualization.test.ts"
+  ],
+  "verification_evidence": [
+    "Reader Journey出现非当前小说内容",
+    "错误结论绑定当前Paragraph ID",
+    "Artifact来源和证据校验不足",
+    "可能存在缓存、查询作用域、异步绑定或Provider上下文污染",
+    "Run #9暂停作为可信结果使用",
+    "Run #8真实跨上下文污染必须阻断",
+    "完整性校验上线后多个Journey被整体阻断",
+    "需要区分legacy、partial和严重污染",
+    "单节点/单字段失败不得阻断全部Journey",
+    "实体抽取把分析套话误判为跨书实体导致系统性误伤",
+    "全库Journey缺少fingerprint时不得一律data_integrity_failed",
+    "Run #11被整页拦截的真实原因是缺fingerprint叠加软性claim启发式误伤，而非跨Book Paragraph",
+    "全库9条Journey均无fingerprint；分级后全部legacy_unverified可展示",
+    "图表节点资格由node_type决定，phase_summary无scores不算污染",
+    "正式库中对Run #8的自动严重污染码当前无法复现；正文关键词与Journey结论匹配；不得无严重证据硬阻断"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "P0",
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-22T05:49:31Z",
+  "updated_at": "2026-07-23T04:43:23Z"
+}

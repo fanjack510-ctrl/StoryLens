@@ -22,8 +22,8 @@ $VersionFile = Join-Path $Root "VERSION"
 if (-not (Test-Path $VersionFile)) {
     Fail "VERSION file missing at repo root"
 }
-$ExpectedVersion = (Get-Content -LiteralPath $VersionFile -Raw -Encoding UTF8).Trim()
-if (-not $ExpectedVersion) {
+$RepoVersion = (Get-Content -LiteralPath $VersionFile -Raw -Encoding UTF8).Trim()
+if (-not $RepoVersion) {
     Fail "VERSION file is empty"
 }
 
@@ -33,18 +33,35 @@ if (-not (Test-Path $py)) { $py = "python" }
 if ($LASTEXITCODE) {
     Fail "version_manager.py check failed"
 }
-& $py (Join-Path $Root "scripts\change_registry.py") check --release
-if ($LASTEXITCODE) {
-    Fail "change_registry.py check --release failed"
-}
-& $py (Join-Path $Root "scripts\version_manager.py") release-guard --artifacts-dir $ReleaseDir
-if ($LASTEXITCODE) {
-    Fail "version_manager.py release-guard failed"
-}
-
+$IsRcCandidate = ($env:STORYLENS_RC_CANDIDATE -eq "1")
 $SummaryPath = Join-Path $ReleaseDir "build-summary.json"
 if (-not (Test-Path $SummaryPath)) {
     Fail "build-summary.json missing under $ReleaseDir"
+}
+
+# Formal release: installer must match repo VERSION.
+# Local RC candidate: repo VERSION stays formal (e.g. 1.0.5); artifacts match build-summary.version.
+$ExpectedVersion = $RepoVersion
+if ($IsRcCandidate) {
+    Write-Host "STORYLENS_RC_CANDIDATE=1: skip change_registry --release and release-guard for local RC artifact gates."
+    $summaryObj = Get-Content -LiteralPath $SummaryPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    if (-not $summaryObj.version) {
+        Fail "build-summary.json missing version for RC candidate"
+    }
+    if (-not $summaryObj.rc_candidate) {
+        Fail "build-summary.json rc_candidate must be true for STORYLENS_RC_CANDIDATE=1"
+    }
+    $ExpectedVersion = [string]$summaryObj.version
+    Write-Host "RC artifact version expected from build-summary: $ExpectedVersion (repo VERSION=$RepoVersion)"
+} else {
+    & $py (Join-Path $Root "scripts\change_registry.py") check --release
+    if ($LASTEXITCODE) {
+        Fail "change_registry.py check --release failed"
+    }
+    & $py (Join-Path $Root "scripts\version_manager.py") release-guard --artifacts-dir $ReleaseDir
+    if ($LASTEXITCODE) {
+        Fail "version_manager.py release-guard failed"
+    }
 }
 
 $Sidecar = Join-Path $ReleaseDir "storylens-api.exe"

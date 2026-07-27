@@ -1,0 +1,140 @@
+{
+  "id": "CHG-20260723-015",
+  "title": "Phase 1A integration verification",
+  "type": "improvement",
+  "base_version": "1.0.5",
+  "status": "verified",
+  "include_in_next_release": true,
+  "commits": [
+    {
+      "sha": "6b87884205905fb4d1e2153d56409d338c9d93a4",
+      "message": "feat: integrate narrative phase1a foundation",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "f8cde35ec9e6fd75d8110ddd4ec291a5be316891",
+      "message": "docs: finalize CHG-20260723-015 registry after tested mark",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "a5adbb119e1942be0305dc3c22e778f753559a19",
+      "message": "docs: attach registry sync commit to CHG-20260723-015",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "e665e216890941a6523b9f20e43b682152f5e17e",
+      "message": "docs: finalize CHG-20260723-015 commit attachments",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "8d19f61e7b6968b09912fdcf90dd196622bdad34",
+      "message": "docs: sync final CHG-20260723-015 commit list",
+      "primary": false,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "integration",
+    "narrative_core",
+    "testing",
+    "documentation",
+    "change registry"
+  ],
+  "files": [
+    "apps/api/app/narrative_core/hash_canon.py",
+    "apps/api/app/narrative_core/enums.py",
+    "apps/api/app/narrative_core/contracts/hash.py",
+    "apps/api/app/narrative_core/migrations/runner.py",
+    "apps/api/app/narrative_core/services/hash_backfill.py",
+    "apps/api/app/narrative_core/services/snapshot_repository.py",
+    "apps/api/app/narrative_core/services/snapshot_service.py",
+    "apps/api/app/narrative_core/services/run_stage_service.py",
+    "apps/api/app/services/scene_pipeline.py",
+    "apps/api/app/db/models.py",
+    "apps/api/tests/test_narrative_phase1a_integration.py",
+    "docs/architecture/narrative-intelligence-core/README.md",
+    "docs/architecture/narrative-intelligence-core/phase1a-integration-report.md",
+    "docs/architecture/narrative-intelligence-core/phase1a-integrated-migration-verification.md",
+    "docs/architecture/narrative-intelligence-core/phase1a-snapshot-runstage-end-to-end.md",
+    "docs/architecture/narrative-intelligence-core/phase1a-known-limitations.md",
+    "release/changes/CHG-20260723-012.json",
+    "release/changes/CHG-20260723-013.json",
+    "release/changes/CHG-20260723-014.json",
+    "release/changes/CHG-20260723-015.json"
+  ],
+  "user_summary": "Integrates Agent A/B/C Phase 1A outputs, unifies Book Hash Contract, corrects Snapshot error fields, wires real Snapshot gateway, and adds staged/legacy sidecar interrupt compatibility.",
+  "technical_summary": "Cherry-picked A→B→C onto integration/narrative-phase1a from e983e72. Integration fixes: BookHashChapterInput contract, migration 003 error_code/error_message (no new migration_id), RunStageService defaults to SnapshotValidationGatewayImpl, mark_interrupted_runs_failed dual-path, RunStatus constants, cross-module integration tests and docs.",
+  "acceptance_criteria": [
+    "Merge from Phase 1P commit + A/B/C branches",
+    "Cross-module integration tests pass",
+    "No VERSION bump without release Change",
+    "Do not mark verified without user acceptance"
+  ],
+  "tests": [
+    "apps/api/tests/test_narrative_migration_ledger.py",
+    "apps/api/tests/test_narrative_hash_backfill.py",
+    "apps/api/tests/test_narrative_snapshot_service.py",
+    "apps/api/tests/test_narrative_phase1p_contract.py",
+    "apps/api/tests/test_narrative_run_scope.py",
+    "apps/api/tests/test_narrative_run_stage.py",
+    "apps/api/tests/test_narrative_phase1a_integration.py",
+    "apps/desktop: npm run typecheck",
+    "apps/desktop: npx vitest run src/features/narrativePattern"
+  ],
+  "verification_evidence": [
+    "pytest directed A+B+integration: 62 passed",
+    "vitest narrativePattern: 16 passed; typecheck clean",
+    "version_manager check passed (1.0.5)",
+    "Integration corrections documented in phase1a-integration-report.md",
+    "Phase 1A Integration user verification accepted 2026-07-23; status advanced to verified (not ready/released)."
+  ],
+  "data_compatibility": {
+    "database_changed": true,
+    "migration_required": true,
+    "user_data_compatible": true,
+    "notes": "Revised unreleased migration 003 to add snapshot error columns; no new migration_id. Legacy AnalysisRun rows remain readable."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-23T07:20:00Z",
+  "updated_at": "2026-07-23T08:43:10Z",
+  "parallel_plan": {
+    "role": "integration",
+    "branch": "integration/narrative-phase1a",
+    "worktree": "D:\\Dstorylens-wt-narrative-integration",
+    "depends_on": [
+      "CHG-20260723-011",
+      "CHG-20260723-012",
+      "CHG-20260723-013",
+      "CHG-20260723-014"
+    ],
+    "blocks": [],
+    "exclusive_paths": [
+      "apps/api/tests/test_narrative_phase1a_integration.py",
+      "docs/architecture/narrative-intelligence-core/phase1a-integration-report.md"
+    ],
+    "forbidden": [
+      "start before A/B/C complete",
+      "push/publish",
+      "mark verified without user acceptance",
+      "Phase 1B / whole-book analysis"
+    ],
+    "integration_corrections": [
+      "Book Hash Contract unified",
+      "Snapshot error_code/error_message",
+      "Real SnapshotValidationGatewayImpl default",
+      "Sidecar staged/legacy interrupt compatibility",
+      "RunStatus constants"
+    ]
+  }
+}

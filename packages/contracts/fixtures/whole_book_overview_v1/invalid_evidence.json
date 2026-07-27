@@ -1,0 +1,26 @@
+{
+  "candidate_assets": [],
+  "candidate_entities": [],
+  "candidate_evidence": [
+    {
+      "chapter_id": "c1",
+      "confidence": 0.99,
+      "evidence_id": "ev-bad",
+      "evidence_role": "support",
+      "paragraph_id": "",
+      "quote": "",
+      "supports_candidate_ids": []
+    }
+  ],
+  "contract_version": "1.0",
+  "input_hash": "sha256:window-0",
+  "quality": {
+    "confidence": 0.0,
+    "repair_attempted": false,
+    "repair_succeeded": false
+  },
+  "run_id": "101",
+  "state_delta": {},
+  "warnings": [],
+  "window_id": "w-0"
+}

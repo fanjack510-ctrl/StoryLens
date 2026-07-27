@@ -1,0 +1,198 @@
+{
+  "baseline_version": "1.0.5",
+  "baseline_commit": "4cec5dbdf2f12669b389c845abf6de2e6a1ec28b",
+  "source_branch": "integration/narrative-phase2a",
+  "phase2b_p_change": "CHG-20260723-036",
+  "protocol_id": "storylens.private_engine.v1",
+  "public_contract_path": "apps/api/app/narrative_core/private_engine_contract/",
+  "frontend_contract_path": "apps/desktop/src/features/wholeBook/privateEngineContracts/",
+  "agents": {
+    "phase2b_p": {
+      "change": "CHG-20260723-036",
+      "branch": "feature/narrative-phase2b-core-engine-contract",
+      "worktree": "D:\\Dstorylens-wt-narrative-phase2b-contract",
+      "status_target": "tested"
+    },
+    "agent_p": {
+      "change": "CHG-20260723-037",
+      "branch": "feature/narrative-phase2b-engine-runtime",
+      "worktree": "D:\\Dstorylens-wt-narrative-engine-runtime",
+      "status_target": "registered",
+      "role": "Private Engine Runtime Foundation"
+    },
+    "agent_q": {
+      "change": "CHG-20260723-038",
+      "branch": "feature/narrative-phase2b-context-evidence",
+      "worktree": "D:\\Dstorylens-wt-narrative-context-evidence",
+      "status_target": "registered",
+      "role": "Context and Evidence Pipeline"
+    },
+    "agent_r": {
+      "change": "CHG-20260723-039",
+      "branch": "feature/narrative-phase2b-core-modules",
+      "worktree": "D:\\Dstorylens-wt-narrative-core-modules",
+      "status_target": "registered",
+      "role": "First Real Modules and Evaluation Foundation"
+    },
+    "integration": {
+      "change": "CHG-20260723-040",
+      "branch": "integration/narrative-phase2b",
+      "worktree": "D:\\Dstorylens-wt-narrative-phase2b-integration",
+      "status_target": "registered",
+      "role": "Phase 2B Integration"
+    }
+  },
+  "phase2b_p": [
+    "apps/api/app/narrative_core/private_engine_contract/",
+    "apps/desktop/src/features/wholeBook/privateEngineContracts/",
+    "apps/api/tests/test_narrative_phase2bp_contract.py",
+    "docs/architecture/narrative-intelligence-core/phase2b-private-engine-boundary.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-engine-manifest-loader.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-provider-gateway.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-prompt-pack-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-context-pipeline.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-context-unit-bundle.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-evidence-pipeline.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-module-execution-spec.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-first-four-modules.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-output-validation.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-candidate-persistence.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-native-enhanced.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-quality-model-routing.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-data-handling-privacy.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-checkpoint-recovery.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-budget-usage.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-error-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-algorithm-generality.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-evaluation-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-language-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-parallel-file-ownership.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-parallel-file-ownership.json",
+    "docs/architecture/narrative-intelligence-core/phase2b-contract-verification.md",
+    "docs/architecture/narrative-intelligence-core/README.md",
+    "docs/architecture/README.md",
+    "release/changes/CHG-20260723-036.json",
+    "release/changes/CHG-20260723-037.json",
+    "release/changes/CHG-20260723-038.json",
+    "release/changes/CHG-20260723-039.json",
+    "release/changes/CHG-20260723-040.json"
+  ],
+  "agent_p": [
+    "apps/api/app/narrative_core/services/private_engine_manifest_loader.py",
+    "apps/api/app/narrative_core/services/private_engine_signature.py",
+    "apps/api/app/narrative_core/services/whole_book_provider_gateway.py",
+    "apps/api/app/narrative_core/services/private_engine_runtime_adapter.py",
+    "apps/api/app/narrative_core/services/fake_private_whole_book_engine.py",
+    "apps/api/tests/test_narrative_phase2b_engine_runtime.py",
+    "docs/architecture/narrative-intelligence-core/phase2b-engine-runtime-implementation.md",
+    "release/changes/CHG-20260723-037.json"
+  ],
+  "agent_q": [
+    "apps/api/app/narrative_core/services/whole_book_context_pipeline.py",
+    "apps/api/app/narrative_core/services/whole_book_context_units.py",
+    "apps/api/app/narrative_core/services/whole_book_evidence_pipeline.py",
+    "apps/api/app/narrative_core/services/whole_book_evidence_validator.py",
+    "apps/api/tests/test_narrative_phase2b_context_evidence.py",
+    "docs/architecture/narrative-intelligence-core/phase2b-context-evidence-implementation.md",
+    "release/changes/CHG-20260723-038.json"
+  ],
+  "agent_r": [
+    "apps/api/app/narrative_core/services/whole_book_module_runner.py",
+    "apps/api/app/narrative_core/services/whole_book_module_output_validator.py",
+    "apps/api/app/narrative_core/services/whole_book_candidate_builder.py",
+    "apps/api/app/narrative_core/services/fake_prompt_pack.py",
+    "apps/api/app/narrative_core/services/whole_book_evaluation_harness.py",
+    "apps/api/tests/test_narrative_phase2b_core_modules.py",
+    "docs/architecture/narrative-intelligence-core/phase2b-core-modules-implementation.md",
+    "release/changes/CHG-20260723-039.json"
+  ],
+  "integration": [
+    "apps/api/app/main.py",
+    "apps/api/tests/test_narrative_phase2b_integration.py",
+    "docs/architecture/narrative-intelligence-core/phase2b-integration-report.md",
+    "docs/architecture/narrative-intelligence-core/README.md",
+    "README.md",
+    "release/changes/CHG-20260723-040.json"
+  ],
+  "shared_read_only": [
+    "apps/api/app/db/models.py",
+    "apps/api/app/narrative_core/enums.py",
+    "apps/api/app/narrative_core/contracts/",
+    "apps/api/app/narrative_core/product_contract/",
+    "apps/api/app/narrative_core/run_shell_contract/",
+    "apps/api/app/narrative_core/private_engine_contract/",
+    "apps/api/app/narrative_core/services/mock_whole_book_engine.py",
+    "apps/api/app/narrative_core/services/whole_book_engine_registry.py",
+    "apps/desktop/src/features/wholeBook/contracts/",
+    "apps/desktop/src/features/wholeBook/runShell/contracts/",
+    "apps/desktop/src/services/productEdition.ts",
+    "VERSION"
+  ],
+  "shared_risk_files": [
+    {
+      "path": "apps/api/app/main.py",
+      "risk": "Must not enable production whole-book runs or flip lab/production gates",
+      "owner": "integration",
+      "readers": ["agent_p"]
+    },
+    {
+      "path": "apps/api/app/db/models.py",
+      "risk": "No new tables/migrations/FTS5/vector/Neo4j",
+      "owner": "shared_read_only",
+      "readers": ["agent_q", "agent_r", "integration"]
+    },
+    {
+      "path": "apps/api/app/narrative_core/enums.py",
+      "risk": "Module/stage key consistency across P/Q/R",
+      "owner": "shared_read_only",
+      "readers": ["agent_p", "agent_q", "agent_r", "integration"]
+    },
+    {
+      "path": "apps/api/app/narrative_core/product_contract/",
+      "risk": "Planning/Producer/Result maps must use Execution Spec adapters; no fourth FE mapping",
+      "owner": "agent_r_with_integration_review",
+      "readers": ["agent_p", "integration"]
+    },
+    {
+      "path": "apps/api/app/narrative_core/run_shell_contract/",
+      "risk": "Do not break Phase 2A Mock Lab contracts",
+      "owner": "shared_read_only",
+      "readers": ["agent_p", "integration"]
+    },
+    {
+      "path": "apps/api/app/narrative_core/services/whole_book_engine_registry.py",
+      "risk": "PRODUCTION_DEFAULT_ENGINE_ID stays None; no silent mock degrade in production",
+      "owner": "agent_p_with_integration_review",
+      "readers": ["integration"]
+    },
+    {
+      "path": "apps/desktop/src/features/wholeBook/privateEngineContracts/",
+      "risk": "FE types only; no engine internals or prompt bodies",
+      "owner": "phase2b_p",
+      "readers": ["integration"]
+    },
+    {
+      "path": "VERSION",
+      "risk": "Must remain 1.0.5; no tag/baseline/release mutation",
+      "owner": "forbidden",
+      "readers": []
+    }
+  ],
+  "forbidden_for_all": [
+    "formal_prompts",
+    "formal_analysis_algorithms",
+    "local_or_cloud_model_calls",
+    "enable_production_whole_book_runs",
+    "flip_PRO_CAPABILITIES_SHIPPED",
+    "flip_WHOLE_BOOK_RUNS_ENDPOINT_DISABLED",
+    "set_PRODUCTION_DEFAULT_ENGINE_ID",
+    "default_enable_WHOLE_BOOK_MOCK_LAB",
+    "migrations_or_new_tables",
+    "fts5_vector_neo4j",
+    "private_algorithm_in_public_contract",
+    "auto_confirm_lock_canonical",
+    "VERSION_tag_baseline_mutation",
+    "push_build_publish",
+    "stash_restore"
+  ]
+}

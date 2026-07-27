@@ -186,6 +186,32 @@ class RecommendedQwenRepairRequest(BaseModel):
     cloud_body_consent: bool | None = None
 
 
+class CredentialStoreCapability(BaseModel):
+    type: str
+    available: bool
+    machine_scoped: bool = False
+    returns_secret_to_api: bool = False
+    shares_with_packaged: bool = False
+    desktop_parity: bool = False
+
+
+class ConfigRuntimeProfile(BaseModel):
+    """Which SQLite / credential environment the backend is currently using."""
+
+    runtime_mode: Literal[
+        "browser_dev", "desktop_dev", "packaged", "browser_local_production"
+    ]
+    app_env: Literal["development", "production"]
+    is_frozen: bool = False
+    data_directory: str
+    database_path: str
+    database_url: str | None = None
+    isolates_sqlite_from_packaged: bool = False
+    packaged_data_directory_hint: str | None = None
+    credential_store: CredentialStoreCapability
+    user_message: str
+
+
 class RecommendedQwenSetupResponse(BaseModel):
     ok: bool
     user_message: str
@@ -203,3 +229,15 @@ class RecommendedQwenSetupResponse(BaseModel):
     model_service_validated: bool = False
     analysis_ready: bool = False
     readiness_reasons: list[str] = Field(default_factory=list)
+    http_status: int | None = None
+    error_category: str | None = None
+    retryable: bool | None = None
+    config_profile: ConfigRuntimeProfile | None = None
+    cloud_body_consent: bool = False
+    connection_ui_state: str | None = None
+    connection_ui_label: str | None = None
+    connection_ui_reason: str | None = None
+    validated_at: str | None = None
+    validated_at_display: str | None = None
+    validated_model: str | None = None
+    validation_snapshot: dict | None = None

@@ -56,14 +56,6 @@ function renderWorkspace(viz = buildFixture13Scenes(), width = 1600) {
 }
 
 
-function openExportMenu() {
-  const more = screen.queryByTestId("journey-more-chart-settings");
-  if (more && !screen.queryByTestId("journey-export-png")) {
-    fireEvent.click(more);
-  }
-  return screen.getByTestId("journey-export-png");
-}
-
 describe("Reader Journey Metric Selector Overlay System v4.2", () => {
   afterEach(() => {
     cleanup();
@@ -117,10 +109,8 @@ describe("Reader Journey Metric Selector Overlay System v4.2", () => {
       "data-current-metric",
       "hook",
     );
-    expect(screen.getByTestId("journey-metric-select")).toHaveTextContent("钩子强度");
-    expect(screen.getByTestId("journey-metric-select")).toHaveAttribute("aria-expanded", "false");
-    expect(screen.getByTestId("journey-curve-node-3")).toBeInTheDocument();
-    expect(screen.getByTestId("journey-rhythm-dot-3")).toBeInTheDocument();
+    expect(screen.getByTestId("journey-lens-hook_payoff")).toHaveAttribute("aria-current", "true");
+    expect(screen.getByTestId("journey-overview-curve")).toBeInTheDocument();
   });
 
   it("closes on Escape and outside click", () => {
@@ -164,7 +154,7 @@ describe("Reader Journey Metric Selector Overlay System v4.2", () => {
     );
   });
 
-  it("uses SharedPopover via overlay-root for 更多操作 with z-index token 40", () => {
+  it("uses SharedPopover via overlay-root for compare picker with z-index token 40", () => {
     expect(JOURNEY_Z_INDEX.popoverMenu).toBe(40);
     expect(JOURNEY_Z_INDEX.chartTooltip).toBe(50);
     expect(JOURNEY_Z_INDEX.modalDialog).toBe(100);
@@ -173,19 +163,12 @@ describe("Reader Journey Metric Selector Overlay System v4.2", () => {
     expect(css).toMatch(/--journey-z-popover:\s*40/);
     expect(css).not.toMatch(/z-index:\s*9999/);
     renderWorkspace();
-    fireEvent.click(screen.getByTestId("journey-more-chart-settings"));
-    expect(screen.getByTestId("journey-more-menu-panel")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("journey-overlay-composite"));
+    expect(screen.getByTestId("journey-compare-selector-list")).toBeInTheDocument();
     expect(document.getElementById("journey-overlay-root")).toBeTruthy();
-    const panel = screen.getByTestId("journey-more-menu-panel");
+    const panel = screen.getByTestId("journey-compare-selector-list");
     expect(document.getElementById("journey-overlay-root")?.contains(panel)).toBe(true);
-    expect(within(panel).getByTestId("journey-export-png")).toHaveTextContent("导出 PNG");
-    expect(within(panel).getByTestId("journey-chart-height-controls")).toBeInTheDocument();
-    expect(within(panel).getByTestId("journey-y-domain-fixed")).toHaveTextContent("固定 0—100");
-    expect(within(panel).getByTestId("journey-y-domain-focus")).toHaveTextContent("聚焦数据");
-    expect(within(panel).getByTestId("journey-zoom-reset")).toHaveTextContent("恢复默认");
-    expect(within(panel).getByTestId("journey-reset-pane-widths")).toHaveTextContent(
-      "恢复默认栏宽",
-    );
+    expect(screen.queryByTestId("journey-more-chart-settings")).not.toBeInTheDocument();
   });
 
   it("preserves chart Y 0—100 and plot floors", () => {
@@ -218,12 +201,12 @@ describe("Reader Journey Metric Selector Overlay System v4.2", () => {
     expect(workspaceSource).not.toMatch(/MetricSelector[\s\S]{0,80}bookId\s*===/);
   });
 
-  it("shows current metric on trigger as 更多指标 · label", () => {
+  it("shows current metric on trigger as 指标 · label", () => {
     renderWorkspace();
     const trigger = screen.getByTestId("journey-metric-select");
-    expect(trigger).toHaveTextContent("更多指标");
-    expect(trigger).toHaveTextContent("阅读牵引");
-    expect(trigger.textContent).toMatch(/更多指标\s*·\s*阅读牵引/);
+    expect(trigger).toHaveTextContent("指标");
+    expect(trigger).toHaveTextContent("综合阅读");
+    expect(trigger.textContent).toMatch(/指标\s*：\s*综合阅读/);
   });
 
   it("does not show source expand/collapse on the journey toolbar", () => {

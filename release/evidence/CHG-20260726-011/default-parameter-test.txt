@@ -1,0 +1,10 @@
+{
+  "default_class_attr": 8192,
+  "instance_default": 8192,
+  "outgoing_max_tokens": 8192,
+  "temperature": 0.2,
+  "response_format_mode": "json_object",
+  "enable_thinking": false,
+  "real_provider_calls": 0,
+  "passed": true
+}

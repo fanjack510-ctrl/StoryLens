@@ -1,0 +1,108 @@
+{
+  "id": "CHG-20260723-030",
+  "title": "Phase 1D Integration",
+  "type": "improvement",
+  "base_version": "1.0.5",
+  "status": "verified",
+  "include_in_next_release": true,
+  "commits": [
+    {
+      "sha": "ac190bdb650164868f9e28d64f26cbd6acd816fd",
+      "message": "feat: integrate narrative phase1d product foundation",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "26b5be5f79c4ef77bbfc2264d92cb71becdea820",
+      "message": "docs: attach integration commit to CHG-20260723-030",
+      "primary": false,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "narrative_core",
+    "desktop/wholeBook"
+  ],
+  "files": [
+    "apps/api/tests/test_narrative_phase1d_integration.py",
+    "apps/desktop/src/features/wholeBook/phase1dIntegration.test.tsx",
+    "apps/api/app/main.py",
+    "apps/api/app/narrative_core/services/narrative_projection_source.py",
+    "apps/api/app/narrative_core/services/module_stage_mapping_consistency.py",
+    "apps/api/app/narrative_core/services/structure_map_projection.py",
+    "docs/architecture/narrative-intelligence-core/phase1d-integration-report.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-preflight-result-e2e.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-module-stage-dependency-boundary.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-result-api-verification.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-evidence-review-integration.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-structure-map-integration.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-known-limitations.md",
+    "release/changes/CHG-20260723-030.json"
+  ],
+  "user_summary": "Integrate Phase 1D Agent J/K/L contracts, Result API, and product-chain fixtures.",
+  "technical_summary": "Cherry-pick J/K/L; unify Transport DTO vs PageModel; backend/client/effective run_creation; ENGINE vs PRODUCT module-stage maps + consistency; register read-only results router; NarrativeProjectionSource for Structure Map; keep Review write closed; E2E + directed tests.",
+  "acceptance_criteria": [
+    "Agent J/K/L all valid commits cherry-picked onto integration/narrative-phase1d from f79f199",
+    "Transport DTO vs PageModel frozen; effective_run_creation_enabled=false",
+    "PRODUCT deps subset of Engine Planning Closure",
+    "Result API registered; Review write not registered",
+    "Structure Map consumes NarrativeProjectionSource",
+    "Product E2E without models / production run create / Pattern tables",
+    "Change registry 026 verified; 027-029 tested; 030 tested (not ready/released)"
+  ],
+  "tests": [
+    "apps/api/tests/test_narrative_phase1d_integration.py",
+    "apps/desktop/src/features/wholeBook/phase1dIntegration.test.tsx"
+  ],
+  "verification_evidence": [
+    "pytest apps/api/tests/test_narrative_phase1d_integration.py -q => 9 passed",
+    "pytest Agent K/L suites => passed",
+    "vitest wholeBook runUx/review/structureMap/phase1dIntegration => passed",
+    "scripts/version_manager.py check",
+    "scripts/change_registry.py check",
+    "git diff --check"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "No migrations; no Pattern tables; no VERSION bump."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-23T13:23:34Z",
+  "updated_at": "2026-07-23T15:04:11Z",
+  "parallel_plan": {
+    "role": "integration",
+    "branch": "integration/narrative-phase1d",
+    "worktree": "D:\\\\Dstorylens-wt-narrative-phase1d-integration",
+    "depends_on": [
+      "CHG-20260723-026",
+      "CHG-20260723-027",
+      "CHG-20260723-028",
+      "CHG-20260723-029"
+    ],
+    "blocks": [],
+    "forbidden": [
+      "real model calls",
+      "open production whole-book run create",
+      "register review write route",
+      "VERSION bump",
+      "push/build/publish"
+    ],
+    "file_ownership": "docs/architecture/narrative-intelligence-core/phase1d-parallel-file-ownership.json",
+    "integration_corrections": [
+      "WholeBookPreflightResponseDto alias + PageModel backend/client/effective flags",
+      "PRODUCT_MODULE_STAGE_DEPENDENCIES / ENGINE_MODULE_PLANNING_STAGES primary names + consistency checker",
+      "Register whole_book_results in main.py",
+      "NarrativeProjectionSource Protocol; Structure Map consumes it",
+      "Review write route remains closed (Phase 2E)"
+    ]
+  }
+}

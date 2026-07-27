@@ -1,0 +1,64 @@
+{
+  "id": "CHG-20260722-004",
+  "title": "Confirm-only scene boundary division",
+  "type": "fix",
+  "base_version": "1.0.3",
+  "status": "released",
+  "include_in_next_release": false,
+  "commits": [
+    {
+      "sha": "4cf04ec856dd9b61dcc2c4ec3055ec05c5df0dd0",
+      "message": "Replace per-candidate boundary review with confirm-only scene division (CHG-20260722-004).",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "57b5653ed300b565e130b363fdf3d9380c380e51",
+      "message": "Mark CHG-20260722-004 tested after local confirm-only verification.",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "boundary-review",
+    "desktop-shell"
+  ],
+  "files": [
+    "apps/api/app/services/final_boundary_proposal.py",
+    "apps/desktop/src/components/analysis/ConfirmBoundaryDivisionPanel.tsx"
+  ],
+  "user_summary": "系统整理最终场景划分，用户整体确认后继续分析，替代逐项候选审阅。",
+  "technical_summary": "Introduce confirm_only boundary_review_mode, build_final_boundary_proposal, and ConfirmBoundaryDivisionPanel; product routes no longer use per-candidate BoundaryReviewPanel.",
+  "acceptance_criteria": [
+    "正式产品进入确认场景划分而非逐项审阅",
+    "旧pending Run可整体确认",
+    "确认后同run进入scene_analysis"
+  ],
+  "tests": [
+    "apps/api/tests/test_final_boundary_proposal_local.py",
+    "apps/desktop/src/components/analysis/ConfirmBoundaryDivisionPanel.test.tsx"
+  ],
+  "verification_evidence": [
+    "正式产品仍进入旧候选逐项审阅",
+    "用户没有真正编辑边界的能力",
+    "拒绝候选后不存在替代闭环",
+    "冲突与非冲突术语无法被普通用户理解",
+    "改为系统整理最终边界、用户整体确认"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "旧逐项决策保留为诊断；confirm_only 从现有候选生成 final proposal"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-22T05:26:48Z",
+  "updated_at": "2026-07-23T04:43:22Z"
+}

@@ -4,7 +4,7 @@
   "type": "improvement",
   "base_version": "1.0.2",
   "status": "released",
-  "include_in_next_release": true,
+  "include_in_next_release": false,
   "commits": [
     {
       "sha": "3a516f609dd302c484a605d7b696c51e78c79a50",
@@ -50,5 +50,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-21T06:02:50Z",
-  "updated_at": "2026-07-21T08:22:13Z"
+  "updated_at": "2026-07-22T11:20:00Z"
 }

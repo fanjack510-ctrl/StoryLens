@@ -17,14 +17,54 @@ import type { JourneySelectionSource } from "../../types/journeySelection";
 import { CanonicalJourneyChart } from "./CanonicalJourneyChart";
 import { exportJourneyPng, JourneyExportError } from "./exportJourneyPng";
 import { JourneyChartToolbar } from "./JourneyChartToolbar";
+import { JourneyDiagnosisBand } from "./JourneyDiagnosisBand";
 import { JourneyDetailErrorBoundary } from "./JourneyDetailErrorBoundary";
 import {
   clampViewWindow,
   focusPhaseWindow,
-  metricValueOrZero,
   resolveMetricValue,
   zoomViewWindow,
 } from "./journeyChartScales";
+import {
+  buildHookPayoffSceneSummary,
+  formatHookPayoffSceneCaption,
+  isHookPayoffLens,
+} from "./hookPayoffLensModel";
+import {
+  getObservationLens,
+  isLegacyUncalibratedVisualization,
+  type ObservationLensId,
+} from "./observationLenses";
+import {
+  canonicalMetricForLens,
+  lensIdFromMetric,
+  resolveJourneyLensFromSearch,
+  parseLensParam,
+  PHASE_PRIMARY_ONLY_HINT_PREFIX,
+  SAME_METRIC_EXIT_MESSAGE,
+} from "./readerJourneyLensExplanation";
+import {
+  JourneyChartLegend,
+  JourneyLensExplanationChrome,
+} from "./JourneyLensExplanationChrome";
+import { JourneyComparisonTools } from "./JourneyComparisonTools";
+import {
+  buildComparisonState,
+  resolveCompareAfterLensChange,
+  sanitizeCompareMetric,
+  type CompareMetricKey,
+} from "./comparisonState";
+import { HookPayoffTimeline } from "./HookPayoffTimeline";
+import {
+  getNarrativeLoops,
+} from "./narrativeLoopView";
+import {
+  formatLensBindingCaption,
+  formatLensPhaseScoreLabel,
+  phaseAverageForLens,
+  resolveLensMetricBinding,
+} from "./lensMetricBinding";
+import type { SceneDiagnosisLike } from "./diagnosisBandModel";
 import {
   applyJourneySelectionIntent,
   logJourneySelectionTransaction,
@@ -37,7 +77,7 @@ import {
   JourneyQuestionInspectorPanel,
   JourneySceneDetailPanel,
 } from "./JourneySceneDetailPanel";
-import { roleLabelZh, formatJourneyPhaseLabel, resolvePhaseSummaryDisplay, formatJourneyScore, formatJourneySceneLabel, formatJourneyMetricLabel, formatPhaseMetricScoreLabel, formatJourneyRiskSummary, formatJourneyRiskTypeLabel } from "./journeyUiLabels";
+import { roleLabelZh, formatJourneyPhaseLabel, resolvePhaseSummaryDisplay, formatJourneySceneLabel, formatJourneyNodeLabel } from "./journeyUiLabels";
 import {
   CANONICAL_OVERVIEW_MODE,
   OVERVIEW_MODE_PARAM,
@@ -137,48 +177,6 @@ type Props = {
   onSourceCollapsedChange?: (collapsed: boolean) => void;
 };
 
-function metricValue(point: { value?: number; start?: number; end?: number }): number {
-  return metricValueOrZero(point);
-}
-
-function riskIntervalLabel(interval: {
-  start_scene_ordinal: number;
-  end_scene_ordinal: number;
-  span?: number;
-}): string {
-  return `Scene ${interval.start_scene_ordinal}—${interval.end_scene_ordinal} (span ${interval.span ?? interval.end_scene_ordinal - interval.start_scene_ordinal + 1})`;
-}
-
-function weakIntervalDisplay(summary: {
-  max_low_payoff_interval?:
-    | string
-    | {
-        start_scene_ordinal?: number;
-        end_scene_ordinal?: number;
-        span?: number;
-      }
-    | null;
-  weak_interval?: string | null;
-}): string {
-  const interval = summary.max_low_payoff_interval;
-  if (typeof interval === "string" && interval.trim()) {
-    return interval;
-  }
-  if (
-    interval &&
-    typeof interval === "object" &&
-    interval.start_scene_ordinal != null &&
-    interval.end_scene_ordinal != null
-  ) {
-    return riskIntervalLabel({
-      start_scene_ordinal: interval.start_scene_ordinal,
-      end_scene_ordinal: interval.end_scene_ordinal,
-      span: interval.span,
-    }).replace(/ \(span.*\)$/, "");
-  }
-  return summary.weak_interval || "—";
-}
-
 export function ReaderJourneyWorkspace({
   visualization,
   chapterTitle,
@@ -194,18 +192,56 @@ export function ReaderJourneyWorkspace({
   journeyRunId: journeyRunIdProp,
   sourcePane,
   sourceCollapsed: sourceCollapsedProp,
-  onSourceCollapsedChange,
 }: Props) {
   const workspaceRef = useRef<HTMLDivElement>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const overviewMode = parseOverviewMode(searchParams.get("overview"));
-  const [markerMode, setMarkerMode] = useState<"compact" | "full">("compact");
+  const markerMode = "compact" as const;
   const [selectedPhaseInternal, setSelectedPhaseInternal] = useState<number | null>(null);
   const [selectedSceneOrdinalInternal, setSelectedSceneOrdinalInternal] = useState<number | null>(
     null,
   );
-  const [metricInternal, setMetricInternal] = useState<JourneyCurveMetric>("engagement");
-  const [analysisInfoOpen, setAnalysisInfoOpen] = useState(false);
+  const [metricInternal, setMetricInternal] = useState<JourneyCurveMetric>(() => {
+    const lens = resolveJourneyLensFromSearch(
+      searchParams.get("lens"),
+      searchParams.get("metric"),
+    );
+    const fromUrl = searchParams.get("metric");
+    if (
+      fromUrl === "engagement" ||
+      fromUrl === "valence" ||
+      fromUrl === "arousal" ||
+      fromUrl === "curiosity" ||
+      fromUrl === "tension" ||
+      fromUrl === "payoff" ||
+      fromUrl === "hook" ||
+      fromUrl === "dropoff_risk"
+    ) {
+      // Valid lens wins over a conflicting legacy metric on first paint.
+      const canonical = canonicalMetricForLens(lens);
+      if (parseLensParam(searchParams.get("lens"))) return canonical;
+      return fromUrl;
+    }
+    return canonicalMetricForLens(lens);
+  });
+  /** Optimistic mirror; URL is the durable source of truth for active lens. */
+  const [observationLens, setObservationLens] = useState<ObservationLensId>(() =>
+    resolveJourneyLensFromSearch(searchParams.get("lens"), searchParams.get("metric")),
+  );
+  const [selectedLoopId, setSelectedLoopId] = useState<string | null>(
+    () => searchParams.get("loop"),
+  );
+  const [compareWith, setCompareWith] = useState<CompareMetricKey | null>(() => {
+    const raw = searchParams.get("compareWith");
+    const lens = resolveJourneyLensFromSearch(
+      searchParams.get("lens"),
+      searchParams.get("metric"),
+    );
+    const primary = getObservationLens(lens).primaryKey;
+    return sanitizeCompareMetric(raw, primary);
+  });
+  const overlayComposite = Boolean(compareWith);
+  const [compareLiveMessage, setCompareLiveMessage] = useState<string | null>(null);
   const [exportStatus, setExportStatus] = useState<"idle" | "exporting" | "succeeded" | "failed">(
     "idle",
   );
@@ -219,11 +255,8 @@ export function ReaderJourneyWorkspace({
   const [inspectorCollapsed, setInspectorCollapsed] = useState(() =>
     readLocalPref<boolean>(UI_PREF_KEYS.inspectorCollapsed, true),
   );
-  const [sourceCollapsedInternal, setSourceCollapsedInternal] = useState(() =>
+  const [sourceCollapsedInternal] = useState(() =>
     readLocalPref<boolean>(UI_PREF_KEYS.sourceCollapsed, false),
-  );
-  const [insightExpanded, setInsightExpanded] = useState(() =>
-    readLocalPref<boolean>(UI_PREF_KEYS.insightStripExpanded, false),
   );
   const [preferredSourceWidth, setPreferredSourceWidth] = useState(() =>
     sanitizePreferredWidth(
@@ -389,6 +422,32 @@ export function ReaderJourneyWorkspace({
   const selectedPhase =
     controlledPhaseOrdinal !== undefined ? controlledPhaseOrdinal : selectedPhaseInternal;
   const metric = controlledMetric ?? metricInternal;
+  const lensDef = getObservationLens(observationLens);
+  const sceneDiagnoses: SceneDiagnosisLike[] = useMemo(
+    () =>
+      visualization.scene_nodes.map((node) => ({
+        scene_ordinal: node.scene_ordinal,
+        primary_diagnosis: node.primary_diagnosis,
+        secondary_diagnoses: node.secondary_diagnoses,
+        positive_mechanism: node.positive_mechanism,
+        data_quality_issue: node.data_quality_issue,
+        reading_momentum:
+          node.scores?.reading_momentum ?? node.engagement?.engagement_score,
+        plot_progress: node.scores?.plot_progress,
+        role: node.role,
+        node_type: node.node_type,
+        include_in_main_curve: node.include_in_main_curve,
+        legacyUncalibrated: isLegacyUncalibratedVisualization(visualization),
+        insufficientData:
+          node.confidence != null && node.confidence < 0.45
+            ? true
+            : !node.primary_diagnosis &&
+              node.scores?.reading_momentum == null &&
+              node.engagement?.engagement_score == null,
+      })),
+    [visualization],
+  );
+
   const expandedClusterId = controlledClusterId ?? null;
 
   const summary = visualization.chapter_summary;
@@ -399,9 +458,16 @@ export function ReaderJourneyWorkspace({
     [nodes, selectedSceneOrdinal],
   );
 
+  const comparisonState = useMemo(
+    () => buildComparisonState(observationLens, compareWith),
+    [observationLens, compareWith],
+  );
   const phaseStripRef = useRef<HTMLDivElement>(null);
   const chartHeight = chartHeightPx(heightPreset);
-  const series = visualization.curve_series[metric] ?? [];
+  const series = useMemo(
+    () => visualization.curve_series[metric] ?? [],
+    [visualization.curve_series, metric],
+  );
 
   const initialView = defaultViewWindow(sceneCount);
   const urlXStart = Number(searchParams.get(URL_CHART_PARAMS.xStart));
@@ -417,6 +483,10 @@ export function ReaderJourneyWorkspace({
     }
     return initialView;
   });
+
+  const resetViewEnabled =
+    !isHookPayoffLens(observationLens) &&
+    (viewWindow.start !== 1 || viewWindow.end !== sceneCount);
 
   useEffect(() => {
     setViewWindow(defaultViewWindow(sceneCount));
@@ -477,20 +547,13 @@ export function ReaderJourneyWorkspace({
     setInspectorCollapsedPref(!inspectorCollapsed);
   };
 
-  const setSourceCollapsedPref = (collapsed: boolean) => {
-    if (onSourceCollapsedChange) {
-      onSourceCollapsedChange(collapsed);
-    } else {
-      setSourceCollapsedInternal(collapsed);
+  const expandInspector = useCallback(() => {
+    setInspectorCollapsed(false);
+    writeLocalPref(UI_PREF_KEYS.inspectorCollapsed, false);
+    if (layoutMode === "narrow") {
+      setNarrowPane("inspector");
     }
-    writeLocalPref(UI_PREF_KEYS.sourceCollapsed, collapsed);
-  };
-
-  const handleToggleSource = () => {
-    setSourceCollapsedPref(!sourceCollapsed);
-  };
-
-  const expandInspector = () => setInspectorCollapsedPref(false);
+  }, [layoutMode]);
 
   /** Narrow drawer is open only when the inspector tab is active and not collapsed. */
   const narrowDrawerOpen =
@@ -567,73 +630,183 @@ export function ReaderJourneyWorkspace({
     }
   }, [selectedPhase]);
 
-  const primaryCluster = useMemo(() => {
-    const clusters =
-      (visualization.visible_question_clusters?.length
-        ? visualization.visible_question_clusters
-        : visualization.question_clusters) ?? [];
-    return clusters[0] ?? null;
-  }, [visualization.question_clusters, visualization.visible_question_clusters]);
+  const syncLensLoopToUrl = useCallback(
+    (
+      lens: ObservationLensId,
+      loopId: string | null,
+      metricKey?: JourneyCurveMetric,
+      compareKey?: CompareMetricKey | null,
+      options?: { replace?: boolean },
+    ) => {
+      setSearchParams(
+        (prev) => {
+          const params = new URLSearchParams(prev);
+          const nextMetric = metricKey ?? canonicalMetricForLens(lens);
+          params.set("lens", lens);
+          params.set("metric", nextMetric);
+          if (loopId) params.set("loop", loopId);
+          else params.delete("loop");
+          const compare = compareKey === undefined ? compareWith : compareKey;
+          const primary = getObservationLens(lens).primaryKey;
+          const cleaned =
+            compare && lens !== "hook_payoff"
+              ? sanitizeCompareMetric(compare, primary)
+              : null;
+          if (cleaned) params.set("compareWith", cleaned);
+          else params.delete("compareWith");
+          return params;
+        },
+        { replace: options?.replace ?? true },
+      );
+    },
+    [setSearchParams, compareWith],
+  );
 
-  const peakOrdinal = summary.peaks.engagement_peak.scene_ordinal;
-  const valleyOrdinal = summary.peaks.engagement_valley.scene_ordinal;
-  const strongestHook = summary.strongest_hook;
-  const tractionClickable = Boolean(primaryCluster?.cluster_id);
-  const hookClickable = Boolean(strongestHook && strongestHook.scene_ordinal != null);
-
-  const handleInsightTraction = () => {
-    if (!primaryCluster?.cluster_id) return;
-    onSelectionChange?.({
-      selectedQuestionClusterId: primaryCluster.cluster_id,
-      source: "journey_cluster",
-    });
-    commitSelectionIntent({
-      source: "question-cluster",
-      inspector: "question",
-      clusterId: primaryCluster.cluster_id,
-    });
-    expandInspector();
-  };
-
-  const handleInsightPeak = () => {
-    const node = nodes.find((item) => item.scene_ordinal === peakOrdinal);
-    if (node) handleSelectScene(node, "journey_scene");
-  };
-
-  const handleInsightValley = () => {
-    const node = nodes.find((item) => item.scene_ordinal === valleyOrdinal);
-    if (node) handleSelectScene(node, "journey_scene");
-  };
-
-  const handleInsightHook = () => {
-    if (!strongestHook?.scene_ordinal) return;
-    const node = nodes.find((item) => item.scene_ordinal === strongestHook.scene_ordinal);
-    if (!node) return;
-    if (!isControlled) {
-      setSelectedSceneOrdinalInternal(node.scene_ordinal);
-    }
-    onSelectionChange?.({
-      activeSceneOrdinal: node.scene_ordinal,
-      activePhaseOrdinal: node.phase_ordinal ?? undefined,
-      source: "journey_scene",
-    });
-    const evidenceId = strongestHook.evidence_paragraph_ids?.[0];
-    commitSelectionIntent({
-      source: "hook",
-      inspector: "hook",
-      sceneOrdinal: node.scene_ordinal,
-      phaseId: node.phase_ordinal,
-      paragraphId: evidenceId ?? undefined,
-    });
-    expandInspector();
-  };
+  const handleCompareWithChange = useCallback(
+    (next: CompareMetricKey | null) => {
+      setCompareWith(next);
+      setCompareLiveMessage(null);
+      syncLensLoopToUrl(observationLens, selectedLoopId, metric, next, { replace: false });
+    },
+    [syncLensLoopToUrl, observationLens, selectedLoopId, metric],
+  );
 
   const handleMetricChange = (key: JourneyCurveMetric) => {
+    const nextLens = lensIdFromMetric(key);
+    const resolved = resolveCompareAfterLensChange(nextLens, compareWith);
+    // One atomic URL commit — mirrors update after / with the same values.
+    setObservationLens(nextLens);
     if (controlledMetric === undefined) {
       setMetricInternal(key);
     }
+    setCompareWith(resolved.compare);
+    if (resolved.exitedSameMetric) setCompareLiveMessage(SAME_METRIC_EXIT_MESSAGE);
+    syncLensLoopToUrl(nextLens, selectedLoopId, key, resolved.compare);
     onSelectionChange?.({ selectedMetric: key, source: "journey_rhythm" });
   };
+
+  const handleObservationLensChange = (lens: ObservationLensId) => {
+    if (lens === observationLens) return;
+    const resolved = resolveCompareAfterLensChange(lens, compareWith);
+    const nextMetric = canonicalMetricForLens(lens);
+    // Optimistic UI + single atomic URL write (lens + metric + compare).
+    setObservationLens(lens);
+    if (controlledMetric === undefined) {
+      setMetricInternal(nextMetric);
+    }
+    setCompareWith(resolved.compare);
+    if (resolved.exitedSameMetric) {
+      setCompareLiveMessage(SAME_METRIC_EXIT_MESSAGE);
+    } else if (lens === "hook_payoff") {
+      setCompareLiveMessage(null);
+    }
+    syncLensLoopToUrl(lens, selectedLoopId, nextMetric, resolved.compare);
+    onSelectionChange?.({ selectedMetric: nextMetric, source: "journey_rhythm" });
+  };
+
+  const handleSelectLoop = useCallback(
+    (loopId: string, sceneOrdinal: number) => {
+      setSelectedLoopId(loopId);
+      syncLensLoopToUrl(observationLens, loopId);
+      if (!isControlled) {
+        setSelectedSceneOrdinalInternal(sceneOrdinal);
+      }
+      onSelectionChange?.({
+        activeSceneOrdinal: sceneOrdinal,
+        source: "journey_hook",
+      });
+      expandInspector();
+    },
+    [observationLens, syncLensLoopToUrl, isControlled, onSelectionChange, expandInspector],
+  );
+
+  useEffect(() => {
+    const resolvedLens = resolveJourneyLensFromSearch(
+      searchParams.get("lens"),
+      searchParams.get("metric"),
+    );
+    const loopFromUrl = searchParams.get("loop");
+    const compareFromUrl = searchParams.get("compareWith");
+    const metricFromUrl = searchParams.get("metric");
+    const canonicalMetric = canonicalMetricForLens(resolvedLens);
+    const hasExplicitLens = Boolean(parseLensParam(searchParams.get("lens")));
+
+    // One-way: URL → local mirrors (back/forward + external URL writers).
+    if (resolvedLens !== observationLens) {
+      setObservationLens(resolvedLens);
+    }
+    if (loopFromUrl !== selectedLoopId) {
+      setSelectedLoopId(loopFromUrl);
+    }
+    if (controlledMetric === undefined && metricFromUrl) {
+      const allowed = [
+        "engagement",
+        "valence",
+        "arousal",
+        "curiosity",
+        "tension",
+        "payoff",
+        "hook",
+        "dropoff_risk",
+      ] as const;
+      if ((allowed as readonly string[]).includes(metricFromUrl)) {
+        const nextMetric = hasExplicitLens
+          ? canonicalMetric
+          : (metricFromUrl as JourneyCurveMetric);
+        if (nextMetric !== metricInternal) {
+          setMetricInternal(nextMetric);
+        }
+      }
+    }
+
+    const primary = getObservationLens(resolvedLens).primaryKey;
+    const nextCompare = sanitizeCompareMetric(compareFromUrl, primary);
+    if (nextCompare !== compareWith) {
+      setCompareWith(nextCompare);
+    }
+
+    // Normalize once: illegal compare, or conflicting metric under an explicit lens.
+    let needsNormalize = false;
+    if (compareFromUrl && !nextCompare) needsNormalize = true;
+    if (hasExplicitLens && metricFromUrl && metricFromUrl !== canonicalMetric) {
+      needsNormalize = true;
+    }
+    if (needsNormalize) {
+      setSearchParams(
+        (prev) => {
+          const params = new URLSearchParams(prev);
+          let changed = false;
+          if (hasExplicitLens && params.get("metric") !== canonicalMetric) {
+            params.set("metric", canonicalMetric);
+            changed = true;
+          }
+          if (params.get("compareWith") && !sanitizeCompareMetric(params.get("compareWith"), primary)) {
+            params.delete("compareWith");
+            changed = true;
+          }
+          return changed ? params : prev;
+        },
+        { replace: true },
+      );
+    }
+
+    if (loopFromUrl) {
+      const loops = getNarrativeLoops(visualization);
+      if (!loops.some((loop) => loop.loop_id === loopFromUrl)) {
+        setSelectedLoopId(null);
+        setSearchParams(
+          (prev) => {
+            const params = new URLSearchParams(prev);
+            if (!params.get("loop")) return prev;
+            params.delete("loop");
+            return params;
+          },
+          { replace: true },
+        );
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- URL is source of truth for back/forward
+  }, [searchParams]);
 
   const handleLocateEvidence = (paragraphId: string, node?: JourneySceneNode) => {
     onLocateEvidence(paragraphId);
@@ -739,16 +912,6 @@ export function ReaderJourneyWorkspace({
     }
   };
 
-  const selectedMetricValue =
-    selectedSceneOrdinal != null
-      ? (() => {
-          const resolved = resolveMetricValue(
-            series.find((point) => point.scene_ordinal === selectedSceneOrdinal),
-          );
-          return resolved == null ? null : Math.round(resolved);
-        })()
-      : null;
-
   const selectedPhaseData = useMemo(
     () => visualization.phases.find((item) => item.ordinal === selectedPhase) ?? null,
     [visualization.phases, selectedPhase],
@@ -757,6 +920,11 @@ export function ReaderJourneyWorkspace({
   const phaseMetricAverages = useMemo(() => {
     const averages = new Map<number, number>();
     for (const phase of visualization.phases) {
+      const lensAvg = phaseAverageForLens(visualization, observationLens, phase);
+      if (lensAvg != null && Number.isFinite(lensAvg)) {
+        averages.set(phase.ordinal, lensAvg);
+        continue;
+      }
       if (metric === "engagement" && Number.isFinite(phase.average_engagement)) {
         averages.set(phase.ordinal, phase.average_engagement);
         continue;
@@ -778,7 +946,12 @@ export function ReaderJourneyWorkspace({
       }
     }
     return averages;
-  }, [visualization.phases, series, metric]);
+  }, [visualization, series, metric, observationLens]);
+
+  const selectedLensBinding = useMemo(() => {
+    if (!selectedNode) return null;
+    return resolveLensMetricBinding(visualization, observationLens, selectedNode);
+  }, [visualization, observationLens, selectedNode]);
 
   const selectedCluster = useMemo(() => {
     if (!expandedClusterId) return null;
@@ -1001,6 +1174,10 @@ export function ReaderJourneyWorkspace({
         >
           <JourneySceneDetailPanel
             node={selectedNode}
+            visualization={visualization}
+            observationLensLabel={lensDef.labelZh}
+            observationLens={observationLens}
+            selectedLoopId={isHookPayoffLens(observationLens) ? selectedLoopId : null}
             onLocateEvidence={(id) => handleLocateEvidence(id, selectedNode)}
             onOpenInSceneList={
               onSelectScene ? () => onSelectScene(selectedNode.scene_id) : undefined
@@ -1150,68 +1327,9 @@ export function ReaderJourneyWorkspace({
           hidden={showNarrowTabs && narrowPane !== "main"}
           aria-hidden={showNarrowTabs && narrowPane !== "main" ? true : undefined}
         >
-      <header className="journey-analysis-header" data-testid="journey-analysis-header">
-        <div className="journey-analysis-titles">
-          <h2 className="journey-analysis-title" data-testid="journey-analysis-title">
-            阅读旅程
-          </h2>
-          <p className="journey-analysis-subtitle" data-testid="journey-analysis-subtitle" title={chapterHeading}>
-            {chapterHeading}
-          </p>
-          <p className="journey-analysis-meta" data-testid="journey-analysis-meta">
-            {sceneCount > 0 ? `${sceneCount} 个场景` : "— 个场景"}
-            {" · "}
-            {visualization.phases.length > 0
-              ? `${visualization.phases.length} 个阶段`
-              : "— 个阶段"}
-            {" · "}
-            观察读者在本章中的情绪、节奏、牵引力与钩子变化
-          </p>
-        </div>
-        <div className="journey-analysis-tools" data-testid="journey-analysis-tools">
-          <div className="journey-marker-toggle" data-testid="journey-marker-toggle">
-            <button
-              type="button"
-              className={markerMode === "compact" ? "active" : ""}
-              data-testid="journey-marker-compact"
-              title="精简标记：突出主要阅读结构，仅显示关键场景、钩子、回报和问题簇。"
-              onClick={() => setMarkerMode("compact")}
-            >
-              精简标记
-            </button>
-            <button
-              type="button"
-              className={markerMode === "full" ? "active" : ""}
-              data-testid="journey-marker-full"
-              title="完整标记：显示全部分析节点及派生依据。"
-              onClick={() => setMarkerMode("full")}
-            >
-              完整标记
-            </button>
-          </div>
-          <div className="journey-analysis-info-wrap">
-            <button
-              type="button"
-              data-testid="journey-analysis-info"
-              className={analysisInfoOpen ? "active" : ""}
-              aria-expanded={analysisInfoOpen}
-              onClick={() => setAnalysisInfoOpen((value) => !value)}
-            >
-              分析信息
-            </button>
-            {analysisInfoOpen && (
-              <div
-                className="journey-analysis-info-popover"
-                data-testid="journey-analysis-info-popover"
-                role="dialog"
-              >
-                <div className="journey-export-meta" data-testid="journey-export-meta">
-                  {analysisInfoMeta}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+      <header className="journey-analysis-header" data-testid="journey-analysis-header" hidden>
+        {/* Ordinary UI: header/banner/markers/analysis-info removed (CHG-20260723-006).
+            Keep a hidden shell for export/layout audits that still query the testid. */}
       </header>
 
       <div
@@ -1242,6 +1360,11 @@ export function ReaderJourneyWorkspace({
         <JourneyChartToolbar
           metric={metric}
           onMetricChange={handleMetricChange}
+          observationLens={observationLens}
+          onObservationLensChange={handleObservationLensChange}
+          overlayComposite={overlayComposite}
+          compareWith={compareWith}
+          onCompareWithChange={handleCompareWithChange}
           heightPreset={heightPreset}
           onHeightPresetChange={handleHeightPresetChange}
           yDomainMode={yDomainMode}
@@ -1295,8 +1418,39 @@ export function ReaderJourneyWorkspace({
           onExportPng={() => void handleExport()}
           exportBusy={exportStatus === "exporting"}
         />
-        {/* Phase navigation — after toolbar (+ optional MetricSelectorPanel), before chart shell */}
+        {/* Order: one-liner → compare status (if any) → phase cards → legend → curve */}
+          <div className="journey-lens-explanation-with-tools" data-testid="journey-lens-explanation-with-tools">
+            <JourneyLensExplanationChrome
+              lensId={observationLens}
+              overlayCompare={false}
+              comparisonActive={comparisonState.mode === "active"}
+              primaryMetricLabel={comparisonState.primaryLabel}
+              compareMetricLabel={comparisonState.compareLabel}
+              hookPayoffStats={null}
+              inconsistentWarning={null}
+              showLegend={false}
+            />
+            <JourneyComparisonTools
+              observationLens={observationLens}
+              compareWith={compareWith}
+              onCompareWithChange={handleCompareWithChange}
+              resetViewEnabled={resetViewEnabled}
+              onResetView={() => syncViewToUrl(1, sceneCount)}
+              liveMessage={compareLiveMessage}
+            />
+          </div>
+
+        {!isHookPayoffLens(observationLens) ? (
         <section className="journey-phase-strip-wrap" data-testid="journey-phase-strip-wrap">
+          {comparisonState.mode === "active" ? (
+            <p
+              className="journey-phase-primary-only-hint"
+              data-testid="journey-phase-primary-only-hint"
+            >
+              {PHASE_PRIMARY_ONLY_HINT_PREFIX}
+              {comparisonState.primaryLabel}
+            </p>
+          ) : null}
           <label
             className="journey-phase-mobile-select-wrap"
             data-testid="journey-phase-mobile-select-wrap"
@@ -1321,7 +1475,7 @@ export function ReaderJourneyWorkspace({
                   phaseMetricAverages.get(phase.ordinal) ?? phase.average_engagement;
                 return (
                 <option key={phase.ordinal} value={phase.ordinal}>
-                  {`${formatJourneyPhaseLabel(phase.title)} · 场景 ${phase.start_scene_ordinal}—${phase.end_scene_ordinal} · ${formatPhaseMetricScoreLabel(metric, phaseMetric)}`}
+                  {`${formatJourneyPhaseLabel(phase.title)} · 场景 ${phase.start_scene_ordinal}—${phase.end_scene_ordinal} · ${formatLensPhaseScoreLabel(visualization, observationLens, phaseMetric)}`}
                 </option>
                 );
               })}
@@ -1338,14 +1492,19 @@ export function ReaderJourneyWorkspace({
               const phaseSummary = resolvePhaseSummaryDisplay(phase.summary, phase.title);
               const phaseMetric =
                 phaseMetricAverages.get(phase.ordinal) ?? phase.average_engagement;
-              const avgText = formatPhaseMetricScoreLabel(metric, phaseMetric);
+              const avgText = formatLensPhaseScoreLabel(
+                visualization,
+                observationLens,
+                phaseMetric,
+              );
+              const phaseDesc = phaseSummary;
               return (
                 <button
                   key={phase.ordinal}
                   type="button"
                   className={`journey-phase-card journey-phase-compact journey-phase-nav-card ${isSelected ? "selected active-phase" : ""}`}
                   data-testid={`journey-phase-${phase.ordinal}`}
-                  title={`${phaseLabel} · ${phaseSummary}`}
+                  title={`${phaseLabel} · ${phaseDesc}`}
                   aria-pressed={isSelected}
                   aria-selected={isSelected}
                   style={{
@@ -1359,21 +1518,36 @@ export function ReaderJourneyWorkspace({
                       {avgText}
                     </span>
                   </div>
-                  <p className="journey-phase-card-desc">{phaseSummary}</p>
+                  <p className="journey-phase-card-desc">{phaseDesc}</p>
                 </button>
               );
             })}
           </div>
         </section>
+        ) : null}
 
-          {selectedSceneOrdinal != null && selectedMetricValue != null && (
+          {selectedSceneOrdinal != null && selectedLensBinding != null && (
             <p className="journey-active-scene-caption" data-testid="journey-active-scene-caption">
-              {formatJourneySceneLabel(selectedSceneOrdinal)} · {formatJourneyMetricLabel(metric)}{" "}
-              {formatJourneyScore(selectedMetricValue)}
+              {isHookPayoffLens(observationLens) && selectedNode
+                ? (() => {
+                    const summaryHp = buildHookPayoffSceneSummary(visualization, selectedNode);
+                    return summaryHp
+                      ? formatHookPayoffSceneCaption(summaryHp)
+                      : `${formatJourneySceneLabel(selectedSceneOrdinal)} · ${formatLensBindingCaption(selectedLensBinding)}`;
+                  })()
+                : `${formatJourneySceneLabel(selectedSceneOrdinal)} · ${formatLensBindingCaption(selectedLensBinding)}`}
             </p>
           )}
 
-          {/* Chart shell: viewport only (toolbar is above phase strip) */}
+          <JourneyChartLegend
+            lensId={observationLens}
+            primaryMetricLabel={comparisonState.primaryLabel}
+            compareMetricLabel={
+              comparisonState.mode === "active" ? comparisonState.compareLabel : null
+            }
+          />
+
+          {/* Chart shell: viewport only; legend sits immediately above */}
           <div
             className="journey-chart-shell"
             data-testid="journey-chart-shell"
@@ -1383,17 +1557,38 @@ export function ReaderJourneyWorkspace({
             <div
               className="journey-chart-viewport"
               data-testid="journey-chart-viewport"
-              style={{ minHeight: chartHeight }}
+              style={{
+                minHeight: chartHeight,
+                ...(isHookPayoffLens(observationLens)
+                  ? { height: "auto", overflow: "auto" }
+                  : null),
+              }}
             >
               <section
                 className="journey-curve-section"
                 data-testid="journey-curve-section"
                 data-plot-area-height={plotAreaHeightPx(heightPreset)}
-                style={{ minHeight: chartHeight, height: chartHeight, flex: "0 0 auto" }}
+                style={
+                  isHookPayoffLens(observationLens)
+                    ? { minHeight: chartHeight, height: "auto", flex: "0 0 auto" }
+                    : { minHeight: chartHeight, height: chartHeight, flex: "0 0 auto" }
+                }
               >
+                {isHookPayoffLens(observationLens) ? (
+                  <HookPayoffTimeline
+                    visualization={visualization}
+                    selectedLoopId={selectedLoopId}
+                    selectedSceneOrdinal={selectedSceneOrdinal}
+                    onSelectLoop={handleSelectLoop}
+                    onLocateEvidence={(id) => handleLocateEvidence(id, selectedNode)}
+                  />
+                ) : (
                 <CanonicalJourneyChart
                   visualization={visualization}
                   metric={metric}
+                  observationLens={observationLens}
+                  overlayComposite={overlayComposite}
+                  compareWith={compareWith}
                   chartHeight={chartHeight}
                   yDomainMode={yDomainMode}
                   viewStart={viewWindow.start}
@@ -1463,7 +1658,25 @@ export function ReaderJourneyWorkspace({
                     });
                   }}
                 />
+                )}
               </section>
+              {observationLens === "pacing" ? (
+                <p className="journey-pacing-fit-note" data-testid="journey-pacing-fit-note">
+                  适配表示速度是否适合当前场景，不表示与曲线的距离。
+                </p>
+              ) : null}
+
+              <JourneyDiagnosisBand
+                diagnoses={sceneDiagnoses}
+                selectedSceneOrdinal={selectedSceneOrdinal}
+                observationLens={observationLens}
+                onSelectScene={(ordinal: number) => {
+                  const node = visualization.scene_nodes.find(
+                    (item) => item.scene_ordinal === ordinal,
+                  );
+                  if (node) handleSelectScene(node, "journey_rhythm");
+                }}
+              />
 
               {/* Scene navigation must sit below SVG — never overlay or steal plot height */}
               <section
@@ -1479,28 +1692,20 @@ export function ReaderJourneyWorkspace({
                     }`}
                     data-testid={`journey-rhythm-dot-${node.scene_ordinal}`}
                     data-role={node.role}
-                    title={`Scene ${node.scene_ordinal} · ${roleLabelZh(node.role)}`}
-                    aria-label={`Scene ${node.scene_ordinal}`}
+                    title={formatJourneyNodeLabel(node.scene_ordinal, {
+                      role: node.role,
+                      sceneRole: node.scene_role,
+                      nodeType: node.node_type,
+                    })}
+                    aria-label={formatJourneyNodeLabel(node.scene_ordinal, {
+                      role: node.role,
+                      sceneRole: node.scene_role,
+                      nodeType: node.node_type,
+                    })}
                     onClick={() => handleSelectScene(node, "journey_rhythm")}
                   />
                 ))}
               </section>
-
-              <div className="journey-curve-legend" data-testid="journey-curve-legend">
-                <span data-legend="active-scene">当前场景</span>
-                <span data-legend="hook-key">钩子</span>
-                <span data-legend="payoff">回报</span>
-                <span data-legend="risk">流失风险</span>
-                {markerMode === "full" && (
-                  <>
-                    <span data-legend="answered">已回答问题</span>
-                    <span data-legend="transformed">问题升级</span>
-                    <span data-legend="secondary">次级节点</span>
-                    <span data-legend="beat">节拍节点</span>
-                    <span data-legend="derived">派生标记</span>
-                  </>
-                )}
-              </div>
             </div>
           </div>
 
@@ -1533,111 +1738,6 @@ export function ReaderJourneyWorkspace({
           </div>
         ) : null}
 
-        {/* Compact one-line insight strip (below curve to free hero space) */}
-        <section className="journey-diagnosis journey-diagnosis-inline" data-testid="journey-diagnosis-summary">
-          <div
-            className={`journey-insight-strip journey-summary-cards journey-summary-strip journey-summary-oneline ${insightExpanded ? "expanded" : ""}`}
-            data-testid="journey-summary-cards"
-            data-insight-strip="true"
-            data-expanded={insightExpanded ? "true" : "false"}
-          >
-            <button
-              type="button"
-              className="journey-insight-oneline-toggle"
-              data-testid="journey-insight-oneline-toggle"
-              aria-expanded={insightExpanded}
-              onClick={() => {
-                setInsightExpanded((prev) => {
-                  const next = !prev;
-                  writeLocalPref(UI_PREF_KEYS.insightStripExpanded, next);
-                  return next;
-                });
-              }}
-            >
-              {insightExpanded ? "收起摘要" : "章节摘要"}
-            </button>
-            <div className="journey-insight-oneline-body">
-              {tractionClickable ? (
-                <button
-                  type="button"
-                  className="journey-insight-item journey-insight-clickable journey-summary-card journey-summary-card-primary"
-                  data-testid="summary-card-traction"
-                  title={summary.primary_cluster_title ?? summary.primary_traction}
-                  onClick={handleInsightTraction}
-                >
-                  <span>核心牵引</span>
-                  <b>{summary.primary_cluster_title ?? summary.primary_traction}</b>
-                </button>
-              ) : (
-                <div
-                  className="journey-insight-item journey-insight-static journey-summary-card journey-summary-card-primary"
-                  data-testid="summary-card-traction"
-                  title={summary.primary_cluster_title ?? summary.primary_traction}
-                >
-                  <span>核心牵引</span>
-                  <b>{summary.primary_cluster_title ?? summary.primary_traction}</b>
-                </div>
-              )}
-              <span className="journey-insight-sep" aria-hidden="true">
-                |
-              </span>
-              <button
-                type="button"
-                className="journey-insight-item journey-insight-clickable journey-summary-card"
-                data-testid="summary-card-peak"
-                title={`Scene ${peakOrdinal} · ${summary.peaks.engagement_peak.value}`}
-                onClick={handleInsightPeak}
-              >
-                <span>峰值场景</span>
-                <b>
-                  场景 {peakOrdinal} · {summary.peaks.engagement_peak.value}
-                </b>
-              </button>
-              <span className="journey-insight-sep" aria-hidden="true">
-                |
-              </span>
-              <button
-                type="button"
-                className="journey-insight-item journey-insight-clickable journey-summary-card"
-                data-testid="summary-card-weak"
-                title={`${weakIntervalDisplay(summary)} · 最低点 Scene ${valleyOrdinal}`}
-                onClick={handleInsightValley}
-              >
-                <span>薄弱区间</span>
-                <b>{weakIntervalDisplay(summary)}</b>
-              </button>
-              <span className="journey-insight-sep" aria-hidden="true">
-                |
-              </span>
-              {hookClickable ? (
-                <button
-                  type="button"
-                  className="journey-insight-item journey-insight-clickable journey-summary-card journey-summary-card-primary"
-                  data-testid="summary-card-hook"
-                  title={
-                    strongestHook?.summary ||
-                    (strongestHook ? `Scene ${strongestHook.scene_ordinal}` : undefined)
-                  }
-                  onClick={handleInsightHook}
-                >
-                  <span>章尾钩子</span>
-                  <b>
-                    {strongestHook?.summary ||
-                      (strongestHook ? `Scene ${strongestHook.scene_ordinal}` : "—")}
-                  </b>
-                </button>
-              ) : (
-                <div
-                  className="journey-insight-item journey-insight-static journey-summary-card journey-summary-card-primary"
-                  data-testid="summary-card-hook"
-                >
-                  <span>章尾钩子</span>
-                  <b>—</b>
-                </div>
-              )}
-            </div>
-          </div>
-        </section>
           </div>
           </div>
 
@@ -1768,6 +1868,17 @@ export function ReaderJourneyWorkspace({
         />
       </div>
 
+      <button
+        type="button"
+        hidden
+        aria-hidden="true"
+        data-testid="journey-export-png"
+        disabled={exportStatus === "exporting"}
+        onClick={() => void handleExport()}
+      >
+        导出 PNG
+      </button>
+
       {exportMessage && (
         <div
           className="journey-export-feedback"
@@ -1794,6 +1905,9 @@ export function ReaderJourneyWorkspace({
         <CanonicalJourneyChart
           visualization={visualization}
           metric={metric}
+          observationLens={observationLens}
+          overlayComposite={overlayComposite}
+          compareWith={compareWith}
           chartHeight={chartHeightPx("standard")}
           yDomainMode="fixed_0_100"
           viewStart={1}

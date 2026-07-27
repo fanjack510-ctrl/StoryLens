@@ -51,6 +51,8 @@ export const analysisRecoveryApi = {
       model?: string | null;
       request_hash?: string | null;
       recovery_attempts: number;
+      retry_eligible?: boolean;
+      existing_recovery_run_id?: number | null;
       budget_authorization_proposal?: {
         scope: string;
         current_daily_request_limit: number;

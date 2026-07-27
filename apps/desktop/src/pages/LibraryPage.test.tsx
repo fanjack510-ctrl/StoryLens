@@ -214,4 +214,14 @@ describe("LibraryPage polish", () => {
     expect(screen.queryByTestId("import-duplicate-alert")).not.toBeInTheDocument();
     expect(screen.queryByText("书籍可能已存在")).not.toBeInTheDocument();
   });
+
+  it("open link navigates only to /books/:id without chapter or run params", async () => {
+    renderLibrary();
+    const open = await screen.findByTestId("book-open-1");
+    expect(open).toHaveAttribute("href", "/books/1");
+    expect(open.getAttribute("href")).not.toContain("chapter");
+    expect(open.getAttribute("href")).not.toContain("analysisRun");
+    expect(open.getAttribute("href")).not.toContain("view=");
+    expect(open.getAttribute("href")).not.toContain("tab=");
+  });
 });

@@ -1,0 +1,106 @@
+{
+  "id": "CHG-20260723-033",
+  "title": "Agent N Frontend Mock Run Lab",
+  "type": "feature",
+  "base_version": "1.0.5",
+  "status": "tested",
+  "include_in_next_release": true,
+  "commits": [
+    {
+      "sha": "08d2897cc1c7401758b2906909ffb49111404d32",
+      "message": "feat: implement whole book mock run lab",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "dbd0ee8dc8e98eb231b1f5428d4f820f63396eb5",
+      "message": "docs: attach primary commit to CHG-20260723-033",
+      "primary": false,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "desktop/wholeBook/runShell"
+  ],
+  "files": [
+    "apps/desktop/src/features/wholeBook/runShell/client/",
+    "apps/desktop/src/features/wholeBook/runShell/polling/",
+    "apps/desktop/src/features/wholeBook/runShell/progress/",
+    "apps/desktop/src/features/wholeBook/runShell/controls/",
+    "apps/desktop/src/features/wholeBook/runShell/lab/",
+    "apps/desktop/src/features/wholeBook/runShell/__tests__/",
+    "apps/desktop/src/features/wholeBook/runShell/index.ts",
+    "apps/desktop/src/features/wholeBook/index.ts",
+    "docs/architecture/narrative-intelligence-core/phase2a-frontend-mock-lab-implementation.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-mock-run-client.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-polling-implementation.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-run-controls-implementation.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-partial-results-lab.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-frontend-verification.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-run-frontend-implementation.md",
+    "release/changes/CHG-20260723-033.json"
+  ],
+  "user_summary": "Frontend WholeBookMockRunLab with Mock Run client, polling, progress, controls, and Lab partial results.",
+  "technical_summary": "Agent N implements isolated Mock Lab UI/client/polling/controls/partial results against Phase 2A-P contracts. Lab-only routes; no formal Run API; no product router wiring; no backend edits.",
+  "acceptance_criteria": [
+    "Mock client only calls /api/v1/labs/whole-book-runs/* with Lab marker on writes",
+    "WholeBookMockRunLab isolated; production start disabled; mock banner visible",
+    "Polling respects intervals, visibility, backoff, terminal stop, stale discard",
+    "Controls consume allowed_actions; failures re-fetch backend state",
+    "Partial results mark candidate/partial/mock; Evidence and Structure Map on demand",
+    "Focused Vitest + typecheck + version_manager + change_registry + git diff --check"
+  ],
+  "tests": [
+    "apps/desktop/src/features/wholeBook/runShell/__tests__/mockWholeBookRunClient.test.ts",
+    "apps/desktop/src/features/wholeBook/runShell/__tests__/mockRunPollingController.test.ts",
+    "apps/desktop/src/features/wholeBook/runShell/__tests__/WholeBookMockRunLab.test.tsx",
+    "apps/desktop/src/features/wholeBook/runShell/__tests__/noFormalEntry.test.ts"
+  ],
+  "verification_evidence": [
+    "npm run typecheck (apps/desktop) PASS",
+    "npx vitest run src/features/wholeBook/runShell/__tests__ — 29 passed",
+    "python scripts/version_manager.py check",
+    "python scripts/change_registry.py check",
+    "git diff --check"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-23T15:04:11Z",
+  "updated_at": "2026-07-23T16:30:00Z",
+  "parallel_plan": {
+    "role": "agent_n",
+    "branch": "feature/narrative-phase2a-run-frontend",
+    "worktree": "D:\\\\Dstorylens-wt-narrative-run-frontend",
+    "depends_on": [
+      "CHG-20260723-031"
+    ],
+    "blocks": [
+      "CHG-20260723-035"
+    ],
+    "forbidden": [
+      "real engine/model/prompt",
+      "flip production gates",
+      "migrations",
+      "VERSION bump",
+      "push/build/publish"
+    ],
+    "file_ownership": "docs/architecture/narrative-intelligence-core/phase2a-parallel-file-ownership.json"
+  },
+  "file_ownership": "docs/architecture/narrative-intelligence-core/phase2a-parallel-file-ownership.json",
+  "integration_issues": [
+    "II-N-002: WHOLE_BOOK_MOCK_LAB_ENABLED remains false by default; Lab UI requires explicit labEnabled prop or env toggle (Integration wires backend gate in main.py).",
+    "II-N-003: Result API router mount confirmed by Integration; Lab result client uses Phase 1D paths."
+  ]
+}

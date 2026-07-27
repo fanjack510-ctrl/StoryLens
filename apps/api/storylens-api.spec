@@ -12,10 +12,12 @@ REPO = SPECDIR.parents[1]
 datas = [
     (str(REPO / "packages" / "prompts"), "packages/prompts"),
     (str(REPO / "config" / "reader_journey_formulas.json"), "config"),
+    (str(REPO / "config" / "scene_evidence_validation.json"), "config"),
     (str(REPO / "config" / "cloud_pricing.example.json"), "config"),
     # Verified official list-price fallback; resolve_cloud_pricing_path prefers this
     # when config/cloud_pricing.json is absent in packaged installs.
     (str(REPO / "config" / "cloud_pricing.default.json"), "config"),
+    (str(REPO / "config" / "license_public_keys.production.json"), "config"),
 ]
 
 hiddenimports = [
@@ -57,6 +59,23 @@ for pkg in ("uvicorn", "fastapi", "starlette", "sqlalchemy", "pydantic", "anyio"
         pass
 
 hiddenimports += collect_submodules("app")
+
+# Optional Private Native Overview Engine (closed-source package).
+# Must be importable in the build venv (e.g. pip install -e ../private-engine).
+# Never silently invent a Fixture default; absence means loader returns UNAVAILABLE.
+try:
+    import storylens_private_engine  # noqa: F401
+
+    hiddenimports += collect_submodules("storylens_private_engine")
+    try:
+        priv = collect_all("storylens_private_engine")
+        datas += priv[0]
+        hiddenimports += priv[1]
+        hiddenimports += priv[2]
+    except Exception:
+        pass
+except Exception:
+    pass
 
 a = Analysis(
     [str(SPECDIR / "sidecar_main.py")],

@@ -1,0 +1,112 @@
+{
+  "id": "CHG-20260723-029",
+  "title": "Agent L Evidence / Review / Pattern Map",
+  "type": "feature",
+  "base_version": "1.0.5",
+  "status": "verified",
+  "include_in_next_release": true,
+  "commits": [
+    {
+      "sha": "9256dd1ef471a8d265a2f68329aa0c3e0fb7711a",
+      "message": "feat: implement narrative review and structure map prototypes",
+      "primary": true,
+      "multi_change_reason": "integration cherry-pick of Agent L primary onto integration/narrative-phase1d"
+    },
+    {
+      "sha": "917de6c56afbbc8aa7b2c41c868d4185cda8c684",
+      "message": "docs: attach primary commit to CHG-20260723-029",
+      "primary": false,
+      "multi_change_reason": "integration cherry-pick"
+    },
+    {
+      "sha": "925532a10b5fc08a5c83f3463f5465a2be0cefd2",
+      "message": "docs: close CHG-20260723-029 commit attachment loop",
+      "primary": false,
+      "multi_change_reason": "integration cherry-pick"
+    }
+  ],
+  "modules": [
+    "narrative_core",
+    "desktop/wholeBook"
+  ],
+  "files": [
+    "apps/api/app/narrative_core/services/evidence_read_service.py",
+    "apps/api/app/narrative_core/services/review_action_adapter.py",
+    "apps/api/app/narrative_core/services/conflict_center_service.py",
+    "apps/api/app/narrative_core/services/structure_map_projection.py",
+    "apps/api/tests/test_narrative_phase1d_review_map.py",
+    "apps/desktop/src/features/wholeBook/review/",
+    "apps/desktop/src/features/wholeBook/structureMap/",
+    "docs/architecture/narrative-intelligence-core/phase1d-evidence-read-implementation.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-review-action-adapter.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-conflict-center-prototype.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-structure-map-projection-implementation.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-pattern-structure-map-boundary.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-review-map-verification.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-review-map-implementation.md",
+    "release/changes/CHG-20260723-029.json"
+  ],
+  "user_summary": "Evidence drawer, review actions, conflict center, structure map projection adapter.",
+  "technical_summary": "Evidence Read Service, Review Action Adapter, Conflict Center projector, Structure Map via NarrativeProjectionSource (no Pattern tables); isolated FE prototypes under wholeBook/review and structureMap. Review write route remains unregistered.",
+  "acceptance_criteria": [
+    "Evidence read via Snapshot Reader with integrity statuses and deep links",
+    "Review actions adapter exists; production write route not registered (Phase 2E)",
+    "Conflict Center list/compare; blocking never auto-resolved",
+    "Structure Map projection default canonical; candidates explicit; 100/250 limits",
+    "FE prototypes isolated; no formal result nav; no new graph deps"
+  ],
+  "tests": [
+    "apps/api/tests/test_narrative_phase1d_review_map.py",
+    "apps/desktop/src/features/wholeBook/review/reviewMapPrototype.test.tsx"
+  ],
+  "verification_evidence": [
+    "pytest apps/api/tests/test_narrative_phase1d_review_map.py -q → passed",
+    "vitest run review + structureMap + narrativePattern → passed",
+    "Integration: Structure Map uses NarrativeProjectionSource"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "No migrations; no Pattern tables; projection does not write narrative facts."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-23T13:23:33Z",
+  "updated_at": "2026-07-23T15:04:10Z",
+  "parallel_plan": {
+    "role": "agent_l",
+    "branch": "feature/narrative-phase1d-review-map",
+    "worktree": "D:\\\\Dstorylens-wt-narrative-review-map",
+    "depends_on": [
+      "CHG-20260723-026"
+    ],
+    "blocks": [
+      "CHG-20260723-030"
+    ],
+    "forbidden": [
+      "real model calls",
+      "open production whole-book run create",
+      "modify product_contract owned by Phase 1D-P without Integration",
+      "VERSION bump",
+      "push/build/publish"
+    ],
+    "file_ownership": "docs/architecture/narrative-intelligence-core/phase1d-parallel-file-ownership.json"
+  },
+  "integration_issues": [
+    {
+      "id": "II-REVIEW-ROUTE-001",
+      "summary": "DEFERRED to Phase 2E: do not register POST /api/v1/narrative-review-actions in production main router."
+    },
+    {
+      "id": "II-STRUCTURE-DIR-001",
+      "summary": "Keep dual exports narrativePattern + structureMap; Structure Map consumes NarrativeProjectionSource."
+    }
+  ]
+}

@@ -1,13 +1,13 @@
 {
-  "version": "1.0.3",
-  "git_tag": "v1.0.3",
-  "git_commit": "b487514f121d9e7835f47f46ee352bf33136fa66",
+  "version": "1.0.5",
+  "git_tag": "v1.0.5",
+  "git_commit": "d98f1a690e478338003a7b302c856c90c5d95f08",
   "status": "verified",
-  "released_at": "2026-07-21T08:22:14Z",
+  "released_at": "2026-07-23T05:40:48Z",
   "channel": "manual-upgrade-only",
-  "installer_sha256": "85B247F23176790411DE0C6BF79BCB211051E89F0DE2EC9DCD54FF1CA43D5A18",
-  "updater_sha256": "96359D31A4E5A2878C01FAB8532C388D261C4A9BC1AF7EEE9221EB3231690A09",
+  "installer_sha256": "6476C8C14968885E45C1172865590DD2E13ED6CBA83069B4D0BA258129DC89F4",
+  "updater_sha256": null,
   "manifest_url": "manual-upgrade-only",
-  "notes": "StoryLens 1.0.3 published as manual-upgrade-only after staging Result B on installed 1.0.2 (no confirm-install). Stable latest.json not published. Installer/GitHub Release published.",
+  "notes": "StoryLens 1.0.5 local baseline seal after Phase A gates + Windows build/smoke + 1.0.4 data create_db on copied DB. Updater artifacts skipped_no_secret; manual-upgrade-only; no push/publish. baseline.verified means engineering gates, not per-Change end-user manual acceptance.",
   "legacy_source_baseline": false
 }

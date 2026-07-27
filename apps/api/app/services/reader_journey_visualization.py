@@ -23,6 +23,7 @@ from app.db.models import (
 from app.schemas.reader_journey import SceneReaderJourneyProfileItem
 from app.services.reader_journey_engagement import compute_engagement, load_formula_config
 from app.services.reader_journey_progress import load_revision_scenes
+from app.services.narrative_loop_view import build_narrative_loop_bundle
 from app.services.reader_journey_question_lifecycle import (
     build_question_chains,
     diagnose_dropped_high_strength_questions,
@@ -564,6 +565,7 @@ def build_risk_intervals(
         )
         item["trigger"] = f"engagement<{LOW_ENGAGEMENT_THRESHOLD}，连续>=2"
         item["needs_review"] = item["span"] >= 3
+        item["field_used"] = "engagement"
         intervals.append(item)
 
     high_load_flags = [
@@ -618,6 +620,184 @@ def build_risk_intervals(
     return intervals
 
 
+def _is_v2_native_presentation(journey_run: ReaderJourneyRun) -> bool:
+    """True when visualization must use V2 reading_momentum dropoff (not engagement)."""
+    try:
+        details = json.loads(journey_run.failure_details_json or "{}")
+    except json.JSONDecodeError:
+        details = {}
+    source_mode = details.get("source_mode")
+    if source_mode in {"v2_native", "local_fixture"}:
+        return True
+    version = str(journey_run.scene_contract_version or "")
+    return version.startswith("2.")
+
+
+def build_v2_dropoff_risk_intervals(scene_nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Build V2 risk intervals from reading_momentum (never engagement<40).
+
+    base_dropoff_risk = 100 - reading_momentum, with chapter-level penalties:
+    - consecutive two-scene clear decline: +8
+    - three consecutive reading_momentum<45: +15
+    - hook>75 without payoff in a reasonable span: +10
+    """
+    ordered = sorted(
+        [
+            node
+            for node in scene_nodes
+            if node.get("role") != "beat" and node.get("node_type") != "beat"
+        ],
+        key=lambda item: int(item["scene_ordinal"]),
+    )
+    if not ordered:
+        return []
+
+    momentums: list[float] = []
+    hooks: list[float] = []
+    payoffs: list[float] = []
+    dropoffs: list[float] = []
+    ordinals: list[int] = []
+    for node in ordered:
+        scores = node.get("scores") or {}
+        momentum = scores.get("reading_momentum")
+        if momentum is None:
+            engagement = (node.get("engagement") or {}).get("engagement_score")
+            momentum = engagement if engagement is not None else 0
+        momentum_f = float(momentum)
+        momentums.append(momentum_f)
+        hooks.append(float(scores.get("hook") or 0))
+        payoffs.append(float(scores.get("payoff") or 0))
+        stored = scores.get("dropoff_risk")
+        dropoffs.append(
+            float(stored) if stored is not None else max(0.0, min(100.0, 100.0 - momentum_f))
+        )
+        ordinals.append(int(node["scene_ordinal"]))
+
+    intervals: list[dict[str, Any]] = []
+
+    for index in range(2, len(momentums)):
+        d1 = momentums[index - 1] - momentums[index - 2]
+        d2 = momentums[index] - momentums[index - 1]
+        if d1 < -0.5 and d2 < -0.5:
+            start_index = index - 2
+            end = index
+            penalties = [
+                {"code": "consecutive_decline", "amount": 8, "label": "连续两场明显下降"}
+            ]
+            base = 100.0 - momentums[end]
+            final_risk = max(dropoffs[end], min(100.0, base + 8))
+            intervals.append(
+                {
+                    "risk_type": "momentum_decline",
+                    "start_scene_ordinal": ordinals[start_index],
+                    "end_scene_ordinal": ordinals[end],
+                    "span": ordinals[end] - ordinals[start_index] + 1,
+                    "summary": (
+                        f"Scene {ordinals[start_index]}—{ordinals[end]} "
+                        "reading_momentum 连续明显下降"
+                    ),
+                    "trigger": "连续两场 reading_momentum 明显下降",
+                    "needs_review": True,
+                    "field_used": "reading_momentum",
+                    "penalties": penalties,
+                    "final_risk": round(final_risk, 1),
+                }
+            )
+
+    low_flags = [(ordinals[i], momentums[i] < 45) for i in range(len(momentums))]
+    for item in _collect_intervals(low_flags, risk_type="low_reading_momentum"):
+        if item["span"] < 3:
+            continue
+        end_ord = int(item["end_scene_ordinal"])
+        end_index = ordinals.index(end_ord)
+        base = 100.0 - momentums[end_index]
+        penalties = [
+            {
+                "code": "consecutive_low_momentum",
+                "amount": 15,
+                "label": "连续三场 reading_momentum<45",
+            }
+        ]
+        final_risk = max(dropoffs[end_index], min(100.0, base + 15))
+        item["summary"] = (
+            f"Scene {item['start_scene_ordinal']}—{item['end_scene_ordinal']} "
+            "reading_momentum 持续偏低"
+        )
+        item["trigger"] = "reading_momentum<45，连续>=3"
+        item["needs_review"] = True
+        item["field_used"] = "reading_momentum"
+        item["penalties"] = penalties
+        item["final_risk"] = round(final_risk, 1)
+        intervals.append(item)
+
+    span = 3
+    for index, hook in enumerate(hooks):
+        if hook <= 75:
+            continue
+        if payoffs[index] >= 40:
+            continue
+        future_payoff = any(
+            payoffs[ahead] >= 50
+            for ahead in range(index + 1, min(len(payoffs), index + 1 + span))
+        )
+        if future_payoff:
+            continue
+        end_index = min(len(ordinals) - 1, index + span)
+        base = 100.0 - momentums[index]
+        penalties = [
+            {
+                "code": "unpaid_hook",
+                "amount": 10,
+                "label": "hook>75 且合理跨度内无 payoff",
+            }
+        ]
+        final_risk = max(dropoffs[index], min(100.0, base + 10))
+        intervals.append(
+            {
+                "risk_type": "unpaid_hook",
+                "start_scene_ordinal": ordinals[index],
+                "end_scene_ordinal": ordinals[end_index],
+                "span": ordinals[end_index] - ordinals[index] + 1,
+                "summary": (
+                    f"Scene {ordinals[index]} hook 偏高且后续 {span} 场内未见有效 payoff"
+                ),
+                "trigger": "hook>75 且合理跨度内无 payoff",
+                "needs_review": True,
+                "field_used": "reading_momentum",
+                "penalties": penalties,
+                "final_risk": round(final_risk, 1),
+            }
+        )
+
+    for index, risk in enumerate(dropoffs):
+        if risk < 60:
+            continue
+        if any(
+            item["start_scene_ordinal"] <= ordinals[index] <= item["end_scene_ordinal"]
+            for item in intervals
+        ):
+            continue
+        intervals.append(
+            {
+                "risk_type": "high_dropoff_risk",
+                "start_scene_ordinal": ordinals[index],
+                "end_scene_ordinal": ordinals[index],
+                "span": 1,
+                "summary": (
+                    f"Scene {ordinals[index]} 流失风险偏高（base=100-reading_momentum）"
+                ),
+                "trigger": "base_dropoff_risk = 100 - reading_momentum",
+                "needs_review": risk >= 70,
+                "field_used": "reading_momentum",
+                "penalties": [],
+                "final_risk": round(risk, 1),
+            }
+        )
+
+    intervals.sort(key=lambda item: (item["start_scene_ordinal"], item["risk_type"]))
+    return intervals
+
+
 def _phase_payload(
     phase: ReaderJourneyPhase,
     scene_nodes: list[dict[str, Any]],
@@ -626,8 +806,20 @@ def _phase_payload(
     ordinals = list(
         range(int(phase.start_scene_ordinal), int(phase.end_scene_ordinal) + 1)
     )
-    engagements = [engagement_by_ordinal.get(ordinal, 0) for ordinal in ordinals]
     nodes = [node for node in scene_nodes if int(node["scene_ordinal"]) in ordinals]
+    # Beats are localization aids only — excluded from chapter/phase means.
+    mean_nodes = [
+        node
+        for node in nodes
+        if node.get("include_in_chapter_mean", str(node.get("role")) != "beat")
+        and str(node.get("role")) != "beat"
+    ]
+    if mean_nodes:
+        engagements = [
+            engagement_by_ordinal.get(int(node["scene_ordinal"]), 0) for node in mean_nodes
+        ]
+    else:
+        engagements = [engagement_by_ordinal.get(ordinal, 0) for ordinal in ordinals]
     return {
         "ordinal": phase.ordinal,
         "title": phase.title,
@@ -678,7 +870,15 @@ def _weak_interval_text(risk_intervals: list[dict[str, Any]]) -> str:
     candidates = [
         item
         for item in risk_intervals
-        if item["risk_type"] in {"consecutive_no_payoff", "low_engagement", "over_fragmented_beats"}
+        if item["risk_type"] in {
+            "consecutive_no_payoff",
+            "low_engagement",
+            "low_reading_momentum",
+            "momentum_decline",
+            "unpaid_hook",
+            "high_dropoff_risk",
+            "over_fragmented_beats",
+        }
     ]
     if not candidates:
         return "无明显薄弱区间"
@@ -697,15 +897,160 @@ def _calibration_status(journey_run: ReaderJourneyRun) -> dict[str, Any]:
         details = {}
     audits = details.get("semantic_calibration_audit") or []
     latest = audits[-1] if isinstance(audits, list) and audits else {}
-    return {
+    source_mode = details.get("source_mode")
+    status = {
         "scene_contract_version": journey_run.scene_contract_version,
         "scene_prompt_version": journey_run.scene_prompt_version,
         "planner_version": journey_run.planner_version,
+        "formula_version": journey_run.formula_version,
         "semantic_source": "model+deterministic_calibration",
         "calibrated": bool(audits),
         "latest_audit": latest,
         "evidence_coverage": 1.0,
     }
+    if source_mode:
+        status["source_mode"] = source_mode
+        status["semantic_source"] = str(source_mode)
+    display_banner = details.get("display_banner")
+    if display_banner:
+        status["display_banner"] = display_banner
+    return status
+
+
+def _apply_v2_presentation_overrides(
+    scene_nodes: list[dict[str, Any]],
+    summary: ChapterReaderJourneySummary | None,
+) -> None:
+    """Merge fixture / v2 deterministic presentation fields onto visualization nodes.
+
+    Does not recompute literary diagnostics; only surfaces already-persisted
+    scores, diagnoses, and node-role overrides for contract 2.0 runs.
+    """
+    if summary is None:
+        return
+    try:
+        deterministic = json.loads(summary.deterministic_statistics_json or "{}")
+    except json.JSONDecodeError:
+        return
+    if not isinstance(deterministic, dict):
+        return
+
+    scores_by_ordinal = deterministic.get("v2_scene_scores") or {}
+    diagnoses = deterministic.get("scene_diagnoses") or []
+    overrides = deterministic.get("v2_node_overrides") or {}
+    diagnosis_by_ordinal: dict[int, dict[str, Any]] = {}
+    if isinstance(diagnoses, list):
+        for item in diagnoses:
+            if not isinstance(item, dict):
+                continue
+            ordinal = item.get("scene_ordinal")
+            if ordinal is None:
+                continue
+            diagnosis_by_ordinal[int(ordinal)] = item
+
+    for node in scene_nodes:
+        ordinal = int(node["scene_ordinal"])
+        key = str(ordinal)
+        score_patch = scores_by_ordinal.get(key) if isinstance(scores_by_ordinal, dict) else None
+        if isinstance(score_patch, dict):
+            scores = dict(node.get("scores") or {})
+            for field in (
+                "reading_momentum",
+                "plot_progress",
+                "reading_tension",
+                "pacing_speed",
+                "pacing_fit",
+                "hook",
+                "payoff",
+                "emotional_investment",
+                "clarity",
+                "dropoff_risk",
+            ):
+                if field in score_patch and score_patch[field] is not None:
+                    scores[field] = score_patch[field]
+            node["scores"] = scores
+            if "reading_momentum" in score_patch and score_patch["reading_momentum"] is not None:
+                engagement = dict(node.get("engagement") or {})
+                engagement["engagement_score"] = int(round(float(score_patch["reading_momentum"])))
+                node["engagement"] = engagement
+
+        diag = diagnosis_by_ordinal.get(ordinal)
+        if diag:
+            node["primary_diagnosis"] = diag.get("primary_diagnosis")
+            node["secondary_diagnoses"] = list(diag.get("secondary_diagnoses") or [])
+            node["positive_mechanism"] = diag.get("positive_mechanism")
+            node["data_quality_issue"] = diag.get("data_quality_issue")
+
+        override = overrides.get(key) if isinstance(overrides, dict) else None
+        if isinstance(override, dict):
+            if override.get("scene_role"):
+                node["scene_role"] = override["scene_role"]
+            if override.get("node_type"):
+                node["node_type"] = override["node_type"]
+            if "include_in_main_curve" in override:
+                node["include_in_main_curve"] = bool(override["include_in_main_curve"])
+            if "include_in_chapter_mean" in override:
+                node["include_in_chapter_mean"] = bool(override["include_in_chapter_mean"])
+            forced_role = override.get("role")
+            if forced_role in {"core", "secondary", "beat"}:
+                node["role"] = forced_role
+            elif override.get("node_type") == "beat":
+                node["role"] = "beat"
+            elif override.get("node_type") == "scene" and node.get("role") == "beat":
+                # Fixture main scenes must not remain classifier beats.
+                node["role"] = "core"
+
+
+def _narrative_loop_fields(
+    *,
+    profiles: list[SceneReaderJourneyProfileItem],
+    ranked_chains: list[dict[str, Any]],
+    question_lifecycle: list[dict[str, Any]],
+    risk_intervals: list[dict[str, Any]],
+    journey_run: ReaderJourneyRun,
+) -> dict[str, Any]:
+    """Additive NarrativeLoopView projection — does not mutate stored artifacts."""
+    fingerprint = hashlib.sha256(
+        f"{journey_run.id}:{journey_run.analysis_run_id}:{journey_run.scene_contract_version}:"
+        f"{len(profiles)}".encode()
+    ).hexdigest()[:16]
+    bundle = build_narrative_loop_bundle(
+        profiles,
+        question_chains=ranked_chains,
+        question_lifecycle=question_lifecycle,
+        legacy_risk_intervals=risk_intervals,
+        book_id=journey_run.book_id,
+        chapter_id=journey_run.chapter_id,
+        analysis_run_id=journey_run.analysis_run_id,
+        journey_run_id=journey_run.id,
+        scene_contract_version=journey_run.scene_contract_version,
+        artifact_fingerprint=fingerprint,
+    )
+    return {
+        "narrative_loops": bundle["narrative_loops"],
+        "narrative_loop_risks": bundle["narrative_loop_risks"],
+        "reading_resistance": bundle.get("reading_resistance") or [],
+        "scene_payoff_claims": bundle["scene_payoff_claims"],
+        "narrative_loop_consistency": bundle["consistency_report"],
+        "narrative_loop_view_version": bundle["narrative_loop_view_version"],
+    }
+
+
+def _question_lifecycle_from_summary(
+    summary: ChapterReaderJourneySummary | None,
+) -> list[dict[str, Any]]:
+    if summary is None:
+        return []
+    try:
+        deterministic = json.loads(summary.deterministic_statistics_json or "{}")
+    except json.JSONDecodeError:
+        return []
+    if not isinstance(deterministic, dict):
+        return []
+    raw = deterministic.get("question_lifecycle")
+    if not isinstance(raw, list):
+        return []
+    return [item for item in raw if isinstance(item, dict)]
 
 
 def _expanded_diagnosis(summary: ChapterReaderJourneySummary | None) -> dict[str, Any]:
@@ -825,6 +1170,9 @@ def _scene_node_payload(
         "primary_payoff": primary_payoff,
         "primary_hook": primary_hook,
         "primary_risk": primary_risk,
+        "node_type": "beat" if importance["role"] == "beat" else "scene",
+        "include_in_main_curve": importance["role"] != "beat",
+        "include_in_chapter_mean": importance["role"] != "beat",
     }
 
 
@@ -979,14 +1327,24 @@ def build_reader_journey_visualization(
                 evidence_count=evidence_counts.get(scene.id, 0),
             )
         )
+        is_beat = importance["role"] == "beat"
+        curve_point_meta = {
+            "include_in_main_curve": not is_beat,
+            "node_type": "beat" if is_beat else "scene",
+        }
         curve_series["engagement"].append(
-            {"scene_ordinal": scene.ordinal, "value": engagement["engagement_score"]}
+            {
+                "scene_ordinal": scene.ordinal,
+                "value": engagement["engagement_score"],
+                **curve_point_meta,
+            }
         )
         curve_series["valence"].append(
             {
                 "scene_ordinal": scene.ordinal,
                 "start": profile.emotional_valence_start,
                 "end": profile.emotional_valence_end,
+                **curve_point_meta,
             }
         )
         curve_series["arousal"].append(
@@ -994,22 +1352,27 @@ def build_reader_journey_visualization(
                 "scene_ordinal": scene.ordinal,
                 "start": profile.arousal_start,
                 "end": profile.arousal_end,
+                **curve_point_meta,
             }
         )
         curve_series["curiosity"].append(
-            {"scene_ordinal": scene.ordinal, "value": profile.curiosity_score}
+            {"scene_ordinal": scene.ordinal, "value": profile.curiosity_score, **curve_point_meta}
         )
         curve_series["tension"].append(
-            {"scene_ordinal": scene.ordinal, "value": profile.tension_score}
+            {"scene_ordinal": scene.ordinal, "value": profile.tension_score, **curve_point_meta}
         )
         curve_series["payoff"].append(
-            {"scene_ordinal": scene.ordinal, "value": profile.payoff_score}
+            {"scene_ordinal": scene.ordinal, "value": profile.payoff_score, **curve_point_meta}
         )
         curve_series["hook"].append(
-            {"scene_ordinal": scene.ordinal, "value": profile.hook_score}
+            {"scene_ordinal": scene.ordinal, "value": profile.hook_score, **curve_point_meta}
         )
         curve_series["dropoff_risk"].append(
-            {"scene_ordinal": scene.ordinal, "value": profile.dropoff_risk_score}
+            {
+                "scene_ordinal": scene.ordinal,
+                "value": profile.dropoff_risk_score,
+                **curve_point_meta,
+            }
         )
 
     dropped_questions = diagnose_dropped_high_strength_questions(profiles)
@@ -1039,6 +1402,38 @@ def build_reader_journey_visualization(
 
     hook_markers = hook_selection["hook_markers"]
     payoff_markers = payoff_selection["visible_payoff_markers"]
+    _apply_v2_presentation_overrides(scene_nodes, summary)
+    if _is_v2_native_presentation(journey_run):
+        # Replace legacy engagement<40 intervals with V2 reading_momentum formula.
+        kept = [
+            item
+            for item in risk_intervals
+            if item.get("risk_type") not in {"low_engagement"}
+        ]
+        v2_intervals = build_v2_dropoff_risk_intervals(scene_nodes)
+        risk_intervals = kept + v2_intervals
+        risk_intervals.sort(
+            key=lambda item: (item["start_scene_ordinal"], item["risk_type"])
+        )
+        # Keep chapter peaks aligned with reading_momentum when present.
+        for node in scene_nodes:
+            scores = node.get("scores") or {}
+            momentum = scores.get("reading_momentum")
+            if momentum is None:
+                continue
+            engagement_by_ordinal[int(node["scene_ordinal"])] = int(round(float(momentum)))
+    # Keep curve include flags aligned with node overrides (e.g. fixture Beat).
+    beat_ordinals = {
+        int(node["scene_ordinal"])
+        for node in scene_nodes
+        if node.get("role") == "beat" or node.get("node_type") == "beat"
+    }
+    for points in curve_series.values():
+        for point in points:
+            ordinal = int(point["scene_ordinal"])
+            if ordinal in beat_ordinals:
+                point["include_in_main_curve"] = False
+                point["node_type"] = "beat"
     role_counts = {
         "core": sum(1 for node in scene_nodes if node["role"] == "core"),
         "secondary": sum(1 for node in scene_nodes if node["role"] == "secondary"),
@@ -1071,6 +1466,7 @@ def build_reader_journey_visualization(
         "role_counts": role_counts,
         "classifications": classification_rows,
     }
+    question_lifecycle = _question_lifecycle_from_summary(summary)
 
     return {
         "visualization_version": VISUALIZATION_VERSION,
@@ -1150,4 +1546,12 @@ def build_reader_journey_visualization(
             "engagement_formula_version": str(formula.get("version", "1.0")),
         },
         "calibration_status": _calibration_status(journey_run),
+        "question_lifecycle": question_lifecycle,
+        **_narrative_loop_fields(
+            profiles=profiles,
+            ranked_chains=ranked_chains,
+            question_lifecycle=question_lifecycle,
+            risk_intervals=risk_intervals,
+            journey_run=journey_run,
+        ),
     }

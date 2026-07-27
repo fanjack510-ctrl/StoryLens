@@ -1,0 +1,68 @@
+{
+  "id": "CHG-20260722-011",
+  "title": "Unify narrative loop interpretation",
+  "type": "fix",
+  "base_version": "1.0.4",
+  "status": "released",
+  "include_in_next_release": false,
+  "commits": [
+    {
+      "sha": "d47a9540193f7fb3200db67de64b4424b82c9c0e",
+      "message": "fix: unify narrative loop interpretation",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "api",
+    "desktop"
+  ],
+  "files": [
+    "apps/api/app/services/narrative_loop_view.py",
+    "apps/api/app/services/reader_journey_visualization.py",
+    "apps/api/tests/test_narrative_loop_view_local.py",
+    "apps/desktop/src/components/readerJourney/narrativeLoopView.ts",
+    "apps/desktop/src/components/readerJourney/narrativeLoopView.test.ts",
+    "apps/desktop/src/components/readerJourney/lensMetricBinding.ts",
+    "apps/desktop/src/components/readerJourney/hookPayoffLensModel.ts",
+    "apps/desktop/src/components/readerJourney/journeySegmentMarkers.ts",
+    "apps/desktop/src/components/readerJourney/CanonicalJourneyChart.tsx",
+    "apps/desktop/src/components/readerJourney/JourneySceneDetailPanel.tsx",
+    "apps/desktop/src/components/readerJourney/journeyUiLabels.ts",
+    "apps/desktop/src/types/readerJourneyVisualization.ts"
+  ],
+  "user_summary": "Reader Journey中问题链、钩子、回报与流失风险对同一叙事现象给出互相矛盾的解释，无法相互核对。",
+  "technical_summary": "Problem chains, hooks, payoffs, and churn risk read divergent fields (scores.payoff vs payoffs[], next_handoff, exact question strings, consecutive_no_payoff). Added NarrativeLoopView adapter over existing artifacts with consistency checks; UI claims 有效兑现/无回报 only from deterministic loop entities.",
+  "acceptance_criteria": [
+    "Hook/payoff/risk/question panels share NarrativeLoopView",
+    "High payoff_score without entity is inconsistent, not 有效兑现",
+    "Open loops produce locatable risk; resolved loops do not",
+    "VERSION remains 1.0.4; no prompt/weight/formula/tag/baseline/build/push/model"
+  ],
+  "tests": [
+    "apps/api/tests/test_narrative_loop_view_local.py",
+    "apps/desktop/src/components/readerJourney/narrativeLoopView.test.ts"
+  ],
+  "verification_evidence": [
+    "Manual: chart 有效兑现 at S3/S5/S8 while risk said payoffs empty and hook had no handoff.",
+    "Root: score path vs entity path; V2 persist payoffs=[]; chains ignore hook identity.",
+    "Local pytest narrative_loop_view 7 passed; vitest narrativeLoopView+lens+labels 25 passed; typecheck/lint/version/diff-check green.",
+    "1.0.5 Phase A engineering gates (not per-item user manual acceptance): pytest 760 passed/50 skipped; vitest 877 passed; typecheck; lint; frontend build; check_project; template governance; playwright smoke+scroll+chapter; focused theme/lens/comparison vitest."
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "P1",
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-22T14:51:15Z",
+  "updated_at": "2026-07-23T05:40:45Z"
+}

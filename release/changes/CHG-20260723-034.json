@@ -1,0 +1,108 @@
+{
+  "id": "CHG-20260723-034",
+  "title": "Agent O Recovery and Reliability",
+  "type": "feature",
+  "base_version": "1.0.5",
+  "status": "tested",
+  "include_in_next_release": true,
+  "commits": [
+    {
+      "sha": "208adc474746aae2c28d138008b179e3c532a5ef",
+      "message": "feat: implement mock run recovery and reliability",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "5461cb12dc7e07d8078df79476be18ff6a87ca0c",
+      "message": "docs: attach recovery commit to CHG-20260723-034",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "32ee45a8f9168e8934b8f5adcbaaac9cd26d77fc",
+      "message": "docs: sync CHG-20260723-034 commit list",
+      "primary": false,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "narrative_core/services"
+  ],
+  "files": [
+    "apps/api/app/narrative_core/services/mock_run_idempotency.py",
+    "apps/api/app/narrative_core/services/mock_run_recovery_service.py",
+    "apps/api/app/narrative_core/services/mock_run_audit.py",
+    "apps/api/app/narrative_core/services/mock_execution_quota.py",
+    "apps/api/app/narrative_core/services/mock_run_fault_injection.py",
+    "apps/api/tests/test_narrative_phase2a_recovery.py",
+    "docs/architecture/narrative-intelligence-core/phase2a-idempotency-implementation.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-concurrency-guard.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-recovery-implementation.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-checkpoint-validation.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-audit-implementation.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-mock-quota-implementation.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-fault-injection.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-reliability-verification.md",
+    "release/changes/CHG-20260723-034.json"
+  ],
+  "user_summary": "Mock Lab run recovery, idempotency, concurrency, audit, quota/budget, and fault injection for Phase 2A reliability.",
+  "technical_summary": "Implemented MockRunIdempotencyService, MockRunConcurrencyGuard, MockRunRecoveryService, CheckpointValidator, MockRunAuditSink, MockExecutionQuotaService/BudgetGuard, FaultInjectionController, and StartupRecoveryAdapter. No new tables, no formal frontend, no real Engine.",
+  "acceptance_criteria": [
+    "Create/operation idempotency with payload conflict detection",
+    "Book active-run concurrency + single executor lease",
+    "Startup marks interrupted only; no silent resume",
+    "Checkpoint schema/version/engine/snapshot validation",
+    "Audit events without body/credential/prompt leakage",
+    "Synthetic quota/budget deny prevents asset writes",
+    "Fault injection test/dev only and deterministic"
+  ],
+  "tests": [
+    "apps/api/tests/test_narrative_phase2a_recovery.py"
+  ],
+  "verification_evidence": [
+    "pytest apps/api/tests/test_narrative_phase2a_recovery.py -q → 33 passed",
+    "python scripts/version_manager.py check",
+    "python scripts/change_registry.py check",
+    "git diff --check"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "Schema Issue: AnalysisRun lacks metadata_json for durable idempotency; process-local store used. No migration."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-23T15:04:12Z",
+  "updated_at": "2026-07-23T16:30:00Z",
+  "parallel_plan": {
+    "role": "agent_o",
+    "branch": "feature/narrative-phase2a-recovery",
+    "worktree": "D:\\\\Dstorylens-wt-narrative-run-recovery",
+    "depends_on": [
+      "CHG-20260723-031"
+    ],
+    "blocks": [
+      "CHG-20260723-035"
+    ],
+    "forbidden": [
+      "real engine/model/prompt",
+      "flip production gates",
+      "migrations",
+      "VERSION bump",
+      "push/build/publish"
+    ],
+    "file_ownership": "docs/architecture/narrative-intelligence-core/phase2a-parallel-file-ownership.json"
+  },
+  "file_ownership": "docs/architecture/narrative-intelligence-core/phase2a-parallel-file-ownership.json",
+  "integration_issues": [
+    "Create idempotency durable via validated_output envelope (Integration CHG-035); operation idempotency remains process-local.",
+    "MockRunStartupRecoveryAdapter wired in main.py lifespan reconcile (CHG-035); no silent auto-resume."
+  ]
+}

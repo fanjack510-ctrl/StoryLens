@@ -1,0 +1,302 @@
+{
+  "id": "CHG-20260721-012",
+  "title": "Reader Journey v2.0 contract and deterministic derivation",
+  "type": "feature",
+  "base_version": "1.0.3",
+  "status": "released",
+  "include_in_next_release": false,
+  "commits": [
+    {
+      "sha": "fd75d97964d5d3d6dabcc86981f295e146550779",
+      "message": "Add Reader Journey v2.0 contract and deterministic derivation (CHG-20260721-012).",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "1f720d34ec29a744944f144d7e165650344152b5",
+      "message": "Record CHG-20260721-012 as tested after local verification.",
+      "primary": false,
+      "multi_change_reason": "registry metadata update after implementation commit"
+    },
+    {
+      "sha": "08d6509a81e07c40e706edcbe5dbf9329d1380bf",
+      "message": "Attach tested-status commit to CHG-20260721-012.",
+      "primary": false,
+      "multi_change_reason": "attach tested-status commit record"
+    },
+    {
+      "sha": "2974f9b36d0ed990f87b0c58a0b44edf3c6efe35",
+      "message": "Sync remaining CHG-20260721-012 commit attachments.",
+      "primary": false,
+      "multi_change_reason": "final commit attachment sync"
+    },
+    {
+      "sha": "fb002db7efea7e4ba15647f8dad6eca8532d6d09",
+      "message": "Attach final registry sync commit to CHG-20260721-012.",
+      "primary": false,
+      "multi_change_reason": "final registry sync commit"
+    },
+    {
+      "sha": "db14c1facc6bb85320a2289de7408dccb4173d44",
+      "message": "Add Reader Journey observation lenses and diagnosis band UI (CHG-20260721-012).",
+      "primary": false,
+      "multi_change_reason": "frontend observation lenses implementation"
+    },
+    {
+      "sha": "6c40631744de79bcd73778d67eb0f07dd6a7947f",
+      "message": "Attach frontend commit to CHG-20260721-012.",
+      "primary": false,
+      "multi_change_reason": "attach frontend registry sync"
+    },
+    {
+      "sha": "f04ae2b1ff6a8c177d71999d7d6a38a7f2f54d6a",
+      "message": "Record CHG-20260721-012 verification matrix evidence (no product change).",
+      "primary": false,
+      "multi_change_reason": "verification evidence only"
+    },
+    {
+      "sha": "ea5118206b080f1fe44de48ca33aae04a12e81fc",
+      "message": "Audit and isolate Reader Journey V2 synthetic fixture from real-novel branding (CHG-20260721-012).",
+      "primary": false,
+      "multi_change_reason": "fixture coupling audit + anti-hardcode tests; status remains tested"
+    },
+    {
+      "sha": "97b97947ffc822bcb54dbc8aaf24ec7e82112f22",
+      "message": "Attach fixture-audit commit to CHG-20260721-012.",
+      "primary": false,
+      "multi_change_reason": "attach fixture-audit registry sync"
+    },
+    {
+      "sha": "ff627f0c9c621f052c8c4e8c1acd7d51dbadabe1",
+      "message": "Run real 牛角坳 Reader Journey V2 native E2E and surface V2真实正文分析 banner (CHG-20260721-012).",
+      "primary": false,
+      "multi_change_reason": "real 牛角坳 V2 native E2E harness + banner; status remains tested"
+    },
+    {
+      "sha": "08336c3eb02a4bd608aa86bd001920803683167c",
+      "message": "Attach real Niujiaokao V2 native E2E commit to CHG-20260721-012.",
+      "primary": false,
+      "multi_change_reason": "attach real E2E registry sync"
+    },
+    {
+      "sha": "36d9903e10d003d52e8654a13c633440b34f0ddd",
+      "message": "Fix V2 Reader Journey field mixing and lens/diagnosis semantics (CHG-20260721-012).",
+      "primary": false,
+      "multi_change_reason": "V2 field mixing / lens binding / diagnosis / dropoff / pacing semantic fix"
+    },
+    {
+      "sha": "e4325f9dc15579a472e3052c03461d16fc73270a",
+      "message": "Add Reader Journey V2 general rule spec and work-agnostic verification suite (CHG-20260721-012).",
+      "primary": false,
+      "multi_change_reason": "V2 general rule spec + work-agnostic verification suite"
+    },
+    {
+      "sha": "91eb0908303380c6851fce8a13492ee542c17756",
+      "message": "Wire Reader Journey V2 into the default product analysis pipeline (CHG-20260721-012).",
+      "primary": false,
+      "multi_change_reason": "wire V2 into default product pipeline; status remains tested"
+    },
+    {
+      "sha": "55ab5f5012b84d2908a4ea648cd6cbf2aa9e5914",
+      "message": "Attach default-pipeline V2 wiring commit to CHG-20260721-012.",
+      "primary": false,
+      "multi_change_reason": "attach default-pipeline wiring registry sync"
+    },
+    {
+      "sha": "c16b12c039d3b9918dc6e5da775055c2f3826daa",
+      "message": "Sync CHG-20260721-012 registry after V2 default-pipeline attach.",
+      "primary": false,
+      "multi_change_reason": "final registry sync after V2 default-pipeline attach"
+    },
+    {
+      "sha": "e3c92f3569a9f3df06c1e9c3ad7e12f865c2a60f",
+      "message": "Fix Reader Journey lens picker overlay by using inline segmented control (CHG-20260721-012).",
+      "primary": false,
+      "multi_change_reason": "fix lens picker overlay with inline segmented control; status remains tested"
+    },
+    {
+      "sha": "77f63e02d663ebae9581b5ffb46191f0895191ee",
+      "message": "Attach lens-picker overlay fix and evidence to CHG-20260721-012.",
+      "primary": false,
+      "multi_change_reason": "attach lens-picker registry sync"
+    },
+    {
+      "sha": "6d298d03eec69c075ed340f4f894bc3bf40c81fb",
+      "message": "Clarify hook/payoff lens as per-scene strength with lifecycle UI (CHG-20260721-012).",
+      "primary": false,
+      "multi_change_reason": "hook/payoff lens semantics + lifecycle presentation; status remains tested"
+    },
+    {
+      "sha": "fa7b9dfbced8548f979ac79f26d80e8ea0e47f33",
+      "message": "Attach hook/payoff semantics fix and evidence to CHG-20260721-012.",
+      "primary": false,
+      "multi_change_reason": "attach hook/payoff semantics registry sync"
+    },
+    {
+      "sha": "4a1ef0c1cbbaa24add83fd76af8829f1bb7f91dd",
+      "message": "Record final CHG-20260721-012 attach for hook/payoff semantics fix.",
+      "primary": false,
+      "multi_change_reason": "final registry sync after hook/payoff semantics"
+    },
+    {
+      "sha": "fd006c71e90c7c71652567ea63d92388f930c011",
+      "message": "Sync CHG-20260721-012 registry after hook/payoff semantics attach.",
+      "primary": false,
+      "multi_change_reason": "final registry sync commit"
+    },
+    {
+      "sha": "879ca6cdb11e05e2e05afc7354bccdd61c122c23",
+      "message": "Record terminal CHG-20260721-012 registry sync for hook/payoff fix.",
+      "primary": false,
+      "multi_change_reason": "terminal registry sync for hook/payoff semantics"
+    },
+    {
+      "sha": "7b4ce6852404f57be43964794e137ee5720f7c0e",
+      "message": "Fix Scene evidence validation false positives with adaptive field rules (CHG-20260721-012).",
+      "primary": false,
+      "multi_change_reason": "adaptive scene evidence validation + recovery UX; status remains tested"
+    },
+    {
+      "sha": "24c2930ba42a34b2c13cd8d857734066fd35ddd8",
+      "message": "Attach evidence-validation fix and evidence to CHG-20260721-012.",
+      "primary": false,
+      "multi_change_reason": "attach evidence-validation registry sync"
+    }
+  ],
+  "modules": [
+    "apps/api",
+    "config",
+    "packages/prompts",
+    "apps/desktop"
+  ],
+  "files": [
+    "apps/api/app/schemas/reader_journey_v2.py",
+    "apps/api/app/services/reader_journey_v2_derivation.py",
+    "apps/api/app/services/scene_fragment_consolidation.py",
+    "config/reader_journey_formulas_v2.json",
+    "config/scene_role_targets.json",
+    "apps/desktop/src/components/readerJourney/observationLenses.ts",
+    "apps/desktop/src/components/readerJourney/CanonicalJourneyChart.tsx",
+    "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.tsx",
+    "data/fixtures/reader_journey_v2_native/chapter_preview_v2.json",
+    "scripts/seed_reader_journey_v2_native_preview.py",
+    "scripts/run_reader_journey_v2_native_real_niujiaokao.py",
+    "scripts/execute_reader_journey_v2_native_niujiaokao.py",
+    "apps/api/tests/test_reader_journey_v2_anti_hardcode_local.py",
+    "apps/desktop/src/components/readerJourney/lensMetricBinding.ts",
+    "apps/api/tests/test_reader_journey_v2_dropoff_risk_local.py",
+    "apps/desktop/src/components/readerJourney/diagnosisBandModel.ts",
+    "docs/reader-journey-v2-general-rule-spec.md",
+    "data/fixtures/reader_journey_v2_general/contrast_pairs.json",
+    "data/fixtures/reader_journey_v2_general/cross_type_matrix.json",
+    "data/fixtures/reader_journey_v2_general/test_set_splits.json",
+    "apps/api/tests/test_reader_journey_v2_general_rules_local.py",
+    "apps/desktop/src/components/readerJourney/hookPayoffLensModel.ts",
+    "apps/desktop/src/components/readerJourney/hook_payoff_lens_semantics_local.test.ts",
+    "apps/api/tests/test_hook_payoff_visualization_semantics_local.py",
+    "apps/desktop/src/components/readerJourney/journeySegmentMarkers.ts",
+    "apps/desktop/src/components/readerJourney/JourneyDiagnosisBand.tsx",
+    "config/scene_evidence_validation.json",
+    "apps/api/app/services/scene_evidence_validation.py",
+    "apps/api/app/services/scene_pipeline.py",
+    "apps/api/app/services/analysis_recovery_center.py",
+    "apps/desktop/src/components/chapterAnalysis/UnifiedAnalysisRecoveryCard.tsx"
+  ],
+  "user_summary": "建立 Reader Journey V2 通用规则规范与作品无关验证体系（对照/变形/退化/跨类型）；单篇小说仅作外部验证，不驱动调参。",
+  "technical_summary": "Scene evidence validation: field classes local/holistic/hybrid; micro/short/medium_long bands; rationale+full-scene multi-factor overbroad; SCENE_BOUNDARY_TOO_BROAD before EVIDENCE_OVERBROAD_REUSE; evidence_remap_repair max 1 no level change; recovery UI drops misleading fix button for non-repairable business errors.",
+  "acceptance_criteria": [
+    "v2 schema validates level fields with program mapped_score",
+    "derived formulas match config weights and fit_to_band",
+    "客厅陷入死寂 merges and does not create independent scene",
+    "question lifecycle statuses explicit without consecutive-no-payoff floor",
+    "diagnosis engine emits primary/secondary/data_quality_issue",
+    "legacy 1.x marked legacy_uncalibrated; API dual-compatible",
+    "six observation lenses single chart default composite",
+    "overlay max two lines; hook/payoff paired no third",
+    "beat auxiliary nodes excluded from main polyline",
+    "valence domain -100..100",
+    "diagnosis band primary/secondary",
+    "legacy uncalibrated banner",
+    "synthetic fixture renamed away from real novel branding; anti-hardcode diagnosis tests",
+    "real 牛角坳 V2 native E2E: rematerialize + model levels + program finalize; banner V2真实正文分析",
+    "awaiting user desktop smoke checklist for CHG-20260721-012",
+    "v2_native 文案为阅读动力且字段为 reading_momentum，不显示阅读牵引/engagement<40",
+    "阶段卡/当前场景/折线/右侧详情与当前镜头字段数值一致",
+    "诊断缺失不默认正常；Beat显示辅助节拍",
+    "v2_native dropoff=100-reading_momentum+惩罚，风险面板含字段/范围/原因/惩罚/终值",
+    "节奏镜头区分 pacing_speed 与 pacing_fit，线段显示加速/减速/变化不明显",
+    "通用规则文档冻结输入/公式/权重/阈值/诊断/fallback/clamp/rounding",
+    "development/holdout/regression 分流；holdout 默认不跑",
+    "单篇实例失败不得触发定向规则修改",
+    "镜头选择器改为内联分段控件，不得用 Popover/fixed 覆盖阶段卡与折线图",
+    "钩子回报绿色实线=钩子强度、紫色虚线=本场回报强度（非累计）",
+    "缺失 hook/payoff 断点显示，禁止 carry-forward 虚假平台",
+    "固定图例始终可见并含非累计说明",
+    "右侧问题生命周期展示 question_id/建立/推进/兑现/状态",
+    "钩子回报主诊断不优先显示推进停滞/张力下降/冲突升级",
+    "短Scene整场证据共享不再误杀",
+    "整体字段整场引用不计入无差别复用主拒绝",
+    "EVIDENCE_OVERBROAD_REUSE需多条件且先区分SCENE_BOUNDARY_TOO_BROAD",
+    "不可修复业务错误不显示修复并继续",
+    "evidence_remap_repair不改level且最多一次"
+  ],
+  "tests": [
+    "pytest apps/api/tests/test_reader_journey_v2_local.py",
+    "pytest apps/api/tests/test_reader_journey_v2_anti_hardcode_local.py",
+    "vitest observation_lenses_v2_local.test.ts",
+    "npm run typecheck",
+    "vitest observation_lenses_v2_local.test.ts (lens binding/terminology/diagnosis/Beat/pacing)",
+    "pytest apps/api/tests/test_reader_journey_v2_dropoff_risk_local.py",
+    "pytest apps/api/tests/test_reader_journey_v2_general_rules_local.py",
+    "vitest observation_lens_selector_inline_local.test.tsx",
+    "pytest apps/api/tests/test_hook_payoff_visualization_semantics_local.py",
+    "vitest hook_payoff_lens_semantics_local.test.ts",
+    "pytest apps/api/tests/test_scene_evidence_validation_local.py",
+    "vitest evidence_recovery_card_local.test.tsx"
+  ],
+  "verification_evidence": [
+    "12 passed local v2 pytest",
+    "version_manager check passed 1.0.3",
+    "change_registry check passed",
+    "git diff --check clean",
+    "16 passed observation lenses local vitest",
+    "npm run typecheck passed",
+    "verification matrix: pytest 18 passed (incl. stagnation/empty-spin/empty-hook/recompute/sqlite legacy)",
+    "verification matrix: vitest 25 passed (15-point lens/chart checklist)",
+    "local SQLite reader_journey_runs contract=1.3 marked legacy_uncalibrated (no model call)",
+    "fixture coupling audit: synthetic preview renamed away from 牛角坳; anti-hardcode pytest 8 passed; page path reads seeded v2 scores/diagnoses (no live derive/diagnose)",
+    "real 牛角坳 V2 native: 9 scenes/3 beats; contract/prompt/formula 2.0; source_mode=v2_native; 9 scene batches + retries ~0.31 CNY; scores/diagnoses program-derived; hand-recalc 3/3 match; ordering 11/12 (elder pacing equal not lower)",
+    "实机问题：各镜头阶段卡仍显示阅读牵引；诊断带S1-S11默认正常与右侧流失风险矛盾；风险trigger仍用engagement<40",
+    "局部测试：vitest 32 passed；pytest dropoff+run_id=2 一致性 6 passed；typecheck/version/registry/diff-check passed；VERSION 1.0.3",
+    "run_id=2（《我不是戏神》第1章）只读校验：DB engagement/hook/payoff/dropoff 与 API scene_nodes 一致；该run仍为contract 1.3无v2_scene_scores，V2原生风险替换仅在source_mode=v2_native/contract2.x生效",
+    "通用规则审计：V2 formula/diagnosis/prompts/lens 无作品名/人物/Scene编号分支；legacy CLUSTER_ANCHOR_TERMS 记为可视化聚类债务不影响 V2 公式",
+    "通用验证：general_rules 11 passed；contrast≥90%；mutation 100%；degradation≥90%；cross-type role invariance；anti-instance tokens；未改权重/阈值",
+    "实机问题：镜头下拉 Popover(fixed/z40) 覆盖阶段卡与折线图",
+    "镜头选择器改为内联 segmented control + 单行说明；vitest inline selector 7 + lenses 32 = 39 passed；1024/1180/1440/1920 布局非重叠断言通过；typecheck/version/registry/diff-check passed",
+    "根因：紫色线已是本场 scores.payoff；平台多为真实重复 mapped 分数；主噪声为全镜头 segment/诊断标签混入推进停滞等",
+    "局部 pytest hook_payoff_visualization_semantics 3 passed",
+    "局部 vitest hook_payoff_lens_semantics 13 passed",
+    "version_manager check 1.0.3",
+    "原规则漏洞：≥4字段相同evidence集合即失败，忽略Scene长度/字段类型/rationale",
+    "run_id=3只读：失败Scene约2段micro，新规则分类ALLOWED_SHARED_OR_VALID（合理共享）",
+    "局部pytest scene_evidence_validation+scene_pipeline 23 passed",
+    "局部vitest evidence_recovery_card 4 passed",
+    "typecheck/version/registry/diff-check passed"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "v1.6/contract 1.3 read-only; v2 fields parallel; no DB migration; no auto reanalysis; hook/payoff presentation-only fix"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-21T12:43:43Z",
+  "updated_at": "2026-07-23T04:43:21Z"
+}

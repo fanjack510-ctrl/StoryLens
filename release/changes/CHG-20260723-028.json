@@ -1,0 +1,103 @@
+{
+  "id": "CHG-20260723-028",
+  "title": "Agent K Result DTO / Projection",
+  "type": "feature",
+  "base_version": "1.0.5",
+  "status": "verified",
+  "include_in_next_release": true,
+  "commits": [
+    {
+      "sha": "002f5ad25ba56c2a6ae48caf4c7e8629a52b11f5",
+      "message": "feat: implement whole book result projections",
+      "primary": true,
+      "multi_change_reason": "integration cherry-pick of Agent K primary onto integration/narrative-phase1d"
+    },
+    {
+      "sha": "70cd54af7c94e5554c2cd03b7619bbe571fea327",
+      "message": "chore: attach CHG-20260723-028 commit metadata",
+      "primary": false,
+      "multi_change_reason": "integration cherry-pick"
+    },
+    {
+      "sha": "849d2a9782b13fd98a5ab71d968ca1ea55237df4",
+      "message": "chore: sync CHG-20260723-028 attached commits",
+      "primary": false,
+      "multi_change_reason": "integration cherry-pick"
+    }
+  ],
+  "modules": [
+    "narrative_core",
+    "desktop/wholeBook"
+  ],
+  "files": [
+    "apps/api/app/narrative_core/services/whole_book_result_projection.py",
+    "apps/api/app/narrative_core/services/whole_book_stage_plan.py",
+    "apps/api/app/routers/whole_book_results.py",
+    "apps/api/tests/test_narrative_phase1d_result_projection.py",
+    "docs/architecture/narrative-intelligence-core/phase1d-result-projection-implementation.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-module-status-aggregation.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-result-api-readonly.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-result-projection-performance.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-result-projection-verification.md",
+    "release/changes/CHG-20260723-028.json"
+  ],
+  "user_summary": "整书结果索引、模块 Envelope 投影与只读 Result API。",
+  "technical_summary": "WholeBookResultIndexService read-only projection; PRODUCT_MODULE_STAGE_DEPENDENCIES for status; Envelope builders for 11 modules; NarrativeProjectionSource inputs; whole_book_results router registered by Integration.",
+  "acceptance_criteria": [
+    "Result Index binds run + snapshot",
+    "Module status covers not_requested/pending/running/partial/completed/failed/stale/blocked",
+    "Engine planning vs product dependency mappings explicitly distinguished",
+    "Envelope schema/version + typed payloads; no full body / raw model JSON",
+    "Read-only Result API registered in main.py OpenAPI",
+    "Directed tests pass without full release gate"
+  ],
+  "tests": [
+    "apps/api/tests/test_narrative_phase1d_result_projection.py",
+    "apps/api/tests/test_narrative_phase1d_integration.py"
+  ],
+  "verification_evidence": [
+    "pytest apps/api/tests/test_narrative_phase1d_result_projection.py -q => passed",
+    "Integration retest: result router OpenAPI + index API",
+    "scripts/version_manager.py check",
+    "scripts/change_registry.py check",
+    "git diff --check"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "In-memory/computed projection only; no new tables."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-23T13:23:33Z",
+  "updated_at": "2026-07-23T15:04:10Z",
+  "parallel_plan": {
+    "role": "agent_k",
+    "branch": "feature/narrative-phase1d-result-projection",
+    "worktree": "D:\\\\Dstorylens-wt-narrative-result-projection",
+    "depends_on": [
+      "CHG-20260723-026"
+    ],
+    "blocks": [
+      "CHG-20260723-030"
+    ],
+    "forbidden": [
+      "real model calls",
+      "open production whole-book run create",
+      "modify product_contract owned by Phase 1D-P without Integration",
+      "VERSION bump",
+      "push/build/publish"
+    ],
+    "file_ownership": "docs/architecture/narrative-intelligence-core/phase1d-parallel-file-ownership.json",
+    "integration_issues": [
+      "RESOLVED: Register apps/api/app/routers/whole_book_results.py in apps/api/app/main.py (CHG-030)"
+    ]
+  }
+}

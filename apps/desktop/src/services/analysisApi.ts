@@ -1,11 +1,42 @@
-import { api, getApiBase } from "./apiClient";
+import { api, ApiError, getApiBase, waitForApiReady } from "./apiClient";
 import { normalizeInvocations } from "./normalizeInvocations";
 import type { Run, RunResults, Scene, SceneParagraphs, SceneResultItem } from "../types";
 export const analysisApi = {
   preflight: (payload: any) => api<any>("/api/v1/analysis-runs/preflight", {
     method: "POST", body: JSON.stringify(payload),
   }),
-  runs: () => api<Run[]>("/api/v1/analysis-runs"),
+  runs: async (params?: { book_id?: number }) => {
+    // Wait for Sidecar base before starting the list timeout clock.
+    await waitForApiReady(60_000);
+    const LIST_TIMEOUT_MS = 10_000;
+    const qs =
+      params?.book_id != null && Number.isFinite(params.book_id)
+        ? `?book_id=${encodeURIComponent(String(params.book_id))}`
+        : "";
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      return await Promise.race([
+        api<Run[]>(`/api/v1/analysis-runs${qs}`),
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(() => {
+            reject(
+              new ApiError(
+                "TASK_LIST_TIMEOUT",
+                "任务列表加载超时，请重试。",
+                0,
+                {},
+                undefined,
+                true,
+                "请稍后重试；若刚启动应用，请等待本地服务就绪。",
+              ),
+            );
+          }, LIST_TIMEOUT_MS);
+        }),
+      ]);
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  },
   run: (id: number) => api<Run>(`/api/v1/analysis-runs/${id}`),
   results: (runId: number) =>
     api<RunResults>(`/api/v1/analysis-runs/${runId}/results`),
@@ -26,6 +57,25 @@ export const analysisApi = {
       method: "POST",
       body: JSON.stringify(payload),
     }),
+  executionPlan: (mode: string = "BALANCED") =>
+    api<{
+      mode: string;
+      selected_provider: string;
+      selected_model: string;
+      configured: boolean;
+      credential_available: boolean;
+      connection_verified: boolean;
+      supported_stages: string[];
+      missing_stages: string[];
+      blockers: string[];
+      unsupported_reason: string | null;
+      user_message: string | null;
+      can_start: boolean;
+      health_state: string | null;
+      health_source: string | null;
+      provider_state_version: string | null;
+      capability_schema_version: string;
+    }>(`/api/v1/analysis-execution-plan?mode=${encodeURIComponent(mode)}`),
   retry: (run: number) =>
     api(`/api/v1/analysis-runs/${run}/retry`, { method: "POST" }),
   resumeSceneAnalysis: (
@@ -188,6 +238,22 @@ export const analysisApi = {
     api<any>(`/api/v1/boundary-reviews/${review}/confirm`, {
       method: "POST", body: JSON.stringify({ confirmed_by }),
     }),
+  finalBoundaryProposal: (review: number) =>
+    api<any>(`/api/v1/boundary-reviews/${review}/final-proposal`),
+  confirmFinalBoundaryProposal: (
+    review: number,
+    payload: {
+      confirmed_by: string;
+      proposal_fingerprint: string;
+      client_request_id?: string;
+    },
+  ) =>
+    api<any>(`/api/v1/boundary-reviews/${review}/confirm-final-proposal`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  cancelBoundaryReview: (review: number) =>
+    api(`/api/v1/boundary-reviews/${review}/cancel`, { method: "POST" }),
   readerJourneyPreflight: (runId: number, payload?: { cloud_consent?: boolean }) =>
     api<import("../types").ReaderJourneyPreflight>(
       `/api/v1/analysis-runs/${runId}/reader-journey/preflight`,
@@ -206,10 +272,18 @@ export const analysisApi = {
       `/api/v1/analysis-runs/${runId}/reader-journey`,
       { method: "POST", body: JSON.stringify({ confirmed: true, ...payload }) },
     ),
-  readerJourney: (runId: number) =>
-    api<import("../types").ReaderJourneyResult | null>(
-      `/api/v1/analysis-runs/${runId}/reader-journey`,
-    ),
+  readerJourney: (
+    runId: number,
+    scope?: { bookId?: number | null; chapterId?: number | null },
+  ) => {
+    const params = new URLSearchParams();
+    if (scope?.bookId) params.set("book_id", String(scope.bookId));
+    if (scope?.chapterId) params.set("chapter_id", String(scope.chapterId));
+    const q = params.toString();
+    return api<import("../types").ReaderJourneyResult | null>(
+      `/api/v1/analysis-runs/${runId}/reader-journey${q ? `?${q}` : ""}`,
+    );
+  },
   readerJourneyProgress: (journeyRunId: number) =>
     api<import("../types").ReaderJourneyProgress>(
       `/api/v1/reader-journey-runs/${journeyRunId}/progress`,

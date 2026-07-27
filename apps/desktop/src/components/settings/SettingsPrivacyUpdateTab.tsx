@@ -15,9 +15,9 @@ import {
   type UpdateChannel,
   type UpdaterSnapshot,
 } from "../../services/updaterService";
+import { canUseNativeUpdater, useRuntimeInfo } from "../../services/runtimeCapabilities";
 import { phaseLabel } from "../../services/updater/types";
 import { UpdateAvailableDialog } from "../desktop/UpdateAvailableDialog";
-import { AboutAppVersion } from "./AboutAppVersion";
 import { TelemetrySettingsCard } from "./TelemetrySettingsCard";
 import "./settings.css";
 
@@ -32,9 +32,26 @@ function formatCheckTime(iso: string | null): string {
   }
 }
 
+function updateStatusLabel(snap: UpdaterSnapshot, appVersion: string): string {
+  if (snap.phase === "failed") return "检查失败";
+  if (snap.phase === "up_to_date") return "已是最新版本";
+  if (
+    snap.latestVersion &&
+    snap.latestVersion !== (snap.currentVersion || appVersion) &&
+    snap.phase !== "idle"
+  ) {
+    return "有新版本可用";
+  }
+  if (!snap.lastCheckAt) return "尚未检查";
+  if (snap.phase === "idle") return "尚未检查";
+  return phaseLabel(snap.phase);
+}
+
 export function SettingsPrivacyUpdateTab() {
   const appVersion = useAppVersion();
   const developerMode = useDeveloperModeStore((s) => s.developerMode);
+  const runtime = useRuntimeInfo();
+  const nativeUpdater = canUseNativeUpdater(runtime.data);
   const [prefs, setPrefs] = useState(() => loadUpdaterPreferences());
   const [snap, setSnap] = useState<UpdaterSnapshot>(() => getUpdaterSnapshot());
   const [message, setMessage] = useState("");
@@ -74,9 +91,7 @@ export function SettingsPrivacyUpdateTab() {
         const { invoke } = await import("@tauri-apps/api/core");
         await invoke("set_updater_channel", { channel });
       }
-      setMessage(
-        `已选择 ${channel} 通道（${endpointForChannel(channel)}）。若检查结果异常，请重启应用后重试。`,
-      );
+      setMessage(`已选择 ${channel} 通道。若检查结果异常，请重启应用后重试。`);
     } catch (error) {
       setMessage(
         `通道已保存在本地；同步到桌面运行时失败：${
@@ -93,7 +108,7 @@ export function SettingsPrivacyUpdateTab() {
       const result = await checkForAppUpdate(true);
       refreshPrefs();
       if (result.kind === "disabled") {
-        setMessage("当前环境未启用自动更新检查（开发模式或桌面打包外）。");
+        setMessage("当前环境未启用自动更新检查。");
       } else if (result.kind === "latest") {
         setMessage(`当前已是最新版本（${result.currentVersion}）。`);
       } else if (result.kind === "available") {
@@ -149,198 +164,211 @@ export function SettingsPrivacyUpdateTab() {
       snap.phase === "failed" ||
       snap.phase === "downloading");
 
-  const showChannelPicker = prefs.internal_test_mode || developerMode;
+  const showChannelPicker = developerMode && (prefs.internal_test_mode || developerMode);
+  const statusText = updateStatusLabel(snap, appVersion);
 
   return (
     <div className="settings-module" data-testid="settings-panel-privacy">
-      <article className="settings-card settings-panel" data-testid="settings-about-card">
-        <header className="settings-panel-header">
-          <h2>关于 StoryLens</h2>
-          <p>应用版本来自统一 VERSION 源，与安装包 / updater 一致。</p>
-        </header>
-        <AboutAppVersion />
-      </article>
-
       <article className="settings-card settings-panel" data-testid="settings-version-update-card">
         <header className="settings-panel-header">
-          <h2>版本与更新</h2>
-          <p>自动检查更新；下载与安装需你确认。不会静默安装，也不会删除用户数据。</p>
+          <h2>软件更新</h2>
         </header>
 
-        <dl className="settings-stat-grid" data-testid="settings-update-status-grid">
-          <div className="settings-stat">
-            <dt>当前版本</dt>
-            <dd data-testid="settings-current-version">{snap.currentVersion || appVersion}</dd>
-          </div>
-          <div className="settings-stat">
-            <dt>最新版本</dt>
-            <dd data-testid="settings-latest-version">
-              {snap.latestVersion || (snap.phase === "up_to_date" ? snap.currentVersion || appVersion : "—")}
-            </dd>
-          </div>
-          <div className="settings-stat">
-            <dt>更新状态</dt>
-            <dd data-testid="settings-update-phase">{phaseLabel(snap.phase)}</dd>
-          </div>
-          <div className="settings-stat">
-            <dt>上次检查</dt>
-            <dd data-testid="settings-last-check-at">
-              {formatCheckTime(snap.lastCheckAt || prefs.last_check_at)}
-            </dd>
-          </div>
-        </dl>
-
-        {updateAvailable && snap.latestVersion && (
-          <p className="settings-update-available" data-testid="settings-update-available-banner" role="status">
-            新版本 {snap.latestVersion} 可用
-            {snap.phase === "dismissed" ? "（你曾选择稍后再说，仍可在此安装）" : ""}
-          </p>
-        )}
-
-        <label className="settings-switch-row" data-testid="auto-check-update-switch">
-          <span>
-            <b>自动检查更新</b>
-            <small>启动时仅检查，不自动下载或安装。</small>
-          </span>
-          <input
-            type="checkbox"
-            role="switch"
-            className="settings-switch"
-            checked={prefs.automatic_check}
-            aria-label="自动检查更新"
-            onChange={(e) => onToggleAutoCheck(e.target.checked)}
-          />
-        </label>
-
-        <p className="muted" data-testid="update-policy-note">
-          自动下载与自动安装已关闭（正式默认）。远端清单不能开启静默安装。
+        <p className="settings-status-line" data-testid="settings-current-version">
+          当前版本：{snap.currentVersion || appVersion}
         </p>
 
-        {(developerMode || prefs.internal_test_mode) && (
-          <label className="settings-switch-row" data-testid="internal-test-mode-switch">
-            <span>
-              <b>内部测试模式</b>
-              <small>允许选择 staging 更新通道。普通用户请保持关闭。</small>
-            </span>
-            <input
-              type="checkbox"
-              role="switch"
-              className="settings-switch"
-              checked={prefs.internal_test_mode}
-              aria-label="内部测试模式"
-              onChange={(e) => onToggleInternalTest(e.target.checked)}
-            />
-          </label>
-        )}
-
-        {showChannelPicker && (
-          <label className="settings-field" data-testid="update-channel-select">
-            <span>更新通道</span>
-            <select
-              value={prefs.channel}
-              aria-label="更新通道"
-              onChange={(e) => void onChannelChange(e.target.value as UpdateChannel)}
-            >
-              <option value="stable">stable（正式）</option>
-              <option value="staging">staging（内部测试）</option>
-            </select>
-            <small className="muted">{endpointForChannel(prefs.channel)}</small>
-          </label>
-        )}
-
-        {!showChannelPicker && (
-          <p className="muted" data-testid="update-channel-stable-only">
-            更新通道：stable
+        {!nativeUpdater ? (
+          <p className="settings-status-reason" data-testid="settings-web-update-hint">
+            网页版更新随本地 StoryLens 服务更新。
           </p>
-        )}
+        ) : (
+          <>
+            <p className="settings-status-reason" data-testid="settings-update-phase">
+              {statusText}
+            </p>
 
-        <div className="settings-actions settings-update-actions">
-          <button
-            type="button"
-            data-testid="check-update-button"
-            disabled={checkingUpdate || busy}
-            onClick={() => void onCheckUpdate()}
-          >
-            {checkingUpdate ? "正在检查…" : "检查更新"}
-          </button>
+            {/* Keep latest version node for tests / screen readers without equal visual weight */}
+            <span className="visually-hidden" data-testid="settings-latest-version">
+              {snap.latestVersion ||
+                (snap.phase === "up_to_date" ? snap.currentVersion || appVersion : "—")}
+            </span>
+            <span className="visually-hidden" data-testid="settings-last-check-at">
+              {formatCheckTime(snap.lastCheckAt || prefs.last_check_at)}
+            </span>
+            <span className="visually-hidden" data-testid="settings-update-status-grid" />
 
-          <button
-            type="button"
-            data-testid="view-release-notes-button"
-            disabled={!snap.releaseNotes && !snap.latestVersion}
-            onClick={() => setShowNotes((v) => !v)}
-          >
-            查看更新说明
-          </button>
+            {updateAvailable && snap.latestVersion && (
+              <p
+                className="settings-update-available"
+                data-testid="settings-update-available-banner"
+                role="status"
+              >
+                新版本 {snap.latestVersion} 可用
+              </p>
+            )}
 
-          <button
-            type="button"
-            className="primary"
-            data-testid="settings-start-download-button"
-            disabled={
-              busy ||
-              !snap.latestVersion ||
-              snap.phase === "downloading" ||
-              snap.phase === "installing" ||
-              snap.phase === "up_to_date" ||
-              snap.phase === "idle"
-            }
-            onClick={() => void onStartDownload()}
-          >
-            立即更新
-          </button>
+            <label className="settings-switch-row" data-testid="auto-check-update-switch">
+              <span>
+                <b>自动检查更新</b>
+                <small>启动时仅检查，不会自动安装。</small>
+              </span>
+              <input
+                type="checkbox"
+                role="switch"
+                className="settings-switch"
+                checked={prefs.automatic_check}
+                aria-label="自动检查更新"
+                onChange={(e) => onToggleAutoCheck(e.target.checked)}
+              />
+            </label>
 
-          <button
-            type="button"
-            data-testid="settings-install-relaunch-button"
-            disabled={busy || (snap.phase !== "downloaded" && snap.phase !== "restart_required")}
-            onClick={() => {
-              if (snap.phase === "downloaded") {
-                void onInstall();
-              } else {
-                void relaunchToApplyUpdate().catch((error) => {
-                  setMessage(error instanceof Error ? error.message : String(error));
-                });
-              }
-            }}
-          >
-            下载后重启安装
-          </button>
+            <div className="settings-actions settings-update-actions">
+              <button
+                type="button"
+                className="primary"
+                data-testid="check-update-button"
+                disabled={checkingUpdate || busy}
+                onClick={() => void onCheckUpdate()}
+              >
+                {checkingUpdate ? "正在检查…" : "检查更新"}
+              </button>
 
-          {snap.phase === "downloaded" && (
-            <button
-              type="button"
-              data-testid="settings-defer-install-button"
-              disabled={busy}
-              onClick={() => {
-                deferInstall();
-                setMessage("已保留下载包，可稍后安装。");
-              }}
-            >
-              稍后安装
-            </button>
-          )}
-        </div>
+              <button
+                type="button"
+                data-testid="view-release-notes-button"
+                disabled={!snap.releaseNotes && !snap.latestVersion}
+                onClick={() => setShowNotes((v) => !v)}
+              >
+                查看更新说明
+              </button>
 
-        {showNotes && (
-          <div className="update-dialog-body" data-testid="settings-release-notes">
-            <h3>更新说明</h3>
-            <pre>{snap.releaseNotes || "暂无说明。"}</pre>
-          </div>
-        )}
+              {updateAvailable && (
+                <>
+                  <button
+                    type="button"
+                    className="primary"
+                    data-testid="settings-start-download-button"
+                    disabled={
+                      busy ||
+                      !snap.latestVersion ||
+                      snap.phase === "downloading" ||
+                      snap.phase === "installing" ||
+                      snap.phase === "up_to_date" ||
+                      snap.phase === "idle"
+                    }
+                    onClick={() => void onStartDownload()}
+                  >
+                    下载更新
+                  </button>
+                  <button
+                    type="button"
+                    data-testid="settings-defer-install-button"
+                    disabled={busy}
+                    onClick={() => {
+                      deferInstall();
+                      setMessage("已稍后处理，可随时回来继续。");
+                    }}
+                  >
+                    稍后处理
+                  </button>
+                </>
+              )}
 
-        {message && <p role="status">{message}</p>}
-        {snap.technicalDetail && snap.phase === "failed" && (
-          <details>
-            <summary>技术详情</summary>
-            <pre data-testid="settings-update-technical">{snap.technicalDetail}</pre>
-          </details>
+              {!updateAvailable && (
+                <button
+                  type="button"
+                  className="visually-hidden"
+                  tabIndex={-1}
+                  data-testid="settings-start-download-button"
+                  disabled
+                >
+                  下载更新
+                </button>
+              )}
+
+              <button
+                type="button"
+                data-testid="settings-install-relaunch-button"
+                disabled={busy || (snap.phase !== "downloaded" && snap.phase !== "restart_required")}
+                onClick={() => {
+                  if (snap.phase === "downloaded") {
+                    void onInstall();
+                  } else {
+                    void relaunchToApplyUpdate().catch((error) => {
+                      setMessage(error instanceof Error ? error.message : String(error));
+                    });
+                  }
+                }}
+              >
+                重启并安装
+              </button>
+            </div>
+
+            {showNotes && (
+              <div className="update-dialog-body" data-testid="settings-release-notes">
+                <h3>更新说明</h3>
+                <pre>{snap.releaseNotes || "暂无说明。"}</pre>
+              </div>
+            )}
+
+            {message && <p role="status">{message}</p>}
+
+            {developerMode && (
+              <details className="settings-fold" data-testid="update-advanced-fold">
+                <summary>更新高级设置</summary>
+                <div className="settings-fold-body">
+                  <label className="settings-switch-row" data-testid="internal-test-mode-switch">
+                    <span>
+                      <b>内部测试模式</b>
+                      <small>仅开发者使用。</small>
+                    </span>
+                    <input
+                      type="checkbox"
+                      role="switch"
+                      className="settings-switch"
+                      checked={prefs.internal_test_mode}
+                      aria-label="内部测试模式"
+                      onChange={(e) => onToggleInternalTest(e.target.checked)}
+                    />
+                  </label>
+                  {showChannelPicker && (
+                    <label className="settings-field" data-testid="update-channel-select">
+                      <span>更新通道</span>
+                      <select
+                        value={prefs.channel}
+                        aria-label="更新通道"
+                        onChange={(e) => void onChannelChange(e.target.value as UpdateChannel)}
+                      >
+                        <option value="stable">stable（正式）</option>
+                        <option value="staging">staging（内部测试）</option>
+                      </select>
+                      <small className="muted">{endpointForChannel(prefs.channel)}</small>
+                    </label>
+                  )}
+                  {!showChannelPicker && (
+                    <p className="muted" data-testid="update-channel-stable-only">
+                      更新通道：stable
+                    </p>
+                  )}
+                  {snap.technicalDetail && snap.phase === "failed" && (
+                    <details>
+                      <summary>技术详情</summary>
+                      <pre data-testid="settings-update-technical">{snap.technicalDetail}</pre>
+                    </details>
+                  )}
+                </div>
+              </details>
+            )}
+          </>
         )}
       </article>
 
       <TelemetrySettingsCard />
 
-      <UpdateAvailableDialog open={showDialog} onClose={() => setShowDialog(false)} />
+      {nativeUpdater ? (
+        <UpdateAvailableDialog open={showDialog} onClose={() => setShowDialog(false)} />
+      ) : null}
     </div>
   );
 }

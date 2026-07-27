@@ -1,4 +1,4 @@
-import { getApiBase, setApiBase } from "./apiClient";
+import { setApiBase, refreshApiBaseFromTauri } from "./apiClient";
 
 export type BackendUiStatus =
   | { state: "browser_dev" }
@@ -33,7 +33,11 @@ export async function bootstrapDesktopRuntime(
   onStatus?: (status: BackendUiStatus) => void,
 ): Promise<BackendUiStatus> {
   if (!isTauriRuntime()) {
-    // Browser / Vitest: API is started separately (start-dev.ps1). Do not block.
+    // Production SPA served by FastAPI: same-origin relative API paths.
+    if (!import.meta.env.DEV) {
+      setApiBase("");
+    }
+    // Browser / Vitest: API is started separately (start-dev.ps1 / start_storylens_web.ps1).
     onStatus?.({ state: "browser_dev" });
     return { state: "browser_dev" };
   }
@@ -80,13 +84,27 @@ export async function bootstrapDesktopRuntime(
 
 export async function listenBackendEvents(
   onError: (message: string) => void,
+  onReady?: (apiBase: string) => void,
 ): Promise<() => void> {
   if (!isTauriRuntime()) return () => undefined;
   const { listen } = await import("@tauri-apps/api/event");
-  const unlisten = await listen<string>("backend-error", (event) => {
+  const unlistenError = await listen<string>("backend-error", (event) => {
     onError(event.payload || "本地分析服务异常退出。");
   });
-  return unlisten;
+  const unlistenReady = await listen<string>("backend-ready", async (event) => {
+    const payload = typeof event.payload === "string" ? event.payload.trim() : "";
+    if (payload) {
+      setApiBase(payload);
+      onReady?.(payload);
+      return;
+    }
+    const refreshed = await refreshApiBaseFromTauri();
+    if (refreshed) onReady?.(refreshed);
+  });
+  return () => {
+    unlistenError();
+    unlistenReady();
+  };
 }
 
 export { isTauriRuntime };

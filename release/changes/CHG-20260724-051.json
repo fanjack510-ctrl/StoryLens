@@ -1,0 +1,87 @@
+{
+  "id": "CHG-20260724-051",
+  "title": "Phase 2B-R1 Live Transport and Persistence Binding Fix",
+  "type": "fix",
+  "base_version": "1.0.5",
+  "status": "tested",
+  "include_in_next_release": true,
+  "commits": [
+    {
+      "sha": "f35690c96105486713799432658cd07c5c2cd992",
+      "message": "fix: use real transport and orm persistence for live runs",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "c74f4d9e80f01cee89b63dbdf0a45de58a7ddbdb",
+      "message": "docs: mark CHG-20260724-051 tested after transport/persistence fix",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "06118aa834ea617688c280d4428ab5b6d6793ca1",
+      "message": "docs: sync CHG-20260724-051 commit attachments",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "d5fdca95f04c24d32599aa36c47d20cf75198985",
+      "message": "docs: complete CHG-20260724-051 tested metadata",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "e090534b0d6cecff1b849c7b9aa8c5d9550a7eb9",
+      "message": "docs: attach final CHG-20260724-051 metadata commit",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "e429569cf7a73529726feca659edfbabd091e863",
+      "message": "docs: retarget CHG-20260724-051 commits to integration cherry-picks",
+      "primary": false,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "narrative_core",
+    "private_engine_lab"
+  ],
+  "files": [
+    "apps/api/app/narrative_core/services/provider_transport_kind.py",
+    "apps/api/app/narrative_core/services/whole_book_provider_gateway.py",
+    "apps/api/app/narrative_core/services/private_lab_service_adapters.py",
+    "apps/api/app/narrative_core/services/private_lab_run_executor.py",
+    "apps/api/app/narrative_core/services/private_whole_book_live_readiness_runtime.py",
+    "apps/api/tests/test_narrative_phase2br1_live_transport_persistence.py"
+  ],
+  "user_summary": "Refuse Capturing on authorized Live, inject ORM persistence, and fail-closed Stage/Run completion without real usage/evidence.",
+  "technical_summary": "Failed Live Smoke run_id=1 reused Capturing stub (24/12) via _live_gateway; executor TypeError became port_only; Stage/Run completed with 0 Evidence. Fix: ProviderTransportKind; Live rejects Capturing; REAL_HTTP when transport=None; FakeHttpProviderTransport for tests; Live fail-closed without ORM/evidence/provider_request_id; usage bound to Stage. Private@51d8defc5c3842ec1aca99f424d4f6335a45a462",
+  "acceptance_criteria": [
+    "Live Capturing rejected; Fake HTTP once with non-stub tokens; Live port_only forbidden; completion requires orm_written+evidence+provider_request_id"
+  ],
+  "tests": [
+    "apps/api/tests/test_narrative_phase2br1_live_transport_persistence.py",
+    "apps/api/tests/test_narrative_phase2br1_live_network_gate.py",
+    "apps/api/tests/test_narrative_phase2br1_provider_context_cost.py"
+  ],
+  "verification_evidence": [
+    "Public 101 passed directed suite. Private 36 passed. Zero real Provider HTTP. Failed ready DB run_id=1 retained read-only."
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "No schema/migration. Failed live-smoke ready DB retained; new retry DB prepared separately."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-24T05:58:03Z",
+  "updated_at": "2026-07-24T06:11:27Z"
+}

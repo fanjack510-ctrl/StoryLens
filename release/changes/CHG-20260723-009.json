@@ -1,0 +1,55 @@
+{
+  "id": "CHG-20260723-009",
+  "title": "Fix Reader Journey PNG export after more-menu removal",
+  "type": "fix",
+  "base_version": "1.0.4",
+  "status": "released",
+  "include_in_next_release": false,
+  "commits": [
+    {
+      "sha": "2ad6f3ce733023db1dcad5e795a4610561289e48",
+      "message": "fix: restore Reader Journey PNG export after more-menu removal (CHG-20260723-009).",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "desktop-shell",
+    "reader-journey"
+  ],
+  "files": [
+    "apps/desktop/src/pages/BookRoutePage.tsx",
+    "apps/desktop/src/pages/AnalysisResultsShellPage.tsx",
+    "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.tsx"
+  ],
+  "user_summary": "在书库/结果页「更多」中导出旅程 PNG 时，不再依赖已移除的图表更多操作菜单，直接触发导出。",
+  "technical_summary": "After CHG-006 removed journey-more-chart-settings, book/results more-menu export still clicked the removed control. Wire export to a hidden journey-export-png hook that calls handleExport; drop the obsolete more-menu open step.",
+  "acceptance_criteria": [
+    "book-more-export-png / results-more-export-png click journey-export-png only",
+    "No journey-more-chart-settings restored"
+  ],
+  "tests": [
+    "npm run test -- --run (apps/desktop)",
+    "playwright: smoke/scroll/chapter e2e"
+  ],
+  "verification_evidence": [
+    "Phase A vitest 877 pass; book/results more-menu export clicks journey-export-png only; no more-menu restored",
+    "1.0.5 Phase A engineering gates (not per-item user manual acceptance): pytest 760 passed/50 skipped; vitest 877 passed; typecheck; lint; frontend build; check_project; template governance; playwright smoke+scroll+chapter; focused theme/lens/comparison vitest."
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "No DB change"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-23T05:07:01Z",
+  "updated_at": "2026-07-23T05:40:48Z"
+}

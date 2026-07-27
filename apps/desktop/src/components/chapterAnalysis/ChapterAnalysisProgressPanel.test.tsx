@@ -35,7 +35,12 @@ vi.mock("../../services/analysisRecoveryApi", () => ({
           user_label: "Scene分析已完成",
         },
       ],
-      recommended_actions: [],
+      recommended_actions: [
+        {
+          action: "fix_and_continue",
+          label: "继续生成阅读旅程",
+        },
+      ],
       resume_stage: "reader_journey",
       will_reuse_artifacts: ["AnalysisRun", "SceneArtifacts"],
       will_create_entities: ["ReaderJourneyRun"],
@@ -109,7 +114,7 @@ describe("ChapterAnalysisProgressPanel", () => {
     expect(screen.getByTestId("chapter-analysis-status-badge")).toHaveTextContent("正在分析本章");
     expect(screen.getByTestId("chapter-analysis-current-work")).toHaveTextContent("正在分析场景");
     expect(screen.getByTestId("chapter-analysis-run-id")).toHaveTextContent("#55");
-    expect(screen.getByTestId("chapter-analysis-count")).toHaveTextContent("5 / 14");
+    expect(screen.getByTestId("chapter-analysis-count")).toHaveTextContent("场景 5 / 14");
     expect(screen.queryByText(/invocation/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Scene Analysis/i)).not.toBeInTheDocument();
   });
@@ -145,7 +150,7 @@ describe("ChapterAnalysisProgressPanel", () => {
         />,
     );
     const cta = screen.getByTestId("chapter-analysis-open-results");
-    expect(cta).toHaveTextContent("查看分析结果");
+    expect(cta).toHaveTextContent("查看场景结果");
     expect(screen.getByTestId("chapter-analysis-success")).toHaveTextContent("分析完成");
     fireEvent.click(cta);
     expect(onViewResults).toHaveBeenCalled();
@@ -162,9 +167,10 @@ describe("ChapterAnalysisProgressPanel", () => {
       />,
     );
     expect(await screen.findByTestId("unified-recovery-card")).toBeInTheDocument();
-    expect(screen.getByTestId("unified-recovery-fix-continue")).toHaveTextContent(
-      "修复并继续",
+    expect(await screen.findByTestId("chapter-analysis-continue-journey")).toHaveTextContent(
+      "继续生成阅读旅程",
     );
+    expect(screen.getByTestId("chapter-analysis-journey-pending")).toBeInTheDocument();
     expect(screen.queryByText("分析全部完成")).not.toBeInTheDocument();
   });
 

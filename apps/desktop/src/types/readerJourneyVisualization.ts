@@ -15,6 +15,9 @@ export type JourneyCurvePoint = {
   value?: number;
   start?: number;
   end?: number;
+  /** When false, Beat auxiliary points are excluded from equal-weight main polyline. */
+  include_in_main_curve?: boolean;
+  node_type?: "scene" | "beat";
 };
 
 export type JourneyPhaseVisualization = {
@@ -97,6 +100,12 @@ export type JourneyMarker = {
   suppression_reason?: string;
 };
 
+export type JourneyRiskPenalty = {
+  code: string;
+  amount: number;
+  label?: string;
+};
+
 export type JourneyRiskInterval = {
   risk_type: string;
   start_scene_ordinal: number;
@@ -107,6 +116,10 @@ export type JourneyRiskInterval = {
   needs_review?: boolean;
   question?: string;
   strength?: number;
+  /** V2 dropoff panel: field used for the formula (e.g. reading_momentum). */
+  field_used?: string;
+  penalties?: JourneyRiskPenalty[];
+  final_risk?: number;
 };
 
 export type JourneySceneNodeScores = {
@@ -122,6 +135,14 @@ export type JourneySceneNodeScores = {
   valence_end: number;
   arousal_start: number;
   arousal_end: number;
+  /** Optional v2 derived / mapped fields (absent on legacy payloads). */
+  reading_momentum?: number;
+  plot_progress?: number;
+  reading_tension?: number;
+  pacing_speed?: number;
+  pacing_fit?: number;
+  emotional_investment?: number;
+  clarity?: number;
 };
 
 export type JourneyReaderQuestionItem = {
@@ -239,6 +260,15 @@ export type JourneySceneNode = {
   primary_payoff: JourneyPayoffHookItem | null;
   primary_hook: JourneyPayoffHookItem | null;
   primary_risk: JourneyRiskPoint | null;
+  /** Optional v2 presentation fields (legacy payloads omit these). */
+  node_type?: "scene" | "beat";
+  include_in_main_curve?: boolean;
+  include_in_chapter_mean?: boolean;
+  scene_role?: string;
+  primary_diagnosis?: string | null;
+  secondary_diagnoses?: string[];
+  positive_mechanism?: string | null;
+  data_quality_issue?: string | null;
 };
 
 export type JourneyChapterSummary = {
@@ -294,6 +324,9 @@ export type JourneyCalibrationStatus = {
   scene_contract_version?: string;
   scene_prompt_version?: string;
   planner_version?: string;
+  formula_version?: string;
+  source_mode?: string;
+  display_banner?: string;
   semantic_source?: string;
   calibrated?: boolean;
   latest_audit?: Record<string, unknown>;
@@ -341,4 +374,20 @@ export type ReaderJourneyVisualization = {
   risk_intervals: JourneyRiskInterval[];
   formula_versions: JourneyFormulaVersions;
   calibration_status: JourneyCalibrationStatus;
+  /** V2 question lifecycle records (presentation); absent on legacy. */
+  question_lifecycle?: Array<{
+    question_id: string;
+    question_text: string;
+    setup_scene: number;
+    development_scenes: number[];
+    payoff_scene: number | null;
+    status: string;
+    strength?: number;
+  }>;
+  /** Unified NarrativeLoopView projection (additive; absent on older cached payloads). */
+  narrative_loops?: Array<Record<string, unknown>>;
+  narrative_loop_risks?: Array<Record<string, unknown>>;
+  scene_payoff_claims?: Record<string, Record<string, unknown>>;
+  narrative_loop_consistency?: Record<string, unknown>;
+  narrative_loop_view_version?: string;
 };

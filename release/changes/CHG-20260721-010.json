@@ -1,0 +1,83 @@
+{
+  "id": "CHG-20260721-010",
+  "title": "Fix provider HTTP error recovery and pipeline feedback",
+  "type": "fix",
+  "base_version": "1.0.3",
+  "status": "released",
+  "include_in_next_release": false,
+  "commits": [
+    {
+      "sha": "c8bde44d3b0fc22a1abdc8c767618e1833b346ee",
+      "message": "Fix provider error recovery and pipeline feedback",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "1ad88c92de1019340f2dbf28d858a9d996f66a0b",
+      "message": "Record CHG-20260721-010 as tested for next release pool",
+      "primary": false,
+      "multi_change_reason": "registry metadata update after implementation commit"
+    },
+    {
+      "sha": "8dd84c91cef923c5fcfb07b4516bb2e7fb72c0ec",
+      "message": "Fix CHG-20260721-010 user_summary encoding",
+      "primary": false,
+      "multi_change_reason": "encoding fix for registry user_summary"
+    }
+  ],
+  "modules": [
+    "apps/api",
+    "apps/desktop"
+  ],
+  "files": [
+    "apps/api/app/model_gateway/provider_errors.py",
+    "apps/api/app/model_gateway/base.py",
+    "apps/api/app/model_gateway/transport_retry.py",
+    "apps/api/app/model_gateway/providers/openai_compatible.py",
+    "apps/api/app/services/analysis_recovery_center.py",
+    "apps/api/app/services/run_scoped_budget_auth.py",
+    "apps/api/app/services/scene_pipeline.py",
+    "apps/api/app/services/structured_output.py",
+    "apps/api/app/api/v1/analysis_recovery.py",
+    "apps/desktop/src/components/chapterAnalysis/UnifiedAnalysisRecoveryCard.tsx",
+    "apps/desktop/src/services/analysisRecoveryApi.ts",
+    "apps/api/tests/test_provider_http_error_recovery.py",
+    "apps/desktop/src/components/chapterAnalysis/UnifiedAnalysisRecoveryCard.test.tsx"
+  ],
+  "user_summary": "场景边界 PROVIDER_HTTP_ERROR 后可正确恢复：保留结构化错误、限制自动重试、修复并继续有反馈，且不再把阅读旅程未到阶段当作根因。",
+  "technical_summary": "PROVIDER_HTTP_ERROR (real incident: HTTP 429 rate limit on boundary_detection) lacked structured error persistence UX, unified recover never resumed boundary_detection (only incremented recovery_attempts), and skip journey check was shown as root failure. Added provider HTTP error snapshot fields/categories, capped auto(3)/manual(5) recovery, wired boundary checkpoint resume, and fixed recovery card feedback/copy.",
+  "acceptance_criteria": [
+    "Non-retryable HTTP stops auto resume",
+    "Retryable HTTP auto max 3; manual max 5",
+    "boundary_detection resume from checkpoints",
+    "Fix-and-continue shows loading and real reason",
+    "Tech details collapsed with HTTP fields"
+  ],
+  "tests": [
+    "pytest apps/api/tests/test_provider_http_error_recovery.py",
+    "pytest apps/api/tests/test_phase_1c_a5.py",
+    "pytest .../test_defect_canary_009 (401/403/429/5xx)",
+    "pytest apps/api/tests/test_unified_analysis_recovery_center.py",
+    "vitest UnifiedAnalysisRecoveryCard.test.tsx",
+    "npm run typecheck"
+  ],
+  "verification_evidence": [
+    "Installed DB run_id=2: HTTP 429 Too Many Requests; transport 3 attempts; recovery_attempts=20 from unified recover noop loop; provider_request_id=null. Local: 47 pytest passed; 9 vitest passed; version check 1.0.3; change_registry check passed; git diff --check on touched files passed."
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "P1",
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-21T10:41:24Z",
+  "updated_at": "2026-07-23T04:43:20Z"
+}

@@ -1,0 +1,102 @@
+{
+  "id": "CHG-20260723-024",
+  "title": "Agent I: Frontend Capability Client / Pro presentation",
+  "type": "feature",
+  "base_version": "1.0.5",
+  "status": "verified",
+  "include_in_next_release": true,
+  "commits": [
+    {
+      "sha": "2e869fec7c8cb91a95e84b3c83b2be80efd8d06b",
+      "message": "feat: implement frontend capability foundation",
+      "primary": true,
+      "multi_change_reason": "cherry-picked onto integration/narrative-phase1c from Agent I primary 17bbd83"
+    },
+    {
+      "sha": "6d1cb858172fc35cdd4ec53f961690ef35fb15d0",
+      "message": "docs: attach primary commit to CHG-20260723-024",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "e88fff53fb1aae21091f5d5d373ddedff021fdb1",
+      "message": "docs: close CHG-20260723-024 commit attachment loop",
+      "primary": false,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "desktop/capability"
+  ],
+  "files": [
+    "apps/desktop/src/services/capability/capabilityClient.ts",
+    "apps/desktop/src/services/capability/capabilityDto.ts",
+    "apps/desktop/src/services/capability/capabilityStore.ts",
+    "apps/desktop/src/services/capability/presentation.ts",
+    "apps/desktop/src/services/capability/legacyCompatibility.ts",
+    "apps/desktop/src/services/capability/contractKeys.fixture.ts",
+    "apps/desktop/src/services/capability/capabilityClient.test.ts",
+    "apps/desktop/src/services/capability/capabilityComponents.test.tsx",
+    "apps/desktop/src/services/capability/index.ts",
+    "apps/desktop/src/features/capability/",
+    "apps/desktop/src/components/capability/index.ts",
+    "scripts/check_capability_keys.py",
+    "docs/architecture/narrative-intelligence-core/phase1c-capability-frontend-implementation.md",
+    "docs/architecture/narrative-intelligence-core/phase1c-legacy-vip-audit.md",
+    "docs/architecture/narrative-intelligence-core/phase1c-capability-presentation.md",
+    "docs/architecture/narrative-intelligence-core/phase1c-capability-frontend-verification.md"
+  ],
+  "user_summary": "Implement capabilityClient, capabilityStore, legacy compatibility helpers, and isolated Pro presentation components.",
+  "technical_summary": "Agent I builds on frozen capability/types.ts and keys.ts; does not set PRO_CAPABILITIES_SHIPPED=true or create full whole-book UI pages. allowed comes only from backend Decision with fail-closed offline/network fallbacks.",
+  "acceptance_criteria": [
+    "Fork from feature/narrative-phase1c-contract final HEAD",
+    "Use CAPABILITY_KEYS from capability/keys.ts",
+    "Do not break existing entitlementApi",
+    "No formal whole-book product pages in this change",
+    "hasCapability defaults false; offline never grants",
+    "Legacy VIP boolean never becomes allowed"
+  ],
+  "tests": [
+    "apps/desktop/src/services/capability/capabilityClient.test.ts",
+    "apps/desktop/src/services/capability/capabilityComponents.test.tsx",
+    "scripts/check_capability_keys.py"
+  ],
+  "verification_evidence": [
+    "docs/architecture/narrative-intelligence-core/phase1c-capability-frontend-verification.md",
+    "npx vitest run src/services/capability src/features/capability (integration)",
+    "Python 3.12.10; OpenSSL 3.0.16; Phase 1C directed integration tests 83 passed; 1 soupsieve optional-dep warning; version check passed; registry check passed; git diff --check passed; human verification at integration/narrative-phase1c@44a9dcf"
+  ],
+  "parallel_plan": {
+    "role": "agent_i",
+    "branch": "feature/narrative-phase1c-capability-frontend",
+    "worktree": "D:\\\\Dstorylens-wt-capability-frontend",
+    "depends_on": [
+      "CHG-20260723-021"
+    ],
+    "blocks": [
+      "CHG-20260723-025"
+    ],
+    "forbidden": [
+      "PRO_CAPABILITIES_SHIPPED=true",
+      "VERSION bump",
+      "modify capability/types.ts keys.ts owned by Phase 1C-P"
+    ],
+    "file_ownership": "docs/architecture/narrative-intelligence-core/phase1c-parallel-file-ownership.json"
+  },
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-23T11:46:12Z",
+  "updated_at": "2026-07-23T13:23:20Z"
+}

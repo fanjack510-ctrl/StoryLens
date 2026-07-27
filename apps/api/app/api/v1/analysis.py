@@ -71,6 +71,7 @@ from app.services.cloud_budget import daily_usage
 from app.services.cloud_pricing import pricing_status
 from app.services.credentials.base import CredentialStore
 from app.services.credentials.service import get_credential_store
+from app.services.analysis_execution_plan import build_analysis_execution_plan
 from app.services.provider_eligibility import (
     ProviderEligibilityService,
     evaluate_manual_boundary_candidate,
@@ -163,6 +164,90 @@ def _build_scene_validation_detail(
 
 
 def serialize_run(session: Session, run: AnalysisRun) -> AnalysisRunResponse:
+    # Whole-book overview runs are not chapter scene pipelines — skip heavy enrichment
+    # so Task Center listing never depends on Provider / journey / checkpoint paths.
+    if (run.task_type or "") == "whole_book_overview" or (run.subject_type or "") == "book":
+        base = AnalysisRunResponse.model_validate(run)
+        failed_invocation = None
+        failed_window_index = None
+        inv_id = run.failed_invocation_id
+        if inv_id is None:
+            # Fallback: latest failed window's provider attempt.
+            from app.db.models import WholeBookRunWindow
+
+            failed_win = session.scalar(
+                select(WholeBookRunWindow)
+                .where(
+                    WholeBookRunWindow.run_id == run.id,
+                    WholeBookRunWindow.status == "failed",
+                )
+                .order_by(WholeBookRunWindow.window_index.asc())
+            )
+            if failed_win is not None:
+                failed_window_index = int(failed_win.window_index)
+                inv_id = failed_win.provider_attempt_id
+        else:
+            from app.db.models import WholeBookRunWindow
+
+            failed_win = session.scalar(
+                select(WholeBookRunWindow)
+                .where(
+                    WholeBookRunWindow.run_id == run.id,
+                    WholeBookRunWindow.status == "failed",
+                )
+                .order_by(WholeBookRunWindow.window_index.asc())
+            )
+            if failed_win is not None:
+                failed_window_index = int(failed_win.window_index)
+        if inv_id is not None:
+            inv = session.get(ModelInvocation, inv_id)
+            if inv is not None:
+                parsed_meta: dict = {}
+                try:
+                    raw_parsed = json.loads(inv.parsed_response_json or "{}")
+                    if isinstance(raw_parsed, dict):
+                        parsed_meta = raw_parsed
+                except json.JSONDecodeError:
+                    parsed_meta = {}
+                failed_invocation = {
+                    "id": inv.id,
+                    "invocation_kind": inv.invocation_kind,
+                    "attempt_no": inv.attempt_no,
+                    "http_request_sent": inv.http_request_sent,
+                    "http_status": inv.http_status_code,
+                    "http_status_code": inv.http_status_code,
+                    "json_valid": inv.parsed_response_json is not None,
+                    "schema_valid": inv.error_code
+                    not in {"PROVIDER_OUTPUT_INVALID", "SCHEMA_VALIDATION_FAILED"},
+                    "error_code": inv.error_code,
+                    "error_message": inv.error_message,
+                    "finish_reason": inv.finish_reason,
+                    "input_tokens": inv.input_tokens,
+                    "output_tokens": inv.output_tokens,
+                    "total_tokens": inv.total_tokens,
+                    "estimated_cost": inv.estimated_cost,
+                    "latency_ms": inv.latency_ms,
+                    "request_id": inv.request_id,
+                    "provider_name": inv.provider_name,
+                    "model_name": inv.model_name,
+                    "repair_attempted": bool(parsed_meta.get("repair_attempted")),
+                    "text_len": parsed_meta.get("text_len"),
+                    "has_json_fence": parsed_meta.get("has_json_fence"),
+                }
+        return base.model_copy(
+            update={
+                "current_stage": run.failed_stage or run.status,
+                "effective_status": run.status,
+                "actual_failed_stage": run.failed_stage,
+                "chapter_complete": False,
+                "scene_pipeline_complete": False,
+                "failed_invocation": failed_invocation,
+                "failed_invocation_id": inv_id or run.failed_invocation_id,
+                "failed_scene_index": failed_window_index,
+                "validation_error_code": run.error_code,
+            }
+        )
+
     block = _load_budget_block(run)
     reservation = session.scalar(
         select(CloudBudgetReservation)
@@ -348,15 +433,24 @@ def serialize_run(session: Session, run: AnalysisRun) -> AnalysisRunResponse:
         detection_recovery_available = False
         remaining_detection = 0
     base = AnalysisRunResponse.model_validate(run)
+    from app.services.chapter_analysis_completion import chapter_completion_payload
+
+    chapter_meta = chapter_completion_payload(session, run)
+    # Map stage for UI checklist while journey is pending/running.
+    current_stage = stage_map.get(
+        run.status, run.failed_stage if run.status.startswith("failed") else run.status
+    )
+    if chapter_meta["effective_status"] in {"partial_complete", "journey_running", "journey_failed"}:
+        current_stage = "reader_journey"
+    elif chapter_meta["chapter_complete"]:
+        current_stage = "completed"
     return base.model_copy(
         update={
             "budget_required": block.get("required"),
             "budget_remaining": block.get("remaining"),
             "exceeded_dimensions": block.get("exceeded_dimensions"),
             "reservation_status": reservation.status if reservation else None,
-            "current_stage": stage_map.get(
-                run.status, run.failed_stage if run.status.startswith("failed") else run.status
-            ),
+            "current_stage": current_stage,
             "failure_details": failure_details,
             "legacy_classification_warning": legacy_classification_warning,
             "exception_type": (failure_details or {}).get("exception_type"),
@@ -402,6 +496,23 @@ def serialize_run(session: Session, run: AnalysisRun) -> AnalysisRunResponse:
             "completed_scene_ids": progress.completed_scene_ids,
             "remaining_scene_ids": progress.pending_scene_ids,
             "scene_validation_detail": scene_validation_detail,
+            "chapter_complete": chapter_meta["chapter_complete"],
+            "scene_pipeline_complete": chapter_meta["scene_pipeline_complete"],
+            "effective_status": chapter_meta["effective_status"],
+            "checkpoint_stage": chapter_meta["checkpoint_stage"],
+            "resume_stage": chapter_meta["resume_stage"],
+            "journey_run_id": chapter_meta["journey_run_id"],
+            "journey_status": chapter_meta["journey_status"],
+            "journey_completed_scene_count": chapter_meta.get(
+                "journey_completed_scene_count"
+            ),
+            "journey_total_scene_count": chapter_meta.get("journey_total_scene_count"),
+            "journey_retryable": chapter_meta.get("journey_retryable"),
+            "journey_result_available": bool(
+                chapter_meta.get("journey_result_available")
+            ),
+            "journey_error_code": chapter_meta.get("journey_error_code"),
+            "primary_action": chapter_meta.get("primary_action"),
         }
     )
 
@@ -422,7 +533,15 @@ def list_analysis_runs(
         query = query.where(AnalysisRun.provider == provider)
     if book_id is not None:
         chapter_ids = select(Chapter.id).where(Chapter.book_id == book_id)
-        query = query.where(AnalysisRun.subject_id.in_(chapter_ids))
+        book_subject = str(int(book_id))
+        query = query.where(
+            (AnalysisRun.subject_id.in_(chapter_ids))
+            | (
+                (AnalysisRun.subject_type == "book")
+                & (AnalysisRun.subject_id == book_subject)
+            )
+            | (AnalysisRun.book_id == int(book_id))
+        )
     runs = list(
         session.scalars(
             query.order_by(desc(AnalysisRun.created_at)).offset(offset).limit(min(limit, 200))
@@ -498,6 +617,27 @@ async def providers(
             })
         )
     return result
+
+
+@router.get("/analysis-execution-plan")
+def get_analysis_execution_plan(
+    mode: str = "BALANCED",
+    gateway: ModelGateway = Depends(get_model_gateway),
+    session: Session = Depends(get_db),
+    store: CredentialStore = Depends(get_credential_store),
+) -> dict:
+    """Zero-network start-analysis readiness plan (SSOT for dialog gate)."""
+    from app.services.provider_runtime import bind_gateway_runtime
+
+    bind_gateway_runtime(gateway, session, store)
+    plan = build_analysis_execution_plan(
+        session,
+        gateway=gateway,
+        store=store,
+        mode=mode,
+        pricing_path=Path("config/cloud_pricing.json"),
+    )
+    return plan.as_dict()
 
 
 def _preflight_estimate(session: Session, chapter_id: int) -> tuple[int, int, float]:
@@ -651,6 +791,28 @@ async def provider_health(
     return (await provider.health()).model_dump()
 
 
+def _effective_mode_for_provider(
+    session: Session,
+    gateway: ModelGateway,
+    provider_is_cloud: bool,
+    configured_mode: str | None,
+) -> str:
+    from app.services.execution_mode import (
+        cloud_enabled_from_session,
+        resolve_effective_execution_mode,
+    )
+
+    local_available = any(
+        (not p.capabilities().cloud) and p.capabilities().enabled for p in gateway.providers()
+    )
+    return resolve_effective_execution_mode(
+        provider_is_cloud=provider_is_cloud,
+        cloud_enabled=cloud_enabled_from_session(session),
+        configured_execution_mode=configured_mode,
+        local_provider_available=local_available,
+    )
+
+
 def create_run_record(
     session: Session,
     chapter: Chapter,
@@ -667,12 +829,17 @@ def create_run_record(
     capabilities = provider.capabilities()
     if not capabilities.cloud and not capabilities.enabled:
         raise error(422, "PROVIDER_DISABLED", "模型 Provider 未启用")
+    effective_mode = _effective_mode_for_provider(
+        session, gateway, bool(capabilities.cloud), request.execution_mode
+    )
+    # Persist / validate the effective mode (coerce stale local for cloud providers).
+    request.execution_mode = effective_mode  # type: ignore[assignment]
     if capabilities.cloud:
-        if request.execution_mode not in {"cloud", "hybrid"}:
+        if effective_mode not in {"cloud", "hybrid"}:
             raise error(422, "CLOUD_MODE_REQUIRED", "云端 Provider 需要 cloud 或 hybrid 模式")
         if not request.cloud_consent:
             raise error(422, "CLOUD_CONSENT_REQUIRED", "发送正文到云端前必须明确同意")
-    elif request.execution_mode in {"cloud", "hybrid"}:
+    elif effective_mode in {"cloud", "hybrid"}:
         raise error(422, "LOCAL_PROVIDER_MODE_MISMATCH", "本地 Provider 不会自动切换到云端")
     paragraphs = list(
         session.scalars(
@@ -749,12 +916,16 @@ async def create_analysis_run(
             return AnalysisRunAccepted(run_id=existing_request.id, status=existing_request.status)
     provider = gateway.get(request.provider_name)
     ProviderRuntimeService.bind_gateway(gateway, session, store)
-    if provider.capabilities().cloud:
-        if request.execution_mode not in {"cloud", "hybrid"}:
+    capabilities = provider.capabilities()
+    effective_mode = _effective_mode_for_provider(
+        session, gateway, bool(capabilities.cloud), request.execution_mode
+    )
+    request.execution_mode = effective_mode  # type: ignore[assignment]
+    if capabilities.cloud:
+        if effective_mode not in {"cloud", "hybrid"}:
             raise error(422, "CLOUD_MODE_REQUIRED", "云端 Provider 需要 cloud 或 hybrid 模式")
         if not request.cloud_consent:
             raise error(422, "CLOUD_CONSENT_REQUIRED", "发送正文到云端前必须明确同意")
-    capabilities = provider.capabilities()
     if not capabilities.enabled:
         raise error(422, "PROVIDER_DISABLED", "模型 Provider 未启用")
     health = None if capabilities.cloud else await provider.health()
@@ -815,7 +986,19 @@ async def create_analysis_run(
             .order_by(desc(AnalysisRun.id))
         )
         if existing is not None:
-            raise error(409, "ANALYSIS_RUN_EXISTS", "该章节已有相同 Provider 的运行记录")
+            chapter_book_id = int(chapter.book_id) if chapter.book_id is not None else None
+            raise error(
+                409,
+                "ANALYSIS_RUN_EXISTS",
+                "该章节已有相同 Provider 的运行记录",
+                details={
+                    "existing_run_id": int(existing.id),
+                    "existing_run_status": str(existing.status or ""),
+                    "existing_run_type": str(existing.task_type or ""),
+                    "book_id": chapter_book_id,
+                    "chapter_id": int(chapter_id),
+                },
+            )
     reservation = None
     if provider.capabilities().cloud:
         cloud_row = session.get(ApplicationSetting, "cloud_enabled")

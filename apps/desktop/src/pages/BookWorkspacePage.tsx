@@ -1,24 +1,26 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useParams } from "react-router-dom";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useParams, useSearchParams } from "react-router-dom";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { booksApi } from "../services/booksApi";
 import { analysisApi } from "../services/analysisApi";
 import { formatSceneDisplayLabel } from "../services/formatSceneDisplayLabel";
+import {
+  adjacentBodyChapters,
+  applyNavigateToChapterReading,
+  bodyChapters,
+  scrollReadingPaneToTop,
+} from "../services/chapterNavigation";
+import {
+  prefetchAdjacentChapterParagraphs,
+  prefetchChapterParagraphs,
+} from "../services/chapterParagraphPrefetch";
 import { useUiStore } from "../stores/uiStore";
 import { Empty, ErrorState, Loading, Badge } from "../components/common/States";
 import { StateView } from "../components/ui/StateView";
-import { StartAnalysisDialog } from "../components/analysis/StartAnalysisDialog";
 import { ReparseDialog } from "../components/books/ReparseDialog";
+import { ChapterListViewport } from "../components/books/ChapterListViewport";
+import { ChapterAdjacentNav } from "../components/books/ChapterAdjacentNav";
 
-function chapterOrdinalLabel(c: {
-  section_type: string;
-  chapter_number_normalized?: number;
-  chapter_index: number;
-}) {
-  if (c.section_type === "front_matter") return "资料";
-  const n = c.chapter_number_normalized || c.chapter_index;
-  return String(n).padStart(2, "0");
-}
 
 function fileExtLabel(name?: string) {
   if (!name) return null;
@@ -26,18 +28,27 @@ function fileExtLabel(name?: string) {
   return m ? m[1].toUpperCase() : null;
 }
 
+function parsePositiveInt(value: string | null): number | null {
+  if (!value) return null;
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
 export function BookWorkspacePage() {
   const params = useParams();
   const bookId = Number(params.bookId || 1);
-  const [chapter, setChapter] = useState(0);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const chapterFromUrl = parsePositiveInt(searchParams.get("chapter"));
+  const [chapter, setChapter] = useState(chapterFromUrl || 0);
   const [selectedScene, setScene] = useState<any>();
   const [evidence, setEvidence] = useState<string[]>([]);
-  const [dialog, setDialog] = useState(false);
   const [offset, setOffset] = useState(0);
   const [loaded, setLoaded] = useState<any[]>([]);
+  const [displayedChapterId, setDisplayedChapterId] = useState(0);
   const [diagnostics, setDiagnostics] = useState<any>();
   const [reparseOpen, setReparseOpen] = useState(false);
   const chapterListRef = useRef<HTMLDivElement>(null);
+  const pendingScrollTopRef = useRef(false);
   const qc = useQueryClient();
   const { fontSize, lineHeight, setReading, demo } = useUiStore();
   const book = useQuery({
@@ -51,31 +62,60 @@ export function BookWorkspacePage() {
     enabled: !!bookId,
   });
   useEffect(() => {
-    if (!chapter && chapters.data?.length)
-      setChapter(
-        (
-          chapters.data.find((item) => item.section_type === "chapter") ||
-          chapters.data[0]
-        ).id,
-      );
-  }, [chapters.data, chapter]);
+    if (chapterFromUrl && chapterFromUrl !== chapter) {
+      setChapter(chapterFromUrl);
+    }
+  }, [chapterFromUrl, chapter]);
+  useEffect(() => {
+    if (chapter || !chapters.data?.length) return;
+    if (chapterFromUrl) return;
+    const first =
+      chapters.data.find((item) => item.section_type === "chapter") || chapters.data[0];
+    if (first) setChapter(first.id);
+  }, [chapters.data, chapter, chapterFromUrl]);
   useEffect(() => {
     setOffset(0);
-    setLoaded([]);
+    pendingScrollTopRef.current = true;
+    // Keep previous `loaded` until the new chapter body is ready (no blank flash).
   }, [chapter]);
   const paragraphs = useQuery({
     queryKey: ["paragraphs", chapter, offset],
     queryFn: () => booksApi.paragraphs(chapter, offset, 200),
     enabled: !!chapter,
+    placeholderData: keepPreviousData,
   });
   useEffect(() => {
-    if (paragraphs.data)
-      setLoaded((current) =>
-        offset === 0
-          ? paragraphs.data.items
-          : [...current, ...paragraphs.data.items],
-      );
-  }, [paragraphs.data, offset]);
+    if (!paragraphs.data || paragraphs.isPlaceholderData) return;
+    setLoaded((current) =>
+      offset === 0
+        ? paragraphs.data.items
+        : [...current, ...paragraphs.data.items],
+    );
+    if (offset === 0) {
+      setDisplayedChapterId(chapter);
+      if (pendingScrollTopRef.current) {
+        pendingScrollTopRef.current = false;
+        requestAnimationFrame(() => {
+          scrollReadingPaneToTop();
+        });
+      }
+    }
+  }, [paragraphs.data, paragraphs.isPlaceholderData, offset, chapter]);
+  const adjacent = useMemo(
+    () => adjacentBodyChapters(chapters.data, chapter),
+    [chapters.data, chapter],
+  );
+  useEffect(() => {
+    if (!chapter || paragraphs.isPlaceholderData || paragraphs.isFetching) return;
+    prefetchAdjacentChapterParagraphs(qc, adjacent.prev?.id, adjacent.next?.id);
+  }, [
+    chapter,
+    paragraphs.isPlaceholderData,
+    paragraphs.isFetching,
+    adjacent.prev?.id,
+    adjacent.next?.id,
+    qc,
+  ]);
   const scenes = useQuery({
     queryKey: ["scenes", chapter],
     queryFn: () => analysisApi.scenes(chapter),
@@ -92,15 +132,36 @@ export function BookWorkspacePage() {
     [chapters.data, chapter],
   );
   const formatLabel = fileExtLabel(book.data?.source_file_name);
-  const chapterCount = chapters.data?.length;
+  const bodyCount = bodyChapters(chapters.data).length;
+  const chapterCount = bodyCount || chapters.data?.length;
+  const chapterMissing =
+    Boolean(chapterFromUrl) &&
+    Boolean(chapters.data?.length) &&
+    !chapters.data?.some((c) => c.id === chapterFromUrl);
 
-  useEffect(() => {
-    if (!chapter || !chapterListRef.current) return;
-    const el = chapterListRef.current.querySelector<HTMLElement>(
-      `.workspace-chapter-item[data-chapter-id="${chapter}"]`,
-    );
-    el?.scrollIntoView({ block: "nearest", inline: "nearest" });
-  }, [chapter, chapters.data]);
+  const switchingChapter =
+    Boolean(chapter) &&
+    (paragraphs.isFetching || paragraphs.isPlaceholderData) &&
+    loaded.length > 0 &&
+    displayedChapterId !== 0 &&
+    displayedChapterId !== chapter;
+
+  const showInitialLoading =
+    Boolean(chapter) &&
+    !chapterMissing &&
+    paragraphs.isLoading &&
+    loaded.length === 0 &&
+    !paragraphs.isPlaceholderData;
+
+  const selectChapter = (id: number) => {
+    if (id === chapter) return;
+    setChapter(id);
+    applyNavigateToChapterReading(setSearchParams, id);
+  };
+
+  const handlePrefetchChapter = (id: number) => {
+    prefetchChapterParagraphs(qc, id);
+  };
 
   const locate = async (id: number) => {
     const rows = await analysisApi.evidence(id);
@@ -124,10 +185,12 @@ export function BookWorkspacePage() {
 
   const bookTitle = book.data?.title || "选择一本书";
   const chapterTitle = currentChapter?.display_title || currentChapter?.title;
+  const switchingOrdinal =
+    bodyChapters(chapters.data).findIndex((c) => c.id === chapter) + 1;
 
   return (
-    <section className="workspace workspace-content">
-      <aside className="structure-pane workspace-book-nav">
+    <section className="workspace workspace-content" data-testid="book-workspace-page">
+      <aside className="structure-pane workspace-book-nav" data-testid="workspace-book-nav">
         <div className="pane-head workspace-book-info">
           <small>当前书籍</small>
           <h2 className="workspace-book-title" title={bookTitle}>
@@ -178,28 +241,20 @@ export function BookWorkspacePage() {
           )}
         </div>
 
-        <div className="workspace-nav-section">
-          <h3 className="workspace-nav-label">章节</h3>
-          <div className="workspace-chapter-list" ref={chapterListRef}>
-            {chapters.data?.map((c) => {
-              const title = c.display_title || c.title;
-              return (
-                <button
-                  type="button"
-                  className={`workspace-chapter-item${chapter === c.id ? " selected" : ""}`}
-                  data-chapter-id={c.id}
-                  onClick={() => setChapter(c.id)}
-                  key={c.id}
-                  title={title}
-                >
-                  <span className="workspace-chapter-num">
-                    {chapterOrdinalLabel(c)}
-                  </span>
-                  <span className="workspace-chapter-title">{title}</span>
-                </button>
-              );
-            })}
+        <div className="workspace-nav-section workspace-nav-section--chapters">
+          <div className="workspace-chapter-heading-row">
+            <h3 className="workspace-nav-label">章节</h3>
+            {bodyCount > 0 ? (
+              <span className="workspace-chapter-count-hint">{bodyCount} 章</span>
+            ) : null}
           </div>
+          <ChapterListViewport
+            chapters={chapters.data || []}
+            currentChapterId={chapter}
+            onSelect={selectChapter}
+            onPrefetch={handlePrefetchChapter}
+            listRef={chapterListRef}
+          />
         </div>
 
         <div className="workspace-nav-section">
@@ -256,19 +311,39 @@ export function BookWorkspacePage() {
             行距
           </button>
           <button onClick={() => setEvidence([])}>完整正文</button>
-          <button
-            className="primary"
-            onClick={() => setDialog(true)}
-            disabled={!chapter}
-          >
-            开始分析
-          </button>
         </div>
 
+        <div
+          className="reading-content-scroll-region"
+          data-testid="reading-content-scroll-region"
+        >
         <div className="workspace-reading-canvas">
           <header className="workspace-reading-header">
             <p className="eyebrow workspace-reading-label">正文阅读</p>
-            {!chapter ? (
+            {chapterMissing ? (
+              <StateView
+                kind="empty"
+                title="当前章节不存在或已失效"
+                description="请返回第一章，或回到书库重新打开书籍。"
+                data-testid="workspace-chapter-missing"
+                primaryAction={{
+                  label: "返回第一章",
+                  testId: "workspace-goto-first-chapter",
+                  onClick: () => {
+                    const first = bodyChapters(chapters.data)[0];
+                    if (first) selectChapter(first.id);
+                  },
+                }}
+                secondaryAction={{
+                  label: "返回书库",
+                  testId: "workspace-back-library-missing",
+                  variant: "secondary",
+                  onClick: () => {
+                    window.location.href = "/library";
+                  },
+                }}
+              />
+            ) : !chapter ? (
               <StateView
                 kind="empty"
                 title="选择一个章节开始阅读"
@@ -279,20 +354,48 @@ export function BookWorkspacePage() {
                 {chapterTitle}
               </h1>
             )}
+            {!chapterMissing && chapter ? (
+              <ChapterAdjacentNav
+                compact
+                prev={adjacent.prev}
+                next={adjacent.next}
+                chapters={chapters.data || []}
+                onSelect={selectChapter}
+                onPrefetch={handlePrefetchChapter}
+              />
+            ) : null}
           </header>
+
+          {switchingChapter ? (
+            <div
+              className="workspace-chapter-switch-hint"
+              data-testid="workspace-chapter-switching"
+              role="status"
+            >
+              <span className="workspace-chapter-switch-bar" aria-hidden="true" />
+              <span>
+                正在打开第{switchingOrdinal > 0 ? switchingOrdinal : ""}章…
+              </span>
+            </div>
+          ) : null}
 
           {(paragraphs.data?.total || 0) > 2000 && (
             <p className="notice">当前章节异常偏大，可能需要重新识别章节。</p>
           )}
 
-          <div className="prose workspace-prose" style={{ fontSize, lineHeight }}>
-            {!chapter ? null : paragraphs.isLoading ? (
+          <div
+            className={`prose workspace-prose${switchingChapter ? " workspace-prose--switching" : ""}`}
+            style={{ fontSize, lineHeight }}
+            data-displayed-chapter={displayedChapterId || undefined}
+            data-target-chapter={chapter || undefined}
+          >
+            {chapterMissing || !chapter ? null : showInitialLoading ? (
               <StateView
                 kind="loading"
                 title="正在载入章节"
                 data-testid="workspace-chapter-loading"
               />
-            ) : paragraphs.error ? (
+            ) : paragraphs.error && !loaded.length ? (
               <ErrorState error={paragraphs.error} />
             ) : loaded.length ? (
               loaded.slice(Math.max(0, loaded.length - 600)).map((p) => (
@@ -317,12 +420,23 @@ export function BookWorkspacePage() {
                 data-testid="workspace-empty-body"
               />
             )}
-            {paragraphs.data?.has_more && (
+            {paragraphs.data?.has_more && !paragraphs.isPlaceholderData && (
               <button onClick={() => setOffset(offset + paragraphs.data!.limit)}>
                 继续加载正文
               </button>
             )}
           </div>
+
+          {!chapterMissing && chapter ? (
+            <ChapterAdjacentNav
+              prev={adjacent.prev}
+              next={adjacent.next}
+              chapters={chapters.data || []}
+              onSelect={selectChapter}
+              onPrefetch={handlePrefetchChapter}
+            />
+          ) : null}
+        </div>
         </div>
       </article>
 
@@ -369,15 +483,6 @@ export function BookWorkspacePage() {
         </div>
       </aside>
 
-      {dialog && (
-        <StartAnalysisDialog
-          chapterId={chapter}
-          onClose={() => setDialog(false)}
-          onCreated={(runId) => {
-            location.href = `/tasks?run_id=${runId}`;
-          }}
-        />
-      )}
       {reparseOpen && (
         <ReparseDialog
           bookId={bookId}

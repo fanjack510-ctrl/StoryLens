@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "notes": "TEST / DEV verification keys only. Loaded by browser_local_dev and explicit pytest injection. Never loaded by browser_local_production, tauri_desktop, or packaged installs.",
+  "keys": [
+    {
+      "key_id": "test-dev-001",
+      "signature_version": 1,
+      "algorithm": "ed25519",
+      "environment": "test",
+      "public_key_b64url": "kJyzrowjgdbMJI6pYltcNA53_-utGqR_Dr8ipR3uc6I",
+      "status": "active"
+    }
+  ],
+  "commerce": {
+    "afdian_product_url": "https://afdian.com/item/test-placeholder",
+    "product_code": "storylens_pro",
+    "product_label": "StoryLens Pro 1.x (test)"
+  }
+}

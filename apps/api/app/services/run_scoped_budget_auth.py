@@ -196,14 +196,32 @@ def store_unified_recover_marker(
     actions: list[str],
     resume_stage: str,
     recovery_attempts: int,
+    manual_recovery_attempts: int | None = None,
+    auto_recovery_attempts: int | None = None,
+    last_recovery_kind: str | None = None,
+    last_recovery_reason: str | None = None,
 ) -> dict[str, Any]:
     payload = _parse_raw(run)
+    prior = payload.get(UNIFIED_RECOVER_MARKER_KIND)
+    prior = prior if isinstance(prior, dict) else {}
     marker = {
         "kind": UNIFIED_RECOVER_MARKER_KIND,
         "client_request_id": client_request_id,
         "actions": list(actions),
         "resume_stage": resume_stage,
         "recovery_attempts": recovery_attempts,
+        "manual_recovery_attempts": (
+            int(manual_recovery_attempts)
+            if manual_recovery_attempts is not None
+            else int(prior.get("manual_recovery_attempts") or recovery_attempts or 0)
+        ),
+        "auto_recovery_attempts": (
+            int(auto_recovery_attempts)
+            if auto_recovery_attempts is not None
+            else int(prior.get("auto_recovery_attempts") or 0)
+        ),
+        "last_recovery_kind": last_recovery_kind or prior.get("last_recovery_kind"),
+        "last_recovery_reason": last_recovery_reason or prior.get("last_recovery_reason"),
         "recorded_at": datetime.now(timezone.utc).isoformat(),
     }
     payload[UNIFIED_RECOVER_MARKER_KIND] = marker

@@ -1,0 +1,2 @@
+git_history_exact_user_key_hits=0
+git_history_sk_pattern_lines=0

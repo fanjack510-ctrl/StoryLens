@@ -1,0 +1,58 @@
+{
+  "id": "CHG-20260726-007",
+  "title": "Unify chapter primary action and hide standard aggregation entry",
+  "type": "fix",
+  "base_version": "1.0.5",
+  "status": "implemented",
+  "include_in_next_release": true,
+  "commits": [
+    {
+      "sha": "7dd1e64d97eaba7ee102ee45d9add9147bd739c3",
+      "message": "fix(book-actions): use one chapter primary action",
+      "primary": false,
+      "multi_change_reason": "remove duplicate workspace CTA"
+    }
+  ],
+  "modules": [
+    "apps/desktop"
+  ],
+  "files": [
+    "apps/desktop/src/services/chapterPrimaryAction.ts",
+    "apps/desktop/src/pages/BookRoutePage.tsx",
+    "apps/desktop/src/components/readerJourney/ReaderJourneyEntry.tsx"
+  ],
+  "user_summary": "书籍顶部只保留一个单章主分析按钮；移除普通入口的章节聚合洞察与重复的读者旅程启动。",
+  "technical_summary": "resolveChapterPrimaryAction state machine; hide WholeBookInsightsEntry unless developer mode; Reader Journey is result view only.",
+  "acceptance_criteria": [
+    "Idle shows only 开始分析",
+    "Running shows 查看分析进度",
+    "Completed shows 查看分析结果",
+    "Failed shows 重新分析",
+    "No dual 分析读者旅程 + 开始分析",
+    "No standard 章节聚合洞察 Pro",
+    "原生全书概览 preserved"
+  ],
+  "tests": [
+    "vitest chapterPrimaryAction + BookRoute + proNativeOverview + wholeBookInsights: pass"
+  ],
+  "verification_evidence": [
+    "release/evidence/CHG-20260726-007/reader-journey-restore.md",
+    "release/evidence/CHG-20260726-007/fix4-book-actions.md"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "P1",
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-26T10:55:28Z",
+  "updated_at": "2026-07-26T13:37:26Z"
+}

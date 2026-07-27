@@ -145,8 +145,7 @@ export function AnalysisResultsShellPage() {
                 group: "导出",
                 testId: "results-more-export-png",
                 onSelect: () => {
-                  clickResults('[data-testid="journey-more-chart-settings"]');
-                  queueMicrotask(() => clickResults('[data-testid="journey-export-png"]'));
+                  clickResults('[data-testid="journey-export-png"]');
                 },
               },
               {

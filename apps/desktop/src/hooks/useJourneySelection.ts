@@ -8,14 +8,14 @@ import type {
   JourneySelectionState,
 } from "../types/journeySelection";
 import type { SceneResultItem } from "../types";
+import {
+  applyJourneyViewToSearchParams,
+  resolveJourneyPageModeFromSearch,
+} from "../components/readerJourney/journeyViewMode";
+import { lensIdFromMetric } from "../components/readerJourney/readerJourneyLensExplanation";
 
 const DEFAULT_METRIC: JourneyCurveMetric = "engagement";
 const SCROLL_SUPPRESS_MS = 600;
-
-function parseMode(value: string | null): JourneyPageMode {
-  if (value === "journey" || value === "reading" || value === "sync") return value;
-  return "sync";
-}
 
 function parseMetric(value: string | null): JourneyCurveMetric {
   const allowed: JourneyCurveMetric[] = [
@@ -57,7 +57,7 @@ export function useJourneySelection({ scenes, enabled = true }: Options) {
       Number.isFinite(parsedOrdinal) ? parsedOrdinal : null,
     );
     return {
-      pageMode: parseMode(searchParams.get("mode")),
+      pageMode: resolveJourneyPageModeFromSearch(searchParams),
       activePhaseId: null,
       activeSceneId: sceneItem ? sceneItem.scene.id : null,
       activeSceneOrdinal: sceneItem ? sceneItem.scene.ordinal : null,
@@ -73,30 +73,41 @@ export function useJourneySelection({ scenes, enabled = true }: Options) {
   const syncUrl = useCallback(
     (patch: JourneySelectionPatch) => {
       if (!enabled) return;
-      const params = new URLSearchParams(searchParams);
-      params.set("tab", "reader-journey");
+      // Functional updater: never clobber a concurrent lens/metric write from Workspace
+      // with a stale searchParams snapshot.
+      setSearchParams(
+        (prev) => {
+          const params = new URLSearchParams(prev);
+          params.set("tab", "reader-journey");
 
-      const mode = patch.pageMode ?? state.pageMode;
-      params.set("mode", mode);
+          const mode = patch.pageMode ?? state.pageMode;
+          applyJourneyViewToSearchParams(params, mode);
 
-      const sceneOrdinal = patch.activeSceneOrdinal ?? state.activeSceneOrdinal;
-      if (sceneOrdinal != null) params.set("scene", String(sceneOrdinal));
-      else params.delete("scene");
+          const sceneOrdinal = patch.activeSceneOrdinal ?? state.activeSceneOrdinal;
+          if (sceneOrdinal != null) params.set("scene", String(sceneOrdinal));
+          else if (patch.activeSceneOrdinal === null) params.delete("scene");
 
-      const paragraphId = patch.activeParagraphId ?? state.activeParagraphId;
-      if (paragraphId) params.set("paragraph", paragraphId);
-      else params.delete("paragraph");
+          const paragraphId = patch.activeParagraphId ?? state.activeParagraphId;
+          if (paragraphId) params.set("paragraph", paragraphId);
+          else if (patch.activeParagraphId === null) params.delete("paragraph");
 
-      const metric = patch.selectedMetric ?? state.selectedMetric;
-      params.set("metric", metric);
+          if (patch.selectedMetric !== undefined) {
+            const metric = patch.selectedMetric;
+            params.set("metric", metric);
+            // Keep lens in lockstep with metric when parent syncs metric.
+            params.set("lens", lensIdFromMetric(metric));
+          }
 
-      const clusterId = patch.selectedQuestionClusterId ?? state.selectedQuestionClusterId;
-      if (clusterId) params.set("cluster", clusterId);
-      else params.delete("cluster");
+          const clusterId = patch.selectedQuestionClusterId ?? state.selectedQuestionClusterId;
+          if (clusterId) params.set("cluster", clusterId);
+          else if (patch.selectedQuestionClusterId === null) params.delete("cluster");
 
-      setSearchParams(params, { replace: true });
+          return params;
+        },
+        { replace: true },
+      );
     },
-    [enabled, searchParams, setSearchParams, state],
+    [enabled, setSearchParams, state],
   );
 
   const applyPatch = useCallback(
@@ -217,8 +228,11 @@ export function useJourneySelection({ scenes, enabled = true }: Options) {
   );
 
   const setMetric = useCallback(
-    (metric: JourneyCurveMetric) => {
-      applyPatch({ selectedMetric: metric, selectionSource: "journey_scene" });
+    (metric: JourneyCurveMetric, options?: { syncUrl?: boolean }) => {
+      applyPatch(
+        { selectedMetric: metric, selectionSource: "journey_scene" },
+        options?.syncUrl !== false,
+      );
     },
     [applyPatch],
   );
@@ -254,7 +268,7 @@ export function useJourneySelection({ scenes, enabled = true }: Options) {
         activeSceneOrdinal: ordinal,
         activeSceneId: item.scene.id,
         activeParagraphId: searchParams.get("paragraph") ?? item.scene.start_paragraph_id,
-        pageMode: parseMode(searchParams.get("mode")),
+        pageMode: resolveJourneyPageModeFromSearch(searchParams),
         selectedMetric: parseMetric(searchParams.get("metric")),
         selectedQuestionClusterId: searchParams.get("cluster"),
         selectionSource: "url",

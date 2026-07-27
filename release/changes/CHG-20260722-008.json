@@ -1,0 +1,88 @@
+{
+  "id": "CHG-20260722-008",
+  "title": "Fix long-book chapter navigation and pure-reading scroll",
+  "type": "fix",
+  "base_version": "1.0.4",
+  "status": "released",
+  "include_in_next_release": false,
+  "commits": [
+    {
+      "sha": "f3afc0e42a3f1c081b332228e5ceafc00cff083a",
+      "message": "fix: make long-book chapter navigation usable",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "63b043415e57646a69c772959d23a2f9e4ff04c6",
+      "message": "fix: restore independent scroll in pure reading workspace",
+      "primary": false,
+      "multi_change_reason": "same CHG-008: third fix for pure-reading height/scroll chain after nav and shell attempts"
+    },
+    {
+      "sha": "284cd3cea77505d219f5e0ed01612557cc376f58",
+      "message": "docs: attach pure-reading scroll fix to CHG-20260722-008",
+      "primary": false,
+      "multi_change_reason": "CHG-008 registry attachment for reading-scroll fix"
+    }
+  ],
+  "modules": [
+    "desktop"
+  ],
+  "files": [
+    "apps/desktop/src/services/chapterNavigation.ts",
+    "apps/desktop/src/components/books/ChapterNavigatorDrawer.tsx",
+    "apps/desktop/src/components/books/ChapterListViewport.tsx",
+    "apps/desktop/src/components/books/ChapterAdjacentNav.tsx",
+    "apps/desktop/src/pages/BookWorkspacePage.tsx",
+    "apps/desktop/src/pages/BookRoutePage.tsx",
+    "apps/desktop/src/styles/global.css",
+    "apps/desktop/e2e/reading_workspace_scroll.spec.ts",
+    "apps/desktop/src/services/readingScrollRegion.test.ts",
+    "audits/chg-20260722-008-reading-scroll/"
+  ],
+  "user_summary": "纯正文阅读下左侧章节与中间正文被视口底部裁切、无法独立纵向滚动；此前长书导航补丁未修好该基础滚动。",
+  "technical_summary": "Attempt1 (CHG-008 f3afc0e): chapter windows/drawer/prev-next + overflow-y on .workspace-chapter-list but missed pure-reading parent height. Attempt2 (CHG-010 24c68b2): app-shell/book-shell height chain, but .book-shell-workspace min-height:0 only under data-has-progress=true — pure reading never hit. Fix3: always constrain .book-shell-workspace; grid minmax(0,1fr) row; chapter section flex column; reading-content-scroll-region as dedicated overflow-y auto; stable testids; Playwright geometry proof.",
+  "acceptance_criteria": [
+    "Left chapter list independently scrolls with 100-chapter windows",
+    "Top 章节目录 always opens navigator drawer with search/ordinal/ranges",
+    "Prev/next and unified navigateToChapterReading without analysisRun/tab/journeyView",
+    "Pure view=reading: chapter list and reading pane each have bounded clientHeight with scrollHeight>clientHeight and independent scrollTop",
+    "body does not own reading scroll; scrollbars not hidden",
+    "VERSION remains 1.0.4; no tag/baseline/build/push/model"
+  ],
+  "tests": [
+    "apps/desktop/src/services/chapterNavigation.test.ts",
+    "apps/desktop/src/services/readingScrollRegion.test.ts",
+    "apps/desktop/src/components/books/ChapterNavigatorDrawer.test.tsx",
+    "apps/desktop/src/pages/BookWorkspacePage.test.tsx",
+    "apps/desktop/e2e/reading_workspace_scroll.spec.ts"
+  ],
+  "verification_evidence": [
+    "Manual 1.0.4: book with 1299 chapters, /books/3?chapter=5&view=reading showed only first dozen chapters; no usable catalog search/jump; no prev/next.",
+    "Root (nav): openCatalogOrFocusNav focused left list on wide screens; workspace-chapter-list had no independent scroll; full DOM render of all chapters.",
+    "Local vitest: chapterNavigation + ChapterNavigatorDrawer + BookWorkspacePage + BookRoutePage (43 passed); typecheck/lint/version/registry/diff-check green.",
+    "Why attempts 1-2 failed: (1) CHG-008 mainly added drawer/search/windows and child overflow-y without constraining pure-reading .book-shell-workspace; (2) CHG-010 height fixes applied .book-shell-workspace only when data-has-progress=true — pure reading has no progress panel so wrapper stayed content-sized and ancestors overflow:hidden clipped both panes (case scrollHeight<=clientHeight on list).",
+    "Before (no .book-shell-workspace constraint): chapter-list clientHeight=scrollHeight=7014; overflow-y auto inert; clipped by book-shell-main/body.",
+    "After Playwright 1440x900 /books/3?chapter=4&view=reading: chapter clientHeight=527 scrollHeight=3076; reading clientHeight=736 scrollHeight=7312; independent scrollTops 480 vs 400; bodyScroll=0; screenshots in audits/chg-20260722-008-reading-scroll/.",
+    "Clipping ancestor: overflow:hidden on book-shell-body/main while unconstrained .book-shell-workspace grew; missing min-height:0/flex on that wrapper and grid row minmax(0,1fr).",
+    "Real scroll containers: [data-testid=chapter-list-scroll-region] and [data-testid=reading-content-scroll-region].",
+    "Playwright e2e reading_workspace_scroll.spec.ts 3 passed (1440 independent scroll, 1024+drawer, 150%/200% zoom).",
+    "1.0.5 Phase A engineering gates (not per-item user manual acceptance): pytest 760 passed/50 skipped; vitest 877 passed; typecheck; lint; frontend build; check_project; template governance; playwright smoke+scroll+chapter; focused theme/lens/comparison vitest."
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "P1",
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-22T14:05:53Z",
+  "updated_at": "2026-07-23T05:40:44Z"
+}

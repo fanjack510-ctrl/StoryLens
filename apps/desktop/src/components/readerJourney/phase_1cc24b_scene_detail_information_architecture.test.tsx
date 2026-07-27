@@ -35,7 +35,7 @@ describe("Phase 1C-C.2.4B Scene detail information architecture", () => {
     );
     expect(screen.getByTestId("scene-detail-tabs").querySelectorAll("button")).toHaveLength(5);
     expect(screen.getByTestId("scene-detail-score-bars")).toBeInTheDocument();
-    expect(screen.getByTestId("score-bar-engagement")).toHaveTextContent("阅读牵引");
+    expect(screen.getByTestId("score-bar-reading_momentum")).toHaveTextContent("阅读动力");
     expect(screen.getByTestId("score-bar-curiosity")).toBeInTheDocument();
     expect(screen.getByTestId("score-bar-tension")).toBeInTheDocument();
     expect(screen.queryByTestId("score-bar-dropoff_risk")).not.toBeInTheDocument();
@@ -64,7 +64,7 @@ describe("Phase 1C-C.2.4B Scene detail information architecture", () => {
       </MemoryRouter>,
     );
     expect(screen.getByTestId("scene-detail-panel-questions")).toBeInTheDocument();
-    expect(screen.getByTestId("scene-detail-title")).toHaveTextContent("场景 08");
+    expect(screen.getByTestId("scene-detail-title")).toHaveTextContent(/场景08/);
   });
 
   it("renders hook fields and writing takeaways without crashing", () => {

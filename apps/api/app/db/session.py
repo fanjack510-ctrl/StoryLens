@@ -43,6 +43,9 @@ def enable_sqlite_foreign_keys(dbapi_connection, _) -> None:
     if module.startswith("sqlite3"):
         cursor = dbapi_connection.cursor()
         cursor.execute("PRAGMA foreign_keys=ON")
+        # WAL allows concurrent readers while one writer owns AnalysisRun tasks.
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute("PRAGMA synchronous=NORMAL")
         cursor.close()
 
 
@@ -60,7 +63,50 @@ def create_db() -> None:
     migrate_phase_1c_a7(engine)
     migrate_phase_1c_c1(engine)
     migrate_phase_1d_c1_uat05(engine)
+    migrate_phase_license_v1(engine)
     Base.metadata.create_all(bind=engine)
+    # Phase 1P narrative shared skeleton (upgrade path + ledger). After create_all so
+    # fresh DBs already have ORM tables; migrators remain idempotent for 1.0.5 upgrades.
+    from app.narrative_core.migrations.runner import apply_narrative_migrations
+
+    apply_narrative_migrations(engine)
+
+
+def migrate_phase_license_v1(target_engine) -> None:
+    """StoryLens Pro offline license table (idempotent)."""
+    inspector = inspect(target_engine)
+    if "local_licenses" in inspector.get_table_names():
+        return
+    with target_engine.begin() as connection:
+        connection.execute(
+            text(
+                """
+                CREATE TABLE local_licenses (
+                    id INTEGER NOT NULL PRIMARY KEY,
+                    license_id VARCHAR(64) NOT NULL,
+                    product_code VARCHAR(64) NOT NULL,
+                    edition VARCHAR(32) NOT NULL DEFAULT 'pro',
+                    major_version INTEGER NOT NULL,
+                    license_status VARCHAR(32) NOT NULL DEFAULT 'active',
+                    signed_license TEXT NOT NULL,
+                    activated_at DATETIME,
+                    last_validated_at DATETIME,
+                    key_id VARCHAR(64) NOT NULL DEFAULT '',
+                    created_at DATETIME NOT NULL,
+                    updated_at DATETIME NOT NULL,
+                    UNIQUE (license_id)
+                )
+                """
+            )
+        )
+        connection.execute(
+            text("CREATE INDEX IF NOT EXISTS ix_local_licenses_status ON local_licenses (license_status)")
+        )
+        connection.execute(
+            text(
+                "CREATE INDEX IF NOT EXISTS ix_local_licenses_product ON local_licenses (product_code)"
+            )
+        )
 
 
 def migrate_phase_1d_c1_uat05(target_engine) -> None:

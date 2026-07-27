@@ -20,6 +20,7 @@ import {
   nextJourneyTransactionId,
   type JourneySelectionIntent,
 } from "./journeySelectionTransaction";
+import { JourneyModeSwitcher } from "./JourneyModeSwitcher";
 import "./syncWorkspace.css";
 
 type Tab = "structure" | "evidence" | "history" | "overview" | "journey";
@@ -33,6 +34,11 @@ type Props = {
   onTabChange: (tab: Tab) => void;
   taskControls?: ReactNode;
   exportBar?: ReactNode;
+  /**
+   * When embedded in Book Workspace Journey pane:
+   * hide AnalysisResults legacy tabs (structure/overview/…) — primary nav already covers that.
+   */
+  variant?: "standalone" | "workspace";
 };
 
 async function loadAllChapterParagraphs(chapterId: number) {
@@ -64,6 +70,7 @@ export function ReaderJourneySyncWorkspace({
   onTabChange,
   taskControls,
   exportBar,
+  variant = "standalone",
 }: Props) {
   const textPaneRef = useRef<StructuredChapterTextPaneHandle>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -173,7 +180,13 @@ export function ReaderJourneySyncWorkspace({
     evidenceParagraphIds?: string[];
     source?: typeof state.selectionSource;
   }) => {
-    if (patch.selectedMetric) setMetric(patch.selectedMetric);
+    if (patch.selectedMetric) {
+      // Workspace already atomically wrote lens+metric to the URL for rhythm/lens clicks.
+      // Only mirror local controlled metric — a second URL write races and snaps the lens back.
+      setMetric(patch.selectedMetric, {
+        syncUrl: patch.source !== "journey_rhythm",
+      });
+    }
     if (patch.selectedQuestionClusterId !== undefined) {
       setCluster(patch.selectedQuestionClusterId);
     }
@@ -355,79 +368,58 @@ export function ReaderJourneySyncWorkspace({
   };
 
   return (
-    <div className="journey-sync-workspace" data-testid="journey-sync-workspace">
+    <div
+      className="journey-sync-workspace"
+      data-testid="journey-sync-workspace"
+      data-variant={variant}
+      data-page-mode={state.pageMode}
+    >
       <header className="journey-sync-sticky-bar">
         <h1 className="journey-sync-title" data-testid="journey-sync-title">
           {/* Product title lives in journey-analysis-header; avoid duplicate visible H1. */}
           <span className="sr-only">旅程分析</span>
         </h1>
-        <div className="journey-sync-tabs tabs">
-          <button
-            data-testid="tab-structure"
-            className={tab === "structure" ? "active" : ""}
-            onClick={() => onTabChange("structure")}
-          >
-            场景结构
-          </button>
-          <button
-            data-testid="tab-evidence"
-            className={tab === "evidence" ? "active" : ""}
-            onClick={() => onTabChange("evidence")}
-          >
-            证据
-          </button>
-          <button
-            data-testid="tab-history"
-            className={tab === "history" ? "active" : ""}
-            onClick={() => onTabChange("history")}
-          >
-            历史
-          </button>
-          <button
-            data-testid="tab-overview"
-            className={tab === "overview" ? "active" : ""}
-            onClick={() => onTabChange("overview")}
-          >
-            整章概览
-          </button>
-          <button
-            data-testid="tab-journey"
-            className={tab === "journey" ? "active" : ""}
-            onClick={() => onTabChange("journey")}
-          >
-            读者旅程
-          </button>
-        </div>
+        {variant === "standalone" ? (
+          <div className="journey-sync-tabs tabs">
+            <button
+              data-testid="tab-structure"
+              className={tab === "structure" ? "active" : ""}
+              onClick={() => onTabChange("structure")}
+            >
+              场景结构
+            </button>
+            <button
+              data-testid="tab-evidence"
+              className={tab === "evidence" ? "active" : ""}
+              onClick={() => onTabChange("evidence")}
+            >
+              证据
+            </button>
+            <button
+              data-testid="tab-history"
+              className={tab === "history" ? "active" : ""}
+              onClick={() => onTabChange("history")}
+            >
+              历史
+            </button>
+            <button
+              data-testid="tab-overview"
+              className={tab === "overview" ? "active" : ""}
+              onClick={() => onTabChange("overview")}
+            >
+              整章概览
+            </button>
+            <button
+              data-testid="tab-journey"
+              className={tab === "journey" ? "active" : ""}
+              onClick={() => onTabChange("journey")}
+            >
+              读者旅程
+            </button>
+          </div>
+        ) : null}
 
-        <div className="journey-sync-mode-toggle" data-testid="journey-sync-mode-toggle">
-          <button
-            type="button"
-            data-testid="journey-mode-sync"
-            className={state.pageMode === "sync" ? "active" : ""}
-            onClick={() => handleModeChange("sync")}
-            aria-pressed={state.pageMode === "sync"}
-          >
-            正文对照
-          </button>
-          <button
-            type="button"
-            data-testid="journey-mode-journey"
-            className={state.pageMode === "journey" ? "active" : ""}
-            onClick={() => handleModeChange("journey")}
-            aria-pressed={state.pageMode === "journey"}
-          >
-            旅程视图
-          </button>
-          <button
-            type="button"
-            data-testid="journey-mode-reading"
-            className={state.pageMode === "reading" ? "active" : ""}
-            onClick={() => handleModeChange("reading")}
-            aria-pressed={state.pageMode === "reading"}
-          >
-            仅看正文
-          </button>
-        </div>
+        <JourneyModeSwitcher pageMode={state.pageMode} onChange={handleModeChange} />
 
         <div className="journey-sync-actions">
           <button

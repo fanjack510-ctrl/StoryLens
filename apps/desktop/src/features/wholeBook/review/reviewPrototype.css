@@ -1,0 +1,89 @@
+/* Isolated Phase 1D Review / Structure Map styles — not product chrome. */
+
+.sl-ev-drawer,
+.sl-rv-actions-panel,
+.sl-cf-proto,
+.sl-sm-proto {
+  font-family: "Segoe UI", "PingFang SC", sans-serif;
+  border: 1px solid #3a3a3a33;
+  padding: 12px;
+  border-radius: 8px;
+}
+
+.sl-ev-drawer--dark,
+.sl-rv-actions-panel--dark,
+.sl-cf-proto--dark,
+.sl-sm-proto--dark {
+  background: #1c1f24;
+  color: #e8eaed;
+}
+
+.sl-ev-drawer--light,
+.sl-rv-actions-panel--light,
+.sl-cf-proto--light,
+.sl-sm-proto--light {
+  background: #f7f8fa;
+  color: #1a1a1a;
+}
+
+.sl-ev-preview-card {
+  border: 1px solid #8884;
+  padding: 8px;
+  margin-bottom: 8px;
+}
+
+.sl-ev-warn,
+.sl-cf-warn,
+.sl-sm-trunc {
+  color: #b45309;
+}
+
+.sl-ev-integrity--hash_mismatch,
+.sl-cf-sev--blocking {
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+.sl-ev-mono {
+  font-family: ui-monospace, Consolas, monospace;
+}
+
+.sl-sm-svg {
+  background: transparent;
+  outline: none;
+}
+
+.sl-sm-node rect {
+  fill: #dbeafe;
+  stroke: #1d4ed8;
+}
+
+.sl-sm-proto--dark .sl-sm-node rect {
+  fill: #1e3a5f;
+  stroke: #93c5fd;
+}
+
+.sl-sm-node.is-candidate rect {
+  stroke-dasharray: 4 3;
+}
+
+.sl-sm-edge {
+  stroke: #64748b;
+  stroke-width: 1.5;
+}
+
+.sl-sm-node-title,
+.sl-sm-node-meta {
+  font-size: 11px;
+  fill: currentColor;
+}
+
+.sl-sm-toolbar,
+.sl-cf-filters,
+.sl-rv-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}

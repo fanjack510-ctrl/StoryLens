@@ -1,0 +1,80 @@
+{
+  "id": "CHG-20260723-001",
+  "title": "Fix frontend build gate and stale-dist startup",
+  "type": "fix",
+  "base_version": "1.0.4",
+  "status": "released",
+  "include_in_next_release": false,
+  "commits": [
+    {
+      "sha": "9cd806100a18498967fa7263ea88ecc535ff366d",
+      "message": "fix: fail-fast web start and block stale frontend dist",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "806d7a36b3e0ed343728c0b8c82c64dc780cd750",
+      "message": "docs: mark CHG-20260723-001 tested for build gate",
+      "primary": false,
+      "multi_change_reason": "registry status for CHG-20260723-001"
+    },
+    {
+      "sha": "15b3af2c886b88ef9fc95a08c107e131036e77ab",
+      "message": "docs: attach registry commit for CHG-20260723-001",
+      "primary": false,
+      "multi_change_reason": "final registry attachment for CHG-20260723-001"
+    }
+  ],
+  "modules": [
+    "desktop",
+    "api",
+    "scripts"
+  ],
+  "files": [
+    "apps/desktop/src/components/readerJourney/journeyChapterSummary.ts",
+    "apps/desktop/src/components/readerJourney/diagnosisBandModel.ts",
+    "apps/desktop/src/components/readerJourney/narrativeLoopView.test.ts",
+    "apps/desktop/src/components/readerJourney/journeyChapterSummary.test.ts",
+    "apps/desktop/scripts/write-dist-build-meta.mjs",
+    "apps/desktop/package.json",
+    "scripts/start_storylens_web.ps1",
+    "apps/api/app/services/runtime_info.py",
+    "apps/api/tests/test_start_storylens_web_build_gate.py",
+    "apps/api/tests/test_local_web_production.py"
+  ],
+  "user_summary": "前端构建失败后仍用旧dist启动，导致实机看不到已提交的滚动与旅程界面修复。",
+  "technical_summary": "Fail-fast start_storylens_web on npm build failure; write/require storylens-frontend-build.json (source_commit/build_time/version); runtime exposes frontend_source_commit; fix journeyChapterSummary to use scene_boundary_anomaly code; remove unused HARD_BLOCK import.",
+  "acceptance_criteria": [
+    "npm build failure does not start web or serve stale dist",
+    "stale dist meta blocks SkipBuild start",
+    "runtime returns frontend_source_commit",
+    "journeyChapterSummary uses scene_boundary_anomaly code"
+  ],
+  "tests": [
+    "apps/desktop/src/components/readerJourney/journeyChapterSummary.test.ts",
+    "apps/desktop/src/components/readerJourney/narrativeLoopView.test.ts",
+    "apps/api/tests/test_start_storylens_web_build_gate.py",
+    "apps/api/tests/test_local_web_production.py"
+  ],
+  "verification_evidence": [
+    "Ancestors confirmed: 63b0434/d47a954/3a03db6/6948180/3426457. typecheck+lint green. vitest 49. pytest build-gate 5 passed 1 skipped. npm run build wrote meta. start fail-fast + stale dist gates.",
+    "Post-commit npm rebuild + browser_local_production restart; runtime frontend_source_commit equals HEAD.",
+    "1.0.5 Phase A engineering gates (not per-item user manual acceptance): pytest 760 passed/50 skipped; vitest 877 passed; typecheck; lint; frontend build; check_project; template governance; playwright smoke+scroll+chapter; focused theme/lens/comparison vitest."
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "P0",
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-23T00:14:34Z",
+  "updated_at": "2026-07-23T05:40:46Z"
+}

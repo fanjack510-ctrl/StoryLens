@@ -1,0 +1,160 @@
+{
+  "id": "CHG-20260724-058",
+  "title": "Context Citation and Claim Evidence Contract V2",
+  "type": "feature",
+  "base_version": "1.0.5",
+  "status": "tested",
+  "include_in_next_release": true,
+  "commits": [
+    {
+      "sha": "13d3959be5e0695035fc1f008ac4a39b53fdf6cc",
+      "message": "feat: persist claim-bound citation evidence",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "87f5a11e7a7931f9f26ca4c2003ca4f36a7e5110",
+      "message": "fix: preserve provider attempts across pipeline checkpoints",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "467ee8cb3870c40d159707d9c79d37f7d49bddc3",
+      "message": "test: add citation v2 http replay product scenarios",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "d2ea536dddde1b271e0ad61f842c2f124262df4b",
+      "message": "docs: attach CHG-058 http replay test commit",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "c5a4df36d3bc0165e5e9cd936c3e6f198a1e84d1",
+      "message": "docs: retarget CHG-058 commits to Integration SHAs",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "9b69d56d656e1890785d7aee750d5d11b5f122ae",
+      "message": "docs: attach Integration retarget commit to CHG-20260724-058",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "c55ebd2fb67ed136c47689760858b5587fee077c",
+      "message": "docs: close CHG-20260724-058 retarget attachment loop",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "afc6480a51111e2bb8d6f4e0726c8e8aad01c357",
+      "message": "docs: finalize CHG-20260724-058 Integration commit list",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "ced7a78d9caa8fd82bba464b77279b86848c07a3",
+      "message": "fix: render citation catalog ids in live provider prompts",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "f121d3d84d5661134c0ceefa95c133a8d234108b",
+      "message": "docs: attach CHG-058 prompt-render fix commit",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "3368a5363b61d52477c095d96159d3837dfaa71c",
+      "message": "docs: close CHG-058 prompt-render attachment loop",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "63af42cabadfdcc596d3847ddcb402a60cea793a",
+      "message": "test: add named citation repair persistence and attempt append tests",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "2049b67b9dac3b1fd60ab649143f682477b56f92",
+      "message": "docs: include final CHG-058 prompt-render attachment sha",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "cb9401a4784b16260d7ff0bc48333a3f3dc75bde",
+      "message": "docs: attach CHG-058 named-test and prompt-render Integration SHAs",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "0160be61ee6bb24655ae545fb74e601b78b8e15c",
+      "message": "docs: close CHG-058 named-test attachment loop",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "narrative_core.product_contract",
+    "narrative_core.services.citation_catalog_v2",
+    "narrative_core.services.citation_evidence_enrichment_v2",
+    "narrative_core.services.private_whole_book_analysis_runtime",
+    "narrative_core.services.run_stage_repository"
+  ],
+  "files": [
+    "apps/api/app/narrative_core/product_contract/module_results.py",
+    "apps/api/app/narrative_core/product_contract/__init__.py",
+    "apps/api/app/narrative_core/services/citation_catalog_v2.py",
+    "apps/api/app/narrative_core/services/citation_evidence_enrichment_v2.py",
+    "apps/api/app/narrative_core/services/live_module_pipeline_diagnostics.py",
+    "apps/api/app/narrative_core/services/private_whole_book_analysis_runtime.py",
+    "apps/api/app/narrative_core/services/run_stage_repository.py",
+    "apps/api/app/narrative_core/services/run_stage_service.py",
+    "apps/api/app/narrative_core/services/private_lab_run_executor.py",
+    "apps/api/app/narrative_core/private_engine_contract/provider_estimate.py",
+    "apps/api/app/narrative_core/services/private_lab_service_adapters.py",
+    "scripts/check_live_citation_v2_boundary.py"
+  ],
+  "user_summary": "Replace free-form evidence IDs with Context Citation Catalog–bound claim citations for whole-book analysis.",
+  "technical_summary": "Public V2 DTOs (CitedClaimDto/BookOverviewResultV2), CitationCatalog wrappers, citation enrichment (no quote fallback), append-only provider_attempts checkpoint namespaces, estimate evidence_contract_version=v2.",
+  "acceptance_criteria": [
+    "V2 enrich path resolves citation_id via CitationCatalog only",
+    "V2 path does not call quote_resolution / SnapshotQuoteIndex",
+    "provider_attempts preserved across pipeline_diagnostics checkpoint writes",
+    "Estimate safe_dict exposes evidence_contract_version=v2 and citation repair policy"
+  ],
+  "tests": [
+    "apps/api/tests/test_narrative_phase2br1_citation_v2_boundary.py",
+    "apps/api/tests/test_narrative_phase2br1_v2_no_legacy_fallback.py",
+    "apps/api/tests/test_public_citation_contract_boundary.py",
+    "apps/api/tests/test_narrative_phase2br1_provider_attempt_preservation.py",
+    "apps/api/tests/test_narrative_phase2br1_citation_v2_http_replay.py",
+    "apps/api/tests/test_narrative_phase2br1_citation_v2_fail_closed.py"
+  ],
+  "verification_evidence": [
+    {
+      "kind": "integration_directed",
+      "note": "Integration cherry-pick + A-F http replay + citation boundary gates",
+      "public_head": "d2ea536dddde1b271e0ad61f842c2f124262df4b"
+    }
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "No migrations; checkpoint_json namespaces merge in-place."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-24T15:35:15Z",
+  "updated_at": "2026-07-24T16:34:46Z"
+}

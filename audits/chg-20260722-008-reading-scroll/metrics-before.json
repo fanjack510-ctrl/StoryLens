@@ -1,0 +1,16 @@
+{
+  "note": "Captured by temporarily removing .book-shell-workspace height constraints (pure reading / no progress). Chapter list expanded to full content height and was clipped by overflow:hidden ancestors; overflow-y:auto never activated.",
+  "route": "/books/3?chapter=4&view=reading",
+  "viewport": { "width": 1440, "height": 900 },
+  "chapter_list_scroll_region": {
+    "clientHeight": 7014,
+    "scrollHeight": 7014,
+    "overflowY": "auto",
+    "scrollTop_can_change": false,
+    "diagnosis": "scrollHeight <= clientHeight — list not height-constrained"
+  },
+  "reading_content_scroll_region": {
+    "note": "Assertion failed at chapter list first; reading similarly unbounded/clipped by ancestors without independent scrollport"
+  },
+  "clipping_ancestor": ".book-shell-main / .book-shell-body (overflow:hidden) while .book-shell-workspace lacked flex/min-height:0/height"
+}

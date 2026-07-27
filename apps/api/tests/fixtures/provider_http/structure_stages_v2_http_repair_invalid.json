@@ -1,0 +1,22 @@
+{
+  "id": "fake-http-ss-v2-repair-invalid-1",
+  "object": "chat.completion",
+  "model": "qwen3.7-plus",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\"contract_version\": \"v2\", \"evidence_contract_version\": \"v2\", \"coverage_scope\": \"partial_span\", \"context_capabilities\": {}, \"stages\": [{\"local_stage_ref\": \"S1\", \"order_index\": 0, \"stage_type\": \"rising\", \"title\": \"Stage S1\", \"summary\": {\"value\": \"修复后仍缺摘要引用\", \"status\": \"observed\", \"citation_ids\": [], \"confidence\": 0.7}, \"start_boundary\": {\"citation_ids\": [\"{{CITATION_ID_1}}\"], \"note\": null, \"value\": null}, \"end_boundary\": {\"citation_ids\": [\"{{CITATION_ID_2}}\"], \"note\": null, \"value\": null}, \"supporting_citation_ids\": [], \"related_turning_point_refs\": [], \"narrative_function\": \"advance plot\", \"confidence\": 0.6}], \"turning_points\": [], \"analysis_confidence\": 0.5, \"limitations\": []}"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 5125,
+    "completion_tokens": 420,
+    "total_tokens": 5545
+  },
+  "http_status": 200,
+  "request_id": "fake-http-ss-v2-repair-invalid-1"
+}

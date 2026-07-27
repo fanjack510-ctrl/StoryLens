@@ -176,6 +176,46 @@ def _persist_profile(
         return None
     engagement = compute_engagement(profile, genre=genre)
     payload = profile.model_dump()
+    from app.db.models import Scene
+    from app.services.analysis_context_fingerprint import (
+        compute_source_context_fingerprint,
+        paragraph_content_hash,
+    )
+    from app.services.analysis_integrity_guard import scan_journey_profile_grounding
+
+    scene = session.get(Scene, profile.scene_id)
+    if scene is not None:
+        ordered = []
+        for pid, paragraph in sorted(
+            (
+                (pid, p)
+                for pid, p in paragraphs_by_id.items()
+                if p.chapter_id == scene.chapter_id
+            ),
+            key=lambda item: item[1].paragraph_index,
+        ):
+            # Keep only paragraphs inside scene span when available.
+            start = paragraphs_by_id.get(scene.start_paragraph_id)
+            end = paragraphs_by_id.get(scene.end_paragraph_id)
+            if start and end:
+                lo = min(start.paragraph_index, end.paragraph_index)
+                hi = max(start.paragraph_index, end.paragraph_index)
+                if not (lo <= paragraph.paragraph_index <= hi):
+                    continue
+            ordered.append(paragraph)
+        if ordered:
+            payload["source_context_fingerprint"] = compute_source_context_fingerprint(
+                book_id=journey_run.book_id,
+                chapter_id=journey_run.chapter_id,
+                analysis_run_id=journey_run.analysis_run_id,
+                scene_id=profile.scene_id,
+                ordered_paragraph_ids=[p.id for p in ordered],
+                paragraph_content_hashes=[paragraph_content_hash(p.raw_text) for p in ordered],
+                prompt_version=journey_run.scene_prompt_version,
+                contract_version=journey_run.scene_contract_version,
+                formula_version=journey_run.formula_version,
+            )
+    validation_status = "valid"
     artifact = AnalysisArtifact(
         run_id=journey_run.analysis_run_id,
         artifact_type="reader_journey_scene_profile",
@@ -185,7 +225,7 @@ def _persist_profile(
         prompt_version=SCENE_PROMPT_VERSION,
         payload_json=json.dumps(payload, ensure_ascii=False),
         confidence=profile.confidence,
-        validation_status="valid",
+        validation_status=validation_status,
     )
     session.add(artifact)
     session.flush()
@@ -220,11 +260,29 @@ def _persist_profile(
         engagement_score=engagement.engagement_score,
         confidence=profile.confidence,
         payload_json=json.dumps(payload, ensure_ascii=False),
-        validation_status="valid",
+        validation_status=validation_status,
         artifact_id=artifact.id,
     )
     session.add(row)
     session.flush()
+    # Read-time style grounding without mutating provider raw responses.
+    try:
+        report = scan_journey_profile_grounding(
+            session,
+            profile=row,
+            book_id=journey_run.book_id,
+            chapter_id=journey_run.chapter_id,
+            analysis_run_id=journey_run.analysis_run_id,
+            prompt_version=journey_run.scene_prompt_version,
+            contract_version=journey_run.scene_contract_version,
+            formula_version=journey_run.formula_version,
+        )
+        if report.integrity_status in {"data_integrity_failed", "invalid_context"}:
+            row.validation_status = report.integrity_status
+            artifact.validation_status = report.integrity_status
+            session.flush()
+    except Exception:
+        pass
     return row
 
 
@@ -284,6 +342,39 @@ def _classify_journey_error(exc: Exception) -> tuple[str, str, bool, str]:
 
 
 async def execute_reader_journey(
+    session_factory: sessionmaker[Session],
+    gateway: ModelGateway,
+    journey_run_id: int,
+) -> None:
+    """Dispatch to V2 or legacy pipeline based on the run's persisted contract.
+
+    Outer worker boundary (CHG-20260727-019): task-level exceptions are persisted
+    in a short transaction and must not terminate the Sidecar process.
+    """
+    from app.services.reader_journey_recovery import persist_journey_worker_failure
+    from app.services.reader_journey_version import is_v2_journey_run
+    from app.services.reader_journey_v2_execution import execute_reader_journey_v2
+
+    try:
+        with session_factory() as session:
+            journey_run = session.get(ReaderJourneyRun, journey_run_id)
+            if journey_run is None:
+                return
+            if journey_run.status in {"succeeded", "cancelled"}:
+                return
+            if is_v2_journey_run(journey_run):
+                await execute_reader_journey_v2(session_factory, gateway, journey_run_id)
+                return
+
+        await _execute_reader_journey_legacy(session_factory, gateway, journey_run_id)
+    except Exception as exc:  # noqa: BLE001 — worker isolation; keep Sidecar alive
+        persist_journey_worker_failure(session_factory, journey_run_id, exc)
+        logger.exception(
+            "reader_journey_worker_boundary journey_run_id=%s", journey_run_id
+        )
+
+
+async def _execute_reader_journey_legacy(
     session_factory: sessionmaker[Session],
     gateway: ModelGateway,
     journey_run_id: int,
@@ -500,6 +591,14 @@ async def execute_reader_journey(
                     else "normal_batch_request"
                 )
                 snapshot = {
+                    "book_id": journey_run.book_id,
+                    "chapter_id": journey_run.chapter_id,
+                    "analysis_run_id": analysis_run.id,
+                    "scene_ids": list(batch.scene_ids),
+                    "prompt_version": journey_run.scene_prompt_version,
+                    "contract_version": journey_run.scene_contract_version,
+                    "formula_version": journey_run.formula_version,
+                    "analysis_mode": "reader_journey_scene",
                     "profiles_target": scene_payloads,
                     "owned_scene_ids_json": json.dumps(batch.scene_ids),
                     "owned_scene_ordinals_json": json.dumps(batch.scene_ordinals),
@@ -509,6 +608,11 @@ async def execute_reader_journey(
                     "batch_count": batch.batch_count,
                     "audit_type": batch.audit_type,
                     "invocation_request_type": invocation_kind,
+                    "paragraph_ids": [
+                        pid
+                        for scene in batch_scenes
+                        for pid in _paragraph_ids_for_scene(scene, paragraphs, position)
+                    ],
                 }
                 paragraph_ids_by_scene = {
                     scene.id: _paragraph_ids_for_scene(scene, paragraphs, position)
@@ -826,11 +930,24 @@ async def execute_reader_journey(
             journey_run.completed_at = datetime.now(timezone.utc)
             journey_run.retryable = False
             sync_journey_run_counts(session, journey_run)
+            analysis_run = session.get(AnalysisRun, journey_run.analysis_run_id)
+            if analysis_run is not None:
+                from app.services.chapter_analysis_completion import (
+                    finalize_chapter_analysis,
+                    is_chapter_analysis_complete,
+                )
+
+                if is_chapter_analysis_complete(session, analysis_run):
+                    finalize_chapter_analysis(session, analysis_run)
             session.commit()
     except Exception as exc:
         with session_factory() as session:
             journey_run = session.get(ReaderJourneyRun, journey_run_id)
             analysis_run = session.get(AnalysisRun, journey_run.analysis_run_id)
+            if analysis_run is not None:
+                from app.services.chapter_analysis_completion import mark_journey_failed_on_run
+
+                mark_journey_failed_on_run(session, analysis_run)
             root_code, stage, retryable, hint = _classify_journey_error(exc)
             progress = sync_journey_run_counts(session, journey_run)
             journey_run.failed_stage = journey_run.current_stage or STAGE_READER_JOURNEY_SCENE
@@ -926,14 +1043,48 @@ def build_preflight_payload(
         remaining_scene_ids=pending_ids,
         pricing_path=pricing_path,
     )
-    stage2 = estimate_reader_journey_chapter_synthesis(scenes, pricing_path=pricing_path)
+    from app.db.models import ReaderJourneyRun as _ReaderJourneyRun
+    from app.services.reader_journey_version import (
+        is_v2_journey_run,
+        resolve_versions_for_new_run,
+    )
+
+    versions = resolve_versions_for_new_run()
+    use_v2_preflight = True
+    if existing_journey_run_id is not None:
+        existing_jr = session.get(_ReaderJourneyRun, existing_journey_run_id)
+        if existing_jr is not None:
+            use_v2_preflight = is_v2_journey_run(existing_jr)
+            if use_v2_preflight:
+                versions = resolve_versions_for_new_run(pipeline_id="v2")
+            else:
+                versions = resolve_versions_for_new_run(pipeline_id="legacy_v1")
+
+    if use_v2_preflight:
+        # V2: model scene levels only; chapter diagnosis is program-owned (no stage2 model).
+        stage2 = estimate_reader_journey_chapter_synthesis(scenes, pricing_path=pricing_path)
+        stage2_requests = 0
+        stage2_tokens = 0
+        stage2_cost = 0.0
+        stage2_worst_requests = 0
+        stage2_worst_tokens = 0
+        stage2_worst_cost = 0.0
+    else:
+        stage2 = estimate_reader_journey_chapter_synthesis(scenes, pricing_path=pricing_path)
+        stage2_requests = stage2.expected_request_count
+        stage2_tokens = stage2.estimated_total_tokens
+        stage2_cost = stage2.estimated_cost
+        stage2_worst_requests = stage2.worst_case_request_count
+        stage2_worst_tokens = stage2.worst_case_total_tokens
+        stage2_worst_cost = stage2.worst_case_cost
+
     pending_scenes = [scene for scene in scenes if scene.id in pending_ids]
     batches = plan_scene_batches(pending_scenes, paragraphs=paragraphs)
-    # Hard gate: estimated remaining work for both RJ stages (not worst-case).
+    # Hard gate: estimated remaining work (not worst-case).
     required = BudgetAmounts(
-        stage1.expected_request_count + stage2.expected_request_count,
-        stage1.estimated_total_tokens + stage2.estimated_total_tokens,
-        round(stage1.estimated_cost + stage2.estimated_cost, 6),
+        stage1.expected_request_count + stage2_requests,
+        stage1.estimated_total_tokens + stage2_tokens,
+        round(stage1.estimated_cost + stage2_cost, 6),
     )
     dims = exceeded_dimensions(required, remaining)
     return {
@@ -941,12 +1092,12 @@ def build_preflight_payload(
         "total_scenes": len(scenes),
         "remaining_scenes": len(pending_scenes),
         "scene_batch_count": len(batches),
-        "expected_requests": stage1.expected_request_count + stage2.expected_request_count,
-        "worst_case_requests": stage1.worst_case_request_count + stage2.worst_case_request_count,
-        "estimated_tokens": stage1.estimated_total_tokens + stage2.estimated_total_tokens,
-        "worst_case_tokens": stage1.worst_case_total_tokens + stage2.worst_case_total_tokens,
-        "estimated_cost": round(stage1.estimated_cost + stage2.estimated_cost, 6),
-        "worst_case_cost": round(stage1.worst_case_cost + stage2.worst_case_cost, 6),
+        "expected_requests": stage1.expected_request_count + stage2_requests,
+        "worst_case_requests": stage1.worst_case_request_count + stage2_worst_requests,
+        "estimated_tokens": stage1.estimated_total_tokens + stage2_tokens,
+        "worst_case_tokens": stage1.worst_case_total_tokens + stage2_worst_tokens,
+        "estimated_cost": round(stage1.estimated_cost + stage2_cost, 6),
+        "worst_case_cost": round(stage1.worst_case_cost + stage2_worst_cost, 6),
         "within_budget": not dims,
         "exceeded_dimensions": dims,
         "pricing_version": pricing.get("pricing_version"),
@@ -958,10 +1109,23 @@ def build_preflight_payload(
         "currency": stage1.currency,
         "estimated": True,
         "stage1_scene_profiles": estimate_to_dict(stage1),
-        "stage2_chapter_synthesis": estimate_to_dict(stage2),
+        "stage2_chapter_synthesis": estimate_to_dict(stage2)
+        if not use_v2_preflight
+        else {
+            **estimate_to_dict(stage2),
+            "expected_request_count": 0,
+            "worst_case_request_count": 0,
+            "estimated_total_tokens": 0,
+            "worst_case_total_tokens": 0,
+            "estimated_cost": 0.0,
+            "worst_case_cost": 0.0,
+            "note": "v2_native: chapter diagnosis is program-owned (no model)",
+        },
         "planner_version": PLANNER_VERSION,
-        "scene_prompt_version": SCENE_PROMPT_VERSION,
-        "scene_contract_version": SCENE_CONTRACT_VERSION,
+        "scene_prompt_version": versions.scene_prompt_version,
+        "scene_contract_version": versions.contract_version,
+        "pipeline_id": versions.pipeline_id,
+        "source_mode": versions.source_mode,
         "batch_plan": format_batch_plan_report(batches),
         "recovery_mode": recovery_mode,
         "existing_journey_run_id": existing_journey_run_id,

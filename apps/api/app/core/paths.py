@@ -23,7 +23,14 @@ def resource_root() -> Path:
     return Path(__file__).resolve().parents[4]
 
 
+def is_web_production_mode() -> bool:
+    """Formal local web shell (browser → loopback FastAPI SPA)."""
+    return os.environ.get("STORYLENS_WEB_MODE", "").lower() in {"1", "true", "yes", "web"}
+
+
 def is_production_runtime() -> bool:
+    if is_web_production_mode():
+        return True
     env = os.environ.get("STORYLENS_APP_ENV", "").lower()
     if env in {"production", "prod", "packaged"}:
         return True

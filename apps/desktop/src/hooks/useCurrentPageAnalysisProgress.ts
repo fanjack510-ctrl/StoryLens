@@ -57,7 +57,14 @@ export function useCurrentPageAnalysisProgress({ runId, enabled = true }: Option
     refetchInterval: (q) => {
       const run = q.state.data as Run | undefined;
       const ui = mapRunToUiState(run);
-      if (isTerminalUiState(ui)) return false;
+      // Keep polling after scene success until chapter_complete (journey finished).
+      if (ui === "succeeded" && run && run.chapter_complete !== true) {
+        return visible ? POLL_MS : HIDDEN_POLL_MS;
+      }
+      if (isTerminalUiState(ui) && run?.chapter_complete !== false) return false;
+      if (isTerminalUiState(ui) && run?.chapter_complete === true) return false;
+      if (isTerminalUiState(ui) && run == null) return false;
+      if (ui === "failed" || ui === "cancelled") return false;
       return visible ? POLL_MS : HIDDEN_POLL_MS;
     },
     refetchOnWindowFocus: true,

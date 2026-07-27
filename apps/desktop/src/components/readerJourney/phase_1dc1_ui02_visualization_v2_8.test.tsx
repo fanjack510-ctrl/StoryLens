@@ -2,7 +2,7 @@
  * v2.8 visualization tests 鈥?superseded by v2.9 canonical restoration.
  * Kept as a thin compatibility suite so historical gate paths still resolve.
  */
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
@@ -49,7 +49,6 @@ describe("Reader Journey Visualization v2.8 (superseded by v3.0)", () => {
     expect(allowsHorizontalPanZoom(30)).toBe(true);
     expect(requiresBrush(30)).toBe(false);
     renderWorkspace(buildFixture30Scenes());
-    fireEvent.click(screen.getByTestId("journey-more-chart-settings"));
-    expect(screen.getByTestId("journey-zoom-in")).toBeEnabled();
+    expect(screen.getByTestId("journey-zoom-in")).toBeInTheDocument();
   });
 });

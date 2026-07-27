@@ -438,6 +438,19 @@ class AnalysisRunResponse(BaseModel):
     completed_scene_ids: list[int] = Field(default_factory=list)
     remaining_scene_ids: list[int] = Field(default_factory=list)
     scene_validation_detail: dict | None = None
+    chapter_complete: bool = False
+    scene_pipeline_complete: bool = False
+    effective_status: str | None = None
+    checkpoint_stage: str | None = None
+    resume_stage: str | None = None
+    journey_run_id: int | None = None
+    journey_status: str | None = None
+    journey_completed_scene_count: int | None = None
+    journey_total_scene_count: int | None = None
+    journey_retryable: bool | None = None
+    journey_result_available: bool = False
+    journey_error_code: str | None = None
+    primary_action: str | None = None
 
 
 class SceneAnalysisOfflineReplayRequest(BaseModel):

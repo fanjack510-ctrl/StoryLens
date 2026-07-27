@@ -30,6 +30,44 @@ class BoundaryReviewConfirm(BaseModel):
     confirmed_by: str = Field(min_length=1, max_length=255)
 
 
+class ReviewParagraph(BaseModel):
+    id: str
+    paragraph_index: int
+    raw_text: str
+
+
+class FinalBoundaryConfirmRequest(BaseModel):
+    confirmed_by: str = Field(min_length=1, max_length=255)
+    proposal_fingerprint: str = Field(min_length=8, max_length=128)
+    client_request_id: str | None = Field(default=None, min_length=8, max_length=64)
+
+
+class FinalSceneRangeItem(BaseModel):
+    ordinal: int
+    start_paragraph_id: str
+    end_paragraph_id: str
+    start_paragraph_index: int
+    end_paragraph_index: int
+    paragraph_ids: list[str] = Field(default_factory=list)
+
+
+class FinalBoundaryProposalResponse(BaseModel):
+    review_id: int
+    analysis_run_id: int
+    chapter_id: int
+    boundary_review_mode: str = "confirm_only"
+    validation_status: str
+    proposal_fingerprint: str
+    final_boundary_left_ids: list[str] = Field(default_factory=list)
+    final_scene_ranges: list[FinalSceneRangeItem] = Field(default_factory=list)
+    source_summary: dict = Field(default_factory=dict)
+    unresolved_reason: str | None = None
+    paragraph_count: int = 0
+    scene_count: int = 0
+    chapter_title: str | None = None
+    paragraphs: list[ReviewParagraph] = Field(default_factory=list)
+
+
 class BoundaryReviewDecisionResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
@@ -53,12 +91,6 @@ class BoundaryReviewDecisionResponse(BaseModel):
     enum_snapshot_json: str = "{}"
     source_batch_index: int | None = None
     manual_reason_type: str | None = None
-
-
-class ReviewParagraph(BaseModel):
-    id: str
-    paragraph_index: int
-    raw_text: str
 
 
 class BoundaryReviewResponse(BaseModel):

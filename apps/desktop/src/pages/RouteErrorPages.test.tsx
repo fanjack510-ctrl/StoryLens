@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { NotFoundPage, RouteErrorPage } from "./RouteErrorPages";
 
@@ -44,6 +44,10 @@ describe("RouteErrorPages", () => {
     expect(page).not.toHaveTextContent("localhost");
     expect(page).not.toHaveTextContent("C:\\Users");
     expect(screen.getByTestId("route-error-reload")).toBeInTheDocument();
+    expect(screen.getByTestId("route-error-tech-details")).toBeInTheDocument();
+    expect(screen.getByTestId("route-error-tech-body")).toHaveTextContent("error_name=Error");
+    expect(screen.getByTestId("route-error-tech-body")).toHaveTextContent("message=boom");
+    expect(screen.getByTestId("route-error-tech-body")).not.toHaveTextContent("C:\\Users");
     fireEvent.click(screen.getByTestId("route-error-library"));
     expect(screen.getByText("library")).toBeInTheDocument();
   });

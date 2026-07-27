@@ -102,27 +102,55 @@ def test_candidate_generation_creates_pending_review_and_waiting_task(testing_se
 
 
 def test_accept_reject_manual_preview_and_confirmation(testing_session):
+    """Confirm-only product path: proposal from user_decision, then fingerprint confirm."""
+    from app.services.boundary_review_service import confirm_review_from_final_proposal
+    from app.services.final_boundary_proposal import build_final_boundary_proposal
+
     _, chapter, paragraphs, run = seed(testing_session)
+    # Longer body text so short-fragment consolidation keeps accepted cuts.
+    for index, paragraph in enumerate(paragraphs, start=1):
+        long_text = f"这是用于场景划分测试的较长正文段落内容{index}。" * 8
+        paragraph.raw_text = long_text
+        paragraph.normalized_text = long_text
+        paragraph.char_end = paragraph.char_start + len(long_text)
     review = create_review_session(testing_session, run)
     model = testing_session.scalar(select(BoundaryReviewDecision))
     model.user_decision = "accept"
-    model.final_boundary = True
-    testing_session.add(BoundaryReviewDecision(
-        review_session_id=review.id, transition_id="M-P4",
-        left_paragraph_id=paragraphs[3].id, right_paragraph_id=paragraphs[4].id,
-        model_candidate=False, model_confidence=0, first_pass_json="{}",
-        review_priority="high", user_decision="manually_added", final_boundary=True,
-    ))
-    testing_session.flush()
+    # confirm_only: do not rely on pre-confirm final_boundary materialization
+    testing_session.add(
+        BoundaryReviewDecision(
+            review_session_id=review.id,
+            transition_id="M-P4",
+            left_paragraph_id=paragraphs[3].id,
+            right_paragraph_id=paragraphs[4].id,
+            model_candidate=False,
+            model_confidence=0,
+            first_pass_json="{}",
+            review_priority="high",
+            user_decision="manually_added",
+            final_boundary=False,
+        )
+    )
+    testing_session.commit()
     update_counts(testing_session, review)
-    _, ids, ranges = preview_ranges(testing_session, review)
-    assert ids == [paragraphs[1].id, paragraphs[3].id]
-    assert [(a.id, b.id) for a, b in ranges] == [
+
+    proposal = build_final_boundary_proposal(testing_session, review)
+    assert proposal.validation_status == "valid"
+    assert proposal.final_boundary_left_ids == [paragraphs[1].id, paragraphs[3].id]
+    assert proposal.scene_count == 3
+    assert [(row["start_paragraph_id"], row["end_paragraph_id"]) for row in proposal.final_scene_ranges] == [
         (paragraphs[0].id, paragraphs[1].id),
         (paragraphs[2].id, paragraphs[3].id),
         (paragraphs[4].id, paragraphs[5].id),
     ]
-    revision, scenes = confirm_review(testing_session, review, "offline-reviewer")
+
+    revision, scenes, replay = confirm_review_from_final_proposal(
+        testing_session,
+        review,
+        confirmed_by="offline-reviewer",
+        proposal_fingerprint=proposal.proposal_fingerprint,
+    )
+    assert replay is False
     assert revision.coverage_rate == 1 and len(scenes) == 3
     assert review.status == "confirmed" and run.status == "boundary_confirmed"
     assert all(item.boundary_revision_id == revision.id for item in scenes)

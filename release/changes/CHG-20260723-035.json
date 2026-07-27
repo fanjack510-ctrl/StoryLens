@@ -1,0 +1,142 @@
+{
+  "id": "CHG-20260723-035",
+  "title": "Phase 2A Integration",
+  "type": "feature",
+  "base_version": "1.0.5",
+  "status": "tested",
+  "include_in_next_release": true,
+  "commits": [
+    {
+      "sha": "8b08f386ded2af5466ec655bbea4a47c1fba5841",
+      "message": "feat: implement backend mock whole book runs",
+      "primary": false,
+      "multi_change_reason": "Cherry-pick Agent M onto integration branch (CHG-032 primary on agent branch)"
+    },
+    {
+      "sha": "b948c844aeae613d5dd1c7477be97418e411de73",
+      "message": "docs: strip trailing whitespace in phase2a backend docs",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "208adc474746aae2c28d138008b179e3c532a5ef",
+      "message": "feat: implement mock run recovery and reliability",
+      "primary": false,
+      "multi_change_reason": "Cherry-pick Agent O onto integration branch (CHG-034 primary on agent branch)"
+    },
+    {
+      "sha": "08d2897cc1c7401758b2906909ffb49111404d32",
+      "message": "feat: implement whole book mock run lab",
+      "primary": false,
+      "multi_change_reason": "Cherry-pick Agent N onto integration branch (CHG-033 primary on agent branch)"
+    },
+    {
+      "sha": "dbd0ee8dc8e98eb231b1f5428d4f820f63396eb5",
+      "message": "docs: attach primary commit to CHG-20260723-033",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "c23b09555f3e4715dea7b99b42380c3696c0a9f8",
+      "message": "feat: integrate narrative phase2a mock run shell",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "integration",
+    "narrative_core/services",
+    "routers",
+    "desktop/wholeBook/runShell",
+    "docs"
+  ],
+  "files": [
+    "apps/api/app/main.py",
+    "apps/api/app/narrative_core/services/mock_whole_book_run_runtime.py",
+    "apps/api/app/narrative_core/services/mock_run_metadata.py",
+    "apps/api/app/routers/whole_book_mock_lab_runs.py",
+    "apps/api/tests/test_narrative_phase2a_integration.py",
+    "apps/desktop/src/features/wholeBook/runShell/__tests__/fixtures.ts",
+    "docs/architecture/narrative-intelligence-core/phase2a-integration-report.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-runtime-composition.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-lab-router-security.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-metadata-idempotency-boundary.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-executor-recovery-e2e.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-frontend-backend-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-production-isolation-verification.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-known-limitations.md",
+    "docs/architecture/narrative-intelligence-core/README.md",
+    "release/changes/CHG-20260723-031.json",
+    "release/changes/CHG-20260723-032.json",
+    "release/changes/CHG-20260723-033.json",
+    "release/changes/CHG-20260723-034.json",
+    "release/changes/CHG-20260723-035.json"
+  ],
+  "user_summary": "Merge Agent M/N/O mock Lab stack, wire composition root and conditional Lab router, verify product E2E and production isolation.",
+  "technical_summary": "Cherry-pick M→O→N on integration/narrative-phase2a; add MockWholeBookRunRuntime composition root; mount_mock_lab_if_enabled + startup reconcile in main.py; nested mock_whole_book_run_metadata envelope; integration E2E tests; eight integration docs; Change Registry status updates. No migrations, no VERSION bump, gates unchanged.",
+  "acceptance_criteria": [
+    "MockWholeBookRunRuntime wires M service/executor with O idempotency/concurrency/quota/audit/recovery",
+    "Lab router mounts only development/test + WHOLE_BOOK_MOCK_LAB_ENABLED=true via main.py",
+    "Startup MockRunStartupRecoveryAdapter.reconcile marks interrupted only; no silent resume",
+    "E2E: complete run, pause/resume skip completed, failure retry, cancel, restart recovery",
+    "Production isolation: Lab absent in production OpenAPI; formal create disabled; gates unchanged",
+    "Metadata nested envelope in validated_output; create idempotency durable; no new tables/migrations",
+    "Frontend Lab marker on writes; allowed_actions from backend; fixtures.ts reused",
+    "Regression: M/O/N/contract tests pass; change_registry check clean"
+  ],
+  "tests": [
+    "apps/api/tests/test_narrative_phase2a_integration.py",
+    "apps/api/tests/test_narrative_phase2a_mock_run_backend.py (Agent M regression)",
+    "apps/api/tests/test_narrative_phase2a_recovery.py (Agent O regression)",
+    "apps/api/tests/test_narrative_phase2ap_contract.py (Phase 2A-P contract regression)",
+    "apps/desktop/src/features/wholeBook/runShell/__tests__/ (Agent N Vitest regression)"
+  ],
+  "verification_evidence": [
+    "D:\\Dstorylens\\.venv\\Scripts\\python.exe -m pytest apps/api/tests/test_narrative_phase2ap_contract.py -q --noconftest → 33 passed",
+    "D:\\Dstorylens\\.venv\\Scripts\\python.exe -m pytest apps/api/tests/test_narrative_phase2a_mock_run_backend.py -q -k \"not change_registry and not git_diff\" → 25 passed",
+    "D:\\Dstorylens\\.venv\\Scripts\\python.exe -m pytest apps/api/tests/test_narrative_phase2a_recovery.py -q -k \"not change_registry and not git_diff\" → 31 passed",
+    "D:\\Dstorylens\\.venv\\Scripts\\python.exe -m pytest apps/api/tests/test_narrative_phase2a_integration.py -q → 18 passed",
+    "D:\\Dstorylens\\.venv\\Scripts\\python.exe -m pytest phase1c/1d suite -q --noconftest → 87 passed (2 registry/git_diff only)",
+    "npx vitest run src/features/wholeBook/runShell → 29 passed (4 files)",
+    "python scripts/version_manager.py check → Version check passed: 1.0.5",
+    "python scripts/change_registry.py check → passed",
+    "python scripts/check_capability_keys.py → ok",
+    "git diff --check → clean"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "Mock metadata in validated_output nested envelope; no schema migration."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-23T15:04:12Z",
+  "updated_at": "2026-07-23T16:45:00Z",
+  "parallel_plan": {
+    "role": "integration",
+    "branch": "integration/narrative-phase2a",
+    "worktree": "D:\\\\Dstorylens-wt-narrative-phase2a-integration",
+    "depends_on": [
+      "CHG-20260723-032",
+      "CHG-20260723-033",
+      "CHG-20260723-034"
+    ],
+    "blocks": [],
+    "forbidden": [
+      "real engine/model/prompt",
+      "flip production gates",
+      "migrations",
+      "VERSION bump",
+      "push/build/publish"
+    ],
+    "file_ownership": "docs/architecture/narrative-intelligence-core/phase2a-parallel-file-ownership.json"
+  },
+  "file_ownership": "docs/architecture/narrative-intelligence-core/phase2a-parallel-file-ownership.json"
+}

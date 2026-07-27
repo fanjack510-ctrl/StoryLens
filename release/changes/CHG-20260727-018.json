@@ -1,0 +1,87 @@
+{
+  "id": "CHG-20260727-018",
+  "title": "Prepare StoryLens 1.1.0 stable release metadata and build",
+  "type": "build",
+  "base_version": "1.0.5",
+  "status": "ready",
+  "include_in_next_release": true,
+  "commits": [
+    {
+      "sha": "c4ff5c951c1b4e324a661cc128974b6026edff14",
+      "message": "chore(release): prepare StoryLens 1.1.0",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "1a129ee7572ba115d8a94e0026f2e06ae04646c5",
+      "message": "test(tasks): align no-journey CTA with CHG-019 lifecycle",
+      "primary": true,
+      "multi_change_reason": "V1.1.0 BUILD SOURCE HEAD for formal binaries"
+    },
+    {
+      "sha": "5a6e2834bd6adce75ddcd299cce27a2409335340",
+      "message": "docs(release): record StoryLens 1.1.0 formal build evidence",
+      "primary": true,
+      "multi_change_reason": "formal build evidence after BUILD SOURCE"
+    },
+    {
+      "sha": "4485a6476dd2a79936c6ad7a6f9a5d71e312cab7",
+      "message": "docs(release): record StoryLens 1.1.0 formal build evidence",
+      "primary": true,
+      "multi_change_reason": "formal build evidence after BUILD SOURCE"
+    }
+  ],
+  "modules": [
+    "apps/desktop",
+    "apps/api",
+    "scripts"
+  ],
+  "files": [
+    "VERSION",
+    "README.md",
+    "docs/releases/1.1.0.md",
+    "apps/desktop/package.json",
+    "apps/desktop/src-tauri/tauri.conf.json",
+    "apps/desktop/src-tauri/Cargo.toml",
+    "pyproject.toml",
+    "apps/api/app/__init__.py",
+    "apps/desktop/src/pages/WholeBookInsightsPage.tsx",
+    "apps/desktop/src/components/wholeBookInsights/WholeBookInsightsEntry.tsx"
+  ],
+  "user_summary": "正式版 1.1.0 版本晋升、构建配置与发布证据，不新增业务功能。",
+  "technical_summary": "Formal 1.1.0 packaging and GitHub Stable Release after RC9 acceptance; single-chapter scope; registry freeze bypass via STORYLENS_RC_CANDIDATE for unfrozen 1.0.5 pool while product VERSION remains 1.1.0.",
+  "acceptance_criteria": [
+    "Formal display/installer/runtime version 1.1.0; single-chapter scope retained; no RC strings in production metadata",
+    "Formal installer StoryLens_1.1.0_x64-setup.exe; GitHub Stable Release v1.1.0; RC9 acceptance PASS; CHG-019/020 verified"
+  ],
+  "tests": [
+    "targeted pytest 25 passed; vitest 140 passed; typecheck; version_manager check",
+    "targeted pytest 25; vitest 140; typecheck; version check; packaged sidecar verify; installer identity",
+    "apps/desktop/src/pages/TasksPage.test.tsx"
+  ],
+  "verification_evidence": [
+    "D:/StoryLens-Local-Evidence/V1.1.0-gate-20260727/gate-pytest.txt",
+    "D:/StoryLens-Local-Evidence/V1.1.0-gate-20260727/gate-vitest.txt",
+    "release/evidence/V1.1.0/build-manifest.json",
+    "release/evidence/V1.1.0/windows-build-log-1.1.0.md",
+    "release/evidence/V1.1.0/security-audit-summary.txt",
+    "release/evidence/V1.1.0/installed-smoke-summary.txt",
+    "release/evidence/V1.1.0/final-verdict.txt"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-27T00:18:49Z",
+  "updated_at": "2026-07-27T03:12:57Z"
+}

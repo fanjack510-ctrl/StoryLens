@@ -1,0 +1,102 @@
+{
+  "id": "CHG-20260723-037",
+  "title": "Agent P Private Engine Runtime",
+  "type": "feature",
+  "base_version": "1.0.5",
+  "status": "tested",
+  "include_in_next_release": true,
+  "commits": [
+    {
+      "sha": "208b5b56f2b4db18a9f13154fc5d153a50c0bb79",
+      "message": "feat: implement private engine runtime foundation",
+      "primary": true,
+      "multi_change_reason": "Cherry-pick Agent P primary onto integration/narrative-phase2b (agent SHA b6c60b5)"
+    },
+    {
+      "sha": "6857e19dd03a6b82a19c9c5ca2fa43dff68f5519",
+      "message": "docs: attach CHG-20260723-037 and mark tested",
+      "primary": false,
+      "multi_change_reason": "Cherry-pick Agent P docs onto integration (agent SHA 209521f)"
+    },
+    {
+      "sha": "a18b3c924e014685cab0a115fe8a3e29c46e2f77",
+      "message": "docs: close CHG-20260723-037 commit attachment loop",
+      "primary": false,
+      "multi_change_reason": "Cherry-pick Agent P docs onto integration (agent SHA dbe6aca)"
+    }
+  ],
+  "modules": [
+    "narrative_core/services",
+    "private_engine_runtime"
+  ],
+  "files": [
+    "apps/api/app/narrative_core/services/private_engine_manifest_loader.py",
+    "apps/api/app/narrative_core/services/private_engine_signature.py",
+    "apps/api/app/narrative_core/services/private_engine_runtime_adapter.py",
+    "apps/api/app/narrative_core/services/fake_private_whole_book_engine.py",
+    "apps/api/app/narrative_core/services/whole_book_provider_gateway.py",
+    "apps/api/tests/test_narrative_phase2b_engine_runtime.py",
+    "docs/architecture/narrative-intelligence-core/phase2b-engine-runtime-implementation.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-manifest-repository.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-package-verification.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-runtime-adapter.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-fake-private-engine.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-provider-gateway-implementation.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-credential-boundary.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-engine-runtime-verification.md"
+  ],
+  "user_summary": "Implement private engine loader, signature verify, provider gateway adapter, and fake private engine runtime foundation.",
+  "technical_summary": "Agent P implements Manifest Loader, signature verification interface, Provider Gateway adapter, Engine Runtime Adapter, and Fake Private Engine. Must not implement formal analysis algorithms or formal prompts.",
+  "acceptance_criteria": [
+    "Loader verifies signature/protocol/app version before load",
+    "Production never degrades to Mock",
+    "Provider Gateway used for all inference; credentials never in DTOs",
+    "Fake Private Engine for tests only; no real binary load in this phase",
+    "No formal prompts or real model calls"
+  ],
+  "tests": [
+    "apps/api/tests/test_narrative_phase2b_engine_runtime.py"
+  ],
+  "verification_evidence": [
+    "pytest apps/api/tests/test_narrative_phase2b_engine_runtime.py: 43 passed",
+    "scripts/check_project.py passed; version_manager check passed; change_registry check passed"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "Runtime adapters only; no new tables."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-23T22:38:45Z",
+  "updated_at": "2026-07-24T00:51:47Z",
+  "parallel_plan": {
+    "role": "agent_p",
+    "branch": "feature/narrative-phase2b-engine-runtime",
+    "worktree": "D:\\\\Dstorylens-wt-narrative-engine-runtime",
+    "depends_on": [
+      "CHG-20260723-036"
+    ],
+    "blocks": [
+      "CHG-20260723-040"
+    ],
+    "forbidden": [
+      "formal analysis algorithm",
+      "formal prompt body",
+      "real model calls",
+      "open production run",
+      "migrations",
+      "VERSION bump",
+      "push/build/publish"
+    ],
+    "file_ownership": "docs/architecture/narrative-intelligence-core/phase2b-parallel-file-ownership.json"
+  },
+  "file_ownership": "docs/architecture/narrative-intelligence-core/phase2b-parallel-file-ownership.json"
+}

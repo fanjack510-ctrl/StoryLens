@@ -1,0 +1,80 @@
+{
+  "id": "CHG-20260724-050",
+  "title": "Phase 2B-R1 Live Network Gate Fix",
+  "type": "fix",
+  "base_version": "1.0.5",
+  "status": "tested",
+  "include_in_next_release": true,
+  "commits": [
+    {
+      "sha": "282fa8c127f07c6a9cbe3e390f092c2ce2505f3b",
+      "message": "fix: enable explicitly authorized private lab live calls",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "0a4248d19c7f295564deaa77f4780d2d2fb04962",
+      "message": "docs: mark CHG-20260724-050 tested after live network gate verification",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "c0de92a211b1510097af9c40605fb55e20f4a17f",
+      "message": "docs: sync CHG-20260724-050 commit attachments",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "3e4ea9c35ab824311eb043c5e46916256b3570f7",
+      "message": "docs: retarget CHG-049/050 commits to integration cherry-picks",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "959d5217c57d1633d77f53d8b4be895b31cf763c",
+      "message": "fix: bind session and fix live smoke harness safe print",
+      "primary": false,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "narrative_core",
+    "private_engine_lab"
+  ],
+  "files": [
+    "apps/api/app/narrative_core/services/provider_execution_authorization.py",
+    "apps/api/app/narrative_core/services/private_whole_book_live_readiness_runtime.py",
+    "apps/api/app/narrative_core/services/private_lab_service_adapters.py",
+    "apps/api/tests/test_narrative_phase2br1_live_network_gate.py",
+    "scripts/private_whole_book_live_smoke.py"
+  ],
+  "user_summary": "Fix Private Lab Live Probe to authorize allow_network and honor request dry_run without silent Fake success or stale Runtime cache.",
+  "technical_summary": "HTTP Lab Runtime allow_network follows Live Probe+Lab+non-prod; cache keyed by security config; execute_module honors request.dry_run via ProviderExecutionAuthorization; Live rebuilds Bailian gateway; denied Live returns security_denied not Fake Success. Private@dc233d33bff04c87ef8e5104842e70254cac4c98",
+  "acceptance_criteria": [
+    "Probe off / dry_run true / guards fail => zero HTTP; authorized Live uses injected Fake Transport once; Runtime cache rebuilds on Probe/DB change"
+  ],
+  "tests": [
+    "apps/api/tests/test_narrative_phase2br1_live_network_gate.py",
+    "apps/api/tests/test_narrative_phase2br1_live_smoke_runtime_di.py",
+    "apps/api/tests/test_narrative_phase2br1_integration.py"
+  ],
+  "verification_evidence": [
+    "Public 90 passed (gate+DI+provider_context_cost+lab_runtime+integration). Private 31 passed. Private commit dc233d33bff04c87ef8e5104842e70254cac4c98. Zero real Provider HTTP."
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "No schema change. Ready live-smoke DB untouched."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-24T05:09:30Z",
+  "updated_at": "2026-07-24T05:32:06Z"
+}

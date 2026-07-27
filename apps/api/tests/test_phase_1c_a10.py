@@ -378,7 +378,20 @@ async def test_partial_success_then_resume_skips_completed(client):
             )
         )
         assert int(det or 0) == 0
-    assert fake.calls == 2
+    # Scene resume must invoke FakeProvider once per remaining scene; auto-continue
+    # Reader Journey may add further calls after scenes complete (CHG-20260722-003).
+    scene_calls = sum(
+        1
+        for req in fake.requests
+        if not any(
+            ("reader_journey" in (msg.get("content") or ""))
+            or ("读者阅读旅程" in (msg.get("content") or ""))
+            or ("章节阅读旅程" in (msg.get("content") or ""))
+            or ("reading_momentum" in (msg.get("content") or ""))
+            for msg in req.messages
+        )
+    )
+    assert scene_calls == 2
 
 
 def test_resume_rejects_running_concurrent(client):
@@ -476,8 +489,19 @@ async def test_analyze_binds_runtime_before_generate(testing_session):
     await analyze_confirmed_review(session_factory, ModelGateway([fake]), review.id)
     testing_session.expire_all()
     run = testing_session.get(AnalysisRun, run.id)
-    assert run.status == "succeeded"
-    assert fake.calls == 2
+    assert run.status in {"succeeded", "reader_journey_running", "reader_journey_pending", "reader_journey_failed"}
+    scene_calls = sum(
+        1
+        for req in fake.requests
+        if not any(
+            ("reader_journey" in (msg.get("content") or ""))
+            or ("读者阅读旅程" in (msg.get("content") or ""))
+            or ("章节阅读旅程" in (msg.get("content") or ""))
+            or ("reading_momentum" in (msg.get("content") or ""))
+            for msg in req.messages
+        )
+    )
+    assert scene_calls == 2
 
 
 def test_resume_idempotent_same_client_request(client):

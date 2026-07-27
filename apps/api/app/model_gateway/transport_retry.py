@@ -10,6 +10,20 @@ import random
 from dataclasses import dataclass
 
 from app.model_gateway.base import ProviderRequestError
+from app.model_gateway.provider_errors import (
+    NON_RETRYABLE_HTTP_STATUSES,
+    RETRYABLE_HTTP_STATUSES,
+)
+
+__all__ = [
+    "TransportRetryPolicy",
+    "DEFAULT_TRANSPORT_RETRY_POLICY",
+    "transport_retry_policy_from_settings",
+    "compute_provider_retry_delay_seconds",
+    "should_retry_provider_error",
+    "RETRYABLE_HTTP_STATUSES",
+    "NON_RETRYABLE_HTTP_STATUSES",
+]
 
 
 @dataclass(frozen=True)
@@ -49,11 +63,14 @@ def compute_provider_retry_delay_seconds(
     policy: TransportRetryPolicy | None = None,
     *,
     rng: random.Random | None = None,
+    retry_after: float | None = None,
 ) -> float:
     """Return jittered backoff after a failed attempt before the next provider_retry.
 
     failed_attempt_no=1 → delay before 2nd attempt (2–4s)
     failed_attempt_no=2 → delay before 3rd attempt (8–12s)
+
+    When ``retry_after`` is provided (Retry-After header), it is respected as a floor.
     """
     policy = policy or DEFAULT_TRANSPORT_RETRY_POLICY
     sampler = rng if rng is not None else random
@@ -62,21 +79,22 @@ def compute_provider_retry_delay_seconds(
     elif failed_attempt_no == 2:
         low, high = policy.delay_2_min_seconds, policy.delay_2_max_seconds
     else:
-        return 0.0
+        return float(retry_after or 0.0)
     if high < low:
         low, high = high, low
     if high <= 0:
-        return 0.0
-    return float(sampler.uniform(low, high))
+        base = 0.0
+    else:
+        base = float(sampler.uniform(low, high))
+    if retry_after is not None and retry_after > 0:
+        return max(base, float(retry_after))
+    return base
 
 
 def should_retry_provider_error(error: ProviderRequestError | None) -> bool:
     """Only clearly retryable transport/HTTP errors continue with backoff."""
     if error is None:
         return False
+    if error.http_status_code in NON_RETRYABLE_HTTP_STATUSES:
+        return False
     return bool(error.retryable)
-
-
-# HTTP statuses that remain retryable under TRANSPORT_HTTP / PROVIDER_* codes.
-RETRYABLE_HTTP_STATUSES = frozenset({429, 500, 502, 503, 504})
-NON_RETRYABLE_HTTP_STATUSES = frozenset({401, 403})

@@ -102,14 +102,18 @@ def setup_env(tmp_path, verified_cloud_pricing) -> Generator[tuple[TestClient, S
         with factory() as session:
             yield session
 
+    previous_overrides = dict(app.dependency_overrides)
     app.dependency_overrides[get_db] = override_db
     app.dependency_overrides[get_session_factory] = lambda: factory
     app.dependency_overrides[get_model_gateway] = lambda: ModelGateway([provider])
     app.dependency_overrides[get_credential_store] = lambda: store
-    with TestClient(app) as client, factory() as session:
-        yield client, session, store
-    app.dependency_overrides.clear()
-    engine.dispose()
+    try:
+        with TestClient(app) as client, factory() as session:
+            yield client, session, store
+    finally:
+        app.dependency_overrides.clear()
+        app.dependency_overrides.update(previous_overrides)
+        engine.dispose()
 
 
 def test_configure_persists_credential_and_enables_cloud(setup_env, monkeypatch) -> None:
@@ -169,7 +173,9 @@ def test_test_only_does_not_claim_saved_or_enable_cloud(setup_env, monkeypatch) 
     body = response.json()
     assert body["ok"] is True
     assert body["persisted"] is False
-    assert body.get("model_service_validated") is True
+    assert body["connection_status"] == "tested"
+    assert body.get("model_service_validated") is False
+    assert body.get("connection_ui_state") == "NOT_CONFIGURED"
     assert body.get("analysis_ready") is False
     assert "验证成功" in body["user_message"] or "保存配置后" in body["user_message"]
     assert store.get(CANONICAL_PROVIDER_ID) is None
@@ -435,3 +441,90 @@ def test_production_credential_store_is_keyring() -> None:
     assert isinstance(store, KeyringCredentialStore)
     assert "FakeCredentialStore" not in type(store).__name__
     get_credential_store.cache_clear()
+
+
+def test_saved_cloud_and_provider_survive_status_reload(setup_env, monkeypatch) -> None:
+    client, session, store = setup_env
+    _patch_model_probe(monkeypatch)
+    assert client.post(
+        "/api/v1/desktop/ai-setup/recommended-qwen",
+        json={
+            "api_key": "sk-persist-reload-key",
+            "analysis_mode": "BALANCED",
+            "cloud_body_consent": True,
+            "persist": True,
+        },
+    ).json()["ok"]
+
+    # Simulate process restart: new session read + status endpoint.
+    session.expire_all()
+    status = client.get("/api/v1/desktop/ai-setup/recommended-qwen").json()
+    assert status["cloud_enabled"] is True
+    assert status["provider_enabled"] is True
+    assert status["credential_configured"] is True
+    assert status["cloud_body_consent"] is True
+    assert status["config_profile"]["credential_store"]["returns_secret_to_api"] is False
+    assert "sk-persist-reload-key" not in str(status)
+
+    cloud = client.get("/api/v1/settings/cloud").json()
+    assert cloud["enabled"] is True
+    cfg = client.get(f"/api/v1/model-providers/{CANONICAL_PROVIDER_ID}/configuration").json()
+    assert cfg["enabled"] is True
+    assert store.get(CANONICAL_PROVIDER_ID) == "sk-persist-reload-key"
+
+
+def test_rate_limited_probe_keeps_enabled_flags_and_category(setup_env) -> None:
+    _client, session, store = setup_env
+    store.set(CANONICAL_PROVIDER_ID, "sk-existing-valid-key")
+    from app.services.recommended_ai_setup import _ensure_canonical_provider, _save_setting
+
+    row = _ensure_canonical_provider(session)
+    row.enabled = True
+    row.disconnected = False
+    row.credential_reference = f"keyring:{CANONICAL_PROVIDER_ID}"
+    session.commit()
+    _save_setting(session, "cloud_enabled", True)
+
+    def _rate_limited(**_kwargs) -> dict:
+        return {
+            "ok": False,
+            "error_code": "RATE_LIMITED",
+            "detail": "Too Many Requests",
+            "http_status": 429,
+            "error_category": "rate_limited",
+            "retryable": True,
+        }
+
+    result = configure_recommended_qwen(
+        session=session,
+        store=store,
+        gateway=ModelGateway([AliyunProbeFake()]),
+        api_key=None,
+        analysis_mode="BALANCED",
+        cloud_body_consent=True,
+        persist=False,
+        model_probe=_rate_limited,
+    )
+    assert result.ok is False
+    assert result.error_code == "RATE_LIMITED"
+    assert result.http_status == 429
+    assert result.error_category == "rate_limited"
+    assert result.retryable is True
+    assert result.provider_enabled is True
+    assert result.cloud_enabled is True
+    assert result.credential_configured is True
+    assert "限流" in result.user_message
+    assert "云端模型服务尚未开启" not in result.user_message
+    assert "分析配置尚未完成" not in result.user_message
+    assert "Provider 已启用" in result.user_message
+    assert result.error_category == "rate_limited"
+
+    session.expire_all()
+    cloud = session.get(ApplicationSetting, "cloud_enabled")
+    assert cloud is not None and json.loads(cloud.value_json) is True
+    row = session.scalar(
+        select(ProviderConfiguration).where(
+            ProviderConfiguration.provider_name == CANONICAL_PROVIDER_ID
+        )
+    )
+    assert row is not None and row.enabled is True

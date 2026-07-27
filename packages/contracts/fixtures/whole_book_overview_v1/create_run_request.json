@@ -1,0 +1,13 @@
+{
+  "client_request_id": "req-overview-001",
+  "consent": {
+    "confirmed": true,
+    "currency": "CNY",
+    "estimated_cost": 0.12,
+    "estimated_tokens": 8000
+  },
+  "mode": "whole_book_native",
+  "model_id": "demo-model",
+  "module_key": "book_overview",
+  "provider_id": "openai_compatible"
+}

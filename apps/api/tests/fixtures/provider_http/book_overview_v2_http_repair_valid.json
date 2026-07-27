@@ -1,0 +1,22 @@
+{
+  "id": "fake-http-v2-repair-1",
+  "object": "chat.completion",
+  "model": "qwen3.7-plus",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\"contract_version\": \"v2\", \"logline\": {\"value\": \"修复后的合成总览\", \"status\": \"observed\", \"citation_ids\": [\"{{CITATION_ID_1}}\"], \"confidence\": 0.81}, \"premise\": {\"value\": \"修复后的合成前提\", \"status\": \"observed\", \"citation_ids\": [\"{{CITATION_ID_1}}\"], \"confidence\": 0.79}, \"central_question\": {\"value\": \"修复后的合成核心问题？\", \"status\": \"observed\", \"citation_ids\": [\"{{CITATION_ID_1}}\"], \"confidence\": 0.77}, \"primary_conflict\": {\"value\": \"修复后的合成主要冲突\", \"status\": \"observed\", \"citation_ids\": [\"{{CITATION_ID_1}}\"], \"confidence\": 0.78}, \"structure_summary\": {\"value\": \"修复后的合成结构摘要\", \"status\": \"observed\", \"citation_ids\": [\"{{CITATION_ID_1}}\"], \"confidence\": 0.76}, \"ending_state\": {\"value\": \"修复后的合成结局状态\", \"status\": \"inferred\", \"citation_ids\": [\"{{CITATION_ID_1}}\"], \"confidence\": 0.72}, \"overall_confidence\": 0.77}"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 5200,
+    "completion_tokens": 430,
+    "total_tokens": 5630
+  },
+  "http_status": 200,
+  "request_id": "fake-http-v2-repair-1"
+}

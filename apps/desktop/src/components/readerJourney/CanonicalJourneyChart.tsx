@@ -11,7 +11,7 @@ import type {
   JourneySceneNode,
   ReaderJourneyVisualization,
 } from "../../types/readerJourneyVisualization";
-import { formatJourneyMetricLabel, formatJourneyPhaseLabel, formatJourneySceneLabel, formatJourneyScore, formatJourneyRiskSummary, roleLabelZh } from "./journeyUiLabels";
+import { formatJourneyMetricLabel, formatJourneySceneLabel, formatJourneyScore, roleLabelZh } from "./journeyUiLabels";
 import { PHASE_BAND_COLORS } from "./journeyVisualTokens";
 import {
   buildLinePathD,
@@ -19,6 +19,7 @@ import {
   collectDataWarnings,
   computeYScale,
   resolveMetricValue,
+  valenceYScaleOptions,
   xForSceneOrdinal,
 } from "./journeyChartScales";
 import {
@@ -32,6 +33,29 @@ import {
   requiresBrush,
   type YDomainMode,
 } from "./journeyVisualizationConfig";
+import {
+  buildLensChartLines,
+  getObservationLens,
+  mainCurveSeries,
+  pacingFitLabel,
+  pacingSegmentLabel,
+  valenceDirection,
+  type ObservationLensId,
+} from "./observationLenses";
+import { resolveNodeVisualStyle } from "./journeyNodeDiagnosisStyle";
+import { buildSegmentMarkers } from "./journeySegmentMarkers";
+import { getScenePayoffClaim } from "./narrativeLoopView";
+import { buildSceneRoleTags } from "./sceneCardRoleTags";
+import { getLensExplanation } from "./readerJourneyLensExplanation";
+import {
+  HOOK_STRENGTH_LABEL,
+  PAYOFF_NOT_CUMULATIVE_HINT,
+  PAYOFF_STRENGTH_LABEL,
+  getQuestionLifecycle,
+  questionsForScene,
+  resolveHookPayoffDataStatus,
+  sceneRoleInLifecycle,
+} from "./hookPayoffLensModel";
 
 const ROLE_CLASS: Record<string, string> = {
   core: "journey-node-core",
@@ -48,6 +72,11 @@ const NODE_RADIUS: Record<string, number> = {
 export type CanonicalJourneyChartProps = {
   visualization: ReaderJourneyVisualization;
   metric: JourneyCurveMetric;
+  /** When set, chart renders observation-lens series instead of raw metric alone. */
+  observationLens?: ObservationLensId;
+  overlayComposite?: boolean;
+  /** Explicit secondary metric id for named compare line. */
+  compareWith?: string | null;
   chartHeight: number;
   yDomainMode: YDomainMode;
   viewStart: number;
@@ -88,6 +117,9 @@ function hookTier(
 export function CanonicalJourneyChart({
   visualization,
   metric,
+  observationLens,
+  overlayComposite = false,
+  compareWith = null,
   chartHeight,
   yDomainMode,
   viewStart,
@@ -105,7 +137,20 @@ export function CanonicalJourneyChart({
   const containerRef = useRef<HTMLDivElement>(null);
   const nodes = visualization.scene_nodes;
   const sceneCount = nodes.length;
-  const series = visualization.curve_series[metric] ?? [];
+  const lensId = observationLens;
+  const lensLines = useMemo(() => {
+    if (!lensId) return null;
+    return buildLensChartLines(visualization, lensId, {
+      overlayComposite,
+      compareWith,
+    });
+  }, [visualization, lensId, overlayComposite, compareWith]);
+  const series = useMemo(
+    () => lensLines?.[0]?.series ?? visualization.curve_series[metric] ?? [],
+    [lensLines, visualization.curve_series, metric],
+  );
+  const secondarySeries = lensLines && lensLines.length > 1 ? lensLines[1].series : null;
+  const lensDef = lensId ? getObservationLens(lensId) : null;
 
   const effectiveView = exportFullJourney
     ? { start: 1, end: Math.max(sceneCount, 1) }
@@ -147,22 +192,95 @@ export function CanonicalJourneyChart({
     );
   }, [exportFullJourney, sceneCount, viewportWidth, effectiveView.start, effectiveView.end]);
 
+  const yScaleOptions = useMemo(() => {
+    if (lensDef?.yDomain === "valence_signed" || metric === "valence") {
+      return valenceYScaleOptions();
+    }
+    return undefined;
+  }, [lensDef, metric]);
+
   const yScale = useMemo(
-    () => computeYScale(series, chartHeight, effectiveYMode),
-    [series, chartHeight, effectiveYMode],
+    () => computeYScale(series, chartHeight, effectiveYMode, yScaleOptions),
+    [series, chartHeight, effectiveYMode, yScaleOptions],
   );
 
-  const warnings = useMemo(() => collectDataWarnings(series), [series]);
+  const warnings = useMemo(() => {
+    const warningDomain = yScaleOptions?.domainOverride
+      ? { min: yScaleOptions.domainOverride.min, max: yScaleOptions.domainOverride.max }
+      : { min: 0, max: 100 };
+    return collectDataWarnings(series, warningDomain);
+  }, [series, yScaleOptions]);
 
   const xFor = useCallback(
     (ordinal: number) => xForSceneOrdinal(ordinal, sceneCount, chartWidth),
     [sceneCount, chartWidth],
   );
 
-  const linePath = useMemo(
-    () => buildLinePathD(series, xFor, yScale.yForValue),
-    [series, xFor, yScale],
+  const mainSeries = useMemo(() => mainCurveSeries(series), [series]);
+  const mainSecondary = useMemo(
+    () => (secondarySeries ? mainCurveSeries(secondarySeries) : []),
+    [secondarySeries],
   );
+
+  const linePath = useMemo(
+    () => buildLinePathD(mainSeries, xFor, yScale.yForValue),
+    [mainSeries, xFor, yScale],
+  );
+  const secondaryLinePath = useMemo(
+    () =>
+      mainSecondary.length
+        ? buildLinePathD(mainSecondary, xFor, yScale.yForValue)
+        : "",
+    [mainSecondary, xFor, yScale],
+  );
+
+  const segmentMarkers = useMemo(() => {
+    if (!lensId) return [];
+    const verifiedFullPayoffScenes = new Set<number>();
+    for (const node of nodes) {
+      const claim = getScenePayoffClaim(visualization, node.scene_ordinal);
+      if (claim?.deterministic && claim.claim === "full") {
+        verifiedFullPayoffScenes.add(node.scene_ordinal);
+      }
+    }
+    return buildSegmentMarkers(
+      nodes.map((node) => ({
+        scene_ordinal: node.scene_ordinal,
+        reading_momentum:
+          node.scores.reading_momentum ?? node.engagement.engagement_score,
+        plot_progress: node.scores.plot_progress,
+        reading_tension: node.scores.reading_tension,
+        hook: node.scores.hook,
+        payoff: node.scores.payoff,
+        pacing_speed: node.scores.pacing_speed,
+        clarity: node.scores.clarity,
+        information_gain: node.scores.information_gain,
+        arousal:
+          ((node.scores.arousal_start ?? 0) + (node.scores.arousal_end ?? 0)) / 2,
+      })),
+      { lensId, verifiedFullPayoffScenes },
+    );
+  }, [lensId, nodes, visualization]);
+
+  const pacingSegments = useMemo(() => {
+    if (lensId !== "pacing") return [];
+    const ordered = [...nodes].sort((a, b) => a.scene_ordinal - b.scene_ordinal);
+    const out: Array<{
+      fromOrdinal: number;
+      toOrdinal: number;
+      label: ReturnType<typeof pacingSegmentLabel>;
+    }> = [];
+    for (let i = 1; i < ordered.length; i += 1) {
+      const prev = ordered[i - 1];
+      const curr = ordered[i];
+      out.push({
+        fromOrdinal: prev.scene_ordinal,
+        toOrdinal: curr.scene_ordinal,
+        label: pacingSegmentLabel(prev.scores.pacing_speed, curr.scores.pacing_speed),
+      });
+    }
+    return out;
+  }, [lensId, nodes]);
 
   const hookOrdinals = useMemo(() => {
     if (markerMode === "compact") {
@@ -275,22 +393,11 @@ export function CanonicalJourneyChart({
   const tooltipPoint =
     hover != null ? series.find((p) => p.scene_ordinal === hover.ordinal) : undefined;
   const tooltipScore = resolveMetricValue(tooltipPoint);
-  const tooltipPhase =
-    tooltipNode?.phase_ordinal != null
-      ? visualization.phases.find((p) => p.ordinal === tooltipNode.phase_ordinal)
+  const tooltipComparePoint =
+    hover != null && secondarySeries
+      ? secondarySeries.find((p) => p.scene_ordinal === hover.ordinal)
       : undefined;
-  const tooltipHook = visualization.hook_markers.find(
-    (m) => m.scene_ordinal === hover?.ordinal,
-  );
-  const tooltipPayoff = visualization.payoff_markers.find(
-    (m) => m.scene_ordinal === hover?.ordinal,
-  );
-  const tooltipRisk = visualization.risk_intervals.find(
-    (r) =>
-      hover != null &&
-      hover.ordinal >= r.start_scene_ordinal &&
-      hover.ordinal <= r.end_scene_ordinal,
-  );
+  const tooltipCompareScore = resolveMetricValue(tooltipComparePoint);
 
   return (
     <div
@@ -311,6 +418,26 @@ export function CanonicalJourneyChart({
         overflowY: "hidden",
       }}
     >
+      {lensId === "hook_payoff" ? (
+        <div className="journey-hook-payoff-legend" data-testid="journey-hook-payoff-legend">
+          <div className="journey-hook-payoff-legend-rows">
+            <span className="journey-hook-payoff-legend-item" data-testid="journey-legend-hook">
+              <span className="journey-legend-swatch journey-legend-swatch-hook" aria-hidden="true" />
+              绿色实线：{HOOK_STRENGTH_LABEL}
+            </span>
+            <span className="journey-hook-payoff-legend-item" data-testid="journey-legend-payoff">
+              <span
+                className="journey-legend-swatch journey-legend-swatch-payoff"
+                aria-hidden="true"
+              />
+              紫色虚线：{PAYOFF_STRENGTH_LABEL}
+            </span>
+          </div>
+          <p className="journey-hook-payoff-legend-hint" data-testid="journey-hook-payoff-legend-hint">
+            {PAYOFF_NOT_CUMULATIVE_HINT}
+          </p>
+        </div>
+      ) : null}
       {warnings.length > 0 && (
         <div
           className="journey-chart-data-warning"
@@ -449,10 +576,25 @@ export function CanonicalJourneyChart({
           />
           {yScale.ticks.map((tick) => {
             const y = yScale.yForValue(tick);
+            const semantic =
+              lensId === "composite"
+                ? tick >= 75
+                  ? "强"
+                  : tick <= 25
+                    ? "弱"
+                    : tick === 50
+                      ? "中"
+                      : null
+                : null;
+            const label =
+              lensId === "composite" && semantic
+                ? semantic
+                : String(tick);
             return (
               <g
                 key={`y-tick-${tick}`}
                 data-testid={exportFullJourney ? undefined : `journey-y-tick-${tick}`}
+                data-y-semantic={semantic || undefined}
               >
                 <line
                   x1={CHART_PAD.left}
@@ -468,7 +610,7 @@ export function CanonicalJourneyChart({
                   textAnchor="end"
                   className="journey-axis-label"
                 >
-                  {tick}
+                  {label}
                 </text>
               </g>
             );
@@ -504,8 +646,62 @@ export function CanonicalJourneyChart({
               stroke="var(--accent)"
               strokeWidth={2.25}
               data-testid="journey-curve-path"
+              data-line-id={lensLines?.[0]?.id ?? metric}
             />
           )}
+          {secondaryLinePath ? (
+            <path
+              d={secondaryLinePath}
+              fill="none"
+              stroke="var(--journey-secondary-line, #ae3ec9)"
+              strokeWidth={2}
+              strokeDasharray="6 4"
+              data-testid="journey-curve-path-secondary"
+              data-line-id={lensLines?.[1]?.id ?? "secondary"}
+              data-line-label={lensLines?.[1]?.labelZh ?? ""}
+            />
+          ) : null}
+          {/* In-chart SVG legends removed: single HTML legend sits centered above the curve. */}
+          {segmentMarkers.map((marker) => {
+            const x1 = xFor(marker.fromOrdinal);
+            const x2 = xFor(marker.toOrdinal);
+            const midX = (x1 + x2) / 2;
+            return (
+              <text
+                key={`seg-${marker.fromOrdinal}-${marker.toOrdinal}-${marker.label}`}
+                x={midX}
+                y={padTop + 12}
+                textAnchor="middle"
+                className="journey-segment-marker"
+                data-testid={`journey-segment-marker-${marker.toOrdinal}`}
+                data-direction={marker.direction}
+                fontSize={10}
+                fill="var(--muted)"
+              >
+                {marker.label}
+              </text>
+            );
+          })}
+          {pacingSegments.map((seg) => {
+            const x1 = xFor(seg.fromOrdinal);
+            const x2 = xFor(seg.toOrdinal);
+            const midX = (x1 + x2) / 2;
+            return (
+              <text
+                key={`pace-seg-${seg.fromOrdinal}-${seg.toOrdinal}`}
+                x={midX}
+                y={padTop + plotHeight - 4}
+                textAnchor="middle"
+                className="journey-pacing-segment-label"
+                data-testid={`journey-pacing-segment-${seg.toOrdinal}`}
+                data-pacing-segment={seg.label}
+                fontSize={9}
+                fill="var(--muted)"
+              >
+                {seg.label}
+              </text>
+            );
+          })}
         </g>
 
         {/* 5. Nodes — not clipped by plot clipPath */}
@@ -547,10 +743,36 @@ export function CanonicalJourneyChart({
               );
             }
             const cy = yScale.yForValue(value);
-            const radius = NODE_RADIUS[node.role] ?? 4;
+            const isBeat =
+              node.role === "beat" ||
+              node.node_type === "beat" ||
+              node.include_in_main_curve === false;
+            const visual = resolveNodeVisualStyle({
+              primaryDiagnosis: node.primary_diagnosis,
+              secondaryDiagnoses: node.secondary_diagnoses,
+              isBeat,
+              confidence: node.confidence,
+              dataQualityIssue: node.data_quality_issue,
+            });
+            const radius = isBeat ? 2.5 : NODE_RADIUS[node.role] ?? 4;
             const selected = selectedSceneOrdinal === node.scene_ordinal;
             const tier = hookTier(visualization, node.scene_ordinal, sceneCount);
             const hookSize = tier === "chapter" ? 7 : tier === "phase" ? 5.5 : 4;
+            const valenceDir =
+              lensId === "emotion" ? valenceDirection(node) : null;
+            const pacingLabel =
+              lensId === "pacing"
+                ? pacingFitLabel(
+                    node.scores.pacing_speed ?? value,
+                    node.scene_role,
+                    node.scores.pacing_fit,
+                  )
+                : null;
+            const stroke = visual.colorToken;
+            const fill =
+              visual.shape === "hollow_circle" || visual.shape === "triangle" || visual.shape === "diamond"
+                ? "var(--surface)"
+                : visual.colorToken;
             return (
               <g
                 key={node.scene_ordinal}
@@ -559,9 +781,12 @@ export function CanonicalJourneyChart({
                 }
                 data-node-hit="true"
                 data-score={String(value)}
+                data-node-type={isBeat ? "beat" : "scene"}
+                data-include-in-main-curve={isBeat ? "false" : "true"}
+                data-node-shape={visual.shape}
                 className={`journey-curve-node ${ROLE_CLASS[node.role] ?? ""} ${
-                  selected ? "selected journey-node-active" : ""
-                }`}
+                  visual.cssClass
+                } ${selected ? "selected journey-node-active" : ""}`}
                 data-hook-tier={hookOrdinals.has(node.scene_ordinal) ? tier : undefined}
                 onMouseEnter={() => setHover({ ordinal: node.scene_ordinal, x: cx, y: cy })}
                 onMouseLeave={() => setHover(null)}
@@ -569,14 +794,69 @@ export function CanonicalJourneyChart({
                 style={{ cursor: "pointer" }}
               >
                 <rect x={cx - 14} y={cy - 14} width={28} height={28} fill="transparent" />
-                <circle
-                  cx={cx}
-                  cy={cy}
-                  r={radius + (selected ? 3 : 0)}
-                  fill="var(--surface)"
-                  stroke="var(--accent)"
-                  strokeWidth={selected ? 3 : 1.5}
-                />
+                {visual.shape === "square_dot" ? (
+                  <rect
+                    x={cx - radius}
+                    y={cy - radius}
+                    width={radius * 2}
+                    height={radius * 2}
+                    fill={fill}
+                    stroke={stroke}
+                    strokeWidth={1}
+                    data-testid={
+                      exportFullJourney
+                        ? undefined
+                        : `journey-beat-aux-node-${node.scene_ordinal}`
+                    }
+                  />
+                ) : visual.shape === "triangle" ? (
+                  <polygon
+                    points={`${cx},${cy - radius - 1} ${cx - radius - 1},${cy + radius} ${cx + radius + 1},${cy + radius}`}
+                    fill={fill}
+                    stroke={stroke}
+                    strokeWidth={selected ? 2.5 : 1.5}
+                  />
+                ) : visual.shape === "diamond" ? (
+                  <polygon
+                    points={`${cx},${cy - radius - 2} ${cx + radius + 1},${cy} ${cx},${cy + radius + 2} ${cx - radius - 1},${cy}`}
+                    fill={fill}
+                    stroke={stroke}
+                    strokeWidth={selected ? 2.5 : 1.5}
+                  />
+                ) : (
+                  <circle
+                    cx={cx}
+                    cy={cy}
+                    r={radius + (selected ? 3 : 0)}
+                    fill={fill}
+                    stroke={stroke}
+                    strokeWidth={selected ? 3 : 1.5}
+                  />
+                )}
+                {valenceDir && valenceDir !== "flat" ? (
+                  <text
+                    x={cx}
+                    y={cy - radius - 6}
+                    textAnchor="middle"
+                    fontSize={9}
+                    fill="var(--muted)"
+                    data-testid={`journey-valence-dir-${node.scene_ordinal}`}
+                  >
+                    {valenceDir === "up" ? "↑" : "↓"}
+                  </text>
+                ) : null}
+                {pacingLabel ? (
+                  <text
+                    x={cx}
+                    y={cy + radius + 11}
+                    textAnchor="middle"
+                    fontSize={9}
+                    fill="var(--muted)"
+                    data-testid={`journey-pacing-fit-${node.scene_ordinal}`}
+                  >
+                    {pacingLabel}
+                  </text>
+                ) : null}
                 {payoffOrdinals.has(node.scene_ordinal) && (
                   <circle
                     cx={cx + 5}
@@ -640,50 +920,107 @@ export function CanonicalJourneyChart({
         <g data-layer="labels_tooltip">
           {hover != null && tooltipNode && (
             <foreignObject
-              x={Math.min(Math.max(hover.x - 90, 4), chartWidth - 200)}
-              y={Math.max(hover.y - 110, 4)}
-              width={196}
-              height={108}
+              x={Math.min(Math.max(hover.x - 90, 4), chartWidth - 220)}
+              y={Math.max(hover.y - (lensId === "hook_payoff" ? 160 : 110), 4)}
+              width={lensId === "hook_payoff" ? 220 : 196}
+              height={lensId === "hook_payoff" ? 168 : 128}
               data-testid="journey-node-tooltip"
             >
               <div
                 className="journey-node-tooltip-card"
                 {...({ xmlns: "http://www.w3.org/1999/xhtml" } as Record<string, string>)}
               >
-                <div>
-                  {formatJourneySceneLabel(tooltipNode.scene_ordinal)}
-                  {tooltipNode.role ? ` · ${roleLabelZh(tooltipNode.role)}` : ""}
-                </div>
-                <div>
-                  阶段{" "}
-                  {tooltipPhase
-                    ? formatJourneyPhaseLabel(tooltipPhase.title)
-                    : tooltipNode.phase_ordinal != null
-                      ? String(tooltipNode.phase_ordinal)
-                      : "—"}
-                </div>
-                <div>
-                  {formatJourneyMetricLabel(metric)}：
-                  {formatJourneyScore(tooltipScore)}
-                </div>
-                {tooltipHook?.summary ? <div>钩子：{tooltipHook.summary}</div> : null}
-                {tooltipPayoff?.summary ? <div>回报：{tooltipPayoff.summary}</div> : null}
-                {tooltipRisk?.summary || tooltipRisk?.risk_type ? (
-                  <div>
-                    流失风险：
-                    {formatJourneyRiskSummary({
-                      risk_type: tooltipRisk?.risk_type,
-                      summary: tooltipRisk?.summary,
-                      start_scene_ordinal: tooltipRisk?.start_scene_ordinal,
-                      end_scene_ordinal: tooltipRisk?.end_scene_ordinal,
-                      span: tooltipRisk?.span,
-                    })}
-                    <details className="journey-tech-details">
-                      <summary>技术详情</summary>
-                      <code>{tooltipRisk?.risk_type ?? "—"}</code>
-                    </details>
-                  </div>
-                ) : null}
+                {lensId === "hook_payoff" ? (
+                  (() => {
+                    const hookVal = tooltipNode.scores.hook;
+                    const payoffVal = tooltipNode.scores.payoff;
+                    const life = questionsForScene(
+                      getQuestionLifecycle(visualization),
+                      tooltipNode.scene_ordinal,
+                    );
+                    const primaryQ = life[0];
+                    const dataStatus = resolveHookPayoffDataStatus(visualization, tooltipNode);
+                    return (
+                      <>
+                        <div>
+                          {formatJourneySceneLabel(tooltipNode.scene_ordinal)}
+                          {tooltipNode.scene_value_summary
+                            ? ` · ${tooltipNode.scene_value_summary.slice(0, 24)}`
+                            : ""}
+                        </div>
+                        <div>
+                          {HOOK_STRENGTH_LABEL}：
+                          {hookVal == null ? "数据不足" : formatJourneyScore(hookVal)}
+                        </div>
+                        <div>
+                          {PAYOFF_STRENGTH_LABEL}：
+                          {payoffVal == null ? "数据不足" : formatJourneyScore(payoffVal)}
+                        </div>
+                        <div>
+                          生命周期：
+                          {primaryQ
+                            ? `${primaryQ.status} · ${sceneRoleInLifecycle(primaryQ, tooltipNode.scene_ordinal)}`
+                            : "未关联"}
+                        </div>
+                        <div>关联问题：{life.length}</div>
+                        {primaryQ ? (
+                          <div>主要问题：{primaryQ.question_text.slice(0, 36)}</div>
+                        ) : null}
+                        <div>
+                          confidence：
+                          {tooltipNode.confidence != null
+                            ? tooltipNode.confidence.toFixed(2)
+                            : "—"}
+                        </div>
+                        <div>数据状态：{dataStatus}</div>
+                      </>
+                    );
+                  })()
+                ) : (
+                  (() => {
+                    const lensExpl = getLensExplanation(lensId);
+                    const scoreNoun =
+                      lensLines?.[0]?.labelZh ||
+                      (lensId === "composite"
+                        ? lensExpl.chart_title || "综合阅读动力"
+                        : lensExpl.title || formatJourneyMetricLabel(metric));
+                    const compareNoun = lensLines?.[1]?.labelZh || null;
+                    const roles = buildSceneRoleTags(visualization, tooltipNode.scene_ordinal);
+                    const roleText = roles.map((r) => r.label).join(" · ") || "无特定叙事作用标签";
+                    const reason =
+                      roles[0]?.title ||
+                      tooltipNode.scene_value_summary ||
+                      lensExpl.caution;
+                    return (
+                      <>
+                        <div>
+                          {formatJourneySceneLabel(tooltipNode.scene_ordinal)}
+                          {tooltipNode.role ? ` · ${roleLabelZh(tooltipNode.role)}` : ""}
+                        </div>
+                        <div data-testid="journey-tooltip-primary-metric">
+                          {scoreNoun}：
+                          {tooltipScore == null ? "暂无数据" : formatJourneyScore(tooltipScore)}
+                        </div>
+                        {compareNoun ? (
+                          <div data-testid="journey-tooltip-compare-metric">
+                            {compareNoun}：
+                            {tooltipCompareScore == null
+                              ? "暂无数据"
+                              : formatJourneyScore(tooltipCompareScore)}
+                          </div>
+                        ) : null}
+                        <div>
+                          节点类型：
+                          {tooltipNode.node_type === "beat" || tooltipNode.role === "beat"
+                            ? "节拍"
+                            : "场景"}
+                        </div>
+                        <div>叙事作用：{roleText}</div>
+                        <div>主要原因：{String(reason).slice(0, 48)}</div>
+                      </>
+                    );
+                  })()
+                )}
               </div>
             </foreignObject>
           )}

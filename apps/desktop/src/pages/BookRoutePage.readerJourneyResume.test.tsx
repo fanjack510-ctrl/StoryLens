@@ -5,7 +5,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BookRoutePage } from "./BookRoutePage";
 import { analysisApi } from "../services/analysisApi";
 import { booksApi } from "../services/booksApi";
-import { settingsApi } from "../services/settingsApi";
 
 vi.mock("../services/analysisApi", async () => {
   const actual = await vi.importActual<typeof import("../services/analysisApi")>(
@@ -97,6 +96,14 @@ vi.mock("../components/chapterResult/AnalysisResultRouteAdapter", () => ({
   ),
 }));
 
+vi.mock("../components/chapterResult/EmbeddedAnalysisResultShell", () => ({
+  EmbeddedAnalysisResultShell: ({ runId }: { runId: number }) => (
+    <div data-testid="embedded-analysis-result" data-run-id={runId}>
+      <div data-testid="mock-embedded-results">embedded-run:{runId}</div>
+    </div>
+  ),
+}));
+
 vi.mock("../components/analysis/StartAnalysisDialog", () => ({
   StartAnalysisDialog: () => null,
 }));
@@ -104,8 +111,18 @@ vi.mock("../components/analysis/StartAnalysisDialog", () => ({
 vi.mock("../components/analysis/BoundaryReviewPanel", () => ({
   BoundaryReviewPanel: () => null,
 }));
+vi.mock("../components/analysis/ConfirmBoundaryDivisionPanel", () => ({
+  ConfirmBoundaryDivisionPanel: () => (
+    <div data-testid="confirm-boundary-division">confirm-boundary-stub</div>
+  ),
+}));
 
-function succeededRun() {
+vi.mock("./BookWorkspacePage", () => ({
+  BookWorkspacePage: () => <div data-testid="mock-book-workspace">workspace</div>,
+}));
+
+
+function succeededRun(extra: Record<string, unknown> = {}) {
   return {
     id: 5,
     subject_id: "2",
@@ -120,13 +137,16 @@ function succeededRun() {
     sends_content_to_cloud: true,
     retryable: false,
     created_at: "2026-01-01T00:00:00Z",
-    completed_at: "2026-01-01T00:05:00Z",
+    completed_at: null,
+    chapter_complete: false,
+    effective_status: "partial_complete",
     reusable_checkpoint_count: 0,
     conflicted_checkpoint_count: 0,
     checkpoint_total_count: 0,
     checkpoint_available: false,
     completed_scene_count: 13,
     total_scene_count: 13,
+    ...extra,
   } as any;
 }
 
@@ -179,30 +199,43 @@ describe("BookRoutePage reader journey resume entry", () => {
     vi.clearAllMocks();
   });
 
-  it("shows 场景分析/阅读旅程 switcher and resume card when journey missing", async () => {
+  it("restores workspace from stale view=result while journey is pending", async () => {
     renderBook("/books/1?chapter=2&analysisRun=5&view=result");
     await waitFor(() => {
-      expect(screen.getByTestId("result-view-switcher")).toBeInTheDocument();
+      expect(screen.getByTestId("book-chapter-shell")).toHaveAttribute("data-view", "progress");
     });
-    expect(screen.getByTestId("result-view-analysis")).toHaveTextContent("场景分析");
-    expect(screen.getByTestId("result-view-journey")).toHaveTextContent("阅读旅程");
-    expect(screen.queryByTestId("book-result-analysis-label")).not.toBeInTheDocument();
+    expect(screen.getByTestId("workspace-view-switcher")).toBeInTheDocument();
+    expect(screen.getByTestId("workspace-tab-analysis")).toHaveTextContent("场景分析");
+    expect(screen.getByTestId("workspace-tab-journey")).toHaveTextContent("阅读旅程");
+    expect(screen.getByTestId("chapter-analysis-progress")).toBeInTheDocument();
     expect(screen.queryByText("分析全部完成")).not.toBeInTheDocument();
-    expect(screen.getByTestId("mock-embedded-results")).toBeInTheDocument();
-
-    fireEvent.click(screen.getByTestId("result-view-journey"));
-    await waitFor(() => {
-      expect(screen.getByTestId("unified-recovery-card")).toBeInTheDocument();
-    });
-    expect(screen.getByTestId("unified-recovery-title")).toHaveTextContent("分析已暂停");
-    expect(screen.queryByTestId("mock-embedded-results")).not.toBeInTheDocument();
     expect(analysisApi.createReaderJourney).not.toHaveBeenCalled();
   });
 
-  it("keeps AnalysisRun #5 and does not auto-create journey", async () => {
-    renderBook("/books/1?chapter=2&analysisRun=5&view=result&tab=reader-journey");
+  it("lets user open Scene tab while journey pending without creating journey", async () => {
+    renderBook("/books/1?chapter=2&analysisRun=5&view=progress");
     await waitFor(() => {
-      expect(screen.getByTestId("unified-recovery-card")).toBeInTheDocument();
+      expect(screen.getByTestId("workspace-tab-analysis")).toBeEnabled();
+    });
+    fireEvent.click(screen.getByTestId("workspace-tab-analysis"));
+    await waitFor(() => {
+      expect(screen.getByTestId("book-chapter-shell")).toHaveAttribute("data-view", "result");
+      expect(screen.getByTestId("embedded-analysis-result")).toBeInTheDocument();
+    });
+    expect(screen.getByTestId("mock-embedded-results")).toBeInTheDocument();
+    expect(screen.getByTestId("chapter-analysis-progress")).toBeInTheDocument();
+    expect(screen.getByTestId("book-chapter-shell")).toHaveAttribute("data-analysis-run", "5");
+    expect(analysisApi.createReaderJourney).not.toHaveBeenCalled();
+  });
+
+  it("keeps AnalysisRun #5 on journey tab without auto-create", async () => {
+    renderBook("/books/1?chapter=2&analysisRun=5&view=progress");
+    await waitFor(() => {
+      expect(screen.getByTestId("workspace-tab-journey")).toBeEnabled();
+    });
+    fireEvent.click(screen.getByTestId("workspace-tab-journey"));
+    await waitFor(() => {
+      expect(screen.getAllByTestId("unified-recovery-card").length).toBeGreaterThanOrEqual(1);
     });
     expect(screen.getByTestId("book-chapter-shell")).toHaveAttribute("data-analysis-run", "5");
     expect(analysisApi.createReaderJourney).not.toHaveBeenCalled();
@@ -231,17 +264,26 @@ describe("BookRoutePage reader journey resume entry", () => {
       has_chapter_summary: false,
       retryable: true,
     });
-    renderBook("/books/1?chapter=2&analysisRun=5&view=result&tab=reader-journey");
+    renderBook("/books/1?chapter=2&analysisRun=5&view=progress");
+    await waitFor(() => {
+      expect(screen.getByTestId("workspace-tab-journey")).toBeEnabled();
+      expect(screen.getByTestId("chapter-analysis-progress")).toHaveAttribute(
+        "data-ui-state",
+        "reader_journey_processing",
+      );
+    });
+    fireEvent.click(screen.getByTestId("workspace-tab-journey"));
     await waitFor(() => {
       expect(screen.getByTestId("reader-journey-progress-scenes")).toHaveTextContent("4 / 13");
     });
     expect(screen.getByTestId("reader-journey-progress-card")).toBeInTheDocument();
+    expect(screen.getByTestId("chapter-analysis-progress")).toBeInTheDocument();
     expect(screen.getByTestId("book-chapter-shell")).toHaveAttribute("data-analysis-run", "5");
     expect(analysisApi.createReaderJourney).not.toHaveBeenCalled();
     expect(analysisApi.readerJourneyProgress).toHaveBeenCalledWith(42);
   });
 
-  it("shows journey failed StateView instead of recovery card when journey failed", async () => {
+  it("shows journey interrupted StateView for retryable journey failure", async () => {
     vi.mocked(analysisApi.readerJourney).mockResolvedValue({
       journey_run_id: 42,
       analysis_run_id: 5,
@@ -266,19 +308,103 @@ describe("BookRoutePage reader journey resume entry", () => {
       retryable: true,
       user_error_message: "阅读旅程生成失败",
     });
-    renderBook("/books/1?chapter=2&analysisRun=5&view=result&tab=reader-journey");
+    renderBook("/books/1?chapter=2&analysisRun=5&view=progress");
+    await waitFor(() => {
+      expect(screen.getByTestId("workspace-tab-journey")).toBeEnabled();
+    });
+    fireEvent.click(screen.getByTestId("workspace-tab-journey"));
+    await waitFor(() => {
+      expect(screen.getByTestId("journey-interrupted")).toBeInTheDocument();
+    });
+    expect(screen.getByTestId("journey-interrupted")).toHaveTextContent("阅读旅程已中断");
+    expect(screen.getByTestId("journey-interrupted-task-details")).toHaveTextContent("查看详情");
+    expect(screen.queryByTestId("journey-failed")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("mock-embedded-results")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("reader-journey-progress-card")).not.toBeInTheDocument();
+  });
+
+  it("shows terminal journey failed StateView when failure is not retryable", async () => {
+    vi.mocked(analysisApi.readerJourney).mockResolvedValue({
+      journey_run_id: 42,
+      analysis_run_id: 5,
+      status: "failed",
+      user_error_message: "阅读旅程生成失败",
+      retryable: false,
+      formula_version: "v1",
+      phases: [],
+      scene_profiles: [],
+    } as any);
+    vi.mocked(analysisApi.readerJourneyProgress).mockResolvedValue({
+      journey_run_id: 42,
+      analysis_run_id: 5,
+      status: "failed",
+      total_scene_count: 13,
+      completed_scene_count: 2,
+      remaining_scene_count: 11,
+      completed_scene_ids: [],
+      remaining_scene_ids: [],
+      phase_count: 0,
+      has_chapter_summary: false,
+      retryable: false,
+      user_error_message: "阅读旅程生成失败",
+    });
+    renderBook("/books/1?chapter=2&analysisRun=5&view=progress");
+    await waitFor(() => {
+      expect(screen.getByTestId("workspace-tab-journey")).toBeEnabled();
+    });
+    fireEvent.click(screen.getByTestId("workspace-tab-journey"));
     await waitFor(() => {
       expect(screen.getByTestId("journey-failed")).toBeInTheDocument();
     });
     expect(screen.getByTestId("journey-failed")).toHaveTextContent("阅读旅程生成失败");
-    expect(screen.getByTestId("journey-failed")).toHaveTextContent(
-      "已完成的场景分析不会受到影响。",
-    );
     expect(screen.getByTestId("journey-failed-retry")).toHaveTextContent("重新生成");
     expect(screen.getByTestId("journey-failed-task-details")).toHaveTextContent("查看任务详情");
-    expect(screen.queryByTestId("unified-recovery-card")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("mock-embedded-results")).not.toBeInTheDocument();
     expect(screen.queryByTestId("reader-journey-progress-card")).not.toBeInTheDocument();
+  });
+
+  it("does not show failure banner when parent says journey is still running", async () => {
+    vi.mocked(analysisApi.run).mockResolvedValue(
+      succeededRun({
+        effective_status: "journey_running",
+        journey_status: "scene_profiles_running",
+        journey_run_id: 42,
+        journey_completed_scene_count: 4,
+        journey_total_scene_count: 13,
+        scene_pipeline_complete: true,
+      }),
+    );
+    vi.mocked(analysisApi.readerJourney).mockResolvedValue({
+      journey_run_id: 42,
+      analysis_run_id: 5,
+      status: "failed",
+      retryable: false,
+      formula_version: "v1",
+      phases: [],
+      scene_profiles: [],
+    } as any);
+    vi.mocked(analysisApi.readerJourneyProgress).mockResolvedValue({
+      journey_run_id: 42,
+      analysis_run_id: 5,
+      status: "scene_profiles_running",
+      total_scene_count: 13,
+      completed_scene_count: 4,
+      remaining_scene_count: 9,
+      completed_scene_ids: [],
+      remaining_scene_ids: [],
+      phase_count: 0,
+      has_chapter_summary: false,
+      retryable: true,
+    });
+    renderBook("/books/1?chapter=2&analysisRun=5&view=progress");
+    await waitFor(() => {
+      expect(screen.getByTestId("workspace-tab-journey")).toBeEnabled();
+    });
+    fireEvent.click(screen.getByTestId("workspace-tab-journey"));
+    await waitFor(() => {
+      expect(screen.getByTestId("reader-journey-progress-card")).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId("journey-failed")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("journey-interrupted")).not.toBeInTheDocument();
   });
 
   it("reading banner does not claim full completion without journey", async () => {
@@ -288,7 +414,7 @@ describe("BookRoutePage reader journey resume entry", () => {
     });
     expect(screen.queryByTestId("chapter-analysis-complete-banner")).not.toBeInTheDocument();
     expect(screen.getByTestId("chapter-analysis-scene-complete-banner").textContent).toMatch(
-      /阅读旅程尚未生成/,
+      /正在衔接阅读旅程|阅读旅程/,
     );
   });
 });

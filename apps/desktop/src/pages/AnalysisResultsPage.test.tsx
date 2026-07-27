@@ -15,6 +15,7 @@ vi.mock("../services/analysisApi", () => ({
     readerJourneyProgress: vi.fn(),
     resumeReaderJourney: vi.fn(),
     offlineReplayReaderJourney: vi.fn(),
+    semanticRecalibrateReaderJourney: vi.fn(),
     resultsExportUrl: vi.fn(
       (runId: number, format: string) =>
         `http://api/api/v1/analysis-runs/${runId}/results/export?format=${format}`,
@@ -486,5 +487,50 @@ describe("AnalysisResultsPage", () => {
     const resume = screen.getByTestId("resume-reader-journey");
     expect(resume).not.toBeDisabled();
     expect(resume).toHaveTextContent("恢复剩余任务");
+  });
+
+  it("旧版成功旅程提示重新生成 V2 会产生费用", async () => {
+    vi.mocked(analysisApi.readerJourney).mockResolvedValue({
+      journey_run_id: 901,
+      analysis_run_id: 55,
+      status: "succeeded",
+      formula_version: "1.0",
+      scene_contract_version: "1.3",
+      phases: [],
+      scene_profiles: [],
+    } as any);
+    vi.mocked(analysisApi.readerJourneyProgress).mockResolvedValue({
+      journey_run_id: 901,
+      analysis_run_id: 55,
+      status: "succeeded",
+      total_scene_count: 2,
+      completed_scene_count: 2,
+      remaining_scene_count: 0,
+      phase_count: 1,
+      has_chapter_summary: true,
+      scene_contract_version: "1.3",
+      retryable: false,
+    } as any);
+    vi.mocked(analysisApi.createReaderJourney).mockResolvedValue({
+      journey_run_id: 999,
+      status: "queued",
+    } as any);
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+
+    renderPage();
+    fireEvent.click(await screen.findByTestId("tab-journey"));
+    expect(await screen.findByTestId("journey-legacy-reanalyze-hint")).toHaveTextContent(
+      "产生相应模型费用",
+    );
+    fireEvent.click(screen.getByTestId("journey-cloud-consent"));
+    fireEvent.click(screen.getByTestId("force-new-v2-reader-journey"));
+    await waitFor(() =>
+      expect(analysisApi.createReaderJourney).toHaveBeenCalledWith(
+        55,
+        expect.objectContaining({ force_new_version: true, cloud_consent: true }),
+      ),
+    );
+    expect(confirmSpy).toHaveBeenCalled();
+    confirmSpy.mockRestore();
   });
 });

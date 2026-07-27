@@ -1,0 +1,123 @@
+.confirm-boundary-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: var(--surface, #f7f4ef);
+  color: var(--ink, #1f1a14);
+}
+
+.confirm-boundary-head {
+  flex: 0 0 auto;
+  padding: 1rem 1.25rem 0.75rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--ink, #1f1a14) 12%, transparent);
+}
+
+.confirm-boundary-head h1 {
+  margin: 0 0 0.35rem;
+  font-size: 1.35rem;
+}
+
+.confirm-boundary-head p {
+  margin: 0 0 0.75rem;
+  color: color-mix(in srgb, var(--ink, #1f1a14) 72%, transparent);
+}
+
+.confirm-boundary-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  font-size: 0.92rem;
+  margin-bottom: 0.75rem;
+}
+
+.confirm-boundary-scene-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.confirm-boundary-scene-nav button {
+  border: 1px solid color-mix(in srgb, var(--ink, #1f1a14) 18%, transparent);
+  background: transparent;
+  padding: 0.25rem 0.65rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.confirm-boundary-scene-nav button.active {
+  background: color-mix(in srgb, var(--ink, #1f1a14) 10%, transparent);
+}
+
+.confirm-boundary-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 1rem 1.25rem 1.5rem;
+}
+
+.confirm-boundary-scene h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.05rem;
+}
+
+.confirm-boundary-scene p {
+  margin: 0 0 0.85rem;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+.confirm-boundary-divider {
+  margin: 1.25rem 0;
+  text-align: center;
+  color: color-mix(in srgb, var(--ink, #1f1a14) 45%, transparent);
+  font-size: 0.85rem;
+  letter-spacing: 0.02em;
+}
+
+.confirm-boundary-actions {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.85rem 1.25rem;
+  border-top: 1px solid color-mix(in srgb, var(--ink, #1f1a14) 12%, transparent);
+  background: color-mix(in srgb, var(--surface, #f7f4ef) 92%, #fff);
+}
+
+.confirm-boundary-actions-left {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.confirm-boundary-tech {
+  margin: 0 1.25rem 0.75rem;
+  font-size: 0.85rem;
+  color: color-mix(in srgb, var(--ink, #1f1a14) 65%, transparent);
+}
+
+.confirm-boundary-tech dl {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0.5rem 0 0;
+}
+
+.confirm-boundary-tech div {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.confirm-boundary-tech dt {
+  min-width: 5rem;
+  opacity: 0.75;
+}
+
+@media (max-width: 1024px) {
+  .confirm-boundary-actions {
+    position: sticky;
+    bottom: 0;
+  }
+}

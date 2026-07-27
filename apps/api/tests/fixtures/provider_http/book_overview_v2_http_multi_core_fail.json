@@ -1,0 +1,22 @@
+{
+  "id": "fake-http-v2-multi-core-1",
+  "object": "chat.completion",
+  "model": "qwen3.7-plus",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\"contract_version\": \"v2\", \"logline\": {\"value\": null, \"status\": \"not_observed\", \"citation_ids\": [], \"confidence\": null}, \"premise\": {\"value\": null, \"status\": \"not_observed\", \"citation_ids\": [], \"confidence\": null}, \"central_question\": {\"value\": \"主角能否化解合成冲突？\", \"status\": \"observed\", \"citation_ids\": [\"{{CITATION_ID_1}}\"], \"confidence\": 0.76}, \"primary_conflict\": {\"value\": null, \"status\": \"not_observed\", \"citation_ids\": [], \"confidence\": null}, \"structure_summary\": {\"value\": \"开端加压、中段升级、收束抉择\", \"status\": \"observed\", \"citation_ids\": [\"{{CITATION_ID_1}}\"], \"confidence\": 0.75}, \"ending_state\": {\"value\": null, \"status\": \"not_observed\", \"citation_ids\": [], \"confidence\": null}, \"overall_confidence\": 0.55}"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 5125,
+    "completion_tokens": 420,
+    "total_tokens": 5545
+  },
+  "http_status": 200,
+  "request_id": "fake-http-v2-multi-core-1"
+}

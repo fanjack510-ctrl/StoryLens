@@ -1,0 +1,50 @@
+﻿
+
+Name  : formal_version
+Value : 1.1.0
+
+Name  : public_head
+Value : 9c1df060d86bec52c0e9b8e6e70fa59ec3fd81fb
+
+Name  : private_head
+Value : 30d8dad8cd649e832999874f7bf16cc1661cf221
+
+Name  : chg019
+Value : 
+
+Name  : chg020
+Value : 
+
+Name  : chg018
+Value : 
+
+Name  : version_check
+Value : PASS
+
+Name  : pytest_recovery
+Value : FAIL
+
+Name  : vitest_stale
+Value : FAIL
+
+Name  : vitest_lifecycle
+Value : FAIL
+
+Name  : typecheck
+Value : FAIL
+
+Name  : chg020_verify
+Value : FAIL
+
+Name  : chg019_verify
+Value : FAIL
+
+Name  : native_default_off
+Value : FAIL
+
+Name  : git_diff_check
+Value : PASS
+
+
+
+

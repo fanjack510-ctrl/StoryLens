@@ -1,0 +1,108 @@
+{
+  "id": "CHG-20260723-016",
+  "title": "Phase 1B-P: Narrative Asset Contract skeleton",
+  "type": "database",
+  "base_version": "1.0.5",
+  "status": "verified",
+  "include_in_next_release": true,
+  "commits": [
+    {
+      "sha": "0d14c2b59324b21cc22a8448100c06a4fff48ec6",
+      "message": "feat: establish narrative phase1b asset contracts",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "7e9c15f8c13525980b46a024abcc37a9aa9d70d0",
+      "message": "docs: mark CHG-20260723-016 tested for phase1b asset contracts",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "10657669aa33149d3e94ca0d1342fe55c0963a5d",
+      "message": "docs: attach registry sync commit to CHG-20260723-016",
+      "primary": false,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "narrative_core",
+    "database",
+    "architecture",
+    "change registry"
+  ],
+  "files": [
+    "apps/api/app/db/models.py",
+    "apps/api/app/db/session.py",
+    "apps/api/app/narrative_core/enums.py",
+    "apps/api/app/narrative_core/errors.py",
+    "apps/api/app/narrative_core/asset_key.py",
+    "apps/api/app/narrative_core/contracts/entity.py",
+    "apps/api/app/narrative_core/contracts/asset.py",
+    "apps/api/app/narrative_core/contracts/relation.py",
+    "apps/api/app/narrative_core/contracts/dto.py",
+    "apps/api/app/narrative_core/migrations/__init__.py",
+    "apps/api/app/narrative_core/migrations/runner.py",
+    "apps/api/tests/test_narrative_phase1bp_contract.py",
+    "docs/architecture/narrative-intelligence-core/phase1b-asset-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase1b-parallel-file-ownership.json"
+  ],
+  "user_summary": "Freeze Phase 1B parallel contracts for Entity/Asset/Relation/Evidence/Conflict shared schema.",
+  "technical_summary": "Freezes Phase 1B ORM skeleton (Entity/Asset/Relation/Evidence/Conflict), migration IDs 006-010, enums, Protocols/DTOs, ownership, and contract tests. No whole-book analysis, model calls, dual-write, or backfill.",
+  "acceptance_criteria": [
+    "Shared ORM + migration 006-010 skeleton create_all and Phase 1A upgrade path",
+    "Protocols frozen for Agents D/E/F; models.py table structures frozen for parallel work",
+    "CHG-017..020 pre-registered as registered; VERSION remains 1.0.5"
+  ],
+  "tests": [
+    "pytest apps/api/tests/test_narrative_phase1bp_contract.py apps/api/tests/test_narrative_phase1p_contract.py -p no:anyio --noconftest (24 passed)",
+    "python scripts/version_manager.py check",
+    "python scripts/change_registry.py check",
+    "git diff --check"
+  ],
+  "verification_evidence": [
+    "Local contract tests on temp SQLite; simulated Phase 1A upgrade preserves analysis_runs row 42 and artifact; canonical partial unique indexes enforce one canonical version",
+    "User confirmed Phase 1B-P Contract acceptance; Agents D/E/F forked and completed; Integration CHG-020 in progress",
+    "docs/architecture/narrative-intelligence-core/phase1b-contract-verification.md"
+  ],
+  "data_compatibility": {
+    "database_changed": true,
+    "migration_required": true,
+    "user_data_compatible": true,
+    "notes": "Additive new tables only; no dual-write; no history backfill; old Reader Journey/Hook/Scene JSON untouched."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-23T08:33:16Z",
+  "updated_at": "2026-07-23T10:22:44Z",
+  "parallel_plan": {
+    "role": "phase1bp",
+    "branch": "feature/narrative-phase1b-contract",
+    "worktree": "D:\\\\Dstorylens-wt-narrative-phase1b-contract",
+    "depends_on": [
+      "CHG-20260723-015"
+    ],
+    "blocks": [
+      "CHG-20260723-017",
+      "CHG-20260723-018",
+      "CHG-20260723-019",
+      "CHG-20260723-020"
+    ],
+    "forbidden": [
+      "whole-book analysis",
+      "model calls",
+      "dual-write",
+      "history backfill",
+      "Pattern tables",
+      "VERSION bump",
+      "push/publish/build"
+    ],
+    "file_ownership": "docs/architecture/narrative-intelligence-core/phase1b-parallel-file-ownership.json"
+  }
+}

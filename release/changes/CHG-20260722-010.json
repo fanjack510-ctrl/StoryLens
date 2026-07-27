@@ -1,0 +1,57 @@
+{
+  "id": "CHG-20260722-010",
+  "title": "Fill book workspace height to viewport bottom",
+  "type": "fix",
+  "base_version": "1.0.4",
+  "status": "released",
+  "include_in_next_release": false,
+  "commits": [
+    {
+      "sha": "24c68b243e3fc5adf9043ff10f986e781b527051",
+      "message": "fix: fill book workspace to viewport bottom",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "desktop"
+  ],
+  "files": [
+    "apps/desktop/src/styles/global.css",
+    "apps/desktop/src/components/chapterResult/chapterResult.css"
+  ],
+  "user_summary": "打开小说后左侧章节列表与正文区域未铺满视口底部，下方留白，章节与正文无法滚动到屏幕最下方。",
+  "technical_summary": "book-shell used calc(100vh-76px) while already inside app main 1fr; book-shell-body was not a flex container so book-shell-main flex:1 and nested height:100% collapsed to content height, leaving a large bottom gap. Fix: app-shell-simplified height 100vh; main flex column; book/results shells flex:1 height 100%; book-shell-body display flex; workspace/reader min-height 0 fill.",
+  "acceptance_criteria": [
+    "Opening a book fills chapter nav and reader to the bottom of the viewport",
+    "Chapter list independently scrolls within the filled left pane",
+    "VERSION remains 1.0.4; no tag/baseline/build/push/model"
+  ],
+  "tests": [
+    "apps/desktop/src/pages/BookWorkspacePage.test.tsx",
+    "apps/desktop/src/pages/BookRoutePage.test.tsx",
+    "apps/desktop/src/components/layout/AppShell.test.tsx"
+  ],
+  "verification_evidence": [
+    "Screenshot: beige nav and reader ended mid-viewport with large white gap under both columns.",
+    "Root: book-shell-body not flex; height:100% on workspace unresolved; vh calc double-counted chrome.",
+    "Local vitest BookWorkspacePage+BookRoutePage+AppShell 39 passed; typecheck/lint/version/registry/check_project green.",
+    "1.0.5 Phase A engineering gates (not per-item user manual acceptance): pytest 760 passed/50 skipped; vitest 877 passed; typecheck; lint; frontend build; check_project; template governance; playwright smoke+scroll+chapter; focused theme/lens/comparison vitest."
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "P1",
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-22T14:43:58Z",
+  "updated_at": "2026-07-23T05:40:44Z"
+}

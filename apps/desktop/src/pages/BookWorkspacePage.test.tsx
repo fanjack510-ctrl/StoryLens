@@ -186,14 +186,69 @@ describe("BookWorkspacePage polish", () => {
     expect(screen.getByText("边界")).toBeInTheDocument();
   });
 
-  it("shows no-chapter StateView when chapters list is empty", async () => {
-    vi.mocked(booksApi.chapters).mockResolvedValue([]);
-    renderWorkspace();
-    expect(await screen.findByTestId("workspace-no-chapter")).toHaveTextContent(
-      "选择一个章节开始阅读",
+  it("shows previous/next chapter controls and disables at ends", async () => {
+    renderWorkspace("/books/1?chapter=1&view=reading");
+    expect(await screen.findByTestId("chapter-adjacent-nav")).toBeInTheDocument();
+    const prevButtons = screen.getAllByTestId("chapter-prev");
+    const nextButtons = screen.getAllByTestId("chapter-next");
+    expect(prevButtons[0]).toBeDisabled();
+    expect(nextButtons[0]).toBeEnabled();
+    fireEvent.click(nextButtons[0]);
+    await waitFor(() => {
+      expect(booksApi.paragraphs).toHaveBeenCalledWith(2, 0, 200);
+    });
+  });
+
+  it("disables next on the last chapter", async () => {
+    renderWorkspace("/books/1?chapter=2&view=reading");
+    await screen.findByTestId("chapter-adjacent-nav");
+    const nextButtons = screen.getAllByTestId("chapter-next");
+    expect(nextButtons.some((b) => (b as HTMLButtonElement).disabled)).toBe(true);
+  });
+
+  it("keeps previous body visible while next chapter loads", async () => {
+    let resolveNext: ((value: unknown) => void) | null = null;
+    vi.mocked(booksApi.paragraphs).mockImplementation(async (chapterId: number) => {
+      if (chapterId === 1) {
+        return {
+          items: [
+            { id: "B0001-C0001-P0001", chapter_id: 1, paragraph_index: 1, raw_text: "潮汐涌起。" },
+          ],
+          offset: 0,
+          limit: 200,
+          total: 1,
+          has_more: false,
+        } as any;
+      }
+      return new Promise((resolve) => {
+        resolveNext = resolve;
+      }) as any;
+    });
+    renderWorkspace("/books/1?chapter=1&view=reading");
+    expect(await screen.findByText("潮汐涌起。")).toBeInTheDocument();
+    const chapter2 = screen.getByText("第二章 星港夜航").closest("button");
+    fireEvent.click(chapter2!);
+    expect(await screen.findByTestId("workspace-chapter-switching")).toBeInTheDocument();
+    expect(screen.getByText("潮汐涌起。")).toBeInTheDocument();
+    expect(screen.queryByTestId("workspace-chapter-loading")).toBeNull();
+    expect(screen.getByTestId("workspace-chapter-item-selected")).toHaveAttribute(
+      "data-chapter-id",
+      "2",
     );
-    expect(screen.queryByRole("heading", { name: /第一章/ })).toBeNull();
-    expect(screen.queryByText("潮汐涌起。")).toBeNull();
+    expect(resolveNext).toBeTruthy();
+    resolveNext!({
+      items: [
+        { id: "B0001-C0002-P0001", chapter_id: 2, paragraph_index: 1, raw_text: "星港夜航正文。" },
+      ],
+      offset: 0,
+      limit: 200,
+      total: 1,
+      has_more: false,
+    });
+    expect(await screen.findByText("星港夜航正文。")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByTestId("workspace-chapter-switching")).toBeNull();
+    });
   });
 
   it("shows loading state without body paragraphs", async () => {

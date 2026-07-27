@@ -1,0 +1,59 @@
+{
+  "id": "CHG-20260726-009",
+  "title": "Fix scene evidence validation config path for packaged sidecar",
+  "type": "fix",
+  "base_version": "1.0.5",
+  "status": "tested",
+  "include_in_next_release": true,
+  "commits": [
+    {
+      "sha": "0c7c933d0463c0905ad66da6e02e7d4ca839c6ad",
+      "message": "fix(runtime): resolve scene validation config in packaged mode",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "0a9d7023a44937ab9cc2d820acb5cc08f74a640f",
+      "message": "docs(release): mark CHG-20260726-009 tested after FIX-TASK-01",
+      "primary": false,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "apps/api"
+  ],
+  "files": [
+    "apps/api/app/services/scene_evidence_validation.py",
+    "apps/api/storylens-api.spec",
+    "apps/api/tests/test_scene_evidence_validation_config_path_local.py"
+  ],
+  "user_summary": "修复生产 Sidecar 解析 scene_evidence_validation.json 时落到 LocalAppData\\\\config 导致任务列表 500。",
+  "technical_summary": "Reuse app.core.paths resource_root/user_data_layout; never resolve %LOCALAPPDATA%/config. Bundle scene_evidence_validation.json in storylens-api.spec datas.",
+  "acceptance_criteria": [
+    "GET /api/v1/analysis-runs returns 200 from System32 cwd with temp DB copy",
+    "Config path never resolves to %LOCALAPPDATA%/config"
+  ],
+  "tests": [
+    "apps/api/tests/test_scene_evidence_validation_config_path_local.py (5 passed)"
+  ],
+  "verification_evidence": [
+    "release/evidence/CHG-20260726-009/verify-result.json",
+    "release/evidence/CHG-20260726-009/verify-production-like-analysis-runs.ps1"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-26T14:26:17Z",
+  "updated_at": "2026-07-26T14:33:58Z"
+}

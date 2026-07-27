@@ -41,8 +41,9 @@ def test_set_version_script_exists():
     script = REPO / "scripts" / "set_version.ps1"
     assert script.is_file()
     body = script.read_text(encoding="utf-8")
-    assert "tauri.conf.json" in body
-    assert "apps/api/app/main.py" in body or "apps\\api\\app\\main.py" in body
+    # Script delegates version sync to the centralized Python version manager.
+    assert "version_manager.py" in body
+    assert "set" in body
 
 
 def test_no_private_key_patterns_in_tauri_conf():
@@ -60,7 +61,14 @@ def test_build_summary_schema_when_present():
     assert data.get("sidecar") == "ok"
     assert data.get("tauri") == "ok"
     updater = data.get("updater_artifacts")
-    assert updater in {"enabled", "skipped", "skipped_no_secret"}
+    allowed_updater_statuses = {
+        "enabled",
+        "skipped",
+        "skipped_no_secret",
+        # Manual signed build with empty TAURI_SIGNING_PRIVATE_KEY_PASSWORD (local RC).
+        "signed_manual_empty_password",
+    }
+    assert updater in allowed_updater_statuses
     if not os.environ.get("TAURI_SIGNING_PRIVATE_KEY"):
         assert updater != "enabled", "local build must not claim signed updater without secret"
 

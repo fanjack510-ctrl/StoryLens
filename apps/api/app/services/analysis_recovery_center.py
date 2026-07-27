@@ -61,15 +61,187 @@ from app.services.staged_budget import (
 
 USER_STATUS_PAUSED = "paused_recoverable"
 
+# Manual "修复并继续" attempts (separate from transport auto-retry max=3).
+MAX_MANUAL_RECOVERY_ATTEMPTS = 5
+MAX_AUTO_PROVIDER_RECOVERY_ATTEMPTS = 3
+
 _AUTH_CODES = frozenset(
     {
         "PROVIDER_AUTH_ERROR",
         "PROVIDER_HTTP_401",
         "PROVIDER_HTTP_403",
+        "PROVIDER_AUTHENTICATION_FAILED",
         "credential_missing",
         "CREDENTIAL_MISSING",
     }
 )
+
+_NON_RETRYABLE_CATEGORIES = frozenset(
+    {
+        "authentication_error",
+        "permission_error",
+        "invalid_request",
+        "model_or_endpoint_not_found",
+    }
+)
+
+
+def _parse_failure_payload(run: AnalysisRun) -> dict[str, Any]:
+    raw = run.provider_health_at_failure or ""
+    if not raw:
+        return {}
+    try:
+        payload = json.loads(raw)
+    except json.JSONDecodeError:
+        return {}
+    if not isinstance(payload, dict):
+        return {}
+    failure = payload.get("failure")
+    return failure if isinstance(failure, dict) else {}
+
+
+def _provider_error_tech_details(run: AnalysisRun) -> dict[str, Any]:
+    failure = _parse_failure_payload(run)
+    snapshot = failure.get("http_error_snapshot")
+    if not isinstance(snapshot, dict):
+        snapshot = {}
+    provider_error = failure.get("provider_error")
+    if not isinstance(provider_error, dict):
+        provider_error = {}
+
+    def _pick(*keys: str) -> Any:
+        for key in keys:
+            if snapshot.get(key) is not None:
+                return snapshot.get(key)
+            if failure.get(key) is not None:
+                return failure.get(key)
+            if provider_error.get(key) is not None:
+                return provider_error.get(key)
+        return None
+
+    category = _pick("error_category")
+    http_status = _pick("http_status")
+    retryable = _pick("retryable")
+    if retryable is None:
+        retryable = bool(run.retryable)
+    return {
+        "http_status": http_status,
+        "provider_error_code": _pick("provider_error_code"),
+        "provider_message": _pick("provider_message", "message"),
+        "provider_request_id": _pick("provider_request_id", "request_id"),
+        "endpoint_host": _pick("endpoint_host"),
+        "error_category": category,
+        "retryable": retryable,
+        "retry_after": _pick("retry_after"),
+        "timeout_stage": _pick("timeout_stage", "timeout_kind"),
+        "response_content_type": _pick("response_content_type"),
+        "sanitized_response_excerpt": _pick("sanitized_response_excerpt"),
+        "occurred_at": _pick("occurred_at"),
+        "user_reason": _pick("user_reason"),
+    }
+
+
+def _boundary_user_copy(run: AnalysisRun, tech: dict[str, Any]) -> dict[str, str]:
+    """User-facing copy when failure is at boundary detection / provider_request."""
+    category = tech.get("error_category")
+    from app.model_gateway.provider_errors import user_reason_for_category
+
+    reason = tech.get("user_reason") or user_reason_for_category(
+        str(category) if category else None
+    )
+    return {
+        "title": "场景边界识别请求失败",
+        "stage_label": "场景边界识别未完成",
+        "explanation": "模型服务在识别场景边界时返回错误。已完成的结果将被保留。",
+        "reason": reason,
+        "impact": "场景边界识别尚未完成，因此暂时无法生成阅读旅程。",
+        "config_note": (
+            "AI 服务配置正常，但本次场景边界请求失败。"
+            if run.root_error_code == "PROVIDER_HTTP_ERROR"
+            else "本次场景边界识别未能完成。"
+        ),
+    }
+
+
+def _classify_scene_evidence_recovery(
+    run: AnalysisRun, tech: dict[str, Any]
+) -> dict[str, Any] | None:
+    """Map structured evidence / boundary validation failures to recovery actions."""
+    from app.services.scene_evidence_validation import user_copy_for_error
+
+    code = str(run.root_error_code or run.error_code or "")
+    message = str(
+        tech.get("provider_message")
+        or tech.get("message")
+        or run.error_message
+        or ""
+    )
+    lower = message.lower()
+
+    if code == "SCENE_BOUNDARY_TOO_BROAD" or "scene_boundary_too_broad" in lower:
+        copy = user_copy_for_error("SCENE_BOUNDARY_TOO_BROAD")
+        return {
+            "error_code": "SCENE_BOUNDARY_TOO_BROAD",
+            "action": "rerun_scene_boundary",
+            "button": copy["button"],
+            "repairable": True,
+            "user_copy": {
+                "title": copy["title"],
+                "stage_label": "场景边界需复查",
+                "explanation": copy["lead"],
+                "reason": "当前场景可能包含多个独立事件",
+                "impact": "需要重新检查场景边界后才能可靠映射证据。",
+            },
+        }
+
+    overbroad_codes = {
+        "EVIDENCE_OVERBROAD_REUSE",
+        "EVIDENCE_OUTSIDE_SCENE",
+        "EVIDENCE_MISSING",
+        "EVIDENCE_VALIDATION_FAILED",
+    }
+    legacy_overbroad = (
+        "must not cite the whole scene" in lower
+        or "reuse full-scene evidence" in lower
+        or "indiscriminately" in lower
+    )
+    if code in overbroad_codes or legacy_overbroad:
+        mapped = (
+            code
+            if code in {"EVIDENCE_OVERBROAD_REUSE", "EVIDENCE_OUTSIDE_SCENE", "EVIDENCE_MISSING"}
+            else "EVIDENCE_OVERBROAD_REUSE"
+        )
+        copy = user_copy_for_error(mapped)
+        return {
+            "error_code": mapped,
+            "action": "evidence_remap_repair",
+            "button": copy["button"] or "整理证据并继续",
+            "repairable": True,
+            "user_copy": {
+                "title": copy["title"],
+                "stage_label": "场景证据需整理",
+                "explanation": copy["lead"],
+                "reason": "部分判断引用了过大的正文范围或证据不合法",
+                "impact": "将只整理当前失败场景的证据，不会重复分析已完成场景。",
+            },
+        }
+
+    # Non-repairable business validation (not evidence-coded): no fix button.
+    if run.retryable is False and code == "BUSINESS_VALIDATION_FAILED":
+        return {
+            "error_code": code,
+            "action": "view_error_details",
+            "button": "查看问题",
+            "repairable": False,
+            "user_copy": {
+                "title": "分析未完成",
+                "stage_label": "业务校验未通过",
+                "explanation": "当前问题无法通过自动修复继续。已完成的分析结果会被保留。",
+                "reason": "业务校验失败且不可自动修复",
+                "impact": "请查看问题详情，或稍后在任务中心处理。",
+            },
+        }
+    return None
 
 
 def _budget_settings(session: Session) -> tuple[bool, dict[str, Any]]:
@@ -590,10 +762,50 @@ def build_recovery_plan(
         )
     )
 
+    # Boundary detection stage check (before journey — journey is a downstream impact)
+    tech = _provider_error_tech_details(run)
+    boundary_failed = resume_stage == "boundary_detection" or (
+        run.failed_stage in {"provider_request", "boundary_detection"}
+        and run.status
+        in {"failed_provider", "boundary_candidates_partial", "failed", "failed_structural"}
+    )
+    user_copy = _boundary_user_copy(run, tech) if boundary_failed else None
+    if boundary_failed:
+        checks.append(
+            RecoveryCheck(
+                id="boundary_detection",
+                label="BoundaryDetection",
+                status="fail",
+                user_label=user_copy["stage_label"] if user_copy else "场景边界识别未完成",
+                detail=run.failed_stage,
+                internal_code=run.root_error_code or run.error_code,
+            )
+        )
+        if tech.get("error_category") in _NON_RETRYABLE_CATEGORIES or (
+            tech.get("http_status") in {400, 401, 403, 404}
+        ):
+            blockers.append(
+                RecoveryBlocker(
+                    code="PROVIDER_REQUEST_NOT_RETRYABLE",
+                    reason="provider_request_not_retryable",
+                    user_message=(user_copy["reason"] if user_copy else "请求参数或凭据不被接受"),
+                    provider=run.provider,
+                    model=run.model,
+                    settings_focus=(
+                        "api_key"
+                        if tech.get("error_category")
+                        in {"authentication_error", "permission_error"}
+                        else "connection"
+                    ),
+                )
+            )
+
     # Reader journey
     journey = _journey_for_run(session, run.id)
     journey_needed = scene_complete and (
-        journey is None or journey.status not in {"succeeded", "queued", "scene_profiles_running", "chapter_synthesis_running"}
+        journey is None
+        or journey.status
+        not in {"succeeded", "queued", "scene_profiles_running", "chapter_synthesis_running"}
     )
     if scene_complete and (journey is None or journey.status != "succeeded"):
         checks.append(
@@ -611,7 +823,6 @@ def build_recovery_plan(
             )
         )
         if journey_needed and not blockers:
-            # Only surface as blocker when other hard blockers cleared? Spec: list ALL current blockers.
             blockers.append(
                 RecoveryBlocker(
                     code="AWAITING_READER_JOURNEY",
@@ -627,14 +838,21 @@ def build_recovery_plan(
                 )
             )
     else:
+        # Downstream impact only — never present as the root failure check.
         checks.append(
             RecoveryCheck(
                 id="reader_journey",
                 label="ReaderJourneyRun",
                 status="pass" if journey and journey.status == "succeeded" else "skip",
-                user_label="阅读旅程已完成"
-                if journey and journey.status == "succeeded"
-                else "阅读旅程未到阶段",
+                user_label=(
+                    "阅读旅程已完成"
+                    if journey and journey.status == "succeeded"
+                    else (
+                        "后续影响：暂时无法生成阅读旅程"
+                        if boundary_failed
+                        else "阅读旅程尚未到生成阶段"
+                    )
+                ),
             )
         )
 
@@ -670,11 +888,14 @@ def build_recovery_plan(
 
     marker = load_unified_recover_marker(run)
     recovery_attempts = int((marker or {}).get("recovery_attempts") or 0)
+    manual_attempts = int((marker or {}).get("manual_recovery_attempts") or recovery_attempts or 0)
+    auto_attempts = int((marker or {}).get("auto_recovery_attempts") or 0)
     if run.status == "awaiting_provider_recovery":
         from app.services.scene_analysis_provider_recovery import load_recovery_state
 
         state = load_recovery_state(run)
-        recovery_attempts = max(recovery_attempts, int(state.get("recovery_cycles") or 0))
+        auto_attempts = max(auto_attempts, int(state.get("recovery_cycles") or 0))
+        recovery_attempts = max(recovery_attempts, auto_attempts)
 
     will_create: list[str] = []
     if resume_stage == "reader_journey" and journey is None:
@@ -682,28 +903,174 @@ def build_recovery_plan(
     if resume_stage == "boundary_detection" and existing_recovery is None:
         will_create.append("AnalysisRun(recovery)")
 
-    # Primary action
-    if not any(a.action == "fix_and_continue" for a in actions):
+    provider_not_retryable = bool(
+        tech.get("error_category") in _NON_RETRYABLE_CATEGORIES
+        or tech.get("http_status") in {400, 401, 403, 404}
+        or (run.retryable is False and run.root_error_code == "PROVIDER_HTTP_ERROR")
+    )
+    recovery_exhausted = manual_attempts >= MAX_MANUAL_RECOVERY_ATTEMPTS or (
+        auto_attempts >= MAX_AUTO_PROVIDER_RECOVERY_ATTEMPTS
+        and run.status == "awaiting_provider_recovery"
+    )
+
+    evidence_error = _classify_scene_evidence_recovery(run, tech)
+    if evidence_error and user_copy is None:
+        user_copy = evidence_error["user_copy"]
+
+    if recovery_exhausted:
+        actions = [
+            RecommendedAction(
+                action="revalidate_ai_service",
+                label="重新验证 AI 服务",
+                automatic=False,
+            ),
+            RecommendedAction(
+                action="create_new_recovery_task",
+                label="新建恢复任务",
+                automatic=False,
+            ),
+            RecommendedAction(
+                action="view_error_details",
+                label="查看错误详情",
+                automatic=False,
+            ),
+            RecommendedAction(
+                action="handle_later",
+                label="稍后处理",
+                automatic=False,
+            ),
+        ]
+    elif provider_not_retryable:
+        actions = [
+            a
+            for a in actions
+            if a.action
+            not in {
+                "fix_and_continue",
+                "start_reader_journey",
+                "reconnect_provider",
+            }
+        ]
         actions.insert(
             0,
             RecommendedAction(
-                action="fix_and_continue",
-                label="修复并继续",
+                action="check_model_config",
+                label="检查模型配置",
                 automatic=False,
-                requires_user_authorization=bool(proposal),
+            ),
+        )
+        actions.append(
+            RecommendedAction(
+                action="validate_and_save_provider",
+                label="验证并保存",
+                automatic=False,
             )
         )
+        actions.append(
+            RecommendedAction(
+                action="view_error_details",
+                label="查看技术详情",
+                automatic=False,
+            )
+        )
+    elif evidence_error:
+        # Replace generic “修复并继续” with structured evidence / boundary actions.
+        actions = [
+            a
+            for a in actions
+            if a.action
+            not in {
+                "fix_and_continue",
+                "start_reader_journey",
+            }
+        ]
+        if evidence_error["repairable"]:
+            actions.insert(
+                0,
+                RecommendedAction(
+                    action=evidence_error["action"],
+                    label=evidence_error["button"],
+                    automatic=False,
+                )
+            )
+        else:
+            actions.insert(
+                0,
+                RecommendedAction(
+                    action="view_error_details",
+                    label="查看问题",
+                    automatic=False,
+                )
+            )
+            actions.append(
+                RecommendedAction(
+                    action="handle_later",
+                    label="稍后处理",
+                    automatic=False,
+                )
+            )
+            actions.append(
+                RecommendedAction(
+                    action="return_task_center",
+                    label="返回任务中心",
+                    automatic=False,
+                )
+            )
+    elif not any(a.action == "fix_and_continue" for a in actions):
+        # Non-retryable business validation must not show misleading fix_and_continue.
+        non_repairable_business = (
+            run.retryable is False
+            and run.root_error_code == "BUSINESS_VALIDATION_FAILED"
+            and not evidence_error
+        )
+        if not non_repairable_business:
+            actions.insert(
+                0,
+                RecommendedAction(
+                    action="fix_and_continue",
+                    label="修复并继续",
+                    automatic=False,
+                    requires_user_authorization=bool(proposal),
+                )
+            )
+        else:
+            actions.insert(
+                0,
+                RecommendedAction(
+                    action="view_error_details",
+                    label="查看问题",
+                    automatic=False,
+                )
+            )
+            actions.append(
+                RecommendedAction(
+                    action="handle_later",
+                    label="稍后处理",
+                    automatic=False,
+                )
+            )
+            actions.append(
+                RecommendedAction(
+                    action="return_task_center",
+                    label="返回任务中心",
+                    automatic=False,
+                )
+            )
 
     hard_blockers = [b for b in blockers if b.severity == "block"]
-    # awaiting_reader_journey alone is recoverable pause (soft next-step)
     recoverable = True
     if auth_blocked and credential_missing is False and run.root_error_code in {
         "PROVIDER_HTTP_401",
         "PROVIDER_HTTP_403",
         "PROVIDER_AUTH_ERROR",
+        "PROVIDER_AUTHENTICATION_FAILED",
     }:
         recoverable = True
     if terminal_failed and not hard_blockers and resume_stage == "none":
+        recoverable = False
+    if provider_not_retryable and resume_stage == "boundary_detection":
+        recoverable = True
+    if recovery_exhausted:
         recoverable = False
 
     pause_reason: str | None = None
@@ -711,6 +1078,8 @@ def build_recovery_plan(
         pause_reason = str(hard_blockers[0].reason)
     elif run.status == "awaiting_provider_recovery":
         pause_reason = "awaiting_provider_recovery"
+    elif boundary_failed:
+        pause_reason = "detection_checkpoint_pending"
     elif journey_needed:
         pause_reason = "awaiting_reader_journey"
 
@@ -726,12 +1095,16 @@ def build_recovery_plan(
         "scene_analysis_running",
     }:
         user_status = "running"
+    elif recovery_exhausted and not hard_blockers:
+        user_status = "failed"
     elif hard_blockers or pause_reason:
         user_status = USER_STATUS_PAUSED
     elif not recoverable:
         user_status = "failed"
     else:
         user_status = USER_STATUS_PAUSED if resume_stage not in {"none", "completed"} else "idle"
+
+    retry_eligible = bool(run.retryable) and not provider_not_retryable and not recovery_exhausted
 
     return AnalysisRecoveryPlanResponse(
         run_id=run.id,
@@ -755,7 +1128,7 @@ def build_recovery_plan(
         model=run.model,
         request_hash=_request_hash(run),
         recovery_attempts=recovery_attempts,
-        budget_authorization_proposal=proposal,
+        budget_authorization_proposal=proposal if not recovery_exhausted else None,
         details={
             "error_code": run.error_code,
             "root_error_code": run.root_error_code,
@@ -776,14 +1149,43 @@ def build_recovery_plan(
             "completed_scene_count": progress.completed_scene_count,
             "total_scene_count": progress.total_scene_count,
             "remaining_scene_count": progress.remaining_scene_count,
+            "manual_recovery_attempts": manual_attempts,
+            "auto_recovery_attempts": auto_attempts,
+            "max_manual_recovery_attempts": MAX_MANUAL_RECOVERY_ATTEMPTS,
+            "max_auto_recovery_attempts": MAX_AUTO_PROVIDER_RECOVERY_ATTEMPTS,
+            "recovery_exhausted": recovery_exhausted,
+            "provider_not_retryable": provider_not_retryable,
+            "evidence_error": (
+                {
+                    "error_code": evidence_error["error_code"],
+                    "action": evidence_error["action"],
+                    "repairable": evidence_error["repairable"],
+                }
+                if evidence_error
+                else None
+            ),
+            "user_error": user_copy,
+            "http_status": tech.get("http_status"),
+            "provider_error_code": tech.get("provider_error_code"),
+            "provider_message": tech.get("provider_message"),
+            "provider_request_id": tech.get("provider_request_id"),
+            "endpoint_host": tech.get("endpoint_host"),
+            "error_category": tech.get("error_category"),
+            "retryable": tech.get("retryable"),
+            "retry_after": tech.get("retry_after"),
+            "timeout_stage": tech.get("timeout_stage"),
+            "response_content_type": tech.get("response_content_type"),
+            "sanitized_response_excerpt": tech.get("sanitized_response_excerpt"),
+            "occurred_at": tech.get("occurred_at"),
+            "user_reason": tech.get("user_reason"),
         },
         active_task=resume_stage if user_status == "running" else None,
-        duplicate_run_risk=duplicate_risk,
+        duplicate_risk=duplicate_risk,
         existing_recovery_run_id=existing_recovery.id if existing_recovery else None,
         reader_journey_run_id=journey.id if journey else None,
         reader_journey_status=journey.status if journey else None,
         current_stage=resume_stage,
-        retry_eligible=bool(run.retryable),
+        retry_eligible=retry_eligible,
         reservation_status=reservation.status if reservation else None,
     )
 
@@ -797,45 +1199,109 @@ def execute_unified_recover(
     *,
     background_resume_scene: Any | None = None,
     background_start_journey: Any | None = None,
+    background_resume_boundary: Any | None = None,
 ) -> AnalysisRecoverResponse:
-    """Execute recovery plan steps in fixed order. Idempotent on client_request_id."""
+    """Execute recovery plan steps in fixed order. Idempotent on successful resume."""
     plan = build_recovery_plan(session, run, gateway, store)
     marker = load_unified_recover_marker(run)
-    if (
-        marker
-        and marker.get("client_request_id") == request.client_request_id
-        and marker.get("actions")
+    resume_actions = {
+        "resume_scene_analysis",
+        "resume_scene_analysis_deferred",
+        "start_or_resume_reader_journey",
+        "reader_journey_deferred",
+        "resume_boundary_detection",
+        "resume_boundary_detection_deferred",
+    }
+    if marker and marker.get("client_request_id") == request.client_request_id and marker.get(
+        "actions"
     ):
+        prior = set(marker.get("actions") or [])
+        # Completed stage resume → always idempotent.
+        if prior & resume_actions:
+            return AnalysisRecoverResponse(
+                run_id=run.id,
+                status=run.status,
+                user_status=plan.user_status,
+                recoverable=plan.recoverable,
+                idempotent_replay=True,
+                actions_executed=list(marker.get("actions") or []),
+                resume_stage=plan.resume_stage,
+                will_reuse_artifacts=plan.will_reuse_artifacts,
+                will_create_entities=[],
+                estimated_requests=plan.estimated_requests,
+                estimated_tokens=plan.estimated_tokens,
+                estimated_cost=plan.estimated_cost,
+                currency=plan.currency,
+                budget_authorization_proposal=plan.budget_authorization_proposal,
+                blockers=plan.blockers,
+                warnings=plan.warnings,
+                checks=plan.checks,
+                reader_journey_run_id=plan.reader_journey_run_id,
+                created_analysis_run_id=plan.existing_recovery_run_id,
+                details={"idempotent": True},
+                http_request_sent=False,
+                model_invocations_started=True,
+            )
+        # Non-resume recover (budget auth / reconnect only) remains idempotent.
+        # Resume=True with only reconnect/auth actions must fall through so boundary
+        # recovery can actually start (fixes silent recovery_attempts loops).
+        if not request.resume:
+            return AnalysisRecoverResponse(
+                run_id=run.id,
+                status=run.status,
+                user_status=plan.user_status,
+                recoverable=plan.recoverable,
+                idempotent_replay=True,
+                actions_executed=list(marker.get("actions") or []),
+                resume_stage=plan.resume_stage,
+                will_reuse_artifacts=plan.will_reuse_artifacts,
+                will_create_entities=[],
+                estimated_requests=plan.estimated_requests,
+                estimated_tokens=plan.estimated_tokens,
+                estimated_cost=plan.estimated_cost,
+                currency=plan.currency,
+                budget_authorization_proposal=plan.budget_authorization_proposal,
+                blockers=plan.blockers,
+                warnings=plan.warnings,
+                checks=plan.checks,
+                reader_journey_run_id=plan.reader_journey_run_id,
+                details={"idempotent": True},
+                http_request_sent=False,
+                model_invocations_started=False,
+            )
+
+    if plan.details.get("recovery_exhausted"):
         return AnalysisRecoverResponse(
             run_id=run.id,
             status=run.status,
-            user_status=plan.user_status,
-            recoverable=plan.recoverable,
-            idempotent_replay=True,
-            actions_executed=list(marker.get("actions") or []),
+            user_status="failed",
+            recoverable=False,
+            actions_executed=[],
             resume_stage=plan.resume_stage,
             will_reuse_artifacts=plan.will_reuse_artifacts,
             will_create_entities=[],
             estimated_requests=plan.estimated_requests,
             estimated_tokens=plan.estimated_tokens,
             estimated_cost=plan.estimated_cost,
-            currency=plan.currency,
-            budget_authorization_proposal=plan.budget_authorization_proposal,
             blockers=plan.blockers,
             warnings=plan.warnings,
             checks=plan.checks,
-            reader_journey_run_id=plan.reader_journey_run_id,
-            details={"idempotent": True},
+            details={
+                **plan.details,
+                "recovery_exhausted": True,
+                "user_message": "已达到恢复上限，请重新验证 AI 服务或新建恢复任务",
+            },
             http_request_sent=False,
             model_invocations_started=False,
         )
 
     actions_executed: list[str] = []
     created_journey_id = plan.reader_journey_run_id
+    created_analysis_run_id = plan.existing_recovery_run_id
     model_started = False
+    manual_attempts = int(plan.details.get("manual_recovery_attempts") or 0)
+    auto_attempts = int(plan.details.get("auto_recovery_attempts") or 0)
 
-    # 1–2 already in plan
-    # 3–5 provider
     auth_blocker = next(
         (
             b
@@ -866,20 +1332,44 @@ def execute_unified_recover(
             model_invocations_started=False,
         )
 
+    # Non-retryable provider HTTP: never auto-resume model work.
+    if plan.details.get("provider_not_retryable") and request.resume:
+        return AnalysisRecoverResponse(
+            run_id=run.id,
+            status=run.status,
+            user_status=plan.user_status,
+            recoverable=plan.recoverable,
+            actions_executed=[],
+            resume_stage=plan.resume_stage,
+            will_reuse_artifacts=plan.will_reuse_artifacts,
+            will_create_entities=[],
+            estimated_requests=plan.estimated_requests,
+            estimated_tokens=plan.estimated_tokens,
+            estimated_cost=plan.estimated_cost,
+            blockers=plan.blockers,
+            warnings=plan.warnings,
+            checks=plan.checks,
+            details={
+                **plan.details,
+                "resume_blocked": True,
+                "user_message": (plan.details.get("user_error") or {}).get("reason")
+                or plan.details.get("user_reason")
+                or "当前错误不可自动重试，请检查模型配置",
+            },
+            http_request_sent=False,
+            model_invocations_started=False,
+        )
+
     row = _provider_row(session, run.provider)
     if row is not None and row.disconnected:
         row.disconnected = False
         session.commit()
         actions_executed.append("provider_reconnect")
-        # refresh plan after reconnect
         plan = build_recovery_plan(session, run, gateway, store)
         actions_executed.append("provider_readiness_refresh")
 
-    # 6–7 budget authorization
     if request.authorize_budget is not None:
         auth_req: RunBudgetAuthorizationRequest = request.authorize_budget
-        # Prefer run_temporary_request_allowance: record on the Run only.
-        # Do NOT permanently mutate cloud_daily_request_limit for run_temporary.
         if auth_req.scope in {"run_temporary", "global_permanent"}:
             prior = load_run_budget_auth(run)
             already = (
@@ -937,23 +1427,28 @@ def execute_unified_recover(
             model_invocations_started=False,
         )
 
-    # Re-evaluate blockers after fixes
     plan = build_recovery_plan(session, run, gateway, store)
     remaining_hard = [
         b
         for b in plan.blockers
         if b.reason
         not in {
-            "awaiting_reader_journey",  # handled as resume
+            "awaiting_reader_journey",
+            "provider_request_not_retryable",
         }
     ]
     if remaining_hard:
+        # Soft marker — do not burn manual attempt budget on budget/auth blockers.
         store_unified_recover_marker(
             run,
             client_request_id=request.client_request_id,
             actions=actions_executed,
             resume_stage=plan.resume_stage,
-            recovery_attempts=plan.recovery_attempts + 1,
+            recovery_attempts=plan.recovery_attempts,
+            manual_recovery_attempts=manual_attempts,
+            auto_recovery_attempts=auto_attempts,
+            last_recovery_kind="partial",
+            last_recovery_reason="blockers_remain",
         )
         session.commit()
         return AnalysisRecoverResponse(
@@ -972,7 +1467,7 @@ def execute_unified_recover(
             blockers=plan.blockers,
             warnings=plan.warnings,
             checks=plan.checks,
-            details={"partial_recovery": True},
+            details={"partial_recovery": True, **plan.details},
             http_request_sent=False,
             model_invocations_started=False,
         )
@@ -983,7 +1478,11 @@ def execute_unified_recover(
             client_request_id=request.client_request_id,
             actions=actions_executed + ["plan_ready"],
             resume_stage=plan.resume_stage,
-            recovery_attempts=plan.recovery_attempts + 1,
+            recovery_attempts=plan.recovery_attempts,
+            manual_recovery_attempts=manual_attempts,
+            auto_recovery_attempts=auto_attempts,
+            last_recovery_kind="plan_ready",
+            last_recovery_reason="awaiting_confirm_resume",
         )
         session.commit()
         return AnalysisRecoverResponse(
@@ -1006,7 +1505,10 @@ def execute_unified_recover(
             model_invocations_started=False,
         )
 
-    # 8–9 resume stage entities (callbacks schedule background work; tests may omit)
+    # Manual resume attempt — counted separately from transport auto-retries.
+    manual_attempts += 1
+    next_attempts = max(plan.recovery_attempts, manual_attempts)
+
     if plan.resume_stage == "scene_analysis" and background_resume_scene is not None:
         background_resume_scene()
         actions_executed.append("resume_scene_analysis")
@@ -1017,20 +1519,37 @@ def execute_unified_recover(
             created_journey_id = int(jid)
         actions_executed.append("start_or_resume_reader_journey")
         model_started = True
+    elif plan.resume_stage == "boundary_detection" and background_resume_boundary is not None:
+        created = background_resume_boundary()
+        if created:
+            created_analysis_run_id = int(created)
+            actions_executed.append("resume_boundary_detection")
+            model_started = True
+        else:
+            actions_executed.append("resume_boundary_detection_deferred")
     elif plan.resume_stage == "scene_analysis":
         actions_executed.append("resume_scene_analysis_deferred")
     elif plan.resume_stage == "reader_journey":
         actions_executed.append("reader_journey_deferred")
+    elif plan.resume_stage == "boundary_detection":
+        actions_executed.append("resume_boundary_detection_deferred")
 
     store_unified_recover_marker(
         run,
         client_request_id=request.client_request_id,
         actions=actions_executed,
         resume_stage=plan.resume_stage,
-        recovery_attempts=plan.recovery_attempts + 1,
+        recovery_attempts=next_attempts,
+        manual_recovery_attempts=manual_attempts,
+        auto_recovery_attempts=auto_attempts,
+        last_recovery_kind="manual",
+        last_recovery_reason=f"resume:{plan.resume_stage}",
     )
     session.commit()
     final_plan = build_recovery_plan(session, run, gateway, store)
+    user_msg = None
+    if not model_started and plan.resume_stage == "boundary_detection":
+        user_msg = "未能启动场景边界恢复；请查看技术详情后重试"
     return AnalysisRecoverResponse(
         run_id=run.id,
         status=run.status,
@@ -1049,10 +1568,17 @@ def execute_unified_recover(
         warnings=final_plan.warnings,
         checks=final_plan.checks,
         reader_journey_run_id=created_journey_id,
-        details={"actions": actions_executed},
+        created_analysis_run_id=created_analysis_run_id,
+        details={
+            "actions": actions_executed,
+            "manual_recovery_attempts": manual_attempts,
+            "user_message": user_msg,
+            **{k: v for k, v in final_plan.details.items() if k not in {"actions"}},
+        },
         http_request_sent=False,
         model_invocations_started=model_started,
     )
+
 
 
 __all__ = [

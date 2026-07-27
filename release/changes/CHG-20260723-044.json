@@ -1,0 +1,121 @@
+{
+  "type": "feature",
+  "base_version": "1.0.5",
+  "include_in_next_release": true,
+  "commits": [
+    {
+      "sha": "e7523d03810b8a851301f5dc017c86c78c31be1a",
+      "message": "feat: integrate narrative phase2br private runtime and real modules",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "2629c6384893a12f489f58ea16f0e97f1e5da930",
+      "message": "docs: attach CHG-20260723-044 and mark tested",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "6cc9049ec0a691b4352d5a29fccfe5b6b5e964e0",
+      "message": "docs: close CHG-20260723-044 commit attachment loop",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "0439c1c1f9d9a1d069d8c9cbb025a22bb7c1b138",
+      "message": "docs: sync final CHG-20260723-044 commit list",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "288d4aff1f1915857c82c1c79ea8a2e51eca90dc",
+      "message": "docs: finalize CHG-20260723-044 commit attachments",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "No schema/migration in Phase 2B-R plan or planned Agents unless blocked and escalated."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-24T01:13:16Z",
+  "updated_at": "2026-07-24T02:06:10Z",
+  "file_ownership": "docs/architecture/narrative-intelligence-core/phase2br-parallel-file-ownership.json",
+  "id": "CHG-20260723-044",
+  "title": "Phase 2B-R Integration",
+  "status": "tested",
+  "modules": [
+    "integration",
+    "private_lab",
+    "candidate_persistence"
+  ],
+  "files": [
+    "apps/api/app/narrative_core/services/private_whole_book_analysis_runtime.py",
+    "apps/api/app/narrative_core/services/whole_book_module_runner.py",
+    "apps/api/app/main.py",
+    "apps/api/tests/test_narrative_phase2br_integration.py",
+    "docs/architecture/narrative-intelligence-core/phase2br-integration-report.md",
+    "docs/architecture/narrative-intelligence-core/phase2br-known-limitations.md",
+    "docs/architecture/narrative-intelligence-core/phase2br-production-isolation-verification.md",
+    "docs/architecture/narrative-intelligence-core/README.md",
+    "docs/architecture/README.md",
+    "release/changes/CHG-20260723-042.json",
+    "release/changes/CHG-20260723-043.json",
+    "release/changes/CHG-20260723-044.json"
+  ],
+  "user_summary": "Integrate private runtime, real modules, Private Lab, Provider E2E, and candidate persistence; keep status tested until Live Smoke.",
+  "technical_summary": "Cherry-pick public S then T onto integration/narrative-phase2br; compose PrivateWholeBookAnalysisRuntime with Fake default + Lab path (create_lab_provider_gateway, build_private_module_runner_adapters / build_first_four_private_runners, Phase1BCandidatePersistenceSink). Private Lab mount gated. Directed eval in test_narrative_phase2br_integration.py. Private HEAD composition follow-up recorded separately.",
+  "acceptance_criteria": [
+    "Composition root wires real private engine under Lab only",
+    "Four modules real path under Lab",
+    "Candidate persistence without auto promote",
+    "Production gates unchanged",
+    "Status max tested until Live Smoke"
+  ],
+  "tests": [
+    "apps/api/tests/test_narrative_phase2br_integration.py",
+    "apps/api/tests/test_narrative_phase2br_private_runtime.py",
+    "apps/api/tests/test_narrative_phase2br_real_modules.py"
+  ],
+  "verification_evidence": [
+    "pytest apps/api/tests/test_narrative_phase2br_integration.py + private_runtime + real_modules → 38 passed",
+    "private tests/test_private_runtime_foundation.py + test_first_four_modules.py → 17 passed",
+    "scripts/check_project.py / change_registry / capability / git diff --check",
+    "gates: VERSION=1.0.5 PRO_CAPABILITIES_SHIPPED=false WHOLE_BOOK_RUNS_ENDPOINT_DISABLED=True PRODUCTION_DEFAULT_ENGINE_ID=None MOCK_LAB=False PRIVATE_LAB=False; no new migrations",
+    "Live Smoke deferred — status capped at tested (not verified)"
+  ],
+  "private_engine": {
+    "repo": "D:\\\\Dstorylens-private-engine",
+    "branch": "integration/narrative-phase2br",
+    "worktree": "D:\\\\Dstorylens-private-engine-wt-integration",
+    "commit": "61cdc3ad184c00e0ab19bcc87b61149293fc3598",
+    "engine_id": "storylens.private.whole_book.dev",
+    "engine_version": "0.1.0-dev",
+    "notes": "Private S+T at 10c19fc; Integration composition follow-up 61cdc3a (create_composed_private_engine_entry)"
+  },
+  "parallel_plan": {
+    "role": "integration",
+    "branch": "integration/narrative-phase2br",
+    "worktree": "D:\\\\Dstorylens-wt-narrative-phase2br-integration",
+    "depends_on": [
+      "CHG-20260723-042",
+      "CHG-20260723-043"
+    ],
+    "forbidden": [
+      "ready/released without product decision",
+      "verified without Live Smoke",
+      "VERSION bump",
+      "push/build/publish"
+    ]
+  }
+}

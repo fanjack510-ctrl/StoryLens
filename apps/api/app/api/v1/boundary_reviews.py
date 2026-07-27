@@ -25,6 +25,9 @@ from app.schemas.boundary_review import (
     BoundaryReviewConfirm,
     BoundaryReviewDecisionResponse,
     BoundaryReviewResponse,
+    FinalBoundaryConfirmRequest,
+    FinalBoundaryProposalResponse,
+    FinalSceneRangeItem,
     ManualBoundaryCreate,
     ReviewParagraph,
     ScenePreviewItem,
@@ -45,14 +48,17 @@ from app.services.staged_budget import (
     estimate_stage2_scene_analysis,
     exceeded_dimensions,
 )
+from app.services.boundary_review_mode import get_boundary_review_mode, is_confirm_only
 from app.services.boundary_review_service import (
     BoundaryReviewIncomplete,
     confirm_review,
+    confirm_review_from_final_proposal,
     analyze_confirmed_review,
     create_review_session,
     preview_ranges,
     update_counts,
 )
+from app.services.final_boundary_proposal import build_final_boundary_proposal
 
 router = APIRouter(prefix="/api/v1")
 
@@ -377,6 +383,12 @@ def confirm(
     gateway: ModelGateway = Depends(get_model_gateway),
     session_factory=Depends(get_session_factory),
 ) -> BoundaryConfirmResponse:
+    if is_confirm_only():
+        raise error(
+            409,
+            "CONFIRM_ONLY_MODE",
+            "请使用整体确认接口确认场景划分",
+        )
     review = _review(session, review_id)
     try:
         revision, scenes = confirm_review(session, review, value.confirmed_by)
@@ -384,6 +396,106 @@ def confirm(
         raise HTTPException(status_code=409, detail=exc.as_error_detail()) from exc
     except ValueError as exc:
         raise error(409, "BOUNDARY_REVIEW_INCOMPLETE", str(exc)) from exc
+    return _launch_stage2_after_confirm(
+        session, review, revision, scenes, background, gateway, session_factory
+    )
+
+
+@router.get(
+    "/boundary-reviews/{review_id}/final-proposal",
+    response_model=FinalBoundaryProposalResponse,
+)
+def get_final_proposal(
+    review_id: int, session: Session = Depends(get_db)
+) -> FinalBoundaryProposalResponse:
+    review = _review(session, review_id)
+    proposal = build_final_boundary_proposal(session, review)
+    chapter = session.get(Chapter, review.chapter_id)
+    paragraphs = list(
+        session.scalars(
+            select(Paragraph)
+            .where(Paragraph.chapter_id == review.chapter_id)
+            .order_by(Paragraph.paragraph_index)
+        )
+    )
+    return FinalBoundaryProposalResponse(
+        review_id=proposal.review_id,
+        analysis_run_id=proposal.analysis_run_id,
+        chapter_id=proposal.chapter_id,
+        boundary_review_mode=get_boundary_review_mode(),
+        validation_status=proposal.validation_status,
+        proposal_fingerprint=proposal.proposal_fingerprint,
+        final_boundary_left_ids=proposal.final_boundary_left_ids,
+        final_scene_ranges=[
+            FinalSceneRangeItem.model_validate(item) for item in proposal.final_scene_ranges
+        ],
+        source_summary=proposal.source_summary,
+        unresolved_reason=proposal.unresolved_reason,
+        paragraph_count=proposal.paragraph_count,
+        scene_count=proposal.scene_count,
+        chapter_title=(chapter.display_title or chapter.title) if chapter else None,
+        paragraphs=[
+            ReviewParagraph(id=p.id, paragraph_index=p.paragraph_index, raw_text=p.raw_text)
+            for p in paragraphs
+        ],
+    )
+
+
+@router.post(
+    "/boundary-reviews/{review_id}/confirm-final-proposal",
+    response_model=BoundaryConfirmResponse,
+)
+def confirm_final_proposal(
+    review_id: int,
+    value: FinalBoundaryConfirmRequest,
+    background: BackgroundTasks,
+    session: Session = Depends(get_db),
+    gateway: ModelGateway = Depends(get_model_gateway),
+    session_factory=Depends(get_session_factory),
+) -> BoundaryConfirmResponse:
+    review = _review(session, review_id)
+    try:
+        revision, scenes, idempotent = confirm_review_from_final_proposal(
+            session,
+            review,
+            confirmed_by=value.confirmed_by,
+            proposal_fingerprint=value.proposal_fingerprint,
+        )
+    except ValueError as exc:
+        message = str(exc)
+        if "fingerprint" in message:
+            raise error(409, "PROPOSAL_FINGERPRINT_MISMATCH", message) from exc
+        if "unresolved" in message.lower() or "无法" in message:
+            raise error(409, "BOUNDARY_PROPOSAL_UNRESOLVED", message) from exc
+        raise error(409, "BOUNDARY_REVIEW_INCOMPLETE", message) from exc
+
+    if idempotent:
+        run = session.get(AnalysisRun, review.analysis_run_id)
+        return BoundaryConfirmResponse(
+            revision_id=revision.id,
+            revision_number=revision.revision_number,
+            scene_count=len(scenes),
+            coverage_rate=revision.coverage_rate,
+            run_status=run.status if run else "boundary_confirmed",
+            scene_analysis_started=run.status == "scene_analysis_running" if run else False,
+            budget_blocked=run.status == "boundary_confirmed_budget_blocked" if run else False,
+            stage=STAGE_ANALYSIS,
+        )
+
+    return _launch_stage2_after_confirm(
+        session, review, revision, scenes, background, gateway, session_factory
+    )
+
+
+def _launch_stage2_after_confirm(
+    session: Session,
+    review: BoundaryReviewSession,
+    revision,
+    scenes,
+    background: BackgroundTasks,
+    gateway: ModelGateway,
+    session_factory,
+) -> BoundaryConfirmResponse:
     run = session.get(AnalysisRun, review.analysis_run_id)
     paragraphs = list(
         session.scalars(
@@ -512,7 +624,6 @@ def confirm(
             )
     run.status = "scene_analysis_running"
     session.commit()
-    # Ensure Stage 2 uses DB-overlaid provider state (same as Detection).
     from app.services.credentials.service import get_credential_store
     from app.services.provider_runtime_service import ProviderRuntimeService
 

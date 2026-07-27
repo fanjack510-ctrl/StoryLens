@@ -1,0 +1,72 @@
+/**
+ * Open an https commerce / external URL outside the app.
+ * Browser local: new tab. Tauri webview: same helper (system/external handler via window.open).
+ * Never accepts javascript:/file:/data:/localhost or non-https targets.
+ */
+
+const USER_UNCONFIGURED = "专业版购买地址尚未配置。";
+
+export type OpenExternalResult = { ok: boolean; message?: string; code?: string };
+
+/** Validate a StoryLens commerce / purchase URL. Rejects non-https and local targets. */
+export function validateHttpsCommerceUrl(url: string): { ok: true; url: string } | { ok: false; code: string } {
+  const trimmed = url.trim();
+  if (!trimmed) {
+    return { ok: false, code: "COMMERCE_URL_MISSING" };
+  }
+
+  let parsed: URL;
+  try {
+    parsed = new URL(trimmed);
+  } catch {
+    return { ok: false, code: "COMMERCE_URL_INVALID" };
+  }
+
+  const protocol = parsed.protocol.toLowerCase();
+  if (protocol !== "https:") {
+    return { ok: false, code: "COMMERCE_URL_INVALID" };
+  }
+
+  // Defense: block dangerous schemes even if somehow embedded.
+  const lower = trimmed.toLowerCase();
+  if (
+    lower.startsWith("javascript:") ||
+    lower.startsWith("file:") ||
+    lower.startsWith("data:") ||
+    lower.startsWith("vbscript:")
+  ) {
+    return { ok: false, code: "COMMERCE_URL_INVALID" };
+  }
+
+  const host = parsed.hostname.toLowerCase();
+  if (
+    host === "localhost" ||
+    host === "127.0.0.1" ||
+    host === "::1" ||
+    host === "[::1]" ||
+    host.endsWith(".localhost")
+  ) {
+    return { ok: false, code: "COMMERCE_URL_INVALID" };
+  }
+
+  return { ok: true, url: parsed.toString() };
+}
+
+/** Open an https URL outside the app (new browser tab / OS handler). */
+export async function openExternalUrl(url: string): Promise<OpenExternalResult> {
+  const checked = validateHttpsCommerceUrl(url);
+  if (!checked.ok) {
+    return { ok: false, code: checked.code, message: USER_UNCONFIGURED };
+  }
+
+  try {
+    const opened = window.open(checked.url, "_blank", "noopener,noreferrer");
+    if (opened == null) {
+      // Popup blocked or unsupported — still no technical dump for users.
+      return { ok: false, code: "COMMERCE_OPEN_FAILED", message: USER_UNCONFIGURED };
+    }
+    return { ok: true };
+  } catch {
+    return { ok: false, code: "COMMERCE_OPEN_FAILED", message: USER_UNCONFIGURED };
+  }
+}

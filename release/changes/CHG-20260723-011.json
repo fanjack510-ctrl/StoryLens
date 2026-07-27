@@ -1,0 +1,102 @@
+{
+  "id": "CHG-20260723-011",
+  "title": "Phase 1P: Narrative parallel contracts and shared schema skeleton",
+  "type": "database",
+  "base_version": "1.0.5",
+  "status": "verified",
+  "include_in_next_release": true,
+  "commits": [
+    {
+      "sha": "55908899edb77d56a3fb6f6ef4c35e8dd58ea3cc",
+      "message": "feat: establish narrative phase1 parallel contracts",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "c5f835fb1c784b7f8ea1245438114fd846818edd",
+      "message": "docs: mark CHG-20260723-011 tested for phase1 parallel contracts",
+      "primary": false,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "architecture",
+    "database",
+    "narrative_core",
+    "analysis run contract",
+    "documentation",
+    "change registry"
+  ],
+  "files": [
+    "apps/api/app/narrative_core/__init__.py",
+    "apps/api/app/narrative_core/enums.py",
+    "apps/api/app/narrative_core/errors.py",
+    "apps/api/app/narrative_core/hash_canon.py",
+    "apps/api/app/narrative_core/stage_transitions.py",
+    "apps/api/app/narrative_core/migrations/runner.py",
+    "apps/api/app/db/models.py",
+    "apps/api/app/db/session.py",
+    "apps/api/tests/test_narrative_phase1p_contract.py",
+    "docs/architecture/narrative-intelligence-core/phase1-parallel-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase1-migration-plan.md",
+    "docs/architecture/narrative-intelligence-core/phase1-parallel-file-ownership.md",
+    "docs/architecture/narrative-intelligence-core/phase1-parallel-file-ownership.json",
+    "docs/architecture/narrative-intelligence-core/phase1-contract-verification.md",
+    "docs/architecture/README.md"
+  ],
+  "user_summary": "Freeze Phase 1 parallel contracts, shared ORM skeleton, migration IDs, and file ownership for Agent A/B/C.",
+  "technical_summary": "Establishes narrative_core enums/protocols/hash_canon/stage matrix, schema_migrations + snapshot + analysis_run_stages ORM skeleton, frozen migration IDs 20260723_001-005, and pre-registers CHG-012..015. Does not implement snapshot/run business loops or call models.",
+  "acceptance_criteria": [
+    "Shared ORM skeleton create_all + incremental migration from simulated 1.0.5",
+    "Enums/protocols/stage matrix/hash_canon frozen with local tests",
+    "File ownership JSON uses real paths",
+    "VERSION remains 1.0.5; Agent A/B/C Changes stay registered"
+  ],
+  "tests": [
+    "pytest apps/api/tests/test_narrative_phase1p_contract.py (8 passed)",
+    "python scripts/version_manager.py check",
+    "python scripts/change_registry.py check",
+    "git diff --check"
+  ],
+  "verification_evidence": [
+    "Local contract tests on temp SQLite; simulated 1.0.5 upgrade preserves analysis_runs row 42",
+    "Phase 1A Integration user verification accepted 2026-07-23; status advanced to verified (not ready/released)."
+  ],
+  "data_compatibility": {
+    "database_changed": true,
+    "migration_required": true,
+    "user_data_compatible": true,
+    "notes": "Additive nullable columns and new tables only; old analysis_runs remain readable; no hash backfill of production data in this Change."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-23T07:20:00Z",
+  "updated_at": "2026-07-23T08:43:10Z",
+  "parallel_plan": {
+    "role": "phase1p",
+    "branch": "feature/narrative-phase1-contract",
+    "worktree": "D:\\Dstorylens-wt-narrative-contract",
+    "depends_on": [],
+    "blocks": [
+      "CHG-20260723-012",
+      "CHG-20260723-013",
+      "CHG-20260723-014",
+      "CHG-20260723-015"
+    ],
+    "forbidden": [
+      "whole-book analysis execution",
+      "model calls",
+      "hash backfill of formal DB",
+      "pause/resume business loop",
+      "VERSION bump",
+      "push/publish"
+    ],
+    "file_ownership": "docs/architecture/narrative-intelligence-core/phase1-parallel-file-ownership.json"
+  }
+}

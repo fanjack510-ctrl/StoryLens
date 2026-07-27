@@ -1,0 +1,114 @@
+{
+  "id": "CHG-20260723-031",
+  "title": "Phase 2A-P Run Shell Contract",
+  "type": "feature",
+  "base_version": "1.0.5",
+  "status": "verified",
+  "include_in_next_release": true,
+  "commits": [
+    {
+      "sha": "612cb314d52deedb7228cce814154ab3bccc80eb",
+      "message": "feat: establish narrative phase2a mock run contracts",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "66abcf995206769dd25f9e0dfdda658987f0bec3",
+      "message": "docs: attach primary commit to CHG-20260723-031",
+      "primary": false,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "narrative_core/run_shell_contract",
+    "desktop/wholeBook/runShell/contracts",
+    "docs"
+  ],
+  "files": [
+    "apps/api/app/narrative_core/run_shell_contract/",
+    "apps/desktop/src/features/wholeBook/runShell/contracts/",
+    "apps/api/tests/test_narrative_phase2ap_contract.py",
+    "docs/architecture/narrative-intelligence-core/phase2a-run-shell-overview.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-parallel-file-ownership.json",
+    "docs/architecture/narrative-intelligence-core/README.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-mock-lab-security.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-run-creation-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-run-state-machine.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-stage-lifecycle.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-mock-executor-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-task-registry-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-mock-run-api.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-frontend-lab-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-polling-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-partial-result-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-run-actions-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-idempotency-concurrency.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-recovery-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-mock-quota-budget.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-error-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-audit-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-parallel-file-ownership.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-contract-verification.md",
+    "release/changes/CHG-20260723-031.json",
+    "release/changes/CHG-20260723-032.json",
+    "release/changes/CHG-20260723-033.json",
+    "release/changes/CHG-20260723-034.json",
+    "release/changes/CHG-20260723-035.json"
+  ],
+  "user_summary": "Freeze Phase 2A Mock Whole-Book Run Shell contracts, state machine, Lab gates, API, ownership.",
+  "technical_summary": "Freeze Phase 2A-P Mock Run Shell contracts: Mock Lab security, create-run, state machine, executor/task-registry protocols, Lab API, frontend Lab mirrors, polling, recovery, quota/budget, errors/audit, ownership. Types/Protocols/Guards/Fixtures only — no real engine, model calls, or prompts.",
+  "acceptance_criteria": [
+    "Mock Lab default closed; production gates unchanged",
+    "Run/Stage state machines and Executor/Registry protocols frozen",
+    "FE/BE error codes and statuses parity",
+    "No migrations; no real engine/model/prompt",
+    "CHG-032–035 registered; ownership documented"
+  ],
+  "tests": [
+    "apps/api/tests/test_narrative_phase2ap_contract.py"
+  ],
+  "verification_evidence": [
+    "pytest apps/api/tests/test_narrative_phase2ap_contract.py -q --noconftest → 33 passed",
+    "python scripts/version_manager.py check",
+    "python scripts/change_registry.py check",
+    "git diff --check"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "Metadata JSON schema only; no ORM column changes."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-23T15:04:11Z",
+  "updated_at": "2026-07-23T16:30:00Z",
+  "parallel_plan": {
+    "role": "phase2a_p",
+    "branch": "feature/narrative-phase2a-run-shell-contract",
+    "worktree": "D:\\\\Dstorylens-wt-narrative-phase2a-contract",
+    "depends_on": [
+      "CHG-20260723-030"
+    ],
+    "blocks": [
+      "CHG-20260723-032",
+      "CHG-20260723-033",
+      "CHG-20260723-034",
+      "CHG-20260723-035"
+    ],
+    "forbidden": [
+      "real engine/model/prompt",
+      "open production whole-book run",
+      "migrations",
+      "VERSION bump",
+      "push/build/publish"
+    ],
+    "file_ownership": "docs/architecture/narrative-intelligence-core/phase2a-parallel-file-ownership.json"
+  }
+}

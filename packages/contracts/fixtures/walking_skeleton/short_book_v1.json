@@ -1,0 +1,36 @@
+{
+  "book": {
+    "title": "行走骨架短篇·灯塔试炼",
+    "author": "StoryLens Test Fixture",
+    "purpose": "STEP 2.2 walking skeleton only — not user content"
+  },
+  "chapters": [
+    {
+      "title": "第一章 启程",
+      "paragraphs": [
+        "林澈站在港口，手里攥着那封写着「必须点亮灯塔」的旧信。",
+        "风把浪推到堤岸上，他知道若今晚失败，整座城会沉入黑暗。"
+      ]
+    },
+    {
+      "title": "第二章 转折与结局",
+      "paragraphs": [
+        "半路风暴撕开甲板，林澈才明白真正的对手不是海，而是自己放弃的念头。",
+        "他爬上灯塔顶层，点燃火种；天亮时，全城看见那道稳定的光。"
+      ]
+    }
+  ],
+  "window": {
+    "total_windows": 1,
+    "window_index": 0,
+    "cross_chapter": true,
+    "original_coverage_percent": 100
+  },
+  "expected_story_facts": {
+    "protagonist": "林澈",
+    "goal": "点亮灯塔以拯救全城",
+    "conflict": "风暴与自我放弃念头",
+    "turning_point": "半路风暴撕开甲板",
+    "ending": "灯塔点燃，全城重获光明"
+  }
+}

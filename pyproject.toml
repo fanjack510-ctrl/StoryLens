@@ -1,6 +1,6 @@
 [project]
 name = "storylens"
-version = "1.0.3"
+version = "1.1.0"
 description = "AI-assisted structured book analysis and narrative case retrieval"
 requires-python = ">=3.11,<3.13"
 dependencies = [
@@ -17,7 +17,7 @@ dependencies = [
   "httpx>=0.27",
   "tenacity>=9.0",
   "jsonschema>=4.23",
-  "keyring>=25.6",
+  "cryptography>=42",
 ]
 
 [project.optional-dependencies]

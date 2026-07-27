@@ -1,0 +1,104 @@
+{
+  "id": "CHG-20260722-001",
+  "title": "Afdian offline StoryLens Pro license activation V1",
+  "type": "feature",
+  "base_version": "1.0.3",
+  "status": "released",
+  "include_in_next_release": false,
+  "commits": [
+    {
+      "sha": "fe419880681a774d876173bebebdb75d6d6232a5",
+      "message": "Add Afdian offline StoryLens Pro license activation (CHG-20260722-001).",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "c3495c58876bcc35824b5e661102958c86c46db9",
+      "message": "Mark CHG-20260722-001 tested after Pro license local verification.",
+      "primary": false,
+      "multi_change_reason": "status mark"
+    },
+    {
+      "sha": "ce1df1e4e6145058c535a51b06899959b1114381",
+      "message": "Isolate StoryLens Pro test and production license public keys (CHG-20260722-001).",
+      "primary": false,
+      "multi_change_reason": "test/prod key isolation follow-up"
+    },
+    {
+      "sha": "f7d6b0e46f0ae63350edc991c161335871109b65",
+      "message": "Install StoryLens Pro production public key storylens-pro-1-prod-001 (CHG-20260722-001).",
+      "primary": false,
+      "multi_change_reason": "production public key install"
+    },
+    {
+      "sha": "8e722cc9fd2de70736bf798db44de05a1e255271",
+      "message": "Configure Afdian Pro purchase URL with HTTPS-only open guard (CHG-20260722-001).",
+      "primary": false,
+      "multi_change_reason": "afdian product URL"
+    },
+    {
+      "sha": "e4a830d8459e8f1a29f37ac214de0c55ebdf7ff7",
+      "message": "Show StoryLens free/Pro identity across app shell (CHG-20260722-001).",
+      "primary": false,
+      "multi_change_reason": "product edition identity UI"
+    }
+  ],
+  "modules": [
+    "api",
+    "desktop",
+    "scripts",
+    "docs",
+    "config"
+  ],
+  "files": [
+    "apps/api/app/services/license_crypto.py",
+    "apps/api/app/services/entitlement.py",
+    "apps/api/app/db/models.py",
+    "apps/api/app/db/session.py",
+    "apps/api/app/api/v1/desktop.py",
+    "apps/desktop/src/services/entitlementApi.ts",
+    "apps/desktop/src/components/settings/LicenseSettingsCard.tsx",
+    "config/license_public_keys.json",
+    "docs/afdian-storylens-pro-setup.md",
+    "scripts/license/generate_keypair.py",
+    "config/license_public_keys.production.json",
+    "tests/fixtures/license_public_keys.test.json",
+    "scripts/license/check_license_release_config.py",
+    "apps/api/tests/test_license_key_isolation.py"
+  ],
+  "user_summary": "增加爱发电离线签名授权码激活 StoryLens Pro 的首版流程，统一专业版文案与 entitlement 权限层。",
+  "technical_summary": "Ed25519 offline licenses with strict test/prod public-key isolation; production-only trust in formal runtimes; issuer scripts and release config checker.",
+  "acceptance_criteria": [
+    "Offline SLP1 activate unlocks Pro; canUseFeature gates; no private keys in repo",
+    "Formal runtimes reject test-dev keys with LICENSE_KEY_NOT_ALLOWED_IN_RUNTIME; no test pubkey fallback",
+    "Pro identity visible in shell; activate updates without refresh; fail-closed free on entitlement error"
+  ],
+  "tests": [
+    "pytest apps/api/tests/test_pro_license_local.py",
+    "vitest pro_license_local + settings license tab",
+    "pytest apps/api/tests/test_license_key_isolation.py"
+  ],
+  "verification_evidence": [
+    "9 pytest passed; related vitest passed; typecheck/version/registry/diff-check passed; test activate+tamper+idempotent against test-dev-001",
+    "18 local pytest passed; 8 vitest passed; typecheck/version/registry/diff-check passed; check_license_release_config.py --allow-pending-keys --allow-missing-commerce passed",
+    "Production public key storylens-pro-1-prod-001 installed; check_license_release_config.py --allow-missing-commerce passed; 18 license pytest passed",
+    "Afdian product URL configured in production license config; openExternalUrl HTTPS hardening; check_license_release_config passed; 19 pytest + 13 vitest passed",
+    "Unified ProductEditionState in AppShell/topbar/sidebar/document.title; activate setQueryData for instant Pro; license page shows 后续开放; 25 related vitest + 10 pytest passed"
+  ],
+  "data_compatibility": {
+    "database_changed": true,
+    "migration_required": true,
+    "user_data_compatible": true,
+    "notes": "Adds local_licenses table; free users unchanged"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-22T00:58:28Z",
+  "updated_at": "2026-07-23T04:43:22Z"
+}

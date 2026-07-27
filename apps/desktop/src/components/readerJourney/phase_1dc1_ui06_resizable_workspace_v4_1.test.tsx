@@ -83,14 +83,6 @@ function openInspector() {
 }
 
 
-function openExportMenu() {
-  const more = screen.queryByTestId("journey-more-chart-settings");
-  if (more && !screen.queryByTestId("journey-export-png")) {
-    fireEvent.click(more);
-  }
-  return screen.getByTestId("journey-export-png");
-}
-
 describe("Reader Journey Resizable Workspace v4.1", () => {
   afterEach(() => {
     cleanup();
@@ -230,33 +222,77 @@ describe("Reader Journey Resizable Workspace v4.1", () => {
   });
 
   it("hides splitters when source/inspector collapsed; expand restores preferred", () => {
-    renderWorkspace(buildFixture13Scenes(), 1600);
+    Object.defineProperty(HTMLElement.prototype, "getBoundingClientRect", {
+      configurable: true,
+      value() {
+        return {
+          width: 1600,
+          height: 900,
+          top: 0,
+          left: 0,
+          bottom: 900,
+          right: 1600,
+          x: 0,
+          y: 0,
+          toJSON() {
+            return {};
+          },
+        };
+      },
+    });
+    const viz = buildFixture13Scenes();
+    const sourcePane = <div data-testid="fixture-source">正文</div>;
+    const { rerender } = render(
+      <MemoryRouter>
+        <div style={{ width: 1600, height: 900 }}>
+          <ReaderJourneyWorkspace
+            visualization={viz}
+            onLocateEvidence={vi.fn()}
+            sourcePane={sourcePane}
+          />
+        </div>
+      </MemoryRouter>,
+    );
     openInspector();
     fireEvent.keyDown(screen.getByTestId("journey-splitter-source"), { key: "ArrowRight" });
     const preferred = JSON.parse(localStorage.getItem(UI_PREF_KEYS.sourcePaneWidth)!);
-    fireEvent.click(screen.getByTestId("journey-source-toggle"));
+    rerender(
+      <MemoryRouter>
+        <div style={{ width: 1600, height: 900 }}>
+          <ReaderJourneyWorkspace
+            visualization={viz}
+            onLocateEvidence={vi.fn()}
+            sourcePane={sourcePane}
+            sourceCollapsed
+          />
+        </div>
+      </MemoryRouter>,
+    );
     expect(screen.queryByTestId("journey-splitter-source")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByTestId("journey-source-toggle"));
+    rerender(
+      <MemoryRouter>
+        <div style={{ width: 1600, height: 900 }}>
+          <ReaderJourneyWorkspace
+            visualization={viz}
+            onLocateEvidence={vi.fn()}
+            sourcePane={sourcePane}
+            sourceCollapsed={false}
+          />
+        </div>
+      </MemoryRouter>,
+    );
     expect(screen.getByTestId("journey-splitter-source")).toHaveAttribute(
       "aria-valuenow",
       String(preferred),
     );
   });
 
-  it("more settings restores both pane defaults without changing scene URL", () => {
+  it("removed more-settings pane reset from unified topbar", () => {
     renderWorkspace(buildFixture13Scenes(), 1600);
     openInspector();
     fireEvent.keyDown(screen.getByTestId("journey-splitter-source"), { key: "End" });
-    fireEvent.click(screen.getByTestId("journey-more-chart-settings"));
-    fireEvent.click(screen.getByTestId("journey-reset-pane-widths"));
-    expect(screen.getByTestId("journey-splitter-source")).toHaveAttribute(
-      "aria-valuenow",
-      "300",
-    );
-    expect(screen.getByTestId("journey-splitter-inspector")).toHaveAttribute(
-      "aria-valuenow",
-      "360",
-    );
+    expect(screen.queryByTestId("journey-more-chart-settings")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("journey-reset-pane-widths")).not.toBeInTheDocument();
   });
 
   it("protects MainPane minimum width when side panes expand", () => {

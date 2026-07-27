@@ -58,6 +58,21 @@ def provider_eligibility(
     enabled = bool(row.enabled) if row and capabilities.cloud else capabilities.enabled
     configured = bool(row and (row.base_url or row.workspace_id)) if capabilities.cloud else True
     connected = bool(row and not row.disconnected) if capabilities.cloud else healthy
+    from app.services.chapter_analysis_smoke_fake_transport import (
+        chapter_smoke_fake_readiness_override,
+    )
+
+    if chapter_smoke_fake_readiness_override() and capabilities.cloud:
+        # Transport-only smoke: do not require live HTTP credential/health.
+        credential = True
+        connected = True if row is not None else connected
+        healthy = True
+        if row is not None and not configured:
+            # Allow create when a ProviderConfiguration row exists even without
+            # a real workspace — smoke never dials the network.
+            configured = True
+            if not enabled:
+                enabled = True
     manual_blockers: list[str] = []
     if capabilities.cloud and not cloud_enabled:
         manual_blockers.append("cloud_master_switch_off")
@@ -210,6 +225,27 @@ def _runtime_health_from_invocations(
     return "healthy", "configured_readiness", fallback
 
 
+def _durable_validation_overrides_cached_failure(
+    session: Session, *, provider_name: str, store: CredentialStore
+) -> bool:
+    """Settings validation snapshot proves a successful probe for this config."""
+    from app.services.ai_validation_snapshot import (
+        build_current_fingerprints,
+        fingerprints_match,
+        load_validation_snapshot,
+    )
+
+    snapshot = load_validation_snapshot(session)
+    if not snapshot or snapshot.get("validation_status") != "success":
+        return False
+    if snapshot.get("provider_key") not in {None, provider_name}:
+        # Older snapshots may omit provider_key; only reject hard mismatches.
+        if snapshot.get("provider_key") and snapshot.get("provider_key") != provider_name:
+            return False
+    current = build_current_fingerprints(session, store, provider_id=provider_name)
+    return fingerprints_match(snapshot, current)
+
+
 def evaluate_manual_boundary_candidate(
     session: Session,
     *,
@@ -223,6 +259,24 @@ def evaluate_manual_boundary_candidate(
         session, provider_name
     )
     now = datetime.now(timezone.utc)
+    # Durable Settings validation must override stale cached transport failures so
+    # "已验证 / 可以开始分析" and Start Analysis share one readiness conclusion.
+    if (
+        runtime_state == "unhealthy"
+        and health_source == "cached_failure"
+        and _durable_validation_overrides_cached_failure(
+            session, provider_name=provider_name, store=store
+        )
+    ):
+        runtime_state = "healthy"
+        health_source = "validation_snapshot"
+    from app.services.chapter_analysis_smoke_fake_transport import (
+        chapter_smoke_fake_readiness_override,
+    )
+
+    if chapter_smoke_fake_readiness_override():
+        runtime_state = "healthy"
+        health_source = "chapter_analysis_smoke_fake"
     result = provider_eligibility(
         session,
         provider_name=provider_name,

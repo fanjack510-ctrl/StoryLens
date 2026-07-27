@@ -376,10 +376,9 @@ def sync_run_partial_display(session: Session, run: AnalysisRun) -> SceneAnalysi
     progress = scene_analysis_progress(session, run)
     if progress.remaining_scene_count == 0:
         clear_scene_analysis_error_fields(run)
-        run.status = "succeeded"
-        from datetime import datetime, timezone
+        from app.services.chapter_analysis_completion import mark_scenes_complete_awaiting_journey
 
-        run.completed_at = datetime.now(timezone.utc)
+        mark_scenes_complete_awaiting_journey(session, run)
         session.commit()
         return progress
     run.status = "scene_analysis_partial"

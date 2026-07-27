@@ -1,0 +1,32 @@
+﻿# RC7 Prebuild Gate — BLOCKED
+
+STEP: 2.8-RC7-SINGLE-CHAPTER-GATE-AND-BUILD
+Public HEAD: 2b39aace8b788181769bad348078c1d2c675b176
+Private HEAD: 30d8dad8cd649e832999874f7bf16cc1661cf221
+Formal VERSION: 1.0.5
+Decision: RC7 BUILD BLOCKED — no Sidecar / Installer builds performed.
+
+## Passed
+
+- Ancestor commits (009–013, 421faba, f55b1b7, 75f4dff, a5a46e5): OK
+- Backend pytest (26 passed): OK
+- CHG-009 production-like analysis-runs: health=200, analysis-runs=200, FileNotFound=0
+- Registry: CHG-014 verified, CHG-015 tested/deferred, CHG-016 verified
+
+## Failed (stop; no source fixes; no build)
+
+Vitest: 5 failed / 130 passed
+
+1. TasksPage.test.tsx — TasksPage Scene Analysis 恢复 > 列表显示真实Scene进度
+2. TasksPage.test.tsx — Artifact已恢复后详情显示历史失败Scene且统一恢复可用
+3. TasksPage.test.tsx — 显示12/14与Evidence错误详情
+4. TasksPage.test.tsx — succeeded Run无旅程时显示继续生成阅读旅程且不显示复制错误
+   Observed: primary CTA `view-progress-55` / 查看进度 instead of expected `view-results-55`
+5. StartAnalysisDialog.test.tsx — 本地模式不显示云端Provider
+   Observed: option /本地模型/ not found
+
+## Build counters
+
+SIDECAR BUILD COUNT: 0
+INSTALLER BUILD COUNT: 0
+REAL PROVIDER CALLS: 0

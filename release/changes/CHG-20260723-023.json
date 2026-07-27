@@ -1,0 +1,99 @@
+{
+  "id": "CHG-20260723-023",
+  "title": "Agent H: Backend Capability / License / Quota",
+  "type": "feature",
+  "base_version": "1.0.5",
+  "status": "verified",
+  "include_in_next_release": true,
+  "commits": [
+    {
+      "sha": "0cc8a4c52a6df759209998144d9afa343f8f13f5",
+      "message": "feat: implement backend capability foundation",
+      "primary": true,
+      "multi_change_reason": "cherry-picked onto integration/narrative-phase1c from Agent H primary 77ea37e"
+    },
+    {
+      "sha": "4cc571e819db524dddc9c95f8aa55ef7d4b461f3",
+      "message": "docs: attach primary commit to CHG-20260723-023",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "dfc4bd29f393512de2f31309c20ff15f91b874d8",
+      "message": "docs: close CHG-20260723-023 commit attachment loop",
+      "primary": false,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "narrative_core",
+    "api/routers",
+    "services/entitlement"
+  ],
+  "files": [
+    "apps/api/app/narrative_core/services/capability_service.py",
+    "apps/api/app/narrative_core/services/quota_service.py",
+    "apps/api/app/narrative_core/services/capability_api_payloads.py",
+    "apps/api/app/narrative_core/services/run_permission_guard.py",
+    "apps/api/app/routers/capabilities.py",
+    "apps/api/app/routers/__init__.py",
+    "apps/api/app/services/entitlement.py",
+    "apps/api/app/main.py",
+    "apps/api/tests/test_narrative_phase1c_capability_backend.py",
+    "docs/architecture/narrative-intelligence-core/phase1c-capability-backend-implementation.md",
+    "docs/architecture/narrative-intelligence-core/phase1c-license-compatibility.md",
+    "docs/architecture/narrative-intelligence-core/phase1c-quota-skeleton.md",
+    "docs/architecture/narrative-intelligence-core/phase1c-run-permission-guard.md",
+    "docs/architecture/narrative-intelligence-core/phase1c-capability-backend-verification.md",
+    "release/changes/CHG-20260723-023.json"
+  ],
+  "user_summary": "Implement CapabilityService, license mapping, quota skeleton, capability API routes.",
+  "technical_summary": "Agent H implements DefaultCapabilityService + InMemoryQuotaService; wires can_use_feature compatibility adapter; adds GET /capabilities routes; require_whole_book_run_permission defaults to deny. whole-book-runs remain disabled; PRO_CAPABILITIES_SHIPPED stays false; no Quota DB tables.",
+  "acceptance_criteria": [
+    "Fork from feature/narrative-phase1c-contract final HEAD",
+    "Use frozen capability_registry metadata",
+    "Do not gate public narrative asset storage APIs",
+    "Do not register POST whole-book-runs before Integration"
+  ],
+  "tests": [
+    "apps/api/tests/test_narrative_phase1c_capability_backend.py"
+  ],
+  "verification_evidence": [
+    "D:\\Dstorylens\\.venv\\Scripts\\python.exe -m pytest apps/api/tests/test_narrative_phase1c_capability_backend.py -q --noconftest → 36 passed",
+    "D:\\Dstorylens\\.venv\\Scripts\\python.exe -m pytest apps/api/tests/test_pro_license_local.py -q --noconftest → 10 passed",
+    "Python 3.12.10; OpenSSL 3.0.16; Phase 1C directed integration tests 83 passed; 1 soupsieve optional-dep warning; version check passed; registry check passed; git diff --check passed; human verification at integration/narrative-phase1c@44a9dcf"
+  ],
+  "parallel_plan": {
+    "role": "agent_h",
+    "branch": "feature/narrative-phase1c-capability-backend",
+    "worktree": "D:\\\\Dstorylens-wt-capability-backend",
+    "depends_on": [
+      "CHG-20260723-021"
+    ],
+    "blocks": [
+      "CHG-20260723-025"
+    ],
+    "forbidden": [
+      "models.py schema edits",
+      "VERSION bump",
+      "modify contracts/*.py owned by Phase 1C-P"
+    ],
+    "file_ownership": "docs/architecture/narrative-intelligence-core/phase1c-parallel-file-ownership.json"
+  },
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "Quota is memory_non_production only; no commercial quota tables."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-23T11:46:12Z",
+  "updated_at": "2026-07-23T13:23:19Z"
+}

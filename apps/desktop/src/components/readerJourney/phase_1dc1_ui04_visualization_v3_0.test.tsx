@@ -164,38 +164,32 @@ describe("Reader Journey Visualization v3.0", () => {
     ).toBeTruthy();
   });
 
-  it("uses horizontal toolbar instead of vertical tool rail", () => {
+  it("uses horizontal unified topbar instead of vertical tool rail", () => {
     renderWorkspace();
     expect(screen.queryByTestId("journey-chart-tool-rail")).not.toBeInTheDocument();
     expect(screen.getByTestId("journey-curve-toolbar")).toBeInTheDocument();
-    expect(screen.getByTestId("journey-zoom-fit-all")).toBeInTheDocument();
-    fireEvent.click(screen.getByTestId("journey-more-chart-settings"));
+    expect(screen.getByTestId("journey-overlay-composite")).toBeInTheDocument();
+    expect(screen.queryByTestId("journey-zoom-fit-all")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("journey-more-chart-settings")).not.toBeInTheDocument();
     expect(screen.getByTestId("journey-export-png")).toBeInTheDocument();
     expect(css).toMatch(/\.journey-chart-tool-rail\s*\{[^}]*display:\s*none/);
   });
 
-  it("hides zoom in/out for 鈮?5 scenes; shows for 30 under more settings", () => {
+  it("hides zoom in/out for ≤15 scenes; compatibility nodes remain hidden for 30", () => {
     expect(showsZoomControls(13)).toBe(false);
     expect(showsZoomControls(30)).toBe(true);
     renderWorkspace(buildFixture13Scenes());
-    fireEvent.click(screen.getByTestId("journey-more-chart-settings"));
-    expect(screen.queryByTestId("journey-zoom-in")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("journey-more-chart-settings")).not.toBeInTheDocument();
+    expect(screen.getByTestId("journey-zoom-in")).not.toBeVisible();
     cleanup();
     renderWorkspace(buildFixture30Scenes());
-    fireEvent.click(screen.getByTestId("journey-more-chart-settings"));
-    expect(screen.getByTestId("journey-zoom-in")).toBeEnabled();
+    expect(screen.getByTestId("journey-zoom-in")).toBeInTheDocument();
   });
 
-  it("keeps height / focus-data only in more settings", () => {
+  it("removed height / focus-data from ordinary topbar with more menu", () => {
     renderWorkspace();
     expect(screen.queryByTestId("journey-chart-height-expanded")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByTestId("journey-more-chart-settings"));
-    expect(screen.getByTestId("journey-chart-height-expanded")).toBeInTheDocument();
-    expect(screen.getByTestId("journey-y-domain-focus")).toBeInTheDocument();
-    fireEvent.click(screen.getByTestId("journey-chart-height-expanded"));
-    expect(screen.getByTestId("journey-curve-svg").getAttribute("height")).toBe(
-      String(chartHeightPx("expanded")),
-    );
+    expect(screen.queryByTestId("journey-more-chart-settings")).not.toBeInTheDocument();
   });
 
   it("renders all 13 scene nodes; chart overflow-y is not scroll/auto", () => {

@@ -1,0 +1,3 @@
+﻿Full result JSON and Sidecar logs were moved outside the public repo before commit.
+Local archive root: D:\StoryLens-Local-Evidence\RC6-untracked-20260727\
+SENSITIVE_DATA_COMMITTED: NO

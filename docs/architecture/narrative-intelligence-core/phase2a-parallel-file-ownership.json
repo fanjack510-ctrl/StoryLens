@@ -1,0 +1,164 @@
+{
+  "baseline_version": "1.0.5",
+  "baseline_commit": "b755f50506a759fdc2cf2841aa6bfe789d95099a",
+  "phase2a_p_change": "CHG-20260723-031",
+  "phase2a_p": [
+    "apps/api/app/narrative_core/run_shell_contract/",
+    "apps/desktop/src/features/wholeBook/runShell/contracts/",
+    "apps/api/tests/test_narrative_phase2ap_contract.py",
+    "docs/architecture/narrative-intelligence-core/phase2a-run-shell-overview.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-mock-lab-security.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-run-creation-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-run-state-machine.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-stage-lifecycle.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-mock-executor-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-task-registry-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-mock-run-api.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-frontend-lab-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-polling-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-partial-result-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-run-actions-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-idempotency-concurrency.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-recovery-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-mock-quota-budget.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-error-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-audit-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-parallel-file-ownership.md",
+    "docs/architecture/narrative-intelligence-core/phase2a-parallel-file-ownership.json",
+    "docs/architecture/narrative-intelligence-core/phase2a-contract-verification.md",
+    "docs/architecture/narrative-intelligence-core/README.md",
+    "release/changes/CHG-20260723-031.json",
+    "release/changes/CHG-20260723-032.json",
+    "release/changes/CHG-20260723-033.json",
+    "release/changes/CHG-20260723-034.json",
+    "release/changes/CHG-20260723-035.json"
+  ],
+  "agent_m": [
+    "apps/api/app/narrative_core/services/mock_whole_book_run_service.py",
+    "apps/api/app/narrative_core/services/mock_whole_book_run_executor.py",
+    "apps/api/app/narrative_core/services/in_process_mock_run_task_registry.py",
+    "apps/api/app/routers/whole_book_mock_lab_runs.py",
+    "apps/api/tests/test_narrative_phase2a_mock_run_backend.py",
+    "docs/architecture/narrative-intelligence-core/phase2a-run-backend-implementation.md",
+    "release/changes/CHG-20260723-032.json"
+  ],
+  "agent_n": [
+    "apps/desktop/src/features/wholeBook/runShell/lab/",
+    "apps/desktop/src/features/wholeBook/runShell/client/",
+    "apps/desktop/src/features/wholeBook/runShell/polling/",
+    "apps/desktop/src/features/wholeBook/runShell/progress/",
+    "apps/desktop/src/features/wholeBook/runShell/controls/",
+    "apps/desktop/src/features/wholeBook/runShell/__tests__/",
+    "docs/architecture/narrative-intelligence-core/phase2a-run-frontend-implementation.md",
+    "release/changes/CHG-20260723-033.json"
+  ],
+  "agent_o": [
+    "apps/api/app/narrative_core/services/mock_run_recovery_service.py",
+    "apps/api/app/narrative_core/services/mock_run_idempotency.py",
+    "apps/api/app/narrative_core/services/mock_execution_quota.py",
+    "apps/api/app/narrative_core/services/mock_run_audit.py",
+    "apps/api/tests/test_narrative_phase2a_recovery.py",
+    "docs/architecture/narrative-intelligence-core/phase2a-recovery-implementation.md",
+    "release/changes/CHG-20260723-034.json"
+  ],
+  "integration": [
+    "apps/api/app/main.py",
+    "apps/api/tests/test_narrative_phase2a_integration.py",
+    "docs/architecture/narrative-intelligence-core/phase2a-integration-report.md",
+    "docs/architecture/narrative-intelligence-core/README.md",
+    "README.md",
+    "release/changes/CHG-20260723-035.json"
+  ],
+  "shared_read_only": [
+    "apps/api/app/db/models.py",
+    "apps/api/app/narrative_core/enums.py",
+    "apps/api/app/narrative_core/stage_transitions.py",
+    "apps/api/app/narrative_core/contracts/",
+    "apps/api/app/narrative_core/product_contract/",
+    "apps/api/app/narrative_core/run_shell_contract/",
+    "apps/api/app/narrative_core/services/mock_whole_book_engine.py",
+    "apps/api/app/narrative_core/services/whole_book_engine_registry.py",
+    "apps/desktop/src/features/wholeBook/contracts/",
+    "apps/desktop/src/features/wholeBook/runShell/contracts/",
+    "apps/desktop/src/services/productEdition.ts",
+    "VERSION"
+  ],
+  "shared_risk_files": [
+    {
+      "path": "apps/api/app/main.py",
+      "risk": "Lab router registration vs production isolation",
+      "owner": "integration",
+      "readers": [
+        "agent_m"
+      ]
+    },
+    {
+      "path": "apps/api/app/db/models.py",
+      "risk": "No new columns; metadata JSON only — schema issue if insufficient",
+      "owner": "shared_read_only",
+      "readers": [
+        "agent_m",
+        "agent_o",
+        "integration"
+      ]
+    },
+    {
+      "path": "apps/api/app/narrative_core/services/whole_book_stage_orchestrator.py",
+      "risk": "Agent M wires Mock executor; must not open production runs",
+      "owner": "agent_m_with_integration_review",
+      "readers": [
+        "agent_o"
+      ]
+    },
+    {
+      "path": "apps/desktop/src/features/wholeBook/runUx/",
+      "risk": "Agent N Lab must not merge into formal Run UX nav without Integration",
+      "owner": "agent_n_isolated_lab",
+      "readers": [
+        "integration"
+      ]
+    },
+    {
+      "path": "apps/api/app/narrative_core/contracts/api_dto.py",
+      "risk": "WHOLE_BOOK_RUNS_ENDPOINT_DISABLED must stay true",
+      "owner": "shared_read_only",
+      "readers": [
+        "all"
+      ]
+    }
+  ],
+  "forbidden_overlap": [
+    "real whole-book engine / model calls / real prompts",
+    "PRO_CAPABILITIES_SHIPPED=true",
+    "WHOLE_BOOK_RUNS_ENDPOINT_DISABLED=false",
+    "PRODUCTION_DEFAULT_ENGINE_ID set",
+    "migrations / new DB tables",
+    "Celery / Redis / message queue / WebSocket / FTS5 / Neo4j / vector DB",
+    "VERSION bump / tag / baseline edits",
+    "push / build / publish / stash restore",
+    "Agent M editing frontend",
+    "Agent N editing backend run implementation",
+    "Agent O editing formal frontend layout"
+  ],
+  "branches": {
+    "phase2a_p": "feature/narrative-phase2a-run-shell-contract",
+    "agent_m": "feature/narrative-phase2a-run-backend",
+    "agent_n": "feature/narrative-phase2a-run-frontend",
+    "agent_o": "feature/narrative-phase2a-recovery",
+    "integration": "integration/narrative-phase2a"
+  },
+  "worktrees": {
+    "phase2a_p": "D:\\\\Dstorylens-wt-narrative-phase2a-contract",
+    "agent_m": "D:\\\\Dstorylens-wt-narrative-run-backend",
+    "agent_n": "D:\\\\Dstorylens-wt-narrative-run-frontend",
+    "agent_o": "D:\\\\Dstorylens-wt-narrative-run-recovery",
+    "integration": "D:\\\\Dstorylens-wt-narrative-phase2a-integration"
+  },
+  "notes": [
+    "All Agent M/N/O branches must fork from Phase 2A-P final HEAD.",
+    "Mock Lab is independent of production ship gates.",
+    "No new migrations; metadata JSON schema versioned.",
+    "Recovery never auto-resumes on startup.",
+    "Formal production whole-book run create remains disabled."
+  ]
+}

@@ -126,8 +126,17 @@ export function ChapterAnalysisProgressPanel({
       uiState === "awaiting_budget_adjustment" ||
       uiState === "aborted_by_limit" ||
       uiState === "provider_recovery" ||
-      uiState === "reader_journey_processing");
+      uiState === "reader_journey_processing" ||
+      uiState === "awaiting_reader_journey_start");
 
+  const meterDetail =
+    uiState === "reader_journey_processing" || uiState === "awaiting_reader_journey_start"
+      ? counts.total > 0
+        ? `正在整合 ${counts.total} 个场景`
+        : "正在生成阅读旅程"
+      : counts.total > 0
+        ? `场景 ${counts.current} / ${counts.total}`
+        : uiStateLabel(uiState);
   return (
     <aside
       className="chapter-analysis-progress-panel"
@@ -187,9 +196,7 @@ export function ChapterAnalysisProgressPanel({
           <div className="chapter-analysis-meter-bar">
             <span style={{ width: `${pct}%` }} />
           </div>
-          <p data-testid="chapter-analysis-count">
-            {counts.total > 0 ? `${counts.current} / ${counts.total}` : uiStateLabel(uiState)}
-          </p>
+          <p data-testid="chapter-analysis-count">{meterDetail}</p>
           {elapsed && <p data-testid="chapter-analysis-elapsed">已用时间 {elapsed}</p>}
           {cost && <p data-testid="chapter-analysis-budget">{cost}</p>}
         </div>
@@ -282,14 +289,14 @@ export function ChapterAnalysisProgressPanel({
 
       {uiState === "boundary_review_required" && (
         <div className="chapter-analysis-boundary" data-testid="chapter-analysis-boundary">
-          <p>需要确认场景边界后才能继续场景分析。</p>
+          <p>请确认场景划分后继续分析。</p>
           <button
             type="button"
             className="primary"
             data-testid="chapter-analysis-review-boundary"
             onClick={onReviewBoundary}
           >
-            审阅场景边界
+            确认场景划分
           </button>
         </div>
       )}
@@ -325,6 +332,26 @@ export function ChapterAnalysisProgressPanel({
         </p>
       )}
 
+      {uiState === "awaiting_reader_journey_start" && run && (
+        <div
+          className="chapter-analysis-success"
+          data-testid="chapter-analysis-journey-pending"
+        >
+          <h3>场景分析已完成，阅读旅程尚未生成</h3>
+          <p>任务 #{run.id} 的场景结果已保留。可继续生成阅读旅程，不会重新分析场景。</p>
+          {onContinueReaderJourney && (
+            <button
+              type="button"
+              className="primary"
+              data-testid="chapter-analysis-continue-journey"
+              onClick={onContinueReaderJourney}
+            >
+              继续生成阅读旅程
+            </button>
+          )}
+        </div>
+      )}
+
       {uiState === "reader_journey_processing" && run && (
         <div
           className="chapter-analysis-success"
@@ -339,7 +366,7 @@ export function ChapterAnalysisProgressPanel({
               data-testid="chapter-analysis-open-results"
               onClick={onViewResults}
             >
-              查看分析结果
+              查看场景结果
             </button>
           )}
         </div>
@@ -375,16 +402,18 @@ export function ChapterAnalysisProgressPanel({
                 data-testid="chapter-analysis-open-results"
                 onClick={onViewResults}
               >
-                查看分析结果
+                查看场景结果
               </button>
             ) : (
-              <a
+              <button
+                type="button"
                 className="primary"
                 data-testid="chapter-analysis-open-results"
-                href={`/analysis-runs/${run.id}/results?tab=reader-journey`}
+                disabled
+                title="请在章节工作台内查看场景结果"
               >
-                查看分析结果
-              </a>
+                查看场景结果
+              </button>
             )}
             {hasJourney && onContinueReaderJourney && (
               <button

@@ -12,7 +12,9 @@ import { useDeveloperModeStore } from "../../stores/developerModeStore";
 vi.mock("../../services/providersApi", () => ({
   providersApi: { list: vi.fn(), cloud: vi.fn(), configuration: vi.fn() },
 }));
-vi.mock("../../services/analysisApi", () => ({ analysisApi: { start: vi.fn(), preflight: vi.fn() } }));
+vi.mock("../../services/analysisApi", () => ({
+  analysisApi: { start: vi.fn(), preflight: vi.fn(), executionPlan: vi.fn() },
+}));
 vi.mock("../../services/analysisRecoveryApi", () => ({
   analysisRecoveryApi: {
     fullPipelinePreflight: vi.fn(async () => ({
@@ -140,6 +142,29 @@ beforeEach(() => {
     remaining: { requests: 70, tokens: 90000, estimated_cost: 2.5 },
   });
   vi.mocked(analysisApi.start).mockResolvedValue({ run_id: 12 });
+  vi.mocked(analysisApi.executionPlan).mockResolvedValue({
+    mode: "BALANCED",
+    selected_provider: "aliyun_qwen_plus",
+    selected_model: "configured-plus",
+    configured: true,
+    credential_available: true,
+    connection_verified: true,
+    supported_stages: [
+      "scene_boundary_detection",
+      "scene_analysis",
+      "reader_journey_generation",
+      "final_validation",
+    ],
+    missing_stages: [],
+    blockers: [],
+    unsupported_reason: null,
+    user_message: "可以开始分析",
+    can_start: true,
+    health_state: "healthy",
+    health_source: "configured_readiness",
+    provider_state_version: "state-1",
+    capability_schema_version: "1c-a-2",
+  } as any);
 });
 afterEach(cleanup);
 
@@ -148,6 +173,14 @@ describe("开始分析人工审阅入口", () => {
     renderDialog();
     expect(await screen.findByRole("option", { name: /本地模型/ })).toBeInTheDocument();
     expect(screen.queryByRole("option", { name: /阿里云百炼/ })).not.toBeInTheDocument();
+  });
+  it("本地 Provider 不可用时不显示可选择的本地模型", async () => {
+    vi.mocked(providersApi.list).mockResolvedValue([plus] as any);
+    renderDialog();
+    await screen.findByLabelText("执行方式");
+    await waitFor(() => {
+      expect(screen.queryByRole("option", { name: /本地模型/ })).not.toBeInTheDocument();
+    });
   });
   it("云端模式显示非默认且关闭自动路由的Plus", async () => {
     renderDialog();
@@ -348,6 +381,24 @@ describe("StartAnalysisDialog 布局与交互", () => {
 
   it("无可用 Provider 时真实禁用创建按钮并展示原因", async () => {
     vi.mocked(providersApi.list).mockResolvedValue([]);
+    vi.mocked(analysisApi.executionPlan).mockResolvedValue({
+      mode: "BALANCED",
+      selected_provider: "aliyun_qwen_plus",
+      selected_model: "qwen3.7-plus",
+      configured: false,
+      credential_available: false,
+      connection_verified: false,
+      supported_stages: [],
+      missing_stages: ["scene_boundary_detection"],
+      blockers: ["credential_missing"],
+      unsupported_reason: "credential_missing",
+      user_message: "尚未配置 API Key",
+      can_start: false,
+      health_state: "unhealthy",
+      health_source: "configured_readiness",
+      provider_state_version: "state-1",
+      capability_schema_version: "1c-a-2",
+    } as any);
     renderDialog();
     fireEvent.change(await screen.findByLabelText(/执行模式|执行方式/), { target: { value: "cloud" } });
     expect(await screen.findByTestId("start-analysis-no-provider")).toHaveTextContent(
@@ -414,10 +465,114 @@ describe("普通模式开始分析弹窗", () => {
       disconnected: true,
       connection_state: "disconnected",
     } as any);
+    vi.mocked(analysisApi.executionPlan).mockResolvedValue({
+      mode: "BALANCED",
+      selected_provider: "aliyun_qwen_plus",
+      selected_model: "qwen3.7-plus",
+      configured: false,
+      credential_available: false,
+      connection_verified: false,
+      supported_stages: [],
+      missing_stages: [
+        "scene_boundary_detection",
+        "scene_analysis",
+        "reader_journey_generation",
+        "final_validation",
+      ],
+      blockers: ["credential_missing"],
+      unsupported_reason: "credential_missing",
+      user_message: "尚未配置 API Key",
+      can_start: false,
+      health_state: "unhealthy",
+      health_source: "configured_readiness",
+      provider_state_version: "state-1",
+      capability_schema_version: "1c-a-2",
+    } as any);
     renderDialog();
     expect(await screen.findByTestId("start-analysis-ai-disconnected")).toHaveTextContent("尚未配置 API Key");
     expect(screen.getByTestId("start-analysis-goto-settings")).toHaveTextContent("去配置 AI 服务");
     expect(screen.getByTestId("start-analysis-submit")).toBeDisabled();
+  });
+
+  it("ExecutionPlan can_start=true 时启用开始按钮", async () => {
+    vi.mocked(providersApi.list).mockResolvedValue([{
+      ...plus,
+      manual_boundary_candidate_eligible: false,
+      manual_selection_blockers: ["provider_unhealthy"],
+      health_state: "unhealthy",
+      health_source: "cached_failure",
+    }] as any);
+    vi.mocked(analysisApi.executionPlan).mockResolvedValue({
+      mode: "BALANCED",
+      selected_provider: "aliyun_qwen_plus",
+      selected_model: "configured-plus",
+      configured: true,
+      credential_available: true,
+      connection_verified: true,
+      supported_stages: [
+        "scene_boundary_detection",
+        "scene_analysis",
+        "reader_journey_generation",
+        "final_validation",
+      ],
+      missing_stages: [],
+      blockers: [],
+      unsupported_reason: null,
+      user_message: "可以开始分析",
+      can_start: true,
+      health_state: "healthy",
+      health_source: "validation_snapshot",
+      provider_state_version: "state-1",
+      capability_schema_version: "1c-a-2",
+    } as any);
+    renderDialog();
+    expect(await screen.findByTestId("start-analysis-ai-connected")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("checkbox"));
+    await waitFor(() => expect(screen.getByTestId("start-analysis-submit")).toBeEnabled());
+  });
+
+  it("缺少阶段时展示后端具体原因而不是笼统不支持", async () => {
+    vi.mocked(providersApi.list).mockResolvedValue([{
+      ...plus,
+      manual_boundary_candidate_eligible: false,
+      manual_selection_blockers: ["provider_unhealthy"],
+    }] as any);
+    vi.mocked(analysisApi.executionPlan).mockResolvedValue({
+      mode: "BALANCED",
+      selected_provider: "aliyun_qwen_plus",
+      selected_model: "configured-plus",
+      configured: true,
+      credential_available: true,
+      connection_verified: false,
+      supported_stages: [],
+      missing_stages: ["scene_boundary_detection"],
+      blockers: ["provider_unhealthy"],
+      unsupported_reason: "provider_unhealthy",
+      user_message: "Provider暂时不可用，请重新验证连接",
+      can_start: false,
+      health_state: "unhealthy",
+      health_source: "cached_failure",
+      provider_state_version: "state-1",
+      capability_schema_version: "1c-a-2",
+    } as any);
+    renderDialog();
+    await waitFor(() => {
+      expect(screen.getByTestId("start-analysis-ai-disconnected")).toHaveTextContent(
+        /Provider暂时不可用/,
+      );
+    });
+    expect(screen.queryByText("当前 AI 服务不支持此分析")).not.toBeInTheDocument();
+    expect(screen.getByTestId("start-analysis-submit")).toBeDisabled();
+  });
+
+  it("刷新状态会重新查询 ExecutionPlan", async () => {
+    vi.mocked(providersApi.list).mockResolvedValue([plus] as any);
+    renderDialog();
+    await screen.findByTestId("start-analysis-ai-connected");
+    expect(analysisApi.executionPlan).toHaveBeenCalled();
+    vi.mocked(analysisApi.executionPlan).mockClear();
+    fireEvent.click(screen.getByTestId("start-analysis-refresh-status"));
+    await waitFor(() => expect(analysisApi.executionPlan).toHaveBeenCalled());
   });
 
   it("唯一可用 Provider 时自动选中真实 provider id", async () => {

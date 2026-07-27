@@ -1,0 +1,116 @@
+{
+  "id": "CHG-20260723-026",
+  "title": "Phase 1D-P Product Contract",
+  "type": "feature",
+  "base_version": "1.0.5",
+  "status": "verified",
+  "include_in_next_release": true,
+  "commits": [
+    {
+      "sha": "08cf77c567502e7d21e07c9722b6434d4faba2d6",
+      "message": "feat: establish narrative phase1d product contracts",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "a028161619eb77c1507ca6043552214da82aea82",
+      "message": "docs: attach primary commit to CHG-20260723-026",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "5d8645923e533e0412f5706836a93bb6f4c436c5",
+      "message": "docs: close CHG-20260723-026 commit attachment loop",
+      "primary": false,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "narrative_core/product_contract",
+    "desktop/wholeBook/contracts",
+    "docs"
+  ],
+  "files": [
+    "apps/api/app/narrative_core/product_contract/",
+    "apps/desktop/src/features/wholeBook/contracts/",
+    "apps/api/tests/test_narrative_phase1dp_contract.py",
+    "docs/architecture/narrative-intelligence-core/phase1d-product-flow.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-preflight-page-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-run-progress-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-result-information-architecture.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-result-envelope.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-module-result-contracts.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-evidence-review-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-conflict-center-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-structure-map-projection.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-api-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-release-scope.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-parallel-file-ownership.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-parallel-file-ownership.json",
+    "docs/architecture/narrative-intelligence-core/phase1d-contract-verification.md",
+    "docs/architecture/narrative-intelligence-core/README.md",
+    "release/changes/CHG-20260723-026.json",
+    "release/changes/CHG-20260723-027.json",
+    "release/changes/CHG-20260723-028.json",
+    "release/changes/CHG-20260723-029.json",
+    "release/changes/CHG-20260723-030.json"
+  ],
+  "user_summary": "Freeze whole-book product flow, DTOs, Evidence/Review/Conflict, Structure Map projection, and Agent J/K/L ownership.",
+  "technical_summary": "Freeze Phase 1D-P product contracts: Preflight page model, Run view/stage progress, Result Envelope + 11 module DTOs, Evidence/Review/Conflict, Structure Map projection, frontend/backend shared keys+guards, Agent J/K/L ownership. No real runs, no models, no Pattern tables, no migrations.",
+  "acceptance_criteria": [
+    "Product flow and result IA frozen with state/page diagrams",
+    "Backend product_contract + desktop wholeBook/contracts key-consistent",
+    "11 module DTOs + Envelope + Evidence/Review/Conflict + Structure Map",
+    "WHOLE_BOOK_RUNS_ENDPOINT_DISABLED=true; PRO_CAPABILITIES_SHIPPED=false",
+    "Agent J/K/L ownership JSON with real paths; no real analysis"
+  ],
+  "tests": [
+    "apps/api/tests/test_narrative_phase1dp_contract.py"
+  ],
+  "verification_evidence": [
+    "pytest apps/api/tests/test_narrative_phase1dp_contract.py -q --noconftest → 28 passed",
+    "python scripts/version_manager.py check passed",
+    "python scripts/change_registry.py check passed",
+    "git diff --check passed"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-23T13:23:32Z",
+  "updated_at": "2026-07-23T13:33:05Z",
+  "parallel_plan": {
+    "role": "phase1d_p",
+    "branch": "feature/narrative-phase1d-product-contract",
+    "worktree": "D:\\\\Dstorylens-wt-narrative-phase1d-contract",
+    "depends_on": [
+      "CHG-20260723-025"
+    ],
+    "blocks": [
+      "CHG-20260723-027",
+      "CHG-20260723-028",
+      "CHG-20260723-029",
+      "CHG-20260723-030"
+    ],
+    "forbidden": [
+      "real whole-book run creation",
+      "model calls",
+      "PRO_CAPABILITIES_SHIPPED=true",
+      "WHOLE_BOOK_RUNS_ENDPOINT_DISABLED=false",
+      "Pattern ORM tables",
+      "VERSION bump",
+      "push/build/publish"
+    ],
+    "file_ownership": "docs/architecture/narrative-intelligence-core/phase1d-parallel-file-ownership.json"
+  }
+}

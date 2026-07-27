@@ -1,0 +1,34 @@
+﻿TASK REENTRY VERIFICATION：
+PASSED
+RUN #12 CTA：
+查看分析结果
+RUN #12 ROUTE：
+/books/5/pro-native-overview?run_id=12
+RUN #13 CTA：
+查看分析进度
+RUN #13 ROUTE：
+/books/5?chapter=1304&analysisRun=13&view=progress
+RUN #14 CTA：
+查看分析结果
+RUN #14 ROUTE：
+/books/5/pro-native-overview?run_id=14
+NOTE：
+正式库验证时 Run #14 已完成（forensic 时为 analyzing）；active 语义与防重复创建由单元测试覆盖。
+DUPLICATE CREATE BLOCKED：
+YES
+409 EXISTING RUN DETAILS：
+PASS
+409 FRONTEND REDIRECT：
+PASS
+CONFIRMED REVIEW ROUTES TO PROGRESS：
+PASS
+TASK CENTER ACTIONS：
+PASS
+REAL PROVIDER CALLS：
+0
+FORMAL DATABASE WRITES：
+0
+NEW RUNS CREATED：
+0
+DATABASE LOCK ERRORS：
+0

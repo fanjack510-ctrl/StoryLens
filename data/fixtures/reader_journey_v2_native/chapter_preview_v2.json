@@ -1,0 +1,659 @@
+{
+  "fixture_id": "reader_journey_v2_native_preview",
+  "fixture_version": "1.0.0",
+  "contract_version": "2.0",
+  "prompt_version": "2.0",
+  "formula_version": "2.0",
+  "source_mode": "local_fixture",
+  "book_title": "Reader Journey V2 · 合成诊断测试",
+  "chapter_title": "合成诊断测试章",
+  "chapter_display_title": "第1章 合成诊断测试章",
+  "genre": "suspense",
+  "display_banner": "合成测试数据：仅用于验证V2图表、数据透传和诊断规则，不代表真实小说分析结果。",
+  "one_sentence_diagnosis": "合成诊断测试：覆盖剧情停滞、空转、节奏、好奇/紧张不足、钩子与兑现、情绪高点及Beat辅助节点（非真实小说正文）。",
+  "phases": [
+    {
+      "ordinal": 1,
+      "title": "钩子与停滞",
+      "start_scene_ordinal": 1,
+      "end_scene_ordinal": 3,
+      "primary_reader_question": "井口铁锁为什么被人动过",
+      "dominant_emotion": "疑虑",
+      "reading_payoff": "建立主疑问但推进短暂停滞",
+      "continuation_motivation": "想确认铁锁异常是否与旧案有关",
+      "summary": "开场钩子后出现停滞与Beat衔接",
+      "confidence": 0.9
+    },
+    {
+      "ordinal": 2,
+      "title": "空转与节奏失衡",
+      "start_scene_ordinal": 4,
+      "end_scene_ordinal": 6,
+      "primary_reader_question": "线索是否真的在推进",
+      "dominant_emotion": "焦躁",
+      "reading_payoff": "暴露空转与节奏问题",
+      "continuation_motivation": "等待有效新信息",
+      "summary": "快节奏空转与偏慢节奏对照",
+      "confidence": 0.88
+    },
+    {
+      "ordinal": 3,
+      "title": "张力缺口与兑现",
+      "start_scene_ordinal": 7,
+      "end_scene_ordinal": 10,
+      "primary_reader_question": "铁锁异常最终指向谁",
+      "dominant_emotion": "紧张转释放",
+      "reading_payoff": "空钩子后有效兑现并冲上情绪高点",
+      "continuation_motivation": "余波未尽",
+      "summary": "好奇/紧张不足后完成钩子兑现",
+      "confidence": 0.92
+    }
+  ],
+  "question_lifecycle": [
+    {
+      "question_id": "ql-iron-lock",
+      "question_text": "井口铁锁为什么被人动过",
+      "setup_scene": 1,
+      "development_scenes": [2, 4, 5, 6, 7, 8],
+      "payoff_scene": 9,
+      "status": "paid_off",
+      "strength": 86
+    },
+    {
+      "question_id": "ql-who-moved",
+      "question_text": "是谁趁夜动了铁锁",
+      "setup_scene": 1,
+      "development_scenes": [6, 7, 8],
+      "payoff_scene": null,
+      "status": "progressing",
+      "strength": 64
+    }
+  ],
+  "scenes": [
+    {
+      "ordinal": 1,
+      "case_labels": ["钩子建立"],
+      "node_type": "scene",
+      "scene_role": "setup",
+      "paragraphs": [
+        "测试井口的铁锁上有新刮痕，像刚被人撬开又慌忙扣回去。",
+        "陈岁蹲下摸了摸，铁锈屑还温着，不像隔夜的痕迹。"
+      ],
+      "profile": {
+        "scene_value_summary": "以井口铁锁刮痕建立主钩子，抛出谁动过锁的疑问",
+        "dominant_emotion": "警觉好奇",
+        "emotional_valence_start": -10,
+        "emotional_valence_end": 5,
+        "arousal_start": 40,
+        "arousal_end": 58,
+        "curiosity_score": 78,
+        "tension_score": 55,
+        "payoff_score": 28,
+        "hook_score": 82,
+        "information_gain_score": 62,
+        "emotional_resonance_score": 48,
+        "cognitive_load_score": 30,
+        "dropoff_risk_score": 22,
+        "confidence": 0.91
+      },
+      "v2_scores": {
+        "reading_momentum": 74,
+        "plot_progress": 58,
+        "reading_tension": 62,
+        "pacing_speed": 55,
+        "pacing_fit": 72,
+        "hook": 82,
+        "payoff": 28,
+        "emotional_investment": 52,
+        "clarity": 78,
+        "dropoff_risk": 26
+      },
+      "diagnosis": {
+        "primary_diagnosis": null,
+        "secondary_diagnoses": [],
+        "positive_mechanism": null,
+        "severity": "info",
+        "confidence": 0.9,
+        "data_quality_issue": null,
+        "diagnostic_evidence": {
+          "scene_ordinals": [1],
+          "metric_keys": ["hook", "curiosity"],
+          "notes": "钩子建立案例：高 hook + 问题抛出"
+        }
+      },
+      "question_out": "井口铁锁为什么被人动过",
+      "hooks": [
+        {
+          "type": "information",
+          "summary": "铁锁新刮痕暗示有人刚动过井口",
+          "strength": 82
+        }
+      ],
+      "payoffs": []
+    },
+    {
+      "ordinal": 2,
+      "case_labels": ["剧情停滞"],
+      "node_type": "scene",
+      "scene_role": "investigation",
+      "paragraphs": [
+        "他围着井台走了两圈，却说不出新发现。",
+        "风声、水声、远处狗吠，都像昨天一样，什么也没推进。"
+      ],
+      "profile": {
+        "scene_value_summary": "反复巡视却无新信息，形成剧情停滞",
+        "dominant_emotion": "空落",
+        "emotional_valence_start": -5,
+        "emotional_valence_end": -18,
+        "arousal_start": 35,
+        "arousal_end": 28,
+        "curiosity_score": 40,
+        "tension_score": 32,
+        "payoff_score": 12,
+        "hook_score": 35,
+        "information_gain_score": 10,
+        "emotional_resonance_score": 30,
+        "cognitive_load_score": 20,
+        "dropoff_risk_score": 68,
+        "confidence": 0.88
+      },
+      "v2_scores": {
+        "reading_momentum": 28,
+        "plot_progress": 14,
+        "reading_tension": 30,
+        "pacing_speed": 35,
+        "pacing_fit": 40,
+        "hook": 35,
+        "payoff": 12,
+        "emotional_investment": 28,
+        "clarity": 70,
+        "dropoff_risk": 72
+      },
+      "diagnosis": {
+        "primary_diagnosis": "plot_stagnation",
+        "secondary_diagnoses": ["weak_progress"],
+        "positive_mechanism": null,
+        "severity": "critical",
+        "confidence": 0.9,
+        "data_quality_issue": null,
+        "diagnostic_evidence": {
+          "scene_ordinals": [2],
+          "metric_keys": ["plot_progress", "reading_momentum"],
+          "notes": "剧情停滞：plot_progress 极低"
+        }
+      },
+      "question_out": "井口铁锁为什么被人动过",
+      "hooks": [],
+      "payoffs": []
+    },
+    {
+      "ordinal": 3,
+      "case_labels": ["Beat辅助节点"],
+      "node_type": "beat",
+      "scene_role": "transition",
+      "paragraphs": [
+        "客厅陷入死寂。"
+      ],
+      "profile": {
+        "scene_value_summary": "短拍静默衔接，不计入主曲线均值",
+        "dominant_emotion": "静滞",
+        "emotional_valence_start": -20,
+        "emotional_valence_end": -22,
+        "arousal_start": 20,
+        "arousal_end": 18,
+        "curiosity_score": 20,
+        "tension_score": 25,
+        "payoff_score": 8,
+        "hook_score": 15,
+        "information_gain_score": 5,
+        "emotional_resonance_score": 22,
+        "cognitive_load_score": 10,
+        "dropoff_risk_score": 40,
+        "confidence": 0.85
+      },
+      "v2_scores": {
+        "reading_momentum": 18,
+        "plot_progress": 8,
+        "reading_tension": 22,
+        "pacing_speed": 20,
+        "pacing_fit": 55,
+        "hook": 15,
+        "payoff": 8,
+        "emotional_investment": 20,
+        "clarity": 80,
+        "dropoff_risk": 45
+      },
+      "diagnosis": {
+        "primary_diagnosis": "scene_boundary_anomaly",
+        "secondary_diagnoses": [],
+        "positive_mechanism": null,
+        "severity": "info",
+        "confidence": 0.95,
+        "data_quality_issue": "scene_boundary_anomaly",
+        "diagnostic_evidence": {
+          "scene_ordinals": [3],
+          "metric_keys": ["node_type"],
+          "notes": "Beat辅助节点：短拍静默"
+        }
+      },
+      "question_out": "井口铁锁为什么被人动过",
+      "hooks": [],
+      "payoffs": []
+    },
+    {
+      "ordinal": 4,
+      "case_labels": ["空转快节奏"],
+      "node_type": "scene",
+      "scene_role": "escalation",
+      "paragraphs": [
+        "他一口气翻遍灶台、柜角和门槛，动作又急又碎。",
+        "东西被挪来挪去，却始终没有落到一条能站得住的线索上。"
+      ],
+      "profile": {
+        "scene_value_summary": "动作密集但剧情不推进，典型空转快节奏",
+        "dominant_emotion": "焦躁空转",
+        "emotional_valence_start": -15,
+        "emotional_valence_end": -25,
+        "arousal_start": 60,
+        "arousal_end": 78,
+        "curiosity_score": 45,
+        "tension_score": 58,
+        "payoff_score": 15,
+        "hook_score": 40,
+        "information_gain_score": 18,
+        "emotional_resonance_score": 35,
+        "cognitive_load_score": 55,
+        "dropoff_risk_score": 62,
+        "confidence": 0.89
+      },
+      "v2_scores": {
+        "reading_momentum": 36,
+        "plot_progress": 18,
+        "reading_tension": 48,
+        "pacing_speed": 88,
+        "pacing_fit": 28,
+        "hook": 40,
+        "payoff": 15,
+        "emotional_investment": 34,
+        "clarity": 55,
+        "dropoff_risk": 64
+      },
+      "diagnosis": {
+        "primary_diagnosis": "empty_fast_pacing",
+        "secondary_diagnoses": ["weak_progress"],
+        "positive_mechanism": null,
+        "severity": "high",
+        "confidence": 0.91,
+        "data_quality_issue": null,
+        "diagnostic_evidence": {
+          "scene_ordinals": [4],
+          "metric_keys": ["plot_progress", "pacing_speed"],
+          "notes": "空转快节奏：高 pacing_speed + 低 plot_progress"
+        }
+      },
+      "question_out": "线索是否真的在推进",
+      "hooks": [],
+      "payoffs": []
+    },
+    {
+      "ordinal": 5,
+      "case_labels": ["节奏偏慢"],
+      "node_type": "scene",
+      "scene_role": "investigation",
+      "paragraphs": [
+        "他把同一句旁白在心里复述了三遍，仍盯着潮湿的砖缝。",
+        "时间仿佛被拉长，读者跟着停在原地等他开口。"
+      ],
+      "profile": {
+        "scene_value_summary": "信息增量不足且节奏明显偏慢",
+        "dominant_emotion": "拖沓不安",
+        "emotional_valence_start": -12,
+        "emotional_valence_end": -20,
+        "arousal_start": 30,
+        "arousal_end": 26,
+        "curiosity_score": 38,
+        "tension_score": 36,
+        "payoff_score": 20,
+        "hook_score": 32,
+        "information_gain_score": 22,
+        "emotional_resonance_score": 33,
+        "cognitive_load_score": 25,
+        "dropoff_risk_score": 58,
+        "confidence": 0.87
+      },
+      "v2_scores": {
+        "reading_momentum": 34,
+        "plot_progress": 32,
+        "reading_tension": 40,
+        "pacing_speed": 22,
+        "pacing_fit": 30,
+        "hook": 32,
+        "payoff": 20,
+        "emotional_investment": 36,
+        "clarity": 68,
+        "dropoff_risk": 60
+      },
+      "diagnosis": {
+        "primary_diagnosis": "pacing_too_slow",
+        "secondary_diagnoses": ["weak_progress"],
+        "positive_mechanism": null,
+        "severity": "medium",
+        "confidence": 0.88,
+        "data_quality_issue": null,
+        "diagnostic_evidence": {
+          "scene_ordinals": [5],
+          "metric_keys": ["pacing_speed", "pacing_fit"],
+          "notes": "节奏偏慢：低 pacing_speed + 低 pacing_fit"
+        }
+      },
+      "question_out": "线索是否真的在推进",
+      "hooks": [],
+      "payoffs": []
+    },
+    {
+      "ordinal": 6,
+      "case_labels": ["好奇不足"],
+      "node_type": "scene",
+      "scene_role": "investigation",
+      "paragraphs": [
+        "邻居只说夜里听过脚步，却不肯多讲半句。",
+        "对话收束得太平，读者提不起继续追问的欲望。"
+      ],
+      "profile": {
+        "scene_value_summary": "信息封闭导致好奇不足，牵引变弱",
+        "dominant_emotion": "平淡失望",
+        "emotional_valence_start": -8,
+        "emotional_valence_end": -15,
+        "arousal_start": 28,
+        "arousal_end": 24,
+        "curiosity_score": 18,
+        "tension_score": 34,
+        "payoff_score": 18,
+        "hook_score": 22,
+        "information_gain_score": 20,
+        "emotional_resonance_score": 28,
+        "cognitive_load_score": 18,
+        "dropoff_risk_score": 66,
+        "confidence": 0.86
+      },
+      "v2_scores": {
+        "reading_momentum": 30,
+        "plot_progress": 36,
+        "reading_tension": 38,
+        "pacing_speed": 40,
+        "pacing_fit": 58,
+        "hook": 22,
+        "payoff": 18,
+        "emotional_investment": 30,
+        "clarity": 72,
+        "dropoff_risk": 70
+      },
+      "diagnosis": {
+        "primary_diagnosis": "weak_curiosity",
+        "secondary_diagnoses": ["weak_hook"],
+        "positive_mechanism": null,
+        "severity": "medium",
+        "confidence": 0.87,
+        "data_quality_issue": null,
+        "diagnostic_evidence": {
+          "scene_ordinals": [6],
+          "metric_keys": ["curiosity", "hook"],
+          "notes": "好奇不足：低 curiosity / hook"
+        }
+      },
+      "question_out": "是谁趁夜动了铁锁",
+      "hooks": [],
+      "payoffs": []
+    },
+    {
+      "ordinal": 7,
+      "case_labels": ["紧张不足"],
+      "node_type": "scene",
+      "scene_role": "escalation",
+      "paragraphs": [
+        "他听见后院有人停住呼吸，却只当是风。",
+        "威胁感被轻易放过，紧张始终抬不起来。"
+      ],
+      "profile": {
+        "scene_value_summary": "危险迹象被轻描淡写，阅读紧张不足",
+        "dominant_emotion": "松懈错觉",
+        "emotional_valence_start": -18,
+        "emotional_valence_end": -12,
+        "arousal_start": 42,
+        "arousal_end": 35,
+        "curiosity_score": 48,
+        "tension_score": 16,
+        "payoff_score": 22,
+        "hook_score": 36,
+        "information_gain_score": 35,
+        "emotional_resonance_score": 32,
+        "cognitive_load_score": 22,
+        "dropoff_risk_score": 55,
+        "confidence": 0.86
+      },
+      "v2_scores": {
+        "reading_momentum": 38,
+        "plot_progress": 42,
+        "reading_tension": 18,
+        "pacing_speed": 48,
+        "pacing_fit": 60,
+        "hook": 36,
+        "payoff": 22,
+        "emotional_investment": 34,
+        "clarity": 70,
+        "dropoff_risk": 55
+      },
+      "diagnosis": {
+        "primary_diagnosis": "weak_tension",
+        "secondary_diagnoses": ["suspended_tension"],
+        "positive_mechanism": null,
+        "severity": "medium",
+        "confidence": 0.88,
+        "data_quality_issue": null,
+        "diagnostic_evidence": {
+          "scene_ordinals": [7],
+          "metric_keys": ["tension", "reading_tension"],
+          "notes": "紧张不足：低 reading_tension"
+        }
+      },
+      "question_out": "是谁趁夜动了铁锁",
+      "hooks": [],
+      "payoffs": []
+    },
+    {
+      "ordinal": 8,
+      "case_labels": ["空钩子或兑现延迟"],
+      "node_type": "scene",
+      "scene_role": "investigation",
+      "paragraphs": [
+        "门缝里塞进一张字条：今晚井边见。",
+        "可字条背面空白，约定时间也在后文迟迟不兑现。"
+      ],
+      "profile": {
+        "scene_value_summary": "抛出空钩子并延迟兑现，牵引悬空",
+        "dominant_emotion": "悬而未决",
+        "emotional_valence_start": -10,
+        "emotional_valence_end": -5,
+        "arousal_start": 50,
+        "arousal_end": 62,
+        "curiosity_score": 70,
+        "tension_score": 58,
+        "payoff_score": 10,
+        "hook_score": 76,
+        "information_gain_score": 40,
+        "emotional_resonance_score": 45,
+        "cognitive_load_score": 35,
+        "dropoff_risk_score": 48,
+        "confidence": 0.9
+      },
+      "v2_scores": {
+        "reading_momentum": 52,
+        "plot_progress": 40,
+        "reading_tension": 60,
+        "pacing_speed": 58,
+        "pacing_fit": 65,
+        "hook": 76,
+        "payoff": 10,
+        "emotional_investment": 48,
+        "clarity": 62,
+        "dropoff_risk": 48
+      },
+      "diagnosis": {
+        "primary_diagnosis": "empty_hook",
+        "secondary_diagnoses": ["delayed_payoff"],
+        "positive_mechanism": null,
+        "severity": "high",
+        "confidence": 0.9,
+        "data_quality_issue": null,
+        "diagnostic_evidence": {
+          "scene_ordinals": [8],
+          "metric_keys": ["hook", "payoff", "question_lifecycle"],
+          "notes": "空钩子 + 兑现延迟"
+        }
+      },
+      "question_out": "是谁趁夜动了铁锁",
+      "hooks": [
+        {
+          "type": "danger",
+          "summary": "字条约定今晚井边见却无兑现内容",
+          "strength": 76
+        }
+      ],
+      "payoffs": []
+    },
+    {
+      "ordinal": 9,
+      "case_labels": ["有效兑现"],
+      "node_type": "scene",
+      "scene_role": "reveal",
+      "paragraphs": [
+        "井沿湿泥里印着半枚熟悉的鞋印，正是村里文书常穿的那双。",
+        "铁锁刮痕与鞋印对上，主疑问第一次得到可验证的兑现。"
+      ],
+      "profile": {
+        "scene_value_summary": "鞋印证据兑现铁锁疑问，形成有效回报",
+        "dominant_emotion": "恍然紧张",
+        "emotional_valence_start": -20,
+        "emotional_valence_end": 15,
+        "arousal_start": 55,
+        "arousal_end": 72,
+        "curiosity_score": 60,
+        "tension_score": 70,
+        "payoff_score": 88,
+        "hook_score": 55,
+        "information_gain_score": 85,
+        "emotional_resonance_score": 68,
+        "cognitive_load_score": 40,
+        "dropoff_risk_score": 18,
+        "confidence": 0.93
+      },
+      "v2_scores": {
+        "reading_momentum": 86,
+        "plot_progress": 84,
+        "reading_tension": 78,
+        "pacing_speed": 68,
+        "pacing_fit": 80,
+        "hook": 55,
+        "payoff": 88,
+        "emotional_investment": 74,
+        "clarity": 86,
+        "dropoff_risk": 14
+      },
+      "diagnosis": {
+        "primary_diagnosis": "effective_payoff",
+        "secondary_diagnoses": [],
+        "positive_mechanism": "effective_payoff",
+        "severity": "info",
+        "confidence": 0.94,
+        "data_quality_issue": null,
+        "diagnostic_evidence": {
+          "scene_ordinals": [1, 9],
+          "metric_keys": ["payoff", "question_lifecycle", "plot_progress"],
+          "notes": "有效兑现：主问题 paid_off"
+        }
+      },
+      "question_out": "文书为何要动铁锁",
+      "hooks": [
+        {
+          "type": "identity",
+          "summary": "文书动机仍未完全揭开",
+          "strength": 55
+        }
+      ],
+      "payoffs": [
+        {
+          "type": "information",
+          "summary": "鞋印把铁锁异常指向文书",
+          "strength": 88
+        }
+      ]
+    },
+    {
+      "ordinal": 10,
+      "case_labels": ["情绪高点"],
+      "node_type": "scene",
+      "scene_role": "climax",
+      "paragraphs": [
+        "他抬头，看见井口黑水里反出一张苍白的脸，心跳猛地撞上耳膜。",
+        "恐惧与确认同时砸下，情绪被推到本章最高点。"
+      ],
+      "profile": {
+        "scene_value_summary": "井中人影将情绪推至高点并留下余波",
+        "dominant_emotion": "恐惧高潮",
+        "emotional_valence_start": -40,
+        "emotional_valence_end": -85,
+        "arousal_start": 70,
+        "arousal_end": 96,
+        "curiosity_score": 72,
+        "tension_score": 92,
+        "payoff_score": 70,
+        "hook_score": 80,
+        "information_gain_score": 65,
+        "emotional_resonance_score": 90,
+        "cognitive_load_score": 48,
+        "dropoff_risk_score": 12,
+        "confidence": 0.94
+      },
+      "v2_scores": {
+        "reading_momentum": 90,
+        "plot_progress": 78,
+        "reading_tension": 92,
+        "pacing_speed": 82,
+        "pacing_fit": 74,
+        "hook": 80,
+        "payoff": 70,
+        "emotional_investment": 92,
+        "clarity": 75,
+        "dropoff_risk": 10
+      },
+      "diagnosis": {
+        "primary_diagnosis": null,
+        "secondary_diagnoses": [],
+        "positive_mechanism": null,
+        "severity": "info",
+        "confidence": 0.92,
+        "data_quality_issue": null,
+        "diagnostic_evidence": {
+          "scene_ordinals": [10],
+          "metric_keys": ["arousal", "emotional_investment", "reading_tension"],
+          "notes": "情绪高点：高 arousal + 负 valence"
+        }
+      },
+      "question_out": "井中那张脸是谁",
+      "hooks": [
+        {
+          "type": "danger",
+          "summary": "井中人影把恐惧推到峰值",
+          "strength": 80
+        }
+      ],
+      "payoffs": [
+        {
+          "type": "emotion",
+          "summary": "情绪高潮兑现悬疑压迫",
+          "strength": 70
+        }
+      ]
+    }
+  ]
+}

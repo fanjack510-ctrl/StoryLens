@@ -36,24 +36,135 @@ export function mapChapterCompositionState(
   const base = mapRunToUiState(run);
   if (base !== "succeeded") return base;
 
+  if (run?.chapter_complete === true) {
+    return "succeeded";
+  }
   if (journey?.status === "succeeded" && journey.visualization) {
     return "succeeded";
   }
-  if (journey?.status && JOURNEY_ACTIVE.has(journey.status)) {
+
+  // Prefer live parent AnalysisRun journey signals over a stale journey GET failure.
+  if (run?.effective_status === "journey_running") {
+    return "reader_journey_processing";
+  }
+  if (run?.journey_status && JOURNEY_ACTIVE.has(run.journey_status)) {
+    return "reader_journey_processing";
+  }
+
+  const journeyStatus = journey?.status || run?.journey_status || null;
+  if (journeyStatus && JOURNEY_ACTIVE.has(journeyStatus)) {
     return "reader_journey_processing";
   }
   // null / missing / failed / partial → user can start or resume journey
-  if (journey == null || journey?.status == null || JOURNEY_NEEDS_RESUME.has(journey.status)) {
+  if (
+    journeyStatus == null ||
+    JOURNEY_NEEDS_RESUME.has(journeyStatus) ||
+    run?.effective_status === "partial_complete" ||
+    run?.effective_status === "journey_failed"
+  ) {
     return "awaiting_reader_journey_start";
   }
   return "awaiting_reader_journey_start";
 }
 
 export function isSceneAnalysisComplete(run: Run | null | undefined): boolean {
-  if (!run || run.status !== "succeeded") return false;
+  if (!run) return false;
+  if (run.scene_pipeline_complete === true) return true;
+  if (run.status !== "succeeded") return false;
   const total = run.total_scene_count ?? 0;
   const done = run.completed_scene_count ?? 0;
   return total > 0 && done >= total;
+}
+
+/** Full chapter (scenes + journey) — shared by tasks / shell / navigation. */
+export function isChapterAnalysisComplete(run: Run | null | undefined): boolean {
+  if (!run) return false;
+  if (run.chapter_complete === true) return true;
+  return false;
+}
+
+/**
+ * True while the chapter pipeline is still open (including scene-succeeded /
+ * journey-pending). View must not treat this as a finished chapter.
+ */
+export function isChapterAnalysisInFlight(
+  run: Run | null | undefined,
+  composition?: ChapterAnalysisUiState,
+): boolean {
+  if (!run) return false;
+  if (isChapterAnalysisComplete(run)) return false;
+  if (composition === "succeeded" || composition === "cancelled") return false;
+  if (composition === "failed" && run.chapter_complete === true) return false;
+
+  if (
+    composition === "awaiting_reader_journey_start" ||
+    composition === "reader_journey_processing" ||
+    composition === "running" ||
+    composition === "creating" ||
+    composition === "partial" ||
+    composition === "boundary_review_required" ||
+    composition === "provider_recovery" ||
+    composition === "awaiting_budget_adjustment" ||
+    composition === "aborted_by_limit"
+  ) {
+    return true;
+  }
+
+  if (run.status === "succeeded" && run.chapter_complete !== true) return true;
+  if (
+    run.effective_status === "partial_complete" ||
+    run.effective_status === "journey_running" ||
+    run.effective_status === "journey_failed"
+  ) {
+    return true;
+  }
+  if (String(run.current_stage || "").startsWith("reader_journey")) return true;
+  return false;
+}
+
+export type WorkspaceView = "reading" | "progress" | "result";
+
+/**
+ * Decide BookRoutePage shell view. Run completeness is never inferred from view.
+ *
+ * Priority: in-flight pipeline (unless user pinned a view) → explicit user view →
+ * full chapter result → default reading.
+ */
+export function resolveChapterWorkspaceView(args: {
+  requestedView: string | null;
+  userPinnedView: WorkspaceView | null;
+  chapterComplete: boolean;
+  inFlight: boolean;
+  composition: ChapterAnalysisUiState;
+}): WorkspaceView {
+  const { requestedView, userPinnedView, chapterComplete, inFlight } = args;
+
+  // Stale bookmarks: view=result while journey still running → restore workspace.
+  if (
+    inFlight &&
+    requestedView === "result" &&
+    userPinnedView !== "result"
+  ) {
+    return "progress";
+  }
+
+  if (userPinnedView === "reading" || userPinnedView === "result" || userPinnedView === "progress") {
+    if (userPinnedView === "result" && inFlight) return "result"; // manual Scene browse
+    if (userPinnedView === "reading") return "reading";
+    if (userPinnedView === "progress") return "progress";
+    if (userPinnedView === "result" && chapterComplete) return "result";
+  }
+
+  if (requestedView === "reading" || requestedView === "progress" || requestedView === "result") {
+    if (requestedView === "result" && inFlight && userPinnedView !== "result") {
+      return "progress";
+    }
+    return requestedView;
+  }
+
+  if (inFlight) return "progress";
+  // Historical chapter_complete must not auto-open result — user opts in via tabs / deep links.
+  return "reading";
 }
 
 export function journeyClientRequestKey(runId: number): string {

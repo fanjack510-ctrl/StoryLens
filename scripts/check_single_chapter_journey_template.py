@@ -341,16 +341,18 @@ def build_report(template: dict, write_report: bool) -> dict:
 
     sync_importers = find_sync_imports()
     checks["sync_importers"] = sync_importers
-    # AnalysisResultsPage should be the sole production mounter of SyncWorkspace.
+    allowed_sync_importers = {
+        "apps/desktop/src/pages/AnalysisResultsPage.tsx",
+        "apps/desktop/src/components/readerJourney/WorkspaceJourneyPane.tsx",
+    }
+    # Standalone results + Books workspace pane are intentional SyncWorkspace entry points.
     sync_unexpected = [
-        item
-        for item in sync_importers
-        if not item["path"].endswith("AnalysisResultsPage.tsx")
+        item for item in sync_importers if item["path"] not in allowed_sync_importers
     ]
     checks["unexpected_sync_importers"] = sync_unexpected
     if sync_unexpected:
         issues.append(
-            "ReaderJourneySyncWorkspace imported outside AnalysisResultsPage: "
+            "ReaderJourneySyncWorkspace imported outside allowed entry points: "
             + ", ".join(item["path"] for item in sync_unexpected)
         )
 

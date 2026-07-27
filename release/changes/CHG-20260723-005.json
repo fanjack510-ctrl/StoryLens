@@ -1,0 +1,76 @@
+{
+  "id": "CHG-20260723-005",
+  "title": "Separate Reader Journey chart tools and make comparison mode explicit",
+  "type": "fix",
+  "base_version": "1.0.4",
+  "status": "released",
+  "include_in_next_release": false,
+  "commits": [
+    {
+      "sha": "5ae56e6ceae2d0da22a2fe38a1d4357e078108a9",
+      "message": "fix: clarify reader journey comparison mode",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "ab3af600bfb860dc2e04b290789e76ce64905ef9",
+      "message": "docs: mark CHG-20260723-005 tested for comparison mode UX",
+      "primary": false,
+      "multi_change_reason": "registry status for CHG-20260723-005"
+    },
+    {
+      "sha": "188b6d22216ee61e7074abcf072b88853789725b",
+      "message": "docs: set CHG-20260723-005 status to tested",
+      "primary": false,
+      "multi_change_reason": "status transition to tested"
+    }
+  ],
+  "modules": [
+    "desktop"
+  ],
+  "files": [
+    "apps/desktop/src/components/readerJourney/comparisonState.ts",
+    "apps/desktop/src/components/readerJourney/JourneyComparisonTools.tsx",
+    "apps/desktop/src/components/readerJourney/JourneyChartToolbar.tsx",
+    "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.tsx",
+    "apps/desktop/src/components/readerJourney/JourneyLensExplanationChrome.tsx",
+    "apps/desktop/src/components/readerJourney/CanonicalJourneyChart.tsx",
+    "apps/desktop/src/components/readerJourney/readerJourneyLensExplanation.ts",
+    "apps/desktop/src/components/readerJourney/readerJourney.css"
+  ],
+  "user_summary": "图表工具与 Lens 并列、紫色线含义不清、对比状态不可见、退出入口藏在菜单、阶段卡含义不清、适配全图用途不明。",
+  "technical_summary": "Split Lens bar from chart tools; explicit ComparisonState; confirm-to-activate compare panel; persistent comparison toolbar with exit/change; dual-metric tooltip/legend; phase cards stay primary-only with hint; reset view only when viewport narrowed; hook_payoff hides numeric compare.",
+  "acceptance_criteria": [
+    "Lens bar has only six analysis dimensions",
+    "对比分析/重置视图 outside Lens list",
+    "Compare requires confirm; cancel no-op",
+    "Active compare shows persistent toolbar with exit",
+    "Tooltip/legend name both metrics",
+    "hook_payoff clears numeric compare"
+  ],
+  "tests": [
+    "apps/desktop/src/components/readerJourney/comparisonState.test.ts",
+    "apps/desktop/src/components/readerJourney/compareWithUrl_local.test.tsx",
+    "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.test.tsx"
+  ],
+  "verification_evidence": [
+    "Local Vitest comparison/workspace/toolbar suites passed; typecheck; lint; version_manager check; change_registry check; git diff --check. No model/install/publish/push.",
+    "1.0.5 Phase A engineering gates (not per-item user manual acceptance): pytest 760 passed/50 skipped; vitest 877 passed; typecheck; lint; frontend build; check_project; template governance; playwright smoke+scroll+chapter; focused theme/lens/comparison vitest."
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "Presentation-only; no prompt/formula/artifact changes."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "P1",
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-23T02:26:18Z",
+  "updated_at": "2026-07-23T05:40:46Z"
+}

@@ -1,0 +1,11 @@
+﻿{
+    "health_http":  200,
+    "analysis_runs_http":  200,
+    "historical_runs_count":  11,
+    "file_not_found_after_fix":  false,
+    "cwd":  "C:\\Windows\\System32",
+    "database":  "C:\\Users\\msi\\AppData\\Local\\Temp\\storylens-fix-task01-20260726-223130\\database\\storylens.db",
+    "port":  18001,
+    "temp_root":  "C:\\Users\\msi\\AppData\\Local\\Temp\\storylens-fix-task01-20260726-223130",
+    "passed":  true
+}

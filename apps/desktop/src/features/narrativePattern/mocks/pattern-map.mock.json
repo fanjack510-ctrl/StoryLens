@@ -1,0 +1,3327 @@
+{
+  "schemaVersion": "pattern-map-draft-1",
+  "bookId": 9001,
+  "bookSnapshotId": "snap_mock_pattern_001",
+  "title": "虚构长篇叙事结构地图 Mock",
+  "generatedAt": "2026-07-23T08:00:00Z",
+  "defaultFilter": {
+    "mode": "all",
+    "storylineIds": [],
+    "characterIds": [],
+    "stageIds": [],
+    "minConfidence": 0.0,
+    "includeDisputed": true,
+    "searchQuery": ""
+  },
+  "defaultViewport": {
+    "scale": 1,
+    "translateX": 0,
+    "translateY": 0,
+    "focusedNodeId": null,
+    "selectedNodeId": "n_stage_setup"
+  },
+  "nodes": [
+    {
+      "id": "n_root",
+      "parentId": null,
+      "title": "虚构长篇 · 结构地图样本",
+      "summary": "通用虚构作品的叙事结构地图草案，不含任何真实小说专有内容。",
+      "nodeType": "book_root",
+      "depth": 0,
+      "orderIndex": 0,
+      "importance": 1.0,
+      "confidence": 1.0,
+      "startChapterId": 1,
+      "endChapterId": 120,
+      "relatedCharacterIds": [
+        "char_a",
+        "char_b",
+        "char_c"
+      ],
+      "relatedStorylineIds": [
+        "sl_main",
+        "sl_side_a",
+        "sl_side_b"
+      ],
+      "relatedAssetIds": [
+        "asset_book"
+      ],
+      "evidenceCount": 0,
+      "childCount": 11,
+      "collapsedByDefault": false,
+      "userStatus": "confirmed"
+    },
+    {
+      "id": "n_stage_setup",
+      "parentId": "n_root",
+      "title": "开局建立",
+      "summary": "世界观、主角处境与初始承诺建立。",
+      "nodeType": "structure_stage",
+      "depth": 1,
+      "orderIndex": 0,
+      "importance": 0.9,
+      "confidence": 0.88,
+      "startChapterId": 1,
+      "endChapterId": 18,
+      "relatedCharacterIds": [
+        "char_a",
+        "char_b"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_stage_setup"
+      ],
+      "evidenceCount": 2,
+      "childCount": 3,
+      "collapsedByDefault": false,
+      "userStatus": "confirmed"
+    },
+    {
+      "id": "n_stage_rising",
+      "parentId": "n_root",
+      "title": "压力升级",
+      "summary": "冲突扩大，多线并进，承诺被反复测试。",
+      "nodeType": "structure_stage",
+      "depth": 1,
+      "orderIndex": 1,
+      "importance": 0.9,
+      "confidence": 0.89,
+      "startChapterId": 19,
+      "endChapterId": 48,
+      "relatedCharacterIds": [
+        "char_a",
+        "char_b"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_stage_rising"
+      ],
+      "evidenceCount": 2,
+      "childCount": 3,
+      "collapsedByDefault": false,
+      "userStatus": "confirmed"
+    },
+    {
+      "id": "n_stage_mid",
+      "parentId": "n_root",
+      "title": "中段转向",
+      "summary": "信息重组与关系重构，主线代价显性化。",
+      "nodeType": "structure_stage",
+      "depth": 1,
+      "orderIndex": 2,
+      "importance": 0.9,
+      "confidence": 0.9,
+      "startChapterId": 49,
+      "endChapterId": 72,
+      "relatedCharacterIds": [
+        "char_a",
+        "char_b"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_stage_mid"
+      ],
+      "evidenceCount": 2,
+      "childCount": 3,
+      "collapsedByDefault": false,
+      "userStatus": "confirmed"
+    },
+    {
+      "id": "n_stage_climax",
+      "parentId": "n_root",
+      "title": "高潮对决",
+      "summary": "关键冲突集中爆发，多线收束。",
+      "nodeType": "structure_stage",
+      "depth": 1,
+      "orderIndex": 3,
+      "importance": 0.9,
+      "confidence": 0.91,
+      "startChapterId": 73,
+      "endChapterId": 102,
+      "relatedCharacterIds": [
+        "char_a",
+        "char_b"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_stage_climax"
+      ],
+      "evidenceCount": 2,
+      "childCount": 3,
+      "collapsedByDefault": false,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_stage_settle",
+      "parentId": "n_root",
+      "title": "余波落定",
+      "summary": "代价结算、关系再定位与开放承诺。",
+      "nodeType": "structure_stage",
+      "depth": 1,
+      "orderIndex": 4,
+      "importance": 0.9,
+      "confidence": 0.92,
+      "startChapterId": 103,
+      "endChapterId": 120,
+      "relatedCharacterIds": [
+        "char_a",
+        "char_b"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_stage_settle"
+      ],
+      "evidenceCount": 2,
+      "childCount": 3,
+      "collapsedByDefault": false,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_sl_main",
+      "parentId": "n_root",
+      "title": "主线：真相追查",
+      "summary": "围绕核心谜题的推进与回扣。",
+      "nodeType": "storyline",
+      "depth": 1,
+      "orderIndex": 10,
+      "importance": 0.85,
+      "confidence": 0.82,
+      "startChapterId": 1,
+      "endChapterId": 110,
+      "relatedCharacterIds": [
+        "char_a",
+        "char_b"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_sl_main"
+      ],
+      "evidenceCount": 1,
+      "childCount": 3,
+      "collapsedByDefault": false,
+      "userStatus": "confirmed"
+    },
+    {
+      "id": "n_sl_side_a",
+      "parentId": "n_root",
+      "title": "支线：同盟破裂",
+      "summary": "盟友信任消耗与重建。",
+      "nodeType": "storyline",
+      "depth": 1,
+      "orderIndex": 11,
+      "importance": 0.85,
+      "confidence": 0.82,
+      "startChapterId": 12,
+      "endChapterId": 95,
+      "relatedCharacterIds": [
+        "char_b",
+        "char_c"
+      ],
+      "relatedStorylineIds": [
+        "sl_side_a"
+      ],
+      "relatedAssetIds": [
+        "asset_n_sl_side_a"
+      ],
+      "evidenceCount": 1,
+      "childCount": 3,
+      "collapsedByDefault": false,
+      "userStatus": "confirmed"
+    },
+    {
+      "id": "n_sl_side_b",
+      "parentId": "n_root",
+      "title": "支线：旧债回收",
+      "summary": "背景债务转化为现时压力。",
+      "nodeType": "storyline",
+      "depth": 1,
+      "orderIndex": 12,
+      "importance": 0.85,
+      "confidence": 0.82,
+      "startChapterId": 12,
+      "endChapterId": 95,
+      "relatedCharacterIds": [
+        "char_c"
+      ],
+      "relatedStorylineIds": [
+        "sl_side_b"
+      ],
+      "relatedAssetIds": [
+        "asset_n_sl_side_b"
+      ],
+      "evidenceCount": 1,
+      "childCount": 2,
+      "collapsedByDefault": true,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_arc_a",
+      "parentId": "n_root",
+      "title": "人物成长：巡查者",
+      "summary": "从旁观者到承担者。",
+      "nodeType": "character_arc",
+      "depth": 1,
+      "orderIndex": 20,
+      "importance": 0.8,
+      "confidence": 0.79,
+      "startChapterId": 1,
+      "endChapterId": 118,
+      "relatedCharacterIds": [
+        "char_a"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_arc_a"
+      ],
+      "evidenceCount": 2,
+      "childCount": 3,
+      "collapsedByDefault": false,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_arc_b",
+      "parentId": "n_root",
+      "title": "人物成长：调解人",
+      "summary": "从和事老到划界者。",
+      "nodeType": "character_arc",
+      "depth": 1,
+      "orderIndex": 21,
+      "importance": 0.8,
+      "confidence": 0.79,
+      "startChapterId": 1,
+      "endChapterId": 118,
+      "relatedCharacterIds": [
+        "char_b"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_arc_b"
+      ],
+      "evidenceCount": 2,
+      "childCount": 3,
+      "collapsedByDefault": true,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_arc_c",
+      "parentId": "n_root",
+      "title": "人物成长：债务者",
+      "summary": "从逃避到偿还。",
+      "nodeType": "character_arc",
+      "depth": 1,
+      "orderIndex": 22,
+      "importance": 0.8,
+      "confidence": 0.79,
+      "startChapterId": 1,
+      "endChapterId": 118,
+      "relatedCharacterIds": [
+        "char_c"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_arc_c"
+      ],
+      "evidenceCount": 2,
+      "childCount": 3,
+      "collapsedByDefault": true,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_beat_inciting",
+      "parentId": "n_stage_setup",
+      "title": "激励事件",
+      "summary": "外部事件迫使主角离开稳态。",
+      "nodeType": "turning_point",
+      "depth": 2,
+      "orderIndex": 0,
+      "importance": 0.7,
+      "confidence": 0.91,
+      "startChapterId": 8,
+      "endChapterId": 10,
+      "relatedCharacterIds": [
+        "char_a",
+        "char_b"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_beat_inciting"
+      ],
+      "evidenceCount": 2,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "confirmed"
+    },
+    {
+      "id": "n_beat_promise",
+      "parentId": "n_stage_setup",
+      "title": "初始承诺",
+      "summary": "读者可感知的核心期待被抛出。",
+      "nodeType": "beat",
+      "depth": 2,
+      "orderIndex": 1,
+      "importance": 0.75,
+      "confidence": 0.86,
+      "startChapterId": 11,
+      "endChapterId": 14,
+      "relatedCharacterIds": [
+        "char_a",
+        "char_b"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_beat_promise"
+      ],
+      "evidenceCount": 2,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "confirmed"
+    },
+    {
+      "id": "n_beat_cast",
+      "parentId": "n_stage_setup",
+      "title": "关键人物登场",
+      "summary": "对立与同盟的第一印象建立。",
+      "nodeType": "beat",
+      "depth": 2,
+      "orderIndex": 2,
+      "importance": 0.7999999999999999,
+      "confidence": 0.8,
+      "startChapterId": 15,
+      "endChapterId": 18,
+      "relatedCharacterIds": [
+        "char_a",
+        "char_b"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_beat_cast"
+      ],
+      "evidenceCount": 2,
+      "childCount": 3,
+      "collapsedByDefault": true,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_beat_first_fail",
+      "parentId": "n_stage_rising",
+      "title": "首次重大失败",
+      "summary": "旧策略失效，压力升级。",
+      "nodeType": "turning_point",
+      "depth": 2,
+      "orderIndex": 0,
+      "importance": 0.7,
+      "confidence": 0.88,
+      "startChapterId": 22,
+      "endChapterId": 28,
+      "relatedCharacterIds": [
+        "char_a",
+        "char_b"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_beat_first_fail"
+      ],
+      "evidenceCount": 3,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "confirmed"
+    },
+    {
+      "id": "n_beat_alliance",
+      "parentId": "n_stage_rising",
+      "title": "临时同盟",
+      "summary": "利益绑定但信任不足。",
+      "nodeType": "beat",
+      "depth": 2,
+      "orderIndex": 1,
+      "importance": 0.75,
+      "confidence": 0.84,
+      "startChapterId": 30,
+      "endChapterId": 36,
+      "relatedCharacterIds": [
+        "char_a",
+        "char_b"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_beat_alliance"
+      ],
+      "evidenceCount": 2,
+      "childCount": 3,
+      "collapsedByDefault": true,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_beat_leak",
+      "parentId": "n_stage_rising",
+      "title": "信息泄漏",
+      "summary": "部分真相提前暴露给读者。",
+      "nodeType": "beat",
+      "depth": 2,
+      "orderIndex": 2,
+      "importance": 0.7999999999999999,
+      "confidence": 0.77,
+      "startChapterId": 38,
+      "endChapterId": 44,
+      "relatedCharacterIds": [
+        "char_a",
+        "char_b"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_beat_leak"
+      ],
+      "evidenceCount": 2,
+      "childCount": 3,
+      "collapsedByDefault": true,
+      "userStatus": "disputed"
+    },
+    {
+      "id": "n_tp_midpoint",
+      "parentId": "n_stage_mid",
+      "title": "中点翻转",
+      "summary": "目标表象被替换，代价升维。",
+      "nodeType": "turning_point",
+      "depth": 2,
+      "orderIndex": 0,
+      "importance": 0.7,
+      "confidence": 0.9,
+      "startChapterId": 52,
+      "endChapterId": 58,
+      "relatedCharacterIds": [
+        "char_a",
+        "char_b"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_tp_midpoint"
+      ],
+      "evidenceCount": 3,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "confirmed"
+    },
+    {
+      "id": "n_beat_split",
+      "parentId": "n_stage_mid",
+      "title": "阵营分裂",
+      "summary": "同盟内部目标冲突公开化。",
+      "nodeType": "beat",
+      "depth": 2,
+      "orderIndex": 1,
+      "importance": 0.75,
+      "confidence": 0.83,
+      "startChapterId": 60,
+      "endChapterId": 66,
+      "relatedCharacterIds": [
+        "char_a",
+        "char_b"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_beat_split"
+      ],
+      "evidenceCount": 2,
+      "childCount": 3,
+      "collapsedByDefault": true,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_beat_false_win",
+      "parentId": "n_stage_mid",
+      "title": "伪胜利",
+      "summary": "短期成功掩盖结构性危机。",
+      "nodeType": "beat",
+      "depth": 2,
+      "orderIndex": 2,
+      "importance": 0.7999999999999999,
+      "confidence": 0.75,
+      "startChapterId": 68,
+      "endChapterId": 72,
+      "relatedCharacterIds": [
+        "char_a",
+        "char_b"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_beat_false_win"
+      ],
+      "evidenceCount": 2,
+      "childCount": 3,
+      "collapsedByDefault": true,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_tp_ordeal",
+      "parentId": "n_stage_climax",
+      "title": "至暗考验",
+      "summary": "主角被迫在不可逆选择中行动。",
+      "nodeType": "turning_point",
+      "depth": 2,
+      "orderIndex": 0,
+      "importance": 0.7,
+      "confidence": 0.92,
+      "startChapterId": 78,
+      "endChapterId": 88,
+      "relatedCharacterIds": [
+        "char_a",
+        "char_b"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_tp_ordeal"
+      ],
+      "evidenceCount": 3,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "confirmed"
+    },
+    {
+      "id": "n_beat_reveal",
+      "parentId": "n_stage_climax",
+      "title": "核心揭示",
+      "summary": "谜底与人物动机同时落地。",
+      "nodeType": "payoff_cluster",
+      "depth": 2,
+      "orderIndex": 1,
+      "importance": 0.75,
+      "confidence": 0.89,
+      "startChapterId": 90,
+      "endChapterId": 96,
+      "relatedCharacterIds": [
+        "char_a",
+        "char_b"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_beat_reveal"
+      ],
+      "evidenceCount": 3,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "confirmed"
+    },
+    {
+      "id": "n_beat_final_push",
+      "parentId": "n_stage_climax",
+      "title": "最终推进",
+      "summary": "多线汇合完成对决。",
+      "nodeType": "beat",
+      "depth": 2,
+      "orderIndex": 2,
+      "importance": 0.7999999999999999,
+      "confidence": 0.81,
+      "startChapterId": 97,
+      "endChapterId": 102,
+      "relatedCharacterIds": [
+        "char_a",
+        "char_b"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_beat_final_push"
+      ],
+      "evidenceCount": 2,
+      "childCount": 3,
+      "collapsedByDefault": true,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_beat_cost",
+      "parentId": "n_stage_settle",
+      "title": "代价结算",
+      "summary": "胜利的不可逆损失被确认。",
+      "nodeType": "beat",
+      "depth": 2,
+      "orderIndex": 0,
+      "importance": 0.7,
+      "confidence": 0.87,
+      "startChapterId": 104,
+      "endChapterId": 110,
+      "relatedCharacterIds": [
+        "char_a",
+        "char_b"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_beat_cost"
+      ],
+      "evidenceCount": 2,
+      "childCount": 3,
+      "collapsedByDefault": true,
+      "userStatus": "confirmed"
+    },
+    {
+      "id": "n_beat_reframe",
+      "parentId": "n_stage_settle",
+      "title": "关系重定位",
+      "summary": "人物关系进入新稳态。",
+      "nodeType": "beat",
+      "depth": 2,
+      "orderIndex": 1,
+      "importance": 0.75,
+      "confidence": 0.8,
+      "startChapterId": 111,
+      "endChapterId": 116,
+      "relatedCharacterIds": [
+        "char_a",
+        "char_b"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_beat_reframe"
+      ],
+      "evidenceCount": 2,
+      "childCount": 2,
+      "collapsedByDefault": true,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_beat_open",
+      "parentId": "n_stage_settle",
+      "title": "开放承诺",
+      "summary": "留下可续写但不悬空的承诺。",
+      "nodeType": "supporting",
+      "depth": 2,
+      "orderIndex": 2,
+      "importance": 0.7999999999999999,
+      "confidence": 0.74,
+      "startChapterId": 117,
+      "endChapterId": 120,
+      "relatedCharacterIds": [
+        "char_a",
+        "char_b"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_beat_open"
+      ],
+      "evidenceCount": 2,
+      "childCount": 2,
+      "collapsedByDefault": true,
+      "userStatus": "ignored"
+    },
+    {
+      "id": "n_sl_main_q",
+      "parentId": "n_sl_main",
+      "title": "主谜题提出",
+      "summary": "调查目标明确化。",
+      "nodeType": "beat",
+      "depth": 2,
+      "orderIndex": 0,
+      "importance": 0.72,
+      "confidence": 0.8,
+      "startChapterId": 6,
+      "endChapterId": 12,
+      "relatedCharacterIds": [
+        "char_a",
+        "char_c"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_sl_main_q"
+      ],
+      "evidenceCount": 2,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_sl_main_clue",
+      "parentId": "n_sl_main",
+      "title": "关键线索链",
+      "summary": "可验证线索串联。",
+      "nodeType": "beat",
+      "depth": 2,
+      "orderIndex": 1,
+      "importance": 0.72,
+      "confidence": 0.8,
+      "startChapterId": 24,
+      "endChapterId": 55,
+      "relatedCharacterIds": [
+        "char_a",
+        "char_c"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_sl_main_clue"
+      ],
+      "evidenceCount": 2,
+      "childCount": 3,
+      "collapsedByDefault": true,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_sl_main_answer",
+      "parentId": "n_sl_main",
+      "title": "答案兑现",
+      "summary": "谜底与证据闭环。",
+      "nodeType": "beat",
+      "depth": 2,
+      "orderIndex": 2,
+      "importance": 0.72,
+      "confidence": 0.8,
+      "startChapterId": 90,
+      "endChapterId": 96,
+      "relatedCharacterIds": [
+        "char_a",
+        "char_c"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_sl_main_answer"
+      ],
+      "evidenceCount": 2,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_sl_a_trust",
+      "parentId": "n_sl_side_a",
+      "title": "信任透支",
+      "summary": "同盟第一次裂痕。",
+      "nodeType": "beat",
+      "depth": 2,
+      "orderIndex": 0,
+      "importance": 0.72,
+      "confidence": 0.8,
+      "startChapterId": 30,
+      "endChapterId": 36,
+      "relatedCharacterIds": [
+        "char_a",
+        "char_c"
+      ],
+      "relatedStorylineIds": [
+        "sl_side_a"
+      ],
+      "relatedAssetIds": [
+        "asset_n_sl_a_trust"
+      ],
+      "evidenceCount": 2,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_sl_a_break",
+      "parentId": "n_sl_side_a",
+      "title": "公开决裂",
+      "summary": "关系跌至谷底。",
+      "nodeType": "beat",
+      "depth": 2,
+      "orderIndex": 1,
+      "importance": 0.72,
+      "confidence": 0.8,
+      "startChapterId": 60,
+      "endChapterId": 66,
+      "relatedCharacterIds": [
+        "char_a",
+        "char_c"
+      ],
+      "relatedStorylineIds": [
+        "sl_side_a"
+      ],
+      "relatedAssetIds": [
+        "asset_n_sl_a_break"
+      ],
+      "evidenceCount": 2,
+      "childCount": 3,
+      "collapsedByDefault": true,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_sl_a_repair",
+      "parentId": "n_sl_side_a",
+      "title": "有限和解",
+      "summary": "新边界下的合作。",
+      "nodeType": "beat",
+      "depth": 2,
+      "orderIndex": 2,
+      "importance": 0.72,
+      "confidence": 0.8,
+      "startChapterId": 111,
+      "endChapterId": 116,
+      "relatedCharacterIds": [
+        "char_a",
+        "char_c"
+      ],
+      "relatedStorylineIds": [
+        "sl_side_a"
+      ],
+      "relatedAssetIds": [
+        "asset_n_sl_a_repair"
+      ],
+      "evidenceCount": 2,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_sl_b_debt",
+      "parentId": "n_sl_side_b",
+      "title": "旧债现身",
+      "summary": "背景压力进入主场。",
+      "nodeType": "beat",
+      "depth": 2,
+      "orderIndex": 0,
+      "importance": 0.72,
+      "confidence": 0.8,
+      "startChapterId": 18,
+      "endChapterId": 26,
+      "relatedCharacterIds": [
+        "char_a",
+        "char_c"
+      ],
+      "relatedStorylineIds": [
+        "sl_side_b"
+      ],
+      "relatedAssetIds": [
+        "asset_n_sl_b_debt"
+      ],
+      "evidenceCount": 2,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_sl_b_collect",
+      "parentId": "n_sl_side_b",
+      "title": "催收升级",
+      "summary": "债务转化为行动约束。",
+      "nodeType": "beat",
+      "depth": 2,
+      "orderIndex": 1,
+      "importance": 0.72,
+      "confidence": 0.8,
+      "startChapterId": 48,
+      "endChapterId": 70,
+      "relatedCharacterIds": [
+        "char_a",
+        "char_c"
+      ],
+      "relatedStorylineIds": [
+        "sl_side_b"
+      ],
+      "relatedAssetIds": [
+        "asset_n_sl_b_collect"
+      ],
+      "evidenceCount": 2,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_arc_a1",
+      "parentId": "n_arc_a",
+      "title": "旁观姿态",
+      "summary": "拒绝卷入。",
+      "nodeType": "beat",
+      "depth": 2,
+      "orderIndex": 0,
+      "importance": 0.68,
+      "confidence": 0.78,
+      "startChapterId": 1,
+      "endChapterId": 14,
+      "relatedCharacterIds": [
+        "char_a"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_arc_a1"
+      ],
+      "evidenceCount": 2,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_arc_a2",
+      "parentId": "n_arc_a",
+      "title": "被迫介入",
+      "summary": "个人代价出现。",
+      "nodeType": "beat",
+      "depth": 2,
+      "orderIndex": 1,
+      "importance": 0.68,
+      "confidence": 0.78,
+      "startChapterId": 22,
+      "endChapterId": 58,
+      "relatedCharacterIds": [
+        "char_a"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_arc_a2"
+      ],
+      "evidenceCount": 2,
+      "childCount": 3,
+      "collapsedByDefault": true,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_arc_a3",
+      "parentId": "n_arc_a",
+      "title": "主动承担",
+      "summary": "选择不可逆。",
+      "nodeType": "beat",
+      "depth": 2,
+      "orderIndex": 2,
+      "importance": 0.68,
+      "confidence": 0.78,
+      "startChapterId": 78,
+      "endChapterId": 118,
+      "relatedCharacterIds": [
+        "char_a"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_arc_a3"
+      ],
+      "evidenceCount": 2,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_arc_b1",
+      "parentId": "n_arc_b",
+      "title": "调和惯性",
+      "summary": "回避冲突。",
+      "nodeType": "beat",
+      "depth": 2,
+      "orderIndex": 0,
+      "importance": 0.68,
+      "confidence": 0.78,
+      "startChapterId": 8,
+      "endChapterId": 36,
+      "relatedCharacterIds": [
+        "char_b"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_arc_b1"
+      ],
+      "evidenceCount": 2,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_arc_b2",
+      "parentId": "n_arc_b",
+      "title": "划界失败",
+      "summary": "中立崩塌。",
+      "nodeType": "beat",
+      "depth": 2,
+      "orderIndex": 1,
+      "importance": 0.68,
+      "confidence": 0.78,
+      "startChapterId": 52,
+      "endChapterId": 72,
+      "relatedCharacterIds": [
+        "char_b"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_arc_b2"
+      ],
+      "evidenceCount": 2,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_arc_b3",
+      "parentId": "n_arc_b",
+      "title": "明确立场",
+      "summary": "公开站队。",
+      "nodeType": "beat",
+      "depth": 2,
+      "orderIndex": 2,
+      "importance": 0.68,
+      "confidence": 0.78,
+      "startChapterId": 90,
+      "endChapterId": 116,
+      "relatedCharacterIds": [
+        "char_b"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_arc_b3"
+      ],
+      "evidenceCount": 2,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_arc_c1",
+      "parentId": "n_arc_c",
+      "title": "逃避债务",
+      "summary": "延期与掩饰。",
+      "nodeType": "beat",
+      "depth": 2,
+      "orderIndex": 0,
+      "importance": 0.68,
+      "confidence": 0.78,
+      "startChapterId": 12,
+      "endChapterId": 40,
+      "relatedCharacterIds": [
+        "char_c"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_arc_c1"
+      ],
+      "evidenceCount": 2,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_arc_c2",
+      "parentId": "n_arc_c",
+      "title": "被迫偿还",
+      "summary": "资源与名誉双损。",
+      "nodeType": "beat",
+      "depth": 2,
+      "orderIndex": 1,
+      "importance": 0.68,
+      "confidence": 0.78,
+      "startChapterId": 48,
+      "endChapterId": 88,
+      "relatedCharacterIds": [
+        "char_c"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_arc_c2"
+      ],
+      "evidenceCount": 2,
+      "childCount": 3,
+      "collapsedByDefault": true,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_arc_c3",
+      "parentId": "n_arc_c",
+      "title": "重建信用",
+      "summary": "有限赎罪。",
+      "nodeType": "beat",
+      "depth": 2,
+      "orderIndex": 2,
+      "importance": 0.68,
+      "confidence": 0.78,
+      "startChapterId": 104,
+      "endChapterId": 118,
+      "relatedCharacterIds": [
+        "char_c"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_arc_c3"
+      ],
+      "evidenceCount": 2,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_l3_cast_rival",
+      "parentId": "n_beat_cast",
+      "title": "对手第一印象",
+      "summary": "对手第一印象的细节落点（样本）。",
+      "nodeType": "supporting",
+      "depth": 3,
+      "orderIndex": 0,
+      "importance": 0.45,
+      "confidence": 0.7,
+      "startChapterId": null,
+      "endChapterId": null,
+      "relatedCharacterIds": [
+        "char_a"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_l3_cast_rival"
+      ],
+      "evidenceCount": 1,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_l3_cast_mentor",
+      "parentId": "n_beat_cast",
+      "title": "导师式配角",
+      "summary": "导师式配角的细节落点（样本）。",
+      "nodeType": "supporting",
+      "depth": 3,
+      "orderIndex": 1,
+      "importance": 0.45,
+      "confidence": 0.7,
+      "startChapterId": null,
+      "endChapterId": null,
+      "relatedCharacterIds": [
+        "char_a"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_l3_cast_mentor"
+      ],
+      "evidenceCount": 1,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_l3_cast_crowd",
+      "parentId": "n_beat_cast",
+      "title": "舆论场建立",
+      "summary": "舆论场建立的细节落点（样本）。",
+      "nodeType": "supporting",
+      "depth": 3,
+      "orderIndex": 2,
+      "importance": 0.45,
+      "confidence": 0.7,
+      "startChapterId": null,
+      "endChapterId": null,
+      "relatedCharacterIds": [
+        "char_a"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_l3_cast_crowd"
+      ],
+      "evidenceCount": 1,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_l3_leak_reader",
+      "parentId": "n_beat_leak",
+      "title": "读者侧提前知情",
+      "summary": "读者侧提前知情的细节落点（样本）。",
+      "nodeType": "supporting",
+      "depth": 3,
+      "orderIndex": 0,
+      "importance": 0.45,
+      "confidence": 0.7,
+      "startChapterId": null,
+      "endChapterId": null,
+      "relatedCharacterIds": [
+        "char_a"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_l3_leak_reader"
+      ],
+      "evidenceCount": 1,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_l3_leak_char",
+      "parentId": "n_beat_leak",
+      "title": "人物侧误读",
+      "summary": "人物侧误读的细节落点（样本）。",
+      "nodeType": "supporting",
+      "depth": 3,
+      "orderIndex": 1,
+      "importance": 0.45,
+      "confidence": 0.7,
+      "startChapterId": null,
+      "endChapterId": null,
+      "relatedCharacterIds": [
+        "char_a"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_l3_leak_char"
+      ],
+      "evidenceCount": 1,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_l3_leak_plant",
+      "parentId": "n_beat_leak",
+      "title": "后续回扣种子",
+      "summary": "后续回扣种子的细节落点（样本）。",
+      "nodeType": "supporting",
+      "depth": 3,
+      "orderIndex": 2,
+      "importance": 0.45,
+      "confidence": 0.7,
+      "startChapterId": null,
+      "endChapterId": null,
+      "relatedCharacterIds": [
+        "char_a"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_l3_leak_plant"
+      ],
+      "evidenceCount": 1,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_l3_fw_surface",
+      "parentId": "n_beat_false_win",
+      "title": "表面成功",
+      "summary": "表面成功的细节落点（样本）。",
+      "nodeType": "supporting",
+      "depth": 3,
+      "orderIndex": 0,
+      "importance": 0.45,
+      "confidence": 0.7,
+      "startChapterId": null,
+      "endChapterId": null,
+      "relatedCharacterIds": [
+        "char_a"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_l3_fw_surface"
+      ],
+      "evidenceCount": 1,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_l3_fw_hidden",
+      "parentId": "n_beat_false_win",
+      "title": "隐藏裂痕",
+      "summary": "隐藏裂痕的细节落点（样本）。",
+      "nodeType": "supporting",
+      "depth": 3,
+      "orderIndex": 1,
+      "importance": 0.45,
+      "confidence": 0.7,
+      "startChapterId": null,
+      "endChapterId": null,
+      "relatedCharacterIds": [
+        "char_a"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_l3_fw_hidden"
+      ],
+      "evidenceCount": 1,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_l3_fw_timer",
+      "parentId": "n_beat_false_win",
+      "title": "倒计时启动",
+      "summary": "倒计时启动的细节落点（样本）。",
+      "nodeType": "supporting",
+      "depth": 3,
+      "orderIndex": 2,
+      "importance": 0.45,
+      "confidence": 0.7,
+      "startChapterId": null,
+      "endChapterId": null,
+      "relatedCharacterIds": [
+        "char_a"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_l3_fw_timer"
+      ],
+      "evidenceCount": 1,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_l3_fp_merge",
+      "parentId": "n_beat_final_push",
+      "title": "多线汇合",
+      "summary": "多线汇合的细节落点（样本）。",
+      "nodeType": "supporting",
+      "depth": 3,
+      "orderIndex": 0,
+      "importance": 0.45,
+      "confidence": 0.7,
+      "startChapterId": null,
+      "endChapterId": null,
+      "relatedCharacterIds": [
+        "char_a"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_l3_fp_merge"
+      ],
+      "evidenceCount": 1,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_l3_fp_choice",
+      "parentId": "n_beat_final_push",
+      "title": "不可逆选择",
+      "summary": "不可逆选择的细节落点（样本）。",
+      "nodeType": "supporting",
+      "depth": 3,
+      "orderIndex": 1,
+      "importance": 0.45,
+      "confidence": 0.7,
+      "startChapterId": null,
+      "endChapterId": null,
+      "relatedCharacterIds": [
+        "char_a"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_l3_fp_choice"
+      ],
+      "evidenceCount": 1,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_l3_fp_strike",
+      "parentId": "n_beat_final_push",
+      "title": "最终行动",
+      "summary": "最终行动的细节落点（样本）。",
+      "nodeType": "supporting",
+      "depth": 3,
+      "orderIndex": 2,
+      "importance": 0.45,
+      "confidence": 0.7,
+      "startChapterId": null,
+      "endChapterId": null,
+      "relatedCharacterIds": [
+        "char_a"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_l3_fp_strike"
+      ],
+      "evidenceCount": 1,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_l3_open_hook",
+      "parentId": "n_beat_open",
+      "title": "续写钩子",
+      "summary": "续写钩子的细节落点（样本）。",
+      "nodeType": "supporting",
+      "depth": 3,
+      "orderIndex": 0,
+      "importance": 0.45,
+      "confidence": 0.7,
+      "startChapterId": null,
+      "endChapterId": null,
+      "relatedCharacterIds": [
+        "char_a"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_l3_open_hook"
+      ],
+      "evidenceCount": 1,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_l3_open_theme",
+      "parentId": "n_beat_open",
+      "title": "主题回响",
+      "summary": "主题回响的细节落点（样本）。",
+      "nodeType": "supporting",
+      "depth": 3,
+      "orderIndex": 1,
+      "importance": 0.45,
+      "confidence": 0.7,
+      "startChapterId": null,
+      "endChapterId": null,
+      "relatedCharacterIds": [
+        "char_a"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_l3_open_theme"
+      ],
+      "evidenceCount": 1,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_l3_al_deal",
+      "parentId": "n_beat_alliance",
+      "title": "利益交换",
+      "summary": "利益交换的细节落点（样本）。",
+      "nodeType": "supporting",
+      "depth": 3,
+      "orderIndex": 0,
+      "importance": 0.42,
+      "confidence": 0.68,
+      "startChapterId": null,
+      "endChapterId": null,
+      "relatedCharacterIds": [
+        "char_a"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_l3_al_deal"
+      ],
+      "evidenceCount": 1,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_l3_al_doubt",
+      "parentId": "n_beat_alliance",
+      "title": "互疑细节",
+      "summary": "互疑细节的细节落点（样本）。",
+      "nodeType": "supporting",
+      "depth": 3,
+      "orderIndex": 1,
+      "importance": 0.42,
+      "confidence": 0.68,
+      "startChapterId": null,
+      "endChapterId": null,
+      "relatedCharacterIds": [
+        "char_a"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_l3_al_doubt"
+      ],
+      "evidenceCount": 1,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_l3_al_terms",
+      "parentId": "n_beat_alliance",
+      "title": "合作条款",
+      "summary": "合作条款的细节落点（样本）。",
+      "nodeType": "supporting",
+      "depth": 3,
+      "orderIndex": 2,
+      "importance": 0.42,
+      "confidence": 0.68,
+      "startChapterId": null,
+      "endChapterId": null,
+      "relatedCharacterIds": [
+        "char_a"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_l3_al_terms"
+      ],
+      "evidenceCount": 1,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_l3_sp_goal",
+      "parentId": "n_beat_split",
+      "title": "目标冲突",
+      "summary": "目标冲突的细节落点（样本）。",
+      "nodeType": "supporting",
+      "depth": 3,
+      "orderIndex": 0,
+      "importance": 0.42,
+      "confidence": 0.68,
+      "startChapterId": null,
+      "endChapterId": null,
+      "relatedCharacterIds": [
+        "char_a"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_l3_sp_goal"
+      ],
+      "evidenceCount": 1,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_l3_sp_loyal",
+      "parentId": "n_beat_split",
+      "title": "忠诚分裂",
+      "summary": "忠诚分裂的细节落点（样本）。",
+      "nodeType": "supporting",
+      "depth": 3,
+      "orderIndex": 1,
+      "importance": 0.42,
+      "confidence": 0.68,
+      "startChapterId": null,
+      "endChapterId": null,
+      "relatedCharacterIds": [
+        "char_a"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_l3_sp_loyal"
+      ],
+      "evidenceCount": 1,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_l3_sp_public",
+      "parentId": "n_beat_split",
+      "title": "公开对峙",
+      "summary": "公开对峙的细节落点（样本）。",
+      "nodeType": "supporting",
+      "depth": 3,
+      "orderIndex": 2,
+      "importance": 0.42,
+      "confidence": 0.68,
+      "startChapterId": null,
+      "endChapterId": null,
+      "relatedCharacterIds": [
+        "char_a"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_l3_sp_public"
+      ],
+      "evidenceCount": 1,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_l3_cost_body",
+      "parentId": "n_beat_cost",
+      "title": "身体代价",
+      "summary": "身体代价的细节落点（样本）。",
+      "nodeType": "supporting",
+      "depth": 3,
+      "orderIndex": 0,
+      "importance": 0.42,
+      "confidence": 0.68,
+      "startChapterId": null,
+      "endChapterId": null,
+      "relatedCharacterIds": [
+        "char_a"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_l3_cost_body"
+      ],
+      "evidenceCount": 1,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_l3_cost_bond",
+      "parentId": "n_beat_cost",
+      "title": "关系代价",
+      "summary": "关系代价的细节落点（样本）。",
+      "nodeType": "supporting",
+      "depth": 3,
+      "orderIndex": 1,
+      "importance": 0.42,
+      "confidence": 0.68,
+      "startChapterId": null,
+      "endChapterId": null,
+      "relatedCharacterIds": [
+        "char_a"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_l3_cost_bond"
+      ],
+      "evidenceCount": 1,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_l3_cost_status",
+      "parentId": "n_beat_cost",
+      "title": "地位代价",
+      "summary": "地位代价的细节落点（样本）。",
+      "nodeType": "supporting",
+      "depth": 3,
+      "orderIndex": 2,
+      "importance": 0.42,
+      "confidence": 0.68,
+      "startChapterId": null,
+      "endChapterId": null,
+      "relatedCharacterIds": [
+        "char_a"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_l3_cost_status"
+      ],
+      "evidenceCount": 1,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_l3_rf_role",
+      "parentId": "n_beat_reframe",
+      "title": "角色重写",
+      "summary": "角色重写的细节落点（样本）。",
+      "nodeType": "supporting",
+      "depth": 3,
+      "orderIndex": 0,
+      "importance": 0.42,
+      "confidence": 0.68,
+      "startChapterId": null,
+      "endChapterId": null,
+      "relatedCharacterIds": [
+        "char_a"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_l3_rf_role"
+      ],
+      "evidenceCount": 1,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_l3_rf_distance",
+      "parentId": "n_beat_reframe",
+      "title": "距离重建",
+      "summary": "距离重建的细节落点（样本）。",
+      "nodeType": "supporting",
+      "depth": 3,
+      "orderIndex": 1,
+      "importance": 0.42,
+      "confidence": 0.68,
+      "startChapterId": null,
+      "endChapterId": null,
+      "relatedCharacterIds": [
+        "char_a"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_l3_rf_distance"
+      ],
+      "evidenceCount": 1,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_l3_clue_a",
+      "parentId": "n_sl_main_clue",
+      "title": "线索A",
+      "summary": "线索A的细节落点（样本）。",
+      "nodeType": "supporting",
+      "depth": 3,
+      "orderIndex": 0,
+      "importance": 0.42,
+      "confidence": 0.68,
+      "startChapterId": null,
+      "endChapterId": null,
+      "relatedCharacterIds": [
+        "char_a"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_l3_clue_a"
+      ],
+      "evidenceCount": 1,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_l3_clue_b",
+      "parentId": "n_sl_main_clue",
+      "title": "线索B",
+      "summary": "线索B的细节落点（样本）。",
+      "nodeType": "supporting",
+      "depth": 3,
+      "orderIndex": 1,
+      "importance": 0.42,
+      "confidence": 0.68,
+      "startChapterId": null,
+      "endChapterId": null,
+      "relatedCharacterIds": [
+        "char_a"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_l3_clue_b"
+      ],
+      "evidenceCount": 1,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_l3_clue_link",
+      "parentId": "n_sl_main_clue",
+      "title": "串联验证",
+      "summary": "串联验证的细节落点（样本）。",
+      "nodeType": "supporting",
+      "depth": 3,
+      "orderIndex": 2,
+      "importance": 0.42,
+      "confidence": 0.68,
+      "startChapterId": null,
+      "endChapterId": null,
+      "relatedCharacterIds": [
+        "char_a"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_l3_clue_link"
+      ],
+      "evidenceCount": 1,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_l3_br_trigger",
+      "parentId": "n_sl_a_break",
+      "title": "决裂触发",
+      "summary": "决裂触发的细节落点（样本）。",
+      "nodeType": "supporting",
+      "depth": 3,
+      "orderIndex": 0,
+      "importance": 0.42,
+      "confidence": 0.68,
+      "startChapterId": null,
+      "endChapterId": null,
+      "relatedCharacterIds": [
+        "char_a"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_l3_br_trigger"
+      ],
+      "evidenceCount": 1,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_l3_br_speech",
+      "parentId": "n_sl_a_break",
+      "title": "决裂对白",
+      "summary": "决裂对白的细节落点（样本）。",
+      "nodeType": "supporting",
+      "depth": 3,
+      "orderIndex": 1,
+      "importance": 0.42,
+      "confidence": 0.68,
+      "startChapterId": null,
+      "endChapterId": null,
+      "relatedCharacterIds": [
+        "char_a"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_l3_br_speech"
+      ],
+      "evidenceCount": 1,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_l3_br_aftermath",
+      "parentId": "n_sl_a_break",
+      "title": "即时余波",
+      "summary": "即时余波的细节落点（样本）。",
+      "nodeType": "supporting",
+      "depth": 3,
+      "orderIndex": 2,
+      "importance": 0.42,
+      "confidence": 0.68,
+      "startChapterId": null,
+      "endChapterId": null,
+      "relatedCharacterIds": [
+        "char_a"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_l3_br_aftermath"
+      ],
+      "evidenceCount": 1,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_l3_a2_push",
+      "parentId": "n_arc_a2",
+      "title": "外部逼入",
+      "summary": "外部逼入的细节落点（样本）。",
+      "nodeType": "supporting",
+      "depth": 3,
+      "orderIndex": 0,
+      "importance": 0.42,
+      "confidence": 0.68,
+      "startChapterId": null,
+      "endChapterId": null,
+      "relatedCharacterIds": [
+        "char_a"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_l3_a2_push"
+      ],
+      "evidenceCount": 1,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_l3_a2_cost",
+      "parentId": "n_arc_a2",
+      "title": "个人代价",
+      "summary": "个人代价的细节落点（样本）。",
+      "nodeType": "supporting",
+      "depth": 3,
+      "orderIndex": 1,
+      "importance": 0.42,
+      "confidence": 0.68,
+      "startChapterId": null,
+      "endChapterId": null,
+      "relatedCharacterIds": [
+        "char_a"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_l3_a2_cost"
+      ],
+      "evidenceCount": 1,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_l3_a2_choice",
+      "parentId": "n_arc_a2",
+      "title": "第一次主动",
+      "summary": "第一次主动的细节落点（样本）。",
+      "nodeType": "supporting",
+      "depth": 3,
+      "orderIndex": 2,
+      "importance": 0.42,
+      "confidence": 0.68,
+      "startChapterId": null,
+      "endChapterId": null,
+      "relatedCharacterIds": [
+        "char_a"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_l3_a2_choice"
+      ],
+      "evidenceCount": 1,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_l3_c2_demand",
+      "parentId": "n_arc_c2",
+      "title": "催收压迫",
+      "summary": "催收压迫的细节落点（样本）。",
+      "nodeType": "supporting",
+      "depth": 3,
+      "orderIndex": 0,
+      "importance": 0.42,
+      "confidence": 0.68,
+      "startChapterId": null,
+      "endChapterId": null,
+      "relatedCharacterIds": [
+        "char_a"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_l3_c2_demand"
+      ],
+      "evidenceCount": 1,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_l3_c2_loss",
+      "parentId": "n_arc_c2",
+      "title": "资源损失",
+      "summary": "资源损失的细节落点（样本）。",
+      "nodeType": "supporting",
+      "depth": 3,
+      "orderIndex": 1,
+      "importance": 0.42,
+      "confidence": 0.68,
+      "startChapterId": null,
+      "endChapterId": null,
+      "relatedCharacterIds": [
+        "char_a"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_l3_c2_loss"
+      ],
+      "evidenceCount": 1,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "unreviewed"
+    },
+    {
+      "id": "n_l3_c2_admit",
+      "parentId": "n_arc_c2",
+      "title": "被迫承认",
+      "summary": "被迫承认的细节落点（样本）。",
+      "nodeType": "supporting",
+      "depth": 3,
+      "orderIndex": 2,
+      "importance": 0.42,
+      "confidence": 0.68,
+      "startChapterId": null,
+      "endChapterId": null,
+      "relatedCharacterIds": [
+        "char_a"
+      ],
+      "relatedStorylineIds": [
+        "sl_main"
+      ],
+      "relatedAssetIds": [
+        "asset_n_l3_c2_admit"
+      ],
+      "evidenceCount": 1,
+      "childCount": 0,
+      "collapsedByDefault": false,
+      "userStatus": "unreviewed"
+    }
+  ],
+  "edges": [
+    {
+      "id": "e_pc_n_stage_setup",
+      "sourceNodeId": "n_root",
+      "targetNodeId": "n_stage_setup",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_stage_rising",
+      "sourceNodeId": "n_root",
+      "targetNodeId": "n_stage_rising",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_stage_mid",
+      "sourceNodeId": "n_root",
+      "targetNodeId": "n_stage_mid",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_stage_climax",
+      "sourceNodeId": "n_root",
+      "targetNodeId": "n_stage_climax",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_stage_settle",
+      "sourceNodeId": "n_root",
+      "targetNodeId": "n_stage_settle",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_sl_main",
+      "sourceNodeId": "n_root",
+      "targetNodeId": "n_sl_main",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_sl_side_a",
+      "sourceNodeId": "n_root",
+      "targetNodeId": "n_sl_side_a",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_sl_side_b",
+      "sourceNodeId": "n_root",
+      "targetNodeId": "n_sl_side_b",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_arc_a",
+      "sourceNodeId": "n_root",
+      "targetNodeId": "n_arc_a",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_arc_b",
+      "sourceNodeId": "n_root",
+      "targetNodeId": "n_arc_b",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_arc_c",
+      "sourceNodeId": "n_root",
+      "targetNodeId": "n_arc_c",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_beat_inciting",
+      "sourceNodeId": "n_stage_setup",
+      "targetNodeId": "n_beat_inciting",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_beat_promise",
+      "sourceNodeId": "n_stage_setup",
+      "targetNodeId": "n_beat_promise",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_beat_cast",
+      "sourceNodeId": "n_stage_setup",
+      "targetNodeId": "n_beat_cast",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_beat_first_fail",
+      "sourceNodeId": "n_stage_rising",
+      "targetNodeId": "n_beat_first_fail",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_beat_alliance",
+      "sourceNodeId": "n_stage_rising",
+      "targetNodeId": "n_beat_alliance",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_beat_leak",
+      "sourceNodeId": "n_stage_rising",
+      "targetNodeId": "n_beat_leak",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_tp_midpoint",
+      "sourceNodeId": "n_stage_mid",
+      "targetNodeId": "n_tp_midpoint",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_beat_split",
+      "sourceNodeId": "n_stage_mid",
+      "targetNodeId": "n_beat_split",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_beat_false_win",
+      "sourceNodeId": "n_stage_mid",
+      "targetNodeId": "n_beat_false_win",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_tp_ordeal",
+      "sourceNodeId": "n_stage_climax",
+      "targetNodeId": "n_tp_ordeal",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_beat_reveal",
+      "sourceNodeId": "n_stage_climax",
+      "targetNodeId": "n_beat_reveal",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_beat_final_push",
+      "sourceNodeId": "n_stage_climax",
+      "targetNodeId": "n_beat_final_push",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_beat_cost",
+      "sourceNodeId": "n_stage_settle",
+      "targetNodeId": "n_beat_cost",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_beat_reframe",
+      "sourceNodeId": "n_stage_settle",
+      "targetNodeId": "n_beat_reframe",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_beat_open",
+      "sourceNodeId": "n_stage_settle",
+      "targetNodeId": "n_beat_open",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_sl_main_q",
+      "sourceNodeId": "n_sl_main",
+      "targetNodeId": "n_sl_main_q",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_sl_main_clue",
+      "sourceNodeId": "n_sl_main",
+      "targetNodeId": "n_sl_main_clue",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_sl_main_answer",
+      "sourceNodeId": "n_sl_main",
+      "targetNodeId": "n_sl_main_answer",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_sl_a_trust",
+      "sourceNodeId": "n_sl_side_a",
+      "targetNodeId": "n_sl_a_trust",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_sl_a_break",
+      "sourceNodeId": "n_sl_side_a",
+      "targetNodeId": "n_sl_a_break",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_sl_a_repair",
+      "sourceNodeId": "n_sl_side_a",
+      "targetNodeId": "n_sl_a_repair",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_sl_b_debt",
+      "sourceNodeId": "n_sl_side_b",
+      "targetNodeId": "n_sl_b_debt",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_sl_b_collect",
+      "sourceNodeId": "n_sl_side_b",
+      "targetNodeId": "n_sl_b_collect",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_arc_a1",
+      "sourceNodeId": "n_arc_a",
+      "targetNodeId": "n_arc_a1",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_cg_n_arc_a1",
+      "sourceNodeId": "n_arc_a",
+      "targetNodeId": "n_arc_a1",
+      "relationType": "character_growth",
+      "confidence": 0.85,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": "成长阶段"
+    },
+    {
+      "id": "e_pc_n_arc_a2",
+      "sourceNodeId": "n_arc_a",
+      "targetNodeId": "n_arc_a2",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_cg_n_arc_a2",
+      "sourceNodeId": "n_arc_a",
+      "targetNodeId": "n_arc_a2",
+      "relationType": "character_growth",
+      "confidence": 0.85,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": "成长阶段"
+    },
+    {
+      "id": "e_pc_n_arc_a3",
+      "sourceNodeId": "n_arc_a",
+      "targetNodeId": "n_arc_a3",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_cg_n_arc_a3",
+      "sourceNodeId": "n_arc_a",
+      "targetNodeId": "n_arc_a3",
+      "relationType": "character_growth",
+      "confidence": 0.85,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": "成长阶段"
+    },
+    {
+      "id": "e_pc_n_arc_b1",
+      "sourceNodeId": "n_arc_b",
+      "targetNodeId": "n_arc_b1",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_cg_n_arc_b1",
+      "sourceNodeId": "n_arc_b",
+      "targetNodeId": "n_arc_b1",
+      "relationType": "character_growth",
+      "confidence": 0.85,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": "成长阶段"
+    },
+    {
+      "id": "e_pc_n_arc_b2",
+      "sourceNodeId": "n_arc_b",
+      "targetNodeId": "n_arc_b2",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_cg_n_arc_b2",
+      "sourceNodeId": "n_arc_b",
+      "targetNodeId": "n_arc_b2",
+      "relationType": "character_growth",
+      "confidence": 0.85,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": "成长阶段"
+    },
+    {
+      "id": "e_pc_n_arc_b3",
+      "sourceNodeId": "n_arc_b",
+      "targetNodeId": "n_arc_b3",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_cg_n_arc_b3",
+      "sourceNodeId": "n_arc_b",
+      "targetNodeId": "n_arc_b3",
+      "relationType": "character_growth",
+      "confidence": 0.85,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": "成长阶段"
+    },
+    {
+      "id": "e_pc_n_arc_c1",
+      "sourceNodeId": "n_arc_c",
+      "targetNodeId": "n_arc_c1",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_cg_n_arc_c1",
+      "sourceNodeId": "n_arc_c",
+      "targetNodeId": "n_arc_c1",
+      "relationType": "character_growth",
+      "confidence": 0.85,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": "成长阶段"
+    },
+    {
+      "id": "e_pc_n_arc_c2",
+      "sourceNodeId": "n_arc_c",
+      "targetNodeId": "n_arc_c2",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_cg_n_arc_c2",
+      "sourceNodeId": "n_arc_c",
+      "targetNodeId": "n_arc_c2",
+      "relationType": "character_growth",
+      "confidence": 0.85,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": "成长阶段"
+    },
+    {
+      "id": "e_pc_n_arc_c3",
+      "sourceNodeId": "n_arc_c",
+      "targetNodeId": "n_arc_c3",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_cg_n_arc_c3",
+      "sourceNodeId": "n_arc_c",
+      "targetNodeId": "n_arc_c3",
+      "relationType": "character_growth",
+      "confidence": 0.85,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": "成长阶段"
+    },
+    {
+      "id": "e_pc_n_l3_cast_rival",
+      "sourceNodeId": "n_beat_cast",
+      "targetNodeId": "n_l3_cast_rival",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_l3_cast_mentor",
+      "sourceNodeId": "n_beat_cast",
+      "targetNodeId": "n_l3_cast_mentor",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_l3_cast_crowd",
+      "sourceNodeId": "n_beat_cast",
+      "targetNodeId": "n_l3_cast_crowd",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_l3_leak_reader",
+      "sourceNodeId": "n_beat_leak",
+      "targetNodeId": "n_l3_leak_reader",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_l3_leak_char",
+      "sourceNodeId": "n_beat_leak",
+      "targetNodeId": "n_l3_leak_char",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_l3_leak_plant",
+      "sourceNodeId": "n_beat_leak",
+      "targetNodeId": "n_l3_leak_plant",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_l3_fw_surface",
+      "sourceNodeId": "n_beat_false_win",
+      "targetNodeId": "n_l3_fw_surface",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_l3_fw_hidden",
+      "sourceNodeId": "n_beat_false_win",
+      "targetNodeId": "n_l3_fw_hidden",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_l3_fw_timer",
+      "sourceNodeId": "n_beat_false_win",
+      "targetNodeId": "n_l3_fw_timer",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_l3_fp_merge",
+      "sourceNodeId": "n_beat_final_push",
+      "targetNodeId": "n_l3_fp_merge",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_l3_fp_choice",
+      "sourceNodeId": "n_beat_final_push",
+      "targetNodeId": "n_l3_fp_choice",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_l3_fp_strike",
+      "sourceNodeId": "n_beat_final_push",
+      "targetNodeId": "n_l3_fp_strike",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_l3_open_hook",
+      "sourceNodeId": "n_beat_open",
+      "targetNodeId": "n_l3_open_hook",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_l3_open_theme",
+      "sourceNodeId": "n_beat_open",
+      "targetNodeId": "n_l3_open_theme",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_sp_1",
+      "sourceNodeId": "n_beat_promise",
+      "targetNodeId": "n_beat_reveal",
+      "relationType": "setup_payoff",
+      "confidence": 0.9,
+      "relatedAssetIds": [],
+      "evidenceCount": 2,
+      "label": "承诺兑现"
+    },
+    {
+      "id": "e_sp_2",
+      "sourceNodeId": "n_beat_inciting",
+      "targetNodeId": "n_tp_ordeal",
+      "relationType": "setup_payoff",
+      "confidence": 0.86,
+      "relatedAssetIds": [],
+      "evidenceCount": 2,
+      "label": "压力回扣"
+    },
+    {
+      "id": "e_fs_1",
+      "sourceNodeId": "n_beat_leak",
+      "targetNodeId": "n_beat_reveal",
+      "relationType": "foreshadow",
+      "confidence": 0.8,
+      "relatedAssetIds": [],
+      "evidenceCount": 2,
+      "label": "信息预埋"
+    },
+    {
+      "id": "e_fs_2",
+      "sourceNodeId": "n_l3_leak_plant",
+      "targetNodeId": "n_sl_main_answer",
+      "relationType": "foreshadow",
+      "confidence": 0.76,
+      "relatedAssetIds": [],
+      "evidenceCount": 2,
+      "label": "种子发芽"
+    },
+    {
+      "id": "e_par_1",
+      "sourceNodeId": "n_sl_a_break",
+      "targetNodeId": "n_tp_midpoint",
+      "relationType": "parallel",
+      "confidence": 0.78,
+      "relatedAssetIds": [],
+      "evidenceCount": 2,
+      "label": "同步高压"
+    },
+    {
+      "id": "e_par_2",
+      "sourceNodeId": "n_sl_b_collect",
+      "targetNodeId": "n_beat_first_fail",
+      "relationType": "parallel",
+      "confidence": 0.72,
+      "relatedAssetIds": [],
+      "evidenceCount": 2,
+      "label": "外部催逼"
+    },
+    {
+      "id": "e_sc_1",
+      "sourceNodeId": "n_sl_main_clue",
+      "targetNodeId": "n_sl_a_trust",
+      "relationType": "storyline_cross",
+      "confidence": 0.74,
+      "relatedAssetIds": [],
+      "evidenceCount": 2,
+      "label": "线索牵动同盟"
+    },
+    {
+      "id": "e_sc_2",
+      "sourceNodeId": "n_sl_main_answer",
+      "targetNodeId": "n_arc_a3",
+      "relationType": "storyline_cross",
+      "confidence": 0.81,
+      "relatedAssetIds": [],
+      "evidenceCount": 2,
+      "label": "谜底推动成长"
+    },
+    {
+      "id": "e_sp_3",
+      "sourceNodeId": "n_sl_main_q",
+      "targetNodeId": "n_sl_main_answer",
+      "relationType": "setup_payoff",
+      "confidence": 0.93,
+      "relatedAssetIds": [],
+      "evidenceCount": 2,
+      "label": "主谜闭环"
+    },
+    {
+      "id": "e_cg_x",
+      "sourceNodeId": "n_arc_b2",
+      "targetNodeId": "n_arc_b3",
+      "relationType": "character_growth",
+      "confidence": 0.88,
+      "relatedAssetIds": [],
+      "evidenceCount": 2,
+      "label": "立场成型"
+    },
+    {
+      "id": "e_pc_n_l3_al_deal",
+      "sourceNodeId": "n_beat_alliance",
+      "targetNodeId": "n_l3_al_deal",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_l3_al_doubt",
+      "sourceNodeId": "n_beat_alliance",
+      "targetNodeId": "n_l3_al_doubt",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_l3_al_terms",
+      "sourceNodeId": "n_beat_alliance",
+      "targetNodeId": "n_l3_al_terms",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_l3_sp_goal",
+      "sourceNodeId": "n_beat_split",
+      "targetNodeId": "n_l3_sp_goal",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_l3_sp_loyal",
+      "sourceNodeId": "n_beat_split",
+      "targetNodeId": "n_l3_sp_loyal",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_l3_sp_public",
+      "sourceNodeId": "n_beat_split",
+      "targetNodeId": "n_l3_sp_public",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_l3_cost_body",
+      "sourceNodeId": "n_beat_cost",
+      "targetNodeId": "n_l3_cost_body",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_l3_cost_bond",
+      "sourceNodeId": "n_beat_cost",
+      "targetNodeId": "n_l3_cost_bond",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_l3_cost_status",
+      "sourceNodeId": "n_beat_cost",
+      "targetNodeId": "n_l3_cost_status",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_l3_rf_role",
+      "sourceNodeId": "n_beat_reframe",
+      "targetNodeId": "n_l3_rf_role",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_l3_rf_distance",
+      "sourceNodeId": "n_beat_reframe",
+      "targetNodeId": "n_l3_rf_distance",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_l3_clue_a",
+      "sourceNodeId": "n_sl_main_clue",
+      "targetNodeId": "n_l3_clue_a",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_l3_clue_b",
+      "sourceNodeId": "n_sl_main_clue",
+      "targetNodeId": "n_l3_clue_b",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_l3_clue_link",
+      "sourceNodeId": "n_sl_main_clue",
+      "targetNodeId": "n_l3_clue_link",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_l3_br_trigger",
+      "sourceNodeId": "n_sl_a_break",
+      "targetNodeId": "n_l3_br_trigger",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_l3_br_speech",
+      "sourceNodeId": "n_sl_a_break",
+      "targetNodeId": "n_l3_br_speech",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_l3_br_aftermath",
+      "sourceNodeId": "n_sl_a_break",
+      "targetNodeId": "n_l3_br_aftermath",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_l3_a2_push",
+      "sourceNodeId": "n_arc_a2",
+      "targetNodeId": "n_l3_a2_push",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_l3_a2_cost",
+      "sourceNodeId": "n_arc_a2",
+      "targetNodeId": "n_l3_a2_cost",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_l3_a2_choice",
+      "sourceNodeId": "n_arc_a2",
+      "targetNodeId": "n_l3_a2_choice",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_l3_c2_demand",
+      "sourceNodeId": "n_arc_c2",
+      "targetNodeId": "n_l3_c2_demand",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_l3_c2_loss",
+      "sourceNodeId": "n_arc_c2",
+      "targetNodeId": "n_l3_c2_loss",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    },
+    {
+      "id": "e_pc_n_l3_c2_admit",
+      "sourceNodeId": "n_arc_c2",
+      "targetNodeId": "n_l3_c2_admit",
+      "relationType": "parent_child",
+      "confidence": 1.0,
+      "relatedAssetIds": [],
+      "evidenceCount": 0,
+      "label": null
+    }
+  ],
+  "evidenceByNodeId": {
+    "n_beat_inciting": [
+      {
+        "bookSnapshotId": "snap_mock_pattern_001",
+        "chapterId": 9,
+        "sceneId": 1,
+        "paragraphId": "p_9_12",
+        "paragraphContentHash": "2dc341c65cab56b6d0f9f188ba6f7daeada9d4d1299a2086f23f040f641b37cc",
+        "label": "稳态被打破的现场描写"
+      },
+      {
+        "bookSnapshotId": "snap_mock_pattern_001",
+        "chapterId": 10,
+        "sceneId": 2,
+        "paragraphId": "p_10_3",
+        "paragraphContentHash": "375448a5490648b6c643a6eb8abcc140663c2267c1f7645d620b318783a2cd59",
+        "label": "主角被迫表态"
+      }
+    ],
+    "n_beat_promise": [
+      {
+        "bookSnapshotId": "snap_mock_pattern_001",
+        "chapterId": 12,
+        "sceneId": 1,
+        "paragraphId": "p_12_8",
+        "paragraphContentHash": "74d197ad32dccfa8eafa14cab8192e0fe166e8b08eb27f72a486735eb153aeb3",
+        "label": "核心期待首次明示"
+      },
+      {
+        "bookSnapshotId": "snap_mock_pattern_001",
+        "chapterId": 13,
+        "sceneId": 1,
+        "paragraphId": "p_13_15",
+        "paragraphContentHash": "dd9ff9488e0e7c54bb83deec8d0ab3f06650f72ba45859ea9b3b160be4f15f07",
+        "label": "读者可验证的承诺句"
+      }
+    ],
+    "n_tp_midpoint": [
+      {
+        "bookSnapshotId": "snap_mock_pattern_001",
+        "chapterId": 55,
+        "sceneId": 2,
+        "paragraphId": "p_55_4",
+        "paragraphContentHash": "25cb95742479955edde7996fe97e62e95f97934efc4cfe346b8e148d0dcee892",
+        "label": "目标替换的对话"
+      },
+      {
+        "bookSnapshotId": "snap_mock_pattern_001",
+        "chapterId": 56,
+        "sceneId": 1,
+        "paragraphId": "p_56_9",
+        "paragraphContentHash": "2b2e38782fa92a05b56fdb9d42bf73b95b3668f67ccb4d5f0dda57b6876895af",
+        "label": "代价升维的动作"
+      },
+      {
+        "bookSnapshotId": "snap_mock_pattern_001",
+        "chapterId": 57,
+        "sceneId": 3,
+        "paragraphId": "p_57_2",
+        "paragraphContentHash": "e73a50e411dedaad9b7026ab4e07aada2b560bfbcf92b2258010dab241527ccb",
+        "label": "关系重构瞬间"
+      }
+    ],
+    "n_tp_ordeal": [
+      {
+        "bookSnapshotId": "snap_mock_pattern_001",
+        "chapterId": 82,
+        "sceneId": 1,
+        "paragraphId": "p_82_6",
+        "paragraphContentHash": "8f7d95dbfdc94c67eb8e354c0a02797238b4bc2d25455b0c2910a2f17117d5f9",
+        "label": "不可逆选择前的停顿"
+      },
+      {
+        "bookSnapshotId": "snap_mock_pattern_001",
+        "chapterId": 85,
+        "sceneId": 2,
+        "paragraphId": "p_85_11",
+        "paragraphContentHash": "e0e0d29ed766ecab05c00db821dc8506181895f38febd3952037f0d0f91088fa",
+        "label": "选择执行"
+      },
+      {
+        "bookSnapshotId": "snap_mock_pattern_001",
+        "chapterId": 87,
+        "sceneId": 1,
+        "paragraphId": "p_87_1",
+        "paragraphContentHash": "3c663733ad66c234889de1ae320e3d2d99f864bca0f428a3785883028cb47155",
+        "label": "后果即时显现"
+      }
+    ],
+    "n_beat_reveal": [
+      {
+        "bookSnapshotId": "snap_mock_pattern_001",
+        "chapterId": 92,
+        "sceneId": 1,
+        "paragraphId": "p_92_7",
+        "paragraphContentHash": "073b1c4b7c7c1851262f2da7e580605528284b9bb14cca189aeae0e8bd78865b",
+        "label": "谜底陈述"
+      },
+      {
+        "bookSnapshotId": "snap_mock_pattern_001",
+        "chapterId": 94,
+        "sceneId": 2,
+        "paragraphId": "p_94_5",
+        "paragraphContentHash": "eef94419d345f30cf42e3939a20da24b0d33fc277b0a3b54beb9ec324518f0a6",
+        "label": "动机证据对照"
+      },
+      {
+        "bookSnapshotId": "snap_mock_pattern_001",
+        "chapterId": 95,
+        "sceneId": 1,
+        "paragraphId": "p_95_14",
+        "paragraphContentHash": "b1acb6a02d2bdf7e4c71f5ae43554e6991ba78d2e1493b5ec242c6941eb0ad55",
+        "label": "读者验证点"
+      }
+    ],
+    "n_sl_main_answer": [
+      {
+        "bookSnapshotId": "snap_mock_pattern_001",
+        "chapterId": 93,
+        "sceneId": 1,
+        "paragraphId": "p_93_3",
+        "paragraphContentHash": "22a64ffd6591cd9c7a4262aec22084eb796c9284336ca2c866e8510743f23986",
+        "label": "主线答案落地"
+      },
+      {
+        "bookSnapshotId": "snap_mock_pattern_001",
+        "chapterId": 96,
+        "sceneId": 1,
+        "paragraphId": "p_96_8",
+        "paragraphContentHash": "2c003f0c3bd860af69d902d4dfd4314e4cb971c184c1989d320359ff7c342228",
+        "label": "证据链闭合"
+      }
+    ],
+    "n_arc_a3": [
+      {
+        "bookSnapshotId": "snap_mock_pattern_001",
+        "chapterId": 100,
+        "sceneId": 1,
+        "paragraphId": "p_100_2",
+        "paragraphContentHash": "b417bbee9d0f0aa08ffb2db7845660160a9d1a54a95c2d4a0f51b767a8ea468f",
+        "label": "主动承担宣言"
+      },
+      {
+        "bookSnapshotId": "snap_mock_pattern_001",
+        "chapterId": 112,
+        "sceneId": 2,
+        "paragraphId": "p_112_6",
+        "paragraphContentHash": "a110e1449972de63d38f7151b20134243de226689e70f30cfb00164ce638b294",
+        "label": "承担后的行为一致性"
+      }
+    ],
+    "n_beat_leak": [
+      {
+        "bookSnapshotId": "snap_mock_pattern_001",
+        "chapterId": 40,
+        "sceneId": 1,
+        "paragraphId": "p_40_5",
+        "paragraphContentHash": "7355d30b113706d6fb19f91e6357d82bd1500635ff81e94907c5cb9ab48d5adb",
+        "label": "读者侧信息泄漏"
+      },
+      {
+        "bookSnapshotId": "snap_mock_pattern_001",
+        "chapterId": 41,
+        "sceneId": 2,
+        "paragraphId": "p_41_9",
+        "paragraphContentHash": "d60a5f90baf4858d3ec3608e8a444d0d7ccb1b108bf7d4d635545323d1952057",
+        "label": "人物误读"
+      }
+    ]
+  }
+}

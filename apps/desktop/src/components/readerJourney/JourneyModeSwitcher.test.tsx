@@ -1,0 +1,70 @@
+import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { JourneyModeSwitcher } from "./JourneyModeSwitcher";
+import {
+  parseJourneyViewMode,
+  resolveJourneyPageModeFromSearch,
+  journeyViewToPageMode,
+  pageModeToJourneyView,
+} from "./journeyViewMode";
+import { WorkspaceViewSwitcher } from "../layout/WorkspaceViewSwitcher";
+
+afterEach(cleanup);
+
+describe("journeyViewMode", () => {
+  it("defaults and maps illegal values to compare", () => {
+    expect(parseJourneyViewMode(null)).toBe("compare");
+    expect(parseJourneyViewMode("nope")).toBe("compare");
+    expect(parseJourneyViewMode("compare")).toBe("compare");
+    expect(parseJourneyViewMode("journey")).toBe("journey");
+    expect(parseJourneyViewMode("text")).toBe("text");
+  });
+
+  it("maps pageMode aliases", () => {
+    expect(journeyViewToPageMode("compare")).toBe("sync");
+    expect(journeyViewToPageMode("text")).toBe("reading");
+    expect(pageModeToJourneyView("sync")).toBe("compare");
+    expect(pageModeToJourneyView("reading")).toBe("text");
+  });
+
+  it("prefers journeyView over legacy mode", () => {
+    const params = new URLSearchParams("mode=journey&journeyView=text");
+    expect(resolveJourneyPageModeFromSearch(params)).toBe("reading");
+  });
+
+  it("falls back to legacy mode when journeyView absent", () => {
+    expect(resolveJourneyPageModeFromSearch(new URLSearchParams("mode=journey"))).toBe(
+      "journey",
+    );
+    expect(resolveJourneyPageModeFromSearch(new URLSearchParams())).toBe("sync");
+  });
+});
+
+describe("JourneyModeSwitcher", () => {
+  it("renders 正文对照 / 旅程视图 / 仅看正文 — never 正文阅读", () => {
+    const onChange = vi.fn();
+    render(<JourneyModeSwitcher pageMode="sync" onChange={onChange} />);
+    expect(screen.getByTestId("journey-mode-sync")).toHaveTextContent("正文对照");
+    expect(screen.getByTestId("journey-mode-journey")).toHaveTextContent("旅程视图");
+    expect(screen.getByTestId("journey-mode-reading")).toHaveTextContent("仅看正文");
+    expect(screen.queryByText("正文阅读")).not.toBeInTheDocument();
+    screen.getByTestId("journey-mode-journey").click();
+    expect(onChange).toHaveBeenCalledWith("journey");
+  });
+});
+
+describe("WorkspaceViewSwitcher primary nav", () => {
+  it("shows a single 正文阅读 among primary tabs", () => {
+    render(
+      <WorkspaceViewSwitcher
+        active="journey"
+        onChange={() => undefined}
+        analysisAvailable
+        journeyAvailable
+      />,
+    );
+    expect(screen.getAllByText("正文阅读")).toHaveLength(1);
+    expect(screen.getByTestId("workspace-tab-analysis")).toHaveTextContent("场景分析");
+    expect(screen.getByTestId("workspace-tab-journey")).toHaveTextContent("阅读旅程");
+  });
+});

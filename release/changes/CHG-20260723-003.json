@@ -1,0 +1,99 @@
+{
+  "id": "CHG-20260723-003",
+  "title": "Redesign Reader Journey hook resolution summary",
+  "type": "fix",
+  "base_version": "1.0.4",
+  "status": "released",
+  "include_in_next_release": false,
+  "commits": [
+    {
+      "sha": "80b4a9b0642dfe5ebb001c2d62e5e07e7c80e280",
+      "message": "fix: redesign reader journey hook resolution summary",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "1802f3a17a966e5ffceb68012c6aaa47f3247cfb",
+      "message": "docs: mark CHG-20260723-003 tested for hook resolution UX",
+      "primary": false,
+      "multi_change_reason": "registry status for CHG-20260723-003"
+    },
+    {
+      "sha": "2027bbc91fda0419e1c2a6311e87791dfdb5b594",
+      "message": "docs: sync CHG-20260723-003 commit list",
+      "primary": false,
+      "multi_change_reason": "final registry attachment for CHG-20260723-003"
+    },
+    {
+      "sha": "263e7789d5556384ccd3271fbd033255bfbe6b9d",
+      "message": "﻿fix: densify hook resolution page to overview + list",
+      "primary": false,
+      "multi_change_reason": "real-device densify follow-up for same hook resolution page"
+    },
+    {
+      "sha": "6cee9b4dda1778028bb961293e737b808a6f64ae",
+      "message": "docs: attach densify follow-up commit to CHG-20260723-003",
+      "primary": false,
+      "multi_change_reason": "registry attachment for densify follow-up"
+    },
+    {
+      "sha": "72eb02e4e76c0aa4c4e3b6d7d3ed1fd78b1400e0",
+      "message": "docs: sync CHG-20260723-003 commit list after densify",
+      "primary": false,
+      "multi_change_reason": "final densify registry sync"
+    }
+  ],
+  "modules": [
+    "desktop"
+  ],
+  "files": [
+    "apps/desktop/src/components/readerJourney/hookResolutionModel.ts",
+    "apps/desktop/src/components/readerJourney/hookResolutionModel.test.ts",
+    "apps/desktop/src/components/readerJourney/HookPayoffTimeline.tsx",
+    "apps/desktop/src/components/readerJourney/hookPayoffTimeline.css",
+    "apps/desktop/src/components/readerJourney/HookPayoffTimeline.test.tsx",
+    "apps/desktop/src/components/readerJourney/hookResolutionEvidence.test.tsx",
+    "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.tsx",
+    "apps/desktop/src/components/readerJourney/observationLenses.ts",
+    "apps/desktop/src/components/readerJourney/readerJourneyLensExplanation.ts",
+    "apps/desktop/src/components/readerJourney/JourneySceneDetailPanel.tsx"
+  ],
+  "user_summary": "钩子回收结果页信息过密：独立冲突提醒占用过大、暴露内部 ID 与英文技术日志，并与总览/清单重复。实机收口后只保留钩子总览与钩子清单，冲突降为轻量附加状态。",
+  "technical_summary": "Remove standalone 冲突提醒 block from ordinary UI; merge chapter verdict into 钩子总览 (one-line verdict + compact stats + bus); keep conflict data in model; list drops ID column; evidence panel shows plain-language divergence with tech under folded 分析信息; hide avg hook/payoff phase cards on hook_payoff lens. Main-status rules unchanged.",
+  "acceptance_criteria": [
+    "Ordinary page has only 钩子总览 and 钩子清单 (no standalone 冲突提醒)",
+    "Conflict facts retained in model; conflict count in compact stats when >0",
+    "Bus shows light 有冲突 mark without extra line type",
+    "List columns: 钩子|提出位置|回收结果|回收位置|冲突|操作; no ordinary ID column",
+    "查看证据 shows plain conflict language; tech only in folded 分析信息",
+    "No avg 钩子/回报 phase cards on 钩子回收 lens",
+    "A+B+C=N invariant; conflict additive; main status rules unchanged"
+  ],
+  "tests": [
+    "apps/desktop/src/components/readerJourney/hookResolutionModel.test.ts",
+    "apps/desktop/src/components/readerJourney/HookPayoffTimeline.test.tsx",
+    "apps/desktop/src/components/readerJourney/hookResolutionEvidence.test.tsx",
+    "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.test.tsx",
+    "apps/desktop/src/components/readerJourney/readerJourneyLensExplanation.test.tsx"
+  ],
+  "verification_evidence": [
+    "Local Vitest hookResolutionModel/HookPayoffTimeline/evidence/workspace/lensExplanation passed; typecheck; lint; version_manager check; change_registry check; git diff --check. No model/install/publish/push/VERSION bump.",
+    "1.0.5 Phase A engineering gates (not per-item user manual acceptance): pytest 760 passed/50 skipped; vitest 877 passed; typecheck; lint; frontend build; check_project; template governance; playwright smoke+scroll+chapter; focused theme/lens/comparison vitest."
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "Presentation-only over NarrativeLoopView; no prompt/formula/artifact changes."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "P1",
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-23T01:35:00Z",
+  "updated_at": "2026-07-23T05:40:46Z"
+}

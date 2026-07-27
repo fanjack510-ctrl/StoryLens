@@ -4,6 +4,7 @@ import type { ReaderJourneyVisualization } from "../../types/readerJourneyVisual
 import type { JourneySelectionState } from "../../types/journeySelection";
 import { roleLabelZh } from "./journeyUiLabels";
 import { PHASE_BAND_COLORS } from "./journeyVisualTokens";
+import { buildSceneRoleTags } from "./sceneCardRoleTags";
 
 export type ChapterParagraph = {
   id: string;
@@ -148,17 +149,7 @@ export const StructuredChapterTextPane = forwardRef<StructuredChapterTextPaneHan
       }
     };
 
-    const hookOrdinals = new Set(visualization.hook_markers.map((m) => m.scene_ordinal));
-    const payoffOrdinals = new Set(visualization.payoff_markers.map((m) => m.scene_ordinal));
-    const riskOrdinals = new Set(
-      visualization.risk_intervals.flatMap((interval) => {
-        const ordinals: number[] = [];
-        for (let o = interval.start_scene_ordinal; o <= interval.end_scene_ordinal; o += 1) {
-          ordinals.push(o);
-        }
-        return ordinals;
-      }),
-    );
+    // Role tags come from NarrativeLoopView facts — not hook_markers / risk_intervals.
 
     return (
       <div className="structured-chapter-text-pane" data-testid="structured-chapter-text-pane">
@@ -223,6 +214,7 @@ export const StructuredChapterTextPane = forwardRef<StructuredChapterTextPaneHan
                     ? node.evidence_paragraph_ids
                     : [];
                 const techTitle = `${s.start_paragraph_id} → ${s.end_paragraph_id}`;
+                const roleTags = buildSceneRoleTags(visualization, s.ordinal);
 
                 return (
                   <section
@@ -243,33 +235,31 @@ export const StructuredChapterTextPane = forwardRef<StructuredChapterTextPaneHan
                       onClick={() => onSelectScene(s.id)}
                     >
                       <span className="structured-scene-ordinal">
-                        Scene {s.ordinal}
+                        {role === "beat" ? `节拍${String(s.ordinal).padStart(2, "0")}` : `场景${String(s.ordinal).padStart(2, "0")}`}
                       </span>
                       <span className={`structured-scene-role role-${role}`}>
                         {roleLabelZh(role)}
                       </span>
                       {phaseOrdinal != null && (
-                        <span className="structured-scene-phase">Phase {phaseOrdinal}</span>
+                        <span className="structured-scene-phase">阶段{phaseOrdinal}</span>
                       )}
                       <span className="structured-scene-range" hidden>
                         {techTitle}
                       </span>
-                      <span className="structured-scene-badges">
-                        {hookOrdinals.has(s.ordinal) && (
-                          <span className="badge-hook" title="钩子标记">
-                            钩子
+                      <span
+                        className="structured-scene-badges"
+                        data-testid={`structured-scene-badges-${s.ordinal}`}
+                      >
+                        {roleTags.map((tag) => (
+                          <span
+                            key={`${tag.kind}:${tag.label}`}
+                            className={`badge-${tag.kind === "resistance" ? "risk" : tag.kind}`}
+                            data-role-kind={tag.kind}
+                            title={tag.title || tag.label}
+                          >
+                            {tag.label}
                           </span>
-                        )}
-                        {payoffOrdinals.has(s.ordinal) && (
-                          <span className="badge-payoff" title="回报标记">
-                            回报
-                          </span>
-                        )}
-                        {riskOrdinals.has(s.ordinal) && (
-                          <span className="badge-risk" title="连续缺少回报、节奏骤降或认知负担过高，可能降低读者继续阅读的意愿。">
-                            流失风险
-                          </span>
-                        )}
+                        ))}
                       </span>
                     </button>
 

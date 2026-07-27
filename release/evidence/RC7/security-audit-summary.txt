@@ -1,0 +1,53 @@
+﻿RC7 Security Audit Summary
+==========================
+Step: STEP-2.8-RC7-GITHUB-PUBLISH
+Audit time: 2026-07-27T04:15:00+08:00
+Public HEAD (pre-publish commit base): f714adb8bb1ec434d0d0dc842569f7c8b407fe71
+Build source commit: 37597e84a1c0da936f7b6bd296282cdef2dcba3d
+Private HEAD (not pushed): 30d8dad8cd649e832999874f7bf16cc1661cf221
+Installer: StoryLens_1.1.0-rc.7_x64-setup.exe
+Installer SHA-256: F93E473D5EC73CCB1400579878485E811BE979DA5A7F3427B286C3D42AC99CB2
+Packaged sidecar SHA-256: 511E7603BBD4DD56C845F7597B9C0948E6CBE4B2E8D51425AD7543CEB0CC06E3
+
+Scope
+-----
+- Tracked + untracked public worktree (text files)
+- Full local git history (rev-list --all, 778 commits)
+- Local secret candidate exact-match (env + local .env* + AppData StoryLens configs)
+- NSIS installer extract (storylens-api.exe, storylens-desktop.exe, plugins)
+- .github/workflows
+- Private engine source leakage checks
+
+Tooling
+-------
+- Local equivalent of gitleaks (high-confidence regex + classification)
+- git grep / git log -S pickaxe exact match
+- 7-Zip NSIS extract (read-only)
+
+Results
+-------
+PUBLIC WORKTREE REAL SECRET MATCHES: 0
+PUBLIC GIT HISTORY REAL SECRET MATCHES: 0
+LOCAL SECRET CANDIDATES FOUND: 4
+EXACT SECRET MATCH IN PUBLIC TREE: 0
+EXACT SECRET MATCH IN GIT HISTORY: 0
+EXACT SECRET MATCH IN INSTALLER: 0
+HARDCODED USER API KEY: NO
+HARDCODED AUTHORIZATION TOKEN: NO
+USER DATABASE PACKAGED: NO
+USER NOVEL CONTENT PACKAGED: NO
+REAL AUTH HEADER PACKAGED: NO
+PRIVATE ENGINE SOURCE IN PUBLIC REPO: NO
+DEFAULT API KEY: EMPTY
+API KEY SOURCE: USER CONFIGURATION
+HARDCODED PROVIDER CREDENTIAL: NO
+GITHUB WORKFLOW INLINE SECRETS: NO (only ${{ secrets.* }} references)
+FORBIDDEN SENSITIVE FILENAMES TRACKED: 0
+
+Notes
+-----
+- Pattern hits in tests/e2e are classified as placeholders (e.g. sk-test-*, alphabetical sk-abcdef...).
+- Binary CONTAINS_DB_HINT refers to embedded SQLite library string fragments, not packaged user databases.
+- No secrets printed in this evidence file.
+
+Verdict: PASS

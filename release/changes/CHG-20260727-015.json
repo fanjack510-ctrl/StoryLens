@@ -1,0 +1,81 @@
+{
+  "id": "CHG-20260727-015",
+  "title": "Present formal Native Overview projection results with engine_id",
+  "type": "fix",
+  "base_version": "1.0.5",
+  "status": "tested",
+  "include_in_next_release": false,
+  "commits": [
+    {
+      "sha": "12cd46419ee6ceab72ebfe6f70f079721619ddb0",
+      "message": "fix(native-overview): present formal projection results",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "c0a56b71f38cd410816fe07c4123da606a188502",
+      "message": "docs(release): sync CHG-20260727-015 to tested",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "apps/api",
+    "apps/desktop"
+  ],
+  "files": [
+    "apps/api/app/narrative_core/contracts/whole_book_overview_v1.py",
+    "apps/api/app/narrative_core/services/native_overview_service.py",
+    "apps/desktop/src/components/proNativeOverview/ProNativeOverviewResult.tsx",
+    "apps/desktop/src/services/proNativeOverviewFlag.ts",
+    "apps/desktop/src/services/proNativeOverviewApi.ts"
+  ],
+  "user_summary": "结果展示已实现但未通过产品验收，不纳入 1.1.0；正式投影仍有中文化/产品化问题。",
+  "technical_summary": "Pass engine_id through OverviewApiResponse; fix formal vs skeleton labeling; render novel_type/narrative_features/core_setting; format overview arrays without JSON.stringify. | Deferred from 1.1.0: formal projection still has localization/productization/readability gaps; keep tested, not verified/ready/released.",
+  "acceptance_criteria": [
+    "Run #14 Artifact #38 API returns engine_id=private-native-overview-v1",
+    "Result page shows Formal Overview Engine without walking-skeleton notice",
+    "novel_type / narrative_features / core_setting rendered",
+    "protagonist array displays as 齐夏 not JSON",
+    "Legacy artifact without engine_id returns null without 500"
+  ],
+  "tests": [
+    "apps/api/tests/test_native_overview_result_engine_id_local.py",
+    "apps/desktop/src/services/formatOverviewValue.test.ts",
+    "apps/desktop/src/services/proNativeOverviewApi.test.ts",
+    "apps/desktop/src/pages/proNativeOverview.test.tsx",
+    "release/evidence/CHG-20260727-015/verify-native-result-presentation.ps1"
+  ],
+  "verification_evidence": [
+    "release/evidence/CHG-20260727-015/verification-summary.txt"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-26T18:25:21Z",
+  "updated_at": "2026-07-26T19:13:10Z",
+  "verification": {
+    "method": "temp DB copy + Fake pytest/vitest + PowerShell zero-cost verify",
+    "script": "release/evidence/CHG-20260727-015/verify-native-result-presentation.ps1",
+    "real_provider_calls": 0,
+    "formal_db_writes": 0,
+    "new_runs_created": 0,
+    "installer_builds": 0,
+    "notes": "Reuses Run #14 Artifact #38; no rematerialize",
+    "release_scope": "deferred / not included in 1.1.0",
+    "deferral_reason": "正式投影结果仍存在中文化、产品化、栏目完整性和可读性问题，不满足普通用户发布标准。",
+    "included_in_1_1_0": false
+  },
+  "release_notes": {}
+}

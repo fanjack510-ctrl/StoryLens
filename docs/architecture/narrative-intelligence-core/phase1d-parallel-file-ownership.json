@@ -1,0 +1,111 @@
+{
+  "baseline_version": "1.0.5",
+  "baseline_commit": "44a9dcf864571fb9f27282cefae282bae478540b",
+  "phase1dp_change": "CHG-20260723-026",
+  "phase1d_p": [
+    "apps/api/app/narrative_core/product_contract/",
+    "apps/desktop/src/features/wholeBook/contracts/",
+    "apps/api/tests/test_narrative_phase1dp_contract.py",
+    "docs/architecture/narrative-intelligence-core/phase1d-product-flow.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-preflight-page-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-run-progress-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-result-information-architecture.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-result-envelope.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-module-result-contracts.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-evidence-review-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-conflict-center-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-structure-map-projection.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-api-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-release-scope.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-parallel-file-ownership.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-parallel-file-ownership.json",
+    "docs/architecture/narrative-intelligence-core/phase1d-contract-verification.md",
+    "docs/architecture/narrative-intelligence-core/README.md",
+    "release/changes/CHG-20260723-026.json",
+    "release/changes/CHG-20260723-027.json",
+    "release/changes/CHG-20260723-028.json",
+    "release/changes/CHG-20260723-029.json",
+    "release/changes/CHG-20260723-030.json"
+  ],
+  "agent_j": [
+    "apps/desktop/src/features/wholeBook/runUx/",
+    "docs/architecture/narrative-intelligence-core/phase1d-run-ux-implementation.md",
+    "release/changes/CHG-20260723-027.json"
+  ],
+  "agent_k": [
+    "apps/api/app/narrative_core/services/whole_book_result_projection.py",
+    "apps/api/tests/test_narrative_phase1d_result_projection.py",
+    "docs/architecture/narrative-intelligence-core/phase1d-result-projection-implementation.md",
+    "release/changes/CHG-20260723-028.json"
+  ],
+  "agent_l": [
+    "apps/desktop/src/features/wholeBook/review/",
+    "apps/desktop/src/features/wholeBook/structureMap/",
+    "docs/architecture/narrative-intelligence-core/phase1d-review-map-implementation.md",
+    "release/changes/CHG-20260723-029.json"
+  ],
+  "integration": [
+    "apps/api/tests/test_narrative_phase1d_integration.py",
+    "docs/architecture/narrative-intelligence-core/phase1d-integration-report.md",
+    "docs/architecture/narrative-intelligence-core/README.md",
+    "release/changes/CHG-20260723-030.json"
+  ],
+  "shared_read_only": [
+    "apps/api/app/db/models.py",
+    "apps/api/app/narrative_core/enums.py",
+    "apps/api/app/narrative_core/errors.py",
+    "apps/api/app/narrative_core/contracts/",
+    "apps/api/app/narrative_core/product_contract/",
+    "apps/desktop/src/features/wholeBook/contracts/",
+    "apps/desktop/src/services/productEdition.ts",
+    "docs/architecture/narrative-intelligence-core/phase1d-product-flow.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-preflight-page-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-run-progress-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-result-information-architecture.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-result-envelope.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-module-result-contracts.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-evidence-review-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-conflict-center-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-structure-map-projection.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-api-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-release-scope.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-parallel-file-ownership.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-parallel-file-ownership.json",
+    "docs/architecture/narrative-intelligence-core/phase1d-contract-verification.md",
+    "VERSION"
+  ],
+  "forbidden_overlap": [
+    "real whole-book runs",
+    "model calls / prompts",
+    "PRO_CAPABILITIES_SHIPPED=true",
+    "WHOLE_BOOK_RUNS_ENDPOINT_DISABLED=false",
+    "migrations / Narrative Asset schema edits",
+    "Pattern tables",
+    "VERSION bump",
+    "push/build/publish",
+    "Agent J editing result projection",
+    "Agent K editing review UI",
+    "Agent L implementing analysis algorithms"
+  ],
+  "branches": {
+    "phase1d_p": "feature/narrative-phase1d-product-contract",
+    "agent_j": "feature/narrative-phase1d-run-ux",
+    "agent_k": "feature/narrative-phase1d-result-projection",
+    "agent_l": "feature/narrative-phase1d-review-map",
+    "integration": "integration/narrative-phase1d"
+  },
+  "worktrees": {
+    "phase1d_p": "D:\\Dstorylens-wt-narrative-phase1d-contract",
+    "agent_j": "D:\\Dstorylens-wt-narrative-run-ux",
+    "agent_k": "D:\\Dstorylens-wt-narrative-result-projection",
+    "agent_l": "D:\\Dstorylens-wt-narrative-review-map",
+    "integration": "D:\\Dstorylens-wt-narrative-phase1d-integration"
+  },
+  "notes": [
+    "All Agent J/K/L branches must fork from Phase 1D-P final HEAD.",
+    "Native/Enhanced are modes not products.",
+    "Preflight does not create Runs.",
+    "Structure Map is projection only — no Pattern tables.",
+    "Public narrative asset APIs must NOT call Pro gating."
+  ]
+}

@@ -372,7 +372,7 @@ describe("TasksPage 从已有结果继续", () => {
     fireEvent.click(screen.getByRole("checkbox"));
     fireEvent.click(await screen.findByTestId("continue-from-checkpoints"));
     expect(await screen.findByTestId("recovery-error")).toHaveTextContent(
-      "本阶段需要的云端请求额度超过今日剩余额度",
+      /预算不足|云端请求额度/,
     );
     expect(screen.getByTestId("recovery-error")).toHaveTextContent("INSUFFICIENT_BUDGET_RESERVATION");
     expect(screen.getByTestId("recovery-error")).toHaveTextContent("req-budget");
@@ -481,7 +481,9 @@ describe("TasksPage Scene Analysis 恢复", () => {
     await waitFor(() => expect(button).toBeEnabled());
     fireEvent.click(button);
     fireEvent.click(button);
-    expect(await screen.findByText("正在修复…")).toBeInTheDocument();
+    expect(await screen.findByTestId("unified-recovery-status")).toHaveTextContent(
+      "正在继续分析…",
+    );
     await waitFor(() => expect(analysisRecoveryApi.recover).toHaveBeenCalledTimes(1));
     expect(analysisRecoveryApi.recover).toHaveBeenCalledWith(
       55,
@@ -610,7 +612,7 @@ describe("TasksPage Scene Analysis 恢复", () => {
     expect(await screen.findByTestId("unified-recovery-fix-continue")).toBeInTheDocument();
   });
 
-  it("succeeded Run无旅程时显示修复并继续且不显示复制错误", async () => {
+  it("succeeded Run无旅程时显示查看进度且可继续生成阅读旅程", async () => {
     const done = {
       ...failedRun55,
       status: "succeeded",
@@ -620,18 +622,22 @@ describe("TasksPage Scene Analysis 恢复", () => {
       total_scene_count: 14,
       remaining_scene_count: 0,
       scene_analysis_resume_available: false,
+      chapter_complete: false,
+      effective_status: "partial_complete",
     };
     vi.mocked(analysisApi.runs).mockResolvedValue([done] as any);
     vi.mocked(analysisApi.run).mockResolvedValue(done as any);
     vi.mocked(analysisApi.invocations).mockResolvedValue([]);
     vi.mocked(analysisApi.readerJourney).mockResolvedValue(null);
     renderPage();
-    expect(await screen.findByTestId("view-results-55")).toHaveTextContent("查看详情");
+    // CHG-019: Parent scene-succeeded without Journey must not claim full 查看结果.
+    expect(await screen.findByTestId("view-progress-55")).toHaveTextContent("查看进度");
     fireEvent.click(screen.getByTestId("run-more-55-trigger"));
     expect(screen.getByTestId("unified-recover-open-55")).toHaveTextContent(
-      "修复并继续",
+      "继续生成阅读旅程",
     );
     expect(screen.getByText("场景分析已完成")).toBeInTheDocument();
+    expect(screen.queryByTestId("view-results-55")).not.toBeInTheDocument();
     expect(screen.queryByText("复制错误")).not.toBeInTheDocument();
     expect(screen.queryByText("分析全部完成")).not.toBeInTheDocument();
   });

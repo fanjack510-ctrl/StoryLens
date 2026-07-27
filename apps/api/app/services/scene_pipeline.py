@@ -2,7 +2,7 @@ import hashlib
 import json
 from datetime import datetime, timezone
 
-from sqlalchemy import select, update
+from sqlalchemy import or_, select, update
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import get_settings
@@ -188,14 +188,16 @@ def scene_ranges(
 
 
 def _normalize_evidence_ids(ids: list[str], allowed_ids: set[str]) -> list[str]:
+    """Dedupe evidence IDs while preserving first-seen (document) order. Never invent IDs."""
     seen: set[str] = set()
     ordered: list[str] = []
     for item in ids:
-        if item not in allowed_ids or item in seen:
+        text = str(item or "").strip()
+        if not text or text not in allowed_ids or text in seen:
             continue
-        seen.add(item)
-        ordered.append(item)
-    return sorted(ordered)
+        seen.add(text)
+        ordered.append(text)
+    return ordered
 
 
 def _normalize_evidence_field(field: EvidenceField, allowed_ids: set[str]) -> EvidenceField:
@@ -271,6 +273,16 @@ def is_evidence_paragraph_validation_error(message: str) -> bool:
         return True
     if "paragraph" in lower and ("outside" in lower or "不存在" in message):
         return True
+    # Structured evidence codes (user-facing copy lives elsewhere).
+    for code in (
+        "evidence_overbroad_reuse",
+        "evidence_outside_scene",
+        "evidence_missing",
+        "full-scene evidence",
+        "reuse full-scene evidence",
+    ):
+        if code in lower:
+            return True
     return "evidence" in lower and "evidenced action" not in lower
 
 
@@ -298,8 +310,14 @@ def describe_scene_validation_failure(
     # Empty key_actions is a legal shape for dialogue/emotion/info scenes; only note it.
     if not result.key_actions and "key_actions" in error_message:
         categories.append("key_actions_empty")
-    if "must not cite the whole scene" in error_message:
+    if (
+        "must not cite the whole scene" in error_message
+        or "EVIDENCE_OVERBROAD_REUSE" in error_message
+        or "reuse full-scene evidence" in error_message.lower()
+    ):
         categories.append("indiscriminate_scene_citation")
+    if "SCENE_BOUNDARY_TOO_BROAD" in error_message:
+        categories.append("scene_boundary_too_broad")
     if "must not reuse one generic summary" in error_message:
         categories.append("duplicate_summaries")
     if not categories:
@@ -318,7 +336,18 @@ def validate_scene_analysis(
     expected_scene_key: str,
     allowed_ids: set[str],
     strict_contract: bool = False,
+    *,
+    boundary_meta: object | None = None,
+    ordered_paragraph_ids: list[str] | None = None,
 ) -> None:
+    from app.services.scene_evidence_validation import (
+        BoundaryMeta,
+        SceneEvidenceValidationError,
+        scene_analysis_fields_from_result,
+        scene_length_band,
+        validate_evidence_mapping,
+    )
+
     if result.scene_id != expected_scene_key:
         raise ValueError("场景分析的 Scene ID 不匹配")
     required = (result.entry_state, result.goal, result.outcome)
@@ -348,20 +377,42 @@ def validate_scene_analysis(
         raise ValueError("key_actions 每项必须包含非空 summary 与当前场景内证据")
     if not result.outcome.summary.strip() or not result.function_tags:
         raise ValueError("outcome and scene function must be complete")
-    # Single-paragraph scenes can only cite one id; identical evidence sets are expected.
-    if len(allowed_ids) <= 1:
-        return
-    summaries = [item.summary.strip() for item in fields if item.summary.strip()]
-    if len(summaries) != len(set(summaries)):
-        raise ValueError("analysis fields must not reuse one generic summary")
-    nonempty_evidence = [
-        set(item.evidence_paragraph_ids) for item in fields if item.summary.strip()
-    ]
-    if (
-        len(nonempty_evidence) >= 4
-        and len({tuple(sorted(item)) for item in nonempty_evidence}) == 1
-    ):
-        raise ValueError("all analysis fields must not cite the whole scene indiscriminately")
+
+    ordered = list(ordered_paragraph_ids) if ordered_paragraph_ids else sorted(allowed_ids)
+    # Prefer caller order; fall back to allowed_ids membership only.
+    ordered = [pid for pid in ordered if pid in allowed_ids]
+    if not ordered:
+        ordered = sorted(allowed_ids)
+
+    boundary = None
+    if isinstance(boundary_meta, BoundaryMeta):
+        boundary = boundary_meta
+    elif isinstance(boundary_meta, dict):
+        boundary = BoundaryMeta(
+            signals=list(boundary_meta.get("signals") or []),
+            suspected_split_points=list(boundary_meta.get("suspected_split_points") or []),
+            consolidation_confidence=boundary_meta.get("consolidation_confidence"),
+            boundary_confidence=boundary_meta.get("boundary_confidence"),
+            paragraph_count=len(ordered),
+            multiple_structure_tasks=bool(boundary_meta.get("multiple_structure_tasks")),
+        )
+
+    try:
+        validate_evidence_mapping(
+            scene_id=expected_scene_key,
+            scene_paragraph_ids=ordered,
+            fields=scene_analysis_fields_from_result(result),
+            boundary=boundary,
+        )
+    except SceneEvidenceValidationError:
+        raise
+
+    # Duplicate generic summaries: only hard-fail on medium/long scenes.
+    # Micro/short dialogue scenes often share compact phrasings with distinct evidence angles.
+    if scene_length_band(len(ordered)) == "medium_long":
+        summaries = [item.summary.strip() for item in fields if item.summary.strip()]
+        if len(summaries) != len(set(summaries)):
+            raise ValueError("analysis fields must not reuse one generic summary")
 
 
 def evidence_fields(result: SceneAnalysisResult) -> list[tuple[str, str]]:
@@ -404,6 +455,17 @@ async def execute_scene_pipeline(
         try:
             awaiting_review = await _execute(session, gateway, run)
             if not awaiting_review:
+                from app.services.chapter_analysis_completion import (
+                    continue_chapter_after_scenes,
+                    is_scene_pipeline_complete,
+                    mark_scenes_complete_awaiting_journey,
+                )
+
+                if is_scene_pipeline_complete(session, run):
+                    mark_scenes_complete_awaiting_journey(session, run)
+                    session.commit()
+                    await continue_chapter_after_scenes(session_factory, gateway, run_id)
+                    return
                 run.status = "succeeded"
                 run.completed_at = datetime.now(timezone.utc)
             session.commit()
@@ -482,8 +544,31 @@ async def execute_scene_pipeline(
                             exc.provider_error.http_status_code
                         )
                         failure_payload["failure"]["request_id"] = exc.provider_error.request_id
+                        if getattr(exc.provider_error, "http_error_snapshot", None):
+                            failure_payload["failure"]["http_error_snapshot"] = (
+                                exc.provider_error.http_error_snapshot
+                            )
+                        for key in (
+                            "error_category",
+                            "provider_error_code",
+                            "provider_message",
+                            "provider_request_id",
+                            "endpoint_host",
+                            "retry_after",
+                            "timeout_kind",
+                            "response_content_type",
+                            "sanitized_response_excerpt",
+                            "occurred_at",
+                        ):
+                            val = getattr(exc.provider_error, key, None)
+                            if val is not None:
+                                failure_payload["failure"][key] = val
                 elif isinstance(exc, ProviderRequestError):
                     failure_payload["failure"].update(exc.as_safe_dict())
+                    if getattr(exc, "http_error_snapshot", None):
+                        failure_payload["failure"]["http_error_snapshot"] = (
+                            exc.http_error_snapshot
+                        )
                 else:
                     from app.services.cloud_budget import RequestBlockedError
 
@@ -612,6 +697,25 @@ def classify_pipeline_error(exc: Exception) -> tuple[str, str, bool, str]:
                 "structural_validation",
                 True,
                 "可从已完成批次继续；请检查transition覆盖、顺序和ID",
+            )
+        if exc.error_code in {
+            "EVIDENCE_OVERBROAD_REUSE",
+            "EVIDENCE_OUTSIDE_SCENE",
+            "EVIDENCE_MISSING",
+            "EVIDENCE_VALIDATION_FAILED",
+        }:
+            return (
+                exc.error_code,
+                "evidence_validation",
+                True,
+                "可整理证据后继续；已完成场景不会重跑",
+            )
+        if exc.error_code == "SCENE_BOUNDARY_TOO_BROAD":
+            return (
+                "SCENE_BOUNDARY_TOO_BROAD",
+                "scene_boundary",
+                True,
+                "请重新检查场景边界后再继续",
             )
         if exc.category == "evidence_validation" or exc.error_code == "EVIDENCE_VALIDATION_FAILED":
             return (
@@ -1114,32 +1218,168 @@ async def _execute(session: Session, gateway: ModelGateway, run: AnalysisRun) ->
     return False
 
 
-def mark_interrupted_runs_failed(session: Session) -> None:
-    now = datetime.now(timezone.utc)
-    session.execute(
-        update(AnalysisRun)
-        .where(AnalysisRun.status.in_(["running", "boundary_candidates_running", "scene_analysis_running"]))
-        .values(
-            status="failed",
-            error_code="PROCESS_INTERRUPTED",
-            error_message="应用重启时任务仍在运行",
-            completed_at=now,
-        )
-    )
-    session.execute(
-        update(AnalysisRun)
-        .where(AnalysisRun.status == "queued")
-        .values(
-            status="failed",
-            error_code="PROCESS_INTERRUPTED_BEFORE_START",
-            error_message="应用重启前任务仍在队列中，无法自动恢复",
-            completed_at=now,
-        )
-    )
-    session.commit()
-    from app.services.budget_reservation import release_run_reservation
+# Worker-bound scene-pipeline statuses: no live Sidecar worker after process exit.
+# Do NOT include user-wait states (awaiting_boundary_review, boundary_confirmed*,
+# awaiting_provider_recovery) — those have no background worker to resume.
+_STARTUP_INTERRUPT_WORKER_STATUSES = (
+    "running",
+    "boundary_candidates_running",
+    "scene_analysis_running",
+    # Native Overview progress checkpoints make these durable mid-run.
+    "preparing",
+    "analyzing",
+    "materializing",
+    "synthesizing",
+)
 
-    for run in session.scalars(
-        select(AnalysisRun).where(AnalysisRun.error_code == "PROCESS_INTERRUPTED")
-    ):
-        release_run_reservation(session, run.id)
+# Terminal statuses that startup recovery must never rewrite.
+_STARTUP_PRESERVE_TERMINAL_STATUSES = frozenset(
+    {
+        "succeeded",
+        "failed",
+        "failed_provider",
+        "failed_structural",
+        "cancelled",
+        "review_cancelled",
+        "completed",
+    }
+)
+
+
+def mark_interrupted_runs_failed(session: Session) -> dict[str, int]:
+    """Sidecar startup recovery with Phase 1A staged-run compatibility.
+
+    Desktop single-instance semantics (Plan B): leftover worker-bound runs cannot
+    safely auto-resume after process exit — mark them interrupted/failed with
+    PROCESS_INTERRUPTED* and close leftover reservations.
+
+    A. Staged narrative runs (have analysis_run_stages):
+       running stages → interrupted; run → interrupted; checkpoints preserved;
+       not permanently failed; no automatic model re-invoke; reservations kept
+       for resume.
+
+    B. Legacy chapter / no-stage runs:
+       worker-bound / queued → failed + PROCESS_INTERRUPTED*; release reservations.
+
+    C. Orphan active reservations (run_id IS NULL or expired): release remaining.
+
+    Idempotent: second call does not re-mutate already-terminal recovered runs.
+    """
+    from app.db.models import AnalysisRunStage, CloudBudgetReservation
+    from app.narrative_core.enums import RunStatus, StageStatus
+    from app.services.budget_reservation import (
+        release_reservation,
+        release_run_reservation,
+    )
+
+    now = datetime.now(timezone.utc)
+    touched_failed_run_ids: list[int] = []
+    touched_interrupted_run_ids: list[int] = []
+    released_reservation_ids: list[int] = []
+
+    staged_with_running: set[int] = set(
+        session.scalars(
+            select(AnalysisRunStage.run_id).where(
+                AnalysisRunStage.status == StageStatus.RUNNING
+            )
+        ).all()
+    )
+    # Also treat any run that already has stage rows as staged for queued/running
+    # recovery when it is in the interrupt candidate set below.
+    staged_run_ids: set[int] = set(
+        session.scalars(select(AnalysisRunStage.run_id).distinct()).all()
+    )
+
+    active_statuses = _STARTUP_INTERRUPT_WORKER_STATUSES
+    candidates = list(
+        session.scalars(
+            select(AnalysisRun).where(
+                AnalysisRun.status.in_([*active_statuses, "queued"])
+            )
+        )
+    )
+
+    for run in candidates:
+        if run.status in _STARTUP_PRESERVE_TERMINAL_STATUSES:
+            continue
+        is_staged = run.id in staged_run_ids
+        has_running_stage = run.id in staged_with_running
+        if is_staged and (has_running_stage or run.status in active_statuses):
+            # Soft interrupt for phased runs — do not rewrite completed/pending stages.
+            for stage in session.scalars(
+                select(AnalysisRunStage).where(AnalysisRunStage.run_id == run.id)
+            ):
+                if stage.status == StageStatus.RUNNING:
+                    stage.status = StageStatus.INTERRUPTED
+                    stage.error_code = "PROCESS_INTERRUPTED"
+                    stage.error_message = "应用重启时阶段仍在运行"
+                    stage.completed_at = None
+            if run.status not in (
+                RunStatus.COMPLETED,
+                RunStatus.FAILED,
+                RunStatus.CANCELLED,
+            ):
+                run.status = RunStatus.INTERRUPTED
+                run.error_code = "PROCESS_INTERRUPTED"
+                run.error_message = "应用重启时任务仍在运行；阶段可 resume"
+                run.completed_at = None
+                touched_interrupted_run_ids.append(int(run.id))
+            continue
+
+        # Legacy / no-stage path — permanently fail worker-bound leftovers.
+        if run.status in active_statuses:
+            run.status = "failed"
+            run.error_code = "PROCESS_INTERRUPTED"
+            run.error_message = "应用重启时任务仍在运行"
+            run.completed_at = now
+            touched_failed_run_ids.append(int(run.id))
+        elif run.status == "queued":
+            run.status = "failed"
+            run.error_code = "PROCESS_INTERRUPTED_BEFORE_START"
+            run.error_message = "应用重启前任务仍在队列中，无法自动恢复"
+            run.completed_at = now
+            touched_failed_run_ids.append(int(run.id))
+
+    session.commit()
+
+    # Release only runs transitioned on this invocation (idempotent vs historical rows).
+    for run_id in touched_failed_run_ids:
+        before = list(
+            session.scalars(
+                select(CloudBudgetReservation.id).where(
+                    CloudBudgetReservation.run_id == run_id,
+                    CloudBudgetReservation.status == "active",
+                )
+            )
+        )
+        release_run_reservation(session, run_id)
+        released_reservation_ids.extend(int(x) for x in before)
+
+    # Orphan create-time reservations (run_id never attached) and expired actives.
+    orphan_or_expired = list(
+        session.scalars(
+            select(CloudBudgetReservation).where(
+                CloudBudgetReservation.status == "active",
+                or_(
+                    CloudBudgetReservation.run_id.is_(None),
+                    CloudBudgetReservation.expires_at <= now,
+                ),
+            )
+        )
+    )
+    for reservation in orphan_or_expired:
+        rid = int(reservation.id)
+        release_reservation(session, rid)
+        released_reservation_ids.append(rid)
+
+    # Reader Journey orphans: never auto-enqueue; mark interrupted/retryable only.
+    from app.services.reader_journey_recovery import recover_orphaned_reader_journeys
+
+    journey_stats = recover_orphaned_reader_journeys(session, force_startup=True)
+
+    return {
+        "failed_runs": len(touched_failed_run_ids),
+        "interrupted_runs": len(touched_interrupted_run_ids),
+        "released_reservations": len(released_reservation_ids),
+        "interrupted_journeys": int(journey_stats.get("interrupted_journeys", 0)),
+    }

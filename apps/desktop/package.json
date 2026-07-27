@@ -1,11 +1,11 @@
 {
   "name": "storylens-desktop",
   "private": true,
-  "version": "1.0.3",
+  "version": "1.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && node scripts/write-dist-build-meta.mjs",
     "typecheck": "tsc -b --pretty false",
     "typecheck:e2e": "tsc -p tsconfig.e2e.json --pretty false",
     "lint": "eslint src --max-warnings 0",

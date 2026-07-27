@@ -1,0 +1,62 @@
+{
+  "id": "CHG-20260726-008",
+  "title": "Add development-only chapter analysis smoke transport",
+  "type": "improvement",
+  "base_version": "1.0.5",
+  "status": "tested",
+  "include_in_next_release": true,
+  "commits": [
+    {
+      "sha": "13cc770b7cfc23a576e2f8f1c3d3292308bc1101",
+      "message": "test(chapter-analysis): add development smoke fake transport",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "apps/api",
+    "chapter_analysis",
+    "model_gateway",
+    "provider_eligibility"
+  ],
+  "files": [
+    "apps/api/app/services/chapter_analysis_smoke_fake_transport.py",
+    "apps/api/app/model_gateway/providers/openai_compatible.py",
+    "apps/api/app/services/provider_eligibility.py",
+    "apps/api/tests/test_chapter_analysis_smoke_fake_transport.py"
+  ],
+  "user_summary": "为本地门禁增加仅开发环境可用的单章分析 Smoke Fake Transport，正式包默认关闭。",
+  "technical_summary": "STORYLENS_CHAPTER_ANALYSIS_SMOKE_FAKE replaces Provider Transport only; rejects packaged/production; synthesizes boundary v3.5, scene analysis, reader journey v2; fail inject via STORYLENS_CHAPTER_ANALYSIS_SMOKE_FAKE_FAIL.",
+  "acceptance_criteria": [
+    "Fake default off",
+    "Production/frozen rejects Fake",
+    "Create Run → Task Center → succeed without real Provider",
+    "Reader Journey contract 2.0 validates",
+    "Failure inject → failed_provider + 重新分析 + retry",
+    "Does not replace Native Overview Fake"
+  ],
+  "tests": [
+    "pytest apps/api/tests/test_chapter_analysis_smoke_fake_transport.py: 7 passed",
+    "local Book Workspace UI gate on :1421/:18000"
+  ],
+  "verification_evidence": [
+    "release/evidence/CHG-20260726-008/chapter-analysis-smoke-fake.md",
+    "release/evidence/CHG-20260726-006/local-runtime-gate-before-rc5.md"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "No schema/migration; Fake is env-gated transport only."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-26T13:06:00Z",
+  "updated_at": "2026-07-26T13:37:26Z"
+}

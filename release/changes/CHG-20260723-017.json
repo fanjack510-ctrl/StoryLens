@@ -1,0 +1,93 @@
+{
+  "id": "CHG-20260723-017",
+  "title": "Agent D: Narrative Entity / Alias",
+  "type": "database",
+  "base_version": "1.0.5",
+  "status": "verified",
+  "include_in_next_release": true,
+  "commits": [
+    {
+      "sha": "b7bab58584e3ab082536f31f4484c53d8a9ac025",
+      "message": "feat: implement narrative entities and aliases",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "narrative_core"
+  ],
+  "files": [
+    "apps/api/app/narrative_core/migrations/runner.py",
+    "apps/api/app/narrative_core/errors.py",
+    "apps/api/app/narrative_core/services/__init__.py",
+    "apps/api/app/narrative_core/services/entity_repository.py",
+    "apps/api/app/narrative_core/services/entity_service.py",
+    "apps/api/tests/test_narrative_entity_alias.py",
+    "docs/architecture/narrative-intelligence-core/phase1b-entity-alias-implementation.md",
+    "docs/architecture/narrative-intelligence-core/phase1b-entity-alias-verification.md",
+    "docs/architecture/narrative-intelligence-core/phase1b-entity-merge-boundary.md",
+    "release/changes/CHG-20260723-017.json"
+  ],
+  "user_summary": "Implement Entity and Alias repository/service and migration 006.",
+  "technical_summary": "Migration 006 + Entity/Alias service; Integration adds superseded_by_entity_id and merge_entities.",
+  "acceptance_criteria": [
+    "Fork from feature/narrative-phase1b-contract final HEAD",
+    "Do not modify models.py table structures",
+    "Stay within file ownership JSON",
+    "Migration 006 idempotent with checksum ledger",
+    "Alias ambiguity never silently picks first entity",
+    "merge_entities unsupported or schema-safe"
+  ],
+  "tests": [
+    "apps/api/tests/test_narrative_entity_alias.py"
+  ],
+  "verification_evidence": [
+    "pytest apps/api/tests/test_narrative_entity_alias.py -q (20 passed)",
+    "python scripts/version_manager.py check",
+    "python scripts/change_registry.py check",
+    "git diff --check",
+    "docs/architecture/narrative-intelligence-core/phase1b-entity-alias-verification.md",
+    "Agent D source SHA a68e828 (feature/narrative-phase1b-entities); Integration cherry-pick b7bab58."
+  ],
+  "data_compatibility": {
+    "database_changed": true,
+    "migration_required": true,
+    "user_data_compatible": true,
+    "notes": "Adds narrative_entities / narrative_entity_aliases via migration 20260723_006; no historical backfill; old Phase 1A DBs upgrade idempotently."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-23T08:33:16Z",
+  "updated_at": "2026-07-23T11:46:11Z",
+  "parallel_plan": {
+    "role": "agent_d",
+    "branch": "feature/narrative-phase1b-entities",
+    "worktree": "D:\\\\Dstorylens-wt-narrative-entities",
+    "depends_on": [
+      "CHG-20260723-016"
+    ],
+    "blocks": [
+      "CHG-20260723-020"
+    ],
+    "forbidden": [
+      "models.py schema edits",
+      "VERSION bump",
+      "push/publish",
+      "Pattern product route"
+    ],
+    "file_ownership": "docs/architecture/narrative-intelligence-core/phase1b-parallel-file-ownership.json",
+    "migration_scope": "006"
+  },
+  "integration_issues": [
+    "II-ENTITY-001 RESOLVED superseded_by_entity_id + merge_entities",
+    "II-ENTITY-002 RESOLVED additive error codes reviewed in Integration",
+    "II-ENTITY-003 RESOLVED casefold normalization",
+    "II-ENTITY-004 RESOLVED Protocol surface synced"
+  ]
+}

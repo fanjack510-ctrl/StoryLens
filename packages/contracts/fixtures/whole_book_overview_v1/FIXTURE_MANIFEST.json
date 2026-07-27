@@ -1,0 +1,22 @@
+{
+  "fixture_set": "whole_book_overview_v1",
+  "contract_version": "1.0",
+  "combined_sha256": "ecf419c6e79bcc4fc899b116e9e5b7c9b8810de9cba70fec9d0f61282f635d55",
+  "files": {
+    "create_run_request.json": "ef337eb15c3e93442370644affeb04fe07f72b28e8962a476e364bca201b7904",
+    "create_run_response.json": "35305c12896aa4ea5e7fafcad3774942efaacfac200f41935e95b6bc6501a133",
+    "error_cases.json": "c9485ca5b2cdc1ef17d6d2917abb8ca862fb696ebc890775296fd20d855abd3f",
+    "invalid_evidence.json": "75ab9d0db4f2101adc74472bd5caf765eb09902a12d0f1dcf6377ef08d79dc13",
+    "overview_api_response.json": "ca1c691522e38ac936946a1f0329a6b5e58b6f5f6bea7263570aaa4750dd4521",
+    "preflight_response.json": "f6b19a8f541ea2849b7136ee830c7e6a185e6c653bffcf56d61e84827be01fe9",
+    "projection_candidate.json": "b71ec5e762b0691682b1143db6b0ff180377db8362e10273429479aad2aabd7c",
+    "resume_run_request.json": "20f3d294cf226e186cc18312090aa0472a4a5f4f5a3acfb76579912ef3207773",
+    "retry_run_request.json": "da75e7a1cb57c08a7a2be4aaaafdb8891c19096fa8a6c737f36e9e5757dd5f49",
+    "retry_run_response.json": "9982a311fc4964994ec0f68f1271a2e89bafdbeb28fb7a37884e6b68bcfce286",
+    "run_status_analyzing.json": "e9b3536fbc2b29576630aa8b3d7c6ce606c5de61222a924ccacf6db893f48ae3",
+    "run_status_failed.json": "450830a247cef872805ba9580aa3db8a6d83f39d84d41185d8d6d0bc3ef647f7",
+    "synthesis_input.json": "42b566f756c1197199901782b45014b5519066881cecd1499fac2a8ecb094401",
+    "window_input.json": "68297c52ec7e3943256e283082583ae2a00c106caab9a7f400a0e06a4656106f",
+    "window_result.json": "dbc77ef2e893ddf2b4cbf56808bafd994eb853fc9c9e22388ce37948df169d82"
+  }
+}

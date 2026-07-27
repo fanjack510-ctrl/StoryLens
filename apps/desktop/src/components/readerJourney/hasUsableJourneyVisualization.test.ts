@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { hasUsableJourneyVisualization } from "./hasUsableJourneyVisualization";
+import {
+  hasChartSafeJourneyNodes,
+  hasUsableJourneyVisualization,
+  isChartEligibleNode,
+} from "./hasUsableJourneyVisualization";
 import type { ReaderJourneyVisualization } from "../../types/readerJourneyVisualization";
 
 function viz(
@@ -12,7 +16,13 @@ function viz(
     curve_series: {
       engagement: [{ scene_ordinal: 1, value: 50 }],
     } as ReaderJourneyVisualization["curve_series"],
-    scene_nodes: [{ scene_ordinal: 1 } as ReaderJourneyVisualization["scene_nodes"][number]],
+    scene_nodes: [
+      {
+        scene_ordinal: 1,
+        scores: { reading_momentum: 1, plot_progress: 1 },
+        engagement: { engagement_score: 1 },
+      } as ReaderJourneyVisualization["scene_nodes"][number],
+    ],
     role_counts: { core: 0, secondary: 0, beat: 0 },
     primary_question_chain: null,
     phase_question_chains: [],
@@ -65,5 +75,50 @@ describe("hasUsableJourneyVisualization", () => {
     expect(
       hasUsableJourneyVisualization({ status: "succeeded", visualization: viz() }),
     ).toBe(true);
+  });
+});
+
+describe("isChartEligibleNode / hasChartSafeJourneyNodes", () => {
+  it("treats phase_summary without scores as non-chart, not pollution", () => {
+    expect(
+      isChartEligibleNode({
+        scene_ordinal: 1,
+        node_type: "phase_summary",
+      }),
+    ).toBe(false);
+    expect(
+      hasChartSafeJourneyNodes({
+        status: "succeeded",
+        visualization: viz({
+          scene_nodes: [
+            {
+              scene_ordinal: 1,
+              node_type: "phase_summary",
+            } as unknown as ReaderJourneyVisualization["scene_nodes"][number],
+            {
+              scene_ordinal: 2,
+              scores: { reading_momentum: 2 },
+              engagement: { engagement_score: 2 },
+            } as unknown as ReaderJourneyVisualization["scene_nodes"][number],
+          ],
+        }),
+      }),
+    ).toBe(true);
+  });
+
+  it("rejects integrity-blocked chart nodes as ineligible", () => {
+    expect(
+      isChartEligibleNode({
+        scene_ordinal: 1,
+        integrity_blocked: true,
+        scores: { reading_momentum: 1 },
+      }),
+    ).toBe(false);
+  });
+
+  it("accepts scene nodes with scores", () => {
+    expect(hasChartSafeJourneyNodes({ status: "succeeded", visualization: viz() })).toBe(
+      true,
+    );
   });
 });

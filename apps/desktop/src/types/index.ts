@@ -245,6 +245,8 @@ export type ReaderJourneyResult = {
   analysis_run_id: number;
   status: string;
   formula_version: string;
+  scene_contract_version?: string | null;
+  scene_prompt_version?: string | null;
   visualization?: ReaderJourneyVisualization | null;
   phases: {
     ordinal: number;
@@ -297,6 +299,9 @@ export type SceneParagraphs = {
 export type Run = {
   id: number;
   subject_id: string;
+  subject_type?: string;
+  task_type?: string;
+  book_id?: number | null;
   provider: string;
   model: string;
   status: string;
@@ -353,6 +358,20 @@ export type Run = {
   scene_analysis_max_http_attempts?: number;
   completed_scene_ids?: number[];
   remaining_scene_ids?: number[];
+  chapter_complete?: boolean;
+  scene_pipeline_complete?: boolean;
+  effective_status?: string | null;
+  checkpoint_stage?: string | null;
+  resume_stage?: string | null;
+  journey_run_id?: number | null;
+  journey_status?: string | null;
+  journey_completed_scene_count?: number | null;
+  journey_total_scene_count?: number | null;
+  journey_retryable?: boolean | null;
+  journey_result_available?: boolean;
+  journey_error_code?: string | null;
+  primary_action?: string | null;
+  run_started_at?: string;
   scene_validation_detail?: {
     validation_error_message?: string;
     categories?: string[];

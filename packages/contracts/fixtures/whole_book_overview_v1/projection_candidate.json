@@ -1,0 +1,102 @@
+{
+  "central_question": {
+    "confidence": 0.55,
+    "evidence_refs": [
+      "ev-1"
+    ],
+    "status": "low_confidence",
+    "value": "钟声从何处传来？"
+  },
+  "climax": {
+    "confidence": 0.0,
+    "evidence_refs": [],
+    "status": "insufficient_evidence",
+    "value": null
+  },
+  "contract_version": "1.0",
+  "core_setting": {
+    "confidence": 0.6,
+    "evidence_refs": [
+      "ev-1"
+    ],
+    "status": "supported",
+    "value": "现代城市雨夜"
+  },
+  "ending_state": {
+    "confidence": 0.0,
+    "evidence_refs": [],
+    "status": "insufficient_evidence",
+    "value": null
+  },
+  "key_turning_points": {
+    "confidence": 0.0,
+    "evidence_refs": [],
+    "status": "insufficient_evidence",
+    "value": []
+  },
+  "logline": {
+    "confidence": 0.6,
+    "evidence_refs": [
+      "ev-1"
+    ],
+    "status": "supported",
+    "value": "雨巷中，林远循着钟声寻找真相。"
+  },
+  "narrative_features": {
+    "confidence": 0.65,
+    "evidence_refs": [
+      "ev-1"
+    ],
+    "status": "low_confidence",
+    "value": [
+      "雨巷意象",
+      "钟声悬念"
+    ]
+  },
+  "novel_type": {
+    "confidence": 0.7,
+    "evidence_refs": [
+      "ev-1"
+    ],
+    "status": "supported",
+    "value": "都市悬疑"
+  },
+  "primary_conflict": {
+    "confidence": 0.0,
+    "evidence_refs": [],
+    "status": "insufficient_evidence",
+    "value": null
+  },
+  "protagonist": {
+    "confidence": 0.9,
+    "evidence_refs": [
+      "ev-1"
+    ],
+    "status": "supported",
+    "value": "林远"
+  },
+  "protagonist_core_goal": {
+    "confidence": 0.7,
+    "evidence_refs": [
+      "ev-1"
+    ],
+    "status": "supported",
+    "value": "寻找钟声来源"
+  },
+  "resolved_problem": {
+    "confidence": 0.0,
+    "evidence_refs": [],
+    "status": "insufficient_evidence",
+    "value": null
+  },
+  "run_id": "101",
+  "synopsis": {
+    "confidence": 0.6,
+    "evidence_refs": [
+      "ev-1"
+    ],
+    "status": "supported",
+    "value": "林远走进雨巷，听见远处钟声，开始追寻来源。"
+  },
+  "warnings": []
+}

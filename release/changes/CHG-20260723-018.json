@@ -1,0 +1,91 @@
+{
+  "id": "CHG-20260723-018",
+  "title": "Agent E: Narrative Asset / Version / Evidence",
+  "type": "feature",
+  "base_version": "1.0.5",
+  "status": "verified",
+  "include_in_next_release": true,
+  "commits": [
+    {
+      "sha": "ddce64872f5529fa5a3877f35a24ce430fcbe3cc",
+      "message": "feat: implement narrative assets and evidence",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "narrative_core"
+  ],
+  "files": [
+    "apps/api/app/narrative_core/services/asset_repository.py",
+    "apps/api/app/narrative_core/services/asset_service.py",
+    "apps/api/app/narrative_core/services/asset_evidence_service.py",
+    "apps/api/app/narrative_core/services/__init__.py",
+    "apps/api/app/narrative_core/migrations/runner.py",
+    "apps/api/tests/test_narrative_asset_service.py",
+    "apps/api/tests/test_narrative_asset_evidence.py",
+    "docs/architecture/narrative-intelligence-core/phase1b-asset-version-implementation.md",
+    "docs/architecture/narrative-intelligence-core/phase1b-asset-evidence-implementation.md",
+    "docs/architecture/narrative-intelligence-core/phase1b-asset-verification.md",
+    "docs/architecture/narrative-intelligence-core/phase1b-asset-key-boundary.md",
+    "release/changes/CHG-20260723-018.json"
+  ],
+  "user_summary": "Implement Asset versioning, lock, and Snapshot-bound evidence validation.",
+  "technical_summary": "Agent E implements NarrativeAssetRepository/Service/EvidenceService; refines migrations 007-008; Integration wires Conflict Sink and canonical support-evidence gates.",
+  "acceptance_criteria": [
+    "Fork from feature/narrative-phase1b-contract final HEAD",
+    "Do not modify models.py table structures",
+    "Stay within file ownership JSON",
+    "Migrations 007/008 idempotent with stable checksum",
+    "Candidate never auto-canonical; confirmed/corrected may switch; rejected may not",
+    "At most one canonical version per asset (transaction + partial unique index)",
+    "Locked asset blocks model canonical switch but allows candidates",
+    "Evidence validated via Phase 1A Snapshot gateway only"
+  ],
+  "tests": [
+    "apps/api/tests/test_narrative_asset_service.py",
+    "apps/api/tests/test_narrative_asset_evidence.py"
+  ],
+  "verification_evidence": [
+    "pytest apps/api/tests/test_narrative_asset_service.py apps/api/tests/test_narrative_asset_evidence.py — 24 passed",
+    "scripts/version_manager.py check",
+    "scripts/change_registry.py check",
+    "git diff --check",
+    "Agent E source SHA 92854a1 (feature/narrative-phase1b-assets); Integration cherry-pick ddce648."
+  ],
+  "data_compatibility": {
+    "database_changed": true,
+    "migration_required": true,
+    "user_data_compatible": true,
+    "notes": "Additive tables narrative_assets / narrative_asset_versions / narrative_asset_evidence via migrations 007-008. No historical JSON backfill. Old DBs upgrade idempotently."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-23T08:33:16Z",
+  "updated_at": "2026-07-23T11:46:11Z",
+  "parallel_plan": {
+    "role": "agent_e",
+    "branch": "feature/narrative-phase1b-assets",
+    "worktree": "D:\\\\Dstorylens-wt-narrative-assets",
+    "depends_on": [
+      "CHG-20260723-016"
+    ],
+    "blocks": [
+      "CHG-20260723-020"
+    ],
+    "forbidden": [
+      "models.py schema edits",
+      "VERSION bump",
+      "push/publish",
+      "Pattern product route"
+    ],
+    "file_ownership": "docs/architecture/narrative-intelligence-core/phase1b-parallel-file-ownership.json",
+    "migration_scope": "007-008"
+  }
+}

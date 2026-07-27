@@ -1,0 +1,147 @@
+{
+  "id": "CHG-20260725-001",
+  "title": "Structure Stages V2 Contract and Product Closure",
+  "type": "feature",
+  "base_version": "1.0.5",
+  "status": "tested",
+  "include_in_next_release": true,
+  "commits": [
+    {
+      "sha": "b0879a3c4f97844b86f47a86be58cb6ae2fb5131",
+      "message": "feat: add Structure Stages V2 product DTOs and output contract",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "5a12352408d8a984d429e9efd76aceb1b220f29a",
+      "message": "feat: wire Structure Stages V2 lab path through persistence and Result API",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "713e510d3969086f04647e6a0a22579f0761f995",
+      "message": "test: add Structure Stages V2 FakeHttp product scenarios A-J",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "495f88699ce433ef1bca711ffbb965969dee6d55",
+      "message": "docs: attach Structure Stages V2 Public commits to CHG-20260725-001",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "62a8141e925c194ba4452872e407757cc7520267",
+      "message": "docs: include registry attach SHA for CHG-20260725-001",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "04a02919c72a0e9b736b3c05aa5a4393c1b44b9c",
+      "message": "docs: fix CHG-20260725-001 commit list ancestry",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "bb1dc26038364fea3d9876a177de4b42d52dcd94",
+      "message": "docs: mark CHG-20260725-001 tested after Structure Stages V2 Integration",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "ac9633905aab140bcfd29c527d4c171b21a5d449",
+      "message": "docs: advance CHG-20260725-001 registered to tested",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "439698cd0d6a7fe06c382360fb1fbcfe4a3bb94a",
+      "message": "docs: retarget CHG-20260725-001 commits to Integration SHAs",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "6b8e81ffc50cdebe101e8cd92b0b017666ba1611",
+      "message": "docs: attach Integration tip to CHG-20260725-001",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "98aababe549e12d34f02c42c7f88ec2b817af3f9",
+      "message": "docs: finalize CHG-20260725-001 Integration tip attach",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "fae210c407cccf2f02f27b88dcd36f52252a5d25",
+      "message": "docs: attach final Integration tip to CHG-20260725-001",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "622e589ef774819ee05cd1236e6d5d831d8378d6",
+      "message": "fix: materialize Structure Stages Citation Catalog at Estimate",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "c3bc77e774340bd92a0282f3e873885fd40ca678",
+      "message": "docs: record Structure Stages Catalog Estimate gap closure on CHG-001",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "apps/api/narrative_core",
+    "storylens_private_engine/structure"
+  ],
+  "files": [],
+  "user_summary": "Freeze Structure Stages V2 contract; Private/Public implementation; FakeHttp product path; failure matrix; Integration; Dry Live candidate prep. No real Provider Live Create.",
+  "technical_summary": "StructureStagesResultV2 parallel stages/turning_points; Structure FieldRequirementPolicy; Structure ContextCapabilities; Citation Catalog V2 reuse; Targeted Repair max1; Mapper formal keys; Output Ref registry; STRUCTURE_STAGE Asset+Artifact; V1 read-only; FakeHttp product A-J; Integration; Dry Live candidate. No real Live Create.",
+  "acceptance_criteria": [
+    "Private V2 DTO/Schema/Policy/Capabilities/Citation/Repair/Mapper/Attempts/no-fallback",
+    "Public product scenarios A-J via FakeHttpRouter path",
+    "book_overview regression unchanged",
+    "gates pass; Dry Health/Preflight/Estimate only; Provider HTTP=0",
+    "Change status tested max; include_in_next_release=true"
+  ],
+  "tests": [
+    "apps/api/tests/test_narrative_phase2br1_structure_stages_v2_http_replay.py (A-J FakeHttp)",
+    "apps/api/tests/test_narrative_phase2br1_citation_v2_http_replay.py::test_citation_v2_scenario_a_valid_no_repair",
+    "apps/api/tests/test_narrative_phase2br1_structure_stages_v2_http_replay.py::A-J",
+    "private:tests/test_structure_stages_result_v2_schema.py",
+    "apps/api/tests/test_narrative_phase2br1_structure_stages_catalog_estimate.py"
+  ],
+  "verification_evidence": [
+    "FakeHttp A-J green; book_overview scenario A regression green; gates check_project/version/change_registry/capability/public_provider/live_citation_v2/diff-check pass; no real Provider",
+    "public_scenarios_A_J=13passed",
+    "private_directed=48passed",
+    "gates=all_passed",
+    "dry_db=data/runtime/live-smoke/storylens-live-smoke-structure-stages-20260725-120747.db",
+    "dry_summary=data/runtime/live-smoke/structure-stages-dry-summary.json",
+    "dry_provider_http=0",
+    "dry_create_not_executed=true",
+    "integration_public_head=ac9633905aab140bcfd29c527d4c171b21a5d449",
+    "integration_private_head=5dabfd5eb0d08e03d4fff6adb5d845a16811a39f",
+    "catalog_gap_closure=Estimate_materializes_structure_stages_catalog",
+    "catalog_estimate_tests=5passed",
+    "structure_A_J_regression=13passed",
+    "integration_public_head=622e589ef774819ee05cd1236e6d5d831d8378d6"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-25T02:35:55Z",
+  "updated_at": "2026-07-25T04:34:03Z"
+}

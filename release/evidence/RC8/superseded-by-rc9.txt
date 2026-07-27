@@ -1,0 +1,10 @@
+RC8 STATUS: BLOCKED / SUPERSEDED BY RC9
+
+Reason: RC8 acceptance found Journey progress page could show
+"阅读旅程生成失败" while Journey was still running or already completed
+(CHG-20260727-020). RC9 includes that fix and replaces RC8 as the
+install-acceptance candidate.
+
+CHG-018 (stable 1.1.0): remains BLOCKED pending RC9 acceptance.
+CHG-019: verified (unchanged).
+CHG-020: verified via zero-cost + fixture evidence for RC9 gate.

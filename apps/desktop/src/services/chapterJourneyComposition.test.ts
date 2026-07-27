@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  isChapterAnalysisComplete,
+  isChapterAnalysisInFlight,
   isSceneAnalysisComplete,
   mapChapterCompositionState,
+  resolveChapterWorkspaceView,
 } from "./chapterJourneyComposition";
 import type { Run } from "../types";
 
@@ -75,15 +78,117 @@ describe("mapChapterCompositionState", () => {
       }),
     ).toBe("awaiting_reader_journey_start");
   });
+
+  it("prefers parent journey_running over stale failed journey GET", () => {
+    expect(
+      mapChapterCompositionState(
+        run({
+          id: 5,
+          effective_status: "journey_running",
+          journey_status: "scene_profiles_running",
+          journey_run_id: 42,
+        }),
+        {
+          status: "failed",
+          journey_run_id: 9,
+        },
+      ),
+    ).toBe("reader_journey_processing");
+  });
 });
 
 describe("isSceneAnalysisComplete", () => {
-  it("requires succeeded + scene counts", () => {
-    expect(isSceneAnalysisComplete(run({ id: 5 }))).toBe(true);
+  it("requires scene counts when status succeeded", () => {
     expect(
       isSceneAnalysisComplete(
-        run({ id: 5, status: "scene_analysis_running", completed_scene_count: 12 }),
+        run({ id: 1, completed_scene_count: 13, total_scene_count: 13 }),
       ),
-    ).toBe(false);
+    ).toBe(true);
+  });
+});
+
+describe("chapter completeness helpers", () => {
+  it("treats scene artifact alone as incomplete chapter", () => {
+    const r = run({ id: 1, chapter_complete: false, status: "succeeded" });
+    expect(isChapterAnalysisComplete(r)).toBe(false);
+    expect(isChapterAnalysisInFlight(r, "awaiting_reader_journey_start")).toBe(true);
+    expect(isChapterAnalysisInFlight(r, "reader_journey_processing")).toBe(true);
+  });
+
+  it("completes only when chapter_complete is true", () => {
+    const r = run({ id: 1, chapter_complete: true, status: "succeeded" });
+    expect(isChapterAnalysisComplete(r)).toBe(true);
+    expect(isChapterAnalysisInFlight(r, "succeeded")).toBe(false);
+  });
+});
+
+describe("resolveChapterWorkspaceView", () => {
+  it("does not auto-open result while in flight even if Scene exists", () => {
+    expect(
+      resolveChapterWorkspaceView({
+        requestedView: null,
+        userPinnedView: null,
+        chapterComplete: false,
+        inFlight: true,
+        composition: "awaiting_reader_journey_start",
+      }),
+    ).toBe("progress");
+  });
+
+  it("rewrites stale view=result to progress unless user pinned result", () => {
+    expect(
+      resolveChapterWorkspaceView({
+        requestedView: "result",
+        userPinnedView: null,
+        chapterComplete: false,
+        inFlight: true,
+        composition: "reader_journey_processing",
+      }),
+    ).toBe("progress");
+    expect(
+      resolveChapterWorkspaceView({
+        requestedView: "result",
+        userPinnedView: "result",
+        chapterComplete: false,
+        inFlight: true,
+        composition: "reader_journey_processing",
+      }),
+    ).toBe("result");
+  });
+
+  it("allows complete chapter result view", () => {
+    expect(
+      resolveChapterWorkspaceView({
+        requestedView: "result",
+        userPinnedView: null,
+        chapterComplete: true,
+        inFlight: false,
+        composition: "succeeded",
+      }),
+    ).toBe("result");
+  });
+
+  it("honors user reading pin over system complete default", () => {
+    expect(
+      resolveChapterWorkspaceView({
+        requestedView: null,
+        userPinnedView: "reading",
+        chapterComplete: true,
+        inFlight: false,
+        composition: "succeeded",
+      }),
+    ).toBe("reading");
+  });
+
+  it("does not auto-open result for historical chapter_complete", () => {
+    expect(
+      resolveChapterWorkspaceView({
+        requestedView: null,
+        userPinnedView: null,
+        chapterComplete: true,
+        inFlight: false,
+        composition: "succeeded",
+      }),
+    ).toBe("reading");
   });
 });

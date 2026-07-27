@@ -1,0 +1,22 @@
+{
+  "id": "fake-http-v2-stale-1",
+  "object": "chat.completion",
+  "model": "qwen3.7-plus",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\"contract_version\": \"v2\", \"logline\": {\"value\": \"过期束引用的合成总览\", \"status\": \"observed\", \"citation_ids\": [\"CIT-AAAAAAAA-0001\"], \"confidence\": 0.8}, \"premise\": {\"value\": \"过期束引用的合成前提\", \"status\": \"observed\", \"citation_ids\": [\"CIT-AAAAAAAA-0001\"], \"confidence\": 0.78}, \"central_question\": {\"value\": \"过期束引用的合成问题？\", \"status\": \"observed\", \"citation_ids\": [\"CIT-AAAAAAAA-0001\"], \"confidence\": 0.76}, \"primary_conflict\": {\"value\": \"过期束引用的合成冲突\", \"status\": \"observed\", \"citation_ids\": [\"CIT-AAAAAAAA-0001\"], \"confidence\": 0.77}, \"structure_summary\": {\"value\": \"过期束引用的合成结构\", \"status\": \"observed\", \"citation_ids\": [\"CIT-AAAAAAAA-0001\"], \"confidence\": 0.75}, \"ending_state\": {\"value\": \"过期束引用的合成结局\", \"status\": \"inferred\", \"citation_ids\": [\"CIT-AAAAAAAA-0001\"], \"confidence\": 0.7}, \"overall_confidence\": 0.76}"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 5125,
+    "completion_tokens": 420,
+    "total_tokens": 5545
+  },
+  "http_status": 200,
+  "request_id": "fake-http-v2-stale-1"
+}

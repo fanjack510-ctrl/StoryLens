@@ -1,0 +1,82 @@
+{
+  "id": "CHG-20260726-012",
+  "title": "Extend Native Overview live provider timeout to 180s",
+  "type": "fix",
+  "base_version": "1.0.5",
+  "status": "tested",
+  "include_in_next_release": true,
+  "commits": [
+    {
+      "sha": "421fabab6def4cd08759b186ba2e2745f87ea6b2",
+      "message": "fix(native-overview): extend live provider timeout",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "9c63544123fed42c65e834e6d4412f68dba07fd8",
+      "message": "docs(release): mark CHG-20260726-012 tested after timeout fix",
+      "primary": true,
+      "multi_change_reason": "registry status update after implementation commit"
+    },
+    {
+      "sha": "ba6c0ace309773ce1477cfa3e36d62258aab4c25",
+      "message": "docs(release): attach docs commit to CHG-20260726-012",
+      "primary": true,
+      "multi_change_reason": "registry attach-commit metadata sync"
+    },
+    {
+      "sha": "20b9a2c3b9be2436bd20b6d20e3b16d250d1b6d6",
+      "message": "docs(evidence): add redacted CHG-012/e2e proofs for RC6 gate",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "09051ca695875c4535be93b5aa3c6382ed16b642",
+      "message": "docs(release): attach evidence commit to CHG-20260726-012",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "133760d44502b0a2f59ea6ff25f594605b30def4",
+      "message": "docs(release): sync CHG-20260726-012 attach-commit metadata",
+      "primary": true,
+      "multi_change_reason": "registry attach-commit metadata sync"
+    }
+  ],
+  "modules": [
+    "apps/api"
+  ],
+  "files": [
+    "apps/api/app/narrative_core/services/native_overview_live_transport.py",
+    "apps/api/tests/test_native_overview_live_timeout_local.py"
+  ],
+  "user_summary": "将 Native Overview Live Transport 默认超时从 90 秒提高到 180 秒，降低长输出窗口 ReadTimeout。",
+  "technical_summary": "Raise AliyunNativeOverviewTransport.timeout_seconds 90→180 only; httpx connect stays 30; max_auto_retries and max_output_tokens unchanged.",
+  "acceptance_criteria": [
+    "Native timeout_seconds=180; httpx connect=30 read/write=180 pool=30; explicit 60 override works; other feature timeouts unchanged; W3 single-window Live script ready"
+  ],
+  "tests": [
+    "apps/api/tests/test_native_overview_live_timeout_local.py (5 passed)"
+  ],
+  "verification_evidence": [
+    "release/evidence/CHG-20260726-012/part-a-parameter-check.json",
+    "release/evidence/CHG-20260726-012/w3-fingerprint.json",
+    "release/evidence/CHG-20260726-012/verify-timeout-window-once.ps1"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-26T15:34:12Z",
+  "updated_at": "2026-07-26T16:35:50Z"
+}

@@ -258,10 +258,12 @@ def test_all_hooks_remain_on_scene_nodes(client):
             item = _item(data)
             _persist_profile(session, journey, item, paragraphs_by_id=by_id, genre="suspense")
         session.commit()
-        run_id = run.id
+        journey_id = journey.id
 
-    resp = client.get(f"/api/v1/analysis-runs/{run_id}/reader-journey")
-    viz = resp.json()["visualization"]
+    with factory() as session:
+        journey = session.get(ReaderJourneyRun, journey_id)
+        viz = build_reader_journey_visualization(session, journey)
+    assert viz is not None
     total_hooks = sum(len(node["hooks"]) for node in viz["scene_nodes"])
     assert total_hooks >= viz["all_hook_count"]
     assert viz["all_hook_count"] > viz["visible_hook_count"]

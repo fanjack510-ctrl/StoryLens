@@ -1,0 +1,106 @@
+{
+  "id": "CHG-20260726-004",
+  "title": "Make Native Whole-Book Overview Free in StoryLens 1.1.x",
+  "type": "improvement",
+  "base_version": "1.0.5",
+  "status": "tested",
+  "include_in_next_release": true,
+  "commits": [
+    {
+      "sha": "6382f0cc171a20a352acd948d7bf8086ef94938f",
+      "message": "docs(release): reposition native overview as free in 1.1.x",
+      "primary": true,
+      "multi_change_reason": "STEP 2.5R governance docs"
+    },
+    {
+      "sha": "0d52a16cbba5746ef4bb87b5e42da876364acb68",
+      "message": "fix(entitlement): allow free native whole-book overview",
+      "primary": true,
+      "multi_change_reason": "STEP 2.5R backend entitlement"
+    },
+    {
+      "sha": "93129e5d3207a59d73392cc6c94ec42fb8037471",
+      "message": "fix(product): remove Pro paywall from native overview",
+      "primary": true,
+      "multi_change_reason": "STEP 2.5R frontend product"
+    },
+    {
+      "sha": "51d034cb0c22c68ebf730a8605565a57eeb8a923",
+      "message": "docs(test): amend free and Windows gates for native overview",
+      "primary": false,
+      "multi_change_reason": "STEP 2.5R gate amendments + G6 supplement"
+    },
+    {
+      "sha": "bfb42ef72f00f8b19afa03b602e1ce36a8f76f8a",
+      "message": "docs: mark CHG-20260726-004 implemented with STEP 2.5R evidence",
+      "primary": false,
+      "multi_change_reason": "STEP 2.5R registry mark"
+    },
+    {
+      "sha": "b6c690361a3be167f813b1f52bfe3ae84c93cf5f",
+      "message": "docs(evidence): stamp CHG-004 heads on G6 free entitlement supplement",
+      "primary": false,
+      "multi_change_reason": "STEP 2.5R supplement HEAD stamp"
+    },
+    {
+      "sha": "a73bf703d37d2ff8aaac8b986b0131b2b227e872",
+      "message": "build(windows): add local 1.1.0-rc.1 RC candidate packaging path",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "93c2ec9754b2df800e72792581e75189ef0c6b6b",
+      "message": "fix(windows): wire Private native overview for 1.1.0-rc.1 G7",
+      "primary": true,
+      "multi_change_reason": "STEP 2.G7 Private HTTP default + Windows RC"
+    },
+    {
+      "sha": "9c1578014491699ec52f10ae4c274f74c3ca3c77",
+      "message": "fix(ui): expose Free native overview entry on RC builds",
+      "primary": true,
+      "multi_change_reason": "STEP 2.8-FIX-1 native overview entry"
+    }
+  ],
+  "modules": [],
+  "files": [],
+  "user_summary": "将原生全书概览在 1.1.x 调整为 Free；Private Engine 继续闭源；Pro 起点改为 1.2.0。CHG-003 负责技术实现，本 Change 只调整产品授权边界。",
+  "technical_summary": "CHG-20260725-003 owns Native Overview technical implementation. This change only repositions entitlement: Native Overview is FREE in 1.1.x; Private Engine remains closed-source; Pro product start is 1.2.0. API/Route/DTO/DB/Migration/Contract/Engine ID/Feature Flag key unchanged. Do not re-run STEP 2.G3-G5. STEP 2.6/2.7 must use amended Free entitlement gates.",
+  "acceptance_criteria": [
+    "Native Overview Free Allowed without Pro License",
+    "Feature Flag / Provider / Consent / Budget gates remain",
+    "Future Pro capabilities still gated",
+    "UI removes Pro paywall for Native Overview",
+    "Private Engine has no license dependency"
+  ],
+  "tests": [
+    "test_native_overview_free_entitlement + walking/flag/insights/license: 39 passed",
+    "desktop proNativeOverview+router+insights vitest: 24 passed; typecheck OK",
+    "private native_overview directed: 38 passed",
+    "STEP 2.G7 Free Windows Smoke: Private engine + Free entitlement on RC sidecar PASSED",
+    "STEP 2.8-FIX-1: proNativeOverview dual-entry routes + flag tests 27 passed; free entitlement 5 passed"
+  ],
+  "verification_evidence": [
+    "STEP 2.5R-GATE PASS; Free native entitlement; Private closed-source unchanged",
+    "release/evidence/CHG-20260726-004/gate-2g6-free-entitlement-supplement.md",
+    "ORIGINAL gate-2g6.md preserved under CHG-003 night-run",
+    "release/evidence/CHG-20260726-004/gate-2g7-free-windows-reference.md",
+    "release/evidence/CHG-20260725-003/night-run/gate-2g7.md",
+    "release/evidence/CHG-20260726-004/manual-acceptance/native-overview-entry-fix.md"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "No schema/API/DTO/contract changes; entitlement/UI/docs only."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-26T02:22:00Z",
+  "updated_at": "2026-07-26T04:02:14Z"
+}

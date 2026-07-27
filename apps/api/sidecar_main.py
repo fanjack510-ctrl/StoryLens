@@ -69,6 +69,8 @@ def main() -> int:
     try:
         from app.core.sidecar_control import set_uvicorn_server
 
+        # StoryLens does not use WebSocket (task progress is HTTP polling).
+        # Disable WS so a broken optional `websockets` install cannot block boot.
         config = uvicorn.Config(
             "app.main:app",
             host=host,
@@ -76,6 +78,7 @@ def main() -> int:
             log_level="info",
             access_log=False,
             log_config=None,
+            ws="none",
         )
         server = uvicorn.Server(config)
         set_uvicorn_server(server)

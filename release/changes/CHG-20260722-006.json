@@ -1,0 +1,65 @@
+{
+  "id": "CHG-20260722-006",
+  "title": "Seal StoryLens 1.0.4 release baseline",
+  "type": "build",
+  "base_version": "1.0.3",
+  "status": "released",
+  "include_in_next_release": false,
+  "commits": [
+    {
+      "sha": "889ce0494f54b89ace5e67d3ccbc09dcd101fc88",
+      "message": "Green Phase A release gates for 1.0.4 seal (CHG-20260722-006).",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "c39cd328ebe740902a1a50b55af6ced7ad767d9f",
+      "message": "Bump StoryLens to 1.0.4 after frozen change pool (CHG-20260722-006).",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "release",
+    "tests"
+  ],
+  "files": [
+    "apps/api/tests/conftest.py",
+    "apps/api/tests/test_local_web_production.py",
+    "scripts/change_registry.py",
+    "release/acceptance/1.0.4.md"
+  ],
+  "user_summary": "将当前已完成的 UI、流水线、完整性与 Pro 授权等改动固化为 StoryLens 1.0.4 正式基线。",
+  "technical_summary": "Seal 1.0.4: Phase A test isolation/contracts/lint/UI audit; Phase B bump/build/smoke/baseline/tag",
+  "acceptance_criteria": [
+    "All automated release gates green before VERSION bump",
+    "Local Windows build+smoke+baseline+tag without push"
+  ],
+  "tests": [
+    "pytest apps/api/tests -q",
+    "npm run test -- --run (apps/desktop)",
+    "npm run typecheck",
+    "npm run lint",
+    "scripts/check_project.py"
+  ],
+  "verification_evidence": [
+    "Phase A full gates 2026-07-22: pytest 723 passed/47 skipped; vitest 774 passed; typecheck pass; lint pass; check_project pass; template governance PASS; VERSION remained 1.0.3",
+    "release/acceptance/1.0.4.md Phase A matrix"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-22T11:17:18Z",
+  "updated_at": "2026-07-23T04:43:23Z"
+}

@@ -1,0 +1,104 @@
+{
+  "id": "CHG-20260723-014",
+  "title": "Agent C: Narrative structure map readiness audit",
+  "type": "documentation",
+  "base_version": "1.0.5",
+  "status": "verified",
+  "include_in_next_release": true,
+  "commits": [
+    {
+      "sha": "584dba9039f51d3425a04c16c79375f616271dae",
+      "message": "feat: prototype narrative pattern map contract",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "437d105e5fcd8054beb2bf3f6631bfb99ab1d45c",
+      "message": "docs: sync CHG-20260723-014 registry after pattern map readiness",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "3438075dc1e2591f2410a3ac35022cd685180f08",
+      "message": "docs: attach registry sync commit for CHG-20260723-014",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "f2d4021c9bd4c9791fffe223153a30866cadd94f",
+      "message": "docs: finalize CHG-20260723-014 commit list",
+      "primary": false,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "architecture",
+    "documentation",
+    "frontend contract draft"
+  ],
+  "files": [
+    "docs/architecture/narrative-intelligence-core/phase0b-pattern-map-readiness.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-pattern-map-contract-draft.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-pattern-map-technology-options.md",
+    "docs/architecture/narrative-intelligence-core/phase1d-pattern-map-performance.md",
+    "apps/desktop/src/features/narrativePattern/"
+  ],
+  "user_summary": "Agent C readiness audit for Narrative Structure Map: frontend capability inventory, DTO draft, mock, SVG spike, and Phase 1D input docs.",
+  "technical_summary": "Added narrativePattern feature drafts (DTO/guards/mock/prototype), four architecture docs under narrative-intelligence-core, no DB/models/migrations/routes/Pro/Capability changes.",
+  "acceptance_criteria": [
+    "Fork from Phase 1P final commit",
+    "No changes to apps/api/app/db/models.py",
+    "No migration edits",
+    "Drafts only under apps/desktop/src/features/narrativePattern/",
+    "Four architecture docs written",
+    "Mock validates 30-40 default / ~80 expanded"
+  ],
+  "tests": [
+    "apps/desktop: npx vitest run src/features/narrativePattern (16 passed)",
+    "apps/desktop: npm run typecheck",
+    "python scripts/version_manager.py check",
+    "python scripts/change_registry.py check",
+    "git diff --check"
+  ],
+  "verification_evidence": [
+    "vitest 16/16 passed; typecheck clean; version 1.0.5; registry check passed",
+    "Phase 1A Integration user verification accepted 2026-07-23; status advanced to verified (not ready/released)."
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "Documentation and frontend drafts only."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-23T07:20:00Z",
+  "updated_at": "2026-07-23T08:43:10Z",
+  "parallel_plan": {
+    "role": "agent_c",
+    "branch": "feature/narrative-pattern-readiness",
+    "worktree": "D:\\Dstorylens-wt-pattern-audit",
+    "depends_on": [
+      "CHG-20260723-011"
+    ],
+    "blocks": [
+      "CHG-20260723-015"
+    ],
+    "exclusive_paths": [
+      "docs/architecture/narrative-intelligence-core/phase0b-pattern-map-readiness.md",
+      "apps/desktop/src/features/narrativePattern/"
+    ],
+    "forbidden": [
+      "database model changes",
+      "migrations",
+      "model calls",
+      "Pro shipping flag"
+    ]
+  }
+}

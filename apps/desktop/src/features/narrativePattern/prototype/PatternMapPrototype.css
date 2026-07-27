@@ -1,0 +1,222 @@
+.pattern-map-prototype {
+  --pm-bg: var(--color-bg-app, #f5f5f1);
+  --pm-surface: var(--color-bg-surface, #ffffff);
+  --pm-text: var(--color-text-primary, #18201c);
+  --pm-muted: var(--color-text-secondary, #66716b);
+  --pm-border: var(--color-border, #d9ded9);
+  --pm-brand: var(--color-brand, #2f6b57);
+  --pm-brand-soft: var(--color-brand-soft, #e4f0ea);
+  --pm-warning: var(--color-warning, #9a671c);
+  display: flex;
+  flex-direction: column;
+  min-height: 480px;
+  color: var(--pm-text);
+  background: var(--pm-bg);
+  border: 1px solid var(--pm-border);
+  border-radius: 10px;
+  overflow: hidden;
+  outline: none;
+}
+
+.pattern-map-prototype[data-theme="dark"] {
+  --pm-bg: #111713;
+  --pm-surface: #18211d;
+  --pm-text: #f1f4f2;
+  --pm-muted: #aab4ae;
+  --pm-border: #334139;
+  --pm-brand: #69a98e;
+  --pm-brand-soft: #213b31;
+  --pm-warning: #d2a458;
+}
+
+.pattern-map-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--pm-border);
+  background: var(--pm-surface);
+}
+
+.pattern-map-toolbar-title {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.pattern-map-toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.pattern-map-toolbar-actions button,
+.pattern-map-search input {
+  height: 32px;
+  border: 1px solid var(--pm-border);
+  border-radius: 6px;
+  background: var(--pm-bg);
+  color: var(--pm-text);
+  padding: 0 10px;
+  font-size: 13px;
+}
+
+.pattern-map-search input {
+  width: 160px;
+}
+
+.pattern-map-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  min-height: 420px;
+  flex: 1;
+}
+
+.pattern-map-canvas-wrap {
+  position: relative;
+  min-width: 0;
+  background:
+    linear-gradient(90deg, transparent 19px, color-mix(in srgb, var(--pm-border) 55%, transparent) 20px),
+    linear-gradient(transparent 19px, color-mix(in srgb, var(--pm-border) 55%, transparent) 20px);
+  background-size: 20px 20px;
+  background-color: var(--pm-bg);
+}
+
+.pattern-map-canvas {
+  width: 100%;
+  height: 100%;
+  min-height: 420px;
+  cursor: grab;
+  touch-action: none;
+}
+
+.pattern-map-edge {
+  stroke: color-mix(in srgb, var(--pm-muted) 70%, transparent);
+  stroke-width: 1.5;
+  fill: none;
+}
+
+.pattern-map-node-rect {
+  fill: var(--pm-surface);
+  stroke: var(--pm-border);
+  stroke-width: 1.5;
+  cursor: pointer;
+}
+
+.pattern-map-node-rect.is-match {
+  stroke: var(--pm-warning);
+}
+
+.pattern-map-node-rect.is-selected {
+  fill: var(--pm-brand-soft);
+  stroke: var(--pm-brand);
+  stroke-width: 2;
+}
+
+.pattern-map-node-title {
+  fill: var(--pm-text);
+  font-size: 12px;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+.pattern-map-node-meta,
+.pattern-map-node-toggle {
+  fill: var(--pm-muted);
+  font-size: 10px;
+}
+
+.pattern-map-node-toggle {
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.pattern-map-hud {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--pm-surface) 88%, transparent);
+  border: 1px solid var(--pm-border);
+  font-size: 12px;
+  color: var(--pm-muted);
+}
+
+.pattern-map-detail {
+  border-left: 1px solid var(--pm-border);
+  background: var(--pm-surface);
+  padding: 12px;
+  overflow: auto;
+}
+
+.pattern-map-detail h2 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+
+.pattern-map-detail h3 {
+  margin: 16px 0 8px;
+  font-size: 13px;
+}
+
+.pattern-map-detail-summary {
+  margin: 0 0 12px;
+  color: var(--pm-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.pattern-map-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 0;
+}
+
+.pattern-map-detail-grid dt {
+  font-size: 11px;
+  color: var(--pm-muted);
+}
+
+.pattern-map-detail-grid dd {
+  margin: 2px 0 0;
+  font-size: 13px;
+}
+
+.pattern-map-evidence-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+}
+
+.pattern-map-evidence-meta {
+  color: var(--pm-muted);
+  font-size: 11px;
+}
+
+.pattern-map-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 900px) {
+  .pattern-map-body {
+    grid-template-columns: 1fr;
+  }
+
+  .pattern-map-detail {
+    border-left: 0;
+    border-top: 1px solid var(--pm-border);
+    max-height: 240px;
+  }
+}

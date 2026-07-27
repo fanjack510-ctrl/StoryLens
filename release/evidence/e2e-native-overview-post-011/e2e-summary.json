@@ -1,0 +1,80 @@
+{
+  "LOCAL_API_HEALTH": "PASS",
+  "ANALYSIS_RUNS_API": "PASS",
+  "CREATE_RUN_HTTP": 201,
+  "CREATE_RESPONSE_TIME": 108,
+  "RUN_ID": 12,
+  "PROVIDER": "aliyun_qwen_plus",
+  "MODEL": "qwen3.7-plus",
+  "MAX_TOKENS_SOURCE": "PRODUCT DEFAULT",
+  "PRODUCT_DEFAULT_MAX_TOKENS": 8192,
+  "REAL_PROVIDER_HTTP": 200,
+  "REAL_PROVIDER_CALLS": 4,
+  "FINISH_REASON": [
+    "stop",
+    "stop",
+    "stop",
+    "stop"
+  ],
+  "JSON": "FAIL",
+  "PARSER": "FAIL",
+  "SCHEMA": "FAIL",
+  "FINAL_RUN_STATE": "failed",
+  "RESULT_API_HTTP": 409,
+  "RESTART_RECOVERY": "FAIL",
+  "DATABASE_LOCK": "NO",
+  "ACTUAL_COST": 0.172404,
+  "FORMAL_DATABASE_WRITES": 0,
+  "END_TO_END_API": "BLOCKED",
+  "BUILD": "NO",
+  "BOOK_ID": 5,
+  "BOOK_TITLE": "十日前4章",
+  "PREFLIGHT_ESTIMATED_COST": 0.164764,
+  "INVOCATIONS": [
+    {
+      "id": 80,
+      "status": "succeeded",
+      "http_status_code": 200,
+      "finish_reason": "stop",
+      "input_tokens": 4295,
+      "output_tokens": 3850,
+      "estimated_cost": 0.03939,
+      "error_code": null,
+      "raw_len": 10525
+    },
+    {
+      "id": 81,
+      "status": "succeeded",
+      "http_status_code": 200,
+      "finish_reason": "stop",
+      "input_tokens": 4633,
+      "output_tokens": 3451,
+      "estimated_cost": 0.036874000000000004,
+      "error_code": null,
+      "raw_len": 9340
+    },
+    {
+      "id": 82,
+      "status": "succeeded",
+      "http_status_code": 200,
+      "finish_reason": "stop",
+      "input_tokens": 4775,
+      "output_tokens": 4815,
+      "estimated_cost": 0.04807,
+      "error_code": null,
+      "raw_len": 13071
+    },
+    {
+      "id": 83,
+      "status": "failed",
+      "http_status_code": 200,
+      "finish_reason": "stop",
+      "input_tokens": 4775,
+      "output_tokens": 4815,
+      "estimated_cost": 0.04807,
+      "error_code": "PROVIDER_OUTPUT_INVALID",
+      "raw_len": 13071
+    }
+  ],
+  "any_finish_length": false
+}

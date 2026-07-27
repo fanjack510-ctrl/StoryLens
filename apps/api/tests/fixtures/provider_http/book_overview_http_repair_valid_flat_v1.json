@@ -1,0 +1,25 @@
+{
+  "id": "fake-http-repair-1",
+  "object": "chat.completion",
+  "model": "qwen3.7-plus",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\"logline\": \"Synthetic logline for contract replay.\", \"premise\": \"Synthetic premise describing the test story frame.\", \"central_question\": \"Will the protagonist resolve the synthetic conflict?\", \"primary_conflict\": \"Synthetic pressure versus obligation.\", \"protagonist_asset_id\": null, \"major_storyline_ids\": [], \"structure_summary\": \"Opening pressure, mid escalation, closing choice.\", \"ending_state\": \"Unresolved but committed.\", \"evidence_refs\": [{\"evidence_id\": \"ev-synth-p1\", \"evidence_role\": \"support\"}], \"confidence\": 0.71}"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 5125,
+    "completion_tokens": 420,
+    "total_tokens": 5545,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    }
+  },
+  "http_status": 200,
+  "request_id": "fake-http-repair-1"
+}

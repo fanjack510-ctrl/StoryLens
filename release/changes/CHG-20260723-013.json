@@ -1,0 +1,114 @@
+{
+  "id": "CHG-20260723-013",
+  "title": "Agent B: AnalysisRun scope, stages, and status service",
+  "type": "feature",
+  "base_version": "1.0.5",
+  "status": "verified",
+  "include_in_next_release": true,
+  "commits": [
+    {
+      "sha": "0eddafc8c6776295b154b0152d0093ec0590a2a1",
+      "message": "feat: implement narrative run stage foundation",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "ef0134a20a9ed1cebc6d4318bd7eddebbbc3006b",
+      "message": "docs: sync CHG-20260723-013 registry after tested mark",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "8f4a59b44cae2de813f554fed12610ae228d92fb",
+      "message": "docs: attach registry sync commit to CHG-20260723-013",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "f6f7bafc342a04a268a8551b2d3f491280e31680",
+      "message": "docs: finalize CHG-20260723-013 commit attachments",
+      "primary": false,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "narrative_core",
+    "analysis run scope",
+    "analysis run stages"
+  ],
+  "files": [
+    "apps/api/app/narrative_core/services/__init__.py",
+    "apps/api/app/narrative_core/services/run_scope_service.py",
+    "apps/api/app/narrative_core/services/run_stage_repository.py",
+    "apps/api/app/narrative_core/services/run_stage_service.py",
+    "apps/api/tests/test_narrative_run_scope.py",
+    "apps/api/tests/test_narrative_run_stage.py",
+    "docs/architecture/narrative-intelligence-core/phase1a-run-scope-implementation.md",
+    "docs/architecture/narrative-intelligence-core/phase1a-run-stage-implementation.md",
+    "docs/architecture/narrative-intelligence-core/phase1a-run-stage-verification.md",
+    "release/changes/CHG-20260723-013.json"
+  ],
+  "user_summary": "Adds AnalysisRun scope validation and stage pause/resume/interrupt/retry against the frozen Phase 1P state matrix, without whole-book model execution.",
+  "technical_summary": "Implements RunScopeService + RunStageRepository + RunStageService consuming SnapshotValidationGateway for book scope. Migrations 004/005 remain Phase 1P frozen SQL. SimulatedStageRunner is test-only. Integration remapped commits to cherry-pick SHAs; II-RUNSTAGE-001/002/003 resolved on integration branch.",
+  "acceptance_criteria": [
+    "Fork from Phase 1P final commit",
+    "Implement frozen stage transition matrix only",
+    "Book scope requires completed snapshot via gateway",
+    "Do not modify snapshot tables/services",
+    "Legacy subject_type/subject_id chapter runs remain readable",
+    "pause/resume/interrupted/retry semantics verified by focused tests"
+  ],
+  "tests": [
+    "apps/api/tests/test_narrative_run_scope.py",
+    "apps/api/tests/test_narrative_run_stage.py"
+  ],
+  "verification_evidence": [
+    "pytest apps/api/tests/test_narrative_run_scope.py apps/api/tests/test_narrative_run_stage.py → 28 passed",
+    "version_manager check / change_registry check / git diff --check (local Agent B)",
+    "docs/architecture/narrative-intelligence-core/phase1a-run-stage-verification.md",
+    "Phase 1A Integration user verification accepted 2026-07-23; status advanced to verified (not ready/released)."
+  ],
+  "data_compatibility": {
+    "database_changed": true,
+    "migration_required": true,
+    "user_data_compatible": true,
+    "notes": "Uses Phase 1P additive analysis_run scope columns and analysis_run_stages table (migrations 004/005). Legacy rows with NULL scope fields remain valid."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-23T07:20:00Z",
+  "updated_at": "2026-07-23T08:43:10Z",
+  "parallel_plan": {
+    "role": "agent_b",
+    "branch": "feature/narrative-phase1a-runstage",
+    "worktree": "D:\\Dstorylens-wt-narrative-runstage",
+    "depends_on": [
+      "CHG-20260723-011"
+    ],
+    "blocks": [
+      "CHG-20260723-015"
+    ],
+    "exclusive_paths": [
+      "apps/api/app/narrative_core/services/run_scope_service.py",
+      "apps/api/app/narrative_core/services/run_stage_repository.py",
+      "apps/api/app/narrative_core/services/run_stage_service.py"
+    ],
+    "forbidden": [
+      "second snapshot implementation",
+      "extend stage status enum without Change",
+      "whole-book model calls",
+      "modify models.py"
+    ],
+    "integration_issues": [
+      "II-RUNSTAGE-001: resolved on integration — staged vs legacy interrupt branching",
+      "II-RUNSTAGE-002: resolved on integration — real SnapshotValidationGatewayImpl default",
+      "II-RUNSTAGE-003: resolved on integration — RunStatus enum for narrative runs"
+    ]
+  }
+}

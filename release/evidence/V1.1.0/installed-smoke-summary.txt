@@ -1,0 +1,14 @@
+﻿V1.1.0 Installed Smoke Summary
+==============================
+Silent install exit: 0
+ProductVersion: 1.1.0
+Installed sidecar SHA matches formal: YES
+Local service health: PASS
+Provider config API: PASS
+Run #4: succeeded / chapter_complete / effective completed
+Journey #3: succeeded 8/8 visualization present
+Failure banner fields: NO
+NEW ANALYSIS RUNS: 0
+NEW JOURNEY TASKS: 0
+NEW MODEL INVOCATIONS: 0
+REAL PROVIDER CALLS: 0

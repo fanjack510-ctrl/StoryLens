@@ -1,0 +1,288 @@
+{
+  "id": "CHG-20260725-003",
+  "title": "Pro Native Whole-Book Overview Production Slice",
+  "type": "feature",
+  "base_version": "1.0.5",
+  "status": "tested",
+  "include_in_next_release": true,
+  "commits": [
+    {
+      "sha": "3ad36459a8dc62452200d2fdfbbd860639e4ddaa",
+      "message": "docs(release): register native overview slice and clarify insights positioning",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "4e4561ce104fc06a98526da367d97dc63ffc2790",
+      "message": "fix(pro-insights): clarify chapter aggregation capability semantics",
+      "primary": true,
+      "multi_change_reason": "STEP 1.2 backend capability semantics (Agent A)"
+    },
+    {
+      "sha": "2f6ca24a09b3c1e5c3213864fb41dc907b1b2098",
+      "message": "fix(pro-insights): reposition UI as chapter aggregation insights",
+      "primary": true,
+      "multi_change_reason": "STEP 1.2 frontend product semantics (Agent C)"
+    },
+    {
+      "sha": "540233eaadd05e43c5cccb1c46c186d5cd360279",
+      "message": "docs: attach STEP 1.2 governance commit to CHG-20260725-003",
+      "primary": false,
+      "multi_change_reason": "docs attach of governance register commit"
+    },
+    {
+      "sha": "b4b29f2a85a3565b670a7ee46cdf7afd99def039",
+      "message": "docs(architecture): freeze StoryLens whole-book Pro architecture",
+      "primary": true,
+      "multi_change_reason": "STEP 1.3 architecture freeze docs and ADRs"
+    },
+    {
+      "sha": "803d23f1522e82de88c358729edb42e61779ba54",
+      "message": "docs(release): freeze StoryLens 1.1.0 native overview scope",
+      "primary": true,
+      "multi_change_reason": "STEP 2.0 1.1.0 scope freeze document"
+    },
+    {
+      "sha": "c79e4e9eb8a29fed97502e7d32957e11358be826",
+      "message": "feat(pro-contract): freeze native whole-book overview contracts and storage",
+      "primary": true,
+      "multi_change_reason": "STEP 2.1 Public contract/DB/DTO/fixture freeze"
+    },
+    {
+      "sha": "2a88cbaefbeb090845c112dd184b3baf5066081a",
+      "message": "fix(pro-contract): close C-Review P0 on overview evidence and retry DTOs",
+      "primary": true,
+      "multi_change_reason": "STEP 2.1 C-Review P0 close (evidence_index + retry/resume DTOs)"
+    },
+    {
+      "sha": "03f000e1a75bf3bd9f16c7d563fca78d68b733e3",
+      "message": "docs: attach STEP 2.1 contract freeze commits to CHG-20260725-003",
+      "primary": false,
+      "multi_change_reason": "docs attach of STEP 2.1 Integration commits"
+    },
+    {
+      "sha": "46a2a6e80b1b877a1a72d788283f0dd2818eff93",
+      "message": "chore(pro-overview): add STEP 2.2 feature flag and fixture engine identity",
+      "primary": true,
+      "multi_change_reason": "STEP 2.2 Integration prep: flag + fixture engine identity"
+    },
+    {
+      "sha": "8abdf62055badd82752650e1c6150340976a512f",
+      "message": "feat(pro-run): add native overview walking-skeleton backend",
+      "primary": true,
+      "multi_change_reason": "STEP 2.2-A Public walking-skeleton backend"
+    },
+    {
+      "sha": "76acec7ce433044fd75f0cf0c743871cb48bc554",
+      "message": "fix(pro-run): wire Private fixture adapter dump boundary and input_hash",
+      "primary": true,
+      "multi_change_reason": "STEP 2.2 Public↔Private adapter wiring"
+    },
+    {
+      "sha": "987a337f7579a9ca2d0140dd35cead8201620ada",
+      "message": "feat(pro-ui): add native overview walking-skeleton workflow",
+      "primary": true,
+      "multi_change_reason": "STEP 2.2-C UI walking-skeleton workflow"
+    },
+    {
+      "sha": "12dffaced4581e756cdf61946b112b4685ad8fbf",
+      "message": "docs: attach STEP 2.2 walking-skeleton commits to CHG-20260725-003",
+      "primary": false,
+      "multi_change_reason": "docs attach of STEP 2.2 Integration evidence"
+    },
+    {
+      "sha": "3970e36a7899dadd8ef3db16d86947d924822af5",
+      "message": "feat(pro-runtime): close STEP 2.3-I0 Adapter Protocol and Engine Loader",
+      "primary": true,
+      "multi_change_reason": "STEP 2.3-I0 Adapter Parity + Engine Loader"
+    },
+    {
+      "sha": "1228a48d9f72ce373778a98824f2c7572696e758",
+      "message": "feat(pro-runtime): add production overview context window builder",
+      "primary": true,
+      "multi_change_reason": "STEP 2.3-A window builder"
+    },
+    {
+      "sha": "61d4babe00f8575b5dbf3340815c096cb7651b7c",
+      "message": "feat(pro-runtime): add resumable multi-window orchestrator and retry/resume API",
+      "primary": true,
+      "multi_change_reason": "STEP 2.3-A multi-window orchestrator + retry/resume"
+    },
+    {
+      "sha": "6124090adf29a45a20f0df7969cdde48f38a38b7",
+      "message": "fix(pro-runtime): tighten evidence quote validation and expand runtime tests",
+      "primary": true,
+      "multi_change_reason": "STEP 2.3-A runtime tests/fixes"
+    },
+    {
+      "sha": "d1d9b7a2e7b67ddbfafb3f49e260a9ce5be8bd98",
+      "message": "feat(pro-ui): complete native overview preflight consent and engine labels",
+      "primary": true,
+      "multi_change_reason": "STEP 2.3-C preflight consent"
+    },
+    {
+      "sha": "7e81f00cdefb1df8c4d2c10a303ef59a867aa5e0",
+      "message": "test(pro-ui): cover native overview production states and Free smoke",
+      "primary": true,
+      "multi_change_reason": "STEP 2.3-C UI tests"
+    },
+    {
+      "sha": "a79db690469de48944f2b5390d9bc5d33eba46eb",
+      "message": "docs: attach STEP 2.3 A/B/C Integration commits to CHG-20260725-003",
+      "primary": false,
+      "multi_change_reason": "docs attach STEP 2.3"
+    },
+    {
+      "sha": "3def68a1725b1df42fef3948b081125a97d252e6",
+      "message": "test(free): add STEP 2.6 upgrade, import, and delete regression coverage",
+      "primary": true,
+      "multi_change_reason": "STEP 2.6 Free regression tests"
+    },
+    {
+      "sha": "acc6846baaa469f4439fa2d04e5c21d5759afab4",
+      "message": "docs(evidence): record STEP 2.G6 Free 1.0.5 regression gate",
+      "primary": false,
+      "multi_change_reason": "STEP 2.6 gate evidence"
+    },
+    {
+      "sha": "8351d81a09abdfbafc006c0fd7b89a4be33680c1",
+      "message": "docs(evidence): stamp final Public HEAD on gate-2g6",
+      "primary": false,
+      "multi_change_reason": "STEP 2.6 gate HEAD stamp"
+    },
+    {
+      "sha": "4e6e30586487c62766828fec973d8ae7d04384f2",
+      "message": "docs(evidence): align gate-2g6 Public HEAD",
+      "primary": false,
+      "multi_change_reason": "STEP 2.6 gate HEAD align"
+    },
+    {
+      "sha": "4ce02b7a0d1928daaba41bfaac00741a3cc42bbf",
+      "message": "docs(evidence): restore UTF-8 gate-2g6 content",
+      "primary": false,
+      "multi_change_reason": "STEP 2.6 restored gate-2g6"
+    },
+    {
+      "sha": "3c301e2bfc87200b29e8d579115d03d6a1bb90a2",
+      "message": "docs(evidence): rewrite gate-2g6 with ASCII-safe UTF-8",
+      "primary": false,
+      "multi_change_reason": "STEP 2.6 final gate-2g6"
+    },
+    {
+      "sha": "9ea47bdb6f054226625ae691c31aa1669fa54f45",
+      "message": "docs(evidence): sync gate-2g6 Public HEAD to tip",
+      "primary": false,
+      "multi_change_reason": "STEP 2.6 tip sync"
+    },
+    {
+      "sha": "93c2ec9754b2df800e72792581e75189ef0c6b6b",
+      "message": "fix(windows): wire Private native overview for 1.1.0-rc.1 G7",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "2ce6dce12f9a97d94fb21a20d6fe5879fbeed310",
+      "message": "docs(evidence): stamp Public HEAD on STEP 2.G7 gate",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "apps/api/capability_registry",
+    "apps/api/db/models",
+    "apps/api/narrative_core/contracts",
+    "apps/api/narrative_core/migrations",
+    "apps/desktop/wholeBookInsights",
+    "docs/architecture",
+    "docs/architecture/adr",
+    "docs/contracts",
+    "docs/releases",
+    "packages/contracts/fixtures",
+    "release/changes",
+    "packages/contracts/fixtures/whole_book_overview_v1",
+    "apps/api/db",
+    "apps/api/narrative_core/services",
+    "apps/desktop/proNativeOverview",
+    "storylens_private_engine/modules/book_overview"
+  ],
+  "files": [
+    "apps/api/app/db/models.py",
+    "apps/api/app/narrative_core/contracts/whole_book_overview_errors.py",
+    "apps/api/app/narrative_core/contracts/whole_book_overview_state_machine.py",
+    "apps/api/app/narrative_core/contracts/whole_book_overview_v1.py",
+    "apps/api/app/narrative_core/enums.py",
+    "apps/api/app/narrative_core/migrations/runner.py",
+    "docs/architecture/adr/ADR-001-single-business-database.md",
+    "docs/architecture/adr/ADR-002-whole-book-native-source-of-truth.md",
+    "docs/architecture/adr/ADR-003-unified-narrative-assets.md",
+    "docs/architecture/adr/ADR-004-whole-book-runtime-and-analysis-passes.md",
+    "docs/architecture/adr/ADR-005-long-text-index-strategy.md",
+    "docs/architecture/storylens-public-private-boundary.md",
+    "docs/architecture/storylens-step-roadmap.md",
+    "docs/architecture/storylens-whole-book-architecture.md",
+    "docs/contracts/storylens-1.1.0-native-overview-contract.md",
+    "docs/contracts/storylens-1.1.0-native-overview-database.md",
+    "docs/contracts/storylens-1.1.0-native-overview-error-codes.md",
+    "docs/contracts/storylens-1.1.0-native-overview-state-machine.md",
+    "docs/releases/storylens-1.1.0-scope.md",
+    "packages/contracts/fixtures/whole_book_overview_v1/"
+  ],
+  "user_summary": "建立 StoryLens 首个基于完整小说原文的 Pro 原生整书功能，并在正式开发前纠正现有章节聚合洞察的产品定位。",
+  "technical_summary": "STEP 2.G6 PASSED (Free 1.0.5 regression). DB upgrade+repeat startup OK; TXT/DOCX/EPUB import+original file protection OK; delete protection OK; chapter aggregation + Free suites OK. Public full pytest BASELINE_FAILURE_ONLY (CHG-002 + pre-native lab failures); Private 200; Desktop 1034; typecheck OK. No new Live API (cost still ¥0.0958008). Flag default false. Status remains implemented. Next: STEP 2.7 Windows candidate (do not auto-enter). VERSION 1.0.5.",
+  "acceptance_criteria": [
+    "Pro Native Whole-Book Overview end-to-end with Snapshot+Evidence+License+Retry+restart persistence",
+    "Free 1.0.5 zero-break and 1.0.5 DB copy upgrade",
+    "No Structure/FTS5/other whole-book modules in 1.1.0"
+  ],
+  "tests": [
+    "apps/api/tests/test_pro_whole_book_insights_gate.py (7 passed)",
+    "apps/desktop wholeBookInsights+router.smoke vitest (7 passed)",
+    "apps/desktop LibraryPage+library_book_delete_local (18 passed)",
+    "apps/api/tests/test_whole_book_overview_contract_v1.py + migration order asserts (26 passed targeted)",
+    "apps/api/tests/test_whole_book_overview_contract_v1.py (24 passed)",
+    "private tests/test_whole_book_overview_contract_v1.py (9 passed)",
+    "apps/api/tests/test_native_overview_walking_skeleton.py + flag + contract (40 passed with Private PYTHONPATH)",
+    "private tests/test_native_overview_fixture_adapter.py + contract (22 passed)",
+    "apps/desktop proNativeOverview Vitest (17 passed)",
+    "STEP 2.3 Public directed pytest 74 passed (Private PYTHONPATH)",
+    "Private native+fixture+contract 37 passed",
+    "Desktop proNativeOverview Vitest 25 passed",
+    "STEP 2.6: test_step26_free_upgrade + test_import_docx_epub + delete completed-run + phase1d OpenAPI native create (34 directed Free passed)",
+    "STEP 2.6: Private full pytest 200 passed; Desktop Vitest 1034; typecheck OK; Public full BASELINE_FAILURE_ONLY",
+    "STEP 2.G7: Windows RC 1.1.0-rc.1 build + smoke_windows_rc_2g7 FAKE Private engine PASSED",
+    "STEP 2.G7: test_native_overview_http_factory + free entitlement + walking skeleton directed PASSED"
+  ],
+  "verification_evidence": [
+    "STEP 1.2 Integration: cherry-pick A 4e4561c + C 2f6ca24; Agent D PASS both; capability key/API/route unchanged; VERSION=1.0.5; no push",
+    "STEP 1.3 Architecture Review PASS (no P0); docs path existence OK; git diff --check OK; CHG-003 remains implemented; VERSION=1.0.5; no push",
+    "STEP 2.0 Scope Review PASS; path docs/releases/storylens-1.1.0-scope.md; git diff --check OK; CHG-003 remains implemented; no VERSION bump; no push",
+    "STEP 2.1 Public: contract docs + DTO/enum/error/state-machine + migration 011 + fixtures; pytest targeted 26 passed; VERSION=1.0.5; no push; status remains implemented",
+    "STEP 2.1: A-Review PASS; B-Review PASS; C-Review PASS (after P0 fix); D-Audit PASS / 2.G1 GO; Public pytest 24; Private pytest 9; fixture hash match ecf419c6...; VERSION=1.0.5; no push",
+    "STEP 2.2: D-Audit PASS; Public 987a337 Private d29fa44; fixture hash ecf419c6...; Flag default off; WHOLE_BOOK_RUNS_ENDPOINT_DISABLED=True; VERSION=1.0.5; no push",
+    "STEP 2.3-I0: Public pytest I0+walking+flag+contract 47 passed with Private PYTHONPATH; Private 22 passed; no silent Fixture downgrade; Flag default false",
+    "STEP 2.3: A/B/C merged; I0 parity; no Live Provider; Flag default off; WHOLE_BOOK_RUNS_ENDPOINT_DISABLED=True; VERSION=1.0.5; no push",
+    "STEP 2.G3 PASSED; evidence release/evidence/CHG-20260725-003/night-run/gate-2g3.md; WAITING_FOR_DETAILED_STEP_2_4_PROMPT=YES; no Live Provider; no Windows build",
+    "STEP 2.G4 PASSED; evidence release/evidence/CHG-20260725-003/night-run/gate-2g4.md; offline Private+Fake failure matrix; no Live Provider; no Windows",
+    "STEP 2.G5 PASSED; Live1+Live2 private-native-overview-v1 + aliyun_qwen_plus/qwen3.6-flash; actual_cost_cny=0.0958008; ledger release/evidence/CHG-20260725-003/night-run/provider-cost-ledger.json; gate-2g5.md; VALIDATION_MODEL_DIFFERS=YES; Live3 NOT_RUN; next STEP 2.6",
+    "STEP 2.G6 PASSED; Free/upgrade/import/delete/insights; Public BASELINE_FAILURE_ONLY; Private 200; Desktop 1034; typecheck OK; new Live cost ¥0; evidence gate-2g6.md; status remains implemented; next STEP 2.7",
+    "release/evidence/CHG-20260725-003/night-run/gate-2g7.md",
+    "release/evidence/CHG-20260725-003/night-run/windows-rc-2g7-smoke.json",
+    "release/evidence/CHG-20260725-003/night-run/windows-build-log.md"
+  ],
+  "data_compatibility": {
+    "database_changed": true,
+    "migration_required": true,
+    "user_data_compatible": true,
+    "notes": "Uses additive migration 011 tables at runtime. Formal Provider path still disabled. Walking skeleton gated by PRO_NATIVE_OVERVIEW_ENABLED."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "P0",
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-25T13:31:37Z",
+  "updated_at": "2026-07-26T03:30:45Z"
+}

@@ -382,7 +382,9 @@ async def generate_validated(
                 break
             if original_capabilities.cloud:
                 delay = compute_provider_retry_delay_seconds(
-                    normal_transport_used, transport_policy
+                    normal_transport_used,
+                    transport_policy,
+                    retry_after=getattr(last_provider_error, "retry_after", None),
                 )
                 if delay > 0:
                     await asyncio.sleep(delay)
@@ -393,7 +395,9 @@ async def generate_validated(
                 break
             if original_capabilities.cloud:
                 delay = compute_provider_retry_delay_seconds(
-                    repair_transport_used, transport_policy
+                    repair_transport_used,
+                    transport_policy,
+                    retry_after=getattr(last_provider_error, "retry_after", None),
                 )
                 if delay > 0:
                     await asyncio.sleep(delay)
@@ -570,6 +574,32 @@ async def generate_validated(
             )
 
             active_schema = JourneyEvidenceRepairPatchResult
+        scope_binding = {}
+        if isinstance(input_snapshot, dict):
+            for key in (
+                "book_id",
+                "chapter_id",
+                "analysis_run_id",
+                "scene_ids",
+                "paragraph_ids",
+                "owned_scene_ids_json",
+                "profiles_target",
+                "exact_input_content_hash",
+                "prompt_version",
+                "contract_version",
+                "formula_version",
+                "analysis_mode",
+            ):
+                if key in input_snapshot:
+                    scope_binding[key] = input_snapshot.get(key)
+            # Prefer explicit content hash; else digest snapshot for binding.
+            if "exact_input_content_hash" not in scope_binding:
+                import hashlib as _hashlib
+                import json as _json
+
+                scope_binding["exact_input_content_hash"] = _hashlib.sha256(
+                    _json.dumps(input_snapshot, ensure_ascii=False, sort_keys=True).encode("utf-8")
+                ).hexdigest()
         request = ModelRequest(
             messages=messages,
             model=authorized_model,
@@ -577,6 +607,7 @@ async def generate_validated(
             response_schema=active_schema.model_json_schema(),
             response_format_mode=invocation_capabilities.structured_output_mode,
             enable_thinking=False,
+            extra_body={"analysis_scope": scope_binding} if scope_binding else {},
         )
         mapped_policy_type = map_invocation_type(
             task_type,
@@ -910,7 +941,17 @@ async def generate_validated(
             last_error = str(exc) or "结构覆盖校验失败"
             error_code = exc.error_code
             last_error_code = exc.error_code
-            last_category = "structural_validation"
+            if exc.error_code in {
+                "EVIDENCE_OVERBROAD_REUSE",
+                "EVIDENCE_OUTSIDE_SCENE",
+                "EVIDENCE_MISSING",
+                "EVIDENCE_VALIDATION_FAILED",
+            }:
+                last_category = "evidence_validation"
+            elif exc.error_code == "SCENE_BOUNDARY_TOO_BROAD":
+                last_category = "business_validation"
+            else:
+                last_category = "structural_validation"
             last_retryable = not exc.no_model_repair
             last_provider_error = None
             previous_raw = raw

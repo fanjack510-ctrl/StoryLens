@@ -1,0 +1,498 @@
+/** Observation lenses for Reader Journey v2 chart (presentation + series resolution). */
+
+import type {
+  JourneyCurvePoint,
+  JourneySceneNode,
+  ReaderJourneyVisualization,
+} from "../../types/readerJourneyVisualization";
+import { resolveMetricValue } from "./journeyChartScales";
+import { getLensExplanation } from "./readerJourneyLensExplanation";
+
+export type ObservationLensId =
+  | "composite"
+  | "plot_progress"
+  | "reading_tension"
+  | "emotion"
+  | "hook_payoff"
+  | "pacing";
+
+export type ObservationLensDef = {
+  id: ObservationLensId;
+  labelZh: string;
+  /** Primary series key used for Y-domain policy. */
+  primaryKey: string;
+  allowsOverlayWithComposite: boolean;
+  isPairedHookPayoff: boolean;
+  yDomain: "0_100" | "valence_signed" | "arousal_0_100";
+};
+
+export const OBSERVATION_LENSES: ObservationLensDef[] = [
+  {
+    id: "composite",
+    labelZh: "综合阅读",
+    primaryKey: "reading_momentum",
+    allowsOverlayWithComposite: false,
+    isPairedHookPayoff: false,
+    yDomain: "0_100",
+  },
+  {
+    id: "plot_progress",
+    labelZh: "剧情推进",
+    primaryKey: "plot_progress",
+    allowsOverlayWithComposite: true,
+    isPairedHookPayoff: false,
+    yDomain: "0_100",
+  },
+  {
+    id: "reading_tension",
+    labelZh: "阅读张力",
+    primaryKey: "reading_tension",
+    allowsOverlayWithComposite: true,
+    isPairedHookPayoff: false,
+    yDomain: "0_100",
+  },
+  {
+    id: "emotion",
+    labelZh: "情绪强度",
+    primaryKey: "arousal",
+    allowsOverlayWithComposite: true,
+    isPairedHookPayoff: false,
+    yDomain: "arousal_0_100",
+  },
+  {
+    id: "hook_payoff",
+    labelZh: "钩子回收",
+    primaryKey: "hook",
+    allowsOverlayWithComposite: false,
+    isPairedHookPayoff: true,
+    yDomain: "0_100",
+  },
+  {
+    id: "pacing",
+    labelZh: "节奏速度",
+    primaryKey: "pacing_speed",
+    allowsOverlayWithComposite: true,
+    isPairedHookPayoff: false,
+    yDomain: "0_100",
+  },
+];
+
+export const DEFAULT_OBSERVATION_LENS: ObservationLensId = "composite";
+
+/** @deprecated Prefer getLensExplanation(id).one_line_summary — keep in sync with frozen copy. */
+export const OBSERVATION_LENS_HINTS_ZH: Record<ObservationLensId, string> = {
+  composite: getLensExplanation("composite").one_line_summary,
+  plot_progress: getLensExplanation("plot_progress").one_line_summary,
+  reading_tension: getLensExplanation("reading_tension").one_line_summary,
+  emotion: getLensExplanation("emotion").one_line_summary,
+  hook_payoff: getLensExplanation("hook_payoff").one_line_summary,
+  pacing: getLensExplanation("pacing").one_line_summary,
+};
+
+export function getObservationLensHint(id: ObservationLensId | string | null | undefined): string {
+  return getLensExplanation(id).one_line_summary;
+}
+
+export function getObservationLens(id: ObservationLensId | string | null | undefined): ObservationLensDef {
+  const found = OBSERVATION_LENSES.find((item) => item.id === id);
+  return found ?? OBSERVATION_LENSES[0];
+}
+
+export type ChartLineSpec = {
+  id: string;
+  labelZh: string;
+  series: JourneyCurvePoint[];
+  style: "solid" | "dashed";
+  /** When false, points are auxiliary (Beat) and skipped by main polyline builder. */
+  includeInMainPolyline: boolean;
+};
+
+/** Resolved score bag for lens binding — engagement only as legacy fallback for reading_momentum. */
+export function nodeScoreRecord(node: JourneySceneNode): Record<string, number | undefined> {
+  const scores = (node.scores ?? {}) as Record<string, number | undefined>;
+  const engagement = node.engagement as { engagement_score?: number } | undefined;
+  return {
+    ...scores,
+    engagement: engagement?.engagement_score,
+    reading_momentum:
+      scores.reading_momentum ?? engagement?.engagement_score ?? scores.curiosity,
+    plot_progress:
+      scores.plot_progress ??
+      averageDefined(scores.information_gain, scores.curiosity, scores.tension),
+    reading_tension:
+      scores.reading_tension ??
+      weightedAverage(
+        [
+          [scores.curiosity, 0.4],
+          [scores.tension, 0.35],
+          [scores.emotional_resonance ?? scores.emotional_investment, 0.25],
+        ],
+      ),
+    pacing_speed: scores.pacing_speed ?? scores.tension,
+    pacing_fit: scores.pacing_fit,
+    hook: scores.hook,
+    payoff: scores.payoff,
+    emotional_investment: scores.emotional_investment ?? scores.emotional_resonance,
+  };
+}
+
+/** @deprecated Use nodeScoreRecord */
+function nodeScores(node: JourneySceneNode): Record<string, number | undefined> {
+  return nodeScoreRecord(node);
+}
+
+function averageDefined(...values: Array<number | undefined>): number | undefined {
+  const nums = values.filter((v): v is number => typeof v === "number" && Number.isFinite(v));
+  if (!nums.length) return undefined;
+  return nums.reduce((a, b) => a + b, 0) / nums.length;
+}
+
+function weightedAverage(parts: Array<[number | undefined, number]>): number | undefined {
+  let total = 0;
+  let weight = 0;
+  for (const [value, w] of parts) {
+    if (typeof value === "number" && Number.isFinite(value)) {
+      total += value * w;
+      weight += w;
+    }
+  }
+  if (weight <= 0) return undefined;
+  return total / weight;
+}
+
+function isBeatNode(node: JourneySceneNode): boolean {
+  if (node.role === "beat") return true;
+  if ((node as { node_type?: string }).node_type === "beat") return true;
+  if ((node as { include_in_main_curve?: boolean }).include_in_main_curve === false) return true;
+  return false;
+}
+
+function pointFromNode(
+  node: JourneySceneNode,
+  value: number | undefined,
+): JourneyCurvePoint {
+  const beat = isBeatNode(node);
+  return {
+    scene_ordinal: node.scene_ordinal,
+    value: typeof value === "number" && Number.isFinite(value) ? value : undefined,
+    include_in_main_curve: !beat,
+    node_type: beat ? "beat" : "scene",
+  } as JourneyCurvePoint;
+}
+
+function seriesFromNodes(
+  visualization: ReaderJourneyVisualization,
+  pick: (node: JourneySceneNode) => number | undefined,
+): JourneyCurvePoint[] {
+  return visualization.scene_nodes.map((node) => pointFromNode(node, pick(node)));
+}
+
+function seriesFromCurve(
+  visualization: ReaderJourneyVisualization,
+  metric: keyof ReaderJourneyVisualization["curve_series"],
+): JourneyCurvePoint[] {
+  const series = visualization.curve_series[metric] ?? [];
+  return series.map((point) => {
+    const node = visualization.scene_nodes.find((n) => n.scene_ordinal === point.scene_ordinal);
+    const beat = node ? isBeatNode(node) : false;
+    return {
+      ...point,
+      include_in_main_curve: !beat,
+      node_type: beat ? "beat" : "scene",
+    } as JourneyCurvePoint;
+  });
+}
+
+/** Build chart lines for one observation lens (never six charts). */
+export function buildLensChartLines(
+  visualization: ReaderJourneyVisualization,
+  lensId: ObservationLensId,
+  options: {
+    overlayComposite?: boolean;
+    /** Explicit secondary metric for 对比指标 tool. */
+    compareWith?: string | null;
+  } = {},
+): ChartLineSpec[] {
+  const compareWith = options.compareWith || null;
+  const lens = getObservationLens(lensId);
+  const lines: ChartLineSpec[] = [];
+
+  if (lens.id === "composite") {
+    lines.push({
+      id: "reading_momentum",
+      labelZh: "综合阅读动力",
+      series: seriesFromNodes(visualization, (n) => nodeScores(n).reading_momentum),
+      style: "solid",
+      includeInMainPolyline: true,
+    });
+  } else if (lens.id === "plot_progress") {
+    lines.push({
+      id: "plot_progress",
+      labelZh: "剧情推进",
+      series: seriesFromNodes(visualization, (n) => nodeScores(n).plot_progress),
+      style: "solid",
+      includeInMainPolyline: true,
+    });
+  } else if (lens.id === "reading_tension") {
+    lines.push({
+      id: "reading_tension",
+      labelZh: "阅读张力",
+      series: seriesFromNodes(visualization, (n) => nodeScores(n).reading_tension),
+      style: "solid",
+      includeInMainPolyline: true,
+    });
+  } else if (lens.id === "emotion") {
+    lines.push({
+      id: "arousal",
+      labelZh: "情绪强度",
+      series: seriesFromCurve(visualization, "arousal").map((point, index) => {
+        const node = visualization.scene_nodes[index];
+        if (!node) return point;
+        const scores = nodeScores(node);
+        const arousal = averageDefined(scores.arousal_start, scores.arousal_end);
+        return pointFromNode(node, arousal ?? resolveMetricValue(point) ?? undefined);
+      }),
+      style: "solid",
+      includeInMainPolyline: true,
+    });
+  } else if (lens.id === "hook_payoff") {
+    lines.push({
+      id: "hook",
+      labelZh: "钩子强度",
+      series: seriesFromNodes(visualization, (n) => {
+        const value = nodeScores(n).hook;
+        return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+      }),
+      style: "solid",
+      includeInMainPolyline: true,
+    });
+    lines.push({
+      id: "payoff",
+      labelZh: "回报强度",
+      series: seriesFromNodes(visualization, (n) => {
+        const value = nodeScores(n).payoff;
+        return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+      }),
+      style: "dashed",
+      includeInMainPolyline: true,
+    });
+  } else if (lens.id === "pacing") {
+    lines.push({
+      id: "pacing_speed",
+      labelZh: "节奏速度",
+      series: seriesFromNodes(visualization, (n) => nodeScores(n).pacing_speed),
+      style: "solid",
+      includeInMainPolyline: true,
+    });
+  }
+
+  // Explicit compare metric only — never silently add a nameless purple line.
+  // Legacy overlayComposite maps to compareWith=reading_momentum for older call sites.
+  const effectiveCompare =
+    compareWith ||
+    (options.overlayComposite && lens.allowsOverlayWithComposite && !lens.isPairedHookPayoff
+      ? "reading_momentum"
+      : null);
+  if (
+    effectiveCompare &&
+    !lens.isPairedHookPayoff &&
+    lines.length === 1 &&
+    effectiveCompare !== lines[0].id &&
+    effectiveCompare !== lens.primaryKey
+  ) {
+    const secondary = seriesForCompareMetric(visualization, effectiveCompare);
+    if (secondary) {
+      lines.push(secondary);
+    }
+  }
+
+  return lines.slice(0, lens.isPairedHookPayoff ? 2 : 2);
+}
+
+function seriesForCompareMetric(
+  visualization: ReaderJourneyVisualization,
+  metricKey: string,
+): ChartLineSpec | null {
+  const labelMap: Record<string, string> = {
+    reading_momentum: "综合阅读动力",
+    engagement: "综合阅读动力",
+    plot_progress: "剧情推进",
+    reading_tension: "阅读张力",
+    arousal: "情绪强度",
+    pacing_speed: "节奏速度",
+    curiosity: "好奇",
+    tension: "张力",
+    hook: "钩子强度",
+    payoff: "回报强度",
+  };
+  const labelZh = labelMap[metricKey] || metricKey;
+  if (metricKey === "arousal") {
+    return {
+      id: metricKey,
+      labelZh,
+      series: seriesFromCurve(visualization, "arousal").map((point, index) => {
+        const node = visualization.scene_nodes[index];
+        if (!node) return point;
+        const scores = nodeScores(node);
+        const arousal = averageDefined(scores.arousal_start, scores.arousal_end);
+        return pointFromNode(node, arousal ?? resolveMetricValue(point) ?? undefined);
+      }),
+      style: "dashed",
+      includeInMainPolyline: true,
+    };
+  }
+  const key = metricKey === "engagement" ? "reading_momentum" : metricKey;
+  return {
+    id: metricKey,
+    labelZh,
+    series: seriesFromNodes(visualization, (n) => nodeScores(n)[key]),
+    style: "dashed",
+    includeInMainPolyline: true,
+  };
+}
+
+/** Equal-weight vertices for chapter/phase means — Beat importance is excluded. */
+export function equalWeightMainCurveSeries(
+  series: JourneyCurvePoint[],
+): JourneyCurvePoint[] {
+  return series.filter((point) => {
+    const flag = (point as { include_in_main_curve?: boolean }).include_in_main_curve;
+    if (flag === false) return false;
+    if ((point as { node_type?: string }).node_type === "beat") return false;
+    return true;
+  });
+}
+
+/**
+ * Polyline vertices for the reading-momentum (and other lens) chart line.
+ *
+ * Importance role "beat" still belongs on the continuous narrative line when the
+ * point has a finite metric value. Otherwise a short chapter with one Core and
+ * two Beat-classified Scenes collapses to a single point and draws no stroke.
+ *
+ * Non-chart annotations should never enter `series` in the first place; null
+ * values still break the path via buildLinePathD.
+ */
+export function mainCurveSeries(series: JourneyCurvePoint[]): JourneyCurvePoint[] {
+  return series.filter((point) => resolveMetricValue(point) != null);
+}
+
+export function valenceDirection(node: JourneySceneNode): "up" | "down" | "flat" {
+  const start = node.scores?.valence_start;
+  const end = node.scores?.valence_end;
+  if (typeof start !== "number" || typeof end !== "number") return "flat";
+  const delta = end - start;
+  if (delta > 8) return "up";
+  if (delta < -8) return "down";
+  return "flat";
+}
+
+export type PacingSegmentLabel = "加速" | "减速" | "变化不明显";
+
+/** Role target midpoints used when backend targets are absent (legacy). */
+const PACING_ROLE_BANDS: Record<string, [number, number]> = {
+  setup: [35, 60],
+  escalation: [55, 80],
+  investigation: [40, 70],
+  reveal: [50, 75],
+  climax: [70, 95],
+  aftermath: [25, 55],
+  transition: [30, 60],
+  open_end: [40, 70],
+  closed_end: [30, 60],
+};
+
+export type PacingFitLabel = "合适" | "偏快" | "偏慢" | "无法判断";
+
+/**
+ * Node label for whether pacing_speed fits scene_role.
+ * Prefer backend pacing_fit when present; never treat fit as identical to speed.
+ * Beat fit must not be expressed as vertical distance on the main curve.
+ */
+export function pacingFitLabel(
+  pacingSpeed: number | null | undefined,
+  sceneRole: string | undefined | null,
+  pacingFitScore?: number | null,
+): PacingFitLabel {
+  if (typeof pacingSpeed !== "number" || !Number.isFinite(pacingSpeed)) {
+    return "无法判断";
+  }
+  const band = PACING_ROLE_BANDS[sceneRole ?? ""] ?? [40, 70];
+  if (typeof pacingFitScore === "number" && Number.isFinite(pacingFitScore)) {
+    if (pacingFitScore >= 70) return "合适";
+    if (pacingFitScore < 45) {
+      if (pacingSpeed < (band[0] + band[1]) / 2) return "偏慢";
+      return "偏快";
+    }
+    return "合适";
+  }
+  if (pacingSpeed < band[0]) return "偏慢";
+  if (pacingSpeed > band[1]) return "偏快";
+  return "合适";
+}
+
+/** Segment label between scenes based on pacing_speed delta (not pacing_fit). */
+export function pacingSegmentLabel(
+  prevSpeed: number | null | undefined,
+  currSpeed: number | null | undefined,
+  threshold = 8,
+): PacingSegmentLabel {
+  if (
+    typeof prevSpeed !== "number" ||
+    typeof currSpeed !== "number" ||
+    !Number.isFinite(prevSpeed) ||
+    !Number.isFinite(currSpeed)
+  ) {
+    return "变化不明显";
+  }
+  const delta = currSpeed - prevSpeed;
+  if (delta >= threshold) return "加速";
+  if (delta <= -threshold) return "减速";
+  return "变化不明显";
+}
+
+export function isLegacyUncalibratedVisualization(
+  visualization: ReaderJourneyVisualization,
+  options: { legacyFlag?: boolean | null; contractVersion?: string | null } = {},
+): boolean {
+  if (options.legacyFlag === true) return true;
+  const version =
+    options.contractVersion ??
+    visualization.calibration_status?.scene_contract_version ??
+    null;
+  if (!version) return true;
+  if (version.startsWith("2.")) return false;
+  return true;
+}
+
+export const LEGACY_UNCALIBRATED_BANNER =
+  "旧版未校准分析，仅供章内走势参考。";
+
+export const V2_LOCAL_FIXTURE_BANNER =
+  "合成测试数据：仅用于验证V2图表、数据透传和诊断规则，不代表真实小说分析结果。";
+
+export const V2_NATIVE_REAL_BANNER = "V2真实正文分析";
+
+export function resolveJourneyTopBanner(
+  visualization: ReaderJourneyVisualization,
+  options: { legacyFlag?: boolean | null; contractVersion?: string | null } = {},
+): string | null {
+  const sourceMode = visualization.calibration_status?.source_mode;
+  const displayBanner = visualization.calibration_status?.display_banner?.trim();
+  if (sourceMode === "v2_native") {
+    return displayBanner || V2_NATIVE_REAL_BANNER;
+  }
+  if (sourceMode === "local_fixture") {
+    return displayBanner || V2_LOCAL_FIXTURE_BANNER;
+  }
+  if (displayBanner === V2_NATIVE_REAL_BANNER) {
+    return V2_NATIVE_REAL_BANNER;
+  }
+  if (displayBanner === V2_LOCAL_FIXTURE_BANNER) {
+    return V2_LOCAL_FIXTURE_BANNER;
+  }
+  if (isLegacyUncalibratedVisualization(visualization, options)) {
+    return LEGACY_UNCALIBRATED_BANNER;
+  }
+  return null;
+}

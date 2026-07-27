@@ -1,0 +1,71 @@
+{
+  "id": "CHG-20260724-049",
+  "title": "Phase 2B-R1 Live Smoke Runtime DI Fix",
+  "type": "fix",
+  "base_version": "1.0.5",
+  "status": "tested",
+  "include_in_next_release": true,
+  "commits": [
+    {
+      "sha": "1e6a10a9fefe5a9b4cd2e1dc9ea1a779a3ffb833",
+      "message": "fix: use real context and credentials in private lab",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "cc5f33e361e28a3f91d8c8efaafb51b22486a016",
+      "message": "docs: mark CHG-20260724-049 tested after DI fix verification",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "65f4aa43a154f76eb8f591e6342fab1cd286b8cb",
+      "message": "docs: sync CHG-20260724-049 commit attachments",
+      "primary": false,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "narrative_core",
+    "private_engine_lab"
+  ],
+  "files": [
+    "apps/api/app/narrative_core/services/formal_private_provider_input_resolver.py",
+    "apps/api/app/narrative_core/services/private_whole_book_live_readiness_runtime.py",
+    "apps/api/app/narrative_core/services/whole_book_context_pipeline.py",
+    "apps/api/app/narrative_core/services/whole_book_context_units.py",
+    "apps/api/app/routers/whole_book_private_engine_lab_runs.py",
+    "apps/api/tests/test_narrative_phase2br1_live_smoke_runtime_di.py",
+    "scripts/private_whole_book_live_smoke.py"
+  ],
+  "user_summary": "Fix Private Lab HTTP runtime to use formal PrivateProviderInputBundleResolver and Credential Adapter instead of Fake defaults for Dry Preflight/Estimate.",
+  "technical_summary": "Formal HTTP Lab DI: FormalPrivateProviderInputBundleResolverAdapter → PrivateProviderInputBundleResolver; ExistingCredentialServiceAdapter auto-wired; paragraph_group content_hash aligned with SnapshotTextResolver; Private lab_wiring @4c412c7e83f70d4d53dfb649921e2d4164583f0f; Fake only via allow_fake_resolver=True.",
+  "acceptance_criteria": [
+    "Formal Lab resolver is not Fake; Snapshot-backed selection; credential adapter wired; Dry Preflight/Estimate zero network/zero Run; no silent Fake fallback"
+  ],
+  "tests": [
+    "apps/api/tests/test_narrative_phase2br1_live_smoke_runtime_di.py",
+    "apps/api/tests/test_narrative_phase2br1_provider_context_cost.py",
+    "apps/api/tests/test_narrative_phase2br1_private_lab_runtime.py",
+    "apps/api/tests/test_narrative_phase2br1_integration.py"
+  ],
+  "verification_evidence": [
+    "Public: 75 passed (DI+provider_context_cost+private_lab_runtime+integration). Private: 27 passed (assembly+wiring+integration+DI). Gates: version 1.0.5, capability keys ok, git diff --check clean. Private commit 4c412c7e83f70d4d53dfb649921e2d4164583f0f."
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "No schema/migration. Ready live-smoke DB unchanged."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-24T04:29:40Z",
+  "updated_at": "2026-07-24T05:22:01Z"
+}

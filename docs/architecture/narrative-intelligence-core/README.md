@@ -1,0 +1,265 @@
+# Narrative Intelligence Core
+
+StoryLens 叙事智能核心文档索引。当前基线：`VERSION=1.0.5`。
+
+## 产品级架构真值（STEP 1.3）
+
+Phase 文档记录分阶段契约与实现史。**产品级整书架构冻结**见：
+
+- [../storylens-whole-book-architecture.md](../storylens-whole-book-architecture.md)
+- [../storylens-public-private-boundary.md](../storylens-public-private-boundary.md)
+- [../storylens-step-roadmap.md](../storylens-step-roadmap.md)
+- [../adr/](../adr/)
+
+若 Phase 文档与上述真值冲突，以 STEP 1.3 真值与 ADR 为准。
+
+## 阶段状态
+
+| Phase | Change | 状态 | 说明 |
+|-------|--------|------|------|
+| Phase 1P | CHG-20260723-011 | verified | 并行 Contract / ORM 骨架 / Migration ID |
+| Phase 1A Agent A | CHG-20260723-012 | verified | Snapshot / Hash / Migration 001–003 |
+| Phase 1A Agent B | CHG-20260723-013 | verified | Run Scope / Stage / Migration 004–005 |
+| Phase 1A Agent C | CHG-20260723-014 | verified | Pattern Map 技术草案 / Mock / 隔离原型 |
+| Phase 1A Integration | CHG-20260723-015 | verified | 合并修正与交叉验证 |
+| Phase 1B-P | CHG-20260723-016 | verified | Asset Contract / ORM 骨架 / Migration 006–010 |
+| Phase 1B Agent D | CHG-20260723-017 | verified | Entity / Alias |
+| Phase 1B Agent E | CHG-20260723-018 | verified | Asset / Version / Evidence |
+| Phase 1B Agent F | CHG-20260723-019 | verified | Relation / Evidence / Conflict |
+| Phase 1B Integration | CHG-20260723-020 | verified | 006–010 联调 / Entity→Asset→Relation |
+| Phase 1C-P | CHG-20260723-021 | verified | Engine / Capability / Quota Contract |
+| Phase 1C Agent G | CHG-20260723-022 | verified | WholeBook Engine / Mock |
+| Phase 1C Agent H | CHG-20260723-023 | verified | Backend Capability / License / Quota |
+| Phase 1C Agent I | CHG-20260723-024 | verified | Frontend Capability Client |
+| Phase 1C Integration | CHG-20260723-025 | verified | Engine + Capability e2e |
+| Phase 1D-P | CHG-20260723-026 | verified | Product Contract freeze |
+| Phase 1D Agent J | CHG-20260723-027 | verified | Preflight / Run UX |
+| Phase 1D Agent K | CHG-20260723-028 | verified | Result DTO / Projection |
+| Phase 1D Agent L | CHG-20260723-029 | verified | Evidence / Review / Map |
+| Phase 1D Integration | CHG-20260723-030 | verified | Phase 1D Integration |
+| Phase 2A-P | CHG-20260723-031 | verified | Mock Run Shell Contract freeze |
+| Phase 2A Agent M | CHG-20260723-032 | tested | Backend Mock Run |
+| Phase 2A Agent N | CHG-20260723-033 | tested | Frontend Mock Run Lab |
+| Phase 2A Agent O | CHG-20260723-034 | tested | Recovery / Reliability |
+| Phase 2A Integration | CHG-20260723-035 | tested | Phase 2A Integration |
+| Phase 2B-P | CHG-20260723-036 | verified | Private Engine / Context / Evidence / Module Contract freeze |
+| Phase 2B Agent P | CHG-20260723-037 | tested | Private Engine Runtime |
+| Phase 2B Agent Q | CHG-20260723-038 | tested | Context and Evidence Pipeline |
+| Phase 2B Agent R | CHG-20260723-039 | tested | First Real Modules and Evaluation |
+| Phase 2B Integration | CHG-20260723-040 | tested | Phase 2B Integration |
+| Phase 2B-R Plan | CHG-20260723-041 | tested | Real engine implementation plan / private boundary audit |
+| Phase 2B-R Agent S | CHG-20260723-042 | tested | Private Runtime and Provider |
+| Phase 2B-R Agent T | CHG-20260723-043 | tested | First Four Real Modules |
+| Phase 2B-R Integration | CHG-20260723-044 | tested | Phase 2B-R Integration |
+| Phase 2B-R1 Plan | CHG-20260723-045 | verified | Live Provider readiness plan |
+| Phase 2B-R1 Agent U | CHG-20260723-046 | tested | Provider Context and Cost |
+| Phase 2B-R1 Agent V | CHG-20260723-047 | tested | Private Lab Runtime and Persistence |
+| Phase 2B-R1 Integration | CHG-20260723-048 | tested | Phase 2B-R1 Integration |
+
+\* 022–031 已为 `verified`（不得 ready/released）。032–040 / 041–044 上限 `tested`（完整 Live Smoke 前不得升 verified）。045 已 `verified`。046–047 保持 `tested`。048 Integration 上限 `tested`。硬边界见下。
+
+## Phase 1P / 1A
+
+- [phase1-parallel-contract.md](./phase1-parallel-contract.md)
+- [phase1-migration-plan.md](./phase1-migration-plan.md)
+- [phase1-parallel-file-ownership.md](./phase1-parallel-file-ownership.md)
+- [phase1-contract-verification.md](./phase1-contract-verification.md)
+- [phase1a-integration-report.md](./phase1a-integration-report.md)
+- [phase1a-known-limitations.md](./phase1a-known-limitations.md)
+
+## Phase 1B-P Contract
+
+- [phase1b-asset-contract.md](./phase1b-asset-contract.md)
+- [phase1b-entity-alias-contract.md](./phase1b-entity-alias-contract.md)
+- [phase1b-relation-contract.md](./phase1b-relation-contract.md)
+- [phase1b-evidence-contract.md](./phase1b-evidence-contract.md)
+- [phase1b-review-lock-versioning.md](./phase1b-review-lock-versioning.md)
+- [phase1b-pattern-map-data-boundary.md](./phase1b-pattern-map-data-boundary.md)
+- [phase1b-migration-plan.md](./phase1b-migration-plan.md)
+- [phase1b-parallel-file-ownership.md](./phase1b-parallel-file-ownership.md)
+- [phase1b-parallel-file-ownership.json](./phase1b-parallel-file-ownership.json)
+- [phase1b-contract-verification.md](./phase1b-contract-verification.md)
+
+## Phase 1B Integration
+
+- [phase1b-integration-report.md](./phase1b-integration-report.md)
+- [phase1b-integrated-migration-verification.md](./phase1b-integrated-migration-verification.md)
+- [phase1b-entity-asset-relation-e2e.md](./phase1b-entity-asset-relation-e2e.md)
+- [phase1b-canonical-lock-conflict.md](./phase1b-canonical-lock-conflict.md)
+- [phase1b-known-limitations.md](./phase1b-known-limitations.md)
+
+## Agent C（Pattern Readiness）
+
+- [phase0b-pattern-map-readiness.md](./phase0b-pattern-map-readiness.md)
+- [phase1d-pattern-map-contract-draft.md](./phase1d-pattern-map-contract-draft.md)
+
+## 硬边界
+
+- 不得实现真实整书分析 / 模型调用 / 双写 / 历史回填
+- 不得建立 Narrative Pattern 数据表或接入正式路由
+- 不得修改 `VERSION`、Tag `v1.0.5`、`release/1.0.5` baseline
+- Integration **可**修订未发布的 migration 006（含 `superseded_by_entity_id`）及对应 ORM；Agents D/E/F 日常不得擅自改 `models.py` 表结构
+- Phase 1C / 1D / 2A：`PRO_CAPABILITIES_SHIPPED=false`；`WHOLE_BOOK_RUNS_ENDPOINT_DISABLED=true`；`PRODUCTION_DEFAULT_ENGINE_ID=None`
+- Phase 1D：Preflight ≠ Run creation；Native/Enhanced 是模式不是产品；无 force-start；无 migrations / Pattern 表 / push / build / publish
+- Phase 2A：`WHOLE_BOOK_MOCK_LAB_ENABLED` 默认 `false`；仅 Lab 路径；无真实 Engine/模型/Prompt；无 Celery/Redis/WebSocket；无新 Migration
+- Phase 2B-P：仅公共契约 / Fake；无正式算法与正式 Prompt；无模型调用；生产整书 Run 仍禁用；无 FTS5 / 向量库 / Neo4j / 新表；高价值逻辑在私有 Sidecar/服务端
+- Phase 2B-R Plan：仅审计与计划文档；私有仓库路径规划；不写正式 Prompt；不调模型；不开放正式 Run；`WHOLE_BOOK_PRIVATE_ENGINE_LAB_ENABLED` 规划默认 false
+- Phase 2B-R1 Plan：修复 Live 就绪缺口的实现计划；不得 live Provider、不得改正式 Prompt、不得写 Candidate/AnalysisRun
+
+## Phase 1C-P Contract
+
+- [phase1c-engine-contract.md](./phase1c-engine-contract.md)
+- [phase1c-stage-contract.md](./phase1c-stage-contract.md)
+- [phase1c-capability-contract.md](./phase1c-capability-contract.md)
+- [phase1c-quota-contract.md](./phase1c-quota-contract.md)
+- [phase1c-engine-asset-boundary.md](./phase1c-engine-asset-boundary.md)
+- [phase1c-frontend-capability-contract.md](./phase1c-frontend-capability-contract.md)
+- [phase1c-api-contract.md](./phase1c-api-contract.md)
+- [phase1c-migration-and-compatibility.md](./phase1c-migration-and-compatibility.md)
+- [phase1c-parallel-file-ownership.md](./phase1c-parallel-file-ownership.md)
+- [phase1c-parallel-file-ownership.json](./phase1c-parallel-file-ownership.json)
+- [phase1c-contract-verification.md](./phase1c-contract-verification.md)
+
+## Phase 1C Integration
+
+- [phase1c-integration-report.md](./phase1c-integration-report.md)
+- [phase1c-engine-capability-e2e.md](./phase1c-engine-capability-e2e.md)
+- [phase1c-capability-api-verification.md](./phase1c-capability-api-verification.md)
+- [phase1c-whole-book-preflight.md](./phase1c-whole-book-preflight.md)
+- [phase1c-mock-production-isolation.md](./phase1c-mock-production-isolation.md)
+- [phase1c-known-limitations.md](./phase1c-known-limitations.md)
+
+## Phase 1D-P Product Contract
+
+- [phase1d-product-flow.md](./phase1d-product-flow.md)
+- [phase1d-preflight-page-contract.md](./phase1d-preflight-page-contract.md)
+- [phase1d-run-progress-contract.md](./phase1d-run-progress-contract.md)
+- [phase1d-result-information-architecture.md](./phase1d-result-information-architecture.md)
+- [phase1d-result-envelope.md](./phase1d-result-envelope.md)
+- [phase1d-module-result-contracts.md](./phase1d-module-result-contracts.md)
+- [phase1d-evidence-review-contract.md](./phase1d-evidence-review-contract.md)
+- [phase1d-conflict-center-contract.md](./phase1d-conflict-center-contract.md)
+- [phase1d-structure-map-projection.md](./phase1d-structure-map-projection.md)
+- [phase1d-api-contract.md](./phase1d-api-contract.md)
+- [phase1d-release-scope.md](./phase1d-release-scope.md)
+- [phase1d-parallel-file-ownership.md](./phase1d-parallel-file-ownership.md)
+- [phase1d-parallel-file-ownership.json](./phase1d-parallel-file-ownership.json)
+- [phase1d-contract-verification.md](./phase1d-contract-verification.md)
+
+## Phase 1D Integration
+
+- [phase1d-integration-report.md](./phase1d-integration-report.md)
+- [phase1d-preflight-result-e2e.md](./phase1d-preflight-result-e2e.md)
+- [phase1d-module-stage-dependency-boundary.md](./phase1d-module-stage-dependency-boundary.md)
+- [phase1d-result-api-verification.md](./phase1d-result-api-verification.md)
+- [phase1d-evidence-review-integration.md](./phase1d-evidence-review-integration.md)
+- [phase1d-structure-map-integration.md](./phase1d-structure-map-integration.md)
+- [phase1d-known-limitations.md](./phase1d-known-limitations.md)
+
+## Agent J / K / L implementation notes
+
+- Run UX: [phase1d-run-ux-implementation.md](./phase1d-run-ux-implementation.md)
+- Result Projection: [phase1d-result-projection-implementation.md](./phase1d-result-projection-implementation.md)
+- Review / Map: [phase1d-review-map-implementation.md](./phase1d-review-map-implementation.md)
+
+## Phase 2A-P Mock Run Shell Contract
+
+- [phase2a-run-shell-overview.md](./phase2a-run-shell-overview.md)
+- [phase2a-mock-lab-security.md](./phase2a-mock-lab-security.md)
+- [phase2a-run-creation-contract.md](./phase2a-run-creation-contract.md)
+- [phase2a-run-state-machine.md](./phase2a-run-state-machine.md)
+- [phase2a-stage-lifecycle.md](./phase2a-stage-lifecycle.md)
+- [phase2a-mock-executor-contract.md](./phase2a-mock-executor-contract.md)
+- [phase2a-task-registry-contract.md](./phase2a-task-registry-contract.md)
+- [phase2a-mock-run-api.md](./phase2a-mock-run-api.md)
+- [phase2a-frontend-lab-contract.md](./phase2a-frontend-lab-contract.md)
+- [phase2a-polling-contract.md](./phase2a-polling-contract.md)
+- [phase2a-partial-result-contract.md](./phase2a-partial-result-contract.md)
+- [phase2a-run-actions-contract.md](./phase2a-run-actions-contract.md)
+- [phase2a-idempotency-concurrency.md](./phase2a-idempotency-concurrency.md)
+- [phase2a-recovery-contract.md](./phase2a-recovery-contract.md)
+- [phase2a-mock-quota-budget.md](./phase2a-mock-quota-budget.md)
+- [phase2a-error-contract.md](./phase2a-error-contract.md)
+- [phase2a-audit-contract.md](./phase2a-audit-contract.md)
+- [phase2a-parallel-file-ownership.md](./phase2a-parallel-file-ownership.md)
+- [phase2a-parallel-file-ownership.json](./phase2a-parallel-file-ownership.json)
+- [phase2a-contract-verification.md](./phase2a-contract-verification.md)
+
+## Phase 2A Integration
+
+- [phase2a-integration-report.md](./phase2a-integration-report.md)
+- [phase2a-runtime-composition.md](./phase2a-runtime-composition.md)
+- [phase2a-lab-router-security.md](./phase2a-lab-router-security.md)
+- [phase2a-metadata-idempotency-boundary.md](./phase2a-metadata-idempotency-boundary.md)
+- [phase2a-executor-recovery-e2e.md](./phase2a-executor-recovery-e2e.md)
+- [phase2a-frontend-backend-contract.md](./phase2a-frontend-backend-contract.md)
+- [phase2a-production-isolation-verification.md](./phase2a-production-isolation-verification.md)
+- [phase2a-known-limitations.md](./phase2a-known-limitations.md)
+
+## Phase 2B-P Private Engine Contract
+
+- [phase2b-private-engine-boundary.md](./phase2b-private-engine-boundary.md)
+- [phase2b-engine-manifest-loader.md](./phase2b-engine-manifest-loader.md)
+- [phase2b-provider-gateway.md](./phase2b-provider-gateway.md)
+- [phase2b-prompt-pack-contract.md](./phase2b-prompt-pack-contract.md)
+- [phase2b-context-pipeline.md](./phase2b-context-pipeline.md)
+- [phase2b-context-unit-bundle.md](./phase2b-context-unit-bundle.md)
+- [phase2b-evidence-pipeline.md](./phase2b-evidence-pipeline.md)
+- [phase2b-module-execution-spec.md](./phase2b-module-execution-spec.md)
+- [phase2b-first-four-modules.md](./phase2b-first-four-modules.md)
+- [phase2b-output-validation.md](./phase2b-output-validation.md)
+- [phase2b-candidate-persistence.md](./phase2b-candidate-persistence.md)
+- [phase2b-native-enhanced.md](./phase2b-native-enhanced.md)
+- [phase2b-quality-model-routing.md](./phase2b-quality-model-routing.md)
+- [phase2b-data-handling-privacy.md](./phase2b-data-handling-privacy.md)
+- [phase2b-checkpoint-recovery.md](./phase2b-checkpoint-recovery.md)
+- [phase2b-budget-usage.md](./phase2b-budget-usage.md)
+- [phase2b-error-contract.md](./phase2b-error-contract.md)
+- [phase2b-algorithm-generality.md](./phase2b-algorithm-generality.md)
+- [phase2b-evaluation-contract.md](./phase2b-evaluation-contract.md)
+- [phase2b-language-contract.md](./phase2b-language-contract.md)
+- [phase2b-parallel-file-ownership.md](./phase2b-parallel-file-ownership.md)
+- [phase2b-parallel-file-ownership.json](./phase2b-parallel-file-ownership.json)
+- [phase2b-contract-verification.md](./phase2b-contract-verification.md)
+
+## Phase 2B Integration
+
+- [phase2b-integration-report.md](./phase2b-integration-report.md)
+- [phase2b-runtime-composition.md](./phase2b-runtime-composition.md)
+- [phase2b-context-bundle-mapping.md](./phase2b-context-bundle-mapping.md)
+- [phase2b-module-registry-runtime.md](./phase2b-module-registry-runtime.md)
+- [phase2b-provider-runner-integration.md](./phase2b-provider-runner-integration.md)
+- [phase2b-evidence-validation-integration.md](./phase2b-evidence-validation-integration.md)
+- [phase2b-fake-provider-e2e.md](./phase2b-fake-provider-e2e.md)
+- [phase2b-production-isolation-verification.md](./phase2b-production-isolation-verification.md)
+- [phase2b-known-limitations.md](./phase2b-known-limitations.md)
+
+## Phase 2B-R Implementation Plan
+
+- [phase2br-implementation-plan.md](./phase2br-implementation-plan.md)
+- [phase2br-private-repository-boundary.md](./phase2br-private-repository-boundary.md)
+- [phase2br-provider-and-budget-plan.md](./phase2br-provider-and-budget-plan.md)
+- [phase2br-live-analysis-safety.md](./phase2br-live-analysis-safety.md)
+- [phase2br-parallel-file-ownership.md](./phase2br-parallel-file-ownership.md)
+- [phase2br-parallel-file-ownership.json](./phase2br-parallel-file-ownership.json)
+- [phase2br-integration-report.md](./phase2br-integration-report.md)
+- [phase2br-known-limitations.md](./phase2br-known-limitations.md)
+- [phase2br-production-isolation-verification.md](./phase2br-production-isolation-verification.md)
+
+## Phase 2B-R1 Live Readiness Plan
+
+- [phase2br1-live-readiness-plan.md](./phase2br1-live-readiness-plan.md)
+- [phase2br1-provider-payload-estimate.md](./phase2br1-provider-payload-estimate.md)
+- [phase2br1-private-lab-persistence.md](./phase2br1-private-lab-persistence.md)
+- [phase2br1-parallel-file-ownership.md](./phase2br1-parallel-file-ownership.md)
+- [phase2br1-parallel-file-ownership.json](./phase2br1-parallel-file-ownership.json)
+- [phase2br1-plan-verification.md](./phase2br1-plan-verification.md)
+
+## Phase 2B-R1 Integration
+
+- [phase2br1-integration-report.md](./phase2br1-integration-report.md)
+- [phase2br1-runtime-composition.md](./phase2br1-runtime-composition.md)
+- [phase2br1-live-smoke-readiness.md](./phase2br1-live-smoke-readiness.md)
+- [phase2br1-known-limitations.md](./phase2br1-known-limitations.md)
+- [phase2br1-provider-context-cost-implementation.md](./phase2br1-provider-context-cost-implementation.md)
+- [phase2br1-private-lab-runtime-implementation.md](./phase2br1-private-lab-runtime-implementation.md)

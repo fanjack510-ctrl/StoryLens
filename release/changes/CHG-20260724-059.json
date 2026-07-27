@@ -1,0 +1,79 @@
+{
+  "id": "CHG-20260724-059",
+  "title": "Direct Citation V2 Contract Closure",
+  "type": "fix",
+  "base_version": "1.0.5",
+  "status": "tested",
+  "include_in_next_release": true,
+  "commits": [
+    {
+      "sha": "862cb0184aab0aa7d62e649d3fab4f7124d5a3f4",
+      "message": "fix: bind execution context and targeted citation repair",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "c053966a9bd81fafadb3219e7b1e5a86c9a59135",
+      "message": "docs: mark CHG-059 tested after directed citation V2 closure",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "6558daf558ee6e0e190cd74a08ec6f25cd0dcaf0",
+      "message": "fix: project execution context binding on lab estimate",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "0a6292f0de05e352f220894cb1e0be62f1583ce5",
+      "message": "docs: attach CHG-059 real Live success evidence",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "apps/api/narrative_core",
+    "storylens_private_engine/citation"
+  ],
+  "files": [],
+  "user_summary": "Freeze Estimate/Consent/Create execution context, field-level claim diagnostics, FieldRequirementPolicy, exact citation error codes, targeted repair, and independent provider business attempts for book_overview.",
+  "technical_summary": "ExecutionContextBinding freeze; FieldRequirementPolicy/ContextCapabilities; claim_contract_diagnostics; precise REQUIRED_CLAIM_* codes; targeted repair with full catalog; independent book_overview_initial/contract_repair attempts; Formal context_bundle_ref reuse.",
+  "acceptance_criteria": [
+    "Estimate/Executor fingerprints match before Provider",
+    "Core fields never not_observed without repair",
+    "Contract HTTP-OK failures are not provider_failed",
+    "Real Live book_overview: Create=1 Provider<=2 ORM Asset/Version/Evidence/Artifact>=1 persistence_complete Result completed Quote/V1=0"
+  ],
+  "tests": [
+    "apps/api/tests/test_narrative_phase2br1_citation_v2_http_replay.py::A-H",
+    "apps/api/tests/test_execution_context_binding_chg059.py",
+    "private:tests/test_field_requirement_policy.py"
+  ],
+  "verification_evidence": [
+    "fix_branch_public=e128a8a95e41cd843ac34fcdd6dcd6337c2d9760",
+    "fix_branch_private=0cfd52e90a0d3796d2b271f82398b78e823f1eb2",
+    "integration_public=c053966a9bd81fafadb3219e7b1e5a86c9a59135",
+    "integration_private=5f8257041b78319beb0921e068a450822257f541",
+    "http_scenarios_A_H=passed",
+    "integration_public_head=9a6b5113a59c456ab4457af0dc24d6e4ae755eaf",
+    "integration_private_head=5f8257041b78319beb0921e068a450822257f541",
+    "live_db=data/runtime/live-smoke/retry9 path artifacts; Create=1; Provider attempts=2 (book_overview_initial+book_overview_contract_repair); ORM Asset/Version/Evidence=4 Artifact=1; persistence_complete=true; Result completed; Quote/V1 fallback=0; actual_cost≈0.016936 CNY; request_ids=25c43445-0010-9980-8127-cd76409398c1,4a75b3ab-fd57-9475-9aa6-81f61125fb28",
+    "live_summary=data/runtime/live-smoke/retry9-live-summary.json"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-24T17:18:07Z",
+  "updated_at": "2026-07-25T00:16:36Z"
+}

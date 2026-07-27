@@ -3,7 +3,7 @@ import { useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { analysisApi } from "../services/analysisApi";
 import { Badge, Empty, ErrorState, Loading } from "../components/common/States";
-import { hasUsableJourneyVisualization } from "../components/readerJourney/hasUsableJourneyVisualization";
+import { hasUsableJourneyVisualization, hasChartSafeJourneyNodes } from "../components/readerJourney/hasUsableJourneyVisualization";
 import { formatJourneyStatus } from "../components/readerJourney/journeyUiLabels";
 import { ReaderJourneySyncWorkspace } from "../components/readerJourney/ReaderJourneySyncWorkspace";
 import { StateView } from "../components/ui/StateView";
@@ -95,12 +95,23 @@ export function AnalysisResultsPage() {
   });
 
   const readerJourney = useQuery({
-    queryKey: ["reader-journey", runId],
-    queryFn: () => analysisApi.readerJourney(runId),
+    queryKey: [
+      "reader-journey",
+      completedResults?.chapter?.book_id ?? null,
+      completedResults?.chapter?.id ?? null,
+      runId,
+    ],
+    queryFn: () =>
+      analysisApi.readerJourney(runId, {
+        bookId: completedResults?.chapter?.book_id,
+        chapterId: completedResults?.chapter?.id,
+      }),
     enabled:
       Number.isFinite(runId) &&
       completedResults != null &&
-      completedResults.run.status === "succeeded",
+      completedResults.run.status === "succeeded" &&
+      Boolean(completedResults.chapter?.id),
+    placeholderData: undefined,
   });
 
   const journeyProgress = useQuery({
@@ -346,6 +357,7 @@ export function AnalysisResultsPage() {
           ? "正在重新计算恢复计划"
           : null);
   const journeyHasVisualization = hasUsableJourneyVisualization(journeyData);
+  const journeyChartSafe = hasChartSafeJourneyNodes(journeyData);
   const journeyEmptyVisualization = Boolean(
     journeyData?.status === "succeeded" &&
       journeyData.visualization &&
@@ -357,7 +369,7 @@ export function AnalysisResultsPage() {
       (journeyProg?.status &&
         ["failed", "scene_profiles_partial", "budget_blocked"].includes(journeyProg.status)),
   );
-  const showJourneySync = tab === "journey" && journeyHasVisualization;
+  const showJourneySync = tab === "journey" && journeyChartSafe;
   const generateJourneyLabel = journeyHasVisualization
     ? "查看预测读者旅程"
     : recoverablePartialOrFailed
@@ -442,8 +454,17 @@ export function AnalysisResultsPage() {
     <div className="reader-journey-panel" data-testid="journey-panel">
       <p className="muted">
         本功能会基于已完成的场景分析，计算阅读节奏、读者问题、正反馈、钩子和风险，不会重新切分场景。
+        新建分析默认使用 Reader Journey V2（真实正文分析）。
       </p>
       {journeyError && <div className="notice error">{journeyError}</div>}
+      {(journeyProg?.status === "succeeded" || journeyData?.status === "succeeded") &&
+        String(journeyProg?.scene_contract_version || journeyData?.scene_contract_version || "").startsWith(
+          "1.",
+        ) && (
+          <div className="notice" data-testid="journey-legacy-reanalyze-hint">
+            当前为旧版未校准分析。重新生成将创建新的 V2 分析并产生相应模型费用；旧结果保留只读，不会自动升级。
+          </div>
+        )}
       {offlineReplayMessage && (
         <div className="notice" data-testid="journey-offline-replay-success">
           {offlineReplayMessage}
@@ -566,6 +587,40 @@ export function AnalysisResultsPage() {
             离线语义校准（重算问题链/诊断，零费用）
           </button>
         )}
+        {(journeyProg?.status === "succeeded" || journeyData?.status === "succeeded") &&
+          String(journeyProg?.scene_contract_version || journeyData?.scene_contract_version || "").startsWith(
+            "1.",
+          ) && (
+            <button
+              data-testid="force-new-v2-reader-journey"
+              disabled={!journeyConsent || journeyBusy}
+              onClick={async () => {
+                if (journeyBusy) return;
+                const ok = window.confirm(
+                  "将创建新的 V2 真实正文分析并产生相应模型费用。旧版结果保留只读，不会自动升级。是否继续？",
+                );
+                if (!ok) return;
+                setJourneyBusy(true);
+                setJourneyError(undefined);
+                try {
+                  const accepted = await analysisApi.createReaderJourney(runId, {
+                    client_request_id: crypto.randomUUID(),
+                    cloud_consent: journeyConsent,
+                    force_new_version: true,
+                  });
+                  setJourneyRunId(accepted.journey_run_id);
+                  setTab("journey");
+                  await journeyProgress.refetch();
+                } catch (error) {
+                  setJourneyError((error as Error).message);
+                } finally {
+                  setJourneyBusy(false);
+                }
+              }}
+            >
+              重新生成 V2 分析（产生模型费用）
+            </button>
+          )}
       </div>
       {(journeyProg?.status === "failed" || journeyProg?.status === "scene_profiles_partial") &&
         (journeyProg.status === "failed" ? (
@@ -698,6 +753,25 @@ export function AnalysisResultsPage() {
           data-testid="journey-empty-state"
           title="暂时没有可显示的阅读旅程"
           description="当前分析结果没有包含有效的场景或指标数据。"
+        />
+        {exportBar}
+      </section>
+    );
+  }
+
+  if (
+    tab === "journey" &&
+    journeyHasVisualization &&
+    !journeyChartSafe &&
+    !showJourneySync
+  ) {
+    return (
+      <section className="workspace results-page results-page-journey-state">
+        <StateView
+          kind="error"
+          data-testid="journey-integrity-blocked-state"
+          title="阅读旅程结果校验未通过"
+          description="检测到部分结论与当前正文不一致，图表详情已暂停展示。"
         />
         {exportBar}
       </section>

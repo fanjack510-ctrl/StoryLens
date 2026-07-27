@@ -34,9 +34,12 @@ describe("ReaderJourneyWorkspace", () => {
       />,
     );
 
-    expect(screen.getByTestId("journey-analysis-title")).toHaveTextContent("阅读旅程");
-    expect(screen.getByTestId("journey-summary-cards")).toBeInTheDocument();
-    expect(screen.getByTestId("summary-card-traction")).toBeInTheDocument();
+    expect(screen.getByTestId("journey-export-title")).toHaveTextContent("阅读旅程");
+    expect(screen.queryByTestId("journey-summary-cards")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("journey-marker-toggle")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("journey-chapter-summary-bullets")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("journey-curve-legend")).not.toBeInTheDocument();
+    expect(screen.getByTestId("journey-unified-legend")).toBeInTheDocument();
     expect(screen.getByTestId("journey-phase-strip").querySelectorAll("button")).toHaveLength(4);
 
     for (let ordinal = 1; ordinal <= 14; ordinal += 1) {
@@ -51,38 +54,36 @@ describe("ReaderJourneyWorkspace", () => {
       beatNode.querySelector("circle")?.getAttribute("r"),
     );
 
+    fireEvent.click(screen.getByTestId("journey-curve-node-14"));
+    expect(screen.getByTestId("journey-detail-drawer")).toHaveTextContent("场景14");
+    expect(screen.getByTestId("scene-detail-tab-questions")).toHaveTextContent(/问题|为什么/);
+
+    expect(screen.getByTestId("journey-overlay-composite")).toHaveTextContent("对比分析");
+    expect(screen.queryByTestId("journey-more-chart-settings")).not.toBeInTheDocument();
+
     fireEvent.click(screen.getByTestId("journey-metric-select"));
     fireEvent.click(screen.getByTestId("journey-metric-hook"));
-    expect(screen.getByTestId("journey-metric-select")).toHaveTextContent("钩子强度");
-
-    fireEvent.click(screen.getByTestId("journey-curve-node-14"));
-    expect(screen.getByTestId("journey-detail-drawer")).toHaveTextContent("场景 14");
-    expect(screen.getByTestId("scene-detail-tab-questions")).toHaveTextContent("问题链");
-
-    fireEvent.click(screen.getByTestId("journey-more-chart-settings"));
-    expect(screen.getByTestId("journey-export-png")).toBeInTheDocument();
+    expect(screen.getByTestId("journey-metric-select")).toHaveTextContent("钩子");
+    expect(screen.queryByTestId("journey-overlay-composite")).not.toBeInTheDocument();
     expect(screen.queryByTestId("journey-overview-mode-tabs")).not.toBeInTheDocument();
   });
 
-  it("defaults to compact marker mode and analysis info popover", () => {
+  it("does not expose 更多操作 or analysis info in ordinary topbar", () => {
     renderJourney(
       <ReaderJourneyWorkspace visualization={visualization} onLocateEvidence={vi.fn()} />,
     );
-    expect(screen.getByTestId("journey-marker-compact").className).toContain("active");
-    expect(screen.getByTestId("journey-marker-compact")).toHaveTextContent("精简标记");
-    expect(screen.queryByTestId("journey-layer-banner")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByTestId("journey-analysis-info"));
-    expect(screen.getByTestId("journey-analysis-info-popover")).toHaveTextContent(
-      /visualization v1\.1/,
-    );
+    expect(screen.queryByTestId("journey-marker-compact")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("journey-marker-full")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("journey-analysis-info-popover")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("journey-more-chart-settings")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("journey-analysis-info")).not.toBeInTheDocument();
   });
 
-  it("toggles full marker mode", () => {
+  it("does not expose full marker mode controls", () => {
     renderJourney(
       <ReaderJourneyWorkspace visualization={visualization} onLocateEvidence={vi.fn()} />,
     );
-    fireEvent.click(screen.getByTestId("journey-marker-full"));
-    expect(screen.getByTestId("journey-marker-full").className).toContain("active");
+    expect(screen.queryByTestId("journey-marker-full")).not.toBeInTheDocument();
   });
 
   it("keeps question chains available in Scene Inspector (legacy overview questions removed)", () => {
@@ -96,27 +97,25 @@ describe("ReaderJourneyWorkspace", () => {
     );
     expect(screen.getByTestId("journey-overview-curve")).toBeInTheDocument();
     expect(screen.queryByTestId("journey-cluster-toggle-qcl-primary")).not.toBeInTheDocument();
-    expect(screen.getByTestId("scene-detail-tab-questions")).toHaveTextContent("问题链");
+    expect(screen.getByTestId("scene-detail-tab-questions")).toHaveTextContent(/问题|为什么/);
   });
 
-  it("shows compact chapter summary cards", () => {
+  it("does not render bottom chapter summary cards", () => {
     renderJourney(
       <ReaderJourneyWorkspace visualization={visualization} onLocateEvidence={vi.fn()} />,
     );
-    expect(screen.getByTestId("summary-card-traction")).toHaveTextContent("核心牵引");
-    expect(screen.getByTestId("summary-card-peak")).toHaveTextContent("峰值");
-    expect(screen.getByTestId("summary-card-weak")).toHaveTextContent("薄弱区间");
-    expect(screen.getByTestId("summary-card-hook")).toHaveTextContent("章尾钩子");
+    expect(screen.queryByTestId("summary-card-traction")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("journey-summary-cards")).not.toBeInTheDocument();
   });
 
-  it("shows diagnosis summary on the single journey analysis view", () => {
+  it("keeps curve workspace when overview=diagnosis alias is used", () => {
     renderJourney(
       <ReaderJourneyWorkspace visualization={visualization} onLocateEvidence={vi.fn()} />,
       "/?overview=diagnosis",
     );
     expect(screen.getByTestId("journey-overview-curve")).toBeInTheDocument();
     expect(screen.queryByTestId("journey-expanded-diagnosis")).not.toBeInTheDocument();
-    expect(screen.getByTestId("summary-card-traction")).toBeInTheDocument();
+    expect(screen.queryByTestId("summary-card-traction")).not.toBeInTheDocument();
   });
 
   it("calls onLocateEvidence from drawer evidence buttons", () => {
@@ -199,7 +198,7 @@ describe("ReaderJourneyWorkspace", () => {
     const collapse = screen.getAllByTestId("journey-collapse-inspector")[0];
     fireEvent.click(collapse!);
     expect(screen.getByTestId("journey-inspector-summary-expand")).toBeInTheDocument();
-    expect(screen.getByTestId("journey-inspector-summary-text").textContent).toMatch(/场景 04/);
+    expect(screen.getByTestId("journey-inspector-summary-text").textContent).toMatch(/场景\s*04/);
     fireEvent.click(screen.getByTestId("journey-inspector-summary-expand"));
     expect(screen.getByTestId("journey-detail-pane")).toBeInTheDocument();
   });

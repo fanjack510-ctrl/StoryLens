@@ -1,0 +1,518 @@
+{
+  "contract_version": "1.0",
+  "run_id": "12",
+  "window_id": "w-3",
+  "input_hash": "60f796cac5966cee82887d6ec69c6a09ea9e3c5d62673f3fb50637689dc9731b",
+  "candidate_entities": [
+    {
+      "candidate_id": "char_goat_head",
+      "entity_type": "character",
+      "canonical_name": "山羊头",
+      "aliases": [],
+      "description": "The organizer of the 'Liar' game, who distributes papers and pens to the participants.",
+      "confidence": 0.95,
+      "evidence_refs": [
+        "ev_1",
+        "ev_2",
+        "ev_3"
+      ]
+    },
+    {
+      "candidate_id": "char_tiantian",
+      "entity_type": "character",
+      "canonical_name": "甜甜",
+      "aliases": [],
+      "description": "A participant in the game, accused by the Arm Tattoo Man of lying about her name being a pseudonym.",
+      "confidence": 0.9,
+      "evidence_refs": [
+        "ev_4",
+        "ev_5",
+        "ev_6"
+      ]
+    },
+    {
+      "candidate_id": "char_arm_tattoo_man",
+      "entity_type": "character",
+      "canonical_name": "花臂男",
+      "aliases": [],
+      "description": "A participant who accuses Tiantian of lying and suggests voting immediately.",
+      "confidence": 0.9,
+      "evidence_refs": [
+        "ev_7",
+        "ev_8"
+      ]
+    },
+    {
+      "candidate_id": "char_white_coat",
+      "entity_type": "character",
+      "canonical_name": "白大褂",
+      "aliases": [],
+      "description": "A middle-aged man in a white coat who questions the Cold Woman's deduction about the time.",
+      "confidence": 0.9,
+      "evidence_refs": [
+        "ev_9",
+        "ev_10"
+      ]
+    },
+    {
+      "candidate_id": "char_cold_woman",
+      "entity_type": "character",
+      "canonical_name": "清冷女人",
+      "aliases": [],
+      "description": "A participant who deduces they have been imprisoned for over 24 hours based on the clock and lack of doors.",
+      "confidence": 0.9,
+      "evidence_refs": [
+        "ev_11",
+        "ev_12",
+        "ev_13"
+      ]
+    },
+    {
+      "candidate_id": "char_sturdy_man",
+      "entity_type": "character",
+      "canonical_name": "健硕男人",
+      "aliases": [],
+      "description": "A participant who stops the argument between Tiantian and the Arm Tattoo Man, and requests to use the tactical discussion time.",
+      "confidence": 0.9,
+      "evidence_refs": [
+        "ev_14",
+        "ev_15"
+      ]
+    },
+    {
+      "candidate_id": "char_xiao_ran",
+      "entity_type": "character",
+      "canonical_name": "肖冉",
+      "aliases": [],
+      "description": "A timid kindergarten teacher sitting next to Qiao Jiajin, who shares her story about waiting for a child's father.",
+      "confidence": 0.9,
+      "evidence_refs": [
+        "ev_16",
+        "ev_17",
+        "ev_18"
+      ]
+    },
+    {
+      "candidate_id": "char_qiao_jiajin",
+      "entity_type": "character",
+      "canonical_name": "乔家劲",
+      "aliases": [],
+      "description": "A participant mentioned as sitting next to Xiao Ran.",
+      "confidence": 0.8,
+      "evidence_refs": [
+        "ev_16"
+      ]
+    },
+    {
+      "candidate_id": "char_qi_xia",
+      "entity_type": "character",
+      "canonical_name": "齐夏",
+      "aliases": [],
+      "description": "A participant who analyzes Tiantian's storytelling style and considers the Arm Tattoo Man's perspective.",
+      "confidence": 0.9,
+      "evidence_refs": [
+        "ev_19",
+        "ev_20"
+      ]
+    },
+    {
+      "candidate_id": "loc_room",
+      "entity_type": "location",
+      "canonical_name": "无门房间",
+      "aliases": [],
+      "description": "The room where the eleven people are held, characterized by having no doors and a clock showing 12 o'clock.",
+      "confidence": 0.9,
+      "evidence_refs": [
+        "ev_13",
+        "ev_21"
+      ]
+    }
+  ],
+  "candidate_assets": [
+    {
+      "candidate_id": "game_liar",
+      "asset_type": "event",
+      "title": "「说谎者」游戏",
+      "summary": "A game organized by Goat Head where nine participants tell stories. One is a liar. If all eight truth-tellers identify the liar, the liar is eliminated and others survive. If any truth-teller votes incorrectly, the liar survives and others are eliminated.",
+      "subject_candidate_ids": [
+        "char_goat_head"
+      ],
+      "object_candidate_ids": [
+        "char_tiantian",
+        "char_arm_tattoo_man",
+        "char_white_coat",
+        "char_cold_woman",
+        "char_sturdy_man",
+        "char_xiao_ran",
+        "char_qiao_jiajin",
+        "char_qi_xia"
+      ],
+      "confidence": 0.95,
+      "evidence_refs": [
+        "ev_2",
+        "ev_3"
+      ],
+      "deduplication_key": "game_liar_rules"
+    },
+    {
+      "candidate_id": "conflict_identify_liar",
+      "asset_type": "conflict",
+      "title": "识别说谎者",
+      "summary": "The participants must identify which of the nine storytellers is lying to survive. Accusations fly, such as against Tiantian for using a pseudonym.",
+      "subject_candidate_ids": [
+        "char_arm_tattoo_man",
+        "char_tiantian"
+      ],
+      "object_candidate_ids": [],
+      "confidence": 0.9,
+      "evidence_refs": [
+        "ev_4",
+        "ev_8"
+      ],
+      "deduplication_key": "conflict_liar_id"
+    },
+    {
+      "candidate_id": "deduction_time",
+      "asset_type": "event",
+      "title": "囚禁时间推断",
+      "summary": "The Cold Woman deduces they have been imprisoned for over 24 hours based on the clock hands completing two cycles and the lack of doors, implying a complex entry method.",
+      "subject_candidate_ids": [
+        "char_cold_woman"
+      ],
+      "object_candidate_ids": [],
+      "confidence": 0.9,
+      "evidence_refs": [
+        "ev_11",
+        "ev_12",
+        "ev_13"
+      ],
+      "deduplication_key": "deduction_24h"
+    }
+  ],
+  "candidate_evidence": [
+    {
+      "evidence_id": "ev_1",
+      "paragraph_id": "B0005-C0002-P0028",
+      "chapter_id": "1304",
+      "quote": "加上山羊头自己，这屋里一共有十一个人。",
+      "evidence_role": "support",
+      "confidence": 0.95,
+      "supports_candidate_ids": [
+        "char_goat_head"
+      ]
+    },
+    {
+      "evidence_id": "ev_2",
+      "paragraph_id": "B0005-C0003-P0028",
+      "chapter_id": "1305",
+      "quote": "本次游戏名为「说谎者」。",
+      "evidence_role": "support",
+      "confidence": 0.95,
+      "supports_candidate_ids": [
+        "game_liar"
+      ]
+    },
+    {
+      "evidence_id": "ev_3",
+      "paragraph_id": "B0005-C0003-P0031",
+      "chapter_id": "1305",
+      "quote": "若八个人全部都选中了「说谎者」，说谎者出局，其余人全部存活。若有其中一人选错，则说谎者存活，其余人全部出局。",
+      "evidence_role": "support",
+      "confidence": 0.95,
+      "supports_candidate_ids": [
+        "game_liar"
+      ]
+    },
+    {
+      "evidence_id": "ev_4",
+      "paragraph_id": "B0005-C0004-P0029",
+      "chapter_id": "1306",
+      "quote": "这个「小姐」已经撒谎了，咱们直接投票就可以。",
+      "evidence_role": "support",
+      "confidence": 0.9,
+      "supports_candidate_ids": [
+        "char_arm_tattoo_man",
+        "conflict_identify_liar"
+      ]
+    },
+    {
+      "evidence_id": "ev_5",
+      "paragraph_id": "B0005-C0004-P0030",
+      "chapter_id": "1306",
+      "quote": "“你……！你说什么？！”甜甜一惊，“我哪里撒谎了？”",
+      "evidence_role": "support",
+      "confidence": 0.9,
+      "supports_candidate_ids": [
+        "char_tiantian"
+      ]
+    },
+    {
+      "evidence_id": "ev_6",
+      "paragraph_id": "B0005-C0004-P0033",
+      "chapter_id": "1306",
+      "quote": "我就叫甜甜！我的本名好多年没用过了！",
+      "evidence_role": "support",
+      "confidence": 0.9,
+      "supports_candidate_ids": [
+        "char_tiantian"
+      ]
+    },
+    {
+      "evidence_id": "ev_7",
+      "paragraph_id": "B0005-C0004-P0031",
+      "chapter_id": "1306",
+      "quote": "花臂男目光冷峻的看了一眼甜甜，说道：“你的名字，你说你叫「甜甜」，可是所有的陪酒小姐都是化名……所以你隐瞒了自己的真名，就已经撒谎了。“",
+      "evidence_role": "support",
+      "confidence": 0.9,
+      "supports_candidate_ids": [
+        "char_arm_tattoo_man",
+        "conflict_identify_liar"
+      ]
+    },
+    {
+      "evidence_id": "ev_8",
+      "paragraph_id": "B0005-C0004-P0029",
+      "chapter_id": "1306",
+      "quote": "花臂男信誓旦旦的说道。",
+      "evidence_role": "support",
+      "confidence": 0.8,
+      "supports_candidate_ids": [
+        "char_arm_tattoo_man"
+      ]
+    },
+    {
+      "evidence_id": "ev_9",
+      "paragraph_id": "B0005-C0004-P0028",
+      "chapter_id": "1306",
+      "quote": "白大褂一愣，看着花臂男：“什么意思？”",
+      "evidence_role": "support",
+      "confidence": 0.9,
+      "supports_candidate_ids": [
+        "char_white_coat"
+      ]
+    },
+    {
+      "evidence_id": "ev_10",
+      "paragraph_id": "B0005-C0002-P0034",
+      "chapter_id": "1304",
+      "quote": "一个穿着白大褂的中年男人打断了众人的思路……开口问道，“我们都刚刚才醒过来，你怎么知道我们被囚禁了「二十四个小时」？”",
+      "evidence_role": "support",
+      "confidence": 0.9,
+      "supports_candidate_ids": [
+        "char_white_coat"
+      ]
+    },
+    {
+      "evidence_id": "ev_11",
+      "paragraph_id": "B0005-C0002-P0031",
+      "chapter_id": "1304",
+      "quote": "一个清冷的女人开口对山羊头说道……我怀疑你拘禁我们已经超过了二十四个小时",
+      "evidence_role": "support",
+      "confidence": 0.9,
+      "supports_candidate_ids": [
+        "char_cold_woman",
+        "deduction_time"
+      ]
+    },
+    {
+      "evidence_id": "ev_12",
+      "paragraph_id": "B0005-C0002-P0036",
+      "chapter_id": "1304",
+      "quote": "清冷女人不慌不忙的指了指桌面上的座钟，回答道：“这里的钟表指向十二点，可我有晚睡的习惯，我上一次在家中看表就已经十二点了，这说明我们被囚禁了至少十二小时。”",
+      "evidence_role": "support",
+      "confidence": 0.9,
+      "supports_candidate_ids": [
+        "char_cold_woman",
+        "deduction_time"
+      ]
+    },
+    {
+      "evidence_id": "ev_13",
+      "paragraph_id": "B0005-C0002-P0037",
+      "chapter_id": "1304",
+      "quote": "这屋子里没有门，说明这个人为了让我们进到这个屋内费了一番功夫……所以我怀疑「超过二十四个小时」",
+      "evidence_role": "support",
+      "confidence": 0.9,
+      "supports_candidate_ids": [
+        "char_cold_woman",
+        "loc_room",
+        "deduction_time"
+      ]
+    },
+    {
+      "evidence_id": "ev_14",
+      "paragraph_id": "B0005-C0005-P0029",
+      "chapter_id": "1307",
+      "quote": "坐在对面的健硕男人喝止了两人",
+      "evidence_role": "support",
+      "confidence": 0.9,
+      "supports_candidate_ids": [
+        "char_sturdy_man"
+      ]
+    },
+    {
+      "evidence_id": "ev_15",
+      "paragraph_id": "B0005-C0003-P0036",
+      "chapter_id": "1305",
+      "quote": "“我现在就要用。”健硕男人不假思索的说道。",
+      "evidence_role": "support",
+      "confidence": 0.9,
+      "supports_candidate_ids": [
+        "char_sturdy_man"
+      ]
+    },
+    {
+      "evidence_id": "ev_16",
+      "paragraph_id": "B0005-C0005-P0031",
+      "chapter_id": "1307",
+      "quote": "乔家劲身边的女人怯生生的点了点头，开口说道：“嗯……我、我叫肖冉，是一名幼师。”",
+      "evidence_role": "support",
+      "confidence": 0.9,
+      "supports_candidate_ids": [
+        "char_xiao_ran",
+        "char_qiao_jiajin"
+      ]
+    },
+    {
+      "evidence_id": "ev_17",
+      "paragraph_id": "B0005-C0005-P0033",
+      "chapter_id": "1307",
+      "quote": "“来这里之前，我正在陪着一个孩子等家长……”",
+      "evidence_role": "support",
+      "confidence": 0.9,
+      "supports_candidate_ids": [
+        "char_xiao_ran"
+      ]
+    },
+    {
+      "evidence_id": "ev_18",
+      "paragraph_id": "B0005-C0005-P0032",
+      "chapter_id": "1307",
+      "quote": "看起来这名叫做肖冉的女孩吓得不轻，她的声音很小，带着颤音。",
+      "evidence_role": "support",
+      "confidence": 0.9,
+      "supports_candidate_ids": [
+        "char_xiao_ran"
+      ]
+    },
+    {
+      "evidence_id": "ev_19",
+      "paragraph_id": "B0005-C0004-P0035",
+      "chapter_id": "1306",
+      "quote": "而齐夏的脸色也有些严肃。",
+      "evidence_role": "support",
+      "confidence": 0.9,
+      "supports_candidate_ids": [
+        "char_qi_xia"
+      ]
+    },
+    {
+      "evidence_id": "ev_20",
+      "paragraph_id": "B0005-C0004-P0037",
+      "chapter_id": "1306",
+      "quote": "可现在花臂男给齐夏提供了另一种思路。",
+      "evidence_role": "support",
+      "confidence": 0.9,
+      "supports_candidate_ids": [
+        "char_qi_xia"
+      ]
+    },
+    {
+      "evidence_id": "ev_21",
+      "paragraph_id": "B0005-C0002-P0037",
+      "chapter_id": "1304",
+      "quote": "这屋子里没有门",
+      "evidence_role": "support",
+      "confidence": 0.9,
+      "supports_candidate_ids": [
+        "loc_room"
+      ]
+    }
+  ],
+  "state_delta": {
+    "characters": [
+      {
+        "candidate_id": "char_goat_head",
+        "summary": "char_goat_head"
+      },
+      {
+        "candidate_id": "char_tiantian",
+        "summary": "char_tiantian"
+      },
+      {
+        "candidate_id": "char_arm_tattoo_man",
+        "summary": "char_arm_tattoo_man"
+      },
+      {
+        "candidate_id": "char_white_coat",
+        "summary": "char_white_coat"
+      },
+      {
+        "candidate_id": "char_cold_woman",
+        "summary": "char_cold_woman"
+      },
+      {
+        "candidate_id": "char_sturdy_man",
+        "summary": "char_sturdy_man"
+      },
+      {
+        "candidate_id": "char_xiao_ran",
+        "summary": "char_xiao_ran"
+      },
+      {
+        "candidate_id": "char_qiao_jiajin",
+        "summary": "char_qiao_jiajin"
+      },
+      {
+        "candidate_id": "char_qi_xia",
+        "summary": "char_qi_xia"
+      }
+    ],
+    "aliases": [],
+    "protagonist_candidates": [
+      {
+        "candidate_id": "char_qi_xia",
+        "summary": "char_qi_xia"
+      }
+    ],
+    "goal_candidates": [
+      {
+        "candidate_id": "game_liar",
+        "summary": "game_liar"
+      }
+    ],
+    "conflict_candidates": [
+      {
+        "candidate_id": "conflict_identify_liar",
+        "summary": "conflict_identify_liar"
+      }
+    ],
+    "central_question_candidates": [
+      {
+        "candidate_id": "game_liar",
+        "summary": "game_liar"
+      }
+    ],
+    "major_event_candidates": [
+      {
+        "candidate_id": "game_liar",
+        "summary": "game_liar"
+      },
+      {
+        "candidate_id": "deduction_time",
+        "summary": "deduction_time"
+      }
+    ],
+    "climax_candidates": [],
+    "ending_state_candidates": []
+  },
+  "warnings": [
+    "Window contains non-chronological chapter ordering (Ch 5, 2, 3, 4). Analysis assumes logical flow within paragraphs but global timeline may be fragmented.",
+    "Protagonist identification is tentative based on internal monologue presence (Qi Xia)."
+  ],
+  "quality": {
+    "confidence": 0.85,
+    "repair_attempted": false,
+    "repair_succeeded": false
+  }
+}

@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ReaderJourneyWorkspace } from "./ReaderJourneyWorkspace";
@@ -110,9 +110,11 @@ describe("DEFECT-012 adaptive phase UI compatibility", () => {
         />
       </MemoryRouter>,
     );
-    fireEvent.click(screen.getByTestId("journey-more-chart-settings"));
     fireEvent.click(screen.getByTestId("journey-export-png"));
-    await vi.waitFor(() => expect(exportJourneyPng).toHaveBeenCalled());
+    await waitFor(() => expect(exportJourneyPng).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(screen.getByTestId("journey-export-feedback")).toHaveTextContent("已导出"),
+    );
     const two = visualizationWithPhases(6, 2);
     cleanup();
     render(
@@ -124,9 +126,11 @@ describe("DEFECT-012 adaptive phase UI compatibility", () => {
         />
       </MemoryRouter>,
     );
-    fireEvent.click(screen.getByTestId("journey-more-chart-settings"));
     fireEvent.click(screen.getByTestId("journey-export-png"));
-    await vi.waitFor(() => expect(exportJourneyPng).toHaveBeenCalled());
+    await waitFor(() => expect(exportJourneyPng).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(screen.getByTestId("journey-export-feedback")).toHaveTextContent("已导出"),
+    );
   });
 
   it("inspector URL recovery works with a single Phase", () => {

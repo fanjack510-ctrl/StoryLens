@@ -1,0 +1,66 @@
+{
+  "constraints": {
+    "allowed_asset_types": [
+      "goal",
+      "conflict"
+    ],
+    "allowed_entity_types": [
+      "character"
+    ],
+    "evidence_required": true,
+    "max_candidates": {
+      "asset": 20,
+      "entity": 20
+    }
+  },
+  "contract_version": "1.0",
+  "prior_state": {
+    "aliases": [],
+    "central_question_candidates": [],
+    "characters": [],
+    "climax_candidates": [],
+    "conflict_candidates": [],
+    "ending_state_candidates": [],
+    "goal_candidates": [],
+    "major_event_candidates": [],
+    "protagonist_candidates": [],
+    "state_version": 0
+  },
+  "run": {
+    "book_id": "1",
+    "engine_version": "overview-engine-1.0",
+    "mode": "whole_book_native",
+    "prompt_version": "overview-prompt-1.0",
+    "run_id": "101",
+    "snapshot_id": "55"
+  },
+  "window": {
+    "chapter_refs": [
+      {
+        "chapter_id": "c1",
+        "chapter_index": 0,
+        "title": "第一章"
+      }
+    ],
+    "end_paragraph_id": "p2",
+    "input_hash": "sha256:window-0",
+    "paragraphs": [
+      {
+        "chapter_id": "c1",
+        "paragraph_id": "p1",
+        "paragraph_index": 0,
+        "text": "主角走进雨巷。"
+      },
+      {
+        "chapter_id": "c1",
+        "paragraph_id": "p2",
+        "paragraph_index": 1,
+        "text": "他听见远处钟声。"
+      }
+    ],
+    "start_paragraph_id": "p1",
+    "total_windows": 2,
+    "window_id": "w-0",
+    "window_index": 0
+  }
+}

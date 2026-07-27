@@ -1,7 +1,13 @@
 import { api } from "./apiClient";
+import type { ConfigRuntimeProfile } from "./aiServiceConfig";
+
 export const settingsApi = {
   dashboard: () => api<any>("/api/v1/dashboard/summary"),
   diagnostics: () => api<any>("/api/v1/system/diagnostics"),
+  configProfile: () => api<ConfigRuntimeProfile>("/api/v1/settings/config-profile"),
+  runtime: () => api<any>("/api/v1/runtime"),
+  openDataDirectory: () =>
+    api<{ ok: boolean; path: string }>("/api/v1/system/open-data-directory", { method: "POST" }),
   get: () => api<any>("/api/v1/settings/desktop"),
   save: (value: any) =>
     api("/api/v1/settings/desktop", {

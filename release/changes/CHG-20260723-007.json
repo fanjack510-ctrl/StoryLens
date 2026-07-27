@@ -1,0 +1,74 @@
+{
+  "id": "CHG-20260723-007",
+  "title": "Move persistent appearance selector to global app header",
+  "type": "fix",
+  "base_version": "1.0.4",
+  "status": "released",
+  "include_in_next_release": false,
+  "commits": [
+    {
+      "sha": "ab3df3f7fda771864b582b8900a21ab833c6caa9",
+      "message": "fix: move persistent theme selector to app header (CHG-20260723-007).",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "8a83c95d54c871169671e8fe070efa2950ada18d",
+      "message": "docs: mark CHG-20260723-007 tested for header theme persistence.",
+      "primary": false,
+      "multi_change_reason": "registry status for CHG-20260723-007"
+    },
+    {
+      "sha": "ad386d1f1adbb84ac40a32b6732b78a8fe8254cd",
+      "message": "docs: set CHG-20260723-007 status to tested.",
+      "primary": false,
+      "multi_change_reason": "status implemented→tested"
+    }
+  ],
+  "modules": [],
+  "files": [
+    "apps/desktop/src/lib/appearanceTheme.ts",
+    "apps/desktop/src/stores/uiStore.ts",
+    "apps/desktop/src/components/layout/AppearanceThemeMenu.tsx",
+    "apps/desktop/src/components/layout/AppShell.tsx",
+    "apps/desktop/index.html",
+    "apps/desktop/src/components/settings/SettingsAppearanceTab.tsx",
+    "apps/desktop/src/components/settings/SettingsGeneralTab.tsx",
+    "apps/desktop/src/styles/global.css",
+    "apps/desktop/src/lib/appearanceTheme.test.ts",
+    "apps/desktop/src/components/layout/appearanceThemeHeader_local.test.tsx"
+  ],
+  "user_summary": "主题选择藏在设置页且刷新恢复默认；移到全局右上角并持久化。",
+  "technical_summary": "SSOT localStorage storylens.appearance.theme; uiStore setTheme persists+applies DOM; Header AppearanceThemeMenu; remove settings theme selects; index.html bootstrap.",
+  "acceptance_criteria": [
+    "Header top-right theme menu on all shell pages",
+    "Theme persists in localStorage across remount/refresh",
+    "Settings no longer has editable theme select",
+    "Pre-hydration script applies theme before React"
+  ],
+  "tests": [
+    "apps/desktop/src/lib/appearanceTheme.test.ts",
+    "apps/desktop/src/components/layout/appearanceThemeHeader_local.test.tsx",
+    "apps/desktop/src/components/layout/AppShell.test.tsx"
+  ],
+  "verification_evidence": [
+    "Appearance/header Vitest 15 passed; typecheck; lint; VERSION 1.0.4",
+    "1.0.5 Phase A engineering gates (not per-item user manual acceptance): pytest 760 passed/50 skipped; vitest 877 passed; typecheck; lint; frontend build; check_project; template governance; playwright smoke+scroll+chapter; focused theme/lens/comparison vitest."
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-23T04:08:55Z",
+  "updated_at": "2026-07-23T05:40:47Z"
+}

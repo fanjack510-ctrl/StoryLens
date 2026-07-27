@@ -98,6 +98,7 @@ describe("UI shell navigation", () => {
     localStorage.removeItem("storylens.nav.devExpanded");
     localStorage.removeItem("storylens.developerMode");
     localStorage.removeItem("storylens.onboarding.v1");
+    localStorage.removeItem("storylens.appearance.theme");
     useOnboardingStore.setState({ status: "completed" });
     useUiStore.setState({ theme: "light" });
   });
@@ -128,13 +129,15 @@ describe("UI shell navigation", () => {
     expect(screen.getByTestId("tasks-route")).toBeInTheDocument();
   });
 
-  it("theme button toggles real theme state", () => {
+  it("theme menu switches real theme state and persists", () => {
     renderShell("/library");
     expect(screen.getByTestId("app-shell")).toHaveAttribute("data-theme", "light");
-    fireEvent.click(screen.getByLabelText("切换到深色模式"));
+    fireEvent.click(screen.getByLabelText("切换界面主题"));
+    fireEvent.click(screen.getByTestId("appearance-theme-option-dark"));
     expect(useUiStore.getState().theme).toBe("dark");
     expect(screen.getByTestId("app-shell")).toHaveAttribute("data-theme", "dark");
-    fireEvent.click(screen.getByLabelText("切换到浅色模式"));
+    fireEvent.click(screen.getByLabelText("切换界面主题"));
+    fireEvent.click(screen.getByTestId("appearance-theme-option-light"));
     expect(useUiStore.getState().theme).toBe("light");
   });
 
@@ -152,7 +155,7 @@ describe("UI shell navigation", () => {
     renderShell("/library");
     const footer = await screen.findByTestId("app-footer");
     await waitFor(() => {
-      expect(footer.textContent || "").toMatch(/StoryLens\s+\d+\.\d+\.\d+/);
+      expect(footer.textContent || "").toMatch(/StoryLens\s*·\s*\d+\.\d+\.\d+/);
     });
     expect(footer).not.toHaveTextContent("1.0.0-rc1");
     expect(footer).not.toHaveTextContent("0.1.0");

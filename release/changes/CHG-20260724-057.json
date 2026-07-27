@@ -1,0 +1,75 @@
+{
+  "id": "CHG-20260724-057",
+  "title": "BookOverview Provider Output Contract Enforcement",
+  "type": "fix",
+  "base_version": "1.0.5",
+  "status": "tested",
+  "include_in_next_release": true,
+  "commits": [
+    {
+      "sha": "4e489cece996776134fd0286383f13ecce563cb3",
+      "message": "fix: close CHG-057 BookOverview acceptance via Router Create path",
+      "primary": true,
+      "multi_change_reason": "Integration cherry-pick retarget"
+    },
+    {
+      "sha": "6b0a52e775ef119e8594aa81e26af254423b8df1",
+      "message": "docs: attach CHG-057 acceptance-closure commit",
+      "primary": false,
+      "multi_change_reason": "Integration cherry-pick retarget"
+    }
+  ],
+  "modules": [
+    "narrative_core",
+    "private_engine_lab"
+  ],
+  "files": [
+    "apps/api/app/narrative_core/services/book_overview_output_contract.py",
+    "apps/api/app/narrative_core/services/whole_book_provider_gateway.py",
+    "apps/api/app/narrative_core/private_engine_contract/data_transfer.py",
+    "apps/api/app/narrative_core/private_engine_contract/model_invocation_authority.py",
+    "apps/api/app/narrative_core/services/private_lab_run_executor.py",
+    "apps/api/app/narrative_core/services/private_lab_service_adapters.py",
+    "apps/api/app/narrative_core/services/private_whole_book_analysis_runtime.py",
+    "apps/api/app/narrative_core/services/provider_transport_kind.py",
+    "apps/api/app/routers/whole_book_private_engine_lab_runs.py",
+    "apps/api/tests/test_narrative_phase2br1_chg057_acceptance_closure.py",
+    "scripts/check_public_provider_boundary.py"
+  ],
+  "user_summary": "Enforce flat BookOverviewResultDto; reject undeclared wrappers/evidence_map; allow one budgeted schema repair; close Router/Create acceptance.",
+  "technical_summary": "Enforce flat BookOverviewResultDto as sole provider output. Exact top-level reject for book_overview/evidence_map/synthetic wrappers; DTO-generated JSON Schema; one budgeted schema repair; Estimate HTTP projects repair budget; Consent fingerprint includes repair strategy; Stage provider_attempt is Lab Live authority (not model_invocations); quote rejection fail-closed before ORM; Router/Create A/B/C acceptance suite.",
+  "acceptance_criteria": [
+    "Router/Create scenario A flat DTO no repair persists ORM and Result completed",
+    "Router/Create scenario B envelope one repair persists; dual attempt auditable via Stage provider_attempt",
+    "Router/Create scenario C repair exhausted fail-closed with zero business rows",
+    "Estimate HTTP exposes repair budget fields; fingerprint rejects stale create",
+    "STAGE_PROVIDER_ATTEMPT_IS_AUTHORITATIVE; model_invocations=0 on Lab Live path",
+    "F1-F8 fail-closed equivalence covered; alias tests not counted"
+  ],
+  "tests": [
+    "apps/api/tests/test_narrative_phase2br1_chg057_acceptance_closure.py",
+    "apps/api/tests/test_narrative_phase2br1_http_replay_no_repair.py",
+    "apps/api/tests/test_public_provider_boundary.py"
+  ],
+  "verification_evidence": [
+    "Integration Public HEAD 6b0a52e775ef119e8594aa81e26af254423b8df1; Private HEAD 4a9c1f1439803cf00f444d38e1954bb4e275c046",
+    "Acceptance suite 15 passed on Integration; Private contract/mapping 16 passed",
+    "Gates: version 1.0.5, capability ok, public_provider_boundary OK; no Migration; runtime_code_changed=true; retry7 dry Estimate Provider HTTP=0"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "No Migration. Undeclared provider envelopes are rejected (no evidence_map contract). Lab Live ledger is Stage provider_attempt."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-24T13:06:00Z",
+  "updated_at": "2026-07-24T15:05:42Z"
+}

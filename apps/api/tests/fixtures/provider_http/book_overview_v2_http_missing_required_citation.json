@@ -1,0 +1,22 @@
+{
+  "id": "fake-http-v2-missing-1",
+  "object": "chat.completion",
+  "model": "qwen3.7-plus",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\"contract_version\": \"v2\", \"logline\": {\"value\": \"缺少必填引用的合成总览\", \"status\": \"observed\", \"citation_ids\": [\"{{CITATION_ID_1}}\"], \"confidence\": 0.8}, \"premise\": {\"value\": null, \"status\": \"not_observed\", \"citation_ids\": [], \"confidence\": null}, \"central_question\": {\"value\": \"缺少必填引用的合成问题？\", \"status\": \"observed\", \"citation_ids\": [\"{{CITATION_ID_1}}\"], \"confidence\": 0.76}, \"primary_conflict\": {\"value\": \"缺少必填引用的合成冲突\", \"status\": \"observed\", \"citation_ids\": [\"{{CITATION_ID_1}}\"], \"confidence\": 0.77}, \"structure_summary\": {\"value\": \"缺少必填引用的合成结构\", \"status\": \"observed\", \"citation_ids\": [\"{{CITATION_ID_1}}\"], \"confidence\": 0.75}, \"ending_state\": {\"value\": null, \"status\": \"not_observed\", \"citation_ids\": [], \"confidence\": null}, \"overall_confidence\": 0.7}"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 5125,
+    "completion_tokens": 420,
+    "total_tokens": 5545
+  },
+  "http_status": 200,
+  "request_id": "fake-http-v2-missing-1"
+}

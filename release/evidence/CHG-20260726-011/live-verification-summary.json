@@ -1,0 +1,21 @@
+{
+  "part_b": "COMPLETED",
+  "window_id": 2075,
+  "body_sha256": "1bdeda15d9419df48f6e862d64d4d740508a5cc336bd52970e0a0779fd11a1db",
+  "prompt_sha256": "3ce882b5c417c9cfe3bd213c36d8e6ed391dafc3d429f76379411a3b925aa31d",
+  "max_tokens_source": "PRODUCT DEFAULT",
+  "outgoing_max_tokens": 8192,
+  "http_status": 200,
+  "finish_reason": "stop",
+  "input_tokens": 5192,
+  "output_tokens": 4626,
+  "json_complete": true,
+  "parser": "PASS",
+  "schema": "PASS",
+  "actual_cost_cny": 0.047392,
+  "elapsed_seconds": 82.309,
+  "real_provider_calls": 1,
+  "database_writes": 0,
+  "passed": true,
+  "measured_at": "2026-07-26T15:11:56.629970+00:00"
+}

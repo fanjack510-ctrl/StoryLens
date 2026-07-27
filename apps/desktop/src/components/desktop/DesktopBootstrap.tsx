@@ -77,9 +77,14 @@ export function DesktopBootstrap({ children }: { children: ReactNode }) {
         setRuntimeError(result.message);
       }
 
-      unlisten = await listenBackendEvents((message) => {
-        if (!cancelled) setRuntimeError(message);
-      });
+      unlisten = await listenBackendEvents(
+        (message) => {
+          if (!cancelled) setRuntimeError(message);
+        },
+        () => {
+          // apiBase already updated in listenBackendEvents; QueryClient invalidates via onApiBaseChange.
+        },
+      );
 
       if (result.state === "ready" || result.state === "browser_dev") {
         trackAppLaunchedOncePerSession();

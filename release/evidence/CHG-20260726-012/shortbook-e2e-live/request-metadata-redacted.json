@@ -1,0 +1,9 @@
+{
+  "provider": "aliyun_qwen_plus",
+  "model": "qwen3.7-plus",
+  "max_output_tokens": "PRODUCT DEFAULT (class attr, not script override)",
+  "timeout_seconds": "PRODUCT DEFAULT (class attr, not script override)",
+  "max_auto_retries": 1,
+  "api_key": "REDACTED",
+  "authorization": "REDACTED"
+}

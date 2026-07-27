@@ -113,7 +113,7 @@ export function TechniqueList({
             {item.mechanism ? <p>机制：{item.mechanism}</p> : null}
             {item.reader_effect ? <p>读者效果：{item.reader_effect}</p> : null}
             {item.transfer_formula ? <p>迁移公式：{item.transfer_formula}</p> : null}
-            {item.risk ? <p>流失风险：{item.risk}</p> : null}
+            {item.risk ? <p>阅读阻力：{item.risk}</p> : null}
             <EvidenceButtons ids={item.evidence_paragraph_ids} onLocate={onLocateEvidence} />
           </li>
         );
@@ -216,7 +216,9 @@ export function HookList({
             </b>
             {item.known ? <p>已知：{item.known}</p> : null}
             {item.gap ? <p>缺口：{item.gap}</p> : null}
-            {item.continue_drive ? <p>续读动力：{item.continue_drive}</p> : null}
+            {item.continue_drive && !/^(继续阅读|继续读下去|继续往下读|想继续读|继续读)$/.test(item.continue_drive.replace(/\s+/g, "")) ? (
+              <p>续读动力：{item.continue_drive}</p>
+            ) : null}
             {item.next_handoff ? <p>下场承接：{item.next_handoff}</p> : null}
             <EvidenceButtons ids={item.evidence_paragraph_ids} onLocate={onLocateEvidence} />
           </li>

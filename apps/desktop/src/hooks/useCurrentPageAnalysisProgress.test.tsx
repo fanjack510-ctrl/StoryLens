@@ -68,7 +68,9 @@ describe("useCurrentPageAnalysisProgress", () => {
   });
 
   it("stops polling after succeeded", async () => {
-    vi.mocked(analysisApi.run).mockResolvedValue(baseRun("succeeded") as any);
+    vi.mocked(analysisApi.run).mockResolvedValue(
+      baseRun("succeeded", { chapter_complete: true }) as any,
+    );
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const { result } = renderHook(
       () => useCurrentPageAnalysisProgress({ runId: 55 }),

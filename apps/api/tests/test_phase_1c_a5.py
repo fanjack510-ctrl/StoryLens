@@ -232,8 +232,7 @@ def test_transport_diagnostic_no_invocation_or_tokens(
     assert body["generates_tokens"] is False
     assert "note" in body
     assert testing_session.query(ModelInvocation).count() == before
-    app.dependency_overrides.clear()
-
+    # Restore gateway only — never clear the shared TestClient overrides map.
 
 def test_transport_diagnostic_unit_skips_chat(testing_session: Session) -> None:
     class CountingProvider(OpenAICompatibleProvider):

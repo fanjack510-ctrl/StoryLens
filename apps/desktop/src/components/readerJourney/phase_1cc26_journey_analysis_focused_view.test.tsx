@@ -6,15 +6,12 @@ import type { ReactElement } from "react";
 import { ReaderJourneyWorkspace } from "./ReaderJourneyWorkspace";
 import { buildMockReaderJourneyVisualization } from "./mockVisualization";
 import {
-  ALL_METRIC_KEYS,
-  METRIC_LABELS_ZH,
-} from "./journeyUiLabels";
-import {
   isLegacyOverviewMode,
   normalizeOverviewModeParam,
   parseOverviewMode,
 } from "./overviewMode";
 import { exportJourneyPng } from "./exportJourneyPng";
+import { expectJourneyTitleVisible, expectRemovedHierarchyChrome, openExportMenu } from "./journeyTestHelpers";
 
 vi.mock("./exportJourneyPng", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./exportJourneyPng")>();
@@ -57,18 +54,11 @@ function renderWorkspace(initial: string, extra?: { analysisRunId?: number; jour
 }
 
 
-function openExportMenu() {
-  const more = screen.queryByTestId("journey-more-chart-settings");
-  if (more && !screen.queryByTestId("journey-export-png")) {
-    fireEvent.click(more);
-  }
-  return screen.getByTestId("journey-export-png");
-}
-
 describe("Phase 1C-C.2.6 journey analysis focused view", () => {
-  it("shows 阅读旅程 and hides legacy top-level overview tabs", () => {
+  it("shows 阅读旅程 export title and hides legacy top-level overview tabs", () => {
     renderWorkspace("/?overview=curve&scene=9&metric=engagement");
-    expect(screen.getByTestId("journey-analysis-title")).toHaveTextContent("阅读旅程");
+    expectJourneyTitleVisible();
+    expectRemovedHierarchyChrome();
     expect(screen.queryByTestId("journey-overview-mode-tabs")).not.toBeInTheDocument();
     expect(screen.queryByTestId("overview-mode-curve")).not.toBeInTheDocument();
     expect(screen.queryByTestId("overview-mode-questions")).not.toBeInTheDocument();
@@ -84,7 +74,7 @@ describe("Phase 1C-C.2.6 journey analysis focused view", () => {
       renderWorkspace(
         `/?overview=${mode}&scene=9&paragraph=B0001-C0002-P0090&inspector=scene&metric=curiosity`,
       );
-      expect(screen.getByTestId("journey-analysis-title")).toHaveTextContent("阅读旅程");
+      expectJourneyTitleVisible();
       expect(screen.getByTestId("journey-overview-curve")).toBeInTheDocument();
       expect(screen.queryByTestId("journey-overview-questions")).not.toBeInTheDocument();
       expect(screen.queryByTestId("journey-overview-diagnosis")).not.toBeInTheDocument();
@@ -107,59 +97,39 @@ describe("Phase 1C-C.2.6 journey analysis focused view", () => {
     expect(next.get("metric")).toBe("tension");
   });
 
-  it("keeps four summary cards and phase strip", () => {
+  it("keeps phase strip without summary cards", () => {
     renderWorkspace("/?overview=curve&scene=9");
-    expect(screen.getByTestId("summary-card-traction")).toBeInTheDocument();
-    expect(screen.getByTestId("summary-card-peak")).toBeInTheDocument();
-    expect(screen.getByTestId("summary-card-weak")).toBeInTheDocument();
-    expect(screen.getByTestId("summary-card-hook")).toBeInTheDocument();
+    expect(screen.queryByTestId("summary-card-traction")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("journey-summary-cards")).not.toBeInTheDocument();
     expect(screen.getByTestId("journey-phase-strip").querySelectorAll("button")).toHaveLength(4);
   });
 
-  it("uses a single metric selector with all metrics and stable URL semantics", async () => {
+  it("uses lens selector instead of legacy metric menu in unified topbar", async () => {
     renderWorkspace("/?overview=curve&scene=9&metric=engagement");
-    expect(screen.getByTestId("journey-metric-select")).toHaveAttribute(
-      "title",
-      "指标：阅读牵引",
-    );
-    expect(screen.getByTestId("journey-metric-select")).toHaveTextContent("阅读牵引");
+    expect(screen.getByTestId("journey-lens-composite")).toHaveAttribute("aria-current", "true");
     expect(screen.queryByTestId("journey-metric-more")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByTestId("journey-metric-select"));
-    const menu = screen.getByTestId("journey-metric-select-menu-panel");
-    for (const key of ALL_METRIC_KEYS) {
-      expect(within(menu).getByTestId(`journey-metric-${key}`)).toHaveTextContent(
-        METRIC_LABELS_ZH[key],
-      );
-    }
-    fireEvent.click(within(menu).getByTestId("journey-metric-curiosity"));
+    fireEvent.click(screen.getByTestId("journey-lens-plot_progress"));
     await waitFor(() => {
-      expect(screen.getByTestId("journey-metric-select")).toHaveAttribute(
-        "title",
-        "指标：好奇",
-      );
-      expect(screen.getByTestId("journey-metric-select")).toHaveTextContent("好奇");
+      expect(screen.getByTestId("journey-lens-plot_progress")).toHaveAttribute("aria-current", "true");
     });
   });
 
-  it("shows compact vs full legend", () => {
+  it("shows above-chart unified legend", () => {
     renderWorkspace("/?overview=curve&scene=9");
-    const legend = screen.getByTestId("journey-curve-legend");
-    expect(within(legend).getByText("当前场景")).toBeInTheDocument();
-    expect(within(legend).getByText("钩子")).toBeInTheDocument();
-    expect(within(legend).queryByText("次级节点")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByTestId("journey-marker-full"));
-    expect(within(legend).getByText("次级节点")).toBeInTheDocument();
-    expect(within(legend).getByText("派生标记")).toBeInTheDocument();
+    const legend = screen.getByTestId("journey-unified-legend");
+    expect(legend).toHaveAttribute("data-legend-placement", "above-chart");
+    expect(screen.getByTestId("journey-minimal-legend")).toBeInTheDocument();
+    expect(within(legend).getByText(/阅读阻力/)).toBeInTheDocument();
   });
 
   it("keeps Scene question chain and Phase questions/risks in Context Inspector", () => {
     renderWorkspace("/?overview=curve&scene=9&inspector=scene");
-    expect(screen.getByTestId("scene-detail-tab-questions")).toHaveTextContent("问题链");
+    expect(screen.getByTestId("scene-detail-tab-questions")).toHaveTextContent("为什么");
     fireEvent.click(screen.getByTestId("scene-detail-tab-overview"));
     expect(screen.getByTestId("scene-detail-panel-overview")).toBeInTheDocument();
     fireEvent.click(screen.getByTestId("journey-phase-1"));
-    expect(screen.getByTestId("phase-detail-tab-questions")).toHaveTextContent("问题与回报");
-    expect(screen.getByTestId("phase-detail-tab-risks")).toHaveTextContent("流失风险");
+    expect(screen.getByTestId("phase-detail-tab-questions")).toHaveTextContent("钩子回收");
+    expect(screen.getByTestId("phase-detail-tab-risks")).toHaveTextContent("阅读阻力");
   });
 
   it("exports PNG with 阅读旅程 title and without legacy tabs", async () => {

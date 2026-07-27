@@ -1,0 +1,19 @@
+﻿{
+    "formal_version":  "1.1.0",
+    "display_target":  "1.1.0-rc.9",
+    "public_head":  "9c1df060d86bec52c0e9b8e6e70fa59ec3fd81fb",
+    "private_head":  "30d8dad8cd649e832999874f7bf16cc1661cf221",
+    "chg019":  "verified",
+    "chg020":  "verified",
+    "chg018":  "tested_blocked",
+    "rc8":  "superseded_by_rc9",
+    "version_check":  "PASS",
+    "pytest_recovery":  "PASS",
+    "vitest":  "PASS",
+    "typecheck":  "PASS",
+    "chg020_verify":  "PASS",
+    "chg019_verify":  "PASS",
+    "native_default_off":  "PASS",
+    "git_diff_check":  "PASS",
+    "prebuild_gate":  "PASS"
+}

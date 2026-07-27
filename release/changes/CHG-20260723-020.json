@@ -1,0 +1,112 @@
+{
+  "id": "CHG-20260723-020",
+  "title": "Phase 1B Integration",
+  "type": "improvement",
+  "base_version": "1.0.5",
+  "status": "verified",
+  "include_in_next_release": true,
+  "commits": [
+    {
+      "sha": "1d1fb9dc028dadb0b67eb1a2ac513a22c8c6570a",
+      "message": "feat: integrate narrative phase1b asset foundation",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "708062ca5070bd2c585618fdc77beef10b2403cc",
+      "message": "docs: mark CHG-20260723-020 tested for phase1b integration",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "c83a9e66b04e5c91bc5d62d74e33ecd97013bbe0",
+      "message": "docs: attach registry sync commit to CHG-20260723-020",
+      "primary": false,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "narrative_core",
+    "database",
+    "architecture"
+  ],
+  "files": [
+    "apps/api/app/db/models.py",
+    "apps/api/app/narrative_core/asset_key.py",
+    "apps/api/app/narrative_core/migrations/runner.py",
+    "apps/api/app/narrative_core/services/entity_service.py",
+    "apps/api/app/narrative_core/services/asset_service.py",
+    "apps/api/app/narrative_core/services/relation_service.py",
+    "apps/api/app/narrative_core/services/conflict_service.py",
+    "apps/api/app/narrative_core/services/conflict_sink.py",
+    "apps/api/app/narrative_core/services/pattern_projection.py",
+    "apps/api/tests/test_narrative_phase1b_integration.py",
+    "docs/architecture/narrative-intelligence-core/phase1b-integration-report.md",
+    "release/changes/CHG-20260723-020.json"
+  ],
+  "user_summary": "Integrate Phase 1B Entity/Asset/Relation foundation with conflict sink and end-to-end verification.",
+  "technical_summary": "Integrate Agent D/E/F: migration 006-010 e2e; Entity superseded_by_entity_id + merge_entities; casefold normalization; Relation identity_fingerprint keys; AnalysisConflictSink; Version/Evidence/Snapshot consistency; canonical support-evidence gates; Protocol sync; Pattern projection adapter; E2E tests.",
+  "acceptance_criteria": [
+    "Fork from feature/narrative-phase1b-contract final HEAD",
+    "Do not modify models.py table structures",
+    "Stay within file ownership JSON",
+    "Cherry-pick D then E then F from Phase 1B-P HEAD",
+    "Migration 001-010 sequential upgrade + idempotent",
+    "Entity merge_entities + superseded_by_entity_id",
+    "casefold normalization",
+    "Relation identity_fingerprint keys",
+    "Conflict Sink persists Asset/Relation lock conflicts",
+    "Canonical requires support Evidence",
+    "E2E Entity-Asset-Relation + Pattern projection",
+    "No Phase 2 / no model calls / VERSION stays 1.0.5"
+  ],
+  "tests": [
+    "apps/api/tests/test_narrative_phase1b_integration.py",
+    "apps/api/tests/test_narrative_entity_alias.py",
+    "apps/api/tests/test_narrative_asset_service.py",
+    "apps/api/tests/test_narrative_asset_evidence.py",
+    "apps/api/tests/test_narrative_relation_service.py",
+    "apps/api/tests/test_narrative_conflict_service.py"
+  ],
+  "verification_evidence": [
+    "pytest apps/api/tests/test_narrative_phase1b_integration.py -q --noconftest (10 passed)",
+    "pytest Agent D/E/F suites (67 passed)",
+    "pytest Phase 1A snapshot/run_scope/run_stage (35 passed)",
+    "docs/architecture/narrative-intelligence-core/phase1b-integration-report.md"
+  ],
+  "data_compatibility": {
+    "database_changed": true,
+    "migration_required": true,
+    "user_data_compatible": true,
+    "notes": "Migration 006 revised in Integration (unpublished): added superseded_by_entity_id; checksum changed for new installs. Existing Phase 1A DBs upgrade 006-010 idempotently. No historical backfill."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-23T08:33:16Z",
+  "updated_at": "2026-07-23T11:46:11Z",
+  "parallel_plan": {
+    "role": "integration",
+    "branch": "integration/narrative-phase1b",
+    "worktree": "D:\\\\Dstorylens-wt-narrative-phase1b-integration",
+    "depends_on": [
+      "CHG-20260723-017",
+      "CHG-20260723-018",
+      "CHG-20260723-019"
+    ],
+    "blocks": [],
+    "forbidden": [
+      "models.py schema edits",
+      "VERSION bump",
+      "push/publish",
+      "Pattern product route"
+    ],
+    "file_ownership": "docs/architecture/narrative-intelligence-core/phase1b-parallel-file-ownership.json",
+    "migration_scope": "006-010 e2e"
+  }
+}

@@ -131,23 +131,29 @@ def test_single_paragraph_scene_allows_identical_evidence() -> None:
     validate_scene_analysis(result, "B0001-C0001-S0001", {pid}, True)
 
 
-def test_multi_paragraph_identical_evidence_rejected() -> None:
+def test_multi_paragraph_identical_evidence_allowed_on_short_scene() -> None:
+    """Short scenes (2 paragraphs) may share full-scene evidence across fields."""
     ids = {"B0001-C0001-P0001", "B0001-C0001-P0002"}
     whole = ["B0001-C0001-P0001", "B0001-C0001-P0002"]
     result = SceneAnalysisResult(
         scene_id="B0001-C0001-S0001",
-        entry_state=EvidenceField(summary="进入", evidence_paragraph_ids=list(whole)),
-        goal=EvidenceField(summary="目标", evidence_paragraph_ids=list(whole)),
-        obstacle=EvidenceField(summary="阻碍", evidence_paragraph_ids=list(whole)),
-        key_actions=[EvidenceField(summary="行动", evidence_paragraph_ids=list(whole))],
+        entry_state=EvidenceField(summary="进入状态：对话开始", evidence_paragraph_ids=list(whole)),
+        goal=EvidenceField(summary="目标：弄清对方态度", evidence_paragraph_ids=list(whole)),
+        obstacle=EvidenceField(summary="阻碍：信息不完整", evidence_paragraph_ids=list(whole)),
+        key_actions=[EvidenceField(summary="行动：追问细节", evidence_paragraph_ids=list(whole))],
         turning_point=EvidenceField(summary="", evidence_paragraph_ids=[]),
-        outcome=EvidenceField(summary="结果", evidence_paragraph_ids=list(whole)),
-        unresolved_question=EvidenceField(summary="悬念", evidence_paragraph_ids=list(whole)),
+        outcome=EvidenceField(summary="结果：悬念仍在", evidence_paragraph_ids=list(whole)),
+        unresolved_question=EvidenceField(summary="悬念：对方隐瞒什么", evidence_paragraph_ids=list(whole)),
         function_tags=["事件推进"],
         confidence=0.9,
     )
-    with pytest.raises(ValueError, match="indiscriminately"):
-        validate_scene_analysis(result, "B0001-C0001-S0001", ids, True)
+    validate_scene_analysis(
+        result,
+        "B0001-C0001-S0001",
+        ids,
+        True,
+        ordered_paragraph_ids=whole,
+    )
 
 
 def test_boundary_and_range_validation() -> None:

@@ -1,0 +1,122 @@
+{
+  "baseline_version": "1.0.5",
+  "baseline_commit": "fc25a984f243d641d91c11d887d07af8b3625fdd",
+  "phase1bp_change": "CHG-20260723-016",
+  "phase1bp": [
+    "apps/api/app/narrative_core/enums.py",
+    "apps/api/app/narrative_core/errors.py",
+    "apps/api/app/narrative_core/asset_key.py",
+    "apps/api/app/narrative_core/contracts/__init__.py",
+    "apps/api/app/narrative_core/contracts/entity.py",
+    "apps/api/app/narrative_core/contracts/asset.py",
+    "apps/api/app/narrative_core/contracts/relation.py",
+    "apps/api/app/narrative_core/contracts/dto.py",
+    "apps/api/app/narrative_core/migrations/__init__.py",
+    "apps/api/app/narrative_core/migrations/runner.py",
+    "apps/api/app/db/models.py",
+    "apps/api/app/db/session.py",
+    "apps/api/tests/test_narrative_phase1bp_contract.py",
+    "apps/api/tests/test_narrative_phase1p_contract.py",
+    "docs/architecture/narrative-intelligence-core/phase1b-asset-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase1b-entity-alias-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase1b-relation-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase1b-evidence-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase1b-review-lock-versioning.md",
+    "docs/architecture/narrative-intelligence-core/phase1b-pattern-map-data-boundary.md",
+    "docs/architecture/narrative-intelligence-core/phase1b-migration-plan.md",
+    "docs/architecture/narrative-intelligence-core/phase1b-parallel-file-ownership.md",
+    "docs/architecture/narrative-intelligence-core/phase1b-parallel-file-ownership.json",
+    "docs/architecture/narrative-intelligence-core/phase1b-contract-verification.md",
+    "docs/architecture/narrative-intelligence-core/README.md",
+    "release/changes/CHG-20260723-016.json",
+    "release/changes/CHG-20260723-017.json",
+    "release/changes/CHG-20260723-018.json",
+    "release/changes/CHG-20260723-019.json",
+    "release/changes/CHG-20260723-020.json",
+    "release/unreleased.json"
+  ],
+  "agent_d": [
+    "apps/api/app/narrative_core/services/entity_repository.py",
+    "apps/api/app/narrative_core/services/entity_service.py",
+    "apps/api/app/narrative_core/migrations/runner.py",
+    "apps/api/tests/test_narrative_entity_alias.py",
+    "docs/architecture/narrative-intelligence-core/phase1b-entity-implementation.md",
+    "release/changes/CHG-20260723-017.json"
+  ],
+  "agent_e": [
+    "apps/api/app/narrative_core/services/asset_repository.py",
+    "apps/api/app/narrative_core/services/asset_service.py",
+    "apps/api/app/narrative_core/services/asset_evidence_service.py",
+    "apps/api/app/narrative_core/migrations/runner.py",
+    "apps/api/tests/test_narrative_asset_service.py",
+    "apps/api/tests/test_narrative_asset_evidence.py",
+    "docs/architecture/narrative-intelligence-core/phase1b-asset-implementation.md",
+    "release/changes/CHG-20260723-018.json"
+  ],
+  "agent_f": [
+    "apps/api/app/narrative_core/services/relation_repository.py",
+    "apps/api/app/narrative_core/services/relation_service.py",
+    "apps/api/app/narrative_core/services/conflict_service.py",
+    "apps/api/app/narrative_core/migrations/runner.py",
+    "apps/api/tests/test_narrative_relation_service.py",
+    "apps/api/tests/test_narrative_conflict_service.py",
+    "docs/architecture/narrative-intelligence-core/phase1b-relation-implementation.md",
+    "release/changes/CHG-20260723-019.json"
+  ],
+  "integration": [
+    "apps/api/tests/test_narrative_phase1b_integration.py",
+    "docs/architecture/narrative-intelligence-core/phase1b-integration-report.md",
+    "docs/architecture/narrative-intelligence-core/README.md",
+    "release/changes/CHG-20260723-020.json",
+    "release/unreleased.json"
+  ],
+  "shared_read_only": [
+    "apps/api/app/db/models.py",
+    "apps/api/app/narrative_core/enums.py",
+    "apps/api/app/narrative_core/errors.py",
+    "apps/api/app/narrative_core/asset_key.py",
+    "apps/api/app/narrative_core/contracts/",
+    "docs/architecture/narrative-intelligence-core/phase1b-asset-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase1b-entity-alias-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase1b-relation-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase1b-evidence-contract.md",
+    "docs/architecture/narrative-intelligence-core/phase1b-review-lock-versioning.md",
+    "docs/architecture/narrative-intelligence-core/phase1b-pattern-map-data-boundary.md",
+    "docs/architecture/narrative-intelligence-core/phase1b-migration-plan.md",
+    "docs/architecture/narrative-intelligence-core/phase1b-parallel-file-ownership.md",
+    "docs/architecture/narrative-intelligence-core/phase1b-parallel-file-ownership.json"
+  ],
+  "branches": {
+    "phase1bp": "feature/narrative-phase1b-contract",
+    "agent_d": "feature/narrative-phase1b-entities",
+    "agent_e": "feature/narrative-phase1b-assets",
+    "agent_f": "feature/narrative-phase1b-relations",
+    "integration": "integration/narrative-phase1b"
+  },
+  "worktrees": {
+    "phase1bp": "D:\\Dstorylens-wt-narrative-phase1b-contract",
+    "agent_d": "D:\\Dstorylens-wt-narrative-entities",
+    "agent_e": "D:\\Dstorylens-wt-narrative-assets",
+    "agent_f": "D:\\Dstorylens-wt-narrative-relations",
+    "integration": "D:\\Dstorylens-wt-narrative-phase1b-integration"
+  },
+  "migration_ownership": {
+    "20260723_001_schema_migrations": "agent_a",
+    "20260723_002_content_hashes": "agent_a",
+    "20260723_003_book_snapshots": "agent_a",
+    "20260723_004_analysis_run_scope": "agent_b",
+    "20260723_005_analysis_run_stages": "agent_b",
+    "20260723_006_narrative_entities_aliases": "agent_d",
+    "20260723_007_narrative_assets_versions": "agent_e",
+    "20260723_008_narrative_asset_evidence": "agent_e",
+    "20260723_009_narrative_relations_versions_evidence": "agent_f",
+    "20260723_010_analysis_conflicts": "agent_f"
+  },
+  "notes": [
+    "All Agent D/E/F/Integration branches must fork from Phase 1B-P final HEAD.",
+    "Do not fork from Agent A/B/C branches or re-derive from v1.0.5 alone.",
+    "models.py table structures are frozen after Phase 1B-P.",
+    "runner.py is multi-owned by migration_id ranges only.",
+    "Pattern Map DTO remains frontend-only; no narrative_patterns tables."
+  ]
+}

@@ -2,8 +2,12 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 import { FirstLaunchWizard } from "./FirstLaunchWizard";
+import { TelemetryInviteCard } from "./TelemetryInviteCard";
 import { useTelemetryStore } from "../../stores/telemetry";
+import { useOnboardingStore } from "../../stores/onboardingStore";
 import * as aiServiceConfig from "../../services/aiServiceConfig";
+
+const navigateMock = vi.fn();
 
 const setupQueryState = vi.hoisted(() => ({
   data: undefined as
@@ -19,151 +23,96 @@ vi.mock("react-router-dom", async () => {
   const actual = await vi.importActual<typeof import("react-router-dom")>("react-router-dom");
   return {
     ...actual,
-    useNavigate: () => vi.fn(),
+    useNavigate: () => navigateMock,
   };
 });
 
-vi.mock("@tanstack/react-query", () => ({
-  useQueryClient: () => ({ invalidateQueries: vi.fn() }),
-  useQuery: () => ({ data: setupQueryState.data, isLoading: false }),
-}));
+vi.mock("@tanstack/react-query", async () => {
+  const actual = await vi.importActual<typeof import("@tanstack/react-query")>("@tanstack/react-query");
+  return {
+    ...actual,
+    useQueryClient: () => ({ invalidateQueries: vi.fn() }),
+    useQuery: () => ({ data: setupQueryState.data, isLoading: false }),
+  };
+});
 
 vi.mock("../../services/aiServiceConfig", () => ({
   configureRecommendedQwenService: vi.fn(),
   fetchRecommendedQwenStatus: vi.fn(),
 }));
 
-describe("FirstLaunchWizard telemetry opt-in", () => {
+function renderWizard() {
+  return render(
+    <MemoryRouter>
+      <FirstLaunchWizard />
+    </MemoryRouter>,
+  );
+}
+
+describe("FirstLaunchWizard two-step flow", () => {
   afterEach(() => {
     cleanup();
-    localStorage.removeItem("storylens.telemetry.consent");
+    localStorage.clear();
+    navigateMock.mockReset();
   });
 
   beforeEach(() => {
     useTelemetryStore.setState({ consent: "UNKNOWN", installIdPreview: null });
+    useOnboardingStore.setState({ status: "pending" });
     setupQueryState.data = undefined;
     vi.mocked(aiServiceConfig.configureRecommendedQwenService).mockReset();
   });
 
-  it("defaults anonymous stats off and sets DISABLED when finishing without opt-in", () => {
-    render(
-      <MemoryRouter>
-        <FirstLaunchWizard />
-      </MemoryRouter>,
-    );
-    fireEvent.click(screen.getByText("下一步"));
-    fireEvent.click(screen.getByText("稍后配置"));
-    fireEvent.click(screen.getByText("开始使用 StoryLens"));
-    expect(localStorage.getItem("storylens.telemetry.consent")).toBe("DISABLED");
-  });
-
-  it("sets ENABLED when user opts in on step 3", () => {
-    render(
-      <MemoryRouter>
-        <FirstLaunchWizard />
-      </MemoryRouter>,
-    );
-    fireEvent.click(screen.getByText("下一步"));
-    fireEvent.click(screen.getByText("稍后配置"));
-    fireEvent.click(screen.getByTestId("onboarding-telemetry-opt-in").querySelector("input")!);
-    fireEvent.click(screen.getByText("开始使用 StoryLens"));
-    expect(localStorage.getItem("storylens.telemetry.consent")).toBe("ENABLED");
-  });
-});
-
-describe("FirstLaunchWizard AI setup", () => {
-  afterEach(cleanup);
-
-  beforeEach(() => {
-    setupQueryState.data = undefined;
-    vi.mocked(aiServiceConfig.configureRecommendedQwenService).mockReset();
-  });
-
-  it("shows step chrome without changing underlying step state machine", () => {
-    render(
-      <MemoryRouter>
-        <FirstLaunchWizard />
-      </MemoryRouter>,
-    );
-    expect(screen.getByText("步骤 1 / 3")).toBeInTheDocument();
+  it("shows welcome with a single primary action", () => {
+    renderWizard();
     expect(screen.getByTestId("onboarding-step-welcome")).toBeInTheDocument();
-    expect(screen.getByText("本地优先的小说拆解工具")).toBeInTheDocument();
-    fireEvent.click(screen.getByText("下一步"));
-    expect(screen.getByText("步骤 2 / 3")).toBeInTheDocument();
+    expect(screen.getByText("欢迎使用 StoryLens")).toBeInTheDocument();
+    expect(screen.getByTestId("onboarding-start-setup")).toBeInTheDocument();
+    expect(screen.queryByText("步骤 1 / 3")).not.toBeInTheDocument();
+    expect(screen.queryByText("本地优先的小说拆解工具")).not.toBeInTheDocument();
+    expect(screen.queryAllByRole("button", { name: "开始设置" })).toHaveLength(1);
+  });
+
+  it("enters AI step from 开始设置", () => {
+    renderWizard();
+    fireEvent.click(screen.getByTestId("onboarding-start-setup"));
     expect(screen.getByTestId("onboarding-step-ai")).toBeInTheDocument();
+    expect(screen.getByText("连接 AI 模型")).toBeInTheDocument();
   });
 
-  it("uses neutral tone before any verification", () => {
-    render(
-      <MemoryRouter>
-        <FirstLaunchWizard />
-      </MemoryRouter>,
+  it("completes wizard when entering library from welcome", () => {
+    renderWizard();
+    fireEvent.click(screen.getByTestId("onboarding-enter-library"));
+    expect(useOnboardingStore.getState().status).toBe("completed");
+    expect(navigateMock).toHaveBeenCalledWith("/library");
+    expect(localStorage.getItem("storylens.telemetry.consent")).toBeNull();
+  });
+
+  it("shows 保存并验证 without existing credential", () => {
+    setupQueryState.data = { credential_configured: false };
+    renderWizard();
+    fireEvent.click(screen.getByTestId("onboarding-start-setup"));
+    expect(screen.getByTestId("onboarding-test")).toHaveTextContent("保存并验证");
+  });
+
+  it("shows 验证并进入书库 when credential exists", () => {
+    setupQueryState.data = { credential_configured: true };
+    renderWizard();
+    fireEvent.click(screen.getByTestId("onboarding-start-setup"));
+    expect(screen.getByTestId("onboarding-api-key")).toHaveAttribute(
+      "placeholder",
+      "已配置，留空表示不修改",
     );
-    fireEvent.click(screen.getByText("下一步"));
-    const status = screen.getByTestId("onboarding-connection-status");
-    expect(status).toHaveAttribute("data-tone", "neutral");
-    expect(status.className).toContain("onboarding-status-card--neutral");
-    expect(status.className).not.toContain("onboarding-status-card--success");
-    expect(status).toHaveTextContent("尚未配置");
+    expect(screen.getByTestId("onboarding-test")).toHaveTextContent("验证并进入书库");
+    expect(screen.getByText("Key仅保存在本机。")).toBeInTheDocument();
+    expect(screen.queryByText(/Windows 凭据管理器/)).not.toBeInTheDocument();
   });
 
-  it("disables verify without api key and without existing credential", () => {
-    render(
-      <MemoryRouter>
-        <FirstLaunchWizard />
-      </MemoryRouter>,
-    );
-    fireEvent.click(screen.getByText("下一步"));
-    expect(screen.getByTestId("onboarding-test")).toBeDisabled();
-    expect(screen.getByTestId("onboarding-save-next")).toBeDisabled();
-    expect(screen.getByTestId("onboarding-next-reason")).toHaveTextContent("尚未填写 API Key");
-  });
-
-  it("keeps next disabled after model validation until analysis ready", async () => {
-    vi.mocked(aiServiceConfig.configureRecommendedQwenService).mockResolvedValue({
-      ok: false,
-      persisted: true,
-      user_message: "模型服务验证成功\n当前模型缺少计价信息",
-      credential_configured: true,
-      provider_enabled: true,
-      cloud_enabled: true,
-      provider_eligible: false,
-      selected_provider_id: "aliyun_qwen_plus",
-      connection_status: "partial",
-      analysis_mode: "BALANCED",
-      blockers: ["pricing_unavailable"],
-      needs_cloud_consent: false,
-      model_service_validated: true,
-      analysis_ready: false,
-      readiness_reasons: ["当前模型缺少计价配置"],
-      error_code: "pricing_unavailable",
-    });
-    render(
-      <MemoryRouter>
-        <FirstLaunchWizard />
-      </MemoryRouter>,
-    );
-    fireEvent.click(screen.getByText("下一步"));
-    fireEvent.change(screen.getByTestId("onboarding-api-key"), {
-      target: { value: "sk-test-key-value" },
-    });
-    fireEvent.click(screen.getByRole("checkbox"));
-    fireEvent.click(screen.getByTestId("onboarding-test"));
-    await waitFor(() => {
-      expect(screen.getByTestId("onboarding-connection-status")).toHaveTextContent(
-        "模型服务验证成功",
-      );
-    });
-    expect(screen.getByTestId("onboarding-save-next")).toBeDisabled();
-    expect(screen.getByTestId("onboarding-next-reason")).toHaveTextContent("计价");
-    expect(screen.queryByTestId("onboarding-step-start")).not.toBeInTheDocument();
-  });
-
-  it("enables next only when analysis ready after verify and save", async () => {
+  it("enters library after successful verify", async () => {
     vi.mocked(aiServiceConfig.configureRecommendedQwenService).mockResolvedValue({
       ok: true,
       persisted: true,
-      user_message: "配置完成。模型服务、计价和预算检查均已通过，可以开始分析。",
+      user_message: "配置完成",
       credential_configured: true,
       provider_enabled: true,
       cloud_enabled: true,
@@ -177,85 +126,22 @@ describe("FirstLaunchWizard AI setup", () => {
       analysis_ready: true,
       readiness_reasons: [],
     });
-    render(
-      <MemoryRouter>
-        <FirstLaunchWizard />
-      </MemoryRouter>,
-    );
-    fireEvent.click(screen.getByText("下一步"));
+    renderWizard();
+    fireEvent.click(screen.getByTestId("onboarding-start-setup"));
     fireEvent.change(screen.getByTestId("onboarding-api-key"), {
       target: { value: "sk-test-key-value" },
     });
     fireEvent.click(screen.getByRole("checkbox"));
     fireEvent.click(screen.getByTestId("onboarding-test"));
     await waitFor(() => {
-      expect(aiServiceConfig.configureRecommendedQwenService).toHaveBeenCalledWith(
-        expect.objectContaining({ persist: true, cloudBodyConsent: true }),
-      );
+      expect(useOnboardingStore.getState().status).toBe("completed");
     });
-    await waitFor(() => {
-      expect(screen.getByTestId("onboarding-save-next")).not.toBeDisabled();
-    });
-    fireEvent.click(screen.getByTestId("onboarding-save-next"));
-    expect(screen.getByTestId("onboarding-step-start")).toBeInTheDocument();
+    expect(navigateMock).toHaveBeenCalledWith("/library");
+    expect(screen.queryByTestId("onboarding-step-start")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("onboarding-telemetry-opt-in")).not.toBeInTheDocument();
   });
 
-  it("allows skip config with explicit analysis unavailable note", () => {
-    render(
-      <MemoryRouter>
-        <FirstLaunchWizard />
-      </MemoryRouter>,
-    );
-    fireEvent.click(screen.getByText("下一步"));
-    expect(screen.getByTestId("onboarding-skip-config")).toBeInTheDocument();
-    expect(screen.getByText(/完成 AI 服务配置前无法执行分析/)).toBeInTheDocument();
-    fireEvent.click(screen.getByTestId("onboarding-skip-config"));
-    expect(screen.getByTestId("onboarding-step-start")).toBeInTheDocument();
-    expect(screen.getByText(/完成 AI 服务配置前无法执行分析/)).toBeInTheDocument();
-  });
-
-  it("uses updated consent copy without hardcoding only 阿里云百炼 as destination", () => {
-    render(
-      <MemoryRouter>
-        <FirstLaunchWizard />
-      </MemoryRouter>,
-    );
-    fireEvent.click(screen.getByText("下一步"));
-    const box = screen.getByTestId("onboarding-consent-box");
-    expect(box).toHaveTextContent(
-      "为完成分析，StoryLens 将应用大模型能力对所选章节正文进行分析，所选正文会发送至当前模型服务商。",
-    );
-    expect(box).toHaveTextContent("正文不会进入 StoryLens 匿名使用统计");
-  });
-
-  it("uses different API Key placeholders for configured vs unconfigured credentials", () => {
-    setupQueryState.data = { credential_configured: false };
-    const { unmount } = render(
-      <MemoryRouter>
-        <FirstLaunchWizard />
-      </MemoryRouter>,
-    );
-    fireEvent.click(screen.getByText("下一步"));
-    expect(screen.getByTestId("onboarding-api-key")).toHaveAttribute(
-      "placeholder",
-      "粘贴你的 API Key",
-    );
-    unmount();
-
-    setupQueryState.data = { credential_configured: true };
-    render(
-      <MemoryRouter>
-        <FirstLaunchWizard />
-      </MemoryRouter>,
-    );
-    fireEvent.click(screen.getByText("下一步"));
-    expect(screen.getByTestId("onboarding-api-key")).toHaveAttribute(
-      "placeholder",
-      "留空表示保持现有凭据",
-    );
-  });
-
-  it("does not show contradictory 连接成功 and 连接失败 labels", async () => {
+  it("stays on AI step when verify fails", async () => {
     vi.mocked(aiServiceConfig.configureRecommendedQwenService).mockResolvedValue({
       ok: false,
       persisted: false,
@@ -273,24 +159,84 @@ describe("FirstLaunchWizard AI setup", () => {
       analysis_ready: false,
       error_code: "CREDENTIAL_INVALID",
     });
-    render(
-      <MemoryRouter>
-        <FirstLaunchWizard />
-      </MemoryRouter>,
-    );
-    fireEvent.click(screen.getByText("下一步"));
+    renderWizard();
+    fireEvent.click(screen.getByTestId("onboarding-start-setup"));
     fireEvent.change(screen.getByTestId("onboarding-api-key"), {
       target: { value: "sk-bad" },
     });
     fireEvent.click(screen.getByRole("checkbox"));
     fireEvent.click(screen.getByTestId("onboarding-test"));
     await waitFor(() => {
-      expect(screen.getByTestId("onboarding-connection-status")).toHaveTextContent(
-        "模型服务验证失败",
-      );
+      expect(screen.getByTestId("onboarding-ai-message")).toHaveTextContent("模型服务验证失败");
     });
-    const status = screen.getByTestId("onboarding-connection-status");
-    expect(status).not.toHaveTextContent("连接成功");
-    expect(status).not.toHaveTextContent("连接失败");
+    expect(screen.getByTestId("onboarding-step-ai")).toBeInTheDocument();
+    expect(screen.getByTestId("onboarding-test")).toHaveTextContent("重新验证");
+    expect(useOnboardingStore.getState().status).toBe("pending");
+  });
+
+  it("allows 稍后配置 to complete and enter library", () => {
+    renderWizard();
+    fireEvent.click(screen.getByTestId("onboarding-start-setup"));
+    fireEvent.click(screen.getByTestId("onboarding-skip-config"));
+    expect(useOnboardingStore.getState().status).toBe("completed");
+    expect(navigateMock).toHaveBeenCalledWith("/library");
+  });
+
+  it("does not leak full API key into the DOM after typing", () => {
+    renderWizard();
+    fireEvent.click(screen.getByTestId("onboarding-start-setup"));
+    fireEvent.change(screen.getByTestId("onboarding-api-key"), {
+      target: { value: "sk-secret-should-not-echo" },
+    });
+    expect(screen.getByTestId("onboarding-api-key")).toHaveAttribute("type", "password");
+    expect(document.body.textContent || "").not.toContain("sk-secret-should-not-echo");
+  });
+
+  it("uses short consent copy without telemetry wording", () => {
+    renderWizard();
+    fireEvent.click(screen.getByTestId("onboarding-start-setup"));
+    const box = screen.getByTestId("onboarding-consent-box");
+    expect(box).toHaveTextContent("分析时，允许将所选正文发送给当前模型服务商");
+    expect(box).toHaveTextContent("StoryLens不会将正文上传到自己的服务器。");
+    expect(box).not.toHaveTextContent("匿名使用统计");
+  });
+});
+
+describe("TelemetryInviteCard", () => {
+  afterEach(() => {
+    cleanup();
+    localStorage.clear();
+  });
+
+  beforeEach(() => {
+    useTelemetryStore.setState({ consent: "UNKNOWN", installIdPreview: null });
+  });
+
+  it("shows invite with no preselected choice when consent unknown", () => {
+    render(<TelemetryInviteCard />);
+    expect(screen.getByTestId("telemetry-invite-card")).toBeInTheDocument();
+    expect(screen.getByTestId("telemetry-invite-decline")).toBeInTheDocument();
+    expect(screen.getByTestId("telemetry-invite-accept")).toBeInTheDocument();
+  });
+
+  it("decline sets DISABLED and hides card", () => {
+    const { rerender } = render(<TelemetryInviteCard />);
+    fireEvent.click(screen.getByTestId("telemetry-invite-decline"));
+    expect(localStorage.getItem("storylens.telemetry.consent")).toBe("DISABLED");
+    rerender(<TelemetryInviteCard />);
+    expect(screen.queryByTestId("telemetry-invite-card")).not.toBeInTheDocument();
+  });
+
+  it("accept sets ENABLED and persists across remount", () => {
+    const { unmount } = render(<TelemetryInviteCard />);
+    fireEvent.click(screen.getByTestId("telemetry-invite-accept"));
+    expect(localStorage.getItem("storylens.telemetry.consent")).toBe("ENABLED");
+    unmount();
+    useTelemetryStore.setState({
+      consent: "ENABLED",
+      installIdPreview: null,
+    });
+    render(<TelemetryInviteCard />);
+    expect(screen.queryByTestId("telemetry-invite-card")).not.toBeInTheDocument();
   });
 });

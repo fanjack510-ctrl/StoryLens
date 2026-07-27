@@ -1,1 +1,45 @@
-<div id="root"></div><script type="module" src="/src/main.tsx"></script>
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>StoryLens</title>
+    <!-- Pre-hydration theme + interface zoom: avoid flash before React mounts. -->
+    <script>
+      (function () {
+        try {
+          var KEY = "storylens.appearance.theme";
+          var LEGACY = ["storylens.theme", "storylens.ui.theme", "theme"];
+          var raw = localStorage.getItem(KEY);
+          if (raw !== "light" && raw !== "dark") {
+            for (var i = 0; i < LEGACY.length; i++) {
+              var v = localStorage.getItem(LEGACY[i]);
+              if (v === "light" || v === "dark") {
+                raw = v;
+                break;
+              }
+            }
+          }
+          if (raw === "light" || raw === "dark") {
+            document.documentElement.dataset.theme = raw;
+            document.documentElement.classList.toggle("theme-dark", raw === "dark");
+            document.documentElement.classList.toggle("theme-light", raw === "light");
+          }
+        } catch (e) {}
+        try {
+          var ZOOM_KEY = "storylens.appearance.interfaceZoom";
+          var allowed = { "80": 1, "90": 1, "100": 1, "110": 1, "125": 1, "150": 1 };
+          var z = localStorage.getItem(ZOOM_KEY);
+          if (!z || !allowed[z]) z = "80";
+          var factor = String(Number(z) / 100);
+          document.documentElement.style.setProperty("--storylens-interface-zoom", factor);
+          document.documentElement.style.zoom = factor;
+        } catch (e2) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
