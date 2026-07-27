@@ -1,0 +1,14 @@
+RC8 PREBUILD GATE: PASS
+
+Formal VERSION: 1.1.0
+Display target: 1.1.0-rc.8
+CHG-019: verified
+version_manager check: PASS
+pytest CHG-019: PASS (9)
+vitest lifecycle: PASS (30)
+CHG-019 zero-cost verify: PASS
+Native Overview default OFF: PASS
+
+Note: change_registry daily check still reports VERSION 1.1.0 vs unreleased/baseline 1.0.5
+(pre-existing on release/1.1.0). RC build uses STORYLENS_RC_CANDIDATE=1 and does not
+require formal --release / release-guard. No Push/Tag/Release/formal 1.1.0 build.

@@ -1,12 +1,12 @@
-# Local Windows RC candidate build (STEP 2.7).
-# - Temporarily sets VERSION to 1.1.0-rc.1 (or -RcVersion)
+# Local Windows RC candidate build.
+# - Temporarily sets VERSION to -RcVersion (e.g. 1.1.0-rc.8)
 # - Installs Private Engine into the build venv (editable)
 # - Builds via build_windows_release.ps1 with STORYLENS_RC_CANDIDATE=1
-# - Restores formal VERSION files so Integration stays at 1.0.5
+# - Restores formal VERSION files so Integration stays at the pre-override formal version
 #
 # Does NOT Push / Tag / Release / permanently bump VERSION.
 param(
-    [string]$RcVersion = "1.1.0-rc.2",
+    [string]$RcVersion = "1.1.0-rc.8",
     [string]$PrivateEnginePath = "D:\Dstorylens-private-engine-wt-phase2br1-integration",
     [string]$BuildLog = ""
 )
@@ -16,14 +16,16 @@ $Root = Resolve-Path (Join-Path $PSScriptRoot "..")
 Set-Location $Root
 
 if (-not $BuildLog) {
-    # Do not overwrite RC1 G7 build log when building a later RC.
+    # Do not overwrite prior RC build logs when building a later RC.
     $safeRc = ($RcVersion -replace "[^\w\.-]", "_")
-    $BuildLog = Join-Path $Root "release\evidence\CHG-20260726-004\manual-acceptance\windows-build-log-$safeRc.md"
+    $BuildLog = Join-Path $Root "release\evidence\RC8\windows-build-log-$safeRc.md"
 }
 
 $FormalVersion = (Get-Content -LiteralPath (Join-Path $Root "VERSION") -Raw -Encoding UTF8).Trim()
-if ($FormalVersion -ne "1.0.5") {
-    throw "Refusing RC build: formal VERSION must be 1.0.5 before override (got $FormalVersion)"
+# Allow RC packaging from current formal lines (1.0.5 historical, 1.1.0 release branch).
+$AllowedFormal = @("1.0.5", "1.1.0")
+if ($AllowedFormal -notcontains $FormalVersion) {
+    throw "Refusing RC build: formal VERSION must be one of $($AllowedFormal -join ', ') before override (got $FormalVersion)"
 }
 
 $py = Join-Path $Root ".venv\Scripts\python.exe"
@@ -50,13 +52,13 @@ function Restore-FormalVersion {
         apps/api/app/__init__.py `
         2>&1 | ForEach-Object { Log "$_" }
     $restored = (Get-Content -LiteralPath (Join-Path $Root "VERSION") -Raw -Encoding UTF8).Trim()
-    if ($restored -ne "1.0.5") {
-        throw "VERSION restore failed; got $restored"
+    if ($restored -ne $FormalVersion) {
+        throw "VERSION restore failed; expected $FormalVersion got $restored"
     }
 }
 
 try {
-    Log "STEP 2.7 RC build start"
+    Log "RC build start"
     Log "Formal VERSION=$FormalVersion RC=$RcVersion"
     Log "PrivateEnginePath=$PrivateEnginePath"
 
@@ -76,14 +78,14 @@ try {
     if ($LASTEXITCODE) { throw "version_manager set $RcVersion failed" }
 
     $env:STORYLENS_RC_CANDIDATE = "1"
-    # CHG-20260727-016: 1.1.0 ships single-chapter scope — do NOT bake Native Overview on.
+    # CHG-20260727-016: single-chapter scope — do NOT bake Native Overview on.
     Remove-Item Env:VITE_PRO_NATIVE_OVERVIEW_ENABLED -ErrorAction SilentlyContinue
     Remove-Item Env:PRO_NATIVE_OVERVIEW_ENABLED -ErrorAction SilentlyContinue
     # Do not force updater signing for local RC.
     Remove-Item Env:STORYLENS_SIGN_UPDATER -ErrorAction SilentlyContinue
     Remove-Item Env:TAURI_SIGNING_PRIVATE_KEY -ErrorAction SilentlyContinue
 
-    # Preserve prior RC installers (do not overwrite RC1 when building RC2).
+    # Preserve prior RC installers (do not overwrite older RCs).
     $releaseDir = Join-Path $Root "dist\release"
     $archiveDir = Join-Path $releaseDir "archive"
     if (Test-Path $releaseDir) {
@@ -126,7 +128,7 @@ try {
         "Started: $started",
         "Finished: $finished",
         "RC Version: $RcVersion",
-        "Formal VERSION restored to: 1.0.5",
+        "Formal VERSION restored to: $FormalVersion",
         "Private Engine: $PrivateEnginePath",
         "STORYLENS_RC_CANDIDATE: 1",
         "VITE_PRO_NATIVE_OVERVIEW_ENABLED (RC bake): false",
