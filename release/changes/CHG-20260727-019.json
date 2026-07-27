@@ -17,6 +17,12 @@
       "message": "docs(release): mark CHG-20260727-019 tested",
       "primary": true,
       "multi_change_reason": "registry status tested evidence update for same CHG-019"
+    },
+    {
+      "sha": "23f6f4ec3c7b541e35df045a36f829d40bb48368",
+      "message": "docs(release): verify CHG-019 and enable RC8 packaging from 1.1.0",
+      "primary": true,
+      "multi_change_reason": "CHG-019 verified evidence + RC8 prebuild gate"
     }
   ],
   "modules": [
@@ -62,5 +68,5 @@
   "blocker_level": "P0",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-27T00:53:16Z",
-  "updated_at": "2026-07-27T01:23:00Z"
+  "updated_at": "2026-07-27T01:27:20Z"
 }
