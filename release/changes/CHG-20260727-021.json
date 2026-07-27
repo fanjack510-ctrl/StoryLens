@@ -23,6 +23,12 @@
       "message": "docs(release): record 1.1.1-rc.1 final HEAD in evidence report",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "270353ee8f071d2dec4e22790bdf35476d5ddce6",
+      "message": "docs(release): record corrected 1.1.1-rc.1 final HEAD",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -76,5 +82,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-27T08:35:48Z",
-  "updated_at": "2026-07-27T10:36:37Z"
+  "updated_at": "2026-07-27T10:36:51Z"
 }
