@@ -3,7 +3,7 @@
   "title": "StoryLens 1.1.1 RC1 packaging and installed verification",
   "type": "build",
   "base_version": "1.1.0",
-  "status": "verified",
+  "status": "ready",
   "include_in_next_release": true,
   "commits": [
     {
@@ -79,7 +79,11 @@
     "release/evidence/1.1.1-rc.1/INSTALLER_AUDIT.md",
     "release/evidence/1.1.1-rc.1/MANUAL_INSTALLED_ACCEPTANCE.md",
     "installer SHA256 DEEB00F87C77...; sidecar 4F7FD23B...; CWD 6/6; isolated refinalize fits 40/90/90/50/80/90/40/80/50",
-    "RC1 manual acceptance PASSED (user authorized formal 1.1.1 publish); installer SHA DEEB00F87C77..."
+    "RC1 manual acceptance PASSED (user authorized formal 1.1.1 publish); installer SHA DEEB00F87C77...",
+    {
+      "path": "release/evidence/1.1.1/INSTALLED_SMOKE.md",
+      "note": "formal install smoke"
+    }
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -96,5 +100,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-27T08:35:48Z",
-  "updated_at": "2026-07-27T12:46:41Z"
+  "updated_at": "2026-07-27T13:07:34Z"
 }

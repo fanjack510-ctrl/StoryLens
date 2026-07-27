@@ -1,0 +1,232 @@
+{
+  "dry_run_1_status": "dry_run",
+  "apply_status": "applied",
+  "dry_run_2_status": "dry_run",
+  "expected_speed": [
+    95,
+    80,
+    50,
+    80,
+    80,
+    50,
+    30,
+    65,
+    30
+  ],
+  "actual_speed": [
+    95,
+    80,
+    50,
+    80,
+    80,
+    50,
+    30,
+    65,
+    30
+  ],
+  "expected_fit": [
+    40,
+    90,
+    90,
+    50,
+    80,
+    90,
+    40,
+    80,
+    50
+  ],
+  "actual_fit": [
+    40,
+    90,
+    90,
+    50,
+    80,
+    90,
+    40,
+    80,
+    50
+  ],
+  "speed_match": true,
+  "fit_match": true,
+  "second_changed": 0,
+  "provider_calls": 0,
+  "formal_db_writes": 0,
+  "ok": true,
+  "dry1": {
+    "status": "dry_run",
+    "changed_scene_count": 6,
+    "provider_calls": 0,
+    "config_provenance": {
+      "scene_role_targets": {
+        "config_name": "scene_role_targets.json",
+        "status": "loaded",
+        "source": "bundled",
+        "version": "1.0",
+        "content_hash": "ee7dd8b88f8386d060e3f21c3d45864a6c26273d4d7f90f3c542390107f40eb7",
+        "error": null,
+        "quality_flags": [
+          "scene_role_targets_loaded"
+        ]
+      },
+      "formulas_v2": {
+        "config_name": "reader_journey_formulas_v2.json",
+        "status": "loaded",
+        "source": "bundled",
+        "version": "2.0",
+        "content_hash": "ceb1ad35e5faa4fbde1522a978bc41408c47f686f7ffd6f3364534f89efb67e0",
+        "error": null,
+        "quality_flags": [
+          "formulas_v2_loaded"
+        ]
+      },
+      "quality_flags": [
+        "formulas_v2_loaded",
+        "scene_role_targets_loaded"
+      ],
+      "derivation_formula_version": "2.0",
+      "role_targets_ready": true
+    },
+    "speeds_after": [
+      95.0,
+      80.0,
+      50.0,
+      80.0,
+      80.0,
+      50.0,
+      30.0,
+      65.0,
+      30.0
+    ],
+    "fits_after": [
+      40.0,
+      90.0,
+      90.0,
+      50.0,
+      80.0,
+      90.0,
+      40.0,
+      80.0,
+      50.0
+    ],
+    "chapter_id": 2,
+    "_returncode": 0
+  },
+  "apply": {
+    "status": "applied",
+    "changed_scene_count": 6,
+    "provider_calls": 0,
+    "config_provenance": {
+      "scene_role_targets": {
+        "config_name": "scene_role_targets.json",
+        "status": "loaded",
+        "source": "bundled",
+        "version": "1.0",
+        "content_hash": "ee7dd8b88f8386d060e3f21c3d45864a6c26273d4d7f90f3c542390107f40eb7",
+        "error": null,
+        "quality_flags": [
+          "scene_role_targets_loaded"
+        ]
+      },
+      "formulas_v2": {
+        "config_name": "reader_journey_formulas_v2.json",
+        "status": "loaded",
+        "source": "bundled",
+        "version": "2.0",
+        "content_hash": "ceb1ad35e5faa4fbde1522a978bc41408c47f686f7ffd6f3364534f89efb67e0",
+        "error": null,
+        "quality_flags": [
+          "formulas_v2_loaded"
+        ]
+      },
+      "quality_flags": [
+        "formulas_v2_loaded",
+        "scene_role_targets_loaded"
+      ],
+      "derivation_formula_version": "2.0",
+      "role_targets_ready": true
+    },
+    "speeds_after": [
+      95.0,
+      80.0,
+      50.0,
+      80.0,
+      80.0,
+      50.0,
+      30.0,
+      65.0,
+      30.0
+    ],
+    "fits_after": [
+      40.0,
+      90.0,
+      90.0,
+      50.0,
+      80.0,
+      90.0,
+      40.0,
+      80.0,
+      50.0
+    ],
+    "chapter_id": 2,
+    "_returncode": 0
+  },
+  "dry2": {
+    "status": "dry_run",
+    "changed_scene_count": 0,
+    "provider_calls": 0,
+    "config_provenance": {
+      "scene_role_targets": {
+        "config_name": "scene_role_targets.json",
+        "status": "loaded",
+        "source": "bundled",
+        "version": "1.0",
+        "content_hash": "ee7dd8b88f8386d060e3f21c3d45864a6c26273d4d7f90f3c542390107f40eb7",
+        "error": null,
+        "quality_flags": [
+          "scene_role_targets_loaded"
+        ]
+      },
+      "formulas_v2": {
+        "config_name": "reader_journey_formulas_v2.json",
+        "status": "loaded",
+        "source": "bundled",
+        "version": "2.0",
+        "content_hash": "ceb1ad35e5faa4fbde1522a978bc41408c47f686f7ffd6f3364534f89efb67e0",
+        "error": null,
+        "quality_flags": [
+          "formulas_v2_loaded"
+        ]
+      },
+      "quality_flags": [
+        "formulas_v2_loaded",
+        "scene_role_targets_loaded"
+      ],
+      "derivation_formula_version": "2.0",
+      "role_targets_ready": true
+    },
+    "speeds_after": [
+      95.0,
+      80.0,
+      50.0,
+      80.0,
+      80.0,
+      50.0,
+      30.0,
+      65.0,
+      30.0
+    ],
+    "fits_after": [
+      40.0,
+      90.0,
+      90.0,
+      50.0,
+      80.0,
+      90.0,
+      40.0,
+      80.0,
+      50.0
+    ],
+    "chapter_id": 2,
+    "_returncode": 0
+  }
+}

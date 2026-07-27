@@ -1,0 +1,11 @@
+﻿{
+    "arch":  "x64",
+    "size":  39085482,
+    "sidecar_sha256":  "81824128B119EB3A25392AD3D44714B0883CD111282B4A2FD7C0FA8EB91D48A7",
+    "os":  "Windows 10",
+    "python":  "Python 3.12.10",
+    "private_head":  "30d8dad8cd649e832999874f7bf16cc1661cf221",
+    "sidecar_build_count":  1,
+    "build_source_head":  "38c85ab4eda0eaa03bd6a7bf8fda7d8deb11a5db",
+    "pyinstaller":  "6.21.0"
+}
