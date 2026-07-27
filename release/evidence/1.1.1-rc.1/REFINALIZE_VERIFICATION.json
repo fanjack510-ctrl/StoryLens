@@ -1,0 +1,614 @@
+{
+  "dry_run_1_status": "dry_run",
+  "apply_status": "applied",
+  "dry_run_2_status": "dry_run",
+  "expected_speed": [
+    95,
+    80,
+    50,
+    80,
+    80,
+    50,
+    30,
+    65,
+    30
+  ],
+  "actual_speed": [
+    95,
+    80,
+    50,
+    80,
+    80,
+    50,
+    30,
+    65,
+    30
+  ],
+  "expected_fit": [
+    40,
+    90,
+    90,
+    50,
+    80,
+    90,
+    40,
+    80,
+    50
+  ],
+  "actual_fit": [
+    40,
+    90,
+    90,
+    50,
+    80,
+    90,
+    40,
+    80,
+    50
+  ],
+  "speed_match": true,
+  "fit_match": true,
+  "second_changed": 0,
+  "provider_calls": 0,
+  "formal_db_writes": 0,
+  "ok": true,
+  "dry1": {
+    "run_id": 1,
+    "db_path": "D:\\StoryLens-Local-Evidence\\1.1.1-rc.1-20260727\\db_copy\\storylens.db",
+    "apply": false,
+    "backup_path": null,
+    "provider_calls": 0,
+    "chapter_id": 2,
+    "chapter_title": "第1章 戏鬼回家",
+    "scene_count": 9,
+    "config_provenance": {
+      "scene_role_targets": {
+        "config_name": "scene_role_targets.json",
+        "status": "loaded",
+        "source": "user",
+        "version": "1.0",
+        "content_hash": "ee7dd8b88f8386d060e3f21c3d45864a6c26273d4d7f90f3c542390107f40eb7",
+        "error": null,
+        "quality_flags": [
+          "scene_role_targets_loaded"
+        ]
+      },
+      "formulas_v2": {
+        "config_name": "reader_journey_formulas_v2.json",
+        "status": "loaded",
+        "source": "user",
+        "version": "2.0",
+        "content_hash": "ceb1ad35e5faa4fbde1522a978bc41408c47f686f7ffd6f3364534f89efb67e0",
+        "error": null,
+        "quality_flags": [
+          "formulas_v2_loaded"
+        ]
+      },
+      "quality_flags": [
+        "formulas_v2_loaded",
+        "scene_role_targets_loaded"
+      ],
+      "derivation_formula_version": "2.0",
+      "role_targets_ready": true
+    },
+    "fits_after": [
+      40.0,
+      90.0,
+      90.0,
+      50.0,
+      80.0,
+      90.0,
+      40.0,
+      80.0,
+      50.0
+    ],
+    "speeds_after": [
+      95.0,
+      80.0,
+      50.0,
+      80.0,
+      80.0,
+      50.0,
+      30.0,
+      65.0,
+      30.0
+    ],
+    "roles_after": [
+      "open_end",
+      "escalation",
+      "reveal",
+      "transition",
+      "reveal",
+      "reveal",
+      "escalation",
+      "transition",
+      "reveal"
+    ],
+    "scene_diffs": [
+      {
+        "scene_ordinal": 1,
+        "scene_id": 1,
+        "scene_role": "open_end",
+        "pacing_speed_before": 95.0,
+        "pacing_speed_after": 95.0,
+        "pacing_fit_before": 90.0,
+        "pacing_fit_after": 40.0,
+        "pacing_fit_status": "ok",
+        "pacing_fit_reason_code": null,
+        "changed": true
+      },
+      {
+        "scene_ordinal": 2,
+        "scene_id": 2,
+        "scene_role": "escalation",
+        "pacing_speed_before": 80.0,
+        "pacing_speed_after": 80.0,
+        "pacing_fit_before": 90.0,
+        "pacing_fit_after": 90.0,
+        "pacing_fit_status": "ok",
+        "pacing_fit_reason_code": null,
+        "changed": false
+      },
+      {
+        "scene_ordinal": 3,
+        "scene_id": 3,
+        "scene_role": "reveal",
+        "pacing_speed_before": 50.0,
+        "pacing_speed_after": 50.0,
+        "pacing_fit_before": 90.0,
+        "pacing_fit_after": 90.0,
+        "pacing_fit_status": "ok",
+        "pacing_fit_reason_code": null,
+        "changed": false
+      },
+      {
+        "scene_ordinal": 4,
+        "scene_id": 4,
+        "scene_role": "transition",
+        "pacing_speed_before": 80.0,
+        "pacing_speed_after": 80.0,
+        "pacing_fit_before": 90.0,
+        "pacing_fit_after": 50.0,
+        "pacing_fit_status": "ok",
+        "pacing_fit_reason_code": null,
+        "changed": true
+      },
+      {
+        "scene_ordinal": 5,
+        "scene_id": 5,
+        "scene_role": "reveal",
+        "pacing_speed_before": 80.0,
+        "pacing_speed_after": 80.0,
+        "pacing_fit_before": 90.0,
+        "pacing_fit_after": 80.0,
+        "pacing_fit_status": "ok",
+        "pacing_fit_reason_code": null,
+        "changed": true
+      },
+      {
+        "scene_ordinal": 6,
+        "scene_id": 6,
+        "scene_role": "reveal",
+        "pacing_speed_before": 50.0,
+        "pacing_speed_after": 50.0,
+        "pacing_fit_before": 90.0,
+        "pacing_fit_after": 90.0,
+        "pacing_fit_status": "ok",
+        "pacing_fit_reason_code": null,
+        "changed": false
+      },
+      {
+        "scene_ordinal": 7,
+        "scene_id": 7,
+        "scene_role": "escalation",
+        "pacing_speed_before": 30.0,
+        "pacing_speed_after": 30.0,
+        "pacing_fit_before": 90.0,
+        "pacing_fit_after": 40.0,
+        "pacing_fit_status": "ok",
+        "pacing_fit_reason_code": null,
+        "changed": true
+      },
+      {
+        "scene_ordinal": 8,
+        "scene_id": 8,
+        "scene_role": "transition",
+        "pacing_speed_before": 65.0,
+        "pacing_speed_after": 65.0,
+        "pacing_fit_before": 90.0,
+        "pacing_fit_after": 80.0,
+        "pacing_fit_status": "ok",
+        "pacing_fit_reason_code": null,
+        "changed": true
+      },
+      {
+        "scene_ordinal": 9,
+        "scene_id": 9,
+        "scene_role": "reveal",
+        "pacing_speed_before": 30.0,
+        "pacing_speed_after": 30.0,
+        "pacing_fit_before": 90.0,
+        "pacing_fit_after": 50.0,
+        "pacing_fit_status": "ok",
+        "pacing_fit_reason_code": null,
+        "changed": true
+      }
+    ],
+    "changed_scene_count": 6,
+    "status": "dry_run",
+    "_returncode": 0
+  },
+  "apply": {
+    "run_id": 1,
+    "db_path": "D:\\StoryLens-Local-Evidence\\1.1.1-rc.1-20260727\\db_copy\\storylens.db",
+    "apply": true,
+    "backup_path": "D:\\StoryLens-Local-Evidence\\1.1.1-rc.1-20260727\\db_copy\\storylens.bak-20260727T103012Z.db",
+    "provider_calls": 0,
+    "chapter_id": 2,
+    "chapter_title": "第1章 戏鬼回家",
+    "scene_count": 9,
+    "config_provenance": {
+      "scene_role_targets": {
+        "config_name": "scene_role_targets.json",
+        "status": "loaded",
+        "source": "user",
+        "version": "1.0",
+        "content_hash": "ee7dd8b88f8386d060e3f21c3d45864a6c26273d4d7f90f3c542390107f40eb7",
+        "error": null,
+        "quality_flags": [
+          "scene_role_targets_loaded"
+        ]
+      },
+      "formulas_v2": {
+        "config_name": "reader_journey_formulas_v2.json",
+        "status": "loaded",
+        "source": "user",
+        "version": "2.0",
+        "content_hash": "ceb1ad35e5faa4fbde1522a978bc41408c47f686f7ffd6f3364534f89efb67e0",
+        "error": null,
+        "quality_flags": [
+          "formulas_v2_loaded"
+        ]
+      },
+      "quality_flags": [
+        "formulas_v2_loaded",
+        "scene_role_targets_loaded"
+      ],
+      "derivation_formula_version": "2.0",
+      "role_targets_ready": true
+    },
+    "fits_after": [
+      40.0,
+      90.0,
+      90.0,
+      50.0,
+      80.0,
+      90.0,
+      40.0,
+      80.0,
+      50.0
+    ],
+    "speeds_after": [
+      95.0,
+      80.0,
+      50.0,
+      80.0,
+      80.0,
+      50.0,
+      30.0,
+      65.0,
+      30.0
+    ],
+    "roles_after": [
+      "open_end",
+      "escalation",
+      "reveal",
+      "transition",
+      "reveal",
+      "reveal",
+      "escalation",
+      "transition",
+      "reveal"
+    ],
+    "scene_diffs": [
+      {
+        "scene_ordinal": 1,
+        "scene_id": 1,
+        "scene_role": "open_end",
+        "pacing_speed_before": 95.0,
+        "pacing_speed_after": 95.0,
+        "pacing_fit_before": 90.0,
+        "pacing_fit_after": 40.0,
+        "pacing_fit_status": "ok",
+        "pacing_fit_reason_code": null,
+        "changed": true
+      },
+      {
+        "scene_ordinal": 2,
+        "scene_id": 2,
+        "scene_role": "escalation",
+        "pacing_speed_before": 80.0,
+        "pacing_speed_after": 80.0,
+        "pacing_fit_before": 90.0,
+        "pacing_fit_after": 90.0,
+        "pacing_fit_status": "ok",
+        "pacing_fit_reason_code": null,
+        "changed": false
+      },
+      {
+        "scene_ordinal": 3,
+        "scene_id": 3,
+        "scene_role": "reveal",
+        "pacing_speed_before": 50.0,
+        "pacing_speed_after": 50.0,
+        "pacing_fit_before": 90.0,
+        "pacing_fit_after": 90.0,
+        "pacing_fit_status": "ok",
+        "pacing_fit_reason_code": null,
+        "changed": false
+      },
+      {
+        "scene_ordinal": 4,
+        "scene_id": 4,
+        "scene_role": "transition",
+        "pacing_speed_before": 80.0,
+        "pacing_speed_after": 80.0,
+        "pacing_fit_before": 90.0,
+        "pacing_fit_after": 50.0,
+        "pacing_fit_status": "ok",
+        "pacing_fit_reason_code": null,
+        "changed": true
+      },
+      {
+        "scene_ordinal": 5,
+        "scene_id": 5,
+        "scene_role": "reveal",
+        "pacing_speed_before": 80.0,
+        "pacing_speed_after": 80.0,
+        "pacing_fit_before": 90.0,
+        "pacing_fit_after": 80.0,
+        "pacing_fit_status": "ok",
+        "pacing_fit_reason_code": null,
+        "changed": true
+      },
+      {
+        "scene_ordinal": 6,
+        "scene_id": 6,
+        "scene_role": "reveal",
+        "pacing_speed_before": 50.0,
+        "pacing_speed_after": 50.0,
+        "pacing_fit_before": 90.0,
+        "pacing_fit_after": 90.0,
+        "pacing_fit_status": "ok",
+        "pacing_fit_reason_code": null,
+        "changed": false
+      },
+      {
+        "scene_ordinal": 7,
+        "scene_id": 7,
+        "scene_role": "escalation",
+        "pacing_speed_before": 30.0,
+        "pacing_speed_after": 30.0,
+        "pacing_fit_before": 90.0,
+        "pacing_fit_after": 40.0,
+        "pacing_fit_status": "ok",
+        "pacing_fit_reason_code": null,
+        "changed": true
+      },
+      {
+        "scene_ordinal": 8,
+        "scene_id": 8,
+        "scene_role": "transition",
+        "pacing_speed_before": 65.0,
+        "pacing_speed_after": 65.0,
+        "pacing_fit_before": 90.0,
+        "pacing_fit_after": 80.0,
+        "pacing_fit_status": "ok",
+        "pacing_fit_reason_code": null,
+        "changed": true
+      },
+      {
+        "scene_ordinal": 9,
+        "scene_id": 9,
+        "scene_role": "reveal",
+        "pacing_speed_before": 30.0,
+        "pacing_speed_after": 30.0,
+        "pacing_fit_before": 90.0,
+        "pacing_fit_after": 50.0,
+        "pacing_fit_status": "ok",
+        "pacing_fit_reason_code": null,
+        "changed": true
+      }
+    ],
+    "changed_scene_count": 6,
+    "status": "applied",
+    "scenes_touched": 9,
+    "_returncode": 0
+  },
+  "dry2": {
+    "run_id": 1,
+    "db_path": "D:\\StoryLens-Local-Evidence\\1.1.1-rc.1-20260727\\db_copy\\storylens.db",
+    "apply": false,
+    "backup_path": null,
+    "provider_calls": 0,
+    "chapter_id": 2,
+    "chapter_title": "第1章 戏鬼回家",
+    "scene_count": 9,
+    "config_provenance": {
+      "scene_role_targets": {
+        "config_name": "scene_role_targets.json",
+        "status": "loaded",
+        "source": "user",
+        "version": "1.0",
+        "content_hash": "ee7dd8b88f8386d060e3f21c3d45864a6c26273d4d7f90f3c542390107f40eb7",
+        "error": null,
+        "quality_flags": [
+          "scene_role_targets_loaded"
+        ]
+      },
+      "formulas_v2": {
+        "config_name": "reader_journey_formulas_v2.json",
+        "status": "loaded",
+        "source": "user",
+        "version": "2.0",
+        "content_hash": "ceb1ad35e5faa4fbde1522a978bc41408c47f686f7ffd6f3364534f89efb67e0",
+        "error": null,
+        "quality_flags": [
+          "formulas_v2_loaded"
+        ]
+      },
+      "quality_flags": [
+        "formulas_v2_loaded",
+        "scene_role_targets_loaded"
+      ],
+      "derivation_formula_version": "2.0",
+      "role_targets_ready": true
+    },
+    "fits_after": [
+      40.0,
+      90.0,
+      90.0,
+      50.0,
+      80.0,
+      90.0,
+      40.0,
+      80.0,
+      50.0
+    ],
+    "speeds_after": [
+      95.0,
+      80.0,
+      50.0,
+      80.0,
+      80.0,
+      50.0,
+      30.0,
+      65.0,
+      30.0
+    ],
+    "roles_after": [
+      "open_end",
+      "escalation",
+      "reveal",
+      "transition",
+      "reveal",
+      "reveal",
+      "escalation",
+      "transition",
+      "reveal"
+    ],
+    "scene_diffs": [
+      {
+        "scene_ordinal": 1,
+        "scene_id": 1,
+        "scene_role": "open_end",
+        "pacing_speed_before": 95.0,
+        "pacing_speed_after": 95.0,
+        "pacing_fit_before": 40.0,
+        "pacing_fit_after": 40.0,
+        "pacing_fit_status": "ok",
+        "pacing_fit_reason_code": null,
+        "changed": false
+      },
+      {
+        "scene_ordinal": 2,
+        "scene_id": 2,
+        "scene_role": "escalation",
+        "pacing_speed_before": 80.0,
+        "pacing_speed_after": 80.0,
+        "pacing_fit_before": 90.0,
+        "pacing_fit_after": 90.0,
+        "pacing_fit_status": "ok",
+        "pacing_fit_reason_code": null,
+        "changed": false
+      },
+      {
+        "scene_ordinal": 3,
+        "scene_id": 3,
+        "scene_role": "reveal",
+        "pacing_speed_before": 50.0,
+        "pacing_speed_after": 50.0,
+        "pacing_fit_before": 90.0,
+        "pacing_fit_after": 90.0,
+        "pacing_fit_status": "ok",
+        "pacing_fit_reason_code": null,
+        "changed": false
+      },
+      {
+        "scene_ordinal": 4,
+        "scene_id": 4,
+        "scene_role": "transition",
+        "pacing_speed_before": 80.0,
+        "pacing_speed_after": 80.0,
+        "pacing_fit_before": 50.0,
+        "pacing_fit_after": 50.0,
+        "pacing_fit_status": "ok",
+        "pacing_fit_reason_code": null,
+        "changed": false
+      },
+      {
+        "scene_ordinal": 5,
+        "scene_id": 5,
+        "scene_role": "reveal",
+        "pacing_speed_before": 80.0,
+        "pacing_speed_after": 80.0,
+        "pacing_fit_before": 80.0,
+        "pacing_fit_after": 80.0,
+        "pacing_fit_status": "ok",
+        "pacing_fit_reason_code": null,
+        "changed": false
+      },
+      {
+        "scene_ordinal": 6,
+        "scene_id": 6,
+        "scene_role": "reveal",
+        "pacing_speed_before": 50.0,
+        "pacing_speed_after": 50.0,
+        "pacing_fit_before": 90.0,
+        "pacing_fit_after": 90.0,
+        "pacing_fit_status": "ok",
+        "pacing_fit_reason_code": null,
+        "changed": false
+      },
+      {
+        "scene_ordinal": 7,
+        "scene_id": 7,
+        "scene_role": "escalation",
+        "pacing_speed_before": 30.0,
+        "pacing_speed_after": 30.0,
+        "pacing_fit_before": 40.0,
+        "pacing_fit_after": 40.0,
+        "pacing_fit_status": "ok",
+        "pacing_fit_reason_code": null,
+        "changed": false
+      },
+      {
+        "scene_ordinal": 8,
+        "scene_id": 8,
+        "scene_role": "transition",
+        "pacing_speed_before": 65.0,
+        "pacing_speed_after": 65.0,
+        "pacing_fit_before": 80.0,
+        "pacing_fit_after": 80.0,
+        "pacing_fit_status": "ok",
+        "pacing_fit_reason_code": null,
+        "changed": false
+      },
+      {
+        "scene_ordinal": 9,
+        "scene_id": 9,
+        "scene_role": "reveal",
+        "pacing_speed_before": 30.0,
+        "pacing_speed_after": 30.0,
+        "pacing_fit_before": 50.0,
+        "pacing_fit_after": 50.0,
+        "pacing_fit_status": "ok",
+        "pacing_fit_reason_code": null,
+        "changed": false
+      }
+    ],
+    "changed_scene_count": 0,
+    "status": "dry_run",
+    "_returncode": 0
+  }
+}

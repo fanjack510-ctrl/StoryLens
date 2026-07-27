@@ -1,0 +1,13 @@
+{
+  "health": "PASS",
+  "analysis_runs": "PASS",
+  "provider_config": "PASS",
+  "file_not_found": 0,
+  "database_locked": 0,
+  "ok": true,
+  "health_body": "{\"status\":\"ok\",\"service\":\"storylens-api\",\"database\":\"ok\",\"default_provider\":\"none\"}",
+  "provider_path": "/api/v1/model-providers/aliyun_qwen_plus/configuration",
+  "default_api_key_empty": false,
+  "visualization": "FAIL:404",
+  "backend_offline": 0
+}

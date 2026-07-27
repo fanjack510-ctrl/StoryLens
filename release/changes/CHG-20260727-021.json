@@ -3,9 +3,22 @@
   "title": "StoryLens 1.1.1 RC1 packaging and installed verification",
   "type": "build",
   "base_version": "1.1.0",
-  "status": "registered",
+  "status": "tested",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "0229c29713ed0f77e79a6a32f61789c29043163e",
+      "message": "chore(release): prepare StoryLens 1.1.1-rc.1",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "e373ed2e25d7b32d3c06689d637a17958a89797c",
+      "message": "fix(release): align RC1 gate tests with CHG-019 chapter CTA",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "release",
     "packaging",
@@ -16,22 +29,36 @@
     "VERSION"
   ],
   "user_summary": "将 CHG-013 节奏适配配置修复纳入 1.1.1，构建并验证 1.1.1-rc.1 安装包",
-  "technical_summary": "Release packaging for StoryLens 1.1.1-rc.1 including verified CHG-013 V2 config packaging fix. BUILD SOURCE HEAD will be the prepare-1.1.1-rc.1 commit. Status during build: implementing (registry enum remains registered until implemented/tested).",
+  "technical_summary": "Packaged StoryLens 1.1.1-rc.1 including verified CHG-013. Sidecar/Installer build count 1. Zero provider. Formal AppData untouched. Awaiting manual installed acceptance before verified.",
   "acceptance_criteria": [
     "Installer StoryLens_1.1.1-rc.1_x64-setup.exe; SIDECAR/INSTALLER build count 1; config packaging hash identity; CWD independence 6/6; isolated re-finalize fits; zero provider; zero formal AppData writes; security audit PASS; CHG-013 remains verified"
   ],
   "tests": [
     "CHG-013 targeted pytest + packaging/CWD/refinalize gates",
-    "release regression vitest/typecheck"
+    "release regression vitest/typecheck",
+    "targeted pytest 80 passed",
+    "targeted vitest 83 passed",
+    "typecheck PASS",
+    "config packaging + CWD 6/6 + isolated refinalize"
   ],
   "verification_evidence": [
-    "release/evidence/1.1.1-rc.1/"
+    "release/evidence/1.1.1-rc.1/",
+    "release/evidence/1.1.1-rc.1/FINAL_REPORT.md",
+    "release/evidence/1.1.1-rc.1/PREBUILD_GATE.md",
+    "release/evidence/1.1.1-rc.1/BUILD_MANIFEST.json",
+    "release/evidence/1.1.1-rc.1/SIDECAR_IDENTITY.json",
+    "release/evidence/1.1.1-rc.1/CONFIG_PACKAGING.json",
+    "release/evidence/1.1.1-rc.1/CWD_INDEPENDENCE.json",
+    "release/evidence/1.1.1-rc.1/REFINALIZE_VERIFICATION.json",
+    "release/evidence/1.1.1-rc.1/SECURITY_AUDIT.md",
+    "release/evidence/1.1.1-rc.1/INSTALLER_AUDIT.md",
+    "release/evidence/1.1.1-rc.1/MANUAL_INSTALLED_ACCEPTANCE.md"
   ],
   "data_compatibility": {
     "database_changed": false,
     "migration_required": false,
     "user_data_compatible": true,
-    "notes": "No schema change. pacing_fit may be null when config unavailable. Does not auto-rewrite user DB."
+    "notes": "No schema change. pacing_fit may be null when unavailable. No auto rewrite of user DB."
   },
   "release_impact": {
     "requires_reanalysis": false,
@@ -40,7 +67,7 @@
     "breaking_change": false
   },
   "blocker_level": null,
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-27T08:35:48Z",
-  "updated_at": "2026-07-27T08:37:41Z"
+  "updated_at": "2026-07-27T10:34:20Z"
 }
