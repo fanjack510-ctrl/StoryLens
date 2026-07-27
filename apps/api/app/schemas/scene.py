@@ -445,6 +445,12 @@ class AnalysisRunResponse(BaseModel):
     resume_stage: str | None = None
     journey_run_id: int | None = None
     journey_status: str | None = None
+    journey_completed_scene_count: int | None = None
+    journey_total_scene_count: int | None = None
+    journey_retryable: bool | None = None
+    journey_result_available: bool = False
+    journey_error_code: str | None = None
+    primary_action: str | None = None
 
 
 class SceneAnalysisOfflineReplayRequest(BaseModel):

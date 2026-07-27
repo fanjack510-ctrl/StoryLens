@@ -1372,8 +1372,14 @@ def mark_interrupted_runs_failed(session: Session) -> dict[str, int]:
         release_reservation(session, rid)
         released_reservation_ids.append(rid)
 
+    # Reader Journey orphans: never auto-enqueue; mark interrupted/retryable only.
+    from app.services.reader_journey_recovery import recover_orphaned_reader_journeys
+
+    journey_stats = recover_orphaned_reader_journeys(session, force_startup=True)
+
     return {
         "failed_runs": len(touched_failed_run_ids),
         "interrupted_runs": len(touched_interrupted_run_ids),
         "released_reservations": len(released_reservation_ids),
+        "interrupted_journeys": int(journey_stats.get("interrupted_journeys", 0)),
     }

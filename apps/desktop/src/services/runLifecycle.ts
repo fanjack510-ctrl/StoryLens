@@ -1,19 +1,26 @@
 /**
  * Shared AnalysisRun lifecycle semantics for book shell, Native Overview,
- * and Task Center (CHG-20260727-014).
+ * and Task Center (CHG-20260727-014 / CHG-20260727-019).
  *
  * Maps real backend statuses only — does not invent production states.
  */
 
 import type { Run } from "../types";
+import {
+  resolveCompositeRunLifecycle,
+  type CompositeLifecyclePhase,
+} from "./compositeRunLifecycle";
 
 export type RunLifecyclePhase =
   | "none"
   | "awaiting_user"
   | "active"
+  | "interrupted"
   | "completed"
   | "failed"
   | "cancelled";
+
+export { resolveCompositeRunLifecycle } from "./compositeRunLifecycle";
 
 export type TaskFamily = "chapter" | "native_overview" | "other";
 
@@ -82,9 +89,9 @@ export function taskFamily(run: Run | Record<string, unknown> | null | undefined
 /**
  * Normalize a backend status (+ optional run fields) into a lifecycle phase.
  *
- * CHG-20260727-017: chapter `succeeded` / `completed` are always **completed**.
- * Missing Reader Journey must not keep the run in progress — journey is an
- * optional result tab, not a routing prerequisite.
+ * CHG-20260727-019: when Journey fields exist, composite priority wins over
+ * Parent `succeeded` (so active/interrupted Journey never becomes "查看结果").
+ * Scene-only Parent succeeded without a Journey row remains completed (017).
  */
 export function normalizeRunLifecycle(
   run: Run | Record<string, unknown> | null | undefined,
@@ -93,6 +100,27 @@ export function normalizeRunLifecycle(
   if (!run) return "none";
   const status = String((run as any).status || "").toLowerCase();
   if (!status) return "none";
+
+  const journeyStatus = (run as any).journey_status;
+  const effective = (run as any).effective_status;
+  if (
+    journeyStatus ||
+    effective === "journey_running" ||
+    effective === "journey_failed" ||
+    effective === "partial_complete" ||
+    effective === "completed"
+  ) {
+    const composite: CompositeLifecyclePhase = resolveCompositeRunLifecycle({
+      parentStatus: status,
+      journeyStatus,
+      journeyResultAvailable: (run as any).journey_result_available,
+      journeyRetryable: (run as any).journey_retryable,
+      journeyErrorCode: (run as any).journey_error_code,
+      effectiveStatus: effective,
+      chapterComplete: (run as any).chapter_complete,
+    });
+    return composite;
+  }
 
   if (CANCELLED_STATUSES.has(status)) return "cancelled";
   if (FAILED_STATUSES.has(status) || status.startsWith("failed")) return "failed";
@@ -104,15 +132,6 @@ export function normalizeRunLifecycle(
   }
 
   if (ACTIVE_STATUSES.has(status)) return "active";
-
-  // Budget pause / provider recovery already covered; treat unknown non-terminal as active.
-  if (
-    (run as any).effective_status === "partial_complete" ||
-    (run as any).effective_status === "journey_running" ||
-    (run as any).effective_status === "journey_failed"
-  ) {
-    return "active";
-  }
 
   return "active";
 }
@@ -153,6 +172,9 @@ export function selectChapterReentryRun(
     const hardActive = active.filter((r) => String(r.status) !== "succeeded");
     return pickNewest(hardActive.length ? hardActive : active);
   }
+
+  const interrupted = chapterRuns.filter((r) => normalizeRunLifecycle(r) === "interrupted");
+  if (interrupted.length) return pickNewest(interrupted);
 
   const chapterDone = chapterRuns.filter(
     (r) => r.status === "succeeded" && r.chapter_complete === true,
@@ -229,6 +251,8 @@ export function resolveTaskCenterPrimaryAction(run: Run | Record<string, unknown
   }
 
   const phase = normalizeRunLifecycle(run as Run);
+  const journeyResultAvailable = Boolean((run as any).journey_result_available);
+  const chapterComplete = (run as any).chapter_complete === true;
 
   if (phase === "awaiting_user") {
     return { kind: "confirm", label: "继续确认", testId: `continue-confirm-${id}` };
@@ -236,8 +260,17 @@ export function resolveTaskCenterPrimaryAction(run: Run | Record<string, unknown
   if (phase === "active") {
     return { kind: "progress", label: "查看进度", testId: `view-progress-${id}` };
   }
+  if (phase === "interrupted") {
+    return { kind: "detail", label: "查看详情", testId: `view-detail-${id}` };
+  }
   if (phase === "completed") {
-    return { kind: "result", label: "查看结果", testId: `view-results-${id}` };
+    // Journey final artifact required when a journey row participated.
+    if ((run as any).journey_status && !journeyResultAvailable && !chapterComplete) {
+      return { kind: "detail", label: "查看详情", testId: `view-detail-${id}` };
+    }
+    const label =
+      journeyResultAvailable || chapterComplete ? "查看分析结果" : "查看结果";
+    return { kind: "result", label, testId: `view-results-${id}` };
   }
   if (phase === "failed") {
     return { kind: "detail", label: "查看详情", testId: `view-detail-${id}` };

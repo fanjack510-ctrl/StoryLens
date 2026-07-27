@@ -498,15 +498,25 @@ async def execute_reader_journey_v2(
                 return
             analysis_run = session.get(AnalysisRun, journey_run.analysis_run_id)
             if analysis_run is not None:
+                from app.services.chapter_analysis_completion import mark_journey_failed_on_run
+
+                mark_journey_failed_on_run(session, analysis_run)
                 release_run_reservation(
                     session, analysis_run.id, stage=STAGE_READER_JOURNEY_SCENE
                 )
-            journey_run.status = "failed"
+            if (
+                int(journey_run.completed_scene_count or 0) > 0
+                and int(journey_run.remaining_scene_count or 0) > 0
+            ):
+                journey_run.status = "scene_profiles_partial"
+            else:
+                journey_run.status = "failed"
             journey_run.root_error_code = root_code
             journey_run.root_error_message = str(exc)[:500]
             journey_run.failed_stage = stage
             journey_run.retryable = retryable
             journey_run.completed_at = datetime.now(timezone.utc)
+            journey_run.updated_at = datetime.now(timezone.utc)
             details: dict[str, Any] = {}
             try:
                 details = json.loads(journey_run.failure_details_json or "{}")

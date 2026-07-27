@@ -503,6 +503,16 @@ def serialize_run(session: Session, run: AnalysisRun) -> AnalysisRunResponse:
             "resume_stage": chapter_meta["resume_stage"],
             "journey_run_id": chapter_meta["journey_run_id"],
             "journey_status": chapter_meta["journey_status"],
+            "journey_completed_scene_count": chapter_meta.get(
+                "journey_completed_scene_count"
+            ),
+            "journey_total_scene_count": chapter_meta.get("journey_total_scene_count"),
+            "journey_retryable": chapter_meta.get("journey_retryable"),
+            "journey_result_available": bool(
+                chapter_meta.get("journey_result_available")
+            ),
+            "journey_error_code": chapter_meta.get("journey_error_code"),
+            "primary_action": chapter_meta.get("primary_action"),
         }
     )
 

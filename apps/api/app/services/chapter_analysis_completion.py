@@ -325,19 +325,65 @@ async def continue_chapter_after_scenes(
             session.commit()
 
 
+def _journey_result_available(session: Session, journey: ReaderJourneyRun | None) -> bool:
+    if journey is None or journey.status != "succeeded":
+        return False
+    from app.db.models import ChapterReaderJourneySummary
+
+    summary = session.scalar(
+        select(ChapterReaderJourneySummary).where(
+            ChapterReaderJourneySummary.reader_journey_run_id == journey.id
+        )
+    )
+    return summary is not None
+
+
+def _journey_primary_action(
+    *,
+    effective: str,
+    journey: ReaderJourneyRun | None,
+    result_available: bool,
+) -> str | None:
+    if journey is None:
+        return None
+    if effective == "journey_running":
+        return "view_progress"
+    if effective == "journey_failed":
+        return "view_detail"
+    if effective == "completed" and result_available:
+        return "view_result"
+    if journey.status == "succeeded" and not result_available:
+        return "view_detail"
+    return None
+
+
 def chapter_completion_payload(session: Session, run: AnalysisRun) -> dict[str, Any]:
     progress = scene_analysis_progress(session, run)
     journey = latest_journey(session, run.id)
     complete = is_chapter_analysis_complete(session, run)
+    effective = effective_chapter_status(session, run)
+    result_available = _journey_result_available(session, journey)
     return {
         "chapter_complete": complete,
-        "effective_status": effective_chapter_status(session, run),
+        "effective_status": effective,
         "checkpoint_stage": checkpoint_stage(session, run),
         "scene_pipeline_complete": is_scene_pipeline_complete(session, run),
         "total_scene_count": progress.total_scene_count,
         "completed_scene_count": progress.completed_scene_count,
         "journey_run_id": journey.id if journey else None,
         "journey_status": journey.status if journey else None,
+        "journey_completed_scene_count": (
+            int(journey.completed_scene_count) if journey is not None else None
+        ),
+        "journey_total_scene_count": (
+            int(journey.total_scene_count) if journey is not None else None
+        ),
+        "journey_retryable": bool(journey.retryable) if journey is not None else None,
+        "journey_result_available": result_available,
+        "journey_error_code": journey.root_error_code if journey is not None else None,
+        "primary_action": _journey_primary_action(
+            effective=effective, journey=journey, result_available=result_available
+        ),
         "resume_stage": (
             None
             if complete

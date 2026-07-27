@@ -365,6 +365,12 @@ export type Run = {
   resume_stage?: string | null;
   journey_run_id?: number | null;
   journey_status?: string | null;
+  journey_completed_scene_count?: number | null;
+  journey_total_scene_count?: number | null;
+  journey_retryable?: boolean | null;
+  journey_result_available?: boolean;
+  journey_error_code?: string | null;
+  primary_action?: string | null;
   run_started_at?: string;
   scene_validation_detail?: {
     validation_error_message?: string;

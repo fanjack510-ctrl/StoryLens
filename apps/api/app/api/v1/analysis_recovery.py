@@ -185,6 +185,16 @@ def recover_analysis_run(
         if journey_run.status == "succeeded":
             session.commit()
             return int(journey_run.id)
+
+        from app.services.reader_journey_recovery import (
+            JOURNEY_ACTIVE_WORKER_STATUSES,
+            reclaim_stale_journey_if_needed,
+        )
+
+        if journey_run.status in JOURNEY_ACTIVE_WORKER_STATUSES:
+            reclaim_stale_journey_if_needed(session, journey_run)
+            session.refresh(journey_run)
+
         if journey_run.status in {
             "failed",
             "scene_profiles_partial",
@@ -197,7 +207,10 @@ def recover_analysis_run(
             "running",
             "scene_profiles_running",
             "chapter_synthesis_running",
+            "summary_running",
+            "phase_analysis_running",
         }:
+            # Healthy in-flight worker — do not double-enqueue.
             session.commit()
             return int(journey_run.id)
         session.commit()

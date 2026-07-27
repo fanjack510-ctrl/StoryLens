@@ -601,23 +601,31 @@ export function TasksPage() {
       if (run.status === "completed") return "已完成";
       if (run.status === "failed") return "失败";
     }
-    if (run.status === "succeeded") {
-      if (run.chapter_complete === true) return "已完成";
-      if (run.effective_status === "journey_running" || run.journey_status) {
-        const js = run.journey_status || "";
-        if (
-          ["queued", "running", "scene_profiles_running", "chapter_synthesis_running"].includes(js) ||
-          run.effective_status === "journey_running"
-        ) {
-          return "正在生成阅读旅程";
-        }
-        if (
-          ["failed", "scene_profiles_partial", "budget_blocked", "aborted_by_limit"].includes(js) ||
-          run.effective_status === "journey_failed"
-        ) {
-          return "阅读旅程已暂停";
-        }
+    const phase = normalizeRunLifecycle(run);
+    if (phase === "active") {
+      const js = String(run.journey_status || "");
+      if (
+        [
+          "queued",
+          "running",
+          "scene_profiles_running",
+          "chapter_synthesis_running",
+          "summary_running",
+          "phase_analysis_running",
+        ].includes(js) ||
+        run.effective_status === "journey_running"
+      ) {
+        return "正在生成阅读旅程";
       }
+      if (run.effective_status === "partial_complete") {
+        return "场景分析已完成";
+      }
+    }
+    if (phase === "interrupted") {
+      return "阅读旅程已中断";
+    }
+    if (run.status === "succeeded") {
+      if (run.chapter_complete === true || phase === "completed") return "已完成";
       if (isSceneAnalysisComplete(run) || run.effective_status === "partial_complete") {
         return "场景分析已完成";
       }

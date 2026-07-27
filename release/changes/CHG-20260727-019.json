@@ -1,0 +1,51 @@
+{
+  "id": "CHG-20260727-019",
+  "title": "Recover interrupted reader journey tasks and unify composite task status",
+  "type": "fix",
+  "base_version": "1.1.0",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "apps/api",
+    "apps/desktop"
+  ],
+  "files": [
+    "apps/api/app/services/reader_journey_recovery.py",
+    "apps/api/app/services/scene_pipeline.py",
+    "apps/api/app/services/reader_journey_pipeline.py",
+    "apps/api/app/api/v1/reader_journey.py",
+    "apps/desktop/src/services/compositeRunLifecycle.ts",
+    "apps/desktop/src/services/runLifecycle.ts",
+    "apps/desktop/src/services/runProgressDisplay.ts"
+  ],
+  "user_summary": "修复阅读旅程异常中断后假运行、无法恢复，以及任务中心状态/进度/CTA不一致的问题。",
+  "technical_summary": "Isolate Reader Journey worker failures, recover orphan running journeys on Sidecar startup as JOURNEY_INTERRUPTED retryable, allow resume, and unify task-center lifecycle/progress/CTA so Parent succeeded cannot show 查看结果 while Journey is active or interrupted.",
+  "acceptance_criteria": [
+    "Orphan Journey#1 recovers to JOURNEY_INTERRUPTED retryable without Provider calls",
+    "Task center shows journey progress and 查看进度/查看详情 correctly"
+  ],
+  "tests": [
+    "apps/api/tests/test_reader_journey_startup_recovery_local.py",
+    "apps/desktop/src/services/compositeRunLifecycle.test.ts"
+  ],
+  "verification_evidence": [
+    "release/evidence/CHG-20260727-019/verification-result.txt"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "P0",
+  "head_inclusion": null,
+  "created_at": "2026-07-27T00:53:16Z",
+  "updated_at": "2026-07-27T01:01:49Z"
+}

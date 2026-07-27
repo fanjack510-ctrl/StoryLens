@@ -346,21 +346,32 @@ async def execute_reader_journey(
     gateway: ModelGateway,
     journey_run_id: int,
 ) -> None:
-    """Dispatch to V2 or legacy pipeline based on the run's persisted contract."""
+    """Dispatch to V2 or legacy pipeline based on the run's persisted contract.
+
+    Outer worker boundary (CHG-20260727-019): task-level exceptions are persisted
+    in a short transaction and must not terminate the Sidecar process.
+    """
+    from app.services.reader_journey_recovery import persist_journey_worker_failure
     from app.services.reader_journey_version import is_v2_journey_run
     from app.services.reader_journey_v2_execution import execute_reader_journey_v2
 
-    with session_factory() as session:
-        journey_run = session.get(ReaderJourneyRun, journey_run_id)
-        if journey_run is None:
-            return
-        if journey_run.status in {"succeeded", "cancelled"}:
-            return
-        if is_v2_journey_run(journey_run):
-            await execute_reader_journey_v2(session_factory, gateway, journey_run_id)
-            return
+    try:
+        with session_factory() as session:
+            journey_run = session.get(ReaderJourneyRun, journey_run_id)
+            if journey_run is None:
+                return
+            if journey_run.status in {"succeeded", "cancelled"}:
+                return
+            if is_v2_journey_run(journey_run):
+                await execute_reader_journey_v2(session_factory, gateway, journey_run_id)
+                return
 
-    await _execute_reader_journey_legacy(session_factory, gateway, journey_run_id)
+        await _execute_reader_journey_legacy(session_factory, gateway, journey_run_id)
+    except Exception as exc:  # noqa: BLE001 — worker isolation; keep Sidecar alive
+        persist_journey_worker_failure(session_factory, journey_run_id, exc)
+        logger.exception(
+            "reader_journey_worker_boundary journey_run_id=%s", journey_run_id
+        )
 
 
 async def _execute_reader_journey_legacy(

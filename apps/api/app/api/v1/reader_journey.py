@@ -391,7 +391,22 @@ async def resume_reader_journey(
         raise error(404, "READER_JOURNEY_RUN_NOT_FOUND", "读者旅程运行不存在")
     if journey_run.status == "succeeded":
         return ReaderJourneyRunAccepted(journey_run_id=journey_run.id, status=journey_run.status)
-    if journey_run.status in {"scene_profiles_running", "chapter_synthesis_running"}:
+    # Orphan fake-running (no heartbeat / unfinished invocation) → recoverable first.
+    from app.services.reader_journey_recovery import (
+        JOURNEY_ACTIVE_WORKER_STATUSES,
+        reclaim_stale_journey_if_needed,
+    )
+
+    if journey_run.status in JOURNEY_ACTIVE_WORKER_STATUSES:
+        reclaim_stale_journey_if_needed(session, journey_run)
+        session.refresh(journey_run)
+    if journey_run.status in {
+        "scene_profiles_running",
+        "chapter_synthesis_running",
+        "running",
+        "summary_running",
+        "phase_analysis_running",
+    }:
         raise error(409, "READER_JOURNEY_ALREADY_RUNNING", "读者旅程正在运行")
     progress = reader_journey_progress(session, journey_run)
     if progress.blind_resume_blocked:
