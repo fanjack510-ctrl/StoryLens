@@ -1,23 +1,15 @@
 # INSTALLER AUDIT — StoryLens 1.1.1-rc.1
 
-Installer: D:\Dstorylens-wt-narrative-phase2br1-integration\dist\release\StoryLens_1.1.1-rc.1_x64-setup.exe
-SHA-256: 7C7348576397A1DC08DE7CEF6831F0036A332F7308DF10288C7F38AF9BD56916
-Display/Product version: 1.1.1-rc.1
-
-Contains storylens-desktop.exe: YES
-Contains storylens-api.exe: YES
-Packaged sidecar SHA matches validated: YES (4F7FD23B003BC7FBC8ABBC7128C83FE020682EA0C71A69570F4635CE6F590A51)
-
-Security JSON:
-{
-  "local_secret_exact_match_in_installer": 0,
-  "pattern_secret_matches": 0,
-  "user_database_packaged": false,
-  "user_novel_packaged": false,
-  "private_engine_source_packaged": false,
-  "has_desktop": true,
-  "has_api": true
-}
-
-
-RESULT: PASS
+- Installer: `D:\Dstorylens-wt-narrative-phase2br1-integration\dist\release\StoryLens_1.1.1-rc.1_x64-setup.exe`
+- Installer SHA-256: `DEEB00F87C77B3FCD4B1CE320DBBA53FAAF644738D6635F7016674C910AE5982`
+- Display / ProductVersion / FileVersion: `1.1.1-rc.1`
+- Required binaries present: `storylens-desktop.exe`, `storylens-api.exe`
+- Packaged sidecar SHA-256: `4F7FD23B003BC7FBC8ABBC7128C83FE020682EA0C71A69570F4635CE6F590A51` (= validated)
+- Packaged GUI SHA-256: `AFBACCE3BF13E7A0CB6FC5F33DB6C30E2611AAA3C718355E80770BD72910A477`
+- LOCAL SECRET EXACT MATCH: 0
+- USER DATABASE PACKAGED: NO
+- USER NOVEL PACKAGED: NO
+- PRIVATE ENGINE SOURCE PACKAGED: NO
+- DECOY / Fake defaults packaged: NO
+- Extract temp directory deleted after audit
+- RESULT: PASS
