@@ -1,0 +1,51 @@
+{
+  "change_id": "CHG-20260728-040",
+  "issue_id": "INC-20260728-002",
+  "captured_at_utc": "2026-07-28T06:40:00Z",
+  "baseline_unique": true,
+  "public": {
+    "v1_1_1_tag_annotated": "6f7d88c41f8006176fe77dd92bdb06cf1c6683e3",
+    "v1_1_1_tag_target": "38c85ab4eda0eaa03bd6a7bf8fda7d8deb11a5db",
+    "hotfix_integration_branch": "hotfix/1.1.2",
+    "issue_branch": "fix/1.1.2-structured-output-truncation",
+    "issue_worktree": "D:\\Dstorylens-wt-hotfix-1.1.2-structured-output",
+    "integration_worktree": "D:\\Dstorylens-wt-hotfix-1.1.2-integration",
+    "created_from": "v1.1.1^{commit}",
+    "head_at_create": "38c85ab4eda0eaa03bd6a7bf8fda7d8deb11a5db",
+    "release_1_1_1_branch_tip_observed": "32fc8a8ce3288afcdd860e70ad4b36cec5e09b97",
+    "release_1_1_1_frozen_for_dev": true,
+    "note": "hotfix created from tag target, not from drifted release/1.1.1 tip or whole-book integration"
+  },
+  "private": {
+    "tag": null,
+    "confirmed_via": [
+      "release/evidence/1.1.1/SIDECAR_IDENTITY.json private_head",
+      "release/evidence/1.1.1/BUILD_MANIFEST.json private_head",
+      "release/evidence/1.1.1/FINAL_REPORT.md PRIVATE HEAD",
+      "docs/whole-book EXECUTION_REGISTRY private_create_from_sha",
+      "installed storylens-api.exe SHA256 match"
+    ],
+    "v1_1_1_private_head": "30d8dad8cd649e832999874f7bf16cc1661cf221",
+    "hotfix_integration_branch": "hotfix/1.1.2",
+    "issue_branch": "fix/1.1.2-structured-output-truncation",
+    "issue_worktree": "D:\\Dstorylens-private-engine-wt-hotfix-1.1.2-structured-output",
+    "integration_worktree": "D:\\Dstorylens-private-engine-wt-hotfix-1.1.2-integration",
+    "head_at_create": "30d8dad8cd649e832999874f7bf16cc1661cf221"
+  },
+  "installer_identity": {
+    "version": "1.1.1",
+    "sidecar_sha256": "81824128B119EB3A25392AD3D44714B0883CD111282B4A2FD7C0FA8EB91D48A7",
+    "gui_sha256": "263BB44C92904574029A4AC1DDE23B2AE212B2D21835ADFE98AEE2D5ADAE3C0E",
+    "installed_sidecar_match": true,
+    "installed_gui_match": true
+  },
+  "constraints": {
+    "real_provider_calls": 0,
+    "formal_database_writes": 0,
+    "source_modified": false,
+    "build": false,
+    "push": false,
+    "v1_1_1_tag_modified": false,
+    "v1_1_1_release_modified": false
+  }
+}

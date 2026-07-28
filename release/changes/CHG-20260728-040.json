@@ -1,0 +1,72 @@
+{
+  "id": "CHG-20260728-040",
+  "title": "Investigate Aliyun Qwen scene-pipeline structured_output truncation (adjudication max_tokens=768)",
+  "type": "fix",
+  "issue_id": "INC-20260728-002",
+  "base_version": "1.1.1",
+  "target_version": "1.1.2",
+  "public_branch": "fix/1.1.2-structured-output-truncation",
+  "private_branch": "fix/1.1.2-structured-output-truncation",
+  "status": "investigated",
+  "release_pool_status": "pending",
+  "include_in_next_release": true,
+  "forward_port_required": true,
+  "forward_port_target": "integration/whole-book-v120",
+  "affected_modules": [
+    "apps/api/app/services/structured_output.py",
+    "apps/api/app/services/cloud_output_policy.py",
+    "apps/api/app/core/config.py",
+    "apps/api/app/services/scene_pipeline.py",
+    "apps/api/app/services/scene_boundary_adjudicator.py",
+    "apps/desktop/src/pages/TasksPage.tsx"
+  ],
+  "commits": [],
+  "modules": [
+    "release",
+    "apps/api/app/services/structured_output.py",
+    "apps/api/app/services/cloud_output_policy.py",
+    "apps/api/app/core/config.py",
+    "apps/api/app/services/scene_pipeline.py",
+    "apps/api/app/services/scene_boundary_adjudicator.py"
+  ],
+  "files": [
+    "release/changes/CHG-20260728-040.json",
+    "release/trains/1.1.2.json",
+    "release/evidence/hotfix/1.1.2/CHG-20260728-040/"
+  ],
+  "user_summary": "调查安装版场景分析任务在 structured_output 阶段因输出上限截断导致结构校验失败的问题；本阶段仅只读取证与根因分析，不改生产业务代码。",
+  "technical_summary": "Task #3 failed at scene_boundary_adjudication with finish_reason=length, requested_output_tokens=768 (cloud_output_scene_boundary). Truncation retries reused the same 768 limit. User hard limit was 4000. No production source changes in this investigation step.",
+  "acceptance_criteria": [
+    "Public/Private hotfix branches created from unique v1.1.1 publish baseline",
+    "Incident snapshot copied read-only without formal AppData writes",
+    "Task #3 forensics recorded without secrets/full prompt/response bodies",
+    "Root cause categorized with code+DB evidence",
+    "Minimal fix recommendation documented; implementation deferred"
+  ],
+  "tests": [
+    "read-only DB forensics on incident copy",
+    "installed binary SHA256 match vs release/evidence/1.1.1",
+    "code path review on v1.1.1 tag sources"
+  ],
+  "manual_gate": "REVIEW before IMPLEMENTATION prompt",
+  "verification_evidence": [
+    "release/evidence/hotfix/1.1.2/CHG-20260728-040/BASELINE.json",
+    "release/evidence/hotfix/1.1.2/CHG-20260728-040/FINAL_REPORT.md",
+    "release/evidence/hotfix/1.1.2/CHG-20260728-040/ROOT_CAUSE.md"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "Investigation only; no schema or business code changes."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "created_at": "2026-07-28T06:40:00Z",
+  "updated_at": "2026-07-28T07:15:00Z"
+}
