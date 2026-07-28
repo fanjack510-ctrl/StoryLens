@@ -7,8 +7,8 @@
   "target_version": "1.1.2",
   "public_branch": "fix/1.1.2-structured-output-truncation",
   "private_branch": "fix/1.1.2-structured-output-truncation",
-  "status": "verified",
-  "release_pool_status": "pending",
+  "status": "integrated",
+  "release_pool_status": "included",
   "include_in_next_release": true,
   "forward_port_required": true,
   "forward_port_target": "integration/whole-book-v120",
@@ -68,7 +68,7 @@
     "release/evidence/hotfix/1.1.2/CHG-20260728-040/"
   ],
   "user_summary": "修复场景边界裁决因固定 768 输出上限截断导致结构校验失败；分批裁决、自适应提高输出预算，并正确展示用量与边界进度。",
-  "technical_summary": "scene_boundary_adjudication uses max 10 targets/batch, compute_scene_boundary_output_budget_v1, adaptive truncation retry before JSON parse, AnalysisArtifact batch checkpoints, API/UI boundary progress + model_invocations usage aggregation. L3 live: 2 HTTP calls, requested_output_tokens=1792, finish_reason=stop, 20/20 coverage, ~¥0.028. L3: provider=aliyun_qwen_plus model=qwen3.7-plus logical_calls=2 actual_calls=2 cost_cny=0.02787 formal_db_writes=0. public_verified_head=956afe025c109cdce4a4c46ecadb36660bd94010 private_verified_head=ebb7a8d30464558b1a7488abba8cb88e47700044. manual_verification=passed l3_verification=passed. public_integration_commit=null private_integration_commit=null (filled after merge finalize). integration_real_provider_calls=0.",
+  "technical_summary": "scene_boundary_adjudication uses max 10 targets/batch, compute_scene_boundary_output_budget_v1, adaptive truncation retry before JSON parse, AnalysisArtifact batch checkpoints, API/UI boundary progress + model_invocations usage aggregation. L3 live: 2 HTTP calls, requested_output_tokens=1792, finish_reason=stop, 20/20 coverage, ~¥0.028. L3: provider=aliyun_qwen_plus model=qwen3.7-plus logical_calls=2 actual_calls=2 cost_cny=0.02787 formal_db_writes=0. public_verified_head=956afe025c109cdce4a4c46ecadb36660bd94010 private_verified_head=ebb7a8d30464558b1a7488abba8cb88e47700044. manual_verification=passed l3_verification=passed. public_integration_commit=49b4430ca5abfffae01a739f320c5ed83433b9e0 private_integration_commit=23a0b025db51acaa8e62f4e81bc7628f19a8e2a6 (filled after merge finalize). integration_real_provider_calls=0. integration_tests=passed status=integrated release_pool_status=included forward_port_status=pending.",
   "acceptance_criteria": [
     "Public/Private hotfix branches created from unique v1.1.1 publish baseline",
     "Incident snapshot copied read-only without formal AppData writes",
@@ -110,7 +110,11 @@
     "release/evidence/hotfix/1.1.2/CHG-20260728-040/FINAL_IMPLEMENTATION_REPORT.md",
     "release/evidence/hotfix/1.1.2/CHG-20260728-040/L3_REAL_PROVIDER_RESULT.json",
     "release/evidence/hotfix/1.1.2/CHG-20260728-040/L3_REAL_PROVIDER_VERIFICATION.md",
-    "release/evidence/hotfix/1.1.2/CHG-20260728-040/"
+    "release/evidence/hotfix/1.1.2/CHG-20260728-040/",
+    "release/evidence/hotfix/1.1.2/CHG-20260728-040/REGISTRY_CONFLICT_RESOLUTION.md",
+    "release/evidence/hotfix/1.1.2/CHG-20260728-040/INTEGRATION_REPORT.md",
+    "release/evidence/hotfix/1.1.2/CHG-20260728-040/INTEGRATION_TEST_RESULTS.json",
+    "release/evidence/hotfix/1.1.2/CHG-20260728-040/FINAL_INTEGRATION_REPORT.md"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -126,5 +130,20 @@
   },
   "blocker_level": null,
   "created_at": "2026-07-28T06:40:00Z",
-  "updated_at": "2026-07-28T08:39:13Z"
+  "updated_at": "2026-07-28T08:46:42Z",
+  "forward_port_status": "pending",
+  "public_integration_commit": "49b4430ca5abfffae01a739f320c5ed83433b9e0",
+  "private_integration_commit": "23a0b025db51acaa8e62f4e81bc7628f19a8e2a6",
+  "public_verified_head": "956afe025c109cdce4a4c46ecadb36660bd94010",
+  "private_verified_head": "ebb7a8d30464558b1a7488abba8cb88e47700044",
+  "integration_tests": "passed",
+  "manual_verification": "passed",
+  "l3_verification": "passed",
+  "l3_provider": "aliyun_qwen_plus",
+  "l3_model": "qwen3.7-plus",
+  "l3_logical_calls": 2,
+  "l3_actual_calls": 2,
+  "l3_cost_cny": 0.02787,
+  "l3_formal_database_writes": 0,
+  "integration_real_provider_calls": 0
 }
