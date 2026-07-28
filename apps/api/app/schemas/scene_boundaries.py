@@ -1,0 +1,67 @@
+"""Schemas for manual scene boundary review API (CHG-041)."""
+
+from __future__ import annotations
+
+from typing import Any
+
+from pydantic import BaseModel, Field
+
+
+class ScenePartitionItem(BaseModel):
+    scene_order: int
+    start_paragraph_id: str
+    end_paragraph_id: str
+    included_in_journey: bool = True
+
+
+class SceneBoundaryRevisionSummary(BaseModel):
+    revision_id: int
+    revision_number: int
+    status: str
+    source: str
+    revision_etag: str
+    boundary_hash: str
+    chapter_text_hash: str
+    scenes: list[ScenePartitionItem]
+    confirmed_at: str | None = None
+
+
+class SceneBoundariesOverviewResponse(BaseModel):
+    chapter_id: int
+    chapter_text_hash: str
+    confirmed_revision: SceneBoundaryRevisionSummary | None = None
+    draft_revision: SceneBoundaryRevisionSummary | None = None
+    model_revision: SceneBoundaryRevisionSummary | None = None
+    awaiting_confirmation: bool = False
+
+
+class SceneBoundaryDraftCreateResponse(BaseModel):
+    revision_id: int
+    revision_etag: str
+    scenes: list[ScenePartitionItem]
+
+
+class SceneBoundaryDraftSaveRequest(BaseModel):
+    expected_etag: str
+    scenes: list[ScenePartitionItem]
+
+
+class SceneBoundaryConfirmRequest(BaseModel):
+    expected_etag: str
+    start_journey: bool = False
+    journey_options: dict[str, Any] = Field(default_factory=dict)
+
+
+class SceneBoundaryConfirmResponse(BaseModel):
+    revision_id: int
+    revision_etag: str
+    boundary_hash: str
+    journey_run_id: int | None = None
+    journey_started: bool = False
+
+
+class SceneBoundaryDiffResponse(BaseModel):
+    revision_id: int
+    against_revision_id: int | None = None
+    changes: list[dict[str, Any]]
+    scene_count_delta: int

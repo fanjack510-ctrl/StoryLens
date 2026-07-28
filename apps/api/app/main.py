@@ -16,6 +16,7 @@ from app.api.v1.analysis import router as analysis_router
 from app.api.v1.analysis_recovery import router as analysis_recovery_router
 from app.api.v1.desktop import router as desktop_router
 from app.api.v1.boundary_reviews import router as boundary_review_router
+from app.api.v1.scene_boundaries import router as scene_boundaries_router
 from app.api.v1.reader_journey import router as reader_journey_router
 from app.routers.capabilities import router as capabilities_router
 from app.routers.whole_book_preflight import router as whole_book_preflight_router
@@ -182,6 +183,7 @@ def _configure_middleware_and_routers(app: FastAPI) -> None:
     app.include_router(analysis_router)
     app.include_router(desktop_router)
     app.include_router(boundary_review_router)
+    app.include_router(scene_boundaries_router)
     app.include_router(reader_journey_router)
     app.include_router(capabilities_router)
     app.include_router(whole_book_preflight_router)

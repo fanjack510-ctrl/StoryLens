@@ -64,12 +64,70 @@ def create_db() -> None:
     migrate_phase_1c_c1(engine)
     migrate_phase_1d_c1_uat05(engine)
     migrate_phase_license_v1(engine)
+    migrate_phase_scene_boundary_manual_review(engine)
     Base.metadata.create_all(bind=engine)
     # Phase 1P narrative shared skeleton (upgrade path + ledger). After create_all so
     # fresh DBs already have ORM tables; migrators remain idempotent for 1.0.5 upgrades.
     from app.narrative_core.migrations.runner import apply_narrative_migrations
 
     apply_narrative_migrations(engine)
+
+
+def migrate_phase_scene_boundary_manual_review(target_engine) -> None:
+    """CHG-041: scene boundary manual review lifecycle columns (idempotent ALTER)."""
+    inspector = inspect(target_engine)
+    tables = inspector.get_table_names()
+    additions_by_table = {
+        "boundary_revisions": {
+            "status": "VARCHAR(32) NOT NULL DEFAULT 'confirmed'",
+            "source": "VARCHAR(32) NOT NULL DEFAULT 'legacy'",
+            "based_on_revision_id": "INTEGER",
+            "chapter_text_hash": "VARCHAR(64) NOT NULL DEFAULT ''",
+            "boundary_hash": "VARCHAR(64) NOT NULL DEFAULT ''",
+            "revision_etag": "VARCHAR(64) NOT NULL DEFAULT ''",
+            "superseded_at": "DATETIME",
+            "title": "VARCHAR(255)",
+            "created_at": "DATETIME",
+            "updated_at": "DATETIME",
+        },
+        "scenes": {
+            "included_in_journey": "BOOLEAN NOT NULL DEFAULT 1",
+            "source_scene_id": "INTEGER",
+        },
+        "reader_journey_runs": {
+            "scene_revision_id": "INTEGER",
+            "scene_revision_no": "INTEGER",
+            "scene_boundary_hash": "VARCHAR(64)",
+            "chapter_text_hash": "VARCHAR(64)",
+            "included_scene_ids_json": "TEXT NOT NULL DEFAULT '[]'",
+            "included_scene_input_hashes_json": "TEXT NOT NULL DEFAULT '{}'",
+            "result_status": "VARCHAR(48) NOT NULL DEFAULT 'current'",
+        },
+    }
+    with target_engine.begin() as connection:
+        for table, additions in additions_by_table.items():
+            if table not in tables:
+                continue
+            existing = {column["name"] for column in inspector.get_columns(table)}
+            for name, definition in additions.items():
+                if name not in existing:
+                    connection.execute(
+                        text(f"ALTER TABLE {table} ADD COLUMN {name} {definition}")
+                    )
+        if "boundary_revisions" in tables:
+            connection.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS ix_boundary_revisions_status "
+                    "ON boundary_revisions (status)"
+                )
+            )
+        if "reader_journey_runs" in tables:
+            connection.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS ix_reader_journey_runs_result_status "
+                    "ON reader_journey_runs (result_status)"
+                )
+            )
 
 
 def migrate_phase_license_v1(target_engine) -> None:
