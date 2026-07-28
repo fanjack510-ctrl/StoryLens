@@ -20,6 +20,15 @@ const nativeOverviewUiEnabled = (() => {
   return value === "1" || value === "true" || value === "yes" || value === "on";
 })();
 
+const wholeBookDiagnosticsEnabled = (() => {
+  const raw =
+    process.env.VITE_WHOLE_BOOK_DIAGNOSTICS_ENABLED ||
+    process.env.WHOLE_BOOK_DIAGNOSTICS_ENABLED ||
+    "false";
+  const value = String(raw).trim().toLowerCase();
+  return value === "1" || value === "true" || value === "yes" || value === "on";
+})();
+
 function resolvePublicGitHead(): string {
   if (process.env.VITE_PUBLIC_GIT_HEAD) return String(process.env.VITE_PUBLIC_GIT_HEAD).trim();
   try {
@@ -36,6 +45,8 @@ export default defineConfig({
     __STORYLENS_PUBLIC_GIT_HEAD__: JSON.stringify(resolvePublicGitHead()),
     // RC builds set VITE_PRO_NATIVE_OVERVIEW_ENABLED=true; repo default remains false.
     __STORYLENS_PRO_NATIVE_OVERVIEW_ENABLED__: JSON.stringify(nativeOverviewUiEnabled),
+    // Wave B diagnostics page — repo default remains false.
+    __STORYLENS_WHOLE_BOOK_DIAGNOSTICS_ENABLED__: JSON.stringify(wholeBookDiagnosticsEnabled),
   },
   server: { port: 1420, strictPort: true },
   test: {

@@ -9,11 +9,15 @@ declare const __STORYLENS_PUBLIC_GIT_HEAD__: string;
 /** Injected by vite.config from VITE_PRO_NATIVE_OVERVIEW_ENABLED (RC builds may enable). */
 declare const __STORYLENS_PRO_NATIVE_OVERVIEW_ENABLED__: boolean;
 
+/** Injected by vite.config from VITE_WHOLE_BOOK_DIAGNOSTICS_ENABLED (Wave B dev page). */
+declare const __STORYLENS_WHOLE_BOOK_DIAGNOSTICS_ENABLED__: boolean;
+
 interface ImportMetaEnv {
   readonly VITE_API_BASE_URL?: string;
   readonly VITE_TELEMETRY_ENDPOINT?: string;
   readonly VITE_TELEMETRY_PROJECT_KEY?: string;
   readonly VITE_PRO_NATIVE_OVERVIEW_ENABLED?: string;
+  readonly VITE_WHOLE_BOOK_DIAGNOSTICS_ENABLED?: string;
   readonly VITE_PUBLIC_GIT_HEAD?: string;
 }
 

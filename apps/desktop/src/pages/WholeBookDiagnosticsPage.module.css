@@ -1,0 +1,133 @@
+.wholeBookDiagnosticsPage {
+  display: grid;
+  gap: 16px;
+  max-width: 960px;
+}
+
+.wholeBookDiagnosticsPage header h1 {
+  margin: 0 0 6px;
+}
+
+.wholeBookDiagnosticsBanner {
+  border: 1px solid var(--color-border, var(--line));
+  border-radius: var(--radius-md, 8px);
+  padding: 12px 14px;
+  background: var(--color-surface-muted, rgba(0, 0, 0, 0.03));
+}
+
+.wholeBookDiagnosticsSection {
+  border: 1px solid var(--color-border, var(--line));
+  border-radius: var(--radius-md, 8px);
+  padding: 12px 14px;
+}
+
+.wholeBookDiagnosticsSection h2 {
+  margin: 0 0 10px;
+  font-size: 1rem;
+}
+
+.wholeBookDiagnosticsGrid {
+  display: grid;
+  gap: 8px;
+}
+
+.wholeBookDiagnosticsMeta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+}
+
+.wholeBookDiagnosticsMeta dt {
+  font-size: 0.75rem;
+  color: var(--color-text-muted, var(--muted));
+}
+
+.wholeBookDiagnosticsMeta dd {
+  margin: 0;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.85rem;
+  word-break: break-all;
+}
+
+.wholeBookDiagnosticsActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.wholeBookDiagnosticsTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.wholeBookDiagnosticsTable th,
+.wholeBookDiagnosticsTable td {
+  border-bottom: 1px solid var(--color-border, var(--line));
+  padding: 6px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.wholeBookDiagnosticsTable tbody tr[data-selected="true"] {
+  background: var(--color-surface-muted, rgba(0, 0, 0, 0.04));
+}
+
+.wholeBookDiagnosticsCoverageCards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.wholeBookDiagnosticsCoverageCard {
+  border: 1px solid var(--color-border, var(--line));
+  border-radius: var(--radius-sm, 6px);
+  padding: 8px 10px;
+}
+
+.wholeBookDiagnosticsCoverageCard strong {
+  display: block;
+  font-size: 1.1rem;
+}
+
+.wholeBookDiagnosticsStageList {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wholeBookDiagnosticsStageList li[data-state="done"] {
+  color: var(--color-text-muted, var(--muted));
+}
+
+.wholeBookDiagnosticsStageList li[data-state="current"] {
+  font-weight: 600;
+}
+
+.wholeBookDiagnosticsWindowDetail {
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: var(--radius-sm, 6px);
+  background: var(--color-surface-muted, rgba(0, 0, 0, 0.03));
+}
+
+.wholeBookDiagnosticsParagraphPreview {
+  margin: 4px 0 0;
+  font-size: 0.82rem;
+  color: var(--color-text-muted, var(--muted));
+}
+
+.wholeBookDiagnosticsBadge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  border: 1px solid var(--color-border, var(--line));
+}
+
+.wholeBookDiagnosticsUnavailable {
+  max-width: 42rem;
+}
