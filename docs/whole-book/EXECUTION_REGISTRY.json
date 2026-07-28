@@ -1,0 +1,743 @@
+{
+  "schema_version": 1,
+  "document": "StoryLens Whole-Book Execution Registry",
+  "target_product_version": "1.2.0",
+  "formal_baseline_version": "1.1.1",
+  "frozen_at_utc": "2026-07-28T01:21:28Z",
+  "frozen_by_step": "WB-0.1-BASELINE-FREEZE",
+  "frozen_by_change": "CHG-20260728-002",
+  "numbering_policy": {
+    "numbered_steps": 37,
+    "manual_gates": 37,
+    "steps_without_manual_gate": 0,
+    "insert_rule": "Do not renumber. Use sub-steps WB-X.YA or WB-X.Y.1 with new Change and Manual Gate.",
+    "change_id_range": [
+      "CHG-20260728-002",
+      "CHG-20260728-038"
+    ],
+    "audit_change_id": "CHG-20260728-001"
+  },
+  "branch_strategy": {
+    "do_not_develop_on": "release/1.1.1",
+    "public_integration_branch": "integration/whole-book-v120",
+    "private_integration_branch": "integration/whole-book-v120",
+    "public_worktree_suggested": "D:\\\\Dstorylens-wt-whole-book-v120-integration",
+    "private_worktree_suggested": "D:\\\\Dstorylens-private-engine-wt-whole-book-v120-integration",
+    "create_when": "After MG-WB-0.1 PASS and before WB-0.2 implementation, with explicit user approval",
+    "public_branch_from_sha_field": "baselines.public_create_from_sha",
+    "private_branch_from_sha_field": "baselines.private_create_from_sha",
+    "release_1_1_1_frozen": true,
+    "v1_1_1_tag_immutable": true,
+    "historical_releases_immutable": true,
+    "created_in_this_step": false
+  },
+  "baselines": {
+    "public_worktree": "D:\\\\Dstorylens-wt-narrative-phase2br1-integration",
+    "public_branch_at_freeze": "release/1.1.1",
+    "public_head": "b2c6a89fa5b1be664120adfcaa7bb9dab514e3a3",
+    "v1_1_1_tag_annotated": "6f7d88c41f8006176fe77dd92bdb06cf1c6683e3",
+    "v1_1_1_tag_target": "38c85ab4eda0eaa03bd6a7bf8fda7d8deb11a5db",
+    "public_create_from_sha": "b2c6a89fa5b1be664120adfcaa7bb9dab514e3a3",
+    "public_base_relation": "CURRENT_HEAD_CONTAINS_TAG",
+    "version": "1.1.1",
+    "private_worktree": "D:\\\\Dstorylens-private-engine-wt-phase2br1-integration",
+    "private_branch_at_freeze": "integration/phase2br1",
+    "private_head": "30d8dad8cd649e832999874f7bf16cc1661cf221",
+    "private_create_from_sha": "30d8dad8cd649e832999874f7bf16cc1661cf221",
+    "notes": "Public tip b2c6a89 includes post-tag release evidence commits; Tag target 38c85ab is build source. New integration branch should fork from Public tip b2c6a89 unless user directs otherwise."
+  },
+  "wb_status_flow": [
+    "planned",
+    "implementing",
+    "tested",
+    "manual verification",
+    "verified",
+    "integrated"
+  ],
+  "change_registry_status_flow": [
+    "registered",
+    "implemented",
+    "tested",
+    "verified",
+    "ready-for-staging",
+    "ready",
+    "released"
+  ],
+  "status_rules": {
+    "cursor_may_set": [
+      "planned",
+      "implementing",
+      "tested",
+      "manual verification"
+    ],
+    "cursor_max_after_automation": "tested",
+    "user_only": [
+      "verified",
+      "integrated"
+    ],
+    "cannot_skip_failed_manual_gate": true,
+    "cursor_must_not_self_verify": true
+  },
+  "acceptance_levels": {
+    "L1": {
+      "name": "零费用结构验收",
+      "provider": 0,
+      "formal_db": 0,
+      "build": 0
+    },
+    "L2": {
+      "name": "源码运行态验收",
+      "provider": 0,
+      "formal_db": 0,
+      "installer_build": 0
+    },
+    "L3": {
+      "name": "受控真实算法验收",
+      "requires_user_approval": true,
+      "default_provider": 0
+    },
+    "L4": {
+      "name": "安装版验收",
+      "only_for": [
+        "1.2.0-rc.x",
+        "1.2.0 Stable"
+      ]
+    }
+  },
+  "high_risk_assumptions": [
+    {
+      "id": "A",
+      "text": "Immutable Book Snapshot",
+      "earliest_step": "WB-1.2-BOOK-SNAPSHOT",
+      "earliest_gate": "MG-WB-1.2"
+    },
+    {
+      "id": "B",
+      "text": "Windows full coverage ordered",
+      "earliest_step": "WB-1.3-CROSS-CHAPTER-WINDOWS",
+      "earliest_gate": "MG-WB-1.3"
+    },
+    {
+      "id": "C",
+      "text": "Assets deep-link to evidence",
+      "earliest_step": "WB-1.5-ASSET-EVIDENCE",
+      "earliest_gate": "MG-WB-1.5"
+    },
+    {
+      "id": "D",
+      "text": "Cross-chapter entity merge",
+      "earliest_step": "WB-1.4-MIN-ENTITY-EVENT",
+      "earliest_gate": "MG-WB-1.4"
+    },
+    {
+      "id": "E",
+      "text": "Checkpoint resume without rebilling",
+      "earliest_steps": [
+        "WB-0.5-PROVIDER-ORCH",
+        "WB-1.8-PAUSE-RESUME"
+      ],
+      "earliest_gates": [
+        "MG-WB-0.5",
+        "MG-WB-1.8"
+      ]
+    },
+    {
+      "id": "F",
+      "text": "Native independent of chapter analysis",
+      "earliest_step": "WB-1.9-NATIVE-INDEPENDENCE",
+      "earliest_gate": "MG-WB-1.9"
+    },
+    {
+      "id": "G",
+      "text": "Enhanced does not replace full text",
+      "earliest_step": "WB-5.3-ENHANCED-MODE",
+      "earliest_gate": "MG-WB-5.3"
+    },
+    {
+      "id": "H",
+      "text": "Confirmed assets not silently overwritten",
+      "earliest_step": "WB-1.10-CONFIRM-NO-OVERWRITE",
+      "earliest_gate": "MG-WB-1.10"
+    }
+  ],
+  "evidence_policy": {
+    "root": "release/evidence/whole-book/<STEP-ID>/",
+    "required_files": [
+      "README.md",
+      "BASELINE.json",
+      "TEST_RESULTS.md",
+      "MANUAL_GATE.md",
+      "FINAL_REPORT.md"
+    ],
+    "forbidden": [
+      "user databases",
+      "novel full text",
+      "API keys",
+      "Authorization",
+      "unredacted prompts/responses",
+      "private engine source",
+      "AppData copies",
+      "large tmp/dist"
+    ]
+  },
+  "commit_trailers": [
+    "StoryLens-Change: CHG-XXXXXXXX-XXX",
+    "StoryLens-Step: WB-X.X-STEP-NAME",
+    "StoryLens-Manual-Gate: MG-WB-X.X"
+  ],
+  "steps": [
+    {
+      "order": 1,
+      "step_id": "WB-0.1-BASELINE-FREEZE",
+      "change_id": "CHG-20260728-002",
+      "manual_gate_id": "MG-WB-0.1",
+      "phase": "WB-0",
+      "title": "Freeze baselines, IDs, gates, evidence policy",
+      "acceptance_level": "L1",
+      "evidence_dir": "release/evidence/whole-book/WB-0.1-BASELINE-FREEZE/",
+      "wb_status": "implementing",
+      "depends_on": [],
+      "next_step": "WB-0.2-DATA-CONTRACTS"
+    },
+    {
+      "order": 2,
+      "step_id": "WB-0.2-DATA-CONTRACTS",
+      "change_id": "CHG-20260728-003",
+      "manual_gate_id": "MG-WB-0.2",
+      "phase": "WB-0",
+      "title": "Freeze Snapshot/Asset/Evidence/Run/Overview contracts",
+      "acceptance_level": "L1",
+      "evidence_dir": "release/evidence/whole-book/WB-0.2-DATA-CONTRACTS/",
+      "wb_status": "planned",
+      "depends_on": [
+        "WB-0.1-BASELINE-FREEZE"
+      ],
+      "next_step": "WB-0.3-CAPABILITY-COST"
+    },
+    {
+      "order": 3,
+      "step_id": "WB-0.3-CAPABILITY-COST",
+      "change_id": "CHG-20260728-004",
+      "manual_gate_id": "MG-WB-0.3",
+      "phase": "WB-0",
+      "title": "Freeze capability/consent/cost semantics",
+      "acceptance_level": "L1",
+      "evidence_dir": "release/evidence/whole-book/WB-0.3-CAPABILITY-COST/",
+      "wb_status": "planned",
+      "depends_on": [
+        "WB-0.2-DATA-CONTRACTS"
+      ],
+      "next_step": "WB-0.4-DB-MIGRATION-GATE"
+    },
+    {
+      "order": 4,
+      "step_id": "WB-0.4-DB-MIGRATION-GATE",
+      "change_id": "CHG-20260728-005",
+      "manual_gate_id": "MG-WB-0.4",
+      "phase": "WB-0",
+      "title": "Migration human gate before algorithm work",
+      "acceptance_level": "L1",
+      "evidence_dir": "release/evidence/whole-book/WB-0.4-DB-MIGRATION-GATE/",
+      "wb_status": "planned",
+      "depends_on": [
+        "WB-0.3-CAPABILITY-COST"
+      ],
+      "next_step": "WB-0.5-PROVIDER-ORCH"
+    },
+    {
+      "order": 5,
+      "step_id": "WB-0.5-PROVIDER-ORCH",
+      "change_id": "CHG-20260728-006",
+      "manual_gate_id": "MG-WB-0.5",
+      "phase": "WB-0",
+      "title": "Cost/idempotency/checkpoint orchestration gate",
+      "acceptance_level": "L1/L2",
+      "evidence_dir": "release/evidence/whole-book/WB-0.5-PROVIDER-ORCH/",
+      "wb_status": "planned",
+      "depends_on": [
+        "WB-0.4-DB-MIGRATION-GATE"
+      ],
+      "next_step": "WB-0.6-SEMANTICS-FREEZE"
+    },
+    {
+      "order": 6,
+      "step_id": "WB-0.6-SEMANTICS-FREEZE",
+      "change_id": "CHG-20260728-007",
+      "manual_gate_id": "MG-WB-0.6",
+      "phase": "WB-0",
+      "title": "Native vs Insights vs Enhanced naming freeze",
+      "acceptance_level": "L1",
+      "evidence_dir": "release/evidence/whole-book/WB-0.6-SEMANTICS-FREEZE/",
+      "wb_status": "planned",
+      "depends_on": [
+        "WB-0.5-PROVIDER-ORCH"
+      ],
+      "next_step": "WB-1.1-RUN-STATE-MACHINE"
+    },
+    {
+      "order": 7,
+      "step_id": "WB-1.1-RUN-STATE-MACHINE",
+      "change_id": "CHG-20260728-008",
+      "manual_gate_id": "MG-WB-1.1",
+      "phase": "WB-1",
+      "title": "Whole-book run create and state machine",
+      "acceptance_level": "L1/L2",
+      "evidence_dir": "release/evidence/whole-book/WB-1.1-RUN-STATE-MACHINE/",
+      "wb_status": "planned",
+      "depends_on": [
+        "WB-0.6-SEMANTICS-FREEZE"
+      ],
+      "next_step": "WB-1.2-BOOK-SNAPSHOT"
+    },
+    {
+      "order": 8,
+      "step_id": "WB-1.2-BOOK-SNAPSHOT",
+      "change_id": "CHG-20260728-009",
+      "manual_gate_id": "MG-WB-1.2",
+      "phase": "WB-1",
+      "title": "Immutable Book Snapshot (Assumption A)",
+      "acceptance_level": "L1",
+      "evidence_dir": "release/evidence/whole-book/WB-1.2-BOOK-SNAPSHOT/",
+      "wb_status": "planned",
+      "depends_on": [
+        "WB-1.1-RUN-STATE-MACHINE"
+      ],
+      "next_step": "WB-1.3-CROSS-CHAPTER-WINDOWS"
+    },
+    {
+      "order": 9,
+      "step_id": "WB-1.3-CROSS-CHAPTER-WINDOWS",
+      "change_id": "CHG-20260728-010",
+      "manual_gate_id": "MG-WB-1.3",
+      "phase": "WB-1",
+      "title": "Cross-chapter windows full coverage (B)",
+      "acceptance_level": "L1",
+      "evidence_dir": "release/evidence/whole-book/WB-1.3-CROSS-CHAPTER-WINDOWS/",
+      "wb_status": "planned",
+      "depends_on": [
+        "WB-1.2-BOOK-SNAPSHOT"
+      ],
+      "next_step": "WB-1.4-MIN-ENTITY-EVENT"
+    },
+    {
+      "order": 10,
+      "step_id": "WB-1.4-MIN-ENTITY-EVENT",
+      "change_id": "CHG-20260728-011",
+      "manual_gate_id": "MG-WB-1.4",
+      "phase": "WB-1",
+      "title": "Minimal entity/event extraction (D)",
+      "acceptance_level": "L2/L3",
+      "evidence_dir": "release/evidence/whole-book/WB-1.4-MIN-ENTITY-EVENT/",
+      "wb_status": "planned",
+      "depends_on": [
+        "WB-1.3-CROSS-CHAPTER-WINDOWS"
+      ],
+      "next_step": "WB-1.5-ASSET-EVIDENCE"
+    },
+    {
+      "order": 11,
+      "step_id": "WB-1.5-ASSET-EVIDENCE",
+      "change_id": "CHG-20260728-012",
+      "manual_gate_id": "MG-WB-1.5",
+      "phase": "WB-1",
+      "title": "Narrative Asset + Evidence persistence (C)",
+      "acceptance_level": "L1/L2",
+      "evidence_dir": "release/evidence/whole-book/WB-1.5-ASSET-EVIDENCE/",
+      "wb_status": "planned",
+      "depends_on": [
+        "WB-1.4-MIN-ENTITY-EVENT"
+      ],
+      "next_step": "WB-1.6-MIN-BOOK-OVERVIEW"
+    },
+    {
+      "order": 12,
+      "step_id": "WB-1.6-MIN-BOOK-OVERVIEW",
+      "change_id": "CHG-20260728-013",
+      "manual_gate_id": "MG-WB-1.6",
+      "phase": "WB-1",
+      "title": "Minimal book overview generation",
+      "acceptance_level": "L2/L3",
+      "evidence_dir": "release/evidence/whole-book/WB-1.6-MIN-BOOK-OVERVIEW/",
+      "wb_status": "planned",
+      "depends_on": [
+        "WB-1.5-ASSET-EVIDENCE"
+      ],
+      "next_step": "WB-1.7-OVERVIEW-UI-DEEPLINK"
+    },
+    {
+      "order": 13,
+      "step_id": "WB-1.7-OVERVIEW-UI-DEEPLINK",
+      "change_id": "CHG-20260728-014",
+      "manual_gate_id": "MG-WB-1.7",
+      "phase": "WB-1",
+      "title": "Overview result page + evidence deep-link",
+      "acceptance_level": "L2",
+      "evidence_dir": "release/evidence/whole-book/WB-1.7-OVERVIEW-UI-DEEPLINK/",
+      "wb_status": "planned",
+      "depends_on": [
+        "WB-1.6-MIN-BOOK-OVERVIEW"
+      ],
+      "next_step": "WB-1.8-PAUSE-RESUME"
+    },
+    {
+      "order": 14,
+      "step_id": "WB-1.8-PAUSE-RESUME",
+      "change_id": "CHG-20260728-015",
+      "manual_gate_id": "MG-WB-1.8",
+      "phase": "WB-1",
+      "title": "Pause/resume/checkpoint recovery (E)",
+      "acceptance_level": "L2",
+      "evidence_dir": "release/evidence/whole-book/WB-1.8-PAUSE-RESUME/",
+      "wb_status": "planned",
+      "depends_on": [
+        "WB-1.7-OVERVIEW-UI-DEEPLINK"
+      ],
+      "next_step": "WB-1.9-NATIVE-INDEPENDENCE"
+    },
+    {
+      "order": 15,
+      "step_id": "WB-1.9-NATIVE-INDEPENDENCE",
+      "change_id": "CHG-20260728-016",
+      "manual_gate_id": "MG-WB-1.9",
+      "phase": "WB-1",
+      "title": "Native independence from chapter analysis (F)",
+      "acceptance_level": "L1/L2",
+      "evidence_dir": "release/evidence/whole-book/WB-1.9-NATIVE-INDEPENDENCE/",
+      "wb_status": "planned",
+      "depends_on": [
+        "WB-1.8-PAUSE-RESUME"
+      ],
+      "next_step": "WB-1.10-CONFIRM-NO-OVERWRITE"
+    },
+    {
+      "order": 16,
+      "step_id": "WB-1.10-CONFIRM-NO-OVERWRITE",
+      "change_id": "CHG-20260728-017",
+      "manual_gate_id": "MG-WB-1.10",
+      "phase": "WB-1",
+      "title": "Confirmed assets no silent overwrite (H)",
+      "acceptance_level": "L2",
+      "evidence_dir": "release/evidence/whole-book/WB-1.10-CONFIRM-NO-OVERWRITE/",
+      "wb_status": "planned",
+      "depends_on": [
+        "WB-1.9-NATIVE-INDEPENDENCE"
+      ],
+      "next_step": "WB-2.1-STRUCTURE-STAGES"
+    },
+    {
+      "order": 17,
+      "step_id": "WB-2.1-STRUCTURE-STAGES",
+      "change_id": "CHG-20260728-018",
+      "manual_gate_id": "MG-WB-2.1",
+      "phase": "WB-2",
+      "title": "Structure stages (+ empty-policy rebase)",
+      "acceptance_level": "L3",
+      "evidence_dir": "release/evidence/whole-book/WB-2.1-STRUCTURE-STAGES/",
+      "wb_status": "planned",
+      "depends_on": [
+        "WB-1.10-CONFIRM-NO-OVERWRITE"
+      ],
+      "next_step": "WB-2.2-CHAPTER-FUNCTIONS"
+    },
+    {
+      "order": 18,
+      "step_id": "WB-2.2-CHAPTER-FUNCTIONS",
+      "change_id": "CHG-20260728-019",
+      "manual_gate_id": "MG-WB-2.2",
+      "phase": "WB-2",
+      "title": "Chapter functions",
+      "acceptance_level": "L3",
+      "evidence_dir": "release/evidence/whole-book/WB-2.2-CHAPTER-FUNCTIONS/",
+      "wb_status": "planned",
+      "depends_on": [
+        "WB-2.1-STRUCTURE-STAGES"
+      ],
+      "next_step": "WB-2.3-STORYLINES"
+    },
+    {
+      "order": 19,
+      "step_id": "WB-2.3-STORYLINES",
+      "change_id": "CHG-20260728-020",
+      "manual_gate_id": "MG-WB-2.3",
+      "phase": "WB-2",
+      "title": "Storylines",
+      "acceptance_level": "L3",
+      "evidence_dir": "release/evidence/whole-book/WB-2.3-STORYLINES/",
+      "wb_status": "planned",
+      "depends_on": [
+        "WB-2.2-CHAPTER-FUNCTIONS"
+      ],
+      "next_step": "WB-2.4-FIRST-FOUR-PRODUCT"
+    },
+    {
+      "order": 20,
+      "step_id": "WB-2.4-FIRST-FOUR-PRODUCT",
+      "change_id": "CHG-20260728-021",
+      "manual_gate_id": "MG-WB-2.4",
+      "phase": "WB-2",
+      "title": "First-four product integration",
+      "acceptance_level": "L2/L3",
+      "evidence_dir": "release/evidence/whole-book/WB-2.4-FIRST-FOUR-PRODUCT/",
+      "wb_status": "planned",
+      "depends_on": [
+        "WB-2.3-STORYLINES"
+      ],
+      "next_step": "WB-3.1-ENTITY-MERGE-HARDEN"
+    },
+    {
+      "order": 21,
+      "step_id": "WB-3.1-ENTITY-MERGE-HARDEN",
+      "change_id": "CHG-20260728-022",
+      "manual_gate_id": "MG-WB-3.1",
+      "phase": "WB-3",
+      "title": "Entity merge hardening",
+      "acceptance_level": "L3",
+      "evidence_dir": "release/evidence/whole-book/WB-3.1-ENTITY-MERGE-HARDEN/",
+      "wb_status": "planned",
+      "depends_on": [
+        "WB-2.4-FIRST-FOUR-PRODUCT"
+      ],
+      "next_step": "WB-3.2-CHARACTER-ARC"
+    },
+    {
+      "order": 22,
+      "step_id": "WB-3.2-CHARACTER-ARC",
+      "change_id": "CHG-20260728-023",
+      "manual_gate_id": "MG-WB-3.2",
+      "phase": "WB-3",
+      "title": "Character arc",
+      "acceptance_level": "L3",
+      "evidence_dir": "release/evidence/whole-book/WB-3.2-CHARACTER-ARC/",
+      "wb_status": "planned",
+      "depends_on": [
+        "WB-3.1-ENTITY-MERGE-HARDEN"
+      ],
+      "next_step": "WB-3.3-RELATIONSHIPS"
+    },
+    {
+      "order": 23,
+      "step_id": "WB-3.3-RELATIONSHIPS",
+      "change_id": "CHG-20260728-024",
+      "manual_gate_id": "MG-WB-3.3",
+      "phase": "WB-3",
+      "title": "Character relationships",
+      "acceptance_level": "L3",
+      "evidence_dir": "release/evidence/whole-book/WB-3.3-RELATIONSHIPS/",
+      "wb_status": "planned",
+      "depends_on": [
+        "WB-3.2-CHARACTER-ARC"
+      ],
+      "next_step": "WB-3.4-GCC-CHAIN"
+    },
+    {
+      "order": 24,
+      "step_id": "WB-3.4-GCC-CHAIN",
+      "change_id": "CHG-20260728-025",
+      "manual_gate_id": "MG-WB-3.4",
+      "phase": "WB-3",
+      "title": "Goal-Conflict-Choice-Consequence",
+      "acceptance_level": "L3",
+      "evidence_dir": "release/evidence/whole-book/WB-3.4-GCC-CHAIN/",
+      "wb_status": "planned",
+      "depends_on": [
+        "WB-3.3-RELATIONSHIPS"
+      ],
+      "next_step": "WB-4.1-HOOKS-CLUES"
+    },
+    {
+      "order": 25,
+      "step_id": "WB-4.1-HOOKS-CLUES",
+      "change_id": "CHG-20260728-026",
+      "manual_gate_id": "MG-WB-4.1",
+      "phase": "WB-4",
+      "title": "Hooks and clues",
+      "acceptance_level": "L3",
+      "evidence_dir": "release/evidence/whole-book/WB-4.1-HOOKS-CLUES/",
+      "wb_status": "planned",
+      "depends_on": [
+        "WB-3.4-GCC-CHAIN"
+      ],
+      "next_step": "WB-4.2-FORESHADOW-PAYOFF"
+    },
+    {
+      "order": 26,
+      "step_id": "WB-4.2-FORESHADOW-PAYOFF",
+      "change_id": "CHG-20260728-027",
+      "manual_gate_id": "MG-WB-4.2",
+      "phase": "WB-4",
+      "title": "Foreshadow and payoff",
+      "acceptance_level": "L3",
+      "evidence_dir": "release/evidence/whole-book/WB-4.2-FORESHADOW-PAYOFF/",
+      "wb_status": "planned",
+      "depends_on": [
+        "WB-4.1-HOOKS-CLUES"
+      ],
+      "next_step": "WB-4.3-CAUSALITY"
+    },
+    {
+      "order": 27,
+      "step_id": "WB-4.3-CAUSALITY",
+      "change_id": "CHG-20260728-028",
+      "manual_gate_id": "MG-WB-4.3",
+      "phase": "WB-4",
+      "title": "Causality",
+      "acceptance_level": "L3",
+      "evidence_dir": "release/evidence/whole-book/WB-4.3-CAUSALITY/",
+      "wb_status": "planned",
+      "depends_on": [
+        "WB-4.2-FORESHADOW-PAYOFF"
+      ],
+      "next_step": "WB-4.4-TIMELINE"
+    },
+    {
+      "order": 28,
+      "step_id": "WB-4.4-TIMELINE",
+      "change_id": "CHG-20260728-029",
+      "manual_gate_id": "MG-WB-4.4",
+      "phase": "WB-4",
+      "title": "Timeline",
+      "acceptance_level": "L3",
+      "evidence_dir": "release/evidence/whole-book/WB-4.4-TIMELINE/",
+      "wb_status": "planned",
+      "depends_on": [
+        "WB-4.3-CAUSALITY"
+      ],
+      "next_step": "WB-5.1-WHOLE-BOOK-RJ"
+    },
+    {
+      "order": 29,
+      "step_id": "WB-5.1-WHOLE-BOOK-RJ",
+      "change_id": "CHG-20260728-030",
+      "manual_gate_id": "MG-WB-5.1",
+      "phase": "WB-5",
+      "title": "Whole-book reader journey",
+      "acceptance_level": "L3",
+      "evidence_dir": "release/evidence/whole-book/WB-5.1-WHOLE-BOOK-RJ/",
+      "wb_status": "planned",
+      "depends_on": [
+        "WB-4.4-TIMELINE"
+      ],
+      "next_step": "WB-5.2-DIAGNOSIS"
+    },
+    {
+      "order": 30,
+      "step_id": "WB-5.2-DIAGNOSIS",
+      "change_id": "CHG-20260728-031",
+      "manual_gate_id": "MG-WB-5.2",
+      "phase": "WB-5",
+      "title": "Diagnosis",
+      "acceptance_level": "L3",
+      "evidence_dir": "release/evidence/whole-book/WB-5.2-DIAGNOSIS/",
+      "wb_status": "planned",
+      "depends_on": [
+        "WB-5.1-WHOLE-BOOK-RJ"
+      ],
+      "next_step": "WB-5.3-ENHANCED-MODE"
+    },
+    {
+      "order": 31,
+      "step_id": "WB-5.3-ENHANCED-MODE",
+      "change_id": "CHG-20260728-032",
+      "manual_gate_id": "MG-WB-5.3",
+      "phase": "WB-5",
+      "title": "Enhanced mode (Assumption G)",
+      "acceptance_level": "L2/L3",
+      "evidence_dir": "release/evidence/whole-book/WB-5.3-ENHANCED-MODE/",
+      "wb_status": "planned",
+      "depends_on": [
+        "WB-5.2-DIAGNOSIS"
+      ],
+      "next_step": "WB-5.4-INSIGHTS-AS-ENHANCED"
+    },
+    {
+      "order": 32,
+      "step_id": "WB-5.4-INSIGHTS-AS-ENHANCED",
+      "change_id": "CHG-20260728-033",
+      "manual_gate_id": "MG-WB-5.4",
+      "phase": "WB-5",
+      "title": "Chapter aggregate insights as Enhanced input",
+      "acceptance_level": "L2",
+      "evidence_dir": "release/evidence/whole-book/WB-5.4-INSIGHTS-AS-ENHANCED/",
+      "wb_status": "planned",
+      "depends_on": [
+        "WB-5.3-ENHANCED-MODE"
+      ],
+      "next_step": "WB-6.1-PRO-PRODUCT-UI"
+    },
+    {
+      "order": 33,
+      "step_id": "WB-6.1-PRO-PRODUCT-UI",
+      "change_id": "CHG-20260728-034",
+      "manual_gate_id": "MG-WB-6.1",
+      "phase": "WB-6",
+      "title": "Pro product UI shell",
+      "acceptance_level": "L2",
+      "evidence_dir": "release/evidence/whole-book/WB-6.1-PRO-PRODUCT-UI/",
+      "wb_status": "planned",
+      "depends_on": [
+        "WB-5.4-INSIGHTS-AS-ENHANCED"
+      ],
+      "next_step": "WB-6.2-FTS5"
+    },
+    {
+      "order": 34,
+      "step_id": "WB-6.2-FTS5",
+      "change_id": "CHG-20260728-035",
+      "manual_gate_id": "MG-WB-6.2",
+      "phase": "WB-6",
+      "title": "FTS5 index",
+      "acceptance_level": "L1/L2",
+      "evidence_dir": "release/evidence/whole-book/WB-6.2-FTS5/",
+      "wb_status": "planned",
+      "depends_on": [
+        "WB-6.1-PRO-PRODUCT-UI"
+      ],
+      "next_step": "WB-6.3-COST-QUOTA-PRODUCT"
+    },
+    {
+      "order": 35,
+      "step_id": "WB-6.3-COST-QUOTA-PRODUCT",
+      "change_id": "CHG-20260728-036",
+      "manual_gate_id": "MG-WB-6.3",
+      "phase": "WB-6",
+      "title": "Product cost/quota UX",
+      "acceptance_level": "L2",
+      "evidence_dir": "release/evidence/whole-book/WB-6.3-COST-QUOTA-PRODUCT/",
+      "wb_status": "planned",
+      "depends_on": [
+        "WB-6.2-FTS5"
+      ],
+      "next_step": "WB-6.4-120-RC"
+    },
+    {
+      "order": 36,
+      "step_id": "WB-6.4-120-RC",
+      "change_id": "CHG-20260728-037",
+      "manual_gate_id": "MG-WB-6.4",
+      "phase": "WB-6",
+      "title": "StoryLens 1.2.0-rc build/smoke",
+      "acceptance_level": "L4",
+      "evidence_dir": "release/evidence/whole-book/WB-6.4-120-RC/",
+      "wb_status": "planned",
+      "depends_on": [
+        "WB-6.3-COST-QUOTA-PRODUCT"
+      ],
+      "next_step": "WB-6.5-120-STABLE"
+    },
+    {
+      "order": 37,
+      "step_id": "WB-6.5-120-STABLE",
+      "change_id": "CHG-20260728-038",
+      "manual_gate_id": "MG-WB-6.5",
+      "phase": "WB-6",
+      "title": "StoryLens 1.2.0 Stable release",
+      "acceptance_level": "L4",
+      "evidence_dir": "release/evidence/whole-book/WB-6.5-120-STABLE/",
+      "wb_status": "planned",
+      "depends_on": [
+        "WB-6.4-120-RC"
+      ],
+      "next_step": null
+    }
+  ]
+}

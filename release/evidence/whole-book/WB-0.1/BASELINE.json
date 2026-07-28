@@ -1,0 +1,63 @@
+{
+  "captured_at_utc": "2026-07-28T01:22:37Z",
+  "step_id": "WB-0.1-BASELINE-FREEZE",
+  "change_id": "CHG-20260728-002",
+  "manual_gate_id": "MG-WB-0.1",
+  "version": "1.1.1",
+  "public": {
+    "worktree": "D:\\\\Dstorylens-wt-narrative-phase2br1-integration",
+    "branch": "release/1.1.1",
+    "head": "b2c6a89fa5b1be664120adfcaa7bb9dab514e3a3",
+    "clean_except_tmp": true,
+    "untracked": [
+      "tmp/"
+    ]
+  },
+  "v1_1_1": {
+    "tag_annotated": "6f7d88c41f8006176fe77dd92bdb06cf1c6683e3",
+    "tag_target": "38c85ab4eda0eaa03bd6a7bf8fda7d8deb11a5db",
+    "log_subject": "test(api): isolate install-layout config probe from AppData overrides",
+    "public_head_contains_tag_target": true
+  },
+  "private": {
+    "worktree": "D:\\\\Dstorylens-private-engine-wt-phase2br1-integration",
+    "branch": "integration/phase2br1",
+    "head": "30d8dad8cd649e832999874f7bf16cc1661cf221",
+    "clean": true
+  },
+  "protected_wip": [
+    {
+      "path": "D:\\\\Dstorylens-wt-narrative-phase2br1-structure-empty-policy",
+      "branch": "fix/narrative-phase2br1-structure-empty-policy",
+      "head": "10e69badda23c980199e9faad1ea2894a476bb86",
+      "dirty_count": 26,
+      "status": "PROTECTED WIP",
+      "modified_this_step": false
+    },
+    {
+      "path": "D:\\\\Dstorylens-private-engine-wt-phase2br1-structure-empty-policy",
+      "branch": "fix/phase2br1-structure-empty-policy",
+      "head": "5dabfd5eb0d08e03d4fff6adb5d845a16811a39f",
+      "dirty_count": 11,
+      "status": "PROTECTED WIP",
+      "modified_this_step": false
+    }
+  ],
+  "registry_snapshot": {
+    "numbered_steps": 37,
+    "change_ids": 37,
+    "manual_gates": 37,
+    "high_risk_assumptions": 8
+  },
+  "constraints": {
+    "real_provider_calls": 0,
+    "formal_database_writes": 0,
+    "sidecar_build_count": 0,
+    "installer_build_count": 0,
+    "business_source_modified": false,
+    "private_engine_modified": false,
+    "push": false,
+    "tag": false,
+    "github_release": false
+  }
+}

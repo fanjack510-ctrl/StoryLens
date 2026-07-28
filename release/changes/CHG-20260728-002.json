@@ -1,0 +1,63 @@
+{
+  "id": "CHG-20260728-002",
+  "title": "WB-0.1 freeze v1.1.1 whole-book execution baseline",
+  "type": "documentation",
+  "base_version": "1.1.1",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "docs/whole-book",
+    "scripts/verify_whole_book_execution_registry.py",
+    "release/evidence/whole-book"
+  ],
+  "files": [
+    "docs/whole-book/EXECUTION_MASTER_PLAN.md",
+    "docs/whole-book/EXECUTION_REGISTRY.json",
+    "docs/whole-book/HIGH_RISK_ASSUMPTIONS.md",
+    "docs/whole-book/MANUAL_GATE_POLICY.md",
+    "docs/whole-book/PROTECTED_WORKTREES.md",
+    "docs/whole-book/SAMPLE_VALIDATION_POLICY.md",
+    "release/changes/CHG-20260728-002.json",
+    "release/evidence/whole-book/WB-0.1/",
+    "scripts/verify_whole_book_execution_registry.py"
+  ],
+  "user_summary": "冻结原生全书分析 Step/Change/Gate 编号、证据规则与执行制度（文档与登记，无业务改动）",
+  "technical_summary": "Freeze WB-0.1 baselines, 37 Step/Change/Gate IDs, evidence policy, sample policy, protected WIP, status flow, and offline registry verifier. Documentation + registry only.",
+  "acceptance_criteria": [
+    "37 steps / 37 gates / 37 change IDs mapped",
+    "verify_whole_book_execution_registry.py PASS",
+    "v1.1.1 baselines recorded as full SHA",
+    "protected WIP recorded and untouched",
+    "no business source / VERSION / Provider / build",
+    "CHG status tested; verified only after MG-WB-0.1 PASS"
+  ],
+  "tests": [
+    "python scripts/verify_whole_book_execution_registry.py"
+  ],
+  "verification_evidence": [
+    "release/evidence/whole-book/WB-0.1/",
+    "docs/whole-book/EXECUTION_REGISTRY.json",
+    "docs/whole-book/EXECUTION_MASTER_PLAN.md",
+    "docs/whole-book/MANUAL_GATE_POLICY.md",
+    "docs/whole-book/SAMPLE_VALIDATION_POLICY.md",
+    "docs/whole-book/PROTECTED_WORKTREES.md",
+    "docs/whole-book/HIGH_RISK_ASSUMPTIONS.md"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": null,
+  "created_at": "2026-07-28T01:20:16Z",
+  "updated_at": "2026-07-28T01:23:50Z"
+}
