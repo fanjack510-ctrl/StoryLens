@@ -20,7 +20,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
-from app.db.models import AnalysisRun, Chapter, ReaderJourneyRun, Scene
+from app.db.models import AnalysisRun, BoundaryRevision, Chapter, ReaderJourneyRun, Scene
 from app.services.reader_journey_batch_planner import PLANNER_VERSION
 from app.services.reader_journey_progress import (
     find_recoverable_journey_run,
@@ -96,6 +96,9 @@ def effective_chapter_status(session: Session, run: AnalysisRun) -> str:
         return run.status
     if run.status in {"awaiting_boundary_review", "boundary_review_required"}:
         return "awaiting_boundary_confirmation"
+    marker = _marker(run)
+    if marker.get("chapter_pipeline") == "awaiting_scene_boundary_confirmation":
+        return "awaiting_scene_boundary_confirmation"
     if run.status in {"scene_analysis_running", "awaiting_provider_recovery"}:
         return "scene_analysis"
     if journey is not None and journey.status in {
@@ -113,7 +116,9 @@ def effective_chapter_status(session: Session, run: AnalysisRun) -> str:
     }:
         return "journey_failed"
     if scenes_done and (journey is None or journey.status != "succeeded"):
-        # Includes legacy AnalysisRun.status==succeeded without journey.
+        marker = _marker(run)
+        if marker.get("chapter_pipeline") == "awaiting_scene_boundary_confirmation":
+            return "awaiting_scene_boundary_confirmation"
         return "partial_complete"
     if is_chapter_analysis_complete(session, run):
         return "completed"
@@ -130,6 +135,7 @@ def checkpoint_stage(session: Session, run: AnalysisRun) -> str:
     eff = effective_chapter_status(session, run)
     mapping = {
         "awaiting_boundary_confirmation": "awaiting_boundary_confirmation",
+        "awaiting_scene_boundary_confirmation": "scene_boundary_confirmation",
         "scene_analysis": "scene_analysis",
         "partial_complete": "reader_journey_generation",
         "journey_running": "reader_journey_generation",
@@ -138,6 +144,20 @@ def checkpoint_stage(session: Session, run: AnalysisRun) -> str:
         "scene_analysis_partial": "scene_analysis",
     }
     return mapping.get(eff, "preparing")
+
+
+def mark_scenes_complete_awaiting_boundary_confirmation(session: Session, run: AnalysisRun) -> None:
+    """Scenes certified — hold for manual boundary confirmation before journey."""
+    run.status = STATUS_SCENES_SUCCEEDED
+    run.completed_at = None
+    run.error_code = None
+    run.error_message = None
+    _store_marker(
+        run,
+        chapter_pipeline="awaiting_scene_boundary_confirmation",
+        checkpoint_stage="scene_boundary_confirmation",
+        scenes_completed_at=_now().isoformat(),
+    )
 
 
 def mark_scenes_complete_awaiting_journey(session: Session, run: AnalysisRun) -> None:
@@ -184,10 +204,17 @@ def ensure_auto_reader_journey_row(
     run: AnalysisRun,
     *,
     cloud_consent: bool | None = None,
+    scene_revision_id: int | None = None,
 ) -> ReaderJourneyRun | None:
     """Idempotently create/reuse a journey row for this analysis run. No model call."""
-    if not is_scene_pipeline_complete(session, run):
+    # Confirmed revision bind may rematerialize scenes; skip global pipeline gate.
+    if scene_revision_id is None and not is_scene_pipeline_complete(session, run):
         return None
+
+    from app.services.scene_boundary_manual_review import (
+        bind_journey_to_revision,
+        revision_scenes,
+    )
 
     client_request_id = auto_journey_client_request_id(run.id)
     existing = session.scalar(
@@ -197,6 +224,11 @@ def ensure_auto_reader_journey_row(
         )
     )
     if existing is not None:
+        if scene_revision_id is not None and existing.scene_revision_id is None:
+            revision = session.get(BoundaryRevision, scene_revision_id)
+            if revision is not None:
+                scenes = revision_scenes(session, revision.id)
+                bind_journey_to_revision(session, existing, revision, scenes)
         return existing
 
     succeeded = session.scalar(
@@ -214,7 +246,53 @@ def ensure_auto_reader_journey_row(
     if recoverable is not None:
         return recoverable
 
+    if scene_revision_id is not None:
+        revision = session.get(BoundaryRevision, scene_revision_id)
+        if revision is not None and revision.status == "confirmed":
+            scenes = revision_scenes(session, revision.id)
+            included = [s for s in scenes if bool(getattr(s, "included_in_journey", True))]
+            chapter = session.get(Chapter, int(run.subject_id))
+            version_fields = new_journey_version_fields()
+            journey_run = ReaderJourneyRun(
+                analysis_run_id=run.id,
+                book_id=chapter.book_id if chapter else 0,
+                chapter_id=int(run.subject_id),
+                status="queued",
+                current_stage=None,
+                provider_name=run.provider,
+                model_name=run.model,
+                scene_prompt_version=version_fields["scene_prompt_version"],
+                chapter_prompt_version=version_fields["chapter_prompt_version"],
+                scene_contract_version=version_fields["scene_contract_version"],
+                chapter_contract_version=version_fields["chapter_contract_version"],
+                planner_version=PLANNER_VERSION,
+                formula_version=version_fields["formula_version"],
+                genre=version_fields["genre"],
+                total_scene_count=len(included),
+                completed_scene_count=0,
+                remaining_scene_count=len(included),
+                completed_scene_ids_json="[]",
+                remaining_scene_ids_json=json.dumps([s.id for s in included]),
+                cloud_consent=bool(cloud_consent if cloud_consent is not None else run.cloud_consent),
+                client_request_id=client_request_id,
+                failure_details_json=version_fields["failure_details_json"],
+            )
+            session.add(journey_run)
+            session.flush()
+            bind_journey_to_revision(session, journey_run, revision, scenes)
+            _store_marker(
+                run,
+                chapter_pipeline="reader_journey_queued",
+                checkpoint_stage="reader_journey_generation",
+                auto_journey_run_id=journey_run.id,
+            )
+            return journey_run
+
     _revision, scenes = load_revision_scenes(session, run.id)
+    if not scenes:
+        from app.services.scene_boundary_manual_review import run_scenes
+
+        scenes = run_scenes(session, run.id)
     require_completed_scene_analysis(session, run, scenes)
     chapter = session.get(Chapter, int(run.subject_id))
     version_fields = new_journey_version_fields()
@@ -244,6 +322,11 @@ def ensure_auto_reader_journey_row(
     )
     session.add(journey_run)
     session.flush()
+    if scene_revision_id is not None:
+        revision = session.get(BoundaryRevision, scene_revision_id)
+        if revision is not None:
+            bound_scenes = revision_scenes(session, revision.id)
+            bind_journey_to_revision(session, journey_run, revision, bound_scenes)
     _store_marker(
         run,
         chapter_pipeline="reader_journey_queued",
@@ -258,10 +341,9 @@ async def continue_chapter_after_scenes(
     gateway: Any,
     run_id: int,
 ) -> None:
-    """After all scenes succeed: enqueue journey on same run and execute (no model from caller)."""
-    from app.services.reader_journey_pipeline import execute_reader_journey
+    """After all scenes succeed: ensure model revision and await manual boundary confirmation."""
+    from app.services.scene_boundary_manual_review import ensure_ai_model_revision_after_scenes_v1
 
-    journey_id: int | None = None
     with session_factory() as session:
         run = session.get(AnalysisRun, run_id)
         if run is None:
@@ -273,56 +355,9 @@ async def continue_chapter_after_scenes(
             session.commit()
             return
 
-        mark_scenes_complete_awaiting_journey(session, run)
-        journey = ensure_auto_reader_journey_row(
-            session, run, cloud_consent=bool(run.cloud_consent)
-        )
+        ensure_ai_model_revision_after_scenes_v1(session, run)
+        mark_scenes_complete_awaiting_boundary_confirmation(session, run)
         session.commit()
-        if journey is None:
-            return
-        if journey.status == "succeeded":
-            finalize_chapter_analysis(session, run)
-            session.commit()
-            return
-        if journey.status in {
-            "queued",
-            "failed",
-            "scene_profiles_partial",
-            "budget_blocked",
-            "aborted_by_limit",
-        } or journey.status.endswith("running"):
-            # Re-queue failed / start queued.
-            if journey.status in {"failed", "scene_profiles_partial", "budget_blocked", "aborted_by_limit"}:
-                journey.status = "queued"
-                journey.completed_at = None
-                session.commit()
-            journey_id = int(journey.id)
-
-    if journey_id is None:
-        return
-
-    # Skip re-entry if already actively running (idempotent event).
-    with session_factory() as session:
-        journey = session.get(ReaderJourneyRun, journey_id)
-        if journey is not None and journey.status in {
-            "running",
-            "scene_profiles_running",
-            "chapter_synthesis_running",
-        }:
-            return
-
-    await execute_reader_journey(session_factory, gateway, journey_id)
-
-    with session_factory() as session:
-        run = session.get(AnalysisRun, run_id)
-        if run is None:
-            return
-        if is_chapter_analysis_complete(session, run):
-            finalize_chapter_analysis(session, run)
-            session.commit()
-        else:
-            mark_journey_failed_on_run(session, run)
-            session.commit()
 
 
 def _journey_result_available(session: Session, journey: ReaderJourneyRun | None) -> bool:

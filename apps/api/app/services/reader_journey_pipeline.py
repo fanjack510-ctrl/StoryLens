@@ -53,6 +53,22 @@ from app.services.reader_journey_progress import (
     scene_analysis_artifact,
     sync_journey_run_counts,
 )
+
+
+def _scenes_for_journey_run(
+    session: Session,
+    journey_run: ReaderJourneyRun,
+    analysis_run: AnalysisRun,
+) -> tuple[object | None, list[Scene]]:
+    from app.services.scene_boundary_manual_review import (
+        SceneBoundaryError,
+        load_journey_bound_scenes,
+    )
+
+    try:
+        return load_journey_bound_scenes(session, journey_run)
+    except SceneBoundaryError:
+        return load_revision_scenes(session, analysis_run.id)
 from app.services.reader_journey_semantic_calibrate import (
     apply_deterministic_qin,
     build_deterministic_chapter_diagnosis,
@@ -392,7 +408,7 @@ async def _execute_reader_journey_legacy(
         if analysis_run is None:
             return
         _chapter = session.get(Chapter, journey_run.chapter_id)
-        _revision, scenes = load_revision_scenes(session, analysis_run.id)
+        _revision, scenes = _scenes_for_journey_run(session, journey_run, analysis_run)
         require_completed_scene_analysis(session, analysis_run, scenes)
         try:
             store = get_credential_store()
@@ -421,7 +437,7 @@ async def _execute_reader_journey_legacy(
             journey_run = session.get(ReaderJourneyRun, journey_run_id)
             analysis_run = session.get(AnalysisRun, journey_run.analysis_run_id)
             chapter = session.get(Chapter, journey_run.chapter_id)
-            _revision, scenes = load_revision_scenes(session, analysis_run.id)
+            _revision, scenes = _scenes_for_journey_run(session, journey_run, analysis_run)
             paragraphs = list(
                 session.scalars(
                     select(Paragraph)

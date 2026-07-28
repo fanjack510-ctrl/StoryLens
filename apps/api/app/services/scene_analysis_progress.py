@@ -85,23 +85,29 @@ def load_revision_scenes(
         .where(BoundaryReviewSession.analysis_run_id == run.id)
         .order_by(BoundaryReviewSession.id.desc())
     )
-    if review is None:
-        return None, []
-    revision = session.scalar(
-        select(BoundaryRevision)
-        .where(BoundaryRevision.review_session_id == review.id)
-        .order_by(BoundaryRevision.id.desc())
-    )
-    if revision is None:
-        return None, []
-    scenes = list(
-        session.scalars(
-            select(Scene)
-            .where(Scene.boundary_revision_id == revision.id)
-            .order_by(Scene.ordinal)
+    if review is not None:
+        revision = session.scalar(
+            select(BoundaryRevision)
+            .where(
+                BoundaryRevision.review_session_id == review.id,
+                BoundaryRevision.status == "confirmed",
+            )
+            .order_by(BoundaryRevision.id.desc())
         )
-    )
-    return revision, scenes
+        if revision is not None:
+            scenes = list(
+                session.scalars(
+                    select(Scene)
+                    .where(Scene.boundary_revision_id == revision.id)
+                    .order_by(Scene.ordinal)
+                )
+            )
+            if scenes:
+                return revision, scenes
+    from app.services.scene_boundary_manual_review import run_scenes
+
+    scenes = run_scenes(session, run.id)
+    return None, scenes
 
 
 def scene_analysis_progress(

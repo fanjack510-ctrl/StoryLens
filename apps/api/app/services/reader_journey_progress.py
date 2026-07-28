@@ -132,23 +132,31 @@ def load_revision_scenes(session: Session, analysis_run_id: int) -> tuple[Bounda
         .where(BoundaryReviewSession.analysis_run_id == analysis_run_id)
         .order_by(BoundaryReviewSession.id.desc())
     )
-    if review is None:
-        return None, []
-    revision = session.scalar(
-        select(BoundaryRevision)
-        .where(BoundaryRevision.review_session_id == review.id)
-        .order_by(BoundaryRevision.id.desc())
-    )
-    if revision is None:
-        return None, []
-    scenes = list(
-        session.scalars(
-            select(Scene)
-            .where(Scene.boundary_revision_id == revision.id)
-            .order_by(Scene.ordinal)
+    if review is not None:
+        revision = session.scalar(
+            select(BoundaryRevision)
+            .where(
+                BoundaryRevision.review_session_id == review.id,
+                BoundaryRevision.status == "confirmed",
+            )
+            .order_by(BoundaryRevision.id.desc())
         )
-    )
-    return revision, scenes
+        if revision is not None:
+            scenes = list(
+                session.scalars(
+                    select(Scene)
+                    .where(Scene.boundary_revision_id == revision.id)
+                    .order_by(Scene.ordinal)
+                )
+            )
+            if scenes:
+                return revision, scenes
+    from app.services.scene_boundary_manual_review import run_scenes
+
+    scenes = run_scenes(session, analysis_run_id)
+    if scenes:
+        return None, scenes
+    return None, []
 
 
 def is_scene_profile_complete(session: Session, journey_run_id: int, scene_id: int) -> bool:
@@ -293,7 +301,12 @@ def recovery_flags(
     )
 
 def reader_journey_progress(session: Session, journey_run: ReaderJourneyRun) -> ReaderJourneyProgress:
-    _revision, scenes = load_revision_scenes(session, journey_run.analysis_run_id)
+    from app.services.scene_boundary_manual_review import load_journey_bound_scenes
+
+    try:
+        _revision, scenes = load_journey_bound_scenes(session, journey_run)
+    except Exception:
+        _revision, scenes = load_revision_scenes(session, journey_run.analysis_run_id)
     completed: list[int] = []
     remaining: list[int] = []
     for scene in scenes:
