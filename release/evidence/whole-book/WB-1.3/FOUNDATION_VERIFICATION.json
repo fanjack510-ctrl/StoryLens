@@ -1,5 +1,10 @@
 ﻿{
   "wave": "B",
+  "manual_gate": "MG-WB-1.3-FOUNDATION-DIAGNOSTICS",
+  "manual_gate_result": "PASS",
+  "wb_1_1_status": "verified",
+  "wb_1_2_status": "verified",
+  "wb_1_3_status": "verified",
   "temp_database": "C:/Users/msi/AppData/Local/Temp/storylens-wb-b-1278768914/wave_b.db",
   "formal_appdata_writes": 0,
   "real_provider_calls": 0,
@@ -9,10 +14,16 @@
   "snapshot_creation": "PASS",
   "snapshot_reuse": "PASS",
   "snapshot_immutability": "PASS",
+  "snapshot_status_completed": true,
   "run_state_machine": "PASS",
+  "stages_displayed": 7,
   "windowing_version": "whole_book_windowing_v1",
-  "core_coverage": "100%",
+  "window_count": 188,
+  "total_paragraphs": 77749,
+  "covered_unique_paragraphs": 77749,
+  "duplicated_paragraphs": 6149,
   "uncovered_paragraphs": 0,
+  "core_coverage": "100%",
   "order_valid": true,
   "checkpoint_contains_full_text": false,
   "diagnostics_flag_default": "OFF",
@@ -20,5 +31,7 @@
   "formal_whole_book_entry_enabled": false,
   "public_tests_sample": 137,
   "vitest": 11,
-  "typecheck": "PASS"
+  "typecheck": "PASS",
+  "next_allowed": "WB-1.4-MIN-ENTITY-EVENT",
+  "wb_1_4_started": false
 }

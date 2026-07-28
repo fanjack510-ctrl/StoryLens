@@ -1,7 +1,7 @@
 ﻿# WB-1.2 FINAL REPORT
 
 ## Status
-tested (awaiting MG-WB-1.3-FOUNDATION-DIAGNOSTICS)
+verified
 
 ## Change
 CHG-20260728-009
@@ -14,6 +14,10 @@ Immutable Book Snapshot create/reuse; unified `compute_book_revision_hash_v1`; m
 - `test_whole_book_wb12_snapshot.py` PASS
 - Cost Estimate hash identity with Snapshot content_hash: PASS
 - Completed snapshot service/DB update rejection: PASS
+
+## Manual gate
+MG-WB-1.3-FOUNDATION-DIAGNOSTICS：PASS  
+Snapshot 创建与复用正常；status=completed；章节数、段落数、字符数正确。
 
 ## Isolation
 - Temp DB: `C:/Users/msi/AppData/Local/Temp/storylens-wb-b-1278768914/wave_b.db`
