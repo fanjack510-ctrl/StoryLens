@@ -3,7 +3,7 @@
   "round": 2,
   "start_head": "8d410c5f1d9a2557f3246cd07d83f402bb4936c5",
   "round_2_commit": "084063eb8876231ae39b3c249142bd7ccb6ec3f5",
-  "public_final_head": "1987fffc665a8155e343203c5ab8b959cd87e02d",
+  "public_final_head": "e364bf0c46c07df51b52064970ebe325f10460ba",
   "pytest_chg041": {
     "command": "pytest tests/test_chg041_scene_boundary_manual_review.py -q",
     "passed": 16,
