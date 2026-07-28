@@ -1,0 +1,16 @@
+{
+  "passed": true,
+  "cases": [
+    "ai_immutable",
+    "confirmed_immutable",
+    "draft_create",
+    "draft_idempotent",
+    "save",
+    "etag_conflict",
+    "restore_ai",
+    "confirm",
+    "supersede",
+    "legacy_idempotent",
+    "fake_scenario"
+  ]
+}

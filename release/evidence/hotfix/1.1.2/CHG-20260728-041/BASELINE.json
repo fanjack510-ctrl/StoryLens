@@ -1,0 +1,14 @@
+{
+  "change_id": "CHG-20260728-041",
+  "public_integration_base": "cfccd33f10cad4201f94f1559f99d8b51ee674a4",
+  "private_integration_base": "23a0b025db51acaa8e62f4e81bc7628f19a8e2a6",
+  "public_issue_branch": "fix/1.1.2-manual-scene-boundary-review",
+  "private_issue_branch": "fix/1.1.2-manual-scene-boundary-review",
+  "audit_commit_source": "2c31792620f737bad18442548aa592047159af41",
+  "audit_commit_migration": "RECREATED",
+  "strategy": "EXTEND EXISTING BOUNDARY REVISION MODEL",
+  "migration": "migrate_phase_scene_boundary_manual_review",
+  "real_provider_calls": 0,
+  "formal_database_writes": 0,
+  "created_at": "2026-07-28T09:21:25Z"
+}

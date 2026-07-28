@@ -1,0 +1,15 @@
+{
+  "passed": true,
+  "cases": [
+    "coverage",
+    "overlap",
+    "empty",
+    "move",
+    "add",
+    "delete",
+    "exclude",
+    "hash_stable"
+  ],
+  "overlap_count": 0,
+  "gap_count": 0
+}

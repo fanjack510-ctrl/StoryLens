@@ -1,0 +1,11 @@
+{
+  "passed": true,
+  "cases": [
+    "confirmed_start",
+    "bind_revision",
+    "bind_hashes",
+    "auto_journey_disabled",
+    "superseded_old"
+  ],
+  "auto_journey_after_scene_detection": "DISABLED"
+}

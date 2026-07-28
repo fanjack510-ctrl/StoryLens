@@ -1,0 +1,85 @@
+{
+  "id": "CHG-20260728-041",
+  "title": "Add manual scene boundary review before Reader Journey",
+  "type": "fix",
+  "issue_id": null,
+  "base_version": "1.1.1",
+  "target_version": "1.1.2",
+  "public_branch": "fix/1.1.2-manual-scene-boundary-review",
+  "private_branch": "fix/1.1.2-manual-scene-boundary-review",
+  "status": "tested",
+  "release_pool_status": "pending",
+  "include_in_next_release": true,
+  "forward_port_required": true,
+  "forward_port_target": "integration/whole-book-v120",
+  "forward_port_status": "pending",
+  "depends_on": [
+    "CHG-20260728-040"
+  ],
+  "related_changes": [
+    {
+      "id": "CHG-20260728-040",
+      "relation": "integrated prerequisite"
+    },
+    {
+      "id": "CHG-20260728-042",
+      "relation": "independent; not modified by CHG-041"
+    }
+  ],
+  "affected_modules": [
+    "apps/api/app/db/models.py",
+    "apps/api/app/db/session.py",
+    "apps/api/app/services/scene_boundary_manual_review.py",
+    "apps/api/app/services/scene_boundary_partition_ops.py",
+    "apps/api/app/services/chapter_analysis_completion.py",
+    "apps/api/app/api/v1/scene_boundaries.py",
+    "apps/desktop/src/components/analysis/SceneBoundaryReviewPanel.tsx"
+  ],
+  "commits": [],
+  "modules": [
+    "release",
+    "apps/api",
+    "apps/desktop"
+  ],
+  "files": [
+    "release/changes/CHG-20260728-041.json",
+    "release/evidence/hotfix/1.1.2/CHG-20260728-041/",
+    "release/trains/1.1.2.json"
+  ],
+  "user_summary": "场景识别完成后先确认/调整场景边界，再启动阅读旅程；支持草稿、确认绑定与结果复用。",
+  "technical_summary": "Extended BoundaryRevision lifecycle; disabled auto journey; scene-boundaries API; UI editor; migration migrate_phase_scene_boundary_manual_review. Manual gate MG-CHG-20260728-041 ready. Real provider calls=0.",
+  "acceptance_criteria": [
+    "AI/confirmed revisions immutable; edits via draft",
+    "Partition coverage/gap/overlap validated",
+    "Journey binds confirmed revision hashes",
+    "Auto journey after scene detection disabled",
+    "Legacy revision compatibility",
+    "UI confirm gate + editor vitest"
+  ],
+  "tests": [
+    "apps/api/tests/test_chg041_scene_boundary_manual_review.py",
+    "apps/desktop/src/components/analysis/SceneBoundaryReviewPanel.chg041.test.tsx"
+  ],
+  "manual_gate": "MG-CHG-20260728-041 ready",
+  "verification_evidence": [
+    "release/evidence/hotfix/1.1.2/CHG-20260728-041/BASELINE.json",
+    "release/evidence/hotfix/1.1.2/CHG-20260728-041/DATA_MODEL_AUDIT.md",
+    "release/evidence/hotfix/1.1.2/CHG-20260728-041/FINAL_IMPLEMENTATION_REPORT.md",
+    "release/evidence/hotfix/1.1.2/CHG-20260728-041/REGRESSION.md",
+    "release/evidence/hotfix/1.1.2/CHG-20260728-041/MANUAL_GATE.md"
+  ],
+  "data_compatibility": {
+    "database_changed": true,
+    "migration_required": true,
+    "user_data_compatible": true,
+    "notes": "Additive columns; legacy revision bootstrap idempotent; no formal AppData writes in tests."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": true,
+    "breaking_change": false
+  },
+  "created_at": "2026-07-28T08:30:00Z",
+  "updated_at": "2026-07-28T09:21:25Z"
+}
