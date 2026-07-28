@@ -11,6 +11,12 @@
       "message": "docs(whole-book): freeze v1.1.1 execution baseline",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "4298ab2a268215ec5c5592cfd93908d5da4f2121",
+      "message": "docs(whole-book): mark CHG-001/002 implemented and tested",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -66,5 +72,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-28T01:20:16Z",
-  "updated_at": "2026-07-28T01:23:51Z"
+  "updated_at": "2026-07-28T01:23:52Z"
 }
