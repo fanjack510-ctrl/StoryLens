@@ -41,6 +41,7 @@ export function mapUrlToActiveTab(args: {
   if (userPinnedTab) return userPinnedTab;
 
   if (requestedView === "reading" || requestedView === "progress") return "text";
+  if (requestedView === "scene-boundary-review") return "scene";
 
   if (requestedTab === "reader-journey" || requestedTab === "journey") return "journey";
   if (

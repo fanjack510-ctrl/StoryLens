@@ -39,6 +39,18 @@ class SceneBoundaryDraftCreateResponse(BaseModel):
     revision_id: int
     revision_etag: str
     scenes: list[ScenePartitionItem]
+    boundary_hash: str | None = None
+    status: str | None = None
+    updated_at: str | None = None
+
+
+class SceneBoundaryDraftSaveResponse(BaseModel):
+    revision_id: int
+    revision_etag: str
+    boundary_hash: str
+    scenes: list[ScenePartitionItem]
+    status: str = "draft"
+    updated_at: str | None = None
 
 
 class SceneBoundaryDraftSaveRequest(BaseModel):

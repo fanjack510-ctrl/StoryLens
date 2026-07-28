@@ -180,3 +180,23 @@
     bottom: 0;
   }
 }
+
+.scene-boundary-conflict-dialog {
+  margin: 0.75rem 1.25rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid color-mix(in srgb, #a33 35%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, #a33 8%, var(--surface, #f7f4ef));
+}
+
+.scene-boundary-conflict-dialog h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.1rem;
+}
+
+.notice.success {
+  margin: 0.5rem 1.25rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 6px;
+  background: color-mix(in srgb, #2f7d4a 14%, var(--surface, #f7f4ef));
+}

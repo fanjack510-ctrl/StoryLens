@@ -28,7 +28,7 @@ export type ChapterPrimaryAction = {
 const LABELS: Record<Exclude<ChapterPrimaryActionKind, "none">, string> = {
   start: "开始分析",
   progress: "查看分析进度",
-  confirm: "继续确认场景",
+  confirm: "确认场景",
   result: "查看分析结果",
   reanalyze: "重新分析",
 };
@@ -62,6 +62,8 @@ export function resolveChapterPrimaryAction(args: {
   inFlight: boolean;
   /** Optional discovered run when URL has no analysisRun. */
   lifecycleRun?: Run | null;
+  /** CHG-041 boundary entry wording. */
+  sceneBoundaryEntry?: "confirm" | "continue_draft" | "readjust";
 }): ChapterPrimaryAction {
   if (!args.hasChapter) {
     return { kind: "none", label: "", testId: "" };
@@ -91,7 +93,14 @@ export function resolveChapterPrimaryAction(args: {
     composition === "awaiting_scene_boundary_confirmation" ||
     lifecycleSource?.status === "awaiting_boundary_review"
   ) {
-    return action("confirm");
+    const base = action("confirm");
+    if (args.sceneBoundaryEntry === "continue_draft") {
+      return { ...base, label: "继续调整场景" };
+    }
+    if (args.sceneBoundaryEntry === "readjust") {
+      return { ...base, label: "重新调整场景" };
+    }
+    return base;
   }
 
   // CHG-20260727-019: Journey active / interrupted beats Parent succeeded.

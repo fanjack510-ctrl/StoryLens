@@ -85,7 +85,7 @@ describe("resolveChapterPrimaryAction", () => {
     expect(a.label).toBe("重新分析");
   });
 
-  it("shows 继续确认场景 when awaiting scene boundary confirmation", () => {
+  it("shows 确认场景 when awaiting scene boundary confirmation", () => {
     const a = resolveChapterPrimaryAction({
       hasChapter: true,
       run: run({
@@ -97,10 +97,25 @@ describe("resolveChapterPrimaryAction", () => {
       inFlight: true,
     });
     expect(a.kind).toBe("confirm");
-    expect(a.label).toBe("继续确认场景");
+    expect(a.label).toBe("确认场景");
   });
 
-  it("shows 继续确认场景 when awaiting boundary review", () => {
+  it("shows 继续调整场景 when draft entry is requested", () => {
+    const a = resolveChapterPrimaryAction({
+      hasChapter: true,
+      run: run({
+        status: "succeeded",
+        effective_status: "awaiting_scene_boundary_confirmation",
+      }),
+      composition: "awaiting_scene_boundary_confirmation",
+      chapterComplete: false,
+      inFlight: true,
+      sceneBoundaryEntry: "continue_draft",
+    });
+    expect(a.label).toBe("继续调整场景");
+  });
+
+  it("shows 确认场景 when awaiting boundary review", () => {
     const a = resolveChapterPrimaryAction({
       hasChapter: true,
       run: null,
@@ -110,7 +125,7 @@ describe("resolveChapterPrimaryAction", () => {
       lifecycleRun: run({ status: "awaiting_boundary_review" }),
     });
     expect(a.kind).toBe("confirm");
-    expect(a.label).toBe("继续确认场景");
+    expect(a.label).toBe("确认场景");
   });
 
   it("shows 查看分析进度 for discovered scene_analysis_running without URL bind", () => {

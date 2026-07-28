@@ -626,12 +626,8 @@ export function BookRoutePage() {
     }
   }, [progress.uiState, analysisRunId]);
 
-  useEffect(() => {
-    if (sceneBoundaryReviewActive && chapterId && !noChapters && !bootstrappingChapter) {
-      setReviewOpen(true);
-      setPanelCollapsed(false);
-    }
-  }, [sceneBoundaryReviewActive, chapterId, noChapters, bootstrappingChapter]);
+  // CHG-041: do not auto-mount scene boundary editor onto reader-journey / reviewOpen.
+  // Entry is via view=scene-boundary-review (toolbar CTA / journey gate).
 
   useEffect(() => {
     if (progress.uiState !== "awaiting_budget_adjustment" || !progress.run) return;
@@ -875,7 +871,10 @@ export function BookRoutePage() {
             label: "确认场景划分",
             group: "操作",
             testId: "book-more-boundary-review",
-            onSelect: () => setReviewOpen(true),
+            onSelect: () => {
+              if (sceneBoundaryReviewActive) openSceneBoundaryReview();
+              else setReviewOpen(true);
+            },
           },
         ]
       : [
@@ -919,7 +918,10 @@ export function BookRoutePage() {
             label: "确认场景划分",
             group: "查看",
             testId: "book-more-boundary-review",
-            onSelect: () => setReviewOpen(true),
+            onSelect: () => {
+              if (sceneBoundaryReviewActive) openSceneBoundaryReview();
+              else setReviewOpen(true);
+            },
           },
           {
             id: "tasks",
@@ -962,6 +964,54 @@ export function BookRoutePage() {
           progress.uiState === "awaiting_budget_adjustment"),
     );
 
+  const sceneBoundaryReviewView = searchParams.get("view") === "scene-boundary-review";
+
+  const sceneBoundariesQuery = useQuery({
+    queryKey: ["scene-boundaries", chapterId],
+    queryFn: () => analysisApi.sceneBoundariesOverview(chapterId!),
+    enabled:
+      Boolean(chapterId) &&
+      (sceneBoundaryReviewActive ||
+        sceneBoundaryReviewView ||
+        compositionUiState === "awaiting_scene_boundary_confirmation"),
+    retry: false,
+  });
+
+  const sceneBoundaryEntry =
+    sceneBoundariesQuery.data?.draft_revision != null
+      ? ("continue_draft" as const)
+      : sceneBoundaryReviewActive
+        ? ("confirm" as const)
+        : sceneBoundariesQuery.data?.confirmed_revision != null
+          ? ("readjust" as const)
+          : ("confirm" as const);
+
+  const openSceneBoundaryReview = () => {
+    if (!chapterId) return;
+    userPinnedViewRef.current = "result";
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        params.set("view", "scene-boundary-review");
+        params.set("chapter", String(chapterId));
+        if (analysisRunId) params.set("analysisRun", String(analysisRunId));
+        else if (lifecycleChapterRun?.id) {
+          params.set("analysisRun", String(lifecycleChapterRun.id));
+        }
+        params.delete("tab");
+        params.delete("mode");
+        params.delete("scene");
+        params.delete("paragraph");
+        params.delete("metric");
+        params.delete("cluster");
+        params.delete("resultTab");
+        return params;
+      },
+      { replace: false },
+    );
+    setPanelCollapsed(false);
+  };
+
   const primaryAction = resolveChapterPrimaryAction({
     hasChapter: Boolean(chapterId) && !noChapters && !bootstrappingChapter,
     run: progress.run,
@@ -969,6 +1019,10 @@ export function BookRoutePage() {
     chapterComplete,
     inFlight: chapterInFlight,
     lifecycleRun: lifecycleChapterRun,
+    sceneBoundaryEntry:
+      compositionUiState === "awaiting_scene_boundary_confirmation" || sceneBoundaryReviewActive
+        ? sceneBoundaryEntry
+        : undefined,
   });
 
   const onPrimaryAction = () => {
@@ -978,7 +1032,19 @@ export function BookRoutePage() {
     }
     const targetRun = lifecycleChapterRun;
     if (!targetRun || !chapterId) return;
-    if (primaryAction.kind === "confirm" || primaryAction.kind === "progress") {
+    if (primaryAction.kind === "confirm") {
+      if (
+        sceneBoundaryReviewActive ||
+        compositionUiState === "awaiting_scene_boundary_confirmation"
+      ) {
+        openSceneBoundaryReview();
+        return;
+      }
+      setReviewOpen(true);
+      setPanelCollapsed(false);
+      return;
+    }
+    if (primaryAction.kind === "progress") {
       // Bind URL only on click — do not auto-rewrite reading URL on load.
       setSearchParams(
         () => {
@@ -1261,32 +1327,34 @@ export function BookRoutePage() {
         </div>
       )}
 
-      {reviewOpen && chapterId && !noChapters && !bootstrappingChapter ? (
-        <div className="shell-review-focus" data-testid="shell-boundary-review">
-          {sceneBoundaryReviewActive || awaitingSceneBoundaryConfirmation ? (
-            <SceneBoundaryReviewPanel
-              chapterId={chapterId}
-              chapterTitle={chapterTitle}
-              analysisRunId={analysisRunId}
-              journeyRunning={compositionUiState === "reader_journey_processing"}
-              journeyRevisionId={
-                (journey.data as { scene_revision_id?: number } | null | undefined)
-                  ?.scene_revision_id ?? null
+      {sceneBoundaryReviewView && chapterId && !noChapters && !bootstrappingChapter ? (
+        <div className="shell-review-focus" data-testid="shell-scene-boundary-review">
+          <SceneBoundaryReviewPanel
+            chapterId={chapterId}
+            chapterTitle={chapterTitle}
+            analysisRunId={analysisRunId}
+            journeyRunning={compositionUiState === "reader_journey_processing"}
+            journeyRevisionId={
+              (journey.data as { scene_revision_id?: number } | null | undefined)
+                ?.scene_revision_id ?? null
+            }
+            onExit={() => setView("reading", "user")}
+            onConfirmed={({ journeyStarted, journeyRunId }) => {
+              void qc.invalidateQueries({ queryKey: ["reader-journey"] });
+              void journey.refetch();
+              void progress.refresh();
+              if (journeyStarted) {
+                setResultTab("journey", "user");
+                if (journeyRunId) {
+                  void qc.invalidateQueries({ queryKey: ["reader-journey"] });
+                }
               }
-              onExit={() => {
-                setReviewOpen(false);
-                void progress.refresh();
-              }}
-              onConfirmed={() => {
-                setReviewOpen(false);
-                setPanelCollapsed(false);
-                setView("progress");
-                void qc.invalidateQueries({ queryKey: ["reader-journey"] });
-                void journey.refetch();
-                void progress.refresh();
-              }}
-            />
-          ) : isConfirmOnlyBoundaryReview() ? (
+            }}
+          />
+        </div>
+      ) : reviewOpen && chapterId && !noChapters && !bootstrappingChapter ? (
+        <div className="shell-review-focus" data-testid="shell-boundary-review">
+          {isConfirmOnlyBoundaryReview() ? (
             <ConfirmBoundaryDivisionPanel
               bookId={bookId}
               chapterId={chapterId}
@@ -1532,20 +1600,35 @@ export function BookRoutePage() {
                   />
                 ) : null}
                 {awaitingSceneBoundaryConfirmation && chapterId ? (
-                  <SceneBoundaryReviewPanel
-                    chapterId={chapterId}
-                    chapterTitle={chapterTitle}
-                    analysisRunId={analysisRunId}
-                    journeyRunning={compositionUiState === "reader_journey_processing"}
-                    journeyRevisionId={
-                      (journey.data as { scene_revision_id?: number } | null | undefined)
-                        ?.scene_revision_id ?? null
-                    }
-                    onConfirmed={() => {
-                      void qc.invalidateQueries({ queryKey: ["reader-journey"] });
-                      void journey.refetch();
-                      void progress.refresh();
-                      setResultTab("journey", "user");
+                  <StateView
+                    kind="empty"
+                    data-testid="reader-journey-blocked-unconfirmed"
+                    title="阅读旅程尚未开始"
+                    description="请先确认场景边界，StoryLens 将按照确认后的场景进行旅程分析。"
+                    primaryAction={{
+                      label: "去确认场景",
+                      testId: "reader-journey-go-confirm-scenes",
+                      onClick: () => openSceneBoundaryReview(),
+                    }}
+                  />
+                ) : null}
+                {!awaitingSceneBoundaryConfirmation &&
+                !hasJourney &&
+                !showJourneyActive &&
+                !showJourneyTerminalFailed &&
+                !showJourneyInterrupted &&
+                !showJourneyAwaiting &&
+                sceneComplete &&
+                chapterId ? (
+                  <StateView
+                    kind="empty"
+                    data-testid="reader-journey-not-started"
+                    title="当前章节尚未生成阅读旅程"
+                    description="场景划分已确认后，可开始阅读旅程分析。"
+                    primaryAction={{
+                      label: "开始阅读旅程分析",
+                      testId: "reader-journey-start-analysis",
+                      onClick: () => openSceneBoundaryReview(),
                     }}
                   />
                 ) : null}
@@ -1599,7 +1682,10 @@ export function BookRoutePage() {
                 canResume={progress.canResume}
                 onResume={progress.resume}
                 onReanalyze={() => setDialog(true)}
-                onReviewBoundary={() => setReviewOpen(true)}
+              onReviewBoundary={() => {
+                if (sceneBoundaryReviewActive) openSceneBoundaryReview();
+                else setReviewOpen(true);
+              }}
                 onDismiss={() => setPanelCollapsed(true)}
                 onContinueReading={() => setView("reading", "user")}
                 onViewResults={() => {

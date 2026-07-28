@@ -366,15 +366,28 @@ export const analysisApi = {
     revisionId: number,
     body: { expected_etag: string; scenes: ScenePartitionItem[] },
   ) =>
-    api<{ revision_id: number; revision_etag: string; boundary_hash: string }>(
-      `/api/v1/chapters/${chapterId}/scene-boundaries/draft/${revisionId}`,
-      { method: "PUT", body: JSON.stringify(body) },
-    ),
+    api<{
+      revision_id: number;
+      revision_etag: string;
+      boundary_hash: string;
+      scenes: ScenePartitionItem[];
+      status?: string;
+      updated_at?: string | null;
+    }>(`/api/v1/chapters/${chapterId}/scene-boundaries/draft/${revisionId}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    }),
   restoreSceneBoundaryAi: (chapterId: number, revisionId: number) =>
-    api<{ revision_id: number; revision_etag: string; scenes: ScenePartitionItem[] }>(
-      `/api/v1/chapters/${chapterId}/scene-boundaries/draft/${revisionId}/restore-ai`,
-      { method: "POST" },
-    ),
+    api<{
+      revision_id: number;
+      revision_etag: string;
+      scenes: ScenePartitionItem[];
+      boundary_hash?: string | null;
+      status?: string;
+      updated_at?: string | null;
+    }>(`/api/v1/chapters/${chapterId}/scene-boundaries/draft/${revisionId}/restore-ai`, {
+      method: "POST",
+    }),
   confirmSceneBoundary: (
     chapterId: number,
     revisionId: number,

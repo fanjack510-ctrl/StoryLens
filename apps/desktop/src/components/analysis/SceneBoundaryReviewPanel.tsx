@@ -3,8 +3,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { analysisApi } from "../../services/analysisApi";
-import { ApiError } from "../../services/apiClient";
 import { booksApi } from "../../services/booksApi";
+import {
+  mapSceneBoundaryError,
+  SCENE_BOUNDARY_CONFLICT_CODE,
+} from "../../services/sceneBoundaryErrors";
 import {
   addSceneBoundary,
   computeSceneBoundaryChangeSummary,
@@ -13,10 +16,19 @@ import {
   setSceneIncluded,
   type ScenePartition,
 } from "../../services/sceneBoundaryPartitionOps";
-import type { Paragraph, SceneBoundaryRevisionSummary } from "../../types";
+import type { Paragraph, SceneBoundaryRevisionSummary, SceneBoundariesOverview } from "../../types";
 import "./sceneBoundaryReview.css";
 
 const DIVIDER_LABEL = "──────── 场景分割线 ────────";
+
+type DraftSnapshot = {
+  revision_id: number;
+  revision_etag: string;
+  boundary_hash?: string;
+  scenes: ScenePartition[];
+  status?: string;
+  updated_at?: string | null;
+};
 
 type Props = {
   chapterId: number;
@@ -53,6 +65,21 @@ function paragraphRangeLabel(
   return `${start}—${end}`;
 }
 
+function toDraftSummary(snapshot: DraftSnapshot, base?: SceneBoundaryRevisionSummary | null) {
+  return {
+    revision_id: snapshot.revision_id,
+    revision_number: base?.revision_number ?? 0,
+    status: snapshot.status || base?.status || "draft",
+    source: base?.source || "user",
+    revision_etag: snapshot.revision_etag,
+    boundary_hash: snapshot.boundary_hash || base?.boundary_hash || "",
+    chapter_text_hash: base?.chapter_text_hash || "",
+    scenes: snapshot.scenes.map((s) => ({ ...s })),
+    confirmed_at: base?.confirmed_at ?? null,
+    updated_at: snapshot.updated_at ?? null,
+  } as SceneBoundaryRevisionSummary;
+}
+
 export function SceneBoundaryReviewPanel({
   chapterId,
   chapterTitle,
@@ -63,13 +90,25 @@ export function SceneBoundaryReviewPanel({
 }: Props) {
   const qc = useQueryClient();
   const [editorOpen, setEditorOpen] = useState(false);
+  const [mode, setMode] = useState<"edit" | "confirmed_readonly">("edit");
   const [draftScenes, setDraftScenes] = useState<ScenePartition[]>([]);
   const [revisionId, setRevisionId] = useState<number | null>(null);
   const [revisionEtag, setRevisionEtag] = useState("");
-  const [savedEtag, setSavedEtag] = useState("");
+  const [boundaryHash, setBoundaryHash] = useState("");
   const [error, setError] = useState<string>();
+  const [errorCode, setErrorCode] = useState<string>();
+  const [successMessage, setSuccessMessage] = useState<string>();
+  const [journeyStartFailed, setJourneyStartFailed] = useState(false);
+  const [conflictOpen, setConflictOpen] = useState(false);
+  const [showTechDetails, setShowTechDetails] = useState(false);
   const dirtyRef = useRef(false);
   const [dirty, setDirty] = useState(false);
+  const persistChainRef = useRef(Promise.resolve());
+  const draftRef = useRef<{ revisionId: number | null; etag: string; scenes: ScenePartition[] }>({
+    revisionId: null,
+    etag: "",
+    scenes: [],
+  });
 
   const markDirty = useCallback((next: boolean) => {
     dirtyRef.current = next;
@@ -96,7 +135,7 @@ export function SceneBoundaryReviewPanel({
       }
       return items;
     },
-    enabled: editorOpen || Boolean(overviewQuery.data?.awaiting_confirmation),
+    enabled: editorOpen || mode === "confirmed_readonly" || Boolean(overviewQuery.data?.awaiting_confirmation),
     retry: false,
   });
 
@@ -105,35 +144,77 @@ export function SceneBoundaryReviewPanel({
   const confirmedRevision = overview?.confirmed_revision ?? null;
   const modelScenes = useMemo(() => revisionScenes(modelRevision), [modelRevision]);
 
-  const syncDraftFromRevision = useCallback(
-    (revision: { revision_id: number; revision_etag: string; scenes: ScenePartition[] }) => {
-      setRevisionId(revision.revision_id);
-      setRevisionEtag(revision.revision_etag);
-      setSavedEtag(revision.revision_etag);
-      setDraftScenes(revision.scenes.map((s) => ({ ...s })));
-      markDirty(false);
+  const applyDraftSnapshot = useCallback(
+    (snapshot: DraftSnapshot, opts?: { dirty?: boolean; openEditor?: boolean }) => {
+      draftRef.current = {
+        revisionId: snapshot.revision_id,
+        etag: snapshot.revision_etag,
+        scenes: snapshot.scenes.map((s) => ({ ...s })),
+      };
+      setRevisionId(snapshot.revision_id);
+      setRevisionEtag(snapshot.revision_etag);
+      setBoundaryHash(snapshot.boundary_hash || "");
+      setDraftScenes(snapshot.scenes.map((s) => ({ ...s })));
+      markDirty(Boolean(opts?.dirty));
+      if (opts?.openEditor) setEditorOpen(true);
     },
     [markDirty],
   );
 
-  useEffect(() => {
-    if (!overview?.draft_revision || editorOpen || journeyRunning) return;
-    syncDraftFromRevision({
-      revision_id: overview.draft_revision.revision_id,
-      revision_etag: overview.draft_revision.revision_etag,
-      scenes: revisionScenes(overview.draft_revision),
-    });
-    setEditorOpen(true);
-  }, [overview?.draft_revision, editorOpen, journeyRunning, syncDraftFromRevision]);
+  const patchOverviewDraft = useCallback(
+    (snapshot: DraftSnapshot | null) => {
+      qc.setQueryData<SceneBoundariesOverview>(["scene-boundaries", chapterId], (prev) => {
+        if (!prev) return prev;
+        if (!snapshot) {
+          return { ...prev, draft_revision: null, awaiting_confirmation: false };
+        }
+        const packed = toDraftSummary(snapshot, prev.draft_revision);
+        return {
+          ...prev,
+          draft_revision: packed,
+          awaiting_confirmation: prev.awaiting_confirmation || snapshot.status === "draft",
+        };
+      });
+    },
+    [chapterId, qc],
+  );
 
+  const patchOverviewConfirmed = useCallback(
+    (snapshot: DraftSnapshot) => {
+      qc.setQueryData<SceneBoundariesOverview>(["scene-boundaries", chapterId], (prev) => {
+        if (!prev) return prev;
+        const packed = toDraftSummary(
+          { ...snapshot, status: "confirmed" },
+          prev.confirmed_revision || prev.draft_revision || prev.model_revision,
+        );
+        return {
+          ...prev,
+          draft_revision: null,
+          confirmed_revision: packed,
+          awaiting_confirmation: false,
+        };
+      });
+    },
+    [chapterId, qc],
+  );
+
+  // Open existing draft once; do not re-sync from overview after local/mutation updates.
   useEffect(() => {
-    if (!editorOpen || !overview?.draft_revision) return;
-    syncDraftFromRevision({
-      revision_id: overview.draft_revision.revision_id,
-      revision_etag: overview.draft_revision.revision_etag,
-      scenes: revisionScenes(overview.draft_revision),
-    });
-  }, [editorOpen, overview?.draft_revision, syncDraftFromRevision]);
+    if (!overview?.draft_revision || editorOpen || journeyRunning || mode === "confirmed_readonly") {
+      return;
+    }
+    applyDraftSnapshot(
+      {
+        revision_id: overview.draft_revision.revision_id,
+        revision_etag: overview.draft_revision.revision_etag,
+        boundary_hash: overview.draft_revision.boundary_hash,
+        scenes: revisionScenes(overview.draft_revision),
+        status: overview.draft_revision.status,
+      },
+      { openEditor: true },
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional one-shot open from server draft
+  }, [overview?.draft_revision?.revision_id]);
 
   useEffect(() => {
     if (!dirty) return;
@@ -167,80 +248,188 @@ export function SceneBoundaryReviewPanel({
     confirmedRevision?.revision_id != null &&
     journeyRevisionId !== confirmedRevision.revision_id;
 
+  const handleMappedError = useCallback((err: unknown) => {
+    const mapped = mapSceneBoundaryError(err);
+    setError(mapped.userMessage);
+    setErrorCode(mapped.code);
+    if (mapped.isConflict) setConflictOpen(true);
+  }, []);
+
   const createDraftMutation = useMutation({
     mutationFn: () => analysisApi.createSceneBoundaryDraft(chapterId),
     onSuccess: (data) => {
-      syncDraftFromRevision(data);
-      setEditorOpen(true);
-      void qc.invalidateQueries({ queryKey: ["scene-boundaries", chapterId] });
+      const snapshot: DraftSnapshot = {
+        revision_id: data.revision_id,
+        revision_etag: data.revision_etag,
+        boundary_hash: data.boundary_hash || undefined,
+        scenes: data.scenes.map((s) => ({ ...s })),
+        status: data.status || "draft",
+        updated_at: data.updated_at,
+      };
+      applyDraftSnapshot(snapshot, { openEditor: true });
+      patchOverviewDraft(snapshot);
+      setMode("edit");
+      setSuccessMessage(undefined);
+      setError(undefined);
+      setErrorCode(undefined);
     },
-    onError: (err) => setError((err as ApiError).message || (err as Error).message),
+    onError: handleMappedError,
   });
 
-  const saveDraftMutation = useMutation({
-    mutationFn: () => {
-      if (!revisionId) throw new Error("缺少草稿修订");
-      return analysisApi.saveSceneBoundaryDraft(chapterId, revisionId, {
-        expected_etag: revisionEtag,
-        scenes: draftScenes,
+  const persistDraft = useCallback(
+    async (scenes: ScenePartition[]) => {
+      const current = draftRef.current;
+      if (!current.revisionId || !current.etag) throw new Error("缺少草稿修订");
+      const data = await analysisApi.saveSceneBoundaryDraft(chapterId, current.revisionId, {
+        expected_etag: current.etag,
+        scenes,
       });
+      const snapshot: DraftSnapshot = {
+        revision_id: data.revision_id,
+        revision_etag: data.revision_etag,
+        boundary_hash: data.boundary_hash,
+        scenes: (data.scenes?.length ? data.scenes : scenes).map((s) => ({ ...s })),
+        status: data.status || "draft",
+        updated_at: data.updated_at,
+      };
+      applyDraftSnapshot(snapshot);
+      patchOverviewDraft(snapshot);
+      return snapshot;
     },
-    onSuccess: (data) => {
-      setRevisionEtag(data.revision_etag);
-      setSavedEtag(data.revision_etag);
-      markDirty(false);
-      void qc.invalidateQueries({ queryKey: ["scene-boundaries", chapterId] });
+    [applyDraftSnapshot, chapterId, patchOverviewDraft],
+  );
+
+  const enqueuePersist = useCallback(
+    (scenes: ScenePartition[]) => {
+      setDraftScenes(scenes);
+      draftRef.current = { ...draftRef.current, scenes: scenes.map((s) => ({ ...s })) };
+      markDirty(true);
+      setError(undefined);
+      setErrorCode(undefined);
+      setSuccessMessage(undefined);
+      const run = persistChainRef.current.then(async () => {
+        try {
+          await persistDraft(scenes);
+        } catch (err) {
+          handleMappedError(err);
+          throw err;
+        }
+      });
+      persistChainRef.current = run.catch(() => undefined);
+      return run;
     },
-    onError: (err) => setError((err as ApiError).message || (err as Error).message),
+    [handleMappedError, markDirty, persistDraft],
+  );
+
+  const saveDraftMutation = useMutation({
+    mutationFn: async () => persistDraft(draftRef.current.scenes),
+    onSuccess: () => {
+      setSuccessMessage("草稿已保存");
+    },
+    onError: handleMappedError,
   });
 
   const restoreAiMutation = useMutation({
-    mutationFn: () => {
-      if (!revisionId) throw new Error("缺少草稿修订");
-      return analysisApi.restoreSceneBoundaryAi(chapterId, revisionId);
+    mutationFn: async () => {
+      const current = draftRef.current;
+      if (!current.revisionId) throw new Error("缺少草稿修订");
+      return analysisApi.restoreSceneBoundaryAi(chapterId, current.revisionId);
     },
     onSuccess: (data) => {
-      syncDraftFromRevision(data);
-      void qc.invalidateQueries({ queryKey: ["scene-boundaries", chapterId] });
+      const snapshot: DraftSnapshot = {
+        revision_id: data.revision_id,
+        revision_etag: data.revision_etag,
+        boundary_hash: data.boundary_hash || undefined,
+        scenes: data.scenes.map((s) => ({ ...s })),
+        status: data.status || "draft",
+        updated_at: data.updated_at,
+      };
+      applyDraftSnapshot(snapshot);
+      patchOverviewDraft(snapshot);
+      setSuccessMessage("已恢复为 AI 划分");
     },
-    onError: (err) => setError((err as ApiError).message || (err as Error).message),
+    onError: handleMappedError,
   });
 
   const discardMutation = useMutation({
-    mutationFn: () => {
-      if (!revisionId) throw new Error("缺少草稿修订");
-      return analysisApi.discardSceneBoundaryDraft(chapterId, revisionId);
+    mutationFn: async () => {
+      const current = draftRef.current;
+      if (!current.revisionId) throw new Error("缺少草稿修订");
+      return analysisApi.discardSceneBoundaryDraft(chapterId, current.revisionId);
     },
     onSuccess: () => {
       markDirty(false);
       setEditorOpen(false);
+      draftRef.current = { revisionId: null, etag: "", scenes: [] };
+      patchOverviewDraft(null);
       void qc.invalidateQueries({ queryKey: ["scene-boundaries", chapterId] });
     },
-    onError: (err) => setError((err as ApiError).message || (err as Error).message),
+    onError: handleMappedError,
   });
 
   const confirmMutation = useMutation({
-    mutationFn: (startJourney: boolean) => {
-      const targetId = revisionId ?? confirmedRevision?.revision_id;
-      const etag = revisionEtag || confirmedRevision?.revision_etag || "";
+    mutationFn: async (startJourney: boolean) => {
+      // Flush any in-flight boundary persists before confirm.
+      await persistChainRef.current;
+      const current = draftRef.current;
+      const targetId = current.revisionId ?? confirmedRevision?.revision_id ?? null;
+      const etag = current.etag || confirmedRevision?.revision_etag || "";
       if (!targetId || !etag) throw new Error("缺少可确认的修订");
-      return analysisApi.confirmSceneBoundary(chapterId, targetId, {
-        expected_etag: etag,
+      if (dirtyRef.current && current.revisionId) {
+        await persistDraft(current.scenes);
+      }
+      const latest = draftRef.current;
+      return analysisApi.confirmSceneBoundary(chapterId, latest.revisionId || targetId, {
+        expected_etag: latest.etag || etag,
         start_journey: startJourney,
         journey_options: {},
       });
     },
-    onSuccess: (result) => {
+    onSuccess: (result, startJourney) => {
       markDirty(false);
-      void qc.invalidateQueries({ queryKey: ["scene-boundaries", chapterId] });
+      setConflictOpen(false);
+      setError(undefined);
+      setErrorCode(undefined);
+      setJourneyStartFailed(Boolean(startJourney) && !result.journey_started);
+      const snapshot: DraftSnapshot = {
+        revision_id: result.revision_id,
+        revision_etag: result.revision_etag,
+        boundary_hash: result.boundary_hash,
+        scenes: draftRef.current.scenes,
+        status: "confirmed",
+      };
+      draftRef.current = {
+        revisionId: result.revision_id,
+        etag: result.revision_etag,
+        scenes: draftRef.current.scenes,
+      };
+      setRevisionEtag(result.revision_etag);
+      setBoundaryHash(result.boundary_hash);
+      patchOverviewConfirmed(snapshot);
+      setMode("confirmed_readonly");
+      setEditorOpen(false);
+      setSuccessMessage(
+        startJourney && result.journey_started
+          ? "场景划分已确认，正在进入阅读旅程"
+          : startJourney && !result.journey_started
+            ? "场景已确认，但阅读旅程任务尚未启动"
+            : "场景划分已确认",
+      );
       onConfirmed?.({
         journeyStarted: result.journey_started,
         journeyRunId: result.journey_run_id,
         revisionId: result.revision_id,
       });
     },
-    onError: (err) => setError((err as ApiError).message || (err as Error).message),
+    onError: handleMappedError,
   });
+
+  const busy =
+    createDraftMutation.isPending ||
+    saveDraftMutation.isPending ||
+    restoreAiMutation.isPending ||
+    discardMutation.isPending ||
+    confirmMutation.isPending;
 
   const tryExit = () => {
     if (dirtyRef.current) {
@@ -250,14 +439,53 @@ export function SceneBoundaryReviewPanel({
     onExit?.();
   };
 
+  const reloadLatestDraft = async () => {
+    if (dirtyRef.current) {
+      if (
+        !window.confirm(
+          "重新加载将丢弃当前页面上尚未同步的本地修改。确定继续？",
+        )
+      ) {
+        return;
+      }
+    }
+    setConflictOpen(false);
+    setError(undefined);
+    setErrorCode(undefined);
+    const fresh = await overviewQuery.refetch();
+    const draft = fresh.data?.draft_revision;
+    if (draft) {
+      applyDraftSnapshot(
+        {
+          revision_id: draft.revision_id,
+          revision_etag: draft.revision_etag,
+          boundary_hash: draft.boundary_hash,
+          scenes: revisionScenes(draft),
+          status: draft.status,
+        },
+        { openEditor: true },
+      );
+      setMode("edit");
+      return;
+    }
+    markDirty(false);
+    setEditorOpen(false);
+    setMode("edit");
+  };
+
   const openEditor = () => {
     if (overview?.draft_revision) {
-      syncDraftFromRevision({
-        revision_id: overview.draft_revision.revision_id,
-        revision_etag: overview.draft_revision.revision_etag,
-        scenes: revisionScenes(overview.draft_revision),
-      });
-      setEditorOpen(true);
+      applyDraftSnapshot(
+        {
+          revision_id: overview.draft_revision.revision_id,
+          revision_etag: overview.draft_revision.revision_etag,
+          boundary_hash: overview.draft_revision.boundary_hash,
+          scenes: revisionScenes(overview.draft_revision),
+          status: overview.draft_revision.status,
+        },
+        { openEditor: true },
+      );
+      setMode("edit");
       return;
     }
     createDraftMutation.mutate();
@@ -292,8 +520,7 @@ export function SceneBoundaryReviewPanel({
   }, [draftScenes, paragraphIds]);
 
   const applyLocalEdit = (next: ScenePartition[]) => {
-    setDraftScenes(next);
-    markDirty(true);
+    void enqueuePersist(next);
   };
 
   if (overviewQuery.isLoading) {
@@ -319,9 +546,10 @@ export function SceneBoundaryReviewPanel({
 
   const title = chapterTitle || "本章";
   const aiSceneCount = modelScenes.length;
-  const currentSceneCount = editorOpen ? draftScenes.length : aiSceneCount;
+  const currentSceneCount =
+    editorOpen || mode === "confirmed_readonly" ? draftScenes.length : aiSceneCount;
 
-  if (journeyRunning) {
+  if (journeyRunning && mode !== "confirmed_readonly") {
     return (
       <section className="scene-boundary-review" data-testid="scene-boundary-review">
         <div className="scene-boundary-readonly" data-testid="scene-boundary-journey-running">
@@ -332,6 +560,69 @@ export function SceneBoundaryReviewPanel({
             返回
           </button>
         ) : null}
+      </section>
+    );
+  }
+
+  if (mode === "confirmed_readonly") {
+    return (
+      <section className="scene-boundary-review" data-testid="scene-boundary-review">
+        <header className="scene-boundary-review-head">
+          <h1>场景划分已确认</h1>
+          {successMessage ? (
+            <p className="notice success" data-testid="scene-boundary-success" role="status">
+              {successMessage}
+            </p>
+          ) : null}
+        </header>
+        <div className="scene-boundary-readonly" data-testid="scene-boundary-confirmed-readonly">
+          <p>已确认修订 #{revisionId ?? confirmedRevision?.revision_id}</p>
+          <p data-testid="scene-boundary-confirmed-count">场景数：{currentSceneCount || revisionScenes(confirmedRevision).length}</p>
+          {boundaryHash ? <p data-testid="scene-boundary-confirmed-hash">边界指纹：{boundaryHash.slice(0, 12)}…</p> : null}
+        </div>
+        {journeyStartFailed ? (
+          <div className="notice error" data-testid="scene-boundary-journey-failed">
+            场景已确认，但阅读旅程任务尚未启动
+            <button
+              type="button"
+              className="primary"
+              data-testid="scene-boundary-retry-journey"
+              onClick={() => onConfirmed?.({ journeyStarted: true, journeyRunId: null, revisionId: revisionId || 0 })}
+            >
+              重新启动 Journey
+            </button>
+          </div>
+        ) : null}
+        <footer className="scene-boundary-actions">
+          <button
+            type="button"
+            className="primary"
+            data-testid="scene-boundary-start-journey"
+            onClick={() =>
+              onConfirmed?.({
+                journeyStarted: true,
+                journeyRunId: null,
+                revisionId: revisionId || confirmedRevision?.revision_id || 0,
+              })
+            }
+          >
+            开始阅读旅程分析
+          </button>
+          <button
+            type="button"
+            className="secondary"
+            data-testid="scene-boundary-readjust"
+            disabled={createDraftMutation.isPending}
+            onClick={() => createDraftMutation.mutate()}
+          >
+            重新调整场景
+          </button>
+          {onExit ? (
+            <button type="button" className="ghost" data-testid="scene-boundary-back-reading" onClick={onExit}>
+              返回正文阅读
+            </button>
+          ) : null}
+        </footer>
       </section>
     );
   }
@@ -357,9 +648,21 @@ export function SceneBoundaryReviewPanel({
             className="primary"
             data-testid="scene-boundary-adopt-ai"
             disabled={confirmMutation.isPending}
-            onClick={() => confirmMutation.mutate(true)}
+            onClick={() => {
+              const target = overview.confirmed_revision || overview.model_revision;
+              if (target) {
+                draftRef.current = {
+                  revisionId: target.revision_id,
+                  etag: target.revision_etag,
+                  scenes: revisionScenes(target),
+                };
+                setRevisionId(target.revision_id);
+                setRevisionEtag(target.revision_etag);
+              }
+              confirmMutation.mutate(true);
+            }}
           >
-            采用 AI 场景并开始旅程分析
+            {confirmMutation.isPending ? "确认中…" : "采用 AI 场景并开始旅程分析"}
           </button>
           <button
             type="button"
@@ -377,9 +680,15 @@ export function SceneBoundaryReviewPanel({
           ) : null}
         </div>
         {error ? (
-          <p className="notice error" data-testid="scene-boundary-error">
-            {error}
-          </p>
+          <div className="notice error" data-testid="scene-boundary-error">
+            <p>{error}</p>
+            {errorCode ? (
+              <details data-testid="scene-boundary-error-tech">
+                <summary>技术详情</summary>
+                <code>{errorCode}</code>
+              </details>
+            ) : null}
+          </div>
         ) : null}
       </section>
     );
@@ -389,6 +698,11 @@ export function SceneBoundaryReviewPanel({
     return (
       <section className="scene-boundary-review" data-testid="scene-boundary-review">
         <p data-testid="scene-boundary-idle">当前无需确认场景划分。</p>
+        {confirmedRevision ? (
+          <button type="button" className="secondary" data-testid="scene-boundary-readjust" onClick={openEditor}>
+            重新调整场景
+          </button>
+        ) : null}
         {onExit ? (
           <button type="button" className="secondary" onClick={tryExit}>
             返回
@@ -413,7 +727,10 @@ export function SceneBoundaryReviewPanel({
           <span data-testid="scene-boundary-ai-count">AI 场景数：{aiSceneCount}</span>
           <span data-testid="scene-boundary-current-count">当前场景数：{currentSceneCount}</span>
           <span data-testid="scene-boundary-status-text">
-            {dirty ? "有未保存修改" : "已保存"}
+            {busy && dirty ? "保存中…" : dirty ? "有未保存修改" : "已保存"}
+          </span>
+          <span data-testid="scene-boundary-etag" data-revision-etag={revisionEtag}>
+            ETag {revisionEtag.slice(0, 8) || "—"}
           </span>
           <span data-testid="scene-boundary-change-summary">
             移动 {changeSummary.moved} · 新增 {changeSummary.added} · 合并{" "}
@@ -421,6 +738,12 @@ export function SceneBoundaryReviewPanel({
           </span>
         </div>
       </header>
+
+      {successMessage ? (
+        <p className="notice success" data-testid="scene-boundary-success" role="status">
+          {successMessage}
+        </p>
+      ) : null}
 
       <div className="scene-boundary-body" data-testid="scene-boundary-editor-body">
         {paragraphsQuery.isLoading ? (
@@ -437,14 +760,11 @@ export function SceneBoundaryReviewPanel({
                 <input
                   type="checkbox"
                   checked={block.scene.included_in_journey}
+                  disabled={busy}
                   onChange={(event) => {
                     try {
                       applyLocalEdit(
-                        setSceneIncluded(
-                          draftScenes,
-                          block.scene.scene_order,
-                          event.target.checked,
-                        ),
+                        setSceneIncluded(draftScenes, block.scene.scene_order, event.target.checked),
                       );
                     } catch {
                       setError("无法更新参与旅程分析设置");
@@ -462,6 +782,7 @@ export function SceneBoundaryReviewPanel({
                         <button
                           type="button"
                           data-testid={`scene-boundary-merge-prev-${block.scene.scene_order}`}
+                          disabled={busy}
                           onClick={() => {
                             try {
                               applyLocalEdit(
@@ -481,11 +802,10 @@ export function SceneBoundaryReviewPanel({
                         <button
                           type="button"
                           data-testid={`scene-boundary-merge-next-${block.scene.scene_order}`}
+                          disabled={busy}
                           onClick={() => {
                             try {
-                              applyLocalEdit(
-                                mergeSceneBoundary(draftScenes, sceneIndex, paragraphIds),
-                              );
+                              applyLocalEdit(mergeSceneBoundary(draftScenes, sceneIndex, paragraphIds));
                             } catch {
                               setError("无法合并场景");
                             }
@@ -499,6 +819,7 @@ export function SceneBoundaryReviewPanel({
                       <button
                         type="button"
                         data-testid={`scene-boundary-toggle-include-${block.scene.scene_order}`}
+                        disabled={busy}
                         onClick={() => {
                           try {
                             applyLocalEdit(
@@ -539,11 +860,10 @@ export function SceneBoundaryReviewPanel({
                       type="button"
                       className="ghost scene-boundary-add-split"
                       data-testid={`scene-boundary-add-after-${paragraph.id}`}
+                      disabled={busy}
                       onClick={() => {
                         try {
-                          applyLocalEdit(
-                            addSceneBoundary(draftScenes, paragraph.id, paragraphIds),
-                          );
+                          applyLocalEdit(addSceneBoundary(draftScenes, paragraph.id, paragraphIds));
                         } catch {
                           setError("无法在此处新增场景分割线");
                         }
@@ -562,6 +882,7 @@ export function SceneBoundaryReviewPanel({
                         <button
                           type="button"
                           data-testid={`scene-boundary-move-up-${sceneIndex}`}
+                          disabled={busy}
                           onClick={() => {
                             try {
                               applyLocalEdit(
@@ -577,6 +898,7 @@ export function SceneBoundaryReviewPanel({
                         <button
                           type="button"
                           data-testid={`scene-boundary-move-down-${sceneIndex}`}
+                          disabled={busy}
                           onClick={() => {
                             try {
                               applyLocalEdit(
@@ -592,11 +914,10 @@ export function SceneBoundaryReviewPanel({
                         <button
                           type="button"
                           data-testid={`scene-boundary-delete-divider-${sceneIndex}`}
+                          disabled={busy}
                           onClick={() => {
                             try {
-                              applyLocalEdit(
-                                mergeSceneBoundary(draftScenes, sceneIndex, paragraphIds),
-                              );
+                              applyLocalEdit(mergeSceneBoundary(draftScenes, sceneIndex, paragraphIds));
                             } catch {
                               setError("无法删除场景分割线");
                             }
@@ -614,10 +935,57 @@ export function SceneBoundaryReviewPanel({
         ))}
       </div>
 
-      {error ? (
-        <p className="notice error" data-testid="scene-boundary-error">
-          {error}
-        </p>
+      {error && !conflictOpen ? (
+        <div className="notice error" data-testid="scene-boundary-error">
+          <p>{error}</p>
+          {errorCode ? (
+            <details data-testid="scene-boundary-error-tech" open={showTechDetails}>
+              <summary onClick={() => setShowTechDetails((v) => !v)}>技术详情</summary>
+              <code>{errorCode}</code>
+            </details>
+          ) : null}
+        </div>
+      ) : null}
+
+      {conflictOpen ? (
+        <div
+          className="scene-boundary-conflict-dialog"
+          role="dialog"
+          aria-modal="true"
+          data-testid="scene-boundary-conflict-dialog"
+        >
+          <h2>场景草稿已更新</h2>
+          <p>
+            当前场景草稿已在其他窗口或操作中发生变化。请重新加载最新版本后继续。
+          </p>
+          {dirty ? (
+            <p className="notice" data-testid="scene-boundary-conflict-dirty-warning">
+              重新加载会丢弃当前页面尚未同步的本地修改。
+            </p>
+          ) : null}
+          <div className="scene-boundary-waiting-actions">
+            <button
+              type="button"
+              className="primary"
+              data-testid="scene-boundary-conflict-reload"
+              onClick={() => void reloadLatestDraft()}
+            >
+              重新加载最新草稿
+            </button>
+            <button
+              type="button"
+              className="secondary"
+              data-testid="scene-boundary-conflict-keep"
+              onClick={() => setConflictOpen(false)}
+            >
+              保留当前页面
+            </button>
+          </div>
+          <details data-testid="scene-boundary-error-tech">
+            <summary>技术详情</summary>
+            <code>{errorCode || SCENE_BOUNDARY_CONFLICT_CODE}</code>
+          </details>
+        </div>
       ) : null}
 
       <footer className="scene-boundary-actions" data-testid="scene-boundary-actions">
@@ -626,7 +994,7 @@ export function SceneBoundaryReviewPanel({
             type="button"
             className="secondary"
             data-testid="scene-boundary-restore-ai"
-            disabled={restoreAiMutation.isPending || saveDraftMutation.isPending}
+            disabled={busy}
             onClick={() => restoreAiMutation.mutate()}
           >
             恢复 AI 划分
@@ -635,16 +1003,16 @@ export function SceneBoundaryReviewPanel({
             type="button"
             className="secondary"
             data-testid="scene-boundary-save-draft"
-            disabled={!dirty || saveDraftMutation.isPending}
+            disabled={!dirty || busy}
             onClick={() => saveDraftMutation.mutate()}
           >
-            保存草稿
+            {saveDraftMutation.isPending ? "保存中…" : "保存草稿"}
           </button>
           <button
             type="button"
             className="ghost"
             data-testid="scene-boundary-discard"
-            disabled={discardMutation.isPending}
+            disabled={busy}
             onClick={() => {
               if (dirty && !window.confirm("放弃未保存的修改？")) return;
               discardMutation.mutate();
@@ -658,26 +1026,27 @@ export function SceneBoundaryReviewPanel({
             type="button"
             className="secondary"
             data-testid="scene-boundary-confirm"
-            disabled={confirmMutation.isPending || dirty}
+            disabled={busy || confirmMutation.isPending}
             onClick={() => confirmMutation.mutate(false)}
           >
-            确认场景
+            {confirmMutation.isPending && confirmMutation.variables === false
+              ? "确认中…"
+              : "确认场景"}
           </button>
           <button
             type="button"
             className="primary"
             data-testid="scene-boundary-confirm-start"
-            disabled={confirmMutation.isPending || (dirty && !savedEtag)}
-            onClick={() => {
-              if (dirty && !window.confirm("有未保存修改，仍要确认并开始旅程？")) return;
-              confirmMutation.mutate(true);
-            }}
+            disabled={busy || confirmMutation.isPending}
+            onClick={() => confirmMutation.mutate(true)}
           >
-            确认场景并开始旅程分析
+            {confirmMutation.isPending && confirmMutation.variables === true
+              ? "确认中…"
+              : "确认场景并开始旅程分析"}
           </button>
           {onExit ? (
             <button type="button" className="ghost" data-testid="scene-boundary-exit" onClick={tryExit}>
-              返回
+              离开
             </button>
           ) : null}
         </div>

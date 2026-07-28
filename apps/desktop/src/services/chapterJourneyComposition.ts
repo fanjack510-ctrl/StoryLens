@@ -168,6 +168,10 @@ export function resolveChapterWorkspaceView(args: {
     if (userPinnedView === "result" && chapterComplete) return "result";
   }
 
+  if (requestedView === "scene-boundary-review") {
+    return "result";
+  }
+
   if (requestedView === "reading" || requestedView === "progress" || requestedView === "result") {
     if (requestedView === "result" && inFlight && userPinnedView !== "result") {
       return "progress";

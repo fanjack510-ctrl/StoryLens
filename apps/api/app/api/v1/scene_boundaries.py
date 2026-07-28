@@ -17,6 +17,7 @@ from app.schemas.scene_boundaries import (
     SceneBoundaryDiffResponse,
     SceneBoundaryDraftCreateResponse,
     SceneBoundaryDraftSaveRequest,
+    SceneBoundaryDraftSaveResponse,
     SceneBoundaryRevisionSummary,
     ScenePartitionItem,
 )
@@ -107,10 +108,16 @@ def create_scene_boundary_draft(chapter_id: int, session: Session = Depends(get_
         revision_id=draft.id,
         revision_etag=draft.revision_etag,
         scenes=[ScenePartitionItem(**item) for item in scenes],
+        boundary_hash=draft.boundary_hash,
+        status=draft.status,
+        updated_at=str(draft.updated_at) if draft.updated_at else None,
     )
 
 
-@router.put("/chapters/{chapter_id}/scene-boundaries/draft/{revision_id}")
+@router.put(
+    "/chapters/{chapter_id}/scene-boundaries/draft/{revision_id}",
+    response_model=SceneBoundaryDraftSaveResponse,
+)
 def save_scene_boundary_draft(
     chapter_id: int,
     revision_id: int,
@@ -128,14 +135,21 @@ def save_scene_boundary_draft(
         session.commit()
     except SceneBoundaryError as exc:
         raise _scene_boundary_http_error(exc) from exc
-    return {
-        "revision_id": draft.id,
-        "revision_etag": draft.revision_etag,
-        "boundary_hash": draft.boundary_hash,
-    }
+    scenes = parse_partition_json(draft.final_boundaries_json)
+    return SceneBoundaryDraftSaveResponse(
+        revision_id=draft.id,
+        revision_etag=draft.revision_etag,
+        boundary_hash=draft.boundary_hash or "",
+        scenes=[ScenePartitionItem(**item) for item in scenes],
+        status=draft.status,
+        updated_at=str(draft.updated_at) if draft.updated_at else None,
+    )
 
 
-@router.post("/chapters/{chapter_id}/scene-boundaries/draft/{revision_id}/restore-ai")
+@router.post(
+    "/chapters/{chapter_id}/scene-boundaries/draft/{revision_id}/restore-ai",
+    response_model=SceneBoundaryDraftCreateResponse,
+)
 def restore_ai_partition(
     chapter_id: int,
     revision_id: int,
@@ -148,11 +162,14 @@ def restore_ai_partition(
     except SceneBoundaryError as exc:
         raise _scene_boundary_http_error(exc) from exc
     scenes = parse_partition_json(draft.final_boundaries_json)
-    return {
-        "revision_id": draft.id,
-        "revision_etag": draft.revision_etag,
-        "scenes": scenes,
-    }
+    return SceneBoundaryDraftCreateResponse(
+        revision_id=draft.id,
+        revision_etag=draft.revision_etag,
+        scenes=[ScenePartitionItem(**item) for item in scenes],
+        boundary_hash=draft.boundary_hash,
+        status=draft.status,
+        updated_at=str(draft.updated_at) if draft.updated_at else None,
+    )
 
 
 @router.post(
