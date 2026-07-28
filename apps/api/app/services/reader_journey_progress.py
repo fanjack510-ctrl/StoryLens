@@ -24,6 +24,7 @@ from app.db.models import (
 )
 from app.schemas.reader_journey import SCENE_CONTRACT_VERSION, SCENE_PROMPT_VERSION
 from app.services.reader_journey_batch_planner import PLANNER_VERSION
+from app.services.utc_datetime import ensure_utc_aware
 
 
 USER_ERROR_MESSAGES = {
@@ -102,7 +103,7 @@ class ReaderJourneyProgress:
             "failed_scene_id": self.journey_run.failed_scene_id,
             "failed_scene_ordinal": self.journey_run.failed_scene_ordinal,
             "failed_invocation_id": self.journey_run.failed_invocation_id,
-            "completed_at": self.journey_run.completed_at,
+            "completed_at": ensure_utc_aware(self.journey_run.completed_at),
             "planner_version": getattr(self.journey_run, "planner_version", None),
             "current_planner_version": PLANNER_VERSION,
             "scene_prompt_version": self.journey_run.scene_prompt_version,

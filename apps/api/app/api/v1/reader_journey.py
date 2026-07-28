@@ -39,7 +39,8 @@ from app.schemas.reader_journey import (
     ReaderJourneySemanticRecalibrateRequest,
     ReaderJourneySemanticRecalibrateResponse,
 )
-from app.services.credentials.service import get_credential_store
+from app.services.utc_datetime import ensure_utc_aware
+
 from app.services.reader_journey_batch_planner import PLANNER_VERSION
 from app.services.reader_journey_engagement import compute_engagement
 from app.services.reader_journey_offline_replay import offline_replay_journey_profiles
@@ -232,10 +233,10 @@ def _serialize_result(session: Session, journey_run: ReaderJourneyRun) -> Reader
         deterministic_statistics=deterministic,
         one_sentence_diagnosis=diagnosis,
         visualization=visualization,
-        created_at=journey_run.created_at,
-        started_at=journey_run.started_at,
-        updated_at=journey_run.updated_at,
-        completed_at=journey_run.completed_at,
+        created_at=ensure_utc_aware(journey_run.created_at),
+        started_at=ensure_utc_aware(journey_run.started_at),
+        updated_at=ensure_utc_aware(journey_run.updated_at),
+        completed_at=ensure_utc_aware(journey_run.completed_at),
         scene_revision_id=journey_run.scene_revision_id,
         result_status=journey_run.result_status,
         error_code=journey_run.root_error_code,

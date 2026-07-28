@@ -1,5 +1,7 @@
 /** Unified Reader Journey selection for chapter workspace (CHG-041 Round 3). */
 
+import { parseBackendUtcTimestamp } from "./parseBackendUtcTimestamp";
+
 export type JourneyCandidate = {
   id: number;
   status: string;
@@ -9,6 +11,8 @@ export type JourneyCandidate = {
   created_at?: string | null;
   updated_at?: string | null;
   completed_at?: string | null;
+  failed_at?: string | null;
+  paused_at?: string | null;
   total_scene_count?: number | null;
   completed_scene_count?: number | null;
   root_error_code?: string | null;
@@ -106,12 +110,22 @@ export function journeyElapsedMs(args: {
 }): number | null {
   const journey = args.journey;
   if (!journey) return null;
-  const startRaw = journey.started_at || journey.created_at;
-  if (!startRaw) return null;
-  const start = Date.parse(startRaw);
-  if (!Number.isFinite(start)) return null;
-  const endRaw = journey.completed_at;
-  const end = endRaw ? Date.parse(endRaw) : (args.nowMs ?? Date.now());
+  const start = parseBackendUtcTimestamp(journey.started_at || journey.created_at);
+  if (start == null) return null;
+  const status = (journey.status || "").toLowerCase();
+  let end: number | null = null;
+  if (status === "failed" || status === "budget_blocked" || status === "aborted_by_limit") {
+    end = parseBackendUtcTimestamp(journey.failed_at || journey.completed_at || journey.updated_at);
+  } else if (status === "paused") {
+    end = parseBackendUtcTimestamp(journey.paused_at || journey.updated_at);
+  } else if (status === "succeeded") {
+    end = parseBackendUtcTimestamp(journey.completed_at || journey.updated_at);
+  } else if (status === "interrupted" || status === "cancelled") {
+    end = parseBackendUtcTimestamp(journey.completed_at || journey.updated_at || journey.failed_at);
+  }
+  if (end == null) {
+    end = args.nowMs ?? Date.now();
+  }
   if (!Number.isFinite(end) || end < start) return null;
   return end - start;
 }

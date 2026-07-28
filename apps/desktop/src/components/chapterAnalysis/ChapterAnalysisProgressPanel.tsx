@@ -42,6 +42,8 @@ type Props = {
   elapsedOverride?: string | null;
   /** Optional progress counts from the selected journey run. */
   progressOverride?: { current: number; total: number } | null;
+  /** Optional status label override (e.g. journey failed copy). */
+  statusLabelOverride?: string | null;
   onResume?: () => Promise<void> | void;
   onReanalyze?: () => void;
   onReviewBoundary?: () => void;
@@ -62,6 +64,7 @@ export function ChapterAnalysisProgressPanel({
   canResume,
   elapsedOverride,
   progressOverride,
+  statusLabelOverride,
   onResume,
   onReanalyze,
   onReviewBoundary,
@@ -173,9 +176,9 @@ export function ChapterAnalysisProgressPanel({
 
       <ChapterAnalysisStatusBadge state={uiState} />
 
-      {currentWork && (
+      {(statusLabelOverride || currentWork) && (
         <p className="chapter-analysis-current-work" data-testid="chapter-analysis-current-work">
-          {currentWork}
+          {statusLabelOverride || currentWork}
         </p>
       )}
 
@@ -292,7 +295,9 @@ export function ChapterAnalysisProgressPanel({
             </div>
             <div>
               <dt>状态</dt>
-              <dd data-testid="chapter-analysis-status-text">{uiStateLabel(uiState)}</dd>
+              <dd data-testid="chapter-analysis-status-text">
+                {statusLabelOverride || uiStateLabel(uiState)}
+              </dd>
             </div>
           </dl>
         </details>

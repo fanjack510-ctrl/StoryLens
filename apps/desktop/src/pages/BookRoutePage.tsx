@@ -48,6 +48,7 @@ import {
   resolveCurrentReaderJourney,
   type JourneyCandidate,
 } from "../services/resolveCurrentReaderJourney";
+import { mapReaderJourneyStatusToUi } from "../services/mapReaderJourneyStatusToUi";
 import {
   chapterProgressHref,
   chapterResultHref,
@@ -1004,7 +1005,9 @@ export function BookRoutePage() {
       result_status:
         (journey.data as { result_status?: string }).result_status ?? null,
       started_at: (journey.data as { started_at?: string }).started_at ?? null,
+      created_at: (journey.data as { created_at?: string }).created_at ?? null,
       updated_at: journey.data.updated_at ?? null,
+      completed_at: (journey.data as { completed_at?: string }).completed_at ?? null,
       retryable: (journey.data as { retryable?: boolean }).retryable ?? null,
       root_error_code: (journey.data as { error_code?: string }).error_code ?? null,
       total_scene_count:
@@ -1032,6 +1035,11 @@ export function BookRoutePage() {
   const selectedJourneyRunId = resolvedCurrentJourney.journey?.id ?? journeyRunId;
   const selectedJourneyElapsedMs = journeyElapsedMs({
     journey: resolvedCurrentJourney.journey,
+  });
+  const journeySidebarUi = mapReaderJourneyStatusToUi({
+    journeyStatus: resolvedCurrentJourney.journey?.status,
+    resultStatus: resolvedCurrentJourney.journey?.result_status,
+    retryable: resolvedCurrentJourney.journey?.retryable,
   });
 
   // Keep journeyRun in the URL once we know the selected run (refresh / tab safe).
@@ -1797,16 +1805,17 @@ export function BookRoutePage() {
                 uiState={
                   progress.isLoading && !progress.run
                     ? "creating"
-                    : activeTab === "journey" && showJourneyActive
-                      ? "reader_journey_processing"
-                      : activeTab === "journey" &&
-                          (showJourneyInterrupted || showJourneyTerminalFailed)
-                        ? "partial"
-                        : compositionUiState !== "idle"
+                    : activeTab === "journey" && resolvedCurrentJourney.journey
+                      ? journeySidebarUi.sidebarUiState === "idle"
+                        ? compositionUiState !== "idle"
                           ? compositionUiState
-                          : progress.uiState === "idle" && analysisRunId
-                            ? "running"
-                            : progress.uiState
+                          : progress.uiState
+                        : journeySidebarUi.sidebarUiState
+                      : compositionUiState !== "idle"
+                        ? compositionUiState
+                        : progress.uiState === "idle" && analysisRunId
+                          ? "running"
+                          : progress.uiState
                 }
                 chapterTitle={chapterTitle}
                 reconnectHint={progress.reconnectHint}
@@ -1829,6 +1838,11 @@ export function BookRoutePage() {
                           0,
                       }
                     : null
+                }
+                statusLabelOverride={
+                  activeTab === "journey" && resolvedCurrentJourney.journey
+                    ? journeySidebarUi.label
+                    : undefined
                 }
                 onResume={progress.resume}
                 onReanalyze={() => setDialog(true)}
