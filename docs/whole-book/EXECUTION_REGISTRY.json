@@ -195,7 +195,7 @@
       "title": "Freeze baselines, IDs, gates, evidence policy",
       "acceptance_level": "L1",
       "evidence_dir": "release/evidence/whole-book/WB-0.1-BASELINE-FREEZE/",
-      "wb_status": "implementing",
+      "wb_status": "manual verification",
       "depends_on": [],
       "next_step": "WB-0.2-DATA-CONTRACTS"
     },
