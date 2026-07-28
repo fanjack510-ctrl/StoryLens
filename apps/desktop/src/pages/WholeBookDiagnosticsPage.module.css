@@ -131,3 +131,73 @@
 .wholeBookDiagnosticsUnavailable {
   max-width: 42rem;
 }
+
+.wholeBookDiagnosticsNotice {
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm, 6px);
+  background: var(--color-surface-muted, rgba(0, 0, 0, 0.04));
+  font-size: 0.9rem;
+}
+
+.wholeBookDiagnosticsDetailPanel {
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: var(--radius-sm, 6px);
+  background: var(--color-surface-muted, rgba(0, 0, 0, 0.03));
+}
+
+.wholeBookDiagnosticsAssetGroup {
+  margin-top: 8px;
+}
+
+.wholeBookDiagnosticsAssetGroup h3 {
+  margin: 0 0 6px;
+  font-size: 0.92rem;
+}
+
+.wholeBookDiagnosticsParagraphFull {
+  margin: 8px 0 0;
+  line-height: 1.6;
+  font-size: 0.9rem;
+}
+
+.wholeBookDiagnosticsQuoteHighlight {
+  background: rgba(255, 220, 100, 0.45);
+  padding: 0 2px;
+  border-radius: 2px;
+}
+
+.wholeBookDiagnosticsClaimList {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wholeBookDiagnosticsClaimButton {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--color-border, var(--line));
+  border-radius: var(--radius-sm, 6px);
+  padding: 8px 10px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.wholeBookDiagnosticsClaimExpansion {
+  margin-top: 6px;
+  padding-left: 10px;
+  font-size: 0.85rem;
+}
+
+.wholeBookDiagnosticsInsufficient {
+  margin: 4px 0 0;
+  color: var(--color-text-muted, var(--muted));
+  font-size: 0.85rem;
+}
