@@ -348,23 +348,23 @@ function WholeBookFreeProductPageEnabled() {
   );
 
   if (!bookId || Number.isNaN(bookId)) {
-    return <ErrorState message="无效的书籍 ID" />;
+    return <ErrorState error={new Error("无效的书籍 ID")} />;
   }
 
   if (prepareQuery.isLoading) {
-    return <Loading label="加载全书分析…" />;
+    return <Loading />;
   }
 
   if (prepareQuery.isError) {
-    const msg =
-      prepareQuery.error instanceof ApiError
-        ? prepareQuery.error.message
-        : "无法加载全书分析页面";
-    return <ErrorState message={msg} />;
+    const err =
+      prepareQuery.error instanceof Error
+        ? prepareQuery.error
+        : new Error("无法加载全书分析页面");
+    return <ErrorState error={err} retry={() => void prepareQuery.refetch()} />;
   }
 
   if (!prepare) {
-    return <ErrorState message="准备数据不可用" />;
+    return <ErrorState error={new Error("准备数据不可用")} />;
   }
 
   const pageMode: "prepare" | "running" | "completed" | "failed" = (() => {
@@ -794,7 +794,7 @@ function OverviewPanel({
   evidences: NarrativeEvidenceRow[];
   onOpenEvidence: (id: number) => void;
 }) {
-  if (loading) return <Loading label="加载全书总览…" />;
+  if (loading) return <Loading />;
   if (!overview) return <p>总览尚未就绪。</p>;
 
   const claimByKey = new Map(overview.claims.map((c) => [c.claim_key, c]));

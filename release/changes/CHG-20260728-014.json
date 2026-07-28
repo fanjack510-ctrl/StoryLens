@@ -2,13 +2,16 @@
   "user_summary": "Formal book entry, Free whole-book pages, overview and characters-events UI, evidence deeplink.",
   "id": "CHG-20260728-014",
   "base_version": "1.1.1",
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "type": "feature",
   "blocker_level": null,
   "title": "WB-1.7 Free Overview Product Experience",
   "include_in_next_release": true,
   "technical_summary": "",
-  "verification_evidence": [],
+  "verification_evidence": [
+    "release/evidence/whole-book/WB-1.7/FINAL_REPORT.md",
+    "release/evidence/whole-book/WB-1.7/MANUAL_TEST.md"
+  ],
   "acceptance_criteria": [],
   "data_compatibility": {
     "database_changed": false,
@@ -23,10 +26,32 @@
     "requires_restart": false,
     "updater_impact": false
   },
-  "updated_at": "2026-07-28T06:10:54Z",
+  "updated_at": "2026-07-28T06:32:22Z",
   "modules": [],
-  "commits": [],
-  "tests": [],
-  "status": "registered",
+  "commits": [
+    {
+      "sha": "e80db38806288768837f665cea371576f7b3c6aa",
+      "message": "feat(whole-book): add free overview product experience",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "650b0e32788dc8db7abc9121c1d54e3b8d538bd6",
+      "message": "feat(whole-book): add free product prepare/create APIs",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "7fdf0ec2117658876f0e4bb164e8fc91f302129d",
+      "message": "feat(whole-book): add free product prepare/create APIs",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
+  "tests": [
+    "apps/api/tests/test_whole_book_wb17_free_product_api.py",
+    "apps/desktop/src/pages/wholeBookFreeProduct.test.tsx"
+  ],
+  "status": "tested",
   "created_at": "2026-07-28T06:10:54Z"
 }

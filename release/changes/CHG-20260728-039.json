@@ -1,0 +1,44 @@
+{
+  "user_summary": "Freeze Free four modules and Pro planned capabilities; access resolver.",
+  "id": "CHG-20260728-039",
+  "base_version": "1.1.1",
+  "head_inclusion": "INCLUDED",
+  "type": "feature",
+  "blocker_level": null,
+  "title": "WB-1.6A Free Pro Whole-Book Scope Contract",
+  "include_in_next_release": true,
+  "technical_summary": "",
+  "verification_evidence": [
+    "release/evidence/whole-book/WB-1.6A/TEST_RESULTS.md",
+    "release/evidence/whole-book/WB-1.6A/FINAL_REPORT.md"
+  ],
+  "acceptance_criteria": [],
+  "data_compatibility": {
+    "database_changed": true,
+    "migration_required": true,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "files": [],
+  "release_impact": {
+    "breaking_change": false,
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false
+  },
+  "updated_at": "2026-07-28T06:32:22Z",
+  "modules": [],
+  "commits": [
+    {
+      "sha": "3edf5f9ef18e06dffc7c2b6a2d7b61e357e63ead",
+      "message": "feat(product): freeze free and pro whole-book scope",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
+  "tests": [
+    "apps/api/tests/test_whole_book_wb16a_product_capability.py"
+  ],
+  "status": "verified",
+  "created_at": "2026-07-28T06:10:54Z"
+}
