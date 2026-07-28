@@ -25,6 +25,13 @@ from app.model_gateway.provider_errors import TRANSPORT_REMOTE_DISCONNECT
 
 _SMOKE_FAKE_ENV = "STORYLENS_CHAPTER_ANALYSIS_SMOKE_FAKE"
 _SMOKE_FAIL_ENV = "STORYLENS_CHAPTER_ANALYSIS_SMOKE_FAKE_FAIL"
+_JOURNEY_FAKE_MODE_ENV = "STORYLENS_JOURNEY_FAKE_MODE"
+_VALID_JOURNEY_FAKE_MODES = {
+    "success",
+    "initial_truncation_then_success",
+    "repair_success",
+    "repair_failure",
+}
 _logger = logging.getLogger(__name__)
 _rejection_logged = False
 
@@ -32,6 +39,14 @@ _rejection_logged = False
 def _env_truthy(name: str) -> bool:
     raw = os.environ.get(name, "").strip().lower()
     return raw in {"1", "true", "yes", "on"}
+
+
+def journey_smoke_fake_mode() -> str:
+    """Manual-gate Journey Fake mode. Default: success."""
+    raw = (os.environ.get(_JOURNEY_FAKE_MODE_ENV) or "success").strip().lower()
+    if raw not in _VALID_JOURNEY_FAKE_MODES:
+        return "success"
+    return raw
 
 
 def is_chapter_analysis_smoke_fake_requested() -> bool:
@@ -109,6 +124,15 @@ def _paragraph_texts_from_prompt(text: str) -> dict[str, str]:
         flags=re.S,
     ):
         mapping[match.group(1)] = bytes(match.group(2), "utf-8").decode("unicode_escape")
+    # Journey profiles_target style: {"id":"B0001-C0001-P0001","text":"..."}
+    for match in re.finditer(
+        r'"id"\s*:\s*"(B\d+-C\d+-P\d+)"\s*,\s*"text"\s*:\s*"((?:\\.|[^"\\])*)"',
+        text,
+        flags=re.S,
+    ):
+        mapping.setdefault(
+            match.group(1), bytes(match.group(2), "utf-8").decode("unicode_escape")
+        )
     if mapping:
         return mapping
     # Line style: B0001-C0001-P0001: some text
@@ -122,6 +146,115 @@ def _quote_for(pid: str, texts: dict[str, str], fallback: str = "推进") -> str
     if body:
         return body[: min(24, len(body))]
     return fallback
+
+
+def _scene_targets_from_prompt(text: str) -> list[dict[str, Any]]:
+    """Extract scene_id/ordinal/paragraph_ids from journey prompt JSON."""
+    targets: list[dict[str, Any]] = []
+    for match in re.finditer(
+        r'\{\s*"scene_id"\s*:\s*(\d+)\s*,\s*"scene_ordinal"\s*:\s*(\d+)[^\}]*?"paragraphs"\s*:\s*\[(.*?)\]',
+        text,
+        flags=re.S,
+    ):
+        sid = int(match.group(1))
+        ordinal = int(match.group(2))
+        pids = _paragraph_ids_from_text(match.group(3))
+        targets.append({"scene_id": sid, "scene_ordinal": ordinal, "paragraph_ids": pids})
+    if targets:
+        seen: set[int] = set()
+        ordered: list[dict[str, Any]] = []
+        for item in targets:
+            ordinal = int(item["scene_ordinal"])
+            if ordinal in seen:
+                continue
+            seen.add(ordinal)
+            ordered.append(item)
+        return ordered
+
+    pairs = re.findall(
+        r'"scene_id"\s*:\s*(\d+)[^}]{0,160}?"scene_ordinal"\s*:\s*(\d+)',
+        text,
+        flags=re.S,
+    )
+    if not pairs:
+        pairs = re.findall(
+            r'"scene_ordinal"\s*:\s*(\d+)[^}]{0,160}?"scene_id"\s*:\s*(\d+)',
+            text,
+            flags=re.S,
+        )
+        pairs = [(sid, ord_) for ord_, sid in pairs]
+    out: list[dict[str, Any]] = []
+    seen_ord: set[int] = set()
+    for sid_s, ord_s in pairs:
+        ordinal = int(ord_s)
+        if ordinal in seen_ord:
+            continue
+        seen_ord.add(ordinal)
+        out.append({"scene_id": int(sid_s), "scene_ordinal": ordinal, "paragraph_ids": []})
+    return out
+
+
+def _expected_scene_ids_from_prompt(text: str, fallback_ids: list[int]) -> list[int]:
+    match = re.search(r"expected scenes\s*\[([^\]]*)\]", text, flags=re.I)
+    if match:
+        ids = [int(x) for x in re.findall(r"\d+", match.group(1))]
+        if ids:
+            return ids
+    for pattern in (
+        r'"owned_scene_ids(?:_json)?"\s*:\s*"?\[([^\]]*)\]"?',
+        r"owned_scene_ids_json[^\[]*\[([^\]]*)\]",
+    ):
+        match = re.search(pattern, text)
+        if match:
+            ids = [int(x) for x in re.findall(r"\d+", match.group(1))]
+            if ids:
+                return ids
+    missing = [int(x) for x in re.findall(r"missing scene_id\s+(\d+)", text, flags=re.I)]
+    if missing:
+        preferred = [sid for sid in fallback_ids if sid in set(missing)]
+        return preferred or missing
+    return fallback_ids
+
+
+def _evidence_for_scene(paragraph_ids: list[str], global_paragraphs: list[str]) -> list[str]:
+    if paragraph_ids:
+        return [paragraph_ids[0]]
+    if global_paragraphs:
+        return [global_paragraphs[0]]
+    return ["B0001-C0001-P0001"]
+
+
+def _build_journey_profiles(
+    combined: str,
+    paragraph_ids: list[str],
+    texts: dict[str, str],
+) -> list[dict[str, Any]]:
+    mode = journey_smoke_fake_mode()
+    targets = _scene_targets_from_prompt(combined)
+    fallback_ids = [int(t["scene_id"]) for t in targets]
+    expected_ids = _expected_scene_ids_from_prompt(combined, fallback_ids)
+    is_repair = (
+        "structural_repair" in combined
+        or "expected scenes" in combined.lower()
+        or "missing scene_id" in combined.lower()
+    )
+    if mode == "repair_failure" and is_repair and expected_ids:
+        expected_ids = expected_ids[:1]
+
+    by_id = {int(t["scene_id"]): t for t in targets}
+    profiles: list[dict[str, Any]] = []
+    seen: set[int] = set()
+    emit_ids = expected_ids if expected_ids else fallback_ids or [1]
+    for index, sid in enumerate(emit_ids):
+        if sid in seen:
+            continue
+        seen.add(sid)
+        target = by_id.get(sid)
+        ordinal = int(target["scene_ordinal"]) if target else (index + 1)
+        scene_paras = list(target["paragraph_ids"]) if target else []
+        evidence = _evidence_for_scene(scene_paras, paragraph_ids)
+        profiles.append(_scene_profile_item(int(sid), ordinal, evidence, texts))
+    return profiles
 
 
 _LEVEL_KEYS = (
@@ -330,61 +463,7 @@ def synthesize_chapter_smoke_fake_text(request: ModelRequest) -> str:
             "average_reading_momentum": 0.6,
         }
     elif journeyish:
-        # Prefer explicit (scene_id, scene_ordinal) pairs from the prompt snapshot.
-        pairs = re.findall(
-            r'"scene_id"\s*:\s*(\d+)[^}]{0,120}?"scene_ordinal"\s*:\s*(\d+)',
-            combined,
-            flags=re.S,
-        )
-        if not pairs:
-            pairs = re.findall(
-                r'"scene_ordinal"\s*:\s*(\d+)[^}]{0,120}?"scene_id"\s*:\s*(\d+)',
-                combined,
-                flags=re.S,
-            )
-            pairs = [(sid, ord_) for ord_, sid in pairs]
-        if not pairs:
-            numeric_ids = [
-                int(item) for item in re.findall(r'"scene_id"\s*:\s*(\d+)', combined)
-            ]
-            # Preserve order, unique.
-            ordered_ids: list[int] = []
-            seen_ids: set[int] = set()
-            for sid in numeric_ids:
-                if sid not in seen_ids:
-                    seen_ids.add(sid)
-                    ordered_ids.append(sid)
-            ordinals = [
-                int(item) for item in re.findall(r'"scene_ordinal"\s*:\s*(\d+)', combined)
-            ]
-            ordered_ords: list[int] = []
-            seen_ords: set[int] = set()
-            for ordinal in ordinals:
-                if ordinal not in seen_ords:
-                    seen_ords.add(ordinal)
-                    ordered_ords.append(ordinal)
-            if ordered_ids and ordered_ords and len(ordered_ids) == len(ordered_ords):
-                pairs = [(str(sid), str(ord_)) for sid, ord_ in zip(ordered_ids, ordered_ords)]
-            elif ordered_ids:
-                pairs = [(str(sid), str(index + 1)) for index, sid in enumerate(ordered_ids)]
-        profiles = []
-        chunk = paragraph_ids[:2] if len(paragraph_ids) >= 2 else paragraph_ids
-        if pairs:
-            seen_ord: set[int] = set()
-            for sid_s, ord_s in pairs:
-                ordinal = int(ord_s)
-                if ordinal in seen_ord:
-                    continue
-                seen_ord.add(ordinal)
-                profiles.append(_scene_profile_item(int(sid_s), ordinal, chunk, texts))
-        else:
-            ordinals = sorted(
-                {int(item) for item in re.findall(r'"scene_ordinal"\s*:\s*(\d+)', combined)}
-            )
-            if not ordinals:
-                ordinals = [1]
-            for ordinal in ordinals:
-                profiles.append(_scene_profile_item(ordinal, ordinal, chunk, texts))
+        profiles = _build_journey_profiles(combined, paragraph_ids, texts)
         payload = {"contract_version": "2.0", "profiles": profiles}
     elif "场景边界识别器" in combined or ("boundary_candidate" in combined and "contract_version" not in combined):
         chapter_key = paragraph_ids[0].rsplit("-P", 1)[0]
@@ -462,11 +541,103 @@ async def chapter_smoke_fake_generate(
     )
 
 
+def validate_manual_gate_journey_fixture_v1(
+    *,
+    scene_specs: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Preflight for Manual Gate Journey Fake (success mode).
+
+    Raises ``RuntimeError`` with code ``MANUAL_GATE_FAKE_FIXTURE_INVALID`` on failure.
+    """
+    if not is_chapter_analysis_smoke_fake_enabled():
+        raise RuntimeError("MANUAL_GATE_FAKE_FIXTURE_INVALID: smoke fake not enabled")
+    if is_chapter_analysis_smoke_fake_fail_enabled():
+        raise RuntimeError("MANUAL_GATE_FAKE_FIXTURE_INVALID: fail-inject enabled")
+    mode = journey_smoke_fake_mode()
+    if mode == "repair_failure":
+        raise RuntimeError(
+            "MANUAL_GATE_FAKE_FIXTURE_INVALID: default mode must not be repair_failure"
+        )
+
+    specs = scene_specs or [
+        {
+            "scene_id": index,
+            "scene_ordinal": index,
+            "paragraph_ids": [f"B0001-C0001-P{index * 5 - 4:04d}", f"B0001-C0001-P{index * 5:04d}"],
+        }
+        for index in range(1, 5)
+    ]
+    profiles_target = []
+    for spec in specs:
+        pids = list(spec["paragraph_ids"])
+        profiles_target.append(
+            {
+                "scene_id": int(spec["scene_id"]),
+                "scene_ordinal": int(spec["scene_ordinal"]),
+                "paragraphs": [{"id": pid, "text": f"text-{pid}"} for pid in pids],
+            }
+        )
+    owned = [int(s["scene_id"]) for s in specs]
+    batch_prompt = (
+        "读者阅读旅程 scene_profiles contract_version 2.0\n"
+        + json.dumps(
+            {
+                "profiles_target": profiles_target,
+                "owned_scene_ids_json": json.dumps(owned),
+            },
+            ensure_ascii=False,
+        )
+    )
+    repair_prompt = (
+        batch_prompt
+        + f"\nstructural_repair expected scenes {owned}\n"
+        + "\n".join(f"missing scene_id {sid}" for sid in owned)
+    )
+    batch_req = ModelRequest(messages=[{"role": "user", "content": batch_prompt}], model="qwen-plus")
+    repair_req = ModelRequest(messages=[{"role": "user", "content": repair_prompt}], model="qwen-plus")
+    batch = json.loads(synthesize_chapter_smoke_fake_text(batch_req))
+    repair = json.loads(synthesize_chapter_smoke_fake_text(repair_req))
+    batch_profiles = batch.get("profiles") or []
+    repair_profiles = repair.get("profiles") or []
+    batch_ids = [int(p["scene_id"]) for p in batch_profiles]
+    repair_ids = [int(p["scene_id"]) for p in repair_profiles]
+    if sorted(batch_ids) != sorted(owned):
+        raise RuntimeError(
+            f"MANUAL_GATE_FAKE_FIXTURE_INVALID: batch ids {batch_ids} != {owned}"
+        )
+    if sorted(repair_ids) != sorted(owned):
+        raise RuntimeError(
+            f"MANUAL_GATE_FAKE_FIXTURE_INVALID: repair ids {repair_ids} != {owned}"
+        )
+    by_spec = {int(s["scene_id"]): set(s["paragraph_ids"]) for s in specs}
+    for profile in batch_profiles + repair_profiles:
+        sid = int(profile["scene_id"])
+        evidence = list(profile.get("evidence_paragraph_ids") or [])
+        if not evidence:
+            raise RuntimeError(f"MANUAL_GATE_FAKE_FIXTURE_INVALID: empty evidence scene={sid}")
+        allowed = by_spec.get(sid) or set()
+        for pid in evidence:
+            if allowed and pid not in allowed:
+                raise RuntimeError(
+                    f"MANUAL_GATE_FAKE_FIXTURE_INVALID: evidence {pid} out of scene {sid}"
+                )
+    return {
+        "ok": True,
+        "mode": mode,
+        "scene_ids": owned,
+        "batch_ids": batch_ids,
+        "repair_ids": repair_ids,
+        "provider_mode": "fake",
+    }
+
+
 __all__ = [
     "chapter_smoke_fake_generate",
     "chapter_smoke_fake_readiness_override",
     "is_chapter_analysis_smoke_fake_enabled",
     "is_chapter_analysis_smoke_fake_fail_enabled",
     "is_chapter_analysis_smoke_fake_requested",
+    "journey_smoke_fake_mode",
     "synthesize_chapter_smoke_fake_text",
+    "validate_manual_gate_journey_fixture_v1",
 ]
