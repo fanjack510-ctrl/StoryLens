@@ -7,7 +7,7 @@
   "target_version": "1.1.2",
   "public_branch": "fix/1.1.2-structured-output-truncation",
   "private_branch": "fix/1.1.2-structured-output-truncation",
-  "status": "tested",
+  "status": "verified",
   "release_pool_status": "pending",
   "include_in_next_release": true,
   "forward_port_required": true,
@@ -53,7 +53,7 @@
     "release/evidence/hotfix/1.1.2/CHG-20260728-040/"
   ],
   "user_summary": "修复场景边界裁决因固定 768 输出上限截断导致结构校验失败；分批裁决、自适应提高输出预算，并正确展示用量与边界进度。",
-  "technical_summary": "scene_boundary_adjudication uses max 10 targets/batch, compute_scene_boundary_output_budget_v1, adaptive truncation retry before JSON parse, AnalysisArtifact batch checkpoints, API/UI boundary progress + model_invocations usage aggregation.",
+  "technical_summary": "scene_boundary_adjudication uses max 10 targets/batch, compute_scene_boundary_output_budget_v1, adaptive truncation retry before JSON parse, AnalysisArtifact batch checkpoints, API/UI boundary progress + model_invocations usage aggregation. L3 live: 2 HTTP calls, requested_output_tokens=1792, finish_reason=stop, 20/20 coverage, ~¥0.028.",
   "acceptance_criteria": [
     "20 candidates => 2 batches; initial budget != 768",
     "truncation retry limits strictly increase; never 768→768→768",
@@ -61,7 +61,8 @@
     "budget < 1024 returns SCENE_BOUNDARY_OUTPUT_BUDGET_TOO_LOW with 0 provider calls",
     "completed batches reused on retry; raw provider response not persisted",
     "failed task shows usage from model_invocations; no scene progress 0/0 for adjudication",
-    "Fake-only verification; L3 real provider plan ready but not executed"
+    "Fake-only verification; L3 real provider plan ready but not executed",
+    "L3 real provider: 20 candidates / 2 batches / initial limit 1792 / coverage exact / cost under cap"
   ],
   "tests": [
     "apps/api/tests/test_chg040_boundary_adjudication_truncation.py",
@@ -71,7 +72,7 @@
     "apps/desktop/src/pages/TasksPage.chg040.test.ts",
     "private tests/test_scene_boundary_hotfix_chg040.py"
   ],
-  "manual_gate": "ready",
+  "manual_gate": "passed_l3_real_provider",
   "verification_evidence": [
     "release/evidence/hotfix/1.1.2/CHG-20260728-040/IMPLEMENTATION.md",
     "release/evidence/hotfix/1.1.2/CHG-20260728-040/OUTPUT_BUDGET_TESTS.json",
@@ -80,7 +81,9 @@
     "release/evidence/hotfix/1.1.2/CHG-20260728-040/USAGE_UI_TESTS.json",
     "release/evidence/hotfix/1.1.2/CHG-20260728-040/REGRESSION.md",
     "release/evidence/hotfix/1.1.2/CHG-20260728-040/L3_REAL_PROVIDER_TEST_PLAN.md",
-    "release/evidence/hotfix/1.1.2/CHG-20260728-040/FINAL_IMPLEMENTATION_REPORT.md"
+    "release/evidence/hotfix/1.1.2/CHG-20260728-040/FINAL_IMPLEMENTATION_REPORT.md",
+    "release/evidence/hotfix/1.1.2/CHG-20260728-040/L3_REAL_PROVIDER_RESULT.json",
+    "release/evidence/hotfix/1.1.2/CHG-20260728-040/L3_REAL_PROVIDER_VERIFICATION.md"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -96,5 +99,5 @@
   },
   "blocker_level": null,
   "created_at": "2026-07-28T06:40:00Z",
-  "updated_at": "2026-07-28T07:20:00Z"
+  "updated_at": "2026-07-28T07:30:15Z"
 }
