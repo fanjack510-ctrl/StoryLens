@@ -7,7 +7,7 @@ MANUAL GATE: MG-WB-0.2
 PUBLIC WORKTREE: D:\Dstorylens-wt-whole-book-v120-integration
 PUBLIC BRANCH: integration/whole-book-v120
 PUBLIC BASE HEAD: b5f88ac32dde55520e0a0f4d62c7a2303ac4914e (prompt) / create tip 32fc8a8ce3288afcdd860e70ad4b36cec5e09b97
-PUBLIC FINAL HEAD: e7e642567b97711fa9740c78f33d1fcf383ccd09
+PUBLIC FINAL HEAD: f37ba552a31ef38cbaa1b5f393f1d78c4e062da0
 
 PRIVATE WORKTREE: D:\Dstorylens-private-engine-wt-whole-book-v120-integration
 PRIVATE BRANCH: integration/whole-book-v120
