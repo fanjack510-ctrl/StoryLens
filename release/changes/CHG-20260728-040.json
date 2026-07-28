@@ -1,13 +1,13 @@
 {
   "id": "CHG-20260728-040",
-  "title": "Investigate Aliyun Qwen scene-pipeline structured_output truncation (adjudication max_tokens=768)",
+  "title": "Fix scene_boundary_adjudication structured output truncation (batching + adaptive output budget)",
   "type": "fix",
   "issue_id": "INC-20260728-002",
   "base_version": "1.1.1",
   "target_version": "1.1.2",
   "public_branch": "fix/1.1.2-structured-output-truncation",
   "private_branch": "fix/1.1.2-structured-output-truncation",
-  "status": "investigated",
+  "status": "verified",
   "release_pool_status": "pending",
   "include_in_next_release": true,
   "forward_port_required": true,
@@ -18,14 +18,37 @@
     "apps/api/app/core/config.py",
     "apps/api/app/services/scene_pipeline.py",
     "apps/api/app/services/scene_boundary_adjudicator.py",
-    "apps/desktop/src/pages/TasksPage.tsx"
+    "apps/desktop/src/pages/TasksPage.tsx",
+    "apps/api/app/services/scene_boundary_adjudication_batching.py",
+    "apps/api/app/services/scene_boundary_output_budget.py",
+    "apps/api/app/services/boundary_adjudication_checkpoints.py",
+    "apps/api/app/api/v1/analysis.py",
+    "packages/prompts/scene_boundary_adjudication/v1.1.2"
   ],
   "commits": [
     {
       "sha": "03c9fc488ffb76594bc50e46549433f29091ddc0",
       "message": "docs(hotfix): investigate structured output truncation",
+      "primary": false,
+      "multi_change_reason": "investigation baseline docs"
+    },
+    {
+      "sha": "b7d05e73c33b450321d6e39b1b009c1ae16a5d92",
+      "message": "fix(provider): raise truncation retry output budget",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "dfeec5f74da82fa76875a36933c955ae33a49f4f",
+      "message": "fix(tasks): show boundary progress and failed usage",
+      "primary": false,
+      "multi_change_reason": "UI/API progress+usage companion"
+    },
+    {
+      "sha": "90fb771be894c8cd5b72ad17058281482a6e06f0",
+      "message": "docs(hotfix): verify structured output truncation fix",
+      "primary": false,
+      "multi_change_reason": "evidence pack"
     }
   ],
   "modules": [
@@ -34,46 +57,74 @@
     "apps/api/app/services/cloud_output_policy.py",
     "apps/api/app/core/config.py",
     "apps/api/app/services/scene_pipeline.py",
-    "apps/api/app/services/scene_boundary_adjudicator.py"
+    "apps/api/app/services/scene_boundary_adjudicator.py",
+    "apps/api",
+    "apps/desktop",
+    "packages/prompts"
   ],
   "files": [
     "release/changes/CHG-20260728-040.json",
     "release/trains/1.1.2.json",
     "release/evidence/hotfix/1.1.2/CHG-20260728-040/"
   ],
-  "user_summary": "调查安装版场景分析任务在 structured_output 阶段因输出上限截断导致结构校验失败的问题；本阶段仅只读取证与根因分析，不改生产业务代码。",
-  "technical_summary": "Task #3 failed at scene_boundary_adjudication with finish_reason=length, requested_output_tokens=768 (cloud_output_scene_boundary). Truncation retries reused the same 768 limit. User hard limit was 4000. No production source changes in this investigation step.",
+  "user_summary": "修复场景边界裁决因固定 768 输出上限截断导致结构校验失败；分批裁决、自适应提高输出预算，并正确展示用量与边界进度。",
+  "technical_summary": "scene_boundary_adjudication uses max 10 targets/batch, compute_scene_boundary_output_budget_v1, adaptive truncation retry before JSON parse, AnalysisArtifact batch checkpoints, API/UI boundary progress + model_invocations usage aggregation. L3 live: 2 HTTP calls, requested_output_tokens=1792, finish_reason=stop, 20/20 coverage, ~¥0.028. L3: provider=aliyun_qwen_plus model=qwen3.7-plus logical_calls=2 actual_calls=2 cost_cny=0.02787 formal_db_writes=0. public_verified_head=956afe025c109cdce4a4c46ecadb36660bd94010 private_verified_head=ebb7a8d30464558b1a7488abba8cb88e47700044. manual_verification=passed l3_verification=passed. public_integration_commit=null private_integration_commit=null (filled after merge finalize). integration_real_provider_calls=0.",
   "acceptance_criteria": [
     "Public/Private hotfix branches created from unique v1.1.1 publish baseline",
     "Incident snapshot copied read-only without formal AppData writes",
     "Task #3 forensics recorded without secrets/full prompt/response bodies",
     "Root cause categorized with code+DB evidence",
-    "Minimal fix recommendation documented; implementation deferred"
+    "Minimal fix recommendation documented; implementation deferred",
+    "20 candidates => 2 batches; initial budget != 768",
+    "truncation retry limits strictly increase; never 768→768→768",
+    "hard cap exhaustion returns SCENE_BOUNDARY_OUTPUT_TRUNCATED_AT_HARD_CAP",
+    "budget < 1024 returns SCENE_BOUNDARY_OUTPUT_BUDGET_TOO_LOW with 0 provider calls",
+    "completed batches reused on retry; raw provider response not persisted",
+    "failed task shows usage from model_invocations; no scene progress 0/0 for adjudication",
+    "Fake-only verification; L3 real provider plan ready but not executed",
+    "L3 real provider: 20 candidates / 2 batches / initial limit 1792 / coverage exact / cost under cap"
   ],
   "tests": [
     "read-only DB forensics on incident copy",
     "installed binary SHA256 match vs release/evidence/1.1.1",
-    "code path review on v1.1.1 tag sources"
+    "code path review on v1.1.1 tag sources",
+    "apps/api/tests/test_chg040_boundary_adjudication_truncation.py",
+    "apps/api/tests/test_phase_2b2.py",
+    "apps/api/tests/test_phase_2b8.py",
+    "apps/api/tests/test_scene_pipeline.py",
+    "apps/desktop/src/pages/TasksPage.chg040.test.ts",
+    "private tests/test_scene_boundary_hotfix_chg040.py"
   ],
-  "manual_gate": "REVIEW before IMPLEMENTATION prompt",
+  "manual_gate": "passed_l3_real_provider",
   "verification_evidence": [
     "release/evidence/hotfix/1.1.2/CHG-20260728-040/BASELINE.json",
     "release/evidence/hotfix/1.1.2/CHG-20260728-040/FINAL_REPORT.md",
-    "release/evidence/hotfix/1.1.2/CHG-20260728-040/ROOT_CAUSE.md"
+    "release/evidence/hotfix/1.1.2/CHG-20260728-040/ROOT_CAUSE.md",
+    "release/evidence/hotfix/1.1.2/CHG-20260728-040/IMPLEMENTATION.md",
+    "release/evidence/hotfix/1.1.2/CHG-20260728-040/OUTPUT_BUDGET_TESTS.json",
+    "release/evidence/hotfix/1.1.2/CHG-20260728-040/BATCHING_TESTS.json",
+    "release/evidence/hotfix/1.1.2/CHG-20260728-040/TRUNCATION_RETRY_TESTS.json",
+    "release/evidence/hotfix/1.1.2/CHG-20260728-040/USAGE_UI_TESTS.json",
+    "release/evidence/hotfix/1.1.2/CHG-20260728-040/REGRESSION.md",
+    "release/evidence/hotfix/1.1.2/CHG-20260728-040/L3_REAL_PROVIDER_TEST_PLAN.md",
+    "release/evidence/hotfix/1.1.2/CHG-20260728-040/FINAL_IMPLEMENTATION_REPORT.md",
+    "release/evidence/hotfix/1.1.2/CHG-20260728-040/L3_REAL_PROVIDER_RESULT.json",
+    "release/evidence/hotfix/1.1.2/CHG-20260728-040/L3_REAL_PROVIDER_VERIFICATION.md",
+    "release/evidence/hotfix/1.1.2/CHG-20260728-040/"
   ],
   "data_compatibility": {
     "database_changed": false,
     "migration_required": false,
     "user_data_compatible": true,
-    "notes": "Investigation only; no schema or business code changes."
+    "notes": "Reuses AnalysisArtifact; no schema migration. Investigation artifacts retained under same evidence folder. Historical L3 real provider calls=2; this integration round real provider calls=0."
   },
   "release_impact": {
     "requires_reanalysis": false,
-    "requires_restart": false,
-    "updater_impact": false,
+    "requires_restart": true,
+    "updater_impact": true,
     "breaking_change": false
   },
   "blocker_level": null,
   "created_at": "2026-07-28T06:40:00Z",
-  "updated_at": "2026-07-28T07:42:00Z"
+  "updated_at": "2026-07-28T08:39:13Z"
 }

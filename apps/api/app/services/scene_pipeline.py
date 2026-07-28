@@ -38,12 +38,25 @@ from app.services.compact_transition_adapter_v34 import compact_v34_to_canonical
 from app.services.transition_batch_planner import plan_transition_batches
 from app.services.scene_boundary_adjudicator import (
     adjudicated_to_canonical,
-    adjudication_snapshot,
-    plan_adjudication_batches,
-    validate_adjudication,
     validate_candidate_detection,
     validate_candidate_detection_for_review,
     validate_candidate_detection_structure,
+)
+from app.services.scene_boundary_adjudication_batching import (
+    ADJUDICATION_PROMPT_VERSION,
+    adjudication_snapshot_v112,
+    merge_adjudication_batches,
+    plan_output_bounded_adjudication_batches,
+    validate_batch_coverage,
+)
+from app.services.scene_boundary_output_budget import (
+    SceneBoundaryOutputBudgetTooLow,
+    compute_scene_boundary_output_budget_v1,
+)
+from app.services.boundary_adjudication_checkpoints import (
+    load_reusable_adjudication_batches,
+    save_adjudication_batch_checkpoint,
+    save_adjudication_plan,
 )
 from app.services.boundary_detection_checkpoints import (
     PlannedDetectionBatch,
@@ -52,6 +65,7 @@ from app.services.boundary_detection_checkpoints import (
     ordered_checkpoint_decisions,
     upsert_detection_checkpoint,
 )
+from app.services.cloud_output_policy import read_user_output_hard_cap
 
 
 def aggregate_boundary_candidates(
@@ -731,6 +745,30 @@ def classify_pipeline_error(exc: Exception) -> tuple[str, str, bool, str]:
                 False,
                 "查看脱敏技术详情",
             )
+        if exc.error_code in {
+            "OUTPUT_TRUNCATED",
+            "SCENE_BOUNDARY_OUTPUT_TRUNCATED",
+            "SCENE_BOUNDARY_OUTPUT_TRUNCATED_AT_HARD_CAP",
+            "SCENE_BOUNDARY_OUTPUT_BUDGET_TOO_LOW",
+            "SCENE_BOUNDARY_BATCH_COVERAGE_INVALID",
+            "SCENE_BOUNDARY_BATCH_SCHEMA_INVALID",
+            "SCENE_BOUNDARY_BATCH_CHECKPOINT_INVALID",
+        }:
+            hints = {
+                "SCENE_BOUNDARY_OUTPUT_TRUNCATED_AT_HARD_CAP": (
+                    "请提高“最大输出 Token”后重试。已完成的裁决批次不会重复执行。"
+                ),
+                "SCENE_BOUNDARY_OUTPUT_BUDGET_TOO_LOW": (
+                    "请将最大输出 Token 调整到至少 1024 后重试。"
+                ),
+                "SCENE_BOUNDARY_OUTPUT_TRUNCATED": "可重试；输出曾被截断，系统将提高本次输出预算。",
+            }
+            return (
+                exc.error_code,
+                "structured_output",
+                True,
+                hints.get(exc.error_code, "可重试；输出曾被截断"),
+            )
         if exc.error_code == "OUTPUT_TRUNCATED":
             return (
                 "OUTPUT_TRUNCATED",
@@ -908,13 +946,70 @@ async def _execute(session: Session, gateway: ModelGateway, run: AnalysisRun) ->
             candidate_ids = [
                 item.transition_id for item in valid_decisions if item.boundary_candidate
             ]
-            adjudication_batches = plan_adjudication_batches(
-                candidate_ids, transition_candidates, paragraph_text
+            adjudication_batches = plan_output_bounded_adjudication_batches(
+                candidate_ids,
+                transition_candidates,
+                paragraph_text,
+                run_id=run.id,
+                prompt_version=ADJUDICATION_PROMPT_VERSION,
             )
-            verdicts = []
-            adjudication_prompt = load_prompt("scene_boundary_adjudication", "v1")
+            save_adjudication_plan(
+                session,
+                run=run,
+                candidate_ids=candidate_ids,
+                batch_total=len(adjudication_batches),
+                prompt_version=ADJUDICATION_PROMPT_VERSION,
+            )
+            run.progress_total = max(len(adjudication_batches), 1)
+            run.progress_current = 0
+            session.commit()
+            reusable = load_reusable_adjudication_batches(session, run=run)
+            batch_results: list[tuple[list[str], BoundaryCandidateAdjudicationResult]] = []
+            adjudication_prompt = load_prompt(
+                "scene_boundary_adjudication", ADJUDICATION_PROMPT_VERSION
+            )
             for batch in adjudication_batches:
-                adjudication_input = adjudication_snapshot(
+                targets = list(batch.target_candidate_ids)
+                cached = reusable.get(batch.content_key)
+                if cached and cached.get("status") == "completed":
+                    cached_result = BoundaryCandidateAdjudicationResult.model_validate(
+                        {
+                            "contract_version": "1.0",
+                            "verdicts": cached.get("verdicts") or [],
+                        }
+                    )
+                    validate_batch_coverage(
+                        cached_result,
+                        target_candidate_ids=targets,
+                        context_only_candidate_ids=list(batch.context_only_candidate_ids),
+                        known_candidate_ids=set(candidate_ids),
+                    )
+                    batch_results.append((targets, cached_result))
+                    run.progress_current = len(batch_results)
+                    session.commit()
+                    continue
+
+                # Budget gate before any provider call for this batch.
+                caps = gateway.get(run.provider).capabilities()
+                user_hard = read_user_output_hard_cap(
+                    session, cloud=bool(caps.cloud)
+                )
+                try:
+                    budget = compute_scene_boundary_output_budget_v1(
+                        target_candidate_count=len(targets),
+                        user_output_hard_cap=user_hard,
+                        model_output_cap=getattr(caps, "max_output_tokens", None),
+                        provider_output_cap=getattr(caps, "max_output_tokens", None),
+                    )
+                except SceneBoundaryOutputBudgetTooLow as exc:
+                    raise StructuredOutputError(
+                        str(exc),
+                        "SCENE_BOUNDARY_OUTPUT_BUDGET_TOO_LOW",
+                        category="structured_output",
+                        retryable=True,
+                    ) from exc
+
+                adjudication_input = adjudication_snapshot_v112(
                     chapter_id=key,
                     title=chapter.title,
                     batch=batch,
@@ -934,18 +1029,56 @@ async def _execute(session: Session, gateway: ModelGateway, run: AnalysisRun) ->
                     user_content=adjudication_prompt.user_template.format(
                         input_json=json.dumps(adjudication_input, ensure_ascii=False)
                     ),
-                    business_validator=lambda value, batch=batch: validate_adjudication(
-                        value, list(batch.candidate_transition_ids)
+                    business_validator=lambda value, batch=batch: validate_batch_coverage(
+                        value,
+                        target_candidate_ids=list(batch.target_candidate_ids),
+                        context_only_candidate_ids=list(batch.context_only_candidate_ids),
+                        known_candidate_ids=set(candidate_ids),
                     ),
                     initial_invocation_kind="boundary_candidate_adjudication",
+                    output_tokens_override=budget.initial_output_limit,
+                    adaptive_truncation_budget=True,
+                    truncation_hard_cap=budget.effective_hard_cap,
                 )
-                verdicts.extend(adjudicated.verdicts)
+                validate_batch_coverage(
+                    adjudicated,
+                    target_candidate_ids=targets,
+                    context_only_candidate_ids=list(batch.context_only_candidate_ids),
+                    known_candidate_ids=set(candidate_ids),
+                )
+                save_adjudication_batch_checkpoint(
+                    session,
+                    run=run,
+                    batch_key=batch.batch_key,
+                    content_key=batch.content_key,
+                    batch_index=batch.batch_index,
+                    target_candidate_ids=targets,
+                    result=adjudicated,
+                    usage_summary={
+                        "target_candidate_count": len(targets),
+                        "context_candidate_count": len(batch.context_only_candidate_ids),
+                        "initial_output_limit": budget.initial_output_limit,
+                        "effective_hard_cap": budget.effective_hard_cap,
+                    },
+                    prompt_version=ADJUDICATION_PROMPT_VERSION,
+                )
+                batch_results.append((targets, adjudicated))
+                run.progress_current = len(batch_results)
+                session.commit()
+
+            if not adjudication_batches:
+                merged = BoundaryCandidateAdjudicationResult(
+                    contract_version="1.0", verdicts=[]
+                )
+            else:
+                merged = merge_adjudication_batches(
+                    original_candidate_order=candidate_ids,
+                    batch_results=batch_results,
+                )
             result = adjudicated_to_canonical(
                 chapter_id=key,
                 decisions=valid_decisions,
-                verdicts=BoundaryCandidateAdjudicationResult(
-                    contract_version="1.0", verdicts=verdicts
-                ),
+                verdicts=merged,
                 candidates=transition_candidates,
                 allowed_paragraph_ids=allowed,
             )

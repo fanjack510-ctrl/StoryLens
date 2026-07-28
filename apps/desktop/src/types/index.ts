@@ -371,6 +371,22 @@ export type Run = {
   journey_result_available?: boolean;
   journey_error_code?: string | null;
   primary_action?: string | null;
+  failure_substage?: string | null;
+  failure_reason_code?: string | null;
+  boundary_candidate_total?: number | null;
+  boundary_candidate_completed?: number | null;
+  boundary_batch_total?: number | null;
+  boundary_batch_completed?: number | null;
+  usage_invocation_count?: number | null;
+  usage_input_tokens?: number | null;
+  usage_output_tokens?: number | null;
+  usage_total_tokens?: number | null;
+  usage_estimated_cost?: number | null;
+  usage_cost_unknown?: boolean;
+  last_requested_output_tokens?: number | null;
+  last_actual_output_tokens?: number | null;
+  last_finish_reason?: string | null;
+  truncation_attempt_count?: number | null;
   run_started_at?: string;
   scene_validation_detail?: {
     validation_error_message?: string;

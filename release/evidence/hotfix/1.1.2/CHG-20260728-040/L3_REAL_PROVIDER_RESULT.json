@@ -1,0 +1,117 @@
+{
+  "change_id": "CHG-20260728-040",
+  "issue_id": "INC-20260728-002",
+  "provider": "aliyun_qwen_plus",
+  "model": "qwen3.7-plus",
+  "candidate_count": 20,
+  "formal_database_writes": 0,
+  "temp_db_deleted": true,
+  "authorized": true,
+  "caps": {
+    "max_logical_calls": 4,
+    "max_actual_calls": 6,
+    "max_input_tokens": 40000,
+    "max_output_tokens": 24000,
+    "per_request_output_hard_cap": 4000,
+    "max_cost_cny": 5.0
+  },
+  "batch_total": 2,
+  "max_target_per_batch": 10,
+  "initial_limits": [
+    {
+      "batch_index": 0,
+      "target_count": 10,
+      "context_count": 1,
+      "initial_output_limit": 1792,
+      "effective_hard_cap": 4000
+    },
+    {
+      "batch_index": 1,
+      "target_count": 10,
+      "context_count": 1,
+      "initial_output_limit": 1792,
+      "effective_hard_cap": 4000
+    }
+  ],
+  "batch_outcomes": [
+    {
+      "batch_index": 0,
+      "target_ids_count": 10,
+      "actual_calls": 1,
+      "verdict_count": 10,
+      "requested_limits": [
+        1792
+      ],
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "batch_index": 1,
+      "target_ids_count": 10,
+      "actual_calls": 1,
+      "verdict_count": 10,
+      "requested_limits": [
+        1792
+      ],
+      "finish_reasons": [
+        "stop"
+      ]
+    }
+  ],
+  "success": true,
+  "logical_calls": 2,
+  "candidates_covered": 20,
+  "coverage_exact": true,
+  "accept_count": 10,
+  "model_invocations_persisted_in_temp_db": 2,
+  "usage_from_invocations": {
+    "calls": 2,
+    "input_tokens": 8975,
+    "output_tokens": 1240,
+    "requested_output_tokens": [
+      1792,
+      1792
+    ],
+    "finish_reasons": [
+      "stop",
+      "stop"
+    ]
+  },
+  "actual_calls": 2,
+  "call_log": [
+    {
+      "call_index": 1,
+      "requested_output_tokens": 1792,
+      "finish_reason": "stop",
+      "input_tokens": 4484,
+      "output_tokens": 620,
+      "total_tokens": 5104,
+      "estimated_cost_cny": 0.013928,
+      "latency_ms": 12889,
+      "http_status": 200,
+      "model": "qwen3.7-plus",
+      "request_id": "09c9c4bf-5c62-97d9-a534-f7ef8569b95d"
+    },
+    {
+      "call_index": 2,
+      "requested_output_tokens": 1792,
+      "finish_reason": "stop",
+      "input_tokens": 4491,
+      "output_tokens": 620,
+      "total_tokens": 5111,
+      "estimated_cost_cny": 0.013942,
+      "latency_ms": 12593,
+      "http_status": 200,
+      "model": "qwen3.7-plus",
+      "request_id": "56174cf1-8579-9467-8f75-5c53a9cd5b4f"
+    }
+  ],
+  "usage_totals": {
+    "input_tokens": 8975,
+    "output_tokens": 1240,
+    "estimated_cost_cny": 0.02787
+  },
+  "truncation_retry_limits_strictly_increasing": true,
+  "fixed_768_absent": true
+}

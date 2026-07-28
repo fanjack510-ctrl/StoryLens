@@ -451,6 +451,23 @@ class AnalysisRunResponse(BaseModel):
     journey_result_available: bool = False
     journey_error_code: str | None = None
     primary_action: str | None = None
+    # CHG-20260728-040: boundary adjudication progress + usage aggregation
+    failure_substage: str | None = None
+    failure_reason_code: str | None = None
+    boundary_candidate_total: int | None = None
+    boundary_candidate_completed: int | None = None
+    boundary_batch_total: int | None = None
+    boundary_batch_completed: int | None = None
+    usage_invocation_count: int | None = None
+    usage_input_tokens: int | None = None
+    usage_output_tokens: int | None = None
+    usage_total_tokens: int | None = None
+    usage_estimated_cost: float | None = None
+    usage_cost_unknown: bool = False
+    last_requested_output_tokens: int | None = None
+    last_actual_output_tokens: int | None = None
+    last_finish_reason: str | None = None
+    truncation_attempt_count: int | None = None
 
 
 class SceneAnalysisOfflineReplayRequest(BaseModel):
