@@ -3,7 +3,7 @@
   "title": "WB-0.3 Capability Consent and Cost Estimates",
   "type": "feature",
   "base_version": "1.1.1",
-  "status": "implemented",
+  "status": "verified",
   "include_in_next_release": true,
   "commits": [
     {
@@ -16,10 +16,14 @@
   "modules": [],
   "files": [],
   "user_summary": "Whole-book capability registry, cost estimates, consents; entries remain disabled.",
-  "technical_summary": "",
+  "technical_summary": "Capability registry, cost estimates, consents, internal APIs; entries remain disabled.",
   "acceptance_criteria": [],
-  "tests": [],
-  "verification_evidence": [],
+  "tests": [
+    "apps/api/tests/test_whole_book_wb03_capability_cost.py"
+  ],
+  "verification_evidence": [
+    "release/evidence/whole-book/WB-0.3/FINAL_REPORT.md"
+  ],
   "data_compatibility": {
     "database_changed": false,
     "migration_required": false,
@@ -35,5 +39,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-28T02:26:18Z",
-  "updated_at": "2026-07-28T02:45:26Z"
+  "updated_at": "2026-07-28T02:45:43Z"
 }
