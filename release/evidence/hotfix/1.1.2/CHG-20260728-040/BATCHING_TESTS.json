@@ -1,0 +1,15 @@
+{
+  "change_id": "CHG-20260728-040",
+  "suite": "batching",
+  "result": "PASS",
+  "max_target_candidates_per_batch": 10,
+  "tests": [
+    "0/1/10/11/20/25 candidate batch counts",
+    "stable order",
+    "context-only neighbors",
+    "coverage validation",
+    "merge preserves original order",
+    "context-only leak rejected"
+  ],
+  "twenty_candidate_batch_count": 2
+}

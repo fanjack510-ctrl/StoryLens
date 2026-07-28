@@ -1,0 +1,19 @@
+{
+  "change_id": "CHG-20260728-040",
+  "suite": "output_budget",
+  "result": "PASS",
+  "tests": [
+    "test_round_up_to_256",
+    "test_initial_budget_examples[1/5/10]",
+    "test_budget_respects_user_hard_cap_trim",
+    "test_budget_respects_provider_and_model_caps",
+    "test_budget_too_low_blocks",
+    "test_truncation_retry_limits_strictly_increase",
+    "test_truncation_retry_at_1024_hard_cap_stops"
+  ],
+  "notes": [
+    "10 candidates => initial_output_limit=1792",
+    "hard_cap 768 => SCENE_BOUNDARY_OUTPUT_BUDGET_TOO_LOW",
+    "fixed 768 policy not used for adjudication initial budget"
+  ]
+}
