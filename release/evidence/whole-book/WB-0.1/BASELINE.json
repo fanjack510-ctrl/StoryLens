@@ -11,7 +11,8 @@
     "clean_except_tmp": true,
     "untracked": [
       "tmp/"
-    ]
+    ],
+    "public_clean_before": "NO — only untracked tmp/, excluded from commit and release evidence"
   },
   "v1_1_1": {
     "tag_annotated": "6f7d88c41f8006176fe77dd92bdb06cf1c6683e3",
@@ -59,5 +60,12 @@
     "push": false,
     "tag": false,
     "github_release": false
+  },
+  "mg_wb_0_1": {
+    "result": "PASS",
+    "change_verified": true,
+    "verified_at_utc": "2026-07-28T01:32:41Z",
+    "allow_enter": "WB-0.2-DATA-CONTRACTS",
+    "wb_0_2_auto_started": false
   }
 }

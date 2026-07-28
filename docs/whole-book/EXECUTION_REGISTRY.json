@@ -195,9 +195,11 @@
       "title": "Freeze baselines, IDs, gates, evidence policy",
       "acceptance_level": "L1",
       "evidence_dir": "release/evidence/whole-book/WB-0.1-BASELINE-FREEZE/",
-      "wb_status": "manual verification",
+      "wb_status": "verified",
       "depends_on": [],
-      "next_step": "WB-0.2-DATA-CONTRACTS"
+      "next_step": "WB-0.2-DATA-CONTRACTS",
+      "manual_gate_result": "PASS",
+      "verified_at_utc": "2026-07-28T01:32:41Z"
     },
     {
       "order": 2,
@@ -739,5 +741,14 @@
       ],
       "next_step": null
     }
-  ]
+  ],
+  "wb_0_1": {
+    "manual_gate": "MG-WB-0.1",
+    "result": "PASS",
+    "change_status": "verified",
+    "verified_at_utc": "2026-07-28T01:32:41Z",
+    "public_clean_before_note": "NO — only untracked tmp/, excluded from commit and release evidence",
+    "allow_wb_0_2": true,
+    "wb_0_2_started": false
+  }
 }

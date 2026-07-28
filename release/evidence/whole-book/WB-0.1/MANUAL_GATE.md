@@ -84,3 +84,27 @@ WB-0.2-DATA-CONTRACTS（仅在用户批准后另开 Prompt）
 
 Evidence：
 release/evidence/whole-book/WB-0.1/
+
+---
+
+## 用户验收结果（recorded）
+
+MG-WB-0.1：
+PASS
+
+CHG-20260728-002：
+verified
+
+验收补充：
+PUBLIC CLEAN BEFORE：
+NO — only untracked tmp/, excluded from commit and release evidence
+
+允许进入：
+WB-0.2-DATA-CONTRACTS
+
+附加约束已确认：
+1. WB-0.2 开始前须创建/切换到 integration/whole-book-v120 独立工作树；
+2. 不得在 release/1.1.1 做全书业务开发；
+3. 不得触碰 structure-empty-policy 受保护脏工作树；
+4. 本操作仅标记 CHG-002 verified，不自动开始 WB-0.2；
+5. 等待新的 WB-0.2 实施 Prompt。
