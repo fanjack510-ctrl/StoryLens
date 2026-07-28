@@ -3,8 +3,10 @@
 ## Status
 
 CHG-20260728-002: **tested** (awaiting MG-WB-0.1)  
+WB-0.1 wb_status: **manual verification**  
 Manual Gate: **ready**  
-Allow WB-0.2: **NO** until user PASS
+Allow WB-0.2: **NO** until user PASS  
+Public HEAD after freeze commits: see `git rev-parse HEAD` on `release/1.1.1` (docs-only commits after audit tip `b2c6a89…`)
 
 ## Delivered
 
