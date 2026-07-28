@@ -1,0 +1,22 @@
+{
+  "defect": "DEFECT-041-11..16",
+  "observed_url": "/books/1?chapter=1&analysisRun=1&view=result&tab=reader-journey",
+  "journeyRun_present": false,
+  "confirm_start_handler": "SceneBoundaryReviewPanel.confirmMutation.onSuccess → onConfirmed({ journeyRunId: result.journey_run_id })",
+  "navigation_intended": {
+    "view": "result",
+    "tab": "reader-journey",
+    "analysisRun": "1",
+    "journeyRun": "2"
+  },
+  "binding_bug_pre_fix": "boundJourneyRunId ignored searchParams.journeyRun",
+  "root_cause_classes": ["B", "D", "E", "G"],
+  "round3_fix": [
+    "resolveCurrentReaderJourney unified selector",
+    "URL journeyRun read + preserve across setView/setResultTab/refetch",
+    "ReaderJourneyResultResponse exposes scene_revision_id/started_at/result_status",
+    "composition prefers live journey GET over stale parent journey_running",
+    "gate suppressed when selected journey exists",
+    "elapsed from selected journey only on journey tab"
+  ]
+}

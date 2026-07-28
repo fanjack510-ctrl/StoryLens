@@ -134,10 +134,20 @@ def _serialize_result(session: Session, journey_run: ReaderJourneyRun) -> Reader
         deterministic = json.loads(summary.deterministic_statistics_json or "{}")
         diagnosis = summary.one_sentence_diagnosis
     visualization = None
-    integrity_payload = scan_reader_journey_integrity(session, journey_run=journey_run)
+    try:
+        integrity_payload = scan_reader_journey_integrity(session, journey_run=journey_run)
+    except Exception:
+        integrity_payload = {
+            "integrity_status": "unavailable",
+            "trusted": False,
+            "issues": [],
+        }
     if journey_run.status == "succeeded":
-        visualization = build_reader_journey_visualization(session, journey_run)
-        visualization = redact_visualization_for_integrity(visualization, integrity_payload)
+        try:
+            visualization = build_reader_journey_visualization(session, journey_run)
+            visualization = redact_visualization_for_integrity(visualization, integrity_payload)
+        except Exception:
+            visualization = None
     contract_version = journey_run.scene_contract_version
     compat = enrich_result_compatibility(
         {},
@@ -191,7 +201,15 @@ def _serialize_result(session: Session, journey_run: ReaderJourneyRun) -> Reader
         one_sentence_diagnosis=diagnosis,
         visualization=visualization,
         created_at=journey_run.created_at,
+        started_at=journey_run.started_at,
+        updated_at=journey_run.updated_at,
         completed_at=journey_run.completed_at,
+        scene_revision_id=journey_run.scene_revision_id,
+        result_status=journey_run.result_status,
+        error_code=journey_run.root_error_code,
+        retryable=bool(journey_run.retryable),
+        total_scene_count=journey_run.total_scene_count,
+        completed_scene_count=journey_run.completed_scene_count,
         v2_question_lifecycle=v2_lifecycle,
         v2_scene_diagnoses=v2_diagnoses,
         integrity=integrity_payload,
@@ -317,6 +335,7 @@ def get_reader_journey_for_run(
     run_id: int,
     book_id: int | None = None,
     chapter_id: int | None = None,
+    journey_run_id: int | None = None,
     session: Session = Depends(get_db),
 ) -> ReaderJourneyResultResponse | None:
     analysis_run = session.get(AnalysisRun, run_id)
@@ -344,17 +363,37 @@ def get_reader_journey_for_run(
                 analysis_run_id=run_id,
                 book_id=book_id,
             )
-    journey_run = session.scalar(
-        select(ReaderJourneyRun)
-        .where(ReaderJourneyRun.analysis_run_id == run_id)
-        .order_by(ReaderJourneyRun.id.desc())
-    )
+    journey_run: ReaderJourneyRun | None = None
+    if journey_run_id is not None:
+        journey_run = session.get(ReaderJourneyRun, journey_run_id)
+        if journey_run is None or int(journey_run.analysis_run_id) != int(run_id):
+            raise error(404, "READER_JOURNEY_RUN_NOT_FOUND", "读者旅程运行不存在")
+    else:
+        journey_run = session.scalar(
+            select(ReaderJourneyRun)
+            .where(ReaderJourneyRun.analysis_run_id == run_id)
+            .order_by(ReaderJourneyRun.id.desc())
+        )
     if journey_run is None:
         return None
     if book_id is not None and int(journey_run.book_id) != int(book_id):
         raise error(409, ERROR_RUN_SCOPE, "reader journey与book不匹配", book_id=book_id)
     if chapter_id is not None and int(journey_run.chapter_id) != int(chapter_id):
         raise error(409, ERROR_RUN_SCOPE, "reader journey与chapter不匹配", chapter_id=chapter_id)
+    return _serialize_result(session, journey_run)
+
+
+@router.get(
+    "/reader-journey-runs/{journey_run_id}",
+    response_model=ReaderJourneyResultResponse,
+)
+def get_reader_journey_run(
+    journey_run_id: int,
+    session: Session = Depends(get_db),
+) -> ReaderJourneyResultResponse:
+    journey_run = session.get(ReaderJourneyRun, journey_run_id)
+    if journey_run is None:
+        raise error(404, "READER_JOURNEY_RUN_NOT_FOUND", "读者旅程运行不存在")
     return _serialize_result(session, journey_run)
 
 

@@ -283,16 +283,25 @@ export const analysisApi = {
     ),
   readerJourney: (
     runId: number,
-    scope?: { bookId?: number | null; chapterId?: number | null },
+    scope?: {
+      bookId?: number | null;
+      chapterId?: number | null;
+      journeyRunId?: number | null;
+    },
   ) => {
     const params = new URLSearchParams();
     if (scope?.bookId) params.set("book_id", String(scope.bookId));
     if (scope?.chapterId) params.set("chapter_id", String(scope.chapterId));
+    if (scope?.journeyRunId) params.set("journey_run_id", String(scope.journeyRunId));
     const q = params.toString();
     return api<import("../types").ReaderJourneyResult | null>(
       `/api/v1/analysis-runs/${runId}/reader-journey${q ? `?${q}` : ""}`,
     );
   },
+  readerJourneyById: (journeyRunId: number) =>
+    api<import("../types").ReaderJourneyResult>(
+      `/api/v1/reader-journey-runs/${journeyRunId}`,
+    ),
   readerJourneyProgress: (journeyRunId: number) =>
     api<import("../types").ReaderJourneyProgress>(
       `/api/v1/reader-journey-runs/${journeyRunId}/progress`,

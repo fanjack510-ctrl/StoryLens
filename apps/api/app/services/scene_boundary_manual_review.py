@@ -597,6 +597,41 @@ def _materialize_scenes_for_revision(
                             paragraph_hash=evidence.paragraph_hash,
                         )
                     )
+        else:
+            # Edited spans: under Smoke Fake attach a stub analysis so Confirm+Start
+            # can exercise journey routing without a real re-analysis round-trip.
+            from app.services.chapter_analysis_smoke_fake_transport import (
+                is_chapter_analysis_smoke_fake_enabled,
+            )
+
+            if is_chapter_analysis_smoke_fake_enabled():
+                stub = AnalysisArtifact(
+                    run_id=run.id,
+                    artifact_type="scene_analysis",
+                    subject_type="scene",
+                    subject_id=str(scene.id),
+                    schema_version="v1",
+                    prompt_version="v1",
+                    payload_json=json.dumps(
+                        {
+                            "scene_id": scene.scene_key,
+                            "summary": f"smoke-fake rematerialized scene {ordinal}",
+                        },
+                        ensure_ascii=False,
+                    ),
+                    confidence=0.8,
+                    validation_status="valid",
+                )
+                session.add(stub)
+                session.flush()
+                session.add(
+                    AnalysisEvidence(
+                        artifact_id=stub.id,
+                        field_path="summary",
+                        paragraph_id=scene.start_paragraph_id,
+                        paragraph_hash=content_hash,
+                    )
+                )
         created.append(scene)
     return created
 
@@ -778,6 +813,8 @@ async def confirm_scene_revision_and_start_journey_v1(
         journey.root_error_code = None
         journey.root_error_message = None
         journey.failed_stage = None
+    if journey.started_at is None and journey.status == "queued":
+        journey.started_at = _now()
     session.commit()
 
     if session_factory is not None and gateway is not None:

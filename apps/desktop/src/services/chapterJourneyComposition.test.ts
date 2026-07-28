@@ -88,7 +88,7 @@ describe("mapChapterCompositionState", () => {
     ).toBe("awaiting_reader_journey_start");
   });
 
-  it("prefers parent journey_running over stale failed journey GET", () => {
+  it("prefers live failed journey GET over stale parent journey_running", () => {
     expect(
       mapChapterCompositionState(
         run({
@@ -102,7 +102,7 @@ describe("mapChapterCompositionState", () => {
           journey_run_id: 9,
         },
       ),
-    ).toBe("reader_journey_processing");
+    ).toBe("awaiting_reader_journey_start");
   });
 });
 

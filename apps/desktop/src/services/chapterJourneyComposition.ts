@@ -55,7 +55,17 @@ export function mapChapterCompositionState(
     return "succeeded";
   }
 
-  // Prefer live parent AnalysisRun journey signals over a stale journey GET failure.
+  // Prefer the live journey GET when present — do not let a stale parent
+  // journey_running / journey_status marker contradict a terminal journey row.
+  const liveJourneyStatus = journey?.status || null;
+  if (liveJourneyStatus && JOURNEY_ACTIVE.has(liveJourneyStatus)) {
+    return "reader_journey_processing";
+  }
+  if (liveJourneyStatus && JOURNEY_NEEDS_RESUME.has(liveJourneyStatus)) {
+    return "awaiting_reader_journey_start";
+  }
+
+  // Prefer live parent AnalysisRun journey signals over a missing journey GET.
   if (run?.effective_status === "journey_running") {
     return "reader_journey_processing";
   }
@@ -63,7 +73,7 @@ export function mapChapterCompositionState(
     return "reader_journey_processing";
   }
 
-  const journeyStatus = journey?.status || run?.journey_status || null;
+  const journeyStatus = liveJourneyStatus || run?.journey_status || null;
   if (journeyStatus && JOURNEY_ACTIVE.has(journeyStatus)) {
     return "reader_journey_processing";
   }

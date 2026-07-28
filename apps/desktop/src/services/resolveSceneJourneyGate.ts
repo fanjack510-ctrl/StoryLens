@@ -74,13 +74,16 @@ export function resolveSceneJourneyGate(args: {
     };
   }
 
-  if (journeyRev === confirmedId && (status === "failed" || status === "cancelled")) {
+  if (journeyRev === confirmedId && (status === "failed" || status === "cancelled" || status === "interrupted" || status === "paused")) {
     return {
       kind: "failed",
-      title: "阅读旅程生成失败",
-      description: "场景划分仍然有效，可重新尝试生成阅读旅程。",
-      primaryLabel: "重新尝试生成阅读旅程",
-      primaryTestId: "reader-journey-retry-generate",
+      title: status === "interrupted" || status === "paused" ? "阅读旅程已中断" : "阅读旅程生成失败",
+      description: "场景划分仍然有效，可继续或重新尝试生成阅读旅程。",
+      primaryLabel: status === "interrupted" || status === "paused" ? "继续分析" : "重新生成阅读旅程",
+      primaryTestId:
+        status === "interrupted" || status === "paused"
+          ? "reader-journey-continue"
+          : "reader-journey-retry-generate",
     };
   }
 

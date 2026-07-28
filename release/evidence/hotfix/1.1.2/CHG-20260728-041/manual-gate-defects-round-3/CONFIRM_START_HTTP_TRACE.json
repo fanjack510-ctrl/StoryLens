@@ -1,0 +1,40 @@
+{
+  "defect": "DEFECT-041-11..16",
+  "confirm_posts_observed": [
+    {
+      "log_line": "POST /api/v1/chapters/1/scene-boundaries/draft/2/confirm HTTP/1.1 200",
+      "endpoint": "/api/v1/chapters/1/scene-boundaries/draft/{revision_id}/confirm",
+      "draft_revision_id": 2,
+      "start_journey": true,
+      "note": "Body not logged by uvicorn access log; inferred from UI Confirm+Start + DB journey auto-chapter-journey:1:rev:2"
+    },
+    {
+      "log_line": "POST /api/v1/chapters/1/scene-boundaries/draft/2/confirm HTTP/1.1 200",
+      "note": "Second confirm shortly after (likely retry/double-submit)"
+    },
+    {
+      "log_line": "POST /api/v1/chapters/1/scene-boundaries/draft/3/confirm HTTP/1.1 200",
+      "draft_revision_id": 3,
+      "note": "Later no-change or another confirm path"
+    }
+  ],
+  "api_returns_journey_run_id": true,
+  "returned_journey_run_id": 2,
+  "id_kind": "reader_journey_runs.id (Journey Run ID), NOT analysis_run_id, NOT task id",
+  "frontend_reads_field": "SceneBoundaryConfirmResponse.journey_run_id (snake_case) via result.journey_run_id",
+  "frontend_navigate_params_intended": {
+    "view": "result",
+    "tab": "reader-journey",
+    "chapter": "1",
+    "analysisRun": "1",
+    "journeyRun": "2"
+  },
+  "url_after_failure_observed": "/books/1?chapter=1&analysisRun=1&view=result&tab=reader-journey",
+  "journeyRun_present": false,
+  "root_cause_classes": [
+    "B_navigation_may_set_journeyRun_but_page_never_reads_URL_journeyRun_for_binding",
+    "D_E_subsequent_effects_rebuild_URL_with_analysisRun_only_in_some_helpers",
+    "G_boundJourneyRunId_uses_progress.run.journey_run_id_and_GET_by_analysisRun_only"
+  ],
+  "function_generating_current_url": "BookRoutePage setSearchParams helpers (onConfirmed intended journeyRun; later helpers / user tab flows can omit it); selection ignores URL journeyRun"
+}

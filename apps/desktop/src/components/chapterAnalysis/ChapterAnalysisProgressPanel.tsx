@@ -38,6 +38,10 @@ type Props = {
   chapterTitle?: string;
   reconnectHint?: boolean;
   canResume?: boolean;
+  /** When set, overrides AnalysisRun-based elapsed (Reader Journey clock). */
+  elapsedOverride?: string | null;
+  /** Optional progress counts from the selected journey run. */
+  progressOverride?: { current: number; total: number } | null;
   onResume?: () => Promise<void> | void;
   onReanalyze?: () => void;
   onReviewBoundary?: () => void;
@@ -56,6 +60,8 @@ export function ChapterAnalysisProgressPanel({
   chapterTitle,
   reconnectHint,
   canResume,
+  elapsedOverride,
+  progressOverride,
   onResume,
   onReanalyze,
   onReviewBoundary,
@@ -68,12 +74,13 @@ export function ChapterAnalysisProgressPanel({
   const [resumeBusy, setResumeBusy] = useState(false);
   const [resumeError, setResumeError] = useState<string>();
   const [hasJourney, setHasJourney] = useState(false);
-  const counts = progressCounts(run);
+  const counts = progressOverride ?? progressCounts(run);
   const pct =
     counts.total > 0 ? Math.min(100, Math.round((counts.current / counts.total) * 100)) : 0;
   const steps = stageSteps(uiState, run);
   const cost = run ? budgetSummary(run) : null;
-  const elapsed = run ? elapsedLabel(run) : null;
+  const elapsed =
+    elapsedOverride !== undefined ? elapsedOverride : run ? elapsedLabel(run) : null;
   const currentWork = currentWorkLabel(uiState, run);
   const usageQuery = useQuery({
     queryKey: ["cloud-usage"],
@@ -130,13 +137,17 @@ export function ChapterAnalysisProgressPanel({
       uiState === "awaiting_reader_journey_start");
 
   const meterDetail =
-    uiState === "reader_journey_processing" || uiState === "awaiting_reader_journey_start"
+    uiState === "reader_journey_processing"
       ? counts.total > 0
         ? `正在整合 ${counts.total} 个场景`
         : "正在生成阅读旅程"
-      : counts.total > 0
-        ? `场景 ${counts.current} / ${counts.total}`
-        : uiStateLabel(uiState);
+      : uiState === "awaiting_reader_journey_start"
+        ? counts.total > 0
+          ? `场景 ${counts.current} / ${counts.total}`
+          : "场景已确认，等待生成阅读旅程"
+        : counts.total > 0
+          ? `场景 ${counts.current} / ${counts.total}`
+          : uiStateLabel(uiState);
   return (
     <aside
       className="chapter-analysis-progress-panel"

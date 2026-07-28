@@ -42,6 +42,13 @@ import {
 import { resolveChapterPrimaryAction } from "../services/chapterPrimaryAction";
 import { resolveSceneJourneyGate } from "../services/resolveSceneJourneyGate";
 import {
+  formatJourneyElapsed,
+  journeyElapsedMs,
+  preserveJourneyRunInParams,
+  resolveCurrentReaderJourney,
+  type JourneyCandidate,
+} from "../services/resolveCurrentReaderJourney";
+import {
   chapterProgressHref,
   chapterResultHref,
   discoverActiveChapterRun,
@@ -121,6 +128,7 @@ export function BookRoutePage() {
 
   const analysisRunFromUrl = parsePositiveInt(searchParams.get("analysisRun"));
   const chapterFromUrl = parsePositiveInt(searchParams.get("chapter"));
+  const journeyRunFromUrl = parsePositiveInt(searchParams.get("journeyRun"));
 
   const book = useQuery({
     queryKey: ["book", bookId],
@@ -256,12 +264,13 @@ export function BookRoutePage() {
   const stableJourneyPageViewRef = useRef<JourneyPageView>("unknown");
 
   const journey = useQuery({
-    queryKey: ["reader-journey", bookId, chapterId, analysisRunId],
+    queryKey: ["reader-journey", bookId, chapterId, analysisRunId, journeyRunFromUrl],
     queryFn: async (): Promise<JourneyQueryPayload> => {
       const seq = ++journeyFetchSeqRef.current;
       const data = await analysisApi.readerJourney(analysisRunId!, {
         bookId,
         chapterId: chapterId!,
+        journeyRunId: journeyRunFromUrl,
       });
       return { ...(data as JourneyQueryPayload), __fetchSeq: seq };
     },
@@ -363,6 +372,7 @@ export function BookRoutePage() {
         next.delete("scene");
         next.delete("resultTab");
         next.delete("journeyView");
+        preserveJourneyRunInParams(next, journeyRunFromUrl ?? journeyRunId);
         return next;
       },
       { replace: true },
@@ -370,6 +380,7 @@ export function BookRoutePage() {
   }, [analysisRunId, progress.run, compositionUiState, requestedView, setSearchParams]);
 
   const boundJourneyRunId =
+    journeyRunFromUrl ??
     progress.run?.journey_run_id ??
     appliedJourneyMetaRef.current.journeyId ??
     journey.data?.journey_run_id ??
@@ -381,9 +392,10 @@ export function BookRoutePage() {
     const seq = data?.__fetchSeq ?? null;
     const responseJourneyId = data?.journey_run_id ?? null;
     const currentJourneyId =
+      journeyRunFromUrl ??
+      responseJourneyId ??
       progress.run?.journey_run_id ??
-      appliedJourneyMetaRef.current.journeyId ??
-      responseJourneyId;
+      appliedJourneyMetaRef.current.journeyId;
     const finalArtifactAvailable = Boolean(
       progress.run?.journey_result_available === true ||
         progress.run?.chapter_complete === true ||
@@ -394,8 +406,10 @@ export function BookRoutePage() {
       currentJourneyId,
       responseJourneyId,
       journeyStatus: data?.status,
-      parentJourneyStatus: progress.run?.journey_status,
-      effectiveStatus: progress.run?.effective_status,
+      parentJourneyStatus:
+        journeyRunFromUrl != null ? data?.status ?? null : progress.run?.journey_status,
+      effectiveStatus:
+        journeyRunFromUrl != null ? data?.status ?? null : progress.run?.effective_status,
       errorCode:
         (data as { error_code?: string } | undefined)?.error_code ??
         progress.run?.journey_error_code ??
@@ -438,6 +452,7 @@ export function BookRoutePage() {
     journey.isError,
     journey.error,
     journeyScopeMismatch,
+    journeyRunFromUrl,
     progress.run,
     compositionUiState,
     hasJourney,
@@ -558,6 +573,7 @@ export function BookRoutePage() {
         next.set("view", "result");
         next.set("tab", "reader-journey");
         next.set("analysisRun", String(analysisRunId));
+        preserveJourneyRunInParams(next, journeyRunFromUrl ?? journeyRunId);
         return next;
       },
       { replace: true },
@@ -650,6 +666,7 @@ export function BookRoutePage() {
         params.set("view", next);
         if (analysisRunId) params.set("analysisRun", String(analysisRunId));
         if (chapterId) params.set("chapter", String(chapterId));
+        preserveJourneyRunInParams(params, journeyRunFromUrl ?? journeyRunId);
         if (next !== "result") {
           params.delete("tab");
           params.delete("mode");
@@ -675,6 +692,9 @@ export function BookRoutePage() {
       (prev) => {
         const params = new URLSearchParams(prev);
         params.set("view", "result");
+        if (analysisRunId) params.set("analysisRun", String(analysisRunId));
+        if (chapterId) params.set("chapter", String(chapterId));
+        preserveJourneyRunInParams(params, journeyRunFromUrl ?? journeyRunId);
         if (tab === "journey") {
           params.set("tab", "reader-journey");
         } else {
@@ -970,15 +990,72 @@ export function BookRoutePage() {
   const sceneBoundariesQuery = useQuery({
     queryKey: ["scene-boundaries", chapterId],
     queryFn: () => analysisApi.sceneBoundariesOverview(chapterId!),
-    enabled:
-      Boolean(chapterId) &&
-      (sceneBoundaryReviewActive ||
-        sceneBoundaryReviewView ||
-        compositionUiState === "awaiting_scene_boundary_confirmation" ||
-        activeTab === "journey" ||
-        searchParams.get("tab") === "reader-journey"),
+    enabled: Boolean(chapterId) && (Boolean(analysisRunId) || sceneBoundaryReviewView),
     retry: false,
   });
+
+  const journeyCandidates: JourneyCandidate[] = [];
+  if (journey.data?.journey_run_id != null) {
+    journeyCandidates.push({
+      id: journey.data.journey_run_id,
+      status: String(journey.data.status || ""),
+      scene_revision_id:
+        (journey.data as { scene_revision_id?: number }).scene_revision_id ?? null,
+      result_status:
+        (journey.data as { result_status?: string }).result_status ?? null,
+      started_at: (journey.data as { started_at?: string }).started_at ?? null,
+      updated_at: journey.data.updated_at ?? null,
+      retryable: (journey.data as { retryable?: boolean }).retryable ?? null,
+      root_error_code: (journey.data as { error_code?: string }).error_code ?? null,
+      total_scene_count:
+        (journey.data as { total_scene_count?: number }).total_scene_count ?? null,
+      completed_scene_count:
+        (journey.data as { completed_scene_count?: number }).completed_scene_count ?? null,
+    });
+  }
+  if (
+    progress.run?.journey_run_id != null &&
+    !journeyCandidates.some((item) => item.id === progress.run?.journey_run_id)
+  ) {
+    journeyCandidates.push({
+      id: progress.run.journey_run_id,
+      status: String(progress.run.journey_status || progress.run.effective_status || ""),
+      scene_revision_id: null,
+      started_at: progress.run.started_at ?? null,
+    });
+  }
+  const resolvedCurrentJourney = resolveCurrentReaderJourney({
+    explicitJourneyRunId: journeyRunFromUrl,
+    confirmedRevisionId: sceneBoundariesQuery.data?.confirmed_revision?.revision_id,
+    candidates: journeyCandidates,
+  });
+  const selectedJourneyRunId = resolvedCurrentJourney.journey?.id ?? journeyRunId;
+  const selectedJourneyElapsedMs = journeyElapsedMs({
+    journey: resolvedCurrentJourney.journey,
+  });
+
+  // Keep journeyRun in the URL once we know the selected run (refresh / tab safe).
+  useEffect(() => {
+    if (!selectedJourneyRunId) return;
+    if (journeyRunFromUrl === selectedJourneyRunId) return;
+    if (searchParams.get("tab") !== "reader-journey" && searchParams.get("view") !== "result") {
+      return;
+    }
+    setSearchParams(
+      (prev) => {
+        if (prev.get("journeyRun") === String(selectedJourneyRunId)) return prev;
+        const next = new URLSearchParams(prev);
+        preserveJourneyRunInParams(next, selectedJourneyRunId);
+        return next;
+      },
+      { replace: true },
+    );
+  }, [
+    selectedJourneyRunId,
+    journeyRunFromUrl,
+    searchParams,
+    setSearchParams,
+  ]);
 
   const sceneBoundaryEntry =
     sceneBoundariesQuery.data?.draft_revision != null
@@ -1001,6 +1078,7 @@ export function BookRoutePage() {
         else if (lifecycleChapterRun?.id) {
           params.set("analysisRun", String(lifecycleChapterRun.id));
         }
+        preserveJourneyRunInParams(params, journeyRunFromUrl ?? journeyRunId);
         params.delete("tab");
         params.delete("mode");
         params.delete("scene");
@@ -1342,12 +1420,14 @@ export function BookRoutePage() {
                 ?.scene_revision_id ?? null
             }
             onExit={() => setView("reading", "user")}
-            onConfirmed={({ journeyStarted, journeyRunId }) => {
+            onConfirmed={({ journeyStarted, journeyRunId: confirmedJourneyRunId }) => {
               void qc.invalidateQueries({ queryKey: ["reader-journey"] });
               void qc.invalidateQueries({ queryKey: ["scene-boundaries", chapterId] });
               void journey.refetch();
               void progress.refresh();
-              if (journeyStarted) {
+              // Always route with journeyRun when API returned an id (even if start
+              // failed after queueing) so Reader Journey never falls back to analysisRun.
+              if (journeyStarted || confirmedJourneyRunId) {
                 setSearchParams(
                   (prev) => {
                     const params = new URLSearchParams(prev);
@@ -1355,8 +1435,9 @@ export function BookRoutePage() {
                     params.set("tab", "reader-journey");
                     if (chapterId) params.set("chapter", String(chapterId));
                     if (analysisRunId) params.set("analysisRun", String(analysisRunId));
-                    if (journeyRunId) params.set("journeyRun", String(journeyRunId));
-                    else params.delete("journeyRun");
+                    if (confirmedJourneyRunId) {
+                      params.set("journeyRun", String(confirmedJourneyRunId));
+                    }
                     return params;
                   },
                   { replace: false },
@@ -1510,17 +1591,20 @@ export function BookRoutePage() {
                     title="阅读旅程生成失败"
                     description="已完成的场景分析不会受到影响。"
                     primaryAction={{
-                      label: "重新生成",
+                      label: "重新生成阅读旅程",
                       testId: "journey-failed-retry",
                       onClick: () => {
                         void (async () => {
                           try {
-                            if (journeyRunId) {
-                              await analysisApi.resumeReaderJourney(journeyRunId, {
-                                client_request_id: getOrCreateJourneyClientRequestId(analysisRunId),
-                                cloud_consent: true,
-                                confirmed: true,
-                              });
+                            if (selectedJourneyRunId ?? journeyRunId) {
+                              await analysisApi.resumeReaderJourney(
+                                (selectedJourneyRunId ?? journeyRunId)!,
+                                {
+                                  client_request_id: getOrCreateJourneyClientRequestId(analysisRunId),
+                                  cloud_consent: true,
+                                  confirmed: true,
+                                },
+                              );
                             } else if (progress.run) {
                               await analysisRecoveryApi.recover(progress.run.id, {
                                 client_request_id: getOrCreateJourneyClientRequestId(analysisRunId),
@@ -1535,7 +1619,7 @@ export function BookRoutePage() {
                             appliedJourneyMetaRef.current = {
                               seq: 0,
                               updatedAt: null,
-                              journeyId: journeyRunId,
+                              journeyId: selectedJourneyRunId ?? journeyRunId,
                             };
                             void qc.invalidateQueries({
                               queryKey: ["reader-journey"],
@@ -1558,24 +1642,22 @@ export function BookRoutePage() {
                     kind="error"
                     data-testid="journey-interrupted"
                     title="阅读旅程已中断"
-                    description="已完成的场景分析不会受到影响，可从任务详情继续处理。"
+                    description="已完成的场景分析不会受到影响，可继续分析或从任务详情查看。"
                     primaryAction={{
-                      label: "查看详情",
-                      testId: "journey-interrupted-task-details",
-                      onClick: () => navigate(`/tasks?run_id=${analysisRunId}`),
-                    }}
-                    secondaryAction={{
-                      label: "重新生成",
-                      testId: "journey-interrupted-retry",
+                      label: "继续分析",
+                      testId: "journey-interrupted-continue",
                       onClick: () => {
                         void (async () => {
                           try {
-                            if (journeyRunId) {
-                              await analysisApi.resumeReaderJourney(journeyRunId, {
-                                client_request_id: getOrCreateJourneyClientRequestId(analysisRunId),
-                                cloud_consent: true,
-                                confirmed: true,
-                              });
+                            if (selectedJourneyRunId ?? journeyRunId) {
+                              await analysisApi.resumeReaderJourney(
+                                (selectedJourneyRunId ?? journeyRunId)!,
+                                {
+                                  client_request_id: getOrCreateJourneyClientRequestId(analysisRunId),
+                                  cloud_consent: true,
+                                  confirmed: true,
+                                },
+                              );
                             } else if (progress.run) {
                               await analysisRecoveryApi.recover(progress.run.id, {
                                 client_request_id: getOrCreateJourneyClientRequestId(analysisRunId),
@@ -1590,7 +1672,7 @@ export function BookRoutePage() {
                             appliedJourneyMetaRef.current = {
                               seq: 0,
                               updatedAt: null,
-                              journeyId: journeyRunId,
+                              journeyId: selectedJourneyRunId ?? journeyRunId,
                             };
                             void qc.invalidateQueries({
                               queryKey: ["reader-journey"],
@@ -1600,6 +1682,11 @@ export function BookRoutePage() {
                           }
                         })();
                       },
+                    }}
+                    secondaryAction={{
+                      label: "查看详情",
+                      testId: "journey-interrupted-task-details",
+                      onClick: () => navigate(`/tasks?run_id=${analysisRunId}`),
                     }}
                   />
                 ) : null}
@@ -1616,6 +1703,7 @@ export function BookRoutePage() {
                 ) : null}
                 {(() => {
                   const confirmed = sceneBoundariesQuery.data?.confirmed_revision;
+                  const selected = resolvedCurrentJourney.journey;
                   const gate = resolveSceneJourneyGate({
                     awaitingConfirmation: Boolean(
                       sceneBoundariesQuery.data?.awaiting_confirmation ??
@@ -1623,22 +1711,31 @@ export function BookRoutePage() {
                     ),
                     confirmedRevisionId: confirmed?.revision_id,
                     confirmedSource: confirmed?.source,
-                    journeyStatus: journey.data?.status,
+                    journeyStatus: selected?.status ?? journey.data?.status,
                     journeySceneRevisionId:
+                      selected?.scene_revision_id ??
                       (journey.data as { scene_revision_id?: number } | null | undefined)
-                        ?.scene_revision_id ?? null,
+                        ?.scene_revision_id ??
+                      null,
                     journeyResultStatus:
+                      selected?.result_status ??
                       (journey.data as { result_status?: string } | null | undefined)
-                        ?.result_status ?? null,
+                        ?.result_status ??
+                      null,
                   });
+                  // Gate is only for empty / need-confirm / stale. Selected journey
+                  // states (active / interrupted / failed / succeeded) own the pane.
                   const showGate =
                     activeTab === "journey" &&
+                    resolvedCurrentJourney.source === "none" &&
                     !showJourneyTemporaryError &&
+                    !showJourneyInterrupted &&
+                    !showJourneyTerminalFailed &&
+                    !showJourneyActive &&
+                    !showJourneyAwaiting &&
                     (gate.kind === "need_confirm" ||
                       gate.kind === "confirmed_no_journey" ||
-                      gate.kind === "stale_journey" ||
-                      gate.kind === "failed") &&
-                    !showJourneyActive &&
+                      gate.kind === "stale_journey") &&
                     !(gate.kind === "ready" && hasJourney);
                   if (!showGate) return null;
                   return (
@@ -1649,9 +1746,7 @@ export function BookRoutePage() {
                           ? "reader-journey-blocked-unconfirmed"
                           : gate.kind === "stale_journey"
                             ? "reader-journey-stale-revision"
-                            : gate.kind === "failed"
-                              ? "reader-journey-generate-failed"
-                              : "reader-journey-confirmed-no-journey"
+                            : "reader-journey-confirmed-no-journey"
                       }
                       title={gate.title}
                       description={gate.description}
@@ -1702,15 +1797,39 @@ export function BookRoutePage() {
                 uiState={
                   progress.isLoading && !progress.run
                     ? "creating"
-                    : compositionUiState !== "idle"
-                      ? compositionUiState
-                      : progress.uiState === "idle" && analysisRunId
-                        ? "running"
-                        : progress.uiState
+                    : activeTab === "journey" && showJourneyActive
+                      ? "reader_journey_processing"
+                      : activeTab === "journey" &&
+                          (showJourneyInterrupted || showJourneyTerminalFailed)
+                        ? "partial"
+                        : compositionUiState !== "idle"
+                          ? compositionUiState
+                          : progress.uiState === "idle" && analysisRunId
+                            ? "running"
+                            : progress.uiState
                 }
                 chapterTitle={chapterTitle}
                 reconnectHint={progress.reconnectHint}
                 canResume={progress.canResume}
+                elapsedOverride={
+                  activeTab === "journey"
+                    ? formatJourneyElapsed(selectedJourneyElapsedMs)
+                    : undefined
+                }
+                progressOverride={
+                  activeTab === "journey" && resolvedCurrentJourney.journey
+                    ? {
+                        current:
+                          resolvedCurrentJourney.journey.completed_scene_count ??
+                          journeyProgress.data?.completed_scene_count ??
+                          0,
+                        total:
+                          resolvedCurrentJourney.journey.total_scene_count ??
+                          journeyProgress.data?.total_scene_count ??
+                          0,
+                      }
+                    : null
+                }
                 onResume={progress.resume}
                 onReanalyze={() => setDialog(true)}
               onReviewBoundary={() => {

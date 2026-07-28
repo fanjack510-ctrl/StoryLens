@@ -638,3 +638,64 @@ def test_succeeded_journey_not_reused_across_revisions(testing_session):
     assert journey_retry is not None
     assert journey_retry.id == journey.id
     assert journey_retry.completed_scene_count == 1
+
+
+def test_smoke_fake_stubs_scene_analysis_on_edited_rematerialize(testing_session, monkeypatch):
+    monkeypatch.setenv("STORYLENS_CHAPTER_ANALYSIS_SMOKE_FAKE", "1")
+    _, chapter, paragraphs, run, scenes = _seed_chapter(testing_session)
+    _attach_scene_analysis(testing_session, run, scenes)
+    ensure_ai_model_revision_after_scenes_v1(testing_session, run)
+    draft = create_or_get_scene_boundary_draft_v1(testing_session, chapter.id)
+    testing_session.commit()
+    partition = json.loads(draft.final_boundaries_json)["scenes"]
+    # Force an edited span that cannot reuse a source scene analysis artifact.
+    partition[0]["end_paragraph_id"] = paragraphs[2].id
+    partition[1]["start_paragraph_id"] = paragraphs[3].id
+    saved = save_scene_boundary_draft_v1(
+        testing_session, draft.id, partition, expected_etag=draft.revision_etag
+    )
+    testing_session.commit()
+    revision, journey, _, err = asyncio.run(
+        confirm_scene_revision_and_start_journey_v1(
+            testing_session,
+            saved.id,
+            expected_etag=saved.revision_etag,
+            start_journey=True,
+            session_factory=None,
+            gateway=None,
+        )
+    )
+    assert err is None
+    assert journey is not None
+    assert journey.started_at is not None
+    assert journey.status == "queued"
+    rematerialized = revision_scenes(testing_session, revision.id)
+    from app.services.reader_journey_progress import require_completed_scene_analysis
+
+    require_completed_scene_analysis(testing_session, run, rematerialized)
+
+
+def test_reader_journey_result_exposes_revision_binding(testing_session):
+    from app.api.v1.reader_journey import _serialize_result
+
+    _, chapter, _, run, scenes = _seed_chapter(testing_session)
+    _attach_scene_analysis(testing_session, run, scenes)
+    ensure_ai_model_revision_after_scenes_v1(testing_session, run)
+    draft = create_or_get_scene_boundary_draft_v1(testing_session, chapter.id)
+    testing_session.commit()
+    revision, journey, _, err = asyncio.run(
+        confirm_scene_revision_and_start_journey_v1(
+            testing_session,
+            draft.id,
+            expected_etag=draft.revision_etag,
+            start_journey=True,
+            session_factory=None,
+            gateway=None,
+        )
+    )
+    assert err is None and journey is not None
+    payload = _serialize_result(testing_session, journey)
+    assert payload.journey_run_id == journey.id
+    assert payload.scene_revision_id == revision.id
+    assert payload.result_status == journey.result_status
+    assert payload.started_at is not None

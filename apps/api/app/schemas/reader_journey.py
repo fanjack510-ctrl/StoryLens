@@ -595,7 +595,15 @@ class ReaderJourneyResultResponse(BaseModel):
     one_sentence_diagnosis: str | None = None
     visualization: dict[str, object] | None = None
     created_at: datetime | None = None
+    started_at: datetime | None = None
+    updated_at: datetime | None = None
     completed_at: datetime | None = None
+    scene_revision_id: int | None = None
+    result_status: str | None = None
+    error_code: str | None = None
+    retryable: bool | None = None
+    total_scene_count: int | None = None
+    completed_scene_count: int | None = None
     # v2.0 optional payload (present only for contract 2.x runs; never auto-billed).
     v2_question_lifecycle: list[dict[str, object]] | None = None
     v2_scene_diagnoses: list[dict[str, object]] | None = None
