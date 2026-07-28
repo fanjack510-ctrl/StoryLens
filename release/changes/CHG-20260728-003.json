@@ -3,9 +3,16 @@
   "title": "WB-0.2 Whole-Book Data Contracts V1",
   "type": "documentation",
   "base_version": "1.1.1",
-  "status": "registered",
+  "status": "tested",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "3a8a50f8d1c55ce1593d8f16d9adf71957445ae9",
+      "message": "feat(whole-book): add native contract v1",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "whole_book_contract_v1"
   ],
@@ -16,10 +23,12 @@
     "Public/Private wire schema SHA identity PASS; L1 contract tests PASS; no migration/provider/runtime"
   ],
   "tests": [
-    "apps/api/tests/test_whole_book_contract_v1.py"
+    "apps/api/tests/test_whole_book_contract_v1.py",
+    "private:tests/test_whole_book_contract_v1.py"
   ],
   "verification_evidence": [
-    "release/evidence/whole-book/WB-0.2/"
+    "release/evidence/whole-book/WB-0.2/",
+    "release/evidence/whole-book/WB-0.2/TEST_RESULTS.md"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -34,7 +43,7 @@
     "breaking_change": false
   },
   "blocker_level": null,
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-28T01:46:50Z",
-  "updated_at": "2026-07-28T01:55:51Z"
+  "updated_at": "2026-07-28T01:56:24Z"
 }
