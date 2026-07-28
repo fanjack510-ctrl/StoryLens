@@ -29,6 +29,18 @@ plus ~8h elapsed skew.
 
 ## Status
 
-- Production code modified: **NO**
-- Ready for implementation prompt: **YES**
+- Production code modified (investigation round): **NO**
+- Ready for implementation prompt (Fake fixture / UI): **YES** (done in CHG-041 Round 4)
+- Ready for production core fix: **NO**
 - Database migration required: **NO**
+
+## Root-cause boundary (mandatory)
+
+| Scope | Verdict |
+|-------|---------|
+| LOCAL REPRO ROOT CAUSE | **confirmed** — `FAKE_FIXTURE_INVALID` |
+| PRODUCTION INCIDENT ROOT CAUSE (INC-20260728-003) | **unconfirmed** |
+| CHG-042 STATUS | **investigated** (not resolved / not fixed) |
+
+See `ROOT_CAUSE_BOUNDARY.md`. Round 4 Manual Gate Fake repair restores a valid
+acceptance environment; it does **not** close the production incident.
