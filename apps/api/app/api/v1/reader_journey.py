@@ -83,22 +83,54 @@ def _serialize_profile(row: SceneReaderJourneyProfile, genre: str) -> ReaderJour
     payload = json.loads(row.payload_json or "{}")
     from app.schemas.reader_journey import SceneReaderJourneyProfileItem
 
-    profile = SceneReaderJourneyProfileItem.model_validate(payload)
-    engagement = compute_engagement(profile, genre=genre)
-    return ReaderJourneyProfileSummary(
-        scene_id=row.scene_id,
-        scene_ordinal=row.scene_ordinal,
-        scene_value_summary=row.scene_value_summary,
-        dominant_emotion=row.dominant_emotion,
-        engagement=engagement,
-        reader_question_in=[item.get("question", "") for item in payload.get("reader_question_in", [])],
-        reader_question_out=[item.get("question", "") for item in payload.get("reader_question_out", [])],
-        payoffs=[item.get("summary", "") for item in payload.get("payoffs", [])],
-        hooks=[item.get("summary", "") for item in payload.get("hooks", [])],
-        risk_points=[item.get("summary", "") for item in payload.get("risk_points", [])],
-        evidence_paragraph_ids=list(payload.get("evidence_paragraph_ids", [])),
-        confidence=row.confidence,
-    )
+    try:
+        profile = SceneReaderJourneyProfileItem.model_validate(payload)
+        engagement = compute_engagement(profile, genre=genre)
+        return ReaderJourneyProfileSummary(
+            scene_id=row.scene_id,
+            scene_ordinal=row.scene_ordinal,
+            scene_value_summary=row.scene_value_summary,
+            dominant_emotion=row.dominant_emotion,
+            engagement=engagement,
+            reader_question_in=[item.get("question", "") for item in payload.get("reader_question_in", [])],
+            reader_question_out=[item.get("question", "") for item in payload.get("reader_question_out", [])],
+            payoffs=[item.get("summary", "") for item in payload.get("payoffs", [])],
+            hooks=[item.get("summary", "") for item in payload.get("hooks", [])],
+            risk_points=[item.get("summary", "") for item in payload.get("risk_points", [])],
+            evidence_paragraph_ids=list(payload.get("evidence_paragraph_ids", [])),
+            confidence=row.confidence,
+        )
+    except Exception:
+        # Incomplete fixture / legacy payloads must not 500 the journey GET.
+        from app.schemas.reader_journey import EngagementBreakdown
+
+        return ReaderJourneyProfileSummary(
+            scene_id=row.scene_id,
+            scene_ordinal=row.scene_ordinal,
+            scene_value_summary=row.scene_value_summary or "",
+            dominant_emotion=row.dominant_emotion or "neutral",
+            engagement=EngagementBreakdown(
+                curiosity=0,
+                tension=0,
+                hook=0,
+                payoff=0,
+                information_gain=0,
+                emotional_resonance=0,
+                cognitive_load=0,
+                dropoff_risk=0,
+                engagement_score=0,
+                formula_version="1.0",
+                genre=genre or "suspense",
+                weights={},
+            ),
+            reader_question_in=[],
+            reader_question_out=[],
+            payoffs=[],
+            hooks=[],
+            risk_points=[],
+            evidence_paragraph_ids=[],
+            confidence=float(row.confidence or 0.0),
+        )
 
 
 def _serialize_result(session: Session, journey_run: ReaderJourneyRun) -> ReaderJourneyResultResponse:
@@ -369,9 +401,14 @@ def get_reader_journey_for_run(
         if journey_run is None or int(journey_run.analysis_run_id) != int(run_id):
             raise error(404, "READER_JOURNEY_RUN_NOT_FOUND", "读者旅程运行不存在")
     else:
+        # Prefer a non-superseded journey so old revision fixtures cannot steal
+        # the chapter-scoped GET used before journeyRun is in the URL.
         journey_run = session.scalar(
             select(ReaderJourneyRun)
-            .where(ReaderJourneyRun.analysis_run_id == run_id)
+            .where(
+                ReaderJourneyRun.analysis_run_id == run_id,
+                ReaderJourneyRun.result_status != "superseded",
+            )
             .order_by(ReaderJourneyRun.id.desc())
         )
     if journey_run is None:
