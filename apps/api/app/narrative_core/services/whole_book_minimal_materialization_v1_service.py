@@ -33,6 +33,9 @@ from app.narrative_core.contracts.whole_book_contract_v1 import (
 )
 from app.narrative_core.contracts.whole_book_contract_v1.common import sha256_hex
 from app.narrative_core.enums import OriginType, ReviewStatus
+from app.narrative_core.services.whole_book_confirm_protection_v1_service import (
+    materialize_with_confirmed_protection_v1,
+)
 from app.narrative_core.services.whole_book_foundation_errors import (
     WholeBookFoundationError,
     WholeBookFoundationErrorCode,
@@ -84,6 +87,7 @@ class _MaterializationContext:
     warnings: list[str] = field(default_factory=list)
     ambiguous_entity_merge_count: int = 0
     rejected_candidate_count: int = 0
+    conflict_count: int = 0
 
 
 def compute_event_signature_v1(
@@ -477,50 +481,29 @@ def materialize_minimal_narrative_assets_v1(session: Session, run_id: int) -> di
             asset_key = build_asset_key(
                 book_id=ctx.book_id, asset_type=asset.asset_type, stable_label=signature[:32]
             )
-            row = session.scalar(
-                select(NarrativeAsset).where(
-                    NarrativeAsset.book_id == ctx.book_id, NarrativeAsset.asset_key == asset_key
-                )
-            )
-            if row is None:
-                row = NarrativeAsset(
-                    book_id=ctx.book_id,
-                    asset_key=asset_key,
-                    lifecycle_status="active",
-                    created_at=utc_now(),
-                    updated_at=utc_now(),
-                )
-                session.add(row)
-                session.flush()
-            payload_hash = sha256_hex(
-                canonical_json_bytes(asset.payload or {"summary": asset.summary}).decode("utf-8")
-            )
-            attrs = dict(asset.payload or {})
-            attrs["signature"] = signature
-            attrs["subject_entity_ids"] = mapped_entities
-            attrs["source_window_ids"] = [window_id]
-            attrs["whole_book_run_id"] = run_id
-            version = NarrativeAssetVersion(
-                asset_id=row.id,
-                run_id=None,
-                book_snapshot_id=ctx.snapshot_id,
-                asset_type=asset.asset_type,
+            row, version, reused, conflict = materialize_with_confirmed_protection_v1(
+                session,
+                book_id=ctx.book_id,
+                run_id=run_id,
+                snapshot_id=ctx.snapshot_id,
+                asset_key=asset_key,
+                signature=signature,
+                candidate_payload=dict(asset.payload or {"summary": asset.summary}),
                 title=asset.title,
                 summary=asset.summary,
-                attributes_json=json.dumps(attrs, ensure_ascii=False),
-                confidence=float(asset.confidence),
-                origin_type=OriginType.MODEL.value,
-                review_status="candidate",
-                is_canonical=True,
-                source_fingerprint=payload_hash,
-                created_at=utc_now(),
+                asset_type=asset.asset_type,
+                mapped_entities=mapped_entities,
+                window_id=window_id,
+                core_locator=core_locator,
             )
-            session.add(version)
-            session.flush()
+            if conflict is not None:
+                ctx.conflict_count += 1
             for ev_key in asset.evidence_keys:
                 _persist_evidence_for_version(session, ctx, response, ev_key, version.id)
             ctx.asset_signatures[signature] = row.id
             ctx.candidate_to_asset[asset.candidate_key] = row.id
+            if reused:
+                continue
 
     for window_id, response in window_responses:
         for relation in response.relations:
@@ -588,6 +571,7 @@ def materialize_minimal_narrative_assets_v1(session: Session, run_id: int) -> di
         **after,
         "ambiguous_entity_merge_count": ctx.ambiguous_entity_merge_count,
         "rejected_candidate_count": ctx.rejected_candidate_count,
+        "conflict_count": ctx.conflict_count,
         "materialization_hash": sha256_utf8(json.dumps(after, sort_keys=True)),
     }
     upsert_checkpoint(
