@@ -1,0 +1,198 @@
+{
+  "contract_version": "whole_book_contract_v1",
+  "public_only_model_names": [
+    "WholeBookRunStageV1",
+    "WholeBookCheckpointV1"
+  ],
+  "public_only_models": {
+    "WholeBookCheckpointV1": {
+      "additionalProperties": false,
+      "properties": {
+        "checkpoint_id": {
+          "exclusiveMinimum": 0,
+          "title": "Checkpoint Id",
+          "type": "integer"
+        },
+        "checkpoint_key": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Checkpoint Key",
+          "type": "string"
+        },
+        "checkpoint_payload": {
+          "additionalProperties": true,
+          "title": "Checkpoint Payload",
+          "type": "object"
+        },
+        "completed_unit_count": {
+          "minimum": 0,
+          "title": "Completed Unit Count",
+          "type": "integer"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "last_completed_window_id": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Last Completed Window Id"
+        },
+        "payload_hash": {
+          "title": "Payload Hash",
+          "type": "string"
+        },
+        "run_id": {
+          "exclusiveMinimum": 0,
+          "title": "Run Id",
+          "type": "integer"
+        },
+        "sequence_no": {
+          "minimum": 0,
+          "title": "Sequence No",
+          "type": "integer"
+        },
+        "stage_code": {
+          "title": "Stage Code",
+          "type": "string"
+        }
+      },
+      "required": [
+        "checkpoint_id",
+        "run_id",
+        "stage_code",
+        "checkpoint_key",
+        "sequence_no",
+        "completed_unit_count",
+        "payload_hash",
+        "created_at"
+      ],
+      "title": "WholeBookCheckpointV1",
+      "type": "object"
+    },
+    "WholeBookRunStageV1": {
+      "$defs": {
+        "WholeBookStageStatus": {
+          "enum": [
+            "pending",
+            "running",
+            "paused",
+            "completed",
+            "failed",
+            "skipped",
+            "cancelled"
+          ],
+          "title": "WholeBookStageStatus",
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "completed_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Completed At"
+        },
+        "last_error_code": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Last Error Code"
+        },
+        "last_error_message_safe": {
+          "anyOf": [
+            {
+              "maxLength": 500,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Last Error Message Safe"
+        },
+        "progress_current": {
+          "minimum": 0,
+          "title": "Progress Current",
+          "type": "integer"
+        },
+        "progress_total": {
+          "minimum": 0,
+          "title": "Progress Total",
+          "type": "integer"
+        },
+        "run_id": {
+          "exclusiveMinimum": 0,
+          "title": "Run Id",
+          "type": "integer"
+        },
+        "sequence": {
+          "minimum": 0,
+          "title": "Sequence",
+          "type": "integer"
+        },
+        "stage_code": {
+          "title": "Stage Code",
+          "type": "string"
+        },
+        "stage_id": {
+          "exclusiveMinimum": 0,
+          "title": "Stage Id",
+          "type": "integer"
+        },
+        "started_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Started At"
+        },
+        "status": {
+          "$ref": "#/$defs/WholeBookStageStatus"
+        }
+      },
+      "required": [
+        "stage_id",
+        "run_id",
+        "stage_code",
+        "sequence",
+        "status",
+        "progress_current",
+        "progress_total"
+      ],
+      "title": "WholeBookRunStageV1",
+      "type": "object"
+    }
+  }
+}

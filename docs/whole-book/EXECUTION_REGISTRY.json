@@ -209,12 +209,14 @@
       "phase": "WB-0",
       "title": "Freeze Snapshot/Asset/Evidence/Run/Overview contracts",
       "acceptance_level": "L1",
-      "evidence_dir": "release/evidence/whole-book/WB-0.2-DATA-CONTRACTS/",
-      "wb_status": "planned",
+      "evidence_dir": "release/evidence/whole-book/WB-0.2/",
+      "wb_status": "tested",
       "depends_on": [
         "WB-0.1-BASELINE-FREEZE"
       ],
-      "next_step": "WB-0.3-CAPABILITY-COST"
+      "next_step": "WB-0.3-CAPABILITY-COST",
+      "manual_gate_result": "ready",
+      "note": "Awaiting MG-WB-0.2 PASS; do not start WB-0.3"
     },
     {
       "order": 3,

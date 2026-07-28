@@ -1,0 +1,31 @@
+{
+  "step": "WB-0.2-DATA-CONTRACTS",
+  "change_id": "CHG-20260728-003",
+  "manual_gate": "MG-WB-0.2",
+  "contract_version": "whole_book_contract_v1",
+  "target_version": "1.2.0",
+  "acceptance_level": "L1",
+  "public": {
+    "worktree": "D:\\Dstorylens-wt-whole-book-v120-integration",
+    "branch": "integration/whole-book-v120",
+    "prompt_base_head": "b5f88ac32dde55520e0a0f4d62c7a2303ac4914e",
+    "actual_branch_create_head": "32fc8a8ce3288afcdd860e70ad4b36cec5e09b97",
+    "note": "Branch created from tip containing prompt SHA plus WB-0.1 MG PASS/verified docs commits; ancestor includes b5f88ac."
+  },
+  "private": {
+    "worktree": "D:\\Dstorylens-private-engine-wt-whole-book-v120-integration",
+    "branch": "integration/whole-book-v120",
+    "base_head": "30d8dad8cd649e832999874f7bf16cc1661cf221"
+  },
+  "protected_wip_untouched": [
+    "D:\\Dstorylens-wt-narrative-phase2br1-structure-empty-policy",
+    "D:\\Dstorylens-private-engine-wt-phase2br1-structure-empty-policy"
+  ],
+  "real_provider_calls": 0,
+  "formal_database_writes": 0,
+  "migrations_executed": 0,
+  "product_entry_enabled": false,
+  "push": false,
+  "tag": false,
+  "build": false
+}

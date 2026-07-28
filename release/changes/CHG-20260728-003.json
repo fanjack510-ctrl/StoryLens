@@ -1,0 +1,40 @@
+{
+  "id": "CHG-20260728-003",
+  "title": "WB-0.2 Whole-Book Data Contracts V1",
+  "type": "documentation",
+  "base_version": "1.1.1",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "whole_book_contract_v1"
+  ],
+  "files": [],
+  "user_summary": "Freeze whole_book_contract_v1 Public/Private wire contracts, validators, schema identity; no migration or runtime.",
+  "technical_summary": "Add whole_book_contract_v1 Public canonical + Private mirror, validators, legacy adapter, schema export/identity, persistence mapping, WB-0.2 evidence.",
+  "acceptance_criteria": [
+    "Public/Private wire schema SHA identity PASS; L1 contract tests PASS; no migration/provider/runtime"
+  ],
+  "tests": [
+    "apps/api/tests/test_whole_book_contract_v1.py"
+  ],
+  "verification_evidence": [
+    "release/evidence/whole-book/WB-0.2/"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": null,
+  "created_at": "2026-07-28T01:46:50Z",
+  "updated_at": "2026-07-28T01:55:51Z"
+}
