@@ -1,0 +1,98 @@
+[
+  {
+    "id": 1,
+    "revision_number": 1,
+    "status": "superseded",
+    "source": "model",
+    "based_on_revision_id": null,
+    "boundary_hash": "b45fb33646f17fb9fcce66bceb018e0bcc46fab108e08c37548915bb09f6cc32",
+    "chapter_text_hash": "3ac1704914657df75dd821dcb82e0bda5185353f2c6fd49d633c44c05cb40b66",
+    "created_at": "2026-07-28 10:46:19.299568",
+    "updated_at": "2026-07-28 10:59:57.778865",
+    "confirmed_at": "2026-07-28 10:46:19.299568"
+  },
+  {
+    "id": 2,
+    "revision_number": 2,
+    "status": "superseded",
+    "source": "user",
+    "based_on_revision_id": 1,
+    "boundary_hash": "ac521f714e645e9b00d89eaa205d6ee9b2d63f364f70661ba77ee0cce07b8071",
+    "chapter_text_hash": "3ac1704914657df75dd821dcb82e0bda5185353f2c6fd49d633c44c05cb40b66",
+    "created_at": "2026-07-28 10:59:39.099445",
+    "updated_at": "2026-07-28 11:00:06.425313",
+    "confirmed_at": "2026-07-28 10:59:57.775865"
+  },
+  {
+    "id": 3,
+    "revision_number": 3,
+    "status": "superseded",
+    "source": "user",
+    "based_on_revision_id": 2,
+    "boundary_hash": "ac521f714e645e9b00d89eaa205d6ee9b2d63f364f70661ba77ee0cce07b8071",
+    "chapter_text_hash": "3ac1704914657df75dd821dcb82e0bda5185353f2c6fd49d633c44c05cb40b66",
+    "created_at": "2026-07-28 11:00:05.149444",
+    "updated_at": "2026-07-28 11:00:41.389067",
+    "confirmed_at": "2026-07-28 11:00:06.423326"
+  },
+  {
+    "id": 4,
+    "revision_number": 4,
+    "status": "superseded",
+    "source": "user",
+    "based_on_revision_id": 3,
+    "boundary_hash": "ac521f714e645e9b00d89eaa205d6ee9b2d63f364f70661ba77ee0cce07b8071",
+    "chapter_text_hash": "3ac1704914657df75dd821dcb82e0bda5185353f2c6fd49d633c44c05cb40b66",
+    "created_at": "2026-07-28 11:00:28.604960",
+    "updated_at": "2026-07-28 11:01:03.782663",
+    "confirmed_at": "2026-07-28 11:00:41.386067"
+  },
+  {
+    "id": 5,
+    "revision_number": 5,
+    "status": "superseded",
+    "source": "user",
+    "based_on_revision_id": 4,
+    "boundary_hash": "ac521f714e645e9b00d89eaa205d6ee9b2d63f364f70661ba77ee0cce07b8071",
+    "chapter_text_hash": "3ac1704914657df75dd821dcb82e0bda5185353f2c6fd49d633c44c05cb40b66",
+    "created_at": "2026-07-28 11:01:01.705155",
+    "updated_at": "2026-07-28 11:01:32.389797",
+    "confirmed_at": "2026-07-28 11:01:03.780656"
+  },
+  {
+    "id": 6,
+    "revision_number": 6,
+    "status": "superseded",
+    "source": "user",
+    "based_on_revision_id": 5,
+    "boundary_hash": "ac521f714e645e9b00d89eaa205d6ee9b2d63f364f70661ba77ee0cce07b8071",
+    "chapter_text_hash": "3ac1704914657df75dd821dcb82e0bda5185353f2c6fd49d633c44c05cb40b66",
+    "created_at": "2026-07-28 11:01:28.978209",
+    "updated_at": "2026-07-28 11:03:28.332334",
+    "confirmed_at": "2026-07-28 11:01:32.387790"
+  },
+  {
+    "id": 7,
+    "revision_number": 7,
+    "status": "superseded",
+    "source": "user",
+    "based_on_revision_id": 6,
+    "boundary_hash": "ac521f714e645e9b00d89eaa205d6ee9b2d63f364f70661ba77ee0cce07b8071",
+    "chapter_text_hash": "3ac1704914657df75dd821dcb82e0bda5185353f2c6fd49d633c44c05cb40b66",
+    "created_at": "2026-07-28 11:02:19.133468",
+    "updated_at": "2026-07-28 11:04:01.128794",
+    "confirmed_at": "2026-07-28 11:03:28.330342"
+  },
+  {
+    "id": 8,
+    "revision_number": 8,
+    "status": "confirmed",
+    "source": "user",
+    "based_on_revision_id": 7,
+    "boundary_hash": "ac521f714e645e9b00d89eaa205d6ee9b2d63f364f70661ba77ee0cce07b8071",
+    "chapter_text_hash": "3ac1704914657df75dd821dcb82e0bda5185353f2c6fd49d633c44c05cb40b66",
+    "created_at": "2026-07-28 11:03:59.662586",
+    "updated_at": "2026-07-28 11:04:01.128794",
+    "confirmed_at": "2026-07-28 11:04:01.126791"
+  }
+]

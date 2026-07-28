@@ -607,13 +607,20 @@ def confirm_scene_revision_v1(
     *,
     expected_etag: str,
     confirmed_by: str = "user",
-) -> BoundaryRevision:
+) -> tuple[BoundaryRevision, bool]:
+    """Confirm a draft revision.
+
+    Returns ``(revision, already_confirmed)``. When a draft encodes the same
+    boundary/chapter hashes as the current confirmed revision, the draft is
+    discarded and the existing confirmed revision is returned without creating
+    a new revision row.
+    """
     revision = session.get(BoundaryRevision, revision_id)
     if revision is None:
         raise SceneBoundaryError("SCENE_PARTITION_EMPTY")
     if revision.status == "confirmed":
         if revision.revision_etag == expected_etag or not expected_etag:
-            return revision
+            return revision, True
         raise SceneBoundaryError("SCENE_REVISION_CONCURRENT_MODIFICATION")
     if revision.status != "draft":
         raise SceneBoundaryError("SCENE_PARTITION_EMPTY")
@@ -624,6 +631,21 @@ def confirm_scene_revision_v1(
     validate_scene_partition_v1(
         session, revision.chapter_id, scenes, expected_chapter_text_hash=chapter_hash
     )
+    boundary_hash = compute_scene_boundary_hash_v1(
+        revision.chapter_id, chapter_hash, scenes
+    )
+    existing = _confirmed_revision(session, revision.chapter_id)
+    if (
+        existing is not None
+        and existing.id != revision.id
+        and existing.boundary_hash == boundary_hash
+        and (existing.chapter_text_hash or "") == chapter_hash
+    ):
+        # No-op confirm: drop the unused draft and reuse current confirmed.
+        session.delete(revision)
+        session.flush()
+        return existing, True
+
     for old in session.scalars(
         select(BoundaryRevision).where(
             BoundaryRevision.chapter_id == revision.chapter_id,
@@ -644,13 +666,11 @@ def confirm_scene_revision_v1(
     revision.confirmed_by = confirmed_by
     revision.confirmed_at = _now()
     revision.chapter_text_hash = chapter_hash
-    revision.boundary_hash = compute_scene_boundary_hash_v1(
-        revision.chapter_id, chapter_hash, scenes
-    )
+    revision.boundary_hash = boundary_hash
     revision.revision_etag = _new_etag()
     based_on = revision.based_on_revision_id
     _materialize_scenes_for_revision(session, revision, scenes, based_on_revision_id=based_on)
-    return revision
+    return revision, False
 
 
 def bind_journey_to_revision(
@@ -698,30 +718,76 @@ async def confirm_scene_revision_and_start_journey_v1(
     journey_options: dict[str, Any] | None = None,
     session_factory=None,
     gateway=None,
-) -> tuple[BoundaryRevision, ReaderJourneyRun | None]:
+) -> tuple[BoundaryRevision, ReaderJourneyRun | None, bool, str | None]:
+    """Confirm revision and optionally start a journey bound to it.
+
+    Returns ``(revision, journey|None, already_confirmed, journey_error_code|None)``.
+    """
     del journey_options
-    revision = confirm_scene_revision_v1(
+    from app.services.chapter_analysis_completion import (
+        ensure_auto_reader_journey_row,
+        mark_scenes_complete_awaiting_journey,
+    )
+
+    revision, already_confirmed = confirm_scene_revision_v1(
         session, revision_id, expected_etag=expected_etag, confirmed_by="user"
     )
     session.flush()
-    if not start_journey:
-        return revision, None
-    from app.services.chapter_analysis_completion import ensure_auto_reader_journey_row
-
     run = session.get(AnalysisRun, revision.analysis_run_id)
+    if run is not None:
+        mark_scenes_complete_awaiting_journey(session, run)
+    if not start_journey:
+        session.commit()
+        return revision, None, already_confirmed, None
     if run is None:
-        raise SceneBoundaryError("SCENE_CONFIRMED_JOURNEY_NOT_STARTED")
-    journey = ensure_auto_reader_journey_row(session, run)
+        session.commit()
+        return revision, None, already_confirmed, "SCENE_CONFIRMED_JOURNEY_NOT_STARTED"
+
+    journey = ensure_auto_reader_journey_row(
+        session,
+        run,
+        cloud_consent=True,
+        scene_revision_id=revision.id,
+    )
     if journey is None:
-        raise SceneBoundaryError("SCENE_CONFIRMED_JOURNEY_NOT_STARTED")
+        session.commit()
+        return revision, None, already_confirmed, "SCENE_CONFIRMED_JOURNEY_NOT_STARTED"
+
     scenes = revision_scenes(session, revision.id)
     bind_journey_to_revision(session, journey, revision, scenes)
+    if journey.status not in {
+        "queued",
+        "running",
+        "scene_profiles_running",
+        "chapter_synthesis_running",
+    }:
+        # Re-queue when ensure reused a terminal row for this revision (idempotent restart).
+        if journey.status == "succeeded" and journey.scene_revision_id == revision.id:
+            session.commit()
+            return revision, journey, already_confirmed, None
+        journey.status = "queued"
+        journey.current_stage = None
+        journey.root_error_code = None
+        journey.root_error_message = None
+        journey.failed_stage = None
     session.commit()
+
     if session_factory is not None and gateway is not None:
         from app.services.reader_journey_pipeline import execute_reader_journey
 
-        await execute_reader_journey(session_factory, gateway, journey.id)
-    return revision, journey
+        try:
+            await execute_reader_journey(session_factory, gateway, journey.id)
+        except Exception:
+            with session_factory() as retry_session:
+                refreshed = retry_session.get(ReaderJourneyRun, journey.id)
+                code = None
+                if refreshed is not None:
+                    code = refreshed.root_error_code or "JOURNEY_START_FAILED"
+                    return revision, refreshed, already_confirmed, code
+            return revision, journey, already_confirmed, "JOURNEY_START_FAILED"
+        with session_factory() as retry_session:
+            journey = retry_session.get(ReaderJourneyRun, journey.id) or journey
+    return revision, journey, already_confirmed, None
 
 
 def get_scene_boundaries_overview_v1(session: Session, chapter_id: int) -> dict[str, Any]:
@@ -749,13 +815,33 @@ def get_scene_boundaries_overview_v1(session: Session, chapter_id: int) -> dict[
             "confirmed_at": revision.confirmed_at.isoformat() if revision.confirmed_at else None,
         }
 
+    awaiting = False
+    if draft is not None:
+        awaiting = True
+    elif confirmed is None:
+        awaiting = model is not None
+    elif confirmed.source == "model":
+        run = session.get(AnalysisRun, confirmed.analysis_run_id) if confirmed.analysis_run_id else None
+        marker: dict[str, Any] = {}
+        if run is not None:
+            try:
+                import json as _json
+
+                raw = _json.loads(run.raw_output or "{}")
+                marker = raw if isinstance(raw, dict) else {}
+            except Exception:
+                marker = {}
+        awaiting = marker.get("chapter_pipeline") == "awaiting_scene_boundary_confirmation"
+    else:
+        awaiting = False
+
     return {
         "chapter_id": chapter_id,
         "chapter_text_hash": chapter_hash,
         "confirmed_revision": _pack(confirmed),
         "draft_revision": _pack(draft),
         "model_revision": _pack(model),
-        "awaiting_confirmation": confirmed is not None and draft is None and model is not None,
+        "awaiting_confirmation": awaiting,
     }
 
 

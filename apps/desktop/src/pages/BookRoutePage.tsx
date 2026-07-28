@@ -40,6 +40,7 @@ import {
   type WorkspaceView,
 } from "../services/chapterJourneyComposition";
 import { resolveChapterPrimaryAction } from "../services/chapterPrimaryAction";
+import { resolveSceneJourneyGate } from "../services/resolveSceneJourneyGate";
 import {
   chapterProgressHref,
   chapterResultHref,
@@ -973,7 +974,9 @@ export function BookRoutePage() {
       Boolean(chapterId) &&
       (sceneBoundaryReviewActive ||
         sceneBoundaryReviewView ||
-        compositionUiState === "awaiting_scene_boundary_confirmation"),
+        compositionUiState === "awaiting_scene_boundary_confirmation" ||
+        activeTab === "journey" ||
+        searchParams.get("tab") === "reader-journey"),
     retry: false,
   });
 
@@ -1341,13 +1344,25 @@ export function BookRoutePage() {
             onExit={() => setView("reading", "user")}
             onConfirmed={({ journeyStarted, journeyRunId }) => {
               void qc.invalidateQueries({ queryKey: ["reader-journey"] });
+              void qc.invalidateQueries({ queryKey: ["scene-boundaries", chapterId] });
               void journey.refetch();
               void progress.refresh();
               if (journeyStarted) {
-                setResultTab("journey", "user");
-                if (journeyRunId) {
-                  void qc.invalidateQueries({ queryKey: ["reader-journey"] });
-                }
+                setSearchParams(
+                  (prev) => {
+                    const params = new URLSearchParams(prev);
+                    params.set("view", "result");
+                    params.set("tab", "reader-journey");
+                    if (chapterId) params.set("chapter", String(chapterId));
+                    if (analysisRunId) params.set("analysisRun", String(analysisRunId));
+                    if (journeyRunId) params.set("journeyRun", String(journeyRunId));
+                    else params.delete("journeyRun");
+                    return params;
+                  },
+                  { replace: false },
+                );
+                userPinnedViewRef.current = "result";
+                userPinnedTabRef.current = "journey";
               }
             }}
           />
@@ -1599,39 +1614,55 @@ export function BookRoutePage() {
                     }}
                   />
                 ) : null}
-                {awaitingSceneBoundaryConfirmation && chapterId ? (
-                  <StateView
-                    kind="empty"
-                    data-testid="reader-journey-blocked-unconfirmed"
-                    title="阅读旅程尚未开始"
-                    description="请先确认场景边界，StoryLens 将按照确认后的场景进行旅程分析。"
-                    primaryAction={{
-                      label: "去确认场景",
-                      testId: "reader-journey-go-confirm-scenes",
-                      onClick: () => openSceneBoundaryReview(),
-                    }}
-                  />
-                ) : null}
-                {!awaitingSceneBoundaryConfirmation &&
-                !hasJourney &&
-                !showJourneyActive &&
-                !showJourneyTerminalFailed &&
-                !showJourneyInterrupted &&
-                !showJourneyAwaiting &&
-                sceneComplete &&
-                chapterId ? (
-                  <StateView
-                    kind="empty"
-                    data-testid="reader-journey-not-started"
-                    title="当前章节尚未生成阅读旅程"
-                    description="场景划分已确认后，可开始阅读旅程分析。"
-                    primaryAction={{
-                      label: "开始阅读旅程分析",
-                      testId: "reader-journey-start-analysis",
-                      onClick: () => openSceneBoundaryReview(),
-                    }}
-                  />
-                ) : null}
+                {(() => {
+                  const confirmed = sceneBoundariesQuery.data?.confirmed_revision;
+                  const gate = resolveSceneJourneyGate({
+                    awaitingConfirmation: Boolean(
+                      sceneBoundariesQuery.data?.awaiting_confirmation ??
+                        awaitingSceneBoundaryConfirmation,
+                    ),
+                    confirmedRevisionId: confirmed?.revision_id,
+                    confirmedSource: confirmed?.source,
+                    journeyStatus: journey.data?.status,
+                    journeySceneRevisionId:
+                      (journey.data as { scene_revision_id?: number } | null | undefined)
+                        ?.scene_revision_id ?? null,
+                    journeyResultStatus:
+                      (journey.data as { result_status?: string } | null | undefined)
+                        ?.result_status ?? null,
+                  });
+                  const showGate =
+                    activeTab === "journey" &&
+                    !showJourneyTemporaryError &&
+                    (gate.kind === "need_confirm" ||
+                      gate.kind === "confirmed_no_journey" ||
+                      gate.kind === "stale_journey" ||
+                      gate.kind === "failed") &&
+                    !showJourneyActive &&
+                    !(gate.kind === "ready" && hasJourney);
+                  if (!showGate) return null;
+                  return (
+                    <StateView
+                      kind="empty"
+                      data-testid={
+                        gate.kind === "need_confirm"
+                          ? "reader-journey-blocked-unconfirmed"
+                          : gate.kind === "stale_journey"
+                            ? "reader-journey-stale-revision"
+                            : gate.kind === "failed"
+                              ? "reader-journey-generate-failed"
+                              : "reader-journey-confirmed-no-journey"
+                      }
+                      title={gate.title}
+                      description={gate.description}
+                      primaryAction={{
+                        label: gate.primaryLabel,
+                        testId: gate.primaryTestId,
+                        onClick: () => openSceneBoundaryReview(),
+                      }}
+                    />
+                  );
+                })()}
                 {showJourneyActive ? (
                   <ReaderJourneyProgressCard
                     analysisRunId={analysisRunId}

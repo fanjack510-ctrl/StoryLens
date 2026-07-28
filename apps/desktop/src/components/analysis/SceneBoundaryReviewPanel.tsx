@@ -99,6 +99,9 @@ export function SceneBoundaryReviewPanel({
   const [errorCode, setErrorCode] = useState<string>();
   const [successMessage, setSuccessMessage] = useState<string>();
   const [journeyStartFailed, setJourneyStartFailed] = useState(false);
+  const [journeyFailReason, setJourneyFailReason] = useState<string>();
+  const [journeyRunIdState, setJourneyRunIdState] = useState<number | null>(null);
+  const [journeyStatusState, setJourneyStatusState] = useState<string | null>(null);
   const [conflictOpen, setConflictOpen] = useState(false);
   const [showTechDetails, setShowTechDetails] = useState(false);
   const dirtyRef = useRef(false);
@@ -390,7 +393,19 @@ export function SceneBoundaryReviewPanel({
       setConflictOpen(false);
       setError(undefined);
       setErrorCode(undefined);
-      setJourneyStartFailed(Boolean(startJourney) && !result.journey_started);
+      const started = Boolean(result.journey_started);
+      const failedStart = Boolean(startJourney) && !started;
+      setJourneyStartFailed(failedStart);
+      setJourneyFailReason(
+        failedStart
+          ? result.journey_error_message ||
+              (result.journey_error_code === "JOURNEY_TASK_ALREADY_ACTIVE"
+                ? "当前存在运行中的任务。"
+                : "阅读旅程任务未能启动。")
+          : undefined,
+      );
+      setJourneyRunIdState(result.journey_run_id ?? null);
+      setJourneyStatusState(result.journey_status ?? null);
       const snapshot: DraftSnapshot = {
         revision_id: result.revision_id,
         revision_etag: result.revision_etag,
@@ -403,20 +418,21 @@ export function SceneBoundaryReviewPanel({
         etag: result.revision_etag,
         scenes: draftRef.current.scenes,
       };
+      setRevisionId(result.revision_id);
       setRevisionEtag(result.revision_etag);
       setBoundaryHash(result.boundary_hash);
       patchOverviewConfirmed(snapshot);
       setMode("confirmed_readonly");
       setEditorOpen(false);
       setSuccessMessage(
-        startJourney && result.journey_started
+        startJourney && started
           ? "场景划分已确认，正在进入阅读旅程"
-          : startJourney && !result.journey_started
-            ? "场景已确认，但阅读旅程任务尚未启动"
+          : startJourney && !started
+            ? "场景划分已确认"
             : "场景划分已确认",
       );
       onConfirmed?.({
-        journeyStarted: result.journey_started,
+        journeyStarted: started,
         journeyRunId: result.journey_run_id,
         revisionId: result.revision_id,
       });
@@ -565,6 +581,24 @@ export function SceneBoundaryReviewPanel({
   }
 
   if (mode === "confirmed_readonly") {
+    const running =
+      journeyStatusState === "queued" ||
+      journeyStatusState === "running" ||
+      journeyStatusState === "scene_profiles_running" ||
+      journeyStatusState === "chapter_synthesis_running";
+    const succeeded = journeyStatusState === "succeeded" && journeyRunIdState != null;
+    let primaryLabel = "生成阅读旅程";
+    let primaryTestId = "scene-boundary-start-journey";
+    if (journeyStartFailed) {
+      primaryLabel = "重新尝试生成阅读旅程";
+      primaryTestId = "scene-boundary-retry-journey";
+    } else if (running) {
+      primaryLabel = "查看阅读旅程进度";
+      primaryTestId = "scene-boundary-view-journey-progress";
+    } else if (succeeded) {
+      primaryLabel = "查看阅读旅程";
+      primaryTestId = "scene-boundary-view-journey";
+    }
     return (
       <section className="scene-boundary-review" data-testid="scene-boundary-review">
         <header className="scene-boundary-review-head">
@@ -577,42 +611,46 @@ export function SceneBoundaryReviewPanel({
         </header>
         <div className="scene-boundary-readonly" data-testid="scene-boundary-confirmed-readonly">
           <p>已确认修订 #{revisionId ?? confirmedRevision?.revision_id}</p>
-          <p data-testid="scene-boundary-confirmed-count">场景数：{currentSceneCount || revisionScenes(confirmedRevision).length}</p>
-          {boundaryHash ? <p data-testid="scene-boundary-confirmed-hash">边界指纹：{boundaryHash.slice(0, 12)}…</p> : null}
+          <p data-testid="scene-boundary-confirmed-count">
+            场景数：{currentSceneCount || revisionScenes(confirmedRevision).length}
+          </p>
+          {boundaryHash ? (
+            <p data-testid="scene-boundary-confirmed-hash">边界指纹：{boundaryHash.slice(0, 12)}…</p>
+          ) : null}
         </div>
         {journeyStartFailed ? (
           <div className="notice error" data-testid="scene-boundary-journey-failed">
-            场景已确认，但阅读旅程任务尚未启动
-            <button
-              type="button"
-              className="primary"
-              data-testid="scene-boundary-retry-journey"
-              onClick={() => onConfirmed?.({ journeyStarted: true, journeyRunId: null, revisionId: revisionId || 0 })}
-            >
-              重新启动 Journey
-            </button>
+            <p>阅读旅程任务未能启动。</p>
+            <p data-testid="scene-boundary-journey-fail-reason">
+              {journeyFailReason || "请检查配置后重试。"}
+            </p>
           </div>
         ) : null}
         <footer className="scene-boundary-actions">
           <button
             type="button"
             className="primary"
-            data-testid="scene-boundary-start-journey"
-            onClick={() =>
-              onConfirmed?.({
-                journeyStarted: true,
-                journeyRunId: null,
-                revisionId: revisionId || confirmedRevision?.revision_id || 0,
-              })
-            }
+            data-testid={primaryTestId}
+            disabled={confirmMutation.isPending}
+            onClick={() => {
+              if (running || succeeded) {
+                onConfirmed?.({
+                  journeyStarted: true,
+                  journeyRunId: journeyRunIdState,
+                  revisionId: revisionId || confirmedRevision?.revision_id || 0,
+                });
+                return;
+              }
+              confirmMutation.mutate(true);
+            }}
           >
-            开始阅读旅程分析
+            {confirmMutation.isPending ? "启动中…" : primaryLabel}
           </button>
           <button
             type="button"
             className="secondary"
             data-testid="scene-boundary-readjust"
-            disabled={createDraftMutation.isPending}
+            disabled={createDraftMutation.isPending || confirmMutation.isPending}
             onClick={() => createDraftMutation.mutate()}
           >
             重新调整场景
@@ -1027,22 +1065,24 @@ export function SceneBoundaryReviewPanel({
             className="secondary"
             data-testid="scene-boundary-confirm"
             disabled={busy || confirmMutation.isPending}
+            title="保存并确认当前场景划分，暂不生成阅读旅程。"
             onClick={() => confirmMutation.mutate(false)}
           >
             {confirmMutation.isPending && confirmMutation.variables === false
               ? "确认中…"
-              : "确认场景"}
+              : "仅确认场景划分"}
           </button>
           <button
             type="button"
             className="primary"
             data-testid="scene-boundary-confirm-start"
             disabled={busy || confirmMutation.isPending}
+            title="确认当前场景划分，并立即开始生成阅读旅程。"
             onClick={() => confirmMutation.mutate(true)}
           >
             {confirmMutation.isPending && confirmMutation.variables === true
               ? "确认中…"
-              : "确认场景并开始旅程分析"}
+              : "确认并生成阅读旅程"}
           </button>
           {onExit ? (
             <button type="button" className="ghost" data-testid="scene-boundary-exit" onClick={tryExit}>

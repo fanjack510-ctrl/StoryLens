@@ -228,6 +228,8 @@ describe("SceneBoundaryReviewPanel CHG-041", () => {
     expect(await screen.findByTestId("scene-boundary-success")).toHaveTextContent("场景划分已确认");
     expect(screen.getByTestId("scene-boundary-confirmed-readonly")).toBeInTheDocument();
     expect(screen.queryByText("SCENE_REVISION_CONCURRENT_MODIFICATION")).not.toBeInTheDocument();
+    expect(screen.getByTestId("scene-boundary-start-journey")).toHaveTextContent("生成阅读旅程");
+    expect(screen.queryByTestId("scene-boundary-retry-journey")).not.toBeInTheDocument();
   });
 
   it("blocks duplicate confirm while pending and shows loading", async () => {
@@ -375,7 +377,7 @@ describe("SceneBoundaryReviewPanel CHG-041", () => {
     expect(screen.queryByTestId("scene-boundary-editor-body")).not.toBeInTheDocument();
   });
 
-  it("keeps confirmed revision when journey start fails", async () => {
+  it("keeps confirmed revision when journey start fails with single retry CTA", async () => {
     vi.mocked(analysisApi.sceneBoundariesOverview).mockResolvedValue(draftOverview() as any);
     vi.mocked(analysisApi.confirmSceneBoundary).mockResolvedValue({
       revision_id: 11,
@@ -383,13 +385,27 @@ describe("SceneBoundaryReviewPanel CHG-041", () => {
       boundary_hash: "bh2",
       journey_run_id: null,
       journey_started: false,
+      journey_error_code: "SCENE_CONFIRMED_JOURNEY_NOT_STARTED",
+      journey_error_message: "阅读旅程任务未能启动。",
     });
     renderPanel();
     fireEvent.click(await screen.findByTestId("scene-boundary-confirm-start"));
     expect(await screen.findByTestId("scene-boundary-journey-failed")).toHaveTextContent(
-      "场景已确认，但阅读旅程任务尚未启动",
+      "阅读旅程任务未能启动",
     );
-    expect(screen.getByTestId("scene-boundary-retry-journey")).toBeInTheDocument();
+    expect(screen.getByTestId("scene-boundary-retry-journey")).toHaveTextContent(
+      "重新尝试生成阅读旅程",
+    );
+    expect(screen.queryByTestId("scene-boundary-start-journey")).not.toBeInTheDocument();
+  });
+
+  it("uses frozen button labels", async () => {
+    vi.mocked(analysisApi.sceneBoundariesOverview).mockResolvedValue(draftOverview() as any);
+    renderPanel();
+    expect(await screen.findByTestId("scene-boundary-confirm")).toHaveTextContent("仅确认场景划分");
+    expect(screen.getByTestId("scene-boundary-confirm-start")).toHaveTextContent(
+      "确认并生成阅读旅程",
+    );
   });
 
   it("shows readonly message when journey is running", async () => {

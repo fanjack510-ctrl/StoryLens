@@ -70,6 +70,10 @@ class SceneBoundaryConfirmResponse(BaseModel):
     boundary_hash: str
     journey_run_id: int | None = None
     journey_started: bool = False
+    journey_status: str | None = None
+    already_confirmed: bool = False
+    journey_error_code: str | None = None
+    journey_error_message: str | None = None
 
 
 class SceneBoundaryDiffResponse(BaseModel):

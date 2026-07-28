@@ -195,7 +195,9 @@ def mark_journey_failed_on_run(session: Session, run: AnalysisRun) -> None:
     )
 
 
-def auto_journey_client_request_id(run_id: int) -> str:
+def auto_journey_client_request_id(run_id: int, scene_revision_id: int | None = None) -> str:
+    if scene_revision_id is not None:
+        return f"{AUTO_JOURNEY_CLIENT_PREFIX}{run_id}:rev:{scene_revision_id}"
     return f"{AUTO_JOURNEY_CLIENT_PREFIX}{run_id}"
 
 
@@ -216,7 +218,7 @@ def ensure_auto_reader_journey_row(
         revision_scenes,
     )
 
-    client_request_id = auto_journey_client_request_id(run.id)
+    client_request_id = auto_journey_client_request_id(run.id, scene_revision_id)
     existing = session.scalar(
         select(ReaderJourneyRun).where(
             ReaderJourneyRun.analysis_run_id == run.id,
@@ -224,27 +226,37 @@ def ensure_auto_reader_journey_row(
         )
     )
     if existing is not None:
-        if scene_revision_id is not None and existing.scene_revision_id is None:
+        if scene_revision_id is not None:
+            revision = session.get(BoundaryRevision, scene_revision_id)
+            if revision is not None:
+                scenes = revision_scenes(session, revision.id)
+                bind_journey_to_revision(session, existing, revision, scenes)
+        elif existing.scene_revision_id is None and scene_revision_id is not None:
             revision = session.get(BoundaryRevision, scene_revision_id)
             if revision is not None:
                 scenes = revision_scenes(session, revision.id)
                 bind_journey_to_revision(session, existing, revision, scenes)
         return existing
 
+    # Only reuse a succeeded journey when it already matches the requested revision.
     succeeded = session.scalar(
         select(ReaderJourneyRun)
         .where(
             ReaderJourneyRun.analysis_run_id == run.id,
             ReaderJourneyRun.status == "succeeded",
+            ReaderJourneyRun.result_status == "current",
         )
         .order_by(ReaderJourneyRun.id.desc())
     )
     if succeeded is not None:
-        return succeeded
+        if scene_revision_id is None or succeeded.scene_revision_id == scene_revision_id:
+            return succeeded
+        # Old succeeded journey belongs to a different revision — fall through to create.
 
-    recoverable = find_recoverable_journey_run(session, run.id)
-    if recoverable is not None:
-        return recoverable
+    if scene_revision_id is None:
+        recoverable = find_recoverable_journey_run(session, run.id)
+        if recoverable is not None:
+            return recoverable
 
     if scene_revision_id is not None:
         revision = session.get(BoundaryRevision, scene_revision_id)
@@ -287,6 +299,10 @@ def ensure_auto_reader_journey_row(
                 auto_journey_run_id=journey_run.id,
             )
             return journey_run
+
+    recoverable = find_recoverable_journey_run(session, run.id)
+    if recoverable is not None:
+        return recoverable
 
     _revision, scenes = load_revision_scenes(session, run.id)
     if not scenes:

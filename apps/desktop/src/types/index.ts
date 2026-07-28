@@ -515,4 +515,8 @@ export type SceneBoundaryConfirmResponse = {
   boundary_hash: string;
   journey_run_id: number | null;
   journey_started: boolean;
+  journey_status?: string | null;
+  already_confirmed?: boolean;
+  journey_error_code?: string | null;
+  journey_error_message?: string | null;
 };

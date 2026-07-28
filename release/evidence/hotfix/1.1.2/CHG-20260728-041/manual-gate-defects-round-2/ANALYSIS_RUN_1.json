@@ -1,0 +1,8 @@
+﻿{
+    "id":  1,
+    "status":  "succeeded",
+    "effective_status":  "awaiting_scene_boundary_confirmation",
+    "journey_status":  "succeeded",
+    "subject_id":  "1",
+    "stage":  null
+}

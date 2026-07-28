@@ -1,0 +1,21 @@
+﻿{
+  "change": "CHG-20260728-041",
+  "round": 2,
+  "confirm_start_root_cause": "C",
+  "secondary": ["F", "E"],
+  "findings": {
+    "start_journey_flag_sent": true,
+    "ensure_auto_reader_journey_row": "returns existing succeeded journey for analysis_run=1 without scene_revision_id; skips new task creation",
+    "client_request_id": "auto-{run_id} only — one journey slot per analysis run",
+    "journey_started_response": "true when old journey reused, or false when SCENE_CONFIRMED_JOURNEY_NOT_STARTED",
+    "reader_journey_get": "500 ValidationError on fixture payload_json (reuse_fixture extra fields)",
+    "frontend_duplicate_cta": "开始阅读旅程分析 calls onConfirmed({journeyStarted:true}) without creating task — navigates to tab=reader-journey",
+    "awaiting_confirmation_overview": "true whenever confirmed+model+no draft — stays true after user confirm",
+    "run_effective_status": "remains awaiting_scene_boundary_confirmation until marker cleared"
+  },
+  "revisions": {
+    "hashes_2_through_8_identical": true,
+    "boundary_hash_prefix": "ac521f714e645e9b",
+    "note": "re-adjust creates new draft then confirm creates new confirmed row even with no partition change"
+  }
+}

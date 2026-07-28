@@ -6,7 +6,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends
 from sqlalchemy.orm import Session
 
 from app.api.v1.router import error
-from app.db.models import BoundaryRevision, Chapter
+from app.db.models import AnalysisRun, BoundaryRevision, Chapter
 from app.db.session import get_db, get_session_factory
 from app.model_gateway.gateway import ModelGateway
 from app.model_gateway.registry import get_model_gateway
@@ -188,24 +188,50 @@ async def confirm_scene_boundary(
     _revision_or_404(session, revision_id, chapter_id)
     journey_run_id: int | None = None
     journey_started = False
+    journey_status: str | None = None
+    already_confirmed = False
+    journey_error_code: str | None = None
+    journey_error_message: str | None = None
     try:
         if body.start_journey:
-            revision, journey = await confirm_scene_revision_and_start_journey_v1(
-                session,
-                revision_id,
-                expected_etag=body.expected_etag,
-                start_journey=True,
-                journey_options=body.journey_options,
-                session_factory=session_factory,
-                gateway=gateway,
+            revision, journey, already_confirmed, journey_error_code = (
+                await confirm_scene_revision_and_start_journey_v1(
+                    session,
+                    revision_id,
+                    expected_etag=body.expected_etag,
+                    start_journey=True,
+                    journey_options=body.journey_options,
+                    session_factory=session_factory,
+                    gateway=gateway,
+                )
             )
             if journey is not None:
                 journey_run_id = journey.id
-                journey_started = True
+                journey_status = journey.status
+                journey_started = journey_error_code is None and journey.status in {
+                    "queued",
+                    "running",
+                    "scene_profiles_running",
+                    "chapter_synthesis_running",
+                    "succeeded",
+                }
+            if journey_error_code:
+                journey_error_message = {
+                    "SCENE_CONFIRMED_JOURNEY_NOT_STARTED": "阅读旅程任务未能启动。",
+                    "JOURNEY_START_FAILED": "阅读旅程任务启动失败。",
+                    "JOURNEY_TASK_ALREADY_ACTIVE": "阅读旅程任务已在进行中。",
+                }.get(journey_error_code, "阅读旅程任务未能启动。")
         else:
-            revision = confirm_scene_revision_v1(
+            from app.services.chapter_analysis_completion import (
+                mark_scenes_complete_awaiting_journey,
+            )
+
+            revision, already_confirmed = confirm_scene_revision_v1(
                 session, revision_id, expected_etag=body.expected_etag
             )
+            run = session.get(AnalysisRun, revision.analysis_run_id)
+            if run is not None:
+                mark_scenes_complete_awaiting_journey(session, run)
             session.commit()
     except SceneBoundaryError as exc:
         if exc.error_code == "SCENE_CONFIRMED_JOURNEY_NOT_STARTED":
@@ -217,14 +243,21 @@ async def confirm_scene_boundary(
                 boundary_hash=revision.boundary_hash if revision else "",
                 journey_run_id=None,
                 journey_started=False,
+                already_confirmed=False,
+                journey_error_code=exc.error_code,
+                journey_error_message="阅读旅程任务未能启动。",
             )
         raise _scene_boundary_http_error(exc) from exc
     return SceneBoundaryConfirmResponse(
         revision_id=revision.id,
         revision_etag=revision.revision_etag,
-        boundary_hash=revision.boundary_hash,
+        boundary_hash=revision.boundary_hash or "",
         journey_run_id=journey_run_id,
         journey_started=journey_started,
+        journey_status=journey_status,
+        already_confirmed=already_confirmed,
+        journey_error_code=journey_error_code,
+        journey_error_message=journey_error_message,
     )
 
 

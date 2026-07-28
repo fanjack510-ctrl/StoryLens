@@ -31,6 +31,7 @@ from app.services.scene_boundary_manual_review import (
     compute_diff_summary_v1,
     compute_scene_boundary_hash_v1,
     compute_scene_journey_input_hash_v1,
+    confirm_scene_revision_and_start_journey_v1,
     confirm_scene_revision_v1,
     create_or_get_scene_boundary_draft_v1,
     discard_scene_boundary_draft_v1,
@@ -51,7 +52,7 @@ def _seed_chapter(session, *, paragraph_count: int = 20, scene_count: int = 4):
     book = Book(title="CHG041", source_file_name="t.txt", source_file_hash="a" * 64)
     session.add(book)
     session.flush()
-    chapter = Chapter(book_id=book.id, chapter_index=1, title="第一章", section_type="chapter")
+    chapter = Chapter(book_id=book.id, chapter_index=1, title="???", section_type="chapter")
     session.add(chapter)
     session.flush()
     paragraphs: list[Paragraph] = []
@@ -61,8 +62,8 @@ def _seed_chapter(session, *, paragraph_count: int = 20, scene_count: int = 4):
             book_id=book.id,
             chapter_id=chapter.id,
             paragraph_index=index,
-            raw_text=f"段落{index}内容。" * 3,
-            normalized_text=f"段落{index}内容。" * 3,
+            raw_text=f"??{index}???" * 3,
+            normalized_text=f"??{index}???" * 3,
             char_start=index * 10,
             char_end=index * 10 + 20,
         )
@@ -235,7 +236,7 @@ def test_draft_save_etag_and_confirm_supersedes(testing_session):
             testing_session, draft.id, moved, expected_etag=etag
         )
     assert exc.value.error_code == "SCENE_REVISION_CONCURRENT_MODIFICATION"
-    confirmed = confirm_scene_revision_v1(
+    confirmed, _already = confirm_scene_revision_v1(
         testing_session, saved.id, expected_etag=saved.revision_etag
     )
     testing_session.commit()
@@ -360,7 +361,7 @@ def test_fake_manual_edit_scenario_coverage(testing_session):
     # 2) add boundary at 12/13 (after P12)
     partition = add_boundary(partition, after_paragraph_id=paragraph_ids[11], paragraph_ids=paragraph_ids)
     assert len(partition) == 5
-    # 3) delete divider that was at 15/16 — after edits, find boundary ending at P15
+    # 3) delete divider that was at 15/16 ? after edits, find boundary ending at P15
     end15 = paragraph_ids[14]
     boundary_idx = next(i for i, s in enumerate(partition[:-1]) if s["end_paragraph_id"] == end15)
     partition = delete_boundary(partition, boundary_index=boundary_idx, paragraph_ids=paragraph_ids)
@@ -386,7 +387,7 @@ def test_fake_manual_edit_scenario_coverage(testing_session):
         covered.extend(range(start.paragraph_index, end.paragraph_index + 1))
     assert covered == list(range(1, 21))
     # 8) confirm
-    confirmed = confirm_scene_revision_v1(testing_session, reloaded.id, expected_etag=etag)
+    confirmed, _already = confirm_scene_revision_v1(testing_session, reloaded.id, expected_etag=etag)
     testing_session.commit()
     testing_session.refresh(model_rev)
     assert model_rev.status == "superseded"
@@ -416,3 +417,72 @@ def test_ai_revision_immutable_requires_draft(testing_session):
             json.loads(model_rev.final_boundaries_json)["scenes"],
             expected_etag=model_rev.revision_etag,
         )
+
+def test_confirm_no_change_draft_is_idempotent(testing_session):
+    _, chapter, _, run, _ = _seed_chapter(testing_session)
+    model = ensure_ai_model_revision_after_scenes_v1(testing_session, run)
+    testing_session.commit()
+    draft = create_or_get_scene_boundary_draft_v1(testing_session, chapter.id)
+    testing_session.commit()
+    first, already_first = confirm_scene_revision_v1(
+        testing_session, draft.id, expected_etag=draft.revision_etag
+    )
+    testing_session.commit()
+    # No-edit draft collapses onto the existing confirmed model revision.
+    assert already_first is True
+    assert first.id == model.id
+    first_id = first.id
+    first_hash = first.boundary_hash
+    draft2 = create_or_get_scene_boundary_draft_v1(testing_session, chapter.id)
+    testing_session.commit()
+    assert draft2.id != first_id
+    second, already_second = confirm_scene_revision_v1(
+        testing_session, draft2.id, expected_etag=draft2.revision_etag
+    )
+    testing_session.commit()
+    assert already_second is True
+    assert second.id == first_id
+    assert second.boundary_hash == first_hash
+    confirmed_rows = testing_session.scalars(
+        select(BoundaryRevision).where(
+            BoundaryRevision.chapter_id == chapter.id,
+            BoundaryRevision.status == "confirmed",
+        )
+    ).all()
+    assert len(confirmed_rows) == 1
+
+
+def test_confirm_and_start_creates_revision_scoped_journey(testing_session):
+    _, chapter, _paragraphs, run, scenes = _seed_chapter(testing_session)
+    _attach_scene_analysis(testing_session, run, scenes)
+    ensure_ai_model_revision_after_scenes_v1(testing_session, run)
+    old = cac.ensure_auto_reader_journey_row(testing_session, run)
+    assert old is not None
+    old.status = "succeeded"
+    old.result_status = "current"
+    testing_session.commit()
+    draft = create_or_get_scene_boundary_draft_v1(testing_session, chapter.id)
+    testing_session.commit()
+    partition = json.loads(draft.final_boundaries_json)["scenes"]
+    edited = set_included(partition, scene_order=1, included=False)
+    saved = save_scene_boundary_draft_v1(
+        testing_session, draft.id, edited, expected_etag=draft.revision_etag
+    )
+    testing_session.commit()
+    revision, journey, already, err = asyncio.run(
+        confirm_scene_revision_and_start_journey_v1(
+            testing_session,
+            saved.id,
+            expected_etag=saved.revision_etag,
+            start_journey=True,
+            session_factory=None,
+            gateway=None,
+        )
+    )
+    assert already is False
+    assert err is None
+    assert journey is not None
+    assert journey.id != old.id
+    assert journey.scene_revision_id == revision.id
+    testing_session.refresh(old)
+    assert old.result_status == "superseded"
