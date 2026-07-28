@@ -1,0 +1,24 @@
+{
+  "captured_at_utc": "2026-07-28T06:33:33Z",
+  "install_root": "C:\\Users\\msi\\AppData\\Local\\StoryLens",
+  "binaries": [
+    {
+      "path": "storylens-api.exe",
+      "size": 39085482,
+      "sha256": "81824128B119EB3A25392AD3D44714B0883CD111282B4A2FD7C0FA8EB91D48A7",
+      "matches_release_evidence_1_1_1": true
+    },
+    {
+      "path": "storylens-desktop.exe",
+      "size": 13086720,
+      "sha256": "263BB44C92904574029A4AC1DDE23B2AE212B2D21835ADFE98AEE2D5ADAE3C0E",
+      "matches_release_evidence_1_1_1": true
+    }
+  ],
+  "expected_from_release_evidence": {
+    "sidecar_sha256": "81824128B119EB3A25392AD3D44714B0883CD111282B4A2FD7C0FA8EB91D48A7",
+    "gui_sha256": "263BB44C92904574029A4AC1DDE23B2AE212B2D21835ADFE98AEE2D5ADAE3C0E",
+    "build_source_head": "38c85ab4eda0eaa03bd6a7bf8fda7d8deb11a5db",
+    "private_head": "30d8dad8cd649e832999874f7bf16cc1661cf221"
+  }
+}
