@@ -254,31 +254,27 @@ def start_whole_book_run_v1(session: Session, run_id: int) -> WholeBookRun:
 
 
 def pause_whole_book_run_v1(session: Session, run_id: int) -> WholeBookRun:
-    run = get_run(session, run_id)
-    return _transition_run(session, run, WholeBookRunStatus.paused.value)
+    from app.narrative_core.services.whole_book_runtime_control_v1_service import (
+        request_pause_whole_book_run_v1,
+    )
+
+    return request_pause_whole_book_run_v1(session, run_id)
 
 
 def resume_whole_book_run_v1(session: Session, run_id: int) -> WholeBookRun:
-    run = get_run(session, run_id)
-    if run.status not in {
-        WholeBookRunStatus.paused.value,
-        WholeBookRunStatus.recoverable.value,
-    }:
-        raise WholeBookFoundationError(
-            WholeBookFoundationErrorCode.WHOLE_BOOK_RUN_INVALID_TRANSITION,
-            f"run {run.id} cannot resume from {run.status}",
-        )
-    return _transition_run(session, run, WholeBookRunStatus.pending.value)
+    from app.narrative_core.services.whole_book_runtime_control_v1_service import (
+        resume_whole_book_run_v1 as runtime_resume,
+    )
+
+    return runtime_resume(session, run_id)
 
 
 def cancel_whole_book_run_v1(session: Session, run_id: int) -> WholeBookRun:
-    run = get_run(session, run_id)
-    if run.status in _TERMINAL_STATUSES:
-        raise WholeBookFoundationError(
-            WholeBookFoundationErrorCode.WHOLE_BOOK_RUN_TERMINAL,
-            f"run {run.id} is terminal ({run.status})",
-        )
-    return _transition_run(session, run, WholeBookRunStatus.cancelled.value)
+    from app.narrative_core.services.whole_book_runtime_control_v1_service import (
+        request_cancel_whole_book_run_v1,
+    )
+
+    return request_cancel_whole_book_run_v1(session, run_id)
 
 
 def run_to_dict(run: WholeBookRun) -> dict[str, Any]:
@@ -311,6 +307,11 @@ def run_to_dict(run: WholeBookRun) -> dict[str, Any]:
         "cancelled_at": run.cancelled_at.isoformat() if run.cancelled_at else None,
         "failure_code": run.failure_code,
         "failure_message_safe": run.failure_message_safe,
+        "pause_requested_at": run.pause_requested_at.isoformat() if run.pause_requested_at else None,
+        "cancel_requested_at": run.cancel_requested_at.isoformat() if run.cancel_requested_at else None,
+        "last_heartbeat_at": run.last_heartbeat_at.isoformat() if run.last_heartbeat_at else None,
+        "resumed_at": run.resumed_at.isoformat() if run.resumed_at else None,
+        "resume_count": int(run.resume_count or 0),
     }
 
 

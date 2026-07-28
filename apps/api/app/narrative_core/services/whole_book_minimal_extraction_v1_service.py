@@ -45,11 +45,17 @@ from app.narrative_core.services.whole_book_minimal_helpers_v1 import (
     build_run_contract_dict,
     build_window_contract_dict,
     ensure_fixture_consent,
+    get_stage,
     load_window_paragraph_dicts,
     set_stage_completed,
     set_stage_running,
     snapshot_metadata_dict,
 )
+from app.narrative_core.services.whole_book_native_input_audit_v1 import (
+    assert_native_input_independence_v1,
+    persist_native_input_audit_v1,
+)
+from app.narrative_core.services.whole_book_runtime_control_v1_service import should_stop_claiming_units
 from app.narrative_core.services.whole_book_provider_orchestrator import (
     CountingFakeWholeBookProvider,
     ProviderCallResult,
@@ -200,6 +206,9 @@ def execute_minimal_entity_event_extraction_v1(
         start_whole_book_run_v1(session, run_id)
         session.refresh(run)
 
+    audit = assert_native_input_independence_v1(session, run_id)
+    persist_native_input_audit_v1(session, audit)
+
     consent_id = ensure_fixture_consent(session, run)
     set_stage_running(session, run_id, "extract_entities_events")
     run.current_stage_code = "extract_entities_events"
@@ -218,6 +227,10 @@ def execute_minimal_entity_event_extraction_v1(
     provider_calls = 0
 
     for window in windows:
+        if should_stop_claiming_units(session, run_id):
+            session.refresh(run)
+            break
+
         request = _build_window_request(session, run, snapshot, window)
         request_payload = request.model_dump(mode="json")
         unit_key = f"window:{window.id}"
@@ -296,6 +309,47 @@ def execute_minimal_entity_event_extraction_v1(
         window.status = WholeBookUnitStatus.completed.value
         completed_windows += 1
         valid_count += 1
+
+        stage = get_stage(session, run_id, "extract_entities_events")
+        if stage is not None:
+            stage.progress_current = completed_windows
+            stage.progress_total = len(windows)
+            session.flush()
+
+        if should_stop_claiming_units(session, run_id):
+            session.refresh(run)
+            break
+
+    session.flush()
+
+    run = get_run(session, run_id)
+    if run.status == WholeBookRunStatus.paused.value:
+        return {
+            "run_id": run_id,
+            "windows_total": len(windows),
+            "windows_completed": completed_windows,
+            "windows_failed": failed_windows,
+            "valid_results": valid_count,
+            "invalid_results": invalid_count,
+            "provider_calls": provider_calls,
+            "current_stage_code": run.current_stage_code,
+            "run_status": run.status,
+            "paused": True,
+        }
+
+    if run.status == WholeBookRunStatus.cancelled.value:
+        return {
+            "run_id": run_id,
+            "windows_total": len(windows),
+            "windows_completed": completed_windows,
+            "windows_failed": failed_windows,
+            "valid_results": valid_count,
+            "invalid_results": invalid_count,
+            "provider_calls": provider_calls,
+            "current_stage_code": run.current_stage_code,
+            "run_status": run.status,
+            "cancelled": True,
+        }
 
     session.flush()
 

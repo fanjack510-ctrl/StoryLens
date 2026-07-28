@@ -25,9 +25,11 @@ from app.narrative_core.migrations import (
     MIGRATION_NARRATIVE_RELATIONS_VERSIONS_EVIDENCE,
     MIGRATION_SCHEMA_MIGRATIONS,
     MIGRATION_WHOLE_BOOK_FOUNDATION_V1,
-    MIGRATION_WHOLE_BOOK_OVERVIEW_RUNTIME,
-    MIGRATION_WHOLE_BOOK_SNAPSHOT_IMMUTABILITY,
     MIGRATION_WHOLE_BOOK_MINIMAL_ANALYSIS_RESULTS,
+    MIGRATION_WHOLE_BOOK_NATIVE_INPUT_AUDIT,
+    MIGRATION_WHOLE_BOOK_OVERVIEW_RUNTIME,
+    MIGRATION_WHOLE_BOOK_RUNTIME_CONTROL,
+    MIGRATION_WHOLE_BOOK_SNAPSHOT_IMMUTABILITY,
     migration_checksum,
 )
 
@@ -1141,6 +1143,8 @@ def apply_narrative_migrations(engine: Engine) -> None:
     migrate_narrative_20260728_012_whole_book_foundation_v1(engine)
     migrate_narrative_20260728_013_whole_book_snapshot_immutability(engine)
     migrate_narrative_20260728_014_whole_book_minimal_analysis_results(engine)
+    migrate_narrative_20260728_015_whole_book_runtime_control(engine)
+    migrate_narrative_20260728_016_whole_book_native_input_audit(engine)
 
 
 SQL_012 = """
@@ -1922,3 +1926,105 @@ def migrate_narrative_20260728_014_whole_book_minimal_analysis_results(engine: E
         )
     _ensure_schema_migrations_table(engine)
     _record_applied(engine, MIGRATION_WHOLE_BOOK_MINIMAL_ANALYSIS_RESULTS, checksum)
+
+
+SQL_015 = """
+ALTER TABLE whole_book_runs ADD COLUMN pause_requested_at DATETIME;
+ALTER TABLE whole_book_runs ADD COLUMN cancel_requested_at DATETIME;
+ALTER TABLE whole_book_runs ADD COLUMN last_heartbeat_at DATETIME;
+ALTER TABLE whole_book_runs ADD COLUMN resumed_at DATETIME;
+ALTER TABLE whole_book_runs ADD COLUMN resume_count INTEGER NOT NULL DEFAULT 0;
+"""
+
+
+def migrate_narrative_20260728_015_whole_book_runtime_control(engine: Engine) -> None:
+    """WB-1.8: pause/resume/cancel runtime control columns on whole_book_runs."""
+    checksum = migration_checksum(SQL_015)
+    if "whole_book_runs" not in _table_names(engine):
+        migrate_narrative_20260728_012_whole_book_foundation_v1(engine)
+    additions = {
+        "pause_requested_at": "DATETIME",
+        "cancel_requested_at": "DATETIME",
+        "last_heartbeat_at": "DATETIME",
+        "resumed_at": "DATETIME",
+        "resume_count": "INTEGER NOT NULL DEFAULT 0",
+    }
+    existing = _column_names(engine, "whole_book_runs")
+    with engine.begin() as connection:
+        for name, ddl in additions.items():
+            if name not in existing:
+                connection.execute(text(f"ALTER TABLE whole_book_runs ADD COLUMN {name} {ddl}"))
+    required = set(additions)
+    if not required.issubset(_column_names(engine, "whole_book_runs")):
+        raise NarrativeCoreError(
+            NarrativeCoreErrorCode.MIGRATION_BASELINE_INVALID,
+            "015 failed: whole_book_runs runtime control columns incomplete",
+        )
+    _ensure_schema_migrations_table(engine)
+    _record_applied(engine, MIGRATION_WHOLE_BOOK_RUNTIME_CONTROL, checksum)
+
+
+SQL_016 = """
+CREATE TABLE whole_book_native_input_audits (
+    id INTEGER NOT NULL PRIMARY KEY,
+    run_id INTEGER NOT NULL,
+    snapshot_id INTEGER NOT NULL,
+    full_text_snapshot_used INTEGER NOT NULL DEFAULT 1,
+    chapter_analysis_asset_count INTEGER NOT NULL DEFAULT 0,
+    reader_journey_asset_count INTEGER NOT NULL DEFAULT 0,
+    chapter_aggregate_asset_count INTEGER NOT NULL DEFAULT 0,
+    enhanced_asset_count INTEGER NOT NULL DEFAULT 0,
+    audit_status VARCHAR(32) NOT NULL DEFAULT 'pass',
+    created_at DATETIME NOT NULL,
+    FOREIGN KEY(run_id) REFERENCES whole_book_runs (id) ON DELETE CASCADE,
+    FOREIGN KEY(snapshot_id) REFERENCES book_snapshots (id) ON DELETE CASCADE,
+    CONSTRAINT uq_wb_native_input_audits_run UNIQUE (run_id)
+);
+CREATE INDEX IF NOT EXISTS ix_wb_native_input_audits_run_id
+    ON whole_book_native_input_audits (run_id);
+"""
+
+
+def migrate_narrative_20260728_016_whole_book_native_input_audit(engine: Engine) -> None:
+    """WB-1.9: native input independence audit table."""
+    checksum = migration_checksum(SQL_016)
+    names = _table_names(engine)
+    if "whole_book_runs" not in names:
+        migrate_narrative_20260728_015_whole_book_runtime_control(engine)
+        names = _table_names(engine)
+    if "whole_book_native_input_audits" not in names:
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    """
+                    CREATE TABLE whole_book_native_input_audits (
+                        id INTEGER NOT NULL PRIMARY KEY,
+                        run_id INTEGER NOT NULL,
+                        snapshot_id INTEGER NOT NULL,
+                        full_text_snapshot_used INTEGER NOT NULL DEFAULT 1,
+                        chapter_analysis_asset_count INTEGER NOT NULL DEFAULT 0,
+                        reader_journey_asset_count INTEGER NOT NULL DEFAULT 0,
+                        chapter_aggregate_asset_count INTEGER NOT NULL DEFAULT 0,
+                        enhanced_asset_count INTEGER NOT NULL DEFAULT 0,
+                        audit_status VARCHAR(32) NOT NULL DEFAULT 'pass',
+                        created_at DATETIME NOT NULL,
+                        FOREIGN KEY(run_id) REFERENCES whole_book_runs (id) ON DELETE CASCADE,
+                        FOREIGN KEY(snapshot_id) REFERENCES book_snapshots (id) ON DELETE CASCADE,
+                        CONSTRAINT uq_wb_native_input_audits_run UNIQUE (run_id)
+                    )
+                    """
+                )
+            )
+            connection.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS ix_wb_native_input_audits_run_id "
+                    "ON whole_book_native_input_audits (run_id)"
+                )
+            )
+    if "whole_book_native_input_audits" not in _table_names(engine):
+        raise NarrativeCoreError(
+            NarrativeCoreErrorCode.MIGRATION_BASELINE_INVALID,
+            "016 failed: whole_book_native_input_audits missing after DDL",
+        )
+    _ensure_schema_migrations_table(engine)
+    _record_applied(engine, MIGRATION_WHOLE_BOOK_NATIVE_INPUT_AUDIT, checksum)

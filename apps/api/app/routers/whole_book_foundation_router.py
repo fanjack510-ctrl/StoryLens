@@ -20,6 +20,7 @@ from app.narrative_core.services.whole_book_run_v1_service import (
     stage_to_dict,
     start_whole_book_run_v1,
 )
+from app.narrative_core.services.whole_book_runtime_control_v1_service import aggregate_run_progress_v1
 from app.narrative_core.services.whole_book_snapshot_v1_service import (
     chapter_to_dict,
     create_or_reuse_book_snapshot_v1,
@@ -230,6 +231,15 @@ def cancel_run(run_id: int, db: Session = Depends(get_db)) -> dict:
         return {"run": run_to_dict(run)}
     except WholeBookFoundationError as exc:
         db.rollback()
+        _raise_foundation(exc)
+        raise
+
+
+@router.get("/whole-book/runs/{run_id}/progress")
+def get_run_progress(run_id: int, db: Session = Depends(get_db)) -> dict:
+    try:
+        return aggregate_run_progress_v1(db, run_id)
+    except WholeBookFoundationError as exc:
         _raise_foundation(exc)
         raise
 

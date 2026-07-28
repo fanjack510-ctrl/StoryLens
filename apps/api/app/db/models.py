@@ -1327,6 +1327,35 @@ class WholeBookRun(Base):
     cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     failure_code: Mapped[str | None] = mapped_column(String(128), nullable=True)
     failure_message_safe: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    pause_requested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    cancel_requested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_heartbeat_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    resumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    resume_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+
+class WholeBookNativeInputAudit(Base):
+    """Native-mode input independence audit (WB-1.9)."""
+
+    __tablename__ = "whole_book_native_input_audits"
+    __table_args__ = (
+        UniqueConstraint("run_id", name="uq_wb_native_input_audits_run"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    run_id: Mapped[int] = mapped_column(
+        ForeignKey("whole_book_runs.id", ondelete="CASCADE"), index=True
+    )
+    snapshot_id: Mapped[int] = mapped_column(
+        ForeignKey("book_snapshots.id", ondelete="CASCADE"), index=True
+    )
+    full_text_snapshot_used: Mapped[bool] = mapped_column(default=True)
+    chapter_analysis_asset_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    reader_journey_asset_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    chapter_aggregate_asset_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    enhanced_asset_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    audit_status: Mapped[str] = mapped_column(String(32), nullable=False, default="pass")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
 
 class WholeBookRunStageRow(Base):
