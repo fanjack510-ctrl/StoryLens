@@ -20,7 +20,14 @@
     "apps/api/app/services/scene_boundary_adjudicator.py",
     "apps/desktop/src/pages/TasksPage.tsx"
   ],
-  "commits": [],
+  "commits": [
+    {
+      "sha": "03c9fc488ffb76594bc50e46549433f29091ddc0",
+      "message": "docs(hotfix): investigate structured output truncation",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "release",
     "apps/api/app/services/structured_output.py",
@@ -68,5 +75,5 @@
   },
   "blocker_level": null,
   "created_at": "2026-07-28T06:40:00Z",
-  "updated_at": "2026-07-28T07:15:00Z"
+  "updated_at": "2026-07-28T07:42:00Z"
 }
