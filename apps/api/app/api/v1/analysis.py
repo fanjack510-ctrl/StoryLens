@@ -444,6 +444,97 @@ def serialize_run(session: Session, run: AnalysisRun) -> AnalysisRunResponse:
         current_stage = "reader_journey"
     elif chapter_meta["chapter_complete"]:
         current_stage = "completed"
+
+    # CHG-20260728-040: aggregate invocation usage even when reservation is released.
+    inv_rows = list(
+        session.scalars(select(ModelInvocation).where(ModelInvocation.run_id == run.id))
+    )
+    usage_invocation_count = len(inv_rows)
+    usage_input = sum(int(i.input_tokens or 0) for i in inv_rows)
+    usage_output = sum(int(i.output_tokens or 0) for i in inv_rows)
+    usage_total = sum(int(i.total_tokens or 0) for i in inv_rows)
+    cost_values = [i.estimated_cost for i in inv_rows if i.estimated_cost is not None]
+    usage_cost_unknown = bool(inv_rows) and len(cost_values) < len(inv_rows)
+    usage_estimated_cost = float(sum(cost_values)) if cost_values else None
+
+    failure_substage = None
+    failure_reason_code = run.root_error_code
+    if run.root_error_code and str(run.root_error_code).startswith("SCENE_BOUNDARY_"):
+        failure_substage = "scene_boundary_adjudication"
+    elif any(i.task_type == "scene_boundary_adjudication" for i in inv_rows) and (
+        run.status.startswith("failed") or run.root_error_code in {"OUTPUT_TRUNCATED"}
+    ):
+        failure_substage = "scene_boundary_adjudication"
+
+    from app.db.models import AnalysisArtifact
+    from app.services.boundary_adjudication_checkpoints import (
+        ARTIFACT_TYPE,
+        load_adjudication_plan,
+    )
+
+    adj_artifacts = list(
+        session.scalars(
+            select(AnalysisArtifact).where(
+                AnalysisArtifact.run_id == run.id,
+                AnalysisArtifact.artifact_type == ARTIFACT_TYPE,
+            )
+        )
+    )
+    boundary_batch_completed = len(adj_artifacts)
+    boundary_candidate_completed = 0
+    for art in adj_artifacts:
+        try:
+            payload = json.loads(art.payload_json or "{}")
+            boundary_candidate_completed += len(payload.get("target_candidate_ids") or [])
+        except json.JSONDecodeError:
+            pass
+
+    plan = load_adjudication_plan(session, run_id=run.id)
+    if plan is None and (run.recovered_from_run_id or run.retry_of_run_id):
+        plan = load_adjudication_plan(
+            session,
+            run_id=int(run.recovered_from_run_id or run.retry_of_run_id),
+        )
+
+    boundary_candidate_total = None
+    boundary_batch_total = None
+    adj_invs = [i for i in inv_rows if i.task_type == "scene_boundary_adjudication"]
+    if plan:
+        boundary_candidate_total = int(plan.get("boundary_candidate_total") or 0) or None
+        boundary_batch_total = int(plan.get("boundary_batch_total") or 0) or None
+    if adj_invs or adj_artifacts or failure_substage == "scene_boundary_adjudication":
+        if boundary_candidate_total is None:
+            selected: list[str] = []
+            for i in inv_rows:
+                if i.task_type != "scene_boundary" or not i.selected_transition_ids_json:
+                    continue
+                try:
+                    selected.extend(json.loads(i.selected_transition_ids_json))
+                except json.JSONDecodeError:
+                    pass
+            if selected:
+                boundary_candidate_total = len(list(dict.fromkeys(selected)))
+            elif adj_artifacts:
+                boundary_candidate_total = boundary_candidate_completed or None
+        if boundary_candidate_total is not None and boundary_batch_total is None:
+            from math import ceil
+
+            boundary_batch_total = max(
+                boundary_batch_completed,
+                int(ceil(boundary_candidate_total / 10)) if boundary_candidate_total else 0,
+            )
+        if boundary_batch_total is not None:
+            boundary_batch_total = max(boundary_batch_total, boundary_batch_completed)
+
+    last_adj = adj_invs[-1] if adj_invs else None
+    trunc_attempts = sum(
+        1
+        for i in adj_invs
+        if i.finish_reason in {"length", "max_tokens"}
+        or (i.error_code or "").endswith("TRUNCATED")
+        or (i.error_code or "").endswith("TRUNCATED_AT_HARD_CAP")
+    )
+
     return base.model_copy(
         update={
             "budget_required": block.get("required"),
@@ -513,6 +604,26 @@ def serialize_run(session: Session, run: AnalysisRun) -> AnalysisRunResponse:
             ),
             "journey_error_code": chapter_meta.get("journey_error_code"),
             "primary_action": chapter_meta.get("primary_action"),
+            "failure_substage": failure_substage,
+            "failure_reason_code": failure_reason_code,
+            "boundary_candidate_total": boundary_candidate_total,
+            "boundary_candidate_completed": boundary_candidate_completed,
+            "boundary_batch_total": boundary_batch_total,
+            "boundary_batch_completed": boundary_batch_completed,
+            "usage_invocation_count": usage_invocation_count,
+            "usage_input_tokens": usage_input if usage_invocation_count else None,
+            "usage_output_tokens": usage_output if usage_invocation_count else None,
+            "usage_total_tokens": usage_total if usage_invocation_count else None,
+            "usage_estimated_cost": usage_estimated_cost,
+            "usage_cost_unknown": usage_cost_unknown,
+            "last_requested_output_tokens": (
+                last_adj.requested_output_tokens if last_adj else None
+            ),
+            "last_actual_output_tokens": (
+                last_adj.actual_output_tokens or last_adj.output_tokens if last_adj else None
+            ),
+            "last_finish_reason": last_adj.finish_reason if last_adj else None,
+            "truncation_attempt_count": trunc_attempts if adj_invs else None,
         }
     )
 

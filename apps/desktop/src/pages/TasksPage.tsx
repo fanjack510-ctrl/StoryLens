@@ -585,16 +585,32 @@ export function TasksPage() {
     failed: "失败",
   };
   const overviewUserError = (run: any): string | null => {
-    const code = run?.error_code || run?.root_error_code;
+    const code = run?.error_code || run?.root_error_code || run?.failure_reason_code;
     if (code === "PROVIDER_OUTPUT_INVALID") {
       return "模型返回的分析结果格式不符合要求，任务未完成。";
     }
     if (code === "PROVIDER_OUTPUT_EMPTY") {
       return "模型返回空结果，任务未完成。";
     }
+    if (code === "SCENE_BOUNDARY_OUTPUT_TRUNCATED_AT_HARD_CAP") {
+      return "模型输出达到当前上限，边界裁决未能生成完整结果。";
+    }
+    if (code === "SCENE_BOUNDARY_OUTPUT_BUDGET_TOO_LOW") {
+      return "当前模型输出上限不足以完成边界裁决。请将最大输出 Token 调整到至少 1024 后重试。";
+    }
+    if (code === "SCENE_BOUNDARY_OUTPUT_TRUNCATED" || code === "OUTPUT_TRUNCATED") {
+      return "模型输出达到上限，StoryLens 正在提高本次裁决的输出预算。";
+    }
     return null;
   };
   const runStatusLabel = (run: any) => {
+    if (
+      (run.failure_reason_code === "SCENE_BOUNDARY_OUTPUT_TRUNCATED" ||
+        run.root_error_code === "SCENE_BOUNDARY_OUTPUT_TRUNCATED") &&
+      run.status === "running"
+    ) {
+      return "正在调整输出上限并重试";
+    }
     if (isBudgetPauseRun(run)) return "分析已暂停";
     if (run.status === "awaiting_provider_recovery") return "分析已暂停";
     if (run.task_type === "whole_book_overview" || run.subject_type === "book") {
@@ -980,11 +996,64 @@ export function TasksPage() {
                         ? "服务请求"
                         : (detail.actual_failed_stage || detail.failed_stage || detail.current_stage || "未知")}
                   </dd>
+                  {detail.failure_substage ? (
+                    <>
+                      <dt>实际子阶段</dt>
+                      <dd data-testid="detail-failure-substage">{detail.failure_substage}</dd>
+                    </>
+                  ) : null}
+                  {detail.failure_reason_code ? (
+                    <>
+                      <dt>错误码</dt>
+                      <dd data-testid="detail-failure-reason-code">{detail.failure_reason_code}</dd>
+                    </>
+                  ) : null}
                   <dt>场景进度</dt>
                   <dd data-testid="detail-scene-progress">
-                    场景分析：{detail.completed_scene_count ?? 0} / {detail.total_scene_count ?? 0}
-                    （未完成 {detail.remaining_scene_count ?? 0}）
+                    {detail.failure_substage === "scene_boundary_adjudication" ||
+                    (detail.boundary_candidate_total != null && (detail.total_scene_count ?? 0) === 0) ? (
+                      <>
+                        {detail.boundary_candidate_total == null ? (
+                          <>边界候选：暂无进度数据</>
+                        ) : (
+                          <>
+                            边界候选：{detail.boundary_candidate_completed ?? 0} /{" "}
+                            {detail.boundary_candidate_total}
+                            <br />
+                            裁决批次：{detail.boundary_batch_completed ?? 0} /{" "}
+                            {detail.boundary_batch_total ?? "?"}
+                          </>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        场景分析：{detail.completed_scene_count ?? 0} / {detail.total_scene_count ?? 0}
+                        （未完成 {detail.remaining_scene_count ?? 0}）
+                      </>
+                    )}
                   </dd>
+                  {(detail.last_requested_output_tokens != null ||
+                    detail.last_finish_reason ||
+                    detail.truncation_attempt_count != null) && (
+                    <>
+                      <dt>输出上限（最后请求）</dt>
+                      <dd data-testid="detail-last-output-limit">
+                        {detail.last_requested_output_tokens ?? "未知"}
+                      </dd>
+                      <dt>实际输出 Token</dt>
+                      <dd data-testid="detail-last-output-tokens">
+                        {detail.last_actual_output_tokens ?? "未知"}
+                      </dd>
+                      <dt>finish_reason</dt>
+                      <dd data-testid="detail-finish-reason">
+                        {detail.last_finish_reason || "未知"}
+                      </dd>
+                      <dt>截断尝试次数</dt>
+                      <dd data-testid="detail-truncation-attempts">
+                        {detail.truncation_attempt_count ?? 0}
+                      </dd>
+                    </>
+                  )}
                   <dt>当前失败场景</dt>
                   <dd data-testid="detail-failed-scene">
                     {detail.failed_scene_id != null
@@ -1024,7 +1093,24 @@ export function TasksPage() {
                 <dl>
                   <dt>预留状态</dt>
                   <dd>{detail.reservation_status || "无"}</dd>
-                  {(detail.budget_required || detail.budget_remaining || detail.exceeded_dimensions?.length) ? (
+                  {(detail.usage_invocation_count ?? 0) > 0 ? (
+                    <>
+                      <dt>调用次数</dt>
+                      <dd data-testid="detail-usage-calls">{detail.usage_invocation_count}</dd>
+                      <dt>输入 Token</dt>
+                      <dd data-testid="detail-usage-input">{detail.usage_input_tokens ?? 0}</dd>
+                      <dt>输出 Token</dt>
+                      <dd data-testid="detail-usage-output">{detail.usage_output_tokens ?? 0}</dd>
+                      <dt>总 Token</dt>
+                      <dd data-testid="detail-usage-total">{detail.usage_total_tokens ?? 0}</dd>
+                      <dt>费用</dt>
+                      <dd data-testid="detail-usage-cost">
+                        {detail.usage_cost_unknown || detail.usage_estimated_cost == null
+                          ? "费用暂无法计算"
+                          : `${detail.usage_estimated_cost} CNY`}
+                      </dd>
+                    </>
+                  ) : (detail.budget_required || detail.budget_remaining || detail.exceeded_dimensions?.length) ? (
                     <>
                       <dt>所需额度</dt>
                       <dd><pre>{JSON.stringify(detail.budget_required, null, 2)}</pre></dd>
@@ -1036,7 +1122,7 @@ export function TasksPage() {
                   ) : (
                     <>
                       <dt>预算摘要</dt>
-                      <dd>暂无用量明细</dd>
+                      <dd>尚无模型调用</dd>
                     </>
                   )}
                 </dl>
