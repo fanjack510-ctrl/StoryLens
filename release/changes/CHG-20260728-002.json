@@ -23,6 +23,12 @@
       "message": "docs(whole-book): set WB-0.1 status to manual verification",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "e24c9c03a93bd3840dbc20a6f8d7d53baa926fa8",
+      "message": "docs(whole-book): clarify WB-0.1 final report status",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -78,5 +84,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-28T01:20:16Z",
-  "updated_at": "2026-07-28T01:24:08Z"
+  "updated_at": "2026-07-28T01:24:44Z"
 }
