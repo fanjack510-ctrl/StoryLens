@@ -3,9 +3,16 @@
   "title": "WB-0.5 Idempotent Provider Orchestration",
   "type": "feature",
   "base_version": "1.1.1",
-  "status": "registered",
+  "status": "implemented",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "1167a08ce108e61fef131e731daccdf06603353d",
+      "message": "feat(whole-book): add idempotent provider orchestration",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [],
   "files": [],
   "user_summary": "Provider units/attempts, budget gates, Fake provider, resume/retry without real network.",
@@ -26,7 +33,7 @@
     "breaking_change": false
   },
   "blocker_level": null,
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-28T02:26:19Z",
-  "updated_at": "2026-07-28T02:26:19Z"
+  "updated_at": "2026-07-28T02:45:27Z"
 }
