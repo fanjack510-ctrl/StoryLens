@@ -5,7 +5,14 @@
   "base_version": "1.1.1",
   "status": "registered",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "e91b77d2f0bd550a809908d09320128474ed8125",
+      "message": "feat(whole-book): add immutable book snapshots",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [],
   "files": [],
   "user_summary": "Create/reuse immutable book snapshots with shared revision hash.",
@@ -26,7 +33,7 @@
     "breaking_change": false
   },
   "blocker_level": null,
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-28T02:57:42Z",
-  "updated_at": "2026-07-28T02:57:42Z"
+  "updated_at": "2026-07-28T03:15:52Z"
 }
