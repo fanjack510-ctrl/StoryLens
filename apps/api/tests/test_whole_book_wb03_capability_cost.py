@@ -144,8 +144,11 @@ def test_estimate_expiry(testing_session) -> None:
 def test_book_change_invalidates_estimate(testing_session) -> None:
     book, provider = _seed_book(testing_session, chars=400, title="chg")
     est = estimate_whole_book_analysis(testing_session, book.id, "whole_book_native", provider.id)
-    ch = testing_session.query(Chapter).filter_by(book_id=book.id).one()
-    ch.content_hash = "d" * 64
+    # Unified book_revision_v1 hashes real chapter title/text — mutate source text.
+    para = testing_session.query(Paragraph).filter_by(book_id=book.id).first()
+    assert para is not None
+    para.normalized_text = (para.normalized_text or "") + "\n正文变更"
+    para.raw_text = (para.raw_text or "") + "\n正文变更"
     testing_session.flush()
     ok, code = is_estimate_valid(testing_session, est)
     assert ok is False

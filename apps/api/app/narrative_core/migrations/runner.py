@@ -26,6 +26,7 @@ from app.narrative_core.migrations import (
     MIGRATION_SCHEMA_MIGRATIONS,
     MIGRATION_WHOLE_BOOK_FOUNDATION_V1,
     MIGRATION_WHOLE_BOOK_OVERVIEW_RUNTIME,
+    MIGRATION_WHOLE_BOOK_SNAPSHOT_IMMUTABILITY,
     migration_checksum,
 )
 
@@ -1137,6 +1138,7 @@ def apply_narrative_migrations(engine: Engine) -> None:
     """Apply all frozen narrative migrations (Phase 1P + 1B-P + Overview + WB foundation)."""
     apply_narrative_overview_migrations(engine)
     migrate_narrative_20260728_012_whole_book_foundation_v1(engine)
+    migrate_narrative_20260728_013_whole_book_snapshot_immutability(engine)
 
 
 SQL_012 = """
@@ -1702,3 +1704,81 @@ def migrate_narrative_20260728_012_whole_book_foundation_v1(engine: Engine) -> N
 
     _ensure_schema_migrations_table(engine)
     _record_applied(engine, MIGRATION_WHOLE_BOOK_FOUNDATION_V1, checksum)
+
+
+SQL_013 = """
+CREATE TRIGGER IF NOT EXISTS trg_book_snapshots_no_update_completed
+BEFORE UPDATE ON book_snapshots
+FOR EACH ROW
+WHEN OLD.snapshot_status = 'completed'
+BEGIN
+    SELECT RAISE(ABORT, 'update_completed_forbidden');
+END;
+CREATE TRIGGER IF NOT EXISTS trg_book_snapshot_chapters_no_update_completed
+BEFORE UPDATE ON book_snapshot_chapters
+FOR EACH ROW
+WHEN EXISTS (
+    SELECT 1 FROM book_snapshots s
+    WHERE s.id = OLD.snapshot_id AND s.snapshot_status = 'completed'
+)
+BEGIN
+    SELECT RAISE(ABORT, 'update_completed_forbidden');
+END;
+CREATE TRIGGER IF NOT EXISTS trg_book_snapshot_paragraphs_no_update_completed
+BEFORE UPDATE ON book_snapshot_paragraphs
+FOR EACH ROW
+WHEN EXISTS (
+    SELECT 1 FROM book_snapshots s
+    WHERE s.id = OLD.snapshot_id AND s.snapshot_status = 'completed'
+)
+BEGIN
+    SELECT RAISE(ABORT, 'update_completed_forbidden');
+END;
+"""
+
+
+def migrate_narrative_20260728_013_whole_book_snapshot_immutability(engine: Engine) -> None:
+    """WB-1.2: SQLite triggers blocking UPDATE on completed snapshots (idempotent)."""
+    checksum = migration_checksum(SQL_013)
+    names = _table_names(engine)
+    if "book_snapshots" not in names:
+        migrate_narrative_20260728_012_whole_book_foundation_v1(engine)
+    with engine.begin() as connection:
+        for statement in (
+            """
+            CREATE TRIGGER IF NOT EXISTS trg_book_snapshots_no_update_completed
+            BEFORE UPDATE ON book_snapshots
+            FOR EACH ROW
+            WHEN OLD.snapshot_status = 'completed'
+            BEGIN
+                SELECT RAISE(ABORT, 'update_completed_forbidden');
+            END
+            """,
+            """
+            CREATE TRIGGER IF NOT EXISTS trg_book_snapshot_chapters_no_update_completed
+            BEFORE UPDATE ON book_snapshot_chapters
+            FOR EACH ROW
+            WHEN EXISTS (
+                SELECT 1 FROM book_snapshots s
+                WHERE s.id = OLD.snapshot_id AND s.snapshot_status = 'completed'
+            )
+            BEGIN
+                SELECT RAISE(ABORT, 'update_completed_forbidden');
+            END
+            """,
+            """
+            CREATE TRIGGER IF NOT EXISTS trg_book_snapshot_paragraphs_no_update_completed
+            BEFORE UPDATE ON book_snapshot_paragraphs
+            FOR EACH ROW
+            WHEN EXISTS (
+                SELECT 1 FROM book_snapshots s
+                WHERE s.id = OLD.snapshot_id AND s.snapshot_status = 'completed'
+            )
+            BEGIN
+                SELECT RAISE(ABORT, 'update_completed_forbidden');
+            END
+            """,
+        ):
+            connection.execute(text(statement))
+    _ensure_schema_migrations_table(engine)
+    _record_applied(engine, MIGRATION_WHOLE_BOOK_SNAPSHOT_IMMUTABILITY, checksum)

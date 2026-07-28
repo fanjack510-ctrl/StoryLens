@@ -62,6 +62,7 @@ from app.narrative_core.enums import (
 from app.narrative_core.migrations import (
     MIGRATION_WHOLE_BOOK_FOUNDATION_V1,
     MIGRATION_WHOLE_BOOK_OVERVIEW_RUNTIME,
+    MIGRATION_WHOLE_BOOK_SNAPSHOT_IMMUTABILITY,
     NARRATIVE_MIGRATION_ORDER,
     assert_unique_migration_ids,
 )
@@ -109,8 +110,9 @@ def _load_fixture(name: str) -> dict:
 
 def test_migration_order_includes_011() -> None:
     assert_unique_migration_ids()
-    assert len(NARRATIVE_MIGRATION_ORDER) == 12
-    assert NARRATIVE_MIGRATION_ORDER[-1] == MIGRATION_WHOLE_BOOK_FOUNDATION_V1
+    assert len(NARRATIVE_MIGRATION_ORDER) == 13
+    assert NARRATIVE_MIGRATION_ORDER[-1] == MIGRATION_WHOLE_BOOK_SNAPSHOT_IMMUTABILITY
+    assert NARRATIVE_MIGRATION_ORDER[11] == MIGRATION_WHOLE_BOOK_FOUNDATION_V1
     assert NARRATIVE_MIGRATION_ORDER[10] == MIGRATION_WHOLE_BOOK_OVERVIEW_RUNTIME
     assert NARRATIVE_MIGRATION_ORDER[9] == "20260723_010_analysis_conflicts"
 

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import math
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
@@ -22,6 +21,7 @@ from app.narrative_core.services.whole_book_foundation_errors import (
 )
 from app.services.cloud_pricing import estimate_cost, model_pricing_available, pricing_status
 from app.services.transition_batch_planner import conservative_token_estimate
+from app.services.whole_book_source_fingerprint import compute_book_revision_hash_v1
 
 ESTIMATE_VERSION = "whole_book_cost_estimate_v1"
 TARGET_INPUT_TOKENS_PER_WINDOW = 18000
@@ -34,28 +34,8 @@ CURRENCY = "CNY"
 
 
 def compute_book_revision_hash(session: Session, book_id: int) -> str:
-    chapters = session.scalars(
-        select(Chapter).where(Chapter.book_id == book_id).order_by(Chapter.chapter_index.asc())
-    ).all()
-    parts: list[str] = []
-    for ch in chapters:
-        ch_hash = (ch.content_hash or "").strip().lower()
-        if not ch_hash:
-            paras = session.scalars(
-                select(Paragraph)
-                .where(Paragraph.chapter_id == ch.id)
-                .order_by(Paragraph.paragraph_index.asc())
-            ).all()
-            blob = "|".join(
-                (
-                    p.content_hash
-                    or hashlib.sha256((p.normalized_text or p.raw_text or "").encode("utf-8")).hexdigest()
-                )
-                for p in paras
-            )
-            ch_hash = hashlib.sha256(blob.encode("utf-8")).hexdigest()
-        parts.append(f"{ch.id}:{ch_hash}")
-    return hashlib.sha256("\n".join(parts).encode("utf-8")).hexdigest()
+    """Back-compat alias — delegates to unified v1 fingerprint."""
+    return compute_book_revision_hash_v1(session, book_id)
 
 
 def _book_counts(session: Session, book_id: int) -> tuple[int, int, int]:

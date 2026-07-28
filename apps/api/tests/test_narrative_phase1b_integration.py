@@ -182,7 +182,7 @@ def _attach_relation_support(
 
 
 def test_migrations_001_to_010_order_checksum_idempotent(tmp_path) -> None:
-    assert len(NARRATIVE_MIGRATION_ORDER) == 12
+    assert len(NARRATIVE_MIGRATION_ORDER) == 13
     assert NARRATIVE_MIGRATION_ORDER[-1] == "20260728_012_whole_book_foundation_v1"
     engine = _fk_engine(f"sqlite:///{tmp_path / 'm010.db'}")
     Base.metadata.create_all(engine)
