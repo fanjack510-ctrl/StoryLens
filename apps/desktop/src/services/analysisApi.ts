@@ -1,6 +1,15 @@
 import { api, ApiError, getApiBase, waitForApiReady } from "./apiClient";
 import { normalizeInvocations } from "./normalizeInvocations";
-import type { Run, RunResults, Scene, SceneParagraphs, SceneResultItem } from "../types";
+import type {
+  Run,
+  RunResults,
+  Scene,
+  SceneBoundariesOverview,
+  SceneBoundaryConfirmResponse,
+  ScenePartitionItem,
+  SceneParagraphs,
+  SceneResultItem,
+} from "../types";
 export const analysisApi = {
   preflight: (payload: any) => api<any>("/api/v1/analysis-runs/preflight", {
     method: "POST", body: JSON.stringify(payload),
@@ -345,4 +354,49 @@ export const analysisApi = {
     }),
   readerJourneyExportUrl: (journeyRunId: number) =>
     `${getApiBase()}/api/v1/reader-journey-runs/${journeyRunId}/export?format=json`,
+  sceneBoundariesOverview: (chapterId: number) =>
+    api<SceneBoundariesOverview>(`/api/v1/chapters/${chapterId}/scene-boundaries`),
+  createSceneBoundaryDraft: (chapterId: number) =>
+    api<{ revision_id: number; revision_etag: string; scenes: ScenePartitionItem[] }>(
+      `/api/v1/chapters/${chapterId}/scene-boundaries/draft`,
+      { method: "POST" },
+    ),
+  saveSceneBoundaryDraft: (
+    chapterId: number,
+    revisionId: number,
+    body: { expected_etag: string; scenes: ScenePartitionItem[] },
+  ) =>
+    api<{ revision_id: number; revision_etag: string; boundary_hash: string }>(
+      `/api/v1/chapters/${chapterId}/scene-boundaries/draft/${revisionId}`,
+      { method: "PUT", body: JSON.stringify(body) },
+    ),
+  restoreSceneBoundaryAi: (chapterId: number, revisionId: number) =>
+    api<{ revision_id: number; revision_etag: string; scenes: ScenePartitionItem[] }>(
+      `/api/v1/chapters/${chapterId}/scene-boundaries/draft/${revisionId}/restore-ai`,
+      { method: "POST" },
+    ),
+  confirmSceneBoundary: (
+    chapterId: number,
+    revisionId: number,
+    body: {
+      expected_etag: string;
+      start_journey?: boolean;
+      journey_options?: Record<string, unknown>;
+    },
+  ) =>
+    api<SceneBoundaryConfirmResponse>(
+      `/api/v1/chapters/${chapterId}/scene-boundaries/draft/${revisionId}/confirm`,
+      { method: "POST", body: JSON.stringify(body) },
+    ),
+  discardSceneBoundaryDraft: (chapterId: number, revisionId: number) =>
+    api<void>(`/api/v1/chapters/${chapterId}/scene-boundaries/draft/${revisionId}/discard`, {
+      method: "POST",
+    }),
+  sceneBoundaryDiff: (chapterId: number, revisionId: number) =>
+    api<{
+      revision_id: number;
+      against_revision_id: number | null;
+      changes: Array<Record<string, unknown>>;
+      scene_count_delta: number;
+    }>(`/api/v1/chapters/${chapterId}/scene-boundaries/draft/${revisionId}/diff`),
 };

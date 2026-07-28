@@ -16,6 +16,7 @@ export type ChapterAnalysisUiState =
   | "failed"
   | "aborted_by_limit"
   | "awaiting_budget_adjustment"
+  | "awaiting_scene_boundary_confirmation"
   | "awaiting_reader_journey_start"
   | "reader_journey_processing"
   | "succeeded"
@@ -100,6 +101,8 @@ export function uiStateLabel(state: ChapterAnalysisUiState): string {
       return "分析已暂停";
     case "awaiting_budget_adjustment":
       return "分析已暂停";
+    case "awaiting_scene_boundary_confirmation":
+      return "待确认场景划分";
     case "awaiting_reader_journey_start":
       return "场景分析已完成";
     case "reader_journey_processing":
@@ -147,6 +150,7 @@ export function currentWorkLabel(
       return uiStateLabel(ui);
     case "running":
     case "boundary_review_required":
+    case "awaiting_scene_boundary_confirmation":
     case "reader_journey_processing":
     case "awaiting_reader_journey_start":
       return stageLabelForRun(run);
@@ -221,6 +225,7 @@ function activePhaseForUi(ui: ChapterAnalysisUiState, run?: Run | null): number 
     return 0;
   }
   if (ui === "boundary_review_required") return 2;
+  if (ui === "awaiting_scene_boundary_confirmation") return 2;
   if (ui === "reader_journey_processing" || ui === "awaiting_reader_journey_start") return 4;
   if (ui === "succeeded") return 5;
 

@@ -108,7 +108,8 @@ export function normalizeRunLifecycle(
     effective === "journey_running" ||
     effective === "journey_failed" ||
     effective === "partial_complete" ||
-    effective === "completed"
+    effective === "completed" ||
+    effective === "awaiting_scene_boundary_confirmation"
   ) {
     const composite: CompositeLifecyclePhase = resolveCompositeRunLifecycle({
       parentStatus: status,

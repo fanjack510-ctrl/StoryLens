@@ -88,6 +88,7 @@ export function resolveChapterPrimaryAction(args: {
   if (
     phase === "awaiting_user" ||
     composition === "boundary_review_required" ||
+    composition === "awaiting_scene_boundary_confirmation" ||
     lifecycleSource?.status === "awaiting_boundary_review"
   ) {
     return action("confirm");

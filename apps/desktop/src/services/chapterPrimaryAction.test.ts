@@ -85,6 +85,21 @@ describe("resolveChapterPrimaryAction", () => {
     expect(a.label).toBe("重新分析");
   });
 
+  it("shows 继续确认场景 when awaiting scene boundary confirmation", () => {
+    const a = resolveChapterPrimaryAction({
+      hasChapter: true,
+      run: run({
+        status: "succeeded",
+        effective_status: "awaiting_scene_boundary_confirmation",
+      }),
+      composition: "awaiting_scene_boundary_confirmation",
+      chapterComplete: false,
+      inFlight: true,
+    });
+    expect(a.kind).toBe("confirm");
+    expect(a.label).toBe("继续确认场景");
+  });
+
   it("shows 继续确认场景 when awaiting boundary review", () => {
     const a = resolveChapterPrimaryAction({
       hasChapter: true,

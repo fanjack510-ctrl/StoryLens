@@ -9,6 +9,7 @@ import { WorkspaceViewSwitcher } from "../components/layout/WorkspaceViewSwitche
 import { StartAnalysisDialog } from "../components/analysis/StartAnalysisDialog";
 import { BoundaryReviewPanel } from "../components/analysis/BoundaryReviewPanel";
 import { ConfirmBoundaryDivisionPanel } from "../components/analysis/ConfirmBoundaryDivisionPanel";
+import { SceneBoundaryReviewPanel } from "../components/analysis/SceneBoundaryReviewPanel";
 import { ReparseDialog } from "../components/books/ReparseDialog";
 import { ChapterNavigatorDrawer } from "../components/books/ChapterNavigatorDrawer";
 import {
@@ -30,6 +31,7 @@ import { booksApi } from "../services/booksApi";
 import { isConfirmOnlyBoundaryReview } from "../services/boundaryReviewMode";
 import {
   getOrCreateJourneyClientRequestId,
+  isAwaitingSceneBoundaryConfirmation,
   isChapterAnalysisComplete,
   isChapterAnalysisInFlight,
   isSceneAnalysisComplete,
@@ -282,6 +284,9 @@ export function BookRoutePage() {
     },
   });
   const compositionUiState = mapChapterCompositionState(progress.run, journey.data);
+  const awaitingSceneBoundaryConfirmation =
+    compositionUiState === "awaiting_scene_boundary_confirmation" ||
+    isAwaitingSceneBoundaryConfirmation(progress.run);
   const hasJourney = Boolean(
     journey.data?.status === "succeeded" && journey.data.visualization,
   );
@@ -518,6 +523,7 @@ export function BookRoutePage() {
     !showJourneyInterrupted &&
     !showJourneyTemporaryError &&
     !showJourneyActive &&
+    !awaitingSceneBoundaryConfirmation &&
     compositionUiState === "awaiting_reader_journey_start";
   const showJourneyResult =
     !showJourneyTerminalFailed &&
@@ -580,6 +586,9 @@ export function BookRoutePage() {
     [analysisRunId, runs, chapterId],
   );
   const lifecycleChapterRun = progress.run ?? discoveredChapterRun;
+  const sceneBoundaryReviewActive =
+    awaitingSceneBoundaryConfirmation ||
+    isAwaitingSceneBoundaryConfirmation(lifecycleChapterRun);
   const latestSucceeded = runs.find(
     (run) =>
       run.status === "succeeded" && chapterId && String(run.subject_id) === String(chapterId),
@@ -603,7 +612,8 @@ export function BookRoutePage() {
   const showSceneCompleteBanner =
     view === "reading" &&
     Boolean(analysisRunId) &&
-    compositionUiState === "awaiting_reader_journey_start";
+    compositionUiState === "awaiting_reader_journey_start" &&
+    !awaitingSceneBoundaryConfirmation;
   const showJourneyProcessingBanner =
     view === "reading" &&
     Boolean(analysisRunId) &&
@@ -615,6 +625,13 @@ export function BookRoutePage() {
       setPanelCollapsed(false);
     }
   }, [progress.uiState, analysisRunId]);
+
+  useEffect(() => {
+    if (sceneBoundaryReviewActive && chapterId && !noChapters && !bootstrappingChapter) {
+      setReviewOpen(true);
+      setPanelCollapsed(false);
+    }
+  }, [sceneBoundaryReviewActive, chapterId, noChapters, bootstrappingChapter]);
 
   useEffect(() => {
     if (progress.uiState !== "awaiting_budget_adjustment" || !progress.run) return;
@@ -1246,7 +1263,30 @@ export function BookRoutePage() {
 
       {reviewOpen && chapterId && !noChapters && !bootstrappingChapter ? (
         <div className="shell-review-focus" data-testid="shell-boundary-review">
-          {isConfirmOnlyBoundaryReview() ? (
+          {sceneBoundaryReviewActive || awaitingSceneBoundaryConfirmation ? (
+            <SceneBoundaryReviewPanel
+              chapterId={chapterId}
+              chapterTitle={chapterTitle}
+              analysisRunId={analysisRunId}
+              journeyRunning={compositionUiState === "reader_journey_processing"}
+              journeyRevisionId={
+                (journey.data as { scene_revision_id?: number } | null | undefined)
+                  ?.scene_revision_id ?? null
+              }
+              onExit={() => {
+                setReviewOpen(false);
+                void progress.refresh();
+              }}
+              onConfirmed={() => {
+                setReviewOpen(false);
+                setPanelCollapsed(false);
+                setView("progress");
+                void qc.invalidateQueries({ queryKey: ["reader-journey"] });
+                void journey.refetch();
+                void progress.refresh();
+              }}
+            />
+          ) : isConfirmOnlyBoundaryReview() ? (
             <ConfirmBoundaryDivisionPanel
               bookId={bookId}
               chapterId={chapterId}
@@ -1488,6 +1528,24 @@ export function BookRoutePage() {
                       void qc.invalidateQueries({ queryKey: ["reader-journey"] });
                       void journey.refetch();
                       void progress.refresh();
+                    }}
+                  />
+                ) : null}
+                {awaitingSceneBoundaryConfirmation && chapterId ? (
+                  <SceneBoundaryReviewPanel
+                    chapterId={chapterId}
+                    chapterTitle={chapterTitle}
+                    analysisRunId={analysisRunId}
+                    journeyRunning={compositionUiState === "reader_journey_processing"}
+                    journeyRevisionId={
+                      (journey.data as { scene_revision_id?: number } | null | undefined)
+                        ?.scene_revision_id ?? null
+                    }
+                    onConfirmed={() => {
+                      void qc.invalidateQueries({ queryKey: ["reader-journey"] });
+                      void journey.refetch();
+                      void progress.refresh();
+                      setResultTab("journey", "user");
                     }}
                   />
                 ) : null}

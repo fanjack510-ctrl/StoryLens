@@ -1,6 +1,14 @@
 import type { Run } from "../types";
 import { mapRunToUiState, type ChapterAnalysisUiState } from "../components/chapterAnalysis/mapAnalysisUiState";
 
+/** True when scene pipeline finished but user must confirm boundaries before journey. */
+export function isAwaitingSceneBoundaryConfirmation(run: Run | null | undefined): boolean {
+  if (!run) return false;
+  if (run.effective_status === "awaiting_scene_boundary_confirmation") return true;
+  if (run.checkpoint_stage === "scene_boundary_confirmation") return true;
+  return false;
+}
+
 /** Minimal journey snapshot from GET /analysis-runs/{id}/reader-journey (+ progress). */
 export type JourneySnapshot = {
   status?: string | null;
@@ -33,6 +41,10 @@ export function mapChapterCompositionState(
   run: Run | null | undefined,
   journey: JourneySnapshot,
 ): ChapterAnalysisUiState {
+  if (isAwaitingSceneBoundaryConfirmation(run)) {
+    return "awaiting_scene_boundary_confirmation";
+  }
+
   const base = mapRunToUiState(run);
   if (base !== "succeeded") return base;
 
@@ -103,6 +115,7 @@ export function isChapterAnalysisInFlight(
     composition === "creating" ||
     composition === "partial" ||
     composition === "boundary_review_required" ||
+    composition === "awaiting_scene_boundary_confirmation" ||
     composition === "provider_recovery" ||
     composition === "awaiting_budget_adjustment" ||
     composition === "aborted_by_limit"

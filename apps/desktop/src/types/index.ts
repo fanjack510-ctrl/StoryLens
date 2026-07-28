@@ -480,3 +480,39 @@ export type Dashboard = {
   cloud_invocations: number;
   local_invocations: number;
 };
+
+export type ScenePartitionItem = {
+  scene_order: number;
+  start_paragraph_id: string;
+  end_paragraph_id: string;
+  included_in_journey: boolean;
+};
+
+export type SceneBoundaryRevisionSummary = {
+  revision_id: number;
+  revision_number: number;
+  status: string;
+  source: string;
+  revision_etag: string;
+  boundary_hash: string;
+  chapter_text_hash: string;
+  scenes: ScenePartitionItem[];
+  confirmed_at?: string | null;
+};
+
+export type SceneBoundariesOverview = {
+  chapter_id: number;
+  chapter_text_hash: string;
+  confirmed_revision: SceneBoundaryRevisionSummary | null;
+  draft_revision: SceneBoundaryRevisionSummary | null;
+  model_revision: SceneBoundaryRevisionSummary | null;
+  awaiting_confirmation: boolean;
+};
+
+export type SceneBoundaryConfirmResponse = {
+  revision_id: number;
+  revision_etag: string;
+  boundary_hash: string;
+  journey_run_id: number | null;
+  journey_started: boolean;
+};
