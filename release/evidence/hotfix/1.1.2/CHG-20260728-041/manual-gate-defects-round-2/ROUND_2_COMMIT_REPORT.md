@@ -1,4 +1,4 @@
-ï»¿# ROUND 2 COMMIT REPORT éˆ¥?CHG-20260728-041
+# ROUND 2 COMMIT REPORT â€?CHG-20260728-041
 
 ## Identity
 
@@ -6,7 +6,7 @@
 |-------|-------|
 | ROUND 2 START HEAD | `8d410c5f1d9a2557f3246cd07d83f402bb4936c5` |
 | ROUND 2 COMMIT | `084063eb8876231ae39b3c249142bd7ccb6ec3f5` |
-| PUBLIC FINAL HEAD | `303c71b6437faa2b4bc99fb95e7e81e4215f1e41` |
+| PUBLIC FINAL HEAD | `1987fffc665a8155e343203c5ab8b959cd87e02d` |
 | Branch | `fix/1.1.2-manual-scene-boundary-review` |
 | Worktree | `D:\Dstorylens-wt-hotfix-1.1.2-manual-scene-boundary` |
 
@@ -27,12 +27,12 @@ Trailers:
 - StoryLens-Manual-Gate: MG-CHG-20260728-041
 
 Files:
-- `apps/api/app/api/v1/scene_boundaries.py` éˆ¥?Confirm+Start background execute + routable `journey_started`
-- `apps/api/app/services/chapter_analysis_completion.py` éˆ¥?revision-scoped ensure; no foreign succeeded reuse
-- `apps/api/app/services/scene_boundary_manual_review.py` éˆ¥?idempotent bind; failed-status propagation
-- `apps/api/app/services/provider_runtime_service.py` éˆ¥?Smoke Fake eligibility for journey path (+ LF normalize)
-- `apps/api/app/services/chapter_analysis_smoke_fake_transport.py` éˆ¥?numeric scene_id pairing for Fake journey profiles
-- `apps/api/tests/test_chg041_scene_boundary_manual_review.py` éˆ¥?Round 2 invariants
+- `apps/api/app/api/v1/scene_boundaries.py` â€?Confirm+Start background execute + routable `journey_started`
+- `apps/api/app/services/chapter_analysis_completion.py` â€?revision-scoped ensure; no foreign succeeded reuse
+- `apps/api/app/services/scene_boundary_manual_review.py` â€?idempotent bind; failed-status propagation
+- `apps/api/app/services/provider_runtime_service.py` â€?Smoke Fake eligibility for journey path (+ LF normalize)
+- `apps/api/app/services/chapter_analysis_smoke_fake_transport.py` â€?numeric scene_id pairing for Fake journey profiles
+- `apps/api/tests/test_chg041_scene_boundary_manual_review.py` â€?Round 2 invariants
 
 ## Gates
 
