@@ -1,0 +1,39 @@
+{
+  "journey_run_id": 2,
+  "analysis_run_id": 1,
+  "chapter_id": 1,
+  "scene_revision_id": 1,
+  "scene_boundary_hash": "b45fb33646f17fb9fcce66bceb018e0bcc46fab108e08c37548915bb09f6cc32",
+  "chapter_text_hash": "3ac1704914657df75dd821dcb82e0bda5185353f2c6fd49d633c44c05cb40b66",
+  "client_request_id": "auto-chapter-journey:1:rev:1",
+  "status": "failed",
+  "result_status": "superseded",
+  "awaiting_confirmation": "FIELD_NOT_PRESENT",
+  "scene_review_required": "FIELD_NOT_PRESENT",
+  "created_at": "2026-07-28 15:05:07.189529",
+  "started_at": "2026-07-28 15:05:07.191528",
+  "updated_at": "2026-07-28 15:06:02.241914",
+  "failed_at": "FIELD_NOT_PRESENT",
+  "paused_at": "FIELD_NOT_PRESENT",
+  "completed_at": "2026-07-28 15:05:36.172844",
+  "scene_total": 4,
+  "scene_completed": 0,
+  "failure_stage": "reader_journey_scene_profiles",
+  "failure_substage": "FIELD_NOT_PRESENT",
+  "failure_reason_code": "JOURNEY_REPAIR_VALIDATION_FAILED",
+  "root_error_message": "structural repair still violates contract after JOURNEY_EVIDENCE_OUT_OF_SCENE: expected scenes [1, 2], got [1]",
+  "retryable": 0,
+  "included_scene_ids": [
+    1,
+    2,
+    3,
+    4
+  ],
+  "failed_batch_scene_ids": [
+    1,
+    2
+  ],
+  "provider_name": "aliyun_qwen_plus",
+  "model_name": "qwen-plus",
+  "request_id_prefix": "smoke-fake-aliyun_qwen_plus"
+}

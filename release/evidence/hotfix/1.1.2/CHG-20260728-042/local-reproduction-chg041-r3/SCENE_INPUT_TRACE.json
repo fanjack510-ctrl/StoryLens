@@ -1,0 +1,36 @@
+{
+  "confirmed_revision_id": 2,
+  "journey2_bound_revision_id": 1,
+  "revision_mismatch_with_confirmed": true,
+  "journey2_included_scene_ids": [
+    1,
+    2,
+    3,
+    4
+  ],
+  "confirmed_revision_scene_ids": [
+    5,
+    6,
+    7,
+    8
+  ],
+  "journey3_note": {
+    "id": 3,
+    "scene_revision_id": 2,
+    "included_scene_ids": [
+      5,
+      6,
+      7,
+      8
+    ],
+    "status": "failed",
+    "error": "JOURNEY_REPAIR_VALIDATION_FAILED",
+    "message": "expected scenes [5, 6], got [1]"
+  },
+  "scene_analysis_artifact_present_for_confirmed_scenes": {
+    "5": true,
+    "6": true,
+    "7": true,
+    "8": true
+  }
+}

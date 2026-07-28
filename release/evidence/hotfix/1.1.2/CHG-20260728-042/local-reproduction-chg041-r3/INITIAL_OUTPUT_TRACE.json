@@ -1,0 +1,13 @@
+{
+  "journey_run_id": 2,
+  "first_batch_invocation_id": 1,
+  "invocation_kind": "normal_batch_request",
+  "parsed_scene_ids": [
+    1,
+    2
+  ],
+  "validation_error_code": "JOURNEY_EVIDENCE_OUT_OF_SCENE",
+  "validation_error_short": "scene 2 evidence B0001-C0001-P0001 not in scene paragraphs",
+  "raw_response_stored": false,
+  "transport": "smoke-fake"
+}

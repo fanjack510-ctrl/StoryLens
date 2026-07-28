@@ -1,0 +1,16 @@
+{
+  "deterministic": true,
+  "smoke_shared_evidence_bug": true,
+  "pipeline_repro_status": "failed",
+  "pipeline_repro_error_code": "JOURNEY_REPAIR_VALIDATION_FAILED",
+  "pipeline_repro_error_message": "structural repair still violates contract after JOURNEY_EVIDENCE_OUT_OF_SCENE: expected scenes [5, 6], got [1]",
+  "matches_frozen_failure": true,
+  "elapsed_math": {
+    "started_at_db_naive": "2026-07-28 15:05:07.191528",
+    "viewer_china": "2026-07-28T23:16:39+08:00",
+    "elapsed_if_naive_parsed_as_local_hours": 8.192,
+    "elapsed_if_naive_was_utc_correct_hours": 0.192,
+    "classification": "UTC_AS_LOCAL (naive UTC wall-clock parsed as China local via Date.parse)",
+    "fe_function": "journeyElapsedMs → Date.parse(started_at)"
+  }
+}
