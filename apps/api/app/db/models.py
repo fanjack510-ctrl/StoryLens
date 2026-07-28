@@ -8,6 +8,7 @@ from sqlalchemy import (
     Index,
     Integer,
     LargeBinary,
+    Numeric,
     String,
     Text,
     UniqueConstraint,
@@ -697,6 +698,7 @@ class BookSnapshot(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     book_id: Mapped[int] = mapped_column(ForeignKey("books.id", ondelete="CASCADE"), index=True)
     content_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    snapshot_version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     chapter_count: Mapped[int] = mapped_column(Integer, default=0)
     paragraph_count: Mapped[int] = mapped_column(Integer, default=0)
     character_count: Mapped[int] = mapped_column(Integer, default=0)
@@ -705,6 +707,7 @@ class BookSnapshot(Base):
     error_code: Mapped[str | None] = mapped_column(String(100), nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     chapters: Mapped[list["BookSnapshotChapter"]] = relationship(
         back_populates="snapshot",
@@ -770,6 +773,7 @@ class BookSnapshotParagraph(Base):
     source_paragraph_id: Mapped[str | None] = mapped_column(String(32), nullable=True, index=True)
     stable_paragraph_id: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
     paragraph_order: Mapped[int] = mapped_column(Integer, nullable=False)
+    global_paragraph_index: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
     start_offset: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     end_offset: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
@@ -1221,3 +1225,238 @@ class WholeBookRunStateVersion(Base):
     state_hash: Mapped[str] = mapped_column(String(64), nullable=False, default="")
     source_stage_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+
+# ---------------------------------------------------------------------------
+# WB-0.3 / WB-0.4 — Whole-book foundation tables (additive)
+# ---------------------------------------------------------------------------
+
+
+class WholeBookCostEstimate(Base):
+    __tablename__ = "whole_book_cost_estimates"
+    __table_args__ = (
+        Index("ix_wb_cost_estimates_book_created", "book_id", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    book_id: Mapped[int] = mapped_column(ForeignKey("books.id", ondelete="CASCADE"), index=True)
+    book_revision_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    mode: Mapped[str] = mapped_column(String(64), nullable=False)
+    provider_config_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    model_name: Mapped[str] = mapped_column(String(255), nullable=False, default="")
+    chapter_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    paragraph_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    character_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    estimated_window_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    estimated_provider_call_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    estimated_input_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    estimated_output_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    estimated_cost_min_cny: Mapped[object | None] = mapped_column(Numeric(18, 6), nullable=True)
+    estimated_cost_max_cny: Mapped[object | None] = mapped_column(Numeric(18, 6), nullable=True)
+    currency: Mapped[str] = mapped_column(String(8), nullable=False, default="CNY")
+    pricing_status: Mapped[str] = mapped_column(String(32), nullable=False, default="unavailable")
+    pricing_reason_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    contract_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    estimate_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class WholeBookConsent(Base):
+    __tablename__ = "whole_book_consents"
+    __table_args__ = (
+        Index("ix_wb_consents_book_accepted", "book_id", "accepted_at"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    book_id: Mapped[int] = mapped_column(ForeignKey("books.id", ondelete="CASCADE"), index=True)
+    estimate_id: Mapped[int] = mapped_column(
+        ForeignKey("whole_book_cost_estimates.id", ondelete="RESTRICT"), index=True
+    )
+    book_revision_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    mode: Mapped[str] = mapped_column(String(64), nullable=False)
+    provider_config_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    model_name: Mapped[str] = mapped_column(String(255), nullable=False, default="")
+    accepted_estimated_cost_max_cny: Mapped[object | None] = mapped_column(
+        Numeric(18, 6), nullable=True
+    )
+    user_budget_limit_cny: Mapped[object] = mapped_column(Numeric(18, 6), nullable=False, default=0)
+    max_provider_calls: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    max_input_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    max_output_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    auto_retry_enabled: Mapped[bool] = mapped_column(default=False)
+    max_retries_per_unit: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    accepted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class WholeBookRun(Base):
+    """Dedicated whole-book run row (WB-0.4 foundation; no business fills in Wave A)."""
+
+    __tablename__ = "whole_book_runs"
+    __table_args__ = (
+        UniqueConstraint("idempotency_key", name="uq_wb_runs_idempotency_key"),
+        Index("ix_wb_runs_book_status", "book_id", "status"),
+        Index("ix_wb_runs_snapshot", "snapshot_id"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    book_id: Mapped[int] = mapped_column(ForeignKey("books.id", ondelete="CASCADE"), index=True)
+    snapshot_id: Mapped[int | None] = mapped_column(
+        ForeignKey("book_snapshots.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    mode: Mapped[str] = mapped_column(String(64), nullable=False, default="whole_book_native")
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending", index=True)
+    current_stage_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    idempotency_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    engine_id: Mapped[str] = mapped_column(String(128), nullable=False, default="")
+    engine_version: Mapped[str] = mapped_column(String(64), nullable=False, default="")
+    contract_version: Mapped[str] = mapped_column(String(64), nullable=False, default="")
+    prompt_version: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    result_origin: Mapped[str] = mapped_column(String(32), nullable=False, default="formal")
+    consent_id: Mapped[int | None] = mapped_column(
+        ForeignKey("whole_book_consents.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    cost_policy_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    paused_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    failed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    failure_code: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    failure_message_safe: Mapped[str | None] = mapped_column(String(500), nullable=True)
+
+
+class WholeBookRunStageRow(Base):
+    __tablename__ = "whole_book_run_stages"
+    __table_args__ = (
+        UniqueConstraint("run_id", "stage_code", name="uq_wb_run_stages_run_code"),
+        Index("ix_wb_run_stages_run_sequence", "run_id", "sequence"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    run_id: Mapped[int] = mapped_column(
+        ForeignKey("whole_book_runs.id", ondelete="CASCADE"), index=True
+    )
+    stage_code: Mapped[str] = mapped_column(String(64), nullable=False)
+    sequence: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending")
+    progress_current: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    progress_total: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_error_code: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    last_error_message_safe: Mapped[str | None] = mapped_column(String(500), nullable=True)
+
+
+class WholeBookCheckpoint(Base):
+    __tablename__ = "whole_book_checkpoints"
+    __table_args__ = (
+        UniqueConstraint(
+            "run_id", "stage_code", "checkpoint_key", name="uq_wb_checkpoints_run_stage_key"
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    run_id: Mapped[int] = mapped_column(
+        ForeignKey("whole_book_runs.id", ondelete="CASCADE"), index=True
+    )
+    stage_code: Mapped[str] = mapped_column(String(64), nullable=False)
+    checkpoint_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    sequence_no: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    completed_unit_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    last_completed_window_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    payload_hash: Mapped[str] = mapped_column(String(64), nullable=False, default="")
+    checkpoint_payload_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+
+class WholeBookWindow(Base):
+    __tablename__ = "whole_book_windows"
+    __table_args__ = (
+        UniqueConstraint("run_id", "window_index", name="uq_wb_windows_run_index"),
+        Index("ix_wb_windows_run_status", "run_id", "status"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    run_id: Mapped[int] = mapped_column(
+        ForeignKey("whole_book_runs.id", ondelete="CASCADE"), index=True
+    )
+    snapshot_id: Mapped[int | None] = mapped_column(
+        ForeignKey("book_snapshots.id", ondelete="SET NULL"), nullable=True
+    )
+    window_index: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    first_global_paragraph_index: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    last_global_paragraph_index: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    chapter_start_index: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    chapter_end_index: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    paragraph_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    character_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    token_estimate: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    overlap_before_paragraphs: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    overlap_after_paragraphs: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    window_hash: Mapped[str] = mapped_column(String(64), nullable=False, default="")
+    idempotency_key: Mapped[str] = mapped_column(String(128), nullable=False, default="")
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending")
+
+
+class WholeBookProviderUnit(Base):
+    __tablename__ = "whole_book_provider_units"
+    __table_args__ = (
+        UniqueConstraint("run_id", "stage_code", "unit_key", name="uq_wb_provider_units_run_stage_key"),
+        UniqueConstraint("idempotency_key", name="uq_wb_provider_units_idempotency"),
+        Index("ix_wb_provider_units_run_status", "run_id", "status"),
+        Index("ix_wb_provider_units_idempotency", "idempotency_key"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    run_id: Mapped[int] = mapped_column(
+        ForeignKey("whole_book_runs.id", ondelete="CASCADE"), index=True
+    )
+    stage_code: Mapped[str] = mapped_column(String(64), nullable=False)
+    unit_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    unit_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    window_id: Mapped[int | None] = mapped_column(
+        ForeignKey("whole_book_windows.id", ondelete="SET NULL"), nullable=True
+    )
+    idempotency_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    request_hash: Mapped[str] = mapped_column(String(64), nullable=False, default="")
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending")
+    attempt_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    result_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    last_error_code: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now
+    )
+
+
+class WholeBookProviderAttempt(Base):
+    __tablename__ = "whole_book_provider_attempts"
+    __table_args__ = (
+        UniqueConstraint(
+            "provider_unit_id", "attempt_no", name="uq_wb_provider_attempts_unit_attempt"
+        ),
+        Index("ix_wb_provider_attempts_unit_attempt", "provider_unit_id", "attempt_no"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    provider_unit_id: Mapped[int] = mapped_column(
+        ForeignKey("whole_book_provider_units.id", ondelete="CASCADE"), index=True
+    )
+    attempt_no: Mapped[int] = mapped_column(Integer, nullable=False)
+    provider_id: Mapped[str] = mapped_column(String(128), nullable=False, default="")
+    model_name: Mapped[str] = mapped_column(String(255), nullable=False, default="")
+    request_hash: Mapped[str] = mapped_column(String(64), nullable=False, default="")
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="running")
+    input_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    output_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    cost_cny: Mapped[object | None] = mapped_column(Numeric(18, 6), nullable=True)
+    error_code: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    error_message_safe: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

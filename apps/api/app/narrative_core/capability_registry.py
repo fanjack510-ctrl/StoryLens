@@ -1,7 +1,7 @@
-"""Frozen capability metadata registry (Phase 1C-P).
+"""Frozen capability metadata registry (Phase 1C-P + WB-0.3).
 
 Public narrative asset APIs (entity/asset/relation storage) must NOT call Pro gating.
-Only whole_book_analysis *runs* require CapabilityService evaluation.
+Whole-book product entries remain disabled until a later release gate.
 """
 
 from __future__ import annotations
@@ -10,27 +10,30 @@ from app.narrative_core.contracts.capability import CapabilityMetadata, QuotaPol
 from app.narrative_core.enums import (
     CapabilityAvailability,
     CapabilityKey,
+    CapabilityReasonCode,
     CostClass,
     QuotaPolicyKind,
     WholeBookAnalysisMode,
 )
 
+_NOT_RELEASED = CapabilityReasonCode.WHOLE_BOOK_NOT_RELEASED.value
+
 CAPABILITY_REGISTRY: dict[CapabilityKey, CapabilityMetadata] = {
     CapabilityKey.WHOLE_BOOK_ANALYSIS: CapabilityMetadata(
         key=CapabilityKey.WHOLE_BOOK_ANALYSIS,
-        display_name="整书分析",
+        display_name="整书分析（Legacy）",
         description=(
-            "全书结构化叙事分析流水线。"
-            "Legacy internal capability key retained for compatibility. "
-            "Current entitlement in StoryLens 1.1.x: whole_book_native + book_overview "
-            "is FREE (see NativeOverviewService); whole_book_enhanced remains Pro "
-            "and starts product-wise at 1.2.0. Capability still marked requires_license "
-            "for Enhanced / future advanced modes — do not treat NATIVE overview as Pro-only."
+            "Legacy internal whole-book analysis capability key retained for compatibility. "
+            "Prefer whole_book_native / whole_book_enhanced for product semantics."
         ),
         shipped=False,
         requires_license=True,
-        availability=CapabilityAvailability.PREVIEW,
-        preview_visible=True,
+        availability=CapabilityAvailability.UNAVAILABLE,
+        preview_visible=False,
+        enabled=False,
+        entry_visible=False,
+        product_reason_code=_NOT_RELEASED,
+        minimum_version="1.2.0",
         supported_modes=(
             WholeBookAnalysisMode.NATIVE,
             WholeBookAnalysisMode.ENHANCED,
@@ -60,6 +63,8 @@ CAPABILITY_REGISTRY: dict[CapabilityKey, CapabilityMetadata] = {
         requires_license=False,
         availability=CapabilityAvailability.UNAVAILABLE,
         preview_visible=False,
+        enabled=False,
+        entry_visible=False,
         estimated_cost_class=CostClass.FREE,
     ),
     CapabilityKey.STORY_LAB: CapabilityMetadata(
@@ -70,6 +75,8 @@ CAPABILITY_REGISTRY: dict[CapabilityKey, CapabilityMetadata] = {
         requires_license=True,
         availability=CapabilityAvailability.UNAVAILABLE,
         preview_visible=False,
+        enabled=False,
+        entry_visible=False,
         estimated_cost_class=CostClass.MEDIUM,
     ),
     CapabilityKey.CROSS_BOOK_SEARCH: CapabilityMetadata(
@@ -80,6 +87,8 @@ CAPABILITY_REGISTRY: dict[CapabilityKey, CapabilityMetadata] = {
         requires_license=True,
         availability=CapabilityAvailability.UNAVAILABLE,
         preview_visible=False,
+        enabled=False,
+        entry_visible=False,
         estimated_cost_class=CostClass.MEDIUM,
     ),
     CapabilityKey.ADVANCED_EXPORT: CapabilityMetadata(
@@ -90,20 +99,81 @@ CAPABILITY_REGISTRY: dict[CapabilityKey, CapabilityMetadata] = {
         requires_license=True,
         availability=CapabilityAvailability.UNAVAILABLE,
         preview_visible=False,
+        enabled=False,
+        entry_visible=False,
         estimated_cost_class=CostClass.LOW,
     ),
     CapabilityKey.PRO_WHOLE_BOOK_INSIGHTS: CapabilityMetadata(
         key=CapabilityKey.PRO_WHOLE_BOOK_INSIGHTS,
-        display_name="章节聚合洞察",
+        display_name="章节精细分析覆盖（Legacy key）",
         description=(
-            "Chapter Asset Aggregation Insights / 章节聚合洞察："
-            "基于已经完成的单章精细分析资产，对章节覆盖、阅读旅程、节奏、钩子、回报和章节功能进行聚合展示。"
-            "不直接分析全书原文，也不表示原生整书/全书分析能力已完成。"
+            "Legacy key for chapter-aggregate insights. Canonical product id is "
+            "chapter_aggregate_insights. This is NOT native whole-book analysis."
         ),
         shipped=True,
         requires_license=True,
         availability=CapabilityAvailability.AVAILABLE,
-        preview_visible=True,
+        preview_visible=False,
+        enabled=False,
+        entry_visible=False,
+        product_reason_code=_NOT_RELEASED,
+        minimum_version="1.1.0",
+        estimated_cost_class=CostClass.MEDIUM,
+        offline_allowed=True,
+    ),
+    CapabilityKey.WHOLE_BOOK_NATIVE: CapabilityMetadata(
+        key=CapabilityKey.WHOLE_BOOK_NATIVE,
+        display_name="原生全书分析",
+        description=(
+            "直接以完整 Book Snapshot 为唯一事实源进行全书分析。"
+            "不得与章节聚合洞察混用。"
+        ),
+        shipped=False,
+        requires_license=False,
+        availability=CapabilityAvailability.UNAVAILABLE,
+        preview_visible=False,
+        enabled=False,
+        entry_visible=False,
+        product_reason_code=_NOT_RELEASED,
+        minimum_version="1.2.0",
+        supported_modes=(WholeBookAnalysisMode.NATIVE,),
+        estimated_cost_class=CostClass.HIGH,
+        offline_allowed=False,
+    ),
+    CapabilityKey.WHOLE_BOOK_ENHANCED: CapabilityMetadata(
+        key=CapabilityKey.WHOLE_BOOK_ENHANCED,
+        display_name="精细增强分析",
+        description=(
+            "以完整 Book Snapshot 为事实源，同时允许使用已有单章资产和已确认全书资产增强。"
+            "增强不得替代完整原文 Snapshot。"
+        ),
+        shipped=False,
+        requires_license=True,
+        availability=CapabilityAvailability.UNAVAILABLE,
+        preview_visible=False,
+        enabled=False,
+        entry_visible=False,
+        product_reason_code=_NOT_RELEASED,
+        minimum_version="1.2.0",
+        supported_modes=(WholeBookAnalysisMode.ENHANCED,),
+        estimated_cost_class=CostClass.HIGH,
+        offline_allowed=False,
+    ),
+    CapabilityKey.CHAPTER_AGGREGATE_INSIGHTS: CapabilityMetadata(
+        key=CapabilityKey.CHAPTER_AGGREGATE_INSIGHTS,
+        display_name="章节精细分析覆盖",
+        description=(
+            "汇总已完成的单章分析结果，不属于原生全书分析。"
+            "正式入口保持隐藏。"
+        ),
+        shipped=True,
+        requires_license=True,
+        availability=CapabilityAvailability.AVAILABLE,
+        preview_visible=False,
+        enabled=False,
+        entry_visible=False,
+        product_reason_code=_NOT_RELEASED,
+        minimum_version="1.1.0",
         estimated_cost_class=CostClass.MEDIUM,
         offline_allowed=True,
     ),

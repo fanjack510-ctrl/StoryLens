@@ -242,9 +242,9 @@ class ConflictRefType(StrEnum):
 
 
 class CapabilityKey(StrEnum):
-    """Canonical Pro capability keys (backend + desktop entitlementApi).
+    """Canonical capability keys (backend + desktop entitlementApi).
 
-    Extensible later; agents must not scatter string literals for these five.
+    WB-0.3 adds independent whole-book product capabilities; legacy keys retained.
     """
 
     WHOLE_BOOK_ANALYSIS = "whole_book_analysis"
@@ -253,6 +253,9 @@ class CapabilityKey(StrEnum):
     CROSS_BOOK_SEARCH = "cross_book_search"
     ADVANCED_EXPORT = "advanced_export"
     PRO_WHOLE_BOOK_INSIGHTS = "pro_whole_book_insights"
+    WHOLE_BOOK_NATIVE = "whole_book_native"
+    WHOLE_BOOK_ENHANCED = "whole_book_enhanced"
+    CHAPTER_AGGREGATE_INSIGHTS = "chapter_aggregate_insights"
 
 
 class CapabilityAvailability(StrEnum):
@@ -272,6 +275,7 @@ class CapabilityReasonCode(StrEnum):
     CAPABILITY_PREVIEW_ONLY = "CAPABILITY_PREVIEW_ONLY"
     CAPABILITY_UNKNOWN = "CAPABILITY_UNKNOWN"
     CAPABILITY_MODE_NOT_SUPPORTED = "CAPABILITY_MODE_NOT_SUPPORTED"
+    WHOLE_BOOK_NOT_RELEASED = "whole_book_not_released"
 
 
 class WholeBookAnalysisMode(StrEnum):

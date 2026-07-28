@@ -95,12 +95,15 @@ export function documentTitleForEdition(
 }
 
 export const PRO_CAPABILITY_LABELS: Record<string, string> = {
-  whole_book_analysis: "整书分析",
+  whole_book_analysis: "整书分析（Legacy）",
   narrative_asset_library: "叙事资产库",
   story_lab: "故事实验台",
   cross_book_search: "跨书检索",
   advanced_export: "进阶导出",
-  pro_whole_book_insights: "章节聚合洞察",
+  pro_whole_book_insights: "章节精细分析覆盖（Legacy）",
+  whole_book_native: "原生全书分析",
+  whole_book_enhanced: "精细增强分析",
+  chapter_aggregate_insights: "章节精细分析覆盖",
 };
 
 /** V1 Pro capabilities are unlocked by license but not yet shipped as product features. */

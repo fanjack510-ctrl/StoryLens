@@ -50,6 +50,10 @@ class CapabilityMetadata:
     requires_license: bool
     availability: CapabilityAvailability
     preview_visible: bool = False
+    enabled: bool = False
+    entry_visible: bool = False
+    product_reason_code: str | None = None
+    minimum_version: str | None = None
     supported_modes: tuple[WholeBookAnalysisMode, ...] = ()
     quota_policy_key: str = ""
     estimated_cost_class: CostClass = CostClass.FREE
@@ -60,6 +64,14 @@ class CapabilityMetadata:
     def label(self) -> str:
         """Back-compat alias for display_name."""
         return self.display_name
+
+    @property
+    def capability_id(self) -> str:
+        return self.key.value
+
+    @property
+    def requires_pro(self) -> bool:
+        return self.requires_license
 
 
 @dataclass(frozen=True, slots=True)

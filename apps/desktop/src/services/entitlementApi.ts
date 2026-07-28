@@ -7,6 +7,9 @@ export const PRO_FEATURE_KEYS = [
   "cross_book_search",
   "advanced_export",
   "pro_whole_book_insights",
+  "whole_book_native",
+  "whole_book_enhanced",
+  "chapter_aggregate_insights",
 ] as const;
 
 export type ProFeatureKey = (typeof PRO_FEATURE_KEYS)[number];

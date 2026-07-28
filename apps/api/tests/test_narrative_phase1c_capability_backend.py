@@ -494,10 +494,16 @@ def test_25_get_capabilities() -> None:
     assert keys == {k.value for k in CapabilityKey}
     whole = next(item for item in body["items"] if item["key"] == "whole_book_analysis")
     assert whole["shipped"] is False
-    assert whole["preview_visible"] is True
-    assert whole["availability"] == "preview"
+    assert whole["preview_visible"] is False
+    assert whole["entry_visible"] is False
+    assert whole["enabled"] is False
+    assert whole["availability"] == "unavailable"
     assert whole["decision"]["reason_code"] == "CAPABILITY_NOT_SHIPPED"
     assert whole["decision"]["allowed"] is False
+    native = next(item for item in body["items"] if item["key"] == "whole_book_native")
+    assert native["display_name"] == "原生全书分析"
+    assert native["entry_visible"] is False
+    assert native["reason_code"] == "whole_book_not_released"
     serialized = str(body)
     assert "signed_license" not in serialized
     assert "private_key" not in serialized.lower()
@@ -645,10 +651,17 @@ def test_quota_backend_is_non_production(quota: InMemoryQuotaService) -> None:
     assert quota.backend == "memory_non_production"
 
 
-def test_modes_are_not_capability_keys() -> None:
+def test_modes_are_also_capability_keys_but_entries_disabled() -> None:
+    """WB-0.3: whole_book_native/enhanced are independent capability ids.
+
+    Analysis modes share the same string values but product entries stay off.
+    """
     for mode in WholeBookAnalysisMode:
-        with pytest.raises(ValueError):
-            CapabilityKey(mode.value)
+        key = CapabilityKey(mode.value)
+        meta = get_capability_metadata(key)
+        assert meta.enabled is False
+        assert meta.entry_visible is False
+        assert meta.product_reason_code == "whole_book_not_released"
 
 
 def test_pro_capabilities_shipped_remains_false() -> None:

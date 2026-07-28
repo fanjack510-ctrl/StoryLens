@@ -33,14 +33,20 @@ class CapabilityApiError(Exception):
 
 def metadata_payload(meta: CapabilityMetadata) -> dict[str, Any]:
     payload = {
+        "capability_id": meta.capability_id,
         "key": meta.key.value,
         "display_name": meta.display_name,
         "label": meta.label,
         "description": meta.description,
         "shipped": meta.shipped,
+        "enabled": meta.enabled,
+        "entry_visible": meta.entry_visible,
         "requires_license": meta.requires_license,
+        "requires_pro": meta.requires_pro,
         "availability": meta.availability.value,
         "preview_visible": meta.preview_visible,
+        "reason_code": meta.product_reason_code,
+        "minimum_version": meta.minimum_version,
         "supported_modes": [mode.value for mode in meta.supported_modes],
         "quota_policy_key": meta.quota_policy_key,
         "estimated_cost_class": meta.estimated_cost_class.value,
@@ -59,6 +65,9 @@ def metadata_payload(meta: CapabilityMetadata) -> dict[str, Any]:
     }
     if meta.key == CapabilityKey.PRO_WHOLE_BOOK_INSIGHTS:
         payload["api_aliases"] = ["pro.whole_book_insights"]
+        payload["canonical_capability_id"] = CapabilityKey.CHAPTER_AGGREGATE_INSIGHTS.value
+    if meta.key == CapabilityKey.CHAPTER_AGGREGATE_INSIGHTS:
+        payload["api_aliases"] = ["pro.whole_book_insights", "pro_whole_book_insights"]
     return payload
 
 
@@ -120,10 +129,17 @@ def build_capabilities_list_response(service: DefaultCapabilityService) -> dict[
         )
         items.append(
             {
+                "capability_id": meta.capability_id,
                 "key": list_item.key.value,
                 "label": list_item.label,
+                "display_name": meta.display_name,
                 "description": list_item.description,
                 "shipped": list_item.shipped,
+                "enabled": meta.enabled,
+                "entry_visible": meta.entry_visible,
+                "requires_pro": meta.requires_pro,
+                "reason_code": meta.product_reason_code,
+                "minimum_version": meta.minimum_version,
                 "availability": list_item.availability.value,
                 "requires_license": list_item.requires_license,
                 "preview_visible": meta.preview_visible,
