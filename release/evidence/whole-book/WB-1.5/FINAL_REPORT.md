@@ -7,13 +7,19 @@ tested
 CHG-20260728-012
 
 ## Summary
-Conservative cross-window materialization: entity merge (林川/林先生), narrative assets, evidence, relations with ORM compatibility adapters.
+Conservative cross-window character merge and narrative entity/asset/evidence/relation materialization with idempotent checkpoint `minimal_asset_materialization_v1`.
 
 ## Verification
-- `test_whole_book_wb15_materialization.py`: 4 passed
-- Repeat materialization idempotent (checkpoint reuse)
-- Real provider calls: 0
+- `test_whole_book_wb15_materialization.py` PASS
+- 林川 / 林先生 exact alias merge
+- Second materialization: entity/asset/evidence/relation counts unchanged
+- Checkpoint payload contains no full text
+- Confirmed-entity overwrite path guarded; Real provider: 0
 
-## Compatibility adapters
-- Entity↔entity relations via structural character_profile assets + contract_endpoints in attributes_json
-- Evidence quotes in evidence_label; offsets + paragraph_content_hash for source API
+## Compatibility notes
+- Relations: structural `character_profile` asset endpoints + `contract_endpoints` in attributes_json
+- Evidence quotes: `evidence_label` + offset slice on source API
+
+## Isolation
+- Temp SQLite only
+- Formal AppData writes: 0

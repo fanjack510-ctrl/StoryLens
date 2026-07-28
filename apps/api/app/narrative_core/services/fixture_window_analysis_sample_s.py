@@ -292,6 +292,26 @@ def build_fixture_window_analysis_response_v1(
                 attributes={"alias_name": "林先生"},
             )
         )
+        relations.append(
+            CandidateRelationV1(
+                candidate_key="rel-part-decide",
+                relation_type="participates_in",
+                subject=CandidateNarrativeRefV1(kind=NarrativeRefKind.entity, candidate_key="ent-linchuan"),
+                object=CandidateNarrativeRefV1(kind=NarrativeRefKind.asset, candidate_key="asset-decide-investigate"),
+                confidence=0.9,
+                evidence_keys=["ev-lxs-alias"],
+            )
+        )
+        relations.append(
+            CandidateRelationV1(
+                candidate_key="rel-part-coop",
+                relation_type="participates_in",
+                subject=CandidateNarrativeRefV1(kind=NarrativeRefKind.entity, candidate_key="ent-sulan"),
+                object=CandidateNarrativeRefV1(kind=NarrativeRefKind.asset, candidate_key="asset-coop-sulan"),
+                confidence=0.9,
+                evidence_keys=["ev-sulan-meet"],
+            )
+        )
     else:
         ev1 = _evidence("ev-zhouheng", _locator(request, 6, "调查员周衡"))
         ev2 = _evidence("ev-conflict", _locator(request, 7, "主要冲突迅速升级"))

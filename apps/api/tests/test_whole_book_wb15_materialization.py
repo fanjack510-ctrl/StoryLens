@@ -33,12 +33,15 @@ def test_linchuan_mrlin_merge(tmp_path) -> None:
         entities = list(
             session.scalars(select(NarrativeEntity).where(NarrativeEntity.created_by == str(run_id))).all()
         )
-        names = {e.canonical_name for e in entities}
-        assert "林川" in names or "林先生" in names
+        names = {e.canonical_name for e in entities if e.lifecycle_status == "active"}
+        assert "林川" in names
+        assert "林先生" not in names  # merged into 林川 via alias_of
         aliases = list(session.scalars(select(NarrativeEntityAlias)).all())
         alias_texts = {a.alias_text for a in aliases}
-        assert "林先生" in alias_texts or "林川" in alias_texts
-        assert len(entities) >= 3
+        assert "林先生" in alias_texts
+        active = [e for e in entities if e.lifecycle_status == "active"]
+        assert len(active) == 3  # 林川, 苏岚, 周衡
+
     engine.dispose()
 
 

@@ -26,6 +26,19 @@ _WB012_TABLES = (
     "whole_book_provider_attempts",
 )
 
+# Wave C tables FK into runs/windows — drop before simulating a pre-012 schema.
+_WB014_DEPENDENT_TABLES = (
+    "whole_book_window_analysis_results",
+    "whole_book_overview_results",
+)
+
+
+def _drop_wb012_tables(connection) -> None:
+    for table in _WB014_DEPENDENT_TABLES:
+        connection.execute(text(f"DROP TABLE IF EXISTS {table}"))
+    for table in reversed(_WB012_TABLES):
+        connection.execute(text(f"DROP TABLE IF EXISTS {table}"))
+
 _REQUIRED_INDEXES: dict[str, tuple[str, ...]] = {
     "whole_book_cost_estimates": (
         "ix_wb_cost_estimates_book_created",
@@ -149,8 +162,7 @@ def test_failure_injection_rolls_back_ddl_and_skips_ledger(tmp_path) -> None:
     engine = _fk_engine(f"sqlite:///{tmp_path / 'fail.db'}")
     Base.metadata.create_all(engine)
     with engine.begin() as connection:
-        for table in reversed(_WB012_TABLES):
-            connection.execute(text(f"DROP TABLE IF EXISTS {table}"))
+        _drop_wb012_tables(connection)
 
     @event.listens_for(engine, "before_cursor_execute")
     def _inject_failure(
@@ -177,8 +189,7 @@ def test_target_tables_indexes_and_uniques_exist(tmp_path) -> None:
     engine = _fk_engine(f"sqlite:///{tmp_path / 'idx.db'}")
     Base.metadata.create_all(engine)
     with engine.begin() as connection:
-        for table in reversed(_WB012_TABLES):
-            connection.execute(text(f"DROP TABLE IF EXISTS {table}"))
+        _drop_wb012_tables(connection)
     apply_narrative_migrations(engine)
 
     for table, required in _REQUIRED_INDEXES.items():

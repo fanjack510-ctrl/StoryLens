@@ -60,7 +60,10 @@ def get_minimal_analysis_summary(session: Session, run_id: int) -> dict[str, Any
     valid = sum(1 for row in window_rows if row.validation_status == "valid")
     invalid = sum(1 for row in window_rows if row.validation_status == "invalid")
     entities = session.scalars(
-        select(NarrativeEntity).where(NarrativeEntity.created_by == str(run_id))
+        select(NarrativeEntity).where(
+            NarrativeEntity.created_by == str(run_id),
+            NarrativeEntity.lifecycle_status == "active",
+        )
     ).all()
     versions = _versions_for_wb_run(session, run_id)
     version_ids = [v.id for v in versions]
@@ -103,7 +106,10 @@ def get_minimal_analysis_summary(session: Session, run_id: int) -> dict[str, Any
 
 def list_run_entities(session: Session, run_id: int) -> list[dict[str, Any]]:
     entities = session.scalars(
-        select(NarrativeEntity).where(NarrativeEntity.created_by == str(run_id))
+        select(NarrativeEntity).where(
+            NarrativeEntity.created_by == str(run_id),
+            NarrativeEntity.lifecycle_status == "active",
+        )
     ).all()
     out: list[dict[str, Any]] = []
     for entity in entities:

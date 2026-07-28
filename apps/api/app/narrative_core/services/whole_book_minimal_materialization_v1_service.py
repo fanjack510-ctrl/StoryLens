@@ -354,7 +354,12 @@ def _relations_for_wb_run(session: Session, run_id: int) -> list[NarrativeRelati
 
 def _counts_for_run(session: Session, run_id: int, book_id: int) -> dict[str, int]:
     entities = list(
-        session.scalars(select(NarrativeEntity).where(NarrativeEntity.created_by == str(run_id))).all()
+        session.scalars(
+            select(NarrativeEntity).where(
+                NarrativeEntity.created_by == str(run_id),
+                NarrativeEntity.lifecycle_status == "active",
+            )
+        ).all()
     )
     versions = _versions_for_wb_run(session, run_id)
     version_ids = [v.id for v in versions]
@@ -421,16 +426,30 @@ def materialize_minimal_narrative_assets_v1(session: Session, run_id: int) -> di
                 continue
             sub_key = relation.subject.candidate_key
             obj_key = relation.object.candidate_key
-            if sub_key in ctx.candidate_to_entity and obj_key in ctx.candidate_to_entity:
-                sub_id = ctx.candidate_to_entity[sub_key]
-                obj_id = ctx.candidate_to_entity[obj_key]
-                if sub_id != obj_id:
-                    sub_state = ctx.entity_states[sub_id]
-                    obj_state = ctx.entity_states[obj_id]
-                    _register_alias(session, ctx, obj_id, sub_state.canonical_name)
-                    for alias in sub_state.aliases:
-                        _register_alias(session, ctx, obj_id, alias)
-                    ctx.candidate_to_entity[sub_key] = obj_id
+            if sub_key not in ctx.candidate_to_entity or obj_key not in ctx.candidate_to_entity:
+                continue
+            sub_id = ctx.candidate_to_entity[sub_key]
+            obj_id = ctx.candidate_to_entity[obj_key]
+            if sub_id == obj_id:
+                continue
+            # Keep object entity; fold subject into object and retire the duplicate.
+            keep_id, drop_id = obj_id, sub_id
+            drop_state = ctx.entity_states[drop_id]
+            keep_state = ctx.entity_states[keep_id]
+            _register_alias(session, ctx, keep_id, drop_state.canonical_name)
+            for alias in list(drop_state.aliases):
+                _register_alias(session, ctx, keep_id, alias)
+            keep_state.confidence = max(keep_state.confidence, drop_state.confidence)
+            drop_entity = session.get(NarrativeEntity, drop_id)
+            if drop_entity is not None:
+                drop_entity.lifecycle_status = "superseded"
+                drop_entity.superseded_by_entity_id = keep_id
+                drop_entity.updated_at = utc_now()
+            for cand_key, eid in list(ctx.candidate_to_entity.items()):
+                if eid == drop_id:
+                    ctx.candidate_to_entity[cand_key] = keep_id
+            ctx.entity_states.pop(drop_id, None)
+            session.flush()
 
     for window_id, response in window_responses:
         locators = {e.evidence_key: e.locator for e in response.evidences}
