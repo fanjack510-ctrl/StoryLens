@@ -17,6 +17,12 @@
       "message": "docs(whole-book): mark CHG-001/002 implemented and tested",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "5610e86c52912ffcc5254079c70661ff0a101b7e",
+      "message": "docs(whole-book): set WB-0.1 status to manual verification",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -72,5 +78,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-28T01:20:16Z",
-  "updated_at": "2026-07-28T01:23:52Z"
+  "updated_at": "2026-07-28T01:24:08Z"
 }
