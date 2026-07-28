@@ -1,0 +1,225 @@
+"""Free whole-book product coordination (WB-1.7 backend slice)."""
+
+from __future__ import annotations
+
+import os
+import uuid
+from typing import Any
+
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from app.db.models import Book, ProviderConfiguration, WholeBookRun
+from app.narrative_core.contracts.whole_book_contract_v1 import ResultOrigin, WholeBookMode, WholeBookRunStatus
+from app.narrative_core.services.whole_book_consent_service import create_whole_book_consent, validate_whole_book_consent
+from app.narrative_core.services.whole_book_cost_estimate_service import (
+    compute_book_revision_hash,
+    estimate_to_dict,
+    estimate_whole_book_analysis,
+)
+from app.narrative_core.services.whole_book_foundation_errors import (
+    WholeBookFoundationError,
+    WholeBookFoundationErrorCode,
+)
+from app.narrative_core.services.whole_book_fixture_pipeline_v1_service import execute_fixture_minimal_pipeline_v1
+from app.narrative_core.services.whole_book_minimal_helpers_v1 import real_provider_enabled
+from app.narrative_core.services.whole_book_native_input_audit_v1 import (
+    assert_native_input_independence_v1,
+    persist_native_input_audit_v1,
+)
+from app.narrative_core.services.whole_book_product_capability_v1 import (
+    AccessTier,
+    require_capability_access,
+)
+from app.narrative_core.services.whole_book_run_v1_service import (
+    create_whole_book_run_v1,
+    list_runs_for_book,
+    start_whole_book_run_v1,
+)
+from app.narrative_core.services.whole_book_snapshot_v1_service import create_or_reuse_book_snapshot_v1
+from app.narrative_core.services.whole_book_windowing_v1_service import generate_whole_book_windows_v1
+
+
+def free_product_enabled() -> bool:
+    return os.environ.get("STORYLENS_WHOLE_BOOK_FREE_PRODUCT_ENABLED", "false").lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def fixture_preview_enabled() -> bool:
+    return os.environ.get("STORYLENS_WHOLE_BOOK_FIXTURE_PREVIEW_ENABLED", "false").lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _require_free_product_enabled() -> None:
+    if not free_product_enabled():
+        raise WholeBookFoundationError(
+            WholeBookFoundationErrorCode.WHOLE_BOOK_FREE_PRODUCT_DISABLED,
+            "全书分析 Free 产品尚未启用",
+        )
+
+
+def _latest_run_for_book(session: Session, book_id: int) -> WholeBookRun | None:
+    runs = list_runs_for_book(session, book_id)
+    return runs[0] if runs else None
+
+
+def _recoverable_run(session: Session, book_id: int) -> WholeBookRun | None:
+    for run in list_runs_for_book(session, book_id):
+        if run.status in {
+            WholeBookRunStatus.paused.value,
+            WholeBookRunStatus.recoverable.value,
+            WholeBookRunStatus.running.value,
+            WholeBookRunStatus.pending.value,
+        }:
+            return run
+    return None
+
+
+def prepare_free_whole_book_analysis_v1(session: Session, book_id: int) -> dict[str, Any]:
+    _require_free_product_enabled()
+    require_capability_access("whole_book.overview", AccessTier.free)
+    require_capability_access("whole_book.characters_events", AccessTier.free)
+    book = session.get(Book, book_id)
+    if book is None:
+        raise WholeBookFoundationError(
+            WholeBookFoundationErrorCode.WHOLE_BOOK_BOOK_CHANGED,
+            "书籍不存在",
+        )
+    revision_hash = compute_book_revision_hash(session, book_id)
+    provider = session.scalar(select(ProviderConfiguration).limit(1))
+    if provider is None:
+        provider = ProviderConfiguration(provider_name="default", plus_model="default-model")
+        session.add(provider)
+        session.flush()
+    estimate = estimate_whole_book_analysis(
+        session, book_id, WholeBookMode.whole_book_native.value, provider.id
+    )
+    latest = _latest_run_for_book(session, book_id)
+    recoverable = _recoverable_run(session, book_id)
+    snap_result = create_or_reuse_book_snapshot_v1(session, book_id)
+    needs_new_snapshot = (
+        latest is not None
+        and latest.snapshot_id is not None
+        and snap_result["reused"] is False
+    )
+    return {
+        "book_id": book_id,
+        "book_revision_hash": revision_hash,
+        "estimate": estimate_to_dict(estimate),
+        "latest_run_id": latest.id if latest else None,
+        "latest_run_status": latest.status if latest else None,
+        "recoverable_run_id": recoverable.id if recoverable else None,
+        "needs_new_snapshot": needs_new_snapshot,
+        "snapshot": {
+            "snapshot_id": snap_result["snapshot"].id,
+            "reused": snap_result["reused"],
+        },
+        "real_provider_enabled": real_provider_enabled(),
+        "fixture_preview_enabled": fixture_preview_enabled(),
+    }
+
+
+def create_free_whole_book_analysis_v1(
+    session: Session,
+    book_id: int,
+    *,
+    estimate_id: int,
+    consent_id: int,
+    client_request_id: str,
+) -> dict[str, Any]:
+    _require_free_product_enabled()
+    require_capability_access("whole_book.overview", AccessTier.free)
+    if real_provider_enabled():
+        raise WholeBookFoundationError(
+            WholeBookFoundationErrorCode.WHOLE_BOOK_CAPABILITY_DISABLED,
+            "真实 Provider 路径尚未在本版本开放",
+        )
+    raise WholeBookFoundationError(
+        WholeBookFoundationErrorCode.WHOLE_BOOK_REAL_PROVIDER_DISABLED,
+        "真实模型分析尚未启用，请使用测试数据预览",
+    )
+
+
+def create_fixture_free_whole_book_analysis_v1(
+    session: Session,
+    book_id: int,
+    *,
+    client_request_id: str | None = None,
+    execute_pipeline: bool = True,
+) -> dict[str, Any]:
+    _require_free_product_enabled()
+    if not fixture_preview_enabled():
+        raise WholeBookFoundationError(
+            WholeBookFoundationErrorCode.WHOLE_BOOK_FIXTURE_PREVIEW_DISABLED,
+            "测试数据预览尚未启用",
+        )
+    require_capability_access("whole_book.overview", AccessTier.free)
+    require_capability_access("whole_book.characters_events", AccessTier.free)
+    book = session.get(Book, book_id)
+    if book is None:
+        raise WholeBookFoundationError(
+            WholeBookFoundationErrorCode.WHOLE_BOOK_BOOK_CHANGED,
+            "书籍不存在",
+        )
+    snap = create_or_reuse_book_snapshot_v1(session, book_id)["snapshot"]
+    request_id = client_request_id or str(uuid.uuid4())
+    run = create_whole_book_run_v1(
+        session,
+        book_id,
+        snap.id,
+        WholeBookMode.whole_book_native.value,
+        request_id,
+        ResultOrigin.fixture.value,
+    )
+    provider = session.scalar(select(ProviderConfiguration).limit(1))
+    if provider is None:
+        provider = ProviderConfiguration(provider_name="fixture", plus_model="fixture-model")
+        session.add(provider)
+        session.flush()
+    estimate = estimate_whole_book_analysis(
+        session, book_id, WholeBookMode.whole_book_native.value, provider.id
+    )
+    consent = create_whole_book_consent(
+        session,
+        book_id=book_id,
+        estimate_id=estimate.id,
+        user_budget_limit_cny="1000",
+        max_provider_calls=500,
+        max_input_tokens=10_000_000,
+        max_output_tokens=10_000_000,
+        auto_retry_enabled=False,
+        max_retries_per_unit=0,
+    )
+    validate_whole_book_consent(session, consent.id, book_id)
+    run.consent_id = consent.id
+    session.flush()
+
+    audit = assert_native_input_independence_v1(session, run.id)
+    persist_native_input_audit_v1(session, audit)
+
+    generate_whole_book_windows_v1(session, run.id)
+    start_whole_book_run_v1(session, run.id)
+    session.refresh(run)
+
+    pipeline_result: dict[str, Any] | None = None
+    if execute_pipeline:
+        pipeline_result = execute_fixture_minimal_pipeline_v1(session, run.id)
+        session.refresh(run)
+
+    return {
+        "run_id": run.id,
+        "book_id": book_id,
+        "snapshot_id": snap.id,
+        "result_origin": ResultOrigin.fixture.value,
+        "run_status": run.status,
+        "pipeline": pipeline_result,
+        "audit": audit.to_dict(),
+    }
