@@ -17,6 +17,12 @@
       "message": "docs(whole-book): record WB-0.2 tested status and final HEADs",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "161e059ac4fc49037faef821895a5ed1d8ad4907",
+      "message": "docs(whole-book): sync CHG-003 attach metadata",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -51,5 +57,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-28T01:46:50Z",
-  "updated_at": "2026-07-28T01:56:29Z"
+  "updated_at": "2026-07-28T01:56:46Z"
 }
