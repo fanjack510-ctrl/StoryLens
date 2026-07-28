@@ -22,6 +22,7 @@ import { ReaderJourneyProgressCard } from "../components/chapterAnalysis/ReaderJ
 import { EmbeddedAnalysisResultShell } from "../components/chapterResult/EmbeddedAnalysisResultShell";
 import { WorkspaceJourneyPane } from "../components/readerJourney/WorkspaceJourneyPane";
 import { ProNativeOverviewEntry } from "../components/proNativeOverview/ProNativeOverviewEntry";
+import { WholeBookFreeEntry } from "../components/wholeBookFree/WholeBookFreeEntry";
 import { StateView } from "../components/ui/StateView";
 import { useCurrentPageAnalysisProgress } from "../hooks/useCurrentPageAnalysisProgress";
 import { analysisApi } from "../services/analysisApi";
@@ -1094,6 +1095,9 @@ export function BookRoutePage() {
             ) : null}
             {!noChapters && !bootstrappingChapter ? (
               <ProNativeOverviewEntry bookId={bookId} />
+            ) : null}
+            {!noChapters && !bootstrappingChapter ? (
+              <WholeBookFreeEntry bookId={bookId} />
             ) : null}
             {!noChapters &&
             !bootstrappingChapter &&

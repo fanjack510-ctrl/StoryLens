@@ -29,6 +29,24 @@ const wholeBookDiagnosticsEnabled = (() => {
   return value === "1" || value === "true" || value === "yes" || value === "on";
 })();
 
+const wholeBookFreeProductEnabled = (() => {
+  const raw =
+    process.env.VITE_WHOLE_BOOK_FREE_PRODUCT_ENABLED ||
+    process.env.STORYLENS_WHOLE_BOOK_FREE_PRODUCT_ENABLED ||
+    "false";
+  const value = String(raw).trim().toLowerCase();
+  return value === "1" || value === "true" || value === "yes" || value === "on";
+})();
+
+const wholeBookFixturePreviewEnabled = (() => {
+  const raw =
+    process.env.VITE_WHOLE_BOOK_FIXTURE_PREVIEW_ENABLED ||
+    process.env.STORYLENS_WHOLE_BOOK_FIXTURE_PREVIEW_ENABLED ||
+    "false";
+  const value = String(raw).trim().toLowerCase();
+  return value === "1" || value === "true" || value === "yes" || value === "on";
+})();
+
 function resolvePublicGitHead(): string {
   if (process.env.VITE_PUBLIC_GIT_HEAD) return String(process.env.VITE_PUBLIC_GIT_HEAD).trim();
   try {
@@ -47,6 +65,9 @@ export default defineConfig({
     __STORYLENS_PRO_NATIVE_OVERVIEW_ENABLED__: JSON.stringify(nativeOverviewUiEnabled),
     // Wave B diagnostics page — repo default remains false.
     __STORYLENS_WHOLE_BOOK_DIAGNOSTICS_ENABLED__: JSON.stringify(wholeBookDiagnosticsEnabled),
+    // Wave D formal Free whole-book product — repo default remains false.
+    __STORYLENS_WHOLE_BOOK_FREE_PRODUCT_ENABLED__: JSON.stringify(wholeBookFreeProductEnabled),
+    __STORYLENS_WHOLE_BOOK_FIXTURE_PREVIEW_ENABLED__: JSON.stringify(wholeBookFixturePreviewEnabled),
   },
   server: { port: 1420, strictPort: true },
   test: {
