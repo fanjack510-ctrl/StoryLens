@@ -3,9 +3,16 @@
   "title": "Whole-book v1.1.1 baseline audit (read-only)",
   "type": "documentation",
   "base_version": "1.1.1",
-  "status": "registered",
+  "status": "tested",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "539ef2366a4a12a73b70e20671cb35d644dfadf4",
+      "message": "docs(whole-book): freeze v1.1.1 execution baseline",
+      "primary": true,
+      "multi_change_reason": "Same docs commit freezes audit artifacts referenced by CHG-001 and WB-0.1 registry freeze CHG-002"
+    }
+  ],
   "modules": [
     "docs/whole-book"
   ],
@@ -39,7 +46,7 @@
     "breaking_change": false
   },
   "blocker_level": null,
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-28T01:20:16Z",
-  "updated_at": "2026-07-28T01:22:59Z"
+  "updated_at": "2026-07-28T01:23:52Z"
 }
