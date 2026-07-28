@@ -238,22 +238,21 @@ def ensure_auto_reader_journey_row(
                 bind_journey_to_revision(session, existing, revision, scenes)
         return existing
 
-    # Only reuse a succeeded journey when it already matches the requested revision.
-    succeeded = session.scalar(
-        select(ReaderJourneyRun)
-        .where(
-            ReaderJourneyRun.analysis_run_id == run.id,
-            ReaderJourneyRun.status == "succeeded",
-            ReaderJourneyRun.result_status == "current",
-        )
-        .order_by(ReaderJourneyRun.id.desc())
-    )
-    if succeeded is not None:
-        if scene_revision_id is None or succeeded.scene_revision_id == scene_revision_id:
-            return succeeded
-        # Old succeeded journey belongs to a different revision — fall through to create.
-
+    # Legacy auto path (no revision bind): may reuse a current succeeded journey.
+    # Explicit revision bind must create/reuse only via client_request_id above —
+    # never steal an older fixture/manual succeeded row for the same or other revision.
     if scene_revision_id is None:
+        succeeded = session.scalar(
+            select(ReaderJourneyRun)
+            .where(
+                ReaderJourneyRun.analysis_run_id == run.id,
+                ReaderJourneyRun.status == "succeeded",
+                ReaderJourneyRun.result_status == "current",
+            )
+            .order_by(ReaderJourneyRun.id.desc())
+        )
+        if succeeded is not None:
+            return succeeded
         recoverable = find_recoverable_journey_run(session, run.id)
         if recoverable is not None:
             return recoverable
@@ -265,6 +264,13 @@ def ensure_auto_reader_journey_row(
             included = [s for s in scenes if bool(getattr(s, "included_in_journey", True))]
             chapter = session.get(Chapter, int(run.subject_id))
             version_fields = new_journey_version_fields()
+            for other in session.scalars(
+                select(ReaderJourneyRun).where(
+                    ReaderJourneyRun.chapter_id == int(run.subject_id),
+                    ReaderJourneyRun.result_status == "current",
+                )
+            ):
+                other.result_status = "superseded"
             journey_run = ReaderJourneyRun(
                 analysis_run_id=run.id,
                 book_id=chapter.book_id if chapter else 0,

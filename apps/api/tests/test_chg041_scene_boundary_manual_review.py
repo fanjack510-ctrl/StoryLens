@@ -7,8 +7,6 @@ import hashlib
 import json
 from unittest.mock import MagicMock, patch
 
-from unittest.mock import MagicMock, patch
-
 from sqlalchemy import create_engine, inspect, select
 import pytest
 from sqlalchemy.orm import sessionmaker
@@ -21,6 +19,7 @@ from app.db.models import (
     BoundaryRevision,
     Chapter,
     Paragraph,
+    ReaderJourneyRun,
     Scene,
 )
 from app.db.session import migrate_phase_scene_boundary_manual_review
@@ -484,5 +483,158 @@ def test_confirm_and_start_creates_revision_scoped_journey(testing_session):
     assert journey is not None
     assert journey.id != old.id
     assert journey.scene_revision_id == revision.id
+    assert journey.scene_boundary_hash == revision.boundary_hash
+    assert journey.chapter_text_hash == revision.chapter_text_hash
     testing_session.refresh(old)
     assert old.result_status == "superseded"
+    overview = get_scene_boundaries_overview_v1(testing_session, chapter.id)
+    assert overview["awaiting_confirmation"] is False
+
+    # Same Confirm+Start retry must reuse the revision-scoped journey (no new task).
+    retry, journey2, already2, err2 = asyncio.run(
+        confirm_scene_revision_and_start_journey_v1(
+            testing_session,
+            revision.id,
+            expected_etag=revision.revision_etag,
+            start_journey=True,
+            session_factory=None,
+            gateway=None,
+        )
+    )
+    assert err2 is None
+    assert already2 is True
+    assert retry.id == revision.id
+    assert journey2 is not None
+    assert journey2.id == journey.id
+    journey_rows = testing_session.scalars(
+        select(ReaderJourneyRun).where(ReaderJourneyRun.analysis_run_id == run.id)
+    ).all()
+    assert len(journey_rows) == 2  # superseded old + revision-scoped current
+
+
+def test_confirm_clears_awaiting_and_binds_hashes(testing_session):
+    _, chapter, _, run, scenes = _seed_chapter(testing_session)
+    _attach_scene_analysis(testing_session, run, scenes)
+    model = ensure_ai_model_revision_after_scenes_v1(testing_session, run)
+    cac.mark_scenes_complete_awaiting_boundary_confirmation(testing_session, run)
+    testing_session.commit()
+    # Fixture-like old succeeded journey on the same revision, different client id.
+    stale = cac.ensure_auto_reader_journey_row(
+        testing_session, run, scene_revision_id=model.id
+    )
+    assert stale is not None
+    stale.status = "succeeded"
+    stale.result_status = "current"
+    stale.client_request_id = f"mg041-old-journey-{run.id}"
+    # Restore manual-gate hold after ensure_auto marked reader_journey_queued.
+    cac.mark_scenes_complete_awaiting_boundary_confirmation(testing_session, run)
+    testing_session.commit()
+    overview_before = get_scene_boundaries_overview_v1(testing_session, chapter.id)
+    assert overview_before["awaiting_confirmation"] is True
+
+    revision, journey, already, err = asyncio.run(
+        confirm_scene_revision_and_start_journey_v1(
+            testing_session,
+            model.id,
+            expected_etag=model.revision_etag,
+            start_journey=True,
+            session_factory=None,
+            gateway=None,
+        )
+    )
+    assert err is None
+    assert already is True
+    assert journey is not None
+    assert journey.id != stale.id
+    assert journey.client_request_id == cac.auto_journey_client_request_id(run.id, revision.id)
+    assert journey.scene_revision_id == revision.id
+    assert journey.scene_boundary_hash == revision.boundary_hash
+    assert journey.chapter_text_hash == revision.chapter_text_hash
+    testing_session.refresh(stale)
+    assert stale.result_status == "superseded"
+    overview = get_scene_boundaries_overview_v1(testing_session, chapter.id)
+    assert overview["awaiting_confirmation"] is False
+    assert overview["confirmed_revision"]["revision_id"] == revision.id
+
+    # Idempotent Confirm+Start retry reuses the auto revision-scoped task only.
+    _, journey_retry, _, err_retry = asyncio.run(
+        confirm_scene_revision_and_start_journey_v1(
+            testing_session,
+            revision.id,
+            expected_etag=revision.revision_etag,
+            start_journey=True,
+            session_factory=None,
+            gateway=None,
+        )
+    )
+    assert err_retry is None
+    assert journey_retry is not None
+    assert journey_retry.id == journey.id
+    auto_rows = testing_session.scalars(
+        select(ReaderJourneyRun).where(
+            ReaderJourneyRun.analysis_run_id == run.id,
+            ReaderJourneyRun.client_request_id == journey.client_request_id,
+        )
+    ).all()
+    assert len(auto_rows) == 1
+
+
+def test_succeeded_journey_not_reused_across_revisions(testing_session):
+    _, chapter, _, run, scenes = _seed_chapter(testing_session)
+    _attach_scene_analysis(testing_session, run, scenes)
+    model = ensure_ai_model_revision_after_scenes_v1(testing_session, run)
+    stale = cac.ensure_auto_reader_journey_row(
+        testing_session, run, scene_revision_id=model.id
+    )
+    assert stale is not None
+    stale.status = "succeeded"
+    stale.result_status = "current"
+    stale.completed_scene_count = 2
+    testing_session.commit()
+
+    draft = create_or_get_scene_boundary_draft_v1(testing_session, chapter.id)
+    testing_session.commit()
+    partition = json.loads(draft.final_boundaries_json)["scenes"]
+    edited = set_included(partition, scene_order=1, included=False)
+    saved = save_scene_boundary_draft_v1(
+        testing_session, draft.id, edited, expected_etag=draft.revision_etag
+    )
+    testing_session.commit()
+    revision, journey, already, err = asyncio.run(
+        confirm_scene_revision_and_start_journey_v1(
+            testing_session,
+            saved.id,
+            expected_etag=saved.revision_etag,
+            start_journey=True,
+            session_factory=None,
+            gateway=None,
+        )
+    )
+    assert already is False
+    assert err is None
+    assert journey is not None
+    assert journey.id != stale.id
+    assert journey.scene_revision_id == revision.id
+    assert journey.scene_revision_id != model.id
+    assert journey.scene_boundary_hash == revision.boundary_hash
+    assert journey.chapter_text_hash == revision.chapter_text_hash
+    testing_session.refresh(stale)
+    assert stale.result_status == "superseded"
+    # Retry must preserve succeeded progress counters on the new journey once bound.
+    journey.status = "succeeded"
+    journey.completed_scene_count = 1
+    testing_session.commit()
+    _, journey_retry, _, err_retry = asyncio.run(
+        confirm_scene_revision_and_start_journey_v1(
+            testing_session,
+            revision.id,
+            expected_etag=revision.revision_etag,
+            start_journey=True,
+            session_factory=None,
+            gateway=None,
+        )
+    )
+    assert err_retry is None
+    assert journey_retry is not None
+    assert journey_retry.id == journey.id
+    assert journey_retry.completed_scene_count == 1

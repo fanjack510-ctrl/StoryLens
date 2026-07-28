@@ -194,6 +194,10 @@ async def confirm_scene_boundary(
     journey_error_message: str | None = None
     try:
         if body.start_journey:
+            from app.services.reader_journey_pipeline import execute_reader_journey
+
+            # Queue only in-request; execute asynchronously so Confirm+Start can
+            # return a routable journey_run_id immediately (same pattern as create).
             revision, journey, already_confirmed, journey_error_code = (
                 await confirm_scene_revision_and_start_journey_v1(
                     session,
@@ -201,20 +205,25 @@ async def confirm_scene_boundary(
                     expected_etag=body.expected_etag,
                     start_journey=True,
                     journey_options=body.journey_options,
-                    session_factory=session_factory,
-                    gateway=gateway,
+                    session_factory=None,
+                    gateway=None,
                 )
             )
             if journey is not None:
                 journey_run_id = journey.id
                 journey_status = journey.status
-                journey_started = journey_error_code is None and journey.status in {
+                if journey.status in {
                     "queued",
                     "running",
                     "scene_profiles_running",
                     "chapter_synthesis_running",
-                    "succeeded",
-                }
+                }:
+                    background.add_task(
+                        execute_reader_journey, session_factory, gateway, journey.id
+                    )
+                    journey_started = True
+                elif journey.status == "succeeded" and journey_error_code is None:
+                    journey_started = True
             if journey_error_code:
                 journey_error_message = {
                     "SCENE_CONFIRMED_JOURNEY_NOT_STARTED": "阅读旅程任务未能启动。",

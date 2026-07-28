@@ -695,12 +695,20 @@ def bind_journey_to_revision(
         )
         for scene in included
     }
+    already_bound = (
+        journey.scene_revision_id == revision.id
+        and journey.scene_boundary_hash == revision.boundary_hash
+        and journey.chapter_text_hash == revision.chapter_text_hash
+    )
     journey.scene_revision_id = revision.id
     journey.scene_revision_no = revision.revision_number
     journey.scene_boundary_hash = revision.boundary_hash
     journey.chapter_text_hash = revision.chapter_text_hash
     journey.included_scene_ids_json = json.dumps([scene.id for scene in included])
     journey.included_scene_input_hashes_json = json.dumps(input_hashes, ensure_ascii=False)
+    # Idempotent Confirm+Start must not wipe progress on an already-bound journey.
+    if already_bound:
+        return
     journey.result_status = "current"
     journey.total_scene_count = len(included)
     journey.remaining_scene_count = len(included)
@@ -787,6 +795,13 @@ async def confirm_scene_revision_and_start_journey_v1(
             return revision, journey, already_confirmed, "JOURNEY_START_FAILED"
         with session_factory() as retry_session:
             journey = retry_session.get(ReaderJourneyRun, journey.id) or journey
+            if journey is not None and journey.status == "failed":
+                return (
+                    revision,
+                    journey,
+                    already_confirmed,
+                    journey.root_error_code or "JOURNEY_START_FAILED",
+                )
     return revision, journey, already_confirmed, None
 
 

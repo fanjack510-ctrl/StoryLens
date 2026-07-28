@@ -343,6 +343,30 @@ def synthesize_chapter_smoke_fake_text(request: ModelRequest) -> str:
                 flags=re.S,
             )
             pairs = [(sid, ord_) for ord_, sid in pairs]
+        if not pairs:
+            numeric_ids = [
+                int(item) for item in re.findall(r'"scene_id"\s*:\s*(\d+)', combined)
+            ]
+            # Preserve order, unique.
+            ordered_ids: list[int] = []
+            seen_ids: set[int] = set()
+            for sid in numeric_ids:
+                if sid not in seen_ids:
+                    seen_ids.add(sid)
+                    ordered_ids.append(sid)
+            ordinals = [
+                int(item) for item in re.findall(r'"scene_ordinal"\s*:\s*(\d+)', combined)
+            ]
+            ordered_ords: list[int] = []
+            seen_ords: set[int] = set()
+            for ordinal in ordinals:
+                if ordinal not in seen_ords:
+                    seen_ords.add(ordinal)
+                    ordered_ords.append(ordinal)
+            if ordered_ids and ordered_ords and len(ordered_ids) == len(ordered_ords):
+                pairs = [(str(sid), str(ord_)) for sid, ord_ in zip(ordered_ids, ordered_ords)]
+            elif ordered_ids:
+                pairs = [(str(sid), str(index + 1)) for index, sid in enumerate(ordered_ids)]
         profiles = []
         chunk = paragraph_ids[:2] if len(paragraph_ids) >= 2 else paragraph_ids
         if pairs:
