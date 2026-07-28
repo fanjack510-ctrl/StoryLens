@@ -36,6 +36,27 @@ from app.narrative_core.services.whole_book_windowing_v1_service import (
     list_windows,
     window_to_dict,
 )
+from app.narrative_core.services.whole_book_minimal_extraction_v1_service import (
+    execute_minimal_entity_event_extraction_v1,
+)
+from app.narrative_core.services.whole_book_minimal_materialization_v1_service import (
+    materialize_minimal_narrative_assets_v1,
+)
+from app.narrative_core.services.whole_book_minimal_overview_v1_service import (
+    synthesize_minimal_book_overview_v1,
+)
+from app.narrative_core.services.whole_book_fixture_pipeline_v1_service import (
+    execute_fixture_minimal_pipeline_v1,
+)
+from app.narrative_core.services.whole_book_minimal_read_v1_service import (
+    get_evidence_source,
+    get_minimal_analysis_summary,
+    get_run_overview,
+    list_run_assets,
+    list_run_entities,
+    list_run_evidences,
+    list_run_relations,
+)
 
 router = APIRouter(prefix="/api/v1", tags=["whole-book-foundation"])
 
@@ -258,3 +279,106 @@ def get_checkpoints(run_id: int, db: Session = Depends(get_db)) -> dict:
     except WholeBookFoundationError as exc:
         _raise_foundation(exc)
         raise
+
+
+@router.post("/whole-book/runs/{run_id}/minimal-analysis/extract-fixture")
+def extract_fixture(run_id: int, db: Session = Depends(get_db)) -> dict:
+    try:
+        result = execute_minimal_entity_event_extraction_v1(db, run_id)
+        db.commit()
+        return result
+    except WholeBookFoundationError as exc:
+        db.rollback()
+        _raise_foundation(exc)
+        raise
+
+
+@router.post("/whole-book/runs/{run_id}/minimal-analysis/materialize")
+def materialize(run_id: int, db: Session = Depends(get_db)) -> dict:
+    try:
+        result = materialize_minimal_narrative_assets_v1(db, run_id)
+        db.commit()
+        return result
+    except WholeBookFoundationError as exc:
+        db.rollback()
+        _raise_foundation(exc)
+        raise
+
+
+@router.post("/whole-book/runs/{run_id}/minimal-analysis/synthesize-fixture")
+def synthesize_fixture(run_id: int, db: Session = Depends(get_db)) -> dict:
+    try:
+        result = synthesize_minimal_book_overview_v1(db, run_id)
+        db.commit()
+        return result
+    except WholeBookFoundationError as exc:
+        db.rollback()
+        _raise_foundation(exc)
+        raise
+
+
+@router.post("/whole-book/runs/{run_id}/minimal-analysis/execute-fixture")
+def execute_fixture(run_id: int, db: Session = Depends(get_db)) -> dict:
+    try:
+        result = execute_fixture_minimal_pipeline_v1(db, run_id)
+        db.commit()
+        return result
+    except WholeBookFoundationError as exc:
+        db.rollback()
+        _raise_foundation(exc)
+        raise
+
+
+@router.get("/whole-book/runs/{run_id}/minimal-analysis/summary")
+def minimal_summary(run_id: int, db: Session = Depends(get_db)) -> dict:
+    try:
+        return get_minimal_analysis_summary(db, run_id)
+    except WholeBookFoundationError as exc:
+        _raise_foundation(exc)
+        raise
+
+
+@router.get("/whole-book/runs/{run_id}/entities")
+def run_entities(run_id: int, db: Session = Depends(get_db)) -> dict:
+    return {"entities": list_run_entities(db, run_id)}
+
+
+@router.get("/whole-book/runs/{run_id}/assets")
+def run_assets(
+    run_id: int,
+    asset_type: str | None = Query(default=None),
+    entity_id: int | None = Query(default=None, ge=1),
+    offset: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=500),
+    db: Session = Depends(get_db),
+) -> dict:
+    items, total = list_run_assets(
+        db, run_id, asset_type=asset_type, entity_id=entity_id, offset=offset, limit=limit
+    )
+    return {"assets": items, "total": total, "offset": offset, "limit": limit}
+
+
+@router.get("/whole-book/runs/{run_id}/evidences")
+def run_evidences(run_id: int, db: Session = Depends(get_db)) -> dict:
+    return {"evidences": list_run_evidences(db, run_id)}
+
+
+@router.get("/whole-book/runs/{run_id}/relations")
+def run_relations(run_id: int, db: Session = Depends(get_db)) -> dict:
+    return {"relations": list_run_relations(db, run_id)}
+
+
+@router.get("/whole-book/runs/{run_id}/overview")
+def run_overview(run_id: int, db: Session = Depends(get_db)) -> dict:
+    overview = get_run_overview(db, run_id)
+    if overview is None:
+        raise HTTPException(status_code=404, detail={"error_code": "OVERVIEW_NOT_FOUND"})
+    return {"overview": overview}
+
+
+@router.get("/whole-book/evidences/{evidence_id}/source")
+def evidence_source(evidence_id: int, db: Session = Depends(get_db)) -> dict:
+    try:
+        return get_evidence_source(db, evidence_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail={"error_code": "EVIDENCE_NOT_FOUND"}) from exc
