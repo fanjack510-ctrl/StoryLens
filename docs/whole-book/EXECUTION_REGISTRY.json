@@ -210,12 +210,12 @@
       "title": "Freeze Snapshot/Asset/Evidence/Run/Overview contracts",
       "acceptance_level": "L1",
       "evidence_dir": "release/evidence/whole-book/WB-0.2/",
-      "wb_status": "tested",
+      "wb_status": "verified",
       "depends_on": [
         "WB-0.1-BASELINE-FREEZE"
       ],
       "next_step": "WB-0.3-CAPABILITY-COST",
-      "manual_gate_result": "ready",
+      "manual_gate_result": "PASS",
       "note": "Awaiting MG-WB-0.2 PASS; do not start WB-0.3"
     },
     {
@@ -226,8 +226,8 @@
       "phase": "WB-0",
       "title": "Freeze capability/consent/cost semantics",
       "acceptance_level": "L1",
-      "evidence_dir": "release/evidence/whole-book/WB-0.3-CAPABILITY-COST/",
-      "wb_status": "planned",
+      "evidence_dir": "release/evidence/whole-book/WB-0.3/",
+      "wb_status": "verified",
       "depends_on": [
         "WB-0.2-DATA-CONTRACTS"
       ],
@@ -241,8 +241,8 @@
       "phase": "WB-0",
       "title": "Migration human gate before algorithm work",
       "acceptance_level": "L1",
-      "evidence_dir": "release/evidence/whole-book/WB-0.4-DB-MIGRATION-GATE/",
-      "wb_status": "planned",
+      "evidence_dir": "release/evidence/whole-book/WB-0.4/",
+      "wb_status": "verified",
       "depends_on": [
         "WB-0.3-CAPABILITY-COST"
       ],
@@ -256,8 +256,8 @@
       "phase": "WB-0",
       "title": "Cost/idempotency/checkpoint orchestration gate",
       "acceptance_level": "L1/L2",
-      "evidence_dir": "release/evidence/whole-book/WB-0.5-PROVIDER-ORCH/",
-      "wb_status": "planned",
+      "evidence_dir": "release/evidence/whole-book/WB-0.5/",
+      "wb_status": "verified",
       "depends_on": [
         "WB-0.4-DB-MIGRATION-GATE"
       ],

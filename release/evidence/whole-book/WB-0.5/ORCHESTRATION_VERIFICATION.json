@@ -1,0 +1,19 @@
+{
+  "scenario": "10_units_interrupt_resume",
+  "first_wave_completed": 4,
+  "resume_plan": {
+    "completed": 4,
+    "skipped": 4,
+    "pending": 6
+  },
+  "expected_logical_calls": 10,
+  "actual_logical_calls": 10,
+  "second_resume_new_calls": 0,
+  "restart_call_duplication": 0,
+  "fake_network_calls": 0,
+  "real_provider_calls": 0,
+  "budget_gates": "PASS",
+  "auto_retry": "DISABLED",
+  "startup_auto_provider_call": false,
+  "tests": "tests/test_whole_book_wb05_provider_orch.py"
+}
