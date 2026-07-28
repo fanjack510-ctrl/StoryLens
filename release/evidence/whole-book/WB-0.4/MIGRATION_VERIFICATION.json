@@ -1,0 +1,11 @@
+{
+  "migration_id": "20260728_012_whole_book_foundation_v1",
+  "empty_db": "PASS",
+  "second_upgrade_changes": 0,
+  "failure_rollback": "PASS",
+  "target_tables_present": true,
+  "indexes_present": true,
+  "unique_constraints_present": true,
+  "formal_appdata_writes": 0,
+  "tests": "tests/test_whole_book_wb04_migration.py"
+}

@@ -24,6 +24,7 @@ from app.narrative_core.migrations import (
     MIGRATION_NARRATIVE_ENTITIES_ALIASES,
     MIGRATION_NARRATIVE_RELATIONS_VERSIONS_EVIDENCE,
     MIGRATION_SCHEMA_MIGRATIONS,
+    MIGRATION_WHOLE_BOOK_FOUNDATION_V1,
     MIGRATION_WHOLE_BOOK_OVERVIEW_RUNTIME,
     migration_checksum,
 )
@@ -1133,5 +1134,571 @@ def apply_narrative_overview_migrations(engine: Engine) -> None:
 
 
 def apply_narrative_migrations(engine: Engine) -> None:
-    """Apply all frozen narrative migrations (Phase 1P + 1B-P + Overview)."""
+    """Apply all frozen narrative migrations (Phase 1P + 1B-P + Overview + WB foundation)."""
     apply_narrative_overview_migrations(engine)
+    migrate_narrative_20260728_012_whole_book_foundation_v1(engine)
+
+
+SQL_012 = """
+ALTER TABLE book_snapshots ADD COLUMN snapshot_version INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE book_snapshots ADD COLUMN completed_at DATETIME;
+ALTER TABLE book_snapshot_paragraphs ADD COLUMN global_paragraph_index INTEGER;
+CREATE TABLE whole_book_cost_estimates (
+    id INTEGER NOT NULL PRIMARY KEY,
+    book_id INTEGER NOT NULL,
+    book_revision_hash VARCHAR(64) NOT NULL,
+    mode VARCHAR(64) NOT NULL,
+    provider_config_id INTEGER NOT NULL,
+    model_name VARCHAR(255) NOT NULL DEFAULT '',
+    chapter_count INTEGER NOT NULL DEFAULT 0,
+    paragraph_count INTEGER NOT NULL DEFAULT 0,
+    character_count INTEGER NOT NULL DEFAULT 0,
+    estimated_window_count INTEGER NOT NULL DEFAULT 0,
+    estimated_provider_call_count INTEGER NOT NULL DEFAULT 0,
+    estimated_input_tokens INTEGER NOT NULL DEFAULT 0,
+    estimated_output_tokens INTEGER NOT NULL DEFAULT 0,
+    estimated_cost_min_cny NUMERIC(18, 6),
+    estimated_cost_max_cny NUMERIC(18, 6),
+    currency VARCHAR(8) NOT NULL DEFAULT 'CNY',
+    pricing_status VARCHAR(32) NOT NULL DEFAULT 'unavailable',
+    pricing_reason_code VARCHAR(64),
+    contract_version VARCHAR(64) NOT NULL,
+    estimate_version VARCHAR(64) NOT NULL,
+    created_at DATETIME NOT NULL,
+    expires_at DATETIME NOT NULL,
+    FOREIGN KEY(book_id) REFERENCES books (id) ON DELETE CASCADE
+);
+CREATE TABLE whole_book_consents (
+    id INTEGER NOT NULL PRIMARY KEY,
+    book_id INTEGER NOT NULL,
+    estimate_id INTEGER NOT NULL,
+    book_revision_hash VARCHAR(64) NOT NULL,
+    mode VARCHAR(64) NOT NULL,
+    provider_config_id INTEGER NOT NULL,
+    model_name VARCHAR(255) NOT NULL DEFAULT '',
+    accepted_estimated_cost_max_cny NUMERIC(18, 6),
+    user_budget_limit_cny NUMERIC(18, 6) NOT NULL DEFAULT 0,
+    max_provider_calls INTEGER NOT NULL DEFAULT 0,
+    max_input_tokens INTEGER NOT NULL DEFAULT 0,
+    max_output_tokens INTEGER NOT NULL DEFAULT 0,
+    auto_retry_enabled INTEGER NOT NULL DEFAULT 0,
+    max_retries_per_unit INTEGER NOT NULL DEFAULT 0,
+    accepted_at DATETIME NOT NULL,
+    expires_at DATETIME NOT NULL,
+    revoked_at DATETIME,
+    FOREIGN KEY(book_id) REFERENCES books (id) ON DELETE CASCADE,
+    FOREIGN KEY(estimate_id) REFERENCES whole_book_cost_estimates (id) ON DELETE RESTRICT
+);
+CREATE TABLE whole_book_runs (
+    id INTEGER NOT NULL PRIMARY KEY,
+    book_id INTEGER NOT NULL,
+    snapshot_id INTEGER,
+    mode VARCHAR(64) NOT NULL DEFAULT 'whole_book_native',
+    status VARCHAR(32) NOT NULL DEFAULT 'pending',
+    current_stage_code VARCHAR(64),
+    idempotency_key VARCHAR(128) NOT NULL,
+    engine_id VARCHAR(128) NOT NULL DEFAULT '',
+    engine_version VARCHAR(64) NOT NULL DEFAULT '',
+    contract_version VARCHAR(64) NOT NULL DEFAULT '',
+    prompt_version VARCHAR(128),
+    result_origin VARCHAR(32) NOT NULL DEFAULT 'formal',
+    consent_id INTEGER,
+    cost_policy_id INTEGER,
+    created_at DATETIME NOT NULL,
+    started_at DATETIME,
+    paused_at DATETIME,
+    completed_at DATETIME,
+    failed_at DATETIME,
+    cancelled_at DATETIME,
+    failure_code VARCHAR(128),
+    failure_message_safe VARCHAR(500),
+    FOREIGN KEY(book_id) REFERENCES books (id) ON DELETE CASCADE,
+    FOREIGN KEY(snapshot_id) REFERENCES book_snapshots (id) ON DELETE SET NULL,
+    FOREIGN KEY(consent_id) REFERENCES whole_book_consents (id) ON DELETE SET NULL,
+    CONSTRAINT uq_wb_runs_idempotency_key UNIQUE (idempotency_key)
+);
+CREATE TABLE whole_book_run_stages (
+    id INTEGER NOT NULL PRIMARY KEY,
+    run_id INTEGER NOT NULL,
+    stage_code VARCHAR(64) NOT NULL,
+    sequence INTEGER NOT NULL DEFAULT 0,
+    status VARCHAR(32) NOT NULL DEFAULT 'pending',
+    progress_current INTEGER NOT NULL DEFAULT 0,
+    progress_total INTEGER NOT NULL DEFAULT 0,
+    started_at DATETIME,
+    completed_at DATETIME,
+    last_error_code VARCHAR(128),
+    last_error_message_safe VARCHAR(500),
+    FOREIGN KEY(run_id) REFERENCES whole_book_runs (id) ON DELETE CASCADE,
+    CONSTRAINT uq_wb_run_stages_run_code UNIQUE (run_id, stage_code)
+);
+CREATE TABLE whole_book_checkpoints (
+    id INTEGER NOT NULL PRIMARY KEY,
+    run_id INTEGER NOT NULL,
+    stage_code VARCHAR(64) NOT NULL,
+    checkpoint_key VARCHAR(128) NOT NULL,
+    sequence_no INTEGER NOT NULL DEFAULT 0,
+    completed_unit_count INTEGER NOT NULL DEFAULT 0,
+    last_completed_window_id INTEGER,
+    payload_hash VARCHAR(64) NOT NULL DEFAULT '',
+    checkpoint_payload_json TEXT NOT NULL DEFAULT '{}',
+    created_at DATETIME NOT NULL,
+    FOREIGN KEY(run_id) REFERENCES whole_book_runs (id) ON DELETE CASCADE,
+    CONSTRAINT uq_wb_checkpoints_run_stage_key UNIQUE (run_id, stage_code, checkpoint_key)
+);
+CREATE TABLE whole_book_windows (
+    id INTEGER NOT NULL PRIMARY KEY,
+    run_id INTEGER NOT NULL,
+    snapshot_id INTEGER,
+    window_index INTEGER NOT NULL DEFAULT 0,
+    first_global_paragraph_index INTEGER NOT NULL DEFAULT 0,
+    last_global_paragraph_index INTEGER NOT NULL DEFAULT 0,
+    chapter_start_index INTEGER NOT NULL DEFAULT 0,
+    chapter_end_index INTEGER NOT NULL DEFAULT 0,
+    paragraph_count INTEGER NOT NULL DEFAULT 0,
+    character_count INTEGER NOT NULL DEFAULT 0,
+    token_estimate INTEGER NOT NULL DEFAULT 0,
+    overlap_before_paragraphs INTEGER NOT NULL DEFAULT 0,
+    overlap_after_paragraphs INTEGER NOT NULL DEFAULT 0,
+    window_hash VARCHAR(64) NOT NULL DEFAULT '',
+    idempotency_key VARCHAR(128) NOT NULL DEFAULT '',
+    status VARCHAR(32) NOT NULL DEFAULT 'pending',
+    FOREIGN KEY(run_id) REFERENCES whole_book_runs (id) ON DELETE CASCADE,
+    FOREIGN KEY(snapshot_id) REFERENCES book_snapshots (id) ON DELETE SET NULL,
+    CONSTRAINT uq_wb_windows_run_index UNIQUE (run_id, window_index)
+);
+CREATE TABLE whole_book_provider_units (
+    id INTEGER NOT NULL PRIMARY KEY,
+    run_id INTEGER NOT NULL,
+    stage_code VARCHAR(64) NOT NULL,
+    unit_key VARCHAR(128) NOT NULL,
+    unit_type VARCHAR(64) NOT NULL,
+    window_id INTEGER,
+    idempotency_key VARCHAR(128) NOT NULL,
+    request_hash VARCHAR(64) NOT NULL DEFAULT '',
+    status VARCHAR(32) NOT NULL DEFAULT 'pending',
+    attempt_count INTEGER NOT NULL DEFAULT 0,
+    result_hash VARCHAR(64),
+    last_error_code VARCHAR(128),
+    created_at DATETIME NOT NULL,
+    started_at DATETIME,
+    completed_at DATETIME,
+    updated_at DATETIME NOT NULL,
+    FOREIGN KEY(run_id) REFERENCES whole_book_runs (id) ON DELETE CASCADE,
+    FOREIGN KEY(window_id) REFERENCES whole_book_windows (id) ON DELETE SET NULL,
+    CONSTRAINT uq_wb_provider_units_run_stage_key UNIQUE (run_id, stage_code, unit_key),
+    CONSTRAINT uq_wb_provider_units_idempotency UNIQUE (idempotency_key)
+);
+CREATE TABLE whole_book_provider_attempts (
+    id INTEGER NOT NULL PRIMARY KEY,
+    provider_unit_id INTEGER NOT NULL,
+    attempt_no INTEGER NOT NULL,
+    provider_id VARCHAR(128) NOT NULL DEFAULT '',
+    model_name VARCHAR(255) NOT NULL DEFAULT '',
+    request_hash VARCHAR(64) NOT NULL DEFAULT '',
+    status VARCHAR(32) NOT NULL DEFAULT 'running',
+    input_tokens INTEGER,
+    output_tokens INTEGER,
+    cost_cny NUMERIC(18, 6),
+    error_code VARCHAR(128),
+    error_message_safe VARCHAR(500),
+    started_at DATETIME NOT NULL,
+    completed_at DATETIME,
+    FOREIGN KEY(provider_unit_id) REFERENCES whole_book_provider_units (id) ON DELETE CASCADE,
+    CONSTRAINT uq_wb_provider_attempts_unit_attempt UNIQUE (provider_unit_id, attempt_no)
+);
+CREATE INDEX IF NOT EXISTS ix_book_snapshot_paragraphs_global_paragraph_index
+    ON book_snapshot_paragraphs (global_paragraph_index);
+CREATE INDEX IF NOT EXISTS ix_wb_cost_estimates_book_created
+    ON whole_book_cost_estimates (book_id, created_at);
+CREATE INDEX IF NOT EXISTS ix_whole_book_cost_estimates_book_id
+    ON whole_book_cost_estimates (book_id);
+CREATE INDEX IF NOT EXISTS ix_whole_book_cost_estimates_provider_config_id
+    ON whole_book_cost_estimates (provider_config_id);
+CREATE INDEX IF NOT EXISTS ix_wb_consents_book_accepted
+    ON whole_book_consents (book_id, accepted_at);
+CREATE INDEX IF NOT EXISTS ix_whole_book_consents_book_id ON whole_book_consents (book_id);
+CREATE INDEX IF NOT EXISTS ix_whole_book_consents_estimate_id ON whole_book_consents (estimate_id);
+CREATE INDEX IF NOT EXISTS ix_wb_runs_book_status ON whole_book_runs (book_id, status);
+CREATE INDEX IF NOT EXISTS ix_wb_runs_snapshot ON whole_book_runs (snapshot_id);
+CREATE INDEX IF NOT EXISTS ix_whole_book_runs_book_id ON whole_book_runs (book_id);
+CREATE INDEX IF NOT EXISTS ix_whole_book_runs_consent_id ON whole_book_runs (consent_id);
+CREATE INDEX IF NOT EXISTS ix_whole_book_runs_snapshot_id ON whole_book_runs (snapshot_id);
+CREATE INDEX IF NOT EXISTS ix_whole_book_runs_status ON whole_book_runs (status);
+CREATE INDEX IF NOT EXISTS ix_wb_run_stages_run_sequence
+    ON whole_book_run_stages (run_id, sequence);
+CREATE INDEX IF NOT EXISTS ix_whole_book_run_stages_run_id ON whole_book_run_stages (run_id);
+CREATE INDEX IF NOT EXISTS ix_whole_book_checkpoints_run_id ON whole_book_checkpoints (run_id);
+CREATE INDEX IF NOT EXISTS ix_wb_windows_run_status ON whole_book_windows (run_id, status);
+CREATE INDEX IF NOT EXISTS ix_whole_book_windows_run_id ON whole_book_windows (run_id);
+CREATE INDEX IF NOT EXISTS ix_wb_provider_units_run_status
+    ON whole_book_provider_units (run_id, status);
+CREATE INDEX IF NOT EXISTS ix_wb_provider_units_idempotency
+    ON whole_book_provider_units (idempotency_key);
+CREATE INDEX IF NOT EXISTS ix_whole_book_provider_units_run_id
+    ON whole_book_provider_units (run_id);
+CREATE INDEX IF NOT EXISTS ix_wb_provider_attempts_unit_attempt
+    ON whole_book_provider_attempts (provider_unit_id, attempt_no);
+CREATE INDEX IF NOT EXISTS ix_whole_book_provider_attempts_provider_unit_id
+    ON whole_book_provider_attempts (provider_unit_id);
+"""
+
+
+_WB012_TABLES: tuple[str, ...] = (
+    "whole_book_cost_estimates",
+    "whole_book_consents",
+    "whole_book_runs",
+    "whole_book_run_stages",
+    "whole_book_checkpoints",
+    "whole_book_windows",
+    "whole_book_provider_units",
+    "whole_book_provider_attempts",
+)
+
+
+def _ensure_wb012_indexes(connection) -> None:  # noqa: ANN001
+    for statement in (
+        "CREATE INDEX IF NOT EXISTS ix_book_snapshot_paragraphs_global_paragraph_index "
+        "ON book_snapshot_paragraphs (global_paragraph_index)",
+        "CREATE INDEX IF NOT EXISTS ix_wb_cost_estimates_book_created "
+        "ON whole_book_cost_estimates (book_id, created_at)",
+        "CREATE INDEX IF NOT EXISTS ix_whole_book_cost_estimates_book_id "
+        "ON whole_book_cost_estimates (book_id)",
+        "CREATE INDEX IF NOT EXISTS ix_whole_book_cost_estimates_provider_config_id "
+        "ON whole_book_cost_estimates (provider_config_id)",
+        "CREATE INDEX IF NOT EXISTS ix_wb_consents_book_accepted "
+        "ON whole_book_consents (book_id, accepted_at)",
+        "CREATE INDEX IF NOT EXISTS ix_whole_book_consents_book_id "
+        "ON whole_book_consents (book_id)",
+        "CREATE INDEX IF NOT EXISTS ix_whole_book_consents_estimate_id "
+        "ON whole_book_consents (estimate_id)",
+        "CREATE INDEX IF NOT EXISTS ix_wb_runs_book_status "
+        "ON whole_book_runs (book_id, status)",
+        "CREATE INDEX IF NOT EXISTS ix_wb_runs_snapshot ON whole_book_runs (snapshot_id)",
+        "CREATE INDEX IF NOT EXISTS ix_whole_book_runs_book_id ON whole_book_runs (book_id)",
+        "CREATE INDEX IF NOT EXISTS ix_whole_book_runs_consent_id ON whole_book_runs (consent_id)",
+        "CREATE INDEX IF NOT EXISTS ix_whole_book_runs_snapshot_id "
+        "ON whole_book_runs (snapshot_id)",
+        "CREATE INDEX IF NOT EXISTS ix_whole_book_runs_status ON whole_book_runs (status)",
+        "CREATE INDEX IF NOT EXISTS ix_wb_run_stages_run_sequence "
+        "ON whole_book_run_stages (run_id, sequence)",
+        "CREATE INDEX IF NOT EXISTS ix_whole_book_run_stages_run_id "
+        "ON whole_book_run_stages (run_id)",
+        "CREATE INDEX IF NOT EXISTS ix_whole_book_checkpoints_run_id "
+        "ON whole_book_checkpoints (run_id)",
+        "CREATE INDEX IF NOT EXISTS ix_wb_windows_run_status "
+        "ON whole_book_windows (run_id, status)",
+        "CREATE INDEX IF NOT EXISTS ix_whole_book_windows_run_id ON whole_book_windows (run_id)",
+        "CREATE INDEX IF NOT EXISTS ix_wb_provider_units_run_status "
+        "ON whole_book_provider_units (run_id, status)",
+        "CREATE INDEX IF NOT EXISTS ix_wb_provider_units_idempotency "
+        "ON whole_book_provider_units (idempotency_key)",
+        "CREATE INDEX IF NOT EXISTS ix_whole_book_provider_units_run_id "
+        "ON whole_book_provider_units (run_id)",
+        "CREATE INDEX IF NOT EXISTS ix_wb_provider_attempts_unit_attempt "
+        "ON whole_book_provider_attempts (provider_unit_id, attempt_no)",
+        "CREATE INDEX IF NOT EXISTS ix_whole_book_provider_attempts_provider_unit_id "
+        "ON whole_book_provider_attempts (provider_unit_id)",
+    ):
+        connection.execute(text(statement))
+
+
+def migrate_narrative_20260728_012_whole_book_foundation_v1(engine: Engine) -> None:
+    """WB-0.4: snapshot columns + whole-book foundation tables (idempotent)."""
+    checksum = migration_checksum(SQL_012)
+    names = _table_names(engine)
+    if "book_snapshots" not in names:
+        migrate_narrative_20260723_003_book_snapshots(engine)
+        names = _table_names(engine)
+    try:
+        with engine.begin() as connection:
+            if "book_snapshots" in names:
+                snapshot_cols = {
+                    row[1]
+                    for row in connection.execute(text("PRAGMA table_info(book_snapshots)")).fetchall()
+                }
+                if "snapshot_version" not in snapshot_cols:
+                    connection.execute(
+                        text(
+                            "ALTER TABLE book_snapshots "
+                            "ADD COLUMN snapshot_version INTEGER NOT NULL DEFAULT 1"
+                        )
+                    )
+                if "completed_at" not in snapshot_cols:
+                    connection.execute(
+                        text("ALTER TABLE book_snapshots ADD COLUMN completed_at DATETIME")
+                    )
+            if "book_snapshot_paragraphs" in names:
+                paragraph_cols = {
+                    row[1]
+                    for row in connection.execute(
+                        text("PRAGMA table_info(book_snapshot_paragraphs)")
+                    ).fetchall()
+                }
+                if "global_paragraph_index" not in paragraph_cols:
+                    connection.execute(
+                        text(
+                            "ALTER TABLE book_snapshot_paragraphs "
+                            "ADD COLUMN global_paragraph_index INTEGER"
+                        )
+                    )
+            if "whole_book_cost_estimates" not in names:
+                connection.execute(
+                    text(
+                        """
+                        CREATE TABLE whole_book_cost_estimates (
+                            id INTEGER NOT NULL PRIMARY KEY,
+                            book_id INTEGER NOT NULL,
+                            book_revision_hash VARCHAR(64) NOT NULL,
+                            mode VARCHAR(64) NOT NULL,
+                            provider_config_id INTEGER NOT NULL,
+                            model_name VARCHAR(255) NOT NULL DEFAULT '',
+                            chapter_count INTEGER NOT NULL DEFAULT 0,
+                            paragraph_count INTEGER NOT NULL DEFAULT 0,
+                            character_count INTEGER NOT NULL DEFAULT 0,
+                            estimated_window_count INTEGER NOT NULL DEFAULT 0,
+                            estimated_provider_call_count INTEGER NOT NULL DEFAULT 0,
+                            estimated_input_tokens INTEGER NOT NULL DEFAULT 0,
+                            estimated_output_tokens INTEGER NOT NULL DEFAULT 0,
+                            estimated_cost_min_cny NUMERIC(18, 6),
+                            estimated_cost_max_cny NUMERIC(18, 6),
+                            currency VARCHAR(8) NOT NULL DEFAULT 'CNY',
+                            pricing_status VARCHAR(32) NOT NULL DEFAULT 'unavailable',
+                            pricing_reason_code VARCHAR(64),
+                            contract_version VARCHAR(64) NOT NULL,
+                            estimate_version VARCHAR(64) NOT NULL,
+                            created_at DATETIME NOT NULL,
+                            expires_at DATETIME NOT NULL,
+                            FOREIGN KEY(book_id) REFERENCES books (id) ON DELETE CASCADE
+                        )
+                        """
+                    )
+                )
+            if "whole_book_consents" not in names:
+                connection.execute(
+                    text(
+                        """
+                        CREATE TABLE whole_book_consents (
+                            id INTEGER NOT NULL PRIMARY KEY,
+                            book_id INTEGER NOT NULL,
+                            estimate_id INTEGER NOT NULL,
+                            book_revision_hash VARCHAR(64) NOT NULL,
+                            mode VARCHAR(64) NOT NULL,
+                            provider_config_id INTEGER NOT NULL,
+                            model_name VARCHAR(255) NOT NULL DEFAULT '',
+                            accepted_estimated_cost_max_cny NUMERIC(18, 6),
+                            user_budget_limit_cny NUMERIC(18, 6) NOT NULL DEFAULT 0,
+                            max_provider_calls INTEGER NOT NULL DEFAULT 0,
+                            max_input_tokens INTEGER NOT NULL DEFAULT 0,
+                            max_output_tokens INTEGER NOT NULL DEFAULT 0,
+                            auto_retry_enabled INTEGER NOT NULL DEFAULT 0,
+                            max_retries_per_unit INTEGER NOT NULL DEFAULT 0,
+                            accepted_at DATETIME NOT NULL,
+                            expires_at DATETIME NOT NULL,
+                            revoked_at DATETIME,
+                            FOREIGN KEY(book_id) REFERENCES books (id) ON DELETE CASCADE,
+                            FOREIGN KEY(estimate_id) REFERENCES whole_book_cost_estimates (id)
+                                ON DELETE RESTRICT
+                        )
+                        """
+                    )
+                )
+            if "whole_book_runs" not in names:
+                connection.execute(
+                    text(
+                        """
+                        CREATE TABLE whole_book_runs (
+                            id INTEGER NOT NULL PRIMARY KEY,
+                            book_id INTEGER NOT NULL,
+                            snapshot_id INTEGER,
+                            mode VARCHAR(64) NOT NULL DEFAULT 'whole_book_native',
+                            status VARCHAR(32) NOT NULL DEFAULT 'pending',
+                            current_stage_code VARCHAR(64),
+                            idempotency_key VARCHAR(128) NOT NULL,
+                            engine_id VARCHAR(128) NOT NULL DEFAULT '',
+                            engine_version VARCHAR(64) NOT NULL DEFAULT '',
+                            contract_version VARCHAR(64) NOT NULL DEFAULT '',
+                            prompt_version VARCHAR(128),
+                            result_origin VARCHAR(32) NOT NULL DEFAULT 'formal',
+                            consent_id INTEGER,
+                            cost_policy_id INTEGER,
+                            created_at DATETIME NOT NULL,
+                            started_at DATETIME,
+                            paused_at DATETIME,
+                            completed_at DATETIME,
+                            failed_at DATETIME,
+                            cancelled_at DATETIME,
+                            failure_code VARCHAR(128),
+                            failure_message_safe VARCHAR(500),
+                            FOREIGN KEY(book_id) REFERENCES books (id) ON DELETE CASCADE,
+                            FOREIGN KEY(snapshot_id) REFERENCES book_snapshots (id)
+                                ON DELETE SET NULL,
+                            FOREIGN KEY(consent_id) REFERENCES whole_book_consents (id)
+                                ON DELETE SET NULL,
+                            CONSTRAINT uq_wb_runs_idempotency_key UNIQUE (idempotency_key)
+                        )
+                        """
+                    )
+                )
+            if "whole_book_run_stages" not in names:
+                connection.execute(
+                    text(
+                        """
+                        CREATE TABLE whole_book_run_stages (
+                            id INTEGER NOT NULL PRIMARY KEY,
+                            run_id INTEGER NOT NULL,
+                            stage_code VARCHAR(64) NOT NULL,
+                            sequence INTEGER NOT NULL DEFAULT 0,
+                            status VARCHAR(32) NOT NULL DEFAULT 'pending',
+                            progress_current INTEGER NOT NULL DEFAULT 0,
+                            progress_total INTEGER NOT NULL DEFAULT 0,
+                            started_at DATETIME,
+                            completed_at DATETIME,
+                            last_error_code VARCHAR(128),
+                            last_error_message_safe VARCHAR(500),
+                            FOREIGN KEY(run_id) REFERENCES whole_book_runs (id) ON DELETE CASCADE,
+                            CONSTRAINT uq_wb_run_stages_run_code UNIQUE (run_id, stage_code)
+                        )
+                        """
+                    )
+                )
+            if "whole_book_checkpoints" not in names:
+                connection.execute(
+                    text(
+                        """
+                        CREATE TABLE whole_book_checkpoints (
+                            id INTEGER NOT NULL PRIMARY KEY,
+                            run_id INTEGER NOT NULL,
+                            stage_code VARCHAR(64) NOT NULL,
+                            checkpoint_key VARCHAR(128) NOT NULL,
+                            sequence_no INTEGER NOT NULL DEFAULT 0,
+                            completed_unit_count INTEGER NOT NULL DEFAULT 0,
+                            last_completed_window_id INTEGER,
+                            payload_hash VARCHAR(64) NOT NULL DEFAULT '',
+                            checkpoint_payload_json TEXT NOT NULL DEFAULT '{}',
+                            created_at DATETIME NOT NULL,
+                            FOREIGN KEY(run_id) REFERENCES whole_book_runs (id) ON DELETE CASCADE,
+                            CONSTRAINT uq_wb_checkpoints_run_stage_key
+                                UNIQUE (run_id, stage_code, checkpoint_key)
+                        )
+                        """
+                    )
+                )
+            if "whole_book_windows" not in names:
+                connection.execute(
+                    text(
+                        """
+                        CREATE TABLE whole_book_windows (
+                            id INTEGER NOT NULL PRIMARY KEY,
+                            run_id INTEGER NOT NULL,
+                            snapshot_id INTEGER,
+                            window_index INTEGER NOT NULL DEFAULT 0,
+                            first_global_paragraph_index INTEGER NOT NULL DEFAULT 0,
+                            last_global_paragraph_index INTEGER NOT NULL DEFAULT 0,
+                            chapter_start_index INTEGER NOT NULL DEFAULT 0,
+                            chapter_end_index INTEGER NOT NULL DEFAULT 0,
+                            paragraph_count INTEGER NOT NULL DEFAULT 0,
+                            character_count INTEGER NOT NULL DEFAULT 0,
+                            token_estimate INTEGER NOT NULL DEFAULT 0,
+                            overlap_before_paragraphs INTEGER NOT NULL DEFAULT 0,
+                            overlap_after_paragraphs INTEGER NOT NULL DEFAULT 0,
+                            window_hash VARCHAR(64) NOT NULL DEFAULT '',
+                            idempotency_key VARCHAR(128) NOT NULL DEFAULT '',
+                            status VARCHAR(32) NOT NULL DEFAULT 'pending',
+                            FOREIGN KEY(run_id) REFERENCES whole_book_runs (id) ON DELETE CASCADE,
+                            FOREIGN KEY(snapshot_id) REFERENCES book_snapshots (id)
+                                ON DELETE SET NULL,
+                            CONSTRAINT uq_wb_windows_run_index UNIQUE (run_id, window_index)
+                        )
+                        """
+                    )
+                )
+            if "whole_book_provider_units" not in names:
+                connection.execute(
+                    text(
+                        """
+                        CREATE TABLE whole_book_provider_units (
+                            id INTEGER NOT NULL PRIMARY KEY,
+                            run_id INTEGER NOT NULL,
+                            stage_code VARCHAR(64) NOT NULL,
+                            unit_key VARCHAR(128) NOT NULL,
+                            unit_type VARCHAR(64) NOT NULL,
+                            window_id INTEGER,
+                            idempotency_key VARCHAR(128) NOT NULL,
+                            request_hash VARCHAR(64) NOT NULL DEFAULT '',
+                            status VARCHAR(32) NOT NULL DEFAULT 'pending',
+                            attempt_count INTEGER NOT NULL DEFAULT 0,
+                            result_hash VARCHAR(64),
+                            last_error_code VARCHAR(128),
+                            created_at DATETIME NOT NULL,
+                            started_at DATETIME,
+                            completed_at DATETIME,
+                            updated_at DATETIME NOT NULL,
+                            FOREIGN KEY(run_id) REFERENCES whole_book_runs (id) ON DELETE CASCADE,
+                            FOREIGN KEY(window_id) REFERENCES whole_book_windows (id)
+                                ON DELETE SET NULL,
+                            CONSTRAINT uq_wb_provider_units_run_stage_key
+                                UNIQUE (run_id, stage_code, unit_key),
+                            CONSTRAINT uq_wb_provider_units_idempotency UNIQUE (idempotency_key)
+                        )
+                        """
+                    )
+                )
+            if "whole_book_provider_attempts" not in names:
+                connection.execute(
+                    text(
+                        """
+                        CREATE TABLE whole_book_provider_attempts (
+                            id INTEGER NOT NULL PRIMARY KEY,
+                            provider_unit_id INTEGER NOT NULL,
+                            attempt_no INTEGER NOT NULL,
+                            provider_id VARCHAR(128) NOT NULL DEFAULT '',
+                            model_name VARCHAR(255) NOT NULL DEFAULT '',
+                            request_hash VARCHAR(64) NOT NULL DEFAULT '',
+                            status VARCHAR(32) NOT NULL DEFAULT 'running',
+                            input_tokens INTEGER,
+                            output_tokens INTEGER,
+                            cost_cny NUMERIC(18, 6),
+                            error_code VARCHAR(128),
+                            error_message_safe VARCHAR(500),
+                            started_at DATETIME NOT NULL,
+                            completed_at DATETIME,
+                            FOREIGN KEY(provider_unit_id) REFERENCES whole_book_provider_units (id)
+                                ON DELETE CASCADE,
+                            CONSTRAINT uq_wb_provider_attempts_unit_attempt
+                                UNIQUE (provider_unit_id, attempt_no)
+                        )
+                        """
+                    )
+                )
+            _ensure_wb012_indexes(connection)
+        names_after = _table_names(engine)
+        missing = [table for table in _WB012_TABLES if table not in names_after]
+        if missing:
+            raise NarrativeCoreError(
+                NarrativeCoreErrorCode.MIGRATION_BASELINE_INVALID,
+                f"012 failed: missing tables after DDL: {missing}",
+            )
+        if "book_snapshots" in names_after:
+            required_snapshot_cols = {"snapshot_version", "completed_at"}
+            if not required_snapshot_cols.issubset(_column_names(engine, "book_snapshots")):
+                raise NarrativeCoreError(
+                    NarrativeCoreErrorCode.MIGRATION_BASELINE_INVALID,
+                    "012 failed: book_snapshots columns incomplete",
+                )
+        if "book_snapshot_paragraphs" in names_after:
+            if "global_paragraph_index" not in _column_names(engine, "book_snapshot_paragraphs"):
+                raise NarrativeCoreError(
+                    NarrativeCoreErrorCode.MIGRATION_BASELINE_INVALID,
+                    "012 failed: book_snapshot_paragraphs.global_paragraph_index missing",
+                )
+    except NarrativeCoreError:
+        raise
+    except Exception as exc:
+        raise NarrativeCoreError(
+            NarrativeCoreErrorCode.MIGRATION_BASELINE_INVALID,
+            f"012 whole-book foundation migration failed: {exc}",
+        ) from exc
+
+    _ensure_schema_migrations_table(engine)
+    _record_applied(engine, MIGRATION_WHOLE_BOOK_FOUNDATION_V1, checksum)

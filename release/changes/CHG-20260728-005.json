@@ -1,0 +1,32 @@
+{
+  "id": "CHG-20260728-005",
+  "title": "WB-0.4 Whole-Book DB Migration Gate",
+  "type": "feature",
+  "base_version": "1.1.1",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [],
+  "files": [],
+  "user_summary": "Minimal DB foundation for whole-book runs/units; isolate migration verification only.",
+  "technical_summary": "",
+  "acceptance_criteria": [],
+  "tests": [],
+  "verification_evidence": [],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": null,
+  "created_at": "2026-07-28T02:26:18Z",
+  "updated_at": "2026-07-28T02:26:18Z"
+}
