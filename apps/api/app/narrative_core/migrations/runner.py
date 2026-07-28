@@ -27,6 +27,7 @@ from app.narrative_core.migrations import (
     MIGRATION_WHOLE_BOOK_FOUNDATION_V1,
     MIGRATION_WHOLE_BOOK_OVERVIEW_RUNTIME,
     MIGRATION_WHOLE_BOOK_SNAPSHOT_IMMUTABILITY,
+    MIGRATION_WHOLE_BOOK_MINIMAL_ANALYSIS_RESULTS,
     migration_checksum,
 )
 
@@ -1139,6 +1140,7 @@ def apply_narrative_migrations(engine: Engine) -> None:
     apply_narrative_overview_migrations(engine)
     migrate_narrative_20260728_012_whole_book_foundation_v1(engine)
     migrate_narrative_20260728_013_whole_book_snapshot_immutability(engine)
+    migrate_narrative_20260728_014_whole_book_minimal_analysis_results(engine)
 
 
 SQL_012 = """
@@ -1782,3 +1784,141 @@ def migrate_narrative_20260728_013_whole_book_snapshot_immutability(engine: Engi
             connection.execute(text(statement))
     _ensure_schema_migrations_table(engine)
     _record_applied(engine, MIGRATION_WHOLE_BOOK_SNAPSHOT_IMMUTABILITY, checksum)
+
+
+SQL_014 = """
+CREATE TABLE whole_book_window_analysis_results (
+    id INTEGER NOT NULL PRIMARY KEY,
+    run_id INTEGER NOT NULL,
+    window_id INTEGER NOT NULL,
+    snapshot_id INTEGER NOT NULL,
+    contract_version VARCHAR(64) NOT NULL,
+    engine_id VARCHAR(128) NOT NULL DEFAULT '',
+    engine_version VARCHAR(64) NOT NULL DEFAULT '',
+    prompt_version VARCHAR(128),
+    result_origin VARCHAR(32) NOT NULL DEFAULT 'fixture',
+    response_json TEXT NOT NULL DEFAULT '{}',
+    response_hash VARCHAR(64) NOT NULL DEFAULT '',
+    validation_status VARCHAR(32) NOT NULL DEFAULT 'invalid',
+    warning_count INTEGER NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL,
+    FOREIGN KEY(run_id) REFERENCES whole_book_runs (id) ON DELETE CASCADE,
+    FOREIGN KEY(window_id) REFERENCES whole_book_windows (id) ON DELETE CASCADE,
+    FOREIGN KEY(snapshot_id) REFERENCES book_snapshots (id) ON DELETE CASCADE,
+    CONSTRAINT uq_wb_window_analysis_run_window UNIQUE (run_id, window_id)
+);
+CREATE TABLE whole_book_overview_results (
+    id INTEGER NOT NULL PRIMARY KEY,
+    run_id INTEGER NOT NULL,
+    book_id INTEGER NOT NULL,
+    snapshot_id INTEGER NOT NULL,
+    result_version VARCHAR(64) NOT NULL,
+    contract_version VARCHAR(64) NOT NULL,
+    mode VARCHAR(64) NOT NULL,
+    result_origin VARCHAR(32) NOT NULL DEFAULT 'fixture',
+    status VARCHAR(32) NOT NULL DEFAULT 'completed',
+    result_json TEXT NOT NULL DEFAULT '{}',
+    result_hash VARCHAR(64) NOT NULL DEFAULT '',
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL,
+    FOREIGN KEY(run_id) REFERENCES whole_book_runs (id) ON DELETE CASCADE,
+    FOREIGN KEY(book_id) REFERENCES books (id) ON DELETE CASCADE,
+    FOREIGN KEY(snapshot_id) REFERENCES book_snapshots (id) ON DELETE CASCADE,
+    CONSTRAINT uq_wb_overview_results_run UNIQUE (run_id)
+);
+CREATE INDEX IF NOT EXISTS ix_wb_window_analysis_run_window
+    ON whole_book_window_analysis_results (run_id, window_id);
+CREATE INDEX IF NOT EXISTS ix_wb_window_analysis_run_validation
+    ON whole_book_window_analysis_results (run_id, validation_status);
+CREATE INDEX IF NOT EXISTS ix_wb_overview_results_book_id ON whole_book_overview_results (book_id);
+CREATE INDEX IF NOT EXISTS ix_wb_overview_results_snapshot_id
+    ON whole_book_overview_results (snapshot_id);
+CREATE INDEX IF NOT EXISTS ix_wb_overview_results_run_id ON whole_book_overview_results (run_id);
+"""
+
+
+def migrate_narrative_20260728_014_whole_book_minimal_analysis_results(engine: Engine) -> None:
+    """WB-1.4/1.6: window analysis + overview result tables (idempotent)."""
+    checksum = migration_checksum(SQL_014)
+    names = _table_names(engine)
+    if "whole_book_runs" not in names:
+        migrate_narrative_20260728_012_whole_book_foundation_v1(engine)
+        names = _table_names(engine)
+    with engine.begin() as connection:
+        if "whole_book_window_analysis_results" not in names:
+            connection.execute(
+                text(
+                    """
+                    CREATE TABLE whole_book_window_analysis_results (
+                        id INTEGER NOT NULL PRIMARY KEY,
+                        run_id INTEGER NOT NULL,
+                        window_id INTEGER NOT NULL,
+                        snapshot_id INTEGER NOT NULL,
+                        contract_version VARCHAR(64) NOT NULL,
+                        engine_id VARCHAR(128) NOT NULL DEFAULT '',
+                        engine_version VARCHAR(64) NOT NULL DEFAULT '',
+                        prompt_version VARCHAR(128),
+                        result_origin VARCHAR(32) NOT NULL DEFAULT 'fixture',
+                        response_json TEXT NOT NULL DEFAULT '{}',
+                        response_hash VARCHAR(64) NOT NULL DEFAULT '',
+                        validation_status VARCHAR(32) NOT NULL DEFAULT 'invalid',
+                        warning_count INTEGER NOT NULL DEFAULT 0,
+                        created_at DATETIME NOT NULL,
+                        FOREIGN KEY(run_id) REFERENCES whole_book_runs (id) ON DELETE CASCADE,
+                        FOREIGN KEY(window_id) REFERENCES whole_book_windows (id) ON DELETE CASCADE,
+                        FOREIGN KEY(snapshot_id) REFERENCES book_snapshots (id) ON DELETE CASCADE,
+                        CONSTRAINT uq_wb_window_analysis_run_window UNIQUE (run_id, window_id)
+                    )
+                    """
+                )
+            )
+        if "whole_book_overview_results" not in names:
+            connection.execute(
+                text(
+                    """
+                    CREATE TABLE whole_book_overview_results (
+                        id INTEGER NOT NULL PRIMARY KEY,
+                        run_id INTEGER NOT NULL,
+                        book_id INTEGER NOT NULL,
+                        snapshot_id INTEGER NOT NULL,
+                        result_version VARCHAR(64) NOT NULL,
+                        contract_version VARCHAR(64) NOT NULL,
+                        mode VARCHAR(64) NOT NULL,
+                        result_origin VARCHAR(32) NOT NULL DEFAULT 'fixture',
+                        status VARCHAR(32) NOT NULL DEFAULT 'completed',
+                        result_json TEXT NOT NULL DEFAULT '{}',
+                        result_hash VARCHAR(64) NOT NULL DEFAULT '',
+                        created_at DATETIME NOT NULL,
+                        updated_at DATETIME NOT NULL,
+                        FOREIGN KEY(run_id) REFERENCES whole_book_runs (id) ON DELETE CASCADE,
+                        FOREIGN KEY(book_id) REFERENCES books (id) ON DELETE CASCADE,
+                        FOREIGN KEY(snapshot_id) REFERENCES book_snapshots (id) ON DELETE CASCADE,
+                        CONSTRAINT uq_wb_overview_results_run UNIQUE (run_id)
+                    )
+                    """
+                )
+            )
+        for statement in (
+            "CREATE INDEX IF NOT EXISTS ix_wb_window_analysis_run_window "
+            "ON whole_book_window_analysis_results (run_id, window_id)",
+            "CREATE INDEX IF NOT EXISTS ix_wb_window_analysis_run_validation "
+            "ON whole_book_window_analysis_results (run_id, validation_status)",
+            "CREATE INDEX IF NOT EXISTS ix_wb_overview_results_book_id "
+            "ON whole_book_overview_results (book_id)",
+            "CREATE INDEX IF NOT EXISTS ix_wb_overview_results_snapshot_id "
+            "ON whole_book_overview_results (snapshot_id)",
+            "CREATE INDEX IF NOT EXISTS ix_wb_overview_results_run_id "
+            "ON whole_book_overview_results (run_id)",
+        ):
+            connection.execute(text(statement))
+    names_after = _table_names(engine)
+    if (
+        "whole_book_window_analysis_results" not in names_after
+        or "whole_book_overview_results" not in names_after
+    ):
+        raise NarrativeCoreError(
+            NarrativeCoreErrorCode.MIGRATION_BASELINE_INVALID,
+            "014 failed: minimal analysis result tables missing after DDL",
+        )
+    _ensure_schema_migrations_table(engine)
+    _record_applied(engine, MIGRATION_WHOLE_BOOK_MINIMAL_ANALYSIS_RESULTS, checksum)

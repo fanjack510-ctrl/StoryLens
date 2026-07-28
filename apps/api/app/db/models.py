@@ -1460,3 +1460,65 @@ class WholeBookProviderAttempt(Base):
     error_message_safe: Mapped[str | None] = mapped_column(String(500), nullable=True)
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class WholeBookWindowAnalysisResult(Base):
+    __tablename__ = "whole_book_window_analysis_results"
+    __table_args__ = (
+        UniqueConstraint("run_id", "window_id", name="uq_wb_window_analysis_run_window"),
+        Index("ix_wb_window_analysis_run_window", "run_id", "window_id"),
+        Index("ix_wb_window_analysis_run_validation", "run_id", "validation_status"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    run_id: Mapped[int] = mapped_column(
+        ForeignKey("whole_book_runs.id", ondelete="CASCADE"), nullable=False
+    )
+    window_id: Mapped[int] = mapped_column(
+        ForeignKey("whole_book_windows.id", ondelete="CASCADE"), nullable=False
+    )
+    snapshot_id: Mapped[int] = mapped_column(
+        ForeignKey("book_snapshots.id", ondelete="CASCADE"), nullable=False
+    )
+    contract_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    engine_id: Mapped[str] = mapped_column(String(128), nullable=False, default="")
+    engine_version: Mapped[str] = mapped_column(String(64), nullable=False, default="")
+    prompt_version: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    result_origin: Mapped[str] = mapped_column(String(32), nullable=False, default="fixture")
+    response_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
+    response_hash: Mapped[str] = mapped_column(String(64), nullable=False, default="")
+    validation_status: Mapped[str] = mapped_column(String(32), nullable=False, default="invalid")
+    warning_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+
+class WholeBookOverviewResult(Base):
+    __tablename__ = "whole_book_overview_results"
+    __table_args__ = (
+        UniqueConstraint("run_id", name="uq_wb_overview_results_run"),
+        Index("ix_wb_overview_results_book_id", "book_id"),
+        Index("ix_wb_overview_results_snapshot_id", "snapshot_id"),
+        Index("ix_wb_overview_results_run_id", "run_id"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    run_id: Mapped[int] = mapped_column(
+        ForeignKey("whole_book_runs.id", ondelete="CASCADE"), nullable=False, unique=True
+    )
+    book_id: Mapped[int] = mapped_column(
+        ForeignKey("books.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    snapshot_id: Mapped[int] = mapped_column(
+        ForeignKey("book_snapshots.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    result_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    contract_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    mode: Mapped[str] = mapped_column(String(64), nullable=False)
+    result_origin: Mapped[str] = mapped_column(String(32), nullable=False, default="fixture")
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="completed")
+    result_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
+    result_hash: Mapped[str] = mapped_column(String(64), nullable=False, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now
+    )

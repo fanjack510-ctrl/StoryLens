@@ -66,13 +66,14 @@ def _fk_engine(url: str):
 
 def test_migration_ids_001_to_010_unique_and_ordered() -> None:
     assert_unique_migration_ids()
-    assert len(NARRATIVE_MIGRATION_ORDER) == 13
+    assert len(NARRATIVE_MIGRATION_ORDER) == 14
     assert NARRATIVE_MIGRATION_ORDER[0] == "20260723_001_schema_migrations"
     assert NARRATIVE_MIGRATION_ORDER[5] == "20260723_006_narrative_entities_aliases"
     assert NARRATIVE_MIGRATION_ORDER[9] == "20260723_010_analysis_conflicts"
     assert NARRATIVE_MIGRATION_ORDER[10] == "20260725_011_whole_book_overview_runtime"
     assert NARRATIVE_MIGRATION_ORDER[11] == "20260728_012_whole_book_foundation_v1"
     assert NARRATIVE_MIGRATION_ORDER[12] == "20260728_013_whole_book_snapshot_immutability"
+    assert NARRATIVE_MIGRATION_ORDER[13] == "20260728_014_whole_book_minimal_analysis_results"
     # 001–005 unchanged
     assert NARRATIVE_MIGRATION_ORDER[:5] == (
         "20260723_001_schema_migrations",
@@ -108,6 +109,7 @@ def test_create_all_on_empty_temp_db(tmp_path) -> None:
         "20260725_011_whole_book_overview_runtime",
         "20260728_012_whole_book_foundation_v1",
         "20260728_013_whole_book_snapshot_immutability",
+        "20260728_014_whole_book_minimal_analysis_results",
     }
     for mid in NARRATIVE_MIGRATION_ORDER:
         if mid in later:
