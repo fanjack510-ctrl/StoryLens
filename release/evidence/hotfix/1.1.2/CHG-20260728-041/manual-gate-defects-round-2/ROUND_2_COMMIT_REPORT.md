@@ -1,4 +1,4 @@
-# ROUND 2 COMMIT REPORT — CHG-20260728-041
+﻿# ROUND 2 COMMIT REPORT 鈥?CHG-20260728-041
 
 ## Identity
 
@@ -6,7 +6,7 @@
 |-------|-------|
 | ROUND 2 START HEAD | `8d410c5f1d9a2557f3246cd07d83f402bb4936c5` |
 | ROUND 2 COMMIT | `084063eb8876231ae39b3c249142bd7ccb6ec3f5` |
-| PUBLIC FINAL HEAD | `084063eb8876231ae39b3c249142bd7ccb6ec3f5` |
+| PUBLIC FINAL HEAD | `303c71b6437faa2b4bc99fb95e7e81e4215f1e41` |
 | Branch | `fix/1.1.2-manual-scene-boundary-review` |
 | Worktree | `D:\Dstorylens-wt-hotfix-1.1.2-manual-scene-boundary` |
 
@@ -27,12 +27,12 @@ Trailers:
 - StoryLens-Manual-Gate: MG-CHG-20260728-041
 
 Files:
-- `apps/api/app/api/v1/scene_boundaries.py` — Confirm+Start background execute + routable `journey_started`
-- `apps/api/app/services/chapter_analysis_completion.py` — revision-scoped ensure; no foreign succeeded reuse
-- `apps/api/app/services/scene_boundary_manual_review.py` — idempotent bind; failed-status propagation
-- `apps/api/app/services/provider_runtime_service.py` — Smoke Fake eligibility for journey path (+ LF normalize)
-- `apps/api/app/services/chapter_analysis_smoke_fake_transport.py` — numeric scene_id pairing for Fake journey profiles
-- `apps/api/tests/test_chg041_scene_boundary_manual_review.py` — Round 2 invariants
+- `apps/api/app/api/v1/scene_boundaries.py` 鈥?Confirm+Start background execute + routable `journey_started`
+- `apps/api/app/services/chapter_analysis_completion.py` 鈥?revision-scoped ensure; no foreign succeeded reuse
+- `apps/api/app/services/scene_boundary_manual_review.py` 鈥?idempotent bind; failed-status propagation
+- `apps/api/app/services/provider_runtime_service.py` 鈥?Smoke Fake eligibility for journey path (+ LF normalize)
+- `apps/api/app/services/chapter_analysis_smoke_fake_transport.py` 鈥?numeric scene_id pairing for Fake journey profiles
+- `apps/api/tests/test_chg041_scene_boundary_manual_review.py` 鈥?Round 2 invariants
 
 ## Gates
 
@@ -50,5 +50,5 @@ Files:
 
 - Isolated root: `%TEMP%\storylens-mg-chg041-final-retest\`
 - Database: `%TEMP%\storylens-mg-chg041-final-retest\database\storylens-mg-chg041-final.db`
-- Public HEAD pinned: `084063eb8876231ae39b3c249142bd7ccb6ec3f5`
+- Public HEAD pinned: `303c71b6437faa2b4bc99fb95e7e81e4215f1e41` (docs commit; Round 2 code = `084063eb8876231ae39b3c249142bd7ccb6ec3f5`)
 - Fake enabled; real provider disabled
