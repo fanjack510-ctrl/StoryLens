@@ -1,0 +1,23 @@
+{
+  "classification": "PRE_EXISTING_UNRELATED_FAILURE",
+  "full_suite_collection": "PRE_EXISTING_UNRELATED_FAILURE",
+  "base_ref": "hotfix/1.1.2 @ cfccd33f10cad4201f94f1559f99d8b51ee674a4 (integration worktree)",
+  "issue_ref": "fix/1.1.2-manual-scene-boundary-review @ 084063eb8876231ae39b3c249142bd7ccb6ec3f5",
+  "base_error_count": 9,
+  "issue_error_count": 9,
+  "error_set_identical": true,
+  "errors": [
+    "tests/test_defect_canary_010_journey_repair_resilience.py",
+    "tests/test_defect_canary_011_targeted_repair.py",
+    "tests/test_defect_canary_016_evidence_budget.py",
+    "tests/test_narrative_phase2br1_http_replay_repair_failed.py",
+    "tests/test_narrative_phase2br1_http_replay_single_repair.py",
+    "tests/test_narrative_phase2br1_output_contract_boundary.py",
+    "tests/test_native_overview_free_entitlement.py",
+    "tests/test_native_overview_release_scope_local.py",
+    "tests/test_native_overview_result_engine_id_local.py"
+  ],
+  "unrelated_native_overview_failure": "PRE_EXISTING",
+  "native_overview_or_whole_book_code_modified": false,
+  "note": "Collect errors identical on integration base and issue branch; out of CHG-041 Round 2 scope."
+}
