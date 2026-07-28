@@ -123,8 +123,21 @@ class StructuredOutputError(ValueError):
 
 
 class OutputTruncatedError(StructuredOutputError):
-    def __init__(self, message: str = "模型输出被输出上限截断") -> None:
-        super().__init__(message, "OUTPUT_TRUNCATED", category="structured_output", retryable=True)
+    def __init__(
+        self,
+        message: str = "模型输出被输出上限截断",
+        error_code: str = "OUTPUT_TRUNCATED",
+        *,
+        at_hard_cap: bool = False,
+        attempt_output_limit: int | None = None,
+        actual_output_tokens: int | None = None,
+        finish_reason: str | None = None,
+    ) -> None:
+        super().__init__(message, error_code, category="structured_output", retryable=True)
+        self.at_hard_cap = at_hard_cap
+        self.attempt_output_limit = attempt_output_limit
+        self.actual_output_tokens = actual_output_tokens
+        self.finish_reason = finish_reason
 
 
 def _render_repair(template: str, values: dict[str, str]) -> str:
@@ -295,6 +308,9 @@ async def generate_validated(
     initial_invocation_kind: str = "initial",
     allow_truncation_retry: bool = True,
     policy_invocation_type: str | None = None,
+    output_tokens_override: int | None = None,
+    adaptive_truncation_budget: bool = False,
+    truncation_hard_cap: int | None = None,
 ) -> T:
     """Generate + validate with independent normal vs repair transport budgets.
 
@@ -303,6 +319,9 @@ async def generate_validated(
     - structural/business/evidence repair: at most 1 round
     - repair request: up to N independent transport attempts (repair_provider_retry)
     - normal and repair use different request bodies/hashes; repair retries share hash
+
+    CHG-20260728-040: optional adaptive_truncation_budget for scene_boundary_adjudication
+    raises output limit on finish_reason=length (strictly increasing, capped).
     """
     prompt = with_response_contract(prompt, schema)
     original_messages = [
@@ -356,6 +375,16 @@ async def generate_validated(
     # Hard ceiling: normal transport + one repair round of transport (+ a few
     # json/schema repairs still share the normal counter historically via kinds).
     max_total_requests = max_normal_transport + max_repair_rounds * max_repair_transport
+    # CHG-20260728-040 adaptive truncation state
+    adaptive_previous_limit: int | None = (
+        int(output_tokens_override) if output_tokens_override is not None else None
+    )
+    adaptive_hard_cap: int | None = (
+        int(truncation_hard_cap) if truncation_hard_cap is not None else None
+    )
+    last_attempt_output_limit: int | None = adaptive_previous_limit
+    last_finish_reason: str | None = None
+    last_actual_output_tokens: int | None = None
 
     normal_transport_used = 0
     repair_transport_used = 0
@@ -558,6 +587,50 @@ async def generate_validated(
             invocation_kind=limit_kind,
             cloud=invocation_capabilities.cloud,
         )
+        effective_output_tokens = output_limit.effective_limit
+        if output_tokens_override is not None and adaptive_previous_limit is None:
+            adaptive_previous_limit = int(output_tokens_override)
+        if adaptive_truncation_budget and adaptive_previous_limit is not None:
+            if next_kind == "truncation_retry":
+                from app.services.scene_boundary_output_budget import (
+                    compute_truncation_retry_limit,
+                )
+
+                hard = adaptive_hard_cap or output_limit.user_hard_limit
+                nxt = compute_truncation_retry_limit(
+                    previous_limit=adaptive_previous_limit,
+                    effective_hard_cap=hard,
+                    attempt_no=normal_transport_used + 1,
+                )
+                if nxt is None:
+                    last_error = (
+                        "模型输出已达到你设置的最大输出上限，仍未生成完整结果。"
+                        "当前任务可以重试，但需要先提高最大输出 Token，或减少单次分析内容。"
+                    )
+                    last_error_code = "SCENE_BOUNDARY_OUTPUT_TRUNCATED_AT_HARD_CAP"
+                    last_category = "structured_output"
+                    last_retryable = True
+                    error_code = last_error_code
+                    next_kind = "truncation_abort"
+                    break
+                effective_output_tokens = nxt
+                adaptive_previous_limit = nxt
+            else:
+                effective_output_tokens = int(adaptive_previous_limit)
+        elif output_tokens_override is not None:
+            effective_output_tokens = int(output_tokens_override)
+        last_attempt_output_limit = effective_output_tokens
+        # Rebuild OutputLimitDecision fields for audit when override applies.
+        if effective_output_tokens != output_limit.effective_limit:
+            from app.services.cloud_output_policy import OutputLimitDecision
+
+            output_limit = OutputLimitDecision(
+                task_type=output_limit.task_type,
+                configured_limit=effective_output_tokens,
+                user_hard_limit=output_limit.user_hard_limit,
+                effective_limit=effective_output_tokens,
+                provider_parameter_name=output_limit.provider_parameter_name,
+            )
         active_schema: type[BaseModel] = schema
         if (
             targeted_evidence_compaction
@@ -700,6 +773,8 @@ async def generate_validated(
             cached_tokens = response.cached_tokens
             request_id = response.request_id
             finish_reason = response.finish_reason
+            last_finish_reason = finish_reason
+            last_actual_output_tokens = output_tokens
             if finish_reason in {"length", "max_tokens"} or _looks_truncated(raw):
                 if targeted_evidence_compaction or (
                     primary_error == "JOURNEY_EVIDENCE_COUNT_INVALID" and in_repair_phase
@@ -711,7 +786,29 @@ async def generate_validated(
                         repair_context=last_repair_context,
                         no_model_repair=True,
                     )
-                raise OutputTruncatedError()
+                trunc_code = "OUTPUT_TRUNCATED"
+                if (
+                    adaptive_truncation_budget
+                    and adaptive_hard_cap is not None
+                    and last_attempt_output_limit is not None
+                    and int(last_attempt_output_limit) >= int(adaptive_hard_cap)
+                ):
+                    trunc_code = "SCENE_BOUNDARY_OUTPUT_TRUNCATED_AT_HARD_CAP"
+                elif adaptive_truncation_budget:
+                    trunc_code = "SCENE_BOUNDARY_OUTPUT_TRUNCATED"
+                raise OutputTruncatedError(
+                    "模型输出被输出上限截断"
+                    if trunc_code != "SCENE_BOUNDARY_OUTPUT_TRUNCATED_AT_HARD_CAP"
+                    else (
+                        "模型输出已达到你设置的最大输出上限，仍未生成完整结果。"
+                        "当前任务可以重试，但需要先提高最大输出 Token，或减少单次分析内容。"
+                    ),
+                    trunc_code,
+                    at_hard_cap=trunc_code == "SCENE_BOUNDARY_OUTPUT_TRUNCATED_AT_HARD_CAP",
+                    attempt_output_limit=last_attempt_output_limit,
+                    actual_output_tokens=output_tokens,
+                    finish_reason=finish_reason,
+                )
             parsed_json = extract_json_object(raw)
             if (
                 targeted_evidence_compaction
@@ -874,7 +971,11 @@ async def generate_validated(
             last_provider_error = None
             error_code = exc.error_code
             previous_raw = ""
-            if not allow_truncation_retry:
+            if (
+                not allow_truncation_retry
+                or getattr(exc, "at_hard_cap", False)
+                or exc.error_code == "SCENE_BOUNDARY_OUTPUT_TRUNCATED_AT_HARD_CAP"
+            ):
                 next_kind = "truncation_abort"
             else:
                 next_kind = "truncation_retry"
@@ -1223,6 +1324,20 @@ async def generate_validated(
             "repair_rounds_used": repair_rounds_used,
             "in_repair_phase": in_repair_phase,
             "request_hash": request_hash_value,
+            "attempt_output_limit": last_attempt_output_limit,
+            "adaptive_truncation_budget": adaptive_truncation_budget,
+            "target_candidate_count": (
+                len(input_snapshot.get("target_candidate_ids") or [])
+                if isinstance(input_snapshot, dict)
+                else None
+            ),
+            "context_candidate_count": (
+                len(input_snapshot.get("context_only_candidate_ids") or [])
+                if isinstance(input_snapshot, dict)
+                else None
+            ),
+            "effective_hard_cap": adaptive_hard_cap or output_limit.user_hard_limit,
+            "finish_reason": finish_reason,
         }
         if primary_error is not None:
             request_params["primary_error"] = primary_error

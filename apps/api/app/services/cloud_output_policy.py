@@ -66,6 +66,16 @@ def _configured_limit(task_type: str, invocation_kind: str) -> int:
     return limits.get(task_type, settings.cloud_output_scene_analysis)
 
 
+def read_user_output_hard_cap(session: Session, *, cloud: bool) -> int:
+    """Read the user-configured output hard cap without enforcing task configured floors."""
+    if not cloud:
+        return int(get_settings().local_llama_max_output_tokens)
+    with Session(session.get_bind()) as settings_session:
+        row = settings_session.get(ApplicationSetting, "cloud_budget_settings")
+        budget = CloudBudgetUpdate.model_validate_json(row.value_json if row else "{}")
+    return int(budget.cloud_max_output_tokens_per_request)
+
+
 def resolve_output_limit(
     session: Session,
     *,
@@ -79,10 +89,7 @@ def resolve_output_limit(
         return OutputLimitDecision(task_type, local_limit, local_limit, local_limit)
     # Keep the analysis transaction from holding a SQLite read lock while the
     # request gate writes its audit decision in a separate session.
-    with Session(session.get_bind()) as settings_session:
-        row = settings_session.get(ApplicationSetting, "cloud_budget_settings")
-        budget = CloudBudgetUpdate.model_validate_json(row.value_json if row else "{}")
-    hard_limit = budget.cloud_max_output_tokens_per_request
+    hard_limit = read_user_output_hard_cap(session, cloud=True)
     if hard_limit < configured:
         raise CloudOutputLimitTooLow(
             f"CLOUD_OUTPUT_LIMIT_TOO_LOW: {task_type} requires {configured}, hard limit is {hard_limit}"
