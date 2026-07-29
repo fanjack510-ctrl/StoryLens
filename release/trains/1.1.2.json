@@ -4,7 +4,7 @@
   "type": "PATCH",
   "base_version": "1.1.1",
   "target_version": "1.1.2",
-  "status": "blocked-awaiting-provider-health-fix",
+  "status": "ready-for-rc-build",
   "public_integration_branch": "hotfix/1.1.2",
   "private_integration_branch": "hotfix/1.1.2",
   "created_at": "2026-07-28T06:40:00Z",
@@ -38,13 +38,14 @@
     "CHG-20260729-006",
     "CHG-20260729-007",
     "CHG-20260729-008",
-    "CHG-20260729-009"
+    "CHG-20260729-009",
+    "CHG-20260729-010"
   ],
-  "notes": "Hotfix pool from v1.1.1; CHG-040..006 verified/integrated; CHG-007 version bump; CHG-042 excluded (investigated only).",
-  "updated_at": "2026-07-29T11:43:01Z",
-  "public_integration_head_at_ready": "c6b667602e46f4cd40b1f58f9bcfdb78c353bf3d",
+  "notes": "CHG-009 provider-health fix integrated; unblock RC.2 after RC.1 installed acceptance FAILED (INC-20260729-004).",
+  "updated_at": "2026-07-29T13:48:34Z",
+  "public_integration_head_at_ready": "81a7d72afa9f572be1ce391b0e8c737a97da0ba7",
   "rc_version": "1.1.2-rc.1",
   "rc_installer": "dist/release/StoryLens_1.1.2-rc.1_x64-setup.exe",
-  "rc_installed_acceptance": "FAILED",
-  "blocking_incident": "INC-20260729-004"
+  "rc_installed_acceptance": "PENDING_RC2",
+  "blocking_incident": null
 }

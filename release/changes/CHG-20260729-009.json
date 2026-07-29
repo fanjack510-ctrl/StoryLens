@@ -7,10 +7,22 @@
   "include_in_next_release": true,
   "commits": [
     {
-      "sha": "804ca230c95a72dda2e05ed9d204bd5c8053da3f",
+      "sha": "6dc60980e889c6c5efa90c9a0d000d8fb297a06e",
       "message": "fix(provider): unify verified health state for analysis startup",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "c5267c3cdf3a89d5a1b2f041dfc52beddca366d0",
+      "message": "docs(hotfix): record installed provider health stale fix",
+      "primary": false,
+      "multi_change_reason": "docs evidence sync for same CHG-009 fix"
+    },
+    {
+      "sha": "81a7d72afa9f572be1ce391b0e8c737a97da0ba7",
+      "message": "docs(hotfix): record MG validation Fake gap audit for CHG-009",
+      "primary": false,
+      "multi_change_reason": "MG Fake validation gap audit evidence for CHG-009"
     }
   ],
   "modules": [
@@ -52,7 +64,7 @@
   "blocker_level": null,
   "head_inclusion": null,
   "created_at": "2026-07-29T11:39:05Z",
-  "updated_at": "2026-07-29T13:47:22Z",
+  "updated_at": "2026-07-29T13:48:50Z",
   "target_version": "1.1.2",
   "issue_id": "INC-20260729-004",
   "release_pool_status": "pending"
