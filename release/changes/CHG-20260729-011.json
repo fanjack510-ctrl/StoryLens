@@ -31,8 +31,14 @@
       "multi_change_reason": null
     },
     {
-      "sha": "a783b8fb2ee37d71b099c0dcd86f45c33c5a1d62",
+      "sha": "5ed79dcee4394d6a6c3538615700380803c56028",
       "message": "docs(hotfix): record rc2 workflow consistency verification",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "060c95df83ca33a790d0de59ebd0ad77ee4c0b8a",
+      "message": "chore(registry): sync CHG-011 tested status and commit list",
       "primary": false,
       "multi_change_reason": null
     }
@@ -65,5 +71,5 @@
   "blocker_level": "P0",
   "head_inclusion": "EXISTS_NOT_INCLUDED",
   "created_at": "2026-07-29T15:06:00Z",
-  "updated_at": "2026-07-29T15:34:39Z"
+  "updated_at": "2026-07-29T15:35:08Z"
 }
