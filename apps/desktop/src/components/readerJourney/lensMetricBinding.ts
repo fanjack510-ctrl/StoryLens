@@ -83,7 +83,7 @@ export function resolveLensMetricBinding(
   if (lens.id === "composite") {
     return {
       fieldKey: "reading_momentum",
-      labelZh: momentumLabel,
+      labelZh: "综合阅读",
       value: node ? resolveNodeFieldValue(node, "reading_momentum") : null,
     };
   }

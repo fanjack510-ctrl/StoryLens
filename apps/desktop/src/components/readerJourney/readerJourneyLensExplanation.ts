@@ -48,7 +48,7 @@ export const READER_JOURNEY_LENS_EXPLANATIONS: Record<
     title: "综合阅读",
     chart_title: "综合阅读动力",
     one_line_summary:
-      "线越高，读者继续阅读的动力通常越强；低点需要结合场景作用判断，不代表一定写得差。",
+      "综合阅读：综合判断每个场景对剧情理解、阅读期待、情绪体验和阅读流畅度的整体贡献。",
     how_to_read: [
       "高点：继续阅读动力偏强。",
       "低点：需结合场景作用判断，不代表写得差。",

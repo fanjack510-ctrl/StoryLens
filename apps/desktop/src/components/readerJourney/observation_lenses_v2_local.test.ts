@@ -600,8 +600,8 @@ describe("lens card binding + reading_momentum terminology", () => {
     };
 
     expect(readingMomentumLabelZh(viz)).toBe("阅读动力");
-    expect(formatLensPhaseScoreLabel(viz, "composite", 68)).toContain("阅读动力");
-    expect(formatLensPhaseScoreLabel(viz, "composite", 68)).not.toContain("综合阅读");
+    expect(formatLensPhaseScoreLabel(viz, "composite", 68)).toContain("综合阅读");
+    expect(formatLensPhaseScoreLabel(viz, "composite", 68)).not.toContain("阅读动力");
     expect(formatLensPhaseScoreLabel(viz, "plot_progress", 58)).toContain("剧情推进");
     expect(formatLensPhaseScoreLabel(viz, "reading_tension", 66)).toContain("阅读张力");
 
@@ -618,7 +618,11 @@ describe("lens card binding + reading_momentum terminology", () => {
       const seriesVal = seriesValueAtOrdinal(viz, lensId, 1);
       const binding = resolveLensMetricBinding(viz, lensId, viz.scene_nodes[0]);
       expect(binding.value).toBe(seriesVal);
-      expect(formatLensBindingCaption(binding)).not.toMatch(/综合阅读|engagement<40/);
+      if (lensId !== "composite") {
+        expect(formatLensBindingCaption(binding)).not.toMatch(/综合阅读|engagement<40/);
+      } else {
+        expect(formatLensBindingCaption(binding)).toContain("综合阅读");
+      }
     }
 
     const pacing = resolveLensMetricBinding(viz, "pacing", viz.scene_nodes[0]);

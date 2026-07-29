@@ -434,6 +434,7 @@ export function ReaderJourneyWorkspace({
         reading_momentum:
           node.scores?.reading_momentum ?? node.engagement?.engagement_score,
         plot_progress: node.scores?.plot_progress,
+        scene_role: node.scene_role,
         role: node.role,
         node_type: node.node_type,
         include_in_main_curve: node.include_in_main_curve,

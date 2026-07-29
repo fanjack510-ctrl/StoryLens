@@ -17,6 +17,7 @@ import {
   primaryBandLabelForHookPayoffLens,
 } from "./hookPayoffLensModel";
 import type { ObservationLensId } from "./observationLenses";
+import { compositeRoleFitLabel } from "./observationLenses";
 
 const RESISTANCE_BANDS = new Set<DiagnosisBandLabel>([
   "推进偏弱",
@@ -68,10 +69,13 @@ export function JourneyDiagnosisBand({
       aria-label="场景诊断带"
     >
       {diagnoses.map((diag) => {
+        const isComposite = observationLens === "composite";
         const rawLabel = hookPayoff
           ? primaryBandLabelForHookPayoffLens(diag)
-          : primaryBandLabelForScene(diag);
-        const label = ordinaryDiagnosisLabel(rawLabel);
+          : isComposite
+            ? compositeRoleFitLabel(diag.reading_momentum, diag.scene_role ?? diag.role)
+            : primaryBandLabelForScene(diag);
+        const label = isComposite ? rawLabel : ordinaryDiagnosisLabel(rawLabel);
         const secondary = hookPayoff
           ? otherDiagnosesForHookPayoffLens(diag)
           : secondaryBandLabels(diag);

@@ -1,0 +1,22 @@
+{
+  "change_id": "CHG-20260729-001",
+  "recorded_at": "2026-07-29T03:36:00Z",
+  "branch": "fix/1.1.2-reader-journey-dimension-insights",
+  "pytest": {
+    "command": "py -3.12 -m pytest apps/api/tests/test_reader_journey_dimension_insights_local.py -q --tb=short",
+    "passed": 11,
+    "failed": 0,
+    "skipped": 0,
+    "exit_code": 0
+  },
+  "vitest": {
+    "command": "npx vitest run src/components/readerJourney/dimension_insights_chg001_local.test.tsx",
+    "passed": 9,
+    "failed": 0,
+    "exit_code": 0
+  },
+  "notes": [
+    "Python 3.11 default pytest blocked by _ssl DLL; used py -3.12.",
+    "Desktop npm install required before vitest (vitest not globally on PATH)."
+  ]
+}
