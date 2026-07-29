@@ -1,0 +1,11 @@
+{
+  "installer": "D:\\Dstorylens-wt-hotfix-1.1.2-integration\\dist\\release\\StoryLens_1.1.2-rc.1_x64-setup.exe",
+  "installer_sha256": "2C9ED3B8E898118391B56F7A297F96B9CFB8A9951C1226C851C5B7C1AEF1F61F",
+  "product_version": "1.1.2-rc.1",
+  "file_version": "1.1.2-rc.1",
+  "sidecar_sha256": "978E3C5F103A3955AF78EB78F157504A14DEE2B596D89489F726A58B45CFA7F2",
+  "release_sidecar_sha256": "978E3C5F103A3955AF78EB78F157504A14DEE2B596D89489F726A58B45CFA7F2",
+  "gui_sha256_target_release": "F57D0286149E4BF4D80E24815F9FCEB183984AF8521D2F024C33F4289F0CE9A8",
+  "sidecar_artifact_identity": "PASS",
+  "result": "PASS"
+}
