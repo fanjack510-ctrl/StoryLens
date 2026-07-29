@@ -1,0 +1,31 @@
+{
+  "change_id": "CHG-20260729-005",
+  "recorded_at": "2026-07-29T07:10:00Z",
+  "branch": "fix/1.1.2-chapter-hook-simplification",
+  "public_base_head": "2e8ed1edaf7dc91933666f5e46f4b2bdb747407c",
+  "vitest": {
+    "chapter_hook_simplification_chg005_local": "PASS",
+    "HookPayoffTimeline": "PASS",
+    "readerJourneyLensExplanation": "PASS",
+    "readerJourneyTerminology": "PASS",
+    "hierarchySimplification_local": "PASS",
+    "result": "PASS"
+  },
+  "pytest": {
+    "command": "py -3.12 -m pytest apps/api/tests/test_chapter_hook_simplification_chg005_local.py -q",
+    "passed": 2,
+    "failed": 0,
+    "result": "PASS"
+  },
+  "typecheck": "PASS",
+  "http_e2e": {
+    "result": "PASS",
+    "note": "Presentation-only FE change; Fake formula/tab-name anchors via pytest; reuse MG DB for manual UI",
+    "real_provider_calls": 0,
+    "formal_db_writes": 0
+  },
+  "tab_name": "钩子回收",
+  "hook_algorithm_modified": false,
+  "other_lenses_modified": false,
+  "database_migration": false
+}
