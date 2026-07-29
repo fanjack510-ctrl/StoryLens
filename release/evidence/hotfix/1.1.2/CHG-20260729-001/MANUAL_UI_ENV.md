@@ -12,7 +12,7 @@ Ready for MG-CHG-20260729-001 MANUAL UI ACCEPTANCE
 | DATABASE | %TEMP%\storylens-mg-chg001-insights\database\storylens-mg-chg001-insights.db |
 | API | http://127.0.0.1:18042 |
 | FRONTEND | http://127.0.0.1:1421 |
-| JOURNEY | http://127.0.0.1:1421/books/1?chapterId=1&journeyRun=1 |
+| JOURNEY | http://127.0.0.1:1421/books/1?chapter=1&journeyRun=1 |
 | Fake Provider | ON |
 | Real Provider | OFF / calls = 0 |
 | Formal DB writes | 0 |
