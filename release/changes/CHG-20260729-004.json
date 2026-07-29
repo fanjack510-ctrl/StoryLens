@@ -7,7 +7,7 @@
   "target_version": "1.1.2",
   "public_branch": "fix/1.1.2-journey-dimension-node-judgments",
   "private_branch": "fix/1.1.2-journey-dimension-node-judgments",
-  "status": "tested",
+  "status": "verified",
   "release_pool_status": "pending",
   "include_in_next_release": true,
   "forward_port_required": true,
@@ -26,7 +26,8 @@
     "apps/desktop/src/components/readerJourney"
   ],
   "commits": [
-    "989e8e09fbf4fdae01b94a0743ee3e176485aba5"
+    "989e8e09fbf4fdae01b94a0743ee3e176485aba5",
+    "fb22604a78c9a72e23c1857e4dfc4699914a4daf"
   ],
   "modules": [
     "release",
@@ -51,11 +52,12 @@
     "apps/desktop/src/components/readerJourney/dimension_node_judgments_chg004_local.test.tsx",
     "apps/api/tests/test_dimension_node_judgments_chg004_local.py"
   ],
-  "manual_gate": "MG-CHG-20260729-004 pending",
+  "manual_gate": "MG-CHG-20260729-004 PASS",
   "verification_evidence": [
     "release/evidence/hotfix/1.1.2/CHG-20260729-004/DIMENSION_NODE_JUDGMENT_AUDIT.md",
     "release/evidence/hotfix/1.1.2/CHG-20260729-004/TEST_RESULTS.json",
-    "release/evidence/hotfix/1.1.2/CHG-20260729-004/MANUAL_UI_ENV.md"
+    "release/evidence/hotfix/1.1.2/CHG-20260729-004/MANUAL_UI_ENV.md",
+    "release/evidence/hotfix/1.1.2/CHG-20260729-004/MANUAL_GATE_PASS.md"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -64,6 +66,6 @@
     "notes": "FE presentation derive at render time; no persistence rewrite."
   },
   "created_at": "2026-07-29T06:00:00Z",
-  "updated_at": "2026-07-29T06:30:00Z",
+  "updated_at": "2026-07-29T06:50:00Z",
   "base_head": "bbcd6d7ac925303247599c9869e11780e4a7ca20"
 }
