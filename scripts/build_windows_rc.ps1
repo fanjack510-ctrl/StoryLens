@@ -86,19 +86,21 @@ try {
     Remove-Item Env:STORYLENS_SIGN_UPDATER -ErrorAction SilentlyContinue
     Remove-Item Env:TAURI_SIGNING_PRIVATE_KEY -ErrorAction SilentlyContinue
 
-    # Preserve prior RC installers (do not overwrite older RCs).
+    # Preserve prior RC installers OUTSIDE dist/release.
+    # build_windows_release.ps1 wipes dist\release entirely before collecting new artifacts,
+    # so an in-tree archive/ subdirectory would be deleted.
     $releaseDir = Join-Path $Root "dist\release"
-    $archiveDir = Join-Path $releaseDir "archive"
+    $archiveDir = "D:\StoryLens-Local-Evidence\installer-archive"
+    New-Item -ItemType Directory -Force -Path $archiveDir | Out-Null
     if (Test-Path $releaseDir) {
-        New-Item -ItemType Directory -Force -Path $archiveDir | Out-Null
         Get-ChildItem -Path $releaseDir -Filter "StoryLens_*-setup.exe" -File -ErrorAction SilentlyContinue |
             ForEach-Object {
                 $dest = Join-Path $archiveDir $_.Name
                 if (-not (Test-Path $dest)) {
-                    Log "Archiving prior installer $($_.Name)"
+                    Log "Archiving prior installer $($_.Name) -> $archiveDir"
                     Copy-Item -Force $_.FullName $dest
                 } else {
-                    Log "Archive already has $($_.Name); leave untouched"
+                    Log "Safe archive already has $($_.Name); leave untouched"
                 }
             }
     }

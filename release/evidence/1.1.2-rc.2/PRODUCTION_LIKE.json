@@ -1,0 +1,8 @@
+{
+  "exe_sha256": "c1b84d3c36ea7a335701017a1fdecb7cf16fc16fd4791dfe2d375799e0be9f6c",
+  "health": true,
+  "providers_api": false,
+  "file_not_found_errors": 0,
+  "database_lock_errors": 0,
+  "ok": true
+}

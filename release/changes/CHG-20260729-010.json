@@ -3,9 +3,22 @@
   "title": "StoryLens 1.1.2 RC2 packaging after provider-health fix",
   "type": "build",
   "base_version": "1.1.1",
-  "status": "implemented",
+  "status": "tested",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "7677bf834adfeecd0a7c4fe341309a5528ff4033",
+      "message": "chore(release): integrate CHG-009 and register 1.1.2-rc.2 packaging",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "624573104bccd5fab63ec03733a7ab18fed814c2",
+      "message": "docs(release): record StoryLens 1.1.2-rc.2 prebuild gate",
+      "primary": false,
+      "multi_change_reason": "prebuild evidence for same RC2 packaging change"
+    }
+  ],
   "modules": [
     "release",
     "packaging",
@@ -24,9 +37,17 @@
     "formal VERSION restored to 1.1.2",
     "zero real provider; zero formal AppData writes"
   ],
-  "tests": [],
+  "tests": [
+    "pytest CHG-009 17 passed",
+    "vitest targeted 51 passed",
+    "install-state config/CWD/prodlike/security/installer PASS"
+  ],
   "verification_evidence": [
-    "release/evidence/1.1.2-rc.2/"
+    "release/evidence/1.1.2-rc.2/",
+    "release/evidence/1.1.2-rc.2/FINAL_REPORT.md",
+    "release/evidence/1.1.2-rc.2/BUILD_MANIFEST.json",
+    "release/evidence/1.1.2-rc.2/INSTALL_STATE_SUMMARY.json",
+    "release/evidence/1.1.2-rc.2/RC1_PRESERVE_INCIDENT.md"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -43,7 +64,7 @@
   "blocker_level": null,
   "head_inclusion": null,
   "created_at": "2026-07-29T13:48:17Z",
-  "updated_at": "2026-07-29T13:48:34Z",
+  "updated_at": "2026-07-29T14:01:12Z",
   "target_version": "1.1.2",
   "release_pool_status": "pending"
 }
