@@ -220,7 +220,7 @@ export function buildLensChartLines(
   if (lens.id === "composite") {
     lines.push({
       id: "reading_momentum",
-      labelZh: "综合阅读动力",
+      labelZh: "综合阅读",
       series: seriesFromNodes(visualization, (n) => nodeScores(n).reading_momentum),
       style: "solid",
       includeInMainPolyline: true,

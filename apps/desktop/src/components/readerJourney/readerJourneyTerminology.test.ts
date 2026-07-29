@@ -51,7 +51,7 @@ describe("CHG-014/002 Reader Journey terminology", () => {
       expect(getLensExplanation(lens.lens_id).title).toBe(lens.title);
     }
     expect(getLensExplanation("hook_payoff").title).toBe("钩子回收");
-    expect(getLensExplanation("composite").one_line_summary).toContain("不代表一定写得差");
+    expect(getLensExplanation("composite").one_line_summary).toContain("结合场景任务和前后位置判断");
     expect(getLensExplanation("emotion").title).toBe("情绪强度");
     expect(getLensExplanation("pacing").title).toBe("节奏速度");
   });

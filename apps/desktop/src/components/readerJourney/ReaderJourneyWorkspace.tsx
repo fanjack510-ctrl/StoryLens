@@ -126,6 +126,7 @@ import {
 } from "./journeyPaneWidth";
 import { JourneyPaneSplitter } from "./JourneyPaneSplitter";
 import { resolveJourneyStageToken } from "./journeyVisualTokens";
+import { enrichVisualizationComprehensivePresentation } from "./comprehensiveReadingPresentation";
 import "./readerJourney.css";
 
 function exportErrorMessage(error: unknown): string {
@@ -176,7 +177,7 @@ type Props = {
 };
 
 export function ReaderJourneyWorkspace({
-  visualization,
+  visualization: visualizationProp,
   chapterTitle,
   onLocateEvidence,
   onSelectScene,
@@ -191,6 +192,10 @@ export function ReaderJourneyWorkspace({
   sourcePane,
   sourceCollapsed: sourceCollapsedProp,
 }: Props) {
+  const visualization = useMemo(
+    () => enrichVisualizationComprehensivePresentation(visualizationProp),
+    [visualizationProp],
+  );
   const workspaceRef = useRef<HTMLDivElement>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const overviewMode = parseOverviewMode(searchParams.get("overview"));
@@ -1489,7 +1494,10 @@ export function ReaderJourneyWorkspace({
               const isSelected = selectedPhase === phase.ordinal;
               const phaseLabel = formatJourneyPhaseLabel(phase.title);
               const stageToken = resolveJourneyStageToken(phase.title);
-              const phaseSummary = resolvePhaseSummaryDisplay(phase.summary, phase.title);
+              const phaseSummary =
+                observationLens === "composite" && phase.stage_judgment_summary
+                  ? phase.stage_judgment_summary
+                  : resolvePhaseSummaryDisplay(phase.summary, phase.title);
               const phaseMetric =
                 phaseMetricAverages.get(phase.ordinal) ?? phase.average_engagement;
               const avgText = formatLensPhaseScoreLabel(

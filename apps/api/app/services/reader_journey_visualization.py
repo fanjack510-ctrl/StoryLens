@@ -22,6 +22,9 @@ from app.db.models import (
 )
 from app.schemas.reader_journey import SceneReaderJourneyProfileItem
 from app.services.reader_journey_dimension_insights import attach_dimension_insights_to_node
+from app.services.reader_journey_comprehensive_presentation import (
+    attach_comprehensive_reading_presentation,
+)
 from app.services.reader_journey_engagement import compute_engagement, load_formula_config
 from app.services.reader_journey_progress import load_revision_scenes
 from app.services.narrative_loop_view import build_narrative_loop_bundle
@@ -1501,7 +1504,7 @@ def build_reader_journey_visualization(
     }
     question_lifecycle = _question_lifecycle_from_summary(summary)
 
-    return {
+    payload = {
         "visualization_version": VISUALIZATION_VERSION,
         "chapter_summary": {
             "chapter_id": journey_run.chapter_id,
@@ -1588,3 +1591,4 @@ def build_reader_journey_visualization(
             journey_run=journey_run,
         ),
     }
+    return attach_comprehensive_reading_presentation(payload)

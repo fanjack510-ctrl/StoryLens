@@ -222,6 +222,22 @@ export function JourneySceneDetailPanel({
           {hookResolutionRow ? <HookResolutionEvidenceSection row={hookResolutionRow} /> : null}
           <JourneyInspectorSection title={insightTitle} testId="scene-dimension-insight">
             <p data-testid="scene-dimension-insight-text">{insightText}</p>
+            {(observationLens ?? DEFAULT_OBSERVATION_LENS) === "composite" ? (
+              <ul
+                className="journey-comprehensive-factor-list"
+                data-testid="scene-comprehensive-factors"
+              >
+                {node.composite_role_fit ? (
+                  <li data-testid="scene-composite-fit-inline">适配 {node.composite_role_fit}</li>
+                ) : null}
+                {node.primary_driver ? (
+                  <li data-testid="scene-primary-driver">推动：{node.primary_driver}</li>
+                ) : null}
+                {node.primary_drag ? (
+                  <li data-testid="scene-primary-drag">拖累：{node.primary_drag}</li>
+                ) : null}
+              </ul>
+            ) : null}
           </JourneyInspectorSection>
         </div>
 

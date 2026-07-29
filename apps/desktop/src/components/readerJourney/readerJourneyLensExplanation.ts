@@ -28,7 +28,7 @@ export const NUMERIC_LENS_LEGEND: Array<{ key: string; label: string }> = [
   { key: "scene", label: "● 场景" },
   { key: "beat", label: "• 节拍" },
   { key: "selection", label: "┆ 当前选择" },
-  { key: "risk", label: "■ 阅读阻力" },
+  { key: "risk", label: "■ 阅读阻力区间" },
 ];
 
 /** 钩子回收 lens legend (≤1 row). */
@@ -46,15 +46,15 @@ export const READER_JOURNEY_LENS_EXPLANATIONS: Record<
   composite: {
     lens_id: "composite",
     title: "综合阅读",
-    chart_title: "综合阅读动力",
+    chart_title: "综合阅读",
     one_line_summary:
-      "综合阅读：综合判断每个场景对剧情理解、阅读期待、情绪体验和阅读流畅度的整体贡献。",
+      "综合判断每个场景对故事理解、阅读期待、情绪体验和阅读流畅度的整体贡献；分数高低需要结合场景任务和前后位置判断。",
     how_to_read: [
       "高点：继续阅读动力偏强。",
       "低点：需结合场景作用判断，不代表写得差。",
       "阶段卡显示该阶段汇总，不等于单点。",
     ],
-    y_axis_semantics: "强 · 中 · 弱",
+    y_axis_semantics: "综合阅读表现（0—100，辅以强·中·弱）",
     high_meaning: "继续阅读动力偏强",
     low_meaning: "继续阅读动力偏弱，需结合场景作用判断",
     caution: "数值高低不直接等于作品好坏。",
