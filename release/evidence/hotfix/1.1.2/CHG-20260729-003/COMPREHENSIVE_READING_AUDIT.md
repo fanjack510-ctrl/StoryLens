@@ -71,11 +71,13 @@ Evidence: `release/evidence/hotfix/1.1.2/CHG-20260729-001/COMPOSITE_SCORE_SOURCE
 
 **Forbidden labels (already not used for composite fit):** 表现有效 / 未表现明显异常 / 表现明显异常 / 质量好 / 质量差.
 
+**Diagnosis band (important):** `JourneyDiagnosisBand` when `observationLens === "composite"` **forces** `compositeRoleFitLabel(...)` and does **not** use `primaryBandLabelForScene` (which can emit「表现有效」等). Non-composite lenses still use diagnosis-band labels.
+
 **Gap:** field name today is `composite_role_fit`, not `overall_reading_fit`. Spec wants explicit `overall_reading_score` + `overall_reading_fit` separation in data + UI.
 
 **Risk:** when only `role` (`core`/`secondary`/`beat`) is present and `scene_role` (setup/climax/…) is missing, band lookup falls through to default `[40,70]` — fit may be coarse.
 
-**UI gap:** composite chart nodes do **not** render fit under points (only pacing lens shows `pacingLabel` under nodes). Fit appears mainly in `JourneySceneDetailPanel` (“角色契合 …”).
+**UI gap:** composite chart nodes do **not** render fit under points (only pacing lens shows `pacingLabel` under nodes). Fit appears in diagnosis band + `JourneySceneDetailPanel`（「角色契合 …」, developer mode for score alias）.
 
 ---
 
@@ -107,9 +109,10 @@ Evidence: `release/evidence/hotfix/1.1.2/CHG-20260729-001/COMPOSITE_SCORE_SOURCE
 
 | Layer | Source | Semantics |
 |-------|--------|-----------|
-| Risk top strip (post CHG-002) | `visualization.risk_intervals` → thin `#c47a6a` strip (was full-height `#f3ddd8@0.28`) | Reading-resistance / risk intervals (e.g. `consecutive_no_payoff`, V2 `low_reading_momentum`) — **not** a second score curve |
+| Risk top strip (post CHG-002) | `visualization.risk_intervals` → thin `#c47a6a` strip (was full-height `#f3ddd8@0.28`) | Reading-resistance / risk intervals — **not** a second score curve. V2 types include `momentum_decline` / `low_reading_momentum` / `unpaid_hook` / `high_dropoff_risk` (`base ≈ 100 - reading_momentum`); legacy may still emit `consecutive_no_payoff` |
 | Secondary compare line | Compare mode / overlay → dashed purple `journey-secondary-line` | Optional second metric when user enters 对比分析 |
 | Grid / selection | `--line` / accent selection | Axes + current scene |
+| Valence arrows | `valenceDirection` | **Emotion lens only** — not composite |
 
 User-visible “红色线条/色带” in MG screenshots was primarily the **risk wash** (now strip) and/or selection accents — **not** an extra composite formula line.
 
@@ -167,6 +170,13 @@ Source: `readerJourneyLensExplanation.ts` → `READER_JOURNEY_LENS_EXPLANATIONS.
 > 综合阅读：综合判断每个场景对故事理解、阅读期待、情绪体验和阅读流畅度的整体贡献；分数高低需要结合场景任务和前后位置判断。
 
 Also update `chart_title` currently `综合阅读动力` if still confusing vs frozen name `综合阅读`.
+
+**Chrome / test debt to fix in this CHG:**
+
+| Issue | Detail |
+|-------|--------|
+| Possible double title | `JourneyLensExplanationChrome` renders `<strong>{title}</strong>` plus `one_line_summary` that already starts with `综合阅读：` |
+| Stale tests | `readerJourneyLensExplanation.test.tsx` and `readerJourneyTerminology.test.ts` still expect older copy (`线越高，读者继续阅读的动力…` / `不代表一定写得差`) |
 
 ---
 
@@ -236,3 +246,7 @@ Right panel resolves via `resolveDimensionInsightText(node, lensId)` (CHG-001).
 ## Spec note
 
 Kickoff message truncated after introducing `overall_reading_score` / `overall_reading_fit` separation. Implementation of UI details beyond §1–§7 awaits full remaining sections if provided; audit above is sufficient to start presentation design for score/fit split and explanation copy.
+
+## Cross-check
+
+Deep path audit by [Audit comprehensive reading path](608005e0-ac42-4324-887e-999162630564) confirms the same score/fit/driver gaps; deltas above (diagnosis-band override, risk types, chrome/test debt) were merged into this document.
