@@ -3,7 +3,7 @@
   "title": "Unify chapter analysis presentation, revision binding, and hook lens",
   "type": "fix",
   "base_version": "1.1.2",
-  "status": "tested",
+  "status": "verified",
   "include_in_next_release": true,
   "commits": [
     {
@@ -54,7 +54,8 @@
     "HTTP E2E Fake Provider (8/8)"
   ],
   "verification_evidence": [
-    "release/evidence/hotfix/1.1.2/CHG-20260729-011/"
+    "release/evidence/hotfix/1.1.2/CHG-20260729-011/",
+    "release/evidence/hotfix/1.1.2/CHG-20260729-011/MANUAL_GATE_PASS.md"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -71,5 +72,12 @@
   "blocker_level": "P0",
   "head_inclusion": "EXISTS_NOT_INCLUDED",
   "created_at": "2026-07-29T15:06:00Z",
-  "updated_at": "2026-07-29T15:35:08Z"
+  "updated_at": "2026-07-29T16:05:08Z",
+  "release_pool_status": "included",
+  "manual_gate": {
+    "id": "MG-CHG-20260729-011",
+    "result": "PASSED",
+    "user_confirmed": "2026-07-29",
+    "accepted_head": "fba8e845d1c35dd79edcb00ee3bab8f19a0ac858"
+  }
 }
