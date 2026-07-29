@@ -1,0 +1,29 @@
+{
+  "change_id": "CHG-20260729-005",
+  "round": "manual-gate-hook-consistency",
+  "recorded_at": "2026-07-29T08:50:00Z",
+  "public_start_head": "d0024432a55d9fd4e257d5b92581715c735e0ce1",
+  "root_cause": "E.MULTIPLE_UI_FACT_SOURCES + B.CHAPTER_GATE_NOT_PROPAGATED + A.SCORE_ONLY_RESPONSE_INFERENCE",
+  "vitest": {
+    "chapter_hook_consistency_chg005": "PASS",
+    "chapter_hook_simplification_chg005_complete": "PASS",
+    "chapter_hook_simplification_chg005_local": "PASS",
+    "HookPayoffTimeline": "PASS",
+    "hookResolutionEvidence": "PASS",
+    "dimension_node_judgments_chg004_local": "PASS",
+    "result": "PASS"
+  },
+  "pytest": {
+    "command": "pytest apps/api/tests/test_chapter_hook_simplification_chg005_local.py -q",
+    "passed": 4,
+    "result": "PASS"
+  },
+  "typecheck": "PASS",
+  "http_e2e": {
+    "result": "PASS",
+    "evidence": "HTTP_E2E.json"
+  },
+  "real_provider_calls": 0,
+  "formal_db_writes": 0,
+  "database_migration": false
+}

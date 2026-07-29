@@ -1,0 +1,25 @@
+{
+  "change_id": "CHG-20260729-005",
+  "result": "PASS",
+  "fixture_a": {
+    "journey_run_id": 1,
+    "scenes": 6,
+    "mode_expected": "uncertain",
+    "readable_questions": 0,
+    "s5_payoff": 80.0,
+    "note": "Live Fake smoke-fake → FE presentation uncertain/none; S05 明确回应 gated in FE tests"
+  },
+  "fixture_b": {
+    "covered_by": "vitest chapter_hook_consistency_chg005.test.tsx Fixture B",
+    "result": "PASS"
+  },
+  "refresh_hash_match": true,
+  "api_restart_hash_match": true,
+  "real_provider_calls": 0,
+  "formal_db_writes": 0,
+  "api": "http://127.0.0.1:18044",
+  "frontend": "http://127.0.0.1:1423",
+  "no_hook_journey_url": "http://127.0.0.1:1423/books/1?chapter=1&journeyRun=1&lens=hook_payoff",
+  "reliable_hook_journey_url": "vitest://chg005FixtureBReliableHooks (presentation Fixture B)",
+  "hash": "eaa2951937c6c891d6cdaa1ae0c33283941519217f64eea9a13a24852728306a"
+}
