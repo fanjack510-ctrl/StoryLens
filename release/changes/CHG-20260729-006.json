@@ -7,7 +7,7 @@
   "target_version": "1.1.2",
   "public_branch": "fix/1.1.2-task-cancellation",
   "private_branch": "fix/1.1.2-task-cancellation",
-  "status": "verified",
+  "status": "integrated",
   "release_pool_status": "included",
   "include_in_next_release": true,
   "forward_port_required": true,
