@@ -7,8 +7,8 @@
   "target_version": "1.1.2",
   "public_branch": "fix/1.1.2-reader-journey-dimension-insights",
   "private_branch": "fix/1.1.2-reader-journey-dimension-insights",
-  "status": "tested",
-  "release_pool_status": "pending",
+  "status": "verified",
+  "release_pool_status": "included",
   "include_in_next_release": true,
   "forward_port_required": true,
   "forward_port_target": "integration/whole-book-v120",
@@ -71,11 +71,12 @@
     "apps/api/tests/test_reader_journey_dimension_insights_local.py",
     "apps/desktop/src/components/readerJourney/dimension_insights_chg001_local.test.tsx"
   ],
-  "manual_gate": "MG-CHG-20260729-001 pending",
+  "manual_gate": "MG-CHG-20260729-001 PASS",
   "verification_evidence": [
     "release/evidence/hotfix/1.1.2/CHG-20260729-001/DATA_AND_UI_AUDIT.md",
     "release/evidence/hotfix/1.1.2/CHG-20260729-001/TEST_RESULTS.json",
-    "release/evidence/hotfix/1.1.2/CHG-20260729-001/COMPOSITE_SCORE_SOURCE.md"
+    "release/evidence/hotfix/1.1.2/CHG-20260729-001/COMPOSITE_SCORE_SOURCE.md",
+    "release/evidence/hotfix/1.1.2/CHG-20260729-001/MANUAL_GATE_PASS.md"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -84,6 +85,6 @@
     "notes": "Insights embedded in existing journey JSON artifacts; legacy derive at read time without overwrite."
   },
   "created_at": "2026-07-29T03:28:43Z",
-  "updated_at": "2026-07-29T03:38:50Z",
+  "updated_at": "2026-07-29T04:01:24Z",
   "head_inclusion": "INCLUDED"
 }

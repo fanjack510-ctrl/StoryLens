@@ -32,5 +32,5 @@
     "CHG-20260728-041",
     "CHG-20260729-001"
   ],
-  "notes": "Hotfix pool from v1.1.1; CHG-040/041 integrated. CHG-20260729-001 tested on fix/1.1.2-reader-journey-dimension-insights (not yet integrated)."
+  "notes": "Hotfix pool from v1.1.1; CHG-040/041 integrated. CHG-20260729-001 verified (MG PASS)."
 }
