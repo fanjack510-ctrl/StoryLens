@@ -62,6 +62,12 @@ import {
   resolveCompositeRoleFit,
   resolveOverallReadingScore,
 } from "./comprehensiveReadingPresentation";
+import {
+  buildDimensionJudgmentsForVisualization,
+  isDimensionJudgmentLens,
+  resolveDimensionNodeLabelVisibility,
+  type DimensionJudgmentLens,
+} from "./dimensionNodeJudgments";
 
 const ROLE_CLASS: Record<string, string> = {
   core: "journey-node-core",
@@ -273,6 +279,15 @@ export function CanonicalJourneyChart({
     if (lensId !== "composite") return [];
     return visualization.comprehensive_key_nodes ?? [];
   }, [lensId, visualization.comprehensive_key_nodes]);
+
+  const dimensionJudgments = useMemo(() => {
+    if (!isDimensionJudgmentLens(lensId)) return null;
+    return buildDimensionJudgmentsForVisualization(
+      nodes,
+      lensId as DimensionJudgmentLens,
+      selectedSceneOrdinal,
+    );
+  }, [lensId, nodes, selectedSceneOrdinal]);
 
   const pacingSegments = useMemo(() => {
     if (lensId !== "pacing") return [];
@@ -704,12 +719,22 @@ export function CanonicalJourneyChart({
             const shortLabel =
               lensId === "composite"
                 ? node.comprehensive_short_label || null
-                : null;
+                : dimensionJudgments?.get(node.scene_ordinal)?.short_label || null;
+            const dimJudgment = dimensionJudgments?.get(node.scene_ordinal);
             const showShort =
               shortLabel &&
-              (selectedSceneOrdinal === node.scene_ordinal ||
-                sceneCount <= 8 ||
-                node.scene_ordinal % 2 === 1);
+              (lensId === "composite"
+                ? selectedSceneOrdinal === node.scene_ordinal ||
+                  sceneCount <= 8 ||
+                  node.scene_ordinal % 2 === 1
+                : dimJudgment
+                  ? resolveDimensionNodeLabelVisibility({
+                      sceneCount,
+                      importance: dimJudgment.importance,
+                      isSelected: selectedSceneOrdinal === node.scene_ordinal,
+                      judgmentSource: dimJudgment.judgment_source,
+                    }).showOnAxis
+                  : false);
             return (
               <g
                 key={`x-label-${node.scene_ordinal}`}
@@ -717,6 +742,9 @@ export function CanonicalJourneyChart({
                   exportFullJourney ? undefined : `journey-x-label-${node.scene_ordinal}`
                 }
                 data-stage-key={stage.stageKey}
+                data-dimension-short-label={
+                  isDimensionJudgmentLens(lensId) ? shortLabel || undefined : undefined
+                }
               >
                 <text
                   x={xFor(node.scene_ordinal)}
@@ -759,8 +787,16 @@ export function CanonicalJourneyChart({
                     x={xFor(node.scene_ordinal)}
                     y={chartHeight - (isStageStart ? 32 : 24)}
                     textAnchor="middle"
-                    className="journey-comprehensive-short-label"
-                    data-testid={`journey-comprehensive-short-${node.scene_ordinal}`}
+                    className={
+                      lensId === "composite"
+                        ? "journey-comprehensive-short-label"
+                        : "journey-dimension-short-label"
+                    }
+                    data-testid={
+                      lensId === "composite"
+                        ? `journey-comprehensive-short-${node.scene_ordinal}`
+                        : `journey-dimension-axis-short-${node.scene_ordinal}`
+                    }
                     fontSize={9}
                     fill="var(--muted)"
                   >
@@ -930,9 +966,20 @@ export function CanonicalJourneyChart({
             const tier = hookTier(visualization, node.scene_ordinal, sceneCount);
             const hookSize = tier === "chapter" ? 7 : tier === "phase" ? 5.5 : 4;
             const valenceDir =
-              lensId === "emotion" ? valenceDirection(node) : null;
+              lensId === "emotion" && !dimensionJudgments
+                ? valenceDirection(node)
+                : null;
+            const dimJudgment = dimensionJudgments?.get(node.scene_ordinal) ?? null;
+            const showDimAbove =
+              dimJudgment?.short_label &&
+              resolveDimensionNodeLabelVisibility({
+                sceneCount,
+                importance: dimJudgment.importance,
+                isSelected: selected,
+                judgmentSource: dimJudgment.judgment_source,
+              }).showAboveNode;
             const pacingLabel =
-              lensId === "pacing"
+              lensId === "pacing" && !dimensionJudgments
                 ? pacingFitLabel(
                     node.scores.pacing_speed ?? value,
                     node.scene_role,
@@ -941,6 +988,8 @@ export function CanonicalJourneyChart({
                 : null;
             const compositeFit =
               lensId === "composite" ? resolveCompositeRoleFit(node) : null;
+            const dimensionFit =
+              dimJudgment && isDimensionJudgmentLens(lensId) ? dimJudgment.fit_label : null;
             const stroke = visual.colorToken;
             const fill =
               visual.shape === "hollow_circle" || visual.shape === "triangle" || visual.shape === "diamond"
@@ -1018,6 +1067,23 @@ export function CanonicalJourneyChart({
                     {valenceDir === "up" ? "↑" : "↓"}
                   </text>
                 ) : null}
+                {showDimAbove ? (
+                  <text
+                    x={cx}
+                    y={cy - radius - 8}
+                    textAnchor="middle"
+                    fontSize={9}
+                    fill="var(--text)"
+                    fontWeight={selected ? 600 : 500}
+                    className="journey-dimension-node-judgment"
+                    data-testid={`journey-dimension-judgment-${node.scene_ordinal}`}
+                    data-dimension-lens={lensId || undefined}
+                    data-judgment-source={dimJudgment?.judgment_source}
+                    data-importance={dimJudgment?.importance}
+                  >
+                    {dimJudgment?.short_label}
+                  </text>
+                ) : null}
                 {pacingLabel ? (
                   <text
                     x={cx}
@@ -1028,6 +1094,23 @@ export function CanonicalJourneyChart({
                     data-testid={`journey-pacing-fit-${node.scene_ordinal}`}
                   >
                     {pacingLabel}
+                  </text>
+                ) : null}
+                {dimensionFit ? (
+                  <text
+                    x={cx}
+                    y={cy + radius + 11}
+                    textAnchor="middle"
+                    fontSize={9}
+                    fill="var(--muted)"
+                    data-testid={
+                      lensId === "pacing"
+                        ? `journey-pacing-fit-${node.scene_ordinal}`
+                        : `journey-dimension-fit-${node.scene_ordinal}`
+                    }
+                    data-dimension-fit={dimensionFit}
+                  >
+                    {dimensionFit}
                   </text>
                 ) : null}
                 {compositeFit ? (
@@ -1107,9 +1190,9 @@ export function CanonicalJourneyChart({
           {hover != null && tooltipNode && (
             <foreignObject
               x={Math.min(Math.max(hover.x - 90, 4), chartWidth - 220)}
-              y={Math.max(hover.y - (lensId === "hook_payoff" ? 160 : 110), 4)}
+              y={Math.max(hover.y - (lensId === "hook_payoff" ? 160 : isDimensionJudgmentLens(lensId) ? 130 : 110), 4)}
               width={lensId === "hook_payoff" ? 220 : 196}
-              height={lensId === "hook_payoff" ? 168 : 128}
+              height={lensId === "hook_payoff" ? 168 : isDimensionJudgmentLens(lensId) ? 148 : 128}
               data-testid="journey-node-tooltip"
             >
               <div
@@ -1201,6 +1284,37 @@ export function CanonicalJourneyChart({
                               拖累：{tooltipNode.primary_drag}
                             </div>
                           ) : null}
+                        </>
+                      );
+                    }
+                    if (isDimensionJudgmentLens(lensId)) {
+                      const judgment =
+                        dimensionJudgments?.get(tooltipNode.scene_ordinal) ?? null;
+                      return (
+                        <>
+                          <div>
+                            {formatJourneySceneLabel(tooltipNode.scene_ordinal)}
+                            {tooltipNode.scene_role
+                              ? ` · ${roleLabelZh(tooltipNode.scene_role)}`
+                              : tooltipNode.role
+                                ? ` · ${roleLabelZh(tooltipNode.role)}`
+                                : ""}
+                          </div>
+                          <div data-testid="journey-tooltip-primary-metric">
+                            {scoreNoun}：
+                            {tooltipScore == null
+                              ? "暂无数据"
+                              : formatJourneyScore(tooltipScore)}
+                          </div>
+                          <div data-testid="journey-tooltip-dimension-judgment">
+                            {judgment?.short_label || "当前节点暂无可靠判断"}
+                          </div>
+                          <div data-testid="journey-tooltip-dimension-fit">
+                            适配：{judgment?.fit_label || "无法判断"}
+                          </div>
+                          <div data-testid="journey-tooltip-dimension-reason">
+                            {judgment?.full_reason || "当前节点暂无可靠判断"}
+                          </div>
                         </>
                       );
                     }
