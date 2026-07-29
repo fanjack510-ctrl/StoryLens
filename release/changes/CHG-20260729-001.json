@@ -7,7 +7,7 @@
   "target_version": "1.1.2",
   "public_branch": "fix/1.1.2-reader-journey-dimension-insights",
   "private_branch": "fix/1.1.2-reader-journey-dimension-insights",
-  "status": "implementing",
+  "status": "tested",
   "release_pool_status": "pending",
   "include_in_next_release": true,
   "forward_port_required": true,
@@ -28,7 +28,26 @@
     "apps/api/app/services/reader_journey_visualization.py",
     "apps/desktop/src/components/readerJourney"
   ],
-  "commits": [],
+  "commits": [
+    {
+      "sha": "d7bfb76aa005bb71c2f70c11e974cb5a3fd74668",
+      "message": "feat(journey): add dimension-specific scene insights",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "9282e9615e3f53b9fa47de7e064d47fbead5269f",
+      "message": "refactor(journey-ui): simplify scene insight details",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "e824fd4b83adc4d9e8e99ce2ba16dd76cde90a84",
+      "message": "ui(journey): improve comprehensive reading curve",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "release",
     "apps/api",
@@ -48,10 +67,15 @@
     "Legacy results open without re-run",
     "Fake only; no formal DB writes"
   ],
-  "tests": [],
+  "tests": [
+    "apps/api/tests/test_reader_journey_dimension_insights_local.py",
+    "apps/desktop/src/components/readerJourney/dimension_insights_chg001_local.test.tsx"
+  ],
   "manual_gate": "MG-CHG-20260729-001 pending",
   "verification_evidence": [
-    "release/evidence/hotfix/1.1.2/CHG-20260729-001/DATA_AND_UI_AUDIT.md"
+    "release/evidence/hotfix/1.1.2/CHG-20260729-001/DATA_AND_UI_AUDIT.md",
+    "release/evidence/hotfix/1.1.2/CHG-20260729-001/TEST_RESULTS.json",
+    "release/evidence/hotfix/1.1.2/CHG-20260729-001/COMPOSITE_SCORE_SOURCE.md"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -60,5 +84,6 @@
     "notes": "Insights embedded in existing journey JSON artifacts; legacy derive at read time without overwrite."
   },
   "created_at": "2026-07-29T03:28:43Z",
-  "updated_at": "2026-07-29T03:28:43Z"
+  "updated_at": "2026-07-29T03:38:50Z",
+  "head_inclusion": "INCLUDED"
 }
