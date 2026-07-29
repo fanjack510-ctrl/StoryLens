@@ -1,0 +1,60 @@
+{
+  "change_id": "CHG-20260729-011",
+  "database": "C:\\Users\\msi\\AppData\\Local\\Temp\\storylens-mg-chg011-workflow-consistency\\database\\storylens-mg-chg011.db",
+  "api": "http://127.0.0.1:18047",
+  "frontend": "http://127.0.0.1:1426",
+  "real_provider_calls": 0,
+  "formal_db_writes": 0,
+  "fixtures": {
+    "A_revision_22_to_6": {
+      "book_id": 1,
+      "chapter_id": 1,
+      "run_id": 2,
+      "journey_run_id": 1,
+      "confirmed_revision_id": 3,
+      "db_scene_count_on_run": 22,
+      "api_expected_scene_count": 6
+    },
+    "B_interrupted_1_of_6": {
+      "book_id": 1,
+      "chapter_id": 2,
+      "run_id": 3,
+      "journey_run_id": 2,
+      "completed_scene_count": 1,
+      "total_scene_count": 6
+    },
+    "C_awaiting_confirmation_17_to_6": {
+      "book_id": 1,
+      "chapter_id": 3,
+      "run_id": 4,
+      "model_revision_id": 5,
+      "model_scene_count": 17,
+      "draft_revision_id": 6,
+      "draft_scene_count": 6
+    },
+    "running_2_of_6": {
+      "book_id": 1,
+      "chapter_id": 4,
+      "run_id": 5,
+      "journey_run_id": 3
+    },
+    "E_succeeded_hook_empty": {
+      "book_id": 1,
+      "chapter_id": 5,
+      "run_id": 6,
+      "journey_run_id": 4,
+      "note": "Fake smoke → hook uncertain/empty presentation",
+      "final_status": "succeeded"
+    }
+  },
+  "urls": {
+    "REVISION_22_TO_6": "http://127.0.0.1:1426/books/1?chapter=1&analysisRun=2&view=result",
+    "INTERRUPTED": "http://127.0.0.1:1426/books/1?chapter=2&analysisRun=3&journeyRun=2",
+    "AWAITING_CONFIRMATION": "http://127.0.0.1:1426/books/1?chapter=3&analysisRun=4&view=scene-boundary-review",
+    "RUNNING": "http://127.0.0.1:1426/books/1?chapter=4&analysisRun=5&journeyRun=3",
+    "SUCCEEDED": "http://127.0.0.1:1426/books/1?chapter=5&analysisRun=6&journeyRun=4&view=result",
+    "HOOK_EMPTY": "http://127.0.0.1:1426/books/1?chapter=5&journeyRun=4&lens=hook_payoff",
+    "HOOK_RICH": "vitest://chg005FixtureBReliableHooks (frontend-only; see FIXTURES.md)",
+    "TASK_CENTER": "http://127.0.0.1:1426/tasks"
+  }
+}
