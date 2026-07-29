@@ -28,7 +28,8 @@
   "commits": [
     "5efd6dcdb93eddca0b8f5893b921761849a7257d",
     "76d2b04020fcdf0ab97c5daecc33bfd5a1697ef8",
-    "c1a61aab8baf7a737268997fe9867042105b2d6d"
+    "c1a61aab8baf7a737268997fe9867042105b2d6d",
+    "225c491d54b865ecd8d85689ad780b223ed1d61a"
   ],
   "modules": [
     "release",
@@ -39,25 +40,31 @@
     "release/changes/CHG-20260729-005.json",
     "release/evidence/hotfix/1.1.2/CHG-20260729-005/"
   ],
-  "user_summary": "将单章钩子回收页简化为提出、回应、继续保留与章末牵引。",
-  "technical_summary": "Presentation-only chapterHookSimplification + HookPayoffTimeline ordinary UI; tab name unchanged; no algorithm/persistence changes.",
+  "user_summary": "将单章钩子回收页简化为提出、回应、继续保留与章末牵引，并补齐重要钩子列表、章末牵引与开发者技术详情。",
+  "technical_summary": "Presentation-only chapterHookSimplification complete: important hooks, ending pull, scene insight, developer tech details; tab name unchanged; no algorithm/persistence changes.",
   "acceptance_criteria": [
     "Tab name remains 钩子回收",
     "Overview: 本章提出/回应/继续保留/章末牵引",
     "Scene labels: 提出疑问/加深悬念/给出回应/留到下章",
-    "1–3 important reader questions",
+    "1–3 important reader questions below scene chart",
+    "Dedicated 章末牵引 block",
+    "Right panel ordinary 钩子洞察",
+    "Developer mode collapsed 技术详情",
     "No unresolved-as-failure default framing",
     "Other five lenses + composite unchanged"
   ],
   "tests": [
     "apps/desktop/src/components/readerJourney/chapter_hook_simplification_chg005_local.test.tsx",
+    "apps/desktop/src/components/readerJourney/chapter_hook_simplification_chg005_complete.test.tsx",
     "apps/desktop/src/components/readerJourney/HookPayoffTimeline.test.tsx",
+    "apps/desktop/src/components/readerJourney/hookResolutionEvidence.test.tsx",
     "apps/api/tests/test_chapter_hook_simplification_chg005_local.py"
   ],
   "manual_gate": "MG-CHG-20260729-005 pending",
   "verification_evidence": [
     "release/evidence/hotfix/1.1.2/CHG-20260729-005/CHAPTER_HOOK_UI_AUDIT.md",
     "release/evidence/hotfix/1.1.2/CHG-20260729-005/TEST_RESULTS.json",
+    "release/evidence/hotfix/1.1.2/CHG-20260729-005/HTTP_E2E.json",
     "release/evidence/hotfix/1.1.2/CHG-20260729-005/MANUAL_UI_ENV.md"
   ],
   "data_compatibility": {
@@ -67,6 +74,6 @@
     "notes": "FE presentation only; legacy journeys work without re-run."
   },
   "created_at": "2026-07-29T07:00:00Z",
-  "updated_at": "2026-07-29T07:20:00Z",
+  "updated_at": "2026-07-29T07:30:00Z",
   "base_head": "2e8ed1edaf7dc91933666f5e46f4b2bdb747407c"
 }

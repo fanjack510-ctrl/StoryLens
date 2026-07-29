@@ -1,0 +1,16 @@
+{
+  "change_id": "CHG-20260729-005",
+  "result": "PASS",
+  "journey_run_id": 1,
+  "scenes": 6,
+  "refresh_hash_match": true,
+  "api_restart_hash_match": true,
+  "real_provider_calls": 0,
+  "formal_db_writes": 0,
+  "formal_db_path": "C:\\Users\\msi\\AppData\\Local\\StoryLens\\database\\storylens.db",
+  "isolated_db": "C:\\Users\\msi\\AppData\\Local\\Temp\\storylens-mg-chg005-hook-simplification-final\\database\\storylens-mg-chg005-final.db",
+  "api": "http://127.0.0.1:18044",
+  "hash": "183d8bffd318ee4d5886a5dc399ebad93ba3a69f8fc4ab5a6fbcec441dd0e34b",
+  "narrative_loops_count": 5,
+  "has_plot_progress": true
+}

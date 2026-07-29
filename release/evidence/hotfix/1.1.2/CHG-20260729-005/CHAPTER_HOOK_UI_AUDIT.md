@@ -1,36 +1,27 @@
-# CHAPTER_HOOK_UI_AUDIT — CHG-20260729-005
+# CHAPTER_HOOK_UI_AUDIT — CHG-20260729-005 (complete)
 
 **Base HEAD:** `2e8ed1edaf7dc91933666f5e46f4b2bdb747407c`  
 **Branch:** `fix/1.1.2-chapter-hook-simplification`  
 **Dependency:** CHG-20260729-004 verified + integrated
 
-## Data chain
+## Ordinary page structure (final)
 
-```
-Scene profiles (hooks/payoffs/reader_question_*)
-  → question_lifecycle (v2) / narrative_loops (viz-time)
-  → hookResolutionModel + HookPayoffTimeline (current ordinary UI)
-  → JourneySceneDetailPanel evidence
-```
+1. Page blurb（提出 / 回应 / 留下期待）
+2. Four overview stats：本章提出 / 本章回应 / 继续保留 / 章末牵引
+3. Simplified Scene 钩子变化图（提出疑问 / 加深悬念 / 给出回应 / 留到下章）
+4. 1–3 important reader questions（提出 / 结果 / 最后变化）
+5. Dedicated 章末牵引 block
+6. Right panel：场景编号 · 场景角色 · 钩子洞察（1–2 句）
+7. Developer mode only：bottom collapsed 技术详情
 
-## Audit answers
+## Presentation modules
 
-| # | Topic | Finding |
-|---|--------|---------|
-| 1 | Hook title / reader question | `NarrativeLoopView.question` / `information_gap` / `hooks[].summary` / `question_lifecycle.question_text`; UI short via `shortPlainTitle` |
-| 2 | Introduced scene | `open_from_scene` / `setup_scene` / first hook scene |
-| 3 | Reinforced scene | `development_scenes[]` / `developments[]` (no single field) |
-| 4 | Partial / full response | `payoffs[].type`, `answer_degree`, loop status `partially_resolved`/`resolved` |
-| 5 | Still unanswered | loop `open` / `unresolved` main_status; last-scene `reader_question_out` |
-| 6 | Chapter-end active | unresolved loops; `open_at_chapter_end` on chains (not shown in UI) |
-| 7 | Current stats fields | 建立钩子 / 已回收 / 部分回收 / 未回收 (+ conflict) |
-| 8 | Importance | Exists on chains/clusters/`strength`; **not shown** on hook page |
-| 9 | Core-event link | **None** explicit |
-| 10 | Legacy compat | Client synthesizes loops from lifecycle/chains when bundle missing; `resolveHookPayoffDataStatus` |
+- `chapterHookSimplification.ts` — FE derive only
+- `HookPayoffTimeline.tsx` — ordinary layout
+- `JourneySceneDetailPanel.tsx` — ordinary insight; tech evidence under developer details
 
-## Presentation plan (this CHG)
+## Explicit non-goals confirmed
 
-- New FE-only `chapterHookSimplification.ts`
-- Replace ordinary HookPayoffTimeline overview/lanes/table with: 本章提出/回应/继续保留/章末牵引 + 1–3 重要读者问题 + Scene 四态短标签
-- Keep tab name **钩子回收**; do not change hook algorithms or persisted facts
-- Detail/evidence can still use existing resolution row lookup
+- Hook recognition / formula_v2 / other five lenses / persistence / tab rename：unchanged
+- Unresolved is not framed as failure on ordinary UI
+- Recovery rate / Hook ID / smoke-fake：absent from ordinary UI
