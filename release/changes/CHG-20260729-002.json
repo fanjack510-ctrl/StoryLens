@@ -29,7 +29,14 @@
     "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.tsx",
     "apps/desktop/src/components/readerJourney/StructuredChapterTextPane.tsx"
   ],
-  "commits": [],
+  "commits": [
+    {
+      "sha": "005ea1ab673bf71d5e6e8156694475d41e9c3a11",
+      "message": "ui(journey): align scene curves with story stage colors",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "release",
     "apps/desktop"
