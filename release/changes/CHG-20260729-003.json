@@ -7,7 +7,7 @@
   "target_version": "1.1.2",
   "public_branch": "fix/1.1.2-comprehensive-reading-curve",
   "private_branch": "fix/1.1.2-comprehensive-reading-curve",
-  "status": "tested",
+  "status": "verified",
   "release_pool_status": "pending",
   "include_in_next_release": true,
   "forward_port_required": true,
@@ -52,11 +52,12 @@
     "apps/desktop/src/components/readerJourney/comprehensive_reading_chg003_local.test.tsx",
     "apps/api/tests/test_comprehensive_reading_chg003_local.py"
   ],
-  "manual_gate": "MG-CHG-20260729-003 pending",
+  "manual_gate": "MG-CHG-20260729-003 PASS",
   "verification_evidence": [
     "release/evidence/hotfix/1.1.2/CHG-20260729-003/COMPREHENSIVE_READING_AUDIT.md",
     "release/evidence/hotfix/1.1.2/CHG-20260729-003/TEST_RESULTS.json",
-    "release/evidence/hotfix/1.1.2/CHG-20260729-003/MANUAL_UI_ENV.md"
+    "release/evidence/hotfix/1.1.2/CHG-20260729-003/MANUAL_UI_ENV.md",
+    "release/evidence/hotfix/1.1.2/CHG-20260729-003/MANUAL_GATE_PASS.md"
   ],
   "data_compatibility": {
     "database_changed": false,
