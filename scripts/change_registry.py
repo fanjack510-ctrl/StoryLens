@@ -354,12 +354,22 @@ def normalize_trailer_ids(ids: list[str]) -> list[str]:
     return result
 
 
+def commit_entry_sha(entry: Any) -> str | None:
+    """Normalize legacy bare-SHA commit entries and dict entries to a sha string."""
+    if isinstance(entry, str):
+        return entry or None
+    if isinstance(entry, dict):
+        sha = entry.get("sha")
+        return sha if isinstance(sha, str) and sha else None
+    return None
+
+
 def registered_commit_map(root: Path) -> dict[str, list[str]]:
     """Map full sha -> list of change ids."""
     mapping: dict[str, list[str]] = {}
     for change in load_all_changes(root):
         for entry in change.get("commits") or []:
-            sha = entry.get("sha")
+            sha = commit_entry_sha(entry)
             if isinstance(sha, str) and sha:
                 mapping.setdefault(sha, []).append(change["id"])
                 # also short
@@ -544,7 +554,7 @@ def collect_blockers(root: Path) -> list[str]:
             continue
         if change.get("status") == "deferred":
             for entry in change.get("commits") or []:
-                sha = entry.get("sha")
+                sha = commit_entry_sha(entry)
                 if isinstance(sha, str) and resolve_commit(root, sha) and is_ancestor(root, sha):
                     # deferred code present in HEAD without feature-flag evidence
                     flag_notes = (change.get("technical_summary") or "") + " ".join(
@@ -837,7 +847,7 @@ def cmd_attach_commit(
         if other["id"] == change_id:
             continue
         for entry in other.get("commits") or []:
-            if entry.get("sha") == resolved and entry.get("primary", True):
+            if commit_entry_sha(entry) == resolved and (isinstance(entry, str) or entry.get("primary", True)):
                 if primary and not multi_reason:
                     print(
                         "error: commit already primary for "
@@ -846,7 +856,7 @@ def cmd_attach_commit(
                     )
                     return 1
     commits = list(change.get("commits") or [])
-    if any(c.get("sha") == resolved for c in commits):
+    if any(commit_entry_sha(c) == resolved for c in commits):
         print(f"already attached: {resolved}")
         return 0
     commits.append(
@@ -1001,7 +1011,8 @@ def check_registry(root: Path, *, release_mode: bool = False) -> list[str]:
                 errors.append(f"duplicate change id: {cid}")
             ids.append(cid)
         for entry in change.get("commits") or []:
-            sha = entry.get("sha")
+            # Legacy entries may be bare SHA strings; new entries are {sha, ...}.
+            sha = commit_entry_sha(entry)
             if not isinstance(sha, str) or not resolve_commit(root, sha):
                 errors.append(f"{cid}: commit missing: {sha}")
                 continue
@@ -1037,7 +1048,7 @@ def check_registry(root: Path, *, release_mode: bool = False) -> list[str]:
                 errors.append(f"{cid}: {st} without attached commits")
         if st == "deferred" and change.get("include_in_next_release"):
             for entry in change.get("commits") or []:
-                sha = entry.get("sha")
+                sha = commit_entry_sha(entry)
                 if isinstance(sha, str) and resolve_commit(root, sha) and is_ancestor(root, sha):
                     blob = (
                         (change.get("technical_summary") or "")
@@ -1173,7 +1184,7 @@ def cmd_freeze(root: Path) -> int:
                 "id": c["id"],
                 "title": c["title"],
                 "status": c["status"],
-                "commits": [x.get("sha") for x in c.get("commits") or []],
+                "commits": [commit_entry_sha(x) for x in c.get("commits") or []],
             }
             for c in changes
             if c.get("include_in_next_release") and c.get("status") != "deferred"

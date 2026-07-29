@@ -70,9 +70,9 @@
     "breaking_change": false
   },
   "blocker_level": "P0",
-  "head_inclusion": "EXISTS_NOT_INCLUDED",
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-29T15:06:00Z",
-  "updated_at": "2026-07-29T16:05:08Z",
+  "updated_at": "2026-07-29T16:17:51Z",
   "release_pool_status": "included",
   "manual_gate": {
     "id": "MG-CHG-20260729-011",

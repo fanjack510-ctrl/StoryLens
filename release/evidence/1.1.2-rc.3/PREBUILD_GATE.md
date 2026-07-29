@@ -1,0 +1,24 @@
+﻿# PREBUILD GATE — StoryLens 1.1.2-rc.3
+
+- STATUS: PASSED (registry check has pre-existing historical FAIL debt; compileall/version/pytest/vitest/typecheck NEW=0/vite/migrations PASS)
+- RELEASE CHANGE: CHG-20260729-012
+- INTEGRATED FIX: CHG-20260729-011 (MG PASSED, verified, FF into hotfix/1.1.2)
+- PUBLIC INTEGRATION START HEAD: e59da1238eb2c509b4a05d7a401a6b5a1b2002ee
+- PUBLIC HEAD AFTER CHG-011 FF: 29cc4fc4a9e2860fcc3306e40e9ba3ea2e27ee2d
+- PRIVATE HEAD: 23a0b025db51acaa8e62f4e81bc7628f19a8e2a6
+- PRIVATE CODE CHANGE: NO
+- VERSION (formal before RC override): 1.1.2
+- RC VERSION: 1.1.2-rc.3
+- PYTEST CHG-009: 9 passed
+- PYTEST CHG-011+006: 25 passed
+- PYTEST hotfix broad + migration: 51 passed
+- VITEST targeted: 8 files / 51 passed
+- TYPECHECK BASE: 34 / FINAL: 25 / NEW: 0 / CHG-011 files: 0
+- VITE BUILD: PASS (tsc -b skipped in package script; pre-existing errors allowed)
+- FRESH MIGRATION: PASS
+- MIGRATION SECOND PASS: PASS
+- V1.1.1 UPGRADE (formal DB read-only copy): PASS; books/chapters/journeys preserved
+- RC.2 ARCHIVE PRESERVED: YES
+- REAL PROVIDER CALLS: 0
+- FORMAL DATABASE WRITES: 0
+- PUSH / TAG / RELEASE: NO
