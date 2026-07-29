@@ -7,8 +7,8 @@
   "target_version": "1.1.2",
   "public_branch": "fix/1.1.2-comprehensive-reading-curve",
   "private_branch": "fix/1.1.2-comprehensive-reading-curve",
-  "status": "verified",
-  "release_pool_status": "pending",
+  "status": "integrated",
+  "release_pool_status": "included",
   "include_in_next_release": true,
   "forward_port_required": true,
   "forward_port_target": "integration/whole-book-v120",
@@ -57,7 +57,8 @@
     "release/evidence/hotfix/1.1.2/CHG-20260729-003/COMPREHENSIVE_READING_AUDIT.md",
     "release/evidence/hotfix/1.1.2/CHG-20260729-003/TEST_RESULTS.json",
     "release/evidence/hotfix/1.1.2/CHG-20260729-003/MANUAL_UI_ENV.md",
-    "release/evidence/hotfix/1.1.2/CHG-20260729-003/MANUAL_GATE_PASS.md"
+    "release/evidence/hotfix/1.1.2/CHG-20260729-003/MANUAL_GATE_PASS.md",
+    "release/evidence/hotfix/1.1.2/CHG-20260729-003/INTEGRATION_REPORT.md"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -66,6 +67,9 @@
     "notes": "Presentation enrich at read time; no persistence rewrite."
   },
   "created_at": "2026-07-29T04:50:00Z",
-  "updated_at": "2026-07-29T05:10:00Z",
-  "base_head": "9464b957e1538fe975115c972b0606b5a6d9dda2"
+  "updated_at": "2026-07-29T05:50:00Z",
+  "base_head": "9464b957e1538fe975115c972b0606b5a6d9dda2",
+  "head_inclusion": "INCLUDED",
+  "public_integration_commit": "4edf68003cd9836fc9053e6923a83b1629ecc17d",
+  "private_integration_commit": "23a0b025db51acaa8e62f4e81bc7628f19a8e2a6"
 }
