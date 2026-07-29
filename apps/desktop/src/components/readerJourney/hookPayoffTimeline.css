@@ -404,3 +404,44 @@
 [data-testid="hook-stat-carried"] {
   color: var(--muted, #6b7280);
 }
+
+.hook-chapter-ending-pull {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line, #e5e7eb);
+}
+
+.hook-chapter-ending-pull h3 {
+  margin: 0 0 6px;
+}
+
+.hook-chapter-ending-pull p {
+  margin: 0 0 6px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.hook-chapter-tech-details {
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--muted, #6b7280);
+}
+
+.hook-chapter-tech-table-wrap {
+  overflow: auto;
+  margin-top: 8px;
+}
+
+.hook-chapter-tech-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.hook-chapter-tech-table th,
+.hook-chapter-tech-table td {
+  border: 1px solid var(--line, #e5e7eb);
+  padding: 4px 6px;
+  text-align: left;
+  vertical-align: top;
+}

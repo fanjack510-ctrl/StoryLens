@@ -38,6 +38,7 @@ import {
   type HookResolutionRow,
 } from "./hookResolutionModel";
 import { isHookPayoffLens } from "./hookPayoffLensModel";
+import { deriveChapterHookSceneInsightV1 } from "./chapterHookSimplification";
 import {
   dimensionInsightTitle,
   resolveDimensionInsightText,
@@ -119,6 +120,15 @@ export function JourneySceneDetailPanel({
     return findHookResolutionRow(visualization, selectedLoopId);
   }, [visualization, observationLens, selectedLoopId]);
 
+  const hookSceneInsight = useMemo(() => {
+    if (!visualization || !isHookPayoffLens(observationLens)) return null;
+    return deriveChapterHookSceneInsightV1({
+      visualization,
+      sceneOrdinal: node.scene_ordinal,
+      node,
+    });
+  }, [visualization, observationLens, node]);
+
   const evidenceRows = useMemo(() => {
     const rows: EvidenceRow[] = [];
     const push = (ids: string[] | undefined, conclusion: string, kind: string) => {
@@ -195,8 +205,12 @@ export function JourneySceneDetailPanel({
 
   const role = roleLabelZh(node.final_level ?? node.role);
   const sceneRole = node.scene_role ? roleLabelZh(node.scene_role) : role;
-  const insightTitle = dimensionInsightTitle(observationLens ?? DEFAULT_OBSERVATION_LENS);
-  const insightText = resolveDimensionInsightText(node, observationLens ?? DEFAULT_OBSERVATION_LENS);
+  const insightTitle = isHookPayoffLens(observationLens)
+    ? "钩子洞察"
+    : dimensionInsightTitle(observationLens ?? DEFAULT_OBSERVATION_LENS);
+  const insightText = isHookPayoffLens(observationLens)
+    ? hookSceneInsight?.body || "本场景暂无可靠的钩子洞察。"
+    : resolveDimensionInsightText(node, observationLens ?? DEFAULT_OBSERVATION_LENS);
   const lensBinding =
     visualization != null
       ? resolveLensMetricBinding(visualization, observationLens ?? DEFAULT_OBSERVATION_LENS, node)
@@ -204,14 +218,22 @@ export function JourneySceneDetailPanel({
   const narrative =
     visualization != null ? buildSceneNarrative(visualization, node) : null;
 
+  const headerTitle = isHookPayoffLens(observationLens)
+    ? hookSceneInsight?.title || `${formatJourneySceneLabel(node.scene_ordinal)} · 钩子洞察`
+    : `${formatJourneySceneLabel(node.scene_ordinal)} · ${sceneRole}`;
+
   return (
     <JourneyInspectorShell
       testId="journey-detail-drawer"
       className="journey-scene-detail-panel"
     >
       <JourneyInspectorHeader
-        title={`${formatJourneySceneLabel(node.scene_ordinal)} · ${sceneRole}`}
-        meta={`场景范围：${formatJourneySceneRangeLabel(node.scene_ordinal)}`}
+        title={headerTitle}
+        meta={
+          isHookPayoffLens(observationLens)
+            ? `场景角色：${sceneRole}`
+            : `场景范围：${formatJourneySceneRangeLabel(node.scene_ordinal)}`
+        }
         pills={[sceneRole]}
         onClose={onClose}
         titleTestId="scene-detail-title"
@@ -219,31 +241,39 @@ export function JourneySceneDetailPanel({
 
       <JourneyInspectorBody>
         <div className="scene-detail-insight-panel" data-testid="scene-detail-insight-panel">
-          {hookResolutionRow ? <HookResolutionEvidenceSection row={hookResolutionRow} /> : null}
-          <JourneyInspectorSection title={insightTitle} testId="scene-dimension-insight">
-            <p data-testid="scene-dimension-insight-text">{insightText}</p>
-            {(observationLens ?? DEFAULT_OBSERVATION_LENS) === "composite" ? (
-              <ul
-                className="journey-comprehensive-factor-list"
-                data-testid="scene-comprehensive-factors"
-              >
-                {node.composite_role_fit ? (
-                  <li data-testid="scene-composite-fit-inline">适配 {node.composite_role_fit}</li>
-                ) : null}
-                {node.primary_driver ? (
-                  <li data-testid="scene-primary-driver">推动：{node.primary_driver}</li>
-                ) : null}
-                {node.primary_drag ? (
-                  <li data-testid="scene-primary-drag">拖累：{node.primary_drag}</li>
-                ) : null}
-              </ul>
-            ) : null}
-          </JourneyInspectorSection>
+          {isHookPayoffLens(observationLens) ? (
+            <JourneyInspectorSection title="钩子洞察" testId="scene-hook-insight">
+              <p data-testid="scene-hook-insight-text">{insightText}</p>
+            </JourneyInspectorSection>
+          ) : (
+            <JourneyInspectorSection title={insightTitle} testId="scene-dimension-insight">
+              <p data-testid="scene-dimension-insight-text">{insightText}</p>
+              {(observationLens ?? DEFAULT_OBSERVATION_LENS) === "composite" ? (
+                <ul
+                  className="journey-comprehensive-factor-list"
+                  data-testid="scene-comprehensive-factors"
+                >
+                  {node.composite_role_fit ? (
+                    <li data-testid="scene-composite-fit-inline">适配 {node.composite_role_fit}</li>
+                  ) : null}
+                  {node.primary_driver ? (
+                    <li data-testid="scene-primary-driver">推动：{node.primary_driver}</li>
+                  ) : null}
+                  {node.primary_drag ? (
+                    <li data-testid="scene-primary-drag">拖累：{node.primary_drag}</li>
+                  ) : null}
+                </ul>
+              ) : null}
+            </JourneyInspectorSection>
+          )}
         </div>
 
         {developerMode ? (
           <details className="journey-tech-details" data-testid="scene-detail-tech-details">
             <summary>技术详情</summary>
+            {isHookPayoffLens(observationLens) && hookResolutionRow ? (
+              <HookResolutionEvidenceSection row={hookResolutionRow} />
+            ) : null}
             <JourneyInspectorSection title="分数" testId="scene-tech-scores">
               {lensBinding ? (
                 <p data-testid="scene-current-lens-score">
