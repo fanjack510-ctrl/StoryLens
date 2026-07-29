@@ -84,14 +84,25 @@ function vizWithLoops(): ReaderJourneyVisualization {
         open_from_scene: 1,
         hook: [{ scene_ordinal: 1, type: "new", summary: "现身疑问", strength: 80 }],
         developments: [{ scene_ordinal: 2, kind: "development" }],
-        payoffs: [{ scene_ordinal: 3, type: "partial", summary: "部分揭晓" }],
+        payoffs: [
+          {
+            scene_ordinal: 3,
+            type: "partial",
+            summary: "部分揭晓",
+            evidence_paragraph_ids: ["B0001-C0001-P0010"],
+          },
+        ],
         status: "partially_resolved",
         display_status: "partially_resolved",
         consistency_status: "consistent",
         conflicts: [],
         primary_relation: {
           grade: "probable",
-          payoff_ref: { scene_ordinal: 3, type: "partial" },
+          payoff_ref: {
+            scene_ordinal: 3,
+            type: "partial",
+            evidence_paragraph_ids: ["B0001-C0001-P0010"],
+          },
         },
       },
       {
@@ -226,12 +237,14 @@ describe("CHG-20260729-005 chapter hook simplification", () => {
     expect(stats).toContain("继续保留");
   });
 
-  it("empty state without scene bus when no loops", () => {
+  it("empty state keeps scene track with blank labels when no loops", () => {
     const empty = vizWithLoops();
     (empty as { narrative_loops: unknown[] }).narrative_loops = [];
     render(<HookPayoffTimeline visualization={empty} />);
     expect(screen.getByTestId("hook-resolution-empty")).toBeInTheDocument();
-    expect(screen.queryByTestId("hook-chapter-scene-row")).not.toBeInTheDocument();
+    expect(screen.getByTestId("hook-chapter-scene-row")).toBeInTheDocument();
+    expect(screen.getByTestId("hook-chapter-scene-label-5").textContent).toBe("—");
+    expect(screen.getByTestId("hook-payoff-stats").textContent).not.toMatch(/明确回应/);
   });
 
   it("preserves stage band palette", () => {

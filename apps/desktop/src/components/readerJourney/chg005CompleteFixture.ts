@@ -80,14 +80,26 @@ export function chg005CompleteFixtureViz(): ReaderJourneyVisualization {
         open_from_scene: 1,
         hook: [{ scene_ordinal: 1, type: "new", summary: "身份疑问", strength: 82 }],
         developments: [{ scene_ordinal: 2, kind: "development" }],
-        payoffs: [{ scene_ordinal: 3, type: "partial", summary: "部分回应身份" }],
+        payoffs: [
+          {
+            scene_ordinal: 3,
+            type: "partial",
+            summary: "部分回应身份",
+            evidence_paragraph_ids: ["B0001-C0001-P0010"],
+          },
+        ],
         status: "partially_resolved",
         display_status: "partially_resolved",
         consistency_status: "consistent",
         conflicts: [],
         primary_relation: {
           grade: "probable",
-          payoff_ref: { scene_ordinal: 3, type: "partial" },
+          payoff_ref: {
+            scene_ordinal: 3,
+            type: "partial",
+            source_type: "entity",
+            evidence_paragraph_ids: ["B0001-C0001-P0010"],
+          },
         },
       },
       {

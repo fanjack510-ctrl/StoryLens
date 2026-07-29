@@ -43,11 +43,14 @@ describe("Hook resolution result page (CHG-005 ordinary UI)", () => {
     expect(screen.getByTestId("hook-resolution-verdict").textContent).not.toMatch(/判定冲突/);
   });
 
-  it("shows empty state without scene row", () => {
+  it("empty state keeps scene track with blank labels when no loops", () => {
     const empty = vizWithLoops();
     (empty as { narrative_loops: unknown[] }).narrative_loops = [];
     render(<HookPayoffTimeline visualization={empty} />);
     expect(screen.getByTestId("hook-resolution-empty")).toBeInTheDocument();
-    expect(screen.queryByTestId("hook-chapter-scene-row")).not.toBeInTheDocument();
+    expect(screen.getByTestId("hook-chapter-scene-row")).toBeInTheDocument();
+    expect(screen.getByTestId("hook-chapter-scene-label-1").textContent).toBe("—");
+    expect(screen.getByTestId("hook-stat-answered").textContent).toMatch(/本章回应：0/);
+    expect(screen.getByTestId("hook-stat-chapter-pull").textContent).toMatch(/暂无/);
   });
 });

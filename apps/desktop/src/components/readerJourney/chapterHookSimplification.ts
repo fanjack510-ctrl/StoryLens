@@ -1,5 +1,6 @@
 /**
- * CHG-20260729-005 — ordinary-user chapter hook page simplification (presentation only).
+ * CHG-20260729-005 — ordinary-user chapter hook presentation (presentation only).
+ * Single fact source for overview / scene actions / ending pull / right insight / diagnosis band.
  * Does NOT change hook recognition, persisted facts, or other lenses.
  */
 
@@ -26,15 +27,29 @@ export const CHAPTER_HOOK_PAGE_BLURB =
 
 export const CHAPTER_HOOK_EMPTY_TITLE = "本章未识别到明确的阅读钩子。";
 export const CHAPTER_HOOK_EMPTY_NOTE =
-  "这不一定代表章节存在问题；本章可能主要承担过渡、解释或情绪收束任务。";
+  "这不一定代表章节存在问题；本章可能主要承担过渡、说明、氛围营造或情绪收束任务。";
 export const CHAPTER_HOOK_LOW_CONFIDENCE_TITLE =
   "当前仅识别到较弱的阅读期待，暂无可靠钩子结论。";
+
+export const CHAPTER_HOOK_SCENE_NONE_INSIGHT =
+  "本场景未识别到可靠的钩子提出、强化或回应。";
+export const CHAPTER_HOOK_SCENE_UNCERTAIN_INSIGHT =
+  "当前场景仅存在较弱的阅读期待信号，暂无可靠钩子结论。";
 
 export type ChapterHookNodeLabel =
   | "提出疑问"
   | "加深悬念"
   | "给出回应"
   | "留到下章";
+
+export type ChapterHookSceneAction =
+  | "raise"
+  | "deepen"
+  | "respond"
+  | "carry"
+  | "none";
+
+export type ChapterHookMode = "reliable" | "uncertain" | "none";
 
 export type ChapterPullLabel = "明确" | "较弱" | "暂无" | "无法判断";
 
@@ -46,6 +61,7 @@ export type ImportantHookResultLabel =
 
 export type ChapterHookNodeJudgment = {
   short_label: ChapterHookNodeLabel | null;
+  scene_action: ChapterHookSceneAction;
   full_reason: string | null;
   related_hook_ids: string[];
   source: "derived" | "unavailable";
@@ -74,6 +90,7 @@ export type ChapterHookOverview = {
 export type ChapterHookSceneRow = {
   scene_ordinal: number;
   short_label: ChapterHookNodeLabel | null;
+  scene_action: ChapterHookSceneAction;
   full_reason: string | null;
   related_hook_ids: string[];
   source: "derived" | "unavailable";
@@ -106,23 +123,43 @@ export type ChapterHookTechRow = {
   evidence_count: number;
   source: string;
   confidence: string;
+  unlinked_response_signal: boolean;
 };
 
+/** @deprecated Prefer chapter_hook_mode. Kept for existing tests/UI attrs. */
 export type ChapterHookEmptyKind = "none" | "low_confidence" | "has_content";
 
+/** ChapterHookPresentationV1 — sole ordinary Hook UI fact source. */
 export type ChapterHookSimplificationModel = {
+  chapter_hook_mode: ChapterHookMode;
   empty: boolean;
   empty_kind: ChapterHookEmptyKind;
   empty_title: string | null;
   empty_note: string | null;
+  reliable_hook_count: number;
   max_scene: number;
   overview: ChapterHookOverview;
   important_hooks: ImportantChapterHook[];
   scene_rows: ChapterHookSceneRow[];
+  scene_actions: ChapterHookSceneAction[];
   ending_pull: ChapterEndingPull;
   tech_rows: ChapterHookTechRow[];
   page_blurb: string;
   summary_line: string;
+};
+
+const ACTION_TO_LABEL: Record<Exclude<ChapterHookSceneAction, "none">, ChapterHookNodeLabel> = {
+  raise: "提出疑问",
+  deepen: "加深悬念",
+  respond: "给出回应",
+  carry: "留到下章",
+};
+
+const LABEL_TO_ACTION: Record<ChapterHookNodeLabel, ChapterHookSceneAction> = {
+  提出疑问: "raise",
+  加深悬念: "deepen",
+  给出回应: "respond",
+  留到下章: "carry",
 };
 
 function openSceneOf(loop: NarrativeLoopView): number {
@@ -141,6 +178,17 @@ function entityPayoffs(loop: NarrativeLoopView): NarrativeLoopPayoff[] {
       p.source_type !== "score_inferred" &&
       String(p.type || "") !== "score_inferred",
   );
+}
+
+function evidenceIdsOf(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((x) => String(x || "").trim())
+    .filter((x) => Boolean(x) && !isInternalNoise(x));
+}
+
+function hasValidEvidence(ids: unknown): boolean {
+  return evidenceIdsOf(ids).length > 0;
 }
 
 function loopImportance(loop: NarrativeLoopView, openScene: number): number {
@@ -173,6 +221,10 @@ function readerQuestionOf(loop: NarrativeLoopView): string | null {
   const cleaned = shortPlainTitle(raw, 18);
   if (!cleaned || isInternalNoise(cleaned)) return null;
   return cleaned;
+}
+
+function isReliableHook(loop: NarrativeLoopView): boolean {
+  return Boolean(readerQuestionOf(loop));
 }
 
 /** Safe fallback when question cannot be cleaned into a reader question. */
@@ -214,11 +266,46 @@ function sceneHasDeepen(loop: NarrativeLoopView, scene: number): boolean {
   return hookHit && !payoffHit;
 }
 
-function sceneHasAnswer(loop: NarrativeLoopView, scene: number): boolean {
-  const info = resolveHookMainStatus(loop);
-  if (info.main_status === "unresolved") return false;
-  if (info.resolve_scene === scene) return true;
-  return entityPayoffs(loop).some((p) => p.scene_ordinal === scene);
+/**
+ * Hard gate for 「给出回应」:
+ * reliable_hook AND linked_response AND valid_evidence (not score-only).
+ */
+export function sceneHasReliableLinkedResponse(
+  loop: NarrativeLoopView,
+  scene: number,
+): boolean {
+  if (!isReliableHook(loop)) return false;
+  const open = openSceneOf(loop);
+  if (open > scene) return false;
+
+  const grade = String(loop.primary_relation?.grade || "").toLowerCase();
+  if (grade === "unsupported") return false;
+  if (loop.primary_relation?.blocked || loop.hard_blocked) return false;
+
+  const pref = loop.primary_relation?.payoff_ref;
+  const prefIsScore =
+    pref &&
+    (pref.source_type === "score_inferred" || String(pref.type || "") === "score_inferred");
+
+  // Linked entity payoffs on this loop at this scene.
+  const linkedEntities = entityPayoffs(loop).filter((p) => p.scene_ordinal === scene);
+  for (const p of linkedEntities) {
+    if (hasValidEvidence(p.evidence_paragraph_ids)) return true;
+  }
+
+  // Explicit primary_relation payoff_ref to this scene (non score_inferred) with evidence.
+  if (
+    pref &&
+    !prefIsScore &&
+    pref.scene_ordinal === scene &&
+    (grade === "confirmed" || grade === "probable" || grade === "candidate")
+  ) {
+    if (hasValidEvidence(pref.evidence_paragraph_ids)) return true;
+    // Entity payoff matched by scene may carry evidence under payoffs[].
+    if (linkedEntities.some((p) => hasValidEvidence(p.evidence_paragraph_ids))) return true;
+  }
+
+  return false;
 }
 
 function sceneHasCarryToNext(
@@ -226,8 +313,8 @@ function sceneHasCarryToNext(
   scene: number,
   maxScene: number,
 ): boolean {
-  // Ordinary node label「留到下章」only on the final scene.
   if (scene !== maxScene) return false;
+  if (!isReliableHook(loop)) return false;
   const info = resolveHookMainStatus(loop);
   if (info.main_status === "resolved") return false;
   const open = openSceneOf(loop);
@@ -265,8 +352,6 @@ function lastChangeSceneOf(
   }
   if (info.resolve_scene != null) points.push(info.resolve_scene);
   const lastReal = Math.max(...points.filter((n) => Number.isFinite(n)), openSceneOf(loop));
-  // Only treat chapter-end as a change when the hook is still unresolved and
-  // its last real activity is already near the chapter end (carry-forward).
   if (info.main_status === "unresolved" && isNearChapterEnd(lastReal, maxScene)) {
     return maxScene;
   }
@@ -279,27 +364,57 @@ function isStillActiveNearChapterEnd(
 ): boolean {
   const info = resolveHookMainStatus(loop);
   if (info.main_status === "resolved") return false;
+  if (!isReliableHook(loop)) return false;
   const open = openSceneOf(loop);
   if (open > maxScene) return false;
   const last = lastChangeSceneOf(loop, info, maxScene);
-  // Prefer hooks whose last activity (or raise) sits in the final 1–2 scenes.
   return isNearChapterEnd(last, maxScene) || isNearChapterEnd(open, maxScene);
+}
+
+function labelToAction(label: ChapterHookNodeLabel | null): ChapterHookSceneAction {
+  if (!label) return "none";
+  return LABEL_TO_ACTION[label];
 }
 
 /**
  * Deterministic per-scene ordinary label.
- * Priority: 给出回应 > 留到下章 > 加深悬念 > 提出疑问
+ * Priority: 给出回应 > 留到下章 > 加深悬念 > 提出疑问 > none
+ * Respond requires hard gate.
  */
 export function deriveChapterHookNodeLabelV1(input: {
   sceneOrdinal: number;
   maxScene: number;
   loops: NarrativeLoopView[];
   topImportantLoopId?: string | null;
+  chapterHookMode?: ChapterHookMode;
 }): ChapterHookNodeJudgment {
-  const { sceneOrdinal, maxScene, loops, topImportantLoopId } = input;
-  if (!loops.length) {
+  const {
+    sceneOrdinal,
+    maxScene,
+    loops,
+    topImportantLoopId,
+    chapterHookMode = "reliable",
+  } = input;
+
+  if (chapterHookMode !== "reliable") {
     return {
       short_label: null,
+      scene_action: "none",
+      full_reason:
+        chapterHookMode === "uncertain"
+          ? "当前场景暂无可靠的钩子判断。"
+          : "当前节点暂无可靠判断",
+      related_hook_ids: [],
+      source: "unavailable",
+      confidence: "low",
+    };
+  }
+
+  const reliable = loops.filter(isReliableHook);
+  if (!reliable.length) {
+    return {
+      short_label: null,
+      scene_action: "none",
       full_reason: "当前节点暂无可靠判断",
       related_hook_ids: [],
       source: "unavailable",
@@ -307,14 +422,13 @@ export function deriveChapterHookNodeLabelV1(input: {
     };
   }
 
-  const answerLoops = loops.filter((l) => sceneHasAnswer(l, sceneOrdinal));
-  const carryLoops = loops.filter((l) => sceneHasCarryToNext(l, sceneOrdinal, maxScene));
-  const deepenLoops = loops.filter((l) => sceneHasDeepen(l, sceneOrdinal));
-  const raiseLoops = loops.filter((l) => sceneHasRaise(l, sceneOrdinal));
+  const answerLoops = reliable.filter((l) => sceneHasReliableLinkedResponse(l, sceneOrdinal));
+  const carryLoops = reliable.filter((l) => sceneHasCarryToNext(l, sceneOrdinal, maxScene));
+  const deepenLoops = reliable.filter((l) => sceneHasDeepen(l, sceneOrdinal));
+  const raiseLoops = reliable.filter((l) => sceneHasRaise(l, sceneOrdinal));
 
   const topRaise =
-    topImportantLoopId &&
-    raiseLoops.some((l) => l.loop_id === topImportantLoopId);
+    topImportantLoopId && raiseLoops.some((l) => l.loop_id === topImportantLoopId);
 
   let label: ChapterHookNodeLabel | null = null;
   let related: NarrativeLoopView[] = [];
@@ -324,12 +438,12 @@ export function deriveChapterHookNodeLabelV1(input: {
   if (answerLoops.length && !topRaise) {
     label = "给出回应";
     related = answerLoops;
-    reason = "本场景对已有问题给出了有效信息（部分或完整回应）。";
+    reason = "本场景对已有可靠问题给出了有效关联回应。";
     confidence = "high";
   } else if (answerLoops.length && topRaise) {
     label = "给出回应";
     related = answerLoops;
-    reason = "本场景对已有问题给出了有效信息；同时可能提出新问题。";
+    reason = "本场景对已有可靠问题给出了有效关联回应；同时可能提出新问题。";
     confidence = "high";
   } else if (carryLoops.length) {
     label = "留到下章";
@@ -363,6 +477,7 @@ export function deriveChapterHookNodeLabelV1(input: {
   if (!label) {
     return {
       short_label: null,
+      scene_action: "none",
       full_reason: "当前节点暂无可靠判断",
       related_hook_ids: [],
       source: "unavailable",
@@ -372,6 +487,7 @@ export function deriveChapterHookNodeLabelV1(input: {
 
   return {
     short_label: label,
+    scene_action: LABEL_TO_ACTION[label],
     full_reason: reason,
     related_hook_ids: related.map((l) => l.loop_id),
     source: "derived",
@@ -386,13 +502,12 @@ export function selectImportantChapterHooks(
 ): ImportantChapterHook[] {
   const scored = loops
     .map((loop) => {
+      if (!isReliableHook(loop)) return null;
       const open = openSceneOf(loop);
       const info = resolveHookMainStatus(loop);
-      const q = readerQuestionOf(loop) ?? (safeHookSummary(loop) !== "暂无可靠判断" ? safeHookSummary(loop) : null);
-      if (!q || q === "暂无可靠判断") return null;
-      if (isInternalNoise(q)) return null;
+      const q = readerQuestionOf(loop);
+      if (!q) return null;
       const importance = loopImportance(loop, open);
-      // Drop very low-value noise.
       if (importance < 40 && info.main_status === "resolved") return null;
       let role: ImportantChapterHook["role"] = "提出";
       if (info.main_status === "resolved") role = "回应";
@@ -426,13 +541,13 @@ export function selectImportantChapterHooks(
 export function deriveChapterPullLabel(
   loops: NarrativeLoopView[],
   maxScene: number,
+  mode: ChapterHookMode = "reliable",
 ): ChapterPullLabel {
+  if (mode === "none") return "暂无";
+  if (mode === "uncertain") return "无法判断";
   if (!loops.length) return "无法判断";
-  // Only last 1–2 scenes' still-active important hooks count as ending pull.
   const endLoops = loops.filter((loop) => isStillActiveNearChapterEnd(loop, maxScene));
-  if (!endLoops.length) {
-    return "暂无";
-  }
+  if (!endLoops.length) return "暂无";
   const strong = endLoops.filter((loop) => {
     const q = readerQuestionOf(loop);
     const imp = loopImportance(loop, openSceneOf(loop));
@@ -446,8 +561,28 @@ export function deriveChapterPullLabel(
 export function deriveChapterEndingPullV1(
   loops: NarrativeLoopView[],
   maxScene: number,
+  mode: ChapterHookMode = "reliable",
 ): ChapterEndingPull {
-  const readable = loops.filter((l) => readerQuestionOf(l) || safeHookSummary(l) !== "暂无可靠判断");
+  if (mode === "none") {
+    return {
+      status: "暂无",
+      left_behind: null,
+      reader_wants: null,
+      judgment: "暂无可靠判断",
+      source: "derived",
+    };
+  }
+  if (mode === "uncertain") {
+    return {
+      status: "无法判断",
+      left_behind: null,
+      reader_wants: null,
+      judgment: "暂无可靠判断",
+      source: "unavailable",
+    };
+  }
+
+  const readable = loops.filter(isReliableHook);
   if (!loops.length) {
     return {
       status: "无法判断",
@@ -472,7 +607,7 @@ export function deriveChapterEndingPullV1(
       return a.loop.loop_id.localeCompare(b.loop.loop_id);
     });
 
-  const status = deriveChapterPullLabel(readable, maxScene);
+  const status = deriveChapterPullLabel(readable, maxScene, mode);
   if (!candidates.length) {
     return {
       status: status === "无法判断" ? "无法判断" : "暂无",
@@ -518,44 +653,47 @@ export function deriveChapterHookSceneInsightV1(input: {
   visualization: ReaderJourneyVisualization;
   sceneOrdinal: number;
   node?: JourneySceneNode | null;
+  presentation?: ChapterHookSimplificationModel | null;
 }): ChapterHookSceneInsight {
   const { visualization, sceneOrdinal, node } = input;
-  const loops = getNarrativeLoops(visualization);
-  const maxScene = maxSceneOf(visualization);
-  const readable = loops.filter((l) => readerQuestionOf(l));
-  const important = selectImportantChapterHooks(readable.length ? readable : loops, maxScene, 3);
-  const judgment = deriveChapterHookNodeLabelV1({
-    sceneOrdinal,
-    maxScene,
-    loops: readable.length ? readable : loops,
-    topImportantLoopId: important[0]?.loop_id ?? null,
-  });
-  const role =
-    node?.scene_role != null
-      ? roleLabelZh(node.scene_role)
-      : node?.role != null
-        ? roleLabelZh(node.role)
-        : "场景";
+  const model = input.presentation ?? buildChapterHookSimplificationModel(visualization);
   const title = `${formatJourneySceneLabel(sceneOrdinal)} · 钩子洞察`;
+  const row = model.scene_rows.find((r) => r.scene_ordinal === sceneOrdinal) ?? null;
 
-  if (judgment.source === "unavailable" || !judgment.short_label) {
+  if (model.chapter_hook_mode === "uncertain") {
     return {
       title,
-      body: "本场景暂无可靠的钩子洞察。",
+      body: CHAPTER_HOOK_SCENE_UNCERTAIN_INSIGHT,
+      source: "unavailable",
+      node_label: null,
+    };
+  }
+  if (model.chapter_hook_mode === "none") {
+    return {
+      title,
+      body: CHAPTER_HOOK_SCENE_NONE_INSIGHT,
       source: "unavailable",
       node_label: null,
     };
   }
 
-  const related = (readable.length ? readable : loops).filter((l) =>
-    judgment.related_hook_ids.includes(l.loop_id),
-  );
+  if (!row || row.scene_action === "none" || !row.short_label) {
+    return {
+      title,
+      body: CHAPTER_HOOK_SCENE_NONE_INSIGHT,
+      source: "unavailable",
+      node_label: null,
+    };
+  }
+
+  const loops = getNarrativeLoops(visualization).filter(isReliableHook);
+  const related = loops.filter((l) => row.related_hook_ids.includes(l.loop_id));
   const q =
     related.map((l) => readerQuestionOf(l) || safeHookSummary(l)).find(Boolean) ||
     "相关阅读期待";
 
   let body: string;
-  switch (judgment.short_label) {
+  switch (row.short_label) {
     case "提出疑问":
       body = `本场景提出了「${q}」这一读者问题，打开了后续阅读期待，但尚未给出明确答案。`;
       break;
@@ -569,12 +707,7 @@ export function deriveChapterHookSceneInsightV1(input: {
       body = `本场景将近章末，将「${q}」明确留给下一章，形成跨章继续阅读的牵引。`;
       break;
     default:
-      body = "本场景暂无可靠的钩子洞察。";
-  }
-
-  // Keep 60–160 chars preference; truncate hard at 160.
-  if (zhLen(body) < 40) {
-    body = `${body}（场景角色：${role}）`;
+      body = CHAPTER_HOOK_SCENE_NONE_INSIGHT;
   }
   body = truncateZh(body, 160);
 
@@ -582,7 +715,7 @@ export function deriveChapterHookSceneInsightV1(input: {
     title,
     body,
     source: "derived",
-    node_label: judgment.short_label,
+    node_label: row.short_label,
   };
 }
 
@@ -593,6 +726,13 @@ function buildTechRows(loops: NarrativeLoopView[]): ChapterHookTechRow[] {
       ...(info.evidence_paragraph_ids || []),
       ...(loop.evidence || []),
     ];
+    const hasScoreSignal = Boolean(
+      loop.primary_relation?.payoff_ref?.source_type === "score_inferred" ||
+        Object.keys(loop.payoff_score_by_scene || {}).length,
+    );
+    const hasLinked = entityPayoffs(loop).some((p) =>
+      hasValidEvidence(p.evidence_paragraph_ids),
+    );
     return {
       loop_id: loop.loop_id,
       question: safeHookSummary(loop),
@@ -607,8 +747,34 @@ function buildTechRows(loops: NarrativeLoopView[]): ChapterHookTechRow[] {
       evidence_count: evidence.length,
       source: loop.primary_relation?.grade ? String(loop.primary_relation.grade) : "derived",
       confidence: info.has_conflict ? "low" : "medium",
+      unlinked_response_signal: hasScoreSignal && !hasLinked,
     };
   });
+}
+
+function resolveChapterHookMode(
+  loops: NarrativeLoopView[],
+  reliable: NarrativeLoopView[],
+): ChapterHookMode {
+  if (!loops.length) return "none";
+  if (!reliable.length) return "uncertain";
+  return "reliable";
+}
+
+function modeToEmptyKind(mode: ChapterHookMode): ChapterHookEmptyKind {
+  if (mode === "none") return "none";
+  if (mode === "uncertain") return "low_confidence";
+  return "has_content";
+}
+
+/** Ordinary diagnosis-band / scene-index label for hook_payoff lens. */
+export function ordinaryHookSceneBandLabel(
+  presentation: ChapterHookSimplificationModel,
+  sceneOrdinal: number,
+): string {
+  const row = presentation.scene_rows.find((r) => r.scene_ordinal === sceneOrdinal);
+  if (!row || row.scene_action === "none" || !row.short_label) return "—";
+  return row.short_label;
 }
 
 export function buildChapterHookSimplificationModel(
@@ -616,92 +782,110 @@ export function buildChapterHookSimplificationModel(
 ): ChapterHookSimplificationModel {
   const loops = getNarrativeLoops(visualization);
   const maxScene = maxSceneOf(visualization);
-  const readable = loops.filter((l) => readerQuestionOf(l));
-  const weakOnly =
-    loops.length > 0 &&
-    readable.length === 0 &&
-    loops.every((l) => loopImportance(l, openSceneOf(l)) < 55);
+  const reliable = loops.filter(isReliableHook);
+  const chapter_hook_mode = resolveChapterHookMode(loops, reliable);
+  const empty_kind = modeToEmptyKind(chapter_hook_mode);
 
-  const important = selectImportantChapterHooks(
-    readable.length ? readable : loops,
-    maxScene,
-    3,
-  );
+  const important =
+    chapter_hook_mode === "reliable"
+      ? selectImportantChapterHooks(reliable, maxScene, 3)
+      : [];
   const topId = important[0]?.loop_id ?? null;
 
-  const raised = readable.filter((l) => {
-    const open = openSceneOf(l);
-    return open >= 1 && open <= maxScene;
-  }).length;
-  const answered = readable.filter((l) => {
-    const info = resolveHookMainStatus(l);
-    return info.main_status === "resolved" || info.main_status === "partial";
-  }).length;
-  const carried = readable.filter(
-    (l) => resolveHookMainStatus(l).main_status === "unresolved",
-  ).length;
+  let raised = 0;
+  let answered = 0;
+  let carried = 0;
+  if (chapter_hook_mode === "reliable") {
+    raised = reliable.filter((l) => {
+      const open = openSceneOf(l);
+      return open >= 1 && open <= maxScene;
+    }).length;
+    answered = reliable.filter((l) => {
+      for (let s = openSceneOf(l); s <= maxScene; s += 1) {
+        if (sceneHasReliableLinkedResponse(l, s)) return true;
+      }
+      return false;
+    }).length;
+    carried = reliable.filter((l) => {
+      const info = resolveHookMainStatus(l);
+      if (info.main_status !== "unresolved") return false;
+      return isStillActiveNearChapterEnd(l, maxScene) || info.main_status === "unresolved";
+    }).length;
+    // continued_count: reliable still-open hooks (not auto every unresolved mid-chapter as "牵引")
+    carried = reliable.filter(
+      (l) => resolveHookMainStatus(l).main_status === "unresolved",
+    ).length;
+  }
 
-  const ending_pull = deriveChapterEndingPullV1(readable.length ? readable : loops, maxScene);
-  const chapter_pull = ending_pull.status;
+  const ending_pull = deriveChapterEndingPullV1(loops, maxScene, chapter_hook_mode);
+  const chapter_pull =
+    chapter_hook_mode === "none"
+      ? "暂无"
+      : chapter_hook_mode === "uncertain"
+        ? "无法判断"
+        : ending_pull.status;
 
   const scene_rows: ChapterHookSceneRow[] = [];
   for (let s = 1; s <= maxScene; s += 1) {
     const j = deriveChapterHookNodeLabelV1({
       sceneOrdinal: s,
       maxScene,
-      loops: readable.length ? readable : loops,
+      loops: reliable,
       topImportantLoopId: topId,
+      chapterHookMode: chapter_hook_mode,
     });
     scene_rows.push({
       scene_ordinal: s,
       short_label: j.short_label,
+      scene_action: j.scene_action,
       full_reason: j.full_reason,
       related_hook_ids: j.related_hook_ids,
       source: j.source,
     });
   }
 
-  let empty_kind: ChapterHookEmptyKind = "has_content";
+  const overview: ChapterHookOverview = {
+    raised: chapter_hook_mode === "reliable" ? raised : 0,
+    answered: chapter_hook_mode === "reliable" ? answered : 0,
+    carried: chapter_hook_mode === "reliable" ? carried : 0,
+    chapter_pull,
+  };
+
   let empty_title: string | null = null;
   let empty_note: string | null = null;
-  if (loops.length === 0) {
-    empty_kind = "none";
+  if (chapter_hook_mode === "none") {
     empty_title = CHAPTER_HOOK_EMPTY_TITLE;
     empty_note = CHAPTER_HOOK_EMPTY_NOTE;
-  } else if (readable.length === 0) {
-    empty_kind = "low_confidence";
-    empty_title = CHAPTER_HOOK_LOW_CONFIDENCE_TITLE;
-    empty_note = CHAPTER_HOOK_EMPTY_NOTE;
-  } else if (weakOnly) {
-    empty_kind = "low_confidence";
+  } else if (chapter_hook_mode === "uncertain") {
     empty_title = CHAPTER_HOOK_LOW_CONFIDENCE_TITLE;
     empty_note = CHAPTER_HOOK_EMPTY_NOTE;
   }
 
-  const overview: ChapterHookOverview = {
-    raised,
-    answered,
-    carried,
-    chapter_pull,
-  };
-
   const summary_line =
-    empty_kind !== "has_content"
+    chapter_hook_mode !== "reliable"
       ? empty_title || CHAPTER_HOOK_EMPTY_TITLE
       : `本章提出 ${overview.raised} 个重要问题，回应 ${overview.answered} 个，继续保留 ${overview.carried} 个；章末牵引：${overview.chapter_pull}。`;
 
   return {
-    empty: empty_kind !== "has_content",
+    chapter_hook_mode,
+    empty: chapter_hook_mode !== "reliable",
     empty_kind,
     empty_title,
     empty_note,
+    reliable_hook_count: reliable.length,
     max_scene: maxScene,
     overview,
-    important_hooks: empty_kind === "has_content" ? important : [],
-    scene_rows: empty_kind === "has_content" ? scene_rows : [],
-    ending_pull,
+    important_hooks: important,
+    scene_rows,
+    scene_actions: scene_rows.map((r) => r.scene_action),
+    ending_pull: {
+      ...ending_pull,
+      status: chapter_pull,
+    },
     tech_rows: buildTechRows(loops),
     page_blurb: CHAPTER_HOOK_PAGE_BLURB,
     summary_line,
   };
 }
+
+export { ACTION_TO_LABEL, labelToAction };

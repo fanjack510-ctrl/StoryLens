@@ -72,6 +72,8 @@ type Props = {
   observationLens?: ObservationLensId | null;
   /** When set on 钩子回收 lens, show ordinary-language hook resolution evidence. */
   selectedLoopId?: string | null;
+  /** Shared ChapterHookPresentationV1 — avoids independent score/diagnosis inference. */
+  hookPresentation?: import("./chapterHookSimplification").ChapterHookSimplificationModel | null;
 };
 
 function HookResolutionEvidenceSection({ row }: { row: HookResolutionRow }) {
@@ -110,6 +112,7 @@ export function JourneySceneDetailPanel({
   visualization = null,
   observationLens = DEFAULT_OBSERVATION_LENS,
   selectedLoopId = null,
+  hookPresentation = null,
 }: Props) {
   const developerMode = useDeveloperModeStore((state) => state.developerMode);
 
@@ -126,8 +129,9 @@ export function JourneySceneDetailPanel({
       visualization,
       sceneOrdinal: node.scene_ordinal,
       node,
+      presentation: hookPresentation,
     });
-  }, [visualization, observationLens, node]);
+  }, [visualization, observationLens, node, hookPresentation]);
 
   const evidenceRows = useMemo(() => {
     const rows: EvidenceRow[] = [];

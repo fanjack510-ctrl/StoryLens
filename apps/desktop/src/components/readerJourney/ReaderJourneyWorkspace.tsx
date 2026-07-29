@@ -55,6 +55,7 @@ import {
   type CompareMetricKey,
 } from "./comparisonState";
 import { HookPayoffTimeline } from "./HookPayoffTimeline";
+import { buildChapterHookSimplificationModel } from "./chapterHookSimplification";
 import {
   getNarrativeLoops,
 } from "./narrativeLoopView";
@@ -195,6 +196,10 @@ export function ReaderJourneyWorkspace({
   const visualization = useMemo(
     () => enrichVisualizationComprehensivePresentation(visualizationProp),
     [visualizationProp],
+  );
+  const hookPresentation = useMemo(
+    () => buildChapterHookSimplificationModel(visualization),
+    [visualization],
   );
   const workspaceRef = useRef<HTMLDivElement>(null);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -1182,6 +1187,7 @@ export function ReaderJourneyWorkspace({
             observationLensLabel={lensDef.labelZh}
             observationLens={observationLens}
             selectedLoopId={isHookPayoffLens(observationLens) ? selectedLoopId : null}
+            hookPresentation={isHookPayoffLens(observationLens) ? hookPresentation : null}
             onLocateEvidence={(id) => handleLocateEvidence(id, selectedNode)}
             onOpenInSceneList={
               onSelectScene ? () => onSelectScene(selectedNode.scene_id) : undefined
@@ -1587,6 +1593,7 @@ export function ReaderJourneyWorkspace({
                 {isHookPayoffLens(observationLens) ? (
                   <HookPayoffTimeline
                     visualization={visualization}
+                    presentation={hookPresentation}
                     selectedLoopId={selectedLoopId}
                     selectedSceneOrdinal={selectedSceneOrdinal}
                     onSelectLoop={handleSelectLoop}
@@ -1686,6 +1693,9 @@ export function ReaderJourneyWorkspace({
                 diagnoses={sceneDiagnoses}
                 selectedSceneOrdinal={selectedSceneOrdinal}
                 observationLens={observationLens}
+                hookPresentation={
+                  isHookPayoffLens(observationLens) ? hookPresentation : null
+                }
                 onSelectScene={(ordinal: number) => {
                   const node = visualization.scene_nodes.find(
                     (item) => item.scene_ordinal === ordinal,
