@@ -1590,6 +1590,12 @@ export function ReaderJourneyWorkspace({
                     selectedLoopId={selectedLoopId}
                     selectedSceneOrdinal={selectedSceneOrdinal}
                     onSelectLoop={handleSelectLoop}
+                    onSelectScene={(ordinal) => {
+                      const node = visualization.scene_nodes.find(
+                        (n) => n.scene_ordinal === ordinal,
+                      );
+                      if (node) handleSelectScene(node, "journey_scene");
+                    }}
                     onLocateEvidence={(id) => handleLocateEvidence(id, selectedNode)}
                   />
                 ) : (

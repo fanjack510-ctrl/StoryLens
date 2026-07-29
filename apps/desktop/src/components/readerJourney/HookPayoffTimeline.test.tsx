@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ReaderJourneyVisualization } from "../../types/readerJourneyVisualization";
 import { HookPayoffTimeline } from "./HookPayoffTimeline";
@@ -38,7 +38,32 @@ function vizWithLoops(): ReaderJourneyVisualization {
       scores: {},
     })),
     curve_series: {},
-    phases: [],
+    phases: [
+      {
+        ordinal: 1,
+        title: "开端",
+        start_scene_ordinal: 1,
+        end_scene_ordinal: 2,
+        average_engagement: 50,
+        summary: "",
+      },
+      {
+        ordinal: 2,
+        title: "发展",
+        start_scene_ordinal: 3,
+        end_scene_ordinal: 5,
+        average_engagement: 60,
+        summary: "",
+      },
+      {
+        ordinal: 3,
+        title: "收束",
+        start_scene_ordinal: 6,
+        end_scene_ordinal: 6,
+        average_engagement: 40,
+        summary: "",
+      },
+    ],
     question_chains: [],
     canonical_chains: [],
     hook_markers: [],
@@ -49,7 +74,8 @@ function vizWithLoops(): ReaderJourneyVisualization {
         loop_id: "L1",
         question: "他的真实身份究竟是什么人",
         open_from_scene: 1,
-        hook: [{ scene_ordinal: 1, type: "new", summary: "身份疑问" }],
+        hook: [{ scene_ordinal: 1, type: "new", summary: "身份疑问", strength: 75 }],
+        developments: [{ scene_ordinal: 2 }],
         payoffs: [{ scene_ordinal: 4, type: "partial", summary: "部分揭晓" }],
         status: "partially_resolved",
         display_status: "partially_resolved",
@@ -65,7 +91,7 @@ function vizWithLoops(): ReaderJourneyVisualization {
         loop_id: "L2",
         question: "父母为何异常",
         open_from_scene: 2,
-        hook: [{ scene_ordinal: 2, type: "new" }],
+        hook: [{ scene_ordinal: 2, type: "new", strength: 60 }],
         payoffs: [{ scene_ordinal: 5, type: "full", summary: "真相" }],
         status: "resolved",
         display_status: "resolved",
@@ -80,7 +106,7 @@ function vizWithLoops(): ReaderJourneyVisualization {
         loop_id: "L3",
         question: "背后声音从何而来",
         open_from_scene: 3,
-        hook: [{ scene_ordinal: 3, type: "new" }],
+        hook: [{ scene_ordinal: 3, type: "new", strength: 70 }],
         payoffs: [],
         status: "open",
         display_status: "open",
@@ -94,8 +120,8 @@ function vizWithLoops(): ReaderJourneyVisualization {
 
 afterEach(() => cleanup());
 
-describe("Hook resolution result page", () => {
-  it("shows overview + list only; no standalone conflict block or ID column", () => {
+describe("Hook resolution result page (CHG-005 ordinary UI)", () => {
+  it("shows simplified overview without technical conflict table", () => {
     const onSelect = vi.fn();
     render(
       <HookPayoffTimeline
@@ -105,66 +131,30 @@ describe("Hook resolution result page", () => {
       />,
     );
     expect(screen.getByTestId("hook-resolution-overview")).toBeInTheDocument();
-    expect(screen.queryByTestId("hook-resolution-conclusion")).not.toBeInTheDocument();
     expect(screen.queryByTestId("hook-resolution-conflicts")).not.toBeInTheDocument();
     expect(screen.queryByText("冲突提醒")).not.toBeInTheDocument();
-
-    expect(screen.getByTestId("hook-resolution-verdict").textContent).toMatch(
-      /本章建立 3 个钩子，已回收 1 个，部分回收 1 个，未回收 1 个，其中 1 个存在判定冲突/,
-    );
-    expect(screen.getByTestId("hook-payoff-stats").textContent).toMatch(/建立钩子 3/);
-    expect(screen.getByTestId("hook-payoff-stats").textContent).toMatch(/已回收 1/);
-    expect(screen.getByTestId("hook-payoff-stats").textContent).toMatch(/部分回收 1/);
-    expect(screen.getByTestId("hook-payoff-stats").textContent).toMatch(/未回收 1/);
-    expect(screen.getByTestId("hook-payoff-stats").textContent).toMatch(/有冲突 1/);
-
-    const lanes = screen.getAllByTestId("hook-payoff-loop-row");
-    expect(lanes).toHaveLength(3);
-    expect(lanes[0]).toHaveAttribute("data-main-status", "partial");
-    expect(lanes[0]).toHaveAttribute("data-line-style", "dashed");
-    expect(lanes[0]).toHaveAttribute("data-has-conflict", "true");
-    expect(within(lanes[0]).getByTestId("hook-resolution-lane-status").textContent).toMatch(
-      /部分回收｜有冲突/,
-    );
-    expect(lanes[1]).toHaveAttribute("data-line-style", "solid");
-    expect(lanes[2]).toHaveAttribute("data-line-style", "gray");
-    expect(within(lanes[2]).getByTestId("hook-resolution-node-unresolved")).toBeInTheDocument();
-
-    const table = screen.getByTestId("hook-resolution-table");
-    expect(table.textContent).not.toMatch(/\bID\b/);
-    expect(within(table).queryByText("L1")).not.toBeInTheDocument();
-    expect(within(table).queryByText("L2")).not.toBeInTheDocument();
-    expect(within(table).getByText("提出位置")).toBeInTheDocument();
-    expect(within(table).getByText("回收结果")).toBeInTheDocument();
-
-    const listRows = screen.getAllByTestId("hook-resolution-list-row");
-    expect(listRows).toHaveLength(3);
-    expect(listRows[0].textContent).toMatch(/有/);
-    expect(listRows[2].textContent).toMatch(/本章未回收/);
-    fireEvent.click(within(listRows[0]).getByTestId("hook-resolution-locate"));
+    expect(screen.getByTestId("hook-stat-raised").textContent).toMatch(/本章提出/);
+    expect(screen.getByTestId("hook-stat-answered").textContent).toMatch(/本章回应/);
+    expect(screen.getByTestId("hook-stat-carried").textContent).toMatch(/继续保留/);
+    expect(screen.getByTestId("hook-stat-chapter-pull").textContent).toMatch(/章末牵引/);
+    expect(screen.queryByTestId("hook-resolution-table")).not.toBeInTheDocument();
+    expect(screen.queryAllByTestId("hook-payoff-loop-row")).toHaveLength(0);
+    expect(screen.getByTestId("hook-chapter-important")).toBeInTheDocument();
+    fireEvent.click(screen.getAllByTestId("hook-chapter-important-item")[0].querySelector("button")!);
     expect(onSelect).toHaveBeenCalled();
   });
 
-  it("hides conflict stat when conflict count is zero", () => {
-    const viz = vizWithLoops();
-    (viz as { narrative_loops: Array<{ soft_conflict?: boolean; consistency_status?: string; conflicts?: unknown[] }> }).narrative_loops =
-      (viz as { narrative_loops: Array<Record<string, unknown>> }).narrative_loops.map((loop) => ({
-        ...loop,
-        soft_conflict: false,
-        consistency_status: "consistent",
-        conflicts: [],
-      }));
-    render(<HookPayoffTimeline visualization={viz} />);
+  it("does not show unresolved-as-failure conflict stat chrome", () => {
+    render(<HookPayoffTimeline visualization={vizWithLoops()} />);
     expect(screen.queryByTestId("hook-stat-conflict")).not.toBeInTheDocument();
     expect(screen.getByTestId("hook-resolution-verdict").textContent).not.toMatch(/判定冲突/);
   });
 
-  it("shows empty state without bus lanes", () => {
+  it("shows empty state without scene row", () => {
     const empty = vizWithLoops();
     (empty as { narrative_loops: unknown[] }).narrative_loops = [];
     render(<HookPayoffTimeline visualization={empty} />);
     expect(screen.getByTestId("hook-resolution-empty")).toBeInTheDocument();
-    expect(screen.queryAllByTestId("hook-payoff-loop-row")).toHaveLength(0);
-    expect(screen.queryByTestId("hook-resolution-conflicts")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("hook-chapter-scene-row")).not.toBeInTheDocument();
   });
 });

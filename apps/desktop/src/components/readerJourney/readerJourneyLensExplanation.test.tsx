@@ -103,7 +103,7 @@ describe("unified lens one-liners", () => {
       "线越高，当前节点带来的情绪感受越强，只表示强弱，不表示好坏。",
     );
     expect(getLensExplanation("hook_payoff").one_line_summary).toBe(
-      "查看本章建立了哪些钩子，以及它们是否已回收、部分回收或尚未回收。",
+      "查看本章提出了哪些问题、给出了哪些回应，以及留下了什么后续期待。",
     );
     expect(getLensExplanation("pacing").one_line_summary).toBe(
       "线越高，叙事推进越快；快慢需要与当前场景任务匹配。",

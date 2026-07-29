@@ -104,10 +104,10 @@ describe("CHG-014/002 Reader Journey terminology", () => {
   it("keeps legends to one compact row for numeric and hook/payoff lenses", () => {
     expect(NUMERIC_LENS_LEGEND.map((i) => i.label).join("")).toContain("阅读阻力");
     expect(HOOK_PAYOFF_LENS_LEGEND.map((i) => i.label)).toEqual([
-      "━ 已回收",
-      "┄ 部分回收",
-      "─ 未回收",
-      "⚠ 有冲突",
+      "提出疑问",
+      "加深悬念",
+      "给出回应",
+      "留到下章",
     ]);
     expect(NUMERIC_LENS_LEGEND.length).toBeLessThanOrEqual(5);
     expect(HOOK_PAYOFF_LENS_LEGEND.length).toBeLessThanOrEqual(5);

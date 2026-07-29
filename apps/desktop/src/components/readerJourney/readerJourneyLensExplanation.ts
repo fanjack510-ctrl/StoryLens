@@ -33,10 +33,10 @@ export const NUMERIC_LENS_LEGEND: Array<{ key: string; label: string }> = [
 
 /** 钩子回收 lens legend (≤1 row). */
 export const HOOK_PAYOFF_LENS_LEGEND: Array<{ key: string; label: string }> = [
-  { key: "resolved", label: "━ 已回收" },
-  { key: "partial", label: "┄ 部分回收" },
-  { key: "unresolved", label: "─ 未回收" },
-  { key: "conflict", label: "⚠ 有冲突" },
+  { key: "raise", label: "提出疑问" },
+  { key: "deepen", label: "加深悬念" },
+  { key: "answer", label: "给出回应" },
+  { key: "carry", label: "留到下章" },
 ];
 
 export const READER_JOURNEY_LENS_EXPLANATIONS: Record<
@@ -135,16 +135,16 @@ export const READER_JOURNEY_LENS_EXPLANATIONS: Record<
     title: "钩子回收",
     chart_title: "钩子总览",
     one_line_summary:
-      "查看本章建立了哪些钩子，以及它们是否已回收、部分回收或尚未回收。",
+      "查看本章提出了哪些问题、给出了哪些回应，以及留下了什么后续期待。",
     how_to_read: [
-      "实线已回收，虚线部分回收，灰线未回收。",
-      "每个钩子独占一行，冲突仅作轻量附加标记。",
-      "有冲突时主结论不变，详情在「查看证据」中说明。",
+      "顶部概览：本章提出、本章回应、继续保留、章末牵引。",
+      "场景短标签只表示：提出疑问、加深悬念、给出回应、留到下章。",
+      "继续保留是正常跨章状态，不代表失败。",
     ],
-    y_axis_semantics: "钩子提出与回收关系（非分数曲线）",
-    high_meaning: "问题已建立或得到回收",
-    low_meaning: "问题仍在等待回收",
-    caution: "识别存在分歧时，冲突是附加说明，不取代主结论。",
+    y_axis_semantics: "钩子提出与回应关系（非分数曲线）",
+    high_meaning: "问题已提出或得到回应",
+    low_meaning: "期待仍留给后续章节",
+    caution: "单章未回应不等于异常；重要钩子可跨章保留。",
     legend_items: HOOK_PAYOFF_LENS_LEGEND,
     metric_id: "hook",
   },

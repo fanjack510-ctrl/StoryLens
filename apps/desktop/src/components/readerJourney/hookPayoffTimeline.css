@@ -291,3 +291,116 @@
 .hook-payoff-timeline--rows {
   /* no-op wrappers — component root uses hook-resolution-panel */
 }
+
+/* CHG-20260729-005 ordinary chapter hook simplification */
+.hook-chapter-blurb {
+  margin: 0 0 8px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--muted, #6b7280);
+}
+
+.hook-chapter-important {
+  margin: 0 0 10px;
+}
+
+.hook-chapter-important h3 {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.hook-chapter-important-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.hook-chapter-important-btn {
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--line, #e5e7eb);
+  background: var(--surface, #fff);
+  border-radius: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hook-chapter-important-btn.is-active,
+.hook-chapter-important-btn:hover {
+  border-color: #2f6f4e;
+}
+
+.hook-chapter-q {
+  font-size: 13px;
+  color: var(--text, #111);
+}
+
+.hook-chapter-meta {
+  font-size: 11px;
+  color: var(--muted, #6b7280);
+}
+
+.hook-chapter-scene-track {
+  position: relative;
+  padding: 28px 12px 12px;
+}
+
+.hook-chapter-stage-bands {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  top: 4px;
+  height: 22px;
+  pointer-events: none;
+}
+
+.hook-chapter-scene-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  position: relative;
+  z-index: 1;
+}
+
+.hook-chapter-scene-node {
+  flex: 1 1 0;
+  min-width: 64px;
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: 8px;
+  padding: 8px 4px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.hook-chapter-scene-node.is-selected {
+  border-color: var(--accent, #2f6f4e);
+  background: color-mix(in srgb, var(--accent, #2f6f4e) 8%, transparent);
+}
+
+.hook-chapter-scene-id {
+  font-size: 11px;
+  color: var(--muted, #6b7280);
+}
+
+.hook-chapter-scene-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text, #111);
+  text-align: center;
+}
+
+.hook-stat-carried,
+[data-testid="hook-stat-carried"] {
+  color: var(--muted, #6b7280);
+}
