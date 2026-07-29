@@ -7,8 +7,8 @@
   "target_version": "1.1.2",
   "public_branch": "fix/1.1.2-reader-journey-stage-colors",
   "private_branch": "fix/1.1.2-reader-journey-stage-colors",
-  "status": "verified",
-  "release_pool_status": "pending",
+  "status": "integrated",
+  "release_pool_status": "included",
   "include_in_next_release": true,
   "forward_port_required": true,
   "forward_port_target": "integration/whole-book-v120",
@@ -71,7 +71,8 @@
     "release/evidence/hotfix/1.1.2/CHG-20260729-002/MANUAL_UI_ENV.md",
     "release/evidence/hotfix/1.1.2/CHG-20260729-002/MANUAL_GATE_PASS.md",
     "release/evidence/hotfix/1.1.2/CHG-20260729-002/manual-gate-defect/COMPUTED_STAGE_COLORS.json",
-    "release/evidence/hotfix/1.1.2/CHG-20260729-002/manual-gate-defect/MG-CHG-20260729-002-stage-colors-after-fix.png"
+    "release/evidence/hotfix/1.1.2/CHG-20260729-002/manual-gate-defect/MG-CHG-20260729-002-stage-colors-after-fix.png",
+    "release/evidence/hotfix/1.1.2/CHG-20260729-002/INTEGRATION_REPORT.md"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -80,5 +81,8 @@
     "notes": "Presentation-only; no persistence changes."
   },
   "created_at": "2026-07-29T04:04:02Z",
-  "updated_at": "2026-07-29T04:44:00Z"
+  "updated_at": "2026-07-29T04:50:00Z",
+  "head_inclusion": "INCLUDED",
+  "public_integration_commit": "9025d403758778c9feb4227508270c9c22a31cdf",
+  "private_integration_commit": "23a0b025db51acaa8e62f4e81bc7628f19a8e2a6"
 }
