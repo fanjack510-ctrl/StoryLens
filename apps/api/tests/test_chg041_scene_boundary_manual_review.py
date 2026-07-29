@@ -18,14 +18,18 @@ from app.db.models import (
     Book,
     BoundaryRevision,
     Chapter,
+    ChapterReaderJourneySummary,
     Paragraph,
+    ReaderJourneyPhase,
     ReaderJourneyRun,
     Scene,
+    SceneReaderJourneyProfile,
 )
 from app.db.session import migrate_phase_scene_boundary_manual_review
 from app.services import chapter_analysis_completion as cac
 from app.services.scene_boundary_manual_review import (
     SceneBoundaryError,
+    bind_journey_to_revision,
     compute_chapter_text_hash_v1,
     compute_diff_summary_v1,
     compute_scene_boundary_hash_v1,
@@ -510,6 +514,74 @@ def test_confirm_and_start_creates_revision_scoped_journey(testing_session):
         select(ReaderJourneyRun).where(ReaderJourneyRun.analysis_run_id == run.id)
     ).all()
     assert len(journey_rows) == 2  # superseded old + revision-scoped current
+
+
+def test_rebind_changed_boundary_clears_stale_persisted_result(testing_session):
+    _, _chapter, _, run, scenes = _seed_chapter(testing_session)
+    _attach_scene_analysis(testing_session, run, scenes)
+    revision = ensure_ai_model_revision_after_scenes_v1(testing_session, run)
+    journey = cac.ensure_auto_reader_journey_row(
+        testing_session, run, scene_revision_id=revision.id
+    )
+    assert journey is not None
+    first_scene = revision_scenes(testing_session, revision.id)[0]
+    testing_session.add(
+        SceneReaderJourneyProfile(
+            reader_journey_run_id=journey.id,
+            scene_id=first_scene.id,
+            scene_ordinal=first_scene.ordinal,
+            scene_value_summary="stale",
+            dominant_emotion="stale",
+        )
+    )
+    testing_session.add(
+        ReaderJourneyPhase(
+            reader_journey_run_id=journey.id,
+            ordinal=1,
+            title="stale",
+            start_scene_ordinal=1,
+            end_scene_ordinal=1,
+            primary_reader_question="stale",
+            dominant_emotion="stale",
+            reading_payoff="stale",
+            continuation_motivation="stale",
+            summary="stale",
+        )
+    )
+    testing_session.add(
+        ChapterReaderJourneySummary(
+            reader_journey_run_id=journey.id,
+            chapter_value_summary="stale",
+        )
+    )
+    testing_session.commit()
+
+    revision.boundary_hash = "changed-boundary-hash"
+    bind_journey_to_revision(
+        testing_session,
+        journey,
+        revision,
+        revision_scenes(testing_session, revision.id),
+    )
+    testing_session.flush()
+
+    assert testing_session.scalar(
+        select(SceneReaderJourneyProfile).where(
+            SceneReaderJourneyProfile.reader_journey_run_id == journey.id
+        )
+    ) is None
+    assert testing_session.scalar(
+        select(ReaderJourneyPhase).where(
+            ReaderJourneyPhase.reader_journey_run_id == journey.id
+        )
+    ) is None
+    assert testing_session.scalar(
+        select(ChapterReaderJourneySummary).where(
+            ChapterReaderJourneySummary.reader_journey_run_id == journey.id
+        )
+    ) is None
+    assert journey.completed_scene_count == 0
+    assert json.loads(journey.completed_scene_ids_json) == []
 
 
 def test_confirm_clears_awaiting_and_binds_hashes(testing_session):

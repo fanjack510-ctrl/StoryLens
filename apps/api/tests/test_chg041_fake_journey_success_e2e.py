@@ -79,3 +79,19 @@ def test_validate_then_confirm_start_journey_succeeds(testing_session, monkeypat
     )
     assert refreshed.completed_scene_count == 4
     assert refreshed.total_scene_count == 4
+
+    # Simulate first render and a process/session restart: both responses must be
+    # reconstructed exclusively from committed rows, with no regeneration.
+    from app.api.v1.reader_journey import _serialize_result
+
+    with Session() as first_session:
+        first = _serialize_result(
+            first_session, first_session.get(ReaderJourneyRun, journey_id)
+        )
+    with Session() as refresh_session:
+        after_refresh = _serialize_result(
+            refresh_session, refresh_session.get(ReaderJourneyRun, journey_id)
+        )
+    assert first.visualization is not None
+    assert after_refresh.visualization == first.visualization
+    assert after_refresh.journey_run_id == journey_id

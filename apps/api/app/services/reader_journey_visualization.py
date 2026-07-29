@@ -1193,17 +1193,26 @@ def build_reader_journey_visualization(
     if journey_run.status != "succeeded":
         return None
 
-    _revision, scenes = load_revision_scenes(session, journey_run.analysis_run_id)
+    # Prefer journey-bound included scenes (same set used by execute/persist).
+    try:
+        from app.services.scene_boundary_manual_review import load_journey_bound_scenes
+
+        _revision, scenes = load_journey_bound_scenes(session, journey_run)
+    except Exception:
+        _revision, scenes = load_revision_scenes(session, journey_run.analysis_run_id)
     if not scenes:
         return None
 
-    profile_rows = list(
-        session.scalars(
+    allowed_scene_ids = {int(scene.id) for scene in scenes}
+    profile_rows = [
+        row
+        for row in session.scalars(
             select(SceneReaderJourneyProfile)
             .where(SceneReaderJourneyProfile.reader_journey_run_id == journey_run.id)
             .order_by(SceneReaderJourneyProfile.scene_ordinal)
         )
-    )
+        if int(row.scene_id) in allowed_scene_ids
+    ]
     if len(profile_rows) != len(scenes):
         return None
 

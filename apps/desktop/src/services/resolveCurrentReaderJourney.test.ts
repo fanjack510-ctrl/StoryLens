@@ -61,25 +61,25 @@ describe("resolveCurrentReaderJourney", () => {
     expect(resolved.source).toBe("none");
   });
 
-  it("does not treat analysis run id as journey", () => {
+  it("honors an explicit superseded run from another revision", () => {
     const resolved = resolveCurrentReaderJourney({
       explicitJourneyRunId: 1,
       confirmedRevisionId: 2,
       candidates: [candidates[0]!],
     });
-    // id=1 is revision 1 superseded — rejected for confirmed 2
-    expect(resolved.journey).toBeNull();
-    expect(resolved.source).toBe("none");
+    expect(resolved.journey?.id).toBe(1);
+    expect(resolved.source).toBe("url");
   });
 
-  it("falls through when URL journey belongs to other revision", () => {
+  it("does not silently fall through when an explicit run is missing", () => {
     const resolved = resolveCurrentReaderJourney({
-      explicitJourneyRunId: 1,
+      explicitJourneyRunId: 99,
       confirmedRevisionId: 2,
       candidates,
     });
-    expect(resolved.source).toBe("active_for_revision");
-    expect(resolved.journey?.id).toBe(3);
+    expect(resolved.source).toBe("url");
+    expect(resolved.journey?.id).toBe(99);
+    expect(resolved.journey?.status).toBe("pending");
   });
 
   it("preserves journeyRun in URLSearchParams", () => {

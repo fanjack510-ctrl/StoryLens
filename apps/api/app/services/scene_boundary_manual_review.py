@@ -8,7 +8,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
@@ -19,7 +19,9 @@ from app.db.models import (
     BoundaryReviewSession,
     BoundaryRevision,
     Chapter,
+    ChapterReaderJourneySummary,
     Paragraph,
+    ReaderJourneyPhase,
     ReaderJourneyRun,
     Scene,
     SceneReaderJourneyProfile,
@@ -745,6 +747,23 @@ def bind_journey_to_revision(
     # Idempotent Confirm+Start must not wipe progress on an already-bound journey.
     if already_bound:
         return
+    # A draft revision keeps its row id while edits rematerialize its Scene rows.
+    # Rebinding must discard artifacts tied to the former boundary hash.
+    session.execute(
+        delete(SceneReaderJourneyProfile).where(
+            SceneReaderJourneyProfile.reader_journey_run_id == journey.id
+        )
+    )
+    session.execute(
+        delete(ReaderJourneyPhase).where(
+            ReaderJourneyPhase.reader_journey_run_id == journey.id
+        )
+    )
+    session.execute(
+        delete(ChapterReaderJourneySummary).where(
+            ChapterReaderJourneySummary.reader_journey_run_id == journey.id
+        )
+    )
     journey.result_status = "current"
     journey.total_scene_count = len(included)
     journey.remaining_scene_count = len(included)

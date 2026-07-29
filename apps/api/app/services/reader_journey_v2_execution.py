@@ -46,7 +46,6 @@ from app.services.reader_journey_pipeline import (
 )
 from app.services.reader_journey_progress import (
     is_scene_profile_complete,
-    load_revision_scenes,
     require_completed_scene_analysis,
     scene_analysis_artifact,
     sync_journey_run_counts,
@@ -139,12 +138,30 @@ def _load_v2_profiles_from_artifacts(
             .order_by(AnalysisArtifact.id)
         )
     )
-    # Prefer latest artifact per scene_id.
+    # Prefer latest artifact per scene_id, scoped to this journey's scenes.
+    # Without scoping, rematerialized revisions merge prior-journey scene ids.
+    allowed_scene_ids = {
+        int(row.scene_id)
+        for row in session.scalars(
+            select(SceneReaderJourneyProfile).where(
+                SceneReaderJourneyProfile.reader_journey_run_id == journey_run.id
+            )
+        )
+    }
+    if not allowed_scene_ids:
+        try:
+            allowed_scene_ids = {
+                int(item) for item in json.loads(journey_run.included_scene_ids_json or "[]")
+            }
+        except (TypeError, ValueError, json.JSONDecodeError):
+            allowed_scene_ids = set()
     by_scene: dict[int, AnalysisArtifact] = {}
     for row in rows:
         try:
             sid = int(row.subject_id)
         except (TypeError, ValueError):
+            continue
+        if allowed_scene_ids and sid not in allowed_scene_ids:
             continue
         by_scene[sid] = row
     profiles: list[SceneReaderJourneyProfileItemV2] = []
@@ -275,7 +292,9 @@ async def execute_reader_journey_v2(
                 session.commit()
                 return
 
-            _revision, scenes = load_revision_scenes(session, analysis_run.id)
+            from app.services.scene_boundary_manual_review import load_journey_bound_scenes
+
+            _revision, scenes = load_journey_bound_scenes(session, journey_run)
             require_completed_scene_analysis(session, analysis_run, scenes)
             chapter = session.get(Chapter, journey_run.chapter_id)
             paragraphs = list(

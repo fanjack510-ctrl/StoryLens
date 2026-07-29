@@ -1,0 +1,60 @@
+{
+  "change": "CHG-20260728-041",
+  "manual_gate": "MG-CHG-20260728-041",
+  "round": 6,
+  "forensics_copy": "%TEMP%/storylens-chg041-r6-persistence-forensics/database/storylens-mg-chg041-r5-add-scene.db",
+  "source_db_untouched": true,
+  "formal_database_writes": 0,
+  "answers": {
+    "1_journey_run_2_exists": true,
+    "2_status_succeeded": true,
+    "3_chapter_journey_result_exists": true,
+    "4_scene_profiles_complete_for_bound_scenes": "PARTIAL_POLLUTED",
+    "5_final_result_persisted": true,
+    "6_profiles_only_without_chapter_result": false,
+    "7_marked_superseded": false,
+    "8_bound_revision": "current_confirmed_revision_3",
+    "9_survives_db_reopen": true,
+    "10_api_query_by_run_id": "GET /api/v1/reader-journey-runs/2 exists; visualization rebuild returned null pre-fix"
+  },
+  "journey_run_2": {
+    "journey_run_id": 2,
+    "analysis_run_id": 1,
+    "chapter_id": 1,
+    "book_id": 1,
+    "scene_revision_id": 3,
+    "scene_revision_no": 3,
+    "scene_boundary_hash": "2ed0e2b486e66910766ed8093569ebf3519ec1a3edec318551edfd1a8b02fb46",
+    "chapter_text_hash": "3ac1704914657df75dd821dcb82e0bda5185353f2c6fd49d633c44c05cb40b66",
+    "status": "succeeded",
+    "result_status": "current",
+    "awaiting_confirmation": false,
+    "created_at": "2026-07-29 00:33:07.190513",
+    "started_at": "2026-07-29 00:33:07.191520",
+    "completed_at": "2026-07-29 00:33:07.528066",
+    "failed_at": null,
+    "superseded_at": null,
+    "included_scene_ids": [10, 11, 12, 13, 14, 15],
+    "total_scene_count": 6,
+    "completed_scene_count": 11,
+    "completed_scene_ids_polluted": [5, 10, 6, 11, 7, 12, 8, 13, 9, 14, 15],
+    "client_request_id": "auto-chapter-journey:1:rev:3",
+    "pipeline": "v2_native"
+  },
+  "related_counts": {
+    "profiles_run_2": 11,
+    "profiles_bound_scene_ids_10_to_15": 6,
+    "profiles_stale_scene_ids_5_to_9": 5,
+    "chapter_summaries_run_2": 1,
+    "phases_run_2": 3,
+    "phase_ordinal_span": "1..11 (polluted; should be 1..6)",
+    "confirmed_revision_scenes": 6
+  },
+  "visualization_rebuild_pre_fix": {
+    "load_revision_scenes_count": 6,
+    "load_journey_bound_scenes_count": 6,
+    "profile_row_count": 11,
+    "len_profiles_equals_len_scenes": false,
+    "visualization": null
+  }
+}

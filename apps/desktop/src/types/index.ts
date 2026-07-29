@@ -282,6 +282,13 @@ export type ReaderJourneyResult = {
     question_chains?: unknown[];
     [key: string]: unknown;
   } | null;
+  scene_revision_id?: number | null;
+  scene_boundary_hash?: string | null;
+  result_status?: string | null;
+  is_current?: boolean | null;
+  is_superseded?: boolean | null;
+  created_at?: string | null;
+  completed_at?: string | null;
 };
 export type SceneParagraphs = {
   scene_id: number;

@@ -298,10 +298,18 @@ export const analysisApi = {
       `/api/v1/analysis-runs/${runId}/reader-journey${q ? `?${q}` : ""}`,
     );
   },
-  readerJourneyById: (journeyRunId: number) =>
-    api<import("../types").ReaderJourneyResult>(
-      `/api/v1/reader-journey-runs/${journeyRunId}`,
-    ),
+  readerJourneyById: (
+    journeyRunId: number,
+    scope?: { bookId?: number | null; chapterId?: number | null },
+  ) => {
+    const params = new URLSearchParams();
+    if (scope?.bookId) params.set("book_id", String(scope.bookId));
+    if (scope?.chapterId) params.set("chapter_id", String(scope.chapterId));
+    const q = params.toString();
+    return api<import("../types").ReaderJourneyResult>(
+      `/api/v1/reader-journeys/${journeyRunId}${q ? `?${q}` : ""}`,
+    );
+  },
   readerJourneyProgress: (journeyRunId: number) =>
     api<import("../types").ReaderJourneyProgress>(
       `/api/v1/reader-journey-runs/${journeyRunId}/progress`,

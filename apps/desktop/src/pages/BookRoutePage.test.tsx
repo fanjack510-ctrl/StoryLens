@@ -41,6 +41,7 @@ vi.mock("../services/analysisApi", async () => {
         ],
       })),
       readerJourney: vi.fn(async () => ({ status: "missing", visualization: null })),
+      readerJourneyById: vi.fn(async () => ({ status: "missing", visualization: null })),
       sceneParagraphs: vi.fn(async () => ({
         paragraphs: [
           {
@@ -233,6 +234,10 @@ describe("Book chapter shell", () => {
       status: "missing",
       visualization: null,
     } as any);
+    vi.mocked(analysisApi.readerJourneyById).mockResolvedValue({
+      status: "missing",
+      visualization: null,
+    } as any);
     vi.mocked(analysisApi.run).mockResolvedValue({
       id: 77,
       subject_id: "2",
@@ -258,6 +263,42 @@ describe("Book chapter shell", () => {
   afterEach(() => {
     cleanup();
     vi.stubGlobal("fetch", defaultFetchMock);
+  });
+
+  it("loads an explicit journeyRun by id and chapter scope", async () => {
+    vi.mocked(analysisApi.readerJourneyById).mockResolvedValue({
+      journey_run_id: 2,
+      status: "succeeded",
+      result_status: "superseded",
+      scene_revision_id: 1,
+      visualization: {
+        scene_nodes: [
+          {
+            scene_ordinal: 1,
+            scores: { reading_momentum: 50, plot_progress: 50 },
+            engagement: { engagement_score: 50 },
+          },
+        ],
+        phases: [{ ordinal: 1 }],
+        curve_series: { curiosity: [{ scene_ordinal: 1, value: 50 }] },
+      },
+    } as any);
+
+    renderBook(
+      "/books/1?chapter=2&analysisRun=77&view=result&journeyRun=2&tab=reader-journey",
+    );
+
+    await waitFor(() => {
+      expect(analysisApi.readerJourneyById).toHaveBeenCalledWith(2, {
+        bookId: 1,
+        chapterId: 2,
+      });
+    });
+    expect(analysisApi.readerJourney).not.toHaveBeenCalled();
+    expect(await screen.findByTestId("reader-journey-historical-banner")).toHaveTextContent(
+      "历史阅读旅程",
+    );
+    expect(screen.queryByText("当前章节尚未生成阅读旅程")).not.toBeInTheDocument();
   });
 
   it("hides empty analysis pane and exposes shell start analysis", () => {

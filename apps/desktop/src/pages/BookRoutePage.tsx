@@ -268,14 +268,22 @@ export function BookRoutePage() {
     queryKey: ["reader-journey", bookId, chapterId, analysisRunId, journeyRunFromUrl],
     queryFn: async (): Promise<JourneyQueryPayload> => {
       const seq = ++journeyFetchSeqRef.current;
-      const data = await analysisApi.readerJourney(analysisRunId!, {
-        bookId,
-        chapterId: chapterId!,
-        journeyRunId: journeyRunFromUrl,
-      });
+      const data =
+        journeyRunFromUrl != null
+          ? await analysisApi.readerJourneyById(journeyRunFromUrl, {
+              bookId,
+              chapterId: chapterId!,
+            })
+          : await analysisApi.readerJourney(analysisRunId!, {
+              bookId,
+              chapterId: chapterId!,
+            });
       return { ...(data as JourneyQueryPayload), __fetchSeq: seq };
     },
-    enabled: Number.isFinite(bookId) && !!analysisRunId && !!chapterId,
+    enabled:
+      Number.isFinite(bookId) &&
+      !!chapterId &&
+      (journeyRunFromUrl != null || !!analysisRunId),
     placeholderData: undefined,
     retry: false,
     refetchInterval: (q) => {
@@ -327,15 +335,24 @@ export function BookRoutePage() {
         "ANALYSIS_RUN_SCOPE_MISMATCH",
       ),
   );
-  const journeyQueryStatus: "idle" | "loading" | "success" | "error" = !analysisRunId
-    ? "idle"
-    : journey.isLoading || (journey.isFetching && !journey.data)
-      ? "loading"
-      : journey.isError
-        ? "error"
-        : journey.isSuccess
-          ? "success"
-          : "idle";
+  const journeyExplicitMissing = Boolean(
+    journeyRunFromUrl != null &&
+      journey.isError &&
+      ((journey.error as { status?: number } | null)?.status === 404 ||
+        String((journey.error as { message?: string } | null)?.message || "").includes(
+          "READER_JOURNEY_RUN_NOT_FOUND",
+        )),
+  );
+  const journeyQueryStatus: "idle" | "loading" | "success" | "error" =
+    !analysisRunId && journeyRunFromUrl == null
+      ? "idle"
+      : journey.isLoading || (journey.isFetching && !journey.data)
+        ? "loading"
+        : journey.isError
+          ? "error"
+          : journey.isSuccess
+            ? "success"
+            : "idle";
 
   const workspaceLayout = resolveWorkspaceLayout({
     requestedView,
@@ -1782,17 +1799,48 @@ export function BookRoutePage() {
                   />
                 ) : null}
                 {showJourneyResult ? (
-                  <WorkspaceJourneyPane
-                    bookId={bookId}
-                    chapterId={chapterId!}
-                    chapterTitle={chapterTitle}
-                    analysisRunId={analysisRunId}
-                    journey={journey.data}
-                    mainContentState={workspaceLayout.mainContentState}
-                    onRetry={() => void journey.refetch()}
-                    onReading={() => setView("reading", "user")}
-                    onViewScene={() => setResultTab("analysis", "user")}
-                  />
+                  <>
+                    {journeyExplicitMissing ? (
+                      <div
+                        className="workspace-journey-pane state"
+                        data-testid="reader-journey-explicit-missing"
+                      >
+                        <strong>指定的阅读旅程不存在或已被删除</strong>
+                        <button type="button" className="secondary" onClick={() => setView("reading", "user")}>
+                          返回正文阅读
+                        </button>
+                      </div>
+                    ) : null}
+                    {!journeyExplicitMissing &&
+                    journeyRunFromUrl != null &&
+                    (journey.data?.result_status === "superseded" ||
+                      (journey.data?.scene_revision_id != null &&
+                        journey.data.scene_revision_id !==
+                          sceneBoundariesQuery.data?.confirmed_revision?.revision_id)) ? (
+                      <div className="shell-banner" data-testid="reader-journey-historical-banner">
+                        <strong>历史阅读旅程</strong>
+                        <span>
+                          该结果基于场景修订 #{journey.data?.scene_revision_id ?? "-"}。当前场景划分已经更新。
+                        </span>
+                        <button type="button" className="secondary" onClick={openSceneBoundaryReview}>
+                          按当前场景重新生成
+                        </button>
+                      </div>
+                    ) : null}
+                    {!journeyExplicitMissing ? (
+                      <WorkspaceJourneyPane
+                        bookId={bookId}
+                        chapterId={chapterId!}
+                        chapterTitle={chapterTitle}
+                        analysisRunId={analysisRunId}
+                        journey={journey.data}
+                        mainContentState={workspaceLayout.mainContentState}
+                        onRetry={() => void journey.refetch()}
+                        onReading={() => setView("reading", "user")}
+                        onViewScene={() => setResultTab("analysis", "user")}
+                      />
+                    ) : null}
+                  </>
                 ) : null}
               </>
             ) : null}

@@ -239,6 +239,16 @@ export function WorkspaceJourneyPane({
     integrityStatus === "partially_trusted"
       ? "部分分析结果未通过校验，受影响内容已单独隐藏。"
       : null;
+  const historicalBanner =
+    journey?.is_superseded === true ||
+    String(journey?.result_status || "").toLowerCase() === "superseded"
+      ? {
+          title: "历史阅读旅程",
+          detail: journey?.scene_revision_id
+            ? `该结果基于场景修订 #${journey.scene_revision_id}。当前场景划分已经更新。`
+            : "该阅读旅程基于旧场景版本。当前场景划分已经更新。",
+        }
+      : null;
 
   return (
     <div
@@ -249,7 +259,19 @@ export function WorkspaceJourneyPane({
       data-book-id={bookId}
       data-chapter-id={chapterId}
       data-analysis-run={analysisRunId}
+      data-historical={historicalBanner ? "true" : undefined}
     >
+      {historicalBanner ? (
+        <div className="shell-banner" data-testid="workspace-journey-historical-banner">
+          <strong>{historicalBanner.title}</strong>
+          <span>{historicalBanner.detail}</span>
+          {onViewScene ? (
+            <button type="button" className="secondary" onClick={onViewScene}>
+              按当前场景重新生成
+            </button>
+          ) : null}
+        </div>
+      ) : null}
       {legacyWarning ? (
         <div className="shell-banner" data-testid="workspace-journey-legacy-banner">
           <strong>{legacyWarning}</strong>

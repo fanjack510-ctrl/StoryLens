@@ -1,0 +1,18 @@
+{
+  "change": "CHG-20260728-041",
+  "round": 6,
+  "database": "C:\\Users\\msi\\AppData\\Local\\Temp\\storylens-mg-chg041-r6-persistence\\database\\storylens-mg-chg041-r6-persistence.db",
+  "api_url": "http://127.0.0.1:18042",
+  "frontend_url": "http://127.0.0.1:1421",
+  "final_journey_url": "http://127.0.0.1:1421/books/1?chapter=1&analysisRun=1&view=result&journeyRun=1&tab=reader-journey",
+  "journey_run_id": 1,
+  "result_before_restart": "PASS",
+  "result_after_restart": "PASS",
+  "result_hash_before": "d47bf7264bb6b559c38f3d7b070d7f116cebefb152dd8bb3c0feaa87b39512a8",
+  "result_hash_after": "d47bf7264bb6b559c38f3d7b070d7f116cebefb152dd8bb3c0feaa87b39512a8",
+  "result_hash_match": true,
+  "profile_count": 4,
+  "visualization_present": true,
+  "real_provider_calls": 0,
+  "formal_database_writes": 0
+}

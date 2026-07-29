@@ -142,13 +142,21 @@ def _serialize_result(session: Session, journey_run: ReaderJourneyRun) -> Reader
             .order_by(ReaderJourneyPhase.ordinal)
         )
     )
-    profiles = list(
-        session.scalars(
+    try:
+        allowed_scene_ids = {
+            int(item) for item in json.loads(journey_run.included_scene_ids_json or "[]")
+        }
+    except (TypeError, ValueError, json.JSONDecodeError):
+        allowed_scene_ids = set()
+    profiles = [
+        item
+        for item in session.scalars(
             select(SceneReaderJourneyProfile)
             .where(SceneReaderJourneyProfile.reader_journey_run_id == journey_run.id)
             .order_by(SceneReaderJourneyProfile.scene_ordinal)
         )
-    )
+        if not allowed_scene_ids or int(item.scene_id) in allowed_scene_ids
+    ]
     summary = session.scalar(
         select(ChapterReaderJourneySummary).where(
             ChapterReaderJourneySummary.reader_journey_run_id == journey_run.id
@@ -229,16 +237,21 @@ def _serialize_result(session: Session, journey_run: ReaderJourneyRun) -> Reader
             for phase in phases
         ],
         scene_profiles=[_serialize_profile(item, journey_run.genre) for item in profiles],
+        profiles=[_serialize_profile(item, journey_run.genre) for item in profiles],
         chapter_summary=chapter_summary,
         deterministic_statistics=deterministic,
         one_sentence_diagnosis=diagnosis,
         visualization=visualization,
+        journey_result=visualization,
         created_at=ensure_utc_aware(journey_run.created_at),
         started_at=ensure_utc_aware(journey_run.started_at),
         updated_at=ensure_utc_aware(journey_run.updated_at),
         completed_at=ensure_utc_aware(journey_run.completed_at),
         scene_revision_id=journey_run.scene_revision_id,
+        scene_boundary_hash=journey_run.scene_boundary_hash,
         result_status=journey_run.result_status,
+        is_current=journey_run.result_status == "current",
+        is_superseded=journey_run.result_status == "superseded",
         error_code=journey_run.root_error_code,
         retryable=bool(journey_run.retryable),
         total_scene_count=journey_run.total_scene_count,
@@ -427,12 +440,41 @@ def get_reader_journey_for_run(
 )
 def get_reader_journey_run(
     journey_run_id: int,
+    book_id: int | None = None,
+    chapter_id: int | None = None,
     session: Session = Depends(get_db),
 ) -> ReaderJourneyResultResponse:
     journey_run = session.get(ReaderJourneyRun, journey_run_id)
     if journey_run is None:
         raise error(404, "READER_JOURNEY_RUN_NOT_FOUND", "读者旅程运行不存在")
+    if book_id is not None and int(journey_run.book_id) != int(book_id):
+        raise error(409, ERROR_RUN_SCOPE, "reader journey scope mismatch", book_id=book_id)
+    if chapter_id is not None and int(journey_run.chapter_id) != int(chapter_id):
+        raise error(
+            409,
+            ERROR_RUN_SCOPE,
+            "reader journey scope mismatch",
+            chapter_id=chapter_id,
+        )
     return _serialize_result(session, journey_run)
+
+
+@router.get(
+    "/reader-journeys/{journey_run_id}",
+    response_model=ReaderJourneyResultResponse,
+)
+def get_reader_journey_by_explicit_id(
+    journey_run_id: int,
+    book_id: int | None = None,
+    chapter_id: int | None = None,
+    session: Session = Depends(get_db),
+) -> ReaderJourneyResultResponse:
+    return get_reader_journey_run(
+        journey_run_id,
+        book_id=book_id,
+        chapter_id=chapter_id,
+        session=session,
+    )
 
 
 @router.get(

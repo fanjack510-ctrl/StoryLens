@@ -51,7 +51,8 @@ function byIdDesc(a: JourneyCandidate, b: JourneyCandidate): number {
  * 4. latest failed/interrupted for confirmed revision
  * 5. none
  *
- * Never selects journeys bound to a different revision.
+ * Explicit URL runs are historical deep links and are returned even when bound
+ * to a different/superseded revision. Automatic selection remains revision-safe.
  * Never treats analysisRun id as a journey id.
  */
 export function resolveCurrentReaderJourney(args: {
@@ -65,11 +66,18 @@ export function resolveCurrentReaderJourney(args: {
 
   if (explicit != null) {
     const hit = pool.find((item) => item.id === explicit);
-    if (hit) {
-      if (confirmedId == null || hit.scene_revision_id == null || hit.scene_revision_id === confirmedId) {
-        return { journey: hit, source: "url" };
-      }
-    }
+    if (hit) return { journey: hit, source: "url" };
+    // Keep an explicit URL pointer so gates do not treat a deep link as
+    // "never generated" while the by-id query is loading or 404ing.
+    return {
+      journey: {
+        id: explicit,
+        status: "pending",
+        scene_revision_id: null,
+        result_status: null,
+      },
+      source: "url",
+    };
   }
 
   if (confirmedId == null) {
