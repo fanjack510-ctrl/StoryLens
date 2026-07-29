@@ -54,8 +54,8 @@ describe("CHG-005 hook consistency gates", () => {
       </>,
     );
     expect(screen.getByTestId("hook-resolution-verdict").textContent).toMatch(/较弱的阅读期待/);
-    expect(screen.getByTestId("hook-stat-answered").textContent).toMatch(/本章回应：0/);
-    expect(screen.getByTestId("hook-chapter-scene-label-5").textContent).toBe("—");
+    expect(screen.queryByTestId("hook-payoff-stats")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("hook-chapter-scene-row")).not.toBeInTheDocument();
     const s5 = screen.getByTestId("journey-diagnosis-band-s5");
     expect(s5.getAttribute("data-primary-label")).not.toMatch(/明确回应|给出回应/);
     expect(s5.getAttribute("data-primary-label")).toBe("—");
@@ -89,6 +89,9 @@ describe("CHG-005 hook consistency gates", () => {
     ]);
     expect(model.overview.chapter_pull).toBe("明确");
     expect(model.overview.answered).toBeGreaterThanOrEqual(1);
+    expect(model.summary_line).not.toMatch(/本章提出 \d+ 个/);
+    expect(model.reader_question_cards.length).toBeGreaterThan(0);
+    expect(model.reader_question_cards[0].change_trail).toMatch(/S\d{2} 提出/);
     const identity = getNarrativeLoops(viz).find((l) => l.loop_id === "ID-identity")!;
     expect(sceneHasReliableLinkedResponse(identity, 3)).toBe(true);
   });

@@ -37,6 +37,7 @@ describe("CHG-20260729-005 complete sections 11–19", () => {
       "加深悬念",
       "留到下章",
     ]);
+    expect(model.summary_line).not.toMatch(/本章提出 \d+ 个/);
   });
 
   it("important hooks: max 3, reader questions, result labels, no smoke-fake/ids in copy", () => {
@@ -141,8 +142,10 @@ describe("CHG-20260729-005 complete sections 11–19", () => {
     const { rerender } = render(<HookPayoffTimeline visualization={viz} />);
     expect(screen.queryByTestId("hook-chapter-tech-details")).not.toBeInTheDocument();
     expect(screen.queryByTestId("hook-resolution-table")).not.toBeInTheDocument();
-    expect(screen.getByTestId("hook-payoff-stats").textContent).not.toMatch(/回收率/);
-    expect(screen.getByTestId("hook-chapter-important").textContent).not.toMatch(/ID-identity/);
+    expect(screen.queryByTestId("hook-payoff-stats")).not.toBeInTheDocument();
+    expect(screen.getByTestId("hook-chapter-reader-questions").textContent).not.toMatch(
+      /ID-identity/,
+    );
 
     useDeveloperModeStore.setState({ developerMode: true });
     rerender(<HookPayoffTimeline visualization={viz} />);
@@ -161,7 +164,7 @@ describe("CHG-20260729-005 complete sections 11–19", () => {
     (empty as { narrative_loops: unknown[] }).narrative_loops = [];
     render(<HookPayoffTimeline visualization={empty} />);
     expect(screen.getByTestId("hook-resolution-verdict").textContent).toContain(
-      "本章未识别到明确的阅读钩子",
+      "本章未形成明确的阅读悬念",
     );
     expect(screen.getByTestId("hook-resolution-empty").textContent).not.toMatch(
       /分析失败|质量较差|回收率 0|缺少吸引力/,
@@ -182,11 +185,11 @@ describe("CHG-20260729-005 complete sections 11–19", () => {
     ];
     render(<HookPayoffTimeline visualization={weak} />);
     expect(screen.getByTestId("hook-resolution-verdict").textContent).toMatch(
-      /较弱的阅读期待|未识别到明确/,
+      /较弱的阅读期待|未形成明确/,
     );
   });
 
-  it("renders important list fields and ending pull; stage bands preserved", () => {
+  it("renders reader question cards and compact trajectory; stage bands preserved", () => {
     const onSelect = vi.fn();
     render(
       <HookPayoffTimeline
@@ -196,12 +199,10 @@ describe("CHG-20260729-005 complete sections 11–19", () => {
         onSelectScene={vi.fn()}
       />,
     );
-    const item = screen.getAllByTestId("hook-chapter-important-item")[0];
-    expect(item.textContent).toMatch(/提出：S/);
-    expect(item.textContent).toMatch(/结果：/);
-    expect(item.textContent).toMatch(/最后变化：S/);
-    expect(screen.getByTestId("hook-chapter-ending-pull")).toBeInTheDocument();
-    expect(screen.getByTestId("hook-ending-status").textContent).toMatch(/明确|较弱|暂无|无法判断/);
+    const card = screen.getAllByTestId("hook-chapter-question-card")[0];
+    expect(card.textContent).toMatch(/S\d{2} 提出/);
+    expect(card.textContent).toMatch(/部分回应|已回应|继续保留|新提出/);
+    expect(screen.queryByTestId("hook-chapter-ending-pull")).not.toBeInTheDocument();
     expect(JOURNEY_STAGE_VISUAL_TOKENS.opening.chartBand).toBe("#E4F1E8");
     fireEvent.click(screen.getByTestId("hook-chapter-scene-3"));
     expect(onSelect).toHaveBeenCalled();

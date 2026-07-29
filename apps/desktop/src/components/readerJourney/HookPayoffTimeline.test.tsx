@@ -14,26 +14,25 @@ afterEach(() => {
   useDeveloperModeStore.setState({ developerMode: false });
 });
 
-describe("Hook resolution result page (CHG-005 ordinary UI)", () => {
-  it("shows simplified overview without technical conflict table", () => {
+describe("Hook resolution result page (CHG-011 ordinary UI)", () => {
+  it("shows verdict and reader questions without legacy stats blocks", () => {
     const onSelect = vi.fn();
     render(
       <HookPayoffTimeline
         visualization={vizWithLoops()}
         selectedLoopId="ID-identity"
+        selectedSceneOrdinal={3}
         onSelectLoop={onSelect}
       />,
     );
     expect(screen.getByTestId("hook-resolution-overview")).toBeInTheDocument();
     expect(screen.queryByTestId("hook-resolution-conflicts")).not.toBeInTheDocument();
-    expect(screen.getByTestId("hook-stat-raised").textContent).toMatch(/本章提出/);
-    expect(screen.getByTestId("hook-stat-answered").textContent).toMatch(/本章回应/);
-    expect(screen.getByTestId("hook-stat-carried").textContent).toMatch(/继续保留/);
-    expect(screen.getByTestId("hook-stat-chapter-pull").textContent).toMatch(/章末牵引/);
+    expect(screen.queryByTestId("hook-payoff-stats")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("hook-chapter-ending-pull")).not.toBeInTheDocument();
+    expect(screen.getByTestId("hook-chapter-reader-questions")).toBeInTheDocument();
     expect(screen.queryByTestId("hook-resolution-table")).not.toBeInTheDocument();
     expect(screen.queryAllByTestId("hook-payoff-loop-row")).toHaveLength(0);
-    expect(screen.getByTestId("hook-chapter-important")).toBeInTheDocument();
-    fireEvent.click(screen.getAllByTestId("hook-chapter-important-item")[0].querySelector("button")!);
+    fireEvent.click(screen.getAllByTestId("hook-chapter-question-btn")[0]);
     expect(onSelect).toHaveBeenCalled();
   });
 
@@ -43,14 +42,15 @@ describe("Hook resolution result page (CHG-005 ordinary UI)", () => {
     expect(screen.getByTestId("hook-resolution-verdict").textContent).not.toMatch(/判定冲突/);
   });
 
-  it("empty state keeps scene track with blank labels when no loops", () => {
+  it("empty state shows title and note without trajectory", () => {
     const empty = vizWithLoops();
     (empty as { narrative_loops: unknown[] }).narrative_loops = [];
     render(<HookPayoffTimeline visualization={empty} />);
+    expect(screen.getByTestId("hook-resolution-verdict").textContent).toContain(
+      "本章未形成明确的阅读悬念",
+    );
     expect(screen.getByTestId("hook-resolution-empty")).toBeInTheDocument();
-    expect(screen.getByTestId("hook-chapter-scene-row")).toBeInTheDocument();
-    expect(screen.getByTestId("hook-chapter-scene-label-1").textContent).toBe("—");
-    expect(screen.getByTestId("hook-stat-answered").textContent).toMatch(/本章回应：0/);
-    expect(screen.getByTestId("hook-stat-chapter-pull").textContent).toMatch(/暂无/);
+    expect(screen.queryByTestId("hook-chapter-scene-row")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("hook-chapter-reader-questions")).not.toBeInTheDocument();
   });
 });

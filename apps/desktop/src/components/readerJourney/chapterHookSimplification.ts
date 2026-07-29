@@ -25,7 +25,7 @@ export const CHAPTER_HOOK_TAB_LABEL = "钩子回收";
 export const CHAPTER_HOOK_PAGE_BLURB =
   "钩子回收：查看本章提出了哪些问题、给出了哪些回应，以及留下了什么后续期待。";
 
-export const CHAPTER_HOOK_EMPTY_TITLE = "本章未识别到明确的阅读钩子。";
+export const CHAPTER_HOOK_EMPTY_TITLE = "本章未形成明确的阅读悬念。";
 export const CHAPTER_HOOK_EMPTY_NOTE =
   "这不一定代表章节存在问题；本章可能主要承担过渡、说明、氛围营造或情绪收束任务。";
 export const CHAPTER_HOOK_LOW_CONFIDENCE_TITLE =
@@ -58,6 +58,20 @@ export type ImportantHookResultLabel =
   | "部分回应"
   | "继续保留"
   | "暂无可靠判断";
+
+export type ReaderQuestionStatus =
+  | "新提出"
+  | "部分回应"
+  | "已回应"
+  | "继续保留";
+
+export type ReaderQuestionCard = {
+  loop_id: string;
+  question: string;
+  status: ReaderQuestionStatus;
+  change_trail: string;
+  role: string;
+};
 
 export type ChapterHookNodeJudgment = {
   short_label: ChapterHookNodeLabel | null;
@@ -140,6 +154,7 @@ export type ChapterHookSimplificationModel = {
   max_scene: number;
   overview: ChapterHookOverview;
   important_hooks: ImportantChapterHook[];
+  reader_question_cards: ReaderQuestionCard[];
   scene_rows: ChapterHookSceneRow[];
   scene_actions: ChapterHookSceneAction[];
   ending_pull: ChapterEndingPull;
@@ -336,6 +351,168 @@ function resultLabelOf(status: HookMainStatus): ImportantHookResultLabel {
   if (status === "partial") return "部分回应";
   if (status === "unresolved") return "继续保留";
   return "暂无可靠判断";
+}
+
+function formatSceneRef(sceneOrdinal: number): string {
+  return `S${String(sceneOrdinal).padStart(2, "0")}`;
+}
+
+function readerQuestionStatusOf(
+  loop: NarrativeLoopView,
+  maxScene: number,
+): ReaderQuestionStatus {
+  const info = resolveHookMainStatus(loop);
+  if (info.main_status === "resolved") return "已回应";
+  if (info.main_status === "partial") return "部分回应";
+  const open = openSceneOf(loop);
+  const hasDeepen = (loop.developments || []).some(
+    (d) => typeof d.scene_ordinal === "number" && d.scene_ordinal > open,
+  );
+  const hasRespond = entityPayoffs(loop).some((p) =>
+    hasValidEvidence(p.evidence_paragraph_ids),
+  );
+  if (!hasDeepen && !hasRespond) return "新提出";
+  if (isStillActiveNearChapterEnd(loop, maxScene)) return "继续保留";
+  return "继续保留";
+}
+
+function readerQuestionRoleOf(
+  loop: NarrativeLoopView,
+  status: ReaderQuestionStatus,
+  maxScene: number,
+): string {
+  if (status === "新提出") return "打开本章阅读期待";
+  if (status === "部分回应") return "部分回应核心疑问";
+  if (status === "已回应") return "收束本章相关疑问";
+  if (isStillActiveNearChapterEnd(loop, maxScene)) return "推动读者继续阅读";
+  return "维持阅读追问";
+}
+
+export function buildReaderQuestionChangeTrail(
+  loop: NarrativeLoopView,
+  maxScene: number,
+): string {
+  const parts: string[] = [];
+  const open = openSceneOf(loop);
+  parts.push(`${formatSceneRef(open)} 提出`);
+
+  const deepenScenes = new Set<number>();
+  for (const d of loop.developments || []) {
+    if (typeof d.scene_ordinal === "number" && d.scene_ordinal !== open) {
+      deepenScenes.add(d.scene_ordinal);
+    }
+  }
+  for (const h of loop.hook || []) {
+    if (
+      typeof h.scene_ordinal === "number" &&
+      h.scene_ordinal !== open &&
+      !entityPayoffs(loop).some((p) => p.scene_ordinal === h.scene_ordinal)
+    ) {
+      deepenScenes.add(h.scene_ordinal);
+    }
+  }
+  for (const scene of Array.from(deepenScenes).sort((a, b) => a - b)) {
+    parts.push(`${formatSceneRef(scene)} 加深`);
+  }
+
+  const info = resolveHookMainStatus(loop);
+  if (info.resolve_scene != null) {
+    parts.push(`${formatSceneRef(info.resolve_scene)} 回应`);
+  } else {
+    for (let s = open + 1; s <= maxScene; s += 1) {
+      if (sceneHasReliableLinkedResponse(loop, s)) {
+        parts.push(`${formatSceneRef(s)} 回应`);
+        break;
+      }
+    }
+  }
+
+  if (sceneHasCarryToNext(loop, maxScene, maxScene)) {
+    parts.push(`${formatSceneRef(maxScene)} 留到下章`);
+  }
+
+  return parts.join(" · ");
+}
+
+export function buildReaderQuestionCards(
+  loops: NarrativeLoopView[],
+  maxScene: number,
+  limit = 3,
+): ReaderQuestionCard[] {
+  const important = selectImportantChapterHooks(loops, maxScene, limit);
+  return important.map((hook) => {
+    const loop = loops.find((l) => l.loop_id === hook.loop_id);
+    if (!loop) {
+      return {
+        loop_id: hook.loop_id,
+        question: hook.reader_question,
+        status: "继续保留" as ReaderQuestionStatus,
+        change_trail: `${formatSceneRef(hook.open_scene)} 提出`,
+        role: "推动读者继续阅读",
+      };
+    }
+    const status = readerQuestionStatusOf(loop, maxScene);
+    return {
+      loop_id: hook.loop_id,
+      question: hook.reader_question,
+      status,
+      change_trail: buildReaderQuestionChangeTrail(loop, maxScene),
+      role: readerQuestionRoleOf(loop, status, maxScene),
+    };
+  });
+}
+
+export function deriveChapterHookSummaryLine(input: {
+  chapter_hook_mode: ChapterHookMode;
+  reader_question_cards: ReaderQuestionCard[];
+  ending_pull: ChapterEndingPull;
+}): string {
+  if (input.chapter_hook_mode === "none") return CHAPTER_HOOK_EMPTY_TITLE;
+  if (input.chapter_hook_mode === "uncertain") return CHAPTER_HOOK_LOW_CONFIDENCE_TITLE;
+
+  const cards = input.reader_question_cards;
+  if (!cards.length) return CHAPTER_HOOK_EMPTY_TITLE;
+
+  const primary = cards[0].question;
+  const answered = cards.filter(
+    (c) => c.status === "已回应" || c.status === "部分回应",
+  ).length;
+  const carried = cards.filter(
+    (c) => c.status === "继续保留" || c.status === "新提出",
+  ).length;
+  const pull = input.ending_pull.status;
+
+  if (answered > 0 && carried > 0 && pull === "明确") {
+    return truncateZh(
+      `本章在回应部分疑问的同时，章末仍围绕「${primary}」留下明确继续阅读牵引。`,
+      72,
+    );
+  }
+  if (answered > 0 && carried === 0) {
+    return truncateZh(
+      `本章围绕「${primary}」等问题给出了有效回应，相关阅读期待在本章内得到收束。`,
+      72,
+    );
+  }
+  if (answered === 0 && carried > 0 && pull === "明确") {
+    return truncateZh(
+      `本章主要提出并强化了「${primary}」等疑问，章末牵引明确，推动读者继续阅读。`,
+      72,
+    );
+  }
+  if (pull === "较弱") {
+    return truncateZh("本章提出了若干阅读疑问，但章末跨章牵引尚不够明确。", 72);
+  }
+  if (pull === "暂无" && answered === 0) {
+    return truncateZh(
+      `本章围绕「${primary}」${cards.length > 1 ? "等疑问" : ""}展开，阅读期待仍在推进中。`,
+      72,
+    );
+  }
+  return truncateZh(
+    `本章围绕「${primary}」${cards.length > 1 ? "等疑问" : ""}推进阅读，部分期待仍待后续章节回应。`,
+    72,
+  );
 }
 
 function lastChangeSceneOf(
@@ -790,6 +967,10 @@ export function buildChapterHookSimplificationModel(
     chapter_hook_mode === "reliable"
       ? selectImportantChapterHooks(reliable, maxScene, 3)
       : [];
+  const reader_question_cards =
+    chapter_hook_mode === "reliable"
+      ? buildReaderQuestionCards(reliable, maxScene, 3)
+      : [];
   const topId = important[0]?.loop_id ?? null;
 
   let raised = 0;
@@ -861,10 +1042,11 @@ export function buildChapterHookSimplificationModel(
     empty_note = CHAPTER_HOOK_EMPTY_NOTE;
   }
 
-  const summary_line =
-    chapter_hook_mode !== "reliable"
-      ? empty_title || CHAPTER_HOOK_EMPTY_TITLE
-      : `本章提出 ${overview.raised} 个重要问题，回应 ${overview.answered} 个，继续保留 ${overview.carried} 个；章末牵引：${overview.chapter_pull}。`;
+  const summary_line = deriveChapterHookSummaryLine({
+    chapter_hook_mode,
+    reader_question_cards,
+    ending_pull,
+  });
 
   return {
     chapter_hook_mode,
@@ -876,6 +1058,7 @@ export function buildChapterHookSimplificationModel(
     max_scene: maxScene,
     overview,
     important_hooks: important,
+    reader_question_cards,
     scene_rows,
     scene_actions: scene_rows.map((r) => r.scene_action),
     ending_pull: {

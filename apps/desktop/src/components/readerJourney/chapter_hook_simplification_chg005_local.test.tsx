@@ -4,7 +4,9 @@ import type { ReaderJourneyVisualization } from "../../types/readerJourneyVisual
 import { HookPayoffTimeline } from "./HookPayoffTimeline";
 import {
   buildChapterHookSimplificationModel,
+  buildReaderQuestionChangeTrail,
   deriveChapterHookNodeLabelV1,
+  deriveChapterHookSummaryLine,
   selectImportantChapterHooks,
 } from "./chapterHookSimplification";
 import { getNarrativeLoops } from "./narrativeLoopView";
@@ -152,13 +154,27 @@ describe("CHG-20260729-005 chapter hook simplification", () => {
     ]);
   });
 
-  it("overview uses raised/answered/carried/chapter_pull without unresolved-as-failure", () => {
+  it("summary_line uses natural-language verdict instead of stats dump", () => {
     const model = buildChapterHookSimplificationModel(vizWithLoops());
-    expect(model.overview.raised).toBeGreaterThanOrEqual(1);
-    expect(model.overview.answered).toBeGreaterThanOrEqual(1);
-    expect(model.overview.carried).toBeGreaterThanOrEqual(1);
-    expect(["明确", "较弱", "暂无", "无法判断"]).toContain(model.overview.chapter_pull);
+    expect(model.summary_line).not.toMatch(/本章提出 \d+ 个|章末牵引：/);
+    expect(model.summary_line).toMatch(/围绕|回应|牵引|疑问/);
     expect(model.summary_line).not.toMatch(/未回收风险|必须回收/);
+  });
+
+  it("reader question cards include status, change trail, and role", () => {
+    const model = buildChapterHookSimplificationModel(vizWithLoops());
+    expect(model.reader_question_cards.length).toBeGreaterThan(0);
+    expect(model.reader_question_cards.length).toBeLessThanOrEqual(3);
+    for (const card of model.reader_question_cards) {
+      expect(card.question).not.toMatch(/smoke-fake|hook_0|L\d+$/);
+      expect(["新提出", "部分回应", "已回应", "继续保留"]).toContain(card.status);
+      expect(card.change_trail).toMatch(/S\d{2} 提出/);
+      expect(card.role.length).toBeGreaterThan(2);
+    }
+    const loops = getNarrativeLoops(vizWithLoops());
+    const trail = buildReaderQuestionChangeTrail(loops[0], 6);
+    expect(trail).toMatch(/S01 提出/);
+    expect(trail).toMatch(/S03 回应/);
   });
 
   it("selects at most 3 important reader questions without internal ids", () => {
@@ -206,50 +222,57 @@ describe("CHG-20260729-005 chapter hook simplification", () => {
     expect(s6.short_label).toBe("留到下章");
   });
 
-  it("renders simplified timeline without technical multi-lane table", () => {
+  it("renders CHG-011 layout: verdict, reader questions, compact trajectory", () => {
     const onSelect = vi.fn();
     render(
       <HookPayoffTimeline
         visualization={vizWithLoops()}
         selectedLoopId="L1"
-        selectedSceneOrdinal={1}
+        selectedSceneOrdinal={3}
         onSelectLoop={onSelect}
       />,
     );
-    expect(screen.getByTestId("hook-chapter-blurb").textContent).toContain("提出了哪些问题");
-    expect(screen.getByTestId("hook-stat-raised").textContent).toMatch(/本章提出/);
-    expect(screen.getByTestId("hook-stat-answered").textContent).toMatch(/本章回应/);
-    expect(screen.getByTestId("hook-stat-carried").textContent).toMatch(/继续保留/);
-    expect(screen.getByTestId("hook-stat-chapter-pull").textContent).toMatch(/章末牵引/);
-    expect(screen.queryByTestId("hook-stat-established")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("hook-resolution-table")).not.toBeInTheDocument();
-    expect(screen.queryAllByTestId("hook-payoff-loop-row")).toHaveLength(0);
-    expect(screen.getByTestId("hook-chapter-scene-label-1").textContent).toMatch(/提出疑问|加深悬念|给出回应|留到下章|—/);
+    expect(screen.queryByTestId("hook-chapter-blurb")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("hook-payoff-stats")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("hook-chapter-ending-pull")).not.toBeInTheDocument();
+    expect(screen.getByTestId("hook-resolution-verdict").textContent).not.toMatch(
+      /本章提出 \d+ 个/,
+    );
+    expect(screen.getByTestId("hook-chapter-reader-questions")).toBeInTheDocument();
+    expect(screen.getAllByTestId("hook-chapter-question-card").length).toBeGreaterThan(0);
+    expect(screen.getByTestId("hook-chapter-scene-label-1").textContent).toBe("提出疑问");
+    expect(screen.queryByText("—")).not.toBeInTheDocument();
+    expect(screen.getByTestId("hook-chapter-scene-insight")).toBeInTheDocument();
     expect(screen.getByTestId("journey-stage-bands")).toBeInTheDocument();
     fireEvent.click(screen.getByTestId("hook-chapter-scene-1"));
     expect(onSelect).toHaveBeenCalled();
   });
 
-  it("does not mark carried hooks as failure in UI copy", () => {
-    render(<HookPayoffTimeline visualization={vizWithLoops()} />);
-    const stats = screen.getByTestId("hook-payoff-stats").textContent || "";
-    expect(stats).not.toMatch(/未回收风险|失败/);
-    expect(stats).toContain("继续保留");
-  });
-
-  it("empty state keeps scene track with blank labels when no loops", () => {
+  it("empty state shows title and note without cards or trajectory", () => {
     const empty = vizWithLoops();
     (empty as { narrative_loops: unknown[] }).narrative_loops = [];
     render(<HookPayoffTimeline visualization={empty} />);
+    expect(screen.getByTestId("hook-resolution-verdict").textContent).toContain(
+      "本章未形成明确的阅读悬念",
+    );
     expect(screen.getByTestId("hook-resolution-empty")).toBeInTheDocument();
-    expect(screen.getByTestId("hook-chapter-scene-row")).toBeInTheDocument();
-    expect(screen.getByTestId("hook-chapter-scene-label-5").textContent).toBe("—");
-    expect(screen.getByTestId("hook-payoff-stats").textContent).not.toMatch(/明确回应/);
+    expect(screen.queryByTestId("hook-chapter-reader-questions")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("hook-chapter-scene-row")).not.toBeInTheDocument();
   });
 
   it("preserves stage band palette", () => {
     expect(JOURNEY_STAGE_VISUAL_TOKENS.opening.chartBand).toBe("#E4F1E8");
     expect(JOURNEY_STAGE_VISUAL_TOKENS.development.chartBand).toBe("#F7EDD8");
     expect(JOURNEY_STAGE_VISUAL_TOKENS.closing.chartBand).toBe("#E7EDF6");
+  });
+
+  it("deriveChapterHookSummaryLine avoids stats dump for reliable mode", () => {
+    const model = buildChapterHookSimplificationModel(vizWithLoops());
+    const line = deriveChapterHookSummaryLine({
+      chapter_hook_mode: "reliable",
+      reader_question_cards: model.reader_question_cards,
+      ending_pull: model.ending_pull,
+    });
+    expect(line).not.toMatch(/\d+ 个/);
   });
 });

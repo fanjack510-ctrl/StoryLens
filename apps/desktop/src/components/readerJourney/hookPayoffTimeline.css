@@ -292,25 +292,18 @@
   /* no-op wrappers — component root uses hook-resolution-panel */
 }
 
-/* CHG-20260729-005 ordinary chapter hook simplification */
-.hook-chapter-blurb {
+/* CHG-20260729-011 ordinary hook page — reader questions + compact trajectory */
+.hook-chapter-reader-questions {
+  margin: 10px 0;
+}
+
+.hook-chapter-reader-questions h3 {
   margin: 0 0 8px;
-  font-size: 13px;
-  line-height: 1.45;
-  color: var(--muted, #6b7280);
-}
-
-.hook-chapter-important {
-  margin: 0 0 10px;
-}
-
-.hook-chapter-important h3 {
-  margin: 0 0 6px;
   font-size: 13px;
   font-weight: 650;
 }
 
-.hook-chapter-important-list {
+.hook-chapter-question-list {
   margin: 0;
   padding: 0;
   list-style: none;
@@ -319,7 +312,11 @@
   gap: 6px;
 }
 
-.hook-chapter-important-btn {
+.hook-chapter-question-card {
+  margin: 0;
+}
+
+.hook-chapter-question-btn {
   width: 100%;
   text-align: left;
   border: 1px solid var(--line, #e5e7eb);
@@ -332,19 +329,52 @@
   gap: 2px;
 }
 
-.hook-chapter-important-btn.is-active,
-.hook-chapter-important-btn:hover {
+.hook-chapter-question-btn.is-active,
+.hook-chapter-question-btn:hover {
   border-color: #2f6f4e;
 }
 
-.hook-chapter-q {
+.hook-chapter-trajectory-scroll {
+  max-height: none;
+  margin-top: 8px;
+}
+
+.hook-chapter-trajectory-track {
+  padding: 20px 12px 10px;
+}
+
+.hook-chapter-trajectory-row {
+  justify-content: flex-start;
+  gap: 10px;
+}
+
+.hook-chapter-trajectory-node {
+  flex: 0 1 auto;
+  min-width: 72px;
+}
+
+.hook-chapter-scene-insight {
+  margin: 10px 0 0;
   font-size: 13px;
+  line-height: 1.5;
   color: var(--text, #111);
 }
 
-.hook-chapter-meta {
-  font-size: 11px;
-  color: var(--muted, #6b7280);
+/* Legacy CHG-005 classes kept for backward compat in tests / developer table */
+.hook-chapter-blurb {
+  display: none;
+}
+
+.hook-chapter-important {
+  display: none;
+}
+
+.hook-chapter-ending-pull {
+  display: none;
+}
+
+.hook-resolution-stats {
+  display: none;
 }
 
 .hook-chapter-scene-track {
@@ -400,25 +430,19 @@
   text-align: center;
 }
 
-.hook-stat-carried,
-[data-testid="hook-stat-carried"] {
+.hook-chapter-q {
+  font-size: 13px;
+  color: var(--text, #111);
+}
+
+.hook-chapter-meta {
+  font-size: 11px;
   color: var(--muted, #6b7280);
 }
 
-.hook-chapter-ending-pull {
-  margin-top: 12px;
-  padding-top: 8px;
-  border-top: 1px solid var(--line, #e5e7eb);
-}
-
-.hook-chapter-ending-pull h3 {
-  margin: 0 0 6px;
-}
-
-.hook-chapter-ending-pull p {
-  margin: 0 0 6px;
-  font-size: 13px;
-  line-height: 1.45;
+.hook-stat-carried,
+[data-testid="hook-stat-carried"] {
+  color: var(--muted, #6b7280);
 }
 
 .hook-chapter-tech-details {
