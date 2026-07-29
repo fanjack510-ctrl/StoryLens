@@ -1,0 +1,42 @@
+{
+  "change": "CHG-20260728-041",
+  "round": 7,
+  "forensics_db": "%TEMP%/storylens-chg041-r7-forensics/database/storylens-mg-chg041-clean.db",
+  "source_db_untouched": true,
+  "garbled_text": {
+    "verdict": "A_DATABASE_ALREADY_GARBLED",
+    "book_title": "CHG041",
+    "chapter_title_repr": "'???'",
+    "paragraph_count": 20,
+    "garbled_paragraph_count": 20,
+    "sample_raw_text": "??1?????1?????1???",
+    "cause": "_seed_chapter / clean seed used ASCII '???' placeholders as Chinese stand-ins; not OEM pipeline mojibake"
+  },
+  "journey_failure": {
+    "journey_run_id": 1,
+    "confirmed_revision_id": 2,
+    "scenes_before_split": [1, 2, 3, 4],
+    "scenes_after_split": [5, 6, 7, 8, 9, 10],
+    "included_scene_ids": [5, 6, 7, 8, 9, 10],
+    "scene_count_after_split": 6,
+    "status": "failed",
+    "failure_code": "PIPELINE_UNEXPECTED_ERROR",
+    "failure_stage": "pipeline",
+    "failure_detail": "[Errno 2] No such file or directory: 'packages\\\\prompts\\\\reader_journey_scene\\\\v2.0\\\\system.md'",
+    "completed_scene_count": 0,
+    "profiles_persisted": 0,
+    "fake_mode": "success",
+    "answers": {
+      "1_scene_count_after_split": 6,
+      "2_fake_fixed_4": "NOT_REACHED — pipeline failed before Fake generate",
+      "3_new_scene_profile_missing": "N/A — zero profiles written",
+      "4_evidence_out_of_range": "N/A",
+      "5_fake_old_autoincrement": "N/A",
+      "6_repair_fake_incomplete": "N/A",
+      "7_old_revision_scenes": false,
+      "8_failure_code": "PIPELINE_UNEXPECTED_ERROR"
+    },
+    "root_cause_category": "H_OTHER",
+    "root_cause_detail": "PROMPT_ROOT_RELATIVE_TO_API_CWD — uvicorn cwd apps/api resolves packages/prompts under apps/api (missing). apply_runtime_path_defaults not applied on uvicorn app.main entry."
+  }
+}

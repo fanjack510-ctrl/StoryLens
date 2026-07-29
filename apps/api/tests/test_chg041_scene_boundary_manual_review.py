@@ -52,23 +52,33 @@ from app.services.scene_boundary_manual_review import (
 
 
 def _seed_chapter(session, *, paragraph_count: int = 20, scene_count: int = 4):
-    book = Book(title="CHG041", source_file_name="t.txt", source_file_hash="a" * 64)
+    book = Book(
+        title="CHG-041 场景边界验收书",
+        source_file_name="chg041-fixture.txt",
+        source_file_hash="a" * 64,
+    )
     session.add(book)
     session.flush()
-    chapter = Chapter(book_id=book.id, chapter_index=1, title="???", section_type="chapter")
+    chapter = Chapter(
+        book_id=book.id,
+        chapter_index=1,
+        title="第一章 夜雨初至",
+        section_type="chapter",
+    )
     session.add(chapter)
     session.flush()
     paragraphs: list[Paragraph] = []
     for index in range(1, paragraph_count + 1):
+        body = f"第{index}段：雨打青瓦，巷口灯影摇晃，案情线索逐渐浮现。"
         paragraph = Paragraph(
             id=f"B0001-C0001-P{index:04d}",
             book_id=book.id,
             chapter_id=chapter.id,
             paragraph_index=index,
-            raw_text=f"??{index}???" * 3,
-            normalized_text=f"??{index}???" * 3,
+            raw_text=body,
+            normalized_text=body,
             char_start=index * 10,
-            char_end=index * 10 + 20,
+            char_end=index * 10 + len(body),
         )
         session.add(paragraph)
         paragraphs.append(paragraph)

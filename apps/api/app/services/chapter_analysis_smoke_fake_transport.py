@@ -221,7 +221,8 @@ def _evidence_for_scene(paragraph_ids: list[str], global_paragraphs: list[str]) 
         return [paragraph_ids[0]]
     if global_paragraphs:
         return [global_paragraphs[0]]
-    return ["B0001-C0001-P0001"]
+    # Never invent a fixed chapter paragraph id — callers must supply real ids.
+    return []
 
 
 def _build_journey_profiles(
@@ -244,7 +245,10 @@ def _build_journey_profiles(
     by_id = {int(t["scene_id"]): t for t in targets}
     profiles: list[dict[str, Any]] = []
     seen: set[int] = set()
-    emit_ids = expected_ids if expected_ids else fallback_ids or [1]
+    # Success Fake must emit exactly the requested/owned scene ids — never a fixed [1].
+    emit_ids = list(expected_ids or fallback_ids)
+    if not emit_ids:
+        return profiles
     for index, sid in enumerate(emit_ids):
         if sid in seen:
             continue
@@ -252,7 +256,9 @@ def _build_journey_profiles(
         target = by_id.get(sid)
         ordinal = int(target["scene_ordinal"]) if target else (index + 1)
         scene_paras = list(target["paragraph_ids"]) if target else []
-        evidence = _evidence_for_scene(scene_paras, paragraph_ids)
+        evidence = _evidence_for_scene(scene_paras, paragraph_ids if not scene_paras else scene_paras)
+        if not evidence and scene_paras:
+            evidence = [scene_paras[0]]
         profiles.append(_scene_profile_item(int(sid), ordinal, evidence, texts))
     return profiles
 
@@ -304,7 +310,7 @@ def _scene_profile_item(
     texts: dict[str, str],
 ) -> dict[str, Any]:
     """Build SceneReaderJourneyProfileItemV2-compatible payload (contract 2.0)."""
-    first = paragraph_ids[0] if paragraph_ids else "B0001-C0001-P0001"
+    first = paragraph_ids[0] if paragraph_ids else ""
     roles = (
         "setup",
         "escalation",
@@ -318,21 +324,22 @@ def _scene_profile_item(
     )
     scene_role = roles[(max(1, scene_ordinal) - 1) % len(roles)]
     base_level = 2 + (scene_ordinal % 3)
+    evidence_ids = list(dict.fromkeys(paragraph_ids))[:16]
     fields = {
         key: _scored_level(
             base_level if key not in {"cognitive_load", "redundancy"} else 1,
-            paragraph_ids,
+            evidence_ids,
             rationale=f"smoke-fake {key} for scene {scene_ordinal}",
         )
         for key in _LEVEL_KEYS
     }
     # Emphasize journey-facing metrics for gate visibility.
-    fields["hook"] = _scored_level(3, paragraph_ids, rationale="smoke-fake hook")
-    fields["payoff"] = _scored_level(2, paragraph_ids, rationale="smoke-fake payoff")
-    fields["curiosity"] = _scored_level(3, paragraph_ids, rationale="smoke-fake curiosity")
-    fields["tension"] = _scored_level(3, paragraph_ids, rationale="smoke-fake tension")
-    fields["pacing_speed"] = _scored_level(3, paragraph_ids, rationale="smoke-fake pacing")
-    summary_seed = _quote_for(first, texts)
+    fields["hook"] = _scored_level(3, evidence_ids, rationale="smoke-fake hook")
+    fields["payoff"] = _scored_level(2, evidence_ids, rationale="smoke-fake payoff")
+    fields["curiosity"] = _scored_level(3, evidence_ids, rationale="smoke-fake curiosity")
+    fields["tension"] = _scored_level(3, evidence_ids, rationale="smoke-fake tension")
+    fields["pacing_speed"] = _scored_level(3, evidence_ids, rationale="smoke-fake pacing")
+    summary_seed = _quote_for(first, texts) if first else f"场景{scene_ordinal}"
     return {
         "scene_id": int(scene_id),
         "scene_ordinal": int(scene_ordinal),
@@ -340,7 +347,7 @@ def _scene_profile_item(
         "scene_role": scene_role,
         "scene_value_summary": f"Scene{scene_ordinal}推进：{summary_seed}"[:160],
         "confidence": 0.8,
-        "evidence_paragraph_ids": list(dict.fromkeys(paragraph_ids))[:16],
+        "evidence_paragraph_ids": evidence_ids,
         **fields,
     }
 

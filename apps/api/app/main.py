@@ -26,7 +26,11 @@ from app.routers.pro_whole_book_insights import router as pro_whole_book_insight
 from app.routers import whole_book_mock_lab_runs as mock_lab_runs
 from app.routers import whole_book_private_engine_lab_runs as private_engine_lab_runs
 from app.core.config import get_settings
-from app.core.paths import is_web_production_mode
+from app.core.paths import apply_runtime_path_defaults, is_web_production_mode
+
+# Resolve absolute prompt/data paths before Settings is first constructed.
+# Uvicorn entry uses cwd=apps/api; relative packages/prompts would miss repo prompts.
+apply_runtime_path_defaults()
 from app.core.sidecar_control import request_shutdown, shutdown_token
 from app.db.session import SessionLocal, create_db
 from app.middleware.local_origin import LocalOriginGuardMiddleware, SecurityHeadersMiddleware

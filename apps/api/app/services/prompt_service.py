@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from app.core.config import get_settings
+from app.core.paths import resource_root
 from app.services.response_contract import render_contract
 
 
@@ -16,8 +17,15 @@ class PromptBundle:
     content_hash: str
 
 
+def _prompt_root() -> Path:
+    configured = Path(get_settings().prompt_root)
+    if configured.is_absolute():
+        return configured
+    return (resource_root() / configured).resolve()
+
+
 def load_prompt(task_type: str, version: str = "v1") -> PromptBundle:
-    root = Path(get_settings().prompt_root) / task_type / version
+    root = _prompt_root() / task_type / version
     system = (root / "system.md").read_text(encoding="utf-8")
     user = (root / "user.md").read_text(encoding="utf-8")
     repair = (root / "repair.md").read_text(encoding="utf-8")
