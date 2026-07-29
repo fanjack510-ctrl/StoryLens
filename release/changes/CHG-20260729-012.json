@@ -20,6 +20,11 @@
       "sha": "50b15e722c92b71e3f8c8e6fc06a49f999f0cc64",
       "message": "docs(release): attach CHG-012 commits and record final HEAD",
       "primary": false
+    },
+    {
+      "sha": "9175641caeedd563d97cc9e8da011a44e0fdf495",
+      "message": "docs(release): finalize CHG-012 commit list and RC.3 final report",
+      "primary": false
     }
   ],
   "modules": [
@@ -98,5 +103,5 @@
   "sidecar_sha256": "40A023C301D344C157F9C45D1083D067C0D5EAD5F0F3D83E0C186CDA1A046C9C",
   "archive_path": "D:\\StoryLens-Local-Evidence\\installer-archive\\StoryLens_1.1.2-rc.3_x64-setup.exe",
   "public_build_source_head": "c8858b900dd9eb677a73f2549bb3f57ff3990e6b",
-  "public_final_head": "50b15e722c92b71e3f8c8e6fc06a49f999f0cc64"
+  "public_final_head": "9175641caeedd563d97cc9e8da011a44e0fdf495"
 }
