@@ -1,0 +1,64 @@
+{
+  "id": "CHG-20260729-003",
+  "title": "综合阅读曲线表达、阶段判断与场景主因优化",
+  "type": "fix",
+  "issue_id": null,
+  "base_version": "1.1.1",
+  "target_version": "1.1.2",
+  "public_branch": "fix/1.1.2-comprehensive-reading-curve",
+  "private_branch": "fix/1.1.2-comprehensive-reading-curve",
+  "status": "implementing",
+  "release_pool_status": "pending",
+  "include_in_next_release": true,
+  "forward_port_required": true,
+  "forward_port_target": "integration/whole-book-v120",
+  "forward_port_status": "pending",
+  "depends_on": [
+    "CHG-20260729-002"
+  ],
+  "related_changes": [
+    {
+      "id": "CHG-20260729-002",
+      "relation": "integrated prerequisite"
+    }
+  ],
+  "affected_modules": [
+    "apps/desktop/src/components/readerJourney",
+    "apps/api/app/services/reader_journey_dimension_insights.py"
+  ],
+  "commits": [],
+  "modules": [
+    "release",
+    "apps/desktop",
+    "apps/api"
+  ],
+  "files": [
+    "release/changes/CHG-20260729-003.json",
+    "release/evidence/hotfix/1.1.2/CHG-20260729-003/"
+  ],
+  "user_summary": "强化综合阅读曲线的贡献表达、场景任务适配与主因解释，不改 formula_v2。",
+  "technical_summary": "Keep reading_momentum; separate overall_reading_score vs overall_reading_fit; presentation-layer drivers/drags and phase conclusions.",
+  "acceptance_criteria": [
+    "综合阅读 name unchanged",
+    "reading_momentum / formula_v2 unchanged",
+    "Score and role-fit visually separated",
+    "Primary driver/drag visible without stacking five curves",
+    "Phase cards gain conclusions beyond average",
+    "Legacy Journey compatible without re-run",
+    "Fake only; no formal DB writes"
+  ],
+  "tests": [],
+  "manual_gate": "MG-CHG-20260729-003 pending",
+  "verification_evidence": [
+    "release/evidence/hotfix/1.1.2/CHG-20260729-003/COMPREHENSIVE_READING_AUDIT.md"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "Presentation enrich at read time; no persistence rewrite."
+  },
+  "created_at": "2026-07-29T04:50:00Z",
+  "updated_at": "2026-07-29T04:55:00Z",
+  "base_head": "9464b957e1538fe975115c972b0606b5a6d9dda2"
+}
