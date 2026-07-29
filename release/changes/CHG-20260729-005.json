@@ -26,7 +26,8 @@
     "apps/desktop/src/components/readerJourney"
   ],
   "commits": [
-    "5efd6dcdb93eddca0b8f5893b921761849a7257d"
+    "5efd6dcdb93eddca0b8f5893b921761849a7257d",
+    "76d2b04020fcdf0ab97c5daecc33bfd5a1697ef8"
   ],
   "modules": [
     "release",
@@ -65,7 +66,6 @@
     "notes": "FE presentation only; legacy journeys work without re-run."
   },
   "created_at": "2026-07-29T07:00:00Z",
-  "updated_at": "2026-07-29T07:10:00Z",
+  "updated_at": "2026-07-29T07:20:00Z",
   "base_head": "2e8ed1edaf7dc91933666f5e46f4b2bdb747407c"
 }
-

@@ -9,7 +9,7 @@ CHG-20260729-004 **integrated** into Public `hotfix/1.1.2` via fast-forward.
 | | SHA |
 |--|-----|
 | Public start | `bbcd6d7ac925303247599c9869e11780e4a7ca20` |
-| Public tip (verify) | *(filled after FF)* |
+| Public tip (verify) | `2e8ed1edaf7dc91933666f5e46f4b2bdb747407c` |
 | Merge type | fast-forward |
 
 ## Registry
