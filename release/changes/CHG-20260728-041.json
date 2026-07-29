@@ -7,7 +7,7 @@
   "target_version": "1.1.2",
   "public_branch": "fix/1.1.2-manual-scene-boundary-review",
   "private_branch": "fix/1.1.2-manual-scene-boundary-review",
-  "status": "verified",
+  "status": "integrated",
   "release_pool_status": "included",
   "include_in_next_release": true,
   "forward_port_required": true,
@@ -47,7 +47,7 @@
     "release/trains/1.1.2.json"
   ],
   "user_summary": "场景识别完成后先确认/调整场景边界，再启动阅读旅程；支持草稿、确认绑定与结果复用。",
-  "technical_summary": "Extended BoundaryRevision lifecycle; disabled auto journey; scene-boundaries API; UI editor; migration migrate_phase_scene_boundary_manual_review. Manual gate MG-CHG-20260728-041 ready. Real provider calls=0.",
+  "technical_summary": "Extended BoundaryRevision lifecycle; disabled auto journey; scene-boundaries API; UI editor; migration migrate_phase_scene_boundary_manual_review. Manual gate MG-CHG-20260728-041 ready. Real provider calls=0. Integrated into hotfix/1.1.2 at 5900615.",
   "acceptance_criteria": [
     "AI/confirmed revisions immutable; edits via draft",
     "Partition coverage/gap/overlap validated",
@@ -67,7 +67,8 @@
     "release/evidence/hotfix/1.1.2/CHG-20260728-041/FINAL_IMPLEMENTATION_REPORT.md",
     "release/evidence/hotfix/1.1.2/CHG-20260728-041/REGRESSION.md",
     "release/evidence/hotfix/1.1.2/CHG-20260728-041/MANUAL_GATE.md",
-    "release/evidence/hotfix/1.1.2/CHG-20260728-041/MANUAL_GATE_PASS.md"
+    "release/evidence/hotfix/1.1.2/CHG-20260728-041/MANUAL_GATE_PASS.md",
+    "release/evidence/hotfix/1.1.2/CHG-20260728-041/INTEGRATION_REPORT.md"
   ],
   "data_compatibility": {
     "database_changed": true,
@@ -82,5 +83,7 @@
     "breaking_change": false
   },
   "created_at": "2026-07-28T08:30:00Z",
-  "updated_at": "2026-07-29T03:22:46Z"
+  "updated_at": "2026-07-29T03:25:08Z",
+  "public_integration_commit": "590061547e4db773c1ec688b7c093aa7bb8b0b5d",
+  "private_integration_commit": "23a0b025db51acaa8e62f4e81bc7628f19a8e2a6"
 }
