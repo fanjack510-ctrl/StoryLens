@@ -122,6 +122,15 @@ export type JourneyRiskInterval = {
   final_risk?: number;
 };
 
+export type DimensionInsightsMap = {
+  overall_reading?: string | null;
+  plot_progression?: string | null;
+  reading_tension?: string | null;
+  emotional_intensity?: string | null;
+  hook_payoff?: string | null;
+  pacing_speed?: string | null;
+};
+
 export type JourneySceneNodeScores = {
   curiosity: number;
   tension: number;
@@ -269,6 +278,12 @@ export type JourneySceneNode = {
   secondary_diagnoses?: string[];
   positive_mechanism?: string | null;
   data_quality_issue?: string | null;
+  /** Per-dimension scene insight texts (v2 / presentation enrich). */
+  dimension_insights?: DimensionInsightsMap | null;
+  insight_source?: "generated" | "derived_legacy" | "unavailable" | null;
+  /** Alias for reading_momentum on composite lens. */
+  overall_reading_score?: number | null;
+  composite_role_fit?: "合适" | "偏弱" | "偏强" | "无法判断" | null;
 };
 
 export type JourneyChapterSummary = {
