@@ -49,6 +49,9 @@ const ACTIVE_STATUSES = new Set([
   "reader_journey_chapter_running",
   "awaiting_provider_recovery",
   "aborted_by_limit",
+  "cancellation_requested",
+  "stopping",
+  "retrying",
 ]);
 
 const COMPLETED_STATUSES = new Set(["completed", "succeeded"]);
@@ -60,6 +63,8 @@ const FAILED_STATUSES = new Set([
 ]);
 
 const CANCELLED_STATUSES = new Set(["cancelled", "review_cancelled", "review_expired"]);
+
+const STOPPING_STATUSES = new Set(["cancellation_requested", "stopping"]);
 
 export function isNativeOverviewRun(run: Run | Record<string, unknown>): boolean {
   const taskType = String((run as any).task_type || "");
@@ -131,6 +136,9 @@ export function normalizeRunLifecycle(
   if (COMPLETED_STATUSES.has(status)) {
     return "completed";
   }
+
+  // Cooperative stop-in-progress stays "active" for polling, not failed/paused.
+  if (STOPPING_STATUSES.has(status)) return "active";
 
   if (ACTIVE_STATUSES.has(status)) return "active";
 
@@ -259,6 +267,9 @@ export function resolveTaskCenterPrimaryAction(run: Run | Record<string, unknown
     return { kind: "confirm", label: "继续确认", testId: `continue-confirm-${id}` };
   }
   if (phase === "active") {
+    if (STOPPING_STATUSES.has(status)) {
+      return { kind: "detail", label: "查看详情", testId: `view-detail-${id}` };
+    }
     return { kind: "progress", label: "查看进度", testId: `view-progress-${id}` };
   }
   if (phase === "interrupted") {

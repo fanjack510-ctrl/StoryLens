@@ -87,6 +87,35 @@ export const analysisApi = {
     }>(`/api/v1/analysis-execution-plan?mode=${encodeURIComponent(mode)}`),
   retry: (run: number) =>
     api(`/api/v1/analysis-runs/${run}/retry`, { method: "POST" }),
+  cancel: (
+    run: number,
+    payload?: {
+      reason?: string;
+      expected_version?: number;
+      client_request_id?: string;
+    },
+  ) =>
+    api<{
+      task_id: number;
+      previous_status: string;
+      current_status: string;
+      cancellation_requested_at?: string | null;
+      cancelled_at?: string | null;
+      message: string;
+      already_requested: boolean;
+      already_cancelled: boolean;
+      already_completed: boolean;
+      cannot_cancel: boolean;
+      can_restart_as_new_task: boolean;
+      status_version: number;
+    }>(`/api/v1/analysis-runs/${run}/cancel`, {
+      method: "POST",
+      body: JSON.stringify({
+        reason: payload?.reason ?? "user_requested",
+        expected_version: payload?.expected_version,
+        client_request_id: payload?.client_request_id,
+      }),
+    }),
   resumeSceneAnalysis: (
     run: number,
     payload?: {

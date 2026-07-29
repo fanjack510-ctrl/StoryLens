@@ -21,6 +21,16 @@ import {
   normalizeRunLifecycle,
   resolveTaskCenterPrimaryAction,
 } from "../services/runLifecycle";
+import {
+  STOP_CONFIRM_BODY,
+  STOP_CONFIRM_TITLE,
+  canShowStopAnalysis,
+  cancellationReasonLabel,
+  formatCancelDetailHint,
+  isCancelledStatus,
+  isStoppingStatus,
+  taskCancelStatusLabel,
+} from "../services/taskCancellationUi";
 import { isProNativeOverviewUiEnabled } from "../services/proNativeOverviewFlag";
 import "./tasksPage.css";
 
@@ -172,6 +182,8 @@ async function resolveBookIdForChapter(chapterId: number): Promise<number | null
 }
 
 function badgeToneForRun(run: any): string {
+  if (isStoppingStatus(run?.status)) return "warning";
+  if (isCancelledStatus(run?.status)) return "neutral";
   if (isBudgetPauseRun(run) || run.status === "awaiting_provider_recovery") {
     return "warning";
   }
@@ -294,6 +306,9 @@ export function TasksPage() {
   const [, setOfflineReplayMessage] = useState<string>();
   const [, setOfflineReplayError] = useState<RecoveryErrorView>();
   const [navBusyRunId, setNavBusyRunId] = useState<number | null>(null);
+  const [stopConfirmRun, setStopConfirmRun] = useState<any | null>(null);
+  const [stopSubmitting, setStopSubmitting] = useState(false);
+  const [stopError, setStopError] = useState<{ code: string; message: string } | null>(null);
   const qc = useQueryClient();
   const runs = useQuery({
     queryKey: ["runs"],
@@ -314,6 +329,32 @@ export function TasksPage() {
     await analysisApi.retry(id);
     await qc.invalidateQueries({ queryKey: ["runs"] });
   };
+
+  const submitStopAnalysis = async () => {
+    if (!stopConfirmRun || stopSubmitting) return;
+    setStopSubmitting(true);
+    setStopError(null);
+    try {
+      await analysisApi.cancel(stopConfirmRun.id, {
+        reason: "user_requested",
+        expected_version: stopConfirmRun.status_version,
+        client_request_id:
+          globalThis.crypto?.randomUUID?.() || `cancel-${Date.now()}`,
+      });
+      setStopConfirmRun(null);
+      await qc.invalidateQueries({ queryKey: ["runs"] });
+    } catch (error) {
+      const code = error instanceof ApiError ? error.code : "CANCEL_FAILED";
+      const message =
+        error instanceof ApiError
+          ? error.message
+          : "提交停止请求失败，请稍后重试。";
+      setStopError({ code: String(code || "CANCEL_FAILED"), message });
+    } finally {
+      setStopSubmitting(false);
+    }
+  };
+
   const openChapterProgress = async (run: any) => {
     if (isNativeOverviewRun(run) || run.task_type === "whole_book_overview" || run.subject_type === "book") {
       const bookId = Number(run.book_id || run.subject_id);
@@ -579,8 +620,10 @@ export function TasksPage() {
     failed_provider: "服务请求失败",
     succeeded: "已完成",
     completed: "已完成",
-    cancelled: "已取消",
-    review_cancelled: "已取消",
+    cancelled: "已停止",
+    review_cancelled: "已停止",
+    cancellation_requested: "正在停止",
+    stopping: "正在停止",
     review_expired: "审阅已过期",
     failed: "失败",
   };
@@ -604,6 +647,8 @@ export function TasksPage() {
     return null;
   };
   const runStatusLabel = (run: any) => {
+    const cancelLabel = taskCancelStatusLabel(run?.status);
+    if (cancelLabel) return cancelLabel;
     if (
       (run.failure_reason_code === "SCENE_BOUNDARY_OUTPUT_TRUNCATED" ||
         run.root_error_code === "SCENE_BOUNDARY_OUTPUT_TRUNCATED") &&
@@ -679,7 +724,7 @@ export function TasksPage() {
         );
       }
       if (statusFilter === "cancelled") {
-        return run.status === "cancelled" || run.status === "review_cancelled";
+        return isCancelledStatus(run.status) || isStoppingStatus(run.status);
       }
       if (statusFilter === "running") {
         return (
@@ -802,7 +847,7 @@ export function TasksPage() {
           <option value="paused">已暂停</option>
           <option value="failed">失败</option>
           <option value="succeeded">已完成</option>
-          <option value="cancelled">已取消</option>
+          <option value="cancelled">已停止</option>
         </select>
       </div>
       {highlightRunId && (
@@ -938,6 +983,37 @@ export function TasksPage() {
                           {primary.label}
                         </button>
                       ) : null}
+                      {canShowStopAnalysis(run) ? (
+                        <button
+                          type="button"
+                          className="tasks-stop-btn"
+                          data-testid={`stop-analysis-${run.id}`}
+                          aria-label="停止分析"
+                          disabled={stopSubmitting && stopConfirmRun?.id === run.id}
+                          onClick={() => {
+                            setStopError(null);
+                            setStopConfirmRun(run);
+                          }}
+                        >
+                          停止分析
+                        </button>
+                      ) : null}
+                      {isCancelledStatus(run.status) ? (
+                        <button
+                          type="button"
+                          className="ghost"
+                          data-testid={`reanalyze-${run.id}`}
+                          disabled={navBusyRunId === run.id}
+                          onClick={() => void openChapterProgress(run)}
+                        >
+                          重新分析
+                        </button>
+                      ) : null}
+                      {isStoppingStatus(run.status) ? (
+                        <small className="tasks-stopping-hint" data-testid={`stopping-hint-${run.id}`}>
+                          正在结束当前请求，不会再启动后续分析。
+                        </small>
+                      ) : null}
                       {moreItems.length > 0 && (
                         <OverflowMenu
                           data-testid={`run-more-${run.id}`}
@@ -984,6 +1060,58 @@ export function TasksPage() {
                   <dd>{detail.boundary_revision_id ? `#${detail.boundary_revision_id}` : "无"}</dd>
                 </dl>
               </section>
+
+              {(isCancelledStatus(detail.status) || isStoppingStatus(detail.status)) && (
+                <section className="tasks-detail-section" data-testid="cancel-detail-section">
+                  <h3>停止信息</h3>
+                  <dl>
+                    <dt>停止状态</dt>
+                    <dd>{taskCancelStatusLabel(detail.status) || runStatusLabel(detail)}</dd>
+                    <dt>停止请求时间</dt>
+                    <dd>
+                      {detail.cancellation_requested_at
+                        ? new Date(detail.cancellation_requested_at).toLocaleString()
+                        : "—"}
+                    </dd>
+                    <dt>实际停止时间</dt>
+                    <dd>
+                      {detail.cancelled_at
+                        ? new Date(detail.cancelled_at).toLocaleString()
+                        : "—"}
+                    </dd>
+                    <dt>停止原因</dt>
+                    <dd>{cancellationReasonLabel(detail.cancellation_reason)}</dd>
+                    <dt>场景进度</dt>
+                    <dd data-testid="cancel-scene-progress">
+                      {formatCancelDetailHint(detail) ||
+                        `${detail.completed_scene_count ?? 0} / ${detail.total_scene_count ?? 0}`}
+                    </dd>
+                    <dt>实际用量</dt>
+                    <dd data-testid="cancel-usage">
+                      {detail.usage_invocation_count != null
+                        ? `停止前已调用：${detail.usage_invocation_count} 次；Token：${
+                            detail.usage_total_tokens ?? "—"
+                          }；估算费用：${
+                            detail.usage_estimated_cost != null
+                              ? detail.usage_estimated_cost
+                              : "—"
+                          }`
+                        : "暂无调用记录（可能尚未发起模型请求）"}
+                    </dd>
+                    <dt>预算预留</dt>
+                    <dd>
+                      {detail.reservation_status === "released" ||
+                      detail.reservation_status === "consumed"
+                        ? detail.reservation_status === "released"
+                          ? "已释放"
+                          : "已结算"
+                        : detail.reservation_status || "—"}
+                    </dd>
+                    <dt>重新分析</dt>
+                    <dd>{detail.can_restart_as_new_task !== false ? "可创建新任务" : "—"}</dd>
+                  </dl>
+                </section>
+              )}
 
               <section className="tasks-detail-section">
                 <h3>执行过程</h3>
@@ -1378,6 +1506,67 @@ export function TasksPage() {
                 <p data-testid="provider-transport-error-label">服务商传输错误</p>
               )}
             </div>
+          </div>
+        </div>
+      )}
+      {stopConfirmRun && (
+        <div className="modal-backdrop" data-testid="stop-confirm-dialog">
+          <div className="modal tasks-stop-modal" role="dialog" aria-modal="true" aria-labelledby="stop-confirm-title">
+            <header>
+              <h2 id="stop-confirm-title">{STOP_CONFIRM_TITLE}</h2>
+              <button
+                type="button"
+                aria-label="关闭"
+                disabled={stopSubmitting}
+                onClick={() => {
+                  if (stopSubmitting) return;
+                  setStopConfirmRun(null);
+                  setStopError(null);
+                }}
+              >
+                ×
+              </button>
+            </header>
+            <p className="tasks-stop-body" style={{ whiteSpace: "pre-line" }}>
+              {STOP_CONFIRM_BODY}
+            </p>
+            {stopSubmitting && (
+              <p className="notice" data-testid="stop-submitting">
+                正在提交停止请求……
+              </p>
+            )}
+            {stopError && (
+              <div className="notice" data-testid="stop-error">
+                <b>{stopError.message}</b>
+                <details>
+                  <summary>技术详情</summary>
+                  <code>{stopError.code}</code>
+                </details>
+              </div>
+            )}
+            <footer className="tasks-stop-actions">
+              <button
+                type="button"
+                data-testid="stop-continue-analysis"
+                disabled={stopSubmitting}
+                onClick={() => {
+                  setStopConfirmRun(null);
+                  setStopError(null);
+                }}
+              >
+                继续分析
+              </button>
+              <button
+                type="button"
+                className="tasks-stop-confirm"
+                data-testid="stop-confirm-submit"
+                disabled={stopSubmitting}
+                aria-busy={stopSubmitting}
+                onClick={() => void submitStopAnalysis()}
+              >
+                确认停止
+              </button>
+            </footer>
           </div>
         </div>
       )}

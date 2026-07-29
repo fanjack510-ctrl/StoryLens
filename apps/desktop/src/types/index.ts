@@ -328,6 +328,13 @@ export type Run = {
   created_at: string;
   started_at?: string;
   completed_at?: string;
+  status_version?: number;
+  cancellation_requested_at?: string | null;
+  cancelled_at?: string | null;
+  cancellation_reason?: string | null;
+  cancelled_by?: string | null;
+  can_cancel?: boolean;
+  can_restart_as_new_task?: boolean;
   budget_required?: { requests?: number; tokens?: number; estimated_cost?: number };
   budget_remaining?: { requests?: number; tokens?: number; estimated_cost?: number };
   exceeded_dimensions?: string[];
