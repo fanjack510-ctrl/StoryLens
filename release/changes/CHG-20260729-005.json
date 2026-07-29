@@ -1,4 +1,4 @@
-﻿{
+{
   "id": "CHG-20260729-005",
   "title": "单章钩子提出、回应与章末牵引可视化",
   "type": "fix",
@@ -27,7 +27,8 @@
   ],
   "commits": [
     "5efd6dcdb93eddca0b8f5893b921761849a7257d",
-    "76d2b04020fcdf0ab97c5daecc33bfd5a1697ef8"
+    "76d2b04020fcdf0ab97c5daecc33bfd5a1697ef8",
+    "c1a61aab8baf7a737268997fe9867042105b2d6d"
   ],
   "modules": [
     "release",
