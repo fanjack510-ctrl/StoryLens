@@ -303,6 +303,141 @@ def _scored_level(
     }
 
 
+_FAKE_SCENE_SPECS: list[dict[str, Any]] = [
+    {
+        "scene_role": "setup",
+        "summary": "开篇交代人物处境与章节初始疑问，为后续冲突埋线。",
+        "levels": {
+            "curiosity": 2,
+            "tension": 1,
+            "emotional_investment": 2,
+            "pacing_speed": 2,
+            "hook": 3,
+            "payoff": 1,
+            "information_gain": 2,
+        },
+        "insights": {
+            "overall_reading": "综合阅读贡献偏稳；读者主要在建立章节初始认知，继续阅读动力一般。",
+            "plot_progression": "剧情推进偏弱；事件变化有限，更多是在交代背景与人物处境。",
+            "reading_tension": "阅读张力偏弱；悬念与不确定性尚未充分建立。",
+            "emotional_intensity": "情绪强度偏弱；读者尚未被强烈情感牵动。",
+            "hook_payoff": "钩子刚提出而回报不足，问题链处于开启阶段。",
+            "pacing_speed": "节奏速度偏慢；叙述偏缓，符合铺垫场景的信息铺设需要。",
+        },
+    },
+    {
+        "scene_role": "transition",
+        "summary": "场景切换与信息过渡，为下一段冲突积蓄势能。",
+        "levels": {
+            "curiosity": 2,
+            "tension": 2,
+            "emotional_investment": 2,
+            "pacing_speed": 4,
+            "hook": 2,
+            "payoff": 1,
+            "information_gain": 1,
+        },
+        "insights": {
+            "overall_reading": "综合阅读贡献有限；过渡段推进快但剧情增量不大，整体拉动一般。",
+            "plot_progression": "剧情推进偏弱；场景切换完成但实质事件变化不多。",
+            "reading_tension": "阅读张力中等；危险感尚未明显抬升。",
+            "emotional_intensity": "情绪强度偏弱；读者更多在跟随场景位移。",
+            "hook_payoff": "钩子延续有限，回报几乎未落地，问题仍待后续回应。",
+            "pacing_speed": "节奏速度偏快；叙事推进快于信息增量，存在空转风险。",
+        },
+    },
+    {
+        "scene_role": "escalation",
+        "summary": "冲突抬升，人物做出关键反应，情绪投入明显增强。",
+        "levels": {
+            "curiosity": 3,
+            "tension": 2,
+            "emotional_investment": 4,
+            "pacing_speed": 3,
+            "hook": 3,
+            "payoff": 2,
+            "information_gain": 3,
+        },
+        "insights": {
+            "overall_reading": "综合阅读贡献中等偏上；情绪投入增强，但悬念压力尚未同步抬升。",
+            "plot_progression": "剧情推进中等；冲突有抬升，目标与状态出现可见变化。",
+            "reading_tension": "阅读张力偏弱；尽管冲突升级，等待感与不确定性仍不高。",
+            "emotional_intensity": "情绪强度偏强；读者对人物处境产生较明显的情感反应。",
+            "hook_payoff": "钩子持续存在，回报有限，问题链仍在推进中。",
+            "pacing_speed": "节奏速度中等；推进与情绪渲染大致平衡。",
+        },
+    },
+    {
+        "scene_role": "reveal",
+        "summary": "关键信息揭露，部分前文疑问得到回应但仍留余波。",
+        "levels": {
+            "curiosity": 3,
+            "tension": 3,
+            "emotional_investment": 3,
+            "pacing_speed": 3,
+            "hook": 3,
+            "payoff": 3,
+            "information_gain": 4,
+        },
+        "insights": {
+            "overall_reading": "综合阅读贡献较好；信息揭露带来阶段性满足，同时引出新的阅读期待。",
+            "plot_progression": "剧情推进偏强；关键信息落地，故事状态发生实质变化。",
+            "reading_tension": "阅读张力中等；真相揭晓后悬念压力有所释放。",
+            "emotional_intensity": "情绪强度中等；揭晓带来冲击但尚未达到情绪峰值。",
+            "hook_payoff": "钩子与回报部分呼应，问题链处于部分兑现阶段。",
+            "pacing_speed": "节奏速度中等；信息披露与场景反应节奏匹配。",
+        },
+    },
+    {
+        "scene_role": "climax",
+        "summary": "章节冲突高点，悬念与回报同时抬升，阅读动力达到峰值。",
+        "levels": {
+            "curiosity": 4,
+            "tension": 5,
+            "emotional_investment": 4,
+            "pacing_speed": 4,
+            "hook": 4,
+            "payoff": 4,
+            "information_gain": 4,
+        },
+        "insights": {
+            "overall_reading": "综合阅读贡献偏强；多维度同步抬升，读者继续阅读动力达到峰值。",
+            "plot_progression": "剧情推进偏强；核心冲突集中爆发，故事状态剧烈变化。",
+            "reading_tension": "阅读张力偏强；等待、危险与不确定性同时拉满。",
+            "emotional_intensity": "情绪强度偏强；高潮段情绪反应强烈且持续。",
+            "hook_payoff": "钩子与回报同步抬升，问题链在高潮段得到有效回应。",
+            "pacing_speed": "节奏速度偏快；动作与信息密集，符合高潮场景预期。",
+        },
+    },
+    {
+        "scene_role": "aftermath",
+        "summary": "高潮余波消化，读者情绪回落并承接下一章悬念。",
+        "levels": {
+            "curiosity": 2,
+            "tension": 2,
+            "emotional_investment": 3,
+            "pacing_speed": 2,
+            "hook": 2,
+            "payoff": 3,
+            "information_gain": 2,
+        },
+        "insights": {
+            "overall_reading": "综合阅读贡献回落；高潮后进入消化段，整体拉动趋于平稳。",
+            "plot_progression": "剧情推进偏弱；主要在处理高潮后果，增量事件有限。",
+            "reading_tension": "阅读张力偏弱；紧张感释放，读者处于阶段性安全区。",
+            "emotional_intensity": "情绪强度中等；余波仍有余温但不再持续加压。",
+            "hook_payoff": "部分钩子已回应，仍有问题留给后续章节。",
+            "pacing_speed": "节奏速度偏慢；停顿与观察增多，帮助读者消化高潮。",
+        },
+    },
+]
+
+
+def _fake_scene_spec(scene_ordinal: int) -> dict[str, Any]:
+    index = (max(1, scene_ordinal) - 1) % len(_FAKE_SCENE_SPECS)
+    return _FAKE_SCENE_SPECS[index]
+
+
 def _scene_profile_item(
     scene_id: int,
     scene_ordinal: int,
@@ -310,44 +445,30 @@ def _scene_profile_item(
     texts: dict[str, str],
 ) -> dict[str, Any]:
     """Build SceneReaderJourneyProfileItemV2-compatible payload (contract 2.0)."""
-    first = paragraph_ids[0] if paragraph_ids else ""
-    roles = (
-        "setup",
-        "escalation",
-        "investigation",
-        "reveal",
-        "climax",
-        "aftermath",
-        "transition",
-        "open_end",
-        "closed_end",
-    )
-    scene_role = roles[(max(1, scene_ordinal) - 1) % len(roles)]
-    base_level = 2 + (scene_ordinal % 3)
+    spec = _fake_scene_spec(scene_ordinal)
+    scene_role = str(spec["scene_role"])
+    level_overrides = dict(spec.get("levels") or {})
     evidence_ids = list(dict.fromkeys(paragraph_ids))[:16]
     fields = {
         key: _scored_level(
-            base_level if key not in {"cognitive_load", "redundancy"} else 1,
+            level_overrides.get(key, 2 if key not in {"cognitive_load", "redundancy"} else 1),
             evidence_ids,
             rationale=f"smoke-fake {key} for scene {scene_ordinal}",
         )
         for key in _LEVEL_KEYS
     }
-    # Emphasize journey-facing metrics for gate visibility.
-    fields["hook"] = _scored_level(3, evidence_ids, rationale="smoke-fake hook")
-    fields["payoff"] = _scored_level(2, evidence_ids, rationale="smoke-fake payoff")
-    fields["curiosity"] = _scored_level(3, evidence_ids, rationale="smoke-fake curiosity")
-    fields["tension"] = _scored_level(3, evidence_ids, rationale="smoke-fake tension")
-    fields["pacing_speed"] = _scored_level(3, evidence_ids, rationale="smoke-fake pacing")
+    first = paragraph_ids[0] if paragraph_ids else ""
     summary_seed = _quote_for(first, texts) if first else f"场景{scene_ordinal}"
+    summary = str(spec.get("summary") or summary_seed)[:160]
     return {
         "scene_id": int(scene_id),
         "scene_ordinal": int(scene_ordinal),
         "node_type": "scene",
         "scene_role": scene_role,
-        "scene_value_summary": f"Scene{scene_ordinal}推进：{summary_seed}"[:160],
+        "scene_value_summary": summary,
         "confidence": 0.8,
         "evidence_paragraph_ids": evidence_ids,
+        "dimension_insights": dict(spec.get("insights") or {}),
         **fields,
     }
 

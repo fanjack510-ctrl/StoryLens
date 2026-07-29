@@ -94,6 +94,32 @@ def _require_text_len(value: str, *, field_name: str, max_chars: int) -> str:
     return text
 
 
+class DimensionInsightsV2(BaseModel):
+    """Optional per-dimension scene insight texts (model-generated or persisted)."""
+
+    model_config = ConfigDict(extra="forbid")
+    overall_reading: str | None = Field(default=None, max_length=160)
+    plot_progression: str | None = Field(default=None, max_length=160)
+    reading_tension: str | None = Field(default=None, max_length=160)
+    emotional_intensity: str | None = Field(default=None, max_length=160)
+    hook_payoff: str | None = Field(default=None, max_length=160)
+    pacing_speed: str | None = Field(default=None, max_length=160)
+
+    @field_validator(
+        "overall_reading",
+        "plot_progression",
+        "reading_tension",
+        "emotional_intensity",
+        "hook_payoff",
+        "pacing_speed",
+    )
+    @classmethod
+    def _insight_len(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        return _require_text_len(value, field_name="dimension_insight", max_chars=160)
+
+
 class ScoredLevelField(BaseModel):
     """Model emits level only; mapped_score is program-derived."""
 
@@ -162,6 +188,8 @@ class SceneReaderJourneyProfileItemV2(BaseModel):
     pacing_fit_reason_code: str | None = None
     hook_payoff_fit_status: Literal["ok", "unavailable"] | None = None
     hook_payoff_fit_reason_code: str | None = None
+    # Optional model-generated per-dimension insights (absent on legacy artifacts).
+    dimension_insights: DimensionInsightsV2 | None = None
     # Persistence/integrity metadata written by pipeline; not model output.
     source_context_fingerprint: str | None = None
 
