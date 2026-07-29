@@ -161,7 +161,7 @@ class AnalysisRun(Base):
         ForeignKey("analysis_runs.id", ondelete="SET NULL"), nullable=True, index=True
     )
     # CHG-20260729-006 cooperative cancellation (nullable / defaults for legacy rows).
-    status_version: Mapped[int] = mapped_column(Integer, default=0)
+    status_version: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     cancellation_requested_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )

@@ -1,0 +1,49 @@
+{
+  "id": "CHG-20260729-008",
+  "title": "StoryLens 1.1.2 RC1 packaging and install-state verification",
+  "type": "build",
+  "base_version": "1.1.1",
+  "status": "implemented",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "release",
+    "packaging",
+    "apps/api",
+    "scripts/build_windows_rc.ps1"
+  ],
+  "files": [],
+  "user_summary": "构建 StoryLens 1.1.2-rc.1 安装包并完成安装态自动验证，准备人工安装验收",
+  "technical_summary": "Package StoryLens 1.1.2-rc.1 with STORYLENS_RC_CANDIDATE=1; install-state verify; no Push/Tag/Release.",
+  "acceptance_criteria": [
+    "Installer StoryLens_1.1.2-rc.1_x64-setup.exe",
+    "SIDECAR/INSTALLER build count 1",
+    "config packaging hash identity",
+    "CWD independence",
+    "security audit PASS",
+    "formal VERSION restored to 1.1.2",
+    "zero real provider; zero formal AppData writes"
+  ],
+  "tests": [],
+  "verification_evidence": [
+    "release/evidence/1.1.2-rc.1/"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": null,
+  "created_at": "2026-07-29T10:57:47Z",
+  "updated_at": "2026-07-29T11:07:36Z",
+  "target_version": "1.1.2",
+  "release_pool_status": "pending"
+}

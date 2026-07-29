@@ -23,7 +23,7 @@ if (-not $BuildLog) {
 
 $FormalVersion = (Get-Content -LiteralPath (Join-Path $Root "VERSION") -Raw -Encoding UTF8).Trim()
 # Allow RC packaging from current formal lines (1.0.5 historical, 1.1.0 release branch).
-$AllowedFormal = @("1.0.5", "1.1.0")
+$AllowedFormal = @("1.0.5", "1.1.0", "1.1.1", "1.1.2")
 if ($AllowedFormal -notcontains $FormalVersion) {
     throw "Refusing RC build: formal VERSION must be one of $($AllowedFormal -join ', ') before override (got $FormalVersion)"
 }
