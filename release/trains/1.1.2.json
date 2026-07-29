@@ -33,5 +33,5 @@
     "CHG-20260729-001",
     "CHG-20260729-002"
   ],
-  "notes": "Hotfix pool from v1.1.1; CHG-040/041/001 integrated. CHG-20260729-002 implementing."
+  "notes": "Hotfix pool from v1.1.1; CHG-040/041/001 integrated. CHG-20260729-002 verified (MG PASS)."
 }

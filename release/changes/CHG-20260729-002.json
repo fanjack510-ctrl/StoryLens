@@ -7,7 +7,7 @@
   "target_version": "1.1.2",
   "public_branch": "fix/1.1.2-reader-journey-stage-colors",
   "private_branch": "fix/1.1.2-reader-journey-stage-colors",
-  "status": "tested",
+  "status": "verified",
   "release_pool_status": "pending",
   "include_in_next_release": true,
   "forward_port_required": true,
@@ -35,6 +35,12 @@
       "message": "ui(journey): align scene curves with story stage colors",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "46754919680fd23001131be4617511cd75b5dea3",
+      "message": "fix(journey-ui): strengthen visual separation of story stages",
+      "primary": true,
+      "multi_change_reason": "manual-gate defect fix for washed stage colors"
     }
   ],
   "modules": [
@@ -46,22 +52,26 @@
     "release/evidence/hotfix/1.1.2/CHG-20260729-002/"
   ],
   "user_summary": "将开端/发展/收束阶段颜色贯通到曲线背景、Scene 轴与左侧列表，不改阶段算法。",
-  "technical_summary": "Single journeyStageVisualTokens source; midpoint stage bands from actual scene X; shared across six lenses.",
+  "technical_summary": "Single journeyStageVisualTokens source; opaque distinct green/warm/blue-gray bands; midpoint geometry; risk top-strip only; stage titles only.",
   "acceptance_criteria": [
     "Single color source for cards and chart",
     "Bands follow actual scene ownership not equal thirds",
     "Six lenses share stage bands",
     "No stage algorithm change",
-    "Legacy compatible"
+    "Legacy compatible",
+    "Stage colors visually distinct without opacity wash"
   ],
   "tests": [
     "apps/desktop/src/components/readerJourney/stage_colors_chg002_local.test.ts"
   ],
-  "manual_gate": "MG-CHG-20260729-002 pending",
+  "manual_gate": "MG-CHG-20260729-002 PASS",
   "verification_evidence": [
     "release/evidence/hotfix/1.1.2/CHG-20260729-002/STAGE_COLOR_AUDIT.md",
     "release/evidence/hotfix/1.1.2/CHG-20260729-002/TEST_RESULTS.json",
-    "release/evidence/hotfix/1.1.2/CHG-20260729-002/MANUAL_UI_ENV.md"
+    "release/evidence/hotfix/1.1.2/CHG-20260729-002/MANUAL_UI_ENV.md",
+    "release/evidence/hotfix/1.1.2/CHG-20260729-002/MANUAL_GATE_PASS.md",
+    "release/evidence/hotfix/1.1.2/CHG-20260729-002/manual-gate-defect/COMPUTED_STAGE_COLORS.json",
+    "release/evidence/hotfix/1.1.2/CHG-20260729-002/manual-gate-defect/MG-CHG-20260729-002-stage-colors-after-fix.png"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -70,5 +80,5 @@
     "notes": "Presentation-only; no persistence changes."
   },
   "created_at": "2026-07-29T04:04:02Z",
-  "updated_at": "2026-07-29T04:10:03Z"
+  "updated_at": "2026-07-29T04:44:00Z"
 }
