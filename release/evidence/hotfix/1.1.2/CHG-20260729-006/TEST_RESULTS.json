@@ -1,0 +1,27 @@
+{
+  "change": "CHG-20260729-006",
+  "public_base_head": "595545351972cacd010b149061f4f513d8a0bd71",
+  "pytest": {
+    "file": "apps/api/tests/test_task_cancellation_chg006.py",
+    "result": "19 passed",
+    "command": "PYTHONPATH=apps/api pytest apps/api/tests/test_task_cancellation_chg006.py -q"
+  },
+  "vitest": {
+    "files": [
+      "apps/desktop/src/services/taskCancellationUi.test.ts",
+      "apps/desktop/src/pages/TasksPage.cancel.test.tsx"
+    ],
+    "result": "11 passed"
+  },
+  "typecheck": {
+    "chg006_files": "no errors in TasksPage / taskCancellationUi / runLifecycle / analysisApi",
+    "full_tsc_b": "33 pre-existing errors outside CHG-006 (readerJourney local tests / BookRoutePage)",
+    "verdict": "PASS for change scope"
+  },
+  "http_e2e": "PASS (see HTTP_E2E.json)",
+  "real_provider_calls": 0,
+  "formal_database_writes": 0,
+  "process_kill_used": false,
+  "database_migration": "YES migrate_phase_task_cancellation_v1",
+  "status": "tested"
+}

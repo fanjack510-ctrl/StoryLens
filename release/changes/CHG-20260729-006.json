@@ -1,0 +1,55 @@
+{
+  "id": "CHG-20260729-006",
+  "title": "任务中心主动停止分析与协作式任务取消",
+  "type": "fix",
+  "issue_id": null,
+  "base_version": "1.1.1",
+  "target_version": "1.1.2",
+  "public_branch": "fix/1.1.2-task-cancellation",
+  "private_branch": "fix/1.1.2-task-cancellation",
+  "status": "tested",
+  "release_pool_status": "pending",
+  "include_in_next_release": true,
+  "forward_port_required": true,
+  "forward_port_target": "integration/whole-book-v120",
+  "forward_port_status": "pending",
+  "depends_on": [
+    "CHG-20260729-005"
+  ],
+  "related_changes": [
+    {
+      "id": "CHG-20260729-005",
+      "relation": "verified prerequisite"
+    }
+  ],
+  "affected_modules": [
+    "apps/api/app/services/task_cancellation.py",
+    "apps/api/app/services/scene_pipeline.py",
+    "apps/api/app/api/v1/analysis.py",
+    "apps/desktop/src/pages/TasksPage.tsx"
+  ],
+  "commits": [
+    "7035ebceb0eb84d22186953d0d7201a02f903740",
+    "df64db64a65fa627aac0f6f4d954f1be1911a3c7"
+  ],
+  "evidence_commit_pending": true,
+  "modules": [
+    "release",
+    "apps/api",
+    "apps/desktop"
+  ],
+  "files": [
+    "release/changes/CHG-20260729-006.json",
+    "release/evidence/hotfix/1.1.2/CHG-20260729-006/"
+  ],
+  "user_summary": "任务中心可为未结束分析提交协作式停止；已停止为独立终态，保留已完成结果与用量并释放未用预算。",
+  "technical_summary": "Persisted cancellation_requested/stopping/cancelled on AnalysisRun with migration; POST cancel API; worker checkpoints; Task Center stop UI; no process kill.",
+  "acceptance_criteria": [
+    "Stop is cooperative cancel not process kill",
+    "Cancelled is distinct from failed",
+    "Unused reservation released; usage preserved",
+    "Reanalyze creates new task"
+  ],
+  "manual_gate": "MG-CHG-20260729-006",
+  "created_at": "2026-07-29"
+}

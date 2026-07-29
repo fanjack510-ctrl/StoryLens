@@ -1,0 +1,39 @@
+{
+  "pass": true,
+  "real_provider_calls": 0,
+  "formal_db_writes": 0,
+  "results": [
+    {
+      "case": "queued_cancel",
+      "status_code": 200,
+      "body": {
+        "task_id": 1,
+        "previous_status": "queued",
+        "current_status": "cancelled",
+        "already_cancelled": true,
+        "message": "任务已停止"
+      }
+    },
+    {
+      "case": "succeeded_cannot_cancel",
+      "status_code": 200,
+      "body": {
+        "current_status": "succeeded",
+        "already_completed": true,
+        "cannot_cancel": true
+      }
+    },
+    {
+      "case": "missing_404",
+      "status_code": 404,
+      "error": {
+        "error_code": "ANALYSIS_RUN_NOT_FOUND",
+        "message": "分析运行不存在",
+        "details": {},
+        "request_id": "70b7404b407d4060",
+        "retryable": false,
+        "user_action_hint": null
+      }
+    }
+  ]
+}
