@@ -19,6 +19,8 @@ from app.schemas.scene_boundaries import (
     SceneBoundaryDraftSaveRequest,
     SceneBoundaryDraftSaveResponse,
     SceneBoundaryRevisionSummary,
+    SceneBoundarySplitRequest,
+    SceneBoundarySplitResponse,
     ScenePartitionItem,
 )
 from app.services.scene_boundary_manual_review import (
@@ -32,13 +34,19 @@ from app.services.scene_boundary_manual_review import (
     parse_partition_json,
     restore_ai_partition_into_draft_v1,
     save_scene_boundary_draft_v1,
+    split_scene_at_paragraph_v1,
 )
 
 router = APIRouter(prefix="/api/v1", tags=["scene-boundaries"])
 
 
 def _scene_boundary_http_error(exc: SceneBoundaryError):
-    status = 409 if exc.error_code == "SCENE_REVISION_CONCURRENT_MODIFICATION" else 422
+    if exc.error_code == "SCENE_REVISION_CONCURRENT_MODIFICATION":
+        status = 409
+    elif exc.error_code == "SCENE_REVISION_NOT_FOUND":
+        status = 404
+    else:
+        status = 422
     return error(status, exc.error_code, str(exc))
 
 
@@ -143,6 +151,42 @@ def save_scene_boundary_draft(
         scenes=[ScenePartitionItem(**item) for item in scenes],
         status=draft.status,
         updated_at=str(draft.updated_at) if draft.updated_at else None,
+    )
+
+
+@router.post(
+    "/chapters/{chapter_id}/scene-boundaries/draft/{revision_id}/split",
+    response_model=SceneBoundarySplitResponse,
+)
+def split_scene_boundary_draft(
+    chapter_id: int,
+    revision_id: int,
+    body: SceneBoundarySplitRequest,
+    session: Session = Depends(get_db),
+):
+    _revision_or_404(session, revision_id, chapter_id)
+    try:
+        result = split_scene_at_paragraph_v1(
+            session,
+            chapter_id,
+            revision_id,
+            boundary_after_paragraph_id=body.boundary_after_paragraph_id,
+            expected_etag=body.expected_etag,
+            client_request_id=body.client_request_id,
+            scene_order=body.scene_order,
+        )
+        session.commit()
+    except SceneBoundaryError as exc:
+        raise _scene_boundary_http_error(exc) from exc
+    return SceneBoundarySplitResponse(
+        revision_id=result["revision_id"],
+        revision_etag=result["revision_etag"],
+        boundary_hash=result["boundary_hash"],
+        scenes=[ScenePartitionItem(**item) for item in result["scenes"]],
+        diff_summary=result.get("diff_summary") or {},
+        updated_at=result.get("updated_at"),
+        already_split=bool(result.get("already_split")),
+        status=str(result.get("status") or "draft"),
     )
 
 

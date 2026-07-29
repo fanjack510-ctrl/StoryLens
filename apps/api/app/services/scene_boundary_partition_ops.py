@@ -54,14 +54,28 @@ def add_boundary(
     after_paragraph_id: str,
     paragraph_ids: list[str],
 ) -> list[dict]:
-    """Split one scene at after_paragraph_id (boundary after this paragraph)."""
+    """Split one scene after after_paragraph_id (boundary after this paragraph).
+
+    Raises ValueError with:
+    - SCENE_SPLIT_INVALID_POSITION
+    - SCENE_SPLIT_EMPTY_SCENE
+    - SCENE_BOUNDARY_ALREADY_EXISTS
+    - SCENE_PARTITION_PARAGRAPH_MISSING
+    """
     ordered = _ordered(scenes)
     pos = {pid: index for index, pid in enumerate(paragraph_ids)}
     if after_paragraph_id not in pos:
         raise ValueError("SCENE_PARTITION_PARAGRAPH_MISSING")
     split_idx = pos[after_paragraph_id]
     if split_idx >= len(paragraph_ids) - 1:
-        raise ValueError("SCENE_PARTITION_ORDER_INVALID")
+        # Cannot split after the chapter's last paragraph.
+        raise ValueError("SCENE_SPLIT_INVALID_POSITION")
+
+    # Existing boundary after this paragraph?
+    for scene in ordered[:-1]:
+        if scene["end_paragraph_id"] == after_paragraph_id:
+            raise ValueError("SCENE_BOUNDARY_ALREADY_EXISTS")
+
     target_idx = None
     for index, scene in enumerate(ordered):
         start_i = pos[scene["start_paragraph_id"]]
@@ -70,14 +84,17 @@ def add_boundary(
             target_idx = index
             break
     if target_idx is None:
-        raise ValueError("SCENE_PARTITION_PARAGRAPH_MISSING")
+        raise ValueError("SCENE_SPLIT_INVALID_POSITION")
+
     scene = deepcopy(ordered[target_idx])
     start_i = pos[scene["start_paragraph_id"]]
     end_i = pos[scene["end_paragraph_id"]]
+    # Must be strictly inside the scene (not last paragraph of the scene).
     if split_idx < start_i or split_idx >= end_i:
-        raise ValueError("SCENE_PARTITION_ORDER_INVALID")
-    if split_idx == end_i:
-        raise ValueError("SCENE_PARTITION_ORDER_INVALID")
+        raise ValueError("SCENE_SPLIT_INVALID_POSITION")
+    if start_i == end_i:
+        raise ValueError("SCENE_SPLIT_EMPTY_SCENE")
+
     left = {
         **scene,
         "end_paragraph_id": paragraph_ids[split_idx],
@@ -86,8 +103,14 @@ def add_boundary(
         "scene_order": int(scene["scene_order"]) + 1,
         "start_paragraph_id": paragraph_ids[split_idx + 1],
         "end_paragraph_id": scene["end_paragraph_id"],
+        # Inherit journey participation from the parent scene.
         "included_in_journey": bool(scene.get("included_in_journey", True)),
     }
+    if pos[left["start_paragraph_id"]] > pos[left["end_paragraph_id"]]:
+        raise ValueError("SCENE_SPLIT_EMPTY_SCENE")
+    if pos[right["start_paragraph_id"]] > pos[right["end_paragraph_id"]]:
+        raise ValueError("SCENE_SPLIT_EMPTY_SCENE")
+
     updated = ordered[:target_idx] + [left, right] + ordered[target_idx + 1 :]
     for index, item in enumerate(updated, start=1):
         item["scene_order"] = index
@@ -111,11 +134,14 @@ def delete_scene_merge(
     paragraph_ids: list[str],
     direction: str | None = None,
     scene_order: int | None = None,
+    included_in_journey: bool | None = None,
 ) -> list[dict]:
     """Merge adjacent scenes.
 
     - boundary_index: merge scenes at [i] and [i+1] (delete divider)
     - scene_order + direction: delete that scene into 'prev' or 'next'
+    - included_in_journey: explicit merge result; when None and sides agree, inherit;
+      when sides disagree and None, raise SCENE_MERGE_INCLUDED_CONFLICT
     """
     ordered = _ordered(scenes)
     if len(ordered) <= 1:
@@ -146,12 +172,19 @@ def delete_scene_merge(
     right = deepcopy(ordered[boundary_index + 1])
     if pos[left["end_paragraph_id"]] + 1 != pos[right["start_paragraph_id"]]:
         raise ValueError("SCENE_PARTITION_GAP")
+    left_inc = bool(left.get("included_in_journey", True))
+    right_inc = bool(right.get("included_in_journey", True))
+    if included_in_journey is not None:
+        merged_included = bool(included_in_journey)
+    elif left_inc == right_inc:
+        merged_included = left_inc
+    else:
+        raise ValueError("SCENE_MERGE_INCLUDED_CONFLICT")
     merged = {
         "scene_order": left["scene_order"],
         "start_paragraph_id": left["start_paragraph_id"],
         "end_paragraph_id": right["end_paragraph_id"],
-        "included_in_journey": bool(left.get("included_in_journey", True))
-        or bool(right.get("included_in_journey", True)),
+        "included_in_journey": merged_included,
     }
     updated = ordered[:boundary_index] + [merged] + ordered[boundary_index + 2 :]
     for index, item in enumerate(updated, start=1):

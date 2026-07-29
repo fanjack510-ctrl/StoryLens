@@ -15,6 +15,7 @@ from app.db.models import (
     AnalysisArtifact,
     AnalysisEvidence,
     AnalysisRun,
+    ApplicationSetting,
     BoundaryReviewSession,
     BoundaryRevision,
     Chapter,
@@ -897,6 +898,179 @@ def get_scene_boundaries_overview_v1(session: Session, chapter_id: int) -> dict[
     }
 
 
+def _split_idem_key(revision_id: int, client_request_id: str) -> str:
+    digest = hashlib.sha256(client_request_id.encode("utf-8")).hexdigest()[:24]
+    return f"split_idem_{revision_id}_{digest}"
+
+
+def _load_split_idem(session: Session, revision_id: int, client_request_id: str) -> dict[str, Any] | None:
+    if not client_request_id:
+        return None
+    row = session.get(ApplicationSetting, _split_idem_key(revision_id, client_request_id))
+    if row is None or not row.value_json:
+        return None
+    try:
+        payload = json.loads(row.value_json)
+    except json.JSONDecodeError:
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
+def _store_split_idem(
+    session: Session,
+    revision_id: int,
+    client_request_id: str,
+    payload: dict[str, Any],
+) -> None:
+    if not client_request_id:
+        return
+    key = _split_idem_key(revision_id, client_request_id)
+    row = session.get(ApplicationSetting, key)
+    body = json.dumps(payload, ensure_ascii=False)
+    if row is None:
+        session.add(ApplicationSetting(key=key, value_json=body, updated_at=_now()))
+    else:
+        row.value_json = body
+        row.updated_at = _now()
+
+
+def split_scene_at_paragraph_v1(
+    session: Session,
+    chapter_id: int,
+    draft_revision_id: int,
+    *,
+    boundary_after_paragraph_id: str,
+    expected_etag: str,
+    client_request_id: str | None = None,
+    scene_order: int | None = None,
+) -> dict[str, Any]:
+    """Split a draft scene after ``boundary_after_paragraph_id``.
+
+    Returns a dict with revision fields, scenes, diff_summary, already_split.
+    """
+    request_id = (client_request_id or "").strip()
+    if request_id:
+        cached = _load_split_idem(session, draft_revision_id, request_id)
+        if cached is not None:
+            return cached
+
+    revision = session.get(BoundaryRevision, draft_revision_id)
+    if revision is None or revision.chapter_id != chapter_id:
+        raise SceneBoundaryError("SCENE_REVISION_NOT_FOUND", "场景边界修订不存在")
+    if revision.status != "draft":
+        if revision.status == "confirmed":
+            raise SceneBoundaryError(
+                "SCENE_REVISION_NOT_DRAFT",
+                "已确认的场景划分不能原地拆分，请先创建草稿。",
+            )
+        if revision.source == "model" and revision.status == "confirmed":
+            raise SceneBoundaryError(
+                "SCENE_REVISION_NOT_DRAFT",
+                "AI 场景划分不能直接拆分，请先创建草稿。",
+            )
+        raise SceneBoundaryError(
+            "SCENE_REVISION_NOT_DRAFT",
+            "仅草稿状态的场景划分可以拆分。",
+        )
+    if revision.revision_etag != expected_etag:
+        raise SceneBoundaryError("SCENE_REVISION_CONCURRENT_MODIFICATION")
+
+    paragraphs = list(
+        session.scalars(
+            select(Paragraph)
+            .where(Paragraph.chapter_id == chapter_id)
+            .order_by(Paragraph.paragraph_index)
+        )
+    )
+    paragraph_ids = [item.id for item in paragraphs]
+    scenes = parse_partition_json(revision.final_boundaries_json)
+    if not scenes:
+        raise SceneBoundaryError("SCENE_PARTITION_EMPTY")
+
+    # Idempotent success if boundary already exists at the target gap.
+    already_split = False
+    for scene in sorted(scenes, key=lambda item: int(item["scene_order"]))[:-1]:
+        if scene["end_paragraph_id"] == boundary_after_paragraph_id:
+            already_split = True
+            break
+
+    if already_split:
+        result = {
+            "revision_id": revision.id,
+            "revision_etag": revision.revision_etag,
+            "boundary_hash": revision.boundary_hash or "",
+            "scenes": scenes,
+            "diff_summary": compute_diff_summary_v1(session, revision.id),
+            "updated_at": revision.updated_at.isoformat() if revision.updated_at else None,
+            "already_split": True,
+            "status": revision.status,
+        }
+        if request_id:
+            _store_split_idem(session, draft_revision_id, request_id, result)
+        return result
+
+    if scene_order is not None:
+        target = next(
+            (item for item in scenes if int(item["scene_order"]) == int(scene_order)),
+            None,
+        )
+        if target is None:
+            raise SceneBoundaryError("SCENE_SPLIT_INVALID_POSITION", "场景不属于当前草稿。")
+        pos = {pid: index for index, pid in enumerate(paragraph_ids)}
+        if boundary_after_paragraph_id not in pos:
+            raise SceneBoundaryError("SCENE_SPLIT_INVALID_POSITION")
+        split_idx = pos[boundary_after_paragraph_id]
+        start_i = pos[target["start_paragraph_id"]]
+        end_i = pos[target["end_paragraph_id"]]
+        if not (start_i <= split_idx < end_i):
+            raise SceneBoundaryError(
+                "SCENE_SPLIT_INVALID_POSITION",
+                "只能在同一场景的两个段落之间新增场景。",
+            )
+
+    try:
+        next_scenes = add_boundary(
+            scenes,
+            after_paragraph_id=boundary_after_paragraph_id,
+            paragraph_ids=paragraph_ids,
+        )
+    except ValueError as exc:
+        code = str(exc)
+        messages = {
+            "SCENE_SPLIT_INVALID_POSITION": "只能在同一场景的两个段落之间新增场景。",
+            "SCENE_SPLIT_EMPTY_SCENE": "该位置会产生空场景，无法拆分。",
+            "SCENE_BOUNDARY_ALREADY_EXISTS": "这里已经是场景边界。",
+            "SCENE_PARTITION_PARAGRAPH_MISSING": "只能在同一场景的两个段落之间新增场景。",
+        }
+        raise SceneBoundaryError(code, messages.get(code, code)) from exc
+
+    before_hash = revision.boundary_hash
+    before_etag = revision.revision_etag
+    saved = save_scene_boundary_draft_v1(
+        session,
+        draft_revision_id,
+        next_scenes,
+        expected_etag=expected_etag,
+    )
+    if saved.boundary_hash == before_hash or saved.revision_etag == before_etag:
+        # Defensive: save must rotate hash/etag when partition changes.
+        raise SceneBoundaryError("SCENE_PARTITION_EMPTY", "拆分后未能更新草稿版本。")
+
+    result = {
+        "revision_id": saved.id,
+        "revision_etag": saved.revision_etag,
+        "boundary_hash": saved.boundary_hash or "",
+        "scenes": parse_partition_json(saved.final_boundaries_json),
+        "diff_summary": compute_diff_summary_v1(session, saved.id),
+        "updated_at": saved.updated_at.isoformat() if saved.updated_at else None,
+        "already_split": False,
+        "status": saved.status,
+    }
+    if request_id:
+        _store_split_idem(session, draft_revision_id, request_id, result)
+    return result
+
+
 def compute_diff_summary_v1(
     session: Session,
     revision_id: int,
@@ -1083,6 +1257,7 @@ __all__ = [
     "delete_boundary",
     "delete_scene_merge",
     "set_included",
+    "split_scene_at_paragraph_v1",
     "get_scene_boundaries_overview_v1",
     "compute_diff_summary_v1",
     "find_reusable_scene_journey_profile",

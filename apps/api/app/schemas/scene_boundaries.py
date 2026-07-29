@@ -58,6 +58,24 @@ class SceneBoundaryDraftSaveRequest(BaseModel):
     scenes: list[ScenePartitionItem]
 
 
+class SceneBoundarySplitRequest(BaseModel):
+    expected_etag: str
+    boundary_after_paragraph_id: str
+    client_request_id: str | None = None
+    scene_order: int | None = None
+
+
+class SceneBoundarySplitResponse(BaseModel):
+    revision_id: int
+    revision_etag: str
+    boundary_hash: str
+    scenes: list[ScenePartitionItem]
+    diff_summary: dict[str, Any] = Field(default_factory=dict)
+    updated_at: str | None = None
+    already_split: bool = False
+    status: str = "draft"
+
+
 class SceneBoundaryConfirmRequest(BaseModel):
     expected_etag: str
     start_journey: bool = False

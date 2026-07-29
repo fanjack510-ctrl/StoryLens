@@ -10,6 +10,7 @@ import {
 } from "../../services/sceneBoundaryErrors";
 import {
   addSceneBoundary,
+  canSplitAfterParagraph,
   computeSceneBoundaryChangeSummary,
   mergeSceneBoundary,
   moveSceneBoundary,
@@ -303,7 +304,7 @@ export function SceneBoundaryReviewPanel({
   );
 
   const enqueuePersist = useCallback(
-    (scenes: ScenePartition[]) => {
+    (scenes: ScenePartition[], successText?: string) => {
       setDraftScenes(scenes);
       draftRef.current = { ...draftRef.current, scenes: scenes.map((s) => ({ ...s })) };
       markDirty(true);
@@ -313,6 +314,7 @@ export function SceneBoundaryReviewPanel({
       const run = persistChainRef.current.then(async () => {
         try {
           await persistDraft(scenes);
+          if (successText) setSuccessMessage(successText);
         } catch (err) {
           handleMappedError(err);
           throw err;
@@ -322,6 +324,101 @@ export function SceneBoundaryReviewPanel({
       return run;
     },
     [handleMappedError, markDirty, persistDraft],
+  );
+
+  const splitAfterParagraph = useCallback(
+    (paragraphId: string, sceneOrder: number) => {
+      const current = draftRef.current;
+      if (!current.revisionId || !current.etag) {
+        setError("缺少草稿修订");
+        return;
+      }
+      const clientRequestId =
+        typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID()
+          : `split-${Date.now()}-${paragraphId}`;
+      markDirty(true);
+      setError(undefined);
+      setErrorCode(undefined);
+      setSuccessMessage(undefined);
+      const run = persistChainRef.current.then(async () => {
+        try {
+          const data = await analysisApi.splitSceneBoundaryDraft(chapterId, current.revisionId!, {
+            expected_etag: draftRef.current.etag,
+            boundary_after_paragraph_id: paragraphId,
+            client_request_id: clientRequestId,
+            scene_order: sceneOrder,
+          });
+          const snapshot: DraftSnapshot = {
+            revision_id: data.revision_id,
+            revision_etag: data.revision_etag,
+            boundary_hash: data.boundary_hash,
+            scenes: data.scenes.map((s) => ({ ...s })),
+            status: data.status || "draft",
+            updated_at: data.updated_at,
+          };
+          applyDraftSnapshot(snapshot);
+          patchOverviewDraft(snapshot);
+          setSuccessMessage(data.already_split ? "这里已经是场景边界" : "已新增一个场景。");
+        } catch (err) {
+          // Fallback: optimistic local split + bulk save if dedicated endpoint unavailable.
+          const mapped = mapSceneBoundaryError(err);
+          if (mapped.code === "HTTP_ERROR" || mapped.code == null) {
+            try {
+              const next = addSceneBoundary(draftRef.current.scenes, paragraphId, paragraphIds);
+              await persistDraft(next);
+              setSuccessMessage("已新增一个场景。");
+              return;
+            } catch (fallbackErr) {
+              handleMappedError(fallbackErr);
+              throw fallbackErr;
+            }
+          }
+          handleMappedError(err);
+          throw err;
+        }
+      });
+      persistChainRef.current = run.catch(() => undefined);
+      return run;
+    },
+    [
+      applyDraftSnapshot,
+      chapterId,
+      handleMappedError,
+      markDirty,
+      paragraphIds,
+      patchOverviewDraft,
+      persistDraft,
+    ],
+  );
+
+  const mergeAtBoundary = useCallback(
+    (boundaryIndex: number) => {
+      const left = draftScenes[boundaryIndex];
+      const right = draftScenes[boundaryIndex + 1];
+      if (!left || !right) {
+        setError("无法删除场景分割线");
+        return;
+      }
+      let included: boolean | undefined;
+      if (left.included_in_journey !== right.included_in_journey) {
+        const keep = window.confirm(
+          "两侧场景的旅程参与状态不同。\n确定：合并后参与旅程分析\n取消：合并后不参与旅程分析",
+        );
+        included = keep;
+      }
+      try {
+        applyLocalEdit(
+          mergeSceneBoundary(draftScenes, boundaryIndex, paragraphIds, included),
+          "已合并场景。",
+        );
+      } catch (err) {
+        const mapped = mapSceneBoundaryError(err);
+        setError(mapped.userMessage);
+        setErrorCode(mapped.code);
+      }
+    },
+    [draftScenes, paragraphIds],
   );
 
   const saveDraftMutation = useMutation({
@@ -535,8 +632,8 @@ export function SceneBoundaryReviewPanel({
     return set;
   }, [draftScenes, paragraphIds]);
 
-  const applyLocalEdit = (next: ScenePartition[]) => {
-    void enqueuePersist(next);
+  const applyLocalEdit = (next: ScenePartition[], successText?: string) => {
+    void enqueuePersist(next, successText);
   };
 
   if (overviewQuery.isLoading) {
@@ -822,13 +919,7 @@ export function SceneBoundaryReviewPanel({
                           data-testid={`scene-boundary-merge-prev-${block.scene.scene_order}`}
                           disabled={busy}
                           onClick={() => {
-                            try {
-                              applyLocalEdit(
-                                mergeSceneBoundary(draftScenes, sceneIndex - 1, paragraphIds),
-                              );
-                            } catch {
-                              setError("无法合并场景");
-                            }
+                            mergeAtBoundary(sceneIndex - 1);
                           }}
                         >
                           与上一场景合并
@@ -842,11 +933,7 @@ export function SceneBoundaryReviewPanel({
                           data-testid={`scene-boundary-merge-next-${block.scene.scene_order}`}
                           disabled={busy}
                           onClick={() => {
-                            try {
-                              applyLocalEdit(mergeSceneBoundary(draftScenes, sceneIndex, paragraphIds));
-                            } catch {
-                              setError("无法合并场景");
-                            }
+                            mergeAtBoundary(sceneIndex);
                           }}
                         >
                           与下一场景合并
@@ -881,12 +968,15 @@ export function SceneBoundaryReviewPanel({
             </div>
 
             {block.paragraphs.map((paragraph, paraIndex) => {
+              const sceneParaIds = block.paragraphs.map((item) => item.id);
               const isLastInScene = paraIndex === block.paragraphs.length - 1;
               const isLastParagraph = paragraph.id === paragraphIds[paragraphIds.length - 1];
-              const showAdd =
-                !isLastInScene &&
-                !boundaryAfterParagraph.has(paragraph.id) &&
-                paragraph.id !== paragraphIds[paragraphIds.length - 1];
+              const showAdd = canSplitAfterParagraph({
+                paragraphId: paragraph.id,
+                sceneParagraphIds: sceneParaIds,
+                chapterParagraphIds: paragraphIds,
+                boundaryAfterParagraphIds: boundaryAfterParagraph,
+              });
 
               return (
                 <div key={paragraph.id}>
@@ -900,14 +990,10 @@ export function SceneBoundaryReviewPanel({
                       data-testid={`scene-boundary-add-after-${paragraph.id}`}
                       disabled={busy}
                       onClick={() => {
-                        try {
-                          applyLocalEdit(addSceneBoundary(draftScenes, paragraph.id, paragraphIds));
-                        } catch {
-                          setError("无法在此处新增场景分割线");
-                        }
+                        void splitAfterParagraph(paragraph.id, block.scene.scene_order);
                       }}
                     >
-                      在此新增场景分割线
+                      ＋ 在此拆分为新场景
                     </button>
                   ) : null}
                   {isLastInScene && !isLastParagraph ? (
@@ -954,11 +1040,7 @@ export function SceneBoundaryReviewPanel({
                           data-testid={`scene-boundary-delete-divider-${sceneIndex}`}
                           disabled={busy}
                           onClick={() => {
-                            try {
-                              applyLocalEdit(mergeSceneBoundary(draftScenes, sceneIndex, paragraphIds));
-                            } catch {
-                              setError("无法删除场景分割线");
-                            }
+                            mergeAtBoundary(sceneIndex);
                           }}
                         >
                           删除分割线

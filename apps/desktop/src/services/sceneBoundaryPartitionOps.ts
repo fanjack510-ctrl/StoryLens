@@ -52,7 +52,12 @@ export function addSceneBoundary(
   const pos = Object.fromEntries(paragraphIds.map((id, index) => [id, index]));
   const splitIdx = pos[afterParagraphId];
   if (splitIdx == null || splitIdx >= paragraphIds.length - 1) {
-    throw new Error("SCENE_PARTITION_ORDER_INVALID");
+    throw new Error("SCENE_SPLIT_INVALID_POSITION");
+  }
+  for (const scene of list.slice(0, -1)) {
+    if (scene.end_paragraph_id === afterParagraphId) {
+      throw new Error("SCENE_BOUNDARY_ALREADY_EXISTS");
+    }
   }
   let targetIdx: number | null = null;
   for (let index = 0; index < list.length; index += 1) {
@@ -64,11 +69,12 @@ export function addSceneBoundary(
       break;
     }
   }
-  if (targetIdx == null) throw new Error("SCENE_PARTITION_PARAGRAPH_MISSING");
+  if (targetIdx == null) throw new Error("SCENE_SPLIT_INVALID_POSITION");
   const scene = list[targetIdx];
   const startI = pos[scene.start_paragraph_id];
   const endI = pos[scene.end_paragraph_id];
-  if (splitIdx < startI || splitIdx >= endI) throw new Error("SCENE_PARTITION_ORDER_INVALID");
+  if (splitIdx < startI || splitIdx >= endI) throw new Error("SCENE_SPLIT_INVALID_POSITION");
+  if (startI === endI) throw new Error("SCENE_SPLIT_EMPTY_SCENE");
   const left: ScenePartition = {
     ...scene,
     end_paragraph_id: paragraphIds[splitIdx],
@@ -87,6 +93,7 @@ export function mergeSceneBoundary(
   scenes: ScenePartition[],
   boundaryIndex: number,
   paragraphIds: string[],
+  includedInJourney?: boolean,
 ): ScenePartition[] {
   const list = ordered(scenes).map((s) => ({ ...s }));
   if (list.length <= 1) throw new Error("SCENE_PARTITION_EMPTY");
@@ -99,11 +106,19 @@ export function mergeSceneBoundary(
   if (pos[left.end_paragraph_id] + 1 !== pos[right.start_paragraph_id]) {
     throw new Error("SCENE_PARTITION_GAP");
   }
+  let mergedIncluded: boolean;
+  if (includedInJourney != null) {
+    mergedIncluded = includedInJourney;
+  } else if (left.included_in_journey === right.included_in_journey) {
+    mergedIncluded = left.included_in_journey;
+  } else {
+    throw new Error("SCENE_MERGE_INCLUDED_CONFLICT");
+  }
   const merged: ScenePartition = {
     scene_order: left.scene_order,
     start_paragraph_id: left.start_paragraph_id,
     end_paragraph_id: right.end_paragraph_id,
-    included_in_journey: left.included_in_journey || right.included_in_journey,
+    included_in_journey: mergedIncluded,
   };
   const updated = [...list.slice(0, boundaryIndex), merged, ...list.slice(boundaryIndex + 2)];
   return updated.map((item, index) => ({ ...item, scene_order: index + 1 }));
@@ -156,4 +171,20 @@ export function computeSceneBoundaryChangeSummary(
     summary.merged += right.length - left.length;
   }
   return summary;
+}
+
+/** True when an add-split control should appear after this paragraph inside a scene. */
+export function canSplitAfterParagraph(args: {
+  paragraphId: string;
+  sceneParagraphIds: string[];
+  chapterParagraphIds: string[];
+  boundaryAfterParagraphIds: Set<string>;
+}): boolean {
+  const { paragraphId, sceneParagraphIds, chapterParagraphIds, boundaryAfterParagraphIds } = args;
+  if (sceneParagraphIds.length <= 1) return false;
+  const lastInScene = sceneParagraphIds[sceneParagraphIds.length - 1];
+  if (paragraphId === lastInScene) return false;
+  if (paragraphId === chapterParagraphIds[chapterParagraphIds.length - 1]) return false;
+  if (boundaryAfterParagraphIds.has(paragraphId)) return false;
+  return sceneParagraphIds.includes(paragraphId);
 }

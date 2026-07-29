@@ -386,6 +386,29 @@ export const analysisApi = {
       method: "PUT",
       body: JSON.stringify(body),
     }),
+  splitSceneBoundaryDraft: (
+    chapterId: number,
+    revisionId: number,
+    body: {
+      expected_etag: string;
+      boundary_after_paragraph_id: string;
+      client_request_id?: string;
+      scene_order?: number;
+    },
+  ) =>
+    api<{
+      revision_id: number;
+      revision_etag: string;
+      boundary_hash: string;
+      scenes: ScenePartitionItem[];
+      diff_summary?: Record<string, unknown>;
+      updated_at?: string | null;
+      already_split?: boolean;
+      status?: string;
+    }>(`/api/v1/chapters/${chapterId}/scene-boundaries/draft/${revisionId}/split`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
   restoreSceneBoundaryAi: (chapterId: number, revisionId: number) =>
     api<{
       revision_id: number;

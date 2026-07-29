@@ -13,6 +13,7 @@ vi.mock("../../services/analysisApi", () => ({
     sceneBoundariesOverview: vi.fn(),
     createSceneBoundaryDraft: vi.fn(),
     saveSceneBoundaryDraft: vi.fn(),
+    splitSceneBoundaryDraft: vi.fn(),
     restoreSceneBoundaryAi: vi.fn(),
     confirmSceneBoundary: vi.fn(),
     discardSceneBoundaryDraft: vi.fn(),
@@ -121,6 +122,33 @@ beforeEach(() => {
     scenes: body.scenes,
     status: "draft",
   }));
+  vi.mocked(analysisApi.splitSceneBoundaryDraft).mockImplementation(async (_c, _r, body) => {
+    const { addSceneBoundary } = await import("../../services/sceneBoundaryPartitionOps");
+    const overview = await vi.mocked(analysisApi.sceneBoundariesOverview).getMockImplementation()?.(2);
+    const currentScenes =
+      (overview as any)?.draft_revision?.scenes ||
+      MODEL_SCENES;
+    // Prefer last saved scenes from save mock chain if present via body scene_order path.
+    const paragraphIds = PARAGRAPHS.map((p) => p.id);
+    // Reconstruct from draft overview etag chain is hard; use MODEL_SCENES as base then split.
+    let base = currentScenes.map((s: any) => ({ ...s }));
+    // If already more scenes from prior ops, try reading from last save call.
+    const saveCalls = vi.mocked(analysisApi.saveSceneBoundaryDraft).mock.calls;
+    if (saveCalls.length > 0) {
+      const last = saveCalls[saveCalls.length - 1]?.[2] as { scenes?: typeof MODEL_SCENES };
+      if (last?.scenes?.length) base = last.scenes.map((s) => ({ ...s }));
+    }
+    const scenes = addSceneBoundary(base, body.boundary_after_paragraph_id, paragraphIds);
+    return {
+      revision_id: 11,
+      revision_etag: `next-of-${body.expected_etag}`,
+      boundary_hash: "bh-split",
+      scenes,
+      already_split: false,
+      status: "draft",
+      diff_summary: { scene_count_delta: 1, changes: [] },
+    };
+  });
 });
 
 afterEach(() => {
@@ -196,6 +224,27 @@ describe("SceneBoundaryReviewPanel CHG-041", () => {
         status: "draft",
       };
     });
+    vi.mocked(analysisApi.splitSceneBoundaryDraft).mockImplementation(async (_c, _r, body) => {
+      expect(body.expected_etag).toBe(etags[call]);
+      const { addSceneBoundary } = await import("../../services/sceneBoundaryPartitionOps");
+      const saveCalls = vi.mocked(analysisApi.saveSceneBoundaryDraft).mock.calls;
+      const last = saveCalls[saveCalls.length - 1]?.[2] as { scenes?: typeof MODEL_SCENES };
+      const base = (last?.scenes || MODEL_SCENES).map((s) => ({ ...s }));
+      const scenes = addSceneBoundary(
+        base,
+        body.boundary_after_paragraph_id,
+        PARAGRAPHS.map((p) => p.id),
+      );
+      call += 1;
+      return {
+        revision_id: 11,
+        revision_etag: etags[call],
+        boundary_hash: "bh-split",
+        scenes,
+        already_split: false,
+        status: "draft",
+      };
+    });
     vi.mocked(analysisApi.confirmSceneBoundary).mockResolvedValue({
       revision_id: 11,
       revision_etag: "etag-final",
@@ -211,9 +260,9 @@ describe("SceneBoundaryReviewPanel CHG-041", () => {
     await waitFor(() => expect(call).toBe(2));
     fireEvent.click(screen.getByTestId("scene-boundary-delete-divider-0"));
     await waitFor(() => expect(call).toBe(3));
-    // recreate divider via add after restore-like single scene then add
     fireEvent.click(await screen.findByTestId("scene-boundary-add-after-P2"));
     await waitFor(() => expect(call).toBe(4));
+    expect(await screen.findByTestId("scene-boundary-success")).toHaveTextContent("已新增一个场景");
     const toolbar = screen.getByTestId("scene-boundary-toolbar-1");
     fireEvent.click(within(toolbar).getByTestId("scene-boundary-toggle-include-1"));
     await waitFor(() => expect(call).toBe(5));
@@ -303,7 +352,35 @@ describe("SceneBoundaryReviewPanel CHG-041", () => {
     );
     renderPanel();
     fireEvent.click(await screen.findByTestId("scene-boundary-add-after-P2"));
-    expect(screen.getByTestId("scene-boundary-current-count")).toHaveTextContent("当前场景数：2");
+    await waitFor(() =>
+      expect(screen.getByTestId("scene-boundary-current-count")).toHaveTextContent("当前场景数：2"),
+    );
+    expect(await screen.findByTestId("scene-boundary-success")).toHaveTextContent("已新增一个场景");
+    expect(screen.getAllByText("＋ 在此拆分为新场景").length).toBeGreaterThan(0);
+  });
+
+  it("hides add control for single-paragraph scenes and existing boundaries", async () => {
+    vi.mocked(analysisApi.sceneBoundariesOverview).mockResolvedValue(
+      draftOverview("etag-A", [
+        {
+          scene_order: 1,
+          start_paragraph_id: "P1",
+          end_paragraph_id: "P1",
+          included_in_journey: true,
+        },
+        {
+          scene_order: 2,
+          start_paragraph_id: "P2",
+          end_paragraph_id: "P4",
+          included_in_journey: true,
+        },
+      ]) as any,
+    );
+    renderPanel();
+    await screen.findByTestId("scene-boundary-divider-0");
+    expect(screen.queryByTestId("scene-boundary-add-after-P1")).not.toBeInTheDocument();
+    expect(screen.getByTestId("scene-boundary-add-after-P2")).toBeInTheDocument();
+    expect(screen.getByTestId("scene-boundary-add-after-P3")).toBeInTheDocument();
   });
 
   it("deletes divider by merging scenes", async () => {
