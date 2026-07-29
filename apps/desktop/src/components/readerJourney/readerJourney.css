@@ -3194,9 +3194,10 @@ body.journey-pane-resizing[data-row-resize="true"] * {
   max-height: none;
   padding: 12px 12px 14px;
   text-align: left;
-  border: 1px solid var(--line);
+  border: 1px solid var(--phase-band-border, var(--line));
   border-radius: 10px;
-  background: color-mix(in srgb, var(--phase-band-color, var(--surface2)) 28%, var(--surface));
+  /* Opaque stage token — no 28% color-mix washout */
+  background: var(--phase-band-color, var(--surface2));
   color: var(--color-text-primary, var(--text));
   cursor: pointer;
   display: flex;
@@ -3209,10 +3210,10 @@ body.journey-pane-resizing[data-row-resize="true"] * {
 
 .journey-workspace-v4 .journey-phase-card.journey-phase-nav-card.selected,
 .journey-workspace-v4 .journey-phase-card.journey-phase-nav-card.active-phase {
-  border-color: var(--color-brand, var(--accent));
+  border-color: var(--phase-band-border, var(--color-brand, var(--accent)));
   border-width: 2px;
-  background: var(--color-brand-soft, var(--accent2));
-  box-shadow: none;
+  background: var(--phase-band-color, var(--surface2));
+  box-shadow: inset 0 0 0 1px var(--phase-band-border, var(--accent));
 }
 
 .journey-phase-card-head {
@@ -3350,8 +3351,8 @@ body.journey-pane-resizing[data-row-resize="true"] * {
 
 .app[data-theme="dark"] .journey-workspace-v4 .journey-phase-card.journey-phase-nav-card,
 [data-theme="dark"] .journey-workspace-v4 .journey-phase-card.journey-phase-nav-card {
-  background: color-mix(in srgb, var(--phase-band-color, #2a332e) 22%, var(--surface));
-  border-color: var(--line);
+  background: var(--phase-band-color, #2a332e);
+  border-color: var(--phase-band-border, var(--line));
   color: var(--color-text-primary, var(--text));
 }
 

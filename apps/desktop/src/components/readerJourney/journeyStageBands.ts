@@ -8,8 +8,8 @@ import type {
   JourneySceneNode,
   ReaderJourneyVisualization,
 } from "../../types/readerJourneyVisualization";
-import { formatJourneyPhaseLabel } from "./journeyUiLabels";
 import {
+  journeyStageBandTitle,
   journeyStageTokenByKey,
   resolveJourneyStageKey,
   type JourneyStageKey,
@@ -81,15 +81,12 @@ export function resolveSceneStageAssignment(
     };
   }
 
-  const label = formatJourneyPhaseLabel(phase.title);
-  const stageKey = resolveJourneyStageKey(phase.title) !== "unknown"
-    ? resolveJourneyStageKey(phase.title)
-    : resolveJourneyStageKey(label);
+  const stageKey = resolveJourneyStageKey(phase.title);
   const token = journeyStageTokenByKey(stageKey);
   return {
     sceneOrdinal,
     stageKey,
-    label: stageKey === "unknown" ? label : token.label,
+    label: journeyStageBandTitle(stageKey),
     token,
     phaseOrdinal: phase.ordinal,
   };

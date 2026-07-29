@@ -11,7 +11,6 @@ import {
   computeStageBandPixelRanges,
   resolveSceneStageAssignment,
 } from "./journeyStageBands";
-import { PHASE_BAND_OPACITY } from "./journeyVisualizationConfig";
 import "./hookPayoffTimeline.css";
 
 type Props = {
@@ -149,12 +148,12 @@ export function HookPayoffTimeline({
                       className="hook-resolution-stage-band"
                       data-testid={`journey-stage-band-${band.stageKey}-${band.startSceneOrdinal}`}
                       data-stage-key={band.stageKey}
-                      style={{
-                        left: `${band.x1}%`,
-                        width: `${Math.max(band.x2 - band.x1, 0.5)}%`,
-                        background: band.token.chartBand,
-                        opacity: PHASE_BAND_OPACITY.idle,
-                      }}
+                  style={{
+                    left: `${band.x1}%`,
+                    width: `${Math.max(band.x2 - band.x1, 0.5)}%`,
+                    background: band.token.chartBand,
+                    opacity: 1,
+                  }}
                     >
                       <span className="hook-resolution-stage-label">{band.label}</span>
                     </div>

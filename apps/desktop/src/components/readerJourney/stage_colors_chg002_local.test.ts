@@ -5,6 +5,8 @@ import { describe, expect, it } from "vitest";
 import {
   JOURNEY_STAGE_VISUAL_TOKENS,
   PHASE_BAND_COLORS,
+  assertStageColorsVisuallyDistinct,
+  journeyStageBandTitle,
   resolveJourneyStageKey,
   resolveJourneyStageToken,
 } from "./journeyVisualTokens";
@@ -17,7 +19,7 @@ import {
 import type { ReaderJourneyVisualization } from "../../types/readerJourneyVisualization";
 import { OBSERVATION_LENSES } from "./observationLenses";
 import { xForSceneOrdinal } from "./journeyChartScales";
-import { CHART_PAD } from "./journeyVisualizationConfig";
+import { CHART_PAD, PHASE_BAND_OPACITY } from "./journeyVisualizationConfig";
 
 function fixtureViz(): ReaderJourneyVisualization {
   const nodes = [1, 2, 3, 4, 5, 6].map((ordinal) => ({
@@ -143,6 +145,44 @@ describe("CHG-20260729-002 stage color tokens", () => {
     expect(resolveJourneyStageToken("开端").cardBackground).toBe(
       JOURNEY_STAGE_VISUAL_TOKENS.opening.chartBand,
     );
+  });
+
+  it("keeps three opaque computed backgrounds distinct with green/warm/blue semantics", () => {
+    const colors = assertStageColorsVisuallyDistinct();
+    expect(colors.opening).toBe("#E4F1E8");
+    expect(colors.development).toBe("#F7EDD8");
+    expect(colors.closing).toBe("#E7EDF6");
+    expect(new Set([colors.opening, colors.development, colors.closing]).size).toBe(3);
+    // green channel stronger on opening vs closing
+    const openG = parseInt(colors.opening.slice(3, 5), 16);
+    const closeG = parseInt(colors.closing.slice(3, 5), 16);
+    expect(openG).toBeGreaterThan(closeG);
+    // warm: development R high, B lower
+    const devR = parseInt(colors.development.slice(1, 3), 16);
+    const devB = parseInt(colors.development.slice(5, 7), 16);
+    expect(devR).toBeGreaterThan(devB);
+    // closing blue channel relatively stronger than development
+    const closeB = parseInt(colors.closing.slice(5, 7), 16);
+    expect(closeB).toBeGreaterThan(devB);
+    expect(PHASE_BAND_OPACITY.idle).toBe(1);
+    expect(PHASE_BAND_OPACITY.active).toBe(1);
+  });
+
+  it("stage band titles are only 开端/发展/收束", () => {
+    expect(journeyStageBandTitle("opening")).toBe("开端");
+    expect(journeyStageBandTitle("development")).toBe("发展");
+    expect(journeyStageBandTitle("closing")).toBe("收束");
+    expect(["开端", "发展", "收束"]).not.toContain("钩子建立");
+  });
+
+  it("does not apply extra opacity wash to stage chart bands", () => {
+    expect(PHASE_BAND_OPACITY.idle).toBe(1);
+    expect(PHASE_BAND_OPACITY.active).toBe(1);
+    for (const key of ["opening", "development", "closing"] as const) {
+      const hex = JOURNEY_STAGE_VISUAL_TOKENS[key].chartBand;
+      expect(hex.startsWith("#")).toBe(true);
+      expect(hex.toLowerCase()).not.toMatch(/rgba?\(/);
+    }
   });
 });
 

@@ -102,8 +102,9 @@ export const CHART_LAYER_ORDER = [
 ] as const;
 
 export const PHASE_BAND_OPACITY = {
-  idle: 0.18,
-  active: 0.32,
+  /** Opaque stage fills — do not wash tokens with extra alpha. */
+  idle: 1,
+  active: 1,
 } as const;
 
 export const RISK_BAND_OPACITY = 0.28;

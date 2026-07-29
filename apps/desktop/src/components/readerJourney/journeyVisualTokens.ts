@@ -5,10 +5,10 @@ export type JourneyStageKey = "opening" | "development" | "closing" | "unknown";
 export type JourneyStageVisualToken = {
   key: JourneyStageKey;
   label: string;
-  /** Card / CSS --phase-band-color base */
+  /** Card / CSS --phase-band-color base (opaque) */
   cardBackground: string;
   cardBorder: string;
-  /** Chart band fill (opacity applied by chart) */
+  /** Chart band fill — opaque; do not apply extra SVG opacity */
   chartBand: string;
   /** Left rail / scene marker strip */
   sceneMarker: string;
@@ -17,45 +17,46 @@ export type JourneyStageVisualToken = {
 };
 
 /**
- * Semantic tokens — reuse the muted greens/warms/cools already used by phase cards.
- * Do not invent a second palette elsewhere.
+ * Frozen MG-visible palette (CHG-20260729-002 defect fix).
+ * Low-saturation but clearly separable: green / warm / blue-gray.
+ * Must remain opaque in chart + cards (no extra washout opacity).
  */
 export const JOURNEY_STAGE_VISUAL_TOKENS: Record<JourneyStageKey, JourneyStageVisualToken> = {
   opening: {
     key: "opening",
     label: "开端",
-    cardBackground: "#e8ede9",
-    cardBorder: "#c5d0c8",
-    chartBand: "#e8ede9",
-    sceneMarker: "#c5d0c8",
-    divider: "#a8b8ae",
+    cardBackground: "#E4F1E8",
+    cardBorder: "#9FC4AA",
+    chartBand: "#E4F1E8",
+    sceneMarker: "#9FC4AA",
+    divider: "#7FAF8E",
   },
   development: {
     key: "development",
     label: "发展",
-    cardBackground: "#f0ebe3",
-    cardBorder: "#d9cfc0",
-    chartBand: "#f0ebe3",
-    sceneMarker: "#d9cfc0",
-    divider: "#c4b5a0",
+    cardBackground: "#F7EDD8",
+    cardBorder: "#D4B779",
+    chartBand: "#F7EDD8",
+    sceneMarker: "#D4B779",
+    divider: "#C4A35F",
   },
   closing: {
     key: "closing",
     label: "收束",
-    cardBackground: "#e6ebf0",
-    cardBorder: "#c2ccd8",
-    chartBand: "#e6ebf0",
-    sceneMarker: "#c2ccd8",
-    divider: "#9aabbd",
+    cardBackground: "#E7EDF6",
+    cardBorder: "#9EB4D1",
+    chartBand: "#E7EDF6",
+    sceneMarker: "#9EB4D1",
+    divider: "#7E9BC0",
   },
   unknown: {
     key: "unknown",
     label: "阶段未判定",
-    cardBackground: "#ede8e6",
-    cardBorder: "#d5cecb",
-    chartBand: "#ede8e6",
-    sceneMarker: "#d5cecb",
-    divider: "#b8b0ac",
+    cardBackground: "#EDE8E6",
+    cardBorder: "#D5CECB",
+    chartBand: "#EDE8E6",
+    sceneMarker: "#D5CECB",
+    divider: "#B8B0AC",
   },
 };
 
@@ -108,4 +109,22 @@ export function resolveJourneyStageToken(
 
 export function journeyStageTokenByKey(key: JourneyStageKey): JourneyStageVisualToken {
   return JOURNEY_STAGE_VISUAL_TOKENS[key] ?? JOURNEY_STAGE_VISUAL_TOKENS.unknown;
+}
+
+/** Canonical band title — never Scene Role / segment labels. */
+export function journeyStageBandTitle(key: JourneyStageKey): string {
+  return journeyStageTokenByKey(key).label;
+}
+
+/** Hex colors must stay distinct without further opacity dilution. */
+export function assertStageColorsVisuallyDistinct(): {
+  opening: string;
+  development: string;
+  closing: string;
+} {
+  return {
+    opening: JOURNEY_STAGE_VISUAL_TOKENS.opening.chartBand,
+    development: JOURNEY_STAGE_VISUAL_TOKENS.development.chartBand,
+    closing: JOURNEY_STAGE_VISUAL_TOKENS.closing.chartBand,
+  };
 }

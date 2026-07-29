@@ -24,8 +24,6 @@ import {
 import {
   CHART_PAD,
   JOURNEY_VISUALIZATION_VERSION,
-  PHASE_BAND_OPACITY,
-  RISK_BAND_OPACITY,
   SCENE_DENSITY,
   allowsHorizontalPanZoom,
   computeChartContentWidth,
@@ -403,15 +401,6 @@ export function CanonicalJourneyChart({
     });
   }, [visualization, nodes, xFor, plotLeft, plotRight]);
 
-  const selectedPhase = useMemo(
-    () =>
-      selectedPhaseOrdinal == null
-        ? null
-        : visualization.phases.find((phase) => phase.ordinal === selectedPhaseOrdinal) ??
-          null,
-    [visualization.phases, selectedPhaseOrdinal],
-  );
-
   const tooltipNode =
     hover != null ? nodes.find((n) => n.scene_ordinal === hover.ordinal) : undefined;
   const tooltipPoint =
@@ -519,10 +508,6 @@ export function CanonicalJourneyChart({
         {/* 1. Phase background (clipped to plot) — midpoint bands from shared tokens */}
         <g data-layer="phase_background" data-testid="journey-stage-bands" clipPath={`url(#${clipPathId})`}>
           {stageBands.map((band) => {
-            const overlapsSelected =
-              selectedPhase != null &&
-              band.endSceneOrdinal >= selectedPhase.start_scene_ordinal &&
-              band.startSceneOrdinal <= selectedPhase.end_scene_ordinal;
             const width = Math.max(band.x2 - band.x1, 1);
             const labelX = band.x1 + width / 2;
             return (
@@ -540,9 +525,8 @@ export function CanonicalJourneyChart({
                   width={width}
                   height={plotHeight}
                   fill={band.token.chartBand}
-                  opacity={
-                    overlapsSelected ? PHASE_BAND_OPACITY.active : PHASE_BAND_OPACITY.idle
-                  }
+                  fillOpacity={1}
+                  data-stage-fill={band.token.chartBand}
                 />
                 <text
                   x={labelX}
@@ -550,6 +534,7 @@ export function CanonicalJourneyChart({
                   textAnchor="middle"
                   className="journey-stage-band-label"
                   data-testid={`journey-stage-band-label-${band.startSceneOrdinal}`}
+                  data-stage-title={band.label}
                 >
                   {band.label}
                 </text>
@@ -571,7 +556,7 @@ export function CanonicalJourneyChart({
           ))}
         </g>
 
-        {/* 2. Risk background */}
+        {/* 2. Risk markers — thin top strip only (never full-height wash over stage bands) */}
         <g data-layer="risk_background" clipPath={`url(#${clipPathId})`}>
           {visualization.risk_intervals.map((interval) => {
             const x1 = xFor(interval.start_scene_ordinal) - 6;
@@ -579,16 +564,12 @@ export function CanonicalJourneyChart({
             const startNode = nodes.find(
               (node) => node.scene_ordinal === interval.start_scene_ordinal,
             );
+            const riskWidth = Math.max(x2 - x1, 4);
+            const stripHeight = 6;
             return (
-              <rect
+              <g
                 key={`${interval.risk_type}-${interval.start_scene_ordinal}`}
                 data-testid={`journey-risk-${interval.risk_type}-${interval.start_scene_ordinal}`}
-                x={x1}
-                y={padTop}
-                width={Math.max(x2 - x1, 4)}
-                height={plotHeight}
-                fill="#f3ddd8"
-                opacity={RISK_BAND_OPACITY}
                 style={{ cursor: "pointer" }}
                 onClick={(event) => {
                   event.stopPropagation();
@@ -597,7 +578,25 @@ export function CanonicalJourneyChart({
                     startNode,
                   );
                 }}
-              />
+              >
+                <rect
+                  x={x1}
+                  y={padTop}
+                  width={riskWidth}
+                  height={stripHeight}
+                  fill="#c47a6a"
+                  opacity={0.9}
+                  data-risk-marker="top-strip"
+                />
+                <rect
+                  x={x1}
+                  y={padTop}
+                  width={riskWidth}
+                  height={plotHeight}
+                  fill="transparent"
+                  data-risk-hit-area="true"
+                />
+              </g>
             );
           })}
         </g>
@@ -750,7 +749,7 @@ export function CanonicalJourneyChart({
               <text
                 key={`seg-${marker.fromOrdinal}-${marker.toOrdinal}-${marker.label}`}
                 x={midX}
-                y={padTop + 12}
+                y={padTop + plotHeight / 2 - 10}
                 textAnchor="middle"
                 className="journey-segment-marker"
                 data-testid={`journey-segment-marker-${marker.toOrdinal}`}
