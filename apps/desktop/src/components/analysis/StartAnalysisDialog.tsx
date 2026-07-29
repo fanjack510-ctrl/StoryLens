@@ -1017,7 +1017,12 @@ export function StartAnalysisDialog({
       const messages: Record<string, string> = {
         NO_MANUAL_BOUNDARY_PROVIDER: "当前没有可用于人工边界审阅的AI服务。",
         PROVIDER_UNHEALTHY: "当前AI服务健康检查失败，请前往设置查看连接状态。",
-        PROVIDER_HEALTH_STALE: "AI服务健康状态已过期，请刷新状态或重新测试连接。",
+        PROVIDER_HEALTH_STALE: "AI服务健康状态已过期，请重新验证连接。",
+        PROVIDER_HEALTH_NOT_VERIFIED: "AI服务尚未验证，请先在设置中完成验证。",
+        PROVIDER_MODEL_NOT_VERIFIED: "当前分析模式将使用的模型尚未验证。",
+        PROVIDER_CREDENTIAL_CHANGED: "API Key 已变化，请重新验证连接。",
+        PROVIDER_CONFIGURATION_INCOMPLETE: "AI服务配置已变化，请检查设置后重新验证。",
+        PROVIDER_UNHEALTHY: "AI服务连接失败，请重新测试连接。",
         PROVIDER_NOT_CONNECTED: "AI服务尚未连接。",
         CLOUD_MASTER_SWITCH_OFF: "云端AI尚未开启。",
         BUDGET_NOT_AVAILABLE: "当前无法计算本次分析费用",

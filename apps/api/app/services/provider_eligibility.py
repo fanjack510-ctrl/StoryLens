@@ -12,6 +12,10 @@ from app.services.cloud_budget import daily_usage
 from app.services.cloud_pricing import pricing_status
 from app.services.credentials.base import CredentialStore
 
+# Shared freshness window for invocation cache and settings validation snapshot.
+# Do not inflate this to hide timezone bugs; compare UTC-aware ages only.
+HEALTH_TTL_SECONDS = 24 * 60 * 60
+
 # Application-layer failures after a successful Provider HTTP round-trip.
 # These must NOT mark the Provider itself unhealthy for manual eligibility.
 _APPLICATION_ERROR_CODES = {
@@ -206,7 +210,7 @@ def _runtime_health_from_invocations(
     )
 
     if _proves_provider_reachable(evidence):
-        if age > 24 * 60 * 60:
+        if age > HEALTH_TTL_SECONDS:
             return "stale", source, checked
         return "healthy", source, checked
 
@@ -225,10 +229,57 @@ def _runtime_health_from_invocations(
     return "healthy", "configured_readiness", fallback
 
 
+def parse_health_timestamp(value: object) -> datetime | None:
+    """Parse persisted health timestamps as UTC-aware datetimes."""
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        dt = value
+    else:
+        raw = str(value).strip()
+        if not raw:
+            return None
+        try:
+            dt = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+    if dt.tzinfo is None:
+        # Legacy naive rows are treated as UTC (historical write path used UTC wall clock).
+        return dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
+
 def _durable_validation_overrides_cached_failure(
     session: Session, *, provider_name: str, store: CredentialStore
 ) -> bool:
     """Settings validation snapshot proves a successful probe for this config."""
+    applied = apply_validation_snapshot_health(
+        session,
+        provider_name=provider_name,
+        store=store,
+        runtime_state="unhealthy",
+        health_source="cached_failure",
+        health_checked_at=datetime.now(timezone.utc),
+        now=datetime.now(timezone.utc),
+    )
+    return applied[0] == "healthy" and applied[1] == "validation_snapshot"
+
+
+def apply_validation_snapshot_health(
+    session: Session,
+    *,
+    provider_name: str,
+    store: CredentialStore,
+    runtime_state: str,
+    health_source: str,
+    health_checked_at: datetime,
+    now: datetime,
+) -> tuple[str, str, datetime, str | None, float | None]:
+    """Unify Settings validation snapshot with analysis preflight health.
+
+    Returns:
+        (state, source, checked_at, mismatch_error_code, freshness_age_seconds)
+    """
     from app.services.ai_validation_snapshot import (
         build_current_fingerprints,
         fingerprints_match,
@@ -236,14 +287,80 @@ def _durable_validation_overrides_cached_failure(
     )
 
     snapshot = load_validation_snapshot(session)
-    if not snapshot or snapshot.get("validation_status") != "success":
-        return False
+    if not snapshot:
+        return runtime_state, health_source, health_checked_at, None, None
+
     if snapshot.get("provider_key") not in {None, provider_name}:
-        # Older snapshots may omit provider_key; only reject hard mismatches.
         if snapshot.get("provider_key") and snapshot.get("provider_key") != provider_name:
-            return False
+            return (
+                runtime_state,
+                health_source,
+                health_checked_at,
+                "PROVIDER_MODEL_NOT_VERIFIED",
+                None,
+            )
+
     current = build_current_fingerprints(session, store, provider_id=provider_name)
-    return fingerprints_match(snapshot, current)
+    snap_model = str(
+        snapshot.get("response_model") or snapshot.get("model_id") or ""
+    ).strip()
+    current_model = str(current.get("model_id") or "").strip()
+    if (
+        snapshot.get("validation_status") == "success"
+        and snap_model
+        and current_model
+        and snap_model != current_model
+    ):
+        return (
+            runtime_state,
+            health_source,
+            health_checked_at,
+            "PROVIDER_MODEL_NOT_VERIFIED",
+            None,
+        )
+
+    if snapshot.get("validation_status") != "success":
+        return runtime_state, health_source, health_checked_at, None, None
+
+    if not fingerprints_match(snapshot, current):
+        # Config or credential changed since the Settings probe.
+        if snapshot.get("credential_version_fingerprint") != current.get(
+            "credential_version_fingerprint"
+        ):
+            return (
+                runtime_state,
+                health_source,
+                health_checked_at,
+                "PROVIDER_CREDENTIAL_CHANGED",
+                None,
+            )
+        return (
+            runtime_state,
+            health_source,
+            health_checked_at,
+            "PROVIDER_CONFIGURATION_INCOMPLETE",
+            None,
+        )
+
+    validated_at = parse_health_timestamp(snapshot.get("validated_at"))
+    if validated_at is None:
+        # Unparseable legacy timestamp → require re-verify; do not fake fresh.
+        return runtime_state, health_source, health_checked_at, "PROVIDER_HEALTH_NOT_VERIFIED", None
+
+    age = (now - validated_at).total_seconds()
+    if age < 0:
+        # Future timestamp defense: do not treat as fresh forever.
+        return "stale", "validation_snapshot", validated_at, None, age
+
+    if age > HEALTH_TTL_SECONDS:
+        # Snapshot itself is outside TTL; keep invocation conclusion unless it
+        # was already healthy from a fresher source.
+        if runtime_state == "healthy" and health_source != "configured_readiness":
+            return runtime_state, health_source, health_checked_at, None, age
+        return "stale", "validation_snapshot", validated_at, None, age
+
+    # Fresh matching Settings verification is the canonical health fact.
+    return "healthy", "validation_snapshot", validated_at, None, age
 
 
 def evaluate_manual_boundary_candidate(
@@ -259,17 +376,21 @@ def evaluate_manual_boundary_candidate(
         session, provider_name
     )
     now = datetime.now(timezone.utc)
-    # Durable Settings validation must override stale cached transport failures so
-    # "已验证 / 可以开始分析" and Start Analysis share one readiness conclusion.
-    if (
-        runtime_state == "unhealthy"
-        and health_source == "cached_failure"
-        and _durable_validation_overrides_cached_failure(
-            session, provider_name=provider_name, store=store
-        )
-    ):
-        runtime_state = "healthy"
-        health_source = "validation_snapshot"
+    (
+        runtime_state,
+        health_source,
+        health_checked_at,
+        health_mismatch_code,
+        freshness_age_seconds,
+    ) = apply_validation_snapshot_health(
+        session,
+        provider_name=provider_name,
+        store=store,
+        runtime_state=runtime_state,
+        health_source=health_source,
+        health_checked_at=health_checked_at,
+        now=now,
+    )
     from app.services.chapter_analysis_smoke_fake_transport import (
         chapter_smoke_fake_readiness_override,
     )
@@ -277,6 +398,7 @@ def evaluate_manual_boundary_candidate(
     if chapter_smoke_fake_readiness_override():
         runtime_state = "healthy"
         health_source = "chapter_analysis_smoke_fake"
+        health_mismatch_code = None
     result = provider_eligibility(
         session,
         provider_name=provider_name,
@@ -320,13 +442,24 @@ def evaluate_manual_boundary_candidate(
         "credential": result["credential_configured"],
         "health_state": runtime_state,
         "health_checked_at": health_checked_at.isoformat(),
+        "health_source": health_source,
     }
+    health_error_code = None
+    if runtime_state == "stale":
+        health_error_code = "PROVIDER_HEALTH_STALE"
+    elif runtime_state == "unhealthy":
+        health_error_code = "PROVIDER_UNHEALTHY"
+    elif health_mismatch_code:
+        health_error_code = health_mismatch_code
     result.update({
         "status": "eligible" if result["manual_boundary_candidate_eligible"] else "blocked",
         "evaluated_at": evaluated_at,
         "health_state": runtime_state if readiness else "unhealthy",
         "health_source": health_source,
         "health_checked_at": health_checked_at.isoformat(),
+        "health_ttl_seconds": HEALTH_TTL_SECONDS,
+        "freshness_age_seconds": freshness_age_seconds,
+        "health_error_code": health_error_code,
         "capability_schema_version": "1c-a-2",
         "provider_state_version": hashlib.sha256(
             json.dumps(state_payload, sort_keys=True).encode()

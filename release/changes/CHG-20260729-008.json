@@ -14,7 +14,7 @@
   ],
   "files": [],
   "user_summary": "构建 StoryLens 1.1.2-rc.1 安装包并完成安装态自动验证，准备人工安装验收",
-  "technical_summary": "Built StoryLens 1.1.2-rc.1; install-state automated gates PASS; awaiting manual installed acceptance. Formal VERSION restored to 1.1.2. No Push/Tag/Release.",
+  "technical_summary": "Built StoryLens 1.1.2-rc.1; install-state automated gates PASS; awaiting manual installed acceptance. Formal VERSION restored to 1.1.2. No Push/Tag/Release. RC.1 installed acceptance FAILED (INC-20260729-004 PROVIDER_HEALTH_STALE). Remains tested, not verified.",
   "acceptance_criteria": [
     "Installer StoryLens_1.1.2-rc.1_x64-setup.exe",
     "SIDECAR/INSTALLER build count 1",
@@ -36,7 +36,8 @@
     "release/evidence/1.1.2-rc.1/",
     "release/evidence/1.1.2-rc.1/FINAL_REPORT.md",
     "release/evidence/1.1.2-rc.1/BUILD_MANIFEST.json",
-    "release/evidence/1.1.2-rc.1/MANUAL_INSTALLED_ACCEPTANCE.md"
+    "release/evidence/1.1.2-rc.1/MANUAL_INSTALLED_ACCEPTANCE.md",
+    "release/evidence/1.1.2-rc.1/RC1_INSTALLED_ACCEPTANCE_FAILED.md"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -53,7 +54,7 @@
   "blocker_level": null,
   "head_inclusion": null,
   "created_at": "2026-07-29T10:57:47Z",
-  "updated_at": "2026-07-29T11:23:51Z",
+  "updated_at": "2026-07-29T11:43:01Z",
   "target_version": "1.1.2",
   "release_pool_status": "pending"
 }

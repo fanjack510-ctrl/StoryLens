@@ -832,9 +832,38 @@ def analysis_preflight(
     )
     if request.provider_state_version != evaluation["provider_state_version"]:
         raise error(409, "PROVIDER_STATE_CHANGED", "Provider状态已变化，请刷新后重新确认。")
-    if evaluation["health_state"] == "stale":
-        raise error(409, "PROVIDER_HEALTH_STALE", "Provider健康状态已过期，请刷新或重新验证连接。")
-    if evaluation["health_state"] == "unhealthy":
+    health_state = evaluation["health_state"]
+    health_error = evaluation.get("health_error_code")
+    if health_state == "stale" or health_error == "PROVIDER_HEALTH_STALE":
+        raise error(
+            409,
+            "PROVIDER_HEALTH_STALE",
+            "AI 服务健康状态已过期，请重新验证连接。",
+            details={
+                "provider": request.provider,
+                "health_source": evaluation.get("health_source"),
+                "health_checked_at": evaluation.get("health_checked_at"),
+                "freshness_age_seconds": evaluation.get("freshness_age_seconds"),
+                "health_ttl_seconds": evaluation.get("health_ttl_seconds"),
+            },
+        )
+    if health_error == "PROVIDER_HEALTH_NOT_VERIFIED":
+        raise error(409, "PROVIDER_HEALTH_NOT_VERIFIED", "AI 服务尚未验证，请先在设置中完成验证。")
+    if health_error == "PROVIDER_MODEL_NOT_VERIFIED":
+        raise error(
+            409,
+            "PROVIDER_MODEL_NOT_VERIFIED",
+            "当前分析模式将使用的模型尚未验证，请先验证该模型。",
+        )
+    if health_error == "PROVIDER_CREDENTIAL_CHANGED":
+        raise error(409, "PROVIDER_CREDENTIAL_CHANGED", "API Key 或凭据已变化，请重新验证连接。")
+    if health_error == "PROVIDER_CONFIGURATION_INCOMPLETE":
+        raise error(
+            409,
+            "PROVIDER_CONFIGURATION_INCOMPLETE",
+            "AI 服务配置已变化或不完整，请检查设置后重新验证。",
+        )
+    if health_state == "unhealthy":
         raise error(409, "PROVIDER_UNHEALTHY", "Provider健康检查失败。")
     paragraphs = list(
         session.scalars(
