@@ -162,14 +162,14 @@ describe("SceneBoundaryReviewPanel CHG-041", () => {
     vi.mocked(analysisApi.sceneBoundariesOverview).mockResolvedValue(overviewFixture() as any);
     renderPanel();
     expect(await screen.findByRole("heading", { name: "确认场景划分" })).toBeInTheDocument();
-    expect(screen.getByTestId("scene-boundary-waiting-lead")).toHaveTextContent("共识别 2");
+    expect(screen.getByTestId("scene-boundary-waiting-lead")).toHaveTextContent("共 2 个场景");
   });
 
   it("shows adopt AI button", async () => {
     vi.mocked(analysisApi.sceneBoundariesOverview).mockResolvedValue(overviewFixture() as any);
     renderPanel();
     expect(await screen.findByTestId("scene-boundary-adopt-ai")).toHaveTextContent(
-      "采用 AI 场景并开始旅程分析",
+      "确认这 2 个场景并开始分析",
     );
   });
 
@@ -481,7 +481,7 @@ describe("SceneBoundaryReviewPanel CHG-041", () => {
     renderPanel();
     expect(await screen.findByTestId("scene-boundary-confirm")).toHaveTextContent("仅确认场景划分");
     expect(screen.getByTestId("scene-boundary-confirm-start")).toHaveTextContent(
-      "确认并生成阅读旅程",
+      "确认这 2 个场景并开始分析",
     );
   });
 

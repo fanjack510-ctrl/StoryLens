@@ -54,17 +54,28 @@ describe("JourneyModeSwitcher", () => {
 });
 
 describe("WorkspaceViewSwitcher primary nav", () => {
-  it("shows a single 正文阅读 among primary tabs", () => {
+  it("shows 正文阅读 and 阅读旅程 without 场景分析 by default (CHG-011)", () => {
     render(
       <WorkspaceViewSwitcher
         active="journey"
         onChange={() => undefined}
-        analysisAvailable
         journeyAvailable
       />,
     );
     expect(screen.getAllByText("正文阅读")).toHaveLength(1);
-    expect(screen.getByTestId("workspace-tab-analysis")).toHaveTextContent("场景分析");
+    expect(screen.queryByTestId("workspace-tab-analysis")).not.toBeInTheDocument();
     expect(screen.getByTestId("workspace-tab-journey")).toHaveTextContent("阅读旅程");
+  });
+
+  it("shows 场景分析 only when showAnalysisTab is true", () => {
+    render(
+      <WorkspaceViewSwitcher
+        active="analysis"
+        onChange={() => undefined}
+        showAnalysisTab
+        journeyAvailable
+      />,
+    );
+    expect(screen.getByTestId("workspace-tab-analysis")).toHaveTextContent("场景分析");
   });
 });

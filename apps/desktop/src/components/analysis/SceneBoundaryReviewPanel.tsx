@@ -773,8 +773,8 @@ export function SceneBoundaryReviewPanel({
         <header className="scene-boundary-review-head">
           <h1>确认场景划分</h1>
           <p data-testid="scene-boundary-waiting-lead">
-            StoryLens 已完成场景分析，共识别 {aiSceneCount}{" "}
-            个场景。请确认是否采用 AI 划分并开始阅读旅程，或手动调整场景边界。
+            已生成场景划分建议，共 {aiSceneCount}{" "}
+            个场景。请确认是否采用，或手动调整场景边界。
           </p>
         </header>
         <div className="scene-boundary-waiting-actions">
@@ -797,7 +797,9 @@ export function SceneBoundaryReviewPanel({
               confirmMutation.mutate(true);
             }}
           >
-            {confirmMutation.isPending ? "确认中…" : "采用 AI 场景并开始旅程分析"}
+            {confirmMutation.isPending
+              ? "确认中…"
+              : `确认这 ${aiSceneCount} 个场景并开始分析`}
           </button>
           <button
             type="button"
@@ -1164,7 +1166,7 @@ export function SceneBoundaryReviewPanel({
           >
             {confirmMutation.isPending && confirmMutation.variables === true
               ? "确认中…"
-              : "确认并生成阅读旅程"}
+              : `确认这 ${currentSceneCount} 个场景并开始分析`}
           </button>
           {onExit ? (
             <button type="button" className="ghost" data-testid="scene-boundary-exit" onClick={tryExit}>
