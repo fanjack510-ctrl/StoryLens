@@ -7,7 +7,7 @@
   "target_version": "1.1.2",
   "public_branch": "fix/1.1.2-reader-journey-dimension-insights",
   "private_branch": "fix/1.1.2-reader-journey-dimension-insights",
-  "status": "verified",
+  "status": "integrated",
   "release_pool_status": "included",
   "include_in_next_release": true,
   "forward_port_required": true,
@@ -76,7 +76,8 @@
     "release/evidence/hotfix/1.1.2/CHG-20260729-001/DATA_AND_UI_AUDIT.md",
     "release/evidence/hotfix/1.1.2/CHG-20260729-001/TEST_RESULTS.json",
     "release/evidence/hotfix/1.1.2/CHG-20260729-001/COMPOSITE_SCORE_SOURCE.md",
-    "release/evidence/hotfix/1.1.2/CHG-20260729-001/MANUAL_GATE_PASS.md"
+    "release/evidence/hotfix/1.1.2/CHG-20260729-001/MANUAL_GATE_PASS.md",
+    "release/evidence/hotfix/1.1.2/CHG-20260729-001/INTEGRATION_REPORT.md"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -85,6 +86,8 @@
     "notes": "Insights embedded in existing journey JSON artifacts; legacy derive at read time without overwrite."
   },
   "created_at": "2026-07-29T03:28:43Z",
-  "updated_at": "2026-07-29T04:01:24Z",
-  "head_inclusion": "INCLUDED"
+  "updated_at": "2026-07-29T04:01:51Z",
+  "head_inclusion": "INCLUDED",
+  "public_integration_commit": "550406126767f1d14c9ae284cc3926255bf70cf9",
+  "private_integration_commit": "23a0b025db51acaa8e62f4e81bc7628f19a8e2a6"
 }
