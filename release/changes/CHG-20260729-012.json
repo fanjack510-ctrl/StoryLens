@@ -3,7 +3,7 @@
   "title": "Integrate verified chapter workflow fixes and build StoryLens 1.1.2-rc.3",
   "type": "build",
   "base_version": "1.1.1",
-  "status": "implemented",
+  "status": "tested",
   "include_in_next_release": true,
   "commits": [],
   "modules": [
@@ -53,7 +53,7 @@
   "blocker_level": null,
   "head_inclusion": null,
   "created_at": "2026-07-29T16:06:52Z",
-  "updated_at": "2026-07-29T16:17:51Z",
+  "updated_at": "2026-07-29T16:26:19Z",
   "target_version": "1.1.2",
   "rc_version": "1.1.2-rc.3",
   "release_pool_status": "pending",
@@ -76,5 +76,10 @@
   "build": true,
   "push": false,
   "tag": false,
-  "release": false
+  "release": false,
+  "installer_filename": "StoryLens_1.1.2-rc.3_x64-setup.exe",
+  "installer_sha256": "118831F5C6E66AB238CBD2CE38BD72E2C65F041FAD8E9B73F4C2C40927A5A166",
+  "sidecar_sha256": "40A023C301D344C157F9C45D1083D067C0D5EAD5F0F3D83E0C186CDA1A046C9C",
+  "archive_path": "D:\\StoryLens-Local-Evidence\\installer-archive\\StoryLens_1.1.2-rc.3_x64-setup.exe",
+  "public_build_source_head": "c8858b900dd9eb677a73f2549bb3f57ff3990e6b"
 }

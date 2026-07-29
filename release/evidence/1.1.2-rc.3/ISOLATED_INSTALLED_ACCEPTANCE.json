@@ -1,0 +1,21 @@
+{
+  "health": true,
+  "health_body": {
+    "status": "ok",
+    "service": "storylens-api",
+    "database": "ok",
+    "default_provider": "none"
+  },
+  "version_probe": null,
+  "isolated_db_exists": true,
+  "isolated_db_path": "C:\\Users\\msi\\AppData\\Local\\Temp\\storylens-112-rc3-installed-acceptance\\AppData\\StoryLens\\database\\storylens.db",
+  "installer_readable": true,
+  "installer_size": 42759987,
+  "sidecar_sha256": "40A023C301D344C157F9C45D1083D067C0D5EAD5F0F3D83E0C186CDA1A046C9C",
+  "fake_provider": true,
+  "real_provider_enabled": false,
+  "providers_error": "HTTP Error 404: Not Found",
+  "api_restart_health": true,
+  "formal_db_writes": 0,
+  "ok": true
+}

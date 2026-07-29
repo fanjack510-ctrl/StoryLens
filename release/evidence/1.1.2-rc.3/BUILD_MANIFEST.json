@@ -1,0 +1,17 @@
+{
+  "rc_version": "1.1.2-rc.3",
+  "installer_filename": "StoryLens_1.1.2-rc.3_x64-setup.exe",
+  "installer_size": 42759987,
+  "installer_sha256": "118831F5C6E66AB238CBD2CE38BD72E2C65F041FAD8E9B73F4C2C40927A5A166",
+  "archive_path": "D:\\StoryLens-Local-Evidence\\installer-archive\\StoryLens_1.1.2-rc.3_x64-setup.exe",
+  "archive_sha256": "118831F5C6E66AB238CBD2CE38BD72E2C65F041FAD8E9B73F4C2C40927A5A166",
+  "archive_hash_match": true,
+  "sidecar_filename": "storylens-api-x86_64-pc-windows-msvc.exe",
+  "sidecar_size": 39689385,
+  "sidecar_sha256": "40A023C301D344C157F9C45D1083D067C0D5EAD5F0F3D83E0C186CDA1A046C9C",
+  "desktop_sha256": "C138E45001DD912D15448DA902EBB66DA9C46AA7454FE61B23BA1151FD02DC0F",
+  "public_build_source_head": "c8858b900dd9eb677a73f2549bb3f57ff3990e6b",
+  "private_head": "23a0b025db51acaa8e62f4e81bc7628f19a8e2a6",
+  "build_timestamp": "2026-07-29T16:23:35Z",
+  "rc2_preserved_sha256": "CBE975E097E24A7DD5452C3B2B3BCB93DD75AFAED8B857EEF297B4C05FF94959"
+}
