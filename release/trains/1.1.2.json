@@ -31,5 +31,5 @@
     "CHG-20260728-040",
     "CHG-20260728-041"
   ],
-  "notes": "Hotfix pool branched from v1.1.1 formal publish baseline; not from integration/whole-book-v120. CHG-040 integrated. CHG-041 tested pending manual gate."
+  "notes": "Hotfix pool branched from v1.1.1 formal publish baseline; not from integration/whole-book-v120. CHG-040 integrated. CHG-041 verified (MG PASS)."
 }
