@@ -30,9 +30,9 @@
   ],
   "commits": [
     "7035ebceb0eb84d22186953d0d7201a02f903740",
-    "df64db64a65fa627aac0f6f4d954f1be1911a3c7"
+    "df64db64a65fa627aac0f6f4d954f1be1911a3c7",
+    "7fa22aeb1222955ad5f02ed6fd2d79c9488de821"
   ],
-  "evidence_commit_pending": true,
   "modules": [
     "release",
     "apps/api",
