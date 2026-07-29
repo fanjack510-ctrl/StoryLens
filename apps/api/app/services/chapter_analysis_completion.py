@@ -365,10 +365,13 @@ async def continue_chapter_after_scenes(
 ) -> None:
     """After all scenes succeed: ensure model revision and await manual boundary confirmation."""
     from app.services.scene_boundary_manual_review import ensure_ai_model_revision_after_scenes_v1
+    from app.services.task_cancellation import try_finalize_if_cancel_requested
 
     with session_factory() as session:
         run = session.get(AnalysisRun, run_id)
         if run is None:
+            return
+        if try_finalize_if_cancel_requested(session, run_id):
             return
         if not is_scene_pipeline_complete(session, run):
             return

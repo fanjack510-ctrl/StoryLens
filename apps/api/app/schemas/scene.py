@@ -447,6 +447,13 @@ class AnalysisRunResponse(BaseModel):
     journey_status: str | None = None
     journey_completed_scene_count: int | None = None
     journey_total_scene_count: int | None = None
+    status_version: int = 0
+    cancellation_requested_at: datetime | None = None
+    cancelled_at: datetime | None = None
+    cancellation_reason: str | None = None
+    cancelled_by: str | None = None
+    can_cancel: bool = False
+    can_restart_as_new_task: bool = False
     journey_retryable: bool | None = None
     journey_result_available: bool = False
     journey_error_code: str | None = None

@@ -322,7 +322,12 @@ async def generate_validated(
 
     CHG-20260728-040: optional adaptive_truncation_budget for scene_boundary_adjudication
     raises output limit on finish_reason=length (strictly increasing, capped).
+
+    CHG-20260729-006: cooperative cancel check before each provider attempt.
     """
+    from app.services.task_cancellation import raise_if_cancel_requested
+
+    raise_if_cancel_requested(session, run_id)
     prompt = with_response_contract(prompt, schema)
     original_messages = [
         {"role": "system", "content": prompt.system},
@@ -402,6 +407,7 @@ async def generate_validated(
     paragraph_ids_by_scene_cached: dict[int, set[str]] = {}
 
     while True:
+        raise_if_cancel_requested(session, run_id)
         if total_requests >= max_total_requests:
             break
         if next_kind == "provider_retry":
@@ -416,7 +422,9 @@ async def generate_validated(
                     retry_after=getattr(last_provider_error, "retry_after", None),
                 )
                 if delay > 0:
+                    raise_if_cancel_requested(session, run_id)
                     await asyncio.sleep(delay)
+                    raise_if_cancel_requested(session, run_id)
         elif next_kind == "repair_provider_retry":
             if not should_retry_provider_error(last_provider_error):
                 break
@@ -429,7 +437,9 @@ async def generate_validated(
                     retry_after=getattr(last_provider_error, "retry_after", None),
                 )
                 if delay > 0:
+                    raise_if_cancel_requested(session, run_id)
                     await asyncio.sleep(delay)
+                    raise_if_cancel_requested(session, run_id)
         elif next_kind in STRUCTURAL_REPAIR_KINDS:
             if repair_rounds_used >= max_repair_rounds and in_repair_phase:
                 break

@@ -64,6 +64,11 @@ from app.services.staged_budget import (
     estimate_reader_journey_scene_profiles,
 )
 from app.services.structured_output import StructuredOutputError, generate_validated
+from app.services.task_cancellation import (
+    AnalysisCancellationRequested,
+    raise_if_cancel_requested,
+    try_finalize_if_cancel_requested,
+)
 from app.services.validation_errors import StructuralValidationError
 
 logger = logging.getLogger(__name__)
@@ -360,6 +365,7 @@ async def execute_reader_journey_v2(
             prior_summaries: list[str] = []
             work: deque[ReaderJourneySceneBatch] = deque(batches)
             while work:
+                raise_if_cancel_requested(session, analysis_run.id)
                 batch = work.popleft()
                 current_batch = batch
                 batch_scenes = batch.scenes
@@ -481,6 +487,8 @@ async def execute_reader_journey_v2(
                 session.commit()
                 return
 
+            if try_finalize_if_cancel_requested(session, analysis_run.id):
+                return
             raw_profiles = _load_v2_profiles_from_artifacts(session, journey_run)
             derived, stats = finalize_v2_profiles(raw_profiles)
             paragraph_ids_by_scene = {
@@ -513,6 +521,8 @@ async def execute_reader_journey_v2(
                 len(derived),
                 stats.get("beat_count"),
             )
+    except AnalysisCancellationRequested:
+        raise
     except Exception as exc:  # noqa: BLE001
         root_code, stage, retryable, hint = _classify_journey_error(exc)
         with session_factory() as session:

@@ -451,6 +451,14 @@ def evidence_fields(result: SceneAnalysisResult) -> list[tuple[str, str]]:
 async def execute_scene_pipeline(
     session_factory: sessionmaker[Session], gateway: ModelGateway, run_id: int
 ) -> None:
+    from app.services.task_cancellation import (
+        AnalysisCancellationRequested,
+        finalize_cancelled,
+        is_cancel_requested,
+        raise_if_cancel_requested,
+        try_finalize_if_cancel_requested,
+    )
+
     with session_factory() as session:
         from app.services.credentials.service import get_credential_store
         from app.services.provider_runtime_service import ProviderRuntimeService
@@ -462,12 +470,20 @@ async def execute_scene_pipeline(
         run = session.get(AnalysisRun, run_id)
         if run is None:
             return
+        if is_cancel_requested(run):
+            finalize_cancelled(session, run, commit=True)
+            return
         if run.status not in {"boundary_candidates_running"}:
             run.status = "running"
         run.started_at = datetime.now(timezone.utc)
         session.commit()
+        if try_finalize_if_cancel_requested(session, run_id):
+            return
         try:
+            raise_if_cancel_requested(session, run_id)
             awaiting_review = await _execute(session, gateway, run)
+            if try_finalize_if_cancel_requested(session, run_id):
+                return
             if not awaiting_review:
                 from app.services.chapter_analysis_completion import (
                     continue_chapter_after_scenes,
@@ -476,13 +492,24 @@ async def execute_scene_pipeline(
                 )
 
                 if is_scene_pipeline_complete(session, run):
+                    if try_finalize_if_cancel_requested(session, run_id):
+                        return
                     mark_scenes_complete_awaiting_journey(session, run)
                     session.commit()
                     await continue_chapter_after_scenes(session_factory, gateway, run_id)
                     return
+                session.refresh(run)
+                if try_finalize_if_cancel_requested(session, run_id):
+                    return
                 run.status = "succeeded"
                 run.completed_at = datetime.now(timezone.utc)
             session.commit()
+        except AnalysisCancellationRequested:
+            session.rollback()
+            run = session.get(AnalysisRun, run_id)
+            if run is not None:
+                finalize_cancelled(session, run, commit=True)
+            return
         except Exception as exc:
             session.rollback()
             run = session.get(AnalysisRun, run_id)
@@ -806,6 +833,9 @@ def classify_pipeline_error(exc: Exception) -> tuple[str, str, bool, str]:
 
 
 async def _execute(session: Session, gateway: ModelGateway, run: AnalysisRun) -> bool:
+    from app.services.task_cancellation import raise_if_cancel_requested
+
+    raise_if_cancel_requested(session, run.id)
     chapter = session.get(Chapter, int(run.subject_id))
     if chapter is None:
         raise ValueError("章节不存在")
@@ -842,6 +872,7 @@ async def _execute(session: Session, gateway: ModelGateway, run: AnalysisRun) ->
             decisions = []
             valid_decisions = []
             for batch in batches:
+                raise_if_cancel_requested(session, run.id)
                 detection_batch_index += 1
                 planned = PlannedDetectionBatch(
                     batch_index=detection_batch_index,
@@ -1089,6 +1120,7 @@ async def _execute(session: Session, gateway: ModelGateway, run: AnalysisRun) ->
                 item.id: {"id": item.id, "text": item.normalized_text} for item in window
             }
             for batch in batches:
+                raise_if_cancel_requested(session, run.id)
                 owned = [
                     item
                     for item in transition_candidates
@@ -1276,6 +1308,7 @@ async def _execute(session: Session, gateway: ModelGateway, run: AnalysisRun) ->
     )
     paragraph_by_id = {item.id: item for item in paragraphs}
     for ordinal, (start, end) in enumerate(ranges, start=1):
+        raise_if_cancel_requested(session, run.id)
         scene_key = f"{key}-S{ordinal:04d}"
         included = [
             item
@@ -1427,12 +1460,20 @@ def mark_interrupted_runs_failed(session: Session) -> dict[str, int]:
     candidates = list(
         session.scalars(
             select(AnalysisRun).where(
-                AnalysisRun.status.in_([*active_statuses, "queued"])
+                AnalysisRun.status.in_(
+                    [*active_statuses, "queued", "cancellation_requested", "stopping"]
+                )
             )
         )
     )
 
     for run in candidates:
+        if run.status in {"cancellation_requested", "stopping"}:
+            from app.services.task_cancellation import finalize_cancelled
+
+            finalize_cancelled(session, run, commit=False)
+            touched_failed_run_ids.append(run.id)  # counted as recovered
+            continue
         if run.status in _STARTUP_PRESERVE_TERMINAL_STATUSES:
             continue
         is_staged = run.id in staged_run_ids

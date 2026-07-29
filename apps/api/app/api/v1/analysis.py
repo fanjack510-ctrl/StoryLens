@@ -4,6 +4,7 @@ from pathlib import Path
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
 
@@ -624,8 +625,53 @@ def serialize_run(session: Session, run: AnalysisRun) -> AnalysisRunResponse:
             ),
             "last_finish_reason": last_adj.finish_reason if last_adj else None,
             "truncation_attempt_count": trunc_attempts if adj_invs else None,
+            "status_version": int(getattr(run, "status_version", 0) or 0),
+            "cancellation_requested_at": getattr(run, "cancellation_requested_at", None),
+            "cancelled_at": getattr(run, "cancelled_at", None),
+            "cancellation_reason": getattr(run, "cancellation_reason", None),
+            "cancelled_by": getattr(run, "cancelled_by", None),
+            "can_cancel": _run_can_cancel(run),
+            "can_restart_as_new_task": run.status
+            in {
+                "cancelled",
+                "failed",
+                "failed_provider",
+                "failed_structural",
+                "succeeded",
+                "completed",
+            },
         }
     )
+
+
+def _run_can_cancel(run: AnalysisRun) -> bool:
+    from app.services.task_cancellation import CANCELABLE_STATUSES, CANCEL_IN_PROGRESS
+
+    if run.status in CANCEL_IN_PROGRESS:
+        return False
+    return run.status in CANCELABLE_STATUSES
+
+
+class AnalysisRunCancelRequest(BaseModel):
+    reason: str = "user_requested"
+    expected_version: int | None = None
+    client_request_id: str | None = None
+
+
+class AnalysisRunCancelResponse(BaseModel):
+    task_id: int
+    previous_status: str
+    current_status: str
+    cancellation_requested_at: datetime | None = None
+    cancelled_at: datetime | None = None
+    message: str
+    already_requested: bool = False
+    already_cancelled: bool = False
+    already_completed: bool = False
+    cannot_cancel: bool = False
+    can_restart_as_new_task: bool = True
+    status_version: int = 0
+
 
 
 @router.get("/analysis-runs", response_model=list[AnalysisRunResponse])
@@ -1221,6 +1267,49 @@ def get_analysis_run(run_id: int, session: Session = Depends(get_db)) -> Analysi
     if run is None:
         raise error(404, "ANALYSIS_RUN_NOT_FOUND", "分析运行不存在")
     return serialize_run(session, run)
+
+
+@router.post(
+    "/analysis-runs/{run_id}/cancel",
+    response_model=AnalysisRunCancelResponse,
+)
+def cancel_analysis_run(
+    run_id: int,
+    request: AnalysisRunCancelRequest | None = None,
+    session: Session = Depends(get_db),
+) -> AnalysisRunCancelResponse:
+    """Cooperative user cancel — persists request; workers stop at checkpoints."""
+    from app.services.task_cancellation import request_cancel
+
+    body = request or AnalysisRunCancelRequest()
+    try:
+        result = request_cancel(
+            session,
+            run_id,
+            reason=body.reason or "user_requested",
+            expected_version=body.expected_version,
+            client_request_id=body.client_request_id,
+        )
+    except LookupError:
+        raise error(404, "ANALYSIS_RUN_NOT_FOUND", "分析运行不存在") from None
+    except ValueError as exc:
+        if "VERSION_CONFLICT" in str(exc):
+            raise error(409, "ANALYSIS_RUN_VERSION_CONFLICT", "任务状态已变化，请刷新后重试") from None
+        raise error(400, "CANCEL_REJECTED", "无法停止该任务") from None
+    return AnalysisRunCancelResponse(
+        task_id=result.task_id,
+        previous_status=result.previous_status,
+        current_status=result.current_status,
+        cancellation_requested_at=result.cancellation_requested_at,
+        cancelled_at=result.cancelled_at,
+        message=result.message,
+        already_requested=result.already_requested,
+        already_cancelled=result.already_cancelled,
+        already_completed=result.already_completed,
+        cannot_cancel=result.cannot_cancel,
+        can_restart_as_new_task=result.can_restart_as_new_task,
+        status_version=result.status_version,
+    )
 
 
 def _boundary_recovery_budget(

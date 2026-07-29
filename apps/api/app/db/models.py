@@ -160,6 +160,14 @@ class AnalysisRun(Base):
     recovered_from_run_id: Mapped[int | None] = mapped_column(
         ForeignKey("analysis_runs.id", ondelete="SET NULL"), nullable=True, index=True
     )
+    # CHG-20260729-006 cooperative cancellation (nullable / defaults for legacy rows).
+    status_version: Mapped[int] = mapped_column(Integer, default=0)
+    cancellation_requested_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    cancellation_reason: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    cancelled_by: Mapped[str | None] = mapped_column(String(32), nullable=True)
     # Phase 1P narrative scope skeleton (nullable for 1.0.5 row compatibility).
     # Legacy chapter binding remains subject_type/subject_id — there is no chapter_id column.
     analysis_type: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)

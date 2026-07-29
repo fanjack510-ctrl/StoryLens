@@ -65,12 +65,36 @@ def create_db() -> None:
     migrate_phase_1d_c1_uat05(engine)
     migrate_phase_license_v1(engine)
     migrate_phase_scene_boundary_manual_review(engine)
+    migrate_phase_task_cancellation_v1(engine)
     Base.metadata.create_all(bind=engine)
     # Phase 1P narrative shared skeleton (upgrade path + ledger). After create_all so
     # fresh DBs already have ORM tables; migrators remain idempotent for 1.0.5 upgrades.
     from app.narrative_core.migrations.runner import apply_narrative_migrations
 
     apply_narrative_migrations(engine)
+
+
+def migrate_phase_task_cancellation_v1(target_engine) -> None:
+    """CHG-20260729-006: cooperative cancel columns on analysis_runs (idempotent)."""
+    inspector = inspect(target_engine)
+    tables = inspector.get_table_names()
+    if "analysis_runs" not in tables:
+        return
+    existing = {col["name"] for col in inspector.get_columns("analysis_runs")}
+    columns = {
+        "status_version": "INTEGER NOT NULL DEFAULT 0",
+        "cancellation_requested_at": "DATETIME",
+        "cancelled_at": "DATETIME",
+        "cancellation_reason": "VARCHAR(64)",
+        "cancelled_by": "VARCHAR(32)",
+    }
+    with target_engine.begin() as connection:
+        for name, definition in columns.items():
+            if name in existing:
+                continue
+            connection.execute(
+                text(f"ALTER TABLE analysis_runs ADD COLUMN {name} {definition}")
+            )
 
 
 def migrate_phase_scene_boundary_manual_review(target_engine) -> None:
