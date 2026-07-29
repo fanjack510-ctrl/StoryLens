@@ -40,5 +40,5 @@
   ],
   "notes": "Hotfix pool from v1.1.1; CHG-040..006 verified/integrated; CHG-007 version bump; CHG-042 excluded (investigated only).",
   "updated_at": "2026-07-29T10:43:16Z",
-  "public_integration_head_at_ready": null
+  "public_integration_head_at_ready": "ca5b72b49f3326575b0cd0786fc99dcf803fabf3"
 }
