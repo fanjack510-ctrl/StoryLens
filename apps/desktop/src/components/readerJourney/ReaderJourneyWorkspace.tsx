@@ -125,10 +125,8 @@ import {
   sanitizePreferredWidth,
 } from "./journeyPaneWidth";
 import { JourneyPaneSplitter } from "./JourneyPaneSplitter";
-import { PHASE_BAND_COLORS } from "./journeyVisualTokens";
+import { resolveJourneyStageToken } from "./journeyVisualTokens";
 import "./readerJourney.css";
-
-const phaseColors = PHASE_BAND_COLORS;
 
 function exportErrorMessage(error: unknown): string {
   if (
@@ -1487,9 +1485,10 @@ export function ReaderJourneyWorkspace({
             className="journey-phase-strip journey-phase-band journey-phase-nav"
             data-testid="journey-phase-strip"
           >
-            {visualization.phases.map((phase, index) => {
+            {visualization.phases.map((phase) => {
               const isSelected = selectedPhase === phase.ordinal;
               const phaseLabel = formatJourneyPhaseLabel(phase.title);
+              const stageToken = resolveJourneyStageToken(phase.title);
               const phaseSummary = resolvePhaseSummaryDisplay(phase.summary, phase.title);
               const phaseMetric =
                 phaseMetricAverages.get(phase.ordinal) ?? phase.average_engagement;
@@ -1505,11 +1504,13 @@ export function ReaderJourneyWorkspace({
                   type="button"
                   className={`journey-phase-card journey-phase-compact journey-phase-nav-card ${isSelected ? "selected active-phase" : ""}`}
                   data-testid={`journey-phase-${phase.ordinal}`}
+                  data-stage-key={stageToken.key}
                   title={`${phaseLabel} · ${phaseDesc}`}
                   aria-pressed={isSelected}
                   aria-selected={isSelected}
                   style={{
-                    ["--phase-band-color" as string]: phaseColors[index % phaseColors.length],
+                    ["--phase-band-color" as string]: stageToken.cardBackground,
+                    ["--phase-band-border" as string]: stageToken.cardBorder,
                   }}
                   onClick={() => handleSelectPhase(phase.ordinal)}
                 >

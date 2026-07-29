@@ -12,7 +12,6 @@ import type {
   ReaderJourneyVisualization,
 } from "../../types/readerJourneyVisualization";
 import { formatJourneyMetricLabel, formatJourneySceneLabel, formatJourneyScore, roleLabelZh } from "./journeyUiLabels";
-import { PHASE_BAND_COLORS } from "./journeyVisualTokens";
 import {
   buildLinePathD,
   clampViewWindow,
@@ -33,6 +32,10 @@ import {
   requiresBrush,
   type YDomainMode,
 } from "./journeyVisualizationConfig";
+import {
+  buildJourneyStageBands,
+  resolveSceneStageAssignment,
+} from "./journeyStageBands";
 import {
   buildLensChartLines,
   getObservationLens,
@@ -384,9 +387,30 @@ export function CanonicalJourneyChart({
   const padLeft = CHART_PAD.left;
   const plotHeight = chartHeight - CHART_PAD.top - CHART_PAD.bottom;
   const plotWidth = Math.max(chartWidth - CHART_PAD.left - CHART_PAD.right, 1);
+  const plotLeft = padLeft;
+  const plotRight = padLeft + plotWidth;
   const clipPathId = exportFullJourney
     ? "journey-plot-clip-full-export"
     : "journey-plot-clip";
+
+  const stageBands = useMemo(() => {
+    const ordinals = nodes.map((node) => node.scene_ordinal);
+    return buildJourneyStageBands(visualization, {
+      sceneOrdinals: ordinals,
+      xFor,
+      plotLeft,
+      plotRight,
+    });
+  }, [visualization, nodes, xFor, plotLeft, plotRight]);
+
+  const selectedPhase = useMemo(
+    () =>
+      selectedPhaseOrdinal == null
+        ? null
+        : visualization.phases.find((phase) => phase.ordinal === selectedPhaseOrdinal) ??
+          null,
+    [visualization.phases, selectedPhaseOrdinal],
+  );
 
   const tooltipNode =
     hover != null ? nodes.find((n) => n.scene_ordinal === hover.ordinal) : undefined;
@@ -492,27 +516,59 @@ export function CanonicalJourneyChart({
           </clipPath>
         </defs>
 
-        {/* 1. Phase background (clipped to plot) */}
-        <g data-layer="phase_background" clipPath={`url(#${clipPathId})`}>
-          {visualization.phases.map((phase, index) => {
-            const x1 = xFor(phase.start_scene_ordinal) - 8;
-            const x2 = xFor(phase.end_scene_ordinal) + 8;
+        {/* 1. Phase background (clipped to plot) — midpoint bands from shared tokens */}
+        <g data-layer="phase_background" data-testid="journey-stage-bands" clipPath={`url(#${clipPathId})`}>
+          {stageBands.map((band) => {
+            const overlapsSelected =
+              selectedPhase != null &&
+              band.endSceneOrdinal >= selectedPhase.start_scene_ordinal &&
+              band.startSceneOrdinal <= selectedPhase.end_scene_ordinal;
+            const width = Math.max(band.x2 - band.x1, 1);
+            const labelX = band.x1 + width / 2;
             return (
-              <rect
-                key={`phase-band-${phase.ordinal}`}
-                x={x1}
-                y={padTop}
-                width={Math.max(x2 - x1, 4)}
-                height={plotHeight}
-                fill={PHASE_BAND_COLORS[index % PHASE_BAND_COLORS.length]}
-                opacity={
-                  selectedPhaseOrdinal === phase.ordinal
-                    ? PHASE_BAND_OPACITY.active
-                    : PHASE_BAND_OPACITY.idle
-                }
-              />
+              <g
+                key={band.id}
+                data-testid={`journey-stage-band-${band.stageKey}-${band.startSceneOrdinal}`}
+                data-stage-key={band.stageKey}
+                data-start-scene={band.startSceneOrdinal}
+                data-end-scene={band.endSceneOrdinal}
+                data-warning={band.warning || undefined}
+              >
+                <rect
+                  x={band.x1}
+                  y={padTop}
+                  width={width}
+                  height={plotHeight}
+                  fill={band.token.chartBand}
+                  opacity={
+                    overlapsSelected ? PHASE_BAND_OPACITY.active : PHASE_BAND_OPACITY.idle
+                  }
+                />
+                <text
+                  x={labelX}
+                  y={padTop + 14}
+                  textAnchor="middle"
+                  className="journey-stage-band-label"
+                  data-testid={`journey-stage-band-label-${band.startSceneOrdinal}`}
+                >
+                  {band.label}
+                </text>
+              </g>
             );
           })}
+          {stageBands.slice(1).map((band) => (
+            <line
+              key={`stage-divider-${band.id}`}
+              data-testid={`journey-stage-divider-${band.startSceneOrdinal}`}
+              x1={band.x1}
+              y1={padTop}
+              x2={band.x1}
+              y2={padTop + plotHeight}
+              stroke={band.token.divider}
+              strokeWidth={1}
+              strokeOpacity={0.85}
+            />
+          ))}
         </g>
 
         {/* 2. Risk background */}
@@ -548,18 +604,6 @@ export function CanonicalJourneyChart({
 
         {/* 3. Grid + axes */}
         <g data-layer="grid">
-          {visualization.phases.map((phase) => (
-            <line
-              key={`phase-line-${phase.start_scene_ordinal}`}
-              x1={xFor(phase.start_scene_ordinal)}
-              y1={padTop}
-              x2={xFor(phase.start_scene_ordinal)}
-              y2={padTop + plotHeight}
-              stroke="var(--line)"
-              strokeDasharray="3 3"
-              strokeOpacity={0.55}
-            />
-          ))}
           <line
             x1={CHART_PAD.left}
             y1={padTop + plotHeight}
@@ -620,19 +664,55 @@ export function CanonicalJourneyChart({
             if (dense && node.scene_ordinal % 2 === 0 && node.scene_ordinal !== sceneCount) {
               return null;
             }
+            const stage = resolveSceneStageAssignment(visualization, node.scene_ordinal, node);
+            const isStageStart = stageBands.some(
+              (band) => band.startSceneOrdinal === node.scene_ordinal,
+            );
             return (
-              <text
+              <g
                 key={`x-label-${node.scene_ordinal}`}
-                x={xFor(node.scene_ordinal)}
-                y={chartHeight - 8}
-                textAnchor="middle"
-                className="journey-axis-label"
                 data-testid={
                   exportFullJourney ? undefined : `journey-x-label-${node.scene_ordinal}`
                 }
+                data-stage-key={stage.stageKey}
               >
-                S{node.scene_ordinal}
-              </text>
+                <text
+                  x={xFor(node.scene_ordinal)}
+                  y={chartHeight - 14}
+                  textAnchor="middle"
+                  className="journey-axis-label"
+                >
+                  S{node.scene_ordinal}
+                </text>
+                <rect
+                  x={xFor(node.scene_ordinal) - 8}
+                  y={chartHeight - 8}
+                  width={16}
+                  height={3}
+                  rx={1}
+                  fill={stage.token.sceneMarker}
+                  data-testid={
+                    exportFullJourney
+                      ? undefined
+                      : `journey-x-stage-mark-${node.scene_ordinal}`
+                  }
+                />
+                {isStageStart && stage.stageKey !== "unknown" ? (
+                  <text
+                    x={xFor(node.scene_ordinal)}
+                    y={chartHeight - 22}
+                    textAnchor="middle"
+                    className="journey-axis-stage-start"
+                    data-testid={
+                      exportFullJourney
+                        ? undefined
+                        : `journey-x-stage-start-${node.scene_ordinal}`
+                    }
+                  >
+                    {stage.label}起点
+                  </text>
+                ) : null}
+              </g>
             );
           })}
         </g>

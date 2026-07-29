@@ -1,0 +1,67 @@
+{
+  "id": "CHG-20260729-002",
+  "title": "阅读旅程阶段颜色贯通与场景归属可视化",
+  "type": "fix",
+  "issue_id": null,
+  "base_version": "1.1.1",
+  "target_version": "1.1.2",
+  "public_branch": "fix/1.1.2-reader-journey-stage-colors",
+  "private_branch": "fix/1.1.2-reader-journey-stage-colors",
+  "status": "tested",
+  "release_pool_status": "pending",
+  "include_in_next_release": true,
+  "forward_port_required": true,
+  "forward_port_target": "integration/whole-book-v120",
+  "forward_port_status": "pending",
+  "depends_on": [
+    "CHG-20260729-001"
+  ],
+  "related_changes": [
+    {
+      "id": "CHG-20260729-001",
+      "relation": "integrated prerequisite"
+    }
+  ],
+  "affected_modules": [
+    "apps/desktop/src/components/readerJourney/journeyVisualTokens.ts",
+    "apps/desktop/src/components/readerJourney/journeyStageBands.ts",
+    "apps/desktop/src/components/readerJourney/CanonicalJourneyChart.tsx",
+    "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.tsx",
+    "apps/desktop/src/components/readerJourney/StructuredChapterTextPane.tsx"
+  ],
+  "commits": [],
+  "modules": [
+    "release",
+    "apps/desktop"
+  ],
+  "files": [
+    "release/changes/CHG-20260729-002.json",
+    "release/evidence/hotfix/1.1.2/CHG-20260729-002/"
+  ],
+  "user_summary": "将开端/发展/收束阶段颜色贯通到曲线背景、Scene 轴与左侧列表，不改阶段算法。",
+  "technical_summary": "Single journeyStageVisualTokens source; midpoint stage bands from actual scene X; shared across six lenses.",
+  "acceptance_criteria": [
+    "Single color source for cards and chart",
+    "Bands follow actual scene ownership not equal thirds",
+    "Six lenses share stage bands",
+    "No stage algorithm change",
+    "Legacy compatible"
+  ],
+  "tests": [
+    "apps/desktop/src/components/readerJourney/stage_colors_chg002_local.test.ts"
+  ],
+  "manual_gate": "MG-CHG-20260729-002 pending",
+  "verification_evidence": [
+    "release/evidence/hotfix/1.1.2/CHG-20260729-002/STAGE_COLOR_AUDIT.md",
+    "release/evidence/hotfix/1.1.2/CHG-20260729-002/TEST_RESULTS.json",
+    "release/evidence/hotfix/1.1.2/CHG-20260729-002/MANUAL_UI_ENV.md"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "Presentation-only; no persistence changes."
+  },
+  "created_at": "2026-07-29T04:04:02Z",
+  "updated_at": "2026-07-29T04:10:03Z"
+}

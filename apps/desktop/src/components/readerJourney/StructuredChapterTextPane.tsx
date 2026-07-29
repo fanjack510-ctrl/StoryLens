@@ -3,8 +3,9 @@ import type { SceneResultItem } from "../../types";
 import type { ReaderJourneyVisualization } from "../../types/readerJourneyVisualization";
 import type { JourneySelectionState } from "../../types/journeySelection";
 import { roleLabelZh } from "./journeyUiLabels";
-import { PHASE_BAND_COLORS } from "./journeyVisualTokens";
+import { resolveSceneStageAssignment } from "./journeyStageBands";
 import { buildSceneRoleTags } from "./sceneCardRoleTags";
+import "./structuredChapterStage.css";
 
 export type ChapterParagraph = {
   id: string;
@@ -166,18 +167,26 @@ export const StructuredChapterTextPane = forwardRef<StructuredChapterTextPaneHan
             <div className="structure-rail" aria-hidden="true">
               {sceneParagraphGroups.map(({ sceneItem, paragraphs: paras }) => {
                 const node = nodeByOrdinal.get(sceneItem.scene.ordinal);
-                const phaseIndex = (node?.phase_ordinal ?? 1) - 1;
+                const stage = resolveSceneStageAssignment(
+                  visualization,
+                  sceneItem.scene.ordinal,
+                  node,
+                );
                 const role = node?.role ?? "secondary";
                 return (
                   <div
                     key={sceneItem.scene.id}
                     className={`structure-rail-scene structure-rail-${role}`}
+                    data-stage-key={stage.stageKey}
                     style={{
                       flexGrow: Math.max(paras.length, 1),
-                      background: PHASE_BAND_COLORS[phaseIndex % PHASE_BAND_COLORS.length],
+                      background: stage.token.chartBand,
                     }}
                   >
-                    <span className={`structure-rail-marker structure-rail-marker-${role}`} />
+                    <span
+                      className={`structure-rail-marker structure-rail-marker-${role}`}
+                      style={{ background: stage.token.sceneMarker }}
+                    />
                     {paras.map((p) => (
                       <span key={p.id} className="structure-rail-tick" />
                     ))}
@@ -191,7 +200,8 @@ export const StructuredChapterTextPane = forwardRef<StructuredChapterTextPaneHan
                 const s = sceneItem.scene;
                 const node = nodeByOrdinal.get(s.ordinal);
                 const role = node?.role ?? "secondary";
-                const phaseOrdinal = node?.phase_ordinal ?? null;
+                const stage = resolveSceneStageAssignment(visualization, s.ordinal, node);
+                const phaseOrdinal = stage.phaseOrdinal;
                 const isActive = selection.activeSceneOrdinal === s.ordinal;
                 const activePhase =
                   selection.activePhaseId ??
@@ -226,6 +236,10 @@ export const StructuredChapterTextPane = forwardRef<StructuredChapterTextPaneHan
                     data-end-paragraph-id={s.end_paragraph_id}
                     data-display-level={role}
                     data-phase-id={phaseOrdinal ?? undefined}
+                    data-stage-key={stage.stageKey}
+                    style={{
+                      ["--scene-stage-marker" as string]: stage.token.sceneMarker,
+                    }}
                   >
                     <button
                       type="button"
@@ -234,15 +248,23 @@ export const StructuredChapterTextPane = forwardRef<StructuredChapterTextPaneHan
                       title={techTitle}
                       onClick={() => onSelectScene(s.id)}
                     >
+                      <span
+                        className="structured-scene-stage-bar"
+                        data-testid={`structured-scene-stage-bar-${s.ordinal}`}
+                        aria-hidden="true"
+                      />
                       <span className="structured-scene-ordinal">
                         {role === "beat" ? `节拍${String(s.ordinal).padStart(2, "0")}` : `场景${String(s.ordinal).padStart(2, "0")}`}
                       </span>
                       <span className={`structured-scene-role role-${role}`}>
                         {roleLabelZh(role)}
                       </span>
-                      {phaseOrdinal != null && (
-                        <span className="structured-scene-phase">阶段{phaseOrdinal}</span>
-                      )}
+                      <span
+                        className="structured-scene-phase"
+                        data-testid={`structured-scene-stage-label-${s.ordinal}`}
+                      >
+                        {stage.label}
+                      </span>
                       <span className="structured-scene-range" hidden>
                         {techTitle}
                       </span>

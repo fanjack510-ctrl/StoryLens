@@ -30,7 +30,8 @@
   "changes": [
     "CHG-20260728-040",
     "CHG-20260728-041",
-    "CHG-20260729-001"
+    "CHG-20260729-001",
+    "CHG-20260729-002"
   ],
-  "notes": "Hotfix pool from v1.1.1; CHG-040/041 integrated. CHG-20260729-001 verified (MG PASS)."
+  "notes": "Hotfix pool from v1.1.1; CHG-040/041/001 integrated. CHG-20260729-002 implementing."
 }

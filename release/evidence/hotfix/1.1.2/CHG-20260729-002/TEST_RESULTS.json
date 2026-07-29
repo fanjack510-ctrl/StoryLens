@@ -1,0 +1,33 @@
+{
+  "change_id": "CHG-20260729-002",
+  "recorded_at": "2026-07-29T04:12:00Z",
+  "branch": "fix/1.1.2-reader-journey-stage-colors",
+  "public_base_head": "017d9cc26d5dd510aff8f251ddb22d083af382f3",
+  "vitest": {
+    "command": "npx vitest run src/components/readerJourney/stage_colors_chg002_local.test.ts",
+    "passed": 8,
+    "failed": 0,
+    "exit_code": 0
+  },
+  "vitest_related": {
+    "command": "observation_lenses_v2 + dimension_insights_chg001 + HookPayoffTimeline",
+    "passed": 44,
+    "failed": 0
+  },
+  "typecheck": {
+    "result": "PASS",
+    "exit_code": 0
+  },
+  "http_e2e": {
+    "result": "PASS",
+    "phases": [
+      { "title": "开端", "start": 1, "end": 2 },
+      { "title": "发展", "start": 3, "end": 5 },
+      { "title": "收束", "start": 6, "end": 6 }
+    ],
+    "api": "http://127.0.0.1:18042",
+    "frontend": "http://127.0.0.1:1421",
+    "real_provider_calls": 0,
+    "formal_db_writes": 0
+  }
+}

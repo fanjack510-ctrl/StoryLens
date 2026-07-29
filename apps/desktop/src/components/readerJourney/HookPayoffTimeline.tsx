@@ -6,6 +6,12 @@ import {
   buildHookResolutionModel,
   type HookResolutionRow,
 } from "./hookResolutionModel";
+import {
+  buildContiguousStageRuns,
+  computeStageBandPixelRanges,
+  resolveSceneStageAssignment,
+} from "./journeyStageBands";
+import { PHASE_BAND_OPACITY } from "./journeyVisualizationConfig";
 import "./hookPayoffTimeline.css";
 
 type Props = {
@@ -44,6 +50,25 @@ export function HookPayoffTimeline({
   const model = useMemo(() => buildHookResolutionModel(visualization), [visualization]);
   const scenes = sceneAxis(model.max_scene);
   const trackMinWidth = Math.max(420, model.max_scene * SCENE_COL_MIN + 140);
+
+  const stageBands = useMemo(() => {
+    if (!scenes.length || !(visualization.phases?.length)) return [];
+    const assignmentFor = (ordinal: number) =>
+      resolveSceneStageAssignment(
+        visualization,
+        ordinal,
+        visualization.scene_nodes.find((n) => n.scene_ordinal === ordinal) ?? null,
+      );
+    const runs = buildContiguousStageRuns(scenes, assignmentFor);
+    const xFor = (ordinal: number) => lanePercent(ordinal, model.max_scene);
+    const pixels = computeStageBandPixelRanges(runs, scenes, xFor, 0, 100);
+    return runs.map((run, index) => ({
+      ...run,
+      id: `hook-stage-${index}-${run.startSceneOrdinal}`,
+      x1: pixels[index]?.x1 ?? 0,
+      x2: pixels[index]?.x2 ?? 100,
+    }));
+  }, [scenes, visualization, model.max_scene]);
 
   const selectRow = (row: HookResolutionRow) => {
     onSelectLoop?.(row.loop_id, row.locate_scene);
@@ -113,6 +138,28 @@ export function HookPayoffTimeline({
             <div className="hook-resolution-axis" data-testid="hook-resolution-axis">
               <span className="hook-resolution-axis-spacer" />
               <div className="hook-resolution-axis-scenes">
+                <div
+                  className="hook-resolution-stage-bands"
+                  data-testid="journey-stage-bands"
+                  aria-hidden="true"
+                >
+                  {stageBands.map((band) => (
+                    <div
+                      key={band.id}
+                      className="hook-resolution-stage-band"
+                      data-testid={`journey-stage-band-${band.stageKey}-${band.startSceneOrdinal}`}
+                      data-stage-key={band.stageKey}
+                      style={{
+                        left: `${band.x1}%`,
+                        width: `${Math.max(band.x2 - band.x1, 0.5)}%`,
+                        background: band.token.chartBand,
+                        opacity: PHASE_BAND_OPACITY.idle,
+                      }}
+                    >
+                      <span className="hook-resolution-stage-label">{band.label}</span>
+                    </div>
+                  ))}
+                </div>
                 {scenes.map((s) => (
                   <span key={s} className="hook-resolution-axis-tick">
                     S{s}
