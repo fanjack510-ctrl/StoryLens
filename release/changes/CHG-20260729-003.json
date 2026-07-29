@@ -7,7 +7,7 @@
   "target_version": "1.1.2",
   "public_branch": "fix/1.1.2-comprehensive-reading-curve",
   "private_branch": "fix/1.1.2-comprehensive-reading-curve",
-  "status": "implementing",
+  "status": "tested",
   "release_pool_status": "pending",
   "include_in_next_release": true,
   "forward_port_required": true,
@@ -24,7 +24,8 @@
   ],
   "affected_modules": [
     "apps/desktop/src/components/readerJourney",
-    "apps/api/app/services/reader_journey_dimension_insights.py"
+    "apps/api/app/services/reader_journey_comprehensive_presentation.py",
+    "apps/api/app/services/reader_journey_visualization.py"
   ],
   "commits": [],
   "modules": [
@@ -37,7 +38,7 @@
     "release/evidence/hotfix/1.1.2/CHG-20260729-003/"
   ],
   "user_summary": "强化综合阅读曲线的贡献表达、场景任务适配与主因解释，不改 formula_v2。",
-  "technical_summary": "Keep reading_momentum; separate overall_reading_score vs overall_reading_fit; presentation-layer drivers/drags and phase conclusions.",
+  "technical_summary": "Keep reading_momentum; reuse composite_role_fit; presentation-layer drivers/drags, key nodes, stage judgments; FE+API enrich at read time.",
   "acceptance_criteria": [
     "综合阅读 name unchanged",
     "reading_momentum / formula_v2 unchanged",
@@ -47,10 +48,15 @@
     "Legacy Journey compatible without re-run",
     "Fake only; no formal DB writes"
   ],
-  "tests": [],
+  "tests": [
+    "apps/desktop/src/components/readerJourney/comprehensive_reading_chg003_local.test.tsx",
+    "apps/api/tests/test_comprehensive_reading_chg003_local.py"
+  ],
   "manual_gate": "MG-CHG-20260729-003 pending",
   "verification_evidence": [
-    "release/evidence/hotfix/1.1.2/CHG-20260729-003/COMPREHENSIVE_READING_AUDIT.md"
+    "release/evidence/hotfix/1.1.2/CHG-20260729-003/COMPREHENSIVE_READING_AUDIT.md",
+    "release/evidence/hotfix/1.1.2/CHG-20260729-003/TEST_RESULTS.json",
+    "release/evidence/hotfix/1.1.2/CHG-20260729-003/MANUAL_UI_ENV.md"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -59,6 +65,6 @@
     "notes": "Presentation enrich at read time; no persistence rewrite."
   },
   "created_at": "2026-07-29T04:50:00Z",
-  "updated_at": "2026-07-29T04:55:00Z",
+  "updated_at": "2026-07-29T05:10:00Z",
   "base_head": "9464b957e1538fe975115c972b0606b5a6d9dda2"
 }

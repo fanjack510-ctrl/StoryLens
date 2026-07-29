@@ -1,0 +1,34 @@
+{
+  "change_id": "CHG-20260729-003",
+  "vitest": {
+    "comprehensive_reading_chg003_local": "PASS (15)",
+    "readerJourneyLensExplanation": "PASS",
+    "readerJourneyTerminology": "PASS"
+  },
+  "pytest": {
+    "test_comprehensive_reading_chg003_local": "PASS (4)"
+  },
+  "typecheck": "PASS",
+  "http_e2e": {
+    "api": "http://127.0.0.1:18042",
+    "journey_run_id": 1,
+    "scenes": 6,
+    "phases": 3,
+    "has_fit": true,
+    "has_driver_or_unavailable": true,
+    "key_nodes": ["reading_rise@3", "reading_drop@2", "composite_turn@6"],
+    "phase_judgments": 3,
+    "refresh_consistent": true,
+    "real_provider_calls": 0,
+    "formal_db_writes": 0,
+    "result": "PASS"
+  },
+  "red_line": {
+    "source": "visualization.risk_intervals top-strip (#c47a6a, 6px)",
+    "decision": "KEEP",
+    "legend": "阅读阻力区间",
+    "final_state": "explained thin risk strip; not an unexplained chart threshold"
+  },
+  "area_fill": "PASS (fillOpacity 0.06 under composite curve only)",
+  "formula_v2_modified": false
+}
