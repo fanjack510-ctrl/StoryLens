@@ -15,6 +15,7 @@ export type ChapterPrimaryActionKind =
   | "start"
   | "progress"
   | "confirm"
+  | "continue"
   | "result"
   | "reanalyze"
   | "none";
@@ -29,6 +30,7 @@ const LABELS: Record<Exclude<ChapterPrimaryActionKind, "none">, string> = {
   start: "开始分析",
   progress: "查看分析进度",
   confirm: "确认场景",
+  continue: "继续分析",
   result: "查看分析结果",
   reanalyze: "重新分析",
 };
@@ -37,6 +39,7 @@ const TEST_IDS: Record<Exclude<ChapterPrimaryActionKind, "none">, string> = {
   start: "shell-start-analysis",
   progress: "shell-view-analysis-progress",
   confirm: "shell-continue-boundary-confirm",
+  continue: "shell-continue-analysis",
   result: "shell-view-analysis-result",
   reanalyze: "shell-reanalyze",
 };
@@ -103,10 +106,13 @@ export function resolveChapterPrimaryAction(args: {
     return base;
   }
 
-  // CHG-20260727-019: Journey active / interrupted beats Parent succeeded.
+  if (phase === "interrupted") {
+    return action("continue");
+  }
+
+  // CHG-20260727-019: Journey active beats Parent succeeded.
   if (
     phase === "active" ||
-    phase === "interrupted" ||
     inFlight ||
     isChapterAnalysisInFlight(run, composition) ||
     composition === "running" ||

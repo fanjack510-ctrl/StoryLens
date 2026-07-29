@@ -563,7 +563,7 @@ describe("TasksPage Scene Analysis 恢复", () => {
     renderPage();
     fireEvent.click(await screen.findByText("查看详情"));
     expect(await screen.findByTestId("detail-failed-scene")).toHaveTextContent("无");
-    expect(screen.getByTestId("detail-historical-failed-scene")).toHaveTextContent("#10");
+    expect(screen.getByTestId("detail-historical-failed-scene")).toHaveTextContent("S05");
     expect(await screen.findByTestId("unified-recovery-fix-continue")).toBeEnabled();
   });
 

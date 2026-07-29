@@ -155,6 +155,25 @@ describe("resolveChapterPrimaryAction", () => {
     expect(a.label).not.toMatch(/读者旅程/);
   });
 
+  it("shows 继续分析 when interrupted", () => {
+    const a = resolveChapterPrimaryAction({
+      hasChapter: true,
+      run: run({
+        status: "succeeded",
+        journey_status: "failed",
+        journey_retryable: true,
+        journey_error_code: "JOURNEY_INTERRUPTED",
+        effective_status: "journey_failed",
+      }),
+      composition: "reader_journey_processing",
+      chapterComplete: false,
+      inFlight: true,
+    });
+    expect(a.kind).toBe("continue");
+    expect(a.label).toBe("继续分析");
+    expect(a.testId).toBe("shell-continue-analysis");
+  });
+
   it("succeeded without journey still routes to result", () => {
     const a = resolveChapterPrimaryAction({
       hasChapter: true,

@@ -32,7 +32,26 @@ import {
   taskCancelStatusLabel,
 } from "../services/taskCancellationUi";
 import { isProNativeOverviewUiEnabled } from "../services/proNativeOverviewFlag";
+import {
+  formatCompletedScenesProgress,
+  formatSceneOrdinalLabel,
+  formatSceneOrdinalRange,
+} from "../services/chapterAnalysisPresentation";
 import "./tasksPage.css";
+
+function taskContinueAvailabilityLabel(detail: {
+  retryable?: boolean;
+  journey_retryable?: boolean | null;
+  status?: string;
+  journey_status?: string | null;
+  effective_status?: string | null;
+}): string {
+  const phase = normalizeRunLifecycle(detail as any);
+  if (phase === "interrupted") {
+    return detail.journey_retryable !== false ? "可继续本次分析" : "可重新开始分析";
+  }
+  return detail.retryable ? "可重试" : "不可重试";
+}
 
 type RecoveryState = "idle" | "checking" | "creating_recovery" | "created" | "failed";
 type SceneResumeState = "idle" | "checking" | "resuming" | "done" | "failed";
@@ -1155,8 +1174,13 @@ export function TasksPage() {
                       </>
                     ) : (
                       <>
-                        场景分析：{detail.completed_scene_count ?? 0} / {detail.total_scene_count ?? 0}
-                        （未完成 {detail.remaining_scene_count ?? 0}）
+                        已完成：{formatCompletedScenesProgress(
+                          detail.completed_scene_count,
+                          detail.total_scene_count,
+                        )}
+                        {detail.remaining_scene_count != null && detail.remaining_scene_count > 0
+                          ? `（未完成 ${detail.remaining_scene_count}）`
+                          : null}
                       </>
                     )}
                   </dd>
@@ -1184,14 +1208,15 @@ export function TasksPage() {
                   )}
                   <dt>当前失败场景</dt>
                   <dd data-testid="detail-failed-scene">
-                    {detail.failed_scene_id != null
-                      ? `#${detail.failed_scene_id}（序号 ${detail.failed_scene_index ?? "-"}）`
+                    {detail.failed_scene_id != null && detail.failed_scene_index != null
+                      ? formatSceneOrdinalLabel(detail.failed_scene_index)
                       : "无"}
                   </dd>
                   <dt>历史失败场景</dt>
                   <dd data-testid="detail-historical-failed-scene">
-                    {detail.historical_failed_scene_id != null
-                      ? `#${detail.historical_failed_scene_id}（序号 ${detail.historical_failed_scene_index ?? "-"}，调用 #${detail.historical_failed_invocation_id ?? detail.failed_invocation_id ?? "-"})`
+                    {detail.historical_failed_scene_id != null &&
+                    detail.historical_failed_scene_index != null
+                      ? formatSceneOrdinalLabel(detail.historical_failed_scene_index)
                       : "无"}
                   </dd>
                   <dt>失败场景请求次数</dt>
@@ -1201,16 +1226,21 @@ export function TasksPage() {
                   </dd>
                   <dt>已完成场景</dt>
                   <dd data-testid="detail-completed-scene-ids">
-                    {(detail.completed_scene_ids ?? []).join(", ") || "无"}
+                    {formatSceneOrdinalRange(1, detail.completed_scene_count ?? detail.completed_scene_ids?.length ?? 0)}
                   </dd>
                   <dt>剩余场景</dt>
                   <dd data-testid="detail-remaining-scene-ids">
-                    {(detail.remaining_scene_ids ?? []).join(", ") || "无"}
+                    {formatSceneOrdinalRange(
+                      (detail.completed_scene_count ?? 0) + 1,
+                      detail.remaining_scene_count ?? detail.remaining_scene_ids?.length ?? 0,
+                    )}
                   </dd>
                   <dt>可离线恢复</dt>
                   <dd>{detail.offline_replay_available ? "是" : "否"}</dd>
-                  <dt>是否可重试</dt>
-                  <dd>{detail.retryable ? "可重试" : "不可重试"}</dd>
+                  <dt>继续分析</dt>
+                  <dd data-testid="detail-continue-availability">
+                    {taskContinueAvailabilityLabel(detail)}
+                  </dd>
                   <dt>处理建议</dt>
                   <dd>{detail.user_action_hint || "无"}</dd>
                 </dl>
@@ -1349,6 +1379,12 @@ export function TasksPage() {
                     <dd>{detail.failed_scene_id ?? "无"}</dd>
                     <dt>失败场景序号</dt>
                     <dd>{detail.failed_scene_index ?? "无"}</dd>
+                    <dt>历史失败场景 ID</dt>
+                    <dd>{detail.historical_failed_scene_id ?? "无"}</dd>
+                    <dt>已完成场景 ID</dt>
+                    <dd>{(detail.completed_scene_ids ?? []).join(", ") || "无"}</dd>
+                    <dt>剩余场景 ID</dt>
+                    <dd>{(detail.remaining_scene_ids ?? []).join(", ") || "无"}</dd>
                     <dt>异常类型</dt>
                     <dd>{detail.exception_type || detail.failure_details?.exception_type || "无"}</dd>
                     <dt>传输类型</dt>
