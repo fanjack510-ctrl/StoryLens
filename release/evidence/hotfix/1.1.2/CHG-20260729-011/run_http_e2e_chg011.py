@@ -13,7 +13,7 @@ from pathlib import Path
 
 import httpx
 
-REPO = Path(__file__).resolve().parents[4]
+REPO = Path(__file__).resolve().parents[5]
 EVIDENCE = Path(__file__).resolve().parent
 DEFAULT_API = "http://127.0.0.1:18047"
 MANIFEST = EVIDENCE / "FIXTURE_MANIFEST.json"

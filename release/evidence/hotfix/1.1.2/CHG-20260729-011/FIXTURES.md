@@ -31,11 +31,16 @@ Covered by: HTTP E2E case `B_interrupted_not_running` + `chapterAnalysisPresenta
 
 Covered by: HTTP E2E case `C_awaiting_confirmation` + `SceneBoundaryReviewPanel.chg041.test.tsx`
 
-## Fixture D — Hook rich presentation
+## Fixture D — Hook rich presentation (LIVE)
 
-- **Not live-seeded** — Fake smoke cannot emit reliable reader questions without algorithm change
-- **Frontend coverage:** `chapter_hook_consistency_chg005.test.tsx` Fixture B (`chg005FixtureBReliableHooks`), `HookPayoffTimeline.test.tsx` CHG-011 layout
-- Vitest reference: `vitest://chg005FixtureBReliableHooks`
+- **Chapter 6**, analysis run **7**, journey run **5** (succeeded)
+- Confirmed revision **9**, **6** scenes
+- Persisted profiles / phases / summary encode the same reader questions as `chg005FixtureBReliableHooks`
+- Seed: `seed_mg_chg011_hook_rich.py` (no Provider calls; does not wipe A–E)
+- URL: http://127.0.0.1:1426/books/1?chapter=6&analysisRun=7&journeyRun=5&view=result&tab=reader-journey&lens=hook_payoff
+- Precheck: `HOOK_RICH_PRESENTATION_PRECHECK.json` (verdict=1, cards=2, trajectory raise/deepen/respond/carry)
+
+Also covered by vitest Fixture B / HookPayoffTimeline layout tests.
 
 ## Fixture E — Hook empty / uncertain
 

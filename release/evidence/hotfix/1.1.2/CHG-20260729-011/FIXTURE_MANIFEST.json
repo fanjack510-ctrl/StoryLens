@@ -45,6 +45,21 @@
       "journey_run_id": 4,
       "note": "Fake smoke → hook uncertain/empty presentation",
       "final_status": "succeeded"
+    },
+    "D_hook_rich": {
+      "book_id": 1,
+      "chapter_id": 6,
+      "run_id": 7,
+      "journey_run_id": 5,
+      "confirmed_revision_id": 9,
+      "scene_count": 6,
+      "narrative_loop_count": 2,
+      "questions": [
+        "主角为什么会出现在这里？",
+        "门外的人是谁？"
+      ],
+      "fixture_source": "chg005FixtureBReliableHooks",
+      "url": "http://127.0.0.1:1426/books/1?chapter=6&analysisRun=7&journeyRun=5&view=result&tab=reader-journey&lens=hook_payoff"
     }
   },
   "urls": {
@@ -54,7 +69,7 @@
     "RUNNING": "http://127.0.0.1:1426/books/1?chapter=4&analysisRun=5&journeyRun=3",
     "SUCCEEDED": "http://127.0.0.1:1426/books/1?chapter=5&analysisRun=6&journeyRun=4&view=result",
     "HOOK_EMPTY": "http://127.0.0.1:1426/books/1?chapter=5&journeyRun=4&lens=hook_payoff",
-    "HOOK_RICH": "vitest://chg005FixtureBReliableHooks (frontend-only; see FIXTURES.md)",
+    "HOOK_RICH": "http://127.0.0.1:1426/books/1?chapter=6&analysisRun=7&journeyRun=5&view=result&tab=reader-journey&lens=hook_payoff",
     "TASK_CENTER": "http://127.0.0.1:1426/tasks"
   }
 }

@@ -17,7 +17,7 @@ import {
   setSceneIncluded,
   type ScenePartition,
 } from "../../services/sceneBoundaryPartitionOps";
-import type { Paragraph, SceneBoundaryRevisionSummary, SceneBoundariesOverview } from "../../types";
+import type { Paragraph, SceneBoundaryRevisionSummary, SceneBoundariesOverview, ScenePartitionItem } from "../../types";
 import "./sceneBoundaryReview.css";
 
 const DIVIDER_LABEL = "──────── 场景分割线 ────────";
@@ -262,13 +262,21 @@ export function SceneBoundaryReviewPanel({
   const createDraftMutation = useMutation({
     mutationFn: () => analysisApi.createSceneBoundaryDraft(chapterId),
     onSuccess: (data) => {
+      const raw = data as {
+        revision_id: number;
+        revision_etag: string;
+        scenes: ScenePartitionItem[];
+        boundary_hash?: string;
+        status?: string;
+        updated_at?: string | null;
+      };
       const snapshot: DraftSnapshot = {
-        revision_id: data.revision_id,
-        revision_etag: data.revision_etag,
-        boundary_hash: data.boundary_hash || undefined,
-        scenes: data.scenes.map((s) => ({ ...s })),
-        status: data.status || "draft",
-        updated_at: data.updated_at,
+        revision_id: raw.revision_id,
+        revision_etag: raw.revision_etag,
+        boundary_hash: raw.boundary_hash || undefined,
+        scenes: raw.scenes.map((s) => ({ ...s })),
+        status: raw.status || "draft",
+        updated_at: raw.updated_at,
       };
       applyDraftSnapshot(snapshot, { openEditor: true });
       patchOverviewDraft(snapshot);

@@ -9,7 +9,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parents[4]
+REPO = Path(__file__).resolve().parents[5]
 EVIDENCE = Path(__file__).resolve().parent
 DEFAULT_DB = (
     Path(os.environ.get("TEMP", "/tmp"))

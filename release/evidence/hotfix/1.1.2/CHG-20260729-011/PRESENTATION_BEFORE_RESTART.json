@@ -1,0 +1,58 @@
+﻿{
+  "pass": true,
+  "journey_id": 5,
+  "checks": {
+    "verdict_count": 1,
+    "card_count": 2,
+    "trajectory_nodes": 6,
+    "has_raise": true,
+    "has_deepen": true,
+    "has_respond": true,
+    "has_carry": true,
+    "empty": false,
+    "mode": "reliable",
+    "summary_line": "鏈珷鍦ㄥ洖搴旈儴鍒嗙枒闂殑鍚屾椂锛岀珷鏈粛鍥寸粫銆岄棬澶栫殑浜烘槸璋侊紵銆嶇暀涓嬫槑纭户缁槄璇荤壍寮曘€?,
+    "questions": [
+      {
+        "q": "闂ㄥ鐨勪汉鏄皝锛?,
+        "result": "缁х画淇濈暀"
+      },
+      {
+        "q": "涓昏涓轰粈涔堜細鍑虹幇鍦ㄨ繖閲岋紵",
+        "result": "閮ㄥ垎鍥炲簲"
+      }
+    ],
+    "trajectory_labels": [
+      {
+        "scene": 1,
+        "action": "raise",
+        "label": "鎻愬嚭鐤戦棶"
+      },
+      {
+        "scene": 2,
+        "action": "deepen",
+        "label": "鍔犳繁鎮康"
+      },
+      {
+        "scene": 3,
+        "action": "respond",
+        "label": "缁欏嚭鍥炲簲"
+      },
+      {
+        "scene": 4,
+        "action": "raise",
+        "label": "鎻愬嚭鐤戦棶"
+      },
+      {
+        "scene": 5,
+        "action": "deepen",
+        "label": "鍔犳繁鎮康"
+      },
+      {
+        "scene": 6,
+        "action": "carry",
+        "label": "鐣欏埌涓嬬珷"
+      }
+    ]
+  }
+}

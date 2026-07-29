@@ -15,7 +15,7 @@ import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parents[4]
+REPO = Path(__file__).resolve().parents[5]
 EVIDENCE = Path(__file__).resolve().parent
 DEFAULT_DATA = Path(os.environ.get("TEMP", "/tmp")) / "storylens-mg-chg011-workflow-consistency"
 DEFAULT_DB = DEFAULT_DATA / "database" / "storylens-mg-chg011.db"
@@ -263,6 +263,9 @@ def _add_journey_profile(session, journey, scene, *, ordinal: int | None = None)
             payload_json="{}",
         )
     )
+
+
+def _seed_journey_state(
     session,
     *,
     run,

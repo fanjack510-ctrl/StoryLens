@@ -15,7 +15,7 @@ import {
   chg005FixtureANoReliableHooks,
   chg005FixtureBReliableHooks,
 } from "./chg005HookConsistencyFixtures";
-import { getNarrativeLoops } from "./narrativeLoopView";
+import { getNarrativeLoops, type NarrativeLoopView } from "./narrativeLoopView";
 import { useDeveloperModeStore } from "../../stores/developerModeStore";
 import { vi } from "vitest";
 
@@ -114,7 +114,7 @@ describe("CHG-005 hook consistency gates", () => {
         },
       },
     };
-    expect(sceneHasReliableLinkedResponse(scoreOnly, 3)).toBe(false);
+    expect(sceneHasReliableLinkedResponse(scoreOnly as unknown as NarrativeLoopView, 3)).toBe(false);
 
     const noEvidence = {
       ...loops[0],
@@ -129,7 +129,7 @@ describe("CHG-005 hook consistency gates", () => {
         },
       },
     };
-    expect(sceneHasReliableLinkedResponse(noEvidence, 3)).toBe(false);
+    expect(sceneHasReliableLinkedResponse(noEvidence as unknown as NarrativeLoopView, 3)).toBe(false);
 
     const future = {
       ...loops[0],

@@ -11,7 +11,7 @@ import {
   deriveChapterHookSceneInsightV1,
   selectImportantChapterHooks,
 } from "./chapterHookSimplification";
-import { getNarrativeLoops } from "./narrativeLoopView";
+import { getNarrativeLoops, type NarrativeLoopView } from "./narrativeLoopView";
 import { useDeveloperModeStore } from "../../stores/developerModeStore";
 import { JOURNEY_STAGE_VISUAL_TOKENS } from "./journeyVisualTokens";
 import { JourneySceneDetailPanel } from "./JourneySceneDetailPanel";
@@ -79,7 +79,7 @@ describe("CHG-20260729-005 complete sections 11–19", () => {
           grade: "confirmed",
           payoff_ref: { scene_ordinal: 6, type: "full" },
         },
-      })),
+      })) as unknown as NarrativeLoopView[],
       6,
     );
     expect(["暂无", "无法判断", "较弱"]).toContain(closed.status);
@@ -101,7 +101,7 @@ describe("CHG-20260729-005 complete sections 11–19", () => {
           consistency_status: "consistent",
           conflicts: [],
         },
-      ] as ReturnType<typeof getNarrativeLoops>,
+      ] as unknown as NarrativeLoopView[],
       6,
     );
     expect(midOnly.status).toBe("暂无");

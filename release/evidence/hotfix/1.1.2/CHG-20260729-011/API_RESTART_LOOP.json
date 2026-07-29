@@ -1,0 +1,38 @@
+{
+  "generated_at": "2026-07-29T15:49:36.124358+00:00",
+  "api_pid_before": 24680,
+  "api_pid_after": 6336,
+  "frontend_pid": 28992,
+  "api_url": "http://127.0.0.1:18047",
+  "frontend_url": "http://127.0.0.1:1426",
+  "refresh_script": "PASS",
+  "precheck_after_restart": true,
+  "presentation_after_restart": true,
+  "hook_rich": {
+    "book_id": 1,
+    "chapter_id": 6,
+    "run_id": 7,
+    "journey_run_id": 5,
+    "confirmed_revision_id": 9,
+    "scene_count": 6,
+    "narrative_loop_count": 2,
+    "questions": [
+      "主角为什么会出现在这里？",
+      "门外的人是谁？"
+    ],
+    "fixture_source": "chg005FixtureBReliableHooks",
+    "url": "http://127.0.0.1:1426/books/1?chapter=6&analysisRun=7&journeyRun=5&view=result&tab=reader-journey&lens=hook_payoff"
+  },
+  "urls": {
+    "REVISION_22_TO_6": "http://127.0.0.1:1426/books/1?chapter=1&analysisRun=2&view=result",
+    "INTERRUPTED": "http://127.0.0.1:1426/books/1?chapter=2&analysisRun=3&journeyRun=2",
+    "AWAITING_CONFIRMATION": "http://127.0.0.1:1426/books/1?chapter=3&analysisRun=4&view=scene-boundary-review",
+    "RUNNING": "http://127.0.0.1:1426/books/1?chapter=4&analysisRun=5&journeyRun=3",
+    "SUCCEEDED": "http://127.0.0.1:1426/books/1?chapter=5&analysisRun=6&journeyRun=4&view=result",
+    "HOOK_EMPTY": "http://127.0.0.1:1426/books/1?chapter=5&journeyRun=4&lens=hook_payoff",
+    "HOOK_RICH": "http://127.0.0.1:1426/books/1?chapter=6&analysisRun=7&journeyRun=5&view=result&tab=reader-journey&lens=hook_payoff",
+    "TASK_CENTER": "http://127.0.0.1:1426/tasks"
+  },
+  "real_provider_calls": 0,
+  "formal_database_writes": 0
+}
