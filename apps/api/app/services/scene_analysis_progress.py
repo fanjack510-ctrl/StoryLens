@@ -104,8 +104,25 @@ def load_revision_scenes(
             )
             if scenes:
                 return revision, scenes
-    from app.services.scene_boundary_manual_review import run_scenes
+    from app.services.scene_boundary_manual_review import (
+        get_confirmed_revision,
+        revision_scenes,
+        run_scenes,
+    )
 
+    # Prefer chapter-confirmed revision even when review_session lookup missed.
+    try:
+        chapter_id = int(run.subject_id)
+    except (TypeError, ValueError):
+        chapter_id = None
+    if chapter_id is not None:
+        confirmed = get_confirmed_revision(session, chapter_id)
+        if confirmed is not None and confirmed.analysis_run_id == run.id:
+            bound = revision_scenes(session, confirmed.id)
+            if bound:
+                return confirmed, bound
+
+    # Legacy runs without revision linkage: keep prior behavior.
     scenes = run_scenes(session, run.id)
     return None, scenes
 

@@ -2312,13 +2312,13 @@ def list_scenes(chapter_id: int, session: Session = Depends(get_db)) -> list[Sce
     )
     if latest_run_id is None:
         return []
-    return list(
-        session.scalars(
-            select(Scene)
-            .where(Scene.chapter_id == chapter_id, Scene.created_by_run_id == latest_run_id)
-            .order_by(Scene.ordinal)
-        )
-    )
+    run = session.get(AnalysisRun, latest_run_id)
+    if run is None:
+        return []
+    from app.services.scene_analysis_progress import load_revision_scenes
+
+    _revision, scenes = load_revision_scenes(session, run)
+    return scenes
 
 
 def resolve_scene(session: Session, scene_id: str) -> Scene | None:
@@ -2334,13 +2334,13 @@ def resolve_scene(session: Session, scene_id: str) -> Scene | None:
 
 @router.get("/analysis-runs/{run_id}/scenes", response_model=list[SceneResponse])
 def run_scenes(run_id: int, session: Session = Depends(get_db)) -> list[Scene]:
-    if session.get(AnalysisRun, run_id) is None:
+    run = session.get(AnalysisRun, run_id)
+    if run is None:
         raise error(404, "ANALYSIS_RUN_NOT_FOUND", "分析运行不存在")
-    return list(
-        session.scalars(
-            select(Scene).where(Scene.created_by_run_id == run_id).order_by(Scene.ordinal)
-        )
-    )
+    from app.services.scene_analysis_progress import load_revision_scenes
+
+    _revision, scenes = load_revision_scenes(session, run)
+    return scenes
 
 
 @router.get(
