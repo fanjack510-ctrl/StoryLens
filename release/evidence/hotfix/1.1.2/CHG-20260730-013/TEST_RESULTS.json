@@ -1,0 +1,25 @@
+{
+  "change_id": "CHG-20260730-013",
+  "incident": "INC-20260730-006",
+  "timestamp": "2026-07-30T03:20:00+00:00",
+  "pytest": {
+    "pass": true,
+    "command": "pytest apps/api/tests/test_confirm_start_journey_race_chg013.py apps/api/tests/test_reader_journey_startup_recovery_local.py apps/api/tests/test_chg041_scene_boundary_manual_review.py -q",
+    "summary": "37 passed"
+  },
+  "vitest": {
+    "pass": true,
+    "command": "vitest run src/services/chapterJourneyComposition.test.ts src/services/chapterAnalysisPresentation.test.ts src/services/chapterPrimaryAction.test.ts",
+    "summary": "3 files / 30 tests passed"
+  },
+  "typecheck": {
+    "pass": true,
+    "note": "CHG-013 touched FE sources clean; pre-existing errors only in unrelated chg002/chg004/chg041 local test fixtures under apps/desktop"
+  },
+  "http_e2e": {
+    "pass": true,
+    "evidence": "HTTP_E2E.json"
+  },
+  "real_provider_calls": 0,
+  "formal_database_writes": 0
+}

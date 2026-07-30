@@ -1,0 +1,36 @@
+{
+  "id": "CHG-20260730-013",
+  "title": "修复确认场景后 Journey 启动竞态与恢复流程不稳定",
+  "type": "fix",
+  "base_version": "1.1.1",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [],
+  "files": [],
+  "user_summary": "确认场景并开始分析后，启动窗口不再被误判为中断；Continue 幂等并直达当前旅程进度",
+  "technical_summary": "Confirm+Start bootstrap race: do not mark unclaimed starting/queued journeys interrupted; claim worker atomically; prefer live journey over stale awaiting confirmation; Continue routes to current journey.",
+  "acceptance_criteria": [],
+  "tests": [],
+  "verification_evidence": [],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": null,
+  "created_at": "2026-07-30T02:59:57Z",
+  "updated_at": "2026-07-30T03:00:12Z",
+  "issue_id": "INC-20260730-006",
+  "target_version": "1.1.2",
+  "public_branch": "fix/1.1.2-confirm-start-journey-race",
+  "release_pool_status": "pending"
+}

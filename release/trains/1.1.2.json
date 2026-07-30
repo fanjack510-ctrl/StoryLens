@@ -4,7 +4,7 @@
   "type": "PATCH",
   "base_version": "1.1.1",
   "target_version": "1.1.2",
-  "status": "rc3-built-awaiting-installed-acceptance",
+  "status": "blocked-awaiting-confirm-start-stability-retest",
   "public_integration_branch": "hotfix/1.1.2",
   "private_integration_branch": "hotfix/1.1.2",
   "created_at": "2026-07-28T06:40:00Z",
@@ -41,15 +41,16 @@
     "CHG-20260729-009",
     "CHG-20260729-010",
     "CHG-20260729-011",
-    "CHG-20260729-012"
+    "CHG-20260729-012",
+    "CHG-20260730-013"
   ],
-  "notes": "CHG-011 verified+integrated; RC.2 install acceptance FAILED (workflow); building RC.3; CHG-042 excluded.",
-  "updated_at": "2026-07-29T16:26:19Z",
+  "notes": "RC.3 installed acceptance FAILED (INC-20260730-006). CHG-013 tested locally; blocked awaiting confirm-start stability retest / MG manual UI. Do not build RC.4 until MG passes.",
+  "updated_at": "2026-07-30T03:22:00Z",
   "public_integration_head_at_ready": "81a7d72afa9f572be1ce391b0e8c737a97da0ba7",
   "rc_version": "1.1.2-rc.3",
   "rc_installer": "dist/release/StoryLens_1.1.2-rc.3_x64-setup.exe",
-  "rc_installed_acceptance": "AUTOMATED_PASS_AWAITING_MANUAL",
-  "blocking_incident": null,
+  "rc_installed_acceptance": "FAILED",
+  "blocking_incident": "INC-20260730-006",
   "prior_rc_status": "rc2-installed-acceptance-failed",
   "public_build_source_head": "c8858b900dd9eb677a73f2549bb3f57ff3990e6b"
 }
