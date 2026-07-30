@@ -17,6 +17,12 @@
       "message": "docs(release): mark CHG-20260730-017 tested",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "d7635a78407c52256a752e416ad144fbd92ad36d",
+      "message": "docs(evidence): record CHG-017 manual UI env URLs",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -57,5 +63,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-30T09:25:11Z",
-  "updated_at": "2026-07-30T09:46:40Z"
+  "updated_at": "2026-07-30T09:48:53Z"
 }
