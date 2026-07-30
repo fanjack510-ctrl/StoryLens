@@ -1,0 +1,437 @@
+﻿{
+    "journey":  {
+                    "journey_run_id":  2,
+                    "analysis_run_id":  3,
+                    "book_id":  1,
+                    "chapter_id":  3,
+                    "status":  "scene_profiles_partial",
+                    "provider_name":  "aliyun_qwen_plus",
+                    "model_name":  "qwen-plus",
+                    "scene_prompt_version":  "v2.0",
+                    "chapter_prompt_version":  "v2.0",
+                    "formula_version":  "1.0",
+                    "scene_contract_version":  "2.0",
+                    "contract_version":  "2.0",
+                    "calibration_status_label":  "v2_calibrated",
+                    "legacy_uncalibrated":  false,
+                    "display_mode":  "v2",
+                    "phases":  [
+
+                               ],
+                    "scene_profiles":  [
+                                           {
+                                               "scene_id":  7,
+                                               "scene_ordinal":  1,
+                                               "scene_value_summary":  "MG recoverable checkpoint S1",
+                                               "dominant_emotion":  "tension",
+                                               "engagement":  {
+                                                                  "curiosity":  0,
+                                                                  "tension":  0,
+                                                                  "hook":  0,
+                                                                  "payoff":  0,
+                                                                  "information_gain":  0,
+                                                                  "emotional_resonance":  0,
+                                                                  "cognitive_load":  0,
+                                                                  "dropoff_risk":  0,
+                                                                  "engagement_score":  0,
+                                                                  "formula_version":  "1.0",
+                                                                  "genre":  "suspense",
+                                                                  "weights":  {
+
+                                                                              }
+                                                              },
+                                               "reader_question_in":  [
+
+                                                                      ],
+                                               "reader_question_out":  [
+
+                                                                       ],
+                                               "payoffs":  [
+
+                                                           ],
+                                               "hooks":  [
+
+                                                         ],
+                                               "risk_points":  [
+
+                                                               ],
+                                               "evidence_paragraph_ids":  [
+
+                                                                          ],
+                                               "confidence":  0.85
+                                           }
+                                       ],
+                    "profiles":  [
+                                     {
+                                         "scene_id":  7,
+                                         "scene_ordinal":  1,
+                                         "scene_value_summary":  "MG recoverable checkpoint S1",
+                                         "dominant_emotion":  "tension",
+                                         "engagement":  {
+                                                            "curiosity":  0,
+                                                            "tension":  0,
+                                                            "hook":  0,
+                                                            "payoff":  0,
+                                                            "information_gain":  0,
+                                                            "emotional_resonance":  0,
+                                                            "cognitive_load":  0,
+                                                            "dropoff_risk":  0,
+                                                            "engagement_score":  0,
+                                                            "formula_version":  "1.0",
+                                                            "genre":  "suspense",
+                                                            "weights":  {
+
+                                                                        }
+                                                        },
+                                         "reader_question_in":  [
+
+                                                                ],
+                                         "reader_question_out":  [
+
+                                                                 ],
+                                         "payoffs":  [
+
+                                                     ],
+                                         "hooks":  [
+
+                                                   ],
+                                         "risk_points":  [
+
+                                                         ],
+                                         "evidence_paragraph_ids":  [
+
+                                                                    ],
+                                         "confidence":  0.85
+                                     }
+                                 ],
+                    "chapter_summary":  null,
+                    "deterministic_statistics":  null,
+                    "one_sentence_diagnosis":  null,
+                    "visualization":  null,
+                    "journey_result":  null,
+                    "created_at":  "2026-07-30T06:01:53.988781Z",
+                    "started_at":  "2026-07-30T05:21:53.988781Z",
+                    "updated_at":  "2026-07-30T06:23:58.268172Z",
+                    "completed_at":  "2026-07-30T06:01:53.988781Z",
+                    "scene_revision_id":  3,
+                    "scene_boundary_hash":  "ae10ff5d7cf479f3fc6483cb3fc68963e75e172afc63f75d77596ef8c5e9e6a3",
+                    "result_status":  "superseded",
+                    "is_current":  false,
+                    "is_superseded":  true,
+                    "error_code":  "JOURNEY_INTERRUPTED",
+                    "retryable":  true,
+                    "total_scene_count":  3,
+                    "completed_scene_count":  1,
+                    "v2_question_lifecycle":  null,
+                    "v2_scene_diagnoses":  null,
+                    "integrity":  {
+                                      "integrity_status":  "legacy_unverified",
+                                      "overall_status":  "legacy_unverified",
+                                      "overall_display_policy":  "show_legacy",
+                                      "trusted":  false,
+                                      "partially_trusted":  false,
+                                      "untrusted":  false,
+                                      "legacy_unverified":  true,
+                                      "legacy_warning":  "æ§çåæå°æªå®ææ¥æºæ ¡éªï¼ä»\u0085ä¾åèã",
+                                      "blocked_scene_count":  0,
+                                      "blocked_sections":  [
+
+                                                           ],
+                                      "scene_reports":  [
+                                                            {
+                                                                "scene_id":  7,
+                                                                "scene_ordinal":  1,
+                                                                "integrity_status":  "legacy_unverified",
+                                                                "status":  "legacy_unverified",
+                                                                "fingerprint_state":  "missing_legacy",
+                                                                "fingerprint_digest":  "f0643c09370c",
+                                                                "issue_codes":  [
+
+                                                                                ],
+                                                                "failed_fields":  [
+
+                                                                                  ],
+                                                                "error_codes":  [
+
+                                                                                ],
+                                                                "issue_count":  0,
+                                                                "safe_to_display":  true,
+                                                                "display_allowed":  true,
+                                                                "field_results":  [
+
+                                                                                  ]
+                                                            }
+                                                        ],
+                                      "scene_integrity":  [
+                                                              {
+                                                                  "scene_id":  7,
+                                                                  "scene_ordinal":  1,
+                                                                  "integrity_status":  "legacy_unverified",
+                                                                  "status":  "legacy_unverified",
+                                                                  "fingerprint_state":  "missing_legacy",
+                                                                  "fingerprint_digest":  "f0643c09370c",
+                                                                  "issue_codes":  [
+
+                                                                                  ],
+                                                                  "failed_fields":  [
+
+                                                                                    ],
+                                                                  "error_codes":  [
+
+                                                                                  ],
+                                                                  "issue_count":  0,
+                                                                  "safe_to_display":  true,
+                                                                  "display_allowed":  true,
+                                                                  "field_results":  [
+
+                                                                                    ]
+                                                              }
+                                                          ],
+                                      "field_integrity":  [
+
+                                                          ],
+                                      "integrity_summary":  {
+                                                                "scene_count":  1,
+                                                                "blocked_scene_count":  0,
+                                                                "field_issue_count":  0,
+                                                                "fingerprint_missing":  true
+                                                            },
+                                      "user_message":  "æ§çåæå°æªå®ææ¥æºæ ¡éªï¼ä»\u0085ä¾åèã",
+                                      "error_code":  null
+                                  },
+                    "integrity_status":  "legacy_unverified",
+                    "trusted":  false
+                },
+    "analysis_run":  {
+                         "id":  3,
+                         "task_type":  "scene_pipeline",
+                         "subject_type":  "chapter",
+                         "subject_id":  "3",
+                         "provider":  "aliyun_qwen_plus",
+                         "model":  "qwen-plus",
+                         "status":  "succeeded",
+                         "progress_current":  0,
+                         "progress_total":  0,
+                         "error_code":  null,
+                         "error_message":  null,
+                         "root_error_code":  null,
+                         "root_error_message":  null,
+                         "failed_stage":  null,
+                         "failed_invocation_id":  null,
+                         "provider_health_at_failure":  null,
+                         "retryable":  false,
+                         "user_action_hint":  null,
+                         "retry_of_run_id":  null,
+                         "created_at":  "2026-07-30T06:01:53.963727",
+                         "queued_at":  "2026-07-30T06:01:53.963727",
+                         "started_at":  "2026-07-30T06:01:53.963727",
+                         "completed_at":  null,
+                         "execution_mode":  "cloud",
+                         "analysis_mode":  "automatic",
+                         "cloud_consent":  true,
+                         "cloud_consent_at":  null,
+                         "sends_content_to_cloud":  true,
+                         "budget_required":  null,
+                         "budget_remaining":  null,
+                         "exceeded_dimensions":  null,
+                         "reservation_status":  "released",
+                         "current_stage":  "completed",
+                         "failure_details":  null,
+                         "legacy_classification_warning":  false,
+                         "exception_type":  null,
+                         "transport_kind":  null,
+                         "actual_failed_stage":  null,
+                         "failed_invocation":  null,
+                         "validation_error_code":  null,
+                         "failed_transition_id":  null,
+                         "failed_batch_index":  null,
+                         "reusable_checkpoint_count":  0,
+                         "conflicted_checkpoint_count":  0,
+                         "checkpoint_total_count":  0,
+                         "checkpoint_available":  false,
+                         "recovered_from_run_id":  null,
+                         "scene_analysis_resume_available":  false,
+                         "detection_recovery_available":  false,
+                         "remaining_detection_batch_count":  0,
+                         "boundary_revision_id":  3,
+                         "total_scene_count":  3,
+                         "completed_scene_count":  3,
+                         "remaining_scene_count":  0,
+                         "failed_scene_id":  null,
+                         "failed_scene_index":  null,
+                         "historical_failed_scene_id":  null,
+                         "historical_failed_scene_index":  null,
+                         "historical_failed_invocation_id":  null,
+                         "scene_analysis_coverage_rate":  1.0,
+                         "offline_replay_available":  false,
+                         "failed_scene_http_attempts":  0,
+                         "scene_analysis_max_http_attempts":  4,
+                         "completed_scene_ids":  [
+                                                     7,
+                                                     8,
+                                                     9
+                                                 ],
+                         "remaining_scene_ids":  [
+
+                                                 ],
+                         "scene_validation_detail":  null,
+                         "chapter_complete":  true,
+                         "scene_pipeline_complete":  true,
+                         "effective_status":  "completed",
+                         "checkpoint_stage":  "completed",
+                         "resume_stage":  null,
+                         "journey_run_id":  5,
+                         "journey_status":  "succeeded",
+                         "journey_completed_scene_count":  3,
+                         "journey_total_scene_count":  3,
+                         "status_version":  0,
+                         "cancellation_requested_at":  null,
+                         "cancelled_at":  null,
+                         "cancellation_reason":  null,
+                         "cancelled_by":  null,
+                         "can_cancel":  false,
+                         "can_restart_as_new_task":  true,
+                         "journey_retryable":  false,
+                         "journey_result_available":  true,
+                         "journey_error_code":  null,
+                         "primary_action":  "view_result",
+                         "failure_substage":  null,
+                         "failure_reason_code":  null,
+                         "boundary_candidate_total":  null,
+                         "boundary_candidate_completed":  0,
+                         "boundary_batch_total":  null,
+                         "boundary_batch_completed":  0,
+                         "usage_invocation_count":  2,
+                         "usage_input_tokens":  64,
+                         "usage_output_tokens":  128,
+                         "usage_total_tokens":  192,
+                         "usage_estimated_cost":  null,
+                         "usage_cost_unknown":  true,
+                         "last_requested_output_tokens":  null,
+                         "last_actual_output_tokens":  null,
+                         "last_finish_reason":  null,
+                         "truncation_attempt_count":  null
+                     },
+    "progress":  {
+                     "journey_run_id":  2,
+                     "analysis_run_id":  3,
+                     "status":  "scene_profiles_partial",
+                     "current_stage":  "reader_journey_scene_profiles",
+                     "total_scene_count":  3,
+                     "completed_scene_count":  1,
+                     "remaining_scene_count":  2,
+                     "completed_scene_ids":  [
+                                                 7
+                                             ],
+                     "remaining_scene_ids":  [
+                                                 8,
+                                                 9
+                                             ],
+                     "phase_count":  0,
+                     "has_chapter_summary":  false,
+                     "retryable":  true,
+                     "failed_stage":  "reader_journey_scene_profiles",
+                     "root_error_code":  "JOURNEY_INTERRUPTED",
+                     "root_error_message":  "åºç¨éå¯æåå°ä»»å¡ä¸­æ­ï¼é\u0085è¯»æ\u0085ç¨æªå®æï¼å¯ä»å·²å®ææ£æ¥ç¹æ¢å¤",
+                     "failed_scene_id":  null,
+                     "failed_scene_ordinal":  null,
+                     "failed_invocation_id":  null,
+                     "completed_at":  "2026-07-30T06:01:53.988781Z",
+                     "planner_version":  "1.1",
+                     "current_planner_version":  "1.1",
+                     "scene_prompt_version":  "v2.0",
+                     "scene_contract_version":  "2.0",
+                     "recovery_safe":  true,
+                     "blind_resume_blocked":  false,
+                     "resume_block_reason":  null,
+                     "reservation_released":  true,
+                     "request_count":  2,
+                     "total_tokens":  192,
+                     "estimated_cost":  0.0,
+                     "currency":  "CNY",
+                     "failure_details":  {
+                                             "interrupt":  {
+                                                               "code":  "JOURNEY_INTERRUPTED",
+                                                               "previous_status":  "scene_profiles_running",
+                                                               "recovered_at":  "2026-07-30T06:01:53.988781+00:00",
+                                                               "auto_enqueued":  false,
+                                                               "had_worker_claim":  true
+                                                           },
+                                             "worker_claim":  {
+                                                                  "claimed_at":  "2026-07-30T05:26:53.988781+00:00",
+                                                                  "worker_id":  "mg-chg015-worker",
+                                                                  "lease_expires_at":  "2026-07-30T05:31:53.988781+00:00"
+                                                              },
+                                             "startup_intent":  {
+                                                                    "claimed":  true
+                                                                }
+                                         },
+                     "resume_preflight":  {
+                                              "remaining_scenes":  2,
+                                              "scene_batch_count":  1,
+                                              "batch_plan":  [
+                                                                 "Scene 2â3"
+                                                             ],
+                                              "expected_requests":  2,
+                                              "worst_case_requests":  7,
+                                              "estimated_tokens":  7113,
+                                              "worst_case_tokens":  24613,
+                                              "estimated_cost":  0.053226,
+                                              "worst_case_cost":  0.193226,
+                                              "planner_version":  "1.1",
+                                              "scene_prompt_version":  "v1.6",
+                                              "scene_contract_version":  "1.3",
+                                              "stage1_scene_profiles":  {
+                                                                            "stage":  "reader_journey_scene_profiles",
+                                                                            "paragraph_count":  18,
+                                                                            "transition_count":  0,
+                                                                            "detection_batch_count":  0,
+                                                                            "adjudication_batch_count_estimated":  0,
+                                                                            "scene_count":  2,
+                                                                            "expected_request_count":  1,
+                                                                            "worst_case_request_count":  5,
+                                                                            "estimated_input_tokens":  589,
+                                                                            "worst_case_input_tokens":  589,
+                                                                            "estimated_output_tokens":  3500,
+                                                                            "worst_case_output_tokens":  17500,
+                                                                            "estimated_total_tokens":  4089,
+                                                                            "worst_case_total_tokens":  18089,
+                                                                            "estimated_cost":  0.029178,
+                                                                            "worst_case_cost":  0.141178,
+                                                                            "currency":  "CNY",
+                                                                            "pricing_version":  "aliyun-cn-beijing-2026-07-21-official-list-price-v1",
+                                                                            "estimated":  true
+                                                                        },
+                                              "stage2_chapter_synthesis":  {
+                                                                               "stage":  "reader_journey_chapter_synthesis",
+                                                                               "paragraph_count":  0,
+                                                                               "transition_count":  0,
+                                                                               "detection_batch_count":  0,
+                                                                               "adjudication_batch_count_estimated":  0,
+                                                                               "scene_count":  3,
+                                                                               "expected_request_count":  1,
+                                                                               "worst_case_request_count":  2,
+                                                                               "estimated_input_tokens":  24,
+                                                                               "worst_case_input_tokens":  24,
+                                                                               "estimated_output_tokens":  3000,
+                                                                               "worst_case_output_tokens":  6500,
+                                                                               "estimated_total_tokens":  3024,
+                                                                               "worst_case_total_tokens":  6524,
+                                                                               "estimated_cost":  0.024048,
+                                                                               "worst_case_cost":  0.052048,
+                                                                               "currency":  "CNY",
+                                                                               "pricing_version":  "aliyun-cn-beijing-2026-07-21-official-list-price-v1",
+                                                                               "estimated":  true
+                                                                           },
+                                              "currency":  "CNY"
+                                          },
+                     "user_error_message":  null,
+                     "offline_replay_available":  false,
+                     "offline_replayable_scene_count":  0,
+                     "offline_replayable_invocation_ids":  [
+
+                                                           ],
+                     "current_contract_version":  "1.3",
+                     "recoverable_contract_version":  null
+                 }
+}

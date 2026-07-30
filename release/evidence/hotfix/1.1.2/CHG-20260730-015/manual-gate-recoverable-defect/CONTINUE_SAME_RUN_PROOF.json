@@ -1,0 +1,10 @@
+﻿{
+  "change_id": "CHG-20260730-015",
+  "proof": "CONTINUE_SAME_RUN",
+  "analysis_run_id": 6,
+  "journey_run_id": 6,
+  "new_journey_runs_created": 0,
+  "resume_endpoint": "POST /api/v1/reader-journey-runs/6/resume",
+  "result": "same journey_run_id=6 advanced; chapter reached succeeded then re-armed to interrupted for MG",
+  "real_provider_calls": 0
+}

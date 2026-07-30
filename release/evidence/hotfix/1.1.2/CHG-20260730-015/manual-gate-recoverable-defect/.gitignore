@@ -1,0 +1,6 @@
+# Local MG DB copies — do not commit
+*.db
+*.db-shm
+*.db-wal
+__pycache__/
+*.pyc

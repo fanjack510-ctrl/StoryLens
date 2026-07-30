@@ -1,0 +1,24 @@
+{
+  "change_id": "CHG-20260730-015",
+  "label": "C2_legal_recoverable",
+  "database": "C:\\Users\\msi\\AppData\\Local\\Temp\\storylens-mg-chg015-rc4-failure\\database\\storylens-mg-chg015.db",
+  "fixture": {
+    "chapter_id": 6,
+    "run_id": 6,
+    "journey_run_id": 6,
+    "confirmed_revision_id": 8,
+    "status": "scene_profiles_partial",
+    "result_status": "current",
+    "completed_scene_count": 2,
+    "total_scene_count": 3,
+    "root_error_code": "JOURNEY_INTERRUPTED"
+  },
+  "url": "http://127.0.0.1:1428/books/1?chapter=6&analysisRun=6&journeyRun=6&view=progress",
+  "notes": "Appended without rewriting Journey 2/5.",
+  "manual_checklist": [
+    "标题：阅读旅程已中断",
+    "说明含：当前进度已保存，可以继续分析",
+    "主按钮：继续分析",
+    "不出现：分析已暂停 / 阅读旅程已完成 / 修复并继续 / 右侧恢复面板重试"
+  ]
+}

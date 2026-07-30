@@ -156,6 +156,32 @@ describe("resolveJourneyPageState", () => {
     ).toBe("interrupted");
   });
 
+  it("bound recoverable interrupted wins over sibling chapter_complete", () => {
+    expect(
+      resolveJourneyPageState({
+        currentJourneyId: 2,
+        responseJourneyId: 2,
+        journeyStatus: "scene_profiles_partial",
+        errorCode: "JOURNEY_INTERRUPTED",
+        retryable: true,
+        chapterComplete: true,
+        finalArtifactAvailable: true,
+        parentJourneyStatus: "succeeded",
+        effectiveStatus: "completed",
+      }),
+    ).toBe("interrupted");
+  });
+
+  it("succeeded journey still completes even when parent chapter_complete", () => {
+    expect(
+      resolveJourneyPageState({
+        journeyStatus: "succeeded",
+        chapterComplete: true,
+        finalArtifactAvailable: true,
+      }),
+    ).toBe("completed");
+  });
+
   it("parent journey_running overrides stale failed GET", () => {
     expect(
       resolveJourneyPageState({

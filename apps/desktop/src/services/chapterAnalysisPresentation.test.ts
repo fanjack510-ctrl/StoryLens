@@ -53,6 +53,45 @@ describe("buildChapterAnalysisPresentationV1", () => {
     expect(presentation.primary_action).toBe("continue_analysis");
   });
 
+  it("interrupted pageView wins over sibling chapterComplete", () => {
+    const presentation = buildChapterAnalysisPresentationV1({
+      chapterId: 3,
+      analysisRunId: 3,
+      journeyRunId: 2,
+      composition: "awaiting_reader_journey_start",
+      pageView: "interrupted",
+      chapterComplete: true,
+      canResumeJourney: true,
+      lifecycleRun: run({
+        id: 3,
+        status: "succeeded",
+        journey_status: "succeeded",
+        journey_run_id: 5,
+        chapter_complete: true,
+        effective_status: "completed",
+      }),
+    });
+    expect(presentation.workflow_state).toBe("journey_interrupted");
+    expect(presentation.status_title).toBe("阅读旅程已中断");
+    expect(presentation.primary_action).toBe("continue_analysis");
+    expect(presentation.can_resume).toBe(true);
+    expect(presentation.status_title).not.toBe("阅读旅程已完成");
+  });
+
+  it("succeeded journey does not expose continue", () => {
+    const presentation = buildChapterAnalysisPresentationV1({
+      chapterId: 3,
+      composition: "succeeded",
+      pageView: "completed",
+      chapterComplete: true,
+      canResumeJourney: true,
+    });
+    expect(presentation.workflow_state).toBe("journey_succeeded");
+    expect(presentation.primary_action).toBe("view_results");
+    expect(presentation.can_resume).toBe(false);
+    expect(presentation.status_title).toBe("阅读旅程已完成");
+  });
+
   it("awaiting hides journey nav", () => {
     const presentation = buildChapterAnalysisPresentationV1({
       chapterId: 1301,
