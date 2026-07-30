@@ -193,6 +193,8 @@ export function resolveChapterWorkflowState(args: {
   const fromPage = mapPageView(args.pageView);
   if (fromPage) candidates.push(fromPage);
   const fromLife = mapLifecycle(args.lifecycleRun);
+  const lifeIsSceneFailed = fromLife === "scene_analysis_failed";
+  const lifeIsSceneRunning = fromLife === "scene_analysis_running";
   if (fromLife) candidates.push(fromLife);
   const fromComp = mapComposition(args.composition);
   // Parent AnalysisRun may stay "succeeded" after scenes while journey failed/interrupted.
@@ -206,15 +208,13 @@ export function resolveChapterWorkflowState(args: {
     fromLife === "journey_failed" ||
     fromLife === "journey_cancelled" ||
     fromLife === "journey_running" ||
-    fromLife === "scene_analysis_failed" ||
-    fromLife === "scene_analysis_running";
+    lifeIsSceneFailed ||
+    lifeIsSceneRunning;
   if (
     fromComp &&
     !(
       fromComp === "journey_succeeded" &&
-      (terminalOpen ||
-        fromLife === "scene_analysis_failed" ||
-        fromLife === "scene_analysis_running")
+      (terminalOpen || lifeIsSceneFailed || lifeIsSceneRunning)
     )
   ) {
     candidates.push(fromComp);
