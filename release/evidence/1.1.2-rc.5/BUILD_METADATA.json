@@ -27,5 +27,7 @@
   "chg015_verified_head": "5278bbc3063adf59c6265764118b1c18385f5c5e",
   "chg017_verified_head": "972388be3fecac6a42dd1718c082f4cbaff2b767",
   "chg018_verified_head": "a7cade3c8bb3af7304a6eabd5ddf104dc8a8060a",
-  "public_final_head": "31d5fa1787b61ce3eb7327a62c5845c05e084566"
+  "public_final_head": "db16a266b86526f8457b51bd9d0c7786c3fc655f",
+  "cwd_gate": "6/6",
+  "isolated_acceptance": "PASS"
 }
