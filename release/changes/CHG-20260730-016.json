@@ -35,6 +35,12 @@
       "message": "docs(release): set CHG-016 status tested",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "0626da4d9b412becfd382f389d9a79ae098c2ef1",
+      "message": "docs(release): sync RC.5 BUILD_METADATA public final head",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [],
@@ -66,5 +72,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-30T07:14:52Z",
-  "updated_at": "2026-07-30T07:46:08Z"
+  "updated_at": "2026-07-30T07:46:09Z"
 }
