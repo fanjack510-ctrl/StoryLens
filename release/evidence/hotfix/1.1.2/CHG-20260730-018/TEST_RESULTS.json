@@ -1,0 +1,19 @@
+{
+  "change_id": "CHG-20260730-018",
+  "pass": true,
+  "timestamp": "2026-07-30T10:00:00+00:00",
+  "real_provider_calls": 0,
+  "formal_db_writes": 0,
+  "vitest": {
+    "passed": 16,
+    "suites": [
+      "journeyActiveRecoveryGuard.test.ts",
+      "activeJourneyStaleRecovery.chg018.test.tsx",
+      "UnifiedAnalysisRecoveryCard.test.tsx"
+    ]
+  },
+  "pytest": {
+    "passed": 3,
+    "file": "tests/test_active_journey_stale_recovery_chg018.py"
+  }
+}

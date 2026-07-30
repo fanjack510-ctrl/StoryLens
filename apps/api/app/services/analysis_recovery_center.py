@@ -285,16 +285,48 @@ def _provider_row(session: Session, provider_name: str) -> ProviderConfiguration
 
 
 def _journey_for_run(session: Session, run_id: int) -> ReaderJourneyRun | None:
-    from app.services.reader_journey_progress import find_recoverable_journey_run
+    """Bind Recovery Plan to the current journey for this AnalysisRun.
 
+    CHG-018: prefer an *active* journey over an older recoverable interrupted row.
+    """
+    from app.services.reader_journey_progress import find_recoverable_journey_run
+    from app.services.reader_journey_recovery import JOURNEY_ACTIVE_WORKER_STATUSES
+
+    rows = list(
+        session.scalars(
+            select(ReaderJourneyRun)
+            .where(ReaderJourneyRun.analysis_run_id == run_id)
+            .order_by(desc(ReaderJourneyRun.id))
+        )
+    )
+    for row in rows:
+        if row.status in JOURNEY_ACTIVE_WORKER_STATUSES or row.status in {
+            "pending",
+            "resuming",
+            "reader_journey_processing",
+        }:
+            return row
     recoverable = find_recoverable_journey_run(session, run_id)
     if recoverable is not None:
         return recoverable
-    return session.scalar(
-        select(ReaderJourneyRun)
-        .where(ReaderJourneyRun.analysis_run_id == run_id)
-        .order_by(desc(ReaderJourneyRun.id))
-    )
+    return rows[0] if rows else None
+
+
+# CHG-018: journey statuses that mean generation is already in flight (not paused).
+_JOURNEY_ACTIVE_FOR_RECOVERY = frozenset(
+    {
+        "starting",
+        "queued",
+        "pending",
+        "resuming",
+        "running",
+        "scene_profiles_running",
+        "chapter_synthesis_running",
+        "summary_running",
+        "phase_analysis_running",
+        "reader_journey_processing",
+    }
+)
 
 
 def _estimate_remaining_work(
@@ -807,12 +839,31 @@ def build_recovery_plan(
 
     # Reader journey
     journey = _journey_for_run(session, run.id)
-    journey_needed = scene_complete and (
-        journey is None
-        or journey.status
-        not in {"succeeded", "queued", "scene_profiles_running", "chapter_synthesis_running"}
+    journey_active = bool(
+        journey is not None and journey.status in _JOURNEY_ACTIVE_FOR_RECOVERY
     )
-    if scene_complete and (journey is None or journey.status != "succeeded"):
+    journey_needed = (
+        scene_complete
+        and not journey_active
+        and (
+            journey is None
+            or journey.status
+            not in {
+                "succeeded",
+                "queued",
+                "starting",
+                "pending",
+                "resuming",
+                "running",
+                "scene_profiles_running",
+                "chapter_synthesis_running",
+                "summary_running",
+                "phase_analysis_running",
+                "reader_journey_processing",
+            }
+        )
+    )
+    if scene_complete and (journey is None or journey.status != "succeeded") and not journey_active:
         checks.append(
             RecoveryCheck(
                 id="reader_journey",
@@ -842,6 +893,16 @@ def build_recovery_plan(
                     automatic=True,
                 )
             )
+    elif journey_active:
+        checks.append(
+            RecoveryCheck(
+                id="reader_journey",
+                label="ReaderJourneyRun",
+                status="pass",
+                user_label=f"阅读旅程生成中（{journey.status}）",
+                detail=str(journey.id),
+            )
+        )
     else:
         # Downstream impact only — never present as the root failure check.
         checks.append(
@@ -1093,6 +1154,11 @@ def build_recovery_plan(
         user_status = "succeeded"
         recoverable = False
         pause_reason = None
+    elif journey_active:
+        # CHG-018: active journey invalidates paused recovery UX immediately.
+        user_status = "running"
+        recoverable = False
+        pause_reason = None
     elif run.status in {
         "queued",
         "running",
@@ -1208,6 +1274,26 @@ def execute_unified_recover(
 ) -> AnalysisRecoverResponse:
     """Execute recovery plan steps in fixed order. Idempotent on successful resume."""
     plan = build_recovery_plan(session, run, gateway, store)
+    # CHG-018: do not re-submit recovery while the bound journey is already active.
+    if plan.user_status == "running" and plan.reader_journey_status in _JOURNEY_ACTIVE_FOR_RECOVERY:
+        return AnalysisRecoverResponse(
+            run_id=run.id,
+            status=run.status,
+            user_status="running",
+            recoverable=False,
+            idempotent_replay=True,
+            actions_executed=["noop_journey_already_active"],
+            resume_stage=plan.resume_stage,
+            will_reuse_artifacts=plan.will_reuse_artifacts,
+            reader_journey_run_id=plan.reader_journey_run_id,
+            details={
+                "reader_journey_run_id": plan.reader_journey_run_id,
+                "reader_journey_status": plan.reader_journey_status,
+                "reason": "journey_already_active",
+            },
+            http_request_sent=False,
+            model_invocations_started=False,
+        )
     marker = load_unified_recover_marker(run)
     resume_actions = {
         "resume_scene_analysis",

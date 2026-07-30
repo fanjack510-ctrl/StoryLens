@@ -8,6 +8,7 @@ import {
   shouldShowUnifiedRecovery,
   UnifiedAnalysisRecoveryCard,
 } from "./UnifiedAnalysisRecoveryCard";
+import { isJourneyActivelyRunning } from "../../services/journeyActiveRecoveryGuard";
 import { ChapterAnalysisFailureCard } from "./ChapterAnalysisFailureCard";
 import { ChapterAnalysisStatusBadge } from "./ChapterAnalysisStatusBadge";
 import {
@@ -54,6 +55,9 @@ type Props = {
   /** Open journey resume / workspace entry on the chapter shell. */
   onContinueReaderJourney?: () => void;
   onBudgetContinued?: () => void;
+  /** CHG-018: suppress recovery while journey generation is active. */
+  journeyPageActive?: boolean;
+  journeyStatus?: string | null;
 };
 
 export function ChapterAnalysisProgressPanel({
@@ -73,6 +77,8 @@ export function ChapterAnalysisProgressPanel({
   onViewResults,
   onContinueReaderJourney,
   onBudgetContinued,
+  journeyPageActive = false,
+  journeyStatus = null,
 }: Props) {
   const [resumeBusy, setResumeBusy] = useState(false);
   const [resumeError, setResumeError] = useState<string>();
@@ -151,6 +157,14 @@ export function ChapterAnalysisProgressPanel({
         : counts.total > 0
           ? `场景 ${counts.current} / ${counts.total}`
           : uiStateLabel(uiState);
+
+  const liveJourneyStatus = journeyStatus || run?.journey_status || null;
+  const journeyActiveNow =
+    journeyPageActive ||
+    isJourneyActivelyRunning(liveJourneyStatus) ||
+    uiState === "reader_journey_processing";
+  const showRecovery = Boolean(run) && shouldShowUnifiedRecovery(uiState) && !journeyActiveNow;
+
   return (
     <aside
       className="chapter-analysis-progress-panel"
@@ -317,18 +331,20 @@ export function ChapterAnalysisProgressPanel({
         </div>
       )}
 
-      {run && shouldShowUnifiedRecovery(uiState) && (
+      {showRecovery && run ? (
         <UnifiedAnalysisRecoveryCard
           run={run}
           variant="card"
+          journeyStatus={liveJourneyStatus}
+          journeyPageActive={journeyActiveNow}
           onContinued={onBudgetContinued}
           onLater={onDismiss}
         />
-      )}
+      ) : null}
 
       {(uiState === "failed" || uiState === "partial") &&
         run &&
-        !shouldShowUnifiedRecovery(uiState) && (
+        !showRecovery && (
         <ChapterAnalysisFailureCard
           run={run}
           canResume={Boolean(canResume)}
@@ -348,7 +364,7 @@ export function ChapterAnalysisProgressPanel({
         </p>
       )}
 
-      {uiState === "awaiting_reader_journey_start" && run && (
+      {uiState === "awaiting_reader_journey_start" && run && !journeyActiveNow && (
         <div
           className="chapter-analysis-success"
           data-testid="chapter-analysis-journey-pending"

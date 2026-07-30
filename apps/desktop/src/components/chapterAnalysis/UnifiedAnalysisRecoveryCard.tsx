@@ -4,6 +4,10 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Run } from "../../types";
 import { analysisRecoveryApi } from "../../services/analysisRecoveryApi";
 import { mapRunToUiState } from "./mapAnalysisUiState";
+import {
+  isJourneyActivelyRunning,
+  shouldShowUnifiedRecoveryForJourney,
+} from "../../services/journeyActiveRecoveryGuard";
 
 type Props = {
   run: Run;
@@ -11,6 +15,10 @@ type Props = {
   onClose?: () => void;
   onContinued?: () => void;
   onLater?: () => void;
+  /** Live journey status for the current task (suppresses stale paused card). */
+  journeyStatus?: string | null;
+  /** True when journey page view is already active / generating. */
+  journeyPageActive?: boolean;
 };
 
 function newClientRequestId(runId: number): string {
@@ -51,6 +59,8 @@ export function UnifiedAnalysisRecoveryCard({
   onClose,
   onContinued,
   onLater,
+  journeyStatus = null,
+  journeyPageActive = false,
 }: Props) {
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -61,11 +71,23 @@ export function UnifiedAnalysisRecoveryCard({
   const [proposalOpen, setProposalOpen] = useState(false);
   const uiState = mapRunToUiState(run);
   const isFailed = uiState === "failed";
+  const liveJourneyStatus =
+    journeyStatus ||
+    run.journey_status ||
+    null;
 
   const planQuery = useQuery({
     queryKey: ["analysis-recovery-plan", run.id],
     queryFn: () => analysisRecoveryApi.recoveryPlan(run.id),
-    refetchInterval: 4000,
+    refetchInterval: (query) => {
+      const status = query.state.data?.user_status;
+      const jStatus = query.state.data?.reader_journey_status;
+      if (status === "running" || isJourneyActivelyRunning(jStatus) || isJourneyActivelyRunning(liveJourneyStatus)) {
+        return false;
+      }
+      return 4000;
+    },
+    enabled: !journeyPageActive && !isJourneyActivelyRunning(liveJourneyStatus),
   });
 
   const plan = planQuery.data;
@@ -112,6 +134,19 @@ export function UnifiedAnalysisRecoveryCard({
       });
   }, [plan?.checks]);
 
+  const suppressForActiveJourney =
+    journeyPageActive ||
+    isJourneyActivelyRunning(liveJourneyStatus) ||
+    isJourneyActivelyRunning(plan?.reader_journey_status) ||
+    plan?.user_status === "running" ||
+    plan?.user_status === "succeeded" ||
+    !shouldShowUnifiedRecoveryForJourney({
+      uiState,
+      journeyStatus: liveJourneyStatus || plan?.reader_journey_status,
+      recoveryUserStatus: plan?.user_status,
+      journeyPageActive,
+    });
+
   const needsAuthRedirect = (plan?.blockers || []).some(
     (b) =>
       b.settings_focus === "api_key" ||
@@ -146,6 +181,17 @@ export function UnifiedAnalysisRecoveryCard({
 
   const fixAndContinue = async (withBudgetAuth: boolean) => {
     if (busy) return;
+    // CHG-018: never re-submit recovery against an already-active journey.
+    if (
+      journeyPageActive ||
+      isJourneyActivelyRunning(liveJourneyStatus) ||
+      isJourneyActivelyRunning(plan?.reader_journey_status) ||
+      plan?.user_status === "running"
+    ) {
+      setStatusMessage("阅读旅程已在生成中");
+      onContinued?.();
+      return;
+    }
     setBusy(true);
     setError(undefined);
     const initialStatus = showEvidenceRemap
@@ -501,6 +547,10 @@ export function UnifiedAnalysisRecoveryCard({
     </div>
   );
 
+  if (suppressForActiveJourney) {
+    return null;
+  }
+
   if (variant === "modal") {
     return (
       <div className="modal-backdrop" data-testid="unified-recovery-modal">
@@ -537,12 +587,5 @@ export function UnifiedAnalysisRecoveryCard({
 
 /** Whether chapter/tasks should host the unified recovery card for this UI state. */
 export function shouldShowUnifiedRecovery(uiState: string | undefined | null): boolean {
-  return (
-    uiState === "awaiting_budget_adjustment" ||
-    uiState === "provider_recovery" ||
-    uiState === "awaiting_reader_journey_start" ||
-    uiState === "partial" ||
-    uiState === "failed" ||
-    uiState === "aborted_by_limit"
-  );
+  return shouldShowUnifiedRecoveryForJourney({ uiState });
 }

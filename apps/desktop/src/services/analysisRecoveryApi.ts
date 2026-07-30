@@ -67,6 +67,7 @@ export const analysisRecoveryApi = {
       } | null;
       details: Record<string, unknown>;
       reader_journey_run_id?: number | null;
+      reader_journey_status?: string | null;
       current_stage?: string | null;
     }>(`/api/v1/analysis-runs/${runId}/recovery-plan`),
   recover: (

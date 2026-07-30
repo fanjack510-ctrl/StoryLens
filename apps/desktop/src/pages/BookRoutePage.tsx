@@ -566,6 +566,21 @@ export function BookRoutePage() {
     !showJourneyActive &&
     !awaitingSceneBoundaryConfirmation &&
     compositionUiState === "awaiting_reader_journey_start";
+
+  // CHG-018: drop stale recovery-plan cache as soon as journey is active.
+  useEffect(() => {
+    if (!showJourneyActive && compositionUiState !== "reader_journey_processing") return;
+    const runId = analysisRunId ?? progress.run?.id;
+    if (runId == null) return;
+    void qc.invalidateQueries({ queryKey: ["analysis-recovery-plan", runId] });
+  }, [
+    showJourneyActive,
+    compositionUiState,
+    analysisRunId,
+    progress.run?.id,
+    qc,
+  ]);
+
   const showJourneyResult =
     !showJourneyTerminalFailed &&
     !showJourneyInterrupted &&
@@ -1863,12 +1878,22 @@ export function BookRoutePage() {
                     }}
                   />
                 ) : null}
-                {showJourneyAwaiting && progress.run ? (
+                {showJourneyAwaiting && progress.run && !showJourneyActive ? (
                   <UnifiedAnalysisRecoveryCard
                     run={progress.run}
                     variant="card"
+                    journeyStatus={
+                      journeyProgress.data?.status ||
+                      journey.data?.status ||
+                      progress.run.journey_status ||
+                      null
+                    }
+                    journeyPageActive={false}
                     onContinued={() => {
                       void qc.invalidateQueries({ queryKey: ["reader-journey"] });
+                      void qc.invalidateQueries({
+                        queryKey: ["analysis-recovery-plan", progress.run!.id],
+                      });
                       void journey.refetch();
                       void progress.refresh();
                     }}
@@ -2074,6 +2099,13 @@ export function BookRoutePage() {
                   setResultTab("journey", "user");
                 }}
                 onBudgetContinued={() => void progress.refresh()}
+                journeyPageActive={showJourneyActive || journeyActiveView}
+                journeyStatus={
+                  journeyProgress.data?.status ||
+                  journey.data?.status ||
+                  progress.run?.journey_status ||
+                  null
+                }
               />
             </aside>
           ) : null}
