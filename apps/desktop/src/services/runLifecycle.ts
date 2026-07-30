@@ -32,6 +32,7 @@ const ACTIVE_STATUSES = new Set([
   "pending",
   "preparing",
   "queued",
+  "starting",
   "running",
   "analyzing",
   "materializing",

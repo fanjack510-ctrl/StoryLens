@@ -247,17 +247,22 @@ export function buildChapterAnalysisPresentationV1(args: {
       break;
     case "journey_running":
       primary_action = "view_progress";
-      status_title = "正在生成阅读旅程";
-      status_description =
-        completed != null && total != null
-          ? `已完成 ${completed} / ${total} 个场景。`
-          : "阅读旅程生成中。";
+      if (completed == null || completed === 0) {
+        status_title = "正在启动阅读旅程";
+        status_description = "正在启动阅读旅程，请稍候。";
+      } else {
+        status_title = "正在生成阅读旅程";
+        status_description =
+          total != null
+            ? `已完成 ${completed} / ${total} 个场景。`
+            : "正在分析场景 / 正在生成阅读旅程。";
+      }
       break;
     case "journey_interrupted":
       primary_action = "continue_analysis";
       status_title = "阅读旅程已中断";
       status_description =
-        "已完成的场景分析不会受到影响，可继续本次分析或查看任务详情。";
+        "阅读旅程已中断，当前进度已保存，可以继续分析。";
       break;
     case "journey_cancelled":
       primary_action = "reanalyze";

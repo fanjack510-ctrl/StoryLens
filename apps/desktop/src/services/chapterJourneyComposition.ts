@@ -17,6 +17,7 @@ export type JourneySnapshot = {
 } | null | undefined;
 
 const JOURNEY_ACTIVE = new Set([
+  "starting",
   "queued",
   "running",
   "scene_profiles_running",
@@ -41,6 +42,22 @@ export function mapChapterCompositionState(
   run: Run | null | undefined,
   journey: JourneySnapshot,
 ): ChapterAnalysisUiState {
+  const liveJourneyStatus = journey?.status || null;
+
+  // CHG-013: live journey (including starting) must win over stale awaiting marker.
+  if (liveJourneyStatus && JOURNEY_ACTIVE.has(liveJourneyStatus)) {
+    return "reader_journey_processing";
+  }
+  if (liveJourneyStatus && JOURNEY_NEEDS_RESUME.has(liveJourneyStatus)) {
+    return "awaiting_reader_journey_start";
+  }
+  if (run?.journey_status && JOURNEY_ACTIVE.has(run.journey_status)) {
+    return "reader_journey_processing";
+  }
+  if (run?.effective_status === "journey_running") {
+    return "reader_journey_processing";
+  }
+
   if (isAwaitingSceneBoundaryConfirmation(run)) {
     return "awaiting_scene_boundary_confirmation";
   }
@@ -53,24 +70,6 @@ export function mapChapterCompositionState(
   }
   if (journey?.status === "succeeded" && journey.visualization) {
     return "succeeded";
-  }
-
-  // Prefer the live journey GET when present — do not let a stale parent
-  // journey_running / journey_status marker contradict a terminal journey row.
-  const liveJourneyStatus = journey?.status || null;
-  if (liveJourneyStatus && JOURNEY_ACTIVE.has(liveJourneyStatus)) {
-    return "reader_journey_processing";
-  }
-  if (liveJourneyStatus && JOURNEY_NEEDS_RESUME.has(liveJourneyStatus)) {
-    return "awaiting_reader_journey_start";
-  }
-
-  // Prefer live parent AnalysisRun journey signals over a missing journey GET.
-  if (run?.effective_status === "journey_running") {
-    return "reader_journey_processing";
-  }
-  if (run?.journey_status && JOURNEY_ACTIVE.has(run.journey_status)) {
-    return "reader_journey_processing";
   }
 
   const journeyStatus = liveJourneyStatus || run?.journey_status || null;

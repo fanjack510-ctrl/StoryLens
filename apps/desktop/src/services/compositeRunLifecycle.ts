@@ -15,6 +15,7 @@ export type CompositeLifecyclePhase =
   | "cancelled";
 
 const JOURNEY_ACTIVE = new Set([
+  "starting",
   "queued",
   "running",
   "scene_profiles_running",
@@ -77,13 +78,13 @@ export function resolveCompositeRunLifecycle(
     input.journeyErrorCode === "JOURNEY_INTERRUPTED" ||
     journey === "scene_profiles_partial";
 
-  if (effective === "awaiting_scene_boundary_confirmation") {
-    return "awaiting_user";
-  }
-
-  // 1. Journey active
+  // CHG-013: live journey active (incl. starting) before stale awaiting confirmation.
   if (JOURNEY_ACTIVE.has(journey) || effective === "journey_running") {
     return "active";
+  }
+
+  if (effective === "awaiting_scene_boundary_confirmation") {
+    return "awaiting_user";
   }
 
   // 2. Journey interrupted / failed retryable

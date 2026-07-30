@@ -1129,12 +1129,25 @@ export function BookRoutePage() {
   useEffect(() => {
     if (!awaitingSceneBoundaryConfirmation || activeTab !== "journey") return;
     if (sceneBoundaryReviewView) return;
+    // CHG-013: confirmed revision / live journey must not bounce to review dead-end.
+    if (sceneBoundariesQuery.data?.confirmed_revision?.revision_id) return;
+    if (selectedJourneyRunId || journeyRunId) return;
+    if (
+      compositionUiState === "reader_journey_processing" ||
+      compositionUiState === "awaiting_reader_journey_start"
+    ) {
+      return;
+    }
     openSceneBoundaryReview();
   }, [
     awaitingSceneBoundaryConfirmation,
     activeTab,
     sceneBoundaryReviewView,
     chapterId,
+    sceneBoundariesQuery.data?.confirmed_revision?.revision_id,
+    selectedJourneyRunId,
+    journeyRunId,
+    compositionUiState,
   ]);
 
   const chapterPresentation: ChapterAnalysisPresentationV1 = useMemo(

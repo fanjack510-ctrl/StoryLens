@@ -842,13 +842,27 @@ export function SceneBoundaryReviewPanel({
   if (!editorOpen) {
     return (
       <section className="scene-boundary-review" data-testid="scene-boundary-review">
-        <p data-testid="scene-boundary-idle">当前无需确认场景划分。</p>
+        <p data-testid="scene-boundary-idle">
+          {confirmedRevision
+            ? "场景划分已确认。可返回当前分析进度，或重新调整场景后再次确认。"
+            : "当前无需确认场景划分。"}
+        </p>
+        {confirmedRevision && onExit ? (
+          <button
+            type="button"
+            className="primary"
+            data-testid="scene-boundary-return-progress"
+            onClick={tryExit}
+          >
+            返回分析进度
+          </button>
+        ) : null}
         {confirmedRevision ? (
           <button type="button" className="secondary" data-testid="scene-boundary-readjust" onClick={openEditor}>
             重新调整场景
           </button>
         ) : null}
-        {onExit ? (
+        {onExit && !confirmedRevision ? (
           <button type="button" className="secondary" onClick={tryExit}>
             返回
           </button>
