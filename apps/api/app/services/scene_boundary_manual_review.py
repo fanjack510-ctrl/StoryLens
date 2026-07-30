@@ -603,11 +603,13 @@ def _materialize_scenes_for_revision(
         else:
             # Edited spans: under Smoke Fake attach a stub analysis so Confirm+Start
             # can exercise journey routing without a real re-analysis round-trip.
+            # CHG-015: skip stubs when SKIP_REMATERIALIZE_STUBS is set so wait-gate
+            # (WAITING_SCENE_ANALYSIS → analyze → journey) remains observable.
             from app.services.chapter_analysis_smoke_fake_transport import (
-                is_chapter_analysis_smoke_fake_enabled,
+                is_chapter_analysis_smoke_fake_rematerialize_stub_enabled,
             )
 
-            if is_chapter_analysis_smoke_fake_enabled():
+            if is_chapter_analysis_smoke_fake_rematerialize_stub_enabled():
                 stub = AnalysisArtifact(
                     run_id=run.id,
                     artifact_type="scene_analysis",

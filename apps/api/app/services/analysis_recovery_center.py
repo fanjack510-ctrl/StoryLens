@@ -285,6 +285,11 @@ def _provider_row(session: Session, provider_name: str) -> ProviderConfiguration
 
 
 def _journey_for_run(session: Session, run_id: int) -> ReaderJourneyRun | None:
+    from app.services.reader_journey_progress import find_recoverable_journey_run
+
+    recoverable = find_recoverable_journey_run(session, run_id)
+    if recoverable is not None:
+        return recoverable
     return session.scalar(
         select(ReaderJourneyRun)
         .where(ReaderJourneyRun.analysis_run_id == run_id)

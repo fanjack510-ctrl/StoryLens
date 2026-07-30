@@ -13,6 +13,7 @@ on every generate (transport failure path).
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import os
@@ -56,6 +57,19 @@ def is_chapter_analysis_smoke_fake_requested() -> bool:
 
 def is_chapter_analysis_smoke_fake_fail_enabled() -> bool:
     return _env_truthy(_SMOKE_FAIL_ENV)
+
+
+def is_chapter_analysis_smoke_fake_rematerialize_stub_enabled() -> bool:
+    """When Fake is on, rematerialize may attach stub scene_analysis artifacts.
+
+    CHG-015 wait-gate MG sets ``STORYLENS_CHAPTER_ANALYSIS_SMOKE_FAKE_SKIP_REMATERIALIZE_STUBS=1``
+    so edited spans remain incomplete and exercise post-confirm analyze → journey.
+    """
+    if not is_chapter_analysis_smoke_fake_enabled():
+        return False
+    if _env_truthy("STORYLENS_CHAPTER_ANALYSIS_SMOKE_FAKE_SKIP_REMATERIALIZE_STUBS"):
+        return False
+    return True
 
 
 def is_chapter_analysis_smoke_fake_enabled() -> bool:
@@ -634,6 +648,16 @@ def synthesize_chapter_smoke_fake_text(request: ModelRequest) -> str:
     return json.dumps(payload, ensure_ascii=False)
 
 
+def chapter_smoke_fake_delay_seconds() -> float:
+    """Optional per-call delay for Manual Gate wait-gate observation (CHG-015)."""
+    raw = (os.environ.get("STORYLENS_CHAPTER_ANALYSIS_SMOKE_FAKE_DELAY_SECONDS") or "0").strip()
+    try:
+        value = float(raw)
+    except ValueError:
+        return 0.0
+    return max(0.0, min(value, 30.0))
+
+
 async def chapter_smoke_fake_generate(
     request: ModelRequest,
     *,
@@ -654,6 +678,9 @@ async def chapter_smoke_fake_generate(
             transport_kind=TRANSPORT_REMOTE_DISCONNECT,
             user_action_hint="这是开发 Smoke Fake 注入的可控传输失败，可重新分析。",
         )
+    delay = chapter_smoke_fake_delay_seconds()
+    if delay > 0:
+        await asyncio.sleep(delay)
     text = synthesize_chapter_smoke_fake_text(request)
     model = request.model or default_model
     # Stable zero-cost usage for smoke accounting.

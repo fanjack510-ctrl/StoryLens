@@ -453,8 +453,13 @@ def find_recoverable_journey_run(
     session: Session,
     analysis_run_id: int,
     *,
-    contract_major: str = "1",
+    contract_major: str | None = None,
 ) -> ReaderJourneyRun | None:
+    """Return the newest recoverable journey for an analysis run.
+
+    ``contract_major=None`` accepts any contract (default). Pass an explicit major
+    only when a caller must pin a generation.
+    """
     rows = list(
         session.scalars(
             select(ReaderJourneyRun)
@@ -469,9 +474,10 @@ def find_recoverable_journey_run(
         "scene_profiles_partial",
     }
     for row in rows:
-        major = (row.scene_contract_version or "1.0").split(".", 1)[0]
-        if major != contract_major:
-            continue
+        if contract_major is not None:
+            major = (row.scene_contract_version or "1.0").split(".", 1)[0]
+            if major != contract_major:
+                continue
         if row.status in active_statuses:
             return row
         if row.status == "failed" and (

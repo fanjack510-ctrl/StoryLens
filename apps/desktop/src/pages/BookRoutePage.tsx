@@ -1790,7 +1790,7 @@ export function BookRoutePage() {
                     kind="error"
                     data-testid="journey-interrupted"
                     title="阅读旅程已中断"
-                    description="已完成的场景分析不会受到影响，可继续分析或从任务详情查看。"
+                    description="当前进度已保存，可以继续分析。Scene 分析已完成；阅读旅程尚未完成；当前任务可以继续。"
                     primaryAction={{
                       label: "继续分析",
                       testId: "journey-interrupted-continue",

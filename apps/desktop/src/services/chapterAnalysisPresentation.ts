@@ -13,6 +13,7 @@ export type ChapterWorkflowState =
   | "boundary_detecting"
   | "awaiting_scene_confirmation"
   | "scene_analysis_running"
+  | "scene_analysis_failed"
   | "journey_running"
   | "journey_interrupted"
   | "journey_cancelled"
@@ -59,6 +60,7 @@ export type ChapterAnalysisPresentationV1 = {
 const PRIORITY: ChapterWorkflowState[] = [
   "journey_succeeded",
   "journey_cancelled",
+  "scene_analysis_failed",
   "journey_failed",
   "journey_interrupted",
   "journey_running",
@@ -116,12 +118,33 @@ function mapLifecycle(run: Run | null | undefined): ChapterWorkflowState | null 
   if (!run) return null;
   const journeyStatus = String(run.journey_status || "").toLowerCase();
   const effective = String(run.effective_status || "").toLowerCase();
+  const journeyError = String((run as any).journey_error_code || (run as any).root_error_code || "");
+  const parentStatus = String(run.status || "").toLowerCase();
+  // CHG-015: scene-analysis stage failure must not look like journey synthesis failure.
+  if (
+    effective === "scene_analysis" ||
+    journeyError === "WAITING_SCENE_ANALYSIS" ||
+    journeyError === "SCENE_ANALYSIS_INCOMPLETE" ||
+    parentStatus === "scene_analysis_partial" ||
+    parentStatus === "failed_structural"
+  ) {
+    if (
+      parentStatus.includes("fail") ||
+      journeyError === "SCENE_ANALYSIS_INCOMPLETE" ||
+      (journeyStatus === "failed" && journeyError === "SCENE_ANALYSIS_INCOMPLETE")
+    ) {
+      return "scene_analysis_failed";
+    }
+    if (journeyError === "WAITING_SCENE_ANALYSIS" || effective === "scene_analysis") {
+      return "scene_analysis_running";
+    }
+  }
   // Parent AnalysisRun may stay "succeeded" after scenes while journey is interrupted.
   if (
     journeyStatus === "interrupted" ||
     journeyStatus === "paused" ||
     effective === "journey_interrupted" ||
-    effective.includes("interrupted")
+    (journeyError === "JOURNEY_INTERRUPTED")
   ) {
     return "journey_interrupted";
   }
@@ -140,6 +163,9 @@ function mapLifecycle(run: Run | null | undefined): ChapterWorkflowState | null 
     case "awaiting_user":
       return "awaiting_scene_confirmation";
     case "active":
+      if (effective === "scene_analysis" || journeyError === "WAITING_SCENE_ANALYSIS") {
+        return "scene_analysis_running";
+      }
       return "journey_running";
     case "interrupted":
       return "journey_interrupted";
@@ -169,8 +195,8 @@ export function resolveChapterWorkflowState(args: {
   const fromLife = mapLifecycle(args.lifecycleRun);
   if (fromLife) candidates.push(fromLife);
   const fromComp = mapComposition(args.composition);
-  if (fromComp) candidates.push(fromComp);
-  // chapterComplete must not override an explicit interrupted/failed/cancelled page/lifecycle.
+  // Parent AnalysisRun may stay "succeeded" after scenes while journey failed/interrupted.
+  // Composition "succeeded" must not override an open journey terminal/active state.
   const terminalOpen =
     fromPage === "journey_interrupted" ||
     fromPage === "journey_failed" ||
@@ -179,7 +205,20 @@ export function resolveChapterWorkflowState(args: {
     fromLife === "journey_interrupted" ||
     fromLife === "journey_failed" ||
     fromLife === "journey_cancelled" ||
-    fromLife === "journey_running";
+    fromLife === "journey_running" ||
+    fromLife === "scene_analysis_failed" ||
+    fromLife === "scene_analysis_running";
+  if (
+    fromComp &&
+    !(
+      fromComp === "journey_succeeded" &&
+      (terminalOpen ||
+        fromLife === "scene_analysis_failed" ||
+        fromLife === "scene_analysis_running")
+    )
+  ) {
+    candidates.push(fromComp);
+  }
   if (args.chapterComplete && !terminalOpen) {
     candidates.push("journey_succeeded");
   }
@@ -243,7 +282,18 @@ export function buildChapterAnalysisPresentationV1(args: {
     case "scene_analysis_running":
       primary_action = "view_progress";
       status_title = "正在分析场景";
-      status_description = "场景分析进行中，完成后将生成阅读旅程。";
+      status_description =
+        completed != null && total != null
+          ? `已完成 ${completed} / ${total} 个场景。产物齐备后将自动生成阅读旅程。`
+          : "场景分析进行中，完成后将自动生成阅读旅程。";
+      break;
+    case "scene_analysis_failed":
+      primary_action = "reanalyze";
+      status_title = "场景分析未完成";
+      status_description =
+        completed != null && total != null
+          ? `已完成 ${completed} / ${total} 个场景。第一个场景分析时发生错误，阅读旅程尚未开始生成。`
+          : "场景分析未完成，阅读旅程尚未开始生成。";
       break;
     case "journey_running":
       primary_action = "view_progress";
@@ -271,8 +321,8 @@ export function buildChapterAnalysisPresentationV1(args: {
       break;
     case "journey_failed":
       primary_action = can_retry ? "continue_analysis" : "reanalyze";
-      status_title = "阅读旅程生成失败";
-      status_description = "请查看任务详情，或重新开始分析。";
+      status_title = "阅读旅程整合失败";
+      status_description = "场景分析已完成，但阅读旅程整合失败。请查看任务详情。";
       break;
     case "journey_succeeded":
       primary_action = "view_results";
@@ -290,12 +340,17 @@ export function buildChapterAnalysisPresentationV1(args: {
     workflow_state === "journey_running" ||
     workflow_state === "journey_interrupted" ||
     workflow_state === "journey_succeeded" ||
-    workflow_state === "scene_analysis_running";
+    workflow_state === "scene_analysis_running" ||
+    workflow_state === "scene_analysis_failed" ||
+    workflow_state === "journey_failed";
   const show_results_nav = workflow_state === "journey_succeeded";
   const show_progress_nav =
     workflow_state === "boundary_detecting" ||
     workflow_state === "scene_analysis_running" ||
-    workflow_state === "journey_running";
+    workflow_state === "scene_analysis_failed" ||
+    workflow_state === "journey_running" ||
+    workflow_state === "journey_failed" ||
+    workflow_state === "journey_interrupted";
 
   return {
     chapter_id: args.chapterId,

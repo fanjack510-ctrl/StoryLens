@@ -60,6 +60,26 @@ def _store_marker(run: AnalysisRun, **fields: Any) -> None:
 
 
 def latest_journey(session: Session, run_id: int) -> ReaderJourneyRun | None:
+    """Resolve the chapter-facing journey for an analysis run.
+
+    Prefer a ``result_status=current`` succeeded journey. Otherwise prefer a still
+    recoverable interrupted/partial row over a newer auto-succeeded sibling that
+    left the interrupt superseded (CHG-015 Manual Gate split).
+    """
+    current_succeeded = session.scalar(
+        select(ReaderJourneyRun)
+        .where(
+            ReaderJourneyRun.analysis_run_id == run_id,
+            ReaderJourneyRun.status == "succeeded",
+            ReaderJourneyRun.result_status == "current",
+        )
+        .order_by(ReaderJourneyRun.id.desc())
+    )
+    if current_succeeded is not None:
+        return current_succeeded
+    recoverable = find_recoverable_journey_run(session, run_id)
+    if recoverable is not None:
+        return recoverable
     return session.scalar(
         select(ReaderJourneyRun)
         .where(ReaderJourneyRun.analysis_run_id == run_id)
@@ -245,9 +265,23 @@ def ensure_auto_reader_journey_row(
                 bind_journey_to_revision(session, existing, revision, scenes)
         return existing
 
+    # Prefer a recoverable interrupted/partial journey for this run (and revision when
+    # bound) over creating a parallel auto-journey that would split chapter_complete
+    # from the still-open interrupted row (CHG-015).
+    recoverable = find_recoverable_journey_run(session, run.id)
+    if recoverable is not None:
+        if scene_revision_id is None or recoverable.scene_revision_id in {
+            None,
+            scene_revision_id,
+        }:
+            if scene_revision_id is not None:
+                revision = session.get(BoundaryRevision, scene_revision_id)
+                if revision is not None:
+                    scenes = revision_scenes(session, revision.id)
+                    bind_journey_to_revision(session, recoverable, revision, scenes)
+            return recoverable
+
     # Legacy auto path (no revision bind): may reuse a current succeeded journey.
-    # Explicit revision bind must create/reuse only via client_request_id above —
-    # never steal an older fixture/manual succeeded row for the same or other revision.
     if scene_revision_id is None:
         succeeded = session.scalar(
             select(ReaderJourneyRun)
@@ -260,9 +294,6 @@ def ensure_auto_reader_journey_row(
         )
         if succeeded is not None:
             return succeeded
-        recoverable = find_recoverable_journey_run(session, run.id)
-        if recoverable is not None:
-            return recoverable
 
     if scene_revision_id is not None:
         revision = session.get(BoundaryRevision, scene_revision_id)
@@ -312,10 +343,6 @@ def ensure_auto_reader_journey_row(
                 auto_journey_run_id=journey_run.id,
             )
             return journey_run
-
-    recoverable = find_recoverable_journey_run(session, run.id)
-    if recoverable is not None:
-        return recoverable
 
     _revision, scenes = load_revision_scenes(session, run.id)
     if not scenes:

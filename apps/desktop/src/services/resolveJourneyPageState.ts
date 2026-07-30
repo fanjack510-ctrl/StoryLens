@@ -134,15 +134,7 @@ export function resolveJourneyPageState(input: JourneyPageStateInput): JourneyPa
   const parent = String(input.parentJourneyStatus || "");
   const effective = String(input.effectiveStatus || "");
 
-  // 1. Completed + final artifact — overrides stale failed fields on the same journey
-  if (input.finalArtifactAvailable === true || input.chapterComplete === true) {
-    return "completed";
-  }
-  if (journey === "succeeded" && effective === "completed") {
-    return "completed";
-  }
-
-  // 2. Active — parent/progress can override a stale failed journey GET
+  // 1. Active — parent/progress can override a stale failed journey GET
   if (
     isActiveStatus(journey) ||
     isActiveStatus(progress) ||
@@ -150,6 +142,29 @@ export function resolveJourneyPageState(input: JourneyPageStateInput): JourneyPa
     effective === "journey_running"
   ) {
     return "active";
+  }
+
+  // Bound / selected journey still recoverable. Must win over parent chapter_complete
+  // from a newer sibling auto-journey (CHG-015 Manual Gate recoverable split).
+  const boundRecoverableInterrupted =
+    journey === "scene_profiles_partial" ||
+    progress === "scene_profiles_partial" ||
+    journey === "budget_blocked" ||
+    progress === "budget_blocked" ||
+    input.errorCode === "JOURNEY_INTERRUPTED" ||
+    (JOURNEY_INTERRUPTED.has(journey) && input.retryable === true) ||
+    (JOURNEY_INTERRUPTED.has(progress) && input.retryable === true);
+
+  if (boundRecoverableInterrupted) {
+    return "interrupted";
+  }
+
+  // 2. Completed + final artifact — overrides stale failed fields on the same journey
+  if (input.finalArtifactAvailable === true || input.chapterComplete === true) {
+    return "completed";
+  }
+  if (journey === "succeeded" && effective === "completed") {
+    return "completed";
   }
 
   // 3. Interrupted / recoverable (including retryable failed / JOURNEY_INTERRUPTED)
