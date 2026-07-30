@@ -384,6 +384,17 @@ async def execute_reader_journey(
                 return
             if try_finalize_if_cancel_requested(session, journey_run.analysis_run_id):
                 return
+            from app.services.reader_journey_recovery import claim_journey_worker
+
+            # Durable claim before Provider work (CHG-20260730-013).
+            if journey_run.status in {
+                "starting",
+                "queued",
+                "failed",
+                "scene_profiles_partial",
+            }:
+                claim_journey_worker(session, journey_run)
+                session.commit()
             if is_v2_journey_run(journey_run):
                 await execute_reader_journey_v2(session_factory, gateway, journey_run_id)
                 return

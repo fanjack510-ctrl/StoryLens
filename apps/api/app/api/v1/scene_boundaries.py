@@ -33,7 +33,9 @@ from app.services.scene_boundary_manual_review import (
     get_scene_boundaries_overview_v1,
     parse_partition_json,
     restore_ai_partition_into_draft_v1,
+    revision_scenes,
     save_scene_boundary_draft_v1,
+    scenes_from_scene_rows,
     split_scene_at_paragraph_v1,
 )
 
@@ -257,6 +259,7 @@ async def confirm_scene_boundary(
                 journey_run_id = journey.id
                 journey_status = journey.status
                 if journey.status in {
+                    "starting",
                     "queued",
                     "running",
                     "scene_profiles_running",
@@ -301,6 +304,38 @@ async def confirm_scene_boundary(
                 journey_error_message="阅读旅程任务未能启动。",
             )
         raise _scene_boundary_http_error(exc) from exc
+    confirmed_scene_count = None
+    analysis_run_id = None
+    workflow_state = None
+    client_request_id = None
+    already_started = False
+    if revision is not None:
+        analysis_run_id = revision.analysis_run_id
+        scenes = parse_partition_json(revision.final_boundaries_json)
+        if not scenes:
+            scenes = scenes_from_scene_rows(revision_scenes(session, revision.id))
+        confirmed_scene_count = len(scenes)
+    if journey_run_id is not None:
+        from app.db.models import ReaderJourneyRun
+
+        journey_row = session.get(ReaderJourneyRun, journey_run_id)
+        if journey_row is not None:
+            client_request_id = journey_row.client_request_id
+            if journey_row.status in {
+                "starting",
+                "queued",
+            }:
+                workflow_state = "starting"
+            elif journey_row.status in {
+                "running",
+                "scene_profiles_running",
+                "chapter_synthesis_running",
+            }:
+                workflow_state = "running"
+            else:
+                workflow_state = journey_row.status
+            if already_confirmed and journey_started:
+                already_started = True
     return SceneBoundaryConfirmResponse(
         revision_id=revision.id,
         revision_etag=revision.revision_etag,
@@ -311,6 +346,12 @@ async def confirm_scene_boundary(
         already_confirmed=already_confirmed,
         journey_error_code=journey_error_code,
         journey_error_message=journey_error_message,
+        analysis_run_id=analysis_run_id,
+        confirmed_revision_id=revision.id,
+        confirmed_scene_count=confirmed_scene_count,
+        workflow_state=workflow_state,
+        already_started=bool(already_started and already_confirmed),
+        client_request_id=client_request_id,
     )
 
 

@@ -128,8 +128,37 @@ def _make_lifespan(
             acquire_instance_lock(port=_bind_port(), shell="browser_local_production")
         try:
             create_db()
+            requeue_journey_ids: list[int] = []
             with SessionLocal() as session:
-                mark_interrupted_runs_failed(session)
+                stats = mark_interrupted_runs_failed(session)
+                requeue_journey_ids = list(stats.get("requeue_journey_ids") or [])
+            # CHG-013: re-claim unclaimed starting/queued journeys after restart.
+            if requeue_journey_ids:
+                import asyncio
+
+                from app.model_gateway.registry import get_model_gateway
+                from app.services.reader_journey_pipeline import execute_reader_journey
+
+                gateway = get_model_gateway()
+
+                async def _requeue() -> None:
+                    for journey_id in requeue_journey_ids:
+                        try:
+                            await execute_reader_journey(
+                                SessionLocal, gateway, int(journey_id)
+                            )
+                        except Exception:  # noqa: BLE001
+                            logger.exception(
+                                "startup_requeue_journey_failed journey_run_id=%s",
+                                journey_id,
+                            )
+
+                asyncio.create_task(_requeue())
+                logger.info(
+                    "reader_journey_startup_requeue count=%s ids=%s",
+                    len(requeue_journey_ids),
+                    requeue_journey_ids[:20],
+                )
             log_lab_startup_status(environment=env, lab_enabled=lab_on)
             if private_lab_on:
                 logger.info(

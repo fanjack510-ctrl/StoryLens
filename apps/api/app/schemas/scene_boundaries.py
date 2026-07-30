@@ -80,6 +80,7 @@ class SceneBoundaryConfirmRequest(BaseModel):
     expected_etag: str
     start_journey: bool = False
     journey_options: dict[str, Any] = Field(default_factory=dict)
+    client_request_id: str | None = None
 
 
 class SceneBoundaryConfirmResponse(BaseModel):
@@ -92,6 +93,13 @@ class SceneBoundaryConfirmResponse(BaseModel):
     already_confirmed: bool = False
     journey_error_code: str | None = None
     journey_error_message: str | None = None
+    # CHG-20260730-013 confirm-and-start contract
+    analysis_run_id: int | None = None
+    confirmed_revision_id: int | None = None
+    confirmed_scene_count: int | None = None
+    workflow_state: str | None = None
+    already_started: bool = False
+    client_request_id: str | None = None
 
 
 class SceneBoundaryDiffResponse(BaseModel):

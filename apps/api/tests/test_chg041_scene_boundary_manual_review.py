@@ -750,7 +750,7 @@ def test_smoke_fake_stubs_scene_analysis_on_edited_rematerialize(testing_session
     assert err is None
     assert journey is not None
     assert journey.started_at is not None
-    assert journey.status == "queued"
+    assert journey.status in {"queued", "starting"}
     rematerialized = revision_scenes(testing_session, revision.id)
     from app.services.reader_journey_progress import require_completed_scene_analysis
 

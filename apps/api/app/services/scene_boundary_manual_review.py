@@ -818,7 +818,10 @@ async def confirm_scene_revision_and_start_journey_v1(
 
     scenes = revision_scenes(session, revision.id)
     bind_journey_to_revision(session, journey, revision, scenes)
+    from app.services.reader_journey_recovery import mark_journey_startup_intent
+
     if journey.status not in {
+        "starting",
         "queued",
         "running",
         "scene_profiles_running",
@@ -828,12 +831,16 @@ async def confirm_scene_revision_and_start_journey_v1(
         if journey.status == "succeeded" and journey.scene_revision_id == revision.id:
             session.commit()
             return revision, journey, already_confirmed, None
-        journey.status = "queued"
-        journey.current_stage = None
+        journey.status = "starting"
+        journey.current_stage = "starting"
         journey.root_error_code = None
         journey.root_error_message = None
         journey.failed_stage = None
-    if journey.started_at is None and journey.status == "queued":
+    if journey.status in {"queued", "starting"}:
+        mark_journey_startup_intent(
+            journey, client_request_id=journey.client_request_id
+        )
+    if journey.started_at is None and journey.status in {"queued", "starting"}:
         journey.started_at = _now()
     session.commit()
 

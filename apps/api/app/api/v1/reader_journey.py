@@ -513,19 +513,22 @@ async def resume_reader_journey(
     # Orphan fake-running (no heartbeat / unfinished invocation) → recoverable first.
     from app.services.reader_journey_recovery import (
         JOURNEY_ACTIVE_WORKER_STATUSES,
+        JOURNEY_CLAIMED_WORKER_STATUSES,
+        JOURNEY_STARTING_STATUSES,
+        mark_journey_startup_intent,
         reclaim_stale_journey_if_needed,
     )
 
     if journey_run.status in JOURNEY_ACTIVE_WORKER_STATUSES:
         reclaim_stale_journey_if_needed(session, journey_run)
         session.refresh(journey_run)
-    if journey_run.status in {
-        "scene_profiles_running",
-        "chapter_synthesis_running",
-        "running",
-        "summary_running",
-        "phase_analysis_running",
-    }:
+    # CHG-013: idempotent resume — do not create a new run; re-arm same journey.
+    if journey_run.status in JOURNEY_STARTING_STATUSES:
+        background.add_task(execute_reader_journey, session_factory, gateway, journey_run.id)
+        return ReaderJourneyRunAccepted(
+            journey_run_id=journey_run.id, status=journey_run.status
+        )
+    if journey_run.status in JOURNEY_CLAIMED_WORKER_STATUSES:
         raise error(409, "READER_JOURNEY_ALREADY_RUNNING", "读者旅程正在运行")
     progress = reader_journey_progress(session, journey_run)
     if progress.blind_resume_blocked:
@@ -578,18 +581,11 @@ async def resume_reader_journey(
         journey_run.scene_prompt_version = SCENE_PROMPT_VERSION
         journey_run.scene_contract_version = SCENE_CONTRACT_VERSION
         journey_run.chapter_contract_version = CHAPTER_CONTRACT_VERSION
-    journey_run.status = "queued"
-    journey_run.current_stage = None
     journey_run.cloud_consent = request.cloud_consent
     journey_run.planner_version = PLANNER_VERSION
-    journey_run.retryable = False
-    journey_run.root_error_code = None
-    journey_run.root_error_message = None
-    journey_run.failed_stage = None
-    journey_run.failed_scene_id = None
-    journey_run.failed_scene_ordinal = None
-    journey_run.failed_invocation_id = None
-    journey_run.completed_at = None
+    mark_journey_startup_intent(
+        journey_run, client_request_id=journey_run.client_request_id
+    )
     session.commit()
     background.add_task(execute_reader_journey, session_factory, gateway, journey_run.id)
     return ReaderJourneyRunAccepted(journey_run_id=journey_run.id, status=journey_run.status)

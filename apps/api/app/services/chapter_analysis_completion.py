@@ -96,12 +96,9 @@ def effective_chapter_status(session: Session, run: AnalysisRun) -> str:
         return run.status
     if run.status in {"awaiting_boundary_review", "boundary_review_required"}:
         return "awaiting_boundary_confirmation"
-    marker = _marker(run)
-    if marker.get("chapter_pipeline") == "awaiting_scene_boundary_confirmation":
-        return "awaiting_scene_boundary_confirmation"
-    if run.status in {"scene_analysis_running", "awaiting_provider_recovery"}:
-        return "scene_analysis"
+    # CHG-013: live journey must win over a stale awaiting-confirmation marker.
     if journey is not None and journey.status in {
+        "starting",
         "queued",
         "running",
         "scene_profiles_running",
@@ -115,6 +112,11 @@ def effective_chapter_status(session: Session, run: AnalysisRun) -> str:
         "aborted_by_limit",
     }:
         return "journey_failed"
+    marker = _marker(run)
+    if marker.get("chapter_pipeline") == "awaiting_scene_boundary_confirmation":
+        return "awaiting_scene_boundary_confirmation"
+    if run.status in {"scene_analysis_running", "awaiting_provider_recovery"}:
+        return "scene_analysis"
     if scenes_done and (journey is None or journey.status != "succeeded"):
         marker = _marker(run)
         if marker.get("chapter_pipeline") == "awaiting_scene_boundary_confirmation":
@@ -275,8 +277,8 @@ def ensure_auto_reader_journey_row(
                 analysis_run_id=run.id,
                 book_id=chapter.book_id if chapter else 0,
                 chapter_id=int(run.subject_id),
-                status="queued",
-                current_stage=None,
+                status="starting",
+                current_stage="starting",
                 provider_name=run.provider,
                 model_name=run.model,
                 scene_prompt_version=version_fields["scene_prompt_version"],
