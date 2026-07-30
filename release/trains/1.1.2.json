@@ -4,7 +4,7 @@
   "type": "PATCH",
   "base_version": "1.1.1",
   "target_version": "1.1.2",
-  "status": "building-rc5-with-015-017-018",
+  "status": "rc5-built-awaiting-installed-acceptance",
   "public_integration_branch": "hotfix/1.1.2",
   "private_integration_branch": "hotfix/1.1.2",
   "created_at": "2026-07-28T06:40:00Z",
@@ -50,12 +50,12 @@
     "CHG-20260730-019",
     "CHG-20260730-016"
   ],
-  "notes": "CHG-015/017/018 verified; CHG-019 rebuilding 1.1.2-rc.5",
-  "updated_at": "2026-07-30T12:42:37Z",
+  "notes": "CHG-019 rebuilt RC.5 with verified 015/017/018; auto isolated acceptance PASS",
+  "updated_at": "2026-07-30T12:55:20Z",
   "public_integration_head_at_ready": "81a7d72afa9f572be1ce391b0e8c737a97da0ba7",
   "rc_version": "1.1.2-rc.5",
-  "rc_installer": "dist/release/StoryLens_1.1.2-rc.4_x64-setup.exe",
-  "rc_installed_acceptance": "pending",
+  "rc_installer": "dist/release/StoryLens_1.1.2-rc.5_x64-setup.exe",
+  "rc_installed_acceptance": "AUTO_PASS_AWAITING_MANUAL",
   "prior_rc_status": "rc4-built-awaiting-installed-acceptance",
-  "public_build_source_head": "8073fdf947538c296cca12189b4051b34e15d63a"
+  "public_build_source_head": "994ab6576a2fb094c47aebe085bf78e9a3a226d4"
 }
