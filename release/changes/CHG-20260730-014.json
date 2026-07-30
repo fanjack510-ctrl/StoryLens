@@ -41,6 +41,12 @@
       "message": "docs(release): record public final HEAD for RC.4",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "a0902c340db954656ac29db8121e7e2117e38226",
+      "message": "docs(release): attach RC.4 final HEAD commits to CHG-014",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
