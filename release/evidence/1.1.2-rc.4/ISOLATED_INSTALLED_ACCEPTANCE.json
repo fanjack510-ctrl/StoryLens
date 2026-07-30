@@ -1,0 +1,33 @@
+{
+  "health": true,
+  "health_body": {
+    "status": "ok",
+    "service": "storylens-api",
+    "database": "ok",
+    "default_provider": "none"
+  },
+  "isolated_db_exists": true,
+  "isolated_db_path": "C:\\Users\\msi\\AppData\\Local\\Temp\\storylens-112-rc4-installed-acceptance\\AppData\\StoryLens\\database\\storylens.db",
+  "installer_readable": true,
+  "installer_size": 42760309,
+  "sidecar_sha256": "AF51B8FBD386BB967E79DBEE76BCB77E2AE934EBA956F2F2DFCCE6E46CD474F4",
+  "desktop_sha256": "A15BC720B187D0F02AB53E96A7D8E9EFFD8419E8717A66A2FEE2106A54FC6E82",
+  "installer_sha256": "5342B02F97B1A865DA42F95A51F1E28950B53FE1934CD6E0438AE7362443E7F6",
+  "fake_provider": true,
+  "real_provider_enabled": false,
+  "api_restart_health": true,
+  "formal_db_writes": 0,
+  "formal_db_before": {
+    "exists": true,
+    "sha": "D95C0B5C7D83199D4235B94728D0751096BC6D1A1F324CFE7EDA17AB7C4C2660",
+    "mtime": 1785335778.670209,
+    "size": 40783872
+  },
+  "formal_db_after": {
+    "exists": true,
+    "sha": "D95C0B5C7D83199D4235B94728D0751096BC6D1A1F324CFE7EDA17AB7C4C2660",
+    "mtime": 1785335778.670209,
+    "size": 40783872
+  },
+  "ok": true
+}

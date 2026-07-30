@@ -1,0 +1,40 @@
+{
+  "delay_4s": {
+    "delay_seconds": 4.0,
+    "journey_id": 1,
+    "status_before": "starting",
+    "status_after": "starting",
+    "root_error_code": null,
+    "interrupted_journeys": 0,
+    "analysis_run_id": 1,
+    "revision_id": 2,
+    "already_started": false,
+    "shown_as_interrupted": false,
+    "pass": true
+  },
+  "delay_10s": {
+    "delay_seconds": 10.0,
+    "journey_id": 1,
+    "status_before": "starting",
+    "status_after": "starting",
+    "root_error_code": null,
+    "interrupted_journeys": 0,
+    "analysis_run_id": 1,
+    "revision_id": 2,
+    "already_started": false,
+    "shown_as_interrupted": false,
+    "pass": true
+  },
+  "idempotency": {
+    "confirmed_revision_count": 1,
+    "journey_run_count": 1,
+    "analysis_run_count": 1,
+    "reservation_count": 0,
+    "second_already_started": true,
+    "same_journey": true,
+    "pass": true
+  },
+  "startup_shown_as_interrupted": false,
+  "pass": true,
+  "real_provider_calls": 0
+}

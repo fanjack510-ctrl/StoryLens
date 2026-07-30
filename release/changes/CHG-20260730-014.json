@@ -3,7 +3,7 @@
   "title": "Integrate verified confirm-start stability fix and build StoryLens 1.1.2-rc.4",
   "type": "fix",
   "base_version": "1.1.1",
-  "status": "implemented",
+  "status": "tested",
   "include_in_next_release": true,
   "commits": [
     {
@@ -26,8 +26,20 @@
     "RC.4 installer archived with matching SHA-256",
     "Confirm delay / Continue / Provider / Cancel gates pass under Fake Provider"
   ],
-  "tests": [],
-  "verification_evidence": [],
+  "tests": [
+    "apps/api/tests/test_confirm_start_journey_race_chg013.py",
+    "apps/api/tests/test_workflow_consistency_chg011.py",
+    "apps/api/tests/test_provider_health_consistency_chg009.py",
+    "apps/api/tests/test_task_cancellation_chg006.py"
+  ],
+  "verification_evidence": [
+    "release/evidence/1.1.2-rc.4/ISOLATED_INSTALLED_ACCEPTANCE.json",
+    "release/evidence/1.1.2-rc.4/CONFIRM_DELAY_GATE.json",
+    "release/evidence/1.1.2-rc.4/CWD_INDEPENDENCE.json",
+    "release/evidence/1.1.2-rc.4/INSTALLER_AUDIT.json",
+    "release/evidence/1.1.2-rc.4/FINAL_REPORT.md",
+    "release/evidence/hotfix/1.1.2/CHG-20260730-014/windows-build-log-1.1.2-rc.4.md"
+  ],
   "data_compatibility": {
     "database_changed": false,
     "migration_required": false,
@@ -43,7 +55,7 @@
   "blocker_level": "P0",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-30T04:02:54Z",
-  "updated_at": "2026-07-30T04:13:41Z",
+  "updated_at": "2026-07-30T04:36:27Z",
   "issue_id": "MG-CHG-20260730-013",
   "target_version": "1.1.2",
   "public_branch": "hotfix/1.1.2",

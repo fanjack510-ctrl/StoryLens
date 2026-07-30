@@ -1,0 +1,10 @@
+{
+  "config_hash_identity": true,
+  "cwd_independence": true,
+  "cwd_cases": "6/6",
+  "production_like": true,
+  "security": "PASS",
+  "installer": "PASS",
+  "real_provider_calls": 0,
+  "formal_database_writes": 0
+}
