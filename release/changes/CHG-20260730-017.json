@@ -29,6 +29,12 @@
       "message": "docs(hotfix): prepare CHG-017 isolated manual UI fixtures",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "d57740c642e4a3088f79c0d667f5b45a2ccb7653",
+      "message": "docs(release): attach CHG-017 MG fixture commit",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -69,5 +75,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-30T09:25:11Z",
-  "updated_at": "2026-07-30T11:02:37Z"
+  "updated_at": "2026-07-30T11:02:39Z"
 }
