@@ -1,0 +1,24 @@
+{
+  "exe_sha256": "b38e2c509d598c142b015813c1f4e22f359fd626c7e0ac14d9c280710032d0ea",
+  "rows": [
+    {
+      "config": "scene_role_targets.json",
+      "source_sha256": "ee7dd8b88f8386d060e3f21c3d45864a6c26273d4d7f90f3c542390107f40eb7",
+      "product_sha256": "ee7dd8b88f8386d060e3f21c3d45864a6c26273d4d7f90f3c542390107f40eb7",
+      "match": true,
+      "location": "D:\\StoryLens-Local-Evidence\\1.1.2-rc.5-20260730\\extracted_configs\\scene_role_targets.json",
+      "schema_ok": true,
+      "json_ok": true
+    },
+    {
+      "config": "reader_journey_formulas_v2.json",
+      "source_sha256": "ceb1ad35e5faa4fbde1522a978bc41408c47f686f7ffd6f3364534f89efb67e0",
+      "product_sha256": "ceb1ad35e5faa4fbde1522a978bc41408c47f686f7ffd6f3364534f89efb67e0",
+      "match": true,
+      "location": "D:\\StoryLens-Local-Evidence\\1.1.2-rc.5-20260730\\extracted_configs\\reader_journey_formulas_v2.json",
+      "schema_ok": true,
+      "json_ok": true
+    }
+  ],
+  "config_hash_identity": true
+}
