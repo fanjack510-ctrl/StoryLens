@@ -5,7 +5,14 @@
   "base_version": "1.1.2",
   "status": "registered",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "a1757748ffdb8e8693b7554c399d71bb9332ad9d",
+      "message": "docs(release): register CHG-019 for 1.1.2-rc.5 rebuild",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "release",
     "api",
@@ -34,9 +41,9 @@
     "breaking_change": false
   },
   "blocker_level": null,
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-30T12:42:36Z",
-  "updated_at": "2026-07-30T12:42:37Z",
+  "updated_at": "2026-07-30T12:42:49Z",
   "target_version": "1.1.2",
   "public_branch": "hotfix/1.1.2",
   "rc_version": "1.1.2-rc.5"
