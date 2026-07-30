@@ -1,39 +1,53 @@
 # CHG-20260730-017 Manual UI Environment
 
-## Live MG stack (this machine)
+## Live stack
 
 | Item | Value |
 |------|-------|
-| DATABASE | `%TEMP%\storylens-mg-chg017\storylens.db` (`sqlite:///C:/Users/msi/AppData/Local/Temp/storylens-mg-chg017/storylens.db`) |
+| DATABASE | `C:\Users\msi\AppData\Local\Temp\storylens-mg-chg017\storylens.db` |
 | API URL | http://127.0.0.1:18080 |
 | FRONTEND URL | http://127.0.0.1:1420 |
-| Health | `GET /health` → ok (temp DB) |
-| Provider | Fake / no formal AppData writes |
-| Formal DB writes | 0 |
+| Provider | Fake |
+| REAL PROVIDER CALLS | 0 |
+| FORMAL DATABASE WRITES | 0 |
 
-## Start commands used
+## Start
 
 ```powershell
+cd apps/api
+$env:PYTHONPATH = (Get-Location).Path
+D:\Dstorylens\.venv\Scripts\python.exe scripts_seed_chg017_mg.py
+
 $mgRoot = Join-Path $env:TEMP "storylens-mg-chg017"
 $db = Join-Path $mgRoot "storylens.db"
 $env:STORYLENS_DATABASE_URL = "sqlite:///$($db -replace '\\','/')"
 $env:STORYLENS_PROVIDER = "fake"
 $env:STORYLENS_ALLOW_FAKE_PROVIDER = "1"
-cd apps/api
 D:\Dstorylens\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 18080 --ws none
 
-cd apps/desktop
+# Post-start patch: restore Fixture A scene_analysis_running; keep Fixture C journey starting
+D:\Dstorylens\.venv\Scripts\python.exe -c "import sqlite3; db=r'$db'; c=sqlite3.connect(db); c.execute(\"update analysis_runs set status='scene_analysis_running', error_code=null, error_message=null, failed_stage=null, completed_at=null, progress_current=1, progress_total=3 where id=1\"); c.execute(\"update reader_journey_runs set status='starting', current_stage='starting', root_error_code='WAITING_SCENE_ANALYSIS', root_error_message='waiting scene analysis', retryable=1, failure_details_json='{}', completed_at=null where id=1\"); c.execute(\"update analysis_runs set status='succeeded', progress_current=3, progress_total=3 where id=3\"); c.execute(\"update reader_journey_runs set status='starting', current_stage='starting', root_error_code=null, root_error_message=null, retryable=0, failure_details_json='{}', completed_at=null where analysis_run_id=3\"); c.commit()"
+
+cd ../desktop
+$env:VITE_API_BASE_URL = "http://127.0.0.1:18080"
 npx vite --host 127.0.0.1 --port 1420
 ```
 
-## Acceptance steps
-1. Import/start chapter analysis → confirm scenes → enter Scene Analysis with progress `< N/N`
-2. Top nav: 正文阅读 · 查看分析进度 · 更多 — **no** 阅读旅程 / 确认场景 / 场景分析 / 查看分析结果
-3. Open Journey deep link with `tab=reader-journey` → redirects to progress
-4. After Scene `N/N` and journey starting → 阅读旅程 appears
+## Direct URLs
 
-## Chapter URLs
-Fill after creating fixture chapter in this temp DB:
+**SCENE ANALYSIS RUNNING URL**  
+http://127.0.0.1:1420/books/1?chapter=1&analysisRun=1&view=progress  
 
-- SCENE ANALYSIS URL: http://127.0.0.1:1420/books/{bookId}?chapter={chapterId}&analysisRun={runId}&view=progress
-- JOURNEY STARTING URL: same shell after Scene N/N (`journey_starting` / `journey_running`)
+Journey deep link (expect redirect to progress):  
+http://127.0.0.1:1420/books/1?chapter=1&analysisRun=1&view=result&tab=reader-journey&journeyRun=1  
+
+**AWAITING CONFIRMATION URL**  
+http://127.0.0.1:1420/books/2?chapter=2&analysisRun=2&view=scene-boundary-review  
+
+Journey deep link (expect redirect to confirm):  
+http://127.0.0.1:1420/books/2?chapter=2&analysisRun=2&view=result&tab=reader-journey  
+
+**JOURNEY RUNNING URL**  
+http://127.0.0.1:1420/books/3?chapter=3&analysisRun=3&view=progress&journeyRun=2  
+
+Fixtures: `MANUAL_FIXTURES.json`

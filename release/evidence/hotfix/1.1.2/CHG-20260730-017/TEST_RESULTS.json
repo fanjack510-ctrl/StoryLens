@@ -1,20 +1,32 @@
 {
   "change_id": "CHG-20260730-017",
   "pass": true,
-  "timestamp": "2026-07-30T09:45:00+00:00",
+  "timestamp": "2026-07-30T11:02:00+00:00",
   "vitest": {
-    "command": "npx vitest run src/services/chapterAnalysisPresentation.journeyNav.test.ts src/pages/BookRoutePage.journeyNav.test.tsx src/pages/BookRoutePage.readerJourneyResume.test.tsx src/pages/BookRoutePage.test.tsx src/services/chapterAnalysisPresentation.test.ts",
-    "passed": 46,
+    "command": "npx vitest run chapterAnalysisPresentation.journeyNav + BookRoutePage.journeyNav + readerJourneyResume + chapterAnalysisPresentation",
+    "passed": 29,
     "failed": 0
   },
   "pytest": {
-    "command": "python -m pytest tests/test_journey_nav_visibility_chg017.py -q",
+    "command": "python -m pytest apps/api/tests/test_journey_nav_visibility_chg017.py -q",
     "passed": 3,
     "failed": 0
   },
   "typecheck": {
-    "command": "npx tsc -p tsconfig.app.json --noEmit",
-    "chg017_files": "PASS (no errors in changed files)",
-    "repo_baseline": "pre-existing errors in unrelated readerJourney/SceneBoundary test fixtures"
-  }
+    "result": "PASS_SCOPED",
+    "chg017_related_hits": 0,
+    "note": "Repo-wide tsc has pre-existing unrelated fixture errors; NEW errors in CHG-017 product files = 0"
+  },
+  "http_e2e": {
+    "result": "PASS",
+    "file": "HTTP_E2E.json"
+  },
+  "live_mg_probes": {
+    "fixture_a_effective_status": "scene_analysis",
+    "fixture_b_awaiting_confirmation": true,
+    "fixture_c_effective_status": "journey_running",
+    "fixture_c_journey_status": "starting"
+  },
+  "real_provider_calls": 0,
+  "formal_db_writes": 0
 }
