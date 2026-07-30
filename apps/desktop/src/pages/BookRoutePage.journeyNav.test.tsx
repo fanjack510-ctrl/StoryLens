@@ -242,5 +242,133 @@ describe("CHG-017 BookRoutePage journey nav", () => {
     await waitFor(() => {
       expect(screen.getByTestId("workspace-tab-journey")).toBeInTheDocument();
     });
+    expect(screen.getByTestId("shell-view-analysis-progress")).toHaveTextContent(
+      "查看分析进度",
+    );
+    expect(screen.getByTestId("workspace-tab-journey")).toHaveAttribute(
+      "data-nav-primary",
+      "false",
+    );
+  });
+
+  it("journey_succeeded on progress: 阅读旅程 primary, progress secondary, open journey CTA", async () => {
+    vi.mocked(analysisApi.run).mockResolvedValue({
+      id: 77,
+      subject_id: "2",
+      provider: "fake",
+      model: "fake",
+      status: "succeeded",
+      progress_current: 3,
+      progress_total: 3,
+      execution_mode: "cloud",
+      cloud_consent: true,
+      sends_content_to_cloud: true,
+      retryable: false,
+      created_at: "2026-01-01T00:00:00Z",
+      completed_at: "2026-01-01T01:00:00Z",
+      chapter_complete: true,
+      effective_status: "complete",
+      journey_status: "succeeded",
+      journey_result_available: true,
+      completed_scene_count: 3,
+      total_scene_count: 3,
+    } as any);
+    vi.mocked(analysisApi.readerJourney).mockResolvedValue({
+      status: "succeeded",
+      journey_run_id: 12,
+      visualization: { scenes: [] },
+    } as any);
+    vi.mocked(analysisApi.readerJourneyProgress).mockResolvedValue({
+      status: "succeeded",
+      journey_run_id: 12,
+      completed_scene_count: 3,
+      total_scene_count: 3,
+    } as any);
+
+    renderBook("/books/1?chapter=2&analysisRun=77&view=progress&journeyRun=12");
+    await waitFor(() => {
+      expect(screen.getByTestId("book-chapter-shell")).toHaveAttribute(
+        "data-journey-nav-primary",
+        "true",
+      );
+    });
+    expect(screen.getByTestId("workspace-tab-journey")).toHaveAttribute(
+      "data-nav-primary",
+      "true",
+    );
+    expect(screen.getByTestId("shell-view-analysis-progress-secondary")).toHaveTextContent(
+      "查看分析进度",
+    );
+    expect(screen.queryByTestId("shell-view-analysis-progress")).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByTestId("chapter-analysis-success-title")).toHaveTextContent(
+        "阅读旅程已生成",
+      );
+    });
+    expect(screen.getByTestId("chapter-analysis-open-journey")).toHaveTextContent(
+      "查看阅读旅程",
+    );
+    expect(screen.getByTestId("chapter-analysis-open-journey").className).toContain("primary");
+    const toolbarPrimaries = screen
+      .getByTestId("book-shell-toolbar")
+      .querySelectorAll("button.primary");
+    expect(toolbarPrimaries.length).toBe(1);
+    expect(toolbarPrimaries[0]).toHaveAttribute("data-testid", "workspace-tab-journey");
+  });
+
+  it("journey_succeeded on reading journey: journey primary, progress secondary only", async () => {
+    vi.mocked(analysisApi.run).mockResolvedValue({
+      id: 77,
+      subject_id: "2",
+      provider: "fake",
+      model: "fake",
+      status: "succeeded",
+      progress_current: 3,
+      progress_total: 3,
+      execution_mode: "cloud",
+      cloud_consent: true,
+      sends_content_to_cloud: true,
+      retryable: false,
+      created_at: "2026-01-01T00:00:00Z",
+      completed_at: "2026-01-01T01:00:00Z",
+      chapter_complete: true,
+      effective_status: "complete",
+      journey_status: "succeeded",
+      journey_result_available: true,
+      completed_scene_count: 3,
+      total_scene_count: 3,
+    } as any);
+    vi.mocked(analysisApi.readerJourney).mockResolvedValue({
+      status: "succeeded",
+      journey_run_id: 12,
+      visualization: { scenes: [] },
+    } as any);
+    vi.mocked(analysisApi.readerJourneyById).mockResolvedValue({
+      status: "succeeded",
+      journey_run_id: 12,
+      visualization: { scenes: [] },
+    } as any);
+    vi.mocked(analysisApi.readerJourneyProgress).mockResolvedValue({
+      status: "succeeded",
+      journey_run_id: 12,
+      completed_scene_count: 3,
+      total_scene_count: 3,
+    } as any);
+
+    renderBook(
+      "/books/1?chapter=2&analysisRun=77&view=result&tab=reader-journey&journeyRun=12",
+    );
+    await waitFor(() => {
+      expect(screen.getByTestId("workspace-tab-journey")).toHaveAttribute(
+        "data-nav-primary",
+        "true",
+      );
+    });
+    expect(screen.getByTestId("shell-view-analysis-progress-secondary")).toBeInTheDocument();
+    expect(screen.queryByTestId("shell-view-analysis-progress")).not.toBeInTheDocument();
+    const toolbarPrimaries = screen
+      .getByTestId("book-shell-toolbar")
+      .querySelectorAll("button.primary");
+    expect(toolbarPrimaries.length).toBe(1);
   });
 });

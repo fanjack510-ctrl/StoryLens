@@ -13,6 +13,11 @@ type Props = {
   showJourneyTab?: boolean;
   /** CHG-011: never show analysis tab in ordinary nav when false. */
   showAnalysisTab?: boolean;
+  /**
+   * CHG-017: after journey_succeeded, 阅读旅程 owns the single green primary
+   * in the top nav (查看分析进度 must stay secondary).
+   */
+  journeyPrimary?: boolean;
 };
 
 /**
@@ -27,8 +32,15 @@ export function WorkspaceViewSwitcher({
   journeyInProgress = false,
   showJourneyTab = true,
   showAnalysisTab = false,
+  journeyPrimary = false,
 }: Props) {
   const journeyEnabled = showJourneyTab && (journeyAvailable || journeyInProgress);
+  const journeyClass = [
+    active === "journey" ? "active" : "",
+    journeyPrimary ? "primary" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
   return (
     <div className="result-view-switcher" data-testid="workspace-view-switcher" role="tablist">
       <button
@@ -58,8 +70,9 @@ export function WorkspaceViewSwitcher({
           type="button"
           role="tab"
           aria-selected={active === "journey"}
-          className={active === "journey" ? "active" : ""}
+          className={journeyClass}
           data-testid="workspace-tab-journey"
+          data-nav-primary={journeyPrimary ? "true" : "false"}
           disabled={!journeyEnabled}
           onClick={() => onChange("journey")}
         >

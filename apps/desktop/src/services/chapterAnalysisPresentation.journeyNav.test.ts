@@ -154,6 +154,8 @@ describe("CHG-017 journey navigation visibility", () => {
     expect(p.workflow_state).toBe("journey_succeeded");
     expect(p.show_journey_nav).toBe(true);
     expect(p.show_results_nav).toBe(true);
+    expect(p.status_title).toBe("阅读旅程已生成");
+    expect(p.show_progress_nav).toBe(true);
   });
 
   it("historical journey does not force journey nav during scene analysis", () => {

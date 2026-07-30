@@ -59,7 +59,8 @@
   "tests": [
     "apps/desktop/src/services/chapterAnalysisPresentation.journeyNav.test.ts",
     "apps/desktop/src/pages/BookRoutePage.journeyNav.test.tsx",
-    "apps/api/tests/test_journey_nav_visibility_chg017.py"
+    "apps/api/tests/test_journey_nav_visibility_chg017.py",
+    "apps/desktop/src/services/chapterAnalysisPresentation.completedJourneyCta.test.ts"
   ],
   "verification_evidence": [
     "release/evidence/hotfix/1.1.2/CHG-20260730-017/TEST_RESULTS.json",
@@ -81,5 +82,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-30T09:25:11Z",
-  "updated_at": "2026-07-30T11:02:59Z"
+  "updated_at": "2026-07-30T11:20:00Z"
 }

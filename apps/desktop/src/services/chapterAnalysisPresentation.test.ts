@@ -89,7 +89,7 @@ describe("buildChapterAnalysisPresentationV1", () => {
     expect(presentation.workflow_state).toBe("journey_succeeded");
     expect(presentation.primary_action).toBe("view_results");
     expect(presentation.can_resume).toBe(false);
-    expect(presentation.status_title).toBe("阅读旅程已完成");
+    expect(presentation.status_title).toBe("阅读旅程已生成");
   });
 
   it("awaiting hides journey nav", () => {

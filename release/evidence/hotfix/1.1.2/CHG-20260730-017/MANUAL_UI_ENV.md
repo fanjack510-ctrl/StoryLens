@@ -35,19 +35,35 @@ npx vite --host 127.0.0.1 --port 1420
 
 ## Direct URLs
 
-**SCENE ANALYSIS RUNNING URL**  
-http://127.0.0.1:1420/books/1?chapter=1&analysisRun=1&view=progress  
+**SCENE ANALYSIS RUNNING URL**
+http://127.0.0.1:1420/books/1?chapter=1&analysisRun=1&view=progress
 
-Journey deep link (expect redirect to progress):  
-http://127.0.0.1:1420/books/1?chapter=1&analysisRun=1&view=result&tab=reader-journey&journeyRun=1  
+Journey deep link (expect redirect to progress):
+http://127.0.0.1:1420/books/1?chapter=1&analysisRun=1&view=result&tab=reader-journey&journeyRun=1
 
-**AWAITING CONFIRMATION URL**  
-http://127.0.0.1:1420/books/2?chapter=2&analysisRun=2&view=scene-boundary-review  
+**AWAITING CONFIRMATION URL**
+http://127.0.0.1:1420/books/2?chapter=2&analysisRun=2&view=scene-boundary-review
 
-Journey deep link (expect redirect to confirm):  
-http://127.0.0.1:1420/books/2?chapter=2&analysisRun=2&view=result&tab=reader-journey  
+Journey deep link (expect redirect to confirm):
+http://127.0.0.1:1420/books/2?chapter=2&analysisRun=2&view=result&tab=reader-journey
 
-**JOURNEY RUNNING URL**  
-http://127.0.0.1:1420/books/3?chapter=3&analysisRun=3&view=progress&journeyRun=2  
+**JOURNEY RUNNING URL**
+http://127.0.0.1:1420/books/3?chapter=3&analysisRun=3&view=progress&journeyRun=2
+
+**JOURNEY SUCCEEDED PROGRESS URL** (Fixture D)
+http://127.0.0.1:1420/books/4?chapter=4&analysisRun=4&view=progress&journeyRun=3
+
+Expect: 「阅读旅程已生成」; toolbar 「阅读旅程」green primary; 「查看分析进度」secondary; panel CTA 「查看阅读旅程」.
+
+**JOURNEY SUCCEEDED RESULT URL** (Fixture D)
+http://127.0.0.1:1420/books/4?chapter=4&analysisRun=4&view=result&tab=reader-journey&journeyRun=3
+
+Expect: 「阅读旅程」green selected; 「查看分析进度」secondary; no dual green primary in toolbar.
 
 Fixtures: `MANUAL_FIXTURES.json`
+
+## Manual gate note
+
+MG-017 Completed Journey CTA amendment is ready for acceptance.
+Do **not** mark CHG-017 `verified` until MG PASS.
+Do **not** build RC.5 / create CHG-019 from this gate.

@@ -41,9 +41,12 @@ from app.db.models import (  # noqa: E402
     AnalysisRun,
     Book,
     Chapter,
+    ChapterReaderJourneySummary,
     Paragraph,
+    ReaderJourneyPhase,
     ReaderJourneyRun,
     Scene,
+    SceneReaderJourneyProfile,
 )
 from app.db.session import create_db, get_session_factory  # noqa: E402
 from app.services.chapter_analysis_completion import (  # noqa: E402
@@ -319,6 +322,133 @@ async def _seed_fixture_c(session):
     }
 
 
+async def _seed_fixture_d(session):
+    """Scenes complete; journey succeeded with result rows (Fixture D)."""
+    book, chapter, paragraphs, run, scenes = _seed_book(
+        session,
+        title="CHG017 Fixture D Journey Succeeded",
+        source_hash="d" * 64,
+        book_code="B0D17",
+        input_hash="4" * 64,
+        paragraph_count=12,
+        scene_count=3,
+    )
+    _attach_scene_analysis(session, run, scenes)
+    draft = create_or_get_scene_boundary_draft_v1(session, chapter.id)
+    session.commit()
+    session.refresh(draft)
+    draft = _shrink_draft(session, draft, paragraphs, scene_count=3)
+    session.commit()
+    session.refresh(draft)
+    revision, journey, _, _ = await confirm_scene_revision_and_start_journey_v1(
+        session,
+        draft.id,
+        expected_etag=draft.revision_etag,
+        start_journey=True,
+    )
+    session.commit()
+    session.refresh(run)
+    assert journey is not None
+    if journey.root_error_code == "WAITING_SCENE_ANALYSIS":
+        journey.root_error_code = None
+        journey.root_error_message = None
+
+    from app.services.scene_boundary_manual_review import revision_scenes
+
+    rev_scenes = revision_scenes(session, revision.id)
+    included_ids = [int(s.id) for s in rev_scenes]
+    journey.status = "succeeded"
+    journey.current_stage = "succeeded"
+    journey.result_status = "current"
+    journey.completed_scene_count = len(rev_scenes)
+    journey.total_scene_count = len(rev_scenes)
+    journey.remaining_scene_count = 0
+    journey.included_scene_ids_json = json.dumps(included_ids)
+    journey.completed_scene_ids_json = json.dumps(included_ids)
+    journey.completed_at = datetime.now(timezone.utc)
+    session.flush()
+
+    for ordinal, scene in enumerate(rev_scenes, start=1):
+        profile_payload = {
+            "scene_id": scene.id,
+            "scene_ordinal": ordinal,
+            "scene_value_summary": f"Fixture D scene {ordinal}",
+            "dominant_emotion": "好奇",
+            "curiosity_score": 70,
+            "tension_score": 55,
+            "payoff_score": 60,
+            "hook_score": 65,
+            "information_gain_score": 50,
+            "emotional_resonance_score": 48,
+            "cognitive_load_score": 40,
+            "dropoff_risk_score": 30,
+            "confidence": 0.9,
+        }
+        session.add(
+            SceneReaderJourneyProfile(
+                reader_journey_run_id=journey.id,
+                scene_id=scene.id,
+                scene_ordinal=ordinal,
+                scene_value_summary=profile_payload["scene_value_summary"],
+                dominant_emotion="好奇",
+                curiosity_score=70,
+                tension_score=55,
+                payoff_score=60,
+                hook_score=65,
+                information_gain_score=50,
+                emotional_resonance_score=48,
+                cognitive_load_score=40,
+                dropoff_risk_score=30,
+                engagement_score=68,
+                confidence=0.9,
+                payload_json=json.dumps(profile_payload, ensure_ascii=False),
+                validation_status="valid",
+            )
+        )
+    session.add(
+        ReaderJourneyPhase(
+            reader_journey_run_id=journey.id,
+            ordinal=1,
+            title="开篇牵引",
+            start_scene_ordinal=1,
+            end_scene_ordinal=max(1, len(rev_scenes)),
+            primary_reader_question="接下来会发生什么",
+            dominant_emotion="好奇",
+            reading_payoff="建立期待",
+            continuation_motivation="继续阅读",
+            summary="Fixture D phase",
+            confidence=0.9,
+            payload_json="{}",
+        )
+    )
+    session.add(
+        ChapterReaderJourneySummary(
+            reader_journey_run_id=journey.id,
+            chapter_value_summary="Fixture D 阅读旅程已生成",
+            chapter_reader_question_chain_json='["接下来会发生什么"]',
+            overall_engagement_score=70,
+            one_sentence_diagnosis="Fixture D 旅程结果可用于 CTA 验收。",
+            pacing_diagnosis_json='["节奏正常"]',
+            deterministic_statistics_json="{}",
+            payload_json="{}",
+            validation_status="valid",
+        )
+    )
+    session.commit()
+    session.refresh(journey)
+    return {
+        "book_id": book.id,
+        "chapter_id": chapter.id,
+        "analysis_run_id": run.id,
+        "journey_run_id": journey.id,
+        "revision_id": revision.id if revision else None,
+        "run_status": run.status,
+        "journey_status": journey.status,
+        "journey_error": journey.root_error_code,
+        "has_result": True,
+    }
+
+
 def _url(fe: str, book_id: int, chapter_id: int, run_id: int, **extra: object) -> str:
     q = [f"chapter={chapter_id}", f"analysisRun={run_id}"]
     for k, v in extra.items():
@@ -338,6 +468,7 @@ async def _amain() -> dict:
         fixture_a = await _seed_fixture_a(session)
         fixture_b = await _seed_fixture_b(session)
         fixture_c = await _seed_fixture_c(session)
+        fixture_d = await _seed_fixture_d(session)
         session.commit()
 
     fe = "http://127.0.0.1:1420"
@@ -395,6 +526,26 @@ async def _amain() -> dict:
                 fixture_c["analysis_run_id"],
                 view="progress",
                 journeyRun=fixture_c.get("journey_run_id"),
+            ),
+        },
+        "d_journey_succeeded": {
+            **fixture_d,
+            "progress_url": _url(
+                fe,
+                fixture_d["book_id"],
+                fixture_d["chapter_id"],
+                fixture_d["analysis_run_id"],
+                view="progress",
+                journeyRun=fixture_d.get("journey_run_id"),
+            ),
+            "result_url": _url(
+                fe,
+                fixture_d["book_id"],
+                fixture_d["chapter_id"],
+                fixture_d["analysis_run_id"],
+                view="result",
+                tab="reader-journey",
+                journeyRun=fixture_d.get("journey_run_id"),
             ),
         },
     }

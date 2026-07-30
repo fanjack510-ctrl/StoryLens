@@ -85,7 +85,9 @@ export function resolveWorkspaceLayout(args: {
     userPinnedTab: args.userPinnedTab,
   });
 
-  const showProgressContext = Boolean(args.inFlight);
+  // Keep progress context while URL explicitly asks for progress (incl. journey_succeeded).
+  const showProgressContext =
+    Boolean(args.inFlight) || args.requestedView === "progress";
 
   let mainContentState: WorkspaceMainState = "idle";
   if (activeTab === "journey") {

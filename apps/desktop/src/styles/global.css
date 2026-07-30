@@ -2569,6 +2569,15 @@ html[data-theme="dark"] .appearance-theme-panel button.is-selected,
   background: var(--accent2);
   color: var(--accent);
 }
+/* CHG-017: journey_succeeded — 阅读旅程 owns toolbar green primary */
+.compact-toolbar .result-view-switcher button.primary {
+  background: var(--accent);
+  color: #fff;
+}
+.compact-toolbar .result-view-switcher button.primary.active {
+  background: var(--accent);
+  color: #fff;
+}
 
 .library-page-compact {
   max-width: 1240px;

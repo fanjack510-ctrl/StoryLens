@@ -42,6 +42,7 @@ import {
 import { resolveChapterPrimaryAction } from "../services/chapterPrimaryAction";
 import {
   buildChapterAnalysisPresentationV1,
+  resolveCompletedJourneyNavPrimary,
   type ChapterAnalysisPresentationV1,
 } from "../services/chapterAnalysisPresentation";
 import { resolveSceneJourneyGate } from "../services/resolveSceneJourneyGate";
@@ -1320,30 +1321,42 @@ export function BookRoutePage() {
         : undefined,
   });
 
+  const completedJourneyNavPrimary = resolveCompletedJourneyNavPrimary({
+    workflowState: chapterPresentation.workflow_state,
+    currentView: view,
+    resultTab: activeTab === "journey" ? "journey" : activeTab,
+  });
+  // Succeeded: 阅读旅程 tab owns the single toolbar green primary (not 查看分析进度).
+  const journeyNavIsPrimary = chapterPresentation.workflow_state === "journey_succeeded";
+  const showProgressNavSecondary = journeyNavIsPrimary;
+
   const effectivePrimaryAction =
-    chapterPresentation.primary_action === "continue_analysis"
-      ? { kind: "continue" as const, label: "继续分析", testId: "shell-continue-analysis" }
-      : chapterPresentation.primary_action === "view_progress"
+    journeyNavIsPrimary
+      ? { kind: "none" as const, label: "", testId: "shell-primary-none" }
+      : completedJourneyNavPrimary === "view_progress" ||
+          chapterPresentation.primary_action === "view_progress"
         ? {
             kind: "progress" as const,
             label: "查看分析进度",
             testId: "shell-view-analysis-progress",
           }
-        : chapterPresentation.primary_action === "confirm_scenes"
-          ? primaryAction.kind === "confirm"
-            ? primaryAction
-            : {
-                kind: "confirm" as const,
-                label: "确认场景",
-                testId: "shell-continue-boundary-confirm",
-              }
-          : chapterPresentation.primary_action === "view_results"
-            ? {
-                kind: "result" as const,
-                label: "查看分析结果",
-                testId: "shell-view-analysis-result",
-              }
-            : primaryAction;
+        : chapterPresentation.primary_action === "continue_analysis"
+          ? { kind: "continue" as const, label: "继续分析", testId: "shell-continue-analysis" }
+          : chapterPresentation.primary_action === "confirm_scenes"
+            ? primaryAction.kind === "confirm"
+              ? primaryAction
+              : {
+                  kind: "confirm" as const,
+                  label: "确认场景",
+                  testId: "shell-continue-boundary-confirm",
+                }
+            : chapterPresentation.primary_action === "view_results"
+              ? {
+                  kind: "result" as const,
+                  label: "查看阅读旅程",
+                  testId: "shell-view-reading-journey",
+                }
+              : primaryAction;
 
   const onPrimaryAction = () => {
     if (effectivePrimaryAction.kind === "start" || effectivePrimaryAction.kind === "reanalyze") {
@@ -1391,13 +1404,40 @@ export function BookRoutePage() {
               bookId,
               chapterId,
               analysisRunId: targetRun.id,
+              tab: "reader-journey",
             }).split("?")[1] || "",
           );
+          if (selectedJourneyRunId ?? journeyRunId) {
+            params.set("journeyRun", String(selectedJourneyRunId ?? journeyRunId));
+          }
           return params;
         },
         { replace: false },
       );
+      setResultTab("journey", "user");
     }
+  };
+
+  const openProgressSecondary = () => {
+    const targetRun = lifecycleChapterRun;
+    if (!targetRun || !chapterId) return;
+    setSearchParams(
+      () => {
+        const params = new URLSearchParams(
+          chapterProgressHref({
+            bookId,
+            chapterId,
+            analysisRunId: targetRun.id,
+          }).split("?")[1] || "",
+        );
+        if (selectedJourneyRunId ?? journeyRunId) {
+          params.set("journeyRun", String(selectedJourneyRunId ?? journeyRunId));
+        }
+        return params;
+      },
+      { replace: false },
+    );
+    setPanelCollapsed(false);
   };
 
   const readingToolbarTitle = (
@@ -1464,6 +1504,8 @@ export function BookRoutePage() {
       data-book-home="false"
       data-catalog-open={catalogOpen ? "true" : "false"}
       data-has-progress={showProgressPanel ? "true" : "false"}
+      data-journey-nav-primary={journeyNavIsPrimary ? "true" : "false"}
+      data-completed-nav-primary={completedJourneyNavPrimary}
     >
       <CompactToolbar
         className="workspace-toolbar"
@@ -1515,6 +1557,7 @@ export function BookRoutePage() {
                 showJourneyTab={chapterPresentation.show_journey_nav}
                 journeyAvailable={journeyNavAvailable}
                 journeyInProgress={journeyNavInProgress}
+                journeyPrimary={journeyNavIsPrimary}
                 onChange={(tab) => {
                   if (tab === "reading") {
                     setView("reading", "user");
@@ -1527,6 +1570,16 @@ export function BookRoutePage() {
                   setResultTab("journey", "user");
                 }}
               />
+            ) : null}
+            {showProgressNavSecondary ? (
+              <button
+                type="button"
+                className="secondary"
+                data-testid="shell-view-analysis-progress-secondary"
+                onClick={openProgressSecondary}
+              >
+                查看分析进度
+              </button>
             ) : null}
             {!noChapters && !bootstrappingChapter && panelCollapsed && analysisRunId ? (
               <button
@@ -2135,6 +2188,13 @@ export function BookRoutePage() {
                   progress.run?.journey_status ||
                   null
                 }
+                presentationStatusTitle={
+                  journeyNavIsPrimary ? chapterPresentation.status_title : null
+                }
+                presentationStatusDescription={
+                  journeyNavIsPrimary ? chapterPresentation.status_description : null
+                }
+                preferJourneyResultCta={journeyNavIsPrimary}
               />
             </aside>
           ) : null}

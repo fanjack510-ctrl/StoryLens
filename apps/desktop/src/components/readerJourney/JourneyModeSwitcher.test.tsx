@@ -78,4 +78,32 @@ describe("WorkspaceViewSwitcher primary nav", () => {
     );
     expect(screen.getByTestId("workspace-tab-analysis")).toHaveTextContent("场景分析");
   });
+
+  it("CHG-017: journeyPrimary marks 阅读旅程 as green primary, not dual with progress", () => {
+    render(
+      <WorkspaceViewSwitcher
+        active="journey"
+        onChange={() => undefined}
+        journeyAvailable
+        journeyPrimary
+      />,
+    );
+    const journey = screen.getByTestId("workspace-tab-journey");
+    expect(journey.className).toContain("primary");
+    expect(journey).toHaveAttribute("data-nav-primary", "true");
+  });
+
+  it("CHG-017: running journey tab stays secondary (no primary class)", () => {
+    render(
+      <WorkspaceViewSwitcher
+        active="reading"
+        onChange={() => undefined}
+        journeyInProgress
+        showJourneyTab
+      />,
+    );
+    const journey = screen.getByTestId("workspace-tab-journey");
+    expect(journey.className).not.toContain("primary");
+    expect(journey).toHaveAttribute("data-nav-primary", "false");
+  });
 });

@@ -1,42 +1,18 @@
 {
   "change_id": "CHG-20260730-017",
-  "pass": true,
-  "timestamp": "2026-07-30T11:02:00+00:00",
+  "api_url": "http://127.0.0.1:18080",
+  "database": "C:\\Users\\msi\\AppData\\Local\\Temp\\storylens-mg-chg017\\storylens.db",
+  "provider": "fake",
   "real_provider_calls": 0,
-  "formal_db_writes": 0,
-  "harness": "pytest FakeProvider + testing_session + live MG probes on isolated temp DB",
-  "results": [
-    {
-      "case": "A_scene_analysis_running",
-      "pass": true,
-      "test": "test_http_e2e_a_scene_analysis_running_hides_journey_nav",
-      "expected_show_journey_nav": false,
-      "live_effective_status": "scene_analysis",
-      "live_url": "http://127.0.0.1:1420/books/1?chapter=1&analysisRun=1&view=progress"
-    },
-    {
-      "case": "B_awaiting_confirmation",
-      "pass": true,
-      "live_awaiting_confirmation": true,
-      "expected_show_journey_nav": false,
-      "live_url": "http://127.0.0.1:1420/books/2?chapter=2&analysisRun=2&view=scene-boundary-review"
-    },
-    {
-      "case": "B_waiting_scene_analysis_pytest",
-      "pass": true,
-      "test": "test_http_e2e_b_waiting_scene_analysis_hides_journey_nav",
-      "expected_show_journey_nav": false
-    },
-    {
-      "case": "C_journey_starting",
-      "pass": true,
-      "test": "test_http_e2e_c_journey_starting_shows_journey_nav",
-      "expected_show_journey_nav": true,
-      "live_effective_status": "journey_running",
-      "live_journey_status": "starting",
-      "live_url": "http://127.0.0.1:1420/books/3?chapter=3&analysisRun=3&view=progress&journeyRun=2"
-    }
-  ],
-  "refresh_persistence": "PASS (presentation derived from live run/journey fields)",
-  "api_restart_persistence": "PASS_WITH_POST_START_PATCH (startup interrupts scene_analysis_running; MG restores Fixture A/C after boot for acceptance)"
+  "formal_database_writes": 0,
+  "fixture_d": {
+    "analysis_run_id": 4,
+    "journey_run_id": 3,
+    "journey_status": "succeeded",
+    "visualization": true,
+    "refresh_keep": true,
+    "api_restart_keep": true
+  },
+  "http_e2e": "PASS",
+  "recorded_at": "2026-07-30T12:41:00Z"
 }

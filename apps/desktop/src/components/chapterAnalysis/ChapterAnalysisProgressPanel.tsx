@@ -61,6 +61,10 @@ type Props = {
   /** CHG-018: suppress recovery while journey generation is active. */
   journeyPageActive?: boolean;
   journeyStatus?: string | null;
+  /** CHG-017: when journey succeeded, progress panel promotes journey CTA. */
+  presentationStatusTitle?: string | null;
+  presentationStatusDescription?: string | null;
+  preferJourneyResultCta?: boolean;
 };
 
 export function ChapterAnalysisProgressPanel({
@@ -82,6 +86,9 @@ export function ChapterAnalysisProgressPanel({
   onBudgetContinued,
   journeyPageActive = false,
   journeyStatus = null,
+  presentationStatusTitle = null,
+  presentationStatusDescription = null,
+  preferJourneyResultCta = false,
 }: Props) {
   const [resumeBusy, setResumeBusy] = useState(false);
   const [resumeError, setResumeError] = useState<string>();
@@ -418,37 +425,55 @@ export function ChapterAnalysisProgressPanel({
 
       {uiState === "succeeded" && run && (
         <div className="chapter-analysis-success" data-testid="chapter-analysis-success">
-          <h3>分析完成</h3>
-          <ul>
-            <li data-testid="chapter-analysis-scene-count">
-              场景数量：{(run.total_scene_count ?? counts.total) || "—"}
-            </li>
-            <li data-testid="chapter-analysis-coverage">
-              覆盖：
-              {typeof run.scene_analysis_coverage_rate === "number"
-                ? `${Math.round(run.scene_analysis_coverage_rate * 100)}%`
-                : "已完成"}
-            </li>
-            <li data-testid="chapter-analysis-journey-flag">
-              读者旅程：{hasJourney ? "已有可视化" : "已完成"}
-            </li>
-            {run.completed_at && (
-              <li data-testid="chapter-analysis-completed-at">
-                完成时间：{new Date(run.completed_at).toLocaleString()}
+          <h3 data-testid="chapter-analysis-success-title">
+            {preferJourneyResultCta || presentationStatusTitle
+              ? presentationStatusTitle || "阅读旅程已生成"
+              : "分析完成"}
+          </h3>
+          {preferJourneyResultCta && presentationStatusDescription ? (
+            <p data-testid="chapter-analysis-success-desc">{presentationStatusDescription}</p>
+          ) : (
+            <ul>
+              <li data-testid="chapter-analysis-scene-count">
+                场景数量：{(run.total_scene_count ?? counts.total) || "—"}
               </li>
-            )}
-          </ul>
+              <li data-testid="chapter-analysis-coverage">
+                覆盖：
+                {typeof run.scene_analysis_coverage_rate === "number"
+                  ? `${Math.round(run.scene_analysis_coverage_rate * 100)}%`
+                  : "已完成"}
+              </li>
+              <li data-testid="chapter-analysis-journey-flag">
+                读者旅程：{hasJourney || preferJourneyResultCta ? "已有可视化" : "已完成"}
+              </li>
+              {run.completed_at && (
+                <li data-testid="chapter-analysis-completed-at">
+                  完成时间：{new Date(run.completed_at).toLocaleString()}
+                </li>
+              )}
+            </ul>
+          )}
           <div className="chapter-analysis-success-actions">
-            {onViewResults ? (
+            {preferJourneyResultCta && onContinueReaderJourney ? (
               <button
                 type="button"
                 className="primary"
+                data-testid="chapter-analysis-open-journey"
+                onClick={onContinueReaderJourney}
+              >
+                查看阅读旅程
+              </button>
+            ) : null}
+            {onViewResults ? (
+              <button
+                type="button"
+                className={preferJourneyResultCta ? "secondary" : "primary"}
                 data-testid="chapter-analysis-open-results"
                 onClick={onViewResults}
               >
                 查看场景结果
               </button>
-            ) : (
+            ) : preferJourneyResultCta ? null : (
               <button
                 type="button"
                 className="primary"
@@ -459,7 +484,7 @@ export function ChapterAnalysisProgressPanel({
                 查看场景结果
               </button>
             )}
-            {hasJourney && onContinueReaderJourney && (
+            {!preferJourneyResultCta && hasJourney && onContinueReaderJourney && (
               <button
                 type="button"
                 className="secondary"

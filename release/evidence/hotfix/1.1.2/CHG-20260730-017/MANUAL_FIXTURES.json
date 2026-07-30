@@ -38,5 +38,18 @@
     "journey_status": "starting",
     "journey_error": null,
     "url": "http://127.0.0.1:1420/books/3?chapter=3&analysisRun=3&view=progress&journeyRun=2"
+  },
+  "d_journey_succeeded": {
+    "book_id": 4,
+    "chapter_id": 4,
+    "analysis_run_id": 4,
+    "journey_run_id": 3,
+    "revision_id": 6,
+    "run_status": "succeeded",
+    "journey_status": "succeeded",
+    "journey_error": null,
+    "has_result": true,
+    "progress_url": "http://127.0.0.1:1420/books/4?chapter=4&analysisRun=4&view=progress&journeyRun=3",
+    "result_url": "http://127.0.0.1:1420/books/4?chapter=4&analysisRun=4&view=result&tab=reader-journey&journeyRun=3"
   }
 }

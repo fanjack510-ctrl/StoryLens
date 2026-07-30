@@ -49,6 +49,59 @@ export function shouldShowJourneyNav(workflowState: ChapterWorkflowState): boole
   return JOURNEY_NAV_WORKFLOW_STATES.has(workflowState);
 }
 
+/** Top-nav / toolbar: which surface owns the single green primary CTA. */
+export type CompletedJourneyNavPrimary =
+  | "view_progress"
+  | "view_reading_journey"
+  | "none";
+
+/**
+ * CHG-017 amendment: after journey_succeeded, green primary moves to 阅读旅程.
+ * While journey_starting / journey_running, keep 查看分析进度 as green primary.
+ */
+export function resolveCompletedJourneyNavPrimary(input: {
+  workflowState: ChapterWorkflowState;
+  /** Current shell view: progress | reading | result | confirm | … */
+  currentView: string;
+  /** When on result, which tab is active. */
+  resultTab?: "scenes" | "journey" | string | null;
+}): CompletedJourneyNavPrimary {
+  const { workflowState, currentView, resultTab } = input;
+  if (
+    workflowState === "journey_starting" ||
+    workflowState === "journey_running" ||
+    workflowState === "waiting_scene_analysis" ||
+    workflowState === "scene_analysis_running"
+  ) {
+    return "view_progress";
+  }
+  if (workflowState !== "journey_succeeded") {
+    return "none";
+  }
+  const onJourneyResult =
+    currentView === "result" && (resultTab === "journey" || resultTab === "reader-journey");
+  if (onJourneyResult) {
+    return "none";
+  }
+  return "view_reading_journey";
+}
+
+/** Progress nav remains visible on journey_succeeded but must not stay primary. */
+export function shouldShowProgressNavSecondary(workflowState: ChapterWorkflowState): boolean {
+  return (
+    workflowState === "boundary_detecting" ||
+    workflowState === "journey_succeeded" ||
+    workflowState === "journey_starting" ||
+    workflowState === "journey_running" ||
+    workflowState === "waiting_scene_analysis" ||
+    workflowState === "scene_analysis_running" ||
+    workflowState === "journey_interrupted" ||
+    workflowState === "journey_failed" ||
+    workflowState === "journey_cancelled" ||
+    workflowState === "scene_analysis_failed"
+  );
+}
+
 export type ChapterPrimaryCta =
   | "view_progress"
   | "confirm_scenes"
@@ -447,8 +500,8 @@ export function buildChapterAnalysisPresentationV1(args: {
       break;
     case "journey_succeeded":
       primary_action = "view_results";
-      status_title = "阅读旅程已完成";
-      status_description = "可以查看分析结果。";
+      status_title = "阅读旅程已生成";
+      status_description = "可从顶部进入阅读旅程查看最终结果。";
       break;
     default:
       primary_action = "start_analysis";
@@ -459,15 +512,7 @@ export function buildChapterAnalysisPresentationV1(args: {
   const show_confirm_nav = workflow_state === "awaiting_scene_confirmation";
   const show_journey_nav = shouldShowJourneyNav(workflow_state);
   const show_results_nav = workflow_state === "journey_succeeded";
-  const show_progress_nav =
-    workflow_state === "boundary_detecting" ||
-    workflow_state === "scene_analysis_running" ||
-    workflow_state === "waiting_scene_analysis" ||
-    workflow_state === "scene_analysis_failed" ||
-    workflow_state === "journey_starting" ||
-    workflow_state === "journey_running" ||
-    workflow_state === "journey_failed" ||
-    workflow_state === "journey_interrupted";
+  const show_progress_nav = shouldShowProgressNavSecondary(workflow_state);
 
   const show_recovery_card = resolveShowRecoveryCard({
     workflowState: workflow_state,

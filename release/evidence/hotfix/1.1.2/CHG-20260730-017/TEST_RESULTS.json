@@ -1,32 +1,25 @@
 {
   "change_id": "CHG-20260730-017",
-  "pass": true,
-  "timestamp": "2026-07-30T11:02:00+00:00",
   "vitest": {
-    "command": "npx vitest run chapterAnalysisPresentation.journeyNav + BookRoutePage.journeyNav + readerJourneyResume + chapterAnalysisPresentation",
-    "passed": 29,
-    "failed": 0
+    "passed": 44,
+    "failed": 0,
+    "suites": [
+      "chapterAnalysisPresentation.journeyNav.test.ts",
+      "chapterAnalysisPresentation.completedJourneyCta.test.ts",
+      "chapterAnalysisPresentation.test.ts",
+      "BookRoutePage.journeyNav.test.tsx",
+      "JourneyModeSwitcher.test.tsx",
+      "SceneBoundaryNavigation.chg041.test.tsx"
+    ]
   },
   "pytest": {
-    "command": "python -m pytest apps/api/tests/test_journey_nav_visibility_chg017.py -q",
-    "passed": 3,
-    "failed": 0
+    "test_journey_nav_visibility_chg017.py": "3 passed"
   },
-  "typecheck": {
-    "result": "PASS_SCOPED",
-    "chg017_related_hits": 0,
-    "note": "Repo-wide tsc has pre-existing unrelated fixture errors; NEW errors in CHG-017 product files = 0"
-  },
-  "http_e2e": {
-    "result": "PASS",
-    "file": "HTTP_E2E.json"
-  },
-  "live_mg_probes": {
-    "fixture_a_effective_status": "scene_analysis",
-    "fixture_b_awaiting_confirmation": true,
-    "fixture_c_effective_status": "journey_running",
-    "fixture_c_journey_status": "starting"
-  },
+  "typecheck_related_hits": 0,
+  "new_typecheck_errors": 0,
   "real_provider_calls": 0,
-  "formal_db_writes": 0
+  "formal_database_writes": 0,
+  "manual_gate": "PASSED",
+  "completed_journey_cta_gate": "PASSED",
+  "recorded_at": "2026-07-30T12:41:00Z"
 }
