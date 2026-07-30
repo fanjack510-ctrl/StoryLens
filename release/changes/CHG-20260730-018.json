@@ -23,6 +23,12 @@
       "message": "fix(journey): hide stale recovery state while active",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "77d6c7be233ce0efdbe8c136f7ddb4067c5e9ad5",
+      "message": "docs(release): attach CHG-018 completion commit",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -61,5 +67,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-30T09:50:56Z",
-  "updated_at": "2026-07-30T10:24:55Z"
+  "updated_at": "2026-07-30T10:25:09Z"
 }
