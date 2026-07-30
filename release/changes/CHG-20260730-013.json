@@ -29,6 +29,12 @@
       "message": "docs(release): mark CHG-20260730-013 tested with evidence",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "a51574e4b9a44631c96fc721a8287b1795500a5b",
+      "message": "docs(release): attach registry mark commit to CHG-013",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -66,7 +72,7 @@
   "blocker_level": "P0",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-30T02:59:57Z",
-  "updated_at": "2026-07-30T03:22:44Z",
+  "updated_at": "2026-07-30T03:22:45Z",
   "issue_id": "INC-20260730-006",
   "target_version": "1.1.2",
   "public_branch": "fix/1.1.2-confirm-start-journey-race",
