@@ -1,0 +1,33 @@
+{
+  "fixture_a": {
+    "book_id": 1,
+    "chapter_id": 1,
+    "analysis_run_id": 1,
+    "draft_revision_id": 2,
+    "draft_etag": "e4176ea3eccdacb43a5244798319492c5411f6020d6751fe638e11401286a7c7",
+    "draft_scene_count": 3,
+    "ai_scene_count": 6,
+    "journey_count_before_confirm": 0,
+    "confirm_url": "http://127.0.0.1:1427/books/1?chapter=1&analysisRun=1&view=scene-boundary-review"
+  },
+  "fixture_b": {
+    "book_id": 2,
+    "chapter_id": 2,
+    "analysis_run_id": 2,
+    "journey_run_id": 1,
+    "confirmed_revision_id": 4,
+    "confirmed_scene_count": 3,
+    "journey_status": "scene_profiles_partial",
+    "root_error_code": "JOURNEY_INTERRUPTED",
+    "retryable": true,
+    "url": "http://127.0.0.1:1427/books/2?chapter=2&analysisRun=2&journeyRun=1"
+  },
+  "fixture_c": {
+    "book_id": 3,
+    "chapter_id": 3,
+    "analysis_run_id": 3,
+    "draft_revision_id": 6,
+    "draft_etag": "c3d2d6b90714c5b11989d02eb325c76a8245f7f10269d358e469d2aaa5c51f37"
+  },
+  "database": "C:\\Users\\msi\\AppData\\Local\\Temp\\storylens-mg-chg013-confirm-start\\database\\storylens-mg-chg013.db"
+}
