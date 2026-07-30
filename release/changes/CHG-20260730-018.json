@@ -41,6 +41,12 @@
       "message": "docs(release): attach CHG-018 tip commit",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "19aad41ef174be6b56deda2cbc30d7dd2c917704",
+      "message": "docs(release): sync CHG-018 registry tip",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -79,5 +85,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-30T09:50:56Z",
-  "updated_at": "2026-07-30T10:26:04Z"
+  "updated_at": "2026-07-30T10:26:05Z"
 }
