@@ -31,5 +31,5 @@
   "isolated_acceptance": "PASS",
   "wait_gate_on_frozen_sidecar": "SKIPPED_SMOKE_FAKE_HARD_REJECT",
   "mg_chg015": "PASSED",
-  "public_final_head": "7ab45272e18ca2ff57fecf9990925eeeb72e123b"
+  "public_final_head": "976f1577fcde8091286cd64f18b1ba037239c856"
 }
