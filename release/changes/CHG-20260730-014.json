@@ -11,6 +11,12 @@
       "message": "docs(release): register CHG-014 and align journey start status asserts",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "3369cac6e7a16d7aa1963aee1c978f2ac1b305e0",
+      "message": "docs(release): record StoryLens 1.1.2-rc.4 build",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -55,7 +61,7 @@
   "blocker_level": "P0",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-30T04:02:54Z",
-  "updated_at": "2026-07-30T04:36:27Z",
+  "updated_at": "2026-07-30T04:37:22Z",
   "issue_id": "MG-CHG-20260730-013",
   "target_version": "1.1.2",
   "public_branch": "hotfix/1.1.2",
