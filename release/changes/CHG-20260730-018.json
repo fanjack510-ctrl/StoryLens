@@ -11,6 +11,12 @@
       "message": "fix(workflow): hide stale recovery while journey is active",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "defdf5ae2927072941c04dfa6c1d04aa7b6c8b33",
+      "message": "docs(release): mark CHG-20260730-018 tested",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -49,5 +55,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-30T09:50:56Z",
-  "updated_at": "2026-07-30T10:02:08Z"
+  "updated_at": "2026-07-30T10:02:10Z"
 }
