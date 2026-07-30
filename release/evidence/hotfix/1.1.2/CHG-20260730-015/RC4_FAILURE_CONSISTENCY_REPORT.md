@@ -13,7 +13,7 @@ PUBLIC BASE HEAD：
 678e0b1aff1ca827a48520474d2f8a3fc660dacc
 
 PUBLIC FINAL HEAD：
-6b1df057526d13d13847a54a282afa8949c41645
+07b4045e42c027cf2147f972c8ab6b51abe21ee4
 
 ROOT CAUSE：
 H + M(JOURNEY_START_BEFORE_REMATERIALIZED_SCENE_ARTIFACTS) + I + K
@@ -94,7 +94,7 @@ TYPECHECK：
 not re-baselined this round
 
 HTTP E2E：
-PASS (unit/HTTP confirm path); live fixture seed pending MG
+PASS (confirm wait-gate); live MG fixture URLs pending seed
 
 REFRESH RESULT：
 PASS (status derived)
