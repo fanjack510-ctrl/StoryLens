@@ -3,9 +3,16 @@
   "title": "Integrate verified confirm-start stability fix and build StoryLens 1.1.2-rc.4",
   "type": "fix",
   "base_version": "1.1.1",
-  "status": "registered",
+  "status": "implemented",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "130beb2ce5a393173a67e284f03d141c83a74456",
+      "message": "docs(release): register CHG-014 and align journey start status asserts",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "release",
     "api",
@@ -36,7 +43,7 @@
   "blocker_level": "P0",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-30T04:02:54Z",
-  "updated_at": "2026-07-30T04:02:54Z",
+  "updated_at": "2026-07-30T04:13:41Z",
   "issue_id": "MG-CHG-20260730-013",
   "target_version": "1.1.2",
   "public_branch": "hotfix/1.1.2",
