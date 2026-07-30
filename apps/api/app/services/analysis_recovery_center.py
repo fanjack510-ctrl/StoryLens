@@ -838,10 +838,13 @@ def build_recovery_plan(
             )
 
     # Reader journey
+    from app.services.reader_journey_recovery import journey_has_worker_claim
+
     journey = _journey_for_run(session, run.id)
     journey_active = bool(
         journey is not None and journey.status in _JOURNEY_ACTIVE_FOR_RECOVERY
     )
+    has_worker_lease = bool(journey is not None and journey_has_worker_claim(journey))
     journey_needed = (
         scene_complete
         and not journey_active
@@ -1249,6 +1252,23 @@ def build_recovery_plan(
             "sanitized_response_excerpt": tech.get("sanitized_response_excerpt"),
             "occurred_at": tech.get("occurred_at"),
             "user_reason": tech.get("user_reason"),
+            "status_version": int(getattr(run, "status_version", 0) or 0),
+            "confirmed_revision_id": (
+                int(journey.scene_revision_id)
+                if journey is not None and journey.scene_revision_id is not None
+                else None
+            ),
+            "has_active_worker_lease": bool(journey_active or has_worker_lease),
+            "recovery_plan_cache_key": {
+                "analysis_run_id": run.id,
+                "journey_run_id": journey.id if journey else None,
+                "confirmed_revision_id": (
+                    int(journey.scene_revision_id)
+                    if journey is not None and journey.scene_revision_id is not None
+                    else None
+                ),
+                "status_version": int(getattr(run, "status_version", 0) or 0),
+            },
         },
         active_task=resume_stage if user_status == "running" else None,
         duplicate_risk=duplicate_risk,
@@ -1276,20 +1296,28 @@ def execute_unified_recover(
     plan = build_recovery_plan(session, run, gateway, store)
     # CHG-018: do not re-submit recovery while the bound journey is already active.
     if plan.user_status == "running" and plan.reader_journey_status in _JOURNEY_ACTIVE_FOR_RECOVERY:
+        jstatus = str(plan.reader_journey_status or "")
+        reason = "already_resuming" if jstatus == "resuming" else "already_running"
         return AnalysisRecoverResponse(
             run_id=run.id,
             status=run.status,
             user_status="running",
             recoverable=False,
             idempotent_replay=True,
-            actions_executed=["noop_journey_already_active"],
+            actions_executed=[reason],
             resume_stage=plan.resume_stage,
             will_reuse_artifacts=plan.will_reuse_artifacts,
             reader_journey_run_id=plan.reader_journey_run_id,
             details={
                 "reader_journey_run_id": plan.reader_journey_run_id,
                 "reader_journey_status": plan.reader_journey_status,
-                "reason": "journey_already_active",
+                "reason": reason,
+                "already_running": reason == "already_running",
+                "already_resuming": reason == "already_resuming",
+                "created_analysis_run_id": None,
+                "created_journey_run_id": None,
+                "http_request_sent": False,
+                "model_invocations_started": False,
             },
             http_request_sent=False,
             model_invocations_started=False,

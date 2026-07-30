@@ -1166,6 +1166,19 @@ export function BookRoutePage() {
         chapterComplete,
         awaitingConfirmation: awaitingSceneBoundaryConfirmation,
         inFlight: chapterInFlight,
+        journeyStatus:
+          journeyProgress.data?.status ||
+          journey.data?.status ||
+          progress.run?.journey_status ||
+          null,
+        statusVersion: progress.run?.status_version ?? lifecycleChapterRun?.status_version ?? null,
+        hasActiveTask:
+          showJourneyActive ||
+          compositionUiState === "reader_journey_processing",
+        hasCheckpointOrRecoveryBasis: Boolean(
+          progress.run?.journey_retryable === true ||
+            journeyProgress.data?.retryable === true,
+        ),
       }),
     [
       chapterId,
@@ -1178,9 +1191,12 @@ export function BookRoutePage() {
       progress.run,
       lifecycleChapterRun,
       journeyProgress.data?.retryable,
+      journeyProgress.data?.status,
+      journey.data?.status,
       chapterComplete,
       awaitingSceneBoundaryConfirmation,
       chapterInFlight,
+      showJourneyActive,
     ],
   );
 
@@ -1878,7 +1894,10 @@ export function BookRoutePage() {
                     }}
                   />
                 ) : null}
-                {showJourneyAwaiting && progress.run && !showJourneyActive ? (
+                {showJourneyAwaiting &&
+                progress.run &&
+                !showJourneyActive &&
+                chapterPresentation.show_recovery_card ? (
                   <UnifiedAnalysisRecoveryCard
                     run={progress.run}
                     variant="card"
@@ -1889,10 +1908,16 @@ export function BookRoutePage() {
                       null
                     }
                     journeyPageActive={false}
+                    journeyRunId={selectedJourneyRunId ?? journeyRunId}
+                    confirmedRevisionId={
+                      sceneBoundariesQuery.data?.confirmed_revision?.revision_id ?? null
+                    }
+                    canResume={chapterPresentation.can_resume}
+                    workflowState={chapterPresentation.workflow_state}
                     onContinued={() => {
                       void qc.invalidateQueries({ queryKey: ["reader-journey"] });
                       void qc.invalidateQueries({
-                        queryKey: ["analysis-recovery-plan", progress.run!.id],
+                        queryKey: ["analysis-recovery-plan"],
                       });
                       void journey.refetch();
                       void progress.refresh();
@@ -2099,7 +2124,11 @@ export function BookRoutePage() {
                   setResultTab("journey", "user");
                 }}
                 onBudgetContinued={() => void progress.refresh()}
-                journeyPageActive={showJourneyActive || journeyActiveView}
+                journeyPageActive={
+                  showJourneyActive ||
+                  journeyActiveView ||
+                  chapterPresentation.is_journey_active
+                }
                 journeyStatus={
                   journeyProgress.data?.status ||
                   journey.data?.status ||

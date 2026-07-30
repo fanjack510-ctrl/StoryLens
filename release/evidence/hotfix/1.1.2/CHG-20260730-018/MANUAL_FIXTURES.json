@@ -1,0 +1,23 @@
+{
+  "database": "C:\\Users\\msi\\AppData\\Local\\Temp\\storylens-mg-chg018\\storylens.db",
+  "api_url": "http://127.0.0.1:18080",
+  "frontend_url": "http://127.0.0.1:1420",
+  "active": {
+    "book_id": 1,
+    "chapter_id": 1,
+    "analysis_run_id": 1,
+    "journey_run_id": 1,
+    "confirmed_revision_id": 1,
+    "url": "http://127.0.0.1:1420/books/1?chapter=1&analysisRun=1&view=progress&journeyRun=1"
+  },
+  "interrupted": {
+    "book_id": 2,
+    "chapter_id": 2,
+    "analysis_run_id": 2,
+    "journey_run_id": 2,
+    "confirmed_revision_id": 2,
+    "url": "http://127.0.0.1:1420/books/2?chapter=2&analysisRun=2&view=progress&journeyRun=2"
+  },
+  "real_provider_calls": 0,
+  "formal_db_writes": 0
+}

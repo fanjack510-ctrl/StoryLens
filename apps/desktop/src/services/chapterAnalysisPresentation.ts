@@ -7,6 +7,11 @@ import type { Run } from "../types";
 import type { ChapterAnalysisUiState } from "../components/chapterAnalysis/mapAnalysisUiState";
 import type { JourneyPageView } from "./resolveJourneyPageState";
 import { normalizeRunLifecycle } from "./runLifecycle";
+import {
+  isJourneyActiveWorkflow,
+  resolveJourneyActionFlags,
+  resolveShowRecoveryCard,
+} from "./journeyActiveRecoveryGuard";
 
 export type ChapterWorkflowState =
   | "chapter_ready"
@@ -80,6 +85,11 @@ export type ChapterAnalysisPresentationV1 = {
   show_progress_nav: boolean;
   redirect_journey_to_confirm: boolean;
   redirect_journey_to_progress: boolean;
+  /** CHG-018 presentation flags — components must not override from stale recovery. */
+  is_journey_active: boolean;
+  show_recovery_card: boolean;
+  show_resume_action: boolean;
+  show_stop_action: boolean;
 };
 
 const PRIORITY: ChapterWorkflowState[] = [
@@ -336,6 +346,12 @@ export function buildChapterAnalysisPresentationV1(args: {
   awaitingConfirmation?: boolean;
   chapterComplete?: boolean;
   canResumeJourney?: boolean;
+  /** Live journey row status (starting/running/interrupted/…). */
+  journeyStatus?: string | null;
+  hasValidWorkerLease?: boolean | null;
+  hasActiveTask?: boolean | null;
+  hasCheckpointOrRecoveryBasis?: boolean | null;
+  statusVersion?: number | null;
 }): ChapterAnalysisPresentationV1 {
   const workflow_state = resolveChapterWorkflowState(args);
   const total =
@@ -343,6 +359,10 @@ export function buildChapterAnalysisPresentationV1(args: {
     args.totalSceneCount ??
     null;
   const completed = args.completedSceneCount ?? null;
+  const journeyStatus =
+    args.journeyStatus ??
+    (args.lifecycleRun as { journey_status?: string } | null | undefined)?.journey_status ??
+    null;
   const can_resume =
     workflow_state === "journey_interrupted" && args.canResumeJourney !== false;
   const can_retry = workflow_state === "journey_failed";
@@ -354,6 +374,9 @@ export function buildChapterAnalysisPresentationV1(args: {
   let primary_action: ChapterPrimaryCta = "none";
   let status_title = "";
   let status_description = "";
+
+  const journeyStatusLower = String(journeyStatus || "").toLowerCase();
+  const isResuming = journeyStatusLower === "resuming";
 
   switch (workflow_state) {
     case "boundary_detecting":
@@ -388,22 +411,29 @@ export function buildChapterAnalysisPresentationV1(args: {
       break;
     case "journey_starting":
       primary_action = "view_progress";
-      status_title = "正在启动阅读旅程";
-      status_description = "场景分析已完成，正在启动阅读旅程。";
+      if (isResuming) {
+        status_title = "正在恢复阅读旅程";
+        status_description = "正在从已保存的进度继续，无需重复操作。";
+      } else {
+        status_title = "正在启动阅读旅程";
+        status_description = "任务已经创建，StoryLens 正在准备分析。";
+      }
       break;
     case "journey_running":
       primary_action = "view_progress";
-      status_title = "正在生成阅读旅程";
-      status_description =
-        completed != null && total != null
-          ? `已完成 ${completed} / ${total} 个场景。`
-          : "正在生成阅读旅程。";
+      if (isResuming) {
+        status_title = "正在恢复阅读旅程";
+        status_description = "正在从已保存的进度继续，无需重复操作。";
+      } else {
+        status_title = "正在生成阅读旅程";
+        status_description =
+          "StoryLens 正在整合场景之间的情绪、节奏和阅读牵引变化。";
+      }
       break;
     case "journey_interrupted":
       primary_action = "continue_analysis";
       status_title = "阅读旅程已中断";
-      status_description =
-        "阅读旅程已中断，当前进度已保存，可以继续分析。";
+      status_description = "当前进度已保存，可以继续分析。";
       break;
     case "journey_cancelled":
       primary_action = "reanalyze";
@@ -439,6 +469,30 @@ export function buildChapterAnalysisPresentationV1(args: {
     workflow_state === "journey_failed" ||
     workflow_state === "journey_interrupted";
 
+  const show_recovery_card = resolveShowRecoveryCard({
+    workflowState: workflow_state,
+    journeyStatus,
+    journeyPageActive: false,
+    canResume: can_resume,
+    hasValidWorkerLease: args.hasValidWorkerLease ?? false,
+    hasActiveTask: args.hasActiveTask ?? isJourneyActiveWorkflow(workflow_state, journeyStatus),
+    hasCheckpointOrRecoveryBasis: args.hasCheckpointOrRecoveryBasis ?? can_resume,
+    currentAnalysisRunId: args.analysisRunId ?? null,
+    planAnalysisRunId: args.analysisRunId ?? null,
+    currentJourneyRunId: args.journeyRunId ?? null,
+    planJourneyRunId: args.journeyRunId ?? null,
+    currentConfirmedRevisionId: args.confirmedRevisionId ?? null,
+    planConfirmedRevisionId: args.confirmedRevisionId ?? null,
+    currentStatusVersion: args.statusVersion ?? null,
+    planStatusVersion: args.statusVersion ?? null,
+  });
+  const actionFlags = resolveJourneyActionFlags({
+    workflowState: workflow_state,
+    journeyStatus,
+    canResume: can_resume,
+    showRecoveryCard: show_recovery_card,
+  });
+
   return {
     chapter_id: args.chapterId,
     active_analysis_run_id: args.analysisRunId ?? null,
@@ -451,12 +505,12 @@ export function buildChapterAnalysisPresentationV1(args: {
     can_confirm_scenes: show_confirm_nav,
     can_adjust_scenes: show_confirm_nav,
     can_open_journey: show_journey_nav,
-    can_resume_journey: can_resume,
+    can_resume_journey: can_resume && !actionFlags.isJourneyActive,
     can_view_results: show_results_nav,
-    can_resume,
+    can_resume: can_resume && !actionFlags.isJourneyActive,
     can_retry,
     can_restart_as_new,
-    primary_action,
+    primary_action: actionFlags.isJourneyActive ? "view_progress" : primary_action,
     status_title,
     status_description,
     show_confirm_nav,
@@ -466,6 +520,10 @@ export function buildChapterAnalysisPresentationV1(args: {
     show_progress_nav,
     redirect_journey_to_confirm: workflow_state === "awaiting_scene_confirmation",
     redirect_journey_to_progress: JOURNEY_DEEP_LINK_REDIRECT_TO_PROGRESS.has(workflow_state),
+    is_journey_active: actionFlags.isJourneyActive,
+    show_recovery_card: actionFlags.showRecoveryCard,
+    show_resume_action: actionFlags.showResumeAction,
+    show_stop_action: actionFlags.showStopAction,
   };
 }
 

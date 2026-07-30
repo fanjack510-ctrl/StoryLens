@@ -231,9 +231,10 @@ describe("BookRoutePage reader journey resume entry", () => {
     });
     fireEvent.click(screen.getByTestId("workspace-tab-journey"));
     await waitFor(() => {
-      expect(screen.getAllByTestId("unified-recovery-card").length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByTestId("book-chapter-shell")).toHaveAttribute("data-analysis-run", "5");
     });
-    expect(screen.getByTestId("book-chapter-shell")).toHaveAttribute("data-analysis-run", "5");
+    // CHG-018: awaiting / starting journey must not mount stale paused recovery card.
+    expect(screen.queryByTestId("unified-recovery-card")).not.toBeInTheDocument();
     expect(analysisApi.createReaderJourney).not.toHaveBeenCalled();
     expect(booksApi.chapters).toHaveBeenCalled();
   });

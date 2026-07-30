@@ -6,6 +6,7 @@ import { analysisRecoveryApi } from "../../services/analysisRecoveryApi";
 import { mapRunToUiState } from "./mapAnalysisUiState";
 import {
   isJourneyActivelyRunning,
+  recoveryPlanQueryKey,
   shouldShowUnifiedRecoveryForJourney,
 } from "../../services/journeyActiveRecoveryGuard";
 
@@ -19,6 +20,10 @@ type Props = {
   journeyStatus?: string | null;
   /** True when journey page view is already active / generating. */
   journeyPageActive?: boolean;
+  journeyRunId?: number | null;
+  confirmedRevisionId?: number | null;
+  canResume?: boolean | null;
+  workflowState?: string | null;
 };
 
 function newClientRequestId(runId: number): string {
@@ -61,6 +66,10 @@ export function UnifiedAnalysisRecoveryCard({
   onLater,
   journeyStatus = null,
   journeyPageActive = false,
+  journeyRunId = null,
+  confirmedRevisionId = null,
+  canResume = true,
+  workflowState = null,
 }: Props) {
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -75,9 +84,15 @@ export function UnifiedAnalysisRecoveryCard({
     journeyStatus ||
     run.journey_status ||
     null;
+  const statusVersion = run.status_version ?? null;
 
   const planQuery = useQuery({
-    queryKey: ["analysis-recovery-plan", run.id],
+    queryKey: recoveryPlanQueryKey({
+      analysisRunId: run.id,
+      journeyRunId: journeyRunId ?? run.journey_run_id ?? null,
+      confirmedRevisionId,
+      statusVersion,
+    }),
     queryFn: () => analysisRecoveryApi.recoveryPlan(run.id),
     refetchInterval: (query) => {
       const status = query.state.data?.user_status;
@@ -145,6 +160,8 @@ export function UnifiedAnalysisRecoveryCard({
       journeyStatus: liveJourneyStatus || plan?.reader_journey_status,
       recoveryUserStatus: plan?.user_status,
       journeyPageActive,
+      workflowState,
+      canResume,
     });
 
   const needsAuthRedirect = (plan?.blockers || []).some(

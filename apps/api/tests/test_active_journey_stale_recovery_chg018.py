@@ -125,5 +125,118 @@ def test_recover_noop_when_journey_already_active(testing_session):
     )
     assert result.user_status == "running"
     assert result.idempotent_replay is True
-    assert "noop_journey_already_active" in result.actions_executed
+    assert "already_running" in result.actions_executed
+    assert result.details.get("reason") == "already_running"
     assert result.http_request_sent is False
+    assert result.model_invocations_started is False
+    assert result.details.get("created_analysis_run_id") is None
+    assert result.details.get("created_journey_run_id") is None
+
+
+def test_http_e2e_a_active_journey_stale_paused_plan(testing_session):
+    """Fixture A: Journey=running + worker claim ⇒ plan running, not paused."""
+    _enable_cloud(testing_session)
+    _set_budget(testing_session)
+    book, chapter, run, _revw, _rev, _scenes, paragraphs = _seed_confirmed_run(
+        testing_session
+    )
+    _complete_all_scenes(testing_session, run, paragraphs)
+    journey = _add_journey(
+        testing_session,
+        run,
+        book,
+        chapter,
+        status="running",
+        client_request_id="chg018-e2e-a",
+    )
+    from app.services.reader_journey_recovery import claim_journey_worker
+
+    claim_journey_worker(testing_session, journey)
+    testing_session.commit()
+
+    gateway = get_model_gateway()
+    store = get_credential_store()
+    plan = build_recovery_plan(testing_session, run, gateway, store)
+    assert plan.user_status == "running"
+    assert plan.recoverable is False
+    assert plan.pause_reason is None
+    assert not any(b.code == "AWAITING_READER_JOURNEY" for b in plan.blockers)
+    assert plan.details.get("has_active_worker_lease") is True
+    key = plan.details.get("recovery_plan_cache_key") or {}
+    assert key.get("analysis_run_id") == run.id
+    assert key.get("journey_run_id") == journey.id
+    assert "status_version" in key
+
+
+def test_http_e2e_b_resuming_journey_no_recover_side_effects(testing_session):
+    """Fixture B: Journey=resuming ⇒ already_resuming; no new runs."""
+    _enable_cloud(testing_session)
+    _set_budget(testing_session)
+    book, chapter, run, _revw, _rev, _scenes, paragraphs = _seed_confirmed_run(
+        testing_session
+    )
+    _complete_all_scenes(testing_session, run, paragraphs)
+    _add_journey(
+        testing_session,
+        run,
+        book,
+        chapter,
+        status="resuming",
+        client_request_id="chg018-e2e-b",
+    )
+    testing_session.commit()
+
+    gateway = get_model_gateway()
+    store = get_credential_store()
+    plan = build_recovery_plan(testing_session, run, gateway, store)
+    assert plan.user_status == "running"
+    assert plan.reader_journey_status == "resuming"
+    assert plan.recoverable is False
+
+    result = execute_unified_recover(
+        testing_session,
+        run,
+        AnalysisRecoverRequest(
+            client_request_id="chg018-e2e-b-resume",
+            cloud_consent=True,
+            confirmed=True,
+            recovery_mode="unified",
+            resume=True,
+        ),
+        gateway,
+        store,
+    )
+    assert result.idempotent_replay is True
+    assert "already_resuming" in result.actions_executed
+    assert result.details.get("reason") == "already_resuming"
+    assert result.http_request_sent is False
+    assert result.model_invocations_started is False
+    assert result.details.get("created_analysis_run_id") is None
+    assert result.details.get("created_journey_run_id") is None
+
+
+def test_http_e2e_c_real_interrupted_shows_paused(testing_session):
+    """Fixture C: interrupted, no active lease ⇒ paused_recoverable."""
+    _enable_cloud(testing_session)
+    _set_budget(testing_session)
+    book, chapter, run, _revw, _rev, _scenes, paragraphs = _seed_confirmed_run(
+        testing_session
+    )
+    _complete_all_scenes(testing_session, run, paragraphs)
+    _add_journey(
+        testing_session,
+        run,
+        book,
+        chapter,
+        status="scene_profiles_partial",
+        client_request_id="chg018-e2e-c",
+        retryable=True,
+        root_error_code="JOURNEY_INTERRUPTED",
+    )
+    testing_session.commit()
+
+    gateway = get_model_gateway()
+    store = get_credential_store()
+    plan = build_recovery_plan(testing_session, run, gateway, store)
+    assert plan.user_status == "paused_recoverable"
+    assert plan.recoverable is True

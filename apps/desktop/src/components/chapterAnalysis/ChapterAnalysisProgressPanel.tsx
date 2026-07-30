@@ -8,7 +8,10 @@ import {
   shouldShowUnifiedRecovery,
   UnifiedAnalysisRecoveryCard,
 } from "./UnifiedAnalysisRecoveryCard";
-import { isJourneyActivelyRunning } from "../../services/journeyActiveRecoveryGuard";
+import {
+  isJourneyActivelyRunning,
+  shouldShowUnifiedRecoveryForJourney,
+} from "../../services/journeyActiveRecoveryGuard";
 import { ChapterAnalysisFailureCard } from "./ChapterAnalysisFailureCard";
 import { ChapterAnalysisStatusBadge } from "./ChapterAnalysisStatusBadge";
 import {
@@ -163,7 +166,16 @@ export function ChapterAnalysisProgressPanel({
     journeyPageActive ||
     isJourneyActivelyRunning(liveJourneyStatus) ||
     uiState === "reader_journey_processing";
-  const showRecovery = Boolean(run) && shouldShowUnifiedRecovery(uiState) && !journeyActiveNow;
+  const showRecovery =
+    Boolean(run) &&
+    !journeyActiveNow &&
+    shouldShowUnifiedRecovery(uiState) &&
+    shouldShowUnifiedRecoveryForJourney({
+      uiState,
+      journeyStatus: liveJourneyStatus,
+      journeyPageActive: journeyActiveNow,
+      canResume: canResume ?? true,
+    });
 
   return (
     <aside

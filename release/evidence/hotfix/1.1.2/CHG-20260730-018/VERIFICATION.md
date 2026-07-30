@@ -1,12 +1,13 @@
 # CHG-20260730-018 Verification
 
 ## Fix
-- Backend: active journey ⇒ recovery `user_status=running`; prefer active journey row over old recoverable interrupted; recover() no-ops when journey already active.
-- Frontend: suppress UnifiedAnalysisRecoveryCard / progress-panel recovery while journey is active; invalidate recovery-plan query on active transition.
+- Backend: prefer Active Journey over stale recoverable; `user_status=running` while starting/running/resuming; recover returns `already_running` / `already_resuming` with zero new runs; plan details include cache key `{analysis_run_id, journey_run_id, confirmed_revision_id, status_version}`.
+- Frontend Workflow Presentation: `is_journey_active` / `show_recovery_card` / `show_resume_action` / `show_stop_action`; Recovery Card §五 gates; cache key never `chapter_id` alone; Active copy §十.
 
 ## Tests
-- Vitest: PASS
-- Pytest: PASS (3)
+- Vitest: PASS (36)
+- Pytest: PASS (6)
+- HTTP E2E A/B/C: PASS
 - Real provider: 0
 - Formal DB writes: 0
 

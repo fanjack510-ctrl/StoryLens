@@ -205,12 +205,8 @@ describe("CHG-017 BookRoutePage journey nav", () => {
 
     renderBook("/books/1?chapter=2&analysisRun=77&view=result&tab=reader-journey");
     await waitFor(() => {
-      expect(
-        screen.getByTestId("shell-boundary-review") ||
-          screen.getByTestId("confirm-boundary-division"),
-      ).toBeTruthy();
+      expect(screen.getAllByTestId("shell-scene-boundary-review").length).toBeGreaterThan(0);
     });
-    expect(screen.getByTestId("confirm-boundary-division")).toBeInTheDocument();
     expect(screen.queryByText("阅读旅程尚未开始")).not.toBeInTheDocument();
     expect(screen.queryByTestId("workspace-tab-journey")).not.toBeInTheDocument();
   });
