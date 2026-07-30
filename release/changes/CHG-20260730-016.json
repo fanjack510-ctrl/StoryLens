@@ -5,7 +5,14 @@
   "base_version": "1.1.2",
   "status": "registered",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "c401530d2b22a8ce622dd2a110da2e4c9e223b5c",
+      "message": "docs(release): mark CHG-015 verified and register CHG-016 RC.5 train",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [],
   "files": [],
   "user_summary": "记录 MG-015 PASS，验证 CHG-015，构建并隔离验收 1.1.2-rc.5",
@@ -26,7 +33,7 @@
     "breaking_change": false
   },
   "blocker_level": null,
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-30T07:14:52Z",
-  "updated_at": "2026-07-30T07:14:52Z"
+  "updated_at": "2026-07-30T07:15:27Z"
 }
