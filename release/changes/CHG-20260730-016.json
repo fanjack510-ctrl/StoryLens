@@ -1,0 +1,32 @@
+{
+  "id": "CHG-20260730-016",
+  "title": "CHG-015 人工验收收口、集成并构建 RC.5",
+  "type": "build",
+  "base_version": "1.1.2",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [],
+  "files": [],
+  "user_summary": "记录 MG-015 PASS，验证 CHG-015，构建并隔离验收 1.1.2-rc.5",
+  "technical_summary": "",
+  "acceptance_criteria": [],
+  "tests": [],
+  "verification_evidence": [],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": null,
+  "created_at": "2026-07-30T07:14:52Z",
+  "updated_at": "2026-07-30T07:14:52Z"
+}

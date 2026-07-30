@@ -3,7 +3,7 @@
   "title": "定位并修复 RC.4 安装态阅读旅程执行失败及状态分裂",
   "type": "fix",
   "base_version": "1.1.2",
-  "status": "tested",
+  "status": "verified",
   "include_in_next_release": true,
   "commits": [
     {
@@ -15,6 +15,24 @@
     {
       "sha": "57929d4cbb7475ed2c2abbad5477bbf1cc34ce45",
       "message": "docs(release): record INC-20260730-007 forensic and CHG-015 report",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "a0b257d34531b537d39853b30871a776d0161ae5",
+      "message": "fix(workflow): keep recovery state bound to requested journey",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "46a852cf31e75e0feb02e23cd98177a462c8daa6",
+      "message": "docs(hotfix): record rc4 failure consistency acceptance",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "5278bbc3063adf59c6265764118b1c18385f5c5e",
+      "message": "fix(workflow): avoid presentation type narrowing on scene stages",
       "primary": true,
       "multi_change_reason": null
     }
@@ -31,18 +49,24 @@
     "0/3 not shown as scene-analyze complete",
     "failed not shown as interrupted or paused",
     "journey synthesis failure only after synthesis starts",
-    "accident DB replay consistent; Fake/Replay only"
+    "accident DB replay consistent; Fake/Replay only",
+    "MG-CHG-20260730-015 PASSED: wait-gate, failure stages, recoverable C2 continue same run"
   ],
   "tests": [
     "apps/api/tests/test_rc4_post_confirm_scene_analysis_chg015.py",
     "apps/api/tests/test_confirm_start_journey_race_chg013.py",
-    "apps/desktop/src/services/compositeRunLifecycle.test.ts"
+    "apps/desktop/src/services/compositeRunLifecycle.test.ts",
+    "apps/api/tests/test_chg015_recoverable_current_run.py",
+    "apps/desktop/src/services/resolveJourneyPageState.test.ts",
+    "apps/desktop/src/services/chapterAnalysisPresentation.test.ts"
   ],
   "verification_evidence": [
     "D:/StoryLensIncident/INC-20260730-007-rc4-journey-execution-failure/FORENSIC_SNAPSHOT.md",
     "release/evidence/hotfix/1.1.2/CHG-20260730-015/RC4_INSTALLED_FAILURE_AUDIT.md",
     "release/evidence/hotfix/1.1.2/CHG-20260730-015/FORENSIC_SNAPSHOT.md",
-    "release/evidence/hotfix/1.1.2/CHG-20260730-015/MANUAL_UI_ENV.md"
+    "release/evidence/hotfix/1.1.2/CHG-20260730-015/MANUAL_UI_ENV.md",
+    "release/evidence/hotfix/1.1.2/CHG-20260730-015/MANUAL_GATE_PASS.md",
+    "release/evidence/hotfix/1.1.2/CHG-20260730-015/manual-gate-recoverable-defect/RECOVERABLE_FIXTURE_STATE_AUDIT.md"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -59,5 +83,5 @@
   "blocker_level": "P0",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-30T05:00:19Z",
-  "updated_at": "2026-07-30T05:08:50Z"
+  "updated_at": "2026-07-30T07:14:52Z"
 }
