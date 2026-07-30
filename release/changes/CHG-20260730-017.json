@@ -23,6 +23,12 @@
       "message": "docs(evidence): record CHG-017 manual UI env URLs",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "6c498cc7860b12469321c041c5ebac0829b72c76",
+      "message": "docs(hotfix): prepare CHG-017 isolated manual UI fixtures",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -63,5 +69,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-30T09:25:11Z",
-  "updated_at": "2026-07-30T09:48:53Z"
+  "updated_at": "2026-07-30T11:02:37Z"
 }
