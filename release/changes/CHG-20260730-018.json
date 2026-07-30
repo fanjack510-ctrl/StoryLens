@@ -47,6 +47,12 @@
       "message": "docs(release): sync CHG-018 registry tip",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "1a2c5a595d94193dcf5056e5a86b19370bcab2fc",
+      "message": "docs(release): mark CHG-20260730-018 verified after MG PASS",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -88,6 +94,6 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-30T09:50:56Z",
-  "updated_at": "2026-07-30T10:56:40Z",
+  "updated_at": "2026-07-30T10:56:41Z",
   "release_pool_status": "included"
 }
