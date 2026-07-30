@@ -29,6 +29,18 @@
       "message": "docs(release): point CHG-014 final HEAD at tip",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "e5264bd7f118cfaa4e2197513cbbf95e707ff2d9",
+      "message": "docs(release): restore RC.4 final report UTF-8 encoding",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "7bed14b776e3ef097d90423a9d40a93c57d4c02c",
+      "message": "docs(release): record public final HEAD for RC.4",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -73,7 +85,7 @@
   "blocker_level": "P0",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-30T04:02:54Z",
-  "updated_at": "2026-07-30T04:37:23Z",
+  "updated_at": "2026-07-30T04:37:59Z",
   "issue_id": "MG-CHG-20260730-013",
   "target_version": "1.1.2",
   "public_branch": "hotfix/1.1.2",
