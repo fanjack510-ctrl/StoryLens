@@ -29,6 +29,12 @@
       "message": "docs(release): attach CHG-018 completion commit",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "d08a0e8f63131fd23addee5c49b0528599198436",
+      "message": "docs(release): attach CHG-018 tip commit",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -67,5 +73,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-30T09:50:56Z",
-  "updated_at": "2026-07-30T10:25:09Z"
+  "updated_at": "2026-07-30T10:25:11Z"
 }
