@@ -3,7 +3,7 @@
   "title": "Hide reading journey navigation until journey generation starts",
   "type": "fix",
   "base_version": "1.1.2",
-  "status": "tested",
+  "status": "verified",
   "include_in_next_release": true,
   "commits": [
     {
@@ -41,6 +41,12 @@
       "message": "docs(release): sync CHG-017 tested status after MG prep",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "972388be3fecac6a42dd1718c082f4cbaff2b767",
+      "message": "fix(chapter): promote reading journey after completion",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -49,7 +55,9 @@
   ],
   "files": [
     "apps/desktop/src/services/chapterAnalysisPresentation.ts",
-    "apps/desktop/src/pages/BookRoutePage.tsx"
+    "apps/desktop/src/pages/BookRoutePage.tsx",
+    "apps/desktop/src/components/layout/WorkspaceViewSwitcher.tsx",
+    "apps/desktop/src/services/resolveWorkspaceLayout.ts"
   ],
   "user_summary": "场景分析期间隐藏阅读旅程入口，避免误导性未开始页面",
   "technical_summary": "Hide ordinary journey nav until journey_* workflow; redirect premature deep links; remove 尚未开始 gate",
@@ -65,7 +73,8 @@
   "verification_evidence": [
     "release/evidence/hotfix/1.1.2/CHG-20260730-017/TEST_RESULTS.json",
     "release/evidence/hotfix/1.1.2/CHG-20260730-017/HTTP_E2E.json",
-    "release/evidence/hotfix/1.1.2/CHG-20260730-017/VERIFICATION.md"
+    "release/evidence/hotfix/1.1.2/CHG-20260730-017/VERIFICATION.md",
+    "release/evidence/hotfix/1.1.2/CHG-20260730-017/MANUAL_GATE_PASS.md"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -82,5 +91,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-30T09:25:11Z",
-  "updated_at": "2026-07-30T11:20:00Z"
+  "updated_at": "2026-07-30T12:41:26Z"
 }
