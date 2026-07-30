@@ -797,8 +797,19 @@ async def confirm_scene_revision_and_start_journey_v1(
     )
     session.flush()
     run = session.get(AnalysisRun, revision.analysis_run_id)
+    from app.services.confirmed_revision_scene_analysis import (
+        mark_awaiting_post_confirm_scene_analysis,
+        revision_scene_analysis_complete,
+    )
+
+    scenes_ready = False
     if run is not None:
-        mark_scenes_complete_awaiting_journey(session, run)
+        scenes_ready = revision_scene_analysis_complete(session, run.id, revision.id)
+        if scenes_ready:
+            mark_scenes_complete_awaiting_journey(session, run)
+        else:
+            # CHG-015: rematerialized IDs may lack artifacts — never mark analyze complete.
+            mark_awaiting_post_confirm_scene_analysis(session, run)
     if not start_journey:
         session.commit()
         return revision, None, already_confirmed, None
@@ -836,19 +847,36 @@ async def confirm_scene_revision_and_start_journey_v1(
         journey.root_error_code = None
         journey.root_error_message = None
         journey.failed_stage = None
+        journey.completed_at = None
     if journey.status in {"queued", "starting"}:
         mark_journey_startup_intent(
             journey, client_request_id=journey.client_request_id
         )
     if journey.started_at is None and journey.status in {"queued", "starting"}:
         journey.started_at = _now()
+    # Stash whether background must analyze first (read by confirm API).
+    if not scenes_ready:
+        journey.root_error_code = "WAITING_SCENE_ANALYSIS"
+        journey.root_error_message = "确认后的场景分析尚未完成"
+        journey.retryable = True
     session.commit()
 
     if session_factory is not None and gateway is not None:
+        from app.services.confirmed_revision_scene_analysis import (
+            confirm_start_analyze_then_journey,
+        )
         from app.services.reader_journey_pipeline import execute_reader_journey
 
         try:
-            await execute_reader_journey(session_factory, gateway, journey.id)
+            if scenes_ready:
+                await execute_reader_journey(session_factory, gateway, journey.id)
+            else:
+                await confirm_start_analyze_then_journey(
+                    session_factory,
+                    gateway,
+                    revision_id=revision.id,
+                    journey_run_id=journey.id,
+                )
         except Exception:
             with session_factory() as retry_session:
                 refreshed = retry_session.get(ReaderJourneyRun, journey.id)

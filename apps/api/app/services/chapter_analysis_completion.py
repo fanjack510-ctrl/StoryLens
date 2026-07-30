@@ -104,23 +104,28 @@ def effective_chapter_status(session: Session, run: AnalysisRun) -> str:
         "scene_profiles_running",
         "chapter_synthesis_running",
     }:
+        # CHG-015: waiting for rematerialized scene artifacts is still scene analysis.
+        if journey.root_error_code == "WAITING_SCENE_ANALYSIS":
+            return "scene_analysis"
         return "journey_running"
+    if run.status in {"scene_analysis_running", "awaiting_provider_recovery"}:
+        return "scene_analysis"
     if journey is not None and journey.status in {
         "failed",
         "scene_profiles_partial",
         "budget_blocked",
         "aborted_by_limit",
     }:
+        if journey.root_error_code in {
+            "SCENE_ANALYSIS_INCOMPLETE",
+            "WAITING_SCENE_ANALYSIS",
+        }:
+            return "scene_analysis"
         return "journey_failed"
     marker = _marker(run)
     if marker.get("chapter_pipeline") == "awaiting_scene_boundary_confirmation":
         return "awaiting_scene_boundary_confirmation"
-    if run.status in {"scene_analysis_running", "awaiting_provider_recovery"}:
-        return "scene_analysis"
     if scenes_done and (journey is None or journey.status != "succeeded"):
-        marker = _marker(run)
-        if marker.get("chapter_pipeline") == "awaiting_scene_boundary_confirmation":
-            return "awaiting_scene_boundary_confirmation"
         return "partial_complete"
     if is_chapter_analysis_complete(session, run):
         return "completed"

@@ -29,6 +29,7 @@ export function resolveSceneJourneyGate(args: {
   const status = (args.journeyStatus || "").toLowerCase();
   const running =
     status === "queued" ||
+    status === "starting" ||
     status === "running" ||
     status === "scene_profiles_running" ||
     status === "chapter_synthesis_running" ||
@@ -77,13 +78,21 @@ export function resolveSceneJourneyGate(args: {
   if (journeyRev === confirmedId && (status === "failed" || status === "cancelled" || status === "interrupted" || status === "paused")) {
     return {
       kind: "failed",
-      title: status === "interrupted" || status === "paused" ? "阅读旅程已中断" : "阅读旅程生成失败",
-      description: "场景划分仍然有效，可继续或重新尝试生成阅读旅程。",
-      primaryLabel: status === "interrupted" || status === "paused" ? "继续分析" : "重新生成阅读旅程",
+      title: status === "interrupted"
+        ? "阅读旅程已中断"
+        : status === "paused"
+          ? "分析已暂停"
+          : "阅读旅程生成失败",
+      description: status === "interrupted"
+        ? "任务曾中断，当前进度已保存，可继续同一旅程。"
+        : status === "paused"
+          ? "分析已暂停，请按提示处理后继续。"
+          : "阅读旅程未完成。请查看失败阶段与进度后再决定重试或重新开始。",
+      primaryLabel: status === "interrupted" || status === "paused" ? "继续分析" : "查看详情",
       primaryTestId:
         status === "interrupted" || status === "paused"
           ? "reader-journey-continue"
-          : "reader-journey-retry-generate",
+          : "reader-journey-view-detail",
     };
   }
 

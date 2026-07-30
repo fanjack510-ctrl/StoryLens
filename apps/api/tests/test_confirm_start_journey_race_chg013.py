@@ -135,7 +135,13 @@ async def test_delayed_worker_claim_keeps_starting(testing_session):
     recover_orphaned_reader_journeys(testing_session, force_startup=True)
     testing_session.refresh(journey)
     assert journey.status in {"starting", "queued"}
-    assert effective_chapter_status(testing_session, run) == "journey_running"
+    # CHG-015: rematerialized spans without carried artifacts report scene_analysis;
+    # live starting journey must still not look interrupted/failed.
+    assert effective_chapter_status(testing_session, run) in {
+        "journey_running",
+        "scene_analysis",
+    }
+    assert journey.root_error_code in {None, "WAITING_SCENE_ANALYSIS"}
 
     claimed = claim_journey_worker(testing_session, journey)
     testing_session.commit()
@@ -219,7 +225,15 @@ async def test_effective_status_prefers_live_journey_over_awaiting_marker(
     )
     assert journey is not None and err is None
     testing_session.refresh(run)
-    assert effective_chapter_status(testing_session, run) == "journey_running"
+    # Live starting journey wins over awaiting-confirmation marker (CHG-013),
+    # and may surface as scene_analysis while WAITING_SCENE_ANALYSIS (CHG-015).
+    assert effective_chapter_status(testing_session, run) in {
+        "journey_running",
+        "scene_analysis",
+    }
+    assert effective_chapter_status(testing_session, run) != (
+        "awaiting_scene_boundary_confirmation"
+    )
 
 
 @pytest.mark.asyncio
@@ -236,7 +250,11 @@ async def test_execute_claims_before_provider(testing_session):
     gateway = ModelGateway([FakeProvider()])
     await execute_reader_journey(factory, gateway, journey.id)
     testing_session.refresh(journey)
-    assert journey.status != "starting"
+    # CHG-015: without carried artifacts, worker waits instead of failing.
+    if journey.root_error_code == "WAITING_SCENE_ANALYSIS":
+        assert journey.status == "starting"
+    else:
+        assert journey.status != "starting"
     _ = testing_session.scalar(select(func.count()).select_from(ModelInvocation)) or 0
 
 

@@ -1,0 +1,50 @@
+{
+  "id": "CHG-20260730-015",
+  "title": "定位并修复 RC.4 安装态阅读旅程执行失败及状态分裂",
+  "type": "fix",
+  "base_version": "1.1.2",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "api",
+    "desktop",
+    "release"
+  ],
+  "files": [],
+  "user_summary": "修复确认后 Journey 在场景产物未齐备时失败，并消除失败/中断/阶段完成状态分裂",
+  "technical_summary": "INC-20260730-007: confirm rematerialize creates new scene IDs; mark_scenes_complete_awaiting_journey + journey start before artifacts; SCENE_ANALYSIS_INCOMPLETE mapped to failed; UI mixes interrupted/failed/complete",
+  "acceptance_criteria": [
+    "0/3 not shown as scene-analyze complete",
+    "failed not shown as interrupted or paused",
+    "journey synthesis failure only after synthesis starts",
+    "accident DB replay consistent; Fake/Replay only"
+  ],
+  "tests": [
+    "apps/api/tests/test_rc4_post_confirm_scene_analysis_chg015.py",
+    "apps/api/tests/test_confirm_start_journey_race_chg013.py",
+    "apps/desktop/src/services/compositeRunLifecycle.test.ts"
+  ],
+  "verification_evidence": [
+    "D:/StoryLensIncident/INC-20260730-007-rc4-journey-execution-failure/FORENSIC_SNAPSHOT.md",
+    "release/evidence/hotfix/1.1.2/CHG-20260730-015/RC4_INSTALLED_FAILURE_AUDIT.md",
+    "release/evidence/hotfix/1.1.2/CHG-20260730-015/FORENSIC_SNAPSHOT.md",
+    "release/evidence/hotfix/1.1.2/CHG-20260730-015/MANUAL_UI_ENV.md"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "P0",
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-30T05:00:19Z",
+  "updated_at": "2026-07-30T05:08:23Z"
+}

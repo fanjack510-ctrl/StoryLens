@@ -265,10 +265,27 @@ async def confirm_scene_boundary(
                     "scene_profiles_running",
                     "chapter_synthesis_running",
                 }:
-                    background.add_task(
-                        execute_reader_journey, session_factory, gateway, journey.id
-                    )
+                    # CHG-015: if rematerialized scenes lack artifacts, analyze first.
+                    if journey.root_error_code == "WAITING_SCENE_ANALYSIS":
+                        from app.services.confirmed_revision_scene_analysis import (
+                            confirm_start_analyze_then_journey,
+                        )
+
+                        background.add_task(
+                            confirm_start_analyze_then_journey,
+                            session_factory,
+                            gateway,
+                            revision_id=revision.id,
+                            journey_run_id=journey.id,
+                        )
+                    else:
+                        background.add_task(
+                            execute_reader_journey, session_factory, gateway, journey.id
+                        )
                     journey_started = True
+                    # Waiting on scene analysis is not a start failure for the client.
+                    if journey_error_code == "WAITING_SCENE_ANALYSIS":
+                        journey_error_code = None
                 elif journey.status == "succeeded" and journey_error_code is None:
                     journey_started = True
             if journey_error_code:
@@ -281,13 +298,20 @@ async def confirm_scene_boundary(
             from app.services.chapter_analysis_completion import (
                 mark_scenes_complete_awaiting_journey,
             )
+            from app.services.confirmed_revision_scene_analysis import (
+                mark_awaiting_post_confirm_scene_analysis,
+                revision_scene_analysis_complete,
+            )
 
             revision, already_confirmed = confirm_scene_revision_v1(
                 session, revision_id, expected_etag=body.expected_etag
             )
             run = session.get(AnalysisRun, revision.analysis_run_id)
             if run is not None:
-                mark_scenes_complete_awaiting_journey(session, run)
+                if revision_scene_analysis_complete(session, run.id, revision.id):
+                    mark_scenes_complete_awaiting_journey(session, run)
+                else:
+                    mark_awaiting_post_confirm_scene_analysis(session, run)
             session.commit()
     except SceneBoundaryError as exc:
         if exc.error_code == "SCENE_CONFIRMED_JOURNEY_NOT_STARTED":

@@ -277,6 +277,33 @@ async def execute_reader_journey_v2(
             analysis_run = session.get(AnalysisRun, journey_run.analysis_run_id)
             if analysis_run is None:
                 return
+            from app.services.scene_boundary_manual_review import load_journey_bound_scenes
+            from app.services.reader_journey_progress import scene_analysis_artifact
+
+            _revision, scenes = load_journey_bound_scenes(session, journey_run)
+            # CHG-015: rematerialized scenes may still be analyzing.
+            missing = [
+                s.id
+                for s in scenes
+                if scene_analysis_artifact(session, analysis_run.id, s.id) is None
+            ]
+            if missing:
+                journey_run.status = "starting"
+                journey_run.current_stage = "starting"
+                journey_run.root_error_code = "WAITING_SCENE_ANALYSIS"
+                journey_run.root_error_message = "确认后的场景分析尚未完成"
+                journey_run.failed_stage = "scene_analysis"
+                journey_run.retryable = True
+                journey_run.completed_at = None
+                journey_run.updated_at = datetime.now(timezone.utc)
+                session.commit()
+                logger.info(
+                    "reader_journey_v2_waiting_scene_analysis journey_run_id=%s missing=%s",
+                    journey_run_id,
+                    missing,
+                )
+                return
+
             try:
                 store = get_credential_store()
             except Exception:
@@ -297,9 +324,6 @@ async def execute_reader_journey_v2(
                 session.commit()
                 return
 
-            from app.services.scene_boundary_manual_review import load_journey_bound_scenes
-
-            _revision, scenes = load_journey_bound_scenes(session, journey_run)
             require_completed_scene_analysis(session, analysis_run, scenes)
             chapter = session.get(Chapter, journey_run.chapter_id)
             paragraphs = list(
@@ -524,6 +548,27 @@ async def execute_reader_journey_v2(
     except AnalysisCancellationRequested:
         raise
     except Exception as exc:  # noqa: BLE001
+        # CHG-015: rematerialized scenes may still be analyzing — wait, do not fail
+        # as journey-synthesis failure or map to interrupted in the UI.
+        if "SCENE_ANALYSIS_INCOMPLETE" in str(exc):
+            with session_factory() as session:
+                journey_run = session.get(ReaderJourneyRun, journey_run_id)
+                if journey_run is None:
+                    return
+                journey_run.status = "starting"
+                journey_run.current_stage = "starting"
+                journey_run.root_error_code = "WAITING_SCENE_ANALYSIS"
+                journey_run.root_error_message = "确认后的场景分析尚未完成"
+                journey_run.failed_stage = "scene_analysis"
+                journey_run.retryable = True
+                journey_run.completed_at = None
+                journey_run.updated_at = datetime.now(timezone.utc)
+                session.commit()
+            logger.info(
+                "reader_journey_v2_waiting_scene_analysis journey_run_id=%s",
+                journey_run_id,
+            )
+            return
         root_code, stage, retryable, hint = _classify_journey_error(exc)
         with session_factory() as session:
             journey_run = session.get(ReaderJourneyRun, journey_run_id)

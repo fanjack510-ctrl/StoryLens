@@ -1,0 +1,14 @@
+﻿[
+    {
+        "path":  "C:\\Users\\msi\\AppData\\Local\\StoryLens\\storylens-desktop.exe",
+        "size":  13107200,
+        "sha256":  "46260FB461F7A63E9EE1D2B212932CFF2A8904F63CAFC2040364F815FD263793",
+        "mtime":  "2026-07-30T04:19:14.0000000Z"
+    },
+    {
+        "path":  "C:\\Users\\msi\\AppData\\Local\\StoryLens\\storylens-api.exe",
+        "size":  39691772,
+        "sha256":  "AF51B8FBD386BB967E79DBEE76BCB77E2AE934EBA956F2F2DFCCE6E46CD474F4",
+        "mtime":  "2026-07-30T04:16:56.0000000Z"
+    }
+]

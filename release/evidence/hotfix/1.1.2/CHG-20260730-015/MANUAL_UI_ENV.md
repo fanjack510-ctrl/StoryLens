@@ -1,0 +1,29 @@
+﻿# MANUAL UI ENV — MG-CHG-20260730-015
+
+DATABASE：
+%TEMP%\storylens-mg-chg015-rc4-failure\database\storylens-mg-chg015.db
+
+（事故只读副本可从）
+D:\StoryLensIncident\INC-20260730-007-rc4-journey-execution-failure\database\storylens.db
+复制到上述路径后启动 API；**禁止写正式 AppData**。
+
+API：
+http://127.0.0.1:18049
+
+FRONTEND：
+http://127.0.0.1:1428
+
+ENV：
+STORYLENS_CHAPTER_ANALYSIS_SMOKE_FAKE=1
+STORYLENS_JOURNEY_FAKE_MODE=success
+STORYLENS_REAL_PROVIDER_ENABLED=0
+STORYLENS_APP_PORT=18049
+
+Fixtures（启动后由 seed 脚本填充，见 FIXTURES.md）：
+- SCENE FAILURE URL
+- SYNTHESIS FAILURE URL
+- RECOVERABLE INTERRUPTED URL
+- SUCCESS URL
+
+REAL PROVIDER CALLS：0
+FORMAL DATABASE WRITES：0

@@ -78,6 +78,35 @@ describe("CHG-019 composite lifecycle / progress / CTA", () => {
     expect(resolveTaskCenterPrimaryAction(r).label).toBe("查看详情");
   });
 
+  it("CHG-015: plain failed journey is failed, not interrupted", () => {
+    const r = run({
+      id: 2,
+      journey_status: "failed",
+      journey_retryable: true,
+      journey_error_code: "PIPELINE_UNEXPECTED_ERROR",
+      journey_result_available: false,
+      journey_completed_scene_count: 0,
+      journey_total_scene_count: 3,
+      effective_status: "journey_failed",
+    });
+    expect(normalizeRunLifecycle(r)).toBe("failed");
+    expect(formatRunProgress(r)).toBe("阅读旅程生成失败");
+  });
+
+  it("CHG-015: WAITING_SCENE_ANALYSIS stays active / 场景分析", () => {
+    const r = run({
+      id: 2,
+      status: "scene_analysis_running",
+      journey_status: "starting",
+      journey_error_code: "WAITING_SCENE_ANALYSIS",
+      journey_completed_scene_count: 0,
+      journey_total_scene_count: 3,
+      effective_status: "scene_analysis",
+    });
+    expect(normalizeRunLifecycle(r)).toBe("active");
+    expect(formatRunProgress(r)).toBe("场景分析：0 / 3");
+  });
+
   it("Parent succeeded + Journey completed + artifact → 已完成 / 查看分析结果", () => {
     const r = run({
       id: 2,

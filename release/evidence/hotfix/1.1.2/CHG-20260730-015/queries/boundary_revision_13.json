@@ -1,0 +1,23 @@
+[
+  {
+    "id": 13,
+    "review_session_id": 6,
+    "chapter_id": 1304,
+    "analysis_run_id": 7,
+    "revision_number": 3,
+    "final_boundaries_json": "{\"partition_version\": 1, \"scenes\": [{\"end_paragraph_id\": \"B0002-C0005-P0003\", \"included_in_journey\": true, \"scene_order\": 1, \"start_paragraph_id\": \"B0002-C0005-P0001\"}, {\"end_paragraph_id\": \"B0002-C0005-P0007\", \"included_in_journey\": true, \"scene_order\": 2, \"start_paragraph_id\": \"B0002-C0005-P0004\"}, {\"end_paragraph_id\": \"B0002-C0005-P0012\", \"included_in_journey\": true, \"scene_order\": 3, \"start_paragraph_id\": \"B0002-C0005-P0008\"}]}",
+    "confirmed_by": "user",
+    "confirmed_at": "2026-07-30 04:52:38.891117",
+    "coverage_rate": 1.0,
+    "status": "confirmed",
+    "source": "user",
+    "based_on_revision_id": 12,
+    "chapter_text_hash": "5c946728472c913271f8b7413d8d7571324a69b1f80ac01aa8d3cf93a1d5f14a",
+    "boundary_hash": "7db3a50ffd1fbe735dbf1707c04b61b439a62862d181e9e54af2157496939501",
+    "revision_etag": "88160a6084b8c7ad5b875821e2535283f5969983fb9a310aefa456cc6226130f",
+    "superseded_at": null,
+    "title": null,
+    "created_at": "2026-07-30 04:52:19.900261",
+    "updated_at": "2026-07-30 04:52:38.898117"
+  }
+]
