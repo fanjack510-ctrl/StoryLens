@@ -23,6 +23,12 @@
       "message": "fix(chapter): route resume directly to current journey",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "7405456ef42716d8a1705555405bfc6be433055c",
+      "message": "docs(release): mark CHG-20260730-013 tested with evidence",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -60,7 +66,7 @@
   "blocker_level": "P0",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-30T02:59:57Z",
-  "updated_at": "2026-07-30T03:22:24Z",
+  "updated_at": "2026-07-30T03:22:44Z",
   "issue_id": "INC-20260730-006",
   "target_version": "1.1.2",
   "public_branch": "fix/1.1.2-confirm-start-journey-race",
