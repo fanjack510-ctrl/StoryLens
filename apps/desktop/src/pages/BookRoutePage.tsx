@@ -1126,30 +1126,6 @@ export function BookRoutePage() {
     setPanelCollapsed(false);
   };
 
-  useEffect(() => {
-    if (!awaitingSceneBoundaryConfirmation || activeTab !== "journey") return;
-    if (sceneBoundaryReviewView) return;
-    // CHG-013: confirmed revision / live journey must not bounce to review dead-end.
-    if (sceneBoundariesQuery.data?.confirmed_revision?.revision_id) return;
-    if (selectedJourneyRunId || journeyRunId) return;
-    if (
-      compositionUiState === "reader_journey_processing" ||
-      compositionUiState === "awaiting_reader_journey_start"
-    ) {
-      return;
-    }
-    openSceneBoundaryReview();
-  }, [
-    awaitingSceneBoundaryConfirmation,
-    activeTab,
-    sceneBoundaryReviewView,
-    chapterId,
-    sceneBoundariesQuery.data?.confirmed_revision?.revision_id,
-    selectedJourneyRunId,
-    journeyRunId,
-    compositionUiState,
-  ]);
-
   const chapterPresentation: ChapterAnalysisPresentationV1 = useMemo(
     () =>
       buildChapterAnalysisPresentationV1({
@@ -1194,13 +1170,77 @@ export function BookRoutePage() {
   );
 
   const journeyNavInProgress =
+    chapterPresentation.workflow_state === "journey_starting" ||
     chapterPresentation.workflow_state === "journey_running" ||
-    chapterPresentation.workflow_state === "journey_interrupted" ||
-    chapterPresentation.workflow_state === "scene_analysis_running";
-  const journeyNavAvailable =
-    chapterPresentation.workflow_state === "journey_succeeded" ||
-    journeyNavInProgress ||
-    hasJourney;
+    chapterPresentation.workflow_state === "journey_interrupted";
+  // CHG-017: never use historical hasJourney to advertise ordinary journey nav.
+  const journeyNavAvailable = chapterPresentation.show_journey_nav;
+
+  useEffect(() => {
+    // Wait for AnalysisRun hydrate — otherwise inFlight fallback falsely redirects
+    // succeeded journey deep links to progress.
+    if (awaitingRunHydration) return;
+    if (analysisRunId && progress.isLoading && !progress.run && !lifecycleChapterRun) return;
+
+    const onJourneyDeepLink =
+      activeTab === "journey" ||
+      searchParams.get("tab") === "reader-journey" ||
+      (searchParams.get("view") === "result" &&
+        (searchParams.get("tab") === "reader-journey" || searchParams.get("resultTab") === "reader-journey"));
+    if (!onJourneyDeepLink) return;
+
+    // CHG-017: awaiting confirmation → scene confirm page (not「尚未开始」gate).
+    if (chapterPresentation.redirect_journey_to_confirm) {
+      if (sceneBoundaryReviewView) return;
+      if (
+        compositionUiState === "reader_journey_processing" ||
+        compositionUiState === "awaiting_reader_journey_start"
+      ) {
+        return;
+      }
+      openSceneBoundaryReview();
+      return;
+    }
+
+    // CHG-017: boundary / scene analysis / waiting scenes → progress page.
+    if (!chapterPresentation.redirect_journey_to_progress) return;
+    if (searchParams.get("view") === "progress" && searchParams.get("tab") !== "reader-journey") {
+      return;
+    }
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        params.set("view", "progress");
+        if (analysisRunId) params.set("analysisRun", String(analysisRunId));
+        else if (lifecycleChapterRun?.id) {
+          params.set("analysisRun", String(lifecycleChapterRun.id));
+        }
+        if (chapterId) params.set("chapter", String(chapterId));
+        params.delete("tab");
+        params.delete("resultTab");
+        params.delete("mode");
+        params.delete("scene");
+        return params;
+      },
+      { replace: true },
+    );
+    userPinnedTabRef.current = null;
+    userPinnedViewRef.current = null;
+  }, [
+    awaitingRunHydration,
+    progress.isLoading,
+    progress.run,
+    chapterPresentation.redirect_journey_to_confirm,
+    chapterPresentation.redirect_journey_to_progress,
+    chapterPresentation.workflow_state,
+    activeTab,
+    sceneBoundaryReviewView,
+    chapterId,
+    analysisRunId,
+    lifecycleChapterRun,
+    compositionUiState,
+    searchParams,
+  ]);
 
   const resumeJourneyAnalysis = () => {
     void (async () => {
@@ -1252,7 +1292,27 @@ export function BookRoutePage() {
   const effectivePrimaryAction =
     chapterPresentation.primary_action === "continue_analysis"
       ? { kind: "continue" as const, label: "继续分析", testId: "shell-continue-analysis" }
-      : primaryAction;
+      : chapterPresentation.primary_action === "view_progress"
+        ? {
+            kind: "progress" as const,
+            label: "查看分析进度",
+            testId: "shell-view-analysis-progress",
+          }
+        : chapterPresentation.primary_action === "confirm_scenes"
+          ? primaryAction.kind === "confirm"
+            ? primaryAction
+            : {
+                kind: "confirm" as const,
+                label: "确认场景",
+                testId: "shell-continue-boundary-confirm",
+              }
+          : chapterPresentation.primary_action === "view_results"
+            ? {
+                kind: "result" as const,
+                label: "查看分析结果",
+                testId: "shell-view-analysis-result",
+              }
+            : primaryAction;
 
   const onPrimaryAction = () => {
     if (effectivePrimaryAction.kind === "start" || effectivePrimaryAction.kind === "reanalyze") {
@@ -1265,7 +1325,7 @@ export function BookRoutePage() {
     }
     const targetRun = lifecycleChapterRun;
     if (!targetRun || !chapterId) return;
-    if (primaryAction.kind === "confirm") {
+    if (effectivePrimaryAction.kind === "confirm") {
       if (sceneBoundaryReviewActive || awaitingSceneBoundaryConfirmation) {
         openSceneBoundaryReview();
         return;
@@ -1274,7 +1334,7 @@ export function BookRoutePage() {
       setPanelCollapsed(false);
       return;
     }
-    if (primaryAction.kind === "progress") {
+    if (effectivePrimaryAction.kind === "progress") {
       // Bind URL only on click — do not auto-rewrite reading URL on load.
       setSearchParams(
         () => {
@@ -1292,7 +1352,7 @@ export function BookRoutePage() {
       setPanelCollapsed(false);
       return;
     }
-    if (primaryAction.kind === "result") {
+    if (effectivePrimaryAction.kind === "result") {
       setSearchParams(
         () => {
           const params = new URLSearchParams(
@@ -1837,7 +1897,8 @@ export function BookRoutePage() {
                       null,
                   });
                   // Gate is only for empty / need-confirm / stale. Selected journey
-                  // states (active / interrupted / failed / succeeded) own the pane.
+                  // CHG-017: do not render「阅读旅程尚未开始」/ confirmed_no_journey
+                  // intermediate pages — deep links redirect instead.
                   const showGate =
                     activeTab === "journey" &&
                     resolvedCurrentJourney.source === "none" &&
@@ -1847,20 +1908,14 @@ export function BookRoutePage() {
                     !showJourneyActive &&
                     !showJourneyAwaiting &&
                     !awaitingSceneBoundaryConfirmation &&
-                    (gate.kind === "need_confirm" ||
-                      gate.kind === "confirmed_no_journey" ||
-                      gate.kind === "stale_journey");
+                    !chapterPresentation.redirect_journey_to_confirm &&
+                    !chapterPresentation.redirect_journey_to_progress &&
+                    gate.kind === "stale_journey";
                   if (!showGate) return null;
                   return (
                     <StateView
                       kind="empty"
-                      data-testid={
-                        gate.kind === "need_confirm"
-                          ? "reader-journey-blocked-unconfirmed"
-                          : gate.kind === "stale_journey"
-                            ? "reader-journey-stale-revision"
-                            : "reader-journey-confirmed-no-journey"
-                      }
+                      data-testid="reader-journey-stale-revision"
                       title={gate.title}
                       description={gate.description}
                       primaryAction={{

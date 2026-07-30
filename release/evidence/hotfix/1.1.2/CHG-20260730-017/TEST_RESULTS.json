@@ -1,0 +1,20 @@
+{
+  "change_id": "CHG-20260730-017",
+  "pass": true,
+  "timestamp": "2026-07-30T09:45:00+00:00",
+  "vitest": {
+    "command": "npx vitest run src/services/chapterAnalysisPresentation.journeyNav.test.ts src/pages/BookRoutePage.journeyNav.test.tsx src/pages/BookRoutePage.readerJourneyResume.test.tsx src/pages/BookRoutePage.test.tsx src/services/chapterAnalysisPresentation.test.ts",
+    "passed": 46,
+    "failed": 0
+  },
+  "pytest": {
+    "command": "python -m pytest tests/test_journey_nav_visibility_chg017.py -q",
+    "passed": 3,
+    "failed": 0
+  },
+  "typecheck": {
+    "command": "npx tsc -p tsconfig.app.json --noEmit",
+    "chg017_files": "PASS (no errors in changed files)",
+    "repo_baseline": "pre-existing errors in unrelated readerJourney/SceneBoundary test fixtures"
+  }
+}

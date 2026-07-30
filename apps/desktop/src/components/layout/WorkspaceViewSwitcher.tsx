@@ -18,6 +18,7 @@ type Props = {
 /**
  * Book workspace top tabs: 正文阅读 | 阅读旅程.
  * 「场景分析」已从普通主导航移除（CHG-011）。
+ * CHG-017: showJourneyTab=false fully hides the journey tab (not merely disabled).
  */
 export function WorkspaceViewSwitcher({
   active,

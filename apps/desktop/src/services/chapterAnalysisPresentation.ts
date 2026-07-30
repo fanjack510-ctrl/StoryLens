@@ -13,12 +13,36 @@ export type ChapterWorkflowState =
   | "boundary_detecting"
   | "awaiting_scene_confirmation"
   | "scene_analysis_running"
+  | "waiting_scene_analysis"
   | "scene_analysis_failed"
+  | "journey_starting"
   | "journey_running"
   | "journey_interrupted"
   | "journey_cancelled"
   | "journey_failed"
   | "journey_succeeded";
+
+/** Ordinary top-nav「阅读旅程」— only after journey generation has started. */
+export const JOURNEY_NAV_WORKFLOW_STATES: ReadonlySet<ChapterWorkflowState> = new Set([
+  "journey_starting",
+  "journey_running",
+  "journey_interrupted",
+  "journey_failed",
+  "journey_cancelled",
+  "journey_succeeded",
+]);
+
+/** Deep-link to Journey must leave these states (no empty / 尚未开始 intermediate page). */
+export const JOURNEY_DEEP_LINK_REDIRECT_TO_PROGRESS: ReadonlySet<ChapterWorkflowState> =
+  new Set([
+    "boundary_detecting",
+    "scene_analysis_running",
+    "waiting_scene_analysis",
+  ]);
+
+export function shouldShowJourneyNav(workflowState: ChapterWorkflowState): boolean {
+  return JOURNEY_NAV_WORKFLOW_STATES.has(workflowState);
+}
 
 export type ChapterPrimaryCta =
   | "view_progress"
@@ -55,6 +79,7 @@ export type ChapterAnalysisPresentationV1 = {
   show_results_nav: boolean;
   show_progress_nav: boolean;
   redirect_journey_to_confirm: boolean;
+  redirect_journey_to_progress: boolean;
 };
 
 const PRIORITY: ChapterWorkflowState[] = [
@@ -64,6 +89,8 @@ const PRIORITY: ChapterWorkflowState[] = [
   "journey_failed",
   "journey_interrupted",
   "journey_running",
+  "journey_starting",
+  "waiting_scene_analysis",
   "scene_analysis_running",
   "awaiting_scene_confirmation",
   "boundary_detecting",
@@ -82,7 +109,7 @@ function mapComposition(composition: ChapterAnalysisUiState): ChapterWorkflowSta
     case "reader_journey_processing":
       return "journey_running";
     case "awaiting_reader_journey_start":
-      return "scene_analysis_running";
+      return "journey_starting";
     case "running":
     case "creating":
     case "partial":
@@ -135,7 +162,10 @@ function mapLifecycle(run: Run | null | undefined): ChapterWorkflowState | null 
     ) {
       return "scene_analysis_failed";
     }
-    if (journeyError === "WAITING_SCENE_ANALYSIS" || effective === "scene_analysis") {
+    if (journeyError === "WAITING_SCENE_ANALYSIS") {
+      return "waiting_scene_analysis";
+    }
+    if (effective === "scene_analysis") {
       return "scene_analysis_running";
     }
   }
@@ -158,15 +188,55 @@ function mapLifecycle(run: Run | null | undefined): ChapterWorkflowState | null 
   ) {
     return "journey_failed";
   }
+  if (
+    journeyStatus === "starting" ||
+    journeyStatus === "queued" ||
+    journeyStatus === "pending"
+  ) {
+    return "journey_starting";
+  }
   const phase = normalizeRunLifecycle(run);
   switch (phase) {
     case "awaiting_user":
       return "awaiting_scene_confirmation";
     case "active":
-      if (effective === "scene_analysis" || journeyError === "WAITING_SCENE_ANALYSIS") {
+      if (journeyError === "WAITING_SCENE_ANALYSIS") {
+        return "waiting_scene_analysis";
+      }
+      if (
+        effective === "scene_analysis" ||
+        parentStatus === "scene_analysis_running" ||
+        parentStatus === "boundary_confirmed"
+      ) {
         return "scene_analysis_running";
       }
-      return "journey_running";
+      if (
+        journeyStatus === "starting" ||
+        journeyStatus === "queued" ||
+        journeyStatus === "pending"
+      ) {
+        return "journey_starting";
+      }
+      if (
+        journeyStatus === "running" ||
+        journeyStatus === "scene_profiles_running" ||
+        journeyStatus === "chapter_synthesis_running" ||
+        effective === "journey_running"
+      ) {
+        return "journey_running";
+      }
+      if (
+        parentStatus.includes("boundary") ||
+        parentStatus === "running" ||
+        parentStatus === "queued"
+      ) {
+        // Prefer boundary / scene over falsely advertising journey nav.
+        return parentStatus === "boundary_confirmed" || parentStatus === "scene_analysis_running"
+          ? "scene_analysis_running"
+          : "boundary_detecting";
+      }
+      // Unknown active: keep journey nav hidden until journey status is explicit.
+      return "scene_analysis_running";
     case "interrupted":
       return "journey_interrupted";
     case "failed":
@@ -187,6 +257,7 @@ export function resolveChapterWorkflowState(args: {
   inFlight?: boolean;
   awaitingConfirmation?: boolean;
   chapterComplete?: boolean;
+  confirmedRevisionId?: number | null;
 }): ChapterWorkflowState {
   const candidates: ChapterWorkflowState[] = [];
   if (args.awaitingConfirmation) candidates.push("awaiting_scene_confirmation");
@@ -194,7 +265,8 @@ export function resolveChapterWorkflowState(args: {
   if (fromPage) candidates.push(fromPage);
   const fromLife = mapLifecycle(args.lifecycleRun);
   const lifeIsSceneFailed = fromLife === "scene_analysis_failed";
-  const lifeIsSceneRunning = fromLife === "scene_analysis_running";
+  const lifeIsSceneRunning =
+    fromLife === "scene_analysis_running" || fromLife === "waiting_scene_analysis";
   if (fromLife) candidates.push(fromLife);
   const fromComp = mapComposition(args.composition);
   // Parent AnalysisRun may stay "succeeded" after scenes while journey failed/interrupted.
@@ -204,10 +276,12 @@ export function resolveChapterWorkflowState(args: {
     fromPage === "journey_failed" ||
     fromPage === "journey_cancelled" ||
     fromPage === "journey_running" ||
+    fromPage === "journey_starting" ||
     fromLife === "journey_interrupted" ||
     fromLife === "journey_failed" ||
     fromLife === "journey_cancelled" ||
     fromLife === "journey_running" ||
+    fromLife === "journey_starting" ||
     lifeIsSceneFailed ||
     lifeIsSceneRunning;
   if (
@@ -217,13 +291,31 @@ export function resolveChapterWorkflowState(args: {
       (terminalOpen || lifeIsSceneFailed || lifeIsSceneRunning)
     )
   ) {
-    candidates.push(fromComp);
+    if (
+      fromComp === "scene_analysis_running" &&
+      !lifeIsSceneRunning &&
+      args.confirmedRevisionId == null &&
+      !args.awaitingConfirmation
+    ) {
+      candidates.push("boundary_detecting");
+    } else {
+      candidates.push(fromComp);
+    }
   }
   if (args.chapterComplete && !terminalOpen) {
     candidates.push("journey_succeeded");
   }
   if (args.inFlight && !fromPage && !args.awaitingConfirmation && !terminalOpen) {
-    candidates.push("scene_analysis_running");
+    if (
+      args.confirmedRevisionId == null &&
+      (args.composition === "running" ||
+        args.composition === "creating" ||
+        args.composition === "partial")
+    ) {
+      candidates.push("boundary_detecting");
+    } else {
+      candidates.push("scene_analysis_running");
+    }
   }
   if (!candidates.length) return "chapter_ready";
   return candidates.reduce(higherPriority);
@@ -280,12 +372,11 @@ export function buildChapterAnalysisPresentationV1(args: {
       break;
     }
     case "scene_analysis_running":
+    case "waiting_scene_analysis":
       primary_action = "view_progress";
       status_title = "正在分析场景";
       status_description =
-        completed != null && total != null
-          ? `已完成 ${completed} / ${total} 个场景。产物齐备后将自动生成阅读旅程。`
-          : "场景分析进行中，完成后将自动生成阅读旅程。";
+        "StoryLens 正在分析确认后的场景。全部场景完成后，将自动生成阅读旅程。";
       break;
     case "scene_analysis_failed":
       primary_action = "reanalyze";
@@ -295,18 +386,18 @@ export function buildChapterAnalysisPresentationV1(args: {
           ? `已完成 ${completed} / ${total} 个场景。第一个场景分析时发生错误，阅读旅程尚未开始生成。`
           : "场景分析未完成，阅读旅程尚未开始生成。";
       break;
+    case "journey_starting":
+      primary_action = "view_progress";
+      status_title = "正在启动阅读旅程";
+      status_description = "场景分析已完成，正在启动阅读旅程。";
+      break;
     case "journey_running":
       primary_action = "view_progress";
-      if (completed == null || completed === 0) {
-        status_title = "正在启动阅读旅程";
-        status_description = "正在启动阅读旅程，请稍候。";
-      } else {
-        status_title = "正在生成阅读旅程";
-        status_description =
-          total != null
-            ? `已完成 ${completed} / ${total} 个场景。`
-            : "正在分析场景 / 正在生成阅读旅程。";
-      }
+      status_title = "正在生成阅读旅程";
+      status_description =
+        completed != null && total != null
+          ? `已完成 ${completed} / ${total} 个场景。`
+          : "正在生成阅读旅程。";
       break;
     case "journey_interrupted":
       primary_action = "continue_analysis";
@@ -336,18 +427,14 @@ export function buildChapterAnalysisPresentationV1(args: {
   }
 
   const show_confirm_nav = workflow_state === "awaiting_scene_confirmation";
-  const show_journey_nav =
-    workflow_state === "journey_running" ||
-    workflow_state === "journey_interrupted" ||
-    workflow_state === "journey_succeeded" ||
-    workflow_state === "scene_analysis_running" ||
-    workflow_state === "scene_analysis_failed" ||
-    workflow_state === "journey_failed";
+  const show_journey_nav = shouldShowJourneyNav(workflow_state);
   const show_results_nav = workflow_state === "journey_succeeded";
   const show_progress_nav =
     workflow_state === "boundary_detecting" ||
     workflow_state === "scene_analysis_running" ||
+    workflow_state === "waiting_scene_analysis" ||
     workflow_state === "scene_analysis_failed" ||
+    workflow_state === "journey_starting" ||
     workflow_state === "journey_running" ||
     workflow_state === "journey_failed" ||
     workflow_state === "journey_interrupted";
@@ -378,6 +465,7 @@ export function buildChapterAnalysisPresentationV1(args: {
     show_results_nav,
     show_progress_nav,
     redirect_journey_to_confirm: workflow_state === "awaiting_scene_confirmation",
+    redirect_journey_to_progress: JOURNEY_DEEP_LINK_REDIRECT_TO_PROGRESS.has(workflow_state),
   };
 }
 

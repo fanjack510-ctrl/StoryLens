@@ -1,0 +1,32 @@
+{
+  "id": "CHG-20260730-017",
+  "title": "Hide reading journey navigation until journey generation starts",
+  "type": "fix",
+  "base_version": "1.1.2",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [],
+  "files": [],
+  "user_summary": "场景分析期间隐藏阅读旅程入口，避免误导性未开始页面",
+  "technical_summary": "",
+  "acceptance_criteria": [],
+  "tests": [],
+  "verification_evidence": [],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": null,
+  "created_at": "2026-07-30T09:25:11Z",
+  "updated_at": "2026-07-30T09:25:11Z"
+}

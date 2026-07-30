@@ -205,24 +205,20 @@ describe("BookRoutePage reader journey resume entry", () => {
       expect(screen.getByTestId("book-chapter-shell")).toHaveAttribute("data-view", "progress");
     });
     expect(screen.getByTestId("workspace-view-switcher")).toBeInTheDocument();
-    expect(screen.getByTestId("workspace-tab-analysis")).toHaveTextContent("场景分析");
+    // CHG-011/017: ordinary nav has reading + journey (not 场景分析 tab).
+    expect(screen.queryByTestId("workspace-tab-analysis")).not.toBeInTheDocument();
     expect(screen.getByTestId("workspace-tab-journey")).toHaveTextContent("阅读旅程");
     expect(screen.getByTestId("chapter-analysis-progress")).toBeInTheDocument();
     expect(screen.queryByText("分析全部完成")).not.toBeInTheDocument();
     expect(analysisApi.createReaderJourney).not.toHaveBeenCalled();
   });
 
-  it("lets user open Scene tab while journey pending without creating journey", async () => {
+  it("keeps journey pending on progress without auto-create (no scene analysis tab)", async () => {
     renderBook("/books/1?chapter=2&analysisRun=5&view=progress");
     await waitFor(() => {
-      expect(screen.getByTestId("workspace-tab-analysis")).toBeEnabled();
+      expect(screen.getByTestId("workspace-tab-journey")).toBeEnabled();
     });
-    fireEvent.click(screen.getByTestId("workspace-tab-analysis"));
-    await waitFor(() => {
-      expect(screen.getByTestId("book-chapter-shell")).toHaveAttribute("data-view", "result");
-      expect(screen.getByTestId("embedded-analysis-result")).toBeInTheDocument();
-    });
-    expect(screen.getByTestId("mock-embedded-results")).toBeInTheDocument();
+    expect(screen.queryByTestId("workspace-tab-analysis")).not.toBeInTheDocument();
     expect(screen.getByTestId("chapter-analysis-progress")).toBeInTheDocument();
     expect(screen.getByTestId("book-chapter-shell")).toHaveAttribute("data-analysis-run", "5");
     expect(analysisApi.createReaderJourney).not.toHaveBeenCalled();

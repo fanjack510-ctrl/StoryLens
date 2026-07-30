@@ -1,0 +1,34 @@
+{
+  "change_id": "CHG-20260730-017",
+  "pass": true,
+  "timestamp": "2026-07-30T09:45:00+00:00",
+  "real_provider_calls": 0,
+  "formal_db_writes": 0,
+  "harness": "pytest FakeProvider + testing_session (no AppData formal DB)",
+  "results": [
+    {
+      "case": "A_scene_analysis_running",
+      "pass": true,
+      "test": "test_http_e2e_a_scene_analysis_running_hides_journey_nav",
+      "expected_show_journey_nav": false,
+      "effective_status": "scene_analysis",
+      "journey_error": "WAITING_SCENE_ANALYSIS",
+      "confirmed_scene_count": 3
+    },
+    {
+      "case": "B_waiting_scene_analysis",
+      "pass": true,
+      "test": "test_http_e2e_b_waiting_scene_analysis_hides_journey_nav",
+      "expected_show_journey_nav": false,
+      "effective_status": "scene_analysis",
+      "journey_error": "WAITING_SCENE_ANALYSIS"
+    },
+    {
+      "case": "C_journey_starting",
+      "pass": true,
+      "test": "test_http_e2e_c_journey_starting_shows_journey_nav",
+      "expected_show_journey_nav": true
+    }
+  ],
+  "frontend_contract": "apps/desktop Vitest chapterAnalysisPresentation.journeyNav + BookRoutePage.journeyNav"
+}
