@@ -59,6 +59,18 @@
       "message": "docs(release): attach CHG-017 verified tip commit",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "b93b5ae8844192172fb29f313a5e23be947cd6f1",
+      "message": "docs(release): sync CHG-017 verified registry tip",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "d48852994bf0abbe560d4692480f4a9d25d9efe0",
+      "message": "docs(release): finalize CHG-017 verified HEAD tip",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -103,5 +115,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-30T09:25:11Z",
-  "updated_at": "2026-07-30T12:41:44Z"
+  "updated_at": "2026-07-30T12:42:02Z"
 }
