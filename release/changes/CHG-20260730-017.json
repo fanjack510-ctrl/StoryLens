@@ -11,6 +11,12 @@
       "message": "fix(chapter): hide journey navigation during scene analysis",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "ea1944e126b9076cc3057130fd9e97231bf72d0b",
+      "message": "docs(release): mark CHG-20260730-017 tested",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -51,5 +57,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-30T09:25:11Z",
-  "updated_at": "2026-07-30T09:46:20Z"
+  "updated_at": "2026-07-30T09:46:40Z"
 }
