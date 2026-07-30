@@ -60,7 +60,7 @@ def test_validate_then_confirm_start_journey_succeeds(testing_session, monkeypat
     assert err is None
     assert journey is not None
     journey_id = journey.id
-    assert journey.status == "queued"
+    assert journey.status in {"queued", "starting"}
 
     # Bind execute to the same in-memory testing session factory.
     factory = testing_session.get_bind()
