@@ -3,16 +3,39 @@
   "title": "Hide reading journey navigation until journey generation starts",
   "type": "fix",
   "base_version": "1.1.2",
-  "status": "registered",
+  "status": "tested",
   "include_in_next_release": true,
-  "commits": [],
-  "modules": [],
-  "files": [],
+  "commits": [
+    {
+      "sha": "834cb3401945ca93729fe4adfb96b195e3a64647",
+      "message": "fix(chapter): hide journey navigation during scene analysis",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "desktop",
+    "api"
+  ],
+  "files": [
+    "apps/desktop/src/services/chapterAnalysisPresentation.ts",
+    "apps/desktop/src/pages/BookRoutePage.tsx"
+  ],
   "user_summary": "场景分析期间隐藏阅读旅程入口，避免误导性未开始页面",
-  "technical_summary": "",
-  "acceptance_criteria": [],
-  "tests": [],
-  "verification_evidence": [],
+  "technical_summary": "Hide ordinary journey nav until journey_* workflow; redirect premature deep links; remove 尚未开始 gate",
+  "acceptance_criteria": [
+    "Scene analysis hides 阅读旅程; journey deep link redirects; journey_starting shows nav"
+  ],
+  "tests": [
+    "apps/desktop/src/services/chapterAnalysisPresentation.journeyNav.test.ts",
+    "apps/desktop/src/pages/BookRoutePage.journeyNav.test.tsx",
+    "apps/api/tests/test_journey_nav_visibility_chg017.py"
+  ],
+  "verification_evidence": [
+    "release/evidence/hotfix/1.1.2/CHG-20260730-017/TEST_RESULTS.json",
+    "release/evidence/hotfix/1.1.2/CHG-20260730-017/HTTP_E2E.json",
+    "release/evidence/hotfix/1.1.2/CHG-20260730-017/VERIFICATION.md"
+  ],
   "data_compatibility": {
     "database_changed": false,
     "migration_required": false,
@@ -26,7 +49,7 @@
     "breaking_change": false
   },
   "blocker_level": null,
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-07-30T09:25:11Z",
-  "updated_at": "2026-07-30T09:25:11Z"
+  "updated_at": "2026-07-30T09:46:20Z"
 }
