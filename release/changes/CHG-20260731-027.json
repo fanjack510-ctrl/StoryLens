@@ -5,7 +5,14 @@
   "base_version": "1.1.2",
   "status": "registered",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "b06b4877045867745b75ef9f74e547807424290d",
+      "message": "chore(release): verify CHG-026 RC.7 MG and register CHG-027 stable build",
+      "primary": true,
+      "multi_change_reason": "shared MG closeout + CHG-027 registration commit"
+    }
+  ],
   "modules": [
     "release",
     "desktop",
@@ -37,6 +44,6 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-31T14:38:46Z",
-  "updated_at": "2026-07-31T14:39:06Z",
+  "updated_at": "2026-07-31T14:39:07Z",
   "target_version": "1.1.2"
 }
