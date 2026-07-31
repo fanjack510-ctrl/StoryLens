@@ -71,6 +71,12 @@
       "message": "test(acceptance): assert WorkspaceJourneyPane result for CHG-023 success",
       "primary": false,
       "multi_change_reason": null
+    },
+    {
+      "sha": "7e76752cbabd8cbdfedc5b033537c22c6cdf5e41",
+      "message": "docs(release): attach CHG-023 browser E2E acceptance commit",
+      "primary": false,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -117,5 +123,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-31T04:15:37Z",
-  "updated_at": "2026-07-31T07:01:10Z"
+  "updated_at": "2026-07-31T07:01:58Z"
 }
