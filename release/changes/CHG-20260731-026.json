@@ -17,6 +17,12 @@
       "message": "chore(release): mark CHG-20260731-026 tested for 1.1.2-rc.7",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "b763d174905c3b16f93517bd68b8077433a4c119",
+      "message": "chore(release): sync CHG-026 attach metadata at tip",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -67,5 +73,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-31T13:38:39Z",
-  "updated_at": "2026-07-31T14:02:21Z"
+  "updated_at": "2026-07-31T14:02:42Z"
 }
