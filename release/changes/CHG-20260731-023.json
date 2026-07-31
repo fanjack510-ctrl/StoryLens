@@ -65,6 +65,12 @@
       "message": "test(acceptance): patch bound integrity import for CHG-023 launcher",
       "primary": false,
       "multi_change_reason": null
+    },
+    {
+      "sha": "6c19dac01d39e434234dcd1d2b6853580685a0d8",
+      "message": "test(acceptance): assert WorkspaceJourneyPane result for CHG-023 success",
+      "primary": false,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -111,5 +117,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-31T04:15:37Z",
-  "updated_at": "2026-07-31T06:48:36Z"
+  "updated_at": "2026-07-31T07:01:10Z"
 }
