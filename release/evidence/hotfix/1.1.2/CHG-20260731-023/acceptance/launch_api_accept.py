@@ -123,6 +123,8 @@ def _acceptance_trusted_integrity(session, journey_run=None, **kwargs):  # type:
 
 
 _aig.scan_reader_journey_integrity = _acceptance_trusted_integrity  # type: ignore[assignment]
+# reader_journey imported the symbol by name — patch the bound reference too.
+_rj_api.scan_reader_journey_integrity = _acceptance_trusted_integrity  # type: ignore[assignment]
 
 import uvicorn  # noqa: E402
 
