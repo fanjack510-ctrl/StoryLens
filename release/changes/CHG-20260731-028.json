@@ -11,6 +11,12 @@
       "message": "docs(release): prepare StoryLens 1.1.2 GitHub release",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "921502b927d121a043175f420c09acd1e1f45e1a",
+      "message": "docs(release): record StoryLens 1.1.2 publication",
+      "primary": true,
+      "multi_change_reason": "publication record shared with CHG-027"
     }
   ],
   "modules": [
@@ -49,6 +55,6 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-31T15:32:11Z",
-  "updated_at": "2026-07-31T15:36:02Z",
+  "updated_at": "2026-07-31T15:36:04Z",
   "target_version": "1.1.2"
 }
