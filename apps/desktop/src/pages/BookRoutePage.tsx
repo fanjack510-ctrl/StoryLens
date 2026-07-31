@@ -1014,15 +1014,9 @@ export function BookRoutePage() {
     analysisRunId: analysisRunId ?? progress.run?.id,
     detailStatus: (journey.data as JourneyQueryPayload | undefined)?.status,
     progressStatus: journeyProgress.data?.status,
-    currentStage:
-      journeyProgress.data?.current_stage ??
-      (journey.data as JourneyQueryPayload | undefined)?.current_stage,
-    completedSceneCount:
-      journeyProgress.data?.completed_scene_count ??
-      (journey.data as JourneyQueryPayload | undefined)?.completed_scene_count,
-    totalSceneCount:
-      journeyProgress.data?.total_scene_count ??
-      (journey.data as JourneyQueryPayload | undefined)?.total_scene_count,
+    currentStage: journeyProgress.data?.current_stage ?? null,
+    completedSceneCount: journeyProgress.data?.completed_scene_count ?? null,
+    totalSceneCount: journeyProgress.data?.total_scene_count ?? null,
     resultExists: Boolean(
       (journey.data as JourneyQueryPayload | undefined)?.visualization ||
         progress.run?.journey_result_available === true ||
