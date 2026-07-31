@@ -1,0 +1,40 @@
+{
+  "id": "CHG-20260731-028",
+  "title": "Publish StoryLens 1.1.2 GitHub Release",
+  "type": "build",
+  "base_version": "1.1.2",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "release"
+  ],
+  "files": [],
+  "user_summary": "推送 hotfix/1.1.2、创建 v1.1.2 Tag 并发布 GitHub Release（含安装包与 SHA-256）",
+  "technical_summary": "Publish v1.1.2 from build source 30fe4b6; upload StoryLens_1.1.2_x64-setup.exe; set Latest.",
+  "acceptance_criteria": [
+    "Push hotfix/1.1.2",
+    "Annotated tag v1.1.2 on 30fe4b6",
+    "GitHub Release published as Latest with installer + SHA256",
+    "CHG-027 and CHG-028 marked released"
+  ],
+  "tests": [],
+  "verification_evidence": [],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-31T15:32:11Z",
+  "updated_at": "2026-07-31T15:32:11Z",
+  "target_version": "1.1.2"
+}
