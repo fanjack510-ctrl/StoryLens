@@ -43,12 +43,26 @@ export function AppShell() {
   const theme = useUiStore((s) => s.theme);
   const runtime = useRuntimeInfo();
   const webShell = isLocalWebShell(runtime.data);
-  const [devFingerprint, setDevFingerprint] = useState(() =>
-    import.meta.env.DEV ? formatRuntimeFingerprint() : "",
-  );
+  const [buildFingerprint, setBuildFingerprint] = useState(() => {
+    const fp = getRuntimeFingerprint();
+    if (import.meta.env.DEV) return formatRuntimeFingerprint(fp);
+    // Acceptance / preview builds bake VITE_PUBLIC_GIT_HEAD — surface Commit SHA on page.
+    if (fp.publicHead && fp.publicHead !== "unknown") {
+      return `Build ${fp.publicHead} · API ${fp.apiPort || fp.apiBase}`;
+    }
+    return "";
+  });
   useEffect(() => {
-    if (!import.meta.env.DEV) return;
-    const refresh = () => setDevFingerprint(formatRuntimeFingerprint(getRuntimeFingerprint()));
+    const refresh = () => {
+      const fp = getRuntimeFingerprint();
+      if (import.meta.env.DEV) {
+        setBuildFingerprint(formatRuntimeFingerprint(fp));
+        return;
+      }
+      if (fp.publicHead && fp.publicHead !== "unknown") {
+        setBuildFingerprint(`Build ${fp.publicHead} · API ${fp.apiPort || fp.apiBase}`);
+      }
+    };
     refresh();
     return onApiBaseChange(() => refresh());
   }, []);
@@ -149,13 +163,14 @@ export function AppShell() {
           <p className="nav-version" data-testid="app-footer">
             {webShell ? "本地网页版" : "StoryLens"} · {appVersion}
           </p>
-          {import.meta.env.DEV && devFingerprint ? (
+          {buildFingerprint ? (
             <p
               className="nav-dev-fingerprint"
               data-testid="runtime-dev-fingerprint"
+              data-build-fingerprint="1"
               title={getRuntimeFingerprint().apiBase}
             >
-              {devFingerprint}
+              {buildFingerprint}
             </p>
           ) : null}
         </div>

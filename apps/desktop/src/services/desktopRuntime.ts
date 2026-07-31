@@ -33,9 +33,16 @@ export async function bootstrapDesktopRuntime(
   onStatus?: (status: BackendUiStatus) => void,
 ): Promise<BackendUiStatus> {
   if (!isTauriRuntime()) {
-    // Production SPA served by FastAPI: same-origin relative API paths.
+    // Production SPA served by FastAPI uses same-origin relative API paths.
+    // Explicit build-time VITE_API_BASE_URL (acceptance vite preview) must be preserved.
     if (!import.meta.env.DEV) {
-      setApiBase("");
+      const baked =
+        typeof import.meta.env.VITE_API_BASE_URL === "string"
+          ? import.meta.env.VITE_API_BASE_URL.trim()
+          : "";
+      if (!baked) {
+        setApiBase("");
+      }
     }
     // Browser / Vitest: API is started separately (start-dev.ps1 / start_storylens_web.ps1).
     onStatus?.({ state: "browser_dev" });
