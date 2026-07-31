@@ -522,8 +522,27 @@ async def resume_reader_journey(
     if journey_run.status in JOURNEY_ACTIVE_WORKER_STATUSES:
         reclaim_stale_journey_if_needed(session, journey_run)
         session.refresh(journey_run)
-    # CHG-013: idempotent resume — do not create a new run; re-arm same journey.
+    # CHG-023 final: same journey_run_id + request.client_request_id → at most one
+    # startup intent / background task (do not re-enqueue).
+    try:
+        _details_early = json.loads(journey_run.failure_details_json or "{}")
+    except json.JSONDecodeError:
+        _details_early = {}
+    _startup_early = _details_early.get("startup_intent")
+    _startup_cid = (
+        _startup_early.get("client_request_id")
+        if isinstance(_startup_early, dict)
+        else None
+    )
     if journey_run.status in JOURNEY_STARTING_STATUSES:
+        if (
+            request.client_request_id
+            and _startup_cid
+            and str(_startup_cid) == str(request.client_request_id)
+        ):
+            return ReaderJourneyRunAccepted(
+                journey_run_id=journey_run.id, status=journey_run.status
+            )
         background.add_task(execute_reader_journey, session_factory, gateway, journey_run.id)
         return ReaderJourneyRunAccepted(
             journey_run_id=journey_run.id, status=journey_run.status
@@ -587,7 +606,7 @@ async def resume_reader_journey(
     journey_run.cloud_consent = request.cloud_consent
     journey_run.planner_version = PLANNER_VERSION
     mark_journey_startup_intent(
-        journey_run, client_request_id=journey_run.client_request_id
+        journey_run, client_request_id=request.client_request_id
     )
     session.commit()
     background.add_task(execute_reader_journey, session_factory, gateway, journey_run.id)

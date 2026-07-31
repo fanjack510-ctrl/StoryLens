@@ -48,7 +48,7 @@ describe("isStaleJourneyResponse", () => {
 });
 
 describe("resolveJourneyPageState", () => {
-  it("9.1 active overrides old failure", () => {
+  it("9.1 terminal failed beats active progress when detail failed", () => {
     expect(
       resolveJourneyPageState({
         journeyStatus: "failed",
@@ -57,10 +57,10 @@ describe("resolveJourneyPageState", () => {
         requestSequence: 2,
         appliedSequence: 1,
       }),
-    ).toBe("active");
+    ).toBe("terminal_failed");
   });
 
-  it("9.2 completed overrides old failure", () => {
+  it("9.2 bound failed is not overridden by chapterComplete/artifact (CHG-023 final)", () => {
     expect(
       resolveJourneyPageState({
         journeyStatus: "failed",
@@ -69,7 +69,7 @@ describe("resolveJourneyPageState", () => {
         requestSequence: 3,
         appliedSequence: 2,
       }),
-    ).toBe("completed");
+    ).toBe("terminal_failed");
   });
 
   it("9.3 out-of-order failed response returns null so UI keeps running", () => {
@@ -126,14 +126,14 @@ describe("resolveJourneyPageState", () => {
     ).toBe("terminal_failed");
   });
 
-  it("9.7 final artifact wins even with stale error fields", () => {
+  it("9.7 bound failed stays terminal even with artifact + stale error fields", () => {
     expect(
       resolveJourneyPageState({
         journeyStatus: "failed",
         errorCode: "SOME_OLD_ERROR",
         finalArtifactAvailable: true,
       }),
-    ).toBe("completed");
+    ).toBe("terminal_failed");
   });
 
   it("maps recoverable partial as interrupted; failed(+retryable) as terminal failed", () => {
@@ -227,14 +227,14 @@ describe("resolveJourneyPageState", () => {
     ).toBe("completed");
   });
 
-  it("parent journey_running overrides stale failed GET", () => {
+  it("parent journey_running does not override bound failed status", () => {
     expect(
       resolveJourneyPageState({
         journeyStatus: "failed",
         parentJourneyStatus: "scene_profiles_running",
         effectiveStatus: "journey_running",
       }),
-    ).toBe("active");
+    ).toBe("terminal_failed");
   });
 });
 
@@ -248,6 +248,6 @@ describe("shouldPollJourneyResult", () => {
         effectiveStatus: "journey_running",
         journeyStatus: "failed",
       }),
-    ).toBe(true);
+    ).toBe(false);
   });
 });

@@ -411,8 +411,8 @@ describe("BookRoutePage reader journey resume entry", () => {
     vi.mocked(analysisApi.readerJourney).mockResolvedValue({
       journey_run_id: 42,
       analysis_run_id: 5,
-      status: "failed",
-      retryable: false,
+      status: "scene_profiles_running",
+      retryable: true,
       formula_version: "v1",
       phases: [],
       scene_profiles: [],
@@ -528,21 +528,49 @@ describe("BookRoutePage reader journey resume entry", () => {
       phases: [],
       scene_profiles: [],
     } as any;
-    vi.mocked(analysisApi.readerJourney).mockResolvedValue(partialJourney);
-    vi.mocked(analysisApi.readerJourneyById).mockResolvedValue(partialJourney);
-    vi.mocked(analysisApi.readerJourneyProgress).mockResolvedValue({
-      journey_run_id: 7,
-      analysis_run_id: 5,
-      status: "scene_profiles_partial",
-      total_scene_count: 13,
-      completed_scene_count: 2,
-      remaining_scene_count: 11,
-      completed_scene_ids: [],
-      remaining_scene_ids: [],
-      phase_count: 0,
-      has_chapter_summary: false,
-      retryable: true,
-      root_error_code: "JOURNEY_INTERRUPTED",
+    vi.mocked(analysisApi.readerJourney).mockImplementation(async () => {
+      if (vi.mocked(analysisApi.resumeReaderJourney).mock.calls.length > 0) {
+        return { ...partialJourney, status: "queued" } as any;
+      }
+      return partialJourney;
+    });
+    vi.mocked(analysisApi.readerJourneyById).mockImplementation(async () => {
+      if (vi.mocked(analysisApi.resumeReaderJourney).mock.calls.length > 0) {
+        return { ...partialJourney, status: "queued" } as any;
+      }
+      return partialJourney;
+    });
+    vi.mocked(analysisApi.readerJourneyProgress).mockImplementation(async () => {
+      if (vi.mocked(analysisApi.resumeReaderJourney).mock.calls.length > 0) {
+        return {
+          journey_run_id: 7,
+          analysis_run_id: 5,
+          status: "queued",
+          total_scene_count: 13,
+          completed_scene_count: 2,
+          remaining_scene_count: 11,
+          completed_scene_ids: [],
+          remaining_scene_ids: [],
+          phase_count: 0,
+          has_chapter_summary: false,
+          retryable: true,
+          root_error_code: "JOURNEY_INTERRUPTED",
+        };
+      }
+      return {
+        journey_run_id: 7,
+        analysis_run_id: 5,
+        status: "scene_profiles_partial",
+        total_scene_count: 13,
+        completed_scene_count: 2,
+        remaining_scene_count: 11,
+        completed_scene_ids: [],
+        remaining_scene_ids: [],
+        phase_count: 0,
+        has_chapter_summary: false,
+        retryable: true,
+        root_error_code: "JOURNEY_INTERRUPTED",
+      };
     });
     renderBook("/books/1?chapter=2&analysisRun=5&journeyRun=7&view=progress");
     await waitFor(() => {
