@@ -136,13 +136,13 @@ describe("resolveJourneyPageState", () => {
     ).toBe("completed");
   });
 
-  it("maps retryable / interrupted failures away from terminal failed", () => {
+  it("maps recoverable partial as interrupted; failed(+retryable) as terminal failed", () => {
     expect(
       resolveJourneyPageState({
         journeyStatus: "failed",
         retryable: true,
       }),
-    ).toBe("interrupted");
+    ).toBe("terminal_failed");
     expect(
       resolveJourneyPageState({
         journeyStatus: "scene_profiles_partial",
@@ -152,8 +152,25 @@ describe("resolveJourneyPageState", () => {
       resolveJourneyPageState({
         journeyStatus: "failed",
         errorCode: "JOURNEY_INTERRUPTED",
+        retryable: true,
       }),
-    ).toBe("interrupted");
+    ).toBe("terminal_failed");
+  });
+
+  it("CHG-023: failed + checkpoint/recovery noise never shows interrupted", () => {
+    expect(
+      resolveJourneyPageState({
+        currentJourneyId: 2,
+        responseJourneyId: 2,
+        journeyStatus: "failed",
+        progressStatus: "failed",
+        errorCode: "PIPELINE_UNEXPECTED_ERROR",
+        retryable: true,
+        finalArtifactAvailable: false,
+        chapterComplete: false,
+        effectiveStatus: "journey_failed",
+      }),
+    ).toBe("terminal_failed");
   });
 
   it("bound recoverable interrupted wins over sibling chapter_complete", () => {

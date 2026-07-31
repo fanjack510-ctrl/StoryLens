@@ -2,20 +2,22 @@
   "database": "C:\\Users\\msi\\AppData\\Local\\Temp\\storylens-mg-chg023\\storylens.db",
   "api_url": "http://127.0.0.1:18057",
   "frontend_url": "http://127.0.0.1:1436",
-  "succeeded_stale_recovery": {
+  "resume_success": {
     "book_id": 1,
     "chapter_id": 1,
     "analysis_run_id": 1,
     "journey_run_id": 1,
     "confirmed_revision_id": 1,
-    "url": "http://127.0.0.1:1436/books/1?chapter=1&analysisRun=1&journeyRun=1&view=result&tab=reader-journey"
+    "client_request_id": "chg023-mg-success",
+    "url": "http://127.0.0.1:1436/books/1?chapter=1&analysisRun=1&journeyRun=1&view=progress&tab=reader-journey"
   },
-  "real_recoverable": {
+  "resume_failure": {
     "book_id": 2,
     "chapter_id": 2,
     "analysis_run_id": 2,
     "journey_run_id": 2,
     "confirmed_revision_id": 2,
+    "client_request_id": "chg023-mg-fail",
     "url": "http://127.0.0.1:1436/books/2?chapter=2&analysisRun=2&journeyRun=2&view=progress&tab=reader-journey"
   },
   "real_provider_calls": 0,

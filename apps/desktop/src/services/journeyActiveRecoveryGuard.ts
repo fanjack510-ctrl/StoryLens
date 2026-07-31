@@ -88,11 +88,13 @@ export function resolveShowRecoveryCard(args: RecoveryCardVisibilityInput): bool
   if (args.hasActiveTask === true) return false;
 
   const status = String(args.journeyStatus || "").toLowerCase();
-  // CHG-023: succeeded / cancelled never show recovery over a completed journey.
+  // CHG-023: succeeded / cancelled / failed never show recovery over terminal journey.
   if (
     status === "succeeded" ||
     status === "cancelled" ||
+    status === "failed" ||
     args.workflowState === "journey_succeeded" ||
+    args.workflowState === "journey_failed" ||
     args.recoveryUserStatus === "succeeded"
   ) {
     return false;

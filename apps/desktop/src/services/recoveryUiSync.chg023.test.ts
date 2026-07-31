@@ -63,4 +63,28 @@ describe("CHG-023 recovery UI sync", () => {
       }),
     ).toBe(true);
   });
+
+  it("failed(+retryable) shows failure workflow, not interrupted / continue", () => {
+    const pageView = resolveJourneyPageState({
+      journeyStatus: "failed",
+      retryable: true,
+      errorCode: "PIPELINE_UNEXPECTED_ERROR",
+    });
+    expect(pageView).toBe("terminal_failed");
+    const presentation = buildChapterAnalysisPresentationV1({
+      chapterId: 2,
+      analysisRunId: 2,
+      journeyRunId: 2,
+      composition: "succeeded",
+      pageView,
+      journeyStatus: "failed",
+      canResumeJourney: true,
+      hasCheckpointOrRecoveryBasis: true,
+    });
+    expect(presentation.workflow_state).toBe("journey_failed");
+    expect(presentation.status_title).toBe("阅读旅程生成失败");
+    expect(presentation.primary_action).toBe("retry_journey");
+    expect(presentation.show_recovery_card).toBe(false);
+    expect(presentation.can_resume).toBe(false);
+  });
 });

@@ -106,6 +106,7 @@ export type ChapterPrimaryCta =
   | "view_progress"
   | "confirm_scenes"
   | "continue_analysis"
+  | "retry_journey"
   | "view_results"
   | "start_analysis"
   | "reanalyze"
@@ -232,24 +233,27 @@ function mapLifecycle(run: Run | null | undefined): ChapterWorkflowState | null 
       return "scene_analysis_running";
     }
   }
-  // Parent AnalysisRun may stay "succeeded" after scenes while journey is interrupted.
-  if (
-    journeyStatus === "interrupted" ||
-    journeyStatus === "paused" ||
-    effective === "journey_interrupted" ||
-    (journeyError === "JOURNEY_INTERRUPTED")
-  ) {
-    return "journey_interrupted";
-  }
-  if (journeyStatus === "cancelled" || effective === "cancelled") {
-    return "journey_cancelled";
-  }
+  // CHG-023: failed journey (incl. retryable) is never rewritten as interrupted.
   if (
     journeyStatus === "failed" ||
     effective === "journey_failed" ||
     effective === "failed"
   ) {
     return "journey_failed";
+  }
+  // Parent AnalysisRun may stay "succeeded" after scenes while journey is interrupted.
+  if (
+    journeyStatus === "interrupted" ||
+    journeyStatus === "paused" ||
+    journeyStatus === "scene_profiles_partial" ||
+    journeyStatus === "budget_blocked" ||
+    effective === "journey_interrupted" ||
+    (journeyError === "JOURNEY_INTERRUPTED" && journeyStatus !== "succeeded")
+  ) {
+    return "journey_interrupted";
+  }
+  if (journeyStatus === "cancelled" || effective === "cancelled") {
+    return "journey_cancelled";
   }
   if (
     journeyStatus === "starting" ||
@@ -433,7 +437,9 @@ export function buildChapterAnalysisPresentationV1(args: {
   const completed = args.completedSceneCount ?? null;
   const can_resume =
     workflow_state === "journey_interrupted" && args.canResumeJourney !== false;
-  const can_retry = workflow_state === "journey_failed";
+  // CHG-023: retryable gate is independent of failure presentation.
+  const can_retry =
+    workflow_state === "journey_failed" && args.canResumeJourney !== false;
   const can_restart_as_new =
     workflow_state === "journey_cancelled" ||
     workflow_state === "journey_failed" ||
@@ -509,9 +515,11 @@ export function buildChapterAnalysisPresentationV1(args: {
       status_description = "可重新开始分析本章。";
       break;
     case "journey_failed":
-      primary_action = can_retry ? "continue_analysis" : "reanalyze";
-      status_title = "阅读旅程整合失败";
-      status_description = "场景分析已完成，但阅读旅程整合失败。请查看任务详情。";
+      // CHG-023: failure presentation first; retryable only gates retry CTA label.
+      primary_action = can_retry ? "retry_journey" : "none";
+      status_title = "阅读旅程生成失败";
+      status_description =
+        "StoryLens 在生成阅读旅程时遇到问题，已完成的场景分析结果仍会保留。";
       break;
     case "journey_succeeded":
       primary_action = "view_results";
@@ -595,6 +603,8 @@ export function primaryCtaLabel(action: ChapterPrimaryCta, sceneCount?: number |
       return sceneCount != null ? `确认场景` : "确认场景";
     case "continue_analysis":
       return "继续分析";
+    case "retry_journey":
+      return "重试阅读旅程";
     case "view_results":
       return "查看分析结果";
     case "start_analysis":

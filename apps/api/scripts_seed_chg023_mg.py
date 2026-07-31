@@ -1,7 +1,7 @@
-"""Seed isolated MG DB for CHG-20260731-023.
+"""Seed isolated MG DB for CHG-20260731-023 retest.
 
-Fixture A: succeeded journey + result + stale interrupt fields / recovery plan noise.
-Fixture B: real recoverable interrupted journey (can_resume).
+Fixture A (resume success): interrupted + checkpoint + can_resume; Fake Worker succeeds.
+Fixture B (resume failure): interrupted + checkpoint; launcher injects deterministic fail.
 """
 
 from __future__ import annotations
@@ -46,9 +46,7 @@ from app.db.models import (  # noqa: E402
     BoundaryReviewSession,
     BoundaryRevision,
     Chapter,
-    ChapterReaderJourneySummary,
     Paragraph,
-    ReaderJourneyPhase,
     ReaderJourneyRun,
     Scene,
     SceneReaderJourneyProfile,
@@ -207,112 +205,92 @@ def _seed_confirmed(
     return book, chapter, run, revision, scenes
 
 
-def _add_profiles(session, journey: ReaderJourneyRun, scenes: list[Scene]) -> None:
-    for scene in scenes:
-        payload = {
-            "scene_id": scene.id,
-            "scene_ordinal": scene.ordinal,
-            "scene_value_summary": f"场景{scene.ordinal}价值摘要",
-            "dominant_emotion": "紧张",
-            "emotional_valence_start": 20,
-            "emotional_valence_end": 40,
-            "arousal_start": 30,
-            "arousal_end": 50,
-            "curiosity_score": 60,
-            "tension_score": 55,
-            "payoff_score": 40,
-            "hook_score": 50,
-            "information_gain_score": 45,
-            "emotional_resonance_score": 40,
-            "cognitive_load_score": 30,
-            "dropoff_risk_score": 20,
-            "hooks": [
-                {
-                    "type": "information",
-                    "summary": "信息钩子",
-                    "strength": 60,
-                    "evidence_paragraph_ids": [scene.start_paragraph_id],
-                }
-            ],
-            "payoffs": [
-                {
-                    "type": "information",
-                    "summary": "信息回报",
-                    "strength": 50,
-                    "evidence_paragraph_ids": [scene.start_paragraph_id],
-                }
-            ],
-            "risk_points": [
-                {
-                    "type": "slow_progress",
-                    "summary": "节奏风险",
-                    "severity": 20,
-                    "evidence_paragraph_ids": [scene.start_paragraph_id],
-                }
-            ],
-            "confidence": 0.9,
-            "evidence_paragraph_ids": [scene.start_paragraph_id],
-        }
-        session.add(
-            SceneReaderJourneyProfile(
-                reader_journey_run_id=journey.id,
-                scene_id=scene.id,
-                scene_ordinal=scene.ordinal,
-                scene_value_summary=payload["scene_value_summary"],
-                dominant_emotion="紧张",
-                emotional_valence_start=20,
-                emotional_valence_end=40,
-                arousal_start=30,
-                arousal_end=50,
-                curiosity_score=60,
-                tension_score=55,
-                payoff_score=40,
-                hook_score=50,
-                information_gain_score=45,
-                emotional_resonance_score=40,
-                cognitive_load_score=30,
-                dropoff_risk_score=20,
-                engagement_score=58,
-                confidence=0.9,
-                payload_json=json.dumps(payload, ensure_ascii=False),
-                validation_status="valid",
-            )
-        )
+def _checkpoint_profile(session, journey: ReaderJourneyRun, scene: Scene) -> None:
+    payload = {
+        "scene_id": scene.id,
+        "scene_ordinal": scene.ordinal,
+        "scene_value_summary": f"场景{scene.ordinal}检查点",
+        "dominant_emotion": "紧张",
+        "curiosity_score": 60,
+        "tension_score": 55,
+        "payoff_score": 40,
+        "hook_score": 50,
+        "information_gain_score": 45,
+        "emotional_resonance_score": 40,
+        "cognitive_load_score": 30,
+        "dropoff_risk_score": 20,
+        "confidence": 0.9,
+        "evidence_paragraph_ids": [scene.start_paragraph_id],
+    }
     session.add(
-        ReaderJourneyPhase(
+        SceneReaderJourneyProfile(
             reader_journey_run_id=journey.id,
-            ordinal=1,
-            title="开端",
-            start_scene_ordinal=1,
-            end_scene_ordinal=len(scenes),
-            primary_reader_question="接下来会发生什么？",
+            scene_id=scene.id,
+            scene_ordinal=scene.ordinal,
+            scene_value_summary=payload["scene_value_summary"],
             dominant_emotion="紧张",
-            reading_payoff="推进悬念",
-            continuation_motivation="想知道答案",
-            summary="章节阶段摘要",
+            curiosity_score=60,
+            tension_score=55,
+            payoff_score=40,
+            hook_score=50,
+            information_gain_score=45,
+            emotional_resonance_score=40,
+            cognitive_load_score=30,
+            dropoff_risk_score=20,
+            engagement_score=58,
             confidence=0.9,
-            payload_json="{}",
-        )
-    )
-    session.add(
-        ChapterReaderJourneySummary(
-            reader_journey_run_id=journey.id,
-            chapter_value_summary="本章已完成阅读旅程结果（CHG-023 Fixture A）",
-            chapter_reader_question_chain_json="[]",
-            overall_engagement_score=70,
-            strongest_hook_scene_ids_json="[]",
-            strongest_payoff_scene_ids_json="[]",
-            risk_scene_ids_json="[]",
-            positive_feedback_distribution_json="{}",
-            hook_distribution_json="{}",
-            emotion_trend_summary="上升",
-            pacing_diagnosis_json="[]",
-            one_sentence_diagnosis="Fixture A succeeded with stale recovery noise.",
-            deterministic_statistics_json="{}",
-            payload_json="{}",
+            payload_json=json.dumps(payload, ensure_ascii=False),
             validation_status="valid",
         )
     )
+
+
+def _seed_interrupted(
+    session,
+    *,
+    book_title: str,
+    source_hash: str,
+    book_code: str,
+    input_hash: str,
+    client_request_id: str,
+):
+    book, chapter, run, rev, scenes = _seed_confirmed(
+        session,
+        book_title=book_title,
+        source_hash=source_hash,
+        book_code=book_code,
+        input_hash=input_hash,
+    )
+    done = scenes[:1]
+    remain = scenes[1:]
+    journey = ReaderJourneyRun(
+        analysis_run_id=run.id,
+        book_id=book.id,
+        chapter_id=chapter.id,
+        status="scene_profiles_partial",
+        current_stage="reader_journey_scene_profiles",
+        provider_name=run.provider,
+        model_name=run.model,
+        formula_version="v1",
+        scene_contract_version="2.0",
+        client_request_id=client_request_id,
+        cloud_consent=True,
+        scene_revision_id=rev.id,
+        scene_revision_no=rev.revision_number,
+        retryable=True,
+        root_error_code="JOURNEY_INTERRUPTED",
+        root_error_message="fixture recoverable interrupt",
+        completed_scene_count=len(done),
+        total_scene_count=len(scenes),
+        remaining_scene_count=len(remain),
+        completed_scene_ids_json=json.dumps([s.id for s in done]),
+        remaining_scene_ids_json=json.dumps([s.id for s in remain]),
+        started_at=datetime.now(timezone.utc),
+    )
+    session.add(journey)
+    session.flush()
+    _checkpoint_profile(session, journey, done[0])
+    return book, chapter, run, rev, journey
 
 
 def main() -> None:
@@ -323,80 +301,22 @@ def main() -> None:
         _enable_cloud(session)
         _set_budget(session)
 
-        book_a, chapter_a, run_a, rev_a, scenes_a = _seed_confirmed(
+        book_a, chapter_a, run_a, rev_a, journey_a = _seed_interrupted(
             session,
-            book_title="CHG023 Succeeded Stale Recovery",
+            book_title="CHG023 Resume Success",
             source_hash="a" * 64,
-            book_code="B0A23",
+            book_code="B0S23",
             input_hash="1" * 64,
+            client_request_id="chg023-mg-success",
         )
-        journey_a = ReaderJourneyRun(
-            analysis_run_id=run_a.id,
-            book_id=book_a.id,
-            chapter_id=chapter_a.id,
-            status="succeeded",
-            current_stage="completed",
-            provider_name=run_a.provider,
-            model_name=run_a.model,
-            formula_version="v1",
-            scene_contract_version="2.0",
-            client_request_id="chg023-mg-succeeded",
-            cloud_consent=True,
-            scene_revision_id=rev_a.id,
-            scene_revision_no=rev_a.revision_number,
-            completed_scene_count=len(scenes_a),
-            total_scene_count=len(scenes_a),
-            remaining_scene_count=0,
-            completed_scene_ids_json=json.dumps([s.id for s in scenes_a]),
-            remaining_scene_ids_json="[]",
-            # Deliberate stale interrupt noise (must not override succeeded UI).
-            root_error_code="JOURNEY_INTERRUPTED",
-            root_error_message="stale interrupt after success",
-            retryable=True,
-            failed_stage="reader_journey_scene_profiles",
-            completed_at=datetime.now(timezone.utc),
-            started_at=datetime.now(timezone.utc),
-        )
-        session.add(journey_a)
-        session.flush()
-        _add_profiles(session, journey_a, scenes_a)
-
-        book_b, chapter_b, run_b, rev_b, scenes_b = _seed_confirmed(
+        book_b, chapter_b, run_b, rev_b, journey_b = _seed_interrupted(
             session,
-            book_title="CHG023 Real Recoverable",
+            book_title="CHG023 Resume Failure",
             source_hash="b" * 64,
-            book_code="B0B23",
+            book_code="B0F23",
             input_hash="2" * 64,
+            client_request_id="chg023-mg-fail",
         )
-        done = scenes_b[:1]
-        remain = scenes_b[1:]
-        journey_b = ReaderJourneyRun(
-            analysis_run_id=run_b.id,
-            book_id=book_b.id,
-            chapter_id=chapter_b.id,
-            status="scene_profiles_partial",
-            current_stage="reader_journey_scene_profiles",
-            provider_name=run_b.provider,
-            model_name=run_b.model,
-            formula_version="v1",
-            scene_contract_version="2.0",
-            client_request_id="chg023-mg-recoverable",
-            cloud_consent=True,
-            scene_revision_id=rev_b.id,
-            scene_revision_no=rev_b.revision_number,
-            retryable=True,
-            root_error_code="JOURNEY_INTERRUPTED",
-            root_error_message="fixture recoverable interrupt",
-            completed_scene_count=len(done),
-            total_scene_count=len(scenes_b),
-            remaining_scene_count=len(remain),
-            completed_scene_ids_json=json.dumps([s.id for s in done]),
-            remaining_scene_ids_json=json.dumps([s.id for s in remain]),
-            started_at=datetime.now(timezone.utc),
-        )
-        session.add(journey_b)
-        session.flush()
-        _add_profiles(session, journey_b, done)
         session.commit()
 
         api = os.environ.get("STORYLENS_MG_API_URL", "http://127.0.0.1:18057")
@@ -405,24 +325,26 @@ def main() -> None:
             "database": str(db_path),
             "api_url": api,
             "frontend_url": fe,
-            "succeeded_stale_recovery": {
+            "resume_success": {
                 "book_id": book_a.id,
                 "chapter_id": chapter_a.id,
                 "analysis_run_id": run_a.id,
                 "journey_run_id": journey_a.id,
                 "confirmed_revision_id": rev_a.id,
+                "client_request_id": "chg023-mg-success",
                 "url": (
                     f"{fe}/books/{book_a.id}?chapter={chapter_a.id}"
                     f"&analysisRun={run_a.id}&journeyRun={journey_a.id}"
-                    f"&view=result&tab=reader-journey"
+                    f"&view=progress&tab=reader-journey"
                 ),
             },
-            "real_recoverable": {
+            "resume_failure": {
                 "book_id": book_b.id,
                 "chapter_id": chapter_b.id,
                 "analysis_run_id": run_b.id,
                 "journey_run_id": journey_b.id,
                 "confirmed_revision_id": rev_b.id,
+                "client_request_id": "chg023-mg-fail",
                 "url": (
                     f"{fe}/books/{book_b.id}?chapter={chapter_b.id}"
                     f"&analysisRun={run_b.id}&journeyRun={journey_b.id}"

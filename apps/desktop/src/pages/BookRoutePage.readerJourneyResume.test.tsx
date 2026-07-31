@@ -23,6 +23,7 @@ vi.mock("../services/analysisApi", async () => {
         scenes: [],
       })),
       readerJourney: vi.fn(async () => null),
+      readerJourneyById: vi.fn(async () => null),
       readerJourneyPreflight: vi.fn(),
       createReaderJourney: vi.fn(),
       resumeReaderJourney: vi.fn(),
@@ -280,7 +281,7 @@ describe("BookRoutePage reader journey resume entry", () => {
     expect(analysisApi.readerJourneyProgress).toHaveBeenCalledWith(42);
   });
 
-  it("shows journey interrupted StateView for retryable journey failure", async () => {
+  it("CHG-023: retryable journey failure shows failed StateView, not interrupted", async () => {
     vi.mocked(analysisApi.readerJourney).mockResolvedValue({
       journey_run_id: 42,
       analysis_run_id: 5,
@@ -311,16 +312,16 @@ describe("BookRoutePage reader journey resume entry", () => {
     });
     fireEvent.click(screen.getByTestId("workspace-tab-journey"));
     await waitFor(() => {
-      expect(screen.getByTestId("journey-interrupted")).toBeInTheDocument();
+      expect(screen.getByTestId("journey-failed")).toBeInTheDocument();
     });
-    expect(screen.getByTestId("journey-interrupted")).toHaveTextContent("阅读旅程已中断");
-    expect(screen.getByTestId("journey-interrupted-task-details")).toHaveTextContent("查看详情");
-    expect(screen.queryByTestId("journey-failed")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("mock-embedded-results")).not.toBeInTheDocument();
+    expect(screen.getByTestId("journey-failed")).toHaveTextContent("阅读旅程生成失败");
+    expect(screen.getByTestId("journey-failed-retry")).toHaveTextContent("重试阅读旅程");
+    expect(screen.queryByTestId("journey-interrupted")).not.toBeInTheDocument();
+    expect(screen.queryByText("继续分析")).not.toBeInTheDocument();
     expect(screen.queryByTestId("reader-journey-progress-card")).not.toBeInTheDocument();
   });
 
-  it("shows terminal journey failed StateView when failure is not retryable", async () => {
+  it("shows terminal journey failed without retry when failure is not retryable", async () => {
     vi.mocked(analysisApi.readerJourney).mockResolvedValue({
       journey_run_id: 42,
       analysis_run_id: 5,
@@ -354,9 +355,46 @@ describe("BookRoutePage reader journey resume entry", () => {
       expect(screen.getByTestId("journey-failed")).toBeInTheDocument();
     });
     expect(screen.getByTestId("journey-failed")).toHaveTextContent("阅读旅程生成失败");
-    expect(screen.getByTestId("journey-failed-retry")).toHaveTextContent("重新生成");
-    expect(screen.getByTestId("journey-failed-task-details")).toHaveTextContent("查看任务详情");
+    expect(screen.queryByTestId("journey-failed-retry")).not.toBeInTheDocument();
+    expect(screen.getByTestId("journey-failed-task-details")).toHaveTextContent("查看详情");
     expect(screen.queryByTestId("reader-journey-progress-card")).not.toBeInTheDocument();
+  });
+
+  it("shows journey interrupted StateView for scene_profiles_partial", async () => {
+    vi.mocked(analysisApi.readerJourney).mockResolvedValue({
+      journey_run_id: 42,
+      analysis_run_id: 5,
+      status: "scene_profiles_partial",
+      retryable: true,
+      error_code: "JOURNEY_INTERRUPTED",
+      formula_version: "v1",
+      phases: [],
+      scene_profiles: [],
+    } as any);
+    vi.mocked(analysisApi.readerJourneyProgress).mockResolvedValue({
+      journey_run_id: 42,
+      analysis_run_id: 5,
+      status: "scene_profiles_partial",
+      total_scene_count: 13,
+      completed_scene_count: 2,
+      remaining_scene_count: 11,
+      completed_scene_ids: [],
+      remaining_scene_ids: [],
+      phase_count: 0,
+      has_chapter_summary: false,
+      retryable: true,
+      root_error_code: "JOURNEY_INTERRUPTED",
+    });
+    renderBook("/books/1?chapter=2&analysisRun=5&view=progress");
+    await waitFor(() => {
+      expect(screen.getByTestId("workspace-tab-journey")).toBeEnabled();
+    });
+    fireEvent.click(screen.getByTestId("workspace-tab-journey"));
+    await waitFor(() => {
+      expect(screen.getByTestId("journey-interrupted")).toBeInTheDocument();
+    });
+    expect(screen.getByTestId("journey-interrupted-continue")).toHaveTextContent("继续分析");
+    expect(screen.queryByTestId("journey-failed")).not.toBeInTheDocument();
   });
 
   it("does not show failure banner when parent says journey is still running", async () => {
@@ -428,7 +466,7 @@ describe("BookRoutePage reader journey resume entry", () => {
         journey_retryable: true,
       }),
     );
-    vi.mocked(analysisApi.readerJourney).mockResolvedValue({
+    const succeededJourney = {
       journey_run_id: 3,
       analysis_run_id: 5,
       status: "succeeded",
@@ -438,7 +476,9 @@ describe("BookRoutePage reader journey resume entry", () => {
       visualization: { version: 1, nodes: [] },
       error_code: "JOURNEY_INTERRUPTED",
       retryable: true,
-    } as any);
+    } as any;
+    vi.mocked(analysisApi.readerJourney).mockResolvedValue(succeededJourney);
+    vi.mocked(analysisApi.readerJourneyById).mockResolvedValue(succeededJourney);
     vi.mocked(analysisApi.readerJourneyProgress).mockResolvedValue({
       journey_run_id: 3,
       analysis_run_id: 5,
@@ -478,7 +518,7 @@ describe("BookRoutePage reader journey resume entry", () => {
         journey_error_code: "JOURNEY_INTERRUPTED",
       }),
     );
-    vi.mocked(analysisApi.readerJourney).mockResolvedValue({
+    const partialJourney = {
       journey_run_id: 7,
       analysis_run_id: 5,
       status: "scene_profiles_partial",
@@ -487,7 +527,9 @@ describe("BookRoutePage reader journey resume entry", () => {
       formula_version: "v1",
       phases: [],
       scene_profiles: [],
-    } as any);
+    } as any;
+    vi.mocked(analysisApi.readerJourney).mockResolvedValue(partialJourney);
+    vi.mocked(analysisApi.readerJourneyById).mockResolvedValue(partialJourney);
     vi.mocked(analysisApi.readerJourneyProgress).mockResolvedValue({
       journey_run_id: 7,
       analysis_run_id: 5,

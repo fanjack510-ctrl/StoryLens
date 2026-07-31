@@ -1446,6 +1446,12 @@ export function BookRoutePage() {
           }
         : chapterPresentation.primary_action === "continue_analysis"
           ? { kind: "continue" as const, label: "继续分析", testId: "shell-continue-analysis" }
+          : chapterPresentation.primary_action === "retry_journey"
+            ? {
+                kind: "continue" as const,
+                label: "重试阅读旅程",
+                testId: "shell-retry-reader-journey",
+              }
           : chapterPresentation.primary_action === "confirm_scenes"
             ? primaryAction.kind === "confirm"
               ? primaryAction
@@ -1983,51 +1989,21 @@ export function BookRoutePage() {
                     kind="error"
                     data-testid="journey-failed"
                     title="阅读旅程生成失败"
-                    description="已完成的场景分析不会受到影响。"
-                    primaryAction={{
-                      label: "重新生成阅读旅程",
-                      testId: "journey-failed-retry",
-                      onClick: () => {
-                        void (async () => {
-                          try {
-                            if (selectedJourneyRunId ?? journeyRunId) {
-                              await analysisApi.resumeReaderJourney(
-                                (selectedJourneyRunId ?? journeyRunId)!,
-                                {
-                                  client_request_id: getOrCreateJourneyClientRequestId(
-                                    analysisRunId ?? progress.run!.id,
-                                  ),
-                                  cloud_consent: true,
-                                  confirmed: true,
-                                },
-                              );
-                            } else if (progress.run) {
-                              await analysisRecoveryApi.recover(progress.run.id, {
-                                client_request_id: getOrCreateJourneyClientRequestId(progress.run.id),
-                                cloud_consent: true,
-                                confirmed: true,
-                                recovery_mode: "unified",
-                                resume: true,
-                              });
-                            }
-                          } finally {
-                            stableJourneyPageViewRef.current = "unknown";
-                            appliedJourneyMetaRef.current = {
-                              seq: 0,
-                              updatedAt: null,
-                              journeyId: selectedJourneyRunId ?? journeyRunId,
-                            };
-                            void qc.invalidateQueries({
-                              queryKey: ["reader-journey"],
-                            });
-                            void journey.refetch();
-                            void progress.refresh();
+                    description="StoryLens 在生成阅读旅程时遇到问题，已完成的场景分析结果仍会保留。"
+                    primaryAction={
+                      chapterPresentation.can_retry ||
+                      (journey.data as { retryable?: boolean } | undefined)?.retryable === true ||
+                      journeyProgress.data?.retryable === true
+                        ? {
+                            label: journeyResumePending ? "正在恢复…" : "重试阅读旅程",
+                            testId: "journey-failed-retry",
+                            disabled: journeyResumePending || journeyResumeInFlightRef.current,
+                            onClick: resumeJourneyAnalysis,
                           }
-                        })();
-                      },
-                    }}
+                        : undefined
+                    }
                     secondaryAction={{
-                      label: "查看任务详情",
+                      label: "查看详情",
                       testId: "journey-failed-task-details",
                       onClick: () => navigate(`/tasks?run_id=${analysisRunId}`),
                     }}

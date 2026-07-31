@@ -23,8 +23,8 @@ const JOURNEY_ACTIVE = new Set([
   "phase_analysis_running",
 ]);
 
+/** Recoverable interrupt statuses — NOT including `failed` (CHG-023 failure presentation). */
 const JOURNEY_INTERRUPTED = new Set([
-  "failed",
   "scene_profiles_partial",
   "budget_blocked",
   "aborted_by_limit",
@@ -63,16 +63,16 @@ function isActiveStatus(status: string | null | undefined): boolean {
 
 function isInterruptedStatus(
   status: string | null | undefined,
-  errorCode?: string | null,
-  retryable?: boolean | null,
+  _errorCode?: string | null,
+  _retryable?: boolean | null,
 ): boolean {
   if (!status) return false;
-  // errorCode alone must not flip a succeeded/running row; require matching status.
+  // CHG-023: `failed` is never interrupted — even when retryable / JOURNEY_INTERRUPTED.
+  if (status === "failed") return false;
   if (status === "scene_profiles_partial") return true;
   if (status === "budget_blocked") return true;
-  if (errorCode === "JOURNEY_INTERRUPTED" && JOURNEY_INTERRUPTED.has(status)) return true;
-  if (JOURNEY_INTERRUPTED.has(status) && retryable === true) return true;
-  return false;
+  if (status === "aborted_by_limit") return true;
+  return JOURNEY_INTERRUPTED.has(status);
 }
 
 function parseTime(value: string | null | undefined): number | null {
@@ -114,8 +114,8 @@ export function isStaleJourneyResponse(input: {
 
 /**
  * Resolve the Journey tab main-pane view.
- * Priority (CHG-023): succeeded/result → cancelled → active → recoverable interrupted
- * → terminal failed → temporary error → awaiting → unknown.
+ * Priority (CHG-023): succeeded/result → cancelled → failed → active → recoverable
+ * interrupted → temporary error → awaiting → unknown.
  * Returns null when the candidate response is stale and must not replace the current view.
  */
 export function resolveJourneyPageState(input: JourneyPageStateInput): JourneyPageView | null {
@@ -142,15 +142,6 @@ export function resolveJourneyPageState(input: JourneyPageStateInput): JourneyPa
   if (journey === "succeeded") {
     return "completed";
   }
-  if (
-    (input.finalArtifactAvailable === true || input.chapterComplete === true) &&
-    !JOURNEY_INTERRUPTED.has(journey) &&
-    journey !== "scene_profiles_partial" &&
-    journey !== "budget_blocked" &&
-    journey !== "failed"
-  ) {
-    return "completed";
-  }
 
   // Active — parent/progress can override a stale failed journey GET
   if (
@@ -162,70 +153,72 @@ export function resolveJourneyPageState(input: JourneyPageStateInput): JourneyPa
     return "active";
   }
 
-  // Bound / selected journey still recoverable. Must win over parent chapter_complete
-  // from a newer sibling auto-journey (CHG-015 Manual Gate recoverable split).
-  // Only the bound journey row (not stale progress/error alone after succeed) may interrupt.
-  const boundRecoverableInterrupted =
-    journey === "scene_profiles_partial" ||
-    journey === "budget_blocked" ||
-    (journey === "failed" &&
-      (input.errorCode === "JOURNEY_INTERRUPTED" || input.retryable === true)) ||
-    (JOURNEY_INTERRUPTED.has(journey) && input.retryable === true) ||
-    // Progress may refine only while journey GET is missing or still non-terminal.
-    ((!journey || journey === "failed") &&
-      (progress === "scene_profiles_partial" ||
-        progress === "budget_blocked" ||
-        (JOURNEY_INTERRUPTED.has(progress) && input.retryable === true)));
-
-  if (boundRecoverableInterrupted) {
-    return "interrupted";
-  }
-
-  // Completed + final artifact — overrides stale failed fields on the same journey
+  // Artifact / chapter complete: wins over stale failed GET (9.2/9.7), but not over
+  // a still-recoverable bound interrupt (CHG-015 sibling chapter_complete).
   if (input.finalArtifactAvailable === true || input.chapterComplete === true) {
-    // Sibling chapter_complete must not hide a still-recoverable bound journey (CHG-015).
     if (
       journey === "scene_profiles_partial" ||
       journey === "budget_blocked" ||
-      (JOURNEY_INTERRUPTED.has(journey) && input.retryable === true)
+      journey === "aborted_by_limit"
     ) {
       return "interrupted";
     }
     return "completed";
   }
-  if (journey === "succeeded" && effective === "completed") {
-    return "completed";
-  }
 
-  // Interrupted / recoverable (including retryable failed / JOURNEY_INTERRUPTED)
-  if (
-    isInterruptedStatus(journey, input.errorCode, input.retryable) ||
-    ((!journey || journey === "failed") &&
-      isInterruptedStatus(progress, input.errorCode, input.retryable)) ||
-    isInterruptedStatus(parent, input.errorCode, input.retryable) ||
-    journey === "scene_profiles_partial" ||
-    ((!journey || journey === "failed") && progress === "scene_profiles_partial") ||
-    journey === "budget_blocked" ||
-    (effective === "journey_failed" && input.retryable !== false && journey !== "succeeded")
-  ) {
-    return "interrupted";
+  // CHG-023: failed beats interrupted / stale recovery_recommended / retryable rewrite.
+  // Must follow active so a live progress/parent still wins over a stale failed GET.
+  if (journey === "failed" || progress === "failed") {
+    return "terminal_failed";
   }
-
-  // 4. Terminal failed — only when current journey is failed, no active signal, no artifact
   if (
-    (journey === "failed" || progress === "failed") &&
-    !isActiveStatus(parent) &&
-    effective !== "journey_running"
+    effective === "journey_failed" &&
+    journey !== "scene_profiles_partial" &&
+    journey !== "budget_blocked" &&
+    journey !== "aborted_by_limit"
   ) {
     return "terminal_failed";
   }
 
-  // 5. Temporary connection error — never “重新生成”
+  // Bound / selected journey still recoverable. Must win over parent chapter_complete
+  // from a newer sibling auto-journey (CHG-015 Manual Gate recoverable split).
+  // Never classify status=failed as interrupted (retryable only gates retry CTA).
+  const boundRecoverableInterrupted =
+    journey === "scene_profiles_partial" ||
+    journey === "budget_blocked" ||
+    journey === "aborted_by_limit" ||
+    // Progress may refine only while journey GET is missing / non-terminal.
+    (!journey &&
+      (progress === "scene_profiles_partial" ||
+        progress === "budget_blocked" ||
+        progress === "aborted_by_limit"));
+
+  if (boundRecoverableInterrupted) {
+    return "interrupted";
+  }
+
+  if (journey === "succeeded" && effective === "completed") {
+    return "completed";
+  }
+
+  // Interrupted / recoverable (partial / budget) — not failed
+  if (
+    isInterruptedStatus(journey, input.errorCode, input.retryable) ||
+    (!journey && isInterruptedStatus(progress, input.errorCode, input.retryable)) ||
+    isInterruptedStatus(parent, input.errorCode, input.retryable) ||
+    journey === "scene_profiles_partial" ||
+    (!journey && progress === "scene_profiles_partial") ||
+    journey === "budget_blocked"
+  ) {
+    return "interrupted";
+  }
+
+  // Temporary connection error — never “重新生成”
   if (input.temporaryFetchError) {
     return "temporary_error";
   }
 
-  // 6. Awaiting start / unknown
+  // Awaiting start / unknown
   if (!journey && !progress && !parent) {
     if (effective === "partial_complete") return "awaiting_start";
     return "unknown";
