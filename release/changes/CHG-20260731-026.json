@@ -3,9 +3,16 @@
   "title": "StoryLens 1.1.2-rc.7 build and installed acceptance preparation",
   "type": "build",
   "base_version": "1.1.2",
-  "status": "registered",
+  "status": "tested",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "8656e016c47f6777b7f6a8ef4ce266929accf00b",
+      "message": "build(release): StoryLens 1.1.2-rc.7 package and automatic gates (CHG-026)",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "release",
     "desktop",
@@ -54,5 +61,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-31T13:38:39Z",
-  "updated_at": "2026-07-31T14:01:46Z"
+  "updated_at": "2026-07-31T14:02:19Z"
 }
