@@ -11,6 +11,12 @@
       "message": "fix(journey): route completed right-rail CTA to result",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "ba9521f0069b6515551aaf005cc139a47355c926",
+      "message": "docs(release): verify CHG-025 right-rail journey CTA",
+      "primary": false,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -52,7 +58,7 @@
   "blocker_level": "P1",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-31T12:24:46Z",
-  "updated_at": "2026-07-31T13:33:16Z",
+  "updated_at": "2026-07-31T13:33:34Z",
   "target_version": "1.1.2",
   "manual_gate": "MG-CHG-20260731-025-RIGHT-RAIL-CTA",
   "manual_gate_result": "PASSED",
