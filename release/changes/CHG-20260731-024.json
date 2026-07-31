@@ -3,7 +3,7 @@
   "title": "StoryLens 1.1.2-rc.6 build and installed acceptance preparation",
   "type": "build",
   "base_version": "1.1.2",
-  "status": "registered",
+  "status": "tested",
   "include_in_next_release": true,
   "commits": [],
   "modules": [
@@ -23,9 +23,20 @@
     "Installed automatic acceptance PASS",
     "status tested only; awaiting manual installed acceptance"
   ],
-  "tests": [],
+  "tests": [
+    "pytest CHG-006/013/015/023 suites: 45 passed",
+    "vitest CHG-006/018/023 suites: 75 passed",
+    "playwright Cases A-G PASS",
+    "CWD 6/6",
+    "isolated installed acceptance PASS"
+  ],
   "verification_evidence": [
-    "release/evidence/1.1.2-rc.6/PREBUILD_GATE.md"
+    "release/evidence/1.1.2-rc.6/PREBUILD_GATE.md",
+    "release/evidence/1.1.2-rc.6/BUILD_ARTIFACTS.md",
+    "release/evidence/1.1.2-rc.6/TEST_RESULTS.json",
+    "release/evidence/1.1.2-rc.6/VERIFICATION.md",
+    "release/evidence/1.1.2-rc.6/ISOLATED_INSTALLED_ACCEPTANCE.json",
+    "D:/StoryLens-Local-Evidence/installer-archive/StoryLens_1.1.2-rc.6_x64-setup.exe"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -42,6 +53,16 @@
   "blocker_level": null,
   "head_inclusion": null,
   "created_at": "2026-07-31T07:58:55Z",
-  "updated_at": "2026-07-31T07:59:30Z",
-  "target_version": "1.1.2"
+  "updated_at": "2026-07-31T08:51:14Z",
+  "target_version": "1.1.2",
+  "related_changes": [
+    {
+      "id": "CHG-20260731-023",
+      "relation": "verified product fix under test in RC.6"
+    },
+    {
+      "id": "CHG-20260730-016",
+      "relation": "RC.5 installed acceptance failed baseline"
+    }
+  ]
 }

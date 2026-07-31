@@ -8,7 +8,7 @@ import { defineConfig } from "@playwright/test";
  */
 export default defineConfig({
   testDir: "./e2e",
-  testMatch: "chg023_final_resume_state.spec.ts",
+  testMatch: /chg023_(final_resume_state|rc6_cases_cd)\.spec\.ts/,
   timeout: 180_000,
   expect: { timeout: 90_000 },
   retries: 0,

@@ -345,7 +345,10 @@ def _copy_launcher() -> Path:
 
 
 def main() -> None:
-    assert MG_DIR_NAME in get_settings().database_url
+    db_url = get_settings().database_url.replace("\\", "/")
+    assert db_path.as_posix() in db_url or mg_root.name in db_url, (
+        f"seed DB URL mismatch: {db_url} vs {db_path}"
+    )
     launcher = _copy_launcher()
     create_db()
     SessionLocal = get_session_factory()

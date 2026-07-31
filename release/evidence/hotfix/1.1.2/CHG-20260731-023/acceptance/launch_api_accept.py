@@ -1,10 +1,10 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """TEMP-only acceptance launcher for CHG-023 final (NOT product code).
 
 - Smoke Fake ON (OpenAI-compatible HTTP intercept)
 - Startup requeue OFF
 - Fail inject ONLY for journey_run_id == FAIL_JOURNEY_ID (fixture B)
-  — no product execution_scenario / no client_request_id substring
+  鈥?no product execution_scenario / no client_request_id substring
 """
 from __future__ import annotations
 
@@ -13,8 +13,9 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-REPO = Path(r"D:\Dstorylens-wt-chg023-final-state-fix")
-DB = Path(os.environ["TEMP"]) / "storylens-mg-chg023-final" / "storylens.db"
+REPO = Path(r"D:\Dstorylens-wt-hotfix-1.1.2-integration")
+_mg = Path(os.environ.get("STORYLENS_MG_ROOT") or (Path(os.environ["TEMP"]) / "storylens-mg-chg023-final"))
+DB = _mg / "storylens.db"
 PORT = int(os.environ.get("STORYLENS_MG_API_PORT", "18067"))
 FE_PORT = int(os.environ.get("STORYLENS_MG_FE_PORT", "1467"))
 FAIL_JOURNEY_ID = int(os.environ.get("STORYLENS_CHG023_FAIL_JOURNEY_ID", "2"))
@@ -123,7 +124,7 @@ def _acceptance_trusted_integrity(session, journey_run=None, **kwargs):  # type:
 
 
 _aig.scan_reader_journey_integrity = _acceptance_trusted_integrity  # type: ignore[assignment]
-# reader_journey imported the symbol by name — patch the bound reference too.
+# reader_journey imported the symbol by name 鈥?patch the bound reference too.
 _rj_api.scan_reader_journey_integrity = _acceptance_trusted_integrity  # type: ignore[assignment]
 
 import uvicorn  # noqa: E402
@@ -135,3 +136,4 @@ if __name__ == "__main__":
         flush=True,
     )
     uvicorn.run("app.main:app", host="127.0.0.1", port=PORT, log_level="info")
+
