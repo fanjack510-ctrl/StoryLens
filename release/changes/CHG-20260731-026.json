@@ -3,7 +3,7 @@
   "title": "StoryLens 1.1.2-rc.7 build and installed acceptance preparation",
   "type": "build",
   "base_version": "1.1.2",
-  "status": "tested",
+  "status": "verified",
   "include_in_next_release": true,
   "commits": [
     {
@@ -62,7 +62,8 @@
     "release/evidence/1.1.2-rc.7/VERIFICATION.md",
     "release/evidence/1.1.2-rc.7/TRUE_INSTALLED_EXECUTION.json",
     "release/evidence/1.1.2-rc.7/ISOLATED_INSTALLED_ACCEPTANCE.json",
-    "D:/StoryLens-Local-Evidence/installer-archive/StoryLens_1.1.2-rc.7_x64-setup.exe"
+    "D:/StoryLens-Local-Evidence/installer-archive/StoryLens_1.1.2-rc.7_x64-setup.exe",
+    "release/evidence/1.1.2-rc.7/MANUAL_GATE_PASS.md"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -79,5 +80,8 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-31T13:38:39Z",
-  "updated_at": "2026-07-31T14:03:09Z"
+  "updated_at": "2026-07-31T14:38:46Z",
+  "manual_gate": "MG-STORYLENS-1.1.2-RC.7-INSTALLED",
+  "manual_gate_result": "PASSED",
+  "target_version": "1.1.2"
 }
