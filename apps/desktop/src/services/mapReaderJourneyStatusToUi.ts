@@ -66,7 +66,11 @@ export function mapReaderJourneyStatusToUi(args: {
       sidebarUiState: "partial",
     };
   }
-  if (raw === "interrupted" || raw === "cancelled") {
+  if (
+    raw === "interrupted" ||
+    raw === "cancelled" ||
+    raw === "scene_profiles_partial"
+  ) {
     return {
       status: "interrupted",
       label: "阅读旅程已中断",

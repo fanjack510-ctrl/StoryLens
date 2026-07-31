@@ -20,6 +20,9 @@ describe("mapReaderJourneyStatusToUi", () => {
     expect(mapReaderJourneyStatusToUi({ journeyStatus: "interrupted" }).label).toBe(
       "阅读旅程已中断",
     );
+    expect(mapReaderJourneyStatusToUi({ journeyStatus: "scene_profiles_partial" }).label).toBe(
+      "阅读旅程已中断",
+    );
     expect(mapReaderJourneyStatusToUi({ journeyStatus: "running" }).label).toContain("正在生成");
     expect(mapReaderJourneyStatusToUi({ journeyStatus: "succeeded" }).label).toContain("已完成");
   });

@@ -65,19 +65,22 @@ function Start-ApiLauncher {
     $env:STORYLENS_CHG023_FAIL_JOURNEY_ID = "$FailJourneyId"
     $env:STORYLENS_MG_API_PORT = "$ApiPort"
     $env:STORYLENS_MG_FE_PORT = "$FePort"
-    $apiLog = Join-Path $MgRoot "api_launch.log"
+    $apiLogOut = Join-Path $MgRoot "api_launch.out.log"
+    $apiLogErr = Join-Path $MgRoot "api_launch.err.log"
+    Remove-Item $apiLogOut, $apiLogErr -ErrorAction SilentlyContinue
     Write-Host "=== Start API launcher (fail_journey_id=$FailJourneyId) ==="
     $script:apiProc = Start-Process -FilePath $Py -ArgumentList @($launcher) `
         -WorkingDirectory (Join-Path $Repo "apps\api") `
-        -RedirectStandardOutput $apiLog -RedirectStandardError $apiLog `
+        -RedirectStandardOutput $apiLogOut `
+        -RedirectStandardError $apiLogErr `
         -PassThru -WindowStyle Hidden
     try {
         Wait-HttpOk "$ApiUrl/api/v1/analysis-runs"
     } catch {
-        if (Test-Path $apiLog) {
-            Write-Host "--- api_launch.log (tail) ---"
-            Get-Content $apiLog -Tail 40 | Write-Host
-        }
+        Write-Host "--- api_launch.out.log (tail) ---"
+        if (Test-Path $apiLogOut) { Get-Content $apiLogOut -Tail 40 | Write-Host }
+        Write-Host "--- api_launch.err.log (tail) ---"
+        if (Test-Path $apiLogErr) { Get-Content $apiLogErr -Tail 40 | Write-Host }
         throw
     }
     Write-Host "API ready: $ApiUrl"
@@ -96,11 +99,16 @@ function Start-FePreview {
         npm run build
         if ($LASTEXITCODE -ne 0) { throw "npm run build failed" }
         Write-Host "=== vite preview :$FePort ==="
-        $feLog = Join-Path $MgRoot "fe_preview.log"
-        $script:feProc = Start-Process -FilePath "cmd.exe" `
-            -ArgumentList @("/c", "npx vite preview --host 127.0.0.1 --port $FePort --strictPort") `
+        $feLogOut = Join-Path $MgRoot "fe_preview.out.log"
+        $feLogErr = Join-Path $MgRoot "fe_preview.err.log"
+        Remove-Item $feLogOut, $feLogErr -ErrorAction SilentlyContinue
+        $npxCmd = Get-Command npx.cmd -ErrorAction SilentlyContinue
+        $npx = if ($npxCmd) { $npxCmd.Source } else { "npx.cmd" }
+        $script:feProc = Start-Process -FilePath $npx `
+            -ArgumentList @("vite", "preview", "--host", "127.0.0.1", "--port", "$FePort", "--strictPort") `
             -WorkingDirectory $desktop `
-            -RedirectStandardOutput $feLog -RedirectStandardError $feLog `
+            -RedirectStandardOutput $feLogOut `
+            -RedirectStandardError $feLogErr `
             -PassThru -WindowStyle Hidden
     } finally {
         Pop-Location
@@ -147,6 +155,9 @@ function Invoke-PlaywrightSuccessOnly {
 }
 
 try {
+    Stop-PortListener -Port $ApiPort
+    Stop-PortListener -Port $FePort
+    Start-Sleep -Seconds 2
     Invoke-Seed
     Start-ApiLauncher
     Start-FePreview
@@ -155,7 +166,11 @@ try {
     Invoke-Playwright -Order "fail-first"
 
     Write-Host "`n=== Reseed + Round 2: success then fail ==="
+    Stop-ProcSafe $apiProc
+    Stop-PortListener -Port $ApiPort
+    Start-Sleep -Seconds 2
     Invoke-Seed
+    Start-ApiLauncher
     Invoke-Playwright -Order "success-first"
 
     Write-Host "`n=== Restart API + brief case B ==="

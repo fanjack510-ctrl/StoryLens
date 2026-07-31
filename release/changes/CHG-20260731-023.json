@@ -23,6 +23,24 @@
       "message": "fix(ui): present journey failed ahead of interrupted resume UI",
       "primary": false,
       "multi_change_reason": null
+    },
+    {
+      "sha": "9eb334af0fc72395459ae3ce669960066239a0fc",
+      "message": "fix(ui): preserve preview API base and prove CHG-023 browser state",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "a0547553d1ea213b10c1d0b34e5a70c836a57c0e",
+      "message": "fix(ui): single journey execution state for CHG-023 resume",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "e84afb01a845b8fa2197544e2f1be46b82a589e7",
+      "message": "fix(build): unblock desktop build for CHG-023 acceptance preview",
+      "primary": false,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -69,5 +87,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-31T04:15:37Z",
-  "updated_at": "2026-07-31T04:56:44Z"
+  "updated_at": "2026-07-31T06:25:06Z"
 }

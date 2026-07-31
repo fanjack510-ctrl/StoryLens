@@ -1079,9 +1079,11 @@ export function BookRoutePage() {
   }, [journeyRunId]);
 
   const journeySidebarUi = mapReaderJourneyStatusToUi({
-    journeyStatus: resolvedCurrentJourney.journey?.status,
+    journeyStatus: journeyExecution.journey_status ?? resolvedCurrentJourney.journey?.status,
     resultStatus: resolvedCurrentJourney.journey?.result_status,
-    retryable: resolvedCurrentJourney.journey?.retryable,
+    retryable:
+      journeyExecution.retryable ||
+      Boolean(resolvedCurrentJourney.journey?.retryable),
   });
 
   useEffect(() => {
@@ -2224,7 +2226,11 @@ export function BookRoutePage() {
                 }}
                 onBudgetContinued={() => void progress.refresh()}
                 journeyPageActive={
-                  showJourneyActive || chapterPresentation.is_journey_active
+                  showJourneyActive ||
+                  showJourneyInterrupted ||
+                  showJourneyTerminalFailed ||
+                  showJourneyResult ||
+                  chapterPresentation.is_journey_active
                 }
                 journeyStatus={journeyExecution.journey_status}
                 journeyRunId={selectedJourneyRunId ?? journeyRunId}

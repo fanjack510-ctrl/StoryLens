@@ -40,10 +40,12 @@ export function mapUrlToActiveTab(args: {
 
   if (userPinnedTab) return userPinnedTab;
 
+  // Explicit journey deep-link wins over view=progress/reading shell (CHG-023 resume URLs).
+  if (requestedTab === "reader-journey" || requestedTab === "journey") return "journey";
+
   if (requestedView === "reading" || requestedView === "progress") return "text";
   if (requestedView === "scene-boundary-review") return "scene";
 
-  if (requestedTab === "reader-journey" || requestedTab === "journey") return "journey";
   if (
     requestedTab === "scene-analysis" ||
     requestedTab === "analysis" ||

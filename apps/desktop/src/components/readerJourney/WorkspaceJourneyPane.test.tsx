@@ -45,13 +45,13 @@ function renderPane(ui: ReactElement) {
 }
 
 describe("resolveWorkspaceLayout", () => {
-  it("maps reader-journey URL to journey tab inside one workspace", () => {
+  it("maps reader-journey tab over view=progress (CHG-023 resume deep link)", () => {
     expect(
       mapUrlToActiveTab({
-        requestedView: "result",
+        requestedView: "progress",
         requestedTab: "reader-journey",
-        chapterComplete: true,
-        journeyAvailable: true,
+        chapterComplete: false,
+        journeyAvailable: false,
         sceneAvailable: true,
         userPinnedTab: null,
       }),
