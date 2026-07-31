@@ -11,6 +11,12 @@
       "message": "build(release): StoryLens 1.1.2-rc.7 package and automatic gates (CHG-026)",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "bb537ee5912c2d28281c9b6dc67d1cfa15f9b79e",
+      "message": "chore(release): mark CHG-20260731-026 tested for 1.1.2-rc.7",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -61,5 +67,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-31T13:38:39Z",
-  "updated_at": "2026-07-31T14:02:19Z"
+  "updated_at": "2026-07-31T14:02:21Z"
 }
