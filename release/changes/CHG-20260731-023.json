@@ -81,6 +81,12 @@
       "message": "docs(evidence): pin CHG-023 FINAL STATE FIX REPORT to tip",
       "primary": false,
       "multi_change_reason": null
+    },
+    {
+      "sha": "3377e56c5d63687f2b764838ea3d7faf7f25e1fe",
+      "message": "docs(release): verify CHG-023 final journey state fix",
+      "primary": false,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -145,5 +151,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-31T04:15:37Z",
-  "updated_at": "2026-07-31T07:51:42Z"
+  "updated_at": "2026-07-31T07:52:13Z"
 }
