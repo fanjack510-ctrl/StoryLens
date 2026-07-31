@@ -3,7 +3,7 @@
   "title": "StoryLens 1.1.2 stable Windows installer build",
   "type": "build",
   "base_version": "1.1.2",
-  "status": "registered",
+  "status": "tested",
   "include_in_next_release": true,
   "commits": [
     {
@@ -11,6 +11,12 @@
       "message": "chore(release): verify CHG-026 RC.7 MG and register CHG-027 stable build",
       "primary": true,
       "multi_change_reason": "shared MG closeout + CHG-027 registration commit"
+    },
+    {
+      "sha": "333dde1104d3cc325b467ed810b86f3f9978038a",
+      "message": "build(release): StoryLens 1.1.2 stable Windows installer (CHG-027)",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -58,6 +64,6 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-31T14:38:46Z",
-  "updated_at": "2026-07-31T14:58:18Z",
+  "updated_at": "2026-07-31T14:58:21Z",
   "target_version": "1.1.2"
 }
