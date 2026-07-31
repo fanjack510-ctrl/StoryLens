@@ -1,0 +1,47 @@
+{
+  "id": "CHG-20260731-024",
+  "title": "StoryLens 1.1.2-rc.6 build and installed acceptance preparation",
+  "type": "build",
+  "base_version": "1.1.2",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "release",
+    "desktop",
+    "api"
+  ],
+  "files": [],
+  "user_summary": "构建 StoryLens 1.1.2-rc.6，验证 CHG-023 终态同步修复，完成自动门禁与隔离安装态验收",
+  "technical_summary": "Build 1.1.2-rc.6 from public HEAD bfb9b9a (CHG-023 verified). Auto gates + isolated installed acceptance. No push/tag/stable.",
+  "acceptance_criteria": [
+    "Installer StoryLens_1.1.2-rc.6_x64-setup.exe archived with SHA-256",
+    "VERSION restored to 1.1.2 after build",
+    "CWD gate 6/6",
+    "CHG-023 resume/terminal auto gates PASS",
+    "Playwright Cases A-G PASS",
+    "Installed automatic acceptance PASS",
+    "status tested only; awaiting manual installed acceptance"
+  ],
+  "tests": [],
+  "verification_evidence": [
+    "release/evidence/1.1.2-rc.6/PREBUILD_GATE.md"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": null,
+  "created_at": "2026-07-31T07:58:55Z",
+  "updated_at": "2026-07-31T07:59:30Z",
+  "target_version": "1.1.2"
+}
