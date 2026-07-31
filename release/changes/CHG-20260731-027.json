@@ -17,6 +17,12 @@
       "message": "build(release): StoryLens 1.1.2 stable Windows installer (CHG-027)",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "02092c0906592826c8c4f84a33fcb787d9872ff0",
+      "message": "chore(release): mark CHG-20260731-027 tested for 1.1.2 stable",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
