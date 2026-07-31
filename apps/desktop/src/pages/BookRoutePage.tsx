@@ -56,7 +56,6 @@ import {
 import { mapReaderJourneyStatusToUi } from "../services/mapReaderJourneyStatusToUi";
 import {
   chapterProgressHref,
-  chapterResultHref,
   discoverActiveChapterRun,
 } from "../services/discoverActiveChapterRun";
 import { normalizeRunLifecycle } from "../services/runLifecycle";
@@ -683,6 +682,11 @@ export function BookRoutePage() {
       },
       { replace: true },
     );
+  };
+
+  /** CHG-025: canonical journey-result navigation shared by top nav and right-rail CTA. */
+  const openReaderJourneyResult = () => {
+    setResultTab("journey", "user");
   };
 
   const bindAnalysisRun = (
@@ -1467,24 +1471,7 @@ export function BookRoutePage() {
       return;
     }
     if (effectivePrimaryAction.kind === "result") {
-      setSearchParams(
-        () => {
-          const params = new URLSearchParams(
-            chapterResultHref({
-              bookId,
-              chapterId,
-              analysisRunId: targetRun.id,
-              tab: "reader-journey",
-            }).split("?")[1] || "",
-          );
-          if (selectedJourneyRunId ?? journeyRunId) {
-            params.set("journeyRun", String(selectedJourneyRunId ?? journeyRunId));
-          }
-          return params;
-        },
-        { replace: false },
-      );
-      setResultTab("journey", "user");
+      openReaderJourneyResult();
     }
   };
 
@@ -1637,7 +1624,7 @@ export function BookRoutePage() {
                     setResultTab("analysis", "user");
                     return;
                   }
-                  setResultTab("journey", "user");
+                  openReaderJourneyResult();
                 }}
               />
             ) : null}
@@ -1731,9 +1718,7 @@ export function BookRoutePage() {
           <button
             type="button"
             data-testid="banner-open-result"
-            onClick={() => {
-              setResultTab("journey");
-            }}
+            onClick={openReaderJourneyResult}
           >
             查看阅读旅程
           </button>
@@ -2193,9 +2178,14 @@ export function BookRoutePage() {
                   setResultTab("analysis", "user");
                 }}
                 onContinueReaderJourney={() => {
-                  const targetJourneyId = selectedJourneyRunId ?? journeyRunId;
-                  if (targetJourneyId != null) {
-                    resumeJourneyAnalysis();
+                  // CHG-025: succeeded + result CTA must navigate like top「阅读旅程」,
+                  // never call resume/recover (that caused a silent no-op click).
+                  if (
+                    journeyNavIsPrimary ||
+                    chapterPresentation.workflow_state === "journey_succeeded" ||
+                    journeyExecution.journey_status === "succeeded"
+                  ) {
+                    openReaderJourneyResult();
                     return;
                   }
                   if (
@@ -2217,12 +2207,21 @@ export function BookRoutePage() {
                         });
                         void journey.refetch();
                         void progress.refresh();
-                        setResultTab("journey", "user");
+                        openReaderJourneyResult();
                       }
                     })();
                     return;
                   }
-                  setResultTab("journey", "user");
+                  const targetJourneyId = selectedJourneyRunId ?? journeyRunId;
+                  if (
+                    targetJourneyId != null &&
+                    (chapterPresentation.can_resume ||
+                      chapterPresentation.can_resume_journey)
+                  ) {
+                    resumeJourneyAnalysis();
+                    return;
+                  }
+                  openReaderJourneyResult();
                 }}
                 onBudgetContinued={() => void progress.refresh()}
                 journeyPageActive={

@@ -1,9 +1,58 @@
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BookRoutePage } from "./BookRoutePage";
 import { analysisApi } from "../services/analysisApi";
+import { analysisRecoveryApi } from "../services/analysisRecoveryApi";
+
+vi.mock("../services/analysisApi", async () => {
+  const actual = await vi.importActual<typeof import("../services/analysisApi")>(
+    "../services/analysisApi",
+  );
+  return {
+    analysisApi: {
+      ...actual.analysisApi,
+      runs: vi.fn(async () => []),
+      run: vi.fn(),
+      results: vi.fn(async () => ({
+        run: { id: 77, status: "scene_analysis_running", provider: "fake", model: "fake" },
+        chapter: { id: 2, book_id: 1, title: "开端", display_title: "开端" },
+        boundary_revision: { id: 3, revision_number: 1 },
+        summary: { total_scene_count: 3 },
+        scenes: [],
+      })),
+      readerJourney: vi.fn(async () => ({ status: "missing", visualization: null })),
+      readerJourneyById: vi.fn(async () => ({ status: "missing", visualization: null })),
+      readerJourneyProgress: vi.fn(async () => null),
+      resumeReaderJourney: vi.fn(),
+      sceneBoundariesOverview: vi.fn(async () => ({
+        chapter_id: 2,
+        chapter_text_hash: "h",
+        confirmed_revision: {
+          revision_id: 3,
+          revision_number: 1,
+          status: "confirmed",
+          source: "user",
+          scenes: [{ ordinal: 1 }, { ordinal: 2 }, { ordinal: 3 }],
+        },
+        draft_revision: null,
+        model_revision: null,
+        awaiting_confirmation: false,
+      })),
+      sceneParagraphs: vi.fn(async () => ({ paragraphs: [] })),
+      resumeSceneAnalysis: vi.fn(),
+      createReaderJourney: vi.fn(),
+    },
+  };
+});
+
+vi.mock("../services/analysisRecoveryApi", () => ({
+  analysisRecoveryApi: {
+    recover: vi.fn(),
+    recoveryPlan: vi.fn(),
+  },
+}));
 
 vi.mock("../services/analysisApi", async () => {
   const actual = await vi.importActual<typeof import("../services/analysisApi")>(
@@ -90,13 +139,32 @@ vi.mock("./BookWorkspacePage", () => ({
   BookWorkspacePage: () => <div data-testid="mock-book-workspace">workspace</div>,
 }));
 
+function LocationProbe() {
+  const location = useLocation();
+  return (
+    <div
+      data-testid="location-probe"
+      data-pathname={location.pathname}
+      data-search={location.search}
+    />
+  );
+}
+
 function renderBook(path: string) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[path]}>
         <Routes>
-          <Route path="/books/:bookId" element={<BookRoutePage />} />
+          <Route
+            path="/books/:bookId"
+            element={
+              <>
+                <LocationProbe />
+                <BookRoutePage />
+              </>
+            }
+          />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -314,6 +382,88 @@ describe("CHG-017 BookRoutePage journey nav", () => {
       .querySelectorAll("button.primary");
     expect(toolbarPrimaries.length).toBe(1);
     expect(toolbarPrimaries[0]).toHaveAttribute("data-testid", "workspace-tab-journey");
+  });
+
+  it("CHG-025: right-rail 查看阅读旅程 navigates once like top 阅读旅程", async () => {
+    vi.mocked(analysisApi.run).mockResolvedValue({
+      id: 77,
+      subject_id: "2",
+      provider: "fake",
+      model: "fake",
+      status: "succeeded",
+      progress_current: 3,
+      progress_total: 3,
+      execution_mode: "cloud",
+      cloud_consent: true,
+      sends_content_to_cloud: true,
+      retryable: false,
+      created_at: "2026-01-01T00:00:00Z",
+      completed_at: "2026-01-01T01:00:00Z",
+      chapter_complete: true,
+      effective_status: "complete",
+      journey_status: "succeeded",
+      journey_result_available: true,
+      completed_scene_count: 3,
+      total_scene_count: 3,
+    } as any);
+    vi.mocked(analysisApi.readerJourney).mockResolvedValue({
+      status: "succeeded",
+      journey_run_id: 12,
+      visualization: { scenes: [] },
+    } as any);
+    vi.mocked(analysisApi.readerJourneyById).mockResolvedValue({
+      status: "succeeded",
+      journey_run_id: 12,
+      visualization: { scenes: [] },
+    } as any);
+    vi.mocked(analysisApi.readerJourneyProgress).mockResolvedValue({
+      status: "succeeded",
+      journey_run_id: 12,
+      completed_scene_count: 3,
+      total_scene_count: 3,
+    } as any);
+
+    renderBook("/books/1?chapter=2&analysisRun=77&view=progress&journeyRun=12");
+    await waitFor(() => {
+      expect(screen.getByTestId("chapter-analysis-open-journey")).toBeInTheDocument();
+    });
+
+    const resumeSpy = vi.spyOn(analysisApi, "resumeReaderJourney").mockResolvedValue({} as any);
+    const recoverSpy = vi.spyOn(analysisRecoveryApi, "recover").mockResolvedValue({} as any);
+    const createSpy = vi.spyOn(analysisApi, "createReaderJourney").mockResolvedValue({} as any);
+
+    fireEvent.click(screen.getByTestId("chapter-analysis-open-journey"));
+    await waitFor(() => {
+      const search = screen.getByTestId("location-probe").getAttribute("data-search") || "";
+      const params = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
+      expect(params.get("view")).toBe("result");
+      expect(params.get("tab")).toBe("reader-journey");
+      expect(params.get("analysisRun")).toBe("77");
+      expect(params.get("journeyRun")).toBe("12");
+      expect(params.get("chapter")).toBe("2");
+    });
+    expect(resumeSpy).not.toHaveBeenCalled();
+    expect(recoverSpy).not.toHaveBeenCalled();
+    expect(createSpy).not.toHaveBeenCalled();
+
+    // Return to progress via secondary, then top nav must match the same destination.
+    fireEvent.click(screen.getByTestId("shell-view-analysis-progress-secondary"));
+    await waitFor(() => {
+      const search = screen.getByTestId("location-probe").getAttribute("data-search") || "";
+      const params = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
+      expect(params.get("view")).toBe("progress");
+    });
+
+    fireEvent.click(screen.getByTestId("workspace-tab-journey"));
+    await waitFor(() => {
+      const search = screen.getByTestId("location-probe").getAttribute("data-search") || "";
+      const params = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
+      expect(params.get("view")).toBe("result");
+      expect(params.get("tab")).toBe("reader-journey");
+      expect(params.get("analysisRun")).toBe("77");
+      expect(params.get("journeyRun")).toBe("12");
+    });
+    expect(resumeSpy).not.toHaveBeenCalled();
   });
 
   it("journey_succeeded on reading journey: journey primary, progress secondary only", async () => {
