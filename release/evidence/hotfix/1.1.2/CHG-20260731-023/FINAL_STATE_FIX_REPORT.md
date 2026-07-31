@@ -1,7 +1,7 @@
-# CHG-023 FINAL STATE FIX REPORT
+﻿# CHG-023 FINAL STATE FIX REPORT
 
 BASE HEAD：`2551c8d618977a285379e8467581ef6249a806c6`  
-FINAL HEAD：`3e97af0c7a9f5310089615b10e73fb81934dee6d`  
+FINAL HEAD：`785c73bb9112a1c17ec55b2f42f19badcd04a2e8`  
 WORKTREE：`D:\Dstorylens-wt-chg023-final-state-fix`  
 BRANCH：`fix/1.1.2-chg023-final-state-fix`  
 WIP ARCHIVE：`wip/chg023-abandoned-multi-state-fix`（未 Push / 未 Merge）
@@ -11,7 +11,7 @@ WIP ARCHIVE：`wip/chg023-abandoned-multi-state-fix`（未 Push / 未 Merge）
 | Field | Value |
 |---|---|
 | WORKTREE CLEAN | YES（仅本地 dist / TEMP MG；源码树 clean） |
-| LOADED FRONTEND COMMIT | `3e97af0c7a9f5310089615b10e73fb81934dee6d` |
+| LOADED FRONTEND COMMIT | `785c73bb9112a1c17ec55b2f42f19badcd04a2e8` |
 | SINGLE EXECUTION STATE USED BY MAIN | YES |
 | SINGLE EXECUTION STATE USED BY RAIL | YES |
 | LOCAL PENDING USED AS PAGE TRUTH | NO |
