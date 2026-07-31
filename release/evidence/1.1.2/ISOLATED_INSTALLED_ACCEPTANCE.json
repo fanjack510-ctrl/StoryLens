@@ -1,0 +1,11 @@
+{
+    "formal_install_overwritten":  false,
+    "desktop_version_ok":  true,
+    "api_health":  true,
+    "desktop_path":  "C:\\Users\\msi\\AppData\\Local\\Temp\\storylens-1.1.2-stable-installed-automatic\\install\\storylens-desktop.exe",
+    "ok":  true,
+    "formal_db_writes":  0,
+    "health":  true,
+    "sidecar_path":  "C:\\Users\\msi\\AppData\\Local\\Temp\\storylens-1.1.2-stable-installed-automatic\\install\\storylens-api.exe",
+    "desktop_version":  "1.1.2"
+}

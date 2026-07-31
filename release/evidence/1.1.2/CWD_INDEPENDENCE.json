@@ -1,0 +1,32 @@
+﻿[
+    {
+        "cwd":  "install_dir",
+        "ok":  true,
+        "port":  18201
+    },
+    {
+        "cwd":  "user_dir",
+        "ok":  true,
+        "port":  18202
+    },
+    {
+        "cwd":  "system32",
+        "ok":  true,
+        "port":  18203
+    },
+    {
+        "cwd":  "temp_dir",
+        "ok":  true,
+        "port":  18204
+    },
+    {
+        "cwd":  "unrelated_project",
+        "ok":  true,
+        "port":  18205
+    },
+    {
+        "cwd":  "path_with_spaces",
+        "ok":  true,
+        "port":  18206
+    }
+]

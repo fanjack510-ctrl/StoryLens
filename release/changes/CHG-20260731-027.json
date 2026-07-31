@@ -27,8 +27,22 @@
     "CWD 6/6 and isolated installed automatic acceptance PASS",
     "status tested only; no Push/Tag/Release"
   ],
-  "tests": [],
-  "verification_evidence": [],
+  "tests": [
+    "pytest resume/cancel focused: 21 passed",
+    "vitest journey CTA/023/017: 29 passed",
+    "playwright CHG-025 CTA: PASS",
+    "CWD 6/6",
+    "true packaged Sidecar resume success/failure PASS"
+  ],
+  "verification_evidence": [
+    "release/evidence/1.1.2/PREBUILD_GATE.md",
+    "release/evidence/1.1.2/BUILD_ARTIFACTS.md",
+    "release/evidence/1.1.2/TEST_RESULTS.json",
+    "release/evidence/1.1.2/VERIFICATION.md",
+    "release/evidence/1.1.2/TRUE_INSTALLED_EXECUTION.json",
+    "release/evidence/1.1.2/ISOLATED_INSTALLED_ACCEPTANCE.json",
+    "D:/StoryLens-Local-Evidence/installer-archive/StoryLens_1.1.2_x64-setup.exe"
+  ],
   "data_compatibility": {
     "database_changed": false,
     "migration_required": false,
@@ -44,6 +58,6 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-31T14:38:46Z",
-  "updated_at": "2026-07-31T14:39:07Z",
+  "updated_at": "2026-07-31T14:58:18Z",
   "target_version": "1.1.2"
 }

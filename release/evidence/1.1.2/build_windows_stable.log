@@ -1,0 +1,9 @@
+﻿
+2026-07-31T22:42:24.4858864+08:00  STABLE BUILD START
+2026-07-31T22:42:24.6167903+08:00  HEAD=30fe4b6d324ced7f1b0f2792ef60b402f6c157e1
+2026-07-31T22:42:24.6257946+08:00  VERSION=1.1.2
+2026-07-31T22:42:24.6297918+08:00  PrivateEngine=D:\Dstorylens-private-engine-wt-hotfix-1.1.2-integration
+2026-07-31T22:42:26.8648999+08:00  Install private engine editable
+2026-07-31T22:42:33.2943318+08:00  build_sidecar.ps1
+2026-07-31T22:44:48.9390624+08:00  build_windows_release.ps1 (stable version 1.1.2; RC_CANDIDATE skip unfrozen registry only)
+2026-07-31T22:51:20.2080076+08:00  BUILD_EXIT=0

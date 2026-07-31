@@ -1,0 +1,17 @@
+{
+    "provider_base_url":  "http://127.0.0.1:18180/v1",
+    "success_status":  "succeeded",
+    "formal_install_overwritten":  false,
+    "source_python_api":  false,
+    "failure_result":  false,
+    "ok":  true,
+    "success_result":  true,
+    "api_path":  "C:\\Users\\msi\\AppData\\Local\\Temp\\storylens-1.1.2-stable-installed-automatic\\install\\storylens-api.exe",
+    "desktop_version":  "1.1.2",
+    "desktop_sha":  "DDA8CE50150D7DD4B461A585F11AAE864BACA464227418458319B9BC9E2F5EF7",
+    "api_sha":  "E847FAEAE6971542BB2894F745D62FD72D24C3C2E0FED661D28B427ED22C6D07",
+    "failure_status":  "failed",
+    "formal_db_writes":  0,
+    "real_provider":  0,
+    "external_network":  0
+}

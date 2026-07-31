@@ -1,0 +1,10 @@
+﻿Python: Python 3.12.10
+PyInstaller: 6.21.0
+Node: v22.20.0
+npm: 11.11.0
+rustc: rustc 1.91.0 (f8297e351 2025-10-28)
+cargo: cargo 1.91.0 (ea2d97820 2025-10-10)
+tauri-cli: tauri-cli 2.9.2
+PrivateEngine: D:\Dstorylens-private-engine-wt-hotfix-1.1.2-integration
+PublicHead: 30fe4b6d324ced7f1b0f2792ef60b402f6c157e1
+Started: 2026-07-31T22:42:24.4638673+08:00
