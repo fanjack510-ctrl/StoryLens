@@ -4,7 +4,7 @@
   "type": "PATCH",
   "base_version": "1.1.1",
   "target_version": "1.1.2",
-  "status": "rc5-built-awaiting-installed-acceptance",
+  "status": "released",
   "public_integration_branch": "hotfix/1.1.2",
   "private_integration_branch": "hotfix/1.1.2",
   "created_at": "2026-07-28T06:40:00Z",
@@ -57,5 +57,9 @@
   "rc_installer": "dist/release/StoryLens_1.1.2-rc.5_x64-setup.exe",
   "rc_installed_acceptance": "AUTO_PASS_AWAITING_MANUAL",
   "prior_rc_status": "rc4-built-awaiting-installed-acceptance",
-  "public_build_source_head": "994ab6576a2fb094c47aebe085bf78e9a3a226d4"
+  "public_build_source_head": "994ab6576a2fb094c47aebe085bf78e9a3a226d4",
+  "released_at": "2026-07-31T15:36:02Z",
+  "github_release": "https://github.com/fanjack510-ctrl/StoryLens/releases/tag/v1.1.2",
+  "tag": "v1.1.2",
+  "tag_commit": "30fe4b6d324ced7f1b0f2792ef60b402f6c157e1"
 }

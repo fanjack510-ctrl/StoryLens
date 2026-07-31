@@ -3,7 +3,7 @@
   "title": "StoryLens 1.1.2 stable Windows installer build",
   "type": "build",
   "base_version": "1.1.2",
-  "status": "tested",
+  "status": "released",
   "include_in_next_release": true,
   "commits": [
     {
@@ -53,7 +53,9 @@
     "release/evidence/1.1.2/VERIFICATION.md",
     "release/evidence/1.1.2/TRUE_INSTALLED_EXECUTION.json",
     "release/evidence/1.1.2/ISOLATED_INSTALLED_ACCEPTANCE.json",
-    "D:/StoryLens-Local-Evidence/installer-archive/StoryLens_1.1.2_x64-setup.exe"
+    "D:/StoryLens-Local-Evidence/installer-archive/StoryLens_1.1.2_x64-setup.exe",
+    "https://github.com/fanjack510-ctrl/StoryLens/releases/tag/v1.1.2",
+    "release/evidence/1.1.2/github-release/PUBLICATION.md"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -70,6 +72,6 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-31T14:38:46Z",
-  "updated_at": "2026-07-31T14:58:21Z",
+  "updated_at": "2026-07-31T15:36:01Z",
   "target_version": "1.1.2"
 }

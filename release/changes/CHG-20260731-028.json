@@ -3,7 +3,7 @@
   "title": "Publish StoryLens 1.1.2 GitHub Release",
   "type": "build",
   "base_version": "1.1.2",
-  "status": "registered",
+  "status": "released",
   "include_in_next_release": true,
   "commits": [
     {
@@ -25,8 +25,15 @@
     "GitHub Release published as Latest with installer + SHA256",
     "CHG-027 and CHG-028 marked released"
   ],
-  "tests": [],
-  "verification_evidence": [],
+  "tests": [
+    "GitHub Release v1.1.2 published as Latest",
+    "Downloaded asset SHA-256 match"
+  ],
+  "verification_evidence": [
+    "https://github.com/fanjack510-ctrl/StoryLens/releases/tag/v1.1.2",
+    "release/evidence/1.1.2/github-release/PUBLICATION.md",
+    "release/notes/StoryLens_1.1.2_zh-CN.md"
+  ],
   "data_compatibility": {
     "database_changed": false,
     "migration_required": false,
@@ -42,6 +49,6 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-31T15:32:11Z",
-  "updated_at": "2026-07-31T15:32:51Z",
+  "updated_at": "2026-07-31T15:36:02Z",
   "target_version": "1.1.2"
 }
