@@ -41,6 +41,30 @@
       "message": "fix(build): unblock desktop build for CHG-023 acceptance preview",
       "primary": false,
       "multi_change_reason": null
+    },
+    {
+      "sha": "e9a15a3ae614312e364e5f4b8aaaa3d313b40d4a",
+      "message": "fix(ui): honor journey deep-link over progress shell for CHG-023",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "c696c029ebc1aa411b453823a22db25889519557",
+      "message": "test(acceptance): trust smoke-fake journey integrity for CHG-023 DOM result",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "9b2878ca1a0bdbbc9c3fbf1fd8aef59c5946f792",
+      "message": "test(acceptance): extend CHG-023 Playwright timeouts for smoke-fake resume",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "31a1fe5ac37fe8b04f6110ee75380efa1f42149d",
+      "message": "test(acceptance): patch bound integrity import for CHG-023 launcher",
+      "primary": false,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -87,5 +111,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-31T04:15:37Z",
-  "updated_at": "2026-07-31T06:25:06Z"
+  "updated_at": "2026-07-31T06:48:36Z"
 }

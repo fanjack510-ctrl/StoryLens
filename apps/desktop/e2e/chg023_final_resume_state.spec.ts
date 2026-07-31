@@ -129,11 +129,17 @@ async function runCaseB(page: Page, fixtures: ManualFixtures): Promise<void> {
   await expect(page.getByTestId("journey-interrupted")).toBeVisible({ timeout: 30_000 });
   await page.getByTestId("journey-interrupted-continue").click();
 
-  await expect(page.getByTestId("embedded-analysis-result")).toBeVisible({ timeout: 120_000 });
+  // Succeeded journey renders WorkspaceJourneyPane (not EmbeddedAnalysisResultShell).
+  await expect(page.getByTestId("workspace-journey-pane")).toBeVisible({ timeout: 180_000 });
+  await expect(page.getByTestId("workspace-journey-pane")).toHaveAttribute("data-state", "ready");
   await expect(page.getByText("正在恢复阅读旅程")).toHaveCount(0);
   await expect(page.getByTestId("reader-journey-progress-card")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "继续分析" })).toHaveCount(0);
+  await expect(page.getByTestId("journey-curve-svg")).toBeVisible();
+  await expect(page.getByTestId("journey-interrupted")).toHaveCount(0);
+  await expect(page.getByTestId("journey-failed")).toHaveCount(0);
+  // Conflicting resume CTAs must stay absent (progress rail may dismiss after success).
   await expect(page.getByTestId("chapter-analysis-continue-journey")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "继续分析" })).toHaveCount(0);
 
   await expect.poll(() => tracker.resumePosts.length, { timeout: 15_000 }).toBe(1);
   expect(tracker.recoverPosts).toHaveLength(0);
