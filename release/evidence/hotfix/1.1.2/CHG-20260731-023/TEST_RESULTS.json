@@ -30,5 +30,6 @@
     "new_errors": 0
   },
   "real_provider_calls": 0,
-  "formal_database_writes": 0
+  "formal_database_writes": 0,
+  "public_final_head": "c1a7fbc05ba44d6200429c87060025b0d6f6be1a"
 }
