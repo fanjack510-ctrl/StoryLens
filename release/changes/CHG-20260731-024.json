@@ -17,6 +17,12 @@
       "message": "chore(release): register CHG-20260731-024 for 1.1.2-rc.6 build",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "d67e86d826cd79592cf48c5096b51ffb90cdde8b",
+      "message": "chore(release): attach RC.6 commits to CHG-20260731-024",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -66,7 +72,7 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-31T07:58:55Z",
-  "updated_at": "2026-07-31T08:53:25Z",
+  "updated_at": "2026-07-31T08:53:51Z",
   "target_version": "1.1.2",
   "related_changes": [
     {
