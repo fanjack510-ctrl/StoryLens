@@ -1,0 +1,54 @@
+{
+  "id": "CHG-20260731-023",
+  "title": "Synchronize recovery UI after journey resume and completion",
+  "type": "fix",
+  "base_version": "1.1.2",
+  "status": "tested",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "apps/desktop",
+    "apps/api"
+  ],
+  "files": [
+    "apps/desktop/src/services/resolveJourneyPageState.ts",
+    "apps/desktop/src/pages/BookRoutePage.tsx",
+    "apps/desktop/src/services/chapterAnalysisPresentation.ts",
+    "apps/desktop/src/services/journeyActiveRecoveryGuard.ts",
+    "apps/desktop/src/components/chapterAnalysis/UnifiedAnalysisRecoveryCard.tsx",
+    "apps/api/app/api/v1/reader_journey.py"
+  ],
+  "user_summary": "Resume/Succeeded 后清除旧中断恢复卡并同步结果态",
+  "technical_summary": "Succeeded/result overrides stale recovery UI; journey resume-only path; click idempotency; query invalidation; backend resume already-running 202.",
+  "acceptance_criteria": [
+    "succeeded + result hides recovery card and continue",
+    "one click resume: only POST reader-journey-runs/{id}/resume",
+    "resume UI transitions to resuming then auto result"
+  ],
+  "tests": [
+    "apps/desktop/src/services/recoveryUiSync.chg023.test.ts",
+    "apps/desktop/src/pages/BookRoutePage.readerJourneyResume.test.tsx",
+    "apps/api/tests/test_reader_journey_resume_idempotent_chg023.py"
+  ],
+  "verification_evidence": [
+    "release/evidence/hotfix/1.1.2/CHG-20260731-023/MANUAL_UI_ENV.md",
+    "release/evidence/hotfix/1.1.2/CHG-20260731-023/TEST_RESULTS.json",
+    "release/evidence/hotfix/1.1.2/CHG-20260731-023/HTTP_E2E.json"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-31T04:15:37Z",
+  "updated_at": "2026-07-31T04:33:04Z"
+}

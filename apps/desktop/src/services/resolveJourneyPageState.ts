@@ -67,8 +67,10 @@ function isInterruptedStatus(
   retryable?: boolean | null,
 ): boolean {
   if (!status) return false;
-  if (errorCode === "JOURNEY_INTERRUPTED") return true;
+  // errorCode alone must not flip a succeeded/running row; require matching status.
   if (status === "scene_profiles_partial") return true;
+  if (status === "budget_blocked") return true;
+  if (errorCode === "JOURNEY_INTERRUPTED" && JOURNEY_INTERRUPTED.has(status)) return true;
   if (JOURNEY_INTERRUPTED.has(status) && retryable === true) return true;
   return false;
 }
@@ -112,7 +114,8 @@ export function isStaleJourneyResponse(input: {
 
 /**
  * Resolve the Journey tab main-pane view.
- * Priority: completed → active → interrupted → terminal failed → temporary error → awaiting → unknown.
+ * Priority (CHG-023): succeeded/result → cancelled → active → recoverable interrupted
+ * → terminal failed → temporary error → awaiting → unknown.
  * Returns null when the candidate response is stale and must not replace the current view.
  */
 export function resolveJourneyPageState(input: JourneyPageStateInput): JourneyPageView | null {
@@ -134,7 +137,22 @@ export function resolveJourneyPageState(input: JourneyPageStateInput): JourneyPa
   const parent = String(input.parentJourneyStatus || "");
   const effective = String(input.effectiveStatus || "");
 
-  // 1. Active — parent/progress can override a stale failed journey GET
+  // CHG-023: bound journey succeeded / result exists always beats stale recovery signals
+  // (cached progressStatus, JOURNEY_INTERRUPTED errorCode, paused recovery plan).
+  if (journey === "succeeded") {
+    return "completed";
+  }
+  if (
+    (input.finalArtifactAvailable === true || input.chapterComplete === true) &&
+    !JOURNEY_INTERRUPTED.has(journey) &&
+    journey !== "scene_profiles_partial" &&
+    journey !== "budget_blocked" &&
+    journey !== "failed"
+  ) {
+    return "completed";
+  }
+
+  // Active — parent/progress can override a stale failed journey GET
   if (
     isActiveStatus(journey) ||
     isActiveStatus(progress) ||
@@ -146,36 +164,49 @@ export function resolveJourneyPageState(input: JourneyPageStateInput): JourneyPa
 
   // Bound / selected journey still recoverable. Must win over parent chapter_complete
   // from a newer sibling auto-journey (CHG-015 Manual Gate recoverable split).
+  // Only the bound journey row (not stale progress/error alone after succeed) may interrupt.
   const boundRecoverableInterrupted =
     journey === "scene_profiles_partial" ||
-    progress === "scene_profiles_partial" ||
     journey === "budget_blocked" ||
-    progress === "budget_blocked" ||
-    input.errorCode === "JOURNEY_INTERRUPTED" ||
+    (journey === "failed" &&
+      (input.errorCode === "JOURNEY_INTERRUPTED" || input.retryable === true)) ||
     (JOURNEY_INTERRUPTED.has(journey) && input.retryable === true) ||
-    (JOURNEY_INTERRUPTED.has(progress) && input.retryable === true);
+    // Progress may refine only while journey GET is missing or still non-terminal.
+    ((!journey || journey === "failed") &&
+      (progress === "scene_profiles_partial" ||
+        progress === "budget_blocked" ||
+        (JOURNEY_INTERRUPTED.has(progress) && input.retryable === true)));
 
   if (boundRecoverableInterrupted) {
     return "interrupted";
   }
 
-  // 2. Completed + final artifact — overrides stale failed fields on the same journey
+  // Completed + final artifact — overrides stale failed fields on the same journey
   if (input.finalArtifactAvailable === true || input.chapterComplete === true) {
+    // Sibling chapter_complete must not hide a still-recoverable bound journey (CHG-015).
+    if (
+      journey === "scene_profiles_partial" ||
+      journey === "budget_blocked" ||
+      (JOURNEY_INTERRUPTED.has(journey) && input.retryable === true)
+    ) {
+      return "interrupted";
+    }
     return "completed";
   }
   if (journey === "succeeded" && effective === "completed") {
     return "completed";
   }
 
-  // 3. Interrupted / recoverable (including retryable failed / JOURNEY_INTERRUPTED)
+  // Interrupted / recoverable (including retryable failed / JOURNEY_INTERRUPTED)
   if (
     isInterruptedStatus(journey, input.errorCode, input.retryable) ||
-    isInterruptedStatus(progress, input.errorCode, input.retryable) ||
+    ((!journey || journey === "failed") &&
+      isInterruptedStatus(progress, input.errorCode, input.retryable)) ||
     isInterruptedStatus(parent, input.errorCode, input.retryable) ||
     journey === "scene_profiles_partial" ||
-    progress === "scene_profiles_partial" ||
+    ((!journey || journey === "failed") && progress === "scene_profiles_partial") ||
     journey === "budget_blocked" ||
-    (effective === "journey_failed" && input.retryable !== false)
+    (effective === "journey_failed" && input.retryable !== false && journey !== "succeeded")
   ) {
     return "interrupted";
   }

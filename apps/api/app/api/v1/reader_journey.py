@@ -528,8 +528,11 @@ async def resume_reader_journey(
         return ReaderJourneyRunAccepted(
             journey_run_id=journey_run.id, status=journey_run.status
         )
+    # CHG-023: already claimed/running is idempotent (align with unified recover).
     if journey_run.status in JOURNEY_CLAIMED_WORKER_STATUSES:
-        raise error(409, "READER_JOURNEY_ALREADY_RUNNING", "读者旅程正在运行")
+        return ReaderJourneyRunAccepted(
+            journey_run_id=journey_run.id, status=journey_run.status
+        )
     progress = reader_journey_progress(session, journey_run)
     if progress.blind_resume_blocked:
         reason = progress.resume_block_reason

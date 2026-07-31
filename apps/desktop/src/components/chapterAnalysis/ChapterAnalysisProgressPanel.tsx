@@ -61,6 +61,8 @@ type Props = {
   /** CHG-018: suppress recovery while journey generation is active. */
   journeyPageActive?: boolean;
   journeyStatus?: string | null;
+  /** CHG-023: bind recovery continue to journey resume when present. */
+  journeyRunId?: number | null;
   /** CHG-017: when journey succeeded, progress panel promotes journey CTA. */
   presentationStatusTitle?: string | null;
   presentationStatusDescription?: string | null;
@@ -86,6 +88,7 @@ export function ChapterAnalysisProgressPanel({
   onBudgetContinued,
   journeyPageActive = false,
   journeyStatus = null,
+  journeyRunId = null,
   presentationStatusTitle = null,
   presentationStatusDescription = null,
   preferJourneyResultCta = false,
@@ -356,6 +359,8 @@ export function ChapterAnalysisProgressPanel({
           variant="card"
           journeyStatus={liveJourneyStatus}
           journeyPageActive={journeyActiveNow}
+          journeyRunId={journeyRunId ?? run.journey_run_id ?? null}
+          canResume={canResume ?? true}
           onContinued={onBudgetContinued}
           onLater={onDismiss}
         />

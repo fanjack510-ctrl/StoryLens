@@ -321,7 +321,17 @@ export function resolveChapterWorkflowState(args: {
   awaitingConfirmation?: boolean;
   chapterComplete?: boolean;
   confirmedRevisionId?: number | null;
+  /** Live bound journey status — CHG-023 succeeds over sticky interrupted pageView. */
+  journeyStatus?: string | null;
 }): ChapterWorkflowState {
+  const liveJourney = String(args.journeyStatus || "").toLowerCase();
+  // CHG-023: succeeded journey must never stay on interrupted workflow from sticky pageView.
+  if (liveJourney === "succeeded") {
+    return "journey_succeeded";
+  }
+  if (liveJourney === "cancelled") {
+    return "journey_cancelled";
+  }
   const candidates: ChapterWorkflowState[] = [];
   if (args.awaitingConfirmation) candidates.push("awaiting_scene_confirmation");
   const fromPage = mapPageView(args.pageView);
@@ -406,16 +416,21 @@ export function buildChapterAnalysisPresentationV1(args: {
   hasCheckpointOrRecoveryBasis?: boolean | null;
   statusVersion?: number | null;
 }): ChapterAnalysisPresentationV1 {
-  const workflow_state = resolveChapterWorkflowState(args);
+  // Explicit bound journey status only — do not inject parent/sibling lifecycle
+  // journey_status into the CHG-023 succeed override (CHG-015 recoverable split).
+  const workflow_state = resolveChapterWorkflowState({
+    ...args,
+    journeyStatus: args.journeyStatus,
+  });
+  const journeyStatus =
+    args.journeyStatus ??
+    (args.lifecycleRun as { journey_status?: string } | null | undefined)?.journey_status ??
+    null;
   const total =
     args.confirmedSceneCount ??
     args.totalSceneCount ??
     null;
   const completed = args.completedSceneCount ?? null;
-  const journeyStatus =
-    args.journeyStatus ??
-    (args.lifecycleRun as { journey_status?: string } | null | undefined)?.journey_status ??
-    null;
   const can_resume =
     workflow_state === "journey_interrupted" && args.canResumeJourney !== false;
   const can_retry = workflow_state === "journey_failed";

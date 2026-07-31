@@ -123,6 +123,9 @@ export function BookRoutePage() {
   const [analysisInfoOpen, setAnalysisInfoOpen] = useState(false);
   const [panelCollapsed, setPanelCollapsed] = useState(false);
   const [budgetModalOpen, setBudgetModalOpen] = useState(false);
+  /** CHG-023: local resume presentation until journey row reflects active/succeeded. */
+  const [journeyResumePending, setJourneyResumePending] = useState(false);
+  const journeyResumeInFlightRef = useRef(false);
   const [budgetModalRunId, setBudgetModalRunId] = useState<number | null>(null);
   /** In-memory only: survives polling, clears on full page refresh/remount. */
   const seenBudgetModalRef = useRef<Set<number>>(new Set());
@@ -434,14 +437,18 @@ export function BookRoutePage() {
       effectiveStatus:
         journeyRunFromUrl != null ? data?.status ?? null : progress.run?.effective_status,
       errorCode:
-        (data as { error_code?: string } | undefined)?.error_code ??
-        progress.run?.journey_error_code ??
-        progress.run?.error_code ??
-        null,
+        data?.status === "succeeded"
+          ? null
+          : ((data as { error_code?: string } | undefined)?.error_code ??
+            progress.run?.journey_error_code ??
+            progress.run?.error_code ??
+            null),
       retryable:
-        (data as { retryable?: boolean } | undefined)?.retryable ??
-        progress.run?.journey_retryable ??
-        null,
+        data?.status === "succeeded"
+          ? false
+          : ((data as { retryable?: boolean } | undefined)?.retryable ??
+            progress.run?.journey_retryable ??
+            null),
       finalArtifactAvailable,
       chapterComplete:
         progress.run?.chapter_complete === true || compositionUiState === "succeeded",
@@ -502,29 +509,53 @@ export function BookRoutePage() {
   // Progress status can refine the page view (e.g. fresher running counts) without
   // letting an older failed journey GET stick.
   const journeyPageViewWithProgress = useMemo((): JourneyPageView => {
+    const data = journey.data as JourneyQueryPayload | undefined;
+    // CHG-023: never let cached progress/error override a succeeded journey GET.
+    if (journeyPageView === "completed" || data?.status === "succeeded") {
+      stableJourneyPageViewRef.current = "completed";
+      return "completed";
+    }
+    if (journeyResumePending) {
+      stableJourneyPageViewRef.current = "active";
+      return "active";
+    }
     const progressStatus = journeyProgress.data?.status ?? null;
     if (!progressStatus) return journeyPageView;
-    const data = journey.data as JourneyQueryPayload | undefined;
+    const journeyStatus = data?.status;
+    const staleProgressInterrupt =
+      journeyStatus === "succeeded" ||
+      (journeyStatus != null &&
+        journeyStatus !== "failed" &&
+        journeyStatus !== "scene_profiles_partial" &&
+        journeyStatus !== "budget_blocked");
     const refined = resolveJourneyPageState({
       currentJourneyId:
         progress.run?.journey_run_id ??
         journeyProgress.data?.journey_run_id ??
         data?.journey_run_id,
       responseJourneyId: journeyProgress.data?.journey_run_id ?? data?.journey_run_id,
-      journeyStatus: data?.status,
-      progressStatus,
-      parentJourneyStatus: progress.run?.journey_status,
-      effectiveStatus: progress.run?.effective_status,
+      journeyStatus,
+      progressStatus: staleProgressInterrupt ? null : progressStatus,
+      parentJourneyStatus:
+        journeyStatus === "succeeded" ? journeyStatus : progress.run?.journey_status,
+      effectiveStatus:
+        journeyStatus === "succeeded" ? "completed" : progress.run?.effective_status,
       errorCode:
-        journeyProgress.data?.root_error_code ??
-        (data as { error_code?: string } | undefined)?.error_code ??
-        progress.run?.journey_error_code ??
-        null,
+        journeyStatus === "succeeded"
+          ? null
+          : ((data as { error_code?: string } | undefined)?.error_code ??
+            (staleProgressInterrupt
+              ? null
+              : journeyProgress.data?.root_error_code) ??
+            progress.run?.journey_error_code ??
+            null),
       retryable:
-        journeyProgress.data?.retryable ??
-        (data as { retryable?: boolean } | undefined)?.retryable ??
-        progress.run?.journey_retryable ??
-        null,
+        journeyStatus === "succeeded"
+          ? false
+          : ((data as { retryable?: boolean } | undefined)?.retryable ??
+            journeyProgress.data?.retryable ??
+            progress.run?.journey_retryable ??
+            null),
       finalArtifactAvailable: Boolean(
         progress.run?.journey_result_available === true ||
           progress.run?.chapter_complete === true ||
@@ -549,14 +580,16 @@ export function BookRoutePage() {
     compositionUiState,
     hasJourney,
     journeyTemporaryError,
+    journeyResumePending,
   ]);
 
   const showJourneyTerminalFailed = journeyPageViewWithProgress === "terminal_failed";
-  const showJourneyInterrupted = journeyPageViewWithProgress === "interrupted";
+  const showJourneyInterrupted =
+    journeyPageViewWithProgress === "interrupted" && !journeyResumePending;
   const showJourneyTemporaryError = journeyPageViewWithProgress === "temporary_error";
   // CHG-011: terminal/interrupted must never share the screen with running UI.
   const showJourneyActive =
-    journeyPageViewWithProgress === "active" &&
+    (journeyPageViewWithProgress === "active" || journeyResumePending) &&
     !showJourneyInterrupted &&
     !showJourneyTerminalFailed &&
     !showJourneyTemporaryError;
@@ -568,19 +601,51 @@ export function BookRoutePage() {
     !awaitingSceneBoundaryConfirmation &&
     compositionUiState === "awaiting_reader_journey_start";
 
-  // CHG-018: drop stale recovery-plan cache as soon as journey is active.
+  // CHG-018/023: drop stale recovery-plan cache as soon as journey is active or succeeded.
   useEffect(() => {
-    if (!showJourneyActive && compositionUiState !== "reader_journey_processing") return;
     const runId = analysisRunId ?? progress.run?.id;
     if (runId == null) return;
-    void qc.invalidateQueries({ queryKey: ["analysis-recovery-plan", runId] });
+    if (
+      !showJourneyActive &&
+      compositionUiState !== "reader_journey_processing" &&
+      journeyPageViewWithProgress !== "completed" &&
+      !journeyResumePending
+    ) {
+      return;
+    }
+    void qc.invalidateQueries({ queryKey: ["analysis-recovery-plan"] });
+    if (journeyPageViewWithProgress === "completed") {
+      void qc.removeQueries({ queryKey: ["reader-journey-progress", journeyRunId] });
+    }
   }, [
     showJourneyActive,
     compositionUiState,
     analysisRunId,
     progress.run?.id,
+    journeyPageViewWithProgress,
+    journeyResumePending,
+    journeyRunId,
     qc,
   ]);
+
+  // CHG-023: clear local resume only after server row leaves interrupted (not on optimistic active).
+  useEffect(() => {
+    if (!journeyResumePending) return;
+    const status = String(
+      (journey.data as JourneyQueryPayload | undefined)?.status ||
+        journeyProgress.data?.status ||
+        "",
+    );
+    if (
+      status === "succeeded" ||
+      status === "queued" ||
+      status === "starting" ||
+      status === "resuming" ||
+      status.includes("running")
+    ) {
+      setJourneyResumePending(false);
+    }
+  }, [journeyResumePending, journey.data, journeyProgress.data]);
 
   const showJourneyResult =
     !showJourneyTerminalFailed &&
@@ -1168,10 +1233,13 @@ export function BookRoutePage() {
         awaitingConfirmation: awaitingSceneBoundaryConfirmation,
         inFlight: chapterInFlight,
         journeyStatus:
-          journeyProgress.data?.status ||
-          journey.data?.status ||
-          progress.run?.journey_status ||
-          null,
+          // CHG-023: prefer journey GET terminal status over stale progress cache.
+          journey.data?.status === "succeeded" || journey.data?.status === "cancelled"
+            ? journey.data.status
+            : journeyProgress.data?.status ||
+              journey.data?.status ||
+              progress.run?.journey_status ||
+              null,
         statusVersion: progress.run?.status_version ?? lifecycleChapterRun?.status_version ?? null,
         hasActiveTask:
           showJourneyActive ||
@@ -1274,36 +1342,72 @@ export function BookRoutePage() {
     searchParams,
   ]);
 
+  const invalidateAfterJourneyResume = (targetJourneyId: number | null) => {
+    const runId = analysisRunId ?? progress.run?.id;
+    void qc.invalidateQueries({ queryKey: ["reader-journey"] });
+    void qc.invalidateQueries({ queryKey: ["reader-journey-progress"] });
+    void qc.invalidateQueries({ queryKey: ["analysis-recovery-plan"] });
+    void qc.invalidateQueries({ queryKey: ["chapter-complete"] });
+    void qc.invalidateQueries({ queryKey: ["current-page-analysis-run"] });
+    void qc.invalidateQueries({ queryKey: ["runs"] });
+    if (runId != null) {
+      void qc.invalidateQueries({ queryKey: ["current-page-analysis-run", runId] });
+    }
+    if (targetJourneyId != null) {
+      void qc.invalidateQueries({ queryKey: ["reader-journey-progress", targetJourneyId] });
+    }
+    void journey.refetch();
+    void progress.refresh();
+  };
+
   const resumeJourneyAnalysis = () => {
-    void (async () => {
-      const requestRunId = analysisRunId ?? progress.run?.id;
-      if (requestRunId == null) return;
-      try {
-        if (selectedJourneyRunId ?? journeyRunId) {
-          await analysisApi.resumeReaderJourney((selectedJourneyRunId ?? journeyRunId)!, {
-            client_request_id: getOrCreateJourneyClientRequestId(requestRunId),
-            cloud_consent: true,
-            confirmed: true,
-          });
-        } else if (progress.run) {
-          await analysisRecoveryApi.recover(progress.run.id, {
+    if (journeyResumeInFlightRef.current || journeyResumePending) return;
+    const requestRunId = analysisRunId ?? progress.run?.id;
+    const targetJourneyId = selectedJourneyRunId ?? journeyRunId;
+    if (requestRunId == null) return;
+    // CHG-023: Journey recoverable Continue must only hit journey resume.
+    // Analysis-run /recover is reserved for true Analysis Run recovery (no journey id).
+    if (targetJourneyId == null) {
+      if (!progress.run) return;
+      journeyResumeInFlightRef.current = true;
+      setJourneyResumePending(true);
+      stableJourneyPageViewRef.current = "active";
+      void (async () => {
+        try {
+          await analysisRecoveryApi.recover(progress.run!.id, {
             client_request_id: getOrCreateJourneyClientRequestId(requestRunId),
             cloud_consent: true,
             confirmed: true,
             recovery_mode: "unified",
             resume: true,
           });
+        } finally {
+          journeyResumeInFlightRef.current = false;
+          invalidateAfterJourneyResume(null);
         }
+      })();
+      return;
+    }
+    journeyResumeInFlightRef.current = true;
+    setJourneyResumePending(true);
+    stableJourneyPageViewRef.current = "active";
+    void (async () => {
+      try {
+        await analysisApi.resumeReaderJourney(targetJourneyId, {
+          client_request_id: getOrCreateJourneyClientRequestId(requestRunId),
+          cloud_consent: true,
+          confirmed: true,
+        });
+      } catch {
+        setJourneyResumePending(false);
       } finally {
-        stableJourneyPageViewRef.current = "unknown";
+        journeyResumeInFlightRef.current = false;
         appliedJourneyMetaRef.current = {
           seq: 0,
           updatedAt: null,
-          journeyId: selectedJourneyRunId ?? journeyRunId,
+          journeyId: targetJourneyId,
         };
-        void qc.invalidateQueries({ queryKey: ["reader-journey"] });
-        void journey.refetch();
-        void progress.refresh();
+        invalidateAfterJourneyResume(targetJourneyId);
       }
     })();
   };
@@ -1936,8 +2040,9 @@ export function BookRoutePage() {
                     title="阅读旅程已中断"
                     description="当前进度已保存，可以继续分析。Scene 分析已完成；阅读旅程尚未完成；当前任务可以继续。"
                     primaryAction={{
-                      label: "继续分析",
+                      label: journeyResumePending ? "正在恢复…" : "继续分析",
                       testId: "journey-interrupted-continue",
+                      disabled: journeyResumePending || journeyResumeInFlightRef.current,
                       onClick: resumeJourneyAnalysis,
                     }}
                     secondaryAction={{
@@ -2034,6 +2139,7 @@ export function BookRoutePage() {
                     analysisRunId={analysisRunId}
                     progress={journeyProgress.data}
                     loading={journeyProgress.isLoading && !journeyProgress.data}
+                    resuming={journeyResumePending}
                     errorMessage={
                       showJourneyTemporaryError
                         ? "暂时无法读取最新进度"
@@ -2180,14 +2286,18 @@ export function BookRoutePage() {
                 journeyPageActive={
                   showJourneyActive ||
                   journeyActiveView ||
+                  journeyResumePending ||
                   chapterPresentation.is_journey_active
                 }
                 journeyStatus={
-                  journeyProgress.data?.status ||
-                  journey.data?.status ||
-                  progress.run?.journey_status ||
-                  null
+                  journeyResumePending
+                    ? "resuming"
+                    : journeyProgress.data?.status ||
+                      journey.data?.status ||
+                      progress.run?.journey_status ||
+                      null
                 }
+                journeyRunId={selectedJourneyRunId ?? journeyRunId}
                 presentationStatusTitle={
                   journeyNavIsPrimary ? chapterPresentation.status_title : null
                 }

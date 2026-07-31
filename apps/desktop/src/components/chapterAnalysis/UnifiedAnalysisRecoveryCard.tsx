@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Run } from "../../types";
+import { analysisApi } from "../../services/analysisApi";
 import { analysisRecoveryApi } from "../../services/analysisRecoveryApi";
 import { mapRunToUiState } from "./mapAnalysisUiState";
 import {
@@ -9,6 +10,7 @@ import {
   recoveryPlanQueryKey,
   shouldShowUnifiedRecoveryForJourney,
 } from "../../services/journeyActiveRecoveryGuard";
+import { getOrCreateJourneyClientRequestId } from "../../services/chapterJourneyComposition";
 
 type Props = {
   run: Run;
@@ -242,6 +244,39 @@ export function UnifiedAnalysisRecoveryCard({
                   ? "正在继续生成阅读旅程"
                   : "正在修复并继续…",
       );
+      // CHG-023: Journey-level recovery must call journey resume, not analysis-run recover.
+      const boundJourneyId = journeyRunId ?? run.journey_run_id ?? null;
+      const liveStatus = String(liveJourneyStatus || "").toLowerCase();
+      const analysisStageResume =
+        resumeStage === "boundary_detection" || resumeStage === "scene_analysis";
+      const journeyLevelResume =
+        !analysisStageResume &&
+        (resumeStage === "reader_journey" ||
+          [
+            "scene_profiles_partial",
+            "budget_blocked",
+            "aborted_by_limit",
+            "failed",
+            "interrupted",
+            "recoverable_failed",
+          ].includes(liveStatus));
+      if (boundJourneyId != null && journeyLevelResume && !withBudgetAuth) {
+        setStatusMessage("正在恢复阅读旅程");
+        await analysisApi.resumeReaderJourney(boundJourneyId, {
+          client_request_id: getOrCreateJourneyClientRequestId(run.id),
+          cloud_consent: true,
+          confirmed: true,
+        });
+        await qc.invalidateQueries({ queryKey: ["reader-journey"] });
+        await qc.invalidateQueries({ queryKey: ["reader-journey-progress"] });
+        await qc.invalidateQueries({ queryKey: ["analysis-recovery-plan"] });
+        await qc.invalidateQueries({ queryKey: ["current-page-analysis-run", run.id] });
+        await qc.invalidateQueries({ queryKey: ["runs"] });
+        setStatusMessage("已开始恢复，进度将自动更新");
+        onContinued?.();
+        onClose?.();
+        return;
+      }
       const body: Parameters<typeof analysisRecoveryApi.recover>[1] = {
         client_request_id: clientRequestIdFor(run.id, { rotate: false }),
         cloud_consent: true,

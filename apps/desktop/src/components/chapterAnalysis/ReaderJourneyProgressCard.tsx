@@ -8,6 +8,8 @@ type Props = {
   loading?: boolean;
   errorMessage?: string | null;
   onViewTaskDetails: () => void;
+  /** CHG-023: local resume presentation before progress row catches up. */
+  resuming?: boolean;
 };
 
 export function ReaderJourneyProgressCard({
@@ -16,6 +18,7 @@ export function ReaderJourneyProgressCard({
   loading,
   errorMessage,
   onViewTaskDetails,
+  resuming = false,
 }: Props) {
   const total = progress?.total_scene_count ?? 0;
   const done = progress?.completed_scene_count ?? 0;
@@ -25,16 +28,20 @@ export function ReaderJourneyProgressCard({
     progress?.status === "scene_profiles_partial" ||
     progress?.status === "budget_blocked";
   const statusLabel = formatJourneyStatus(progress?.status);
+  const title = resuming ? "正在恢复阅读旅程" : "正在生成阅读旅程";
+  const description = resuming
+    ? "正在从已保存的进度继续，无需重复操作。"
+    : "正在计算场景之间的情绪、节奏和阅读牵引变化。离开本页后任务仍会继续。";
 
   return (
     <section
       className="reader-journey-progress-card"
       data-testid="reader-journey-progress-card"
-      data-status={progress?.status || (loading ? "loading" : "unknown")}
+      data-status={progress?.status || (resuming ? "resuming" : loading ? "loading" : "unknown")}
     >
       <header>
-        <h2 data-testid="reader-journey-progress-title">正在生成阅读旅程</h2>
-        <p>正在计算场景之间的情绪、节奏和阅读牵引变化。离开本页后任务仍会继续。</p>
+        <h2 data-testid="reader-journey-progress-title">{title}</h2>
+        <p>{description}</p>
       </header>
       <div className="reader-journey-progress-meter" data-testid="reader-journey-progress-meter">
         <p data-testid="reader-journey-progress-scenes">

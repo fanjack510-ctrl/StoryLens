@@ -182,6 +182,34 @@ describe("resolveJourneyPageState", () => {
     ).toBe("completed");
   });
 
+  it("CHG-023: succeeded + result beats stale interrupted progress/errorCode", () => {
+    expect(
+      resolveJourneyPageState({
+        currentJourneyId: 3,
+        responseJourneyId: 3,
+        journeyStatus: "succeeded",
+        progressStatus: "scene_profiles_partial",
+        errorCode: "JOURNEY_INTERRUPTED",
+        retryable: true,
+        finalArtifactAvailable: true,
+        chapterComplete: true,
+        parentJourneyStatus: "failed",
+        effectiveStatus: "journey_failed",
+      }),
+    ).toBe("completed");
+  });
+
+  it("CHG-023: stale JOURNEY_INTERRUPTED errorCode alone does not interrupt succeeded", () => {
+    expect(
+      resolveJourneyPageState({
+        journeyStatus: "succeeded",
+        errorCode: "JOURNEY_INTERRUPTED",
+        retryable: true,
+        finalArtifactAvailable: true,
+      }),
+    ).toBe("completed");
+  });
+
   it("parent journey_running overrides stale failed GET", () => {
     expect(
       resolveJourneyPageState({

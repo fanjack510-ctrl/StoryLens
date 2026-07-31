@@ -1,0 +1,43 @@
+﻿{
+    "formal_db_writes":  0,
+    "pass":  true,
+    "journey_1":  {
+                      "status":  "succeeded",
+                      "progress_status":  "succeeded",
+                      "error_code":  "JOURNEY_INTERRUPTED",
+                      "has_visualization":  true,
+                      "recovery_user_status":  "succeeded"
+                  },
+    "real_provider_calls":  0,
+    "resume_succeeded_idempotent":  {
+                                        "status_codes":  [
+                                                             202,
+                                                             202
+                                                         ],
+                                        "bodies":  [
+                                                       {
+                                                           "journey_run_id":  1,
+                                                           "status":  "succeeded",
+                                                           "existing_journey_run_id":  null,
+                                                           "idempotent_replay":  false,
+                                                           "recovery_recommended":  false,
+                                                           "creation_blocked_reason":  null
+                                                       },
+                                                       {
+                                                           "journey_run_id":  1,
+                                                           "status":  "succeeded",
+                                                           "existing_journey_run_id":  null,
+                                                           "idempotent_replay":  false,
+                                                           "recovery_recommended":  false,
+                                                           "creation_blocked_reason":  null
+                                                       }
+                                                   ]
+                                    },
+    "journey_2":  {
+                      "resume_stage":  "reader_journey",
+                      "status":  "scene_profiles_partial",
+                      "retryable":  true,
+                      "progress_status":  "scene_profiles_partial",
+                      "recovery_user_status":  "paused_recoverable"
+                  }
+}

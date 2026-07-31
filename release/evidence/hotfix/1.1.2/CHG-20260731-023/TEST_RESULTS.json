@@ -1,0 +1,34 @@
+{
+  "change_id": "CHG-20260731-023",
+  "public_base_head": "61d16e0627d3f15fa3de60160a9a1f0d3fe6e441",
+  "pytest": {
+    "suites": [
+      "apps/api/tests/test_reader_journey_resume_idempotent_chg023.py",
+      "apps/api/tests/test_reader_journey_startup_recovery_local.py",
+      "apps/api/tests/test_confirm_start_journey_race_chg013.py"
+    ],
+    "passed": 20,
+    "failed": 0
+  },
+  "vitest": {
+    "suites": [
+      "src/services/resolveJourneyPageState.test.ts",
+      "src/services/recoveryUiSync.chg023.test.ts",
+      "src/services/chapterAnalysisPresentation.test.ts",
+      "src/pages/BookRoutePage.readerJourneyResume.test.tsx",
+      "src/services/activeJourneyStaleRecovery.chg018.test.tsx",
+      "src/services/journeyActiveRecoveryGuard.test.ts",
+      "src/components/chapterAnalysis/UnifiedAnalysisRecoveryCard.test.tsx",
+      "src/components/chapterAnalysis/ReaderJourneyResumeCard.test.tsx"
+    ],
+    "passed": 61,
+    "failed": 0
+  },
+  "typecheck": {
+    "base_errors": 25,
+    "final_errors": 25,
+    "new_errors": 0
+  },
+  "real_provider_calls": 0,
+  "formal_database_writes": 0
+}

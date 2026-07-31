@@ -1,0 +1,388 @@
+﻿{
+    "journey":  {
+                    "journey_run_id":  2,
+                    "analysis_run_id":  2,
+                    "book_id":  2,
+                    "chapter_id":  2,
+                    "status":  "scene_profiles_partial",
+                    "provider_name":  "fake",
+                    "model_name":  "fake-scene-model",
+                    "scene_prompt_version":  "v1",
+                    "chapter_prompt_version":  "v1",
+                    "formula_version":  "v1",
+                    "scene_contract_version":  "2.0",
+                    "contract_version":  "2.0",
+                    "calibration_status_label":  "v2_calibrated",
+                    "legacy_uncalibrated":  false,
+                    "display_mode":  "v2",
+                    "phases":  [
+                                   {
+                                       "ordinal":  1,
+                                       "title":  "å¼ç«¯",
+                                       "start_scene_ordinal":  1,
+                                       "end_scene_ordinal":  1,
+                                       "primary_reader_question":  "æ¥ä¸æ¥ä¼åçä»ä¹ï¼",
+                                       "dominant_emotion":  "ç´§å¼ ",
+                                       "reading_payoff":  "æ¨è¿æ¬å¿µ",
+                                       "continuation_motivation":  "æ³ç¥éç­æ¡",
+                                       "summary":  "ç« èé¶æ®µæè¦",
+                                       "confidence":  0.9
+                                   }
+                               ],
+                    "scene_profiles":  [
+                                           {
+                                               "scene_id":  4,
+                                               "scene_ordinal":  1,
+                                               "scene_value_summary":  "åºæ¯1ä»·å¼",
+                                               "dominant_emotion":  "ç´§å¼ ",
+                                               "engagement":  {
+                                                                  "curiosity":  0,
+                                                                  "tension":  0,
+                                                                  "hook":  0,
+                                                                  "payoff":  0,
+                                                                  "information_gain":  0,
+                                                                  "emotional_resonance":  0,
+                                                                  "cognitive_load":  0,
+                                                                  "dropoff_risk":  0,
+                                                                  "engagement_score":  0,
+                                                                  "formula_version":  "1.0",
+                                                                  "genre":  "suspense",
+                                                                  "weights":  {
+
+                                                                              }
+                                                              },
+                                               "reader_question_in":  [
+
+                                                                      ],
+                                               "reader_question_out":  [
+
+                                                                       ],
+                                               "payoffs":  [
+
+                                                           ],
+                                               "hooks":  [
+
+                                                         ],
+                                               "risk_points":  [
+
+                                                               ],
+                                               "evidence_paragraph_ids":  [
+
+                                                                          ],
+                                               "confidence":  0.9
+                                           }
+                                       ],
+                    "profiles":  [
+                                     {
+                                         "scene_id":  4,
+                                         "scene_ordinal":  1,
+                                         "scene_value_summary":  "åºæ¯1ä»·å¼",
+                                         "dominant_emotion":  "ç´§å¼ ",
+                                         "engagement":  {
+                                                            "curiosity":  0,
+                                                            "tension":  0,
+                                                            "hook":  0,
+                                                            "payoff":  0,
+                                                            "information_gain":  0,
+                                                            "emotional_resonance":  0,
+                                                            "cognitive_load":  0,
+                                                            "dropoff_risk":  0,
+                                                            "engagement_score":  0,
+                                                            "formula_version":  "1.0",
+                                                            "genre":  "suspense",
+                                                            "weights":  {
+
+                                                                        }
+                                                        },
+                                         "reader_question_in":  [
+
+                                                                ],
+                                         "reader_question_out":  [
+
+                                                                 ],
+                                         "payoffs":  [
+
+                                                     ],
+                                         "hooks":  [
+
+                                                   ],
+                                         "risk_points":  [
+
+                                                         ],
+                                         "evidence_paragraph_ids":  [
+
+                                                                    ],
+                                         "confidence":  0.9
+                                     }
+                                 ],
+                    "chapter_summary":  {
+                                            "chapter_value_summary":  "æ¬ç« å·²å®æé\u0085è¯»æ\u0085ç¨ç»æï¼CHG-023 Fixture Aï¼",
+                                            "overall_engagement_score":  70,
+                                            "chapter_reader_question_chain":  [
+
+                                                                              ],
+                                            "pacing_diagnosis":  [
+
+                                                                 ]
+                                        },
+                    "deterministic_statistics":  {
+
+                                                 },
+                    "one_sentence_diagnosis":  "Fixture A succeeded with stale recovery noise.",
+                    "visualization":  null,
+                    "journey_result":  null,
+                    "created_at":  "2026-07-31T04:28:55.339750Z",
+                    "started_at":  "2026-07-31T04:28:55.338761Z",
+                    "updated_at":  "2026-07-31T04:28:55.339750Z",
+                    "completed_at":  null,
+                    "scene_revision_id":  2,
+                    "scene_boundary_hash":  null,
+                    "result_status":  "current",
+                    "is_current":  true,
+                    "is_superseded":  false,
+                    "error_code":  "JOURNEY_INTERRUPTED",
+                    "retryable":  true,
+                    "total_scene_count":  3,
+                    "completed_scene_count":  1,
+                    "v2_question_lifecycle":  null,
+                    "v2_scene_diagnoses":  null,
+                    "integrity":  {
+                                      "integrity_status":  "legacy_unverified",
+                                      "overall_status":  "legacy_unverified",
+                                      "overall_display_policy":  "show_legacy",
+                                      "trusted":  false,
+                                      "partially_trusted":  false,
+                                      "untrusted":  false,
+                                      "legacy_unverified":  true,
+                                      "legacy_warning":  "æ§çåæå°æªå®ææ¥æºæ ¡éªï¼ä»\u0085ä¾åèã",
+                                      "blocked_scene_count":  0,
+                                      "blocked_sections":  [
+
+                                                           ],
+                                      "scene_reports":  [
+                                                            {
+                                                                "scene_id":  4,
+                                                                "scene_ordinal":  1,
+                                                                "integrity_status":  "legacy_unverified",
+                                                                "status":  "legacy_unverified",
+                                                                "fingerprint_state":  "missing_legacy",
+                                                                "fingerprint_digest":  "08156a2ead2c",
+                                                                "issue_codes":  [
+
+                                                                                ],
+                                                                "failed_fields":  [
+
+                                                                                  ],
+                                                                "error_codes":  [
+
+                                                                                ],
+                                                                "issue_count":  0,
+                                                                "safe_to_display":  true,
+                                                                "display_allowed":  true,
+                                                                "field_results":  [
+
+                                                                                  ]
+                                                            }
+                                                        ],
+                                      "scene_integrity":  [
+                                                              {
+                                                                  "scene_id":  4,
+                                                                  "scene_ordinal":  1,
+                                                                  "integrity_status":  "legacy_unverified",
+                                                                  "status":  "legacy_unverified",
+                                                                  "fingerprint_state":  "missing_legacy",
+                                                                  "fingerprint_digest":  "08156a2ead2c",
+                                                                  "issue_codes":  [
+
+                                                                                  ],
+                                                                  "failed_fields":  [
+
+                                                                                    ],
+                                                                  "error_codes":  [
+
+                                                                                  ],
+                                                                  "issue_count":  0,
+                                                                  "safe_to_display":  true,
+                                                                  "display_allowed":  true,
+                                                                  "field_results":  [
+
+                                                                                    ]
+                                                              }
+                                                          ],
+                                      "field_integrity":  [
+
+                                                          ],
+                                      "integrity_summary":  {
+                                                                "scene_count":  1,
+                                                                "blocked_scene_count":  0,
+                                                                "field_issue_count":  0,
+                                                                "fingerprint_missing":  true
+                                                            },
+                                      "user_message":  "æ§çåæå°æªå®ææ¥æºæ ¡éªï¼ä»\u0085ä¾åèã",
+                                      "error_code":  null
+                                  },
+                    "integrity_status":  "legacy_unverified",
+                    "trusted":  false
+                },
+    "progress":  {
+                     "journey_run_id":  2,
+                     "analysis_run_id":  2,
+                     "status":  "scene_profiles_partial",
+                     "current_stage":  "reader_journey_scene_profiles",
+                     "total_scene_count":  3,
+                     "completed_scene_count":  1,
+                     "remaining_scene_count":  2,
+                     "completed_scene_ids":  [
+                                                 4
+                                             ],
+                     "remaining_scene_ids":  [
+                                                 5,
+                                                 6
+                                             ],
+                     "phase_count":  1,
+                     "has_chapter_summary":  true,
+                     "retryable":  true,
+                     "failed_stage":  null,
+                     "root_error_code":  "JOURNEY_INTERRUPTED",
+                     "root_error_message":  "fixture recoverable interrupt",
+                     "failed_scene_id":  null,
+                     "failed_scene_ordinal":  null,
+                     "failed_invocation_id":  null,
+                     "completed_at":  null,
+                     "planner_version":  "1.0",
+                     "current_planner_version":  "1.1",
+                     "scene_prompt_version":  "v1",
+                     "scene_contract_version":  "2.0",
+                     "recovery_safe":  true,
+                     "blind_resume_blocked":  false,
+                     "resume_block_reason":  null,
+                     "reservation_released":  true,
+                     "request_count":  0,
+                     "total_tokens":  0,
+                     "estimated_cost":  0.0,
+                     "currency":  "CNY",
+                     "failure_details":  null,
+                     "resume_preflight":  {
+                                              "remaining_scenes":  2,
+                                              "scene_batch_count":  1,
+                                              "batch_plan":  [
+                                                                 "Scene 2â3"
+                                                             ],
+                                              "expected_requests":  2,
+                                              "worst_case_requests":  7,
+                                              "estimated_tokens":  6664,
+                                              "worst_case_tokens":  24164,
+                                              "estimated_cost":  0.052328,
+                                              "worst_case_cost":  0.192328,
+                                              "planner_version":  "1.1",
+                                              "scene_prompt_version":  "v1.6",
+                                              "scene_contract_version":  "1.3",
+                                              "stage1_scene_profiles":  {
+                                                                            "stage":  "reader_journey_scene_profiles",
+                                                                            "paragraph_count":  6,
+                                                                            "transition_count":  0,
+                                                                            "detection_batch_count":  0,
+                                                                            "adjudication_batch_count_estimated":  0,
+                                                                            "scene_count":  2,
+                                                                            "expected_request_count":  1,
+                                                                            "worst_case_request_count":  5,
+                                                                            "estimated_input_tokens":  140,
+                                                                            "worst_case_input_tokens":  140,
+                                                                            "estimated_output_tokens":  3500,
+                                                                            "worst_case_output_tokens":  17500,
+                                                                            "estimated_total_tokens":  3640,
+                                                                            "worst_case_total_tokens":  17640,
+                                                                            "estimated_cost":  0.02828,
+                                                                            "worst_case_cost":  0.14028,
+                                                                            "currency":  "CNY",
+                                                                            "pricing_version":  "aliyun-cn-beijing-2026-07-21-official-list-price-v1",
+                                                                            "estimated":  true
+                                                                        },
+                                              "stage2_chapter_synthesis":  {
+                                                                               "stage":  "reader_journey_chapter_synthesis",
+                                                                               "paragraph_count":  0,
+                                                                               "transition_count":  0,
+                                                                               "detection_batch_count":  0,
+                                                                               "adjudication_batch_count_estimated":  0,
+                                                                               "scene_count":  3,
+                                                                               "expected_request_count":  1,
+                                                                               "worst_case_request_count":  2,
+                                                                               "estimated_input_tokens":  24,
+                                                                               "worst_case_input_tokens":  24,
+                                                                               "estimated_output_tokens":  3000,
+                                                                               "worst_case_output_tokens":  6500,
+                                                                               "estimated_total_tokens":  3024,
+                                                                               "worst_case_total_tokens":  6524,
+                                                                               "estimated_cost":  0.024048,
+                                                                               "worst_case_cost":  0.052048,
+                                                                               "currency":  "CNY",
+                                                                               "pricing_version":  "aliyun-cn-beijing-2026-07-21-official-list-price-v1",
+                                                                               "estimated":  true
+                                                                           },
+                                              "currency":  "CNY"
+                                          },
+                     "user_error_message":  null,
+                     "offline_replay_available":  false,
+                     "offline_replayable_scene_count":  0,
+                     "offline_replayable_invocation_ids":  [
+
+                                                           ],
+                     "current_contract_version":  "1.3",
+                     "recoverable_contract_version":  null
+                 },
+    "recovery_plan":  {
+                          "resume_stage":  "reader_journey",
+                          "can_resume_hint":  {
+                                                  "error_code":  null,
+                                                  "root_error_code":  null,
+                                                  "failed_stage":  null,
+                                                  "worst_case_requests":  9,
+                                                  "worst_case_tokens":  31234,
+                                                  "worst_case_cost":  0.248468,
+                                                  "remaining":  {
+                                                                    "requests":  50,
+                                                                    "tokens":  2000000,
+                                                                    "estimated_cost":  50.0
+                                                                },
+                                                  "run_scoped_auth":  null,
+                                                  "provider_state_version":  null,
+                                                  "health_state":  "unknown",
+                                                  "completed_scene_count":  3,
+                                                  "total_scene_count":  3,
+                                                  "remaining_scene_count":  0,
+                                                  "manual_recovery_attempts":  0,
+                                                  "auto_recovery_attempts":  0,
+                                                  "max_manual_recovery_attempts":  5,
+                                                  "max_auto_recovery_attempts":  3,
+                                                  "recovery_exhausted":  false,
+                                                  "provider_not_retryable":  false,
+                                                  "evidence_error":  null,
+                                                  "user_error":  null,
+                                                  "http_status":  null,
+                                                  "provider_error_code":  null,
+                                                  "provider_message":  null,
+                                                  "provider_request_id":  null,
+                                                  "endpoint_host":  null,
+                                                  "error_category":  null,
+                                                  "retryable":  false,
+                                                  "retry_after":  null,
+                                                  "timeout_stage":  null,
+                                                  "response_content_type":  null,
+                                                  "sanitized_response_excerpt":  null,
+                                                  "occurred_at":  null,
+                                                  "user_reason":  null,
+                                                  "status_version":  1,
+                                                  "confirmed_revision_id":  2,
+                                                  "has_active_worker_lease":  false,
+                                                  "recovery_plan_cache_key":  {
+                                                                                  "analysis_run_id":  2,
+                                                                                  "journey_run_id":  2,
+                                                                                  "confirmed_revision_id":  2,
+                                                                                  "status_version":  1
+                                                                              }
+                                              },
+                          "recoverable":  true,
+                          "user_status":  "paused_recoverable",
+                          "reader_journey_status":  "scene_profiles_partial"
+                      }
+}
