@@ -17,6 +17,12 @@
       "message": "docs(release): attach CHG-023 commit and final head",
       "primary": false,
       "multi_change_reason": null
+    },
+    {
+      "sha": "231900a5fa9f3cbc600b8310127a0c5e8119bd87",
+      "message": "fix(ui): present journey failed ahead of interrupted resume UI",
+      "primary": false,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -63,5 +69,5 @@
   "blocker_level": null,
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-31T04:15:37Z",
-  "updated_at": "2026-07-31T04:33:51Z"
+  "updated_at": "2026-07-31T04:56:44Z"
 }
