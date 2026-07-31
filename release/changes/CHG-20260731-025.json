@@ -23,6 +23,12 @@
       "message": "chore(release): record CHG-025 verified tip metadata",
       "primary": false,
       "multi_change_reason": null
+    },
+    {
+      "sha": "3f05e77be99ad97960c3588b99e90ab0c0b3b65e",
+      "message": "chore(release): finalize CHG-025 verified registry tip",
+      "primary": false,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -64,7 +70,7 @@
   "blocker_level": "P1",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-07-31T12:24:46Z",
-  "updated_at": "2026-07-31T13:34:04Z",
+  "updated_at": "2026-07-31T13:34:05Z",
   "target_version": "1.1.2",
   "manual_gate": "MG-CHG-20260731-025-RIGHT-RAIL-CTA",
   "manual_gate_result": "PASSED",
