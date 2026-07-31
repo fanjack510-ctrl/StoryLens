@@ -1,0 +1,58 @@
+{
+  "id": "CHG-20260731-026",
+  "title": "StoryLens 1.1.2-rc.7 build and installed acceptance preparation",
+  "type": "build",
+  "base_version": "1.1.2",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "release",
+    "desktop",
+    "api"
+  ],
+  "files": [],
+  "user_summary": "构建 1.1.2-rc.7 安装包并准备真正安装态验收（含 CHG-023/025）",
+  "technical_summary": "Build 1.1.2-rc.7 from public HEAD 5148fb7 (CHG-023+CHG-025 verified). Packaged Sidecar true-exec + auto gates. No push/tag/stable.",
+  "acceptance_criteria": [
+    "Installer StoryLens_1.1.2-rc.7_x64-setup.exe archived with SHA-256",
+    "VERSION restored to 1.1.2 after build",
+    "CWD gate 6/6",
+    "CHG-023/025 auto gates PASS",
+    "True packaged Sidecar resume success/failure PASS",
+    "status tested only; awaiting manual installed acceptance"
+  ],
+  "tests": [
+    "pytest CHG-006/013/015/023 suites: 45 passed",
+    "vitest CHG-017/023/025 related: 29 passed",
+    "playwright CHG-023 A-D+H + CHG-025 E-G PASS",
+    "CWD 6/6",
+    "isolated installed acceptance PASS",
+    "true packaged Sidecar execution PASS"
+  ],
+  "verification_evidence": [
+    "release/evidence/1.1.2-rc.7/PREBUILD_GATE.md",
+    "release/evidence/1.1.2-rc.7/BUILD_ARTIFACTS.md",
+    "release/evidence/1.1.2-rc.7/TEST_RESULTS.json",
+    "release/evidence/1.1.2-rc.7/VERIFICATION.md",
+    "release/evidence/1.1.2-rc.7/TRUE_INSTALLED_EXECUTION.json",
+    "release/evidence/1.1.2-rc.7/ISOLATED_INSTALLED_ACCEPTANCE.json",
+    "D:/StoryLens-Local-Evidence/installer-archive/StoryLens_1.1.2-rc.7_x64-setup.exe"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-31T13:38:39Z",
+  "updated_at": "2026-07-31T14:01:46Z"
+}

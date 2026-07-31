@@ -1,0 +1,43 @@
+{
+  "health": true,
+  "health_body": {
+    "status": "ok",
+    "service": "storylens-api",
+    "database": "ok",
+    "default_provider": "none"
+  },
+  "listen_127": true,
+  "isolated_db_exists": true,
+  "isolated_db_path": "C:\\Users\\msi\\AppData\\Local\\Temp\\storylens-1.1.2-rc.7-installed-automatic\\AppData\\StoryLens\\database\\storylens.db",
+  "desktop_version": "1.1.2-rc.7",
+  "desktop_version_expected": "1.1.2-rc.7",
+  "desktop_version_ok": true,
+  "desktop_path": "C:\\Users\\msi\\AppData\\Local\\Temp\\storylens-1.1.2-rc.7-installed-automatic\\install\\storylens-desktop.exe",
+  "sidecar_path": "C:\\Users\\msi\\AppData\\Local\\Temp\\storylens-1.1.2-rc.7-installed-automatic\\install\\storylens-api.exe",
+  "desktop_path_isolated": true,
+  "sidecar_path_isolated": true,
+  "installer_readable": true,
+  "installer_size": 42776408,
+  "sidecar_sha256": "5F196E6E077247CA471D77428398A054A82219709566487FE361E30859A2B023",
+  "desktop_sha256": "719E2471B84FAA44B48DB130F752A6748C1B90E525550A476AEBD8242FC25148",
+  "installer_sha256": "9831A4821CADFF90665CCFDEB73A244A3C71595882F73C6EBAF9CADD37D50FB9",
+  "fake_provider": false,
+  "real_provider_enabled": false,
+  "external_provider_network_calls": 0,
+  "api_restart_health": true,
+  "formal_db_writes": 0,
+  "formal_db_before": {
+    "exists": true,
+    "sha": "BE2A258F77B06B688181C185EEE4ACEE1E4B2E4656E080556845ADF8D2C34EBA",
+    "mtime": 1785421637.5060432,
+    "size": 43126784
+  },
+  "formal_db_after": {
+    "exists": true,
+    "sha": "BE2A258F77B06B688181C185EEE4ACEE1E4B2E4656E080556845ADF8D2C34EBA",
+    "mtime": 1785421637.5060432,
+    "size": 43126784
+  },
+  "formal_install_overwritten": false,
+  "ok": true
+}

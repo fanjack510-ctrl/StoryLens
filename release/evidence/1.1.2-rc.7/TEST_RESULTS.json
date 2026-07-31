@@ -1,0 +1,52 @@
+{
+  "change_id": "CHG-20260731-026",
+  "rc_version": "1.1.2-rc.7",
+  "build_source_head": "5148fb7861bf21dcfb6d55de6419fe391a32561c",
+  "chg023_verified_head": "bfb9b9ad787b260a8b813f8b35a7612b075d0330",
+  "chg025_verified_head": "ba9521f0069b6515551aaf005cc139a47355c926",
+  "pytest": {
+    "suites": [
+      "test_task_cancellation_chg006.py",
+      "test_reader_journey_resume_idempotent_chg023.py",
+      "test_reader_journey_startup_recovery_local.py",
+      "test_confirm_start_journey_race_chg013.py",
+      "test_rc4_post_confirm_scene_analysis_chg015.py",
+      "test_chg015_recoverable_current_run.py"
+    ],
+    "passed": 45,
+    "failed": 0,
+    "result": "PASS"
+  },
+  "vitest": {
+    "suites": [
+      "currentJourneyExecutionState.test.ts",
+      "chapterAnalysisPresentation.completedJourneyCta.test.ts",
+      "recoveryUiSync.chg023.test.ts",
+      "BookRoutePage.journeyNav.test.tsx"
+    ],
+    "passed": 29,
+    "failed": 0,
+    "result": "PASS"
+  },
+  "typecheck": {
+    "error_count": 0,
+    "new_errors": 0,
+    "result": "PASS"
+  },
+  "playwright": {
+    "chg023_cases_abcd_h": "PASS",
+    "chg025_cases_efg": "PASS",
+    "build_commit_asserted": "5148fb7861bf21dcfb6d55de6419fe391a32561c",
+    "result": "PASS"
+  },
+  "http_e2e": "PASS",
+  "cwd_gate": "6/6",
+  "isolated_installed_acceptance": "PASS",
+  "true_packaged_sidecar_execution": "PASS",
+  "real_provider_calls": 0,
+  "external_provider_network_calls": 0,
+  "formal_database_writes": 0,
+  "formal_install_overwritten": false,
+  "production_scenario_hook": "ABSENT",
+  "source_python_api_used_for_true_installed": false
+}
