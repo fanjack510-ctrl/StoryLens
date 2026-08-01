@@ -9,6 +9,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Mapping, Sequence
 
+from app.narrative_core.product_contract.module_results import (
+    normalize_coverage_scope_wire,
+)
 from app.narrative_core.services.structure_stages_output_contract_v2 import (
     OUTPUT_CONTRACT_ID,
     SCHEMA_ID,
@@ -152,7 +155,9 @@ def map_structure_stages_result_v2(
                 or getattr(mapped, "semantic_claim_count", None)
                 or len(assets)
             ),
-            coverage_scope=str(normalized.get("coverage_scope") or "") or None,
+            coverage_scope=normalize_coverage_scope_wire(
+                normalized.get("coverage_scope")
+            ),
         )
     except Exception:  # noqa: BLE001
         pass
@@ -291,7 +296,9 @@ def map_structure_stages_result_v2(
             evidence_refs=(),
             resolver_output_refs=refs,
             semantic_claim_count=0,
-            coverage_scope=str(payload.get("coverage_scope") or "") or None,
+            coverage_scope=normalize_coverage_scope_wire(
+                payload.get("coverage_scope")
+            ),
         )
 
     return StructureStagesMappingResult(
@@ -304,7 +311,9 @@ def map_structure_stages_result_v2(
         evidence_refs=tuple(evidence_bucket),
         resolver_output_refs=refs,
         semantic_claim_count=claim_count,
-        coverage_scope=str(payload.get("coverage_scope") or "") or None,
+        coverage_scope=normalize_coverage_scope_wire(
+            payload.get("coverage_scope")
+        ),
     )
 
 

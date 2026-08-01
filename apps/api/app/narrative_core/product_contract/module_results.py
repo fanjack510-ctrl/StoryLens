@@ -267,7 +267,7 @@ class StructureStagesResultV2:
             raise ValueError("StructureStagesResultV2.contract_version must be 'v2'")
         if str(self.evidence_contract_version or "v2") != "v2":
             raise ValueError("evidence_contract_version must be 'v2'")
-        scope = str(self.coverage_scope or "").strip()
+        scope = normalize_coverage_scope_wire(self.coverage_scope) or ""
         if scope not in COVERAGE_SCOPE_VALUES:
             raise ValueError(f"invalid coverage_scope: {self.coverage_scope!r}")
         object.__setattr__(self, "coverage_scope", scope)

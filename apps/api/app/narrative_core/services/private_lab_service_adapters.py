@@ -406,6 +406,36 @@ class PrivateLabEstimateServiceAdapter:
                     if catalog_materialization is not None:
                         # Stash for Estimate cache / Consent projection (no body).
                         self._pending_catalog_materialization_safe = catalog_materialization
+                    # CHG-20260725-001: freeze StructureStagesExecutionMaterialization at Estimate.
+                    if (
+                        str(module_key) == "structure_stages"
+                        and getattr(self, "_pending_catalog_materialization", None)
+                        is not None
+                    ):
+                        try:
+                            from app.narrative_core.services.structure_stages_execution_materialization import (
+                                freeze_structure_stages_execution_materialization,
+                            )
+
+                            exec_mat = freeze_structure_stages_execution_materialization(
+                                selected_chapter_ids=bundle.selected_chapter_ids,
+                                selected_paragraph_ids=bundle.selected_paragraph_ids,
+                                selected_unit_refs=bundle.selected_context_unit_ids,
+                                context_bundle_hash=bundle.context_bundle_hash,
+                                catalog_mat=self._pending_catalog_materialization,
+                                context_capabilities=caps,
+                                prompt_input_fingerprint=str(
+                                    resolve_meta.get("bundle_fingerprint")
+                                    or bundle.bundle_fingerprint
+                                ),
+                            )
+                            self._pending_execution_materialization = exec_mat
+                            self._pending_execution_materialization_safe = (
+                                exec_mat.safe_dict()
+                            )
+                        except Exception:  # noqa: BLE001
+                            self._pending_execution_materialization = None
+                            self._pending_execution_materialization_safe = None
                 except Exception:  # noqa: BLE001
                     execution_binding = None
             module_estimates.append(est.safe_dict())
@@ -505,10 +535,15 @@ class PrivateLabEstimateServiceAdapter:
             "catalog_materialization": getattr(
                 self, "_pending_catalog_materialization_safe", None
             ),
+            "structure_stages_execution_materialization": getattr(
+                self, "_pending_execution_materialization_safe", None
+            ),
         }
         self._pending_binding = None
         self._pending_catalog_materialization = None
         self._pending_catalog_materialization_safe = None
+        self._pending_execution_materialization = None
+        self._pending_execution_materialization_safe = None
         return result
 
     def validate_fingerprint(
@@ -541,6 +576,15 @@ class PrivateLabEstimateServiceAdapter:
         if not entry:
             return None
         raw = entry.get("catalog_materialization")
+        return dict(raw) if isinstance(raw, dict) else None
+
+    def cached_structure_stages_execution_materialization(
+        self, estimate_fingerprint: str
+    ) -> dict[str, Any] | None:
+        entry = self._cache.get(str(estimate_fingerprint))
+        if not entry:
+            return None
+        raw = entry.get("structure_stages_execution_materialization")
         return dict(raw) if isinstance(raw, dict) else None
 
 
@@ -1351,8 +1395,20 @@ class PrivateLabProviderExecutionServiceAdapter:
                     "UNDECLARED_TOP_LEVEL_FIELDS",
                     "MISSING_REQUIRED_FIELDS",
                     "contract_rejected",
+                    "STRUCTURE_REQUIRED_STAGE_MISSING",
+                    "STRUCTURE_COVERAGE_SCOPE_BINDING_MISMATCH",
+                    "STRUCTURE_EMPTY_RESULT_AFTER_REPAIR",
+                    "STRUCTURE_CONTRACT_FAILURE",
+                    "STRUCTURE_STAGE_RANGE_OVERLAP",
+                    "STRUCTURE_STAGE_RANGE_NON_CONTIGUOUS",
+                    "STRUCTURE_STAGE_SUMMARY_CITATION_EMPTY",
+                    "TURNING_POINT_CITATION_EMPTY",
                 }
-                if detail_s in {"REPAIR_EXHAUSTED", "repair_exhausted"} or (
+                if detail_s in {
+                    "REPAIR_EXHAUSTED",
+                    "repair_exhausted",
+                    "STRUCTURE_EMPTY_RESULT_AFTER_REPAIR",
+                } or (
                     detail_s in citation_codes | contract_codes
                     and int(audit.get("business_repair_count") or 0) >= 1
                 ):

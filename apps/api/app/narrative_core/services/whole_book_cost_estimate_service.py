@@ -152,7 +152,8 @@ def estimate_whole_book_analysis(
     synthesis_input = SYNTHESIS_INPUT_TOKENS_BASE + min(8000, window_count * 200)
     estimated_input = window_input_tokens + synthesis_input
     estimated_output = window_count * RESERVED_OUTPUT_TOKENS_PER_WINDOW + SYNTHESIS_OUTPUT_TOKENS
-    provider_calls = 0 if window_count == 0 else window_count + 1
+    # Window units + overview synthesis + structure_stages unit (WB-2.1).
+    provider_calls = 0 if window_count == 0 else window_count + 2
 
     cost_min: Decimal | None = None
     cost_max: Decimal | None = None

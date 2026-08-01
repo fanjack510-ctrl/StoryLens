@@ -1229,6 +1229,199 @@ class PrivateWholeBookAnalysisRuntime:
                 if str(outputs.get(claim_name) or structured.get(claim_name) or "").strip():
                     claim_count += 1
         diag.claim_count = claim_count
+        # Structure Stages V2: safe counters from Provider DTO (not asset length).
+        if use_v2 and key == WholeBookModuleKey.STRUCTURE_STAGES:
+            stages_list = list(outputs.get("stages") or structured.get("stages") or ())
+            tps_list = list(
+                outputs.get("turning_points") or structured.get("turning_points") or ()
+            )
+            lims = list(
+                outputs.get("limitations") or structured.get("limitations") or ()
+            )
+            diag.stages_count = len(stages_list)
+            diag.turning_points_count = len(tps_list)
+            diag.limitations_count = len(lims)
+            try:
+                from app.narrative_core.product_contract.module_results import (
+                    normalize_coverage_scope_wire,
+                )
+
+                diag.actual_coverage_scope = normalize_coverage_scope_wire(
+                    outputs.get("coverage_scope")
+                    or structured.get("coverage_scope")
+                )
+            except Exception:  # noqa: BLE001
+                diag.actual_coverage_scope = str(
+                    outputs.get("coverage_scope")
+                    or structured.get("coverage_scope")
+                    or ""
+                ) or None
+            exec_mat_early = provider_policy.get(
+                "structure_stages_execution_materialization"
+            )
+            if isinstance(exec_mat_early, Mapping):
+                diag.expected_coverage_scope = str(
+                    exec_mat_early.get("expected_coverage_scope") or ""
+                ) or None
+            caps_early = dict(
+                provider_policy.get("context_capabilities")
+                or (exec_mat_early or {}).get("context_capabilities")
+                or {}
+            )
+            if not diag.expected_coverage_scope and caps_early:
+                try:
+                    from storylens_private_engine.citation import (
+                        freeze_structure_coverage_binding,
+                    )
+                    from app.narrative_core.services.structure_stages_output_contract_v2 import (
+                        resolve_structure_context_capabilities,
+                    )
+
+                    caps_obj = resolve_structure_context_capabilities(caps_early)
+                    if caps_obj is not None:
+                        binding = freeze_structure_coverage_binding(caps_obj)
+                        diag.expected_coverage_scope = binding.expected_coverage_scope
+                except Exception:  # noqa: BLE001
+                    pass
+            try:
+                from storylens_private_engine.citation import (
+                    count_structure_provider_citations,
+                )
+
+                total_cites, unique_cites = count_structure_provider_citations(
+                    {**structured, **outputs}
+                )
+                diag.provider_citation_count = int(total_cites)
+                diag.unique_provider_citation_count = int(unique_cites)
+            except Exception:  # noqa: BLE001
+                diag.provider_citation_count = int(
+                    outputs.get("provider_citation_count") or 0
+                )
+            # Module envelope is not a stage candidate.
+            diag.module_result_envelope_count = 1 if structured else 0
+            # Stage candidates come from mapped assets with stage keys — not envelope.
+            stage_assets = [
+                a
+                for a in (guarded.asset_candidates or ())
+                if (
+                    (isinstance(a, Mapping) and a.get("asset_type") in {"structure_stage", "stage"})
+                    or str(getattr(a, "asset_type", "") or "")
+                    in {"structure_stage", "stage"}
+                )
+            ]
+            diag.structure_stage_candidate_count = len(stage_assets) or int(
+                outputs.get("structure_stage_candidate_count")
+                or outputs.get("stage_candidate_count")
+                or 0
+            )
+            if diag.structure_stage_candidate_count < 1 and diag.stages_count > 0:
+                # Mapped stage rows count as candidates when assets not yet projected.
+                diag.structure_stage_candidate_count = diag.stages_count
+            diag.turning_point_projection_count = diag.turning_points_count
+            # semantic_claim_count must NOT use len(assets).
+            if int(outputs.get("semantic_claim_count") or 0) > 0:
+                diag.semantic_claim_count = int(outputs.get("semantic_claim_count") or 0)
+            diag.repair_required = bool(
+                diag.repair_attempted
+                or diag.initial_contract_failure_code
+                or outputs.get("repair_required")
+            )
+            # Prefer live capabilities for empty-policy (binding may be patched post-Estimate).
+            permits_empty = False
+            requires_obs = True
+            try:
+                from storylens_private_engine.citation import (
+                    freeze_structure_coverage_binding,
+                )
+                from app.narrative_core.services.structure_stages_output_contract_v2 import (
+                    resolve_structure_context_capabilities,
+                )
+
+                caps_obj = resolve_structure_context_capabilities(caps_early)
+                if caps_obj is not None:
+                    live_binding = freeze_structure_coverage_binding(caps_obj)
+                    permits_empty = bool(live_binding.permits_empty_observation)
+                    requires_obs = bool(live_binding.requires_stage_observation)
+                    diag.expected_coverage_scope = str(
+                        live_binding.expected_coverage_scope
+                    )
+            except Exception:  # noqa: BLE001
+                permits_empty = bool(
+                    (
+                        isinstance(exec_mat_early, Mapping)
+                        and exec_mat_early.get("permits_empty_observation")
+                    )
+                    or (not bool(caps_early.get("can_identify_local_stages", True)))
+                )
+                requires_obs = bool(
+                    (
+                        isinstance(exec_mat_early, Mapping)
+                        and exec_mat_early.get("requires_stage_observation")
+                    )
+                    if isinstance(exec_mat_early, Mapping)
+                    and "requires_stage_observation" in (exec_mat_early or {})
+                    else caps_early.get("can_identify_local_stages", True)
+                )
+            # Empty + capability=true must not reach Mapper success / Candidate Builder.
+            if requires_obs and diag.stages_count < 1:
+                empty_code = str(
+                    diag.dto_mapper_failure_code
+                    or diag.initial_contract_failure_code
+                    or outputs.get("failure_code")
+                    or "STRUCTURE_REQUIRED_STAGE_MISSING"
+                )
+                if empty_code in {
+                    "STRUCTURE_EMPTY_RESULT_AFTER_REPAIR",
+                    "STRUCTURE_REQUIRED_STAGE_MISSING",
+                    "STRUCTURE_COVERAGE_SCOPE_BINDING_MISMATCH",
+                } or int(diag.repair_count or 0) >= 1:
+                    contract_code = (
+                        "STRUCTURE_EMPTY_RESULT_AFTER_REPAIR"
+                        if int(diag.repair_count or 0) >= 1
+                        else empty_code
+                    )
+                else:
+                    contract_code = "STRUCTURE_REQUIRED_STAGE_MISSING"
+                diag.failure_boundary = "STRUCTURE_CONTRACT_FAILURE"
+                diag.failure_code = contract_code
+                diag.first_rejection_code = contract_code
+                diag.first_object_loss_boundary = "STRUCTURE_CONTRACT_FAILURE"
+                diag.persistence_complete = False
+                # Strip candidates so Mapper/Builder success cannot proceed.
+                outputs = dict(outputs)
+                outputs["empty_dto"] = True
+                outputs["accepted"] = False
+                guarded = PrivateEngineExecutionResult(
+                    schema=guarded.schema,
+                    version=guarded.version,
+                    engine_id=guarded.engine_id,
+                    engine_version=guarded.engine_version,
+                    stage_key=guarded.stage_key,
+                    attempt=guarded.attempt,
+                    status="failed",
+                    module_outputs=outputs,
+                    evidence_candidates=(),
+                    asset_candidates=(),
+                    relation_candidates=(),
+                    conflict_candidates=(),
+                    checkpoint=guarded.checkpoint,
+                    usage=guarded.usage,
+                    warnings=guarded.warnings,
+                    validation_summary=guarded.validation_summary,
+                    generated_at=guarded.generated_at,
+                )
+            elif (
+                permits_empty
+                and not requires_obs
+                and str(diag.expected_coverage_scope or "") == "insufficient"
+                and diag.stages_count < 1
+                and not bool(caps_early.get("can_identify_local_stages", True))
+            ):
+                diag.no_observation = True
+                outputs = dict(outputs)
+                outputs["no_observation"] = True
+                outputs["status"] = "completed_no_observation"
+                outputs["module_status"] = "completed_no_observation"
         provider_refs = (
             outputs.get("evidence_refs")
             or structured.get("evidence_refs")
@@ -1243,6 +1436,7 @@ class PrivateWholeBookAnalysisRuntime:
             diag.structured_output_present
             and diag.private_candidate_count < 1
             and not diag.failure_boundary
+            and not bool(getattr(diag, "no_observation", False))
         ):
             diag.failure_boundary = "PRIVATE_TRANSLATION_EMPTY"
             diag.failure_code = str(
@@ -1330,8 +1524,45 @@ class PrivateWholeBookAnalysisRuntime:
         selected_chapter_ids = tuple(
             int(x) for x in (getattr(contract, "selected_chapter_ids", None) or ())
         ) or None
-        # Context Bundle may expose paragraph ids via units metadata.
-        if selected_paragraph_ids is None:
+        # Prefer Estimate/Executor frozen selection from provider_policy (never full-book).
+        policy_pids = provider_policy.get("selected_paragraph_ids")
+        exec_mat = provider_policy.get("structure_stages_execution_materialization")
+        binding_meta = provider_policy.get("execution_context_binding")
+        if isinstance(policy_pids, (list, tuple)) and policy_pids:
+            selected_paragraph_ids = tuple(int(x) for x in policy_pids)
+        elif isinstance(exec_mat, Mapping) and exec_mat.get("selected_paragraph_ids"):
+            selected_paragraph_ids = tuple(
+                int(x) for x in (exec_mat.get("selected_paragraph_ids") or ())
+            )
+        elif isinstance(binding_meta, Mapping) and binding_meta.get(
+            "selected_paragraph_ids"
+        ):
+            selected_paragraph_ids = tuple(
+                int(x) for x in (binding_meta.get("selected_paragraph_ids") or ())
+            )
+        # Structure Stages V2: never expand Selection to all Context Bundle units.
+        # Missing selected_paragraph_ids must fail closed (catalog 32 must not become 48).
+        if use_v2 and key == WholeBookModuleKey.STRUCTURE_STAGES:
+            diag.selected_paragraph_ids = [
+                str(x) for x in (selected_paragraph_ids or ())
+            ]
+            diag.selected_paragraph_count = len(diag.selected_paragraph_ids)
+            if selected_paragraph_ids is None or len(selected_paragraph_ids) < 1:
+                if not diag.failure_boundary:
+                    diag.failure_boundary = "EXECUTION_CONTEXT_BINDING_FAILURE"
+                diag.failure_code = "EXECUTION_CONTEXT_CATALOG_MISMATCH"
+                diag.first_rejection_code = diag.first_rejection_code or (
+                    "EXECUTION_CONTEXT_CATALOG_MISMATCH"
+                )
+                diag.first_object_loss_boundary = (
+                    diag.first_object_loss_boundary
+                    or "EXECUTION_CONTEXT_BINDING_FAILURE"
+                )
+                diag.persistence_complete = False
+                # Fail closed: do not rebuild empty/full-book catalog or continue to ORM.
+                selected_paragraph_ids = ()
+        elif selected_paragraph_ids is None:
+            # Legacy / non-structure modules may still derive from units.
             unit_pids: list[int] = []
             for unit in getattr(contract, "units", ()) or ():
                 for pid in getattr(unit, "snapshot_paragraph_ids", ()) or ():
@@ -1348,17 +1579,31 @@ class PrivateWholeBookAnalysisRuntime:
             request=request,
         )
         if use_v2:
-            paragraph_units = self._paragraph_units_for_citation_catalog(
-                contract=contract,
-                book_snapshot_id=book_snapshot_id,
-                selected_paragraph_ids=selected_paragraph_ids,
-            )
-            catalog = build_catalog_from_paragraph_units(
-                context_bundle_hash=str(getattr(contract, "bundle_hash", "") or ""),
-                snapshot_id=int(book_snapshot_id),
-                paragraph_units=paragraph_units,
-                context_bundle_ref=str(context_bundle_ref),
-            )
+            # Rematerialize from binding.selected_paragraph_ids only (never full-book).
+            # Prefer Runtime view hashes for evidence validation — Estimate filler
+            # catalogs must not be used as the enrich/validate authority.
+            if (
+                key == WholeBookModuleKey.STRUCTURE_STAGES
+                and selected_paragraph_ids == ()
+            ):
+                catalog = build_catalog_from_paragraph_units(
+                    context_bundle_hash=str(getattr(contract, "bundle_hash", "") or ""),
+                    snapshot_id=int(book_snapshot_id),
+                    paragraph_units=[],
+                    context_bundle_ref=str(context_bundle_ref),
+                )
+            else:
+                paragraph_units = self._paragraph_units_for_citation_catalog(
+                    contract=contract,
+                    book_snapshot_id=book_snapshot_id,
+                    selected_paragraph_ids=selected_paragraph_ids,
+                )
+                catalog = build_catalog_from_paragraph_units(
+                    context_bundle_hash=str(getattr(contract, "bundle_hash", "") or ""),
+                    snapshot_id=int(book_snapshot_id),
+                    paragraph_units=paragraph_units,
+                    context_bundle_ref=str(context_bundle_ref),
+                )
             diag.catalog_id = catalog.catalog_id
             diag.catalog_entry_count = len(catalog.entries)
             diag.catalog_fingerprint = catalog.catalog_fingerprint
@@ -1366,6 +1611,38 @@ class PrivateWholeBookAnalysisRuntime:
             diag.schema_catalog_fingerprint = catalog.catalog_fingerprint
             diag.resolver_catalog_fingerprint = catalog.catalog_fingerprint
             diag.catalog_fingerprints_match = fingerprints_match(catalog)
+            # Compare diagnostics catalog against Estimate freeze (count/id authoritative;
+            # fingerprint may differ when Estimate used filler vs Runtime view hashes).
+            if (
+                key == WholeBookModuleKey.STRUCTURE_STAGES
+                and isinstance(exec_mat, Mapping)
+                and (
+                    exec_mat.get("catalog_entry_count") is not None
+                    or exec_mat.get("catalog_fingerprint")
+                )
+            ):
+                expected_count = int(exec_mat.get("catalog_entry_count") or 0)
+                actual_count = int(len(catalog.entries))
+                count_ok = (not expected_count) or expected_count == actual_count
+                fp_ok = (
+                    not exec_mat.get("catalog_fingerprint")
+                    or str(exec_mat.get("catalog_fingerprint") or "")
+                    == str(catalog.catalog_fingerprint or "")
+                )
+                # Fail closed only on count expansion / selection drift (32→48).
+                cat_ok = count_ok and actual_count < 48
+                diag.estimate_executor_catalog_match = count_ok
+                diag.provider_diagnostics_catalog_match = count_ok
+                diag.provider_evidence_catalog_match = count_ok
+                diag.provider_resolver_catalog_match = bool(fp_ok or count_ok)
+                if not count_ok:
+                    diag.failure_boundary = "EXECUTION_CONTEXT_BINDING_FAILURE"
+                    diag.failure_code = "EXECUTION_CONTEXT_CATALOG_MISMATCH"
+                    diag.first_rejection_code = diag.first_rejection_code or diag.failure_code
+                    diag.first_object_loss_boundary = (
+                        diag.first_object_loss_boundary or "STRUCTURE_CONTRACT_FAILURE"
+                    )
+                    diag.persistence_complete = False
             evidence = enrich_evidence_from_citation_catalog(
                 raw_evidence,
                 catalog=catalog,
@@ -1491,6 +1768,207 @@ class PrivateWholeBookAnalysisRuntime:
         )
         # Keep Q calculator available for claim-binding harnesses (not unused).
         _ = self.evidence_coverage
+        # Explicit No-Observation: skip Candidate Builder; artifact-only persistence.
+        if bool(getattr(diag, "no_observation", False)):
+            from app.narrative_core.private_engine_contract.candidate import (
+                CandidatePersistenceContract,
+            )
+            from app.narrative_core.services.whole_book_candidate_builder import (
+                ModuleCandidateBuildResult,
+                StageArtifactPayload,
+                compute_output_fingerprint,
+            )
+
+            no_obs_payload = {
+                "module_key": key.value,
+                "status": "completed_no_observation",
+                "completed_no_observation": True,
+                "no_observation": True,
+                "contract_version": "v2",
+                "evidence_contract_version": "v2",
+                "coverage_scope": diag.actual_coverage_scope or "insufficient",
+                "expected_coverage_scope": diag.expected_coverage_scope,
+                "stages": [],
+                "turning_points": [],
+                "stages_count": 0,
+                "turning_points_count": 0,
+                "catalog_fingerprint": diag.catalog_fingerprint,
+                "catalog_entry_count": diag.catalog_entry_count,
+                "persistence_complete": True,
+                "provider_backed": True,
+                "synthetic": False,
+                "completed": True,
+            }
+            out_fp = compute_output_fingerprint(no_obs_payload)
+            artifact_contract = CandidatePersistenceContract(
+                run_id=int(run_id),
+                run_stage_id=int(run_stage_id) if run_stage_id is not None else None,
+                book_snapshot_id=int(book_snapshot_id),
+                engine_id=str(guarded.engine_id or "private"),
+                engine_version=str(guarded.engine_version or "0"),
+                module_key=key.value,
+                module_version=runner.spec.module_version,
+                prompt_pack_id=pack.manifest.prompt_pack_id,
+                prompt_pack_version=pack.manifest.prompt_pack_version,
+                configuration_fingerprint=configuration_fingerprint_value,
+                output_fingerprint=out_fp,
+                evidence_refs=(),
+                mock=not self.private_modules_bound,
+                private_engine=True,
+                write_kind="stage_artifact",
+            )
+            built = ModuleCandidateBuildResult(
+                asset_commands=(),
+                relation_commands=(),
+                evidence_commands=(),
+                conflict_commands=(),
+                stage_artifact=StageArtifactPayload(
+                    write_kind="stage_artifact",
+                    contract=artifact_contract,
+                    payload=no_obs_payload,
+                ),
+                output_fingerprint=out_fp,
+                rejected=False,
+                orm_written=False,
+                auto_confirm=False,
+                auto_lock=False,
+                canonical_overwrite=False,
+                synthetic=False,
+                notes=("no_observation", "artifact_only", "candidate_builder_skipped"),
+            )
+            diag.candidate_command_count = 0
+            diag.evidence_command_count = 0
+            diag.structure_stage_candidate_count = 0
+            diag.persistence_complete = True
+            persist_summary: Mapping[str, Any] = {"recorded": False}
+            if persist:
+                diag.persistence_attempted = True
+                diag.transaction_started = True
+                try:
+                    persist_summary = dict(self.persistence.persist_commands(built) or {})
+                    persist_summary["persistence_complete"] = True
+                    persist_summary["no_observation"] = True
+                    persist_summary["orm_written"] = bool(
+                        persist_summary.get("artifact_written")
+                    )
+                    persist_summary["candidate_written"] = True
+                    persist_summary["evidence_written"] = True
+                    if persist_summary.get("artifact_written") or persist_summary.get(
+                        "has_stage_artifact"
+                    ):
+                        diag.transaction_committed = True
+                        diag.artifact_written_count = 1
+                except Exception as exc:  # noqa: BLE001
+                    diag.transaction_rolled_back = True
+                    diag.transaction_committed = False
+                    diag.failure_boundary = "ORM_TRANSACTION_ROLLBACK"
+                    diag.failure_code = type(exc).__name__
+                    raise
+            diag.asset_written_count = 0
+            diag.version_written_count = 0
+            diag.evidence_written_count = 0
+            diag.persistence_complete = True
+            runtime_bundle = self.runtime_bundles.get(context_bundle_ref)
+            is_fake = not self.private_modules_bound
+            return ModulePipelineResultDTO(
+                schema="storylens.phase2b.module_pipeline_result",
+                version="1.0.0",
+                module_key=key.value,
+                module_version=runner.spec.module_version,
+                status="completed_no_observation",
+                context_bundle_hash=contract.bundle_hash,
+                configuration_fingerprint=configuration_fingerprint_value,
+                contract_bundle=contract,
+                runtime_bundle_mode=runtime_bundle.mode.value if runtime_bundle else "unknown",
+                engine_result=guarded,
+                validation={
+                    "accepted": True,
+                    "schema_valid": True,
+                    "references_valid": True,
+                    "evidence_valid": True,
+                    "snapshot_valid": True,
+                    "duplicate_summary": {},
+                    "no_observation": True,
+                },
+                evidence_coverage={
+                    "required_claims": 0,
+                    "evidenced_claims": 0,
+                    "coverage_ratio": 1.0,
+                    "incomplete": False,
+                },
+                candidate_summary={
+                    "asset_count": 0,
+                    "evidence_count": 0,
+                    "rejected": False,
+                    "persist": dict(persist_summary),
+                },
+                checkpoint=None,
+                usage=dict(getattr(guarded, "usage", None) or {}),
+                fake=is_fake,
+                synthetic=is_fake,
+                pipeline_diagnostics=diag.to_safe_dict(),
+            )
+
+        # Structure contract failure: do not call Candidate Builder / ORM success path.
+        if diag.failure_boundary == "STRUCTURE_CONTRACT_FAILURE" or str(
+            diag.first_object_loss_boundary or ""
+        ) == "STRUCTURE_CONTRACT_FAILURE":
+            diag.candidate_command_count = 0
+            diag.evidence_command_count = 0
+            diag.persistence_complete = False
+            persist_summary = {
+                "recorded": False,
+                "orm_written": False,
+                "persistence_complete": False,
+                "candidate_written": False,
+                "evidence_written": False,
+                "artifact_written": False,
+                "skipped_reason": str(
+                    diag.failure_code or "STRUCTURE_CONTRACT_FAILURE"
+                ),
+                "first_rejection_code": diag.first_rejection_code or diag.failure_code,
+                "first_object_loss_boundary": "STRUCTURE_CONTRACT_FAILURE",
+            }
+            runtime_bundle = self.runtime_bundles.get(context_bundle_ref)
+            is_fake = not self.private_modules_bound
+            return ModulePipelineResultDTO(
+                schema="storylens.phase2b.module_pipeline_result",
+                version="1.0.0",
+                module_key=key.value,
+                module_version=runner.spec.module_version,
+                status="failed",
+                context_bundle_hash=contract.bundle_hash,
+                configuration_fingerprint=configuration_fingerprint_value,
+                contract_bundle=contract,
+                runtime_bundle_mode=runtime_bundle.mode.value if runtime_bundle else "unknown",
+                engine_result=guarded,
+                validation={
+                    "accepted": False,
+                    "schema_valid": False,
+                    "references_valid": False,
+                    "evidence_valid": False,
+                    "snapshot_valid": True,
+                    "duplicate_summary": {},
+                },
+                evidence_coverage={
+                    "required_claims": 0,
+                    "evidenced_claims": 0,
+                    "coverage_ratio": 0.0,
+                    "incomplete": True,
+                },
+                candidate_summary={
+                    "asset_count": 0,
+                    "evidence_count": 0,
+                    "rejected": True,
+                    "persist": dict(persist_summary),
+                },
+                checkpoint=None,
+                usage=dict(getattr(guarded, "usage", None) or {}),
+                fake=is_fake,
+                synthetic=is_fake,
+                pipeline_diagnostics=diag.to_safe_dict(),
+            )
+
         # Candidate commands — only when accepted (force_accept fixtures for Fake E2E).
         guarded_for_build = PrivateEngineExecutionResult(
             schema=guarded.schema,

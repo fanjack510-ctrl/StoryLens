@@ -59,7 +59,7 @@ PRODUCT_CAPABILITY_REGISTRY: dict[str, ProductCapabilityDefinition] = {
         capability_id="whole_book.structure",
         display_name="故事结构",
         required_tier=AccessTier.free,
-        release_status=CapabilityReleaseStatus.planned,
+        release_status=CapabilityReleaseStatus.available,
     ),
     "whole_book.chapter_functions": ProductCapabilityDefinition(
         capability_id="whole_book.chapter_functions",
