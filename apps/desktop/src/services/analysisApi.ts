@@ -1,6 +1,15 @@
 import { api, ApiError, getApiBase, waitForApiReady } from "./apiClient";
 import { normalizeInvocations } from "./normalizeInvocations";
-import type { Run, RunResults, Scene, SceneParagraphs, SceneResultItem } from "../types";
+import type {
+  Run,
+  RunResults,
+  Scene,
+  SceneBoundariesOverview,
+  SceneBoundaryConfirmResponse,
+  ScenePartitionItem,
+  SceneParagraphs,
+  SceneResultItem,
+} from "../types";
 export const analysisApi = {
   preflight: (payload: any) => api<any>("/api/v1/analysis-runs/preflight", {
     method: "POST", body: JSON.stringify(payload),
@@ -78,6 +87,35 @@ export const analysisApi = {
     }>(`/api/v1/analysis-execution-plan?mode=${encodeURIComponent(mode)}`),
   retry: (run: number) =>
     api(`/api/v1/analysis-runs/${run}/retry`, { method: "POST" }),
+  cancel: (
+    run: number,
+    payload?: {
+      reason?: string;
+      expected_version?: number;
+      client_request_id?: string;
+    },
+  ) =>
+    api<{
+      task_id: number;
+      previous_status: string;
+      current_status: string;
+      cancellation_requested_at?: string | null;
+      cancelled_at?: string | null;
+      message: string;
+      already_requested: boolean;
+      already_cancelled: boolean;
+      already_completed: boolean;
+      cannot_cancel: boolean;
+      can_restart_as_new_task: boolean;
+      status_version: number;
+    }>(`/api/v1/analysis-runs/${run}/cancel`, {
+      method: "POST",
+      body: JSON.stringify({
+        reason: payload?.reason ?? "user_requested",
+        expected_version: payload?.expected_version,
+        client_request_id: payload?.client_request_id,
+      }),
+    }),
   resumeSceneAnalysis: (
     run: number,
     payload?: {
@@ -274,14 +312,31 @@ export const analysisApi = {
     ),
   readerJourney: (
     runId: number,
+    scope?: {
+      bookId?: number | null;
+      chapterId?: number | null;
+      journeyRunId?: number | null;
+    },
+  ) => {
+    const params = new URLSearchParams();
+    if (scope?.bookId) params.set("book_id", String(scope.bookId));
+    if (scope?.chapterId) params.set("chapter_id", String(scope.chapterId));
+    if (scope?.journeyRunId) params.set("journey_run_id", String(scope.journeyRunId));
+    const q = params.toString();
+    return api<import("../types").ReaderJourneyResult | null>(
+      `/api/v1/analysis-runs/${runId}/reader-journey${q ? `?${q}` : ""}`,
+    );
+  },
+  readerJourneyById: (
+    journeyRunId: number,
     scope?: { bookId?: number | null; chapterId?: number | null },
   ) => {
     const params = new URLSearchParams();
     if (scope?.bookId) params.set("book_id", String(scope.bookId));
     if (scope?.chapterId) params.set("chapter_id", String(scope.chapterId));
     const q = params.toString();
-    return api<import("../types").ReaderJourneyResult | null>(
-      `/api/v1/analysis-runs/${runId}/reader-journey${q ? `?${q}` : ""}`,
+    return api<import("../types").ReaderJourneyResult>(
+      `/api/v1/reader-journeys/${journeyRunId}${q ? `?${q}` : ""}`,
     );
   },
   readerJourneyProgress: (journeyRunId: number) =>
@@ -345,4 +400,85 @@ export const analysisApi = {
     }),
   readerJourneyExportUrl: (journeyRunId: number) =>
     `${getApiBase()}/api/v1/reader-journey-runs/${journeyRunId}/export?format=json`,
+  sceneBoundariesOverview: (chapterId: number) =>
+    api<SceneBoundariesOverview>(`/api/v1/chapters/${chapterId}/scene-boundaries`),
+  createSceneBoundaryDraft: (chapterId: number) =>
+    api<{ revision_id: number; revision_etag: string; scenes: ScenePartitionItem[] }>(
+      `/api/v1/chapters/${chapterId}/scene-boundaries/draft`,
+      { method: "POST" },
+    ),
+  saveSceneBoundaryDraft: (
+    chapterId: number,
+    revisionId: number,
+    body: { expected_etag: string; scenes: ScenePartitionItem[] },
+  ) =>
+    api<{
+      revision_id: number;
+      revision_etag: string;
+      boundary_hash: string;
+      scenes: ScenePartitionItem[];
+      status?: string;
+      updated_at?: string | null;
+    }>(`/api/v1/chapters/${chapterId}/scene-boundaries/draft/${revisionId}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    }),
+  splitSceneBoundaryDraft: (
+    chapterId: number,
+    revisionId: number,
+    body: {
+      expected_etag: string;
+      boundary_after_paragraph_id: string;
+      client_request_id?: string;
+      scene_order?: number;
+    },
+  ) =>
+    api<{
+      revision_id: number;
+      revision_etag: string;
+      boundary_hash: string;
+      scenes: ScenePartitionItem[];
+      diff_summary?: Record<string, unknown>;
+      updated_at?: string | null;
+      already_split?: boolean;
+      status?: string;
+    }>(`/api/v1/chapters/${chapterId}/scene-boundaries/draft/${revisionId}/split`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  restoreSceneBoundaryAi: (chapterId: number, revisionId: number) =>
+    api<{
+      revision_id: number;
+      revision_etag: string;
+      scenes: ScenePartitionItem[];
+      boundary_hash?: string | null;
+      status?: string;
+      updated_at?: string | null;
+    }>(`/api/v1/chapters/${chapterId}/scene-boundaries/draft/${revisionId}/restore-ai`, {
+      method: "POST",
+    }),
+  confirmSceneBoundary: (
+    chapterId: number,
+    revisionId: number,
+    body: {
+      expected_etag: string;
+      start_journey?: boolean;
+      journey_options?: Record<string, unknown>;
+    },
+  ) =>
+    api<SceneBoundaryConfirmResponse>(
+      `/api/v1/chapters/${chapterId}/scene-boundaries/draft/${revisionId}/confirm`,
+      { method: "POST", body: JSON.stringify(body) },
+    ),
+  discardSceneBoundaryDraft: (chapterId: number, revisionId: number) =>
+    api<void>(`/api/v1/chapters/${chapterId}/scene-boundaries/draft/${revisionId}/discard`, {
+      method: "POST",
+    }),
+  sceneBoundaryDiff: (chapterId: number, revisionId: number) =>
+    api<{
+      revision_id: number;
+      against_revision_id: number | null;
+      changes: Array<Record<string, unknown>>;
+      scene_count_delta: number;
+    }>(`/api/v1/chapters/${chapterId}/scene-boundaries/draft/${revisionId}/diff`),
 };

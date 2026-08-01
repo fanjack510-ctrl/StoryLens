@@ -1,0 +1,55 @@
+{
+  "database": "C:\\Users\\msi\\AppData\\Local\\Temp\\storylens-mg-chg017\\storylens.db",
+  "api_url": "http://127.0.0.1:18080",
+  "frontend_url": "http://127.0.0.1:1420",
+  "provider": "fake",
+  "real_provider_calls": 0,
+  "formal_db_writes": 0,
+  "a_scene_analysis_running": {
+    "book_id": 1,
+    "chapter_id": 1,
+    "analysis_run_id": 1,
+    "journey_run_id": 1,
+    "revision_id": 2,
+    "run_status": "scene_analysis_running",
+    "journey_status": "starting",
+    "journey_error": "WAITING_SCENE_ANALYSIS",
+    "url": "http://127.0.0.1:1420/books/1?chapter=1&analysisRun=1&view=progress",
+    "journey_deep_link": "http://127.0.0.1:1420/books/1?chapter=1&analysisRun=1&view=result&tab=reader-journey&journeyRun=1"
+  },
+  "b_awaiting_confirmation": {
+    "book_id": 2,
+    "chapter_id": 2,
+    "analysis_run_id": 2,
+    "journey_run_id": null,
+    "draft_revision_id": 4,
+    "run_status": "succeeded",
+    "effective_hint": "awaiting_scene_boundary_confirmation",
+    "url": "http://127.0.0.1:1420/books/2?chapter=2&analysisRun=2&view=scene-boundary-review",
+    "journey_deep_link": "http://127.0.0.1:1420/books/2?chapter=2&analysisRun=2&view=result&tab=reader-journey"
+  },
+  "c_journey_running": {
+    "book_id": 3,
+    "chapter_id": 3,
+    "analysis_run_id": 3,
+    "journey_run_id": 2,
+    "revision_id": 5,
+    "run_status": "succeeded",
+    "journey_status": "starting",
+    "journey_error": null,
+    "url": "http://127.0.0.1:1420/books/3?chapter=3&analysisRun=3&view=progress&journeyRun=2"
+  },
+  "d_journey_succeeded": {
+    "book_id": 4,
+    "chapter_id": 4,
+    "analysis_run_id": 4,
+    "journey_run_id": 3,
+    "revision_id": 6,
+    "run_status": "succeeded",
+    "journey_status": "succeeded",
+    "journey_error": null,
+    "has_result": true,
+    "progress_url": "http://127.0.0.1:1420/books/4?chapter=4&analysisRun=4&view=progress&journeyRun=3",
+    "result_url": "http://127.0.0.1:1420/books/4?chapter=4&analysisRun=4&view=result&tab=reader-journey&journeyRun=3"
+  }
+}

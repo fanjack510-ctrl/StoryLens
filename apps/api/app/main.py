@@ -16,6 +16,7 @@ from app.api.v1.analysis import router as analysis_router
 from app.api.v1.analysis_recovery import router as analysis_recovery_router
 from app.api.v1.desktop import router as desktop_router
 from app.api.v1.boundary_reviews import router as boundary_review_router
+from app.api.v1.scene_boundaries import router as scene_boundaries_router
 from app.api.v1.reader_journey import router as reader_journey_router
 from app.routers.capabilities import router as capabilities_router
 from app.routers.whole_book_preflight import router as whole_book_preflight_router
@@ -29,7 +30,11 @@ from app.routers.whole_book_product_capability_router import router as whole_boo
 from app.routers import whole_book_mock_lab_runs as mock_lab_runs
 from app.routers import whole_book_private_engine_lab_runs as private_engine_lab_runs
 from app.core.config import get_settings
-from app.core.paths import is_web_production_mode
+from app.core.paths import apply_runtime_path_defaults, is_web_production_mode
+
+# Resolve absolute prompt/data paths before Settings is first constructed.
+# Uvicorn entry uses cwd=apps/api; relative packages/prompts would miss repo prompts.
+apply_runtime_path_defaults()
 from app.core.sidecar_control import request_shutdown, shutdown_token
 from app.db.session import SessionLocal, create_db
 from app.middleware.local_origin import LocalOriginGuardMiddleware, SecurityHeadersMiddleware
@@ -127,8 +132,37 @@ def _make_lifespan(
             acquire_instance_lock(port=_bind_port(), shell="browser_local_production")
         try:
             create_db()
+            requeue_journey_ids: list[int] = []
             with SessionLocal() as session:
-                mark_interrupted_runs_failed(session)
+                stats = mark_interrupted_runs_failed(session)
+                requeue_journey_ids = list(stats.get("requeue_journey_ids") or [])
+            # CHG-013: re-claim unclaimed starting/queued journeys after restart.
+            if requeue_journey_ids:
+                import asyncio
+
+                from app.model_gateway.registry import get_model_gateway
+                from app.services.reader_journey_pipeline import execute_reader_journey
+
+                gateway = get_model_gateway()
+
+                async def _requeue() -> None:
+                    for journey_id in requeue_journey_ids:
+                        try:
+                            await execute_reader_journey(
+                                SessionLocal, gateway, int(journey_id)
+                            )
+                        except Exception:  # noqa: BLE001
+                            logger.exception(
+                                "startup_requeue_journey_failed journey_run_id=%s",
+                                journey_id,
+                            )
+
+                asyncio.create_task(_requeue())
+                logger.info(
+                    "reader_journey_startup_requeue count=%s ids=%s",
+                    len(requeue_journey_ids),
+                    requeue_journey_ids[:20],
+                )
             log_lab_startup_status(environment=env, lab_enabled=lab_on)
             if private_lab_on:
                 logger.info(
@@ -186,6 +220,7 @@ def _configure_middleware_and_routers(app: FastAPI) -> None:
     app.include_router(analysis_router)
     app.include_router(desktop_router)
     app.include_router(boundary_review_router)
+    app.include_router(scene_boundaries_router)
     app.include_router(reader_journey_router)
     app.include_router(capabilities_router)
     app.include_router(whole_book_cost_consent_router)

@@ -85,23 +85,46 @@ def load_revision_scenes(
         .where(BoundaryReviewSession.analysis_run_id == run.id)
         .order_by(BoundaryReviewSession.id.desc())
     )
-    if review is None:
-        return None, []
-    revision = session.scalar(
-        select(BoundaryRevision)
-        .where(BoundaryRevision.review_session_id == review.id)
-        .order_by(BoundaryRevision.id.desc())
-    )
-    if revision is None:
-        return None, []
-    scenes = list(
-        session.scalars(
-            select(Scene)
-            .where(Scene.boundary_revision_id == revision.id)
-            .order_by(Scene.ordinal)
+    if review is not None:
+        revision = session.scalar(
+            select(BoundaryRevision)
+            .where(
+                BoundaryRevision.review_session_id == review.id,
+                BoundaryRevision.status == "confirmed",
+            )
+            .order_by(BoundaryRevision.id.desc())
         )
+        if revision is not None:
+            scenes = list(
+                session.scalars(
+                    select(Scene)
+                    .where(Scene.boundary_revision_id == revision.id)
+                    .order_by(Scene.ordinal)
+                )
+            )
+            if scenes:
+                return revision, scenes
+    from app.services.scene_boundary_manual_review import (
+        get_confirmed_revision,
+        revision_scenes,
+        run_scenes,
     )
-    return revision, scenes
+
+    # Prefer chapter-confirmed revision even when review_session lookup missed.
+    try:
+        chapter_id = int(run.subject_id)
+    except (TypeError, ValueError):
+        chapter_id = None
+    if chapter_id is not None:
+        confirmed = get_confirmed_revision(session, chapter_id)
+        if confirmed is not None and confirmed.analysis_run_id == run.id:
+            bound = revision_scenes(session, confirmed.id)
+            if bound:
+                return confirmed, bound
+
+    # Legacy runs without revision linkage: keep prior behavior.
+    scenes = run_scenes(session, run.id)
+    return None, scenes
 
 
 def scene_analysis_progress(

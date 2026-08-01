@@ -1,0 +1,93 @@
+{
+  "id": "CHG-20260729-001",
+  "title": "阅读旅程综合曲线与分维度场景洞察优化",
+  "type": "fix",
+  "issue_id": null,
+  "base_version": "1.1.1",
+  "target_version": "1.1.2",
+  "public_branch": "fix/1.1.2-reader-journey-dimension-insights",
+  "private_branch": "fix/1.1.2-reader-journey-dimension-insights",
+  "status": "integrated",
+  "release_pool_status": "included",
+  "include_in_next_release": true,
+  "forward_port_required": true,
+  "forward_port_target": "integration/whole-book-v120",
+  "forward_port_status": "pending",
+  "depends_on": [
+    "CHG-20260728-041"
+  ],
+  "related_changes": [
+    {
+      "id": "CHG-20260728-041",
+      "relation": "integrated prerequisite"
+    }
+  ],
+  "affected_modules": [
+    "apps/api/app/schemas/reader_journey_v2.py",
+    "apps/api/app/services/reader_journey_dimension_insights.py",
+    "apps/api/app/services/reader_journey_visualization.py",
+    "apps/desktop/src/components/readerJourney"
+  ],
+  "commits": [
+    {
+      "sha": "d7bfb76aa005bb71c2f70c11e974cb5a3fd74668",
+      "message": "feat(journey): add dimension-specific scene insights",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "9282e9615e3f53b9fa47de7e064d47fbead5269f",
+      "message": "refactor(journey-ui): simplify scene insight details",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "e824fd4b83adc4d9e8e99ce2ba16dd76cde90a84",
+      "message": "ui(journey): improve comprehensive reading curve",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "release",
+    "apps/api",
+    "apps/desktop"
+  ],
+  "files": [
+    "release/changes/CHG-20260729-001.json",
+    "release/evidence/hotfix/1.1.2/CHG-20260729-001/"
+  ],
+  "user_summary": "优化综合阅读曲线表达与六个维度独立场景洞察，精简普通用户右侧详情，兼容历史 Journey。",
+  "technical_summary": "Keep six dimension names; use reading_momentum as composite; add dimension_insights contract + legacy derive; simplify JourneySceneDetailPanel; Fake-only.",
+  "acceptance_criteria": [
+    "Six dimension names unchanged",
+    "Composite curve not reading_tension copy",
+    "Six distinct per-scene insights",
+    "Normal UI without old five tabs / technical fields",
+    "Legacy results open without re-run",
+    "Fake only; no formal DB writes"
+  ],
+  "tests": [
+    "apps/api/tests/test_reader_journey_dimension_insights_local.py",
+    "apps/desktop/src/components/readerJourney/dimension_insights_chg001_local.test.tsx"
+  ],
+  "manual_gate": "MG-CHG-20260729-001 PASS",
+  "verification_evidence": [
+    "release/evidence/hotfix/1.1.2/CHG-20260729-001/DATA_AND_UI_AUDIT.md",
+    "release/evidence/hotfix/1.1.2/CHG-20260729-001/TEST_RESULTS.json",
+    "release/evidence/hotfix/1.1.2/CHG-20260729-001/COMPOSITE_SCORE_SOURCE.md",
+    "release/evidence/hotfix/1.1.2/CHG-20260729-001/MANUAL_GATE_PASS.md",
+    "release/evidence/hotfix/1.1.2/CHG-20260729-001/INTEGRATION_REPORT.md"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "Insights embedded in existing journey JSON artifacts; legacy derive at read time without overwrite."
+  },
+  "created_at": "2026-07-29T03:28:43Z",
+  "updated_at": "2026-07-29T04:01:51Z",
+  "head_inclusion": "INCLUDED",
+  "public_integration_commit": "550406126767f1d14c9ae284cc3926255bf70cf9",
+  "private_integration_commit": "23a0b025db51acaa8e62f4e81bc7628f19a8e2a6"
+}

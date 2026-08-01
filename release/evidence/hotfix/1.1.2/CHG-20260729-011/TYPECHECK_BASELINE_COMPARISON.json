@@ -1,0 +1,13 @@
+{
+  "base_head": "e59da1238eb2c509b4a05d7a401a6b5a1b2002ee",
+  "final_head": "8a5a19eebc400b8bb298d6439ceb8d271128941c",
+  "base_error_count": 34,
+  "final_error_count": 25,
+  "new_error_count": 0,
+  "resolved_error_count": 9,
+  "chg011_file_error_count": 0,
+  "new_errors": [],
+  "chg011_file_errors": [],
+  "pass_new_zero": true,
+  "pass_chg011_zero": true
+}

@@ -1,0 +1,26 @@
+{
+  "journey_run_id": 2,
+  "repair_invocation_id": 2,
+  "invocation_kind": "structural_repair",
+  "trigger_error": "JOURNEY_EVIDENCE_OUT_OF_SCENE",
+  "repair_required_scene_ids": [
+    1,
+    2
+  ],
+  "repair_parsed_scene_ids": [
+    1
+  ],
+  "repair_error_code": "JOURNEY_SCENE_ID_MISMATCH",
+  "repair_error_short": "expected scenes [1, 2], got [1]",
+  "wrapped_final_code": "JOURNEY_REPAIR_VALIDATION_FAILED",
+  "same_pattern_on_journey_3": {
+    "expected": [
+      5,
+      6
+    ],
+    "got": [
+      1
+    ],
+    "trigger": "JOURNEY_EVIDENCE_OUT_OF_SCENE scene 6 evidence P0001"
+  }
+}

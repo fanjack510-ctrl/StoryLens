@@ -1,0 +1,62 @@
+{
+  "id": "CHG-20260730-019",
+  "title": "Build StoryLens 1.1.2-rc.5 with verified workflow fixes",
+  "type": "build",
+  "base_version": "1.1.2",
+  "status": "tested",
+  "include_in_next_release": true,
+  "commits": [
+    {
+      "sha": "a1757748ffdb8e8693b7554c399d71bb9332ad9d",
+      "message": "docs(release): register CHG-019 for 1.1.2-rc.5 rebuild",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "8a63bff317cc3befe85610d153b594b2946b970e",
+      "message": "docs(release): archive StoryLens 1.1.2-rc.5 build (CHG-019)",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "release",
+    "api",
+    "desktop"
+  ],
+  "files": [],
+  "user_summary": "将已验证的 CHG-015/017/018 纳入并构建 1.1.2-rc.5",
+  "technical_summary": "Rebuild RC.5 from hotfix/1.1.2 including verified CHG-015/017/018; isolated installed acceptance; no Push/Tag/Release.",
+  "acceptance_criteria": [
+    "CHG-015/017/018 verified and ancestors of build head",
+    "RC.5 installer archived with matching SHA-256",
+    "Isolated installed automatic acceptance PASS under Fake Provider"
+  ],
+  "tests": [],
+  "verification_evidence": [
+    "release/evidence/1.1.2-rc.5/BUILD_METADATA.json",
+    "release/evidence/1.1.2-rc.5/ISOLATED_INSTALLED_ACCEPTANCE.json",
+    "release/evidence/1.1.2-rc.5/SHA256SUMS.txt",
+    "release/evidence/1.1.2-rc.5/EXTENDED_AUTO_ACCEPTANCE.json",
+    "release/evidence/hotfix/1.1.2/CHG-20260730-017/MANUAL_GATE_PASS.md"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-30T12:42:36Z",
+  "updated_at": "2026-07-30T12:55:21Z",
+  "target_version": "1.1.2",
+  "public_branch": "hotfix/1.1.2",
+  "rc_version": "1.1.2-rc.5"
+}

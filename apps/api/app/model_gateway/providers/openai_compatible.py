@@ -247,6 +247,18 @@ class OpenAICompatibleProvider(ModelProvider):
             return ProviderHealth(provider_name=self.name, status="unhealthy", detail=detail)
 
     async def generate(self, request: ModelRequest) -> ModelResponse:
+        from app.services.chapter_analysis_smoke_fake_transport import (
+            chapter_smoke_fake_generate,
+            is_chapter_analysis_smoke_fake_enabled,
+        )
+
+        # Smoke Fake short-circuits before enabled/credential gates (MG / local only).
+        if is_chapter_analysis_smoke_fake_enabled():
+            return await chapter_smoke_fake_generate(
+                request,
+                provider_name=self.name,
+                default_model=self.default_model,
+            )
         if not self.enabled:
             raise ProviderRequestError(
                 "Provider已停用，拒绝发送请求",
@@ -259,17 +271,6 @@ class OpenAICompatibleProvider(ModelProvider):
                 retryable=False,
                 transport_kind=TRANSPORT_DISABLED,
                 user_action_hint=user_hint_for(TRANSPORT_DISABLED, "PROVIDER_DISABLED"),
-            )
-        from app.services.chapter_analysis_smoke_fake_transport import (
-            chapter_smoke_fake_generate,
-            is_chapter_analysis_smoke_fake_enabled,
-        )
-
-        if is_chapter_analysis_smoke_fake_enabled():
-            return await chapter_smoke_fake_generate(
-                request,
-                provider_name=self.name,
-                default_model=self.default_model,
             )
         model = request.model or self.default_model
         payload = {

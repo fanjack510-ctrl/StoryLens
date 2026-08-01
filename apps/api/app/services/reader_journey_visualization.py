@@ -21,6 +21,10 @@ from app.db.models import (
     SceneReaderJourneyProfile,
 )
 from app.schemas.reader_journey import SceneReaderJourneyProfileItem
+from app.services.reader_journey_dimension_insights import attach_dimension_insights_to_node
+from app.services.reader_journey_comprehensive_presentation import (
+    attach_comprehensive_reading_presentation,
+)
 from app.services.reader_journey_engagement import compute_engagement, load_formula_config
 from app.services.reader_journey_progress import load_revision_scenes
 from app.services.narrative_loop_view import build_narrative_loop_bundle
@@ -936,6 +940,7 @@ def _apply_v2_presentation_overrides(
         return
 
     scores_by_ordinal = deterministic.get("v2_scene_scores") or {}
+    insights_by_ordinal = deterministic.get("v2_dimension_insights") or {}
     diagnoses = deterministic.get("scene_diagnoses") or []
     overrides = deterministic.get("v2_node_overrides") or {}
     diagnosis_by_ordinal: dict[int, dict[str, Any]] = {}
@@ -1008,6 +1013,16 @@ def _apply_v2_presentation_overrides(
             elif override.get("node_type") == "scene" and node.get("role") == "beat":
                 # Fixture main scenes must not remain classifier beats.
                 node["role"] = "core"
+
+        persisted = (
+            insights_by_ordinal.get(key)
+            if isinstance(insights_by_ordinal, dict)
+            else None
+        )
+        attach_dimension_insights_to_node(
+            node,
+            persisted_insights=persisted if isinstance(persisted, dict) else None,
+        )
 
 
 def _narrative_loop_fields(
@@ -1193,17 +1208,26 @@ def build_reader_journey_visualization(
     if journey_run.status != "succeeded":
         return None
 
-    _revision, scenes = load_revision_scenes(session, journey_run.analysis_run_id)
+    # Prefer journey-bound included scenes (same set used by execute/persist).
+    try:
+        from app.services.scene_boundary_manual_review import load_journey_bound_scenes
+
+        _revision, scenes = load_journey_bound_scenes(session, journey_run)
+    except Exception:
+        _revision, scenes = load_revision_scenes(session, journey_run.analysis_run_id)
     if not scenes:
         return None
 
-    profile_rows = list(
-        session.scalars(
+    allowed_scene_ids = {int(scene.id) for scene in scenes}
+    profile_rows = [
+        row
+        for row in session.scalars(
             select(SceneReaderJourneyProfile)
             .where(SceneReaderJourneyProfile.reader_journey_run_id == journey_run.id)
             .order_by(SceneReaderJourneyProfile.scene_ordinal)
         )
-    )
+        if int(row.scene_id) in allowed_scene_ids
+    ]
     if len(profile_rows) != len(scenes):
         return None
 
@@ -1412,6 +1436,9 @@ def build_reader_journey_visualization(
     hook_markers = hook_selection["hook_markers"]
     payoff_markers = payoff_selection["visible_payoff_markers"]
     _apply_v2_presentation_overrides(scene_nodes, summary)
+    for node in scene_nodes:
+        if node.get("dimension_insights") is None and node.get("insight_source") is None:
+            attach_dimension_insights_to_node(node)
     if _is_v2_native_presentation(journey_run):
         # Replace legacy engagement<40 intervals with V2 reading_momentum formula.
         kept = [
@@ -1477,7 +1504,7 @@ def build_reader_journey_visualization(
     }
     question_lifecycle = _question_lifecycle_from_summary(summary)
 
-    return {
+    payload = {
         "visualization_version": VISUALIZATION_VERSION,
         "chapter_summary": {
             "chapter_id": journey_run.chapter_id,
@@ -1564,3 +1591,4 @@ def build_reader_journey_visualization(
             journey_run=journey_run,
         ),
     }
+    return attach_comprehensive_reading_presentation(payload)

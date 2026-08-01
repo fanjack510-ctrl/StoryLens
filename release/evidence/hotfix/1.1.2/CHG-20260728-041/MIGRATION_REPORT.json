@@ -1,0 +1,14 @@
+{
+  "migration_id": "migrate_phase_scene_boundary_manual_review",
+  "database_migration": true,
+  "idempotent": true,
+  "rollback": "column-additive; drop columns manually if needed",
+  "tables_extended": [
+    "boundary_revisions",
+    "scenes",
+    "reader_journey_runs"
+  ],
+  "empty_db": "PASS",
+  "repeat_upgrade": "PASS",
+  "formal_appdata_writes": 0
+}

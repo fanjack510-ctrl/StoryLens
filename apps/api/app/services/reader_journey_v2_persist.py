@@ -188,6 +188,15 @@ def build_v2_node_override(profile: SceneReaderJourneyProfileItemV2) -> dict[str
     }
 
 
+def build_v2_dimension_insights_patch(
+    profile: SceneReaderJourneyProfileItemV2,
+) -> dict[str, Any] | None:
+    if profile.dimension_insights is None:
+        return None
+    payload = profile.dimension_insights.model_dump(exclude_none=True)
+    return payload or None
+
+
 def build_v2_deterministic_statistics(
     *,
     derived: list[SceneReaderJourneyProfileItemV2],
@@ -199,7 +208,12 @@ def build_v2_deterministic_statistics(
     v2_node_overrides = {
         str(profile.scene_ordinal): build_v2_node_override(profile) for profile in derived
     }
-    return {
+    v2_dimension_insights: dict[str, Any] = {}
+    for profile in derived:
+        patch = build_v2_dimension_insights_patch(profile)
+        if patch:
+            v2_dimension_insights[str(profile.scene_ordinal)] = patch
+    result = {
         "source_mode": SOURCE_MODE_V2_NATIVE,
         "contract_version": SCENE_CONTRACT_VERSION_V2,
         "prompt_version": "2.0",
@@ -216,6 +230,9 @@ def build_v2_deterministic_statistics(
         "prewritten_diagnoses": False,
         "config_provenance": finalize_stats.get("config_provenance") or {},
     }
+    if v2_dimension_insights:
+        result["v2_dimension_insights"] = v2_dimension_insights
+    return result
 
 
 def ensure_basic_phases(

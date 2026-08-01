@@ -1,0 +1,78 @@
+{
+  "id": "CHG-20260731-025",
+  "title": "Fix completed journey right-rail CTA navigation",
+  "type": "fix",
+  "base_version": "1.1.2",
+  "status": "verified",
+  "include_in_next_release": true,
+  "commits": [
+    {
+      "sha": "feff05699f72613b0c8d3d54fc44436063cc7688",
+      "message": "fix(journey): route completed right-rail CTA to result",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "ba9521f0069b6515551aaf005cc139a47355c926",
+      "message": "docs(release): verify CHG-025 right-rail journey CTA",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "af8cc570cf2dfd5c495eaae95f901e1222a92d5a",
+      "message": "chore(release): record CHG-025 verified tip metadata",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "3f05e77be99ad97960c3588b99e90ab0c0b3b65e",
+      "message": "chore(release): finalize CHG-025 verified registry tip",
+      "primary": false,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "apps/desktop"
+  ],
+  "files": [
+    "apps/desktop/src/pages/BookRoutePage.tsx",
+    "apps/desktop/src/pages/BookRoutePage.journeyNav.test.tsx",
+    "apps/desktop/e2e/chg025_right_rail_journey_cta.spec.ts"
+  ],
+  "user_summary": "右侧完成卡「查看阅读旅程」与顶部导航共用规范化结果导航，一次点击进入阅读旅程结果",
+  "technical_summary": "Right-rail succeeded CTA called resumeJourneyAnalysis when journeyRunId present; now shares openReaderJourneyResult with top nav.",
+  "acceptance_criteria": [
+    "右侧查看阅读旅程与顶部阅读旅程一次点击进入相同 view=result&tab=reader-journey，保留 analysisRun/journeyRun，无 resume/recover"
+  ],
+  "tests": [
+    "vitest BookRoutePage.journeyNav.test.tsx CHG-025",
+    "playwright e2e/chg025_right_rail_journey_cta.spec.ts"
+  ],
+  "verification_evidence": [
+    "release/evidence/hotfix/1.1.2/CHG-20260731-025/FORENSICS.md",
+    "release/evidence/hotfix/1.1.2/CHG-20260731-025/VERIFICATION.md",
+    "release/evidence/hotfix/1.1.2/CHG-20260731-025/MANUAL_UI_ENV.md",
+    "release/evidence/hotfix/1.1.2/CHG-20260731-025/MANUAL_GATE_PASS.md",
+    "release/evidence/1.1.2-rc.6/INSTALLED_EXECUTION_ACCEPTANCE_CORRECTION.md"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "P1",
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-31T12:24:46Z",
+  "updated_at": "2026-07-31T13:34:05Z",
+  "target_version": "1.1.2",
+  "manual_gate": "MG-CHG-20260731-025-RIGHT-RAIL-CTA",
+  "manual_gate_result": "PASSED",
+  "verified_product_head": "feff05699f72613b0c8d3d54fc44436063cc7688"
+}

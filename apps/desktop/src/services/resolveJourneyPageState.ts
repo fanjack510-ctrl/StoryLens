@@ -1,8 +1,8 @@
 /**
- * Journey progress / result pane view priority (CHG-20260727-020).
+ * Journey progress / result pane view priority (CHG-20260731-023 final).
  *
- * Prevents stale failed GET /reader-journey responses from covering an active
- * or completed journey that AnalysisRun composition already reflects.
+ * Terminal bound-journey status (succeeded/failed/cancelled) always beats
+ * active progress / parent / effective_status. Progress must never mask terminal.
  */
 
 export type JourneyPageView =
@@ -16,6 +16,8 @@ export type JourneyPageView =
 
 const JOURNEY_ACTIVE = new Set([
   "queued",
+  "starting",
+  "resuming",
   "running",
   "scene_profiles_running",
   "chapter_synthesis_running",
@@ -24,35 +26,27 @@ const JOURNEY_ACTIVE = new Set([
 ]);
 
 const JOURNEY_INTERRUPTED = new Set([
-  "failed",
   "scene_profiles_partial",
   "budget_blocked",
   "aborted_by_limit",
 ]);
 
 export type JourneyPageStateInput = {
-  /** Bound / expected journey id for this page (may be null before first fetch). */
   currentJourneyId?: number | null;
-  /** Journey id on the response being applied. */
   responseJourneyId?: number | null;
-  /** Status from GET /reader-journey (may be stale). */
+  /** Authoritative merged status (prefer mergeBoundJourneyStatus first). */
   journeyStatus?: string | null;
-  /** Status from GET .../progress (may be fresher while running). */
+  /** @deprecated Prefer merging into journeyStatus; kept for callers. */
   progressStatus?: string | null;
-  /** Parent AnalysisRun.journey_status / effective_status projection. */
   parentJourneyStatus?: string | null;
   effectiveStatus?: string | null;
   errorCode?: string | null;
   retryable?: boolean | null;
   finalArtifactAvailable?: boolean | null;
   chapterComplete?: boolean | null;
-  /** True when GET /reader-journey failed as transport/network (not business failed). */
   temporaryFetchError?: boolean;
-  /** Monotonic request sequence for the response under consideration. */
   requestSequence?: number | null;
-  /** Last applied sequence — ignore older responses when provided. */
   appliedSequence?: number | null;
-  /** ISO timestamps — ignore older updatedAt when both present. */
   responseUpdatedAt?: string | null;
   appliedUpdatedAt?: string | null;
 };
@@ -61,25 +55,12 @@ function isActiveStatus(status: string | null | undefined): boolean {
   return Boolean(status && JOURNEY_ACTIVE.has(status));
 }
 
-function isInterruptedStatus(
-  status: string | null | undefined,
-  errorCode?: string | null,
-  retryable?: boolean | null,
-): boolean {
-  if (!status) return false;
-  if (errorCode === "JOURNEY_INTERRUPTED") return true;
-  if (status === "scene_profiles_partial") return true;
-  if (JOURNEY_INTERRUPTED.has(status) && retryable === true) return true;
-  return false;
-}
-
 function parseTime(value: string | null | undefined): number | null {
   if (!value) return null;
   const ms = Date.parse(value);
   return Number.isFinite(ms) ? ms : null;
 }
 
-/** Returns true when the candidate response should be ignored as stale. */
 export function isStaleJourneyResponse(input: {
   responseJourneyId?: number | null;
   currentJourneyId?: number | null;
@@ -111,9 +92,8 @@ export function isStaleJourneyResponse(input: {
 }
 
 /**
- * Resolve the Journey tab main-pane view.
- * Priority: completed → active → interrupted → terminal failed → temporary error → awaiting → unknown.
- * Returns null when the candidate response is stale and must not replace the current view.
+ * Priority (enforced): succeeded/result → failed → cancelled → active → interrupted
+ * → temporary error → awaiting → unknown.
  */
 export function resolveJourneyPageState(input: JourneyPageStateInput): JourneyPageView | null {
   if (
@@ -129,68 +109,88 @@ export function resolveJourneyPageState(input: JourneyPageStateInput): JourneyPa
     return null;
   }
 
-  const journey = String(input.journeyStatus || "");
-  const progress = String(input.progressStatus || "");
+  // Merge with terminal-first rule (never `detail || progress` raw).
+  const journeyRaw = String(input.journeyStatus || "");
+  const progressRaw = String(input.progressStatus || "");
+  let journey = journeyRaw;
+  if (journeyRaw === "succeeded" || progressRaw === "succeeded") {
+    journey = "succeeded";
+  } else if (journeyRaw === "failed" || progressRaw === "failed") {
+    journey = "failed";
+  } else if (journeyRaw === "cancelled" || progressRaw === "cancelled") {
+    journey = "cancelled";
+  } else if (isActiveStatus(progressRaw)) {
+    journey = progressRaw;
+  } else if (isActiveStatus(journeyRaw)) {
+    journey = journeyRaw;
+  } else if (!journeyRaw && progressRaw) {
+    journey = progressRaw;
+  }
+
   const parent = String(input.parentJourneyStatus || "");
   const effective = String(input.effectiveStatus || "");
 
-  // 1. Completed + final artifact — overrides stale failed fields on the same journey
-  if (input.finalArtifactAvailable === true || input.chapterComplete === true) {
+  // 1) succeeded / result
+  if (journey === "succeeded") {
     return "completed";
   }
-  if (journey === "succeeded" && effective === "completed") {
+  if (
+    (input.finalArtifactAvailable === true || input.chapterComplete === true) &&
+    journey !== "failed" &&
+    journey !== "cancelled" &&
+    !JOURNEY_INTERRUPTED.has(journey) &&
+    !isActiveStatus(journey)
+  ) {
     return "completed";
   }
 
-  // 2. Active — parent/progress can override a stale failed journey GET
-  if (
-    isActiveStatus(journey) ||
-    isActiveStatus(progress) ||
-    isActiveStatus(parent) ||
-    effective === "journey_running"
-  ) {
-    return "active";
+  // 2) failed / cancelled — BEFORE active (fixes stale active masking terminal)
+  if (journey === "failed" || journey === "cancelled") {
+    return "terminal_failed";
   }
-
-  // 3. Interrupted / recoverable (including retryable failed / JOURNEY_INTERRUPTED)
+  // Do not let parent/effective invent failure over bound interrupt; only when
+  // bound journey status is empty/non-recoverable.
   if (
-    isInterruptedStatus(journey, input.errorCode, input.retryable) ||
-    isInterruptedStatus(progress, input.errorCode, input.retryable) ||
-    isInterruptedStatus(parent, input.errorCode, input.retryable) ||
-    journey === "scene_profiles_partial" ||
-    progress === "scene_profiles_partial" ||
-    journey === "budget_blocked" ||
-    (effective === "journey_failed" && input.retryable !== false)
-  ) {
-    return "interrupted";
-  }
-
-  // 4. Terminal failed — only when current journey is failed, no active signal, no artifact
-  if (
-    (journey === "failed" || progress === "failed") &&
-    !isActiveStatus(parent) &&
-    effective !== "journey_running"
+    effective === "journey_failed" &&
+    !journey &&
+    !JOURNEY_INTERRUPTED.has(parent)
   ) {
     return "terminal_failed";
   }
 
-  // 5. Temporary connection error — never “重新生成”
+  // 3) active — bound journey only; parent/effective must NOT override terminal
+  // (terminal already returned). Parent may refine only when journey missing.
+  if (isActiveStatus(journey)) {
+    return "active";
+  }
+  if (!journey && (isActiveStatus(parent) || effective === "journey_running")) {
+    return "active";
+  }
+
+  // 4) interrupted
+  if (JOURNEY_INTERRUPTED.has(journey)) {
+    return "interrupted";
+  }
+  if (!journey && JOURNEY_INTERRUPTED.has(progressRaw)) {
+    return "interrupted";
+  }
+
+  // 5) temporary
   if (input.temporaryFetchError) {
     return "temporary_error";
   }
 
-  // 6. Awaiting start / unknown
-  if (!journey && !progress && !parent) {
+  // 6) awaiting / unknown
+  if (!journey && !progressRaw && !parent) {
     if (effective === "partial_complete") return "awaiting_start";
     return "unknown";
   }
-  if (JOURNEY_INTERRUPTED.has(journey) || effective === "partial_complete") {
+  if (effective === "partial_complete") {
     return "awaiting_start";
   }
   return "unknown";
 }
 
-/** Whether the journey GET query should keep polling. */
 export function shouldPollJourneyResult(args: {
   journeyStatus?: string | null;
   parentJourneyStatus?: string | null;
@@ -199,6 +199,9 @@ export function shouldPollJourneyResult(args: {
   pageView?: JourneyPageView;
 }): boolean {
   if (args.pageView === "active" || args.pageView === "temporary_error") return true;
+  if (args.pageView === "completed" || args.pageView === "terminal_failed") return false;
+  const status = String(args.journeyStatus || "");
+  if (status === "succeeded" || status === "failed" || status === "cancelled") return false;
   if (args.effectiveStatus === "journey_running") return true;
   if (isActiveStatus(args.journeyStatus) || isActiveStatus(args.parentJourneyStatus)) return true;
   if (args.sceneComplete && !args.journeyStatus) return true;

@@ -67,7 +67,7 @@ export function JourneyLensExplanationChrome({
       <p className="journey-lens-one-liner" data-testid="journey-lens-one-liner">
         <strong data-testid="journey-lens-title">{title}</strong>
         {"："}
-        {summary}
+        {summary.replace(new RegExp(`^${title}：`), "")}
       </p>
       {showLegend ? (
         <JourneyChartLegend

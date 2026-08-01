@@ -1,0 +1,17 @@
+﻿{
+    "rc_version":  "1.1.2-rc.4",
+    "installer":  "D:\\StoryLens-Local-Evidence\\installer-archive\\StoryLens_1.1.2-rc.4_x64-setup.exe",
+    "installer_size":  42760309,
+    "installer_sha256":  "5342b02f97b1a865da42f95a51f1e28950b53fe1934cd6e0438ae7362443e7f6",
+    "archive_sha256":  "5342b02f97b1a865da42f95a51f1e28950b53fe1934cd6e0438ae7362443e7f6",
+    "archive_hash_match":  true,
+    "public_build_source_head":  "8073fdf947538c296cca12189b4051b34e15d63a",
+    "private_head":  "23a0b025db51acaa8e62f4e81bc7628f19a8e2a6",
+    "built_at":  "2026-07-30T04:20:18.283528+00:00",
+    "version_after_build":  "1.1.2",
+    "sidecar_sha256":  "AF51B8FBD386BB967E79DBEE76BCB77E2AE934EBA956F2F2DFCCE6E46CD474F4",
+    "desktop_sha256":  "A15BC720B187D0F02AB53E96A7D8E9EFFD8419E8717A66A2FEE2106A54FC6E82",
+    "public_start_head":  "c568ab9a248e91dca5e14b666e4345dc30f80cd0",
+    "cwd_gate":  "6/6",
+    "isolated_acceptance":  "PASS"
+}

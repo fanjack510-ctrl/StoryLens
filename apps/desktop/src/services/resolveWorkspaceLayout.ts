@@ -40,9 +40,12 @@ export function mapUrlToActiveTab(args: {
 
   if (userPinnedTab) return userPinnedTab;
 
-  if (requestedView === "reading" || requestedView === "progress") return "text";
-
+  // Explicit journey deep-link wins over view=progress/reading shell (CHG-023 resume URLs).
   if (requestedTab === "reader-journey" || requestedTab === "journey") return "journey";
+
+  if (requestedView === "reading" || requestedView === "progress") return "text";
+  if (requestedView === "scene-boundary-review") return "scene";
+
   if (
     requestedTab === "scene-analysis" ||
     requestedTab === "analysis" ||
@@ -84,7 +87,9 @@ export function resolveWorkspaceLayout(args: {
     userPinnedTab: args.userPinnedTab,
   });
 
-  const showProgressContext = Boolean(args.inFlight);
+  // Keep progress context while URL explicitly asks for progress (incl. journey_succeeded).
+  const showProgressContext =
+    Boolean(args.inFlight) || args.requestedView === "progress";
 
   let mainContentState: WorkspaceMainState = "idle";
   if (activeTab === "journey") {

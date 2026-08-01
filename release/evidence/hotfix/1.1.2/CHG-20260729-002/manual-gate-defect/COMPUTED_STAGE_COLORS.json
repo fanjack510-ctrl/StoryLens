@@ -1,0 +1,112 @@
+{
+  "change": "CHG-20260729-002",
+  "head_at_failure": "22f7579e5cf7f8694d0edf51541432ff6b09f53c",
+  "investigation": "browser Runtime.evaluate + getComputedStyle on live Journey UI",
+  "root_cause_codes": [
+    "B. EXTRA_OPACITY_WASHOUT",
+    "A. COLORS_TOO_SIMILAR",
+    "C. COMMON_BACKGROUND_OVERLAY",
+    "F. STAGE_AND_ROLE_BANDS_MIXED"
+  ],
+  "primary_root_cause": "B. EXTRA_OPACITY_WASHOUT",
+  "secondary_root_causes": [
+    "A. COLORS_TOO_SIMILAR",
+    "C. COMMON_BACKGROUND_OVERLAY",
+    "F. STAGE_AND_ROLE_BANDS_MIXED"
+  ],
+  "pre_fix_bands": {
+    "opening": {
+      "token_raw": "#e8ede9",
+      "svg_fill": "#e8ede9",
+      "svg_opacity_idle": 0.18,
+      "effective_over_white_approx": "#f8faf8",
+      "card_css": "color-mix(in srgb, #e8ede9 28%, var(--surface))",
+      "card_effective_approx": "near-white green tint"
+    },
+    "development": {
+      "token_raw": "#f0ebe3",
+      "svg_fill": "#f0ebe3",
+      "svg_opacity_idle": 0.18,
+      "effective_over_white_approx": "#fbf9f6",
+      "card_css": "color-mix(in srgb, #f0ebe3 28%, var(--surface))",
+      "card_effective_approx": "near-white warm tint"
+    },
+    "closing": {
+      "token_raw": "#e6ebf0",
+      "svg_fill": "#e6ebf0",
+      "svg_opacity_idle": 0.18,
+      "effective_over_white_approx": "#f7f9fa",
+      "card_css": "color-mix(in srgb, #e6ebf0 28%, var(--surface))",
+      "card_effective_approx": "near-white blue tint"
+    }
+  },
+  "post_fix_browser_computed": {
+    "opening": {
+      "token_raw": "#E4F1E8",
+      "svg_fill_attr": "#E4F1E8",
+      "fill_opacity": "1",
+      "computed_fill": "rgb(228, 241, 232)",
+      "computed_opacity": "1",
+      "card_background": "rgb(228, 241, 232)",
+      "card_border": "rgb(159, 196, 170)"
+    },
+    "development": {
+      "token_raw": "#F7EDD8",
+      "svg_fill_attr": "#F7EDD8",
+      "fill_opacity": "1",
+      "computed_fill": "rgb(247, 237, 216)",
+      "computed_opacity": "1",
+      "card_background": "rgb(247, 237, 216)",
+      "card_border": "rgb(212, 183, 121)"
+    },
+    "closing": {
+      "token_raw": "#E7EDF6",
+      "svg_fill_attr": "#E7EDF6",
+      "fill_opacity": "1",
+      "computed_fill": "rgb(231, 237, 246)",
+      "computed_opacity": "1",
+      "card_background": "rgb(231, 237, 246)",
+      "card_border": "rgb(158, 180, 209)"
+    }
+  },
+  "parent_background": {
+    "journey_curve_container": "transparent / inherits surface",
+    "risk_band_overlay_pre_fix": {
+      "fill": "#f3ddd8",
+      "opacity": 0.28,
+      "height": "full plot",
+      "classification": "C. COMMON_BACKGROUND_OVERLAY",
+      "note": "full-width pink risk wash flattened opaque stage bands"
+    },
+    "risk_band_overlay_post_fix": {
+      "marker": "6px top strip #c47a6a",
+      "full_height_fill": "transparent hit-area only",
+      "pink_wash_full_height_count": 0
+    }
+  },
+  "z_index_layers_post_fix": [
+    "phase_background (opaque stage bands + titles 开端/发展/收束 at padTop+14)",
+    "risk_background (top strip only; no full-height pink wash)",
+    "grid + stage dividers",
+    "curve + segmentMarkers at mid-plot (not title row)",
+    "nodes / active scene"
+  ],
+  "wrong_stage_title": {
+    "pre_fix": "钩子建立 at y=padTop+12 overlapping stage titles",
+    "post_fix": {
+      "stage_titles": ["开端", "发展", "收束"],
+      "segment_marker_钩子建立_y": "mid-plot (~padTop+plotHeight/2-10)",
+      "role_label_in_stage_band_title": "ABSENT"
+    },
+    "classification": "F. STAGE_AND_ROLE_BANDS_MIXED"
+  },
+  "token_applied": true,
+  "computed_colors_distinct": true,
+  "extra_opacity_on_stage_bands": false,
+  "notes": [
+    "Primary washout: PHASE_BAND_OPACITY idle 0.18 on already-similar tokens.",
+    "Secondary: full-height risk #f3ddd8@0.28 over all scenes.",
+    "Cards used 28% color-mix against surface.",
+    "Fix: opaque distinct tokens, opacity=1, opaque card backgrounds, risk top-strip only, segment markers off title row."
+  ]
+}

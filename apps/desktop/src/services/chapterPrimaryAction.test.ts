@@ -85,7 +85,37 @@ describe("resolveChapterPrimaryAction", () => {
     expect(a.label).toBe("重新分析");
   });
 
-  it("shows 继续确认场景 when awaiting boundary review", () => {
+  it("shows 确认场景 when awaiting scene boundary confirmation", () => {
+    const a = resolveChapterPrimaryAction({
+      hasChapter: true,
+      run: run({
+        status: "succeeded",
+        effective_status: "awaiting_scene_boundary_confirmation",
+      }),
+      composition: "awaiting_scene_boundary_confirmation",
+      chapterComplete: false,
+      inFlight: true,
+    });
+    expect(a.kind).toBe("confirm");
+    expect(a.label).toBe("确认场景");
+  });
+
+  it("shows 继续调整场景 when draft entry is requested", () => {
+    const a = resolveChapterPrimaryAction({
+      hasChapter: true,
+      run: run({
+        status: "succeeded",
+        effective_status: "awaiting_scene_boundary_confirmation",
+      }),
+      composition: "awaiting_scene_boundary_confirmation",
+      chapterComplete: false,
+      inFlight: true,
+      sceneBoundaryEntry: "continue_draft",
+    });
+    expect(a.label).toBe("继续调整场景");
+  });
+
+  it("shows 确认场景 when awaiting boundary review", () => {
     const a = resolveChapterPrimaryAction({
       hasChapter: true,
       run: null,
@@ -95,7 +125,7 @@ describe("resolveChapterPrimaryAction", () => {
       lifecycleRun: run({ status: "awaiting_boundary_review" }),
     });
     expect(a.kind).toBe("confirm");
-    expect(a.label).toBe("继续确认场景");
+    expect(a.label).toBe("确认场景");
   });
 
   it("shows 查看分析进度 for discovered scene_analysis_running without URL bind", () => {
@@ -123,6 +153,25 @@ describe("resolveChapterPrimaryAction", () => {
     expect(a.kind).toBe("progress");
     expect(a.label).toBe("查看分析进度");
     expect(a.label).not.toMatch(/读者旅程/);
+  });
+
+  it("shows 继续分析 when interrupted", () => {
+    const a = resolveChapterPrimaryAction({
+      hasChapter: true,
+      run: run({
+        status: "succeeded",
+        journey_status: "failed",
+        journey_retryable: true,
+        journey_error_code: "JOURNEY_INTERRUPTED",
+        effective_status: "journey_failed",
+      }),
+      composition: "reader_journey_processing",
+      chapterComplete: false,
+      inFlight: true,
+    });
+    expect(a.kind).toBe("continue");
+    expect(a.label).toBe("继续分析");
+    expect(a.testId).toBe("shell-continue-analysis");
   });
 
   it("succeeded without journey still routes to result", () => {

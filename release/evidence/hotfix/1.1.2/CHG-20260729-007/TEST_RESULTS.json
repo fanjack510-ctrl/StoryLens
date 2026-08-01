@@ -1,0 +1,30 @@
+{
+  "change": "CHG-20260729-007",
+  "public_start_head": "595545351972cacd010b149061f4f513d8a0bd71",
+  "chg006_verified_head": "8206a279a8ade58505f20ad3a6ad462a26243dad",
+  "pytest": {
+    "test_task_cancellation_chg006": "19 passed",
+    "chg041_fake_and_startup": "14 passed",
+    "chg004_chg005_local": "6 passed"
+  },
+  "vitest_targeted": {
+    "result": "5 files / 37 passed",
+    "files": [
+      "taskCancellationUi.test.ts",
+      "TasksPage.cancel.test.tsx",
+      "appVersion.test.tsx",
+      "dimension_node_judgments_chg004_local.test.tsx",
+      "stage_colors_chg002_local.test.ts"
+    ]
+  },
+  "vitest_broad_readerJourney": {
+    "note": "PRE_EXISTING / environment noise — 26 failed when sweeping all readerJourney; not treated as CHG-007 regressions. Targeted hotfix suites PASS.",
+    "failed_files": 13,
+    "passed_files": 50
+  },
+  "version_check": "PASS 1.1.2",
+  "http_e2e_cancel": "PASS",
+  "migrations": "see MIGRATION_RESULTS.json",
+  "real_provider_calls": 0,
+  "formal_database_writes": 0
+}

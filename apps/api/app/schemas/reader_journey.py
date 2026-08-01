@@ -590,12 +590,25 @@ class ReaderJourneyResultResponse(BaseModel):
     display_mode: str | None = None
     phases: list[ReaderJourneyPhaseSummary]
     scene_profiles: list[ReaderJourneyProfileSummary]
+    profiles: list[ReaderJourneyProfileSummary] = Field(default_factory=list)
     chapter_summary: dict[str, object] | None = None
     deterministic_statistics: dict[str, object] | None = None
     one_sentence_diagnosis: str | None = None
     visualization: dict[str, object] | None = None
+    journey_result: dict[str, object] | None = None
     created_at: datetime | None = None
+    started_at: datetime | None = None
+    updated_at: datetime | None = None
     completed_at: datetime | None = None
+    scene_revision_id: int | None = None
+    scene_boundary_hash: str | None = None
+    result_status: str | None = None
+    is_current: bool | None = None
+    is_superseded: bool | None = None
+    error_code: str | None = None
+    retryable: bool | None = None
+    total_scene_count: int | None = None
+    completed_scene_count: int | None = None
     # v2.0 optional payload (present only for contract 2.x runs; never auto-billed).
     v2_question_lifecycle: list[dict[str, object]] | None = None
     v2_scene_diagnoses: list[dict[str, object]] | None = None

@@ -1,0 +1,71 @@
+{
+  "id": "CHG-20260729-004",
+  "title": "剧情推进、阅读张力、情绪强度、节奏速度曲线节点简短判断",
+  "type": "fix",
+  "issue_id": null,
+  "base_version": "1.1.1",
+  "target_version": "1.1.2",
+  "public_branch": "fix/1.1.2-journey-dimension-node-judgments",
+  "private_branch": "fix/1.1.2-journey-dimension-node-judgments",
+  "status": "integrated",
+  "release_pool_status": "included",
+  "include_in_next_release": true,
+  "forward_port_required": true,
+  "forward_port_target": "integration/whole-book-v120",
+  "forward_port_status": "pending",
+  "depends_on": [
+    "CHG-20260729-003"
+  ],
+  "related_changes": [
+    {
+      "id": "CHG-20260729-003",
+      "relation": "verified prerequisite"
+    }
+  ],
+  "affected_modules": [
+    "apps/desktop/src/components/readerJourney"
+  ],
+  "commits": [
+    "989e8e09fbf4fdae01b94a0743ee3e176485aba5",
+    "fb22604a78c9a72e23c1857e4dfc4699914a4daf"
+  ],
+  "modules": [
+    "release",
+    "apps/desktop",
+    "apps/api"
+  ],
+  "files": [
+    "release/changes/CHG-20260729-004.json",
+    "release/evidence/hotfix/1.1.2/CHG-20260729-004/"
+  ],
+  "user_summary": "四条单维度旅程曲线在 Scene 节点展示独立简短判断与适配状态。",
+  "technical_summary": "Presentation-only deriveDimensionNodeJudgmentV1 + shared density visibility; wire CanonicalJourneyChart for plot/tension/emotion/pacing; composite and hook_payoff untouched.",
+  "acceptance_criteria": [
+    "Four dimension node judgments with independent semantics",
+    "Fit separated from judgment; pacing fit maps 偏强→偏快 / 偏弱→偏慢 at display",
+    "Shared density rules; labels ≤10 Chinese chars",
+    "Tooltip + bottom axis sync on dimension switch",
+    "Composite and hook_payoff unchanged",
+    "Legacy compatible without re-run; Fake only"
+  ],
+  "tests": [
+    "apps/desktop/src/components/readerJourney/dimension_node_judgments_chg004_local.test.tsx",
+    "apps/api/tests/test_dimension_node_judgments_chg004_local.py"
+  ],
+  "manual_gate": "MG-CHG-20260729-004 PASS",
+  "verification_evidence": [
+    "release/evidence/hotfix/1.1.2/CHG-20260729-004/DIMENSION_NODE_JUDGMENT_AUDIT.md",
+    "release/evidence/hotfix/1.1.2/CHG-20260729-004/TEST_RESULTS.json",
+    "release/evidence/hotfix/1.1.2/CHG-20260729-004/MANUAL_UI_ENV.md",
+    "release/evidence/hotfix/1.1.2/CHG-20260729-004/MANUAL_GATE_PASS.md"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "FE presentation derive at render time; no persistence rewrite."
+  },
+  "created_at": "2026-07-29T06:00:00Z",
+  "updated_at": "2026-07-29T06:50:00Z",
+  "base_head": "bbcd6d7ac925303247599c9869e11780e4a7ca20"
+}

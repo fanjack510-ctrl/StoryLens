@@ -1,6 +1,14 @@
 import type { Run } from "../types";
 import { mapRunToUiState, type ChapterAnalysisUiState } from "../components/chapterAnalysis/mapAnalysisUiState";
 
+/** True when scene pipeline finished but user must confirm boundaries before journey. */
+export function isAwaitingSceneBoundaryConfirmation(run: Run | null | undefined): boolean {
+  if (!run) return false;
+  if (run.effective_status === "awaiting_scene_boundary_confirmation") return true;
+  if (run.checkpoint_stage === "scene_boundary_confirmation") return true;
+  return false;
+}
+
 /** Minimal journey snapshot from GET /analysis-runs/{id}/reader-journey (+ progress). */
 export type JourneySnapshot = {
   status?: string | null;
@@ -9,6 +17,7 @@ export type JourneySnapshot = {
 } | null | undefined;
 
 const JOURNEY_ACTIVE = new Set([
+  "starting",
   "queued",
   "running",
   "scene_profiles_running",
@@ -33,6 +42,26 @@ export function mapChapterCompositionState(
   run: Run | null | undefined,
   journey: JourneySnapshot,
 ): ChapterAnalysisUiState {
+  const liveJourneyStatus = journey?.status || null;
+
+  // CHG-013: live journey (including starting) must win over stale awaiting marker.
+  if (liveJourneyStatus && JOURNEY_ACTIVE.has(liveJourneyStatus)) {
+    return "reader_journey_processing";
+  }
+  if (liveJourneyStatus && JOURNEY_NEEDS_RESUME.has(liveJourneyStatus)) {
+    return "awaiting_reader_journey_start";
+  }
+  if (run?.journey_status && JOURNEY_ACTIVE.has(run.journey_status)) {
+    return "reader_journey_processing";
+  }
+  if (run?.effective_status === "journey_running") {
+    return "reader_journey_processing";
+  }
+
+  if (isAwaitingSceneBoundaryConfirmation(run)) {
+    return "awaiting_scene_boundary_confirmation";
+  }
+
   const base = mapRunToUiState(run);
   if (base !== "succeeded") return base;
 
@@ -43,15 +72,7 @@ export function mapChapterCompositionState(
     return "succeeded";
   }
 
-  // Prefer live parent AnalysisRun journey signals over a stale journey GET failure.
-  if (run?.effective_status === "journey_running") {
-    return "reader_journey_processing";
-  }
-  if (run?.journey_status && JOURNEY_ACTIVE.has(run.journey_status)) {
-    return "reader_journey_processing";
-  }
-
-  const journeyStatus = journey?.status || run?.journey_status || null;
+  const journeyStatus = liveJourneyStatus || run?.journey_status || null;
   if (journeyStatus && JOURNEY_ACTIVE.has(journeyStatus)) {
     return "reader_journey_processing";
   }
@@ -103,6 +124,7 @@ export function isChapterAnalysisInFlight(
     composition === "creating" ||
     composition === "partial" ||
     composition === "boundary_review_required" ||
+    composition === "awaiting_scene_boundary_confirmation" ||
     composition === "provider_recovery" ||
     composition === "awaiting_budget_adjustment" ||
     composition === "aborted_by_limit"
@@ -153,6 +175,10 @@ export function resolveChapterWorkspaceView(args: {
     if (userPinnedView === "reading") return "reading";
     if (userPinnedView === "progress") return "progress";
     if (userPinnedView === "result" && chapterComplete) return "result";
+  }
+
+  if (requestedView === "scene-boundary-review") {
+    return "result";
   }
 
   if (requestedView === "reading" || requestedView === "progress" || requestedView === "result") {

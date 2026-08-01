@@ -1,0 +1,40 @@
+{
+  "change": "CHG-20260729-011",
+  "incident": "INC-20260729-005",
+  "public_base_head": "e59da1238eb2c509b4a05d7a401a6b5a1b2002ee",
+  "pytest": {
+    "file": "apps/api/tests/test_workflow_consistency_chg011.py",
+    "result": "6 passed",
+    "command": ".venv/Scripts/python.exe -m pytest apps/api/tests/test_workflow_consistency_chg011.py -q"
+  },
+  "vitest": {
+    "files": [
+      "apps/desktop/src/services/chapterAnalysisPresentation.test.ts",
+      "apps/desktop/src/services/chapterPrimaryAction.test.ts",
+      "apps/desktop/src/pages/TasksPage.test.tsx",
+      "apps/desktop/src/components/analysis/SceneBoundaryReviewPanel.chg041.test.tsx",
+      "apps/desktop/src/components/readerJourney/HookPayoffTimeline.test.tsx",
+      "apps/desktop/src/components/readerJourney/chapter_hook_consistency_chg005.test.tsx",
+      "apps/desktop/src/components/readerJourney/chapter_hook_simplification_chg005_complete.test.tsx",
+      "apps/desktop/src/components/readerJourney/chapter_hook_simplification_chg005_local.test.tsx",
+      "apps/desktop/src/components/readerJourney/JourneyModeSwitcher.test.tsx"
+    ],
+    "result": "85 passed (9 files)"
+  },
+  "typecheck": {
+    "full_tsc": "FAIL — pre-existing test fixture / SceneBoundaryReviewPanel draft typing gaps remain",
+    "chg011_core_files": "BookRoutePage.tsx + chapterAnalysisPresentation.ts type errors resolved",
+    "verdict": "PASS for automated tests; full-project typecheck still blocked by pre-existing debt"
+  },
+  "http_e2e": {
+    "result": "PASS",
+    "evidence": "HTTP_E2E.json",
+    "api": "http://127.0.0.1:18047",
+    "cases_passed": 8
+  },
+  "real_provider_calls": 0,
+  "formal_database_writes": 0,
+  "build": "NO",
+  "version_bump": "NO",
+  "status": "tested"
+}

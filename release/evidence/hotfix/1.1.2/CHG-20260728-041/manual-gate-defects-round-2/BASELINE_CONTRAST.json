@@ -1,0 +1,19 @@
+﻿{
+    "chg041_pytest":  "16 passed",
+    "vitest_subset":  "26 passed (resolveSceneJourneyGate + SceneBoundary* chg041)",
+    "issue_collect_errors":  [
+                                 "test_defect_canary_010_journey_repair_resilience.py",
+                                 "test_defect_canary_011_targeted_repair.py",
+                                 "test_defect_canary_016_evidence_budget.py",
+                                 "test_narrative_phase2br1_http_replay_repair_failed.py",
+                                 "test_narrative_phase2br1_http_replay_single_repair.py",
+                                 "test_narrative_phase2br1_output_contract_boundary.py",
+                                 "test_native_overview_free_entitlement.py",
+                                 "test_native_overview_release_scope_local.py",
+                                 "test_native_overview_result_engine_id_local.py"
+                             ],
+    "classification":  "PRE_EXISTING",
+    "tsc":  "passed",
+    "integration_base_collect_errors_same":  true,
+    "check_project":  "FAILED (registry drift PRE_EXISTING on hotfix branch; not introduced by Round 2 code)"
+}

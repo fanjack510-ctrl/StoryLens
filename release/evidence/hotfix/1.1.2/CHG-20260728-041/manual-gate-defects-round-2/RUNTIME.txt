@@ -1,0 +1,11 @@
+API_PID=23144
+FRONTEND_PID=3112
+API_URL=http://127.0.0.1:18041
+FRONTEND_URL=http://127.0.0.1:1421
+FINAL_SCENE_REVIEW_URL=http://127.0.0.1:1421/books/1?view=scene-boundary-review&chapter=1&analysisRun=1
+DATABASE=C:\Users\msi\AppData\Local\Temp\storylens-mg-chg041-final-retest\database\storylens-mg-chg041-final.db
+ROUND_2_COMMIT=084063eb8876231ae39b3c249142bd7ccb6ec3f5
+PUBLIC_HEAD=45e2bc906b0df2e869db64c8e100f82f7ccddb4b
+FAKE=1
+REAL_PROVIDER=0
+FORMAL_DB_TOUCHED=0

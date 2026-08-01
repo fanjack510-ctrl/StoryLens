@@ -1,0 +1,80 @@
+﻿{
+    "captured_at":  "2026-07-28T18:31:58.9459217+08:00",
+    "url":  "/books/1?chapter=1\u0026analysisRun=1\u0026view=result\u0026tab=reader-journey",
+    "chapter_id":  1,
+    "chapter_text_hash":  "3ac1704914657df75dd821dcb82e0bda5185353f2c6fd49d633c44c05cb40b66",
+    "awaiting_confirmation":  true,
+    "draft_revision":  null,
+    "confirmed_revision":  {
+                               "revision_id":  3,
+                               "revision_number":  3,
+                               "status":  "confirmed",
+                               "source":  "user",
+                               "revision_etag":  "429230fd26489ca5ded6d84b42bbe0bab4c1c8eb63d92565ad46a52f9f6ace90",
+                               "boundary_hash":  "b45fb33646f17fb9fcce66bceb018e0bcc46fab108e08c37548915bb09f6cc32",
+                               "chapter_text_hash":  "3ac1704914657df75dd821dcb82e0bda5185353f2c6fd49d633c44c05cb40b66",
+                               "scene_count":  4,
+                               "scenes":  [
+                                              {
+                                                  "scene_order":  1,
+                                                  "start_paragraph_id":  "B0001-C0001-P0001",
+                                                  "end_paragraph_id":  "B0001-C0001-P0005",
+                                                  "included_in_journey":  true
+                                              },
+                                              {
+                                                  "scene_order":  2,
+                                                  "start_paragraph_id":  "B0001-C0001-P0006",
+                                                  "end_paragraph_id":  "B0001-C0001-P0010",
+                                                  "included_in_journey":  true
+                                              },
+                                              {
+                                                  "scene_order":  3,
+                                                  "start_paragraph_id":  "B0001-C0001-P0011",
+                                                  "end_paragraph_id":  "B0001-C0001-P0015",
+                                                  "included_in_journey":  true
+                                              },
+                                              {
+                                                  "scene_order":  4,
+                                                  "start_paragraph_id":  "B0001-C0001-P0016",
+                                                  "end_paragraph_id":  "B0001-C0001-P0020",
+                                                  "included_in_journey":  true
+                                              }
+                                          ]
+                           },
+    "model_revision":  {
+                           "revision_id":  1,
+                           "revision_number":  1,
+                           "status":  "superseded",
+                           "source":  "model",
+                           "revision_etag":  "931ecd12d8e4a257b7dd53cdf041357caf5d939f378b99bf35e279e7db2cfa04",
+                           "boundary_hash":  "b45fb33646f17fb9fcce66bceb018e0bcc46fab108e08c37548915bb09f6cc32",
+                           "chapter_text_hash":  "3ac1704914657df75dd821dcb82e0bda5185353f2c6fd49d633c44c05cb40b66",
+                           "scene_count":  4,
+                           "scenes":  [
+                                          {
+                                              "scene_order":  1,
+                                              "start_paragraph_id":  "B0001-C0001-P0001",
+                                              "end_paragraph_id":  "B0001-C0001-P0005",
+                                              "included_in_journey":  true
+                                          },
+                                          {
+                                              "scene_order":  2,
+                                              "start_paragraph_id":  "B0001-C0001-P0006",
+                                              "end_paragraph_id":  "B0001-C0001-P0010",
+                                              "included_in_journey":  true
+                                          },
+                                          {
+                                              "scene_order":  3,
+                                              "start_paragraph_id":  "B0001-C0001-P0011",
+                                              "end_paragraph_id":  "B0001-C0001-P0015",
+                                              "included_in_journey":  true
+                                          },
+                                          {
+                                              "scene_order":  4,
+                                              "start_paragraph_id":  "B0001-C0001-P0016",
+                                              "end_paragraph_id":  "B0001-C0001-P0020",
+                                              "included_in_journey":  true
+                                          }
+                                      ]
+                       }
+}

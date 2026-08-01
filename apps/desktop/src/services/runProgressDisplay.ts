@@ -1,19 +1,13 @@
 /** Format AnalysisRun progress for list UI. Never emit undefined/null/NaN. */
 
 const JOURNEY_ACTIVE = new Set([
+  "starting",
   "queued",
   "running",
   "scene_profiles_running",
   "chapter_synthesis_running",
   "summary_running",
   "phase_analysis_running",
-]);
-
-const JOURNEY_INTERRUPTED = new Set([
-  "failed",
-  "scene_profiles_partial",
-  "budget_blocked",
-  "aborted_by_limit",
 ]);
 
 export function formatRunProgress(run: {
@@ -30,6 +24,7 @@ export function formatRunProgress(run: {
 }): string {
   const journeyStatus = String(run.journey_status || "");
   const effective = String(run.effective_status || "");
+  const errorCode = String(run.journey_error_code || "");
   const journeyTotal =
     typeof run.journey_total_scene_count === "number" &&
     Number.isFinite(run.journey_total_scene_count) &&
@@ -42,6 +37,13 @@ export function formatRunProgress(run: {
       ? run.journey_completed_scene_count
       : 0;
 
+  if (errorCode === "WAITING_SCENE_ANALYSIS" || effective === "scene_analysis") {
+    if (journeyTotal != null) {
+      return `场景分析：${journeyCompleted} / ${journeyTotal}`;
+    }
+    return "正在分析场景";
+  }
+
   if (JOURNEY_ACTIVE.has(journeyStatus) || effective === "journey_running") {
     if (journeyTotal != null) {
       return `阅读旅程：${journeyCompleted} / ${journeyTotal}`;
@@ -49,12 +51,18 @@ export function formatRunProgress(run: {
     return "阅读旅程进行中";
   }
 
+  // CHG-015: only true interrupt / lease-partial states show 已中断.
   if (
-    JOURNEY_INTERRUPTED.has(journeyStatus) ||
-    effective === "journey_failed" ||
-    run.journey_error_code === "JOURNEY_INTERRUPTED"
+    errorCode === "JOURNEY_INTERRUPTED" ||
+    journeyStatus === "scene_profiles_partial" ||
+    journeyStatus === "budget_blocked" ||
+    journeyStatus === "aborted_by_limit"
   ) {
     return "阅读旅程已中断";
+  }
+
+  if (journeyStatus === "failed" || effective === "journey_failed") {
+    return "阅读旅程生成失败";
   }
 
   if (journeyStatus === "succeeded" && journeyTotal != null) {

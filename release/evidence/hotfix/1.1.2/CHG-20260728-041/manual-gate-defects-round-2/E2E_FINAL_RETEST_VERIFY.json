@@ -1,0 +1,40 @@
+﻿{
+    "confirm_start_1":  {
+                            "revision_id":  2,
+                            "revision_etag":  "de9b62823973eda6b2754578e01dd611ce933beeefe8818e1c93e9d2f0be3432",
+                            "boundary_hash":  "a337a4874a5cd0ad9228e602337d999a38a99b2910eec124a774fa09ad77c084",
+                            "journey_run_id":  2,
+                            "journey_started":  true,
+                            "journey_status":  "queued",
+                            "already_confirmed":  false,
+                            "journey_error_code":  null,
+                            "journey_error_message":  null
+                        },
+    "api_pid":  1984,
+    "frontend_pid":  10824,
+    "database":  "C:\\Users\\msi\\AppData\\Local\\Temp\\storylens-mg-chg041-final-retest\\database\\storylens-mg-chg041-final.db",
+    "invariants":  {
+                       "CURRENT_JOURNEY_BOUNDARY_HASH_MATCH":  "YES",
+                       "NEW_JOURNEY_RUN_ROUTED":  "YES",
+                       "AWAITING_CONFIRMATION_AFTER_CONFIRM":  false,
+                       "NAVIGATION_LOOP":  "ABSENT",
+                       "NEW_JOURNEY_RUN_RETURNED":  "YES",
+                       "CURRENT_JOURNEY_CHAPTER_HASH_MATCH":  "YES",
+                       "CONFIRM_START_RETRY_NEW_TASK":  0,
+                       "NO_CHANGE_RECONFIRM_NEW_REVISION":  0,
+                       "CURRENT_JOURNEY_REVISION_MATCH":  "YES",
+                       "SCENE_REVIEW_REQUIRED_AFTER_CONFIRM":  "N/A_FIELD_ABSENT",
+                       "OLD_JOURNEY_REUSED_FOR_NEW_REVISION":  "NO"
+                   },
+    "journey":  {
+                    "id":  2,
+                    "status":  "failed",
+                    "scene_revision_id":  2,
+                    "scene_boundary_hash":  "a337a4874a5cd0ad9228e602337d999a38a99b2910eec124a774fa09ad77c084",
+                    "chapter_text_hash":  "3ac1704914657df75dd821dcb82e0bda5185353f2c6fd49d633c44c05cb40b66",
+                    "client_request_id":  "auto-chapter-journey:1:rev:2",
+                    "result_status":  "current"
+                },
+    "pass":  true,
+    "public_head":  "084063eb8876231ae39b3c249142bd7ccb6ec3f5"
+}

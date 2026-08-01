@@ -15,6 +15,7 @@ export type CompositeLifecyclePhase =
   | "cancelled";
 
 const JOURNEY_ACTIVE = new Set([
+  "starting",
   "queued",
   "running",
   "scene_profiles_running",
@@ -72,22 +73,39 @@ export function resolveCompositeRunLifecycle(
   const journey = String(input.journeyStatus || "").toLowerCase();
   const effective = String(input.effectiveStatus || "").toLowerCase();
   const resultAvailable = Boolean(input.journeyResultAvailable);
-  const retryable =
-    input.journeyRetryable === true ||
-    input.journeyErrorCode === "JOURNEY_INTERRUPTED" ||
-    journey === "scene_profiles_partial";
 
-  // 1. Journey active
+  // CHG-013: live journey active (incl. starting) before stale awaiting confirmation.
   if (JOURNEY_ACTIVE.has(journey) || effective === "journey_running") {
     return "active";
   }
 
-  // 2. Journey interrupted / failed retryable
+  if (effective === "awaiting_scene_boundary_confirmation") {
+    return "awaiting_user";
+  }
+
+  // CHG-015: waiting on rematerialized scene analysis is active, not interrupted.
   if (
-    JOURNEY_RECOVERABLE.has(journey) ||
-    effective === "journey_failed" ||
-    (journey === "failed" && retryable)
+    input.journeyErrorCode === "WAITING_SCENE_ANALYSIS" ||
+    effective === "scene_analysis"
   ) {
+    return "active";
+  }
+
+  // 2. Recoverable interruption only — not every retryable failed journey.
+  const interruptedCode =
+    input.journeyErrorCode === "JOURNEY_INTERRUPTED" ||
+    journey === "scene_profiles_partial";
+  if (interruptedCode) {
+    return "interrupted";
+  }
+  if (JOURNEY_RECOVERABLE.has(journey) || effective === "journey_failed") {
+    // budget / partial may still be interrupted UX; plain failed is failed.
+    if (journey === "budget_blocked" || journey === "aborted_by_limit") {
+      return "interrupted";
+    }
+    if (journey === "failed" || effective === "journey_failed") {
+      return "failed";
+    }
     return "interrupted";
   }
 
@@ -129,6 +147,8 @@ export function compositeLifecycleStatusLabel(phase: CompositeLifecyclePhase): s
       return null; // caller may specialize (journey vs scene)
     case "interrupted":
       return "阅读旅程已中断";
+    case "failed":
+      return "阅读旅程生成失败";
     case "completed":
       return "已完成";
     default:

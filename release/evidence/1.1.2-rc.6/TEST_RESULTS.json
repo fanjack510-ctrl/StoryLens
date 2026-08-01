@@ -1,0 +1,55 @@
+{
+  "change_id": "CHG-20260731-024",
+  "rc_version": "1.1.2-rc.6",
+  "build_source_head": "2ffaad8d45dc1bf6d79d99a52559bb1ea29ec838",
+  "chg023_verified_head": "bfb9b9ad787b260a8b813f8b35a7612b075d0330",
+  "pytest": {
+    "suites": [
+      "test_task_cancellation_chg006.py",
+      "test_reader_journey_resume_idempotent_chg023.py",
+      "test_reader_journey_startup_recovery_local.py",
+      "test_confirm_start_journey_race_chg013.py",
+      "test_rc4_post_confirm_scene_analysis_chg015.py",
+      "test_chg015_recoverable_current_run.py"
+    ],
+    "passed": 45,
+    "failed": 0,
+    "result": "PASS"
+  },
+  "vitest": {
+    "suites": [
+      "taskCancellationUi.test.ts",
+      "TasksPage.cancel.test.tsx",
+      "resolveJourneyPageState.test.ts",
+      "recoveryUiSync.chg023.test.ts",
+      "chapterAnalysisPresentation.test.ts",
+      "BookRoutePage.readerJourneyResume.test.tsx",
+      "activeJourneyStaleRecovery.chg018.test.tsx",
+      "journeyActiveRecoveryGuard.test.ts",
+      "UnifiedAnalysisRecoveryCard.test.tsx",
+      "ReaderJourneyResumeCard.test.tsx"
+    ],
+    "passed": 75,
+    "failed": 0,
+    "result": "PASS"
+  },
+  "typecheck": {
+    "error_count": 0,
+    "new_errors": 0,
+    "result": "PASS"
+  },
+  "playwright": {
+    "cases_abefg": "PASS",
+    "cases_cd": "PASS",
+    "build_commit_asserted": "2ffaad8",
+    "result": "PASS"
+  },
+  "http_e2e": "PASS",
+  "cwd_gate": "6/6",
+  "installed_automatic_acceptance": "PASS",
+  "real_provider_calls": 0,
+  "external_provider_network_calls": 0,
+  "formal_database_writes": 0,
+  "formal_install_overwritten": false,
+  "production_scenario_hook": "ABSENT"
+}

@@ -56,10 +56,11 @@ def test_phase_1c_a7_migration_is_idempotent_and_preserves_history(tmp_path) -> 
                 "(id,task_type,subject_type,subject_id,provider,model,prompt_version,"
                 "schema_version,input_hash,prompt_hash,status,progress_current,progress_total,"
                 "created_at,queued_at,started_at,"
-                "execution_mode,analysis_mode,cloud_consent,sends_content_to_cloud,retryable) "
+                "execution_mode,analysis_mode,cloud_consent,sends_content_to_cloud,retryable,"
+                "status_version) "
                 "VALUES (54,'scene_pipeline','chapter','1','fake','fake','v3.5','v1',"
                 "'x','y','failed',0,0,'2026-01-01','2026-01-01','2026-01-01',"
-                "'cloud','assisted_boundary_review',1,1,0)"
+                "'cloud','assisted_boundary_review',1,1,0,0)"
             )
         )
     migrate_phase_1c_a7(engine)

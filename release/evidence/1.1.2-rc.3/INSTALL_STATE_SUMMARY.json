@@ -1,0 +1,16 @@
+{
+  "config_hash_identity": true,
+  "cwd_independence": true,
+  "cwd_cases": "6/6",
+  "production_like": true,
+  "health": true,
+  "security": "PASS",
+  "installer": "PASS",
+  "isolated_acceptance": true,
+  "api_restart_health": true,
+  "real_provider_calls": 0,
+  "external_provider_network_calls": 0,
+  "formal_database_writes": 0,
+  "formal_install_overwritten": false,
+  "rc2_preserved": true
+}

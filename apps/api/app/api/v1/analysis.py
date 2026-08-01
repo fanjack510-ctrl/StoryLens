@@ -4,6 +4,7 @@ from pathlib import Path
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
 
@@ -444,6 +445,97 @@ def serialize_run(session: Session, run: AnalysisRun) -> AnalysisRunResponse:
         current_stage = "reader_journey"
     elif chapter_meta["chapter_complete"]:
         current_stage = "completed"
+
+    # CHG-20260728-040: aggregate invocation usage even when reservation is released.
+    inv_rows = list(
+        session.scalars(select(ModelInvocation).where(ModelInvocation.run_id == run.id))
+    )
+    usage_invocation_count = len(inv_rows)
+    usage_input = sum(int(i.input_tokens or 0) for i in inv_rows)
+    usage_output = sum(int(i.output_tokens or 0) for i in inv_rows)
+    usage_total = sum(int(i.total_tokens or 0) for i in inv_rows)
+    cost_values = [i.estimated_cost for i in inv_rows if i.estimated_cost is not None]
+    usage_cost_unknown = bool(inv_rows) and len(cost_values) < len(inv_rows)
+    usage_estimated_cost = float(sum(cost_values)) if cost_values else None
+
+    failure_substage = None
+    failure_reason_code = run.root_error_code
+    if run.root_error_code and str(run.root_error_code).startswith("SCENE_BOUNDARY_"):
+        failure_substage = "scene_boundary_adjudication"
+    elif any(i.task_type == "scene_boundary_adjudication" for i in inv_rows) and (
+        run.status.startswith("failed") or run.root_error_code in {"OUTPUT_TRUNCATED"}
+    ):
+        failure_substage = "scene_boundary_adjudication"
+
+    from app.db.models import AnalysisArtifact
+    from app.services.boundary_adjudication_checkpoints import (
+        ARTIFACT_TYPE,
+        load_adjudication_plan,
+    )
+
+    adj_artifacts = list(
+        session.scalars(
+            select(AnalysisArtifact).where(
+                AnalysisArtifact.run_id == run.id,
+                AnalysisArtifact.artifact_type == ARTIFACT_TYPE,
+            )
+        )
+    )
+    boundary_batch_completed = len(adj_artifacts)
+    boundary_candidate_completed = 0
+    for art in adj_artifacts:
+        try:
+            payload = json.loads(art.payload_json or "{}")
+            boundary_candidate_completed += len(payload.get("target_candidate_ids") or [])
+        except json.JSONDecodeError:
+            pass
+
+    plan = load_adjudication_plan(session, run_id=run.id)
+    if plan is None and (run.recovered_from_run_id or run.retry_of_run_id):
+        plan = load_adjudication_plan(
+            session,
+            run_id=int(run.recovered_from_run_id or run.retry_of_run_id),
+        )
+
+    boundary_candidate_total = None
+    boundary_batch_total = None
+    adj_invs = [i for i in inv_rows if i.task_type == "scene_boundary_adjudication"]
+    if plan:
+        boundary_candidate_total = int(plan.get("boundary_candidate_total") or 0) or None
+        boundary_batch_total = int(plan.get("boundary_batch_total") or 0) or None
+    if adj_invs or adj_artifacts or failure_substage == "scene_boundary_adjudication":
+        if boundary_candidate_total is None:
+            selected: list[str] = []
+            for i in inv_rows:
+                if i.task_type != "scene_boundary" or not i.selected_transition_ids_json:
+                    continue
+                try:
+                    selected.extend(json.loads(i.selected_transition_ids_json))
+                except json.JSONDecodeError:
+                    pass
+            if selected:
+                boundary_candidate_total = len(list(dict.fromkeys(selected)))
+            elif adj_artifacts:
+                boundary_candidate_total = boundary_candidate_completed or None
+        if boundary_candidate_total is not None and boundary_batch_total is None:
+            from math import ceil
+
+            boundary_batch_total = max(
+                boundary_batch_completed,
+                int(ceil(boundary_candidate_total / 10)) if boundary_candidate_total else 0,
+            )
+        if boundary_batch_total is not None:
+            boundary_batch_total = max(boundary_batch_total, boundary_batch_completed)
+
+    last_adj = adj_invs[-1] if adj_invs else None
+    trunc_attempts = sum(
+        1
+        for i in adj_invs
+        if i.finish_reason in {"length", "max_tokens"}
+        or (i.error_code or "").endswith("TRUNCATED")
+        or (i.error_code or "").endswith("TRUNCATED_AT_HARD_CAP")
+    )
+
     return base.model_copy(
         update={
             "budget_required": block.get("required"),
@@ -513,8 +605,73 @@ def serialize_run(session: Session, run: AnalysisRun) -> AnalysisRunResponse:
             ),
             "journey_error_code": chapter_meta.get("journey_error_code"),
             "primary_action": chapter_meta.get("primary_action"),
+            "failure_substage": failure_substage,
+            "failure_reason_code": failure_reason_code,
+            "boundary_candidate_total": boundary_candidate_total,
+            "boundary_candidate_completed": boundary_candidate_completed,
+            "boundary_batch_total": boundary_batch_total,
+            "boundary_batch_completed": boundary_batch_completed,
+            "usage_invocation_count": usage_invocation_count,
+            "usage_input_tokens": usage_input if usage_invocation_count else None,
+            "usage_output_tokens": usage_output if usage_invocation_count else None,
+            "usage_total_tokens": usage_total if usage_invocation_count else None,
+            "usage_estimated_cost": usage_estimated_cost,
+            "usage_cost_unknown": usage_cost_unknown,
+            "last_requested_output_tokens": (
+                last_adj.requested_output_tokens if last_adj else None
+            ),
+            "last_actual_output_tokens": (
+                last_adj.actual_output_tokens or last_adj.output_tokens if last_adj else None
+            ),
+            "last_finish_reason": last_adj.finish_reason if last_adj else None,
+            "truncation_attempt_count": trunc_attempts if adj_invs else None,
+            "status_version": int(getattr(run, "status_version", 0) or 0),
+            "cancellation_requested_at": getattr(run, "cancellation_requested_at", None),
+            "cancelled_at": getattr(run, "cancelled_at", None),
+            "cancellation_reason": getattr(run, "cancellation_reason", None),
+            "cancelled_by": getattr(run, "cancelled_by", None),
+            "can_cancel": _run_can_cancel(run),
+            "can_restart_as_new_task": run.status
+            in {
+                "cancelled",
+                "failed",
+                "failed_provider",
+                "failed_structural",
+                "succeeded",
+                "completed",
+            },
         }
     )
+
+
+def _run_can_cancel(run: AnalysisRun) -> bool:
+    from app.services.task_cancellation import CANCELABLE_STATUSES, CANCEL_IN_PROGRESS
+
+    if run.status in CANCEL_IN_PROGRESS:
+        return False
+    return run.status in CANCELABLE_STATUSES
+
+
+class AnalysisRunCancelRequest(BaseModel):
+    reason: str = "user_requested"
+    expected_version: int | None = None
+    client_request_id: str | None = None
+
+
+class AnalysisRunCancelResponse(BaseModel):
+    task_id: int
+    previous_status: str
+    current_status: str
+    cancellation_requested_at: datetime | None = None
+    cancelled_at: datetime | None = None
+    message: str
+    already_requested: bool = False
+    already_cancelled: bool = False
+    already_completed: bool = False
+    cannot_cancel: bool = False
+    can_restart_as_new_task: bool = True
+    status_version: int = 0
+
 
 
 @router.get("/analysis-runs", response_model=list[AnalysisRunResponse])
@@ -675,9 +832,38 @@ def analysis_preflight(
     )
     if request.provider_state_version != evaluation["provider_state_version"]:
         raise error(409, "PROVIDER_STATE_CHANGED", "Provider状态已变化，请刷新后重新确认。")
-    if evaluation["health_state"] == "stale":
-        raise error(409, "PROVIDER_HEALTH_STALE", "Provider健康状态已过期，请刷新或重新验证连接。")
-    if evaluation["health_state"] == "unhealthy":
+    health_state = evaluation["health_state"]
+    health_error = evaluation.get("health_error_code")
+    if health_state == "stale" or health_error == "PROVIDER_HEALTH_STALE":
+        raise error(
+            409,
+            "PROVIDER_HEALTH_STALE",
+            "AI 服务健康状态已过期，请重新验证连接。",
+            details={
+                "provider": request.provider,
+                "health_source": evaluation.get("health_source"),
+                "health_checked_at": evaluation.get("health_checked_at"),
+                "freshness_age_seconds": evaluation.get("freshness_age_seconds"),
+                "health_ttl_seconds": evaluation.get("health_ttl_seconds"),
+            },
+        )
+    if health_error == "PROVIDER_HEALTH_NOT_VERIFIED":
+        raise error(409, "PROVIDER_HEALTH_NOT_VERIFIED", "AI 服务尚未验证，请先在设置中完成验证。")
+    if health_error == "PROVIDER_MODEL_NOT_VERIFIED":
+        raise error(
+            409,
+            "PROVIDER_MODEL_NOT_VERIFIED",
+            "当前分析模式将使用的模型尚未验证，请先验证该模型。",
+        )
+    if health_error == "PROVIDER_CREDENTIAL_CHANGED":
+        raise error(409, "PROVIDER_CREDENTIAL_CHANGED", "API Key 或凭据已变化，请重新验证连接。")
+    if health_error == "PROVIDER_CONFIGURATION_INCOMPLETE":
+        raise error(
+            409,
+            "PROVIDER_CONFIGURATION_INCOMPLETE",
+            "AI 服务配置已变化或不完整，请检查设置后重新验证。",
+        )
+    if health_state == "unhealthy":
         raise error(409, "PROVIDER_UNHEALTHY", "Provider健康检查失败。")
     paragraphs = list(
         session.scalars(
@@ -1110,6 +1296,49 @@ def get_analysis_run(run_id: int, session: Session = Depends(get_db)) -> Analysi
     if run is None:
         raise error(404, "ANALYSIS_RUN_NOT_FOUND", "分析运行不存在")
     return serialize_run(session, run)
+
+
+@router.post(
+    "/analysis-runs/{run_id}/cancel",
+    response_model=AnalysisRunCancelResponse,
+)
+def cancel_analysis_run(
+    run_id: int,
+    request: AnalysisRunCancelRequest | None = None,
+    session: Session = Depends(get_db),
+) -> AnalysisRunCancelResponse:
+    """Cooperative user cancel — persists request; workers stop at checkpoints."""
+    from app.services.task_cancellation import request_cancel
+
+    body = request or AnalysisRunCancelRequest()
+    try:
+        result = request_cancel(
+            session,
+            run_id,
+            reason=body.reason or "user_requested",
+            expected_version=body.expected_version,
+            client_request_id=body.client_request_id,
+        )
+    except LookupError:
+        raise error(404, "ANALYSIS_RUN_NOT_FOUND", "分析运行不存在") from None
+    except ValueError as exc:
+        if "VERSION_CONFLICT" in str(exc):
+            raise error(409, "ANALYSIS_RUN_VERSION_CONFLICT", "任务状态已变化，请刷新后重试") from None
+        raise error(400, "CANCEL_REJECTED", "无法停止该任务") from None
+    return AnalysisRunCancelResponse(
+        task_id=result.task_id,
+        previous_status=result.previous_status,
+        current_status=result.current_status,
+        cancellation_requested_at=result.cancellation_requested_at,
+        cancelled_at=result.cancelled_at,
+        message=result.message,
+        already_requested=result.already_requested,
+        already_cancelled=result.already_cancelled,
+        already_completed=result.already_completed,
+        cannot_cancel=result.cannot_cancel,
+        can_restart_as_new_task=result.can_restart_as_new_task,
+        status_version=result.status_version,
+    )
 
 
 def _boundary_recovery_budget(
@@ -2083,13 +2312,13 @@ def list_scenes(chapter_id: int, session: Session = Depends(get_db)) -> list[Sce
     )
     if latest_run_id is None:
         return []
-    return list(
-        session.scalars(
-            select(Scene)
-            .where(Scene.chapter_id == chapter_id, Scene.created_by_run_id == latest_run_id)
-            .order_by(Scene.ordinal)
-        )
-    )
+    run = session.get(AnalysisRun, latest_run_id)
+    if run is None:
+        return []
+    from app.services.scene_analysis_progress import load_revision_scenes
+
+    _revision, scenes = load_revision_scenes(session, run)
+    return scenes
 
 
 def resolve_scene(session: Session, scene_id: str) -> Scene | None:
@@ -2105,13 +2334,13 @@ def resolve_scene(session: Session, scene_id: str) -> Scene | None:
 
 @router.get("/analysis-runs/{run_id}/scenes", response_model=list[SceneResponse])
 def run_scenes(run_id: int, session: Session = Depends(get_db)) -> list[Scene]:
-    if session.get(AnalysisRun, run_id) is None:
+    run = session.get(AnalysisRun, run_id)
+    if run is None:
         raise error(404, "ANALYSIS_RUN_NOT_FOUND", "分析运行不存在")
-    return list(
-        session.scalars(
-            select(Scene).where(Scene.created_by_run_id == run_id).order_by(Scene.ordinal)
-        )
-    )
+    from app.services.scene_analysis_progress import load_revision_scenes
+
+    _revision, scenes = load_revision_scenes(session, run)
+    return scenes
 
 
 @router.get(

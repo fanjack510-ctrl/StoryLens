@@ -377,6 +377,13 @@ class ModelInvocationBroker:
                     details={"caller": caller, "provider_enabled": False},
                 ) from exc
             provider_enabled = bool(provider.capabilities().enabled)
+            from app.services.chapter_analysis_smoke_fake_transport import (
+                is_chapter_analysis_smoke_fake_enabled,
+            )
+
+            if not provider_enabled and is_chapter_analysis_smoke_fake_enabled():
+                # Local MG Fake may keep registry capability disabled; transport never dials.
+                provider_enabled = True
             if not provider_enabled:
                 raise ModelInvocationPolicyError(
                     f"Provider已停用，拒绝发送请求: {resolved_provider}",

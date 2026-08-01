@@ -48,7 +48,7 @@ describe("isStaleJourneyResponse", () => {
 });
 
 describe("resolveJourneyPageState", () => {
-  it("9.1 active overrides old failure", () => {
+  it("9.1 terminal failed beats active progress when detail failed", () => {
     expect(
       resolveJourneyPageState({
         journeyStatus: "failed",
@@ -57,10 +57,10 @@ describe("resolveJourneyPageState", () => {
         requestSequence: 2,
         appliedSequence: 1,
       }),
-    ).toBe("active");
+    ).toBe("terminal_failed");
   });
 
-  it("9.2 completed overrides old failure", () => {
+  it("9.2 bound failed is not overridden by chapterComplete/artifact (CHG-023 final)", () => {
     expect(
       resolveJourneyPageState({
         journeyStatus: "failed",
@@ -69,7 +69,7 @@ describe("resolveJourneyPageState", () => {
         requestSequence: 3,
         appliedSequence: 2,
       }),
-    ).toBe("completed");
+    ).toBe("terminal_failed");
   });
 
   it("9.3 out-of-order failed response returns null so UI keeps running", () => {
@@ -126,23 +126,23 @@ describe("resolveJourneyPageState", () => {
     ).toBe("terminal_failed");
   });
 
-  it("9.7 final artifact wins even with stale error fields", () => {
+  it("9.7 bound failed stays terminal even with artifact + stale error fields", () => {
     expect(
       resolveJourneyPageState({
         journeyStatus: "failed",
         errorCode: "SOME_OLD_ERROR",
         finalArtifactAvailable: true,
       }),
-    ).toBe("completed");
+    ).toBe("terminal_failed");
   });
 
-  it("maps retryable / interrupted failures away from terminal failed", () => {
+  it("maps recoverable partial as interrupted; failed(+retryable) as terminal failed", () => {
     expect(
       resolveJourneyPageState({
         journeyStatus: "failed",
         retryable: true,
       }),
-    ).toBe("interrupted");
+    ).toBe("terminal_failed");
     expect(
       resolveJourneyPageState({
         journeyStatus: "scene_profiles_partial",
@@ -152,18 +152,89 @@ describe("resolveJourneyPageState", () => {
       resolveJourneyPageState({
         journeyStatus: "failed",
         errorCode: "JOURNEY_INTERRUPTED",
+        retryable: true,
+      }),
+    ).toBe("terminal_failed");
+  });
+
+  it("CHG-023: failed + checkpoint/recovery noise never shows interrupted", () => {
+    expect(
+      resolveJourneyPageState({
+        currentJourneyId: 2,
+        responseJourneyId: 2,
+        journeyStatus: "failed",
+        progressStatus: "failed",
+        errorCode: "PIPELINE_UNEXPECTED_ERROR",
+        retryable: true,
+        finalArtifactAvailable: false,
+        chapterComplete: false,
+        effectiveStatus: "journey_failed",
+      }),
+    ).toBe("terminal_failed");
+  });
+
+  it("bound recoverable interrupted wins over sibling chapter_complete", () => {
+    expect(
+      resolveJourneyPageState({
+        currentJourneyId: 2,
+        responseJourneyId: 2,
+        journeyStatus: "scene_profiles_partial",
+        errorCode: "JOURNEY_INTERRUPTED",
+        retryable: true,
+        chapterComplete: true,
+        finalArtifactAvailable: true,
+        parentJourneyStatus: "succeeded",
+        effectiveStatus: "completed",
       }),
     ).toBe("interrupted");
   });
 
-  it("parent journey_running overrides stale failed GET", () => {
+  it("succeeded journey still completes even when parent chapter_complete", () => {
+    expect(
+      resolveJourneyPageState({
+        journeyStatus: "succeeded",
+        chapterComplete: true,
+        finalArtifactAvailable: true,
+      }),
+    ).toBe("completed");
+  });
+
+  it("CHG-023: succeeded + result beats stale interrupted progress/errorCode", () => {
+    expect(
+      resolveJourneyPageState({
+        currentJourneyId: 3,
+        responseJourneyId: 3,
+        journeyStatus: "succeeded",
+        progressStatus: "scene_profiles_partial",
+        errorCode: "JOURNEY_INTERRUPTED",
+        retryable: true,
+        finalArtifactAvailable: true,
+        chapterComplete: true,
+        parentJourneyStatus: "failed",
+        effectiveStatus: "journey_failed",
+      }),
+    ).toBe("completed");
+  });
+
+  it("CHG-023: stale JOURNEY_INTERRUPTED errorCode alone does not interrupt succeeded", () => {
+    expect(
+      resolveJourneyPageState({
+        journeyStatus: "succeeded",
+        errorCode: "JOURNEY_INTERRUPTED",
+        retryable: true,
+        finalArtifactAvailable: true,
+      }),
+    ).toBe("completed");
+  });
+
+  it("parent journey_running does not override bound failed status", () => {
     expect(
       resolveJourneyPageState({
         journeyStatus: "failed",
         parentJourneyStatus: "scene_profiles_running",
         effectiveStatus: "journey_running",
       }),
-    ).toBe("active");
+    ).toBe("terminal_failed");
   });
 });
 
@@ -177,6 +248,6 @@ describe("shouldPollJourneyResult", () => {
         effectiveStatus: "journey_running",
         journeyStatus: "failed",
       }),
-    ).toBe(true);
+    ).toBe(false);
   });
 });

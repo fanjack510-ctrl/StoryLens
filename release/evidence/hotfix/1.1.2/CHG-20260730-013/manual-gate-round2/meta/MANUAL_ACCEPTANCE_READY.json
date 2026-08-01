@@ -1,0 +1,49 @@
+﻿{
+    "frontend_url":  "http://127.0.0.1:1427",
+    "api_pid":  22024,
+    "precheck":  {
+                     "a_scenes":  3,
+                     "a_journey_before":  0,
+                     "c_not_interrupted_during_delay":  true,
+                     "b_continue_same_run":  true,
+                     "refresh":  "PASS",
+                     "c_workflow_starting":  true,
+                     "c_idempotent_one_journey":  true,
+                     "api_restart":  "PASS",
+                     "a_page":  200,
+                     "a_button":  "确认这 3 个场景并开始分析",
+                     "formal_db_writes":  0,
+                     "b_route":  "CURRENT_JOURNEY",
+                     "b_interrupted":  true,
+                     "real_provider_calls":  0,
+                     "b_can_resume":  true
+                 },
+    "public_head":  "1f00c4ab6477863fd5c1a29c5ef6755e20fc548b",
+    "fixture_a":  {
+                      "book_id":  1,
+                      "chapter_id":  1,
+                      "analysis_run_id":  1,
+                      "draft_revision_id":  2,
+                      "draft_etag":  "e4176ea3eccdacb43a5244798319492c5411f6020d6751fe638e11401286a7c7",
+                      "draft_scene_count":  3,
+                      "ai_scene_count":  6,
+                      "journey_count_before_confirm":  0,
+                      "confirm_url":  "http://127.0.0.1:1427/books/1?chapter=1\u0026analysisRun=1\u0026view=scene-boundary-review"
+                  },
+    "worker_delay_seconds":  4,
+    "fixture_b":  {
+                      "book_id":  2,
+                      "chapter_id":  2,
+                      "analysis_run_id":  2,
+                      "journey_run_id":  1,
+                      "confirmed_revision_id":  4,
+                      "confirmed_scene_count":  3,
+                      "journey_status":  "scene_profiles_partial",
+                      "root_error_code":  "JOURNEY_INTERRUPTED",
+                      "retryable":  true,
+                      "url":  "http://127.0.0.1:1427/books/2?chapter=2\u0026analysisRun=2\u0026journeyRun=1"
+                  },
+    "fe_pid":  29184,
+    "api_url":  "http://127.0.0.1:18048",
+    "database":  "C:\\Users\\msi\\AppData\\Local\\Temp\\storylens-mg-chg013-confirm-start\\database\\storylens-mg-chg013.db"
+}

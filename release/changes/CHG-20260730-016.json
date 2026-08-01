@@ -1,0 +1,76 @@
+{
+  "id": "CHG-20260730-016",
+  "title": "CHG-015 人工验收收口、集成并构建 RC.5",
+  "type": "build",
+  "base_version": "1.1.2",
+  "status": "tested",
+  "include_in_next_release": true,
+  "commits": [
+    {
+      "sha": "c401530d2b22a8ce622dd2a110da2e4c9e223b5c",
+      "message": "docs(release): mark CHG-015 verified and register CHG-016 RC.5 train",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "9d762a6ceb05d4616f0be638fe61cb6d226f0fe5",
+      "message": "docs(release): archive StoryLens 1.1.2-rc.5 build and isolated acceptance",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "7ab45272e18ca2ff57fecf9990925eeeb72e123b",
+      "message": "docs(release): mark CHG-016 tested with RC.5 evidence",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "e750c70508e484cfacd5ad1d54888394cd3b231c",
+      "message": "docs(release): record RC.5 public final head in build metadata",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "d83e7f1e80cd44e2eca53afbd57a0dae35ecf703",
+      "message": "docs(release): set CHG-016 status tested",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "0626da4d9b412becfd382f389d9a79ae098c2ef1",
+      "message": "docs(release): sync RC.5 BUILD_METADATA public final head",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [],
+  "files": [],
+  "user_summary": "记录 MG-015 PASS，验证 CHG-015，构建并隔离验收 1.1.2-rc.5",
+  "technical_summary": "",
+  "acceptance_criteria": [],
+  "tests": [
+    "apps/api/tests/test_chg015_recoverable_current_run.py",
+    "apps/api/tests/test_rc4_post_confirm_scene_analysis_chg015.py"
+  ],
+  "verification_evidence": [
+    "release/evidence/1.1.2-rc.5/ISOLATED_INSTALLED_ACCEPTANCE.json",
+    "release/evidence/1.1.2-rc.5/BUILD_METADATA.json",
+    "release/evidence/hotfix/1.1.2/CHG-20260730-015/MANUAL_GATE_PASS.md"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-30T07:14:52Z",
+  "updated_at": "2026-07-30T07:46:09Z"
+}

@@ -1,0 +1,84 @@
+{
+  "id": "CHG-20260729-005",
+  "title": "单章钩子提出、回应与章末牵引可视化",
+  "type": "fix",
+  "issue_id": null,
+  "base_version": "1.1.1",
+  "target_version": "1.1.2",
+  "public_branch": "fix/1.1.2-chapter-hook-simplification",
+  "private_branch": "fix/1.1.2-chapter-hook-simplification",
+  "status": "integrated",
+  "release_pool_status": "included",
+  "include_in_next_release": true,
+  "forward_port_required": true,
+  "forward_port_target": "integration/whole-book-v120",
+  "forward_port_status": "pending",
+  "depends_on": [
+    "CHG-20260729-004"
+  ],
+  "related_changes": [
+    {
+      "id": "CHG-20260729-004",
+      "relation": "verified prerequisite"
+    }
+  ],
+  "affected_modules": [
+    "apps/desktop/src/components/readerJourney"
+  ],
+  "commits": [
+    "5efd6dcdb93eddca0b8f5893b921761849a7257d",
+    "76d2b04020fcdf0ab97c5daecc33bfd5a1697ef8",
+    "c1a61aab8baf7a737268997fe9867042105b2d6d",
+    "225c491d54b865ecd8d85689ad780b223ed1d61a",
+    "befe06efa87482d0b3ef24c82f8533f563db48b8",
+    "d0024432a55d9fd4e257d5b92581715c735e0ce1",
+    "4559d6ec1c31f1d1f174fc804215c75dd076a391",
+    "9a91258e6d7cd6a4f3568dc49ff43641107bb521",
+    "e0bcc29a42764615e5d8cdc69b10bd284d0da6ef"
+  ],
+  "modules": [
+    "release",
+    "apps/desktop",
+    "apps/api"
+  ],
+  "files": [
+    "release/changes/CHG-20260729-005.json",
+    "release/evidence/hotfix/1.1.2/CHG-20260729-005/"
+  ],
+  "user_summary": "将单章钩子回收页简化为提出、回应、继续保留与章末牵引，并统一章节/场景钩子展示门禁。",
+  "technical_summary": "Presentation-only chapterHookSimplification with chapter_hook_mode gate, linked respond hard gate, diagnosis band aligned; tab name unchanged; no algorithm/persistence changes.",
+  "acceptance_criteria": [
+    "Tab name remains 钩子回收",
+    "Overview: 本章提出/回应/继续保留/章末牵引",
+    "Scene labels: 提出疑问/加深悬念/给出回应/留到下章",
+    "No score-only 明确回应 when chapter has no reliable hooks",
+    "Respond requires reliable linked Response + evidence",
+    "Other five lenses + composite unchanged"
+  ],
+  "tests": [
+    "apps/desktop/src/components/readerJourney/chapter_hook_simplification_chg005_local.test.tsx",
+    "apps/desktop/src/components/readerJourney/chapter_hook_simplification_chg005_complete.test.tsx",
+    "apps/desktop/src/components/readerJourney/chapter_hook_consistency_chg005.test.tsx",
+    "apps/desktop/src/components/readerJourney/HookPayoffTimeline.test.tsx",
+    "apps/api/tests/test_chapter_hook_simplification_chg005_local.py"
+  ],
+  "manual_gate": "MG-CHG-20260729-005 PASS",
+  "verification_evidence": [
+    "release/evidence/hotfix/1.1.2/CHG-20260729-005/CHAPTER_HOOK_UI_AUDIT.md",
+    "release/evidence/hotfix/1.1.2/CHG-20260729-005/TEST_RESULTS.json",
+    "release/evidence/hotfix/1.1.2/CHG-20260729-005/HTTP_E2E.json",
+    "release/evidence/hotfix/1.1.2/CHG-20260729-005/MANUAL_UI_ENV.md",
+    "release/evidence/hotfix/1.1.2/CHG-20260729-005/manual-gate-hook-consistency/",
+    "release/evidence/hotfix/1.1.2/CHG-20260729-005/MANUAL_GATE_PASS.md"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "FE presentation only; legacy journeys work without re-run."
+  },
+  "created_at": "2026-07-29T07:00:00Z",
+  "updated_at": "2026-07-29T09:00:00Z",
+  "base_head": "2e8ed1edaf7dc91933666f5e46f4b2bdb747407c",
+  "verified_head": "e0bcc29a42764615e5d8cdc69b10bd284d0da6ef"
+}

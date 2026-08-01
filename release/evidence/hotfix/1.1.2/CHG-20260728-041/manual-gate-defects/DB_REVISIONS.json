@@ -1,0 +1,35 @@
+[
+  {
+    "id": 1,
+    "chapter_id": 1,
+    "revision_number": 1,
+    "status": "superseded",
+    "source": "model",
+    "revision_etag": "931ecd12d8e4a257b7dd53cdf041357caf5d939f378b99bf35e279e7db2cfa04",
+    "boundary_hash": "b45fb33646f17fb9fcce66bceb018e0bcc46fab108e08c37548915bb09f6cc32",
+    "updated_at": "2026-07-28 10:18:52.218650",
+    "superseded_at": "2026-07-28 10:18:52.210976"
+  },
+  {
+    "id": 2,
+    "chapter_id": 1,
+    "revision_number": 2,
+    "status": "superseded",
+    "source": "user",
+    "revision_etag": "63b7d5e97de30286bd4901027a97b25361e1bf0e8798fc9286baeb0669825d9d",
+    "boundary_hash": "b45fb33646f17fb9fcce66bceb018e0bcc46fab108e08c37548915bb09f6cc32",
+    "updated_at": "2026-07-28 10:19:19.933564",
+    "superseded_at": "2026-07-28 10:19:19.932565"
+  },
+  {
+    "id": 3,
+    "chapter_id": 1,
+    "revision_number": 3,
+    "status": "confirmed",
+    "source": "user",
+    "revision_etag": "429230fd26489ca5ded6d84b42bbe0bab4c1c8eb63d92565ad46a52f9f6ace90",
+    "boundary_hash": "b45fb33646f17fb9fcce66bceb018e0bcc46fab108e08c37548915bb09f6cc32",
+    "updated_at": "2026-07-28 10:19:19.934562",
+    "superseded_at": null
+  }
+]

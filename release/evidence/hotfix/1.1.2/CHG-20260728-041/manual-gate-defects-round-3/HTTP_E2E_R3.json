@@ -1,0 +1,66 @@
+{
+  "api": "http://127.0.0.1:18041",
+  "steps": [
+    {
+      "get_overview": 200,
+      "awaiting": true
+    },
+    {
+      "create_draft": 201,
+      "revision_id": 2
+    },
+    {
+      "save_draft": 200,
+      "revision_id": 2
+    }
+  ],
+  "confirm": {
+    "http_status": 200,
+    "body": {
+      "revision_id": 2,
+      "revision_etag": "31a0706a2a7b10b276c6593790c46994d6088cefa875658852823930ebb056c8",
+      "boundary_hash": "520d55c0502313ffd5af33ae2e88023b0d598103968c1c707332c69eda8c713c",
+      "journey_run_id": 2,
+      "journey_started": true,
+      "journey_status": "queued",
+      "already_confirmed": false,
+      "journey_error_code": null,
+      "journey_error_message": null
+    }
+  },
+  "journey_run_id": 2,
+  "journey_started": true,
+  "journey_status": "queued",
+  "poll": [
+    {
+      "status_code": 200,
+      "journey_status": "failed"
+    }
+  ],
+  "final_journey": {
+    "http_status": 200,
+    "journey_run_id": 2,
+    "status": "failed",
+    "scene_revision_id": 2,
+    "result_status": "current",
+    "started_at": "2026-07-28T14:54:50.790445",
+    "error_code": "JOURNEY_REPAIR_VALIDATION_FAILED",
+    "total_scene_count": 4,
+    "completed_scene_count": 0
+  },
+  "by_analysis_run": {
+    "http_status": 200,
+    "journey_run_id": 2,
+    "scene_revision_id": 2,
+    "status": "failed"
+  },
+  "pass_criteria": {
+    "confirm_returns_journey_run_id": true,
+    "revision_match": true,
+    "analysis_query_same_id": true,
+    "started_at_present": true,
+    "terminal_or_active_explained": true,
+    "not_scene_analysis_incomplete": true
+  },
+  "ok": true
+}

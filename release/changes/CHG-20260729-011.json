@@ -1,0 +1,83 @@
+{
+  "id": "CHG-20260729-011",
+  "title": "Unify chapter analysis presentation, revision binding, and hook lens",
+  "type": "fix",
+  "base_version": "1.1.2",
+  "status": "verified",
+  "include_in_next_release": true,
+  "commits": [
+    {
+      "sha": "20101ef63dd7f5226593cc2fc55f04c923440435",
+      "message": "fix(journey): bind current scene results to confirmed revision",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "74bcc21217a48f83c622550ba93a49c934e3f46d",
+      "message": "fix(workflow): unify chapter analysis presentation state",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "a8d90b0d19a10c233b238de7c1e7fe23817ac146",
+      "message": "ui(chapter): simplify stage-aware navigation and confirmation flow",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "4c409bd552543edab8fe8983e3f9636f72cf74e8",
+      "message": "ui(journey): redesign hook lens around reader questions",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "5ed79dcee4394d6a6c3538615700380803c56028",
+      "message": "docs(hotfix): record rc2 workflow consistency verification",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "060c95df83ca33a790d0de59ebd0ad77ee4c0b8a",
+      "message": "chore(registry): sync CHG-011 tested status and commit list",
+      "primary": false,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [],
+  "files": [],
+  "user_summary": "统一章节分析流程状态、确认场景结果绑定与钩子回收页面表达",
+  "technical_summary": "ChapterAnalysisPresentationV1 SSOT; scene results bind confirmed revision; stage-aware nav; hook lens reader questions",
+  "acceptance_criteria": [],
+  "tests": [
+    "pytest apps/api/tests/test_workflow_consistency_chg011.py (6 passed)",
+    "vitest CHG-011 suite (85 passed)",
+    "HTTP E2E Fake Provider (8/8)"
+  ],
+  "verification_evidence": [
+    "release/evidence/hotfix/1.1.2/CHG-20260729-011/",
+    "release/evidence/hotfix/1.1.2/CHG-20260729-011/MANUAL_GATE_PASS.md"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "P0",
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-29T15:06:00Z",
+  "updated_at": "2026-07-29T16:17:51Z",
+  "release_pool_status": "included",
+  "manual_gate": {
+    "id": "MG-CHG-20260729-011",
+    "result": "PASSED",
+    "user_confirmed": "2026-07-29",
+    "accepted_head": "fba8e845d1c35dd79edcb00ee3bab8f19a0ac858"
+  }
+}

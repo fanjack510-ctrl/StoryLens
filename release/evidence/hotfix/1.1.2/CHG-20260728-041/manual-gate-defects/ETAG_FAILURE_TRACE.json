@@ -1,0 +1,24 @@
+﻿{
+  "change": "CHG-20260728-041",
+  "manual_gate": "MG-CHG-20260728-041",
+  "captured_at": "2026-07-28T18:30:00+08:00",
+  "url": "/books/1?chapter=1&analysisRun=1&view=result&tab=reader-journey",
+  "ui_shown": "调整场景边界 (SceneBoundaryReviewPanel)",
+  "api_access_log_trace": [
+    {"step": 1, "request": "POST /draft/2/confirm", "status": 200, "note": "first confirm succeeds; server rotates etag"},
+    {"step": 2, "request": "POST /draft", "status": 201, "note": "new draft revision_id=3"},
+    {"step": 3, "request": "POST /draft/3/confirm", "status": 200, "note": "confirm succeeds; revision_etag rotated"},
+    {"step": 4, "request": "POST /draft/3/confirm", "status": 409, "note": "retry/reclick with pre-confirm etag against confirmed revision"},
+    {"step": 5, "request": "POST /draft/3/confirm xN", "status": 409, "error_code": "SCENE_REVISION_CONCURRENT_MODIFICATION"}
+  ],
+  "database_revisions": [
+    {"id": 1, "status": "superseded", "source": "model", "revision_etag_prefix": "931ecd12"},
+    {"id": 2, "status": "superseded", "source": "user", "revision_etag_prefix": "63b7d5e9"},
+    {"id": 3, "status": "confirmed", "source": "user", "revision_etag": "429230fd26489ca5ded6d84b42bbe0bab4c1c8eb63d92565ad46a52f9f6ace90"}
+  ],
+  "frontend_error_display": "raw ApiError.message containing SCENE_REVISION_CONCURRENT_MODIFICATION in scene-boundary-error notice",
+  "root_cause_category": "C",
+  "root_cause_detail": "confirm_scene_revision_v1 rotates revision_etag on success; SceneBoundaryReviewPanel confirmMutation keeps pre-confirm etag in React state, allows re-submit, and useEffect+invalidateQueries can rehydrate stale overview.draft_revision etag. Secondary: D INVALIDATE_REFETCH_RACE via sync-from-overview effect; A mutation response not applied via setQueryData.",
+  "put_draft_mutations_in_failing_session": 0,
+  "notes": "Boundary move/delete were local-only until Save; confirm disabled when dirty with no feedback. Panel mounted under tab=reader-journey."
+}

@@ -1,0 +1,119 @@
+{
+  "id": "CHG-20260730-017",
+  "title": "Hide reading journey navigation until journey generation starts",
+  "type": "fix",
+  "base_version": "1.1.2",
+  "status": "verified",
+  "include_in_next_release": true,
+  "commits": [
+    {
+      "sha": "834cb3401945ca93729fe4adfb96b195e3a64647",
+      "message": "fix(chapter): hide journey navigation during scene analysis",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "ea1944e126b9076cc3057130fd9e97231bf72d0b",
+      "message": "docs(release): mark CHG-20260730-017 tested",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "d7635a78407c52256a752e416ad144fbd92ad36d",
+      "message": "docs(evidence): record CHG-017 manual UI env URLs",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "6c498cc7860b12469321c041c5ebac0829b72c76",
+      "message": "docs(hotfix): prepare CHG-017 isolated manual UI fixtures",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "d57740c642e4a3088f79c0d667f5b45a2ccb7653",
+      "message": "docs(release): attach CHG-017 MG fixture commit",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "c85784bfeebbcf887ef993832458aab5d0baaaed",
+      "message": "docs(release): sync CHG-017 tested status after MG prep",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "972388be3fecac6a42dd1718c082f4cbaff2b767",
+      "message": "fix(chapter): promote reading journey after completion",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "44c24ac23c2afb2e602ddfe62a080b151a4d076a",
+      "message": "docs(release): mark CHG-20260730-017 verified",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "d51cd05eb68891d9607df2b791fbd05c0cb0a436",
+      "message": "docs(release): attach CHG-017 verified tip commit",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "b93b5ae8844192172fb29f313a5e23be947cd6f1",
+      "message": "docs(release): sync CHG-017 verified registry tip",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "341a5383b0e4fe23c53c6a2b8a6058ab309881f8",
+      "message": "docs(release): finalize CHG-017 verified HEAD tip",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "desktop",
+    "api"
+  ],
+  "files": [
+    "apps/desktop/src/services/chapterAnalysisPresentation.ts",
+    "apps/desktop/src/pages/BookRoutePage.tsx",
+    "apps/desktop/src/components/layout/WorkspaceViewSwitcher.tsx",
+    "apps/desktop/src/services/resolveWorkspaceLayout.ts"
+  ],
+  "user_summary": "场景分析期间隐藏阅读旅程入口，避免误导性未开始页面",
+  "technical_summary": "Hide ordinary journey nav until journey_* workflow; redirect premature deep links; remove 尚未开始 gate",
+  "acceptance_criteria": [
+    "Scene analysis hides 阅读旅程; journey deep link redirects; journey_starting shows nav"
+  ],
+  "tests": [
+    "apps/desktop/src/services/chapterAnalysisPresentation.journeyNav.test.ts",
+    "apps/desktop/src/pages/BookRoutePage.journeyNav.test.tsx",
+    "apps/api/tests/test_journey_nav_visibility_chg017.py",
+    "apps/desktop/src/services/chapterAnalysisPresentation.completedJourneyCta.test.ts"
+  ],
+  "verification_evidence": [
+    "release/evidence/hotfix/1.1.2/CHG-20260730-017/TEST_RESULTS.json",
+    "release/evidence/hotfix/1.1.2/CHG-20260730-017/HTTP_E2E.json",
+    "release/evidence/hotfix/1.1.2/CHG-20260730-017/VERIFICATION.md",
+    "release/evidence/hotfix/1.1.2/CHG-20260730-017/MANUAL_GATE_PASS.md"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-30T09:25:11Z",
+  "updated_at": "2026-07-30T12:45:15Z"
+}

@@ -1,0 +1,74 @@
+﻿{
+  "pass": true,
+  "chapter_id": 6,
+  "journey_run_id": 5,
+  "results": [
+    {
+      "check": "hook_rich_journey_http",
+      "pass": true,
+      "status_code": 200,
+      "status": "succeeded",
+      "loop_count": 2,
+      "questions": [
+        "主角为什么会出现在这里？",
+        "门外的人是谁？"
+      ]
+    },
+    {
+      "check": "hook_rich_scene_count",
+      "pass": true,
+      "status_code": 200,
+      "scene_count": 6,
+      "confirmed_revision_id": 9
+    },
+    {
+      "check": "hook_rich_frontend_http",
+      "pass": true,
+      "status_code": 200,
+      "url": "http://127.0.0.1:1426/books/1?chapter=6&analysisRun=7&journeyRun=5&view=result&tab=reader-journey&lens=hook_payoff"
+    },
+    {
+      "check": "url_listed_REVISION_22_TO_6",
+      "pass": true,
+      "url": "http://127.0.0.1:1426/books/1?chapter=1&analysisRun=2&view=result"
+    },
+    {
+      "check": "url_listed_INTERRUPTED",
+      "pass": true,
+      "url": "http://127.0.0.1:1426/books/1?chapter=2&analysisRun=3&journeyRun=2"
+    },
+    {
+      "check": "url_listed_AWAITING_CONFIRMATION",
+      "pass": true,
+      "url": "http://127.0.0.1:1426/books/1?chapter=3&analysisRun=4&view=scene-boundary-review"
+    },
+    {
+      "check": "url_listed_RUNNING",
+      "pass": true,
+      "url": "http://127.0.0.1:1426/books/1?chapter=4&analysisRun=5&journeyRun=3"
+    },
+    {
+      "check": "url_listed_SUCCEEDED",
+      "pass": true,
+      "url": "http://127.0.0.1:1426/books/1?chapter=5&analysisRun=6&journeyRun=4&view=result"
+    },
+    {
+      "check": "url_listed_HOOK_EMPTY",
+      "pass": true,
+      "url": "http://127.0.0.1:1426/books/1?chapter=5&journeyRun=4&lens=hook_payoff"
+    },
+    {
+      "check": "interrupted_progress",
+      "pass": true,
+      "status_code": 200,
+      "status": "scene_profiles_partial"
+    },
+    {
+      "check": "revision_22_to_6_scenes",
+      "pass": true,
+      "status_code": 200,
+      "scene_count": 6
+    }
+  ],
+  "hook_rich_url": "http://127.0.0.1:1426/books/1?chapter=6&analysisRun=7&journeyRun=5&view=result&tab=reader-journey&lens=hook_payoff"
+}

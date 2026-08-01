@@ -12,7 +12,6 @@ import type {
   ReaderJourneyVisualization,
 } from "../../types/readerJourneyVisualization";
 import { formatJourneyMetricLabel, formatJourneySceneLabel, formatJourneyScore, roleLabelZh } from "./journeyUiLabels";
-import { PHASE_BAND_COLORS } from "./journeyVisualTokens";
 import {
   buildLinePathD,
   clampViewWindow,
@@ -25,14 +24,16 @@ import {
 import {
   CHART_PAD,
   JOURNEY_VISUALIZATION_VERSION,
-  PHASE_BAND_OPACITY,
-  RISK_BAND_OPACITY,
   SCENE_DENSITY,
   allowsHorizontalPanZoom,
   computeChartContentWidth,
   requiresBrush,
   type YDomainMode,
 } from "./journeyVisualizationConfig";
+import {
+  buildJourneyStageBands,
+  resolveSceneStageAssignment,
+} from "./journeyStageBands";
 import {
   buildLensChartLines,
   getObservationLens,
@@ -56,6 +57,17 @@ import {
   resolveHookPayoffDataStatus,
   sceneRoleInLifecycle,
 } from "./hookPayoffLensModel";
+import {
+  COMPREHENSIVE_READING_COPY,
+  resolveCompositeRoleFit,
+  resolveOverallReadingScore,
+} from "./comprehensiveReadingPresentation";
+import {
+  buildDimensionJudgmentsForVisualization,
+  isDimensionJudgmentLens,
+  resolveDimensionNodeLabelVisibility,
+  type DimensionJudgmentLens,
+} from "./dimensionNodeJudgments";
 
 const ROLE_CLASS: Record<string, string> = {
   core: "journey-node-core",
@@ -235,7 +247,8 @@ export function CanonicalJourneyChart({
   );
 
   const segmentMarkers = useMemo(() => {
-    if (!lensId) return [];
+    // Composite lens uses comprehensive key nodes instead of generic segment markers.
+    if (!lensId || lensId === "composite") return [];
     const verifiedFullPayoffScenes = new Set<number>();
     for (const node of nodes) {
       const claim = getScenePayoffClaim(visualization, node.scene_ordinal);
@@ -261,6 +274,20 @@ export function CanonicalJourneyChart({
       { lensId, verifiedFullPayoffScenes },
     );
   }, [lensId, nodes, visualization]);
+
+  const comprehensiveKeyNodes = useMemo(() => {
+    if (lensId !== "composite") return [];
+    return visualization.comprehensive_key_nodes ?? [];
+  }, [lensId, visualization.comprehensive_key_nodes]);
+
+  const dimensionJudgments = useMemo(() => {
+    if (!isDimensionJudgmentLens(lensId)) return null;
+    return buildDimensionJudgmentsForVisualization(
+      nodes,
+      lensId as DimensionJudgmentLens,
+      selectedSceneOrdinal,
+    );
+  }, [lensId, nodes, selectedSceneOrdinal]);
 
   const pacingSegments = useMemo(() => {
     if (lensId !== "pacing") return [];
@@ -384,9 +411,29 @@ export function CanonicalJourneyChart({
   const padLeft = CHART_PAD.left;
   const plotHeight = chartHeight - CHART_PAD.top - CHART_PAD.bottom;
   const plotWidth = Math.max(chartWidth - CHART_PAD.left - CHART_PAD.right, 1);
+  const plotLeft = padLeft;
+  const plotRight = padLeft + plotWidth;
   const clipPathId = exportFullJourney
     ? "journey-plot-clip-full-export"
     : "journey-plot-clip";
+
+  const areaPath = useMemo(() => {
+    if (lensId !== "composite" || !linePath || !mainSeries.length) return "";
+    const baseline = padTop + plotHeight;
+    const firstX = xFor(mainSeries[0].scene_ordinal);
+    const lastX = xFor(mainSeries[mainSeries.length - 1].scene_ordinal);
+    return `${linePath} L ${lastX} ${baseline} L ${firstX} ${baseline} Z`;
+  }, [lensId, linePath, mainSeries, padTop, plotHeight, xFor]);
+
+  const stageBands = useMemo(() => {
+    const ordinals = nodes.map((node) => node.scene_ordinal);
+    return buildJourneyStageBands(visualization, {
+      sceneOrdinals: ordinals,
+      xFor,
+      plotLeft,
+      plotRight,
+    });
+  }, [visualization, nodes, xFor, plotLeft, plotRight]);
 
   const tooltipNode =
     hover != null ? nodes.find((n) => n.scene_ordinal === hover.ordinal) : undefined;
@@ -492,30 +539,58 @@ export function CanonicalJourneyChart({
           </clipPath>
         </defs>
 
-        {/* 1. Phase background (clipped to plot) */}
-        <g data-layer="phase_background" clipPath={`url(#${clipPathId})`}>
-          {visualization.phases.map((phase, index) => {
-            const x1 = xFor(phase.start_scene_ordinal) - 8;
-            const x2 = xFor(phase.end_scene_ordinal) + 8;
+        {/* 1. Phase background (clipped to plot) — midpoint bands from shared tokens */}
+        <g data-layer="phase_background" data-testid="journey-stage-bands" clipPath={`url(#${clipPathId})`}>
+          {stageBands.map((band) => {
+            const width = Math.max(band.x2 - band.x1, 1);
+            const labelX = band.x1 + width / 2;
             return (
-              <rect
-                key={`phase-band-${phase.ordinal}`}
-                x={x1}
-                y={padTop}
-                width={Math.max(x2 - x1, 4)}
-                height={plotHeight}
-                fill={PHASE_BAND_COLORS[index % PHASE_BAND_COLORS.length]}
-                opacity={
-                  selectedPhaseOrdinal === phase.ordinal
-                    ? PHASE_BAND_OPACITY.active
-                    : PHASE_BAND_OPACITY.idle
-                }
-              />
+              <g
+                key={band.id}
+                data-testid={`journey-stage-band-${band.stageKey}-${band.startSceneOrdinal}`}
+                data-stage-key={band.stageKey}
+                data-start-scene={band.startSceneOrdinal}
+                data-end-scene={band.endSceneOrdinal}
+                data-warning={band.warning || undefined}
+              >
+                <rect
+                  x={band.x1}
+                  y={padTop}
+                  width={width}
+                  height={plotHeight}
+                  fill={band.token.chartBand}
+                  fillOpacity={1}
+                  data-stage-fill={band.token.chartBand}
+                />
+                <text
+                  x={labelX}
+                  y={padTop + 14}
+                  textAnchor="middle"
+                  className="journey-stage-band-label"
+                  data-testid={`journey-stage-band-label-${band.startSceneOrdinal}`}
+                  data-stage-title={band.label}
+                >
+                  {band.label}
+                </text>
+              </g>
             );
           })}
+          {stageBands.slice(1).map((band) => (
+            <line
+              key={`stage-divider-${band.id}`}
+              data-testid={`journey-stage-divider-${band.startSceneOrdinal}`}
+              x1={band.x1}
+              y1={padTop}
+              x2={band.x1}
+              y2={padTop + plotHeight}
+              stroke={band.token.divider}
+              strokeWidth={1}
+              strokeOpacity={0.85}
+            />
+          ))}
         </g>
 
-        {/* 2. Risk background */}
+        {/* 2. Risk markers — thin top strip only (never full-height wash over stage bands) */}
         <g data-layer="risk_background" clipPath={`url(#${clipPathId})`}>
           {visualization.risk_intervals.map((interval) => {
             const x1 = xFor(interval.start_scene_ordinal) - 6;
@@ -523,16 +598,12 @@ export function CanonicalJourneyChart({
             const startNode = nodes.find(
               (node) => node.scene_ordinal === interval.start_scene_ordinal,
             );
+            const riskWidth = Math.max(x2 - x1, 4);
+            const stripHeight = 6;
             return (
-              <rect
+              <g
                 key={`${interval.risk_type}-${interval.start_scene_ordinal}`}
                 data-testid={`journey-risk-${interval.risk_type}-${interval.start_scene_ordinal}`}
-                x={x1}
-                y={padTop}
-                width={Math.max(x2 - x1, 4)}
-                height={plotHeight}
-                fill="#f3ddd8"
-                opacity={RISK_BAND_OPACITY}
                 style={{ cursor: "pointer" }}
                 onClick={(event) => {
                   event.stopPropagation();
@@ -541,25 +612,46 @@ export function CanonicalJourneyChart({
                     startNode,
                   );
                 }}
-              />
+              >
+                <rect
+                  x={x1}
+                  y={padTop}
+                  width={riskWidth}
+                  height={stripHeight}
+                  fill="#c47a6a"
+                  opacity={0.9}
+                  data-risk-marker="top-strip"
+                  data-risk-label="阅读阻力区间"
+                />
+                <rect
+                  x={x1}
+                  y={padTop}
+                  width={riskWidth}
+                  height={plotHeight}
+                  fill="transparent"
+                  data-risk-hit-area="true"
+                />
+              </g>
             );
           })}
         </g>
 
         {/* 3. Grid + axes */}
         <g data-layer="grid">
-          {visualization.phases.map((phase) => (
-            <line
-              key={`phase-line-${phase.start_scene_ordinal}`}
-              x1={xFor(phase.start_scene_ordinal)}
-              y1={padTop}
-              x2={xFor(phase.start_scene_ordinal)}
-              y2={padTop + plotHeight}
-              stroke="var(--line)"
-              strokeDasharray="3 3"
-              strokeOpacity={0.55}
-            />
-          ))}
+          {lensId === "composite" ? (
+            <text
+              x={12}
+              y={padTop + plotHeight / 2}
+              textAnchor="middle"
+              className="journey-axis-title"
+              data-testid="journey-y-axis-title"
+              transform={`rotate(-90 12 ${padTop + plotHeight / 2})`}
+              fontSize={11}
+              fill="var(--muted)"
+            >
+              {COMPREHENSIVE_READING_COPY.yAxisTitle}
+            </text>
+          ) : null}
           <line
             x1={CHART_PAD.left}
             y1={padTop + plotHeight}
@@ -588,7 +680,7 @@ export function CanonicalJourneyChart({
                 : null;
             const label =
               lensId === "composite" && semantic
-                ? semantic
+                ? `${tick}·${semantic}`
                 : String(tick);
             return (
               <g
@@ -620,25 +712,114 @@ export function CanonicalJourneyChart({
             if (dense && node.scene_ordinal % 2 === 0 && node.scene_ordinal !== sceneCount) {
               return null;
             }
+            const stage = resolveSceneStageAssignment(visualization, node.scene_ordinal, node);
+            const isStageStart = stageBands.some(
+              (band) => band.startSceneOrdinal === node.scene_ordinal,
+            );
+            const shortLabel =
+              lensId === "composite"
+                ? node.comprehensive_short_label || null
+                : dimensionJudgments?.get(node.scene_ordinal)?.short_label || null;
+            const dimJudgment = dimensionJudgments?.get(node.scene_ordinal);
+            const showShort =
+              shortLabel &&
+              (lensId === "composite"
+                ? selectedSceneOrdinal === node.scene_ordinal ||
+                  sceneCount <= 8 ||
+                  node.scene_ordinal % 2 === 1
+                : dimJudgment
+                  ? resolveDimensionNodeLabelVisibility({
+                      sceneCount,
+                      importance: dimJudgment.importance,
+                      isSelected: selectedSceneOrdinal === node.scene_ordinal,
+                      judgmentSource: dimJudgment.judgment_source,
+                    }).showOnAxis
+                  : false);
             return (
-              <text
+              <g
                 key={`x-label-${node.scene_ordinal}`}
-                x={xFor(node.scene_ordinal)}
-                y={chartHeight - 8}
-                textAnchor="middle"
-                className="journey-axis-label"
                 data-testid={
                   exportFullJourney ? undefined : `journey-x-label-${node.scene_ordinal}`
                 }
+                data-stage-key={stage.stageKey}
+                data-dimension-short-label={
+                  isDimensionJudgmentLens(lensId) ? shortLabel || undefined : undefined
+                }
               >
-                S{node.scene_ordinal}
-              </text>
+                <text
+                  x={xFor(node.scene_ordinal)}
+                  y={chartHeight - 14}
+                  textAnchor="middle"
+                  className="journey-axis-label"
+                >
+                  S{node.scene_ordinal}
+                </text>
+                <rect
+                  x={xFor(node.scene_ordinal) - 8}
+                  y={chartHeight - 8}
+                  width={16}
+                  height={3}
+                  rx={1}
+                  fill={stage.token.sceneMarker}
+                  data-testid={
+                    exportFullJourney
+                      ? undefined
+                      : `journey-x-stage-mark-${node.scene_ordinal}`
+                  }
+                />
+                {isStageStart && stage.stageKey !== "unknown" ? (
+                  <text
+                    x={xFor(node.scene_ordinal)}
+                    y={chartHeight - 22}
+                    textAnchor="middle"
+                    className="journey-axis-stage-start"
+                    data-testid={
+                      exportFullJourney
+                        ? undefined
+                        : `journey-x-stage-start-${node.scene_ordinal}`
+                    }
+                  >
+                    {stage.label}起点
+                  </text>
+                ) : null}
+                {showShort ? (
+                  <text
+                    x={xFor(node.scene_ordinal)}
+                    y={chartHeight - (isStageStart ? 32 : 24)}
+                    textAnchor="middle"
+                    className={
+                      lensId === "composite"
+                        ? "journey-comprehensive-short-label"
+                        : "journey-dimension-short-label"
+                    }
+                    data-testid={
+                      lensId === "composite"
+                        ? `journey-comprehensive-short-${node.scene_ordinal}`
+                        : `journey-dimension-axis-short-${node.scene_ordinal}`
+                    }
+                    fontSize={9}
+                    fill="var(--muted)"
+                  >
+                    {shortLabel}
+                  </text>
+                ) : null}
+              </g>
             );
           })}
         </g>
 
         {/* 4. Curve (clipped); nodes stay outside clip so radius is never cropped */}
         <g data-layer="curve" clipPath={`url(#${clipPathId})`}>
+          {areaPath ? (
+            <path
+              d={areaPath}
+              fill="var(--accent)"
+              fillOpacity={0.06}
+              stroke="none"
+              data-testid="journey-curve-area-fill"
+              style={{ pointerEvents: "none" }}
+            />
+          ) : null}
           {linePath && (
             <path
               d={linePath}
@@ -662,6 +843,32 @@ export function CanonicalJourneyChart({
             />
           ) : null}
           {/* In-chart SVG legends removed: single HTML legend sits centered above the curve. */}
+          {comprehensiveKeyNodes.map((kn) => {
+            const cx = xFor(kn.scene_ordinal);
+            const point = series.find((item) => item.scene_ordinal === kn.scene_ordinal);
+            const value = resolveMetricValue(point);
+            if (value == null) return null;
+            const cy = yScale.yForValue(value);
+            const text = kn.detail ? `${kn.label}：${kn.detail}` : kn.label;
+            return (
+              <g
+                key={`key-${kn.kind}-${kn.scene_ordinal}`}
+                data-testid={`journey-key-node-${kn.kind}-${kn.scene_ordinal}`}
+                data-key-node-kind={kn.kind}
+              >
+                <text
+                  x={cx}
+                  y={Math.max(padTop + 28, cy - 16)}
+                  textAnchor="middle"
+                  fontSize={10}
+                  fill="var(--color-text-primary, var(--text))"
+                  className="journey-key-node-label"
+                >
+                  {Array.from(text).length > 16 ? `${kn.label}` : text}
+                </text>
+              </g>
+            );
+          })}
           {segmentMarkers.map((marker) => {
             const x1 = xFor(marker.fromOrdinal);
             const x2 = xFor(marker.toOrdinal);
@@ -670,7 +877,7 @@ export function CanonicalJourneyChart({
               <text
                 key={`seg-${marker.fromOrdinal}-${marker.toOrdinal}-${marker.label}`}
                 x={midX}
-                y={padTop + 12}
+                y={padTop + plotHeight / 2 - 10}
                 textAnchor="middle"
                 className="journey-segment-marker"
                 data-testid={`journey-segment-marker-${marker.toOrdinal}`}
@@ -759,15 +966,30 @@ export function CanonicalJourneyChart({
             const tier = hookTier(visualization, node.scene_ordinal, sceneCount);
             const hookSize = tier === "chapter" ? 7 : tier === "phase" ? 5.5 : 4;
             const valenceDir =
-              lensId === "emotion" ? valenceDirection(node) : null;
+              lensId === "emotion" && !dimensionJudgments
+                ? valenceDirection(node)
+                : null;
+            const dimJudgment = dimensionJudgments?.get(node.scene_ordinal) ?? null;
+            const showDimAbove =
+              dimJudgment?.short_label &&
+              resolveDimensionNodeLabelVisibility({
+                sceneCount,
+                importance: dimJudgment.importance,
+                isSelected: selected,
+                judgmentSource: dimJudgment.judgment_source,
+              }).showAboveNode;
             const pacingLabel =
-              lensId === "pacing"
+              lensId === "pacing" && !dimensionJudgments
                 ? pacingFitLabel(
                     node.scores.pacing_speed ?? value,
                     node.scene_role,
                     node.scores.pacing_fit,
                   )
                 : null;
+            const compositeFit =
+              lensId === "composite" ? resolveCompositeRoleFit(node) : null;
+            const dimensionFit =
+              dimJudgment && isDimensionJudgmentLens(lensId) ? dimJudgment.fit_label : null;
             const stroke = visual.colorToken;
             const fill =
               visual.shape === "hollow_circle" || visual.shape === "triangle" || visual.shape === "diamond"
@@ -845,6 +1067,23 @@ export function CanonicalJourneyChart({
                     {valenceDir === "up" ? "↑" : "↓"}
                   </text>
                 ) : null}
+                {showDimAbove ? (
+                  <text
+                    x={cx}
+                    y={cy - radius - 8}
+                    textAnchor="middle"
+                    fontSize={9}
+                    fill="var(--text)"
+                    fontWeight={selected ? 600 : 500}
+                    className="journey-dimension-node-judgment"
+                    data-testid={`journey-dimension-judgment-${node.scene_ordinal}`}
+                    data-dimension-lens={lensId || undefined}
+                    data-judgment-source={dimJudgment?.judgment_source}
+                    data-importance={dimJudgment?.importance}
+                  >
+                    {dimJudgment?.short_label}
+                  </text>
+                ) : null}
                 {pacingLabel ? (
                   <text
                     x={cx}
@@ -855,6 +1094,36 @@ export function CanonicalJourneyChart({
                     data-testid={`journey-pacing-fit-${node.scene_ordinal}`}
                   >
                     {pacingLabel}
+                  </text>
+                ) : null}
+                {dimensionFit ? (
+                  <text
+                    x={cx}
+                    y={cy + radius + 11}
+                    textAnchor="middle"
+                    fontSize={9}
+                    fill="var(--muted)"
+                    data-testid={
+                      lensId === "pacing"
+                        ? `journey-pacing-fit-${node.scene_ordinal}`
+                        : `journey-dimension-fit-${node.scene_ordinal}`
+                    }
+                    data-dimension-fit={dimensionFit}
+                  >
+                    {dimensionFit}
+                  </text>
+                ) : null}
+                {compositeFit ? (
+                  <text
+                    x={cx}
+                    y={cy + radius + 11}
+                    textAnchor="middle"
+                    fontSize={9}
+                    fill="var(--muted)"
+                    data-testid={`journey-composite-fit-${node.scene_ordinal}`}
+                    data-composite-role-fit={compositeFit}
+                  >
+                    {compositeFit}
                   </text>
                 ) : null}
                 {payoffOrdinals.has(node.scene_ordinal) && (
@@ -921,9 +1190,9 @@ export function CanonicalJourneyChart({
           {hover != null && tooltipNode && (
             <foreignObject
               x={Math.min(Math.max(hover.x - 90, 4), chartWidth - 220)}
-              y={Math.max(hover.y - (lensId === "hook_payoff" ? 160 : 110), 4)}
+              y={Math.max(hover.y - (lensId === "hook_payoff" ? 160 : isDimensionJudgmentLens(lensId) ? 130 : 110), 4)}
               width={lensId === "hook_payoff" ? 220 : 196}
-              height={lensId === "hook_payoff" ? 168 : 128}
+              height={lensId === "hook_payoff" ? 168 : isDimensionJudgmentLens(lensId) ? 148 : 128}
               data-testid="journey-node-tooltip"
             >
               <div
@@ -982,11 +1251,73 @@ export function CanonicalJourneyChart({
                     const scoreNoun =
                       lensLines?.[0]?.labelZh ||
                       (lensId === "composite"
-                        ? lensExpl.chart_title || "综合阅读动力"
+                        ? lensExpl.chart_title || "综合阅读"
                         : lensExpl.title || formatJourneyMetricLabel(metric));
                     const compareNoun = lensLines?.[1]?.labelZh || null;
                     const roles = buildSceneRoleTags(visualization, tooltipNode.scene_ordinal);
                     const roleText = roles.map((r) => r.label).join(" · ") || "无特定叙事作用标签";
+                    if (lensId === "composite") {
+                      const fit = resolveCompositeRoleFit(tooltipNode);
+                      const score = resolveOverallReadingScore(tooltipNode);
+                      return (
+                        <>
+                          <div>
+                            {formatJourneySceneLabel(tooltipNode.scene_ordinal)}
+                            {tooltipNode.scene_role
+                              ? ` · ${roleLabelZh(tooltipNode.scene_role)}`
+                              : tooltipNode.role
+                                ? ` · ${roleLabelZh(tooltipNode.role)}`
+                                : ""}
+                          </div>
+                          <div data-testid="journey-tooltip-primary-metric">
+                            综合阅读：
+                            {score == null ? "暂无数据" : formatJourneyScore(score)}
+                          </div>
+                          <div data-testid="journey-tooltip-composite-fit">适配：{fit}</div>
+                          {tooltipNode.primary_driver ? (
+                            <div data-testid="journey-tooltip-driver">
+                              推动：{tooltipNode.primary_driver}
+                            </div>
+                          ) : null}
+                          {tooltipNode.primary_drag ? (
+                            <div data-testid="journey-tooltip-drag">
+                              拖累：{tooltipNode.primary_drag}
+                            </div>
+                          ) : null}
+                        </>
+                      );
+                    }
+                    if (isDimensionJudgmentLens(lensId)) {
+                      const judgment =
+                        dimensionJudgments?.get(tooltipNode.scene_ordinal) ?? null;
+                      return (
+                        <>
+                          <div>
+                            {formatJourneySceneLabel(tooltipNode.scene_ordinal)}
+                            {tooltipNode.scene_role
+                              ? ` · ${roleLabelZh(tooltipNode.scene_role)}`
+                              : tooltipNode.role
+                                ? ` · ${roleLabelZh(tooltipNode.role)}`
+                                : ""}
+                          </div>
+                          <div data-testid="journey-tooltip-primary-metric">
+                            {scoreNoun}：
+                            {tooltipScore == null
+                              ? "暂无数据"
+                              : formatJourneyScore(tooltipScore)}
+                          </div>
+                          <div data-testid="journey-tooltip-dimension-judgment">
+                            {judgment?.short_label || "当前节点暂无可靠判断"}
+                          </div>
+                          <div data-testid="journey-tooltip-dimension-fit">
+                            适配：{judgment?.fit_label || "无法判断"}
+                          </div>
+                          <div data-testid="journey-tooltip-dimension-reason">
+                            {judgment?.full_reason || "当前节点暂无可靠判断"}
+                          </div>
+                        </>
+                      );
+                    }
                     const reason =
                       roles[0]?.title ||
                       tooltipNode.scene_value_summary ||

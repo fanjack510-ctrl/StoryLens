@@ -23,6 +23,7 @@ vi.mock("../services/analysisApi", async () => {
         scenes: [],
       })),
       readerJourney: vi.fn(async () => null),
+      readerJourneyById: vi.fn(async () => null),
       readerJourneyPreflight: vi.fn(),
       createReaderJourney: vi.fn(),
       resumeReaderJourney: vi.fn(),
@@ -205,24 +206,20 @@ describe("BookRoutePage reader journey resume entry", () => {
       expect(screen.getByTestId("book-chapter-shell")).toHaveAttribute("data-view", "progress");
     });
     expect(screen.getByTestId("workspace-view-switcher")).toBeInTheDocument();
-    expect(screen.getByTestId("workspace-tab-analysis")).toHaveTextContent("场景分析");
+    // CHG-011/017: ordinary nav has reading + journey (not 场景分析 tab).
+    expect(screen.queryByTestId("workspace-tab-analysis")).not.toBeInTheDocument();
     expect(screen.getByTestId("workspace-tab-journey")).toHaveTextContent("阅读旅程");
     expect(screen.getByTestId("chapter-analysis-progress")).toBeInTheDocument();
     expect(screen.queryByText("分析全部完成")).not.toBeInTheDocument();
     expect(analysisApi.createReaderJourney).not.toHaveBeenCalled();
   });
 
-  it("lets user open Scene tab while journey pending without creating journey", async () => {
+  it("keeps journey pending on progress without auto-create (no scene analysis tab)", async () => {
     renderBook("/books/1?chapter=2&analysisRun=5&view=progress");
     await waitFor(() => {
-      expect(screen.getByTestId("workspace-tab-analysis")).toBeEnabled();
+      expect(screen.getByTestId("workspace-tab-journey")).toBeEnabled();
     });
-    fireEvent.click(screen.getByTestId("workspace-tab-analysis"));
-    await waitFor(() => {
-      expect(screen.getByTestId("book-chapter-shell")).toHaveAttribute("data-view", "result");
-      expect(screen.getByTestId("embedded-analysis-result")).toBeInTheDocument();
-    });
-    expect(screen.getByTestId("mock-embedded-results")).toBeInTheDocument();
+    expect(screen.queryByTestId("workspace-tab-analysis")).not.toBeInTheDocument();
     expect(screen.getByTestId("chapter-analysis-progress")).toBeInTheDocument();
     expect(screen.getByTestId("book-chapter-shell")).toHaveAttribute("data-analysis-run", "5");
     expect(analysisApi.createReaderJourney).not.toHaveBeenCalled();
@@ -235,9 +232,10 @@ describe("BookRoutePage reader journey resume entry", () => {
     });
     fireEvent.click(screen.getByTestId("workspace-tab-journey"));
     await waitFor(() => {
-      expect(screen.getAllByTestId("unified-recovery-card").length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByTestId("book-chapter-shell")).toHaveAttribute("data-analysis-run", "5");
     });
-    expect(screen.getByTestId("book-chapter-shell")).toHaveAttribute("data-analysis-run", "5");
+    // CHG-018: awaiting / starting journey must not mount stale paused recovery card.
+    expect(screen.queryByTestId("unified-recovery-card")).not.toBeInTheDocument();
     expect(analysisApi.createReaderJourney).not.toHaveBeenCalled();
     expect(booksApi.chapters).toHaveBeenCalled();
   });
@@ -283,7 +281,7 @@ describe("BookRoutePage reader journey resume entry", () => {
     expect(analysisApi.readerJourneyProgress).toHaveBeenCalledWith(42);
   });
 
-  it("shows journey interrupted StateView for retryable journey failure", async () => {
+  it("CHG-023: retryable journey failure shows failed StateView, not interrupted", async () => {
     vi.mocked(analysisApi.readerJourney).mockResolvedValue({
       journey_run_id: 42,
       analysis_run_id: 5,
@@ -314,16 +312,16 @@ describe("BookRoutePage reader journey resume entry", () => {
     });
     fireEvent.click(screen.getByTestId("workspace-tab-journey"));
     await waitFor(() => {
-      expect(screen.getByTestId("journey-interrupted")).toBeInTheDocument();
+      expect(screen.getByTestId("journey-failed")).toBeInTheDocument();
     });
-    expect(screen.getByTestId("journey-interrupted")).toHaveTextContent("阅读旅程已中断");
-    expect(screen.getByTestId("journey-interrupted-task-details")).toHaveTextContent("查看详情");
-    expect(screen.queryByTestId("journey-failed")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("mock-embedded-results")).not.toBeInTheDocument();
+    expect(screen.getByTestId("journey-failed")).toHaveTextContent("阅读旅程生成失败");
+    expect(screen.getByTestId("journey-failed-retry")).toHaveTextContent("重试阅读旅程");
+    expect(screen.queryByTestId("journey-interrupted")).not.toBeInTheDocument();
+    expect(screen.queryByText("继续分析")).not.toBeInTheDocument();
     expect(screen.queryByTestId("reader-journey-progress-card")).not.toBeInTheDocument();
   });
 
-  it("shows terminal journey failed StateView when failure is not retryable", async () => {
+  it("shows terminal journey failed without retry when failure is not retryable", async () => {
     vi.mocked(analysisApi.readerJourney).mockResolvedValue({
       journey_run_id: 42,
       analysis_run_id: 5,
@@ -357,9 +355,46 @@ describe("BookRoutePage reader journey resume entry", () => {
       expect(screen.getByTestId("journey-failed")).toBeInTheDocument();
     });
     expect(screen.getByTestId("journey-failed")).toHaveTextContent("阅读旅程生成失败");
-    expect(screen.getByTestId("journey-failed-retry")).toHaveTextContent("重新生成");
-    expect(screen.getByTestId("journey-failed-task-details")).toHaveTextContent("查看任务详情");
+    expect(screen.queryByTestId("journey-failed-retry")).not.toBeInTheDocument();
+    expect(screen.getByTestId("journey-failed-task-details")).toHaveTextContent("查看详情");
     expect(screen.queryByTestId("reader-journey-progress-card")).not.toBeInTheDocument();
+  });
+
+  it("shows journey interrupted StateView for scene_profiles_partial", async () => {
+    vi.mocked(analysisApi.readerJourney).mockResolvedValue({
+      journey_run_id: 42,
+      analysis_run_id: 5,
+      status: "scene_profiles_partial",
+      retryable: true,
+      error_code: "JOURNEY_INTERRUPTED",
+      formula_version: "v1",
+      phases: [],
+      scene_profiles: [],
+    } as any);
+    vi.mocked(analysisApi.readerJourneyProgress).mockResolvedValue({
+      journey_run_id: 42,
+      analysis_run_id: 5,
+      status: "scene_profiles_partial",
+      total_scene_count: 13,
+      completed_scene_count: 2,
+      remaining_scene_count: 11,
+      completed_scene_ids: [],
+      remaining_scene_ids: [],
+      phase_count: 0,
+      has_chapter_summary: false,
+      retryable: true,
+      root_error_code: "JOURNEY_INTERRUPTED",
+    });
+    renderBook("/books/1?chapter=2&analysisRun=5&view=progress");
+    await waitFor(() => {
+      expect(screen.getByTestId("workspace-tab-journey")).toBeEnabled();
+    });
+    fireEvent.click(screen.getByTestId("workspace-tab-journey"));
+    await waitFor(() => {
+      expect(screen.getByTestId("journey-interrupted")).toBeInTheDocument();
+    });
+    expect(screen.getByTestId("journey-interrupted-continue")).toHaveTextContent("继续分析");
+    expect(screen.queryByTestId("journey-failed")).not.toBeInTheDocument();
   });
 
   it("does not show failure banner when parent says journey is still running", async () => {
@@ -376,8 +411,8 @@ describe("BookRoutePage reader journey resume entry", () => {
     vi.mocked(analysisApi.readerJourney).mockResolvedValue({
       journey_run_id: 42,
       analysis_run_id: 5,
-      status: "failed",
-      retryable: false,
+      status: "scene_profiles_running",
+      retryable: true,
       formula_version: "v1",
       phases: [],
       scene_profiles: [],
@@ -416,5 +451,151 @@ describe("BookRoutePage reader journey resume entry", () => {
     expect(screen.getByTestId("chapter-analysis-scene-complete-banner").textContent).toMatch(
       /正在衔接阅读旅程|阅读旅程/,
     );
+  });
+
+  it("CHG-023: succeeded journey hides interrupted UI despite stale progress interrupt", async () => {
+    const { analysisRecoveryApi } = await import("../services/analysisRecoveryApi");
+    vi.mocked(analysisApi.run).mockResolvedValue(
+      succeededRun({
+        chapter_complete: true,
+        effective_status: "completed",
+        journey_status: "succeeded",
+        journey_run_id: 3,
+        journey_result_available: true,
+        journey_error_code: "JOURNEY_INTERRUPTED",
+        journey_retryable: true,
+      }),
+    );
+    const succeededJourney = {
+      journey_run_id: 3,
+      analysis_run_id: 5,
+      status: "succeeded",
+      formula_version: "v1",
+      phases: [{ id: "p1", label: "phase" }],
+      scene_profiles: [],
+      visualization: { version: 1, nodes: [] },
+      error_code: "JOURNEY_INTERRUPTED",
+      retryable: true,
+    } as any;
+    vi.mocked(analysisApi.readerJourney).mockResolvedValue(succeededJourney);
+    vi.mocked(analysisApi.readerJourneyById).mockResolvedValue(succeededJourney);
+    vi.mocked(analysisApi.readerJourneyProgress).mockResolvedValue({
+      journey_run_id: 3,
+      analysis_run_id: 5,
+      status: "scene_profiles_partial",
+      total_scene_count: 13,
+      completed_scene_count: 4,
+      remaining_scene_count: 9,
+      completed_scene_ids: [],
+      remaining_scene_ids: [],
+      phase_count: 1,
+      has_chapter_summary: true,
+      retryable: true,
+      root_error_code: "JOURNEY_INTERRUPTED",
+    });
+    renderBook(
+      "/books/1?chapter=2&analysisRun=5&journeyRun=3&view=result&tab=reader-journey",
+    );
+    await waitFor(() => {
+      expect(screen.queryByTestId("journey-interrupted")).not.toBeInTheDocument();
+    });
+    expect(screen.queryByTestId("journey-interrupted-continue")).not.toBeInTheDocument();
+    expect(analysisRecoveryApi.recover).not.toHaveBeenCalled();
+  });
+
+  it("CHG-023: continue calls journey resume once and not analysis recover", async () => {
+    const { analysisRecoveryApi } = await import("../services/analysisRecoveryApi");
+    vi.mocked(analysisApi.resumeReaderJourney).mockResolvedValue({
+      journey_run_id: 7,
+      status: "queued",
+    });
+    vi.mocked(analysisApi.run).mockResolvedValue(
+      succeededRun({
+        effective_status: "journey_failed",
+        journey_status: "scene_profiles_partial",
+        journey_run_id: 7,
+        journey_retryable: true,
+        journey_error_code: "JOURNEY_INTERRUPTED",
+      }),
+    );
+    const partialJourney = {
+      journey_run_id: 7,
+      analysis_run_id: 5,
+      status: "scene_profiles_partial",
+      retryable: true,
+      error_code: "JOURNEY_INTERRUPTED",
+      formula_version: "v1",
+      phases: [],
+      scene_profiles: [],
+    } as any;
+    vi.mocked(analysisApi.readerJourney).mockImplementation(async () => {
+      if (vi.mocked(analysisApi.resumeReaderJourney).mock.calls.length > 0) {
+        return { ...partialJourney, status: "queued" } as any;
+      }
+      return partialJourney;
+    });
+    vi.mocked(analysisApi.readerJourneyById).mockImplementation(async () => {
+      if (vi.mocked(analysisApi.resumeReaderJourney).mock.calls.length > 0) {
+        return { ...partialJourney, status: "queued" } as any;
+      }
+      return partialJourney;
+    });
+    vi.mocked(analysisApi.readerJourneyProgress).mockImplementation(async () => {
+      if (vi.mocked(analysisApi.resumeReaderJourney).mock.calls.length > 0) {
+        return {
+          journey_run_id: 7,
+          analysis_run_id: 5,
+          status: "queued",
+          total_scene_count: 13,
+          completed_scene_count: 2,
+          remaining_scene_count: 11,
+          completed_scene_ids: [],
+          remaining_scene_ids: [],
+          phase_count: 0,
+          has_chapter_summary: false,
+          retryable: true,
+          root_error_code: "JOURNEY_INTERRUPTED",
+        };
+      }
+      return {
+        journey_run_id: 7,
+        analysis_run_id: 5,
+        status: "scene_profiles_partial",
+        total_scene_count: 13,
+        completed_scene_count: 2,
+        remaining_scene_count: 11,
+        completed_scene_ids: [],
+        remaining_scene_ids: [],
+        phase_count: 0,
+        has_chapter_summary: false,
+        retryable: true,
+        root_error_code: "JOURNEY_INTERRUPTED",
+      };
+    });
+    renderBook("/books/1?chapter=2&analysisRun=5&journeyRun=7&view=progress");
+    await waitFor(() => {
+      expect(screen.getByTestId("workspace-tab-journey")).toBeEnabled();
+    });
+    fireEvent.click(screen.getByTestId("workspace-tab-journey"));
+    await waitFor(() => {
+      expect(screen.getByTestId("journey-interrupted-continue")).toBeInTheDocument();
+    });
+    const continueBtn = screen.getByTestId("journey-interrupted-continue");
+    fireEvent.click(continueBtn);
+    fireEvent.click(continueBtn);
+    await waitFor(() => {
+      expect(screen.getByTestId("reader-journey-progress-title")).toHaveTextContent(
+        "正在恢复阅读旅程",
+      );
+    });
+    expect(screen.queryByTestId("journey-interrupted")).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(analysisApi.resumeReaderJourney).toHaveBeenCalledTimes(1);
+    });
+    expect(analysisApi.resumeReaderJourney).toHaveBeenCalledWith(
+      7,
+      expect.objectContaining({ cloud_consent: true, confirmed: true }),
+    );
+    expect(analysisRecoveryApi.recover).not.toHaveBeenCalled();
   });
 });

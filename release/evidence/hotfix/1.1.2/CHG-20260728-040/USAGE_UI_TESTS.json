@@ -1,0 +1,12 @@
+{
+  "change_id": "CHG-20260728-040",
+  "suite": "usage_ui",
+  "result": "PASS",
+  "vitest": "TasksPage.chg040.test.ts 3 passed",
+  "checks": [
+    "boundary progress not scene 0/0",
+    "candidate and batch counters",
+    "aggregated usage rendered",
+    "no 暂无用量明细 when invocations exist"
+  ]
+}

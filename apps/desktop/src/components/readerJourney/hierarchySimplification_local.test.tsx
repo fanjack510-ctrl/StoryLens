@@ -68,7 +68,7 @@ describe("Reader Journey hierarchy simplification", () => {
     );
     const oneLiner = screen.getByTestId("journey-lens-one-liner");
     expect(oneLiner.textContent).toMatch(/^综合阅读：/);
-    expect(oneLiner.textContent).toContain("不代表一定写得差");
+    expect(oneLiner.textContent).toMatch(/场景任务|整体贡献/);
     // Only one explanation paragraph — no duplicate bare summary
     expect(screen.queryAllByTestId("journey-lens-one-liner")).toHaveLength(1);
   });

@@ -21,10 +21,18 @@ logger = logging.getLogger(__name__)
 
 JOURNEY_INTERRUPTED = "JOURNEY_INTERRUPTED"
 
-# Worker-bound statuses: no live BackgroundTask survives process exit.
-JOURNEY_ACTIVE_WORKER_STATUSES = frozenset(
+# Unclaimed bootstrap window (CHG-20260730-013): Confirm+Start persists these
+# before a BackgroundTask claims the row. Must NOT be force-interrupted on boot.
+JOURNEY_STARTING_STATUSES = frozenset(
     {
+        "starting",
         "queued",
+    }
+)
+
+# Worker has claimed the row (lease / in-progress stages).
+JOURNEY_CLAIMED_WORKER_STATUSES = frozenset(
+    {
         "running",
         "scene_profiles_running",
         "chapter_synthesis_running",
@@ -33,8 +41,18 @@ JOURNEY_ACTIVE_WORKER_STATUSES = frozenset(
     }
 )
 
+# Worker-bound statuses: no live BackgroundTask survives process exit.
+# Includes starting/queued for resume-active checks; startup recovery treats
+# starting/queued separately (see recover_orphaned_reader_journeys).
+JOURNEY_ACTIVE_WORKER_STATUSES = frozenset(
+    set(JOURNEY_STARTING_STATUSES) | set(JOURNEY_CLAIMED_WORKER_STATUSES)
+)
+
 # Mid-process orphan check: updated_at older than this ⇒ assume worker gone.
 JOURNEY_STALE_THRESHOLD = timedelta(seconds=120)
+
+# Extremely old unclaimed starting rows may be re-queued rather than interrupted.
+JOURNEY_STARTING_REQUEUE_GRACE = timedelta(seconds=2)
 
 _SAFE_ERROR_MESSAGE = "应用重启或后台任务中断，阅读旅程未完成；可从已完成检查点恢复"
 
@@ -49,6 +67,134 @@ def _as_aware(dt: datetime | None) -> datetime | None:
     if dt.tzinfo is None:
         return dt.replace(tzinfo=timezone.utc)
     return dt
+
+
+def _failure_details(journey: ReaderJourneyRun) -> dict[str, Any]:
+    try:
+        details = json.loads(journey.failure_details_json or "{}")
+        if not isinstance(details, dict):
+            return {}
+        return details
+    except json.JSONDecodeError:
+        return {}
+
+
+def _store_failure_details(journey: ReaderJourneyRun, details: dict[str, Any]) -> None:
+    journey.failure_details_json = json.dumps(details, ensure_ascii=False)
+
+
+def journey_has_worker_claim(journey: ReaderJourneyRun) -> bool:
+    """True when a worker has claimed this journey (durable claim or mid-run status)."""
+    if journey.status in JOURNEY_CLAIMED_WORKER_STATUSES:
+        return True
+    details = _failure_details(journey)
+    startup = details.get("startup_intent")
+    if isinstance(startup, dict) and startup.get("claimed") is True:
+        return True
+    claim = details.get("worker_claim")
+    if isinstance(claim, dict) and claim.get("claimed_at"):
+        return True
+    return False
+
+
+def mark_journey_startup_intent(
+    journey: ReaderJourneyRun,
+    *,
+    now: datetime | None = None,
+    client_request_id: str | None = None,
+) -> None:
+    """Persist Confirm+Start bootstrap intent. Status stays starting/queued."""
+    clock = now or _now()
+    if journey.status not in JOURNEY_STARTING_STATUSES:
+        journey.status = "starting"
+    elif journey.status == "queued":
+        # Prefer explicit starting for new confirm-and-start handoffs.
+        journey.status = "starting"
+    if not journey.current_stage:
+        journey.current_stage = "starting"
+    details = _failure_details(journey)
+    details["startup_intent"] = {
+        "at": clock.isoformat(),
+        "claimed": False,
+        "client_request_id": client_request_id or journey.client_request_id,
+    }
+    # Clear prior interrupt markers when re-arming startup.
+    details.pop("interrupt", None)
+    _store_failure_details(journey, details)
+    journey.root_error_code = None
+    journey.root_error_message = None
+    journey.failed_stage = None
+    journey.retryable = False
+    journey.completed_at = None
+    journey.updated_at = clock
+    if journey.started_at is None:
+        journey.started_at = clock
+
+
+def claim_journey_worker(
+    session: Session,
+    journey: ReaderJourneyRun,
+    *,
+    now: datetime | None = None,
+) -> bool:
+    """Atomically mark starting/queued → running with durable claim evidence.
+
+    Returns True when this call established or refreshed a claim for work.
+    """
+    clock = now or _now()
+    if journey.status in {"succeeded", "cancelled"}:
+        return False
+    if journey.status in JOURNEY_CLAIMED_WORKER_STATUSES and journey_has_worker_claim(
+        journey
+    ):
+        return True
+    if journey.status not in JOURNEY_STARTING_STATUSES and journey.status not in {
+        "failed",
+        "scene_profiles_partial",
+    }:
+        # Already in an unexpected state — do not steal.
+        if journey.status in JOURNEY_CLAIMED_WORKER_STATUSES:
+            return True
+        return False
+
+    previous = journey.status
+    journey.status = "running"
+    if journey.current_stage in {None, "starting"}:
+        journey.current_stage = "reader_journey_scene_profiles"
+    details = _failure_details(journey)
+    startup = details.get("startup_intent")
+    if not isinstance(startup, dict):
+        startup = {"at": clock.isoformat()}
+    startup["claimed"] = True
+    startup["claimed_at"] = clock.isoformat()
+    startup["previous_status"] = previous
+    details["startup_intent"] = startup
+    details["worker_claim"] = {
+        "claimed_at": clock.isoformat(),
+        "previous_status": previous,
+    }
+    details.pop("interrupt", None)
+    _store_failure_details(journey, details)
+    journey.root_error_code = None
+    journey.root_error_message = None
+    journey.failed_stage = None
+    journey.retryable = False
+    journey.completed_at = None
+    journey.updated_at = clock
+    if journey.started_at is None:
+        journey.started_at = clock
+    session.flush()
+    return True
+
+
+def list_unclaimed_starting_journeys(session: Session) -> list[int]:
+    """Journey ids in starting/queued without a worker claim (safe to re-enqueue)."""
+    rows = session.scalars(
+        select(ReaderJourneyRun).where(
+            ReaderJourneyRun.status.in_(tuple(JOURNEY_STARTING_STATUSES))
+        )
+    )
+    return [int(j.id) for j in rows if not journey_has_worker_claim(j)]
 
 
 def journey_has_unfinished_invocation(session: Session, analysis_run_id: int) -> bool:
@@ -92,7 +238,14 @@ def mark_journey_interrupted(
     *,
     now: datetime | None = None,
 ) -> bool:
-    """Persist recoverable interrupt. Returns True if status changed."""
+    """Persist recoverable interrupt. Returns True if status changed.
+
+    Unclaimed starting/queued rows are never interrupted here (CHG-20260730-013).
+    """
+    if journey.status in JOURNEY_STARTING_STATUSES and not journey_has_worker_claim(
+        journey
+    ):
+        return False
     if journey.status not in JOURNEY_ACTIVE_WORKER_STATUSES:
         return False
     clock = now or _now()
@@ -110,20 +263,15 @@ def mark_journey_interrupted(
     journey.failed_stage = journey.current_stage or "reader_journey_scene_profiles"
     journey.completed_at = clock
     journey.updated_at = clock
-    details: dict[str, Any] = {}
-    try:
-        details = json.loads(journey.failure_details_json or "{}")
-        if not isinstance(details, dict):
-            details = {}
-    except json.JSONDecodeError:
-        details = {}
+    details = _failure_details(journey)
     details["interrupt"] = {
         "code": JOURNEY_INTERRUPTED,
         "previous_status": previous,
         "recovered_at": clock.isoformat(),
         "auto_enqueued": False,
+        "had_worker_claim": previous in JOURNEY_CLAIMED_WORKER_STATUSES,
     }
-    journey.failure_details_json = json.dumps(details, ensure_ascii=False)
+    _store_failure_details(journey, details)
     return True
 
 
@@ -135,8 +283,11 @@ def recover_orphaned_reader_journeys(
 ) -> dict[str, int]:
     """Mark orphan worker-bound journeys interrupted. Never enqueues Provider work.
 
-    force_startup=True (Sidecar boot): all active worker statuses are orphans.
-    force_startup=False: only stale rows (no unfinished invocation + aged stamp).
+    force_startup=True (Sidecar boot): interrupt only **claimed** in-progress
+    statuses. Unclaimed ``starting``/``queued`` rows are left intact and returned
+    in ``requeue_journey_ids`` so lifespan can safely re-claim them.
+
+    force_startup=False: only stale claimed rows (no unfinished invocation + aged stamp).
     Idempotent: already-terminal interrupted rows are skipped.
     """
     from app.services.budget_reservation import release_run_reservation
@@ -151,11 +302,22 @@ def recover_orphaned_reader_journeys(
         )
     )
     touched: list[int] = []
+    requeue_ids: list[int] = []
     for journey in candidates:
-        if not force_startup and not is_journey_worker_stale(
-            session, journey, now=now, stale_after=stale_after
+        # CHG-013: never treat unclaimed bootstrap as interrupted.
+        if journey.status in JOURNEY_STARTING_STATUSES and not journey_has_worker_claim(
+            journey
         ):
+            requeue_ids.append(int(journey.id))
             continue
+        if force_startup:
+            if journey.status not in JOURNEY_CLAIMED_WORKER_STATUSES:
+                continue
+        else:
+            if not is_journey_worker_stale(
+                session, journey, now=now, stale_after=stale_after
+            ):
+                continue
         if not mark_journey_interrupted(session, journey, now=now):
             continue
         analysis_run = session.get(AnalysisRun, journey.analysis_run_id)
@@ -181,6 +343,8 @@ def recover_orphaned_reader_journeys(
     return {
         "interrupted_journeys": len(touched),
         "journey_ids": len(touched),
+        "requeue_journey_ids": requeue_ids,
+        "requeue_journeys": len(requeue_ids),
     }
 
 
@@ -190,7 +354,11 @@ def reclaim_stale_journey_if_needed(
     *,
     stale_after: timedelta = JOURNEY_STALE_THRESHOLD,
 ) -> bool:
-    """Resume-entry orphan detect: stale running → recoverable. No Provider call."""
+    """Resume-entry orphan detect: stale claimed running → recoverable. No Provider call."""
+    if journey.status in JOURNEY_STARTING_STATUSES and not journey_has_worker_claim(
+        journey
+    ):
+        return False
     if journey.status not in JOURNEY_ACTIVE_WORKER_STATUSES:
         return False
     if not is_journey_worker_stale(session, journey, stale_after=stale_after):

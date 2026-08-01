@@ -1,0 +1,27 @@
+{
+  "change": "CHG-20260728-041",
+  "round": 6,
+  "persistence_chain": {
+    "journey_run_status_succeeded": true,
+    "scene_profiles_written": true,
+    "chapter_journey_summary_written": true,
+    "revision_binding": true,
+    "boundary_hash": true,
+    "chapter_text_hash": true,
+    "result_payload_in_summary_and_profiles": true,
+    "completed_at": true,
+    "result_status_current": true
+  },
+  "defect": {
+    "id": "DEFECT-041-19",
+    "category": "cross_journey_artifact_bleed_on_v2_finalize",
+    "mechanism": "_load_v2_profiles_from_stubs selects AnalysisArtifact by analysis_run_id only, then keeps latest per scene_id. Journey run 1 left artifacts for scenes 5-9; journey run 2 added 10-15; finalize merged both (11) into run 2 profiles.",
+    "code_path": "apps/api/app/services/reader_journey_v2_execution.py::_load_v2_profiles_from_stubs",
+    "secondary": "execute_reader_journey_v2 uses load_revision_scenes instead of load_journey_bound_scenes; build_reader_journey_visualization requires len(profiles)==len(scenes) without filtering to included_scene_ids."
+  },
+  "fake_vs_real": {
+    "shared_persist_path": true,
+    "note": "Fake transport only synthesizes model JSON; V2 persist_finalized_v2_profiles is shared."
+  },
+  "result_hash_note": "No dedicated result_hash column; integrity uses payload/fingerprint fields. E2E will compare SHA256 of GET visualization+profiles digest before/after API restart."
+}

@@ -1,0 +1,85 @@
+{
+  "change_id": "CHG-20260729-011",
+  "pass": true,
+  "timestamp": "2026-07-29T15:33:11.436664+00:00",
+  "api": "http://127.0.0.1:18047",
+  "database": "C:\\Users\\msi\\AppData\\Local\\Temp\\storylens-mg-chg011-workflow-consistency\\database\\storylens-mg-chg011.db",
+  "real_provider_calls": 0,
+  "formal_db_writes": 0,
+  "model_invocations_delta": 0,
+  "results": [
+    {
+      "case": "A_revision_contamination",
+      "pass": true,
+      "status_code": 200,
+      "api_scene_count": 6,
+      "db_scene_count_on_run": 22,
+      "expected_api": 6,
+      "expected_db_min": 22
+    },
+    {
+      "case": "A_run_results_six_only",
+      "pass": true,
+      "status_code": 200,
+      "scene_count": 6
+    },
+    {
+      "case": "B_interrupted_not_running",
+      "pass": true,
+      "status_code": 200,
+      "body": {
+        "status": "scene_profiles_partial",
+        "completed_scene_count": 1,
+        "total_scene_count": 6,
+        "retryable": true,
+        "root_error_code": "JOURNEY_INTERRUPTED"
+      }
+    },
+    {
+      "case": "C_awaiting_confirmation",
+      "pass": true,
+      "status_code": 200,
+      "awaiting_confirmation": true,
+      "draft_scene_count": 6,
+      "model_scene_count": 17
+    },
+    {
+      "case": "D_hook_rich_presentation",
+      "pass": true,
+      "covered_by": "vitest chapter_hook_consistency_chg005.test.tsx Fixture B + HookPayoffTimeline.test.tsx",
+      "live_api": "not_seeded — Fake cannot emit reliable hooks without algorithm change"
+    },
+    {
+      "case": "E_hook_empty_or_uncertain",
+      "pass": true,
+      "status_code": 200,
+      "journey_status": "succeeded",
+      "narrative_loops_count": 5,
+      "note": "Fake smoke → FE uncertain/none; rich hooks require vitest Fixture B"
+    },
+    {
+      "case": "running_journey",
+      "pass": true,
+      "status_code": 200,
+      "status": "scene_profiles_running",
+      "completed_scene_count": 2
+    },
+    {
+      "case": "succeeded_journey",
+      "pass": true,
+      "status_code": 200,
+      "status": "succeeded",
+      "completed_scene_count": 6
+    }
+  ],
+  "urls": {
+    "REVISION_22_TO_6": "http://127.0.0.1:1426/books/1?chapter=1&analysisRun=2&view=result",
+    "INTERRUPTED": "http://127.0.0.1:1426/books/1?chapter=2&analysisRun=3&journeyRun=2",
+    "AWAITING_CONFIRMATION": "http://127.0.0.1:1426/books/1?chapter=3&analysisRun=4&view=scene-boundary-review",
+    "RUNNING": "http://127.0.0.1:1426/books/1?chapter=4&analysisRun=5&journeyRun=3",
+    "SUCCEEDED": "http://127.0.0.1:1426/books/1?chapter=5&analysisRun=6&journeyRun=4&view=result",
+    "HOOK_EMPTY": "http://127.0.0.1:1426/books/1?chapter=5&journeyRun=4&lens=hook_payoff",
+    "HOOK_RICH": "vitest://chg005FixtureBReliableHooks (frontend-only; see FIXTURES.md)",
+    "TASK_CENTER": "http://127.0.0.1:1426/tasks"
+  }
+}

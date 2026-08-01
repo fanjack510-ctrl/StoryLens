@@ -1,0 +1,35 @@
+{
+  "change_id": "CHG-20260729-001",
+  "recorded_at": "2026-07-29T03:45:01Z",
+  "branch": "fix/1.1.2-reader-journey-dimension-insights",
+  "public_head": "4dd49a0ee437d87144335f9382152c9919bc5122",
+  "pytest": {
+    "command": "py -3.12 -m pytest apps/api/tests/test_reader_journey_dimension_insights_local.py -q",
+    "passed": 11,
+    "failed": 0,
+    "exit_code": 0
+  },
+  "vitest": {
+    "command": "npx vitest run src/components/readerJourney/dimension_insights_chg001_local.test.tsx src/components/readerJourney/observation_lenses_v2_local.test.ts",
+    "passed": 41,
+    "failed": 0,
+    "exit_code": 0
+  },
+  "typecheck": {
+    "command": "npx tsc --noEmit -p tsconfig.json",
+    "exit_code": 0,
+    "result": "PASS"
+  },
+  "http_e2e": {
+    "result": "PASS",
+    "nodes": 6,
+    "insight_source": "generated",
+    "overall_reading_score": 63.8,
+    "reading_tension": 43.0,
+    "api": "http://127.0.0.1:18042",
+    "frontend": "http://127.0.0.1:1421",
+    "database": "%TEMP%\\storylens-mg-chg001-insights\\database\\storylens-mg-chg001-insights.db",
+    "real_provider_calls": 0,
+    "formal_db_writes": 0
+  }
+}

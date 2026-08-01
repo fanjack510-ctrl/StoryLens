@@ -1,0 +1,76 @@
+{
+  "id": "CHG-20260729-010",
+  "title": "StoryLens 1.1.2 RC2 packaging after provider-health fix",
+  "type": "build",
+  "base_version": "1.1.1",
+  "status": "tested",
+  "include_in_next_release": true,
+  "commits": [
+    {
+      "sha": "7677bf834adfeecd0a7c4fe341309a5528ff4033",
+      "message": "chore(release): integrate CHG-009 and register 1.1.2-rc.2 packaging",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "624573104bccd5fab63ec03733a7ab18fed814c2",
+      "message": "docs(release): record StoryLens 1.1.2-rc.2 prebuild gate",
+      "primary": false,
+      "multi_change_reason": "prebuild evidence for same RC2 packaging change"
+    },
+    {
+      "sha": "401d52d08606489c544132f34aeaf3a230db1559",
+      "message": "docs(release): record StoryLens 1.1.2-rc.2 build and install-state evidence",
+      "primary": false,
+      "multi_change_reason": "RC2 build/install-state evidence for same packaging change"
+    }
+  ],
+  "modules": [
+    "release",
+    "packaging",
+    "apps/api",
+    "scripts/build_windows_rc.ps1"
+  ],
+  "files": [],
+  "user_summary": "集成 CHG-009 后构建 StoryLens 1.1.2-rc.2 安装包并完成安装态自动验证",
+  "technical_summary": "Integrate CHG-009 into hotfix/1.1.2; package StoryLens 1.1.2-rc.2; install-state verify; no Push/Tag/Release; preserve RC.1 installer.",
+  "acceptance_criteria": [
+    "CHG-009 integrated on hotfix/1.1.2",
+    "Installer StoryLens_1.1.2-rc.2_x64-setup.exe",
+    "RC.1 installer preserved (hash unchanged)",
+    "SIDECAR/INSTALLER build count 1 for rc.2",
+    "config packaging / CWD / security PASS",
+    "formal VERSION restored to 1.1.2",
+    "zero real provider; zero formal AppData writes"
+  ],
+  "tests": [
+    "pytest CHG-009 17 passed",
+    "vitest targeted 51 passed",
+    "install-state config/CWD/prodlike/security/installer PASS"
+  ],
+  "verification_evidence": [
+    "release/evidence/1.1.2-rc.2/",
+    "release/evidence/1.1.2-rc.2/FINAL_REPORT.md",
+    "release/evidence/1.1.2-rc.2/BUILD_MANIFEST.json",
+    "release/evidence/1.1.2-rc.2/INSTALL_STATE_SUMMARY.json",
+    "release/evidence/1.1.2-rc.2/RC1_PRESERVE_INCIDENT.md"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": null,
+  "created_at": "2026-07-29T13:48:17Z",
+  "updated_at": "2026-07-29T14:01:30Z",
+  "target_version": "1.1.2",
+  "release_pool_status": "pending"
+}

@@ -227,18 +227,26 @@ def build_run_results(session: Session, run: AnalysisRun) -> RunResultsBundle:
     chapter = session.get(Chapter, int(run.subject_id))
     if chapter is None:
         raise ValueError("CHAPTER_NOT_FOUND")
-    scenes = list(
-        session.scalars(
-            select(Scene)
-            .where(Scene.created_by_run_id == run.id)
-            .order_by(Scene.ordinal)
+    # CHG-011: ordinary results bind to confirmed revision scenes only.
+    # Historical superseded rematerializations remain in DB but must not appear here.
+    from app.services.scene_analysis_progress import load_revision_scenes
+
+    boundary_revision, scenes = load_revision_scenes(session, run)
+    if boundary_revision is None:
+        boundary_revision = session.scalar(
+            select(BoundaryRevision)
+            .where(
+                BoundaryRevision.analysis_run_id == run.id,
+                BoundaryRevision.status == "confirmed",
+            )
+            .order_by(BoundaryRevision.id.desc())
         )
-    )
-    boundary_revision = session.scalar(
-        select(BoundaryRevision)
-        .where(BoundaryRevision.analysis_run_id == run.id)
-        .order_by(BoundaryRevision.revision_number.desc())
-    )
+    if boundary_revision is None:
+        boundary_revision = session.scalar(
+            select(BoundaryRevision)
+            .where(BoundaryRevision.analysis_run_id == run.id)
+            .order_by(BoundaryRevision.revision_number.desc())
+        )
     ordered_ids = _chapter_paragraph_ids(session, chapter.id)
     invocations = list(
         session.scalars(

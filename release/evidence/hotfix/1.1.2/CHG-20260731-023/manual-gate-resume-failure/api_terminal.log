@@ -1,0 +1,156 @@
+---
+pid: 16336
+cwd: "D:\\Dstorylens-wt-hotfix-1.1.2-integration"
+command: "D:\\Dstorylens-wt-hotfix-1.1.2-integration\\.venv\\Scripts\\python.exe C:\\Users\\msi\\AppData\\Local\\Temp\\storylens-mg-chg023\\launch_api_safe.py\n"
+title: "Start CHG-023 safe Fake API on 18057"
+status: running  
+started_at: 2026-07-31T04:41:14.355Z
+running_for_ms: 450661   
+---
+CHG023_SAFE_API port=18057 db=C:\Users\msi\AppData\Local\Temp\storylens-mg-chg023\storylens.db requeue=OFF fake=ON real=OFF
+INFO:     Started server process [22560]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:18057 (Press CTRL+C to quit)
+INFO:     127.0.0.1:62646 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62646 - "GET /api/v1/reader-journey-runs/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62646 - "GET /api/v1/reader-journey-runs/2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62646 - "GET /api/v1/reader-journey-runs/2/progress HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62646 - "GET /api/v1/analysis-runs/2/recovery-plan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62686 - "OPTIONS /api/v1/entitlements HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62687 - "OPTIONS /api/v1/books/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62688 - "OPTIONS /api/v1/books/1/chapters HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62689 - "OPTIONS /api/v1/analysis-runs/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62690 - "OPTIONS /api/v1/reader-journeys/1?book_id=1&chapter_id=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62691 - "OPTIONS /api/v1/chapters/1/scene-boundaries HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62688 - "OPTIONS /api/v1/runtime HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62689 - "OPTIONS /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62690 - "OPTIONS /api/v1/analysis-runs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62686 - "GET /api/v1/entitlements HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62687 - "GET /api/v1/books/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62687 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62691 - "GET /api/v1/books/1/chapters HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62690 - "GET /api/v1/chapters/1/scene-boundaries HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62689 - "GET /api/v1/reader-journeys/1?book_id=1&chapter_id=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62688 - "GET /api/v1/analysis-runs/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62687 - "GET /api/v1/analysis-runs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62686 - "GET /api/v1/runtime HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62693 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62698 - "OPTIONS /api/v1/analysis-runs/1/results HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62698 - "GET /api/v1/analysis-runs/1/results HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62698 - "OPTIONS /api/v1/scenes/1/paragraphs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62699 - "OPTIONS /api/v1/analysis-runs/1/reader-journey?book_id=1&chapter_id=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62698 - "GET /api/v1/scenes/1/paragraphs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62699 - "GET /api/v1/analysis-runs/1/reader-journey?book_id=1&chapter_id=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62699 - "OPTIONS /api/v1/reader-journey-runs/1/progress HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62699 - "GET /api/v1/reader-journey-runs/1/progress HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62699 - "GET /api/v1/analysis-runs/1/reader-journey?book_id=1&chapter_id=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62699 - "GET /api/v1/analysis-runs/1/reader-journey?book_id=1&chapter_id=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62699 - "OPTIONS /api/v1/cloud-usage/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62702 - "OPTIONS /api/v1/analysis-runs/1/reader-journey HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62704 - "OPTIONS /api/v1/analysis-runs/1/reader-journey HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62699 - "GET /api/v1/cloud-usage/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62703 - "GET /api/v1/analysis-runs/1/reader-journey?book_id=1&chapter_id=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62702 - "GET /api/v1/analysis-runs/1/reader-journey HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62702 - "GET /api/v1/analysis-runs/1/reader-journey HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62702 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62719 - "OPTIONS /api/v1/books/2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62720 - "OPTIONS /api/v1/books/2/chapters HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62721 - "OPTIONS /api/v1/chapters/2/paragraphs?offset=0&limit=200 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62722 - "OPTIONS /api/v1/chapters/2/scenes HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62723 - "OPTIONS /api/v1/analysis-runs/2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62719 - "OPTIONS /api/v1/reader-journeys/2?book_id=2&chapter_id=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62720 - "OPTIONS /api/v1/chapters/2/scene-boundaries HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62702 - "GET /api/v1/entitlements HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62722 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62723 - "GET /api/v1/books/2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62720 - "GET /api/v1/books/2/chapters HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62702 - "GET /api/v1/chapters/2/paragraphs?offset=0&limit=200 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62721 - "GET /api/v1/runtime HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62722 - "GET /api/v1/chapters/2/scenes HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62702 - "GET /api/v1/chapters/2/scene-boundaries HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62720 - "GET /api/v1/reader-journeys/2?book_id=2&chapter_id=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62720 - "OPTIONS /api/v1/reader-journey-runs/2/progress HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62723 - "GET /api/v1/analysis-runs/2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62702 - "GET /api/v1/reader-journey-runs/2/progress HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62723 - "GET /api/v1/cloud-usage/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62719 - "GET /api/v1/analysis-runs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62719 - "OPTIONS /api/v1/analysis-runs/2/recover HTTP/1.1" 200 OK
+reader_journey_v2_failed journey_run_id=2
+Traceback (most recent call last):
+  File "D:\Dstorylens-wt-hotfix-1.1.2-integration\apps\api\app\model_gateway\gateway.py", line 17, in get
+    return self._providers[name]
+           ~~~~~~~~~~~~~~~^^^^^^
+KeyError: 'fake'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\Dstorylens-wt-hotfix-1.1.2-integration\apps\api\app\services\reader_journey_v2_execution.py", line 311, in execute_reader_journey_v2
+    resolved = ProviderRuntimeService.resolve_for_run(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Dstorylens-wt-hotfix-1.1.2-integration\apps\api\app\services\provider_runtime_service.py", line 57, in resolve_for_run
+    provider = gateway.get(run.provider)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Dstorylens-wt-hotfix-1.1.2-integration\apps\api\app\model_gateway\gateway.py", line 19, in get
+    raise ProviderNotFoundError(name) from exc
+app.model_gateway.gateway.ProviderNotFoundError: fake
+INFO:     127.0.0.1:62723 - "POST /api/v1/analysis-runs/2/recover HTTP/1.1" 202 Accepted
+INFO:     127.0.0.1:62723 - "GET /api/v1/reader-journeys/2?book_id=2&chapter_id=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62723 - "GET /api/v1/reader-journeys/2?book_id=2&chapter_id=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62719 - "GET /api/v1/analysis-runs/2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62719 - "GET /api/v1/analysis-runs/2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62719 - "GET /api/v1/analysis-runs/2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62719 - "GET /api/v1/analysis-runs/2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62719 - "OPTIONS /api/v1/reader-journey-runs/2/resume HTTP/1.1" 200 OK
+reader_journey_v2_failed journey_run_id=2
+Traceback (most recent call last):
+  File "D:\Dstorylens-wt-hotfix-1.1.2-integration\apps\api\app\model_gateway\gateway.py", line 17, in get
+    return self._providers[name]
+           ~~~~~~~~~~~~~~~^^^^^^
+KeyError: 'fake'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\Dstorylens-wt-hotfix-1.1.2-integration\apps\api\app\services\reader_journey_v2_execution.py", line 311, in execute_reader_journey_v2
+    resolved = ProviderRuntimeService.resolve_for_run(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Dstorylens-wt-hotfix-1.1.2-integration\apps\api\app\services\provider_runtime_service.py", line 57, in resolve_for_run
+    provider = gateway.get(run.provider)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Dstorylens-wt-hotfix-1.1.2-integration\apps\api\app\model_gateway\gateway.py", line 19, in get
+    raise ProviderNotFoundError(name) from exc
+app.model_gateway.gateway.ProviderNotFoundError: fake
+INFO:     127.0.0.1:62719 - "POST /api/v1/reader-journey-runs/2/resume HTTP/1.1" 202 Accepted
+INFO:     127.0.0.1:62719 - "GET /api/v1/reader-journeys/2?book_id=2&chapter_id=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62733 - "GET /api/v1/reader-journeys/2?book_id=2&chapter_id=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62730 - "GET /api/v1/reader-journey-runs/2/progress HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62731 - "GET /api/v1/analysis-runs/2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62733 - "GET /api/v1/reader-journey-runs/2/progress HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62730 - "GET /api/v1/analysis-runs/2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62732 - "GET /api/v1/analysis-runs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62733 - "GET /api/v1/analysis-runs/2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62733 - "GET /api/v1/reader-journeys/2?book_id=2&chapter_id=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62733 - "GET /api/v1/analysis-runs/2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62733 - "GET /api/v1/reader-journeys/2?book_id=2&chapter_id=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62733 - "GET /api/v1/analysis-runs/2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62733 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62736 - "GET /api/v1/books/2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62737 - "GET /api/v1/books/2/chapters HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62739 - "GET /api/v1/chapters/2/scene-boundaries HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62740 - "GET /api/v1/cloud-usage/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62738 - "GET /api/v1/reader-journey-runs/2/progress HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62735 - "GET /api/v1/analysis-runs/2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62736 - "GET /api/v1/analysis-runs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62736 - "GET /api/v1/reader-journeys/2?book_id=2&chapter_id=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62736 - "GET /api/v1/analysis-runs/2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62736 - "GET /api/v1/reader-journeys/2?book_id=2&chapter_id=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62736 - "GET /api/v1/analysis-runs/2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62736 - "GET /api/v1/reader-journeys/2?book_id=2&chapter_id=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62736 - "GET /api/v1/analysis-runs/2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62744 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62743 - "GET /api/v1/entitlements HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62736 - "GET /api/v1/analysis-runs/2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62736 - "GET /api/v1/analysis-runs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62745 - "GET /api/v1/analysis-runs HTTP/1.1" 200 OK

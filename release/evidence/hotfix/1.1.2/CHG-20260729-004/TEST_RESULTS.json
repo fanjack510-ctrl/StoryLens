@@ -1,0 +1,51 @@
+{
+  "change_id": "CHG-20260729-004",
+  "recorded_at": "2026-07-29T06:30:00Z",
+  "branch": "fix/1.1.2-journey-dimension-node-judgments",
+  "public_base_head": "bbcd6d7ac925303247599c9869e11780e4a7ca20",
+  "vitest": {
+    "command": "npx vitest run src/components/readerJourney/dimension_node_judgments_chg004_local.test.tsx",
+    "passed": 13,
+    "failed": 0,
+    "exit_code": 0,
+    "result": "PASS"
+  },
+  "pytest": {
+    "command": "py -3.12 -m pytest apps/api/tests/test_dimension_node_judgments_chg004_local.py -q",
+    "passed": 2,
+    "failed": 0,
+    "exit_code": 0,
+    "result": "PASS"
+  },
+  "typecheck": {
+    "command": "npx tsc --noEmit -p tsconfig.json",
+    "exit_code": 0,
+    "result": "PASS"
+  },
+  "http_e2e": {
+    "result": "PASS",
+    "api": "http://127.0.0.1:18043",
+    "frontend": "http://127.0.0.1:1422",
+    "journey_run_id": 1,
+    "scenes": 6,
+    "path": "GET /api/v1/reader-journey-runs/1 + Fake pytest serialize/refresh",
+    "has_plot_progress": true,
+    "has_reading_tension": true,
+    "has_pacing_speed": true,
+    "has_emotion_scores": true,
+    "no_persisted_dimension_short_label": true,
+    "refresh_consistent": true,
+    "real_provider_calls": 0,
+    "formal_db_writes": 0
+  },
+  "fixture_labels": {
+    "plot_progress": ["信息铺垫", "推进有限", "目标明确", "冲突升级", "局势反转", "完成收束"],
+    "reading_tension": ["疑问建立", "期待维持", "风险上升", "悬念强化", "部分回应", "张力回落"],
+    "emotion": ["情绪铺垫", "紧张上升", "情绪爆发", "情绪回落", "再次抬升", "情绪释放"],
+    "pacing": ["平稳进入", "适度放缓", "明显加速", "保持平稳", "再次加速", "收束减速"]
+  },
+  "formula_v2_modified": false,
+  "comprehensive_reading_modified": false,
+  "hook_payoff_modified": false,
+  "database_migration": false
+}

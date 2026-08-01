@@ -1,0 +1,155 @@
+{
+  "id": "CHG-20260731-023",
+  "title": "Synchronize recovery UI after journey resume and completion",
+  "type": "fix",
+  "base_version": "1.1.2",
+  "target_version": "1.1.2",
+  "status": "verified",
+  "include_in_next_release": true,
+  "manual_gate": "MG-CHG-20260731-023-FINAL-STATE",
+  "manual_gate_result": "PASSED",
+  "verified_product_head": "3fc04b61f10d2f9747c1869921a6089ee6f3f5db",
+  "commits": [
+    {
+      "sha": "c1a7fbc05ba44d6200429c87060025b0d6f6be1a",
+      "message": "fix(ui): sync recovery card after journey resume/success",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "9fb20f2693caaa4479cc2eff1f87ee54c8fc849d",
+      "message": "docs(release): attach CHG-023 commit and final head",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "231900a5fa9f3cbc600b8310127a0c5e8119bd87",
+      "message": "fix(ui): present journey failed ahead of interrupted resume UI",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "a0547553d1ea213b10c1d0b34e5a70c836a57c0e",
+      "message": "fix(ui): single journey execution state for CHG-023 resume",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "e84afb01a845b8fa2197544e2f1be46b82a589e7",
+      "message": "fix(build): unblock desktop build for CHG-023 acceptance preview",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "9eb334af0fc72395459ae3ce669960066239a0fc",
+      "message": "fix(ui): preserve preview API base and prove CHG-023 browser state",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "e9a15a3ae614312e364e5f4b8aaaa3d313b40d4a",
+      "message": "fix(ui): honor journey deep-link over progress shell for CHG-023",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "c696c029ebc1aa411b453823a22db25889519557",
+      "message": "test(acceptance): trust smoke-fake journey integrity for CHG-023 DOM result",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "9b2878ca1a0bdbbc9c3fbf1fd8aef59c5946f792",
+      "message": "test(acceptance): extend CHG-023 Playwright timeouts for smoke-fake resume",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "31a1fe5ac37fe8b04f6110ee75380efa1f42149d",
+      "message": "test(acceptance): patch bound integrity import for CHG-023 launcher",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "6c19dac01d39e434234dcd1d2b6853580685a0d8",
+      "message": "test(acceptance): assert WorkspaceJourneyPane result for CHG-023 success",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "3fc04b61f10d2f9747c1869921a6089ee6f3f5db",
+      "message": "docs(evidence): pin CHG-023 FINAL STATE FIX REPORT to tip",
+      "primary": false,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "3377e56c5d63687f2b764838ea3d7faf7f25e1fe",
+      "message": "docs(release): verify CHG-023 final journey state fix",
+      "primary": false,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "apps/desktop",
+    "apps/api"
+  ],
+  "files": [
+    "apps/desktop/src/services/currentJourneyExecutionState.ts",
+    "apps/desktop/src/services/resolveJourneyPageState.ts",
+    "apps/desktop/src/services/resolveWorkspaceLayout.ts",
+    "apps/desktop/src/services/mapReaderJourneyStatusToUi.ts",
+    "apps/desktop/src/services/desktopRuntime.ts",
+    "apps/desktop/src/services/chapterAnalysisPresentation.ts",
+    "apps/desktop/src/services/journeyActiveRecoveryGuard.ts",
+    "apps/desktop/src/pages/BookRoutePage.tsx",
+    "apps/desktop/src/components/layout/AppShell.tsx",
+    "apps/desktop/src/components/chapterAnalysis/ReaderJourneyProgressCard.tsx",
+    "apps/api/app/api/v1/reader_journey.py",
+    "apps/api/tests/test_chg023_resume_client_request_id.py"
+  ],
+  "user_summary": "Resume 后以单一 Journey 执行态驱动终态；成功显示结果、失败显示生成失败，不再被旧恢复态遮盖",
+  "technical_summary": "CurrentJourneyExecutionState terminal-first; resume uses request.client_request_id; journeyResumePending is click-guard only; ProgressCard only for starting/resuming/running; no product journey_execution_scenario hook. RC.5 installed acceptance failed due to stale recovery masking terminal; fixed here. RC.6 required for next installed train.",
+  "acceptance_criteria": [
+    "interrupted → resume → succeeded → DOM Result",
+    "interrupted → resume → failed → DOM Failure",
+    "order swap + API restart still PASS",
+    "Resume POST=1; Analysis Recover=0; no new Analysis/Journey runs",
+    "terminal 后无「正在恢复」; ProgressCard absent on terminal"
+  ],
+  "tests": [
+    "apps/desktop/src/services/currentJourneyExecutionState.test.ts",
+    "apps/desktop/src/services/recoveryUiSync.chg023.test.ts",
+    "apps/desktop/src/services/resolveJourneyPageState.test.ts",
+    "apps/desktop/src/pages/BookRoutePage.readerJourneyResume.test.tsx",
+    "apps/api/tests/test_chg023_resume_client_request_id.py",
+    "apps/desktop/e2e/chg023_final_resume_state.spec.ts",
+    "apps/desktop/playwright.chg023-final.config.ts",
+    "release/evidence/hotfix/1.1.2/CHG-20260731-023/acceptance/run_browser_e2e.ps1"
+  ],
+  "verification_evidence": [
+    "release/evidence/hotfix/1.1.2/CHG-20260731-023/MANUAL_GATE_PASS.md",
+    "release/evidence/hotfix/1.1.2/CHG-20260731-023/FINAL_STATE_FIX_REPORT.md",
+    "release/evidence/hotfix/1.1.2/CHG-20260731-023/acceptance/MANUAL_FIXTURES.json",
+    "release/evidence/hotfix/1.1.2/CHG-20260731-023/TEST_RESULTS.json",
+    "release/evidence/hotfix/1.1.2/CHG-20260731-023/HTTP_E2E.json",
+    "release/evidence/1.1.2-rc.5/INSTALLED_ACCEPTANCE_FAILED_RETAINED.md"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "UI/state sync only; no schema migration. Existing interrupted journeys remain resumeable."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false,
+    "rc6_required": true,
+    "rc5_installed_acceptance": "FAILED"
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-31T04:15:37Z",
+  "updated_at": "2026-07-31T07:52:13Z"
+}

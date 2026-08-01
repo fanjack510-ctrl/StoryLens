@@ -8,6 +8,10 @@ import {
   shouldShowUnifiedRecovery,
   UnifiedAnalysisRecoveryCard,
 } from "./UnifiedAnalysisRecoveryCard";
+import {
+  isJourneyActivelyRunning,
+  shouldShowUnifiedRecoveryForJourney,
+} from "../../services/journeyActiveRecoveryGuard";
 import { ChapterAnalysisFailureCard } from "./ChapterAnalysisFailureCard";
 import { ChapterAnalysisStatusBadge } from "./ChapterAnalysisStatusBadge";
 import {
@@ -38,6 +42,12 @@ type Props = {
   chapterTitle?: string;
   reconnectHint?: boolean;
   canResume?: boolean;
+  /** When set, overrides AnalysisRun-based elapsed (Reader Journey clock). */
+  elapsedOverride?: string | null;
+  /** Optional progress counts from the selected journey run. */
+  progressOverride?: { current: number; total: number } | null;
+  /** Optional status label override (e.g. journey failed copy). */
+  statusLabelOverride?: string | null;
   onResume?: () => Promise<void> | void;
   onReanalyze?: () => void;
   onReviewBoundary?: () => void;
@@ -48,6 +58,15 @@ type Props = {
   /** Open journey resume / workspace entry on the chapter shell. */
   onContinueReaderJourney?: () => void;
   onBudgetContinued?: () => void;
+  /** CHG-018: suppress recovery while journey generation is active. */
+  journeyPageActive?: boolean;
+  journeyStatus?: string | null;
+  /** CHG-023: bind recovery continue to journey resume when present. */
+  journeyRunId?: number | null;
+  /** CHG-017: when journey succeeded, progress panel promotes journey CTA. */
+  presentationStatusTitle?: string | null;
+  presentationStatusDescription?: string | null;
+  preferJourneyResultCta?: boolean;
 };
 
 export function ChapterAnalysisProgressPanel({
@@ -56,6 +75,9 @@ export function ChapterAnalysisProgressPanel({
   chapterTitle,
   reconnectHint,
   canResume,
+  elapsedOverride,
+  progressOverride,
+  statusLabelOverride,
   onResume,
   onReanalyze,
   onReviewBoundary,
@@ -64,16 +86,23 @@ export function ChapterAnalysisProgressPanel({
   onViewResults,
   onContinueReaderJourney,
   onBudgetContinued,
+  journeyPageActive = false,
+  journeyStatus = null,
+  journeyRunId = null,
+  presentationStatusTitle = null,
+  presentationStatusDescription = null,
+  preferJourneyResultCta = false,
 }: Props) {
   const [resumeBusy, setResumeBusy] = useState(false);
   const [resumeError, setResumeError] = useState<string>();
   const [hasJourney, setHasJourney] = useState(false);
-  const counts = progressCounts(run);
+  const counts = progressOverride ?? progressCounts(run);
   const pct =
     counts.total > 0 ? Math.min(100, Math.round((counts.current / counts.total) * 100)) : 0;
   const steps = stageSteps(uiState, run);
   const cost = run ? budgetSummary(run) : null;
-  const elapsed = run ? elapsedLabel(run) : null;
+  const elapsed =
+    elapsedOverride !== undefined ? elapsedOverride : run ? elapsedLabel(run) : null;
   const currentWork = currentWorkLabel(uiState, run);
   const usageQuery = useQuery({
     queryKey: ["cloud-usage"],
@@ -130,13 +159,34 @@ export function ChapterAnalysisProgressPanel({
       uiState === "awaiting_reader_journey_start");
 
   const meterDetail =
-    uiState === "reader_journey_processing" || uiState === "awaiting_reader_journey_start"
+    uiState === "reader_journey_processing"
       ? counts.total > 0
         ? `正在整合 ${counts.total} 个场景`
         : "正在生成阅读旅程"
-      : counts.total > 0
-        ? `场景 ${counts.current} / ${counts.total}`
-        : uiStateLabel(uiState);
+      : uiState === "awaiting_reader_journey_start"
+        ? counts.total > 0
+          ? `场景 ${counts.current} / ${counts.total}`
+          : "场景已确认，等待生成阅读旅程"
+        : counts.total > 0
+          ? `场景 ${counts.current} / ${counts.total}`
+          : uiStateLabel(uiState);
+
+  const liveJourneyStatus = journeyStatus || run?.journey_status || null;
+  const journeyActiveNow =
+    journeyPageActive ||
+    isJourneyActivelyRunning(liveJourneyStatus) ||
+    uiState === "reader_journey_processing";
+  const showRecovery =
+    Boolean(run) &&
+    !journeyActiveNow &&
+    shouldShowUnifiedRecovery(uiState) &&
+    shouldShowUnifiedRecoveryForJourney({
+      uiState,
+      journeyStatus: liveJourneyStatus,
+      journeyPageActive: journeyActiveNow,
+      canResume: canResume ?? true,
+    });
+
   return (
     <aside
       className="chapter-analysis-progress-panel"
@@ -162,9 +212,9 @@ export function ChapterAnalysisProgressPanel({
 
       <ChapterAnalysisStatusBadge state={uiState} />
 
-      {currentWork && (
+      {(statusLabelOverride || currentWork) && (
         <p className="chapter-analysis-current-work" data-testid="chapter-analysis-current-work">
-          {currentWork}
+          {statusLabelOverride || currentWork}
         </p>
       )}
 
@@ -281,7 +331,9 @@ export function ChapterAnalysisProgressPanel({
             </div>
             <div>
               <dt>状态</dt>
-              <dd data-testid="chapter-analysis-status-text">{uiStateLabel(uiState)}</dd>
+              <dd data-testid="chapter-analysis-status-text">
+                {statusLabelOverride || uiStateLabel(uiState)}
+              </dd>
             </div>
           </dl>
         </details>
@@ -301,18 +353,22 @@ export function ChapterAnalysisProgressPanel({
         </div>
       )}
 
-      {run && shouldShowUnifiedRecovery(uiState) && (
+      {showRecovery && run ? (
         <UnifiedAnalysisRecoveryCard
           run={run}
           variant="card"
+          journeyStatus={liveJourneyStatus}
+          journeyPageActive={journeyActiveNow}
+          journeyRunId={journeyRunId ?? run.journey_run_id ?? null}
+          canResume={canResume ?? true}
           onContinued={onBudgetContinued}
           onLater={onDismiss}
         />
-      )}
+      ) : null}
 
       {(uiState === "failed" || uiState === "partial") &&
         run &&
-        !shouldShowUnifiedRecovery(uiState) && (
+        !showRecovery && (
         <ChapterAnalysisFailureCard
           run={run}
           canResume={Boolean(canResume)}
@@ -332,7 +388,7 @@ export function ChapterAnalysisProgressPanel({
         </p>
       )}
 
-      {uiState === "awaiting_reader_journey_start" && run && (
+      {uiState === "awaiting_reader_journey_start" && run && !journeyActiveNow && (
         <div
           className="chapter-analysis-success"
           data-testid="chapter-analysis-journey-pending"
@@ -374,37 +430,55 @@ export function ChapterAnalysisProgressPanel({
 
       {uiState === "succeeded" && run && (
         <div className="chapter-analysis-success" data-testid="chapter-analysis-success">
-          <h3>分析完成</h3>
-          <ul>
-            <li data-testid="chapter-analysis-scene-count">
-              场景数量：{(run.total_scene_count ?? counts.total) || "—"}
-            </li>
-            <li data-testid="chapter-analysis-coverage">
-              覆盖：
-              {typeof run.scene_analysis_coverage_rate === "number"
-                ? `${Math.round(run.scene_analysis_coverage_rate * 100)}%`
-                : "已完成"}
-            </li>
-            <li data-testid="chapter-analysis-journey-flag">
-              读者旅程：{hasJourney ? "已有可视化" : "已完成"}
-            </li>
-            {run.completed_at && (
-              <li data-testid="chapter-analysis-completed-at">
-                完成时间：{new Date(run.completed_at).toLocaleString()}
+          <h3 data-testid="chapter-analysis-success-title">
+            {preferJourneyResultCta || presentationStatusTitle
+              ? presentationStatusTitle || "阅读旅程已生成"
+              : "分析完成"}
+          </h3>
+          {preferJourneyResultCta && presentationStatusDescription ? (
+            <p data-testid="chapter-analysis-success-desc">{presentationStatusDescription}</p>
+          ) : (
+            <ul>
+              <li data-testid="chapter-analysis-scene-count">
+                场景数量：{(run.total_scene_count ?? counts.total) || "—"}
               </li>
-            )}
-          </ul>
+              <li data-testid="chapter-analysis-coverage">
+                覆盖：
+                {typeof run.scene_analysis_coverage_rate === "number"
+                  ? `${Math.round(run.scene_analysis_coverage_rate * 100)}%`
+                  : "已完成"}
+              </li>
+              <li data-testid="chapter-analysis-journey-flag">
+                读者旅程：{hasJourney || preferJourneyResultCta ? "已有可视化" : "已完成"}
+              </li>
+              {run.completed_at && (
+                <li data-testid="chapter-analysis-completed-at">
+                  完成时间：{new Date(run.completed_at).toLocaleString()}
+                </li>
+              )}
+            </ul>
+          )}
           <div className="chapter-analysis-success-actions">
-            {onViewResults ? (
+            {preferJourneyResultCta && onContinueReaderJourney ? (
               <button
                 type="button"
                 className="primary"
+                data-testid="chapter-analysis-open-journey"
+                onClick={onContinueReaderJourney}
+              >
+                查看阅读旅程
+              </button>
+            ) : null}
+            {onViewResults ? (
+              <button
+                type="button"
+                className={preferJourneyResultCta ? "secondary" : "primary"}
                 data-testid="chapter-analysis-open-results"
                 onClick={onViewResults}
               >
                 查看场景结果
               </button>
-            ) : (
+            ) : preferJourneyResultCta ? null : (
               <button
                 type="button"
                 className="primary"
@@ -415,7 +489,7 @@ export function ChapterAnalysisProgressPanel({
                 查看场景结果
               </button>
             )}
-            {hasJourney && onContinueReaderJourney && (
+            {!preferJourneyResultCta && hasJourney && onContinueReaderJourney && (
               <button
                 type="button"
                 className="secondary"

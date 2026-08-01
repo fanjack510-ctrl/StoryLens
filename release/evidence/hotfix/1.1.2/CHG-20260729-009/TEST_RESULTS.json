@@ -1,0 +1,9 @@
+﻿{
+  "change": "CHG-20260729-009",
+  "pytest": "test_provider_health_consistency_chg009 + test_analysis_execution_plan_local: 17 passed",
+  "http_e2e_eval": "PASS (Fake; snapshot overrides 30h-old invocation; no real provider)",
+  "incident_replay": "PASS",
+  "real_provider_calls": 0,
+  "formal_database_writes": 0,
+  "build": "NO"
+}

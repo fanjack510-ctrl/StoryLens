@@ -220,7 +220,7 @@ export function buildLensChartLines(
   if (lens.id === "composite") {
     lines.push({
       id: "reading_momentum",
-      labelZh: "综合阅读动力",
+      labelZh: "综合阅读",
       series: seriesFromNodes(visualization, (n) => nodeScores(n).reading_momentum),
       style: "solid",
       includeInMainPolyline: true,
@@ -389,6 +389,21 @@ export function valenceDirection(node: JourneySceneNode): "up" | "down" | "flat"
 
 export type PacingSegmentLabel = "加速" | "减速" | "变化不明显";
 
+export type CompositeRoleFitLabel = "合适" | "偏弱" | "偏强" | "无法判断";
+
+/** Role target midpoints used when backend targets are absent (legacy). */
+const COMPOSITE_ROLE_BANDS: Record<string, [number, number]> = {
+  setup: [35, 65],
+  escalation: [55, 85],
+  investigation: [45, 75],
+  reveal: [55, 80],
+  climax: [70, 95],
+  aftermath: [30, 60],
+  transition: [30, 60],
+  open_end: [45, 75],
+  closed_end: [35, 65],
+};
+
 /** Role target midpoints used when backend targets are absent (legacy). */
 const PACING_ROLE_BANDS: Record<string, [number, number]> = {
   setup: [35, 60],
@@ -428,6 +443,23 @@ export function pacingFitLabel(
   }
   if (pacingSpeed < band[0]) return "偏慢";
   if (pacingSpeed > band[1]) return "偏快";
+  return "合适";
+}
+
+/**
+ * Node label for whether reading_momentum (综合阅读) fits scene_role expectations.
+ * Core/climax expect higher bands; transition/setup allow lower.
+ */
+export function compositeRoleFitLabel(
+  momentum: number | null | undefined,
+  sceneRole: string | undefined | null,
+): CompositeRoleFitLabel {
+  if (typeof momentum !== "number" || !Number.isFinite(momentum)) {
+    return "无法判断";
+  }
+  const band = COMPOSITE_ROLE_BANDS[sceneRole ?? ""] ?? [40, 70];
+  if (momentum < band[0]) return "偏弱";
+  if (momentum > band[1]) return "偏强";
   return "合适";
 }
 

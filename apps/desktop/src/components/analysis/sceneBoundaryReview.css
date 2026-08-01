@@ -1,0 +1,202 @@
+.scene-boundary-review {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: var(--surface, #f7f4ef);
+  color: var(--ink, #1f1a14);
+}
+
+.scene-boundary-review-head {
+  flex: 0 0 auto;
+  padding: 1rem 1.25rem 0.75rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--ink, #1f1a14) 12%, transparent);
+}
+
+.scene-boundary-review-head h1 {
+  margin: 0 0 0.35rem;
+  font-size: 1.35rem;
+}
+
+.scene-boundary-review-head p {
+  margin: 0 0 0.75rem;
+  color: color-mix(in srgb, var(--ink, #1f1a14) 72%, transparent);
+}
+
+.scene-boundary-review-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  font-size: 0.92rem;
+  margin-bottom: 0.5rem;
+}
+
+.scene-boundary-stale-banner {
+  margin: 0 1.25rem 0.75rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 6px;
+  background: color-mix(in srgb, #c45a11 12%, var(--surface, #f7f4ef));
+  color: color-mix(in srgb, var(--ink, #1f1a14) 88%, #000);
+  font-size: 0.92rem;
+}
+
+.scene-boundary-readonly {
+  margin: 1rem 1.25rem;
+  padding: 1rem;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--ink, #1f1a14) 6%, transparent);
+}
+
+.scene-boundary-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 1rem 1.25rem 1.5rem;
+}
+
+.scene-boundary-paragraph {
+  margin: 0 0 0.85rem;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+.scene-boundary-divider {
+  margin: 1rem 0;
+  padding: 0.5rem 0;
+  text-align: center;
+  border-top: 1px dashed color-mix(in srgb, var(--ink, #1f1a14) 22%, transparent);
+  border-bottom: 1px dashed color-mix(in srgb, var(--ink, #1f1a14) 22%, transparent);
+}
+
+.scene-boundary-divider-label {
+  display: block;
+  color: color-mix(in srgb, var(--ink, #1f1a14) 45%, transparent);
+  font-size: 0.85rem;
+  letter-spacing: 0.02em;
+  margin-bottom: 0.35rem;
+}
+
+.scene-boundary-divider-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.35rem;
+}
+
+.scene-boundary-divider-actions button {
+  font-size: 0.82rem;
+  padding: 0.2rem 0.55rem;
+}
+
+.scene-boundary-add-split {
+  margin: 0.35rem 0 0.85rem;
+  font-size: 0.85rem;
+}
+
+.scene-boundary-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin: 0 0 0.75rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--ink, #1f1a14) 5%, transparent);
+  font-size: 0.9rem;
+}
+
+.scene-boundary-toolbar label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+}
+
+.scene-boundary-toolbar-menu {
+  position: relative;
+}
+
+.scene-boundary-toolbar-menu details summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.scene-boundary-toolbar-menu details summary::-webkit-details-marker {
+  display: none;
+}
+
+.scene-boundary-toolbar-menu ul {
+  position: absolute;
+  z-index: 2;
+  min-width: 9rem;
+  margin: 0.25rem 0 0;
+  padding: 0.35rem 0;
+  list-style: none;
+  background: var(--surface, #fff);
+  border: 1px solid color-mix(in srgb, var(--ink, #1f1a14) 15%, transparent);
+  border-radius: 6px;
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--ink, #1f1a14) 12%, transparent);
+}
+
+.scene-boundary-toolbar-menu li button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.35rem 0.75rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.scene-boundary-actions {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.85rem 1.25rem;
+  border-top: 1px solid color-mix(in srgb, var(--ink, #1f1a14) 12%, transparent);
+  background: color-mix(in srgb, var(--surface, #f7f4ef) 92%, #fff);
+}
+
+.scene-boundary-actions-left,
+.scene-boundary-actions-right {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.scene-boundary-waiting-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+@media (max-width: 1024px) {
+  .scene-boundary-actions {
+    position: sticky;
+    bottom: 0;
+  }
+}
+
+.scene-boundary-conflict-dialog {
+  margin: 0.75rem 1.25rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid color-mix(in srgb, #a33 35%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, #a33 8%, var(--surface, #f7f4ef));
+}
+
+.scene-boundary-conflict-dialog h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.1rem;
+}
+
+.notice.success {
+  margin: 0.5rem 1.25rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 6px;
+  background: color-mix(in srgb, #2f7d4a 14%, var(--surface, #f7f4ef));
+}

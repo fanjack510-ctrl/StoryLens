@@ -24,6 +24,7 @@ from app.db.models import (
 )
 from app.schemas.reader_journey import SCENE_CONTRACT_VERSION, SCENE_PROMPT_VERSION
 from app.services.reader_journey_batch_planner import PLANNER_VERSION
+from app.services.utc_datetime import ensure_utc_aware
 
 
 USER_ERROR_MESSAGES = {
@@ -102,7 +103,7 @@ class ReaderJourneyProgress:
             "failed_scene_id": self.journey_run.failed_scene_id,
             "failed_scene_ordinal": self.journey_run.failed_scene_ordinal,
             "failed_invocation_id": self.journey_run.failed_invocation_id,
-            "completed_at": self.journey_run.completed_at,
+            "completed_at": ensure_utc_aware(self.journey_run.completed_at),
             "planner_version": getattr(self.journey_run, "planner_version", None),
             "current_planner_version": PLANNER_VERSION,
             "scene_prompt_version": self.journey_run.scene_prompt_version,
@@ -132,23 +133,31 @@ def load_revision_scenes(session: Session, analysis_run_id: int) -> tuple[Bounda
         .where(BoundaryReviewSession.analysis_run_id == analysis_run_id)
         .order_by(BoundaryReviewSession.id.desc())
     )
-    if review is None:
-        return None, []
-    revision = session.scalar(
-        select(BoundaryRevision)
-        .where(BoundaryRevision.review_session_id == review.id)
-        .order_by(BoundaryRevision.id.desc())
-    )
-    if revision is None:
-        return None, []
-    scenes = list(
-        session.scalars(
-            select(Scene)
-            .where(Scene.boundary_revision_id == revision.id)
-            .order_by(Scene.ordinal)
+    if review is not None:
+        revision = session.scalar(
+            select(BoundaryRevision)
+            .where(
+                BoundaryRevision.review_session_id == review.id,
+                BoundaryRevision.status == "confirmed",
+            )
+            .order_by(BoundaryRevision.id.desc())
         )
-    )
-    return revision, scenes
+        if revision is not None:
+            scenes = list(
+                session.scalars(
+                    select(Scene)
+                    .where(Scene.boundary_revision_id == revision.id)
+                    .order_by(Scene.ordinal)
+                )
+            )
+            if scenes:
+                return revision, scenes
+    from app.services.scene_boundary_manual_review import run_scenes
+
+    scenes = run_scenes(session, analysis_run_id)
+    if scenes:
+        return None, scenes
+    return None, []
 
 
 def is_scene_profile_complete(session: Session, journey_run_id: int, scene_id: int) -> bool:
@@ -293,7 +302,12 @@ def recovery_flags(
     )
 
 def reader_journey_progress(session: Session, journey_run: ReaderJourneyRun) -> ReaderJourneyProgress:
-    _revision, scenes = load_revision_scenes(session, journey_run.analysis_run_id)
+    from app.services.scene_boundary_manual_review import load_journey_bound_scenes
+
+    try:
+        _revision, scenes = load_journey_bound_scenes(session, journey_run)
+    except Exception:
+        _revision, scenes = load_revision_scenes(session, journey_run.analysis_run_id)
     completed: list[int] = []
     remaining: list[int] = []
     for scene in scenes:
@@ -439,8 +453,13 @@ def find_recoverable_journey_run(
     session: Session,
     analysis_run_id: int,
     *,
-    contract_major: str = "1",
+    contract_major: str | None = None,
 ) -> ReaderJourneyRun | None:
+    """Return the newest recoverable journey for an analysis run.
+
+    ``contract_major=None`` accepts any contract (default). Pass an explicit major
+    only when a caller must pin a generation.
+    """
     rows = list(
         session.scalars(
             select(ReaderJourneyRun)
@@ -455,9 +474,10 @@ def find_recoverable_journey_run(
         "scene_profiles_partial",
     }
     for row in rows:
-        major = (row.scene_contract_version or "1.0").split(".", 1)[0]
-        if major != contract_major:
-            continue
+        if contract_major is not None:
+            major = (row.scene_contract_version or "1.0").split(".", 1)[0]
+            if major != contract_major:
+                continue
         if row.status in active_statuses:
             return row
         if row.status == "failed" and (

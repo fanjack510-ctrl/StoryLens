@@ -55,6 +55,7 @@ import {
   type CompareMetricKey,
 } from "./comparisonState";
 import { HookPayoffTimeline } from "./HookPayoffTimeline";
+import { buildChapterHookSimplificationModel } from "./chapterHookSimplification";
 import {
   getNarrativeLoops,
 } from "./narrativeLoopView";
@@ -125,10 +126,9 @@ import {
   sanitizePreferredWidth,
 } from "./journeyPaneWidth";
 import { JourneyPaneSplitter } from "./JourneyPaneSplitter";
-import { PHASE_BAND_COLORS } from "./journeyVisualTokens";
+import { resolveJourneyStageToken } from "./journeyVisualTokens";
+import { enrichVisualizationComprehensivePresentation } from "./comprehensiveReadingPresentation";
 import "./readerJourney.css";
-
-const phaseColors = PHASE_BAND_COLORS;
 
 function exportErrorMessage(error: unknown): string {
   if (
@@ -178,7 +178,7 @@ type Props = {
 };
 
 export function ReaderJourneyWorkspace({
-  visualization,
+  visualization: visualizationProp,
   chapterTitle,
   onLocateEvidence,
   onSelectScene,
@@ -193,6 +193,14 @@ export function ReaderJourneyWorkspace({
   sourcePane,
   sourceCollapsed: sourceCollapsedProp,
 }: Props) {
+  const visualization = useMemo(
+    () => enrichVisualizationComprehensivePresentation(visualizationProp),
+    [visualizationProp],
+  );
+  const hookPresentation = useMemo(
+    () => buildChapterHookSimplificationModel(visualization),
+    [visualization],
+  );
   const workspaceRef = useRef<HTMLDivElement>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const overviewMode = parseOverviewMode(searchParams.get("overview"));
@@ -434,6 +442,7 @@ export function ReaderJourneyWorkspace({
         reading_momentum:
           node.scores?.reading_momentum ?? node.engagement?.engagement_score,
         plot_progress: node.scores?.plot_progress,
+        scene_role: node.scene_role,
         role: node.role,
         node_type: node.node_type,
         include_in_main_curve: node.include_in_main_curve,
@@ -1178,6 +1187,7 @@ export function ReaderJourneyWorkspace({
             observationLensLabel={lensDef.labelZh}
             observationLens={observationLens}
             selectedLoopId={isHookPayoffLens(observationLens) ? selectedLoopId : null}
+            hookPresentation={isHookPayoffLens(observationLens) ? hookPresentation : null}
             onLocateEvidence={(id) => handleLocateEvidence(id, selectedNode)}
             onOpenInSceneList={
               onSelectScene ? () => onSelectScene(selectedNode.scene_id) : undefined
@@ -1486,10 +1496,14 @@ export function ReaderJourneyWorkspace({
             className="journey-phase-strip journey-phase-band journey-phase-nav"
             data-testid="journey-phase-strip"
           >
-            {visualization.phases.map((phase, index) => {
+            {visualization.phases.map((phase) => {
               const isSelected = selectedPhase === phase.ordinal;
               const phaseLabel = formatJourneyPhaseLabel(phase.title);
-              const phaseSummary = resolvePhaseSummaryDisplay(phase.summary, phase.title);
+              const stageToken = resolveJourneyStageToken(phase.title);
+              const phaseSummary =
+                observationLens === "composite" && phase.stage_judgment_summary
+                  ? phase.stage_judgment_summary
+                  : resolvePhaseSummaryDisplay(phase.summary, phase.title);
               const phaseMetric =
                 phaseMetricAverages.get(phase.ordinal) ?? phase.average_engagement;
               const avgText = formatLensPhaseScoreLabel(
@@ -1504,11 +1518,13 @@ export function ReaderJourneyWorkspace({
                   type="button"
                   className={`journey-phase-card journey-phase-compact journey-phase-nav-card ${isSelected ? "selected active-phase" : ""}`}
                   data-testid={`journey-phase-${phase.ordinal}`}
+                  data-stage-key={stageToken.key}
                   title={`${phaseLabel} · ${phaseDesc}`}
                   aria-pressed={isSelected}
                   aria-selected={isSelected}
                   style={{
-                    ["--phase-band-color" as string]: phaseColors[index % phaseColors.length],
+                    ["--phase-band-color" as string]: stageToken.cardBackground,
+                    ["--phase-band-border" as string]: stageToken.cardBorder,
                   }}
                   onClick={() => handleSelectPhase(phase.ordinal)}
                 >
@@ -1577,9 +1593,16 @@ export function ReaderJourneyWorkspace({
                 {isHookPayoffLens(observationLens) ? (
                   <HookPayoffTimeline
                     visualization={visualization}
+                    presentation={hookPresentation}
                     selectedLoopId={selectedLoopId}
                     selectedSceneOrdinal={selectedSceneOrdinal}
                     onSelectLoop={handleSelectLoop}
+                    onSelectScene={(ordinal) => {
+                      const node = visualization.scene_nodes.find(
+                        (n) => n.scene_ordinal === ordinal,
+                      );
+                      if (node) handleSelectScene(node, "journey_scene");
+                    }}
                     onLocateEvidence={(id) => handleLocateEvidence(id, selectedNode)}
                   />
                 ) : (
@@ -1670,6 +1693,9 @@ export function ReaderJourneyWorkspace({
                 diagnoses={sceneDiagnoses}
                 selectedSceneOrdinal={selectedSceneOrdinal}
                 observationLens={observationLens}
+                hookPresentation={
+                  isHookPayoffLens(observationLens) ? hookPresentation : null
+                }
                 onSelectScene={(ordinal: number) => {
                   const node = visualization.scene_nodes.find(
                     (item) => item.scene_ordinal === ordinal,

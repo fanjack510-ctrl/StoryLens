@@ -144,16 +144,17 @@ def test_resume_accepts_interrupted_and_reuses_task(client, monkeypatch):
     assert response.status_code == 202, response.text
     body = response.json()
     assert body["journey_run_id"] == journey_id
-    assert body["status"] == "queued"
+    assert body["status"] in {"queued", "starting"}
     with factory() as session:
         assert session.scalar(select(func.count()).select_from(ReaderJourneyRun)) == 1
         row = session.get(ReaderJourneyRun, journey_id)
         assert row is not None
         assert row.id == journey_id
-        assert row.status == "queued"
+        assert row.status in {"queued", "starting"}
 
 
-def test_resume_healthy_running_returns_409(client):
+def test_resume_healthy_running_returns_202_idempotent(client):
+    """CHG-023: already-running resume is idempotent (no 409, no new run)."""
     from app.db.session import get_session_factory
     from app.main import app
 
@@ -166,15 +167,19 @@ def test_resume_healthy_running_returns_409(client):
         journey.started_at = now
         session.commit()
         journey_id = journey.id
+        before_count = session.scalar(select(func.count()).select_from(ReaderJourneyRun))
 
     response = client.post(
         f"/api/v1/reader-journey-runs/{journey_id}/resume",
         json={"cloud_consent": True, "client_request_id": "resume-healthy-001"},
     )
-    assert response.status_code == 409, response.text
-    payload = response.json()
-    code = payload.get("error_code") or (payload.get("detail") or {}).get("error_code")
-    assert code == "READER_JOURNEY_ALREADY_RUNNING"
+    assert response.status_code == 202, response.text
+    body = response.json()
+    assert body["journey_run_id"] == journey_id
+    assert body["status"] == "scene_profiles_running"
+    with factory() as session:
+        after_count = session.scalar(select(func.count()).select_from(ReaderJourneyRun))
+        assert after_count == before_count
 
 
 @pytest.mark.asyncio

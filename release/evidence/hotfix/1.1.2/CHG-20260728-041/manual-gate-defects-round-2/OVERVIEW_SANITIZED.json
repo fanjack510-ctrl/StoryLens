@@ -1,0 +1,76 @@
+﻿{
+    "awaiting":  true,
+    "draft":  null,
+    "confirmed":  {
+                      "revision_id":  8,
+                      "revision_number":  8,
+                      "status":  "confirmed",
+                      "source":  "user",
+                      "revision_etag":  "9e138a3e99957fc1c1186b34b7b531b7928bb9e52b1109c4b4ba4c11b57562e3",
+                      "boundary_hash":  "ac521f714e645e9b00d89eaa205d6ee9b2d63f364f70661ba77ee0cce07b8071",
+                      "chapter_text_hash":  "3ac1704914657df75dd821dcb82e0bda5185353f2c6fd49d633c44c05cb40b66",
+                      "scene_count":  4,
+                      "scenes":  [
+                                     {
+                                         "scene_order":  1,
+                                         "start_paragraph_id":  "B0001-C0001-P0001",
+                                         "end_paragraph_id":  "B0001-C0001-P0006",
+                                         "included_in_journey":  true
+                                     },
+                                     {
+                                         "scene_order":  2,
+                                         "start_paragraph_id":  "B0001-C0001-P0007",
+                                         "end_paragraph_id":  "B0001-C0001-P0010",
+                                         "included_in_journey":  true
+                                     },
+                                     {
+                                         "scene_order":  3,
+                                         "start_paragraph_id":  "B0001-C0001-P0011",
+                                         "end_paragraph_id":  "B0001-C0001-P0016",
+                                         "included_in_journey":  true
+                                     },
+                                     {
+                                         "scene_order":  4,
+                                         "start_paragraph_id":  "B0001-C0001-P0017",
+                                         "end_paragraph_id":  "B0001-C0001-P0020",
+                                         "included_in_journey":  true
+                                     }
+                                 ]
+                  },
+    "model":  {
+                  "revision_id":  1,
+                  "revision_number":  1,
+                  "status":  "superseded",
+                  "source":  "model",
+                  "revision_etag":  "f8a32e9c12c289076d0f7e95e35c884a6d654813468edf00f9875e5cb26b07a8",
+                  "boundary_hash":  "b45fb33646f17fb9fcce66bceb018e0bcc46fab108e08c37548915bb09f6cc32",
+                  "chapter_text_hash":  "3ac1704914657df75dd821dcb82e0bda5185353f2c6fd49d633c44c05cb40b66",
+                  "scene_count":  4,
+                  "scenes":  [
+                                 {
+                                     "scene_order":  1,
+                                     "start_paragraph_id":  "B0001-C0001-P0001",
+                                     "end_paragraph_id":  "B0001-C0001-P0005",
+                                     "included_in_journey":  true
+                                 },
+                                 {
+                                     "scene_order":  2,
+                                     "start_paragraph_id":  "B0001-C0001-P0006",
+                                     "end_paragraph_id":  "B0001-C0001-P0010",
+                                     "included_in_journey":  true
+                                 },
+                                 {
+                                     "scene_order":  3,
+                                     "start_paragraph_id":  "B0001-C0001-P0011",
+                                     "end_paragraph_id":  "B0001-C0001-P0015",
+                                     "included_in_journey":  true
+                                 },
+                                 {
+                                     "scene_order":  4,
+                                     "start_paragraph_id":  "B0001-C0001-P0016",
+                                     "end_paragraph_id":  "B0001-C0001-P0020",
+                                     "included_in_journey":  true
+                                 }
+                             ]
+              }
+}

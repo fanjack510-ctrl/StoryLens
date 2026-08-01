@@ -1,0 +1,22 @@
+﻿{
+    "change":  "CHG-20260728-041",
+    "related":  "CHG-20260728-042",
+    "public_final_head":  "0413ad5e0cff3f55b6a093be8d9ac8d60859f183",
+    "journey_run_id":  1,
+    "final_status":  "succeeded",
+    "profiles":  4,
+    "started_at":  "2026-07-28T15:46:53.639673Z",
+    "completed_at":  "2026-07-28T15:46:54.043087Z",
+    "timestamps_utc_z":  true,
+    "elapsed_sec":  0.4,
+    "fake_mode":  "success",
+    "real_provider_calls":  0,
+    "formal_db_writes":  0,
+    "api_url":  "http://127.0.0.1:18041",
+    "frontend_url":  "http://127.0.0.1:1421",
+    "scene_review_url":  "http://127.0.0.1:1421/books/1?view=scene-boundary-review\u0026chapter=1\u0026analysisRun=1",
+    "result_url":  "http://127.0.0.1:1421/books/1?view=result\u0026tab=reader-journey\u0026chapter=1\u0026analysisRun=1\u0026journeyRun=1",
+    "api_pid":  17592,
+    "frontend_pid":  19752,
+    "database":  "C:\\Users\\msi\\AppData\\Local\\Temp\\storylens-mg-chg041-r4-final\\database\\storylens-mg-chg041-r4-final.db"
+}

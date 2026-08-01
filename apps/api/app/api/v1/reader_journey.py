@@ -39,7 +39,8 @@ from app.schemas.reader_journey import (
     ReaderJourneySemanticRecalibrateRequest,
     ReaderJourneySemanticRecalibrateResponse,
 )
-from app.services.credentials.service import get_credential_store
+from app.services.utc_datetime import ensure_utc_aware
+
 from app.services.reader_journey_batch_planner import PLANNER_VERSION
 from app.services.reader_journey_engagement import compute_engagement
 from app.services.reader_journey_offline_replay import offline_replay_journey_profiles
@@ -83,22 +84,54 @@ def _serialize_profile(row: SceneReaderJourneyProfile, genre: str) -> ReaderJour
     payload = json.loads(row.payload_json or "{}")
     from app.schemas.reader_journey import SceneReaderJourneyProfileItem
 
-    profile = SceneReaderJourneyProfileItem.model_validate(payload)
-    engagement = compute_engagement(profile, genre=genre)
-    return ReaderJourneyProfileSummary(
-        scene_id=row.scene_id,
-        scene_ordinal=row.scene_ordinal,
-        scene_value_summary=row.scene_value_summary,
-        dominant_emotion=row.dominant_emotion,
-        engagement=engagement,
-        reader_question_in=[item.get("question", "") for item in payload.get("reader_question_in", [])],
-        reader_question_out=[item.get("question", "") for item in payload.get("reader_question_out", [])],
-        payoffs=[item.get("summary", "") for item in payload.get("payoffs", [])],
-        hooks=[item.get("summary", "") for item in payload.get("hooks", [])],
-        risk_points=[item.get("summary", "") for item in payload.get("risk_points", [])],
-        evidence_paragraph_ids=list(payload.get("evidence_paragraph_ids", [])),
-        confidence=row.confidence,
-    )
+    try:
+        profile = SceneReaderJourneyProfileItem.model_validate(payload)
+        engagement = compute_engagement(profile, genre=genre)
+        return ReaderJourneyProfileSummary(
+            scene_id=row.scene_id,
+            scene_ordinal=row.scene_ordinal,
+            scene_value_summary=row.scene_value_summary,
+            dominant_emotion=row.dominant_emotion,
+            engagement=engagement,
+            reader_question_in=[item.get("question", "") for item in payload.get("reader_question_in", [])],
+            reader_question_out=[item.get("question", "") for item in payload.get("reader_question_out", [])],
+            payoffs=[item.get("summary", "") for item in payload.get("payoffs", [])],
+            hooks=[item.get("summary", "") for item in payload.get("hooks", [])],
+            risk_points=[item.get("summary", "") for item in payload.get("risk_points", [])],
+            evidence_paragraph_ids=list(payload.get("evidence_paragraph_ids", [])),
+            confidence=row.confidence,
+        )
+    except Exception:
+        # Incomplete fixture / legacy payloads must not 500 the journey GET.
+        from app.schemas.reader_journey import EngagementBreakdown
+
+        return ReaderJourneyProfileSummary(
+            scene_id=row.scene_id,
+            scene_ordinal=row.scene_ordinal,
+            scene_value_summary=row.scene_value_summary or "",
+            dominant_emotion=row.dominant_emotion or "neutral",
+            engagement=EngagementBreakdown(
+                curiosity=0,
+                tension=0,
+                hook=0,
+                payoff=0,
+                information_gain=0,
+                emotional_resonance=0,
+                cognitive_load=0,
+                dropoff_risk=0,
+                engagement_score=0,
+                formula_version="1.0",
+                genre=genre or "suspense",
+                weights={},
+            ),
+            reader_question_in=[],
+            reader_question_out=[],
+            payoffs=[],
+            hooks=[],
+            risk_points=[],
+            evidence_paragraph_ids=[],
+            confidence=float(row.confidence or 0.0),
+        )
 
 
 def _serialize_result(session: Session, journey_run: ReaderJourneyRun) -> ReaderJourneyResultResponse:
@@ -109,13 +142,21 @@ def _serialize_result(session: Session, journey_run: ReaderJourneyRun) -> Reader
             .order_by(ReaderJourneyPhase.ordinal)
         )
     )
-    profiles = list(
-        session.scalars(
+    try:
+        allowed_scene_ids = {
+            int(item) for item in json.loads(journey_run.included_scene_ids_json or "[]")
+        }
+    except (TypeError, ValueError, json.JSONDecodeError):
+        allowed_scene_ids = set()
+    profiles = [
+        item
+        for item in session.scalars(
             select(SceneReaderJourneyProfile)
             .where(SceneReaderJourneyProfile.reader_journey_run_id == journey_run.id)
             .order_by(SceneReaderJourneyProfile.scene_ordinal)
         )
-    )
+        if not allowed_scene_ids or int(item.scene_id) in allowed_scene_ids
+    ]
     summary = session.scalar(
         select(ChapterReaderJourneySummary).where(
             ChapterReaderJourneySummary.reader_journey_run_id == journey_run.id
@@ -134,10 +175,20 @@ def _serialize_result(session: Session, journey_run: ReaderJourneyRun) -> Reader
         deterministic = json.loads(summary.deterministic_statistics_json or "{}")
         diagnosis = summary.one_sentence_diagnosis
     visualization = None
-    integrity_payload = scan_reader_journey_integrity(session, journey_run=journey_run)
+    try:
+        integrity_payload = scan_reader_journey_integrity(session, journey_run=journey_run)
+    except Exception:
+        integrity_payload = {
+            "integrity_status": "unavailable",
+            "trusted": False,
+            "issues": [],
+        }
     if journey_run.status == "succeeded":
-        visualization = build_reader_journey_visualization(session, journey_run)
-        visualization = redact_visualization_for_integrity(visualization, integrity_payload)
+        try:
+            visualization = build_reader_journey_visualization(session, journey_run)
+            visualization = redact_visualization_for_integrity(visualization, integrity_payload)
+        except Exception:
+            visualization = None
     contract_version = journey_run.scene_contract_version
     compat = enrich_result_compatibility(
         {},
@@ -186,12 +237,25 @@ def _serialize_result(session: Session, journey_run: ReaderJourneyRun) -> Reader
             for phase in phases
         ],
         scene_profiles=[_serialize_profile(item, journey_run.genre) for item in profiles],
+        profiles=[_serialize_profile(item, journey_run.genre) for item in profiles],
         chapter_summary=chapter_summary,
         deterministic_statistics=deterministic,
         one_sentence_diagnosis=diagnosis,
         visualization=visualization,
-        created_at=journey_run.created_at,
-        completed_at=journey_run.completed_at,
+        journey_result=visualization,
+        created_at=ensure_utc_aware(journey_run.created_at),
+        started_at=ensure_utc_aware(journey_run.started_at),
+        updated_at=ensure_utc_aware(journey_run.updated_at),
+        completed_at=ensure_utc_aware(journey_run.completed_at),
+        scene_revision_id=journey_run.scene_revision_id,
+        scene_boundary_hash=journey_run.scene_boundary_hash,
+        result_status=journey_run.result_status,
+        is_current=journey_run.result_status == "current",
+        is_superseded=journey_run.result_status == "superseded",
+        error_code=journey_run.root_error_code,
+        retryable=bool(journey_run.retryable),
+        total_scene_count=journey_run.total_scene_count,
+        completed_scene_count=journey_run.completed_scene_count,
         v2_question_lifecycle=v2_lifecycle,
         v2_scene_diagnoses=v2_diagnoses,
         integrity=integrity_payload,
@@ -317,6 +381,7 @@ def get_reader_journey_for_run(
     run_id: int,
     book_id: int | None = None,
     chapter_id: int | None = None,
+    journey_run_id: int | None = None,
     session: Session = Depends(get_db),
 ) -> ReaderJourneyResultResponse | None:
     analysis_run = session.get(AnalysisRun, run_id)
@@ -344,11 +409,22 @@ def get_reader_journey_for_run(
                 analysis_run_id=run_id,
                 book_id=book_id,
             )
-    journey_run = session.scalar(
-        select(ReaderJourneyRun)
-        .where(ReaderJourneyRun.analysis_run_id == run_id)
-        .order_by(ReaderJourneyRun.id.desc())
-    )
+    journey_run: ReaderJourneyRun | None = None
+    if journey_run_id is not None:
+        journey_run = session.get(ReaderJourneyRun, journey_run_id)
+        if journey_run is None or int(journey_run.analysis_run_id) != int(run_id):
+            raise error(404, "READER_JOURNEY_RUN_NOT_FOUND", "读者旅程运行不存在")
+    else:
+        # Prefer a non-superseded journey so old revision fixtures cannot steal
+        # the chapter-scoped GET used before journeyRun is in the URL.
+        journey_run = session.scalar(
+            select(ReaderJourneyRun)
+            .where(
+                ReaderJourneyRun.analysis_run_id == run_id,
+                ReaderJourneyRun.result_status != "superseded",
+            )
+            .order_by(ReaderJourneyRun.id.desc())
+        )
     if journey_run is None:
         return None
     if book_id is not None and int(journey_run.book_id) != int(book_id):
@@ -356,6 +432,49 @@ def get_reader_journey_for_run(
     if chapter_id is not None and int(journey_run.chapter_id) != int(chapter_id):
         raise error(409, ERROR_RUN_SCOPE, "reader journey与chapter不匹配", chapter_id=chapter_id)
     return _serialize_result(session, journey_run)
+
+
+@router.get(
+    "/reader-journey-runs/{journey_run_id}",
+    response_model=ReaderJourneyResultResponse,
+)
+def get_reader_journey_run(
+    journey_run_id: int,
+    book_id: int | None = None,
+    chapter_id: int | None = None,
+    session: Session = Depends(get_db),
+) -> ReaderJourneyResultResponse:
+    journey_run = session.get(ReaderJourneyRun, journey_run_id)
+    if journey_run is None:
+        raise error(404, "READER_JOURNEY_RUN_NOT_FOUND", "读者旅程运行不存在")
+    if book_id is not None and int(journey_run.book_id) != int(book_id):
+        raise error(409, ERROR_RUN_SCOPE, "reader journey scope mismatch", book_id=book_id)
+    if chapter_id is not None and int(journey_run.chapter_id) != int(chapter_id):
+        raise error(
+            409,
+            ERROR_RUN_SCOPE,
+            "reader journey scope mismatch",
+            chapter_id=chapter_id,
+        )
+    return _serialize_result(session, journey_run)
+
+
+@router.get(
+    "/reader-journeys/{journey_run_id}",
+    response_model=ReaderJourneyResultResponse,
+)
+def get_reader_journey_by_explicit_id(
+    journey_run_id: int,
+    book_id: int | None = None,
+    chapter_id: int | None = None,
+    session: Session = Depends(get_db),
+) -> ReaderJourneyResultResponse:
+    return get_reader_journey_run(
+        journey_run_id,
+        book_id=book_id,
+        chapter_id=chapter_id,
+        session=session,
+    )
 
 
 @router.get(
@@ -394,20 +513,45 @@ async def resume_reader_journey(
     # Orphan fake-running (no heartbeat / unfinished invocation) → recoverable first.
     from app.services.reader_journey_recovery import (
         JOURNEY_ACTIVE_WORKER_STATUSES,
+        JOURNEY_CLAIMED_WORKER_STATUSES,
+        JOURNEY_STARTING_STATUSES,
+        mark_journey_startup_intent,
         reclaim_stale_journey_if_needed,
     )
 
     if journey_run.status in JOURNEY_ACTIVE_WORKER_STATUSES:
         reclaim_stale_journey_if_needed(session, journey_run)
         session.refresh(journey_run)
-    if journey_run.status in {
-        "scene_profiles_running",
-        "chapter_synthesis_running",
-        "running",
-        "summary_running",
-        "phase_analysis_running",
-    }:
-        raise error(409, "READER_JOURNEY_ALREADY_RUNNING", "读者旅程正在运行")
+    # CHG-023 final: same journey_run_id + request.client_request_id → at most one
+    # startup intent / background task (do not re-enqueue).
+    try:
+        _details_early = json.loads(journey_run.failure_details_json or "{}")
+    except json.JSONDecodeError:
+        _details_early = {}
+    _startup_early = _details_early.get("startup_intent")
+    _startup_cid = (
+        _startup_early.get("client_request_id")
+        if isinstance(_startup_early, dict)
+        else None
+    )
+    if journey_run.status in JOURNEY_STARTING_STATUSES:
+        if (
+            request.client_request_id
+            and _startup_cid
+            and str(_startup_cid) == str(request.client_request_id)
+        ):
+            return ReaderJourneyRunAccepted(
+                journey_run_id=journey_run.id, status=journey_run.status
+            )
+        background.add_task(execute_reader_journey, session_factory, gateway, journey_run.id)
+        return ReaderJourneyRunAccepted(
+            journey_run_id=journey_run.id, status=journey_run.status
+        )
+    # CHG-023: already claimed/running is idempotent (align with unified recover).
+    if journey_run.status in JOURNEY_CLAIMED_WORKER_STATUSES:
+        return ReaderJourneyRunAccepted(
+            journey_run_id=journey_run.id, status=journey_run.status
+        )
     progress = reader_journey_progress(session, journey_run)
     if progress.blind_resume_blocked:
         reason = progress.resume_block_reason
@@ -459,18 +603,11 @@ async def resume_reader_journey(
         journey_run.scene_prompt_version = SCENE_PROMPT_VERSION
         journey_run.scene_contract_version = SCENE_CONTRACT_VERSION
         journey_run.chapter_contract_version = CHAPTER_CONTRACT_VERSION
-    journey_run.status = "queued"
-    journey_run.current_stage = None
     journey_run.cloud_consent = request.cloud_consent
     journey_run.planner_version = PLANNER_VERSION
-    journey_run.retryable = False
-    journey_run.root_error_code = None
-    journey_run.root_error_message = None
-    journey_run.failed_stage = None
-    journey_run.failed_scene_id = None
-    journey_run.failed_scene_ordinal = None
-    journey_run.failed_invocation_id = None
-    journey_run.completed_at = None
+    mark_journey_startup_intent(
+        journey_run, client_request_id=request.client_request_id
+    )
     session.commit()
     background.add_task(execute_reader_journey, session_factory, gateway, journey_run.id)
     return ReaderJourneyRunAccepted(journey_run_id=journey_run.id, status=journey_run.status)

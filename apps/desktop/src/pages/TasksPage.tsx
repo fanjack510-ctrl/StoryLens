@@ -21,8 +21,37 @@ import {
   normalizeRunLifecycle,
   resolveTaskCenterPrimaryAction,
 } from "../services/runLifecycle";
+import {
+  STOP_CONFIRM_BODY,
+  STOP_CONFIRM_TITLE,
+  canShowStopAnalysis,
+  cancellationReasonLabel,
+  formatCancelDetailHint,
+  isCancelledStatus,
+  isStoppingStatus,
+  taskCancelStatusLabel,
+} from "../services/taskCancellationUi";
 import { isProNativeOverviewUiEnabled } from "../services/proNativeOverviewFlag";
+import {
+  formatCompletedScenesProgress,
+  formatSceneOrdinalLabel,
+  formatSceneOrdinalRange,
+} from "../services/chapterAnalysisPresentation";
 import "./tasksPage.css";
+
+function taskContinueAvailabilityLabel(detail: {
+  retryable?: boolean;
+  journey_retryable?: boolean | null;
+  status?: string;
+  journey_status?: string | null;
+  effective_status?: string | null;
+}): string {
+  const phase = normalizeRunLifecycle(detail as any);
+  if (phase === "interrupted") {
+    return detail.journey_retryable !== false ? "可继续本次分析" : "可重新开始分析";
+  }
+  return detail.retryable ? "可重试" : "不可重试";
+}
 
 type RecoveryState = "idle" | "checking" | "creating_recovery" | "created" | "failed";
 type SceneResumeState = "idle" | "checking" | "resuming" | "done" | "failed";
@@ -172,6 +201,8 @@ async function resolveBookIdForChapter(chapterId: number): Promise<number | null
 }
 
 function badgeToneForRun(run: any): string {
+  if (isStoppingStatus(run?.status)) return "warning";
+  if (isCancelledStatus(run?.status)) return "neutral";
   if (isBudgetPauseRun(run) || run.status === "awaiting_provider_recovery") {
     return "warning";
   }
@@ -294,6 +325,9 @@ export function TasksPage() {
   const [, setOfflineReplayMessage] = useState<string>();
   const [, setOfflineReplayError] = useState<RecoveryErrorView>();
   const [navBusyRunId, setNavBusyRunId] = useState<number | null>(null);
+  const [stopConfirmRun, setStopConfirmRun] = useState<any | null>(null);
+  const [stopSubmitting, setStopSubmitting] = useState(false);
+  const [stopError, setStopError] = useState<{ code: string; message: string } | null>(null);
   const qc = useQueryClient();
   const runs = useQuery({
     queryKey: ["runs"],
@@ -314,6 +348,32 @@ export function TasksPage() {
     await analysisApi.retry(id);
     await qc.invalidateQueries({ queryKey: ["runs"] });
   };
+
+  const submitStopAnalysis = async () => {
+    if (!stopConfirmRun || stopSubmitting) return;
+    setStopSubmitting(true);
+    setStopError(null);
+    try {
+      await analysisApi.cancel(stopConfirmRun.id, {
+        reason: "user_requested",
+        expected_version: stopConfirmRun.status_version,
+        client_request_id:
+          globalThis.crypto?.randomUUID?.() || `cancel-${Date.now()}`,
+      });
+      setStopConfirmRun(null);
+      await qc.invalidateQueries({ queryKey: ["runs"] });
+    } catch (error) {
+      const code = error instanceof ApiError ? error.code : "CANCEL_FAILED";
+      const message =
+        error instanceof ApiError
+          ? error.message
+          : "提交停止请求失败，请稍后重试。";
+      setStopError({ code: String(code || "CANCEL_FAILED"), message });
+    } finally {
+      setStopSubmitting(false);
+    }
+  };
+
   const openChapterProgress = async (run: any) => {
     if (isNativeOverviewRun(run) || run.task_type === "whole_book_overview" || run.subject_type === "book") {
       const bookId = Number(run.book_id || run.subject_id);
@@ -579,22 +639,42 @@ export function TasksPage() {
     failed_provider: "服务请求失败",
     succeeded: "已完成",
     completed: "已完成",
-    cancelled: "已取消",
-    review_cancelled: "已取消",
+    cancelled: "已停止",
+    review_cancelled: "已停止",
+    cancellation_requested: "正在停止",
+    stopping: "正在停止",
     review_expired: "审阅已过期",
     failed: "失败",
   };
   const overviewUserError = (run: any): string | null => {
-    const code = run?.error_code || run?.root_error_code;
+    const code = run?.error_code || run?.root_error_code || run?.failure_reason_code;
     if (code === "PROVIDER_OUTPUT_INVALID") {
       return "模型返回的分析结果格式不符合要求，任务未完成。";
     }
     if (code === "PROVIDER_OUTPUT_EMPTY") {
       return "模型返回空结果，任务未完成。";
     }
+    if (code === "SCENE_BOUNDARY_OUTPUT_TRUNCATED_AT_HARD_CAP") {
+      return "模型输出达到当前上限，边界裁决未能生成完整结果。";
+    }
+    if (code === "SCENE_BOUNDARY_OUTPUT_BUDGET_TOO_LOW") {
+      return "当前模型输出上限不足以完成边界裁决。请将最大输出 Token 调整到至少 1024 后重试。";
+    }
+    if (code === "SCENE_BOUNDARY_OUTPUT_TRUNCATED" || code === "OUTPUT_TRUNCATED") {
+      return "模型输出达到上限，StoryLens 正在提高本次裁决的输出预算。";
+    }
     return null;
   };
   const runStatusLabel = (run: any) => {
+    const cancelLabel = taskCancelStatusLabel(run?.status);
+    if (cancelLabel) return cancelLabel;
+    if (
+      (run.failure_reason_code === "SCENE_BOUNDARY_OUTPUT_TRUNCATED" ||
+        run.root_error_code === "SCENE_BOUNDARY_OUTPUT_TRUNCATED") &&
+      run.status === "running"
+    ) {
+      return "正在调整输出上限并重试";
+    }
     if (isBudgetPauseRun(run)) return "分析已暂停";
     if (run.status === "awaiting_provider_recovery") return "分析已暂停";
     if (run.task_type === "whole_book_overview" || run.subject_type === "book") {
@@ -663,7 +743,7 @@ export function TasksPage() {
         );
       }
       if (statusFilter === "cancelled") {
-        return run.status === "cancelled" || run.status === "review_cancelled";
+        return isCancelledStatus(run.status) || isStoppingStatus(run.status);
       }
       if (statusFilter === "running") {
         return (
@@ -786,7 +866,7 @@ export function TasksPage() {
           <option value="paused">已暂停</option>
           <option value="failed">失败</option>
           <option value="succeeded">已完成</option>
-          <option value="cancelled">已取消</option>
+          <option value="cancelled">已停止</option>
         </select>
       </div>
       {highlightRunId && (
@@ -922,6 +1002,37 @@ export function TasksPage() {
                           {primary.label}
                         </button>
                       ) : null}
+                      {canShowStopAnalysis(run) ? (
+                        <button
+                          type="button"
+                          className="tasks-stop-btn"
+                          data-testid={`stop-analysis-${run.id}`}
+                          aria-label="停止分析"
+                          disabled={stopSubmitting && stopConfirmRun?.id === run.id}
+                          onClick={() => {
+                            setStopError(null);
+                            setStopConfirmRun(run);
+                          }}
+                        >
+                          停止分析
+                        </button>
+                      ) : null}
+                      {isCancelledStatus(run.status) ? (
+                        <button
+                          type="button"
+                          className="ghost"
+                          data-testid={`reanalyze-${run.id}`}
+                          disabled={navBusyRunId === run.id}
+                          onClick={() => void openChapterProgress(run)}
+                        >
+                          重新分析
+                        </button>
+                      ) : null}
+                      {isStoppingStatus(run.status) ? (
+                        <small className="tasks-stopping-hint" data-testid={`stopping-hint-${run.id}`}>
+                          正在结束当前请求，不会再启动后续分析。
+                        </small>
+                      ) : null}
                       {moreItems.length > 0 && (
                         <OverflowMenu
                           data-testid={`run-more-${run.id}`}
@@ -969,6 +1080,58 @@ export function TasksPage() {
                 </dl>
               </section>
 
+              {(isCancelledStatus(detail.status) || isStoppingStatus(detail.status)) && (
+                <section className="tasks-detail-section" data-testid="cancel-detail-section">
+                  <h3>停止信息</h3>
+                  <dl>
+                    <dt>停止状态</dt>
+                    <dd>{taskCancelStatusLabel(detail.status) || runStatusLabel(detail)}</dd>
+                    <dt>停止请求时间</dt>
+                    <dd>
+                      {detail.cancellation_requested_at
+                        ? new Date(detail.cancellation_requested_at).toLocaleString()
+                        : "—"}
+                    </dd>
+                    <dt>实际停止时间</dt>
+                    <dd>
+                      {detail.cancelled_at
+                        ? new Date(detail.cancelled_at).toLocaleString()
+                        : "—"}
+                    </dd>
+                    <dt>停止原因</dt>
+                    <dd>{cancellationReasonLabel(detail.cancellation_reason)}</dd>
+                    <dt>场景进度</dt>
+                    <dd data-testid="cancel-scene-progress">
+                      {formatCancelDetailHint(detail) ||
+                        `${detail.completed_scene_count ?? 0} / ${detail.total_scene_count ?? 0}`}
+                    </dd>
+                    <dt>实际用量</dt>
+                    <dd data-testid="cancel-usage">
+                      {detail.usage_invocation_count != null
+                        ? `停止前已调用：${detail.usage_invocation_count} 次；Token：${
+                            detail.usage_total_tokens ?? "—"
+                          }；估算费用：${
+                            detail.usage_estimated_cost != null
+                              ? detail.usage_estimated_cost
+                              : "—"
+                          }`
+                        : "暂无调用记录（可能尚未发起模型请求）"}
+                    </dd>
+                    <dt>预算预留</dt>
+                    <dd>
+                      {detail.reservation_status === "released" ||
+                      detail.reservation_status === "consumed"
+                        ? detail.reservation_status === "released"
+                          ? "已释放"
+                          : "已结算"
+                        : detail.reservation_status || "—"}
+                    </dd>
+                    <dt>重新分析</dt>
+                    <dd>{detail.can_restart_as_new_task !== false ? "可创建新任务" : "—"}</dd>
+                  </dl>
+                </section>
+              )}
+
               <section className="tasks-detail-section">
                 <h3>执行过程</h3>
                 <dl>
@@ -980,21 +1143,80 @@ export function TasksPage() {
                         ? "服务请求"
                         : (detail.actual_failed_stage || detail.failed_stage || detail.current_stage || "未知")}
                   </dd>
+                  {detail.failure_substage ? (
+                    <>
+                      <dt>实际子阶段</dt>
+                      <dd data-testid="detail-failure-substage">{detail.failure_substage}</dd>
+                    </>
+                  ) : null}
+                  {detail.failure_reason_code ? (
+                    <>
+                      <dt>错误码</dt>
+                      <dd data-testid="detail-failure-reason-code">{detail.failure_reason_code}</dd>
+                    </>
+                  ) : null}
                   <dt>场景进度</dt>
                   <dd data-testid="detail-scene-progress">
-                    场景分析：{detail.completed_scene_count ?? 0} / {detail.total_scene_count ?? 0}
-                    （未完成 {detail.remaining_scene_count ?? 0}）
+                    {detail.failure_substage === "scene_boundary_adjudication" ||
+                    (detail.boundary_candidate_total != null && (detail.total_scene_count ?? 0) === 0) ? (
+                      <>
+                        {detail.boundary_candidate_total == null ? (
+                          <>边界候选：暂无进度数据</>
+                        ) : (
+                          <>
+                            边界候选：{detail.boundary_candidate_completed ?? 0} /{" "}
+                            {detail.boundary_candidate_total}
+                            <br />
+                            裁决批次：{detail.boundary_batch_completed ?? 0} /{" "}
+                            {detail.boundary_batch_total ?? "?"}
+                          </>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        已完成：{formatCompletedScenesProgress(
+                          detail.completed_scene_count,
+                          detail.total_scene_count,
+                        )}
+                        {detail.remaining_scene_count != null && detail.remaining_scene_count > 0
+                          ? `（未完成 ${detail.remaining_scene_count}）`
+                          : null}
+                      </>
+                    )}
                   </dd>
+                  {(detail.last_requested_output_tokens != null ||
+                    detail.last_finish_reason ||
+                    detail.truncation_attempt_count != null) && (
+                    <>
+                      <dt>输出上限（最后请求）</dt>
+                      <dd data-testid="detail-last-output-limit">
+                        {detail.last_requested_output_tokens ?? "未知"}
+                      </dd>
+                      <dt>实际输出 Token</dt>
+                      <dd data-testid="detail-last-output-tokens">
+                        {detail.last_actual_output_tokens ?? "未知"}
+                      </dd>
+                      <dt>finish_reason</dt>
+                      <dd data-testid="detail-finish-reason">
+                        {detail.last_finish_reason || "未知"}
+                      </dd>
+                      <dt>截断尝试次数</dt>
+                      <dd data-testid="detail-truncation-attempts">
+                        {detail.truncation_attempt_count ?? 0}
+                      </dd>
+                    </>
+                  )}
                   <dt>当前失败场景</dt>
                   <dd data-testid="detail-failed-scene">
-                    {detail.failed_scene_id != null
-                      ? `#${detail.failed_scene_id}（序号 ${detail.failed_scene_index ?? "-"}）`
+                    {detail.failed_scene_id != null && detail.failed_scene_index != null
+                      ? formatSceneOrdinalLabel(detail.failed_scene_index)
                       : "无"}
                   </dd>
                   <dt>历史失败场景</dt>
                   <dd data-testid="detail-historical-failed-scene">
-                    {detail.historical_failed_scene_id != null
-                      ? `#${detail.historical_failed_scene_id}（序号 ${detail.historical_failed_scene_index ?? "-"}，调用 #${detail.historical_failed_invocation_id ?? detail.failed_invocation_id ?? "-"})`
+                    {detail.historical_failed_scene_id != null &&
+                    detail.historical_failed_scene_index != null
+                      ? formatSceneOrdinalLabel(detail.historical_failed_scene_index)
                       : "无"}
                   </dd>
                   <dt>失败场景请求次数</dt>
@@ -1004,16 +1226,21 @@ export function TasksPage() {
                   </dd>
                   <dt>已完成场景</dt>
                   <dd data-testid="detail-completed-scene-ids">
-                    {(detail.completed_scene_ids ?? []).join(", ") || "无"}
+                    {formatSceneOrdinalRange(1, detail.completed_scene_count ?? detail.completed_scene_ids?.length ?? 0)}
                   </dd>
                   <dt>剩余场景</dt>
                   <dd data-testid="detail-remaining-scene-ids">
-                    {(detail.remaining_scene_ids ?? []).join(", ") || "无"}
+                    {formatSceneOrdinalRange(
+                      (detail.completed_scene_count ?? 0) + 1,
+                      detail.remaining_scene_count ?? detail.remaining_scene_ids?.length ?? 0,
+                    )}
                   </dd>
                   <dt>可离线恢复</dt>
                   <dd>{detail.offline_replay_available ? "是" : "否"}</dd>
-                  <dt>是否可重试</dt>
-                  <dd>{detail.retryable ? "可重试" : "不可重试"}</dd>
+                  <dt>继续分析</dt>
+                  <dd data-testid="detail-continue-availability">
+                    {taskContinueAvailabilityLabel(detail)}
+                  </dd>
                   <dt>处理建议</dt>
                   <dd>{detail.user_action_hint || "无"}</dd>
                 </dl>
@@ -1024,7 +1251,24 @@ export function TasksPage() {
                 <dl>
                   <dt>预留状态</dt>
                   <dd>{detail.reservation_status || "无"}</dd>
-                  {(detail.budget_required || detail.budget_remaining || detail.exceeded_dimensions?.length) ? (
+                  {(detail.usage_invocation_count ?? 0) > 0 ? (
+                    <>
+                      <dt>调用次数</dt>
+                      <dd data-testid="detail-usage-calls">{detail.usage_invocation_count}</dd>
+                      <dt>输入 Token</dt>
+                      <dd data-testid="detail-usage-input">{detail.usage_input_tokens ?? 0}</dd>
+                      <dt>输出 Token</dt>
+                      <dd data-testid="detail-usage-output">{detail.usage_output_tokens ?? 0}</dd>
+                      <dt>总 Token</dt>
+                      <dd data-testid="detail-usage-total">{detail.usage_total_tokens ?? 0}</dd>
+                      <dt>费用</dt>
+                      <dd data-testid="detail-usage-cost">
+                        {detail.usage_cost_unknown || detail.usage_estimated_cost == null
+                          ? "费用暂无法计算"
+                          : `${detail.usage_estimated_cost} CNY`}
+                      </dd>
+                    </>
+                  ) : (detail.budget_required || detail.budget_remaining || detail.exceeded_dimensions?.length) ? (
                     <>
                       <dt>所需额度</dt>
                       <dd><pre>{JSON.stringify(detail.budget_required, null, 2)}</pre></dd>
@@ -1036,7 +1280,7 @@ export function TasksPage() {
                   ) : (
                     <>
                       <dt>预算摘要</dt>
-                      <dd>暂无用量明细</dd>
+                      <dd>尚无模型调用</dd>
                     </>
                   )}
                 </dl>
@@ -1135,6 +1379,12 @@ export function TasksPage() {
                     <dd>{detail.failed_scene_id ?? "无"}</dd>
                     <dt>失败场景序号</dt>
                     <dd>{detail.failed_scene_index ?? "无"}</dd>
+                    <dt>历史失败场景 ID</dt>
+                    <dd>{detail.historical_failed_scene_id ?? "无"}</dd>
+                    <dt>已完成场景 ID</dt>
+                    <dd>{(detail.completed_scene_ids ?? []).join(", ") || "无"}</dd>
+                    <dt>剩余场景 ID</dt>
+                    <dd>{(detail.remaining_scene_ids ?? []).join(", ") || "无"}</dd>
                     <dt>异常类型</dt>
                     <dd>{detail.exception_type || detail.failure_details?.exception_type || "无"}</dd>
                     <dt>传输类型</dt>
@@ -1292,6 +1542,67 @@ export function TasksPage() {
                 <p data-testid="provider-transport-error-label">服务商传输错误</p>
               )}
             </div>
+          </div>
+        </div>
+      )}
+      {stopConfirmRun && (
+        <div className="modal-backdrop" data-testid="stop-confirm-dialog">
+          <div className="modal tasks-stop-modal" role="dialog" aria-modal="true" aria-labelledby="stop-confirm-title">
+            <header>
+              <h2 id="stop-confirm-title">{STOP_CONFIRM_TITLE}</h2>
+              <button
+                type="button"
+                aria-label="关闭"
+                disabled={stopSubmitting}
+                onClick={() => {
+                  if (stopSubmitting) return;
+                  setStopConfirmRun(null);
+                  setStopError(null);
+                }}
+              >
+                ×
+              </button>
+            </header>
+            <p className="tasks-stop-body" style={{ whiteSpace: "pre-line" }}>
+              {STOP_CONFIRM_BODY}
+            </p>
+            {stopSubmitting && (
+              <p className="notice" data-testid="stop-submitting">
+                正在提交停止请求……
+              </p>
+            )}
+            {stopError && (
+              <div className="notice" data-testid="stop-error">
+                <b>{stopError.message}</b>
+                <details>
+                  <summary>技术详情</summary>
+                  <code>{stopError.code}</code>
+                </details>
+              </div>
+            )}
+            <footer className="tasks-stop-actions">
+              <button
+                type="button"
+                data-testid="stop-continue-analysis"
+                disabled={stopSubmitting}
+                onClick={() => {
+                  setStopConfirmRun(null);
+                  setStopError(null);
+                }}
+              >
+                继续分析
+              </button>
+              <button
+                type="button"
+                className="tasks-stop-confirm"
+                data-testid="stop-confirm-submit"
+                disabled={stopSubmitting}
+                aria-busy={stopSubmitting}
+                onClick={() => void submitStopAnalysis()}
+              >
+                确认停止
+              </button>
+            </footer>
           </div>
         </div>
       )}

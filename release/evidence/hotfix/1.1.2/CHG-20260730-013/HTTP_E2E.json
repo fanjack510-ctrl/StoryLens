@@ -1,0 +1,44 @@
+{
+  "change_id": "CHG-20260730-013",
+  "incident": "INC-20260730-006",
+  "pass": true,
+  "timestamp": "2026-07-30T03:20:00+00:00",
+  "api": "http://127.0.0.1:18048",
+  "frontend": "http://127.0.0.1:1427",
+  "database": "%TEMP%\\storylens-mg-chg013-confirm-start\\database\\storylens-mg-chg013.db",
+  "real_provider_calls": 0,
+  "formal_db_writes": 0,
+  "harness": "FastAPI TestClient + FakeProvider; BackgroundTasks held to simulate delayed worker claim",
+  "results": [
+    {
+      "case": "confirm_3_scenes_returns_starting",
+      "pass": true,
+      "test": "test_http_e2e_confirm_start_delayed_worker_not_interrupted",
+      "workflow_state": "starting",
+      "confirmed_scene_count": 3
+    },
+    {
+      "case": "delayed_worker_boot_recover_not_interrupted",
+      "pass": true,
+      "test": "test_http_e2e_confirm_start_delayed_worker_not_interrupted",
+      "interrupted_journeys": 0
+    },
+    {
+      "case": "worker_claim_starting_to_running",
+      "pass": true,
+      "test": "test_http_e2e_confirm_start_delayed_worker_not_interrupted"
+    },
+    {
+      "case": "repeated_confirm_idempotent",
+      "pass": true,
+      "test": "test_http_e2e_confirm_idempotent_and_resume_same_run",
+      "journey_run_count": 1
+    },
+    {
+      "case": "resume_same_journey_run",
+      "pass": true,
+      "test": "test_http_e2e_confirm_idempotent_and_resume_same_run",
+      "new_runs": 0
+    }
+  ]
+}

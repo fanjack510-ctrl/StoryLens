@@ -282,6 +282,13 @@ export type ReaderJourneyResult = {
     question_chains?: unknown[];
     [key: string]: unknown;
   } | null;
+  scene_revision_id?: number | null;
+  scene_boundary_hash?: string | null;
+  result_status?: string | null;
+  is_current?: boolean | null;
+  is_superseded?: boolean | null;
+  created_at?: string | null;
+  completed_at?: string | null;
 };
 export type SceneParagraphs = {
   scene_id: number;
@@ -321,6 +328,13 @@ export type Run = {
   created_at: string;
   started_at?: string;
   completed_at?: string;
+  status_version?: number;
+  cancellation_requested_at?: string | null;
+  cancelled_at?: string | null;
+  cancellation_reason?: string | null;
+  cancelled_by?: string | null;
+  can_cancel?: boolean;
+  can_restart_as_new_task?: boolean;
   budget_required?: { requests?: number; tokens?: number; estimated_cost?: number };
   budget_remaining?: { requests?: number; tokens?: number; estimated_cost?: number };
   exceeded_dimensions?: string[];
@@ -371,6 +385,22 @@ export type Run = {
   journey_result_available?: boolean;
   journey_error_code?: string | null;
   primary_action?: string | null;
+  failure_substage?: string | null;
+  failure_reason_code?: string | null;
+  boundary_candidate_total?: number | null;
+  boundary_candidate_completed?: number | null;
+  boundary_batch_total?: number | null;
+  boundary_batch_completed?: number | null;
+  usage_invocation_count?: number | null;
+  usage_input_tokens?: number | null;
+  usage_output_tokens?: number | null;
+  usage_total_tokens?: number | null;
+  usage_estimated_cost?: number | null;
+  usage_cost_unknown?: boolean;
+  last_requested_output_tokens?: number | null;
+  last_actual_output_tokens?: number | null;
+  last_finish_reason?: string | null;
+  truncation_attempt_count?: number | null;
   run_started_at?: string;
   scene_validation_detail?: {
     validation_error_message?: string;
@@ -463,4 +493,44 @@ export type Dashboard = {
   failed_runs: number;
   cloud_invocations: number;
   local_invocations: number;
+};
+
+export type ScenePartitionItem = {
+  scene_order: number;
+  start_paragraph_id: string;
+  end_paragraph_id: string;
+  included_in_journey: boolean;
+};
+
+export type SceneBoundaryRevisionSummary = {
+  revision_id: number;
+  revision_number: number;
+  status: string;
+  source: string;
+  revision_etag: string;
+  boundary_hash: string;
+  chapter_text_hash: string;
+  scenes: ScenePartitionItem[];
+  confirmed_at?: string | null;
+};
+
+export type SceneBoundariesOverview = {
+  chapter_id: number;
+  chapter_text_hash: string;
+  confirmed_revision: SceneBoundaryRevisionSummary | null;
+  draft_revision: SceneBoundaryRevisionSummary | null;
+  model_revision: SceneBoundaryRevisionSummary | null;
+  awaiting_confirmation: boolean;
+};
+
+export type SceneBoundaryConfirmResponse = {
+  revision_id: number;
+  revision_etag: string;
+  boundary_hash: string;
+  journey_run_id: number | null;
+  journey_started: boolean;
+  journey_status?: string | null;
+  already_confirmed?: boolean;
+  journey_error_code?: string | null;
+  journey_error_message?: string | null;
 };

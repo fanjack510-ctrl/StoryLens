@@ -1,0 +1,410 @@
+{
+  "change_id": "CHG-20260730-015",
+  "api": "http://127.0.0.1:18049",
+  "scene_failure": {
+    "pass": true,
+    "run": {
+      "status": "failed_structural",
+      "failed_stage": "scene_analysis",
+      "root_error_code": "STRUCTURAL_VALIDATION_FAILED",
+      "completed_scene_count": 0,
+      "total_scene_count": 3,
+      "journey_status": null,
+      "journey_error_code": null,
+      "effective_status": "failed_structural"
+    }
+  },
+  "synthesis_failure": {
+    "pass": true,
+    "run": {
+      "status": "succeeded",
+      "journey_status": "failed",
+      "journey_error_code": "JOURNEY_SYNTHESIS_FAILED",
+      "completed_scene_count": 3,
+      "total_scene_count": 3,
+      "effective_status": "journey_failed"
+    },
+    "progress": {
+      "failed_stage": "reader_journey_chapter_synthesis",
+      "root_error_code": "JOURNEY_SYNTHESIS_FAILED",
+      "status": "failed",
+      "completed_scene_count": 3
+    }
+  },
+  "recoverable": {
+    "pass": true,
+    "run": {
+      "status": "succeeded",
+      "journey_status": "scene_profiles_partial",
+      "journey_error_code": "JOURNEY_INTERRUPTED",
+      "journey_run_id": 2,
+      "journey_retryable": true,
+      "effective_status": "journey_failed"
+    },
+    "progress": {
+      "status": "scene_profiles_partial",
+      "root_error_code": "JOURNEY_INTERRUPTED",
+      "retryable": true,
+      "recovery_safe": true,
+      "completed_scene_count": 1,
+      "remaining_scene_count": 2
+    }
+  },
+  "manual_success_fixture": {
+    "status": "awaiting_confirm_2_to_3",
+    "url": "http://127.0.0.1:1428/books/1?chapter=4&analysisRun=4&view=scene-boundary-review",
+    "awaiting_confirm": true
+  },
+  "success_wait_gate": {
+    "pass": true,
+    "confirm": {
+      "revision_id": 7,
+      "revision_etag": "77c4919d78a14d308bcb7f7ade8af74d33875c36590beeca07ef3186f355872b",
+      "boundary_hash": "910f4e9dff17e6f5626ce6bce7fb57e1d6039c5e1de82e83ef84d8abc71e9a98",
+      "journey_run_id": 3,
+      "journey_started": true,
+      "journey_status": "starting",
+      "already_confirmed": false,
+      "journey_error_code": null,
+      "journey_error_message": null,
+      "analysis_run_id": 5,
+      "confirmed_revision_id": 7,
+      "confirmed_scene_count": 3,
+      "workflow_state": "starting",
+      "already_started": false,
+      "client_request_id": "auto-chapter-journey:5:rev:7"
+    },
+    "waiting_seen": true,
+    "scene_analysis_phase_seen": true,
+    "incomplete_seen": false,
+    "scene_stage_completed_before_commit": false,
+    "journey_start_count": 1,
+    "duplicate_runs": 0,
+    "confirmed_revision_id": 7,
+    "journey_run_id": 3,
+    "analysis_run_id": 5,
+    "final": {
+      "status": "succeeded",
+      "effective_status": "completed",
+      "journey_status": "succeeded",
+      "journey_error_code": null,
+      "completed_scene_count": 3,
+      "total_scene_count": 3,
+      "chapter_complete": true
+    },
+    "status_trace_tail": [
+      {
+        "t": 1785391320.9756136,
+        "status": "scene_analysis_running",
+        "effective_status": "scene_analysis",
+        "journey_status": "starting",
+        "journey_error_code": "WAITING_SCENE_ANALYSIS",
+        "completed_scene_count": 0,
+        "total_scene_count": 3,
+        "journey_run_id": 3,
+        "progress_root_error_code": "WAITING_SCENE_ANALYSIS",
+        "progress_status": "starting",
+        "progress_completed": 0
+      },
+      {
+        "t": 1785391321.3820515,
+        "status": "scene_analysis_running",
+        "effective_status": "scene_analysis",
+        "journey_status": "starting",
+        "journey_error_code": "WAITING_SCENE_ANALYSIS",
+        "completed_scene_count": 0,
+        "total_scene_count": 3,
+        "journey_run_id": 3,
+        "progress_root_error_code": "WAITING_SCENE_ANALYSIS",
+        "progress_status": "starting",
+        "progress_completed": 0
+      },
+      {
+        "t": 1785391321.7899318,
+        "status": "scene_analysis_running",
+        "effective_status": "scene_analysis",
+        "journey_status": "starting",
+        "journey_error_code": "WAITING_SCENE_ANALYSIS",
+        "completed_scene_count": 0,
+        "total_scene_count": 3,
+        "journey_run_id": 3,
+        "progress_root_error_code": "WAITING_SCENE_ANALYSIS",
+        "progress_status": "starting",
+        "progress_completed": 0
+      },
+      {
+        "t": 1785391322.19053,
+        "status": "scene_analysis_running",
+        "effective_status": "scene_analysis",
+        "journey_status": "starting",
+        "journey_error_code": "WAITING_SCENE_ANALYSIS",
+        "completed_scene_count": 0,
+        "total_scene_count": 3,
+        "journey_run_id": 3,
+        "progress_root_error_code": "WAITING_SCENE_ANALYSIS",
+        "progress_status": "starting",
+        "progress_completed": 0
+      },
+      {
+        "t": 1785391322.601454,
+        "status": "scene_analysis_running",
+        "effective_status": "scene_analysis",
+        "journey_status": "starting",
+        "journey_error_code": "WAITING_SCENE_ANALYSIS",
+        "completed_scene_count": 0,
+        "total_scene_count": 3,
+        "journey_run_id": 3,
+        "progress_root_error_code": "WAITING_SCENE_ANALYSIS",
+        "progress_status": "starting",
+        "progress_completed": 0
+      },
+      {
+        "t": 1785391323.0315654,
+        "status": "scene_analysis_running",
+        "effective_status": "scene_analysis",
+        "journey_status": "starting",
+        "journey_error_code": "WAITING_SCENE_ANALYSIS",
+        "completed_scene_count": 1,
+        "total_scene_count": 3,
+        "journey_run_id": 3,
+        "progress_root_error_code": "WAITING_SCENE_ANALYSIS",
+        "progress_status": "starting",
+        "progress_completed": 0
+      },
+      {
+        "t": 1785391323.4168773,
+        "status": "scene_analysis_running",
+        "effective_status": "scene_analysis",
+        "journey_status": "starting",
+        "journey_error_code": "WAITING_SCENE_ANALYSIS",
+        "completed_scene_count": 1,
+        "total_scene_count": 3,
+        "journey_run_id": 3,
+        "progress_root_error_code": "WAITING_SCENE_ANALYSIS",
+        "progress_status": "starting",
+        "progress_completed": 0
+      },
+      {
+        "t": 1785391323.8355145,
+        "status": "scene_analysis_running",
+        "effective_status": "scene_analysis",
+        "journey_status": "starting",
+        "journey_error_code": "WAITING_SCENE_ANALYSIS",
+        "completed_scene_count": 1,
+        "total_scene_count": 3,
+        "journey_run_id": 3,
+        "progress_root_error_code": "WAITING_SCENE_ANALYSIS",
+        "progress_status": "starting",
+        "progress_completed": 0
+      },
+      {
+        "t": 1785391324.2355897,
+        "status": "scene_analysis_running",
+        "effective_status": "scene_analysis",
+        "journey_status": "starting",
+        "journey_error_code": "WAITING_SCENE_ANALYSIS",
+        "completed_scene_count": 1,
+        "total_scene_count": 3,
+        "journey_run_id": 3,
+        "progress_root_error_code": "WAITING_SCENE_ANALYSIS",
+        "progress_status": "starting",
+        "progress_completed": 0
+      },
+      {
+        "t": 1785391324.661025,
+        "status": "scene_analysis_running",
+        "effective_status": "scene_analysis",
+        "journey_status": "starting",
+        "journey_error_code": "WAITING_SCENE_ANALYSIS",
+        "completed_scene_count": 1,
+        "total_scene_count": 3,
+        "journey_run_id": 3,
+        "progress_root_error_code": "WAITING_SCENE_ANALYSIS",
+        "progress_status": "starting",
+        "progress_completed": 0
+      },
+      {
+        "t": 1785391325.0807106,
+        "status": "scene_analysis_running",
+        "effective_status": "scene_analysis",
+        "journey_status": "starting",
+        "journey_error_code": "WAITING_SCENE_ANALYSIS",
+        "completed_scene_count": 2,
+        "total_scene_count": 3,
+        "journey_run_id": 3,
+        "progress_root_error_code": "WAITING_SCENE_ANALYSIS",
+        "progress_status": "starting",
+        "progress_completed": 0
+      },
+      {
+        "t": 1785391325.5014462,
+        "status": "scene_analysis_running",
+        "effective_status": "scene_analysis",
+        "journey_status": "starting",
+        "journey_error_code": "WAITING_SCENE_ANALYSIS",
+        "completed_scene_count": 2,
+        "total_scene_count": 3,
+        "journey_run_id": 3,
+        "progress_root_error_code": "WAITING_SCENE_ANALYSIS",
+        "progress_status": "starting",
+        "progress_completed": 0
+      },
+      {
+        "t": 1785391328.6634412,
+        "status": "succeeded",
+        "effective_status": "journey_running",
+        "journey_status": "scene_profiles_running",
+        "journey_error_code": null,
+        "completed_scene_count": 3,
+        "total_scene_count": 3,
+        "journey_run_id": 3,
+        "progress_root_error_code": null,
+        "progress_status": "scene_profiles_running",
+        "progress_completed": 0
+      },
+      {
+        "t": 1785391329.0532992,
+        "status": "succeeded",
+        "effective_status": "journey_running",
+        "journey_status": "scene_profiles_running",
+        "journey_error_code": null,
+        "completed_scene_count": 3,
+        "total_scene_count": 3,
+        "journey_run_id": 3,
+        "progress_root_error_code": null,
+        "progress_status": "scene_profiles_running",
+        "progress_completed": 0
+      },
+      {
+        "t": 1785391329.5167775,
+        "status": "succeeded",
+        "effective_status": "journey_running",
+        "journey_status": "scene_profiles_running",
+        "journey_error_code": null,
+        "completed_scene_count": 3,
+        "total_scene_count": 3,
+        "journey_run_id": 3,
+        "progress_root_error_code": null,
+        "progress_status": "scene_profiles_running",
+        "progress_completed": 2
+      },
+      {
+        "t": 1785391329.9366436,
+        "status": "succeeded",
+        "effective_status": "journey_running",
+        "journey_status": "scene_profiles_running",
+        "journey_error_code": null,
+        "completed_scene_count": 3,
+        "total_scene_count": 3,
+        "journey_run_id": 3,
+        "progress_root_error_code": null,
+        "progress_status": "scene_profiles_running",
+        "progress_completed": 2
+      },
+      {
+        "t": 1785391330.3392441,
+        "status": "succeeded",
+        "effective_status": "journey_running",
+        "journey_status": "scene_profiles_running",
+        "journey_error_code": null,
+        "completed_scene_count": 3,
+        "total_scene_count": 3,
+        "journey_run_id": 3,
+        "progress_root_error_code": null,
+        "progress_status": "scene_profiles_running",
+        "progress_completed": 2
+      },
+      {
+        "t": 1785391330.7414832,
+        "status": "succeeded",
+        "effective_status": "journey_running",
+        "journey_status": "scene_profiles_running",
+        "journey_error_code": null,
+        "completed_scene_count": 3,
+        "total_scene_count": 3,
+        "journey_run_id": 3,
+        "progress_root_error_code": null,
+        "progress_status": "scene_profiles_running",
+        "progress_completed": 2
+      },
+      {
+        "t": 1785391331.159896,
+        "status": "succeeded",
+        "effective_status": "journey_running",
+        "journey_status": "scene_profiles_running",
+        "journey_error_code": null,
+        "completed_scene_count": 3,
+        "total_scene_count": 3,
+        "journey_run_id": 3,
+        "progress_root_error_code": null,
+        "progress_status": "scene_profiles_running",
+        "progress_completed": 2
+      },
+      {
+        "t": 1785391331.5687346,
+        "status": "succeeded",
+        "effective_status": "completed",
+        "journey_status": "succeeded",
+        "journey_error_code": null,
+        "completed_scene_count": 3,
+        "total_scene_count": 3,
+        "journey_run_id": 3,
+        "progress_root_error_code": null,
+        "progress_status": "succeeded",
+        "progress_completed": 3
+      }
+    ]
+  },
+  "snapshot_before_success": {
+    "A_scene_failure": {
+      "run_id": 1,
+      "status": "failed_structural",
+      "effective_status": "failed_structural",
+      "journey_status": null,
+      "journey_error_code": null,
+      "journey_run_id": null,
+      "completed_scene_count": 0,
+      "total_scene_count": 3
+    },
+    "B_synthesis_failure": {
+      "run_id": 2,
+      "status": "succeeded",
+      "effective_status": "journey_failed",
+      "journey_status": "failed",
+      "journey_error_code": "JOURNEY_SYNTHESIS_FAILED",
+      "journey_run_id": 1,
+      "completed_scene_count": 3,
+      "total_scene_count": 3
+    },
+    "C_recoverable": {
+      "run_id": 3,
+      "status": "succeeded",
+      "effective_status": "journey_failed",
+      "journey_status": "scene_profiles_partial",
+      "journey_error_code": "JOURNEY_INTERRUPTED",
+      "journey_run_id": 2,
+      "completed_scene_count": 3,
+      "total_scene_count": 3
+    },
+    "D_success_wait_gate": {
+      "run_id": 4,
+      "status": "succeeded",
+      "effective_status": "awaiting_scene_boundary_confirmation",
+      "journey_status": null,
+      "journey_error_code": null,
+      "journey_run_id": null,
+      "completed_scene_count": 2,
+      "total_scene_count": 2
+    },
+    "D_auto_wait_gate": {
+      "run_id": 5,
+      "status": "succeeded",
+      "effective_status": "awaiting_scene_boundary_confirmation",
+      "journey_status": null,
+      "journey_error_code": null,
+      "journey_run_id": null,
+      "completed_scene_count": 2,
+      "total_scene_count": 2
+    }
+  }
+}

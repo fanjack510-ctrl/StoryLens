@@ -53,6 +53,22 @@ from app.services.reader_journey_progress import (
     scene_analysis_artifact,
     sync_journey_run_counts,
 )
+
+
+def _scenes_for_journey_run(
+    session: Session,
+    journey_run: ReaderJourneyRun,
+    analysis_run: AnalysisRun,
+) -> tuple[object | None, list[Scene]]:
+    from app.services.scene_boundary_manual_review import (
+        SceneBoundaryError,
+        load_journey_bound_scenes,
+    )
+
+    try:
+        return load_journey_bound_scenes(session, journey_run)
+    except SceneBoundaryError:
+        return load_revision_scenes(session, analysis_run.id)
 from app.services.reader_journey_semantic_calibrate import (
     apply_deterministic_qin,
     build_deterministic_chapter_diagnosis,
@@ -354,6 +370,10 @@ async def execute_reader_journey(
     from app.services.reader_journey_recovery import persist_journey_worker_failure
     from app.services.reader_journey_version import is_v2_journey_run
     from app.services.reader_journey_v2_execution import execute_reader_journey_v2
+    from app.services.task_cancellation import (
+        AnalysisCancellationRequested,
+        try_finalize_if_cancel_requested,
+    )
 
     try:
         with session_factory() as session:
@@ -362,11 +382,27 @@ async def execute_reader_journey(
                 return
             if journey_run.status in {"succeeded", "cancelled"}:
                 return
+            if try_finalize_if_cancel_requested(session, journey_run.analysis_run_id):
+                return
+            from app.services.reader_journey_recovery import claim_journey_worker
+
+            # Durable claim before Provider work (CHG-20260730-013).
+            if journey_run.status in {
+                "starting",
+                "queued",
+                "failed",
+                "scene_profiles_partial",
+            }:
+                claim_journey_worker(session, journey_run)
+                session.commit()
             if is_v2_journey_run(journey_run):
                 await execute_reader_journey_v2(session_factory, gateway, journey_run_id)
                 return
 
         await _execute_reader_journey_legacy(session_factory, gateway, journey_run_id)
+    except AnalysisCancellationRequested as exc:
+        with session_factory() as session:
+            try_finalize_if_cancel_requested(session, exc.run_id)
     except Exception as exc:  # noqa: BLE001 — worker isolation; keep Sidecar alive
         persist_journey_worker_failure(session_factory, journey_run_id, exc)
         logger.exception(
@@ -392,7 +428,7 @@ async def _execute_reader_journey_legacy(
         if analysis_run is None:
             return
         _chapter = session.get(Chapter, journey_run.chapter_id)
-        _revision, scenes = load_revision_scenes(session, analysis_run.id)
+        _revision, scenes = _scenes_for_journey_run(session, journey_run, analysis_run)
         require_completed_scene_analysis(session, analysis_run, scenes)
         try:
             store = get_credential_store()
@@ -421,7 +457,7 @@ async def _execute_reader_journey_legacy(
             journey_run = session.get(ReaderJourneyRun, journey_run_id)
             analysis_run = session.get(AnalysisRun, journey_run.analysis_run_id)
             chapter = session.get(Chapter, journey_run.chapter_id)
-            _revision, scenes = load_revision_scenes(session, analysis_run.id)
+            _revision, scenes = _scenes_for_journey_run(session, journey_run, analysis_run)
             paragraphs = list(
                 session.scalars(
                     select(Paragraph)

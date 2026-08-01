@@ -1,0 +1,13 @@
+{
+  "exe_sha256": "978e3c5f103a3955af78eb78f157504a14dee2b596d89489f726a58b45cfa7f2",
+  "health": true,
+  "health_path": "/health",
+  "health_body": "{\"status\":\"ok\",\"service\":\"storylens-api\",\"database\":\"ok\",\"default_provider\":\"none\"}",
+  "providers_api": false,
+  "provider_status": "HTTP Error 404: Not Found",
+  "file_not_found_errors": 0,
+  "database_lock_errors": 0,
+  "ok": true,
+  "port": 18847,
+  "stderr_tail": "sidecar_runtime database_url=sqlite:///D:/StoryLens-Local-Evidence/1.1.2-rc.1-20260729/sidecar_runtime/database/storylens.db\n2026-07-29 19:22:52,235 INFO uvicorn.error Started server process [37020]\n2026-07-29 19:22:52,235 INFO uvicorn.error Waiting for application startup.\n2026-07-29 19:22:52,467 INFO storylens.mock_lab_runtime whole_book_mock_lab status=enabled=False environment=production router_registered=False\n2026-07-29 19:22:52,468 INFO uvicorn.error Application startup complete.\n2026-07-29 19:22:52,469 INFO uvicorn.error Uvicorn running on http://127.0.0.1:18847 (Press CTRL+C to quit)\n"
+}

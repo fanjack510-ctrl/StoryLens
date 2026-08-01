@@ -55,6 +55,7 @@ export type SceneDiagnosisLike = {
   data_quality_issue?: string | null;
   reading_momentum?: number | null;
   plot_progress?: number | null;
+  scene_role?: string | null;
   role?: string | null;
   node_type?: string | null;
   include_in_main_curve?: boolean | null;

@@ -1,0 +1,43 @@
+{
+  "change_id": "CHG-20260729-005",
+  "recorded_at": "2026-07-29T07:25:00Z",
+  "branch": "fix/1.1.2-chapter-hook-simplification",
+  "public_base_head": "2e8ed1edaf7dc91933666f5e46f4b2bdb747407c",
+  "public_start_head": "225c491d54b865ecd8d85689ad780b223ed1d61a",
+  "vitest": {
+    "chapter_hook_simplification_chg005_local": "PASS",
+    "chapter_hook_simplification_chg005_complete": "PASS",
+    "HookPayoffTimeline": "PASS",
+    "hookResolutionEvidence": "PASS",
+    "dimension_node_judgments_chg004_local": "PASS",
+    "result": "PASS"
+  },
+  "pytest": {
+    "command": "py -m pytest apps/api/tests/test_chapter_hook_simplification_chg005_local.py -q",
+    "passed": 4,
+    "failed": 0,
+    "result": "PASS"
+  },
+  "typecheck": {
+    "command": "npx tsc --noEmit -p tsconfig.json",
+    "result": "PASS"
+  },
+  "http_e2e": {
+    "result": "PASS",
+    "evidence": "HTTP_E2E.json",
+    "api": "http://127.0.0.1:18044",
+    "frontend": "http://127.0.0.1:1423",
+    "scenes": 6,
+    "refresh_consistent": true,
+    "api_restart_consistent": true,
+    "real_provider_calls": 0,
+    "formal_db_writes": 0
+  },
+  "tab_name": "钩子回收",
+  "hook_algorithm_modified": false,
+  "other_lenses_modified": false,
+  "database_migration": false,
+  "important_hook_limit": 3,
+  "recovery_rate_shown": false,
+  "unresolved_marked_as_failure": false
+}

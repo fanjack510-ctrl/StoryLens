@@ -1,0 +1,120 @@
+import type { ReaderJourneyVisualization } from "../../types/readerJourneyVisualization";
+
+/** Spec §20 six-scene Fake fixture for CHG-20260729-005. */
+export function chg005CompleteFixtureViz(): ReaderJourneyVisualization {
+  return {
+    visualization_version: "test",
+    chapter_summary: {
+      chapter_id: 1,
+      chapter_title: "t",
+      diagnosis: "d",
+      primary_traction: "p",
+      strongest_payoff: null,
+      strongest_hook: null,
+      weak_interval: "",
+      counts: {
+        scene_count: 6,
+        phase_count: 3,
+        question_chain_count: 0,
+        canonical_chain_count: 0,
+        core: 6,
+        secondary: 0,
+        beat: 0,
+      },
+      peaks: {
+        engagement_peak: { scene_ordinal: 1, value: 90 },
+        engagement_valley: { scene_ordinal: 2, value: 10 },
+        curiosity_peak: { scene_ordinal: 1, value: 80 },
+        tension_peak: { scene_ordinal: 1, value: 70 },
+        emotional_peak: { scene_ordinal: 1, value: 60 },
+      },
+    },
+    scene_nodes: Array.from({ length: 6 }, (_, i) => ({
+      scene_id: i + 1,
+      scene_ordinal: i + 1,
+      role: "core",
+      scene_role: i < 2 ? "setup" : i < 5 ? "escalation" : "aftermath",
+      scores: { hook: 60, payoff: 40, reading_momentum: 55 },
+      engagement: { engagement_score: 55 },
+      techniques: [],
+      dimension_insights: {
+        hook_payoff: null,
+      },
+    })),
+    curve_series: {},
+    phases: [
+      {
+        ordinal: 1,
+        title: "开端",
+        start_scene_ordinal: 1,
+        end_scene_ordinal: 2,
+        average_engagement: 50,
+        summary: "",
+      },
+      {
+        ordinal: 2,
+        title: "发展",
+        start_scene_ordinal: 3,
+        end_scene_ordinal: 5,
+        average_engagement: 60,
+        summary: "",
+      },
+      {
+        ordinal: 3,
+        title: "收束",
+        start_scene_ordinal: 6,
+        end_scene_ordinal: 6,
+        average_engagement: 55,
+        summary: "",
+      },
+    ],
+    question_chains: [],
+    canonical_chains: [],
+    hook_markers: [],
+    payoff_markers: [],
+    risk_intervals: [],
+    narrative_loops: [
+      {
+        loop_id: "ID-identity",
+        question: "主角为什么会出现在这里？",
+        open_from_scene: 1,
+        hook: [{ scene_ordinal: 1, type: "new", summary: "身份疑问", strength: 82 }],
+        developments: [{ scene_ordinal: 2, kind: "development" }],
+        payoffs: [
+          {
+            scene_ordinal: 3,
+            type: "partial",
+            summary: "部分回应身份",
+            evidence_paragraph_ids: ["B0001-C0001-P0010"],
+          },
+        ],
+        status: "partially_resolved",
+        display_status: "partially_resolved",
+        consistency_status: "consistent",
+        conflicts: [],
+        primary_relation: {
+          grade: "probable",
+          payoff_ref: {
+            scene_ordinal: 3,
+            type: "partial",
+            source_type: "entity",
+            evidence_paragraph_ids: ["B0001-C0001-P0010"],
+          },
+        },
+      },
+      {
+        loop_id: "ID-danger",
+        question: "门外的人是谁？",
+        open_from_scene: 4,
+        hook: [{ scene_ordinal: 4, type: "new", summary: "危险来客", strength: 78 }],
+        developments: [{ scene_ordinal: 5, kind: "development" }],
+        payoffs: [],
+        status: "open",
+        display_status: "open",
+        consistency_status: "consistent",
+        conflicts: [],
+      },
+    ],
+    reading_resistance: [],
+  } as unknown as ReaderJourneyVisualization;
+}

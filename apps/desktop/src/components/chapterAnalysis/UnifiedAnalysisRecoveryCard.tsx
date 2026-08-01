@@ -2,8 +2,15 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Run } from "../../types";
+import { analysisApi } from "../../services/analysisApi";
 import { analysisRecoveryApi } from "../../services/analysisRecoveryApi";
 import { mapRunToUiState } from "./mapAnalysisUiState";
+import {
+  isJourneyActivelyRunning,
+  recoveryPlanQueryKey,
+  shouldShowUnifiedRecoveryForJourney,
+} from "../../services/journeyActiveRecoveryGuard";
+import { getOrCreateJourneyClientRequestId } from "../../services/chapterJourneyComposition";
 
 type Props = {
   run: Run;
@@ -11,6 +18,14 @@ type Props = {
   onClose?: () => void;
   onContinued?: () => void;
   onLater?: () => void;
+  /** Live journey status for the current task (suppresses stale paused card). */
+  journeyStatus?: string | null;
+  /** True when journey page view is already active / generating. */
+  journeyPageActive?: boolean;
+  journeyRunId?: number | null;
+  confirmedRevisionId?: number | null;
+  canResume?: boolean | null;
+  workflowState?: string | null;
 };
 
 function newClientRequestId(runId: number): string {
@@ -51,6 +66,12 @@ export function UnifiedAnalysisRecoveryCard({
   onClose,
   onContinued,
   onLater,
+  journeyStatus = null,
+  journeyPageActive = false,
+  journeyRunId = null,
+  confirmedRevisionId = null,
+  canResume = true,
+  workflowState = null,
 }: Props) {
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -61,11 +82,29 @@ export function UnifiedAnalysisRecoveryCard({
   const [proposalOpen, setProposalOpen] = useState(false);
   const uiState = mapRunToUiState(run);
   const isFailed = uiState === "failed";
+  const liveJourneyStatus =
+    journeyStatus ||
+    run.journey_status ||
+    null;
+  const statusVersion = run.status_version ?? null;
 
   const planQuery = useQuery({
-    queryKey: ["analysis-recovery-plan", run.id],
+    queryKey: recoveryPlanQueryKey({
+      analysisRunId: run.id,
+      journeyRunId: journeyRunId ?? run.journey_run_id ?? null,
+      confirmedRevisionId,
+      statusVersion,
+    }),
     queryFn: () => analysisRecoveryApi.recoveryPlan(run.id),
-    refetchInterval: 4000,
+    refetchInterval: (query) => {
+      const status = query.state.data?.user_status;
+      const jStatus = query.state.data?.reader_journey_status;
+      if (status === "running" || isJourneyActivelyRunning(jStatus) || isJourneyActivelyRunning(liveJourneyStatus)) {
+        return false;
+      }
+      return 4000;
+    },
+    enabled: !journeyPageActive && !isJourneyActivelyRunning(liveJourneyStatus),
   });
 
   const plan = planQuery.data;
@@ -112,6 +151,21 @@ export function UnifiedAnalysisRecoveryCard({
       });
   }, [plan?.checks]);
 
+  const suppressForActiveJourney =
+    journeyPageActive ||
+    isJourneyActivelyRunning(liveJourneyStatus) ||
+    isJourneyActivelyRunning(plan?.reader_journey_status) ||
+    plan?.user_status === "running" ||
+    plan?.user_status === "succeeded" ||
+    !shouldShowUnifiedRecoveryForJourney({
+      uiState,
+      journeyStatus: liveJourneyStatus || plan?.reader_journey_status,
+      recoveryUserStatus: plan?.user_status,
+      journeyPageActive,
+      workflowState,
+      canResume,
+    });
+
   const needsAuthRedirect = (plan?.blockers || []).some(
     (b) =>
       b.settings_focus === "api_key" ||
@@ -146,6 +200,17 @@ export function UnifiedAnalysisRecoveryCard({
 
   const fixAndContinue = async (withBudgetAuth: boolean) => {
     if (busy) return;
+    // CHG-018: never re-submit recovery against an already-active journey.
+    if (
+      journeyPageActive ||
+      isJourneyActivelyRunning(liveJourneyStatus) ||
+      isJourneyActivelyRunning(plan?.reader_journey_status) ||
+      plan?.user_status === "running"
+    ) {
+      setStatusMessage("阅读旅程已在生成中");
+      onContinued?.();
+      return;
+    }
     setBusy(true);
     setError(undefined);
     const initialStatus = showEvidenceRemap
@@ -179,6 +244,39 @@ export function UnifiedAnalysisRecoveryCard({
                   ? "正在继续生成阅读旅程"
                   : "正在修复并继续…",
       );
+      // CHG-023: Journey-level recovery must call journey resume, not analysis-run recover.
+      const boundJourneyId = journeyRunId ?? run.journey_run_id ?? null;
+      const liveStatus = String(liveJourneyStatus || "").toLowerCase();
+      const analysisStageResume =
+        resumeStage === "boundary_detection" || resumeStage === "scene_analysis";
+      const journeyLevelResume =
+        !analysisStageResume &&
+        (resumeStage === "reader_journey" ||
+          [
+            "scene_profiles_partial",
+            "budget_blocked",
+            "aborted_by_limit",
+            "failed",
+            "interrupted",
+            "recoverable_failed",
+          ].includes(liveStatus));
+      if (boundJourneyId != null && journeyLevelResume && !withBudgetAuth) {
+        setStatusMessage("正在恢复阅读旅程");
+        await analysisApi.resumeReaderJourney(boundJourneyId, {
+          client_request_id: getOrCreateJourneyClientRequestId(run.id),
+          cloud_consent: true,
+          confirmed: true,
+        });
+        await qc.invalidateQueries({ queryKey: ["reader-journey"] });
+        await qc.invalidateQueries({ queryKey: ["reader-journey-progress"] });
+        await qc.invalidateQueries({ queryKey: ["analysis-recovery-plan"] });
+        await qc.invalidateQueries({ queryKey: ["current-page-analysis-run", run.id] });
+        await qc.invalidateQueries({ queryKey: ["runs"] });
+        setStatusMessage("已开始恢复，进度将自动更新");
+        onContinued?.();
+        onClose?.();
+        return;
+      }
       const body: Parameters<typeof analysisRecoveryApi.recover>[1] = {
         client_request_id: clientRequestIdFor(run.id, { rotate: false }),
         cloud_consent: true,
@@ -501,6 +599,10 @@ export function UnifiedAnalysisRecoveryCard({
     </div>
   );
 
+  if (suppressForActiveJourney) {
+    return null;
+  }
+
   if (variant === "modal") {
     return (
       <div className="modal-backdrop" data-testid="unified-recovery-modal">
@@ -537,12 +639,5 @@ export function UnifiedAnalysisRecoveryCard({
 
 /** Whether chapter/tasks should host the unified recovery card for this UI state. */
 export function shouldShowUnifiedRecovery(uiState: string | undefined | null): boolean {
-  return (
-    uiState === "awaiting_budget_adjustment" ||
-    uiState === "provider_recovery" ||
-    uiState === "awaiting_reader_journey_start" ||
-    uiState === "partial" ||
-    uiState === "failed" ||
-    uiState === "aborted_by_limit"
-  );
+  return shouldShowUnifiedRecoveryForJourney({ uiState });
 }

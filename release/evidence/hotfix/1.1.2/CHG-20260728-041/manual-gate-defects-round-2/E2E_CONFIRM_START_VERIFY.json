@@ -1,0 +1,55 @@
+﻿{
+    "confirm_start_1":  {
+                            "revision_id":  2,
+                            "revision_etag":  "8cb3344a19cb325a5f6218208a60650fe00b2e230e105b7bede1e123b6cf2f90",
+                            "boundary_hash":  "a337a4874a5cd0ad9228e602337d999a38a99b2910eec124a774fa09ad77c084",
+                            "journey_run_id":  2,
+                            "journey_started":  true,
+                            "journey_status":  "queued",
+                            "already_confirmed":  false,
+                            "journey_error_code":  null,
+                            "journey_error_message":  null
+                        },
+    "overview_after":  {
+                           "awaiting":  false,
+                           "chapter_text_hash":  "3ac1704914657df75dd821dcb82e0bda5185353f2c6fd49d633c44c05cb40b66",
+                           "revision_id":  2,
+                           "boundary_hash":  "a337a4874a5cd0ad9228e602337d999a38a99b2910eec124a774fa09ad77c084"
+                       },
+    "journey":  {
+                    "id":  2,
+                    "status":  "failed",
+                    "result_status":  "current",
+                    "scene_revision_id":  2,
+                    "scene_boundary_hash":  "a337a4874a5cd0ad9228e602337d999a38a99b2910eec124a774fa09ad77c084",
+                    "chapter_text_hash":  "3ac1704914657df75dd821dcb82e0bda5185353f2c6fd49d633c44c05cb40b66",
+                    "client_request_id":  "auto-chapter-journey:1:rev:2",
+                    "root_error_code":  "JOURNEY_REPAIR_VALIDATION_FAILED"
+                },
+    "confirm_start_2":  {
+                            "already":  true,
+                            "status":  "queued",
+                            "journey_run_id":  2,
+                            "started":  true
+                        },
+    "confirm_nochange":  {
+                             "already":  true,
+                             "revision_id":  2
+                         },
+    "checks":  {
+                   "api_url":  "http://127.0.0.1:18041",
+                   "journey_started":  true,
+                   "hashes_match":  true,
+                   "api_pid":  32804,
+                   "old_superseded":  true,
+                   "frontend_url":  "http://127.0.0.1:1421",
+                   "frontend_pid":  33060,
+                   "public_head":  "8d410c5f1d9a2557f3246cd07d83f402bb4936c5",
+                   "nochange_idempotent":  true,
+                   "journey_new_id":  2,
+                   "frontend_route":  "http://127.0.0.1:1421/books/1?view=result\u0026tab=reader-journey\u0026chapter=1\u0026analysisRun=1\u0026journeyRun=2",
+                   "scene_url":  "http://127.0.0.1:1421/books/1?view=scene-boundary-review\u0026chapter=1\u0026analysisRun=1",
+                   "retry_same":  true,
+                   "awaiting_false":  true
+               }
+}

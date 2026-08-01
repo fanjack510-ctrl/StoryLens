@@ -1,0 +1,13 @@
+{
+  "config_hash_identity": true,
+  "cwd_independence": true,
+  "cwd_cases": "6/6",
+  "production_like": true,
+  "health": true,
+  "providers_api": false,
+  "security": "PASS",
+  "installer": "PASS",
+  "real_provider_calls": 0,
+  "formal_database_writes": 0,
+  "note": "health /health PASS; providers list path optional for this gate"
+}

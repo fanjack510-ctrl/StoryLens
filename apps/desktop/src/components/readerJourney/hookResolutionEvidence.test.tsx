@@ -1,9 +1,13 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { JourneySceneNode, ReaderJourneyVisualization } from "../../types/readerJourneyVisualization";
 import { JourneySceneDetailPanel } from "./JourneySceneDetailPanel";
+import { useDeveloperModeStore } from "../../stores/developerModeStore";
 
-afterEach(() => cleanup());
+afterEach(() => {
+  cleanup();
+  useDeveloperModeStore.setState({ developerMode: false });
+});
 
 function vizAndNode(): { viz: ReaderJourneyVisualization; node: JourneySceneNode } {
   const node = {
@@ -83,8 +87,9 @@ function vizAndNode(): { viz: ReaderJourneyVisualization; node: JourneySceneNode
 }
 
 describe("hook resolution evidence in inspector", () => {
-  it("shows ordinary conflict language; tech text only under folded 分析信息", () => {
+  it("ordinary hook_payoff shows scene insight without technical evidence", () => {
     const { viz, node } = vizAndNode();
+    useDeveloperModeStore.setState({ developerMode: false });
     render(
       <JourneySceneDetailPanel
         node={node}
@@ -94,20 +99,41 @@ describe("hook resolution evidence in inspector", () => {
         onLocateEvidence={vi.fn()}
       />,
     );
-    expect(screen.getByTestId("hook-resolution-evidence")).toBeInTheDocument();
-    expect(screen.getByTestId("hook-resolution-evidence-conclusion").textContent).toMatch(/未回收/);
-    expect(screen.getByTestId("hook-resolution-evidence-why").textContent).toMatch(
+    expect(screen.getByTestId("scene-hook-insight-text")).toBeInTheDocument();
+    expect(screen.queryByTestId("hook-resolution-evidence")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("scene-detail-tech-details")).not.toBeInTheDocument();
+  });
+
+  it("developer mode folds ordinary conflict language under 技术详情", () => {
+    const { viz, node } = vizAndNode();
+    useDeveloperModeStore.setState({ developerMode: true });
+    render(
+      <JourneySceneDetailPanel
+        node={node}
+        visualization={viz}
+        observationLens="hook_payoff"
+        selectedLoopId="nl-conflict"
+        onLocateEvidence={vi.fn()}
+      />,
+    );
+    const tech = screen.getByTestId("scene-detail-tech-details");
+    expect(tech).not.toHaveAttribute("open");
+    expect(within(tech).getByTestId("hook-resolution-evidence")).toBeInTheDocument();
+    expect(within(tech).getByTestId("hook-resolution-evidence-conclusion").textContent).toMatch(
+      /未回收/,
+    );
+    expect(within(tech).getByTestId("hook-resolution-evidence-why").textContent).toMatch(
       /没有足够的实体回报证据/,
     );
-    expect(screen.getByTestId("hook-resolution-evidence-divergence").textContent).toMatch(
+    expect(within(tech).getByTestId("hook-resolution-evidence-divergence").textContent).toMatch(
       /分数提示可能存在回报/,
     );
-    expect(screen.getByTestId("hook-resolution-evidence-divergence").textContent).not.toMatch(
+    expect(within(tech).getByTestId("hook-resolution-evidence-divergence").textContent).not.toMatch(
       /payoff_score/,
     );
-    const tech = screen.getByTestId("hook-resolution-evidence-tech");
-    expect(tech).toBeInTheDocument();
-    expect(tech.textContent).toMatch(/payoff_score=80/);
+    const analysis = within(tech).getByTestId("hook-resolution-evidence-tech");
+    expect(analysis).toBeInTheDocument();
+    expect(analysis.textContent).toMatch(/payoff_score=80/);
     expect(screen.queryByText("冲突提醒")).not.toBeInTheDocument();
   });
 });

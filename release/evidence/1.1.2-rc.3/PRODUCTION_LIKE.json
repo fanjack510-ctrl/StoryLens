@@ -1,0 +1,6 @@
+{
+  "health": true,
+  "health_body": "{\"status\":\"ok\",\"service\":\"storylens-api\",\"database\":\"ok\",\"default_provider\":\"none\"}",
+  "ok": true,
+  "cwd_independence_ref": "6/6"
+}

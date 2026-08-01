@@ -1,0 +1,78 @@
+{
+  "change_id": "CHG-20260730-015",
+  "database": "C:\\Users\\msi\\AppData\\Local\\Temp\\storylens-mg-chg015-rc4-failure\\database\\storylens-mg-chg015.db",
+  "api": "http://127.0.0.1:18049",
+  "frontend": "http://127.0.0.1:1428",
+  "fake_provider": "ON",
+  "real_provider": "OFF",
+  "real_provider_calls": 0,
+  "formal_db_writes": 0,
+  "fixtures": {
+    "A_scene_failure": {
+      "book_id": 1,
+      "chapter_id": 1,
+      "run_id": 1,
+      "journey_run_id": null,
+      "confirmed_revision_id": 1,
+      "scene_count": 3,
+      "completed_scene_count": 0,
+      "total_scene_count": 3,
+      "root_error_code": "STRUCTURAL_VALIDATION_FAILED",
+      "failed_stage": "scene_analysis"
+    },
+    "B_synthesis_failure": {
+      "book_id": 1,
+      "chapter_id": 2,
+      "run_id": 2,
+      "journey_run_id": 1,
+      "confirmed_revision_id": 2,
+      "completed_scene_count": 3,
+      "total_scene_count": 3,
+      "root_error_code": "JOURNEY_SYNTHESIS_FAILED",
+      "failed_stage": "reader_journey_chapter_synthesis"
+    },
+    "C_recoverable": {
+      "book_id": 1,
+      "chapter_id": 3,
+      "run_id": 3,
+      "journey_run_id": 2,
+      "confirmed_revision_id": 3,
+      "completed_scene_count": 1,
+      "total_scene_count": 3,
+      "root_error_code": "JOURNEY_INTERRUPTED",
+      "can_resume": true
+    },
+    "D_success_wait_gate": {
+      "book_id": 1,
+      "chapter_id": 4,
+      "run_id": 4,
+      "journey_run_id": null,
+      "model_revision_id": 4,
+      "draft_revision_id": 5,
+      "draft_etag": "84ab49ed123d552617f1126f945c1eda93aee04925b917f74cf57f73e1e5115f",
+      "ai_scene_count": 2,
+      "draft_scene_count": 3,
+      "status": "awaiting_confirm_2_to_3"
+    },
+    "D_auto_wait_gate": {
+      "book_id": 1,
+      "chapter_id": 5,
+      "run_id": 5,
+      "journey_run_id": 3,
+      "model_revision_id": 6,
+      "draft_revision_id": 7,
+      "draft_etag": "0d1d8e9d6fe033c2670d9f881257feaef3794e4859a91ce990f00df1cb5027de",
+      "ai_scene_count": 2,
+      "draft_scene_count": 3,
+      "status": "succeeded_auto_probe",
+      "confirmed_revision_id": 7,
+      "scene_count": 3
+    }
+  },
+  "urls": {
+    "SCENE_FAILURE": "http://127.0.0.1:1428/books/1?chapter=1&analysisRun=1&view=progress",
+    "SYNTHESIS_FAILURE": "http://127.0.0.1:1428/books/1?chapter=2&analysisRun=2&journeyRun=1&view=progress",
+    "RECOVERABLE_INTERRUPTED": "http://127.0.0.1:1428/books/1?chapter=3&analysisRun=3&journeyRun=2&view=progress",
+    "SUCCESS": "http://127.0.0.1:1428/books/1?chapter=4&analysisRun=4&view=scene-boundary-review"
+  }
+}

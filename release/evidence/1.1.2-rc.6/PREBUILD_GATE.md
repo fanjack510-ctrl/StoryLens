@@ -1,0 +1,26 @@
+# PREBUILD GATE — StoryLens 1.1.2-rc.6 (CHG-20260731-024)
+
+Date：2026-07-31  
+RC：1.1.2-rc.6  
+Change：CHG-20260731-024
+
+| Check | Result |
+|-------|--------|
+| PUBLIC HEAD | `bfb9b9ad787b260a8b813f8b35a7612b075d0330` |
+| PUBLIC CLEAN | YES |
+| PRIVATE HEAD | `23a0b025db51acaa8e62f4e81bc7628f19a8e2a6` |
+| PRIVATE CLEAN | YES |
+| VERSION | 1.1.2 |
+| CHG-023 STATUS | verified |
+| CHG-023 MANUAL GATE | PASSED |
+| CHG-023 PRODUCT FIX HEAD | `3fc04b61f10d2f9747c1869921a6089ee6f3f5db` |
+| CHG-023 VERIFIED HEAD | `bfb9b9ad787b260a8b813f8b35a7612b075d0330` |
+| PRODUCTION SCENARIO HOOK | ABSENT |
+| WIP Archive merged | NO |
+| Unfinished CHG-020/021/022 in FF delta | ABSENT |
+| TEMP launcher in product Worker | ABSENT |
+| RC.5 archive preserved | YES |
+| RC.5 SHA-256 match | YES (`2485B19E0ED62A8846387EE525E69FCF3BD046D6C26BBCEE4306DE2E90AACFAE`) |
+| RC.2/RC.3/RC.4 archives | PRESERVED |
+
+Gate：**PASS** — authorized to build 1.1.2-rc.6.

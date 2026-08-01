@@ -1,0 +1,88 @@
+{
+  "id": "CHG-20260729-002",
+  "title": "阅读旅程阶段颜色贯通与场景归属可视化",
+  "type": "fix",
+  "issue_id": null,
+  "base_version": "1.1.1",
+  "target_version": "1.1.2",
+  "public_branch": "fix/1.1.2-reader-journey-stage-colors",
+  "private_branch": "fix/1.1.2-reader-journey-stage-colors",
+  "status": "integrated",
+  "release_pool_status": "included",
+  "include_in_next_release": true,
+  "forward_port_required": true,
+  "forward_port_target": "integration/whole-book-v120",
+  "forward_port_status": "pending",
+  "depends_on": [
+    "CHG-20260729-001"
+  ],
+  "related_changes": [
+    {
+      "id": "CHG-20260729-001",
+      "relation": "integrated prerequisite"
+    }
+  ],
+  "affected_modules": [
+    "apps/desktop/src/components/readerJourney/journeyVisualTokens.ts",
+    "apps/desktop/src/components/readerJourney/journeyStageBands.ts",
+    "apps/desktop/src/components/readerJourney/CanonicalJourneyChart.tsx",
+    "apps/desktop/src/components/readerJourney/ReaderJourneyWorkspace.tsx",
+    "apps/desktop/src/components/readerJourney/StructuredChapterTextPane.tsx"
+  ],
+  "commits": [
+    {
+      "sha": "005ea1ab673bf71d5e6e8156694475d41e9c3a11",
+      "message": "ui(journey): align scene curves with story stage colors",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "46754919680fd23001131be4617511cd75b5dea3",
+      "message": "fix(journey-ui): strengthen visual separation of story stages",
+      "primary": true,
+      "multi_change_reason": "manual-gate defect fix for washed stage colors"
+    }
+  ],
+  "modules": [
+    "release",
+    "apps/desktop"
+  ],
+  "files": [
+    "release/changes/CHG-20260729-002.json",
+    "release/evidence/hotfix/1.1.2/CHG-20260729-002/"
+  ],
+  "user_summary": "将开端/发展/收束阶段颜色贯通到曲线背景、Scene 轴与左侧列表，不改阶段算法。",
+  "technical_summary": "Single journeyStageVisualTokens source; opaque distinct green/warm/blue-gray bands; midpoint geometry; risk top-strip only; stage titles only.",
+  "acceptance_criteria": [
+    "Single color source for cards and chart",
+    "Bands follow actual scene ownership not equal thirds",
+    "Six lenses share stage bands",
+    "No stage algorithm change",
+    "Legacy compatible",
+    "Stage colors visually distinct without opacity wash"
+  ],
+  "tests": [
+    "apps/desktop/src/components/readerJourney/stage_colors_chg002_local.test.ts"
+  ],
+  "manual_gate": "MG-CHG-20260729-002 PASS",
+  "verification_evidence": [
+    "release/evidence/hotfix/1.1.2/CHG-20260729-002/STAGE_COLOR_AUDIT.md",
+    "release/evidence/hotfix/1.1.2/CHG-20260729-002/TEST_RESULTS.json",
+    "release/evidence/hotfix/1.1.2/CHG-20260729-002/MANUAL_UI_ENV.md",
+    "release/evidence/hotfix/1.1.2/CHG-20260729-002/MANUAL_GATE_PASS.md",
+    "release/evidence/hotfix/1.1.2/CHG-20260729-002/manual-gate-defect/COMPUTED_STAGE_COLORS.json",
+    "release/evidence/hotfix/1.1.2/CHG-20260729-002/manual-gate-defect/MG-CHG-20260729-002-stage-colors-after-fix.png",
+    "release/evidence/hotfix/1.1.2/CHG-20260729-002/INTEGRATION_REPORT.md"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "Presentation-only; no persistence changes."
+  },
+  "created_at": "2026-07-29T04:04:02Z",
+  "updated_at": "2026-07-29T04:50:00Z",
+  "head_inclusion": "INCLUDED",
+  "public_integration_commit": "9025d403758778c9feb4227508270c9c22a31cdf",
+  "private_integration_commit": "23a0b025db51acaa8e62f4e81bc7628f19a8e2a6"
+}

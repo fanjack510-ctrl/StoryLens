@@ -1,0 +1,14 @@
+﻿{
+    "failure_url":  "/books/1?chapter=1\u0026analysisRun=1\u0026view=result\u0026tab=reader-journey\u0026journeyRun=2",
+    "frontend_pid_at_failure":  15100,
+    "smoke_fake":  true,
+    "public_head":  "d31258df32aa00acf65f77e75056f59026d33ecd",
+    "journey_run_id":  2,
+    "timezone":  "China Standard Time (UTC+08:00)",
+    "dest_db":  "C:\\Users\\msi\\AppData\\Local\\Temp\\storylens-chg042-repro-r3\\database\\storylens-mg-chg041-r3.db",
+    "frozen_at":  "2026-07-28T23:16:55.8039092+08:00",
+    "api_pid_at_failure":  2960,
+    "real_provider":  false,
+    "analysis_run_id":  1,
+    "source_db":  "C:\\Users\\msi\\AppData\\Local\\Temp\\storylens-mg-chg041-r3-retest\\database\\storylens-mg-chg041-r3.db"
+}

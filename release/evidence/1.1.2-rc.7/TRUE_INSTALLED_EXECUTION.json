@@ -1,0 +1,22 @@
+{
+  "ok": true,
+  "api_process_path": "C:\\Users\\msi\\AppData\\Local\\Temp\\storylens-1.1.2-rc.7-installed-automatic\\install\\storylens-api.exe",
+  "api_sha256": "5F196E6E077247CA471D77428398A054A82219709566487FE361E30859A2B023",
+  "desktop_path": "C:\\Users\\msi\\AppData\\Local\\Temp\\storylens-1.1.2-rc.7-installed-automatic\\install\\storylens-desktop.exe",
+  "desktop_sha256": "719E2471B84FAA44B48DB130F752A6748C1B90E525550A476AEBD8242FC25148",
+  "database": "C:\\Users\\msi\\AppData\\Local\\Temp\\storylens-1.1.2-rc.7-installed-automatic\\AppData\\StoryLens-true-exec\\database\\storylens.db",
+  "mock_url": "http://127.0.0.1:18170",
+  "source_python_api_running": false,
+  "resume_request_count": 2,
+  "analysis_recover_request_count": 0,
+  "success_status": "succeeded",
+  "success_result_exists": true,
+  "failure_status": "failed",
+  "failure_result_exists": false,
+  "formal_db_unchanged": true,
+  "formal_before": "BE2A258F77B06B688181C185EEE4ACEE1E4B2E4656E080556845ADF8D2C34EBA",
+  "formal_after": "BE2A258F77B06B688181C185EEE4ACEE1E4B2E4656E080556845ADF8D2C34EBA",
+  "provider_base_url": "http://127.0.0.1:18170/v1",
+  "external_network": 0,
+  "generated_at": "2026-07-31T13:59:27.946139+00:00"
+}

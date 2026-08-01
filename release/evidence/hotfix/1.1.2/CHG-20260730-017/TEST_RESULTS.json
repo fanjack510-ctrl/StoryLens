@@ -1,0 +1,25 @@
+{
+  "change_id": "CHG-20260730-017",
+  "vitest": {
+    "passed": 44,
+    "failed": 0,
+    "suites": [
+      "chapterAnalysisPresentation.journeyNav.test.ts",
+      "chapterAnalysisPresentation.completedJourneyCta.test.ts",
+      "chapterAnalysisPresentation.test.ts",
+      "BookRoutePage.journeyNav.test.tsx",
+      "JourneyModeSwitcher.test.tsx",
+      "SceneBoundaryNavigation.chg041.test.tsx"
+    ]
+  },
+  "pytest": {
+    "test_journey_nav_visibility_chg017.py": "3 passed"
+  },
+  "typecheck_related_hits": 0,
+  "new_typecheck_errors": 0,
+  "real_provider_calls": 0,
+  "formal_database_writes": 0,
+  "manual_gate": "PASSED",
+  "completed_journey_cta_gate": "PASSED",
+  "recorded_at": "2026-07-30T12:41:00Z"
+}

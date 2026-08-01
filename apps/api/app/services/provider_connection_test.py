@@ -459,6 +459,21 @@ async def run_connection_test(
         run.validated_output = normalized
         session.commit()
         session.refresh(invocation)
+        try:
+            from app.services.ai_validation_snapshot import record_validation_outcome
+
+            record_validation_outcome(
+                session,
+                store,
+                provider_id=provider_name,
+                ok=True,
+                model_name=response.model or preflight.configured_model,
+                provider_request_id=redact_request_id(response.request_id),
+                validation_latency_ms=latency_ms,
+            )
+        except Exception:  # noqa: BLE001
+            # Snapshot persistence must not fail a successful connection probe.
+            pass
         return ProviderConnectionTestResponse(
             status="healthy",
             http_status=response.http_status_code or 200,

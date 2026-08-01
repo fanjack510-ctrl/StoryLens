@@ -161,6 +161,14 @@ class AnalysisRun(Base):
     recovered_from_run_id: Mapped[int | None] = mapped_column(
         ForeignKey("analysis_runs.id", ondelete="SET NULL"), nullable=True, index=True
     )
+    # CHG-20260729-006 cooperative cancellation (nullable / defaults for legacy rows).
+    status_version: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    cancellation_requested_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    cancellation_reason: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    cancelled_by: Mapped[str | None] = mapped_column(String(32), nullable=True)
     # Phase 1P narrative scope skeleton (nullable for 1.0.5 row compatibility).
     # Legacy chapter binding remains subject_type/subject_id — there is no chapter_id column.
     analysis_type: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
@@ -204,6 +212,10 @@ class Scene(Base):
         ForeignKey("boundary_revisions.id", ondelete="SET NULL"), nullable=True, index=True
     )
     boundary_source: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    included_in_journey: Mapped[bool] = mapped_column(default=True)
+    source_scene_id: Mapped[int | None] = mapped_column(
+        ForeignKey("scenes.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utc_now, onupdate=utc_now
@@ -507,8 +519,8 @@ class BoundaryRevision(Base):
     __table_args__ = (UniqueConstraint("review_session_id", "revision_number"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    review_session_id: Mapped[int] = mapped_column(
-        ForeignKey("boundary_review_sessions.id", ondelete="CASCADE"), index=True
+    review_session_id: Mapped[int | None] = mapped_column(
+        ForeignKey("boundary_review_sessions.id", ondelete="CASCADE"), nullable=True, index=True
     )
     chapter_id: Mapped[int] = mapped_column(
         ForeignKey("chapters.id", ondelete="CASCADE"), index=True
@@ -521,6 +533,20 @@ class BoundaryRevision(Base):
     confirmed_by: Mapped[str] = mapped_column(String(255))
     confirmed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
     coverage_rate: Mapped[float] = mapped_column(Float, default=1.0)
+    status: Mapped[str] = mapped_column(String(32), default="confirmed", index=True)
+    source: Mapped[str] = mapped_column(String(32), default="legacy")
+    based_on_revision_id: Mapped[int | None] = mapped_column(
+        ForeignKey("boundary_revisions.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    chapter_text_hash: Mapped[str] = mapped_column(String(64), default="")
+    boundary_hash: Mapped[str] = mapped_column(String(64), default="")
+    revision_etag: Mapped[str] = mapped_column(String(64), default="")
+    superseded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    title: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now
+    )
 
 
 class ReaderJourneyRun(Base):
@@ -563,6 +589,15 @@ class ReaderJourneyRun(Base):
     failure_details_json: Mapped[str] = mapped_column(Text, default="{}")
     cloud_consent: Mapped[bool] = mapped_column(default=False)
     client_request_id: Mapped[str] = mapped_column(String(64), index=True)
+    scene_revision_id: Mapped[int | None] = mapped_column(
+        ForeignKey("boundary_revisions.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    scene_revision_no: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    scene_boundary_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    chapter_text_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    included_scene_ids_json: Mapped[str] = mapped_column(Text, default="[]")
+    included_scene_input_hashes_json: Mapped[str] = mapped_column(Text, default="{}")
+    result_status: Mapped[str] = mapped_column(String(48), default="current", index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utc_now, onupdate=utc_now

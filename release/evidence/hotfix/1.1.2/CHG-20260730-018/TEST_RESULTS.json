@@ -1,0 +1,29 @@
+{
+  "change_id": "CHG-20260730-018",
+  "pass": true,
+  "timestamp": "2026-07-30T10:23:00+00:00",
+  "vitest": {
+    "passed": 36,
+    "failed": 0,
+    "suites": [
+      "journeyActiveRecoveryGuard.test.ts",
+      "chapterAnalysisPresentation.test.ts",
+      "UnifiedAnalysisRecoveryCard.test.tsx",
+      "BookRoutePage.journeyNav.test.tsx",
+      "BookRoutePage.readerJourneyResume.test.tsx"
+    ]
+  },
+  "pytest": {
+    "passed": 6,
+    "failed": 0,
+    "file": "apps/api/tests/test_active_journey_stale_recovery_chg018.py"
+  },
+  "typecheck": {
+    "result": "PASS_SCOPED",
+    "note": "Repo tsc has pre-existing errors in unrelated chg002/chg004 local test fixtures; no new errors attributed to CHG-018 sources"
+  },
+  "http_e2e": {
+    "result": "PASS",
+    "file": "HTTP_E2E.json"
+  }
+}

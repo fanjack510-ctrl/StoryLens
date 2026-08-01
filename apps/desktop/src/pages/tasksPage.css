@@ -83,3 +83,62 @@
 .tasks-status-filter {
   min-width: 9rem;
 }
+
+.tasks-stop-btn {
+  border: 1px solid color-mix(in srgb, #b42318 55%, var(--color-border, #c9c4bc));
+  background: transparent;
+  color: #8f1f18;
+  border-radius: var(--radius-md, 8px);
+  padding: 4px 10px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.tasks-stop-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, #b42318 8%, transparent);
+}
+
+.tasks-stop-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.tasks-stopping-hint {
+  display: block;
+  max-width: 14rem;
+  color: var(--color-text-muted, var(--muted));
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.tasks-stop-modal {
+  width: min(480px, 94vw);
+}
+
+.tasks-stop-body {
+  margin: 0 0 12px;
+  line-height: 1.55;
+  color: var(--color-text, inherit);
+}
+
+.tasks-stop-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.tasks-stop-confirm {
+  border: 1px solid #8f1f18;
+  background: color-mix(in srgb, #b42318 12%, transparent);
+  color: #8f1f18;
+  border-radius: var(--radius-md, 8px);
+  padding: 6px 14px;
+  cursor: pointer;
+}
+
+.tasks-stop-confirm:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+

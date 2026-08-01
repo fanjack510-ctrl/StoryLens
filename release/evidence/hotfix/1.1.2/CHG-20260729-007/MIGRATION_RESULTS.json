@@ -1,0 +1,32 @@
+{
+  "formal_db_writes": 0,
+  "temp_root": "C:\\Users\\msi\\AppData\\Local\\Temp\\storylens-v112-integration",
+  "fresh": {
+    "fresh": true,
+    "cancel_cols": [
+      "cancellation_reason",
+      "cancellation_requested_at",
+      "cancelled_at",
+      "cancelled_by",
+      "status_version"
+    ],
+    "missing": [],
+    "second_pass": "ok"
+  },
+  "upgrade": {
+    "upgrade": true,
+    "book": [
+      1,
+      "legacy"
+    ],
+    "chapter": [
+      1,
+      "第一章"
+    ],
+    "run": [
+      1,
+      "succeeded"
+    ],
+    "has_cancel_cols": true
+  }
+}

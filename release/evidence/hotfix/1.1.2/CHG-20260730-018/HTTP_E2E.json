@@ -1,0 +1,41 @@
+{
+  "change_id": "CHG-20260730-018",
+  "pass": true,
+  "timestamp": "2026-07-30T10:23:00+00:00",
+  "real_provider_calls": 0,
+  "formal_db_writes": 0,
+  "harness": "pytest FakeProvider + testing_session + live MG recovery-plan probes",
+  "results": [
+    {
+      "case": "A_active_journey_stale_paused_plan",
+      "pass": true,
+      "test": "test_http_e2e_a_active_journey_stale_paused_plan",
+      "user_status": "running",
+      "recovery_card_expected": false,
+      "live_mg_probe": "GET /analysis-runs/1/recovery-plan → user_status=running"
+    },
+    {
+      "case": "B_resuming_journey",
+      "pass": true,
+      "test": "test_http_e2e_b_resuming_journey_no_recover_side_effects",
+      "reason": "already_resuming",
+      "duplicate_runs": 0
+    },
+    {
+      "case": "C_real_interrupted",
+      "pass": true,
+      "test": "test_http_e2e_c_real_interrupted_shows_paused",
+      "user_status": "paused_recoverable",
+      "recovery_card_expected": true,
+      "live_mg_probe": "GET /analysis-runs/2/recovery-plan → paused_recoverable"
+    },
+    {
+      "case": "resume_while_active",
+      "pass": true,
+      "test": "test_recover_noop_when_journey_already_active",
+      "reason": "already_running",
+      "duplicate_analysis_runs": 0,
+      "duplicate_journey_runs": 0
+    }
+  ]
+}

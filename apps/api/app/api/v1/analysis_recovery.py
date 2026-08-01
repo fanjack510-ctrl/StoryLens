@@ -140,17 +140,32 @@ def recover_analysis_run(
         background.add_task(analyze_confirmed_review, session_factory, gateway, review.id)
 
     def _start_journey() -> int | None:
-        """Resume/create journey on the same AnalysisRun (idempotent with auto-pipeline)."""
+        """Resume/create journey on the same AnalysisRun (requires confirmed scene revision)."""
+        import json as _json
+
         from app.services.chapter_analysis_completion import (
             ensure_auto_reader_journey_row,
             is_scene_pipeline_complete,
             mark_scenes_complete_awaiting_journey,
+        )
+        from app.services.scene_boundary_manual_review import (
+            get_confirmed_revision,
         )
 
         fresh = session.get(AnalysisRun, run_id)
         if fresh is None or fresh.status != "succeeded":
             return None
         if not is_scene_pipeline_complete(session, fresh):
+            return None
+        try:
+            marker = _json.loads(fresh.raw_output or "{}")
+        except _json.JSONDecodeError:
+            marker = {}
+        if marker.get("chapter_pipeline") == "awaiting_scene_boundary_confirmation":
+            return None
+        chapter_id = int(fresh.subject_id)
+        confirmed = get_confirmed_revision(session, chapter_id)
+        if confirmed is None:
             return None
         # Prefer client_request_id match, then shared auto row / recoverable row.
         existing = session.scalar(
@@ -161,10 +176,22 @@ def recover_analysis_run(
         )
         if existing is not None:
             journey_run = existing
+            if journey_run.scene_revision_id is None:
+                journey_run = ensure_auto_reader_journey_row(
+                    session,
+                    fresh,
+                    cloud_consent=request.cloud_consent,
+                    scene_revision_id=confirmed.id,
+                )
+                if journey_run is None:
+                    return None
         else:
             mark_scenes_complete_awaiting_journey(session, fresh)
             journey_run = ensure_auto_reader_journey_row(
-                session, fresh, cloud_consent=request.cloud_consent
+                session,
+                fresh,
+                cloud_consent=request.cloud_consent,
+                scene_revision_id=confirmed.id,
             )
             if journey_run is None:
                 return None

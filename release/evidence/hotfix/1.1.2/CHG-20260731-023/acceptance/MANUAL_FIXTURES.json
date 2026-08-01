@@ -1,0 +1,34 @@
+{
+  "change_id": "CHG-20260731-023",
+  "database": "C:\\Users\\msi\\AppData\\Local\\Temp\\storylens-rc6-chg023-browser\\storylens.db",
+  "mg_root": "C:\\Users\\msi\\AppData\\Local\\Temp\\storylens-rc6-chg023-browser",
+  "launcher": "C:\\Users\\msi\\AppData\\Local\\Temp\\storylens-rc6-chg023-browser\\launch_api_accept.py",
+  "api_url": "http://127.0.0.1:18068",
+  "frontend_url": "http://127.0.0.1:1468",
+  "provider": "aliyun_qwen_plus",
+  "model": "qwen-plus",
+  "scene_count": 4,
+  "fail_journey_run_id": 2,
+  "resume_success": {
+    "book_code": "B0231",
+    "book_id": 1,
+    "chapter_id": 1,
+    "analysis_run_id": 1,
+    "journey_run_id": 1,
+    "confirmed_revision_id": 1,
+    "client_request_id": "chg023-final-success",
+    "url": "http://127.0.0.1:1468/books/1?chapter=1&analysisRun=1&journeyRun=1&view=progress&tab=reader-journey"
+  },
+  "resume_failure": {
+    "book_code": "B0232",
+    "book_id": 2,
+    "chapter_id": 2,
+    "analysis_run_id": 2,
+    "journey_run_id": 2,
+    "confirmed_revision_id": 2,
+    "client_request_id": "chg023-final-fail",
+    "url": "http://127.0.0.1:1468/books/2?chapter=2&analysisRun=2&journeyRun=2&view=progress&tab=reader-journey"
+  },
+  "real_provider_calls": 0,
+  "formal_db_writes": 0
+}

@@ -10,6 +10,10 @@ type Props = {
   onViewTaskDetails: () => void;
 };
 
+/**
+ * Only mount this card when CurrentJourneyExecutionState.phase === "running".
+ * Must not accept a resuming boolean that can outlive terminal status.
+ */
 export function ReaderJourneyProgressCard({
   analysisRunId,
   progress,
@@ -20,11 +24,16 @@ export function ReaderJourneyProgressCard({
   const total = progress?.total_scene_count ?? 0;
   const done = progress?.completed_scene_count ?? 0;
   const hasProgress = total > 0;
-  const failed =
-    progress?.status === "failed" ||
-    progress?.status === "scene_profiles_partial" ||
-    progress?.status === "budget_blocked";
+  const status = String(progress?.status || "");
   const statusLabel = formatJourneyStatus(progress?.status);
+  const title =
+    status === "starting" || status === "resuming" || status === "queued"
+      ? "正在恢复阅读旅程"
+      : "正在生成阅读旅程";
+  const description =
+    status === "starting" || status === "resuming" || status === "queued"
+      ? "正在从已保存的进度继续，无需重复操作。"
+      : "正在计算场景之间的情绪、节奏和阅读牵引变化。离开本页后任务仍会继续。";
 
   return (
     <section
@@ -33,8 +42,8 @@ export function ReaderJourneyProgressCard({
       data-status={progress?.status || (loading ? "loading" : "unknown")}
     >
       <header>
-        <h2 data-testid="reader-journey-progress-title">正在生成阅读旅程</h2>
-        <p>正在计算场景之间的情绪、节奏和阅读牵引变化。离开本页后任务仍会继续。</p>
+        <h2 data-testid="reader-journey-progress-title">{title}</h2>
+        <p>{description}</p>
       </header>
       <div className="reader-journey-progress-meter" data-testid="reader-journey-progress-meter">
         <p data-testid="reader-journey-progress-scenes">
@@ -45,18 +54,14 @@ export function ReaderJourneyProgressCard({
               : "正在处理场景数据"}
         </p>
         {progress?.status ? (
-          <p data-testid="reader-journey-progress-stage">
-            状态：{statusLabel}
-          </p>
+          <p data-testid="reader-journey-progress-stage">状态：{statusLabel}</p>
         ) : null}
       </div>
-      {(failed || errorMessage) && (
+      {errorMessage ? (
         <p className="notice error" data-testid="reader-journey-progress-error">
-          {errorMessage ||
-            progress?.user_error_message ||
-            "阅读旅程生成失败，可只重试旅程，无需重新分析整章。"}
+          {errorMessage}
         </p>
-      )}
+      ) : null}
       <details className="reader-journey-progress-tech" data-testid="reader-journey-progress-tech">
         <summary>技术详情</summary>
         <dl data-testid="reader-journey-progress-meta">

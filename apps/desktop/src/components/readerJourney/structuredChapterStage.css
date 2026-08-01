@@ -1,0 +1,38 @@
+/* CHG-20260729-002 — left scene stage cue (shared tokens via --scene-stage-marker). */
+
+.structured-scene-header {
+  position: relative;
+}
+
+.structured-scene-stage-bar {
+  position: absolute;
+  left: 0;
+  top: 4px;
+  bottom: 4px;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--scene-stage-marker, transparent);
+  pointer-events: none;
+}
+
+.structured-scene-header .structured-scene-ordinal {
+  margin-left: 6px;
+}
+
+.structured-scene-phase {
+  font-size: 12px;
+  color: var(--muted, #667);
+  margin-left: 4px;
+}
+
+.journey-stage-band-label,
+.journey-axis-stage-start {
+  fill: var(--muted, #5c6670);
+  font-size: 11px;
+  pointer-events: none;
+}
+
+.journey-axis-stage-start {
+  font-size: 9px;
+  opacity: 0.9;
+}

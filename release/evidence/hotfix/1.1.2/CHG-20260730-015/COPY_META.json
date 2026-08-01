@@ -1,0 +1,11 @@
+{
+  "copied_at": "2026-07-30T04:57:22.440175+00:00",
+  "formal_db_path": "C:\\Users\\msi\\AppData\\Local\\StoryLens\\database\\storylens.db",
+  "backup_sha256": "7B016F389BE641C5EA9281383188E39059A7A7CB9A1A52C10BBF3E20D5B91865",
+  "backup_size": 41119744,
+  "raw_present": [
+    "storylens.db",
+    "storylens.db-shm",
+    "storylens.db-wal"
+  ]
+}

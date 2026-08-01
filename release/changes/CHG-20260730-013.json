@@ -1,0 +1,94 @@
+{
+  "id": "CHG-20260730-013",
+  "title": "修复确认场景后 Journey 启动竞态与恢复流程不稳定",
+  "type": "fix",
+  "base_version": "1.1.1",
+  "status": "verified",
+  "include_in_next_release": true,
+  "commits": [
+    {
+      "sha": "75990ae039849f60f7b940f6fe203090a75e4c2c",
+      "message": "fix(workflow): make confirm and journey startup idempotent",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "167f7105b4323356a7adf9a825327a3ab8b02046",
+      "message": "fix(tasks): prevent startup delay from becoming interruption",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "1bd09544354c65e53308f4e82394e35c900610f3",
+      "message": "fix(chapter): route resume directly to current journey",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "7405456ef42716d8a1705555405bfc6be433055c",
+      "message": "docs(release): mark CHG-20260730-013 tested with evidence",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "a51574e4b9a44631c96fc721a8287b1795500a5b",
+      "message": "docs(release): attach registry mark commit to CHG-013",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "8ad9b10c4bbb35626ca556337749b02bc236d977",
+      "message": "docs(release): record MG-CHG-20260730-013 PASS (round 2)",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "26ad38ab4ecc783b2572e2e4cc1f2794d5e346aa",
+      "message": "docs(release): mark CHG-20260730-013 verified after MG PASS",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "api",
+    "desktop"
+  ],
+  "files": [],
+  "user_summary": "确认场景并开始分析后，启动窗口不再被误判为中断；Continue 幂等并直达当前旅程进度",
+  "technical_summary": "Confirm+Start bootstrap race: do not mark unclaimed starting/queued journeys interrupted; claim worker atomically; prefer live journey over stale awaiting confirmation; Continue routes to current journey.",
+  "acceptance_criteria": [
+    "Confirm+Start returns starting; delayed worker not interrupted; Continue same run; no scene-review dead end",
+    "MG-CHG-20260730-013 Round 2 PASSED (user-confirmed 2026-07-30)"
+  ],
+  "tests": [
+    "apps/api/tests/test_confirm_start_journey_race_chg013.py",
+    "apps/desktop/src/services/chapterJourneyComposition.test.ts"
+  ],
+  "verification_evidence": [
+    "release/evidence/hotfix/1.1.2/CHG-20260730-013/CONFIRM_START_JOURNEY_RACE_AUDIT.md",
+    "release/evidence/hotfix/1.1.2/CHG-20260730-013/HTTP_E2E.json",
+    "release/evidence/hotfix/1.1.2/CHG-20260730-013/TEST_RESULTS.json",
+    "release/evidence/hotfix/1.1.2/CHG-20260730-013/VERIFICATION.md",
+    "release/evidence/hotfix/1.1.2/CHG-20260730-013/MANUAL_GATE_PASS.md"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "P0",
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-30T02:59:57Z",
+  "updated_at": "2026-07-30T04:36:27Z",
+  "issue_id": "INC-20260730-006",
+  "target_version": "1.1.2",
+  "public_branch": "fix/1.1.2-confirm-start-journey-race",
+  "release_pool_status": "included"
+}

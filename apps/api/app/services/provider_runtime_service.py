@@ -100,6 +100,30 @@ class ProviderRuntimeService:
         if caps.cloud and not usage.get("within_budget"):
             blockers.append("budget_unavailable")
 
+        from app.services.chapter_analysis_smoke_fake_transport import (
+            chapter_smoke_fake_readiness_override,
+        )
+
+        if chapter_smoke_fake_readiness_override() and caps.cloud:
+            # Align with provider_eligibility: Fake intercepts HTTP and must not
+            # block reader-journey / confirm+start on credential or enablement.
+            credential = True
+            connected = True
+            configured = True
+            enabled = True
+            if caps.cloud and hasattr(provider, "enabled"):
+                provider.enabled = True
+            smoke_skip = {
+                "cloud_master_switch_off",
+                "provider_disabled",
+                "provider_not_configured",
+                "provider_disconnected",
+                "credential_missing",
+                "pricing_unavailable",
+                "budget_unavailable",
+            }
+            blockers = [item for item in blockers if item not in smoke_skip]
+
         if task_type == "scene_analysis":
             if not caps.supports_scene_analysis and caps.cloud:
                 # Local/fake providers may omit the flag; only enforce for cloud.

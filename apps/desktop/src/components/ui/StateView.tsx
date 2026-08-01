@@ -8,6 +8,7 @@ export type StateAction = {
   onClick: () => void;
   variant?: ButtonVariant;
   testId?: string;
+  disabled?: boolean;
 };
 
 export type StateViewProps = {
@@ -55,6 +56,7 @@ export function StateView({
             <Button
               variant={primaryAction.variant || "primary"}
               onClick={primaryAction.onClick}
+              disabled={primaryAction.disabled}
               data-testid={primaryAction.testId || `${testId}-primary`}
             >
               {primaryAction.label}
@@ -64,6 +66,7 @@ export function StateView({
             <Button
               variant={secondaryAction.variant || "secondary"}
               onClick={secondaryAction.onClick}
+              disabled={secondaryAction.disabled}
               data-testid={secondaryAction.testId || `${testId}-secondary`}
             >
               {secondaryAction.label}

@@ -1,0 +1,100 @@
+{
+  "id": "CHG-20260730-014",
+  "title": "Integrate verified confirm-start stability fix and build StoryLens 1.1.2-rc.4",
+  "type": "fix",
+  "base_version": "1.1.1",
+  "status": "tested",
+  "include_in_next_release": true,
+  "commits": [
+    {
+      "sha": "130beb2ce5a393173a67e284f03d141c83a74456",
+      "message": "docs(release): register CHG-014 and align journey start status asserts",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "3369cac6e7a16d7aa1963aee1c978f2ac1b305e0",
+      "message": "docs(release): record StoryLens 1.1.2-rc.4 build",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "77902356fbe886a0395cbc83988feab346959f9f",
+      "message": "docs(release): finalize CHG-014 evidence and RC.4 final HEAD",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "76dc9def7c72f503dc4228ed926155aa6e3b0dbc",
+      "message": "docs(release): point CHG-014 final HEAD at tip",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "e5264bd7f118cfaa4e2197513cbbf95e707ff2d9",
+      "message": "docs(release): restore RC.4 final report UTF-8 encoding",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "7bed14b776e3ef097d90423a9d40a93c57d4c02c",
+      "message": "docs(release): record public final HEAD for RC.4",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "a0902c340db954656ac29db8121e7e2117e38226",
+      "message": "docs(release): attach RC.4 final HEAD commits to CHG-014",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "release",
+    "api",
+    "desktop"
+  ],
+  "files": [],
+  "user_summary": "将已验证的 Confirm-Start 稳定性修复纳入 1.1.2 并构建 RC.4",
+  "technical_summary": "Integrate CHG-013 into hotfix/1.1.2; build StoryLens 1.1.2-rc.4; isolated installed acceptance; no Push/Tag/Release.",
+  "acceptance_criteria": [
+    "CHG-013 verified and included",
+    "RC.4 installer archived with matching SHA-256",
+    "Confirm delay / Continue / Provider / Cancel gates pass under Fake Provider"
+  ],
+  "tests": [
+    "apps/api/tests/test_confirm_start_journey_race_chg013.py",
+    "apps/api/tests/test_workflow_consistency_chg011.py",
+    "apps/api/tests/test_provider_health_consistency_chg009.py",
+    "apps/api/tests/test_task_cancellation_chg006.py"
+  ],
+  "verification_evidence": [
+    "release/evidence/1.1.2-rc.4/ISOLATED_INSTALLED_ACCEPTANCE.json",
+    "release/evidence/1.1.2-rc.4/CONFIRM_DELAY_GATE.json",
+    "release/evidence/1.1.2-rc.4/CWD_INDEPENDENCE.json",
+    "release/evidence/1.1.2-rc.4/INSTALLER_AUDIT.json",
+    "release/evidence/1.1.2-rc.4/FINAL_REPORT.md",
+    "release/evidence/hotfix/1.1.2/CHG-20260730-014/windows-build-log-1.1.2-rc.4.md"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "P0",
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-07-30T04:02:54Z",
+  "updated_at": "2026-07-30T04:37:59Z",
+  "issue_id": "MG-CHG-20260730-013",
+  "target_version": "1.1.2",
+  "public_branch": "hotfix/1.1.2",
+  "release_pool_status": "included",
+  "rc_version": "1.1.2-rc.4"
+}

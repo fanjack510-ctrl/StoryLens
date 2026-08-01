@@ -1,0 +1,75 @@
+{
+  "id": "CHG-20260729-007",
+  "title": "StoryLens 1.1.2 Hotfix Final Integration and Version Bump",
+  "type": "release",
+  "issue_id": null,
+  "base_version": "1.1.1",
+  "target_version": "1.1.2",
+  "public_branch": "hotfix/1.1.2",
+  "private_branch": "hotfix/1.1.2",
+  "status": "ready-for-staging",
+  "release_pool_status": "included",
+  "include_in_next_release": true,
+  "forward_port_required": true,
+  "forward_port_target": "integration/whole-book-v120",
+  "forward_port_status": "pending",
+  "depends_on": [
+    "CHG-20260728-040",
+    "CHG-20260728-041",
+    "CHG-20260729-001",
+    "CHG-20260729-002",
+    "CHG-20260729-003",
+    "CHG-20260729-004",
+    "CHG-20260729-005",
+    "CHG-20260729-006"
+  ],
+  "related_changes": [
+    {
+      "id": "CHG-20260728-042",
+      "relation": "excluded — investigated only, not included in 1.1.2"
+    }
+  ],
+  "affected_modules": [
+    "VERSION",
+    "apps/desktop",
+    "apps/api",
+    "release/trains",
+    "release/notes"
+  ],
+  "commits": [
+    "addc21b059595992657bf1ce89215ac6134930ce",
+    "ad1b98e40d370b1cd62c7ce1ee87c59d75db22e1",
+    "6c991eb65ec44adf1c0299f9b6e7da0022317863",
+    "551639ffd4f411cf7d71f175b00fa698fa1e16de",
+    "ca5b72b49f3326575b0cd0786fc99dcf803fabf3"
+  ],
+  "modules": [
+    "release",
+    "apps/api",
+    "apps/desktop"
+  ],
+  "files": [
+    "release/changes/CHG-20260729-007.json",
+    "release/evidence/hotfix/1.1.2/CHG-20260729-007/",
+    "release/notes/StoryLens-1.1.2.md",
+    "release/trains/1.1.2.json"
+  ],
+  "user_summary": "完成 1.1.2 Hotfix 最终集成与版本号升级，准备 RC 构建门禁。",
+  "technical_summary": "FF-integrate CHG-006; bump VERSION 1.1.2 via version_manager; train ready-for-rc-build; migrations verified in TEMP; no Build/Push/Tag.",
+  "acceptance_criteria": [
+    "All verified hotfix changes reachable from hotfix/1.1.2",
+    "VERSION consistency PASS at 1.1.2",
+    "Fresh + upgrade migrations PASS",
+    "No Build/Push/Tag/Release"
+  ],
+  "migrations": [
+    "migrate_phase_scene_boundary_manual_review",
+    "migrate_phase_task_cancellation_v1"
+  ],
+  "manual_gate": null,
+  "created_at": "2026-07-29",
+  "build": false,
+  "push": false,
+  "tag": false,
+  "release": false
+}

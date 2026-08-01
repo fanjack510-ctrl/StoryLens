@@ -1,0 +1,19 @@
+{
+  "change": "CHG-20260728-042",
+  "related_change": "CHG-20260728-041",
+  "related_manual_gate": "MG-CHG-20260728-041",
+  "public_head": "d31258df32aa00acf65f77e75056f59026d33ecd",
+  "frozen_db_copy": "C:\\Users\\msi\\AppData\\Local\\Temp\\storylens-chg042-repro-r3\\database\\storylens-mg-chg041-r3.db",
+  "source_db": "C:\\Users\\msi\\AppData\\Local\\Temp\\storylens-mg-chg041-r3-retest\\database\\storylens-mg-chg041-r3.db",
+  "failure_url": "/books/1?chapter=1&analysisRun=1&view=result&tab=reader-journey&journeyRun=2",
+  "target_journey_run_id": 2,
+  "note_current_revision_journey": 3,
+  "api_at_failure": "http://127.0.0.1:18041",
+  "frontend_at_failure": "http://127.0.0.1:1421",
+  "api_pid": 2960,
+  "frontend_pid": 15100,
+  "timezone": "China Standard Time UTC+08:00",
+  "real_provider_calls": 0,
+  "formal_database_writes": 0,
+  "production_code_modified": false
+}

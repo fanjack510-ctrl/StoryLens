@@ -35,6 +35,8 @@ export type JourneyPhaseVisualization = {
   core_scene_count: number;
   beat_count: number;
   scene_span: number;
+  /** CHG-003 presentation-layer one-sentence stage judgment. */
+  stage_judgment_summary?: string | null;
 };
 
 export type JourneyQuestionLifecycleEntry = {
@@ -120,6 +122,15 @@ export type JourneyRiskInterval = {
   field_used?: string;
   penalties?: JourneyRiskPenalty[];
   final_risk?: number;
+};
+
+export type DimensionInsightsMap = {
+  overall_reading?: string | null;
+  plot_progression?: string | null;
+  reading_tension?: string | null;
+  emotional_intensity?: string | null;
+  hook_payoff?: string | null;
+  pacing_speed?: string | null;
 };
 
 export type JourneySceneNodeScores = {
@@ -269,6 +280,17 @@ export type JourneySceneNode = {
   secondary_diagnoses?: string[];
   positive_mechanism?: string | null;
   data_quality_issue?: string | null;
+  /** Per-dimension scene insight texts (v2 / presentation enrich). */
+  dimension_insights?: DimensionInsightsMap | null;
+  insight_source?: "generated" | "derived_legacy" | "unavailable" | null;
+  /** Alias for reading_momentum on composite lens. */
+  overall_reading_score?: number | null;
+  composite_role_fit?: "合适" | "偏弱" | "偏强" | "无法判断" | null;
+  /** Presentation-layer CHG-003 factors (derived at read time). */
+  primary_driver?: string | null;
+  primary_drag?: string | null;
+  explanation_source?: "derived" | "unavailable" | "generated" | null;
+  comprehensive_short_label?: string | null;
 };
 
 export type JourneyChapterSummary = {
@@ -374,6 +396,13 @@ export type ReaderJourneyVisualization = {
   risk_intervals: JourneyRiskInterval[];
   formula_versions: JourneyFormulaVersions;
   calibration_status: JourneyCalibrationStatus;
+  /** CHG-003 presentation-layer key nodes (rise / drop / turn). */
+  comprehensive_key_nodes?: Array<{
+    scene_ordinal: number;
+    kind: "reading_rise" | "reading_drop" | "composite_turn";
+    label: string;
+    detail?: string | null;
+  }>;
   /** V2 question lifecycle records (presentation); absent on legacy. */
   question_lifecycle?: Array<{
     question_id: string;

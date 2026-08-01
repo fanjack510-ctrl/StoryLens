@@ -1,0 +1,8 @@
+﻿{
+  "revision_4_and_5": {
+    "same_boundary_hash": true,
+    "same_chapter_text_hash": true,
+    "note": "All user revisions 2..8 share boundary_hash ac521f714e645e9b…; based_on chains 1→2→…→8"
+  },
+  "idempotency_gap": "confirm_scene_revision_v1 always materializes a new confirmed draft row; no-change draft confirm does not collapse to existing confirmed"
+}

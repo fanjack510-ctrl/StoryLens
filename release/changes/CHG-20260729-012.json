@@ -1,0 +1,107 @@
+{
+  "id": "CHG-20260729-012",
+  "title": "Integrate verified chapter workflow fixes and build StoryLens 1.1.2-rc.3",
+  "type": "build",
+  "base_version": "1.1.1",
+  "status": "tested",
+  "include_in_next_release": true,
+  "commits": [
+    {
+      "sha": "c8858b900dd9eb677a73f2549bb3f57ff3990e6b",
+      "message": "chore(release): register CHG-012 and prepare 1.1.2-rc.3 prebuild gate",
+      "primary": true
+    },
+    {
+      "sha": "9192e3bdb6ce236fb6091e3c727bc3c749b9de7d",
+      "message": "docs(release): record StoryLens 1.1.2-rc.3 build",
+      "primary": false
+    },
+    {
+      "sha": "50b15e722c92b71e3f8c8e6fc06a49f999f0cc64",
+      "message": "docs(release): attach CHG-012 commits and record final HEAD",
+      "primary": false
+    },
+    {
+      "sha": "9175641caeedd563d97cc9e8da011a44e0fdf495",
+      "message": "docs(release): finalize CHG-012 commit list and RC.3 final report",
+      "primary": false
+    }
+  ],
+  "modules": [
+    "release",
+    "packaging",
+    "apps/api",
+    "apps/desktop",
+    "scripts/change_registry.py",
+    "scripts/build_windows_rc.ps1"
+  ],
+  "files": [
+    "release/changes/CHG-20260729-012.json",
+    "release/evidence/1.1.2-rc.3/",
+    "release/trains/1.1.2.json"
+  ],
+  "user_summary": "集成 CHG-011 并构建 1.1.2-rc.3 验证安装包",
+  "technical_summary": "FF-integrate verified CHG-011; package StoryLens 1.1.2-rc.3; isolated install-state acceptance; preserve RC.2 archive; no Push/Tag/Release/Stable.",
+  "acceptance_criteria": [
+    "CHG-011 MG PASS recorded and status verified/included",
+    "Installer StoryLens_1.1.2-rc.3_x64-setup.exe",
+    "CWD 6/6; Fake Provider only; formal AppData writes 0",
+    "VERSION restored to 1.1.2 after build",
+    "RC.2 archive not overwritten"
+  ],
+  "tests": [
+    "apps/api/tests/test_provider_health_consistency_chg009.py",
+    "apps/api/tests/test_workflow_consistency_chg011.py",
+    "apps/api/tests/test_task_cancellation_chg006.py",
+    "apps/desktop targeted + readerJourney vitest",
+    "isolated install-state harness"
+  ],
+  "verification_evidence": [
+    "release/evidence/1.1.2-rc.3/"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": null,
+  "created_at": "2026-07-29T16:06:52Z",
+  "updated_at": "2026-07-29T16:26:57Z",
+  "target_version": "1.1.2",
+  "rc_version": "1.1.2-rc.3",
+  "release_pool_status": "pending",
+  "public_branch": "hotfix/1.1.2",
+  "private_branch": "hotfix/1.1.2",
+  "included_changes": [
+    "CHG-20260728-040",
+    "CHG-20260728-041",
+    "CHG-20260729-001",
+    "CHG-20260729-002",
+    "CHG-20260729-003",
+    "CHG-20260729-004",
+    "CHG-20260729-005",
+    "CHG-20260729-006",
+    "CHG-20260729-007",
+    "CHG-20260729-009",
+    "CHG-20260729-011"
+  ],
+  "private_head": "23a0b025db51acaa8e62f4e81bc7628f19a8e2a6",
+  "build": true,
+  "push": false,
+  "tag": false,
+  "release": false,
+  "installer_filename": "StoryLens_1.1.2-rc.3_x64-setup.exe",
+  "installer_sha256": "118831F5C6E66AB238CBD2CE38BD72E2C65F041FAD8E9B73F4C2C40927A5A166",
+  "sidecar_sha256": "40A023C301D344C157F9C45D1083D067C0D5EAD5F0F3D83E0C186CDA1A046C9C",
+  "archive_path": "D:\\StoryLens-Local-Evidence\\installer-archive\\StoryLens_1.1.2-rc.3_x64-setup.exe",
+  "public_build_source_head": "c8858b900dd9eb677a73f2549bb3f57ff3990e6b",
+  "public_final_head": "9175641caeedd563d97cc9e8da011a44e0fdf495"
+}

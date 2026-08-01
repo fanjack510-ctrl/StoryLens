@@ -1,0 +1,52 @@
+{
+  "change_id": "CHG-20260728-040",
+  "issue_id": "INC-20260728-002",
+  "round": "integration_hotfix_1_1_2",
+  "real_provider_calls_this_round": 0,
+  "historical_l3_real_calls": 2,
+  "formal_database_writes": 0,
+  "database_migration": false,
+  "version_modified": false,
+  "build": false,
+  "push": false,
+  "frozen_checks": {
+    "candidates_20_batches_2": true,
+    "initial_output_limit": 1792,
+    "truncation_retry_limits": [
+      1792,
+      2816,
+      4000
+    ],
+    "repeated_same_limit": 0,
+    "completed_batch_duplicate_calls": 0,
+    "usage_on_length": "PASS",
+    "released_reservation_usage": "PASS",
+    "scene_progress_0_0": "ABSENT"
+  },
+  "public": {
+    "pytest_chg040_scene_suites": {
+      "passed": 46,
+      "failed": 0
+    },
+    "pytest_reservation_usage_extra": {
+      "passed": 47,
+      "skipped": 11,
+      "failed": 0
+    },
+    "vitest_TasksPage_chg040": {
+      "passed": 3,
+      "failed": 0
+    },
+    "typescript_typecheck": "PASS",
+    "git_diff_check": "PASS",
+    "registry_verification": "PASS"
+  },
+  "private": {
+    "pytest_scene_boundary_hotfix_chg040": {
+      "passed": 1,
+      "failed": 0
+    },
+    "git_diff_check": "PASS"
+  },
+  "regression": "PASS"
+}

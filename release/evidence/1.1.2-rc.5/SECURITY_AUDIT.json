@@ -1,0 +1,10 @@
+{
+  "public_tree_secret_matches": 0,
+  "git_increment_secret_matches": 0,
+  "local_secret_exact_match_in_installer": 0,
+  "user_database_packaged": "NO",
+  "user_novel_packaged": "NO",
+  "private_engine_source_packaged": "NO",
+  "default_api_key": "EMPTY",
+  "result": "PASS"
+}

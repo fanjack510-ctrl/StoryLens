@@ -1,0 +1,13 @@
+{
+  "change_id": "CHG-20260728-040",
+  "suite": "truncation_retry",
+  "result": "PASS",
+  "tests": [
+    "test_adaptive_truncation_increases_limit",
+    "test_hard_cap_truncation_does_not_repeat_same_limit"
+  ],
+  "fixture_20_candidate_design_calls": "batch0:2 + batch1:1 = 3 (unit covered adaptive increase; full 20-candidate orchestration covered by batch planner + budget)",
+  "repeated_same_limit": 0,
+  "max_attempts_per_batch": 3,
+  "finish_reason_checked_before_json_parse": true
+}

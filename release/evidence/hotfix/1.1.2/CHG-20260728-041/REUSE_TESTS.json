@@ -1,0 +1,10 @@
+{
+  "passed": true,
+  "cases": [
+    "input_hash_reuse",
+    "excluded_zero_calls",
+    "changed_reanalysis"
+  ],
+  "excluded_scene_provider_calls": 0,
+  "duplicate_reuse_calls": 0
+}

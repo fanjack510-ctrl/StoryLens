@@ -32,6 +32,15 @@ function run(partial: Partial<Run> & { id: number }): Run {
 }
 
 describe("mapChapterCompositionState", () => {
+  it("maps awaiting_scene_boundary_confirmation from effective_status", () => {
+    expect(
+      mapChapterCompositionState(
+        run({ id: 5, effective_status: "awaiting_scene_boundary_confirmation" }),
+        null,
+      ),
+    ).toBe("awaiting_scene_boundary_confirmation");
+  });
+
   it("marks scene-succeeded without journey as awaiting_reader_journey_start", () => {
     expect(mapChapterCompositionState(run({ id: 5 }), null)).toBe(
       "awaiting_reader_journey_start",
@@ -79,7 +88,7 @@ describe("mapChapterCompositionState", () => {
     ).toBe("awaiting_reader_journey_start");
   });
 
-  it("prefers parent journey_running over stale failed journey GET", () => {
+  it("prefers live failed journey GET over stale parent journey_running", () => {
     expect(
       mapChapterCompositionState(
         run({
@@ -93,7 +102,7 @@ describe("mapChapterCompositionState", () => {
           journey_run_id: 9,
         },
       ),
-    ).toBe("reader_journey_processing");
+    ).toBe("awaiting_reader_journey_start");
   });
 });
 
