@@ -47,3 +47,7 @@ tested (automatic regression only; manual UI smoke pending)
 - REAL PROVIDER CALLS: 0
 - Formal AppData writes: 0 (tests use temp DBs)
 - WB-2.1 implementation: NOT STARTED
+
+## Manual smoke environment
+See `MANUAL_SMOKE_ENV.md` — UI `http://127.0.0.1:1422` / API `http://127.0.0.1:8002` / temp DB only.
+Checklist pending human execution. Task control remains MANUAL NOT EXECUTED.
