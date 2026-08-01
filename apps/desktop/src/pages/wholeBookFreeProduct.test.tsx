@@ -439,15 +439,37 @@ describe("WholeBookFreeProduct (Wave D §18.2)", () => {
     expect(screen.queryByTestId("whole-book-free-entry")).not.toBeInTheDocument();
   });
 
-  it("shows entry on book detail page with title and description", async () => {
-    renderPage("/books/1");
+  it("shows compact 全书分析 entry without toolbar description or start CTA", async () => {
+    renderPage("/books/1?chapter=1&view=reading");
     const entry = await screen.findByTestId("whole-book-free-entry");
     expect(entry).toHaveTextContent("全书分析");
-    expect(entry).toHaveTextContent(
+    expect(entry).toHaveAttribute("href", "/books/1/whole-book");
+    expect(entry).toHaveAttribute(
+      "title",
       "从完整原文出发，分析全书总览、主要人物、关键事件、故事结构和章节功能。",
     );
-    expect(entry).toHaveAttribute("href", "/books/1/whole-book");
-    expect(entry).toHaveTextContent("开始全书分析");
+    expect(entry.textContent?.trim()).toBe("全书分析");
+    expect(entry).not.toHaveTextContent("开始全书分析");
+    expect(entry).not.toHaveTextContent("从完整原文出发");
+    expect(screen.getAllByTestId("whole-book-free-entry")).toHaveLength(1);
+    // Chapter primary CTA may still exist; whole-book entry must not duplicate start wording.
+    expect(entry).not.toHaveTextContent("开始分析");
+  });
+
+  it("navigates from entry to whole-book page with page title", async () => {
+    renderPage("/books/1?chapter=1&view=reading");
+    const entry = await screen.findByTestId("whole-book-free-entry");
+    fireEvent.click(entry);
+    expect(await screen.findByTestId("whole-book-free-product-page")).toBeInTheDocument();
+    expect(screen.getByTestId("whole-book-free-page-title")).toHaveTextContent("全书分析");
+    expect(screen.queryByTestId("error-state")).not.toBeInTheDocument();
+  });
+
+  it("loads whole-book route directly without prior book-page click", async () => {
+    renderPage("/books/1/whole-book");
+    expect(await screen.findByTestId("whole-book-free-product-page")).toBeInTheDocument();
+    expect(screen.getByTestId("whole-book-free-page-title")).toHaveTextContent("全书分析");
+    expect(screen.queryByTestId("error-state")).not.toBeInTheDocument();
   });
 
   it("does not expose whole-book in primary navigation", async () => {
@@ -460,14 +482,20 @@ describe("WholeBookFreeProduct (Wave D §18.2)", () => {
   it("renders prepare page with cost estimate and consent", async () => {
     renderPage("/books/1/whole-book");
     expect(await screen.findByTestId("whole-book-free-prepare")).toBeInTheDocument();
+    expect(screen.getByTestId("whole-book-free-empty-title")).toHaveTextContent("尚未进行全书分析");
+    expect(screen.getByTestId("whole-book-free-page-description")).toHaveTextContent(
+      "从完整原文出发",
+    );
     expect(screen.getByTestId("whole-book-free-cost-estimate")).toHaveTextContent("预计窗口数");
     expect(screen.getByTestId("whole-book-free-cost-estimate")).toHaveTextContent("20");
     expect(screen.getByTestId("whole-book-free-consent-checkbox")).toBeInTheDocument();
     const start = screen.getByTestId("whole-book-free-start-formal");
+    expect(start).toHaveTextContent("开始全书分析");
     expect(start).toBeDisabled();
     expect(screen.getByTestId("whole-book-free-real-provider-disabled")).toHaveTextContent(
       "真实模型 Provider 尚未启用",
     );
+    expect(screen.queryByTestId("error-state")).not.toBeInTheDocument();
   });
 
   it("requires consent before formal start when real provider is on", async () => {
@@ -488,7 +516,7 @@ describe("WholeBookFreeProduct (Wave D §18.2)", () => {
     expect(await screen.findByTestId("whole-book-free-start-fixture")).toHaveTextContent(
       "使用测试数据预览页面",
     );
-    expect(screen.getByTestId("whole-book-free-fixture-notice")).toHaveTextContent("测试数据");
+    expect(screen.getByTestId("whole-book-free-fixture-notice")).toHaveTextContent("演示数据");
     expect(screen.getByTestId("whole-book-free-start-fixture")).not.toHaveTextContent("开始分析");
     expect(screen.getByTestId("whole-book-free-start-formal")).toHaveTextContent("开始全书分析");
   });
@@ -617,8 +645,44 @@ describe("WholeBookFreeProduct (Wave D §18.2)", () => {
     listEvidencesSpy.mockResolvedValue({ evidences: [] });
     renderPage("/books/1/whole-book");
     expect(await screen.findByTestId("whole-book-free-fixture-banner")).toHaveTextContent(
-      "测试数据预览",
+      "演示数据",
     );
+  });
+
+  it("shows four free modules and planned pro modules for fixture results", async () => {
+    prepareSpy.mockResolvedValue(
+      basePrepare({ latest_run: baseRun("completed", { result_origin: "fixture" }) }),
+    );
+    getOverviewSpy.mockResolvedValue({ overview: baseOverview() });
+    listEntitiesSpy.mockResolvedValue({ entities: [] });
+    listAssetsSpy.mockResolvedValue({ assets: [], total: 0, offset: 0, limit: 50 });
+    listEvidencesSpy.mockResolvedValue({ evidences: [] });
+    renderPage("/books/1/whole-book");
+    await screen.findByTestId("whole-book-free-module-nav");
+    expect(screen.getByTestId("whole-book-free-module-overview")).toBeInTheDocument();
+    expect(screen.getByTestId("whole-book-free-module-characters_events")).toBeInTheDocument();
+    expect(screen.getByTestId("whole-book-free-module-structure")).toHaveTextContent("开发中");
+    expect(screen.getByTestId("whole-book-free-module-chapter_functions")).toHaveTextContent(
+      "开发中",
+    );
+    expect(screen.getByTestId("whole-book-free-module-pro_depth")).toHaveTextContent(
+      "后续版本开放",
+    );
+    expect(screen.getByTestId("whole-book-free-fixture-banner")).toHaveTextContent("演示数据");
+    expect(screen.queryByText("购买")).not.toBeInTheDocument();
+  });
+
+  it("shows not-found for missing book without treating empty analysis as HTTP 404", async () => {
+    const { ApiError } = await import("../services/apiClient");
+    prepareSpy.mockRejectedValue(
+      new ApiError("WHOLE_BOOK_BOOK_NOT_FOUND", "书籍不存在", 404, {
+        error_code: "WHOLE_BOOK_BOOK_NOT_FOUND",
+        message: "书籍不存在",
+      }),
+    );
+    renderPage("/books/999999/whole-book");
+    expect(await screen.findByTestId("whole-book-free-not-found")).toHaveTextContent("书籍不存在");
+    expect(screen.queryByTestId("error-state")).not.toBeInTheDocument();
   });
 
   it("builds evidence reader deeplink with offset params", () => {
@@ -652,12 +716,12 @@ describe("WholeBookFreeProduct (Wave D §18.2)", () => {
     });
   });
 
-  it("shows entry label 查看分析进度 for running run", async () => {
+  it("keeps compact entry label even when a run is already running", async () => {
     prepareSpy.mockResolvedValue(basePrepare({ latest_run: baseRun("running") }));
     renderPage("/books/1");
-    await waitFor(() => {
-      expect(screen.getByTestId("whole-book-free-entry")).toHaveTextContent("查看分析进度");
-    });
+    const entry = await screen.findByTestId("whole-book-free-entry");
+    expect(entry.textContent?.trim()).toBe("全书分析");
+    expect(entry).not.toHaveTextContent("查看分析进度");
   });
 });
 

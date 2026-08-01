@@ -32,6 +32,9 @@ import {
 } from "../services/wholeBookFreeProductStages";
 import styles from "./WholeBookFreeProductPage.module.css";
 
+const PAGE_TITLE = "全书分析";
+const PAGE_DESCRIPTION =
+  "从完整原文出发，分析全书总览、主要人物、关键事件、故事结构和章节功能。";
 const MODE_USER_LABEL = "原生全书分析";
 const PREPARE_TITLE = "开始全书分析";
 const PREPARE_EXPLANATION =
@@ -44,9 +47,10 @@ const PREPARE_BULLETS = [
 const CONSENT_TEXT =
   "我已了解本次分析会调用我配置的大模型 API，并可能产生模型费用。";
 const FIXTURE_BANNER_TEXT =
-  "测试数据 · 不会调用真实模型 · 结果不代表真实分析质量";
+  "演示数据 · 不会调用真实模型 · 结果不代表真实分析质量";
 const FIXTURE_PAGE_BANNER =
-  "当前为测试数据预览，不会调用真实模型，结果不代表本书的真实分析。";
+  "演示数据 · 当前为测试数据预览，不会调用真实模型，结果不代表本书的真实分析。";
+const EMPTY_STATE_TITLE = "尚未进行全书分析";
 
 function formatMoneyRange(min: string | null | undefined, max: string | null | undefined): string {
   if (!min && !max) return "当前模型缺少价格配置";
@@ -348,7 +352,11 @@ function WholeBookFreeProductPageEnabled() {
   );
 
   if (!bookId || Number.isNaN(bookId)) {
-    return <ErrorState error={new Error("无效的书籍 ID")} />;
+    return (
+      <ErrorState
+        error={new Error("无效的书籍 ID")}
+      />
+    );
   }
 
   if (prepareQuery.isLoading) {
@@ -356,6 +364,26 @@ function WholeBookFreeProductPageEnabled() {
   }
 
   if (prepareQuery.isError) {
+    const apiErr = prepareQuery.error instanceof ApiError ? prepareQuery.error : null;
+    const detailCode =
+      apiErr?.detail && typeof apiErr.detail === "object"
+        ? String((apiErr.detail as { error_code?: string }).error_code || "")
+        : "";
+    const isMissingBook =
+      apiErr?.status === 404 ||
+      apiErr?.code === "WHOLE_BOOK_BOOK_NOT_FOUND" ||
+      detailCode === "WHOLE_BOOK_BOOK_NOT_FOUND";
+    if (isMissingBook) {
+      return (
+        <section data-testid="whole-book-free-not-found">
+          <h1>{PAGE_TITLE}</h1>
+          <p>书籍不存在。</p>
+          <p className="muted">
+            <Link to="/">返回书库</Link>
+          </p>
+        </section>
+      );
+    }
     const err =
       prepareQuery.error instanceof Error
         ? prepareQuery.error
@@ -386,7 +414,11 @@ function WholeBookFreeProductPageEnabled() {
         <p className="muted">
           <Link to={`/books/${bookId}`}>← 返回书籍</Link>
         </p>
-        <h1 data-testid="whole-book-free-book-title">{prepare.book_title}</h1>
+        <h1 data-testid="whole-book-free-page-title">{PAGE_TITLE}</h1>
+        <p className="muted" data-testid="whole-book-free-page-description">
+          {PAGE_DESCRIPTION}
+        </p>
+        <h2 data-testid="whole-book-free-book-title">{prepare.book_title}</h2>
         <div className={styles.wholeBookFreeHeaderMeta}>
           <span data-testid="whole-book-free-chapter-count">{prepare.chapter_count} 章</span>
           <span data-testid="whole-book-free-word-count">{prepare.character_count} 字</span>
@@ -582,8 +614,9 @@ function PreparePanel({
   const est = prepare.estimate;
   return (
     <section className={styles.wholeBookFreePrepare} data-testid="whole-book-free-prepare">
-      <h2>{PREPARE_TITLE}</h2>
-      <p>{PREPARE_EXPLANATION}</p>
+      <h2 data-testid="whole-book-free-empty-title">{EMPTY_STATE_TITLE}</h2>
+      <p data-testid="whole-book-free-empty-explanation">{PREPARE_EXPLANATION}</p>
+      <h3>{PREPARE_TITLE}</h3>
       <ul>
         {PREPARE_BULLETS.map((item) => (
           <li key={item}>{item}</li>

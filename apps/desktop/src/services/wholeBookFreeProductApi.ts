@@ -133,19 +133,28 @@ export const wholeBookFreeProductApi = {
   productCapabilities: () =>
     api<{ capabilities: ProductCapabilityRow[] }>("/api/v1/whole-book/product-capabilities"),
 
+  /** Product prepare — aliases `/whole-book/free/prepare`. */
   prepare: (bookId: number) =>
     api<WholeBookPrepareResponse>(`/api/v1/books/${bookId}/whole-book/prepare`),
 
   createRun: (bookId: number, body: CreateWholeBookRunRequest) =>
-    api<CreateWholeBookRunResponse>(`/api/v1/books/${bookId}/whole-book/runs`, {
+    api<CreateWholeBookRunResponse>(`/api/v1/books/${bookId}/whole-book/free/create`, {
       method: "POST",
-      body: JSON.stringify(body),
+      body: JSON.stringify({
+        estimate_id: body.estimate_id,
+        consent_id: body.consent_id,
+        client_request_id: body.client_request_id,
+      }),
     }),
 
+  /** Fixture preview — aliases `/whole-book/free/create-fixture`. */
   createFixtureRun: (bookId: number, body: { client_request_id: string }) =>
     api<CreateWholeBookRunResponse>(`/api/v1/books/${bookId}/whole-book/runs/fixture`, {
       method: "POST",
-      body: JSON.stringify(body),
+      body: JSON.stringify({
+        client_request_id: body.client_request_id,
+        execute_pipeline: true,
+      }),
     }),
 
   getProgress: (runId: number) =>

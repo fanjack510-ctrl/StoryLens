@@ -34,6 +34,7 @@ from app.narrative_core.services.whole_book_product_capability_v1 import (
 from app.narrative_core.services.whole_book_run_v1_service import (
     create_whole_book_run_v1,
     list_runs_for_book,
+    run_to_dict,
     start_whole_book_run_v1,
 )
 from app.narrative_core.services.whole_book_snapshot_v1_service import create_or_reuse_book_snapshot_v1
@@ -90,7 +91,7 @@ def prepare_free_whole_book_analysis_v1(session: Session, book_id: int) -> dict[
     book = session.get(Book, book_id)
     if book is None:
         raise WholeBookFoundationError(
-            WholeBookFoundationErrorCode.WHOLE_BOOK_BOOK_CHANGED,
+            WholeBookFoundationErrorCode.WHOLE_BOOK_BOOK_NOT_FOUND,
             "书籍不存在",
         )
     revision_hash = compute_book_revision_hash(session, book_id)
@@ -110,20 +111,55 @@ def prepare_free_whole_book_analysis_v1(session: Session, book_id: int) -> dict[
         and latest.snapshot_id is not None
         and snap_result["reused"] is False
     )
+    est = estimate_to_dict(estimate)
+    real_on = real_provider_enabled()
+    fixture_on = fixture_preview_enabled()
     return {
         "book_id": book_id,
+        "book_title": book.title or "",
         "book_revision_hash": revision_hash,
-        "estimate": estimate_to_dict(estimate),
+        "chapter_count": int(est.get("chapter_count") or 0),
+        "character_count": int(est.get("character_count") or 0),
+        "mode": WholeBookMode.whole_book_native.value,
+        "mode_label": "原生全书分析",
+        "product_enabled": True,
+        "real_provider_enabled": real_on,
+        "run_creation_enabled": real_on,
+        "fixture_preview_enabled": fixture_on,
+        "latest_run": run_to_dict(latest) if latest is not None else None,
+        "recoverable_run": run_to_dict(recoverable) if recoverable is not None else None,
         "latest_run_id": latest.id if latest else None,
         "latest_run_status": latest.status if latest else None,
         "recoverable_run_id": recoverable.id if recoverable else None,
         "needs_new_snapshot": needs_new_snapshot,
+        "snapshot_rebuild_required": needs_new_snapshot,
         "snapshot": {
             "snapshot_id": snap_result["snapshot"].id,
             "reused": snap_result["reused"],
         },
-        "real_provider_enabled": real_provider_enabled(),
-        "fixture_preview_enabled": fixture_preview_enabled(),
+        "estimate": {
+            "estimate_id": est["id"],
+            "book_id": est["book_id"],
+            "mode": est["mode"],
+            "estimated_windows": est.get("estimated_window_count"),
+            "estimated_provider_calls": est.get("estimated_provider_call_count"),
+            "estimated_input_tokens": est.get("estimated_input_tokens"),
+            "estimated_output_tokens": est.get("estimated_output_tokens"),
+            "estimated_cost_min_cny": est.get("estimated_cost_min_cny"),
+            "estimated_cost_max_cny": est.get("estimated_cost_max_cny"),
+            "provider_name": provider.provider_name,
+            "model_name": est.get("model_name"),
+            "price_known": str(est.get("pricing_status") or "") == "available",
+            "currency": est.get("currency") or "CNY",
+        },
+        "recommended_limits": {
+            "max_provider_calls": 200,
+            "max_input_tokens": 500_000,
+            "max_output_tokens": 100_000,
+            "max_cost_budget_cny": "10.00",
+        },
+        "blocking_reasons": [],
+        "warnings": [],
     }
 
 
@@ -166,7 +202,7 @@ def create_fixture_free_whole_book_analysis_v1(
     book = session.get(Book, book_id)
     if book is None:
         raise WholeBookFoundationError(
-            WholeBookFoundationErrorCode.WHOLE_BOOK_BOOK_CHANGED,
+            WholeBookFoundationErrorCode.WHOLE_BOOK_BOOK_NOT_FOUND,
             "书籍不存在",
         )
     snap = create_or_reuse_book_snapshot_v1(session, book_id)["snapshot"]
@@ -215,6 +251,7 @@ def create_fixture_free_whole_book_analysis_v1(
         session.refresh(run)
 
     return {
+        "run": run_to_dict(run),
         "run_id": run.id,
         "book_id": book_id,
         "snapshot_id": snap.id,

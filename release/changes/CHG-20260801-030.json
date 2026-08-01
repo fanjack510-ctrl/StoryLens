@@ -1,0 +1,42 @@
+{
+  "id": "CHG-20260801-030",
+  "title": "Fix Wave D whole-book entry and route loading",
+  "type": "fix",
+  "base_version": "1.1.1",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [],
+  "files": [],
+  "user_summary": "Compact book-page whole-book entry; fix prepare/fixture 404 mapping and empty/not-found states.",
+  "technical_summary": "WholeBookFreeEntry compact label; product prepare/fixture route aliases; prepare product payload; missing book HTTP 404; page title/empty-state hierarchy.",
+  "acceptance_criteria": [
+    "Book reading toolbar shows only one 全书分析 entry",
+    "Clicking entry opens /books/{id}/whole-book without HTTP 404",
+    "Fixture preview labelled and Free/Pro module contract preserved"
+  ],
+  "tests": [
+    "apps/desktop/src/pages/wholeBookFreeProduct.test.tsx",
+    "apps/api/tests/test_whole_book_wb17_free_product_api.py"
+  ],
+  "verification_evidence": [
+    "release/evidence/whole-book/CHG-20260801-030/TEST_RESULTS.md",
+    "release/evidence/whole-book/CHG-20260801-030/FINAL_REPORT.md"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": null,
+  "created_at": "2026-08-01T02:29:11Z",
+  "updated_at": "2026-08-01T02:29:11Z"
+}

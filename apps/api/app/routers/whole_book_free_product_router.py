@@ -7,7 +7,10 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.narrative_core.services.whole_book_foundation_errors import WholeBookFoundationError
+from app.narrative_core.services.whole_book_foundation_errors import (
+    WholeBookFoundationError,
+    WholeBookFoundationErrorCode,
+)
 from app.narrative_core.services.whole_book_free_product_v1_service import (
     create_fixture_free_whole_book_analysis_v1,
     create_free_whole_book_analysis_v1,
@@ -22,6 +25,12 @@ from app.narrative_core.services.whole_book_product_capability_v1 import (
 )
 
 router = APIRouter(prefix="/api/v1", tags=["whole-book-free-product"])
+
+_NOT_FOUND_CODES = {
+    WholeBookFoundationErrorCode.WHOLE_BOOK_BOOK_NOT_FOUND.value,
+    WholeBookFoundationErrorCode.WHOLE_BOOK_RUN_NOT_FOUND.value,
+    WholeBookFoundationErrorCode.WHOLE_BOOK_SNAPSHOT_NOT_FOUND.value,
+}
 
 
 class CreateFreeRunRequest(BaseModel):
@@ -38,11 +47,14 @@ class CreateFixtureFreeRunRequest(BaseModel):
 
 
 def _raise_foundation(exc: WholeBookFoundationError) -> None:
-    raise HTTPException(status_code=400, detail={"error_code": exc.code, "message": exc.message})
+    status = 404 if exc.code in _NOT_FOUND_CODES else 400
+    raise HTTPException(
+        status_code=status,
+        detail={"error_code": exc.code, "message": exc.message},
+    )
 
 
-@router.get("/books/{book_id}/whole-book/free/prepare")
-def prepare_free_analysis(book_id: int, db: Session = Depends(get_db)) -> dict:
+def _prepare(book_id: int, db: Session) -> dict:
     try:
         result = prepare_free_whole_book_analysis_v1(db, book_id)
         db.commit()
@@ -51,6 +63,33 @@ def prepare_free_analysis(book_id: int, db: Session = Depends(get_db)) -> dict:
         db.rollback()
         _raise_foundation(exc)
         raise
+
+
+def _create_fixture(book_id: int, body: CreateFixtureFreeRunRequest, db: Session) -> dict:
+    try:
+        result = create_fixture_free_whole_book_analysis_v1(
+            db,
+            book_id,
+            client_request_id=body.client_request_id,
+            execute_pipeline=body.execute_pipeline,
+        )
+        db.commit()
+        return result
+    except WholeBookFoundationError as exc:
+        db.rollback()
+        _raise_foundation(exc)
+        raise
+
+
+@router.get("/books/{book_id}/whole-book/free/prepare")
+def prepare_free_analysis(book_id: int, db: Session = Depends(get_db)) -> dict:
+    return _prepare(book_id, db)
+
+
+@router.get("/books/{book_id}/whole-book/prepare")
+def prepare_free_analysis_product_alias(book_id: int, db: Session = Depends(get_db)) -> dict:
+    """Product-facing alias used by Wave D desktop client."""
+    return _prepare(book_id, db)
 
 
 @router.post("/books/{book_id}/whole-book/free/create")
@@ -81,19 +120,17 @@ def create_fixture_free_analysis(
     body: CreateFixtureFreeRunRequest,
     db: Session = Depends(get_db),
 ) -> dict:
-    try:
-        result = create_fixture_free_whole_book_analysis_v1(
-            db,
-            book_id,
-            client_request_id=body.client_request_id,
-            execute_pipeline=body.execute_pipeline,
-        )
-        db.commit()
-        return result
-    except WholeBookFoundationError as exc:
-        db.rollback()
-        _raise_foundation(exc)
-        raise
+    return _create_fixture(book_id, body, db)
+
+
+@router.post("/books/{book_id}/whole-book/runs/fixture")
+def create_fixture_free_analysis_alias(
+    book_id: int,
+    body: CreateFixtureFreeRunRequest,
+    db: Session = Depends(get_db),
+) -> dict:
+    """Product-facing alias used by Wave D desktop client."""
+    return _create_fixture(book_id, body, db)
 
 
 @router.get("/whole-book/runs/{run_id}/overview-gated")
@@ -102,7 +139,10 @@ def gated_overview(run_id: int, db: Session = Depends(get_db)) -> dict:
         require_capability_access("whole_book.overview", AccessTier.free)
         overview = get_run_overview(db, run_id)
         if overview is None:
-            raise HTTPException(status_code=404, detail={"error_code": "OVERVIEW_NOT_FOUND", "message": "全书总览尚未生成"})
+            raise HTTPException(
+                status_code=404,
+                detail={"error_code": "OVERVIEW_NOT_FOUND", "message": "全书总览尚未生成"},
+            )
         return {"overview": overview}
     except WholeBookFoundationError as exc:
         _raise_foundation(exc)
