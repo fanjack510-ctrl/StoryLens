@@ -3,7 +3,7 @@
   "title": "Optimize whole-book analysis desktop layout",
   "type": "improvement",
   "base_version": "1.2.0",
-  "status": "tested",
+  "status": "verified",
   "include_in_next_release": true,
   "head_inclusion": "INCLUDED",
   "blocker_level": null,
@@ -17,7 +17,8 @@
     "release/evidence/whole-book/CHG-20260801-031/after-cost-consent-1920x1080.png",
     "release/evidence/whole-book/CHG-20260801-031/after-overview-1366x768.png",
     "release/evidence/whole-book/CHG-20260801-031/after-cost-consent-1366x768.png",
-    "release/evidence/whole-book/CHG-20260801-031/layout_playwright_verify.mjs"
+    "release/evidence/whole-book/CHG-20260801-031/layout_playwright_verify.mjs",
+    "release/evidence/whole-book/CHG-20260801-031/MANUAL_GATE_RESULT.md"
   ],
   "acceptance_criteria": [],
   "data_compatibility": {
