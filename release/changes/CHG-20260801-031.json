@@ -40,12 +40,19 @@
   "modules": [
     "whole-book"
   ],
-  "commits": [],
+  "commits": [
+    {
+      "sha": "a6cb6c78615c22d42abfdce9b107515d1b324d9c",
+      "message": "style(whole-book): expand analysis workspace layout",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "tests": [
     "apps/desktop/src/pages/wholeBookFreeProduct.layout.test.tsx",
     "release/evidence/whole-book/CHG-20260801-031/layout_playwright_verify.mjs"
   ],
   "created_at": "2026-08-01T09:25:51Z",
-  "updated_at": "2026-08-01T09:25:51Z",
+  "updated_at": "2026-08-01T09:26:51Z",
   "parent_change": "CHG-20260731-029"
 }
