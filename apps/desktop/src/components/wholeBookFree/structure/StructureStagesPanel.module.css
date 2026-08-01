@@ -1,0 +1,132 @@
+/* WB-2.1 structure stages — inherits CHG-031 workbench width */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.overview {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem 1rem;
+  border: 1px solid var(--border-subtle, #e5e7eb);
+  border-radius: 8px;
+  padding: 0.9rem 1rem;
+}
+
+.overviewItem {
+  min-width: 0;
+}
+
+.overviewItem dt {
+  font-size: 0.8rem;
+  color: var(--text-muted, #6b7280);
+  margin: 0 0 0.2rem;
+}
+
+.overviewItem dd {
+  margin: 0;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.stageGrid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.stageCard,
+.tpCard {
+  border: 1px solid var(--border-subtle, #e5e7eb);
+  border-radius: 8px;
+  padding: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.stageCard h3,
+.tpCard h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.meta {
+  color: var(--text-muted, #6b7280);
+  font-size: 0.88rem;
+}
+
+.bodyText {
+  margin: 0;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.actions {
+  margin-top: auto;
+  padding-top: 0.35rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.tpList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.emptyState {
+  border: 1px dashed var(--border-subtle, #d1d5db);
+  border-radius: 8px;
+  padding: 1.1rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.emptyState h3 {
+  margin: 0;
+}
+
+.techDetails {
+  font-size: 0.85rem;
+  color: var(--text-muted, #6b7280);
+}
+
+.techDetails summary {
+  cursor: pointer;
+}
+
+.limitList {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+@media (max-width: 1366px) {
+  .overview,
+  .stageGrid,
+  .tpList {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 1920px) {
+  .stageGrid,
+  .tpList {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
