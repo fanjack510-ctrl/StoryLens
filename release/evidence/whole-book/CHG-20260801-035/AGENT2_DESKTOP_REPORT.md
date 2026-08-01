@@ -4,32 +4,84 @@ CHANGE：CHG-20260801-035
 
 PUBLIC BASE HEAD：710d05ad7d759160c9bb09b860fc395f9af6d005
 
+PUBLIC PRODUCT HEAD：93340b5efdb7b156fd99b646aac0c0278043e58a
+
+PUBLIC FINAL HEAD：见本文件更新提交（证据提交后 HEAD）
+
 CANONICAL CONTRACT：V2 / StructureStagesResultV2
 
 CONTRACT VERSION：2.0.0 / wire `v2`
 
-## Implementation summary
+STRUCTURE MODULE：available
 
-- Free module `structure` status: `planned` → `available`
-- Product client: `GET /api/v1/whole-book/runs/{run_id}/structure`
-- UI: `StructureStagesPanel` (overview / variable stages / turning points / states)
-- Evidence: Wave D deep link + `returnModule=structure` (no fuzzy fallback, no evidence_map)
-- Fixtures A–L under `apps/desktop/src/components/wholeBookFree/structure/fixtures/`
-- Vitest + Playwright (route mock); Typecheck PASS
+FREE MODULES：4
 
-## Commands
+CHAPTER FUNCTIONS：planned
 
-```text
-cd apps/desktop
-npm run typecheck
-npm test -- src/pages/wholeBookFreeStructure.test.tsx src/services/structureStagesResultV2.test.ts src/pages/wholeBookFreeProduct.test.tsx src/pages/wholeBookFreeProduct.layout.test.tsx
-npm run test:e2e:wb21-structure
-```
+PRO MODULES PLANNED：8（导航展示 Pro 深度分析 planned；能力表由 Integration/Agent1 对齐）
 
-## Status
+PRO PURCHASE UI：ABSENT
 
-CHANGE STATUS：tested  
-READY FOR INTEGRATION：YES  
-PROTECTED WIP MODIFIED：NO  
-REAL PROVIDER CALLS：0  
-FORMAL DATABASE WRITES：0  
+AVAILABLE UI：PASS
+
+VARIABLE STAGE COUNT：PASS
+
+NON-THREE-ACT UI：PASS
+
+TURNING POINTS EMPTY：PASS
+
+INSUFFICIENT UI：PASS
+
+FAILED UI：PASS
+
+CANCELED UI：PASS
+
+CONFLICT UI：PASS
+
+LOADING UI：PASS
+
+ABSENT UI：PASS
+
+V1 ADAPTER：PASS
+
+UNSUPPORTED CONTRACT VERSION：PASS
+
+EVIDENCE DEEP LINK：PASS
+
+EVIDENCE FUZZY FALLBACK：ABSENT
+
+REFRESH AND REENTRY：PASS
+
+1366×768：PASS
+
+1920×1080：PASS
+
+HORIZONTAL SCROLL：ABSENT
+
+OVERVIEW REGRESSION：PASS
+
+CHARACTERS EVENTS REGRESSION：PASS
+
+VITEST：35 passed（structure + free product + layout + V2 unit）
+
+PLAYWRIGHT：2 passed（`npm run test:e2e:wb21-structure`）
+
+TYPECHECK：PASS
+
+REAL PROVIDER CALLS：0
+
+FORMAL DATABASE WRITES：0
+
+PROTECTED WIP MODIFIED：NO
+
+PUBLIC CLEAN：YES
+
+CHANGE STATUS：tested
+
+READY FOR INTEGRATION：YES
+
+## Notes
+
+- Desktop mocks product `GET /api/v1/whole-book/runs/{run_id}/structure` until Integration wires Agent1.
+- V1 Lab DTO only via `structureStagesV1Adapter`（adapter-only）.
+- No Push / Tag / Release / merge Agent1.
