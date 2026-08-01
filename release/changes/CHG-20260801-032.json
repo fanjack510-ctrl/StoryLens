@@ -1,0 +1,52 @@
+{
+  "id": "CHG-20260801-032",
+  "title": "Extract and plan WB-2.1 implementation scope",
+  "type": "documentation",
+  "base_version": "1.2.0",
+  "status": "implemented",
+  "include_in_next_release": true,
+  "head_inclusion": "INCLUDED",
+  "blocker_level": null,
+  "commits": [],
+  "modules": [
+    "docs/whole-book",
+    "release/evidence/whole-book"
+  ],
+  "files": [
+    "release/evidence/whole-book/CHG-20260801-032/SCOPE_AND_IMPLEMENTATION_PLAN.md",
+    "release/changes/CHG-20260801-032.json"
+  ],
+  "user_summary": "??????????? WB-2.1?Structure Stages??????????????????????????",
+  "technical_summary": "Read-only extraction of WB-2.1-STRUCTURE-STAGES from EXECUTION_REGISTRY, Free capability contract, Lab StructureStagesResultV2 (CHG-20260725-001), and protected WIP migration rules. Identifies blockers: missing CHG-20260728-018, Free product not wired, empty-policy WIP not audited into integration baseline.",
+  "acceptance_criteria": [
+    "WB-2.1 formal name and Free/Pro boundary identified from repository evidence only",
+    "No product/API/UI/DB/Prompt code modified",
+    "Implementation blockers listed when evidence insufficient",
+    "Parallel agent plan max 2 with file ownership",
+    "REAL PROVIDER CALLS=0"
+  ],
+  "tests": [
+    "read-only evidence audit; no product code changes"
+  ],
+  "verification_evidence": [
+    "release/evidence/whole-book/CHG-20260801-032/SCOPE_AND_IMPLEMENTATION_PLAN.md",
+    "docs/whole-book/EXECUTION_REGISTRY.json",
+    "docs/whole-book/PROTECTED_WORKTREES.md",
+    "release/evidence/whole-book/WB-1.6A/FINAL_REPORT.md",
+    "release/changes/CHG-20260725-001.json"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "Planning only; no schema changes in this CHG."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "created_at": "2026-08-01T10:08:24Z",
+  "updated_at": "2026-08-01T10:08:24Z"
+}
