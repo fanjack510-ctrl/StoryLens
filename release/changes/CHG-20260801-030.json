@@ -3,7 +3,7 @@
   "title": "Fix Wave D whole-book entry and route loading",
   "type": "fix",
   "base_version": "1.1.1",
-  "status": "tested",
+  "status": "verified",
   "include_in_next_release": true,
   "commits": [
     {
@@ -34,7 +34,9 @@
   ],
   "verification_evidence": [
     "release/evidence/whole-book/CHG-20260801-030/TEST_RESULTS.md",
-    "release/evidence/whole-book/CHG-20260801-030/FINAL_REPORT.md"
+    "release/evidence/whole-book/CHG-20260801-030/FINAL_REPORT.md",
+    "release/evidence/whole-book/CHG-20260801-030/MANUAL_GATE_RESULT.md",
+    "release/evidence/whole-book/CHG-20260801-030/SMOKE_V2.md"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -51,5 +53,5 @@
   "blocker_level": null,
   "head_inclusion": null,
   "created_at": "2026-08-01T02:29:11Z",
-  "updated_at": "2026-08-01T08:48:38Z"
+  "updated_at": "2026-08-01T09:25:51Z"
 }

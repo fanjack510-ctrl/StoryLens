@@ -455,7 +455,10 @@ function WholeBookFreeProductPageEnabled() {
         </div>
       ) : null}
 
-      <div className={styles.wholeBookFreeLayout}>
+      <div
+        className={styles.wholeBookFreeLayout}
+        data-testid="whole-book-free-layout"
+      >
         <nav className={styles.wholeBookFreeNav} aria-label="全书分析模块" data-testid="whole-book-free-module-nav">
           {WHOLE_BOOK_FREE_MODULES.map((mod) => {
             const disabled = mod.status === "available" && pageMode !== "completed";
@@ -483,7 +486,7 @@ function WholeBookFreeProductPageEnabled() {
           })}
         </nav>
 
-        <main className={styles.wholeBookFreeContent}>
+        <main className={styles.wholeBookFreeContent} data-testid="whole-book-free-main-content">
           {pageMode === "prepare" ? (
             <PreparePanel
               prepare={prepare}
@@ -651,7 +654,7 @@ function PreparePanel({
 
       <section data-testid="whole-book-free-limits">
         <h3>调用限制</h3>
-        <div className={styles.wholeBookFreeLimitsGrid}>
+        <div className={styles.wholeBookFreeLimitsGrid} data-testid="whole-book-free-limits-grid">
           <label>
             最大模型调用次数
             <input
@@ -676,6 +679,8 @@ function PreparePanel({
               onChange={(e) => onLimitsChange({ ...limits, max_output_tokens: e.target.value })}
             />
           </label>
+        </div>
+        <div className={styles.wholeBookFreeLimitsBudget} data-testid="whole-book-free-limits-budget">
           <label>
             最高费用预算（CNY）
             <input
@@ -862,14 +867,16 @@ function OverviewPanel({
                 <p>Evidence 数量：{claim.evidence_ids.length}</p>
               ) : null}
               {claim?.evidence_ids?.length ? (
-                <button
-                  type="button"
-                  className="secondary"
-                  data-testid={`whole-book-free-claim-evidence-${claimKey}`}
-                  onClick={() => onOpenEvidence(claim.evidence_ids[0])}
-                >
-                  查看依据
-                </button>
+                <div className={styles.wholeBookFreeClaimActions}>
+                  <button
+                    type="button"
+                    className="secondary"
+                    data-testid={`whole-book-free-claim-evidence-${claimKey}`}
+                    onClick={() => onOpenEvidence(claim.evidence_ids[0])}
+                  >
+                    查看依据
+                  </button>
+                </div>
               ) : null}
             </li>
           );

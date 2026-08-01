@@ -1,24 +1,30 @@
+/* CHG-20260801-031 — whole-book analysis workspace (desktop workbench, not article column) */
+
 .wholeBookFreePage {
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  padding: 1rem 1.25rem 2rem;
-  max-width: 1200px;
+  width: 100%;
+  max-width: 1560px;
   margin: 0 auto;
+  padding: clamp(24px, 3vw, 56px);
+  padding-bottom: 2.5rem;
 }
 
 .wholeBookFreeHeader {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.55rem;
   border-bottom: 1px solid var(--border-subtle, #e5e7eb);
-  padding-bottom: 0.75rem;
+  padding-bottom: 0.85rem;
+  width: 100%;
 }
 
 .wholeBookFreeHeaderMeta {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem 1.25rem;
+  gap: 0.65rem 1.35rem;
   font-size: 0.9rem;
   color: var(--text-muted, #6b7280);
 }
@@ -27,42 +33,46 @@
   background: #fef3c7;
   border: 1px solid #f59e0b;
   color: #92400e;
-  padding: 0.65rem 0.85rem;
+  padding: 0.7rem 0.95rem;
   border-radius: 6px;
   font-size: 0.9rem;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .wholeBookFreeLayout {
   display: grid;
-  grid-template-columns: minmax(180px, 220px) 1fr;
-  gap: 1rem;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: clamp(24px, 2.5vw, 36px);
   align-items: start;
-}
-
-@media (max-width: 800px) {
-  .wholeBookFreeLayout {
-    grid-template-columns: 1fr;
-  }
+  width: 100%;
 }
 
 .wholeBookFreeNav {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.4rem;
+  position: sticky;
+  top: 0.75rem;
+  align-self: start;
 }
 
 .wholeBookFreeNavButton {
   text-align: left;
-  padding: 0.55rem 0.75rem;
+  padding: 0.6rem 0.8rem;
   border-radius: 6px;
   border: 1px solid transparent;
   background: transparent;
   cursor: pointer;
+  line-height: 1.35;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .wholeBookFreeNavButton[data-active="true"] {
   border-color: var(--accent, #2563eb);
   background: color-mix(in srgb, var(--accent, #2563eb) 8%, transparent);
+  font-weight: 600;
 }
 
 .wholeBookFreeNavButton[data-disabled="true"] {
@@ -71,22 +81,33 @@
 }
 
 .wholeBookFreeContent {
+  min-width: 0;
   min-height: 280px;
+  width: 100%;
 }
 
 .wholeBookFreePrepare {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  width: 100%;
 }
 
 .wholeBookFreeLimitsGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: repeat(3, minmax(220px, 1fr));
+  gap: 0.85rem 1rem;
 }
 
-.wholeBookFreeLimitsGrid label {
+.wholeBookFreeLimitsBudget {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr);
+  gap: 0.85rem;
+  margin-top: 0.85rem;
+}
+
+.wholeBookFreeLimitsGrid label,
+.wholeBookFreeLimitsBudget label {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
@@ -114,15 +135,24 @@
   list-style: none;
   padding: 0;
   margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
 }
 
 .wholeBookFreeClaimCard {
   border: 1px solid var(--border-subtle, #e5e7eb);
   border-radius: 8px;
-  padding: 0.75rem;
+  padding: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.wholeBookFreeClaimCard .wholeBookFreeClaimActions {
+  margin-top: auto;
+  padding-top: 0.35rem;
 }
 
 .wholeBookFreeEvidenceDrawer {
@@ -157,17 +187,71 @@
   list-style: none;
   padding: 0;
   margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.65rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
 }
 
 .wholeBookFreeSubTabs {
   display: flex;
   gap: 0.5rem;
   margin-bottom: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .wholeBookFreeUnavailable {
-  padding: 2rem 1.25rem;
+  padding: 2rem clamp(24px, 3vw, 56px);
+  width: 100%;
+  max-width: 1560px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+/* Wide desktop: keep 2-col claims / 3-col limits */
+@media (min-width: 1920px) {
+  .wholeBookFreePage {
+    max-width: 1600px;
+  }
+}
+
+/* Mid desktop: keep workbench, soften claim columns if needed */
+@media (max-width: 1366px) {
+  .wholeBookFreeLimitsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Stack module nav above content when workspace is tight */
+@media (max-width: 1050px) {
+  .wholeBookFreeLayout {
+    grid-template-columns: 1fr;
+  }
+
+  .wholeBookFreeNav {
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .wholeBookFreeNavButton {
+    width: auto;
+  }
+
+  .wholeBookFreeClaimList,
+  .wholeBookFreeEntityList,
+  .wholeBookFreeEventList {
+    grid-template-columns: 1fr;
+  }
+
+  .wholeBookFreeLimitsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 1280px) and (min-width: 1051px) {
+  .wholeBookFreeClaimList,
+  .wholeBookFreeEntityList,
+  .wholeBookFreeEventList {
+    grid-template-columns: 1fr;
+  }
 }
