@@ -298,6 +298,78 @@ class ChapterFunctionsResultDto:
 
 
 @dataclass(frozen=True, slots=True)
+class ChapterFunctionChapterV2:
+    """Per-chapter function item (ChapterFunctionsResultV2)."""
+
+    chapter_id: str | int
+    chapter_order: int
+    primary_function: str | None
+    secondary_functions: tuple[str, ...]
+    confidence: float
+    supporting_citation_ids: tuple[str, ...]
+    observed_summary: CitedClaimDto | None = None
+    inferred_effect: CitedClaimDto | None = None
+    limitations: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "secondary_functions",
+            tuple(str(x) for x in (self.secondary_functions or ())),
+        )
+        object.__setattr__(
+            self,
+            "supporting_citation_ids",
+            tuple(str(x) for x in (self.supporting_citation_ids or ())),
+        )
+        object.__setattr__(
+            self,
+            "limitations",
+            tuple(str(x) for x in (self.limitations or ())),
+        )
+        conf = float(self.confidence)
+        if conf < 0.0 or conf > 1.0:
+            raise ValueError("ChapterFunctionChapterV2.confidence must be in 0..1")
+        object.__setattr__(self, "confidence", conf)
+
+
+@dataclass(frozen=True, slots=True)
+class ChapterFunctionsResultV2:
+    """Claim-bound Chapter Functions contract (evidence_contract_version=v2)."""
+
+    chapters: tuple[ChapterFunctionChapterV2, ...]
+    coverage_scope: str
+    contract_version: str = "v2"
+    evidence_contract_version: str = "v2"
+    analysis_confidence: float | None = None
+    overall_confidence: float | None = None
+    limitations: tuple[str, ...] = ()
+    context_capabilities: dict[str, Any] | None = None
+    empty_reason: str | None = None
+
+    def __post_init__(self) -> None:
+        if str(self.contract_version or "") != "v2":
+            raise ValueError("ChapterFunctionsResultV2.contract_version must be 'v2'")
+        if str(self.evidence_contract_version or "v2") != "v2":
+            raise ValueError("evidence_contract_version must be 'v2'")
+        scope = normalize_coverage_scope_wire(self.coverage_scope) or ""
+        if scope not in COVERAGE_SCOPE_VALUES:
+            raise ValueError(f"invalid coverage_scope: {self.coverage_scope!r}")
+        object.__setattr__(self, "coverage_scope", scope)
+        object.__setattr__(
+            self,
+            "limitations",
+            tuple(str(x) for x in (self.limitations or ())),
+        )
+        if scope == CoverageScope.INSUFFICIENT and self.chapters:
+            raise ValueError("insufficient coverage_scope forbids non-empty chapters")
+        if scope != CoverageScope.INSUFFICIENT and not self.chapters:
+            raise ValueError("non-insufficient coverage_scope requires ≥1 chapter")
+        if self.overall_confidence is None and self.analysis_confidence is not None:
+            object.__setattr__(self, "overall_confidence", self.analysis_confidence)
+
+
+@dataclass(frozen=True, slots=True)
 class StorylinesResultDto:
     storyline_asset_id: int
     title: str
@@ -468,6 +540,9 @@ def resolve_module_result_dto_class(
     if module_key == WholeBookModuleKey.STRUCTURE_STAGES:
         if is_v2 or "StructureStagesResultV2" in schema:
             return StructureStagesResultV2
+    if module_key == WholeBookModuleKey.CHAPTER_FUNCTIONS:
+        if is_v2 or "ChapterFunctionsResultV2" in schema:
+            return ChapterFunctionsResultV2
     if module_key == WholeBookModuleKey.BOOK_OVERVIEW:
         if is_v2 or "BookOverviewResultV2" in schema:
             return BookOverviewResultV2

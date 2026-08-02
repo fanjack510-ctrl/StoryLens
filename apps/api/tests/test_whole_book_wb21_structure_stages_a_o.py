@@ -36,7 +36,14 @@ from tests.whole_book_minimal_test_helpers import make_engine, prepare_sample_s_
 
 
 def _pipeline(session, run_id: int, *, mode: str = "multi_stage"):
-    return execute_fixture_minimal_pipeline_v1(session, run_id, structure_mode=mode)
+    # Keep structure fail-closed cases failing the run (CF follows with matching mode).
+    cf_mode = "failed_empty" if mode == "failed_empty" else "available"
+    return execute_fixture_minimal_pipeline_v1(
+        session,
+        run_id,
+        structure_mode=mode,
+        chapter_functions_mode=cf_mode,
+    )
 
 
 def test_a_normal_multi_stage(tmp_path) -> None:
@@ -367,14 +374,17 @@ def test_capability_structure_available_counts() -> None:
     chapter = resolve_capability_access("whole_book.chapter_functions", AccessTier.free)
     assert structure["access_status"] == "granted"
     assert structure["release_status"] == "available"
-    assert chapter["release_status"] == "planned"
+    assert chapter["release_status"] == "available"
+    assert chapter["access_status"] == "granted"
     from app.narrative_core.services.whole_book_product_capability_v1 import (
         PRODUCT_CAPABILITY_REGISTRY,
     )
 
     free = [c for c in PRODUCT_CAPABILITY_REGISTRY.values() if c.required_tier.value == "free"]
+    free_available = [c for c in free if c.release_status.value == "available"]
     pro = [c for c in PRODUCT_CAPABILITY_REGISTRY.values() if c.required_tier.value == "pro"]
     assert len(free) == 4
+    assert len(free_available) == 4
     assert len(pro) == 8
 
 

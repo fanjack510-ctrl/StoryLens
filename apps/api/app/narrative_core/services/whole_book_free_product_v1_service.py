@@ -89,6 +89,7 @@ def prepare_free_whole_book_analysis_v1(session: Session, book_id: int) -> dict[
     require_capability_access("whole_book.overview", AccessTier.free)
     require_capability_access("whole_book.characters_events", AccessTier.free)
     require_capability_access("whole_book.structure", AccessTier.free)
+    require_capability_access("whole_book.chapter_functions", AccessTier.free)
     book = session.get(Book, book_id)
     if book is None:
         raise WholeBookFoundationError(
@@ -201,6 +202,7 @@ def create_fixture_free_whole_book_analysis_v1(
     require_capability_access("whole_book.overview", AccessTier.free)
     require_capability_access("whole_book.characters_events", AccessTier.free)
     require_capability_access("whole_book.structure", AccessTier.free)
+    require_capability_access("whole_book.chapter_functions", AccessTier.free)
     book = session.get(Book, book_id)
     if book is None:
         raise WholeBookFoundationError(

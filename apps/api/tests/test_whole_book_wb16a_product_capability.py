@@ -46,8 +46,9 @@ def test_free_user_granted_for_available_modules() -> None:
 def test_planned_free_and_pro_return_planned() -> None:
     chapter_functions = resolve_capability_access("whole_book.chapter_functions", AccessTier.free)
     pro = resolve_capability_access("whole_book.storylines", AccessTier.free)
-    assert chapter_functions["access_status"] == CapabilityAccessStatus.planned.value
-    assert chapter_functions["reason_code"] == "capability_planned"
+    assert chapter_functions["access_status"] == CapabilityAccessStatus.granted.value
+    assert chapter_functions["release_status"] == "available"
+    assert chapter_functions["reason_code"] is None
     assert pro["access_status"] == CapabilityAccessStatus.planned.value
 
 
@@ -74,8 +75,10 @@ def test_capability_access_api() -> None:
 
 
 def test_gate_helper_blocks_planned() -> None:
+    # chapter_functions is available; storylines remains planned.
+    require_capability_access("whole_book.chapter_functions", AccessTier.free)
     with pytest.raises(WholeBookFoundationError):
-        require_capability_access("whole_book.chapter_functions", AccessTier.free)
+        require_capability_access("whole_book.storylines", AccessTier.free)
 
 
 def test_defaults_to_free_tier() -> None:

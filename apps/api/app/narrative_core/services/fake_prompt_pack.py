@@ -45,6 +45,7 @@ FAKE_RESPONSE_SCHEMA_REFS: Mapping[str, str] = {
 
 FAKE_RESPONSE_SCHEMA_REFS_V2: Mapping[str, str] = {
     "structure_stages": "dto://StructureStagesResultV2",
+    "chapter_functions": "dto://ChapterFunctionsResultV2",
 }
 
 SUPPORTED_LOCALES: tuple[str, ...] = ("zh-CN", "en-US")

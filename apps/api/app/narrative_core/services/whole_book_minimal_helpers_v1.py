@@ -46,6 +46,9 @@ OVERVIEW_ENGINE_ID = "whole_book_overview_synthesis_v1"
 OVERVIEW_PROMPT_VERSION = "whole_book_overview_prompt_v1"
 STRUCTURE_ENGINE_ID = "whole_book_structure_stages_v1"
 STRUCTURE_PROMPT_VERSION = "whole_book_structure_stages_prompt_v2"
+CHAPTER_FUNCTIONS_ENGINE_ID = "whole_book_chapter_functions_v1"
+CHAPTER_FUNCTIONS_PROMPT_VERSION = "whole_book_chapter_functions_prompt_v2"
+MAX_CHAPTERS_PER_BATCH = 8
 
 MINIMAL_ASSET_TYPES = frozenset(
     {

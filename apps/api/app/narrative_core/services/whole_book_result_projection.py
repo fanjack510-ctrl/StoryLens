@@ -1396,6 +1396,7 @@ class WholeBookResultIndexService:
             entities=entities,
             used_candidate=used_candidate or view == "candidate",
             artifact_payloads=ctx.get("artifact_payloads") or (),
+            run_id=int(run.id),
         )
         validate_module_payload(module, payload)
 
@@ -1523,6 +1524,7 @@ class WholeBookResultIndexService:
         entities: Sequence[NarrativeEntity],
         used_candidate: bool,
         artifact_payloads: Sequence[dict[str, Any]] = (),
+        run_id: int | None = None,
     ) -> dict[str, Any]:
         if module == WholeBookModuleKey.BOOK_OVERVIEW:
             storylines = [a for a in assets if a.asset_type == AssetType.STORYLINE.value]
@@ -1638,23 +1640,41 @@ class WholeBookResultIndexService:
             return _dto_to_dict(dto)
 
         if module == WholeBookModuleKey.CHAPTER_FUNCTIONS:
+            # Prefer Free V2 checkpoint → Lab V1 adapter (no duplicated recognition).
+            if run_id is not None:
+                try:
+                    from app.narrative_core.services.whole_book_chapter_functions_product_v1_service import (
+                        get_lab_chapter_functions_v1_from_v2,
+                    )
+
+                    adapted = get_lab_chapter_functions_v1_from_v2(self._session, int(run_id))
+                    if adapted is not None and adapted.get("items") is not None:
+                        return adapted
+                except Exception:  # noqa: BLE001
+                    pass
             items = []
             for asset in assets[:MAX_CHAPTER_FUNCTION_ITEMS]:
                 order = asset.chapter_range[0] or 0
+                primary = asset.attributes.get("primary_function")
+                secondary = asset.attributes.get("secondary_functions") or []
+                if isinstance(asset.attributes.get("function_labels"), list):
+                    labels = tuple(asset.attributes.get("function_labels") or ())
+                elif primary is not None or secondary:
+                    labels = tuple(
+                        [x for x in ((primary,) if primary else ()) + tuple(secondary) if x]
+                    )
+                else:
+                    labels = (
+                        (asset.narrative_function,)
+                        if asset.narrative_function
+                        else ()
+                    )
                 items.append(
                     _dto_to_dict(
                         ChapterFunctionsResultDto(
                             chapter_id=int(asset.attributes.get("chapter_id") or order or asset.asset_id),
                             chapter_order=int(asset.attributes.get("chapter_order") or order or 0),
-                            function_labels=(
-                                tuple(asset.attributes.get("function_labels") or ())
-                                if isinstance(asset.attributes.get("function_labels"), list)
-                                else (
-                                    (asset.narrative_function,)
-                                    if asset.narrative_function
-                                    else ()
-                                )
-                            ),
+                            function_labels=labels,
                             primary_storyline_ids=asset.storyline_ids,
                             character_focus_ids=asset.entity_ids,
                             hook_ids=_parse_id_list(asset.attributes, "hook_ids"),

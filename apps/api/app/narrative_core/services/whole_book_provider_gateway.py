@@ -762,6 +762,11 @@ class BailianOpenAICompatibleProviderAdapter:
                     "structure_stages_initial",
                     "structure_stages_contract_repair",
                 )
+            elif module_key in {"chapter_functions", "CHAPTER_FUNCTIONS"}:
+                initial_kind, repair_kind = (
+                    "chapter_functions_initial",
+                    "chapter_functions_contract_repair",
+                )
             else:
                 initial_kind, repair_kind = (
                     "book_overview_initial",
