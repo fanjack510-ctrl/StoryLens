@@ -461,10 +461,13 @@
       "acceptance_level": "L3",
       "evidence_dir": "release/evidence/whole-book/WB-2.2-CHAPTER-FUNCTIONS/",
       "wb_status": "planned",
+      "planning_change_id": "CHG-20260802-038",
+      "freeze_change_id": "CHG-20260802-039",
       "depends_on": [
         "WB-2.1-STRUCTURE-STAGES"
       ],
-      "next_step": "WB-2.3-STORYLINES"
+      "next_step": "WB-2.3-STORYLINES",
+      "notes": "Pre-implementation freeze complete (CHG-039). Implementation not started. Capability remains planned until Agent impl."
     },
     {
       "order": 19,

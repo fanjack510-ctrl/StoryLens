@@ -1,0 +1,75 @@
+{
+  "id": "CHG-20260802-039",
+  "title": "Freeze WB-2.2 chapter functions contract and implementation boundaries",
+  "type": "documentation",
+  "base_version": "1.2.0",
+  "status": "implemented",
+  "include_in_next_release": true,
+  "head_inclusion": "INCLUDED",
+  "blocker_level": null,
+  "parent_plan": "CHG-20260802-038",
+  "wb_step_id": "WB-2.2-CHAPTER-FUNCTIONS",
+  "manual_gate_id": "MG-WB-2.2",
+  "depends_on": [
+    "CHG-20260802-038",
+    "CHG-20260728-019",
+    "CHG-20260802-037"
+  ],
+  "commits": [],
+  "modules": [
+    "docs/whole-book",
+    "release/evidence/whole-book",
+    "release/changes"
+  ],
+  "files": [
+    "release/evidence/whole-book/CHG-20260802-039/CHANGE_019_FREEZE_AUDIT.md",
+    "release/evidence/whole-book/CHG-20260802-039/EXISTING_IMPLEMENTATION_AUDIT.md",
+    "release/evidence/whole-book/CHG-20260802-039/PRODUCT_DEFINITION_FREEZE.md",
+    "release/evidence/whole-book/CHG-20260802-039/FUNCTION_LABEL_POLICY_FREEZE.md",
+    "release/evidence/whole-book/CHG-20260802-039/CHAPTER_FUNCTIONS_CONTRACT_V2_FREEZE.md",
+    "release/evidence/whole-book/CHG-20260802-039/EMPTY_POLICY_FREEZE.md",
+    "release/evidence/whole-book/CHG-20260802-039/WB21_CONTEXT_BOUNDARY_FREEZE.md",
+    "release/evidence/whole-book/CHG-20260802-039/DATABASE_DECISION.md",
+    "release/evidence/whole-book/CHG-20260802-039/BATCHING_AND_PAGINATION_FREEZE.md",
+    "release/evidence/whole-book/CHG-20260802-039/PIPELINE_AND_PROVIDER_FREEZE.md",
+    "release/evidence/whole-book/CHG-20260802-039/API_DECISION.md",
+    "release/evidence/whole-book/CHG-20260802-039/PUBLIC_PRIVATE_CONTRACT_FREEZE.md",
+    "release/evidence/whole-book/CHG-20260802-039/REUSE_AND_REWRITE_MANIFEST.md",
+    "release/evidence/whole-book/CHG-20260802-039/AGENT_OWNERSHIP.md",
+    "release/evidence/whole-book/CHG-20260802-039/TEST_MATRIX.md",
+    "release/evidence/whole-book/CHG-20260802-039/PRE_IMPLEMENTATION_FREEZE_REPORT.md",
+    "release/changes/CHG-20260802-039.json",
+    "release/evidence/whole-book/WB-2.2-CHAPTER-FUNCTIONS/README.md"
+  ],
+  "user_summary": "冻结 WB-2.2 章节功能：V2 Contract、受控标签、Empty Policy、DB/API/Pipeline、Agent 所有权与测试矩阵；禁止产品编码。",
+  "technical_summary": "Freeze-only. ChapterFunctionsResultV2 canonical; FUNCTION LABEL POLICY=CONTROLLED; DATABASE NOT REQUIRED; stage synthesize_chapter_functions; GET .../chapter-functions with pagination; WB-2.1 structure is optional derived context. PRODUCT CODE MODIFIED=NO. WB-2.2 IMPLEMENTATION STARTED=NO. Not tested/verified.",
+  "acceptance_criteria": [
+    "CHG-019 recovery Case B confirmed",
+    "All planning UNRESOLVED items from CHG-038 decided",
+    "V2 / labels / empty / DB / API / pipeline / agents / test matrix frozen",
+    "PRODUCT CODE MODIFIED=NO",
+    "Not marked tested/verified"
+  ],
+  "tests": [
+    "documentation freeze audit only; no product tests in this change"
+  ],
+  "verification_evidence": [
+    "release/evidence/whole-book/CHG-20260802-039/PRE_IMPLEMENTATION_FREEZE_REPORT.md",
+    "release/evidence/whole-book/CHG-20260802-039/CHAPTER_FUNCTIONS_CONTRACT_V2_FREEZE.md",
+    "release/evidence/whole-book/CHG-20260802-039/FUNCTION_LABEL_POLICY_FREEZE.md"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "Freeze decides DATABASE NOT REQUIRED; reuse AssetType.chapter_function."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "created_at": "2026-08-02T14:30:00Z",
+  "updated_at": "2026-08-02T14:45:00Z"
+}

@@ -37,7 +37,7 @@
   "user_summary": "RECOVERY RECORD：Free「章节功能」由 planned 产品化为原生全书逐章叙事功能分析（非 Phase2B storylines / 非 Pro 聚合洞察）。",
   "technical_summary": "RECOVERY RECORD (original CHG-20260728-019 never found in git history). Productize Lab ChapterFunctionsResultDto / Private runner into Wave D Free path after Pre-Implementation Freeze. Capability whole_book.chapter_functions → available. No second run state machine. Do not confuse with Pro ChapterFunctionsResultV1 insights.",
   "acceptance_criteria": [
-    "Canonical contract frozen (V1 Lab DTO vs required V2 TBD in freeze)",
+    "Canonical contract ChapterFunctionsResultV2 (frozen in CHG-20260802-039)",
     "Free capability available; storylines remains Pro",
     "Native snapshot input; no chapter-analysis / journey / aggregate SoT",
     "Evidence exact; confirmed no silent overwrite",
@@ -45,16 +45,18 @@
     "MG-WB-2.2"
   ],
   "tests": [
-    "See release/evidence/whole-book/CHG-20260802-038/TEST_MATRIX.md"
+    "See release/evidence/whole-book/CHG-20260802-039/TEST_MATRIX.md"
   ],
   "verification_evidence": [
-    "release/evidence/whole-book/CHG-20260802-038/CHANGE_019_RECOVERY_AUDIT.md"
+    "release/evidence/whole-book/CHG-20260802-038/CHANGE_019_RECOVERY_AUDIT.md",
+    "release/evidence/whole-book/CHG-20260802-039/CHANGE_019_FREEZE_AUDIT.md",
+    "release/evidence/whole-book/CHG-20260802-039/PRE_IMPLEMENTATION_FREEZE_REPORT.md"
   ],
   "data_compatibility": {
     "database_changed": false,
     "migration_required": false,
     "user_data_compatible": true,
-    "notes": "Pending freeze DATABASE_DECISION; AssetType.chapter_function already exists."
+    "notes": "Freeze CHG-039: DATABASE NOT REQUIRED; reuse AssetType.chapter_function."
   },
   "release_impact": {
     "requires_reanalysis": false,
@@ -63,6 +65,7 @@
     "breaking_change": false
   },
   "created_at": "2026-08-02T14:10:00Z",
-  "updated_at": "2026-08-02T14:10:00Z",
-  "notes": "Honest recovery record created 2026-08-02. Does NOT claim registration occurred on 2026-07-28. No invented historical timestamps."
+  "updated_at": "2026-08-02T14:45:00Z",
+  "freeze_change_id": "CHG-20260802-039",
+  "notes": "Honest recovery record created 2026-08-02. Does NOT claim registration occurred on 2026-07-28. No invented historical timestamps. Pre-implementation freeze completed in CHG-20260802-039; implementation not started."
 }
