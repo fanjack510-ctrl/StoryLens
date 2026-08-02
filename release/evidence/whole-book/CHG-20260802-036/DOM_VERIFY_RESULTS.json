@@ -1,0 +1,161 @@
+{
+  "change_id": "CHG-20260802-036",
+  "verified_at": "2026-08-02T12:41:46.292Z",
+  "frontend": "http://127.0.0.1:1425",
+  "api": "http://127.0.0.1:8005",
+  "fixtures": "C:\\Users\\msi\\AppData\\Local\\Temp\\storylens-wb21-integration\\MANUAL_FIXTURES.json",
+  "results": [
+    {
+      "key": "structure_available",
+      "book_id": 1,
+      "run_id": 1,
+      "url": "http://127.0.0.1:1425/books/1/whole-book?module=structure&run=1",
+      "expected": "data-state=available; stages>=2; turning_points present",
+      "page_ok": true,
+      "api_http": 200,
+      "structure_visible": true,
+      "evidence_clickable": true,
+      "purchase_ui": "ABSENT",
+      "notes": [
+        "data-state=available"
+      ]
+    },
+    {
+      "key": "non_three_act",
+      "book_id": 2,
+      "run_id": 2,
+      "url": "http://127.0.0.1:1425/books/2/whole-book?module=structure&run=2",
+      "expected": "data-state=available; stage_count=4",
+      "page_ok": true,
+      "api_http": 200,
+      "structure_visible": true,
+      "evidence_clickable": true,
+      "purchase_ui": "ABSENT",
+      "notes": [
+        "data-state=available"
+      ]
+    },
+    {
+      "key": "turning_points_empty",
+      "book_id": 3,
+      "run_id": 3,
+      "url": "http://127.0.0.1:1425/books/3/whole-book?module=structure&run=3",
+      "expected": "data-state=available; empty turning_points list",
+      "page_ok": true,
+      "api_http": 200,
+      "structure_visible": true,
+      "evidence_clickable": true,
+      "purchase_ui": "ABSENT",
+      "notes": [
+        "data-state=available"
+      ]
+    },
+    {
+      "key": "insufficient",
+      "book_id": 4,
+      "run_id": 4,
+      "url": "http://127.0.0.1:1425/books/4/whole-book?module=structure&run=4",
+      "expected": "data-state=insufficient",
+      "page_ok": true,
+      "api_http": 200,
+      "structure_visible": true,
+      "evidence_clickable": false,
+      "purchase_ui": "ABSENT",
+      "notes": [
+        "data-state=insufficient"
+      ]
+    },
+    {
+      "key": "failed",
+      "book_id": 5,
+      "run_id": 5,
+      "url": "http://127.0.0.1:1425/books/5/whole-book?module=structure&run=5",
+      "expected": "data-state=failed",
+      "page_ok": true,
+      "api_http": 200,
+      "structure_visible": true,
+      "evidence_clickable": false,
+      "purchase_ui": "ABSENT",
+      "notes": [
+        "data-state=failed"
+      ]
+    },
+    {
+      "key": "canceled",
+      "book_id": 6,
+      "run_id": 6,
+      "url": "http://127.0.0.1:1425/books/6/whole-book?module=structure&run=6",
+      "expected": "data-state=canceled",
+      "page_ok": true,
+      "api_http": 200,
+      "structure_visible": true,
+      "evidence_clickable": false,
+      "purchase_ui": "ABSENT",
+      "notes": [
+        "data-state=canceled"
+      ]
+    },
+    {
+      "key": "conflict",
+      "book_id": 7,
+      "run_id": 7,
+      "url": "http://127.0.0.1:1425/books/7/whole-book?module=structure&run=7",
+      "expected": "data-state=conflict",
+      "page_ok": true,
+      "api_http": 200,
+      "structure_visible": true,
+      "evidence_clickable": true,
+      "purchase_ui": "ABSENT",
+      "notes": [
+        "data-state=conflict"
+      ]
+    },
+    {
+      "key": "evidence",
+      "book_id": 8,
+      "run_id": 8,
+      "url": "http://127.0.0.1:1425/books/8/whole-book?module=structure&run=8",
+      "expected": "data-state=available; evidence drawer navigates to reader",
+      "page_ok": true,
+      "api_http": 200,
+      "structure_visible": true,
+      "evidence_clickable": true,
+      "purchase_ui": "ABSENT",
+      "notes": [
+        "data-state=available"
+      ]
+    },
+    {
+      "key": "structure_absent",
+      "book_id": 9,
+      "run_id": null,
+      "url": "http://127.0.0.1:1425/books/9/whole-book?module=structure",
+      "expected": "data-state=not_started or absent; no READY inference from DB alone",
+      "page_ok": true,
+      "api_http": 200,
+      "structure_visible": true,
+      "evidence_clickable": false,
+      "purchase_ui": "ABSENT",
+      "notes": [
+        "data-state=not_started"
+      ]
+    },
+    {
+      "key": "cost_consent",
+      "book_id": 10,
+      "run_id": null,
+      "url": "http://127.0.0.1:1425/books/10/whole-book",
+      "expected": "prepare + consent; no whole-book run yet",
+      "page_ok": true,
+      "api_http": 200,
+      "structure_visible": true,
+      "evidence_clickable": false,
+      "purchase_ui": "ABSENT",
+      "notes": [
+        "data-state=not_started"
+      ]
+    }
+  ],
+  "purchase_ui_any": "ABSENT",
+  "page_ok_all": true
+}

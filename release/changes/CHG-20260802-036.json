@@ -27,6 +27,12 @@
       "message": "merge(whole-book): integrate WB-2.1 structure desktop",
       "primary": true,
       "multi_change_reason": "desktop merge same integration CHG"
+    },
+    {
+      "sha": "28db54d9b8875d9d690cc22e95bc20fff7321910",
+      "message": "feat(whole-book): integrate WB-2.1 structure stages",
+      "primary": true,
+      "multi_change_reason": "integration product commit"
     }
   ],
   "modules": [
@@ -78,5 +84,5 @@
     "breaking_change": false
   },
   "created_at": "2026-08-02T12:00:00Z",
-  "updated_at": "2026-08-02T12:52:45Z"
+  "updated_at": "2026-08-02T13:14:17Z"
 }
