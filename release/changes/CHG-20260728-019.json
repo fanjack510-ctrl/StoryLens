@@ -1,0 +1,68 @@
+{
+  "id": "CHG-20260728-019",
+  "title": "WB-2.2 Chapter Functions",
+  "type": "feature",
+  "base_version": "1.2.0",
+  "status": "registered",
+  "include_in_next_release": true,
+  "head_inclusion": "PENDING",
+  "blocker_level": null,
+  "recovery_record": true,
+  "reconstructed_at": "2026-08-02",
+  "original_record_missing": true,
+  "source_evidence": [
+    "docs/whole-book/EXECUTION_REGISTRY.json#WB-2.2-CHAPTER-FUNCTIONS",
+    "docs/architecture/narrative-intelligence-core/phase2b-first-four-modules.md",
+    "apps/api/app/narrative_core/private_engine_contract/module_spec.py#CHAPTER_FUNCTIONS_SPEC",
+    "apps/api/app/narrative_core/product_contract/module_results.py#ChapterFunctionsResultDto",
+    "apps/api/app/narrative_core/services/whole_book_product_capability_v1.py#whole_book.chapter_functions",
+    "release/evidence/whole-book/CHG-20260802-038/SCOPE_AND_IMPLEMENTATION_PLAN.md"
+  ],
+  "manual_gate_id": "MG-WB-2.2",
+  "wb_step_id": "WB-2.2-CHAPTER-FUNCTIONS",
+  "depends_on": [
+    "CHG-20260728-018",
+    "CHG-20260802-037",
+    "CHG-20260802-038"
+  ],
+  "next_step": "WB-2.3-STORYLINES",
+  "acceptance_level": "L3",
+  "commits": [],
+  "modules": [
+    "apps/api/narrative_core",
+    "apps/desktop/whole-book-free",
+    "storylens_private_engine/chapter_functions"
+  ],
+  "files": [],
+  "user_summary": "RECOVERY RECORD：Free「章节功能」由 planned 产品化为原生全书逐章叙事功能分析（非 Phase2B storylines / 非 Pro 聚合洞察）。",
+  "technical_summary": "RECOVERY RECORD (original CHG-20260728-019 never found in git history). Productize Lab ChapterFunctionsResultDto / Private runner into Wave D Free path after Pre-Implementation Freeze. Capability whole_book.chapter_functions → available. No second run state machine. Do not confuse with Pro ChapterFunctionsResultV1 insights.",
+  "acceptance_criteria": [
+    "Canonical contract frozen (V1 Lab DTO vs required V2 TBD in freeze)",
+    "Free capability available; storylines remains Pro",
+    "Native snapshot input; no chapter-analysis / journey / aggregate SoT",
+    "Evidence exact; confirmed no silent overwrite",
+    "Prepare dual aliases preserved",
+    "MG-WB-2.2"
+  ],
+  "tests": [
+    "See release/evidence/whole-book/CHG-20260802-038/TEST_MATRIX.md"
+  ],
+  "verification_evidence": [
+    "release/evidence/whole-book/CHG-20260802-038/CHANGE_019_RECOVERY_AUDIT.md"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "Pending freeze DATABASE_DECISION; AssetType.chapter_function already exists."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "created_at": "2026-08-02T14:10:00Z",
+  "updated_at": "2026-08-02T14:10:00Z",
+  "notes": "Honest recovery record created 2026-08-02. Does NOT claim registration occurred on 2026-07-28. No invented historical timestamps."
+}

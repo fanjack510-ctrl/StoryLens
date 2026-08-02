@@ -1,0 +1,66 @@
+{
+  "id": "CHG-20260802-038",
+  "title": "Extract and plan WB-2.2 chapter functions scope",
+  "type": "documentation",
+  "base_version": "1.2.0",
+  "status": "implemented",
+  "include_in_next_release": true,
+  "head_inclusion": "INCLUDED",
+  "blocker_level": null,
+  "parent_plan": "CHG-20260802-037",
+  "wb_step_id": "WB-2.2-CHAPTER-FUNCTIONS",
+  "manual_gate_id": "MG-WB-2.2",
+  "depends_on": [
+    "CHG-20260802-037",
+    "CHG-20260728-019"
+  ],
+  "commits": [],
+  "modules": [
+    "docs/whole-book",
+    "release/evidence/whole-book",
+    "release/changes"
+  ],
+  "files": [
+    "release/evidence/whole-book/CHG-20260802-038/SCOPE_AND_IMPLEMENTATION_PLAN.md",
+    "release/evidence/whole-book/CHG-20260802-038/CHANGE_019_RECOVERY_AUDIT.md",
+    "release/evidence/whole-book/CHG-20260802-038/CONFLICTING_DOCUMENTS.md",
+    "release/evidence/whole-book/CHG-20260802-038/DATABASE_DECISION.md",
+    "release/evidence/whole-book/CHG-20260802-038/API_AND_PIPELINE_DECISION.md",
+    "release/evidence/whole-book/CHG-20260802-038/AGENT_OWNERSHIP.md",
+    "release/evidence/whole-book/CHG-20260802-038/TEST_MATRIX.md",
+    "release/evidence/whole-book/CHG-20260802-038/MANUAL_ACCEPTANCE_PLAN.md",
+    "release/evidence/whole-book/CHG-20260802-038/UI_PLAN.md",
+    "release/changes/CHG-20260728-019.json",
+    "release/changes/CHG-20260802-038.json"
+  ],
+  "user_summary": "抽取 WB-2.2 章节功能准确范围与实施计划；补 CHG-019 recovery；明确编码前 Freeze 阻塞项。",
+  "technical_summary": "Planning-only. SOURCE CONSISTENCY INSUFFICIENT. Canonical product contract UNRESOLVED (Lab V1 DTO exists; V2 TBD). DATABASE/MIGRATION/API/PIPELINE/WB-2.1-context UNRESOLVED. No product code. WB-2.2 IMPLEMENTATION STARTED=NO.",
+  "acceptance_criteria": [
+    "Scope questions answered or marked UNRESOLVED",
+    "CHG-019 recovery honest",
+    "Agent ownership and test matrix written",
+    "PRODUCT CODE MODIFIED=NO",
+    "Not marked tested/verified"
+  ],
+  "tests": [
+    "documentation audit only; no product tests in this change"
+  ],
+  "verification_evidence": [
+    "release/evidence/whole-book/CHG-20260802-038/SCOPE_AND_IMPLEMENTATION_PLAN.md",
+    "release/evidence/whole-book/CHG-20260802-038/CHANGE_019_RECOVERY_AUDIT.md"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "Planning only; freeze must decide migration."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "created_at": "2026-08-02T14:10:00Z",
+  "updated_at": "2026-08-02T14:10:00Z"
+}

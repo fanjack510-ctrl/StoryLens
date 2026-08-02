@@ -15,7 +15,14 @@
     "CHG-20260801-034",
     "CHG-20260801-035"
   ],
-  "commits": [],
+  "commits": [
+    {
+      "sha": "88aa361cae2e144263731382c3c931a131f23854",
+      "message": "docs(release): verify WB-2.1 structure stages",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "docs/whole-book",
     "release/evidence/whole-book",
@@ -58,5 +65,5 @@
     "breaking_change": false
   },
   "created_at": "2026-08-02T14:00:00Z",
-  "updated_at": "2026-08-02T14:00:00Z"
+  "updated_at": "2026-08-02T14:10:58Z"
 }
