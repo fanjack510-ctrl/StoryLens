@@ -1,0 +1,82 @@
+{
+  "id": "CHG-20260802-036",
+  "title": "Integrate WB-2.1 structure stages into V1.2.0 baseline",
+  "type": "feature",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": true,
+  "head_inclusion": "INCLUDED",
+  "blocker_level": null,
+  "parent_plan": "CHG-20260801-033",
+  "wb_step_id": "WB-2.1-STRUCTURE-STAGES",
+  "manual_gate_id": "MG-WB-2.1",
+  "depends_on": [
+    "CHG-20260801-034",
+    "CHG-20260801-035",
+    "CHG-20260728-018"
+  ],
+  "commits": [
+    {
+      "sha": "2670723c6b11d140c46a3cca6a06f07658335c0b",
+      "message": "merge(whole-book): integrate WB-2.1 structure backend",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "94544218c2a82d9b512e0db49d66f7b7f0b0d1cf",
+      "message": "merge(whole-book): integrate WB-2.1 structure desktop",
+      "primary": true,
+      "multi_change_reason": "desktop merge same integration CHG"
+    }
+  ],
+  "modules": [
+    "apps/api/narrative_core",
+    "apps/desktop/whole-book-free",
+    "docs/whole-book",
+    "release/evidence/whole-book"
+  ],
+  "files": [
+    "apps/api/scripts_seed_wb21_integration.py",
+    "docs/whole-book/EXECUTION_REGISTRY.json",
+    "release/unreleased.json",
+    "release/evidence/whole-book/CHG-20260802-036/",
+    "release/evidence/whole-book/WB-2.1-STRUCTURE-STAGES/"
+  ],
+  "user_summary": "合并 WB-2.1 Agent1/Agent2，联调 StructureStagesResultV2，建立 MG-WB-2.1 隔离验收环境。",
+  "technical_summary": "Integration merge: private engine + public backend + desktop. Contract V2 SoT; no migration; prepare dual paths preserved; Free structure available; chapter_functions planned; smoke UI 1425 / API 8005.",
+  "acceptance_criteria": [
+    "Public/Private merges complete",
+    "Canonical StructureStagesResultV2",
+    "Product + Lab APIs",
+    "DOM catalog entries verified",
+    "CHG-034/035/036 tested; WB-2.1 tested; not verified",
+    "MG-WB-2.1 ready"
+  ],
+  "tests": [
+    "apps/api/tests/test_whole_book_wb21_structure_stages_a_o.py",
+    "apps/desktop/src/pages/wholeBookFreeStructure.test.tsx",
+    "apps/desktop/e2e/wb21_structure_stages.spec.ts",
+    "release/evidence/whole-book/CHG-20260802-036/dom_verify_wb21.mjs"
+  ],
+  "verification_evidence": [
+    "release/evidence/whole-book/CHG-20260802-036/TEST_RESULTS.md",
+    "release/evidence/whole-book/CHG-20260802-036/MANUAL_UI_ENV.md",
+    "release/evidence/whole-book/CHG-20260802-036/DOM_VERIFY_RESULTS.json",
+    "release/evidence/whole-book/CHG-20260802-036/CONFLICT_RESOLUTION.md",
+    "release/evidence/whole-book/WB-2.1-STRUCTURE-STAGES/FINAL_REPORT.md"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "No migration; isolated smoke DB only."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "created_at": "2026-08-02T12:00:00Z",
+  "updated_at": "2026-08-02T12:52:45Z"
+}

@@ -1,0 +1,58 @@
+{
+  "id": "CHG-20260801-034",
+  "title": "Implement WB-2.1 structure stages backend and private engine",
+  "type": "feature",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": true,
+  "head_inclusion": "INCLUDED",
+  "blocker_level": null,
+  "parent_plan": "CHG-20260801-033",
+  "wb_step_id": "WB-2.1-STRUCTURE-STAGES",
+  "manual_gate_id": "MG-WB-2.1",
+  "commits": [
+    {
+      "sha": "f231ff5d51114d96218cb53ce16b5c54f1600773",
+      "message": "feat(whole-book): implement structure stages backend",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "apps/api/narrative_core",
+    "storylens_private_engine/structure_stages"
+  ],
+  "files": [],
+  "user_summary": "全书 Free「故事结构」后端：StructureStagesResultV2、pipeline stage、product/Lab 读取 API、empty-policy 与 fixture A–O。",
+  "technical_summary": "Agent1 public+private implementation. Canonical contract StructureStagesResultV2 wire v2; synthesize_structure_stages; GET /api/v1/whole-book/runs/{id}/structure; Lab results path preserved; no DB migration.",
+  "acceptance_criteria": [
+    "StructureStagesResultV2 canonical",
+    "Empty policy binding",
+    "Product + Lab APIs",
+    "Pause/resume/cancel semantics",
+    "Native input independence",
+    "REAL PROVIDER CALLS=0"
+  ],
+  "tests": [
+    "apps/api/tests/test_whole_book_wb21_structure_stages_a_o.py",
+    "apps/api/tests/test_structure_stages_output_contract_v2_empty_policy.py",
+    "private: tests/test_structure_stages_*"
+  ],
+  "verification_evidence": [
+    "release/evidence/whole-book/CHG-20260802-036/TEST_RESULTS.md"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "Reuse structure_stage Narrative Assets; no migration."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "created_at": "2026-08-01T11:00:00Z",
+  "updated_at": "2026-08-02T12:45:00Z"
+}

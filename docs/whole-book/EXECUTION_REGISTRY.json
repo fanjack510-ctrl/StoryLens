@@ -432,12 +432,18 @@
       "order": 17,
       "step_id": "WB-2.1-STRUCTURE-STAGES",
       "change_id": "CHG-20260728-018",
+      "integration_change_id": "CHG-20260802-036",
+      "implementation_changes": [
+        "CHG-20260801-034",
+        "CHG-20260801-035",
+        "CHG-20260802-036"
+      ],
       "manual_gate_id": "MG-WB-2.1",
       "phase": "WB-2",
       "title": "Structure stages (+ empty-policy rebase)",
       "acceptance_level": "L3",
       "evidence_dir": "release/evidence/whole-book/WB-2.1-STRUCTURE-STAGES/",
-      "wb_status": "planned",
+      "wb_status": "tested",
       "depends_on": [
         "WB-1.10-CONFIRM-NO-OVERWRITE"
       ],
