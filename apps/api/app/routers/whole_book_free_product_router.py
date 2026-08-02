@@ -23,6 +23,9 @@ from app.narrative_core.services.whole_book_product_capability_v1 import (
     AccessTier,
     require_capability_access,
 )
+from app.narrative_core.services.whole_book_structure_product_v1_service import (
+    get_run_structure_product_v1,
+)
 
 router = APIRouter(prefix="/api/v1", tags=["whole-book-free-product"])
 
@@ -144,6 +147,27 @@ def gated_overview(run_id: int, db: Session = Depends(get_db)) -> dict:
                 detail={"error_code": "OVERVIEW_NOT_FOUND", "message": "全书总览尚未生成"},
             )
         return {"overview": overview}
+    except WholeBookFoundationError as exc:
+        _raise_foundation(exc)
+        raise
+
+
+@router.get("/whole-book/runs/{run_id}/structure")
+def product_structure_result(run_id: int, db: Session = Depends(get_db)) -> dict:
+    """Product StructureStagesResultV2 envelope (WB-2.1)."""
+
+    try:
+        require_capability_access("whole_book.structure", AccessTier.free)
+        payload = get_run_structure_product_v1(db, run_id)
+        if payload is None:
+            raise HTTPException(
+                status_code=404,
+                detail={
+                    "error_code": "STRUCTURE_RESULT_ABSENT",
+                    "message": "故事结构结果尚未生成",
+                },
+            )
+        return payload
     except WholeBookFoundationError as exc:
         _raise_foundation(exc)
         raise

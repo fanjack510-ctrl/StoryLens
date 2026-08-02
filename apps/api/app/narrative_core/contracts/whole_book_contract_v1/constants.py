@@ -15,6 +15,7 @@ WHOLE_BOOK_STAGE_CODES_V1: tuple[str, ...] = (
     "extract_entities_events",
     "materialize_assets",
     "synthesize_overview",
+    "synthesize_structure_stages",
     "project_result",
     "finalize",
 )

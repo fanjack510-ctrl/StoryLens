@@ -36,16 +36,18 @@ def test_free_capability_registry_counts() -> None:
 def test_free_user_granted_for_available_modules() -> None:
     overview = resolve_capability_access("whole_book.overview", AccessTier.free)
     chars = resolve_capability_access("whole_book.characters_events", AccessTier.free)
+    structure = resolve_capability_access("whole_book.structure", AccessTier.free)
     assert overview["access_status"] == CapabilityAccessStatus.granted.value
     assert chars["access_status"] == CapabilityAccessStatus.granted.value
+    assert structure["access_status"] == CapabilityAccessStatus.granted.value
     assert overview["reason_code"] is None
 
 
 def test_planned_free_and_pro_return_planned() -> None:
-    structure = resolve_capability_access("whole_book.structure", AccessTier.free)
+    chapter_functions = resolve_capability_access("whole_book.chapter_functions", AccessTier.free)
     pro = resolve_capability_access("whole_book.storylines", AccessTier.free)
-    assert structure["access_status"] == CapabilityAccessStatus.planned.value
-    assert structure["reason_code"] == "capability_planned"
+    assert chapter_functions["access_status"] == CapabilityAccessStatus.planned.value
+    assert chapter_functions["reason_code"] == "capability_planned"
     assert pro["access_status"] == CapabilityAccessStatus.planned.value
 
 
@@ -73,7 +75,7 @@ def test_capability_access_api() -> None:
 
 def test_gate_helper_blocks_planned() -> None:
     with pytest.raises(WholeBookFoundationError):
-        require_capability_access("whole_book.structure", AccessTier.free)
+        require_capability_access("whole_book.chapter_functions", AccessTier.free)
 
 
 def test_defaults_to_free_tier() -> None:

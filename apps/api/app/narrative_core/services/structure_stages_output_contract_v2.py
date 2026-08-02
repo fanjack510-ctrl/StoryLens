@@ -28,6 +28,9 @@ STRUCTURE_STAGES_V2_ALLOWED_TOP_LEVEL: frozenset[str] = frozenset(
         "analysis_confidence",
         "overall_confidence",  # public alias accepted then normalized by private
         "limitations",
+        "empty_reason",
+        "provenance",
+        "source_revision",
     }
 )
 
@@ -47,9 +50,15 @@ FAILURE_TP_CITATION_EMPTY = "TURNING_POINT_CITATION_EMPTY"
 FAILURE_STAGE_RANGE_OVERLAP = "STRUCTURE_STAGE_RANGE_OVERLAP"
 FAILURE_STAGE_RANGE_NON_CONTIGUOUS = "STRUCTURE_STAGE_RANGE_NON_CONTIGUOUS"
 FAILURE_COVERAGE_SCOPE_INVALID = "STRUCTURE_COVERAGE_SCOPE_INVALID"
+FAILURE_COVERAGE_SCOPE_BINDING_MISMATCH = "STRUCTURE_COVERAGE_SCOPE_BINDING_MISMATCH"
+FAILURE_REQUIRED_STAGE_MISSING = "STRUCTURE_REQUIRED_STAGE_MISSING"
+FAILURE_EMPTY_RESULT_AFTER_REPAIR = "STRUCTURE_EMPTY_RESULT_AFTER_REPAIR"
+FAILURE_STRUCTURE_CONTRACT = "STRUCTURE_CONTRACT_FAILURE"
 FAILURE_LOCAL_REF_DUPLICATE = "STRUCTURE_LOCAL_REF_DUPLICATE"
 FAILURE_LOCAL_REF_UNKNOWN = "STRUCTURE_LOCAL_REF_UNKNOWN"
 FAILURE_EXECUTION_CONTEXT_MISMATCH = "EXECUTION_CONTEXT_FINGERPRINT_MISMATCH"
+FAILURE_EXECUTION_CONTEXT_CATALOG_MISMATCH = "EXECUTION_CONTEXT_CATALOG_MISMATCH"
+FAILURE_EXECUTION_CONTEXT_BINDING = "EXECUTION_CONTEXT_BINDING_FAILURE"
 FAILURE_REPAIR_EXHAUSTED = "REPAIR_EXHAUSTED"
 STATUS_CONTRACT_VALIDATION_FAILED = "contract_validation_failed"
 STATUS_CITATION_VALIDATION_FAILED = "citation_validation_failed"
@@ -117,53 +126,49 @@ def repair_instruction_text_v2(
     passed_fields: Sequence[str] | None = None,
     policy_text: str | None = None,
     capabilities: Mapping[str, Any] | None = None,
+    actual_coverage_scope: str | None = None,
+    stage_count: int | None = None,
+    turning_point_count: int | None = None,
 ) -> str:
     ids = list(citation_ids or ())
     enum_hint = ", ".join(ids) if ids else "(catalog citation_ids)"
     try:
         from storylens_private_engine.citation.structure_field_policy import (
             build_structure_field_requirement_policy,
-            derive_structure_context_capabilities,
+            freeze_structure_coverage_binding,
+        )
+        from storylens_private_engine.citation.structure_prompt_render import (
+            structure_empty_result_repair_instruction,
+            structure_targeted_repair_instruction,
         )
 
-        caps_obj = None
-        if capabilities:
-            caps_obj = derive_structure_context_capabilities(
-                selected_chapter_orders=tuple(
-                    capabilities.get("selected_chapter_orders") or ()
-                ),
-                all_chapter_orders=tuple(capabilities.get("all_chapter_orders") or ()),
-                selected_paragraph_count=int(
-                    capabilities.get("selected_paragraph_count") or 0
-                ),
-                batch_index=int(capabilities.get("batch_index") or 0),
-                batch_count=int(capabilities.get("batch_count") or 1),
-                full_book_default=bool(
-                    capabilities.get("is_full_book_coverage")
-                    or capabilities.get("full_book_coverage")
-                    or False
-                ),
-            )
+        caps_obj = resolve_structure_context_capabilities(capabilities)
         policy = build_structure_field_requirement_policy(caps_obj)
-        # Prefer private targeted repair when available.
-        try:
-            from storylens_private_engine.citation import targeted_repair_instruction
-
-            return targeted_repair_instruction(
+        binding = freeze_structure_coverage_binding(policy.capabilities)
+        empty_codes = {
+            FAILURE_REQUIRED_STAGE_MISSING,
+            FAILURE_COVERAGE_SCOPE_BINDING_MISMATCH,
+            "STRUCTURE_REQUIRED_STAGE_MISSING",
+            "STRUCTURE_COVERAGE_SCOPE_BINDING_MISMATCH",
+        }
+        if failure_code in empty_codes and binding.requires_stage_observation:
+            return structure_empty_result_repair_instruction(
                 policy=policy,
-                failed_diagnostics=[dict(x) for x in (failed_diagnostics or ())],
-                passed_fields=list(passed_fields or observed_fields),
+                binding=binding,
+                actual_coverage_scope=str(actual_coverage_scope or ""),
+                stage_count=int(stage_count or 0),
+                turning_point_count=int(turning_point_count or 0),
                 citation_ids=ids,
                 failure_code=failure_code,
+                failed_diagnostics=list(failed_diagnostics or ()),
             )
-        except Exception:  # noqa: BLE001
-            return (
-                f"Previous output failed Structure V2 contract ({failure_code}). "
-                f"Observed top-level fields: {', '.join(observed_fields) or '(none)'}. "
-                "Regenerate a complete StructureStagesResultV2 JSON object only. "
-                f"Use only these citation_ids ({len(ids)}): {enum_hint}. "
-                + (policy_text or policy.prompt_rules_text())
-            )
+        return structure_targeted_repair_instruction(
+            policy=policy,
+            failed_diagnostics=list(failed_diagnostics or ()),
+            passed_local_refs=list(passed_fields or ()),
+            citation_ids=ids,
+            failure_code=failure_code,
+        )
     except Exception:  # noqa: BLE001
         return (
             f"Previous output failed V2 contract validation ({failure_code}). "
@@ -172,7 +177,8 @@ def repair_instruction_text_v2(
             f"Use only these citation_ids ({len(ids)}): {enum_hint}. "
             + (
                 policy_text
-                or "Stage summary/boundaries and TP descriptions require catalog citations."
+                or "Stage summary/boundaries and TP descriptions require catalog citations. "
+                "coverage_scope must equal server-frozen expected_coverage_scope."
             )
         )
 
@@ -348,46 +354,13 @@ def _try_private_validate(
 ) -> tuple[dict[str, Any] | None, str | None]:
     try:
         from storylens_private_engine.citation import validate_structure_stages_result_v2
-        from storylens_private_engine.citation.structure_field_policy import (
-            StructureContextCapabilities,
-            derive_structure_context_capabilities,
-        )
     except Exception:  # noqa: BLE001
         return None, "PRIVATE_CITATION_VALIDATOR_UNAVAILABLE"
     private_catalog = _catalog_for_private_engine(catalog)
     if private_catalog is None:
         return None, "PRIVATE_CITATION_VALIDATOR_UNAVAILABLE"
-    caps_obj = None
-    if capabilities:
-        try:
-            if isinstance(capabilities, StructureContextCapabilities):
-                caps_obj = capabilities
-            else:
-                caps_obj = derive_structure_context_capabilities(
-                    selected_chapter_orders=tuple(
-                        capabilities.get("selected_chapter_orders") or ()
-                    ),
-                    all_chapter_orders=tuple(
-                        capabilities.get("all_chapter_orders") or ()
-                    ),
-                    selected_paragraph_count=int(
-                        capabilities.get("selected_paragraph_count")
-                        or capabilities.get("selected_chapter_count")
-                        or 0
-                    ),
-                    batch_index=int(capabilities.get("batch_index") or 0),
-                    batch_count=int(capabilities.get("batch_count") or 1),
-                    full_book_default=bool(
-                        capabilities.get("is_full_book_coverage")
-                        or capabilities.get("full_book_coverage")
-                        or False
-                    ),
-                    has_beginning_window=capabilities.get("has_beginning_window"),
-                    has_middle_window=capabilities.get("has_middle_window"),
-                    has_ending_window=capabilities.get("has_ending_window"),
-                )
-        except Exception:  # noqa: BLE001
-            caps_obj = None
+    # Prefer resolve so patched capability flags (local_only / no-observation) stick.
+    caps_obj = resolve_structure_context_capabilities(capabilities)
     try:
         dto, err = validate_structure_stages_result_v2(
             structured, private_catalog, capabilities=caps_obj
@@ -418,13 +391,16 @@ def _public_shape_validate(
         StructureStageV2,
         StructureStagesResultV2,
         TurningPointV2,
+        normalize_coverage_scope_wire,
     )
 
     allowed = {str(x) for x in allowed_citation_ids}
     try:
         if str(structured.get("contract_version") or "") != "v2":
             return None, FAILURE_DTO_VALIDATION
-        coverage_scope = str(structured.get("coverage_scope") or "").strip()
+        coverage_scope = normalize_coverage_scope_wire(
+            structured.get("coverage_scope")
+        ) or ""
         raw_stages = list(structured.get("stages") or ())
         raw_tps = list(structured.get("turning_points") or ())
         if not isinstance(structured.get("stages"), (list, tuple)):
@@ -432,31 +408,17 @@ def _public_shape_validate(
         if not isinstance(structured.get("turning_points"), (list, tuple)):
             return None, FAILURE_DTO_VALIDATION
 
-        # Prefer private coverage-scope capability check when present.
+        # Prefer private coverage-scope capability + frozen binding check.
         try:
             from storylens_private_engine.citation.structure_field_policy import (
-                derive_structure_context_capabilities,
+                freeze_structure_coverage_binding,
                 validate_coverage_scope_against_capabilities,
             )
 
-            caps = derive_structure_context_capabilities(
-                selected_chapter_orders=tuple(
-                    (capabilities or {}).get("selected_chapter_orders") or ()
-                ),
-                all_chapter_orders=tuple(
-                    (capabilities or {}).get("all_chapter_orders") or ()
-                ),
-                selected_paragraph_count=int(
-                    (capabilities or {}).get("selected_paragraph_count") or 0
-                ),
-                batch_index=int((capabilities or {}).get("batch_index") or 0),
-                batch_count=int((capabilities or {}).get("batch_count") or 1),
-                full_book_default=bool(
-                    (capabilities or {}).get("is_full_book_coverage")
-                    or (capabilities or {}).get("full_book_coverage")
-                    or False
-                ),
-            )
+            caps = resolve_structure_context_capabilities(capabilities)
+            if caps is None:
+                raise RuntimeError("capabilities_unavailable")
+            binding = freeze_structure_coverage_binding(caps)
             scope_err = validate_coverage_scope_against_capabilities(
                 coverage_scope,
                 caps,
@@ -465,6 +427,11 @@ def _public_shape_validate(
             )
             if scope_err:
                 return None, str(scope_err)
+            # Empty after capability=true must not pass public shape fallback.
+            if binding.requires_stage_observation and len(raw_stages) < 1:
+                return None, FAILURE_REQUIRED_STAGE_MISSING
+            if binding.permits_empty_observation and raw_stages:
+                return None, FAILURE_COVERAGE_SCOPE_BINDING_MISMATCH
         except Exception:  # noqa: BLE001
             if coverage_scope not in {
                 CoverageScope.LOCAL,
@@ -474,9 +441,9 @@ def _public_shape_validate(
             }:
                 return None, FAILURE_COVERAGE_SCOPE_INVALID
             if coverage_scope == CoverageScope.INSUFFICIENT and raw_stages:
-                return None, FAILURE_COVERAGE_SCOPE_INVALID
+                return None, FAILURE_COVERAGE_SCOPE_BINDING_MISMATCH
             if coverage_scope != CoverageScope.INSUFFICIENT and not raw_stages:
-                return None, FAILURE_COVERAGE_SCOPE_INVALID
+                return None, FAILURE_REQUIRED_STAGE_MISSING
 
         range_err = _validate_stage_ranges(
             [s for s in raw_stages if isinstance(s, Mapping)]
@@ -484,23 +451,25 @@ def _public_shape_validate(
         if range_err:
             return None, range_err
 
-        seen_stage_keys: set[str] = set()
-        seen_local_refs: set[str] = set()
+        seen_stage_refs: set[str] = set()
         stages: list[StructureStageV2] = []
         for idx, raw in enumerate(raw_stages):
             if not isinstance(raw, Mapping):
                 return None, FAILURE_DTO_VALIDATION
-            stage_key = str(raw.get("stage_key") or "").strip() or f"STAGE-{idx + 1:03d}"
-            local_ref = (
-                str(raw.get("local_ref") or "").strip() or None
-            )
-            if stage_key in seen_stage_keys:
+            local_stage_ref = str(
+                raw.get("local_stage_ref")
+                or raw.get("local_ref")
+                or raw.get("stage_key")
+                or ""
+            ).strip()
+            if not local_stage_ref:
+                local_stage_ref = f"S{idx + 1}"
+            if local_stage_ref in seen_stage_refs:
                 return None, FAILURE_LOCAL_REF_DUPLICATE
-            seen_stage_keys.add(stage_key)
-            if local_ref:
-                if local_ref in seen_local_refs:
-                    return None, FAILURE_LOCAL_REF_DUPLICATE
-                seen_local_refs.add(local_ref)
+            seen_stage_refs.add(local_stage_ref)
+            title = str(raw.get("title") or raw.get("label") or local_stage_ref).strip()
+            if not title:
+                return None, FAILURE_DTO_VALIDATION
 
             summary_raw = raw.get("summary")
             if not isinstance(summary_raw, Mapping):
@@ -548,39 +517,57 @@ def _public_shape_validate(
                 status=end_raw.get("status"),
                 confidence=end_raw.get("confidence"),
             )
+            order_index = int(
+                raw.get("order_index")
+                if raw.get("order_index") is not None
+                else (raw.get("order") if raw.get("order") is not None else idx)
+            )
+            related_tp_refs = tuple(
+                str(x)
+                for x in (
+                    raw.get("related_turning_point_refs")
+                    or raw.get("related_turning_point_keys")
+                    or ()
+                )
+            )
+            formal_key = str(raw.get("stage_key") or "").strip() or None
             stages.append(
                 StructureStageV2(
-                    stage_key=stage_key,
-                    label=str(raw.get("label") or stage_key),
+                    local_stage_ref=local_stage_ref,
+                    title=title,
                     summary=summary,
                     start_boundary=start_boundary,
                     end_boundary=end_boundary,
-                    chapter_range=_parse_chapter_range(raw.get("chapter_range")),
-                    related_turning_point_keys=tuple(
-                        str(x) for x in (raw.get("related_turning_point_keys") or ())
+                    order_index=order_index,
+                    stage_type=str(raw.get("stage_type") or "unknown"),
+                    supporting_citation_ids=tuple(
+                        str(x) for x in (raw.get("supporting_citation_ids") or ())
                     ),
-                    order=int(raw.get("order") if raw.get("order") is not None else idx),
-                    narrative_function=str(raw.get("narrative_function") or ""),
-                    local_ref=local_ref,
+                    related_turning_point_refs=related_tp_refs,
+                    narrative_function=str(raw.get("narrative_function") or "") or None,
+                    confidence=raw.get("confidence"),
+                    stage_key=formal_key,
+                    chapter_range=_parse_chapter_range(raw.get("chapter_range")),
                 )
             )
 
         tps: list[TurningPointV2] = []
-        seen_tp_keys: set[str] = set()
+        seen_tp_refs: set[str] = set()
         for idx, raw in enumerate(raw_tps):
             if not isinstance(raw, Mapping):
                 return None, FAILURE_DTO_VALIDATION
-            tp_key = (
-                str(raw.get("turning_point_key") or "").strip() or f"TP-{idx + 1:03d}"
-            )
-            local_ref = str(raw.get("local_ref") or "").strip() or None
-            if tp_key in seen_tp_keys:
+            local_tp_ref = str(
+                raw.get("local_turning_point_ref")
+                or raw.get("local_ref")
+                or raw.get("turning_point_key")
+                or ""
+            ).strip()
+            if not local_tp_ref:
+                local_tp_ref = f"TP{idx + 1}"
+            if local_tp_ref in seen_tp_refs:
                 return None, FAILURE_LOCAL_REF_DUPLICATE
-            seen_tp_keys.add(tp_key)
-            if local_ref:
-                if local_ref in seen_local_refs:
-                    return None, FAILURE_LOCAL_REF_DUPLICATE
-                seen_local_refs.add(local_ref)
+            seen_tp_refs.add(local_tp_ref)
+            title = str(raw.get("title") or raw.get("label") or local_tp_ref).strip()
             desc_raw = raw.get("description") or raw.get("summary")
             if not isinstance(desc_raw, Mapping):
                 return None, FAILURE_DTO_VALIDATION
@@ -607,20 +594,41 @@ def _public_shape_validate(
                     citation_ids=extra_ids,
                     confidence=description.confidence,
                 )
-            related = raw.get("related_stage_key")
-            if related is not None and str(related) and str(related) not in seen_stage_keys:
-                # Soft: unknown related stage key fails closed only when stages present.
-                if stages:
+            related_refs = tuple(
+                str(x)
+                for x in (
+                    raw.get("related_stage_refs")
+                    or (
+                        (raw.get("related_stage_key"),)
+                        if raw.get("related_stage_key")
+                        else ()
+                    )
+                )
+            )
+            for related in related_refs:
+                if related and related not in seen_stage_refs and stages:
                     return None, FAILURE_LOCAL_REF_UNKNOWN
             chapter_id = raw.get("chapter_id")
             tps.append(
                 TurningPointV2(
-                    turning_point_key=tp_key,
-                    label=str(raw.get("label") or tp_key),
+                    local_turning_point_ref=local_tp_ref,
+                    title=title,
                     description=description,
+                    citation_ids=extra_ids or description.citation_ids,
+                    order_index=int(
+                        raw.get("order_index")
+                        if raw.get("order_index") is not None
+                        else idx
+                    ),
+                    turning_point_type=str(raw.get("turning_point_type") or "unknown"),
+                    before_state=raw.get("before_state"),
+                    after_state=raw.get("after_state"),
+                    impact=raw.get("impact"),
+                    related_stage_refs=related_refs,
+                    confidence=raw.get("confidence"),
+                    turning_point_key=str(raw.get("turning_point_key") or "").strip()
+                    or None,
                     chapter_id=None if chapter_id in (None, "") else int(chapter_id),
-                    related_stage_key=str(related) if related else None,
-                    local_ref=local_ref,
                 )
             )
 
@@ -629,37 +637,59 @@ def _public_shape_validate(
             turning_points=tuple(tps),
             coverage_scope=coverage_scope,
             contract_version="v2",
+            evidence_contract_version=str(
+                structured.get("evidence_contract_version") or "v2"
+            ),
+            analysis_confidence=structured.get("analysis_confidence"),
             overall_confidence=structured.get("overall_confidence"),
             limitations=tuple(str(x) for x in (structured.get("limitations") or ())),
+            context_capabilities=(
+                dict(structured.get("context_capabilities"))
+                if isinstance(structured.get("context_capabilities"), Mapping)
+                else None
+            ),
         )
         return {
             "contract_version": dto.contract_version,
+            "evidence_contract_version": dto.evidence_contract_version,
             "coverage_scope": dto.coverage_scope,
+            "analysis_confidence": dto.analysis_confidence,
             "overall_confidence": dto.overall_confidence,
             "limitations": list(dto.limitations),
+            "context_capabilities": dto.context_capabilities,
             "stages": [
                 {
-                    "stage_key": s.stage_key,
-                    "label": s.label,
+                    "local_stage_ref": s.local_stage_ref,
+                    "title": s.title,
                     "summary": _claim_dict(s.summary),
                     "start_boundary": _boundary_dict(s.start_boundary),
                     "end_boundary": _boundary_dict(s.end_boundary),
-                    "chapter_range": list(s.chapter_range),
-                    "related_turning_point_keys": list(s.related_turning_point_keys),
-                    "order": s.order,
+                    "order_index": s.order_index,
+                    "stage_type": s.stage_type,
+                    "supporting_citation_ids": list(s.supporting_citation_ids),
+                    "related_turning_point_refs": list(s.related_turning_point_refs),
                     "narrative_function": s.narrative_function,
-                    **({"local_ref": s.local_ref} if s.local_ref else {}),
+                    "confidence": s.confidence,
+                    "chapter_range": list(s.chapter_range),
+                    **({"stage_key": s.stage_key} if s.stage_key else {}),
                 }
                 for s in dto.stages
             ],
             "turning_points": [
                 {
-                    "turning_point_key": t.turning_point_key,
-                    "label": t.label,
+                    "local_turning_point_ref": t.local_turning_point_ref,
+                    "title": t.title,
                     "description": _claim_dict(t.description),
+                    "citation_ids": list(t.citation_ids),
+                    "order_index": t.order_index,
+                    "turning_point_type": t.turning_point_type,
+                    "before_state": t.before_state,
+                    "after_state": t.after_state,
+                    "impact": t.impact,
+                    "related_stage_refs": list(t.related_stage_refs),
+                    "confidence": t.confidence,
                     "chapter_id": t.chapter_id,
-                    "related_stage_key": t.related_stage_key,
-                    **({"local_ref": t.local_ref} if t.local_ref else {}),
+                    **({"turning_point_key": t.turning_point_key} if t.turning_point_key else {}),
                 }
                 for t in dto.turning_points
             ],
@@ -811,20 +841,42 @@ def structure_stages_result_v2_json_schema(
     *,
     citation_ids: Sequence[str] | None = None,
     catalog: Any | None = None,
+    capabilities: Mapping[str, Any] | Any | None = None,
+    policy: Any | None = None,
 ) -> dict[str, Any]:
     """JSON Schema for Live binding. Prefer private dynamic schema when available."""
 
+    caps_obj = resolve_structure_context_capabilities(capabilities)
     if catalog is not None:
         try:
             from storylens_private_engine.citation import (
+                build_structure_field_requirement_policy,
                 structure_stages_result_v2_json_schema as _priv,
             )
 
-            return dict(_priv(_catalog_for_private_engine(catalog)))
+            pol = policy or build_structure_field_requirement_policy(caps_obj)
+            return dict(_priv(_catalog_for_private_engine(catalog), policy=pol))
         except Exception:  # noqa: BLE001
             pass
 
     ids = list(citation_ids or ())
+    expected_scope = "local"
+    try:
+        from storylens_private_engine.citation.structure_field_policy import (
+            build_structure_field_requirement_policy,
+            freeze_structure_coverage_binding,
+        )
+
+        pol = policy or build_structure_field_requirement_policy(caps_obj)
+        expected_scope = freeze_structure_coverage_binding(
+            pol.capabilities
+        ).expected_coverage_scope
+    except Exception:  # noqa: BLE001
+        if caps_obj is not None and not bool(
+            getattr(caps_obj, "can_identify_local_stages", True)
+        ):
+            expected_scope = "insufficient"
+
     claim = {
         "type": "object",
         "properties": {
@@ -916,12 +968,7 @@ def structure_stages_result_v2_json_schema(
             "contract_version": {"type": "string", "const": "v2"},
             "coverage_scope": {
                 "type": "string",
-                "enum": [
-                    "local",
-                    "partial_span",
-                    "full_selected_range",
-                    "insufficient",
-                ],
+                "enum": [expected_scope],
             },
             "stages": {"type": "array", "items": stage},
             "turning_points": {"type": "array", "items": turning_point},
@@ -941,5 +988,7 @@ def structure_stages_result_v2_json_schema(
         "x_storylens": {
             "citation_enum_count": len(ids),
             "evidence_contract_version": "v2",
+            "expected_coverage_scope": expected_scope,
+            "coverage_scope_enum": [expected_scope],
         },
     }

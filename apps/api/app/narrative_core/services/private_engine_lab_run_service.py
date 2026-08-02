@@ -389,6 +389,16 @@ class PrivateWholeBookLabRunService:
         getter = getattr(self._estimate, "cached_execution_context_binding", None)
         if callable(getter):
             execution_binding_payload = getter(request.estimate_fingerprint)
+        catalog_mat_payload = None
+        cat_getter = getattr(self._estimate, "cached_catalog_materialization", None)
+        if callable(cat_getter):
+            catalog_mat_payload = cat_getter(request.estimate_fingerprint)
+        ss_exec_mat_payload = None
+        ss_mat_getter = getattr(
+            self._estimate, "cached_structure_stages_execution_materialization", None
+        )
+        if callable(ss_mat_getter):
+            ss_exec_mat_payload = ss_mat_getter(request.estimate_fingerprint)
         metadata = build_private_lab_run_metadata(
             book_id=int(book.id),
             snapshot_id=int(snapshot.id),
@@ -418,6 +428,8 @@ class PrivateWholeBookLabRunService:
                 "modules_implemented": True,
                 "source": PRIVATE_ENGINE_LAB_SOURCE,
                 "execution_context_binding": execution_binding_payload,
+                "catalog_materialization": catalog_mat_payload,
+                "structure_stages_execution_materialization": ss_exec_mat_payload,
             },
         )
 

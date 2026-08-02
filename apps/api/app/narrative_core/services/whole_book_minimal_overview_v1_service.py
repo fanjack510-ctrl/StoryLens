@@ -265,6 +265,8 @@ def synthesize_minimal_book_overview_v1(
     session: Session,
     run_id: int,
     transport: WholeBookProviderTransport | None = None,
+    *,
+    finalize_run: bool = True,
 ) -> dict[str, Any]:
     run = assert_run_not_terminal(session, run_id)
     stage = session.scalar(
@@ -345,11 +347,16 @@ def synthesize_minimal_book_overview_v1(
     _validate_synthesis_ids(response, proj)
     row = _persist_overview(session, run_id, response.result)
 
-    for stage_code in ("synthesize_overview", "project_result", "finalize"):
-        set_stage_completed(session, run_id, stage_code, progress_total=1)
-    run.status = WholeBookRunStatus.completed.value
-    run.current_stage_code = "finalize"
-    run.completed_at = utc_now()
+    set_stage_completed(session, run_id, "synthesize_overview", progress_total=1)
+    run.current_stage_code = "synthesize_overview"
+    if finalize_run:
+        # Standalone overview callers (pre-WB-2.1). Free pipeline passes False
+        # so synthesize_structure_stages can run before project_result/finalize.
+        for stage_code in ("project_result", "finalize"):
+            set_stage_completed(session, run_id, stage_code, progress_total=1)
+        run.status = WholeBookRunStatus.completed.value
+        run.current_stage_code = "finalize"
+        run.completed_at = utc_now()
     session.flush()
 
     return {

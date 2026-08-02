@@ -1,4 +1,4 @@
-"""Combined fixture minimal pipeline (WB-1.4–1.6)."""
+"""Combined fixture minimal pipeline (WB-1.4–1.6 + WB-2.1 structure)."""
 
 from __future__ import annotations
 
@@ -20,10 +20,19 @@ from app.narrative_core.services.whole_book_minimal_materialization_v1_service i
 from app.narrative_core.services.whole_book_minimal_overview_v1_service import (
     synthesize_minimal_book_overview_v1,
 )
+from app.narrative_core.services.whole_book_minimal_structure_stages_v1_service import (
+    FixtureStructureTransport,
+    synthesize_minimal_structure_stages_v1,
+)
 from app.narrative_core.services.whole_book_run_v1_service import get_run, start_whole_book_run_v1
 
 
-def execute_fixture_minimal_pipeline_v1(session: Session, run_id: int) -> dict:
+def execute_fixture_minimal_pipeline_v1(
+    session: Session,
+    run_id: int,
+    *,
+    structure_mode: str = "multi_stage",
+) -> dict:
     if os.environ.get("STORYLENS_WHOLE_BOOK_REAL_PROVIDER_ENABLED", "false").lower() in {
         "1",
         "true",
@@ -45,6 +54,7 @@ def execute_fixture_minimal_pipeline_v1(session: Session, run_id: int) -> dict:
             "extraction": {"run_id": run_id, "reused": True, "provider_calls": 0},
             "materialization": {"run_id": run_id, "reused": True},
             "overview": {"run_id": run_id, "reused": True},
+            "structure": {"run_id": run_id, "reused": True, "provider_calls": 0},
             "result_origin": run.result_origin,
         }
 
@@ -55,7 +65,14 @@ def execute_fixture_minimal_pipeline_v1(session: Session, run_id: int) -> dict:
     transport = FixtureWindowAnalysisTransport()
     extraction = execute_minimal_entity_event_extraction_v1(session, run_id, transport=transport)
     materialization = materialize_minimal_narrative_assets_v1(session, run_id)
-    overview = synthesize_minimal_book_overview_v1(session, run_id)
+    overview = synthesize_minimal_book_overview_v1(session, run_id, finalize_run=False)
+    structure = synthesize_minimal_structure_stages_v1(
+        session,
+        run_id,
+        transport=FixtureStructureTransport(mode=structure_mode),  # type: ignore[arg-type]
+        mode=structure_mode,  # type: ignore[arg-type]
+        finalize_run=True,
+    )
 
     session.refresh(run)
     return {
@@ -65,5 +82,6 @@ def execute_fixture_minimal_pipeline_v1(session: Session, run_id: int) -> dict:
         "extraction": extraction,
         "materialization": materialization,
         "overview": overview,
+        "structure": structure,
         "result_origin": run.result_origin,
     }

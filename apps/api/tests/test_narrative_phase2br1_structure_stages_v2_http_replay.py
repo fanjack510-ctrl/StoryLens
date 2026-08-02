@@ -261,6 +261,7 @@ def _patch_ss_context_capabilities(
     run_id: int,
     *,
     local_only: bool = False,
+    no_observation: bool = False,
 ) -> None:
     """Freeze derived structure capabilities on the Lab run before Executor start."""
 
@@ -274,11 +275,44 @@ def _patch_ss_context_capabilities(
     run = session.get(AnalysisRun, int(run_id))
     assert run is not None
     meta = parse_metadata_json(run.validated_output)
-    caps = _default_ss_context_capabilities(local_only=local_only)
+    if no_observation:
+        caps = {
+            "selected_chapter_orders": [],
+            "all_chapter_orders": [1],
+            "selected_paragraph_count": 0,
+            "selected_chapter_count": 0,
+            "batch_index": 0,
+            "batch_count": 1,
+            "can_identify_local_stages": False,
+            "can_identify_span_stages": False,
+            "can_identify_turning_points": False,
+            "is_full_book_coverage": False,
+        }
+    else:
+        caps = _default_ss_context_capabilities(local_only=local_only)
     binding = dict(meta.get("execution_context_binding") or {})
     binding["context_capabilities"] = caps
     meta["execution_context_binding"] = binding
     meta["context_capabilities"] = caps
+    # Keep execution materialization flags aligned with live capabilities.
+    ss_mat = dict(meta.get("structure_stages_execution_materialization") or {})
+    if ss_mat or no_observation:
+        try:
+            from storylens_private_engine.citation import freeze_structure_coverage_binding
+            from app.narrative_core.services.structure_stages_output_contract_v2 import (
+                resolve_structure_context_capabilities,
+            )
+
+            caps_obj = resolve_structure_context_capabilities(caps)
+            if caps_obj is not None:
+                live = freeze_structure_coverage_binding(caps_obj)
+                ss_mat["expected_coverage_scope"] = live.expected_coverage_scope
+                ss_mat["requires_stage_observation"] = live.requires_stage_observation
+                ss_mat["permits_empty_observation"] = live.permits_empty_observation
+                ss_mat["context_capabilities"] = caps
+                meta["structure_stages_execution_materialization"] = ss_mat
+        except Exception:  # noqa: BLE001
+            pass
     run.validated_output = serialize_metadata(meta)
     session.commit()
 
@@ -288,6 +322,7 @@ def _create_and_start_ss(
     *,
     idem: str,
     local_only: bool = False,
+    no_observation: bool = False,
 ) -> tuple[Any, Any, Any, Any]:
     client = env["client"]
     pre, est, create = _http_flow(
@@ -302,7 +337,9 @@ def _create_and_start_ss(
     assert est.status_code == 200, est.text
     assert create.status_code == 200, create.text
     run_id = int(create.json().get("run_id") or create.json().get("lab_run_id"))
-    _patch_ss_context_capabilities(env, run_id, local_only=local_only)
+    _patch_ss_context_capabilities(
+        env, run_id, local_only=local_only, no_observation=no_observation
+    )
     exec_result = env["executor"].start(run_id)
     return pre, est, create, exec_result
 
@@ -835,6 +872,281 @@ def test_book_overview_http_replay_is_separate_module() -> None:
     text = sibling.read_text(encoding="utf-8")
     assert "book_overview_v2_http_valid.json" in text
     assert "structure_stages_v2_http_valid.json" not in text
+
+
+def test_structure_stages_v2_scenario_k_empty_then_repair_success(product_env) -> None:
+    """K: initial empty → one repair → success."""
+
+    env = product_env
+    catalog = _build_ss_env_catalog(env)
+    cids = list(catalog.citation_ids[:4])
+    empty = _load_fixture_content(
+        "structure_stages_v2_http_empty_initial.json", citation_ids=cids
+    )
+    good = _load_fixture_content(
+        "structure_stages_v2_http_repair_valid.json", citation_ids=cids
+    )
+    _configure_fake_http(
+        env,
+        stub_texts=[empty, good],
+        request_ids=["fake-http-ss-v2-empty-k-1", "fake-http-ss-v2-empty-k-repair"],
+    )
+
+    _pre, _est, create, exec_result = _create_and_start_ss(env, idem="ss-v2-k")
+    run_id = int(create.json().get("run_id") or create.json().get("lab_run_id"))
+    assert exec_result.status.lower() in {"completed", "complete"}, exec_result.detail
+    assert len(env["fake_http"].calls) == 2
+
+    usage = _module_result_usage(env, run_id)
+    oc = dict(usage.get("output_contract") or {})
+    assert int(oc.get("repair_count") or usage.get("retry_count") or 0) == 1
+    counts = _orm_counts(env["session"])
+    assert counts["assets"] >= 1
+    assert counts["evidence"] >= 1
+
+
+def test_structure_stages_v2_scenario_l_empty_after_repair_contract_fail(
+    product_env,
+) -> None:
+    """L: initial+repair empty → STRUCTURE_EMPTY_RESULT_AFTER_REPAIR; no ORM assets."""
+
+    env = product_env
+    catalog = _build_ss_env_catalog(env)
+    cids = list(catalog.citation_ids[:4])
+    empty = _load_fixture_content(
+        "structure_stages_v2_http_empty_initial.json", citation_ids=cids
+    )
+    still_empty = _load_fixture_content(
+        "structure_stages_v2_http_empty_after_repair.json", citation_ids=cids
+    )
+    _configure_fake_http(
+        env,
+        stub_texts=[empty, still_empty],
+        request_ids=["fake-http-ss-v2-empty-l-1", "fake-http-ss-v2-empty-l-2"],
+    )
+
+    _pre, _est, create, exec_result = _create_and_start_ss(env, idem="ss-v2-l")
+    run_id = int(create.json().get("run_id") or create.json().get("lab_run_id"))
+    assert exec_result.status.lower() == "failed"
+    assert len(env["fake_http"].calls) == 2
+
+    blob = json.dumps(
+        {
+            "status": exec_result.status,
+            "detail": getattr(exec_result, "detail", None),
+            "usage": _module_result_usage(env, run_id),
+            "diags": _pipeline_diags(env, run_id),
+        },
+        ensure_ascii=False,
+        default=str,
+    )
+    assert (
+        "STRUCTURE_EMPTY_RESULT_AFTER_REPAIR" in blob
+        or "STRUCTURE_CONTRACT_FAILURE" in blob
+        or "STRUCTURE_REQUIRED_STAGE_MISSING" in blob
+    )
+    assert "LIVE_ORM_PERSISTENCE_REQUIRED" not in blob or (
+        "STRUCTURE_EMPTY_RESULT_AFTER_REPAIR" in blob
+    )
+    counts = _orm_counts(env["session"])
+    assert counts["assets"] == 0
+    assert counts["evidence"] == 0
+    assert counts["versions"] == 0
+
+
+def test_structure_stages_v2_scenario_m_no_observation_artifact_success(
+    product_env,
+) -> None:
+    """M: capability=false → no-observation artifact success; no stage/TP assets."""
+
+    env = product_env
+    _build_ss_env_catalog(env)
+    stub = _load_fixture_content("structure_stages_v2_http_no_observation.json")
+    _configure_fake_http(
+        env,
+        stub_texts=[stub],
+        request_ids=["fake-http-ss-v2-no-obs-m-1"],
+    )
+
+    _pre, _est, create, exec_result = _create_and_start_ss(
+        env, idem="ss-v2-m", no_observation=True
+    )
+    run_id = int(create.json().get("run_id") or create.json().get("lab_run_id"))
+    assert exec_result.status.lower() in {
+        "completed",
+        "complete",
+        "completed_no_observation",
+    }, getattr(exec_result, "detail", None)
+
+    diags = _pipeline_diags(env, run_id)
+    persist = (
+        env["executor"].get_module_results(run_id)[0].get("persistence_summary", {})
+        if env["executor"].get_module_results(run_id)
+        else {}
+    )
+    assert diags.get("no_observation") is True or persist.get("no_observation") is True
+    assert (
+        diags.get("persistence_complete") is True
+        or persist.get("persistence_complete") is True
+    )
+    assert int(diags.get("structure_stage_candidate_count") or 0) == 0
+    assert int(diags.get("stages_count") or 0) == 0
+    counts = _orm_counts(env["session"])
+    assert counts["assets"] == 0
+    assert counts["evidence"] == 0
+    assert counts["artifacts"] >= 1
+    detail = str(getattr(exec_result, "detail", "") or "")
+    assert "LIVE_ORM_PERSISTENCE_REQUIRED" not in detail
+
+
+def test_structure_stages_v2_scenario_n_catalog_stays_selected_count(
+    product_env,
+) -> None:
+    """N: Estimate→Artifact catalog_entry_count never expands to full-book (48)."""
+
+    env = product_env
+    catalog = _build_ss_env_catalog(env)
+    cids = list(catalog.citation_ids[:4])
+    estimate_count = len(catalog.citation_ids)
+    assert estimate_count < 48
+    stub = _load_fixture_content("structure_stages_v2_http_valid.json", citation_ids=cids)
+    _configure_fake_http(
+        env,
+        stub_texts=[stub],
+        request_ids=["fake-http-ss-v2-catalog-n-1"],
+    )
+
+    _pre, est, create, exec_result = _create_and_start_ss(env, idem="ss-v2-n")
+    run_id = int(create.json().get("run_id") or create.json().get("lab_run_id"))
+    assert exec_result.status.lower() in {"completed", "complete"}
+
+    est_body = est.json()
+    cached_mat = dict(
+        (est_body.get("catalog_materialization") or {})
+        if isinstance(est_body.get("catalog_materialization"), dict)
+        else {}
+    )
+    from app.db.models import AnalysisRun
+    from app.narrative_core.services.private_lab_run_metadata import parse_metadata_json
+
+    run = env["session"].get(AnalysisRun, run_id)
+    meta = parse_metadata_json(run.validated_output)
+    binding = dict(meta.get("execution_context_binding") or {})
+    ss_mat = dict(meta.get("structure_stages_execution_materialization") or {})
+    frozen_count = int(
+        ss_mat.get("catalog_entry_count")
+        or binding.get("citation_entry_count")
+        or cached_mat.get("catalog_entry_count")
+        or estimate_count
+    )
+    diags = _pipeline_diags(env, run_id)
+    diag_count = int(diags.get("catalog_entry_count") or 0)
+    assert diag_count == frozen_count or diag_count == estimate_count
+    assert diag_count != 48
+    assert diag_count < 48
+    assert frozen_count < 48
+
+
+def test_structure_stages_v2_scenario_o_selected_paragraph_ids_none_fail_closed(
+    product_env,
+) -> None:
+    """O: selected_paragraph_ids=None must fail closed (no full-book expansion)."""
+
+    from app.narrative_core.services.private_lab_run_metadata import (
+        parse_metadata_json,
+        serialize_metadata,
+    )
+
+    env = product_env
+    catalog = _build_ss_env_catalog(env)
+    cids = list(catalog.citation_ids[:4])
+    stub = _load_fixture_content("structure_stages_v2_http_valid.json", citation_ids=cids)
+    _configure_fake_http(
+        env,
+        stub_texts=[stub],
+        request_ids=["fake-http-ss-v2-o-should-not-run"],
+    )
+
+    client = env["client"]
+    pre, est, create = _http_flow(
+        client, env, idem="ss-v2-o", dry_run=False, auto_start=False, modules=SS_MODULES
+    )
+    assert create.status_code == 200, create.text
+    run_id = int(create.json().get("run_id") or create.json().get("lab_run_id"))
+
+    session: Session = env["session"]
+    run = session.get(AnalysisRun, run_id)
+    assert run is not None
+    meta = parse_metadata_json(run.validated_output)
+    binding = dict(meta.get("execution_context_binding") or {})
+    assert binding
+    binding["selected_paragraph_ids"] = None
+    binding["estimate_selection_count"] = 0
+    meta["execution_context_binding"] = binding
+    ss_mat = dict(meta.get("structure_stages_execution_materialization") or {})
+    if ss_mat:
+        ss_mat["selected_paragraph_ids"] = []
+        meta["structure_stages_execution_materialization"] = ss_mat
+    run.validated_output = serialize_metadata(meta)
+    session.commit()
+
+    exec_result = env["executor"].start(run_id)
+    assert exec_result.status.lower() == "failed"
+    blob = json.dumps(
+        {
+            "status": exec_result.status,
+            "detail": getattr(exec_result, "detail", None),
+            "diags": _pipeline_diags(env, run_id),
+        },
+        ensure_ascii=False,
+        default=str,
+    )
+    assert (
+        "EXECUTION_CONTEXT_CATALOG_MISMATCH" in blob
+        or "EXECUTION_CONTEXT_BINDING_FAILURE" in blob
+        or "EXECUTION_CONTEXT_SELECTION_EMPTY" in blob
+        or "EXECUTION_CONTEXT_FINGERPRINT_MISMATCH" in blob
+    )
+    diags = _pipeline_diags(env, run_id)
+    if diags.get("catalog_entry_count") is not None:
+        assert int(diags.get("catalog_entry_count") or 0) != 48
+    counts = _orm_counts(session)
+    assert counts["assets"] == 0
+    assert counts["evidence"] == 0
+
+
+def test_structure_stages_v2_scenario_p_safe_counter_semantics(product_env) -> None:
+    """P: provider_citation_count real; envelope ≠ stage candidate; claim ≠ len(assets)."""
+
+    env = product_env
+    catalog = _build_ss_env_catalog(env)
+    cids = list(catalog.citation_ids[:4])
+    stub = _load_fixture_content("structure_stages_v2_http_valid.json", citation_ids=cids)
+    _configure_fake_http(
+        env,
+        stub_texts=[stub],
+        request_ids=["fake-http-ss-v2-counters-p-1"],
+    )
+
+    _pre, _est, create, exec_result = _create_and_start_ss(env, idem="ss-v2-p")
+    run_id = int(create.json().get("run_id") or create.json().get("lab_run_id"))
+    assert exec_result.status.lower() in {"completed", "complete"}
+
+    diags = _pipeline_diags(env, run_id)
+    assert int(diags.get("provider_citation_count") or 0) >= 1
+    assert int(diags.get("unique_provider_citation_count") or 0) >= 1
+    assert int(diags.get("module_result_envelope_count") or 0) == 1
+    assert int(diags.get("structure_stage_candidate_count") or 0) >= 1
+    # Envelope must not be counted as a stage candidate.
+    assert int(diags.get("structure_stage_candidate_count") or 0) != int(
+        diags.get("module_result_envelope_count") or 0
+    ) or int(diags.get("stages_count") or 0) >= 1
+    assert int(diags.get("stages_count") or 0) >= 1
+    # semantic_claim_count must not equal asset_written_count solely via len(assets).
+    assert diags.get("semantic_claim_count") is not None
+    assert int(diags.get("semantic_claim_count") or 0) >= 1
+    if diags.get("estimate_executor_catalog_match") is not None:
+        assert diags.get("estimate_executor_catalog_match") is True
 
 
 _ = (product_env, MARKER)

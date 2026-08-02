@@ -27,16 +27,18 @@ def test_full_pipeline_completed(tmp_path) -> None:
         assert run.current_stage_code == "finalize"
         assert first["extraction"]["provider_calls"] == 3
         assert first["overview"]["claims"] == 9
+        assert first["structure"]["stage_count"] >= 1
         stages = list(
             session.scalars(select(WholeBookRunStageRow).where(WholeBookRunStageRow.run_id == run_id)).all()
         )
         completed = [s for s in stages if s.status == "completed"]
-        assert len(completed) == 7
+        assert len(completed) == 8
+        assert any(s.stage_code == "synthesize_structure_stages" and s.status == "completed" for s in stages)
         overview = session.scalar(
             select(WholeBookOverviewResult).where(WholeBookOverviewResult.run_id == run_id)
         )
         assert overview is not None
-        assert count_provider_calls(session, run_id) == 4
+        assert count_provider_calls(session, run_id) == 5
     engine.dispose()
 
 
@@ -51,10 +53,10 @@ def test_pipeline_rerun_zero_new_calls(tmp_path) -> None:
         execute_fixture_minimal_pipeline_v1(session, run_id)
         session.commit()
         calls_after_second = count_provider_calls(session, run_id)
-        assert calls_after_first == 4
-        assert calls_after_second == 4
+        assert calls_after_first == 5
+        assert calls_after_second == 5
         attempts = session.query(WholeBookProviderAttempt).count()
-        assert attempts == 4
+        assert attempts == 5
     engine.dispose()
 
 

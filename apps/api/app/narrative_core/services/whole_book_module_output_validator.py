@@ -306,12 +306,47 @@ class DefaultModuleOutputValidator:
             "output_fingerprint",
             "schema_label_verified",
             "resolver_output_refs",
+            # CHG-20260725-001 empty-policy / no-observation markers
+            "no_observation",
+            "completed_no_observation",
+            "completed_with_limitations",
+            "module_status",
+            "expected_coverage_scope",
+            "requires_stage_observation",
+            "permits_empty_observation",
+            "stages_count",
+            "turning_points_count",
+            "structure_stage_candidate_count",
+            "module_result_envelope_count",
+            "provider_citation_count",
+            "unique_provider_citation_count",
+            "semantic_claim_count",
+            "semantic_source_field_count",
+            "semantic_source_item_count",
+            "semantic_claim_source_fields",
+            "evidence_source_field_count",
+            "evidence_source_item_count",
+            "dto_mapper_key",
+            "dto_mapper_status",
+            "dto_mapper_failure_code",
+            "asset_candidates",
+            "evidence_candidates",
+            "empty_dto",
+            "accepted",
+            "partial",
+            "status",
         }
         unknown_fields = [
             k for k in dto_payload.keys() if k not in allowed and k not in meta_allowed
         ]
         if unknown_fields:
-            if inp.unknown_field_policy == "reject":
+            # Structure Stages V2 private mapper may emit evolving safe diagnostic keys.
+            ss_v2 = module_key.value == "structure_stages" and (
+                str(outputs.get("contract_version") or "").lower() == "v2"
+                or str(outputs.get("schema") or "") == "StructureStagesResultV2"
+                or str(outputs.get("evidence_contract_version") or "").lower() == "v2"
+            )
+            if inp.unknown_field_policy == "reject" and not ss_v2:
                 schema_valid = False
                 error_code = error_code or PrivateEngineErrorCode.MODULE_OUTPUT_SCHEMA_INVALID.value
                 warnings.append(f"unknown_fields_rejected:{','.join(sorted(unknown_fields))}")

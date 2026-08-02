@@ -44,6 +44,8 @@ FIXTURE_ENGINE_VERSION = "1.0.0"
 FIXTURE_PROMPT_VERSION = "whole_book_window_entity_event_prompt_v1"
 OVERVIEW_ENGINE_ID = "whole_book_overview_synthesis_v1"
 OVERVIEW_PROMPT_VERSION = "whole_book_overview_prompt_v1"
+STRUCTURE_ENGINE_ID = "whole_book_structure_stages_v1"
+STRUCTURE_PROMPT_VERSION = "whole_book_structure_stages_prompt_v2"
 
 MINIMAL_ASSET_TYPES = frozenset(
     {
