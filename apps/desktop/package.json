@@ -11,6 +11,7 @@
     "lint": "eslint src --max-warnings 0",
     "test": "vitest run",
     "test:e2e": "playwright test",
+    "test:e2e:wb21-structure": "playwright test --config playwright.wb21-structure.config.ts",
     "screenshots": "playwright test e2e/screenshots.spec.ts",
     "ui-audit": "playwright test --config playwright.ui-audit.config.ts",
     "tauri": "tauri"

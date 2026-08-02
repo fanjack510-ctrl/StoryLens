@@ -617,10 +617,11 @@ describe("WholeBookFreeProduct (Wave D §18.2)", () => {
     expect(await screen.findByTestId("whole-book-free-event-201")).toHaveTextContent("入门试炼");
   });
 
-  it("shows planned modules without purchase UI", async () => {
+  it("shows four free modules with structure available and no purchase UI", async () => {
     renderPage("/books/1/whole-book");
     await screen.findByTestId("whole-book-free-module-nav");
-    expect(screen.getByTestId("whole-book-free-module-structure")).toHaveTextContent("开发中");
+    expect(screen.getByTestId("whole-book-free-module-structure")).not.toHaveTextContent("开发中");
+    expect(screen.getByTestId("whole-book-free-module-structure")).toHaveTextContent("故事结构");
     expect(screen.getByTestId("whole-book-free-module-chapter_functions")).toHaveTextContent(
       "开发中",
     );
@@ -661,7 +662,8 @@ describe("WholeBookFreeProduct (Wave D §18.2)", () => {
     await screen.findByTestId("whole-book-free-module-nav");
     expect(screen.getByTestId("whole-book-free-module-overview")).toBeInTheDocument();
     expect(screen.getByTestId("whole-book-free-module-characters_events")).toBeInTheDocument();
-    expect(screen.getByTestId("whole-book-free-module-structure")).toHaveTextContent("开发中");
+    expect(screen.getByTestId("whole-book-free-module-structure")).toHaveTextContent("故事结构");
+    expect(screen.getByTestId("whole-book-free-module-structure")).not.toHaveTextContent("开发中");
     expect(screen.getByTestId("whole-book-free-module-chapter_functions")).toHaveTextContent(
       "开发中",
     );

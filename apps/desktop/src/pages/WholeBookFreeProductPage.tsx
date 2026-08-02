@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ErrorState, Loading } from "../components/common/States";
+import { StructureStagesPanel } from "../components/wholeBookFree/structure";
 import { ApiError } from "../services/apiClient";
 import { isWholeBookFixturePreviewEnabled } from "../services/wholeBookFixturePreviewFlag";
 import { isWholeBookFreeProductEnabled } from "../services/wholeBookFreeProductFlag";
@@ -20,6 +21,7 @@ import {
   type NarrativeAssetRow,
   type NarrativeEntityRow,
   type NarrativeEvidenceRow,
+  type StructureProductResponse,
   type WholeBookModuleKey,
   type WholeBookPrepareResponse,
   type WholeBookProgressResponse,
@@ -30,7 +32,17 @@ import {
   wholeBookFreeStageLabel,
   wholeBookFreeStatusLabel,
 } from "../services/wholeBookFreeProductStages";
+import { deriveStructureViewState } from "../services/structureStagesResultV2";
 import styles from "./WholeBookFreeProductPage.module.css";
+
+const MODULE_KEYS = new Set<WholeBookModuleKey>(
+  WHOLE_BOOK_FREE_MODULES.map((m) => m.key),
+);
+
+function parseModuleParam(raw: string | null): WholeBookModuleKey | null {
+  if (!raw) return null;
+  return MODULE_KEYS.has(raw as WholeBookModuleKey) ? (raw as WholeBookModuleKey) : null;
+}
 
 const PAGE_TITLE = "全书分析";
 const PAGE_DESCRIPTION =
@@ -131,11 +143,36 @@ function WholeBookFreeProductPageEnabled() {
   const { bookId: bookIdParam } = useParams();
   const bookId = Number(bookIdParam);
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const fixturePreviewOn = isWholeBookFixturePreviewEnabled();
   const realProviderOn = isWholeBookRealProviderEnabled();
 
-  const [activeModule, setActiveModule] = useState<WholeBookModuleKey>("overview");
+  const moduleFromUrl = parseModuleParam(searchParams.get("module"));
+  const [activeModule, setActiveModuleState] = useState<WholeBookModuleKey>(
+    moduleFromUrl ?? "overview",
+  );
+  const setActiveModule = useCallback(
+    (key: WholeBookModuleKey) => {
+      setActiveModuleState(key);
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.set("module", key);
+          return next;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
+
+  useEffect(() => {
+    if (moduleFromUrl && moduleFromUrl !== activeModule) {
+      setActiveModuleState(moduleFromUrl);
+    }
+  }, [moduleFromUrl, activeModule]);
+
   const [charactersTab, setCharactersTab] = useState<"characters" | "events">("characters");
   const [consented, setConsented] = useState(false);
   const [limits, setLimits] = useState({
@@ -204,6 +241,13 @@ function WholeBookFreeProductPageEnabled() {
     enabled: runId != null && isCompletedRun(runStatus),
   });
 
+  const structureQuery = useQuery({
+    queryKey: ["whole-book-free-structure", runId],
+    queryFn: () => wholeBookFreeProductApi.getStructure(runId!),
+    enabled: runId != null && isCompletedRun(runStatus) && activeModule === "structure",
+    retry: false,
+  });
+
   const capabilitiesQuery = useQuery({
     queryKey: ["whole-book-free-capabilities"],
     queryFn: () => wholeBookFreeProductApi.productCapabilities(),
@@ -231,6 +275,7 @@ function WholeBookFreeProductPageEnabled() {
     await queryClient.invalidateQueries({ queryKey: ["whole-book-free-prepare", bookId] });
     if (runId != null) {
       await queryClient.invalidateQueries({ queryKey: ["whole-book-free-progress", runId] });
+      await queryClient.invalidateQueries({ queryKey: ["whole-book-free-structure", runId] });
     }
   }, [bookId, queryClient, runId]);
 
@@ -338,7 +383,9 @@ function WholeBookFreeProductPageEnabled() {
           return;
         }
         const chapterId = source.chapter_index;
-        const href = openEvidenceInReader(bookId, source, chapterId);
+        const href = openEvidenceInReader(bookId, source, chapterId, {
+          returnModule: activeModule === "structure" ? "structure" : undefined,
+        });
         navigate(href);
       } catch (err) {
         if (err instanceof Error && err.message === "EVIDENCE_MISSING") {
@@ -348,8 +395,52 @@ function WholeBookFreeProductPageEnabled() {
         setDrawerError(err instanceof Error ? err.message : "无法打开原文");
       }
     },
-    [bookId, navigate],
+    [activeModule, bookId, navigate],
   );
+
+  const structureView = useMemo(() => {
+    const apiErr = structureQuery.error instanceof ApiError ? structureQuery.error : null;
+    const detailCode =
+      apiErr?.detail && typeof apiErr.detail === "object"
+        ? String((apiErr.detail as { error_code?: string }).error_code || "")
+        : "";
+    const errorCode = apiErr?.code || detailCode || null;
+    const unsupported =
+      errorCode === "STRUCTURE_CONTRACT_UNSUPPORTED" ||
+      detailCode === "STRUCTURE_CONTRACT_UNSUPPORTED";
+    const networkError =
+      structureQuery.isError &&
+      !unsupported &&
+      apiErr?.status !== 404 &&
+      errorCode !== "STRUCTURE_RESULT_ABSENT";
+
+    return {
+      viewState: deriveStructureViewState({
+        runStatus: runStatus ?? null,
+        fetchStatus: structureQuery.isLoading
+          ? "pending"
+          : structureQuery.isError
+            ? "error"
+            : structureQuery.isSuccess
+              ? "success"
+              : "idle",
+        httpStatus: apiErr?.status ?? null,
+        errorCode,
+        response: (structureQuery.data as StructureProductResponse | undefined) ?? null,
+        unsupportedContract: unsupported,
+        networkError,
+      }),
+      errorMessage: structureQuery.error instanceof Error ? structureQuery.error.message : null,
+      response: (structureQuery.data as StructureProductResponse | undefined) ?? null,
+    };
+  }, [
+    runStatus,
+    structureQuery.data,
+    structureQuery.error,
+    structureQuery.isError,
+    structureQuery.isLoading,
+    structureQuery.isSuccess,
+  ]);
 
   if (!bookId || Number.isNaN(bookId)) {
     return (
@@ -461,7 +552,11 @@ function WholeBookFreeProductPageEnabled() {
       >
         <nav className={styles.wholeBookFreeNav} aria-label="全书分析模块" data-testid="whole-book-free-module-nav">
           {WHOLE_BOOK_FREE_MODULES.map((mod) => {
-            const disabled = mod.status === "available" && pageMode !== "completed";
+            // Structure stays selectable so loading/failed/canceled/absent states can render.
+            const disabled =
+              mod.status === "available" &&
+              mod.key !== "structure" &&
+              pageMode !== "completed";
             const badge =
               mod.status === "planned"
                 ? "开发中"
@@ -544,8 +639,41 @@ function WholeBookFreeProductPageEnabled() {
             />
           ) : null}
 
-          {activeModule === "structure" ? (
-            <PlannedModulePanel label="故事结构" data-testid="whole-book-free-structure-planned" />
+          {activeModule === "structure" && pageMode === "running" ? (
+            <section data-testid="whole-book-free-structure" data-state="loading">
+              <h2>故事结构</h2>
+              <p data-testid="whole-book-free-structure-loading">
+                全书分析进行中，故事结构将随任务进度生成。请使用上方进度与任务操作。
+              </p>
+            </section>
+          ) : null}
+
+          {activeModule === "structure" && pageMode !== "running" ? (
+            <StructureStagesPanel
+              viewState={structureView.viewState}
+              response={
+                pageMode === "failed" && run?.status === "cancelled"
+                  ? { result_status: "canceled", coverage_scope: null, structure: null }
+                  : pageMode === "failed" && run?.status === "failed"
+                    ? {
+                        result_status: "failed",
+                        coverage_scope: null,
+                        structure: null,
+                        failure_code: run.failure_code,
+                        failure_message_safe: run.failure_message_safe,
+                      }
+                    : structureView.response
+              }
+              loading={structureQuery.isLoading}
+              errorMessage={structureView.errorMessage}
+              onOpenEvidence={(id) => void handleOpenEvidence(id)}
+              onRetry={() => {
+                if (pageMode === "prepare") return;
+                setActiveModule("overview");
+                void prepareQuery.refetch();
+              }}
+              onBack={() => setActiveModule("overview")}
+            />
           ) : null}
 
           {activeModule === "chapter_functions" ? (

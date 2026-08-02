@@ -2,7 +2,7 @@
  * Wave D — formal Free whole-book product HTTP client.
  * Wraps prepare/create/progress/capabilities; re-exports foundation reads.
  */
-import { api } from "./apiClient";
+import { api, ApiError } from "./apiClient";
 import {
   wholeBookFoundationApi,
   newFoundationClientRequestId,
@@ -14,8 +14,14 @@ import {
   type WholeBookRunRecord,
   type WholeBookRunStageRow,
 } from "./wholeBookFoundationApi";
+import {
+  assertStructureStagesResultV2,
+  UnsupportedStructureContractError,
+  type StructureProductResponse,
+} from "./structureStagesResultV2";
 
 export { wholeBookFoundationApi, newFoundationClientRequestId };
+export type { StructureProductResponse } from "./structureStagesResultV2";
 
 export type ProductCapabilityRow = {
   capability_id: string;
@@ -120,7 +126,7 @@ export const WHOLE_BOOK_FREE_MODULES: Array<{
 }> = [
   { key: "overview", label: "全书总览", status: "available" },
   { key: "characters_events", label: "主要人物与关键事件", status: "available" },
-  { key: "structure", label: "故事结构", status: "planned" },
+  { key: "structure", label: "故事结构", status: "available" },
   { key: "chapter_functions", label: "章节功能", status: "planned" },
   { key: "pro_depth", label: "Pro 深度分析", status: "pro_planned" },
 ];
@@ -190,6 +196,50 @@ export const wholeBookFreeProductApi = {
   getEvidenceSource: (evidenceId: number) => wholeBookFoundationApi.getEvidenceSource(evidenceId),
   listStages: (runId: number) => wholeBookFoundationApi.listStages(runId),
   getRun: (runId: number) => wholeBookFoundationApi.getRun(runId),
+
+  /**
+   * Product structure result — GET /api/v1/whole-book/runs/{run_id}/structure
+   * Canonical payload: StructureStagesResultV2 (wire v2).
+   */
+  getStructure: async (runId: number): Promise<StructureProductResponse> => {
+    try {
+      const resp = await api<StructureProductResponse>(
+        `/api/v1/whole-book/runs/${runId}/structure`,
+      );
+      if (resp.structure != null) {
+        try {
+          resp.structure = assertStructureStagesResultV2(resp.structure);
+        } catch (err) {
+          if (err instanceof UnsupportedStructureContractError) {
+            throw new ApiError(
+              "STRUCTURE_CONTRACT_UNSUPPORTED",
+              err.message,
+              422,
+              { error_code: "STRUCTURE_CONTRACT_UNSUPPORTED", contract_version: err.contractVersion },
+            );
+          }
+          throw err;
+        }
+      }
+      return resp;
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 404) {
+        const detailCode =
+          err.detail && typeof err.detail === "object"
+            ? String((err.detail as { error_code?: string }).error_code || "")
+            : "";
+        if (!detailCode) {
+          throw new ApiError(
+            "STRUCTURE_RESULT_ABSENT",
+            err.message || "STRUCTURE_RESULT_ABSENT",
+            404,
+            { error_code: "STRUCTURE_RESULT_ABSENT" },
+          );
+        }
+      }
+      throw err;
+    }
+  },
 };
 
 export type {
