@@ -14,7 +14,14 @@
     "CHG-20260802-037",
     "CHG-20260728-019"
   ],
-  "commits": [],
+  "commits": [
+    {
+      "sha": "35e9e0629859882f8051906d590fb4ad1565d4f2",
+      "message": "docs(release): extract WB-2.2 chapter functions scope",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "docs/whole-book",
     "release/evidence/whole-book",
@@ -62,5 +69,5 @@
     "breaking_change": false
   },
   "created_at": "2026-08-02T14:10:00Z",
-  "updated_at": "2026-08-02T14:10:00Z"
+  "updated_at": "2026-08-02T14:11:15Z"
 }
