@@ -6,7 +6,8 @@
 | Source changes | CHG-20260801-034 (backend), CHG-20260801-035 (desktop) |
 | Recovery record | CHG-20260728-018 (unchanged historical recovery facts) |
 | Manual gate | MG-WB-2.1 |
-| wb_status | **tested** (not verified) |
+| wb_status | **verified** (MG-WB-2.1 PASSED) |
+| verification change | CHG-20260802-037 |
 | Canonical contract | StructureStagesResultV2 |
 | Contract version | 2.0.0 / wire v2 |
 | Database migration | NO |

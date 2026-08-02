@@ -3,7 +3,7 @@
   "title": "Implement WB-2.1 structure stages desktop UI",
   "type": "feature",
   "base_version": "1.2.0",
-  "status": "tested",
+  "status": "verified",
   "include_in_next_release": true,
   "head_inclusion": "INCLUDED",
   "blocker_level": null,
@@ -38,7 +38,8 @@
   ],
   "verification_evidence": [
     "release/evidence/whole-book/CHG-20260801-035/AGENT2_DESKTOP_REPORT.md",
-    "release/evidence/whole-book/CHG-20260802-036/TEST_RESULTS.md"
+    "release/evidence/whole-book/CHG-20260802-036/TEST_RESULTS.md",
+    "release/evidence/whole-book/CHG-20260802-036/MANUAL_GATE_RESULT.md"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -53,5 +54,5 @@
     "breaking_change": false
   },
   "created_at": "2026-08-01T12:00:00Z",
-  "updated_at": "2026-08-02T12:45:00Z"
+  "updated_at": "2026-08-02T14:09:36Z"
 }

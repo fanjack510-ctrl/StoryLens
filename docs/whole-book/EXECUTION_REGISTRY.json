@@ -443,7 +443,9 @@
       "title": "Structure stages (+ empty-policy rebase)",
       "acceptance_level": "L3",
       "evidence_dir": "release/evidence/whole-book/WB-2.1-STRUCTURE-STAGES/",
-      "wb_status": "tested",
+      "wb_status": "verified",
+      "verification_change_id": "CHG-20260802-037",
+      "manual_gate_result": "PASSED",
       "depends_on": [
         "WB-1.10-CONFIRM-NO-OVERWRITE"
       ],
