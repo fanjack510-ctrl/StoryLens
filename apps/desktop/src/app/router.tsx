@@ -13,6 +13,7 @@ import { WholeBookInsightsPage } from "../pages/WholeBookInsightsPage";
 import { ProNativeOverviewPage } from "../pages/ProNativeOverviewPage";
 import { WholeBookDiagnosticsPage } from "../pages/WholeBookDiagnosticsPage";
 import { WholeBookFreeProductPage } from "../pages/WholeBookFreeProductPage";
+import { ChapterFunctionsHarnessPage } from "../pages/ChapterFunctionsHarnessPage";
 import { NotFoundPage, RouteErrorPage } from "../pages/RouteErrorPages";
 
 const routeErrorElement = <RouteErrorPage />;
@@ -53,6 +54,12 @@ export const router = createBrowserRouter([
       {
         path: "/dev/whole-book-diagnostics",
         element: <WholeBookDiagnosticsPage />,
+        errorElement: routeErrorElement,
+      },
+      {
+        // TEST-ONLY / removable WB-2.2 harness — Integration owns final Free page wiring.
+        path: "/dev/whole-book-free-chapter-functions-harness",
+        element: <ChapterFunctionsHarnessPage />,
         errorElement: routeErrorElement,
       },
       { path: "*", element: <NotFoundPage />, errorElement: routeErrorElement },

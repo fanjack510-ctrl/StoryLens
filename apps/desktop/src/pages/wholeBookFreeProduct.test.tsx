@@ -622,7 +622,7 @@ describe("WholeBookFreeProduct (Wave D §18.2)", () => {
     await screen.findByTestId("whole-book-free-module-nav");
     expect(screen.getByTestId("whole-book-free-module-structure")).not.toHaveTextContent("开发中");
     expect(screen.getByTestId("whole-book-free-module-structure")).toHaveTextContent("故事结构");
-    expect(screen.getByTestId("whole-book-free-module-chapter_functions")).toHaveTextContent(
+    expect(screen.getByTestId("whole-book-free-module-chapter_functions")).not.toHaveTextContent(
       "开发中",
     );
     expect(screen.getByTestId("whole-book-free-module-pro_depth")).toHaveTextContent(
@@ -664,7 +664,7 @@ describe("WholeBookFreeProduct (Wave D §18.2)", () => {
     expect(screen.getByTestId("whole-book-free-module-characters_events")).toBeInTheDocument();
     expect(screen.getByTestId("whole-book-free-module-structure")).toHaveTextContent("故事结构");
     expect(screen.getByTestId("whole-book-free-module-structure")).not.toHaveTextContent("开发中");
-    expect(screen.getByTestId("whole-book-free-module-chapter_functions")).toHaveTextContent(
+    expect(screen.getByTestId("whole-book-free-module-chapter_functions")).not.toHaveTextContent(
       "开发中",
     );
     expect(screen.getByTestId("whole-book-free-module-pro_depth")).toHaveTextContent(
