@@ -39,6 +39,75 @@ const STRUCTURE_SMOKE = {
   citation_evidence_bindings: [{ citation_id: "CIT-TEST0001-0001", evidence_id: 501 }],
 };
 
+const CF_AVAILABLE_SMOKE = {
+  result_status: "completed",
+  contract_version: "v2",
+  schema_version: "2.0.0",
+  coverage_scope: "full_selected_range",
+  product_result_status: "completed",
+  chapter_functions: {
+    contract_version: "v2",
+    evidence_contract_version: "v2",
+    coverage_scope: "full_selected_range",
+    analysis_confidence: 0.84,
+    limitations: [],
+    context_capabilities: { structure_context_status: "available", structure_context_used: true },
+    chapters: [
+      {
+        chapter_id: 1,
+        chapter_order: 1,
+        chapter_title: "开篇",
+        primary_function: "setup",
+        secondary_functions: ["transition"],
+        observed_summary: {
+          value: "建立世界与主角处境。",
+          status: "observed",
+          citation_ids: ["CIT-TEST0001-0001"],
+          confidence: 0.82,
+        },
+        inferred_effect: {
+          value: "为后续冲突铺垫。",
+          status: "inferred",
+          citation_ids: ["CIT-TEST0001-0001"],
+          confidence: 0.7,
+        },
+        confidence: 0.82,
+        supporting_citation_ids: ["CIT-TEST0001-0001"],
+        limitations: [],
+      },
+    ],
+  },
+  items: [
+    {
+      chapter_id: 1,
+      chapter_order: 1,
+      chapter_title: "开篇",
+      primary_function: "setup",
+      secondary_functions: ["transition"],
+      observed_summary: {
+        value: "建立世界与主角处境。",
+        status: "observed",
+        citation_ids: ["CIT-TEST0001-0001"],
+        confidence: 0.82,
+      },
+      inferred_effect: {
+        value: "为后续冲突铺垫。",
+        status: "inferred",
+        citation_ids: ["CIT-TEST0001-0001"],
+        confidence: 0.7,
+      },
+      confidence: 0.82,
+      supporting_citation_ids: ["CIT-TEST0001-0001"],
+      limitations: [],
+    },
+  ],
+  next_cursor: null,
+  total_chapters: 1,
+  source_revision: { run_id: RUN_ID, snapshot_id: 11, book_id: BOOK_ID },
+  citation_evidence_bindings: [{ citation_id: "CIT-TEST0001-0001", evidence_id: 501 }],
+  fixture_test_data: true,
+};
+
 function completedRun() {
   return {
     run_id: RUN_ID,
@@ -127,6 +196,9 @@ async function installFreePageMocks(page: Page) {
     }
     if (url.includes(`/whole-book/runs/${RUN_ID}/structure`)) {
       return json(route, STRUCTURE_SMOKE);
+    }
+    if (url.includes(`/whole-book/runs/${RUN_ID}/chapter-functions`)) {
+      return json(route, CF_AVAILABLE_SMOKE);
     }
     if (url.includes(`/whole-book/runs/${RUN_ID}/overview`)) {
       return json(route, {
@@ -309,8 +381,8 @@ test.describe("WB-2.2 chapter functions harness", () => {
   });
 });
 
-test.describe("WB-2.2 free page regression smoke (no final CF wiring)", () => {
-  test("overview / characters-events / structure still work; CF nav available badge", async ({
+test.describe("WB-2.2 free page regression smoke (formal CF wiring)", () => {
+  test("overview / characters-events / structure / chapter-functions available; no purchase", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1920, height: 1080 });
@@ -328,12 +400,15 @@ test.describe("WB-2.2 free page regression smoke (no final CF wiring)", () => {
       "available",
     );
 
-    // Module table available — final panel wiring still PlannedModulePanel (Integration).
     await expect(page.getByTestId("whole-book-free-module-chapter_functions")).not.toContainText(
       "开发中",
     );
     await page.getByTestId("whole-book-free-module-chapter_functions").click();
-    await expect(page.getByTestId("whole-book-free-chapter-functions-planned")).toBeVisible();
+    await expect(page.getByTestId("whole-book-free-chapter-functions")).toHaveAttribute(
+      "data-state",
+      "available",
+    );
+    await expect(page.getByTestId("whole-book-free-chapter-functions-planned")).toHaveCount(0);
 
     const body = await page.evaluate(() => document.body.innerText);
     expect(/购买|升级\s*Pro|立即开通/.test(body)).toBeFalsy();

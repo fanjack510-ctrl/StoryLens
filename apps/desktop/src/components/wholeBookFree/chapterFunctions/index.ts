@@ -1,8 +1,9 @@
 /**
- * WB-2.2 Chapter Functions Free UI.
- * Final WholeBookFreeProductPage wiring is Integration-owned — use harness for tests.
+ * WB-2.2 Chapter Functions Free UI (wired via ChapterFunctionsFreeModule on Free page).
+ * Dev harness remains under /dev for Playwright offline fixtures.
  */
 export { ChapterFunctionsPanel } from "./ChapterFunctionsPanel";
+export { ChapterFunctionsFreeModule } from "./ChapterFunctionsFreeModule";
 export type { ChapterFunctionsFilters } from "./ChapterFunctionsPanel";
 export {
   CHAPTER_FUNCTIONS_UI_FIXTURES,

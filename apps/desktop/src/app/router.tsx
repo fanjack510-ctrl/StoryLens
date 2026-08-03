@@ -18,6 +18,23 @@ import { NotFoundPage, RouteErrorPage } from "../pages/RouteErrorPages";
 
 const routeErrorElement = <RouteErrorPage />;
 
+/** Dev/test-only routes — excluded from production builds (import.meta.env.DEV). */
+const devOnlyChildren = import.meta.env.DEV
+  ? [
+      {
+        path: "/dev/whole-book-diagnostics",
+        element: <WholeBookDiagnosticsPage />,
+        errorElement: routeErrorElement,
+      },
+      {
+        // TEST-ONLY harness — not in Free product nav; Playwright uses Vite DEV server.
+        path: "/dev/whole-book-free-chapter-functions-harness",
+        element: <ChapterFunctionsHarnessPage />,
+        errorElement: routeErrorElement,
+      },
+    ]
+  : [];
+
 export const router = createBrowserRouter([
   {
     element: <AppShell />,
@@ -51,17 +68,7 @@ export const router = createBrowserRouter([
       { path: "/cases", element: <CasesPage />, errorElement: routeErrorElement },
       { path: "/providers", element: <ProvidersPage />, errorElement: routeErrorElement },
       { path: "/settings", element: <SettingsPage />, errorElement: routeErrorElement },
-      {
-        path: "/dev/whole-book-diagnostics",
-        element: <WholeBookDiagnosticsPage />,
-        errorElement: routeErrorElement,
-      },
-      {
-        // TEST-ONLY / removable WB-2.2 harness — Integration owns final Free page wiring.
-        path: "/dev/whole-book-free-chapter-functions-harness",
-        element: <ChapterFunctionsHarnessPage />,
-        errorElement: routeErrorElement,
-      },
+      ...devOnlyChildren,
       { path: "*", element: <NotFoundPage />, errorElement: routeErrorElement },
     ],
   },

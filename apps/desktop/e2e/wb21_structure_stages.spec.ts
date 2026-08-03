@@ -336,7 +336,9 @@ test.describe("WB-2.1 structure stages desktop", () => {
     await expect(page.getByTestId("whole-book-free-overview")).toBeVisible();
     await page.getByTestId("whole-book-free-module-characters_events").click();
     await expect(page.getByTestId("whole-book-free-characters-events")).toBeVisible();
-    await expect(page.getByTestId("whole-book-free-module-chapter_functions")).toContainText("开发中");
+    await expect(page.getByTestId("whole-book-free-module-chapter_functions")).not.toContainText(
+      "开发中",
+    );
 
     const m = await measureLayout(page);
     expect(m.hasPurchase).toBeFalsy();

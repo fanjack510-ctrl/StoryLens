@@ -225,7 +225,6 @@ describe("WB-2.1 structure module shell", () => {
     expect(screen.getByTestId("whole-book-free-structure-tp-TP1")).toBeInTheDocument();
     expect(screen.queryByText("第一幕")).not.toBeInTheDocument();
     expect(screen.queryByText("购买")).not.toBeInTheDocument();
-    // Desktop module table marks chapter_functions available; final Free page wiring remains Integration.
     expect(screen.getByTestId("whole-book-free-module-chapter_functions")).not.toHaveTextContent(
       "开发中",
     );

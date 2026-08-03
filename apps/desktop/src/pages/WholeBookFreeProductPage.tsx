@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ErrorState, Loading } from "../components/common/States";
+import { ChapterFunctionsFreeModule } from "../components/wholeBookFree/chapterFunctions";
 import { StructureStagesPanel } from "../components/wholeBookFree/structure";
 import { ApiError } from "../services/apiClient";
 import { isWholeBookFixturePreviewEnabled } from "../services/wholeBookFixturePreviewFlag";
@@ -384,7 +385,10 @@ function WholeBookFreeProductPageEnabled() {
         }
         const chapterId = source.chapter_index;
         const href = openEvidenceInReader(bookId, source, chapterId, {
-          returnModule: activeModule === "structure" ? "structure" : undefined,
+          returnModule:
+            activeModule === "structure" || activeModule === "chapter_functions"
+              ? activeModule
+              : undefined,
         });
         navigate(href);
       } catch (err) {
@@ -676,8 +680,28 @@ function WholeBookFreeProductPageEnabled() {
             />
           ) : null}
 
-          {activeModule === "chapter_functions" ? (
-            <PlannedModulePanel label="章节功能" data-testid="whole-book-free-chapter-functions-planned" />
+          {activeModule === "chapter_functions" && pageMode === "running" ? (
+            <section data-testid="whole-book-free-chapter-functions" data-state="loading">
+              <h2>章节功能</h2>
+              <p data-testid="whole-book-free-chapter-functions-loading">
+                全书分析进行中，章节功能将随任务进度生成。请使用上方进度与任务操作。
+              </p>
+            </section>
+          ) : null}
+
+          {activeModule === "chapter_functions" && pageMode !== "running" ? (
+            <ChapterFunctionsFreeModule
+              runId={runId}
+              runStatus={runStatus}
+              pageMode={pageMode}
+              onOpenEvidence={(id) => void handleOpenEvidence(id)}
+              onRetry={() => {
+                if (pageMode === "prepare") return;
+                setActiveModule("overview");
+                void prepareQuery.refetch();
+              }}
+              onBack={() => setActiveModule("overview")}
+            />
           ) : null}
 
           {activeModule === "pro_depth" ? (
@@ -1093,15 +1117,6 @@ function CharactersEventsPanel({
           ))}
         </ul>
       )}
-    </section>
-  );
-}
-
-function PlannedModulePanel({ label, "data-testid": testId }: { label: string; "data-testid": string }) {
-  return (
-    <section data-testid={testId}>
-      <h2>{label}</h2>
-      <p>开发中</p>
     </section>
   );
 }
