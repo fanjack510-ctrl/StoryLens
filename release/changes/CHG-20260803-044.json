@@ -1,0 +1,74 @@
+{
+  "id": "CHG-20260803-044",
+  "title": "Reconcile V1.2.0 scope and remaining release roadmap",
+  "type": "documentation",
+  "base_version": "1.2.0",
+  "status": "implemented",
+  "include_in_next_release": true,
+  "head_inclusion": "INCLUDED",
+  "blocker_level": null,
+  "parent_plan": "CHG-20260803-043",
+  "wb_step_id": null,
+  "manual_gate_id": "MG-V1.2.0-SCOPE-RECONCILIATION",
+  "depends_on": [
+    "CHG-20260803-043"
+  ],
+  "commits": [],
+  "modules": [
+    "docs/whole-book",
+    "docs/architecture",
+    "docs/releases",
+    "release/evidence/whole-book",
+    "release/changes"
+  ],
+  "files": [
+    "docs/whole-book/EXECUTION_REGISTRY.json",
+    "docs/whole-book/EXECUTION_MASTER_PLAN.md",
+    "docs/architecture/storylens-step-roadmap.md",
+    "docs/architecture/narrative-intelligence-core/phase2b-first-four-modules.md",
+    "docs/releases/storylens-1.2.0-scope.md",
+    "docs/releases/storylens-1.2.0-checklist.md",
+    "release/unreleased.json",
+    "release/changes/CHG-20260803-044.json",
+    "release/evidence/whole-book/CHG-20260803-044/",
+    "scripts/verify_whole_book_execution_registry.py"
+  ],
+  "user_summary": "冻结 V1.2.0 Free 四模块功能开发终点为 WB-2.2；WB-2.3/2.4 与 WB-3–5、WB-6.1–6.3 移出 Free 发布链；压缩剩余四波次至 Stable。",
+  "technical_summary": "Docs/registry reconciliation only. Adds v120_free_product_scope and v120_free_release_path. WB-2.2 next→WB-2.2.1 E2E. WB-2.3 deferred Pro/future. WB-2.4 superseded. WB-3–5 and WB-6.1–6.3 out_of_scope for Free 1.2.0. Reuses WB-6.4/6.5. Frozen 37 historical steps retained. PRODUCT CODE MODIFIED=NO.",
+  "acceptance_criteria": [
+    "Product owner scope decision recorded",
+    "WB-2.3 not next Free feature step",
+    "Remaining release path has exact IDs (5 formal steps / 4 waves)",
+    "Legacy dispositions use deferred/superseded/out_of_scope",
+    "verify_whole_book_execution_registry.py still PASS for 37 historical steps",
+    "status=implemented pending MG-V1.2.0-SCOPE-RECONCILIATION",
+    "PRODUCT CODE MODIFIED=NO"
+  ],
+  "tests": [
+    "python scripts/verify_whole_book_execution_registry.py"
+  ],
+  "verification_evidence": [
+    "release/evidence/whole-book/CHG-20260803-044/PRODUCT_OWNER_SCOPE_DECISION.md",
+    "release/evidence/whole-book/CHG-20260803-044/LEGACY_ROADMAP_RECONCILIATION.md",
+    "release/evidence/whole-book/CHG-20260803-044/WB23_WB24_DISPOSITION.md",
+    "release/evidence/whole-book/CHG-20260803-044/V120_FINAL_SCOPE.md",
+    "release/evidence/whole-book/CHG-20260803-044/V120_REMAINING_RELEASE_PATH.md",
+    "release/evidence/whole-book/CHG-20260803-044/RELEASE_DEBT_CLASSIFICATION_PLAN.md",
+    "release/evidence/whole-book/CHG-20260803-044/REGISTRY_DIFF.md",
+    "release/evidence/whole-book/CHG-20260803-044/REGISTRY_DIFF.json"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "Documentation/registry reconciliation only."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "created_at": "2026-08-03T05:04:18Z",
+  "updated_at": "2026-08-03T05:05:29Z"
+}

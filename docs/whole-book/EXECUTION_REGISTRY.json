@@ -15,7 +15,14 @@
       "CHG-20260728-002",
       "CHG-20260728-038"
     ],
-    "audit_change_id": "CHG-20260728-001"
+    "audit_change_id": "CHG-20260728-001",
+    "frozen_numbered_steps": 37,
+    "v120_release_substeps": [
+      "WB-2.2.1-V120-E2E-STABILIZATION",
+      "WB-2.2.2-V120-RELEASE-DEBT",
+      "WB-2.2.3-V120-L3-PROVIDER"
+    ],
+    "notes_chg044": "Frozen 37 historical steps unchanged in count. V1.2.0 Free release uses v120_release_steps + WB-6.4/WB-6.5."
   },
   "branch_strategy": {
     "do_not_develop_on": "release/1.1.1",
@@ -29,7 +36,11 @@
     "release_1_1_1_frozen": true,
     "v1_1_1_tag_immutable": true,
     "historical_releases_immutable": true,
-    "created_in_this_step": false
+    "created_in_this_step": false,
+    "public_integration_branch_active": "integration/1.2.0-after-1.1.2",
+    "private_integration_branch_active": "integration/1.2.0-after-1.1.2",
+    "historical_planned_branch": "integration/whole-book-v120",
+    "notes_chg044": "Active Integration branch is integration/1.2.0-after-1.1.2. Frozen historical name integration/whole-book-v120 retained for audit."
   },
   "baselines": {
     "public_worktree": "D:\\\\Dstorylens-wt-narrative-phase2br1-integration",
@@ -466,8 +477,8 @@
       "depends_on": [
         "WB-2.1-STRUCTURE-STAGES"
       ],
-      "next_step": "WB-2.3-STORYLINES",
-      "notes": "MG-WB-2.2 CHAPTER FUNCTIONS ACCEPTANCE PASSED. Free chapter_functions available. Do not start WB-2.3 until V1.2.0 scope/registry conflicts reconciled (CHG-043).",
+      "next_step": "WB-2.2.1-V120-E2E-STABILIZATION",
+      "notes": "MG-WB-2.2 PASSED. FEATURE END for V1.2.0 Free modules. Next Free release step is WB-2.2.1 E2E stabilization (not WB-2.3). Reconciled by CHG-20260803-044.",
       "integration_change_id": "CHG-20260803-042",
       "implementation_changes": [
         "CHG-20260802-040",
@@ -475,7 +486,10 @@
         "CHG-20260803-042"
       ],
       "verification_change_id": "CHG-20260803-043",
-      "manual_gate_result": "PASSED"
+      "manual_gate_result": "PASSED",
+      "v120_required": true,
+      "scope_disposition": "feature_complete",
+      "target_version_bucket": "1.2.0"
     },
     {
       "order": 19,
@@ -490,7 +504,11 @@
       "depends_on": [
         "WB-2.2-CHAPTER-FUNCTIONS"
       ],
-      "next_step": "WB-2.4-FIRST-FOUR-PRODUCT"
+      "next_step": "WB-2.4-FIRST-FOUR-PRODUCT",
+      "v120_required": false,
+      "scope_disposition": "deferred",
+      "target_version_bucket": "pro_future",
+      "notes": "Deferred. Pro / future-version. NOT required for V1.2.0. Do not start for Free 1.2.0. Historical step retained. CHG-044."
     },
     {
       "order": 20,
@@ -505,7 +523,11 @@
       "depends_on": [
         "WB-2.3-STORYLINES"
       ],
-      "next_step": "WB-3.1-ENTITY-MERGE-HARDEN"
+      "next_step": "WB-3.1-ENTITY-MERGE-HARDEN",
+      "v120_required": false,
+      "scope_disposition": "superseded_by_current_free_four_modules",
+      "target_version_bucket": "historical_phase2b",
+      "notes": "Superseded. Original Phase2B first-four (overview/structure/chapter_functions/storylines) productization path. Current Free four productization delivered via Wave D + WB-2.1 + WB-2.2 (characters_events instead of storylines). Do not re-implement Storylines here. CHG-044."
     },
     {
       "order": 21,
@@ -520,7 +542,11 @@
       "depends_on": [
         "WB-2.4-FIRST-FOUR-PRODUCT"
       ],
-      "next_step": "WB-3.2-CHARACTER-ARC"
+      "next_step": "WB-3.2-CHARACTER-ARC",
+      "v120_required": false,
+      "scope_disposition": "out_of_scope_for_1.2.0",
+      "target_version_bucket": "pro_future",
+      "notes": "Pro / future-version. out_of_scope_for_1.2.0. Historical record retained. CHG-044."
     },
     {
       "order": 22,
@@ -535,7 +561,11 @@
       "depends_on": [
         "WB-3.1-ENTITY-MERGE-HARDEN"
       ],
-      "next_step": "WB-3.3-RELATIONSHIPS"
+      "next_step": "WB-3.3-RELATIONSHIPS",
+      "v120_required": false,
+      "scope_disposition": "out_of_scope_for_1.2.0",
+      "target_version_bucket": "pro_future",
+      "notes": "Pro / future-version. out_of_scope_for_1.2.0. Historical record retained. CHG-044."
     },
     {
       "order": 23,
@@ -550,7 +580,11 @@
       "depends_on": [
         "WB-3.2-CHARACTER-ARC"
       ],
-      "next_step": "WB-3.4-GCC-CHAIN"
+      "next_step": "WB-3.4-GCC-CHAIN",
+      "v120_required": false,
+      "scope_disposition": "out_of_scope_for_1.2.0",
+      "target_version_bucket": "pro_future",
+      "notes": "Pro / future-version. out_of_scope_for_1.2.0. Historical record retained. CHG-044."
     },
     {
       "order": 24,
@@ -565,7 +599,11 @@
       "depends_on": [
         "WB-3.3-RELATIONSHIPS"
       ],
-      "next_step": "WB-4.1-HOOKS-CLUES"
+      "next_step": "WB-4.1-HOOKS-CLUES",
+      "v120_required": false,
+      "scope_disposition": "out_of_scope_for_1.2.0",
+      "target_version_bucket": "pro_future",
+      "notes": "Pro / future-version. out_of_scope_for_1.2.0. Historical record retained. CHG-044."
     },
     {
       "order": 25,
@@ -580,7 +618,11 @@
       "depends_on": [
         "WB-3.4-GCC-CHAIN"
       ],
-      "next_step": "WB-4.2-FORESHADOW-PAYOFF"
+      "next_step": "WB-4.2-FORESHADOW-PAYOFF",
+      "v120_required": false,
+      "scope_disposition": "out_of_scope_for_1.2.0",
+      "target_version_bucket": "pro_future",
+      "notes": "Pro / future-version. out_of_scope_for_1.2.0. Historical record retained. CHG-044."
     },
     {
       "order": 26,
@@ -595,7 +637,11 @@
       "depends_on": [
         "WB-4.1-HOOKS-CLUES"
       ],
-      "next_step": "WB-4.3-CAUSALITY"
+      "next_step": "WB-4.3-CAUSALITY",
+      "v120_required": false,
+      "scope_disposition": "out_of_scope_for_1.2.0",
+      "target_version_bucket": "pro_future",
+      "notes": "Pro / future-version. out_of_scope_for_1.2.0. Historical record retained. CHG-044."
     },
     {
       "order": 27,
@@ -610,7 +656,11 @@
       "depends_on": [
         "WB-4.2-FORESHADOW-PAYOFF"
       ],
-      "next_step": "WB-4.4-TIMELINE"
+      "next_step": "WB-4.4-TIMELINE",
+      "v120_required": false,
+      "scope_disposition": "out_of_scope_for_1.2.0",
+      "target_version_bucket": "pro_future",
+      "notes": "Pro / future-version. out_of_scope_for_1.2.0. Historical record retained. CHG-044."
     },
     {
       "order": 28,
@@ -625,7 +675,11 @@
       "depends_on": [
         "WB-4.3-CAUSALITY"
       ],
-      "next_step": "WB-5.1-WHOLE-BOOK-RJ"
+      "next_step": "WB-5.1-WHOLE-BOOK-RJ",
+      "v120_required": false,
+      "scope_disposition": "out_of_scope_for_1.2.0",
+      "target_version_bucket": "pro_future",
+      "notes": "Pro / future-version. out_of_scope_for_1.2.0. Historical record retained. CHG-044."
     },
     {
       "order": 29,
@@ -640,7 +694,11 @@
       "depends_on": [
         "WB-4.4-TIMELINE"
       ],
-      "next_step": "WB-5.2-DIAGNOSIS"
+      "next_step": "WB-5.2-DIAGNOSIS",
+      "v120_required": false,
+      "scope_disposition": "out_of_scope_for_1.2.0",
+      "target_version_bucket": "pro_future",
+      "notes": "Pro / future-version. out_of_scope_for_1.2.0. Historical record retained. CHG-044."
     },
     {
       "order": 30,
@@ -655,7 +713,11 @@
       "depends_on": [
         "WB-5.1-WHOLE-BOOK-RJ"
       ],
-      "next_step": "WB-5.3-ENHANCED-MODE"
+      "next_step": "WB-5.3-ENHANCED-MODE",
+      "v120_required": false,
+      "scope_disposition": "out_of_scope_for_1.2.0",
+      "target_version_bucket": "pro_future",
+      "notes": "Pro / future-version. out_of_scope_for_1.2.0. Historical record retained. CHG-044."
     },
     {
       "order": 31,
@@ -670,7 +732,11 @@
       "depends_on": [
         "WB-5.2-DIAGNOSIS"
       ],
-      "next_step": "WB-5.4-INSIGHTS-AS-ENHANCED"
+      "next_step": "WB-5.4-INSIGHTS-AS-ENHANCED",
+      "v120_required": false,
+      "scope_disposition": "out_of_scope_for_1.2.0",
+      "target_version_bucket": "pro_future",
+      "notes": "Pro / future-version. out_of_scope_for_1.2.0. Historical record retained. CHG-044."
     },
     {
       "order": 32,
@@ -685,7 +751,11 @@
       "depends_on": [
         "WB-5.3-ENHANCED-MODE"
       ],
-      "next_step": "WB-6.1-PRO-PRODUCT-UI"
+      "next_step": "WB-6.1-PRO-PRODUCT-UI",
+      "v120_required": false,
+      "scope_disposition": "out_of_scope_for_1.2.0",
+      "target_version_bucket": "pro_future",
+      "notes": "Pro / future-version. out_of_scope_for_1.2.0. Historical record retained. CHG-044."
     },
     {
       "order": 33,
@@ -700,7 +770,11 @@
       "depends_on": [
         "WB-5.4-INSIGHTS-AS-ENHANCED"
       ],
-      "next_step": "WB-6.2-FTS5"
+      "next_step": "WB-6.2-FTS5",
+      "v120_required": false,
+      "scope_disposition": "out_of_scope_for_1.2.0_free_release",
+      "target_version_bucket": "pro_future",
+      "notes": "Excluded from Free V1.2.0 release chain (Pro shell / FTS / paid quota UX). Free cost consent already exists in module UX. Historical record retained. CHG-044."
     },
     {
       "order": 34,
@@ -715,7 +789,11 @@
       "depends_on": [
         "WB-6.1-PRO-PRODUCT-UI"
       ],
-      "next_step": "WB-6.3-COST-QUOTA-PRODUCT"
+      "next_step": "WB-6.3-COST-QUOTA-PRODUCT",
+      "v120_required": false,
+      "scope_disposition": "out_of_scope_for_1.2.0_free_release",
+      "target_version_bucket": "pro_future",
+      "notes": "Excluded from Free V1.2.0 release chain (Pro shell / FTS / paid quota UX). Free cost consent already exists in module UX. Historical record retained. CHG-044."
     },
     {
       "order": 35,
@@ -730,7 +808,11 @@
       "depends_on": [
         "WB-6.2-FTS5"
       ],
-      "next_step": "WB-6.4-120-RC"
+      "next_step": "WB-6.4-120-RC",
+      "v120_required": false,
+      "scope_disposition": "out_of_scope_for_1.2.0_free_release",
+      "target_version_bucket": "pro_future",
+      "notes": "Excluded from Free V1.2.0 release chain (Pro shell / FTS / paid quota UX). Free cost consent already exists in module UX. Historical record retained. CHG-044."
     },
     {
       "order": 36,
@@ -743,9 +825,16 @@
       "evidence_dir": "release/evidence/whole-book/WB-6.4-120-RC/",
       "wb_status": "planned",
       "depends_on": [
+        "WB-2.2.3-V120-L3-PROVIDER"
+      ],
+      "next_step": "WB-6.5-120-STABLE",
+      "v120_required": true,
+      "scope_disposition": "required_for_1.2.0_release",
+      "target_version_bucket": "1.2.0",
+      "legacy_depends_on": [
         "WB-6.3-COST-QUOTA-PRODUCT"
       ],
-      "next_step": "WB-6.5-120-STABLE"
+      "notes": "Free V1.2.0 RC / installer / upgrade acceptance. Depends on L3 path WB-2.2.3 (not WB-6.3). Includes sidecar, Windows installer, 1.1.2→1.2.0 upgrade, AppData retention, no Dev routes in release build. CHG-044."
     },
     {
       "order": 37,
@@ -760,7 +849,11 @@
       "depends_on": [
         "WB-6.4-120-RC"
       ],
-      "next_step": null
+      "next_step": null,
+      "v120_required": true,
+      "scope_disposition": "required_for_1.2.0_release",
+      "target_version_bucket": "1.2.0",
+      "notes": "Free V1.2.0 Stable Release Gate: version, notes, hashes, archive, Tag, GitHub Release. CHG-044."
     }
   ],
   "wb_0_1": {
@@ -771,5 +864,190 @@
     "public_clean_before_note": "NO — only untracked tmp/, excluded from commit and release evidence",
     "allow_wb_0_2": true,
     "wb_0_2_started": false
-  }
+  },
+  "v120_scope_reconciliation": {
+    "change_id": "CHG-20260803-044",
+    "manual_gate_id": "MG-V1.2.0-SCOPE-RECONCILIATION",
+    "reconciled_at_utc": "2026-08-03T05:05:29Z",
+    "status": "implemented_pending_owner_verify",
+    "product_owner_decision": [
+      "V1.2.0 feature development ends at WB-2.2",
+      "V1.2.0 is Free whole-book four-module release",
+      "Modules: overview, characters_events, structure, chapter_functions",
+      "WB-2.3 Storylines not in V1.2.0; Pro/future",
+      "WB-2.4 Phase2B first-four path superseded; do not re-implement",
+      "WB-3.x–WB-5.x out of V1.2.0",
+      "No purchase/License/activation/Pro product UI in V1.2.0"
+    ]
+  },
+  "v120_free_product_scope": {
+    "target_version": "1.2.0",
+    "feature_development_complete": true,
+    "feature_end_step": "WB-2.2-CHAPTER-FUNCTIONS",
+    "free_module_count": 4,
+    "modules": [
+      {
+        "id": "overview",
+        "label": "全书总览",
+        "capability": "whole_book.overview",
+        "status": "available",
+        "manual_verified": true
+      },
+      {
+        "id": "characters_events",
+        "label": "主要人物与关键事件",
+        "capability": "whole_book.characters_events",
+        "status": "available",
+        "manual_verified": true
+      },
+      {
+        "id": "structure",
+        "label": "故事结构",
+        "capability": "whole_book.structure",
+        "status": "available",
+        "manual_verified": true
+      },
+      {
+        "id": "chapter_functions",
+        "label": "章节功能",
+        "capability": "whole_book.chapter_functions",
+        "status": "available",
+        "manual_verified": true
+      }
+    ],
+    "pro_modules_in_v120": 0,
+    "pro_modules_planned_future": 8,
+    "purchase_license_activation_ui": "ABSENT",
+    "remaining_function_modules": 0
+  },
+  "v120_free_release_path": {
+    "schema_note": "Authoritative Free V1.2.0 release chain after CHG-044. Historical 37 numbered steps remain for audit; do not follow WB-2.3→WB-5.x→WB-6.1–6.3 for Free 1.2.0.",
+    "waves": [
+      {
+        "wave": 1,
+        "step_id": "WB-2.2.1-V120-E2E-STABILIZATION",
+        "manual_gate_id": "MG-WB-2.2.1",
+        "change_id_planned": "CHG-20260803-045",
+        "title": "V1.2.0 Free four-module end-to-end stabilization",
+        "acceptance_level": "L2",
+        "product_code_expected": true,
+        "real_provider_required": false,
+        "installer_required": false
+      },
+      {
+        "wave": 2,
+        "step_id": "WB-2.2.2-V120-RELEASE-DEBT",
+        "manual_gate_id": "MG-WB-2.2.2",
+        "change_id_planned": "CHG-20260803-046",
+        "title": "V1.2.0 release debt triage and formal exceptions",
+        "acceptance_level": "L1/L2",
+        "product_code_expected": "minimal_if_main_chain",
+        "real_provider_required": false,
+        "installer_required": false
+      },
+      {
+        "wave": 3,
+        "step_id": "WB-2.2.3-V120-L3-PROVIDER",
+        "manual_gate_id": "MG-WB-2.2.3",
+        "change_id_planned": "CHG-20260803-047",
+        "title": "V1.2.0 Free four-module real Provider L3 acceptance",
+        "acceptance_level": "L3",
+        "product_code_expected": "minimal_fixes_only",
+        "real_provider_required": true,
+        "installer_required": false
+      },
+      {
+        "wave": 4,
+        "step_ids": [
+          "WB-6.4-120-RC",
+          "WB-6.5-120-STABLE"
+        ],
+        "manual_gate_ids": [
+          "MG-WB-6.4",
+          "MG-WB-6.5"
+        ],
+        "change_ids": [
+          "CHG-20260728-037",
+          "CHG-20260728-038"
+        ],
+        "title": "V1.2.0 RC / installer / upgrade / Stable release",
+        "acceptance_level": "L4",
+        "product_code_expected": "release_packaging_only",
+        "real_provider_required": "as_gate_requires",
+        "installer_required": true
+      }
+    ],
+    "formal_steps_remaining": 5,
+    "next_formal_step_after_scope_gate": "WB-2.2.1-V120-E2E-STABILIZATION",
+    "excluded_from_free_v120_chain": [
+      "WB-2.3-STORYLINES",
+      "WB-2.4-FIRST-FOUR-PRODUCT",
+      "WB-3.1-ENTITY-MERGE-HARDEN",
+      "WB-3.2-CHARACTER-ARC",
+      "WB-3.3-RELATIONSHIPS",
+      "WB-3.4-GCC-CHAIN",
+      "WB-4.1-HOOKS-CLUES",
+      "WB-4.2-FORESHADOW-PAYOFF",
+      "WB-4.3-CAUSALITY",
+      "WB-4.4-TIMELINE",
+      "WB-5.1-WHOLE-BOOK-RJ",
+      "WB-5.2-DIAGNOSIS",
+      "WB-5.3-ENHANCED-MODE",
+      "WB-5.4-INSIGHTS-AS-ENHANCED",
+      "WB-6.1-PRO-PRODUCT-UI",
+      "WB-6.2-FTS5",
+      "WB-6.3-COST-QUOTA-PRODUCT"
+    ]
+  },
+  "v120_release_steps": [
+    {
+      "step_id": "WB-2.2.1-V120-E2E-STABILIZATION",
+      "manual_gate_id": "MG-WB-2.2.1",
+      "change_id": "CHG-20260803-045",
+      "title": "V1.2.0 Free four-module end-to-end stabilization",
+      "wb_status": "planned",
+      "acceptance_level": "L2",
+      "evidence_dir": "release/evidence/whole-book/WB-2.2.1-V120-E2E-STABILIZATION/",
+      "depends_on": [
+        "WB-2.2-CHAPTER-FUNCTIONS",
+        "CHG-20260803-044"
+      ],
+      "next_step": "WB-2.2.2-V120-RELEASE-DEBT",
+      "v120_required": true,
+      "scope_disposition": "required_for_1.2.0_release",
+      "notes": "No new analysis modules. Stabilize Free four on one formal run path."
+    },
+    {
+      "step_id": "WB-2.2.2-V120-RELEASE-DEBT",
+      "manual_gate_id": "MG-WB-2.2.2",
+      "change_id": "CHG-20260803-046",
+      "title": "V1.2.0 release debt triage",
+      "wb_status": "planned",
+      "acceptance_level": "L1/L2",
+      "evidence_dir": "release/evidence/whole-book/WB-2.2.2-V120-RELEASE-DEBT/",
+      "depends_on": [
+        "WB-2.2.1-V120-E2E-STABILIZATION"
+      ],
+      "next_step": "WB-2.2.3-V120-L3-PROVIDER",
+      "v120_required": true,
+      "scope_disposition": "required_for_1.2.0_release",
+      "notes": "Classify/fix Public 48f/6e, Vitest 30f, check_project TIMEOUT; formal exceptions only with owner sign-off."
+    },
+    {
+      "step_id": "WB-2.2.3-V120-L3-PROVIDER",
+      "manual_gate_id": "MG-WB-2.2.3",
+      "change_id": "CHG-20260803-047",
+      "title": "V1.2.0 Free four-module real Provider L3",
+      "wb_status": "planned",
+      "acceptance_level": "L3",
+      "evidence_dir": "release/evidence/whole-book/WB-2.2.3-V120-L3-PROVIDER/",
+      "depends_on": [
+        "WB-2.2.2-V120-RELEASE-DEBT"
+      ],
+      "next_step": "WB-6.4-120-RC",
+      "v120_required": true,
+      "scope_disposition": "required_for_1.2.0_release",
+      "notes": "Real Bailian Provider; S/M/L books; four modules; repair; cost; resume; evidence; no duplicate bill/calls."
+    }
+  ]
 }

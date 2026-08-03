@@ -93,6 +93,39 @@ def main() -> int:
         and not unexpected_disk
     )
 
+    # Optional V1.2.0 Free release path (CHG-20260803-044); does not change frozen 37 count.
+    v120_path = data.get("v120_free_release_path")
+    v120_steps = data.get("v120_release_steps") or []
+    v120_ok = True
+    v120_details: dict = {}
+    if v120_path is not None or v120_steps:
+        expected_ids = {
+            "WB-2.2.1-V120-E2E-STABILIZATION",
+            "WB-2.2.2-V120-RELEASE-DEBT",
+            "WB-2.2.3-V120-L3-PROVIDER",
+        }
+        got_ids = {s.get("step_id") for s in v120_steps}
+        wb22 = next((s for s in steps if s.get("step_id") == "WB-2.2-CHAPTER-FUNCTIONS"), {})
+        wb64 = next((s for s in steps if s.get("step_id") == "WB-6.4-120-RC"), {})
+        v120_ok = (
+            isinstance(v120_path, dict)
+            and got_ids == expected_ids
+            and wb22.get("next_step") == "WB-2.2.1-V120-E2E-STABILIZATION"
+            and wb64.get("depends_on") == ["WB-2.2.3-V120-L3-PROVIDER"]
+            and (data.get("v120_free_product_scope") or {}).get("feature_end_step")
+            == "WB-2.2-CHAPTER-FUNCTIONS"
+            and (data.get("v120_free_product_scope") or {}).get("remaining_function_modules") == 0
+        )
+        if not v120_ok:
+            v120_details = {
+                "expected_v120_ids": sorted(expected_ids),
+                "got_v120_ids": sorted(x for x in got_ids if x),
+                "wb22_next_step": wb22.get("next_step"),
+                "wb64_depends_on": wb64.get("depends_on"),
+            }
+
+    ok = ok and v120_ok
+
     print("WHOLE-BOOK REGISTRY VERIFICATION：")
     print("PASS" if ok else "FAIL")
     print("NUMBERED STEPS：")
@@ -109,6 +142,8 @@ def main() -> int:
     print(len(dup_gates))
     print("INVALID EVIDENCE PATHS：")
     print(len(invalid_evidence))
+    print("V120 FREE RELEASE PATH：")
+    print("PRESENT_OK" if v120_path and v120_ok else ("ABSENT" if not v120_path else "FAIL"))
     if not ok:
         details = {
             "dup_steps": dup_steps,
@@ -121,6 +156,7 @@ def main() -> int:
             "missing_reserved": missing_reserved,
             "extra_mapped": extra_mapped,
             "unexpected_disk": unexpected_disk,
+            "v120": v120_details,
         }
         print(json.dumps(details, ensure_ascii=False, indent=2))
         return 1

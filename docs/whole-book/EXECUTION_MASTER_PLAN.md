@@ -1,22 +1,41 @@
 # StoryLens Whole-Book Execution Master Plan
 
-**Status:** frozen by WB-0.1 / CHG-20260728-002 (pending MG-WB-0.1)  
-**Target product version:** StoryLens **1.2.0**  
-**Formal baseline:** StoryLens **v1.1.1**  
+**Status:** frozen by WB-0.1 / CHG-20260728-002；**AMENDED BY CHG-20260803-044**（V1.2.0 Free scope reconciliation）  
+**Target product version:** StoryLens **1.2.0**（Free 全书四模块）  
+**Formal baseline:** StoryLens **v1.1.1**（integration train also carries 1.1.2→1.2.0 work）  
 **Machine registry:** [`EXECUTION_REGISTRY.json`](./EXECUTION_REGISTRY.json)
+
+## 0. V1.2.0 Free scope (CHG-20260803-044)
+
+| Field | Value |
+|---|---|
+| FEATURE DEVELOPMENT COMPLETE | **YES** |
+| FEATURE END STEP | **WB-2.2-CHAPTER-FUNCTIONS** |
+| FREE MODULES | overview / characters_events / structure / chapter_functions（**4**） |
+| PRO MODULES IN 1.2.0 | **0** |
+| WB-2.3 Storylines | **deferred** → Pro / future（**not** next Free step） |
+| WB-2.4 Phase2B first-four | **superseded** by current Free four |
+| WB-3.x～WB-5.x | **out_of_scope_for_1.2.0** |
+| WB-6.1～WB-6.3 | **out_of_scope_for_1.2.0_free_release** |
+| Remaining Free release path | WB-2.2.1 → WB-2.2.2 → WB-2.2.3 → WB-6.4 → WB-6.5 |
+
+Authoritative details: registry keys `v120_free_product_scope` / `v120_free_release_path` and evidence `release/evidence/whole-book/CHG-20260803-044/`.
+
+Active Integration branch: `integration/1.2.0-after-1.1.2`（historical planned name `integration/whole-book-v120` retained for audit only）.
 
 ## 1. Purpose
 
 This document freezes the execution system for native whole-book analysis after v1.1.1:
 
 - baselines and branch strategy
-- 37 Step IDs, Change IDs, Manual Gate IDs
+- 37 historical Step IDs, Change IDs, Manual Gate IDs（audit spine；not the active Free 1.2.0 coding queue）
+- V1.2.0 Free release substeps WB-2.2.1 / 2.2.2 / 2.2.3 + reused WB-6.4 / WB-6.5
 - evidence paths, status flow, Sample S/M/L, Provider rules
 - protected WIP worktrees
 - parallel Agent / Integration rules
 - re-acceptance rules when frozen contracts break
 
-It does **not** implement whole-book product features.
+It does **not** by itself implement whole-book product features.
 
 ## 2. Frozen baselines (full SHA)
 
@@ -113,7 +132,7 @@ If a frozen contract must change after a Gate PASS:
 python scripts/verify_whole_book_execution_registry.py
 ```
 
-## 10. Next after MG-WB-0.1 PASS
+## 10. Historical next after MG-WB-0.1 PASS
 
 1. Mark `CHG-20260728-002` verified (user-authorized)  
 2. Freeze WB-0.1  
@@ -121,3 +140,9 @@ python scripts/verify_whole_book_execution_registry.py
 4. Optionally create `integration/whole-book-v120` worktrees (user-approved)  
 
 **WB-0.2 must not start automatically.**
+
+## 11. Next after MG-V1.2.0-SCOPE-RECONCILIATION PASS（current）
+
+1. Mark `CHG-20260803-044` verified  
+2. Authorize **WB-2.2.1-V120-E2E-STABILIZATION** only  
+3. Do **not** start WB-2.3 / WB-2.4 / WB-3.x～WB-5.x / Pro UI for Free 1.2.0

@@ -1,5 +1,15 @@
 # Phase 2B First Four Modules
 
+**Status:** Historical Phase 2B engine/module contract.  
+**AMENDED BY CHG-20260803-044：** 本文 A–D 描述的是 Phase2B 私有引擎“first-four”契约（含 **storylines**），**不是** V1.2.0 产品 Free 四模块清单。
+
+| 概念 | 模块集合 |
+|---|---|
+| Phase2B first-four（本文） | overview / structure_stages / chapter_functions / **storylines** |
+| V1.2.0 Free four（产品） | overview / **characters_events** / structure / chapter_functions |
+
+V1.2.0 不交付 Storylines；`WB-2.4-FIRST-FOUR-PRODUCT` 对产品路径标记为 **superseded_by_current_free_four_modules**。详见 `release/evidence/whole-book/CHG-20260803-044/WB23_WB24_DISPOSITION.md`。
+
 Out of Phase 2B scope: character arcs, deep character relations, hook recovery, causal chains, full timeline, diagnosis, formal Structure Map page, cross-book search, Story Lab.
 
 ## A. book_overview → BookOverviewResultDto

@@ -1,0 +1,44 @@
+{
+  "change_id": "CHG-20260803-044",
+  "public_base": "3195e1e70463f67816abdff62fbbdd02cefda710",
+  "added_top_level_keys": [
+    "v120_scope_reconciliation",
+    "v120_free_product_scope",
+    "v120_free_release_path",
+    "v120_release_steps"
+  ],
+  "historical_steps_count_before": 37,
+  "historical_steps_count_after": 37,
+  "wb22_next_step_before": "WB-2.3-STORYLINES",
+  "wb22_next_step_after": "WB-2.2.1-V120-E2E-STABILIZATION",
+  "wb64_depends_on_before": [
+    "WB-6.3-COST-QUOTA-PRODUCT"
+  ],
+  "wb64_depends_on_after": [
+    "WB-2.2.3-V120-L3-PROVIDER"
+  ],
+  "dispositions_applied": [
+    "WB-2.2-CHAPTER-FUNCTIONS",
+    "WB-2.3-STORYLINES",
+    "WB-2.4-FIRST-FOUR-PRODUCT",
+    "WB-3.1-ENTITY-MERGE-HARDEN",
+    "WB-3.2-CHARACTER-ARC",
+    "WB-3.3-RELATIONSHIPS",
+    "WB-3.4-GCC-CHAIN",
+    "WB-4.1-HOOKS-CLUES",
+    "WB-4.2-FORESHADOW-PAYOFF",
+    "WB-4.3-CAUSALITY",
+    "WB-4.4-TIMELINE",
+    "WB-5.1-WHOLE-BOOK-RJ",
+    "WB-5.2-DIAGNOSIS",
+    "WB-5.3-ENHANCED-MODE",
+    "WB-5.4-INSIGHTS-AS-ENHANCED",
+    "WB-6.1-PRO-PRODUCT-UI",
+    "WB-6.2-FTS5",
+    "WB-6.3-COST-QUOTA-PRODUCT",
+    "WB-6.4-120-RC",
+    "WB-6.5-120-STABLE"
+  ],
+  "product_code_modified": false,
+  "verifier_note": "V120 path PRESENT_OK; pre-existing invalid evidence_dir WB-0.2..0.5 unchanged"
+}
