@@ -21,9 +21,12 @@
 
 | Gap | Priority |
 |---|---|
+| create-fixture consent validate 签名 + 产品入口测 | P0 |
+| Evidence chapter_id（非 chapter_index）深链测 | P0 |
+| Drawer 无 fuzzy fallback 测 | P0 |
 | 跨四模块同一 Run 正式 API+UI 套件 | P0 |
 | Cost estimate ↔ CF batch/repair 对齐测 | P0 |
-| Free 页 Pause/Resume/Cancel + ProgressCard/Main-Rail | P0 |
+| Free 页 Pause/Resume/Cancel + ProgressPanel/header | P0 |
 | Duplicate create/resume/asset 统一套件 | P0 |
 | Evidence returnModule overview/chars + CF restore round-trip | P0 |
 | Refresh / reentry 不 create | P0 |

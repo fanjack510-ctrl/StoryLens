@@ -6,18 +6,20 @@
 ## In scope (must)
 
 ### Backend
-1. Cost estimate 与 unit plan 对齐（CF batches；repair 策略明示）  
-2. 跨四模块同 Run 集成测：stages、partial/fail 可读性、Resume 不重跑完成单元  
-3. 幂等套件：duplicate run/unit/call/asset/evidence/confirmed overwrite = 0  
-4. Pause/Resume/Cancel 跨阶段 + restart recovery（隔离 DB，不自动 Provider）  
-5. Fixture vs formal 门禁回归（real create 仍禁用直至 Wave 3）
+1. **P0：修复 `create_fixture` → `validate_whole_book_consent` 调用签名**并补 create-fixture pytest  
+2. Cost estimate 与 unit plan 对齐（CF batches；repair 策略明示）  
+3. 跨四模块同 Run 集成测：stages、partial/fail 可读性、Resume 不重跑完成单元；审视 `project_result` 是否应 gate 四模块（最小必要）  
+4. 幂等套件：duplicate run/unit/call/asset/evidence/confirmed overwrite = 0  
+5. Pause/Resume/Cancel 跨阶段 + restart recovery（隔离 DB，不自动 Provider）  
+6. Fixture vs formal 门禁回归（real create 仍禁用直至 Wave 3）
 
 ### Desktop
-1. 四模块正式页联调（非 harness）：切换 / 刷新 / 重进  
-2. Evidence returnModule：overview + characters_events + structure + CF  
-3. CF 筛选/cursor/detail 返回保持  
-4. ProgressCard 终态消失；Main/Rail 一致（对齐 v1.1.2）  
-5. Production build：`/dev/*` ABSENT；fixture label PRESENT when enabled  
+1. **P0：Evidence 深链改用 API `chapter_id`，禁止用 `chapter_index` 冒充 chapter id**  
+2. **P0：消除 drawer fuzzy `indexOf`；CF Evidence 正式回链保持 restore\***  
+3. 四模块正式页联调（非 harness）：切换 / 刷新 / 重进  
+4. Evidence returnModule：overview + characters_events + structure + CF  
+5. ProgressPanel 终态消失；header/模块态一致（对齐 v1.1.2）  
+6. Production build：`/dev/*` ABSENT；fixture label PRESENT when enabled  
 
 ### Integration
 合并后冒烟：四模块同 Run、Cost/Consent、任务控制、幂等、Evidence、刷新重进、生产路由隔离、定向回归、1366/1920。

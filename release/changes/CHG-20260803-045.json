@@ -29,7 +29,7 @@
     "docs/releases/storylens-1.2.0-checklist.md"
   ],
   "user_summary": "Wave 1 只读审计：冻结 Free 四模块端到端稳定化范围与最多两路 Agent 实施计划；不改产品代码。",
-  "technical_summary": "Audits fixture Free pipeline same-run path; marks real Free create path MISSING; cost estimate PARTIAL (no CF batch/repair granularity); consent revision binding PASS; task control / idempotency / evidence mostly present with E2E gaps; dev routes DEV-gated but production build proof GAP. PRODUCT CODE MODIFIED=NO.",
+  "technical_summary": "Audits fixture Free pipeline same-run path; marks real Free create path MISSING; cost estimate PARTIAL; consent binding PARTIAL (revision OK; create-fixture validate call INCONSISTENT; no snapshot_id). Evidence P0: chapter_id vs chapter_index; drawer fuzzy; CF restore gaps. Audit delta from backend+desktop explore agents folded into evidence. PRODUCT CODE MODIFIED=NO.",
   "acceptance_criteria": [
     "MG-V1.2.0-SCOPE-RECONCILIATION recorded PASSED",
     "CHG-044 verified",
@@ -44,7 +44,8 @@
   "verification_evidence": [
     "release/evidence/whole-book/CHG-20260803-045/IMPLEMENTATION_PLAN.md",
     "release/evidence/whole-book/CHG-20260803-045/CURRENT_E2E_PIPELINE.md",
-    "release/evidence/whole-book/CHG-20260803-045/FOUR_MODULE_RUN_AUDIT.md"
+    "release/evidence/whole-book/CHG-20260803-045/FOUR_MODULE_RUN_AUDIT.md",
+    "release/evidence/whole-book/CHG-20260803-045/AUDIT_DELTA.md"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -59,5 +60,5 @@
     "breaking_change": false
   },
   "created_at": "2026-08-03T05:38:16Z",
-  "updated_at": "2026-08-03T05:38:16Z"
+  "updated_at": "2026-08-03T05:40:26Z"
 }

@@ -9,6 +9,7 @@
 ### Agent 1 — Backend / State / Idempotency
 
 **Scope**
+- **P0：create-fixture consent validate 调用签名修复 + 测试**  
 - Cost estimate ↔ provider unit planning（含 CF batch/repair 明示）  
 - 四模块同 Run 编排断言与缺口修复（不重写模块契约）  
 - Pause / Resume / Cancel / recoverable  
@@ -42,10 +43,12 @@ pytest apps/api/tests/test_whole_book_wb18_pause_resume.py apps/api/tests/test_w
 ### Agent 2 — Desktop / Navigation / Production Isolation
 
 **Scope**
+- **P0：Evidence `chapter_id` 对齐 + 禁止 drawer fuzzy**  
+- **P0：CF Evidence 正式回链保持 restore\***  
 - Free 正式页四模块联调  
 - refresh / reentry  
-- Evidence return state（含 overview/chars）  
-- ProgressCard / Main / Rail  
+- Evidence return state（含 overview/chars returnModule）  
+- ProgressPanel / header 态一致  
 - Dev harness 生产隔离证明  
 - Vitest / Playwright（正式页优先；harness 仅回归）  
 

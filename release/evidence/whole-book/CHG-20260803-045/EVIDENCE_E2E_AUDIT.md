@@ -20,8 +20,30 @@ Shared helper：`apps/desktop/src/services/wholeBookFreeEvidenceDeepLink.ts`
 | 禁止只开章节顶部 | PASS in helper（offsets required） |
 | stale revision 不静默开错文 | PASS — UI 提示 + throw EVIDENCE_STALE |
 | conflict 结果不混用 Evidence | PARTIAL — structure conflict UI；跨模块缺 |
+| Reader 使用正确 chapter **id** | **GAP / must-fix** — 见下 |
+| Drawer 禁止 fuzzy fallback | **INCONSISTENT** — 见下 |
+| CF Evidence 返回保持筛选/cursor/详情 | **GAP** — restore* 写入后经 Entry 回链易丢；`restoreCursor` 未真正恢复分页 |
+
+### Wave 1 must-fix（Desktop audit 确认）
+
+1. **chapter_id vs chapter_index**  
+   API `get_evidence_source` 返回 `chapter_id`（`source_chapter_id`）与 `chapter_index`（`chapter_order`）。  
+   `WholeBookFreeProductPage` 使用 `source.chapter_index` 作为 reader `chapter` 参数，而 `BookRoutePage` 按 **chapter id** 解析 → id≠order 时**错章**。  
+   Desktop `EvidenceSourceDetail` 类型需对齐并改用 `chapter_id`。
+
+2. **Drawer `highlightQuote`**  
+   offset 失败时 `indexOf(quote)` fuzzy，与 deep-link「禁止 fuzzy」合同不一致。
+
+3. **CF restore\***  
+   Evidence 往返须把 restoreFunction/Status/Cursor/Chapter 带进正式回链；`loadFirstPage` 不得清空未消费的 restoreCursor。
 
 ## Wave 1
-- overview / characters_events 打开 reader 时传入 `returnModule`  
-- 四模块 Evidence round-trip 正式页/Playwright（Fake）  
-- stale/conflict 负例  
+- 修复 chapter_id 深链（P0）  
+- 去掉或隔离 drawer fuzzy（P0）  
+- overview / characters_events 传入 `returnModule`  
+- CF Evidence round-trip 保持筛选/cursor/详情  
+- 四模块正式页/Playwright（Fake；非仅 harness）  
+- stale/conflict 负例
+
+## Audit delta source
+[Audit Free E2E desktop](da1b73d8-c797-4e73-a382-993852f31373)  
