@@ -460,20 +460,22 @@
       "title": "Chapter functions",
       "acceptance_level": "L3",
       "evidence_dir": "release/evidence/whole-book/WB-2.2-CHAPTER-FUNCTIONS/",
-      "wb_status": "tested",
+      "wb_status": "verified",
       "planning_change_id": "CHG-20260802-038",
       "freeze_change_id": "CHG-20260802-039",
       "depends_on": [
         "WB-2.1-STRUCTURE-STAGES"
       ],
       "next_step": "WB-2.3-STORYLINES",
-      "notes": "Integration tested (CHG-042). Capability available. Pending MG-WB-2.2 human acceptance; not verified.",
+      "notes": "MG-WB-2.2 CHAPTER FUNCTIONS ACCEPTANCE PASSED. Free chapter_functions available. Do not start WB-2.3 until V1.2.0 scope/registry conflicts reconciled (CHG-043).",
       "integration_change_id": "CHG-20260803-042",
       "implementation_changes": [
         "CHG-20260802-040",
         "CHG-20260803-041",
         "CHG-20260803-042"
-      ]
+      ],
+      "verification_change_id": "CHG-20260803-043",
+      "manual_gate_result": "PASSED"
     },
     {
       "order": 19,

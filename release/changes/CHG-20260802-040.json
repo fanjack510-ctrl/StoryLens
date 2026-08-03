@@ -3,7 +3,7 @@
   "title": "Implement WB-2.2 chapter functions backend and private engine",
   "type": "feature",
   "base_version": "1.2.0",
-  "status": "tested",
+  "status": "verified",
   "include_in_next_release": true,
   "head_inclusion": "INCLUDED",
   "blocker_level": null,
@@ -49,5 +49,6 @@
     "migration_required": false,
     "user_data_compatible": true,
     "notes": "No migration."
-  }
+  },
+  "updated_at": "2026-08-03T04:50:32Z"
 }

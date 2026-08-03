@@ -3,7 +3,7 @@
   "title": "Integrate WB-2.2 chapter functions into V1.2.0 baseline",
   "type": "feature",
   "base_version": "1.2.0",
-  "status": "tested",
+  "status": "verified",
   "include_in_next_release": true,
   "head_inclusion": "INCLUDED",
   "blocker_level": null,
@@ -34,8 +34,8 @@
     "Public/Private merges complete",
     "Canonical ChapterFunctionsResultV2",
     "DOM catalog verified",
-    "CHG-040/041/042 tested; WB-2.2 tested; not verified",
-    "MG-WB-2.2 ready"
+    "CHG-040/041/042 verified (via CHG-20260803-043)",
+    "MG-WB-2.2 CHAPTER FUNCTIONS ACCEPTANCE PASSED"
   ],
   "tests": [
     "apps/api/tests/test_whole_book_wb22_chapter_functions_a_y.py",
@@ -47,12 +47,15 @@
     "release/evidence/whole-book/CHG-20260803-042/MANUAL_UI_ENV.md",
     "release/evidence/whole-book/CHG-20260803-042/DOM_VERIFY_RESULTS.json",
     "release/evidence/whole-book/CHG-20260803-042/BASELINE_FAILURE_COMPARISON.md",
-    "release/evidence/whole-book/WB-2.2-CHAPTER-FUNCTIONS/FINAL_REPORT.md"
+    "release/evidence/whole-book/WB-2.2-CHAPTER-FUNCTIONS/FINAL_REPORT.md",
+    "release/evidence/whole-book/CHG-20260803-042/MANUAL_GATE_RESULT.md",
+    "release/evidence/whole-book/CHG-20260803-043/REMAINING_ROADMAP.md"
   ],
   "data_compatibility": {
     "database_changed": false,
     "migration_required": false,
     "user_data_compatible": true,
     "notes": "No migration; isolated smoke DB only."
-  }
+  },
+  "updated_at": "2026-08-03T04:50:32Z"
 }
