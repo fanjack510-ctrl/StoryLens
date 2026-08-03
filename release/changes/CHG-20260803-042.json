@@ -1,0 +1,58 @@
+{
+  "id": "CHG-20260803-042",
+  "title": "Integrate WB-2.2 chapter functions into V1.2.0 baseline",
+  "type": "feature",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": true,
+  "head_inclusion": "INCLUDED",
+  "blocker_level": null,
+  "parent_plan": "CHG-20260802-039",
+  "wb_step_id": "WB-2.2-CHAPTER-FUNCTIONS",
+  "manual_gate_id": "MG-WB-2.2",
+  "depends_on": [
+    "CHG-20260802-040",
+    "CHG-20260803-041",
+    "CHG-20260802-039"
+  ],
+  "commits": [],
+  "modules": [
+    "apps/api/narrative_core",
+    "apps/desktop/whole-book-free",
+    "docs/whole-book",
+    "release/evidence/whole-book"
+  ],
+  "files": [
+    "docs/whole-book/EXECUTION_REGISTRY.json",
+    "release/unreleased.json",
+    "release/evidence/whole-book/CHG-20260803-042/",
+    "release/evidence/whole-book/WB-2.2-CHAPTER-FUNCTIONS/"
+  ],
+  "user_summary": "合并 WB-2.2 Backend/Private/Desktop，正式接线章节功能 Free 模块，建立 MG-WB-2.2 隔离验收环境。",
+  "technical_summary": "Integration merge + Free page wiring; ChapterFunctionsResultV2 SoT; no migration; Free modules=4; Pro planned=8; smoke UI 1426 / API 8006.",
+  "acceptance_criteria": [
+    "Public/Private merges complete",
+    "Canonical ChapterFunctionsResultV2",
+    "DOM catalog verified",
+    "CHG-040/041/042 tested; WB-2.2 tested; not verified",
+    "MG-WB-2.2 ready"
+  ],
+  "tests": [
+    "apps/api/tests/test_whole_book_wb22_chapter_functions_a_y.py",
+    "apps/desktop/e2e/wb22_chapter_functions.spec.ts",
+    "release/evidence/whole-book/CHG-20260803-042/dom_verify_wb22.mjs"
+  ],
+  "verification_evidence": [
+    "release/evidence/whole-book/CHG-20260803-042/TEST_RESULTS.md",
+    "release/evidence/whole-book/CHG-20260803-042/MANUAL_UI_ENV.md",
+    "release/evidence/whole-book/CHG-20260803-042/DOM_VERIFY_RESULTS.json",
+    "release/evidence/whole-book/CHG-20260803-042/BASELINE_FAILURE_COMPARISON.md",
+    "release/evidence/whole-book/WB-2.2-CHAPTER-FUNCTIONS/FINAL_REPORT.md"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "No migration; isolated smoke DB only."
+  }
+}

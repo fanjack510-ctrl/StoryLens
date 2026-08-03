@@ -1,0 +1,97 @@
+........................................................................ [  3%]
+........................................................................ [  6%]
+........................................................................ [  9%]
+..........s...s..............s.....s.s.............ssssssssssssss.s..... [ 12%]
+............s..s...........ssssss....s...............s..s............... [ 16%]
+ss....s......................ss.s.............................ss.ss..... [ 19%]
+F...F................................................................... [ 22%]
+.......................................................F.........F.F.... [ 25%]
+........................................................................ [ 29%]
+.F.F............F....................................................... [ 32%]
+..................................F..................................... [ 35%]
+.............F..................F............F.......................... [ 38%]
+.........................F.............................................. [ 42%]
+.......F..........................................F....................F [ 45%]
+F..........................................................F..F......FFF [ 48%]
+..F........................................................F......F..... [ 51%]
+.F.....F..................................F............................. [ 55%]
+..F...........F......................FF.............................F... [ 58%]
+......F.........F......F................................................ [ 61%]
+........................................................................ [ 64%]
+................................................s..................F.... [ 68%]
+........................................................................ [ 71%]
+............................................ss..sss..................... [ 74%]
+........................................................................ [ 77%]
+....F.......F............F.............................................. [ 81%]
+..................................sss............................s...... [ 84%]
+..FF...FF....................................................F.......... [ 87%]
+...sss.....FF........................................................... [ 90%]
+.........................F.............................................. [ 94%]
+........................................................................ [ 97%]
+........................................................                 [100%]
+============================== warnings summary ===============================
+..\..\..\Dstorylens\.venv\Lib\site-packages\fastapi\testclient.py:1
+  D:\Dstorylens\.venv\Lib\site-packages\fastapi\testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+..\..\..\Dstorylens\.venv\Lib\site-packages\bs4\css.py:40
+  D:\Dstorylens\.venv\Lib\site-packages\bs4\css.py:40: UserWarning: The soupsieve package is not installed. CSS selectors cannot be used.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests\test_hardening.py::test_prompt_injection_fixture_cannot_change_pipeline
+FAILED tests\test_hook_payoff_visualization_semantics_local.py::test_scene_score_dict_uses_per_scene_payoff_not_cumulative_alias
+FAILED tests\test_narrative_phase1b_integration.py::test_migrations_001_to_010_order_checksum_idempotent
+FAILED tests\test_narrative_phase1bp_contract.py::test_migration_ids_001_to_010_unique_and_ordered
+FAILED tests\test_narrative_phase1bp_contract.py::test_create_all_on_empty_temp_db
+FAILED tests\test_narrative_phase1c_engine.py::test_change_registry_check - A...
+FAILED tests\test_narrative_phase1c_integration.py::test_01_capability_not_shipped_preview_visible
+FAILED tests\test_narrative_phase1c_integration.py::test_14_capability_api_dto
+FAILED tests\test_narrative_phase1p_contract.py::test_migration_ids_are_unique
+FAILED tests\test_narrative_phase2a_mock_run_backend.py::test_change_registry_check
+FAILED tests\test_narrative_phase2a_recovery.py::test_20_snapshot_missing - s...
+FAILED tests\test_narrative_phase2a_recovery.py::test_40_change_registry_check
+FAILED tests\test_narrative_phase2b_context_evidence.py::test_version_manager_and_change_registry_and_diff_check
+FAILED tests\test_narrative_phase2b_core_modules.py::test_53_change_registry_check
+FAILED tests\test_narrative_phase2b_engine_runtime.py::test_37_change_registry_check
+FAILED tests\test_narrative_phase2b_integration.py::test_static_security_scan_paths
+FAILED tests\test_narrative_phase2b_integration.py::test_version_and_gates_locked
+FAILED tests\test_narrative_phase2bp_contract.py::test_version_is_1_0_5 - Ass...
+FAILED tests\test_narrative_phase2bp_contract.py::test_60_change_registry_check
+FAILED tests\test_narrative_phase2br1_chg057_acceptance_closure.py::test_ac_router_create_scenario_a_valid_flat_no_repair
+FAILED tests\test_narrative_phase2br1_chg057_acceptance_closure.py::test_ac_router_create_scenario_b_envelope_one_repair
+FAILED tests\test_narrative_phase2br1_chg057_acceptance_closure.py::test_ac_router_create_scenario_c_repair_still_fails
+FAILED tests\test_narrative_phase2br1_chg057_acceptance_closure.py::test_ac_model_invocation_authority_is_stage_provider_attempt
+FAILED tests\test_narrative_phase2br1_integration.py::test_12_production_isolation_version_no_migration
+FAILED tests\test_narrative_phase2br1_live_engine_provenance.py::test_provider_attempt_checkpoint_written_before_live_assert_fails
+FAILED tests\test_narrative_phase2br1_live_network_gate.py::test_authorized_live_uses_injected_transport_once
+FAILED tests\test_narrative_phase2br1_live_network_gate.py::test_request_dry_run_reaches_adapter_and_matches_gateway
+FAILED tests\test_narrative_phase2br1_live_transport_persistence.py::test_live_fake_http_once_not_stub_tokens
+FAILED tests\test_narrative_phase2br1_private_lab_runtime.py::test_version_unchanged
+FAILED tests\test_narrative_phase2br1_provider_context_cost.py::test_11_unknown_pricing_not_zero
+FAILED tests\test_narrative_phase2br1_provider_result_binding.py::test_live_executor_binds_provider_response_not_fake
+FAILED tests\test_narrative_phase2br1_provider_result_binding.py::test_empty_structured_fails_live
+FAILED tests\test_narrative_phase2br_integration.py::test_gates_and_version_locked
+FAILED tests\test_narrative_phase2br_private_runtime.py::test_gates_remain_closed
+FAILED tests\test_narrative_phase2br_private_runtime.py::test_private_lab_router_mount_and_dry_create
+FAILED tests\test_narrative_phase2br_real_modules.py::test_gates_remain_frozen
+FAILED tests\test_phase_1c_a10.py::test_partial_success_then_resume_skips_completed
+FAILED tests\test_pro_license_local.py::test_private_key_not_in_repo_config
+FAILED tests\test_pro_whole_book_insights_gate.py::test_capability_key_and_aggregation_semantics_unchanged
+FAILED tests\test_provider_health_consistency_chg009.py::test_incident_db_replay_becomes_fresh
+FAILED tests\test_reader_journey_v2_pipeline_wiring_local.py::test_execute_reader_journey_dispatches_v2
+FAILED tests\test_reader_journey_v2_pipeline_wiring_local.py::test_execute_reader_journey_keeps_legacy_path
+FAILED tests\test_reader_journey_v2_pipeline_wiring_local.py::test_harness_script_calls_official_service_only
+FAILED tests\test_reader_journey_v2_pipeline_wiring_local.py::test_config_default_pipeline_is_v2
+FAILED tests\test_scene_pipeline.py::test_fake_provider_complete_pipeline - a...
+FAILED tests\test_step23_i0_adapter_parity.py::test_public_bridge_matches_private_direct_payload_shapes
+FAILED tests\test_step23_i0_adapter_parity.py::test_ending_asset_type_uses_public_asset_enum
+FAILED tests\test_whole_book_overview_contract_v1.py::test_migration_order_includes_011
+ERROR tests\test_narrative_phase2br1_http_replay_repair_failed.py
+ERROR tests\test_narrative_phase2br1_http_replay_single_repair.py
+ERROR tests\test_narrative_phase2br1_output_contract_boundary.py
+ERROR tests\test_native_overview_free_entitlement.py - ImportError: Error imp...
+ERROR tests\test_native_overview_release_scope_local.py - ImportError: Error ...
+ERROR tests\test_native_overview_result_engine_id_local.py - ImportError: Err...
+48 failed, 2114 passed, 54 skipped, 2 warnings, 6 errors in 1261.27s (0:21:01)

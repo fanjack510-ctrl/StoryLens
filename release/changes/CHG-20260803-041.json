@@ -1,0 +1,47 @@
+{
+  "id": "CHG-20260803-041",
+  "title": "Implement WB-2.2 chapter functions desktop experience",
+  "type": "feature",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": true,
+  "head_inclusion": "INCLUDED",
+  "blocker_level": null,
+  "parent_plan": "CHG-20260802-039",
+  "wb_step_id": "WB-2.2-CHAPTER-FUNCTIONS",
+  "manual_gate_id": "MG-WB-2.2",
+  "depends_on": [
+    "CHG-20260802-040"
+  ],
+  "commits": [
+    {
+      "sha": "d1720065bcf2342302b025cb8c83e40fabe9fc55",
+      "message": "feat(whole-book): add chapter functions experience",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "apps/desktop/whole-book-free"
+  ],
+  "files": [],
+  "user_summary": "实现章节功能 Desktop UI、分页筛选、Evidence 与测试 harness。",
+  "technical_summary": "ChapterFunctionsResultV2 TS; cursor pagination; freeze labels; harness DEV-only.",
+  "acceptance_criteria": [
+    "Vitest/Playwright tested",
+    "status tested not verified"
+  ],
+  "tests": [
+    "apps/desktop/src/pages/wholeBookFreeChapterFunctions.test.tsx",
+    "apps/desktop/e2e/wb22_chapter_functions.spec.ts"
+  ],
+  "verification_evidence": [
+    "release/evidence/whole-book/CHG-20260803-042/TEST_RESULTS.md"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "No migration."
+  }
+}

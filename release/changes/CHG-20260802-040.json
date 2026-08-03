@@ -1,0 +1,53 @@
+{
+  "id": "CHG-20260802-040",
+  "title": "Implement WB-2.2 chapter functions backend and private engine",
+  "type": "feature",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": true,
+  "head_inclusion": "INCLUDED",
+  "blocker_level": null,
+  "parent_plan": "CHG-20260802-039",
+  "wb_step_id": "WB-2.2-CHAPTER-FUNCTIONS",
+  "manual_gate_id": "MG-WB-2.2",
+  "depends_on": [
+    "CHG-20260802-039"
+  ],
+  "commits": [
+    {
+      "sha": "56111e651570ae07627945e834dc01d1aa4ac9bc",
+      "message": "feat(whole-book): implement chapter functions backend",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "ae0c0e31886ba5499561254afa967c454e2ed92f",
+      "message": "feat(chapter-functions): implement WB-2.2 engine",
+      "primary": true,
+      "multi_change_reason": "private engine same CHG"
+    }
+  ],
+  "modules": [
+    "apps/api/narrative_core",
+    "private_engine/chapter_functions"
+  ],
+  "files": [],
+  "user_summary": "实现章节功能 Free 后端、V2 Contract、批处理与 Private Engine。",
+  "technical_summary": "ChapterFunctionsResultV2; synthesize_chapter_functions; max batch 8; capability available; no migration.",
+  "acceptance_criteria": [
+    "A–Y matrix tested",
+    "status tested not verified"
+  ],
+  "tests": [
+    "apps/api/tests/test_whole_book_wb22_chapter_functions_a_y.py"
+  ],
+  "verification_evidence": [
+    "release/evidence/whole-book/CHG-20260803-042/TEST_RESULTS.md"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "No migration."
+  }
+}

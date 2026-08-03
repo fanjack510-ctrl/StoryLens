@@ -1,0 +1,407 @@
+{
+  "change_id": "CHG-20260803-042",
+  "verified_at": "2026-08-03T00:47:04.899Z",
+  "frontend": "http://127.0.0.1:1426",
+  "api": "http://127.0.0.1:8006",
+  "fixtures": "C:\\Users\\msi\\AppData\\Local\\Temp\\storylens-wb22-integration\\MANUAL_FIXTURES.json",
+  "results": [
+    {
+      "key": "cf_available",
+      "book_id": 1,
+      "run_id": 1,
+      "url": "http://127.0.0.1:1426/books/1/whole-book?module=chapter_functions&run=1",
+      "seeded": true,
+      "expected": "data-state=available; chapters>=1",
+      "page_ok": true,
+      "api_http": 200,
+      "chapter_functions_visible": true,
+      "evidence_clickable": true,
+      "purchase_ui": "ABSENT",
+      "notes": [
+        "api_result_status=completed",
+        "data-state=available"
+      ]
+    },
+    {
+      "key": "cf_primary_secondary",
+      "book_id": 2,
+      "run_id": 2,
+      "url": "http://127.0.0.1:1426/books/2/whole-book?module=chapter_functions&run=2",
+      "seeded": true,
+      "expected": "data-state=available; primary+secondary present",
+      "page_ok": true,
+      "api_http": 200,
+      "chapter_functions_visible": true,
+      "evidence_clickable": true,
+      "purchase_ui": "ABSENT",
+      "notes": [
+        "api_result_status=completed",
+        "data-state=available"
+      ]
+    },
+    {
+      "key": "cf_primary_null",
+      "book_id": 3,
+      "run_id": 3,
+      "url": "http://127.0.0.1:1426/books/3/whole-book?module=chapter_functions&run=3",
+      "seeded": true,
+      "expected": "data-state=available; primary null allowed",
+      "page_ok": true,
+      "api_http": 200,
+      "chapter_functions_visible": true,
+      "evidence_clickable": true,
+      "purchase_ui": "ABSENT",
+      "notes": [
+        "api_result_status=completed",
+        "data-state=available"
+      ]
+    },
+    {
+      "key": "cf_secondary_empty",
+      "book_id": 4,
+      "run_id": 4,
+      "url": "http://127.0.0.1:1426/books/4/whole-book?module=chapter_functions&run=4",
+      "seeded": true,
+      "expected": "data-state=available; empty secondary list",
+      "page_ok": true,
+      "api_http": 200,
+      "chapter_functions_visible": true,
+      "evidence_clickable": true,
+      "purchase_ui": "ABSENT",
+      "notes": [
+        "api_result_status=completed",
+        "data-state=available"
+      ]
+    },
+    {
+      "key": "cf_partial",
+      "book_id": 5,
+      "run_id": 5,
+      "url": "http://127.0.0.1:1426/books/5/whole-book?module=chapter_functions&run=5",
+      "seeded": true,
+      "expected": "data-state=available or partial; coverage=partial_span",
+      "page_ok": true,
+      "api_http": 200,
+      "chapter_functions_visible": true,
+      "evidence_clickable": true,
+      "purchase_ui": "ABSENT",
+      "notes": [
+        "api_result_status=completed",
+        "data-state=partial"
+      ]
+    },
+    {
+      "key": "cf_insufficient",
+      "book_id": 6,
+      "run_id": 6,
+      "url": "http://127.0.0.1:1426/books/6/whole-book?module=chapter_functions&run=6",
+      "seeded": true,
+      "expected": "data-state=insufficient",
+      "page_ok": true,
+      "api_http": 200,
+      "chapter_functions_visible": true,
+      "evidence_clickable": false,
+      "purchase_ui": "ABSENT",
+      "notes": [
+        "api_result_status=completed",
+        "data-state=insufficient"
+      ]
+    },
+    {
+      "key": "cf_failed",
+      "book_id": 7,
+      "run_id": 7,
+      "url": "http://127.0.0.1:1426/books/7/whole-book?module=chapter_functions&run=7",
+      "seeded": true,
+      "expected": "data-state=failed",
+      "page_ok": true,
+      "api_http": 200,
+      "chapter_functions_visible": true,
+      "evidence_clickable": false,
+      "purchase_ui": "ABSENT",
+      "notes": [
+        "api_result_status=failed",
+        "data-state=failed"
+      ]
+    },
+    {
+      "key": "canceled",
+      "book_id": 8,
+      "run_id": 8,
+      "url": "http://127.0.0.1:1426/books/8/whole-book?module=chapter_functions&run=8",
+      "seeded": true,
+      "expected": "data-state=canceled",
+      "page_ok": true,
+      "api_http": 200,
+      "chapter_functions_visible": true,
+      "evidence_clickable": false,
+      "purchase_ui": "ABSENT",
+      "notes": [
+        "api_result_status=canceled",
+        "data-state=canceled"
+      ]
+    },
+    {
+      "key": "conflict",
+      "book_id": 9,
+      "run_id": 9,
+      "url": "http://127.0.0.1:1426/books/9/whole-book?module=chapter_functions&run=9",
+      "seeded": true,
+      "expected": "data-state=conflict",
+      "page_ok": true,
+      "api_http": 200,
+      "chapter_functions_visible": true,
+      "evidence_clickable": true,
+      "purchase_ui": "ABSENT",
+      "notes": [
+        "api_result_status=conflict",
+        "data-state=conflict"
+      ]
+    },
+    {
+      "key": "cf_evidence",
+      "book_id": 10,
+      "run_id": 10,
+      "url": "http://127.0.0.1:1426/books/10/whole-book?module=chapter_functions&run=10",
+      "seeded": true,
+      "expected": "data-state=available; evidence clickable",
+      "page_ok": true,
+      "api_http": 200,
+      "chapter_functions_visible": true,
+      "evidence_clickable": true,
+      "purchase_ui": "ABSENT",
+      "notes": [
+        "api_result_status=completed",
+        "data-state=available"
+      ]
+    },
+    {
+      "key": "cf_absent",
+      "book_id": 11,
+      "run_id": null,
+      "url": "http://127.0.0.1:1426/books/11/whole-book?module=chapter_functions",
+      "seeded": true,
+      "expected": "data-state=not_started or absent; no READY inference from DB alone",
+      "page_ok": true,
+      "api_http": 200,
+      "chapter_functions_visible": true,
+      "evidence_clickable": false,
+      "purchase_ui": "ABSENT",
+      "notes": [
+        "data-state=not_started"
+      ]
+    },
+    {
+      "key": "cf_long_book_pagination",
+      "book_id": 12,
+      "run_id": 11,
+      "url": "http://127.0.0.1:1426/books/12/whole-book?module=chapter_functions&run=11",
+      "seeded": true,
+      "expected": "data-state=available; pagination controls or cursor API",
+      "page_ok": true,
+      "api_http": 200,
+      "chapter_functions_visible": true,
+      "evidence_clickable": true,
+      "purchase_ui": "ABSENT",
+      "notes": [
+        "api_result_status=completed",
+        "data-state=available"
+      ]
+    },
+    {
+      "key": "cf_function_filter",
+      "book_id": 1,
+      "run_id": 1,
+      "url": "http://127.0.0.1:1426/books/1/whole-book?module=chapter_functions&run=1&cfFunction=setup",
+      "seeded": true,
+      "expected": "data-state=available; function filter=setup applied",
+      "page_ok": true,
+      "api_http": 200,
+      "chapter_functions_visible": true,
+      "evidence_clickable": true,
+      "purchase_ui": "ABSENT",
+      "notes": [
+        "api_result_status=completed",
+        "data-state=available"
+      ]
+    },
+    {
+      "key": "cf_status_filter",
+      "book_id": 1,
+      "run_id": 1,
+      "url": "http://127.0.0.1:1426/books/1/whole-book?module=chapter_functions&run=1&cfStatus=observed",
+      "seeded": true,
+      "expected": "data-state=available; status filter=observed applied",
+      "page_ok": true,
+      "api_http": 200,
+      "chapter_functions_visible": true,
+      "evidence_clickable": true,
+      "purchase_ui": "ABSENT",
+      "notes": [
+        "api_result_status=completed",
+        "data-state=available"
+      ]
+    },
+    {
+      "key": "cf_chapter_detail",
+      "book_id": 1,
+      "run_id": 1,
+      "url": "http://127.0.0.1:1426/books/1/whole-book?module=chapter_functions&run=1&cfChapter=1",
+      "seeded": true,
+      "expected": "data-state=available; chapter detail drawer/selection",
+      "page_ok": true,
+      "api_http": 200,
+      "chapter_functions_visible": true,
+      "evidence_clickable": true,
+      "purchase_ui": "ABSENT",
+      "notes": [
+        "api_result_status=completed",
+        "data-state=available"
+      ]
+    },
+    {
+      "key": "wb21_context_available",
+      "book_id": 13,
+      "run_id": 12,
+      "url": "http://127.0.0.1:1426/books/13/whole-book?module=chapter_functions&run=12",
+      "seeded": true,
+      "expected": "data-state=available; WB-2.1 context available (derived, not fact)",
+      "page_ok": true,
+      "api_http": 200,
+      "chapter_functions_visible": true,
+      "evidence_clickable": true,
+      "purchase_ui": "ABSENT",
+      "notes": [
+        "api_result_status=completed",
+        "data-state=available"
+      ]
+    },
+    {
+      "key": "wb21_context_absent",
+      "book_id": 14,
+      "run_id": 13,
+      "url": "http://127.0.0.1:1426/books/14/whole-book?module=chapter_functions&run=13",
+      "seeded": true,
+      "expected": "data-state=available; WB-2.1 context absent",
+      "page_ok": true,
+      "api_http": 200,
+      "chapter_functions_visible": true,
+      "evidence_clickable": true,
+      "purchase_ui": "ABSENT",
+      "notes": [
+        "api_result_status=completed",
+        "data-state=available"
+      ]
+    },
+    {
+      "key": "wb21_context_insufficient",
+      "book_id": 15,
+      "run_id": 14,
+      "url": "http://127.0.0.1:1426/books/15/whole-book?module=chapter_functions&run=14",
+      "seeded": true,
+      "expected": "CF available/insufficient; WB-2.1 context insufficient",
+      "page_ok": true,
+      "api_http": 200,
+      "chapter_functions_visible": true,
+      "evidence_clickable": true,
+      "purchase_ui": "ABSENT",
+      "notes": [
+        "api_result_status=completed",
+        "data-state=available"
+      ]
+    },
+    {
+      "key": "cost_consent",
+      "book_id": 16,
+      "run_id": null,
+      "url": "http://127.0.0.1:1426/books/16/whole-book",
+      "seeded": true,
+      "expected": "prepare + consent; no whole-book run yet",
+      "page_ok": true,
+      "api_http": 200,
+      "chapter_functions_visible": true,
+      "evidence_clickable": false,
+      "purchase_ui": "ABSENT",
+      "notes": [
+        "page text contains whole-book/chapter-functions cues"
+      ]
+    },
+    {
+      "key": "regression_overview",
+      "book_id": 1,
+      "run_id": 1,
+      "url": "http://127.0.0.1:1426/books/1/whole-book?module=overview&run=1",
+      "seeded": true,
+      "expected": "overview regression OK",
+      "page_ok": true,
+      "api_http": 200,
+      "chapter_functions_visible": true,
+      "evidence_clickable": true,
+      "purchase_ui": "ABSENT",
+      "notes": [
+        "api_result_status=completed",
+        "page text contains whole-book/chapter-functions cues"
+      ]
+    },
+    {
+      "key": "regression_characters",
+      "book_id": 1,
+      "run_id": 1,
+      "url": "http://127.0.0.1:1426/books/1/whole-book?module=characters_events&run=1",
+      "seeded": true,
+      "expected": "characters_events regression OK",
+      "page_ok": true,
+      "api_http": 200,
+      "chapter_functions_visible": true,
+      "evidence_clickable": false,
+      "purchase_ui": "ABSENT",
+      "notes": [
+        "api_result_status=completed",
+        "page text contains whole-book/chapter-functions cues"
+      ]
+    },
+    {
+      "key": "regression_structure",
+      "book_id": 1,
+      "run_id": 1,
+      "url": "http://127.0.0.1:1426/books/1/whole-book?module=structure&run=1",
+      "seeded": true,
+      "expected": "data-state=available; structure regression OK",
+      "page_ok": true,
+      "api_http": 200,
+      "chapter_functions_visible": true,
+      "evidence_clickable": true,
+      "purchase_ui": "ABSENT",
+      "notes": [
+        "api_result_status=completed",
+        "structure_data-state=available"
+      ]
+    }
+  ],
+  "purchase_ui_any": "ABSENT",
+  "page_ok_all": true,
+  "catalog_keys_checked": [
+    "cf_available",
+    "cf_primary_secondary",
+    "cf_primary_null",
+    "cf_secondary_empty",
+    "cf_partial",
+    "cf_insufficient",
+    "cf_failed",
+    "canceled",
+    "conflict",
+    "cf_evidence",
+    "cf_absent",
+    "cf_long_book_pagination",
+    "cf_function_filter",
+    "cf_status_filter",
+    "cf_chapter_detail",
+    "wb21_context_available",
+    "wb21_context_absent",
+    "wb21_context_insufficient",
+    "cost_consent",
+    "regression_overview",
+    "regression_characters",
+    "regression_structure"
+  ]
+}
