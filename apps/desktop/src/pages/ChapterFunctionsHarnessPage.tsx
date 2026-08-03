@@ -306,16 +306,33 @@ export function ChapterFunctionsHarnessPage() {
     });
     try {
       if (offline) {
-        // Stub: no real source fetch — expose href contract for Playwright.
-        const href = `/books/${bookId}?chapter=1&paragraph=2&view=reading&evidenceId=${evidenceId}&chapterId=1&paragraphIndex=2&startOffset=1&endOffset=5&returnTo=whole-book&returnModule=chapter_functions`;
+        // Stub: real chapter_id (not chapter_index) + restore* for Playwright contract.
+        const restore = new URLSearchParams();
+        if (selectedChapterId) restore.set("restoreChapter", selectedChapterId);
+        if (filters.function) restore.set("restoreFunction", filters.function);
+        if (filters.status) restore.set("restoreStatus", filters.status);
+        if (cursor) restore.set("restoreCursor", cursor);
+        restore.set("returnTo", "whole-book");
+        restore.set("returnModule", "chapter_functions");
+        const href = `/books/${bookId}?chapter=42&paragraph=2&view=reading&evidenceId=${evidenceId}&chapterId=42&chapterIndex=1&paragraphIndex=2&startOffset=1&endOffset=5&snapshotId=11&${restore.toString()}`;
         window.history.pushState({}, "", href);
         return;
       }
       const { source } = await wholeBookFreeProductApi.getEvidenceSource(evidenceId);
-      const chapterId = Number(source.chapter_index || 1);
-      const href = openEvidenceInReader(bookId, source, chapterId, {
-        returnModule: "chapter_functions",
-      });
+      const href = openEvidenceInReader(
+        bookId,
+        source,
+        Number(source.chapter_id),
+        {
+          returnModule: "chapter_functions",
+          restore: {
+            restoreChapter: selectedChapterId,
+            restoreFunction: filters.function || null,
+            restoreStatus: filters.status || null,
+            restoreCursor: cursor,
+          },
+        },
+      );
       window.location.assign(href);
     } catch (err) {
       setErrorMessage(err instanceof Error ? err.message : "Evidence 打开失败");

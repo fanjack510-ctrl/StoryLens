@@ -1,9 +1,10 @@
 /**
- * Free product Chapter Functions module container (CHG-20260803-042).
+ * Free product Chapter Functions module container (CHG-20260803-042 / CHG-047).
  * Owns pagination / filter / detail fetch against product APIs.
+ * Restore state is URL-backed (cf* + restore*) — not memory-only.
  * Panel remains presentational.
  */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { ApiError } from "../../../services/apiClient";
 import { wholeBookFreeProductApi } from "../../../services/wholeBookFreeProductApi";
@@ -18,6 +19,13 @@ import type { ChapterFunctionsFilters } from "./ChapterFunctionsPanel";
 
 const EMPTY_FILTERS: ChapterFunctionsFilters = { function: "", status: "" };
 const PAGE_LIMIT = 50;
+
+function readInitialFilters(params: URLSearchParams): ChapterFunctionsFilters {
+  return {
+    function: params.get("cfFunction") || params.get("restoreFunction") || "",
+    status: params.get("cfStatus") || params.get("restoreStatus") || "",
+  };
+}
 
 export function ChapterFunctionsFreeModule({
   runId,
@@ -35,14 +43,15 @@ export function ChapterFunctionsFreeModule({
   onBack?: () => void;
 }) {
   const [params, setParams] = useSearchParams();
-  const [filters, setFilters] = useState<ChapterFunctionsFilters>({
-    function: params.get("cfFunction") || params.get("restoreFunction") || "",
-    status: params.get("cfStatus") || params.get("restoreStatus") || "",
-  });
+  const [filters, setFilters] = useState<ChapterFunctionsFilters>(() =>
+    readInitialFilters(params),
+  );
   const [items, setItems] = useState<ChapterFunctionItemV2[]>([]);
   const [response, setResponse] = useState<ChapterFunctionsProductResponse | null>(null);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
-  const [cursor, setCursor] = useState<string | null>(params.get("restoreCursor") || null);
+  const [cursor, setCursor] = useState<string | null>(null);
+  const pendingRestoreCursor = useRef<string | null>(params.get("restoreCursor"));
+  const restoreCursorConsumed = useRef(false);
   const [viewState, setViewState] = useState<ChapterFunctionsClientViewState>("loading");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -100,6 +109,7 @@ export function ChapterFunctionsFreeModule({
 
     setLoading(true);
     setErrorMessage(null);
+    // Do not clear pendingRestoreCursor here — consume after first page.
     setCursor(null);
     try {
       const page = await wholeBookFreeProductApi.getChapterFunctions(runId, {
@@ -108,6 +118,31 @@ export function ChapterFunctionsFreeModule({
         status: filters.status || null,
       });
       applyPage(page, false);
+
+      const restoreCursor = pendingRestoreCursor.current;
+      if (restoreCursor && !restoreCursorConsumed.current) {
+        restoreCursorConsumed.current = true;
+        pendingRestoreCursor.current = null;
+        try {
+          const more = await wholeBookFreeProductApi.getChapterFunctions(runId, {
+            limit: PAGE_LIMIT,
+            cursor: restoreCursor,
+            function: filters.function || null,
+            status: filters.status || null,
+          });
+          setCursor(restoreCursor);
+          applyPage(more, true);
+        } catch (err) {
+          if (err instanceof ApiError && err.code === "CHAPTER_FUNCTIONS_INVALID_CURSOR") {
+            setErrorMessage(err.message || "分页游标无效，请清除筛选后重试");
+          }
+        }
+        setParams((prev) => {
+          const p = new URLSearchParams(prev);
+          p.delete("restoreCursor");
+          return p;
+        });
+      }
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.code === "CHAPTER_FUNCTIONS_RESULT_ABSENT" || err.status === 404) {
@@ -131,7 +166,7 @@ export function ChapterFunctionsFreeModule({
     } finally {
       setLoading(false);
     }
-  }, [applyPage, filters.function, filters.status, pageMode, runId, runStatus]);
+  }, [applyPage, filters.function, filters.status, pageMode, runId, runStatus, setParams]);
 
   useEffect(() => {
     void loadFirstPage();
@@ -152,7 +187,18 @@ export function ChapterFunctionsFreeModule({
           selectedChapterId,
         );
         const item = detail.items?.[0] ?? local ?? null;
-        if (!cancelled) setDetailItem(item);
+        if (!cancelled) {
+          // Prefer local list item when detail payload chapter_id mismatches selection.
+          if (
+            item &&
+            local &&
+            String(item.chapter_id) !== String(selectedChapterId)
+          ) {
+            setDetailItem(local);
+          } else {
+            setDetailItem(item);
+          }
+        }
       } catch {
         if (!cancelled) setDetailItem(local ?? null);
       } finally {
@@ -171,9 +217,12 @@ export function ChapterFunctionsFreeModule({
       else p.delete("cfFunction");
       if (next.status) p.set("cfStatus", next.status);
       else p.delete("cfStatus");
+      // User changed filters — drop one-shot restore anchors.
       p.delete("restoreCursor");
       p.delete("restoreFunction");
       p.delete("restoreStatus");
+      pendingRestoreCursor.current = null;
+      restoreCursorConsumed.current = true;
       return p;
     });
   };
@@ -215,6 +264,7 @@ export function ChapterFunctionsFreeModule({
     setParams((prev) => {
       const p = new URLSearchParams(prev);
       p.set("cfChapter", chapterId);
+      p.set("restoreChapter", chapterId);
       return p;
     });
   };
@@ -222,10 +272,21 @@ export function ChapterFunctionsFreeModule({
   const handleOpenEvidence = (evidenceId: number) => {
     setParams((prev) => {
       const p = new URLSearchParams(prev);
-      if (selectedChapterId) p.set("restoreChapter", selectedChapterId);
-      if (filters.function) p.set("restoreFunction", filters.function);
-      if (filters.status) p.set("restoreStatus", filters.status);
-      if (cursor || nextCursor) p.set("restoreCursor", cursor || nextCursor || "");
+      if (selectedChapterId) {
+        p.set("restoreChapter", selectedChapterId);
+        p.set("cfChapter", selectedChapterId);
+      }
+      if (filters.function) {
+        p.set("restoreFunction", filters.function);
+        p.set("cfFunction", filters.function);
+      }
+      if (filters.status) {
+        p.set("restoreStatus", filters.status);
+        p.set("cfStatus", filters.status);
+      }
+      // Only persist cursor already consumed (list position), never nextCursor alone.
+      if (cursor) p.set("restoreCursor", cursor);
+      else p.delete("restoreCursor");
       p.set("module", "chapter_functions");
       return p;
     });
@@ -269,6 +330,7 @@ export function ChapterFunctionsFreeModule({
         setParams((prev) => {
           const p = new URLSearchParams(prev);
           p.delete("cfChapter");
+          p.delete("restoreChapter");
           return p;
         });
       }}

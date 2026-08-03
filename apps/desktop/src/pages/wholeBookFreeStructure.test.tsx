@@ -129,6 +129,7 @@ function baseOverview() {
 function evidenceSource(): EvidenceSourceDetail {
   return {
     evidence_id: 501,
+    chapter_id: 42,
     chapter_title: "第1章",
     chapter_index: 1,
     paragraph_index: 3,
@@ -139,6 +140,7 @@ function evidenceSource(): EvidenceSourceDetail {
     end_offset: 5,
     quote_hash: "qh",
     paragraph_text_hash: "ph",
+    snapshot_id: 11,
     state: "valid",
   };
 }
@@ -327,12 +329,17 @@ describe("WB-2.1 structure module shell", () => {
     fireEvent.click(screen.getByTestId("whole-book-free-open-in-reader"));
     await waitFor(() => expect(screen.getByTestId("book-shell-toolbar")).toBeInTheDocument());
 
-    const href = openEvidenceInReader(1, evidenceSource(), 1, { returnModule: "structure" });
+    const href = openEvidenceInReader(1, evidenceSource(), 42, { returnModule: "structure" });
+    expect(href).toContain("chapter=42");
+    expect(href).toContain("chapterId=42");
     expect(href).toContain("paragraphIndex=3");
     expect(href).toContain("startOffset=1");
     expect(href).toContain("endOffset=5");
     expect(href).toContain("returnModule=structure");
     expect(href).not.toContain("evidence_map");
+    // chapter_index is display-only, never used as chapter id
+    expect(href).toContain("chapterIndex=1");
+    expect(href).not.toMatch(/[?&]chapter=1(?:&|$)/);
 
     cleanup();
     prepareSpy.mockResolvedValue(basePrepare(baseRun("completed")));

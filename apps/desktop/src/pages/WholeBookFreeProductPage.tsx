@@ -12,7 +12,11 @@ import {
   BOOK_OVERVIEW_CLAIM_LABELS,
   BOOK_OVERVIEW_CLAIM_ORDER,
 } from "../services/wholeBookFoundationApi";
-import { openEvidenceInReader } from "../services/wholeBookFreeEvidenceDeepLink";
+import {
+  openEvidenceInReaderFromSource,
+  readEvidenceRestoreState,
+  EvidenceChapterIdMissingError,
+} from "../services/wholeBookFreeEvidenceDeepLink";
 import {
   WHOLE_BOOK_FREE_MODULES,
   wholeBookFreeProductApi,
@@ -84,12 +88,16 @@ function overviewAvailabilityLabel(availability: string): string {
   return availability;
 }
 
-function highlightQuote(
+/**
+ * Exact offset highlight only — no title match / indexOf / nearest-chapter fuzzy.
+ * Returns locateError when offsets do not match quote_text.
+ */
+function highlightQuoteExact(
   paragraphText: string,
   quoteText: string,
   startOffset: number,
   endOffset: number,
-): { before: string; quote: string; after: string } {
+): { before: string; quote: string; after: string; locateError: string | null } {
   if (
     startOffset >= 0 &&
     endOffset > startOffset &&
@@ -100,17 +108,15 @@ function highlightQuote(
       before: paragraphText.slice(0, startOffset),
       quote: quoteText,
       after: paragraphText.slice(endOffset),
+      locateError: null,
     };
   }
-  const idx = paragraphText.indexOf(quoteText);
-  if (idx >= 0) {
-    return {
-      before: paragraphText.slice(0, idx),
-      quote: quoteText,
-      after: paragraphText.slice(idx + quoteText.length),
-    };
-  }
-  return { before: paragraphText, quote: "", after: "" };
+  return {
+    before: paragraphText,
+    quote: "",
+    after: "",
+    locateError: "无法精确定位引用片段，已保留当前页面，未跳转模糊位置。",
+  };
 }
 
 function isActiveRun(status: string | null | undefined): boolean {
@@ -383,23 +389,36 @@ function WholeBookFreeProductPageEnabled() {
           setDrawerError("原文已发生变化，当前依据无法精确定位。");
           return;
         }
-        const chapterId = source.chapter_index;
-        const href = openEvidenceInReader(bookId, source, chapterId, {
-          returnModule:
-            activeModule === "structure" || activeModule === "chapter_functions"
-              ? activeModule
-              : undefined,
+        if (source.chapter_id == null || Number(source.chapter_id) <= 0) {
+          setDrawerError("缺少真实章节 ID，无法打开原文。");
+          return;
+        }
+        const restore =
+          activeModule === "chapter_functions"
+            ? readEvidenceRestoreState(searchParams)
+            : undefined;
+        const href = openEvidenceInReaderFromSource(bookId, source, {
+          returnModule: activeModule,
+          restore,
         });
         navigate(href);
       } catch (err) {
+        if (err instanceof EvidenceChapterIdMissingError) {
+          setDrawerError("缺少真实章节 ID，无法打开原文。");
+          return;
+        }
         if (err instanceof Error && err.message === "EVIDENCE_MISSING") {
           setDrawerError("对应章节已不存在。");
+          return;
+        }
+        if (err instanceof Error && err.message === "EVIDENCE_STALE") {
+          setDrawerError("原文已发生变化，当前依据无法精确定位。");
           return;
         }
         setDrawerError(err instanceof Error ? err.message : "无法打开原文");
       }
     },
-    [activeModule, bookId, navigate],
+    [activeModule, bookId, navigate, searchParams],
   );
 
   const structureView = useMemo(() => {
@@ -493,9 +512,18 @@ function WholeBookFreeProductPageEnabled() {
   const pageMode: "prepare" | "running" | "completed" | "failed" = (() => {
     if (!run) return "prepare";
     if (isCompletedRun(run.status)) return "completed";
-    if (run.status === "failed" || run.status === "cancelled") return "failed";
+    if (
+      run.status === "failed" ||
+      run.status === "cancelled" ||
+      run.status === "canceled"
+    ) {
+      return "failed";
+    }
     return "running";
   })();
+  const isCanceledTerminal =
+    run?.status === "cancelled" || run?.status === "canceled";
+  const showProgressCard = pageMode === "running";
 
   const canStartFormal =
     consented &&
@@ -610,7 +638,7 @@ function WholeBookFreeProductPageEnabled() {
             />
           ) : null}
 
-          {pageMode === "running" ? (
+          {showProgressCard ? (
             <ProgressPanel
               progress={progress}
               stages={stagesQuery.data?.stages ?? []}
@@ -621,6 +649,17 @@ function WholeBookFreeProductPageEnabled() {
               onPause={() => pauseMutation.mutate()}
               onResume={() => resumeMutation.mutate()}
               onCancel={() => cancelMutation.mutate()}
+            />
+          ) : null}
+
+          {pageMode === "failed" &&
+          activeModule !== "structure" &&
+          activeModule !== "chapter_functions" ? (
+            <TerminalRunPanel
+              canceled={isCanceledTerminal}
+              failureCode={run?.failure_code}
+              failureMessage={run?.failure_message_safe}
+              headerStatus={run?.status ?? "failed"}
             />
           ) : null}
 
@@ -656,7 +695,7 @@ function WholeBookFreeProductPageEnabled() {
             <StructureStagesPanel
               viewState={structureView.viewState}
               response={
-                pageMode === "failed" && run?.status === "cancelled"
+                pageMode === "failed" && isCanceledTerminal
                   ? { result_status: "canceled", coverage_scope: null, structure: null }
                   : pageMode === "failed" && run?.status === "failed"
                     ? {
@@ -900,6 +939,38 @@ function PreparePanel({
   );
 }
 
+function TerminalRunPanel({
+  canceled,
+  failureCode,
+  failureMessage,
+  headerStatus,
+}: {
+  canceled: boolean;
+  failureCode?: string | null;
+  failureMessage?: string | null;
+  headerStatus: string;
+}) {
+  return (
+    <section
+      data-testid="whole-book-free-terminal"
+      data-status={canceled ? "canceled" : "failed"}
+      data-header-status={headerStatus}
+    >
+      <h2>{canceled ? "分析已取消" : "分析失败"}</h2>
+      <p data-testid="whole-book-free-terminal-message">
+        {canceled
+          ? "本次全书分析已取消，进度卡片已关闭。"
+          : failureMessage || "本次全书分析失败，进度卡片已关闭。"}
+      </p>
+      {failureCode ? (
+        <p className="muted" data-testid="whole-book-free-terminal-code">
+          {failureCode}
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
 function ProgressPanel({
   progress,
   stages,
@@ -1132,12 +1203,18 @@ function EvidenceDrawerPanel({
   onOpenInReader: () => void;
   error: string | null;
 }) {
-  const parts = highlightQuote(
+  const parts = highlightQuoteExact(
     source.paragraph_text,
     source.quote_text,
     source.start_offset,
     source.end_offset,
   );
+  const locateBlocked = Boolean(parts.locateError);
+  const canOpenReader =
+    !locateBlocked &&
+    source.state !== "stale" &&
+    source.chapter_id != null &&
+    Number(source.chapter_id) > 0;
   return (
     <aside
       className={styles.wholeBookFreeEvidenceDrawer}
@@ -1156,11 +1233,22 @@ function EvidenceDrawerPanel({
       </p>
       <p className={styles.wholeBookFreeEvidenceParagraph} data-testid="whole-book-free-evidence-paragraph">
         {parts.before}
-        {parts.quote ? <mark>{parts.quote}</mark> : null}
+        {parts.quote ? <mark data-testid="whole-book-free-evidence-mark">{parts.quote}</mark> : null}
         {parts.after}
       </p>
+      {parts.locateError ? (
+        <p className="error-text" data-testid="whole-book-free-evidence-locate-error">
+          {parts.locateError}
+        </p>
+      ) : null}
       {error ? <p className="error-text">{error}</p> : null}
-      <button type="button" className="primary" data-testid="whole-book-free-open-in-reader" onClick={onOpenInReader}>
+      <button
+        type="button"
+        className="primary"
+        data-testid="whole-book-free-open-in-reader"
+        disabled={!canOpenReader}
+        onClick={onOpenInReader}
+      >
         在原文中查看
       </button>
     </aside>

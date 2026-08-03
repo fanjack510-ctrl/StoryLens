@@ -275,6 +275,7 @@ function baseOverview(): BookOverviewResultRow {
 function baseEvidenceSource(): EvidenceSourceDetail {
   return {
     evidence_id: 501,
+    chapter_id: 42,
     chapter_title: "第1章",
     chapter_index: 1,
     paragraph_index: 3,
@@ -285,6 +286,7 @@ function baseEvidenceSource(): EvidenceSourceDetail {
     end_offset: 6,
     quote_hash: "qh",
     paragraph_text_hash: "ph",
+    snapshot_id: 11,
     state: "valid",
   };
 }
@@ -687,15 +689,30 @@ describe("WholeBookFreeProduct (Wave D §18.2)", () => {
     expect(screen.queryByTestId("error-state")).not.toBeInTheDocument();
   });
 
-  it("builds evidence reader deeplink with offset params", () => {
+  it("builds evidence reader deeplink with real chapter_id and offset params", () => {
     const source = baseEvidenceSource();
-    const href = wholeBookEvidenceReaderHref(1, source, 1);
+    const href = wholeBookEvidenceReaderHref(1, source, 42);
     expect(href).toContain("/books/1?");
     expect(href).toContain("view=reading");
+    expect(href).toContain("chapter=42");
+    expect(href).toContain("chapterId=42");
+    expect(href).toContain("chapterIndex=1");
     expect(href).toContain("evidenceId=501");
     expect(href).toContain("paragraphIndex=3");
     expect(href).toContain("startOffset=2");
     expect(href).toContain("endOffset=6");
+    expect(href).toContain("snapshotId=11");
+    expect(href).not.toMatch(/[?&]chapter=1(?:&|$)/);
+  });
+
+  it("refuses to build deeplink when chapter_id is missing", () => {
+    const source = { ...baseEvidenceSource(), chapter_id: null };
+    expect(() => wholeBookEvidenceReaderHref(1, source, 1)).toThrow("EVIDENCE_CHAPTER_ID_MISSING");
+  });
+
+  it("refuses chapter_index masquerading as chapter id", () => {
+    const source = baseEvidenceSource(); // chapter_id=42, chapter_index=1
+    expect(() => wholeBookEvidenceReaderHref(1, source, 1)).toThrow("EVIDENCE_CHAPTER_ID_MISSING");
   });
 
   it("opens evidence drawer and reader deeplink", async () => {
@@ -718,6 +735,54 @@ describe("WholeBookFreeProduct (Wave D §18.2)", () => {
     });
   });
 
+  it("does not fuzzy-highlight when offsets mismatch quote", async () => {
+    prepareSpy.mockResolvedValue(basePrepare({ latest_run: baseRun("completed") }));
+    getOverviewSpy.mockResolvedValue({ overview: baseOverview() });
+    listEntitiesSpy.mockResolvedValue({ entities: [] });
+    listAssetsSpy.mockResolvedValue({ assets: [], total: 0, offset: 0, limit: 50 });
+    listEvidencesSpy.mockResolvedValue({ evidences: [] });
+    getEvidenceSourceSpy.mockResolvedValue({
+      source: {
+        ...baseEvidenceSource(),
+        quote_text: "踏入山门",
+        start_offset: 0,
+        end_offset: 2,
+      },
+    });
+    renderPage("/books/1/whole-book");
+    await screen.findByTestId("whole-book-free-claim-evidence-genre_and_narrative_features");
+    fireEvent.click(
+      screen.getByTestId("whole-book-free-claim-evidence-genre_and_narrative_features"),
+    );
+    expect(await screen.findByTestId("whole-book-free-evidence-locate-error")).toBeInTheDocument();
+    expect(screen.queryByTestId("whole-book-free-evidence-mark")).not.toBeInTheDocument();
+    expect(screen.getByTestId("whole-book-free-open-in-reader")).toBeDisabled();
+  });
+
+  it("hides ProgressCard on failed/canceled terminal and keeps header consistent", async () => {
+    prepareSpy.mockResolvedValue(basePrepare({ latest_run: baseRun("failed") }));
+    renderPage("/books/1/whole-book");
+    expect(await screen.findByTestId("whole-book-free-terminal")).toHaveAttribute(
+      "data-status",
+      "failed",
+    );
+    expect(screen.queryByTestId("whole-book-free-progress")).not.toBeInTheDocument();
+    expect(screen.getByTestId("whole-book-free-status")).toHaveTextContent("分析失败");
+    expect(screen.getByTestId("whole-book-free-terminal")).toHaveAttribute(
+      "data-header-status",
+      "failed",
+    );
+
+    cleanup();
+    prepareSpy.mockResolvedValue(basePrepare({ latest_run: baseRun("cancelled") }));
+    renderPage("/books/1/whole-book");
+    expect(await screen.findByTestId("whole-book-free-terminal")).toHaveAttribute(
+      "data-status",
+      "canceled",
+    );
+    expect(screen.queryByTestId("whole-book-free-progress")).not.toBeInTheDocument();
+  });
+
   it("keeps compact entry label even when a run is already running", async () => {
     prepareSpy.mockResolvedValue(basePrepare({ latest_run: baseRun("running") }));
     renderPage("/books/1");
@@ -725,12 +790,27 @@ describe("WholeBookFreeProduct (Wave D §18.2)", () => {
     expect(entry.textContent?.trim()).toBe("全书分析");
     expect(entry).not.toHaveTextContent("查看分析进度");
   });
+
+  it("returns to chapter_functions with restore filters from reader entry", async () => {
+    prepareSpy.mockResolvedValue(basePrepare({ latest_run: baseRun("completed") }));
+    renderPage(
+      "/books/1?chapter=42&view=reading&returnTo=whole-book&returnModule=chapter_functions&restoreFunction=climax&restoreStatus=observed&restoreCursor=cur-2&restoreChapter=7",
+    );
+    const entry = await screen.findByTestId("whole-book-free-entry");
+    expect(entry).toHaveAttribute("data-return-module", "chapter_functions");
+    expect(entry.textContent?.trim()).toBe("返回分析");
+    expect(entry.getAttribute("href")).toContain("module=chapter_functions");
+    expect(entry.getAttribute("href")).toContain("restoreFunction=climax");
+    expect(entry.getAttribute("href")).toContain("restoreStatus=observed");
+    expect(entry.getAttribute("href")).toContain("restoreCursor=cur-2");
+    expect(entry.getAttribute("href")).toContain("restoreChapter=7");
+  });
 });
 
 describe("wholeBookFreeEvidenceDeepLink stale handling", () => {
   it("rejects stale evidence for reader navigation", () => {
     expect(() =>
-      openEvidenceInReader(1, { ...baseEvidenceSource(), state: "stale" }, 1),
+      openEvidenceInReader(1, { ...baseEvidenceSource(), state: "stale" }, 42),
     ).toThrow("EVIDENCE_STALE");
   });
 });
