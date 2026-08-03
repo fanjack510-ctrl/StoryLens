@@ -1,4 +1,4 @@
-"""Combined fixture minimal pipeline (WB-1.4–1.6 + WB-2.1 structure)."""
+"""Combined fixture minimal pipeline (WB-1.4–1.6 + WB-2.1 structure + WB-2.2 CF)."""
 
 from __future__ import annotations
 
@@ -9,6 +9,10 @@ from sqlalchemy.orm import Session
 from app.narrative_core.services.whole_book_foundation_errors import (
     WholeBookFoundationError,
     WholeBookFoundationErrorCode,
+)
+from app.narrative_core.services.whole_book_minimal_chapter_functions_v1_service import (
+    FixtureChapterFunctionsTransport,
+    synthesize_minimal_chapter_functions_v1,
 )
 from app.narrative_core.services.whole_book_minimal_extraction_v1_service import (
     FixtureWindowAnalysisTransport,
@@ -32,6 +36,7 @@ def execute_fixture_minimal_pipeline_v1(
     run_id: int,
     *,
     structure_mode: str = "multi_stage",
+    chapter_functions_mode: str = "available",
 ) -> dict:
     if os.environ.get("STORYLENS_WHOLE_BOOK_REAL_PROVIDER_ENABLED", "false").lower() in {
         "1",
@@ -55,6 +60,7 @@ def execute_fixture_minimal_pipeline_v1(
             "materialization": {"run_id": run_id, "reused": True},
             "overview": {"run_id": run_id, "reused": True},
             "structure": {"run_id": run_id, "reused": True, "provider_calls": 0},
+            "chapter_functions": {"run_id": run_id, "reused": True, "provider_calls": 0},
             "result_origin": run.result_origin,
         }
 
@@ -71,6 +77,13 @@ def execute_fixture_minimal_pipeline_v1(
         run_id,
         transport=FixtureStructureTransport(mode=structure_mode),  # type: ignore[arg-type]
         mode=structure_mode,  # type: ignore[arg-type]
+        finalize_run=False,
+    )
+    chapter_functions = synthesize_minimal_chapter_functions_v1(
+        session,
+        run_id,
+        transport=FixtureChapterFunctionsTransport(mode=chapter_functions_mode),  # type: ignore[arg-type]
+        mode=chapter_functions_mode,  # type: ignore[arg-type]
         finalize_run=True,
     )
 
@@ -83,5 +96,6 @@ def execute_fixture_minimal_pipeline_v1(
         "materialization": materialization,
         "overview": overview,
         "structure": structure,
+        "chapter_functions": chapter_functions,
         "result_origin": run.result_origin,
     }

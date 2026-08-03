@@ -371,6 +371,7 @@ def _fail_structure_stage(
     *,
     failure_code: str,
     message: str,
+    finalize_run: bool = True,
 ) -> dict[str, Any]:
     run = get_run(session, run_id)
     stage = session.scalar(
@@ -404,11 +405,16 @@ def _fail_structure_stage(
         checkpoint_key=STRUCTURE_RESULT_CHECKPOINT_KEY,
         payload=envelope,
     )
-    run.status = WholeBookRunStatus.failed.value
     run.current_stage_code = STRUCTURE_STAGE_CODE
-    run.failed_at = utc_now()
-    run.failure_code = failure_code
-    run.failure_message_safe = message[:500]
+    # When a later stage (chapter_functions) follows, soft-fail the structure stage only.
+    if finalize_run:
+        run.status = WholeBookRunStatus.failed.value
+        run.failed_at = utc_now()
+        run.failure_code = failure_code
+        run.failure_message_safe = message[:500]
+    else:
+        run.failure_code = failure_code
+        run.failure_message_safe = message[:500]
     session.flush()
     return {
         "run_id": run_id,
@@ -510,6 +516,7 @@ def synthesize_minimal_structure_stages_v1(
             run_id,
             failure_code="STRUCTURE_PROVIDER_UNIT_FAILED",
             message="structure stages provider unit failed",
+            finalize_run=finalize_run,
         )
 
     if isinstance(transport, FixtureStructureTransport):
@@ -561,6 +568,7 @@ def synthesize_minimal_structure_stages_v1(
             run_id,
             failure_code=primary,
             message="structure stages contract failed after fixture validation",
+            finalize_run=finalize_run,
         )
     structure = typed
 

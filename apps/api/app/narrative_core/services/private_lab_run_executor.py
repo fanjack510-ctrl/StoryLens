@@ -64,6 +64,8 @@ def _module_attempt_kinds(module_key: str) -> tuple[str, str]:
     mk = str(module_key)
     if mk == "structure_stages":
         return "structure_stages_initial", "structure_stages_contract_repair"
+    if mk == "chapter_functions":
+        return "chapter_functions_initial", "chapter_functions_contract_repair"
     return "book_overview_initial", "book_overview_contract_repair"
 
 

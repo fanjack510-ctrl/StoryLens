@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
+from app.narrative_core.services.whole_book_chapter_functions_product_v1_service import (
+    DEFAULT_PAGE_LIMIT,
+    MAX_PAGE_LIMIT,
+    get_run_chapter_functions_product_v1,
+)
 from app.narrative_core.services.whole_book_foundation_errors import (
     WholeBookFoundationError,
     WholeBookFoundationErrorCode,
@@ -165,6 +170,73 @@ def product_structure_result(run_id: int, db: Session = Depends(get_db)) -> dict
                 detail={
                     "error_code": "STRUCTURE_RESULT_ABSENT",
                     "message": "故事结构结果尚未生成",
+                },
+            )
+        return payload
+    except WholeBookFoundationError as exc:
+        _raise_foundation(exc)
+        raise
+
+
+@router.get("/whole-book/runs/{run_id}/chapter-functions")
+def product_chapter_functions_result(
+    run_id: int,
+    db: Session = Depends(get_db),
+    limit: int = Query(default=DEFAULT_PAGE_LIMIT, ge=1, le=MAX_PAGE_LIMIT),
+    cursor: str | None = Query(default=None),
+    offset: int | None = Query(default=None, ge=0),
+    function: str | None = Query(default=None),
+    status: str | None = Query(default=None),
+) -> dict:
+    """Product ChapterFunctionsResultV2 envelope (WB-2.2)."""
+
+    try:
+        require_capability_access("whole_book.chapter_functions", AccessTier.free)
+        payload = get_run_chapter_functions_product_v1(
+            db,
+            run_id,
+            limit=limit,
+            cursor=cursor,
+            offset=offset,
+            function=function,
+            status=status,
+        )
+        if payload is None:
+            raise HTTPException(
+                status_code=404,
+                detail={
+                    "error_code": "CHAPTER_FUNCTIONS_RESULT_ABSENT",
+                    "message": "章节功能结果尚未生成",
+                },
+            )
+        return payload
+    except WholeBookFoundationError as exc:
+        _raise_foundation(exc)
+        raise
+
+
+@router.get("/whole-book/runs/{run_id}/chapter-functions/{chapter_id}")
+def product_chapter_functions_chapter_result(
+    run_id: int,
+    chapter_id: str,
+    db: Session = Depends(get_db),
+) -> dict:
+    """Single-chapter ChapterFunctionsResultV2 item envelope."""
+
+    try:
+        require_capability_access("whole_book.chapter_functions", AccessTier.free)
+        payload = get_run_chapter_functions_product_v1(
+            db,
+            run_id,
+            limit=1,
+            chapter_id=chapter_id,
+        )
+        if payload is None:
+            raise HTTPException(
+                status_code=404,
+                detail={
+                    "error_code": "CHAPTER_FUNCTION_CHAPTER_NOT_FOUND",
+                    "message": "该章节功能结果不存在",
                 },
             )
         return payload

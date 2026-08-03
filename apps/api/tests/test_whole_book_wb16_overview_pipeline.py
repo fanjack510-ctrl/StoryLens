@@ -32,13 +32,16 @@ def test_full_pipeline_completed(tmp_path) -> None:
             session.scalars(select(WholeBookRunStageRow).where(WholeBookRunStageRow.run_id == run_id)).all()
         )
         completed = [s for s in stages if s.status == "completed"]
-        assert len(completed) == 8
+        # WB-2.2 adds synthesize_chapter_functions → 9 completed stages.
+        assert len(completed) == 9
         assert any(s.stage_code == "synthesize_structure_stages" and s.status == "completed" for s in stages)
+        assert any(s.stage_code == "synthesize_chapter_functions" and s.status == "completed" for s in stages)
         overview = session.scalar(
             select(WholeBookOverviewResult).where(WholeBookOverviewResult.run_id == run_id)
         )
         assert overview is not None
-        assert count_provider_calls(session, run_id) == 5
+        # 3 windows + overview + structure + chapter_functions
+        assert count_provider_calls(session, run_id) == 6
     engine.dispose()
 
 
@@ -53,10 +56,10 @@ def test_pipeline_rerun_zero_new_calls(tmp_path) -> None:
         execute_fixture_minimal_pipeline_v1(session, run_id)
         session.commit()
         calls_after_second = count_provider_calls(session, run_id)
-        assert calls_after_first == 5
-        assert calls_after_second == 5
+        assert calls_after_first == 6
+        assert calls_after_second == 6
         attempts = session.query(WholeBookProviderAttempt).count()
-        assert attempts == 5
+        assert attempts == 6
     engine.dispose()
 
 
