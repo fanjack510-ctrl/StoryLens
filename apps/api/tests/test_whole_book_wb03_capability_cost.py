@@ -156,7 +156,10 @@ def test_book_change_invalidates_estimate(testing_session) -> None:
 
 
 def test_consent_binds_estimate_and_immutable(testing_session) -> None:
+    from app.narrative_core.services.whole_book_snapshot_v1_service import create_or_reuse_book_snapshot_v1
+
     book, provider = _seed_book(testing_session, chars=400, title="cns")
+    snap = create_or_reuse_book_snapshot_v1(testing_session, book.id)["snapshot"]
     est = estimate_whole_book_analysis(testing_session, book.id, "whole_book_native", provider.id)
     # Force unavailable path requiring limits
     est.pricing_status = "unavailable"
@@ -181,7 +184,13 @@ def test_consent_binds_estimate_and_immutable(testing_session) -> None:
     # Service contract: create always inserts new row; revoke marks revoked_at
     revoke_whole_book_consent(testing_session, consent.id)
     with pytest.raises(WholeBookFoundationError) as exc:
-        validate_whole_book_consent(testing_session, consent.id)
+        validate_whole_book_consent(
+            testing_session,
+            consent.id,
+            book_id=book.id,
+            estimate_id=est.id,
+            snapshot_id=snap.id,
+        )
     assert exc.value.code == WholeBookFoundationErrorCode.WHOLE_BOOK_CONSENT_REVOKED.value
     assert original_budget is not None
 

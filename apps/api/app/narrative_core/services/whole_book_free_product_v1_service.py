@@ -175,14 +175,29 @@ def create_free_whole_book_analysis_v1(
 ) -> dict[str, Any]:
     _require_free_product_enabled()
     require_capability_access("whole_book.overview", AccessTier.free)
-    if real_provider_enabled():
+    book = session.get(Book, book_id)
+    if book is None:
         raise WholeBookFoundationError(
-            WholeBookFoundationErrorCode.WHOLE_BOOK_CAPABILITY_DISABLED,
-            "真实 Provider 路径尚未在本版本开放",
+            WholeBookFoundationErrorCode.WHOLE_BOOK_BOOK_NOT_FOUND,
+            "书籍不存在",
+        )
+    snap = create_or_reuse_book_snapshot_v1(session, book_id)["snapshot"]
+    # Same Consent Contract as create-fixture (book / estimate / snapshot / revision).
+    validate_whole_book_consent(
+        session,
+        consent_id,
+        book_id=book_id,
+        estimate_id=estimate_id,
+        snapshot_id=snap.id,
+    )
+    if not real_provider_enabled():
+        raise WholeBookFoundationError(
+            WholeBookFoundationErrorCode.WHOLE_BOOK_REAL_PROVIDER_DISABLED,
+            "真实模型分析尚未启用，请使用测试数据预览",
         )
     raise WholeBookFoundationError(
-        WholeBookFoundationErrorCode.WHOLE_BOOK_REAL_PROVIDER_DISABLED,
-        "真实模型分析尚未启用，请使用测试数据预览",
+        WholeBookFoundationErrorCode.WHOLE_BOOK_CAPABILITY_DISABLED,
+        "真实 Provider 路径尚未在本版本开放",
     )
 
 
@@ -210,15 +225,6 @@ def create_fixture_free_whole_book_analysis_v1(
             "书籍不存在",
         )
     snap = create_or_reuse_book_snapshot_v1(session, book_id)["snapshot"]
-    request_id = client_request_id or str(uuid.uuid4())
-    run = create_whole_book_run_v1(
-        session,
-        book_id,
-        snap.id,
-        WholeBookMode.whole_book_native.value,
-        request_id,
-        ResultOrigin.fixture.value,
-    )
     provider = session.scalar(select(ProviderConfiguration).limit(1))
     if provider is None:
         provider = ProviderConfiguration(provider_name="fixture", plus_model="fixture-model")
@@ -238,15 +244,33 @@ def create_fixture_free_whole_book_analysis_v1(
         auto_retry_enabled=False,
         max_retries_per_unit=0,
     )
-    validate_whole_book_consent(session, consent.id, book_id)
-    run.consent_id = consent.id
-    session.flush()
+    # Formal Create Run Consent Contract (keyword bindings only).
+    validate_whole_book_consent(
+        session,
+        consent.id,
+        book_id=book_id,
+        estimate_id=estimate.id,
+        snapshot_id=snap.id,
+    )
+    request_id = client_request_id or str(uuid.uuid4())
+    run = create_whole_book_run_v1(
+        session,
+        book_id,
+        snap.id,
+        WholeBookMode.whole_book_native.value,
+        request_id,
+        ResultOrigin.fixture.value,
+    )
+    if run.consent_id is None:
+        run.consent_id = consent.id
+        session.flush()
 
     audit = assert_native_input_independence_v1(session, run.id)
     persist_native_input_audit_v1(session, audit)
 
     generate_whole_book_windows_v1(session, run.id)
-    start_whole_book_run_v1(session, run.id)
+    if run.status == WholeBookRunStatus.pending.value:
+        start_whole_book_run_v1(session, run.id)
     session.refresh(run)
 
     pipeline_result: dict[str, Any] | None = None

@@ -23,7 +23,7 @@ from app.services.cloud_pricing import estimate_cost, model_pricing_available, p
 from app.services.transition_batch_planner import conservative_token_estimate
 from app.services.whole_book_source_fingerprint import compute_book_revision_hash_v1
 
-ESTIMATE_VERSION = "whole_book_cost_estimate_v1"
+ESTIMATE_VERSION = "whole_book_cost_estimate_v2"
 TARGET_INPUT_TOKENS_PER_WINDOW = 18000
 RESERVED_OUTPUT_TOKENS_PER_WINDOW = 3000
 WINDOW_OVERLAP_RATIO = 0.08
@@ -31,6 +31,13 @@ SYNTHESIS_OUTPUT_TOKENS = 6000
 SYNTHESIS_INPUT_TOKENS_BASE = 4000
 DEFAULT_EXPIRE_HOURS = 24
 CURRENCY = "CNY"
+# Keep aligned with whole_book_minimal_helpers_v1.MAX_CHAPTERS_PER_BATCH (avoid circular import).
+CF_MAX_CHAPTERS_PER_BATCH = 8
+# Planning reserve: CF allows at most one repair call per batch (may not be consumed).
+CF_REPAIR_RESERVE_PER_BATCH = 1
+# Overview synthesis + structure_stages synthesis (characters_events covered by window units).
+SYNTHESIS_PROVIDER_CALLS = 2
+CHAPTER_FUNCTION_REPAIR_STRATEGY = "at_most_one_repair_per_batch"
 
 
 def compute_book_revision_hash(session: Session, book_id: int) -> str:
@@ -64,6 +71,21 @@ def _estimate_window_count(total_input_tokens: int) -> int:
     if effective <= 0:
         effective = float(TARGET_INPUT_TOKENS_PER_WINDOW)
     return max(1, int(math.ceil(total_input_tokens / effective)))
+
+
+def _estimate_chapter_function_batches(chapter_count: int) -> int:
+    if chapter_count <= 0:
+        return 0
+    return int(math.ceil(chapter_count / float(CF_MAX_CHAPTERS_PER_BATCH)))
+
+
+def _estimate_provider_call_count(*, window_count: int, chapter_count: int) -> int:
+    """Align estimate with unit planning: windows + overview + structure + CF batches + repair reserve."""
+    if window_count == 0 and chapter_count == 0:
+        return 0
+    cf_batches = _estimate_chapter_function_batches(chapter_count)
+    cf_repair_reserve = cf_batches * CF_REPAIR_RESERVE_PER_BATCH
+    return int(window_count) + SYNTHESIS_PROVIDER_CALLS + cf_batches + cf_repair_reserve
 
 
 def _resolve_model_name(provider: ProviderConfiguration | None) -> str:
@@ -152,8 +174,9 @@ def estimate_whole_book_analysis(
     synthesis_input = SYNTHESIS_INPUT_TOKENS_BASE + min(8000, window_count * 200)
     estimated_input = window_input_tokens + synthesis_input
     estimated_output = window_count * RESERVED_OUTPUT_TOKENS_PER_WINDOW + SYNTHESIS_OUTPUT_TOKENS
-    # Window units + overview + structure_stages + chapter_functions (WB-2.2).
-    provider_calls = 0 if window_count == 0 else window_count + 3
+    provider_calls = _estimate_provider_call_count(
+        window_count=window_count, chapter_count=chapter_count
+    )
 
     cost_min: Decimal | None = None
     cost_max: Decimal | None = None
@@ -224,6 +247,7 @@ def estimate_to_dict(row: WholeBookCostEstimate) -> dict[str, Any]:
     def _dec(v: Any) -> str | None:
         return None if v is None else str(v)
 
+    cf_batches = _estimate_chapter_function_batches(int(row.chapter_count or 0))
     return {
         "id": row.id,
         "book_id": row.book_id,
@@ -236,6 +260,9 @@ def estimate_to_dict(row: WholeBookCostEstimate) -> dict[str, Any]:
         "character_count": row.character_count,
         "estimated_window_count": row.estimated_window_count,
         "estimated_provider_call_count": row.estimated_provider_call_count,
+        "estimated_chapter_function_batches": cf_batches,
+        "estimated_chapter_function_repair_reserve": cf_batches * CF_REPAIR_RESERVE_PER_BATCH,
+        "chapter_function_repair_strategy": CHAPTER_FUNCTION_REPAIR_STRATEGY,
         "estimated_input_tokens": row.estimated_input_tokens,
         "estimated_output_tokens": row.estimated_output_tokens,
         "estimated_cost_min_cny": _dec(row.estimated_cost_min_cny),

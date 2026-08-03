@@ -356,13 +356,9 @@ def _persist_structure_assets(
 
 
 def _finalize_run(session: Session, run_id: int) -> None:
-    run = get_run(session, run_id)
-    for stage_code in ("project_result", "finalize"):
-        set_stage_completed(session, run_id, stage_code, progress_total=1)
-    run.status = WholeBookRunStatus.completed.value
-    run.current_stage_code = "finalize"
-    run.completed_at = utc_now()
-    session.flush()
+    from app.narrative_core.services.whole_book_minimal_helpers_v1 import finalize_whole_book_run_v1
+
+    finalize_whole_book_run_v1(session, run_id)
 
 
 def _fail_structure_stage(

@@ -8,7 +8,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from app.db.models import WholeBookConsent, WholeBookCostEstimate
+from app.db.models import BookSnapshot, WholeBookConsent, WholeBookCostEstimate
 from app.narrative_core.services.whole_book_cost_estimate_service import (
     compute_book_revision_hash,
     is_estimate_valid,
@@ -119,13 +119,52 @@ def validate_whole_book_consent(
     session: Session,
     consent_id: int,
     *,
+    book_id: int,
+    estimate_id: int,
+    snapshot_id: int,
     now: datetime | None = None,
 ) -> WholeBookConsent:
+    """Validate consent for create / provider paths under one binding contract.
+
+    Required bindings (keyword-only; no positional extras, no **kwargs):
+    - book_id
+    - estimate_id (prepare / estimate identity)
+    - snapshot_id
+    - book revision (consent.book_revision_hash vs live book + snapshot content)
+    """
     consent = session.get(WholeBookConsent, consent_id)
     if consent is None:
         raise WholeBookFoundationError(
             WholeBookFoundationErrorCode.WHOLE_BOOK_CONSENT_REQUIRED,
             "consent not found",
+        )
+    if int(consent.book_id) != int(book_id):
+        raise WholeBookFoundationError(
+            WholeBookFoundationErrorCode.WHOLE_BOOK_CONSENT_REQUIRED,
+            "consent book_id mismatch",
+        )
+    if int(consent.estimate_id) != int(estimate_id):
+        raise WholeBookFoundationError(
+            WholeBookFoundationErrorCode.WHOLE_BOOK_ESTIMATE_EXPIRED,
+            "consent estimate_id mismatch",
+        )
+    snapshot = session.get(BookSnapshot, snapshot_id)
+    if snapshot is None:
+        raise WholeBookFoundationError(
+            WholeBookFoundationErrorCode.WHOLE_BOOK_SNAPSHOT_NOT_FOUND,
+            f"snapshot not found: {snapshot_id}",
+        )
+    if int(snapshot.book_id) != int(book_id):
+        raise WholeBookFoundationError(
+            WholeBookFoundationErrorCode.WHOLE_BOOK_SNAPSHOT_BOOK_MISMATCH,
+            f"snapshot {snapshot_id} belongs to book {snapshot.book_id}, not {book_id}",
+        )
+    # Snapshot content_hash is the book revision fingerprint at snapshot time.
+    snap_revision = str(snapshot.source_fingerprint or snapshot.content_hash or "")
+    if snap_revision and snap_revision != consent.book_revision_hash:
+        raise WholeBookFoundationError(
+            WholeBookFoundationErrorCode.WHOLE_BOOK_BOOK_CHANGED,
+            "snapshot revision does not match consent",
         )
     if consent.revoked_at is not None:
         raise WholeBookFoundationError(
@@ -147,6 +186,34 @@ def validate_whole_book_consent(
             "book revision changed since consent",
         )
     return consent
+
+
+def validate_whole_book_consent_for_run(
+    session: Session,
+    consent_id: int,
+    *,
+    book_id: int,
+    snapshot_id: int,
+    now: datetime | None = None,
+) -> WholeBookConsent:
+    """Mid-run budget/retry path: bind consent to the run's book + snapshot.
+
+    estimate_id is taken from the consent row (identity fixed at create time).
+    """
+    consent = session.get(WholeBookConsent, consent_id)
+    if consent is None:
+        raise WholeBookFoundationError(
+            WholeBookFoundationErrorCode.WHOLE_BOOK_CONSENT_REQUIRED,
+            "consent not found",
+        )
+    return validate_whole_book_consent(
+        session,
+        consent_id,
+        book_id=book_id,
+        estimate_id=int(consent.estimate_id),
+        snapshot_id=snapshot_id,
+        now=now,
+    )
 
 
 def revoke_whole_book_consent(

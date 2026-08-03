@@ -18,7 +18,7 @@ from app.narrative_core.contracts.whole_book_contract_v1 import (
     WHOLE_BOOK_CONTRACT_VERSION,
     ResultOrigin,
 )
-from app.narrative_core.services.whole_book_consent_service import validate_whole_book_consent
+from app.narrative_core.services.whole_book_consent_service import validate_whole_book_consent_for_run
 from app.narrative_core.services.whole_book_foundation_errors import (
     WholeBookFoundationError,
     WholeBookFoundationErrorCode,
@@ -181,7 +181,18 @@ class WholeBookProviderOrchestrator:
         projected_output_tokens: int,
         projected_cost_cny: Decimal,
     ) -> None:
-        consent = validate_whole_book_consent(self.session, consent_id)
+        run = self.session.get(WholeBookRun, run_id)
+        if run is None or run.snapshot_id is None:
+            raise WholeBookFoundationError(
+                WholeBookFoundationErrorCode.WHOLE_BOOK_RUN_NOT_FOUND,
+                f"run not found or missing snapshot: {run_id}",
+            )
+        consent = validate_whole_book_consent_for_run(
+            self.session,
+            consent_id,
+            book_id=int(run.book_id),
+            snapshot_id=int(run.snapshot_id),
+        )
         usage = self._usage_for_run(run_id)
         if usage.provider_calls + 1 > consent.max_provider_calls:
             raise WholeBookFoundationError(
@@ -395,7 +406,18 @@ class WholeBookProviderOrchestrator:
                 WholeBookFoundationErrorCode.WHOLE_BOOK_RETRY_NOT_ALLOWED,
                 "unit is not failed",
             )
-        consent = validate_whole_book_consent(self.session, consent_id)
+        run = self.session.get(WholeBookRun, unit.run_id)
+        if run is None or run.snapshot_id is None:
+            raise WholeBookFoundationError(
+                WholeBookFoundationErrorCode.WHOLE_BOOK_RUN_NOT_FOUND,
+                f"run not found or missing snapshot: {unit.run_id}",
+            )
+        consent = validate_whole_book_consent_for_run(
+            self.session,
+            consent_id,
+            book_id=int(run.book_id),
+            snapshot_id=int(run.snapshot_id),
+        )
         if not consent.auto_retry_enabled and consent.max_retries_per_unit <= 0:
             # Explicit worker retry still allowed when max_retries_per_unit > 0 OR caller is explicit.
             # Prompt: only when Consent allows retry — use max_retries_per_unit.
@@ -422,9 +444,12 @@ class WholeBookProviderOrchestrator:
 
 def ensure_test_run(session: Session, *, book_id: int, consent_id: int | None = None) -> WholeBookRun:
     """Helper for tests — creates a minimal whole_book_runs row without product entry."""
+    from app.narrative_core.services.whole_book_snapshot_v1_service import create_or_reuse_book_snapshot_v1
+
+    snap = create_or_reuse_book_snapshot_v1(session, book_id)["snapshot"]
     run = WholeBookRun(
         book_id=book_id,
-        snapshot_id=None,
+        snapshot_id=snap.id,
         mode="whole_book_native",
         status="running",
         current_stage_code="extract_entities_events",
