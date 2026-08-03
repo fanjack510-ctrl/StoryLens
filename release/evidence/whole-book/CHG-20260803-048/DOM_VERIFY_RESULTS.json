@@ -1,0 +1,167 @@
+{
+  "api": "http://127.0.0.1:8007",
+  "fe": "http://127.0.0.1:1427",
+  "fixtures": "C:\\Users\\msi\\AppData\\Local\\Temp\\storylens-v120-e2e\\MANUAL_FIXTURES.json",
+  "page_ok_all": true,
+  "purchase_ui": "ABSENT",
+  "results": [
+    {
+      "key": "regression_overview",
+      "book_id": 1,
+      "run_id": 1,
+      "url": "http://127.0.0.1:1427/books/1/whole-book?module=overview&run=1",
+      "page_ok": true,
+      "free_page": true,
+      "purchase_ui": "ABSENT",
+      "fixture_banner": true,
+      "progress_card": "ABSENT",
+      "notes": []
+    },
+    {
+      "key": "regression_characters",
+      "book_id": 1,
+      "run_id": 1,
+      "url": "http://127.0.0.1:1427/books/1/whole-book?module=characters_events&run=1",
+      "page_ok": true,
+      "free_page": true,
+      "purchase_ui": "ABSENT",
+      "fixture_banner": true,
+      "progress_card": "ABSENT",
+      "notes": []
+    },
+    {
+      "key": "regression_structure",
+      "book_id": 1,
+      "run_id": 1,
+      "url": "http://127.0.0.1:1427/books/1/whole-book?module=structure&run=1",
+      "page_ok": true,
+      "free_page": true,
+      "purchase_ui": "ABSENT",
+      "fixture_banner": true,
+      "progress_card": "ABSENT",
+      "notes": []
+    },
+    {
+      "key": "cf_available",
+      "book_id": 1,
+      "run_id": 1,
+      "url": "http://127.0.0.1:1427/books/1/whole-book?module=chapter_functions&run=1",
+      "page_ok": true,
+      "free_page": true,
+      "purchase_ui": "ABSENT",
+      "fixture_banner": true,
+      "progress_card": "ABSENT",
+      "notes": []
+    },
+    {
+      "key": "cf_evidence",
+      "book_id": 10,
+      "run_id": 10,
+      "url": "http://127.0.0.1:1427/books/10/whole-book?module=chapter_functions&run=10",
+      "page_ok": true,
+      "free_page": true,
+      "purchase_ui": "ABSENT",
+      "fixture_banner": true,
+      "progress_card": "ABSENT",
+      "notes": []
+    },
+    {
+      "key": "cf_function_filter",
+      "book_id": 1,
+      "run_id": 1,
+      "url": "http://127.0.0.1:1427/books/1/whole-book?module=chapter_functions&run=1&cfFunction=setup",
+      "page_ok": true,
+      "free_page": true,
+      "purchase_ui": "ABSENT",
+      "fixture_banner": true,
+      "progress_card": "ABSENT",
+      "notes": []
+    },
+    {
+      "key": "cf_status_filter",
+      "book_id": 1,
+      "run_id": 1,
+      "url": "http://127.0.0.1:1427/books/1/whole-book?module=chapter_functions&run=1&cfStatus=observed",
+      "page_ok": true,
+      "free_page": true,
+      "purchase_ui": "ABSENT",
+      "fixture_banner": true,
+      "progress_card": "ABSENT",
+      "notes": []
+    },
+    {
+      "key": "cf_chapter_detail",
+      "book_id": 1,
+      "run_id": 1,
+      "url": "http://127.0.0.1:1427/books/1/whole-book?module=chapter_functions&run=1&cfChapter=1",
+      "page_ok": true,
+      "free_page": true,
+      "purchase_ui": "ABSENT",
+      "fixture_banner": true,
+      "progress_card": "ABSENT",
+      "notes": []
+    },
+    {
+      "key": "cost_consent",
+      "book_id": 16,
+      "run_id": null,
+      "url": "http://127.0.0.1:1427/books/16/whole-book",
+      "page_ok": true,
+      "free_page": true,
+      "purchase_ui": "ABSENT",
+      "fixture_banner": false,
+      "progress_card": "ABSENT",
+      "notes": []
+    },
+    {
+      "key": "conflict",
+      "book_id": 9,
+      "run_id": 9,
+      "url": "http://127.0.0.1:1427/books/9/whole-book?module=chapter_functions&run=9",
+      "page_ok": true,
+      "free_page": true,
+      "purchase_ui": "ABSENT",
+      "fixture_banner": true,
+      "progress_card": "ABSENT",
+      "notes": []
+    },
+    {
+      "key": "canceled",
+      "book_id": 8,
+      "run_id": 8,
+      "url": "http://127.0.0.1:1427/books/8/whole-book?module=chapter_functions&run=8",
+      "page_ok": true,
+      "free_page": true,
+      "purchase_ui": "ABSENT",
+      "fixture_banner": true,
+      "progress_card": "ABSENT",
+      "notes": []
+    },
+    {
+      "key": "cf_failed",
+      "book_id": 7,
+      "run_id": 7,
+      "url": "http://127.0.0.1:1427/books/7/whole-book?module=chapter_functions&run=7",
+      "page_ok": true,
+      "free_page": true,
+      "purchase_ui": "ABSENT",
+      "fixture_banner": true,
+      "progress_card": "ABSENT",
+      "notes": []
+    },
+    {
+      "key": "layout_1366x768",
+      "page_ok": true,
+      "horizontal_scroll": "ABSENT",
+      "scrollWidth": 1366,
+      "clientWidth": 1366
+    },
+    {
+      "key": "layout_1920x1080",
+      "page_ok": true,
+      "horizontal_scroll": "ABSENT",
+      "scrollWidth": 1920,
+      "clientWidth": 1920
+    }
+  ]
+}
