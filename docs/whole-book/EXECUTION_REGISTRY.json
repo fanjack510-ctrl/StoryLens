@@ -929,13 +929,18 @@
       {
         "wave": 1,
         "step_id": "WB-2.2.1-V120-E2E-STABILIZATION",
-        "manual_gate_id": "MG-WB-2.2.1",
+        "manual_gate_id": "MG-V1.2.0-E2E-STABILIZATION",
         "change_id_planned": "CHG-20260803-045",
+        "change_id_backend_agent": "CHG-20260803-046",
+        "change_id_desktop_agent": "CHG-20260803-047",
+        "change_id_integration": "CHG-20260803-048",
         "title": "V1.2.0 Free four-module end-to-end stabilization",
         "acceptance_level": "L2",
         "product_code_expected": true,
         "real_provider_required": false,
-        "installer_required": false
+        "installer_required": false,
+        "wb_status": "tested",
+        "notes": "CHG-046/047 agent CHGs collide with historically planned WB-2.2.2/2.2.3 change_id_planned labels; agent statuses tested. WB-2.2.2 not started. MG pending."
       },
       {
         "wave": 2,
@@ -1005,10 +1010,10 @@
   "v120_release_steps": [
     {
       "step_id": "WB-2.2.1-V120-E2E-STABILIZATION",
-      "manual_gate_id": "MG-WB-2.2.1",
-      "change_id": "CHG-20260803-045",
+      "manual_gate_id": "MG-V1.2.0-E2E-STABILIZATION",
+      "change_id": "CHG-20260803-048",
       "title": "V1.2.0 Free four-module end-to-end stabilization",
-      "wb_status": "planned",
+      "wb_status": "tested",
       "acceptance_level": "L2",
       "evidence_dir": "release/evidence/whole-book/WB-2.2.1-V120-E2E-STABILIZATION/",
       "depends_on": [
@@ -1018,8 +1023,19 @@
       "next_step": "WB-2.2.2-V120-RELEASE-DEBT",
       "v120_required": true,
       "scope_disposition": "required_for_1.2.0_release",
-      "notes": "Planning complete via CHG-20260803-045. Implementation not started until AUTHORIZE WB-2.2.1 AGENT IMPLEMENTATION.",
-      "planning_change_id": "CHG-20260803-045"
+      "notes": "Integration tested via CHG-048. Manual gate MG-V1.2.0-E2E-STABILIZATION pending. Do not mark verified until MG PASS. WB-2.2.2 not started.",
+      "planning_change_id": "CHG-20260803-045",
+      "backend_agent_change_id": "CHG-20260803-046",
+      "desktop_agent_change_id": "CHG-20260803-047",
+      "integration_change_id": "CHG-20260803-048",
+      "backend_agent_status": "tested",
+      "desktop_agent_status": "tested",
+      "integration_status": "tested",
+      "public_base_head": "27da35236faf1ff23c67a3759eb268c3ef11102d",
+      "agent1_head": "a60a333e6f41f6c829d8413a20ace12baaed6da4",
+      "agent2_head": "421d1a01257a7b976343e86fdf36807aaa25b83d",
+      "merge1_commit": "18c79e137577d2666d6ef2908d16c4d2d7be5bd0",
+      "merge2_commit": "de417b48e7feba94f5bce7280d0f9e89b4849f81"
     },
     {
       "step_id": "WB-2.2.2-V120-RELEASE-DEBT",
@@ -1035,7 +1051,7 @@
       "next_step": "WB-2.2.3-V120-L3-PROVIDER",
       "v120_required": true,
       "scope_disposition": "required_for_1.2.0_release",
-      "notes": "Classify/fix Public 48f/6e, Vitest 30f, check_project TIMEOUT; formal exceptions only with owner sign-off."
+      "notes": "NOT STARTED. Planned change_id label historically CHG-046 collides with Agent1 E2E CHG-046 (tested). Reassign change_id when this wave starts. Debt: Public full suite, Vitest full, check_project TIMEOUT."
     },
     {
       "step_id": "WB-2.2.3-V120-L3-PROVIDER",
@@ -1051,7 +1067,7 @@
       "next_step": "WB-6.4-120-RC",
       "v120_required": true,
       "scope_disposition": "required_for_1.2.0_release",
-      "notes": "Real Bailian Provider; S/M/L books; four modules; repair; cost; resume; evidence; no duplicate bill/calls."
+      "notes": "NOT STARTED. Planned change_id label historically CHG-047 collides with Agent2 E2E CHG-047 (tested). Reassign when wave starts. Real Bailian Provider L3."
     }
   ]
 }
