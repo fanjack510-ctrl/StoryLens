@@ -239,6 +239,7 @@ async function installMocks(page: Page, structureBody: unknown = STRUCTURE_AVAIL
       return json(route, {
         source: {
           evidence_id: 501,
+          chapter_id: 42,
           chapter_title: "第1章",
           chapter_index: 1,
           paragraph_index: 3,
@@ -249,6 +250,7 @@ async function installMocks(page: Page, structureBody: unknown = STRUCTURE_AVAIL
           end_offset: 5,
           quote_hash: "qh",
           paragraph_text_hash: "ph",
+          snapshot_id: 11,
           state: "valid",
         },
       });
@@ -259,7 +261,7 @@ async function installMocks(page: Page, structureBody: unknown = STRUCTURE_AVAIL
     if (url.includes(`/books/${BOOK_ID}/chapters`)) {
       return json(route, [
         {
-          id: 1,
+          id: 42,
           book_id: BOOK_ID,
           chapter_index: 1,
           title: "第1章",

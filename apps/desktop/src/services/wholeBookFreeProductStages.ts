@@ -66,6 +66,7 @@ export const WHOLE_BOOK_FREE_STATUS_LABELS: Record<string, string> = {
   failed: "分析失败",
   completed: "分析完成",
   cancelled: "已取消",
+  canceled: "已取消",
 };
 
 export function wholeBookFreeStatusLabel(status: string | null | undefined): string {

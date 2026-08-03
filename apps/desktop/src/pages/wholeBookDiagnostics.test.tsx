@@ -294,6 +294,7 @@ function baseEvidences(): NarrativeEvidenceRow[] {
 function baseEvidenceSource(): EvidenceSourceDetail {
   return {
     evidence_id: 501,
+    chapter_id: 7,
     chapter_title: "第1章",
     chapter_index: 1,
     paragraph_index: 2,
@@ -304,6 +305,7 @@ function baseEvidenceSource(): EvidenceSourceDetail {
     end_offset: 5,
     quote_hash: "qh1",
     paragraph_text_hash: "ph1",
+    snapshot_id: 11,
     state: "valid",
   };
 }

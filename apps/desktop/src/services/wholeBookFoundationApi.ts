@@ -213,16 +213,21 @@ export type NarrativeRelationRow = {
 
 export type EvidenceSourceDetail = {
   evidence_id: number;
-  chapter_title: string;
+  /** Real Chapter.id from API — never substitute chapter_index. */
+  chapter_id: number | null;
+  /** Display order only — never use as reader chapter id. */
   chapter_index: number;
+  chapter_title: string;
   paragraph_index: number;
   global_paragraph_index: number;
   paragraph_text: string;
   quote_text: string;
   start_offset: number;
   end_offset: number;
-  quote_hash: string;
-  paragraph_text_hash: string;
+  quote_hash?: string;
+  paragraph_text_hash?: string;
+  /** Snapshot / revision identity for stale checks. */
+  snapshot_id?: number | null;
   state: string;
 };
 
