@@ -7,8 +7,9 @@
 
 | Wave | ID | Owner gate | Done? |
 |---|---|---|---|
-| Scope reconciliation | CHG-20260803-044 | MG-V1.2.0-SCOPE-RECONCILIATION | pending |
-| 1 E2E stabilization | WB-2.2.1-V120-E2E-STABILIZATION | MG-WB-2.2.1 | ☐ |
+| Scope reconciliation | CHG-20260803-044 | MG-V1.2.0-SCOPE-RECONCILIATION | **PASSED** |
+| 1 E2E stabilization plan | CHG-20260803-045 | （planning） | implemented；待授权 Agents |
+| 1 E2E stabilization | WB-2.2.1-V120-E2E-STABILIZATION | MG-V1.2.0-E2E-STABILIZATION / MG-WB-2.2.1 | ☐ |
 | 2 Release debt triage | WB-2.2.2-V120-RELEASE-DEBT | MG-WB-2.2.2 | ☐ |
 | 3 Real Provider L3 | WB-2.2.3-V120-L3-PROVIDER | MG-WB-2.2.3 | ☐ |
 | 4a RC / installer / upgrade | WB-6.4-120-RC | MG-WB-6.4 | ☐ |

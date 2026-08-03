@@ -869,7 +869,7 @@
     "change_id": "CHG-20260803-044",
     "manual_gate_id": "MG-V1.2.0-SCOPE-RECONCILIATION",
     "reconciled_at_utc": "2026-08-03T05:05:29Z",
-    "status": "implemented_pending_owner_verify",
+    "status": "verified",
     "product_owner_decision": [
       "V1.2.0 feature development ends at WB-2.2",
       "V1.2.0 is Free whole-book four-module release",
@@ -878,7 +878,10 @@
       "WB-2.4 Phase2B first-four path superseded; do not re-implement",
       "WB-3.x–WB-5.x out of V1.2.0",
       "No purchase/License/activation/Pro product UI in V1.2.0"
-    ]
+    ],
+    "manual_gate_result": "PASSED",
+    "verified_at_utc": "2026-08-03T05:38:16Z",
+    "verification_change_id": "CHG-20260803-045"
   },
   "v120_free_product_scope": {
     "target_version": "1.2.0",
@@ -1015,7 +1018,8 @@
       "next_step": "WB-2.2.2-V120-RELEASE-DEBT",
       "v120_required": true,
       "scope_disposition": "required_for_1.2.0_release",
-      "notes": "No new analysis modules. Stabilize Free four on one formal run path."
+      "notes": "Planning complete via CHG-20260803-045. Implementation not started until AUTHORIZE WB-2.2.1 AGENT IMPLEMENTATION.",
+      "planning_change_id": "CHG-20260803-045"
     },
     {
       "step_id": "WB-2.2.2-V120-RELEASE-DEBT",

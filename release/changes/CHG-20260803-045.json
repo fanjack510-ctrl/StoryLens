@@ -1,0 +1,63 @@
+{
+  "id": "CHG-20260803-045",
+  "title": "Plan V1.2.0 Free four-module end-to-end stabilization",
+  "type": "documentation",
+  "base_version": "1.2.0",
+  "status": "implemented",
+  "include_in_next_release": true,
+  "head_inclusion": "INCLUDED",
+  "blocker_level": null,
+  "parent_plan": "CHG-20260803-044",
+  "wb_step_id": "WB-2.2.1-V120-E2E-STABILIZATION",
+  "manual_gate_id": "MG-V1.2.0-E2E-STABILIZATION",
+  "depends_on": [
+    "CHG-20260803-044"
+  ],
+  "commits": [],
+  "modules": [
+    "docs/whole-book",
+    "release/evidence/whole-book",
+    "release/changes"
+  ],
+  "files": [
+    "release/evidence/whole-book/CHG-20260803-045/",
+    "release/evidence/whole-book/CHG-20260803-044/MANUAL_GATE_RESULT.md",
+    "docs/whole-book/EXECUTION_REGISTRY.json",
+    "release/unreleased.json",
+    "release/changes/CHG-20260803-044.json",
+    "release/changes/CHG-20260803-045.json",
+    "docs/releases/storylens-1.2.0-checklist.md"
+  ],
+  "user_summary": "Wave 1 只读审计：冻结 Free 四模块端到端稳定化范围与最多两路 Agent 实施计划；不改产品代码。",
+  "technical_summary": "Audits fixture Free pipeline same-run path; marks real Free create path MISSING; cost estimate PARTIAL (no CF batch/repair granularity); consent revision binding PASS; task control / idempotency / evidence mostly present with E2E gaps; dev routes DEV-gated but production build proof GAP. PRODUCT CODE MODIFIED=NO.",
+  "acceptance_criteria": [
+    "MG-V1.2.0-SCOPE-RECONCILIATION recorded PASSED",
+    "CHG-044 verified",
+    "Twelve evidence docs under CHG-045",
+    "Max 2 Agent plan with ownership",
+    "No product code changes",
+    "status=implemented not tested/verified"
+  ],
+  "tests": [
+    "read-only audit of Free E2E pipeline and tests"
+  ],
+  "verification_evidence": [
+    "release/evidence/whole-book/CHG-20260803-045/IMPLEMENTATION_PLAN.md",
+    "release/evidence/whole-book/CHG-20260803-045/CURRENT_E2E_PIPELINE.md",
+    "release/evidence/whole-book/CHG-20260803-045/FOUR_MODULE_RUN_AUDIT.md"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "Planning only."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "created_at": "2026-08-03T05:38:16Z",
+  "updated_at": "2026-08-03T05:38:16Z"
+}
