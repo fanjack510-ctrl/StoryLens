@@ -158,6 +158,52 @@ def set_stage_completed(
     session.flush()
 
 
+# Free four-module readiness before project_result / finalize.
+# structure is optional (may be skipped or soft-failed); other Free stages are required.
+_PROJECT_RESULT_REQUIRED_STAGES: dict[str, frozenset[str]] = {
+    "extract_entities_events": frozenset({WholeBookStageStatus.completed.value}),
+    "materialize_assets": frozenset({WholeBookStageStatus.completed.value}),
+    "synthesize_overview": frozenset({WholeBookStageStatus.completed.value}),
+    "synthesize_chapter_functions": frozenset({WholeBookStageStatus.completed.value}),
+}
+_PROJECT_RESULT_OPTIONAL_STRUCTURE_STATUSES = frozenset(
+    {
+        WholeBookStageStatus.completed.value,
+        WholeBookStageStatus.failed.value,
+        WholeBookStageStatus.pending.value,
+    }
+)
+
+
+def assert_free_modules_ready_for_project_result(session: Session, run_id: int) -> None:
+    missing: list[str] = []
+    for stage_code, allowed in _PROJECT_RESULT_REQUIRED_STAGES.items():
+        stage = get_stage(session, run_id, stage_code)
+        status = stage.status if stage is not None else None
+        if status not in allowed:
+            missing.append(f"{stage_code}:{status or 'absent'}")
+    structure = get_stage(session, run_id, "synthesize_structure_stages")
+    if structure is not None and structure.status not in _PROJECT_RESULT_OPTIONAL_STRUCTURE_STATUSES:
+        missing.append(f"synthesize_structure_stages:{structure.status}")
+    if missing:
+        raise WholeBookFoundationError(
+            WholeBookFoundationErrorCode.WHOLE_BOOK_RUN_INVALID_TRANSITION,
+            "project_result blocked; free modules incomplete: " + ", ".join(missing),
+        )
+
+
+def finalize_whole_book_run_v1(session: Session, run_id: int) -> None:
+    """Mark project_result + finalize only when free four-module stages are ready."""
+    assert_free_modules_ready_for_project_result(session, run_id)
+    run = get_run(session, run_id)
+    for stage_code in ("project_result", "finalize"):
+        set_stage_completed(session, run_id, stage_code, progress_total=1)
+    run.status = WholeBookRunStatus.completed.value
+    run.current_stage_code = "finalize"
+    run.completed_at = utc_now()
+    session.flush()
+
+
 def paragraph_contract_dict(
     session: Session,
     paragraph: BookSnapshotParagraph,

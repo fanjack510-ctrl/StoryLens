@@ -7,7 +7,6 @@ import os
 import pytest
 from sqlalchemy.orm import sessionmaker
 
-from app.main import app
 from app.narrative_core.services.whole_book_foundation_errors import (
     WholeBookFoundationError,
     WholeBookFoundationErrorCode,
@@ -38,21 +37,42 @@ def test_prepare_requires_feature_flag(tmp_path, monkeypatch) -> None:
 
 
 def test_create_free_blocks_real_provider_path(tmp_path, monkeypatch) -> None:
+    from app.db.models import ProviderConfiguration, WholeBookRun
+    from app.narrative_core.services.whole_book_consent_service import create_whole_book_consent
+    from app.narrative_core.services.whole_book_cost_estimate_service import estimate_whole_book_analysis
+    from sqlalchemy import select
+
     monkeypatch.setenv("STORYLENS_WHOLE_BOOK_FREE_PRODUCT_ENABLED", "true")
     monkeypatch.setenv("STORYLENS_WHOLE_BOOK_REAL_PROVIDER_ENABLED", "false")
     engine = make_engine(tmp_path, "wb17-create.db")
     factory = sessionmaker(bind=engine)
     with factory() as session:
         book, _ = seed_sample_s_book(session)
+        provider = ProviderConfiguration(provider_name="fixture", plus_model="fixture-model")
+        session.add(provider)
+        session.flush()
+        estimate = estimate_whole_book_analysis(session, book.id, "whole_book_native", provider.id)
+        estimate.pricing_status = "unavailable"
+        session.flush()
+        consent = create_whole_book_consent(
+            session,
+            book_id=book.id,
+            estimate_id=estimate.id,
+            user_budget_limit_cny="1000",
+            max_provider_calls=100,
+            max_input_tokens=10_000_000,
+            max_output_tokens=10_000_000,
+        )
         with pytest.raises(WholeBookFoundationError) as exc:
             create_free_whole_book_analysis_v1(
                 session,
                 book.id,
-                estimate_id=1,
-                consent_id=1,
+                estimate_id=estimate.id,
+                consent_id=consent.id,
                 client_request_id="req-1",
             )
         assert exc.value.code == WholeBookFoundationErrorCode.WHOLE_BOOK_REAL_PROVIDER_DISABLED.value
+        assert session.scalar(select(WholeBookRun.id).limit(1)) is None
     engine.dispose()
 
 
@@ -91,7 +111,9 @@ def test_prepare_missing_book_is_not_found(tmp_path, monkeypatch) -> None:
 
 
 def test_product_prepare_routes_registered() -> None:
-    paths = {route.path for route in app.routes if hasattr(route, "path")}
+    from app.main import app
+
+    paths = set(app.openapi().get("paths", {}))
     assert "/api/v1/books/{book_id}/whole-book/prepare" in paths
     assert "/api/v1/books/{book_id}/whole-book/free/prepare" in paths
     assert "/api/v1/books/{book_id}/whole-book/runs/fixture" in paths
