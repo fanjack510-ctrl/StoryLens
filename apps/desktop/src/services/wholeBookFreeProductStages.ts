@@ -15,6 +15,8 @@ const USER_STAGE_LABELS: Record<string, string> = {
   extract_entities_events: "识别人物与关键事件",
   materialize_assets: "整理分析证据",
   synthesize_overview: "生成全书总览",
+  /** WB-2.2 — label only; stage list wiring remains Integration-owned. */
+  synthesize_chapter_functions: "识别章节功能",
   project_result: "整理结果页面",
   finalize: "完成分析",
 };

@@ -202,12 +202,12 @@ beforeEach(() => {
 });
 
 describe("WB-2.1 structure module shell", () => {
-  it("flips structure from planned to available; free modules remain 4; chapter_functions planned", () => {
+  it("flips structure from planned to available; free modules remain 4; chapter_functions available", () => {
     const free = WHOLE_BOOK_FREE_MODULES.filter((m) => m.status !== "pro_planned");
     expect(free).toHaveLength(4);
     expect(WHOLE_BOOK_FREE_MODULES.find((m) => m.key === "structure")?.status).toBe("available");
     expect(WHOLE_BOOK_FREE_MODULES.find((m) => m.key === "chapter_functions")?.status).toBe(
-      "planned",
+      "available",
     );
     expect(WHOLE_BOOK_FREE_MODULES.filter((m) => m.status === "pro_planned")).toHaveLength(1);
   });
@@ -225,7 +225,8 @@ describe("WB-2.1 structure module shell", () => {
     expect(screen.getByTestId("whole-book-free-structure-tp-TP1")).toBeInTheDocument();
     expect(screen.queryByText("第一幕")).not.toBeInTheDocument();
     expect(screen.queryByText("购买")).not.toBeInTheDocument();
-    expect(screen.getByTestId("whole-book-free-module-chapter_functions")).toHaveTextContent(
+    // Desktop module table marks chapter_functions available; final Free page wiring remains Integration.
+    expect(screen.getByTestId("whole-book-free-module-chapter_functions")).not.toHaveTextContent(
       "开发中",
     );
   });

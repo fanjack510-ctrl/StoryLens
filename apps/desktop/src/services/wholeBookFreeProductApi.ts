@@ -19,9 +19,23 @@ import {
   UnsupportedStructureContractError,
   type StructureProductResponse,
 } from "./structureStagesResultV2";
+import {
+  assertChapterFunctionsResultV2,
+  clampChapterFunctionsLimit,
+  CHAPTER_FUNCTIONS_DEFAULT_LIMIT,
+  UnsupportedChapterFunctionsContractError,
+  type ChapterFunctionsProductResponse,
+  type ChapterFunctionItemV2,
+} from "./chapterFunctionsResultV2";
 
 export { wholeBookFoundationApi, newFoundationClientRequestId };
 export type { StructureProductResponse } from "./structureStagesResultV2";
+export type {
+  ChapterFunctionsProductResponse,
+  ChapterFunctionItemV2,
+  ChapterFunctionsResultV2,
+  ChapterFunctionsClientViewState,
+} from "./chapterFunctionsResultV2";
 
 export type ProductCapabilityRow = {
   capability_id: string;
@@ -127,9 +141,98 @@ export const WHOLE_BOOK_FREE_MODULES: Array<{
   { key: "overview", label: "全书总览", status: "available" },
   { key: "characters_events", label: "主要人物与关键事件", status: "available" },
   { key: "structure", label: "故事结构", status: "available" },
-  { key: "chapter_functions", label: "章节功能", status: "planned" },
+  { key: "chapter_functions", label: "章节功能", status: "available" },
   { key: "pro_depth", label: "Pro 深度分析", status: "pro_planned" },
 ];
+
+export type ChapterFunctionsQueryParams = {
+  limit?: number;
+  cursor?: string | null;
+  function?: string | null;
+  status?: string | null;
+  offset?: number | null;
+};
+
+function mapChapterFunctionsApiError(err: unknown): never {
+  if (err instanceof ApiError) {
+    const detailCode =
+      err.detail && typeof err.detail === "object"
+        ? String((err.detail as { error_code?: string }).error_code || "")
+        : "";
+    if (err.status === 404) {
+      if (
+        detailCode === "CHAPTER_FUNCTION_CHAPTER_NOT_FOUND" ||
+        detailCode === "CHAPTER_FUNCTIONS_CHAPTER_NOT_FOUND"
+      ) {
+        throw err;
+      }
+      if (!detailCode || detailCode === "CHAPTER_FUNCTIONS_RESULT_ABSENT") {
+        throw new ApiError(
+          "CHAPTER_FUNCTIONS_RESULT_ABSENT",
+          err.message || "章节功能结果尚未生成",
+          404,
+          { error_code: "CHAPTER_FUNCTIONS_RESULT_ABSENT" },
+        );
+      }
+    }
+    if (
+      detailCode === "CHAPTER_FUNCTIONS_INVALID_CURSOR" ||
+      detailCode === "CHAPTER_FN_INVALID_CURSOR" ||
+      err.code === "CHAPTER_FUNCTIONS_INVALID_CURSOR" ||
+      err.code === "CHAPTER_FN_INVALID_CURSOR"
+    ) {
+      throw new ApiError(
+        "CHAPTER_FUNCTIONS_INVALID_CURSOR",
+        err.message || "分页游标无效，请清除筛选后重试",
+        err.status || 400,
+        { error_code: "CHAPTER_FUNCTIONS_INVALID_CURSOR", ...(typeof err.detail === "object" ? err.detail : {}) },
+      );
+    }
+  }
+  throw err;
+}
+
+function assertChapterFunctionsEnvelope(
+  resp: ChapterFunctionsProductResponse,
+): ChapterFunctionsProductResponse {
+  if (resp.chapter_functions != null) {
+    try {
+      resp.chapter_functions = assertChapterFunctionsResultV2(resp.chapter_functions);
+    } catch (err) {
+      if (err instanceof UnsupportedChapterFunctionsContractError) {
+        throw new ApiError(
+          "CHAPTER_FUNCTIONS_CONTRACT_UNSUPPORTED",
+          err.message,
+          422,
+          {
+            error_code: "CHAPTER_FUNCTIONS_CONTRACT_UNSUPPORTED",
+            contract_version: err.contractVersion,
+          },
+        );
+      }
+      throw err;
+    }
+  }
+  if (
+    resp.failure_code === "CHAPTER_FN_UNSUPPORTED_VERSION" ||
+    resp.failure_code === "CHAPTER_FUNCTIONS_CONTRACT_UNSUPPORTED"
+  ) {
+    throw new ApiError(
+      "CHAPTER_FUNCTIONS_CONTRACT_UNSUPPORTED",
+      resp.failure_message_safe || "章节功能合同版本不受支持",
+      422,
+      {
+        error_code: "CHAPTER_FUNCTIONS_CONTRACT_UNSUPPORTED",
+        contract_version: resp.contract_version,
+        failure_code: resp.failure_code,
+      },
+    );
+  }
+  if (!Array.isArray(resp.items)) {
+    resp.items = [] as ChapterFunctionItemV2[];
+  }
+  return resp;
+}
 
 export function newWholeBookClientRequestId(prefix = "wb-free"): string {
   return newFoundationClientRequestId(prefix);
@@ -238,6 +341,49 @@ export const wholeBookFreeProductApi = {
         }
       }
       throw err;
+    }
+  },
+
+  /**
+   * Product chapter-functions list — GET /api/v1/whole-book/runs/{run_id}/chapter-functions
+   * Canonical payload: ChapterFunctionsResultV2 (wire v2) + cursor pagination.
+   */
+  getChapterFunctions: async (
+    runId: number,
+    params?: ChapterFunctionsQueryParams,
+  ): Promise<ChapterFunctionsProductResponse> => {
+    const limit = clampChapterFunctionsLimit(params?.limit ?? CHAPTER_FUNCTIONS_DEFAULT_LIMIT);
+    const qs = new URLSearchParams();
+    qs.set("limit", String(limit));
+    if (params?.cursor) qs.set("cursor", params.cursor);
+    if (params?.offset != null) qs.set("offset", String(params.offset));
+    if (params?.function) qs.set("function", params.function);
+    if (params?.status) qs.set("status", params.status);
+    try {
+      const resp = await api<ChapterFunctionsProductResponse>(
+        `/api/v1/whole-book/runs/${runId}/chapter-functions?${qs.toString()}`,
+      );
+      return assertChapterFunctionsEnvelope(resp);
+    } catch (err) {
+      mapChapterFunctionsApiError(err);
+    }
+  },
+
+  /**
+   * Single-chapter detail — GET .../chapter-functions/{chapter_id}
+   * 404 CHAPTER_FUNCTION_CHAPTER_NOT_FOUND when chapter not in set (not module absent).
+   */
+  getChapterFunctionChapter: async (
+    runId: number,
+    chapterId: string | number,
+  ): Promise<ChapterFunctionsProductResponse> => {
+    try {
+      const resp = await api<ChapterFunctionsProductResponse>(
+        `/api/v1/whole-book/runs/${runId}/chapter-functions/${encodeURIComponent(String(chapterId))}`,
+      );
+      return assertChapterFunctionsEnvelope(resp);
+    } catch (err) {
+      mapChapterFunctionsApiError(err);
     }
   },
 };

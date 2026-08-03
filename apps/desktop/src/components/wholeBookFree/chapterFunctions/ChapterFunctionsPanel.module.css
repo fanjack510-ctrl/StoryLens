@@ -1,0 +1,244 @@
+/* WB-2.2 chapter functions — inherits CHG-031 workbench width */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.overview {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem 1rem;
+  border: 1px solid var(--border-subtle, #e5e7eb);
+  border-radius: 8px;
+  padding: 0.9rem 1rem;
+}
+
+.overviewItem {
+  min-width: 0;
+}
+
+.overviewItem dt {
+  font-size: 0.8rem;
+  color: var(--text-muted, #6b7280);
+  margin: 0 0 0.2rem;
+}
+
+.overviewItem dd {
+  margin: 0;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.partialBanner {
+  border: 1px solid #f59e0b;
+  background: #fffbeb;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  color: #92400e;
+}
+
+.filterBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  align-items: flex-end;
+  min-width: 0;
+}
+
+.filterBar label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+  color: var(--text-muted, #6b7280);
+  min-width: 0;
+}
+
+.filterBar select {
+  min-width: 8rem;
+  max-width: 100%;
+}
+
+.workbench {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.9fr);
+  gap: 1rem;
+  min-width: 0;
+  align-items: start;
+}
+
+.workbenchSingle {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.chapterList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.chapterRow {
+  border: 1px solid var(--border-subtle, #e5e7eb);
+  border-radius: 8px;
+  padding: 0.75rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+  cursor: pointer;
+  background: transparent;
+  text-align: left;
+  width: 100%;
+}
+
+.chapterRow[data-selected="true"] {
+  border-color: #2563eb;
+  box-shadow: inset 0 0 0 1px #2563eb;
+}
+
+.chapterRow h3 {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.tag {
+  font-size: 0.8rem;
+  border: 1px solid var(--border-subtle, #d1d5db);
+  border-radius: 4px;
+  padding: 0.1rem 0.4rem;
+  overflow-wrap: anywhere;
+}
+
+.tagPrimary {
+  font-weight: 600;
+}
+
+.meta {
+  color: var(--text-muted, #6b7280);
+  font-size: 0.88rem;
+}
+
+.bodyText {
+  margin: 0;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.actions {
+  margin-top: 0.25rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.detailPanel {
+  border: 1px solid var(--border-subtle, #e5e7eb);
+  border-radius: 8px;
+  padding: 0.9rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  min-width: 0;
+  position: sticky;
+  top: 0.5rem;
+  max-height: calc(100vh - 8rem);
+  overflow: auto;
+}
+
+.detailDrawer {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  justify-content: flex-end;
+  background: rgba(15, 23, 42, 0.35);
+}
+
+.detailDrawerInner {
+  width: min(420px, 100%);
+  height: 100%;
+  background: var(--surface, #fff);
+  padding: 1rem;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  box-shadow: -4px 0 16px rgba(0, 0, 0, 0.08);
+}
+
+.emptyState {
+  border: 1px dashed var(--border-subtle, #d1d5db);
+  border-radius: 8px;
+  padding: 1.1rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.emptyState h3 {
+  margin: 0;
+}
+
+.techDetails {
+  font-size: 0.85rem;
+  color: var(--text-muted, #6b7280);
+}
+
+.techDetails summary {
+  cursor: pointer;
+}
+
+.limitList {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.semanticsNote {
+  font-size: 0.85rem;
+  color: var(--text-muted, #6b7280);
+  margin: 0;
+}
+
+.pagination {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  align-items: center;
+}
+
+@media (max-width: 1366px) {
+  .overview {
+    grid-template-columns: 1fr;
+  }
+
+  .workbench {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .detailPanel {
+    position: static;
+    max-height: none;
+  }
+}
+
+@media (min-width: 1920px) {
+  .workbench {
+    grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+  }
+}
