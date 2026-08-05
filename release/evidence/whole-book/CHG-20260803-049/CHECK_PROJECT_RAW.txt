@@ -1,0 +1,72 @@
+Version check passed: 1.2.0
+Change registry check FAILED:
+  - VERSION 1.2.0 != unreleased.base_version 1.0.5
+  - VERSION 1.2.0 != baseline.version 1.0.5
+  - collecting pool must keep target_version null
+  - CHG-20260725-002: head_inclusion=INCLUDED but commit not ancestor of HEAD
+  - CHG-20260726-012: head_inclusion=INCLUDED but commit not ancestor of HEAD
+  - CHG-20260726-013: head_inclusion=INCLUDED but commit not ancestor of HEAD
+  - CHG-20260727-018: head_inclusion=INCLUDED but commit not ancestor of HEAD
+  - CHG-20260728-013: head_inclusion=INCLUDED but commit not ancestor of HEAD
+  - CHG-20260728-014: head_inclusion=INCLUDED but commit not ancestor of HEAD
+  - CHG-20260728-040: invalid status: integrated
+  - CHG-20260728-041: invalid status: integrated
+  - CHG-20260729-001: missing field: release_impact
+  - CHG-20260729-001: invalid status: integrated
+  - CHG-20260729-001: release_impact must be object
+  - CHG-20260729-002: missing field: release_impact
+  - CHG-20260729-002: invalid status: integrated
+  - CHG-20260729-002: release_impact must be object
+  - CHG-20260729-003: missing field: release_impact
+  - CHG-20260729-003: invalid status: integrated
+  - CHG-20260729-003: release_impact must be object
+  - CHG-20260729-004: missing field: release_impact
+  - CHG-20260729-004: invalid status: integrated
+  - CHG-20260729-004: release_impact must be object
+  - CHG-20260729-005: missing field: release_impact
+  - CHG-20260729-005: invalid status: integrated
+  - CHG-20260729-005: release_impact must be object
+  - CHG-20260729-006: missing field: tests
+  - CHG-20260729-006: missing field: verification_evidence
+  - CHG-20260729-006: missing field: data_compatibility
+  - CHG-20260729-006: missing field: release_impact
+  - CHG-20260729-006: invalid status: integrated
+  - CHG-20260729-006: data_compatibility must be object
+  - CHG-20260729-006: release_impact must be object
+  - CHG-20260729-007: missing field: tests
+  - CHG-20260729-007: missing field: verification_evidence
+  - CHG-20260729-007: missing field: data_compatibility
+  - CHG-20260729-007: missing field: release_impact
+  - CHG-20260729-007: missing field: updated_at
+  - CHG-20260729-007: invalid type: release
+  - CHG-20260729-007: data_compatibility must be object
+  - CHG-20260729-007: release_impact must be object
+  - CHG-20260729-007: ready-for-staging but commit 551639f not in HEAD
+  - CHG-20260729-007: ready-for-staging but commit ca5b72b not in HEAD
+  - CHG-20260729-007: ready-for-staging without tests/verification evidence
+  - CHG-20260729-011: head_inclusion=INCLUDED but commit not ancestor of HEAD
+  - CHG-20260730-019: tested without tests evidence
+  - CHG-20260801-032: implemented without commits
+  - CHG-20260801-033: implemented without commits
+  - CHG-20260802-040: missing field: release_impact
+  - CHG-20260802-040: missing field: created_at
+  - CHG-20260802-040: release_impact must be object
+  - CHG-20260802-040: commit missing: ae0c0e31886ba5499561254afa967c454e2ed92f
+  - CHG-20260803-041: missing field: release_impact
+  - CHG-20260803-041: missing field: created_at
+  - CHG-20260803-041: release_impact must be object
+  - CHG-20260803-042: missing field: release_impact
+  - CHG-20260803-042: missing field: created_at
+  - CHG-20260803-042: release_impact must be object
+  - CHG-20260803-045: implemented without commits
+  - unregistered commit 8fa116c: fix(ui): resolve CHG-041 manual gate scene boundary defects
+  - unregistered commit 8d410c5: fix(ui): resolve CHG-041 confirm/journey state split
+  - unregistered commit 33d13ae: fix(journey): unify reader journey selection and URL routing
+  - unregistered commit 89b438c: fix(journey): ignore superseded journeys on analysis-run GET
+  - unregistered commit 3fa1f6b: docs(release): register CHG-029 and pin 1.2.0 after v1.1.2 merge
+  - unregistered commit a60a333: feat(whole-book): stabilize consent and E2E orchestration
+  - unregistered commit 421d1a0: fix(whole-book): stabilize evidence navigation and restore state
+  - unregistered commit 18c79e1: merge(whole-book): integrate E2E backend stabilization
+  - unregistered commit de417b4: merge(whole-book): integrate E2E desktop stabilization
+  - unregistered commit 02dcbba: fix(whole-book): integrate V1.2.0 E2E stabilization
+  - unregistered commit bbd7501: test(release): validate V1.2.0 E2E stabilization

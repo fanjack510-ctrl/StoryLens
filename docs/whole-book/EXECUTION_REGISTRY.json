@@ -939,19 +939,21 @@
         "product_code_expected": true,
         "real_provider_required": false,
         "installer_required": false,
-        "wb_status": "tested",
-        "notes": "CHG-046/047 agent CHGs collide with historically planned WB-2.2.2/2.2.3 change_id_planned labels; agent statuses tested. WB-2.2.2 not started. MG pending."
+        "wb_status": "verified",
+        "notes": "MG-V1.2.0-E2E-STABILIZATION PASSED (user-recorded in CHG-049). CHG-046/047/048 verified. Full suite / check_project remain WB-2.2.2 debt."
       },
       {
         "wave": 2,
         "step_id": "WB-2.2.2-V120-RELEASE-DEBT",
         "manual_gate_id": "MG-WB-2.2.2",
-        "change_id_planned": "CHG-20260803-046",
+        "change_id_planned": "CHG-20260803-049",
         "title": "V1.2.0 release debt triage and formal exceptions",
         "acceptance_level": "L1/L2",
         "product_code_expected": "minimal_if_main_chain",
         "real_provider_required": false,
-        "installer_required": false
+        "installer_required": false,
+        "wb_status": "implemented",
+        "notes": "CHG-049 triage complete; fix Agents not authorized. Historical planned id CHG-046 retired for this step (collision with Agent1 E2E)."
       },
       {
         "wave": 3,
@@ -986,7 +988,7 @@
       }
     ],
     "formal_steps_remaining": 5,
-    "next_formal_step_after_scope_gate": "WB-2.2.1-V120-E2E-STABILIZATION",
+    "next_formal_step_after_scope_gate": "WB-2.2.2-V120-RELEASE-DEBT",
     "excluded_from_free_v120_chain": [
       "WB-2.3-STORYLINES",
       "WB-2.4-FIRST-FOUR-PRODUCT",
@@ -1013,7 +1015,7 @@
       "manual_gate_id": "MG-V1.2.0-E2E-STABILIZATION",
       "change_id": "CHG-20260803-048",
       "title": "V1.2.0 Free four-module end-to-end stabilization",
-      "wb_status": "tested",
+      "wb_status": "verified",
       "acceptance_level": "L2",
       "evidence_dir": "release/evidence/whole-book/WB-2.2.1-V120-E2E-STABILIZATION/",
       "depends_on": [
@@ -1023,14 +1025,15 @@
       "next_step": "WB-2.2.2-V120-RELEASE-DEBT",
       "v120_required": true,
       "scope_disposition": "required_for_1.2.0_release",
-      "notes": "Integration tested via CHG-048. Manual gate MG-V1.2.0-E2E-STABILIZATION pending. Do not mark verified until MG PASS. WB-2.2.2 not started.",
+      "notes": "MG-V1.2.0-E2E-STABILIZATION PASSED. CHG-046/047/048 verified via user-recorded gate in CHG-049 closeout. Full suite debt tracked under WB-2.2.2.",
       "planning_change_id": "CHG-20260803-045",
       "backend_agent_change_id": "CHG-20260803-046",
       "desktop_agent_change_id": "CHG-20260803-047",
       "integration_change_id": "CHG-20260803-048",
-      "backend_agent_status": "tested",
-      "desktop_agent_status": "tested",
-      "integration_status": "tested",
+      "backend_agent_status": "verified",
+      "desktop_agent_status": "verified",
+      "integration_status": "verified",
+      "manual_gate_result": "PASSED",
       "public_base_head": "27da35236faf1ff23c67a3759eb268c3ef11102d",
       "agent1_head": "a60a333e6f41f6c829d8413a20ace12baaed6da4",
       "agent2_head": "421d1a01257a7b976343e86fdf36807aaa25b83d",
@@ -1040,18 +1043,21 @@
     {
       "step_id": "WB-2.2.2-V120-RELEASE-DEBT",
       "manual_gate_id": "MG-WB-2.2.2",
-      "change_id": "CHG-20260803-046",
+      "change_id": "CHG-20260803-049",
       "title": "V1.2.0 release debt triage",
-      "wb_status": "planned",
+      "wb_status": "implemented",
       "acceptance_level": "L1/L2",
-      "evidence_dir": "release/evidence/whole-book/WB-2.2.2-V120-RELEASE-DEBT/",
+      "evidence_dir": "release/evidence/whole-book/CHG-20260803-049/",
       "depends_on": [
         "WB-2.2.1-V120-E2E-STABILIZATION"
       ],
       "next_step": "WB-2.2.3-V120-L3-PROVIDER",
       "v120_required": true,
       "scope_disposition": "required_for_1.2.0_release",
-      "notes": "NOT STARTED. Planned change_id label historically CHG-046 collides with Agent1 E2E CHG-046 (tested). Reassign change_id when this wave starts. Debt: Public full suite, Vitest full, check_project TIMEOUT."
+      "notes": "Triage-only CHG-049 complete on base bbd7501. Public 40f/6e, Vitest 30f, check_project FAIL@change_registry. Fix Agents not started. Historical planned id CHG-046 reassigned to CHG-049.",
+      "public_base_head": "bbd7501f23273207916ed27be883fa98da70fafc",
+      "triage_status": "implemented",
+      "implementation_authorized": false
     },
     {
       "step_id": "WB-2.2.3-V120-L3-PROVIDER",

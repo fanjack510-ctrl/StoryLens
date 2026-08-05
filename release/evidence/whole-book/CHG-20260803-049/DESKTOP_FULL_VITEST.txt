@@ -1,0 +1,22 @@
+﻿SOURCE=DESKTOP_FULL_VITEST.raw.txt
+Test Files  17 failed | 170 passed (187)
+Tests  30 failed | 1392 passed (1422)
+Duration  111.16s
+FAILED_FILES=
+src/components/analysis/SceneBoundaryNavigation.chg041.test.tsx
+src/components/chapterAnalysis/ChapterAnalysisProgressPanel.test.tsx
+src/components/readerJourney/dimension_insights_chg001_local.test.tsx
+src/components/readerJourney/phase_1cc24a_overview_detail_layout.test.tsx
+src/components/readerJourney/phase_1cc24b_scene_detail_information_architecture.test.tsx
+src/components/readerJourney/phase_1cc24c_visual_refinement.test.tsx
+src/components/readerJourney/phase_1cc25a_overview_modes.test.tsx
+src/components/readerJourney/phase_1cc25c_density_refinement.test.tsx
+src/components/readerJourney/phase_1cc26_journey_analysis_focused_view.test.tsx
+src/components/readerJourney/phase_1cc262_compact_phase_navigation.test.tsx
+src/components/readerJourney/phase_1cc27_context_inspector_hierarchy.test.tsx
+src/components/readerJourney/phase_3a21_reader_journey_polish.test.tsx
+src/components/readerJourney/reader_journey_ui_cleanup_local_audit.test.tsx
+src/components/readerJourney/ReaderJourneyWorkspace.test.tsx
+src/components/readerJourney/sceneDetailFields.test.tsx
+src/pages/BookRoutePage.autoDiscover.test.tsx
+src/services/runtime_capabilities_local.test.tsx

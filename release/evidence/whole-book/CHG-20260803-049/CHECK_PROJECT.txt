@@ -1,0 +1,158 @@
+CHECK_PROJECT INSTRUMENTED START
+[0.0s] STEP2 rglob *.gguf
+[0.4s] gguf_count 0 sec 0.24
+[0.4s] STEP3 version_manager check
+[1.4s] Version check passed: 1.2.0
+[1.5s] STEP3 exit=0
+[1.5s] STEP4 change_registry check START
+[6.6s] STEP4 still running pid=5812 elapsed=6.6s
+[11.6s] STEP4 still running pid=5812 elapsed=11.6s
+[16.6s] STEP4 still running pid=5812 elapsed=16.6s
+[21.6s] STEP4 still running pid=5812 elapsed=21.6s
+[26.6s] STEP4 still running pid=5812 elapsed=26.6s
+[31.6s] STEP4 still running pid=5812 elapsed=31.6s
+[36.6s] STEP4 still running pid=5812 elapsed=36.6s
+[41.6s] STEP4 still running pid=5812 elapsed=41.6s
+[46.6s] STEP4 still running pid=5812 elapsed=46.6s
+[51.7s] STEP4 still running pid=5812 elapsed=51.7s
+[56.7s] STEP4 still running pid=5812 elapsed=56.7s
+[61.7s] STEP4 still running pid=5812 elapsed=61.7s
+[66.7s] STEP4 still running pid=5812 elapsed=66.7s
+[71.7s] STEP4 still running pid=5812 elapsed=71.7s
+[76.7s] STEP4 still running pid=5812 elapsed=76.7s
+[81.7s] STEP4 still running pid=5812 elapsed=81.7s
+[86.7s] STEP4 still running pid=5812 elapsed=86.7s
+[91.7s] STEP4 still running pid=5812 elapsed=91.7s
+[96.7s] STEP4 still running pid=5812 elapsed=96.7s
+[101.7s] STEP4 still running pid=5812 elapsed=101.7s
+[106.7s] STEP4 still running pid=5812 elapsed=106.7s
+[111.8s] STEP4 still running pid=5812 elapsed=111.8s
+[116.8s] STEP4 still running pid=5812 elapsed=116.8s
+[121.8s] STEP4 still running pid=5812 elapsed=121.8s
+[126.8s] STEP4 still running pid=5812 elapsed=126.8s
+[131.8s] STEP4 still running pid=5812 elapsed=131.8s
+[136.8s] STEP4 still running pid=5812 elapsed=136.8s
+[141.8s] STEP4 still running pid=5812 elapsed=141.8s
+[146.9s] STEP4 still running pid=5812 elapsed=146.9s
+[151.9s] STEP4 still running pid=5812 elapsed=151.9s
+[156.9s] STEP4 still running pid=5812 elapsed=156.9s
+[161.9s] STEP4 still running pid=5812 elapsed=161.9s
+[166.9s] STEP4 still running pid=5812 elapsed=166.9s
+[171.9s] STEP4 still running pid=5812 elapsed=171.9s
+[176.9s] STEP4 still running pid=5812 elapsed=176.9s
+[181.9s] STEP4 still running pid=5812 elapsed=181.9s
+[186.9s] STEP4 still running pid=5812 elapsed=186.9s
+[191.9s] STEP4 still running pid=5812 elapsed=191.9s
+[197.0s] STEP4 still running pid=5812 elapsed=197.0s
+[197.0s] STEP4 exit=
+[197.0s] STEP5 check_project.py START
+[202.1s] STEP5 still running pid=32776 elapsed=202.1s
+[207.1s] STEP5 still running pid=32776 elapsed=207.1s
+[212.1s] STEP5 still running pid=32776 elapsed=212.1s
+[217.1s] STEP5 still running pid=32776 elapsed=217.1s
+[222.1s] STEP5 still running pid=32776 elapsed=222.1s
+[227.1s] STEP5 still running pid=32776 elapsed=227.1s
+[232.2s] STEP5 still running pid=32776 elapsed=232.2s
+[237.2s] STEP5 still running pid=32776 elapsed=237.2s
+[242.2s] STEP5 still running pid=32776 elapsed=242.2s
+[247.2s] STEP5 still running pid=32776 elapsed=247.2s
+[252.2s] STEP5 still running pid=32776 elapsed=252.2s
+[257.2s] STEP5 still running pid=32776 elapsed=257.2s
+[262.2s] STEP5 still running pid=32776 elapsed=262.2s
+[267.2s] STEP5 still running pid=32776 elapsed=267.2s
+[272.2s] STEP5 still running pid=32776 elapsed=272.2s
+[277.2s] STEP5 still running pid=32776 elapsed=277.2s
+[282.2s] STEP5 still running pid=32776 elapsed=282.2s
+[287.3s] STEP5 still running pid=32776 elapsed=287.3s
+[292.3s] STEP5 still running pid=32776 elapsed=292.3s
+[297.3s] STEP5 still running pid=32776 elapsed=297.3s
+[302.3s] STEP5 still running pid=32776 elapsed=302.3s
+[307.3s] STEP5 still running pid=32776 elapsed=307.3s
+[312.3s] STEP5 still running pid=32776 elapsed=312.3s
+[317.3s] STEP5 still running pid=32776 elapsed=317.3s
+[322.3s] STEP5 still running pid=32776 elapsed=322.3s
+[327.3s] STEP5 still running pid=32776 elapsed=327.3s
+[332.3s] STEP5 still running pid=32776 elapsed=332.3s
+[337.4s] STEP5 still running pid=32776 elapsed=337.4s
+[342.4s] STEP5 still running pid=32776 elapsed=342.4s
+[347.4s] STEP5 still running pid=32776 elapsed=347.4s
+[352.4s] STEP5 still running pid=32776 elapsed=352.4s
+[357.4s] STEP5 still running pid=32776 elapsed=357.4s
+[362.4s] STEP5 still running pid=32776 elapsed=362.4s
+[367.4s] STEP5 still running pid=32776 elapsed=367.4s
+[372.4s] STEP5 still running pid=32776 elapsed=372.4s
+[377.4s] STEP5 still running pid=32776 elapsed=377.4s
+[377.5s] Version check passed: 1.2.0
+[377.5s] Change registry check FAILED:
+[377.5s]   - VERSION 1.2.0 != unreleased.base_version 1.0.5
+[377.5s]   - VERSION 1.2.0 != baseline.version 1.0.5
+[377.6s]   - collecting pool must keep target_version null
+[377.6s]   - CHG-20260725-002: head_inclusion=INCLUDED but commit not ancestor of HEAD
+[377.6s]   - CHG-20260726-012: head_inclusion=INCLUDED but commit not ancestor of HEAD
+[377.6s]   - CHG-20260726-013: head_inclusion=INCLUDED but commit not ancestor of HEAD
+[377.6s]   - CHG-20260727-018: head_inclusion=INCLUDED but commit not ancestor of HEAD
+[377.6s]   - CHG-20260728-013: head_inclusion=INCLUDED but commit not ancestor of HEAD
+[377.6s]   - CHG-20260728-014: head_inclusion=INCLUDED but commit not ancestor of HEAD
+[377.7s]   - CHG-20260728-040: invalid status: integrated
+[377.7s]   - CHG-20260728-041: invalid status: integrated
+[377.7s]   - CHG-20260729-001: missing field: release_impact
+[377.7s]   - CHG-20260729-001: invalid status: integrated
+[377.7s]   - CHG-20260729-001: release_impact must be object
+[377.7s]   - CHG-20260729-002: missing field: release_impact
+[377.7s]   - CHG-20260729-002: invalid status: integrated
+[377.8s]   - CHG-20260729-002: release_impact must be object
+[377.8s]   - CHG-20260729-003: missing field: release_impact
+[377.8s]   - CHG-20260729-003: invalid status: integrated
+[377.8s]   - CHG-20260729-003: release_impact must be object
+[377.8s]   - CHG-20260729-004: missing field: release_impact
+[377.8s]   - CHG-20260729-004: invalid status: integrated
+[377.8s]   - CHG-20260729-004: release_impact must be object
+[377.8s]   - CHG-20260729-005: missing field: release_impact
+[377.9s]   - CHG-20260729-005: invalid status: integrated
+[377.9s]   - CHG-20260729-005: release_impact must be object
+[377.9s]   - CHG-20260729-006: missing field: tests
+[377.9s]   - CHG-20260729-006: missing field: verification_evidence
+[377.9s]   - CHG-20260729-006: missing field: data_compatibility
+[377.9s]   - CHG-20260729-006: missing field: release_impact
+[377.9s]   - CHG-20260729-006: invalid status: integrated
+[377.9s]   - CHG-20260729-006: data_compatibility must be object
+[378.0s]   - CHG-20260729-006: release_impact must be object
+[378.0s]   - CHG-20260729-007: missing field: tests
+[378.0s]   - CHG-20260729-007: missing field: verification_evidence
+[378.0s]   - CHG-20260729-007: missing field: data_compatibility
+[378.0s]   - CHG-20260729-007: missing field: release_impact
+[378.0s]   - CHG-20260729-007: missing field: updated_at
+[378.0s]   - CHG-20260729-007: invalid type: release
+[378.0s]   - CHG-20260729-007: data_compatibility must be object
+[378.1s]   - CHG-20260729-007: release_impact must be object
+[378.1s]   - CHG-20260729-007: ready-for-staging but commit 551639f not in HEAD
+[378.1s]   - CHG-20260729-007: ready-for-staging but commit ca5b72b not in HEAD
+[378.1s]   - CHG-20260729-007: ready-for-staging without tests/verification evidence
+[378.1s]   - CHG-20260729-011: head_inclusion=INCLUDED but commit not ancestor of HEAD
+[378.1s]   - CHG-20260730-019: tested without tests evidence
+[378.1s]   - CHG-20260801-032: implemented without commits
+[378.1s]   - CHG-20260801-033: implemented without commits
+[378.1s]   - CHG-20260802-040: missing field: release_impact
+[378.2s]   - CHG-20260802-040: missing field: created_at
+[378.2s]   - CHG-20260802-040: release_impact must be object
+[378.2s]   - CHG-20260802-040: commit missing: ae0c0e31886ba5499561254afa967c454e2ed92f
+[378.2s]   - CHG-20260803-041: missing field: release_impact
+[378.2s]   - CHG-20260803-041: missing field: created_at
+[378.2s]   - CHG-20260803-041: release_impact must be object
+[378.2s]   - CHG-20260803-042: missing field: release_impact
+[378.2s]   - CHG-20260803-042: missing field: created_at
+[378.2s]   - CHG-20260803-042: release_impact must be object
+[378.3s]   - CHG-20260803-045: implemented without commits
+[378.3s]   - unregistered commit 8fa116c: fix(ui): resolve CHG-041 manual gate scene boundary defects
+[378.3s]   - unregistered commit 8d410c5: fix(ui): resolve CHG-041 confirm/journey state split
+[378.3s]   - unregistered commit 33d13ae: fix(journey): unify reader journey selection and URL routing
+[378.3s]   - unregistered commit 89b438c: fix(journey): ignore superseded journeys on analysis-run GET
+[378.4s]   - unregistered commit 3fa1f6b: docs(release): register CHG-029 and pin 1.2.0 after v1.1.2 merge
+[378.4s]   - unregistered commit a60a333: feat(whole-book): stabilize consent and E2E orchestration
+[378.4s]   - unregistered commit 421d1a0: fix(whole-book): stabilize evidence navigation and restore state
+[378.4s]   - unregistered commit 18c79e1: merge(whole-book): integrate E2E backend stabilization
+[378.4s]   - unregistered commit de417b4: merge(whole-book): integrate E2E desktop stabilization
+[378.4s]   - unregistered commit 02dcbba: fix(whole-book): integrate V1.2.0 E2E stabilization
+[378.4s]   - unregistered commit bbd7501: test(release): validate V1.2.0 E2E stabilization
+[378.5s] STEP5 exit=
+[378.5s] DONE
