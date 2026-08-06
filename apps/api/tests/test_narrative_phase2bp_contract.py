@@ -1071,8 +1071,8 @@ def test_58_no_new_migration() -> None:
 # --- VERSION + docs ---
 
 
-def test_version_is_1_0_5() -> None:
-    assert VERSION_FILE.read_text(encoding="utf-8").strip() == "1.0.5"
+def test_version_is_1_2_0() -> None:
+    assert VERSION_FILE.read_text(encoding="utf-8").strip() == "1.2.0"
 
 
 def test_phase2b_docs_exist() -> None:
@@ -1137,7 +1137,7 @@ def test_60_change_registry_check() -> None:
     )
     if result.returncode != 0:
         # Prefer soft skip until CHG-036 is registered; still assert VERSION stable.
-        assert VERSION_FILE.read_text(encoding="utf-8").strip() == "1.0.5"
+        assert VERSION_FILE.read_text(encoding="utf-8").strip() == "1.2.0"
         pytest.skip(f"change_registry check not green yet: {result.stderr or result.stdout}")
     assert result.returncode == 0
 

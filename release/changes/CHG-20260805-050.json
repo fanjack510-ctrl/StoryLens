@@ -1,0 +1,73 @@
+{
+  "id": "CHG-20260805-050",
+  "title": "V1.2.0 release debt Agent 1 — backend progress, registry, collection, obsolete tests",
+  "type": "fix",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": true,
+  "head_inclusion": null,
+  "blocker_level": null,
+  "parent_plan": "CHG-20260803-049",
+  "depends_on": [
+    "CHG-20260803-049"
+  ],
+  "commits": [],
+  "modules": [
+    "apps/api",
+    "release/changes",
+    "release/unreleased.json",
+    "release/baseline.json",
+    "scripts/change_registry.py"
+  ],
+  "files": [
+    "apps/api/app/services/scene_pipeline.py",
+    "apps/api/app/services/task_cancellation.py",
+    "apps/api/tests/",
+    "release/baseline.json",
+    "release/unreleased.json",
+    "release/changes/",
+    "scripts/change_registry.py"
+  ],
+  "user_summary": "修复场景进度计数、版本/注册表对齐、测试收集 ImportError，并更新过期后端测试，使 V1.2.0 发布债务 Agent 1 门禁可通过。",
+  "technical_summary": "P1: flush-before-refresh in raise_if_cancel_requested; scene progress_total covers windows+scenes. T1: baseline/unreleased aligned to 1.2.0 (unverified development baseline at d5cb364). T2: DATA-first registry repair + minimal integrated_into head-inclusion path. T4/T5: tests.* absolute imports for native_overview/http_replay. O1–O6/U2–U5 obsolete or contract-aligned test updates. U1 private-lab live suites classified LAB_DEBT.",
+  "acceptance_criteria": [
+    "test_fake_provider_complete_pipeline progress_current <= progress_total and equal on succeeded",
+    "python scripts/version_manager.py check PASS",
+    "python scripts/change_registry.py check PASS",
+    "python scripts/check_project.py PASS",
+    "native_overview and http_replay collect without ImportError",
+    "No blanket ancestor bypass; no forged verified baseline seal"
+  ],
+  "tests": [
+    "apps/api/tests/test_scene_pipeline.py::test_fake_provider_complete_pipeline",
+    "apps/api/tests/test_scene_pipeline.py::test_raise_if_cancel_requested_preserves_progress_total",
+    "apps/api/tests/test_whole_book_stage_progress_consistency.py",
+    "apps/api/tests/test_change_registry.py",
+    "apps/api/tests/test_native_overview_free_entitlement.py",
+    "apps/api/tests/test_narrative_phase2br1_http_replay_no_repair.py",
+    "apps/api/tests/test_phase_1c_a10.py::test_partial_success_then_resume_skips_completed",
+    "apps/api/tests/test_provider_health_consistency_chg009.py::test_incident_db_replay_becomes_fresh",
+    "apps/api/tests/test_narrative_phase2b_integration.py::test_static_security_scan_paths",
+    "python scripts/version_manager.py check",
+    "python scripts/change_registry.py check",
+    "python scripts/check_project.py"
+  ],
+  "verification_evidence": [
+    "release/evidence/whole-book/CHG-20260803-049/FIX_PLAN_AGENTS.md",
+    "release/evidence/whole-book/CHG-20260803-049/FAILURE_CLASSIFICATION.md"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "Progress and cancel flush behavior only; no schema migration."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "created_at": "2026-08-06T00:40:00Z",
+  "updated_at": "2026-08-06T01:00:00Z"
+}

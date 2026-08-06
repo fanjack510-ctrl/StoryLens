@@ -7,7 +7,7 @@
   "target_version": "1.1.2",
   "public_branch": "fix/1.1.2-structured-output-truncation",
   "private_branch": "fix/1.1.2-structured-output-truncation",
-  "status": "integrated",
+  "status": "tested",
   "release_pool_status": "included",
   "include_in_next_release": true,
   "forward_port_required": true,
@@ -43,12 +43,6 @@
       "message": "fix(tasks): show boundary progress and failed usage",
       "primary": false,
       "multi_change_reason": "UI/API progress+usage companion"
-    },
-    {
-      "sha": "90fb771be894c8cd5b72ad17058281482a6e06f0",
-      "message": "docs(hotfix): verify structured output truncation fix",
-      "primary": false,
-      "multi_change_reason": "evidence pack"
     }
   ],
   "modules": [
@@ -132,7 +126,6 @@
   "created_at": "2026-07-28T06:40:00Z",
   "updated_at": "2026-07-28T08:46:42Z",
   "forward_port_status": "pending",
-  "public_integration_commit": "49b4430ca5abfffae01a739f320c5ed83433b9e0",
   "private_integration_commit": "23a0b025db51acaa8e62f4e81bc7628f19a8e2a6",
   "public_verified_head": "956afe025c109cdce4a4c46ecadb36660bd94010",
   "private_verified_head": "ebb7a8d30464558b1a7488abba8cb88e47700044",
@@ -145,5 +138,8 @@
   "l3_actual_calls": 2,
   "l3_cost_cny": 0.02787,
   "l3_formal_database_writes": 0,
-  "integration_real_provider_calls": 0
+  "integration_real_provider_calls": 0,
+  "integrated_into": "49b4430ca5abfffae01a739f320c5ed83433b9e0",
+  "integration_change": "CHG-20260729-007",
+  "integration_evidence": "release/evidence/hotfix/1.1.2/CHG-20260728-040/FINAL_INTEGRATION_REPORT.md"
 }

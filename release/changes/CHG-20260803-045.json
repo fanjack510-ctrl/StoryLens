@@ -3,7 +3,7 @@
   "title": "Plan V1.2.0 Free four-module end-to-end stabilization",
   "type": "documentation",
   "base_version": "1.2.0",
-  "status": "implemented",
+  "status": "registered",
   "include_in_next_release": true,
   "head_inclusion": "INCLUDED",
   "blocker_level": null,

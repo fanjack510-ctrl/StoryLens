@@ -11,12 +11,6 @@
       "message": "feat: add Pro Whole-Book Insights public API, license gate, and page",
       "primary": true,
       "multi_change_reason": null
-    },
-    {
-      "sha": "478824530e9e9875843febf267b766e76168ab57",
-      "message": "fix: restore RouteErrorPage import so desktop router boots",
-      "primary": true,
-      "multi_change_reason": null
     }
   ],
   "modules": [

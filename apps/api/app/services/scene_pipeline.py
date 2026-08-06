@@ -852,7 +852,9 @@ async def _execute(session: Session, gateway: ModelGateway, run: AnalysisRun) ->
     boundary_prompt = load_prompt("scene_boundary", run.prompt_version)
     windows = build_windows(paragraphs)
     window_results: list[SceneBoundaryResult] = []
-    run.progress_total = len(windows)
+    # Formal units (phase 1): one step per boundary window.
+    run.progress_current = 0
+    run.progress_total = max(len(windows), 1)
     session.commit()
     detection_batch_index = 0
     for window_index, window in enumerate(windows, 1):
@@ -991,8 +993,10 @@ async def _execute(session: Session, gateway: ModelGateway, run: AnalysisRun) ->
                 batch_total=len(adjudication_batches),
                 prompt_version=ADJUDICATION_PROMPT_VERSION,
             )
+            # Formal units (v3.5 adjudication phase): one step per adjudication batch.
             run.progress_total = max(len(adjudication_batches), 1)
             run.progress_current = 0
+            session.flush()
             session.commit()
             reusable = load_reusable_adjudication_batches(session, run=run)
             batch_results: list[tuple[list[str], BoundaryCandidateAdjudicationResult]] = []
@@ -1299,7 +1303,10 @@ async def _execute(session: Session, gateway: ModelGateway, run: AnalysisRun) ->
         consolidate_short_fragments=False,
         boundary_meta=boundary_meta,
     )
-    run.progress_total += len(ranges)
+    # Formal units (phase 2): extend total to cover remaining scene-analysis steps.
+    # Assign absolutely and flush so cooperative cancel refresh cannot drop the total.
+    run.progress_total = max(int(run.progress_current) + len(ranges), 1)
+    session.flush()
     analysis_prompt = load_prompt(
         "scene_analysis",
         "v3.2"
@@ -1380,7 +1387,13 @@ async def _execute(session: Session, gateway: ModelGateway, run: AnalysisRun) ->
                 )
             )
         run.progress_current += 1
+        if run.progress_current > run.progress_total:
+            run.progress_total = run.progress_current
         session.commit()
+    # Succeeded scene phase must report a consistent progress envelope.
+    if run.progress_total < run.progress_current:
+        run.progress_total = run.progress_current
+    session.flush()
     return False
 
 

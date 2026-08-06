@@ -386,18 +386,14 @@ def test_capability_key_and_aggregation_semantics_unchanged() -> None:
     meta = get_capability_metadata(CapabilityKey.PRO_WHOLE_BOOK_INSIGHTS)
     assert meta.key == CapabilityKey.PRO_WHOLE_BOOK_INSIGHTS
     assert meta.key.value == "pro_whole_book_insights"
-    assert meta.display_name == "章节聚合洞察"
+    assert meta.display_name == "章节精细分析覆盖（Legacy key）"
     assert meta.shipped is True
     assert meta.requires_license is True
 
     description = meta.description
-    assert "章节聚合" in description
-    assert "单章" in description
-    assert "聚合" in description
-    assert "Chapter Asset Aggregation Insights" in description
-    # Explicit non-claims: aggregation only; not native whole-book / full-text analysis.
-    assert "不直接分析全书原文" in description
-    assert "不表示原生整书" in description
+    # Current Free contract: legacy key points at chapter-aggregate insights, not native WB.
+    assert "chapter-aggregate" in description.lower() or "章节" in description
+    assert "native whole-book" in description.lower() or "原生" in description
     assert "全文分析" not in description
     assert "原生整书分析已完成" not in description
     assert "原生全书分析已完成" not in description

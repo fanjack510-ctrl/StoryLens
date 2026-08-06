@@ -131,7 +131,7 @@ def _seed_book(session: Session) -> tuple[Book, int]:
 
 
 def test_gates_and_version_locked() -> None:
-    assert VERSION == "1.0.5"
+    assert VERSION == "1.2.0"
     assert WHOLE_BOOK_RUNS_ENDPOINT_DISABLED is True
     assert PRODUCTION_DEFAULT_ENGINE_ID is None
     assert WHOLE_BOOK_MOCK_LAB_ENABLED is False

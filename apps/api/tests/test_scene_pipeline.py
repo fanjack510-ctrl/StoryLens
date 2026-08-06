@@ -58,6 +58,8 @@ def test_fake_provider_complete_pipeline(client: TestClient) -> None:
     run = client.get(f"/api/v1/analysis-runs/{response.json()['run_id']}").json()
     assert run["status"] == "succeeded"
     assert run["progress_current"] == run["progress_total"]
+    assert run["progress_current"] > 0
+    assert run["progress_current"] <= run["progress_total"]
     scenes = client.get(f"/api/v1/chapters/{chapter_id}/scenes").json()
     assert [item["scene_key"] for item in scenes] == ["B0001-C0001-S0001", "B0001-C0001-S0002"]
     assert scenes[0]["boundary_detected"] is True
@@ -76,6 +78,33 @@ def test_fake_provider_complete_pipeline(client: TestClient) -> None:
         assert len(artifacts) == 1
         assert artifacts[0]["validation_status"] == "valid"
     assert [item["id"] for item in covered] == [item["id"] for item in paragraphs]
+
+
+def test_raise_if_cancel_requested_preserves_progress_total(testing_session) -> None:
+    """Cooperative cancel refresh must not drop pending progress_total updates."""
+    from app.db.models import AnalysisRun
+    from app.services.task_cancellation import raise_if_cancel_requested
+
+    run = AnalysisRun(
+        task_type="scene_pipeline",
+        subject_type="chapter",
+        subject_id="1",
+        provider="fake",
+        model="fake-scene-model",
+        prompt_version="v1",
+        schema_version="v1",
+        input_hash="a" * 64,
+        prompt_hash="b" * 64,
+        status="running",
+        progress_current=1,
+        progress_total=1,
+    )
+    testing_session.add(run)
+    testing_session.commit()
+    run.progress_total = 3
+    raise_if_cancel_requested(testing_session, run.id)
+    assert run.progress_total == 3
+    assert run.progress_current == 1
 
 
 def test_failed_run_can_retry_without_overwrite(

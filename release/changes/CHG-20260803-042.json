@@ -57,5 +57,12 @@
     "user_data_compatible": true,
     "notes": "No migration; isolated smoke DB only."
   },
-  "updated_at": "2026-08-03T04:50:32Z"
+  "updated_at": "2026-08-03T04:50:32Z",
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "created_at": "2026-08-03T04:50:32Z"
 }

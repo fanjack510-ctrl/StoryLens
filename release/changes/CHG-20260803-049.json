@@ -1,0 +1,63 @@
+{
+  "id": "CHG-20260803-049",
+  "title": "Triage V1.2.0 release debt and registry/version alignment",
+  "type": "documentation",
+  "base_version": "1.2.0",
+  "status": "implemented",
+  "include_in_next_release": true,
+  "head_inclusion": "INCLUDED",
+  "blocker_level": null,
+  "parent_plan": "CHG-20260803-044",
+  "wb_step_id": "WB-2.2.2-RELEASE-DEBT-TRIAGE",
+  "depends_on": [
+    "CHG-20260803-048"
+  ],
+  "commits": [
+    {
+      "sha": "d5cb364667a298538cc545f742197a17056a90ce",
+      "message": "docs(release): triage V1.2.0 release debt (CHG-049)",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "release",
+    "release/evidence/whole-book",
+    "docs/releases"
+  ],
+  "files": [
+    "release/evidence/whole-book/CHG-20260803-049/",
+    "release/changes/CHG-20260803-049.json"
+  ],
+  "user_summary": "只读审计 V1.2.0 发布债务：registry/version/test 分类与并行修复 Agent 计划；不改产品代码。",
+  "technical_summary": "Triage-only. Classifies T1–T5 tooling, O* obsolete tests, P* product defects. PRODUCT CODE MODIFIED=NO.",
+  "acceptance_criteria": [
+    "Evidence pack under CHG-20260803-049",
+    "Failure classification and fix plan documented",
+    "No product code modified in triage wave"
+  ],
+  "tests": [
+    "read-only triage audit of registry/version/test debt"
+  ],
+  "verification_evidence": [
+    "release/evidence/whole-book/CHG-20260803-049/CHANGE_STATUS.md",
+    "release/evidence/whole-book/CHG-20260803-049/FAILURE_CLASSIFICATION.md",
+    "release/evidence/whole-book/CHG-20260803-049/FIX_PLAN_AGENTS.md",
+    "release/evidence/whole-book/CHG-20260803-049/VERSION_REGISTRY_MIGRATION.md",
+    "release/evidence/whole-book/CHG-20260803-049/CHANGE_REGISTRY_CHECK.txt"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "Triage/documentation only."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "created_at": "2026-08-06T00:30:00Z",
+  "updated_at": "2026-08-06T00:30:00Z"
+}

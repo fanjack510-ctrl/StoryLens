@@ -1062,7 +1062,7 @@ def test_12_production_isolation_version_no_migration(network_deny) -> None:
     assert WHOLE_BOOK_RUNS_ENDPOINT_DISABLED is True
     assert PRODUCTION_DEFAULT_ENGINE_ID is None
     assert WHOLE_BOOK_MOCK_LAB_ENABLED is False
-    assert VERSION == "1.0.5"
+    assert VERSION == "1.2.0"
     assert is_private_provider_live_probe_enabled(environ={}) is False
     assert os.environ.get(PRIVATE_PROVIDER_LIVE_PROBE_ENV, "") in {"", "0", "false", "no", "off"}
 

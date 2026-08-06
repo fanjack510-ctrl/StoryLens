@@ -155,6 +155,24 @@ def is_ancestor(root: Path, commit: str, head: str = "HEAD") -> bool:
     return git_ok(root, "merge-base", "--is-ancestor", commit, head)
 
 
+def resolved_integration_commit(root: Path, change: dict[str, Any]) -> str | None:
+    """Return full sha when change.integrated_into resolves and is reachable from HEAD."""
+    integrated_into = change.get("integrated_into")
+    if not isinstance(integrated_into, str) or not integrated_into.strip():
+        return None
+    resolved = resolve_commit(root, integrated_into.strip())
+    if not resolved or not is_ancestor(root, resolved):
+        return None
+    return resolved
+
+
+def commit_included_in_head(root: Path, change: dict[str, Any], sha: str) -> bool:
+    """True when sha is in HEAD history or explicitly integrated via integrated_into."""
+    if is_ancestor(root, sha):
+        return True
+    return resolved_integration_commit(root, change) is not None
+
+
 def working_tree_dirty(root: Path) -> list[str]:
     proc = git(root, "status", "--porcelain")
     if proc.returncode != 0:
@@ -1016,7 +1034,7 @@ def check_registry(root: Path, *, release_mode: bool = False) -> list[str]:
             if not isinstance(sha, str) or not resolve_commit(root, sha):
                 errors.append(f"{cid}: commit missing: {sha}")
                 continue
-            if not is_ancestor(root, sha):
+            if not commit_included_in_head(root, change, sha):
                 # allowed for EXISTS_NOT_INCLUDED but flag if marked freeze-ready
                 if is_freeze_ready_status(change.get("status")):
                     errors.append(

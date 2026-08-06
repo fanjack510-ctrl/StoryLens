@@ -127,46 +127,100 @@ def test_is_v2_vs_legacy_run_detection():
 
 @pytest.mark.asyncio
 async def test_execute_reader_journey_dispatches_v2():
+    from app.db.models import AnalysisRun, ReaderJourneyRun
     from app.services import reader_journey_pipeline as pipeline
 
     journey = SimpleNamespace(
-        id=7, status="queued", scene_contract_version="2.0", failure_details_json="{}"
+        id=7,
+        status="queued",
+        analysis_run_id=1,
+        scene_contract_version="2.0",
+        failure_details_json="{}",
+        cancellation_requested_at=None,
+        raw_output=None,
     )
+    analysis_run = SimpleNamespace(
+        id=1,
+        status="running",
+        cancellation_requested_at=None,
+        raw_output="{}",
+    )
+
+    def _get(model, ident):  # noqa: ANN001
+        if model is ReaderJourneyRun or getattr(model, "__name__", "") == "ReaderJourneyRun":
+            return journey
+        if model is AnalysisRun or getattr(model, "__name__", "") == "AnalysisRun":
+            return analysis_run
+        return None
+
     session = MagicMock()
-    session.get.return_value = journey
+    session.get.side_effect = _get
     session_cm = MagicMock()
     session_cm.__enter__.return_value = session
     session_cm.__exit__.return_value = False
     factory = MagicMock(return_value=session_cm)
     gateway = MagicMock()
 
-    with patch(
-        "app.services.reader_journey_v2_execution.execute_reader_journey_v2",
-        new_callable=AsyncMock,
-    ) as mocked:
+    with (
+        patch(
+            "app.services.reader_journey_v2_execution.execute_reader_journey_v2",
+            new_callable=AsyncMock,
+        ) as mocked,
+        patch(
+            "app.services.reader_journey_recovery.claim_journey_worker",
+            return_value=journey,
+        ),
+    ):
         await pipeline.execute_reader_journey(factory, gateway, 7)
         mocked.assert_awaited_once_with(factory, gateway, 7)
 
 
 @pytest.mark.asyncio
 async def test_execute_reader_journey_keeps_legacy_path():
+    from app.db.models import AnalysisRun, ReaderJourneyRun
     from app.services import reader_journey_pipeline as pipeline
 
     journey = SimpleNamespace(
-        id=8, status="queued", scene_contract_version="1.3", failure_details_json="{}"
+        id=8,
+        status="queued",
+        analysis_run_id=1,
+        scene_contract_version="1.3",
+        failure_details_json="{}",
+        cancellation_requested_at=None,
+        raw_output=None,
     )
+    analysis_run = SimpleNamespace(
+        id=1,
+        status="running",
+        cancellation_requested_at=None,
+        raw_output="{}",
+    )
+
+    def _get(model, ident):  # noqa: ANN001
+        if model is ReaderJourneyRun or getattr(model, "__name__", "") == "ReaderJourneyRun":
+            return journey
+        if model is AnalysisRun or getattr(model, "__name__", "") == "AnalysisRun":
+            return analysis_run
+        return None
+
     session = MagicMock()
-    session.get.return_value = journey
+    session.get.side_effect = _get
     session_cm = MagicMock()
     session_cm.__enter__.return_value = session
     session_cm.__exit__.return_value = False
     factory = MagicMock(return_value=session_cm)
     gateway = MagicMock()
 
-    with patch(
-        "app.services.reader_journey_pipeline._execute_reader_journey_legacy",
-        new_callable=AsyncMock,
-    ) as mocked:
+    with (
+        patch(
+            "app.services.reader_journey_pipeline._execute_reader_journey_legacy",
+            new_callable=AsyncMock,
+        ) as mocked,
+        patch(
+            "app.services.reader_journey_recovery.claim_journey_worker",
+            return_value=journey,
+        ),
+    ):
         await pipeline.execute_reader_journey(factory, gateway, 8)
         mocked.assert_awaited_once_with(factory, gateway, 8)
 

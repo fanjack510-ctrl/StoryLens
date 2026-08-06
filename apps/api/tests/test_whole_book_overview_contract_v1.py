@@ -110,11 +110,14 @@ def _load_fixture(name: str) -> dict:
 
 def test_migration_order_includes_011() -> None:
     assert_unique_migration_ids()
-    assert len(NARRATIVE_MIGRATION_ORDER) == 13
-    assert NARRATIVE_MIGRATION_ORDER[-1] == MIGRATION_WHOLE_BOOK_SNAPSHOT_IMMUTABILITY
-    assert NARRATIVE_MIGRATION_ORDER[11] == MIGRATION_WHOLE_BOOK_FOUNDATION_V1
-    assert NARRATIVE_MIGRATION_ORDER[10] == MIGRATION_WHOLE_BOOK_OVERVIEW_RUNTIME
     assert NARRATIVE_MIGRATION_ORDER[9] == "20260723_010_analysis_conflicts"
+    assert NARRATIVE_MIGRATION_ORDER[10] == MIGRATION_WHOLE_BOOK_OVERVIEW_RUNTIME
+    assert NARRATIVE_MIGRATION_ORDER[11] == MIGRATION_WHOLE_BOOK_FOUNDATION_V1
+    assert NARRATIVE_MIGRATION_ORDER[12] == MIGRATION_WHOLE_BOOK_SNAPSHOT_IMMUTABILITY
+    # Later Free whole-book migrations may extend the tail; lock identity/order, not length.
+    assert MIGRATION_WHOLE_BOOK_OVERVIEW_RUNTIME in NARRATIVE_MIGRATION_ORDER
+    assert len(NARRATIVE_MIGRATION_ORDER) == len(set(NARRATIVE_MIGRATION_ORDER))
+    assert len(NARRATIVE_MIGRATION_ORDER) >= 13
 
 
 def test_fixture_manifest_hashes() -> None:

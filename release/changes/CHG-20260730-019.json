@@ -32,7 +32,10 @@
     "RC.5 installer archived with matching SHA-256",
     "Isolated installed automatic acceptance PASS under Fake Provider"
   ],
-  "tests": [],
+  "tests": [
+    "release/evidence/1.1.2-rc.5/ISOLATED_INSTALLED_ACCEPTANCE.json",
+    "release/evidence/1.1.2-rc.5/EXTENDED_AUTO_ACCEPTANCE.json"
+  ],
   "verification_evidence": [
     "release/evidence/1.1.2-rc.5/BUILD_METADATA.json",
     "release/evidence/1.1.2-rc.5/ISOLATED_INSTALLED_ACCEPTANCE.json",

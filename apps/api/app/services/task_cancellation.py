@@ -109,9 +109,15 @@ def is_cancel_requested(run: AnalysisRun | None) -> bool:
 
 
 def raise_if_cancel_requested(session: Session, run_id: int) -> None:
+    """Raise when a cooperative cancel request is visible.
+
+    Flush pending ORM mutations before refresh so local progress / stage updates
+    are not discarded when reloading cancel flags from the database.
+    """
     run = session.get(AnalysisRun, run_id)
     if run is None:
         return
+    session.flush()
     session.refresh(run)
     if run.status in TERMINAL_SUCCESS | TERMINAL_FAILED:
         return

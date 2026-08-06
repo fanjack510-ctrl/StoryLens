@@ -15,7 +15,7 @@ from app.narrative_core.services.capability_service import DefaultCapabilityServ
 from app.narrative_core.services.native_overview_seed import seed_short_book_v1
 from app.services import entitlement
 
-pytest_plugins = ["test_native_overview_walking_skeleton"]
+pytest_plugins = ["tests.test_native_overview_walking_skeleton"]
 
 from app.narrative_core.contracts.pro_native_overview_flags import (
     FIXTURE_ENGINE_ID,

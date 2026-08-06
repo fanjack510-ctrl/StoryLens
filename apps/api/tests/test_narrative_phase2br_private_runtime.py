@@ -87,7 +87,7 @@ def _provider_request(*, provider_kind: str = "fake") -> ProviderInferenceReques
 
 
 def test_gates_remain_closed() -> None:
-    assert Path(REPO_ROOT / "VERSION").read_text(encoding="utf-8").strip() == "1.0.5"
+    assert Path(REPO_ROOT / "VERSION").read_text(encoding="utf-8").strip() == "1.2.0"
     assert WHOLE_BOOK_RUNS_ENDPOINT_DISABLED is True
     assert PRODUCTION_DEFAULT_ENGINE_ID is None
     assert WHOLE_BOOK_MOCK_LAB_ENABLED is False

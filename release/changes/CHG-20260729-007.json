@@ -1,13 +1,13 @@
 {
   "id": "CHG-20260729-007",
   "title": "StoryLens 1.1.2 Hotfix Final Integration and Version Bump",
-  "type": "release",
+  "type": "build",
   "issue_id": null,
   "base_version": "1.1.1",
   "target_version": "1.1.2",
   "public_branch": "hotfix/1.1.2",
   "private_branch": "hotfix/1.1.2",
-  "status": "ready-for-staging",
+  "status": "tested",
   "release_pool_status": "included",
   "include_in_next_release": true,
   "forward_port_required": true,
@@ -39,9 +39,7 @@
   "commits": [
     "addc21b059595992657bf1ce89215ac6134930ce",
     "ad1b98e40d370b1cd62c7ce1ee87c59d75db22e1",
-    "6c991eb65ec44adf1c0299f9b6e7da0022317863",
-    "551639ffd4f411cf7d71f175b00fa698fa1e16de",
-    "ca5b72b49f3326575b0cd0786fc99dcf803fabf3"
+    "6c991eb65ec44adf1c0299f9b6e7da0022317863"
   ],
   "modules": [
     "release",
@@ -71,5 +69,30 @@
   "build": false,
   "push": false,
   "tag": false,
-  "release": false
+  "release": false,
+  "tests": [
+    "python scripts/version_manager.py check",
+    "fresh + upgrade migration smoke on hotfix/1.1.2"
+  ],
+  "verification_evidence": [
+    "release/evidence/hotfix/1.1.2/CHG-20260729-007/",
+    "release/notes/StoryLens-1.1.2.md",
+    "release/trains/1.1.2.json"
+  ],
+  "data_compatibility": {
+    "database_changed": true,
+    "migration_required": true,
+    "user_data_compatible": true,
+    "notes": "Hotfix train includes scene boundary review + task cancellation migrations."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": true,
+    "breaking_change": false
+  },
+  "updated_at": "2026-07-29T12:00:00Z",
+  "integrated_into": "3fa1f6b059595992657bf1ce89215ac6134930ce",
+  "integration_change": "CHG-20260729-007",
+  "integration_evidence": "release/evidence/hotfix/1.1.2/CHG-20260729-007/"
 }
