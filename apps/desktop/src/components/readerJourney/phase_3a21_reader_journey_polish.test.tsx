@@ -152,7 +152,8 @@ describe("Reader Journey 3A.2.1 polish", () => {
       expect(text).not.toBe("...");
       expect(text).not.toBe("…");
       expect(text.length).toBeGreaterThan(1);
-      expect(text).toMatch(/阅读期待|核心冲突|信息变化|后续期待/);
+      expect(text).not.toMatch(/^[\.\s…]+$/);
+      expect(text).toMatch(/(阅读期待|核心冲突|信息变化|后续期待|进入|信息铺垫|推进|收束|冲突|推动|中段|阶段|抬升|形成)/);
     }
   });
 

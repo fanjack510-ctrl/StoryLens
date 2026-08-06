@@ -40,11 +40,14 @@ export function mapUrlToActiveTab(args: {
 
   if (userPinnedTab) return userPinnedTab;
 
+  // CHG-041: scene-boundary-review is a dedicated Scene surface. It must win over a
+  // stale/leftover tab=reader-journey so review never lands on Journey IA.
+  if (requestedView === "scene-boundary-review") return "scene";
+
   // Explicit journey deep-link wins over view=progress/reading shell (CHG-023 resume URLs).
   if (requestedTab === "reader-journey" || requestedTab === "journey") return "journey";
 
   if (requestedView === "reading" || requestedView === "progress") return "text";
-  if (requestedView === "scene-boundary-review") return "scene";
 
   if (
     requestedTab === "scene-analysis" ||

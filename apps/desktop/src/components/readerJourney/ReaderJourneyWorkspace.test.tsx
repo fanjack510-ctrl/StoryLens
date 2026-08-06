@@ -1,9 +1,10 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ReaderJourneyWorkspace } from "./ReaderJourneyWorkspace";
 import { buildMockReaderJourneyVisualization } from "./mockVisualization";
 import type { ReactElement } from "react";
+import { useDeveloperModeStore } from "../../stores/developerModeStore";
 
 vi.mock("./exportJourneyPng", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./exportJourneyPng")>();
@@ -16,6 +17,10 @@ vi.mock("./exportJourneyPng", async (importOriginal) => {
 });
 
 afterEach(cleanup);
+
+beforeEach(() => {
+  useDeveloperModeStore.setState({ developerMode: false });
+});
 
 function renderJourney(ui: ReactElement, initial = "/") {
   return render(<MemoryRouter initialEntries={[initial]}>{ui}</MemoryRouter>);
@@ -56,7 +61,8 @@ describe("ReaderJourneyWorkspace", () => {
 
     fireEvent.click(screen.getByTestId("journey-curve-node-14"));
     expect(screen.getByTestId("journey-detail-drawer")).toHaveTextContent("场景14");
-    expect(screen.getByTestId("scene-detail-tab-questions")).toHaveTextContent(/问题|为什么/);
+    expect(screen.getByTestId("scene-detail-insight-panel")).toBeInTheDocument();
+    expect(screen.getByTestId("scene-dimension-insight-text")).toBeInTheDocument();
 
     expect(screen.getByTestId("journey-overlay-composite")).toHaveTextContent("对比分析");
     expect(screen.queryByTestId("journey-more-chart-settings")).not.toBeInTheDocument();
@@ -97,7 +103,8 @@ describe("ReaderJourneyWorkspace", () => {
     );
     expect(screen.getByTestId("journey-overview-curve")).toBeInTheDocument();
     expect(screen.queryByTestId("journey-cluster-toggle-qcl-primary")).not.toBeInTheDocument();
-    expect(screen.getByTestId("scene-detail-tab-questions")).toHaveTextContent(/问题|为什么/);
+    expect(screen.getByTestId("scene-detail-insight-panel")).toBeInTheDocument();
+    expect(screen.getByTestId("scene-dimension-insight-text")).toBeInTheDocument();
   });
 
   it("does not render bottom chapter summary cards", () => {
@@ -118,7 +125,8 @@ describe("ReaderJourneyWorkspace", () => {
     expect(screen.queryByTestId("summary-card-traction")).not.toBeInTheDocument();
   });
 
-  it("calls onLocateEvidence from drawer evidence buttons", () => {
+  it("calls onLocateEvidence from developer tech evidence when enabled", () => {
+    useDeveloperModeStore.setState({ developerMode: true });
     const onLocateEvidence = vi.fn();
     renderJourney(
       <ReaderJourneyWorkspace
@@ -128,7 +136,7 @@ describe("ReaderJourneyWorkspace", () => {
     );
     fireEvent.click(screen.getByTestId("journey-curve-node-1"));
     const drawer = screen.getByTestId("journey-detail-drawer");
-    fireEvent.click(within(drawer).getByTestId("scene-detail-tab-evidence"));
+    fireEvent.click(within(drawer).getByText("技术详情"));
     fireEvent.click(within(drawer).getByTestId("journey-evidence-B0001-C0002-P0010"));
     expect(onLocateEvidence).toHaveBeenCalledWith("B0001-C0002-P0010");
   });

@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ReactElement } from "react";
@@ -29,19 +29,17 @@ describe("Phase 1C-C.2.4B Scene detail information architecture", () => {
   const node1 = visualization.scene_nodes[0];
   const node14 = visualization.scene_nodes[13];
 
-  it("exposes five detail tabs and three core metrics on overview", () => {
+  it("uses simplified Scene Inspector without legacy tabs", () => {
     render(
       <JourneySceneDetailPanel node={node1} onLocateEvidence={vi.fn()} />,
     );
-    expect(screen.getByTestId("scene-detail-tabs").querySelectorAll("button")).toHaveLength(5);
-    expect(screen.getByTestId("scene-detail-score-bars")).toBeInTheDocument();
-    expect(screen.getByTestId("score-bar-reading_momentum")).toHaveTextContent("阅读动力");
-    expect(screen.getByTestId("score-bar-curiosity")).toBeInTheDocument();
-    expect(screen.getByTestId("score-bar-tension")).toBeInTheDocument();
-    expect(screen.queryByTestId("score-bar-dropoff_risk")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("scene-detail-tabs")).not.toBeInTheDocument();
+    expect(screen.getByTestId("scene-detail-insight-panel")).toBeInTheDocument();
+    expect(screen.getByTestId("scene-dimension-insight-text")).toBeInTheDocument();
+    expect(screen.queryByTestId("scene-detail-score-bars")).not.toBeInTheDocument();
   });
 
-  it("localizes lifecycle labels and keeps tab across Scene switch", () => {
+  it("localizes lifecycle labels and keeps title across Scene switch", () => {
     expect(lifecycleLabelZh("created_here")).toBe("本场新增");
     expect(lifecycleLabelZh("transformed")).toBe("问题升级");
     const { rerender } = renderJourney(
@@ -51,9 +49,8 @@ describe("Phase 1C-C.2.4B Scene detail information architecture", () => {
         activeSceneOrdinal={1}
       />,
     );
-    fireEvent.click(screen.getByTestId("scene-detail-tab-questions"));
-    expect(screen.getByTestId("scene-detail-questions")).toHaveTextContent("本场景建立的问题");
-    expect(screen.getByTestId("scene-detail-questions")).toHaveTextContent("留给后续的问题");
+    expect(screen.getByTestId("scene-detail-insight-panel")).toBeInTheDocument();
+    expect(screen.getByTestId("scene-detail-title")).toHaveTextContent(/场景01/);
     rerender(
       <MemoryRouter>
         <ReaderJourneyWorkspace
@@ -63,37 +60,20 @@ describe("Phase 1C-C.2.4B Scene detail information architecture", () => {
         />
       </MemoryRouter>,
     );
-    expect(screen.getByTestId("scene-detail-panel-questions")).toBeInTheDocument();
+    expect(screen.getByTestId("scene-detail-insight-panel")).toBeInTheDocument();
     expect(screen.getByTestId("scene-detail-title")).toHaveTextContent(/场景08/);
   });
 
-  it("renders hook fields and writing takeaways without crashing", () => {
+  it("renders Scene 14 insight panel without crashing", () => {
     render(
       <JourneySceneDetailPanel node={node14} onLocateEvidence={vi.fn()} />,
     );
-    fireEvent.click(screen.getByTestId("scene-detail-tab-payoffs"));
-    expect(screen.getByTestId("primary-hook-grid")).toHaveTextContent("缺口");
-    expect(screen.getByTestId("primary-hook-grid")).toHaveTextContent("继续动力");
-    fireEvent.click(screen.getByTestId("scene-detail-tab-techniques"));
-    expect(screen.getByTestId("journey-writing-takeaways")).toBeInTheDocument();
+    expect(screen.getByTestId("scene-detail-insight-panel")).toBeInTheDocument();
+    expect(screen.getByTestId("scene-dimension-insight-text")).toBeInTheDocument();
+    expect(screen.queryByTestId("journey-detail-error")).not.toBeInTheDocument();
   });
 
-  it("locates evidence from evidence tab for Scene 1 and Scene 14", () => {
-    const onLocate = vi.fn();
-    renderJourney(
-      <ReaderJourneyWorkspace
-        visualization={visualization}
-        onLocateEvidence={onLocate}
-        activeSceneOrdinal={1}
-      />,
-    );
-    const drawer = screen.getByTestId("journey-detail-drawer");
-    fireEvent.click(within(drawer).getByTestId("scene-detail-tab-evidence"));
-    fireEvent.click(within(drawer).getByTestId("journey-evidence-B0001-C0002-P0010"));
-    expect(onLocate).toHaveBeenCalledWith("B0001-C0002-P0010");
-  });
-
-  it("shows empty states when fields are missing", () => {
+  it("shows unavailable insight copy when fields are missing", () => {
     const emptyNode = {
       ...node1,
       reader_question_in: [],
@@ -108,16 +88,15 @@ describe("Phase 1C-C.2.4B Scene detail information architecture", () => {
       writing_takeaways: [],
       evidence_paragraph_ids: [],
       risk_points: [],
+      dimension_insights: { overall_reading: null },
     };
     render(<JourneySceneDetailPanel node={emptyNode} onLocateEvidence={vi.fn()} />);
-    fireEvent.click(screen.getByTestId("scene-detail-tab-questions"));
-    expect(screen.getByTestId("empty-questions")).toHaveTextContent("未识别出明确问题链");
-    fireEvent.click(screen.getByTestId("scene-detail-tab-payoffs"));
-    expect(screen.getByTestId("empty-hook-payoff")).toHaveTextContent("未识别出明确的钩子或回报");
-    fireEvent.click(screen.getByTestId("scene-detail-tab-techniques"));
-    expect(screen.getByTestId("empty-techniques")).toHaveTextContent("未提取出可复用技法");
-    fireEvent.click(screen.getByTestId("scene-detail-tab-evidence"));
-    expect(screen.getByTestId("empty-evidence")).toHaveTextContent("暂无可用证据");
+    expect(screen.getByTestId("scene-detail-insight-panel")).toBeInTheDocument();
+    expect(screen.getByTestId("scene-dimension-insight-text")).toHaveTextContent(
+      "当前维度暂无可靠洞察",
+    );
+    expect(screen.queryByTestId("empty-questions")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("empty-evidence")).not.toBeInTheDocument();
   });
 
   it("keeps Error Boundary isolation", () => {

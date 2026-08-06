@@ -65,8 +65,8 @@ describe("Phase 1C-C.2.5C density refinement (updated for 2.6)", () => {
     expect(screen.getByTestId("journey-phase-detail-panel")).toBeInTheDocument();
     expect(screen.queryByTestId("journey-phase-popover")).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId("journey-curve-node-12"));
-    fireEvent.click(screen.getByTestId("scene-detail-tab-questions"));
-    expect(screen.getByTestId("scene-detail-panel-questions")).toBeInTheDocument();
+    expect(screen.getByTestId("scene-detail-insight-panel")).toBeInTheDocument();
+    expect(screen.getByTestId("scene-dimension-insight-text")).toBeInTheDocument();
     expect(screen.getByTestId("scene-detail-title")).toHaveTextContent(/场景12/);
   });
 

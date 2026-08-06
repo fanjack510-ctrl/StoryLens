@@ -118,10 +118,8 @@ describe("writing takeaways and structured detail fields", () => {
       />,
     );
     expect(screen.getByTestId("journey-detail-drawer")).toHaveTextContent(/场景01/);
-    fireEvent.click(screen.getByTestId("scene-detail-tab-techniques"));
-    expect(screen.getByTestId("journey-writing-takeaways")).toHaveTextContent(
-      "用具体动作建立身份疑点",
-    );
+    expect(screen.getByTestId("scene-detail-insight-panel")).toBeInTheDocument();
+    expect(screen.getByTestId("scene-dimension-insight-text")).toBeInTheDocument();
 
     rerender(
       <MemoryRouter>
@@ -133,8 +131,8 @@ describe("writing takeaways and structured detail fields", () => {
       </MemoryRouter>,
     );
     expect(screen.getByTestId("journey-detail-drawer")).toHaveTextContent(/场景14/);
-    fireEvent.click(screen.getByTestId("scene-detail-tab-techniques"));
-    expect(screen.getByTestId("journey-writing-takeaways")).toBeInTheDocument();
+    expect(screen.getByTestId("scene-detail-insight-panel")).toBeInTheDocument();
+    expect(screen.getByTestId("scene-dimension-insight-text")).toBeInTheDocument();
   });
 
   it("error boundary catches detail render crashes", () => {

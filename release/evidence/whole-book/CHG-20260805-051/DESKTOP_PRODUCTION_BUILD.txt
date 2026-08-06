@@ -1,0 +1,50 @@
+﻿vite v6.4.3 building for production...
+transforming...
+鉁?339 modules transformed.
+rendering chunks...
+node.exe : [plugin vite:reporter] 
+所在位置 C:\nvm4w\nodejs\npx.ps1:16 字符: 5
++     & "$basedir/node$exe"  "$basedir/node_modules/npm/bin/npx-cli.js" ...
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([plugin vite:reporter] :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+(!) D:/Dstorylens-wt-v120-debt-agent2/apps/desktop/src/services/providersApi.ts is dynamically imported by D:/Dstorylen
+s-wt-v120-debt-agent2/apps/desktop/src/services/aiServiceConfig.ts but also statically imported by D:/Dstorylens-wt-v12
+0-debt-agent2/apps/desktop/src/components/analysis/StartAnalysisDialog.tsx, D:/Dstorylens-wt-v120-debt-agent2/apps/desk
+top/src/components/onboarding/QwenFirstLaunchBanner.tsx, D:/Dstorylens-wt-v120-debt-agent2/apps/desktop/src/components/
+providers/AliyunForm.tsx, D:/Dstorylens-wt-v120-debt-agent2/apps/desktop/src/components/settings/SettingsAdvancedTab.ts
+x, D:/Dstorylens-wt-v120-debt-agent2/apps/desktop/src/components/settings/SettingsAiServiceTab.tsx, D:/Dstorylens-wt-v1
+20-debt-agent2/apps/desktop/src/pages/ProvidersPage.tsx, dynamic import will not move module into another chunk.
+
+[plugin vite:reporter] 
+(!) D:/Dstorylens-wt-v120-debt-agent2/apps/desktop/src/services/settingsApi.ts is dynamically imported by D:/Dstorylens
+-wt-v120-debt-agent2/apps/desktop/src/services/aiServiceConfig.ts but also statically imported by D:/Dstorylens-wt-v120
+-debt-agent2/apps/desktop/src/components/analysis/StartAnalysisDialog.tsx, D:/Dstorylens-wt-v120-debt-agent2/apps/deskt
+op/src/components/chapterAnalysis/ChapterAnalysisProgressPanel.tsx, D:/Dstorylens-wt-v120-debt-agent2/apps/desktop/src/
+components/onboarding/QwenFirstLaunchBanner.tsx, D:/Dstorylens-wt-v120-debt-agent2/apps/desktop/src/components/settings
+/SettingsAdvancedTab.tsx, D:/Dstorylens-wt-v120-debt-agent2/apps/desktop/src/components/settings/SettingsAiServiceTab.t
+sx, D:/Dstorylens-wt-v120-debt-agent2/apps/desktop/src/components/settings/SettingsAppearanceTab.tsx, D:/Dstorylens-wt-
+v120-debt-agent2/apps/desktop/src/components/settings/SettingsDataStorageTab.tsx, D:/Dstorylens-wt-v120-debt-agent2/app
+s/desktop/src/components/settings/SettingsUsageCostTab.tsx, D:/Dstorylens-wt-v120-debt-agent2/apps/desktop/src/pages/Pr
+ovidersPage.tsx, dynamic import will not move module into another chunk.
+
+computing gzip size...
+dist/index.html                      1.82 kB 鈹?gzip:   0.75 kB
+dist/assets/index-DqbbC5TL.css     214.65 kB 鈹?gzip:  35.87 kB
+dist/assets/index-DWAWkcyj.js        0.12 kB 鈹?gzip:   0.13 kB
+dist/assets/index-CAH3XQkg.js        1.09 kB 鈹?gzip:   0.52 kB
+dist/assets/event-CNdo2oXa.js        1.44 kB 鈹?gzip:   0.69 kB
+dist/assets/core-DhEqZVGG.js         2.44 kB 鈹?gzip:   0.98 kB
+dist/assets/webview-DpsYG1xs.js      3.36 kB 鈹?gzip:   1.15 kB
+dist/assets/window-DePn7tLG.js      14.22 kB 鈹?gzip:   3.57 kB
+dist/assets/index-BQgcB5_k.js    1,181.03 kB 鈹?gzip: 341.94 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-m
+anualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+鉁?built in 6.52s
+BUILD_EXIT=0
+DURATION_SEC=46

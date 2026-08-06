@@ -80,7 +80,7 @@ describe("Phase 1C-C.2.6.2 compact phase navigation strip", () => {
     );
     const card = screen.getByTestId("journey-phase-2");
     expect(card).toHaveTextContent(/推进/);
-    expect(within(card).getByTestId("journey-phase-avg-2").textContent).toMatch(/阅读动力\s+\d+/);
+    expect(within(card).getByTestId("journey-phase-avg-2").textContent).toMatch(/综合阅读\s+\d+/);
     expect(card.textContent).not.toMatch(/平均牵引/);
     expect(card.textContent).not.toMatch(/核心问题/);
     expect(card.textContent).not.toMatch(/阶段回报/);
@@ -103,12 +103,14 @@ describe("Phase 1C-C.2.6.2 compact phase navigation strip", () => {
     expect(within(card).queryByTestId("journey-phase-current-badge")).not.toBeInTheDocument();
     expect(card.querySelectorAll(".journey-phase-card-head")).toHaveLength(1);
     expect(card.querySelectorAll(".journey-phase-card-desc")).toHaveLength(1);
-    expect(within(card).getByTestId("journey-phase-avg-3").textContent).toMatch(/阅读动力/);
+    expect(within(card).getByTestId("journey-phase-avg-3").textContent).toMatch(/综合阅读/);
     expect(within(card).getByTestId("journey-phase-avg-3").textContent).not.toMatch(/当前/);
   });
 
   it("keeps equal compact card height and desktop four columns in CSS", () => {
-    expect(css).toMatch(/\.journey-workspace-v4\s+\.journey-phase-nav-card[\s\S]*min-height:\s*96px/);
+    expect(css).toMatch(
+      /\.journey-workspace-v4\s+\.journey-phase-card\.journey-phase-nav-card[\s\S]*min-height:\s*112px/,
+    );
     expect(css).toMatch(/\.journey-workspace-v4\s+\.journey-phase-nav-card[\s\S]*max-height:\s*none/);
     expect(css).toMatch(
       /\.journey-phase-strip\.journey-phase-nav[\s\S]*grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/,
@@ -205,7 +207,9 @@ describe("Phase 1C-C.2.6.2 compact phase navigation strip", () => {
 
   it("does not clip titles via two-line clamp inside fixed 72px shell", () => {
     expect(css).not.toMatch(/min-height:\s*72px;\s*max-height:\s*72px/);
-    expect(css).toMatch(/\.journey-workspace-v4\s+\.journey-phase-nav-card[\s\S]*min-height:\s*96px/);
+    expect(css).toMatch(
+      /\.journey-workspace-v4\s+\.journey-phase-card\.journey-phase-nav-card[\s\S]*min-height:\s*112px/,
+    );
   });
 });
 

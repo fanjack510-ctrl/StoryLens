@@ -85,7 +85,7 @@ describe("Reader Journey UI cleanup local audit", () => {
       </MemoryRouter>,
     );
     expect(screen.queryByTestId("journey-phase-current-badge")).not.toBeInTheDocument();
-    expect(screen.getByTestId("journey-phase-avg-2").textContent).toMatch(/阅读动力\s+\d+/);
+    expect(screen.getByTestId("journey-phase-avg-2").textContent).toMatch(/综合阅读\s+\d+/);
     expect(screen.getByTestId("journey-phase-2")).toHaveClass("active-phase");
   });
 });
