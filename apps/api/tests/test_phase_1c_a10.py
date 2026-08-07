@@ -361,14 +361,35 @@ async def test_partial_success_then_resume_skips_completed(client):
         ).all()
         assert len(arts) == 3
         assert session.get(BoundaryRevision, revision_id) is not None
-        assert (
-            session.scalar(
-                select(func.count())
-                .select_from(Scene)
-                .where(Scene.boundary_revision_id == revision_id)
+        # After scenes succeed, ensure_ai_model_revision_after_scenes_v1 may rebind
+        # scenes onto a model-sourced revision. Assert binding to a confirmed
+        # revision for this run, not the seed revision id alone.
+        bound = session.scalar(
+            select(func.count())
+            .select_from(Scene)
+            .where(
+                Scene.created_by_run_id == run.id,
+                Scene.boundary_revision_id.is_not(None),
             )
-            == 3
         )
+        assert int(bound or 0) == 3
+        model_rev = session.scalar(
+            select(BoundaryRevision)
+            .where(
+                BoundaryRevision.analysis_run_id == run.id,
+                BoundaryRevision.source == "model",
+            )
+            .order_by(BoundaryRevision.id.desc())
+        )
+        if model_rev is not None:
+            assert (
+                session.scalar(
+                    select(func.count())
+                    .select_from(Scene)
+                    .where(Scene.boundary_revision_id == model_rev.id)
+                )
+                == 3
+            )
         det = session.scalar(
             select(func.count())
             .select_from(ModelInvocation)

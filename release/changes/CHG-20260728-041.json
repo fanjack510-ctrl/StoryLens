@@ -7,7 +7,7 @@
   "target_version": "1.1.2",
   "public_branch": "fix/1.1.2-manual-scene-boundary-review",
   "private_branch": "fix/1.1.2-manual-scene-boundary-review",
-  "status": "integrated",
+  "status": "tested",
   "release_pool_status": "included",
   "include_in_next_release": true,
   "forward_port_required": true,

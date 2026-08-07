@@ -3,7 +3,7 @@
   "title": "Freeze WB-2.1 contract and audit protected empty-policy work",
   "type": "documentation",
   "base_version": "1.2.0",
-  "status": "implemented",
+  "status": "registered",
   "include_in_next_release": true,
   "head_inclusion": "INCLUDED",
   "blocker_level": null,

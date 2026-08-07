@@ -23,7 +23,7 @@ from app.narrative_core.services.native_overview_service import (
     NativeOverviewService,
 )
 
-pytest_plugins = ["test_native_overview_walking_skeleton"]
+pytest_plugins = ["tests.test_native_overview_walking_skeleton"]
 
 CREATE_BODY = {
     "mode": "whole_book_native",
@@ -41,7 +41,7 @@ CREATE_BODY = {
 
 
 def _create_completed_fixture_run(api_env) -> int:
-    from test_native_overview_walking_skeleton import _seed_pro_book
+    from tests.test_native_overview_walking_skeleton import _seed_pro_book
 
     book_id = _seed_pro_book(api_env)
     with api_env["factory"]() as session:

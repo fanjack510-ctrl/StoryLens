@@ -478,7 +478,8 @@ def test_19_lab_disabled_no_resume(env):
 def test_20_snapshot_missing(env):
     session: Session = env["session"]
     run, stages, _ = _make_mock_run(session, book=env["book"], snap=env["snap"])
-    run.book_snapshot_id = 999999
+    # FK-safe missing snapshot: clear the binding rather than inventing a dangling id.
+    run.book_snapshot_id = None
     session.commit()
     recovery = MockRunRecoveryService(session, lab_enabled=True)
     with pytest.raises(MockRunServiceError) as exc:

@@ -1,0 +1,64 @@
+{
+  "id": "CHG-20260803-046",
+  "title": "V1.2.0 E2E backend stabilization (Agent 1)",
+  "type": "fix",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": true,
+  "head_inclusion": "INCLUDED",
+  "blocker_level": null,
+  "parent_plan": "CHG-20260803-045",
+  "wb_step_id": "WB-2.2.1-V120-E2E-STABILIZATION",
+  "depends_on": [
+    "CHG-20260803-045"
+  ],
+  "commits": [
+    {
+      "sha": "a60a333e6f41f6c829d8413a20ace12baaed6da4",
+      "message": "feat(whole-book): stabilize consent and E2E orchestration",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
+  "integrated_into": "18c79e137577d2666d6ef2908d16c4d2d7be5bd0",
+  "integration_change": "CHG-20260803-048",
+  "integration_evidence": "release/evidence/whole-book/CHG-20260803-048/MERGE_REPORT.md",
+  "modules": [
+    "apps/api",
+    "apps/api/tests"
+  ],
+  "files": [
+    "apps/api/app/api/v1/whole_book.py",
+    "apps/api/tests/test_whole_book_wb221_e2e_stabilization.py",
+    "release/evidence/whole-book/CHG-20260803-048/"
+  ],
+  "user_summary": "稳定 Free 四模块 E2E 后端：consent 签名、fixture 创建、幂等与 pause/resume。",
+  "technical_summary": "Agent 1 backend wave for WB-2.2.1. Directed pytest green; merged via 18c79e1; not MG-verified.",
+  "acceptance_criteria": [
+    "Directed backend E2E stabilization tests pass",
+    "Merged into integration/whole-book-v120 at 18c79e1",
+    "status tested not verified"
+  ],
+  "tests": [
+    "apps/api/tests/test_whole_book_wb221_e2e_stabilization.py",
+    "release/evidence/whole-book/CHG-20260803-048/TEST_RESULTS.md"
+  ],
+  "verification_evidence": [
+    "release/evidence/whole-book/CHG-20260803-048/TEST_RESULTS.md",
+    "release/evidence/whole-book/CHG-20260803-048/MERGE_REPORT.md"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "Backend orchestration fixes only."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "created_at": "2026-08-03T12:00:00Z",
+  "updated_at": "2026-08-03T12:00:00Z"
+}

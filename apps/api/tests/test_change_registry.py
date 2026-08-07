@@ -6,6 +6,7 @@ import json
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -418,3 +419,129 @@ def test_freeze_accepts_legacy_verified_and_ready_for_staging(fixture_repo: Path
         (fixture_repo / "release" / "unreleased.json").read_text(encoding="utf-8")
     )
     assert pool["status"] == "frozen"
+
+
+def _minimal_change(
+    change_id: str,
+    *,
+    commits: list[Any] | None = None,
+    head_inclusion: str | None = "INCLUDED",
+    integrated_into: str | None = None,
+) -> dict[str, Any]:
+    now = "2026-08-06T00:00:00Z"
+    payload: dict[str, Any] = {
+        "id": change_id,
+        "title": "integration fixture",
+        "type": "fix",
+        "base_version": "1.0.2",
+        "status": "tested",
+        "include_in_next_release": True,
+        "commits": commits or [],
+        "modules": [],
+        "files": [],
+        "user_summary": "",
+        "technical_summary": "",
+        "acceptance_criteria": [],
+        "tests": ["unit"],
+        "verification_evidence": [],
+        "data_compatibility": {
+            "database_changed": False,
+            "migration_required": False,
+            "user_data_compatible": True,
+            "notes": "",
+        },
+        "release_impact": {
+            "requires_reanalysis": False,
+            "requires_restart": False,
+            "updater_impact": False,
+            "breaking_change": False,
+        },
+        "blocker_level": None,
+        "head_inclusion": head_inclusion,
+        "created_at": now,
+        "updated_at": now,
+    }
+    if integrated_into is not None:
+        payload["integrated_into"] = integrated_into
+        payload["integration_change"] = "CHG-INTEGRATION-PARENT"
+        payload["integration_evidence"] = "release/evidence/integration-fixture.md"
+    return payload
+
+
+def test_check_allows_integrated_into_for_non_ancestor_commit(fixture_repo: Path) -> None:
+    main_branch = _git(fixture_repo, "branch", "--show-current")
+    base = _git(fixture_repo, "rev-parse", "HEAD")
+    _git(fixture_repo, "checkout", "-b", "agent-side", base)
+    _write(fixture_repo / "apps" / "api" / "app" / "feature.py", "agent-only\n")
+    _git(fixture_repo, "add", "apps")
+    _git(fixture_repo, "commit", "-m", "agent-only source")
+    agent_sha = _git(fixture_repo, "rev-parse", "HEAD")
+    _git(fixture_repo, "checkout", main_branch)
+    _write(fixture_repo / "apps" / "api" / "app" / "feature.py", "integrated\n")
+    _git(fixture_repo, "add", "apps")
+    _git(fixture_repo, "commit", "-m", "integrate agent work")
+    integration_sha = _git(fixture_repo, "rev-parse", "HEAD")
+
+    change_id = "CHG-20260806-001"
+    change = _minimal_change(
+        change_id,
+        commits=[
+            {
+                "sha": agent_sha,
+                "message": "agent-only source",
+                "primary": True,
+                "multi_change_reason": None,
+            },
+            {
+                "sha": integration_sha,
+                "message": "integrate agent work",
+                "primary": False,
+                "multi_change_reason": "integration commit on main",
+            },
+        ],
+        integrated_into=integration_sha,
+    )
+    _write(fixture_repo / "release" / "changes" / f"{change_id}.json", json.dumps(change, indent=2) + "\n")
+    pool = json.loads((fixture_repo / "release" / "unreleased.json").read_text(encoding="utf-8"))
+    pool["changes"].append(change_id)
+    _write(fixture_repo / "release" / "unreleased.json", json.dumps(pool, indent=2) + "\n")
+    _git(fixture_repo, "add", "release")
+    _git(fixture_repo, "commit", "-m", f"register {change_id}")
+
+    result = _run(fixture_repo, "check")
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert agent_sha != integration_sha
+
+
+def test_check_rejects_included_without_valid_integrated_into(fixture_repo: Path) -> None:
+    main_branch = _git(fixture_repo, "branch", "--show-current")
+    base = _git(fixture_repo, "rev-parse", "HEAD")
+    change_id = "CHG-20260806-002"
+    _git(fixture_repo, "checkout", "-b", "orphan-side", base)
+    _write(fixture_repo / "apps" / "api" / "app" / "side.py", "orphan\n")
+    _git(fixture_repo, "add", "apps")
+    _git(fixture_repo, "commit", "-m", "orphan-only source")
+    orphan_sha = _git(fixture_repo, "rev-parse", "HEAD")
+    _git(fixture_repo, "checkout", main_branch)
+
+    change = _minimal_change(
+        change_id,
+        commits=[
+            {
+                "sha": orphan_sha,
+                "message": "orphan-only source",
+                "primary": True,
+                "multi_change_reason": None,
+            }
+        ],
+        head_inclusion="INCLUDED",
+        integrated_into=None,
+    )
+    _write(fixture_repo / "release" / "changes" / f"{change_id}.json", json.dumps(change, indent=2) + "\n")
+    pool = json.loads((fixture_repo / "release" / "unreleased.json").read_text(encoding="utf-8"))
+    pool["changes"].append(change_id)
+    _write(fixture_repo / "release" / "unreleased.json", json.dumps(pool, indent=2) + "\n")
+
+    result = _run(fixture_repo, "check")
+    assert result.returncode != 0
+    assert "head_inclusion=INCLUDED but commit not ancestor of HEAD" in result.stdout

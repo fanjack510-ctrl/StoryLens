@@ -319,6 +319,14 @@ def test_incident_db_replay_becomes_fresh(tmp_path: Path):
     snap = json.loads(row.value_json)
     assert snap["validation_status"] == "success"
     target_fp = snap["credential_version_fingerprint"]
+    # Incident DB timestamps are historical; refresh checked_at into the active TTL
+    # window so this case validates fingerprint continuity, not wall-clock archaeology.
+    fresh_at = datetime.now(timezone.utc).isoformat()
+    for key in ("validated_at", "health_checked_at", "checked_at"):
+        if key in snap:
+            snap[key] = fresh_at
+    row.value_json = json.dumps(snap, ensure_ascii=False)
+    s.commit()
 
     path, previous = install_verified_cloud_pricing(CLOUD_PRICING_PATH)
     import app.services.ai_validation_snapshot as snap_mod

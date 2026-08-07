@@ -11,12 +11,6 @@
       "message": "fix(native-overview): commit visible progress checkpoints",
       "primary": true,
       "multi_change_reason": null
-    },
-    {
-      "sha": "1234fa7e51ba9bfa5f627ec76473988a87baf36c",
-      "message": "docs(release): mark CHG-20260726-013 tested after progress fix",
-      "primary": true,
-      "multi_change_reason": "registry status update"
     }
   ],
   "modules": [

@@ -19,12 +19,6 @@
       "multi_change_reason": "V1.1.0 BUILD SOURCE HEAD for formal binaries"
     },
     {
-      "sha": "5a6e2834bd6adce75ddcd299cce27a2409335340",
-      "message": "docs(release): record StoryLens 1.1.0 formal build evidence",
-      "primary": true,
-      "multi_change_reason": "formal build evidence after BUILD SOURCE"
-    },
-    {
       "sha": "4485a6476dd2a79936c6ad7a6f9a5d71e312cab7",
       "message": "docs(release): record StoryLens 1.1.0 formal build evidence",
       "primary": true,

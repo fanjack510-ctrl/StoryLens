@@ -7,7 +7,7 @@
   "target_version": "1.1.2",
   "public_branch": "fix/1.1.2-chapter-hook-simplification",
   "private_branch": "fix/1.1.2-chapter-hook-simplification",
-  "status": "integrated",
+  "status": "tested",
   "release_pool_status": "included",
   "include_in_next_release": true,
   "forward_port_required": true,
@@ -80,5 +80,11 @@
   "created_at": "2026-07-29T07:00:00Z",
   "updated_at": "2026-07-29T09:00:00Z",
   "base_head": "2e8ed1edaf7dc91933666f5e46f4b2bdb747407c",
-  "verified_head": "e0bcc29a42764615e5d8cdc69b10bd284d0da6ef"
+  "verified_head": "e0bcc29a42764615e5d8cdc69b10bd284d0da6ef",
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": true,
+    "breaking_change": false
+  }
 }

@@ -7,7 +7,7 @@
   "target_version": "1.1.2",
   "public_branch": "fix/1.1.2-comprehensive-reading-curve",
   "private_branch": "fix/1.1.2-comprehensive-reading-curve",
-  "status": "integrated",
+  "status": "tested",
   "release_pool_status": "included",
   "include_in_next_release": true,
   "forward_port_required": true,
@@ -70,6 +70,14 @@
   "updated_at": "2026-07-29T05:50:00Z",
   "base_head": "9464b957e1538fe975115c972b0606b5a6d9dda2",
   "head_inclusion": "INCLUDED",
-  "public_integration_commit": "4edf68003cd9836fc9053e6923a83b1629ecc17d",
-  "private_integration_commit": "23a0b025db51acaa8e62f4e81bc7628f19a8e2a6"
+  "private_integration_commit": "23a0b025db51acaa8e62f4e81bc7628f19a8e2a6",
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": true,
+    "breaking_change": false
+  },
+  "integrated_into": "4edf68003cd9836fc9053e6923a83b1629ecc17d",
+  "integration_change": "CHG-20260729-007",
+  "integration_evidence": "release/evidence/hotfix/1.1.2/CHG-20260729-003/INTEGRATION_REPORT.md"
 }

@@ -7,12 +7,6 @@
   "include_in_next_release": true,
   "commits": [
     {
-      "sha": "8531a565d6b6490c099d4af4979168ba1c578074",
-      "message": "feat(whole-book): add minimal book overview projection — CHG-013 WB-1.6",
-      "primary": true,
-      "multi_change_reason": null
-    },
-    {
       "sha": "a0fea4212c69a73f6af2d15f0dfc4dbc5e7c54a1",
       "message": "feat(whole-book): extend diagnostics for fixture minimal analysis",
       "primary": false,

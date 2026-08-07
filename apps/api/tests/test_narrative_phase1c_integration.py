@@ -154,17 +154,17 @@ def _allowed_decision() -> CapabilityDecision:
     )
 
 
-def test_01_capability_not_shipped_preview_visible() -> None:
+def test_01_capability_not_shipped_preview_hidden() -> None:
     meta = get_capability_metadata(CapabilityKey.WHOLE_BOOK_ANALYSIS)
     assert meta.shipped is False
-    assert meta.preview_visible is True
-    assert meta.availability == CapabilityAvailability.PREVIEW
+    assert meta.preview_visible is False
+    assert meta.availability == CapabilityAvailability.UNAVAILABLE
     assert meta.requires_license is True
     svc = DefaultCapabilityService()
     decision = svc.evaluate_capability(CapabilityKey.WHOLE_BOOK_ANALYSIS)
     assert decision.allowed is False
     assert decision.reason_code == CapabilityReasonCode.CAPABILITY_NOT_SHIPPED
-    assert decision.preview_only is True
+    assert decision.preview_only is False
 
 
 def test_02_mode_not_supported() -> None:
@@ -423,7 +423,7 @@ def test_13_budget_denied_no_asset_write(session: Session) -> None:
 def test_14_capability_api_dto() -> None:
     body = build_capabilities_list_response(DefaultCapabilityService())
     whole = next(i for i in body["items"] if i["key"] == "whole_book_analysis")
-    assert whole["preview_visible"] is True
+    assert whole["preview_visible"] is False
     assert whole["shipped"] is False
     assert whole["decision"]["allowed"] is False
     detail = build_capability_detail_response(

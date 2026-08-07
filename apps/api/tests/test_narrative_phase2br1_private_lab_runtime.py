@@ -715,4 +715,4 @@ def test_contract_and_mock_unaffected() -> None:
 
 
 def test_version_unchanged() -> None:
-    assert (REPO_ROOT / "VERSION").read_text(encoding="utf-8").strip() == "1.0.5"
+    assert (REPO_ROOT / "VERSION").read_text(encoding="utf-8").strip() == "1.2.0"

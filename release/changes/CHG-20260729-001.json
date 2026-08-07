@@ -7,7 +7,7 @@
   "target_version": "1.1.2",
   "public_branch": "fix/1.1.2-reader-journey-dimension-insights",
   "private_branch": "fix/1.1.2-reader-journey-dimension-insights",
-  "status": "integrated",
+  "status": "tested",
   "release_pool_status": "included",
   "include_in_next_release": true,
   "forward_port_required": true,
@@ -88,6 +88,14 @@
   "created_at": "2026-07-29T03:28:43Z",
   "updated_at": "2026-07-29T04:01:51Z",
   "head_inclusion": "INCLUDED",
-  "public_integration_commit": "550406126767f1d14c9ae284cc3926255bf70cf9",
-  "private_integration_commit": "23a0b025db51acaa8e62f4e81bc7628f19a8e2a6"
+  "private_integration_commit": "23a0b025db51acaa8e62f4e81bc7628f19a8e2a6",
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": true,
+    "breaking_change": false
+  },
+  "integrated_into": "550406126767f1d14c9ae284cc3926255bf70cf9",
+  "integration_change": "CHG-20260729-007",
+  "integration_evidence": "release/evidence/hotfix/1.1.2/CHG-20260729-001/INTEGRATION_REPORT.md"
 }

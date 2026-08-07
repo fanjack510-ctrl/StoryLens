@@ -35,12 +35,6 @@
       "message": "docs(hotfix): record rc2 workflow consistency verification",
       "primary": false,
       "multi_change_reason": null
-    },
-    {
-      "sha": "060c95df83ca33a790d0de59ebd0ad77ee4c0b8a",
-      "message": "chore(registry): sync CHG-011 tested status and commit list",
-      "primary": false,
-      "multi_change_reason": null
     }
   ],
   "modules": [],

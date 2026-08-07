@@ -162,7 +162,7 @@ def _contract(**overrides: Any) -> CandidatePersistenceContract:
 
 
 def test_gates_remain_frozen() -> None:
-    assert VERSION == "1.0.5"
+    assert VERSION == "1.2.0"
     assert WHOLE_BOOK_RUNS_ENDPOINT_DISABLED is True
     assert WHOLE_BOOK_MOCK_LAB_ENABLED is False
     assert PRODUCTION_DEFAULT_ENGINE_ID is None

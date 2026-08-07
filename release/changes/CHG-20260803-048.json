@@ -1,0 +1,74 @@
+{
+  "id": "CHG-20260803-048",
+  "title": "Integrate V1.2.0 Free four-module E2E stabilization",
+  "type": "feature",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": true,
+  "head_inclusion": "INCLUDED",
+  "blocker_level": null,
+  "parent_plan": "CHG-20260803-045",
+  "wb_step_id": "WB-2.2.1-V120-E2E-STABILIZATION",
+  "manual_gate_id": "MG-V1.2.0-E2E-STABILIZATION",
+  "depends_on": [
+    "CHG-20260803-046",
+    "CHG-20260803-047"
+  ],
+  "commits": [
+    {
+      "sha": "02dcbbaba6d9a74836eb777b76cea76c20c40857",
+      "message": "fix(whole-book): integrate V1.2.0 E2E stabilization",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "bbd7501f23273207916ed27be883fa98da70fafc",
+      "message": "test(release): validate V1.2.0 E2E stabilization",
+      "primary": false,
+      "multi_change_reason": "validation commit"
+    }
+  ],
+  "modules": [
+    "apps/api",
+    "apps/desktop",
+    "release/evidence/whole-book"
+  ],
+  "files": [
+    "release/evidence/whole-book/CHG-20260803-048/",
+    "release/changes/CHG-20260803-046.json",
+    "release/changes/CHG-20260803-047.json",
+    "release/changes/CHG-20260803-048.json"
+  ],
+  "user_summary": "合并 Agent1/2 E2E 稳定化改动并跑定向回归；MG-V1.2.0-E2E-STABILIZATION 仍待正式 PASS。",
+  "technical_summary": "Integration merge 02dcbba + validation bbd7501. Directed suites green per TEST_RESULTS.md; full suite debt retained.",
+  "acceptance_criteria": [
+    "Agent 1+2 merges integrated",
+    "Directed backend+desktop suites pass",
+    "Evidence pack under CHG-20260803-048",
+    "status tested not verified until MG pass"
+  ],
+  "tests": [
+    "apps/api/tests/test_whole_book_wb221_e2e_stabilization.py",
+    "apps/desktop/e2e/wb221_e2e_stabilization.spec.ts",
+    "release/evidence/whole-book/CHG-20260803-048/TEST_RESULTS.md"
+  ],
+  "verification_evidence": [
+    "release/evidence/whole-book/CHG-20260803-048/TEST_RESULTS.md",
+    "release/evidence/whole-book/CHG-20260803-048/CHANGE_STATUS.md",
+    "release/evidence/whole-book/CHG-20260803-048/MERGE_REPORT.md"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "Integration wave; no new migrations."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "created_at": "2026-08-03T14:00:00Z",
+  "updated_at": "2026-08-03T14:00:00Z"
+}

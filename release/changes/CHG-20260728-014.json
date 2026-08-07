@@ -36,12 +36,6 @@
       "multi_change_reason": null
     },
     {
-      "sha": "650b0e32788dc8db7abc9121c1d54e3b8d538bd6",
-      "message": "feat(whole-book): add free product prepare/create APIs",
-      "primary": true,
-      "multi_change_reason": null
-    },
-    {
       "sha": "7fdf0ec2117658876f0e4bb164e8fc91f302129d",
       "message": "feat(whole-book): add free product prepare/create APIs",
       "primary": true,

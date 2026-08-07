@@ -7,7 +7,7 @@
   "target_version": "1.1.2",
   "public_branch": "fix/1.1.2-journey-dimension-node-judgments",
   "private_branch": "fix/1.1.2-journey-dimension-node-judgments",
-  "status": "integrated",
+  "status": "tested",
   "release_pool_status": "included",
   "include_in_next_release": true,
   "forward_port_required": true,
@@ -67,5 +67,11 @@
   },
   "created_at": "2026-07-29T06:00:00Z",
   "updated_at": "2026-07-29T06:50:00Z",
-  "base_head": "bbcd6d7ac925303247599c9869e11780e4a7ca20"
+  "base_head": "bbcd6d7ac925303247599c9869e11780e4a7ca20",
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": true,
+    "breaking_change": false
+  }
 }

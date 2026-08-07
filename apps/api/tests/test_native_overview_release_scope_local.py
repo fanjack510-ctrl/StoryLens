@@ -6,12 +6,12 @@ from sqlalchemy import func, select
 
 from app.db.models import AnalysisRun
 
-pytest_plugins = ["test_native_overview_walking_skeleton"]
+pytest_plugins = ["tests.test_native_overview_walking_skeleton"]
 
 
 def test_native_create_blocked_when_flag_off(api_env, monkeypatch):
     monkeypatch.setenv("PRO_NATIVE_OVERVIEW_ENABLED", "false")
-    from test_native_overview_walking_skeleton import CREATE_BODY, _seed_pro_book
+    from tests.test_native_overview_walking_skeleton import CREATE_BODY, _seed_pro_book
 
     book_id = _seed_pro_book(api_env)
     with api_env["factory"]() as session:
