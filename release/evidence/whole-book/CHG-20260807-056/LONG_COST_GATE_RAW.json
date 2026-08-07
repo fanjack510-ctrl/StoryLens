@@ -1,0 +1,121 @@
+{
+  "sample": {
+    "long_sample": "我不是戏神",
+    "source_available": true,
+    "source_path": "[REDACTED_LOCAL_PATH]",
+    "source_bytes": 8110728,
+    "source_character_count_raw": 2766354,
+    "content_modified": false,
+    "fixture": false,
+    "ai_generated": false
+  },
+  "import": {
+    "book_id": 1,
+    "book_title": "我不是戏神",
+    "chapter_count": 1299,
+    "character_count": 2672342,
+    "source_character_count_raw": 2766354,
+    "char_ratio_imported_vs_source": 0.966,
+    "first_chapter_title": "正文",
+    "last_chapter_title": "第1291章 求求你了……好吗？",
+    "chapter_detection_ok": true,
+    "elapsed_import_sec": 13.59
+  },
+  "gate": {
+    "change": "CHG-20260807-056",
+    "provider": "aliyun_qwen_plus",
+    "model": "qwen3.7-plus",
+    "real_provider_calls": 0,
+    "book_id": 1,
+    "book_title": "我不是戏神",
+    "source_path_redacted": true,
+    "source_bytes": 8110728,
+    "chapter_count": 1299,
+    "character_count": 2672342,
+    "snapshot_id": 1,
+    "revision": "0482f999f6c4304afdd9c99b473d136b7c7a3d0e22c2a68072248c7e463f2b06",
+    "estimate_id": 2,
+    "cf_max_chapters_per_batch": 8,
+    "expected_cf_batches": 163,
+    "planned_cf_batches": 163,
+    "cf_batch_delta": 0,
+    "estimated_window_count": 162,
+    "planned_physical_window_count": 188,
+    "window_estimate_vs_physical_delta": 26,
+    "estimated_overview_units": 1,
+    "estimated_characters_events_units": 162,
+    "estimated_structure_units": 1,
+    "estimated_chapter_function_units": 163,
+    "estimated_repair_reserve": 163,
+    "estimated_other_units": 0,
+    "total_estimated_provider_units": 490,
+    "sum_check": 490,
+    "sum_matches_total": true,
+    "recalc_provider_calls": 490,
+    "estimated_input_tokens": 2928000,
+    "estimated_output_tokens": 492000,
+    "pricing_status": "available",
+    "estimated_cost_min_cny": "8.3232",
+    "estimated_cost_max_cny": "12.24",
+    "estimated_base_cost_cny_mid": 10.2816,
+    "estimated_repair_reserve_cost_cny_derived": {
+      "min": 2.768738,
+      "max": 4.071673,
+      "note": "Derived proportional share; official estimate prices tokens (windows+synthesis), not per CF/repair call."
+    },
+    "chapter_scale_factor": 30.9286,
+    "character_scale_factor": 20.6427,
+    "estimated_unit_scale_factor": 22.2727,
+    "normal_unit_scale_vs_l3b_normal": 20.4375,
+    "scaling": "REASONABLE",
+    "long_medium_cost_multiplier": {
+      "min": 18.1602,
+      "max": 18.1602
+    },
+    "normal_provider_units": 327,
+    "repair_case_provider_units": 490,
+    "stress_provider_calls": 654,
+    "stress_cost_range_cny_scaled": {
+      "min": 11.1089,
+      "max": 16.3367,
+      "note": "Analytical scale by call count vs official token estimate; not a product invoice."
+    },
+    "window_plan": {
+      "count": 188,
+      "avg_chapters_per_window": 8.42,
+      "avg_characters_per_window": 15327.1,
+      "max_window_characters": 16183,
+      "min_window_characters": 4569,
+      "single_chapter_windows": 0,
+      "empty_windows": 0,
+      "overlap_paragraph_hits": 6149,
+      "duplicate_provider_unit_keys": 0,
+      "warnings": [],
+      "note": "Physical plan via whole_book_windowing_v1 on snapshot; NO formal create / NO provider."
+    },
+    "time_estimate": {
+      "median_call_sec": 18.01,
+      "p95_call_sec": 21.74,
+      "sample_size": 17,
+      "assumption": "serial provider units (current Free pipeline)",
+      "normal_wall_clock_min_range": [
+        78.5,
+        177.6
+      ],
+      "note": "Rough range only; not a precise SLA."
+    },
+    "cost_plan_anomaly": false,
+    "obs_l3b_001": "UNCHANGED_NON_BLOCKING",
+    "obs_l3b_002": "SUSPICIOUS",
+    "technical_cost_gate": "PASS",
+    "long_real_run": "NOT EXECUTED — AWAITING COST DECISION",
+    "elapsed_sec": 65.08,
+    "prepare_estimate_binding": {
+      "provider_name": "aliyun_qwen_plus",
+      "model_name": "qwen3.7-plus",
+      "estimated_windows": 162,
+      "estimated_provider_calls": 490
+    },
+    "obs_l3b_002_note": "relative window under-estimate 16.0% (L3-B ~12.5%); absolute +26 windows; not exponential"
+  }
+}
