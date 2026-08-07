@@ -5,13 +5,21 @@
   "base_version": "1.2.0",
   "status": "tested",
   "include_in_next_release": true,
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "blocker_level": null,
   "parent_plan": "CHG-20260803-049",
+  "wb_step_id": "WB-2.2.2-V120-RELEASE-DEBT",
   "depends_on": [
     "CHG-20260803-049"
   ],
-  "commits": [],
+  "commits": [
+    {
+      "sha": "2d2a10df6fe91b603bb1701b36c1e273c552b4e7",
+      "message": "fix(release): resolve V1.2.0 backend and registry debt",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "apps/api",
     "release/changes",
@@ -54,7 +62,8 @@
   ],
   "verification_evidence": [
     "release/evidence/whole-book/CHG-20260803-049/FIX_PLAN_AGENTS.md",
-    "release/evidence/whole-book/CHG-20260803-049/FAILURE_CLASSIFICATION.md"
+    "release/evidence/whole-book/CHG-20260803-049/FAILURE_CLASSIFICATION.md",
+    "release/evidence/whole-book/CHG-20260805-052/INTEGRATION_REPORT.md"
   ],
   "data_compatibility": {
     "database_changed": false,

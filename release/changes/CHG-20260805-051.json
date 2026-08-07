@@ -1,0 +1,72 @@
+{
+  "id": "CHG-20260805-051",
+  "title": "V1.2.0 release debt Agent 2 — desktop navigation and Vitest debt",
+  "type": "fix",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": true,
+  "head_inclusion": "INCLUDED",
+  "blocker_level": null,
+  "parent_plan": "CHG-20260803-049",
+  "wb_step_id": "WB-2.2.2-V120-RELEASE-DEBT",
+  "depends_on": [
+    "CHG-20260803-049"
+  ],
+  "commits": [
+    {
+      "sha": "f54a5d791c5f70734e2533ff592761550a8d660c",
+      "message": "fix(desktop): resolve V1.2.0 navigation and Vitest debt",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "apps/desktop",
+    "release/evidence/whole-book/CHG-20260805-051"
+  ],
+  "files": [
+    "apps/desktop/src/services/resolveWorkspaceLayout.ts",
+    "apps/desktop/src/components/analysis/SceneBoundaryNavigation.chg041.test.tsx",
+    "apps/desktop/src/components/readerJourney/",
+    "apps/desktop/src/pages/BookRoutePage.autoDiscover.test.tsx",
+    "apps/desktop/src/services/runtime_capabilities_local.test.tsx",
+    "release/evidence/whole-book/CHG-20260805-051/"
+  ],
+  "user_summary": "修复场景边界导航被 Journey 深链覆盖，并更新 Reader Journey 过期 Vitest，使 V1.2.0 Desktop 发布债务 Agent 2 门禁可通过。",
+  "technical_summary": "P2: scene-boundary-review wins before reader-journey in resolveWorkspaceLayout. O7/O8: obsolete IA/copy/layout/runtime mocks updated. X1/X2 remain deferred non-blocking; production dist isolates /dev.",
+  "acceptance_criteria": [
+    "SceneBoundaryNavigation directed Vitest PASS",
+    "readerJourney core directed Vitest PASS",
+    "Evidence/restore Free product Vitest PASS",
+    "typecheck PASS",
+    "desktop production build PASS with INDEX_NO_DEV",
+    "X1/X2 not implemented; deferred non-blocking"
+  ],
+  "tests": [
+    "apps/desktop/src/components/analysis/SceneBoundaryNavigation.chg041.test.tsx",
+    "apps/desktop/src/pages/BookRoutePage.journeyNav.test.tsx",
+    "apps/desktop/src/components/readerJourney/",
+    "apps/desktop/src/pages/wholeBookFreeEvidence.wb221.test.tsx",
+    "apps/desktop/src/pages/wholeBookFreeProduct.test.tsx",
+    "npm run typecheck",
+    "npm run build"
+  ],
+  "verification_evidence": [
+    "release/evidence/whole-book/CHG-20260805-051/AGENT2_REPORT.md",
+    "release/evidence/whole-book/CHG-20260805-052/INTEGRATION_REPORT.md"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "Desktop routing and tests only."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "created_at": "2026-08-06T01:00:00Z",
+  "updated_at": "2026-08-07T06:50:00Z"
+}

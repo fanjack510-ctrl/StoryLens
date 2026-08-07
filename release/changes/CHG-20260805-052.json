@@ -1,0 +1,83 @@
+{
+  "id": "CHG-20260805-052",
+  "title": "Integrate V1.2.0 release debt Agent1/Agent2 into public integration",
+  "type": "fix",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": true,
+  "head_inclusion": "INCLUDED",
+  "blocker_level": null,
+  "parent_plan": "CHG-20260803-049",
+  "wb_step_id": "WB-2.2.2-V120-RELEASE-DEBT",
+  "manual_gate_id": "MG-WB-2.2.2",
+  "depends_on": [
+    "CHG-20260805-050",
+    "CHG-20260805-051"
+  ],
+  "commits": [
+    {
+      "sha": "466107e94933bb81291fc97ce1272475b2fe7b2c",
+      "message": "merge: Agent1 V1.2.0 release-debt backend into integration/1.2.0-after-1.1.2",
+      "primary": false,
+      "multi_change_reason": "integration merge commit (empty tree; docs-only ignored by classifier)"
+    },
+    {
+      "sha": "73ec5ba9c0b2439a4a2599b47a49bf102ef76cbe",
+      "message": "merge: Agent2 V1.2.0 release-debt desktop into integration/1.2.0-after-1.1.2",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "apps/api",
+    "apps/desktop",
+    "release/changes",
+    "release/evidence/whole-book"
+  ],
+  "files": [
+    "release/changes/CHG-20260805-051.json",
+    "release/changes/CHG-20260805-052.json",
+    "release/evidence/whole-book/CHG-20260805-052/",
+    "docs/whole-book/EXECUTION_REGISTRY.json"
+  ],
+  "user_summary": "合并 V1.2.0 Release Debt 两路 Agent，完成定向冒烟与全量发布门禁，等待最终 Release Debt Gate 决策。",
+  "technical_summary": "no-ff merge Agent1 2d2a10d then Agent2 f54a5d7 onto d5cb364. Register CHG-051/052. Directed smoke PASS. Full vitest/check/version/registry/typecheck/build PASS. Public full pytest 11f all U1 LAB_DEBT (private-lab not Free-loaded). Numeric gate blocked pending formal exception. X1/X2 DEFERRED_NON_BLOCKING. Do not mark verified.",
+  "acceptance_criteria": [
+    "Agent1 and Agent2 merged with --no-ff",
+    "Directed Agent1/Agent2 smoke PASS",
+    "Public full pytest 0 failed 0 collection errors",
+    "Desktop full Vitest 0 failed",
+    "check_project / version_manager / change_registry / typecheck / production build PASS",
+    "status tested not verified until MG-WB-2.2.2"
+  ],
+  "tests": [
+    "apps/api/tests/test_scene_pipeline.py::test_fake_provider_complete_pipeline",
+    "python scripts/version_manager.py check",
+    "python scripts/change_registry.py check",
+    "python -m pytest apps/api/tests",
+    "apps/desktop npm test",
+    "python scripts/check_project.py",
+    "apps/desktop npm run typecheck",
+    "apps/desktop npm run build"
+  ],
+  "verification_evidence": [
+    "release/evidence/whole-book/CHG-20260805-052/INTEGRATION_REPORT.md",
+    "release/evidence/whole-book/CHG-20260805-052/FAILURE_CLASSIFICATION.md",
+    "release/evidence/whole-book/CHG-20260805-052/public_full_pytest.txt",
+    "release/evidence/whole-book/CHG-20260805-052/desktop_full_vitest.txt"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "Integration only; no schema change."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "created_at": "2026-08-07T06:50:00Z",
+  "updated_at": "2026-08-07T06:50:00Z"
+}
