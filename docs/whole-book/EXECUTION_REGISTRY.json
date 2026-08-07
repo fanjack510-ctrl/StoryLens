@@ -952,8 +952,11 @@
         "product_code_expected": "minimal_if_main_chain",
         "real_provider_required": false,
         "installer_required": false,
-        "wb_status": "implemented",
-        "notes": "CHG-049 triage complete; fix Agents not authorized. Historical planned id CHG-046 retired for this step (collision with Agent1 E2E)."
+        "wb_status": "verified",
+        "notes": "U1 formal exception EXC-V120-U1-PHASE2BR1-LAB-001 APPROVED. FREE PRODUCT RELEASE BLOCKERS=0; LAB DEBT=11 preserved. CHG-050/051/052 verified.",
+        "integration_status": "verified",
+        "agent1_status": "verified",
+        "agent2_status": "verified"
       },
       {
         "wave": 3,
@@ -1045,7 +1048,7 @@
       "manual_gate_id": "MG-WB-2.2.2",
       "change_id": "CHG-20260805-052",
       "title": "V1.2.0 release debt triage and Agent fixes integration",
-      "wb_status": "blocked",
+      "wb_status": "verified",
       "acceptance_level": "L1/L2",
       "evidence_dir": "release/evidence/whole-book/CHG-20260805-052/",
       "depends_on": [
@@ -1054,7 +1057,7 @@
       "next_step": "WB-2.2.3-V120-L3-PROVIDER",
       "v120_required": true,
       "scope_disposition": "required_for_1.2.0_release",
-      "notes": "Agent1 CHG-050 + Agent2 CHG-051 merged. Directed smoke PASS. Full Vitest/check/version/registry/typecheck/build PASS. Public full pytest 11 failed — all U1 LAB_DEBT (private-lab/live/chg057); Free entry does not load private lab. Gate blocked pending formal exception/quarantine. CHG-052/WB-2.2.2 not verified.",
+      "notes": "Verified via EXC-V120-U1-PHASE2BR1-LAB-001; CHG-050/051/052 verified.",
       "public_base_head": "d5cb364667a298538cc545f742197a17056a90ce",
       "triage_change_id": "CHG-20260803-049",
       "agent1_change_id": "CHG-20260805-050",
@@ -1066,26 +1069,27 @@
       "merge2_commit": "73ec5ba9c0b2439a4a2599b47a49bf102ef76cbe",
       "public_product_head": "73ec5ba9c0b2439a4a2599b47a49bf102ef76cbe",
       "triage_status": "implemented",
-      "agent1_status": "tested",
-      "agent2_status": "tested",
-      "integration_status": "blocked",
+      "agent1_status": "verified",
+      "agent2_status": "verified",
+      "integration_status": "verified",
       "implementation_authorized": true
     },
     {
       "step_id": "WB-2.2.3-V120-L3-PROVIDER",
       "manual_gate_id": "MG-WB-2.2.3",
-      "change_id": "CHG-20260803-047",
+      "change_id": "CHG-20260807-053",
       "title": "V1.2.0 Free four-module real Provider L3",
-      "wb_status": "planned",
+      "wb_status": "blocked",
       "acceptance_level": "L3",
-      "evidence_dir": "release/evidence/whole-book/WB-2.2.3-V120-L3-PROVIDER/",
+      "evidence_dir": "release/evidence/whole-book/CHG-20260807-053/",
       "depends_on": [
         "WB-2.2.2-V120-RELEASE-DEBT"
       ],
       "next_step": "WB-6.4-120-RC",
       "v120_required": true,
       "scope_disposition": "required_for_1.2.0_release",
-      "notes": "NOT STARTED. Planned change_id label historically CHG-047 collides with Agent2 E2E CHG-047 (tested). Reassign when wave starts. Real Bailian Provider L3."
+      "notes": "STARTED under CHG-20260807-053. Blocked: Free real provider create path hard-stubs WHOLE_BOOK_CAPABILITY_DISABLED; no Free Real Transport pipeline.",
+      "change_id_planned": "CHG-20260807-053"
     }
   ]
 }

@@ -1,0 +1,57 @@
+{
+  "id": "CHG-20260807-053",
+  "title": "V1.2.0 Free four-module real Provider L3 acceptance",
+  "type": "fix",
+  "base_version": "1.2.0",
+  "status": "implemented",
+  "include_in_next_release": true,
+  "head_inclusion": null,
+  "blocker_level": "P0",
+  "parent_plan": "CHG-20260805-052",
+  "wb_step_id": "WB-2.2.3-V120-L3-PROVIDER",
+  "manual_gate_id": "MG-WB-2.2.3",
+  "depends_on": [
+    "CHG-20260805-052"
+  ],
+  "commits": [],
+  "modules": [
+    "apps/api",
+    "release/evidence/whole-book/CHG-20260807-053"
+  ],
+  "files": [
+    "release/evidence/whole-book/CHG-20260807-053/",
+    "release/changes/CHG-20260807-053.json"
+  ],
+  "user_summary": "真实百炼 L3 验收：短/中/长书四模块、Repair、Resume、费用与安全。",
+  "technical_summary": "U1 EXC-V120-U1-PHASE2BR1-LAB-001 APPROVED; CHG-050/051/052 verified. Bailian smoke PASS (aliyun_qwen_plus/qwen3.7-plus). L3 BLOCKED: create_free_whole_book_analysis_v1 hard-stubs with WHOLE_BOOK_CAPABILITY_DISABLED; no Free Real Transport pipeline (only Fixture* transports).",
+  "acceptance_criteria": [
+    "Real Bailian provider smoke PASS",
+    "L3-A short Free four modules PASS",
+    "L3-B medium Free four modules + Resume PASS",
+    "Secret leak ABSENT",
+    "No Free release blockers"
+  ],
+  "tests": [
+    "release/evidence/whole-book/CHG-20260807-053/L3_FINAL_DECISION.md"
+  ],
+  "verification_evidence": [
+    "release/evidence/whole-book/CHG-20260807-053/FORMAL_EXCEPTION_U1.md",
+    "release/evidence/whole-book/CHG-20260807-053/PROVIDER_CONFIGURATION.md",
+    "release/evidence/whole-book/CHG-20260807-053/L3_FINAL_DECISION.md",
+    "release/evidence/whole-book/CHG-20260807-053/provider_smoke.txt"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "L3 uses isolated temp DB only."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "created_at": "2026-08-07T07:50:28Z",
+  "updated_at": "2026-08-07T07:55:46Z"
+}

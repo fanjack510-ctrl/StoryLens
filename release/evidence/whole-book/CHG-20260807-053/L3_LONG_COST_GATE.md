@@ -1,0 +1,15 @@
+# L3_LONG_COST_GATE
+
+STATUS：COST_GATED_NOT_EXECUTED（前置未满足）
+
+REASON：  
+L3-A / L3-B 未通过（Free 真实路径未开放），按规则不得进入长书 Provider Run。
+
+LONG SAMPLE CANDIDATES（本机存在，未估费发起）：  
+多本 1000+ 章 TXT（含约 1183～2628 章等）；仓库内无《我不是戏神》全文。
+
+LONG COST ESTIMATE：  
+NOT GENERATED（未发起）
+
+LONG RUN：  
+COST_GATED_NOT_EXECUTED

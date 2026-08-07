@@ -1,0 +1,5 @@
+# REAL_RESUME_TEST
+
+STATUS：NOT TESTED
+
+REASON：无中等样本真实 Provider Run。
