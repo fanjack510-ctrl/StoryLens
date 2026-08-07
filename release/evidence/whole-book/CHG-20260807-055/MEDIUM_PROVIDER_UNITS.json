@@ -1,0 +1,410 @@
+[
+  {
+    "unit_id": 1,
+    "stage_code": "extract_entities_events",
+    "unit_type": "window_analysis",
+    "unit_key": "window:1",
+    "status": "completed",
+    "attempt_count": 1,
+    "retry_count": 0,
+    "repair": false,
+    "attempts": [
+      {
+        "attempt_id": 1,
+        "attempt_no": 1,
+        "provider_id": "aliyun_qwen_plus",
+        "model_name": "qwen3.7-plus",
+        "status": "succeeded",
+        "input_tokens": 15107,
+        "output_tokens": 1070,
+        "error_code": null,
+        "started_at": "2026-08-07T14:53:15.561581",
+        "completed_at": "2026-08-07T14:53:36.258271"
+      }
+    ]
+  },
+  {
+    "unit_id": 2,
+    "stage_code": "extract_entities_events",
+    "unit_type": "window_analysis",
+    "unit_key": "window:2",
+    "status": "completed",
+    "attempt_count": 1,
+    "retry_count": 0,
+    "repair": false,
+    "attempts": [
+      {
+        "attempt_id": 2,
+        "attempt_no": 1,
+        "provider_id": "aliyun_qwen_plus",
+        "model_name": "qwen3.7-plus",
+        "status": "succeeded",
+        "input_tokens": 16488,
+        "output_tokens": 1031,
+        "error_code": null,
+        "started_at": "2026-08-07T14:53:38.681116",
+        "completed_at": "2026-08-07T14:53:58.419978"
+      }
+    ]
+  },
+  {
+    "unit_id": 3,
+    "stage_code": "extract_entities_events",
+    "unit_type": "window_analysis",
+    "unit_key": "window:3",
+    "status": "completed",
+    "attempt_count": 1,
+    "retry_count": 0,
+    "repair": false,
+    "attempts": [
+      {
+        "attempt_id": 3,
+        "attempt_no": 1,
+        "provider_id": "aliyun_qwen_plus",
+        "model_name": "qwen3.7-plus",
+        "status": "succeeded",
+        "input_tokens": 16112,
+        "output_tokens": 981,
+        "error_code": null,
+        "started_at": "2026-08-07T14:53:58.558336",
+        "completed_at": "2026-08-07T14:54:17.399113"
+      }
+    ]
+  },
+  {
+    "unit_id": 4,
+    "stage_code": "extract_entities_events",
+    "unit_type": "window_analysis",
+    "unit_key": "window:4",
+    "status": "completed",
+    "attempt_count": 1,
+    "retry_count": 0,
+    "repair": false,
+    "attempts": [
+      {
+        "attempt_id": 4,
+        "attempt_no": 1,
+        "provider_id": "aliyun_qwen_plus",
+        "model_name": "qwen3.7-plus",
+        "status": "succeeded",
+        "input_tokens": 16433,
+        "output_tokens": 901,
+        "error_code": null,
+        "started_at": "2026-08-07T14:54:17.598769",
+        "completed_at": "2026-08-07T14:54:35.605114"
+      }
+    ]
+  },
+  {
+    "unit_id": 5,
+    "stage_code": "extract_entities_events",
+    "unit_type": "window_analysis",
+    "unit_key": "window:5",
+    "status": "completed",
+    "attempt_count": 1,
+    "retry_count": 0,
+    "repair": false,
+    "attempts": [
+      {
+        "attempt_id": 5,
+        "attempt_no": 1,
+        "provider_id": "aliyun_qwen_plus",
+        "model_name": "qwen3.7-plus",
+        "status": "succeeded",
+        "input_tokens": 16261,
+        "output_tokens": 1071,
+        "error_code": null,
+        "started_at": "2026-08-07T14:54:35.776388",
+        "completed_at": "2026-08-07T14:54:56.662852"
+      }
+    ]
+  },
+  {
+    "unit_id": 6,
+    "stage_code": "extract_entities_events",
+    "unit_type": "window_analysis",
+    "unit_key": "window:6",
+    "status": "completed",
+    "attempt_count": 1,
+    "retry_count": 0,
+    "repair": false,
+    "attempts": [
+      {
+        "attempt_id": 6,
+        "attempt_no": 1,
+        "provider_id": "aliyun_qwen_plus",
+        "model_name": "qwen3.7-plus",
+        "status": "succeeded",
+        "input_tokens": 16405,
+        "output_tokens": 1122,
+        "error_code": null,
+        "started_at": "2026-08-07T14:54:56.813016",
+        "completed_at": "2026-08-07T14:55:18.117027"
+      }
+    ]
+  },
+  {
+    "unit_id": 7,
+    "stage_code": "extract_entities_events",
+    "unit_type": "window_analysis",
+    "unit_key": "window:7",
+    "status": "completed",
+    "attempt_count": 1,
+    "retry_count": 0,
+    "repair": false,
+    "attempts": [
+      {
+        "attempt_id": 7,
+        "attempt_no": 1,
+        "provider_id": "aliyun_qwen_plus",
+        "model_name": "qwen3.7-plus",
+        "status": "succeeded",
+        "input_tokens": 16634,
+        "output_tokens": 982,
+        "error_code": null,
+        "started_at": "2026-08-07T14:55:18.317796",
+        "completed_at": "2026-08-07T14:55:37.739404"
+      }
+    ]
+  },
+  {
+    "unit_id": 8,
+    "stage_code": "extract_entities_events",
+    "unit_type": "window_analysis",
+    "unit_key": "window:8",
+    "status": "completed",
+    "attempt_count": 1,
+    "retry_count": 0,
+    "repair": false,
+    "attempts": [
+      {
+        "attempt_id": 8,
+        "attempt_no": 1,
+        "provider_id": "aliyun_qwen_plus",
+        "model_name": "qwen3.7-plus",
+        "status": "succeeded",
+        "input_tokens": 16195,
+        "output_tokens": 1141,
+        "error_code": null,
+        "started_at": "2026-08-07T14:55:37.930636",
+        "completed_at": "2026-08-07T14:55:59.673072"
+      }
+    ]
+  },
+  {
+    "unit_id": 9,
+    "stage_code": "extract_entities_events",
+    "unit_type": "window_analysis",
+    "unit_key": "window:9",
+    "status": "completed",
+    "attempt_count": 1,
+    "retry_count": 0,
+    "repair": false,
+    "attempts": [
+      {
+        "attempt_id": 9,
+        "attempt_no": 1,
+        "provider_id": "aliyun_qwen_plus",
+        "model_name": "qwen3.7-plus",
+        "status": "succeeded",
+        "input_tokens": 4866,
+        "output_tokens": 963,
+        "error_code": null,
+        "started_at": "2026-08-07T14:55:59.775076",
+        "completed_at": "2026-08-07T14:56:18.787958"
+      }
+    ]
+  },
+  {
+    "unit_id": 10,
+    "stage_code": "synthesize_overview",
+    "unit_type": "book_synthesis",
+    "unit_key": "overview:v1",
+    "status": "completed",
+    "attempt_count": 1,
+    "retry_count": 0,
+    "repair": false,
+    "attempts": [
+      {
+        "attempt_id": 10,
+        "attempt_no": 1,
+        "provider_id": "aliyun_qwen_plus",
+        "model_name": "qwen3.7-plus",
+        "status": "succeeded",
+        "input_tokens": 1151,
+        "output_tokens": 873,
+        "error_code": null,
+        "started_at": "2026-08-07T14:56:19.355014",
+        "completed_at": "2026-08-07T14:56:35.915578"
+      }
+    ]
+  },
+  {
+    "unit_id": 11,
+    "stage_code": "synthesize_structure_stages",
+    "unit_type": "book_synthesis",
+    "unit_key": "structure_stages:v2",
+    "status": "completed",
+    "attempt_count": 1,
+    "retry_count": 0,
+    "repair": false,
+    "attempts": [
+      {
+        "attempt_id": 11,
+        "attempt_no": 1,
+        "provider_id": "aliyun_qwen_plus",
+        "model_name": "qwen3.7-plus",
+        "status": "succeeded",
+        "input_tokens": 1469,
+        "output_tokens": 50,
+        "error_code": null,
+        "started_at": "2026-08-07T14:56:37.025816",
+        "completed_at": "2026-08-07T14:56:39.527925"
+      }
+    ]
+  },
+  {
+    "unit_id": 12,
+    "stage_code": "synthesize_chapter_functions",
+    "unit_type": "book_synthesis",
+    "unit_key": "chapter_functions:v2:batch:0",
+    "status": "completed",
+    "attempt_count": 1,
+    "retry_count": 0,
+    "repair": false,
+    "attempts": [
+      {
+        "attempt_id": 12,
+        "attempt_no": 1,
+        "provider_id": "aliyun_qwen_plus",
+        "model_name": "qwen3.7-plus",
+        "status": "succeeded",
+        "input_tokens": 508,
+        "output_tokens": 488,
+        "error_code": null,
+        "started_at": "2026-08-07T14:56:40.038530",
+        "completed_at": "2026-08-07T14:56:49.927410"
+      }
+    ]
+  },
+  {
+    "unit_id": 13,
+    "stage_code": "synthesize_chapter_functions",
+    "unit_type": "book_synthesis",
+    "unit_key": "chapter_functions:v2:batch:1",
+    "status": "completed",
+    "attempt_count": 1,
+    "retry_count": 0,
+    "repair": false,
+    "attempts": [
+      {
+        "attempt_id": 13,
+        "attempt_no": 1,
+        "provider_id": "aliyun_qwen_plus",
+        "model_name": "qwen3.7-plus",
+        "status": "succeeded",
+        "input_tokens": 515,
+        "output_tokens": 484,
+        "error_code": null,
+        "started_at": "2026-08-07T14:56:50.011745",
+        "completed_at": "2026-08-07T14:57:00.256671"
+      }
+    ]
+  },
+  {
+    "unit_id": 14,
+    "stage_code": "synthesize_chapter_functions",
+    "unit_type": "book_synthesis",
+    "unit_key": "chapter_functions:v2:batch:2",
+    "status": "completed",
+    "attempt_count": 1,
+    "retry_count": 0,
+    "repair": false,
+    "attempts": [
+      {
+        "attempt_id": 14,
+        "attempt_no": 1,
+        "provider_id": "aliyun_qwen_plus",
+        "model_name": "qwen3.7-plus",
+        "status": "succeeded",
+        "input_tokens": 516,
+        "output_tokens": 496,
+        "error_code": null,
+        "started_at": "2026-08-07T14:57:00.320728",
+        "completed_at": "2026-08-07T14:57:10.646808"
+      }
+    ]
+  },
+  {
+    "unit_id": 15,
+    "stage_code": "synthesize_chapter_functions",
+    "unit_type": "book_synthesis",
+    "unit_key": "chapter_functions:v2:batch:3",
+    "status": "completed",
+    "attempt_count": 1,
+    "retry_count": 0,
+    "repair": false,
+    "attempts": [
+      {
+        "attempt_id": 15,
+        "attempt_no": 1,
+        "provider_id": "aliyun_qwen_plus",
+        "model_name": "qwen3.7-plus",
+        "status": "succeeded",
+        "input_tokens": 516,
+        "output_tokens": 496,
+        "error_code": null,
+        "started_at": "2026-08-07T14:57:10.695090",
+        "completed_at": "2026-08-07T14:57:20.952708"
+      }
+    ]
+  },
+  {
+    "unit_id": 16,
+    "stage_code": "synthesize_chapter_functions",
+    "unit_type": "book_synthesis",
+    "unit_key": "chapter_functions:v2:batch:4",
+    "status": "completed",
+    "attempt_count": 1,
+    "retry_count": 0,
+    "repair": false,
+    "attempts": [
+      {
+        "attempt_id": 16,
+        "attempt_no": 1,
+        "provider_id": "aliyun_qwen_plus",
+        "model_name": "qwen3.7-plus",
+        "status": "succeeded",
+        "input_tokens": 516,
+        "output_tokens": 497,
+        "error_code": null,
+        "started_at": "2026-08-07T14:57:21.019459",
+        "completed_at": "2026-08-07T14:57:31.191966"
+      }
+    ]
+  },
+  {
+    "unit_id": 17,
+    "stage_code": "synthesize_chapter_functions",
+    "unit_type": "book_synthesis",
+    "unit_key": "chapter_functions:v2:batch:5",
+    "status": "completed",
+    "attempt_count": 1,
+    "retry_count": 0,
+    "repair": false,
+    "attempts": [
+      {
+        "attempt_id": 17,
+        "attempt_no": 1,
+        "provider_id": "aliyun_qwen_plus",
+        "model_name": "qwen3.7-plus",
+        "status": "succeeded",
+        "input_tokens": 222,
+        "output_tokens": 131,
+        "error_code": null,
+        "started_at": "2026-08-07T14:57:31.260525",
+        "completed_at": "2026-08-07T14:57:35.299935"
+      }
+    ]
+  }
+]

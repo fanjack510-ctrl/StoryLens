@@ -1,0 +1,96 @@
+{
+  "id": "CHG-20260807-055",
+  "title": "Validate Free whole-book real Provider with medium multi-batch sample",
+  "type": "validation",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": true,
+  "head_inclusion": null,
+  "blocker_level": null,
+  "parent_plan": "CHG-20260807-054",
+  "wb_step_id": "WB-2.2.3-V120-L3-PROVIDER",
+  "manual_gate_id": "MG-WB-2.2.3",
+  "depends_on": [
+    "CHG-20260807-054"
+  ],
+  "commits": [],
+  "modules": [
+    "release/evidence/whole-book/CHG-20260807-055"
+  ],
+  "files": [
+    "release/evidence/whole-book/CHG-20260807-055/",
+    "release/changes/CHG-20260807-055.json",
+    "release/unreleased.json"
+  ],
+  "user_summary": "中等完整小说（42章）真实 Provider 四模块 + 多 batch CF + Pause/Resume 验证通过；无产品代码修改。",
+  "technical_summary": "Isolated L3-B DB; aliyun_qwen_plus/qwen3.7-plus; estimate 22 units / actual 17 calls; CF 42/42; pause barrier new units 0; evidence 20/20; secret ABSENT. L3-A PASS; L3-B PASS.",
+  "l3_gates": {
+    "L3-A": "PASS",
+    "L3-B": "PASS"
+  },
+  "sample": {
+    "title": "天才医生",
+    "chapter_count": 42,
+    "character_count": 129457,
+    "provider": "aliyun_qwen_plus",
+    "model": "qwen3.7-plus",
+    "estimated_provider_units": 22,
+    "actual_provider_units": 17,
+    "actual_provider_calls": 17
+  },
+  "observations": [
+    {
+      "id": "OBS-L3B-001",
+      "category": "NON_BLOCKING_OBSERVATION",
+      "release_blocking": false,
+      "summary": "Structure DTO chapter_range = null, but citation boundary exists; real Evidence locators PASS."
+    },
+    {
+      "id": "OBS-L3B-002",
+      "category": "NON_BLOCKING_COST_ESTIMATE_OBSERVATION",
+      "release_blocking": false,
+      "summary": "window estimate = 8, actual = 9; total estimate 22 vs actual units 17; no duplicate calls / cost runaway."
+    }
+  ],
+  "acceptance_criteria": [
+    "Medium real novel 30-100 chapters selected without fixture/AI generation",
+    "Cost Gate before formal calls; CF batches = ceil(chapters/8)",
+    "Consent + formal create; four modules same run",
+    "Pause/Resume no duplicate provider units/calls/assets",
+    "Chapter Functions coverage complete; evidence sample PASS",
+    "No product code change required",
+    "OBS-L3B-001 and OBS-L3B-002 recorded as non-blocking"
+  ],
+  "tests": [
+    "release/evidence/whole-book/CHG-20260807-055/l3b_medium_real_run.py",
+    "release/evidence/whole-book/CHG-20260807-055/MEDIUM_RUN.md",
+    "release/evidence/whole-book/CHG-20260807-055/L3_B_DECISION.md"
+  ],
+  "verification_evidence": [
+    "release/evidence/whole-book/CHG-20260807-055/MEDIUM_SAMPLE_SELECTION.md",
+    "release/evidence/whole-book/CHG-20260807-055/MEDIUM_COST_ESTIMATE.md",
+    "release/evidence/whole-book/CHG-20260807-055/MEDIUM_RUN.md",
+    "release/evidence/whole-book/CHG-20260807-055/MEDIUM_PROVIDER_UNITS.md",
+    "release/evidence/whole-book/CHG-20260807-055/MEDIUM_PAUSE_RESUME.md",
+    "release/evidence/whole-book/CHG-20260807-055/MEDIUM_CHAPTER_FUNCTIONS.md",
+    "release/evidence/whole-book/CHG-20260807-055/MEDIUM_OUTPUT_REVIEW.md",
+    "release/evidence/whole-book/CHG-20260807-055/MEDIUM_EVIDENCE_REVIEW.md",
+    "release/evidence/whole-book/CHG-20260807-055/MEDIUM_PROVIDER_ACCOUNTING.md",
+    "release/evidence/whole-book/CHG-20260807-055/MEDIUM_SECRET_SCAN.md",
+    "release/evidence/whole-book/CHG-20260807-055/L3_B_DECISION.md"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "L3-B uses isolated temp DB only; formal user DB writes 0."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "created_at": "2026-08-07T14:40:00Z",
+  "updated_at": "2026-08-07T15:55:00Z"
+}

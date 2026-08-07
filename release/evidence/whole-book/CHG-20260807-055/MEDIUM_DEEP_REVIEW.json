@@ -1,0 +1,623 @@
+{
+  "overview": {
+    "book_id": 1,
+    "claims": [
+      {
+        "availability": "available",
+        "claim_key": "genre_and_narrative_features",
+        "confidence": 0.8,
+        "conflict_ids": [],
+        "evidence_ids": [
+          1,
+          2,
+          3
+        ],
+        "summary": "故事融合了灵体穿越附身（asset_id: 1）的奇幻元素与江湖仇杀、门派斗争的武侠叙事，情节包含被卖获救（asset_id: 2）、杀手寻仇（asset_id: 7）及惨烈厮杀（asset_id: 21）等戏剧性事件。",
+        "supporting_asset_ids": [
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "availability": "available",
+        "claim_key": "core_setting",
+        "confidence": 0.8,
+        "conflict_ids": [],
+        "evidence_ids": [
+          1,
+          2,
+          3
+        ],
+        "summary": "故事背景涉及多个具体场景，包括发生上官庄灭门惨案（asset_id: 30）的庄园、宝晶宫血战（asset_id: 27）的地点、以及蚁丝网困寺庙（asset_id: 20）和驿站爆炸陷阱（asset_id: 18）等江湖险地。",
+        "supporting_asset_ids": [
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "availability": "available",
+        "claim_key": "protagonist",
+        "confidence": 0.8,
+        "conflict_ids": [],
+        "evidence_ids": [
+          1,
+          2,
+          3
+        ],
+        "summary": "主角为何晓月（entity_id: 1），她经历了灵体穿越附身（asset_id: 1），并从一名伴读丫鬟（asset_id: 3）成长为能够化解危机（asset_id: 8）和智取解药（asset_id: 19）的关键人物。",
+        "supporting_asset_ids": [
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "availability": "available",
+        "claim_key": "protagonist_core_goal",
+        "confidence": 0.8,
+        "conflict_ids": [],
+        "evidence_ids": [
+          1,
+          2,
+          3
+        ],
+        "summary": "何晓月在失恋后决心闯荡（asset_id: 5），其核心目标涉及在复杂的江湖恩怨中生存，保护身边人，并应对如合字会包围（asset_id: 17）和杀手上门（asset_id: 7）等致命威胁。",
+        "supporting_asset_ids": [
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "availability": "available",
+        "claim_key": "main_conflict",
+        "confidence": 0.8,
+        "conflict_ids": [],
+        "evidence_ids": [
+          1,
+          2,
+          3
+        ],
+        "summary": "主要冲突围绕何晓月与多方势力的对抗展开，包括与冷青云的湖畔对峙（asset_id: 29）、遭遇合字会包围（asset_id: 17）、以及卷入上官庄灭门惨案（asset_id: 30）和宝晶宫血战（asset_id: 27）等江湖大事件。",
+        "supporting_asset_ids": [
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "availability": "available",
+        "claim_key": "core_question",
+        "confidence": 0.8,
+        "conflict_ids": [],
+        "evidence_ids": [
+          1,
+          2,
+          3
+        ],
+        "summary": "故事的核心疑问涉及何晓月穿越后的命运走向，以及她如何在水上伏击与内讧（asset_id: 16）、发现水晶之灵（asset_id: 15）等关键节点中解开身世与江湖谜团。",
+        "supporting_asset_ids": [
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "availability": "available",
+        "claim_key": "final_resolution",
+        "confidence": 0.8,
+        "conflict_ids": [],
+        "evidence_ids": [
+          1,
+          2,
+          3
+        ],
+        "summary": "故事的高潮与结局部分包含惨烈最终厮杀（asset_id: 21）和宝晶宫血战（asset_id: 27），其中涉及天华中毒失功（asset_id: 28）等重大转折，最终通过一系列激烈冲突达成Resolution。",
+        "supporting_asset_ids": [
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "availability": "available",
+        "claim_key": "important_characters",
+        "confidence": 0.8,
+        "conflict_ids": [],
+        "evidence_ids": [
+          1,
+          2,
+          3
+        ],
+        "summary": "重要角色包括主角何晓月（entity_id: 1），与其关系密切的柳晓青（entity_id: 7）、上官飞（entity_id: 3）、上官天华（entity_id: 12），以及对手或关键人物如冷青云（entity_id: 10）、赵无极（entity_id: 9）和梅娘（entity_id: 15）。",
+        "supporting_asset_ids": [
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "availability": "available",
+        "claim_key": "key_events",
+        "confidence": 0.8,
+        "conflict_ids": [],
+        "evidence_ids": [
+          1,
+          2,
+          3
+        ],
+        "summary": "关键事件链包括：灵体穿越附身（asset_id: 1）、成为伴读丫鬟（asset_id: 3）、邂逅柳晓青（asset_id: 6）、杀手上门寻仇（asset_id: 7）、晓月化解危机（asset_id: 8）、发现水晶之灵（asset_id: 15）、驿站爆炸陷阱（asset_id: 18）、宝晶宫血战（asset_id: 27）及惨烈最终厮杀（asset_id: 21）。",
+        "supporting_asset_ids": [
+          1,
+          2,
+          3
+        ]
+      }
+    ],
+    "contract_version": "whole_book_contract_v1",
+    "coverage": {
+      "coverage_ratio": 1.0,
+      "covered_unique_paragraphs": 2113,
+      "duplicated_paragraphs": 169,
+      "first_global_paragraph_index": 0,
+      "last_global_paragraph_index": 2112,
+      "order_valid": true,
+      "run_id": 1,
+      "snapshot_id": 1,
+      "total_paragraphs": 2113,
+      "uncovered_paragraphs": 0
+    },
+    "created_at": "2026-08-07T14:56:35.915052Z",
+    "important_entity_ids": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "input_usage": {
+      "chapter_analysis_asset_count": 0,
+      "confirmed_whole_book_asset_count": 0,
+      "full_text_snapshot_used": true,
+      "reader_journey_asset_count": 0
+    },
+    "key_event_asset_ids": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      27,
+      28,
+      29,
+      30
+    ],
+    "mode": "whole_book_native",
+    "provenance": {
+      "config_hashes": {},
+      "contract_version": "whole_book_contract_v1",
+      "deterministic": false,
+      "engine_id": "storylens.free.whole_book.gateway",
+      "engine_version": "1.0.0",
+      "generated_at": "2026-08-07T14:56:35.915052Z",
+      "model_name": "qwen3.7-plus",
+      "prompt_version": "whole_book_overview_prompt_v1",
+      "provenance_version": "analysis_provenance_v1",
+      "provider_id": "aliyun_qwen_plus",
+      "result_origin": "formal",
+      "run_id": 1,
+      "snapshot_id": 1,
+      "source_mode": "whole_book_native",
+      "window_ids": []
+    },
+    "result_origin": "formal",
+    "result_version": "book_overview_v1",
+    "run_id": 1,
+    "snapshot_id": 1,
+    "status": "completed",
+    "warnings": [
+      "normalized_from_llm_overview_intermediate"
+    ]
+  },
+  "structure_stage_count": 2,
+  "structure_issues": [
+    {
+      "i": 0,
+      "issue": "missing_range"
+    },
+    {
+      "i": 1,
+      "issue": "missing_range"
+    }
+  ],
+  "structure_sample": [
+    {
+      "chapter_range": [
+        null,
+        null
+      ],
+      "confidence": 0.6,
+      "end_boundary": {
+        "citation_ids": [
+          "CIT-1F61FCC0-1057"
+        ]
+      },
+      "local_stage_ref": "stage-1",
+      "narrative_function": "建立情境",
+      "order_index": 0,
+      "related_turning_point_refs": [],
+      "stage_type": "setup",
+      "start_boundary": {
+        "citation_ids": [
+          "CIT-1F61FCC0-0001"
+        ]
+      },
+      "summary": {
+        "citation_ids": [
+          "CIT-1F61FCC0-0001"
+        ],
+        "confidence": 0.7,
+        "status": "observed",
+        "value": "故事开端与人物入场。"
+      },
+      "supporting_citation_ids": [],
+      "title": "开端"
+    },
+    {
+      "chapter_range": [
+        null,
+        null
+      ],
+      "confidence": 0.6,
+      "end_boundary": {
+        "citation_ids": [
+          "CIT-1F61FCC0-2113"
+        ]
+      },
+      "local_stage_ref": "stage-2",
+      "narrative_function": "推进冲突",
+      "order_index": 1,
+      "related_turning_point_refs": [],
+      "stage_type": "development",
+      "start_boundary": {
+        "citation_ids": [
+          "CIT-1F61FCC0-1057"
+        ]
+      },
+      "summary": {
+        "citation_ids": [
+          "CIT-1F61FCC0-1057"
+        ],
+        "confidence": 0.7,
+        "status": "observed",
+        "value": "冲突推进与关系变化。"
+      },
+      "supporting_citation_ids": [],
+      "title": "发展"
+    }
+  ],
+  "cf_total": 42,
+  "cf_sample_count": 20,
+  "cf_samples": [
+    {
+      "chapter_order": 1,
+      "primary": "setup",
+      "secondary": [],
+      "has_evidence": false
+    },
+    {
+      "chapter_order": 2,
+      "primary": "escalation",
+      "secondary": [],
+      "has_evidence": false
+    },
+    {
+      "chapter_order": 3,
+      "primary": "escalation",
+      "secondary": [],
+      "has_evidence": false
+    },
+    {
+      "chapter_order": 4,
+      "primary": "transition",
+      "secondary": [],
+      "has_evidence": false
+    },
+    {
+      "chapter_order": 5,
+      "primary": "climax",
+      "secondary": [],
+      "has_evidence": false
+    },
+    {
+      "chapter_order": 17,
+      "primary": "setup",
+      "secondary": [],
+      "has_evidence": false
+    },
+    {
+      "chapter_order": 18,
+      "primary": "escalation",
+      "secondary": [],
+      "has_evidence": false
+    },
+    {
+      "chapter_order": 19,
+      "primary": "escalation",
+      "secondary": [],
+      "has_evidence": false
+    },
+    {
+      "chapter_order": 20,
+      "primary": "climax",
+      "secondary": [],
+      "has_evidence": false
+    },
+    {
+      "chapter_order": 21,
+      "primary": "resolution",
+      "secondary": [],
+      "has_evidence": false
+    },
+    {
+      "chapter_order": 22,
+      "primary": "resolution",
+      "secondary": [],
+      "has_evidence": false
+    },
+    {
+      "chapter_order": 23,
+      "primary": "transition",
+      "secondary": [],
+      "has_evidence": false
+    },
+    {
+      "chapter_order": 24,
+      "primary": "setup",
+      "secondary": [],
+      "has_evidence": false
+    },
+    {
+      "chapter_order": 25,
+      "primary": "escalation",
+      "secondary": [],
+      "has_evidence": false
+    },
+    {
+      "chapter_order": 26,
+      "primary": "escalation",
+      "secondary": [],
+      "has_evidence": false
+    },
+    {
+      "chapter_order": 38,
+      "primary": "transition",
+      "secondary": [],
+      "has_evidence": false
+    },
+    {
+      "chapter_order": 39,
+      "primary": "setup",
+      "secondary": [],
+      "has_evidence": false
+    },
+    {
+      "chapter_order": 40,
+      "primary": "escalation",
+      "secondary": [],
+      "has_evidence": false
+    },
+    {
+      "chapter_order": 41,
+      "primary": null,
+      "secondary": [],
+      "has_evidence": false
+    },
+    {
+      "chapter_order": 42,
+      "primary": null,
+      "secondary": [],
+      "has_evidence": false
+    }
+  ],
+  "cf_primary_dist": {
+    "setup": 6,
+    "escalation": 9,
+    "transition": 4,
+    "climax": 4,
+    "resolution": 9,
+    "None": 10
+  },
+  "entity_check": [
+    {
+      "name": "何晓月",
+      "in_text": true
+    },
+    {
+      "name": "何成生",
+      "in_text": true
+    },
+    {
+      "name": "上官飞",
+      "in_text": true
+    },
+    {
+      "name": "叶秋水",
+      "in_text": true
+    },
+    {
+      "name": "冬儿",
+      "in_text": true
+    },
+    {
+      "name": "杜美美",
+      "in_text": true
+    },
+    {
+      "name": "柳晓青",
+      "in_text": true
+    },
+    {
+      "name": "陈安",
+      "in_text": true
+    }
+  ],
+  "event_asset_count": 0,
+  "event_asset_sample": [],
+  "evidence_bucket_sizes": {
+    "overview": 0,
+    "characters_events": 68,
+    "structure": 0,
+    "chapter_functions": 42,
+    "other": 43
+  },
+  "evidence_review": {
+    "checked": 20,
+    "pass": 20,
+    "fail": 0,
+    "items": [
+      {
+        "bucket": "overview",
+        "ok": true,
+        "chapter_id": null,
+        "snap": 1
+      },
+      {
+        "bucket": "overview",
+        "ok": true,
+        "chapter_id": null,
+        "snap": 1
+      },
+      {
+        "bucket": "overview",
+        "ok": true,
+        "chapter_id": null,
+        "snap": 1
+      },
+      {
+        "bucket": "overview",
+        "ok": true,
+        "chapter_id": null,
+        "snap": 1
+      },
+      {
+        "bucket": "characters_events",
+        "ok": true,
+        "chapter_id": null,
+        "snap": 1
+      },
+      {
+        "bucket": "characters_events",
+        "ok": true,
+        "chapter_id": null,
+        "snap": 1
+      },
+      {
+        "bucket": "characters_events",
+        "ok": true,
+        "chapter_id": null,
+        "snap": 1
+      },
+      {
+        "bucket": "characters_events",
+        "ok": true,
+        "chapter_id": null,
+        "snap": 1
+      },
+      {
+        "bucket": "characters_events",
+        "ok": true,
+        "chapter_id": null,
+        "snap": 1
+      },
+      {
+        "bucket": "characters_events",
+        "ok": true,
+        "chapter_id": null,
+        "snap": 1
+      },
+      {
+        "bucket": "structure",
+        "ok": true,
+        "chapter_id": null,
+        "snap": 1
+      },
+      {
+        "bucket": "structure",
+        "ok": true,
+        "chapter_id": null,
+        "snap": 1
+      },
+      {
+        "bucket": "structure",
+        "ok": true,
+        "chapter_id": null,
+        "snap": 1
+      },
+      {
+        "bucket": "structure",
+        "ok": true,
+        "chapter_id": null,
+        "snap": 1
+      },
+      {
+        "bucket": "chapter_functions",
+        "ok": true,
+        "chapter_id": null,
+        "snap": 1
+      },
+      {
+        "bucket": "chapter_functions",
+        "ok": true,
+        "chapter_id": null,
+        "snap": 1
+      },
+      {
+        "bucket": "chapter_functions",
+        "ok": true,
+        "chapter_id": null,
+        "snap": 1
+      },
+      {
+        "bucket": "chapter_functions",
+        "ok": true,
+        "chapter_id": null,
+        "snap": 1
+      },
+      {
+        "bucket": "chapter_functions",
+        "ok": true,
+        "chapter_id": null,
+        "snap": 1
+      },
+      {
+        "bucket": "chapter_functions",
+        "ok": true,
+        "chapter_id": null,
+        "snap": 1
+      }
+    ]
+  },
+  "secret_leaks": [],
+  "major_hallucination_count": 0
+}

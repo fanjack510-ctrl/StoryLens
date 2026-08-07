@@ -1,0 +1,126 @@
+{
+  "provider": "aliyun_qwen_plus",
+  "model": "qwen3.7-plus",
+  "sample_path": "C:\\Users\\msi\\AppData\\Local\\Temp\\storylens-v120-l3-medium\\medium_41ch_source.txt",
+  "db": "C:\\Users\\msi\\AppData\\Local\\Temp\\storylens-v120-l3-medium\\storylens_l3_medium.db",
+  "book_id": 1,
+  "book_title": "天才医生",
+  "chapter_count": 42,
+  "character_count": 129457,
+  "snapshot_id": 1,
+  "revision": "c047c09ac3abd08231dca4a3000f11893e0875deea846963866e3bf926497fb3",
+  "estimate_id": 2,
+  "consent_id": 1,
+  "run_id": 1,
+  "run_status": "completed",
+  "result_origin": "formal",
+  "elapsed_sec": 262.13,
+  "estimated_windows": 8,
+  "estimated_overview_units": 1,
+  "estimated_characters_events_units": 8,
+  "estimated_structure_units": 1,
+  "estimated_chapter_function_batches": 6,
+  "estimated_repair_reserve": 6,
+  "estimated_provider_units": 22,
+  "estimated_cost_min_cny": "0.45832",
+  "estimated_cost_max_cny": "0.674",
+  "pricing_status": "available",
+  "actual_provider_units": 17,
+  "actual_provider_calls": 17,
+  "actual_input_tokens": 139914,
+  "actual_output_tokens": 12777,
+  "actual_cost": "NOT AVAILABLE FROM PROVIDER RESPONSE",
+  "overview": "PASS",
+  "characters_events": "PASS",
+  "structure": "PASS",
+  "chapter_functions": "PASS",
+  "project_result": "PASS",
+  "input_chapters": 42,
+  "result_chapters": 42,
+  "missing_chapters": 0,
+  "duplicate_chapter_results": 0,
+  "invalid_enum_count": 0,
+  "pause": "PASS",
+  "resume": "PASS",
+  "calls_at_pause_request": 1,
+  "in_flight_at_pause": 0,
+  "new_units_started_after_pause_barrier": 0,
+  "duplicate_provider_calls": 0,
+  "duplicate_provider_units": 0,
+  "duplicate_success_assets": 0,
+  "confirmed_overwrite": 0,
+  "http_errors": 0,
+  "timeouts": 0,
+  "malformed_outputs": 0,
+  "schema_failures": 0,
+  "truncations": 0,
+  "retry_calls": 0,
+  "repair_calls": 0,
+  "failed_provider_calls": 0,
+  "major_hallucination_count": 0,
+  "evidence_checked": 20,
+  "evidence_pass": 20,
+  "evidence_fail": 0,
+  "entity_count": 31,
+  "asset_version_count": 157,
+  "evidence_count": 153,
+  "stages": {
+    "snapshot": "completed",
+    "windowing": "completed",
+    "extract_entities_events": "completed",
+    "materialize_assets": "completed",
+    "synthesize_overview": "completed",
+    "synthesize_structure_stages": "completed",
+    "synthesize_chapter_functions": "completed",
+    "project_result": "completed",
+    "finalize": "completed"
+  },
+  "checked_entities": [
+    {
+      "name": "何晓月",
+      "present_in_text": true
+    },
+    {
+      "name": "何成生",
+      "present_in_text": true
+    },
+    {
+      "name": "上官飞",
+      "present_in_text": true
+    },
+    {
+      "name": "叶秋水",
+      "present_in_text": true
+    },
+    {
+      "name": "冬儿",
+      "present_in_text": true
+    },
+    {
+      "name": "杜美美",
+      "present_in_text": true
+    },
+    {
+      "name": "柳晓青",
+      "present_in_text": true
+    },
+    {
+      "name": "陈安",
+      "present_in_text": true
+    }
+  ],
+  "pause_probe_calls": [
+    {
+      "unit_key": "window:1",
+      "unit_type": "window_analysis",
+      "started_at": "2026-08-07T14:53:15.563577+00:00",
+      "finished_at": "2026-08-07T14:53:36.257744+00:00",
+      "elapsed_sec": 20.694,
+      "ok": true,
+      "error_code": null,
+      "input_tokens": 15107,
+      "output_tokens": 1070
+    }
+  ],
+  "pipeline_reused_overview": false
+}
