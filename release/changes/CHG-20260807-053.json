@@ -19,6 +19,12 @@
       "message": "docs(release): approve U1 exception and record L3 Free-path blocker",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "33599353f7bfd8e18342ad19b41af2f16e7ef23e",
+      "message": "chore(release): attach L3 evidence commit to CHG-053",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -60,5 +66,5 @@
     "breaking_change": false
   },
   "created_at": "2026-08-07T07:50:28Z",
-  "updated_at": "2026-08-07T07:59:32Z"
+  "updated_at": "2026-08-07T07:59:34Z"
 }
