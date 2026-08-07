@@ -1,0 +1,69 @@
+{
+  "id": "CHG-20260807-054",
+  "title": "Enable Free whole-book real Provider pipeline",
+  "type": "fix",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": true,
+  "head_inclusion": null,
+  "blocker_level": "P0",
+  "parent_plan": "CHG-20260807-053",
+  "wb_step_id": "WB-2.2.3-V120-L3-PROVIDER",
+  "manual_gate_id": "MG-WB-2.2.3",
+  "depends_on": [
+    "CHG-20260807-053"
+  ],
+  "commits": [],
+  "modules": [
+    "apps/api",
+    "release/evidence/whole-book/CHG-20260807-054"
+  ],
+  "files": [
+    "apps/api/app/narrative_core/services/whole_book_free_product_v1_service.py",
+    "apps/api/app/narrative_core/services/whole_book_gateway_transport_v1.py",
+    "apps/api/app/narrative_core/services/whole_book_minimal_pipeline_v1_service.py",
+    "apps/api/tests/test_whole_book_chg054_real_provider_path.py",
+    "release/evidence/whole-book/CHG-20260807-054/",
+    "release/changes/CHG-20260807-054.json"
+  ],
+  "user_summary": "接通 Free 正式全书四模块真实 Provider 路径，解除 WHOLE_BOOK_CAPABILITY_DISABLED 硬 stub。",
+  "technical_summary": "Removed create_free hard stub; shared execute_minimal_pipeline_v1 with Gateway* transports for aliyun_qwen_plus/qwen3.7-plus; Fixture stays isolated; L3-A 6ch formal run PASS.",
+  "acceptance_criteria": [
+    "Formal create no longer raises WHOLE_BOOK_CAPABILITY_DISABLED when real flag + provider valid",
+    "Four modules same Run/Snapshot/Revision via real Provider",
+    "No fixture/fake fallback on formal create",
+    "Consent/Cost/Revision gates preserved",
+    "Short real sample four-module loop PASS"
+  ],
+  "tests": [
+    "apps/api/tests/test_whole_book_chg054_real_provider_path.py",
+    "release/evidence/whole-book/CHG-20260807-054/TARGETED_TESTS.md",
+    "release/evidence/whole-book/CHG-20260807-054/REAL_SHORT_RUN.md"
+  ],
+  "verification_evidence": [
+    "release/evidence/whole-book/CHG-20260807-054/REAL_PATH_AUDIT.md",
+    "release/evidence/whole-book/CHG-20260807-054/REAL_PATH_IMPLEMENTATION.md",
+    "release/evidence/whole-book/CHG-20260807-054/CAPABILITY_GATE.md",
+    "release/evidence/whole-book/CHG-20260807-054/PROVIDER_UNIT_BINDING.md",
+    "release/evidence/whole-book/CHG-20260807-054/FIXTURE_REAL_ISOLATION.md",
+    "release/evidence/whole-book/CHG-20260807-054/TARGETED_TESTS.md",
+    "release/evidence/whole-book/CHG-20260807-054/REAL_SHORT_RUN.md",
+    "release/evidence/whole-book/CHG-20260807-054/REAL_PROVIDER_CALLS.md",
+    "release/evidence/whole-book/CHG-20260807-054/REAL_OUTPUT_SAMPLE_REVIEW.md",
+    "release/evidence/whole-book/CHG-20260807-054/SECRET_SCAN.md"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "L3 uses isolated temp DB only; formal user DB writes 0."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "created_at": "2026-08-07T11:10:00Z",
+  "updated_at": "2026-08-07T11:45:00Z"
+}

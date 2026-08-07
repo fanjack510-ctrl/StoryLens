@@ -303,8 +303,16 @@ class WholeBookProviderOrchestrator:
         attempt = WholeBookProviderAttempt(
             provider_unit_id=unit.id,
             attempt_no=attempt_no,
-            provider_id="fake",
-            model_name="counting-fake",
+            provider_id=str(
+                request_payload.get("_provider_id")
+                or getattr(transport, "provider_id", None)
+                or "fake"
+            )[:128],
+            model_name=str(
+                request_payload.get("_model_name")
+                or getattr(transport, "model_name", None)
+                or "counting-fake"
+            )[:128],
             request_hash=request_hash,
             status="running",
             started_at=_utc_now(),
@@ -335,6 +343,7 @@ class WholeBookProviderOrchestrator:
                 "attempt_no": attempt_no,
                 "idempotency_key": unit.idempotency_key,
                 "result_hash": result_hash,
+                "result_payload": dict(result.result_payload or {}),
                 "reused": False,
             }
 
@@ -352,6 +361,7 @@ class WholeBookProviderOrchestrator:
             "attempt_no": attempt_no,
             "error_code": attempt.error_code,
             "idempotency_key": unit.idempotency_key,
+            "result_payload": dict(result.result_payload or {}),
         }
 
     def resume_incomplete_provider_units(self, run_id: int, stage_code: str) -> dict[str, list[dict[str, Any]]]:

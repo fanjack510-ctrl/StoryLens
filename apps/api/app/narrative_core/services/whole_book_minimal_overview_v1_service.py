@@ -341,8 +341,13 @@ def synthesize_minimal_book_overview_v1(
             important_entity_ids=proj["important_entity_ids"],
         )
     else:
-        raw = transport.invoke(unit_key="overview:v1", unit_type=UNIT_SYNTHESIS, request_payload=payload)
-        response = WholeBookSynthesisResponseV1.model_validate(raw.result_payload)
+        result_payload = unit_result.get("result_payload")
+        if not isinstance(result_payload, dict) or not result_payload:
+            raw = transport.invoke(
+                unit_key="overview:v1", unit_type=UNIT_SYNTHESIS, request_payload=payload
+            )
+            result_payload = raw.result_payload
+        response = WholeBookSynthesisResponseV1.model_validate(result_payload)
 
     _validate_synthesis_ids(response, proj)
     row = _persist_overview(session, run_id, response.result)

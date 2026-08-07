@@ -57,7 +57,10 @@ def validate_window_response_against_snapshot_v1(
         errors.append("contract_version mismatch")
     if response.provenance.result_origin == ResultOrigin.formal and run.result_origin != ResultOrigin.formal.value:
         errors.append("result_origin formal impersonation")
-    if response.provenance.result_origin == ResultOrigin.formal:
+    if (
+        response.provenance.result_origin == ResultOrigin.formal
+        and run.result_origin == ResultOrigin.fixture.value
+    ):
         errors.append("fixture pipeline forbids formal provenance")
 
     para_by_id = {p.snapshot_paragraph_id: p for p in paragraphs}

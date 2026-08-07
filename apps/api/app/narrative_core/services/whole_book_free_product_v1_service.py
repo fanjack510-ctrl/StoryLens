@@ -97,9 +97,23 @@ def prepare_free_whole_book_analysis_v1(session: Session, book_id: int) -> dict[
             "书籍不存在",
         )
     revision_hash = compute_book_revision_hash(session, book_id)
-    provider = session.scalar(select(ProviderConfiguration).limit(1))
+    provider = None
+    if real_provider_enabled():
+        # Prefer canonical Bailian row for formal Free cost estimate binding.
+        provider = session.scalar(
+            select(ProviderConfiguration).where(
+                ProviderConfiguration.provider_name == "aliyun_qwen_plus"
+            )
+        )
     if provider is None:
-        provider = ProviderConfiguration(provider_name="default", plus_model="default-model")
+        provider = session.scalar(select(ProviderConfiguration).limit(1))
+    if provider is None:
+        provider = ProviderConfiguration(
+            provider_name="aliyun_qwen_plus" if real_provider_enabled() else "default",
+            plus_model="qwen3.7-plus" if real_provider_enabled() else "default-model",
+            enabled=bool(real_provider_enabled()),
+            disconnected=not bool(real_provider_enabled()),
+        )
         session.add(provider)
         session.flush()
     estimate = estimate_whole_book_analysis(
@@ -172,9 +186,13 @@ def create_free_whole_book_analysis_v1(
     estimate_id: int,
     consent_id: int,
     client_request_id: str,
+    execute_pipeline: bool = True,
 ) -> dict[str, Any]:
     _require_free_product_enabled()
     require_capability_access("whole_book.overview", AccessTier.free)
+    require_capability_access("whole_book.characters_events", AccessTier.free)
+    require_capability_access("whole_book.structure", AccessTier.free)
+    require_capability_access("whole_book.chapter_functions", AccessTier.free)
     book = session.get(Book, book_id)
     if book is None:
         raise WholeBookFoundationError(
@@ -195,10 +213,56 @@ def create_free_whole_book_analysis_v1(
             WholeBookFoundationErrorCode.WHOLE_BOOK_REAL_PROVIDER_DISABLED,
             "真实模型分析尚未启用，请使用测试数据预览",
         )
-    raise WholeBookFoundationError(
-        WholeBookFoundationErrorCode.WHOLE_BOOK_CAPABILITY_DISABLED,
-        "真实 Provider 路径尚未在本版本开放",
+
+    # Formal create: never fixture/fake fallback.
+    from app.narrative_core.services.whole_book_gateway_transport_v1 import (
+        resolve_formal_provider_row,
     )
+    from app.narrative_core.services.whole_book_minimal_pipeline_v1_service import (
+        build_formal_gateway_transports,
+        execute_minimal_pipeline_v1,
+    )
+
+    resolve_formal_provider_row(session)  # fail-closed if provider/key unavailable
+    request_id = client_request_id or str(uuid.uuid4())
+    run = create_whole_book_run_v1(
+        session,
+        book_id,
+        snap.id,
+        WholeBookMode.whole_book_native.value,
+        request_id,
+        ResultOrigin.formal.value,
+    )
+    if run.consent_id is None:
+        run.consent_id = consent_id
+        session.flush()
+
+    audit = assert_native_input_independence_v1(session, run.id)
+    persist_native_input_audit_v1(session, audit)
+
+    generate_whole_book_windows_v1(session, run.id)
+    if run.status == WholeBookRunStatus.pending.value:
+        start_whole_book_run_v1(session, run.id)
+    session.refresh(run)
+
+    pipeline_result: dict[str, Any] | None = None
+    if execute_pipeline:
+        transports = build_formal_gateway_transports(session)
+        pipeline_result = execute_minimal_pipeline_v1(
+            session, run.id, transports=transports
+        )
+        session.refresh(run)
+
+    return {
+        "run": run_to_dict(run),
+        "run_id": run.id,
+        "book_id": book_id,
+        "snapshot_id": snap.id,
+        "result_origin": ResultOrigin.formal.value,
+        "run_status": run.status,
+        "pipeline": pipeline_result,
+        "audit": audit.to_dict(),
+    }
 
 
 def create_fixture_free_whole_book_analysis_v1(

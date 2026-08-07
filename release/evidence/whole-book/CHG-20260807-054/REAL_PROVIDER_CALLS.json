@@ -1,0 +1,38 @@
+[
+  {
+    "attempt_id": 1,
+    "provider_id": "aliyun_qwen_plus",
+    "model_name": "qwen3.7-plus",
+    "status": "succeeded",
+    "input_tokens": 13222,
+    "output_tokens": 1024,
+    "error_code": null
+  },
+  {
+    "attempt_id": 2,
+    "provider_id": "aliyun_qwen_plus",
+    "model_name": "qwen3.7-plus",
+    "status": "succeeded",
+    "input_tokens": 613,
+    "output_tokens": 592,
+    "error_code": null
+  },
+  {
+    "attempt_id": 3,
+    "provider_id": "aliyun_qwen_plus",
+    "model_name": "qwen3.7-plus",
+    "status": "succeeded",
+    "input_tokens": 1469,
+    "output_tokens": 50,
+    "error_code": null
+  },
+  {
+    "attempt_id": 4,
+    "provider_id": "aliyun_qwen_plus",
+    "model_name": "qwen3.7-plus",
+    "status": "succeeded",
+    "input_tokens": 412,
+    "output_tokens": 370,
+    "error_code": null
+  }
+]

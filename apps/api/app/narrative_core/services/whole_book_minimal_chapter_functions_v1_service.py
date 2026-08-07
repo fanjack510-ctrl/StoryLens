@@ -710,12 +710,15 @@ def synthesize_minimal_chapter_functions_v1(
                 structure_context=transport.structure_context,
             )
         else:
-            raw = transport.invoke(
-                unit_key=unit_key,
-                unit_type=UNIT_SYNTHESIS,
-                request_payload=request_payload,
-            )
-            raw_payload = dict(raw.result_payload or {})
+            result_payload = unit_result.get("result_payload")
+            if not isinstance(result_payload, dict) or not result_payload:
+                raw = transport.invoke(
+                    unit_key=unit_key,
+                    unit_type=UNIT_SYNTHESIS,
+                    request_payload=request_payload,
+                )
+                result_payload = dict(raw.result_payload or {})
+            raw_payload = dict(result_payload)
 
         validation = validate_chapter_functions_provider_output_v2(
             raw_payload,
@@ -759,12 +762,15 @@ def synthesize_minimal_chapter_functions_v1(
                         structure_context=transport.structure_context,
                     )
             else:
-                repaired = transport.invoke(
-                    unit_key=repair_unit_key,
-                    unit_type=UNIT_SYNTHESIS,
-                    request_payload=repair_payload,
-                )
-                repaired_raw = dict(repaired.result_payload or {})
+                repaired_payload = repair_result.get("result_payload")
+                if not isinstance(repaired_payload, dict) or not repaired_payload:
+                    repaired = transport.invoke(
+                        unit_key=repair_unit_key,
+                        unit_type=UNIT_SYNTHESIS,
+                        request_payload=repair_payload,
+                    )
+                    repaired_payload = dict(repaired.result_payload or {})
+                repaired_raw = dict(repaired_payload)
             validation = validate_chapter_functions_provider_output_v2(
                 repaired_raw,
                 allowed_citation_ids=batch_cids or citation_ids,

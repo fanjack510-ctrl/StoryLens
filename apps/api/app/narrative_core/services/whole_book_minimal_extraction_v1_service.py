@@ -269,14 +269,17 @@ def execute_minimal_entity_event_extraction_v1(
         if isinstance(transport, FixtureWindowAnalysisTransport):
             response = build_fixture_window_analysis_response_v1(request)
         else:
-            raw = transport.invoke(
-                unit_key=unit_key, unit_type=UNIT_WINDOW, request_payload=request_payload
-            )
-            if not raw.ok:
-                window.status = WholeBookUnitStatus.failed.value
-                failed_windows += 1
-                continue
-            response = WholeBookWindowAnalysisResponseV1.model_validate(raw.result_payload)
+            payload = unit_result.get("result_payload")
+            if not isinstance(payload, dict) or not payload:
+                raw = transport.invoke(
+                    unit_key=unit_key, unit_type=UNIT_WINDOW, request_payload=request_payload
+                )
+                if not raw.ok:
+                    window.status = WholeBookUnitStatus.failed.value
+                    failed_windows += 1
+                    continue
+                payload = raw.result_payload
+            response = WholeBookWindowAnalysisResponseV1.model_validate(payload)
 
         paragraph_models = request.paragraphs
         validation = validate_window_response_against_snapshot_v1(

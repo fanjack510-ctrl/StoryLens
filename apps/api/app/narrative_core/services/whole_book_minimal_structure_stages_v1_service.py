@@ -522,12 +522,15 @@ def synthesize_minimal_structure_stages_v1(
             context_capabilities=transport.context_capabilities or caps,
         )
     else:
-        raw = transport.invoke(
-            unit_key=STRUCTURE_UNIT_KEY,
-            unit_type=UNIT_SYNTHESIS,
-            request_payload=request_payload,
-        )
-        structure = dict(raw.result_payload or {})
+        result_payload = unit_result.get("result_payload")
+        if not isinstance(result_payload, dict) or not result_payload:
+            raw = transport.invoke(
+                unit_key=STRUCTURE_UNIT_KEY,
+                unit_type=UNIT_SYNTHESIS,
+                request_payload=request_payload,
+            )
+            result_payload = dict(raw.result_payload or {})
+        structure = dict(result_payload)
 
     # Server-frozen expected scope for empty-policy.
     expected_scope = "insufficient" if effective_mode == "insufficient" else "full_selected_range"
