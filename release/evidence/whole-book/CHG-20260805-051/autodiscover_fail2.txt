@@ -1,0 +1,10 @@
+﻿
+ RUN  v3.2.7 D:/Dstorylens-wt-v120-debt-agent2/apps/desktop
+
+ 鉁?src/pages/BookRoutePage.autoDiscover.test.tsx (7 tests | 6 skipped) 196ms
+
+ Test Files  1 passed (1)
+      Tests  1 passed | 6 skipped (7)
+   Start at  08:45:46
+   Duration  5.11s (transform 1.11s, setup 162ms, collect 3.32s, tests 196ms, environment 709ms, prepare 246ms)
+

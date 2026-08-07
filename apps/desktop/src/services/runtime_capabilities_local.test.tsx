@@ -12,47 +12,51 @@ import {
   type RuntimeInfo,
 } from "./runtimeCapabilities";
 
-vi.mock("./apiClient", () => ({
-  api: vi.fn(async (path: string) => {
-    if (path === "/health") {
-      return { status: "ok", database: "ok" };
-    }
-    if (path === "/api/v1/runtime") {
-      return {
-        runtime_mode: "browser_local_production",
-        shell: "browser_local_production",
-        application_version: "1.0.3",
-        data_directory: "C:\\Users\\x\\AppData\\Local\\StoryLens",
-        database_path: "C:\\Users\\x\\AppData\\Local\\StoryLens\\database\\storylens.db",
-        frontend_origin: "http://127.0.0.1:8765",
-        user_label: "本地网页版",
-        desktop_capabilities: {
-          tauri_shell: false,
-          native_updater: false,
-          native_window_controls: false,
-          sidecar_lifecycle: false,
-        },
-        web_capabilities: {
-          browser_zoom: true,
-          file_picker_import: true,
-          drag_drop_import: true,
-          open_data_folder_via_api: true,
-          clipboard_copy: true,
-          local_only: true,
-        },
-        is_local_web_production: true,
-      } satisfies RuntimeInfo;
-    }
-    if (path === "/api/v1/system/diagnostics") {
-      return {
-        data_directory: "C:\\Users\\x\\AppData\\Local\\StoryLens",
-        database_path: "C:\\Users\\x\\AppData\\Local\\StoryLens\\database\\storylens.db",
-        app_env: "production",
-      };
-    }
-    throw new Error(`unexpected ${path}`);
-  }),
-}));
+vi.mock("./apiClient", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./apiClient")>();
+  return {
+    ...actual,
+    api: vi.fn(async (path: string) => {
+      if (path === "/health") {
+        return { status: "ok", database: "ok" };
+      }
+      if (path === "/api/v1/runtime") {
+        return {
+          runtime_mode: "browser_local_production",
+          shell: "browser_local_production",
+          application_version: "1.0.3",
+          data_directory: "C:\\Users\\x\\AppData\\Local\\StoryLens",
+          database_path: "C:\\Users\\x\\AppData\\Local\\StoryLens\\database\\storylens.db",
+          frontend_origin: "http://127.0.0.1:8765",
+          user_label: "本地网页版",
+          desktop_capabilities: {
+            tauri_shell: false,
+            native_updater: false,
+            native_window_controls: false,
+            sidecar_lifecycle: false,
+          },
+          web_capabilities: {
+            browser_zoom: true,
+            file_picker_import: true,
+            drag_drop_import: true,
+            open_data_folder_via_api: true,
+            clipboard_copy: true,
+            local_only: true,
+          },
+          is_local_web_production: true,
+        } satisfies RuntimeInfo;
+      }
+      if (path === "/api/v1/system/diagnostics") {
+        return {
+          data_directory: "C:\\Users\\x\\AppData\\Local\\StoryLens",
+          database_path: "C:\\Users\\x\\AppData\\Local\\StoryLens\\database\\storylens.db",
+          app_env: "production",
+        };
+      }
+      throw new Error(`unexpected ${path}`);
+    }),
+  };
+});
 
 vi.mock("./desktopRuntime", () => ({
   isTauriRuntime: () => false,

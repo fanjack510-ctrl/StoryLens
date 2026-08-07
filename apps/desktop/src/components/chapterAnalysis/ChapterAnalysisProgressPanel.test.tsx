@@ -166,11 +166,11 @@ describe("ChapterAnalysisProgressPanel", () => {
         onViewResults={vi.fn()}
       />,
     );
-    expect(await screen.findByTestId("unified-recovery-card")).toBeInTheDocument();
+    expect(await screen.findByTestId("chapter-analysis-journey-pending")).toBeInTheDocument();
     expect(await screen.findByTestId("chapter-analysis-continue-journey")).toHaveTextContent(
       "继续生成阅读旅程",
     );
-    expect(screen.getByTestId("chapter-analysis-journey-pending")).toBeInTheDocument();
+    expect(screen.queryByTestId("unified-recovery-card")).not.toBeInTheDocument();
     expect(screen.queryByText("分析全部完成")).not.toBeInTheDocument();
   });
 

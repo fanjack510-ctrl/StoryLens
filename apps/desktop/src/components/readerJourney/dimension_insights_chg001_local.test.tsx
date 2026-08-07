@@ -148,7 +148,7 @@ describe("CHG-20260729-001 dimension insights", () => {
 
   it("uses required composite one-line summary", () => {
     expect(getLensExplanation("composite").one_line_summary).toBe(
-      "综合阅读：综合判断每个场景对剧情理解、阅读期待、情绪体验和阅读流畅度的整体贡献。",
+      "综合判断每个场景对故事理解、阅读期待、情绪体验和阅读流畅度的整体贡献；分数高低需要结合场景任务和前后位置判断。",
     );
   });
 

@@ -61,7 +61,9 @@ describe("Phase 1C-C.2.4A overview–detail layout", () => {
     expect(card.textContent).not.toMatch(/核心问题/);
     expect(card.textContent).not.toMatch(/阶段回报/);
     expect(card.textContent).not.toMatch(/续读/);
-    expect(css).toMatch(/\.journey-workspace-v4\s+\.journey-phase-nav-card[\s\S]*min-height:\s*96px/);
+    expect(css).toMatch(
+      /\.journey-workspace-v4\s+\.journey-phase-card\.journey-phase-nav-card[\s\S]*min-height:\s*112px/,
+    );
   });
 
   it("enlarges curve with Y ticks and S1–S14 X labels", () => {

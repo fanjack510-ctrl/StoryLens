@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes, useSearchParams } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -208,6 +208,9 @@ describe("BookRoutePage active run auto discovery", () => {
       if (id === 4) return olderFailed as any;
       throw new Error(`unexpected run ${id}`);
     });
+    // Prior cases may override this with a succeeded visualization; budget-pause
+    // must not inherit that or journeyPageActive will suppress the recovery card.
+    vi.mocked(analysisApi.readerJourney).mockResolvedValue({ status: "missing" } as any);
   });
 
   afterEach(cleanup);
@@ -328,14 +331,21 @@ describe("BookRoutePage active run auto discovery", () => {
   it("shows budget pause modal once for explicit analysisRun deep link", async () => {
     renderBook("/books/1?chapter=2&analysisRun=5&view=progress");
     await waitFor(() => expect(screen.getByTestId("budget-pause-modal")).toBeInTheDocument());
-    const modal = screen.getByTestId("budget-pause-modal");
-    modal.querySelector('[data-testid="unified-recovery-later"]')?.dispatchEvent(
-      new MouseEvent("click", { bubbles: true }),
+    // Inline recovery card must already be present beside the one-shot modal.
+    expect(await screen.findByTestId("unified-recovery-card")).toBeInTheDocument();
+    expect(screen.getByTestId("chapter-analysis-progress")).toHaveAttribute(
+      "data-ui-state",
+      "awaiting_budget_adjustment",
+    );
+    fireEvent.click(
+      within(screen.getByTestId("budget-pause-modal")).getByTestId("unified-recovery-later"),
     );
     await waitFor(() =>
       expect(screen.queryByTestId("budget-pause-modal")).not.toBeInTheDocument(),
     );
+    // Dismissing the modal must not collapse the progress rail recovery surface.
     expect(screen.getByTestId("unified-recovery-card")).toBeInTheDocument();
+    expect(screen.getByTestId("chapter-analysis-progress")).toBeInTheDocument();
     // Simulate poll refresh of same run id — modal must stay closed.
     await waitFor(() => expect(analysisApi.run).toHaveBeenCalled());
     expect(screen.queryByTestId("budget-pause-modal")).not.toBeInTheDocument();

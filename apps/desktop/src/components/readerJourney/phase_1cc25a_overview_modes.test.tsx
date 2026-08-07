@@ -61,7 +61,9 @@ describe("Phase 1C-C.2.5A overview modes (superseded by 2.6 single view)", () =>
     expect(card.textContent).not.toMatch(/平均牵引/);
     expect(card.textContent).not.toMatch(/核心问题/);
     expect(card.textContent).not.toMatch(/阶段回报/);
-    expect(css).toMatch(/\.journey-workspace-v4\s+\.journey-phase-nav-card[\s\S]*min-height:\s*96px/);
+    expect(css).toMatch(
+      /\.journey-workspace-v4\s+\.journey-phase-card\.journey-phase-nav-card[\s\S]*min-height:\s*112px/,
+    );
     expect(screen.getByTestId("journey-curve-svg").getAttribute("height")).toBe("420");
     for (const tick of [100, 75, 50, 25, 0]) {
       expect(screen.getByTestId(`journey-y-tick-${tick}`)).toBeInTheDocument();

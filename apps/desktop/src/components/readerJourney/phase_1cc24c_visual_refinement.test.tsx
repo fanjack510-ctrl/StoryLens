@@ -138,7 +138,9 @@ describe("Phase 1C-C.2.4C visual refinement", () => {
     );
     const header = screen.getByTestId("structured-scene-header-12");
     expect(header.textContent).toMatch(/核心场景|过渡场景|过渡/);
-    expect(header).toHaveTextContent("阶段");
+    expect(screen.getByTestId("structured-scene-stage-label-12")).toHaveTextContent(
+      /开端|发展|收束|转折/,
+    );
     expect(header.textContent).not.toMatch(/Phase\s|Scene\s|B0001-C0002-P0060/);
     const marker = header.querySelector(".badge-hook, .badge-payoff, .badge-risk");
     if (marker) {
@@ -166,8 +168,8 @@ describe("Phase 1C-C.2.4C visual refinement", () => {
     );
     expect(screen.queryByTestId("journey-marker-compact")).not.toBeInTheDocument();
     expect(screen.queryByTestId("journey-layer-banner")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByTestId("scene-detail-tab-questions"));
-    expect(screen.getByTestId("scene-detail-panel-questions")).toBeInTheDocument();
+    expect(screen.getByTestId("scene-detail-insight-panel")).toBeInTheDocument();
+    expect(screen.getByTestId("scene-dimension-insight-text")).toBeInTheDocument();
     expect(screen.getByTestId("scene-detail-title")).toHaveTextContent(/场景12/);
   });
 });

@@ -119,11 +119,9 @@ describe("Phase 1C-C.2.7 Context Inspector hierarchy", () => {
     expect(screen.getByTestId("journey-risk-inspector")).toBeInTheDocument();
   });
 
-  it("prioritizes Scene and Phase one-line conclusions from existing fields", () => {
+  it("prioritizes Scene dimension insight and Phase one-line conclusions", () => {
     render(<JourneySceneDetailPanel node={node9} onLocateEvidence={vi.fn()} />);
-    expect(screen.getByTestId("scene-primary-conclusion")).toHaveTextContent(
-      node9.scene_value_summary,
-    );
+    expect(screen.getByTestId("scene-dimension-insight-text")).toBeInTheDocument();
     cleanup();
     render(
       <JourneyPhaseDetailPanel
@@ -135,27 +133,18 @@ describe("Phase 1C-C.2.7 Context Inspector hierarchy", () => {
     expect(screen.getByTestId("phase-primary-conclusion")).toHaveTextContent(phase3.summary);
   });
 
-  it("limits Scene resident metrics to three", () => {
-    render(<JourneySceneDetailPanel node={node9} onLocateEvidence={vi.fn()} />);
-    const bars = screen.getByTestId("scene-detail-score-bars");
-    expect(within(bars).getByTestId("score-bar-reading_momentum")).toBeInTheDocument();
-    expect(within(bars).getByTestId("score-bar-curiosity")).toBeInTheDocument();
-    expect(within(bars).getByTestId("score-bar-tension")).toBeInTheDocument();
-    expect(within(bars).queryByTestId("score-bar-payoff")).not.toBeInTheDocument();
-    expect(within(bars).queryByTestId("score-bar-dropoff_risk")).not.toBeInTheDocument();
-  });
-
-  it("omits empty risk section on Scene overview", () => {
+  it("omits empty risk section on simplified Scene panel", () => {
     const noRisk = {
       ...node1,
       primary_risk: null,
       risk_points: [],
     };
     render(<JourneySceneDetailPanel node={noRisk} onLocateEvidence={vi.fn()} />);
+    expect(screen.getByTestId("scene-detail-insight-panel")).toBeInTheDocument();
     expect(screen.queryByTestId("scene-overview-risk")).not.toBeInTheDocument();
   });
 
-  it("uses unified empty states for techniques, questions, hook/payoff, evidence", () => {
+  it("shows unavailable insight copy on simplified Scene panel when data missing", () => {
     const emptyNode = {
       ...node1,
       reader_question_in: [],
@@ -171,22 +160,15 @@ describe("Phase 1C-C.2.7 Context Inspector hierarchy", () => {
       evidence_paragraph_ids: [],
       risk_points: [],
       primary_risk: null,
+      dimension_insights: { overall_reading: null },
     };
     render(<JourneySceneDetailPanel node={emptyNode} onLocateEvidence={vi.fn()} />);
-    fireEvent.click(screen.getByTestId("scene-detail-tab-questions"));
-    expect(screen.getByTestId("empty-questions")).toHaveAttribute(
-      "data-empty-kind",
-      "no-question-chain",
+    expect(screen.getByTestId("scene-detail-insight-panel")).toBeInTheDocument();
+    expect(screen.getByTestId("scene-dimension-insight-text")).toHaveTextContent(
+      "当前维度暂无可靠洞察",
     );
-    fireEvent.click(screen.getByTestId("scene-detail-tab-payoffs"));
-    expect(screen.getByTestId("empty-hook-payoff")).toHaveAttribute(
-      "data-empty-kind",
-      "no-hook-payoff",
-    );
-    fireEvent.click(screen.getByTestId("scene-detail-tab-techniques"));
-    expect(screen.getByTestId("empty-techniques")).toHaveAttribute("data-empty-kind", "no-technique");
-    fireEvent.click(screen.getByTestId("scene-detail-tab-evidence"));
-    expect(screen.getByTestId("empty-evidence")).toHaveAttribute("data-empty-kind", "no-evidence");
+    expect(screen.queryByTestId("scene-detail-tab-questions")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("empty-techniques")).not.toBeInTheDocument();
   });
 
   it("keeps empty state height constrained", () => {
@@ -221,7 +203,7 @@ describe("Phase 1C-C.2.7 Context Inspector hierarchy", () => {
     expect(screen.queryByTestId("empty-questions")).not.toBeInTheDocument();
   });
 
-  it("renders writing_takeaways string / array / object / object array", () => {
+  it("renders writing_takeaways variants without crashing simplified Scene panel", () => {
     const cases = [
       { writing_takeaways: "单句启示" as unknown },
       { writing_takeaways: ["启示A", "启示B"] as unknown },
@@ -238,8 +220,7 @@ describe("Phase 1C-C.2.7 Context Inspector hierarchy", () => {
       const { unmount } = render(
         <JourneySceneDetailPanel node={node as typeof node1} onLocateEvidence={vi.fn()} />,
       );
-      fireEvent.click(screen.getByTestId("scene-detail-tab-techniques"));
-      expect(screen.getByTestId("scene-detail-techniques")).toBeInTheDocument();
+      expect(screen.getByTestId("scene-detail-insight-panel")).toBeInTheDocument();
       expect(screen.queryByTestId("journey-detail-error")).not.toBeInTheDocument();
       unmount();
     }

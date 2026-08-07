@@ -1,6 +1,9 @@
 import { cleanup } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { mapUrlToActiveTab } from "../../services/resolveWorkspaceLayout";
+import {
+  mapUrlToActiveTab,
+  resolveWorkspaceLayout,
+} from "../../services/resolveWorkspaceLayout";
 
 describe("CHG-041 navigation helpers", () => {
   afterEach(() => cleanup());
@@ -18,6 +21,23 @@ describe("CHG-041 navigation helpers", () => {
     ).toBe("scene");
   });
 
+  it("keeps scene target when boundary review coexists with stale journey deep-link", () => {
+    const layout = resolveWorkspaceLayout({
+      requestedView: "scene-boundary-review",
+      requestedTab: "reader-journey",
+      userPinnedTab: null,
+      chapterComplete: false,
+      inFlight: false,
+      sceneAvailable: true,
+      journeyAvailable: false,
+      journeyStatus: null,
+      journeyQueryStatus: "idle",
+    });
+    expect(layout.activeTab).toBe("scene");
+    expect(layout.workspaceMode).toBe("scene_result");
+    expect(layout.shellView).toBe("result");
+  });
+
   it("keeps reader-journey tab as journey when not on boundary review view", () => {
     expect(
       mapUrlToActiveTab({
@@ -25,6 +45,19 @@ describe("CHG-041 navigation helpers", () => {
         requestedTab: "reader-journey",
         chapterComplete: true,
         journeyAvailable: true,
+        sceneAvailable: true,
+        userPinnedTab: null,
+      }),
+    ).toBe("journey");
+  });
+
+  it("preserves CHG-023 journey resume over progress shell when not reviewing boundaries", () => {
+    expect(
+      mapUrlToActiveTab({
+        requestedView: "progress",
+        requestedTab: "reader-journey",
+        chapterComplete: false,
+        journeyAvailable: false,
         sceneAvailable: true,
         userPinnedTab: null,
       }),
