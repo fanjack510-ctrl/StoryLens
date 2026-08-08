@@ -3,9 +3,9 @@
   "title": "Fix Whole-Book token budget bug and consolidate AI provider settings",
   "type": "fix",
   "base_version": "1.2.0",
-  "status": "implemented",
+  "status": "tested",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": ["62ec288f150a5251578b279ab167c911364031c3"],
   "modules": ["apps/api", "apps/desktop"],
   "files": [
     "apps/api/app/narrative_core/services/whole_book_provider_orchestrator.py",
