@@ -7,7 +7,7 @@
   "include_in_next_release": true,
   "commits": [
     {
-      "sha": "b15b5c46142a1cf0a6956ec281bf696a10cf1e47",
+      "sha": "fe265fed2beaf4dd09844a1578e352f67e566bae",
       "message": "fix(whole-book): complete DeepSeek create and limit validation",
       "primary": true,
       "multi_change_reason": null
