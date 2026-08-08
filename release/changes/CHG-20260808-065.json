@@ -1,0 +1,59 @@
+{
+  "id": "CHG-20260808-065",
+  "title": "Unify default cloud provider selection and task routing",
+  "type": "feature",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "apps/api",
+    "apps/desktop"
+  ],
+  "files": [
+    "apps/api/app/services/task_routing_policy_v1.py",
+    "apps/api/app/services/cloud_provider_resolver_v1.py",
+    "apps/api/app/services/analysis_execution_plan.py",
+    "apps/api/app/api/v1/desktop.py",
+    "apps/desktop/src/pages/ProvidersPage.tsx",
+    "apps/desktop/src/components/settings/SettingsAiServiceTab.tsx",
+    "apps/desktop/src/components/analysis/StartAnalysisDialog.tsx",
+    "apps/desktop/src/components/providers/providerDisplayLabels.ts",
+    "apps/desktop/src/components/providers/DeepSeekForm.tsx",
+    "apps/api/tests/test_cloud_provider_routing_chg065.py",
+    "apps/desktop/src/components/providers/providerDisplayLabels.test.ts"
+  ],
+  "user_summary": "Unify cloud provider routing via default provider + task override + run pinning; remove Aliyun-centric hardcoding for follow-default tasks",
+  "technical_summary": "CloudProviderResolver + TaskRoutingPolicy; scene/structure/whole_book FOLLOW_DEFAULT; repair/resume INHERIT_RUN; high_difficulty FIXED aliyun_max; no silent Aliyun fallback.",
+  "acceptance_criteria": [
+    "default DeepSeek routes scene_boundary/structure/whole_book to DeepSeek",
+    "default Aliyun routes those to Aliyun",
+    "Run pin wins over Settings switch",
+    "No silent cross-provider fallback",
+    "Routing preview reflects real policy"
+  ],
+  "tests": [
+    "apps/api/tests/test_cloud_provider_routing_chg065.py",
+    "apps/desktop/src/components/providers/providerDisplayLabels.test.ts"
+  ],
+  "verification_evidence": [
+    "release/evidence/whole-book/CHG-20260808-065/TARGETED_TESTS.md",
+    "release/evidence/whole-book/CHG-20260808-065/TYPECHECK.txt"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": null,
+  "created_at": "2026-08-08T10:49:35Z",
+  "updated_at": "2026-08-08T10:55:06Z"
+}

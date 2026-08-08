@@ -101,7 +101,7 @@ export function DeepSeekForm({ onSaved }: { onSaved: () => void }) {
         api_key: form.api_key || null,
       });
       await settingsApi.setActiveCloudProvider(DEEPSEEK_PROVIDER);
-      setMsg(connect ? "已保存并设为当前云端 Provider" : "DeepSeek 配置已保存");
+      setMsg(connect ? "已保存并设为默认 AI 服务商" : "DeepSeek 配置已保存");
       const latest = await providersApi.configuration(DEEPSEEK_PROVIDER);
       setState(latest);
       setForm((f) => ({
@@ -250,7 +250,7 @@ export function DeepSeekForm({ onSaved }: { onSaved: () => void }) {
           保存配置
         </button>
         <button type="button" data-testid="deepseek-save-connect" onClick={() => save(true)}>
-          保存并设为当前
+          保存并设为默认
         </button>
         <button
           type="button"

@@ -473,10 +473,6 @@ def put_provider_configuration(
         is_aliyun_cloud_provider,
         is_deepseek_provider,
     )
-    from app.services.provider_runtime import (
-        FORMAL_CLOUD_PROVIDERS,
-        set_active_cloud_provider,
-    )
 
     if is_deepseek_provider(provider_name):
         ensure_deepseek_provider_configuration(session, create_if_missing=True)
@@ -486,9 +482,8 @@ def put_provider_configuration(
         )
     else:
         _bootstrap_provider_row(session, provider_name)
-    if provider_name in FORMAL_CLOUD_PROVIDERS and (value.enabled or not value.disconnected):
-        set_active_cloud_provider(session, provider_name)
-        session.commit()
+    # Saving Provider configuration must NOT change active_cloud_provider (CHG-065).
+    # Default switching is explicit via PUT /settings/active-cloud-provider or UI「设为默认」.
     return configuration_response(
         session.scalar(
             select(ProviderConfiguration).where(
@@ -684,43 +679,11 @@ def routing_preview(
     gateway: ModelGateway = Depends(get_model_gateway),
     session: Session = Depends(get_db),
 ):
-    providers = {item.name: item for item in gateway.providers()}
-    # Repair / retry inherit the run-frozen provider (DEFECT-CANARY-015).
-    # Do not advertise silent Flash fallback for JSON/schema repair.
-    # Whole-book formal path follows active_cloud_provider only — do not remap
-    # scene-boundary / structure / review tasks onto DeepSeek for this preview.
-    from app.services.provider_runtime import get_active_cloud_provider
+    """Task routing preview — reflects TaskRoutingPolicy + active default (CHG-065)."""
+    from app.services.cloud_provider_resolver_v1 import build_routing_preview
 
-    active_cloud = get_active_cloud_provider(session)
-    active_row = session.scalar(
-        select(ProviderConfiguration).where(ProviderConfiguration.provider_name == active_cloud)
-    )
-    whole_book_model = (
-        str(active_row.plus_model or "").strip()
-        if active_row is not None
-        else ""
-    )
-    routes: list[tuple[str, str, str | None]] = [
-        ("场景边界", "aliyun_qwen_plus", None),
-        ("场景结构", "aliyun_qwen_plus", None),
-        ("JSON/Schema修复(继承Run策略)", "aliyun_qwen_plus", None),
-        ("高难度人工复核", "aliyun_qwen_max", None),
-        ("全书分析", active_cloud, whole_book_model or None),
-        ("本地人工测试", "local_qwen14", None),
-        ("27B手工短任务", "local_qwen27_manual", None),
-    ]
-    return [
-        {
-            "task": task,
-            "provider": name,
-            "model": model,
-            "available": name in providers and providers[name].capabilities().enabled,
-            "sends_content_to_cloud": providers[name].capabilities().sends_content_to_cloud
-            if name in providers
-            else False,
-        }
-        for task, name, model in routes
-    ]
+    providers = {item.name: item for item in gateway.providers()}
+    return build_routing_preview(session, gateway_provider_names=set(providers.keys()))
 
 
 @router.get("/system/diagnostics")

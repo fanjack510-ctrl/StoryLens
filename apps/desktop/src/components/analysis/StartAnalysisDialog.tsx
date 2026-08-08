@@ -460,7 +460,7 @@ export function StartAnalysisDialog({
 }) {
   const developerMode = useDeveloperModeStore((s) => s.developerMode);
   const [mode, setMode] = useState(developerMode ? "local" : "cloud");
-  const [provider, setProvider] = useState(developerMode ? "" : DEFAULT_AI_SERVICE_ID);
+  const [provider, setProvider] = useState(developerMode ? "" : "");
   const [consent, setConsent] = useState(false);
   const [message, setMessage] = useState("");
   const [preflight, setPreflight] = useState<any>(null);
@@ -473,6 +473,15 @@ export function StartAnalysisDialog({
   const clientRequestId = useRef(crypto.randomUUID());
   const dialogRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
+  const activeCloud = useQuery({
+    queryKey: ["active-cloud-provider"],
+    queryFn: settingsApi.activeCloudProvider,
+    enabled: !developerMode,
+    refetchOnMount: "always",
+    staleTime: 0,
+  });
+  const defaultCloudProviderId =
+    activeCloud.data?.provider_name || DEFAULT_AI_SERVICE_ID;
   const providers = useQuery({
     queryKey: ["providers"], queryFn: providersApi.list, refetchOnMount: "always", staleTime: 0,
   });
@@ -490,15 +499,16 @@ export function StartAnalysisDialog({
     queryFn: settingsApi.cloudUsage,
   });
   const configuration = useQuery({
-    queryKey: ["provider-config", DEFAULT_AI_SERVICE_ID],
-    queryFn: () => providersApi.configuration(DEFAULT_AI_SERVICE_ID),
-    enabled: !developerMode,
+    queryKey: ["provider-config", defaultCloudProviderId],
+    queryFn: () => providersApi.configuration(defaultCloudProviderId),
+    enabled: !developerMode && Boolean(defaultCloudProviderId),
     refetchOnMount: "always",
     staleTime: 0,
   });
   const executionPlanQuery = useQuery({
-    queryKey: ["analysis-execution-plan", analysisModePreset, DEFAULT_AI_SERVICE_ID],
+    queryKey: ["analysis-execution-plan", analysisModePreset, defaultCloudProviderId],
     queryFn: () => analysisApi.executionPlan(analysisModePreset),
+    enabled: Boolean(defaultCloudProviderId) || developerMode,
     refetchOnMount: "always",
     staleTime: 0,
   });
@@ -514,21 +524,20 @@ export function StartAnalysisDialog({
 
   const defaultProvider = useMemo(
     () =>
-      eligible.find((p) => p.name === DEFAULT_AI_SERVICE_ID) ||
+      eligible.find((p) => p.name === defaultCloudProviderId) ||
       (eligible.length === 1 ? eligible[0] : null) ||
-      (providers.data || []).find((p) => p.name === DEFAULT_AI_SERVICE_ID) ||
+      (providers.data || []).find((p) => p.name === defaultCloudProviderId) ||
       (providers.data || []).find((p) => p.capabilities?.cloud) ||
       null,
-    [eligible, providers.data],
+    [eligible, providers.data, defaultCloudProviderId],
   );
-
   const unavailableReason = useMemo(() => {
     if (executionPlan?.user_message && !executionPlan.can_start) {
       return executionPlan.user_message;
     }
     if (eligible.length > 0) return null;
     const target =
-      (providers.data || []).find((p) => p.name === DEFAULT_AI_SERVICE_ID) ||
+      (providers.data || []).find((p) => p.name === defaultCloudProviderId) ||
       (providers.data || []).find((p) => p.capabilities?.cloud);
     const blockers = target?.manual_selection_blockers || [];
     if (!target || blockers.includes("credential_missing")) return "尚未配置 API Key";
@@ -564,6 +573,7 @@ export function StartAnalysisDialog({
     configuration.data?.credential_state,
     executionPlan?.user_message,
     executionPlan?.can_start,
+    defaultCloudProviderId,
   ]);
 
   const aiView = useMemo(
@@ -574,7 +584,7 @@ export function StartAnalysisDialog({
         cloudEnabled: cloud.data?.enabled ?? true,
         providerEligible:
           executionPlan?.can_start === true ||
-          eligible.some((p) => p.name === (defaultProvider?.name || DEFAULT_AI_SERVICE_ID)),
+          eligible.some((p) => p.name === (defaultProvider?.name || defaultCloudProviderId)),
       }),
     [
       developerMode,
@@ -584,6 +594,7 @@ export function StartAnalysisDialog({
       cloud.data?.enabled,
       eligible,
       executionPlan?.can_start,
+      defaultCloudProviderId,
     ],
   );
 
@@ -596,8 +607,8 @@ export function StartAnalysisDialog({
     if (developerMode) {
       if (eligible.length === 1 && provider !== eligible[0].name) {
         setProvider(eligible[0].name);
-      } else if (eligible.length === 0 && planAllowsStart && provider !== DEFAULT_AI_SERVICE_ID) {
-        setProvider(DEFAULT_AI_SERVICE_ID);
+      } else if (eligible.length === 0 && planAllowsStart && provider !== defaultCloudProviderId) {
+        setProvider(defaultCloudProviderId);
       }
       // Cloud provider + stale local mode → coerce to cloud (RC2 CLOUD_MODE_REQUIRED).
       // Do not coerce while providers are still loading, or when a local-capable
@@ -611,31 +622,31 @@ export function StartAnalysisDialog({
         mode === "local" &&
         Array.isArray(providers.data) &&
         eligible.length === 0 &&
-        (providers.data || []).some((p) => p.name === DEFAULT_AI_SERVICE_ID && p.capabilities?.cloud)
+        (providers.data || []).some((p) => p.name === defaultCloudProviderId && p.capabilities?.cloud)
       ) {
         setMode("cloud");
       }
       return;
     }
     const preferred =
-      eligible.find((p) => p.name === DEFAULT_AI_SERVICE_ID)?.name ||
+      eligible.find((p) => p.name === defaultCloudProviderId)?.name ||
       (eligible.length === 1 ? eligible[0].name : null) ||
-      DEFAULT_AI_SERVICE_ID;
+      defaultCloudProviderId;
     if (preferred && provider !== preferred) {
       setProvider(preferred);
     }
     if (mode !== "cloud") setMode("cloud");
-  }, [developerMode, eligible, provider, mode, planAllowsStart, providers.data]);
+  }, [developerMode, eligible, provider, mode, planAllowsStart, providers.data, defaultCloudProviderId]);
 
   useEffect(() => {
     if (provider && !eligible.some((item) => item.name === provider)) {
       if (developerMode) {
         if (eligible.length === 1) setProvider(eligible[0].name);
-        else if (planAllowsStart) setProvider(DEFAULT_AI_SERVICE_ID);
+        else if (planAllowsStart) setProvider(defaultCloudProviderId);
         else setProvider("");
       }
     }
-  }, [eligible, provider, developerMode, planAllowsStart]);
+  }, [eligible, provider, developerMode, planAllowsStart, defaultCloudProviderId]);
 
   useEffect(() => {
     setPreflight(null);
@@ -1210,7 +1221,7 @@ export function StartAnalysisDialog({
                       )}
                       {(eligible.length > 0
                         ? eligible
-                        : (providers.data || []).filter((p) => p.name === DEFAULT_AI_SERVICE_ID)
+                        : (providers.data || []).filter((p) => p.name === defaultCloudProviderId)
                       ).map((item) => (
                         <option key={item.name} value={item.name}>
                           {formatProviderOptionLabel(item, eligible.length ? eligible : [item])}

@@ -151,6 +151,13 @@ export function ProvidersPage() {
     queryKey: ["providers"],
     queryFn: providersApi.list,
   });
+  const activeCloud = useQuery({
+    queryKey: ["active-cloud-provider"],
+    queryFn: settingsApi.activeCloudProvider,
+    refetchOnMount: "always",
+    staleTime: 0,
+  });
+  const activeProviderName = activeCloud.data?.provider_name || "";
   const cloud = useQuery({ queryKey: ["cloud"], queryFn: providersApi.cloud });
   const configProfile = useQuery({
     queryKey: ["config-profile"],
@@ -160,7 +167,7 @@ export function ProvidersPage() {
   const usage = useQuery({ queryKey: ["cloud-usage"], queryFn: settingsApi.cloudUsage });
   const pricing = useQuery({ queryKey: ["cloud-pricing"], queryFn: settingsApi.cloudPricing });
   const routing = useQuery({
-    queryKey: ["routing"],
+    queryKey: ["routing", activeProviderName],
     queryFn: providersApi.routing,
   });
   const refresh = () => {
@@ -169,6 +176,8 @@ export function ProvidersPage() {
     qc.invalidateQueries({ queryKey: ["cloud-usage"] });
     qc.invalidateQueries({ queryKey: ["cloud-pricing"] });
     qc.invalidateQueries({ queryKey: ["config-profile"] });
+    qc.invalidateQueries({ queryKey: ["active-cloud-provider"] });
+    qc.invalidateQueries({ queryKey: ["routing"] });
   };
   const blockedReasons = usage.data?.blocked_reasons ?? ["预算状态正在加载"];
   const runTransportDiagnostic = async () => {
@@ -411,12 +420,15 @@ export function ProvidersPage() {
             </div>
           </header>
           {providers.data?.map((p) => {
-            const status = providerListStatusLabel(p);
+            const isDefault = p.name === activeProviderName;
+            const status = providerListStatusLabel(p, { isDefault });
             return (
               <button
                 key={p.name}
                 type="button"
                 className={selected === p.name ? "selected" : ""}
+                data-testid={`provider-card-${p.name}`}
+                data-is-default={isDefault ? "true" : "false"}
                 onClick={() => {
                   setSelected(p.name);
                   setTransportStatus("idle");
@@ -479,8 +491,8 @@ export function ProvidersPage() {
         <article className="panel config-panel providers-section providers-config-panel">
           <header>
             <div>
-              <p className="eyebrow">当前配置</p>
-              <h2>{selectedDisplay}</h2>
+              <p className="eyebrow">正在编辑</p>
+              <h2 data-testid="provider-editing-title">{selectedDisplay}</h2>
               <code className="providers-tech-id">{selected}</code>
             </div>
             <Badge>
@@ -488,6 +500,30 @@ export function ProvidersPage() {
                 "local"}
             </Badge>
           </header>
+          <div className="notice" data-testid="providers-default-status-banner">
+            <b>当前默认 AI 服务商</b>
+            <span>
+              {activeProviderName
+                ? `${providerDisplayName(activeProviderName)} · ${
+                    providers.data?.find((p) => p.name === activeProviderName)?.default_model ||
+                    "—"
+                  }`
+                : "加载中…"}
+            </span>
+            <span>点击左侧卡片仅切换“正在编辑”的配置，不会改变默认服务商。</span>
+            {selected !== activeProviderName && activeProviderName ? (
+              <button
+                type="button"
+                data-testid="provider-set-as-default"
+                onClick={async () => {
+                  await settingsApi.setActiveCloudProvider(selected);
+                  refresh();
+                }}
+              >
+                设为默认
+              </button>
+            ) : null}
+          </div>
           {selected === "deepseek" ? (
             <>
               <div className="notice">
@@ -737,18 +773,21 @@ export function ProvidersPage() {
             </div>
           </header>
           {routing.data?.map((r) => (
-            <div key={r.task} className="providers-routing-row">
+            <div key={r.task} className="providers-routing-row" data-testid={`routing-row-${r.task_type || r.task}`}>
               <b>{r.task}</b>
               <span>
-                →{" "}
-                <code className="providers-tech-id">
-                  {r.provider}
-                </code>
-                {r.model ? (
+                → {r.policy_label ? <em>{r.policy_label}</em> : null}
+                {r.provider && r.provider !== "(inherit_run)" ? (
                   <>
                     {" "}
-                    /{" "}
-                    <code className="providers-tech-id">{r.model}</code>
+                    <code className="providers-tech-id">{r.provider}</code>
+                    {r.model ? (
+                      <>
+                        {" "}
+                        /{" "}
+                        <code className="providers-tech-id">{r.model}</code>
+                      </>
+                    ) : null}
                   </>
                 ) : null}
               </span>

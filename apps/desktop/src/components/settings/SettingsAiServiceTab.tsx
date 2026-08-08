@@ -345,12 +345,12 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
 
       <section className="settings-hero-card" data-testid="ai-active-cloud-provider">
         <header className="settings-panel-header">
-          <h2>AI 服务商</h2>
+          <h2>当前默认 AI 服务商</h2>
         </header>
         <label className="settings-field">
-          <span>AI 服务商</span>
+          <span>当前默认 AI 服务商</span>
           <select
-            aria-label="AI 服务商"
+            aria-label="当前默认 AI 服务商"
             data-testid="ai-cloud-provider-select"
             value={selectedProviderId}
             onChange={async (e) => {
@@ -359,13 +359,14 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
                 await settingsApi.setActiveCloudProvider(next);
                 setUserMessage(
                   next === DEEPSEEK_PROVIDER_ID
-                    ? "已切换到 DeepSeek（不会删除阿里云密钥）。"
-                    : "已切换到阿里云百炼（不会删除 DeepSeek 密钥）。",
+                    ? "已切换默认服务商为 DeepSeek（不会删除阿里云密钥）。"
+                    : "已切换默认服务商为阿里云百炼（不会删除 DeepSeek 密钥）。",
                 );
                 await qc.invalidateQueries({ queryKey: ["active-cloud-provider"] });
                 await qc.invalidateQueries({ queryKey: ["provider-config"] });
                 await qc.invalidateQueries({ queryKey: ["whole-book-free-prepare"] });
                 await qc.invalidateQueries({ queryKey: ["routing"] });
+                await qc.invalidateQueries({ queryKey: ["analysis-execution-plan"] });
                 await activeCloud.refetch();
               } catch (err: any) {
                 setUserMessage(stripRawErrorCodes(err?.message || "切换服务商失败"));
@@ -376,8 +377,9 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
             <option value={DEEPSEEK_PROVIDER_ID}>DeepSeek</option>
           </select>
         </label>
-        <p className="settings-status-reason">
-          切换服务商不会删除另一方已保存的 API Key。也可在「模型与API」中管理详细配置。
+        <p className="settings-status-reason" data-testid="ai-default-provider-help">
+          新建 AI 分析任务默认使用此服务商。已创建任务继续使用创建时的 Provider / Model。
+          切换不会删除另一方已保存的 API Key。也可在「模型与API」中管理详细配置。
         </p>
         <p>
           <Link to="/providers" data-testid="ai-open-providers-link">
@@ -420,13 +422,13 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
         </p>
         <dl className="settings-status-meta" data-testid="ai-service-status-meta">
           <div>
-            <dt>当前服务</dt>
+            <dt>当前默认服务</dt>
             <dd data-testid="ai-service-current-provider">
               {selectedProviderId === DEEPSEEK_PROVIDER_ID ? "DeepSeek" : "阿里云百炼"}
             </dd>
           </div>
           <div>
-            <dt>当前模型</dt>
+            <dt>默认模型</dt>
             <dd data-testid="ai-service-current-model">{validatedModel}</dd>
           </div>
           {validatedAtDisplay ? (
@@ -456,7 +458,9 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
           <li>Provider：{providerEnabled ? "已启用" : "未启用"}</li>
           <li>云端分析：{cloudEnabled ? "已开启" : "未开启"}</li>
           <li>最终分析就绪：{uiState === "READY" ? "是" : "否"}</li>
-          <li data-testid="ai-service-default-provider-label">默认服务：阿里云百炼（推荐）</li>
+          <li data-testid="ai-service-default-provider-label">
+            默认服务：{selectedProviderId === DEEPSEEK_PROVIDER_ID ? "DeepSeek" : "阿里云百炼"}
+          </li>
         </ul>
       </section>
 

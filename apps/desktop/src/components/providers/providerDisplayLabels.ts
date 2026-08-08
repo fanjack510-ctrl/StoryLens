@@ -32,33 +32,41 @@ const HEALTH_LABELS: Record<string, string> = {
   stale: "状态过期",
 };
 
-/** Primary list badge: 已启用 / 已停用 / 凭据无效 / 连接失败 / 健康… */
-export function providerListStatusLabel(p: {
-  enabled?: boolean;
-  healthy?: boolean;
-  running?: boolean;
-  connected?: boolean;
-  credential_state?: string;
-  health_state?: string;
-  capabilities?: { enabled?: boolean };
-}): { label: string; tone: "success" | "warning" | "danger" | "neutral" } {
+/** Primary list badge: 当前默认 / 已启用 / 已停用 / … (enabled ≠ active). */
+export function providerListStatusLabel(
+  p: {
+    name?: string;
+    enabled?: boolean;
+    healthy?: boolean;
+    running?: boolean;
+    connected?: boolean;
+    credential_state?: string;
+    health_state?: string;
+    capabilities?: { enabled?: boolean };
+  },
+  options?: { isDefault?: boolean },
+): { label: string; tone: "success" | "warning" | "danger" | "neutral" } {
   const enabled = p.enabled ?? p.capabilities?.enabled;
+  if (options?.isDefault && enabled) {
+    return { label: "当前默认", tone: "success" };
+  }
   if (!enabled) {
     return { label: "已停用", tone: "neutral" };
   }
   if (p.credential_state === "invalid") {
     return { label: "凭据无效", tone: "danger" };
   }
-  if (p.healthy) {
+  // Enabled + configured path: never confuse connection failure with "not default".
+  if (p.connected === false || p.health_state === "unhealthy") {
+    return { label: "已启用 · 连接失败", tone: "warning" };
+  }
+  if (p.healthy || p.credential_state === "configured") {
     return { label: "已启用", tone: "success" };
   }
-  if (p.connected === false || p.health_state === "unhealthy") {
-    return { label: "连接失败", tone: "warning" };
-  }
   if (p.running) {
-    return { label: "不健康", tone: "warning" };
+    return { label: "已启用", tone: "warning" };
   }
-  return { label: "服务未启动", tone: "warning" };
+  return { label: "已启用", tone: "success" };
 }
 
 export function credentialStateLabel(state?: string | null): string {

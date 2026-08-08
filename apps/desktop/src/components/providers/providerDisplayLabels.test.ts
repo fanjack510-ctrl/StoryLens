@@ -25,7 +25,13 @@ describe("providerDisplayLabels", () => {
         healthy: false,
         connected: false,
       }).label,
-    ).toBe("连接失败");
+    ).toBe("已启用 · 连接失败");
+    expect(
+      providerListStatusLabel(
+        { enabled: true, healthy: true, connected: true },
+        { isDefault: true },
+      ).label,
+    ).toBe("当前默认");
   });
 
   it("localizes credential / cloud / health states", () => {

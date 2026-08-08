@@ -38,6 +38,13 @@ MODE_DEFAULT_MODELS: dict[str, str] = {
     "QUALITY": "qwen3.7-max",
 }
 
+DEEPSEEK_MODE_DEFAULT_MODELS: dict[str, str] = {
+    "FAST": "deepseek-v4-flash",
+    "BALANCED": "deepseek-v4-flash",
+    "QUALITY": "deepseek-v4-pro",
+}
+
+# Legacy alias — new code must resolve via active_cloud_provider (CHG-065).
 CANONICAL_PROVIDER_ID = "aliyun_qwen_plus"
 
 REASON_COPY: dict[str, str] = {
@@ -120,12 +127,21 @@ class AnalysisExecutionPlan:
         }
 
 
-def _resolve_mode_model(session: Session, mode: str) -> str:
+def _resolve_mode_model(session: Session, mode: str, provider_id: str) -> str:
+    from app.services.provider_bootstrap import is_deepseek_provider
+
     row = (
         session.query(ProviderConfiguration)
-        .filter_by(provider_name=CANONICAL_PROVIDER_ID)
+        .filter_by(provider_name=provider_id)
         .one_or_none()
     )
+    if is_deepseek_provider(provider_id):
+        if mode == "CUSTOM":
+            return (row.plus_model if row and row.plus_model else DEEPSEEK_MODE_DEFAULT_MODELS["BALANCED"])
+        if row and row.plus_model and mode in {"FAST", "BALANCED", "QUALITY"}:
+            # Persist per-provider default (Flash/Pro); mode table is fallback only.
+            return row.plus_model
+        return DEEPSEEK_MODE_DEFAULT_MODELS.get(mode, DEEPSEEK_MODE_DEFAULT_MODELS["BALANCED"])
     if mode == "CUSTOM":
         return (row.plus_model if row and row.plus_model else MODE_DEFAULT_MODELS["BALANCED"])
     if row and row.plus_model and mode in {"FAST", "BALANCED", "QUALITY"}:
@@ -134,7 +150,20 @@ def _resolve_mode_model(session: Session, mode: str) -> str:
     return MODE_DEFAULT_MODELS.get(mode, MODE_DEFAULT_MODELS["BALANCED"])
 
 
-def _user_message_for(blockers: list[str]) -> str:
+def _user_message_for(blockers: list[str], *, provider_id: str | None = None) -> str:
+    from app.services.provider_bootstrap import is_deepseek_provider
+
+    if provider_id and any(
+        code in {
+            "provider_not_configured",
+            "credential_missing",
+            "provider_disabled",
+            "provider_disconnected",
+        }
+        for code in blockers
+    ):
+        label = "DeepSeek" if is_deepseek_provider(provider_id) else "阿里云百炼"
+        return f"当前默认 AI 服务商 {label} 不可用，请前往设置检查。"
     for code in blockers:
         if code in REASON_COPY:
             return REASON_COPY[code]
@@ -151,17 +180,56 @@ def build_analysis_execution_plan(
     mode: str = "BALANCED",
     pricing_path: Path | None = None,
 ) -> AnalysisExecutionPlan:
+    from app.services.cloud_provider_resolver_v1 import (
+        ProviderResolutionError,
+        resolve_provider_for_task,
+    )
+    from app.services.task_routing_policy_v1 import TASK_SCENE_BOUNDARY
+
     normalized = (mode or "BALANCED").upper()
     if normalized not in {"FAST", "BALANCED", "QUALITY", "CUSTOM"}:
         normalized = "BALANCED"
     pricing = pricing_path or Path("config/cloud_pricing.json")
-    provider = gateway.get(CANONICAL_PROVIDER_ID)
+
+    try:
+        resolved = resolve_provider_for_task(
+            session,
+            task_type=TASK_SCENE_BOUNDARY,
+            preview=False,
+        )
+        provider_id = resolved.provider_name
+    except ProviderResolutionError as exc:
+        # Surface fail-closed default-provider errors without Aliyun substitute.
+        from app.services.provider_runtime import get_active_cloud_provider
+
+        provider_id = get_active_cloud_provider(session)
+        model_id = _resolve_mode_model(session, normalized, provider_id)
+        return AnalysisExecutionPlan(
+            mode=normalized,
+            selected_provider=provider_id,
+            selected_model=model_id,
+            configured=False,
+            credential_available=False,
+            connection_verified=False,
+            supported_stages=[],
+            missing_stages=list(PIPELINE_STAGES),
+            stage_bindings=[],
+            blockers=["provider_not_configured"],
+            unsupported_reason="provider_not_configured",
+            user_message=exc.message,
+            can_start=False,
+            health_state="unhealthy",
+            health_source="resolver",
+            provider_state_version="",
+        )
+
+    provider = gateway.get(provider_id)
     capabilities: ProviderCapabilities = provider.capabilities()
-    model_id = _resolve_mode_model(session, normalized)
+    model_id = _resolve_mode_model(session, normalized, provider_id)
 
     eligibility = evaluate_manual_boundary_candidate(
         session,
-        provider_name=CANONICAL_PROVIDER_ID,
+        provider_name=provider_id,
         capabilities=capabilities,
         store=store,
         pricing_path=pricing,
@@ -177,7 +245,7 @@ def build_analysis_execution_plan(
     # Stronger verified signal from durable settings snapshot when present.
     snapshot = load_validation_snapshot(session)
     current_fp = build_current_fingerprints(
-        session, store, provider_id=CANONICAL_PROVIDER_ID
+        session, store, provider_id=provider_id
     )
     snapshot_ok = bool(
         snapshot
@@ -216,7 +284,7 @@ def build_analysis_execution_plan(
         stage_bindings.append(
             StageBinding(
                 stage=stage,
-                provider_id=CANONICAL_PROVIDER_ID,
+                provider_id=provider_id,
                 model_id=model_id,
                 supported=ok,
                 reason=reason,
@@ -251,12 +319,14 @@ def build_analysis_execution_plan(
         can_start = True
         blockers = []
 
-    user_message = _user_message_for(blockers) if not can_start else "可以开始分析"
+    user_message = (
+        _user_message_for(blockers, provider_id=provider_id) if not can_start else "可以开始分析"
+    )
     unsupported_reason = blockers[0] if blockers else None
 
     return AnalysisExecutionPlan(
         mode=normalized,
-        selected_provider=CANONICAL_PROVIDER_ID,
+        selected_provider=provider_id,
         selected_model=model_id,
         configured=configured,
         credential_available=credential_available,
