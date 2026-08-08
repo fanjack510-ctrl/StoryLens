@@ -19,13 +19,13 @@ from app.narrative_core.services.whole_book_free_product_v1_service import (
 from tests.whole_book_minimal_test_helpers import make_engine, seed_sample_s_book
 
 
-def test_free_product_flag_default_false(monkeypatch) -> None:
+def test_free_product_flag_default_true(monkeypatch) -> None:
     monkeypatch.delenv("STORYLENS_WHOLE_BOOK_FREE_PRODUCT_ENABLED", raising=False)
-    assert free_product_enabled() is False
+    assert free_product_enabled() is True
 
 
-def test_prepare_requires_feature_flag(tmp_path, monkeypatch) -> None:
-    monkeypatch.delenv("STORYLENS_WHOLE_BOOK_FREE_PRODUCT_ENABLED", raising=False)
+def test_prepare_respects_explicit_feature_flag_off(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("STORYLENS_WHOLE_BOOK_FREE_PRODUCT_ENABLED", "false")
     engine = make_engine(tmp_path, "wb17-flag.db")
     factory = sessionmaker(bind=engine)
     with factory() as session:

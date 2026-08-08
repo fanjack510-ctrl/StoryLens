@@ -131,7 +131,7 @@ function ProductUnavailable() {
   return (
     <section className={styles.wholeBookFreeUnavailable} data-testid="whole-book-free-unavailable">
       <h1>全书分析</h1>
-      <p>正式全书分析入口未启用。请设置 VITE_WHOLE_BOOK_FREE_PRODUCT_ENABLED=true 后重试。</p>
+      <p>正式全书分析入口未启用。若需开启，请将 VITE_WHOLE_BOOK_FREE_PRODUCT_ENABLED 设为 true。</p>
       <p className="muted">
         <Link to="/library">返回书库</Link>
       </p>

@@ -233,6 +233,10 @@ fn spawn_sidecar(
         .env("STORYLENS_APP_PORT", port.to_string())
         .env("STORYLENS_APP_ENV", "production")
         .env("STORYLENS_SHUTDOWN_TOKEN", shutdown_token)
+        // V1.2.0 Free contract: installed production sidecar enables formal whole-book.
+        // Fixture / diagnostics remain off unless explicitly set by the process environment.
+        .env("STORYLENS_WHOLE_BOOK_FREE_PRODUCT_ENABLED", "true")
+        .env("STORYLENS_WHOLE_BOOK_REAL_PROVIDER_ENABLED", "true")
         .stdout(Stdio::null())
         .stderr(Stdio::piped());
 

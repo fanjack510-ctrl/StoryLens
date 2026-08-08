@@ -30,10 +30,12 @@ const wholeBookDiagnosticsEnabled = (() => {
 })();
 
 const wholeBookFreeProductEnabled = (() => {
+  // V1.2.0 Free contract: formal whole-book product is ON by default in production builds.
+  // Explicit env false/0/off still disables (dev/test). Fixture/diagnostics stay separate defaults OFF.
   const raw =
     process.env.VITE_WHOLE_BOOK_FREE_PRODUCT_ENABLED ||
     process.env.STORYLENS_WHOLE_BOOK_FREE_PRODUCT_ENABLED ||
-    "false";
+    "true";
   const value = String(raw).trim().toLowerCase();
   return value === "1" || value === "true" || value === "yes" || value === "on";
 })();
@@ -65,7 +67,7 @@ export default defineConfig({
     __STORYLENS_PRO_NATIVE_OVERVIEW_ENABLED__: JSON.stringify(nativeOverviewUiEnabled),
     // Wave B diagnostics page — repo default remains false.
     __STORYLENS_WHOLE_BOOK_DIAGNOSTICS_ENABLED__: JSON.stringify(wholeBookDiagnosticsEnabled),
-    // Wave D formal Free whole-book product — repo default remains false.
+    // Wave D / V1.2.0 formal Free whole-book product — production default ON.
     __STORYLENS_WHOLE_BOOK_FREE_PRODUCT_ENABLED__: JSON.stringify(wholeBookFreeProductEnabled),
     __STORYLENS_WHOLE_BOOK_FIXTURE_PREVIEW_ENABLED__: JSON.stringify(wholeBookFixturePreviewEnabled),
   },

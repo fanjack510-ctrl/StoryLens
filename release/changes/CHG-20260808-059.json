@@ -1,0 +1,61 @@
+{
+  "id": "CHG-20260808-059",
+  "title": "Fix Free whole-book entry missing in production installer",
+  "type": "fix",
+  "base_version": "1.2.0",
+  "status": "verified",
+  "include_in_next_release": true,
+  "commits": [
+    {
+      "sha": "73bf11c54b94dd07607eab9da0f0553a635408d5",
+      "message": "fix(whole-book): enable Free product in installed production build",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "desktop",
+    "api"
+  ],
+  "files": [
+    "apps/desktop/vite.config.ts",
+    "apps/desktop/src/services/wholeBookFreeProductFlag.ts",
+    "apps/desktop/src/pages/WholeBookFreeProductPage.tsx",
+    "apps/desktop/src-tauri/src/backend.rs",
+    "apps/desktop/src-tauri/Cargo.toml",
+    "apps/api/app/narrative_core/services/whole_book_free_product_v1_service.py",
+    "apps/api/app/narrative_core/services/whole_book_minimal_helpers_v1.py",
+    "apps/api/tests/test_whole_book_wb17_free_product_api.py"
+  ],
+  "user_summary": "Installed V1.2.0 production UI shows Free whole-book entry (全书分析); production defaults Free product + real provider ON.",
+  "technical_summary": "Default Free whole-book ON for production/Tauri: vite + runtime flag, API free/real-provider defaults, sidecar env. Restore 全书分析 toolbar entry without Dev/Fixture.",
+  "acceptance_criteria": [
+    "MANUAL INSTALLED UI: PASS",
+    "WHOLE-BOOK ENTRY: PRESENT",
+    "Dev Harness / Fake Provider / Fixture formal create remain OFF"
+  ],
+  "tests": [
+    "apps/api/tests/test_whole_book_wb17_free_product_api.py (flag defaults)"
+  ],
+  "verification_evidence": [
+    "release/evidence/whole-book/CHG-20260808-059/ROOT_CAUSE.md",
+    "release/evidence/whole-book/CHG-20260808-059/FIX_AND_BUNDLE_CHECK.md",
+    "release/evidence/whole-book/CHG-20260808-059/MANUAL_INSTALLED_UI.md"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-08-08T03:46:59Z",
+  "updated_at": "2026-08-08T04:35:32Z"
+}

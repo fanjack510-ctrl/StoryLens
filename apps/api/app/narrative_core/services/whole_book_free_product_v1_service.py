@@ -42,7 +42,9 @@ from app.narrative_core.services.whole_book_windowing_v1_service import generate
 
 
 def free_product_enabled() -> bool:
-    return os.environ.get("STORYLENS_WHOLE_BOOK_FREE_PRODUCT_ENABLED", "false").lower() in {
+    # V1.2.0 Free contract: formal whole-book product ON by default in production.
+    # Explicit false/0/off still disables. Fixture preview remains default OFF.
+    return os.environ.get("STORYLENS_WHOLE_BOOK_FREE_PRODUCT_ENABLED", "true").lower() in {
         "1",
         "true",
         "yes",

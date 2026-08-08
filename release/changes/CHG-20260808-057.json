@@ -7,9 +7,20 @@
   "include_in_next_release": true,
   "parent_plan": "CHG-20260807-056",
   "wb_step_id": "WB-2.2.3-V120-L3-PROVIDER",
-  "depends_on": ["CHG-20260807-056"],
-  "commits": [],
-  "modules": ["release/evidence/whole-book/CHG-20260808-057"],
+  "depends_on": [
+    "CHG-20260807-056"
+  ],
+  "commits": [
+    {
+      "sha": "5153f8b25850d654502621e4b69eb4a2f541df71",
+      "message": "test(whole-book): verify V1.2.0 real Provider L3",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "release/evidence/whole-book/CHG-20260808-057"
+  ],
   "files": [
     "release/evidence/whole-book/CHG-20260808-057/",
     "release/changes/CHG-20260808-057.json"
@@ -31,8 +42,15 @@
     "actual_window_units": 188
   },
   "observations": [
-    {"id": "OBS-L3B-001", "status": "NON_BLOCKING"},
-    {"id": "OBS-L3B-002", "status": "NON_BLOCKING_COST_ACCURACY_DEBT", "summary": "window estimate 162 vs actual 188"}
+    {
+      "id": "OBS-L3B-001",
+      "status": "NON_BLOCKING"
+    },
+    {
+      "id": "OBS-L3B-002",
+      "status": "NON_BLOCKING_COST_ACCURACY_DEBT",
+      "summary": "window estimate 162 vs actual 188"
+    }
   ],
   "verification_evidence": [
     "release/evidence/whole-book/CHG-20260808-057/LONG_RUN.json",
@@ -45,5 +63,6 @@
     "notes": "Temp L3 long DB only; formal user DB writes 0."
   },
   "created_at": "2026-08-07T16:25:00Z",
-  "updated_at": "2026-08-07T18:10:00Z"
+  "updated_at": "2026-08-08T04:32:48Z",
+  "head_inclusion": "INCLUDED"
 }

@@ -73,7 +73,9 @@ MINIMAL_RELATION_TYPES = frozenset(
 
 
 def real_provider_enabled() -> bool:
-    return os.environ.get("STORYLENS_WHOLE_BOOK_REAL_PROVIDER_ENABLED", "false").lower() in {
+    # V1.2.0 Free formal path: real Provider ON by default (Aliyun via ModelGateway).
+    # Explicit false/0/off still disables. Fixture preview remains a separate flag.
+    return os.environ.get("STORYLENS_WHOLE_BOOK_REAL_PROVIDER_ENABLED", "true").lower() in {
         "1",
         "true",
         "yes",
