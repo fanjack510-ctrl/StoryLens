@@ -1,0 +1,19 @@
+{
+  "calls": 350,
+  "ok": 350,
+  "fail": 0,
+  "wall_sec": 5965.6,
+  "last": {
+    "n": 350,
+    "label": "chapter_functions",
+    "unit_key": "chapter_functions:v2:batch:159",
+    "unit_type": "book_synthesis",
+    "started_at": "2026-08-07T18:06:44.437953+00:00",
+    "finished_at": "2026-08-07T18:06:54.605576+00:00",
+    "elapsed_sec": 10.168,
+    "ok": true,
+    "error_code": null,
+    "input_tokens": 550,
+    "output_tokens": 509
+  }
+}

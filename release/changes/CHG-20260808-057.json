@@ -1,0 +1,49 @@
+{
+  "id": "CHG-20260808-057",
+  "title": "Execute full long-book Free real Provider L3-C",
+  "type": "validation",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": true,
+  "parent_plan": "CHG-20260807-056",
+  "wb_step_id": "WB-2.2.3-V120-L3-PROVIDER",
+  "depends_on": ["CHG-20260807-056"],
+  "commits": [],
+  "modules": ["release/evidence/whole-book/CHG-20260808-057"],
+  "files": [
+    "release/evidence/whole-book/CHG-20260808-057/",
+    "release/changes/CHG-20260808-057.json"
+  ],
+  "user_summary": "《我不是戏神》1299章真实四模块全量跑通：353 calls，CF 1299/1299，无重复/无 repair，L3-C PASS。",
+  "technical_summary": "Isolated long DB; formal aliyun_qwen_plus/qwen3.7-plus; windows 188 (est 162); CF 163 batches; wall ~100.5min; evidence 30/30; OBS-002 cost accuracy debt.",
+  "l3_gates": {
+    "L3-A": "PASS",
+    "L3-B": "PASS",
+    "L3-C": "PASS"
+  },
+  "sample": {
+    "title": "我不是戏神",
+    "chapter_count": 1299,
+    "character_count": 2672342,
+    "estimated_provider_units": 490,
+    "actual_provider_units": 353,
+    "actual_provider_calls": 353,
+    "actual_window_units": 188
+  },
+  "observations": [
+    {"id": "OBS-L3B-001", "status": "NON_BLOCKING"},
+    {"id": "OBS-L3B-002", "status": "NON_BLOCKING_COST_ACCURACY_DEBT", "summary": "window estimate 162 vs actual 188"}
+  ],
+  "verification_evidence": [
+    "release/evidence/whole-book/CHG-20260808-057/LONG_RUN.json",
+    "release/evidence/whole-book/CHG-20260808-057/L3_C_LONG_DECISION.md"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "Temp L3 long DB only; formal user DB writes 0."
+  },
+  "created_at": "2026-08-07T16:25:00Z",
+  "updated_at": "2026-08-07T18:10:00Z"
+}
