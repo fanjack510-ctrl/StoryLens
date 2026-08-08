@@ -7,7 +7,7 @@
   "include_in_next_release": true,
   "commits": [
     {
-      "sha": "73bf11c54b94dd07607eab9da0f0553a635408d5",
+      "sha": "92ac5e99fe2f451f40c9e2d854534e453ede5522",
       "message": "fix(whole-book): enable Free product in installed production build",
       "primary": true,
       "multi_change_reason": null
