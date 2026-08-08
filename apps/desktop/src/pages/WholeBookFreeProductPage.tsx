@@ -8,6 +8,7 @@ import { ApiError } from "../services/apiClient";
 import { isWholeBookFixturePreviewEnabled } from "../services/wholeBookFixturePreviewFlag";
 import { isWholeBookFreeProductEnabled } from "../services/wholeBookFreeProductFlag";
 import { isWholeBookRealProviderEnabled } from "../services/wholeBookRealProviderFlag";
+import { settingsApi } from "../services/settingsApi";
 import {
   BOOK_OVERVIEW_CLAIM_LABELS,
   BOOK_OVERVIEW_CLAIM_ORDER,
@@ -153,7 +154,7 @@ function WholeBookFreeProductPageEnabled() {
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const fixturePreviewOn = isWholeBookFixturePreviewEnabled();
-  const realProviderOn = isWholeBookRealProviderEnabled();
+  const realProviderFlagOn = isWholeBookRealProviderEnabled();
 
   const moduleFromUrl = parseModuleParam(searchParams.get("module"));
   const [activeModule, setActiveModuleState] = useState<WholeBookModuleKey>(
@@ -194,11 +195,22 @@ function WholeBookFreeProductPageEnabled() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerError, setDrawerError] = useState<string | null>(null);
 
+  const activeCloudQuery = useQuery({
+    queryKey: ["active-cloud-provider"],
+    queryFn: settingsApi.activeCloudProvider,
+    refetchOnMount: "always",
+    staleTime: 0,
+  });
+  const activeProviderName = activeCloudQuery.data?.provider_name ?? "unknown";
+
   const prepareQuery = useQuery({
-    queryKey: ["whole-book-free-prepare", bookId],
+    // Provider/model participate in identity so switching DeepSeek↔Aliyun forces re-Prepare.
+    queryKey: ["whole-book-free-prepare", bookId, activeProviderName],
     queryFn: () => wholeBookFreeProductApi.prepare(bookId),
-    enabled: bookId > 0,
+    enabled: bookId > 0 && Boolean(activeCloudQuery.data?.provider_name),
     retry: false,
+    staleTime: 0,
+    refetchOnMount: "always",
     refetchInterval: (query) => {
       const run = query.state.data?.latest_run;
       return run && isActiveRun(run.status) ? 3000 : false;
@@ -527,8 +539,9 @@ function WholeBookFreeProductPageEnabled() {
 
   const canStartFormal =
     consented &&
-    realProviderOn &&
-    prepare.run_creation_enabled &&
+    realProviderFlagOn &&
+    Boolean(prepare.run_creation_enabled) &&
+    Boolean(prepare.provider_available !== false) &&
     !createFormalMutation.isPending;
 
   return (
@@ -622,7 +635,8 @@ function WholeBookFreeProductPageEnabled() {
               limits={limits}
               onLimitsChange={setLimits}
               canStartFormal={canStartFormal}
-              realProviderOn={realProviderOn}
+              realProviderOn={realProviderFlagOn && Boolean(prepare.run_creation_enabled)}
+              providerBlockers={prepare.blocking_reasons ?? []}
               fixturePreviewOn={fixturePreviewOn}
               actionError={actionError}
               startingFormal={createFormalMutation.isPending}
@@ -778,6 +792,7 @@ function PreparePanel({
   onLimitsChange,
   canStartFormal,
   realProviderOn,
+  providerBlockers,
   fixturePreviewOn,
   actionError,
   startingFormal,
@@ -798,6 +813,7 @@ function PreparePanel({
   onLimitsChange: (v: typeof limits) => void;
   canStartFormal: boolean;
   realProviderOn: boolean;
+  providerBlockers: string[];
   fixturePreviewOn: boolean;
   actionError: string | null;
   startingFormal: boolean;
@@ -905,7 +921,9 @@ function PreparePanel({
 
       {!realProviderOn ? (
         <p data-testid="whole-book-free-real-provider-disabled">
-          真实模型 Provider 尚未启用，暂不可开始正式分析。
+          {providerBlockers.length > 0
+            ? providerBlockers.join("；")
+            : "真实模型 Provider 尚未启用，暂不可开始正式分析。"}
         </p>
       ) : null}
 

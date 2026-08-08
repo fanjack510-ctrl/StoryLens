@@ -364,6 +364,8 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
                 );
                 await qc.invalidateQueries({ queryKey: ["active-cloud-provider"] });
                 await qc.invalidateQueries({ queryKey: ["provider-config"] });
+                await qc.invalidateQueries({ queryKey: ["whole-book-free-prepare"] });
+                await qc.invalidateQueries({ queryKey: ["routing"] });
                 await activeCloud.refetch();
               } catch (err: any) {
                 setUserMessage(stripRawErrorCodes(err?.message || "切换服务商失败"));
@@ -392,6 +394,8 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
               await qc.invalidateQueries({ queryKey: ["providers"] });
               await qc.invalidateQueries({ queryKey: ["provider-config"] });
               await qc.invalidateQueries({ queryKey: ["active-cloud-provider"] });
+              await qc.invalidateQueries({ queryKey: ["whole-book-free-prepare"] });
+              await qc.invalidateQueries({ queryKey: ["routing"] });
             }}
           />
         </section>

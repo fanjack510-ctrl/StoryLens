@@ -72,6 +72,9 @@ export type WholeBookPrepareResponse = {
   product_enabled: boolean;
   real_provider_enabled: boolean;
   run_creation_enabled: boolean;
+  active_provider_name?: string;
+  active_model_name?: string;
+  provider_available?: boolean;
   fixture_preview_enabled: boolean;
   latest_run: WholeBookRunRecord | null;
   recoverable_run: WholeBookRunRecord | null;

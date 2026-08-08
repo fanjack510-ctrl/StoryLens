@@ -77,15 +77,25 @@ def resolve_formal_provider_row(
     """Resolve formal cloud provider; require enabled + credential.
 
     Selection order:
-    1. provider_config_id (consent/estimate pin)
+    1. provider_config_id (consent/estimate/run pin)
     2. explicit provider_name
     3. active_cloud_provider setting
-    4. legacy aliyun_qwen_plus fallback
+
+    Never silently substitutes a different formal provider when an explicit
+    provider_name / provider_config_id is requested.
     """
     row: ProviderConfiguration | None = None
+    explicit = False
     if provider_config_id is not None:
+        explicit = True
         row = session.get(ProviderConfiguration, int(provider_config_id))
+        if row is None:
+            raise WholeBookFoundationError(
+                WholeBookFoundationErrorCode.WHOLE_BOOK_REAL_PROVIDER_DISABLED,
+                f"Provider 配置不存在: id={provider_config_id}",
+            )
     if row is None and provider_name:
+        explicit = True
         name = str(provider_name).strip()
         if is_deepseek_provider(name):
             ensure_deepseek_provider_configuration(session, create_if_missing=True)
@@ -94,6 +104,11 @@ def resolve_formal_provider_row(
         row = session.scalar(
             select(ProviderConfiguration).where(ProviderConfiguration.provider_name == name)
         )
+        if row is None:
+            raise WholeBookFoundationError(
+                WholeBookFoundationErrorCode.WHOLE_BOOK_REAL_PROVIDER_DISABLED,
+                f"未配置正式 Provider: {name}",
+            )
     if row is None:
         active = get_active_cloud_provider(session)
         if is_deepseek_provider(active):
@@ -103,24 +118,16 @@ def resolve_formal_provider_row(
         row = session.scalar(
             select(ProviderConfiguration).where(ProviderConfiguration.provider_name == active)
         )
-    if row is None:
-        ensure_aliyun_provider_configuration(session, CANONICAL_PROVIDER, create_if_missing=True)
-        row = session.scalar(
-            select(ProviderConfiguration).where(
-                ProviderConfiguration.provider_name == CANONICAL_PROVIDER
+        if row is None:
+            raise WholeBookFoundationError(
+                WholeBookFoundationErrorCode.WHOLE_BOOK_REAL_PROVIDER_DISABLED,
+                f"当前服务商 {active} 尚未配置",
             )
-        )
-    if row is None:
-        row = session.scalar(select(ProviderConfiguration).limit(1))
-    if row is None:
-        raise WholeBookFoundationError(
-            WholeBookFoundationErrorCode.WHOLE_BOOK_REAL_PROVIDER_DISABLED,
-            "未配置正式 Provider",
-        )
     if not bool(row.enabled) or bool(row.disconnected):
+        label = row.provider_name
         raise WholeBookFoundationError(
             WholeBookFoundationErrorCode.WHOLE_BOOK_REAL_PROVIDER_DISABLED,
-            "正式 Provider 未启用",
+            f"正式 Provider 未启用: {label}",
         )
     store = KeyringCredentialStore()
     secret = store.get(row.provider_name) if store.available() else None
@@ -134,11 +141,12 @@ def resolve_formal_provider_row(
     if not secret:
         raise WholeBookFoundationError(
             WholeBookFoundationErrorCode.WHOLE_BOOK_REAL_PROVIDER_DISABLED,
-            "正式 Provider API Key 不可用",
+            f"正式 Provider API Key 不可用: {row.provider_name}",
         )
     if not row.credential_reference:
         row.credential_reference = f"keyring:{row.provider_name}"
         session.flush()
+    _ = explicit  # reserved for diagnostics
     return row
 
 

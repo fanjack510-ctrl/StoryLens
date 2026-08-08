@@ -100,44 +100,39 @@ def prepare_free_whole_book_analysis_v1(session: Session, book_id: int) -> dict[
         )
     revision_hash = compute_book_revision_hash(session, book_id)
     provider = None
+    active_name = "default"
+    blockers: list[str] = []
+    provider_available = False
     if real_provider_enabled():
-        from app.narrative_core.services.whole_book_gateway_transport_v1 import (
-            resolve_formal_provider_row,
+        from app.narrative_core.services.whole_book_active_provider_v1 import (
+            active_provider_availability,
         )
-        from app.services.provider_bootstrap import (
-            ensure_aliyun_provider_configuration,
-            ensure_deepseek_provider_configuration,
-            is_deepseek_provider,
-        )
-        from app.services.provider_runtime import get_active_cloud_provider
 
-        active = get_active_cloud_provider(session)
-        if is_deepseek_provider(active):
-            ensure_deepseek_provider_configuration(session, create_if_missing=True)
-        else:
-            ensure_aliyun_provider_configuration(
-                session, "aliyun_qwen_plus", create_if_missing=True
+        provider, active_name, blockers = active_provider_availability(session)
+        provider_available = provider is not None and not blockers
+        # Never invent / substitute another formal provider for estimate identity.
+        if provider is None:
+            # Soft shell: still need a row for estimate display when bootstrap created one.
+            from app.narrative_core.services.whole_book_active_provider_v1 import (
+                ensure_active_provider_row,
             )
-        try:
-            provider = resolve_formal_provider_row(session, provider_name=active)
-        except WholeBookFoundationError:
-            # Prepare still returns estimate shell when key/enablement incomplete.
-            provider = session.scalar(
-                select(ProviderConfiguration).where(
-                    ProviderConfiguration.provider_name == active
-                )
-            )
-    if provider is None:
-        provider = session.scalar(select(ProviderConfiguration).limit(1))
-    if provider is None:
+
+            provider = ensure_active_provider_row(session, active_name)
+    if provider is None and not real_provider_enabled():
         provider = ProviderConfiguration(
-            provider_name="aliyun_qwen_plus" if real_provider_enabled() else "default",
-            plus_model="qwen3.7-plus" if real_provider_enabled() else "default-model",
-            enabled=bool(real_provider_enabled()),
-            disconnected=not bool(real_provider_enabled()),
+            provider_name="default",
+            plus_model="default-model",
+            enabled=False,
+            disconnected=True,
         )
         session.add(provider)
         session.flush()
+    if provider is None:
+        # Real path with missing active row — fail closed for create; estimate shell blocked.
+        raise WholeBookFoundationError(
+            WholeBookFoundationErrorCode.WHOLE_BOOK_REAL_PROVIDER_DISABLED,
+            f"当前服务商 {active_name} 尚未配置，无法准备全书分析",
+        )
     estimate = estimate_whole_book_analysis(
         session, book_id, WholeBookMode.whole_book_native.value, provider.id
     )
@@ -152,6 +147,7 @@ def prepare_free_whole_book_analysis_v1(session: Session, book_id: int) -> dict[
     est = estimate_to_dict(estimate)
     real_on = real_provider_enabled()
     fixture_on = fixture_preview_enabled()
+    run_creation_enabled = bool(real_on and provider_available)
     return {
         "book_id": book_id,
         "book_title": book.title or "",
@@ -162,7 +158,10 @@ def prepare_free_whole_book_analysis_v1(session: Session, book_id: int) -> dict[
         "mode_label": "原生全书分析",
         "product_enabled": True,
         "real_provider_enabled": real_on,
-        "run_creation_enabled": real_on,
+        "run_creation_enabled": run_creation_enabled,
+        "active_provider_name": provider.provider_name,
+        "active_model_name": est.get("model_name") or provider.plus_model or "",
+        "provider_available": provider_available,
         "fixture_preview_enabled": fixture_on,
         "latest_run": run_to_dict(latest) if latest is not None else None,
         "recoverable_run": run_to_dict(recoverable) if recoverable is not None else None,
@@ -186,6 +185,7 @@ def prepare_free_whole_book_analysis_v1(session: Session, book_id: int) -> dict[
             "estimated_cost_min_cny": est.get("estimated_cost_min_cny"),
             "estimated_cost_max_cny": est.get("estimated_cost_max_cny"),
             "provider_name": provider.provider_name,
+            "provider_config_id": provider.id,
             "model_name": est.get("model_name"),
             "price_known": str(est.get("pricing_status") or "") == "available",
             "currency": est.get("currency") or "CNY",
@@ -196,7 +196,7 @@ def prepare_free_whole_book_analysis_v1(session: Session, book_id: int) -> dict[
             "max_output_tokens": 100_000,
             "max_cost_budget_cny": "10.00",
         },
-        "blocking_reasons": [],
+        "blocking_reasons": blockers,
         "warnings": [],
     }
 
@@ -256,6 +256,22 @@ def create_free_whole_book_analysis_v1(
     provider_row = resolve_formal_provider_row(
         session, provider_config_id=provider_config_id
     )  # fail-closed if provider/key unavailable
+    from app.services.provider_runtime import get_active_cloud_provider
+
+    active = get_active_cloud_provider(session)
+    if provider_row.provider_name != active:
+        raise WholeBookFoundationError(
+            WholeBookFoundationErrorCode.WHOLE_BOOK_ESTIMATE_EXPIRED,
+            f"费用预估绑定的服务商为 {provider_row.provider_name}，与当前选择 {active} 不一致，请重新准备全书分析",
+        )
+    if (
+        estimate_row is not None
+        and int(estimate_row.provider_config_id) != int(provider_row.id)
+    ):
+        raise WholeBookFoundationError(
+            WholeBookFoundationErrorCode.WHOLE_BOOK_ESTIMATE_EXPIRED,
+            "费用预估与当前 Provider 配置不一致，请重新准备全书分析",
+        )
     pinned_model = (
         (estimate_row.model_name if estimate_row is not None else None)
         or provider_row.plus_model

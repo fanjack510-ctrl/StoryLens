@@ -1,0 +1,70 @@
+{
+  "id": "CHG-20260808-061",
+  "title": "Fix Whole-Book to honor active DeepSeek provider",
+  "type": "fix",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": true,
+  "commits": [
+    {
+      "sha": "176518bbcac5970c4df52c14640c473c9630cbd7",
+      "message": "fix(whole-book): honor selected provider for new analysis runs",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "apps/api",
+    "apps/desktop"
+  ],
+  "files": [
+    "apps/api/app/narrative_core/services/whole_book_active_provider_v1.py",
+    "apps/api/app/narrative_core/services/whole_book_free_product_v1_service.py",
+    "apps/api/app/narrative_core/services/whole_book_gateway_transport_v1.py",
+    "apps/api/app/narrative_core/services/whole_book_minimal_pipeline_v1_service.py",
+    "apps/api/app/api/v1/desktop.py",
+    "apps/api/tests/test_whole_book_provider_selection_chg061.py",
+    "apps/desktop/src/pages/WholeBookFreeProductPage.tsx",
+    "apps/desktop/src/services/wholeBookRealProviderFlag.ts",
+    "apps/desktop/src/services/wholeBookFreeProductApi.ts",
+    "apps/desktop/src/components/providers/DeepSeekForm.tsx",
+    "apps/desktop/src/components/settings/SettingsAiServiceTab.tsx",
+    "apps/desktop/src/pages/ProvidersPage.tsx",
+    "apps/desktop/vite.config.ts"
+  ],
+  "user_summary": "全书分析 Prepare/Estimate/Create 跟随当前云端 Provider；取消静默 Aliyun fallback；切换 Provider 后旧费用预估失效；Run 固定 provider/model。",
+  "technical_summary": "Prepare uses active_cloud_provider via whole_book_active_provider_v1; resolve_formal_provider_row no silent cross-provider substitute; UI real-provider gate defaults ON; prepare queryKey includes active provider; create rejects estimate/active mismatch; build_formal_gateway_transports prefers run pin; routing preview adds 全书分析→active provider/model.",
+  "acceptance_criteria": [
+    "DeepSeek set-current → Prepare deepseek / deepseek-v4-flash",
+    "Cost estimate uses DeepSeek pricing",
+    "No silent Aliyun fallback when DeepSeek unavailable",
+    "Provider switch invalidates old estimate",
+    "Existing run resume keeps pinned provider/model",
+    "Aliyun path regression PASS"
+  ],
+  "tests": [
+    "apps/api/tests/test_whole_book_provider_selection_chg061.py"
+  ],
+  "verification_evidence": [
+    "release/evidence/whole-book/CHG-20260808-061/TARGETED_TESTS.txt",
+    "release/evidence/whole-book/CHG-20260808-061/TYPECHECK.txt",
+    "release/evidence/whole-book/CHG-20260808-061/README.md"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "Current provider only affects new runs; historical runs keep provider_name/model_name pins."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "created_at": "2026-08-08T06:18:23Z",
+  "updated_at": "2026-08-08T09:38:46Z",
+  "parent_change": "CHG-20260808-060"
+}

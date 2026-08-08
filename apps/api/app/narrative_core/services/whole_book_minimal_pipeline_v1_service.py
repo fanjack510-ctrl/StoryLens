@@ -71,11 +71,14 @@ def build_formal_gateway_transports(
     pinned_model = (run.model_name if run is not None else None) or model_name
     pinned_provider = str(pinned_provider or "").strip() or None
     pinned_model = str(pinned_model or "").strip() or None
-    row = resolve_formal_provider_row(
-        session,
-        provider_name=pinned_provider,
-        provider_config_id=provider_config_id,
-    )
+    # Existing-run pin beats Settings and beats estimate config id.
+    if pinned_provider:
+        row = resolve_formal_provider_row(session, provider_name=pinned_provider)
+    else:
+        row = resolve_formal_provider_row(
+            session,
+            provider_config_id=provider_config_id,
+        )
     return MinimalPipelineTransports(
         window=GatewayWindowAnalysisTransport(
             session, provider_row=row, model_name=pinned_model

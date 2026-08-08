@@ -680,28 +680,46 @@ def dashboard_summary(session: Session = Depends(get_db)):
 
 
 @router.get("/model-routing/preview")
-def routing_preview(gateway: ModelGateway = Depends(get_model_gateway)):
+def routing_preview(
+    gateway: ModelGateway = Depends(get_model_gateway),
+    session: Session = Depends(get_db),
+):
     providers = {item.name: item for item in gateway.providers()}
     # Repair / retry inherit the run-frozen provider (DEFECT-CANARY-015).
     # Do not advertise silent Flash fallback for JSON/schema repair.
-    routes = [
-        ("场景边界", "aliyun_qwen_plus"),
-        ("场景结构", "aliyun_qwen_plus"),
-        ("JSON/Schema修复(继承Run策略)", "aliyun_qwen_plus"),
-        ("高难度人工复核", "aliyun_qwen_max"),
-        ("本地人工测试", "local_qwen14"),
-        ("27B手工短任务", "local_qwen27_manual"),
+    # Whole-book formal path follows active_cloud_provider only — do not remap
+    # scene-boundary / structure / review tasks onto DeepSeek for this preview.
+    from app.services.provider_runtime import get_active_cloud_provider
+
+    active_cloud = get_active_cloud_provider(session)
+    active_row = session.scalar(
+        select(ProviderConfiguration).where(ProviderConfiguration.provider_name == active_cloud)
+    )
+    whole_book_model = (
+        str(active_row.plus_model or "").strip()
+        if active_row is not None
+        else ""
+    )
+    routes: list[tuple[str, str, str | None]] = [
+        ("场景边界", "aliyun_qwen_plus", None),
+        ("场景结构", "aliyun_qwen_plus", None),
+        ("JSON/Schema修复(继承Run策略)", "aliyun_qwen_plus", None),
+        ("高难度人工复核", "aliyun_qwen_max", None),
+        ("全书分析", active_cloud, whole_book_model or None),
+        ("本地人工测试", "local_qwen14", None),
+        ("27B手工短任务", "local_qwen27_manual", None),
     ]
     return [
         {
             "task": task,
             "provider": name,
+            "model": model,
             "available": name in providers and providers[name].capabilities().enabled,
             "sends_content_to_cloud": providers[name].capabilities().sends_content_to_cloud
             if name in providers
             else False,
         }
-        for task, name in routes
+        for task, name, model in routes
     ]
 
 

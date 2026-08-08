@@ -744,6 +744,13 @@ export function ProvidersPage() {
                 <code className="providers-tech-id">
                   {r.provider}
                 </code>
+                {r.model ? (
+                  <>
+                    {" "}
+                    /{" "}
+                    <code className="providers-tech-id">{r.model}</code>
+                  </>
+                ) : null}
               </span>
               <small>
                 {r.available ? "可用" : "不可选"} ·{" "}

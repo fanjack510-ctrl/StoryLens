@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { providersApi } from "../../services/providersApi";
 import { settingsApi } from "../../services/settingsApi";
 import { credentialStateLabel } from "./providerDisplayLabels";
@@ -31,6 +32,7 @@ const EMPTY_FORM: ProviderFormState = {
 };
 
 export function DeepSeekForm({ onSaved }: { onSaved: () => void }) {
+  const queryClient = useQueryClient();
   const [form, setForm] = useState<ProviderFormState>(EMPTY_FORM);
   const [state, setState] = useState<any>();
   const [hydrated, setHydrated] = useState(false);
@@ -108,6 +110,9 @@ export function DeepSeekForm({ onSaved }: { onSaved: () => void }) {
         disconnected: Boolean(latest.disconnected),
         api_key: "",
       }));
+      await queryClient.invalidateQueries({ queryKey: ["active-cloud-provider"] });
+      await queryClient.invalidateQueries({ queryKey: ["whole-book-free-prepare"] });
+      await queryClient.invalidateQueries({ queryKey: ["routing"] });
       onSaved();
     } catch (e: any) {
       setMsg(`${e.code || "ERROR"}：${e.message}`);

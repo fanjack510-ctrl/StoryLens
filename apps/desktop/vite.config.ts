@@ -40,6 +40,16 @@ const wholeBookFreeProductEnabled = (() => {
   return value === "1" || value === "true" || value === "yes" || value === "on";
 })();
 
+const wholeBookRealProviderEnabled = (() => {
+  // V1.2.0 Free contract: formal real Provider path ON by default in production builds.
+  const raw =
+    process.env.VITE_WHOLE_BOOK_REAL_PROVIDER_ENABLED ||
+    process.env.STORYLENS_WHOLE_BOOK_REAL_PROVIDER_ENABLED ||
+    "true";
+  const value = String(raw).trim().toLowerCase();
+  return value === "1" || value === "true" || value === "yes" || value === "on";
+})();
+
 const wholeBookFixturePreviewEnabled = (() => {
   const raw =
     process.env.VITE_WHOLE_BOOK_FIXTURE_PREVIEW_ENABLED ||
@@ -69,6 +79,7 @@ export default defineConfig({
     __STORYLENS_WHOLE_BOOK_DIAGNOSTICS_ENABLED__: JSON.stringify(wholeBookDiagnosticsEnabled),
     // Wave D / V1.2.0 formal Free whole-book product — production default ON.
     __STORYLENS_WHOLE_BOOK_FREE_PRODUCT_ENABLED__: JSON.stringify(wholeBookFreeProductEnabled),
+    __STORYLENS_WHOLE_BOOK_REAL_PROVIDER_ENABLED__: JSON.stringify(wholeBookRealProviderEnabled),
     __STORYLENS_WHOLE_BOOK_FIXTURE_PREVIEW_ENABLED__: JSON.stringify(wholeBookFixturePreviewEnabled),
   },
   server: { port: 1420, strictPort: true },
