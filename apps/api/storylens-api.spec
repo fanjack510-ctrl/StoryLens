@@ -51,7 +51,9 @@ hiddenimports = [
     "app.main",
 ]
 
-for pkg in ("uvicorn", "fastapi", "starlette", "sqlalchemy", "pydantic", "anyio"):
+# keyring discovers backends via package metadata / entry points; collect_all
+# pulls submodules + dist-info so Windows Credential Manager backend is usable.
+for pkg in ("uvicorn", "fastapi", "starlette", "sqlalchemy", "pydantic", "anyio", "keyring"):
     try:
         tmp_ret = collect_all(pkg)
         datas += tmp_ret[0]
@@ -60,6 +62,7 @@ for pkg in ("uvicorn", "fastapi", "starlette", "sqlalchemy", "pydantic", "anyio"
     except Exception:
         pass
 
+hiddenimports += collect_submodules("keyring")
 hiddenimports += collect_submodules("app")
 
 # Optional Private Native Overview Engine (closed-source package).
