@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { providersApi } from "../services/providersApi";
 import { Badge, ErrorState, Loading } from "../components/common/States";
 import { AliyunForm } from "../components/providers/AliyunForm";
+import { DeepSeekForm } from "../components/providers/DeepSeekForm";
 import {
   cloudStateLabel,
   formatUnknown,
@@ -440,7 +441,31 @@ export function ProvidersPage() {
               </button>
             );
           })}
-          {["DeepSeek", "智谱 GLM", "Kimi"].map((p) => (
+          {!providers.data?.some((p) => p.name === "deepseek") && (
+            <button
+              type="button"
+              className={selected === "deepseek" ? "selected" : ""}
+              onClick={() => {
+                setSelected("deepseek");
+                setTransportStatus("idle");
+                setTransportResult(undefined);
+                setTransportError("");
+                setRealTestStatus("idle");
+                setRealTestPreflight(undefined);
+                setRealTestResult(undefined);
+                setRealTestError(undefined);
+              }}
+            >
+              <span>
+                <b>深度求索/DeepSeek</b>
+                <small className="providers-tech-id" title="deepseek">
+                  deepseek
+                </small>
+              </span>
+              <Badge>可配置</Badge>
+            </button>
+          )}
+          {["智谱 GLM", "Kimi"].map((p) => (
             <button type="button" disabled key={p}>
               <span>
                 <b>{p}</b>
@@ -463,7 +488,16 @@ export function ProvidersPage() {
                 "local"}
             </Badge>
           </header>
-          {selected.startsWith("aliyun_") ? (
+          {selected === "deepseek" ? (
+            <>
+              <div className="notice">
+                <b>能力状态</b>
+                <span>OpenAI 兼容 · Thinking 默认关闭 · Flash/Pro 可选</span>
+                <span>与阿里云百炼密钥相互独立</span>
+              </div>
+              <DeepSeekForm onSaved={refresh} />
+            </>
+          ) : selected.startsWith("aliyun_") ? (
             <>
               {selected === "aliyun_qwen_plus" && (
                 <div className="notice">

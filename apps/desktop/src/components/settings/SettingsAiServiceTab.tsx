@@ -22,8 +22,11 @@ import { providersApi } from "../../services/providersApi";
 import { settingsApi } from "../../services/settingsApi";
 import { useAdvancedSettingsStore } from "../../stores/advancedSettingsStore";
 import { useDeveloperModeStore } from "../../stores/developerModeStore";
+import { DeepSeekForm } from "../providers/DeepSeekForm";
 import { Loading } from "../common/States";
 import "./settings.css";
+
+const DEEPSEEK_PROVIDER_ID = "deepseek";
 
 type Props = {
   autoOpenWizard?: boolean;
@@ -80,9 +83,19 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
   });
   const providers = useQuery({ queryKey: ["providers"], queryFn: providersApi.list });
   const cloud = useQuery({ queryKey: ["cloud"], queryFn: settingsApi.cloud });
+  const activeCloud = useQuery({
+    queryKey: ["active-cloud-provider"],
+    queryFn: settingsApi.activeCloudProvider,
+    refetchOnMount: "always",
+    staleTime: 0,
+  });
+  const selectedProviderId =
+    activeCloud.data?.provider_name === DEEPSEEK_PROVIDER_ID
+      ? DEEPSEEK_PROVIDER_ID
+      : DEFAULT_AI_SERVICE_ID;
   const configuration = useQuery({
-    queryKey: ["provider-config", DEFAULT_AI_SERVICE_ID],
-    queryFn: () => providersApi.configuration(DEFAULT_AI_SERVICE_ID),
+    queryKey: ["provider-config", selectedProviderId],
+    queryFn: () => providersApi.configuration(selectedProviderId),
   });
 
   useEffect(() => {
@@ -109,10 +122,11 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
 
   const provider = useMemo(
     () =>
+      (providers.data || []).find((p) => p.name === selectedProviderId) ||
       (providers.data || []).find((p) => p.name === DEFAULT_AI_SERVICE_ID) ||
       (providers.data || []).find((p) => p.capabilities?.cloud) ||
       null,
-    [providers.data],
+    [providers.data, selectedProviderId],
   );
 
   const view = useMemo(
@@ -329,6 +343,60 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
         </div>
       )}
 
+      <section className="settings-hero-card" data-testid="ai-active-cloud-provider">
+        <header className="settings-panel-header">
+          <h2>AI 服务商</h2>
+        </header>
+        <label className="settings-field">
+          <span>AI 服务商</span>
+          <select
+            aria-label="AI 服务商"
+            data-testid="ai-cloud-provider-select"
+            value={selectedProviderId}
+            onChange={async (e) => {
+              const next = e.target.value;
+              try {
+                await settingsApi.setActiveCloudProvider(next);
+                setUserMessage(
+                  next === DEEPSEEK_PROVIDER_ID
+                    ? "已切换到 DeepSeek（不会删除阿里云密钥）。"
+                    : "已切换到阿里云百炼（不会删除 DeepSeek 密钥）。",
+                );
+                await qc.invalidateQueries({ queryKey: ["active-cloud-provider"] });
+                await qc.invalidateQueries({ queryKey: ["provider-config"] });
+                await activeCloud.refetch();
+              } catch (err: any) {
+                setUserMessage(stripRawErrorCodes(err?.message || "切换服务商失败"));
+              }
+            }}
+          >
+            <option value={DEFAULT_AI_SERVICE_ID}>阿里云百炼</option>
+            <option value={DEEPSEEK_PROVIDER_ID}>DeepSeek</option>
+          </select>
+        </label>
+        <p className="settings-status-reason">
+          切换服务商不会删除另一方已保存的 API Key。也可在「模型与API」中管理详细配置。
+        </p>
+        <p>
+          <Link to="/providers" data-testid="ai-open-providers-link">
+            打开模型与API设置
+          </Link>
+        </p>
+      </section>
+
+      {selectedProviderId === DEEPSEEK_PROVIDER_ID ? (
+        <section className="settings-zone" data-testid="ai-deepseek-config-zone">
+          <h3>DeepSeek 配置</h3>
+          <DeepSeekForm
+            onSaved={async () => {
+              await qc.invalidateQueries({ queryKey: ["providers"] });
+              await qc.invalidateQueries({ queryKey: ["provider-config"] });
+              await qc.invalidateQueries({ queryKey: ["active-cloud-provider"] });
+            }}
+          />
+        </section>
+      ) : null}
+
       <section
         className="settings-hero-card"
         data-testid="ai-service-status-card"
@@ -349,7 +417,9 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
         <dl className="settings-status-meta" data-testid="ai-service-status-meta">
           <div>
             <dt>当前服务</dt>
-            <dd data-testid="ai-service-current-provider">阿里云百炼</dd>
+            <dd data-testid="ai-service-current-provider">
+              {selectedProviderId === DEEPSEEK_PROVIDER_ID ? "DeepSeek" : "阿里云百炼"}
+            </dd>
           </div>
           <div>
             <dt>当前模型</dt>
@@ -386,6 +456,7 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
         </ul>
       </section>
 
+      {selectedProviderId !== DEEPSEEK_PROVIDER_ID ? (
       <section className="settings-zone" data-testid="ai-service-config-zone">
         <h3>必要配置</h3>
         <div className="settings-fields">
@@ -482,6 +553,7 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
           )}
         </div>
       </section>
+      ) : null}
 
       <details
         className="settings-fold"

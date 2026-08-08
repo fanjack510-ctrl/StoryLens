@@ -1,0 +1,60 @@
+{
+  "id": "CHG-20260808-060",
+  "title": "Add DeepSeek V4 Provider and cost estimation",
+  "type": "feature",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "api",
+    "desktop",
+    "config"
+  ],
+  "files": [
+    "apps/api/app/services/provider_pricing.py",
+    "apps/api/app/services/provider_usage_accounting.py",
+    "apps/api/app/services/provider_runtime.py",
+    "apps/api/app/services/provider_bootstrap.py",
+    "apps/api/app/model_gateway/registry.py",
+    "apps/api/app/model_gateway/providers/openai_compatible.py",
+    "apps/api/app/narrative_core/services/whole_book_gateway_transport_v1.py",
+    "apps/desktop/src/components/providers/DeepSeekForm.tsx",
+    "apps/desktop/src/components/settings/SettingsAiServiceTab.tsx",
+    "config/cloud_pricing.default.json"
+  ],
+  "user_summary": "Add deepseek provider (v4-flash/pro), independent key storage, pricing registry, pre/post-run cost estimate, run provider pinning.",
+  "technical_summary": "DeepSeek V4 flash/pro via shared ModelGateway; independent keyring; pricing registry; run provider/model pin; thinking disabled; conservative pre-run cost.",
+  "acceptance_criteria": [
+    "deepseek-v4-flash/pro only; never chat/reasoner",
+    "Independent keyring username deepseek",
+    "thinking.type=disabled explicitly for DeepSeek requests",
+    "Whole-book create/resume honors run.provider_name/model_name",
+    "Targeted pytest passes without real API calls",
+    "Aliyun remains registered and functional"
+  ],
+  "tests": [
+    "apps/api/tests/test_deepseek_provider_chg060.py"
+  ],
+  "verification_evidence": [
+    "release/evidence/whole-book/CHG-20260808-060/DEEPSEEK_ARCHITECTURE.md",
+    "release/evidence/whole-book/CHG-20260808-060/TARGETED_TESTS.md",
+    "release/evidence/whole-book/CHG-20260808-060/REAL_SMOKE.md"
+  ],
+  "data_compatibility": {
+    "database_changed": true,
+    "migration_required": true,
+    "user_data_compatible": true,
+    "notes": "Additive columns on whole_book_runs: provider_name, model_name, estimated_actual_cost_cny. Migration 20260808_017_whole_book_run_provider_pinning."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": null,
+  "created_at": "2026-08-08T04:49:48Z",
+  "updated_at": "2026-08-08T05:05:00Z"
+}

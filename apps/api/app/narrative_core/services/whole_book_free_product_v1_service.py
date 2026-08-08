@@ -101,12 +101,32 @@ def prepare_free_whole_book_analysis_v1(session: Session, book_id: int) -> dict[
     revision_hash = compute_book_revision_hash(session, book_id)
     provider = None
     if real_provider_enabled():
-        # Prefer canonical Bailian row for formal Free cost estimate binding.
-        provider = session.scalar(
-            select(ProviderConfiguration).where(
-                ProviderConfiguration.provider_name == "aliyun_qwen_plus"
-            )
+        from app.narrative_core.services.whole_book_gateway_transport_v1 import (
+            resolve_formal_provider_row,
         )
+        from app.services.provider_bootstrap import (
+            ensure_aliyun_provider_configuration,
+            ensure_deepseek_provider_configuration,
+            is_deepseek_provider,
+        )
+        from app.services.provider_runtime import get_active_cloud_provider
+
+        active = get_active_cloud_provider(session)
+        if is_deepseek_provider(active):
+            ensure_deepseek_provider_configuration(session, create_if_missing=True)
+        else:
+            ensure_aliyun_provider_configuration(
+                session, "aliyun_qwen_plus", create_if_missing=True
+            )
+        try:
+            provider = resolve_formal_provider_row(session, provider_name=active)
+        except WholeBookFoundationError:
+            # Prepare still returns estimate shell when key/enablement incomplete.
+            provider = session.scalar(
+                select(ProviderConfiguration).where(
+                    ProviderConfiguration.provider_name == active
+                )
+            )
     if provider is None:
         provider = session.scalar(select(ProviderConfiguration).limit(1))
     if provider is None:
@@ -217,6 +237,7 @@ def create_free_whole_book_analysis_v1(
         )
 
     # Formal create: never fixture/fake fallback.
+    from app.db.models import WholeBookConsent, WholeBookCostEstimate
     from app.narrative_core.services.whole_book_gateway_transport_v1 import (
         resolve_formal_provider_row,
     )
@@ -225,7 +246,21 @@ def create_free_whole_book_analysis_v1(
         execute_minimal_pipeline_v1,
     )
 
-    resolve_formal_provider_row(session)  # fail-closed if provider/key unavailable
+    consent = session.get(WholeBookConsent, consent_id)
+    estimate_row = session.get(WholeBookCostEstimate, estimate_id)
+    provider_config_id = None
+    if consent is not None and consent.provider_config_id:
+        provider_config_id = int(consent.provider_config_id)
+    elif estimate_row is not None and estimate_row.provider_config_id:
+        provider_config_id = int(estimate_row.provider_config_id)
+    provider_row = resolve_formal_provider_row(
+        session, provider_config_id=provider_config_id
+    )  # fail-closed if provider/key unavailable
+    pinned_model = (
+        (estimate_row.model_name if estimate_row is not None else None)
+        or provider_row.plus_model
+        or ""
+    ).strip()
     request_id = client_request_id or str(uuid.uuid4())
     run = create_whole_book_run_v1(
         session,
@@ -237,7 +272,12 @@ def create_free_whole_book_analysis_v1(
     )
     if run.consent_id is None:
         run.consent_id = consent_id
-        session.flush()
+    # Pin at create — resume/transports must use these, not current settings.
+    if not (run.provider_name or "").strip():
+        run.provider_name = provider_row.provider_name
+    if not (run.model_name or "").strip():
+        run.model_name = pinned_model
+    session.flush()
 
     audit = assert_native_input_independence_v1(session, run.id)
     persist_native_input_audit_v1(session, audit)
@@ -249,7 +289,11 @@ def create_free_whole_book_analysis_v1(
 
     pipeline_result: dict[str, Any] | None = None
     if execute_pipeline:
-        transports = build_formal_gateway_transports(session)
+        transports = build_formal_gateway_transports(
+            session,
+            run=run,
+            provider_config_id=provider_config_id,
+        )
         pipeline_result = execute_minimal_pipeline_v1(
             session, run.id, transports=transports
         )

@@ -29,6 +29,7 @@ from app.narrative_core.migrations import (
     MIGRATION_WHOLE_BOOK_NATIVE_INPUT_AUDIT,
     MIGRATION_WHOLE_BOOK_OVERVIEW_RUNTIME,
     MIGRATION_WHOLE_BOOK_RUNTIME_CONTROL,
+    MIGRATION_WHOLE_BOOK_RUN_PROVIDER_PINNING,
     MIGRATION_WHOLE_BOOK_SNAPSHOT_IMMUTABILITY,
     migration_checksum,
 )
@@ -1145,6 +1146,7 @@ def apply_narrative_migrations(engine: Engine) -> None:
     migrate_narrative_20260728_014_whole_book_minimal_analysis_results(engine)
     migrate_narrative_20260728_015_whole_book_runtime_control(engine)
     migrate_narrative_20260728_016_whole_book_native_input_audit(engine)
+    migrate_narrative_20260808_017_whole_book_run_provider_pinning(engine)
 
 
 SQL_012 = """
@@ -2028,3 +2030,37 @@ def migrate_narrative_20260728_016_whole_book_native_input_audit(engine: Engine)
         )
     _ensure_schema_migrations_table(engine)
     _record_applied(engine, MIGRATION_WHOLE_BOOK_NATIVE_INPUT_AUDIT, checksum)
+
+
+SQL_017 = """
+ALTER TABLE whole_book_runs ADD COLUMN provider_name TEXT NOT NULL DEFAULT '';
+ALTER TABLE whole_book_runs ADD COLUMN model_name TEXT NOT NULL DEFAULT '';
+ALTER TABLE whole_book_runs ADD COLUMN estimated_actual_cost_cny REAL;
+"""
+
+
+def migrate_narrative_20260808_017_whole_book_run_provider_pinning(engine: Engine) -> None:
+    """CHG-20260808-060: pin provider/model (+ optional estimated actual cost) on runs."""
+    checksum = migration_checksum(SQL_017)
+    names = _table_names(engine)
+    if "whole_book_runs" not in names:
+        migrate_narrative_20260728_016_whole_book_native_input_audit(engine)
+        names = _table_names(engine)
+    if "whole_book_runs" not in names:
+        raise NarrativeCoreError(
+            NarrativeCoreErrorCode.MIGRATION_BASELINE_INVALID,
+            "017 failed: whole_book_runs missing",
+        )
+    existing = _column_names(engine, "whole_book_runs")
+    columns = {
+        "provider_name": "TEXT NOT NULL DEFAULT ''",
+        "model_name": "TEXT NOT NULL DEFAULT ''",
+        "estimated_actual_cost_cny": "REAL",
+    }
+    with engine.begin() as connection:
+        for name, ddl in columns.items():
+            if name in existing:
+                continue
+            connection.execute(text(f"ALTER TABLE whole_book_runs ADD COLUMN {name} {ddl}"))
+    _ensure_schema_migrations_table(engine)
+    _record_applied(engine, MIGRATION_WHOLE_BOOK_RUN_PROVIDER_PINNING, checksum)

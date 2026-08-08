@@ -6,6 +6,7 @@ from dataclasses import dataclass
 
 from sqlalchemy.orm import Session
 
+from app.db.models import WholeBookRun
 from app.narrative_core.services.whole_book_gateway_transport_v1 import (
     GatewayChapterFunctionsTransport,
     GatewayOverviewTransport,
@@ -57,13 +58,37 @@ def build_fixture_transports(
     )
 
 
-def build_formal_gateway_transports(session: Session) -> MinimalPipelineTransports:
-    row = resolve_formal_provider_row(session)
+def build_formal_gateway_transports(
+    session: Session,
+    *,
+    run: WholeBookRun | None = None,
+    provider_name: str | None = None,
+    provider_config_id: int | None = None,
+    model_name: str | None = None,
+) -> MinimalPipelineTransports:
+    """Build formal transports. When run is pinned, honor run.provider_name/model_name."""
+    pinned_provider = (run.provider_name if run is not None else None) or provider_name
+    pinned_model = (run.model_name if run is not None else None) or model_name
+    pinned_provider = str(pinned_provider or "").strip() or None
+    pinned_model = str(pinned_model or "").strip() or None
+    row = resolve_formal_provider_row(
+        session,
+        provider_name=pinned_provider,
+        provider_config_id=provider_config_id,
+    )
     return MinimalPipelineTransports(
-        window=GatewayWindowAnalysisTransport(session, provider_row=row),
-        overview=GatewayOverviewTransport(session, provider_row=row),
-        structure=GatewayStructureTransport(session, provider_row=row),
-        chapter_functions=GatewayChapterFunctionsTransport(session, provider_row=row),
+        window=GatewayWindowAnalysisTransport(
+            session, provider_row=row, model_name=pinned_model
+        ),
+        overview=GatewayOverviewTransport(
+            session, provider_row=row, model_name=pinned_model
+        ),
+        structure=GatewayStructureTransport(
+            session, provider_row=row, model_name=pinned_model
+        ),
+        chapter_functions=GatewayChapterFunctionsTransport(
+            session, provider_row=row, model_name=pinned_model
+        ),
     )
 
 

@@ -66,6 +66,9 @@ class ModelResponse(BaseModel):
     output_tokens: int | None = None
     total_tokens: int | None = None
     cached_tokens: int | None = None
+    cache_hit_tokens: int | None = None
+    cache_miss_tokens: int | None = None
+    reasoning_tokens: int | None = None
     request_id: str | None = None
     finish_reason: str | None = None
 

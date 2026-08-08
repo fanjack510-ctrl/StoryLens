@@ -74,6 +74,15 @@ class Settings(BaseSettings):
     scene_analysis_recovery_max_cost: float | None = None
     aliyun_structured_output_mode: str = "json_object"
     aliyun_enable_thinking: bool = False
+
+    # DeepSeek (OpenAI-compatible) — independent from Aliyun settings/keyring.
+    deepseek_api_key: str = ""
+    deepseek_base_url: str = "https://api.deepseek.com"
+    deepseek_model: str = "deepseek-v4-flash"
+    deepseek_timeout_seconds: int = 300
+    deepseek_max_retries: int = 3
+    deepseek_structured_output_mode: str = "json_object"
+
     cloud_raw_logging: bool = False
     cloud_output_connection_test: int = 64
     cloud_output_minimal_json_test: int = 128

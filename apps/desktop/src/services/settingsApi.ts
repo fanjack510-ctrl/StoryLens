@@ -17,6 +17,13 @@ export const settingsApi = {
   cloud: () => api<any>("/api/v1/settings/cloud"),
   setCloud: (enabled: boolean) =>
     api("/api/v1/settings/cloud", { method: "PUT", body: JSON.stringify({ enabled }) }),
+  activeCloudProvider: () =>
+    api<{ provider_name: string }>("/api/v1/settings/active-cloud-provider"),
+  setActiveCloudProvider: (provider_name: string) =>
+    api<{ provider_name: string }>("/api/v1/settings/active-cloud-provider", {
+      method: "PUT",
+      body: JSON.stringify({ provider_name }),
+    }),
   cloudBudget: () => api<any>("/api/v1/settings/cloud-budget"),
   saveCloudBudget: (value: any) =>
     api<any>("/api/v1/settings/cloud-budget", {

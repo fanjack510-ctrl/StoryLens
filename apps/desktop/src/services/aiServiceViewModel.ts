@@ -71,6 +71,7 @@ const SERVICE_DISPLAY_NAMES: Record<string, string> = {
   aliyun_qwen_plus: "阿里云百炼",
   aliyun_qwen_max: "阿里云百炼 Max",
   aliyun_qwen_flash: "阿里云百炼 Flash",
+  deepseek: "深度求索/DeepSeek",
 };
 
 export function serviceDisplayNameFor(providerId: string, fallback?: string): string {

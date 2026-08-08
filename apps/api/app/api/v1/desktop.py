@@ -141,6 +141,31 @@ def put_cloud_settings(value: CloudSettingsUpdate, session: Session = Depends(ge
     return get_cloud_settings(session)
 
 
+class ActiveCloudProviderSettings(BaseModel):
+    provider_name: str
+
+
+@router.get("/settings/active-cloud-provider", response_model=ActiveCloudProviderSettings)
+def get_active_cloud_provider_setting(session: Session = Depends(get_db)):
+    from app.services.provider_runtime import get_active_cloud_provider
+
+    return ActiveCloudProviderSettings(provider_name=get_active_cloud_provider(session))
+
+
+@router.put("/settings/active-cloud-provider", response_model=ActiveCloudProviderSettings)
+def put_active_cloud_provider_setting(
+    value: ActiveCloudProviderSettings, session: Session = Depends(get_db)
+):
+    from app.services.provider_runtime import set_active_cloud_provider
+
+    try:
+        name = set_active_cloud_provider(session, value.provider_name)
+    except ValueError as exc:
+        raise error(422, "UNSUPPORTED_CLOUD_PROVIDER", str(exc)) from exc
+    session.commit()
+    return ActiveCloudProviderSettings(provider_name=name)
+
+
 def cloud_budget_value(session: Session) -> CloudBudgetUpdate:
     return CloudBudgetUpdate.model_validate(setting(session, CLOUD_BUDGET_KEY, {}))
 
@@ -218,17 +243,25 @@ def configuration_response(row: ProviderConfiguration | None, name: str, store: 
     )
 
 
-def _bootstrap_aliyun_row(session: Session, provider_name: str) -> ProviderConfiguration | None:
+def _bootstrap_provider_row(session: Session, provider_name: str) -> ProviderConfiguration | None:
     from app.services.provider_bootstrap import (
         ensure_aliyun_provider_configuration,
+        ensure_deepseek_provider_configuration,
         is_aliyun_cloud_provider,
+        is_deepseek_provider,
     )
 
+    if is_deepseek_provider(provider_name):
+        return ensure_deepseek_provider_configuration(session, create_if_missing=True)
     if not is_aliyun_cloud_provider(provider_name):
         return None
     return ensure_aliyun_provider_configuration(
         session, provider_name, create_if_missing=False
     )
+
+
+# Back-compat alias for older call sites / tests.
+_bootstrap_aliyun_row = _bootstrap_provider_row
 
 
 def _recommended_setup_response(
@@ -395,7 +428,7 @@ def get_provider_configuration(
     session: Session = Depends(get_db),
     store: CredentialStore = Depends(get_credential_store),
 ):
-    _bootstrap_aliyun_row(session, provider_name)
+    _bootstrap_provider_row(session, provider_name)
     return configuration_response(
         session.scalar(
             select(ProviderConfiguration).where(
@@ -428,22 +461,34 @@ def put_provider_configuration(
         else:
             setattr(row, key, item)
     if value.api_key:
+        # Independent keyring username per provider (aliyun_* vs deepseek).
         store.set(provider_name, value.api_key)
         row.credential_reference = f"keyring:{provider_name}"
     row.updated_at = datetime.now(timezone.utc)
     session.commit()
-    # Fill public Bailian endpoint when client omitted / sent empty base_url.
+    # Fill public Bailian / DeepSeek endpoint defaults when client omitted base_url.
     from app.services.provider_bootstrap import (
         ensure_aliyun_provider_configuration,
+        ensure_deepseek_provider_configuration,
         is_aliyun_cloud_provider,
+        is_deepseek_provider,
+    )
+    from app.services.provider_runtime import (
+        FORMAL_CLOUD_PROVIDERS,
+        set_active_cloud_provider,
     )
 
-    if is_aliyun_cloud_provider(provider_name):
+    if is_deepseek_provider(provider_name):
+        ensure_deepseek_provider_configuration(session, create_if_missing=True)
+    elif is_aliyun_cloud_provider(provider_name):
         ensure_aliyun_provider_configuration(
             session, provider_name, create_if_missing=True
         )
     else:
-        _bootstrap_aliyun_row(session, provider_name)
+        _bootstrap_provider_row(session, provider_name)
+    if provider_name in FORMAL_CLOUD_PROVIDERS and (value.enabled or not value.disconnected):
+        set_active_cloud_provider(session, provider_name)
+        session.commit()
     return configuration_response(
         session.scalar(
             select(ProviderConfiguration).where(

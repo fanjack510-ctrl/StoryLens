@@ -16,6 +16,7 @@ from app.model_gateway.provider_errors import (
     build_provider_http_error_snapshot,
     build_safe_details,
     categorize_provider_error,
+    chinese_message_for_http_status,
     classify_exception,
     endpoint_host_from_url,
     error_code_for_transport,
@@ -113,13 +114,16 @@ class OpenAICompatibleProvider(ModelProvider):
             if http_status in {401, 403}:
                 transport_kind = TRANSPORT_AUTH
                 retryable = False
+            elif http_status == 402:
+                retryable = False
             elif http_status in RETRYABLE_HTTP_STATUSES:
                 retryable = True
             elif http_status is not None:
                 retryable = False
         code = error_code_for_transport(transport_kind, http_status)
         exc_name = exception_type_name(exc)
-        message = safe_message(
+        zh = chinese_message_for_http_status(http_status)
+        message = zh or safe_message(
             str(exc),
             fallback=f"Provider请求失败 ({exc_name})",
         )
@@ -273,6 +277,7 @@ class OpenAICompatibleProvider(ModelProvider):
                 user_action_hint=user_hint_for(TRANSPORT_DISABLED, "PROVIDER_DISABLED"),
             )
         model = request.model or self.default_model
+        is_deepseek = self.provider_family == "deepseek" or self.name == "deepseek"
         payload = {
             "model": model,
             "messages": request.messages,
@@ -281,7 +286,11 @@ class OpenAICompatibleProvider(ModelProvider):
         output_tokens = request.max_output_tokens or request.max_tokens
         if output_tokens is not None:
             payload["max_tokens"] = output_tokens
-        payload["chat_template_kwargs"] = {"enable_thinking": request.enable_thinking}
+        if is_deepseek:
+            # Official default is thinking enabled — always send disabled explicitly.
+            payload["thinking"] = {"type": "disabled"}
+        else:
+            payload["chat_template_kwargs"] = {"enable_thinking": request.enable_thinking}
         if request.response_schema and request.response_format_mode == "json_schema":
             payload["response_format"] = {
                 "type": "json_schema",
@@ -296,6 +305,10 @@ class OpenAICompatibleProvider(ModelProvider):
         elif request.response_format_mode == "json_object":
             payload["response_format"] = {"type": "json_object"}
         payload.update(request.extra_body)
+        if is_deepseek:
+            # Never send Aliyun-only thinking control on DeepSeek requests.
+            payload.pop("chat_template_kwargs", None)
+            payload["thinking"] = {"type": "disabled"}
         try:
             async with httpx.AsyncClient(timeout=self._timeout()) as client:
                 response = await client.post(
@@ -322,8 +335,12 @@ class OpenAICompatibleProvider(ModelProvider):
                 model=model,
             )
         try:
-            content = data["choices"][0]["message"]["content"]
-        except (KeyError, IndexError, TypeError) as exc:
+            message = data["choices"][0]["message"]
+            # Never fold reasoning_content into analysis text.
+            content = message.get("content")
+            if content is None:
+                content = ""
+        except (KeyError, IndexError, TypeError, AttributeError) as exc:
             self._raise_provider_error(
                 exc,
                 phase="provider_response_parse",
@@ -331,16 +348,29 @@ class OpenAICompatibleProvider(ModelProvider):
                 http_status=response.status_code,
                 model=model,
             )
+        usage = data.get("usage") or {}
+        details = usage.get("prompt_tokens_details") or {}
+        completion_details = usage.get("completion_tokens_details") or {}
+        cache_hit = usage.get("prompt_cache_hit_tokens")
+        if cache_hit is None and isinstance(details, dict):
+            cache_hit = details.get("cached_tokens")
+        cache_miss = usage.get("prompt_cache_miss_tokens")
+        reasoning_tokens = None
+        if isinstance(completion_details, dict):
+            reasoning_tokens = completion_details.get("reasoning_tokens")
+        if reasoning_tokens is None:
+            reasoning_tokens = usage.get("reasoning_tokens")
         return ModelResponse(
             text=content or "",
             model=data.get("model", payload["model"]),
             http_status_code=response.status_code,
-            input_tokens=data.get("usage", {}).get("prompt_tokens"),
-            output_tokens=data.get("usage", {}).get("completion_tokens"),
-            total_tokens=data.get("usage", {}).get("total_tokens"),
-            cached_tokens=data.get("usage", {})
-            .get("prompt_tokens_details", {})
-            .get("cached_tokens"),
+            input_tokens=usage.get("prompt_tokens"),
+            output_tokens=usage.get("completion_tokens"),
+            total_tokens=usage.get("total_tokens"),
+            cached_tokens=details.get("cached_tokens") if isinstance(details, dict) else None,
+            cache_hit_tokens=int(cache_hit) if cache_hit is not None else None,
+            cache_miss_tokens=int(cache_miss) if cache_miss is not None else None,
+            reasoning_tokens=int(reasoning_tokens) if reasoning_tokens is not None else None,
             request_id=getattr(response, "headers", {}).get("x-request-id")
             or data.get("request_id"),
             finish_reason=data["choices"][0].get("finish_reason"),

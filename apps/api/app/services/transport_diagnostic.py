@@ -72,10 +72,14 @@ def run_transport_diagnostic(
 ) -> dict[str, Any]:
     from app.services.provider_bootstrap import (
         ensure_aliyun_provider_configuration,
+        ensure_deepseek_provider_configuration,
         is_aliyun_cloud_provider,
+        is_deepseek_provider,
     )
 
-    if is_aliyun_cloud_provider(provider_name):
+    if is_deepseek_provider(provider_name):
+        ensure_deepseek_provider_configuration(session, create_if_missing=True)
+    elif is_aliyun_cloud_provider(provider_name):
         ensure_aliyun_provider_configuration(session, provider_name)
 
     apply_provider_runtime(provider, session, store)

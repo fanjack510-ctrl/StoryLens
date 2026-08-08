@@ -838,8 +838,10 @@ function PreparePanel({
         ) : (
           <p className="muted">费用预估暂不可用。</p>
         )}
-        <p className="muted">
-          由模型服务商收取，实际费用以模型服务商账单为准。价格未知时需设置调用次数和 Token 上限。
+        <p className="muted" data-testid="whole-book-free-cost-disclaimer">
+          {String(est?.provider_name || "").includes("deepseek")
+            ? "费用为预估值，实际收费以 DeepSeek 官方账单为准。"
+            : "由模型服务商收取，实际费用以模型服务商账单为准。价格未知时需设置调用次数和 Token 上限。"}
         </p>
       </section>
 

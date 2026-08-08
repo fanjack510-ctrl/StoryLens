@@ -82,4 +82,30 @@ def get_model_gateway() -> ModelGateway:
                 requires_boundary_review=name == "aliyun_qwen_plus",
             )
         )
+    deepseek_base = (settings.deepseek_base_url or "https://api.deepseek.com").rstrip("/")
+    providers.append(
+        OpenAICompatibleProvider(
+            name="deepseek",
+            base_url=deepseek_base,
+            api_key=settings.deepseek_api_key,
+            default_model=settings.deepseek_model or "deepseek-v4-flash",
+            timeout_seconds=settings.deepseek_timeout_seconds,
+            max_context_tokens=128000,
+            enabled=False,
+            profile_name="deepseek",
+            default=False,
+            manual_only=False,
+            structured_output_mode=settings.deepseek_structured_output_mode,
+            supports_thinking_control=True,
+            cloud=True,
+            provider_family="deepseek",
+            supports_json_object=True,
+            sends_content_to_cloud=True,
+            region=None,
+            supports_scene_analysis=True,
+            supports_boundary_candidates=True,
+            automatic_boundary_routing=False,
+            requires_boundary_review=True,
+        )
+    )
     return ModelGateway(providers)

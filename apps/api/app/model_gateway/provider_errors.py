@@ -13,6 +13,7 @@ import httpx
 # Provider HTTP / transport error categories (user-facing taxonomy).
 ERROR_CATEGORY_AUTHENTICATION = "authentication_error"
 ERROR_CATEGORY_PERMISSION = "permission_error"
+ERROR_CATEGORY_PAYMENT_REQUIRED = "payment_required"
 ERROR_CATEGORY_INVALID_REQUEST = "invalid_request"
 ERROR_CATEGORY_MODEL_NOT_FOUND = "model_or_endpoint_not_found"
 ERROR_CATEGORY_RATE_LIMITED = "rate_limited"
@@ -23,7 +24,7 @@ ERROR_CATEGORY_INVALID_RESPONSE = "invalid_provider_response"
 ERROR_CATEGORY_UNKNOWN = "unknown_provider_error"
 
 RETRYABLE_HTTP_STATUSES = frozenset({408, 429, 500, 502, 503, 504})
-NON_RETRYABLE_HTTP_STATUSES = frozenset({400, 401, 403, 404})
+NON_RETRYABLE_HTTP_STATUSES = frozenset({400, 401, 402, 403, 404})
 
 _EXCERPT_MAX = 400
 
@@ -210,6 +211,12 @@ def error_code_for_transport(transport_kind: str, http_status: int | None = None
         return "PROVIDER_AUTHENTICATION_FAILED"
     if transport_kind == TRANSPORT_AUTH:
         return "PROVIDER_AUTHENTICATION_FAILED"
+    if transport_kind == TRANSPORT_HTTP and http_status == 402:
+        return "PROVIDER_PAYMENT_REQUIRED"
+    if transport_kind == TRANSPORT_HTTP and http_status == 429:
+        return "PROVIDER_RATE_LIMITED"
+    if transport_kind == TRANSPORT_HTTP and http_status in {500, 502, 503, 504}:
+        return "PROVIDER_SERVER_ERROR"
     if transport_kind == TRANSPORT_HTTP and http_status == 404:
         return "PROVIDER_MODEL_NOT_FOUND"
     if transport_kind == TRANSPORT_HTTP and http_status == 400:
@@ -252,6 +259,8 @@ def categorize_provider_error(
     """Map transport/HTTP facts to a stable error_category (never invent status)."""
     if http_status == 401 or transport_kind == TRANSPORT_AUTH:
         return ERROR_CATEGORY_AUTHENTICATION
+    if http_status == 402:
+        return ERROR_CATEGORY_PAYMENT_REQUIRED
     if http_status == 403:
         return ERROR_CATEGORY_PERMISSION
     if http_status == 400:
@@ -286,12 +295,13 @@ def categorize_provider_error(
 
 def user_reason_for_category(category: str | None) -> str:
     reasons = {
-        ERROR_CATEGORY_AUTHENTICATION: "API 凭据无权访问当前模型，或密钥无效",
+        ERROR_CATEGORY_AUTHENTICATION: "API Key 无效或未授权，请检查后重新测试",
+        ERROR_CATEGORY_PAYMENT_REQUIRED: "账户余额不足或需要充值，请到服务商控制台处理",
         ERROR_CATEGORY_PERMISSION: "API 凭据无权访问当前模型",
         ERROR_CATEGORY_INVALID_REQUEST: "请求参数不被当前模型支持",
         ERROR_CATEGORY_MODEL_NOT_FOUND: "当前模型或 Endpoint 不匹配",
-        ERROR_CATEGORY_RATE_LIMITED: "请求受到服务商限流",
-        ERROR_CATEGORY_SERVER: "模型服务暂时不可用",
+        ERROR_CATEGORY_RATE_LIMITED: "请求过于频繁，已被限流，请稍后重试",
+        ERROR_CATEGORY_SERVER: "模型服务暂时不可用，请稍后重试",
         ERROR_CATEGORY_TIMEOUT: "请求超时",
         ERROR_CATEGORY_NETWORK: "网络连接中断或不可达",
         ERROR_CATEGORY_INVALID_RESPONSE: "模型服务返回了无法解析的响应",
@@ -300,9 +310,25 @@ def user_reason_for_category(category: str | None) -> str:
     return reasons.get(category or "", reasons[ERROR_CATEGORY_UNKNOWN])
 
 
+def chinese_message_for_http_status(http_status: int | None) -> str | None:
+    """User-facing Chinese messages for common provider HTTP statuses."""
+    messages = {
+        401: "API Key 无效或未授权，请检查后重新测试",
+        402: "账户余额不足或需要充值，请到服务商控制台处理",
+        429: "请求过于频繁，已被限流，请稍后重试",
+        500: "模型服务内部错误，请稍后重试",
+        503: "模型服务暂时不可用，请稍后重试",
+    }
+    if http_status is None:
+        return None
+    return messages.get(int(http_status))
+
+
 def user_hint_for(transport_kind: str, error_code: str, *, category: str | None = None) -> str:
     if category == ERROR_CATEGORY_RATE_LIMITED:
         return "稍后重试；若持续限流请降低并发或检查服务商配额"
+    if category == ERROR_CATEGORY_PAYMENT_REQUIRED:
+        return "打开 DeepSeek / 服务商控制台充值或检查账单状态后重试"
     if category == ERROR_CATEGORY_INVALID_REQUEST:
         return "检查模型配置与请求参数；必要时验证并保存后重试"
     if category == ERROR_CATEGORY_MODEL_NOT_FOUND:
@@ -311,6 +337,8 @@ def user_hint_for(transport_kind: str, error_code: str, *, category: str | None 
         return "检查 API Key 与云端总开关后重新验证"
     if category == ERROR_CATEGORY_PERMISSION:
         return "确认密钥具备当前模型访问权限"
+    if category == ERROR_CATEGORY_SERVER:
+        return "稍后重试；若持续失败请查看服务商状态页"
     hints = {
         TRANSPORT_DNS: "检查网络DNS或Base URL主机名后重试；可先运行传输诊断",
         TRANSPORT_CONNECT_TIMEOUT: "检查网络连通性与防火墙后重试；可先运行传输诊断",

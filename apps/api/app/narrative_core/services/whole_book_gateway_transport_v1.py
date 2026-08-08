@@ -43,8 +43,18 @@ from app.narrative_core.services.whole_book_minimal_helpers_v1 import (
 )
 from app.narrative_core.services.whole_book_provider_orchestrator import ProviderCallResult
 from app.services.credentials.keyring_store import KeyringCredentialStore
-from app.services.provider_bootstrap import ensure_aliyun_provider_configuration
-from app.services.provider_runtime import apply_provider_runtime, bind_gateway_runtime
+from app.services.provider_bootstrap import (
+    ensure_aliyun_provider_configuration,
+    ensure_deepseek_provider_configuration,
+    is_deepseek_provider,
+)
+from app.services.provider_pricing import DEEPSEEK_PROVIDER
+from app.services.provider_runtime import (
+    apply_provider_runtime,
+    bind_gateway_runtime,
+    get_active_cloud_provider,
+)
+from app.services.provider_usage_accounting import estimate_call_cost_cny
 from app.services.structured_output import extract_json_object
 
 logger = logging.getLogger(__name__)
@@ -58,12 +68,48 @@ def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def resolve_formal_provider_row(session: Session) -> ProviderConfiguration:
-    """Prefer aliyun_qwen_plus; require enabled + credential reference."""
-    ensure_aliyun_provider_configuration(session, CANONICAL_PROVIDER, create_if_missing=True)
-    row = session.scalar(
-        select(ProviderConfiguration).where(ProviderConfiguration.provider_name == CANONICAL_PROVIDER)
-    )
+def resolve_formal_provider_row(
+    session: Session,
+    *,
+    provider_name: str | None = None,
+    provider_config_id: int | None = None,
+) -> ProviderConfiguration:
+    """Resolve formal cloud provider; require enabled + credential.
+
+    Selection order:
+    1. provider_config_id (consent/estimate pin)
+    2. explicit provider_name
+    3. active_cloud_provider setting
+    4. legacy aliyun_qwen_plus fallback
+    """
+    row: ProviderConfiguration | None = None
+    if provider_config_id is not None:
+        row = session.get(ProviderConfiguration, int(provider_config_id))
+    if row is None and provider_name:
+        name = str(provider_name).strip()
+        if is_deepseek_provider(name):
+            ensure_deepseek_provider_configuration(session, create_if_missing=True)
+        elif name == CANONICAL_PROVIDER or name.startswith("aliyun_"):
+            ensure_aliyun_provider_configuration(session, name, create_if_missing=True)
+        row = session.scalar(
+            select(ProviderConfiguration).where(ProviderConfiguration.provider_name == name)
+        )
+    if row is None:
+        active = get_active_cloud_provider(session)
+        if is_deepseek_provider(active):
+            ensure_deepseek_provider_configuration(session, create_if_missing=True)
+        else:
+            ensure_aliyun_provider_configuration(session, CANONICAL_PROVIDER, create_if_missing=True)
+        row = session.scalar(
+            select(ProviderConfiguration).where(ProviderConfiguration.provider_name == active)
+        )
+    if row is None:
+        ensure_aliyun_provider_configuration(session, CANONICAL_PROVIDER, create_if_missing=True)
+        row = session.scalar(
+            select(ProviderConfiguration).where(
+                ProviderConfiguration.provider_name == CANONICAL_PROVIDER
+            )
+        )
     if row is None:
         row = session.scalar(select(ProviderConfiguration).limit(1))
     if row is None:
@@ -81,7 +127,10 @@ def resolve_formal_provider_row(session: Session) -> ProviderConfiguration:
     if not secret:
         import os
 
-        secret = os.environ.get("STORYLENS_ALIYUN_API_KEY", "").strip()
+        if is_deepseek_provider(row.provider_name):
+            secret = os.environ.get("STORYLENS_DEEPSEEK_API_KEY", "").strip()
+        else:
+            secret = os.environ.get("STORYLENS_ALIYUN_API_KEY", "").strip()
     if not secret:
         raise WholeBookFoundationError(
             WholeBookFoundationErrorCode.WHOLE_BOOK_REAL_PROVIDER_DISABLED,
@@ -166,8 +215,17 @@ def _gateway_generate(
 
     in_tok = int(response.input_tokens or 0)
     out_tok = int(response.output_tokens or 0)
-    # Conservative fallback cost when ledger pricing is unavailable.
-    cost = Decimal(str(round((in_tok + out_tok) * 0.000002, 6)))
+    priced = estimate_call_cost_cny(
+        model_name=model_name,
+        input_tokens=in_tok,
+        output_tokens=out_tok,
+        cache_hit_tokens=getattr(response, "cache_hit_tokens", None),
+        cache_miss_tokens=getattr(response, "cache_miss_tokens", None),
+    )
+    if priced is None:
+        # Conservative fallback cost when ledger pricing is unavailable.
+        priced = round((in_tok + out_tok) * 0.000002, 6)
+    cost = Decimal(str(priced))
     return payload, in_tok, out_tok, cost
 
 
@@ -607,10 +665,21 @@ class GatewayWindowAnalysisTransport:
     provider_id: str
     model_name: str
 
-    def __init__(self, session: Session, *, provider_row: ProviderConfiguration) -> None:
+    def __init__(
+        self,
+        session: Session,
+        *,
+        provider_row: ProviderConfiguration,
+        model_name: str | None = None,
+    ) -> None:
         self._session = session
         self.provider_id = provider_row.provider_name
-        self.model_name = provider_row.plus_model or "qwen3.7-plus"
+        default_model = (
+            "deepseek-v4-flash"
+            if provider_row.provider_name == DEEPSEEK_PROVIDER
+            else "qwen3.7-plus"
+        )
+        self.model_name = (model_name or provider_row.plus_model or default_model).strip()
 
     def invoke(self, *, unit_key: str, unit_type: str, request_payload: dict[str, Any]) -> ProviderCallResult:
         system = (
@@ -673,10 +742,21 @@ class GatewayOverviewTransport:
     provider_id: str
     model_name: str
 
-    def __init__(self, session: Session, *, provider_row: ProviderConfiguration) -> None:
+    def __init__(
+        self,
+        session: Session,
+        *,
+        provider_row: ProviderConfiguration,
+        model_name: str | None = None,
+    ) -> None:
         self._session = session
         self.provider_id = provider_row.provider_name
-        self.model_name = provider_row.plus_model or "qwen3.7-plus"
+        default_model = (
+            "deepseek-v4-flash"
+            if provider_row.provider_name == DEEPSEEK_PROVIDER
+            else "qwen3.7-plus"
+        )
+        self.model_name = (model_name or provider_row.plus_model or default_model).strip()
 
     def invoke(self, *, unit_key: str, unit_type: str, request_payload: dict[str, Any]) -> ProviderCallResult:
         run = request_payload.get("run") or {}
@@ -863,10 +943,21 @@ class GatewayStructureTransport:
     provider_id: str
     model_name: str
 
-    def __init__(self, session: Session, *, provider_row: ProviderConfiguration) -> None:
+    def __init__(
+        self,
+        session: Session,
+        *,
+        provider_row: ProviderConfiguration,
+        model_name: str | None = None,
+    ) -> None:
         self._session = session
         self.provider_id = provider_row.provider_name
-        self.model_name = provider_row.plus_model or "qwen3.7-plus"
+        default_model = (
+            "deepseek-v4-flash"
+            if provider_row.provider_name == DEEPSEEK_PROVIDER
+            else "qwen3.7-plus"
+        )
+        self.model_name = (model_name or provider_row.plus_model or default_model).strip()
 
     def invoke(self, *, unit_key: str, unit_type: str, request_payload: dict[str, Any]) -> ProviderCallResult:
         citation_ids = [str(x) for x in (request_payload.get("citation_ids") or []) if str(x).strip()]
@@ -1045,10 +1136,21 @@ class GatewayChapterFunctionsTransport:
     provider_id: str
     model_name: str
 
-    def __init__(self, session: Session, *, provider_row: ProviderConfiguration) -> None:
+    def __init__(
+        self,
+        session: Session,
+        *,
+        provider_row: ProviderConfiguration,
+        model_name: str | None = None,
+    ) -> None:
         self._session = session
         self.provider_id = provider_row.provider_name
-        self.model_name = provider_row.plus_model or "qwen3.7-plus"
+        default_model = (
+            "deepseek-v4-flash"
+            if provider_row.provider_name == DEEPSEEK_PROVIDER
+            else "qwen3.7-plus"
+        )
+        self.model_name = (model_name or provider_row.plus_model or default_model).strip()
 
     def invoke(self, *, unit_key: str, unit_type: str, request_payload: dict[str, Any]) -> ProviderCallResult:
         allowed = {

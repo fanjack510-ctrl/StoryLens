@@ -1354,6 +1354,10 @@ class WholeBookRun(Base):
         ForeignKey("whole_book_consents.id", ondelete="SET NULL"), nullable=True, index=True
     )
     cost_policy_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # CHG-20260808-060: pin formal provider/model at create; resume must honor these.
+    provider_name: Mapped[str] = mapped_column(String(100), nullable=False, default="")
+    model_name: Mapped[str] = mapped_column(String(255), nullable=False, default="")
+    estimated_actual_cost_cny: Mapped[float | None] = mapped_column(Float, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     paused_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

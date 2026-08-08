@@ -20,6 +20,12 @@ from app.narrative_core.services.whole_book_foundation_errors import (
     WholeBookFoundationErrorCode,
 )
 from app.services.cloud_pricing import estimate_cost, model_pricing_available, pricing_status
+from app.services.provider_pricing import (
+    TOKEN_ESTIMATE_METHOD_HEURISTIC,
+    estimate_pre_run_cost_cny,
+    estimate_tokens_heuristic,
+    is_deepseek_model,
+)
 from app.services.transition_batch_planner import conservative_token_estimate
 from app.services.whole_book_source_fingerprint import compute_book_revision_hash_v1
 
@@ -161,9 +167,14 @@ def estimate_whole_book_analysis(
         session.flush()
         return row
 
-    # Generic project estimator — no novel-specific rules.
+    # TOKEN ESTIMATE METHOD: prefer unit-plan sizes; character heuristic labeled `heuristic`.
     proxy_text = ("汉" if character_count > 0 else "a") * min(max(character_count, 1), 50_000)
-    sample_tokens = conservative_token_estimate(proxy_text)
+    if is_deepseek_model(model_name):
+        sample_tokens = estimate_tokens_heuristic(proxy_text)
+        token_method = TOKEN_ESTIMATE_METHOD_HEURISTIC
+    else:
+        sample_tokens = conservative_token_estimate(proxy_text)
+        token_method = "unit_plan"
     if character_count > len(proxy_text):
         total_input_tokens = int(math.ceil(sample_tokens * (character_count / len(proxy_text))))
     else:
@@ -177,20 +188,38 @@ def estimate_whole_book_analysis(
     provider_calls = _estimate_provider_call_count(
         window_count=window_count, chapter_count=chapter_count
     )
+    _ = token_method  # documented for evidence / future estimate payload fields
 
     cost_min: Decimal | None = None
     cost_max: Decimal | None = None
     if pricing_status_value == "available" and model_name:
-        base, currency, _ver = estimate_cost(model_name, estimated_input, estimated_output)
-        if base is None:
-            pricing_status_value = "unavailable"
-            pricing_reason = "model_pricing_missing"
-        elif currency and str(currency).upper() != CURRENCY:
-            pricing_status_value = "unavailable"
-            pricing_reason = "model_pricing_missing"
+        if is_deepseek_model(model_name):
+            # Conservative: ALL input as cache miss; min/max vary output band only.
+            out_min = int(round(estimated_output * 0.85))
+            out_max = int(round(estimated_output * 1.25))
+            cmin, cmax, err = estimate_pre_run_cost_cny(
+                model_name,
+                estimated_input_tokens=estimated_input,
+                estimated_output_tokens_min=out_min,
+                estimated_output_tokens_max=out_max,
+            )
+            if err or cmin is None or cmax is None:
+                pricing_status_value = "unavailable"
+                pricing_reason = "model_pricing_missing"
+            else:
+                cost_min = Decimal(str(cmin))
+                cost_max = Decimal(str(cmax))
         else:
-            cost_min = Decimal(str(round(base * 0.85, 6)))
-            cost_max = Decimal(str(round(base * 1.25, 6)))
+            base, currency, _ver = estimate_cost(model_name, estimated_input, estimated_output)
+            if base is None:
+                pricing_status_value = "unavailable"
+                pricing_reason = "model_pricing_missing"
+            elif currency and str(currency).upper() != CURRENCY:
+                pricing_status_value = "unavailable"
+                pricing_reason = "model_pricing_missing"
+            else:
+                cost_min = Decimal(str(round(base * 0.85, 6)))
+                cost_max = Decimal(str(round(base * 1.25, 6)))
 
     row = WholeBookCostEstimate(
         book_id=book_id,
