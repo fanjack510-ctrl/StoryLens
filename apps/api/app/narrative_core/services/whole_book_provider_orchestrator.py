@@ -199,16 +199,11 @@ class WholeBookProviderOrchestrator:
                 WholeBookFoundationErrorCode.WHOLE_BOOK_CALL_BUDGET_EXCEEDED,
                 "provider call budget exceeded",
             )
-        if usage.input_tokens + projected_input_tokens > consent.max_input_tokens:
-            raise WholeBookFoundationError(
-                WholeBookFoundationErrorCode.WHOLE_BOOK_INPUT_TOKEN_BUDGET_EXCEEDED,
-                "input token budget exceeded",
-            )
-        if usage.output_tokens + projected_output_tokens > consent.max_output_tokens:
-            raise WholeBookFoundationError(
-                WholeBookFoundationErrorCode.WHOLE_BOOK_OUTPUT_TOKEN_BUDGET_EXCEEDED,
-                "output token budget exceeded",
-            )
+        # Token limits are the user-approved whole-run estimate envelope. They
+        # are validated against the immutable estimate when consent is created.
+        # Provider-reported live usage has different accounting boundaries
+        # (cache/framing/repair), so it must not reinterpret these fields as a
+        # second per-call context budget after Create has already passed.
         limit = Decimal(str(consent.user_budget_limit_cny))
         if usage.cost_cny + projected_cost_cny > limit:
             raise WholeBookFoundationError(

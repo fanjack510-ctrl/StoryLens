@@ -49,5 +49,8 @@ describe("wholeBookStartLimits CHG-062", () => {
     expect(mapWholeBookStartError("REQUEST_VALIDATION_ERROR", "请求字段校验失败。")).toBe(
       "请求参数异常",
     );
+    expect(mapWholeBookStartError("WHOLE_BOOK_INPUT_TOKEN_BUDGET_EXCEEDED", "input token budget exceeded")).toBe(
+      "输入 Token 上限不足",
+    );
   });
 });

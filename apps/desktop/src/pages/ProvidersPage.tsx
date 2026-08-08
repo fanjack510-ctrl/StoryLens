@@ -2,8 +2,6 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { providersApi } from "../services/providersApi";
 import { Badge, ErrorState, Loading } from "../components/common/States";
-import { AliyunForm } from "../components/providers/AliyunForm";
-import { DeepSeekForm } from "../components/providers/DeepSeekForm";
 import {
   cloudStateLabel,
   formatUnknown,
@@ -510,19 +508,10 @@ export function ProvidersPage() {
                   }`
                 : "加载中…"}
             </span>
-            <span>点击左侧卡片仅切换“正在编辑”的配置，不会改变默认服务商。</span>
-            {selected !== activeProviderName && activeProviderName ? (
-              <button
-                type="button"
-                data-testid="provider-set-as-default"
-                onClick={async () => {
-                  await settingsApi.setActiveCloudProvider(selected);
-                  refresh();
-                }}
-              >
-                设为默认
-              </button>
-            ) : null}
+            <span>点击左侧卡片仅查看诊断，不会改变默认服务商。</span>
+            <Link to="/settings?tab=ai" data-testid="provider-open-ai-settings">
+              前往 设置 → AI与模型 修改配置
+            </Link>
           </div>
           {selected === "deepseek" ? (
             <>
@@ -531,7 +520,9 @@ export function ProvidersPage() {
                 <span>OpenAI 兼容 · Thinking 默认关闭 · Flash/Pro 可选</span>
                 <span>与阿里云百炼密钥相互独立</span>
               </div>
-              <DeepSeekForm onSaved={refresh} />
+              <p className="notice" data-testid="provider-diagnostics-read-only">
+                此页面只读展示运行时诊断；凭据、模型、启用状态和默认 Provider 请在“设置 → AI与模型”修改。
+              </p>
             </>
           ) : selected.startsWith("aliyun_") ? (
             <>
@@ -716,7 +707,9 @@ export function ProvidersPage() {
                   </div>
                 )}
               </div>
-              <AliyunForm provider={selected} onSaved={refresh} />
+              <p className="notice" data-testid="provider-diagnostics-read-only">
+                此页面只读展示运行时诊断；凭据、模型、启用状态和默认 Provider 请在“设置 → AI与模型”修改。
+              </p>
             </>
           ) : (
             <div className="local-config">

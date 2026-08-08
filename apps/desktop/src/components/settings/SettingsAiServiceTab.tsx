@@ -379,12 +379,7 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
         </label>
         <p className="settings-status-reason" data-testid="ai-default-provider-help">
           新建 AI 分析任务默认使用此服务商。已创建任务继续使用创建时的 Provider / Model。
-          切换不会删除另一方已保存的 API Key。也可在「模型与API」中管理详细配置。
-        </p>
-        <p>
-          <Link to="/providers" data-testid="ai-open-providers-link">
-            打开模型与API设置
-          </Link>
+          切换不会删除另一方已保存的 API Key。此页是 Provider 配置的唯一入口。
         </p>
       </section>
 

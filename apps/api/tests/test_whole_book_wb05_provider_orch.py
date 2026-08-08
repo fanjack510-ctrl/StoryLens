@@ -319,41 +319,39 @@ def test_resume_does_not_auto_call(tmp_path) -> None:
     assert plan["completed"]
 
 
-def test_token_and_cost_budget_gates(tmp_path) -> None:
+def test_estimate_token_envelope_is_not_reapplied_as_per_call_gate(tmp_path) -> None:
     session = _session(tmp_path)
     _book, consent, run = _seed(session)
     orch = WholeBookProviderOrchestrator(session)
     fake = CountingFakeWholeBookProvider()
     consent.max_input_tokens = 10
     session.commit()
-    with pytest.raises(WholeBookFoundationError) as exc:
-        orch.execute_provider_unit(
-            run_id=run.id,
-            stage_code="extract_entities_events",
-            unit_type="window_analysis",
-            unit_key="tok",
-            request_payload={"t": 1},
-            consent_id=consent.id,
-            transport=fake,
-            projected_input_tokens=100,
-        )
-    assert exc.value.code == WholeBookFoundationErrorCode.WHOLE_BOOK_INPUT_TOKEN_BUDGET_EXCEEDED.value
+    result = orch.execute_provider_unit(
+        run_id=run.id,
+        stage_code="extract_entities_events",
+        unit_type="window_analysis",
+        unit_key="tok",
+        request_payload={"t": 1},
+        consent_id=consent.id,
+        transport=fake,
+        projected_input_tokens=100,
+    )
+    assert result["status"] == "completed"
 
     consent.max_input_tokens = 1_000_000
     consent.max_output_tokens = 1
     session.commit()
-    with pytest.raises(WholeBookFoundationError) as exc2:
-        orch.execute_provider_unit(
-            run_id=run.id,
-            stage_code="extract_entities_events",
-            unit_type="window_analysis",
-            unit_key="out",
-            request_payload={"t": 2},
-            consent_id=consent.id,
-            transport=fake,
-            projected_output_tokens=50,
-        )
-    assert exc2.value.code == WholeBookFoundationErrorCode.WHOLE_BOOK_OUTPUT_TOKEN_BUDGET_EXCEEDED.value
+    result2 = orch.execute_provider_unit(
+        run_id=run.id,
+        stage_code="extract_entities_events",
+        unit_type="window_analysis",
+        unit_key="out",
+        request_payload={"t": 2},
+        consent_id=consent.id,
+        transport=fake,
+        projected_output_tokens=50,
+    )
+    assert result2["status"] == "completed"
 
     consent.max_output_tokens = 1_000_000
     consent.user_budget_limit_cny = Decimal("0.001")
@@ -370,4 +368,4 @@ def test_token_and_cost_budget_gates(tmp_path) -> None:
             projected_cost_cny=Decimal("1.00"),
         )
     assert exc3.value.code == WholeBookFoundationErrorCode.WHOLE_BOOK_COST_BUDGET_EXCEEDED.value
-    assert fake.call_count == 0
+    assert fake.call_count == 2

@@ -1,0 +1,48 @@
+{
+  "id": "CHG-20260809-068",
+  "title": "Fix Whole-Book token budget bug and consolidate AI provider settings",
+  "type": "fix",
+  "base_version": "1.2.0",
+  "status": "implemented",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": ["apps/api", "apps/desktop"],
+  "files": [
+    "apps/api/app/narrative_core/services/whole_book_provider_orchestrator.py",
+    "apps/desktop/src/services/wholeBookStartLimits.ts",
+    "apps/desktop/src/components/layout/DevelopmentNavigationGroup.tsx",
+    "apps/desktop/src/components/settings/SettingsAiServiceTab.tsx",
+    "apps/desktop/src/pages/ProvidersPage.tsx"
+  ],
+  "user_summary": "Whole-book starts now honor the approved estimate budget, and Provider credentials are edited only in Settings > AI and Models.",
+  "technical_summary": "Keep estimate-envelope validation at consent creation; stop reinterpreting run token caps as per-call context limits; make developer Provider UI diagnostic-only.",
+  "acceptance_criteria": [
+    "estimated input 1758000 passes limit 2000000",
+    "estimated input 1758000 fails limit 1700000",
+    "developer diagnostics cannot edit credentials or default provider",
+    "routing preview remains resolver-backed"
+  ],
+  "tests": [
+    "apps/api/tests/test_whole_book_start_validation_chg062.py",
+    "apps/api/tests/test_whole_book_wb05_provider_orch.py",
+    "apps/api/tests/test_cloud_provider_routing_chg065.py",
+    "apps/desktop/src/services/wholeBookStartLimits.test.ts"
+  ],
+  "verification_evidence": [],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": null,
+  "created_at": "2026-08-09T00:00:00Z",
+  "updated_at": "2026-08-09T00:00:00Z"
+}

@@ -114,8 +114,10 @@ export function mapWholeBookStartError(code: string, fallbackMessage: string): s
     case "LIMIT_PROVIDER_CALLS_TOO_LOW":
       return "模型调用次数上限低于本次分析预计需求";
     case "LIMIT_INPUT_TOKENS_TOO_LOW":
+    case "WHOLE_BOOK_INPUT_TOKEN_BUDGET_EXCEEDED":
       return "输入 Token 上限不足";
     case "LIMIT_OUTPUT_TOKENS_TOO_LOW":
+    case "WHOLE_BOOK_OUTPUT_TOKEN_BUDGET_EXCEEDED":
       return "输出 Token 上限不足";
     case "BUDGET_TOO_LOW":
     case "WHOLE_BOOK_BUDGET_TOO_LOW":
