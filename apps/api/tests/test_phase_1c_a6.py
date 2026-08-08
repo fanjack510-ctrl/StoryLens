@@ -328,7 +328,7 @@ def test_output_limit_above_64_is_rejected_before_send(connection_env) -> None:
         json={"confirmed": True, "test_type": "minimal_json", "max_output_tokens": 65},
     )
     assert response.status_code == 422
-    assert response.json()["error_code"] == "REQUEST_VALIDATION_ERROR"
+    assert response.json()["error_code"] in {"REQUEST_SCHEMA_INVALID", "REQUEST_VALIDATION_ERROR"}
     assert provider.calls == 0
 
 

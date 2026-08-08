@@ -1,0 +1,78 @@
+{
+  "id": "CHG-20260808-062",
+  "title": "Fix Whole-Book start validation UX for limits and consent",
+  "type": "fix",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": true,
+  "commits": [
+    {
+      "sha": "b15b5c46142a1cf0a6956ec281bf696a10cf1e47",
+      "message": "fix(whole-book): complete DeepSeek create and limit validation",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
+  "modules": [
+    "apps/api",
+    "apps/desktop"
+  ],
+  "files": [
+    "apps/api/app/main.py",
+    "apps/api/app/routers/whole_book_free_product_router.py",
+    "apps/api/app/narrative_core/services/whole_book_consent_service.py",
+    "apps/api/app/narrative_core/services/whole_book_foundation_errors.py",
+    "apps/api/app/narrative_core/services/whole_book_free_product_v1_service.py",
+    "apps/api/app/narrative_core/services/whole_book_start_limits_v1.py",
+    "apps/api/tests/test_whole_book_start_validation_chg062.py",
+    "apps/desktop/src/pages/WholeBookFreeProductPage.tsx",
+    "apps/desktop/src/services/wholeBookFreeProductApi.ts",
+    "apps/desktop/src/services/wholeBookStartLimits.ts",
+    "apps/desktop/src/services/wholeBookStartLimits.test.ts"
+  ],
+  "user_summary": "点击开始前校验调用限制；限制不足时禁用按钮并提供建议上限；修复 free create 缺少 consent_id 导致的 422 泛化提示。",
+  "technical_summary": "Root 422 was missing consent_id. Free create now creates consent from limits; assert_limits_cover_estimate; prepare recommended_limits from estimate headroom; desktop pre-start gaps + suggested limits; REQUEST_SCHEMA_INVALID messages. ROOT CAUSE: stale runtime Sidecar + Create consent schema mismatch. NEW SIDECAR verified SHA256 6E049C483744ECCD69AEFF19904BF92797123B1BF19A77FE6AC20AC3DFB7C197. Small real sample 明朝那些事儿.txt 6ch deepseek/deepseek-v4-flash: pre calls 5 cost 0.0375-0.0447; real calls 4; tokens 15201/0/15201/1605/16806; actual cost 0.018411; modules PASS; failed/retry/repair 0; duplicates 0; secret ABSENT.",
+  "acceptance_criteria": [
+    "Limits below estimate disable Start with explicit gaps",
+    "Budget 10 > estimate max passes",
+    "Suggested limits button fills headroom caps",
+    "DeepSeek provider/model unchanged",
+    "No generic 请求字段校验失败 for this path"
+  ],
+  "tests": [
+    "apps/api/tests/test_whole_book_start_validation_chg062.py",
+    "apps/desktop/src/services/wholeBookStartLimits.test.ts"
+  ],
+  "verification_evidence": [
+    "release/evidence/whole-book/CHG-20260808-062/ROOT_CAUSE.md",
+    "release/evidence/whole-book/CHG-20260808-062/RUNTIME_CREATE_DIAGNOSIS.md",
+    "release/evidence/whole-book/CHG-20260808-062/RUNTIME_DIAGNOSIS.json",
+    "release/evidence/whole-book/CHG-20260808-062/SIDECAR_BUILD.txt",
+    "release/evidence/whole-book/CHG-20260808-062/TARGETED_TESTS.txt",
+    "release/evidence/whole-book/CHG-20260808-062/TYPECHECK.txt",
+    "release/evidence/whole-book/CHG-20260808-062/VITEST_LIMITS.txt",
+    "release/evidence/whole-book/CHG-20260808-062/DEEPSEEK_SMALL_ACCEPTANCE/ACCEPTANCE.md",
+    "release/evidence/whole-book/CHG-20260808-062/DEEPSEEK_SMALL_ACCEPTANCE/ACCEPTANCE.json",
+    "release/evidence/whole-book/CHG-20260808-062/DEEPSEEK_SMALL_ACCEPTANCE/ACCEPTANCE_CONSOLE.txt",
+    "release/evidence/whole-book/CHG-20260808-062/DEEPSEEK_SMALL_ACCEPTANCE/PROVIDER_CALLS.json",
+    "release/evidence/whole-book/CHG-20260808-062/DEEPSEEK_SMALL_ACCEPTANCE/USAGE_CAPTURE.json",
+    "release/evidence/whole-book/CHG-20260808-062/DEEPSEEK_SMALL_ACCEPTANCE/deepseek_small_acceptance.py"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "Consent contract unchanged; consent may be created inline by free create."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": "INCLUDED",
+  "parent_change": "CHG-20260808-061",
+  "created_at": "2026-08-08T06:42:47Z",
+  "updated_at": "2026-08-08T09:41:59Z"
+}

@@ -299,10 +299,22 @@ def _register_app_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(RequestValidationError)
     async def validation_error(request: Request, exc: RequestValidationError) -> JSONResponse:
+        errors = exc.errors()
+        fields: list[str] = []
+        for item in errors:
+            loc = item.get("loc") or ()
+            # Skip "body" / "query" prefix for readability.
+            parts = [str(p) for p in loc if p not in {"body", "query", "path"}]
+            if parts:
+                fields.append(".".join(parts))
+        if fields:
+            message = f"请求参数异常：缺少或无效字段 {', '.join(fields)}"
+        else:
+            message = "请求参数异常。"
         return JSONResponse(status_code=422, content={
-            "error_code": "REQUEST_VALIDATION_ERROR",
-            "message": "请求字段校验失败。",
-            "details": exc.errors(),
+            "error_code": "REQUEST_SCHEMA_INVALID",
+            "message": message,
+            "details": errors,
             "request_id": getattr(request.state, "request_id", None),
             "retryable": False,
             "user_action_hint": "请刷新页面后重新提交；若仍失败，请查看字段诊断。",

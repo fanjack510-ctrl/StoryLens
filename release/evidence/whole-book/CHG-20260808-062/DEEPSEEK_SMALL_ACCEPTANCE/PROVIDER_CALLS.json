@@ -1,0 +1,46 @@
+[
+  {
+    "attempt_id": 1,
+    "provider_id": "deepseek",
+    "model_name": "deepseek-v4-flash",
+    "status": "succeeded",
+    "attempt_no": 1,
+    "input_tokens": 13153,
+    "output_tokens": 619,
+    "cost_cny": "0.014391",
+    "error_code": null
+  },
+  {
+    "attempt_id": 2,
+    "provider_id": "deepseek",
+    "model_name": "deepseek-v4-flash",
+    "status": "succeeded",
+    "attempt_no": 1,
+    "input_tokens": 445,
+    "output_tokens": 358,
+    "cost_cny": "0.001161",
+    "error_code": null
+  },
+  {
+    "attempt_id": 3,
+    "provider_id": "deepseek",
+    "model_name": "deepseek-v4-flash",
+    "status": "succeeded",
+    "attempt_no": 1,
+    "input_tokens": 1239,
+    "output_tokens": 394,
+    "cost_cny": "0.002027",
+    "error_code": null
+  },
+  {
+    "attempt_id": 4,
+    "provider_id": "deepseek",
+    "model_name": "deepseek-v4-flash",
+    "status": "succeeded",
+    "attempt_no": 1,
+    "input_tokens": 364,
+    "output_tokens": 234,
+    "cost_cny": "0.000832",
+    "error_code": null
+  }
+]

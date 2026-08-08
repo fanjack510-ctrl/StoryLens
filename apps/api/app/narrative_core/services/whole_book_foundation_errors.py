@@ -11,6 +11,12 @@ class WholeBookFoundationErrorCode(StrEnum):
     WHOLE_BOOK_BOOK_NOT_FOUND = "WHOLE_BOOK_BOOK_NOT_FOUND"
     WHOLE_BOOK_PRICING_UNAVAILABLE = "WHOLE_BOOK_PRICING_UNAVAILABLE"
     WHOLE_BOOK_BUDGET_TOO_LOW = "WHOLE_BOOK_BUDGET_TOO_LOW"
+    BUDGET_TOO_LOW = "BUDGET_TOO_LOW"
+    LIMIT_PROVIDER_CALLS_TOO_LOW = "LIMIT_PROVIDER_CALLS_TOO_LOW"
+    LIMIT_INPUT_TOKENS_TOO_LOW = "LIMIT_INPUT_TOKENS_TOO_LOW"
+    LIMIT_OUTPUT_TOKENS_TOO_LOW = "LIMIT_OUTPUT_TOKENS_TOO_LOW"
+    CONSENT_STALE = "CONSENT_STALE"
+    REQUEST_SCHEMA_INVALID = "REQUEST_SCHEMA_INVALID"
     WHOLE_BOOK_CALL_LIMIT_REQUIRED = "WHOLE_BOOK_CALL_LIMIT_REQUIRED"
     WHOLE_BOOK_TOKEN_LIMIT_REQUIRED = "WHOLE_BOOK_TOKEN_LIMIT_REQUIRED"
     WHOLE_BOOK_CONSENT_REVOKED = "WHOLE_BOOK_CONSENT_REVOKED"
@@ -40,7 +46,14 @@ class WholeBookFoundationErrorCode(StrEnum):
 
 
 class WholeBookFoundationError(Exception):
-    def __init__(self, code: WholeBookFoundationErrorCode | str, message: str) -> None:
+    def __init__(
+        self,
+        code: WholeBookFoundationErrorCode | str,
+        message: str,
+        *,
+        details: dict | None = None,
+    ) -> None:
         self.code = code.value if isinstance(code, WholeBookFoundationErrorCode) else str(code)
         self.message = message
+        self.details = details or {}
         super().__init__(message)

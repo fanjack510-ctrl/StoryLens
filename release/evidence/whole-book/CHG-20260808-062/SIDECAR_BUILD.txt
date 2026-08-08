@@ -1,0 +1,3 @@
+Sidecar rebuild evidence (trimmed; full PyInstaller log omitted from git).
+Expected SHA256: 6E049C483744ECCD69AEFF19904BF92797123B1BF19A77FE6AC20AC3DFB7C197
+Binary path (gitignored): apps/desktop/src-tauri/binaries/storylens-api-x86_64-pc-windows-msvc.exe

@@ -254,8 +254,13 @@ export const wholeBookFreeProductApi = {
       method: "POST",
       body: JSON.stringify({
         estimate_id: body.estimate_id,
-        consent_id: body.consent_id,
+        ...(body.consent_id != null ? { consent_id: body.consent_id } : {}),
         client_request_id: body.client_request_id,
+        max_provider_calls: body.max_provider_calls ?? undefined,
+        max_input_tokens: body.max_input_tokens ?? undefined,
+        max_output_tokens: body.max_output_tokens ?? undefined,
+        max_cost_budget_cny: body.max_cost_budget_cny ?? undefined,
+        auto_retry_enabled: Boolean(body.auto_retry_enabled),
       }),
     }),
 

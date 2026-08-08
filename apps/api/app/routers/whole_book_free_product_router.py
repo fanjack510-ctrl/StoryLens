@@ -42,10 +42,17 @@ _NOT_FOUND_CODES = {
 
 
 class CreateFreeRunRequest(BaseModel):
+    """Formal free create — consent may be created inline from limits (CHG-062)."""
+
     model_config = ConfigDict(extra="forbid")
     estimate_id: int = Field(gt=0)
-    consent_id: int = Field(gt=0)
+    consent_id: int | None = Field(default=None, gt=0)
     client_request_id: str = Field(min_length=1, max_length=128)
+    max_provider_calls: int | None = Field(default=None, gt=0)
+    max_input_tokens: int | None = Field(default=None, gt=0)
+    max_output_tokens: int | None = Field(default=None, gt=0)
+    max_cost_budget_cny: str | None = None
+    auto_retry_enabled: bool = False
 
 
 class CreateFixtureFreeRunRequest(BaseModel):
@@ -56,9 +63,12 @@ class CreateFixtureFreeRunRequest(BaseModel):
 
 def _raise_foundation(exc: WholeBookFoundationError) -> None:
     status = 404 if exc.code in _NOT_FOUND_CODES else 400
+    detail: dict = {"error_code": exc.code, "message": exc.message}
+    if getattr(exc, "details", None):
+        detail["details"] = exc.details
     raise HTTPException(
         status_code=status,
-        detail={"error_code": exc.code, "message": exc.message},
+        detail=detail,
     )
 
 
@@ -107,11 +117,43 @@ def create_free_analysis(
     db: Session = Depends(get_db),
 ) -> dict:
     try:
+        consent_id = body.consent_id
+        if consent_id is None:
+            from decimal import Decimal
+
+            from app.db.models import WholeBookCostEstimate
+            from app.narrative_core.services.whole_book_consent_service import (
+                create_whole_book_consent,
+            )
+
+            if not body.max_cost_budget_cny:
+                raise WholeBookFoundationError(
+                    WholeBookFoundationErrorCode.BUDGET_TOO_LOW,
+                    "请填写最高费用预算后再开始分析",
+                )
+            estimate = db.get(WholeBookCostEstimate, body.estimate_id)
+            if estimate is None or estimate.book_id != book_id:
+                raise WholeBookFoundationError(
+                    WholeBookFoundationErrorCode.CONSENT_STALE,
+                    "分析配置已经变化，请重新确认费用预估",
+                )
+            consent = create_whole_book_consent(
+                db,
+                book_id=book_id,
+                estimate_id=body.estimate_id,
+                user_budget_limit_cny=Decimal(str(body.max_cost_budget_cny)),
+                max_provider_calls=body.max_provider_calls,
+                max_input_tokens=body.max_input_tokens,
+                max_output_tokens=body.max_output_tokens,
+                auto_retry_enabled=bool(body.auto_retry_enabled),
+                max_retries_per_unit=0,
+            )
+            consent_id = consent.id
         result = create_free_whole_book_analysis_v1(
             db,
             book_id,
             estimate_id=body.estimate_id,
-            consent_id=body.consent_id,
+            consent_id=int(consent_id),
             client_request_id=body.client_request_id,
         )
         db.commit()

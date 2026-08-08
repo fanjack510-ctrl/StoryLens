@@ -38,6 +38,7 @@ from app.narrative_core.services.whole_book_run_v1_service import (
     start_whole_book_run_v1,
 )
 from app.narrative_core.services.whole_book_snapshot_v1_service import create_or_reuse_book_snapshot_v1
+from app.narrative_core.services.whole_book_start_limits_v1 import suggest_limits_from_estimate
 from app.narrative_core.services.whole_book_windowing_v1_service import generate_whole_book_windows_v1
 
 
@@ -190,12 +191,7 @@ def prepare_free_whole_book_analysis_v1(session: Session, book_id: int) -> dict[
             "price_known": str(est.get("pricing_status") or "") == "available",
             "currency": est.get("currency") or "CNY",
         },
-        "recommended_limits": {
-            "max_provider_calls": 200,
-            "max_input_tokens": 500_000,
-            "max_output_tokens": 100_000,
-            "max_cost_budget_cny": "10.00",
-        },
+        "recommended_limits": suggest_limits_from_estimate(estimate),
         "blocking_reasons": blockers,
         "warnings": [],
     }

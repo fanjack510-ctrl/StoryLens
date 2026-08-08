@@ -7,7 +7,7 @@
   "include_in_next_release": true,
   "commits": [
     {
-      "sha": "176518bbcac5970c4df52c14640c473c9630cbd7",
+      "sha": "6ac077b074ee9258db1c8067ca606c4c97c72481",
       "message": "fix(whole-book): honor selected provider for new analysis runs",
       "primary": true,
       "multi_change_reason": null

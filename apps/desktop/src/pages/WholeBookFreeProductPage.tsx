@@ -10,6 +10,11 @@ import { isWholeBookFreeProductEnabled } from "../services/wholeBookFreeProductF
 import { isWholeBookRealProviderEnabled } from "../services/wholeBookRealProviderFlag";
 import { settingsApi } from "../services/settingsApi";
 import {
+  compareLimitsToEstimate,
+  formatLimitGapsMessage,
+  mapWholeBookStartError,
+} from "../services/wholeBookStartLimits";
+import {
   BOOK_OVERVIEW_CLAIM_LABELS,
   BOOK_OVERVIEW_CLAIM_ORDER,
 } from "../services/wholeBookFoundationApi";
@@ -272,23 +277,30 @@ function WholeBookFreeProductPageEnabled() {
     queryFn: () => wholeBookFreeProductApi.productCapabilities(),
   });
 
+  const [limitsSeededForEstimateId, setLimitsSeededForEstimateId] = useState<number | null>(
+    null,
+  );
+
   useEffect(() => {
     const rec = prepareQuery.data?.recommended_limits;
-    if (!rec) return;
-    setLimits((prev) => ({
+    const estimateId = prepareQuery.data?.estimate?.estimate_id ?? null;
+    if (!rec || estimateId == null) return;
+    if (limitsSeededForEstimateId === estimateId) return;
+    setLimits({
       max_provider_calls:
-        prev.max_provider_calls ||
-        (rec.max_provider_calls != null ? String(rec.max_provider_calls) : ""),
-      max_input_tokens:
-        prev.max_input_tokens ||
-        (rec.max_input_tokens != null ? String(rec.max_input_tokens) : ""),
+        rec.max_provider_calls != null ? String(rec.max_provider_calls) : "",
+      max_input_tokens: rec.max_input_tokens != null ? String(rec.max_input_tokens) : "",
       max_output_tokens:
-        prev.max_output_tokens ||
-        (rec.max_output_tokens != null ? String(rec.max_output_tokens) : ""),
-      max_cost_budget_cny: prev.max_cost_budget_cny || rec.max_cost_budget_cny || "",
-      auto_retry_enabled: prev.auto_retry_enabled,
-    }));
-  }, [prepareQuery.data?.recommended_limits]);
+        rec.max_output_tokens != null ? String(rec.max_output_tokens) : "",
+      max_cost_budget_cny: rec.max_cost_budget_cny || "10.00",
+      auto_retry_enabled: false,
+    });
+    setLimitsSeededForEstimateId(estimateId);
+  }, [
+    prepareQuery.data?.estimate?.estimate_id,
+    prepareQuery.data?.recommended_limits,
+    limitsSeededForEstimateId,
+  ]);
 
   const invalidateAll = useCallback(async () => {
     await queryClient.invalidateQueries({ queryKey: ["whole-book-free-prepare", bookId] });
@@ -312,8 +324,13 @@ function WholeBookFreeProductPageEnabled() {
         auto_retry_enabled: limits.auto_retry_enabled,
       }),
     onSuccess: () => void invalidateAll(),
-    onError: (err) =>
-      setActionError(err instanceof ApiError ? err.message : "创建分析任务失败"),
+    onError: (err) => {
+      if (err instanceof ApiError) {
+        setActionError(mapWholeBookStartError(err.code, err.message));
+        return;
+      }
+      setActionError("创建分析任务失败");
+    },
   });
 
   const createFixtureMutation = useMutation({
@@ -537,12 +554,32 @@ function WholeBookFreeProductPageEnabled() {
     run?.status === "cancelled" || run?.status === "canceled";
   const showProgressCard = pageMode === "running";
 
+  const limitGaps = compareLimitsToEstimate(prepare.estimate, limits);
+  const limitsSufficient = limitGaps.length === 0;
+
   const canStartFormal =
     consented &&
     realProviderFlagOn &&
     Boolean(prepare.run_creation_enabled) &&
     Boolean(prepare.provider_available !== false) &&
+    limitsSufficient &&
     !createFormalMutation.isPending;
+
+  const applySuggestedLimits = () => {
+    const rec = prepare.recommended_limits;
+    if (!rec) return;
+    setLimits((prev) => ({
+      ...prev,
+      max_provider_calls:
+        rec.max_provider_calls != null ? String(rec.max_provider_calls) : prev.max_provider_calls,
+      max_input_tokens:
+        rec.max_input_tokens != null ? String(rec.max_input_tokens) : prev.max_input_tokens,
+      max_output_tokens:
+        rec.max_output_tokens != null ? String(rec.max_output_tokens) : prev.max_output_tokens,
+      // Keep budget if already sufficient; otherwise take recommended.
+      max_cost_budget_cny: prev.max_cost_budget_cny || rec.max_cost_budget_cny || "10.00",
+    }));
+  };
 
   return (
     <div className={styles.wholeBookFreePage} data-testid="whole-book-free-product-page">
@@ -634,6 +671,8 @@ function WholeBookFreeProductPageEnabled() {
               onConsentChange={setConsented}
               limits={limits}
               onLimitsChange={setLimits}
+              limitGaps={limitGaps}
+              onApplySuggestedLimits={applySuggestedLimits}
               canStartFormal={canStartFormal}
               realProviderOn={realProviderFlagOn && Boolean(prepare.run_creation_enabled)}
               providerBlockers={prepare.blocking_reasons ?? []}
@@ -790,6 +829,8 @@ function PreparePanel({
   onConsentChange,
   limits,
   onLimitsChange,
+  limitGaps,
+  onApplySuggestedLimits,
   canStartFormal,
   realProviderOn,
   providerBlockers,
@@ -811,6 +852,8 @@ function PreparePanel({
     auto_retry_enabled: boolean;
   };
   onLimitsChange: (v: typeof limits) => void;
+  limitGaps: ReturnType<typeof compareLimitsToEstimate>;
+  onApplySuggestedLimits: () => void;
   canStartFormal: boolean;
   realProviderOn: boolean;
   providerBlockers: string[];
@@ -834,7 +877,7 @@ function PreparePanel({
       </ul>
 
       <section data-testid="whole-book-free-cost-estimate">
-        <h3>费用预估</h3>
+        <h3>费用预估（预计使用量）</h3>
         {est ? (
           <ul>
             <li>预计窗口数：{est.estimated_windows ?? "—"}</li>
@@ -862,7 +905,10 @@ function PreparePanel({
       </section>
 
       <section data-testid="whole-book-free-limits">
-        <h3>调用限制</h3>
+        <h3>调用限制（允许的最大上限）</h3>
+        <p className="muted" data-testid="whole-book-free-limits-hint">
+          上限必须不低于上方「预计使用量」。这是安全上限，不是费用预估。
+        </p>
         <div className={styles.wholeBookFreeLimitsGrid} data-testid="whole-book-free-limits-grid">
           <label>
             最大模型调用次数
@@ -907,6 +953,23 @@ function PreparePanel({
           />
           启用自动重试（默认关闭；失败后不会自动无限重试）
         </label>
+        {limitGaps.length > 0 ? (
+          <div data-testid="whole-book-free-limit-gaps">
+            <p
+              data-testid="whole-book-free-limit-gaps-message"
+              style={{ whiteSpace: "pre-wrap" }}
+            >
+              {formatLimitGapsMessage(limitGaps)}
+            </p>
+            <button
+              type="button"
+              data-testid="whole-book-free-apply-suggested-limits"
+              onClick={onApplySuggestedLimits}
+            >
+              按本次分析需求填写建议上限
+            </button>
+          </div>
+        ) : null}
       </section>
 
       <label className="consent" data-testid="whole-book-free-consent">
@@ -924,6 +987,12 @@ function PreparePanel({
           {providerBlockers.length > 0
             ? providerBlockers.join("；")
             : "真实模型 Provider 尚未启用，暂不可开始正式分析。"}
+        </p>
+      ) : null}
+
+      {limitGaps.length > 0 ? (
+        <p className="muted" data-testid="whole-book-free-start-blocked-by-limits">
+          请先提高不足的调用限制，或点击「按本次分析需求填写建议上限」。
         </p>
       ) : null}
 

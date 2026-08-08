@@ -65,9 +65,24 @@ def create_whole_book_consent(
             )
         if budget < Decimal(str(accepted_max)):
             raise WholeBookFoundationError(
-                WholeBookFoundationErrorCode.WHOLE_BOOK_BUDGET_TOO_LOW,
-                "user_budget_limit_cny below estimated_cost_max_cny",
+                WholeBookFoundationErrorCode.BUDGET_TOO_LOW,
+                f"费用预算低于预计最高费用：预计最高 ¥{accepted_max}，当前预算 ¥{budget}",
+                details={
+                    "estimated_cost_max_cny": str(accepted_max),
+                    "max_cost_budget_cny": str(budget),
+                },
             )
+        from app.narrative_core.services.whole_book_start_limits_v1 import (
+            assert_limits_cover_estimate,
+        )
+
+        assert_limits_cover_estimate(
+            estimate,
+            max_provider_calls=max_provider_calls,
+            max_input_tokens=max_input_tokens,
+            max_output_tokens=max_output_tokens,
+            user_budget_limit_cny=None,  # already checked above
+        )
         calls = max_provider_calls if max_provider_calls is not None else estimate.estimated_provider_call_count
         in_tok = max_input_tokens if max_input_tokens is not None else estimate.estimated_input_tokens
         out_tok = max_output_tokens if max_output_tokens is not None else estimate.estimated_output_tokens

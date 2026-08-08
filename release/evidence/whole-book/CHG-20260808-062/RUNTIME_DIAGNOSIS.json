@@ -1,0 +1,7 @@
+{
+  "api_url": "http://127.0.0.1:57335",
+  "schema_consent_optional": true,
+  "old_sha256": "0C6513DEC5CBA15F71154E17CAB417C9CB9CFCD8C14B46B12ADC28533D4F3489",
+  "new_sha256": "6E049C483744ECCD69AEFF19904BF92797123B1BF19A77FE6AC20AC3DFB7C197",
+  "sidecar_path": "D:\\Dstorylens-wt-v120-deepseek\\apps\\desktop\\src-tauri\\binaries\\storylens-api-x86_64-pc-windows-msvc.exe"
+}
