@@ -12,5 +12,9 @@ describe("app router bootstrap", () => {
     expect(paths).toContain("/");
     expect(paths).toContain("/books/:bookId/whole-book-insights");
     expect(paths).toContain("/books/:bookId/pro-native-overview");
+    if (import.meta.env.DEV) {
+      expect(paths).toContain("/dev/whole-book-v2-mock");
+      expect(paths).toContain("/dev/whole-book-v2-mock/progress");
+    }
   });
 });

@@ -1,0 +1,45 @@
+{
+  "id": "CHG-20260809-069",
+  "title": "Add isolated Whole-Book V2 product review mock",
+  "type": "feature",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": ["apps/desktop"],
+  "files": [
+    "apps/desktop/src/features/wholeBookV2Mock/wholeBookV2MockData.ts",
+    "apps/desktop/src/features/wholeBookV2Mock/wholeBookV2MockEnrichment.ts",
+    "apps/desktop/src/features/wholeBookV2Mock/WholeBookV2MockPage.tsx",
+    "apps/desktop/src/features/wholeBookV2Mock/WholeBookV2ProgressMockPage.tsx",
+    "apps/desktop/src/features/wholeBookV2Mock/wholeBookV2Mock.css",
+    "apps/desktop/src/features/wholeBookV2Mock/WholeBookV2MockPage.test.tsx",
+    "apps/desktop/src/app/router.tsx",
+    "apps/desktop/src/app/router.smoke.test.tsx"
+  ],
+  "user_summary": "Adds a development-only, static Whole-Book V2 report and progress prototype for product information-architecture review.",
+  "technical_summary": "Implements two dev-only React routes with deterministic static mock data and dependency-free SVG/HTML visualizations; no backend requests or formal route changes.",
+  "acceptance_criteria": [
+    "eight report modules render from static mock data",
+    "progress mock exposes all fifteen stages and requested metrics",
+    "chapter heatmap aggregates 1299 chapters instead of rendering 1299 cards",
+    "formal whole-book route and backend remain unchanged"
+  ],
+  "tests": [
+    "apps/desktop/src/features/wholeBookV2Mock/WholeBookV2MockPage.test.tsx",
+    "apps/desktop/src/app/router.smoke.test.tsx",
+    "npm run typecheck",
+    "npm run build"
+  ],
+  "verification_evidence": [
+    "Targeted Vitest: 2 files / 6 tests passed (final mock polish)",
+    "Typecheck: passed",
+    "Production frontend build: passed"
+  ],
+  "data_compatibility": {"database_changed": false, "migration_required": false, "user_data_compatible": true, "notes": "Static frontend mock only."},
+  "release_impact": {"requires_reanalysis": false, "requires_restart": false, "updater_impact": false, "breaking_change": false},
+  "blocker_level": null,
+  "head_inclusion": null,
+  "created_at": "2026-08-09T00:00:00Z",
+  "updated_at": "2026-08-09T00:00:00Z"
+}

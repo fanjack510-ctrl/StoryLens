@@ -22,6 +22,22 @@ const routeErrorElement = <RouteErrorPage />;
 const devOnlyChildren = import.meta.env.DEV
   ? [
       {
+        path: "/dev/whole-book-v2-mock",
+        lazy: async () => ({
+          Component: (await import("../features/wholeBookV2Mock/WholeBookV2MockPage"))
+            .WholeBookV2MockPage,
+        }),
+        errorElement: routeErrorElement,
+      },
+      {
+        path: "/dev/whole-book-v2-mock/progress",
+        lazy: async () => ({
+          Component: (await import("../features/wholeBookV2Mock/WholeBookV2ProgressMockPage"))
+            .WholeBookV2ProgressMockPage,
+        }),
+        errorElement: routeErrorElement,
+      },
+      {
         path: "/dev/whole-book-diagnostics",
         element: <WholeBookDiagnosticsPage />,
         errorElement: routeErrorElement,
