@@ -22,6 +22,7 @@ from app.routers.capabilities import router as capabilities_router
 from app.routers.whole_book_preflight import router as whole_book_preflight_router
 from app.routers.whole_book_native_overview import router as whole_book_native_overview_router
 from app.routers.whole_book_results import router as whole_book_results_router
+from app.narrative_core.whole_book_v2.router import router as whole_book_v2_router
 from app.routers.pro_whole_book_insights import router as pro_whole_book_insights_router
 from app.routers.whole_book_cost_consent import router as whole_book_cost_consent_router
 from app.routers.whole_book_foundation_router import router as whole_book_foundation_router
@@ -231,6 +232,7 @@ def _configure_middleware_and_routers(app: FastAPI) -> None:
     app.include_router(whole_book_native_overview_router)
     # Phase 1D Integration: read-only result projection (no run create / no review writes).
     app.include_router(whole_book_results_router)
+    app.include_router(whole_book_v2_router)
     app.include_router(pro_whole_book_insights_router)
 
 

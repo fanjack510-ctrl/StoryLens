@@ -15,6 +15,7 @@ import { WholeBookDiagnosticsPage } from "../pages/WholeBookDiagnosticsPage";
 import { WholeBookFreeProductPage } from "../pages/WholeBookFreeProductPage";
 import { ChapterFunctionsHarnessPage } from "../pages/ChapterFunctionsHarnessPage";
 import { NotFoundPage, RouteErrorPage } from "../pages/RouteErrorPages";
+import { WholeBookV2FormalPage } from "../features/wholeBookV2/WholeBookV2FormalPage";
 
 const routeErrorElement = <RouteErrorPage />;
 
@@ -73,6 +74,11 @@ export const router = createBrowserRouter([
       {
         path: "/books/:bookId/whole-book",
         element: <WholeBookFreeProductPage />,
+        errorElement: routeErrorElement,
+      },
+      {
+        path: "/books/:bookId/whole-book-v2",
+        element: <WholeBookV2FormalPage />,
         errorElement: routeErrorElement,
       },
       { path: "/tasks", element: <TasksPage />, errorElement: routeErrorElement },

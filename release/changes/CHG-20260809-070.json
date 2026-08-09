@@ -1,0 +1,48 @@
+{
+  "id": "CHG-20260809-070",
+  "title": "Whole-Book V2 Real Analysis Engine",
+  "type": "feature",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": ["apps/api", "apps/desktop"],
+  "files": [
+    "apps/api/app/narrative_core/whole_book_v2/",
+    "apps/api/app/main.py",
+    "apps/api/tests/test_whole_book_v2_engine.py",
+    "apps/desktop/src/features/wholeBookV2/",
+    "apps/desktop/src/app/router.tsx"
+  ],
+  "user_summary": "Adds the first structured, resumable Whole-Book V2 engine and formal seven-module frontend route while preserving V1 and the CHG-069 mock.",
+  "technical_summary": "Introduces versioned Pydantic contracts, one-pass shared window primitives, normalization and evidence validation, provider-unit planning and pinning, JSON-asset persistence, formal versioned read APIs, progress state, and a typed frontend adapter.",
+  "acceptance_criteria": [
+    "all seven formal modules are represented by structured versioned data",
+    "one shared extraction pass feeds synthesis without per-module rescans",
+    "evidence validates chapter identity, snapshot, revision and offsets",
+    "progress, provider pinning and resume-safe unit execution are explicit",
+    "V1 and the static V2 mock remain available"
+  ],
+  "tests": [
+    "apps/api/tests/test_whole_book_v2_engine.py",
+    "apps/desktop/src/features/wholeBookV2/adapter.test.ts",
+    "apps/desktop/src/features/wholeBookV2Mock/WholeBookV2MockPage.test.tsx",
+    "apps/desktop/src/app/router.smoke.test.tsx",
+    "npm run typecheck",
+    "npm run build"
+  ],
+  "verification_evidence": [
+    "Backend targeted pytest: 10 passed",
+    "Frontend targeted Vitest: 3 files / 9 tests passed",
+    "Typecheck: passed",
+    "Production frontend build: passed",
+    "Real provider calls: 0"
+  ],
+  "data_compatibility": {"database_changed": false, "migration_required": false, "user_data_compatible": true, "notes": "V2 materializes into existing versioned JSON assets and checkpoints; legacy results are explicitly unavailable/partial rather than promoted."},
+  "provider_impact": {"real_calls": 0, "routing_changed": false, "notes": "Run provider/model are pinned; retry, repair and resume reject mismatches and never silently fall back."},
+  "release_impact": {"requires_reanalysis": false, "requires_restart": false, "updater_impact": false, "breaking_change": false},
+  "blocker_level": null,
+  "head_inclusion": null,
+  "created_at": "2026-08-09T00:00:00Z",
+  "updated_at": "2026-08-09T00:00:00Z"
+}
