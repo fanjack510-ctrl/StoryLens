@@ -5,7 +5,7 @@
   "base_version": "1.2.0",
   "status": "tested",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": ["00863774b23304b68e5157e180abd3e5df158aeb"],
   "modules": ["apps/desktop"],
   "files": [
     "apps/desktop/src/features/wholeBookV2Mock/wholeBookV2MockData.ts",
