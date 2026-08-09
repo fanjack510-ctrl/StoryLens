@@ -5,7 +5,7 @@
   "base_version": "1.2.0",
   "status": "tested",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": ["60392a4"],
   "modules": ["apps/api", "apps/desktop"],
   "files": [
     "apps/api/app/narrative_core/whole_book_v2/",
