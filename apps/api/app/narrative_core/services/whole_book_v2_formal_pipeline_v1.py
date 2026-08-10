@@ -2,17 +2,32 @@
 
 from __future__ import annotations
 
+import json
 import logging
+import os
 from typing import Any
 
 from sqlalchemy.orm import Session
 
 from app.db.models import Book, WholeBookRun
+from app.model_gateway.base import ModelResponse
 from app.narrative_core.contracts.whole_book_contract_v1 import WholeBookRunStatus
 from app.narrative_core.services.whole_book_gateway_transport_v1 import _run_async
 from app.narrative_core.services.whole_book_run_v1_service import get_run, start_whole_book_run_v1
 from app.narrative_core.services.whole_book_snapshot_v1_service import get_snapshot, list_chapters
-from app.narrative_core.whole_book_v2.engine import SourceChapter
+from app.narrative_core.whole_book_v2.contracts import (
+    AssessmentSynthesisUnit,
+    CharactersSynthesisUnit,
+    OverviewTypeSynthesisUnit,
+    PacingSynthesisUnit,
+    StorySynthesisUnit,
+    SuspenseSynthesisUnit,
+)
+from app.narrative_core.whole_book_v2.engine import (
+    DeterministicPrimitiveExtractor,
+    SourceChapter,
+    WholeBookV2Engine,
+)
 from app.narrative_core.whole_book_v2.pipeline import ProviderBudget
 from app.narrative_core.whole_book_v2.provider_engine import GatewayWholeBookV2Analyzer
 from app.narrative_core.whole_book_v2.repository import WholeBookV2Repository, pinned_provider
@@ -22,6 +37,47 @@ logger = logging.getLogger(__name__)
 
 ENGINE_ID = "whole_book_v2_hierarchical"
 ENGINE_VERSION = "2.1.0"
+
+
+def _env_flag(name: str) -> bool:
+    return os.environ.get(name, "").lower() in {"1", "true", "yes", "on"}
+
+
+class _DeterministicV2Gateway:
+    """Opt-in packaged/local evidence gateway — zero real Provider HTTP calls."""
+
+    def __init__(self, payloads: list[dict[str, Any]]):
+        self._payloads = list(payloads)
+        self.disallow_local_merge = True
+        self.deterministic_extraction = True
+
+    async def generate(self, provider: str, request: Any) -> ModelResponse:
+        if not self._payloads:
+            raise RuntimeError("deterministic gateway exhausted")
+        item = self._payloads.pop(0)
+        return ModelResponse(
+            text=json.dumps(item, ensure_ascii=False),
+            model="deterministic-v2",
+            finish_reason="stop",
+            input_tokens=10,
+            output_tokens=20,
+        )
+
+
+def _deterministic_payloads(chapters: list[SourceChapter]) -> list[dict[str, Any]]:
+    result = WholeBookV2Engine(
+        DeterministicPrimitiveExtractor(), window_size=3, overlap=0
+    ).run(run_id=1, book_id=1, title="deterministic", chapters=chapters)
+    return [
+        OverviewTypeSynthesisUnit(type_profile=result.type_profile, overview=result.overview).model_dump(
+            mode="json"
+        ),
+        StorySynthesisUnit(story=result.story).model_dump(mode="json"),
+        CharactersSynthesisUnit(characters=result.characters).model_dump(mode="json"),
+        SuspenseSynthesisUnit(suspense=result.suspense).model_dump(mode="json"),
+        PacingSynthesisUnit(pacing=result.pacing, chapters=result.chapters).model_dump(mode="json"),
+        AssessmentSynthesisUnit(assessment=result.assessment).model_dump(mode="json"),
+    ]
 
 
 def _source_chapters(session: Session, run: WholeBookRun) -> list[SourceChapter]:
@@ -115,6 +171,10 @@ def execute_hierarchical_v2_pipeline_v1(
     provider_name, model_name = pinned_provider(session, int(run_id))
     chapters = _source_chapters(session, run)
 
+    # CHG-081 packaged/local evidence probes — opt-in only; never used by normal installs.
+    if _env_flag("STORYLENS_WHOLE_BOOK_V2_FORCE_BACKGROUND_FAIL"):
+        raise RuntimeError("STORYLENS_WHOLE_BOOK_V2_FORCE_BACKGROUND_FAIL")
+
     def _persist_commit() -> None:
         if commit_progress:
             session.commit()
@@ -130,11 +190,16 @@ def execute_hierarchical_v2_pipeline_v1(
             repo, source_run_id=int(previous_run_id), target_run_id=int(run_id)
         )
         _persist_commit()
-    gateway = (
-        use_fake_gateway
-        if use_fake_gateway is not None
-        else _bind_formal_gateway(session, provider_name=provider_name)
-    )
+    if use_fake_gateway is not None:
+        gateway = use_fake_gateway
+    elif _env_flag("STORYLENS_WHOLE_BOOK_V2_DETERMINISTIC_GATEWAY"):
+        gateway = _DeterministicV2Gateway(_deterministic_payloads(chapters))
+        logger.warning(
+            "whole_book_v2_deterministic_gateway_enabled run_id=%s (no real Provider calls)",
+            run_id,
+        )
+    else:
+        gateway = _bind_formal_gateway(session, provider_name=provider_name)
     # Tests may inject a fake gateway; still forbid silent local merge unless the
     # fake explicitly allows it (force_local_merge / missing disallow).
     if use_fake_gateway is not None and not hasattr(gateway, "disallow_local_merge"):
