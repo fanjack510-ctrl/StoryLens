@@ -3,7 +3,7 @@
   "title": "V2 reanalysis runtime crash + hierarchical planner cutover",
   "type": "bugfix",
   "base_version": "1.2.0",
-  "status": "tested",
+  "status": "verified",
   "include_in_next_release": true,
   "commits": [
     {
@@ -15,6 +15,12 @@
     {
       "sha": "ff28f1519ca95e1279c657471e2cd0cbe85363e5",
       "message": "fix(whole-book): add opt-in deterministic V2 gateway probes for packaged sidecar evidence.",
+      "primary": true,
+      "multi_change_reason": null
+    },
+    {
+      "sha": "6267cff8feea048646cc1a9d09a6b3e141e690e9",
+      "message": "chore(release): sync CHG-081 commit list after attach.",
       "primary": true,
       "multi_change_reason": null
     }
@@ -41,11 +47,12 @@
     "WholeBookV2ProductPage.test.tsx"
   ],
   "verification_evidence": [
-    "backend targeted: test_whole_book_chg081 + chg077/078/080 regression PASS (28)",
-    "frontend vitest WholeBookV2ProductPage PASS (8)",
+    "backend targeted CHG-081+077/078/080: 28 passed",
+    "frontend vitest WholeBookV2ProductPage: 8 passed",
     "typecheck PASS",
     "production frontend build PASS",
-    "hierarchical dry-run 542ch -> 15 windows / 33 calls (not legacy 106/244)"
+    "packaged sidecar probe: health before/during/after PASS; success completed; failure failed without killing health; planner hierarchical_v2; REAL_PROVIDER_CALLS=0",
+    "installer built to D:/StoryLens-Local-Evidence/v1.2.0-v2-runtime-hotfix-chg081/"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -62,5 +69,5 @@
   "blocker_level": "P0",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-08-10T11:03:10Z",
-  "updated_at": "2026-08-10T11:40:52Z"
+  "updated_at": "2026-08-10T12:11:45Z"
 }
