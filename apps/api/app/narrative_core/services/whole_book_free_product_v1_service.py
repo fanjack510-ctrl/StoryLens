@@ -87,6 +87,50 @@ def _recoverable_run(session: Session, book_id: int) -> WholeBookRun | None:
     return None
 
 
+def _completed_v2_run(session: Session, book_id: int) -> WholeBookRun | None:
+    """Latest completed run that has a persisted WholeBookAnalysisV2 result."""
+    from app.narrative_core.whole_book_v2.repository import WholeBookV2Repository
+
+    repo = WholeBookV2Repository(session)
+    for run in list_runs_for_book(session, book_id):
+        if run.status == WholeBookRunStatus.completed.value and repo.has_result(int(run.id)):
+            return run
+    return None
+
+
+def _hierarchical_context_safe(chapter_count: int, character_count: int, model_name: str) -> bool:
+    """Cheap planner gate for prepare / reanalyse confirm (no Provider calls)."""
+    try:
+        from app.narrative_core.whole_book_v2.pipeline import (
+            ChapterMeta,
+            ProviderBudget,
+            build_token_plan,
+            plan_windows,
+        )
+
+        if chapter_count <= 0:
+            return True
+        avg = max(1, int(character_count / max(1, chapter_count)))
+        sample = min(chapter_count, 80)
+        metas = [
+            ChapterMeta(
+                chapter_id=i,
+                chapter_index=i,
+                title=f"c{i}",
+                text=("字" * avg),
+                snapshot_id=1,
+                revision_hash="prepare",
+            )
+            for i in range(1, sample + 1)
+        ]
+        budget = ProviderBudget(provider="formal", model=model_name or "default")
+        windows = plan_windows(metas, book_id=0, budget=budget)
+        token_plan = build_token_plan(windows, budget=budget)
+        return token_plan.context_safe == "YES"
+    except Exception:  # noqa: BLE001
+        return True
+
+
 def prepare_free_whole_book_analysis_v1(session: Session, book_id: int) -> dict[str, Any]:
     _require_free_product_enabled()
     require_capability_access("whole_book.overview", AccessTier.free)
@@ -149,6 +193,14 @@ def prepare_free_whole_book_analysis_v1(session: Session, book_id: int) -> dict[
     real_on = real_provider_enabled()
     fixture_on = fixture_preview_enabled()
     run_creation_enabled = bool(real_on and provider_available)
+    active_run = recoverable
+    completed_v2 = _completed_v2_run(session, book_id)
+    model_name = str(est.get("model_name") or provider.plus_model or "")
+    context_safe = _hierarchical_context_safe(
+        int(est.get("chapter_count") or 0),
+        int(est.get("character_count") or 0),
+        model_name,
+    )
     return {
         "book_id": book_id,
         "book_title": book.title or "",
@@ -161,16 +213,19 @@ def prepare_free_whole_book_analysis_v1(session: Session, book_id: int) -> dict[
         "real_provider_enabled": real_on,
         "run_creation_enabled": run_creation_enabled,
         "active_provider_name": provider.provider_name,
-        "active_model_name": est.get("model_name") or provider.plus_model or "",
+        "active_model_name": model_name,
         "provider_available": provider_available,
         "fixture_preview_enabled": fixture_on,
         "latest_run": run_to_dict(latest) if latest is not None else None,
         "recoverable_run": run_to_dict(recoverable) if recoverable is not None else None,
+        "active_run": run_to_dict(active_run) if active_run is not None else None,
+        "completed_v2_run": run_to_dict(completed_v2) if completed_v2 is not None else None,
         "latest_run_id": latest.id if latest else None,
         "latest_run_status": latest.status if latest else None,
         "recoverable_run_id": recoverable.id if recoverable else None,
         "needs_new_snapshot": needs_new_snapshot,
         "snapshot_rebuild_required": needs_new_snapshot,
+        "context_safe": context_safe,
         "snapshot": {
             "snapshot_id": snap_result["snapshot"].id,
             "reused": snap_result["reused"],
@@ -207,6 +262,9 @@ def create_free_whole_book_analysis_v1(
     client_request_id: str,
     execute_pipeline: bool = True,
     defer_execution: bool = False,
+    reanalyse: bool = False,
+    force_full_reanalysis: bool = False,
+    previous_run_id: int | None = None,
 ) -> dict[str, Any]:
     _require_free_product_enabled()
     require_capability_access("whole_book.overview", AccessTier.free)
@@ -277,6 +335,10 @@ def create_free_whole_book_analysis_v1(
         or ""
     ).strip()
     request_id = client_request_id or str(uuid.uuid4())
+    if reanalyse and previous_run_id is None:
+        prev = _completed_v2_run(session, book_id)
+        previous_run_id = int(prev.id) if prev is not None else None
+
     run = create_whole_book_run_v1(
         session,
         book_id,
@@ -285,6 +347,21 @@ def create_free_whole_book_analysis_v1(
         request_id,
         ResultOrigin.formal.value,
     )
+    if reanalyse:
+        if previous_run_id is not None and int(run.id) == int(previous_run_id):
+            raise WholeBookFoundationError(
+                WholeBookFoundationErrorCode.WHOLE_BOOK_RUN_INVALID_TRANSITION,
+                "重新分析必须创建新的 V2 任务，不能复用已完成结果",
+            )
+        if run.status == WholeBookRunStatus.completed.value:
+            # Same client_request_id replay of a prior success — still not a fresh reanalysis.
+            from app.narrative_core.whole_book_v2.repository import WholeBookV2Repository
+
+            if WholeBookV2Repository(session).has_result(int(run.id)):
+                raise WholeBookFoundationError(
+                    WholeBookFoundationErrorCode.WHOLE_BOOK_RUN_INVALID_TRANSITION,
+                    "重新分析请求与已完成任务冲突，请使用新的请求标识重试",
+                )
     if run.consent_id is None:
         run.consent_id = consent_id
     # Pin at create — resume/transports must use these, not current settings.
@@ -310,7 +387,12 @@ def create_free_whole_book_analysis_v1(
     pipeline_result: dict[str, Any] | None = None
     # HTTP create must return before Provider work (CHG-077). Background task runs pipeline.
     if execute_pipeline and not defer_execution:
-        pipeline_result = execute_hierarchical_v2_pipeline_v1(session, run.id)
+        pipeline_result = execute_hierarchical_v2_pipeline_v1(
+            session,
+            run.id,
+            force_full_reanalysis=bool(force_full_reanalysis),
+            previous_run_id=int(previous_run_id) if previous_run_id else None,
+        )
         session.refresh(run)
 
     return {
@@ -324,6 +406,9 @@ def create_free_whole_book_analysis_v1(
         "deferred_execution": bool(defer_execution and execute_pipeline),
         "provider_config_id": provider_config_id,
         "audit": audit.to_dict(),
+        "reanalyse": bool(reanalyse),
+        "force_full_reanalysis": bool(force_full_reanalysis),
+        "previous_run_id": int(previous_run_id) if previous_run_id else None,
     }
 
 

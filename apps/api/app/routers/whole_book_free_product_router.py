@@ -54,6 +54,10 @@ class CreateFreeRunRequest(BaseModel):
     max_output_tokens: int | None = Field(default=None, gt=0)
     max_cost_budget_cny: str | None = None
     auto_retry_enabled: bool = False
+    # CHG-080 reanalysis
+    reanalyse: bool = False
+    force_full_reanalysis: bool = False
+    previous_run_id: int | None = Field(default=None, gt=0)
 
 
 class CreateFixtureFreeRunRequest(BaseModel):
@@ -159,6 +163,9 @@ def create_free_analysis(
             consent_id=int(consent_id),
             client_request_id=body.client_request_id,
             defer_execution=True,
+            reanalyse=bool(body.reanalyse),
+            force_full_reanalysis=bool(body.force_full_reanalysis),
+            previous_run_id=body.previous_run_id,
         )
         db.commit()
     except WholeBookFoundationError as exc:
@@ -172,6 +179,8 @@ def create_free_analysis(
             session_factory,
             int(result["run_id"]),
             provider_config_id=result.get("provider_config_id"),
+            force_full_reanalysis=bool(result.get("force_full_reanalysis")),
+            previous_run_id=result.get("previous_run_id"),
         )
     return result
 

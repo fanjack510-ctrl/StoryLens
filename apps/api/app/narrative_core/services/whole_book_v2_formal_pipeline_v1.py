@@ -74,9 +74,21 @@ def _bind_formal_gateway(session: Session, *, provider_name: str) -> Any:
     apply_provider_runtime(provider, session, store)
     provider.api_key = secret
     provider.enabled = True
-    # Formal hierarchical default: local deterministic window extract; synthesis via provider.
+    # Formal hierarchical: deterministic window extract; synthesis via provider.
+    # Never persist local scaffold merge as a formal "completed" real result (CHG-080).
     gateway.deterministic_extraction = True  # type: ignore[attr-defined]
+    gateway.disallow_local_merge = True  # type: ignore[attr-defined]
     return gateway
+
+
+def _copy_safe_intermediates(
+    repo: WholeBookV2Repository,
+    *,
+    source_run_id: int,
+    target_run_id: int,
+) -> int:
+    """Copy successful intermediate/unit checkpoints when reanalysis allows reuse."""
+    return repo.copy_intermediates(source_run_id=source_run_id, target_run_id=target_run_id)
 
 
 def execute_hierarchical_v2_pipeline_v1(
@@ -84,10 +96,14 @@ def execute_hierarchical_v2_pipeline_v1(
     run_id: int,
     *,
     use_fake_gateway: Any | None = None,
+    force_full_reanalysis: bool = False,
+    previous_run_id: int | None = None,
 ) -> dict[str, Any]:
     """Run hierarchical V2 analyze for an existing WholeBookRun and persist V2 result.
 
     ``use_fake_gateway`` is test-only. Production must pass None (real ModelGateway).
+    When ``force_full_reanalysis`` is False and ``previous_run_id`` is set, successful
+    intermediate checkpoints may be copied into the new run (same pipeline contract).
     """
     run = get_run(session, int(run_id))
     book = session.get(Book, int(run.book_id))
@@ -96,11 +112,24 @@ def execute_hierarchical_v2_pipeline_v1(
     provider_name, model_name = pinned_provider(session, int(run_id))
     chapters = _source_chapters(session, run)
     repo = WholeBookV2Repository(session)
+    reused = 0
+    if (
+        not force_full_reanalysis
+        and previous_run_id is not None
+        and int(previous_run_id) != int(run_id)
+    ):
+        reused = _copy_safe_intermediates(
+            repo, source_run_id=int(previous_run_id), target_run_id=int(run_id)
+        )
     gateway = (
         use_fake_gateway
         if use_fake_gateway is not None
         else _bind_formal_gateway(session, provider_name=provider_name)
     )
+    # Tests may inject a fake gateway; still forbid silent local merge unless the
+    # fake explicitly allows it (force_local_merge / missing disallow).
+    if use_fake_gateway is not None and not hasattr(gateway, "disallow_local_merge"):
+        gateway.disallow_local_merge = False  # type: ignore[attr-defined]
     analyzer = GatewayWholeBookV2Analyzer(
         gateway,
         provider_name=provider_name,
@@ -125,6 +154,15 @@ def execute_hierarchical_v2_pipeline_v1(
             chapters=chapters,
         )
     )
+    # Formal product must never mark scaffold merge as real_provider.
+    if result.analysis_metadata.result_origin == "deterministic_local_merge":
+        run.status = WholeBookRunStatus.failed.value
+        run.failure_code = "WHOLE_BOOK_V2_LOCAL_MERGE_FORBIDDEN"
+        run.failure_message_safe = (
+            "全书 V2 合成未能完成真实模型结果，未写入正式完成态。请重新分析。"
+        )
+        session.flush()
+        raise ValueError("formal V2 local merge result rejected")
     version_id = repo.save_result(result)
     run.status = WholeBookRunStatus.completed.value
     run.current_stage_code = "complete"
@@ -137,6 +175,8 @@ def execute_hierarchical_v2_pipeline_v1(
         "asset_version_id": version_id,
         "provider_calls": len(responses),
         "pipeline": "hierarchical_v2",
+        "intermediates_reused": reused,
+        "result_origin": result.analysis_metadata.result_origin,
     }
 
 

@@ -85,6 +85,11 @@ export type WholeBookPrepareResponse = {
   fixture_preview_enabled: boolean;
   latest_run: WholeBookRunRecord | null;
   recoverable_run: WholeBookRunRecord | null;
+  /** Last completed run that has or had V2 materialized. */
+  completed_v2_run?: WholeBookRunRecord | null;
+  /** Pending, running, or recoverable run (may overlap with latest_run). */
+  active_run?: WholeBookRunRecord | null;
+  context_safe?: boolean;
   snapshot_rebuild_required: boolean;
   estimate: WholeBookCostEstimateRow | null;
   recommended_limits: {
@@ -106,6 +111,12 @@ export type CreateWholeBookRunRequest = {
   max_output_tokens?: number | null;
   max_cost_budget_cny?: string | null;
   auto_retry_enabled?: boolean;
+  /** When true, discard cached AI intermediates and re-run extraction. */
+  force_full_reanalysis?: boolean;
+  /** True when user confirms a reanalysis from an existing completed V2 run. */
+  reanalyse?: boolean;
+  /** Completed run id to preserve/display while the new run is in flight. */
+  previous_run_id?: number | null;
 };
 
 export type CreateWholeBookRunResponse = {
@@ -268,6 +279,9 @@ export const wholeBookFreeProductApi = {
         max_output_tokens: body.max_output_tokens ?? undefined,
         max_cost_budget_cny: body.max_cost_budget_cny ?? undefined,
         auto_retry_enabled: Boolean(body.auto_retry_enabled),
+        force_full_reanalysis: Boolean(body.force_full_reanalysis),
+        reanalyse: Boolean(body.reanalyse),
+        ...(body.previous_run_id != null ? { previous_run_id: body.previous_run_id } : {}),
       }),
     }),
 

@@ -1,5 +1,6 @@
 import { Fragment, useMemo, useState, type ReactNode } from "react";
 import type { WholeBookAnalysisV2 } from "../contracts";
+import { needsReanalysisWarning } from "../adapter";
 import {
   MODULES,
   MODULE_DESCRIPTIONS,
@@ -13,7 +14,12 @@ export type WholeBookV2ReportViewProps = {
   onModuleChange: (m: ModuleKey) => void;
   mode: "formal" | "mock";
   bookId?: number;
+  /** @deprecated use onReanalyzeClick */
   onReanalyze?: () => void;
+  onReanalyzeClick?: () => void;
+  showReanalyzeButton?: boolean;
+  analysisStatusLabel?: string;
+  headerBanner?: ReactNode;
   headerExtra?: ReactNode;
 };
 
@@ -1073,11 +1079,19 @@ export function WholeBookV2ReportView({
   activeModule,
   onModuleChange,
   mode,
+  onReanalyze,
+  onReanalyzeClick,
+  showReanalyzeButton = false,
+  analysisStatusLabel,
+  headerBanner,
   headerExtra,
 }: WholeBookV2ReportViewProps) {
   const meta = data.book_metadata;
   const tp = data.type_profile;
   const activeLabel = MODULES.find((m) => m.key === activeModule)?.label ?? activeModule;
+  const handleReanalyze = onReanalyzeClick ?? onReanalyze;
+  const statusLabel = analysisStatusLabel ?? "已完成";
+  const showNonRealWarning = mode === "formal" && needsReanalysisWarning(data);
 
   return (
     <div
@@ -1086,6 +1100,12 @@ export function WholeBookV2ReportView({
       data-module={activeModule}
       data-mode={mode}
     >
+      {showNonRealWarning ? (
+        <div className="wbv2-nonreal-warning" data-testid="whole-book-v2-nonreal-warning">
+          当前结果不是完整真实 V2 分析，需要重新分析。
+        </div>
+      ) : null}
+      {headerBanner}
       <header className="wb2-book-header">
         <div className="wb2-book-title">
           {mode === "mock" && <span className="wb2-dev-badge">DEV</span>}
@@ -1110,10 +1130,20 @@ export function WholeBookV2ReportView({
           <div>
             <dt>分析状态</dt>
             <dd>
-              <i /> 已完成
+              <i /> {statusLabel}
             </dd>
           </div>
         </dl>
+        {showReanalyzeButton && handleReanalyze ? (
+          <button
+            type="button"
+            className="wbv2-reanalyse-btn"
+            data-testid="whole-book-v2-reanalyse-button"
+            onClick={handleReanalyze}
+          >
+            重新分析 V2
+          </button>
+        ) : null}
         {headerExtra}
       </header>
 

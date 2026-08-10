@@ -275,14 +275,40 @@ class GatewayWholeBookV2Analyzer:
                 emit(key,100,last)
 
         metadata=BookMetadata(book_id=book_id,snapshot_id=chapters[0].snapshot_id,revision_hash=chapters[0].revision_hash,title=title,chapter_count=len(chapters),character_count=sum(len(c.text) for c in chapters))
-        analysis=AnalysisMetadata(run_id=run_id,engine_version=self.ENGINE_VERSION,provider_name=self.provider_name,model_name=self.model_name,module_availability={k:Availability.AVAILABLE for k in ["overview","story","characters","suspense","pacing","chapters","assessment"]},provider_calls_completed=self.stats.provider_calls,real_provider_calls=self.stats.provider_calls)
-        if force_local or len(values)<len(UNIT_SCHEMAS):
+        used_local=bool(force_local or len(values)<len(UNIT_SCHEMAS))
+        if used_local:
             if disallow_local:
                 raise SynthesisUnitError("synthesis",UnitFailureCode.SCHEMA_MISMATCH,"local merge forbidden for real acceptance")
             genre=infer_genre_profile(extractions)
             modules=materialize_from_intermediates(chapters=metas,intermediates=intermediates,evidence_index=catalog,genre_profile=genre)
+            origin="deterministic_local_merge"
+            real_calls=0
+            analysis=AnalysisMetadata(
+                run_id=run_id,
+                engine_version=self.ENGINE_VERSION,
+                provider_name=self.provider_name,
+                model_name=self.model_name,
+                module_availability={k:Availability.AVAILABLE for k in ["overview","story","characters","suspense","pacing","chapters","assessment"]},
+                provider_calls_completed=self.stats.provider_calls,
+                real_provider_calls=real_calls,
+                result_origin=origin,
+                pipeline_version=f"whole_book_v2_hierarchical/{self.ENGINE_VERSION}",
+                source_revision=chapters[0].revision_hash,
+            )
             result=WholeBookAnalysisV2(book_metadata=metadata,type_profile=modules["type_profile"],overview=modules["overview"],story=modules["story"],characters=modules["characters"],suspense=modules["suspense"],pacing=modules["pacing"],chapters=modules["chapters"],assessment=modules["assessment"],evidence_index=catalog,analysis_metadata=analysis)
         else:
+            analysis=AnalysisMetadata(
+                run_id=run_id,
+                engine_version=self.ENGINE_VERSION,
+                provider_name=self.provider_name,
+                model_name=self.model_name,
+                module_availability={k:Availability.AVAILABLE for k in ["overview","story","characters","suspense","pacing","chapters","assessment"]},
+                provider_calls_completed=self.stats.provider_calls,
+                real_provider_calls=self.stats.provider_calls,
+                result_origin="real_provider",
+                pipeline_version=f"whole_book_v2_hierarchical/{self.ENGINE_VERSION}",
+                source_revision=chapters[0].revision_hash,
+            )
             result=WholeBookAnalysisV2(book_metadata=metadata,type_profile=values["overview_type"].type_profile,overview=values["overview_type"].overview,story=values["story"].story,characters=values["characters"].characters,suspense=values["suspense"].suspense,pacing=values["pacing"].pacing,chapters=values["pacing"].chapters,assessment=values["assessment"].assessment,evidence_index=catalog,analysis_metadata=analysis)
 
         validator=EvidenceValidator(chapters)

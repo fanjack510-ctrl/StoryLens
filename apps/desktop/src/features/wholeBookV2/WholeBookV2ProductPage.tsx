@@ -15,6 +15,7 @@ import {
   newWholeBookClientRequestId,
   wholeBookFreeProductApi,
   type WholeBookPrepareResponse,
+  type WholeBookRunRecord,
 } from "../../services/wholeBookFreeProductApi";
 import { getWholeBookV2, getWholeBookV2Progress } from "./api";
 import { V2_PROGRESS_LABELS } from "./contracts";
@@ -33,6 +34,18 @@ const PREPARE_BULLETS = [
   "当前分析以完整原文为事实源，不依赖已有单章分析。",
 ];
 const CONSENT_TEXT = "我已了解本次分析会调用我配置的大模型 API，并可能产生模型费用。";
+const REANALYSE_CONSENT_TEXT =
+  "我已了解重新分析会调用我配置的大模型 API，并可能产生模型费用。";
+
+type PageMode =
+  | "prepare"
+  | "reanalyse-confirm"
+  | "running"
+  | "completed-v2"
+  | "legacy"
+  | "failed";
+
+type RunningSubview = "progress" | "old-result";
 
 function isActiveRun(status: string | null | undefined): boolean {
   return status === "running" || status === "paused" || status === "recoverable";
@@ -42,12 +55,42 @@ function isCompletedRun(status: string | null | undefined): boolean {
   return status === "completed";
 }
 
+function isFailedRun(status: string | null | undefined): boolean {
+  return status === "failed" || status === "cancelled" || status === "canceled";
+}
+
 function isLegacyV2Error(err: unknown): boolean {
   if (!(err instanceof ApiError)) return false;
   if (err.status === 404) return true;
   if (err.code === "WHOLE_BOOK_V2_RESULT_NOT_FOUND") return true;
   if (err.message.includes("WHOLE_BOOK_V2")) return true;
   return false;
+}
+
+function resolveActiveRun(prepare: WholeBookPrepareResponse): WholeBookRunRecord | null {
+  if (prepare.active_run && isActiveRun(prepare.active_run.status)) {
+    return prepare.active_run;
+  }
+  if (prepare.latest_run && isActiveRun(prepare.latest_run.status)) {
+    return prepare.latest_run;
+  }
+  if (prepare.recoverable_run && isActiveRun(prepare.recoverable_run.status)) {
+    return prepare.recoverable_run;
+  }
+  return null;
+}
+
+function resolveCompletedV2Run(prepare: WholeBookPrepareResponse): WholeBookRunRecord | null {
+  if (prepare.completed_v2_run && isCompletedRun(prepare.completed_v2_run.status)) {
+    return prepare.completed_v2_run;
+  }
+  const active = resolveActiveRun(prepare);
+  if (prepare.latest_run && isCompletedRun(prepare.latest_run.status)) {
+    if (!active || active.run_id !== prepare.latest_run.run_id) {
+      return prepare.latest_run;
+    }
+  }
+  return null;
 }
 
 function ProductUnavailable() {
@@ -59,6 +102,61 @@ function ProductUnavailable() {
         <Link to="/library">返回书库</Link>
       </p>
     </section>
+  );
+}
+
+type LimitsState = {
+  max_provider_calls: string;
+  max_input_tokens: string;
+  max_output_tokens: string;
+  max_cost_budget_cny: string;
+};
+
+function LimitsInputs({
+  limits,
+  onLimitsChange,
+  limitGaps,
+}: {
+  limits: LimitsState;
+  onLimitsChange: (next: LimitsState) => void;
+  limitGaps: ReturnType<typeof compareLimitsToEstimate>;
+}) {
+  return (
+    <>
+      <div className="wbv2-limits">
+        <label>
+          最大调用次数
+          <input
+            value={limits.max_provider_calls}
+            onChange={(e) => onLimitsChange({ ...limits, max_provider_calls: e.target.value })}
+          />
+        </label>
+        <label>
+          最大输入 tokens
+          <input
+            value={limits.max_input_tokens}
+            onChange={(e) => onLimitsChange({ ...limits, max_input_tokens: e.target.value })}
+          />
+        </label>
+        <label>
+          最大输出 tokens
+          <input
+            value={limits.max_output_tokens}
+            onChange={(e) => onLimitsChange({ ...limits, max_output_tokens: e.target.value })}
+          />
+        </label>
+        <label>
+          费用上限（元）
+          <input
+            value={limits.max_cost_budget_cny}
+            onChange={(e) => onLimitsChange({ ...limits, max_cost_budget_cny: e.target.value })}
+          />
+        </label>
+      </div>
+      {limitGaps.length > 0 ? (
+        <p className="wbv2-warning">{formatLimitGapsMessage(limitGaps)}</p>
+      ) : null}
+    </>
   );
 }
 
@@ -81,13 +179,8 @@ function PreparePanel({
   starting: boolean;
   onStart: () => void;
   actionError: string | null;
-  limits: {
-    max_provider_calls: string;
-    max_input_tokens: string;
-    max_output_tokens: string;
-    max_cost_budget_cny: string;
-  };
-  onLimitsChange: (next: typeof limits) => void;
+  limits: LimitsState;
+  onLimitsChange: (next: LimitsState) => void;
   limitGaps: ReturnType<typeof compareLimitsToEstimate>;
 }) {
   const est = prepare.estimate;
@@ -108,25 +201,7 @@ function PreparePanel({
             : "—"}
         </p>
       ) : null}
-      <div className="wbv2-limits">
-        <label>
-          最大调用次数
-          <input
-            value={limits.max_provider_calls}
-            onChange={(e) => onLimitsChange({ ...limits, max_provider_calls: e.target.value })}
-          />
-        </label>
-        <label>
-          费用上限（元）
-          <input
-            value={limits.max_cost_budget_cny}
-            onChange={(e) => onLimitsChange({ ...limits, max_cost_budget_cny: e.target.value })}
-          />
-        </label>
-      </div>
-      {limitGaps.length > 0 ? (
-        <p className="wbv2-warning">{formatLimitGapsMessage(limitGaps)}</p>
-      ) : null}
+      <LimitsInputs limits={limits} onLimitsChange={onLimitsChange} limitGaps={limitGaps} />
       <label className="wbv2-consent">
         <input type="checkbox" checked={consented} onChange={(e) => onConsent(e.target.checked)} />
         {CONSENT_TEXT}
@@ -135,6 +210,122 @@ function PreparePanel({
       <button type="button" disabled={!canStart} onClick={onStart}>
         {starting ? "创建中…" : "开始全书分析"}
       </button>
+    </section>
+  );
+}
+
+function ReanalyseConfirmPanel({
+  prepare,
+  consented,
+  onConsent,
+  forceFull,
+  onForceFull,
+  canConfirm,
+  confirming,
+  onCancel,
+  onConfirm,
+  actionError,
+  limits,
+  onLimitsChange,
+  limitGaps,
+}: {
+  prepare: WholeBookPrepareResponse;
+  consented: boolean;
+  onConsent: (v: boolean) => void;
+  forceFull: boolean;
+  onForceFull: (v: boolean) => void;
+  canConfirm: boolean;
+  confirming: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+  actionError: string | null;
+  limits: LimitsState;
+  onLimitsChange: (next: LimitsState) => void;
+  limitGaps: ReturnType<typeof compareLimitsToEstimate>;
+}) {
+  const est = prepare.estimate;
+  const provider = est?.provider_name ?? prepare.active_provider_name ?? "—";
+  const model = est?.model_name ?? prepare.active_model_name ?? "—";
+
+  return (
+    <section className="wbv2-reanalyse-confirm" data-testid="whole-book-v2-reanalyse-confirm">
+      <h2>确认重新分析 V2</h2>
+      <p>
+        重新分析会创建新的 V2 分析任务。当前分析结果不会立即删除。新分析成功后将显示最新结果。
+      </p>
+      <dl className="wbv2-reanalyse-meta">
+        <div>
+          <dt>模型服务商</dt>
+          <dd>{provider}</dd>
+        </div>
+        <div>
+          <dt>模型</dt>
+          <dd>{model}</dd>
+        </div>
+        <div>
+          <dt>章节</dt>
+          <dd>{prepare.chapter_count}</dd>
+        </div>
+        <div>
+          <dt>字数</dt>
+          <dd>{prepare.character_count.toLocaleString()}</dd>
+        </div>
+        {est ? (
+          <>
+            <div>
+              <dt>预估窗口</dt>
+              <dd>{est.estimated_windows ?? "—"}</dd>
+            </div>
+            <div>
+              <dt>预估调用</dt>
+              <dd>{est.estimated_provider_calls ?? "—"}</dd>
+            </div>
+            <div>
+              <dt>预估 tokens</dt>
+              <dd>
+                {est.estimated_input_tokens ?? "—"} 输入 / {est.estimated_output_tokens ?? "—"} 输出
+              </dd>
+            </div>
+            <div>
+              <dt>预估费用</dt>
+              <dd>
+                {est.estimated_cost_min_cny && est.estimated_cost_max_cny
+                  ? `约 ¥${est.estimated_cost_min_cny}～¥${est.estimated_cost_max_cny}`
+                  : "—"}
+              </dd>
+            </div>
+          </>
+        ) : null}
+        {prepare.context_safe != null ? (
+          <div>
+            <dt>上下文安全</dt>
+            <dd>{prepare.context_safe ? "是" : "否"}</dd>
+          </div>
+        ) : null}
+      </dl>
+      <LimitsInputs limits={limits} onLimitsChange={onLimitsChange} limitGaps={limitGaps} />
+      <label className="wbv2-consent">
+        <input
+          type="checkbox"
+          data-testid="whole-book-v2-force-full"
+          checked={forceFull}
+          onChange={(e) => onForceFull(e.target.checked)}
+        />
+        强制重新分析全部 AI 中间结果
+      </label>
+      <label className="wbv2-consent">
+        <input type="checkbox" checked={consented} onChange={(e) => onConsent(e.target.checked)} />
+        {REANALYSE_CONSENT_TEXT}
+      </label>
+      {actionError ? <p className="wbv2-error">{actionError}</p> : null}
+      <div className="wbv2-reanalyse-actions">
+        <button type="button" className="wbv2-btn-secondary" onClick={onCancel} disabled={confirming}>
+          取消
+        </button>
+        <button type="button" disabled={!canConfirm} onClick={onConfirm}>
+          {confirming ? "创建任务中…" : "确认开始重新分析"}
+        </button>
+      </div>
     </section>
   );
 }
@@ -182,6 +373,36 @@ function ProgressPanel({ runId }: { runId: number }) {
   );
 }
 
+function RunningWithOldBanner({
+  subview,
+  onSubviewChange,
+}: {
+  subview: RunningSubview;
+  onSubviewChange: (v: RunningSubview) => void;
+}) {
+  return (
+    <div className="wbv2-reanalyse-running-banner" data-testid="whole-book-v2-reanalyse-running-banner">
+      <p>新的 V2 分析正在进行</p>
+      <div className="wbv2-reanalyse-running-actions">
+        <button
+          type="button"
+          className={subview === "progress" ? "active" : ""}
+          onClick={() => onSubviewChange("progress")}
+        >
+          查看分析进度
+        </button>
+        <button
+          type="button"
+          className={subview === "old-result" ? "active" : ""}
+          onClick={() => onSubviewChange("old-result")}
+        >
+          查看当前旧结果
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function LegacyNotice({ onReanalyze }: { onReanalyze: () => void }) {
   return (
     <section className="wbv2-state wbv2-legacy" data-testid="whole-book-v2-legacy-notice">
@@ -201,14 +422,19 @@ function WholeBookV2ProductPageEnabled() {
   const realProviderFlagOn = isWholeBookRealProviderEnabled();
   const [activeModule, setActiveModule] = useState<ModuleKey>("overview");
   const [consented, setConsented] = useState(false);
+  const [reanalyseConsented, setReanalyseConsented] = useState(false);
+  const [forceFullReanalysis, setForceFullReanalysis] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
-  const [limits, setLimits] = useState({
+  const [modeOverride, setModeOverride] = useState<PageMode | null>(null);
+  const [runningSubview, setRunningSubview] = useState<RunningSubview>("progress");
+  const [limits, setLimits] = useState<LimitsState>({
     max_provider_calls: "",
     max_input_tokens: "",
     max_output_tokens: "",
     max_cost_budget_cny: "",
   });
   const createRequestIdRef = useRef<string | null>(null);
+  const reanalysePreviousRunIdRef = useRef<number | null>(null);
 
   const activeCloudQuery = useQuery({
     queryKey: ["active-cloud-provider"],
@@ -224,36 +450,41 @@ function WholeBookV2ProductPageEnabled() {
     enabled: bookId > 0 && Boolean(activeCloudQuery.data?.provider_name),
     retry: false,
     refetchInterval: (query) => {
-      const run = query.state.data?.latest_run;
-      return run && isActiveRun(run.status) ? 3000 : false;
+      const prepare = query.state.data;
+      if (!prepare) return false;
+      const active = resolveActiveRun(prepare);
+      return active ? 3000 : false;
     },
   });
 
-  const runId =
-    prepareQuery.data?.latest_run?.run_id ?? prepareQuery.data?.recoverable_run?.run_id ?? null;
-  const runStatus =
-    prepareQuery.data?.latest_run?.status ?? prepareQuery.data?.recoverable_run?.status;
+  const prepare = prepareQuery.data;
+  const activeRun = prepare ? resolveActiveRun(prepare) : null;
+  const completedV2Run = prepare ? resolveCompletedV2Run(prepare) : null;
+  const activeRunId = activeRun?.run_id ?? null;
+  const displayV2RunId = completedV2Run?.run_id ?? null;
+  const hasOldResultWhileRunning = activeRunId != null && displayV2RunId != null;
 
   const v2ResultQuery = useQuery({
-    queryKey: ["whole-book-v2-result", runId],
-    queryFn: () => getWholeBookV2(runId!),
-    enabled: runId != null && isCompletedRun(runStatus),
+    queryKey: ["whole-book-v2-result", displayV2RunId],
+    queryFn: () => getWholeBookV2(displayV2RunId!),
+    enabled: displayV2RunId != null,
     retry: false,
   });
 
   const invalidateAll = useCallback(async () => {
     await queryClient.invalidateQueries({ queryKey: ["whole-book-v2-prepare", bookId] });
-    if (runId != null) {
-      await queryClient.invalidateQueries({ queryKey: ["whole-book-v2-result", runId] });
-      await queryClient.invalidateQueries({ queryKey: ["whole-book-v2-progress", runId] });
+    if (displayV2RunId != null) {
+      await queryClient.invalidateQueries({ queryKey: ["whole-book-v2-result", displayV2RunId] });
     }
-  }, [bookId, queryClient, runId]);
+    if (activeRunId != null) {
+      await queryClient.invalidateQueries({ queryKey: ["whole-book-v2-progress", activeRunId] });
+    }
+  }, [activeRunId, bookId, displayV2RunId, queryClient]);
 
   const createMutation = useMutation({
-    mutationFn: () => {
-      if (!createRequestIdRef.current) {
-        createRequestIdRef.current = newWholeBookClientRequestId("wb-v2");
-      }
+    mutationFn: (opts?: { reanalyse?: boolean; previousRunId?: number | null }) => {
+      createRequestIdRef.current = newWholeBookClientRequestId("wb-v2");
+      const isReanalyse = Boolean(opts?.reanalyse);
       return wholeBookFreeProductApi.createRun(bookId, {
         client_request_id: createRequestIdRef.current,
         estimate_id: prepareQuery.data?.estimate?.estimate_id ?? null,
@@ -261,11 +492,19 @@ function WholeBookV2ProductPageEnabled() {
         max_input_tokens: limits.max_input_tokens ? Number(limits.max_input_tokens) : null,
         max_output_tokens: limits.max_output_tokens ? Number(limits.max_output_tokens) : null,
         max_cost_budget_cny: limits.max_cost_budget_cny || null,
+        reanalyse: isReanalyse,
+        force_full_reanalysis: isReanalyse ? forceFullReanalysis : false,
+        previous_run_id: isReanalyse ? (opts?.previousRunId ?? null) : null,
       });
     },
     onSuccess: () => {
       createRequestIdRef.current = null;
+      reanalysePreviousRunIdRef.current = null;
       setActionError(null);
+      setModeOverride(null);
+      setRunningSubview("progress");
+      setReanalyseConsented(false);
+      setForceFullReanalysis(false);
       void invalidateAll();
     },
     onError: (err) => {
@@ -292,6 +531,12 @@ function WholeBookV2ProductPageEnabled() {
     }));
   }, [prepareQuery.data?.recommended_limits]);
 
+  useEffect(() => {
+    if (!activeRun && modeOverride === null) {
+      setRunningSubview("progress");
+    }
+  }, [activeRun, modeOverride]);
+
   if (bookId <= 0) {
     return <ErrorState error={new Error("无效的书籍 ID")} />;
   }
@@ -314,25 +559,25 @@ function WholeBookV2ProductPageEnabled() {
     );
   }
 
-  const prepare = prepareQuery.data;
   if (!prepare) {
     return <ErrorState error={new Error("准备数据不可用")} />;
   }
 
-  const run = prepare.latest_run ?? prepare.recoverable_run ?? null;
-  const pageMode: "prepare" | "running" | "completed-v2" | "legacy" | "failed" = (() => {
-    if (!run) return "prepare";
-    if (isCompletedRun(run.status)) {
+  const pageMode: PageMode = (() => {
+    if (modeOverride === "reanalyse-confirm") return "reanalyse-confirm";
+    if (activeRun) {
+      if (isFailedRun(activeRun.status)) return "failed";
+      return "running";
+    }
+    if (!completedV2Run && !activeRun) return "prepare";
+    if (completedV2Run) {
       if (v2ResultQuery.isSuccess && v2ResultQuery.data) return "completed-v2";
       if (v2ResultQuery.isError && isLegacyV2Error(v2ResultQuery.error)) return "legacy";
       if (v2ResultQuery.isLoading || v2ResultQuery.isFetching) return "completed-v2";
       if (v2ResultQuery.isError) return "failed";
       return "legacy";
     }
-    if (run.status === "failed" || run.status === "cancelled" || run.status === "canceled") {
-      return "failed";
-    }
-    return "running";
+    return "prepare";
   })();
 
   const limitGaps = compareLimitsToEstimate(prepare.estimate, limits);
@@ -344,11 +589,36 @@ function WholeBookV2ProductPageEnabled() {
     limitGaps.length === 0 &&
     !createMutation.isPending;
 
-  const handleReanalyze = () => {
-    void queryClient.resetQueries({ queryKey: ["whole-book-v2-result", runId] });
-    void prepareQuery.refetch();
-    createMutation.mutate();
+  const canConfirmReanalyse =
+    reanalyseConsented &&
+    realProviderFlagOn &&
+    Boolean(prepare.run_creation_enabled) &&
+    Boolean(prepare.provider_available !== false) &&
+    limitGaps.length === 0 &&
+    !createMutation.isPending;
+
+  const openReanalyseConfirm = () => {
+    setActionError(null);
+    setReanalyseConsented(false);
+    setForceFullReanalysis(false);
+    setModeOverride("reanalyse-confirm");
   };
+
+  const cancelReanalyseConfirm = () => {
+    setActionError(null);
+    setModeOverride(null);
+  };
+
+  const confirmReanalyse = () => {
+    const previousRunId = completedV2Run?.run_id ?? displayV2RunId;
+    reanalysePreviousRunIdRef.current = previousRunId;
+    createMutation.mutate({ reanalyse: true, previousRunId });
+  };
+
+  const showRunningProgress =
+    pageMode === "running" && (runningSubview === "progress" || !hasOldResultWhileRunning);
+  const showOldResultWhileRunning =
+    pageMode === "running" && hasOldResultWhileRunning && runningSubview === "old-result";
 
   return (
     <div className="wbv2-product" data-testid="whole-book-v2-formal-page">
@@ -370,7 +640,7 @@ function WholeBookV2ProductPageEnabled() {
           onConsent={setConsented}
           canStart={canStart}
           starting={createMutation.isPending}
-          onStart={() => createMutation.mutate()}
+          onStart={() => createMutation.mutate(undefined)}
           actionError={actionError}
           limits={limits}
           onLimitsChange={setLimits}
@@ -378,39 +648,87 @@ function WholeBookV2ProductPageEnabled() {
         />
       )}
 
-      {pageMode === "running" && runId != null && <ProgressPanel runId={runId} />}
-
-      {pageMode === "legacy" && (
-        <LegacyNotice onReanalyze={() => void handleReanalyze()} />
+      {pageMode === "reanalyse-confirm" && (
+        <ReanalyseConfirmPanel
+          prepare={prepare}
+          consented={reanalyseConsented}
+          onConsent={setReanalyseConsented}
+          forceFull={forceFullReanalysis}
+          onForceFull={setForceFullReanalysis}
+          canConfirm={canConfirmReanalyse}
+          confirming={createMutation.isPending}
+          onCancel={cancelReanalyseConfirm}
+          onConfirm={confirmReanalyse}
+          actionError={actionError}
+          limits={limits}
+          onLimitsChange={setLimits}
+          limitGaps={limitGaps}
+        />
       )}
+
+      {pageMode === "running" && hasOldResultWhileRunning && (
+        <RunningWithOldBanner subview={runningSubview} onSubviewChange={setRunningSubview} />
+      )}
+
+      {showRunningProgress && activeRunId != null && <ProgressPanel runId={activeRunId} />}
+
+      {pageMode === "legacy" && <LegacyNotice onReanalyze={openReanalyseConfirm} />}
 
       {pageMode === "failed" && (
         <ErrorState
           error={
             v2ResultQuery.error instanceof Error
               ? v2ResultQuery.error
-              : new Error(run?.status === "failed" ? "分析任务失败" : "无法加载 V2 结果")
+              : new Error(activeRun?.status === "failed" ? "分析任务失败" : "无法加载 V2 结果")
           }
-          retry={() => void prepareQuery.refetch()}
+          retry={() => {
+            if (completedV2Run) {
+              openReanalyseConfirm();
+            } else {
+              void prepareQuery.refetch();
+            }
+          }}
         />
       )}
 
-      {pageMode === "completed-v2" && v2ResultQuery.data && (
+      {(pageMode === "completed-v2" || showOldResultWhileRunning) && v2ResultQuery.data && (
         <WholeBookV2ReportView
           data={v2ResultQuery.data}
           activeModule={activeModule}
           onModuleChange={setActiveModule}
           mode="formal"
           bookId={bookId}
-          onReanalyze={() => void handleReanalyze()}
+          showReanalyzeButton={pageMode === "completed-v2" && !activeRun}
+          onReanalyzeClick={openReanalyseConfirm}
+          analysisStatusLabel={showOldResultWhileRunning ? "当前旧结果" : undefined}
         />
       )}
 
-      {pageMode === "completed-v2" && !v2ResultQuery.data && v2ResultQuery.isLoading && (
-        <section className="wbv2-state">
-          <h1>加载 V2 报告…</h1>
-          <Loading />
-        </section>
+      {(pageMode === "completed-v2" || showOldResultWhileRunning) &&
+        !v2ResultQuery.data &&
+        v2ResultQuery.isLoading && (
+          <section className="wbv2-state">
+            <h1>加载 V2 报告…</h1>
+            <Loading />
+          </section>
+        )}
+
+      {pageMode === "failed" && completedV2Run && v2ResultQuery.data && (
+        <WholeBookV2ReportView
+          data={v2ResultQuery.data}
+          activeModule={activeModule}
+          onModuleChange={setActiveModule}
+          mode="formal"
+          bookId={bookId}
+          showReanalyzeButton
+          onReanalyzeClick={openReanalyseConfirm}
+          analysisStatusLabel="当前旧结果"
+          headerBanner={
+            <div className="wbv2-error-banner">
+              新的分析任务失败。您可以查看当前旧结果，或再次尝试重新分析。
+            </div>
+          }
+        />
       )}
     </div>
   );

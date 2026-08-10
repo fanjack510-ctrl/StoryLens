@@ -14,13 +14,15 @@ def execute_free_whole_book_pipeline_background(
     run_id: int,
     *,
     provider_config_id: int | None = None,
+    force_full_reanalysis: bool = False,
+    previous_run_id: int | None = None,
 ) -> None:
     """Continue a deferred formal Free whole-book run in a fresh session.
 
     Create HTTP returns after the WholeBookRun row is committed so the UI can
     leave「创建中…」and show progress. Provider work happens here.
 
-    CHG-078: formal product runs Hierarchical V2 — not minimal_pipeline_v1.
+    CHG-078/080: formal product runs Hierarchical V2 — not minimal_pipeline_v1.
     """
 
     del provider_config_id  # pinned on WholeBookRun at create; hierarchical uses run pin
@@ -34,7 +36,12 @@ def execute_free_whole_book_pipeline_background(
 
     with session_factory() as session:
         try:
-            execute_hierarchical_v2_pipeline_v1(session, int(run_id))
+            execute_hierarchical_v2_pipeline_v1(
+                session,
+                int(run_id),
+                force_full_reanalysis=bool(force_full_reanalysis),
+                previous_run_id=int(previous_run_id) if previous_run_id else None,
+            )
             session.commit()
         except WholeBookFoundationError as exc:
             try:

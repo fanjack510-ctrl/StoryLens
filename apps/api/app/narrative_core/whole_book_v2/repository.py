@@ -237,6 +237,49 @@ class WholeBookV2Repository:
         )
         self.session.flush()
 
+    def has_result(self, run_id: int) -> bool:
+        return self.load_result(int(run_id)) is not None
+
+    def copy_intermediates(self, *, source_run_id: int, target_run_id: int) -> int:
+        """Copy intermediate + synthesis-unit checkpoints for safe reanalysis reuse.
+
+        Never copies the final v2_result row — a new formal result version is always required.
+        """
+        if int(source_run_id) == int(target_run_id):
+            return 0
+        rows = self.session.scalars(
+            select(WholeBookCheckpoint).where(
+                WholeBookCheckpoint.run_id == int(source_run_id),
+                WholeBookCheckpoint.stage_code.in_((INTERMEDIATE_STAGE, UNIT_STAGE)),
+            )
+        ).all()
+        copied = 0
+        for row in rows:
+            exists = self.session.scalars(
+                select(WholeBookCheckpoint).where(
+                    WholeBookCheckpoint.run_id == int(target_run_id),
+                    WholeBookCheckpoint.stage_code == row.stage_code,
+                    WholeBookCheckpoint.checkpoint_key == row.checkpoint_key,
+                )
+            ).first()
+            if exists is not None:
+                continue
+            self.session.add(
+                WholeBookCheckpoint(
+                    run_id=int(target_run_id),
+                    stage_code=row.stage_code,
+                    checkpoint_key=row.checkpoint_key,
+                    sequence_no=1,
+                    completed_unit_count=row.completed_unit_count,
+                    payload_hash=row.payload_hash,
+                    checkpoint_payload_json=row.checkpoint_payload_json,
+                )
+            )
+            copied += 1
+        if copied:
+            self.session.flush()
+        return copied
+
 
 def pinned_provider(session: Session, run_id: int) -> tuple[str, str]:
     run = session.get(WholeBookRun, run_id)

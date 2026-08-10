@@ -74,7 +74,29 @@ class AssessmentResult(M):
     version:str="2.0"; overall_summary:str; dimensions:list[AssessmentDimension]; strengths:list[Strength]; issues:list[AssessmentIssue]; issue_map:list[AssessmentIssue]; revision_priorities:list[RevisionPriority]; preserve_list:list[str]
     overall_assessment:str=""
 class BookMetadata(M): book_id:int; snapshot_id:int; revision_hash:str; title:str; chapter_count:int=Field(ge=1); character_count:int=Field(ge=0)
-class AnalysisMetadata(M): run_id:int; schema_version:str=SCHEMA_VERSION; engine_version:str; provider_name:str; model_name:str; generated_at:datetime=Field(default_factory=lambda:datetime.now(timezone.utc)); module_availability:dict[str,Availability]; provider_calls_completed:int=0; real_provider_calls:int=0
+RESULT_ORIGINS=Literal[
+    "real_provider",
+    "deterministic_local_merge",
+    "deterministic_test",
+    "fixture",
+    "mock",
+    "legacy_migration",
+    "unknown",
+]
+class AnalysisMetadata(M):
+    run_id:int
+    schema_version:str=SCHEMA_VERSION
+    engine_version:str
+    provider_name:str
+    model_name:str
+    generated_at:datetime=Field(default_factory=lambda:datetime.now(timezone.utc))
+    module_availability:dict[str,Availability]
+    provider_calls_completed:int=0
+    real_provider_calls:int=0
+    # CHG-080: formal product must distinguish real provider vs scaffold/local merge.
+    result_origin:RESULT_ORIGINS="unknown"
+    pipeline_version:str="whole_book_v2_hierarchical/2.1.0"
+    source_revision:str=""
 class WholeBookAnalysisV2(M):
     schema_version:str=SCHEMA_VERSION; book_metadata:BookMetadata; type_profile:TypeProfile; overview:OverviewResult; story:StoryResult; characters:CharactersResult; suspense:SuspenseResult; pacing:PacingResult; chapters:ChaptersResult; assessment:AssessmentResult; evidence_index:dict[str,EvidenceRef]; analysis_metadata:AnalysisMetadata
 
