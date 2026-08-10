@@ -12,10 +12,10 @@ import { SettingsPage } from "../pages/SettingsPage";
 import { WholeBookInsightsPage } from "../pages/WholeBookInsightsPage";
 import { ProNativeOverviewPage } from "../pages/ProNativeOverviewPage";
 import { WholeBookDiagnosticsPage } from "../pages/WholeBookDiagnosticsPage";
-import { WholeBookFreeProductPage } from "../pages/WholeBookFreeProductPage";
 import { ChapterFunctionsHarnessPage } from "../pages/ChapterFunctionsHarnessPage";
 import { NotFoundPage, RouteErrorPage } from "../pages/RouteErrorPages";
 import { WholeBookV2FormalPage } from "../features/wholeBookV2/WholeBookV2FormalPage";
+import { WholeBookV2ProductPage } from "../features/wholeBookV2/WholeBookV2ProductPage";
 
 const routeErrorElement = <RouteErrorPage />;
 
@@ -73,7 +73,7 @@ export const router = createBrowserRouter([
       },
       {
         path: "/books/:bookId/whole-book",
-        element: <WholeBookFreeProductPage />,
+        element: <WholeBookV2ProductPage />,
         errorElement: routeErrorElement,
       },
       {

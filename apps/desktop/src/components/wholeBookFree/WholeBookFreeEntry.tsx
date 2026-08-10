@@ -4,7 +4,7 @@ import {
   readEvidenceRestoreState,
   wholeBookFreeModuleHref,
 } from "../../services/wholeBookFreeEvidenceDeepLink";
-import type { WholeBookModuleKey } from "../../services/wholeBookFreeProductApi";
+import type { ModuleKey } from "../../features/wholeBookV2/presentation/modules";
 
 type Props = {
   bookId: number;
@@ -13,14 +13,16 @@ type Props = {
 const ENTRY_TITLE = "全书分析";
 const RETURN_TITLE = "返回分析";
 const ENTRY_DESCRIPTION =
-  "从完整原文出发，分析全书总览、主要人物、关键事件、故事结构和章节功能。";
+  "从完整原文出发，分析全书总览、故事、人物、悬念、节奏、章节与综合诊断。";
 
 const MODULE_KEYS = new Set<string>([
   "overview",
-  "characters_events",
-  "structure",
-  "chapter_functions",
-  "pro_depth",
+  "story",
+  "characters",
+  "suspense",
+  "pacing",
+  "chapters",
+  "assessment",
 ]);
 
 /**
@@ -37,7 +39,7 @@ export function WholeBookFreeEntry({ bookId }: Props) {
   const returnModuleRaw = searchParams.get("returnModule");
   const returnModule =
     returnTo === "whole-book" && returnModuleRaw && MODULE_KEYS.has(returnModuleRaw)
-      ? (returnModuleRaw as WholeBookModuleKey)
+      ? (returnModuleRaw as ModuleKey)
       : null;
   const restore = returnModule ? readEvidenceRestoreState(searchParams) : undefined;
   const href = returnModule

@@ -234,14 +234,15 @@ def create_free_whole_book_analysis_v1(
             "真实模型分析尚未启用，请使用测试数据预览",
         )
 
-    # Formal create: never fixture/fake fallback.
+    # Formal create: never fixture/fake fallback. CHG-078 → hierarchical V2.
     from app.db.models import WholeBookConsent, WholeBookCostEstimate
     from app.narrative_core.services.whole_book_gateway_transport_v1 import (
         resolve_formal_provider_row,
     )
-    from app.narrative_core.services.whole_book_minimal_pipeline_v1_service import (
-        build_formal_gateway_transports,
-        execute_minimal_pipeline_v1,
+    from app.narrative_core.services.whole_book_v2_formal_pipeline_v1 import (
+        ENGINE_ID as V2_ENGINE_ID,
+        ENGINE_VERSION as V2_ENGINE_VERSION,
+        execute_hierarchical_v2_pipeline_v1,
     )
 
     consent = session.get(WholeBookConsent, consent_id)
@@ -291,11 +292,15 @@ def create_free_whole_book_analysis_v1(
         run.provider_name = provider_row.provider_name
     if not (run.model_name or "").strip():
         run.model_name = pinned_model
+    # Formal V1.2.0 product engine pin (CHG-078).
+    run.engine_id = V2_ENGINE_ID
+    run.engine_version = V2_ENGINE_VERSION
     session.flush()
 
     audit = assert_native_input_independence_v1(session, run.id)
     persist_native_input_audit_v1(session, audit)
 
+    # Hierarchical V2 plans windows internally; keep V1 window rows for legacy progress UIs only.
     generate_whole_book_windows_v1(session, run.id)
     # Mark running so prepare/progress can observe the run immediately after commit.
     if run.status == WholeBookRunStatus.pending.value:
@@ -305,14 +310,7 @@ def create_free_whole_book_analysis_v1(
     pipeline_result: dict[str, Any] | None = None
     # HTTP create must return before Provider work (CHG-077). Background task runs pipeline.
     if execute_pipeline and not defer_execution:
-        transports = build_formal_gateway_transports(
-            session,
-            run=run,
-            provider_config_id=provider_config_id,
-        )
-        pipeline_result = execute_minimal_pipeline_v1(
-            session, run.id, transports=transports
-        )
+        pipeline_result = execute_hierarchical_v2_pipeline_v1(session, run.id)
         session.refresh(run)
 
     return {

@@ -19,26 +19,22 @@ def execute_free_whole_book_pipeline_background(
 
     Create HTTP returns after the WholeBookRun row is committed so the UI can
     leave「创建中…」and show progress. Provider work happens here.
+
+    CHG-078: formal product runs Hierarchical V2 — not minimal_pipeline_v1.
     """
+
+    del provider_config_id  # pinned on WholeBookRun at create; hierarchical uses run pin
 
     from app.narrative_core.services.whole_book_foundation_errors import (
         WholeBookFoundationError,
     )
-    from app.narrative_core.services.whole_book_minimal_pipeline_v1_service import (
-        build_formal_gateway_transports,
-        execute_minimal_pipeline_v1,
+    from app.narrative_core.services.whole_book_v2_formal_pipeline_v1 import (
+        execute_hierarchical_v2_pipeline_v1,
     )
-    from app.narrative_core.services.whole_book_run_v1_service import get_run
 
     with session_factory() as session:
         try:
-            run = get_run(session, int(run_id))
-            transports = build_formal_gateway_transports(
-                session,
-                run=run,
-                provider_config_id=provider_config_id,
-            )
-            execute_minimal_pipeline_v1(session, int(run_id), transports=transports)
+            execute_hierarchical_v2_pipeline_v1(session, int(run_id))
             session.commit()
         except WholeBookFoundationError as exc:
             try:
@@ -68,7 +64,9 @@ def execute_free_whole_book_pipeline_background(
                     }:
                         run.status = WholeBookRunStatus.failed.value
                         run.failure_code = "WHOLE_BOOK_BACKGROUND_FAILED"
-                        run.failure_message_safe = "全书分析后台执行失败，可重试或检查 Provider 配置。"
+                        run.failure_message_safe = (
+                            "全书分析后台执行失败，可重试或检查 Provider 配置。"
+                        )
                         fail_session.commit()
             except Exception:  # noqa: BLE001
                 logger.exception(
