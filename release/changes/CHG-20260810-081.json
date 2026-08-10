@@ -23,6 +23,12 @@
       "message": "chore(release): sync CHG-081 commit list after attach.",
       "primary": true,
       "multi_change_reason": null
+    },
+    {
+      "sha": "326aabbad8a3fb231a3059971c9ec0844a77287e",
+      "message": "chore(release): mark CHG-081 verified after packaged sidecar evidence.",
+      "primary": true,
+      "multi_change_reason": null
     }
   ],
   "modules": [
@@ -69,5 +75,5 @@
   "blocker_level": "P0",
   "head_inclusion": "INCLUDED",
   "created_at": "2026-08-10T11:03:10Z",
-  "updated_at": "2026-08-10T12:11:45Z"
+  "updated_at": "2026-08-10T12:12:14Z"
 }
