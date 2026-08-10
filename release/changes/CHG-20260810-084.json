@@ -1,0 +1,53 @@
+{
+  "id": "CHG-20260810-084",
+  "title": "Real Hierarchical V2 Provider window extraction and synthesis fix",
+  "type": "bugfix",
+  "base_version": "1.2.0",
+  "status": "implemented",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "whole_book_v2",
+    "desktop_tasks",
+    "formal_pipeline"
+  ],
+  "files": [
+    "apps/api/app/narrative_core/whole_book_v2/provider_engine.py",
+    "apps/api/app/narrative_core/whole_book_v2/window_extraction.py",
+    "apps/api/app/narrative_core/whole_book_v2/usage_ledger.py",
+    "apps/api/app/narrative_core/whole_book_v2/task_center_projection.py",
+    "apps/api/app/narrative_core/services/whole_book_v2_formal_pipeline_v1.py",
+    "apps/desktop/src/features/wholeBookV2/WholeBookV2ProductPage.tsx",
+    "apps/desktop/src/pages/TasksPage.tsx"
+  ],
+  "user_summary": "Make formal V2 use real Provider window extraction and block scaffold as completed results.",
+  "technical_summary": "Formal Hierarchical V2 now uses Provider window extraction with evidence_ids validation, real_provider intermediate reuse, synthesis contract hints/repair, usage ledger via AnalysisRun projection + model_invocations, Task Center WholeBookRun projection, progress gated on real provider calls, and scaffold read-time NON_REAL gating.",
+  "acceptance_criteria": [
+    "Production window extraction uses Provider path",
+    "Deterministic scaffold cannot complete formal result",
+    "Task Center shows WholeBookRun",
+    "0 provider calls cannot show ~69% progress",
+    "REAL PROVIDER CALLS = 0 in this change verification"
+  ],
+  "tests": [
+    "tests/test_whole_book_chg084_real_hierarchical_v2.py",
+    "apps/desktop/src/features/wholeBookV2/adapter.chg084.test.ts"
+  ],
+  "verification_evidence": [],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": ""
+  },
+  "release_impact": {
+    "requires_reanalysis": true,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "P0",
+  "head_inclusion": null,
+  "created_at": "2026-08-10T13:09:26Z",
+  "updated_at": "2026-08-10T16:14:05Z"
+}

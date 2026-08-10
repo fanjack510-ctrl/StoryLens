@@ -196,5 +196,72 @@ class WholeBookV2Engine:
         return WholeBookAnalysisV2(book_metadata=metadata,type_profile=profile,overview=overview,story=story,characters=characters,suspense=suspense,pacing=pacing,chapters=chapter_result,assessment=assessment,evidence_index=evidence_index,analysis_metadata=analysis)
 
 def progress_snapshot(*,stage_index:int,stage_percent:float,current_window:int,total_windows:int,current_chapter:int,total_chapters:int,provider_calls_completed:int,provider_calls_estimated:int,provider:str,model:str,elapsed:int,last_action:str,current_action:str,failed:int=0,retries:int=0,repairs:int=0,estimated_cost:float=0,actual_cost:float=0)->ProgressV2:
-    weighted=((stage_index+stage_percent/100)/len(V2_STAGES))*100; rate=max(0.001,weighted/max(1,elapsed)); remaining=int(max(0,(100-weighted)/rate))
-    return ProgressV2(overall_percent=min(100,weighted),current_stage=V2_STAGES[min(stage_index,len(V2_STAGES)-1)],stage_percent=stage_percent,current_window=current_window,total_windows=total_windows,current_chapter=current_chapter,total_chapters=total_chapters,provider_calls_completed=provider_calls_completed,provider_calls_estimated=provider_calls_estimated,successful_calls=max(0,provider_calls_completed-failed),failed_calls=failed,retry_calls=retries,repair_calls=repairs,elapsed_seconds=elapsed,estimated_remaining_seconds=remaining,estimated_cost=estimated_cost,estimated_actual_cost=actual_cost,provider=provider,model=model,last_completed_action=last_action,current_action=current_action,last_activity_at=datetime.now(timezone.utc))
+    """Progress must reflect real Provider completion — never jump to ~69% with 0 calls.
+
+    Weights (generic, not book-specific):
+      planning 5% | window extraction 55% | consolidation 15% | synthesis 20% | finish 5%
+    """
+    # Stage buckets mapped from V2_STAGES indices.
+    planning_stages = {"prepare_source", "parse_chapters", "plan_windows"}
+    extract_stages = {"extract_windows"}
+    consolid_stages = {
+        "consolidate_story", "consolidate_relationships", "build_protagonist_arc",
+        "consolidate_characters", "merge_suspense", "compute_pacing", "chapter_functions",
+    }
+    synth_stages = {"generate_overview", "generate_assessment"}
+    finish_stages = {"evidence_validation", "materialize_report", "complete"}
+    stage = V2_STAGES[min(stage_index, len(V2_STAGES) - 1)]
+    est = max(1, provider_calls_estimated)
+    call_ratio = min(1.0, max(0.0, provider_calls_completed / est))
+
+    if stage in planning_stages:
+        overall = min(5.0, (stage_percent / 100.0) * 5.0)
+    elif stage in extract_stages:
+        # Extraction progress only advances with real provider calls (or completed windows
+        # that required provider work). Stage percent alone cannot dominate.
+        window_ratio = (current_window / max(1, total_windows)) if total_windows else 0.0
+        extract_share = 0.55 * max(call_ratio, window_ratio * min(1.0, call_ratio + 0.01) if provider_calls_completed else 0.0)
+        if provider_calls_completed <= 0:
+            extract_share = 0.0
+        overall = 5.0 + extract_share * 100.0
+    elif stage in consolid_stages:
+        base = 5.0 + 55.0 * (1.0 if provider_calls_completed > 0 else 0.0)
+        overall = base + (stage_percent / 100.0) * 15.0 * (1.0 if provider_calls_completed > 0 else 0.0)
+    elif stage in synth_stages:
+        base = 5.0 + 55.0 + 15.0 if provider_calls_completed > 0 else 5.0
+        # Blend stage percent with real call completion for synthesis tail.
+        overall = base + (stage_percent / 100.0) * 20.0 * max(0.2, call_ratio)
+    elif stage in finish_stages:
+        overall = 95.0 + (stage_percent / 100.0) * 5.0 if provider_calls_completed > 0 else min(5.0, stage_percent / 20.0)
+    else:
+        overall = min(100.0, call_ratio * 100.0)
+
+    if provider_calls_completed <= 0:
+        overall = min(overall, 5.0)
+    overall = min(100.0, max(0.0, overall))
+    rate = max(0.001, overall / max(1, elapsed))
+    remaining = int(max(0, (100 - overall) / rate))
+    return ProgressV2(
+        overall_percent=overall,
+        current_stage=stage,
+        stage_percent=stage_percent,
+        current_window=current_window,
+        total_windows=total_windows,
+        current_chapter=current_chapter,
+        total_chapters=total_chapters,
+        provider_calls_completed=provider_calls_completed,
+        provider_calls_estimated=provider_calls_estimated,
+        successful_calls=max(0, provider_calls_completed - failed),
+        failed_calls=failed,
+        retry_calls=retries,
+        repair_calls=repairs,
+        elapsed_seconds=elapsed,
+        estimated_remaining_seconds=remaining,
+        estimated_cost=estimated_cost,
+        estimated_actual_cost=actual_cost,
+        provider=provider,
+        model=model,
+        last_completed_action=last_action,
+        current_action=current_action,
+        last_activity_at=datetime.now(timezone.utc),
+    )

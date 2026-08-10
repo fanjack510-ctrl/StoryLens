@@ -1,0 +1,99 @@
+{
+  "story": {
+    "version": "2.0",
+    "availability": "available",
+    "structure_stages": [
+      {
+        "chapter_start": 1,
+        "chapter_end": 1,
+        "evidence": [
+          "E-1001-0"
+        ],
+        "stage_id": "S1",
+        "title": "阶段 1",
+        "summary": "第 1 至 1 章围绕目标、阻力与选择形成完整阶段。",
+        "protagonist_state": "阶段 1 进入状态",
+        "stage_goal": "推进核心目标",
+        "core_conflict": "目标与代价冲突",
+        "major_characters": [
+          "Lin大人",
+          "Lin"
+        ],
+        "key_events": [
+          "事件 1",
+          "事件 1"
+        ],
+        "major_choice": "选择承担后果",
+        "cost_paid": [
+          "失去既有安全"
+        ],
+        "gain_received": [
+          "获得新线索"
+        ],
+        "turning_point": "第 1 章改变方向",
+        "ending_state": "带着代价进入下一阶段",
+        "next_question": "下一阶段如何兑现选择？"
+      },
+      {
+        "chapter_start": 2,
+        "chapter_end": 2,
+        "evidence": [
+          "E-1002-0"
+        ],
+        "stage_id": "S2",
+        "title": "阶段 2",
+        "summary": "第 2 至 2 章围绕目标、阻力与选择形成完整阶段。",
+        "protagonist_state": "阶段 2 进入状态",
+        "stage_goal": "推进核心目标",
+        "core_conflict": "目标与代价冲突",
+        "major_characters": [
+          "Lin大人",
+          "Lin"
+        ],
+        "key_events": [
+          "事件 2",
+          "事件 2"
+        ],
+        "major_choice": "选择承担后果",
+        "cost_paid": [
+          "失去既有安全"
+        ],
+        "gain_received": [
+          "获得新线索"
+        ],
+        "turning_point": "第 2 章改变方向",
+        "ending_state": "带着代价进入下一阶段",
+        "next_question": "下一阶段如何兑现选择？"
+      },
+      {
+        "chapter_start": 3,
+        "chapter_end": 3,
+        "evidence": [],
+        "stage_id": "S3",
+        "title": "阶段 3",
+        "summary": "第 3 至 3 章围绕目标、阻力与选择形成完整阶段。",
+        "protagonist_state": "阶段 3 进入状态",
+        "stage_goal": "推进核心目标",
+        "core_conflict": "目标与代价冲突",
+        "major_characters": [
+          "Lin大人",
+          "Lin"
+        ],
+        "key_events": [
+          "事件 3",
+          "事件 3"
+        ],
+        "major_choice": "选择承担后果",
+        "cost_paid": [
+          "失去既有安全"
+        ],
+        "gain_received": [
+          "获得新线索"
+        ],
+        "turning_point": "第 3 章改变方向",
+        "ending_state": "带着代价进入下一阶段",
+        "next_question": "下一阶段如何兑现选择？"
+      }
+    ]
+  }
+}

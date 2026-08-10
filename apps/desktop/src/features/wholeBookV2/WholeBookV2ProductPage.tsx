@@ -81,14 +81,29 @@ function resolveActiveRun(prepare: WholeBookPrepareResponse): WholeBookRunRecord
 }
 
 function resolveCompletedV2Run(prepare: WholeBookPrepareResponse): WholeBookRunRecord | null {
+  // CHG-084: only backend-gated real_provider completed rows — never fall back to scaffold.
   if (prepare.completed_v2_run && isCompletedRun(prepare.completed_v2_run.status)) {
     return prepare.completed_v2_run;
   }
-  const active = resolveActiveRun(prepare);
-  if (prepare.latest_run && isCompletedRun(prepare.latest_run.status)) {
-    if (!active || active.run_id !== prepare.latest_run.run_id) {
-      return prepare.latest_run;
-    }
+  return null;
+}
+
+function resolveLatestFailedRun(prepare: WholeBookPrepareResponse): WholeBookRunRecord | null {
+  if (prepare.latest_failed_run && isFailedRun(prepare.latest_failed_run.status)) {
+    return prepare.latest_failed_run;
+  }
+  if (prepare.latest_run && isFailedRun(prepare.latest_run.status)) {
+    return prepare.latest_run;
+  }
+  return null;
+}
+
+function resolveNonRealCompletedRun(prepare: WholeBookPrepareResponse): WholeBookRunRecord | null {
+  if (
+    prepare.non_real_completed_v2_run &&
+    isCompletedRun(prepare.non_real_completed_v2_run.status)
+  ) {
+    return prepare.non_real_completed_v2_run;
   }
   return null;
 }
@@ -460,8 +475,12 @@ function WholeBookV2ProductPageEnabled() {
   const prepare = prepareQuery.data;
   const activeRun = prepare ? resolveActiveRun(prepare) : null;
   const completedV2Run = prepare ? resolveCompletedV2Run(prepare) : null;
+  const latestFailedRun = prepare ? resolveLatestFailedRun(prepare) : null;
+  const nonRealCompletedRun = prepare ? resolveNonRealCompletedRun(prepare) : null;
   const activeRunId = activeRun?.run_id ?? null;
-  const displayV2RunId = completedV2Run?.run_id ?? null;
+  const displayV2RunId =
+    completedV2Run?.run_id ??
+    (latestFailedRun ? nonRealCompletedRun?.run_id ?? null : nonRealCompletedRun?.run_id ?? null);
   const hasOldResultWhileRunning = activeRunId != null && displayV2RunId != null;
 
   const v2ResultQuery = useQuery({
@@ -579,7 +598,9 @@ function WholeBookV2ProductPageEnabled() {
       if (isFailedRun(activeRun.status)) return "failed";
       return "running";
     }
-    if (!completedV2Run && !activeRun) return "prepare";
+    // New run failed → never auto-restore scaffold as "分析完成".
+    if (latestFailedRun && !completedV2Run) return "failed";
+    if (!completedV2Run && !activeRun && !nonRealCompletedRun) return "prepare";
     if (completedV2Run) {
       if (v2ResultQuery.isSuccess && v2ResultQuery.data) return "completed-v2";
       if (v2ResultQuery.isError && isLegacyV2Error(v2ResultQuery.error)) return "legacy";
@@ -587,6 +608,7 @@ function WholeBookV2ProductPageEnabled() {
       if (v2ResultQuery.isError) return "failed";
       return "legacy";
     }
+    if (nonRealCompletedRun) return "legacy";
     return "prepare";
   })();
 
@@ -620,7 +642,8 @@ function WholeBookV2ProductPageEnabled() {
   };
 
   const confirmReanalyse = () => {
-    const previousRunId = completedV2Run?.run_id ?? displayV2RunId;
+    const previousRunId =
+      completedV2Run?.run_id ?? nonRealCompletedRun?.run_id ?? displayV2RunId;
     reanalysePreviousRunIdRef.current = previousRunId;
     createMutation.mutate({ reanalyse: true, previousRunId });
   };
@@ -685,20 +708,29 @@ function WholeBookV2ProductPageEnabled() {
       {pageMode === "legacy" && <LegacyNotice onReanalyze={openReanalyseConfirm} />}
 
       {pageMode === "failed" && (
-        <ErrorState
-          error={
-            v2ResultQuery.error instanceof Error
-              ? v2ResultQuery.error
-              : new Error(activeRun?.status === "failed" ? "分析任务失败" : "无法加载 V2 结果")
-          }
-          retry={() => {
-            if (completedV2Run) {
-              openReanalyseConfirm();
-            } else {
-              void prepareQuery.refetch();
-            }
-          }}
-        />
+        <section className="wbv2-state" data-testid="whole-book-v2-failed">
+          <h1>分析失败</h1>
+          <p>
+            阶段：{latestFailedRun?.current_stage_code || activeRun?.current_stage_code || "—"}
+          </p>
+          <p>
+            错误码：
+            {latestFailedRun?.failure_code ||
+              activeRun?.failure_code ||
+              (v2ResultQuery.error instanceof ApiError ? v2ResultQuery.error.code : null) ||
+              "—"}
+          </p>
+          <p>
+            {latestFailedRun?.failure_message_safe ||
+              activeRun?.failure_message_safe ||
+              (v2ResultQuery.error instanceof Error
+                ? v2ResultQuery.error.message
+                : "全书分析任务失败，可重新分析。")}
+          </p>
+          <button type="button" onClick={openReanalyseConfirm}>
+            重新分析
+          </button>
+        </section>
       )}
 
       {(pageMode === "completed-v2" || showOldResultWhileRunning) && v2ResultQuery.data && (
@@ -723,7 +755,7 @@ function WholeBookV2ProductPageEnabled() {
           </section>
         )}
 
-      {pageMode === "failed" && completedV2Run && v2ResultQuery.data && (
+      {pageMode === "failed" && (completedV2Run || nonRealCompletedRun) && v2ResultQuery.data && (
         <WholeBookV2ReportView
           data={v2ResultQuery.data}
           activeModule={activeModule}
@@ -735,7 +767,9 @@ function WholeBookV2ProductPageEnabled() {
           analysisStatusLabel="当前旧结果"
           headerBanner={
             <div className="wbv2-error-banner">
-              新的分析任务失败。您可以查看当前旧结果，或再次尝试重新分析。
+              {nonRealCompletedRun && !completedV2Run
+                ? "最新分析失败。当前旧结果不是完整真实 V2 分析，需要重新分析。"
+                : "新的分析任务失败。您可以查看当前旧结果，或再次尝试重新分析。"}
             </div>
           }
         />

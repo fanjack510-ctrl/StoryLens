@@ -475,6 +475,13 @@ class AnalysisRunResponse(BaseModel):
     last_actual_output_tokens: int | None = None
     last_finish_reason: str | None = None
     truncation_attempt_count: int | None = None
+    # CHG-084: Task Center WholeBook V2 projection
+    book_id: int | None = None
+    client_request_id: str | None = None
+    analysis_type: str | None = None
+    scope_type: str | None = None
+    whole_book_run_id: int | None = None
+    mode_label: str | None = None
 
 
 class SceneAnalysisOfflineReplayRequest(BaseModel):

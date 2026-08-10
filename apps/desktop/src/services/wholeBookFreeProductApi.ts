@@ -93,6 +93,10 @@ export type WholeBookPrepareResponse = {
   completed_v2_run?: WholeBookRunRecord | null;
   /** Pending, running, or recoverable run (may overlap with latest_run). */
   active_run?: WholeBookRunRecord | null;
+  /** Latest failed WholeBookRun (CHG-084 — do not auto-show scaffold as completed). */
+  latest_failed_run?: WholeBookRunRecord | null;
+  /** Completed but non-real / scaffold result for optional old-result viewing. */
+  non_real_completed_v2_run?: WholeBookRunRecord | null;
   context_safe?: boolean;
   snapshot_rebuild_required: boolean;
   estimate: WholeBookCostEstimateRow | null;

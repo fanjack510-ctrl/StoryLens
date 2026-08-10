@@ -105,6 +105,15 @@ class WindowExtractionAsset(M):
     evidence: list[EvidenceRef] = Field(default_factory=list)
     start_chapter_index: int = Field(ge=1)
     end_chapter_index: int = Field(ge=1)
+    # CHG-084: only origin=real_provider may be reused as formal AI intermediates.
+    origin: Literal[
+        "real_provider", "deterministic_scaffold", "fixture", "mock", "legacy"
+    ] = "deterministic_scaffold"
+    provider: str | None = None
+    model: str | None = None
+    provider_request_id: str | None = None
+    input_tokens: int | None = None
+    output_tokens: int | None = None
 
 
 class TopicIntermediate(M):
@@ -458,7 +467,11 @@ def extract_window_asset(
     *,
     focus: list[str] | None = None,
 ) -> WindowExtractionAsset:
-    """Deterministic offline extractor for product pipeline / dry tests. No real provider."""
+    """Deterministic offline scaffold — NEVER a formal production novel analysis.
+
+    Formal Hierarchical V2 must use Provider window extraction
+    (``window_extraction.materialize_window_asset_from_provider``).
+    """
     by_id = {c.chapter_id: c for c in chapters}
     part = [by_id[cid] for cid in window.chapter_ids if cid in by_id]
     if not part:
@@ -529,6 +542,7 @@ def extract_window_asset(
         evidence=evidence,
         start_chapter_index=first.chapter_index,
         end_chapter_index=last.chapter_index,
+        origin="deterministic_scaffold",
     )
 
 

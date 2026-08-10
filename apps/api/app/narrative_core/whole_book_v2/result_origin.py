@@ -43,11 +43,16 @@ def resolve_result_origin(result: WholeBookAnalysisV2) -> str:
         "fixture",
         "mock",
         "legacy_migration",
+        "legacy",
         "unknown",
     }:
         origin = "unknown"
-    if origin in {"unknown", ""} and detect_scaffold(result):
-        return "deterministic_local_merge"
+    if detect_scaffold(result):
+        # Read-time NON_REAL_RESULT — do not rewrite user DB.
+        if origin == "real_provider":
+            return "deterministic_local_merge"
+        if origin in {"unknown", ""}:
+            return "deterministic_local_merge"
     return origin
 
 
@@ -60,6 +65,12 @@ def product_flags_for_result(result: WholeBookAnalysisV2) -> dict[str, Any]:
         "needs_reanalysis": not is_real,
         "scaffold_detected": scaffold,
         "result_origin": origin,
+        "non_real_result": not is_real,
+        "non_real_message": (
+            None
+            if is_real
+            else "当前结果不是完整真实 V2 分析，需要重新分析。"
+        ),
     }
 
 

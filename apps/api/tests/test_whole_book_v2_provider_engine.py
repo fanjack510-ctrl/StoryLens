@@ -28,7 +28,11 @@ def payloads(chapters):
     ]
 
 class QueueGateway:
-    def __init__(self,items): self.items=list(items); self.calls=[]
+    def __init__(self,items):
+        self.items=list(items)
+        self.calls=[]
+        # Legacy synthesis-only fixtures: keep deterministic window extract unless a test opts into Provider windows.
+        self.deterministic_extraction=True
     async def generate(self,provider,request):
         self.calls.append((provider,request))
         item=self.items.pop(0)

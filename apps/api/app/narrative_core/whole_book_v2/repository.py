@@ -252,6 +252,7 @@ class WholeBookV2Repository:
         """Copy intermediate + synthesis-unit checkpoints for safe reanalysis reuse.
 
         Never copies the final v2_result row — a new formal result version is always required.
+        Window intermediates are only reusable when origin=real_provider (CHG-084).
         """
         if int(source_run_id) == int(target_run_id):
             return 0
@@ -263,6 +264,13 @@ class WholeBookV2Repository:
         ).all()
         copied = 0
         for row in rows:
+            if row.stage_code == INTERMEDIATE_STAGE and str(row.checkpoint_key).startswith("window:"):
+                try:
+                    data = json.loads(row.checkpoint_payload_json)
+                except json.JSONDecodeError:
+                    continue
+                if not isinstance(data, dict) or data.get("origin") != "real_provider":
+                    continue
             exists = self.session.scalars(
                 select(WholeBookCheckpoint).where(
                     WholeBookCheckpoint.run_id == int(target_run_id),

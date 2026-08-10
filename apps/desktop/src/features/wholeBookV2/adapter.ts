@@ -35,10 +35,16 @@ export function hasScaffoldHeuristic(data: WholeBookAnalysisV2): boolean {
 
 export function isRealProviderV2Result(data: WholeBookAnalysisV2): boolean {
   const origin = data.analysis_metadata.result_origin ?? "unknown";
-  return origin === "real_provider";
+  if (origin !== "real_provider") return false;
+  if (hasScaffoldHeuristic(data)) return false;
+  const flags = (data as WholeBookAnalysisV2 & { product_flags?: { is_real_provider_result?: boolean } })
+    .product_flags;
+  if (flags && flags.is_real_provider_result === false) return false;
+  return true;
 }
 
 export function needsReanalysisWarning(data: WholeBookAnalysisV2): boolean {
+  if (!isRealProviderV2Result(data)) return true;
   const origin = data.analysis_metadata.result_origin;
   if (origin != null && origin !== "unknown" && origin !== "real_provider") {
     return true;

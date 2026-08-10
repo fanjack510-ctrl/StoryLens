@@ -375,6 +375,19 @@ export function TasksPage() {
   };
 
   const openChapterProgress = async (run: any) => {
+    const taskType = String(run.task_type || "");
+    if (
+      taskType === "whole_book_v2" ||
+      run.analysis_type === "whole_book_v2" ||
+      run.mode_label === "全书 V2" ||
+      run.whole_book_run_id != null
+    ) {
+      const bookId = Number(run.book_id || run.subject_id);
+      if (Number.isFinite(bookId) && bookId > 0) {
+        navigate(`/books/${bookId}/whole-book-v2`);
+        return;
+      }
+    }
     if (isNativeOverviewRun(run) || run.task_type === "whole_book_overview" || run.subject_type === "book") {
       const bookId = Number(run.book_id || run.subject_id);
       if (Number.isFinite(bookId) && bookId > 0) {

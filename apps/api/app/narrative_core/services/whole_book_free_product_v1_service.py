@@ -88,12 +88,44 @@ def _recoverable_run(session: Session, book_id: int) -> WholeBookRun | None:
 
 
 def _completed_v2_run(session: Session, book_id: int) -> WholeBookRun | None:
-    """Latest completed run that has a persisted WholeBookAnalysisV2 result."""
+    """Latest completed run with a real_provider V2 result (scaffold is NON_REAL)."""
     from app.narrative_core.whole_book_v2.repository import WholeBookV2Repository
+    from app.narrative_core.whole_book_v2.result_origin import product_flags_for_result
 
     repo = WholeBookV2Repository(session)
     for run in list_runs_for_book(session, book_id):
-        if run.status == WholeBookRunStatus.completed.value and repo.has_result(int(run.id)):
+        if run.status != WholeBookRunStatus.completed.value:
+            continue
+        result = repo.load_result(int(run.id))
+        if result is None:
+            continue
+        flags = product_flags_for_result(result)
+        if flags.get("is_real_provider_result"):
+            return run
+    return None
+
+
+def _latest_failed_run(session: Session, book_id: int) -> WholeBookRun | None:
+    for run in list_runs_for_book(session, book_id):
+        if run.status == WholeBookRunStatus.failed.value:
+            return run
+    return None
+
+
+def _non_real_completed_v2_run(session: Session, book_id: int) -> WholeBookRun | None:
+    """Scaffold/legacy completed rows — visible as old result, never as formal completed."""
+    from app.narrative_core.whole_book_v2.repository import WholeBookV2Repository
+    from app.narrative_core.whole_book_v2.result_origin import product_flags_for_result
+
+    repo = WholeBookV2Repository(session)
+    for run in list_runs_for_book(session, book_id):
+        if run.status != WholeBookRunStatus.completed.value:
+            continue
+        result = repo.load_result(int(run.id))
+        if result is None:
+            continue
+        flags = product_flags_for_result(result)
+        if not flags.get("is_real_provider_result"):
             return run
     return None
 
@@ -167,6 +199,8 @@ def prepare_free_whole_book_analysis_v1(session: Session, book_id: int) -> dict[
     run_creation_enabled = bool(real_on and provider_available)
     active_run = recoverable
     completed_v2 = _completed_v2_run(session, book_id)
+    latest_failed = _latest_failed_run(session, book_id)
+    non_real_completed = _non_real_completed_v2_run(session, book_id)
     model_name = str(est.get("model_name") or provider.plus_model or "")
     context_safe = bool(hier_plan.get("context_safe", True))
     return {
@@ -188,6 +222,10 @@ def prepare_free_whole_book_analysis_v1(session: Session, book_id: int) -> dict[
         "recoverable_run": run_to_dict(recoverable) if recoverable is not None else None,
         "active_run": run_to_dict(active_run) if active_run is not None else None,
         "completed_v2_run": run_to_dict(completed_v2) if completed_v2 is not None else None,
+        "latest_failed_run": run_to_dict(latest_failed) if latest_failed is not None else None,
+        "non_real_completed_v2_run": (
+            run_to_dict(non_real_completed) if non_real_completed is not None else None
+        ),
         "latest_run_id": latest.id if latest else None,
         "latest_run_status": latest.status if latest else None,
         "recoverable_run_id": recoverable.id if recoverable else None,
@@ -307,7 +345,7 @@ def create_free_whole_book_analysis_v1(
     ).strip()
     request_id = client_request_id or str(uuid.uuid4())
     if reanalyse and previous_run_id is None:
-        prev = _completed_v2_run(session, book_id)
+        prev = _completed_v2_run(session, book_id) or _non_real_completed_v2_run(session, book_id)
         previous_run_id = int(prev.id) if prev is not None else None
 
     run = create_whole_book_run_v1(
@@ -344,6 +382,11 @@ def create_free_whole_book_analysis_v1(
     run.engine_id = V2_ENGINE_ID
     run.engine_version = V2_ENGINE_VERSION
     session.flush()
+
+    # CHG-084: Task Center projection + usage ledger bridge (AnalysisRun).
+    from app.narrative_core.whole_book_v2.usage_ledger import ensure_task_projection
+
+    ensure_task_projection(session, run)
 
     audit = assert_native_input_independence_v1(session, run.id)
     persist_native_input_audit_v1(session, audit)

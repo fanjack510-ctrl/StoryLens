@@ -704,7 +704,20 @@ def list_analysis_runs(
             query.order_by(desc(AnalysisRun.created_at)).offset(offset).limit(min(limit, 200))
         )
     )
-    return [serialize_run(session, run) for run in runs]
+    serialized = [serialize_run(session, run) for run in runs]
+    # CHG-084: ensure WholeBookRun projections appear even if shadow AnalysisRun missing.
+    from app.narrative_core.whole_book_v2.task_center_projection import (
+        merge_whole_book_runs_into_task_list,
+    )
+
+    return merge_whole_book_runs_into_task_list(
+        session,
+        serialized,
+        status=status,
+        provider=provider,
+        book_id=book_id,
+        limit=min(limit, 200),
+    )
 
 
 @router.get("/model-providers", response_model=list[ProviderStatusResponse])

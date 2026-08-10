@@ -49,6 +49,7 @@ class _DeterministicV2Gateway:
     def __init__(self, payloads: list[dict[str, Any]]):
         self._payloads = list(payloads)
         self.disallow_local_merge = True
+        # Opt-in evidence gateway may still use local window extract; formal path does not.
         self.deterministic_extraction = True
 
     async def generate(self, provider: str, request: Any) -> ModelResponse:
@@ -130,9 +131,9 @@ def _bind_formal_gateway(session: Session, *, provider_name: str) -> Any:
     apply_provider_runtime(provider, session, store)
     provider.api_key = secret
     provider.enabled = True
-    # Formal hierarchical: deterministic window extract; synthesis via provider.
-    # Never persist local scaffold merge as a formal "completed" real result (CHG-080).
-    gateway.deterministic_extraction = True  # type: ignore[attr-defined]
+    # CHG-084: formal hierarchical requires real Provider window extraction.
+    # Never persist local scaffold merge as a formal "completed" real result.
+    gateway.deterministic_extraction = False  # type: ignore[attr-defined]
     gateway.disallow_local_merge = True  # type: ignore[attr-defined]
     return gateway
 
@@ -204,6 +205,9 @@ def execute_hierarchical_v2_pipeline_v1(
     # fake explicitly allows it (force_local_merge / missing disallow).
     if use_fake_gateway is not None and not hasattr(gateway, "disallow_local_merge"):
         gateway.disallow_local_merge = False  # type: ignore[attr-defined]
+    from app.narrative_core.whole_book_v2.usage_ledger import ensure_task_projection
+
+    ensure_task_projection(session, run)
     analyzer = GatewayWholeBookV2Analyzer(
         gateway,
         provider_name=provider_name,
@@ -211,6 +215,8 @@ def execute_hierarchical_v2_pipeline_v1(
         ledger=ProviderUnitLedger(),
         repository=repo,
         budget=ProviderBudget(provider=provider_name, model=model_name),
+        db_session=session,
+        force_full_reanalysis=bool(force_full_reanalysis),
     )
     if run.status == WholeBookRunStatus.pending.value:
         start_whole_book_run_v1(session, int(run_id))
@@ -244,6 +250,9 @@ def execute_hierarchical_v2_pipeline_v1(
     run.status = WholeBookRunStatus.completed.value
     run.current_stage_code = "complete"
     session.flush()
+    from app.narrative_core.whole_book_v2.usage_ledger import ensure_task_projection
+
+    ensure_task_projection(session, run)
     _persist_commit()
     return {
         "run_id": int(run_id),

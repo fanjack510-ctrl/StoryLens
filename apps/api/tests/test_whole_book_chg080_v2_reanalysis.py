@@ -40,6 +40,7 @@ class QueueGateway:
         self.items = list(items)
         self.calls = []
         self.disallow_local_merge = False
+        self.deterministic_extraction = True
 
     async def generate(self, provider, request):
         self.calls.append((provider, request))

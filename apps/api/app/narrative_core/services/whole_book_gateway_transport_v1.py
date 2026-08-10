@@ -157,11 +157,16 @@ def _redact(msg: str, secret: str | None) -> str:
 
 
 def _run_async(coro):  # type: ignore[no-untyped-def]
+    """Run a coroutine with an isolated event loop (safe for background threads).
+
+    CHG-084: never depend on the FastAPI request loop lifecycle. Always prefer
+    asyncio.run in a dedicated context; if a loop is already running, offload to
+    a worker thread with its own asyncio.run.
+    """
     try:
         asyncio.get_running_loop()
     except RuntimeError:
         return asyncio.run(coro)
-    # Nested loop (e.g. already inside async): use a dedicated loop in a thread.
     import concurrent.futures
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:

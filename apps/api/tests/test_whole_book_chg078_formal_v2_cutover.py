@@ -36,6 +36,7 @@ class QueueGateway:
     def __init__(self, items):
         self.items = list(items)
         self.calls = []
+        self.deterministic_extraction = True
 
     async def generate(self, provider, request):
         self.calls.append((provider, request))

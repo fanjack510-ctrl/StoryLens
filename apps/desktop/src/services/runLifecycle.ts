@@ -72,8 +72,9 @@ export function isNativeOverviewRun(run: Run | Record<string, unknown>): boolean
   const subjectType = String((run as any).subject_type || "");
   const analysisType = String((run as any).analysis_type || "");
   const scopeType = String((run as any).scope_type || "");
+  if (taskType === "whole_book_v2") return true;
   if (taskType === "whole_book_overview") return true;
-  if (analysisType === "whole_book_native") return true;
+  if (analysisType === "whole_book_native" || analysisType === "whole_book_v2") return true;
   if (scopeType === "whole_book" && subjectType === "book") return true;
   if (subjectType === "book" && taskType.includes("whole_book")) return true;
   return false;
