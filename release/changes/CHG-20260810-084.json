@@ -5,7 +5,9 @@
   "base_version": "1.2.0",
   "status": "implemented",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    "64bb022cc13a55a0d5913ccb753b6c2716f67fd6"
+  ],
   "modules": [
     "whole_book_v2",
     "desktop_tasks",
@@ -49,5 +51,5 @@
   "blocker_level": "P0",
   "head_inclusion": null,
   "created_at": "2026-08-10T13:09:26Z",
-  "updated_at": "2026-08-10T16:14:05Z"
+  "updated_at": "2026-08-10T16:14:31Z"
 }
