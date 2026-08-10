@@ -19,8 +19,13 @@ INTERMEDIATE_STAGE = "v2_intermediate_asset"
 
 
 class WholeBookV2Repository:
-    def __init__(self, session: Session):
+    def __init__(self, session: Session, *, on_persist: Any | None = None):
         self.session = session
+        self._on_persist = on_persist
+
+    def _after_persist(self) -> None:
+        if self._on_persist is not None:
+            self._on_persist()
 
     def _stable_label(self, run_id: int) -> str:
         return f"whole-book-v2:{int(run_id)}"
@@ -144,6 +149,7 @@ class WholeBookV2Repository:
             row.completed_unit_count = progress.provider_calls_completed
             row.checkpoint_payload_json = payload
         self.session.flush()
+        self._after_persist()
 
     def load_progress(self, run_id: int) -> ProgressV2 | None:
         row = self.session.scalars(
@@ -190,6 +196,7 @@ class WholeBookV2Repository:
             )
         )
         self.session.flush()
+        self._after_persist()
 
     def load_intermediate(self, run_id: int, key: str) -> Any | None:
         row = self.session.scalars(
@@ -236,6 +243,7 @@ class WholeBookV2Repository:
             )
         )
         self.session.flush()
+        self._after_persist()
 
     def has_result(self, run_id: int) -> bool:
         return self.load_result(int(run_id)) is not None

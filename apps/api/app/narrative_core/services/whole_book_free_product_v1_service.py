@@ -14,8 +14,11 @@ from app.narrative_core.contracts.whole_book_contract_v1 import ResultOrigin, Wh
 from app.narrative_core.services.whole_book_consent_service import create_whole_book_consent, validate_whole_book_consent
 from app.narrative_core.services.whole_book_cost_estimate_service import (
     compute_book_revision_hash,
-    estimate_to_dict,
     estimate_whole_book_analysis,
+)
+from app.narrative_core.services.whole_book_hierarchical_estimate_v1 import (
+    estimate_hierarchical_whole_book_analysis_v1,
+    hierarchical_estimate_to_dict,
 )
 from app.narrative_core.services.whole_book_foundation_errors import (
     WholeBookFoundationError,
@@ -39,9 +42,6 @@ from app.narrative_core.services.whole_book_run_v1_service import (
 )
 from app.narrative_core.services.whole_book_snapshot_v1_service import create_or_reuse_book_snapshot_v1
 from app.narrative_core.services.whole_book_start_limits_v1 import suggest_limits_from_estimate
-from app.narrative_core.services.whole_book_windowing_v1_service import generate_whole_book_windows_v1
-
-
 def free_product_enabled() -> bool:
     # V1.2.0 Free contract: formal whole-book product ON by default in production.
     # Explicit false/0/off still disables. Fixture preview remains default OFF.
@@ -98,39 +98,6 @@ def _completed_v2_run(session: Session, book_id: int) -> WholeBookRun | None:
     return None
 
 
-def _hierarchical_context_safe(chapter_count: int, character_count: int, model_name: str) -> bool:
-    """Cheap planner gate for prepare / reanalyse confirm (no Provider calls)."""
-    try:
-        from app.narrative_core.whole_book_v2.pipeline import (
-            ChapterMeta,
-            ProviderBudget,
-            build_token_plan,
-            plan_windows,
-        )
-
-        if chapter_count <= 0:
-            return True
-        avg = max(1, int(character_count / max(1, chapter_count)))
-        sample = min(chapter_count, 80)
-        metas = [
-            ChapterMeta(
-                chapter_id=i,
-                chapter_index=i,
-                title=f"c{i}",
-                text=("字" * avg),
-                snapshot_id=1,
-                revision_hash="prepare",
-            )
-            for i in range(1, sample + 1)
-        ]
-        budget = ProviderBudget(provider="formal", model=model_name or "default")
-        windows = plan_windows(metas, book_id=0, budget=budget)
-        token_plan = build_token_plan(windows, budget=budget)
-        return token_plan.context_safe == "YES"
-    except Exception:  # noqa: BLE001
-        return True
-
-
 def prepare_free_whole_book_analysis_v1(session: Session, book_id: int) -> dict[str, Any]:
     _require_free_product_enabled()
     require_capability_access("whole_book.overview", AccessTier.free)
@@ -178,8 +145,13 @@ def prepare_free_whole_book_analysis_v1(session: Session, book_id: int) -> dict[
             WholeBookFoundationErrorCode.WHOLE_BOOK_REAL_PROVIDER_DISABLED,
             f"当前服务商 {active_name} 尚未配置，无法准备全书分析",
         )
-    estimate = estimate_whole_book_analysis(
-        session, book_id, WholeBookMode.whole_book_native.value, provider.id
+    # CHG-081: formal V2 start + reanalysis share Hierarchical planners (not legacy Free).
+    estimate, hier_plan = estimate_hierarchical_whole_book_analysis_v1(
+        session,
+        book_id,
+        WholeBookMode.whole_book_native.value,
+        provider.id,
+        provider_name=str(provider.provider_name or ""),
     )
     latest = _latest_run_for_book(session, book_id)
     recoverable = _recoverable_run(session, book_id)
@@ -189,18 +161,14 @@ def prepare_free_whole_book_analysis_v1(session: Session, book_id: int) -> dict[
         and latest.snapshot_id is not None
         and snap_result["reused"] is False
     )
-    est = estimate_to_dict(estimate)
+    est = hierarchical_estimate_to_dict(estimate)
     real_on = real_provider_enabled()
     fixture_on = fixture_preview_enabled()
     run_creation_enabled = bool(real_on and provider_available)
     active_run = recoverable
     completed_v2 = _completed_v2_run(session, book_id)
     model_name = str(est.get("model_name") or provider.plus_model or "")
-    context_safe = _hierarchical_context_safe(
-        int(est.get("chapter_count") or 0),
-        int(est.get("character_count") or 0),
-        model_name,
-    )
+    context_safe = bool(hier_plan.get("context_safe", True))
     return {
         "book_id": book_id,
         "book_title": book.title or "",
@@ -226,6 +194,7 @@ def prepare_free_whole_book_analysis_v1(session: Session, book_id: int) -> dict[
         "needs_new_snapshot": needs_new_snapshot,
         "snapshot_rebuild_required": needs_new_snapshot,
         "context_safe": context_safe,
+        "planner": "hierarchical_v2",
         "snapshot": {
             "snapshot_id": snap_result["snapshot"].id,
             "reused": snap_result["reused"],
@@ -246,6 +215,8 @@ def prepare_free_whole_book_analysis_v1(session: Session, book_id: int) -> dict[
             "model_name": est.get("model_name"),
             "price_known": str(est.get("pricing_status") or "") == "available",
             "currency": est.get("currency") or "CNY",
+            "estimate_version": est.get("estimate_version"),
+            "planner": "hierarchical_v2",
         },
         "recommended_limits": suggest_limits_from_estimate(estimate),
         "blocking_reasons": blockers,
@@ -377,8 +348,10 @@ def create_free_whole_book_analysis_v1(
     audit = assert_native_input_independence_v1(session, run.id)
     persist_native_input_audit_v1(session, audit)
 
-    # Hierarchical V2 plans windows internally; keep V1 window rows for legacy progress UIs only.
-    generate_whole_book_windows_v1(session, run.id)
+    # CHG-081: Hierarchical V2 owns window planning inside the background executor.
+    # Do NOT call legacy generate_whole_book_windows_v1 here — it loads every
+    # snapshot paragraph text synchronously on create and can stall/OOM the
+    # packaged sidecar on large books (e.g. 542 chapters / ~2.9M chars).
     # Mark running so prepare/progress can observe the run immediately after commit.
     if run.status == WholeBookRunStatus.pending.value:
         start_whole_book_run_v1(session, run.id)
@@ -478,6 +451,10 @@ def create_fixture_free_whole_book_analysis_v1(
 
     audit = assert_native_input_independence_v1(session, run.id)
     persist_native_input_audit_v1(session, audit)
+
+    from app.narrative_core.services.whole_book_windowing_v1_service import (
+        generate_whole_book_windows_v1,
+    )
 
     generate_whole_book_windows_v1(session, run.id)
     if run.status == WholeBookRunStatus.pending.value:

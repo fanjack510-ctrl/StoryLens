@@ -181,9 +181,12 @@ class ChapterMeta:
     text: str
     snapshot_id: int
     revision_hash: str
+    token_hint: int | None = None
 
     @property
     def estimated_tokens(self) -> int:
+        if self.token_hint is not None:
+            return max(1, int(self.token_hint))
         return max(1, math.ceil(len(self.text) / CHARS_PER_TOKEN))
 
 

@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import logging
+import threading
+from typing import Any
 
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -23,6 +25,7 @@ def execute_free_whole_book_pipeline_background(
     leave「创建中…」and show progress. Provider work happens here.
 
     CHG-078/080: formal product runs Hierarchical V2 — not minimal_pipeline_v1.
+    CHG-081: own DB session + intermediate commits; exceptions must not kill sidecar.
     """
 
     del provider_config_id  # pinned on WholeBookRun at create; hierarchical uses run pin
@@ -34,15 +37,23 @@ def execute_free_whole_book_pipeline_background(
         execute_hierarchical_v2_pipeline_v1,
     )
 
+    # Never reuse the request-scoped Session. Always open a new one here.
     with session_factory() as session:
+        request_session_id = id(session)
         try:
             execute_hierarchical_v2_pipeline_v1(
                 session,
                 int(run_id),
                 force_full_reanalysis=bool(force_full_reanalysis),
                 previous_run_id=int(previous_run_id) if previous_run_id else None,
+                commit_progress=True,
             )
             session.commit()
+            logger.info(
+                "free_whole_book_background_ok run_id=%s session_id=%s",
+                run_id,
+                request_session_id,
+            )
         except WholeBookFoundationError as exc:
             try:
                 session.commit()
@@ -82,4 +93,47 @@ def execute_free_whole_book_pipeline_background(
                 )
 
 
-__all__ = ["execute_free_whole_book_pipeline_background"]
+def schedule_free_whole_book_pipeline_background(
+    session_factory: sessionmaker[Session],
+    run_id: int,
+    *,
+    provider_config_id: int | None = None,
+    force_full_reanalysis: bool = False,
+    previous_run_id: int | None = None,
+) -> threading.Thread:
+    """Detach V2 execution from the HTTP request / FastAPI BackgroundTasks lifecycle.
+
+    Packaged sidecar (PyInstaller + uvicorn) must keep accepting /health while a
+    long Hierarchical run executes. A dedicated daemon thread owns the work;
+    exceptions are swallowed inside the worker so they cannot tear down the API
+    process.
+    """
+
+    def _runner() -> None:
+        try:
+            execute_free_whole_book_pipeline_background(
+                session_factory,
+                int(run_id),
+                provider_config_id=provider_config_id,
+                force_full_reanalysis=bool(force_full_reanalysis),
+                previous_run_id=previous_run_id,
+            )
+        except Exception:  # noqa: BLE001 — last-resort process boundary
+            logger.exception(
+                "free_whole_book_background_thread_unhandled run_id=%s",
+                run_id,
+            )
+
+    thread = threading.Thread(
+        target=_runner,
+        name=f"wb-v2-bg-{int(run_id)}",
+        daemon=True,
+    )
+    thread.start()
+    return thread
+
+
+__all__ = [
+    "execute_free_whole_book_pipeline_background",
+    "schedule_free_whole_book_pipeline_background",
+]

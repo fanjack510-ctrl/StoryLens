@@ -98,12 +98,15 @@ def execute_hierarchical_v2_pipeline_v1(
     use_fake_gateway: Any | None = None,
     force_full_reanalysis: bool = False,
     previous_run_id: int | None = None,
+    commit_progress: bool = False,
 ) -> dict[str, Any]:
     """Run hierarchical V2 analyze for an existing WholeBookRun and persist V2 result.
 
     ``use_fake_gateway`` is test-only. Production must pass None (real ModelGateway).
     When ``force_full_reanalysis`` is False and ``previous_run_id`` is set, successful
     intermediate checkpoints may be copied into the new run (same pipeline contract).
+    When ``commit_progress`` is True, intermediate checkpoint writes are committed so
+    other Sessions (health / progress poll) are not blocked by a multi-hour write txn.
     """
     run = get_run(session, int(run_id))
     book = session.get(Book, int(run.book_id))
@@ -111,7 +114,12 @@ def execute_hierarchical_v2_pipeline_v1(
         raise ValueError(f"book not found: {run.book_id}")
     provider_name, model_name = pinned_provider(session, int(run_id))
     chapters = _source_chapters(session, run)
-    repo = WholeBookV2Repository(session)
+
+    def _persist_commit() -> None:
+        if commit_progress:
+            session.commit()
+
+    repo = WholeBookV2Repository(session, on_persist=_persist_commit if commit_progress else None)
     reused = 0
     if (
         not force_full_reanalysis
@@ -121,6 +129,7 @@ def execute_hierarchical_v2_pipeline_v1(
         reused = _copy_safe_intermediates(
             repo, source_run_id=int(previous_run_id), target_run_id=int(run_id)
         )
+        _persist_commit()
     gateway = (
         use_fake_gateway
         if use_fake_gateway is not None
@@ -141,10 +150,12 @@ def execute_hierarchical_v2_pipeline_v1(
     if run.status == WholeBookRunStatus.pending.value:
         start_whole_book_run_v1(session, int(run_id))
         session.refresh(run)
+        _persist_commit()
 
     run.engine_id = ENGINE_ID
     run.engine_version = ENGINE_VERSION
     session.flush()
+    _persist_commit()
 
     result, responses = _run_async(
         analyzer.analyze(
@@ -162,11 +173,13 @@ def execute_hierarchical_v2_pipeline_v1(
             "全书 V2 合成未能完成真实模型结果，未写入正式完成态。请重新分析。"
         )
         session.flush()
+        _persist_commit()
         raise ValueError("formal V2 local merge result rejected")
     version_id = repo.save_result(result)
     run.status = WholeBookRunStatus.completed.value
     run.current_stage_code = "complete"
     session.flush()
+    _persist_commit()
     return {
         "run_id": int(run_id),
         "engine_id": ENGINE_ID,

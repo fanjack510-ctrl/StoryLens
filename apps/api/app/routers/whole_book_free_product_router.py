@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -31,7 +31,7 @@ from app.narrative_core.services.whole_book_product_capability_v1 import (
 from app.narrative_core.services.whole_book_structure_product_v1_service import (
     get_run_structure_product_v1,
 )
-from app.services.whole_book_free_background import execute_free_whole_book_pipeline_background
+from app.services.whole_book_free_background import schedule_free_whole_book_pipeline_background
 
 router = APIRouter(prefix="/api/v1", tags=["whole-book-free-product"])
 
@@ -119,7 +119,6 @@ def prepare_free_analysis_product_alias(book_id: int, db: Session = Depends(get_
 def create_free_analysis(
     book_id: int,
     body: CreateFreeRunRequest,
-    background: BackgroundTasks,
     db: Session = Depends(get_db),
     session_factory: sessionmaker[Session] = Depends(get_session_factory),
 ) -> dict:
@@ -174,8 +173,9 @@ def create_free_analysis(
         raise
 
     if result.get("deferred_execution"):
-        background.add_task(
-            execute_free_whole_book_pipeline_background,
+        # CHG-081: dedicated daemon thread — not FastAPI BackgroundTasks — so
+        # long Hierarchical work cannot block request teardown / starve health.
+        schedule_free_whole_book_pipeline_background(
             session_factory,
             int(result["run_id"]),
             provider_config_id=result.get("provider_config_id"),

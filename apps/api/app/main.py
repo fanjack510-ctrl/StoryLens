@@ -55,6 +55,9 @@ from app.narrative_core.services.mock_whole_book_run_runtime import (
 )
 from app.services.instance_lock import acquire_instance_lock, release_instance_lock
 from app.services.scene_pipeline import mark_interrupted_runs_failed
+from app.narrative_core.services.whole_book_startup_recovery_v1 import (
+    mark_interrupted_whole_book_runs,
+)
 from app.services.spa_static import mount_spa
 
 logger = logging.getLogger(__name__)
@@ -137,6 +140,10 @@ def _make_lifespan(
             with SessionLocal() as session:
                 stats = mark_interrupted_runs_failed(session)
                 requeue_journey_ids = list(stats.get("requeue_journey_ids") or [])
+                try:
+                    mark_interrupted_whole_book_runs(session)
+                except Exception:  # noqa: BLE001 — never block startup
+                    logger.exception("whole_book_startup_recovery_failed")
             # CHG-013: re-claim unclaimed starting/queued journeys after restart.
             if requeue_journey_ids:
                 import asyncio

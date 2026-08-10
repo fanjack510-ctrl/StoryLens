@@ -273,21 +273,21 @@ function ReanalyseConfirmPanel({
         {est ? (
           <>
             <div>
-              <dt>预估窗口</dt>
+              <dt>预计窗口</dt>
               <dd>{est.estimated_windows ?? "—"}</dd>
             </div>
             <div>
-              <dt>预估调用</dt>
+              <dt>预计调用</dt>
               <dd>{est.estimated_provider_calls ?? "—"}</dd>
             </div>
             <div>
-              <dt>预估 tokens</dt>
+              <dt>预计 tokens</dt>
               <dd>
                 {est.estimated_input_tokens ?? "—"} 输入 / {est.estimated_output_tokens ?? "—"} 输出
               </dd>
             </div>
             <div>
-              <dt>预估费用</dt>
+              <dt>预计费用</dt>
               <dd>
                 {est.estimated_cost_min_cny && est.estimated_cost_max_cny
                   ? `约 ¥${est.estimated_cost_min_cny}～¥${est.estimated_cost_max_cny}`
@@ -551,9 +551,19 @@ function WholeBookV2ProductPageEnabled() {
   }
 
   if (prepareQuery.isError) {
+    const err = prepareQuery.error;
+    const offline =
+      err instanceof ApiError &&
+      (err.code === "BACKEND_OFFLINE" || /无法连接本地分析服务/.test(err.message));
     return (
       <ErrorState
-        error={prepareQuery.error instanceof Error ? prepareQuery.error : new Error("准备失败")}
+        error={
+          offline
+            ? new Error("本地分析服务暂时不可用。请点击重新连接。")
+            : err instanceof Error
+              ? err
+              : new Error("准备失败")
+        }
         retry={() => void prepareQuery.refetch()}
       />
     );
