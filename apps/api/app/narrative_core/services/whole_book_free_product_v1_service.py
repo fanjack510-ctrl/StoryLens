@@ -185,6 +185,7 @@ def prepare_free_whole_book_analysis_v1(session: Session, book_id: int) -> dict[
             "estimated_output_tokens": est.get("estimated_output_tokens"),
             "estimated_cost_min_cny": est.get("estimated_cost_min_cny"),
             "estimated_cost_max_cny": est.get("estimated_cost_max_cny"),
+            "call_breakdown": est.get("call_breakdown"),
             "provider_name": provider.provider_name,
             "provider_config_id": provider.id,
             "model_name": est.get("model_name"),
@@ -205,6 +206,7 @@ def create_free_whole_book_analysis_v1(
     consent_id: int,
     client_request_id: str,
     execute_pipeline: bool = True,
+    defer_execution: bool = False,
 ) -> dict[str, Any]:
     _require_free_product_enabled()
     require_capability_access("whole_book.overview", AccessTier.free)
@@ -295,12 +297,14 @@ def create_free_whole_book_analysis_v1(
     persist_native_input_audit_v1(session, audit)
 
     generate_whole_book_windows_v1(session, run.id)
+    # Mark running so prepare/progress can observe the run immediately after commit.
     if run.status == WholeBookRunStatus.pending.value:
         start_whole_book_run_v1(session, run.id)
     session.refresh(run)
 
     pipeline_result: dict[str, Any] | None = None
-    if execute_pipeline:
+    # HTTP create must return before Provider work (CHG-077). Background task runs pipeline.
+    if execute_pipeline and not defer_execution:
         transports = build_formal_gateway_transports(
             session,
             run=run,
@@ -319,6 +323,8 @@ def create_free_whole_book_analysis_v1(
         "result_origin": ResultOrigin.formal.value,
         "run_status": run.status,
         "pipeline": pipeline_result,
+        "deferred_execution": bool(defer_execution and execute_pipeline),
+        "provider_config_id": provider_config_id,
         "audit": audit.to_dict(),
     }
 

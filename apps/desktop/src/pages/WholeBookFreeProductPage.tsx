@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ErrorState, Loading } from "../components/common/States";
@@ -196,6 +196,7 @@ function WholeBookFreeProductPageEnabled() {
     auto_retry_enabled: false,
   });
   const [actionError, setActionError] = useState<string | null>(null);
+  const createRequestIdRef = useRef<string | null>(null);
   const [drawerSource, setDrawerSource] = useState<EvidenceSourceDetail | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerError, setDrawerError] = useState<string | null>(null);
@@ -311,9 +312,12 @@ function WholeBookFreeProductPageEnabled() {
   }, [bookId, queryClient, runId]);
 
   const createFormalMutation = useMutation({
-    mutationFn: () =>
-      wholeBookFreeProductApi.createRun(bookId, {
-        client_request_id: newWholeBookClientRequestId(),
+    mutationFn: () => {
+      if (!createRequestIdRef.current) {
+        createRequestIdRef.current = newWholeBookClientRequestId();
+      }
+      return wholeBookFreeProductApi.createRun(bookId, {
+        client_request_id: createRequestIdRef.current,
         estimate_id: prepareQuery.data?.estimate?.estimate_id ?? null,
         max_provider_calls: limits.max_provider_calls
           ? Number(limits.max_provider_calls)
@@ -322,11 +326,20 @@ function WholeBookFreeProductPageEnabled() {
         max_output_tokens: limits.max_output_tokens ? Number(limits.max_output_tokens) : null,
         max_cost_budget_cny: limits.max_cost_budget_cny || null,
         auto_retry_enabled: limits.auto_retry_enabled,
-      }),
-    onSuccess: () => void invalidateAll(),
+      });
+    },
+    onSuccess: () => {
+      createRequestIdRef.current = null;
+      setActionError(null);
+      void invalidateAll();
+    },
     onError: (err) => {
+      if (!(err instanceof ApiError && (err.status === 0 || err.code === "BACKEND_OFFLINE"))) {
+        // Limit/consent failures roll back server state — next click needs a fresh request id.
+        createRequestIdRef.current = null;
+      }
       if (err instanceof ApiError) {
-        setActionError(mapWholeBookStartError(err.code, err.message));
+        setActionError(mapWholeBookStartError(err.code, err.message, err.detail));
         return;
       }
       setActionError("创建分析任务失败");
@@ -882,6 +895,14 @@ function PreparePanel({
           <ul>
             <li>预计窗口数：{est.estimated_windows ?? "—"}</li>
             <li>预计模型调用数：{est.estimated_provider_calls ?? "—"}</li>
+            {est.call_breakdown ? (
+              <li data-testid="whole-book-free-call-breakdown">
+                调用拆分：窗口抽取 {est.call_breakdown.window_extraction_calls} + 终局综合{" "}
+                {est.call_breakdown.final_synthesis_calls} + 章节功能批次{" "}
+                {est.call_breakdown.chapter_function_batch_calls} + 修复预留{" "}
+                {est.call_breakdown.repair_reserve_calls}
+              </li>
+            ) : null}
             <li>预计输入 Token：{est.estimated_input_tokens ?? "—"}</li>
             <li>预计输出 Token：{est.estimated_output_tokens ?? "—"}</li>
             <li>
@@ -1023,7 +1044,11 @@ function PreparePanel({
         </>
       ) : null}
 
-      {actionError ? <p className="error-text">{actionError}</p> : null}
+      {actionError ? (
+        <p className="error-text" data-testid="whole-book-free-create-error" role="alert">
+          {actionError}
+        </p>
+      ) : null}
     </section>
   );
 }

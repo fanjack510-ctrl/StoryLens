@@ -85,13 +85,42 @@ def _estimate_chapter_function_batches(chapter_count: int) -> int:
     return int(math.ceil(chapter_count / float(CF_MAX_CHAPTERS_PER_BATCH)))
 
 
-def _estimate_provider_call_count(*, window_count: int, chapter_count: int) -> int:
-    """Align estimate with unit planning: windows + overview + structure + CF batches + repair reserve."""
+def _estimate_provider_call_breakdown(*, window_count: int, chapter_count: int) -> dict[str, int]:
+    """Minimal Free pipeline call plan (not hierarchical V2).
+
+    WINDOW EXTRACTION CALLS = one provider unit per analysis window
+    FINAL SYNTHESIS CALLS = overview + structure_stages
+    CHAPTER FUNCTION BATCH CALLS + REPAIR RESERVE = CF batches (+ at most one repair each)
+    """
     if window_count == 0 and chapter_count == 0:
-        return 0
+        return {
+            "window_extraction_calls": 0,
+            "final_synthesis_calls": 0,
+            "chapter_function_batch_calls": 0,
+            "repair_reserve_calls": 0,
+            "estimated_total_calls": 0,
+        }
     cf_batches = _estimate_chapter_function_batches(chapter_count)
     cf_repair_reserve = cf_batches * CF_REPAIR_RESERVE_PER_BATCH
-    return int(window_count) + SYNTHESIS_PROVIDER_CALLS + cf_batches + cf_repair_reserve
+    extract = int(window_count)
+    synthesis = int(SYNTHESIS_PROVIDER_CALLS)
+    total = extract + synthesis + cf_batches + cf_repair_reserve
+    return {
+        "window_extraction_calls": extract,
+        "final_synthesis_calls": synthesis,
+        "chapter_function_batch_calls": int(cf_batches),
+        "repair_reserve_calls": int(cf_repair_reserve),
+        "estimated_total_calls": int(total),
+    }
+
+
+def _estimate_provider_call_count(*, window_count: int, chapter_count: int) -> int:
+    """Align estimate with unit planning: windows + overview + structure + CF batches + repair reserve."""
+    return int(
+        _estimate_provider_call_breakdown(
+            window_count=window_count, chapter_count=chapter_count
+        )["estimated_total_calls"]
+    )
 
 
 def _resolve_model_name(provider: ProviderConfiguration | None) -> str:
@@ -276,7 +305,11 @@ def estimate_to_dict(row: WholeBookCostEstimate) -> dict[str, Any]:
     def _dec(v: Any) -> str | None:
         return None if v is None else str(v)
 
-    cf_batches = _estimate_chapter_function_batches(int(row.chapter_count or 0))
+    breakdown = _estimate_provider_call_breakdown(
+        window_count=int(row.estimated_window_count or 0),
+        chapter_count=int(row.chapter_count or 0),
+    )
+    cf_batches = breakdown["chapter_function_batch_calls"]
     return {
         "id": row.id,
         "book_id": row.book_id,
@@ -289,8 +322,9 @@ def estimate_to_dict(row: WholeBookCostEstimate) -> dict[str, Any]:
         "character_count": row.character_count,
         "estimated_window_count": row.estimated_window_count,
         "estimated_provider_call_count": row.estimated_provider_call_count,
+        "call_breakdown": breakdown,
         "estimated_chapter_function_batches": cf_batches,
-        "estimated_chapter_function_repair_reserve": cf_batches * CF_REPAIR_RESERVE_PER_BATCH,
+        "estimated_chapter_function_repair_reserve": breakdown["repair_reserve_calls"],
         "chapter_function_repair_strategy": CHAPTER_FUNCTION_REPAIR_STRATEGY,
         "estimated_input_tokens": row.estimated_input_tokens,
         "estimated_output_tokens": row.estimated_output_tokens,

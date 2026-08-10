@@ -87,8 +87,8 @@ def assert_limits_cover_estimate(
         raise WholeBookFoundationError(
             WholeBookFoundationErrorCode.LIMIT_PROVIDER_CALLS_TOO_LOW,
             (
-                f"模型调用次数上限低于本次分析预计需求："
-                f"预计 {est_calls}，当前上限 {int(max_provider_calls)}"
+                f"预计需要 {est_calls} 次模型调用，超过当前允许上限 {int(max_provider_calls)} 次。"
+                f"请提高调用上限或调整分析范围。"
             ),
             details={
                 "estimated_provider_calls": est_calls,
@@ -99,7 +99,8 @@ def assert_limits_cover_estimate(
         raise WholeBookFoundationError(
             WholeBookFoundationErrorCode.LIMIT_INPUT_TOKENS_TOO_LOW,
             (
-                f"输入 Token 上限不足：预计 {est_in}，当前上限 {int(max_input_tokens)}"
+                f"预计需要 {est_in} 输入 Token，超过当前允许上限 {int(max_input_tokens)}。"
+                f"请提高输入 Token 上限或调整分析范围。"
             ),
             details={
                 "estimated_input_tokens": est_in,
@@ -110,7 +111,8 @@ def assert_limits_cover_estimate(
         raise WholeBookFoundationError(
             WholeBookFoundationErrorCode.LIMIT_OUTPUT_TOKENS_TOO_LOW,
             (
-                f"输出 Token 上限不足：预计 {est_out}，当前上限 {int(max_output_tokens)}"
+                f"预计需要 {est_out} 输出 Token，超过当前允许上限 {int(max_output_tokens)}。"
+                f"请提高输出 Token 上限或调整分析范围。"
             ),
             details={
                 "estimated_output_tokens": est_out,
@@ -124,7 +126,10 @@ def assert_limits_cover_estimate(
         if budget < needed:
             raise WholeBookFoundationError(
                 WholeBookFoundationErrorCode.BUDGET_TOO_LOW,
-                f"费用预算低于预计最高费用：预计最高 ¥{needed}，当前预算 ¥{budget}",
+                (
+                    f"预计最高费用 ¥{needed}，超过当前费用上限 ¥{budget}。"
+                    f"请提高费用上限或调整分析范围。"
+                ),
                 details={
                     "estimated_cost_max_cny": str(needed),
                     "max_cost_budget_cny": str(budget),

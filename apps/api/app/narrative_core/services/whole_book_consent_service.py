@@ -66,7 +66,10 @@ def create_whole_book_consent(
         if budget < Decimal(str(accepted_max)):
             raise WholeBookFoundationError(
                 WholeBookFoundationErrorCode.BUDGET_TOO_LOW,
-                f"费用预算低于预计最高费用：预计最高 ¥{accepted_max}，当前预算 ¥{budget}",
+                (
+                    f"预计最高费用 ¥{accepted_max}，超过当前费用上限 ¥{budget}。"
+                    f"请提高费用上限或调整分析范围。"
+                ),
                 details={
                     "estimated_cost_max_cny": str(accepted_max),
                     "max_cost_budget_cny": str(budget),

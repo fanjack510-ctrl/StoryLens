@@ -50,6 +50,12 @@ vi.mock("../services/wholeBookRealProviderFlag", async () => {
   };
 });
 
+vi.mock("../services/settingsApi", () => ({
+  settingsApi: {
+    activeCloudProvider: vi.fn(async () => ({ provider_name: "deepseek" })),
+  },
+}));
+
 vi.mock("../components/onboarding/QwenFirstLaunchBanner", () => ({
   QwenFirstLaunchBanner: () => null,
 }));
@@ -510,6 +516,98 @@ describe("WholeBookFreeProduct (Wave D §18.2)", () => {
     expect(start).toBeDisabled();
     fireEvent.click(screen.getByTestId("whole-book-free-consent-checkbox"));
     await waitFor(() => expect(start).not.toBeDisabled());
+  });
+
+  it("shows clear call-limit error and leaves创建中 after create failure", async () => {
+    realProviderState.enabled = true;
+    prepareSpy.mockResolvedValue(
+      basePrepare({
+        real_provider_enabled: true,
+        run_creation_enabled: true,
+        estimate: {
+          estimate_id: 9,
+          book_id: 1,
+          mode: "whole_book_native",
+          estimated_windows: 106,
+          estimated_provider_calls: 244,
+          estimated_input_tokens: 1_920_000,
+          estimated_output_tokens: 324_000,
+          estimated_cost_min_cny: "2.4708",
+          estimated_cost_max_cny: "2.73",
+          provider_name: "deepseek",
+          model_name: "deepseek-v4-flash",
+          price_known: true,
+          currency: "CNY",
+        },
+        recommended_limits: {
+          max_provider_calls: 300,
+          max_input_tokens: 2_200_000,
+          max_output_tokens: 400_000,
+          max_cost_budget_cny: "10.00",
+        },
+      }),
+    );
+    const { ApiError } = await import("../services/apiClient");
+    createRunSpy.mockRejectedValue(
+      new ApiError(
+        "LIMIT_PROVIDER_CALLS_TOO_LOW",
+        "预计需要 2444 次模型调用，超过当前允许上限 300 次。请提高调用上限或调整分析范围。",
+        400,
+        { estimated_provider_calls: 2444, max_provider_calls: 300 },
+      ),
+    );
+    renderPage("/books/1/whole-book");
+    await screen.findByTestId("whole-book-free-prepare");
+    fireEvent.click(screen.getByTestId("whole-book-free-consent-checkbox"));
+    const start = await screen.findByTestId("whole-book-free-start-formal");
+    await waitFor(() => expect(start).not.toBeDisabled());
+    fireEvent.click(start);
+    await waitFor(() => {
+      expect(screen.getByTestId("whole-book-free-create-error")).toHaveTextContent(
+        "预计需要 2444 次模型调用，超过当前允许上限 300 次",
+      );
+    });
+    expect(screen.getByTestId("whole-book-free-start-formal")).toHaveTextContent("开始全书分析");
+    expect(screen.getByTestId("whole-book-free-start-formal")).not.toBeDisabled();
+    expect(createRunSpy).toHaveBeenCalled();
+  });
+
+  it("blocks start locally when estimated calls exceed max calls", async () => {
+    realProviderState.enabled = true;
+    prepareSpy.mockResolvedValue(
+      basePrepare({
+        real_provider_enabled: true,
+        run_creation_enabled: true,
+        estimate: {
+          estimate_id: 9,
+          book_id: 1,
+          mode: "whole_book_native",
+          estimated_windows: 106,
+          estimated_provider_calls: 2444,
+          estimated_input_tokens: 1_920_000,
+          estimated_output_tokens: 324_000,
+          estimated_cost_min_cny: "2.4708",
+          estimated_cost_max_cny: "2.73",
+          provider_name: "deepseek",
+          model_name: "deepseek-v4-flash",
+          price_known: true,
+          currency: "CNY",
+        },
+        recommended_limits: {
+          max_provider_calls: 300,
+          max_input_tokens: 2_200_000,
+          max_output_tokens: 400_000,
+          max_cost_budget_cny: "10.00",
+        },
+      }),
+    );
+    renderPage("/books/1/whole-book");
+    await screen.findByTestId("whole-book-free-prepare");
+    // Seeded recommended limits (300) are below estimate (2444).
+    expect(await screen.findByTestId("whole-book-free-limit-gaps-message")).toHaveTextContent("2444");
+    fireEvent.click(screen.getByTestId("whole-book-free-consent-checkbox"));
+    expect(screen.getByTestId("whole-book-free-start-formal")).toBeDisabled();
+    expect(createRunSpy).not.toHaveBeenCalled();
   });
 
   it("shows fixture preview button separately from formal start", async () => {

@@ -56,6 +56,13 @@ export type WholeBookCostEstimateRow = {
   estimated_output_tokens: number | null;
   estimated_cost_min_cny: string | null;
   estimated_cost_max_cny: string | null;
+  call_breakdown?: {
+    window_extraction_calls: number;
+    final_synthesis_calls: number;
+    chapter_function_batch_calls: number;
+    repair_reserve_calls: number;
+    estimated_total_calls: number;
+  } | null;
   provider_name: string | null;
   model_name: string | null;
   price_known: boolean;

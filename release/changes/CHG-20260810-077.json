@@ -1,0 +1,61 @@
+{
+  "id": "CHG-20260810-077",
+  "title": "Whole-Book create-run hang and estimate/UX hotfix",
+  "type": "fix",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": ["apps/api", "apps/desktop", "release"],
+  "files": [
+    "apps/api/app/services/whole_book_free_background.py",
+    "apps/api/app/routers/whole_book_free_product_router.py",
+    "apps/api/app/narrative_core/services/whole_book_free_product_v1_service.py",
+    "apps/api/app/narrative_core/services/whole_book_cost_estimate_service.py",
+    "apps/api/app/narrative_core/services/whole_book_start_limits_v1.py",
+    "apps/api/app/narrative_core/services/whole_book_consent_service.py",
+    "apps/api/tests/test_whole_book_chg077_create_run_hotfix.py",
+    "apps/desktop/src/services/wholeBookStartLimits.ts",
+    "apps/desktop/src/pages/WholeBookFreeProductPage.tsx",
+    "apps/desktop/src/pages/wholeBookFreeProduct.test.tsx",
+    "release/evidence/whole-book/CHG-20260810-077/"
+  ],
+  "user_summary": "Fix formal Whole-Book create stuck on 创建中 without task visibility; clarify limit errors; expose call estimate breakdown.",
+  "technical_summary": "Defer Free whole-book pipeline to BackgroundTasks after commit so create returns a run immediately. Improve LIMIT_* Chinese errors with estimated vs max numbers. Expose Free minimal call_breakdown. 542-chapter dry-run shows Free estimate=244 calls (not 2444); user limits matched recommended for 244.",
+  "acceptance_criteria": [
+    "create failure clears 创建中 and shows clear Chinese error",
+    "call limit rejection includes estimated and max numbers",
+    "no WholeBookRun when consent rejected",
+    "same client_request_id is idempotent",
+    "REAL PROVIDER CALLS=0 during fix/tests/build"
+  ],
+  "tests": [
+    "pytest apps/api/tests/test_whole_book_chg077_create_run_hotfix.py",
+    "vitest wholeBookStartLimits.test.ts wholeBookFreeProduct.test.tsx"
+  ],
+  "verification_evidence": [
+    "release/evidence/whole-book/CHG-20260810-077/DRY_RUN_542.json",
+    "D:/StoryLens-Local-Evidence/v1.2.0-manual-hotfix-chg077/"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "No formal user DB writes during hotfix build."
+  },
+  "provider_impact": {
+    "real_calls": 0,
+    "routing_changed": false,
+    "notes": "Create now schedules pipeline in background; no provider calls during targeted tests/build."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "manual_acceptance",
+  "head_inclusion": null,
+  "created_at": "2026-08-10T06:00:31Z",
+  "updated_at": "2026-08-10T06:20:00Z"
+}

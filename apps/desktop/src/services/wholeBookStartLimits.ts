@@ -1,4 +1,4 @@
-/** Whole-book start limit checks (CHG-20260808-062). */
+/** Whole-book start limit checks (CHG-20260808-062 / CHG-20260810-077). */
 
 export type WholeBookEstimateLike = {
   estimated_provider_calls?: number | null;
@@ -101,37 +101,84 @@ export function compareLimitsToEstimate(
 export function formatLimitGapsMessage(gaps: LimitGap[]): string {
   if (!gaps.length) return "";
   const lines = gaps.map((g) => {
-    if (g.kind === "budget") {
-      return `${g.label}：¥${g.estimated}\n当前上限：¥${g.limit}`;
+    if (g.kind === "provider_calls") {
+      return `预计需要 ${g.estimated} 次模型调用，超过当前允许上限 ${g.limit} 次。请提高调用上限或调整分析范围。`;
     }
-    return `${g.label}：${g.estimated.toLocaleString()}\n当前上限：${g.limit.toLocaleString()}`;
+    if (g.kind === "input_tokens") {
+      return `预计需要 ${g.estimated} 输入 Token，超过当前允许上限 ${g.limit}。请提高输入 Token 上限或调整分析范围。`;
+    }
+    if (g.kind === "output_tokens") {
+      return `预计需要 ${g.estimated} 输出 Token，超过当前允许上限 ${g.limit}。请提高输出 Token 上限或调整分析范围。`;
+    }
+    return `预计最高费用 ¥${g.estimated}，超过当前费用上限 ¥${g.limit}。请提高费用上限或调整分析范围。`;
   });
-  return `当前调用限制不足，无法开始分析。\n\n${lines.join("\n\n")}`;
+  return lines.join("\n\n");
 }
 
-export function mapWholeBookStartError(code: string, fallbackMessage: string): string {
+function detailNumber(detail: unknown, key: string): number | null {
+  if (!detail || typeof detail !== "object") return null;
+  const raw = (detail as Record<string, unknown>)[key];
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
+}
+
+export function mapWholeBookStartError(
+  code: string,
+  fallbackMessage: string,
+  detail?: unknown,
+): string {
+  const estimatedCalls = detailNumber(detail, "estimated_provider_calls");
+  const maxCalls = detailNumber(detail, "max_provider_calls");
+  const estimatedIn = detailNumber(detail, "estimated_input_tokens");
+  const maxIn = detailNumber(detail, "max_input_tokens");
+  const estimatedOut = detailNumber(detail, "estimated_output_tokens");
+  const maxOut = detailNumber(detail, "max_output_tokens");
+  const estimatedCost = detailNumber(detail, "estimated_cost_max_cny");
+  const maxBudget = detailNumber(detail, "max_cost_budget_cny");
+
   switch (code) {
     case "LIMIT_PROVIDER_CALLS_TOO_LOW":
-      return "模型调用次数上限低于本次分析预计需求";
+      if (estimatedCalls != null && maxCalls != null) {
+        return `预计需要 ${estimatedCalls} 次模型调用，超过当前允许上限 ${maxCalls} 次。请提高调用上限或调整分析范围。`;
+      }
+      return fallbackMessage.includes("预计需要")
+        ? fallbackMessage
+        : "预计模型调用次数超过当前允许上限。请提高调用上限或调整分析范围。";
     case "LIMIT_INPUT_TOKENS_TOO_LOW":
     case "WHOLE_BOOK_INPUT_TOKEN_BUDGET_EXCEEDED":
-      return "输入 Token 上限不足";
+      if (estimatedIn != null && maxIn != null) {
+        return `预计需要 ${estimatedIn} 输入 Token，超过当前允许上限 ${maxIn}。请提高输入 Token 上限或调整分析范围。`;
+      }
+      return fallbackMessage.includes("预计需要") ? fallbackMessage : "输入 Token 上限不足";
     case "LIMIT_OUTPUT_TOKENS_TOO_LOW":
     case "WHOLE_BOOK_OUTPUT_TOKEN_BUDGET_EXCEEDED":
-      return "输出 Token 上限不足";
+      if (estimatedOut != null && maxOut != null) {
+        return `预计需要 ${estimatedOut} 输出 Token，超过当前允许上限 ${maxOut}。请提高输出 Token 上限或调整分析范围。`;
+      }
+      return fallbackMessage.includes("预计需要") ? fallbackMessage : "输出 Token 上限不足";
     case "BUDGET_TOO_LOW":
     case "WHOLE_BOOK_BUDGET_TOO_LOW":
-      return "费用预算低于预计最高费用";
+      if (estimatedCost != null && maxBudget != null) {
+        return `预计最高费用 ¥${estimatedCost}，超过当前费用上限 ¥${maxBudget}。请提高费用上限或调整分析范围。`;
+      }
+      return fallbackMessage.includes("预计") ? fallbackMessage : "费用预算低于预计最高费用";
     case "CONSENT_STALE":
     case "WHOLE_BOOK_ESTIMATE_EXPIRED":
     case "WHOLE_BOOK_BOOK_CHANGED":
     case "WHOLE_BOOK_CONSENT_EXPIRED":
+    case "WHOLE_BOOK_CONSENT_REQUIRED":
+    case "WHOLE_BOOK_CONSENT_REVOKED":
       return "分析配置已经变化，请重新确认";
+    case "WHOLE_BOOK_REAL_PROVIDER_DISABLED":
+      return fallbackMessage || "真实模型分析尚未启用";
     case "REQUEST_SCHEMA_INVALID":
     case "REQUEST_VALIDATION_ERROR":
       return fallbackMessage && !fallbackMessage.includes("请求字段校验失败")
         ? fallbackMessage
         : "请求参数异常";
+    case "BACKEND_OFFLINE":
+    case "HTTP_ERROR":
+      return fallbackMessage || "网络或服务异常，创建分析任务失败";
     default:
       return fallbackMessage || "创建分析任务失败";
   }
