@@ -1,0 +1,23 @@
+{
+  "id": "CHG-20260810-075",
+  "title": "Multi-Window Real Acceptance Preflight",
+  "type": "documentation",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": ["apps/api"],
+  "files": ["release/evidence/whole-book/CHG-20260810-075/"],
+  "user_summary": "Plans the smallest real multi-window Whole-Book V2 acceptance sample without calling any provider.",
+  "technical_summary": "Official Window Planner on real novel chapter lengths shows 明朝那些事儿 cannot reach 2 windows. Minimal 2-window sample is 择天记 first 59 chapters; recommended next real sample is 78 chapters (2 windows with non-trivial second window). Calibrated expected cost uses CHG-074 actual/pre high cost ratio 0.221.",
+  "acceptance_criteria": ["REAL PROVIDER CALLS=0", "FORMAL USER DB WRITES=0", "PRODUCT CODE MODIFIED=NO", "WINDOW COUNT>=2 candidates"],
+  "tests": ["deterministic official WindowPlanner/TokenPlan/CostPlan dry planning only"],
+  "verification_evidence": ["release/evidence/whole-book/CHG-20260810-075/PREFLIGHT.json"],
+  "data_compatibility": {"database_changed": false, "migration_required": false, "user_data_compatible": true, "notes": "No formal user DB writes."},
+  "provider_impact": {"real_calls": 0, "routing_changed": false, "notes": "Preflight only."},
+  "release_impact": {"requires_reanalysis": false, "requires_restart": false, "updater_impact": false, "breaking_change": false},
+  "blocker_level": null,
+  "head_inclusion": null,
+  "created_at": "2026-08-10T04:30:00Z",
+  "updated_at": "2026-08-10T04:40:00Z"
+}

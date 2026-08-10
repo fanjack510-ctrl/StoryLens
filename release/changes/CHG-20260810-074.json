@@ -1,0 +1,55 @@
+{
+  "id": "CHG-20260810-074",
+  "title": "Whole-Book V2 Short Real DeepSeek Acceptance",
+  "type": "documentation",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": ["apps/api", "apps/desktop"],
+  "files": [
+    "release/evidence/whole-book/CHG-20260810-074/",
+    "apps/api/app/narrative_core/whole_book_v2/pipeline.py",
+    "apps/api/app/narrative_core/whole_book_v2/provider_engine.py"
+  ],
+  "user_summary": "Completes one authorized DeepSeek short-sample hierarchical Whole-Book V2 acceptance without writing the formal user database.",
+  "technical_summary": "6-chapter 明朝那些事儿 slice; CONTEXT_SAFE=YES; 6 real synthesis unit calls; 0 repairs; actual cost 0.037059 CNY; evidence/progress/formal adapter PASS. Minimal pre-acceptance product fix: per-chapter evidence + chapter_catalog in synthesis payload + disallow_local_merge gate.",
+  "acceptance_criteria": [
+    "one authorized short real provider run only",
+    "hierarchical pipeline under 0.50 CNY",
+    "no formal user DB writes",
+    "evidence/progress/formal V2 adapter checks"
+  ],
+  "tests": [
+    "CHG-073 deterministic gates",
+    "CHG-074 short real DeepSeek acceptance harness"
+  ],
+  "verification_evidence": [
+    "release/evidence/whole-book/CHG-20260810-074/ACCEPTANCE.json",
+    "release/evidence/whole-book/CHG-20260810-074/PROVIDER_CALLS.json",
+    "release/evidence/whole-book/CHG-20260810-074/USAGE_CAPTURE.json",
+    "release/evidence/whole-book/CHG-20260810-074/PROGRESS_EVENTS.json",
+    "release/evidence/whole-book/CHG-20260810-074/EVIDENCE_AUDIT.json"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "Formal user database writes: 0. Isolated temp SQLite only."
+  },
+  "provider_impact": {
+    "real_calls": 6,
+    "routing_changed": false,
+    "notes": "deepseek / deepseek-v4-flash; thinking disabled; no Aliyun/fake/mock fallback."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": null,
+  "created_at": "2026-08-10T03:30:00Z",
+  "updated_at": "2026-08-10T03:35:00Z"
+}

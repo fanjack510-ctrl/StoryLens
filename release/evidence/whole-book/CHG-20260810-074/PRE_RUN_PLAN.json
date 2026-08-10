@@ -1,0 +1,29 @@
+{
+  "source_head": "e98a431c8ec5c4913593dd7806a1ebdaad43eafb",
+  "sample_path": "C:\\Users\\msi\\AppData\\Local\\Temp\\storylens-v120-deepseek-small-accept\\deepseek_small_6ch.txt",
+  "sample_name": "明朝那些事儿.txt (CHG-071/062 short slice)",
+  "chapter_count": 6,
+  "window_count": 1,
+  "estimated_extract_calls": 1,
+  "estimated_consolidation_calls": 8,
+  "estimated_final_synthesis_calls": 6,
+  "estimated_repair_reserve_calls": 2,
+  "estimated_total_calls": 17,
+  "estimated_input_tokens": 63680,
+  "estimated_output_tokens": 52000,
+  "estimated_cost_low_cny": 0.147953,
+  "estimated_cost_high_cny": 0.16768,
+  "max_request_tokens": 11960,
+  "provider_context_limit": 128000,
+  "context_safety_margin": 8000,
+  "CONTEXT_SAFE": "YES",
+  "provider": "deepseek",
+  "model": "deepseek-v4-flash",
+  "thinking": "disabled",
+  "budget_cny": 0.5,
+  "formal_user_db": "C:\\Users\\msi\\AppData\\Local\\StoryLens\\database\\storylens.db",
+  "isolated_db": "C:\\Users\\msi\\AppData\\Local\\Temp\\storylens-chg074-accept\\chg074_isolated.db",
+  "window_ids": [
+    "W-2001-2006-8c17892bd6884863"
+  ]
+}

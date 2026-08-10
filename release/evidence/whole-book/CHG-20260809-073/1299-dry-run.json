@@ -1,0 +1,43 @@
+{
+  "window_count": 13,
+  "estimated_provider_calls": 31,
+  "max_request_tokens": 109884,
+  "provider_context_limit": 128000,
+  "safety_margin": 8000,
+  "context_safe": "YES",
+  "no_raw_full_book_final_request": "YES",
+  "no_request_above_safe_context": "YES",
+  "token_plan": {
+    "chapter_count": 1299,
+    "window_count": 13,
+    "extract_calls": 13,
+    "consolidation_calls": 9,
+    "final_synthesis_calls": 6,
+    "repair_reserve_calls": 3,
+    "estimated_total_calls": 31,
+    "estimated_input_tokens": 2141838,
+    "estimated_output_tokens": 106000,
+    "max_single_request_input_tokens": 105884,
+    "max_single_request_total_tokens": 109884,
+    "provider_context_limit": 128000,
+    "context_safety_margin": 8000,
+    "context_safe": "YES",
+    "reused_successful_units": 0,
+    "billable_calls": 31
+  },
+  "cost_plan": {
+    "estimated_cost_low": 2.126047,
+    "estimated_cost_high": 2.353838,
+    "extract_cost": 0.987093,
+    "consolidation_cost": 0.683372,
+    "synthesis_cost": 0.455582,
+    "repair_reserve_cost": 0.227791,
+    "reused_units_not_rebilled": 0,
+    "currency": "CNY"
+  },
+  "sample_window_ids": [
+    "W-10001-10103-72e32b292ba4e2fd",
+    "W-10103-10205-ee037f9d1dee4a7a",
+    "W-10205-10307-f9a6d252554af209"
+  ]
+}

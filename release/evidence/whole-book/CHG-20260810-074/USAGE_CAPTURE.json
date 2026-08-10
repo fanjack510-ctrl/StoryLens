@@ -1,0 +1,18 @@
+{
+  "actual_provider_calls": 6,
+  "failed_calls": 0,
+  "repair_calls": 0,
+  "prompt_tokens": 22135,
+  "completion_tokens": 7462,
+  "cache_hit_tokens": 0,
+  "cache_miss_tokens": 22135,
+  "estimated_actual_cost_cny": 0.037059,
+  "provider": "deepseek",
+  "model": "deepseek-v4-flash",
+  "base_url": "https://api.deepseek.com",
+  "base_url_identity": "api.deepseek.com",
+  "run_provider_pin": "deepseek",
+  "run_model_pin": "deepseek-v4-flash",
+  "thinking": "disabled",
+  "total_tokens": 29597
+}

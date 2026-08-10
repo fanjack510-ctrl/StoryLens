@@ -1,0 +1,66 @@
+{
+  "schema_version": "whole-book-analysis-v2.0",
+  "chapter_count": 6,
+  "type_profile": {
+    "version": "2.0",
+    "primary_genre": "冒险",
+    "secondary_genres": [
+      "成长",
+      "奇幻"
+    ],
+    "narrative_drivers": [
+      "主角目标",
+      "外部冲突"
+    ],
+    "narrative_traits": [
+      "线性叙事",
+      "主角中心"
+    ],
+    "genre_confidence": 0.8,
+    "analysis_focus": [
+      "主角弧光",
+      "情节推进"
+    ],
+    "genre_expectations": [
+      "克服困难",
+      "获得成长"
+    ],
+    "evidence": [
+      "E-2001-0",
+      "E-2002-0",
+      "E-2003-0",
+      "E-2004-0",
+      "E-2005-0",
+      "E-2006-0"
+    ]
+  },
+  "overview_one_sentence": "主角从童年经历灾难，踏上征途，通过储蓄资本，最终开启霸业。",
+  "story_stage_count": 1,
+  "protagonist_stage_count": 1,
+  "major_character_count": 1,
+  "relationship_count": 1,
+  "suspense_count": 1,
+  "pacing_points": 1,
+  "chapter_functions": 6,
+  "assessment_issues": 3,
+  "evidence_count": 6,
+  "provider_calls_completed": 6,
+  "real_provider_calls": 6,
+  "content_checks": {
+    "overview": true,
+    "story_stages": true,
+    "protagonist_arc_stages": true,
+    "protagonist_has_cost_gain": true,
+    "characters": true,
+    "relationships": true,
+    "suspense": true,
+    "pacing_chapter_semantics": true,
+    "chapter_coverage": true,
+    "assessment": true,
+    "short_fields": [],
+    "template_like": "ABSENT",
+    "real_provider_calls": 6,
+    "provider_name": "deepseek",
+    "model_name": "deepseek-v4-flash"
+  }
+}

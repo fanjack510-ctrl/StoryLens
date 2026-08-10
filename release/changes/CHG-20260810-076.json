@@ -1,0 +1,80 @@
+{
+  "id": "CHG-20260810-076",
+  "title": "V1.2.0 Whole-Book V2 Final Manual Installer Closeout",
+  "type": "release",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": ["apps/api", "apps/desktop", "release"],
+  "files": [
+    "apps/api/app/narrative_core/whole_book_v2/",
+    "apps/api/tests/test_whole_book_v2_*.py",
+    "apps/desktop/src/features/wholeBookV2/",
+    "release/changes/CHG-20260809-071.json",
+    "release/changes/CHG-20260809-072.json",
+    "release/changes/CHG-20260809-073.json",
+    "release/changes/CHG-20260810-074.json",
+    "release/changes/CHG-20260810-075.json",
+    "release/changes/CHG-20260810-076.json",
+    "release/evidence/whole-book/CHG-20260809-071/",
+    "release/evidence/whole-book/CHG-20260809-072/",
+    "release/evidence/whole-book/CHG-20260809-073/",
+    "release/evidence/whole-book/CHG-20260810-074/",
+    "release/evidence/whole-book/CHG-20260810-075/",
+    "release/unreleased.json"
+  ],
+  "user_summary": "Closes out V1.2.0 Whole-Book V2 work into a final manual-acceptance installer without further automated real-provider runs.",
+  "technical_summary": "Closeout commit packages CHG-071/072/073/074 product code and evidence plus CHG-075 multi-window preflight. Multi-window real provider acceptance is deferred to user manual acceptance and is not a build blocker. Builds a clean-worktree NSIS installer for manual install only.",
+  "acceptance_criteria": [
+    "closeout commit covers CHG-071 through CHG-076 registry entries",
+    "REAL PROVIDER CALLS=0 during closeout/build",
+    "installer archived outside historical keyring/deepseek package folders",
+    "no secrets/DB/novel sources in git or installer",
+    "multi-window real acceptance deferred, not blocking"
+  ],
+  "tests": [
+    "reuse CHG-073 targeted PASS evidence",
+    "reuse CHG-074 short real DeepSeek PASS evidence",
+    "reuse CHG-075 preflight PASS evidence",
+    "git diff --check",
+    "sidecar health after packaged build",
+    "installer static inclusion checks"
+  ],
+  "verification_evidence": [
+    "release/evidence/whole-book/CHG-20260809-073/",
+    "release/evidence/whole-book/CHG-20260810-074/",
+    "release/evidence/whole-book/CHG-20260810-075/",
+    "D:/StoryLens-Local-Evidence/v1.2.0-whole-book-v2-final-manual/"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "Installer must not include user DB; formal user DB writes during closeout: 0."
+  },
+  "provider_impact": {
+    "real_calls": 0,
+    "routing_changed": false,
+    "notes": "No real provider calls during closeout/build. Multi-window real acceptance deferred."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": null,
+  "head_inclusion": null,
+  "created_at": "2026-08-10T04:45:00Z",
+  "updated_at": "2026-08-10T04:45:00Z",
+  "covers_change_ids": [
+    "CHG-20260809-071",
+    "CHG-20260809-072",
+    "CHG-20260809-073",
+    "CHG-20260810-074",
+    "CHG-20260810-075",
+    "CHG-20260810-076"
+  ],
+  "notes": "REAL MULTI-WINDOW PROVIDER ACCEPTANCE: DEFERRED TO USER MANUAL ACCEPTANCE"
+}

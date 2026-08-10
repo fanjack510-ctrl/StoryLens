@@ -15,6 +15,11 @@ class ProviderUnitLedger:
     def duplicate_successful_assets(self)->int: return 0
     @property
     def duplicate_provider_units(self)->int: return 0
+    def load(self,key:str)->Any|None: return self.successful.get(key)
+    def save(self,key:str,value:Any)->None:
+        if key in self.successful and self.successful[key] != value:
+            raise ValueError(f"successful provider unit already persisted: {key}")
+        self.successful[key]=value
 
 def resolve_pinned_provider(*,run_provider:str,run_model:str,requested_provider:str|None=None,requested_model:str|None=None)->tuple[str,str]:
     if not run_provider or not run_model: raise ValueError("provider/model must be pinned on run")

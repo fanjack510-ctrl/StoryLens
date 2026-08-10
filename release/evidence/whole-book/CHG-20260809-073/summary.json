@@ -1,0 +1,38 @@
+{
+  "architecture_before": "shared/full-text-prone synthesis units; fixed-size windows; weak long-book cost/context gating",
+  "architecture_after": "chapters -> window planner -> window extraction -> intermediate assets -> hierarchical consolidation -> final synthesis (no raw full book)",
+  "changed_files": [
+    "apps/api/app/narrative_core/whole_book_v2/pipeline.py",
+    "apps/api/app/narrative_core/whole_book_v2/contracts.py",
+    "apps/api/app/narrative_core/whole_book_v2/engine.py",
+    "apps/api/app/narrative_core/whole_book_v2/provider_engine.py",
+    "apps/api/app/narrative_core/whole_book_v2/repository.py",
+    "apps/api/tests/test_whole_book_v2_hierarchical_pipeline.py",
+    "apps/api/tests/test_whole_book_v2_engine.py",
+    "apps/api/tests/test_whole_book_v2_provider_engine.py",
+    "apps/desktop/src/features/wholeBookV2/contracts.ts",
+    "apps/desktop/src/features/wholeBookV2/adapter.test.ts",
+    "apps/desktop/src/features/wholeBookV2/WholeBookV2FormalPage.tsx"
+  ],
+  "tests": {
+    "backend_targeted": "32 passed",
+    "frontend_targeted": "9 passed",
+    "typecheck": "passed",
+    "production_build": "passed"
+  },
+  "dry_run_1299": {
+    "window_count": 13,
+    "estimated_provider_calls": 31,
+    "max_request_tokens": 109884,
+    "provider_context_limit": 128000,
+    "safety_margin": 8000,
+    "context_safe": "YES",
+    "final_synthesis_receives_raw_full_book": "NO"
+  },
+  "progress": "hierarchical stages with overall/stage percent, window/chapter counters, provider call counters",
+  "resume_retry": "successful window/intermediate/synthesis units reused; failed window only retried; no duplicate successful provider billing",
+  "compatibility": "no migration; checkpoint JSON intermediates; CHG-071/072 WIP preserved",
+  "real_provider_calls": 0,
+  "formal_user_db_writes": 0,
+  "commit": "COMMIT DEFERRED DUE TO PRE-EXISTING WIP"
+}

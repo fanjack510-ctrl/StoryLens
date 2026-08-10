@@ -1,0 +1,23 @@
+{
+  "id": "CHG-20260809-072",
+  "title": "Whole-Book V2 Real Provider Reliability Fix",
+  "type": "fix",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": ["apps/api"],
+  "files": ["apps/api/app/narrative_core/whole_book_v2/", "apps/api/tests/test_whole_book_v2_provider_engine.py", "release/evidence/whole-book/CHG-20260809-072/"],
+  "user_summary": "Makes formal Whole-Book V2 provider synthesis resumable and repairable per bounded unit instead of requiring one giant JSON response.",
+  "technical_summary": "Splits synthesis into overview/type, story, characters/relationships, suspense, pacing/chapters, and assessment DTOs; adds deterministic JSON recovery, unit-only repair, independent checkpoint persistence, success reuse, evidence validation and deterministic merge.",
+  "acceptance_criteria": ["six independently validated and persisted synthesis units", "deterministic recovery precedes model repair", "repair and retry never regenerate successful units", "deterministic WholeBookAnalysisV2 merge", "no duplicate successful units", "real provider calls remain zero until local gates pass"],
+  "tests": ["apps/api/tests/test_whole_book_v2_provider_engine.py", "apps/api/tests/test_whole_book_v2_engine.py", "apps/desktop/src/features/wholeBookV2/adapter.test.ts", "npm run typecheck", "npm run build", "python scripts/check_project.py"],
+  "verification_evidence": ["Provider targeted pytest: 6 passed", "Combined V2 pytest: 15 passed; one pre-existing environment dependency error in router fixture", "Frontend targeted Vitest: 3 files / 9 tests passed", "Typecheck: passed", "Production frontend build: passed", "check_project.py executed; blocked by pre-existing historical registry/object debt", "Real provider calls during fix: 0"],
+  "data_compatibility": {"database_changed": false, "migration_required": false, "user_data_compatible": true, "notes": "Uses existing WholeBookCheckpoint JSON payloads; no formal user DB was used during tests."},
+  "provider_impact": {"real_calls": 0, "routing_changed": false, "notes": "Provider/model remain pinned; max output is bounded per unit."},
+  "release_impact": {"requires_reanalysis": false, "requires_restart": false, "updater_impact": false, "breaking_change": false},
+  "blocker_level": null,
+  "head_inclusion": null,
+  "created_at": "2026-08-09T09:00:00Z",
+  "updated_at": "2026-08-09T09:00:00Z"
+}

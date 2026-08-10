@@ -1,0 +1,175 @@
+{
+  "best_novel": "择天记.txt",
+  "ming_cannot_2window": true,
+  "calibration": {
+    "chg074_pre": {
+      "in": 63680,
+      "out": 52000,
+      "calls": 17,
+      "cost_low": 0.147953,
+      "cost_high": 0.16768
+    },
+    "chg074_act": {
+      "in": 22135,
+      "out": 7462,
+      "calls": 6,
+      "cost": 0.037059
+    },
+    "ratios": {
+      "input_estimate_ratio": 0.3476,
+      "output_estimate_ratio": 0.1435,
+      "call_estimate_ratio": 0.3529,
+      "cost_estimate_ratio": 0.221
+    },
+    "note": "CHG-074 actual calls=6 were final synthesis units only; pre estimated 17 including extract/consolidation/repair. Cost ratio vs high used for calibrated expected cost."
+  },
+  "A": {
+    "label": "A_min_2window",
+    "novel": "择天记.txt",
+    "chapter_count": 59,
+    "character_count": 213400,
+    "window_count": 2,
+    "windows": [
+      {
+        "window_id": "W-10001-10058-7d49318394d1f604",
+        "chapter_range": [
+          1,
+          58
+        ],
+        "chapter_count": 58,
+        "estimated_input_tokens": 104935,
+        "estimated_output_tokens": 4000,
+        "estimated_total_tokens": 108935
+      },
+      {
+        "window_id": "W-10058-10059-b3e9e7acc3b52d66",
+        "chapter_range": [
+          58,
+          59
+        ],
+        "chapter_count": 2,
+        "estimated_input_tokens": 3538,
+        "estimated_output_tokens": 4000,
+        "estimated_total_tokens": 7538
+      }
+    ],
+    "extract_calls": 2,
+    "consolidation_calls": 8,
+    "final_synthesis_calls": 6,
+    "repair_reserve_calls": 2,
+    "estimated_total_calls": 18,
+    "estimated_input_tokens": 843011,
+    "estimated_output_tokens": 56000,
+    "estimated_cost_low": 0.848899,
+    "estimated_cost_high": 0.955011,
+    "calibrated_expected_cost_vs_chg074_cost_ratio": 0.211067,
+    "calibrated_expected_cost_token_scaled": 0.3091,
+    "max_request_tokens": 108935,
+    "provider_context_limit": 128000,
+    "context_safety_margin": 8000,
+    "CONTEXT_SAFE": "YES"
+  },
+  "B": {
+    "label": "B_2window_margin",
+    "novel": "择天记.txt",
+    "chapter_count": 78,
+    "character_count": 280301,
+    "window_count": 2,
+    "windows": [
+      {
+        "window_id": "W-10001-10058-7d49318394d1f604",
+        "chapter_range": [
+          1,
+          58
+        ],
+        "chapter_count": 58,
+        "estimated_input_tokens": 104935,
+        "estimated_output_tokens": 4000,
+        "estimated_total_tokens": 108935
+      },
+      {
+        "window_id": "W-10058-10078-b77d82fc03ef8030",
+        "chapter_range": [
+          58,
+          78
+        ],
+        "chapter_count": 21,
+        "estimated_input_tokens": 36993,
+        "estimated_output_tokens": 4000,
+        "estimated_total_tokens": 40993
+      }
+    ],
+    "extract_calls": 2,
+    "consolidation_calls": 8,
+    "final_synthesis_calls": 6,
+    "repair_reserve_calls": 2,
+    "estimated_total_calls": 18,
+    "estimated_input_tokens": 876466,
+    "estimated_output_tokens": 56000,
+    "estimated_cost_low": 0.878636,
+    "estimated_cost_high": 0.988466,
+    "calibrated_expected_cost_vs_chg074_cost_ratio": 0.218461,
+    "calibrated_expected_cost_token_scaled": 0.320729,
+    "max_request_tokens": 108935,
+    "provider_context_limit": 128000,
+    "context_safety_margin": 8000,
+    "CONTEXT_SAFE": "YES"
+  },
+  "C": {
+    "label": "C_min_3window",
+    "novel": "择天记.txt",
+    "chapter_count": 118,
+    "character_count": 420216,
+    "window_count": 3,
+    "windows": [
+      {
+        "window_id": "W-10001-10058-7d49318394d1f604",
+        "chapter_range": [
+          1,
+          58
+        ],
+        "chapter_count": 58,
+        "estimated_input_tokens": 104935,
+        "estimated_output_tokens": 4000,
+        "estimated_total_tokens": 108935
+      },
+      {
+        "window_id": "W-10058-10117-0e73b17c21d27e91",
+        "chapter_range": [
+          58,
+          117
+        ],
+        "chapter_count": 60,
+        "estimated_input_tokens": 105208,
+        "estimated_output_tokens": 4000,
+        "estimated_total_tokens": 109208
+      },
+      {
+        "window_id": "W-10117-10118-829b9b85cbc0b1d1",
+        "chapter_range": [
+          117,
+          118
+        ],
+        "chapter_count": 2,
+        "estimated_input_tokens": 3505,
+        "estimated_output_tokens": 4000,
+        "estimated_total_tokens": 7505
+      }
+    ],
+    "extract_calls": 3,
+    "consolidation_calls": 8,
+    "final_synthesis_calls": 6,
+    "repair_reserve_calls": 2,
+    "estimated_total_calls": 19,
+    "estimated_input_tokens": 950104,
+    "estimated_output_tokens": 60000,
+    "estimated_cost_low": 0.957461,
+    "estimated_cost_high": 1.070104,
+    "calibrated_expected_cost_vs_chg074_cost_ratio": 0.236504,
+    "calibrated_expected_cost_token_scaled": 0.347474,
+    "max_request_tokens": 109208,
+    "provider_context_limit": 128000,
+    "context_safety_margin": 8000,
+    "CONTEXT_SAFE": "YES"
+  }
+}
