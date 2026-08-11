@@ -5,7 +5,14 @@
   "base_version": "1.2.0",
   "status": "tested",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "41a10e67b4d3736737aaf9f67c8c24d40ac3fc35",
+      "message": "fix(whole-book): bound V2 synthesis per unit and make resume/usage durable.",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "apps/api/app/narrative_core/whole_book_v2",
     "apps/api/app/narrative_core/services"
@@ -69,7 +76,7 @@
     "storylens.db growth (768MB in narrative_asset_versions, 719MB un-checkpointed WAL) is a separate database-governance change."
   ],
   "blocker_level": "P0",
-  "head_inclusion": "PENDING",
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-08-11T03:30:00Z",
-  "updated_at": "2026-08-11T04:20:00Z"
+  "updated_at": "2026-08-11T04:35:00Z"
 }
