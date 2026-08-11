@@ -5,7 +5,14 @@
   "base_version": "1.2.0",
   "status": "tested",
   "include_in_next_release": true,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "37b1332338d7d917f188d599c5e30eacc441607e",
+      "message": "fix(whole-book): resume after post-window synthesis failure without reburning paid windows.",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "apps/api/app/narrative_core/whole_book_v2",
     "apps/api/app/services/whole_book_free_background.py",
@@ -57,7 +64,7 @@
     "breaking_change": false
   },
   "blocker_level": "P0",
-  "head_inclusion": null,
+  "head_inclusion": "INCLUDED",
   "created_at": "2026-08-11T00:38:03Z",
-  "updated_at": "2026-08-11T01:10:00Z"
+  "updated_at": "2026-08-11T01:03:55Z"
 }
