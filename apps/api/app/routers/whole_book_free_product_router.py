@@ -20,6 +20,7 @@ from app.narrative_core.services.whole_book_free_product_v1_service import (
     create_fixture_free_whole_book_analysis_v1,
     create_free_whole_book_analysis_v1,
     prepare_free_whole_book_analysis_v1,
+    resume_failed_free_whole_book_analysis_v1,
 )
 from app.narrative_core.services.whole_book_minimal_read_v1_service import (
     get_run_overview,
@@ -64,6 +65,11 @@ class CreateFixtureFreeRunRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     client_request_id: str | None = Field(default=None, max_length=128)
     execute_pipeline: bool = True
+
+
+class ResumeFailedFreeRunRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    run_id: int = Field(gt=0)
 
 
 def _raise_foundation(exc: WholeBookFoundationError) -> None:
@@ -181,6 +187,37 @@ def create_free_analysis(
             provider_config_id=result.get("provider_config_id"),
             force_full_reanalysis=bool(result.get("force_full_reanalysis")),
             previous_run_id=result.get("previous_run_id"),
+        )
+    return result
+
+
+@router.post("/books/{book_id}/whole-book/free/resume")
+def resume_failed_free_analysis(
+    book_id: int,
+    body: ResumeFailedFreeRunRequest,
+    db: Session = Depends(get_db),
+    session_factory: sessionmaker[Session] = Depends(get_session_factory),
+) -> dict:
+    """Resume a failed Hierarchical V2 run from same-run real_provider checkpoints."""
+    try:
+        result = resume_failed_free_whole_book_analysis_v1(
+            db,
+            book_id,
+            run_id=int(body.run_id),
+        )
+        db.commit()
+    except WholeBookFoundationError as exc:
+        db.rollback()
+        _raise_foundation(exc)
+        raise
+
+    if result.get("deferred_execution"):
+        schedule_free_whole_book_pipeline_background(
+            session_factory,
+            int(result["run_id"]),
+            provider_config_id=result.get("provider_config_id"),
+            force_full_reanalysis=False,
+            previous_run_id=None,
         )
     return result
 

@@ -223,6 +223,10 @@ def test_real_provider_intermediate_origin():
 
 @pytest.mark.asyncio
 async def test_force_full_reanalysis_does_not_reuse_intermediate():
+    """CHG-085: force_full no longer skips THIS run's successful checkpoints.
+
+    Cross-run copy is gated in formal pipeline; same-run resume must reuse paid windows.
+    """
     chapters = source()
     gateway = ProviderQueueGateway(full_provider_queue(chapters))
     analyzer = GatewayWholeBookV2Analyzer(gateway, provider_name="fake", model_name="fixture")
@@ -238,8 +242,9 @@ async def test_force_full_reanalysis_does_not_reuse_intermediate():
         force_full_reanalysis=True,
     )
     await analyzer2.analyze(run_id=8403, book_id=1, title="x", chapters=chapters)
-    assert len(gateway.calls) > calls_first
-    assert analyzer2.stats.window_calls >= 1
+    assert len(gateway.calls) == calls_first
+    assert analyzer2.stats.window_calls == 0
+    assert analyzer2.stats.reused_units >= 1
 
 
 @pytest.mark.asyncio

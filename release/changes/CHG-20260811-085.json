@@ -1,0 +1,63 @@
+{
+  "id": "CHG-20260811-085",
+  "title": "Post-window consolidation failure fix and checkpoint resume",
+  "type": "bugfix",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "apps/api/app/narrative_core/whole_book_v2",
+    "apps/api/app/services/whole_book_free_background.py",
+    "apps/desktop/src/features/wholeBookV2"
+  ],
+  "files": [
+    "apps/api/app/narrative_core/whole_book_v2/failure_taxonomy.py",
+    "apps/api/app/narrative_core/whole_book_v2/provider_engine.py",
+    "apps/api/app/narrative_core/whole_book_v2/repository.py",
+    "apps/api/app/services/whole_book_free_background.py",
+    "apps/api/app/narrative_core/services/whole_book_free_product_v1_service.py",
+    "apps/api/app/narrative_core/services/whole_book_v2_formal_pipeline_v1.py",
+    "apps/api/app/routers/whole_book_free_product_router.py",
+    "apps/desktop/src/features/wholeBookV2/WholeBookV2ProductPage.tsx",
+    "apps/desktop/src/services/wholeBookFreeProductApi.ts",
+    "apps/api/tests/test_whole_book_chg085_post_window_resume.py",
+    "apps/api/tests/test_whole_book_chg085_synthesis_contract.py",
+    "apps/api/tests/fixtures/chg085/overview_type_missing_overview.json"
+  ],
+  "user_summary": "全书分析在窗口抽取完成后若合成失败，可从检查点继续且不再重复已付费窗口；overview_type 等合成合同与 repair 对齐，错误阶段与文案准确。",
+  "technical_summary": "Run 11 failed at overview_type (missing overview). CHG-085 adds resume-from-checkpoint, accurate failure taxonomy, and synthesis prompt/DTO/repair alignment so repair returns a complete OverviewTypeSynthesisUnit.",
+  "acceptance_criteria": [
+    "15 real_provider windows preserved and reused on resume",
+    "force_full does not reburn same-run windows",
+    "failure stage is overview_synthesis not windowing",
+    "overview_type missing overview repairs to valid contract via fake gateway",
+    "all six synthesis unit prompt/schema/DTO contracts align",
+    "REAL PROVIDER CALLS during agent work = 0",
+    "FORMAL USER DATABASE WRITES = 0"
+  ],
+  "tests": [
+    "apps/api/tests/test_whole_book_chg085_post_window_resume.py",
+    "apps/api/tests/test_whole_book_chg085_synthesis_contract.py",
+    "apps/desktop/src/features/wholeBookV2/adapter.chg085.test.ts"
+  ],
+  "verification_evidence": [
+    "release/evidence/whole-book/CHG-20260811-085/forensic_latest_run.json"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "Read-only audit of user DB; resume uses existing checkpoints without rewriting user DB."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "P0",
+  "head_inclusion": null,
+  "created_at": "2026-08-11T00:38:03Z",
+  "updated_at": "2026-08-11T01:10:00Z"
+}

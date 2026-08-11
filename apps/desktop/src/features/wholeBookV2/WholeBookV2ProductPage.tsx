@@ -536,6 +536,23 @@ function WholeBookV2ProductPageEnabled() {
     },
   });
 
+  const resumeMutation = useMutation({
+    mutationFn: (runId: number) => wholeBookFreeProductApi.resumeFailedRun(bookId, runId),
+    onSuccess: () => {
+      setActionError(null);
+      setModeOverride(null);
+      setRunningSubview("progress");
+      void invalidateAll();
+    },
+    onError: (err) => {
+      if (err instanceof ApiError) {
+        setActionError(mapWholeBookStartError(err.code, err.message, err.detail));
+        return;
+      }
+      setActionError("继续分析失败");
+    },
+  });
+
   useEffect(() => {
     const rec = prepareQuery.data?.recommended_limits;
     if (!rec) return;
@@ -627,6 +644,14 @@ function WholeBookV2ProductPageEnabled() {
     Boolean(prepare.run_creation_enabled) &&
     Boolean(prepare.provider_available !== false) &&
     limitGaps.length === 0 &&
+    !createMutation.isPending;
+
+  const resumable = prepare.resumable_checkpoint;
+  const canResumeFailed =
+    Boolean(resumable?.can_resume) &&
+    Boolean(resumable?.run_id) &&
+    realProviderFlagOn &&
+    !resumeMutation.isPending &&
     !createMutation.isPending;
 
   const openReanalyseConfirm = () => {
@@ -727,9 +752,26 @@ function WholeBookV2ProductPageEnabled() {
                 ? v2ResultQuery.error.message
                 : "全书分析任务失败，可重新分析。")}
           </p>
+          {canResumeFailed && (
+            <>
+              <p className="muted" data-testid="whole-book-v2-resume-hint">
+                {resumable?.message ||
+                  `已完成 ${resumable?.completed_windows ?? "—"}/${resumable?.total_windows ?? "—"} 个分析窗口，将从失败阶段继续，不会重复已成功的窗口调用。`}
+              </p>
+              <button
+                type="button"
+                data-testid="whole-book-v2-resume"
+                disabled={resumeMutation.isPending}
+                onClick={() => resumeMutation.mutate(Number(resumable!.run_id))}
+              >
+                {resumeMutation.isPending ? "继续中…" : "继续分析"}
+              </button>
+            </>
+          )}
           <button type="button" onClick={openReanalyseConfirm}>
-            重新分析
+            {canResumeFailed ? "重新分析全部" : "重新分析"}
           </button>
+          {actionError && <p className="wbv2-error">{actionError}</p>}
         </section>
       )}
 

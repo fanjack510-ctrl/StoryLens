@@ -216,7 +216,9 @@ def execute_hierarchical_v2_pipeline_v1(
         repository=repo,
         budget=ProviderBudget(provider=provider_name, model=model_name),
         db_session=session,
-        force_full_reanalysis=bool(force_full_reanalysis),
+        # CHG-085: force_full only blocks cross-run copy above. Analyzer always
+        # reuses THIS run's successful checkpoints on retry/resume.
+        force_full_reanalysis=False,
     )
     if run.status == WholeBookRunStatus.pending.value:
         start_whole_book_run_v1(session, int(run_id))

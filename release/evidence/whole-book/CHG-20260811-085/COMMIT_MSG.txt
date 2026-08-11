@@ -1,0 +1,5 @@
+fix(whole-book): resume after post-window synthesis failure without reburning paid windows.
+
+Align overview_type (and other synthesis units) prompt/DTO/repair contracts so missing overview repairs to a complete object; keep failure stage/error messaging accurate.
+
+StoryLens-Change: CHG-20260811-085

@@ -259,6 +259,89 @@ def prepare_free_whole_book_analysis_v1(session: Session, book_id: int) -> dict[
         "recommended_limits": suggest_limits_from_estimate(estimate),
         "blocking_reasons": blockers,
         "warnings": [],
+        "resumable_checkpoint": _resumable_checkpoint_payload(session, latest_failed),
+    }
+
+
+def _resumable_checkpoint_payload(
+    session: Session, failed: WholeBookRun | None
+) -> dict[str, Any] | None:
+    if failed is None:
+        return None
+    from app.narrative_core.whole_book_v2.failure_taxonomy import inspect_resumable_checkpoints
+
+    info = inspect_resumable_checkpoints(session, int(failed.id))
+    if not info.get("compatible"):
+        return {
+            **info,
+            "can_resume": False,
+        }
+    return {
+        **info,
+        "can_resume": True,
+    }
+
+
+def resume_failed_free_whole_book_analysis_v1(
+    session: Session,
+    book_id: int,
+    *,
+    run_id: int,
+) -> dict[str, Any]:
+    """Resume a failed hierarchical V2 run from persisted same-run checkpoints (CHG-085).
+
+    Does not create a new run. Does not re-execute completed real_provider windows.
+    Force-full semantics do not apply to same-run resume.
+    """
+    _require_free_product_enabled()
+    require_capability_access("whole_book.overview", AccessTier.free)
+    if not real_provider_enabled():
+        raise WholeBookFoundationError(
+            WholeBookFoundationErrorCode.WHOLE_BOOK_REAL_PROVIDER_DISABLED,
+            "真实模型分析尚未启用",
+        )
+    run = session.get(WholeBookRun, int(run_id))
+    if run is None or int(run.book_id) != int(book_id):
+        raise WholeBookFoundationError(
+            WholeBookFoundationErrorCode.WHOLE_BOOK_RUN_NOT_FOUND,
+            "分析任务不存在",
+        )
+    if run.status != WholeBookRunStatus.failed.value:
+        raise WholeBookFoundationError(
+            WholeBookFoundationErrorCode.WHOLE_BOOK_RUN_INVALID_TRANSITION,
+            f"仅失败任务可继续分析，当前状态为 {run.status}",
+        )
+    from app.db.models import utc_now
+    from app.narrative_core.whole_book_v2.failure_taxonomy import inspect_resumable_checkpoints
+
+    info = inspect_resumable_checkpoints(session, int(run_id))
+    if not info.get("compatible"):
+        raise WholeBookFoundationError(
+            WholeBookFoundationErrorCode.WHOLE_BOOK_RUN_INVALID_TRANSITION,
+            str(info.get("message") or "当前失败任务没有可恢复检查点，请重新分析"),
+        )
+
+    run.status = WholeBookRunStatus.running.value
+    run.failure_code = None
+    run.failure_message_safe = None
+    run.resume_count = int(run.resume_count or 0) + 1
+    run.resumed_at = utc_now()
+    # Prefer next stage from checkpoint inspection (not stale windowing).
+    run.current_stage_code = str(info.get("next_stage") or run.current_stage_code or "overview_synthesis")
+    session.flush()
+    from app.narrative_core.whole_book_v2.usage_ledger import ensure_task_projection
+
+    ensure_task_projection(session, run)
+    return {
+        "run": run_to_dict(run),
+        "run_id": int(run.id),
+        "book_id": int(book_id),
+        "resumed": True,
+        "force_full_reanalysis": False,
+        "previous_run_id": None,
+        "resumable_checkpoint": info,
+        "deferred_execution": True,
+        "provider_config_id": None,
     }
 
 

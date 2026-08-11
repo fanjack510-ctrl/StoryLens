@@ -149,6 +149,11 @@ class WholeBookV2Repository:
             row.completed_unit_count = progress.provider_calls_completed
             row.checkpoint_payload_json = payload
         self.session.flush()
+        # Keep WholeBookRun.current_stage_code aligned with live V2 progress (CHG-085).
+        run = self.session.get(WholeBookRun, int(run_id))
+        if run is not None and progress.current_stage:
+            run.current_stage_code = str(progress.current_stage)
+        self.session.flush()
         self._after_persist()
 
     def load_progress(self, run_id: int) -> ProgressV2 | None:

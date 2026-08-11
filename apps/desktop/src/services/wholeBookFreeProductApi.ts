@@ -97,6 +97,19 @@ export type WholeBookPrepareResponse = {
   latest_failed_run?: WholeBookRunRecord | null;
   /** Completed but non-real / scaffold result for optional old-result viewing. */
   non_real_completed_v2_run?: WholeBookRunRecord | null;
+  /** CHG-085: failed run with reusable real_provider window checkpoints. */
+  resumable_checkpoint?: {
+    can_resume?: boolean;
+    compatible?: boolean;
+    run_id?: number;
+    completed_windows?: number;
+    total_windows?: number;
+    provider_calls_completed?: number;
+    provider_calls_estimated?: number;
+    next_stage?: string;
+    message?: string;
+    reason?: string;
+  } | null;
   context_safe?: boolean;
   snapshot_rebuild_required: boolean;
   estimate: WholeBookCostEstimateRow | null;
@@ -315,6 +328,16 @@ export const wholeBookFreeProductApi = {
     api<{ run: WholeBookRunRecord }>(`/api/v1/whole-book/runs/${runId}/resume`, {
       method: "POST",
     }),
+
+  /** CHG-085: continue failed Hierarchical V2 from same-run checkpoints (no new run). */
+  resumeFailedRun: (bookId: number, runId: number) =>
+    api<{ run: WholeBookRunRecord; run_id: number; resumable_checkpoint?: unknown }>(
+      `/api/v1/books/${bookId}/whole-book/free/resume`,
+      {
+        method: "POST",
+        body: JSON.stringify({ run_id: runId }),
+      },
+    ),
 
   cancelRun: (runId: number) =>
     api<{ run: WholeBookRunRecord }>(`/api/v1/whole-book/runs/${runId}/cancel`, {

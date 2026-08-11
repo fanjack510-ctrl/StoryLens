@@ -11,6 +11,35 @@ from sqlalchemy.orm import Session, sessionmaker
 logger = logging.getLogger(__name__)
 
 
+def _mark_run_failed(session_factory: sessionmaker[Session], run_id: int, exc: BaseException) -> None:
+    from app.db.models import WholeBookRun
+    from app.narrative_core.contracts.whole_book_contract_v1 import WholeBookRunStatus
+    from app.narrative_core.whole_book_v2.failure_taxonomy import classify_pipeline_exception
+
+    classified = classify_pipeline_exception(exc)
+    with session_factory() as fail_session:
+        run = fail_session.get(WholeBookRun, int(run_id))
+        if run is None:
+            return
+        if run.status in {
+            WholeBookRunStatus.completed.value,
+            WholeBookRunStatus.cancelled.value,
+        }:
+            return
+        run.status = WholeBookRunStatus.failed.value
+        run.failure_code = classified.failure_code
+        run.failure_message_safe = classified.message_safe
+        run.current_stage_code = classified.failure_stage
+        fail_session.commit()
+        logger.warning(
+            "free_whole_book_background_marked_failed run_id=%s stage=%s code=%s category=%s",
+            run_id,
+            classified.failure_stage,
+            classified.failure_code,
+            classified.category,
+        )
+
+
 def execute_free_whole_book_pipeline_background(
     session_factory: sessionmaker[Session],
     run_id: int,
@@ -26,6 +55,8 @@ def execute_free_whole_book_pipeline_background(
 
     CHG-078/080: formal product runs Hierarchical V2 — not minimal_pipeline_v1.
     CHG-081: own DB session + intermediate commits; exceptions must not kill sidecar.
+    CHG-085: failure stage/message classified from real exception; resume reuses
+    same-run checkpoints (force_full does not reburn THIS run's windows).
     """
 
     del provider_config_id  # pinned on WholeBookRun at create; hierarchical uses run pin
@@ -64,28 +95,18 @@ def execute_free_whole_book_pipeline_background(
                 run_id,
                 getattr(exc, "code", type(exc).__name__),
             )
-        except Exception:  # noqa: BLE001
+            try:
+                _mark_run_failed(session_factory, int(run_id), exc)
+            except Exception:  # noqa: BLE001
+                logger.exception(
+                    "free_whole_book_background_mark_failed_also_crashed run_id=%s",
+                    run_id,
+                )
+        except Exception as exc:  # noqa: BLE001
             session.rollback()
             logger.exception("free_whole_book_background_crashed run_id=%s", run_id)
             try:
-                with session_factory() as fail_session:
-                    from app.db.models import WholeBookRun
-                    from app.narrative_core.contracts.whole_book_contract_v1 import (
-                        WholeBookRunStatus,
-                    )
-
-                    run = fail_session.get(WholeBookRun, int(run_id))
-                    if run is not None and run.status not in {
-                        WholeBookRunStatus.completed.value,
-                        WholeBookRunStatus.failed.value,
-                        WholeBookRunStatus.cancelled.value,
-                    }:
-                        run.status = WholeBookRunStatus.failed.value
-                        run.failure_code = "WHOLE_BOOK_BACKGROUND_FAILED"
-                        run.failure_message_safe = (
-                            "全书分析后台执行失败，可重试或检查 Provider 配置。"
-                        )
-                        fail_session.commit()
+                _mark_run_failed(session_factory, int(run_id), exc)
             except Exception:  # noqa: BLE001
                 logger.exception(
                     "free_whole_book_background_mark_failed_also_crashed run_id=%s",

@@ -1,0 +1,18 @@
+{
+  "_meta": {
+    "change": "CHG-20260811-085",
+    "source": "user run_id=11 DeepSeek HTTP 200 overview_type failure",
+    "notes": "Sanitized structural fixture: type_profile only, missing required overview. No API keys, no novel body text."
+  },
+  "type_profile": {
+    "version": "2.0",
+    "primary_genre": "犯罪悬疑",
+    "secondary_genres": ["黑道", "成长"],
+    "narrative_drivers": ["身份压力", "案件推进"],
+    "narrative_traits": ["第一人称", "高风险选择"],
+    "genre_confidence": 0.86,
+    "analysis_focus": ["主角成长", "悬念回收"],
+    "genre_expectations": ["代价兑现", "线索闭合"],
+    "evidence": ["E-1300-0", "E-1782-0", "E-1783-0"]
+  }
+}

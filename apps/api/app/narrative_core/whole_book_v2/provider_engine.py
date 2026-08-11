@@ -65,15 +65,61 @@ UNIT_SCHEMAS:dict[str,type[BaseModel]]={
 }
 
 UNIT_REQUIRED_HINTS:dict[str,str]={
-    "overview_type": "Must include type_profile and overview with all OverviewResult fields.",
+    "overview_type": (
+        "Required top-level fields: type_profile AND overview. "
+        "Do not return type_profile alone. overview MUST include all OverviewResult fields "
+        "(one_sentence_story, full_summary, protagonist, core_goal, core_conflict, evidence, ...)."
+    ),
     "story": (
+        "Required top-level field: story. "
         "story MUST include structure_stages, storylines, causal_chain, and chronology. "
         "Do not omit storylines, causal_chain, or chronology."
     ),
-    "characters": "characters MUST include protagonist, major_characters, and relationships.",
-    "suspense": "suspense MUST include lifecycles with typed events.",
-    "pacing": "Must include pacing (points/event_markers/pacing_regions) AND chapters.functions covering every chapter.",
-    "assessment": "assessment MUST include overall_summary, dimensions, strengths, issues, issue_map, revision_priorities, preserve_list.",
+    "characters": (
+        "Required top-level field: characters. "
+        "characters MUST include protagonist, major_characters, and relationships."
+    ),
+    "suspense": (
+        "Required top-level field: suspense. "
+        "suspense MUST include lifecycles with typed events."
+    ),
+    "pacing": (
+        "Required top-level fields: pacing AND chapters. "
+        "Must include pacing (points/event_markers/pacing_regions) AND chapters.functions covering every chapter."
+    ),
+    "assessment": (
+        "Required top-level field: assessment. "
+        "assessment MUST include overall_summary, dimensions, strengths, issues, issue_map, revision_priorities, preserve_list."
+    ),
+}
+
+# Explicit top-level keys that must appear in both base + repair prompts (CHG-085).
+UNIT_REQUIRED_TOP_LEVEL:dict[str,tuple[str,...]]={
+    "overview_type":("type_profile","overview"),
+    "story":("story",),
+    "characters":("characters",),
+    "suspense":("suspense",),
+    "pacing":("pacing","chapters"),
+    "assessment":("assessment",),
+}
+
+# Failure / run.current_stage_code mapping (CHG-085). Progress UI may still use V2_STAGES labels.
+UNIT_FAILURE_STAGES:dict[str,str]={
+    "overview_type":"overview_synthesis",
+    "story":"story_synthesis",
+    "characters":"characters_synthesis",
+    "suspense":"suspense_synthesis",
+    "pacing":"pacing_synthesis",
+    "assessment":"assessment_synthesis",
+}
+
+UNIT_PROGRESS_STAGES:dict[str,str]={
+    "overview_type":"generate_overview",
+    "story":"consolidate_story",
+    "characters":"consolidate_characters",
+    "suspense":"merge_suspense",
+    "pacing":"compute_pacing",
+    "assessment":"generate_assessment",
 }
 
 def recover_json_object(text:str)->dict[str,Any]|None:
@@ -116,6 +162,61 @@ def classify_validation_error(exc:Exception)->UnitFailureCode:
     if "evidence" in str(exc).lower(): return UnitFailureCode.EVIDENCE_REFERENCE_INVALID
     return UnitFailureCode.SCHEMA_MISMATCH
 
+def required_top_level_fields(schema:type[BaseModel],key:str)->tuple[str,...]:
+    """Align prompt requirements with Pydantic JSON schema required properties."""
+    declared=UNIT_REQUIRED_TOP_LEVEL.get(key)
+    js=schema.model_json_schema()
+    schema_required=tuple(js.get("required") or ())
+    if declared is None:
+        return schema_required
+    if set(declared)!=set(schema_required):
+        # Prefer schema as source of truth; keep declared order when equal.
+        return schema_required or declared
+    return declared
+
+def _format_required_fields(fields:tuple[str,...]|list[str])->str:
+    return "\n".join(f"- {name}" for name in fields)
+
+def build_synthesis_unit_prompt(
+    key:str,
+    schema:type[BaseModel],
+    synthesis_payload:dict[str,Any],
+)->str:
+    fields=required_top_level_fields(schema,key)
+    hint=UNIT_REQUIRED_HINTS.get(key,"")
+    return (
+        f"Return only a complete JSON object for synthesis unit {key}. "
+        "No Markdown. No commentary. Use the exact schema. Be concrete; do not use placeholders.\n"
+        f"{hint}\n"
+        "Required top-level fields (ALL mandatory — never omit any):\n"
+        f"{_format_required_fields(fields)}\n"
+        "Evidence arrays may only use supplied evidence_id values. "
+        "INPUT is hierarchical intermediate assets only — not raw novel text.\n"
+        f"SCHEMA:\n{json.dumps(schema.model_json_schema(),ensure_ascii=False)}\n"
+        f"HIERARCHICAL_INTERMEDIATES:\n{json.dumps(synthesis_payload,ensure_ascii=False)}"
+    )
+
+def build_synthesis_repair_prompt(
+    key:str,
+    schema:type[BaseModel],
+    *,
+    error:SynthesisUnitError,
+    invalid_output:str,
+)->str:
+    fields=required_top_level_fields(schema,key)
+    hint=UNIT_REQUIRED_HINTS.get(key,"")
+    return (
+        f"Repair ONLY synthesis unit {key}. Return the COMPLETE corrected JSON object matching SCHEMA.\n"
+        "Do NOT return only the missing fields. Do NOT return a partial patch. Do NOT use Markdown.\n"
+        f"{hint}\n"
+        "Required top-level fields (ALL mandatory):\n"
+        f"{_format_required_fields(fields)}\n"
+        f"ERROR_CODE={error.code}\n"
+        f"VALIDATION_ERROR:\n{str(error)[:2000]}\n"
+        f"SCHEMA:\n{json.dumps(schema.model_json_schema(),ensure_ascii=False)}\n"
+        f"INVALID_UNIT_OUTPUT:\n{invalid_output}"
+    )
+
 def _evidence_refs(value:Any)->set[str]:
     out:set[str]=set()
     if isinstance(value,dict):
@@ -143,13 +244,14 @@ class GatewayWholeBookV2Analyzer:
         self.last_token_plan=None; self.last_cost_plan=None; self.last_windows=None
         self.last_synthesis_payload=None; self.progress_events:list[ProgressV2]=[]
         self.db_session=db_session
+        # force_full_reanalysis only governs cross-run intermediate copy at create time.
+        # Same-run resume MUST always reuse THIS run's successful checkpoints (CHG-085).
         self.force_full_reanalysis=bool(force_full_reanalysis)
         self._last_overall=0.0
         self._active_run_id=0
+        self.last_failure_stage:str|None=None
 
     def _load(self,run_id:int,key:str,schema:type[BaseModel])->BaseModel|None:
-        if self.force_full_reanalysis:
-            return None
         value=self.repository.load_unit(run_id,key,schema) if self.repository else self.ledger.load(key)
         if value is not None:
             self.stats.reused_units+=1
@@ -161,8 +263,6 @@ class GatewayWholeBookV2Analyzer:
         self.ledger.save(key,value)
 
     def _load_asset(self,run_id:int,key:str)->Any|None:
-        if self.force_full_reanalysis:
-            return None
         if self.repository and hasattr(self.repository,"load_intermediate"):
             cached=self.repository.load_intermediate(run_id,key)
             if cached is not None:
@@ -174,6 +274,16 @@ class GatewayWholeBookV2Analyzer:
         if cached is not None and key.startswith("window:") and not is_reusable_real_provider_intermediate(cached):
             return None
         return cached
+
+    def _restore_progress_baseline(self,run_id:int)->None:
+        """Resume provider-call / overall percent from persisted progress (CHG-085)."""
+        if self.repository is None or not hasattr(self.repository,"load_progress"):
+            return
+        prev=self.repository.load_progress(int(run_id))
+        if prev is None:
+            return
+        self.stats.provider_calls=max(self.stats.provider_calls,int(prev.provider_calls_completed or 0))
+        self._last_overall=max(self._last_overall,float(prev.overall_percent or 0.0))
 
     def _save_asset(self,run_id:int,key:str,value:Any)->None:
         self.asset_ledger.save(key,value)
@@ -232,24 +342,23 @@ class GatewayWholeBookV2Analyzer:
     async def _unit(self,run_id:int,key:str,schema:type[BaseModel],synthesis_payload:dict[str,Any],catalog:dict[str,EvidenceRef],chapter_count:int)->BaseModel:
         reused=self._load(run_id,key,schema)
         if reused is not None: return reused
-        hint=UNIT_REQUIRED_HINTS.get(key,"")
-        base=(f"Return only JSON for synthesis unit {key}. Use the exact schema. Be concrete; do not use placeholders. "
-              f"{hint} "
-              "Evidence arrays may only use supplied evidence_id values. "
-              "INPUT is hierarchical intermediate assets only — not raw novel text.\nSCHEMA:\n"
-              +json.dumps(schema.model_json_schema(),ensure_ascii=False)
-              +"\nHIERARCHICAL_INTERMEDIATES:\n"+json.dumps(synthesis_payload,ensure_ascii=False))
+        self.last_failure_stage=UNIT_FAILURE_STAGES.get(key,key)
+        base=build_synthesis_unit_prompt(key,schema,synthesis_payload)
         response=await self._call(key,schema,base)
         try:
             value=self._validate(key,schema,response,catalog)
             self._validate_business(key,value,chapter_count,response)
         except SynthesisUnitError as first:
-            repair=(f"Repair only synthesis unit {key}; return a complete JSON object for this schema. "
-                    f"{hint} "
-                    f"ERROR_CODE={first.code}; ERROR={str(first)[:2000]}\nSCHEMA:\n"+json.dumps(schema.model_json_schema(),ensure_ascii=False)+"\nINVALID_UNIT_OUTPUT:\n"+response.text)
+            repair=build_synthesis_repair_prompt(
+                key,schema,error=first,invalid_output=response.text,
+            )
             repaired=await self._call(key,schema,repair,repair=True)
-            value=self._validate(key,schema,repaired,catalog)
-            self._validate_business(key,value,chapter_count,repaired)
+            try:
+                value=self._validate(key,schema,repaired,catalog)
+                self._validate_business(key,value,chapter_count,repaired)
+            except SynthesisUnitError:
+                self.last_failure_stage=UNIT_FAILURE_STAGES.get(key,key)
+                raise
         self._save(run_id,key,value); return value
 
     async def _extract_window_provider(self,*,run_id:int,window:Any,metas:list[Any])->WindowExtractionAsset:
@@ -303,6 +412,7 @@ class GatewayWholeBookV2Analyzer:
     async def analyze(self,*,run_id:int,book_id:int,title:str,chapters:list[SourceChapter],progress:ProgressCallback|None=None)->tuple[WholeBookAnalysisV2,list[ModelResponse]]:
         if not chapters: raise ValueError("chapters required")
         self._active_run_id=int(run_id)
+        self._restore_progress_baseline(int(run_id))
         emit=progress or (lambda *_:None); last=chapters[-1].chapter_index
         metas=[c.as_meta() for c in chapters]
         self._emit_progress(run_id,stage="prepare_source",stage_percent=100,current_window=0,total_windows=0,current_chapter=0,total_chapters=len(chapters),estimated_calls=0)
@@ -322,6 +432,7 @@ class GatewayWholeBookV2Analyzer:
         disallow_local=bool(getattr(self.gateway,"disallow_local_merge",False))
         for i,window in enumerate(windows,1):
             key=f"window:{window.window_id}"
+            self.last_failure_stage="window_extraction"
             cached=self._load_asset(run_id,key)
             if cached is not None:
                 asset=cached if isinstance(cached, WindowExtractionAsset) else WindowExtractionAsset.model_validate(cached)
@@ -345,9 +456,19 @@ class GatewayWholeBookV2Analyzer:
             self._emit_progress(run_id,stage="extract_windows",stage_percent=(i/len(windows))*100,current_window=i,total_windows=len(windows),current_chapter=window.end_chapter_index,total_chapters=len(chapters),estimated_calls=token_plan.estimated_total_calls)
             emit("extract_windows",(i/len(windows))*100,window.end_chapter_index)
 
+        self.last_failure_stage="story_consolidation"
         intermediates=build_topic_intermediates(extractions)
         for topic in intermediates:
             tkey=f"topic:{topic}"
+            self.last_failure_stage={
+                "story_intermediate":"story_consolidation",
+                "character_intermediate":"character_consolidation",
+                "relationship_intermediate":"relationship_consolidation",
+                "protagonist_arc_intermediate":"protagonist_arc_consolidation",
+                "suspense_intermediate":"suspense_consolidation",
+                "pacing_intermediate":"pacing_consolidation",
+                "chapter_function_intermediate":"chapter_function_consolidation",
+            }.get(topic,"story_consolidation")
             if self._load_asset(run_id,tkey) is None:
                 self._save_asset(run_id,tkey,intermediates[topic])
                 self.stats.consolidation_calls+=1
@@ -365,7 +486,8 @@ class GatewayWholeBookV2Analyzer:
         force_local=bool(getattr(self.gateway,"force_local_merge",False))
         if not force_local:
             for key,schema in UNIT_SCHEMAS.items():
-                stage="generate_overview" if key=="overview_type" else ("generate_assessment" if key=="assessment" else "consolidate_story")
+                stage=UNIT_PROGRESS_STAGES.get(key,"generate_overview")
+                self.last_failure_stage=UNIT_FAILURE_STAGES.get(key,key)
                 self._emit_progress(run_id,stage=stage,stage_percent=10,current_window=len(windows),total_windows=len(windows),current_chapter=last,total_chapters=len(chapters),estimated_calls=token_plan.estimated_total_calls)
                 emit(key,10,last)
                 try:
