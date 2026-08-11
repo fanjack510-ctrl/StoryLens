@@ -428,7 +428,14 @@ def create_free_whole_book_analysis_v1(
     ).strip()
     request_id = client_request_id or str(uuid.uuid4())
     if reanalyse and previous_run_id is None:
-        prev = _completed_v2_run(session, book_id) or _non_real_completed_v2_run(session, book_id)
+        # CHG-086: a failed run still holds paid real-provider window extractions.
+        # Only completed runs used to be considered, so every retry after a
+        # mid-pipeline failure silently re-bought all windows.
+        prev = (
+            _completed_v2_run(session, book_id)
+            or _latest_failed_run(session, book_id)
+            or _non_real_completed_v2_run(session, book_id)
+        )
         previous_run_id = int(prev.id) if prev is not None else None
 
     run = create_whole_book_run_v1(

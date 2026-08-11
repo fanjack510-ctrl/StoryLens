@@ -19,7 +19,8 @@ from app.narrative_core.whole_book_v2.contracts import (
     AssessmentSynthesisUnit,
     CharactersSynthesisUnit,
     OverviewTypeSynthesisUnit,
-    PacingSynthesisUnit,
+    ChapterFunctionBatchUnit,
+    PacingCoreSynthesisUnit,
     StorySynthesisUnit,
     SuspenseSynthesisUnit,
 )
@@ -29,7 +30,10 @@ from app.narrative_core.whole_book_v2.engine import (
     WholeBookV2Engine,
 )
 from app.narrative_core.whole_book_v2.pipeline import ProviderBudget
-from app.narrative_core.whole_book_v2.provider_engine import GatewayWholeBookV2Analyzer
+from app.narrative_core.whole_book_v2.provider_engine import (
+    CHAPTER_FUNCTION_BATCH_SIZE,
+    GatewayWholeBookV2Analyzer,
+)
 from app.narrative_core.whole_book_v2.repository import WholeBookV2Repository, pinned_provider
 from app.narrative_core.whole_book_v2.runtime import ProviderUnitLedger
 
@@ -76,8 +80,17 @@ def _deterministic_payloads(chapters: list[SourceChapter]) -> list[dict[str, Any
         StorySynthesisUnit(story=result.story).model_dump(mode="json"),
         CharactersSynthesisUnit(characters=result.characters).model_dump(mode="json"),
         SuspenseSynthesisUnit(suspense=result.suspense).model_dump(mode="json"),
-        PacingSynthesisUnit(pacing=result.pacing, chapters=result.chapters).model_dump(mode="json"),
+        PacingCoreSynthesisUnit(pacing=result.pacing).model_dump(mode="json"),
         AssessmentSynthesisUnit(assessment=result.assessment).model_dump(mode="json"),
+        # Chapter functions are requested last, in bounded batches (CHG-086).
+        *[
+            ChapterFunctionBatchUnit(
+                functions=result.chapters.functions[i : i + CHAPTER_FUNCTION_BATCH_SIZE]
+            ).model_dump(mode="json")
+            for i in range(
+                0, max(1, len(result.chapters.functions)), CHAPTER_FUNCTION_BATCH_SIZE
+            )
+        ],
     ]
 
 

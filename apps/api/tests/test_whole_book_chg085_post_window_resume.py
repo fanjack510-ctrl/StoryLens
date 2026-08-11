@@ -19,7 +19,8 @@ from app.narrative_core.whole_book_v2.contracts import (
     AssessmentSynthesisUnit,
     CharactersSynthesisUnit,
     OverviewTypeSynthesisUnit,
-    PacingSynthesisUnit,
+    ChapterFunctionBatchUnit,
+    PacingCoreSynthesisUnit,
     ProgressV2,
     StorySynthesisUnit,
     SuspenseSynthesisUnit,
@@ -35,6 +36,7 @@ from app.narrative_core.whole_book_v2.failure_taxonomy import (
 )
 from app.narrative_core.whole_book_v2.pipeline import ProviderBudget, plan_windows
 from app.narrative_core.whole_book_v2.provider_engine import (
+    CHAPTER_FUNCTION_BATCH_SIZE,
     GatewayWholeBookV2Analyzer,
     SynthesisUnitError,
     UnitFailureCode,
@@ -78,8 +80,15 @@ def synth_payloads(chapters: list[SourceChapter]) -> list[dict[str, Any]]:
         StorySynthesisUnit(story=r.story).model_dump(mode="json"),
         CharactersSynthesisUnit(characters=r.characters).model_dump(mode="json"),
         SuspenseSynthesisUnit(suspense=r.suspense).model_dump(mode="json"),
-        PacingSynthesisUnit(pacing=r.pacing, chapters=r.chapters).model_dump(mode="json"),
+        PacingCoreSynthesisUnit(pacing=r.pacing).model_dump(mode="json"),
         AssessmentSynthesisUnit(assessment=r.assessment).model_dump(mode="json"),
+        # Chapter functions are requested last, in bounded batches (CHG-086).
+        *[
+            ChapterFunctionBatchUnit(
+                functions=r.chapters.functions[i : i + CHAPTER_FUNCTION_BATCH_SIZE]
+            ).model_dump(mode="json")
+            for i in range(0, max(1, len(r.chapters.functions)), CHAPTER_FUNCTION_BATCH_SIZE)
+        ],
     ]
 
 
@@ -263,9 +272,10 @@ async def test_resume_does_not_repeat_completed_window_calls(tmp_path):
     )
     result, _ = await analyzer2.analyze(run_id=run.id, book_id=1, title="t", chapters=chapters)
     assert result.analysis_metadata.result_origin == "real_provider"
-    assert len(gateway2.calls) == 6
-    assert analyzer2.stats.provider_calls >= 15 or analyzer2.stats.provider_calls == 6 + (
-        repo.load_progress(run.id).provider_calls_completed - 6
+    # 6 synthesis units + 1 bounded chapter-function batch (CHG-086).
+    assert len(gateway2.calls) == 7
+    assert analyzer2.stats.provider_calls >= 15 or analyzer2.stats.provider_calls == 7 + (
+        repo.load_progress(run.id).provider_calls_completed - 7
         if repo.load_progress(run.id)
         else 0
     )
@@ -339,11 +349,12 @@ async def test_provider_call_count_resumes_from_15(tmp_path):
         budget=ProviderBudget(provider="fake", model="fixture"),
     )
     await analyzer2.analyze(run_id=run.id, book_id=1, title="t", chapters=chapters)
-    # Baseline restored from progress; new calls are synthesis only.
-    assert analyzer2.stats.provider_calls == n_windows + 6
+    # Baseline restored from progress; new calls are synthesis only
+    # (6 units + 1 bounded chapter-function batch).
+    assert analyzer2.stats.provider_calls == n_windows + 7
     final = repo.load_progress(run.id)
     assert final is not None
-    assert final.provider_calls_completed == n_windows + 6
+    assert final.provider_calls_completed == n_windows + 7
 
 
 def test_failure_stage_records_actual_stage(tmp_path):
@@ -420,7 +431,7 @@ async def test_resume_only_calls_remaining_units(tmp_path):
         force_full_reanalysis=True,
     )
     result, _ = await analyzer2.analyze(run_id=run.id, book_id=1, title="t", chapters=chapters)
-    assert len(gateway2.calls) == 4  # characters..assessment only
+    assert len(gateway2.calls) == 5  # characters..assessment + chapter-function batch
     assert result.story.structure_stages
 
 

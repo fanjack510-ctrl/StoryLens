@@ -1,0 +1,75 @@
+{
+  "id": "CHG-20260811-086",
+  "title": "Whole-Book V2 bounded synthesis, durable resume and provider usage reliability",
+  "type": "bugfix",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [
+    "apps/api/app/narrative_core/whole_book_v2",
+    "apps/api/app/narrative_core/services"
+  ],
+  "files": [
+    "apps/api/app/narrative_core/whole_book_v2/contracts.py",
+    "apps/api/app/narrative_core/whole_book_v2/pipeline.py",
+    "apps/api/app/narrative_core/whole_book_v2/provider_engine.py",
+    "apps/api/app/narrative_core/whole_book_v2/repository.py",
+    "apps/api/app/narrative_core/services/whole_book_v2_formal_pipeline_v1.py",
+    "apps/api/app/narrative_core/services/whole_book_free_product_v1_service.py",
+    "apps/api/tests/test_whole_book_chg086_full_production_v2_e2e.py",
+    "apps/api/tests/test_whole_book_chg085_post_window_resume.py",
+    "apps/api/tests/test_whole_book_chg085_synthesis_contract.py",
+    "apps/api/tests/test_whole_book_chg084_real_hierarchical_v2.py",
+    "apps/api/tests/test_whole_book_chg080_v2_reanalysis.py",
+    "apps/api/tests/test_whole_book_chg078_formal_v2_cutover.py",
+    "apps/api/tests/test_whole_book_v2_provider_engine.py"
+  ],
+  "user_summary": "长篇小说（542 章级别）的全书分析不再在窗口抽取完成后卡死在合成阶段；重新分析会复用上一次失败任务里已经付费成功的窗口，不再重复扣费；章节功能改为分批生成，覆盖全部章节。",
+  "technical_summary": "Run 12 completed 15/15 real-provider windows and all 7 topic intermediates, then failed deterministically at overview_type with CONTEXT_UNSAFE (estimated 123368 tokens vs 120000 safe context) and was resumed 33 times with zero provider calls. Root cause: synthesis_payload_from_intermediates built one blob (all 7 topics + full 542-entry chapter catalog) that was passed unchanged to every synthesis unit, while build_token_plan estimated synthesis input as min(safe_input_capacity, max_window_input//2) so context_safe could never evaluate to NO. CHG-086 adds per-unit topic projection, a convergent payload bound derived from measured prompt overhead, and splits the unsatisfiable pacing unit (PacingResult + N ChapterFunction rows in one 4000-token response) into PacingCoreSynthesisUnit plus bounded ChapterFunctionBatchUnit batches of 40 with catalog-owned chapter identity. Also: failed runs are now valid intermediate-reuse sources (previously only completed runs, which silently re-bought 15 paid windows), copy_intermediates enforces a provider/model/snapshot pin, and provider usage rows commit immediately so a later crash rollback cannot erase already-billed calls.",
+  "acceptance_criteria": [
+    "542-chapter / 15-window production pipeline runs end to end on real runtime with fake provider transport",
+    "every synthesis unit request stays under the safe provider context at production scale",
+    "chapters.functions covers every chapter via bounded batches of 40",
+    "chapter identity comes from the catalog, never from the model",
+    "failed-run real_provider window checkpoints are reused instead of re-bought",
+    "cross-run reuse refuses to mix providers, models or snapshots",
+    "successful provider units are never requested twice on resume",
+    "provider usage ledger rows survive a background crash rollback",
+    "no deterministic semantic scaffold in a formal real_provider result",
+    "REAL PROVIDER CALLS during agent work = 0",
+    "FORMAL USER DATABASE WRITES = 0"
+  ],
+  "tests": [
+    "apps/api/tests/test_whole_book_chg086_full_production_v2_e2e.py",
+    "apps/api/tests/test_whole_book_chg085_post_window_resume.py",
+    "apps/api/tests/test_whole_book_chg085_synthesis_contract.py",
+    "apps/api/tests/test_whole_book_chg084_real_hierarchical_v2.py",
+    "apps/api/tests/test_whole_book_chg080_v2_reanalysis.py",
+    "apps/api/tests/test_whole_book_chg078_formal_v2_cutover.py",
+    "apps/api/tests/test_whole_book_v2_provider_engine.py"
+  ],
+  "verification_evidence": [
+    "release/evidence/whole-book/CHG-20260811-086/root_cause_report.md"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "Read-only forensic audit of the user DB. No schema change. Existing run 12 checkpoints remain readable and reusable."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "known_out_of_scope": [
+    "DeepSeek max_context_tokens=128000 in app/model_gateway/registry.py is inconsistent with observed 150k-token successful calls; deferred to a provider-capability change.",
+    "storylens.db growth (768MB in narrative_asset_versions, 719MB un-checkpointed WAL) is a separate database-governance change."
+  ],
+  "blocker_level": "P0",
+  "head_inclusion": "PENDING",
+  "created_at": "2026-08-11T03:30:00Z",
+  "updated_at": "2026-08-11T04:20:00Z"
+}

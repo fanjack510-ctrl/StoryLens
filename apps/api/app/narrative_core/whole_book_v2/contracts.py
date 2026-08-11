@@ -108,6 +108,13 @@ class CharactersSynthesisUnit(M): characters:CharactersResult
 class SuspenseSynthesisUnit(M): suspense:SuspenseResult
 class PacingSynthesisUnit(M): pacing:PacingResult; chapters:ChaptersResult
 class AssessmentSynthesisUnit(M): assessment:AssessmentResult
+
+# CHG-086: `pacing` used to demand PacingResult + all N ChapterFunction rows in a
+# single bounded response. For a 542-chapter book that can never fit one
+# max_output_tokens window, so the unit is split: the provider returns pacing
+# curves here, and chapter functions arrive as bounded batches (below).
+class PacingCoreSynthesisUnit(M): pacing:PacingResult
+class ChapterFunctionBatchUnit(M): functions:list[ChapterFunction]
 class ProgressV2(M):
     schema_version:str="whole-book-progress-v2.0"; overall_percent:float=Field(ge=0,le=100); current_stage:str; stage_percent:float=Field(ge=0,le=100); current_window:int; total_windows:int; current_chapter:int; total_chapters:int; provider_calls_completed:int; provider_calls_estimated:int; successful_calls:int; failed_calls:int; retry_calls:int; repair_calls:int; elapsed_seconds:int; estimated_remaining_seconds:int; estimated_cost:float; estimated_actual_cost:float; provider:str; model:str; last_completed_action:str; current_action:str; last_activity_at:datetime
 V2_STAGES=[

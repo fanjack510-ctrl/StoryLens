@@ -18,7 +18,8 @@ from app.narrative_core.whole_book_v2.contracts import (
     AssessmentSynthesisUnit,
     CharactersSynthesisUnit,
     OverviewTypeSynthesisUnit,
-    PacingSynthesisUnit,
+    ChapterFunctionBatchUnit,
+    PacingCoreSynthesisUnit,
     StorySynthesisUnit,
     SuspenseSynthesisUnit,
 )
@@ -38,6 +39,7 @@ from app.narrative_core.whole_book_v2.pipeline import (
 )
 from app.narrative_core.whole_book_v2.provider_engine import (
     UNIT_REQUIRED_HINTS,
+    CHAPTER_FUNCTION_BATCH_SIZE,
     UNIT_SCHEMAS,
     GatewayWholeBookV2Analyzer,
     recover_json_object,
@@ -97,8 +99,15 @@ def synth_payloads(chapters: list[SourceChapter]) -> list[dict[str, Any]]:
         StorySynthesisUnit(story=r.story).model_dump(mode="json"),
         CharactersSynthesisUnit(characters=r.characters).model_dump(mode="json"),
         SuspenseSynthesisUnit(suspense=r.suspense).model_dump(mode="json"),
-        PacingSynthesisUnit(pacing=r.pacing, chapters=r.chapters).model_dump(mode="json"),
+        PacingCoreSynthesisUnit(pacing=r.pacing).model_dump(mode="json"),
         AssessmentSynthesisUnit(assessment=r.assessment).model_dump(mode="json"),
+        # Chapter functions are requested last, in bounded batches (CHG-086).
+        *[
+            ChapterFunctionBatchUnit(
+                functions=r.chapters.functions[i : i + CHAPTER_FUNCTION_BATCH_SIZE]
+            ).model_dump(mode="json")
+            for i in range(0, max(1, len(r.chapters.functions)), CHAPTER_FUNCTION_BATCH_SIZE)
+        ],
     ]
 
 
@@ -337,7 +346,8 @@ async def test_failed_synthesis_repairs_only_failed_unit():
     analyzer = GatewayWholeBookV2Analyzer(gateway, provider_name="fake", model_name="fixture")
     await analyzer.analyze(run_id=8405, book_id=1, title="x", chapters=chapters)
     assert analyzer.stats.repair_calls == 1
-    assert analyzer.stats.provider_calls == len(windows) + 7
+    # 6 synthesis units + 1 story repair + 1 bounded chapter-function batch.
+    assert analyzer.stats.provider_calls == len(windows) + 8
 
 
 def test_progress_tracks_real_provider_completion():

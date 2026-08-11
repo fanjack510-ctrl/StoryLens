@@ -9,6 +9,7 @@ CHG-084: Formal production forbids deterministic semantic scaffold as novel anal
 from __future__ import annotations
 
 import json
+import math
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any, Callable
@@ -18,18 +19,23 @@ from pydantic import BaseModel, ValidationError
 from app.model_gateway.base import ModelRequest, ModelResponse
 from .contracts import (
     AnalysisMetadata, AssessmentSynthesisUnit, Availability, BookMetadata,
+    ChapterFunction, ChapterFunctionBatchUnit, ChaptersResult,
     CharactersSynthesisUnit, EvidenceRef, OverviewTypeSynthesisUnit,
-    PacingSynthesisUnit, ProgressV2, StorySynthesisUnit, SuspenseSynthesisUnit,
-    WholeBookAnalysisV2, V2_STAGES, V2_STAGE_LABELS,
+    PacingCoreSynthesisUnit, PacingSynthesisUnit, ProgressV2, StorySynthesisUnit,
+    SuspenseSynthesisUnit, WholeBookAnalysisV2, V2_STAGES, V2_STAGE_LABELS,
 )
 from .engine import EvidenceValidator, SourceChapter, progress_snapshot
 from .pipeline import (
-    AssetLedger, ProviderBudget, WindowExtractionAsset, assert_context_safe,
+    CHARS_PER_TOKEN, AssetLedger, ProviderBudget, WindowExtractionAsset,
+    assert_context_safe, bound_synthesis_payload, build_chapter_heatmap,
     build_cost_plan, build_token_plan, build_topic_intermediates,
     contains_raw_chapter_text, extract_window_asset, infer_genre_profile,
-    materialize_from_intermediates, plan_windows,
+    materialize_from_intermediates, plan_windows, project_synthesis_payload,
     synthesis_payload_from_intermediates,
 )
+
+# Chapters per bounded chapter-function synthesis request (CHG-086).
+CHAPTER_FUNCTION_BATCH_SIZE = 40
 from .runtime import ProviderUnitLedger
 from .window_extraction import (
     ORIGIN_REAL,
@@ -61,7 +67,7 @@ class UnitStats:
 UNIT_SCHEMAS:dict[str,type[BaseModel]]={
     "overview_type":OverviewTypeSynthesisUnit, "story":StorySynthesisUnit,
     "characters":CharactersSynthesisUnit, "suspense":SuspenseSynthesisUnit,
-    "pacing":PacingSynthesisUnit, "assessment":AssessmentSynthesisUnit,
+    "pacing":PacingCoreSynthesisUnit, "assessment":AssessmentSynthesisUnit,
 }
 
 UNIT_REQUIRED_HINTS:dict[str,str]={
@@ -84,8 +90,13 @@ UNIT_REQUIRED_HINTS:dict[str,str]={
         "suspense MUST include lifecycles with typed events."
     ),
     "pacing": (
-        "Required top-level fields: pacing AND chapters. "
-        "Must include pacing (points/event_markers/pacing_regions) AND chapters.functions covering every chapter."
+        "Required top-level field: pacing. "
+        "pacing MUST include points, event_markers and pacing_regions covering the whole book. "
+        "Do NOT emit per-chapter functions here; they are requested separately."
+    ),
+    "chapter_functions": (
+        "Required top-level field: functions. "
+        "Emit one entry per chapter listed in CHAPTER_CATALOG — no more, no fewer."
     ),
     "assessment": (
         "Required top-level field: assessment. "
@@ -99,7 +110,8 @@ UNIT_REQUIRED_TOP_LEVEL:dict[str,tuple[str,...]]={
     "story":("story",),
     "characters":("characters",),
     "suspense":("suspense",),
-    "pacing":("pacing","chapters"),
+    "pacing":("pacing",),
+    "chapter_functions":("functions",),
     "assessment":("assessment",),
 }
 
@@ -319,6 +331,10 @@ class GatewayWholeBookV2Analyzer:
                 repair=repair,
                 window_id=window_id,
             )
+            # Commit immediately: the call is already billed, so it must not be
+            # rolled back if a later stage of this run crashes (CHG-086).
+            if self.repository is not None and hasattr(self.repository,"commit_usage"):
+                self.repository.commit_usage()
         return response
 
     def _validate(self,key:str,schema:type[BaseModel],response:ModelResponse,catalog:dict[str,EvidenceRef])->BaseModel:
@@ -334,16 +350,30 @@ class GatewayWholeBookV2Analyzer:
 
     @staticmethod
     def _validate_business(key:str,value:BaseModel,chapter_count:int,response:ModelResponse)->None:
-        if key != "pacing": return
-        functions=value.chapters.functions  # type: ignore[attr-defined]
-        if len(functions)!=chapter_count:
-            raise SynthesisUnitError(key,UnitFailureCode.MISSING_REQUIRED_FIELD,"chapter coverage mismatch",response)
+        # Chapter coverage is enforced across batches in _synthesize_chapter_functions.
+        return
+
+    def _payload_char_budget(self,key:str,schema:type[BaseModel])->int:
+        """Chars left for the payload once the real prompt overhead is subtracted.
+
+        The JSON schema of a unit is itself tens of thousands of characters, so a
+        nominal `schema_reserve` badly underestimates it. Measure the actual
+        prompt with an empty payload instead (CHG-086).
+        """
+        overhead=len(build_synthesis_unit_prompt(key,schema,{}))
+        allowance=(self.budget.context_limit-self.budget.safety_margin-self.max_output_tokens)*CHARS_PER_TOKEN
+        return max(2_000,allowance-overhead)
+
+    def _unit_payload(self,key:str,schema:type[BaseModel],synthesis_payload:dict[str,Any])->dict[str,Any]:
+        """Per-unit projection + hard size bound so `_call` cannot trip CONTEXT_UNSAFE."""
+        projected=project_synthesis_payload(synthesis_payload,key)
+        return bound_synthesis_payload(projected,max_chars=self._payload_char_budget(key,schema))
 
     async def _unit(self,run_id:int,key:str,schema:type[BaseModel],synthesis_payload:dict[str,Any],catalog:dict[str,EvidenceRef],chapter_count:int)->BaseModel:
         reused=self._load(run_id,key,schema)
         if reused is not None: return reused
         self.last_failure_stage=UNIT_FAILURE_STAGES.get(key,key)
-        base=build_synthesis_unit_prompt(key,schema,synthesis_payload)
+        base=build_synthesis_unit_prompt(key,schema,self._unit_payload(key,schema,synthesis_payload))
         response=await self._call(key,schema,base)
         try:
             value=self._validate(key,schema,response,catalog)
@@ -360,6 +390,69 @@ class GatewayWholeBookV2Analyzer:
                 self.last_failure_stage=UNIT_FAILURE_STAGES.get(key,key)
                 raise
         self._save(run_id,key,value); return value
+
+    async def _synthesize_chapter_functions(self,run_id:int,synthesis_payload:dict[str,Any],catalog:dict[str,EvidenceRef],chapter_catalog:list[dict[str,Any]])->ChaptersResult:
+        """Provider-generate chapter functions in bounded batches (CHG-086).
+
+        ``chapters.functions`` must cover every chapter. Asking for all of them in
+        one response is impossible past a few dozen chapters, so batches are
+        requested separately, checkpointed separately, and concatenated.
+        """
+        topics=project_synthesis_payload(synthesis_payload,"chapter_functions").get("topics",{})
+        functions:list[ChapterFunction]=[]
+        total=max(1,math.ceil(len(chapter_catalog)/CHAPTER_FUNCTION_BATCH_SIZE))
+        for batch_no in range(total):
+            window=chapter_catalog[batch_no*CHAPTER_FUNCTION_BATCH_SIZE:(batch_no+1)*CHAPTER_FUNCTION_BATCH_SIZE]
+            if not window: continue
+            key=f"chapter_functions:{batch_no+1}"
+            cached=self._load(run_id,key,ChapterFunctionBatchUnit)
+            if cached is None:
+                payload=bound_synthesis_payload(
+                    {"topics":topics,"chapter_catalog":window},
+                    max_chars=self._payload_char_budget(key,ChapterFunctionBatchUnit),
+                )
+                prompt=build_synthesis_unit_prompt(key,ChapterFunctionBatchUnit,payload)+(
+                    f"\nReturn exactly {len(window)} entries in `functions`, one per chapter in "
+                    "CHAPTER_CATALOG, in the same order, reusing each chapter_id/chapter_index/title verbatim."
+                )
+                response=await self._call(key,ChapterFunctionBatchUnit,prompt)
+                try:
+                    cached=self._validate(key,ChapterFunctionBatchUnit,response,catalog)
+                except SynthesisUnitError as first:
+                    repaired=await self._call(
+                        key,ChapterFunctionBatchUnit,
+                        build_synthesis_repair_prompt(key,ChapterFunctionBatchUnit,error=first,invalid_output=response.text),
+                        repair=True,
+                    )
+                    cached=self._validate(key,ChapterFunctionBatchUnit,repaired,catalog)
+                self._save(run_id,key,cached)
+            # Chapter identity is owned by the catalog, never by the model: snapshots
+            # can repeat a chapter_index, so aligning on the model's own ids would
+            # silently drop chapters. Take semantics from the response, identity from
+            # the catalog row it answers.
+            batch=list(cached.functions)  # type: ignore[attr-defined]
+            if len(batch)!=len(window):
+                by_id={int(f.chapter_id):f for f in batch}
+                batch=[by_id[int(row["chapter_id"])] for row in window if int(row["chapter_id"]) in by_id]
+                if len(batch)!=len(window):
+                    raise SynthesisUnitError(
+                        "chapter_functions",UnitFailureCode.MISSING_REQUIRED_FIELD,
+                        f"chapter coverage mismatch in {key}: got {len(batch)} of {len(window)}",
+                    )
+            functions.extend(
+                fn.model_copy(update={
+                    "chapter_id":int(row["chapter_id"]),
+                    "chapter_index":int(row["chapter_index"]),
+                    "title":str(row.get("title") or fn.title),
+                })
+                for row,fn in zip(window,batch)
+            )
+        if len(functions)!=len(chapter_catalog):
+            raise SynthesisUnitError(
+                "chapter_functions",UnitFailureCode.MISSING_REQUIRED_FIELD,
+                f"chapter coverage mismatch: {len(functions)} of {len(chapter_catalog)} chapters",
+            )
+        return ChaptersResult(functions=functions,heatmap=build_chapter_heatmap(functions))
 
     async def _extract_window_provider(self,*,run_id:int,window:Any,metas:list[Any])->WindowExtractionAsset:
         catalog=build_window_evidence_catalog(window,metas)
@@ -483,6 +576,7 @@ class GatewayWholeBookV2Analyzer:
         emit("build_windows",100,last)
 
         values:dict[str,BaseModel]={}
+        chapters_result:ChaptersResult|None=None
         force_local=bool(getattr(self.gateway,"force_local_merge",False))
         if not force_local:
             for key,schema in UNIT_SCHEMAS.items():
@@ -499,9 +593,22 @@ class GatewayWholeBookV2Analyzer:
                     break
                 self._emit_progress(run_id,stage=stage,stage_percent=100,current_window=len(windows),total_windows=len(windows),current_chapter=last,total_chapters=len(chapters),estimated_calls=token_plan.estimated_total_calls)
                 emit(key,100,last)
+            else:
+                # Chapter functions are a separate batched stage (CHG-086).
+                self.last_failure_stage="chapter_function_synthesis"
+                self._emit_progress(run_id,stage="chapter_functions",stage_percent=10,current_window=len(windows),total_windows=len(windows),current_chapter=last,total_chapters=len(chapters),estimated_calls=token_plan.estimated_total_calls)
+                try:
+                    chapters_result=await self._synthesize_chapter_functions(run_id,synthesis_payload,catalog,chapter_catalog)
+                except Exception:
+                    if disallow_local:
+                        raise
+                    force_local=True
+                else:
+                    self._emit_progress(run_id,stage="chapter_functions",stage_percent=100,current_window=len(windows),total_windows=len(windows),current_chapter=last,total_chapters=len(chapters),estimated_calls=token_plan.estimated_total_calls)
+                    emit("chapter_functions",100,last)
 
         metadata=BookMetadata(book_id=book_id,snapshot_id=chapters[0].snapshot_id,revision_hash=chapters[0].revision_hash,title=title,chapter_count=len(chapters),character_count=sum(len(c.text) for c in chapters))
-        used_local=bool(force_local or len(values)<len(UNIT_SCHEMAS))
+        used_local=bool(force_local or len(values)<len(UNIT_SCHEMAS) or chapters_result is None)
         if used_local:
             if disallow_local:
                 raise SynthesisUnitError("synthesis",UnitFailureCode.SCHEMA_MISMATCH,"local merge forbidden for real acceptance")
@@ -521,7 +628,7 @@ class GatewayWholeBookV2Analyzer:
                 provider_calls_completed=self.stats.provider_calls,real_provider_calls=self.stats.provider_calls,result_origin="real_provider",
                 pipeline_version=f"whole_book_v2_hierarchical/{self.ENGINE_VERSION}",source_revision=chapters[0].revision_hash,
             )
-            result=WholeBookAnalysisV2(book_metadata=metadata,type_profile=values["overview_type"].type_profile,overview=values["overview_type"].overview,story=values["story"].story,characters=values["characters"].characters,suspense=values["suspense"].suspense,pacing=values["pacing"].pacing,chapters=values["pacing"].chapters,assessment=values["assessment"].assessment,evidence_index=catalog,analysis_metadata=analysis)
+            result=WholeBookAnalysisV2(book_metadata=metadata,type_profile=values["overview_type"].type_profile,overview=values["overview_type"].overview,story=values["story"].story,characters=values["characters"].characters,suspense=values["suspense"].suspense,pacing=values["pacing"].pacing,chapters=chapters_result,assessment=values["assessment"].assessment,evidence_index=catalog,analysis_metadata=analysis)
 
         if disallow_local:
             if result.analysis_metadata.result_origin != "real_provider":

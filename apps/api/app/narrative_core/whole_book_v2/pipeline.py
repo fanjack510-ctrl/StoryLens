@@ -5,6 +5,7 @@ Final synthesis never receives raw full-book chapter text.
 from __future__ import annotations
 
 import hashlib
+import json
 import math
 from dataclasses import dataclass, field
 from typing import Any, Callable, Literal
@@ -812,6 +813,147 @@ def synthesis_payload_from_intermediates(
             for topic, asset in intermediates.items()
         },
     }
+
+
+# CHG-086: every synthesis unit used to receive all seven topic intermediates plus
+# the full chapter catalog. That payload grows with the book and blew the provider
+# context (542 chapters => ~123k tokens > safe window) before any HTTP call was made.
+# Each unit now sees only the topics it actually consumes.
+UNIT_TOPIC_REQUIREMENTS: dict[str, tuple[str, ...]] = {
+    "overview_type": ("story_intermediate", "protagonist_arc_intermediate", "suspense_intermediate"),
+    "story": ("story_intermediate", "protagonist_arc_intermediate"),
+    "characters": (
+        "character_intermediate",
+        "relationship_intermediate",
+        "protagonist_arc_intermediate",
+    ),
+    "suspense": ("suspense_intermediate",),
+    "pacing": ("pacing_intermediate",),
+    "chapter_functions": ("chapter_function_intermediate",),
+    "assessment": ("story_intermediate", "pacing_intermediate", "suspense_intermediate"),
+}
+
+# Only units that must enumerate chapters need the (large) chapter catalog.
+UNIT_NEEDS_CHAPTER_CATALOG: frozenset[str] = frozenset({"pacing", "chapter_functions"})
+
+
+def project_synthesis_payload(payload: dict[str, Any], unit_key: str) -> dict[str, Any]:
+    """Narrow the shared synthesis payload down to one unit's real inputs."""
+    topics = payload.get("topics") or {}
+    wanted = UNIT_TOPIC_REQUIREMENTS.get(unit_key)
+    selected = (
+        dict(topics)
+        if wanted is None
+        else {name: topics[name] for name in wanted if name in topics}
+    )
+    projected: dict[str, Any] = {"topics": selected}
+    if unit_key in UNIT_NEEDS_CHAPTER_CATALOG:
+        projected["chapter_catalog"] = payload.get("chapter_catalog") or []
+    return projected
+
+
+def bound_synthesis_payload(
+    payload: dict[str, Any],
+    *,
+    max_chars: int,
+    protected_keys: tuple[str, ...] = ("chapter_catalog",),
+) -> dict[str, Any]:
+    """Trim list fields until the payload fits `max_chars`.
+
+    Projection alone is enough for realistic books, but payload size still scales
+    with window count, so this is the general guarantee that a bigger book
+    degrades gracefully instead of hitting CONTEXT_UNSAFE. Lists under
+    `protected_keys` are never truncated — dropping the chapter catalog would
+    silently lose chapter coverage rather than just detail.
+    """
+    if max_chars <= 0 or _payload_chars(payload) <= max_chars:
+        return payload
+    # Binary-search one global cap on list length. Every list is truncated to the
+    # same cap, so the search is monotonic and always terminates — a per-list
+    # greedy trim can stall while many medium lists stay oversized.
+    low, high = 0, max(len(c) for c in _iter_list_containers(payload))
+    best = _capped(payload, 0, protected_keys)
+    while low <= high:
+        mid = (low + high) // 2
+        candidate = _capped(payload, mid, protected_keys)
+        if _payload_chars(candidate) <= max_chars:
+            best, low = candidate, mid + 1
+        else:
+            high = mid - 1
+    return best
+
+
+def _payload_chars(node: Any) -> int:
+    return len(json.dumps(node, ensure_ascii=False))
+
+
+def _capped(node: Any, cap: int, protected_keys: tuple[str, ...]) -> Any:
+    """Deep copy with every unprotected list truncated to at most `cap` entries."""
+    if isinstance(node, dict):
+        return {
+            key: value if key in protected_keys else _capped(value, cap, protected_keys)
+            for key, value in node.items()
+        }
+    if isinstance(node, list):
+        return [_capped(value, cap, protected_keys) for value in node[:cap]]
+    return node
+
+
+def _iter_list_containers(node: Any):
+    if isinstance(node, dict):
+        for value in node.values():
+            yield from _iter_list_containers(value)
+    elif isinstance(node, list):
+        yield node
+        for value in node:
+            yield from _iter_list_containers(value)
+
+
+# Aggregation buckets for the chapter heatmap. Keys are matched against the
+# provider's own primary/secondary function labels — no semantics are invented.
+_HEATMAP_BUCKETS: dict[str, tuple[str, ...]] = {
+    "mainline_progress": ("主线", "推进", "mainline", "plot"),
+    "character_development": ("人物", "成长", "character"),
+    "conflict": ("冲突", "对抗", "conflict"),
+    "suspense": ("悬念", "疑问", "suspense"),
+    "foreshadow": ("伏笔", "铺垫", "foreshadow"),
+    "payoff": ("回收", "揭示", "payoff", "reveal"),
+    "transition": ("过渡", "衔接", "transition"),
+}
+
+
+def build_chapter_heatmap(
+    functions: list[ChapterFunction], *, aggregation_size: int = 50
+) -> list[HeatmapBin]:
+    """Bin real provider chapter functions into a numeric heatmap.
+
+    Pure counting over provider-produced labels: this is consolidation, never a
+    deterministic semantic scaffold.
+    """
+    bins: list[HeatmapBin] = []
+    for start in range(0, len(functions), max(1, aggregation_size)):
+        chunk = functions[start : start + max(1, aggregation_size)]
+        if not chunk:
+            continue
+        scores: dict[str, float] = {}
+        for name, keywords in _HEATMAP_BUCKETS.items():
+            hits = sum(
+                1
+                for fn in chunk
+                if any(
+                    kw in fn.primary_function or any(kw in s for s in fn.secondary_functions)
+                    for kw in keywords
+                )
+            )
+            scores[name] = round(hits / len(chunk), 4)
+        bins.append(
+            HeatmapBin(
+                chapter_start=chunk[0].chapter_index,
+                chapter_end=chunk[-1].chapter_index,
+                **scores,
+            )
+        )
+    return bins
 
 
 def contains_raw_chapter_text(payload: dict[str, Any], chapters: list[ChapterMeta]) -> bool:

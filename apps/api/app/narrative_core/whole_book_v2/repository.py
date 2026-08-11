@@ -27,6 +27,14 @@ class WholeBookV2Repository:
         if self._on_persist is not None:
             self._on_persist()
 
+    def commit_usage(self) -> None:
+        """Durably persist provider-usage rows written outside a save_* call.
+
+        A paid call must survive the background executor's rollback-on-crash,
+        otherwise money is spent that the audit ledger never sees (CHG-086).
+        """
+        self._after_persist()
+
     def _stable_label(self, run_id: int) -> str:
         return f"whole-book-v2:{int(run_id)}"
 
@@ -261,6 +269,18 @@ class WholeBookV2Repository:
         """
         if int(source_run_id) == int(target_run_id):
             return 0
+        # Reuse across runs is only sound when the provider pin matches, otherwise
+        # a run could be assembled from another provider's paid output (CHG-086).
+        source_run = self.session.get(WholeBookRun, int(source_run_id))
+        target_run = self.session.get(WholeBookRun, int(target_run_id))
+        if source_run is not None and target_run is not None:
+            same_pin = (
+                (source_run.provider_name or "") == (target_run.provider_name or "")
+                and (source_run.model_name or "") == (target_run.model_name or "")
+                and (source_run.snapshot_id or 0) == (target_run.snapshot_id or 0)
+            )
+            if not same_pin:
+                return 0
         rows = self.session.scalars(
             select(WholeBookCheckpoint).where(
                 WholeBookCheckpoint.run_id == int(source_run_id),
