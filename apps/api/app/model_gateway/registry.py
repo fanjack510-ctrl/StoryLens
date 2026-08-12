@@ -1,6 +1,23 @@
 from functools import lru_cache
 from pathlib import Path
 
+#: Output ceiling used when a model has not been probed (OQ-1). Deliberately low: it is
+#: better to plan smaller units that certainly complete than to plan large ones that
+#: truncate after they have been paid for. Probing raises it via settings.
+CONSERVATIVE_MAX_OUTPUT_TOKENS = 4096
+
+
+def _output_ceiling(probed: int) -> tuple[int, str]:
+    """Resolve (max_output_tokens, source) from a probe setting.
+
+    Returns the conservative default and marks it unverified when no probe has been
+    recorded, so downstream planning can see that it is planning blind rather than
+    treating a guess as a measurement.
+    """
+    if probed and probed > 0:
+        return probed, "probed"
+    return CONSERVATIVE_MAX_OUTPUT_TOKENS, "conservative_default"
+
 from app.core.config import get_settings
 from app.model_gateway.gateway import ModelGateway
 from app.model_gateway.providers.openai_compatible import OpenAICompatibleProvider
@@ -17,6 +34,8 @@ def get_model_gateway() -> ModelGateway:
         default_model=settings.local_llama_model,
         timeout_seconds=settings.local_llama_timeout_seconds,
         max_context_tokens=settings.local_llama_max_context_tokens,
+        max_output_tokens=CONSERVATIVE_MAX_OUTPUT_TOKENS,
+        max_output_tokens_source="conservative_default",
         profile_name="legacy_local_llama",
         enabled=False,
         manual_only=True,
@@ -31,6 +50,8 @@ def get_model_gateway() -> ModelGateway:
                 default_model=Path(profile.model_path).stem,
                 timeout_seconds=settings.local_llama_timeout_seconds,
                 max_context_tokens=profile.context_size,
+                max_output_tokens=CONSERVATIVE_MAX_OUTPUT_TOKENS,
+                max_output_tokens_source="conservative_default",
                 enabled=profile.enabled,
                 profile_name=profile_name,
                 default=profile.default,
@@ -54,6 +75,7 @@ def get_model_gateway() -> ModelGateway:
         ("aliyun_qwen_max", settings.aliyun_max_model, True),
         ("aliyun_qwen_flash", settings.aliyun_flash_model, True),
     )
+    aliyun_out, aliyun_out_source = _output_ceiling(settings.aliyun_probed_max_output_tokens)
     for name, model, manual_only in aliyun_roles:
         # Bootstrap only: settings.aliyun_enabled is deprecated for per-provider
         # health. Runtime overlays ProviderConfiguration.enabled via provider_runtime.
@@ -65,6 +87,8 @@ def get_model_gateway() -> ModelGateway:
                 default_model=model,
                 timeout_seconds=settings.aliyun_timeout_seconds,
                 max_context_tokens=32768,
+                max_output_tokens=aliyun_out,
+                max_output_tokens_source=aliyun_out_source,
                 enabled=False,
                 profile_name=name,
                 default=False,
@@ -82,6 +106,7 @@ def get_model_gateway() -> ModelGateway:
                 requires_boundary_review=name == "aliyun_qwen_plus",
             )
         )
+    deepseek_out, deepseek_out_source = _output_ceiling(settings.deepseek_probed_max_output_tokens)
     deepseek_base = (settings.deepseek_base_url or "https://api.deepseek.com").rstrip("/")
     providers.append(
         OpenAICompatibleProvider(
@@ -91,6 +116,8 @@ def get_model_gateway() -> ModelGateway:
             default_model=settings.deepseek_model or "deepseek-v4-flash",
             timeout_seconds=settings.deepseek_timeout_seconds,
             max_context_tokens=128000,
+            max_output_tokens=deepseek_out,
+            max_output_tokens_source=deepseek_out_source,
             enabled=False,
             profile_name="deepseek",
             default=False,

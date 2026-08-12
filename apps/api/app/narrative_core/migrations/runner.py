@@ -30,6 +30,7 @@ from app.narrative_core.migrations import (
     MIGRATION_WHOLE_BOOK_OVERVIEW_RUNTIME,
     MIGRATION_WHOLE_BOOK_RUNTIME_CONTROL,
     MIGRATION_WHOLE_BOOK_RUN_PROVIDER_PINNING,
+    MIGRATION_LONG_NOVEL_FOUNDATION,
     MIGRATION_WHOLE_BOOK_SNAPSHOT_IMMUTABILITY,
     migration_checksum,
 )
@@ -1147,6 +1148,7 @@ def apply_narrative_migrations(engine: Engine) -> None:
     migrate_narrative_20260728_015_whole_book_runtime_control(engine)
     migrate_narrative_20260728_016_whole_book_native_input_audit(engine)
     migrate_narrative_20260808_017_whole_book_run_provider_pinning(engine)
+    migrate_narrative_20260812_018_long_novel_foundation(engine)
 
 
 SQL_012 = """
@@ -2064,3 +2066,506 @@ def migrate_narrative_20260808_017_whole_book_run_provider_pinning(engine: Engin
             connection.execute(text(f"ALTER TABLE whole_book_runs ADD COLUMN {name} {ddl}"))
     _ensure_schema_migrations_table(engine)
     _record_applied(engine, MIGRATION_WHOLE_BOOK_RUN_PROVIDER_PINNING, checksum)
+
+
+# ======================================================================================
+# 018 — LongNovelAnalysisEngine Phase 1 Foundation (CHG-20260812-088)
+#
+# Fifteen new long_novel_* tables plus a unit_key column on model_invocations. Additive
+# only: no existing table is altered destructively and no existing row is rewritten, so a
+# database that has run this migration still boots on the previous release.
+#
+# Two idioms are deliberate and are the reason this is hand-written DDL rather than an ORM
+# create_all:
+#
+#   * `long_novel_final_results.run_id` needs to be UNIQUE, and SQLite cannot add a UNIQUE
+#     column with ALTER TABLE. The table is created with the column and a *partial* unique
+#     index is created separately, so legacy NULL rows (there are none here, but the idiom
+#     is the one the runner uses elsewhere) stay legal.
+#   * `long_novel_evidence.snapshot_chapter_id` is ON DELETE CASCADE, and
+#     `long_novel_snapshot_retentions.snapshot_id` is ON DELETE RESTRICT. That asymmetry is
+#     the whole snapshot-retention design: the retention row IS the lock and releasing it is
+#     a DELETE, so exactly one table may block a snapshot from being removed. A second
+#     RESTRICT anywhere would create a lock nobody knows how to release.
+# ======================================================================================
+
+SQL_018 = """
+CREATE TABLE long_novel_block_plans (
+    id INTEGER NOT NULL PRIMARY KEY,
+    run_id INTEGER NOT NULL,
+    plan_revision INTEGER NOT NULL,
+    plan_fingerprint VARCHAR(64) NOT NULL,
+    snapshot_id INTEGER NOT NULL,
+    revision_hash VARCHAR(64) NOT NULL,
+    provider_name VARCHAR(100) NOT NULL DEFAULT '',
+    model_name VARCHAR(255) NOT NULL DEFAULT '',
+    resolved_output_budget INTEGER NOT NULL,
+    density_profile VARCHAR(16) NOT NULL,
+    chapters_per_block_cap INTEGER NOT NULL,
+    effective_raw_text_budget INTEGER NOT NULL,
+    calibration_ratio FLOAT NOT NULL DEFAULT 1.0,
+    calibration_tier VARCHAR(16) NOT NULL DEFAULT 'default',
+    block_count INTEGER NOT NULL DEFAULT 0,
+    carried_block_count INTEGER NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL,
+    FOREIGN KEY(run_id) REFERENCES whole_book_runs (id) ON DELETE CASCADE,
+    CONSTRAINT uq_ln_block_plans_run_revision UNIQUE (run_id, plan_revision)
+);
+CREATE INDEX IF NOT EXISTS ix_ln_block_plans_run ON long_novel_block_plans (run_id);
+
+CREATE TABLE long_novel_plan_blocks (
+    id INTEGER NOT NULL PRIMARY KEY,
+    plan_id INTEGER NOT NULL,
+    run_id INTEGER NOT NULL,
+    block_key VARCHAR(96) NOT NULL,
+    content_key VARCHAR(64) NOT NULL,
+    occurrence_key VARCHAR(64) NOT NULL,
+    duplicate_ordinal INTEGER NOT NULL DEFAULT 0,
+    block_seq INTEGER NOT NULL,
+    chapter_start_order INTEGER NOT NULL,
+    chapter_end_order INTEGER NOT NULL,
+    chapter_ids_json TEXT NOT NULL DEFAULT '[]',
+    partial_chapter INTEGER NOT NULL DEFAULT 0,
+    part_index INTEGER,
+    part_count INTEGER,
+    paragraph_start_hash VARCHAR(64),
+    paragraph_end_hash VARCHAR(64),
+    estimated_input_tokens INTEGER NOT NULL DEFAULT 0,
+    estimated_output_tokens INTEGER NOT NULL DEFAULT 0,
+    carried_from_revision INTEGER,
+    FOREIGN KEY(plan_id) REFERENCES long_novel_block_plans (id) ON DELETE CASCADE,
+    CONSTRAINT uq_ln_plan_blocks_seq UNIQUE (plan_id, block_seq),
+    CONSTRAINT uq_ln_plan_blocks_key UNIQUE (plan_id, block_key)
+);
+CREATE INDEX IF NOT EXISTS ix_ln_plan_blocks_run_block ON long_novel_plan_blocks (run_id, block_key);
+CREATE INDEX IF NOT EXISTS ix_ln_plan_blocks_run_content ON long_novel_plan_blocks (run_id, content_key);
+
+CREATE TABLE long_novel_blocks (
+    id INTEGER NOT NULL PRIMARY KEY,
+    run_id INTEGER NOT NULL,
+    block_key VARCHAR(96) NOT NULL,
+    content_key VARCHAR(64) NOT NULL,
+    occurrence_key VARCHAR(64) NOT NULL,
+    duplicate_ordinal INTEGER NOT NULL DEFAULT 0,
+    oid_provisional INTEGER NOT NULL DEFAULT 0,
+    asset_revision INTEGER NOT NULL DEFAULT 1,
+    chapter_start_order INTEGER NOT NULL,
+    chapter_end_order INTEGER NOT NULL,
+    asset_schema_version VARCHAR(48) NOT NULL,
+    asset_json TEXT NOT NULL,
+    asset_hash VARCHAR(64) NOT NULL,
+    provider_input_fingerprint VARCHAR(64) NOT NULL,
+    carry_in_fingerprint VARCHAR(64) NOT NULL DEFAULT '',
+    carry_out_fingerprint VARCHAR(64) NOT NULL DEFAULT '',
+    carry_status VARCHAR(16) NOT NULL DEFAULT 'converged',
+    carry_residual_delta_json TEXT NOT NULL DEFAULT '{}',
+    rebased_from_snapshot_id INTEGER,
+    rebase_report_json TEXT,
+    superseded_by_revision INTEGER,
+    reused_from_run_id INTEGER,
+    semantic_compat_key VARCHAR(64) NOT NULL,
+    execution_legality_json TEXT NOT NULL DEFAULT '{}',
+    execution_profile_json TEXT NOT NULL DEFAULT '{}',
+    snapshot_id INTEGER NOT NULL,
+    revision_hash VARCHAR(64) NOT NULL DEFAULT '',
+    created_in_phase VARCHAR(48) NOT NULL,
+    origin VARCHAR(32) NOT NULL DEFAULT 'real_provider',
+    invalidated_at DATETIME,
+    created_at DATETIME NOT NULL,
+    provider_name VARCHAR(100) NOT NULL DEFAULT '',
+    model_name VARCHAR(255) NOT NULL DEFAULT '',
+    provider_request_id VARCHAR(128),
+    input_tokens INTEGER,
+    output_tokens INTEGER,
+    FOREIGN KEY(run_id) REFERENCES whole_book_runs (id) ON DELETE CASCADE,
+    CONSTRAINT uq_ln_blocks_key_revision UNIQUE (run_id, block_key, asset_revision)
+);
+CREATE INDEX IF NOT EXISTS ix_ln_blocks_run_content ON long_novel_blocks (run_id, content_key);
+CREATE INDEX IF NOT EXISTS ix_ln_blocks_run_occurrence ON long_novel_blocks (run_id, occurrence_key);
+CREATE INDEX IF NOT EXISTS ix_ln_blocks_run_sci ON long_novel_blocks (run_id, semantic_compat_key);
+CREATE INDEX IF NOT EXISTS ix_ln_blocks_run_chapter ON long_novel_blocks (run_id, chapter_start_order);
+
+CREATE TABLE long_novel_facts (
+    run_id INTEGER NOT NULL,
+    fact_key VARCHAR(64) NOT NULL,
+    asset_revision INTEGER NOT NULL,
+    block_row_id INTEGER NOT NULL,
+    fact_kind VARCHAR(32) NOT NULL,
+    subject_key VARCHAR(160),
+    chapter_order INTEGER,
+    position_ordinal INTEGER NOT NULL DEFAULT 0,
+    payload_json TEXT NOT NULL,
+    evidence_ids_json TEXT NOT NULL DEFAULT '[]',
+    is_live INTEGER NOT NULL DEFAULT 1,
+    PRIMARY KEY (run_id, fact_key, asset_revision),
+    FOREIGN KEY(block_row_id) REFERENCES long_novel_blocks (id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS ix_ln_facts_kind ON long_novel_facts (run_id, fact_kind);
+CREATE INDEX IF NOT EXISTS ix_ln_facts_subject ON long_novel_facts (run_id, subject_key);
+CREATE INDEX IF NOT EXISTS ix_ln_facts_chapter ON long_novel_facts (run_id, chapter_order);
+CREATE INDEX IF NOT EXISTS ix_ln_facts_block ON long_novel_facts (run_id, block_row_id);
+CREATE INDEX IF NOT EXISTS ix_ln_facts_live ON long_novel_facts (run_id, is_live);
+
+CREATE TABLE long_novel_evidence (
+    run_id INTEGER NOT NULL,
+    evidence_id VARCHAR(64) NOT NULL,
+    asset_revision INTEGER NOT NULL,
+    block_row_id INTEGER NOT NULL,
+    snapshot_id INTEGER NOT NULL,
+    snapshot_chapter_id INTEGER,
+    chapter_order INTEGER NOT NULL,
+    stable_paragraph_id VARCHAR(32) NOT NULL DEFAULT '',
+    start_offset INTEGER NOT NULL DEFAULT 0,
+    end_offset INTEGER NOT NULL DEFAULT 0,
+    paragraph_content_hash VARCHAR(64) NOT NULL,
+    reason VARCHAR(200) NOT NULL DEFAULT '',
+    is_live INTEGER NOT NULL DEFAULT 1,
+    PRIMARY KEY (run_id, evidence_id, asset_revision),
+    FOREIGN KEY(block_row_id) REFERENCES long_novel_blocks (id) ON DELETE CASCADE,
+    FOREIGN KEY(snapshot_chapter_id) REFERENCES book_snapshot_chapters (id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS ix_ln_evidence_chapter ON long_novel_evidence (run_id, chapter_order);
+CREATE INDEX IF NOT EXISTS ix_ln_evidence_snapshot_chapter ON long_novel_evidence (snapshot_chapter_id);
+
+CREATE TABLE long_novel_partitions (
+    id INTEGER NOT NULL PRIMARY KEY,
+    run_id INTEGER NOT NULL,
+    partition_key VARCHAR(64) NOT NULL,
+    partition_seq INTEGER NOT NULL,
+    block_key_list_json TEXT NOT NULL DEFAULT '[]',
+    chapter_start_order INTEGER NOT NULL,
+    chapter_end_order INTEGER NOT NULL,
+    entry_state_json TEXT NOT NULL DEFAULT '{}',
+    reduce_json TEXT NOT NULL DEFAULT '{}',
+    reduce_hash VARCHAR(64) NOT NULL,
+    semantic_compat_key VARCHAR(64) NOT NULL,
+    asset_revision INTEGER NOT NULL DEFAULT 1,
+    execution_legality_json TEXT NOT NULL DEFAULT '{}',
+    execution_profile_json TEXT NOT NULL DEFAULT '{}',
+    snapshot_id INTEGER NOT NULL,
+    revision_hash VARCHAR(64) NOT NULL DEFAULT '',
+    created_in_phase VARCHAR(48) NOT NULL,
+    origin VARCHAR(32) NOT NULL DEFAULT 'deterministic',
+    invalidated_at DATETIME,
+    created_at DATETIME NOT NULL,
+    FOREIGN KEY(run_id) REFERENCES whole_book_runs (id) ON DELETE CASCADE,
+    CONSTRAINT uq_ln_partitions_key UNIQUE (run_id, partition_key),
+    CONSTRAINT uq_ln_partitions_seq UNIQUE (run_id, partition_seq)
+);
+
+CREATE TABLE long_novel_entities (
+    id INTEGER NOT NULL PRIMARY KEY,
+    run_id INTEGER NOT NULL,
+    entity_key VARCHAR(64) NOT NULL,
+    resolution_revision INTEGER NOT NULL DEFAULT 1,
+    anchor_mention_key VARCHAR(64) NOT NULL,
+    anchor_provisional_key VARCHAR(64) NOT NULL DEFAULT '',
+    display_surface_norm VARCHAR(120) NOT NULL DEFAULT '',
+    member_provisional_keys_json TEXT NOT NULL DEFAULT '[]',
+    member_surface_norms_json TEXT NOT NULL DEFAULT '[]',
+    centrality FLOAT NOT NULL DEFAULT 0,
+    superseded_by_entity_key VARCHAR(64),
+    normalization_version VARCHAR(32) NOT NULL,
+    resolution_algorithm_version VARCHAR(32) NOT NULL,
+    FOREIGN KEY(run_id) REFERENCES whole_book_runs (id) ON DELETE CASCADE,
+    CONSTRAINT uq_ln_entities_key_revision UNIQUE (run_id, entity_key, resolution_revision)
+);
+CREATE INDEX IF NOT EXISTS ix_ln_entities_revision ON long_novel_entities (run_id, resolution_revision);
+CREATE INDEX IF NOT EXISTS ix_ln_entities_anchor_mention ON long_novel_entities (run_id, anchor_mention_key);
+CREATE INDEX IF NOT EXISTS ix_ln_entities_anchor_lent ON long_novel_entities (run_id, anchor_provisional_key);
+
+CREATE TABLE long_novel_entity_aliases (
+    id INTEGER NOT NULL PRIMARY KEY,
+    run_id INTEGER NOT NULL,
+    resolution_revision INTEGER NOT NULL DEFAULT 1,
+    provisional_entity_key VARCHAR(64) NOT NULL,
+    mention_key VARCHAR(64) NOT NULL DEFAULT '',
+    block_row_id INTEGER,
+    surface_norm VARCHAR(120) NOT NULL DEFAULT '',
+    entity_key VARCHAR(64),
+    decision VARCHAR(24) NOT NULL,
+    decision_evidence_json TEXT NOT NULL DEFAULT '{}',
+    confidence FLOAT,
+    created_at DATETIME NOT NULL,
+    FOREIGN KEY(run_id) REFERENCES whole_book_runs (id) ON DELETE CASCADE,
+    FOREIGN KEY(block_row_id) REFERENCES long_novel_blocks (id) ON DELETE CASCADE,
+    CONSTRAINT uq_ln_aliases_lent_mention
+        UNIQUE (run_id, resolution_revision, provisional_entity_key, mention_key)
+);
+CREATE INDEX IF NOT EXISTS ix_ln_aliases_entity ON long_novel_entity_aliases (run_id, entity_key);
+CREATE INDEX IF NOT EXISTS ix_ln_aliases_surface ON long_novel_entity_aliases (run_id, surface_norm);
+
+CREATE TABLE long_novel_stages (
+    id INTEGER NOT NULL PRIMARY KEY,
+    run_id INTEGER NOT NULL,
+    stage_key VARCHAR(64) NOT NULL,
+    stage_seq INTEGER NOT NULL,
+    partition_key_list_json TEXT NOT NULL DEFAULT '[]',
+    chapter_start_order INTEGER NOT NULL,
+    chapter_end_order INTEGER NOT NULL,
+    boundary_score_json TEXT NOT NULL DEFAULT '{}',
+    reduce_hash VARCHAR(64) NOT NULL,
+    stage_projection_fingerprint VARCHAR(64),
+    stage_projection_omitted_json TEXT NOT NULL DEFAULT '{}',
+    provider_input_fingerprint VARCHAR(64),
+    interpretation_json TEXT,
+    semantic_compat_key VARCHAR(64) NOT NULL,
+    asset_revision INTEGER NOT NULL DEFAULT 1,
+    execution_legality_json TEXT NOT NULL DEFAULT '{}',
+    execution_profile_json TEXT NOT NULL DEFAULT '{}',
+    snapshot_id INTEGER NOT NULL,
+    revision_hash VARCHAR(64) NOT NULL DEFAULT '',
+    created_in_phase VARCHAR(48) NOT NULL,
+    origin VARCHAR(32) NOT NULL DEFAULT 'real_provider',
+    invalidated_at DATETIME,
+    created_at DATETIME NOT NULL,
+    provider_name VARCHAR(100) NOT NULL DEFAULT '',
+    model_name VARCHAR(255) NOT NULL DEFAULT '',
+    provider_request_id VARCHAR(128),
+    input_tokens INTEGER,
+    output_tokens INTEGER,
+    FOREIGN KEY(run_id) REFERENCES whole_book_runs (id) ON DELETE CASCADE,
+    CONSTRAINT uq_ln_stages_key UNIQUE (run_id, stage_key),
+    CONSTRAINT uq_ln_stages_seq UNIQUE (run_id, stage_seq)
+);
+
+CREATE TABLE long_novel_topic_results (
+    id INTEGER NOT NULL PRIMARY KEY,
+    run_id INTEGER NOT NULL,
+    topic VARCHAR(32) NOT NULL,
+    result_json TEXT NOT NULL,
+    result_schema_version VARCHAR(48) NOT NULL,
+    projection_fingerprint VARCHAR(64) NOT NULL,
+    projection_omitted_json TEXT NOT NULL DEFAULT '{}',
+    provider_input_fingerprint VARCHAR(64),
+    digest_json TEXT NOT NULL DEFAULT '{}',
+    digest_fingerprint VARCHAR(64) NOT NULL DEFAULT '',
+    referenced_ids_json TEXT NOT NULL DEFAULT '[]',
+    claim_supports_json TEXT NOT NULL DEFAULT '[]',
+    semantic_compat_key VARCHAR(64) NOT NULL,
+    asset_revision INTEGER NOT NULL DEFAULT 1,
+    execution_legality_json TEXT NOT NULL DEFAULT '{}',
+    execution_profile_json TEXT NOT NULL DEFAULT '{}',
+    snapshot_id INTEGER NOT NULL,
+    revision_hash VARCHAR(64) NOT NULL DEFAULT '',
+    created_in_phase VARCHAR(48) NOT NULL,
+    origin VARCHAR(32) NOT NULL DEFAULT 'real_provider',
+    invalidated_at DATETIME,
+    created_at DATETIME NOT NULL,
+    provider_name VARCHAR(100) NOT NULL DEFAULT '',
+    model_name VARCHAR(255) NOT NULL DEFAULT '',
+    provider_request_id VARCHAR(128),
+    input_tokens INTEGER,
+    output_tokens INTEGER,
+    FOREIGN KEY(run_id) REFERENCES whole_book_runs (id) ON DELETE CASCADE,
+    CONSTRAINT uq_ln_topic_results_topic UNIQUE (run_id, topic)
+);
+
+CREATE TABLE long_novel_final_results (
+    id INTEGER NOT NULL PRIMARY KEY,
+    run_id INTEGER NOT NULL,
+    result_json TEXT NOT NULL,
+    presentation_json TEXT NOT NULL DEFAULT '{}',
+    result_schema_version VARCHAR(48) NOT NULL,
+    presentation_schema_version VARCHAR(48) NOT NULL DEFAULT '',
+    provider_input_fingerprint VARCHAR(64) NOT NULL,
+    final_input_digest_json TEXT NOT NULL DEFAULT '{}',
+    referenced_ids_json TEXT NOT NULL DEFAULT '[]',
+    claim_supports_json TEXT NOT NULL DEFAULT '[]',
+    selected_evidence_ids_json TEXT NOT NULL DEFAULT '[]',
+    quality_metrics_json TEXT NOT NULL DEFAULT '{}',
+    semantic_compat_key VARCHAR(64) NOT NULL,
+    asset_revision INTEGER NOT NULL DEFAULT 1,
+    execution_legality_json TEXT NOT NULL DEFAULT '{}',
+    execution_profile_json TEXT NOT NULL DEFAULT '{}',
+    snapshot_id INTEGER NOT NULL,
+    revision_hash VARCHAR(64) NOT NULL DEFAULT '',
+    created_in_phase VARCHAR(48) NOT NULL,
+    origin VARCHAR(32) NOT NULL DEFAULT 'real_provider',
+    invalidated_at DATETIME,
+    created_at DATETIME NOT NULL,
+    provider_name VARCHAR(100) NOT NULL DEFAULT '',
+    model_name VARCHAR(255) NOT NULL DEFAULT '',
+    provider_request_id VARCHAR(128),
+    input_tokens INTEGER,
+    output_tokens INTEGER,
+    FOREIGN KEY(run_id) REFERENCES whole_book_runs (id) ON DELETE CASCADE
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ln_final_results_run
+    ON long_novel_final_results (run_id) WHERE run_id IS NOT NULL;
+
+CREATE TABLE long_novel_unit_attempts (
+    id INTEGER NOT NULL PRIMARY KEY,
+    run_id INTEGER NOT NULL,
+    unit_kind VARCHAR(24) NOT NULL,
+    unit_key VARCHAR(160) NOT NULL,
+    parent_unit_key VARCHAR(160),
+    attempt_no INTEGER NOT NULL DEFAULT 1,
+    status VARCHAR(24) NOT NULL,
+    failure_code VARCHAR(64),
+    finish_reason VARCHAR(32),
+    requested_output_tokens INTEGER,
+    input_tokens INTEGER,
+    output_tokens INTEGER,
+    provider_input_fingerprint VARCHAR(64),
+    model_invocation_id INTEGER,
+    raw_head TEXT,
+    created_at DATETIME NOT NULL,
+    FOREIGN KEY(run_id) REFERENCES whole_book_runs (id) ON DELETE CASCADE,
+    FOREIGN KEY(model_invocation_id) REFERENCES model_invocations (id) ON DELETE SET NULL
+);
+CREATE INDEX IF NOT EXISTS ix_ln_unit_attempts_unit
+    ON long_novel_unit_attempts (run_id, unit_kind, unit_key);
+
+CREATE TABLE long_novel_invalidations (
+    id INTEGER NOT NULL PRIMARY KEY,
+    run_id INTEGER NOT NULL,
+    reason VARCHAR(48) NOT NULL,
+    from_phase VARCHAR(48) NOT NULL DEFAULT '',
+    to_phase VARCHAR(48) NOT NULL DEFAULT '',
+    invalidated_blocks_json TEXT NOT NULL DEFAULT '[]',
+    invalidated_partitions_json TEXT NOT NULL DEFAULT '[]',
+    invalidated_stages_json TEXT NOT NULL DEFAULT '[]',
+    invalidated_topics_json TEXT NOT NULL DEFAULT '[]',
+    final_invalidated INTEGER NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL,
+    FOREIGN KEY(run_id) REFERENCES whole_book_runs (id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS ix_ln_invalidations_run ON long_novel_invalidations (run_id);
+
+CREATE TABLE long_novel_token_calibrations (
+    id INTEGER NOT NULL PRIMARY KEY,
+    provider_name VARCHAR(100) NOT NULL,
+    model_name VARCHAR(255) NOT NULL,
+    script_class VARCHAR(16) NOT NULL,
+    observation_count INTEGER NOT NULL DEFAULT 0,
+    median_chars_per_token FLOAT NOT NULL,
+    p10_chars_per_token FLOAT,
+    p90_chars_per_token FLOAT,
+    last_observed_at DATETIME,
+    updated_at DATETIME NOT NULL,
+    CONSTRAINT uq_ln_token_calibrations UNIQUE (provider_name, model_name, script_class)
+);
+
+CREATE TABLE long_novel_snapshot_retentions (
+    id INTEGER NOT NULL PRIMARY KEY,
+    run_id INTEGER NOT NULL,
+    snapshot_id INTEGER NOT NULL,
+    holder_kind VARCHAR(24) NOT NULL,
+    retained_at DATETIME NOT NULL,
+    FOREIGN KEY(run_id) REFERENCES whole_book_runs (id) ON DELETE CASCADE,
+    FOREIGN KEY(snapshot_id) REFERENCES book_snapshots (id) ON DELETE RESTRICT,
+    CONSTRAINT uq_ln_snapshot_retentions UNIQUE (run_id, snapshot_id, holder_kind)
+);
+CREATE INDEX IF NOT EXISTS ix_ln_snapshot_retentions_snapshot
+    ON long_novel_snapshot_retentions (snapshot_id);
+"""
+
+#: One distinctive column per table, enough to tell our table from a name collision.
+_LONG_NOVEL_REQUIRED_COLUMNS: dict[str, frozenset[str]] = {
+    "long_novel_block_plans": frozenset({"run_id", "plan_fingerprint", "density_profile"}),
+    "long_novel_plan_blocks": frozenset({"run_id", "block_key", "occurrence_key"}),
+    "long_novel_blocks": frozenset({"run_id", "block_key", "occurrence_key", "oid_provisional"}),
+    "long_novel_facts": frozenset({"run_id", "fact_key", "asset_revision"}),
+    "long_novel_evidence": frozenset({"run_id", "evidence_id", "paragraph_content_hash"}),
+    "long_novel_partitions": frozenset({"run_id", "partition_key", "reduce_hash"}),
+    "long_novel_entities": frozenset({"run_id", "entity_key", "anchor_mention_key"}),
+    "long_novel_entity_aliases": frozenset({"run_id", "provisional_entity_key", "mention_key"}),
+    "long_novel_stages": frozenset({"run_id", "stage_key", "asset_revision"}),
+    "long_novel_topic_results": frozenset({"run_id", "topic", "asset_revision"}),
+    "long_novel_final_results": frozenset({"run_id", "asset_revision"}),
+    "long_novel_unit_attempts": frozenset({"run_id", "unit_kind", "unit_key"}),
+    "long_novel_invalidations": frozenset({"run_id", "reason"}),
+    "long_novel_token_calibrations": frozenset({"provider_name", "script_class"}),
+    "long_novel_snapshot_retentions": frozenset({"run_id", "snapshot_id", "holder_kind"}),
+}
+
+LONG_NOVEL_TABLES: tuple[str, ...] = (
+    "long_novel_block_plans",
+    "long_novel_plan_blocks",
+    "long_novel_blocks",
+    "long_novel_facts",
+    "long_novel_evidence",
+    "long_novel_partitions",
+    "long_novel_entities",
+    "long_novel_entity_aliases",
+    "long_novel_stages",
+    "long_novel_topic_results",
+    "long_novel_final_results",
+    "long_novel_unit_attempts",
+    "long_novel_invalidations",
+    "long_novel_token_calibrations",
+    "long_novel_snapshot_retentions",
+)
+
+
+def migrate_narrative_20260812_018_long_novel_foundation(engine: Engine) -> None:
+    """CHG-20260812-088: LongNovelAnalysisEngine Phase 1 Foundation schema.
+
+    Idempotent and re-entrant. Each statement is guarded on its own object rather than on a
+    single sentinel table, so a run killed part-way through converges when re-run instead of
+    leaving the schema half-built and believing it is complete.
+    """
+    checksum = migration_checksum(SQL_018 + "|model_invocations.unit_key")
+
+    existing = _table_names(engine)
+
+    # A table that is already present is skipped, but only after checking it is *our* table.
+    # A name collision with a differently-shaped table would otherwise be skipped silently
+    # and then fail on the first index with an unreadable "no such column".
+    for table in LONG_NOVEL_TABLES:
+        if table not in existing:
+            continue
+        expected = _LONG_NOVEL_REQUIRED_COLUMNS.get(table, frozenset())
+        missing_columns = expected - _column_names(engine, table)
+        if missing_columns:
+            raise NarrativeCoreError(
+                NarrativeCoreErrorCode.MIGRATION_BASELINE_INVALID,
+                f"018 cannot proceed: table {table} already exists but is missing "
+                f"{', '.join(sorted(missing_columns))}. It was not created by this migration; "
+                "resolve the name collision before re-running.",
+            )
+
+    with engine.begin() as connection:
+        for statement in (s.strip() for s in SQL_018.split(";")):
+            if not statement:
+                continue
+            first_line = statement.splitlines()[0].upper()
+            if first_line.startswith("CREATE TABLE"):
+                if statement.splitlines()[0].split()[2] in existing:
+                    continue
+            elif "CREATE" in first_line and "INDEX" in first_line:
+                # Index statements name their table after ON; skip an index whose table was
+                # skipped above so a re-run over an existing schema is a genuine no-op.
+                target = statement.split(" ON ")[1].split("(")[0].strip()
+                if target in existing:
+                    continue
+            connection.execute(text(statement))
+
+    # model_invocations.unit_key — lets a billing row be tied back to the unit that caused
+    # it. Without it a killed process leaves a paid invocation that cannot be matched to any
+    # unit on resume, and the run either re-buys the call or loses the audit trail.
+    if "model_invocations" in _table_names(engine):
+        if "unit_key" not in _column_names(engine, "model_invocations"):
+            with engine.begin() as connection:
+                connection.execute(
+                    text("ALTER TABLE model_invocations ADD COLUMN unit_key VARCHAR(160)")
+                )
+            with engine.begin() as connection:
+                connection.execute(
+                    text(
+                        "CREATE INDEX IF NOT EXISTS ix_model_invocations_unit_key "
+                        "ON model_invocations (unit_key)"
+                    )
+                )
+
+    created = _table_names(engine)
+    missing = [name for name in LONG_NOVEL_TABLES if name not in created]
+    if missing:
+        raise NarrativeCoreError(
+            NarrativeCoreErrorCode.MIGRATION_BASELINE_INVALID,
+            f"018 failed: missing tables after DDL: {', '.join(missing)}",
+        )
+
+    _ensure_schema_migrations_table(engine)
+    _record_applied(engine, MIGRATION_LONG_NOVEL_FOUNDATION, checksum)

@@ -1,0 +1,73 @@
+"""Frozen contracts for the LongNovelAnalysisEngine."""
+
+from __future__ import annotations
+
+from app.narrative_core.long_novel.contracts.density import (
+    PROFILES,
+    DensityProfile,
+    DensityProfileName,
+    derive_per_block_fixed_tokens,
+    derive_per_chapter_tokens,
+    max_chapters_per_block,
+    profile,
+)
+from app.narrative_core.long_novel.contracts.enums import (
+    CarryStatus,
+    ChapterDiffClass,
+    MaxOutputTokensSource,
+    OutputFidelity,
+    ReuseTier,
+    RunPhase,
+    Topic,
+    UnitKind,
+)
+from app.narrative_core.long_novel.contracts.l1 import (
+    BlockAsset,
+    CarryForwardState,
+    CausalLink,
+    ChapterSignal,
+    CharacterStateChange,
+    Choice,
+    EventFact,
+    EvidenceRef,
+    GoalChange,
+    IdentityAssertion,
+    Mention,
+    ProvisionalEntity,
+    RelationshipChange,
+    SuspenseAction,
+    SuspenseThread,
+)
+
+__all__ = [
+    "PROFILES",
+    "BlockAsset",
+    "CarryForwardState",
+    "CarryStatus",
+    "CausalLink",
+    "ChapterDiffClass",
+    "ChapterSignal",
+    "CharacterStateChange",
+    "Choice",
+    "DensityProfile",
+    "DensityProfileName",
+    "EventFact",
+    "EvidenceRef",
+    "GoalChange",
+    "IdentityAssertion",
+    "MaxOutputTokensSource",
+    "Mention",
+    "OutputFidelity",
+    "ProvisionalEntity",
+    "RelationshipChange",
+    "ReuseTier",
+    "RunPhase",
+    "SuspenseAction",
+    "SuspenseThread",
+    "Topic",
+    "UnitKind",
+    "derive_per_block_fixed_tokens",
+    "derive_per_chapter_tokens",
+    "max_chapters_per_block",
+    "profile",
+]

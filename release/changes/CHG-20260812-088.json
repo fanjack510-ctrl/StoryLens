@@ -1,0 +1,90 @@
+{
+  "id": "CHG-20260812-088",
+  "title": "LongNovelAnalysisEngine Phase 1 Foundation",
+  "type": "feature",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": false,
+  "commits": [],
+  "modules": [
+    "apps/api/app/narrative_core/long_novel",
+    "apps/api/app/narrative_core/migrations",
+    "apps/api/app/model_gateway"
+  ],
+  "files": [
+    "apps/api/app/narrative_core/long_novel/__init__.py",
+    "apps/api/app/narrative_core/long_novel/constants.py",
+    "apps/api/app/narrative_core/long_novel/errors.py",
+    "apps/api/app/narrative_core/long_novel/ids.py",
+    "apps/api/app/narrative_core/long_novel/mention_binding.py",
+    "apps/api/app/narrative_core/long_novel/budget.py",
+    "apps/api/app/narrative_core/long_novel/provider_io.py",
+    "apps/api/app/narrative_core/long_novel/usage.py",
+    "apps/api/app/narrative_core/long_novel/repository.py",
+    "apps/api/app/narrative_core/long_novel/invariants.py",
+    "apps/api/app/narrative_core/long_novel/contracts/__init__.py",
+    "apps/api/app/narrative_core/long_novel/contracts/density.py",
+    "apps/api/app/narrative_core/long_novel/contracts/enums.py",
+    "apps/api/app/narrative_core/long_novel/contracts/l1.py",
+    "apps/api/app/narrative_core/migrations/__init__.py",
+    "apps/api/app/narrative_core/migrations/runner.py",
+    "apps/api/app/model_gateway/base.py",
+    "apps/api/app/model_gateway/providers/openai_compatible.py",
+    "apps/api/app/model_gateway/registry.py",
+    "apps/api/app/core/config.py",
+    "apps/api/tests/test_long_novel_phase1_foundation.py"
+  ],
+  "user_summary": "为超长篇小说（1000 章以上）分析引擎打地基。本次不改变任何现有功能：新引擎只建立契约、预算、错误处理与数据表，没有接入任何界面，也不会调用大模型。现有的全书分析路径完全不受影响。",
+  "technical_summary": "Phase 1 Foundation of the frozen LongNovelAnalysisEngine design (DESIGN_FREEZE.md, 2026-08-12; contracts 01-09 FROZEN). Delivers, with zero pipeline and zero routing: (1) app/narrative_core/long_novel/ package with errors.py, constants.py, ids.py and contracts/*, where ids.py is the single implementation of every identity formula in 02 §3 - content_key, occurrence_key anchored on source_chapter_id, block_key, fact_key over payload plus primary evidence, evidence_id over paragraph_occurrence_key alone, mention_key over surface_norm plus a text-derived surface_occurrence_index_in_paragraph, LENT/CENT/CHR with the CHR anchor on the narrative-earliest member mention, provider_input_fingerprint over the exact semantic payload, and semantic_compat_key; (2) ProviderCapabilities.max_output_tokens with an explicit source (declared, probed or conservative_default=4096); (3) BudgetManager implementing the joint (O, density_profile) search of 03 §2.5.4 with MIN_VIABLE_CHAPTERS_PER_BLOCK gating and OUTPUT_BUDGET_TOO_LOW at plan time; (4) ProviderIO with truncation detection, an engine-local safe-JSON recovery state machine and the three-outcome repair ladder (local repair with zero provider calls, full repair, or escalate at the parent) - there is deliberately no reduced-context repair form; (5) UsageRecorder writing model_invocations in its own session plus a unit_key column, so a killed process still leaves a billing row; (6) fifteen new long_novel_* tables via the existing idempotent migration runner, using the ADD COLUMN plus partial CREATE UNIQUE INDEX idiom because SQLite cannot add a UNIQUE column (M-10); (7) LongNovelRepository with phase-guarded writers, insert-only L1 assets and atomic in-place replacement for Tier-3 derived views (02 §6.1); (8) InvariantValidator covering every invariant declared in 01 §6; (9) TokenCalibrator with all four tiers. whole_book_v2/** is not touched at all (CHG-087 remains paused and is not a prerequisite - C2-P01). No UI change, no routing to the new package, zero real provider calls.",
+  "acceptance_criteria": [
+    "migrations apply and re-apply idempotently on a copy of a real user database",
+    "an interrupted migration (killed mid-run on a database copy) converges when re-run",
+    "the previous release's binary boots against a database carrying the new tables and columns, and every legacy path stays green",
+    "safe-JSON-recovery test matrix green, including every refusal case",
+    "a process killed mid-call still leaves a model_invocations row (G3, G4)",
+    "BudgetManager.resolve() raises OUTPUT_BUDGET_TOO_LOW when the resolved plan is below MIN_VIABLE_CHAPTERS_PER_BLOCK",
+    "ID derivation is deterministic across separate processes",
+    "no reduced-context provider repair is ever sent",
+    "whole_book_v2/** is byte-identical after this change"
+  ],
+  "tests": [
+    "apps/api/tests/test_long_novel_phase1_foundation.py"
+  ],
+  "verification_evidence": [
+    "62/62 tests pass in apps/api/tests/test_long_novel_phase1_foundation.py",
+    "All 18 cells of the frozen MAX_CHAPTERS_PER_BLOCK table (03 2.5.4) are reproduced from code, not transcribed",
+    "Field-by-field token derivation agrees with the published profile totals within 0.40% (contract allows 1%)",
+    "All four frozen (O, density_profile, chapters/block) resolutions reproduced, including the Qwen case where the larger output budget is correctly rejected as input-infeasible",
+    "Derived counts match the frozen baselines: 542ch probed = 91 blocks / 16 partitions / 8 stages / 105 calls; unprobed = 136 / 23 / 12 / 154",
+    "Migration applies to a fresh DB, re-applies twice as a no-op, is recorded once, and converges when the applied-record is lost after the DDL committed",
+    "Exactly one table holds a RESTRICT lock on book_snapshots (long_novel_snapshot_retentions)",
+    "long_novel_final_results.run_id uniqueness uses the partial-index idiom (M-10)",
+    "A name collision on a long_novel_* table is reported with a readable message instead of failing on a missing column",
+    "G3/G4: a model_invocations row written by UsageRecorder survives a rollback of the caller's transaction",
+    "Downgrade smoke: legacy ORM writes succeed against a database carrying the new tables and the unit_key column",
+    "git diff --stat over apps/api/app/narrative_core/whole_book_v2/ is empty (C2-P01 respected)"
+  ],
+  "known_out_of_scope": [
+    "No pipeline: BlockPlanner, BlockExtractor, StageReducer, StageInterpreter, EntityResolver, TopicSynthesizer, FinalSynthesizer are Phase 2 and later.",
+    "No routing: nothing in the product calls the new package; the existing whole-book path is untouched and whole_book_v2/** is not modified (C2-P01).",
+    "No UI change of any kind.",
+    "Zero real provider calls. One manual per-provider capability probe (OQ-1) is expected but is recorded by hand, not automated.",
+    "PACING_CURVE_BINS_MAX, tokenizer ratios and the recall floor stay at their empirical defaults; they are measured at their own phase gates (T8.5, OQ-1/OQ-2/OQ-15), not here."
+  ],
+  "data_compatibility": {
+    "database_changed": true,
+    "migration_required": true,
+    "user_data_compatible": true,
+    "notes": "Additive only: fifteen new long_novel_* tables plus a unit_key column on model_invocations. No existing table is altered destructively and no existing row is rewritten. analysis_run_id uniqueness is enforced by a partial unique index so legacy NULL rows stay legal. Rollback is a flag flip with no data migration; the older-build downgrade smoke covers the real rollback path."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "P2",
+  "head_inclusion": null,
+  "created_at": "2026-08-12T00:00:00Z",
+  "updated_at": "2026-08-12T00:00:00Z"
+}

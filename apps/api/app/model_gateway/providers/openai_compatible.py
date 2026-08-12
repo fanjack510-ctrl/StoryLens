@@ -39,6 +39,8 @@ class OpenAICompatibleProvider(ModelProvider):
         default_model: str,
         timeout_seconds: int,
         max_context_tokens: int,
+        max_output_tokens: int = 4096,
+        max_output_tokens_source: str = "conservative_default",
         enabled: bool = True,
         profile_name: str = "",
         default: bool = False,
@@ -63,6 +65,11 @@ class OpenAICompatibleProvider(ModelProvider):
         self.default_model = default_model
         self.timeout_seconds = timeout_seconds
         self.max_context_tokens = max_context_tokens
+        # Output ceiling is tracked separately from context: a model may accept a large
+        # context and still cap one reply far below it, and it is the reply cap that
+        # decides how many chapters fit in one extraction unit.
+        self.max_output_tokens = max_output_tokens
+        self.max_output_tokens_source = max_output_tokens_source
         self.enabled = enabled
         self.profile_name = profile_name
         self.is_default = default
@@ -195,6 +202,8 @@ class OpenAICompatibleProvider(ModelProvider):
     def capabilities(self) -> ProviderCapabilities:
         return ProviderCapabilities(
             max_context_tokens=self.max_context_tokens,
+            max_output_tokens=self.max_output_tokens,
+            max_output_tokens_source=self.max_output_tokens_source,
             default_timeout_seconds=self.timeout_seconds,
             enabled=self.enabled,
             profile_name=self.profile_name,

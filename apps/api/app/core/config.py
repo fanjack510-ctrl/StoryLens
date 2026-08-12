@@ -59,6 +59,8 @@ class Settings(BaseSettings):
     aliyun_flash_model: str = "qwen3.6-flash"
     aliyun_timeout_seconds: int = 300
     aliyun_max_retries: int = 3
+    # OQ-1, as for DeepSeek: 0 means not probed.
+    aliyun_probed_max_output_tokens: int = 0
     # DEFECT-CANARY-009: cloud transport resilience (total attempts incl. initial)
     aliyun_transport_max_attempts: int = 3
     aliyun_transport_retry_delay_1_min: float = 2.0
@@ -82,6 +84,11 @@ class Settings(BaseSettings):
     deepseek_timeout_seconds: int = 300
     deepseek_max_retries: int = 3
     deepseek_structured_output_mode: str = "json_object"
+    # OQ-1: largest output the model will actually emit in one reply. 0 means "not probed",
+    # in which case the conservative default (4096) is used and is reported as unverified.
+    # This is a MANUAL probe: a guessed ceiling that is too high yields truncated assets
+    # after the call has already been paid for.
+    deepseek_probed_max_output_tokens: int = 0
 
     cloud_raw_logging: bool = False
     cloud_output_connection_test: int = 64

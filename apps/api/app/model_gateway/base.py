@@ -20,6 +20,19 @@ class ProviderCapabilities(BaseModel):
     supports_batch: bool = False
     max_context_tokens: int
     default_timeout_seconds: int
+    #: Largest number of output tokens this model will actually produce in one response.
+    #: Distinct from ``max_context_tokens``, which bounds input+output together: a model can
+    #: accept 128K of context and still refuse to emit more than 8K in one reply, and it is
+    #: the *output* ceiling that decides how much work fits in one unit. When this is
+    #: unknown the conservative default (4096) is used and ``max_output_tokens_source``
+    #: says so, because the difference between a probed and an unprobed ceiling is the
+    #: difference between 91 and 136 blocks — and between the highest and lowest fidelity
+    #: profile — for a 542-chapter book.
+    max_output_tokens: int = 4096
+    #: ``probed`` | ``declared`` | ``conservative_default`` | ``suspect``. Never inferred:
+    #: a guessed ceiling that is too high produces truncated assets after the call is paid
+    #: for, so an unverified value must be visibly unverified.
+    max_output_tokens_source: str = "conservative_default"
     enabled: bool = True
     profile_name: str = ""
     default: bool = False

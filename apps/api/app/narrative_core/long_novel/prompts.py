@@ -1,0 +1,109 @@
+"""L1 prompt contract (03 §2.6, §8).
+
+The prompt is part of the frozen contract, not decoration: its content hash enters
+``semantic_compat_key``, so changing the wording invalidates reuse rather than silently
+altering what "the same extraction" means.
+
+Two instructions here are doing the real work:
+
+**Every fact must cite a paragraph anchor.** A fact with no anchor cannot be traced, cannot
+be keyed (``fact_key`` is derived partly from its primary evidence), and cannot be shown to
+a reader with a quote. Making this structural rather than optional is what separates this
+engine from one that produces confident unsourced summaries.
+
+**Do not interpret.** Normalised pacing scores, act structure and canonical character
+identity all require whole-book knowledge that a single block does not have. Asking for them
+here would get plausible numbers invented from a fragment, which is worse than not asking.
+"""
+
+from __future__ import annotations
+
+import hashlib
+
+from app.narrative_core.long_novel.contracts.density import DensityProfile
+
+__all__ = ["SYSTEM_PROMPT", "build_user_prompt", "prompt_template_hash"]
+
+
+SYSTEM_PROMPT = """你是小说文本的事实抽取器。你的唯一任务是从给定正文中抽取**可核对的事实**，并以严格 JSON 返回。
+
+绝对规则：
+
+1. 只输出 JSON，不要代码块围栏，不要任何解释文字。
+2. 正文按 `=== 第 K 章 ===` 分章，每个自然段前有 `[p:N]` 标记。所有 `chapter_ref` 必须填该章的 K。**每一条事实都必须在 `evidence` 里引用至少一个 `paragraph_ref`**，且该 N 必须真实出现在正文中。禁止引用不存在的 N。
+3. 只抽取正文中**写明或可直接指认**的内容。不要推断全书层面的信息：不要给 0–100 的节奏评分，不要判断幕结构，不要断定两个称呼是不是同一个人（除非正文明说）。
+4. `mentions` 里的 `surface_norm` 必须是正文中**原样出现的字符串**。不要写成规范化后的名字，不要写代词指代的对象。
+5. 严格遵守下面给出的数量上限。宁可少给，不要超限。超限的响应会被整体拒绝。
+6. `chapter_signals` **每章恰好一条，一条不能多一条不能少**。正文里出现了几个 `=== 第 K 章 ===`，就必须返回几条，`chapter_ref` 分别为各章的 K。
+
+字段含义：
+- `events`：发生了什么，`summary` ≤50 字。
+- `character_state_changes`：某人状态从 A 变成 B。
+- `causal_links`：哪件事导致哪件事。
+- `suspense_threads` / `suspense_actions`：抛出的疑问，以及推进或回答它的动作。
+- `relationship_changes` / `goal_changes` / `choices`：关系、目标、抉择的变化。
+- `mentions`：人物称呼在某段的出现。`provisional_entities` 把你认为指同一人的 mention 下标归为一组。
+- `identity_assertions`：正文**明确**说明两个称呼是/不是同一人时才写。
+"""
+
+
+_SCHEMA_SKELETON = """{
+  "chapter_signals": [{"chapter_ref": 1, "dialogue_paragraphs": 0, "action_paragraphs": 0,
+                       "interiority_paragraphs": 0, "scene_breaks": 0, "new_information_beats": 0,
+                       "hook_present": false, "evidence": [{"paragraph_ref": 1}]}],
+  "events": [{"summary": "", "actors": [""], "chapter_ref": 1, "evidence": [{"paragraph_ref": 1}]}],
+  "character_state_changes": [{"entity_ref": "", "from_state": "", "to_state": "", "chapter_ref": 1,
+                               "evidence": [{"paragraph_ref": 1}]}],
+  "causal_links": [{"cause_fact_ref": "", "effect_fact_ref": "", "evidence": [{"paragraph_ref": 1}]}],
+  "suspense_threads": [{"question": "", "opened_chapter_ref": 1, "evidence": [{"paragraph_ref": 1}]}],
+  "suspense_actions": [{"thread_ref": "", "action_kind": "advance", "information_added": "",
+                        "chapter_ref": 1, "evidence": [{"paragraph_ref": 1}]}],
+  "relationship_changes": [{"from_entity_ref": "", "to_entity_ref": "", "relation": "",
+                            "evidence": [{"paragraph_ref": 1}]}],
+  "goal_changes": [{"entity_ref": "", "goal_text": "", "change_kind": "formed",
+                    "evidence": [{"paragraph_ref": 1}]}],
+  "choices": [{"entity_ref": "", "decision": "", "costs": [], "gains": [],
+               "evidence": [{"paragraph_ref": 1}]}],
+  "identity_assertions": [{"left_entity_ref": "", "right_entity_ref": "", "assertion": "uncertain",
+                           "evidence": [{"paragraph_ref": 1}]}],
+  "mentions": [{"surface_norm": "", "paragraph_ref": 1, "evidence": [{"paragraph_ref": 1}]}],
+  "provisional_entities": [{"member_mention_indexes": [0], "display_surface_norm": "", "role_hint": ""}],
+  "carry_forward_out": {"open_thread_refs": [], "active_goal_refs": [],
+                        "active_continuity_refs": [], "unresolved_note": ""}
+}"""
+
+
+def build_user_prompt(
+    *, rendered_text: str, profile: DensityProfile, carry_in_summary: str = ""
+) -> str:
+    """Assemble the user frame: caps, schema, carry-in slate, then the text.
+
+    The text goes **last** so the caps and schema are not pushed out of the model's
+    attention by a long block — the instruction the model is most likely to drop is the one
+    furthest from the end.
+    """
+    p = profile
+    caps = f"""数量上限（每章）：事件 {p.events_per_chapter}，状态变化 {p.state_changes_per_chapter}，因果 {p.causal_per_chapter}，悬念动作 {p.suspense_actions_per_chapter}，人物称呼 {p.mentions_per_chapter}
+数量上限（整块）：关系变化 {p.relationships_per_block}，目标变化 {p.goals_per_block}，抉择 {p.choices_per_block}，新悬念 {p.threads_per_block}，身份断言 {p.identities_per_block}，人物聚类 {p.max_provisional_entities}
+每条事实的 evidence 最多 {p.evidence_refs_per_fact} 个"""
+
+    carry = f"\n上一块结束时仍未了结的线索：\n{carry_in_summary}\n" if carry_in_summary else ""
+
+    return f"""{caps}
+{carry}
+按此结构返回（空数组合法，不要省略键）：
+{_SCHEMA_SKELETON}
+
+正文：
+{rendered_text}"""
+
+
+def prompt_template_hash(profile: DensityProfile) -> str:
+    """Content hash of the prompt as sent, minus the novel text.
+
+    Enters ``semantic_compat_key``: reword the prompt and stored assets stop being
+    considered the same extraction, which is the honest outcome — they were produced under
+    different instructions.
+    """
+    material = SYSTEM_PROMPT + _SCHEMA_SKELETON + profile.name
+    return hashlib.sha256(material.encode("utf-8")).hexdigest()
