@@ -248,8 +248,8 @@ def build_characters_section(
         "availability": "available",
         "protagonist": {
             "initial_identity": str(lead.get("display_surface_norm", "")),
-            "initial_goal": "",
-            "final_goal": "",
+            "initial_goal": str((tracks or {}).get("initial_goal", "")),
+            "final_goal": str((tracks or {}).get("final_goal", "")),
             "final_identity": str(lead.get("display_surface_norm", "")),
             "stages": list((tracks or {}).get("stages", [])),
             # The four tracks are where the 主角历程 page gets its content. Left empty they
@@ -467,6 +467,7 @@ def build_overview_section(
     *,
     goal_evolution: Sequence[str] = (),
     conflict_evolution: Sequence[str] = (),
+    turning_points: Sequence[Mapping[str, Any]] = (),
 ) -> dict[str, Any]:
     """The whole-book overview, from the final synthesis call.
 
@@ -498,7 +499,7 @@ def build_overview_section(
         "major_storylines": [str(x) for x in base.get("major_storylines", [])],
         "major_turning_points": [
             x for x in base.get("major_turning_points", []) if isinstance(x, Mapping)
-        ],
+        ] or list(turning_points),
         "major_suspense": [str(x) for x in base.get("major_suspense", [])],
         "final_climax": str(base.get("final_climax", "")),
         "ending_resolution": [str(x) for x in base.get("ending_resolution", [])],

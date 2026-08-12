@@ -16,6 +16,7 @@ import os
 import subprocess
 import sys
 import tempfile
+from pathlib import Path
 
 import pytest
 from sqlalchemy import create_engine, event, inspect, text
@@ -186,7 +187,10 @@ def test_t0_18_id_derivation_is_deterministic_across_processes():
         "from app.narrative_core.long_novel import ids\n"
         "print(ids.fact_key('event', {'a': '甲'}, ['EVD-x'], prefix='EVT'))\n"
         "print(ids.provider_input_fingerprint('block', 'v1', {'b': [1, 2], 'a': '乙'}))\n"
-    ) % os.getcwd()
+        # Anchored to the package's own location, not the working directory: run from the
+        # repository root this test used to fail on an import error and read as a broken
+        # invariant, which is the most misleading way for a test to fail.
+    ) % str(Path(ids.__file__).resolve().parents[3])
     env = dict(os.environ, PYTHONHASHSEED="0")
     first = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True, env=env)
     env["PYTHONHASHSEED"] = "12345"
@@ -786,3 +790,105 @@ def test_invariant_report_raises_with_every_violation_not_just_the_first():
     with pytest.raises(LongNovelError) as exc:
         report.raise_if_violated()
     assert len(exc.value.detail["violations"]) == 2
+
+
+# ==========================================================  derived sections vs the contract
+#
+# Every section below is built by the engine from facts it already holds, with no provider
+# call involved. That makes them cheap to get wrong in a way nothing catches: the fake
+# provider run exercises the code path but a deterministic builder can still emit a value the
+# contract rejects, and the first thing that notices is validation at the end of a paid run
+# over the whole book. One such escape has already happened — ``pacing_regions`` emitted the
+# Chinese label 高潮 where the contract declares a closed English vocabulary, and it surfaced
+# only after 115 real calls had been spent. These tests move that discovery to 0.2 seconds.
+
+def _curve(drives: list[int]) -> list[dict]:
+    return [
+        {"chapter_start": i * 8 + 1, "chapter_end": i * 8 + 8, "reading_drive": d}
+        for i, d in enumerate(drives)
+    ]
+
+
+def test_pacing_regions_emit_contract_vocabulary_not_display_text():
+    from app.narrative_core.long_novel.orchestrator import RunCoordinator
+    from app.narrative_core.whole_book_v2.contracts import PacingRegion
+
+    regions = RunCoordinator._pacing_regions(_curve([90, 92, 88, 91, 50, 10, 8, 12, 9]))
+    kinds = {r["type"] for r in regions}
+    assert kinds == {"climax", "fatigue"}, kinds
+    for region in regions:
+        PacingRegion.model_validate(region)      # the step that failed on the paid run
+    # The reader-facing label still says it in Chinese; it just lives where prose belongs.
+    assert any("高潮" in r["reason"] for r in regions)
+    assert any("平缓" in r["reason"] for r in regions)
+
+
+def test_pacing_regions_ignore_runs_shorter_than_three_bins():
+    from app.narrative_core.long_novel.orchestrator import RunCoordinator
+
+    assert RunCoordinator._pacing_regions(_curve([90, 91, 40, 40, 40])) == []
+
+
+def test_derived_story_sections_validate_against_the_contract():
+    from app.narrative_core.whole_book_v2.contracts import (
+        ChronologyEvent, PacingMarker, Storyline, TurningPoint,
+    )
+    from app.narrative_core.long_novel.orchestrator import RunCoordinator
+
+    lifecycles = [
+        {"question": "卷宗去哪了", "chapter_start": 3, "chapter_end": 210, "status": "resolved",
+         "importance": 0.9, "events": [{"chapter": 3, "description": "卷宗失踪"},
+                                       {"chapter": 210, "description": "在档案室找到"}]},
+        {"question": "谁是内鬼", "chapter_start": 40, "chapter_end": 60, "status": "unresolved",
+         "importance": 0.4, "events": []},
+    ]
+    for line in RunCoordinator._storylines(lifecycles):
+        Storyline.model_validate(line)
+
+    interpretations = [
+        {"title": "第一幕", "chapter_start_order": 1, "chapter_end_order": 120,
+         "stage_goal": "查清来历", "turning_point": "档案室失火", "summary": "开端"},
+        {"title": "第二幕", "chapter_start_order": 121, "chapter_end_order": 300,
+         "stage_goal": "追查", "turning_point": "", "summary": "推进"},
+    ]
+    for marker in RunCoordinator._event_markers(interpretations, lifecycles):
+        PacingMarker.model_validate(marker)
+    turns = RunCoordinator._turning_points(interpretations)
+    # The stage with no turning point contributes none rather than an empty one.
+    assert len(turns) == 1
+    for turn in turns:
+        TurningPoint.model_validate(turn)
+    assert ChronologyEvent is not None
+
+
+def test_revision_priorities_drop_what_the_contract_cannot_hold():
+    from app.narrative_core.long_novel.adapter import build_assessment_section
+    from app.narrative_core.whole_book_v2.contracts import RevisionPriority
+
+    section = build_assessment_section({
+        "overall_summary": "总评",
+        "revision_priorities": [
+            {"chapter_ranges": [[10, 20]], "direction": "压缩", "preserve": ["主线"]},
+            "把交接提前",
+            {"chapter_ranges": [["坏", 5]], "direction": "补写"},
+            {"direction": "第四条，超出三档"},
+        ],
+        "preserve_list": ["开篇铺设", "   ", "关系层次"],
+    })
+    priorities = section["revision_priorities"]
+    assert [p["priority"] for p in priorities] == ["first", "second", "third"]
+    assert priorities[2]["chapter_ranges"] == []     # the malformed range, not the whole item
+    assert section["preserve_list"] == ["开篇铺设", "关系层次"]
+    for priority in priorities:
+        RevisionPriority.model_validate(priority)
+
+
+def test_type_profile_stays_absent_rather_than_claiming_a_genre():
+    from app.narrative_core.long_novel.adapter import build_type_profile_section
+
+    assert build_type_profile_section(None) is None
+    assert build_type_profile_section({"one_sentence_story": "有故事没类型"}) is None
+    profile = build_type_profile_section({"primary_genre": "悬疑", "narrative_drivers": ["秘密"]})
+    assert profile["primary_genre"] == "悬疑"
+    # The engine measures no genre agreement, so it must not put a number on one.
+    assert profile["genre_confidence"] == 0.0

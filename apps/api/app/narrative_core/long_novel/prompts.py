@@ -49,8 +49,13 @@ SYSTEM_PROMPT = """你是小说文本的事实抽取器。你的唯一任务是�
 4. `mentions` 里的 `surface_norm` 必须是正文中**原样出现的字符串**。不要写成规范化后的名字，不要写代词指代的对象。
 5. 严格遵守下面给出的数量上限。宁可少给，不要超限。超限的响应会被整体拒绝。
 6. `chapter_signals` **每章恰好一条，一条不能多一条不能少**。正文里出现了几个 `=== 第 K 章 ===`，就必须返回几条，`chapter_ref` 分别为各章的 K。
+7. `chapter_signals` 里的数字是**清点结果**，必须逐章真实统计。一章正文里有对话就一定有 `dialogue_paragraphs > 0`。整块的计数全是 0 的响应会被拒绝。
 
 字段含义：
+- `chapter_signals`：**逐章清点段落数量**，不是打分。`dialogue_paragraphs` 数该章有对话的段落数；
+  `action_paragraphs` 数以动作推进为主的段落数；`interiority_paragraphs` 数写心理活动的段落数；
+  `scene_breaks` 数场景切换次数；`new_information_beats` 数该章给出新信息的次数；
+  `hook_present` 表示章末是否留了钩子。这几个数字决定全书节奏曲线，**必须真实清点**。
 - `events`：发生了什么，`summary` ≤50 字。
 - `character_state_changes`：某人状态从 A 变成 B。
 - `causal_links`：哪件事导致哪件事。
@@ -62,9 +67,9 @@ SYSTEM_PROMPT = """你是小说文本的事实抽取器。你的唯一任务是�
 
 
 _SCHEMA_SKELETON = """{
-  "chapter_signals": [{"chapter_ref": 1, "dialogue_paragraphs": 0, "action_paragraphs": 0,
-                       "interiority_paragraphs": 0, "scene_breaks": 0, "new_information_beats": 0,
-                       "hook_present": false, "evidence": [{"paragraph_ref": 1}]}],
+  "chapter_signals": [{"chapter_ref": 1, "dialogue_paragraphs": 12, "action_paragraphs": 7,
+                       "interiority_paragraphs": 3, "scene_breaks": 1, "new_information_beats": 4,
+                       "hook_present": true, "evidence": [{"paragraph_ref": 1}]}],
   "events": [{"summary": "", "actors": [""], "chapter_ref": 1, "evidence": [{"paragraph_ref": 1}]}],
   "character_state_changes": [{"entity_ref": "", "from_state": "", "to_state": "", "chapter_ref": 1,
                                "evidence": [{"paragraph_ref": 1}]}],

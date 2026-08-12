@@ -35,6 +35,7 @@ from app.narrative_core.whole_book_v2.contracts import (
     SuspenseEvent,
     StoryStage,
     SuspenseLifecycle,
+    TurningPoint,
 )
 
 from app.narrative_core.long_novel.adapter import (
@@ -75,6 +76,31 @@ from app.narrative_core.long_novel.topics import (
 # the book. Events are sampled evenly across the span rather than truncated at the front, so
 # the last act is represented as well as the first.
 _CHRONOLOGY_MAX = 200
+
+#: Characters that carry no identifying weight when matching a thread label to the question
+#: it refers to. Dropping them lets 「教堂低语声」 reach 「教堂中的低语声是否来自葛莫娜？」.
+_THREAD_NOISE = "的了是否会与和在有为吗呢？?、，,。 　"
+
+
+def _refers_to(label: str, question: str) -> bool:
+    """Does this thread label name that suspense question?
+
+    Substring either way first, then a comparison with filler characters removed. The model
+    is consistent about *which* thread it means and inconsistent about how much of the
+    question it repeats, so the match has to tolerate the second without inventing the first:
+    a shared core of at least four characters is required, which is long enough that two
+    different questions in the same book do not collide.
+    """
+    if not label or not question:
+        return False
+    if label in question or question in label:
+        return True
+    strip = str.maketrans("", "", _THREAD_NOISE)
+    a, b = label.translate(strip), question.translate(strip)
+    if len(a) < 4:
+        return False
+    return a in b or b in a
+
 
 _SUSPENSE_EVENT_TYPES = {
     "open": "hook",
@@ -148,6 +174,9 @@ class RunCoordinator:
         #: legitimately cite the same paragraph, and the index is what makes every claim in
         #: the finished report followable back to a sentence.
         self._evidence: dict[str, dict[str, Any]] = {}
+        #: block_key → {paragraph_ref: evidence_id}. Paragraph numbers are block-local, so a
+        #: fact's citation can only be resolved against the block it came from.
+        self._anchors: dict[str, dict[int, str]] = {}
 
     def run(
         self,
@@ -271,8 +300,7 @@ class RunCoordinator:
                 chain.append(f"{link.cause_fact_ref} → {link.effect_fact_ref}")
         return chain[:60]
 
-    @staticmethod
-    def _suspense_lifecycles(assets: dict[str, BlockAsset]) -> list[dict[str, Any]]:
+    def _suspense_lifecycles(self, assets: dict[str, BlockAsset]) -> list[dict[str, Any]]:
         """Assemble each thread's life from the actions that touched it.
 
         A thread is opened once and then advanced, misdirected or resolved by later actions.
@@ -292,10 +320,14 @@ class RunCoordinator:
                         "status": "unresolved",
                     },
                 )
-        for asset in assets.values():
+        for block_key, asset in assets.items():
             for action in asset.suspense_actions:
                 for entry in opened.values():
-                    if action.thread_ref and action.thread_ref in entry["question"]:
+                    # A thread is opened as a question ("教堂中的低语声是否来自葛莫娜？") and
+                    # returned to by a label ("教堂低语声"). Matching in one direction only
+                    # dropped the actions whose label was not literally a substring, and a
+                    # lifecycle with no actions is a question the UI shows as never revisited.
+                    if action.thread_ref and _refers_to(action.thread_ref, entry["question"]):
                         entry["events"].append(
                             conform(
                                 SuspenseEvent,
@@ -306,6 +338,7 @@ class RunCoordinator:
                                     ),
                                     "description": action.information_added,
                                     "information_added": action.information_added,
+                                    "evidence": self._cite(block_key, action),
                                 },
                             )
                         )
@@ -332,8 +365,7 @@ class RunCoordinator:
             )
         return lifecycles
 
-    @staticmethod
-    def _growth_tracks(assets: dict[str, BlockAsset], lead: str) -> dict[str, list[dict[str, Any]]]:
+    def _growth_tracks(self, assets: dict[str, BlockAsset], lead: str) -> dict[str, list[dict[str, Any]]]:
         """The protagonist's four tracks, from the state changes L1 already recorded.
 
         The whole 主角历程 page rendered as 「邓肯 → 邓肯」 because none of this was ever
@@ -348,7 +380,7 @@ class RunCoordinator:
 
         ABILITY = ("能力", "掌握", "学会", "力量", "技能", "获得")
         BELIEF = ("相信", "信念", "怀疑", "决心", "信仰", "认知")
-        for asset in assets.values():
+        for block_key, asset in assets.items():
             for change in asset.character_state_changes:
                 if lead and lead not in change.entity_ref:
                     continue
@@ -358,7 +390,9 @@ class RunCoordinator:
                     "state": f"{change.from_state} → {change.to_state}",
                     "cost_paid": [],
                     "gain_received": [],
-                    "evidence": [e.paragraph_content_hash for e in change.evidence if e.paragraph_content_hash][:2],
+                    # ``paragraph_content_hash`` was used here and is empty in every real
+                    # response — the model is not asked for it. The resolved evidence id is.
+                    "evidence": self._cite(block_key, change),
                 }
                 blob = change.from_state + change.to_state
                 if any(k in blob for k in ABILITY):
@@ -415,6 +449,45 @@ class RunCoordinator:
         return goals[:20], conflicts[:20]
 
     @staticmethod
+    def _lead_goals(assets: dict[str, BlockAsset], lead: str) -> tuple[str, str]:
+        """The lead's first and last stated goal, in narrative order.
+
+        The protagonist header was rendering 「邓肯 → 邓肯」 with no goal on either side,
+        while every goal change the lead makes was sitting in the assets unread.
+        """
+        if not lead:
+            return "", ""
+        stated: list[tuple[int, str]] = []
+        for asset in assets.values():
+            for change in asset.goal_changes:
+                if lead and lead in change.entity_ref:
+                    chapter = asset.chapter_signals[0].chapter_ref if asset.chapter_signals else 1
+                    stated.append((chapter, change.goal_text))
+        if not stated:
+            return "", ""
+        stated.sort(key=lambda row: row[0])
+        return stated[0][1], stated[-1][1]
+
+    @staticmethod
+    def _turning_points(interpretations: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
+        """The book's turning points, as the stage interpretations named them."""
+        points: list[dict[str, Any]] = []
+        for item in interpretations:
+            if not isinstance(item, Mapping):
+                continue
+            text = str(item.get("turning_point", "")).strip()
+            if not text:
+                continue
+            start = int(item.get("chapter_start_order", 1) or 1)
+            points.append(conform(TurningPoint, {
+                "chapter_start": start,
+                "chapter_end": max(start, int(item.get("chapter_end_order", start) or start)),
+                "title": str(item.get("title", "")) or "转折",
+                "description": text,
+            }))
+        return points
+
+    @staticmethod
     def _pacing_regions(points: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
         """Name the stretches a reader would actually feel, from the computed curve.
 
@@ -427,23 +500,30 @@ class RunCoordinator:
         regions: list[dict[str, Any]] = []
         run_kind: str | None = None
         start = 0
-        for index, point in enumerate(points + [None]):  # sentinel closes the last run
+        for index, point in enumerate(list(points) + [None]):  # sentinel closes the last run
             kind = None
             if point is not None:
                 drive = point["reading_drive"]
-                kind = "高潮" if drive >= 75 else ("平缓" if drive <= 25 else None)
+                # ``type`` is a closed vocabulary in the contract. It reached the document in
+                # Chinese and failed validation on a finished paid run — the label a reader
+                # sees belongs in ``reason``, never in the enum.
+                kind = "climax" if drive >= 75 else ("fatigue" if drive <= 25 else None)
             if kind != run_kind:
                 if run_kind and index - start >= 3:
+                    slow = run_kind == "fatigue"
                     regions.append(
                         {
                             "chapter_start": points[start]["chapter_start"],
                             "chapter_end": points[index - 1]["chapter_end"],
                             "type": run_kind,
-                            "reason": f"连续 {index - start} 个区间的阅读驱动力处于{run_kind}区",
+                            "reason": (
+                                f"连续 {index - start} 个区间的阅读驱动力处于"
+                                f"{'平缓' if slow else '高潮'}区"
+                            ),
                             "related_events": [],
                             "diagnosis": (
                                 "读者推进力持续偏低，可考虑压缩或加入转折"
-                                if run_kind == "平缓"
+                                if slow
                                 else "高强度段落，注意前后的缓冲"
                             ),
                         }
@@ -478,6 +558,37 @@ class RunCoordinator:
         ]
 
     @staticmethod
+    def _annotate_pacing(
+        points: Sequence[dict[str, Any]], assets: dict[str, BlockAsset]
+    ) -> None:
+        """Name what happens inside each band of the curve.
+
+        The curve answers "how fast" but every point was rendering its ``dominant_events`` and
+        ``reason`` empty, so the reader got a shape with nothing attached to it. Both come
+        from events already extracted for those chapters — the curve and the events finally
+        describe the same stretch of book.
+
+        ``story_consequence`` is left alone: it is a judgement about what a stretch did to the
+        story, and there is nothing measured to derive it from.
+        """
+        by_chapter: dict[int, list[str]] = {}
+        for asset in assets.values():
+            for event in asset.events:
+                by_chapter.setdefault(event.chapter_ref, []).append(event.summary)
+        if not by_chapter:
+            return
+        for point in points:
+            start = int(point.get("chapter_start", 1) or 1)
+            end = int(point.get("chapter_end", start) or start)
+            summaries: list[str] = []
+            for chapter in range(start, end + 1):
+                summaries.extend(by_chapter.get(chapter, ()))
+            if not summaries:
+                continue
+            point["dominant_events"] = summaries[:5]
+            point["reason"] = f"第 {start}–{end} 章共记录 {len(summaries)} 个事件"
+
+    @staticmethod
     def _storylines(lifecycles: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
         """Project suspense lifecycles onto the storyline shape the UI renders.
 
@@ -485,10 +596,14 @@ class RunCoordinator:
         differ in presentation, not in the underlying facts. Building both from one source
         keeps them from disagreeing about the same book.
         """
+        # Ranked by how often the book returns to a thread, and only then by how far it
+        # reaches. Ranking by span first put threads with a single node at the top of the
+        # storyline page: a question asked once in chapter 266 and never revisited is not the
+        # main storyline, however late the book stops mentioning it.
         ranked = sorted(
             lifecycles,
-            key=lambda e: (int(e.get("chapter_end", 1)) - int(e.get("chapter_start", 1)),
-                           len(e.get("events", []))),
+            key=lambda e: (len(e.get("events", [])),
+                           int(e.get("chapter_end", 1)) - int(e.get("chapter_start", 1))),
             reverse=True,
         )[:24]
         lines: list[dict[str, Any]] = []
@@ -506,9 +621,10 @@ class RunCoordinator:
             lines.append(conform(Storyline, {
                 "storyline_id": f"SL-{index}",
                 "name": str(entry.get("question", "")),
-                # The longest-running threads carry the book; the rest are subplots. This is a
-                # measured span, not a judgement about which thread the author cared about.
-                "type": "main" if index <= 3 else "subplot",
+                # A main storyline is one the book keeps coming back to. Requiring three
+                # returns as well as a top rank means a thin book gets no mainline rather
+                # than a promoted one-node thread.
+                "type": "main" if index <= 3 and len(nodes) >= 3 else "subplot",
                 "importance": float(entry.get("importance", 0.0) or 0.0),
                 "chapter_start": int(entry.get("chapter_start", 1) or 1),
                 "chapter_end": int(entry.get("chapter_end", 1) or 1),
@@ -518,8 +634,24 @@ class RunCoordinator:
             }))
         return lines
 
-    @staticmethod
-    def _chronology(assets: dict[str, BlockAsset]) -> list[dict[str, Any]]:
+    def _cite(self, block_key: str, fact: Any) -> list[str]:
+        """Resolve a fact's paragraph citations to evidence ids a reader can follow.
+
+        The index was being published with 3,362 real quotes in it and not one claim
+        pointing at any of them, because the paragraph numbers a fact cites are block-local
+        and nothing carried the block's mapping this far. Unresolvable anchors are dropped
+        rather than passed through: an id that resolves to nothing is worse than no id, since
+        the UI offers the reader a link that goes nowhere.
+        """
+        anchors = self._anchors.get(block_key, {})
+        found: list[str] = []
+        for ref in getattr(fact, "evidence", ()) or ():
+            evidence_id = anchors.get(getattr(ref, "paragraph_ref", 0))
+            if evidence_id and evidence_id not in found:
+                found.append(evidence_id)
+        return found[:3]
+
+    def _chronology(self, assets: dict[str, BlockAsset]) -> list[dict[str, Any]]:
         """Events in the order the book tells them.
 
         ``story_order`` is set equal to ``narrative_order``: nothing in the L1 contract marks
@@ -527,13 +659,9 @@ class RunCoordinator:
         "not detected", which is the truth here — they do not say "no flashbacks exist".
         """
         rows: list[tuple[int, str, list[str]]] = []
-        for asset in assets.values():
+        for block_key, asset in assets.items():
             for event in asset.events:
-                rows.append((
-                    event.chapter_ref,
-                    event.summary,
-                    [ref.evidence_id for ref in event.evidence if getattr(ref, "evidence_id", "")],
-                ))
+                rows.append((event.chapter_ref, event.summary, self._cite(block_key, event)))
         rows.sort(key=lambda r: r[0])
         if len(rows) > _CHRONOLOGY_MAX:
             step = len(rows) / _CHRONOLOGY_MAX
@@ -591,6 +719,33 @@ class RunCoordinator:
                 }))
         markers.sort(key=lambda m: m["chapter"])
         return markers[:40]
+
+    @staticmethod
+    def _name_stages(
+        tracks: Mapping[str, Any], interpretations: Sequence[Mapping[str, Any]]
+    ) -> None:
+        """Label each point on a track with the stage its chapter falls in.
+
+        Without it a track is a list of chapter numbers, and the reader has to hold the act
+        structure in their head to know where 「对掌舵抵触 → 成为船长」 sits in the book.
+        """
+        spans = [
+            (int(item.get("chapter_start_order", 1) or 1),
+             int(item.get("chapter_end_order", 1) or 1),
+             str(item.get("title", "")))
+            for item in interpretations
+            if isinstance(item, Mapping)
+        ]
+        if not spans:
+            return
+        for name in ("external_status_track", "ability_track",
+                     "internal_belief_track", "relationship_track"):
+            for point in tracks.get(name, []):
+                chapter = int(point.get("chapter", 0) or 0)
+                for start, end, title in spans:
+                    if start <= chapter <= end:
+                        point["stage_name"] = title
+                        break
 
     @staticmethod
     def _protagonist_stages(interpretations: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
@@ -867,6 +1022,7 @@ class RunCoordinator:
                 report.provider_calls += 1
                 continue
             assets[block.block_key] = result.asset
+            self._anchors[block.block_key] = result.evidence_by_anchor
             for row in result.evidence:
                 self._evidence.setdefault(row["evidence_id"], row)
             report.blocks_extracted += 1
@@ -955,8 +1111,11 @@ class RunCoordinator:
         pacing = build_pacing_section(resample_pacing_curve(signals))
         pacing["pacing_regions"] = self._pacing_regions(pacing["points"])
         pacing["event_markers"] = self._event_markers(interpretations, suspense_lifecycles)
+        self._annotate_pacing(pacing["points"], assets)
         chapters = build_chapters_section(chapters_topic)
         tracks["stages"] = self._protagonist_stages(interpretations)
+        tracks["initial_goal"], tracks["final_goal"] = self._lead_goals(assets, lead)
+        self._name_stages(tracks, interpretations)
 
         # Each UI section has required sibling fields. Filling only the one this engine
         # produced yields a dict that looks right and fails validation, so the full shape is
@@ -1008,6 +1167,7 @@ class RunCoordinator:
                 entities,
                 goal_evolution=goal_evolution,
                 conflict_evolution=conflict_evolution,
+                turning_points=self._turning_points(interpretations),
             ),
             # The extractor knows the paragraph but not which snapshot the run is pinned to;
             # that belongs to the run, so it is stamped here rather than threaded down.

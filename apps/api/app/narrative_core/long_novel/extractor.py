@@ -96,6 +96,11 @@ class ExtractionResult:
     #: Traceability is the point of the whole design — a claim a reader cannot follow back
     #: to a sentence is the thing the old engine already produced.
     evidence: list[dict[str, Any]] = field(default_factory=list)
+    #: ``paragraph_ref`` inside this block → the evidence id it resolves to. Without it the
+    #: index is a list of quotes nothing points at: every fact cites a paragraph number that
+    #: is only meaningful within its own block, so the link has to be made here, where both
+    #: halves are still in scope.
+    evidence_by_anchor: dict[int, str] = field(default_factory=dict)
 
 
 class BlockProvider(Protocol):
@@ -288,8 +293,10 @@ class BlockExtractor:
             )
             calls += extra_calls
 
+        evidence_rows, evidence_by_anchor = self._collect_evidence(asset, rendered)
         return ExtractionResult(
-            evidence=self._collect_evidence(asset, rendered),
+            evidence=evidence_rows,
+            evidence_by_anchor=evidence_by_anchor,
             block_key=block_key,
             asset=asset,
             provider_input_fingerprint=fingerprint,
@@ -301,7 +308,7 @@ class BlockExtractor:
 
     def _collect_evidence(
         self, asset: BlockAsset, rendered: RenderedBlock
-    ) -> list[dict[str, Any]]:
+    ) -> tuple[list[dict[str, Any]], dict[int, str]]:
         """Resolve every cited anchor into a citable evidence row.
 
         The quote is sliced from the paragraph the model pointed at, truncated at a sentence
@@ -320,12 +327,14 @@ class BlockExtractor:
                     cited.add(ref.paragraph_ref)
 
         rows: list[dict[str, Any]] = []
+        anchors: dict[int, str] = {}
         for anchor in sorted(cited):
             occurrence = rendered.occurrence_keys.get(anchor)
             meta = rendered.metadata.get(anchor)
             text = rendered.texts.get(anchor)
             if occurrence is None or meta is None or text is None:
                 continue
+            anchors[anchor] = derive_evidence_id(occurrence)
             quote = text[: C.MAX_QUOTE_CHARS]
             if len(text) > C.MAX_QUOTE_CHARS:
                 cut = max(quote.rfind(mark) for mark in ("。", "！", "？", "”"))
@@ -342,7 +351,7 @@ class BlockExtractor:
                     "reason": "",
                 }
             )
-        return rows
+        return rows, anchors
 
     # ------------------------------------------------------------------ repair
     def _repair_once(
@@ -454,6 +463,38 @@ class BlockExtractor:
                 unit_key=block_key,
                 detail={"chapter_refs": sorted(refs)},
             )
+        self._check_signals_were_counted(block_key, asset)
+
+    @staticmethod
+    def _check_signals_were_counted(block_key: str, asset: BlockAsset) -> None:
+        """A block whose every counter is zero did not count; it copied the schema.
+
+        Measured, not suspected: across 102 real blocks of an 806-chapter novel, 89 came back
+        with every counter zero in every chapter, and the other 13 counted all of theirs. The
+        split was per response and not per chapter, none of those responses were truncated,
+        and the zero ones were *shorter* — so this was never an output-budget shortfall. The
+        schema example showed zeros and nothing said the numbers had to be counted.
+
+        The cardinality check above passes on such a block: the rows are all present, so
+        coverage reads 100% while three quarters of the pacing curve is a flat line. That is
+        the shape of failure this rebuild exists to stop, so it is a hard failure — the block
+        goes down the repair ladder rather than into a curve nobody can read.
+        """
+        counters = (
+            "dialogue_paragraphs", "action_paragraphs", "interiority_paragraphs",
+            "scene_breaks", "new_information_beats",
+        )
+        if not asset.chapter_signals:
+            return
+        if any(getattr(s, name) for s in asset.chapter_signals for name in counters):
+            return
+        raise LongNovelError(
+            LongNovelErrorCode.CARDINALITY_VIOLATION,
+            f"{block_key}: every chapter signal counter is zero across "
+            f"{len(asset.chapter_signals)} chapter(s); the counts were not taken",
+            unit_key=block_key,
+            detail={"chapters": len(asset.chapter_signals)},
+        )
 
     #: Bounded string lists inside a fact. Exceeding one of these is a *presentation*
     #: overrun — the extra names are real, there is just no room for them — so the list is
