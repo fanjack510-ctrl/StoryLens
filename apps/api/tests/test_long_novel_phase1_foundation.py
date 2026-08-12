@@ -940,3 +940,46 @@ def test_uncounted_block_is_repaired_once_then_kept_not_lost():
     )
     with pytest.raises(LongNovelError):
         extractor._accept_uncounted("blk-1", dict(uncounted), other, expected_chapters=2)
+
+
+def test_centrality_counts_mentions_so_the_lead_is_the_most_mentioned_character():
+    """The protagonist must be the character the book actually talks about most.
+
+    Counting clusters instead of mentions gives everyone who appears in a block the same
+    score, so the cast ties and "protagonist" becomes whoever the sort left first. A real
+    40-chapter extract named 山羊头 — a ship's figurehead — the lead of a book about 邓肯,
+    and the growth tracks followed it.
+    """
+    from app.narrative_core.long_novel.contracts.l1 import (
+        BlockAsset, EvidenceRef, Mention, ProvisionalEntity,
+    )
+    from app.narrative_core.long_novel.orchestrator import RunCoordinator
+
+    def block(counts: dict[str, int]) -> BlockAsset:
+        mentions, entities = [], []
+        for surface, times in counts.items():
+            start = len(mentions)
+            for _ in range(times):
+                mentions.append(Mention(
+                    surface_norm=surface, paragraph_ref=len(mentions) + 1,
+                    evidence=[EvidenceRef(paragraph_ref=len(mentions) + 1)],
+                ))
+            entities.append(ProvisionalEntity(
+                member_mention_indexes=list(range(start, len(mentions))),
+                display_surface_norm=surface,
+            ))
+        return BlockAsset(
+            asset_schema_version=C.ASSET_SCHEMA_VERSION,
+            mentions=mentions, provisional_entities=entities,
+        )
+
+    # 邓肯 is mentioned far more often; 山羊头 appears in exactly as many blocks.
+    assets = {
+        "blk-1": block({"邓肯": 30, "山羊头": 2}),
+        "blk-2": block({"邓肯": 25, "山羊头": 3}),
+    }
+    ranked = RunCoordinator._resolve_entities(assets)
+    names = [row["display_surface_norm"] for row in ranked]
+    assert names[0] == "邓肯", names
+    # And the score has to separate them, or importance renders 1.0 for the whole cast.
+    assert ranked[0]["centrality"] > ranked[1]["centrality"]

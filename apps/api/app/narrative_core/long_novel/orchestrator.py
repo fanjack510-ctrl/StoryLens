@@ -563,6 +563,15 @@ class RunCoordinator:
         ]
 
     @staticmethod
+    def _events_by_chapter(assets: dict[str, BlockAsset]) -> dict[int, list[str]]:
+        """Every chapter's event summaries, in the order they were extracted."""
+        by_chapter: dict[int, list[str]] = {}
+        for asset in assets.values():
+            for event in asset.events:
+                by_chapter.setdefault(event.chapter_ref, []).append(event.summary)
+        return by_chapter
+
+    @staticmethod
     def _annotate_pacing(
         points: Sequence[dict[str, Any]], assets: dict[str, BlockAsset]
     ) -> None:
@@ -576,10 +585,7 @@ class RunCoordinator:
         ``story_consequence`` is left alone: it is a judgement about what a stretch did to the
         story, and there is nothing measured to derive it from.
         """
-        by_chapter: dict[int, list[str]] = {}
-        for asset in assets.values():
-            for event in asset.events:
-                by_chapter.setdefault(event.chapter_ref, []).append(event.summary)
+        by_chapter = RunCoordinator._events_by_chapter(assets)
         if not by_chapter:
             return
         for point in points:
@@ -975,6 +981,12 @@ class RunCoordinator:
                         )
                     )
 
+        # Centrality counted in mentions, not in clusters. Counting clusters gives every
+        # character who appears anywhere in a block the same score of one, so in a five-block
+        # extract the whole cast ties at five and the "protagonist" is whoever the sort
+        # happened to leave first — which is how 山羊头 was named the lead of a book about
+        # 邓肯, and how the growth tracks ended up following the wrong character.
+        sizes = {cluster_key: len(members) for cluster_key, members, _ in clusters}
         folded: dict[str, dict[str, Any]] = {}
         for entity in resolve_entities(clusters):
             row = folded.setdefault(
@@ -983,11 +995,19 @@ class RunCoordinator:
                     "entity_key": entity.entity_key,
                     "display_surface_norm": entity.display_surface_norm,
                     "centrality": 0,
+                    "blocks": 0,
                     "evidence_ids": [],
                 },
             )
-            row["centrality"] += 1
-        return sorted(folded.values(), key=lambda r: r["centrality"], reverse=True)
+            row["centrality"] += sum(
+                sizes.get(member, 1) for member in entity.member_provisional_keys
+            ) or 1
+            row["blocks"] += 1
+        # Appearing across many blocks breaks ties between characters with similar mention
+        # counts: presence through the whole book beats a crowd scene.
+        return sorted(
+            folded.values(), key=lambda r: (r["centrality"], r["blocks"]), reverse=True
+        )
 
     # ------------------------------------------------------------------ stages
     def _extract_all(
@@ -1117,7 +1137,9 @@ class RunCoordinator:
         pacing["pacing_regions"] = self._pacing_regions(pacing["points"])
         pacing["event_markers"] = self._event_markers(interpretations, suspense_lifecycles)
         self._annotate_pacing(pacing["points"], assets)
-        chapters = build_chapters_section(chapters_topic)
+        chapters = build_chapters_section(
+            chapters_topic, chapter_events=self._events_by_chapter(assets)
+        )
         tracks["stages"] = self._protagonist_stages(interpretations)
         tracks["initial_goal"], tracks["final_goal"] = self._lead_goals(assets, lead)
         self._name_stages(tracks, interpretations)

@@ -145,6 +145,7 @@ def build_chapters_section(
     chapters_topic: Mapping[str, Any],
     *,
     chapter_titles: Mapping[int, str] | None = None,
+    chapter_events: Mapping[int, Sequence[str]] | None = None,
     aggregation_size: int = 10,
 ) -> dict[str, Any]:
     """Per-chapter functions and the heatmap, both deterministic and free."""
@@ -175,7 +176,11 @@ def build_chapters_section(
                 "title": titles.get(order, f"第 {order} 章"),
                 "primary_function": primary,
                 "secondary_functions": [],
-                "summary": "",
+                # The chapter list is the longest page in the product — 806 rows for this
+                # book — and every summary on it was blank while the events for each chapter
+                # sat extracted and unused. Joined rather than rewritten: these are the
+                # model's own ≤50-character event summaries, so the line stays traceable.
+                "summary": "；".join(chapter_events.get(order, ())[:3]) if chapter_events else "",
                 # The UI contract declares importance as a 0–1 fraction, not a 0–10 score.
                 # Filling the wrong scale would render every chapter as maximally important
                 # while validating field-by-field, so it is normalised here.
