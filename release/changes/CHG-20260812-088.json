@@ -5,7 +5,14 @@
   "base_version": "1.2.0",
   "status": "tested",
   "include_in_next_release": false,
-  "commits": [],
+  "commits": [
+    {
+      "sha": "43a36fa58cc5186aa206a7129e2ee590548a0882",
+      "message": "feat(long-novel): LongNovelAnalysisEngine Phase 1 Foundation + pipeline core",
+      "primary": true,
+      "multi_change_reason": null
+    }
+  ],
   "modules": [
     "apps/api/app/narrative_core/long_novel",
     "apps/api/app/narrative_core/migrations",
