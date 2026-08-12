@@ -402,6 +402,18 @@ class RunCoordinator:
 
         ABILITY = ("能力", "掌握", "学会", "力量", "技能", "获得")
         BELIEF = ("相信", "信念", "怀疑", "决心", "信仰", "认知")
+
+        # What the lead paid and got, indexed by the chapter it happened in, so a point on a
+        # track can carry its own ledger instead of two permanently empty columns.
+        ledger: dict[int, tuple[list[str], list[str]]] = {}
+        for asset in assets.values():
+            chapter = asset.chapter_signals[0].chapter_ref if asset.chapter_signals else 1
+            for choice in asset.choices:
+                if lead and lead not in choice.entity_ref:
+                    continue
+                costs, gains = ledger.setdefault(chapter, ([], []))
+                costs.extend(c for c in choice.costs if c)
+                gains.extend(g for g in choice.gains if g)
         for block_key, asset in assets.items():
             for change in asset.character_state_changes:
                 if lead and lead not in change.entity_ref:
@@ -410,8 +422,8 @@ class RunCoordinator:
                     "chapter": change.chapter_ref,
                     "stage_name": "",
                     "state": f"{change.from_state} → {change.to_state}",
-                    "cost_paid": [],
-                    "gain_received": [],
+                    "cost_paid": ledger.get(change.chapter_ref, ([], []))[0][:3],
+                    "gain_received": ledger.get(change.chapter_ref, ([], []))[1][:3],
                     # ``paragraph_content_hash`` was used here and is empty in every real
                     # response — the model is not asked for it. The resolved evidence id is.
                     "evidence": self._cite(block_key, change),
@@ -621,6 +633,17 @@ class RunCoordinator:
                     if name != lead and name in other:
                         row["to_lead"].append(rel.relation)
         return facts
+
+    def _evidence_by_chapter(self, assets: dict[str, BlockAsset]) -> dict[int, list[str]]:
+        """Each chapter's citable evidence ids, so a row on the chapter list can be opened."""
+        by_chapter: dict[int, list[str]] = {}
+        for block_key, asset in assets.items():
+            for event in asset.events:
+                row = by_chapter.setdefault(event.chapter_ref, [])
+                for evidence_id in self._cite(block_key, event):
+                    if evidence_id not in row:
+                        row.append(evidence_id)
+        return by_chapter
 
     @staticmethod
     def _events_by_chapter(assets: dict[str, BlockAsset]) -> dict[int, list[str]]:
@@ -901,14 +924,40 @@ class RunCoordinator:
                         break
 
     @staticmethod
-    def _protagonist_stages(interpretations: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
-        """The lead's journey, told stage by stage out of the interpretations already paid for."""
+    def _protagonist_stages(
+        interpretations: Sequence[Mapping[str, Any]],
+        tracks: Mapping[str, Any] | None = None,
+        spans: Mapping[tuple[int, int], Mapping[str, Any]] | None = None,
+    ) -> list[dict[str, Any]]:
+        """The lead's journey, told stage by stage out of the interpretations already paid for.
+
+        The four tracks already say how the lead's status, ability, belief and relationships
+        moved, chapter by chapter. Slicing them per stage answers the arc columns from the
+        same facts, instead of leaving eleven of this row's fields declared and empty.
+        """
+        def moved(track: str, start: int, end: int) -> str:
+            points = [
+                point for point in (tracks or {}).get(track, [])
+                if start <= int(point.get("chapter", 0) or 0) <= end
+            ]
+            if not points:
+                return ""
+            return str(points[-1].get("state", ""))
+
         stages: list[dict[str, Any]] = []
         for index, item in enumerate(interpretations, start=1):
             if not isinstance(item, Mapping):
                 continue
             start = int(item.get("chapter_start_order", 1) or 1)
+            end = max(start, int(item.get("chapter_end_order", start) or start))
+            ledger = (spans or {}).get((start, end), {})
             stages.append(conform(ArcStage, {
+                "status_change": moved("external_status_track", start, end),
+                "ability_change": moved("ability_track", start, end),
+                "internal_belief_change": moved("internal_belief_track", start, end),
+                "relationship_change": moved("relationship_track", start, end),
+                "cost_paid": list(ledger.get("costs", ()))[:4],
+                "gain_received": list(ledger.get("gains", ()))[:4],
                 "stage_name": str(item.get("title", "")) or f"第{index}幕",
                 "chapter": start,
                 "chapter_end": max(start, int(item.get("chapter_end_order", start) or start)),
@@ -1289,11 +1338,16 @@ class RunCoordinator:
         pacing["event_markers"] = self._event_markers(interpretations, suspense_lifecycles)
         self._annotate_pacing(pacing["points"], assets)
         chapters = build_chapters_section(
-            chapters_topic, chapter_events=self._events_by_chapter(assets)
+            chapters_topic,
+            chapter_events=self._events_by_chapter(assets),
+            chapter_evidence=self._evidence_by_chapter(assets),
         )
-        tracks["stages"] = self._protagonist_stages(interpretations)
         tracks["initial_goal"], tracks["final_goal"] = self._lead_goals(assets, lead)
         self._name_stages(tracks, interpretations)
+        # After the tracks are named, so the arc stages can slice them.
+        tracks["stages"] = self._protagonist_stages(
+            interpretations, tracks, self._stage_spans(assets, interpretations)
+        )
 
         # Each UI section has required sibling fields. Filling only the one this engine
         # produced yields a dict that looks right and fails validation, so the full shape is

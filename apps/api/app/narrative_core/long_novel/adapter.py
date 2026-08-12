@@ -146,6 +146,7 @@ def build_chapters_section(
     *,
     chapter_titles: Mapping[int, str] | None = None,
     chapter_events: Mapping[int, Sequence[str]] | None = None,
+    chapter_evidence: Mapping[int, Sequence[str]] | None = None,
     aggregation_size: int = 10,
 ) -> dict[str, Any]:
     """Per-chapter functions and the heatmap, both deterministic and free."""
@@ -192,7 +193,7 @@ def build_chapters_section(
                     ),
                     2,
                 ),
-                "evidence": [],
+                "evidence": list((chapter_evidence or {}).get(order, ()))[:3],
             }
         )
 
