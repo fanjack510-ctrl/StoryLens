@@ -356,12 +356,29 @@ class RunCoordinator:
         for index, entry in enumerate(
             sorted(opened.values(), key=lambda e: len(e["events"]), reverse=True)[:40], start=1
         ):
+            # The lifecycle columns are just the thread's own events sorted by what each one
+            # did to the question. They stayed empty for as long as the extraction returned
+            # every action as "advance".
+            def _of(*kinds: str) -> list[str]:
+                return [
+                    str(event.get("description") or event.get("information_added") or "")
+                    for event in entry["events"]
+                    if event.get("type") in kinds
+                ][:6]
+
+            payoffs = _of("payoff")
             lifecycles.append(
                 conform(
                     SuspenseLifecycle,
                     {
                         **entry,
                         "suspense_id": f"SUS-{index}",
+                        "clues": _of("clue", "foreshadow"),
+                        "misdirections": _of("misdirection"),
+                        "partial_reveals": _of("partial_reveal", "reveal"),
+                        "twist": next(iter(_of("twist")), ""),
+                        "payoff": payoffs[0] if payoffs else "",
+                        "truth": payoffs[-1] if payoffs else "",
                         # Importance is the count of times the story came back to it — a
                         # measured signal, not an opinion about what matters.
                         "importance": round(min(1.0, len(entry["events"]) / 10), 2),
@@ -562,6 +579,49 @@ class RunCoordinator:
             for entry in sorted(pairs.values(), key=lambda e: len(e["evolution"]), reverse=True)[:30]
         ]
 
+    def _character_facts(
+        self, assets: dict[str, BlockAsset], names: Sequence[str], lead: str
+    ) -> dict[str, dict[str, Any]]:
+        """Everything the extraction already knows about each named character.
+
+        The character page declared thirteen fields per person and filled two of them, while
+        the events they act in, the goals they form, the choices they pay for and the
+        relationships they change were all sitting in the assets. Matching is by surface
+        containment against the resolved display name — the same rule the growth tracks use,
+        so the page and the tracks agree about who did what.
+        """
+        facts: dict[str, dict[str, Any]] = {
+            name: {"key_events": [], "goals": [], "choices": [], "to_lead": [], "evidence": []}
+            for name in names if name
+        }
+        if not facts:
+            return facts
+        for block_key, asset in assets.items():
+            for event in asset.events:
+                for name, row in facts.items():
+                    if any(name in actor for actor in event.actors):
+                        row["key_events"].append((event.chapter_ref, event.summary))
+                        row["evidence"].extend(self._cite(block_key, event))
+            for change in asset.goal_changes:
+                for name, row in facts.items():
+                    if name in change.entity_ref:
+                        row["goals"].append(change.goal_text)
+            for choice in asset.choices:
+                for name, row in facts.items():
+                    if name in choice.entity_ref:
+                        row["choices"].append((choice.decision, choice.costs, choice.gains))
+            for rel in asset.relationship_changes:
+                if not lead:
+                    continue
+                pair = (rel.from_entity_ref, rel.to_entity_ref)
+                if not any(lead in side for side in pair):
+                    continue
+                other = pair[1] if lead in pair[0] else pair[0]
+                for name, row in facts.items():
+                    if name != lead and name in other:
+                        row["to_lead"].append(rel.relation)
+        return facts
+
     @staticmethod
     def _events_by_chapter(assets: dict[str, BlockAsset]) -> dict[int, list[str]]:
         """Every chapter's event summaries, in the order they were extracted."""
@@ -600,7 +660,60 @@ class RunCoordinator:
             point["reason"] = f"第 {start}–{end} 章共记录 {len(summaries)} 个事件"
 
     @staticmethod
-    def _storylines(lifecycles: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    def _stage_spans(
+        assets: dict[str, BlockAsset], interpretations: Sequence[Mapping[str, Any]]
+    ) -> dict[tuple[int, int], dict[str, Any]]:
+        """Per-stage cast and ledger, counted from the facts inside each stage's chapters."""
+        spans: dict[tuple[int, int], dict[str, Any]] = {}
+        bounds = []
+        for item in interpretations:
+            if not isinstance(item, Mapping):
+                continue
+            start = int(item.get("chapter_start_order", 1) or 1)
+            end = max(start, int(item.get("chapter_end_order", start) or start))
+            spans[(start, end)] = {"characters": [], "costs": [], "gains": []}
+            bounds.append((start, end))
+        if not bounds:
+            return spans
+
+        def place(chapter: int) -> tuple[int, int] | None:
+            for start, end in bounds:
+                if start <= chapter <= end:
+                    return (start, end)
+            return None
+
+        for asset in assets.values():
+            for event in asset.events:
+                key = place(event.chapter_ref)
+                if key:
+                    for actor in event.actors:
+                        if actor and actor not in spans[key]["characters"]:
+                            spans[key]["characters"].append(actor)
+            for choice in asset.choices:
+                chapter = asset.chapter_signals[0].chapter_ref if asset.chapter_signals else 1
+                key = place(chapter)
+                if key:
+                    spans[key]["costs"].extend(c for c in choice.costs if c)
+                    spans[key]["gains"].extend(g for g in choice.gains if g)
+        return spans
+
+    @staticmethod
+    def _actors_by_chapter(assets: dict[str, BlockAsset]) -> dict[int, list[str]]:
+        """Who acts in each chapter, from the events themselves."""
+        by_chapter: dict[int, list[str]] = {}
+        for asset in assets.values():
+            for event in asset.events:
+                seen = by_chapter.setdefault(event.chapter_ref, [])
+                for actor in event.actors:
+                    if actor and actor not in seen:
+                        seen.append(actor)
+        return by_chapter
+
+    @staticmethod
+    def _storylines(
+        lifecycles: Sequence[Mapping[str, Any]],
+        actors_by_chapter: Mapping[int, Sequence[str]] | None = None,
+    ) -> list[dict[str, Any]]:
         """Project suspense lifecycles onto the storyline shape the UI renders.
 
         A thread that is opened, returned to and closed *is* a storyline; the two views
@@ -617,9 +730,26 @@ class RunCoordinator:
                            int(e.get("chapter_end", 1)) - int(e.get("chapter_start", 1))),
             reverse=True,
         )[:24]
+        # The mainline's chapters, so a subplot can be described by where it touches them
+        # rather than by an adjective. Computed from the same ranking, before the loop.
+        main_span: set[int] = set()
+        for entry in ranked[:3]:
+            main_span.update(
+                range(int(entry.get("chapter_start", 1) or 1),
+                      int(entry.get("chapter_end", 1) or 1) + 1)
+            )
+
         lines: list[dict[str, Any]] = []
         for index, entry in enumerate(ranked, start=1):
             events = list(entry.get("events", []))
+            start = int(entry.get("chapter_start", 1) or 1)
+            end = max(start, int(entry.get("chapter_end", 1) or 1))
+            participants: list[str] = []
+            for chapter in range(start, end + 1):
+                for actor in (actors_by_chapter or {}).get(chapter, ()):
+                    if actor not in participants:
+                        participants.append(actor)
+            overlap = sorted(main_span.intersection(range(start, end + 1)))
             nodes = [
                 conform(StorylineNode, {
                     "chapter": int(ev.get("chapter", 1) or 1),
@@ -637,11 +767,23 @@ class RunCoordinator:
                 # than a promoted one-node thread.
                 "type": "main" if index <= 3 and len(nodes) >= 3 else "subplot",
                 "importance": float(entry.get("importance", 0.0) or 0.0),
-                "chapter_start": int(entry.get("chapter_start", 1) or 1),
-                "chapter_end": int(entry.get("chapter_end", 1) or 1),
+                "chapter_start": start,
+                "chapter_end": end,
                 "nodes": nodes,
+                "participants": participants[:8],
+                # A turning point in a thread is the moment it stops meaning what it meant.
+                "turning_points": [
+                    str(event.get("description", ""))
+                    for event in events
+                    if event.get("type") in ("twist", "reveal")
+                ][:4],
+                "relationship_to_mainline": (
+                    "" if index <= 3 else
+                    (f"与主线在第 {overlap[0]}–{overlap[-1]} 章重叠" if overlap else "独立于主线推进")
+                ),
                 "status": "resolved" if resolved else "open",
                 "resolution": str(events[-1].get("description", "")) if resolved and events else "",
+                "evidence": [e for event in events for e in event.get("evidence", ())][:5],
             }))
         return lines
 
@@ -788,6 +930,7 @@ class RunCoordinator:
         causal_chain: Sequence[str],
         storylines: Sequence[dict[str, Any]] = (),
         chronology: Sequence[dict[str, Any]] = (),
+        spans: Mapping[tuple[int, int], Mapping[str, Any]] | None = None,
     ) -> dict[str, Any] | None:
         """Build the story section from the stage interpretations that were paid for.
 
@@ -799,15 +942,23 @@ class RunCoordinator:
         for index, item in enumerate(interpretations):
             if not isinstance(item, dict):
                 continue
+            start = int(item.get("chapter_start_order", 1) or 1)
+            end = int(item.get("chapter_end_order", 1) or 1)
+            span = spans.get((start, end), {}) if spans else {}
             stages.append(
                 conform(
                     StoryStage,
                     {
                         **item,
                         "stage_id": item.get("stage_id") or f"STG-{index + 1}",
-                        "chapter_start": int(item.get("chapter_start_order", 1) or 1),
-                        "chapter_end": int(item.get("chapter_end_order", 1) or 1),
+                        "chapter_start": start,
+                        "chapter_end": end,
                         "title": item.get("title") or f"第{index + 1}幕",
+                        # What the stage cost and who was in it are counted facts about its
+                        # chapters, not things to ask an interpreter to remember.
+                        "major_characters": list(span.get("characters", ()))[:8],
+                        "cost_paid": list(span.get("costs", ()))[:6],
+                        "gain_received": list(span.get("gains", ()))[:6],
                     },
                 )
             )
@@ -1179,15 +1330,25 @@ class RunCoordinator:
                 interpretations,
                 topic_results.get(Topic.STORY),
                 self._causal_chain(assets),
-                storylines=self._storylines(suspense_lifecycles),
+                storylines=self._storylines(
+                    suspense_lifecycles, self._actors_by_chapter(assets)
+                ),
                 chronology=self._chronology(assets),
+                spans=self._stage_spans(assets, interpretations),
             ),
             suspense={
                 "availability": "available" if suspense_lifecycles else "unavailable",
                 "lifecycles": suspense_lifecycles,
             },
             characters=build_characters_section(
-                entities, relationships=relationships, tracks=tracks
+                entities,
+                relationships=relationships,
+                tracks=tracks,
+                character_facts=self._character_facts(
+                    assets,
+                    [str(e.get("display_surface_norm", "")) for e in entities[:C.CHARACTERS_MAX]],
+                    lead,
+                ),
             ),
             overview=build_overview_section(
                 overview,

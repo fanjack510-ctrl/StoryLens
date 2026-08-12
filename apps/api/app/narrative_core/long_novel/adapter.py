@@ -227,6 +227,7 @@ def build_characters_section(
     *,
     relationships: Sequence[Mapping[str, Any]] = (),
     tracks: Mapping[str, Any] | None = None,
+    character_facts: Mapping[str, Mapping[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Canonical entities and their relationships.
 
@@ -274,28 +275,53 @@ def build_characters_section(
         # than one that is honestly empty. Fields this engine cannot yet derive from counted
         # facts are left blank rather than guessed.
         "major_characters": [
-            {
-                "character_id": str(e.get("entity_key", "")),
-                "name": str(e.get("display_surface_norm", "")),
-                "aliases": list(e.get("aliases", [])),
-                "importance": round(min(1.0, e.get("centrality", 0) / max(1, top_centrality)), 2),
-                "identity": "",
-                "role": "protagonist" if i == 0 else "supporting",
-                "initial_goal": "",
-                "final_goal": "",
-                "character_arc": "",
-                "key_events": [],
-                "relationship_to_protagonist": "" if i == 0 else "unknown",
-                "relationship_changes": [],
-                "major_choice": "",
-                "cost_paid": [],
-                "gain_received": [],
-                "ending": "",
-                "evidence": list(e.get("evidence_ids", []))[:5],
-            }
-            for i, e in enumerate(ranked[:C_CHARACTERS_MAX])
+            _major_character(e, index, top_centrality, (character_facts or {}).get(
+                str(e.get("display_surface_norm", "")), {}))
+            for index, e in enumerate(ranked[:C_CHARACTERS_MAX])
         ],
         "relationships": list(relationships),
+    }
+
+
+def _major_character(
+    entity: Mapping[str, Any], index: int, top_centrality: int, facts: Mapping[str, Any]
+) -> dict[str, Any]:
+    """One row of the character page, filled from facts rather than left declared-and-empty.
+
+    Thirteen of this row's fields were blank in every character of every run while the
+    events, goals, choices and relationship changes that answer them were extracted and
+    stored. Nothing here is asserted: each value is a fact the model already returned with a
+    paragraph citation behind it. Fields with no such fact stay empty.
+    """
+    events = sorted(facts.get("key_events", ()))
+    goals = list(facts.get("goals", ()))
+    choices = list(facts.get("choices", ()))
+    to_lead = list(facts.get("to_lead", ()))
+    costs = [c for _, cs, _ in choices for c in cs]
+    gains = [g for _, _, gs in choices for g in gs]
+    return {
+        "character_id": str(entity.get("entity_key", "")),
+        "name": str(entity.get("display_surface_norm", "")),
+        "aliases": list(entity.get("aliases", [])),
+        "importance": round(min(1.0, entity.get("centrality", 0) / max(1, top_centrality)), 2),
+        "identity": "",
+        "role": "protagonist" if index == 0 else "supporting",
+        "initial_goal": goals[0] if goals else "",
+        "final_goal": goals[-1] if goals else "",
+        # An arc, stated as the distance the character's own goals travelled. Written only
+        # when the two ends differ — "A → A" is not an arc, it is a repetition.
+        "character_arc": (
+            f"{goals[0]} → {goals[-1]}" if len(goals) > 1 and goals[0] != goals[-1] else ""
+        ),
+        "key_events": [summary for _, summary in events[:8]],
+        "relationship_to_protagonist": "" if index == 0 else (to_lead[-1] if to_lead else "unknown"),
+        "relationship_changes": to_lead[:6],
+        "major_choice": choices[0][0] if choices else "",
+        "cost_paid": costs[:4],
+        "gain_received": gains[:4],
+        "ending": "",
+        "evidence": list(dict.fromkeys(facts.get("evidence", ())))[:5]
+        or list(entity.get("evidence_ids", []))[:5],
     }
 
 

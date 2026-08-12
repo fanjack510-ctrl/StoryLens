@@ -63,7 +63,11 @@ SYSTEM_PROMPT = """你是小说文本的事实抽取器。你的唯一任务是�
 - `events`：发生了什么，`summary` ≤50 字。
 - `character_state_changes`：某人状态从 A 变成 B。
 - `causal_links`：哪件事导致哪件事。
-- `suspense_threads` / `suspense_actions`：抛出的疑问，以及推进或回答它的动作。
+- `suspense_threads` / `suspense_actions`：抛出的疑问，以及后续对它做的动作。
+  `action_kind` 必须从这些里选，**按这一处实际起的作用选，不要一律填 advance**：
+  `open`(第一次抛出) `advance`(推进但不揭示) `foreshadow`(埋伏笔)
+  `misdirect`(把读者往错的方向引) `partial`(只揭示一部分) `reveal`(揭示关键信息)
+  `twist`(推翻先前的认知) `resolve`(给出答案) `close`(收束)。
 - `relationship_changes` / `goal_changes` / `choices`：关系、目标、抉择的变化。
 - `mentions`：人物称呼在某段的出现。`provisional_entities` 把你认为指同一人的 mention 下标归为一组。
 - `identity_assertions`：正文**明确**说明两个称呼是/不是同一人时才写。
@@ -79,8 +83,8 @@ _SCHEMA_SKELETON = """{
                                "evidence": [{"paragraph_ref": 1}]}],
   "causal_links": [{"cause_fact_ref": "", "effect_fact_ref": "", "evidence": [{"paragraph_ref": 1}]}],
   "suspense_threads": [{"question": "", "opened_chapter_ref": 1, "evidence": [{"paragraph_ref": 1}]}],
-  "suspense_actions": [{"thread_ref": "", "action_kind": "advance", "information_added": "",
-                        "chapter_ref": 1, "evidence": [{"paragraph_ref": 1}]}],
+  "suspense_actions": [{"thread_ref": "", "action_kind": "foreshadow|misdirect|partial|reveal|twist|resolve|advance",
+                        "information_added": "", "chapter_ref": 1, "evidence": [{"paragraph_ref": 1}]}],
   "relationship_changes": [{"from_entity_ref": "", "to_entity_ref": "", "relation": "",
                             "evidence": [{"paragraph_ref": 1}]}],
   "goal_changes": [{"entity_ref": "", "goal_text": "", "change_kind": "formed",
