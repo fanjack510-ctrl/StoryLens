@@ -23,17 +23,54 @@ from __future__ import annotations
 
 from typing import Any, Mapping, Sequence
 
+from pydantic import BaseModel
+
 from app.narrative_core.long_novel.constants import CHARACTERS_MAX as C_CHARACTERS_MAX
 from app.narrative_core.long_novel.topics import ChapterSignalRow, PacingCurve
 
 __all__ = [
+    "conform",
     "percentile_scores",
     "build_pacing_section",
     "build_chapters_section",
     "build_characters_section",
     "build_assessment_section",
+    "build_overview_section",
     "to_whole_book_v2",
 ]
+
+
+def conform(model: type[BaseModel], values: Mapping[str, Any]) -> dict[str, Any]:
+    """Fill every field the contract declares, taking what ``values`` supplies.
+
+    Hand-writing these dicts produced the same defect three times — a section that looks
+    complete, validates field by field, and fails as a whole because a sibling the author
+    never saw is required. Reading the field list off the model makes that impossible: a
+    field added to the contract later gets a typed empty here instead of a runtime failure
+    at the end of a paid run.
+
+    Empties are typed, never invented: a missing string is ``""`` and a missing list is
+    ``[]``, both of which render as "nothing to say". Filling them with plausible prose is
+    the failure this engine exists to prevent.
+    """
+    out: dict[str, Any] = {}
+    for name, field in model.model_fields.items():
+        if name in values and values[name] is not None:
+            out[name] = values[name]
+            continue
+        annotation = field.annotation
+        origin = getattr(annotation, "__origin__", None)
+        if origin in (list, tuple) or annotation in (list, tuple):
+            out[name] = []
+        elif annotation is int:
+            out[name] = 0
+        elif annotation is float:
+            out[name] = 0.0
+        elif annotation is bool:
+            out[name] = False
+        else:
+            out[name] = ""
+    return out
 
 
 def percentile_scores(values: Sequence[float]) -> list[int]:
@@ -353,6 +390,45 @@ def _as_issue(index: int, value: Any) -> dict[str, Any]:
         "supporting_metrics": list(base.get("supporting_metrics", [])),
         "evidence": list(base.get("evidence", [])),
         "possible_direction": str(base.get("possible_direction", "")),
+    }
+
+
+def build_overview_section(
+    result: Mapping[str, Any] | None, entities: Sequence[Mapping[str, Any]] = ()
+) -> dict[str, Any]:
+    """The whole-book overview, from the final synthesis call.
+
+    This call was already being made and billed, and its return value was being discarded —
+    which is why the overview screen showed em-dashes for every field while the run reported
+    success. Fields the synthesis did not produce stay empty rather than being invented; the
+    protagonist name is the one exception, because it is a *counted* fact (the most-mentioned
+    entity) rather than a judgement.
+    """
+    base = dict(result or {})
+    protagonist = str(base.get("protagonist", ""))
+    if not protagonist and entities:
+        protagonist = str(entities[0].get("display_surface_norm", ""))
+    return {
+        "one_sentence_story": str(base.get("one_sentence_story", "")),
+        "full_summary": str(base.get("full_summary", base.get("summary", ""))),
+        "protagonist": protagonist,
+        "initial_state": str(base.get("initial_state", "")),
+        "final_state": str(base.get("final_state", "")),
+        "core_goal": str(base.get("core_goal", "")),
+        "goal_evolution": [str(x) for x in base.get("goal_evolution", [])],
+        "core_conflict": str(base.get("core_conflict", "")),
+        "conflict_evolution": [str(x) for x in base.get("conflict_evolution", [])],
+        "core_question": str(base.get("core_question", "")),
+        "major_storylines": [str(x) for x in base.get("major_storylines", [])],
+        "major_turning_points": [
+            x for x in base.get("major_turning_points", []) if isinstance(x, Mapping)
+        ],
+        "major_suspense": [str(x) for x in base.get("major_suspense", [])],
+        "final_climax": str(base.get("final_climax", "")),
+        "ending_resolution": [str(x) for x in base.get("ending_resolution", [])],
+        "ending_open_questions": [str(x) for x in base.get("ending_open_questions", [])],
+        "story_skeleton": [str(x) for x in base.get("story_skeleton", [])],
+        "evidence": [],
     }
 
 

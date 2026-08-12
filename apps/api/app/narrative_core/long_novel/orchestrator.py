@@ -25,8 +25,12 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Sequence
 
 from app.narrative_core.long_novel import constants as C
+from app.narrative_core.whole_book_v2.contracts import StoryStage
+
 from app.narrative_core.long_novel.adapter import (
     build_assessment_section,
+    conform,
+    build_overview_section,
     build_chapters_section,
     build_characters_section,
     build_pacing_section,
@@ -115,6 +119,7 @@ class RunCoordinator:
         *,
         plan: BookPlan,
         chapters_by_order: dict[int, SourceChapter],
+        character_count: int = 0,
         book_id: int,
         snapshot_id: int,
         revision_hash: str,
@@ -180,8 +185,9 @@ class RunCoordinator:
             report.provider_calls += 1
             report.topics_projected.append(Topic.ASSESSMENT.value)
 
+        overview: dict[str, Any] | None = None
         if self._finalise is not None and not self._budget_exhausted(report):
-            self._finalise(
+            overview = self._finalise(
                 build_final_input(
                     digests,
                     stage_skeleton=stage_skeleton,
@@ -197,6 +203,9 @@ class RunCoordinator:
             signals=signals,
             entities=entities,
             assessment=assessment,
+            overview=overview,
+            interpretations=interpretations,
+            character_count=character_count,
             chapters_topic=chapters_topic,
             topic_results=topic_results,
             book_id=book_id,
@@ -208,6 +217,49 @@ class RunCoordinator:
             model_name=model_name,
         )
         return report
+
+    @staticmethod
+    def _causal_chain(chapters_topic: dict[str, Any]) -> list[str]:
+        """Placeholder for the causal spine until L3 story projection returns one."""
+        return []
+
+    @staticmethod
+    def _story_section(
+        interpretations: Sequence[dict[str, Any]],
+        story_result: dict[str, Any] | None,
+        causal_chain: Sequence[str],
+    ) -> dict[str, Any] | None:
+        """Build the story section from the stage interpretations that were paid for.
+
+        These calls were being made, billed, and then dropped on the floor: the section read
+        ``structure_stages`` out of the topic result, which never carried them, so four paid
+        interpretations produced an empty screen.
+        """
+        stages = []
+        for index, item in enumerate(interpretations):
+            if not isinstance(item, dict):
+                continue
+            stages.append(
+                conform(
+                    StoryStage,
+                    {
+                        **item,
+                        "stage_id": item.get("stage_id") or f"STG-{index + 1}",
+                        "chapter_start": int(item.get("chapter_start_order", 1) or 1),
+                        "chapter_end": int(item.get("chapter_end_order", 1) or 1),
+                        "title": item.get("title") or f"第{index + 1}幕",
+                    },
+                )
+            )
+        if not stages and not story_result:
+            return None
+        return {
+            "availability": "available" if stages else "partial",
+            "structure_stages": stages,
+            "storylines": [],
+            "causal_chain": list(causal_chain),
+            "chronology": [],
+        }
 
     def _metrics(self, report: RunReport) -> dict[str, Any]:
         return {
@@ -231,7 +283,16 @@ class RunCoordinator:
         for stage in stage_skeleton:
             if self._budget_exhausted(report):
                 break
-            out.append(self._interpret(dict(stage)))
+            interpreted = self._interpret(dict(stage)) or {}
+            # Carry the stage's own chapter range through: the interpreter is given a skeleton
+            # entry and may not echo it back, and a stage rendered without a range shows as
+            # "1-1" on screen.
+            merged = {
+                "chapter_start_order": stage.get("chapter_start_order", 1),
+                "chapter_end_order": stage.get("chapter_end_order", 1),
+                **interpreted,
+            }
+            out.append(merged)
             report.provider_calls += 1
         return out
 
@@ -385,6 +446,9 @@ class RunCoordinator:
         signals: Sequence[ChapterSignalRow],
         entities: Sequence[dict[str, Any]],
         assessment: dict[str, Any] | None,
+        overview: dict[str, Any] | None,
+        interpretations: Sequence[dict[str, Any]],
+        character_count: int,
         chapters_topic: dict[str, Any],
         topic_results: dict[Topic, dict[str, Any]],
         book_id: int,
@@ -395,6 +459,7 @@ class RunCoordinator:
         provider_name: str,
         model_name: str,
     ) -> dict[str, Any]:
+        assets_events = self._causal_chain(chapters_topic)
         pacing = build_pacing_section(resample_pacing_curve(signals))
         chapters = build_chapters_section(chapters_topic)
 
@@ -422,15 +487,16 @@ class RunCoordinator:
             revision_hash=revision_hash,
             title=title,
             chapter_count=len(signals),
-            character_count=0,
+            character_count=character_count,
             run_id=run_id,
             provider_name=provider_name,
             model_name=model_name,
             real_provider_calls=report.provider_calls,
             pacing=pacing,
             chapters=chapters,
-            story=section(Topic.STORY, "structure_stages"),
+            story=self._story_section(interpretations, topic_results.get(Topic.STORY), assets_events),
             suspense=section(Topic.SUSPENSE, "lifecycles"),
             characters=build_characters_section(entities),
+            overview=build_overview_section(overview, entities),
             assessment=build_assessment_section(assessment),
         )
