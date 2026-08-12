@@ -82,6 +82,29 @@ _CHRONOLOGY_MAX = 200
 _THREAD_NOISE = "的了是否会与和在有为吗呢？?、，,。 　"
 
 
+#: Category words a model reaches for when it is describing the cast rather than naming
+#: anyone in it. They arrive as ordinary surfaces and reach the character table looking like
+#: people — a real run listed 「主要角色」 and 「主要人物」 among the 24 characters of a book.
+_NOT_NAMES = frozenset({
+    "主要角色", "主要人物", "次要人物", "配角", "众人", "所有人", "人物", "角色",
+    "群众", "路人", "其他", "旁人", "大家",
+})
+
+
+def _is_not_a_name(surface: str) -> bool:
+    """Reject surfaces that describe a category of character instead of naming one.
+
+    A compound surface such as 「邓肯/周铭」 is rejected too: it is the model writing two
+    names in one cell, and admitting it creates a third character who is neither.
+    """
+    text = surface.strip()
+    if not text:
+        return True
+    if text in _NOT_NAMES:
+        return True
+    return "/" in text or "、" in text
+
+
 def _refers_to(label: str, question: str) -> bool:
     """Does this thread label name that suspense question?
 
@@ -785,10 +808,13 @@ class RunCoordinator:
             lines.append(conform(Storyline, {
                 "storyline_id": f"SL-{index}",
                 "name": str(entry.get("question", "")),
-                # A main storyline is one the book keeps coming back to. Requiring three
-                # returns as well as a top rank means a thin book gets no mainline rather
-                # than a promoted one-node thread.
-                "type": "main" if index <= 3 and len(nodes) >= 3 else "subplot",
+                # A main storyline is one the book comes back to at least once and carries
+                # furthest. The bar is "revisited", not "revisited three times": on a real
+                # 806-chapter novel the most-returned-to thread had two nodes, so a
+                # three-node rule labelled all 24 storylines subplots and the page claimed
+                # the book has no mainline. A one-node thread is still never promoted — that
+                # is a question asked once, whatever its span.
+                "type": "main" if index <= 3 and len(nodes) >= 2 else "subplot",
                 "importance": float(entry.get("importance", 0.0) or 0.0),
                 "chapter_start": start,
                 "chapter_end": end,
@@ -1189,6 +1215,8 @@ class RunCoordinator:
         sizes = {cluster_key: len(members) for cluster_key, members, _ in clusters}
         folded: dict[str, dict[str, Any]] = {}
         for entity in resolve_entities(clusters):
+            if _is_not_a_name(entity.display_surface_norm):
+                continue
             row = folded.setdefault(
                 entity.display_surface_norm,
                 {

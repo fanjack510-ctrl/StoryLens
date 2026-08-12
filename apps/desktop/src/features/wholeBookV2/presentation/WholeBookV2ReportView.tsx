@@ -880,6 +880,46 @@ function ChaptersModule({ data }: { data: WholeBookAnalysisV2 }) {
   );
 }
 
+const REVISION_RANK: Record<string, string> = {
+  first: "第一优先级",
+  second: "第二优先级",
+  third: "第三优先级",
+};
+
+/**
+ * Render one revision priority.
+ *
+ * The contract carries these as objects — rank, chapter ranges, direction, and what must
+ * survive the edit — but this block had no renderer for that shape and fell through to
+ * `JSON.stringify`, so the page showed a reader the raw object. The string branch stays for
+ * the older shape, which some stored results still use.
+ */
+function renderRevisionPriority(x: unknown) {
+  if (typeof x === "string") return <h3>{x}</h3>;
+  if (!x || typeof x !== "object") return null;
+  const p = x as {
+    priority?: string;
+    chapter_ranges?: unknown;
+    direction?: string;
+    preserve?: unknown;
+  };
+  const ranges = Array.isArray(p.chapter_ranges)
+    ? p.chapter_ranges
+        .filter((r): r is number[] => Array.isArray(r) && r.length >= 2)
+        .map((r) => `第 ${r[0]}–${r[1]} 章`)
+        .join(" · ")
+    : "";
+  const preserve = Array.isArray(p.preserve) ? p.preserve.map(String).filter(Boolean) : [];
+  return (
+    <>
+      {p.priority && <small>{REVISION_RANK[p.priority] ?? p.priority}</small>}
+      <h3>{p.direction ?? ""}</h3>
+      {ranges && <p>{ranges}</p>}
+      {preserve.length > 0 && <p>改动时保留：{preserve.join("、")}</p>}
+    </>
+  );
+}
+
 function AssessmentModule({ data }: { data: WholeBookAnalysisV2 }) {
   const [selected, setSelected] = useState(0);
   const a = data.assessment;
@@ -1052,9 +1092,7 @@ function AssessmentModule({ data }: { data: WholeBookAnalysisV2 }) {
             {a.revision_priorities.map((x, i) => (
               <article key={i}>
                 <b>{String(i + 1).padStart(2, "0")}</b>
-                <div>
-                  <h3>{typeof x === "string" ? x : JSON.stringify(x)}</h3>
-                </div>
+                <div>{renderRevisionPriority(x)}</div>
               </article>
             ))}
           </div>

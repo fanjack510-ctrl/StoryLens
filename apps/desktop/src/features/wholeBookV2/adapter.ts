@@ -82,7 +82,16 @@ export function parseWholeBookV2(raw: unknown): WholeBookAnalysisV2 {
     throw new Error("WHOLE_BOOK_V2_COLLECTION_INVALID");
   }
   for (const [id, e] of Object.entries(r.evidence_index)) {
-    if (id !== e.evidence_id || e.chapter_id === e.chapter_index) {
+    // The key must be the row's own id — that one is checkable and stays.
+    //
+    // The companion clause `e.chapter_id === e.chapter_index` used to reject the whole
+    // document as well. Its intent was to catch an ordinal written into the id field, but
+    // equality cannot distinguish that from a book whose chapter ids legitimately coincide
+    // with their positions — which is the normal case for a freshly imported book. In
+    // 深海余烬 the chapters, snapshot chapters and source chapters all run 1..806, so every
+    // correct evidence row failed it and the entire whole-book page rendered as
+    // 分析失败. It never fired before only because evidence_index was always empty.
+    if (id !== e.evidence_id) {
       throw new Error("WHOLE_BOOK_V2_EVIDENCE_IDENTITY_INVALID");
     }
   }
