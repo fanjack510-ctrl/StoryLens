@@ -239,7 +239,11 @@ def joint_resolve(
             # a block that fails costs its whole input again, so an unbounded one turns a
             # single bad response into the most expensive event in the run.
             by_retry_unit = C.HARD_BLOCK_TOKENS // max(1, mean_chapter_tokens)
-            chapters = min(by_output, by_input, by_retry_unit)
+            # Per-chapter fidelity has a lower ceiling than schema validity. A block of 19
+            # chapters returns a valid asset whose per-chapter counters are zero, and that
+            # emptiness is invisible until it reaches a chart. Costing more calls is the
+            # price of the signals every upper layer is built on.
+            chapters = min(by_output, by_input, by_retry_unit, C.MAX_CHAPTERS_FOR_SIGNAL_FIDELITY)
             if chapters < C.MIN_VIABLE_CHAPTERS_PER_BLOCK:
                 continue
             feasible.append(

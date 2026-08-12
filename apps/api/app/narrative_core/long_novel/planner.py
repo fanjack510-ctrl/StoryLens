@@ -115,7 +115,10 @@ class BlockPlanner:
         self._output_budget = output_budget
         self._context_window = context_window
         self._costs = costs
-        self._chapter_cap = max_chapters_per_block(profile, output_budget)
+        self._chapter_cap = min(
+            max_chapters_per_block(profile, output_budget),
+            C.MAX_CHAPTERS_FOR_SIGNAL_FIDELITY,
+        )
         if self._chapter_cap < C.MIN_VIABLE_CHAPTERS_PER_BLOCK:
             raise LongNovelError(
                 LongNovelErrorCode.OUTPUT_BUDGET_TOO_LOW,

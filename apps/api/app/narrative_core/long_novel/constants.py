@@ -45,6 +45,22 @@ CONSERVATIVE_MAX_OUTPUT_TOKENS: Final[int] = 4096  # SAFETY GUARD, unprobed defa
 OUTPUT_LADDER: Final[tuple[int, ...]] = (4096, 6000, 7000, 8000, 16000)  # EMPIRICAL DEFAULT
 MIN_VIABLE_CHAPTERS_PER_BLOCK: Final[int] = 4  # SAFETY GUARD (03 §2.5.4)
 
+#: Largest block for which a model still produces honest **per-chapter** counts.
+#: EMPIRICAL SAFETY GUARD, measured rather than derived.
+#:
+#: The output-budget arithmetic permits 19 chapters per block on a probed DeepSeek, and the
+#: extraction succeeds at that size — schema-valid, one ChapterSignal per chapter, every
+#: cardinality respected. But the *counters inside those signals* come back zero. On a real
+#: 806-chapter run, 81 heatmap bands had data in 6 of them and 94 of 96 pacing points were
+#: flat, because asking for a paragraph-by-paragraph tally across 42,000 tokens of prose is
+#: a tedium the model quietly declines while still returning a well-formed answer.
+#:
+#: Nothing in the contract catches this: the asset is valid, the block passes, and the
+#: sparsity only surfaces three layers later as a pacing chart that is a straight line — and
+#: then gets misread as a flaw in the novel. The bound therefore lives here, as an admission
+#: that per-chapter fidelity has a different ceiling from schema validity.
+MAX_CHAPTERS_FOR_SIGNAL_FIDELITY: Final[int] = 8
+
 # --------------------------------------------------------------------------- block sizing
 TARGET_BLOCK_TOKENS: Final[int] = 40_000  # EMPIRICAL DEFAULT — retry-unit preference
 HARD_BLOCK_TOKENS: Final[int] = 60_000  # SAFETY GUARD — absolute ceiling

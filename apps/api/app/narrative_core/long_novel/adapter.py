@@ -27,6 +27,7 @@ from pydantic import BaseModel
 
 from app.narrative_core.long_novel.constants import CHARACTERS_MAX as C_CHARACTERS_MAX
 from app.narrative_core.long_novel.topics import ChapterSignalRow, PacingCurve
+from app.narrative_core.whole_book_v2.contracts import RevisionPriority, TypeProfile
 
 __all__ = [
     "conform",
@@ -36,6 +37,7 @@ __all__ = [
     "build_characters_section",
     "build_assessment_section",
     "build_overview_section",
+    "build_type_profile_section",
     "to_whole_book_v2",
 ]
 
@@ -219,6 +221,7 @@ def build_characters_section(
     entities: Sequence[Mapping[str, Any]],
     *,
     relationships: Sequence[Mapping[str, Any]] = (),
+    tracks: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Canonical entities and their relationships.
 
@@ -248,11 +251,18 @@ def build_characters_section(
             "initial_goal": "",
             "final_goal": "",
             "final_identity": str(lead.get("display_surface_norm", "")),
-            "stages": [],
-            "external_status_track": [],
-            "ability_track": [],
-            "internal_belief_track": [],
-            "relationship_track": [],
+            "stages": list((tracks or {}).get("stages", [])),
+            # The four tracks are where the 主角历程 page gets its content. Left empty they
+            # render as 「邓肯 → 邓肯」, which is what a reader saw for an 806-chapter book.
+            **{
+                name: list((tracks or {}).get(name, []))
+                for name in (
+                    "external_status_track",
+                    "ability_track",
+                    "internal_belief_track",
+                    "relationship_track",
+                )
+            },
         },
         # Every field the contract declares is filled. Partial entries validate field by
         # field and fail as a whole, and a section that half-exists is harder to diagnose
@@ -307,9 +317,67 @@ def build_assessment_section(result: Mapping[str, Any] | None) -> dict[str, Any]
         "strengths": [_as_strength(x) for x in result.get("strengths", [])],
         "issues": [_as_issue(i, x) for i, x in enumerate(result.get("issues", []))],
         "issue_map": list(result.get("issue_map", [])),
-        "revision_priorities": list(result.get("revision_priorities", [])),
-        "preserve_list": list(result.get("preserve_list", [])),
+        "revision_priorities": [
+            p for p in (_as_priority(i, x) for i, x in enumerate(result.get("revision_priorities", [])))
+            if p
+        ],
+        "preserve_list": [str(x) for x in result.get("preserve_list", []) if str(x).strip()],
     }
+
+
+#: The contract admits exactly three ranks. A fourth item cannot be rendered, and inventing a
+#: rank for it would misstate the model's own ordering, so the tail is dropped.
+_PRIORITY_RANKS = ("first", "second", "third")
+
+
+def _as_priority(index: int, value: Any) -> dict[str, Any] | None:
+    """Normalise one revision priority, or drop it.
+
+    The rank comes from position: a model asked for an ordered list expresses the ordering by
+    the order it writes them in, and that is more reliable than the label it attaches.
+    """
+    if index >= len(_PRIORITY_RANKS):
+        return None
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return None
+        return conform(RevisionPriority, {"priority": _PRIORITY_RANKS[index], "direction": text})
+    if not isinstance(value, Mapping):
+        return None
+    ranges: list[list[int]] = []
+    for item in value.get("chapter_ranges", []):
+        if isinstance(item, Sequence) and not isinstance(item, str) and len(item) >= 2:
+            try:
+                ranges.append([int(item[0]), int(item[1])])
+            except (TypeError, ValueError):
+                continue
+    return conform(RevisionPriority, {
+        **value,
+        "priority": _PRIORITY_RANKS[index],
+        "chapter_ranges": ranges,
+        "direction": str(value.get("direction") or value.get("recommended_direction", "")),
+        "preserve": [str(x) for x in value.get("preserve", []) if str(x).strip()],
+    })
+
+
+def build_type_profile_section(result: Mapping[str, Any] | None) -> dict[str, Any] | None:
+    """The work's genre profile, out of the final synthesis call.
+
+    Returns ``None`` when the synthesis did not name a genre, so the caller falls back to the
+    empty profile rather than publishing a confident-looking blank.
+    """
+    if not result or not str(result.get("primary_genre", "")).strip():
+        return None
+    return conform(TypeProfile, {
+        **result,
+        "primary_genre": str(result.get("primary_genre", "")),
+        "secondary_genres": [str(x) for x in result.get("secondary_genres", []) if str(x).strip()],
+        "narrative_drivers": [str(x) for x in result.get("narrative_drivers", []) if str(x).strip()],
+        "narrative_traits": [str(x) for x in result.get("narrative_traits", []) if str(x).strip()],
+        # The engine does not measure genre agreement, so it does not claim a number for it.
+        "genre_confidence": 0.0,
+    })
 
 
 # A model asked for "issues" will sometimes return a list of sentences rather than a list of
@@ -394,7 +462,11 @@ def _as_issue(index: int, value: Any) -> dict[str, Any]:
 
 
 def build_overview_section(
-    result: Mapping[str, Any] | None, entities: Sequence[Mapping[str, Any]] = ()
+    result: Mapping[str, Any] | None,
+    entities: Sequence[Mapping[str, Any]] = (),
+    *,
+    goal_evolution: Sequence[str] = (),
+    conflict_evolution: Sequence[str] = (),
 ) -> dict[str, Any]:
     """The whole-book overview, from the final synthesis call.
 
@@ -415,9 +487,13 @@ def build_overview_section(
         "initial_state": str(base.get("initial_state", "")),
         "final_state": str(base.get("final_state", "")),
         "core_goal": str(base.get("core_goal", "")),
-        "goal_evolution": [str(x) for x in base.get("goal_evolution", [])],
+        # Prefer what the synthesis said; fall back to the changes L1 counted, so the field
+        # reflects the book even when the summary call omitted it.
+        "goal_evolution": [str(x) for x in (base.get("goal_evolution") or goal_evolution)],
         "core_conflict": str(base.get("core_conflict", "")),
-        "conflict_evolution": [str(x) for x in base.get("conflict_evolution", [])],
+        "conflict_evolution": [
+            str(x) for x in (base.get("conflict_evolution") or conflict_evolution)
+        ],
         "core_question": str(base.get("core_question", "")),
         "major_storylines": [str(x) for x in base.get("major_storylines", [])],
         "major_turning_points": [

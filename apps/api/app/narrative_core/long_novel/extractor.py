@@ -25,7 +25,7 @@ than guess.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Protocol, Sequence
+from typing import Any, Protocol, Sequence
 
 from app.narrative_core.long_novel import constants as C
 from app.narrative_core.long_novel import ids
@@ -34,6 +34,7 @@ from app.narrative_core.long_novel.contracts.enums import UnitKind
 from app.narrative_core.long_novel.contracts.enums import OutputFidelity
 from app.narrative_core.long_novel.contracts.l1 import BlockAsset, CarryForwardState
 from app.narrative_core.long_novel.errors import LongNovelError, LongNovelErrorCode
+from app.narrative_core.long_novel.ids import evidence_id as derive_evidence_id
 from app.narrative_core.long_novel.mention_binding import EmittedMention, bind_mention_occurrences
 from app.narrative_core.long_novel.provider_io import (
     RepairDecision,
@@ -91,6 +92,10 @@ class ExtractionResult:
     mentions_rejected: list[str]
     repairs_applied: list[str]
     provider_calls: int
+    #: Every paragraph an accepted fact actually cited, resolved to product-contract shape.
+    #: Traceability is the point of the whole design — a claim a reader cannot follow back
+    #: to a sentence is the thing the old engine already produced.
+    evidence: list[dict[str, Any]] = field(default_factory=list)
 
 
 class BlockProvider(Protocol):
@@ -284,6 +289,7 @@ class BlockExtractor:
             calls += extra_calls
 
         return ExtractionResult(
+            evidence=self._collect_evidence(asset, rendered),
             block_key=block_key,
             asset=asset,
             provider_input_fingerprint=fingerprint,
@@ -292,6 +298,51 @@ class BlockExtractor:
             repairs_applied=outcome.steps,
             provider_calls=calls,
         )
+
+    def _collect_evidence(
+        self, asset: BlockAsset, rendered: RenderedBlock
+    ) -> list[dict[str, Any]]:
+        """Resolve every cited anchor into a citable evidence row.
+
+        The quote is sliced from the paragraph the model pointed at, truncated at a sentence
+        boundary. Nothing here is asserted by the model: the id, the chapter, the offsets and
+        the text all come from the snapshot, so a reader following a claim lands on the
+        sentence the engine actually read.
+        """
+        cited: set[int] = set()
+        for field_name in (
+            "chapter_signals", "events", "character_state_changes", "causal_links",
+            "suspense_actions", "relationship_changes", "goal_changes", "choices",
+            "suspense_threads", "identity_assertions",
+        ):
+            for item in getattr(asset, field_name):
+                for ref in item.evidence:
+                    cited.add(ref.paragraph_ref)
+
+        rows: list[dict[str, Any]] = []
+        for anchor in sorted(cited):
+            occurrence = rendered.occurrence_keys.get(anchor)
+            meta = rendered.metadata.get(anchor)
+            text = rendered.texts.get(anchor)
+            if occurrence is None or meta is None or text is None:
+                continue
+            quote = text[: C.MAX_QUOTE_CHARS]
+            if len(text) > C.MAX_QUOTE_CHARS:
+                cut = max(quote.rfind(mark) for mark in ("。", "！", "？", "”"))
+                quote = (quote[: cut + 1] if cut > 40 else quote) + "…"
+            rows.append(
+                {
+                    "evidence_id": derive_evidence_id(occurrence),
+                    "chapter_id": meta.get("snapshot_chapter_id") or 0,
+                    "chapter_index": meta.get("chapter_order", 0),
+                    "chapter_title": "",
+                    "start_offset": meta.get("start_offset", 0),
+                    "end_offset": meta.get("end_offset", 0),
+                    "quote_or_excerpt": quote,
+                    "reason": "",
+                }
+            )
+        return rows
 
     # ------------------------------------------------------------------ repair
     def _repair_once(
