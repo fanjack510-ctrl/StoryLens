@@ -1,0 +1,37 @@
+{
+  "story": {
+    "version": "2.0",
+    "availability": "available",
+    "structure_stages": [
+      {
+        "chapter_start": 1,
+        "chapter_end": 3,
+        "evidence": [
+          "E-1001-0"
+        ],
+        "stage_id": "S1",
+        "title": "开端冲突",
+        "summary": "主角卷入案件并被迫做选择",
+        "protagonist_state": "潜伏初期",
+        "stage_goal": "建立身份",
+        "core_conflict": "身份与任务冲突",
+        "major_characters": [
+          "林城"
+        ],
+        "key_events": [
+          "进入圈子"
+        ],
+        "major_choice": "继续潜伏",
+        "cost_paid": [
+          "失去安全感"
+        ],
+        "gain_received": [
+          "获得信任"
+        ],
+        "turning_point": "首次暴露风险",
+        "ending_state": "更深卷入",
+        "next_question": "能否撑住"
+      }
+    ]
+  }
+}

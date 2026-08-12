@@ -25,6 +25,10 @@ from app.narrative_core.long_novel.contracts.density import DensityProfile
 __all__ = [
     "SYSTEM_PROMPT",
     "ASSESSMENT_VOCABULARY",
+    "STAGE_INSTRUCTION",
+    "TOPIC_INSTRUCTION",
+    "FINAL_INSTRUCTION",
+    "build_assessment_instruction",
     "build_user_prompt",
     "prompt_template_hash",
 ]
@@ -126,3 +130,60 @@ def prompt_template_hash(profile: DensityProfile) -> str:
     """
     material = SYSTEM_PROMPT + _SCHEMA_SKELETON + profile.name
     return hashlib.sha256(material.encode("utf-8")).hexdigest()
+
+
+# =====================================================================  L2 / L3 / L4 prompts
+#
+# These four lived in the run harness while only the L1 prompt lived here, which meant the
+# engine could extract facts and had no instructions for turning them into the document a
+# reader sees — every one of them had to be re-supplied by whatever called it. They are part
+# of the contract for the same reason the L1 prompt is: their wording decides what the paid
+# calls produce, so it belongs with the code that spends the money.
+#
+# Each names its fields explicitly. A model asked to "summarise the stage" returns prose that
+# has to be parsed; a model given the field list returns the object the section needs.
+
+STAGE_INSTRUCTION = """下面是这一叙事阶段内实际发生的事件、悬念、人物与状态变化。
+**只依据这些内容**写解读，不要引入输入中没有的设定。用中文。
+字段：title, summary, stage_goal, core_conflict, major_choice, protagonist_state,
+key_events(数组), turning_point, ending_state, next_question。"""
+
+TOPIC_INSTRUCTION = """针对 {topic} 主题给出结论，字段：summary, claims。"""
+
+FINAL_INSTRUCTION = """给出全书总览，字段：one_sentence_story, full_summary, protagonist,
+initial_state, final_state, core_goal, core_conflict, core_question,
+major_storylines(数组), major_suspense(数组), final_climax,
+ending_resolution(数组), ending_open_questions(数组), story_skeleton(数组),
+primary_genre(主类型), secondary_genres(数组),
+narrative_drivers(数组，推动这本书往前走的力量), narrative_traits(数组，叙事特征),
+analysis_focus(数组), genre_expectations(数组，这个类型的读者期待什么)。"""
+
+#: The assessment asks for revision priorities *with chapter ranges*, and is given the
+#: measured slow stretches to point at. Asked without them, a model returns 1–806 for every
+#: priority — technically a range, and useless to someone deciding what to rewrite.
+ASSESSMENT_INSTRUCTION = """给出整体评估，字段：overall_summary, dimensions, strengths, issues,
+revision_priorities(数组，最多3条，按重要性从高到低排序，每条
+{{chapter_ranges:[[起始章,结束章]], direction:改法, preserve:[改动时必须保住的东西]}}),
+preserve_list(数组，这本书已经做对、不该动的地方)。
+**revision_priorities 的 chapter_ranges 必须指向具体区间，不要写成全书范围。**
+{measured_regions}
+""" + ASSESSMENT_VOCABULARY
+
+
+def build_assessment_instruction(regions: object = ()) -> str:
+    """The assessment instruction, carrying whatever slow or dense stretches were measured.
+
+    The regions come from the engine's own curve, so this hands the model a finding rather
+    than asking it to guess where the book sags.
+    """
+    lines = []
+    for region in regions or ():
+        try:
+            start = region["chapter_start"]
+            end = region["chapter_end"]
+            kind = "节奏偏缓" if region.get("type") == "fatigue" else "高强度"
+            lines.append(f"- 第 {start}–{end} 章：{kind}")
+        except (TypeError, KeyError):
+            continue
+    measured = ("引擎已测出以下区间，可直接引用：\n" + "\n".join(lines)) if lines else ""
+    return ASSESSMENT_INSTRUCTION.format(measured_regions=measured)

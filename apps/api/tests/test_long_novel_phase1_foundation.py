@@ -892,3 +892,51 @@ def test_type_profile_stays_absent_rather_than_claiming_a_genre():
     assert profile["primary_genre"] == "悬疑"
     # The engine measures no genre agreement, so it must not put a number on one.
     assert profile["genre_confidence"] == 0.0
+
+
+def test_uncounted_block_is_repaired_once_then_kept_not_lost():
+    """Missing counters must cost a flat curve segment, never eight chapters of facts.
+
+    The counting rule fails the block into a repair, which is the point. But if the second
+    response is uncounted too, dropping the block would throw away every event, thread and
+    character change inside it — a far worse outcome for a reader than a flat stretch. The
+    shortfall is recorded on the asset instead.
+    """
+    from app.narrative_core.long_novel.contracts.enums import OutputFidelity
+    from app.narrative_core.long_novel.extractor import BlockExtractor
+
+    uncounted = {
+        "asset_schema_version": C.ASSET_SCHEMA_VERSION,
+        "chapter_signals": [
+            {"chapter_ref": 1, "evidence": [{"paragraph_ref": 1}]},
+            {"chapter_ref": 2, "evidence": [{"paragraph_ref": 2}]},
+        ],
+        "events": [],
+    }
+    class _NeverCalled:
+        def complete(self, **_kwargs):  # pragma: no cover - the test must not reach it
+            raise AssertionError("validation must not call the provider")
+
+    extractor = BlockExtractor(
+        provider=_NeverCalled(),
+        profile=profile("D_HIGH"),
+        output_budget=16_000,
+        prompt_template_hash="test",
+    )
+
+    with pytest.raises(LongNovelError) as exc:
+        extractor._validate("blk-1", dict(uncounted), expected_chapters=2)
+    assert "counter" in exc.value.message
+
+    kept = extractor._accept_uncounted(
+        "blk-1", dict(uncounted), exc.value, expected_chapters=2
+    )
+    assert len(kept.chapter_signals) == 2
+    assert kept.output_fidelity is OutputFidelity.REDUCED_BY_SATURATION
+
+    # Any other validation failure still propagates — this yields on the counting rule only.
+    other = LongNovelError(
+        LongNovelErrorCode.CARDINALITY_VIOLATION, "blk-1: 1 chapter signal(s) for 2 chapter(s)"
+    )
+    with pytest.raises(LongNovelError):
+        extractor._accept_uncounted("blk-1", dict(uncounted), other, expected_chapters=2)

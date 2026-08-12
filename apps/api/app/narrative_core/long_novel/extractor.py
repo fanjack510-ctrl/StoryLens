@@ -391,13 +391,43 @@ class BlockExtractor:
 
         # A repair that fails the same check is not retried again: it is terminal for this
         # revision, and the planner may split the block instead.
-        asset = self._validate(block_key, outcome.value, expected_chapters=expected_chapters)
+        try:
+            asset = self._validate(block_key, outcome.value, expected_chapters=expected_chapters)
+        except LongNovelError as second_failure:
+            asset = self._accept_uncounted(block_key, outcome.value, second_failure,
+                                           expected_chapters=expected_chapters)
         bound, rejected = self._bind_mentions(block_key, asset, rendered)
         self._check_evidence_anchors(block_key, asset, rendered)
         return asset, bound, rejected, 1
 
+    def _accept_uncounted(
+        self, block_key: str, value: object, failure: LongNovelError, *, expected_chapters: int
+    ) -> BlockAsset:
+        """Keep a twice-uncounted block instead of losing the chapters inside it.
+
+        Missing counters cost a flat stretch of the pacing curve. Failing the block costs
+        every event, thread and character change in eight chapters, and drops those chapters
+        out of the analysis entirely. The second is much worse for a reader, so the counting
+        rule fails the block into a repair and then yields — but the shortfall is recorded on
+        the asset rather than passed off as a complete extraction.
+        """
+        if "counter" not in failure.message:
+            raise failure
+        asset = self._validate(
+            block_key, value, expected_chapters=expected_chapters, require_counts=False
+        )
+        asset.output_fidelity = OutputFidelity.REDUCED_BY_SATURATION
+        return asset
+
     # ------------------------------------------------------------------ validation
-    def _validate(self, block_key: str, value: object, *, expected_chapters: int) -> BlockAsset:
+    def _validate(
+        self,
+        block_key: str,
+        value: object,
+        *,
+        expected_chapters: int,
+        require_counts: bool = True,
+    ) -> BlockAsset:
         if not isinstance(value, dict):
             raise LongNovelError(
                 LongNovelErrorCode.SCHEMA_MISMATCH,
@@ -427,7 +457,7 @@ class BlockExtractor:
                 detail={"problems": problems[:20]},
             ) from exc
         self._check_caps(block_key, asset)
-        self._check_chapter_coverage(block_key, asset, expected_chapters)
+        self._check_chapter_coverage(block_key, asset, expected_chapters, require_counts)
         if trimmed:
             # The block is real and usable, but it is not the complete extraction the plan
             # asked for. Saying so is the difference between a disclosed shortfall and a
@@ -436,7 +466,8 @@ class BlockExtractor:
         return asset
 
     def _check_chapter_coverage(
-        self, block_key: str, asset: BlockAsset, expected_chapters: int
+        self, block_key: str, asset: BlockAsset, expected_chapters: int,
+        require_counts: bool = True,
     ) -> None:
         """Exactly one ``ChapterSignal`` per chapter in the block — mandatory, not a cap.
 
@@ -463,7 +494,8 @@ class BlockExtractor:
                 unit_key=block_key,
                 detail={"chapter_refs": sorted(refs)},
             )
-        self._check_signals_were_counted(block_key, asset)
+        if require_counts:
+            self._check_signals_were_counted(block_key, asset)
 
     @staticmethod
     def _check_signals_were_counted(block_key: str, asset: BlockAsset) -> None:

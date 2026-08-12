@@ -245,11 +245,16 @@ class RunCoordinator:
         # original contract made the final input unbounded in book length.
         assessment: dict[str, Any] | None = None
         if self._assess is not None and not self._budget_exhausted(report):
-            assessment = self._assess(
-                build_assessment_input(
-                    digests, stage_skeleton=stage_skeleton, quality_metrics=self._metrics(report, signals)
-                )
+            payload = build_assessment_input(
+                digests, stage_skeleton=stage_skeleton, quality_metrics=self._metrics(report, signals)
             )
+            # The engine has already measured where the book drags. Handing that over turns
+            # "第 1–806 章，提升叙事密度" — which is what an assessor with no measurements
+            # returns, and which no author can act on — into a range they can open.
+            payload["pacing_regions"] = self._pacing_regions(
+                build_pacing_section(resample_pacing_curve(signals))["points"]
+            )
+            assessment = self._assess(payload)
             report.provider_calls += 1
             report.topics_projected.append(Topic.ASSESSMENT.value)
 
