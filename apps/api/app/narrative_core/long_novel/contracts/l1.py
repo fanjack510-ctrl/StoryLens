@@ -122,8 +122,18 @@ class _Fact(_Strict):
 
 
 class EventFact(_Fact):
+    """One thing that happened.
+
+    ``actors`` was capped at 3 to hold down the output budget. On an ensemble novel that cap
+    is simply wrong: a scene with 「邓肯、凡娜、露克蕾西娅、莫里斯、雪莉」 present is ordinary
+    writing, and ten blocks of a real 806-chapter book — 190 chapters of analysis — were
+    rejected outright because the model reported the cast honestly. The cap is raised to 6,
+    which costs about 3 extra tokens per event against a per-chapter budget of ~490, and
+    surplus names are truncated with a record rather than failing the block (`03 §2.5.2`).
+    """
+
     summary: str = Field(min_length=1, max_length=50)
-    actors: list[str] = Field(default_factory=list, max_length=3)
+    actors: list[str] = Field(default_factory=list, max_length=6)
     chapter_ref: int = Field(ge=1)
 
 

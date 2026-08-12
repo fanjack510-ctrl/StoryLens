@@ -31,6 +31,7 @@ from app.narrative_core.long_novel import constants as C
 from app.narrative_core.long_novel import ids
 from app.narrative_core.long_novel.contracts.density import DensityProfile
 from app.narrative_core.long_novel.contracts.enums import UnitKind
+from app.narrative_core.long_novel.contracts.enums import OutputFidelity
 from app.narrative_core.long_novel.contracts.l1 import BlockAsset, CarryForwardState
 from app.narrative_core.long_novel.errors import LongNovelError, LongNovelErrorCode
 from app.narrative_core.long_novel.mention_binding import EmittedMention, bind_mention_occurrences
@@ -87,6 +88,7 @@ class ExtractionResult:
     asset: BlockAsset
     provider_input_fingerprint: str
     mentions_bound: int
+    mentions_rejected: list[str]
     repairs_applied: list[str]
     provider_calls: int
 
@@ -120,11 +122,17 @@ class BlockExtractor:
         profile: DensityProfile,
         output_budget: int,
         prompt_template_hash: str = "",
+        max_repair_attempts: int = 3,
     ) -> None:
         self._provider = provider
         self._profile = profile
         self._output_budget = output_budget
         self._prompt_template_hash = prompt_template_hash
+        # A schema failure here is usually the model formatting badly on this particular
+        # draw, not a disagreement about the contract: the same block re-sent unchanged
+        # validates. One attempt was too few — eight blocks and 171 chapters were dropped
+        # from a real run to save about ¥0.3 of retries.
+        self._max_repair_attempts = max(1, max_repair_attempts)
 
     # ------------------------------------------------------------------ rendering
     def render(self, chapters: Sequence[SourceChapter]) -> RenderedBlock:
@@ -263,10 +271,10 @@ class BlockExtractor:
 
         try:
             asset = self._validate(block_key, outcome.value, expected_chapters=len(chapters))
-            bound = self._bind_mentions(block_key, asset, rendered)
+            bound, rejected = self._bind_mentions(block_key, asset, rendered)
             self._check_evidence_anchors(block_key, asset, rendered)
         except LongNovelError as first_failure:
-            asset, bound, extra_calls = self._repair_once(
+            asset, bound, rejected, extra_calls = self._repair_once(
                 block_key=block_key,
                 failure=first_failure,
                 payload=payload,
@@ -280,6 +288,7 @@ class BlockExtractor:
             asset=asset,
             provider_input_fingerprint=fingerprint,
             mentions_bound=len(bound),
+            mentions_rejected=[f"{r.surface_norm}@p{r.paragraph_ref}:{r.reason}" for r in rejected],
             repairs_applied=outcome.steps,
             provider_calls=calls,
         )
@@ -323,9 +332,9 @@ class BlockExtractor:
         # A repair that fails the same check is not retried again: it is terminal for this
         # revision, and the planner may split the block instead.
         asset = self._validate(block_key, outcome.value, expected_chapters=expected_chapters)
-        bound = self._bind_mentions(block_key, asset, rendered)
+        bound, rejected = self._bind_mentions(block_key, asset, rendered)
         self._check_evidence_anchors(block_key, asset, rendered)
-        return asset, bound, 1
+        return asset, bound, rejected, 1
 
     # ------------------------------------------------------------------ validation
     def _validate(self, block_key: str, value: object, *, expected_chapters: int) -> BlockAsset:
@@ -337,13 +346,24 @@ class BlockExtractor:
             )
         payload = dict(value)
         payload.setdefault("asset_schema_version", C.ASSET_SCHEMA_VERSION)
+        self._trim_overlong_lists(payload)
         try:
             asset = BlockAsset.model_validate(payload)
         except Exception as exc:  # pydantic ValidationError
+            # Summarise as "field: reason" pairs. The raw pydantic text starts with a count
+            # and puts the useful part on later lines, so a log that keeps only the first
+            # line records "1 validation error" and nothing actionable — which is what a
+            # real run produced for ten failed blocks.
+            problems: list[str] = []
+            for error in getattr(exc, "errors", lambda: [])():
+                where = ".".join(str(x) for x in error.get("loc", ()))
+                problems.append(f"{where}: {error.get('msg', '')}")
+            summary = " | ".join(problems[:6]) or str(exc).splitlines()[0]
             raise LongNovelError(
                 LongNovelErrorCode.SCHEMA_MISMATCH,
-                f"{block_key}: {exc}",
+                f"{block_key}: {summary}",
                 unit_key=block_key,
+                detail={"problems": problems[:20]},
             ) from exc
         self._check_caps(block_key, asset)
         self._check_chapter_coverage(block_key, asset, expected_chapters)
@@ -377,6 +397,34 @@ class BlockExtractor:
                 unit_key=block_key,
                 detail={"chapter_refs": sorted(refs)},
             )
+
+    #: Bounded string lists inside a fact. Exceeding one of these is a *presentation*
+    #: overrun — the extra names are real, there is just no room for them — so the list is
+    #: trimmed and the block is kept. Contrast the per-block cardinality caps below, which
+    #: bound the output budget itself and are enforced strictly.
+    _TRIMMABLE = {
+        "events": {"actors": 6},
+        "choices": {"costs": 2, "gains": 2},
+    }
+
+    def _trim_overlong_lists(self, payload: dict[str, object]) -> None:
+        """Cut over-long inner lists to their cap instead of failing the whole block.
+
+        Rejecting 19 chapters of extracted facts because one event listed five people rather
+        than three trades a large certain loss for a small one. The trimmed names are the
+        tail of a list the model itself ordered, and nothing downstream keys on them.
+        """
+        for field_name, caps in self._TRIMMABLE.items():
+            items = payload.get(field_name)
+            if not isinstance(items, list):
+                continue
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                for inner, cap in caps.items():
+                    value = item.get(inner)
+                    if isinstance(value, list) and len(value) > cap:
+                        item[inner] = value[:cap]
 
     def _check_caps(self, block_key: str, asset: BlockAsset) -> None:
         """Per-block caps are a contract, not a suggestion.
@@ -418,10 +466,18 @@ class BlockExtractor:
                 )
             )
         try:
-            return bind_mention_occurrences(emitted, rendered.texts, rendered.occurrence_keys)
+            bound, rejected = bind_mention_occurrences(
+                emitted, rendered.texts, rendered.occurrence_keys
+            )
         except LongNovelError as exc:
             exc.unit_key = block_key
             raise
+        if rejected:
+            # Recorded rather than swallowed: no identity was created for these, so nothing
+            # downstream is wrong, but a run whose entity coverage is quietly degrading must
+            # say so rather than look clean.
+            asset.output_fidelity = OutputFidelity.REDUCED_BY_SATURATION
+        return bound, rejected
 
     def _check_evidence_anchors(
         self, block_key: str, asset: BlockAsset, rendered: RenderedBlock

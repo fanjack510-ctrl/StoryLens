@@ -113,12 +113,12 @@ def test_t0_no_provider_array_ordinal_reaches_any_key():
     """
     paragraph_text = "老王看着窗外，王主任推门进来。"
     occurrence = ids.paragraph_occurrence_key("cho-x", "hash-p1", 0)
-    forward = bind_mention_occurrences(
+    forward, _ = bind_mention_occurrences(
         [EmittedMention("老王", 1, "c0"), EmittedMention("王主任", 1, "c1")],
         {1: paragraph_text},
         {1: occurrence},
     )
-    reversed_ = bind_mention_occurrences(
+    reversed_, _ = bind_mention_occurrences(
         [EmittedMention("王主任", 1, "c1"), EmittedMention("老王", 1, "c0")],
         {1: paragraph_text},
         {1: occurrence},
@@ -227,7 +227,7 @@ def test_t0_70_repeated_surface_in_one_cluster_binds_and_is_permutation_stable()
     """Interchangeable repetitions are safe: the resulting key *set* cannot differ."""
     text_value = "老王看着老王说道。"
     occurrence = ids.paragraph_occurrence_key("cho-1", "h", 0)
-    bound = bind_mention_occurrences(
+    bound, _ = bind_mention_occurrences(
         [EmittedMention("老王", 1, "same"), EmittedMention("老王", 1, "same")],
         {1: text_value},
         {1: occurrence},
@@ -239,31 +239,40 @@ def test_t0_70_repeated_surface_in_one_cluster_binds_and_is_permutation_stable()
 def test_t0_70_single_mention_with_two_occurrences_binds_deterministically():
     text_value = "老王看着老王说道。"
     occurrence = ids.paragraph_occurrence_key("cho-1", "h", 0)
-    bound = bind_mention_occurrences(
+    bound, _ = bind_mention_occurrences(
         [EmittedMention("老王", 1, "c")], {1: text_value}, {1: occurrence}
     )
     assert len(bound) == 1 and bound[0].surface_occurrence_index_in_paragraph == 0
 
 
-def test_t0_68_surface_absent_from_its_paragraph_is_rejected():
-    """Removes a class of model invention rather than adding one."""
+def test_t0_68_surface_absent_from_its_paragraph_is_dropped_not_fatal():
+    """No identity is created, so the mention is dropped and reported — not the whole block.
+
+    A real DeepSeek run put one surface in the wrong paragraph and cost an entire block:
+    every fact, every chapter signal and three correctly-anchored mentions were discarded to
+    punish one bad claim. Creating no identity is safe; discarding valid work is not.
+    """
     occurrence = ids.paragraph_occurrence_key("cho-1", "h", 0)
-    with pytest.raises(LongNovelError) as exc:
-        bind_mention_occurrences(
-            [EmittedMention("张三", 1, "c")], {1: "老王看着窗外。"}, {1: occurrence}
-        )
-    assert exc.value.code is LongNovelErrorCode.MENTION_ANCHOR_MISMATCH
+    bound, rejected = bind_mention_occurrences(
+        [EmittedMention("张三", 1, "c"), EmittedMention("老王", 1, "c")],
+        {1: "老王看着窗外。"},
+        {1: occurrence},
+    )
+    assert [m.surface_norm for m in bound] == ["老王"]
+    assert len(rejected) == 1
+    assert rejected[0].surface_norm == "张三"
+    assert rejected[0].reason == "surface_not_in_paragraph"
 
 
-def test_t0_68_more_mentions_than_the_paragraph_contains_is_rejected():
+def test_t0_68_surplus_mentions_are_dropped_and_counted():
+    """One textual 老王 but two claimed: the second binds to nothing and is reported."""
     occurrence = ids.paragraph_occurrence_key("cho-1", "h", 0)
-    with pytest.raises(LongNovelError) as exc:
-        bind_mention_occurrences(
-            [EmittedMention("老王", 1, "c"), EmittedMention("老王", 1, "c")],
-            {1: "老王看着窗外。"},
-            {1: occurrence},
-        )
-    assert exc.value.code is LongNovelErrorCode.MENTION_ANCHOR_MISMATCH
+    bound, rejected = bind_mention_occurrences(
+        [EmittedMention("老王", 1, "c"), EmittedMention("老王", 1, "c")],
+        {1: "老王看着窗外。"},
+        {1: occurrence},
+    )
+    assert len(bound) == 1 and len(rejected) == 1
 
 
 # =====================================================================  budget

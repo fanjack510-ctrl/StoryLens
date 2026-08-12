@@ -22,7 +22,21 @@ import hashlib
 
 from app.narrative_core.long_novel.contracts.density import DensityProfile
 
-__all__ = ["SYSTEM_PROMPT", "build_user_prompt", "prompt_template_hash"]
+__all__ = [
+    "SYSTEM_PROMPT",
+    "ASSESSMENT_VOCABULARY",
+    "build_user_prompt",
+    "prompt_template_hash",
+]
+
+#: Stated to the model because the contract's enums are closed. Without them a model returns
+#: reasonable-sounding names like "story" or "characters" that cannot be rendered, and the
+#: engine has to drop a judgement that was already paid for.
+ASSESSMENT_VOCABULARY = """dimension 只能取：story_structure, protagonist_growth, character_relationships, suspense_payoff, pacing, chapter_efficiency
+rating 只能取：A, A-, B+, B, B-, C, D
+每个 dimension 必须同时给出 dimension、rating、conclusion。给不出评级就不要输出该维度。
+strengths 每条需要：title, why_good, chapter_start, chapter_end
+issues 每条需要：issue_id, priority(P0/P1/P2), category, symptom, root_cause, reader_impact, possible_direction, chapter_start, chapter_end"""
 
 
 SYSTEM_PROMPT = """你是小说文本的事实抽取器。你的唯一任务是从给定正文中抽取**可核对的事实**，并以严格 JSON 返回。

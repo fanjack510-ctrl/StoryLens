@@ -27,7 +27,13 @@ from typing import Sequence
 from app.narrative_core.long_novel.errors import LongNovelError, LongNovelErrorCode
 from app.narrative_core.long_novel.ids import mention_key
 
-__all__ = ["EmittedMention", "BoundMention", "textual_occurrences", "bind_mention_occurrences"]
+__all__ = [
+    "EmittedMention",
+    "BoundMention",
+    "RejectedMention",
+    "textual_occurrences",
+    "bind_mention_occurrences",
+]
 
 
 @dataclass(frozen=True)
@@ -43,6 +49,20 @@ class EmittedMention:
     surface_norm: str
     paragraph_ref: int
     cluster_ref: str | None = None
+
+
+@dataclass(frozen=True)
+class RejectedMention:
+    """A mention that could not be anchored, and why.
+
+    Rejection is *not* silent loss: an unbindable mention produces **no identity at all**,
+    so nothing downstream can be wrong because of it — but the count is carried up so a run
+    whose entity coverage is degrading says so instead of looking clean.
+    """
+
+    surface_norm: str
+    paragraph_ref: int
+    reason: str
 
 
 @dataclass(frozen=True)
@@ -79,23 +99,29 @@ def bind_mention_occurrences(
     emitted: Sequence[EmittedMention],
     paragraph_texts: dict[int, str],
     paragraph_occurrence_keys: dict[int, str],
-) -> list[BoundMention]:
-    """Give every emitted mention a text-derived occurrence identity, or refuse.
+) -> tuple[list[BoundMention], list[RejectedMention]]:
+    """Give every emitted mention a text-derived occurrence identity, or reject it.
 
     ``paragraph_texts`` and ``paragraph_occurrence_keys`` are keyed by the block-local
     paragraph anchor ``[p:N]`` the provider was shown.
 
-    Raises ``MENTION_ANCHOR_MISMATCH`` when a claimed surface is not in its paragraph, or
-    when more mentions of a surface are claimed than the paragraph contains — the same
-    fail-closed discipline as evidence anchors, and it removes a class of model invention
-    rather than adding one. Raises ``MENTION_OCCURRENCE_AMBIGUOUS`` for the unrecoverable
-    repetition described in the module docstring.
+    Returns ``(bound, rejected)``. The two failure modes are handled differently on purpose,
+    because they differ in what they can corrupt:
+
+    * **A surface that is not in its paragraph** yields no identity at all, so it is dropped
+      and reported. A real run rejected a whole block — every fact, every chapter signal and
+      three correctly-anchored mentions — because one claimed surface sat in the wrong
+      paragraph. That is punishing the innocent for the guilty.
+    * **An ambiguous repetition** could bind the *wrong* person and propagate a swapped
+      identity upward, so it still raises ``MENTION_OCCURRENCE_AMBIGUOUS``. Creating no
+      identity is safe; creating a plausible wrong one is not.
     """
     groups: dict[tuple[int, str], list[EmittedMention]] = defaultdict(list)
     for item in emitted:
         groups[(item.paragraph_ref, item.surface_norm)].append(item)
 
     bound: list[BoundMention] = []
+    rejected: list[RejectedMention] = []
     # Deterministic group order so the result list is reproducible; it does not affect any
     # key, since each key is derived only from its own paragraph, surface and index.
     for (paragraph_ref, surface_norm) in sorted(groups):
@@ -103,27 +129,25 @@ def bind_mention_occurrences(
         text = paragraph_texts.get(paragraph_ref)
         occurrence_key = paragraph_occurrence_keys.get(paragraph_ref)
         if text is None or occurrence_key is None:
-            raise LongNovelError(
-                LongNovelErrorCode.MENTION_ANCHOR_MISMATCH,
-                f"paragraph anchor [p:{paragraph_ref}] is outside the block's rendered range",
-                detail={"paragraph_ref": paragraph_ref, "surface_norm": surface_norm},
+            rejected.append(
+                RejectedMention(surface_norm, paragraph_ref, "paragraph_out_of_range")
             )
+            continue
 
         occurrences = textual_occurrences(text, surface_norm)
         if len(group) > len(occurrences):
-            raise LongNovelError(
-                LongNovelErrorCode.MENTION_ANCHOR_MISMATCH,
-                (
-                    f"{len(group)} mention(s) of {surface_norm!r} claimed in [p:{paragraph_ref}] "
-                    f"but the paragraph contains {len(occurrences)}"
-                ),
-                detail={
-                    "paragraph_ref": paragraph_ref,
-                    "surface_norm": surface_norm,
-                    "emitted": len(group),
-                    "textual": len(occurrences),
-                },
-            )
+            # The surface is not there (or not there often enough). No identity can be
+            # created for the surplus, so nothing downstream can be wrong — but the block's
+            # facts, chapter signals and correctly-anchored mentions are all still valid and
+            # are worth far more than the one claim being dropped. Rejecting the whole block
+            # for this threw away three good mentions and every fact to punish one bad one.
+            for surplus in group[len(occurrences) :]:
+                rejected.append(
+                    RejectedMention(surface_norm, paragraph_ref, "surface_not_in_paragraph")
+                )
+            group = group[: len(occurrences)]
+            if not group:
+                continue
 
         if len(group) > 1 and len(occurrences) > 1:
             clusters = {item.cluster_ref for item in group}
@@ -159,4 +183,4 @@ def bind_mention_occurrences(
                     cluster_ref=item.cluster_ref,
                 )
             )
-    return bound
+    return bound, rejected
