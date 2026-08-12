@@ -347,6 +347,7 @@ class BlockExtractor:
         payload = dict(value)
         payload.setdefault("asset_schema_version", C.ASSET_SCHEMA_VERSION)
         self._trim_overlong_lists(payload)
+        trimmed = self._trim_to_block_caps(payload)
         try:
             asset = BlockAsset.model_validate(payload)
         except Exception as exc:  # pydantic ValidationError
@@ -367,6 +368,11 @@ class BlockExtractor:
             ) from exc
         self._check_caps(block_key, asset)
         self._check_chapter_coverage(block_key, asset, expected_chapters)
+        if trimmed:
+            # The block is real and usable, but it is not the complete extraction the plan
+            # asked for. Saying so is the difference between a disclosed shortfall and a
+            # silent one.
+            asset.output_fidelity = OutputFidelity.REDUCED_BY_SATURATION
         return asset
 
     def _check_chapter_coverage(
@@ -425,6 +431,36 @@ class BlockExtractor:
                     value = item.get(inner)
                     if isinstance(value, list) and len(value) > cap:
                         item[inner] = value[:cap]
+
+    def _trim_to_block_caps(self, payload: dict[str, object]) -> list[str]:
+        """Cut top-level lists to their per-block caps instead of rejecting the block.
+
+        These caps bound the *output budget*, and by the time the response is in hand the
+        tokens are already spent — the model returned cleanly, it just returned more than the
+        plan assumed. Rejecting then discards nineteen chapters of extracted facts to punish
+        an overrun that already happened and cost what it cost. Trimming keeps the asset
+        consistent with the budget model and loses only the tail of a list the model itself
+        ordered.
+
+        Returns the fields that were trimmed, so the block can be marked reduced-fidelity
+        rather than passing as an ordinary complete result.
+        """
+        p = self._profile
+        caps = {
+            "relationship_changes": p.relationships_per_block,
+            "goal_changes": p.goals_per_block,
+            "choices": p.choices_per_block,
+            "suspense_threads": p.threads_per_block,
+            "identity_assertions": p.identities_per_block,
+            "provisional_entities": p.max_provisional_entities,
+        }
+        trimmed: list[str] = []
+        for field_name, cap in caps.items():
+            items = payload.get(field_name)
+            if isinstance(items, list) and len(items) > cap:
+                trimmed.append(f"{field_name}:{len(items)}->{cap}")
+                payload[field_name] = items[:cap]
+        return trimmed
 
     def _check_caps(self, block_key: str, asset: BlockAsset) -> None:
         """Per-block caps are a contract, not a suggestion.

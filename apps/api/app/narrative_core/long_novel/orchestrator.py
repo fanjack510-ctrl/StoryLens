@@ -136,18 +136,22 @@ class RunCoordinator:
 
         assets = self._extract_all(plan.blocks, chapters_by_order, report)
         signals = self._collect_signals(assets)
-        stage_skeleton = self._build_stage_skeleton(plan, assets)
+        stage_skeleton = self._build_stage_skeleton(plan, assets)  # facts added below
 
         # Reductions are deterministic and free; running them even when blocks failed keeps
         # the partial result coherent rather than half-built.
+        reductions: dict[str, Any] = {}
         for partition in plan.partitions:
             members = [assets[k] for k in partition.block_keys if k in assets]
             if members:
-                reduce_partition(partition_key=partition.partition_key, assets=members)
+                reductions[partition.partition_key] = reduce_partition(
+                    partition_key=partition.partition_key, assets=members
+                )
 
         # L2 interpretation: one bounded call per narrative stage. The reduction above was
         # free; this is the first paid step that works over facts rather than prose.
-        interpretations = self._interpret_stages(stage_skeleton, report)
+        stage_inputs = self._stage_inputs(plan, assets, stage_skeleton)
+        interpretations = self._interpret_stages(stage_inputs, report)
         entities = self._resolve_entities(assets)
 
         chapters_topic = build_chapters_topic(signals)
@@ -268,6 +272,71 @@ class RunCoordinator:
             "coverage": round(report.coverage, 3),
             "blocks_failed": len(report.blocks_failed),
         }
+
+    @staticmethod
+    def _stage_inputs(
+        plan: BookPlan,
+        assets: dict[str, BlockAsset],
+        skeleton: Sequence[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        """Give each stage the facts that happened inside it.
+
+        Without this the interpreter received four numbers — a sequence number, a key and a
+        chapter range — and was asked what the stage was about. A model handed no material
+        does not decline; it reaches for the most common shape for the genre, which is how a
+        steampunk mystery came back as 「初入异世」「获得系统」「初入江湖」 and how the last
+        stage came back in English. That is not the model hallucinating, it is being made to.
+
+        Everything below was already computed and paid for at L1. It was simply not being
+        passed on.
+        """
+        by_key = {b.block_key: b for b in plan.blocks}
+        partition_of_stage: dict[int, list[str]] = {}
+        for stage in plan.stages:
+            partition_of_stage[stage.stage_seq] = list(stage.partition_keys)
+        blocks_of_partition = {p.partition_key: list(p.block_keys) for p in plan.partitions}
+
+        enriched: list[dict[str, Any]] = []
+        for entry in skeleton:
+            seq = int(entry.get("stage_seq", 0))
+            block_keys: list[str] = []
+            for partition_key in partition_of_stage.get(seq, []):
+                block_keys.extend(blocks_of_partition.get(partition_key, []))
+
+            events: list[str] = []
+            threads: list[str] = []
+            people: list[str] = []
+            state_changes: list[str] = []
+            for key in block_keys:
+                asset = assets.get(key)
+                if asset is None:
+                    continue
+                events.extend(e.summary for e in asset.events)
+                threads.extend(t.question for t in asset.suspense_threads)
+                people.extend(
+                    c.display_surface_norm for c in asset.provisional_entities
+                    if c.display_surface_norm
+                )
+                state_changes.extend(
+                    f"{c.entity_ref}: {c.from_state} -> {c.to_state}"
+                    for c in asset.character_state_changes
+                )
+
+            # Bounded: the interpreter's input must not grow with the size of the stage, or
+            # a longer book would eventually blow the window (INV-18).
+            seen: set[str] = set()
+            unique_people = [p for p in people if not (p in seen or seen.add(p))]
+            enriched.append(
+                {
+                    **entry,
+                    "events": events[:40],
+                    "open_questions": threads[:15],
+                    "characters": unique_people[:20],
+                    "state_changes": state_changes[:20],
+                    "event_count": len(events),
+                }
+            )
+        return enriched
 
     def _interpret_stages(
         self, stage_skeleton: Sequence[dict[str, Any]], report: RunReport
