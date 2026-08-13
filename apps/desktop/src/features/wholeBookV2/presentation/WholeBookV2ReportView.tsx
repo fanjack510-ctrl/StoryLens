@@ -421,15 +421,24 @@ function StoryModule({ data }: { data: WholeBookAnalysisV2 }) {
         </div>
       )}
       {tab === "因果链" && (
-        <div className="wb2-causal">
-          {story.causal_chain.map((x, i) => (
-            <div key={x}>
-              <b>{i + 1}</b>
-              <span>{x}</span>
-              {i < story.causal_chain.length - 1 && <i>→</i>}
-            </div>
-          ))}
-        </div>
+        // Vertical. As a horizontal strip these sixty links were 145px-wide cards with the
+        // text squeezed to two characters a line, and reading them meant dragging sideways.
+        // Down the page, cause and effect sit on one line and a dozen fit on a screen.
+        <ol className="wb2-causal">
+          {story.causal_chain.map((x, i) => {
+            const [cause, effect] = x.split("→");
+            return (
+              <li key={`${i}-${x}`}>
+                <b>{String(i + 1).padStart(2, "0")}</b>
+                <span>
+                  {cause.trim()}
+                  {effect && <i>→</i>}
+                  {effect?.trim()}
+                </span>
+              </li>
+            );
+          })}
+        </ol>
       )}
     </>
   );
@@ -880,6 +889,25 @@ function ChaptersModule({ data }: { data: WholeBookAnalysisV2 }) {
   );
 }
 
+/**
+ * What the six assessment dimensions are called on screen.
+ *
+ * The document carries the identifier — `story_structure`, `suspense_payoff` — because that
+ * is what code matches on, and those identifiers were being rendered to the reader as the
+ * headings of the assessment page. The label belongs on the contract beside the identifier,
+ * and there is now an optional field for it, but a backend built before that field exists
+ * rejects a document carrying it. So the mapping lives here until a build ships that
+ * understands the field, at which point this becomes the fallback.
+ */
+const DIMENSION_LABELS: Record<string, string> = {
+  story_structure: "故事结构",
+  protagonist_growth: "主角成长",
+  character_relationships: "人物关系",
+  suspense_payoff: "悬念回收",
+  pacing: "节奏",
+  chapter_efficiency: "章节效率",
+};
+
 const REVISION_RANK: Record<string, string> = {
   first: "第一优先级",
   second: "第二优先级",
@@ -920,6 +948,62 @@ function renderRevisionPriority(x: unknown) {
   );
 }
 
+/** Grade → distance from the centre. A is the rim, D is near it. */
+const RATING_SCORE: Record<string, number> = {
+  A: 7, "A-": 6, "B+": 5, B: 4, "B-": 3, C: 2, D: 1,
+};
+
+/**
+ * The six dimensions as one shape.
+ *
+ * Six side-by-side grade cards make a reader compare letters in sequence; the shape says
+ * which side of the book is weak before any of them are read. The dashed ring is B, so a
+ * dent in the outline is a dimension below competent — for this book, suspense payoff and
+ * pacing, both B-.
+ */
+function DimensionRadar({ dimensions }: { dimensions: WholeBookAnalysisV2["assessment"]["dimensions"] }) {
+  const n = dimensions.length;
+  if (n < 3) return null;
+  const cx = 150, cy = 132, R = 92;
+  const at = (i: number, r: number): [number, number] => {
+    const a = -Math.PI / 2 + (i * 2 * Math.PI) / n;
+    return [cx + Math.cos(a) * r, cy + Math.sin(a) * r];
+  };
+  const poly = (r: number) =>
+    dimensions.map((_, i) => at(i, r).map((v) => v.toFixed(1)).join(",")).join(" ");
+  const points = dimensions.map((d, i) => at(i, (R * (RATING_SCORE[d.rating] ?? 4)) / 7));
+
+  return (
+    <svg viewBox="0 0 300 268" className="wb2-radar" role="img" aria-label="六维评估雷达图">
+      {[0.34, 0.67, 1].map((f) => (
+        <polygon key={f} points={poly(R * f)} fill="none" stroke="currentColor" opacity=".2" />
+      ))}
+      <polygon points={poly((R * RATING_SCORE.B) / 7)} fill="none" stroke="currentColor"
+               opacity=".45" strokeDasharray="3 3" />
+      {dimensions.map((_, i) => {
+        const [x, y] = at(i, R);
+        return <line key={i} x1={cx} y1={cy} x2={x.toFixed(1)} y2={y.toFixed(1)}
+                     stroke="currentColor" opacity=".2" />;
+      })}
+      <polygon points={points.map((p) => p.map((v) => v.toFixed(1)).join(",")).join(" ")}
+               className="wb2-radar-area" />
+      {points.map(([x, y], i) => (
+        <circle key={i} cx={x.toFixed(1)} cy={y.toFixed(1)} r="3" className="wb2-radar-dot" />
+      ))}
+      {dimensions.map((d, i) => {
+        const [x, y] = at(i, R + 25);
+        const anchor = Math.abs(x - cx) < 12 ? "middle" : x > cx ? "start" : "end";
+        return (
+          <text key={d.dimension} x={x.toFixed(1)} y={(y + 4).toFixed(1)} textAnchor={anchor}
+                fontSize="11" className="wb2-radar-label">
+            {DIMENSION_LABELS[d.dimension] ?? d.dimension}
+          </text>
+        );
+      })}
+    </svg>
+  );
+}
+
 function AssessmentModule({ data }: { data: WholeBookAnalysisV2 }) {
   const [selected, setSelected] = useState(0);
   const a = data.assessment;
@@ -940,19 +1024,27 @@ function AssessmentModule({ data }: { data: WholeBookAnalysisV2 }) {
       <section className="wb2-soft-section">
         <div className="wb2-block-title">
           <small>六维评估</small>
-          <h2>等级只是入口，结论和依据更重要</h2>
+          <h2>形状先说明哪一维拖了后腿</h2>
         </div>
-        <div className="wb2-dimensions">
-          {a.dimensions.map((x) => (
-            <article key={x.dimension}>
-              <b>{x.rating}</b>
-              <div>
-                <h3>{x.dimension}</h3>
-                <strong>{x.conclusion}</strong>
-                <p>{x.supporting_metrics.join(" · ")}</p>
-              </div>
-            </article>
-          ))}
+        <div className="wb2-dimension-layout">
+          <figure className="wb2-radar-wrap">
+            <DimensionRadar dimensions={a.dimensions} />
+            <figcaption>越靠外越好 · 虚线为 B 基准</figcaption>
+          </figure>
+          <div className="wb2-dimension-list">
+            {a.dimensions.map((x) => (
+              <article key={x.dimension}>
+                <b data-below={(RATING_SCORE[x.rating] ?? 4) < RATING_SCORE.B ? "1" : "0"}>
+                  {x.rating}
+                </b>
+                <div>
+                  <h3>{DIMENSION_LABELS[x.dimension] ?? x.dimension}</h3>
+                  <strong>{x.conclusion}</strong>
+                  {x.supporting_metrics.length > 0 && <p>{x.supporting_metrics.join(" · ")}</p>}
+                </div>
+              </article>
+            ))}
+          </div>
         </div>
       </section>
 

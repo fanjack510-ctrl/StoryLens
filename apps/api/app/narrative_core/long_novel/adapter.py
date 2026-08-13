@@ -460,12 +460,14 @@ def _as_dimension(value: Any) -> dict[str, Any] | None:
     rating = str(value.get("rating", "")).strip().upper()
     if dimension is None or rating not in LEGAL_RATINGS:
         return None
+    # NOT emitting `dimension_label` here, deliberately. The field exists on the contract and
+    # is optional, but the API a user is running was built before it did, and its model
+    # forbids extras — a document carrying the field made the whole report page fail to load
+    # with a 500. A contract addition only becomes safe to emit once the shipped backend
+    # understands it, so the label is rendered client-side until then. `DIMENSION_LABELS`
+    # below stays as the source of truth for what the six names mean.
     return {
         "dimension": dimension,
-        # Shipped alongside the identifier rather than instead of it: the identifier is what
-        # code matches on, the label is what a person reads, and the screen was showing the
-        # former because nothing supplied the latter.
-        "dimension_label": DIMENSION_LABELS[dimension],
         "rating": rating,
         "conclusion": str(value.get("conclusion", "")),
         "supporting_metrics": [str(m) for m in value.get("supporting_metrics", [])],
