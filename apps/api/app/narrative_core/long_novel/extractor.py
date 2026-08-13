@@ -437,6 +437,7 @@ class BlockExtractor:
         payload = dict(value)
         payload.setdefault("asset_schema_version", C.ASSET_SCHEMA_VERSION)
         self._trim_overlong_lists(payload)
+        self._trim_overlong_text(payload)
         trimmed = self._trim_to_block_caps(payload)
         try:
             asset = BlockAsset.model_validate(payload)
@@ -536,6 +537,40 @@ class BlockExtractor:
         "events": {"actors": 6},
         "choices": {"costs": 2, "gains": 2},
     }
+
+    #: Text fields with a length cap, and the cap. Same reasoning as ``_TRIMMABLE``: a summary
+    #: one character over its limit is a *presentation* overrun, not a false fact, and failing
+    #: the block over it discards every fact in eight chapters. Measured: one 51-character
+    #: summary cost 8 of 40 chapters on a real probe, dropping coverage to 80%.
+    _TRIMMABLE_TEXT = {
+        "events": {"summary": 50},
+        "character_state_changes": {"from_state": 24, "to_state": 24},
+        "suspense_threads": {"question": 40},
+        "suspense_actions": {"information_added": 40},
+        "relationship_changes": {"relation": 24},
+        "goal_changes": {"goal_text": 40},
+        "choices": {"decision": 40},
+        "chapter_signals": {"pov_entity": 120},
+    }
+
+    def _trim_overlong_text(self, payload: dict[str, object]) -> None:
+        """Cut over-long strings to their cap instead of failing the whole block.
+
+        The cut keeps the head of the string, which is where a summary puts its subject and
+        verb; the tail it loses is the qualifier. Nothing downstream keys on these values —
+        identity is derived from evidence anchors, not from prose.
+        """
+        for field_name, caps in self._TRIMMABLE_TEXT.items():
+            items = payload.get(field_name)
+            if not isinstance(items, list):
+                continue
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                for inner, cap in caps.items():
+                    value = item.get(inner)
+                    if isinstance(value, str) and len(value) > cap:
+                        item[inner] = value[:cap]
 
     def _trim_overlong_lists(self, payload: dict[str, object]) -> None:
         """Cut over-long inner lists to their cap instead of failing the whole block.

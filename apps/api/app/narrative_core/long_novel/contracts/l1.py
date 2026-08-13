@@ -108,6 +108,11 @@ class ChapterSignal(_Strict):
     new_information_beats: int = Field(default=0, ge=0)
     hook_present: bool = False
     cap_saturated: bool = False
+    #: PROFILE DELTA — axis 4 `ensemble` (10_ADAPTIVE_PROFILE_LAYER §9). The surface form of
+    #: the character whose viewpoint the chapter is told from. Empty when the profile does not
+    #: ask for it, so the core schema is unchanged for every other book (INV-P1: a profile may
+    #: add, never remove). Dispatch is not built yet; the POC fills it unconditionally.
+    pov_entity: str = Field(default="", max_length=120)
     evidence: list[EvidenceRef] = Field(default_factory=list)
 
 

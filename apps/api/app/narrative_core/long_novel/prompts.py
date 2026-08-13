@@ -60,6 +60,8 @@ SYSTEM_PROMPT = """你是小说文本的事实抽取器。你的唯一任务是�
   `action_paragraphs` 数以动作推进为主的段落数；`interiority_paragraphs` 数写心理活动的段落数；
   `scene_breaks` 数场景切换次数；`new_information_beats` 数该章给出新信息的次数；
   `hook_present` 表示章末是否留了钩子。这几个数字决定全书节奏曲线，**必须真实清点**。
+  `pov_entity` 填**这一章是通过谁的视角叙述的**，取值必须是该章正文里原样出现的人物称呼。
+  一章只填一个；若该章切换过视角，填占篇幅更多的那个。**每一章都必须填，不要留空。**
 - `events`：发生了什么，`summary` ≤50 字。
 - `character_state_changes`：某人状态从 A 变成 B。
 - `causal_links`：哪件事导致哪件事。
@@ -77,7 +79,8 @@ SYSTEM_PROMPT = """你是小说文本的事实抽取器。你的唯一任务是�
 _SCHEMA_SKELETON = """{
   "chapter_signals": [{"chapter_ref": 1, "dialogue_paragraphs": 12, "action_paragraphs": 7,
                        "interiority_paragraphs": 3, "scene_breaks": 1, "new_information_beats": 4,
-                       "hook_present": true, "evidence": [{"paragraph_ref": 1}]}],
+                       "hook_present": true, "pov_entity": "",
+                       "evidence": [{"paragraph_ref": 1}]}],
   "events": [{"summary": "", "actors": [""], "chapter_ref": 1, "evidence": [{"paragraph_ref": 1}]}],
   "character_state_changes": [{"entity_ref": "", "from_state": "", "to_state": "", "chapter_ref": 1,
                                "evidence": [{"paragraph_ref": 1}]}],

@@ -153,6 +153,11 @@ class RunReport:
     topics_projected: list[str] = field(default_factory=list)
     chapters_lost: list[int] = field(default_factory=list)
     document: dict[str, Any] | None = None
+    #: The block assets the run extracted, keyed by block. The report could previously say how
+    #: many blocks succeeded but not what came back inside them, so anything asking "was this
+    #: field actually filled" had to go re-parse provider responses. Profile delta fields have
+    #: no report section consuming them yet, and this is how they are inspected.
+    assets: dict[str, Any] = field(default_factory=dict)
 
     @property
     def complete(self) -> bool:
@@ -222,6 +227,7 @@ class RunCoordinator:
         )
 
         assets = self._extract_all(plan.blocks, chapters_by_order, report)
+        report.assets = assets
         signals = self._collect_signals(assets)
         stage_skeleton = self._build_stage_skeleton(plan, assets)  # facts added below
 
