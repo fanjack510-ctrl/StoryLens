@@ -77,6 +77,15 @@ export const router = createBrowserRouter([
         errorElement: routeErrorElement,
       },
       {
+        // Ahead of the analysis, not inside it: the profile is a book-level prerequisite
+        // that both the whole-book engine and the per-chapter pipeline read.
+        path: "/books/:bookId/profile",
+        lazy: async () => ({
+          Component: (await import("../features/bookProfile/BookProfilePage")).BookProfilePage,
+        }),
+        errorElement: routeErrorElement,
+      },
+      {
         path: "/books/:bookId/whole-book-v2",
         element: <WholeBookV2FormalPage />,
         errorElement: routeErrorElement,
