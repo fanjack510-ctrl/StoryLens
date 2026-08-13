@@ -25,6 +25,7 @@ from app.routers.whole_book_results import router as whole_book_results_router
 from app.narrative_core.whole_book_v2.router import router as whole_book_v2_router
 from app.routers.pro_whole_book_insights import router as pro_whole_book_insights_router
 from app.routers.whole_book_cost_consent import router as whole_book_cost_consent_router
+from app.routers.book_profile_router import router as book_profile_router
 from app.routers.whole_book_foundation_router import router as whole_book_foundation_router
 from app.routers.whole_book_free_product_router import router as whole_book_free_product_router
 from app.routers.whole_book_product_capability_router import router as whole_book_product_capability_router
@@ -224,6 +225,7 @@ def _configure_middleware_and_routers(app: FastAPI) -> None:
     )
     app.include_router(api_v1_router)
     # Recovery Center owns GET recovery-plan + POST recover (unified/legacy dispatch).
+    app.include_router(book_profile_router)
     app.include_router(analysis_recovery_router, prefix="/api/v1")
     app.include_router(analysis_router)
     app.include_router(desktop_router)

@@ -31,6 +31,7 @@ from app.narrative_core.migrations import (
     MIGRATION_WHOLE_BOOK_RUNTIME_CONTROL,
     MIGRATION_WHOLE_BOOK_RUN_PROVIDER_PINNING,
     MIGRATION_LONG_NOVEL_FOUNDATION,
+    MIGRATION_BOOK_PROFILE,
     MIGRATION_WHOLE_BOOK_SNAPSHOT_IMMUTABILITY,
     migration_checksum,
 )
@@ -1149,6 +1150,7 @@ def apply_narrative_migrations(engine: Engine) -> None:
     migrate_narrative_20260728_016_whole_book_native_input_audit(engine)
     migrate_narrative_20260808_017_whole_book_run_provider_pinning(engine)
     migrate_narrative_20260812_018_long_novel_foundation(engine)
+    migrate_narrative_20260813_019_book_profile(engine)
 
 
 SQL_012 = """
@@ -2569,3 +2571,73 @@ def migrate_narrative_20260812_018_long_novel_foundation(engine: Engine) -> None
 
     _ensure_schema_migrations_table(engine)
     _record_applied(engine, MIGRATION_LONG_NOVEL_FOUNDATION, checksum)
+
+
+SQL_019 = """
+CREATE TABLE book_profiles (
+    id INTEGER NOT NULL PRIMARY KEY,
+    book_id INTEGER NOT NULL,
+    snapshot_id INTEGER NOT NULL DEFAULT 0,
+    status VARCHAR(16) NOT NULL DEFAULT 'draft',
+    axes_json TEXT NOT NULL DEFAULT '{}',
+    disagreements_json TEXT NOT NULL DEFAULT '[]',
+    statistics_json TEXT NOT NULL DEFAULT '{}',
+    name_deciles_json TEXT NOT NULL DEFAULT '{}',
+    candidate_names_json TEXT NOT NULL DEFAULT '[]',
+    opening_notes_json TEXT NOT NULL DEFAULT '{}',
+    sample_chapters_json TEXT NOT NULL DEFAULT '[]',
+    provider_name VARCHAR(100) NOT NULL DEFAULT '',
+    model_name VARCHAR(255) NOT NULL DEFAULT '',
+    confirmed_at DATETIME,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(book_id) REFERENCES books (id) ON DELETE CASCADE
+);
+CREATE UNIQUE INDEX ix_book_profiles_book ON book_profiles (book_id);
+"""
+
+#: One row per book, not per run: the profile is a book-level prerequisite that both the
+#: whole-book engine and the single-chapter pipeline read (10_ADAPTIVE_PROFILE_LAYER §4.0).
+BOOK_PROFILE_TABLES: tuple[str, ...] = ("book_profiles",)
+
+_BOOK_PROFILE_REQUIRED_COLUMNS = {
+    "book_profiles": frozenset({"book_id", "status", "axes_json"}),
+}
+
+
+def migrate_narrative_20260813_019_book_profile(engine: Engine) -> None:
+    """CHG-20260813-089: the per-book profile, drafted by the engine and confirmed by the user.
+
+    Additive and optional. A book with no row here behaves exactly as it did before — the
+    profile is an input the engine may use, never a precondition for the existing paths.
+    """
+    checksum = migration_checksum(SQL_019)
+    existing = _table_names(engine)
+
+    for table in BOOK_PROFILE_TABLES:
+        if table not in existing:
+            continue
+        missing_columns = _BOOK_PROFILE_REQUIRED_COLUMNS[table] - _column_names(engine, table)
+        if missing_columns:
+            raise NarrativeCoreError(
+                NarrativeCoreErrorCode.MIGRATION_BASELINE_INVALID,
+                f"019 cannot proceed: table {table} already exists but is missing "
+                f"{', '.join(sorted(missing_columns))}. It was not created by this migration; "
+                "resolve the name collision before re-running.",
+            )
+
+    with engine.begin() as connection:
+        for statement in (s.strip() for s in SQL_019.split(";")):
+            if not statement:
+                continue
+            first_line = statement.splitlines()[0].upper()
+            if first_line.startswith("CREATE TABLE"):
+                if statement.splitlines()[0].split()[2] in existing:
+                    continue
+            elif "CREATE" in first_line and "INDEX" in first_line:
+                target = statement.split(" ON ")[1].split("(")[0].strip()
+                if target in existing:
+                    continue
+            connection.execute(text(statement))
+
+    _record_applied(engine, MIGRATION_BOOK_PROFILE, checksum)

@@ -1,0 +1,3386 @@
+{
+  "schema_version": "whole-book-analysis-v2.0",
+  "book_metadata": {
+    "book_id": 42,
+    "snapshot_id": 77,
+    "revision_hash": "rev-fixture",
+    "title": "余罪·V2验收样例",
+    "chapter_count": 36,
+    "character_count": 1683
+  },
+  "type_profile": {
+    "version": "2.0",
+    "primary_genre": "mystery",
+    "secondary_genres": [
+      "relationship",
+      "growth"
+    ],
+    "narrative_drivers": [
+      "mystery",
+      "relationship",
+      "growth"
+    ],
+    "narrative_traits": [
+      "long_form",
+      "multi_stage"
+    ],
+    "genre_confidence": 0.8500000000000001,
+    "analysis_focus": [
+      "clue_fairness",
+      "payoff_timing"
+    ],
+    "genre_expectations": [],
+    "evidence": [
+      "E-1001-0",
+      "E-1008-0",
+      "E-1015-0",
+      "E-1022-0",
+      "E-1029-0"
+    ]
+  },
+  "overview": {
+    "version": "2.0",
+    "one_sentence_story": "主角在不断升级的冲突中以选择和代价重建目标。",
+    "full_summary": "全书通过阶段目标、人物选择、悬念回收与最终行动形成可追踪的长篇结构。",
+    "protagonist": "林",
+    "initial_state": "故事开始时的普通人物",
+    "final_state": "能主动定义选择并承担代价的人",
+    "core_goal": "承担更大的共同目标",
+    "goal_evolution": [
+      "推进核心目标",
+      "推进核心目标",
+      "推进核心目标",
+      "推进核心目标",
+      "推进核心目标",
+      "推进核心目标",
+      "推进核心目标",
+      "推进核心目标",
+      "推进核心目标"
+    ],
+    "core_conflict": "目标与代价冲突",
+    "conflict_evolution": [
+      "目标与代价冲突",
+      "目标与代价冲突",
+      "目标与代价冲突",
+      "目标与代价冲突",
+      "目标与代价冲突",
+      "目标与代价冲突",
+      "目标与代价冲突",
+      "目标与代价冲突",
+      "目标与代价冲突"
+    ],
+    "core_question": "问题 1",
+    "major_storylines": [
+      "核心目标"
+    ],
+    "major_turning_points": [
+      {
+        "chapter_start": 4,
+        "chapter_end": 4,
+        "evidence": [
+          "E-1001-0",
+          "E-1002-0"
+        ],
+        "title": "第 4 章改变方向",
+        "description": "第 1 至 4 章围绕目标、阻力与选择形成完整阶段。"
+      },
+      {
+        "chapter_start": 8,
+        "chapter_end": 8,
+        "evidence": [
+          "E-1008-0"
+        ],
+        "title": "第 8 章改变方向",
+        "description": "第 5 至 8 章围绕目标、阻力与选择形成完整阶段。"
+      },
+      {
+        "chapter_start": 12,
+        "chapter_end": 12,
+        "evidence": [
+          "E-1009-0"
+        ],
+        "title": "第 12 章改变方向",
+        "description": "第 9 至 12 章围绕目标、阻力与选择形成完整阶段。"
+      },
+      {
+        "chapter_start": 16,
+        "chapter_end": 16,
+        "evidence": [
+          "E-1015-0",
+          "E-1016-0"
+        ],
+        "title": "第 16 章改变方向",
+        "description": "第 13 至 16 章围绕目标、阻力与选择形成完整阶段。"
+      },
+      {
+        "chapter_start": 20,
+        "chapter_end": 20,
+        "evidence": [],
+        "title": "第 20 章改变方向",
+        "description": "第 17 至 20 章围绕目标、阻力与选择形成完整阶段。"
+      }
+    ],
+    "major_suspense": [
+      "问题 1",
+      "问题 8",
+      "问题 15",
+      "问题 22",
+      "问题 29"
+    ],
+    "final_climax": "第 36 章改变方向",
+    "ending_resolution": [
+      "核心目标在结局得到回应"
+    ],
+    "ending_open_questions": [
+      "下一阶段如何兑现选择？"
+    ],
+    "story_skeleton": [
+      "阶段 1",
+      "阶段 2",
+      "阶段 3",
+      "阶段 4",
+      "阶段 5",
+      "阶段 6",
+      "阶段 7",
+      "阶段 8",
+      "阶段 9"
+    ],
+    "evidence": [
+      "E-1001-0",
+      "E-1002-0",
+      "E-1008-0",
+      "E-1009-0",
+      "E-1015-0",
+      "E-1016-0",
+      "E-1022-0",
+      "E-1023-0"
+    ]
+  },
+  "story": {
+    "version": "2.0",
+    "availability": "available",
+    "structure_stages": [
+      {
+        "chapter_start": 1,
+        "chapter_end": 4,
+        "evidence": [
+          "E-1001-0",
+          "E-1002-0"
+        ],
+        "stage_id": "S1",
+        "title": "阶段 1",
+        "summary": "第 1 至 4 章围绕目标、阻力与选择形成完整阶段。",
+        "protagonist_state": "阶段 1 进入状态",
+        "stage_goal": "推进核心目标",
+        "core_conflict": "目标与代价冲突",
+        "major_characters": [
+          "林",
+          "林大人"
+        ],
+        "key_events": [
+          "事件 1",
+          "事件 4"
+        ],
+        "major_choice": "选择承担后果",
+        "cost_paid": [
+          "失去既有安全"
+        ],
+        "gain_received": [
+          "获得新线索"
+        ],
+        "turning_point": "第 4 章改变方向",
+        "ending_state": "带着代价进入下一阶段",
+        "next_question": "下一阶段如何兑现选择？"
+      },
+      {
+        "chapter_start": 5,
+        "chapter_end": 8,
+        "evidence": [
+          "E-1008-0"
+        ],
+        "stage_id": "S2",
+        "title": "阶段 2",
+        "summary": "第 5 至 8 章围绕目标、阻力与选择形成完整阶段。",
+        "protagonist_state": "阶段 2 进入状态",
+        "stage_goal": "推进核心目标",
+        "core_conflict": "目标与代价冲突",
+        "major_characters": [
+          "林",
+          "林大人"
+        ],
+        "key_events": [
+          "事件 5",
+          "事件 8"
+        ],
+        "major_choice": "选择承担后果",
+        "cost_paid": [
+          "失去既有安全"
+        ],
+        "gain_received": [
+          "获得新线索"
+        ],
+        "turning_point": "第 8 章改变方向",
+        "ending_state": "带着代价进入下一阶段",
+        "next_question": "下一阶段如何兑现选择？"
+      },
+      {
+        "chapter_start": 9,
+        "chapter_end": 12,
+        "evidence": [
+          "E-1009-0"
+        ],
+        "stage_id": "S3",
+        "title": "阶段 3",
+        "summary": "第 9 至 12 章围绕目标、阻力与选择形成完整阶段。",
+        "protagonist_state": "阶段 3 进入状态",
+        "stage_goal": "推进核心目标",
+        "core_conflict": "目标与代价冲突",
+        "major_characters": [
+          "林",
+          "林大人"
+        ],
+        "key_events": [
+          "事件 9",
+          "事件 12"
+        ],
+        "major_choice": "选择承担后果",
+        "cost_paid": [
+          "失去既有安全"
+        ],
+        "gain_received": [
+          "获得新线索"
+        ],
+        "turning_point": "第 12 章改变方向",
+        "ending_state": "带着代价进入下一阶段",
+        "next_question": "下一阶段如何兑现选择？"
+      },
+      {
+        "chapter_start": 13,
+        "chapter_end": 16,
+        "evidence": [
+          "E-1015-0",
+          "E-1016-0"
+        ],
+        "stage_id": "S4",
+        "title": "阶段 4",
+        "summary": "第 13 至 16 章围绕目标、阻力与选择形成完整阶段。",
+        "protagonist_state": "阶段 4 进入状态",
+        "stage_goal": "推进核心目标",
+        "core_conflict": "目标与代价冲突",
+        "major_characters": [
+          "林",
+          "林大人"
+        ],
+        "key_events": [
+          "事件 13",
+          "事件 16"
+        ],
+        "major_choice": "选择承担后果",
+        "cost_paid": [
+          "失去既有安全"
+        ],
+        "gain_received": [
+          "获得新线索"
+        ],
+        "turning_point": "第 16 章改变方向",
+        "ending_state": "带着代价进入下一阶段",
+        "next_question": "下一阶段如何兑现选择？"
+      },
+      {
+        "chapter_start": 17,
+        "chapter_end": 20,
+        "evidence": [],
+        "stage_id": "S5",
+        "title": "阶段 5",
+        "summary": "第 17 至 20 章围绕目标、阻力与选择形成完整阶段。",
+        "protagonist_state": "阶段 5 进入状态",
+        "stage_goal": "推进核心目标",
+        "core_conflict": "目标与代价冲突",
+        "major_characters": [
+          "林",
+          "林大人"
+        ],
+        "key_events": [
+          "事件 17",
+          "事件 20"
+        ],
+        "major_choice": "选择承担后果",
+        "cost_paid": [
+          "失去既有安全"
+        ],
+        "gain_received": [
+          "获得新线索"
+        ],
+        "turning_point": "第 20 章改变方向",
+        "ending_state": "带着代价进入下一阶段",
+        "next_question": "下一阶段如何兑现选择？"
+      },
+      {
+        "chapter_start": 21,
+        "chapter_end": 24,
+        "evidence": [
+          "E-1022-0",
+          "E-1023-0"
+        ],
+        "stage_id": "S6",
+        "title": "阶段 6",
+        "summary": "第 21 至 24 章围绕目标、阻力与选择形成完整阶段。",
+        "protagonist_state": "阶段 6 进入状态",
+        "stage_goal": "推进核心目标",
+        "core_conflict": "目标与代价冲突",
+        "major_characters": [
+          "林",
+          "林大人"
+        ],
+        "key_events": [
+          "事件 21",
+          "事件 24"
+        ],
+        "major_choice": "选择承担后果",
+        "cost_paid": [
+          "失去既有安全"
+        ],
+        "gain_received": [
+          "获得新线索"
+        ],
+        "turning_point": "第 24 章改变方向",
+        "ending_state": "带着代价进入下一阶段",
+        "next_question": "下一阶段如何兑现选择？"
+      },
+      {
+        "chapter_start": 25,
+        "chapter_end": 28,
+        "evidence": [],
+        "stage_id": "S7",
+        "title": "阶段 7",
+        "summary": "第 25 至 28 章围绕目标、阻力与选择形成完整阶段。",
+        "protagonist_state": "阶段 7 进入状态",
+        "stage_goal": "推进核心目标",
+        "core_conflict": "目标与代价冲突",
+        "major_characters": [
+          "林",
+          "林大人"
+        ],
+        "key_events": [
+          "事件 25",
+          "事件 28"
+        ],
+        "major_choice": "选择承担后果",
+        "cost_paid": [
+          "失去既有安全"
+        ],
+        "gain_received": [
+          "获得新线索"
+        ],
+        "turning_point": "第 28 章改变方向",
+        "ending_state": "带着代价进入下一阶段",
+        "next_question": "下一阶段如何兑现选择？"
+      },
+      {
+        "chapter_start": 29,
+        "chapter_end": 32,
+        "evidence": [
+          "E-1029-0",
+          "E-1030-0"
+        ],
+        "stage_id": "S8",
+        "title": "阶段 8",
+        "summary": "第 29 至 32 章围绕目标、阻力与选择形成完整阶段。",
+        "protagonist_state": "阶段 8 进入状态",
+        "stage_goal": "推进核心目标",
+        "core_conflict": "目标与代价冲突",
+        "major_characters": [
+          "林",
+          "林大人"
+        ],
+        "key_events": [
+          "事件 29",
+          "事件 32"
+        ],
+        "major_choice": "选择承担后果",
+        "cost_paid": [
+          "失去既有安全"
+        ],
+        "gain_received": [
+          "获得新线索"
+        ],
+        "turning_point": "第 32 章改变方向",
+        "ending_state": "带着代价进入下一阶段",
+        "next_question": "下一阶段如何兑现选择？"
+      },
+      {
+        "chapter_start": 33,
+        "chapter_end": 36,
+        "evidence": [],
+        "stage_id": "S9",
+        "title": "阶段 9",
+        "summary": "第 33 至 36 章围绕目标、阻力与选择形成完整阶段。",
+        "protagonist_state": "阶段 9 进入状态",
+        "stage_goal": "推进核心目标",
+        "core_conflict": "目标与代价冲突",
+        "major_characters": [
+          "林",
+          "林大人"
+        ],
+        "key_events": [
+          "事件 33",
+          "事件 36"
+        ],
+        "major_choice": "选择承担后果",
+        "cost_paid": [
+          "失去既有安全"
+        ],
+        "gain_received": [
+          "获得新线索"
+        ],
+        "turning_point": "第 36 章改变方向",
+        "ending_state": "带着代价进入下一阶段",
+        "next_question": "下一阶段如何兑现选择？"
+      }
+    ],
+    "storylines": [
+      {
+        "chapter_start": 1,
+        "chapter_end": 36,
+        "evidence": [
+          "E-1001-0",
+          "E-1002-0",
+          "E-1008-0",
+          "E-1009-0",
+          "E-1015-0",
+          "E-1016-0"
+        ],
+        "storyline_id": "L-main",
+        "name": "核心目标",
+        "type": "main",
+        "importance": 0.95,
+        "participants": [
+          "林",
+          "林大人"
+        ],
+        "nodes": [
+          {
+            "chapter": 1,
+            "event": "事件 1-8",
+            "evidence": [
+              "E-1001-0",
+              "E-1002-0"
+            ]
+          },
+          {
+            "chapter": 8,
+            "event": "事件 8-15",
+            "evidence": [
+              "E-1008-0",
+              "E-1009-0"
+            ]
+          },
+          {
+            "chapter": 15,
+            "event": "事件 15-22",
+            "evidence": [
+              "E-1015-0",
+              "E-1016-0"
+            ]
+          },
+          {
+            "chapter": 22,
+            "event": "事件 22-29",
+            "evidence": [
+              "E-1022-0",
+              "E-1023-0"
+            ]
+          },
+          {
+            "chapter": 29,
+            "event": "事件 29-36",
+            "evidence": [
+              "E-1029-0",
+              "E-1030-0"
+            ]
+          }
+        ],
+        "turning_points": [
+          "第 4 章改变方向",
+          "第 8 章改变方向",
+          "第 12 章改变方向",
+          "第 16 章改变方向",
+          "第 20 章改变方向",
+          "第 24 章改变方向",
+          "第 28 章改变方向",
+          "第 32 章改变方向",
+          "第 36 章改变方向"
+        ],
+        "relationship_to_mainline": "主线",
+        "status": "resolved",
+        "resolution": "核心目标在结局得到回应"
+      }
+    ],
+    "causal_chain": [
+      "事件 1-8",
+      "事件 8-15",
+      "事件 15-22",
+      "事件 22-29",
+      "事件 29-36"
+    ],
+    "chronology": [
+      {
+        "event_id": "T1",
+        "story_order": 1,
+        "narrative_order": 1,
+        "chapter": 1,
+        "description": "事件 1-8",
+        "evidence": [
+          "E-1001-0",
+          "E-1002-0"
+        ]
+      },
+      {
+        "event_id": "T2",
+        "story_order": 2,
+        "narrative_order": 2,
+        "chapter": 8,
+        "description": "事件 8-15",
+        "evidence": [
+          "E-1008-0",
+          "E-1009-0"
+        ]
+      },
+      {
+        "event_id": "T3",
+        "story_order": 3,
+        "narrative_order": 3,
+        "chapter": 15,
+        "description": "事件 15-22",
+        "evidence": [
+          "E-1015-0",
+          "E-1016-0"
+        ]
+      },
+      {
+        "event_id": "T4",
+        "story_order": 4,
+        "narrative_order": 4,
+        "chapter": 22,
+        "description": "事件 22-29",
+        "evidence": [
+          "E-1022-0",
+          "E-1023-0"
+        ]
+      },
+      {
+        "event_id": "T5",
+        "story_order": 5,
+        "narrative_order": 5,
+        "chapter": 29,
+        "description": "事件 29-36",
+        "evidence": [
+          "E-1029-0",
+          "E-1030-0"
+        ]
+      }
+    ]
+  },
+  "characters": {
+    "version": "2.0",
+    "availability": "available",
+    "protagonist": {
+      "initial_identity": "故事开始时的普通人物",
+      "initial_goal": "解决个人困境",
+      "final_goal": "承担更大的共同目标",
+      "final_identity": "能主动定义选择并承担代价的人",
+      "stages": [
+        {
+          "chapter": 1,
+          "chapter_end": 4,
+          "stage_name": "阶段 1",
+          "entry_state": "阶段 1 进入状态",
+          "goal": "推进核心目标",
+          "major_events": [
+            "事件 1",
+            "事件 4"
+          ],
+          "conflict": "目标与代价冲突",
+          "choice": "选择承担后果",
+          "cost_paid": [
+            "失去既有安全"
+          ],
+          "gain_received": [
+            "获得新线索"
+          ],
+          "ability_change": "能力从被动转向可控",
+          "relationship_change": "关系因选择而变化",
+          "status_change": "社会位置发生变化",
+          "internal_belief_change": "从回避代价到承担责任",
+          "exit_state": "带着代价进入下一阶段",
+          "next_stage_trigger": "下一阶段如何兑现选择？",
+          "evidence": [
+            "E-1001-0",
+            "E-1002-0"
+          ],
+          "external_conflict": "目标与代价冲突",
+          "internal_conflict": "内在犹豫",
+          "obstacles": [
+            "外部阻力"
+          ],
+          "turning_point": "第 4 章改变方向",
+          "identity_change": "身份边界变化"
+        },
+        {
+          "chapter": 5,
+          "chapter_end": 8,
+          "stage_name": "阶段 2",
+          "entry_state": "阶段 2 进入状态",
+          "goal": "推进核心目标",
+          "major_events": [
+            "事件 5",
+            "事件 8"
+          ],
+          "conflict": "目标与代价冲突",
+          "choice": "选择承担后果",
+          "cost_paid": [
+            "失去既有安全"
+          ],
+          "gain_received": [
+            "获得新线索"
+          ],
+          "ability_change": "能力从被动转向可控",
+          "relationship_change": "关系因选择而变化",
+          "status_change": "社会位置发生变化",
+          "internal_belief_change": "从回避代价到承担责任",
+          "exit_state": "带着代价进入下一阶段",
+          "next_stage_trigger": "下一阶段如何兑现选择？",
+          "evidence": [
+            "E-1008-0"
+          ],
+          "external_conflict": "目标与代价冲突",
+          "internal_conflict": "内在犹豫",
+          "obstacles": [
+            "外部阻力"
+          ],
+          "turning_point": "第 8 章改变方向",
+          "identity_change": "身份边界变化"
+        },
+        {
+          "chapter": 9,
+          "chapter_end": 12,
+          "stage_name": "阶段 3",
+          "entry_state": "阶段 3 进入状态",
+          "goal": "推进核心目标",
+          "major_events": [
+            "事件 9",
+            "事件 12"
+          ],
+          "conflict": "目标与代价冲突",
+          "choice": "选择承担后果",
+          "cost_paid": [
+            "失去既有安全"
+          ],
+          "gain_received": [
+            "获得新线索"
+          ],
+          "ability_change": "能力从被动转向可控",
+          "relationship_change": "关系因选择而变化",
+          "status_change": "社会位置发生变化",
+          "internal_belief_change": "从回避代价到承担责任",
+          "exit_state": "带着代价进入下一阶段",
+          "next_stage_trigger": "下一阶段如何兑现选择？",
+          "evidence": [
+            "E-1009-0"
+          ],
+          "external_conflict": "目标与代价冲突",
+          "internal_conflict": "内在犹豫",
+          "obstacles": [
+            "外部阻力"
+          ],
+          "turning_point": "第 12 章改变方向",
+          "identity_change": "身份边界变化"
+        },
+        {
+          "chapter": 13,
+          "chapter_end": 16,
+          "stage_name": "阶段 4",
+          "entry_state": "阶段 4 进入状态",
+          "goal": "推进核心目标",
+          "major_events": [
+            "事件 13",
+            "事件 16"
+          ],
+          "conflict": "目标与代价冲突",
+          "choice": "选择承担后果",
+          "cost_paid": [
+            "失去既有安全"
+          ],
+          "gain_received": [
+            "获得新线索"
+          ],
+          "ability_change": "能力从被动转向可控",
+          "relationship_change": "关系因选择而变化",
+          "status_change": "社会位置发生变化",
+          "internal_belief_change": "从回避代价到承担责任",
+          "exit_state": "带着代价进入下一阶段",
+          "next_stage_trigger": "下一阶段如何兑现选择？",
+          "evidence": [
+            "E-1015-0",
+            "E-1016-0"
+          ],
+          "external_conflict": "目标与代价冲突",
+          "internal_conflict": "内在犹豫",
+          "obstacles": [
+            "外部阻力"
+          ],
+          "turning_point": "第 16 章改变方向",
+          "identity_change": "身份边界变化"
+        },
+        {
+          "chapter": 17,
+          "chapter_end": 20,
+          "stage_name": "阶段 5",
+          "entry_state": "阶段 5 进入状态",
+          "goal": "推进核心目标",
+          "major_events": [
+            "事件 17",
+            "事件 20"
+          ],
+          "conflict": "目标与代价冲突",
+          "choice": "选择承担后果",
+          "cost_paid": [
+            "失去既有安全"
+          ],
+          "gain_received": [
+            "获得新线索"
+          ],
+          "ability_change": "能力从被动转向可控",
+          "relationship_change": "关系因选择而变化",
+          "status_change": "社会位置发生变化",
+          "internal_belief_change": "从回避代价到承担责任",
+          "exit_state": "带着代价进入下一阶段",
+          "next_stage_trigger": "下一阶段如何兑现选择？",
+          "evidence": [],
+          "external_conflict": "目标与代价冲突",
+          "internal_conflict": "内在犹豫",
+          "obstacles": [
+            "外部阻力"
+          ],
+          "turning_point": "第 20 章改变方向",
+          "identity_change": "身份边界变化"
+        },
+        {
+          "chapter": 21,
+          "chapter_end": 24,
+          "stage_name": "阶段 6",
+          "entry_state": "阶段 6 进入状态",
+          "goal": "推进核心目标",
+          "major_events": [
+            "事件 21",
+            "事件 24"
+          ],
+          "conflict": "目标与代价冲突",
+          "choice": "选择承担后果",
+          "cost_paid": [
+            "失去既有安全"
+          ],
+          "gain_received": [
+            "获得新线索"
+          ],
+          "ability_change": "能力从被动转向可控",
+          "relationship_change": "关系因选择而变化",
+          "status_change": "社会位置发生变化",
+          "internal_belief_change": "从回避代价到承担责任",
+          "exit_state": "带着代价进入下一阶段",
+          "next_stage_trigger": "下一阶段如何兑现选择？",
+          "evidence": [
+            "E-1022-0",
+            "E-1023-0"
+          ],
+          "external_conflict": "目标与代价冲突",
+          "internal_conflict": "内在犹豫",
+          "obstacles": [
+            "外部阻力"
+          ],
+          "turning_point": "第 24 章改变方向",
+          "identity_change": "身份边界变化"
+        },
+        {
+          "chapter": 25,
+          "chapter_end": 28,
+          "stage_name": "阶段 7",
+          "entry_state": "阶段 7 进入状态",
+          "goal": "推进核心目标",
+          "major_events": [
+            "事件 25",
+            "事件 28"
+          ],
+          "conflict": "目标与代价冲突",
+          "choice": "选择承担后果",
+          "cost_paid": [
+            "失去既有安全"
+          ],
+          "gain_received": [
+            "获得新线索"
+          ],
+          "ability_change": "能力从被动转向可控",
+          "relationship_change": "关系因选择而变化",
+          "status_change": "社会位置发生变化",
+          "internal_belief_change": "从回避代价到承担责任",
+          "exit_state": "带着代价进入下一阶段",
+          "next_stage_trigger": "下一阶段如何兑现选择？",
+          "evidence": [],
+          "external_conflict": "目标与代价冲突",
+          "internal_conflict": "内在犹豫",
+          "obstacles": [
+            "外部阻力"
+          ],
+          "turning_point": "第 28 章改变方向",
+          "identity_change": "身份边界变化"
+        },
+        {
+          "chapter": 29,
+          "chapter_end": 32,
+          "stage_name": "阶段 8",
+          "entry_state": "阶段 8 进入状态",
+          "goal": "推进核心目标",
+          "major_events": [
+            "事件 29",
+            "事件 32"
+          ],
+          "conflict": "目标与代价冲突",
+          "choice": "选择承担后果",
+          "cost_paid": [
+            "失去既有安全"
+          ],
+          "gain_received": [
+            "获得新线索"
+          ],
+          "ability_change": "能力从被动转向可控",
+          "relationship_change": "关系因选择而变化",
+          "status_change": "社会位置发生变化",
+          "internal_belief_change": "从回避代价到承担责任",
+          "exit_state": "带着代价进入下一阶段",
+          "next_stage_trigger": "下一阶段如何兑现选择？",
+          "evidence": [
+            "E-1029-0",
+            "E-1030-0"
+          ],
+          "external_conflict": "目标与代价冲突",
+          "internal_conflict": "内在犹豫",
+          "obstacles": [
+            "外部阻力"
+          ],
+          "turning_point": "第 32 章改变方向",
+          "identity_change": "身份边界变化"
+        },
+        {
+          "chapter": 33,
+          "chapter_end": 36,
+          "stage_name": "阶段 9",
+          "entry_state": "阶段 9 进入状态",
+          "goal": "推进核心目标",
+          "major_events": [
+            "事件 33",
+            "事件 36"
+          ],
+          "conflict": "目标与代价冲突",
+          "choice": "选择承担后果",
+          "cost_paid": [
+            "失去既有安全"
+          ],
+          "gain_received": [
+            "获得新线索"
+          ],
+          "ability_change": "能力从被动转向可控",
+          "relationship_change": "关系因选择而变化",
+          "status_change": "社会位置发生变化",
+          "internal_belief_change": "从回避代价到承担责任",
+          "exit_state": "带着代价进入下一阶段",
+          "next_stage_trigger": "下一阶段如何兑现选择？",
+          "evidence": [],
+          "external_conflict": "目标与代价冲突",
+          "internal_conflict": "内在犹豫",
+          "obstacles": [
+            "外部阻力"
+          ],
+          "turning_point": "第 36 章改变方向",
+          "identity_change": "身份边界变化"
+        }
+      ],
+      "external_status_track": [
+        {
+          "chapter": 1,
+          "stage_name": "阶段 1",
+          "state": "外在身份：带着代价进入下一阶段",
+          "cost_paid": [
+            "失去既有安全"
+          ],
+          "gain_received": [
+            "获得新线索"
+          ],
+          "evidence": [
+            "E-1001-0",
+            "E-1002-0"
+          ]
+        },
+        {
+          "chapter": 5,
+          "stage_name": "阶段 2",
+          "state": "外在身份：带着代价进入下一阶段",
+          "cost_paid": [
+            "失去既有安全"
+          ],
+          "gain_received": [
+            "获得新线索"
+          ],
+          "evidence": [
+            "E-1008-0"
+          ]
+        },
+        {
+          "chapter": 9,
+          "stage_name": "阶段 3",
+          "state": "外在身份：带着代价进入下一阶段",
+          "cost_paid": [
+            "失去既有安全"
+          ],
+          "gain_received": [
+            "获得新线索"
+          ],
+          "evidence": [
+            "E-1009-0"
+          ]
+        },
+        {
+          "chapter": 13,
+          "stage_name": "阶段 4",
+          "state": "外在身份：带着代价进入下一阶段",
+          "cost_paid": [
+            "失去既有安全"
+          ],
+          "gain_received": [
+            "获得新线索"
+          ],
+          "evidence": [
+            "E-1015-0",
+            "E-1016-0"
+          ]
+        },
+        {
+          "chapter": 17,
+          "stage_name": "阶段 5",
+          "state": "外在身份：带着代价进入下一阶段",
+          "cost_paid": [
+            "失去既有安全"
+          ],
+          "gain_received": [
+            "获得新线索"
+          ],
+          "evidence": []
+        },
+        {
+          "chapter": 21,
+          "stage_name": "阶段 6",
+          "state": "外在身份：带着代价进入下一阶段",
+          "cost_paid": [
+            "失去既有安全"
+          ],
+          "gain_received": [
+            "获得新线索"
+          ],
+          "evidence": [
+            "E-1022-0",
+            "E-1023-0"
+          ]
+        },
+        {
+          "chapter": 25,
+          "stage_name": "阶段 7",
+          "state": "外在身份：带着代价进入下一阶段",
+          "cost_paid": [
+            "失去既有安全"
+          ],
+          "gain_received": [
+            "获得新线索"
+          ],
+          "evidence": []
+        },
+        {
+          "chapter": 29,
+          "stage_name": "阶段 8",
+          "state": "外在身份：带着代价进入下一阶段",
+          "cost_paid": [
+            "失去既有安全"
+          ],
+          "gain_received": [
+            "获得新线索"
+          ],
+          "evidence": [
+            "E-1029-0",
+            "E-1030-0"
+          ]
+        },
+        {
+          "chapter": 33,
+          "stage_name": "阶段 9",
+          "state": "外在身份：带着代价进入下一阶段",
+          "cost_paid": [
+            "失去既有安全"
+          ],
+          "gain_received": [
+            "获得新线索"
+          ],
+          "evidence": []
+        }
+      ],
+      "ability_track": [
+        {
+          "chapter": 1,
+          "stage_name": "阶段 1",
+          "state": "能力：带着代价进入下一阶段",
+          "cost_paid": [
+            "失去既有安全"
+          ],
+          "gain_received": [
+            "获得新线索"
+          ],
+          "evidence": [
+            "E-1001-0",
+            "E-1002-0"
+          ]
+        },
+        {
+          "chapter": 5,
+          "stage_name": "阶段 2",
+          "state": "能力：带着代价进入下一阶段",
+          "cost_paid": [
+            "失去既有安全"
+          ],
+          "gain_received": [
+            "获得新线索"
+          ],
+          "evidence": [
+            "E-1008-0"
+          ]
+        },
+        {
+          "chapter": 9,
+          "stage_name": "阶段 3",
+          "state": "能力：带着代价进入下一阶段",
+          "cost_paid": [
+            "失去既有安全"
+          ],
+          "gain_received": [
+            "获得新线索"
+          ],
+          "evidence": [
+            "E-1009-0"
+          ]
+        },
+        {
+          "chapter": 13,
+          "stage_name": "阶段 4",
+          "state": "能力：带着代价进入下一阶段",
+          "cost_paid": [
+            "失去既有安全"
+          ],
+          "gain_received": [
+            "获得新线索"
+          ],
+          "evidence": [
+            "E-1015-0",
+            "E-1016-0"
+          ]
+        },
+        {
+          "chapter": 17,
+          "stage_name": "阶段 5",
+          "state": "能力：带着代价进入下一阶段",
+          "cost_paid": [
+            "失去既有安全"
+          ],
+          "gain_received": [
+            "获得新线索"
+          ],
+          "evidence": []
+        },
+        {
+          "chapter": 21,
+          "stage_name": "阶段 6",
+          "state": "能力：带着代价进入下一阶段",
+          "cost_paid": [
+            "失去既有安全"
+          ],
+          "gain_received": [
+            "获得新线索"
+          ],
+          "evidence": [
+            "E-1022-0",
+            "E-1023-0"
+          ]
+        },
+        {
+          "chapter": 25,
+          "stage_name": "阶段 7",
+          "state": "能力：带着代价进入下一阶段",
+          "cost_paid": [
+            "失去既有安全"
+          ],
+          "gain_received": [
+            "获得新线索"
+          ],
+          "evidence": []
+        },
+        {
+          "chapter": 29,
+          "stage_name": "阶段 8",
+          "state": "能力：带着代价进入下一阶段",
+          "cost_paid": [
+            "失去既有安全"
+          ],
+          "gain_received": [
+            "获得新线索"
+          ],
+          "evidence": [
+            "E-1029-0",
+            "E-1030-0"
+          ]
+        },
+        {
+          "chapter": 33,
+          "stage_name": "阶段 9",
+          "state": "能力：带着代价进入下一阶段",
+          "cost_paid": [
+            "失去既有安全"
+          ],
+          "gain_received": [
+            "获得新线索"
+          ],
+          "evidence": []
+        }
+      ],
+      "internal_belief_track": [
+        {
+          "chapter": 1,
+          "stage_name": "阶段 1",
+          "state": "内在认知：带着代价进入下一阶段",
+          "cost_paid": [
+            "失去既有安全"
+          ],
+          "gain_received": [
+            "获得新线索"
+          ],
+          "evidence": [
+            "E-1001-0",
+            "E-1002-0"
+          ]
+        },
+        {
+          "chapter": 5,
+          "stage_name": "阶段 2",
+          "state": "内在认知：带着代价进入下一阶段",
+          "cost_paid": [
+            "失去既有安全"
+          ],
+          "gain_received": [
+            "获得新线索"
+          ],
+          "evidence": [
+            "E-1008-0"
+          ]
+        },
+        {
+          "chapter": 9,
+          "stage_name": "阶段 3",
+          "state": "内在认知：带着代价进入下一阶段",
+          "cost_paid": [
+            "失去既有安全"
+          ],
+          "gain_received": [
+            "获得新线索"
+          ],
+          "evidence": [
+            "E-1009-0"
+          ]
+        },
+        {
+          "chapter": 13,
+          "stage_name": "阶段 4",
+          "state": "内在认知：带着代价进入下一阶段",
+          "cost_paid": [
+            "失去既有安全"
+          ],
+          "gain_received": [
+            "获得新线索"
+          ],
+          "evidence": [
+            "E-1015-0",
+            "E-1016-0"
+          ]
+        },
+        {
+          "chapter": 17,
+          "stage_name": "阶段 5",
+          "state": "内在认知：带着代价进入下一阶段",
+          "cost_paid": [
+            "失去既有安全"
+          ],
+          "gain_received": [
+            "获得新线索"
+          ],
+          "evidence": []
+        },
+        {
+          "chapter": 21,
+          "stage_name": "阶段 6",
+          "state": "内在认知：带着代价进入下一阶段",
+          "cost_paid": [
+            "失去既有安全"
+          ],
+          "gain_received": [
+            "获得新线索"
+          ],
+          "evidence": [
+            "E-1022-0",
+            "E-1023-0"
+          ]
+        },
+        {
+          "chapter": 25,
+          "stage_name": "阶段 7",
+          "state": "内在认知：带着代价进入下一阶段",
+          "cost_paid": [
+            "失去既有安全"
+          ],
+          "gain_received": [
+            "获得新线索"
+          ],
+          "evidence": []
+        },
+        {
+          "chapter": 29,
+          "stage_name": "阶段 8",
+          "state": "内在认知：带着代价进入下一阶段",
+          "cost_paid": [
+            "失去既有安全"
+          ],
+          "gain_received": [
+            "获得新线索"
+          ],
+          "evidence": [
+            "E-1029-0",
+            "E-1030-0"
+          ]
+        },
+        {
+          "chapter": 33,
+          "stage_name": "阶段 9",
+          "state": "内在认知：带着代价进入下一阶段",
+          "cost_paid": [
+            "失去既有安全"
+          ],
+          "gain_received": [
+            "获得新线索"
+          ],
+          "evidence": []
+        }
+      ],
+      "relationship_track": [
+        {
+          "chapter": 1,
+          "stage_name": "阶段 1",
+          "state": "关系阵营：带着代价进入下一阶段",
+          "cost_paid": [
+            "失去既有安全"
+          ],
+          "gain_received": [
+            "获得新线索"
+          ],
+          "evidence": [
+            "E-1001-0",
+            "E-1002-0"
+          ]
+        },
+        {
+          "chapter": 5,
+          "stage_name": "阶段 2",
+          "state": "关系阵营：带着代价进入下一阶段",
+          "cost_paid": [
+            "失去既有安全"
+          ],
+          "gain_received": [
+            "获得新线索"
+          ],
+          "evidence": [
+            "E-1008-0"
+          ]
+        },
+        {
+          "chapter": 9,
+          "stage_name": "阶段 3",
+          "state": "关系阵营：带着代价进入下一阶段",
+          "cost_paid": [
+            "失去既有安全"
+          ],
+          "gain_received": [
+            "获得新线索"
+          ],
+          "evidence": [
+            "E-1009-0"
+          ]
+        },
+        {
+          "chapter": 13,
+          "stage_name": "阶段 4",
+          "state": "关系阵营：带着代价进入下一阶段",
+          "cost_paid": [
+            "失去既有安全"
+          ],
+          "gain_received": [
+            "获得新线索"
+          ],
+          "evidence": [
+            "E-1015-0",
+            "E-1016-0"
+          ]
+        },
+        {
+          "chapter": 17,
+          "stage_name": "阶段 5",
+          "state": "关系阵营：带着代价进入下一阶段",
+          "cost_paid": [
+            "失去既有安全"
+          ],
+          "gain_received": [
+            "获得新线索"
+          ],
+          "evidence": []
+        },
+        {
+          "chapter": 21,
+          "stage_name": "阶段 6",
+          "state": "关系阵营：带着代价进入下一阶段",
+          "cost_paid": [
+            "失去既有安全"
+          ],
+          "gain_received": [
+            "获得新线索"
+          ],
+          "evidence": [
+            "E-1022-0",
+            "E-1023-0"
+          ]
+        },
+        {
+          "chapter": 25,
+          "stage_name": "阶段 7",
+          "state": "关系阵营：带着代价进入下一阶段",
+          "cost_paid": [
+            "失去既有安全"
+          ],
+          "gain_received": [
+            "获得新线索"
+          ],
+          "evidence": []
+        },
+        {
+          "chapter": 29,
+          "stage_name": "阶段 8",
+          "state": "关系阵营：带着代价进入下一阶段",
+          "cost_paid": [
+            "失去既有安全"
+          ],
+          "gain_received": [
+            "获得新线索"
+          ],
+          "evidence": [
+            "E-1029-0",
+            "E-1030-0"
+          ]
+        },
+        {
+          "chapter": 33,
+          "stage_name": "阶段 9",
+          "state": "关系阵营：带着代价进入下一阶段",
+          "cost_paid": [
+            "失去既有安全"
+          ],
+          "gain_received": [
+            "获得新线索"
+          ],
+          "evidence": []
+        }
+      ],
+      "overall_cost": [
+        "失去既有安全"
+      ],
+      "overall_gain": [
+        "获得新线索"
+      ],
+      "core_transformation": "从被动承受转向主动承担",
+      "arc_summary": "多阶段选择与代价后完成转变"
+    },
+    "major_characters": [
+      {
+        "character_id": "C-1",
+        "name": "林",
+        "aliases": [
+          "林大人"
+        ],
+        "importance": 0.95,
+        "identity": "跨窗口统一人物",
+        "role": "protagonist",
+        "initial_goal": "完成初始目标",
+        "final_goal": "回应全书冲突",
+        "character_arc": "目标在选择与代价中变化",
+        "key_events": [
+          "事件 1-8",
+          "事件 8-15",
+          "事件 15-22",
+          "事件 22-29",
+          "事件 29-36"
+        ],
+        "relationship_to_protagonist": "本人",
+        "relationship_changes": [
+          "建立",
+          "冲突",
+          "重建"
+        ],
+        "major_choice": "承担后果",
+        "cost_paid": [
+          "失去安全"
+        ],
+        "gain_received": [
+          "获得理解"
+        ],
+        "ending": "完成阶段性落点",
+        "evidence": [
+          "E-1001-0",
+          "E-1002-0",
+          "E-1008-0",
+          "E-1009-0"
+        ]
+      },
+      {
+        "character_id": "C-2",
+        "name": "顾",
+        "aliases": [],
+        "importance": 0.87,
+        "identity": "跨窗口统一人物",
+        "role": "major",
+        "initial_goal": "完成初始目标",
+        "final_goal": "回应全书冲突",
+        "character_arc": "目标在选择与代价中变化",
+        "key_events": [
+          "事件 1-8",
+          "事件 8-15",
+          "事件 15-22",
+          "事件 22-29",
+          "事件 29-36"
+        ],
+        "relationship_to_protagonist": "关键关系",
+        "relationship_changes": [
+          "建立",
+          "冲突",
+          "重建"
+        ],
+        "major_choice": "承担后果",
+        "cost_paid": [
+          "失去安全"
+        ],
+        "gain_received": [
+          "获得理解"
+        ],
+        "ending": "完成阶段性落点",
+        "evidence": [
+          "E-1001-0",
+          "E-1002-0",
+          "E-1008-0",
+          "E-1009-0"
+        ]
+      }
+    ],
+    "relationships": [
+      {
+        "chapter_start": 1,
+        "chapter_end": 8,
+        "evidence": [
+          "E-1001-0",
+          "E-1002-0"
+        ],
+        "person_a": "林",
+        "person_b": "顾",
+        "relationship_type": "同行",
+        "initial_state": "建立联系",
+        "evolution": [
+          "合作",
+          "冲突",
+          "重建"
+        ],
+        "major_turning_points": [
+          "共同选择"
+        ],
+        "final_state": "形成稳定关系"
+      },
+      {
+        "chapter_start": 8,
+        "chapter_end": 15,
+        "evidence": [
+          "E-1008-0",
+          "E-1009-0"
+        ],
+        "person_a": "林",
+        "person_b": "顾",
+        "relationship_type": "同行",
+        "initial_state": "建立联系",
+        "evolution": [
+          "合作",
+          "冲突",
+          "重建"
+        ],
+        "major_turning_points": [
+          "共同选择"
+        ],
+        "final_state": "形成稳定关系"
+      },
+      {
+        "chapter_start": 15,
+        "chapter_end": 22,
+        "evidence": [
+          "E-1015-0",
+          "E-1016-0"
+        ],
+        "person_a": "林",
+        "person_b": "顾",
+        "relationship_type": "同行",
+        "initial_state": "建立联系",
+        "evolution": [
+          "合作",
+          "冲突",
+          "重建"
+        ],
+        "major_turning_points": [
+          "共同选择"
+        ],
+        "final_state": "形成稳定关系"
+      },
+      {
+        "chapter_start": 22,
+        "chapter_end": 29,
+        "evidence": [
+          "E-1022-0",
+          "E-1023-0"
+        ],
+        "person_a": "林",
+        "person_b": "顾",
+        "relationship_type": "同行",
+        "initial_state": "建立联系",
+        "evolution": [
+          "合作",
+          "冲突",
+          "重建"
+        ],
+        "major_turning_points": [
+          "共同选择"
+        ],
+        "final_state": "形成稳定关系"
+      },
+      {
+        "chapter_start": 29,
+        "chapter_end": 36,
+        "evidence": [
+          "E-1029-0",
+          "E-1030-0"
+        ],
+        "person_a": "林",
+        "person_b": "顾",
+        "relationship_type": "同行",
+        "initial_state": "建立联系",
+        "evolution": [
+          "合作",
+          "冲突",
+          "重建"
+        ],
+        "major_turning_points": [
+          "共同选择"
+        ],
+        "final_state": "形成稳定关系"
+      }
+    ]
+  },
+  "suspense": {
+    "version": "2.0",
+    "availability": "available",
+    "lifecycles": [
+      {
+        "chapter_start": 1,
+        "chapter_end": 8,
+        "evidence": [
+          "E-1001-0",
+          "E-1002-0"
+        ],
+        "suspense_id": "H-1",
+        "question": "问题 1",
+        "importance": 0.7,
+        "reader_initial_knowledge": "只知道异常存在",
+        "truth": "局部揭示",
+        "events": [
+          {
+            "chapter": 1,
+            "type": "hook",
+            "description": "问题 1",
+            "information_added": "提出问题",
+            "evidence": [
+              "E-1001-0",
+              "E-1002-0"
+            ]
+          },
+          {
+            "chapter": 8,
+            "type": "payoff",
+            "description": "局部揭示",
+            "information_added": "提供阶段答案",
+            "evidence": [
+              "E-1001-0",
+              "E-1002-0"
+            ]
+          }
+        ],
+        "clues": [
+          "可验证线索"
+        ],
+        "misdirections": [],
+        "partial_reveals": [
+          "局部揭示"
+        ],
+        "twist": "认知被修正",
+        "payoff": "局部揭示",
+        "storyline_effect": "推动主线目标更新",
+        "status": "resolved"
+      },
+      {
+        "chapter_start": 8,
+        "chapter_end": 15,
+        "evidence": [
+          "E-1008-0",
+          "E-1009-0"
+        ],
+        "suspense_id": "H-2",
+        "question": "问题 8",
+        "importance": 0.7,
+        "reader_initial_knowledge": "只知道异常存在",
+        "truth": "局部揭示",
+        "events": [
+          {
+            "chapter": 8,
+            "type": "hook",
+            "description": "问题 8",
+            "information_added": "提出问题",
+            "evidence": [
+              "E-1008-0",
+              "E-1009-0"
+            ]
+          },
+          {
+            "chapter": 15,
+            "type": "payoff",
+            "description": "局部揭示",
+            "information_added": "提供阶段答案",
+            "evidence": [
+              "E-1008-0",
+              "E-1009-0"
+            ]
+          }
+        ],
+        "clues": [
+          "可验证线索"
+        ],
+        "misdirections": [],
+        "partial_reveals": [
+          "局部揭示"
+        ],
+        "twist": "认知被修正",
+        "payoff": "局部揭示",
+        "storyline_effect": "推动主线目标更新",
+        "status": "resolved"
+      },
+      {
+        "chapter_start": 15,
+        "chapter_end": 22,
+        "evidence": [
+          "E-1015-0",
+          "E-1016-0"
+        ],
+        "suspense_id": "H-3",
+        "question": "问题 15",
+        "importance": 0.7,
+        "reader_initial_knowledge": "只知道异常存在",
+        "truth": "局部揭示",
+        "events": [
+          {
+            "chapter": 15,
+            "type": "hook",
+            "description": "问题 15",
+            "information_added": "提出问题",
+            "evidence": [
+              "E-1015-0",
+              "E-1016-0"
+            ]
+          },
+          {
+            "chapter": 22,
+            "type": "payoff",
+            "description": "局部揭示",
+            "information_added": "提供阶段答案",
+            "evidence": [
+              "E-1015-0",
+              "E-1016-0"
+            ]
+          }
+        ],
+        "clues": [
+          "可验证线索"
+        ],
+        "misdirections": [],
+        "partial_reveals": [
+          "局部揭示"
+        ],
+        "twist": "认知被修正",
+        "payoff": "局部揭示",
+        "storyline_effect": "推动主线目标更新",
+        "status": "resolved"
+      },
+      {
+        "chapter_start": 22,
+        "chapter_end": 29,
+        "evidence": [
+          "E-1022-0",
+          "E-1023-0"
+        ],
+        "suspense_id": "H-4",
+        "question": "问题 22",
+        "importance": 0.7,
+        "reader_initial_knowledge": "只知道异常存在",
+        "truth": "局部揭示",
+        "events": [
+          {
+            "chapter": 22,
+            "type": "hook",
+            "description": "问题 22",
+            "information_added": "提出问题",
+            "evidence": [
+              "E-1022-0",
+              "E-1023-0"
+            ]
+          },
+          {
+            "chapter": 29,
+            "type": "payoff",
+            "description": "局部揭示",
+            "information_added": "提供阶段答案",
+            "evidence": [
+              "E-1022-0",
+              "E-1023-0"
+            ]
+          }
+        ],
+        "clues": [
+          "可验证线索"
+        ],
+        "misdirections": [],
+        "partial_reveals": [
+          "局部揭示"
+        ],
+        "twist": "认知被修正",
+        "payoff": "局部揭示",
+        "storyline_effect": "推动主线目标更新",
+        "status": "resolved"
+      },
+      {
+        "chapter_start": 29,
+        "chapter_end": 36,
+        "evidence": [
+          "E-1029-0",
+          "E-1030-0"
+        ],
+        "suspense_id": "H-5",
+        "question": "问题 29",
+        "importance": 0.7,
+        "reader_initial_knowledge": "只知道异常存在",
+        "truth": "局部揭示",
+        "events": [
+          {
+            "chapter": 29,
+            "type": "hook",
+            "description": "问题 29",
+            "information_added": "提出问题",
+            "evidence": [
+              "E-1029-0",
+              "E-1030-0"
+            ]
+          },
+          {
+            "chapter": 36,
+            "type": "payoff",
+            "description": "局部揭示",
+            "information_added": "提供阶段答案",
+            "evidence": [
+              "E-1029-0",
+              "E-1030-0"
+            ]
+          }
+        ],
+        "clues": [
+          "可验证线索"
+        ],
+        "misdirections": [],
+        "partial_reveals": [
+          "局部揭示"
+        ],
+        "twist": "认知被修正",
+        "payoff": "局部揭示",
+        "storyline_effect": "推动主线目标更新",
+        "status": "resolved"
+      }
+    ]
+  },
+  "pacing": {
+    "version": "2.0",
+    "availability": "available",
+    "points": [
+      {
+        "chapter_start": 1,
+        "chapter_end": 8,
+        "plot_progress": 71.0,
+        "tension": 82.0,
+        "emotion": 93.0,
+        "reading_drive": 44.0,
+        "hook_density": 55.0,
+        "pace_speed": 66.0,
+        "dominant_events": [
+          "事件 1-8"
+        ],
+        "reason": "共享窗口信号的确定性聚合",
+        "story_consequence": "影响下一窗口的阅读期待",
+        "chapter_id": null,
+        "chapter_index": null,
+        "chapter_title": null
+      },
+      {
+        "chapter_start": 8,
+        "chapter_end": 15,
+        "plot_progress": 67.0,
+        "tension": 78.0,
+        "emotion": 89.0,
+        "reading_drive": 40.0,
+        "hook_density": 51.0,
+        "pace_speed": 62.0,
+        "dominant_events": [
+          "事件 8-15"
+        ],
+        "reason": "共享窗口信号的确定性聚合",
+        "story_consequence": "影响下一窗口的阅读期待",
+        "chapter_id": null,
+        "chapter_index": null,
+        "chapter_title": null
+      },
+      {
+        "chapter_start": 15,
+        "chapter_end": 22,
+        "plot_progress": 63.0,
+        "tension": 74.0,
+        "emotion": 85.0,
+        "reading_drive": 36.0,
+        "hook_density": 47.0,
+        "pace_speed": 58.0,
+        "dominant_events": [
+          "事件 15-22"
+        ],
+        "reason": "共享窗口信号的确定性聚合",
+        "story_consequence": "影响下一窗口的阅读期待",
+        "chapter_id": null,
+        "chapter_index": null,
+        "chapter_title": null
+      },
+      {
+        "chapter_start": 22,
+        "chapter_end": 29,
+        "plot_progress": 59.0,
+        "tension": 70.0,
+        "emotion": 81.0,
+        "reading_drive": 92.0,
+        "hook_density": 43.0,
+        "pace_speed": 54.0,
+        "dominant_events": [
+          "事件 22-29"
+        ],
+        "reason": "共享窗口信号的确定性聚合",
+        "story_consequence": "影响下一窗口的阅读期待",
+        "chapter_id": null,
+        "chapter_index": null,
+        "chapter_title": null
+      },
+      {
+        "chapter_start": 29,
+        "chapter_end": 36,
+        "plot_progress": 55.0,
+        "tension": 66.0,
+        "emotion": 77.0,
+        "reading_drive": 88.0,
+        "hook_density": 39.0,
+        "pace_speed": 50.0,
+        "dominant_events": [
+          "事件 29-36"
+        ],
+        "reason": "共享窗口信号的确定性聚合",
+        "story_consequence": "影响下一窗口的阅读期待",
+        "chapter_id": null,
+        "chapter_index": null,
+        "chapter_title": null
+      }
+    ],
+    "event_markers": [
+      {
+        "chapter": 1,
+        "title": "事件 1-8",
+        "event": "事件 1-8",
+        "importance": 0.7,
+        "effect_on_pacing": "目标或信息发生变化",
+        "evidence": [
+          "E-1001-0",
+          "E-1002-0"
+        ],
+        "marker_type": "turning_point"
+      },
+      {
+        "chapter": 8,
+        "title": "事件 8-15",
+        "event": "事件 8-15",
+        "importance": 0.7,
+        "effect_on_pacing": "目标或信息发生变化",
+        "evidence": [
+          "E-1008-0",
+          "E-1009-0"
+        ],
+        "marker_type": "turning_point"
+      },
+      {
+        "chapter": 15,
+        "title": "事件 15-22",
+        "event": "事件 15-22",
+        "importance": 0.7,
+        "effect_on_pacing": "目标或信息发生变化",
+        "evidence": [
+          "E-1015-0",
+          "E-1016-0"
+        ],
+        "marker_type": "turning_point"
+      },
+      {
+        "chapter": 22,
+        "title": "事件 22-29",
+        "event": "事件 22-29",
+        "importance": 0.7,
+        "effect_on_pacing": "目标或信息发生变化",
+        "evidence": [
+          "E-1022-0",
+          "E-1023-0"
+        ],
+        "marker_type": "turning_point"
+      },
+      {
+        "chapter": 29,
+        "title": "事件 29-36",
+        "event": "事件 29-36",
+        "importance": 0.7,
+        "effect_on_pacing": "目标或信息发生变化",
+        "evidence": [
+          "E-1029-0",
+          "E-1030-0"
+        ],
+        "marker_type": "turning_point"
+      }
+    ],
+    "pacing_regions": [
+      {
+        "chapter_start": 33,
+        "chapter_end": 36,
+        "evidence": [],
+        "type": "climax",
+        "reason": "主要线索与选择集中回收",
+        "related_events": [
+          "事件 33",
+          "事件 36"
+        ],
+        "diagnosis": "高潮强度与结构职责匹配"
+      }
+    ]
+  },
+  "chapters": {
+    "version": "2.0",
+    "availability": "available",
+    "functions": [
+      {
+        "chapter_id": 1001,
+        "chapter_index": 1,
+        "title": "第1章",
+        "primary_function": "mainline_progress",
+        "secondary_functions": [
+          "character_development"
+        ],
+        "summary": "第1章推进目标并留下后续问题",
+        "importance": 0.6,
+        "evidence": [
+          "E-1001-0"
+        ]
+      },
+      {
+        "chapter_id": 1002,
+        "chapter_index": 2,
+        "title": "第2章",
+        "primary_function": "mainline_progress",
+        "secondary_functions": [
+          "character_development"
+        ],
+        "summary": "第2章推进目标并留下后续问题",
+        "importance": 0.6,
+        "evidence": [
+          "E-1002-0"
+        ]
+      },
+      {
+        "chapter_id": 1003,
+        "chapter_index": 3,
+        "title": "第3章",
+        "primary_function": "mainline_progress",
+        "secondary_functions": [
+          "character_development"
+        ],
+        "summary": "第3章推进目标并留下后续问题",
+        "importance": 0.6,
+        "evidence": []
+      },
+      {
+        "chapter_id": 1004,
+        "chapter_index": 4,
+        "title": "第4章",
+        "primary_function": "mainline_progress",
+        "secondary_functions": [
+          "character_development"
+        ],
+        "summary": "第4章推进目标并留下后续问题",
+        "importance": 0.6,
+        "evidence": []
+      },
+      {
+        "chapter_id": 1005,
+        "chapter_index": 5,
+        "title": "第5章",
+        "primary_function": "mainline_progress",
+        "secondary_functions": [
+          "character_development"
+        ],
+        "summary": "第5章推进目标并留下后续问题",
+        "importance": 0.6,
+        "evidence": []
+      },
+      {
+        "chapter_id": 1006,
+        "chapter_index": 6,
+        "title": "第6章",
+        "primary_function": "mainline_progress",
+        "secondary_functions": [
+          "character_development"
+        ],
+        "summary": "第6章推进目标并留下后续问题",
+        "importance": 0.6,
+        "evidence": []
+      },
+      {
+        "chapter_id": 1007,
+        "chapter_index": 7,
+        "title": "第7章",
+        "primary_function": "mainline_progress",
+        "secondary_functions": [
+          "character_development"
+        ],
+        "summary": "第7章推进目标并留下后续问题",
+        "importance": 0.6,
+        "evidence": []
+      },
+      {
+        "chapter_id": 1008,
+        "chapter_index": 8,
+        "title": "第8章",
+        "primary_function": "mainline_progress",
+        "secondary_functions": [
+          "character_development"
+        ],
+        "summary": "第8章推进目标并留下后续问题",
+        "importance": 0.6,
+        "evidence": [
+          "E-1008-0"
+        ]
+      },
+      {
+        "chapter_id": 1009,
+        "chapter_index": 9,
+        "title": "第9章",
+        "primary_function": "mainline_progress",
+        "secondary_functions": [
+          "character_development"
+        ],
+        "summary": "第9章推进目标并留下后续问题",
+        "importance": 0.6,
+        "evidence": [
+          "E-1009-0"
+        ]
+      },
+      {
+        "chapter_id": 1010,
+        "chapter_index": 10,
+        "title": "第10章",
+        "primary_function": "mainline_progress",
+        "secondary_functions": [
+          "character_development"
+        ],
+        "summary": "第10章推进目标并留下后续问题",
+        "importance": 0.6,
+        "evidence": []
+      },
+      {
+        "chapter_id": 1011,
+        "chapter_index": 11,
+        "title": "第11章",
+        "primary_function": "mainline_progress",
+        "secondary_functions": [
+          "character_development"
+        ],
+        "summary": "第11章推进目标并留下后续问题",
+        "importance": 0.6,
+        "evidence": []
+      },
+      {
+        "chapter_id": 1012,
+        "chapter_index": 12,
+        "title": "第12章",
+        "primary_function": "mainline_progress",
+        "secondary_functions": [
+          "character_development"
+        ],
+        "summary": "第12章推进目标并留下后续问题",
+        "importance": 0.6,
+        "evidence": []
+      },
+      {
+        "chapter_id": 1013,
+        "chapter_index": 13,
+        "title": "第13章",
+        "primary_function": "mainline_progress",
+        "secondary_functions": [
+          "character_development"
+        ],
+        "summary": "第13章推进目标并留下后续问题",
+        "importance": 0.6,
+        "evidence": []
+      },
+      {
+        "chapter_id": 1014,
+        "chapter_index": 14,
+        "title": "第14章",
+        "primary_function": "mainline_progress",
+        "secondary_functions": [
+          "character_development"
+        ],
+        "summary": "第14章推进目标并留下后续问题",
+        "importance": 0.6,
+        "evidence": []
+      },
+      {
+        "chapter_id": 1015,
+        "chapter_index": 15,
+        "title": "第15章",
+        "primary_function": "mainline_progress",
+        "secondary_functions": [
+          "character_development"
+        ],
+        "summary": "第15章推进目标并留下后续问题",
+        "importance": 0.6,
+        "evidence": [
+          "E-1015-0"
+        ]
+      },
+      {
+        "chapter_id": 1016,
+        "chapter_index": 16,
+        "title": "第16章",
+        "primary_function": "mainline_progress",
+        "secondary_functions": [
+          "character_development"
+        ],
+        "summary": "第16章推进目标并留下后续问题",
+        "importance": 0.6,
+        "evidence": [
+          "E-1016-0"
+        ]
+      },
+      {
+        "chapter_id": 1017,
+        "chapter_index": 17,
+        "title": "第17章",
+        "primary_function": "mainline_progress",
+        "secondary_functions": [
+          "character_development"
+        ],
+        "summary": "第17章推进目标并留下后续问题",
+        "importance": 0.6,
+        "evidence": []
+      },
+      {
+        "chapter_id": 1018,
+        "chapter_index": 18,
+        "title": "第18章",
+        "primary_function": "mainline_progress",
+        "secondary_functions": [
+          "character_development"
+        ],
+        "summary": "第18章推进目标并留下后续问题",
+        "importance": 0.6,
+        "evidence": []
+      },
+      {
+        "chapter_id": 1019,
+        "chapter_index": 19,
+        "title": "第19章",
+        "primary_function": "mainline_progress",
+        "secondary_functions": [
+          "character_development"
+        ],
+        "summary": "第19章推进目标并留下后续问题",
+        "importance": 0.6,
+        "evidence": []
+      },
+      {
+        "chapter_id": 1020,
+        "chapter_index": 20,
+        "title": "第20章",
+        "primary_function": "mainline_progress",
+        "secondary_functions": [
+          "character_development"
+        ],
+        "summary": "第20章推进目标并留下后续问题",
+        "importance": 0.6,
+        "evidence": []
+      },
+      {
+        "chapter_id": 1021,
+        "chapter_index": 21,
+        "title": "第21章",
+        "primary_function": "mainline_progress",
+        "secondary_functions": [
+          "character_development"
+        ],
+        "summary": "第21章推进目标并留下后续问题",
+        "importance": 0.6,
+        "evidence": []
+      },
+      {
+        "chapter_id": 1022,
+        "chapter_index": 22,
+        "title": "第22章",
+        "primary_function": "mainline_progress",
+        "secondary_functions": [
+          "character_development"
+        ],
+        "summary": "第22章推进目标并留下后续问题",
+        "importance": 0.6,
+        "evidence": [
+          "E-1022-0"
+        ]
+      },
+      {
+        "chapter_id": 1023,
+        "chapter_index": 23,
+        "title": "第23章",
+        "primary_function": "mainline_progress",
+        "secondary_functions": [
+          "character_development"
+        ],
+        "summary": "第23章推进目标并留下后续问题",
+        "importance": 0.6,
+        "evidence": [
+          "E-1023-0"
+        ]
+      },
+      {
+        "chapter_id": 1024,
+        "chapter_index": 24,
+        "title": "第24章",
+        "primary_function": "mainline_progress",
+        "secondary_functions": [
+          "character_development"
+        ],
+        "summary": "第24章推进目标并留下后续问题",
+        "importance": 0.6,
+        "evidence": []
+      },
+      {
+        "chapter_id": 1025,
+        "chapter_index": 25,
+        "title": "第25章",
+        "primary_function": "mainline_progress",
+        "secondary_functions": [
+          "character_development"
+        ],
+        "summary": "第25章推进目标并留下后续问题",
+        "importance": 0.6,
+        "evidence": []
+      },
+      {
+        "chapter_id": 1026,
+        "chapter_index": 26,
+        "title": "第26章",
+        "primary_function": "mainline_progress",
+        "secondary_functions": [
+          "character_development"
+        ],
+        "summary": "第26章推进目标并留下后续问题",
+        "importance": 0.6,
+        "evidence": []
+      },
+      {
+        "chapter_id": 1027,
+        "chapter_index": 27,
+        "title": "第27章",
+        "primary_function": "mainline_progress",
+        "secondary_functions": [
+          "character_development"
+        ],
+        "summary": "第27章推进目标并留下后续问题",
+        "importance": 0.6,
+        "evidence": []
+      },
+      {
+        "chapter_id": 1028,
+        "chapter_index": 28,
+        "title": "第28章",
+        "primary_function": "mainline_progress",
+        "secondary_functions": [
+          "character_development"
+        ],
+        "summary": "第28章推进目标并留下后续问题",
+        "importance": 0.6,
+        "evidence": []
+      },
+      {
+        "chapter_id": 1029,
+        "chapter_index": 29,
+        "title": "第29章",
+        "primary_function": "mainline_progress",
+        "secondary_functions": [
+          "character_development"
+        ],
+        "summary": "第29章推进目标并留下后续问题",
+        "importance": 0.6,
+        "evidence": [
+          "E-1029-0"
+        ]
+      },
+      {
+        "chapter_id": 1030,
+        "chapter_index": 30,
+        "title": "第30章",
+        "primary_function": "mainline_progress",
+        "secondary_functions": [
+          "character_development"
+        ],
+        "summary": "第30章推进目标并留下后续问题",
+        "importance": 0.6,
+        "evidence": [
+          "E-1030-0"
+        ]
+      },
+      {
+        "chapter_id": 1031,
+        "chapter_index": 31,
+        "title": "第31章",
+        "primary_function": "mainline_progress",
+        "secondary_functions": [
+          "character_development"
+        ],
+        "summary": "第31章推进目标并留下后续问题",
+        "importance": 0.6,
+        "evidence": []
+      },
+      {
+        "chapter_id": 1032,
+        "chapter_index": 32,
+        "title": "第32章",
+        "primary_function": "mainline_progress",
+        "secondary_functions": [
+          "character_development"
+        ],
+        "summary": "第32章推进目标并留下后续问题",
+        "importance": 0.6,
+        "evidence": []
+      },
+      {
+        "chapter_id": 1033,
+        "chapter_index": 33,
+        "title": "第33章",
+        "primary_function": "mainline_progress",
+        "secondary_functions": [
+          "character_development"
+        ],
+        "summary": "第33章推进目标并留下后续问题",
+        "importance": 0.6,
+        "evidence": []
+      },
+      {
+        "chapter_id": 1034,
+        "chapter_index": 34,
+        "title": "第34章",
+        "primary_function": "mainline_progress",
+        "secondary_functions": [
+          "character_development"
+        ],
+        "summary": "第34章推进目标并留下后续问题",
+        "importance": 0.6,
+        "evidence": []
+      },
+      {
+        "chapter_id": 1035,
+        "chapter_index": 35,
+        "title": "第35章",
+        "primary_function": "mainline_progress",
+        "secondary_functions": [
+          "character_development"
+        ],
+        "summary": "第35章推进目标并留下后续问题",
+        "importance": 0.6,
+        "evidence": []
+      },
+      {
+        "chapter_id": 1036,
+        "chapter_index": 36,
+        "title": "第36章",
+        "primary_function": "mainline_progress",
+        "secondary_functions": [
+          "character_development"
+        ],
+        "summary": "第36章推进目标并留下后续问题",
+        "importance": 0.6,
+        "evidence": []
+      }
+    ],
+    "heatmap": [
+      {
+        "chapter_start": 1,
+        "chapter_end": 36,
+        "mainline_progress": 47.0,
+        "character_development": 52.0,
+        "conflict": 41.0,
+        "suspense": 56.0,
+        "foreshadow": 47.0,
+        "payoff": 37.0,
+        "transition": 30.0
+      }
+    ],
+    "aggregation_size": 50
+  },
+  "assessment": {
+    "version": "2.0",
+    "overall_summary": "全书已形成结构、人物、悬念、节奏和章节效率之间的可解释闭环；优先处理局部信息拥挤，同时保护已经互相支撑的核心设计。",
+    "dimensions": [
+      {
+        "dimension": "story_structure",
+        "rating": "B+",
+        "conclusion": "结构化指标显示总体有效，并存在局部优化空间。",
+        "supporting_metrics": [
+          "stage_count=9",
+          "evidence=10"
+        ],
+        "evidence": [
+          "E-1001-0",
+          "E-1002-0"
+        ]
+      },
+      {
+        "dimension": "protagonist_growth",
+        "rating": "B+",
+        "conclusion": "结构化指标显示总体有效，并存在局部优化空间。",
+        "supporting_metrics": [
+          "stage_count=9",
+          "evidence=10"
+        ],
+        "evidence": [
+          "E-1001-0",
+          "E-1002-0"
+        ]
+      },
+      {
+        "dimension": "character_relationships",
+        "rating": "B+",
+        "conclusion": "结构化指标显示总体有效，并存在局部优化空间。",
+        "supporting_metrics": [
+          "stage_count=9",
+          "evidence=10"
+        ],
+        "evidence": [
+          "E-1001-0",
+          "E-1002-0"
+        ]
+      },
+      {
+        "dimension": "suspense_payoff",
+        "rating": "B+",
+        "conclusion": "结构化指标显示总体有效，并存在局部优化空间。",
+        "supporting_metrics": [
+          "stage_count=9",
+          "evidence=10"
+        ],
+        "evidence": [
+          "E-1001-0",
+          "E-1002-0"
+        ]
+      },
+      {
+        "dimension": "pacing",
+        "rating": "B+",
+        "conclusion": "结构化指标显示总体有效，并存在局部优化空间。",
+        "supporting_metrics": [
+          "stage_count=9",
+          "evidence=10"
+        ],
+        "evidence": [
+          "E-1001-0",
+          "E-1002-0"
+        ]
+      },
+      {
+        "dimension": "chapter_efficiency",
+        "rating": "B+",
+        "conclusion": "结构化指标显示总体有效，并存在局部优化空间。",
+        "supporting_metrics": [
+          "stage_count=9",
+          "evidence=10"
+        ],
+        "evidence": [
+          "E-1001-0",
+          "E-1002-0"
+        ]
+      }
+    ],
+    "strengths": [
+      {
+        "chapter_start": 1,
+        "chapter_end": 4,
+        "evidence": [
+          "E-1001-0",
+          "E-1002-0"
+        ],
+        "title": "结构承诺获得回收",
+        "why_good": "阶段目标与终局结果形成因果闭环"
+      },
+      {
+        "chapter_start": 5,
+        "chapter_end": 8,
+        "evidence": [
+          "E-1008-0"
+        ],
+        "title": "主角选择具有代价",
+        "why_good": "成长不是无成本升级"
+      },
+      {
+        "chapter_start": 9,
+        "chapter_end": 12,
+        "evidence": [
+          "E-1009-0"
+        ],
+        "title": "人物关系参与因果",
+        "why_good": "关系变化推动关键选择"
+      },
+      {
+        "chapter_start": 13,
+        "chapter_end": 16,
+        "evidence": [
+          "E-1015-0",
+          "E-1016-0"
+        ],
+        "title": "悬念具有生命周期",
+        "why_good": "问题、线索与回收可以追踪"
+      },
+      {
+        "chapter_start": 17,
+        "chapter_end": 20,
+        "evidence": [],
+        "title": "节奏具备阶段差异",
+        "why_good": "强弱变化与结构节点相互对应"
+      },
+      {
+        "chapter_start": 21,
+        "chapter_end": 24,
+        "evidence": [
+          "E-1022-0",
+          "E-1023-0"
+        ],
+        "title": "章节功能可定位",
+        "why_good": "章节承担的叙事职责可以回溯"
+      }
+    ],
+    "issues": [
+      {
+        "chapter_start": 1,
+        "chapter_end": 8,
+        "evidence": [
+          "E-1001-0",
+          "E-1002-0",
+          "E-1008-0"
+        ],
+        "issue_id": "I-1",
+        "priority": "P0",
+        "category": "structure",
+        "symptom": "阶段边界信息拥挤",
+        "root_cause": "相邻目标与转折在同一窗口集中",
+        "reader_impact": "读者可能来不及确认新方向",
+        "supporting_metrics": [
+          "pace_speed=66.0",
+          "hook_density=55.0"
+        ],
+        "possible_direction": "优先调整信息次序与反馈间隔，保留既有剧情事实",
+        "dimension": "",
+        "problem": "",
+        "cause": "",
+        "recommended_direction": ""
+      },
+      {
+        "chapter_start": 1,
+        "chapter_end": 8,
+        "evidence": [
+          "E-1001-0",
+          "E-1002-0",
+          "E-1008-0"
+        ],
+        "issue_id": "I-2",
+        "priority": "P0",
+        "category": "protagonist_growth",
+        "symptom": "成长反馈间隔偏长",
+        "root_cause": "选择与能力反馈未总在同一阶段显现",
+        "reader_impact": "成长获得感可能延迟",
+        "supporting_metrics": [
+          "pace_speed=66.0",
+          "hook_density=55.0"
+        ],
+        "possible_direction": "优先调整信息次序与反馈间隔，保留既有剧情事实",
+        "dimension": "",
+        "problem": "",
+        "cause": "",
+        "recommended_direction": ""
+      },
+      {
+        "chapter_start": 1,
+        "chapter_end": 8,
+        "evidence": [
+          "E-1001-0",
+          "E-1002-0",
+          "E-1008-0"
+        ],
+        "issue_id": "I-3",
+        "priority": "P0",
+        "category": "character_relationships",
+        "symptom": "关系转折密度不均",
+        "root_cause": "部分关系长期服务主线但缺少独立反馈",
+        "reader_impact": "人物关系可能显得工具化",
+        "supporting_metrics": [
+          "pace_speed=66.0",
+          "hook_density=55.0"
+        ],
+        "possible_direction": "优先调整信息次序与反馈间隔，保留既有剧情事实",
+        "dimension": "",
+        "problem": "",
+        "cause": "",
+        "recommended_direction": ""
+      },
+      {
+        "chapter_start": 8,
+        "chapter_end": 15,
+        "evidence": [
+          "E-1008-0",
+          "E-1009-0",
+          "E-1015-0"
+        ],
+        "issue_id": "I-4",
+        "priority": "P0",
+        "category": "suspense_payoff",
+        "symptom": "线索回收距离偏长",
+        "root_cause": "长期问题跨越多个结构阶段",
+        "reader_impact": "读者可能遗忘早期承诺",
+        "supporting_metrics": [
+          "pace_speed=62.0",
+          "hook_density=51.0"
+        ],
+        "possible_direction": "优先调整信息次序与反馈间隔，保留既有剧情事实",
+        "dimension": "",
+        "problem": "",
+        "cause": "",
+        "recommended_direction": ""
+      },
+      {
+        "chapter_start": 8,
+        "chapter_end": 15,
+        "evidence": [
+          "E-1008-0",
+          "E-1009-0",
+          "E-1015-0"
+        ],
+        "issue_id": "I-5",
+        "priority": "P1",
+        "category": "pacing",
+        "symptom": "中段信号波动",
+        "root_cause": "多类信息在同一窗口集中",
+        "reader_impact": "方向感可能短暂下降",
+        "supporting_metrics": [
+          "pace_speed=62.0",
+          "hook_density=51.0"
+        ],
+        "possible_direction": "优先调整信息次序与反馈间隔，保留既有剧情事实",
+        "dimension": "",
+        "problem": "",
+        "cause": "",
+        "recommended_direction": ""
+      },
+      {
+        "chapter_start": 15,
+        "chapter_end": 22,
+        "evidence": [
+          "E-1015-0",
+          "E-1016-0",
+          "E-1022-0"
+        ],
+        "issue_id": "I-6",
+        "priority": "P1",
+        "category": "chapter_efficiency",
+        "symptom": "过渡功能局部集中",
+        "root_cause": "连续章节承担相似连接职责",
+        "reader_impact": "阅读推进感可能变弱",
+        "supporting_metrics": [
+          "pace_speed=58.0",
+          "hook_density=47.0"
+        ],
+        "possible_direction": "优先调整信息次序与反馈间隔，保留既有剧情事实",
+        "dimension": "",
+        "problem": "",
+        "cause": "",
+        "recommended_direction": ""
+      },
+      {
+        "chapter_start": 15,
+        "chapter_end": 22,
+        "evidence": [
+          "E-1015-0",
+          "E-1016-0",
+          "E-1022-0"
+        ],
+        "issue_id": "I-7",
+        "priority": "P1",
+        "category": "structure",
+        "symptom": "阶段边界信息拥挤",
+        "root_cause": "相邻目标与转折在同一窗口集中",
+        "reader_impact": "读者可能来不及确认新方向",
+        "supporting_metrics": [
+          "pace_speed=58.0",
+          "hook_density=47.0"
+        ],
+        "possible_direction": "优先调整信息次序与反馈间隔，保留既有剧情事实",
+        "dimension": "",
+        "problem": "",
+        "cause": "",
+        "recommended_direction": ""
+      },
+      {
+        "chapter_start": 15,
+        "chapter_end": 22,
+        "evidence": [
+          "E-1015-0",
+          "E-1016-0",
+          "E-1022-0"
+        ],
+        "issue_id": "I-8",
+        "priority": "P1",
+        "category": "protagonist_growth",
+        "symptom": "成长反馈间隔偏长",
+        "root_cause": "选择与能力反馈未总在同一阶段显现",
+        "reader_impact": "成长获得感可能延迟",
+        "supporting_metrics": [
+          "pace_speed=58.0",
+          "hook_density=47.0"
+        ],
+        "possible_direction": "优先调整信息次序与反馈间隔，保留既有剧情事实",
+        "dimension": "",
+        "problem": "",
+        "cause": "",
+        "recommended_direction": ""
+      },
+      {
+        "chapter_start": 22,
+        "chapter_end": 29,
+        "evidence": [
+          "E-1022-0",
+          "E-1023-0",
+          "E-1029-0"
+        ],
+        "issue_id": "I-9",
+        "priority": "P2",
+        "category": "character_relationships",
+        "symptom": "关系转折密度不均",
+        "root_cause": "部分关系长期服务主线但缺少独立反馈",
+        "reader_impact": "人物关系可能显得工具化",
+        "supporting_metrics": [
+          "pace_speed=54.0",
+          "hook_density=43.0"
+        ],
+        "possible_direction": "优先调整信息次序与反馈间隔，保留既有剧情事实",
+        "dimension": "",
+        "problem": "",
+        "cause": "",
+        "recommended_direction": ""
+      },
+      {
+        "chapter_start": 22,
+        "chapter_end": 29,
+        "evidence": [
+          "E-1022-0",
+          "E-1023-0",
+          "E-1029-0"
+        ],
+        "issue_id": "I-10",
+        "priority": "P2",
+        "category": "suspense_payoff",
+        "symptom": "线索回收距离偏长",
+        "root_cause": "长期问题跨越多个结构阶段",
+        "reader_impact": "读者可能遗忘早期承诺",
+        "supporting_metrics": [
+          "pace_speed=54.0",
+          "hook_density=43.0"
+        ],
+        "possible_direction": "优先调整信息次序与反馈间隔，保留既有剧情事实",
+        "dimension": "",
+        "problem": "",
+        "cause": "",
+        "recommended_direction": ""
+      },
+      {
+        "chapter_start": 29,
+        "chapter_end": 36,
+        "evidence": [
+          "E-1029-0",
+          "E-1030-0"
+        ],
+        "issue_id": "I-11",
+        "priority": "P2",
+        "category": "pacing",
+        "symptom": "中段信号波动",
+        "root_cause": "多类信息在同一窗口集中",
+        "reader_impact": "方向感可能短暂下降",
+        "supporting_metrics": [
+          "pace_speed=50.0",
+          "hook_density=39.0"
+        ],
+        "possible_direction": "优先调整信息次序与反馈间隔，保留既有剧情事实",
+        "dimension": "",
+        "problem": "",
+        "cause": "",
+        "recommended_direction": ""
+      },
+      {
+        "chapter_start": 29,
+        "chapter_end": 36,
+        "evidence": [
+          "E-1029-0",
+          "E-1030-0"
+        ],
+        "issue_id": "I-12",
+        "priority": "P2",
+        "category": "chapter_efficiency",
+        "symptom": "过渡功能局部集中",
+        "root_cause": "连续章节承担相似连接职责",
+        "reader_impact": "阅读推进感可能变弱",
+        "supporting_metrics": [
+          "pace_speed=50.0",
+          "hook_density=39.0"
+        ],
+        "possible_direction": "优先调整信息次序与反馈间隔，保留既有剧情事实",
+        "dimension": "",
+        "problem": "",
+        "cause": "",
+        "recommended_direction": ""
+      }
+    ],
+    "issue_map": [
+      {
+        "chapter_start": 1,
+        "chapter_end": 8,
+        "evidence": [
+          "E-1001-0",
+          "E-1002-0",
+          "E-1008-0"
+        ],
+        "issue_id": "I-1",
+        "priority": "P0",
+        "category": "structure",
+        "symptom": "阶段边界信息拥挤",
+        "root_cause": "相邻目标与转折在同一窗口集中",
+        "reader_impact": "读者可能来不及确认新方向",
+        "supporting_metrics": [
+          "pace_speed=66.0",
+          "hook_density=55.0"
+        ],
+        "possible_direction": "优先调整信息次序与反馈间隔，保留既有剧情事实",
+        "dimension": "",
+        "problem": "",
+        "cause": "",
+        "recommended_direction": ""
+      },
+      {
+        "chapter_start": 1,
+        "chapter_end": 8,
+        "evidence": [
+          "E-1001-0",
+          "E-1002-0",
+          "E-1008-0"
+        ],
+        "issue_id": "I-2",
+        "priority": "P0",
+        "category": "protagonist_growth",
+        "symptom": "成长反馈间隔偏长",
+        "root_cause": "选择与能力反馈未总在同一阶段显现",
+        "reader_impact": "成长获得感可能延迟",
+        "supporting_metrics": [
+          "pace_speed=66.0",
+          "hook_density=55.0"
+        ],
+        "possible_direction": "优先调整信息次序与反馈间隔，保留既有剧情事实",
+        "dimension": "",
+        "problem": "",
+        "cause": "",
+        "recommended_direction": ""
+      },
+      {
+        "chapter_start": 1,
+        "chapter_end": 8,
+        "evidence": [
+          "E-1001-0",
+          "E-1002-0",
+          "E-1008-0"
+        ],
+        "issue_id": "I-3",
+        "priority": "P0",
+        "category": "character_relationships",
+        "symptom": "关系转折密度不均",
+        "root_cause": "部分关系长期服务主线但缺少独立反馈",
+        "reader_impact": "人物关系可能显得工具化",
+        "supporting_metrics": [
+          "pace_speed=66.0",
+          "hook_density=55.0"
+        ],
+        "possible_direction": "优先调整信息次序与反馈间隔，保留既有剧情事实",
+        "dimension": "",
+        "problem": "",
+        "cause": "",
+        "recommended_direction": ""
+      },
+      {
+        "chapter_start": 8,
+        "chapter_end": 15,
+        "evidence": [
+          "E-1008-0",
+          "E-1009-0",
+          "E-1015-0"
+        ],
+        "issue_id": "I-4",
+        "priority": "P0",
+        "category": "suspense_payoff",
+        "symptom": "线索回收距离偏长",
+        "root_cause": "长期问题跨越多个结构阶段",
+        "reader_impact": "读者可能遗忘早期承诺",
+        "supporting_metrics": [
+          "pace_speed=62.0",
+          "hook_density=51.0"
+        ],
+        "possible_direction": "优先调整信息次序与反馈间隔，保留既有剧情事实",
+        "dimension": "",
+        "problem": "",
+        "cause": "",
+        "recommended_direction": ""
+      },
+      {
+        "chapter_start": 8,
+        "chapter_end": 15,
+        "evidence": [
+          "E-1008-0",
+          "E-1009-0",
+          "E-1015-0"
+        ],
+        "issue_id": "I-5",
+        "priority": "P1",
+        "category": "pacing",
+        "symptom": "中段信号波动",
+        "root_cause": "多类信息在同一窗口集中",
+        "reader_impact": "方向感可能短暂下降",
+        "supporting_metrics": [
+          "pace_speed=62.0",
+          "hook_density=51.0"
+        ],
+        "possible_direction": "优先调整信息次序与反馈间隔，保留既有剧情事实",
+        "dimension": "",
+        "problem": "",
+        "cause": "",
+        "recommended_direction": ""
+      },
+      {
+        "chapter_start": 15,
+        "chapter_end": 22,
+        "evidence": [
+          "E-1015-0",
+          "E-1016-0",
+          "E-1022-0"
+        ],
+        "issue_id": "I-6",
+        "priority": "P1",
+        "category": "chapter_efficiency",
+        "symptom": "过渡功能局部集中",
+        "root_cause": "连续章节承担相似连接职责",
+        "reader_impact": "阅读推进感可能变弱",
+        "supporting_metrics": [
+          "pace_speed=58.0",
+          "hook_density=47.0"
+        ],
+        "possible_direction": "优先调整信息次序与反馈间隔，保留既有剧情事实",
+        "dimension": "",
+        "problem": "",
+        "cause": "",
+        "recommended_direction": ""
+      },
+      {
+        "chapter_start": 15,
+        "chapter_end": 22,
+        "evidence": [
+          "E-1015-0",
+          "E-1016-0",
+          "E-1022-0"
+        ],
+        "issue_id": "I-7",
+        "priority": "P1",
+        "category": "structure",
+        "symptom": "阶段边界信息拥挤",
+        "root_cause": "相邻目标与转折在同一窗口集中",
+        "reader_impact": "读者可能来不及确认新方向",
+        "supporting_metrics": [
+          "pace_speed=58.0",
+          "hook_density=47.0"
+        ],
+        "possible_direction": "优先调整信息次序与反馈间隔，保留既有剧情事实",
+        "dimension": "",
+        "problem": "",
+        "cause": "",
+        "recommended_direction": ""
+      },
+      {
+        "chapter_start": 15,
+        "chapter_end": 22,
+        "evidence": [
+          "E-1015-0",
+          "E-1016-0",
+          "E-1022-0"
+        ],
+        "issue_id": "I-8",
+        "priority": "P1",
+        "category": "protagonist_growth",
+        "symptom": "成长反馈间隔偏长",
+        "root_cause": "选择与能力反馈未总在同一阶段显现",
+        "reader_impact": "成长获得感可能延迟",
+        "supporting_metrics": [
+          "pace_speed=58.0",
+          "hook_density=47.0"
+        ],
+        "possible_direction": "优先调整信息次序与反馈间隔，保留既有剧情事实",
+        "dimension": "",
+        "problem": "",
+        "cause": "",
+        "recommended_direction": ""
+      },
+      {
+        "chapter_start": 22,
+        "chapter_end": 29,
+        "evidence": [
+          "E-1022-0",
+          "E-1023-0",
+          "E-1029-0"
+        ],
+        "issue_id": "I-9",
+        "priority": "P2",
+        "category": "character_relationships",
+        "symptom": "关系转折密度不均",
+        "root_cause": "部分关系长期服务主线但缺少独立反馈",
+        "reader_impact": "人物关系可能显得工具化",
+        "supporting_metrics": [
+          "pace_speed=54.0",
+          "hook_density=43.0"
+        ],
+        "possible_direction": "优先调整信息次序与反馈间隔，保留既有剧情事实",
+        "dimension": "",
+        "problem": "",
+        "cause": "",
+        "recommended_direction": ""
+      },
+      {
+        "chapter_start": 22,
+        "chapter_end": 29,
+        "evidence": [
+          "E-1022-0",
+          "E-1023-0",
+          "E-1029-0"
+        ],
+        "issue_id": "I-10",
+        "priority": "P2",
+        "category": "suspense_payoff",
+        "symptom": "线索回收距离偏长",
+        "root_cause": "长期问题跨越多个结构阶段",
+        "reader_impact": "读者可能遗忘早期承诺",
+        "supporting_metrics": [
+          "pace_speed=54.0",
+          "hook_density=43.0"
+        ],
+        "possible_direction": "优先调整信息次序与反馈间隔，保留既有剧情事实",
+        "dimension": "",
+        "problem": "",
+        "cause": "",
+        "recommended_direction": ""
+      },
+      {
+        "chapter_start": 29,
+        "chapter_end": 36,
+        "evidence": [
+          "E-1029-0",
+          "E-1030-0"
+        ],
+        "issue_id": "I-11",
+        "priority": "P2",
+        "category": "pacing",
+        "symptom": "中段信号波动",
+        "root_cause": "多类信息在同一窗口集中",
+        "reader_impact": "方向感可能短暂下降",
+        "supporting_metrics": [
+          "pace_speed=50.0",
+          "hook_density=39.0"
+        ],
+        "possible_direction": "优先调整信息次序与反馈间隔，保留既有剧情事实",
+        "dimension": "",
+        "problem": "",
+        "cause": "",
+        "recommended_direction": ""
+      },
+      {
+        "chapter_start": 29,
+        "chapter_end": 36,
+        "evidence": [
+          "E-1029-0",
+          "E-1030-0"
+        ],
+        "issue_id": "I-12",
+        "priority": "P2",
+        "category": "chapter_efficiency",
+        "symptom": "过渡功能局部集中",
+        "root_cause": "连续章节承担相似连接职责",
+        "reader_impact": "阅读推进感可能变弱",
+        "supporting_metrics": [
+          "pace_speed=50.0",
+          "hook_density=39.0"
+        ],
+        "possible_direction": "优先调整信息次序与反馈间隔，保留既有剧情事实",
+        "dimension": "",
+        "problem": "",
+        "cause": "",
+        "recommended_direction": ""
+      }
+    ],
+    "revision_priorities": [
+      {
+        "priority": "first",
+        "chapter_ranges": [
+          [
+            1,
+            8
+          ]
+        ],
+        "direction": "优先调整信息次序与反馈间隔，保留既有剧情事实",
+        "preserve": [
+          "结构承诺获得回收"
+        ]
+      },
+      {
+        "priority": "second",
+        "chapter_ranges": [],
+        "direction": "复核线索反馈间隔",
+        "preserve": [
+          "主角代价链"
+        ]
+      },
+      {
+        "priority": "third",
+        "chapter_ranges": [],
+        "direction": "补足尾声人物落点",
+        "preserve": [
+          "最终高潮结构"
+        ]
+      }
+    ],
+    "preserve_list": [
+      "结构承诺获得回收",
+      "主角选择具有代价",
+      "人物关系参与因果",
+      "悬念具有生命周期",
+      "节奏具备阶段差异",
+      "章节功能可定位"
+    ],
+    "overall_assessment": "结构、人物、悬念与节奏形成可诊断闭环。"
+  },
+  "evidence_index": {
+    "E-1001-0": {
+      "evidence_id": "E-1001-0",
+      "snapshot_id": 77,
+      "revision_hash": "rev-fixture",
+      "chapter_id": 1001,
+      "chapter_index": 1,
+      "chapter_title": "第1章",
+      "start_offset": 0,
+      "end_offset": 24,
+      "quote_or_excerpt": "@林 @顾 第1章 世界规则 身份线索 成长代价",
+      "reason": "window primitive support"
+    },
+    "E-1002-0": {
+      "evidence_id": "E-1002-0",
+      "snapshot_id": 77,
+      "revision_hash": "rev-fixture",
+      "chapter_id": 1002,
+      "chapter_index": 2,
+      "chapter_title": "第2章",
+      "start_offset": 0,
+      "end_offset": 24,
+      "quote_or_excerpt": "@林 @顾 第2章 世界规则 身份线索 成长代价",
+      "reason": "window primitive support"
+    },
+    "E-1008-0": {
+      "evidence_id": "E-1008-0",
+      "snapshot_id": 77,
+      "revision_hash": "rev-fixture",
+      "chapter_id": 1008,
+      "chapter_index": 8,
+      "chapter_title": "第8章",
+      "start_offset": 0,
+      "end_offset": 24,
+      "quote_or_excerpt": "@林 @顾 第8章 世界规则 身份线索 成长代价",
+      "reason": "window primitive support"
+    },
+    "E-1009-0": {
+      "evidence_id": "E-1009-0",
+      "snapshot_id": 77,
+      "revision_hash": "rev-fixture",
+      "chapter_id": 1009,
+      "chapter_index": 9,
+      "chapter_title": "第9章",
+      "start_offset": 0,
+      "end_offset": 24,
+      "quote_or_excerpt": "@林 @顾 第9章 世界规则 身份线索 成长代价",
+      "reason": "window primitive support"
+    },
+    "E-1015-0": {
+      "evidence_id": "E-1015-0",
+      "snapshot_id": 77,
+      "revision_hash": "rev-fixture",
+      "chapter_id": 1015,
+      "chapter_index": 15,
+      "chapter_title": "第15章",
+      "start_offset": 0,
+      "end_offset": 24,
+      "quote_or_excerpt": "@林 @顾 第15章 世界规则 身份线索 成长代",
+      "reason": "window primitive support"
+    },
+    "E-1016-0": {
+      "evidence_id": "E-1016-0",
+      "snapshot_id": 77,
+      "revision_hash": "rev-fixture",
+      "chapter_id": 1016,
+      "chapter_index": 16,
+      "chapter_title": "第16章",
+      "start_offset": 0,
+      "end_offset": 24,
+      "quote_or_excerpt": "@林 @顾 第16章 世界规则 身份线索 成长代",
+      "reason": "window primitive support"
+    },
+    "E-1022-0": {
+      "evidence_id": "E-1022-0",
+      "snapshot_id": 77,
+      "revision_hash": "rev-fixture",
+      "chapter_id": 1022,
+      "chapter_index": 22,
+      "chapter_title": "第22章",
+      "start_offset": 0,
+      "end_offset": 24,
+      "quote_or_excerpt": "@林 @顾 第22章 世界规则 身份线索 成长代",
+      "reason": "window primitive support"
+    },
+    "E-1023-0": {
+      "evidence_id": "E-1023-0",
+      "snapshot_id": 77,
+      "revision_hash": "rev-fixture",
+      "chapter_id": 1023,
+      "chapter_index": 23,
+      "chapter_title": "第23章",
+      "start_offset": 0,
+      "end_offset": 24,
+      "quote_or_excerpt": "@林 @顾 第23章 世界规则 身份线索 成长代",
+      "reason": "window primitive support"
+    },
+    "E-1029-0": {
+      "evidence_id": "E-1029-0",
+      "snapshot_id": 77,
+      "revision_hash": "rev-fixture",
+      "chapter_id": 1029,
+      "chapter_index": 29,
+      "chapter_title": "第29章",
+      "start_offset": 0,
+      "end_offset": 24,
+      "quote_or_excerpt": "@林 @顾 第29章 世界规则 身份线索 成长代",
+      "reason": "window primitive support"
+    },
+    "E-1030-0": {
+      "evidence_id": "E-1030-0",
+      "snapshot_id": 77,
+      "revision_hash": "rev-fixture",
+      "chapter_id": 1030,
+      "chapter_index": 30,
+      "chapter_title": "第30章",
+      "start_offset": 0,
+      "end_offset": 24,
+      "quote_or_excerpt": "@林 @顾 第30章 世界规则 身份线索 成长代",
+      "reason": "window primitive support"
+    }
+  },
+  "analysis_metadata": {
+    "run_id": 9001,
+    "schema_version": "whole-book-analysis-v2.0",
+    "engine_version": "2.1.0",
+    "provider_name": "deterministic_fixture",
+    "model_name": "wb-v2-test",
+    "generated_at": "2026-08-10T07:25:44.748164Z",
+    "module_availability": {
+      "overview": "available",
+      "story": "available",
+      "characters": "available",
+      "suspense": "available",
+      "pacing": "available",
+      "chapters": "available",
+      "assessment": "available"
+    },
+    "provider_calls_completed": 5,
+    "real_provider_calls": 0
+  }
+}

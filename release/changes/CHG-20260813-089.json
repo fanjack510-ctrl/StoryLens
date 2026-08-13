@@ -1,0 +1,58 @@
+{
+  "id": "CHG-20260813-089",
+  "title": "全书画像层与画像确认门（Adaptive Profile Layer L0）",
+  "type": "feature",
+  "base_version": "1.2.0",
+  "status": "in_progress",
+  "include_in_next_release": false,
+  "commits": [],
+  "modules": [
+    "apps/api/app/narrative_core/long_novel",
+    "apps/desktop/src/features/wholeBookV2"
+  ],
+  "files": [],
+  "user_summary": "分析一本书之前，先判断它是什么书。引擎会先把全书正文数一遍（免费），再抽 11 章交给模型判读，给出五项基本判断：变现模式、情感主轴、驱动引擎、视角结构、篇幅。这些判断以草稿形式呈现给你，每一项都附带依据；你用下拉菜单确认或改正，确认之后才开始抽取。改这几项的意义在于：不同类型的小说该看的东西不同，番茄那种快餐网文要看前三章的钩子，晋江的言情要看感情线节拍，用同一把尺去量所有小说，量出来的结论对谁都不准。",
+  "technical_summary": "Implements the L0 layer of 10_ADAPTIVE_PROFILE_LAYER.md (2026-08-13, an extension of the frozen 01-09 contracts, not an unfreeze). Three parts. (1) L0-A/C deterministic statistics over 100% of the text at zero cost: chapter length distribution, dialogue ratio, tail shape, vocabulary rates, and a per-name decile curve; the viewpoint axis is decided by counting because a sampled read provably gets it wrong. (2) L0-B: one provider call over 11 sampled chapters (opening 3 plus an even spread) returning the axes a count cannot reach, with paragraph-anchored evidence. (3) The draft/confirm flow: five closed-vocabulary axes, disagreements between the counted and read sides recorded rather than resolved, and the user's selection outranking every inference including the whole-book one. Profile deltas dispatch additively onto the L1 extraction and enter the prompt hash so a single-lead extraction is never reused for an ensemble book.",
+  "acceptance_criteria": [
+    "the viewpoint axis measured over the whole book disagrees with the same axis measured over the opening, and the whole-book value is the one kept",
+    "a profile axis value outside the closed vocabulary is refused, not coerced or stored",
+    "a user selection overrides every inferred value and is marked as the user's",
+    "with no delta active the extraction prompt is byte-identical to the core prompt, so books that need no delta pay nothing extra",
+    "the prompt hash differs between an active and an inactive delta, so cached extraction is not reused across profiles",
+    "the confirmation screen shows the evidence behind every axis before asking the user to confirm it"
+  ],
+  "tests": [
+    "apps/api/tests/test_long_novel_profile.py",
+    "apps/api/tests/test_long_novel_profile_stats.py"
+  ],
+  "verification_evidence": [
+    "L0-A/C on the real 806-chapter book: whole-book share(1)=0.436 -> ensemble; opening tenth share(1)=0.612 -> single_lead. The engine keeps the counted value and records the disagreement.",
+    "L0-B against the real provider returned pov_hint=single_lead (confidence 0.7) — the wrong answer the design predicted a sample would give, and the reason that axis is owned by counting. Cost ¥0.021.",
+    "Both sides independently agreed on monetization (paid_subscription, from chapter length median 3103) and engine (mystery, vocabulary 2.67/10k vs progression 0.84).",
+    "Delta dispatch: pov_entity active for the ensemble profile, inactive for single_lead; prompt hashes differ.",
+    "Delta fill-rate gate, thresholds fixed before the run: 100% fill, 12 distinct values, top1 40.0% against a 70% ceiling, on chapters 281-320 (a window whose mixed cast was established by the free measurement). The model's viewpoint concentration 0.400 lands on the independent mention share 0.406.",
+    "113 long-novel tests pass"
+  ],
+  "known_out_of_scope": [
+    "Only one profile delta is registered (pov_entity for ensemble). The other deltas in 10_ADAPTIVE_PROFILE_LAYER §9 are specified but not built; a registry entry pointing at an unexercised prompt fragment would be a promise the engine cannot keep.",
+    "The opening-analysis module (fast-food profile, chapters 1-3 at paragraph resolution) is not built.",
+    "Per-chapter analysis does not yet read the profile. §4.0 places the profile before both pipelines; wiring the single-chapter pipeline is separate work.",
+    "L0-A thresholds are provisional and want calibration on a labelled corpus before they are treated as anything but priors."
+  ],
+  "data_compatibility": {
+    "database_changed": true,
+    "migration_required": true,
+    "user_data_compatible": true,
+    "notes": "Additive: one new table holding the draft and confirmed profile per book. No existing table is altered. A book with no profile behaves exactly as before — the profile is optional input to the engine, not a precondition for the existing paths."
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "P2",
+  "head_inclusion": null,
+  "created_at": "2026-08-13T00:00:00Z",
+  "updated_at": "2026-08-13T00:00:00Z"
+}
