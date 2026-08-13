@@ -31,6 +31,9 @@ __all__ = [
     "build_assessment_instruction",
     "build_user_prompt",
     "prompt_template_hash",
+    "PROFILE_SAMPLE_SYSTEM_PROMPT",
+    "PROFILE_SAMPLE_INSTRUCTION",
+    "build_profile_sample_prompt",
 ]
 
 #: Stated to the model because the contract's enums are closed. Without them a model returns
@@ -194,3 +197,71 @@ def build_assessment_instruction(regions: object = ()) -> str:
             continue
     measured = ("引擎已测出以下区间，可直接引用：\n" + "\n".join(lines)) if lines else ""
     return ASSESSMENT_INSTRUCTION.format(measured_regions=measured)
+
+
+# =====================================================================  L0-B 画像采样判读
+#
+# Read before anything expensive: the type judgement used to arrive with the final synthesis
+# call, after every extraction decision had already been made (10_ADAPTIVE_PROFILE_LAYER §1).
+#
+# The closed vocabularies are spelled out in full because they dispatch behaviour downstream.
+# A model that answers "都市异能" instead of one of the listed values has produced something
+# no delta can act on — and a value outside the set is dropped, not coerced, so an unlisted
+# answer silently costs the axis. Naming the whole set is what prevents that.
+#
+# The evidence rule is the same one L1 lives by: a judgement with no paragraph anchor cannot
+# be checked, and the confirmation screen has to show the user *why* each value was guessed
+# before asking them to confirm it.
+
+PROFILE_SAMPLE_SYSTEM_PROMPT = """你是网络小说的类型判读器。你读到的是一本长篇小说的抽样章节：
+开头几章的全文，加上全书均匀抽取的若干章。你的任务是判断这本书的基本类型，并以严格 JSON 返回。
+
+只判断，不复述剧情。每一项判断都必须给出依据（引用你读到的段落编号 `[p:N]`）。
+判断不出来的项，`value` 留空字符串，不要猜。"""
+
+PROFILE_SAMPLE_INSTRUCTION = """按下面的**封闭取值**填写。取值必须原样使用，不得自创：
+
+- `monetization` 变现与获客模式：
+  `fast_food_free` 免费广告流（番茄/七猫/书旗：单章约 1500–2500 字，强冲突前置，章章有钩子）
+  `paid_subscription` 付费订阅流（起点/晋江：单章 3000 字以上，容许铺垫，有卷结构）
+- `audience` 读者与情感主轴：
+  `male_gratification` 男频爽文向（升级、打脸、势力扩张是主要快感来源）
+  `female_romance` 女频情感向（感情线是主轴，关系张力与人物互动是主要驱动）
+  `neutral` 中性 / 双向（悬疑、科幻、群像权谋等不以上述任一为主轴）
+- `engine` 驱动读者往下读的引擎：
+  `progression` 升级流 · `mystery` 悬疑推理 · `romance` 情感关系
+  `ensemble_politics` 权谋群像 · `slice_of_life` 日常种田
+  `episodic_transmigration` 无限流/快穿（单元式结构，一个副本或世界一个单元）
+- `pov_hint` 视角结构（仅供参考，最终以全书统计为准）：
+  `single_lead` 单主角 · `dual_lead` 双主角/CP 双线 · `ensemble` 群像多线
+
+另外给出：
+- `candidate_names`：你在样本里看到的**人物称呼**，原样照抄，最多 20 个。
+  这些名字会被拿去在全书正文里逐一计数，所以必须是正文中真实出现的字符串，不要写描述性的词
+  （不要写"主角""众人""主要人物"）。
+- `opening_notes`：只看第 1 章，`conflict_paragraph` 填冲突首次出现在第几段，
+  `hook_paragraph` 填章末钩子在第几段；没有就填 0。
+
+只输出 JSON，结构如下（`evidence` 填段落编号数组）：
+{"monetization": {"value": "", "confidence": 0.0, "evidence": [1]},
+ "audience": {"value": "", "confidence": 0.0, "evidence": [1]},
+ "engine": {"value": "", "confidence": 0.0, "evidence": [1]},
+ "pov_hint": {"value": "", "confidence": 0.0, "evidence": [1]},
+ "candidate_names": [],
+ "opening_notes": {"conflict_paragraph": 0, "hook_paragraph": 0}}"""
+
+
+def build_profile_sample_prompt(sample: "list[tuple[int, str]]") -> str:
+    """Render the sampled chapters with the same anchors L1 uses.
+
+    Chapter and paragraph markers are identical to the extraction prompt on purpose: the
+    model is being asked to cite paragraphs, and a second anchor syntax would be a second
+    thing to get wrong. The renderer that omitted chapter boundaries once had the model
+    inventing per-chapter signals from undifferentiated text.
+    """
+    parts = []
+    for chapter_order, body in sample:
+        lines = [line.strip() for line in (body or "").splitlines() if line.strip()]
+        rendered = "\n".join(f"[p:{index}] {line}" for index, line in enumerate(lines, start=1))
+        parts.append(f"=== 第 {chapter_order} 章 ===\n{rendered}")
+    return PROFILE_SAMPLE_INSTRUCTION + "\n\n正文抽样：\n\n" + "\n\n".join(parts)
