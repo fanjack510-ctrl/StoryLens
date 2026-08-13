@@ -655,12 +655,100 @@ function CharactersModule({ data }: { data: WholeBookAnalysisV2 }) {
   );
 }
 
+/** What each beat did to the question, as a reader would name it. */
+const SUSPENSE_BEATS: Record<string, string> = {
+  hook: "抛出", clue: "线索", foreshadow: "伏笔", misdirection: "误导",
+  partial_reveal: "部分揭示", reveal: "揭示", twist: "反转", payoff: "兑现",
+};
+
+/**
+ * Every clue reveal in the book, one row each, in chapter order.
+ *
+ * The panel below shows one thread at a time, so comparing forty of them means forty clicks
+ * and the shape of the whole book is never visible. Flattened into a table, the thing that
+ * matters shows up immediately: on this book almost nothing is ever marked resolved.
+ */
+function SuspenseLedger({ data }: { data: WholeBookAnalysisV2 }) {
+  const rows = useMemo(() => {
+    const chapterSummary = new Map(
+      data.chapters.functions.map((f) => [f.chapter_index, f.summary]),
+    );
+    return data.suspense.lifecycles
+      .flatMap((lifecycle) => {
+        const events = [...lifecycle.events].sort((a, b) => a.chapter - b.chapter);
+        return events.map((event, i) => ({
+          key: `${lifecycle.suspense_id}-${i}`,
+          chapter: event.chapter,
+          surface: chapterSummary.get(event.chapter) ?? "",
+          beat: event.type,
+          clue: event.description,
+          question: lifecycle.question,
+          next: events[i + 1]?.chapter ?? null,
+          resolved: lifecycle.status === "resolved",
+        }));
+      })
+      .sort((a, b) => a.chapter - b.chapter);
+  }, [data]);
+
+  const resolved = data.suspense.lifecycles.filter((l) => l.status === "resolved").length;
+
+  return (
+    <>
+      <div className="wb2-ledger-wrap">
+        <table className="wb2-ledger">
+          <thead>
+            <tr>
+              <th>章段</th><th>表面事件</th><th>露出线索</th><th>读者疑问</th><th>下次回响</th><th>状态</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.key}>
+                <td className="ch">第 {r.chapter} 章</td>
+                <td>{r.surface || "—"}</td>
+                <td>
+                  <span className="beat" data-beat={r.beat}>{SUSPENSE_BEATS[r.beat] ?? r.beat}</span>
+                  {r.clue}
+                </td>
+                <td className="q">{r.question}</td>
+                <td className="next">{r.next ? `第 ${r.next} 章` : "无"}</td>
+                <td>
+                  <span className="state" data-resolved={r.resolved ? "1" : "0"}>
+                    {r.resolved ? "已回收" : "未回收"}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="wb2-ledger-note">
+        共 {rows.length} 次线索揭示，分属 {data.suspense.lifecycles.length} 条悬念线，
+        其中 <b>{resolved}</b> 条已回收。
+        {resolved < data.suspense.lifecycles.length / 2 &&
+          "「真实含义」需要线程被明确回收才填得出，目前多数线程未被标记为回收。"}
+      </p>
+    </>
+  );
+}
+
 function SuspenseModule({ data }: { data: WholeBookAnalysisV2 }) {
+  const [tab, setTab] = useState("线索顺序表");
   const [selected, setSelected] = useState(0);
   const hooks = data.suspense.lifecycles;
   const h = hooks[selected];
 
   return (
+    <>
+      <div className="wb2-tabs">
+        {["线索顺序表", "单条追踪"].map((t) => (
+          <button key={t} className={tab === t ? "active" : ""} onClick={() => setTab(t)}>
+            {t}
+          </button>
+        ))}
+      </div>
+      {tab === "线索顺序表" && <SuspenseLedger data={data} />}
+      {tab === "单条追踪" && (
     <div className="wb2-hook-layout">
       <aside>
         {hooks.map((x, i) => (
@@ -702,6 +790,8 @@ function SuspenseModule({ data }: { data: WholeBookAnalysisV2 }) {
         </section>
       )}
     </div>
+      )}
+    </>
   );
 }
 
@@ -710,6 +800,10 @@ function PacingModule({ data }: { data: WholeBookAnalysisV2 }) {
   const H = 390;
   const pad = 48;
   const [hover, setHover] = useState(0);
+  // Six curves drawn together are a ball of wool: at 96 points each they cross constantly
+  // and none of them can be followed. Reading drive is the one that answers "would a reader
+  // keep going", so it is the default; the rest are there when a comparison is wanted.
+  const [shown, setShown] = useState<Set<number>>(() => new Set([3]));
   const pacing = data.pacing;
   const maxChapter = pacing.points.at(-1)?.chapter_end ?? data.book_metadata.chapter_count;
   const marker = pacing.event_markers[hover] ?? pacing.event_markers[0];
@@ -727,33 +821,63 @@ function PacingModule({ data }: { data: WholeBookAnalysisV2 }) {
 
   return (
     <>
-      <div className="wb2-legend">
+      <div className="wb2-legend wb2-metric-toggle">
         {series.map((s, i) => (
-          <span key={s.name}>
+          <button
+            key={s.name}
+            type="button"
+            aria-pressed={shown.has(i)}
+            onClick={() =>
+              setShown((prev) => {
+                const next = new Set(prev);
+                // Never leave the chart empty — turning the last curve off would look like
+                // a broken render rather than a choice.
+                if (next.has(i)) { if (next.size > 1) next.delete(i); } else next.add(i);
+                return next;
+              })
+            }
+          >
             <i style={{ background: PACING_COLORS[i] }} />
             {s.name}
-          </span>
+          </button>
         ))}
       </div>
       <div className="wb2-chart-wrap">
         <svg className="wb2-chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="全书节奏曲线">
+          {/* The regions the engine measured, behind everything. A stretch a reader would
+              feel as slow is a band, not a line to be inferred from six crossing curves. */}
+          {pacing.pacing_regions.map((r) => {
+            const x1 = pad + (r.chapter_start / Math.max(1, maxChapter)) * (W - pad - 10);
+            const x2 = pad + (r.chapter_end / Math.max(1, maxChapter)) * (W - pad - 10);
+            return (
+              <rect
+                key={`${r.type}-${r.chapter_start}`}
+                x={x1} y="42" width={Math.max(2, x2 - x1)} height="280"
+                className={r.type === "fatigue" ? "region-fatigue" : "region-climax"}
+              >
+                <title>{`第${r.chapter_start}–${r.chapter_end}章 ${r.reason}`}</title>
+              </rect>
+            );
+          })}
           {[20, 40, 60, 80].map((v) => (
             <line className="grid" key={v} x1={pad} x2={W - 10} y1={H - 48 - v * 3} y2={H - 48 - v * 3} />
           ))}
-          {series.map((s, si) => (
-            <polyline
-              key={s.name}
-              fill="none"
-              stroke={PACING_COLORS[si]}
-              strokeWidth="2"
-              points={s.values
-                .map(
-                  (v) =>
-                    `${pad + (v.chapter / Math.max(1, maxChapter)) * (W - pad - 10)},${H - 48 - v.value * 3}`,
-                )
-                .join(" ")}
-            />
-          ))}
+          {series.map((s, si) =>
+            shown.has(si) ? (
+              <polyline
+                key={s.name}
+                fill="none"
+                stroke={PACING_COLORS[si]}
+                strokeWidth="2"
+                points={s.values
+                  .map(
+                    (v) =>
+                      `${pad + (v.chapter / Math.max(1, maxChapter)) * (W - pad - 10)},${H - 48 - v.value * 3}`,
+                  )
+                  .join(" ")}
+              />
+            ) : null,
+          )}
           {pacing.event_markers.map((m, i) => {
             const x = pad + (m.chapter / Math.max(1, maxChapter)) * (W - pad - 10);
             return (

@@ -36,3 +36,40 @@ ol.wb2-causal li:first-child{border-top:0}
 ol.wb2-causal b{color:#93a49b;font-size:11.5px;padding-top:2px;font-variant-numeric:tabular-nums}
 ol.wb2-causal span{font-size:13.5px;line-height:1.65}
 ol.wb2-causal i{position:static;color:#3c8768;font-style:normal;margin:0 8px}
+
+/* ---- 节奏：可切换的指标 + 实测区间底色 -------------------------------------
+   Six curves at 96 points each cross constantly and none can be followed. One is shown by
+   default; the measured slow and dense stretches become bands behind it, so a reader sees
+   where the book sags without inferring it from crossing lines. */
+.wb2-metric-toggle button{display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:12px;
+  padding:4px 11px;border-radius:14px;cursor:pointer;border:1px solid #c6d2ca;background:#fff;color:#5d6b64}
+.wb2-metric-toggle button[aria-pressed="true"]{background:#e7efe9;border-color:#8fae9e;color:#245d49;font-weight:600}
+.wb2-metric-toggle button:focus-visible{outline:2px solid #2f6b57;outline-offset:2px}
+.wb2-metric-toggle i{width:16px;height:3px;border-radius:2px;flex:none}
+.wb2-chart .region-fatigue{fill:#e8b866;opacity:.20}
+.wb2-chart .region-climax{fill:#c2695e;opacity:.14}
+
+/* ---- 悬念：线索揭示顺序表 --------------------------------------------------
+   One thread at a time meant forty clicks to compare forty threads, and the shape of the
+   book was never visible. Flattened, the thing that matters is immediate — on this book
+   almost nothing is ever marked resolved. */
+.wb2-ledger-wrap{overflow-x:auto;border:1px solid #dfe6e1;background:#fff}
+table.wb2-ledger{min-width:1040px;border-collapse:collapse;background:#fff}
+.wb2-ledger th{background:#e7efe9;color:#1b241f;font-size:11.5px;font-weight:700;
+  padding:9px 11px;border:1px solid #c6d2ca;white-space:nowrap}
+.wb2-ledger td{padding:9px 11px;border:1px solid #e4eae6;font-size:12.5px;line-height:1.55;vertical-align:top}
+.wb2-ledger tbody tr:hover td{background:#f4f8f5}
+.wb2-ledger td.ch,.wb2-ledger td.next{white-space:nowrap;font-variant-numeric:tabular-nums}
+.wb2-ledger td.ch{font-weight:600}
+.wb2-ledger td.next{color:#68736d}
+.wb2-ledger td.q{max-width:20em;color:#41504a}
+.wb2-ledger .beat{display:inline-block;font-size:10px;padding:1px 6px;border-radius:3px;
+  margin-right:6px;white-space:nowrap;background:#dce9e2;color:#2f6b57}
+.wb2-ledger .beat[data-beat="twist"]{background:#f4dedA;color:#a33f35}
+.wb2-ledger .beat[data-beat="misdirection"]{background:#f6e8d2;color:#b8791c}
+.wb2-ledger .beat[data-beat="payoff"]{background:#e0dcf0;color:#5b4a91}
+.wb2-ledger .state{font-size:10.5px;padding:2px 7px;border-radius:3px;white-space:nowrap;
+  background:#f6e8d2;color:#b8791c}
+.wb2-ledger .state[data-resolved="1"]{background:#dce9e2;color:#2f6b57}
+.wb2-ledger-note{margin:12px 0 0;font-size:12px;color:#5d6b64}
+.wb2-ledger-note b{color:#1b241f}
