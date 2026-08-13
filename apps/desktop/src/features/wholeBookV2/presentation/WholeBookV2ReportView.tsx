@@ -1085,7 +1085,15 @@ const RATING_SCORE: Record<string, number> = {
  * dent in the outline is a dimension below competent — for this book, suspense payoff and
  * pacing, both B-.
  */
-function DimensionRadar({ dimensions }: { dimensions: WholeBookAnalysisV2["assessment"]["dimensions"] }) {
+function DimensionRadar({
+  dimensions,
+  selected,
+  onSelect,
+}: {
+  dimensions: WholeBookAnalysisV2["assessment"]["dimensions"];
+  selected: number;
+  onSelect: (index: number) => void;
+}) {
   const n = dimensions.length;
   if (n < 3) return null;
   const cx = 150, cy = 132, R = 92;
@@ -1112,16 +1120,29 @@ function DimensionRadar({ dimensions }: { dimensions: WholeBookAnalysisV2["asses
       <polygon points={points.map((p) => p.map((v) => v.toFixed(1)).join(",")).join(" ")}
                className="wb2-radar-area" />
       {points.map(([x, y], i) => (
-        <circle key={i} cx={x.toFixed(1)} cy={y.toFixed(1)} r="3" className="wb2-radar-dot" />
+        <circle key={i} cx={x.toFixed(1)} cy={y.toFixed(1)} r={selected === i ? 5 : 3}
+                className="wb2-radar-dot" data-selected={selected === i ? "1" : "0"} />
       ))}
+      {/* Each axis is its own control. The shape says which dimension is weak; clicking it is
+          how a reader gets from that to the sentence explaining why. */}
       {dimensions.map((d, i) => {
         const [x, y] = at(i, R + 25);
         const anchor = Math.abs(x - cx) < 12 ? "middle" : x > cx ? "start" : "end";
+        const [hx, hy] = at(i, R);
         return (
-          <text key={d.dimension} x={x.toFixed(1)} y={(y + 4).toFixed(1)} textAnchor={anchor}
-                fontSize="11" className="wb2-radar-label">
-            {DIMENSION_LABELS[d.dimension] ?? d.dimension}
-          </text>
+          <g key={d.dimension} className="wb2-radar-axis" data-selected={selected === i ? "1" : "0"}
+             tabIndex={0} role="button"
+             aria-label={`${DIMENSION_LABELS[d.dimension] ?? d.dimension} ${d.rating}`}
+             onClick={() => onSelect(i)}
+             onKeyDown={(e) => {
+               if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(i); }
+             }}>
+            <line x1={cx} y1={cy} x2={hx.toFixed(1)} y2={hy.toFixed(1)} className="wb2-radar-hit" />
+            <text x={x.toFixed(1)} y={(y + 4).toFixed(1)} textAnchor={anchor}
+                  fontSize="11" className="wb2-radar-label">
+              {DIMENSION_LABELS[d.dimension] ?? d.dimension}
+            </text>
+          </g>
         );
       })}
     </svg>
@@ -1130,6 +1151,8 @@ function DimensionRadar({ dimensions }: { dimensions: WholeBookAnalysisV2["asses
 
 function AssessmentModule({ data }: { data: WholeBookAnalysisV2 }) {
   const [selected, setSelected] = useState(0);
+  // Which radar axis the reader is asking about. Separate from the issue selection below.
+  const [dimension, setDimension] = useState(0);
   const a = data.assessment;
   const issue = a.issues[selected];
   const total = data.book_metadata.chapter_count;
@@ -1152,12 +1175,12 @@ function AssessmentModule({ data }: { data: WholeBookAnalysisV2 }) {
         </div>
         <div className="wb2-dimension-layout">
           <figure className="wb2-radar-wrap">
-            <DimensionRadar dimensions={a.dimensions} />
-            <figcaption>越靠外越好 · 虚线为 B 基准</figcaption>
+            <DimensionRadar dimensions={a.dimensions} selected={dimension} onSelect={setDimension} />
+            <figcaption>越靠外越好 · 虚线为 B 基准 · 点轴看说明</figcaption>
           </figure>
           <div className="wb2-dimension-list">
-            {a.dimensions.map((x) => (
-              <article key={x.dimension}>
+            {a.dimensions.map((x, i) => (
+              <article key={x.dimension} data-selected={dimension === i ? "1" : "0"}>
                 <b data-below={(RATING_SCORE[x.rating] ?? 4) < RATING_SCORE.B ? "1" : "0"}>
                   {x.rating}
                 </b>

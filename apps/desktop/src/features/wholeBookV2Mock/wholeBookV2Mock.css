@@ -73,3 +73,13 @@ table.wb2-ledger{min-width:1040px;border-collapse:collapse;background:#fff}
 .wb2-ledger .state[data-resolved="1"]{background:#dce9e2;color:#2f6b57}
 .wb2-ledger-note{margin:12px 0 0;font-size:12px;color:#5d6b64}
 .wb2-ledger-note b{color:#1b241f}
+
+/* Radar axes are controls: the shape says which dimension is weak, clicking gets you to why. */
+.wb2-radar-axis{cursor:pointer}
+.wb2-radar-hit{stroke:transparent;stroke-width:14}
+.wb2-radar-axis:hover .wb2-radar-label,.wb2-radar-axis[data-selected="1"] .wb2-radar-label{fill:#245d49;font-weight:700}
+.wb2-radar-axis:focus-visible{outline:none}
+.wb2-radar-axis:focus-visible .wb2-radar-label{fill:#245d49;text-decoration:underline}
+.wb2-radar-dot[data-selected="1"]{fill:#b8791c}
+.wb2-dimension-list article[data-selected="1"]{background:#e7efe9;border-radius:4px;
+  box-shadow:-10px 0 0 #e7efe9,10px 0 0 #e7efe9}
