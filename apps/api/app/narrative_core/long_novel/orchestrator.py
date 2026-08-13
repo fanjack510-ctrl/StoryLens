@@ -168,6 +168,9 @@ class RunCoordinator:
         topic_synthesizer: Callable[[Topic, dict[str, Any]], dict[str, Any]] | None = None,
         assessor: Callable[[dict[str, Any]], dict[str, Any]] | None = None,
         finaliser: Callable[[dict[str, Any]], dict[str, Any]] | None = None,
+        #: One bounded call that decides which reveals answer which questions. Injected like
+        #: the others, so a run without it behaves exactly as before rather than failing.
+        thread_pairer: Callable[[dict[str, Any]], dict[str, Any]] | None = None,
         max_provider_calls: int | None = None,
     ) -> None:
         self._extractor = extractor
@@ -176,6 +179,7 @@ class RunCoordinator:
         self._synthesize = topic_synthesizer
         self._assess = assessor
         self._finalise = finaliser
+        self._pair_threads = thread_pairer
         self._max_calls = max_provider_calls
         #: evidence_id -> citable row, accumulated across blocks and deduplicated. Many facts
         #: legitimately cite the same paragraph, and the index is what makes every claim in
@@ -312,6 +316,105 @@ class RunCoordinator:
             for link in asset.causal_links:
                 chain.append(f"{link.cause_fact_ref} → {link.effect_fact_ref}")
         return chain[:60]
+
+    #: Bounds on the pairing call's input. The payload must not grow with book length, which
+    #: is the property the whole design exists to keep; these caps hold it at roughly 15K
+    #: tokens for any novel. Threads are ranked by how often the book returns to them and
+    #: reveals are taken in chapter order, so what is dropped is the tail nobody revisits.
+    PAIRING_THREADS_MAX = 60
+    PAIRING_REVEALS_MAX = 200
+
+    #: Which action kinds could plausibly answer a question. `advance` cannot — it is defined
+    #: as movement without revelation — so feeding it in would only invite a false pairing.
+    _REVEALING_KINDS = frozenset({"reveal", "partial", "twist", "resolve", "close"})
+
+    def _pairing_input(self, assets: dict[str, BlockAsset]) -> dict[str, list[dict[str, Any]]]:
+        """Every open question and every revealing beat, side by side, for one L2 call.
+
+        A block sees eight chapters and cannot judge whether what it just read answers a
+        question asked four hundred chapters earlier. That judgement needs the whole book at
+        once, so it is made once, here, rather than block by block.
+        """
+        threads: dict[str, dict[str, Any]] = {}
+        reveals: list[dict[str, Any]] = []
+        for asset in assets.values():
+            for thread in asset.suspense_threads:
+                threads.setdefault(
+                    thread.question,
+                    {
+                        "thread_id": f"T{len(threads) + 1}",
+                        "question": thread.question,
+                        "opened_chapter": thread.opened_chapter_ref,
+                        "revisits": 0,
+                    },
+                )
+            for action in asset.suspense_actions:
+                if action.action_kind not in self._REVEALING_KINDS:
+                    continue
+                if not action.information_added:
+                    continue
+                reveals.append(
+                    {
+                        "reveal_id": f"R{len(reveals) + 1}",
+                        "chapter": action.chapter_ref,
+                        "kind": action.action_kind,
+                        "text": action.information_added,
+                    }
+                )
+        for asset in assets.values():
+            for action in asset.suspense_actions:
+                for entry in threads.values():
+                    if action.thread_ref and _refers_to(action.thread_ref, entry["question"]):
+                        entry["revisits"] += 1
+                        break
+
+        ranked = sorted(threads.values(), key=lambda t: t["revisits"], reverse=True)
+        return {
+            "threads": [
+                {k: v for k, v in t.items() if k != "revisits"}
+                for t in ranked[: self.PAIRING_THREADS_MAX]
+            ],
+            "reveals": sorted(reveals, key=lambda r: r["chapter"])[: self.PAIRING_REVEALS_MAX],
+        }
+
+    @staticmethod
+    def _apply_pairs(
+        lifecycles: list[dict[str, Any]],
+        pairing_input: Mapping[str, list[dict[str, Any]]],
+        result: Mapping[str, Any] | None,
+    ) -> int:
+        """Mark the threads the pairing call answered. Returns how many were closed.
+
+        A pair naming a thread or reveal that was not sent is dropped rather than guessed at:
+        an invented resolution is worse than an open thread, because 「已回收」 tells an
+        author to stop looking for the hole.
+        """
+        pairs = (result or {}).get("pairs") or []
+        by_question = {t["question"]: t["thread_id"] for t in pairing_input["threads"]}
+        reveal_chapters = {r["reveal_id"]: r["chapter"] for r in pairing_input["reveals"]}
+        answered: dict[str, tuple[str, int]] = {}
+        for pair in pairs:
+            if not isinstance(pair, Mapping):
+                continue
+            thread_id = str(pair.get("thread_id", ""))
+            reveal_id = str(pair.get("reveal_id", ""))
+            answer = str(pair.get("answer", "")).strip()
+            if not answer or reveal_id not in reveal_chapters:
+                continue
+            answered[thread_id] = (answer, reveal_chapters[reveal_id])
+
+        closed = 0
+        for lifecycle in lifecycles:
+            thread_id = by_question.get(lifecycle.get("question", ""))
+            if thread_id not in answered:
+                continue
+            answer, chapter = answered[thread_id]
+            lifecycle["status"] = "resolved"
+            lifecycle["truth"] = answer
+            lifecycle["payoff"] = answer
+            lifecycle["chapter_end"] = max(int(lifecycle.get("chapter_end", 1) or 1), chapter)
+            closed += 1
+        return closed
 
     def _suspense_lifecycles(self, assets: dict[str, BlockAsset]) -> list[dict[str, Any]]:
         """Assemble each thread's life from the actions that touched it.
@@ -1352,6 +1455,14 @@ class RunCoordinator:
         model_name: str,
     ) -> dict[str, Any]:
         suspense_lifecycles = self._suspense_lifecycles(assets)
+        # The one judgement a block structurally cannot make: does this reveal answer that
+        # question. Carrying the slate forward got threads recognised across blocks; whether
+        # a thread is *answered* needs the whole book at once, so it is asked once here.
+        if self._pair_threads is not None and suspense_lifecycles:
+            pairing = self._pairing_input(assets)
+            if pairing["threads"] and pairing["reveals"]:
+                self._apply_pairs(suspense_lifecycles, pairing, self._pair_threads(pairing))
+                report.provider_calls += 1
         relationships = self._relationships(assets)
         lead = entities[0]["display_surface_norm"] if entities else ""
         tracks = self._growth_tracks(assets, lead)

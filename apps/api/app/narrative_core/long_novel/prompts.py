@@ -34,6 +34,8 @@ __all__ = [
     "PROFILE_SAMPLE_SYSTEM_PROMPT",
     "PROFILE_SAMPLE_INSTRUCTION",
     "build_profile_sample_prompt",
+    "SUSPENSE_PAIRING_INSTRUCTION",
+    "build_suspense_pairing_prompt",
 ]
 
 #: Stated to the model because the contract's enums are closed. Without them a model returns
@@ -276,3 +278,51 @@ def build_profile_sample_prompt(sample: "list[tuple[int, str]]") -> str:
         rendered = "\n".join(f"[p:{index}] {line}" for index, line in enumerate(lines, start=1))
         parts.append(f"=== 第 {chapter_order} 章 ===\n{rendered}")
     return PROFILE_SAMPLE_INSTRUCTION + "\n\n正文抽样：\n\n" + "\n\n".join(parts)
+
+
+# =====================================================================  L2 悬念配对
+#
+# The judgement a single block structurally cannot make. A thread is opened in chapter 25 and
+# answered in chapter 400; the block holding chapter 400 sees eight chapters and cannot know
+# whether what it just read closes a question asked four hundred chapters earlier. Carrying
+# the open slate forward got the *thread* recognised across blocks — measured, 27 of 40
+# threads are now revisited across block boundaries, one spanning 791 chapters — but the
+# model still marked only 1 of 40 as resolved, because "is this the answer" is a whole-book
+# question and it was being asked block by block.
+#
+# So it is asked once, at L2, over the whole book's threads and reveals at the same time.
+# One call. The instruction to leave a thread unpaired rather than guess is the load-bearing
+# part: an invented resolution is worse than an open thread, because an author reading
+# 「已回收」 stops looking for the hole.
+
+SUSPENSE_PAIRING_INSTRUCTION = """下面是一本长篇小说里**所有被抛出的疑问**，以及**所有揭示性的情节点**。
+
+你的任务只有一件：判断哪些揭示**真正回答了**哪个疑问。
+
+规则：
+1. 只有当这个揭示**确实给出了那个疑问的答案**时才配对。推进、铺垫、部分透露、
+   只是再次提到——**都不算回答**。
+2. **宁可不配，也不要硬配。** 没有把握就不要写进结果。一个被错误标成「已回收」的疑问，
+   会让作者以为这条线收好了，从而不去补它——这比留着不收更糟。
+3. 一个疑问最多配一个揭示：配那个**真正给出答案**的，不是最后提到它的。
+4. `answer` 用一句话写出**答案是什么**，不要复述揭示的原文。
+
+只输出 JSON：
+{"pairs": [{"thread_id": "", "reveal_id": "", "answer": ""}]}
+
+配不上的疑问不要出现在结果里。"""
+
+
+def build_suspense_pairing_prompt(
+    threads: "list[dict[str, object]]", reveals: "list[dict[str, object]]"
+) -> str:
+    """Render the whole book's open questions and its revealing beats, side by side."""
+    import json as _json
+
+    return (
+        SUSPENSE_PAIRING_INSTRUCTION
+        + "\n\n疑问：\n"
+        + _json.dumps(threads, ensure_ascii=False, indent=None)
+        + "\n\n揭示：\n"
+        + _json.dumps(reveals, ensure_ascii=False, indent=None)
+    )
