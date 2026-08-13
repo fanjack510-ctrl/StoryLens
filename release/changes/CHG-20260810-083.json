@@ -1,0 +1,32 @@
+{
+  "id": "CHG-20260810-083",
+  "title": "Whole-Book V2 real execution authenticity audit",
+  "type": "audit",
+  "base_version": "1.2.0",
+  "status": "registered",
+  "include_in_next_release": true,
+  "commits": [],
+  "modules": [],
+  "files": [],
+  "user_summary": "Audit whether formal V2 reanalysis truly created runs and called DeepSeek.",
+  "technical_summary": "",
+  "acceptance_criteria": [],
+  "tests": [],
+  "verification_evidence": [],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "read-only audit only"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false
+  },
+  "blocker_level": "P0",
+  "head_inclusion": null,
+  "created_at": "2026-08-10T12:44:43Z",
+  "updated_at": "2026-08-10T12:44:43Z"
+}

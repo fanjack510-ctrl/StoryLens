@@ -36,6 +36,7 @@ from app.narrative_core.long_novel.contracts.l1 import BlockAsset, CarryForwardS
 from app.narrative_core.long_novel.errors import LongNovelError, LongNovelErrorCode
 from app.narrative_core.long_novel.ids import evidence_id as derive_evidence_id
 from app.narrative_core.long_novel.mention_binding import EmittedMention, bind_mention_occurrences
+from app.narrative_core.long_novel.reducer import render_carry_in
 from app.narrative_core.long_novel.provider_io import (
     RepairDecision,
     detect_truncation,
@@ -202,6 +203,13 @@ class BlockExtractor:
             "unit": "block_extract.v1",
             "text": rendered.text,
             "carry_in": carry_in.model_dump(),
+            # Pre-rendered so a provider adapter passes one string through rather than
+            # re-deriving the wording. The slate was reaching the payload and stopping there:
+            # nothing put it in front of the model, so every block met the book's open
+            # questions for the first time, and a thread opened in chapter 25 could not be
+            # closed in chapter 400 because that block had never heard of it. Measured on the
+            # real book: 40 threads opened, 0 resolved.
+            "carry_summary": render_carry_in(carry_in),
             "caps": {
                 "events_per_chapter": p.events_per_chapter,
                 "state_changes_per_chapter": p.state_changes_per_chapter,

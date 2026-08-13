@@ -57,6 +57,7 @@ from app.narrative_core.long_novel.planner import BookPlan, PlannedBlock
 from app.narrative_core.long_novel.reducer import (
     build_carry_out,
     reduce_partition,
+    refers_to_thread,
     resolve_entities,
 )
 from app.narrative_core.long_novel.topics import (
@@ -69,18 +70,14 @@ from app.narrative_core.long_novel.topics import (
     resample_pacing_curve,
 )
 
-#: L1 names an action by what it *did* to a thread; the product contract names it by the
-#: reader-facing beat. Both vocabularies are closed, so the mapping is explicit — an
-#: unmapped kind becomes a neutral "clue" rather than failing the whole suspense tab.
-# A timeline is read, not scrolled: past a couple of hundred rows it stops being a view of
-# the book. Events are sampled evenly across the span rather than truncated at the front, so
-# the last act is represented as well as the first.
+#: A timeline is read, not scrolled: past a couple of hundred rows it stops being a view of
+#: the book. Events are sampled evenly across the span rather than truncated at the front, so
+#: the last act is represented as well as the first.
 _CHRONOLOGY_MAX = 200
 
-#: Characters that carry no identifying weight when matching a thread label to the question
-#: it refers to. Dropping them lets 「教堂低语声」 reach 「教堂中的低语声是否来自葛莫娜？」.
-_THREAD_NOISE = "的了是否会与和在有为吗呢？?、，,。 　"
-
+#: One implementation, imported. The carry slate and the report assembly both have to decide
+#: whether an action names a given thread, and two copies of that rule would drift.
+_refers_to = refers_to_thread
 
 #: Category words a model reaches for when it is describing the cast rather than naming
 #: anyone in it. They arrive as ordinary surfaces and reach the character table looking like
@@ -104,27 +101,9 @@ def _is_not_a_name(surface: str) -> bool:
         return True
     return "/" in text or "、" in text
 
-
-def _refers_to(label: str, question: str) -> bool:
-    """Does this thread label name that suspense question?
-
-    Substring either way first, then a comparison with filler characters removed. The model
-    is consistent about *which* thread it means and inconsistent about how much of the
-    question it repeats, so the match has to tolerate the second without inventing the first:
-    a shared core of at least four characters is required, which is long enough that two
-    different questions in the same book do not collide.
-    """
-    if not label or not question:
-        return False
-    if label in question or question in label:
-        return True
-    strip = str.maketrans("", "", _THREAD_NOISE)
-    a, b = label.translate(strip), question.translate(strip)
-    if len(a) < 4:
-        return False
-    return a in b or b in a
-
-
+#: L1 names an action by what it *did* to a thread; the product contract names it by the
+#: reader-facing beat. Both vocabularies are closed, so the mapping is explicit — an
+#: unmapped kind becomes a neutral "clue" rather than failing the whole suspense tab.
 _SUSPENSE_EVENT_TYPES = {
     "open": "hook",
     "advance": "clue",
@@ -596,9 +575,17 @@ class RunCoordinator:
 
     @staticmethod
     def _relationships(assets: dict[str, BlockAsset]) -> list[dict[str, Any]]:
-        """Relationship changes, folded per pair into a start and end state."""
+        """Relationship changes, folded per pair into a start and end state.
+
+        The chapter span is the range over which the pair actually changed. It used to be
+        hardcoded to 1–1, so the relationship table showed 「1–1」 for all thirty pairs in an
+        806-chapter book — a column that was present, sorted and completely uninformative.
+        A relationship change carries no chapter of its own, so the block's first chapter
+        signal stands in: it is the nearest true position available.
+        """
         pairs: dict[tuple[str, str], dict[str, Any]] = {}
         for asset in assets.values():
+            chapter = asset.chapter_signals[0].chapter_ref if asset.chapter_signals else 1
             for change in asset.relationship_changes:
                 key = tuple(sorted((change.from_entity_ref, change.to_entity_ref)))
                 entry = pairs.setdefault(
@@ -609,10 +596,12 @@ class RunCoordinator:
                         "relationship_type": change.relation,
                         "initial_state": change.relation,
                         "evolution": [],
-                        "chapter_start": 1,
-                        "chapter_end": 1,
+                        "chapter_start": chapter,
+                        "chapter_end": chapter,
                     },
                 )
+                entry["chapter_start"] = min(entry["chapter_start"], chapter)
+                entry["chapter_end"] = max(entry["chapter_end"], chapter)
                 entry["evolution"].append(change.relation)
                 entry["final_state"] = change.relation
         return [

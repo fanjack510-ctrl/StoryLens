@@ -64,7 +64,10 @@ class HeatmapBin(M): chapter_start:int; chapter_end:int; mainline_progress:float
 class ChaptersResult(M): version:str="2.0"; availability:Availability=Availability.AVAILABLE; functions:list[ChapterFunction]; heatmap:list[HeatmapBin]; aggregation_size:int=50
 class OverviewResult(M):
     version:str="2.0"; one_sentence_story:str; full_summary:str; protagonist:str; initial_state:str; final_state:str; core_goal:str; goal_evolution:list[str]; core_conflict:str; conflict_evolution:list[str]; core_question:str; major_storylines:list[str]; major_turning_points:list[TurningPoint]; major_suspense:list[str]; final_climax:str; ending_resolution:list[str]; ending_open_questions:list[str]; story_skeleton:list[str]; evidence:list[str]
-class AssessmentDimension(M): dimension:Literal["story_structure","protagonist_growth","character_relationships","suspense_payoff","pacing","chapter_efficiency"]; rating:Literal["A","A-","B+","B","B-","C","D"]; conclusion:str; supporting_metrics:list[str]; evidence:list[str]
+# `dimension` is the identifier code matches on; `dimension_label` is what a reader sees.
+# Optional and defaulted so results stored before it existed still validate. Without it the
+# assessment page headed its six panels `story_structure`, `suspense_payoff` and so on.
+class AssessmentDimension(M): dimension:Literal["story_structure","protagonist_growth","character_relationships","suspense_payoff","pacing","chapter_efficiency"]; rating:Literal["A","A-","B+","B","B-","C","D"]; conclusion:str; supporting_metrics:list[str]; evidence:list[str]; dimension_label:str=""
 class Strength(Ranged): title:str; why_good:str
 class AssessmentIssue(Ranged):
     issue_id:str; priority:Literal["P0","P1","P2"]; category:str; symptom:str; root_cause:str; reader_impact:str; supporting_metrics:list[str]; possible_direction:str

@@ -420,10 +420,19 @@ def build_type_profile_section(result: Mapping[str, Any] | None) -> dict[str, An
 # identity are never coerced — those fail closed.
 #: The contract's closed vocabularies. A value outside them cannot be rendered, and there is
 #: no "unknown" member to fall back to.
-LEGAL_DIMENSIONS = {
-    "story_structure", "protagonist_growth", "character_relationships",
-    "suspense_payoff", "pacing", "chapter_efficiency",
+#: The closed vocabulary, and what a reader should see for each. The identifier reached the
+#: screen untranslated — the assessment page listed `story_structure` and `suspense_payoff`
+#: as its six headings. Keeping the label beside the value means the two cannot drift, and
+#: means the client never has to hold a second copy of this table (INV-P4).
+DIMENSION_LABELS = {
+    "story_structure": "故事结构",
+    "protagonist_growth": "主角成长",
+    "character_relationships": "人物关系",
+    "suspense_payoff": "悬念回收",
+    "pacing": "节奏",
+    "chapter_efficiency": "章节效率",
 }
+LEGAL_DIMENSIONS = set(DIMENSION_LABELS)
 LEGAL_RATINGS = {"A", "A-", "B+", "B", "B-", "C", "D"}
 #: Names a model naturally reaches for, mapped to the one legal member they can only mean.
 _DIMENSION_ALIASES = {
@@ -453,6 +462,10 @@ def _as_dimension(value: Any) -> dict[str, Any] | None:
         return None
     return {
         "dimension": dimension,
+        # Shipped alongside the identifier rather than instead of it: the identifier is what
+        # code matches on, the label is what a person reads, and the screen was showing the
+        # former because nothing supplied the latter.
+        "dimension_label": DIMENSION_LABELS[dimension],
         "rating": rating,
         "conclusion": str(value.get("conclusion", "")),
         "supporting_metrics": [str(m) for m in value.get("supporting_metrics", [])],

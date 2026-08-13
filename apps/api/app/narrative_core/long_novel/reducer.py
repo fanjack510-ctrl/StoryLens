@@ -61,6 +61,82 @@ def carry_semantic_fingerprint(carry: CarryForwardState, epoch_class: str = "") 
     )
 
 
+#: Characters that carry no identifying weight when matching a thread label to the question
+#: it refers to. Dropping them lets 「教堂低语声」 reach 「教堂中的低语声是否来自葛莫娜？」.
+_THREAD_NOISE = "的了是否会与和在有为吗呢？?、，,。 　"
+
+#: A shared core this long is enough that two different questions in the same book do not
+#: collide, and short enough to survive the model rephrasing the rest.
+_THREAD_MATCH_MIN = 4
+
+
+def refers_to_thread(label: str, question: str) -> bool:
+    """Does this thread label name that suspense question?
+
+    Substring either way first, then again with filler characters removed. The model is
+    consistent about *which* thread it means and inconsistent about how much of the question
+    it repeats, so the match has to tolerate the second without inventing the first.
+
+    Defined here rather than at the point of use because both the carry slate and the report
+    assembly need it, and two copies of a matching rule drift — the L2–L4 prompts had two
+    copies and did exactly that.
+    """
+    if not label or not question:
+        return False
+    if label in question or question in label:
+        return True
+
+    strip = str.maketrans("", "", _THREAD_NOISE)
+    short, long = sorted((label.translate(strip), question.translate(strip)), key=len)
+    if len(short) < _THREAD_MATCH_MIN:
+        return False
+
+    # Subsequence, not substring: the model abbreviates by *dropping* characters, so the
+    # short form's characters survive in order inside the long one with other characters
+    # between them — 「教堂低语声」 sits inside 「教堂中低语声来自葛莫娜」 that way, and a
+    # substring test misses it over the single inserted 中. Requiring the order is what stops
+    # this from matching two unrelated questions that happen to share some characters.
+    iterator = iter(long)
+    return all(character in iterator for character in short)
+
+
+_refers_to_thread = refers_to_thread
+
+#: How many open threads to show the next block. The slate grows with the book — an
+#: 806-chapter novel accumulates hundreds — and an unbounded list would make the prompt grow
+#: with book length, which the whole design exists to prevent. The most recently opened are
+#: kept, because those are the ones a nearby block is most likely to be acting on.
+CARRY_THREADS_SHOWN = 24
+
+
+def render_carry_in(carry: CarryForwardState) -> str:
+    """The open slate, written for the model that is about to extract the next block.
+
+    Threads are listed as their own questions so the model can match an action to one by
+    reading it. It is told explicitly to reuse the wording: a thread referred to by a fresh
+    paraphrase is a new thread as far as every later step is concerned, and that is how a
+    book ends up with hundreds of questions and no answers.
+    """
+    threads = [t for t in carry.open_thread_refs if t][-CARRY_THREADS_SHOWN:]
+    if not threads and not carry.unresolved_note:
+        return ""
+
+    parts: list[str] = []
+    if threads:
+        listed = "\n".join(f"  - {question}" for question in threads)
+        parts.append(
+            "前面章节抛出、**至今仍未回答**的疑问：\n"
+            f"{listed}\n"
+            "如果本块里有内容推进或回答了上面某一条，`suspense_actions.thread_ref` "
+            "必须**原样照抄那一条的文字**，不要改写、不要另起一个新说法；"
+            "真正回答了的，`action_kind` 填 `resolve`。\n"
+            "只有本块新抛出的疑问才写进 `suspense_threads`。"
+        )
+    if carry.unresolved_note:
+        parts.append(f"上一块的遗留说明：{carry.unresolved_note}")
+    return "\n\n".join(parts)
+
+
 def build_carry_out(asset: BlockAsset, previous: CarryForwardState) -> CarryForwardState:
     """Assemble the next block's slate from this block's facts plus what was still open.
 
@@ -68,12 +144,28 @@ def build_carry_out(asset: BlockAsset, previous: CarryForwardState) -> CarryForw
     is block-scoped and cannot resolve in the next block, so a slate built from them would
     change at every block edge by construction and convergence could never be detected.
     """
+    # The thread is carried as its own question text, not as an opaque handle. Two reasons,
+    # both found by looking at a real 806-chapter run where 40 of 40 threads finished
+    # unresolved:
+    #
+    # A handle is unmatchable. This slate is shown to the model extracting the *next* block,
+    # and it is asked to say which open thread an action belongs to. `THR-4821906337` names
+    # nothing it can see in the text; the question does.
+    #
+    # And this particular handle was not even stable: `hash()` on a str is randomised per
+    # process, so the same book produced different thread references on every run — the exact
+    # class of nondeterminism the identity design forbids everywhere else (T0-18).
     threads = {t for t in previous.open_thread_refs}
     for thread in asset.suspense_threads:
-        threads.add(f"THR-{abs(hash(thread.question)) % (10**10):010d}")
+        threads.add(thread.question)
     for action in asset.suspense_actions:
         if action.action_kind in {"resolve", "close"}:
             threads.discard(action.thread_ref)
+            # An action naming a thread by a near-miss must still close it, or a thread
+            # resolved in chapter 400 stays open because the model rephrased its question.
+            for open_thread in list(threads):
+                if _refers_to_thread(action.thread_ref, open_thread):
+                    threads.discard(open_thread)
 
     goals = {g for g in previous.active_goal_refs}
     for change in asset.goal_changes:

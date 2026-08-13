@@ -46,8 +46,8 @@ POV_ENTITY = Delta(
     trigger=("pov", "ensemble"),
     fields=("pov_entity",),
     instruction=(
-        "- `chapter_signals.pov_entity` 填**这一章是通过谁的视角叙述的**，"
-        "取值必须是该章正文里原样出现的人物称呼。\n"
+        "- 在每个 `chapter_signals` 条目里**额外加一个键** `pov_entity`，"
+        "填**这一章是通过谁的视角叙述的**，取值必须是该章正文里原样出现的人物称呼。\n"
         "  一章只填一个；若该章切换过视角，填占篇幅更多的那个。**每一章都必须填，不要留空。**"
     ),
 )

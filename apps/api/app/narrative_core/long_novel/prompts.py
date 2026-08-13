@@ -80,8 +80,7 @@ SYSTEM_PROMPT = """你是小说文本的事实抽取器。你的唯一任务是�
 _SCHEMA_SKELETON = """{
   "chapter_signals": [{"chapter_ref": 1, "dialogue_paragraphs": 12, "action_paragraphs": 7,
                        "interiority_paragraphs": 3, "scene_breaks": 1, "new_information_beats": 4,
-                       "hook_present": true, "pov_entity": "",
-                       "evidence": [{"paragraph_ref": 1}]}],
+                       "hook_present": true, "evidence": [{"paragraph_ref": 1}]}],
   "events": [{"summary": "", "actors": [""], "chapter_ref": 1, "evidence": [{"paragraph_ref": 1}]}],
   "character_state_changes": [{"entity_ref": "", "from_state": "", "to_state": "", "chapter_ref": 1,
                                "evidence": [{"paragraph_ref": 1}]}],
@@ -122,7 +121,10 @@ def build_user_prompt(
 数量上限（整块）：关系变化 {p.relationships_per_block}，目标变化 {p.goals_per_block}，抉择 {p.choices_per_block}，新悬念 {p.threads_per_block}，身份断言 {p.identities_per_block}，人物聚类 {p.max_provisional_entities}
 每条事实的 evidence 最多 {p.evidence_refs_per_fact} 个"""
 
-    carry = f"\n上一块结束时仍未了结的线索：\n{carry_in_summary}\n" if carry_in_summary else ""
+    # Placed before the schema and the text, and already written as instructions by
+    # ``render_carry_in`` — this is the only thing that lets a thread opened four hundred
+    # chapters ago be recognised here.
+    carry = f"\n{carry_in_summary}\n" if carry_in_summary else ""
     # Empty unless the confirmed profile switched a delta on, so a book with no active delta
     # gets a byte-identical prompt — and therefore the same hash, and therefore reuse.
     extra = f"\n档案附加字段：\n{delta_instructions}\n" if delta_instructions else ""
