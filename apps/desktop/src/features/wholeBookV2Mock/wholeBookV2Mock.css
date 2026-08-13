@@ -83,3 +83,71 @@ table.wb2-ledger{min-width:1040px;border-collapse:collapse;background:#fff}
 .wb2-radar-dot[data-selected="1"]{fill:#b8791c}
 .wb2-dimension-list article[data-selected="1"]{background:#e7efe9;border-radius:4px;
   box-shadow:-10px 0 0 #e7efe9,10px 0 0 #e7efe9}
+
+/* ---- 人物关系网络图 ---------------------------------------------------------
+   Thirty rows of 「X ↔ 邓肯」 read as a ledger and hid the eleven edges that never touch the
+   protagonist — which is what makes this an ensemble rather than a hub. */
+.wb2-graph-layout{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:26px;align-items:start}
+@media(max-width:900px){.wb2-graph-layout{grid-template-columns:1fr}}
+.wb2-relgraph{width:100%;height:460px;display:block;background:#f4f7f5;border:1px solid #dfe6e1;border-radius:6px}
+.wb2-relgraph .edge{stroke:#c6d2ca;stroke-width:1.2}
+.wb2-relgraph .edge.on{stroke:#3c8768;stroke-width:2.4}
+.wb2-relgraph .node{cursor:pointer}
+.wb2-relgraph .node circle{fill:#fff;stroke:#3c8768;stroke-width:1.6}
+.wb2-relgraph .node.lead circle{fill:#3c8768;stroke:#2f6b57;stroke-width:2}
+.wb2-relgraph .node.on circle{stroke:#b8791c;stroke-width:2.6}
+.wb2-relgraph .node text{font-size:11px;fill:#1b241f;text-anchor:middle;pointer-events:none}
+.wb2-relgraph .node.lead text{fill:#fff;font-weight:600}
+.wb2-relgraph .node:focus-visible circle{stroke:#b8791c;stroke-width:3}
+.wb2-graph-detail{border-left:2px solid #3c8768;padding-left:14px}
+.wb2-graph-detail h3{margin:0 0 3px;font-size:15px}
+.wb2-graph-detail small{color:#839087;font-size:11.5px}
+.wb2-graph-detail ul{margin:10px 0 0;padding:0;list-style:none}
+.wb2-graph-detail li{padding:7px 0;border-top:1px solid #dfe6e1;font-size:12.5px;line-height:1.5}
+.wb2-graph-detail li b{font-weight:600;margin-right:7px}
+.wb2-graph-detail li span{color:#5d6b64}
+.wb2-graph-detail li em{display:block;font-style:normal;font-size:11px;color:#839087;
+  font-variant-numeric:tabular-nums;margin-top:2px}
+
+/* ---- 悬念方格墙 -------------------------------------------------------------
+   One tile per thread. The proportion — 40 asked, 24 answered — is what an author wants
+   from this page, and it was invisible when threads were shown one at a time. */
+.wb2-wall{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px}
+.wb2-tile{position:relative;aspect-ratio:1;border-radius:5px;border:1px solid #b8791c;
+  background:#f6e8d2;padding:9px;cursor:pointer;text-align:left;font:inherit;color:#1b241f;
+  display:flex;flex-direction:column;justify-content:space-between;overflow:hidden}
+.wb2-tile[data-resolved="1"]{background:#dce9e2;border-color:#3c8768}
+.wb2-tile[data-picked="1"]{outline:2px solid #2f6b57;outline-offset:1px}
+.wb2-tile:hover,.wb2-tile:focus-visible{outline:2px solid #2f6b57;outline-offset:1px}
+.wb2-tile b{font-size:11px;line-height:1.35;font-weight:500;display:-webkit-box;
+  -webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.wb2-tile i{font-style:normal;font-size:9.5px;color:#5d6b64;font-variant-numeric:tabular-nums}
+.wb2-tile u{position:absolute;right:7px;top:7px;width:7px;height:7px;border-radius:50%;background:#b8791c}
+.wb2-tile[data-resolved="1"] u{background:#3c8768}
+.wb2-wall-legend{display:flex;gap:18px;align-items:center;margin-top:14px;font-size:12px;color:#5d6b64}
+.wb2-wall-legend i{width:11px;height:11px;border-radius:3px;display:inline-block;margin-right:5px;
+  vertical-align:-1px;background:#f6e8d2;border:1px solid #b8791c}
+.wb2-wall-legend i[data-resolved="1"]{background:#dce9e2;border-color:#3c8768}
+.wb2-wall-count{margin-left:auto}
+.wb2-wall-count b{color:#1b241f}
+.wb2-wall-detail{margin-top:20px;border-left:2px solid #3c8768;padding-left:15px}
+.wb2-wall-detail h3{margin:0 0 3px;font-size:15.5px}
+.wb2-wall-detail small{color:#839087;font-size:11.5px}
+.wb2-wall-detail p{margin:11px 0 0;font-size:13px;line-height:1.65}
+.wb2-wall-open{color:#8a6216}
+.wb2-wall-beats{margin:14px 0 0;padding:0;list-style:none}
+.wb2-wall-beats li{padding:7px 0;border-top:1px solid #dfe6e1;font-size:12.5px;line-height:1.55}
+.wb2-wall-beats li b{font-variant-numeric:tabular-nums;margin-right:8px;color:#5d6b64;font-weight:600}
+.wb2-beat{display:inline-block;font-size:10px;padding:1px 6px;border-radius:3px;margin-right:7px;
+  background:#dce9e2;color:#2f6b57}
+.wb2-beat[data-beat="twist"]{background:#f4dedа;color:#a33f35}
+.wb2-beat[data-beat="misdirection"]{background:#f6e8d2;color:#b8791c}
+.wb2-beat[data-beat="payoff"]{background:#e0dcf0;color:#5b4a91}
+
+/* ---- 热力图：空行标注 --------------------------------------------------------
+   A row with no variation is absent, not low. Hatching says "no data"; a pale cell would
+   say "a little", and 伏笔铺设 / 回收兑现 are 0 for the entire book. */
+.wb2-heatmap>button.wb2-heat-empty{
+  background:repeating-linear-gradient(-45deg,transparent,transparent 3px,#dfe6e1 3px,#dfe6e1 6px)}
+.wb2-heatmap>strong[data-empty="1"]{color:#96a29b;font-weight:400}
+.wb2-heat-note{margin:12px 0 0;font-size:12px;color:#5d6b64}

@@ -627,31 +627,103 @@ function CharactersModule({ data }: { data: WholeBookAnalysisV2 }) {
           )}
         </>
       )}
-      {tab === "人物关系" && (
-        <table>
-          <thead>
-            <tr>
-              <th>关系</th>
-              <th>类型</th>
-              <th>章节范围</th>
-            </tr>
-          </thead>
-          <tbody>
-            {chars.relationships.map((r) => (
-              <tr key={`${r.person_a}-${r.person_b}`}>
-                <th>
-                  {r.person_a} ↔ {r.person_b}
-                </th>
-                <td>{r.relationship_type}</td>
-                <td>
-                  {r.chapter_start}–{r.chapter_end}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+      {tab === "人物关系" && <RelationshipGraph relationships={chars.relationships} />}
     </>
+  );
+}
+
+/**
+ * The cast as a network.
+ *
+ * As thirty rows of 「X ↔ 邓肯」 the table reads as a ledger and hides the thing worth
+ * seeing: eleven of those edges do not touch the protagonist at all — 凡娜–瓦伦丁,
+ * 海蒂–莫里斯, 劳伦斯–玛莎 — which is what makes this an ensemble rather than a hub.
+ *
+ * The layout is radial and derived from the data, not force-simulated. A simulation would
+ * settle differently on each render, and a report that draws a different picture every time
+ * it is opened cannot be referred to.
+ */
+function RelationshipGraph({
+  relationships,
+}: {
+  relationships: WholeBookAnalysisV2["characters"]["relationships"];
+}) {
+  const [picked, setPicked] = useState<string>("");
+
+  const { nodes, positions, lead } = useMemo(() => {
+    const degree = new Map<string, number>();
+    for (const r of relationships) {
+      degree.set(r.person_a, (degree.get(r.person_a) ?? 0) + 1);
+      degree.set(r.person_b, (degree.get(r.person_b) ?? 0) + 1);
+    }
+    const ordered = [...degree.keys()].sort(
+      (a, b) => (degree.get(b) ?? 0) - (degree.get(a) ?? 0) || a.localeCompare(b),
+    );
+    const centre = ordered[0] ?? "";
+    const ring = ordered.slice(1);
+    const place = new Map<string, [number, number]>([[centre, [320, 230]]]);
+    ring.forEach((name, i) => {
+      const angle = -Math.PI / 2 + (i * 2 * Math.PI) / ring.length;
+      const radius = 118 + (i % 3) * 42;
+      place.set(name, [320 + Math.cos(angle) * radius, 230 + Math.sin(angle) * radius]);
+    });
+    return { nodes: ordered, positions: place, lead: centre };
+  }, [relationships]);
+
+  const active = picked || lead;
+  const mine = relationships.filter((r) => r.person_a === active || r.person_b === active);
+
+  return (
+    <div className="wb2-graph-layout">
+      <svg className="wb2-relgraph" viewBox="0 0 640 460" role="img" aria-label="人物关系网络图">
+        {relationships.map((r, i) => {
+          const a = positions.get(r.person_a);
+          const b = positions.get(r.person_b);
+          if (!a || !b) return null;
+          const on = r.person_a === active || r.person_b === active;
+          return (
+            <line key={i} className={on ? "edge on" : "edge"}
+                  x1={a[0].toFixed(1)} y1={a[1].toFixed(1)}
+                  x2={b[0].toFixed(1)} y2={b[1].toFixed(1)}>
+              <title>{`${r.person_a}–${r.person_b}：${r.relationship_type}`}</title>
+            </line>
+          );
+        })}
+        {nodes.map((name) => {
+          const [x, y] = positions.get(name) ?? [0, 0];
+          const links = relationships.filter((r) => r.person_a === name || r.person_b === name).length;
+          const radius = name === lead ? 27 : 8 + Math.min(12, links * 3);
+          const classes = ["node", name === lead ? "lead" : "", name === active ? "on" : ""]
+            .filter(Boolean).join(" ");
+          return (
+            <g key={name} className={classes} tabIndex={0} role="button" aria-label={name}
+               onClick={() => setPicked(name)}
+               onKeyDown={(e) => {
+                 if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setPicked(name); }
+               }}>
+              <circle cx={x.toFixed(1)} cy={y.toFixed(1)} r={radius} />
+              <text x={x.toFixed(1)} y={(y + (name === lead ? 4 : radius + 13)).toFixed(1)}>{name}</text>
+            </g>
+          );
+        })}
+      </svg>
+      <div className="wb2-graph-detail">
+        <h3>{active}</h3>
+        <small>{mine.length} 条关系</small>
+        <ul>
+          {mine.map((r, i) => {
+            const other = r.person_a === active ? r.person_b : r.person_a;
+            return (
+              <li key={i}>
+                <b>{other}</b>
+                <span>{r.relationship_type}</span>
+                <em>第 {r.chapter_start}–{r.chapter_end} 章</em>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    </div>
   );
 }
 
@@ -662,12 +734,81 @@ const SUSPENSE_BEATS: Record<string, string> = {
 };
 
 /**
- * Every clue reveal in the book, one row each, in chapter order.
+ * One tile per suspense thread, coloured by whether the book ever answers it.
  *
- * The panel below shows one thread at a time, so comparing forty of them means forty clicks
- * and the shape of the whole book is never visible. Flattened into a table, the thing that
- * matters shows up immediately: on this book almost nothing is ever marked resolved.
+ * The per-thread panel shows one at a time, so comparing forty means forty clicks and the
+ * proportion — the thing an author actually wants from this page — is never visible. As a
+ * wall of tiles it is the first thing read: 40 questions, 24 closed.
  */
+function SuspenseWall({ data }: { data: WholeBookAnalysisV2 }) {
+  const [picked, setPicked] = useState(0);
+  const threads = data.suspense.lifecycles;
+  const chosen = threads[picked];
+  const resolved = threads.filter((t) => t.status === "resolved").length;
+
+  return (
+    <>
+      <div className="wb2-wall">
+        {threads.map((t, i) => (
+          <button
+            key={t.suspense_id}
+            type="button"
+            className="wb2-tile"
+            data-resolved={t.status === "resolved" ? "1" : "0"}
+            data-picked={picked === i ? "1" : "0"}
+            onClick={() => setPicked(i)}
+          >
+            <u />
+            <b>{t.question}</b>
+            <i>
+              第 {t.chapter_start}–{t.chapter_end} 章 · {t.events.length} 次
+            </i>
+          </button>
+        ))}
+      </div>
+      <div className="wb2-wall-legend">
+        <span><i data-resolved="1" />已回收</span>
+        <span><i data-resolved="0" />未回收</span>
+        <span className="wb2-wall-count">
+          {threads.length} 条悬念，<b>{resolved}</b> 条已回收
+        </span>
+      </div>
+      {chosen && (
+        <div className="wb2-wall-detail">
+          <h3>{chosen.question}</h3>
+          <small>
+            第 {chosen.chapter_start}–{chosen.chapter_end} 章 · 被回访 {chosen.events.length} 次 ·
+            {chosen.status === "resolved" ? " 已回收" : " 未回收"}
+          </small>
+          {chosen.status === "resolved" ? (
+            <p><b>答案</b>　{chosen.payoff}</p>
+          ) : (
+            // Said plainly rather than left blank: an unanswered question is a finding, and
+            // whether it is deliberate is the author's call, not the engine's.
+            <p className="wb2-wall-open">全书未给出答案。如果是有意留到续作，这里就是伏笔；如果不是，这是个缺口。</p>
+          )}
+          {chosen.events.length > 0 && (
+            <ol className="wb2-wall-beats">
+              {[...chosen.events]
+                .sort((a, b) => a.chapter - b.chapter)
+                .map((e, i) => (
+                  <li key={`${e.chapter}-${i}`}>
+                    <b>第 {e.chapter} 章</b>
+                    <span className="wb2-beat" data-beat={e.type}>
+                      {SUSPENSE_BEATS[e.type] ?? e.type}
+                    </span>
+                    {e.description}
+                  </li>
+                ))}
+            </ol>
+          )}
+        </div>
+      )}
+    </>
+  );
+}
+
+/** Every clue reveal in chapter order — kept as a drill-down from the wall. */
 function SuspenseLedger({ data }: { data: WholeBookAnalysisV2 }) {
   const rows = useMemo(() => {
     const chapterSummary = new Map(
@@ -733,7 +874,7 @@ function SuspenseLedger({ data }: { data: WholeBookAnalysisV2 }) {
 }
 
 function SuspenseModule({ data }: { data: WholeBookAnalysisV2 }) {
-  const [tab, setTab] = useState("线索顺序表");
+  const [tab, setTab] = useState("悬念全景");
   const [selected, setSelected] = useState(0);
   const hooks = data.suspense.lifecycles;
   const h = hooks[selected];
@@ -741,12 +882,13 @@ function SuspenseModule({ data }: { data: WholeBookAnalysisV2 }) {
   return (
     <>
       <div className="wb2-tabs">
-        {["线索顺序表", "单条追踪"].map((t) => (
+        {["悬念全景", "线索顺序表", "单条追踪"].map((t) => (
           <button key={t} className={tab === t ? "active" : ""} onClick={() => setTab(t)}>
             {t}
           </button>
         ))}
       </div>
+      {tab === "悬念全景" && <SuspenseWall data={data} />}
       {tab === "线索顺序表" && <SuspenseLedger data={data} />}
       {tab === "单条追踪" && (
     <div className="wb2-hook-layout">
@@ -964,22 +1106,53 @@ function ChaptersModule({ data }: { data: WholeBookAnalysisV2 }) {
             {x.chapter_start}
           </button>
         ))}
-        {HEATMAP_DIMS.map((d) => (
+        {HEATMAP_DIMS.map((d) => {
+          // Each row scaled to its own range. The raw value was being used directly as a
+          // percentage, and the rows are on wildly different scales — 过渡衔接 runs 3.9–21.2
+          // while 悬念密度 runs 0.4–1.0 — so six of the seven rendered as near-transparent
+          // and the grid read as uniformly pale.
+          const values = ch.heatmap.map((x) => Number(x[d.key]) || 0);
+          const lo = Math.min(...values);
+          const hi = Math.max(...values);
+          const flat = hi - lo === 0;
+          return (
           <Fragment key={d.key}>
-            <strong>{d.label}</strong>
+            <strong data-empty={flat ? "1" : "0"}>{d.label}</strong>
             {ch.heatmap.map((x, i) => (
               <button
                 aria-label={`${d.label} ${x.chapter_start}-${x.chapter_end} ${x[d.key]}`}
                 onClick={() => setSelected(i)}
                 key={`${d.key}${i}`}
-                style={{
-                  background: `color-mix(in srgb, #2f6b57 ${x[d.key]}%, #edf2ef)`,
-                }}
+                // A row with no variation is marked as *absent*, not drawn as a low value:
+                // 伏笔铺设 and 回收兑现 are 0 for the whole book because extraction never
+                // produced them, and a pale cell would read as "a little" rather than "none".
+                className={flat ? "wb2-heat-empty" : undefined}
+                style={
+                  flat
+                    ? undefined
+                    : {
+                        background: `color-mix(in srgb, #2f6b57 ${(
+                          12 + ((values[i] - lo) / (hi - lo)) * 88
+                        ).toFixed(0)}%, #edf2ef)`,
+                      }
+                }
               />
             ))}
           </Fragment>
-        ))}
+          );
+        })}
       </div>
+      <p className="wb2-heat-note">
+        每行按自身取值范围着色，行内对比才出得来。
+        {HEATMAP_DIMS.filter((d) => {
+          const values = ch.heatmap.map((x) => Number(x[d.key]) || 0);
+          return Math.max(...values) - Math.min(...values) === 0;
+        }).map((d) => d.label).join("、") &&
+          `　斜纹行表示全书取值恒定（${HEATMAP_DIMS.filter((d) => {
+            const values = ch.heatmap.map((x) => Number(x[d.key]) || 0);
+            return Math.max(...values) - Math.min(...values) === 0;
+          }).map((d) => d.label).join("、")}）——是没有数据，不是数值低。`}
+      </p>
       {cell && (
         <div className="wb2-range-detail">
           <h2>
