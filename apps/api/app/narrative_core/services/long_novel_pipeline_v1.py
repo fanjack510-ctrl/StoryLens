@@ -290,30 +290,48 @@ def _one_based(chapters: list[Any]) -> list[Any]:
 
 
 #: Token model fitted to three complete runs, every figure read from the usage ledger rather
-#: than forecast:
+#: than forecast. Repair attempts are excluded from every figure, because the estimate is of a
+#: run that goes right and a repair is by definition unplanned:
 #:
 #:   《深海余烬》 806 章 / 2,402,385 字 → 114 calls (99 block + 15 unit), 1,885,739 in, 281,485 out
 #:   《凶宅笔记》 277 章 /   797,953 字 →  46 calls (35 block + 11 unit),   671,493 in, 104,393 out
-#:   《系统豪横》  84 章 /   195,269 字 →  21 calls (12 block +  9 unit),   208,590 in,  39,840 out
+#:   《系统豪横》  84 章 /   195,269 字 →  24 calls (11 block + 13 unit),   210,225 in,  44,524 out
 #:
 #: A call is one of two things and they cost differently, so the model counts them separately.
-#: A **block call** carries a slice of the book plus the extraction contract, and returns a
-#: whole block asset. A **bounded unit** — a stage interpretation, a topic projection, the
-#: assessment, the final synthesis, reversal detection, thread pairing — carries digests and
-#: returns a short JSON object. The earlier model had one blended rate per call, which held
-#: only while blocks dominated: 87% of 《深海余烬》's calls are blocks, against 57% of
-#: 《系统豪横》's, and on that third book the blended rate over-charged output by 25%.
-#: Measured per call: 3,005 output tokens for a block against 421 for a unit — a factor of
-#: seven, so a rate fitted on block-heavy runs prices each added stage interpretation at six
-#: times what one costs.
+#: A **block call** carries a slice of the book plus the extraction contract and returns a whole
+#: block asset; a **bounded unit** — stage interpretation, topic projection, assessment, final
+#: synthesis, reversal detection, thread pairing — carries digests and returns a short JSON
+#: object. The earlier model had one blended rate per call, which held only while blocks
+#: dominated: 87% of 《深海余烬》's calls are blocks against 46% of 《系统豪横》's, and on the
+#: short book the blended rate over-charged output by 25% and priced each stage interpretation
+#: at six times what one costs.
 #:
-#: 《系统豪横》 and 《凶宅笔记》 fit the input coefficients; 《深海余烬》 is then validation
-#: rather than interpolation, and lands 2.1% high. All three agree on output within 4%.
-_TOKENS_PER_CHAR = 0.4344
-_INPUT_TOKENS_PER_BLOCK_CALL = 8539
-_INPUT_TOKENS_PER_UNIT_CALL = 2368
-_OUTPUT_TOKENS_PER_BLOCK_CALL = 2815
-_OUTPUT_TOKENS_PER_UNIT_CALL = 421
+#: Input: the two shorter books fit ``_TOKENS_PER_CHAR`` and the block overhead off their
+#: differing chapters-per-block, which makes 《深海余烬》 validation rather than interpolation —
+#: it lands 3.4% high. Output agrees within 8% across all three and no tighter, because the same
+#: book run twice over the same text returned 2,882 and then 3,323 output tokens per block. That
+#: 15% is the provider's, and an estimate cannot be more precise than the thing it estimates.
+_TOKENS_PER_CHAR = 0.4687
+_INPUT_TOKENS_PER_BLOCK_CALL = 7385
+_INPUT_TOKENS_PER_UNIT_CALL = 2920
+_OUTPUT_TOKENS_PER_BLOCK_CALL = 2959
+_OUTPUT_TOKENS_PER_UNIT_CALL = 613
+
+
+def estimate_tokens(*, character_count: int, blocks: int, units: int) -> tuple[int, int]:
+    """``(input, output)`` for a run of this shape. Separated from the plan so it can be
+    checked against a measured run's *actual* call mix rather than against a re-planned one.
+
+    Without that separation the fit could not be tested at all once the planner changed: the
+    call mix moves, the totals move with it, and a test comparing a new plan's estimate to an
+    old run's ledger fails without either the model or the run being wrong.
+    """
+    return (
+        round(character_count * _TOKENS_PER_CHAR
+              + blocks * _INPUT_TOKENS_PER_BLOCK_CALL
+              + units * _INPUT_TOKENS_PER_UNIT_CALL),
+        round(blocks * _OUTPUT_TOKENS_PER_BLOCK_CALL + units * _OUTPUT_TOKENS_PER_UNIT_CALL),
+    )
 
 #: Provider calls above L1 besides the per-stage interpretations: the four provider-backed
 #: topic projections, then assessment, final synthesis, reversal detection and thread pairing.
@@ -353,15 +371,15 @@ def estimate_long_novel_plan(*, chapter_count: int, character_count: int) -> dic
     # partition floor to apply.
     stages = BlockPlanner.stage_count(BlockPlanner.partition_count(blocks))
     units = stages + _UNITS_BESIDES_STAGES
+    input_tokens, output_tokens = estimate_tokens(
+        character_count=character_count, blocks=blocks, units=units
+    )
     return {
         "blocks": blocks,
         "chapters_per_block": per_block,
         "estimated_provider_calls": blocks + units,
-        "estimated_input_tokens": round(character_count * _TOKENS_PER_CHAR
-                                        + blocks * _INPUT_TOKENS_PER_BLOCK_CALL
-                                        + units * _INPUT_TOKENS_PER_UNIT_CALL),
-        "estimated_output_tokens": round(blocks * _OUTPUT_TOKENS_PER_BLOCK_CALL
-                                         + units * _OUTPUT_TOKENS_PER_UNIT_CALL),
+        "estimated_input_tokens": input_tokens,
+        "estimated_output_tokens": output_tokens,
     }
 
 

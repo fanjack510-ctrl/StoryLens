@@ -299,41 +299,56 @@ def test_the_estimate_describes_the_engine_that_will_actually_run():
     assert estimate_long_novel_plan(chapter_count=0, character_count=0)["blocks"] >= 1
 
 
-def test_the_token_estimate_is_fitted_to_measured_runs():
-    """Three complete runs, every figure read from the usage ledger rather than forecast.
+#: Three complete runs, read from the usage ledger. Repair attempts excluded — the estimate is
+#: of a run that goes right, and a repair is by definition unplanned.
+#: (label, characters, block calls, unit calls, input tokens, output tokens)
+MEASURED_RUNS = (
+    ("深海余烬", 2_402_385, 99, 15, 1_885_739, 281_485),
+    ("凶宅笔记", 797_953, 35, 11, 671_493, 104_393),
+    ("系统豪横", 195_269, 11, 13, 210_225, 44_524),
+)
 
-    A flat per-character rate under-reported the first two by 12% and 25%, because input is the
-    text *plus* a per-call prompt overhead that a character count cannot see. Those two fitted
-    the input coefficients exactly, so the agreement was interpolation and this test said the
-    third book would be the real test.
 
-    《系统豪横》 is that book, and it moved the model twice. Its input landed inside 5% without
-    a refit, which is the validation the note asked for. Its *output* was 25% out, because it is
-    the first run whose calls are not overwhelmingly block calls — 57% blocks against 87% for
-    《深海余烬》 — and a block call and a bounded synthesis unit do not cost the same thing. They
-    are now counted separately, at 2,815 and 421 output tokens.
+def test_the_token_model_reproduces_every_measured_run():
+    """Checked against each run's **own** call mix, not against a re-planned one.
+
+    That separation is what makes this testable at all. The earlier version fed the estimator a
+    chapter count and compared its total to a ledger, so any change to how the book is planned
+    moved the call mix, moved the total, and failed the test without either the model or the
+    run being wrong — which is exactly what happened when the stage count was corrected.
+
+    《系统豪横》 is the run that forced the model's shape. It is the first whose calls are not
+    overwhelmingly blocks — 46% against 87% for 《深海余烬》 — and a block call and a bounded
+    synthesis unit do not cost the same thing. Blended into one rate, it was over-charged 25% on
+    output, and every added stage interpretation was priced at six times what one costs.
     """
+    from app.narrative_core.services.long_novel_pipeline_v1 import estimate_tokens
+
+    for title, chars, blocks, units, measured_in, measured_out in MEASURED_RUNS:
+        predicted_in, predicted_out = estimate_tokens(
+            character_count=chars, blocks=blocks, units=units
+        )
+        assert abs(predicted_in - measured_in) / measured_in < 0.05, title
+        # 10% and no tighter: the same book run twice over the same text returned 2,882 and
+        # then 3,323 output tokens per block. That 15% belongs to the provider.
+        assert abs(predicted_out - measured_out) / measured_out < 0.10, title
+
+    # The flat model's failure, kept as the thing not to regress to: characters alone cannot
+    # produce two books' input, because the per-call overhead differs by call mix.
+    per_char = {
+        chars: estimate_tokens(character_count=chars, blocks=b, units=u)[0] / chars
+        for _, chars, b, u, _, _ in MEASURED_RUNS
+    }
+    assert len(set(per_char.values())) == len(per_char)
+
+
+def test_the_plan_predicts_the_call_mix_the_run_actually_makes():
+    """《系统豪横》 is the one run made under the current planner, so it is the one that pins it."""
     from app.narrative_core.services.long_novel_pipeline_v1 import estimate_long_novel_plan
 
-    # 《深海余烬》 806 章 / 2,402,385 字 → 114 calls, 1,885,739 in, 281,485 out, ¥2.449
-    deep = estimate_long_novel_plan(chapter_count=806, character_count=2_402_385)
-    assert abs(deep["estimated_input_tokens"] - 1_885_739) / 1_885_739 < 0.05
-    assert abs(deep["estimated_output_tokens"] - 281_485) / 281_485 < 0.10
-
-    # 《凶宅笔记》 277 章 / 797,953 字 → 46 calls, 671,493 in, 104,393 out, ¥0.880
-    house = estimate_long_novel_plan(chapter_count=277, character_count=797_953)
-    assert abs(house["estimated_input_tokens"] - 671_493) / 671_493 < 0.05
-    assert abs(house["estimated_output_tokens"] - 104_393) / 104_393 < 0.10
-
-    # 《系统豪横》 84 章 / 195,269 字 → 21 calls (12 block + 9 unit), 208,590 in, 39,840 out.
-    # The short book is where a per-call blended rate breaks, so it is the one that has to hold.
-    system = estimate_long_novel_plan(chapter_count=84, character_count=195_269)
-    assert abs(system["estimated_input_tokens"] - 208_590) / 208_590 < 0.05
-    assert abs(system["estimated_output_tokens"] - 39_840) / 39_840 < 0.10
-
-    # The old flat model's failure, kept as the thing not to regress to: characters alone
-    # cannot produce both books' input, because the overhead differs by call count.
-    assert deep["estimated_input_tokens"] / 2_402_385 != house["estimated_input_tokens"] / 797_953
+    plan = estimate_long_novel_plan(chapter_count=84, character_count=195_269)
+    assert plan["blocks"] == 11
+    assert plan["estimated_provider_calls"] == 24
 
 
 def test_a_book_with_no_text_still_yields_a_usable_estimate():
@@ -345,27 +360,36 @@ def test_a_book_with_no_text_still_yields_a_usable_estimate():
     assert plan["estimated_output_tokens"] > 0
 
 
-def test_the_cost_band_contains_what_the_two_runs_actually_cost():
+def test_the_cost_band_contains_what_every_run_actually_cost():
     """Priced through the estimator's own function, not by scaling its total.
 
     Scaling the hierarchical cost by a token ratio left 7–8% short: the two engines have
     different input-to-output mixes and the two are priced differently, so one multiplier
-    cannot carry both. Both measured spends now fall inside the band.
+    cannot carry both.
+
+    Priced from each run's **own** call mix, for the same reason the token test is: the current
+    planner makes more stage calls than the one the two long runs were made under, so a
+    re-planned estimate is legitimately dearer than what they were billed, and asserting the
+    two match would be asserting that the planner never changed.
     """
-    from app.narrative_core.services.long_novel_pipeline_v1 import estimate_long_novel_plan
+    from app.narrative_core.services.long_novel_pipeline_v1 import estimate_tokens
     from app.narrative_core.services.whole_book_cost_estimate_service import (
         estimate_pre_run_cost_cny,
     )
 
-    for chapters, chars, spent in ((806, 2_402_385, 2.4487), (277, 797_953, 0.8803)):
-        plan = estimate_long_novel_plan(chapter_count=chapters, character_count=chars)
+    spent_cny = {"深海余烬": 2.4487, "凶宅笔记": 0.8803, "系统豪横": 0.2993}
+    for title, chars, blocks, units, _, _ in MEASURED_RUNS:
+        input_tokens, output_tokens = estimate_tokens(
+            character_count=chars, blocks=blocks, units=units
+        )
         low, high, failed = estimate_pre_run_cost_cny(
             "deepseek-v4-flash",
-            estimated_input_tokens=plan["estimated_input_tokens"],
-            estimated_output_tokens_min=round(plan["estimated_output_tokens"] * 0.85),
-            estimated_output_tokens_max=round(plan["estimated_output_tokens"] * 1.25),
+            estimated_input_tokens=input_tokens,
+            estimated_output_tokens_min=round(output_tokens * 0.85),
+            estimated_output_tokens_max=round(output_tokens * 1.25),
         )
+        spent = spent_cny[title]
         assert not failed and low is not None and high is not None
         assert float(low) <= spent <= float(high), (
-            f"{chapters} 章 / {chars} 字：实付 {spent} 不在 {float(low):.3f}–{float(high):.3f} 区间内"
+            f"{title} {chars} 字：实付 {spent} 不在 {float(low):.3f}–{float(high):.3f} 区间内"
         )
