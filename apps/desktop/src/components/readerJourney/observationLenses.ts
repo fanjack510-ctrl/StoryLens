@@ -24,11 +24,30 @@ export type ObservationLensDef = {
   allowsOverlayWithComposite: boolean;
   isPairedHookPayoff: boolean;
   yDomain: "0_100" | "valence_signed" | "arousal_0_100";
+  /**
+   * How prominently this lens competes for attention.
+   *
+   * Measured on 21 real scene profiles, the six were never six viewpoints. 剧情推进 tracks
+   * the main curve at r=+0.83 — it is already a term in the main formula. 阅读张力, 情绪强度
+   * and 钩子回收's curve form correlate 0.70–0.91 *with each other*: one signal wearing three
+   * names. Only 节奏速度 points somewhere else (r=−0.31 against the main curve).
+   *
+   * Nothing is deleted — a saved URL still resolves, and the folded three are one click
+   * away. What changes is that the page stops asking the reader to pick a viewpoint before
+   * knowing what any of them mean.
+   *
+   * `primary` is the conclusion; `distinct` earns its own button by carrying information the
+   * main curve does not; `folded` lives behind 更多视角 and inside the main curve's
+   * attribution.
+   */
+  tier: "primary" | "distinct" | "folded";
 };
 
 export const OBSERVATION_LENSES: ObservationLensDef[] = [
   {
     id: "composite",
+    // the conclusion the other five decompose
+    tier: "primary",
     labelZh: "综合阅读",
     primaryKey: "reading_momentum",
     allowsOverlayWithComposite: false,
@@ -37,6 +56,8 @@ export const OBSERVATION_LENSES: ObservationLensDef[] = [
   },
   {
     id: "plot_progress",
+    // r=+0.83 with the main curve, and already a term inside it
+    tier: "folded",
     labelZh: "剧情推进",
     primaryKey: "plot_progress",
     allowsOverlayWithComposite: true,
@@ -45,6 +66,8 @@ export const OBSERVATION_LENSES: ObservationLensDef[] = [
   },
   {
     id: "reading_tension",
+    // r=+0.91 with the hook curve — the same signal named twice
+    tier: "folded",
     labelZh: "阅读张力",
     primaryKey: "reading_tension",
     allowsOverlayWithComposite: true,
@@ -53,6 +76,8 @@ export const OBSERVATION_LENSES: ObservationLensDef[] = [
   },
   {
     id: "emotion",
+    // r=+0.83 with 阅读张力
+    tier: "folded",
     labelZh: "情绪强度",
     primaryKey: "arousal",
     allowsOverlayWithComposite: true,
@@ -61,6 +86,8 @@ export const OBSERVATION_LENSES: ObservationLensDef[] = [
   },
   {
     id: "hook_payoff",
+    // not a curve at all: HookPayoffTimeline is its own view of the question lifecycle
+    tier: "distinct",
     labelZh: "钩子回收",
     primaryKey: "hook",
     allowsOverlayWithComposite: false,
@@ -69,6 +96,8 @@ export const OBSERVATION_LENSES: ObservationLensDef[] = [
   },
   {
     id: "pacing",
+    // r=-0.31 against the main curve — the only one pointing elsewhere
+    tier: "distinct",
     labelZh: "节奏速度",
     primaryKey: "pacing_speed",
     allowsOverlayWithComposite: true,

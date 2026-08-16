@@ -3,9 +3,11 @@ import type { ReaderJourneyVisualization } from "../../types/readerJourneyVisual
 import {
   buildChapterHookSimplificationModel,
   deriveChapterHookSceneInsightV1,
+  hookLabelZh,
   type ChapterHookNodeLabel,
   type ChapterHookSimplificationModel,
 } from "./chapterHookSimplification";
+import { buildChapterHookVitals } from "./chapterHookVitals";
 import {
   buildContiguousStageRuns,
   computeStageBandPixelRanges,
@@ -59,6 +61,10 @@ export function HookPayoffTimeline({
     [presentation, visualization],
   );
   const hasContent = model.chapter_hook_mode === "reliable";
+  const vitals = useMemo(() => buildChapterHookVitals(visualization), [visualization]);
+  // Backend-owned wording for the four scene actions (INV-P4). Absent = unconfirmed
+  // profile or legacy payload, and then the shipped suspense wording is what shows.
+  const vocabulary = visualization.hook_vocabulary ?? null;
   const activeSceneRows = useMemo(
     () => model.scene_rows.filter((row) => row.scene_action !== "none" && row.short_label),
     [model.scene_rows],
@@ -117,6 +123,26 @@ export function HookPayoffTimeline({
         className="hook-resolution-overview"
         data-testid="hook-resolution-overview"
       >
+        {/* 单章尺度上钩子真正可测的三件事。回收在这个尺度上量不到（三本书 0/10），
+            埋钩量得到，而番茄前三章赌的正是埋钩。 */}
+        {vitals.length ? (
+          <ul className="hook-chapter-vitals" data-testid="hook-chapter-vitals">
+            {vitals.map((vital) => (
+              <li
+                key={vital.key}
+                className="hook-chapter-vital"
+                data-testid={`hook-chapter-vital-${vital.key}`}
+                data-band={vital.band}
+                title={vital.basis}
+              >
+                <span className="hook-chapter-vital-label">{vital.label}</span>
+                <span className="hook-chapter-vital-value">{vital.display}</span>
+                <span className="hook-chapter-vital-reading">{vital.reading}</span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+
         <p className="hook-resolution-verdict" data-testid="hook-resolution-verdict">
           {model.summary_line}
         </p>
@@ -163,17 +189,30 @@ export function HookPayoffTimeline({
                         );
                       }}
                     >
-                      <span className="hook-chapter-q" data-testid="hook-chapter-question-text">
-                        {card.question}
+                      <span
+                        className="hook-chapter-q"
+                        data-testid="hook-chapter-question-text"
+                        title={card.question_full}
+                      >
+                        {card.question_full}
                       </span>
-                      <span className="hook-chapter-meta" data-testid="hook-chapter-question-status">
-                        {card.status}
-                      </span>
-                      <span className="hook-chapter-meta" data-testid="hook-chapter-question-trail">
-                        {card.change_trail}
-                      </span>
-                      <span className="hook-chapter-meta" data-testid="hook-chapter-question-role">
-                        {card.role}
+                      {/* One line, not three. 状态 is the classification, 轨迹 is where it
+                          happened; 角色 was a lookup on 状态 and said the same thing again. */}
+                      <span className="hook-chapter-question-line">
+                        <span
+                          className="hook-chapter-status-pill"
+                          data-testid="hook-chapter-question-status"
+                          data-status={card.status}
+                          title={card.role}
+                        >
+                          {card.status}
+                        </span>
+                        <span
+                          className="hook-chapter-meta"
+                          data-testid="hook-chapter-question-trail"
+                        >
+                          {card.change_trail}
+                        </span>
                       </span>
                     </button>
                   </li>
@@ -246,8 +285,9 @@ export function HookPayoffTimeline({
                           <span
                             className="hook-chapter-scene-label"
                             data-testid={`hook-chapter-scene-label-${row.scene_ordinal}`}
+                            data-canonical-label={label}
                           >
-                            {label}
+                            {hookLabelZh(label, vocabulary)}
                           </span>
                         </button>
                       );

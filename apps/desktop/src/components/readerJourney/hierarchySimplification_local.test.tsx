@@ -41,7 +41,18 @@ describe("Reader Journey hierarchy simplification", () => {
     const toolbar = screen.getByTestId("journey-curve-toolbar");
     const lenses = screen.getByTestId("journey-lens-selector-list");
     const actions = screen.getByTestId("journey-toolbar-right");
-    expect(within(lenses).getAllByRole("radio")).toHaveLength(OBSERVATION_LENSES.length);
+    // Not all six abreast any more. Measured on 21 real scene profiles, 剧情推进 tracks the
+    // main curve at r=+0.83 and 阅读张力 / 情绪强度 / 钩子回收's curve form correlate 0.70–0.91
+    // with each other — one signal wearing several names. The three folded ones stay
+    // reachable behind 更多视角 with the same testids, so nothing is lost, but the row shows
+    // only the conclusion and the lenses that carry something it does not.
+    const front = OBSERVATION_LENSES.filter((lens) => lens.tier !== "folded");
+    expect(front.length).toBeLessThan(OBSERVATION_LENSES.length);
+    expect(within(lenses).getAllByRole("radio")).toHaveLength(front.length);
+    // Every lens is still selectable — folding is about attention, not availability.
+    OBSERVATION_LENSES.forEach((lens) => {
+      expect(screen.getByTestId(`journey-lens-${lens.id}`)).toBeInTheDocument();
+    });
     expect(screen.getByTestId("journey-lens-composite")).toHaveAttribute("aria-current", "true");
     expect(within(toolbar).getByTestId("journey-inspector-toggle")).toHaveTextContent(
       /收起详情|展开详情/,
@@ -66,9 +77,7 @@ describe("Reader Journey hierarchy simplification", () => {
       "data-legend-placement",
       "above-chart",
     );
-    const oneLiner = screen.getByTestId("journey-lens-one-liner");
-    expect(oneLiner.textContent).toMatch(/^综合阅读：/);
-    expect(oneLiner.textContent).toMatch(/场景任务|整体贡献/);
+    expect(screen.getByTestId("journey-lens-title").textContent).toBe("综合阅读");
     // Only one explanation paragraph — no duplicate bare summary
     expect(screen.queryAllByTestId("journey-lens-one-liner")).toHaveLength(1);
   });
@@ -118,7 +127,7 @@ describe("Reader Journey hierarchy simplification", () => {
     expect(screen.queryByTestId("journey-phase-strip-wrap")).not.toBeInTheDocument();
     expect(screen.queryByTestId("journey-overlay-composite")).not.toBeInTheDocument();
     expect(screen.getByTestId("journey-inspector-toggle")).toBeInTheDocument();
-    expect(screen.getByTestId("journey-lens-one-liner").textContent).toMatch(/^钩子回收：/);
+    expect(screen.getByTestId("journey-lens-title").textContent).toBe("钩子回收");
   });
 
   it("keeps right actions visible at 1024px while lenses may scroll", () => {

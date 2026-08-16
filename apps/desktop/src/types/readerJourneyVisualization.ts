@@ -280,6 +280,12 @@ export type JourneySceneNode = {
   secondary_diagnoses?: string[];
   positive_mechanism?: string | null;
   data_quality_issue?: string | null;
+  /** Axes chosen by the book's confirmed profile — absent for an unprofiled book. */
+  genre_axes?: JourneyGenreAxis[];
+  /** Craft defects the scorer named, with the paragraphs they sit in. Usually absent. */
+  craft_flags?: JourneyCraftFlag[];
+  /** Questions the reader is still carrying when this scene ends. Absent on legacy runs. */
+  open_questions?: JourneyOpenQuestions;
   /** Per-dimension scene insight texts (v2 / presentation enrich). */
   dimension_insights?: DimensionInsightsMap | null;
   insight_source?: "generated" | "derived_legacy" | "unavailable" | null;
@@ -291,6 +297,29 @@ export type JourneySceneNode = {
   primary_drag?: string | null;
   explanation_source?: "derived" | "unavailable" | "generated" | null;
   comprehensive_short_label?: string | null;
+};
+
+export type JourneyOpenQuestions = {
+  /** Raised in this scene. */
+  opened: number;
+  /** Answered in this scene. */
+  closed: number;
+  /** Running total the reader still carries — the only figure on the page with a memory. */
+  balance: number;
+};
+
+export type JourneyGenreAxis = {
+  key: string;
+  label: string;
+  level: number;
+  evidence_paragraph_ids: string[];
+  rationale: string;
+};
+
+export type JourneyCraftFlag = {
+  kind: "causal_gap" | "setup_contradiction" | "unclear_reference" | "redundant_passage";
+  evidence_paragraph_ids: string[];
+  detail: string;
 };
 
 export type JourneyChapterSummary = {
@@ -360,8 +389,38 @@ export type JourneyDensityWarning = {
   message: string;
 };
 
+/** The hook layer named in the book's own terms. */
+export type HookVocabulary = {
+  open: string;
+  deepen: string;
+  answer: string;
+  carry: string;
+  /**
+   * What the lens itself is called. 「钩子回收」 is the suspense reading as much as 「提出疑问」
+   * was; leaving it fixed produced 「钩子回收 · 首钩位置 P2 · 起了心结」 on a romance chapter.
+   * Optional so a payload from before this field falls back to the shipped name.
+   */
+  lens?: string;
+  /** What the first-occurrence vital is called (首钩位置 / 第一处牵挂 / 第一个目标). */
+  first_mark?: string;
+};
+
 export type ReaderJourneyVisualization = {
   visualization_version: string;
+  /**
+   * What the main curve is called for this book and which reader decision it stands for.
+   * Absent on runs from before the profile layer, and then the client keeps the old wording
+   * rather than guessing the genre for itself (INV-P4).
+   */
+  main_curve?: { label: string; why: string };
+  /**
+   * What to call the four things a scene does to the reader's open questions.
+   *
+   * Backend-owned (INV-P4): which wording applies is a fact about the book's profile, and
+   * the client must not re-derive it from the genre. Absent on legacy payloads, in which
+   * case the suspense wording that shipped is used.
+   */
+  hook_vocabulary?: HookVocabulary;
   chapter_summary: JourneyChapterSummary;
   phases: JourneyPhaseVisualization[];
   curve_series: Record<JourneyCurveMetric, JourneyCurvePoint[]>;

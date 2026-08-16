@@ -4,6 +4,30 @@ import {
   getLensExplanation,
 } from "./readerJourneyLensExplanation";
 import type { HookPayoffChapterStats } from "./hookPayoffTimelineModel";
+import type { HookVocabulary } from "../../types/readerJourneyVisualization";
+
+/**
+ * The legend's four keys are the four structural hook actions, so they translate the same
+ * way the trajectory labels do. Any other legend row (场景 / 节拍 / 悬念欠账 …) passes through.
+ */
+function legendLabelZh(
+  item: { key: string; label: string },
+  vocabulary: HookVocabulary | null | undefined,
+): string {
+  if (!vocabulary) return item.label;
+  switch (item.key) {
+    case "raise":
+      return vocabulary.open || item.label;
+    case "deepen":
+      return vocabulary.deepen || item.label;
+    case "answer":
+      return vocabulary.answer || item.label;
+    case "carry":
+      return vocabulary.carry || item.label;
+    default:
+      return item.label;
+  }
+}
 
 type Props = {
   lensId: ObservationLensId;
@@ -16,6 +40,21 @@ type Props = {
   inconsistentWarning?: string | null;
   /** When false, omit node/metric legends (rendered above the chart instead). */
   showLegend?: boolean;
+  /**
+   * The main curve's name for this book. Renaming only the toolbar button left twelve
+   * places on the page still saying 综合阅读 under a button reading 追读意愿 — the reader
+   * has no way to know they are the same thing.
+   */
+  mainCurveLabel?: string | null;
+  /**
+   * Backend-owned wording for the four hook actions, forwarded to the legend below the
+   * toolbar. Without it the legend prints the suspense set directly above a trajectory
+   * labelled in the book's own terms — 「提出疑问」 over 「起了心结」, two vocabularies on one
+   * screen.
+   */
+  hookVocabulary?: HookVocabulary | null;
+  /** When true the definition line is suppressed; it lives on the button's tooltip. */
+  hideOneLiner?: boolean;
 };
 
 /** Compact lens title + one-liner from unified explanation config. */
@@ -28,9 +67,18 @@ export function JourneyLensExplanationChrome({
   hookPayoffStats = null,
   inconsistentWarning = null,
   showLegend = false,
+  mainCurveLabel = null,
+  hookVocabulary = null,
+  hideOneLiner = false,
 }: Props) {
   const explanation = getLensExplanation(lensId);
-  const title = explanation.title;
+  // Both named lenses wear the book's own name; the rest keep theirs.
+  const title =
+    lensId === "composite" && mainCurveLabel
+      ? mainCurveLabel
+      : lensId === "hook_payoff" && hookVocabulary?.lens
+        ? hookVocabulary.lens
+        : explanation.title;
   const summary =
     overlayCompare && comparisonActive
       ? OVERLAY_COMPARE_SUMMARY
@@ -64,16 +112,26 @@ export function JourneyLensExplanationChrome({
           <li>存在拖延风险：{hookPayoffStats.delayed_risk}</li>
         </ul>
       ) : null}
-      <p className="journey-lens-one-liner" data-testid="journey-lens-one-liner">
-        <strong data-testid="journey-lens-title">{title}</strong>
-        {"："}
-        {summary.replace(new RegExp(`^${title}：`), "")}
-      </p>
+      {hideOneLiner ? (
+        // The definition is useful once and then costs two rows on every lens switch; it is
+        // carried by the main button's tooltip instead. The title stays for screen readers
+        // and for the tests that identify the active lens by it.
+        <p className="journey-lens-one-liner is-compact" data-testid="journey-lens-one-liner">
+          <strong data-testid="journey-lens-title">{title}</strong>
+        </p>
+      ) : (
+        <p className="journey-lens-one-liner" data-testid="journey-lens-one-liner">
+          <strong data-testid="journey-lens-title">{title}</strong>
+          {"："}
+          {summary.replace(new RegExp(`^${explanation.title}：`), "")}
+        </p>
+      )}
       {showLegend ? (
         <JourneyChartLegend
           lensId={lensId}
           primaryMetricLabel={primaryLabel}
           compareMetricLabel={showCompareLegend ? compareMetricLabel : null}
+          hookVocabulary={hookVocabulary}
         />
       ) : null}
     </div>
@@ -85,10 +143,12 @@ export function JourneyChartLegend({
   lensId,
   primaryMetricLabel = null,
   compareMetricLabel = null,
+  hookVocabulary = null,
 }: {
   lensId: ObservationLensId;
   primaryMetricLabel?: string | null;
   compareMetricLabel?: string | null;
+  hookVocabulary?: HookVocabulary | null;
 }) {
   const explanation = getLensExplanation(lensId);
   const primaryLabel = primaryMetricLabel || explanation.title;
@@ -116,7 +176,7 @@ export function JourneyChartLegend({
       >
         {explanation.legend_items.map((item) => (
           <li key={item.key} data-legend={item.key}>
-            {item.label}
+            {legendLabelZh(item, hookVocabulary)}
           </li>
         ))}
       </ul>

@@ -28,7 +28,9 @@ export const NUMERIC_LENS_LEGEND: Array<{ key: string; label: string }> = [
   { key: "scene", label: "● 场景" },
   { key: "beat", label: "• 节拍" },
   { key: "selection", label: "┆ 当前选择" },
-  { key: "risk", label: "■ 阅读阻力区间" },
+  // 阅读阻力区间 is gone from the chart; a legend that names a mark nobody draws is worse
+  // than no legend — it makes the reader hunt for something that is not there.
+  { key: "debt", label: "▬ 悬念欠账" },
 ];
 
 /** 钩子回收 lens legend (≤1 row). */

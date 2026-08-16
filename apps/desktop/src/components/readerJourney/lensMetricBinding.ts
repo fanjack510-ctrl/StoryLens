@@ -45,6 +45,43 @@ export function readingMomentumLabelZh(
   return usesReadingMomentumTerminology(visualization) ? "阅读动力" : "阅读牵引";
 }
 
+/**
+ * What the main curve is called for this book.
+ *
+ * Every display of the main curve reads this — phase cards, the active-scene caption, the
+ * y-axis title, the score line. Renaming only the toolbar button left twelve places still
+ * saying 综合阅读 beneath a button reading 追读意愿, and nothing on screen said they were the
+ * same quantity. Falls back to the shipped wording for a book without a confirmed profile,
+ * which is the honest answer: without one there is no basis for naming a decision.
+ */
+/**
+ * What to call the hook lens for this book.
+ *
+ * Same rule as the main curve: the backend owns it (INV-P4), and a book without a confirmed
+ * profile keeps the shipped suspense name, because a drafted profile is an inference and
+ * naming the reader's experience off an inference is what INV-P2 forbids.
+ */
+export function hookLensLabelZh(
+  visualization: ReaderJourneyVisualization | null | undefined,
+  fallback = "钩子回收",
+): string {
+  return visualization?.hook_vocabulary?.lens || fallback;
+}
+
+/** What to call the first-occurrence vital (首钩位置 / 第一处牵挂 / 第一个目标). */
+export function firstHookMarkLabelZh(
+  visualization: ReaderJourneyVisualization | null | undefined,
+  fallback = "首钩位置",
+): string {
+  return visualization?.hook_vocabulary?.first_mark || fallback;
+}
+
+export function mainCurveLabelZh(
+  visualization: ReaderJourneyVisualization | null | undefined,
+): string {
+  return visualization?.main_curve?.label || "综合阅读";
+}
+
 export function resolveNodeFieldValue(
   node: JourneySceneNode,
   fieldKey: string,
@@ -83,7 +120,7 @@ export function resolveLensMetricBinding(
   if (lens.id === "composite") {
     return {
       fieldKey: "reading_momentum",
-      labelZh: "综合阅读",
+      labelZh: mainCurveLabelZh(visualization),
       value: node ? resolveNodeFieldValue(node, "reading_momentum") : null,
     };
   }

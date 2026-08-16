@@ -119,16 +119,17 @@ describe("Phase 1C-C.2.6 journey analysis focused view", () => {
     const legend = screen.getByTestId("journey-unified-legend");
     expect(legend).toHaveAttribute("data-legend-placement", "above-chart");
     expect(screen.getByTestId("journey-minimal-legend")).toBeInTheDocument();
-    expect(within(legend).getByText(/阅读阻力/)).toBeInTheDocument();
+    expect(within(legend).getByText(/悬念欠账/)).toBeInTheDocument();
   });
 
-  it("keeps Scene insight panel and Phase questions/risks in Context Inspector", () => {
+  it("keeps Scene insight panel and Phase questions in Context Inspector", () => {
     renderWorkspace("/?overview=curve&scene=9&inspector=scene");
     expect(screen.getByTestId("scene-detail-insight-panel")).toBeInTheDocument();
     expect(screen.getByTestId("scene-dimension-insight-text")).toBeInTheDocument();
     fireEvent.click(screen.getByTestId("journey-phase-1"));
     expect(screen.getByTestId("phase-detail-tab-questions")).toHaveTextContent("钩子回收");
-    expect(screen.getByTestId("phase-detail-tab-risks")).toHaveTextContent("阅读阻力");
+    // 阅读阻力 is gone: it named a formula field rather than anything a reader experiences.
+    expect(screen.queryByTestId("phase-detail-tab-risks")).not.toBeInTheDocument();
   });
 
   it("exports PNG with 阅读旅程 title and without legacy tabs", async () => {

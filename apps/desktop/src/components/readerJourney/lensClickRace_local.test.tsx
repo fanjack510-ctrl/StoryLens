@@ -94,7 +94,9 @@ describe("Lens single-click switching (no snap-back)", () => {
       "true",
     );
     expect(screen.getByTestId("journey-lens-plot_progress")).not.toHaveAttribute("aria-current");
-    expect(screen.getByTestId("journey-lens-one-liner").textContent).toMatch(/^阅读张力：/);
+    // The definition moved to the main button's tooltip — it cost two rows above the chart
+    // on every lens switch and was useful once. The title still names the active lens.
+    expect(screen.getByTestId("journey-lens-title").textContent).toBe("阅读张力");
 
     const last = searches[searches.length - 1] || "";
     const q = new URLSearchParams(last.startsWith("?") ? last.slice(1) : last);
@@ -155,7 +157,7 @@ describe("Lens single-click switching (no snap-back)", () => {
     fireEvent.click(screen.getByTestId("journey-lens-reading_tension"));
     fireEvent.click(screen.getByTestId("journey-lens-emotion"));
     expect(screen.getByTestId("journey-lens-emotion")).toHaveAttribute("aria-current", "true");
-    expect(screen.getByTestId("journey-lens-one-liner").textContent).toMatch(/^情绪强度：/);
+    expect(screen.getByTestId("journey-lens-title").textContent).toBe("情绪强度");
   });
 
   it("clears compare when entering hook_payoff in one click", () => {

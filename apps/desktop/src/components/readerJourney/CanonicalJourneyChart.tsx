@@ -11,6 +11,7 @@ import type {
   JourneySceneNode,
   ReaderJourneyVisualization,
 } from "../../types/readerJourneyVisualization";
+import { mainCurveLabelZh } from "./lensMetricBinding";
 import { formatJourneyMetricLabel, formatJourneySceneLabel, formatJourneyScore, roleLabelZh } from "./journeyUiLabels";
 import {
   buildLinePathD,
@@ -19,6 +20,8 @@ import {
   computeYScale,
   resolveMetricValue,
   valenceYScaleOptions,
+  buildProportionalXScale,
+  buildSceneExtents,
   xForSceneOrdinal,
 } from "./journeyChartScales";
 import {
@@ -100,7 +103,6 @@ export type CanonicalJourneyChartProps = {
   /** When true, always render full scene span at 0–100 (PNG full export). */
   exportFullJourney?: boolean;
   onSelectScene: (node: JourneySceneNode) => void;
-  onSelectRisk: (intervalKey: string, startNode?: JourneySceneNode) => void;
   onSelectHook: (node: JourneySceneNode) => void;
   onSelectPayoff: (node: JourneySceneNode) => void;
 };
@@ -142,7 +144,6 @@ export function CanonicalJourneyChart({
   markerMode,
   exportFullJourney = false,
   onSelectScene,
-  onSelectRisk,
   onSelectHook,
   onSelectPayoff,
 }: CanonicalJourneyChartProps) {
@@ -223,9 +224,43 @@ export function CanonicalJourneyChart({
     return collectDataWarnings(series, warningDomain);
   }, [series, yScaleOptions]);
 
+  // Scene width = the share of the chapter the reader actually spends there. paragraph_count
+  // is already on every node, so this needs nothing new from the backend; a payload without
+  // it falls back to the old even spacing inside buildProportionalXScale.
+  const sceneSpans = useMemo(
+    () =>
+      nodes.map((node) => ({
+        scene_ordinal: node.scene_ordinal,
+        weight: Number(node.paragraph_count) || 0,
+      })),
+    [nodes],
+  );
+  const proportionalX = useMemo(
+    () => buildProportionalXScale(sceneSpans, chartWidth),
+    [sceneSpans, chartWidth],
+  );
   const xFor = useCallback(
-    (ordinal: number) => xForSceneOrdinal(ordinal, sceneCount, chartWidth),
-    [sceneCount, chartWidth],
+    (ordinal: number) =>
+      sceneSpans.length ? proportionalX(ordinal) : xForSceneOrdinal(ordinal, sceneCount, chartWidth),
+    [proportionalX, sceneSpans.length, sceneCount, chartWidth],
+  );
+
+  // Each scene's real horizontal extent. Empty when spans are missing or uniform — then the
+  // ticks stay the old fixed marks and the line keeps its old endpoints.
+  const sceneExtents = useMemo(
+    () => buildSceneExtents(sceneSpans, chartWidth),
+    [sceneSpans, chartWidth],
+  );
+  const extentByOrdinal = useMemo(
+    () => new Map(sceneExtents.map((e) => [e.scene_ordinal, e])),
+    [sceneExtents],
+  );
+  const curveEdges = useMemo(
+    () =>
+      sceneExtents.length
+        ? { left: sceneExtents[0].x0, right: sceneExtents[sceneExtents.length - 1].x1 }
+        : null,
+    [sceneExtents],
   );
 
   const mainSeries = useMemo(() => mainCurveSeries(series), [series]);
@@ -235,15 +270,15 @@ export function CanonicalJourneyChart({
   );
 
   const linePath = useMemo(
-    () => buildLinePathD(mainSeries, xFor, yScale.yForValue),
-    [mainSeries, xFor, yScale],
+    () => buildLinePathD(mainSeries, xFor, yScale.yForValue, curveEdges),
+    [mainSeries, xFor, yScale, curveEdges],
   );
   const secondaryLinePath = useMemo(
     () =>
       mainSecondary.length
-        ? buildLinePathD(mainSecondary, xFor, yScale.yForValue)
+        ? buildLinePathD(mainSecondary, xFor, yScale.yForValue, curveEdges)
         : "",
-    [mainSecondary, xFor, yScale],
+    [mainSecondary, xFor, yScale, curveEdges],
   );
 
   const segmentMarkers = useMemo(() => {
@@ -339,16 +374,6 @@ export function CanonicalJourneyChart({
     }
     return ordinals;
   }, [markerMode, nodes, visualization.payoff_markers]);
-  const riskOrdinals = useMemo(() => {
-    const set = new Set<number>();
-    for (const interval of visualization.risk_intervals) {
-      for (let o = interval.start_scene_ordinal; o <= interval.end_scene_ordinal; o += 1) {
-        set.add(o);
-      }
-    }
-    return set;
-  }, [visualization.risk_intervals]);
-
   const showBrush = !exportFullJourney && requiresBrush(sceneCount);
   const canPan = !exportFullJourney && allowsHorizontalPanZoom(sceneCount);
 
@@ -406,11 +431,37 @@ export function CanonicalJourneyChart({
   };
 
   const brushHeight = showBrush ? 36 : 0;
-  const totalHeight = chartHeight + brushHeight;
   const padTop = CHART_PAD.top;
   const padLeft = CHART_PAD.left;
   const plotHeight = chartHeight - CHART_PAD.top - CHART_PAD.bottom;
   const plotWidth = Math.max(chartWidth - CHART_PAD.left - CHART_PAD.right, 1);
+
+  // 悬念欠账 gets its own strip under the plot rather than a second y-scale on the main one:
+  // a count of unanswered questions and a 0–100 reading score share no units, and one axis
+  // pretending to carry both would invent a correlation. Absent on runs from before the
+  // ledger existed, and then the chart keeps its exact previous height.
+  const DEBT_STRIP = 58;
+  const DEBT_GAP = 14;
+  const debtBand = useMemo(() => {
+    const rows = nodes
+      .filter((node) => node.open_questions && node.include_in_main_curve !== false)
+      .map((node) => ({ ordinal: node.scene_ordinal, balance: node.open_questions!.balance }))
+      .sort((a, b) => a.ordinal - b.ordinal);
+    if (rows.length < 2) return null;
+    const max = Math.max(1, ...rows.map((r) => r.balance));
+    const topY = chartHeight + DEBT_GAP;
+    const baseY = topY + DEBT_STRIP;
+    const yFor = (v: number) => baseY - (v / max) * DEBT_STRIP;
+    const points = rows.map((r) => ({ ...r, x: xFor(r.ordinal), y: yFor(r.balance) }));
+    const lineD = points.map((p, i) => `${i ? "L" : "M"}${p.x},${p.y}`).join(" ");
+    const areaD = `M${points[0].x},${baseY} ${points
+      .map((p) => `L${p.x},${p.y}`)
+      .join(" ")} L${points[points.length - 1].x},${baseY} Z`;
+    return { points, lineD, areaD, baseY, topY, max };
+  }, [nodes, chartHeight, xFor]);
+
+  const debtHeight = debtBand ? DEBT_GAP + DEBT_STRIP : 0;
+  const totalHeight = chartHeight + debtHeight + brushHeight;
   const plotLeft = padLeft;
   const plotRight = padLeft + plotWidth;
   const clipPathId = exportFullJourney
@@ -420,10 +471,14 @@ export function CanonicalJourneyChart({
   const areaPath = useMemo(() => {
     if (lensId !== "composite" || !linePath || !mainSeries.length) return "";
     const baseline = padTop + plotHeight;
-    const firstX = xFor(mainSeries[0].scene_ordinal);
-    const lastX = xFor(mainSeries[mainSeries.length - 1].scene_ordinal);
+    // The baseline must close at the line's real ends, not at the first and last scene's
+    // midpoints. Those used to be the same point; since the line is carried out to the
+    // chapter's edges they are not, and the mismatch closes the polygon through two
+    // diagonals — a wedge under the opening and another over the ending.
+    const firstX = curveEdges?.left ?? xFor(mainSeries[0].scene_ordinal);
+    const lastX = curveEdges?.right ?? xFor(mainSeries[mainSeries.length - 1].scene_ordinal);
     return `${linePath} L ${lastX} ${baseline} L ${firstX} ${baseline} Z`;
-  }, [lensId, linePath, mainSeries, padTop, plotHeight, xFor]);
+  }, [lensId, linePath, mainSeries, padTop, plotHeight, xFor, curveEdges]);
 
   const stageBands = useMemo(() => {
     const ordinals = nodes.map((node) => node.scene_ordinal);
@@ -590,51 +645,69 @@ export function CanonicalJourneyChart({
           ))}
         </g>
 
-        {/* 2. Risk markers — thin top strip only (never full-height wash over stage bands) */}
-        <g data-layer="risk_background" clipPath={`url(#${clipPathId})`}>
-          {visualization.risk_intervals.map((interval) => {
-            const x1 = xFor(interval.start_scene_ordinal) - 6;
-            const x2 = xFor(interval.end_scene_ordinal) + 6;
-            const startNode = nodes.find(
-              (node) => node.scene_ordinal === interval.start_scene_ordinal,
-            );
-            const riskWidth = Math.max(x2 - x1, 4);
-            const stripHeight = 6;
-            return (
-              <g
-                key={`${interval.risk_type}-${interval.start_scene_ordinal}`}
-                data-testid={`journey-risk-${interval.risk_type}-${interval.start_scene_ordinal}`}
-                style={{ cursor: "pointer" }}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onSelectRisk(
-                    `${interval.risk_type}-${interval.start_scene_ordinal}`,
-                    startNode,
-                  );
-                }}
-              >
-                <rect
-                  x={x1}
-                  y={padTop}
-                  width={riskWidth}
-                  height={stripHeight}
-                  fill="#c47a6a"
-                  opacity={0.9}
-                  data-risk-marker="top-strip"
-                  data-risk-label="阅读阻力区间"
-                />
-                <rect
-                  x={x1}
-                  y={padTop}
-                  width={riskWidth}
-                  height={plotHeight}
-                  fill="transparent"
-                  data-risk-hit-area="true"
-                />
-              </g>
-            );
-          })}
-        </g>
+        {/* 2. 悬念欠账 — the running count of questions the reader is still carrying.
+              Replaces the old red risk strip, which pinned a saturated bar across the top of
+              the plot for intervals that covered most of the chapter, and named a field
+              (reading_momentum) rather than anything a reader experiences. */}
+        {debtBand ? (
+          <g data-layer="open_question_debt" data-testid="journey-debt-band">
+            <path d={debtBand.areaD} fill="var(--journey-debt, #eb6834)" opacity={0.16} />
+            <path
+              d={debtBand.lineD}
+              fill="none"
+              stroke="var(--journey-debt, #eb6834)"
+              strokeWidth={2}
+              strokeLinejoin="round"
+            />
+            <line
+              x1={padLeft}
+              x2={padLeft + plotWidth}
+              y1={debtBand.baseY}
+              y2={debtBand.baseY}
+              stroke="var(--journey-axis, #c3c2b7)"
+              strokeWidth={1}
+            />
+            {debtBand.points.map((pt) => (
+              <circle
+                key={`debt-${pt.ordinal}`}
+                cx={pt.x}
+                cy={pt.y}
+                r={3.5}
+                fill="var(--journey-debt, #eb6834)"
+                stroke="var(--journey-surface, #fcfcfb)"
+                strokeWidth={1.5}
+                data-testid={`journey-debt-point-${pt.ordinal}`}
+                data-balance={pt.balance}
+              />
+            ))}
+            <text
+              x={padLeft - 8}
+              y={debtBand.baseY + 4}
+              textAnchor="end"
+              className="journey-axis-label"
+              data-testid="journey-debt-axis-zero"
+            >
+              0
+            </text>
+            <text
+              x={padLeft - 8}
+              y={debtBand.topY + 4}
+              textAnchor="end"
+              className="journey-axis-label"
+            >
+              {debtBand.max}
+            </text>
+            <text
+              x={padLeft + plotWidth}
+              y={debtBand.topY - 5}
+              textAnchor="end"
+              className="journey-axis-label"
+              data-testid="journey-debt-caption"
+            >
+              悬念欠账 · 读者背着的未答问题
+            </text>
+          </g>
+        ) : null}
 
         {/* 3. Grid + axes */}
         <g data-layer="grid">
@@ -649,7 +722,7 @@ export function CanonicalJourneyChart({
               fontSize={11}
               fill="var(--muted)"
             >
-              {COMPREHENSIVE_READING_COPY.yAxisTitle}
+              {`${mainCurveLabelZh(visualization)}表现`}
             </text>
           ) : null}
           <line
@@ -755,9 +828,25 @@ export function CanonicalJourneyChart({
                   S{node.scene_ordinal}
                 </text>
                 <rect
-                  x={xFor(node.scene_ordinal) - 8}
+                  // As wide as the scene is long. This is the only thing on screen that
+                  // explains why S1's dot sits a fifth of the way in: the dot is the middle
+                  // of this bar. 2px of breathing room keeps neighbouring scenes distinct.
+                  x={
+                    extentByOrdinal.has(node.scene_ordinal)
+                      ? extentByOrdinal.get(node.scene_ordinal)!.x0 + 1
+                      : xFor(node.scene_ordinal) - 8
+                  }
                   y={chartHeight - 8}
-                  width={16}
+                  width={
+                    extentByOrdinal.has(node.scene_ordinal)
+                      ? Math.max(
+                          3,
+                          extentByOrdinal.get(node.scene_ordinal)!.x1 -
+                            extentByOrdinal.get(node.scene_ordinal)!.x0 -
+                            2,
+                        )
+                      : 16
+                  }
                   height={3}
                   rx={1}
                   fill={stage.token.sceneMarker}
@@ -1151,17 +1240,6 @@ export function CanonicalJourneyChart({
                     }}
                   />
                 )}
-                {riskOrdinals.has(node.scene_ordinal) && (
-                  <rect
-                    x={cx - 5}
-                    y={padTop + plotHeight - 6}
-                    width={10}
-                    height={5}
-                    fill="#a13a31"
-                    opacity={0.85}
-                    data-marker="risk"
-                  />
-                )}
               </g>
             );
           })}
@@ -1361,6 +1439,7 @@ export function CanonicalJourneyChart({
           <g
             data-layer="brush"
             data-testid={exportFullJourney ? undefined : "journey-chart-brush"}
+            transform={debtHeight ? `translate(0, ${debtHeight})` : undefined}
           >
             <rect
               x={CHART_PAD.left}

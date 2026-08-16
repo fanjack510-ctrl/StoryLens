@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ReaderJourneyVisualization } from "../../types/readerJourneyVisualization";
 import { HookPayoffTimeline } from "./HookPayoffTimeline";
@@ -241,7 +241,12 @@ describe("CHG-20260729-005 chapter hook simplification", () => {
     expect(screen.getByTestId("hook-chapter-reader-questions")).toBeInTheDocument();
     expect(screen.getAllByTestId("hook-chapter-question-card").length).toBeGreaterThan(0);
     expect(screen.getByTestId("hook-chapter-scene-label-1").textContent).toBe("提出疑问");
-    expect(screen.queryByText("—")).not.toBeInTheDocument();
+    // Scoped to the trajectory. The vitals row above it legitimately shows 「—」 when a
+    // fixture carries no hook score: a missing number must read as missing, and this
+    // assertion is about scene labels never degrading to a dash.
+    expect(
+      within(screen.getByTestId("hook-chapter-scene-row")).queryByText("—"),
+    ).not.toBeInTheDocument();
     expect(screen.getByTestId("hook-chapter-scene-insight")).toBeInTheDocument();
     expect(screen.getByTestId("journey-stage-bands")).toBeInTheDocument();
     fireEvent.click(screen.getByTestId("hook-chapter-scene-1"));

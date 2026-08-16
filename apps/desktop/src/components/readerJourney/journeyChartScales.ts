@@ -170,11 +170,94 @@ export function xForSceneOrdinal(
   return CHART_PAD.left + ((ordinal - 1) / (sceneCount - 1)) * plotWidth;
 }
 
-/** Build SVG path(s) with breaks on null; does not coerce missing to 0. */
+export type SceneSpan = { scene_ordinal: number; weight: number };
+
+/**
+ * Place each scene at the middle of the share of the chapter it actually occupies.
+ *
+ * Even spacing draws a 2-paragraph transition as wide as a 28-paragraph opening, which on
+ * 《我不是戏神》第一章 means the reader's 43% is one dot among six and a 3-paragraph lull looks
+ * like a sixth of the chapter. For a chart that claims to trace a reading experience that
+ * is not a simplification, it is a misstatement: the horizontal distance between two points
+ * is how far the reader actually walked, so it has to be the real distance.
+ *
+ * Falls back to even spacing when the weights are missing or all equal — a legacy payload
+ * without paragraph counts keeps its old geometry rather than collapsing to a point.
+ */
+export type SceneExtent = { scene_ordinal: number; x0: number; x1: number };
+
+/**
+ * The horizontal extent each scene occupies, in the same coordinates as the x scale.
+ *
+ * A scene is an interval, not a point. buildProportionalXScale samples it at its midpoint,
+ * which is the honest place for one measurement over a span — but it also means the curve
+ * starts a fifth of the way in on a chapter whose first scene is 41% of the text, with
+ * nothing on screen saying why. These extents are what makes that legible: the tick under
+ * the axis becomes as wide as the scene is long, and the line can be carried out to the
+ * chapter's real edges instead of stopping at the first and last samples.
+ *
+ * Returns [] under the same conditions the scale falls back to even spacing, so a caller
+ * that gets nothing back should draw nothing rather than invent a span.
+ */
+export function buildSceneExtents(spans: SceneSpan[], chartWidth: number): SceneExtent[] {
+  const plotWidth = chartWidth - CHART_PAD.left - CHART_PAD.right;
+  const ordered = [...spans].sort((a, b) => a.scene_ordinal - b.scene_ordinal);
+  const weights = ordered.map((s) => (Number.isFinite(s.weight) && s.weight > 0 ? s.weight : 0));
+  const total = weights.reduce((sum, w) => sum + w, 0);
+  const uniform = weights.length > 0 && weights.every((w) => w === weights[0]);
+  if (ordered.length === 0 || total <= 0 || uniform) return [];
+  const extents: SceneExtent[] = [];
+  let cursor = 0;
+  ordered.forEach((span, i) => {
+    const share = weights[i] / total;
+    extents.push({
+      scene_ordinal: span.scene_ordinal,
+      x0: CHART_PAD.left + cursor * plotWidth,
+      x1: CHART_PAD.left + (cursor + share) * plotWidth,
+    });
+    cursor += share;
+  });
+  return extents;
+}
+
+export function buildProportionalXScale(
+  spans: SceneSpan[],
+  chartWidth: number,
+): (ordinal: number) => number {
+  const plotWidth = chartWidth - CHART_PAD.left - CHART_PAD.right;
+  const ordered = [...spans].sort((a, b) => a.scene_ordinal - b.scene_ordinal);
+  const weights = ordered.map((s) => (Number.isFinite(s.weight) && s.weight > 0 ? s.weight : 0));
+  const total = weights.reduce((sum, w) => sum + w, 0);
+  const uniform = weights.length > 0 && weights.every((w) => w === weights[0]);
+  if (ordered.length === 0 || total <= 0 || uniform) {
+    return (ordinal) => xForSceneOrdinal(ordinal, ordered.length || 1, chartWidth);
+  }
+  const midpoints = new Map<number, number>();
+  let cursor = 0;
+  ordered.forEach((span, i) => {
+    const share = weights[i] / total;
+    midpoints.set(span.scene_ordinal, CHART_PAD.left + (cursor + share / 2) * plotWidth);
+    cursor += share;
+  });
+  const first = midpoints.get(ordered[0].scene_ordinal) ?? CHART_PAD.left;
+  return (ordinal) => midpoints.get(ordinal) ?? first;
+}
+
+/**
+ * Build SVG path(s) with breaks on null; does not coerce missing to 0.
+ *
+ * `edges` carries the line flat from the chapter's start to the first sample and from the
+ * last sample to the chapter's end. Without it the curve begins wherever the first scene's
+ * midpoint falls — a fifth of the way in on a chapter with a long opening — which reads as
+ * "the chapter starts here" rather than "this is where scene 1 was measured". The stub is
+ * not an extra claim: the score belongs to the whole scene, and the scene does start at the
+ * chapter's first paragraph.
+ */
 export function buildLinePathD(
   series: JourneyCurvePoint[],
   xFor: (ordinal: number) => number,
   yFor: (value: number) => number,
+  edges?: { left: number; right: number } | null,
 ): string {
   const segments: string[] = [];
   let current: string[] = [];
@@ -185,6 +268,9 @@ export function buildLinePathD(
     current = [];
   };
 
+  let firstDrawn: { x: number; y: number } | null = null;
+  let lastDrawn: { x: number; y: number } | null = null;
+
   for (const point of series) {
     const value = resolveMetricValue(point);
     if (value == null) {
@@ -194,10 +280,22 @@ export function buildLinePathD(
     const x = xFor(point.scene_ordinal);
     const y = yFor(value);
     if (current.length === 0) {
-      current.push(`M ${x} ${y}`);
+      // Only the very first segment gets the left stub; a segment that starts after a null
+      // break begins at a real sample and must not be extended to the chart edge.
+      if (!firstDrawn && edges && edges.left < x) {
+        current.push(`M ${edges.left} ${y}`);
+        current.push(`L ${x} ${y}`);
+      } else {
+        current.push(`M ${x} ${y}`);
+      }
     } else {
       current.push(`L ${x} ${y}`);
     }
+    if (!firstDrawn) firstDrawn = { x, y };
+    lastDrawn = { x, y };
+  }
+  if (edges && lastDrawn && current.length > 0 && edges.right > lastDrawn.x) {
+    current.push(`L ${edges.right} ${lastDrawn.y}`);
   }
   flush();
   return segments.join(" ");

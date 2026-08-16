@@ -98,7 +98,7 @@ describe("Phase 1C-C.2.7 Context Inspector hierarchy", () => {
     expect(screen.getByTestId("journey-inspector-header")).toBeInTheDocument();
   });
 
-  it("renders unified Hook/Payoff/Risk Inspector headers", () => {
+  it("renders unified Hook/Payoff Inspector headers", () => {
     const hookNode = visualization.scene_nodes.find((n) => n.primary_hook) ?? node1;
     render(
       <JourneyMarkerInspectorPanel kind="hook" node={hookNode} onLocateEvidence={vi.fn()} />,
@@ -108,15 +108,9 @@ describe("Phase 1C-C.2.7 Context Inspector hierarchy", () => {
     const payoffNode = visualization.scene_nodes.find((n) => n.primary_payoff) ?? node1;
     render(<JourneyMarkerInspectorPanel kind="payoff" node={payoffNode} />);
     expect(screen.getByTestId("journey-payoff-inspector")).toBeInTheDocument();
-    cleanup();
-    render(
-      <JourneyMarkerInspectorPanel
-        kind="risk"
-        node={node8}
-        riskInterval={visualization.risk_intervals[0]}
-      />,
-    );
-    expect(screen.getByTestId("journey-risk-inspector")).toBeInTheDocument();
+    // The risk inspector is gone with 阅读阻力 itself: it reported a derived field name and
+    // its penalty arithmetic, which describes the formula rather than the reader. Nothing
+    // could reach it once the chart's risk markers were removed, so it went too.
   });
 
   it("prioritizes Scene dimension insight and Phase one-line conclusions", () => {

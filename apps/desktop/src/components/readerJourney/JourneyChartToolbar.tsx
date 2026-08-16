@@ -12,6 +12,7 @@ import {
   DEFAULT_OBSERVATION_LENS,
   OBSERVATION_LENSES,
   getObservationLens,
+  getObservationLensHint,
   type ObservationLensId,
 } from "./observationLenses";
 import {
@@ -30,6 +31,22 @@ type Props = {
   onMetricChange: (metric: JourneyCurveMetric) => void;
   observationLens?: ObservationLensId;
   onObservationLensChange?: (lens: ObservationLensId) => void;
+  /**
+   * What the main curve is called for this book, from the backend (INV-P4).
+   *
+   * Six lenses at one visual tier made the reader pick a viewpoint before knowing what any
+   * of them meant, and on 42 real scenes they are largely one signal anyway (好奇×钩子
+   * r=+0.91). One named main line answers 「读者还想不想读下去」 and the other five become the
+   * decomposition of that answer.
+   */
+  mainCurveLabel?: string;
+  mainCurveWhy?: string;
+  /**
+   * What the hook lens is called for this book. 「钩子回收」 is the suspense reading of it, the
+   * same way 「提出疑问」 was of its first action; on a romance chapter whose scenes are already
+   * labelled 起了心结 / 挑明, a button still reading 钩子回收 puts two vocabularies on one screen.
+   */
+  hookLensLabel?: string;
   /** @deprecated Prefer compareWith — kept for call-site compat. */
   overlayComposite?: boolean;
   onOverlayCompositeChange?: (enabled: boolean) => void;
@@ -68,6 +85,9 @@ export function JourneyChartToolbar({
   metric,
   onMetricChange,
   observationLens = DEFAULT_OBSERVATION_LENS,
+  mainCurveLabel,
+  mainCurveWhy,
+  hookLensLabel,
   onObservationLensChange,
   overlayComposite = false,
   onOverlayCompositeChange,
@@ -118,6 +138,16 @@ export function JourneyChartToolbar({
   const lensDef = getObservationLens(observationLens);
   const metricLabel = formatJourneyMetricLabel(metric);
   const inspectorLabel = inspectorCollapsed ? "展开详情" : "收起详情";
+  // Falls back to the shipped wording when the backend has nothing to say — which is the
+  // honest answer for a book whose profile is not confirmed: without one there is no basis
+  // for claiming which decision this reader is making.
+  const foldedLenses = OBSERVATION_LENSES.filter(
+    (item) => item.tier === "folded" && item.id !== observationLens,
+  );
+  const mainLabel = mainCurveLabel || getObservationLens(DEFAULT_OBSERVATION_LENS).labelZh;
+  const mainWhy = mainCurveWhy || "";
+  const lensLabelFor = (id: ObservationLensId, fallback: string) =>
+    id === "hook_payoff" && hookLensLabel ? hookLensLabel : fallback;
   const comparison = buildComparisonState(observationLens, compareWith);
   const compareEnabled = !lensDef.isPairedHookPayoff && typeof onCompareWithChange === "function";
   const compareActive = comparison.mode === "active";
@@ -255,25 +285,61 @@ export function JourneyChartToolbar({
           data-testid="journey-lens-selector-list"
           data-lens-panel="inline"
         >
-          {OBSERVATION_LENSES.map((item) => {
+          {OBSERVATION_LENSES.filter(
+            // The folded three stay reachable behind 更多视角 — see ObservationLensDef.tier
+            // for the measurement. A folded lens that is currently selected still shows,
+            // so a saved URL never lands on a control the reader cannot see.
+            (item) => item.tier !== "folded" || lensDef.id === item.id,
+          ).map((item) => {
             const selected = lensDef.id === item.id;
+            const isMain = item.id === DEFAULT_OBSERVATION_LENS;
             return (
               <button
                 key={item.id}
                 type="button"
                 role="radio"
                 data-testid={`journey-lens-${item.id}`}
-                className={`journey-toolbar-btn journey-lens-segment ${selected ? "active" : ""}`}
+                className={
+                  `journey-toolbar-btn journey-lens-segment ` +
+                  `${selected ? "active" : ""} ${isMain ? "journey-lens-main" : "journey-lens-part"}`
+                }
                 aria-checked={selected}
                 aria-current={selected ? "true" : undefined}
-                aria-label={item.labelZh}
-                title={item.labelZh}
+                aria-label={isMain ? mainLabel : lensLabelFor(item.id, item.labelZh)}
+                title={
+                  isMain
+                    ? [mainLabel, mainWhy, getObservationLensHint(item.id)]
+                        .filter(Boolean)
+                        .join("\n")
+                    : `${lensLabelFor(item.id, item.labelZh)}\n${getObservationLensHint(item.id)}`
+                }
                 onClick={() => handleLensSelect(item.id)}
               >
-                {item.labelZh}
+                {isMain ? mainLabel : lensLabelFor(item.id, item.labelZh)}
               </button>
             );
           })}
+          {foldedLenses.length ? (
+        <details className="journey-lens-more" data-testid="journey-lens-more">
+          <summary>更多视角</summary>
+          <div className="journey-lens-more-body">
+            <p className="journey-lens-more-note">
+              这三项与主线或彼此高度重合（实测 r=0.70–0.91），已并入主线的归因；需要单独看时在这里打开。
+            </p>
+            {foldedLenses.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                data-testid={`journey-lens-${item.id}`}
+                className="journey-toolbar-btn journey-lens-segment journey-lens-part"
+                onClick={() => handleLensSelect(item.id)}
+              >
+                {lensLabelFor(item.id, item.labelZh)}
+              </button>
+            ))}
+          </div>
+        </details>
+      ) : null}
         </div>
       </div>
     </div>

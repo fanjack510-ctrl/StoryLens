@@ -5,6 +5,7 @@
  */
 
 import type {
+  HookVocabulary,
   JourneySceneNode,
   ReaderJourneyVisualization,
 } from "../../types/readerJourneyVisualization";
@@ -67,9 +68,24 @@ export type ReaderQuestionStatus =
 
 export type ReaderQuestionCard = {
   loop_id: string;
+  /** Chip-length form, cut to 18 chars. Use where the space is a chip. */
   question: string;
+  /**
+   * The question as the reader would ask it, uncut.
+   *
+   * `question` is truncated at 18 characters because it also serves as a hook's identity in
+   * chips and titles. The card is the one place where the question IS the content — cut
+   * there it reads 「首段即抛出'我是谁'的疑问，第二段…」, which is the setup with the question
+   * removed. The card renders this and clamps in CSS, so long ones lose lines, not sense.
+   */
+  question_full: string;
   status: ReaderQuestionStatus;
   change_trail: string;
+  /**
+   * Kept for the developer table and downstream consumers. Not rendered on the card: it is
+   * a lookup on `status` (see readerQuestionRoleOf), so on screen it restated the pill next
+   * to it three times over.
+   */
   role: string;
 };
 
@@ -163,6 +179,42 @@ export type ChapterHookSimplificationModel = {
   summary_line: string;
 };
 
+/**
+ * Render a canonical label in the book's own words.
+ *
+ * The four labels stay the internal identity — every derivation, test and stored artifact
+ * keys on them — but they are the *suspense* reading of four structural actions, and they
+ * were shown to every reader of every book. On 《再也不见》 that produced three findings that
+ * all say the same thing: 「不足以构成强烈钩子」, 「缺乏吸引力」, 「作为章末钩子强度中等」. The book
+ * does not run on suspense; the vocabulary recorded that as a defect.
+ *
+ * The vocabulary comes from the backend, which owns the book's profile (INV-P4). Missing
+ * vocabulary means an unconfirmed profile or a legacy payload, and then the suspense
+ * wording is the honest default — without a confirmed profile there is no basis for
+ * claiming the reader is tracking a relationship rather than a question.
+ */
+export function hookLabelZh(
+  label: ChapterHookNodeLabel | string | null | undefined,
+  vocabulary?: HookVocabulary | null,
+): string {
+  if (!label) return "";
+  if (!vocabulary) return String(label);
+  const action = LABEL_TO_ACTION[label as ChapterHookNodeLabel];
+  switch (action) {
+    case "raise":
+      return vocabulary.open || String(label);
+    case "deepen":
+      return vocabulary.deepen || String(label);
+    case "respond":
+      return vocabulary.answer || String(label);
+    case "carry":
+      return vocabulary.carry || String(label);
+    default:
+      // "—" and any future non-action label pass through untouched.
+      return String(label);
+  }
+}
+
 const ACTION_TO_LABEL: Record<Exclude<ChapterHookSceneAction, "none">, ChapterHookNodeLabel> = {
   raise: "提出疑问",
   deepen: "加深悬念",
@@ -230,10 +282,54 @@ function isInternalNoise(text: string): boolean {
   return false;
 }
 
+/**
+ * Reject text that asserts there is NO hook here.
+ *
+ * The `question` field is supposed to hold the question the reader is left with. On all
+ * three analysed books it holds the model's scoring rationale instead, negatives included:
+ * 「场景开头无新钩子，仅延续前文」, 「不足以构成强烈钩子」, 「缺乏吸引力」. Those were rendered
+ * verbatim onto cards headed 读者最想知道 — the panel telling the reader that what they most
+ * want to know is that there is nothing to know.
+ *
+ * This is a stopgap at the display layer; the real fix is a contract that asks for the
+ * question as a question and validates it. Until that lands, a card is better absent than
+ * inverted. The patterns match assertions of absence and insufficiency, not merely low
+ * scores, so a genuinely weak-but-real hook still shows.
+ */
+function assertsNoHook(text: string): boolean {
+  const t = text.trim();
+  if (/(无|没有|未)[^，。；]{0,4}(新)?钩子/.test(t)) return true;
+  if (/不足以(构成|形成)/.test(t)) return true;
+  if (/缺乏(吸引力|悬念|钩子)/.test(t)) return true;
+  if (/(仅|只是)(延续|承接)前文/.test(t)) return true;
+  return false;
+}
+
+/**
+ * Drop the question mark the pipeline appends to sentences that already ended.
+ *
+ * Raw values arrive as 「场景开头无新钩子，仅延续前文。？」 — a full stop and then a question
+ * mark. Collapsing `？+` to a single `？` (the previous behaviour) kept the pair.
+ */
+function normalizeQuestionPunctuation(text: string): string {
+  return text
+    .trim()
+    .replace(/[?？]+$/g, "？")
+    .replace(/([。．.!！])？$/g, "$1");
+}
+
+/** The cleaned question with no length cut. Null under the same conditions as the short form. */
+function readerQuestionFullOf(loop: NarrativeLoopView): string | null {
+  const raw = String(loop.question || loop.information_gap || "").trim();
+  if (!raw || isInternalNoise(raw) || assertsNoHook(raw)) return null;
+  const cleaned = normalizeQuestionPunctuation(raw);
+  return isInternalNoise(cleaned) ? null : cleaned;
+}
+
 function readerQuestionOf(loop: NarrativeLoopView): string | null {
   const raw = String(loop.question || loop.information_gap || "").trim();
-  if (!raw || isInternalNoise(raw)) return null;
-  const cleaned = shortPlainTitle(raw, 18);
+  if (!raw || isInternalNoise(raw) || assertsNoHook(raw)) return null;
+  const cleaned = shortPlainTitle(normalizeQuestionPunctuation(raw), 18);
   if (!cleaned || isInternalNoise(cleaned)) return null;
   return cleaned;
 }
@@ -446,6 +542,7 @@ export function buildReaderQuestionCards(
       return {
         loop_id: hook.loop_id,
         question: hook.reader_question,
+        question_full: hook.reader_question,
         status: "继续保留" as ReaderQuestionStatus,
         change_trail: `${formatSceneRef(hook.open_scene)} 提出`,
         role: "推动读者继续阅读",
@@ -455,6 +552,7 @@ export function buildReaderQuestionCards(
     return {
       loop_id: hook.loop_id,
       question: hook.reader_question,
+      question_full: readerQuestionFullOf(loop) || hook.reader_question,
       status,
       change_trail: buildReaderQuestionChangeTrail(loop, maxScene),
       role: readerQuestionRoleOf(loop, status, maxScene),

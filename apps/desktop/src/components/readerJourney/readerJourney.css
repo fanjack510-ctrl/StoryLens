@@ -3960,3 +3960,471 @@ body.journey-pane-resizing[data-row-resize="true"] * {
   min-width: 0;
   flex: 0 0 auto;
 }
+
+/* 类型专项维度 — the axes this book's profile selected, shown as a level per axis with the
+   scorer's own reason underneath. Levels are read across scenes, so the number is tabular. */
+.scene-genre-axis-list,
+.scene-craft-flag-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.scene-genre-axis-list > li {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.scene-genre-axis-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.scene-genre-axis-label {
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.scene-genre-axis-level {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.875rem;
+  color: color-mix(in srgb, var(--text, #1a1a1a) 55%, transparent);
+}
+
+.scene-genre-axis-level[data-level="0"],
+.scene-genre-axis-level[data-level="1"] {
+  color: #b4472e;
+}
+
+.scene-genre-axis-level[data-level="4"],
+.scene-genre-axis-level[data-level="5"] {
+  color: #2f7d4a;
+}
+
+.scene-genre-axis-reason {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: color-mix(in srgb, var(--text, #1a1a1a) 72%, transparent);
+}
+
+.scene-craft-flag-list > li {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.scene-craft-flag-kind {
+  flex: 0 0 auto;
+  padding: 1px 7px;
+  border-radius: 4px;
+  font-size: 0.8125rem;
+  background: color-mix(in srgb, #b4472e 12%, transparent);
+  color: #b4472e;
+}
+
+/* 读者背着的未答问题 —— the one figure on the scene panel that remembers earlier scenes. */
+.scene-open-q {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.scene-open-q-balance {
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: #b4472e;
+}
+
+.scene-open-q-balance[data-balance="0"] {
+  color: color-mix(in srgb, var(--text, #1a1a1a) 55%, transparent);
+}
+
+.scene-open-q-detail {
+  font-size: 0.875rem;
+  color: color-mix(in srgb, var(--text, #1a1a1a) 70%, transparent);
+}
+
+/* 悬念欠账带 —— the strip under the plot. Its own scale, never a second y-axis on the main
+   plot: a count of unanswered questions and a 0–100 reading score share no units. */
+:root {
+  --journey-debt: #eb6834;
+  --journey-axis: #c3c2b7;
+  --journey-surface: #fcfcfb;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    --journey-debt: #d95926;
+    --journey-axis: #383835;
+    --journey-surface: #1a1a19;
+  }
+}
+
+:root[data-theme="dark"] {
+  --journey-debt: #d95926;
+  --journey-axis: #383835;
+  --journey-surface: #1a1a19;
+}
+
+/* 主线与它的分解 —— the main curve is a conclusion, the other five are its components, so
+   they must not sit at one visual tier. Six equal buttons asked the reader to choose a
+   viewpoint before knowing what any of them meant. */
+.journey-lens-segment.journey-lens-main {
+  font-weight: 600;
+}
+
+.journey-lens-segment.journey-lens-main::before {
+  content: "主线";
+  font-size: 0.6875em;
+  font-weight: 400;
+  opacity: 0.62;
+  margin-right: 5px;
+}
+
+.journey-lens-segment.journey-lens-part {
+  font-size: 0.9375em;
+  opacity: 0.82;
+}
+
+.journey-lens-segment.journey-lens-part.active {
+  opacity: 1;
+}
+
+/* 更多视角 —— the three lenses that measure what the main curve already says. Reachable,
+   not competing: they sit behind a disclosure instead of beside the conclusion. */
+.journey-lens-more {
+  margin-left: 10px;
+  font-size: 0.8125rem;
+}
+
+.journey-lens-more > summary {
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 6px;
+  color: color-mix(in srgb, currentColor 62%, transparent);
+  list-style: none;
+}
+
+.journey-lens-more > summary::-webkit-details-marker {
+  display: none;
+}
+
+.journey-lens-more > summary::after {
+  content: " ›";
+}
+
+.journey-lens-more[open] > summary::after {
+  content: " ⌄";
+}
+
+.journey-lens-more-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 0 2px;
+}
+
+.journey-lens-more-note {
+  flex: 1 1 100%;
+  margin: 0 0 2px;
+  font-size: 0.75rem;
+  color: color-mix(in srgb, currentColor 58%, transparent);
+}
+
+/* 章节骨架 —— 拆书 mode's own content. A template you can hold against another draft, so
+   the share bar matters more than the score: 43% on one opening move is the reusable fact. */
+.skeleton-note {
+  margin: 0 0 10px;
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  color: color-mix(in srgb, currentColor 72%, transparent);
+}
+
+.skeleton-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.skeleton-list > li {
+  display: grid;
+  grid-template-columns: 4.5rem 4.5rem 2.2rem 1fr;
+  grid-template-areas: "fn span share bar" ". basis basis basis";
+  align-items: center;
+  gap: 3px 8px;
+  font-size: 0.8125rem;
+}
+
+.skeleton-list > li[data-current="true"] .skeleton-fn {
+  color: var(--journey-mark-good, #0ca30c);
+}
+
+.skeleton-list > li[data-skippable="true"] .skeleton-fn {
+  color: var(--journey-mark-warn, #d03b3b);
+}
+
+.skeleton-fn {
+  grid-area: fn;
+  font-weight: 600;
+}
+
+.skeleton-span {
+  grid-area: span;
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in srgb, currentColor 58%, transparent);
+}
+
+.skeleton-share {
+  grid-area: share;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in srgb, currentColor 70%, transparent);
+}
+
+.skeleton-bar {
+  grid-area: bar;
+  height: 6px;
+  border-radius: 3px;
+  background: color-mix(in srgb, currentColor 8%, transparent);
+  overflow: hidden;
+}
+
+.skeleton-bar > i {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: color-mix(in srgb, currentColor 34%, transparent);
+}
+
+.skeleton-list > li[data-skippable="true"] .skeleton-bar > i {
+  background: color-mix(in srgb, var(--journey-mark-warn, #d03b3b) 45%, transparent);
+}
+
+.skeleton-basis {
+  grid-area: basis;
+  color: color-mix(in srgb, currentColor 62%, transparent);
+  line-height: 1.5;
+}
+
+/* 场景详情的焦点行 —— 一屏里必须有且只有一个最大的东西，否则眼睛会落在面积最大的那块，
+   而面积最大的往往是最泛的。这里最大的是「这一场做了什么」，其余全部明显更小。 */
+.scene-lead {
+  padding-bottom: 12px;
+  margin-bottom: 2px;
+  border-bottom: 1px solid var(--line, #e1e0d9);
+}
+
+.scene-lead-fn {
+  margin: 0 0 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.scene-lead-fn b {
+  font-size: 1.75rem;
+  font-weight: 650;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.scene-lead-fn b[data-skippable="true"] {
+  color: var(--journey-mark-warn, #d03b3b);
+}
+
+.scene-lead-fn span {
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: color-mix(in srgb, currentColor 62%, transparent);
+}
+
+.scene-lead-stats {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  font-size: 0.75rem;
+  color: color-mix(in srgb, currentColor 58%, transparent);
+}
+
+.scene-lead-stats > span {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+}
+
+.scene-lead-stats b {
+  font-size: 1rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: currentColor;
+}
+
+.scene-lead-stats b[data-zero="true"] {
+  color: color-mix(in srgb, currentColor 55%, transparent);
+}
+
+/* 折叠区：证据留着，但不与结论抢位置 */
+.scene-fold {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line, #e1e0d9);
+}
+
+.scene-fold > summary {
+  cursor: pointer;
+  font-size: 0.8125rem;
+  color: color-mix(in srgb, currentColor 62%, transparent);
+  list-style: none;
+}
+
+.scene-fold > summary::-webkit-details-marker {
+  display: none;
+}
+
+.scene-fold > summary::after {
+  content: " ›";
+}
+
+.scene-fold[open] > summary::after {
+  content: " ⌄";
+}
+
+.scene-fold[open] > summary {
+  margin-bottom: 10px;
+}
+
+/* ── 曲线上方的三段压缩 ─────────────────────────────────────────
+   实测：工具栏 70 + 说明段 44 + 三张阶段卡 120 + 图例 46 = 280px 之后曲线才开始，
+   而曲线才是这一页的主体。以下把前三段压到约 100px，全部让位给图。 */
+
+/* 说明段只留标题，定义搬到主线按钮的悬停提示 */
+.journey-lens-one-liner.is-compact {
+  margin: 0;
+  font-size: 0.8125rem;
+}
+
+/* The strip is a 4-column grid that a responsive rule narrows to 2 — with three compact
+   cards that wraps into two rows and gives back the height we just saved. Match the column
+   count to the cards actually present so one row is one row. */
+.journey-workspace-v4 .journey-phase-strip.journey-phase-nav:has(.journey-phase-compact),
+.journey-workspace-v4[data-layout="narrow"]
+  .journey-phase-strip.journey-phase-nav:has(.journey-phase-compact),
+.journey-workspace-v4[data-layout="mid"]
+  .journey-phase-strip.journey-phase-nav:has(.journey-phase-compact) {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* 阶段卡：三张 120px 的大卡 → 一行。均值是场景值的平均，信息比曲线少，不该比曲线上的点
+   还高；卡里真正有用的是那句判断，让它和标题同行。选择器跟着 .journey-workspace-v4 走，
+   因为 v4 的固定 200px / 112px 规则特指度更高，不这样写会被它整块盖掉。 */
+.journey-workspace-v4 .journey-phase-card.journey-phase-compact.journey-phase-nav-card {
+  width: auto;
+  min-width: 0;
+  max-width: none;
+  flex: 1 1 0;
+  min-height: 0;
+  padding: 6px 10px;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 8px;
+  text-align: left;
+}
+
+.journey-workspace-v4
+  .journey-phase-card.journey-phase-compact
+  .journey-phase-card-head {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0;
+  flex: 0 0 auto;
+}
+
+.journey-workspace-v4 .journey-phase-card.journey-phase-compact .journey-phase-title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.journey-workspace-v4 .journey-phase-card.journey-phase-compact .journey-phase-avg {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* One line, clipped. Two clamped lines of stage prose cost 30px per card and the sentence
+   is a summary of the curve directly beneath it. */
+.journey-workspace-v4
+  .journey-phase-card.journey-phase-compact
+  .journey-phase-card-desc {
+  margin: 0;
+  flex: 1 1 6rem;
+  min-width: 0;
+  min-height: 0;
+  display: block;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 更多视角 now sits inside the lens button row. Its body must float rather than expand,
+   or opening it would push the curve down by exactly the rows we just reclaimed. */
+.journey-lens-selector-list .journey-lens-more {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  margin-left: 4px;
+}
+
+.journey-lens-selector-list .journey-lens-more > summary {
+  cursor: pointer;
+  font-size: 0.75rem;
+  padding: 2px 6px;
+  white-space: nowrap;
+  opacity: 0.72;
+}
+
+.journey-lens-selector-list .journey-lens-more > summary:hover {
+  opacity: 1;
+}
+
+.journey-lens-selector-list .journey-lens-more[open] > .journey-lens-more-body {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 30;
+  min-width: 17rem;
+  max-width: 22rem;
+  padding: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle, rgba(127, 127, 127, 0.28));
+  background: var(--surface-raised, var(--surface, #fff));
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+}
+
+.journey-lens-selector-list .journey-lens-more-note {
+  flex: 1 1 100%;
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  opacity: 0.75;
+}

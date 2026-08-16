@@ -269,6 +269,13 @@ export const PHASE_ROLE_FALLBACK_ZH: Record<string, string> = {
   收束: "形成阶段结果并留下后续期待",
   resolution: "形成阶段结果并留下后续期待",
   Resolution: "形成阶段结果并留下后续期待",
+  // The vocabulary the pipeline actually emits. 收束 was covered because it is spelled the
+  // same in both sets; 开端 and 发展 were not, so those two cards fell through to
+  // 「选择阶段或节点查看详细分析」 — an instruction where a description belongs.
+  开端: "建立背景、人物与阅读期待",
+  opening: "建立背景、人物与阅读期待",
+  Opening: "建立背景、人物与阅读期待",
+  发展: "推动事件发展与核心冲突",
 };
 
 const PHASE_SHORT_TO_FULL: Record<string, string> = {
@@ -336,7 +343,19 @@ export function resolvePhaseSummaryDisplay(
   summary: string | null | undefined,
   title: string | null | undefined,
 ): string {
-  if (isEffectivePhaseSummary(summary)) return String(summary).trim();
+  // A summary that is just the phase's own name is not a description of it. Real payloads
+  // carry `summary: "开端"` next to `title: "开端"`, which rendered the card as
+  // 「开端 · 节奏速度 65 · 开端」 — the same word twice with a number between them. Treat that
+  // as absent so the structural fallback ("建立背景、人物与阅读期待") gets its turn.
+  if (isEffectivePhaseSummary(summary)) {
+    const text = String(summary).trim();
+    const rawTitle = String(title ?? "").trim();
+    const echoesTitle =
+      text === rawTitle ||
+      text === formatJourneyPhaseLabel(rawTitle) ||
+      formatJourneyPhaseLabel(text) === formatJourneyPhaseLabel(rawTitle);
+    if (!echoesTitle) return text;
+  }
   return formatJourneyPhaseFallbackSummary(title);
 }
 

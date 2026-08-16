@@ -469,3 +469,134 @@
   text-align: left;
   vertical-align: top;
 }
+
+/* ── 读者最想知道：问题是内容，其余是标签 ──────────────────────────────
+   改前每张卡是四行竖排：被截到 18 字的问题、状态、轨迹、角色。占约 95px，
+   而唯一有信息的那一行是唯一被截断的。改后问题占满宽度、最多两行，
+   状态与轨迹并作一行。 */
+.hook-chapter-question-btn {
+  gap: 4px;
+}
+
+.hook-chapter-q {
+  font-size: 13.5px;
+  line-height: 1.45;
+  font-weight: 500;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+}
+
+.hook-chapter-question-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.hook-chapter-status-pill {
+  flex: 0 0 auto;
+  font-size: 11px;
+  line-height: 1;
+  padding: 3px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--line, #e5e7eb);
+  color: var(--muted, #6b7280);
+  white-space: nowrap;
+}
+
+/* 新提出 opens a debt, 已回应 closes one. Those two are worth telling apart at a glance;
+   the middle states stay neutral rather than inventing a third signal colour. */
+.hook-chapter-status-pill[data-status="新提出"] {
+  border-color: #c8a24a;
+  color: #8a6a1f;
+}
+
+.hook-chapter-status-pill[data-status="已回应"] {
+  border-color: #7fae90;
+  color: #2f6f4e;
+}
+
+.hook-chapter-question-line .hook-chapter-meta {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── 单章可测的三件事 ────────────────────────────────────────────
+   面板原来由三张「读者最想知道」卡领头，而三本真实书里这三张卡永远是
+   「新提出 · 留到下章」——因为 payoffs 在兼容层里写死为空数组，回收从来没
+   发生过。这一行放的是单章真正量得到、且番茄前三章赌的那三个数。 */
+.hook-chapter-vitals {
+  margin: 0 0 10px;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.hook-chapter-vital {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line, #e5e7eb);
+  border-left-width: 3px;
+  background: var(--surface, #fff);
+  min-width: 0;
+}
+
+.hook-chapter-vital-label {
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  color: var(--muted, #6b7280);
+}
+
+.hook-chapter-vital-value {
+  font-size: 1.375rem;
+  line-height: 1.15;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.hook-chapter-vital-reading {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--muted, #6b7280);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Bands carry the verdict so it survives a glance. unknown stays grey and keeps the dash —
+   a missing number must not read as a passing one. */
+.hook-chapter-vital[data-band="strong"] {
+  border-left-color: #2f6f4e;
+}
+
+.hook-chapter-vital[data-band="ok"] {
+  border-left-color: #c8a24a;
+}
+
+.hook-chapter-vital[data-band="weak"] {
+  border-left-color: #c2603f;
+}
+
+.hook-chapter-vital[data-band="unknown"] {
+  border-left-color: var(--line, #e5e7eb);
+}
+
+.hook-chapter-vital[data-band="unknown"] .hook-chapter-vital-value {
+  color: var(--muted, #6b7280);
+}
+
+@media (max-width: 720px) {
+  .hook-chapter-vitals {
+    grid-template-columns: 1fr;
+  }
+}

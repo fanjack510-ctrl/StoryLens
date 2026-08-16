@@ -31,6 +31,7 @@ import {
   JourneyRelatedObjectList,
   type EvidenceRow,
 } from "./inspectorShell";
+import { buildChapterSkeleton, skeletonLedgerNote } from "./chapterSkeleton";
 import type { ObservationLensId } from "./observationLenses";
 import { DEFAULT_OBSERVATION_LENS } from "./observationLenses";
 import {
@@ -103,6 +104,13 @@ function HookResolutionEvidenceSection({ row }: { row: HookResolutionRow }) {
     </JourneyInspectorSection>
   );
 }
+
+const CRAFT_FLAG_LABELS: Record<string, string> = {
+  causal_gap: "因果缺口",
+  setup_contradiction: "设定矛盾",
+  unclear_reference: "指代不明",
+  redundant_passage: "重复段落",
+};
 
 export function JourneySceneDetailPanel({
   node,
@@ -209,6 +217,30 @@ export function JourneySceneDetailPanel({
 
   const role = roleLabelZh(node.final_level ?? node.role);
   const sceneRole = node.scene_role ? roleLabelZh(node.scene_role) : role;
+
+  const skeleton = useMemo(
+    () => buildChapterSkeleton(visualization?.scene_nodes ?? []),
+    [visualization],
+  );
+  const skeletonNote = useMemo(
+    () => skeletonLedgerNote(visualization?.scene_nodes ?? []),
+    [visualization],
+  );
+  /** This scene's own row — the panel's headline is 「它做了什么、占了多少」. */
+  const mySkeleton = useMemo(
+    () => skeleton.find((row) => row.ordinal === node.scene_ordinal) ?? null,
+    [skeleton, node.scene_ordinal],
+  );
+  const leadMeta = mySkeleton
+    ? `${sceneRole} · P${mySkeleton.paragraphFrom}–${mySkeleton.paragraphTo} · 占全章 ${mySkeleton.sharePercent.toFixed(0)}%`
+    : `${sceneRole} · ${formatJourneySceneRangeLabel(node.scene_ordinal)}`;
+  const mainCurveLabel = visualization?.main_curve?.label || "综合阅读";
+  const mainValue = useMemo(() => {
+    const raw = (node.scores as Record<string, unknown> | undefined)?.reading_momentum;
+    const value = Number(raw);
+    return Number.isFinite(value) ? value : null;
+  }, [node]);
+
   const insightTitle = isHookPayoffLens(observationLens)
     ? "钩子洞察"
     : dimensionInsightTitle(observationLens ?? DEFAULT_OBSERVATION_LENS);
@@ -224,7 +256,9 @@ export function JourneySceneDetailPanel({
 
   const headerTitle = isHookPayoffLens(observationLens)
     ? hookSceneInsight?.title || `${formatJourneySceneLabel(node.scene_ordinal)} · 钩子洞察`
-    : `${formatJourneySceneLabel(node.scene_ordinal)} · ${sceneRole}`;
+    : // The role is stated once, in the meta line. Repeating it in the title left the
+      // scene number and its role each said twice above a headline that was said once.
+      formatJourneySceneLabel(node.scene_ordinal);
 
   return (
     <JourneyInspectorShell
@@ -236,15 +270,47 @@ export function JourneySceneDetailPanel({
         meta={
           isHookPayoffLens(observationLens)
             ? `场景角色：${sceneRole}`
-            : `场景范围：${formatJourneySceneRangeLabel(node.scene_ordinal)}`
+            : leadMeta
         }
-        pills={[sceneRole]}
+        // The role used to appear as a pill *and* in the meta line while the scene's actual
+        // move sat below in small type. One mention, in the quietest place.
+        pills={[]}
         onClose={onClose}
         titleTestId="scene-detail-title"
       />
 
       <JourneyInspectorBody>
-        <div className="scene-detail-insight-panel" data-testid="scene-detail-insight-panel">
+        {/* 一个焦点，而不是八块等重的内容。头部回答「这一场做了什么、占了多少」——
+            功能与篇幅是读者真正要判断的两件事；其余全部降级为它的证据。 */}
+        <div className="scene-lead" data-testid="scene-lead">
+          <p className="scene-lead-fn" data-testid="scene-lead-function">
+            <b data-skippable={mySkeleton?.skippable ?? false}>
+              {mySkeleton ? mySkeleton.function : sceneRole}
+            </b>
+            {mySkeleton ? <span>{mySkeleton.basis}</span> : null}
+          </p>
+          <p className="scene-lead-stats" data-testid="scene-lead-stats">
+            <span>
+              {mainCurveLabel}
+              <b>{mainValue == null ? "—" : Math.round(mainValue)}</b>
+            </span>
+            <span>
+              读者背着
+              <b data-zero={node.open_questions?.balance === 0}>
+                {node.open_questions ? node.open_questions.balance : "—"}
+              </b>
+              {node.open_questions
+                ? `（开${node.open_questions.opened} 收${node.open_questions.closed}）`
+                : ""}
+            </span>
+          </p>
+        </div>
+
+        {/* 模型原话。折叠而不是删：它是内容，但它是这一屏里面积最大、行话最多的一块
+            （「综合阅读贡献偏减」这类措辞），摊开时眼睛必然先落在它上面，而它恰恰不是
+            读者要的答案。 */}
+        <details className="scene-fold scene-detail-insight-panel" data-testid="scene-detail-insight-panel">
+          <summary>模型对这一场的原话</summary>
           {isHookPayoffLens(observationLens) ? (
             <JourneyInspectorSection title="钩子洞察" testId="scene-hook-insight">
               <p data-testid="scene-hook-insight-text">{insightText}</p>
@@ -270,7 +336,78 @@ export function JourneySceneDetailPanel({
               ) : null}
             </JourneyInspectorSection>
           )}
-        </div>
+        </details>
+
+        {node.genre_axes?.length ? (
+          <JourneyInspectorSection title="类型专项" testId="scene-genre-axes">
+            {/* These axes exist because this book's profile asked for them — 悬疑 gets
+                线索投放/信息公平, 爽文 gets 爽点兑现/憋屈控制. They sit above the fold rather
+                than in 技术详情 because for a reader of that type they are the reading. */}
+            <ul className="scene-genre-axis-list" data-testid="scene-genre-axis-list">
+              {node.genre_axes.map((axis) => (
+                <li key={axis.key} data-testid={`scene-genre-axis-${axis.key}`}>
+                  <span className="scene-genre-axis-head">
+                    <span className="scene-genre-axis-label">{axis.label}</span>
+                    <span className="scene-genre-axis-level" data-level={axis.level}>
+                      {axis.level} / 5
+                    </span>
+                  </span>
+                  {axis.rationale ? (
+                    <span className="scene-genre-axis-reason">{axis.rationale}</span>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          </JourneyInspectorSection>
+        ) : null}
+
+        {node.craft_flags?.length ? (
+          <JourneyInspectorSection title="需要留意" testId="scene-craft-flags">
+            <ul className="scene-craft-flag-list" data-testid="scene-craft-flag-list">
+              {node.craft_flags.map((flag, index) => (
+                <li key={`${flag.kind}-${index}`}>
+                  <span className="scene-craft-flag-kind">{CRAFT_FLAG_LABELS[flag.kind]}</span>
+                  <span className="scene-craft-flag-detail">{flag.detail}</span>
+                </li>
+              ))}
+            </ul>
+          </JourneyInspectorSection>
+        ) : null}
+
+        {skeleton.length ? (
+          <details className="scene-fold" data-testid="scene-chapter-skeleton">
+            <summary>这一章的骨架 · {skeleton.length} 个动作</summary>
+            {/* 每一行说的是一个「动作」和它花掉的篇幅，不是分数——篇幅是能迁移到别的稿子上
+                的那部分。全部由程序从既有数据推出，不调模型。 */}
+            {skeletonNote ? (
+              <p className="skeleton-note" data-testid="scene-skeleton-note">
+                {skeletonNote}
+              </p>
+            ) : null}
+            <ol className="skeleton-list" data-testid="scene-skeleton-list">
+              {skeleton.map((row) => (
+                <li
+                  key={row.ordinal}
+                  data-testid={`scene-skeleton-row-${row.ordinal}`}
+                  data-current={row.ordinal === node.scene_ordinal}
+                  data-skippable={row.skippable}
+                >
+                  <span className="skeleton-fn">{row.function}</span>
+                  <span className="skeleton-span">
+                    {row.paragraphFrom != null && row.paragraphTo != null
+                      ? `P${row.paragraphFrom}–${row.paragraphTo}`
+                      : `S${row.ordinal}`}
+                  </span>
+                  <span className="skeleton-share">{row.sharePercent.toFixed(0)}%</span>
+                  <span className="skeleton-bar" aria-hidden="true">
+                    <i style={{ width: `${Math.max(2, row.sharePercent)}%` }} />
+                  </span>
+                  <span className="skeleton-basis">{row.basis}</span>
+                </li>
+              ))}
+            </ol>
+          </details>
+        ) : null}
 
         {developerMode ? (
           <details className="journey-tech-details" data-testid="scene-detail-tech-details">
@@ -333,12 +470,14 @@ export function JourneySceneDetailPanel({
   );
 }
 
+// "risks" retired: the 阅读阻力 tab reported a derived field (reading_momentum) and its
+// penalty arithmetic, which is a statement about the formula rather than about the reader.
+// The type kept the member so a stored tab preference does not crash on load.
 export type PhaseDetailTab = "overview" | "questions" | "risks" | "scenes";
 
 const PHASE_TABS: { id: PhaseDetailTab; label: string; testId: string }[] = [
   { id: "overview", label: "阶段概览", testId: "phase-detail-tab-overview" },
   { id: "questions", label: "钩子回收", testId: "phase-detail-tab-questions" },
-  { id: "risks", label: "阅读阻力", testId: "phase-detail-tab-risks" },
   { id: "scenes", label: "相关场景", testId: "phase-detail-tab-scenes" },
 ];
 
@@ -771,7 +910,7 @@ export function JourneyQuestionInspectorPanel({
 }
 
 type MarkerInspectorProps = {
-  kind: "hook" | "payoff" | "risk";
+  kind: "hook" | "payoff";
   node: JourneySceneNode | null;
   riskInterval?: JourneyRiskInterval | null;
   onLocateEvidence?: (paragraphId: string) => void;
@@ -787,89 +926,6 @@ export function JourneyMarkerInspectorPanel({
 }: MarkerInspectorProps) {
   const hook = node?.primary_hook ?? node?.hooks?.[0] ?? null;
   const payoff = node?.primary_payoff ?? node?.payoffs?.[0] ?? null;
-
-  if (kind === "risk") {
-    const summary = formatJourneyRiskSummary({
-      risk_type: riskInterval?.risk_type,
-      summary: riskInterval?.summary || riskInterval?.trigger,
-      start_scene_ordinal: riskInterval?.start_scene_ordinal,
-      end_scene_ordinal: riskInterval?.end_scene_ordinal,
-      span: riskInterval?.span,
-    });
-    return (
-      <JourneyInspectorShell testId="journey-risk-inspector" className="journey-inspector-panel">
-        <JourneyInspectorHeader
-          title="阅读阻力"
-          meta={
-            riskInterval
-              ? `场景 ${riskInterval.start_scene_ordinal}—${riskInterval.end_scene_ordinal}`
-              : "阅读阻力"
-          }
-          pills={
-            riskInterval?.risk_type
-              ? [formatJourneyRiskTypeLabel(riskInterval.risk_type)]
-              : []
-          }
-          onClose={onClose}
-        />
-        <JourneyInspectorBody>
-          {summary ? <JourneyPrimaryConclusion text={summary} /> : null}
-          {riskInterval ? (
-            <>
-              <JourneyInspectorSection title="影响区间">
-                <p>
-                  场景 {riskInterval.start_scene_ordinal}—{riskInterval.end_scene_ordinal}
-                </p>
-              </JourneyInspectorSection>
-              {riskInterval.trigger ? (
-                <JourneyInspectorSection title="阅读阻力依据">
-                  <p>{riskInterval.trigger}</p>
-                </JourneyInspectorSection>
-              ) : null}
-              {riskInterval.field_used ? (
-                <JourneyInspectorSection title="使用的字段">
-                  <p data-testid="risk-field-used">{riskInterval.field_used}</p>
-                </JourneyInspectorSection>
-              ) : null}
-              <JourneyInspectorSection title="实际 Scene 范围">
-                <p data-testid="risk-scene-range">
-                  S{riskInterval.start_scene_ordinal}—S{riskInterval.end_scene_ordinal}
-                  {typeof riskInterval.span === "number" ? `（跨度 ${riskInterval.span}）` : ""}
-                </p>
-              </JourneyInspectorSection>
-              {riskInterval.penalties?.length ? (
-                <JourneyInspectorSection title="附加惩罚">
-                  <ul data-testid="risk-penalties">
-                    {riskInterval.penalties.map((penalty) => (
-                      <li key={`${penalty.code}-${penalty.amount}`}>
-                        {penalty.label ?? penalty.code}：+{penalty.amount}
-                      </li>
-                    ))}
-                  </ul>
-                </JourneyInspectorSection>
-              ) : null}
-              {typeof riskInterval.final_risk === "number" ? (
-                <JourneyInspectorSection title="最终风险值">
-                  <p data-testid="risk-final-value">{Math.round(riskInterval.final_risk)}</p>
-                </JourneyInspectorSection>
-              ) : null}
-              <JourneyInspectorSection title="可能影响">
-                <p>
-                  阅读动力偏低、连续下降或高钩子未兑现，可能降低读者继续阅读的意愿。属于提示性判断，并非确定性失败。
-                </p>
-              </JourneyInspectorSection>
-              <details className="journey-tech-details">
-                <summary>技术详情</summary>
-                <code>{riskInterval.risk_type}</code>
-              </details>
-            </>
-          ) : (
-            <JourneyInspectorEmptyState kind="no-risk" testId="empty-risk" />
-          )}
-        </JourneyInspectorBody>
-      </JourneyInspectorShell>
-    );
-  }
 
   if (kind === "hook") {
     const summary = (hook?.summary || "").trim();

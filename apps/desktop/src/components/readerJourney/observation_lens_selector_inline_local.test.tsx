@@ -110,9 +110,9 @@ describe("Reader Journey inline lens selector (no overlay)", () => {
     expect(screen.getByTestId("journey-lens-composite")).toHaveClass("active");
     expect(screen.getByTestId("journey-lens-composite")).toHaveAttribute("aria-checked", "true");
     expect(screen.queryByTestId("journey-lens-active-hint")).not.toBeInTheDocument();
-    expect(screen.getByTestId("journey-lens-one-liner").textContent).toBe(
-      `综合阅读：${getObservationLensHint("composite")}`,
-    );
+    // The definition now lives on the main button's tooltip — above the chart it cost two
+    // rows on every switch. The title still names the active lens.
+    expect(screen.getByTestId("journey-lens-title").textContent).toBe("综合阅读");
   });
 
   it("switches lenses without opening an overlay panel", () => {
@@ -124,9 +124,7 @@ describe("Reader Journey inline lens selector (no overlay)", () => {
     );
     expect(screen.getByTestId("journey-lens-plot_progress")).toHaveClass("active");
     expect(screen.getByTestId("journey-lens-composite")).not.toHaveClass("active");
-    expect(screen.getByTestId("journey-lens-one-liner").textContent).toBe(
-      `剧情推进：${getObservationLensHint("plot_progress")}`,
-    );
+    expect(screen.getByTestId("journey-lens-title").textContent).toBe("剧情推进");
     expect(screen.queryByTestId("journey-lens-select-menu-panel")).not.toBeInTheDocument();
     const overlay = document.getElementById("journey-overlay-root");
     if (overlay) {

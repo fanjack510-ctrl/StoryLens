@@ -94,19 +94,19 @@ describe("Phase 1C-C.2.5.2 Context Inspector", () => {
     expect(screen.queryByTestId("journey-phase-detail-panel")).not.toBeInTheDocument();
   });
 
-  it("exposes four Phase detail tabs", () => {
+  it("exposes three Phase detail tabs, 阅读阻力 no longer among them", () => {
+    // 阅读阻力 reported a derived field name (reading_momentum) and its penalty arithmetic —
+    // a statement about the formula, not about the reader. Dropped rather than reworded.
     renderAt("/?overview=curve&inspector=phase", {
       activeSceneOrdinal: 12,
       activePhaseOrdinal: 3,
     });
     expect(screen.getByTestId("phase-detail-tab-overview")).toBeInTheDocument();
     expect(screen.getByTestId("phase-detail-tab-questions")).toBeInTheDocument();
-    expect(screen.getByTestId("phase-detail-tab-risks")).toBeInTheDocument();
+    expect(screen.queryByTestId("phase-detail-tab-risks")).not.toBeInTheDocument();
     expect(screen.getByTestId("phase-detail-tab-scenes")).toBeInTheDocument();
     fireEvent.click(screen.getByTestId("phase-detail-tab-questions"));
     expect(screen.getByTestId("phase-detail-panel-questions")).toBeInTheDocument();
-    fireEvent.click(screen.getByTestId("phase-detail-tab-risks"));
-    expect(screen.getByTestId("phase-detail-panel-risks")).toBeInTheDocument();
     fireEvent.click(screen.getByTestId("phase-detail-tab-scenes"));
     expect(screen.getByTestId("phase-detail-panel-scenes")).toBeInTheDocument();
   });
@@ -147,7 +147,9 @@ describe("Phase 1C-C.2.5.2 Context Inspector", () => {
     expect(legend).toHaveAttribute("data-legend-placement", "above-chart");
     expect(screen.getByTestId("journey-minimal-legend")).toBeInTheDocument();
     expect(screen.queryByTestId("journey-curve-legend")).not.toBeInTheDocument();
-    expect(legend.textContent).toMatch(/阅读阻力/);
+    // 阅读阻力 was removed at the user's request; the strip under the curve is now the
+    // suspense ledger, so the legend names that instead.
+    expect(legend.textContent).toMatch(/悬念欠账/);
   });
 
   it("keeps thin rhythm strip scene locate capability", () => {

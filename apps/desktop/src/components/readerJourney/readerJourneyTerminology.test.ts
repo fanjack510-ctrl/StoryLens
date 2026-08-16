@@ -102,7 +102,9 @@ describe("CHG-014/002 Reader Journey terminology", () => {
   });
 
   it("keeps legends to one compact row for numeric and hook/payoff lenses", () => {
-    expect(NUMERIC_LENS_LEGEND.map((i) => i.label).join("")).toContain("阅读阻力");
+    // The strip under the curve used to be 阅读阻力 (a formula field, not something a reader
+    // feels) and is now the suspense ledger, so the legend names that.
+    expect(NUMERIC_LENS_LEGEND.map((i) => i.label).join("")).toContain("悬念欠账");
     expect(HOOK_PAYOFF_LENS_LEGEND.map((i) => i.label)).toEqual([
       "提出疑问",
       "加深悬念",

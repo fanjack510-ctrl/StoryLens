@@ -254,7 +254,6 @@ export function ReaderJourneyWorkspace({
     "idle",
   );
   const [exportMessage, setExportMessage] = useState<string | null>(null);
-  const [selectedRiskKey, setSelectedRiskKey] = useState<string | null>(null);
   const exportRootRef = useRef<HTMLDivElement>(null);
   const exportFullRootRef = useRef<HTMLDivElement>(null);
   const [heightPreset, setHeightPreset] = useState<ChartHeightPreset>(() => readChartHeightPreset());
@@ -971,15 +970,6 @@ export function ReaderJourneyWorkspace({
     return clusters.find((item) => item.cluster_id === expandedClusterId) ?? null;
   }, [expandedClusterId, visualization.question_clusters, visualization.visible_question_clusters]);
 
-  const selectedRiskInterval = useMemo(() => {
-    if (!selectedRiskKey) return null;
-    return (
-      visualization.risk_intervals.find(
-        (item) => `${item.risk_type}-${item.start_scene_ordinal}` === selectedRiskKey,
-      ) ?? null
-    );
-  }, [selectedRiskKey, visualization.risk_intervals]);
-
   /** Context Inspector: URL inspector wins; otherwise infer from selection. */
   const effectiveInspector: JourneyInspectorType | null =
     inspectorFromUrl ??
@@ -1007,7 +997,6 @@ export function ReaderJourneyWorkspace({
 
   const clearInspectorSelection = () => {
     clearInspectorParam();
-    setSelectedRiskKey(null);
   };
 
   const chapterHeading = chapterTitle ?? summary.chapter_title;
@@ -1161,12 +1150,6 @@ export function ReaderJourneyWorkspace({
         <JourneyMarkerInspectorPanel
           kind="payoff"
           node={selectedNode ?? null}
-        />
-      ) : effectiveInspector === "risk" ? (
-        <JourneyMarkerInspectorPanel
-          kind="risk"
-          node={selectedNode ?? null}
-          riskInterval={selectedRiskInterval}
         />
       ) : effectiveInspector === "scene" && selectedNode ? (
         <JourneyDetailErrorBoundary
@@ -1372,6 +1355,9 @@ export function ReaderJourneyWorkspace({
           onMetricChange={handleMetricChange}
           observationLens={observationLens}
           onObservationLensChange={handleObservationLensChange}
+          mainCurveLabel={visualization.main_curve?.label}
+          mainCurveWhy={visualization.main_curve?.why}
+          hookLensLabel={visualization.hook_vocabulary?.lens}
           overlayComposite={overlayComposite}
           compareWith={compareWith}
           onCompareWithChange={handleCompareWithChange}
@@ -1439,6 +1425,11 @@ export function ReaderJourneyWorkspace({
               hookPayoffStats={null}
               inconsistentWarning={null}
               showLegend={false}
+              mainCurveLabel={visualization.main_curve?.label}
+              hookVocabulary={visualization.hook_vocabulary}
+              // The definition costs two rows on every lens switch and is useful once. It
+              // lives on the main button's tooltip alongside the reason for its name.
+              hideOneLiner
             />
             <JourneyComparisonTools
               observationLens={observationLens}
@@ -1561,6 +1552,7 @@ export function ReaderJourneyWorkspace({
             compareMetricLabel={
               comparisonState.mode === "active" ? comparisonState.compareLabel : null
             }
+            hookVocabulary={visualization.hook_vocabulary}
           />
 
           {/* Chart shell: viewport only; legend sits immediately above */}
@@ -1621,29 +1613,6 @@ export function ReaderJourneyWorkspace({
                   selectedPhaseOrdinal={selectedPhase}
                   markerMode={markerMode}
                   onSelectScene={(node) => handleSelectScene(node, "journey_scene")}
-                  onSelectRisk={(intervalKey, startNode) => {
-                    setSelectedRiskKey(intervalKey);
-                    expandInspector();
-                    if (startNode) {
-                      if (!isControlled) {
-                        setSelectedSceneOrdinalInternal(startNode.scene_ordinal);
-                      }
-                      onSelectionChange?.({
-                        activeSceneOrdinal: startNode.scene_ordinal,
-                        activePhaseOrdinal: startNode.phase_ordinal ?? undefined,
-                        source: "journey_risk",
-                      });
-                      commitSelectionIntent({
-                        source: "risk",
-                        inspector: "risk",
-                        sceneOrdinal: startNode.scene_ordinal,
-                        phaseId: startNode.phase_ordinal,
-                        paragraphId: startNode.paragraph_range?.start_paragraph_id,
-                      });
-                    } else {
-                      commitSelectionIntent({ source: "risk", inspector: "risk" });
-                    }
-                  }}
                   onSelectHook={(node) => {
                     expandInspector();
                     if (!isControlled) {
@@ -1689,6 +1658,11 @@ export function ReaderJourneyWorkspace({
                 </p>
               ) : null}
 
+              {/* Hook 镜头下这条带是重复的：它的标签就是 ordinaryHookSceneBandLabel，
+                  而那个函数返回的正是 HookPayoffTimeline 自己那条 S1–S6 轨迹里印的
+                  short_label——同一个来源，同一批字，画两遍。保留带阶段色块、带
+                  S 编号、能点的那一条，去掉这一条。 */}
+              {isHookPayoffLens(observationLens) ? null : (
               <JourneyDiagnosisBand
                 diagnoses={sceneDiagnoses}
                 selectedSceneOrdinal={selectedSceneOrdinal}
@@ -1703,6 +1677,7 @@ export function ReaderJourneyWorkspace({
                   if (node) handleSelectScene(node, "journey_rhythm");
                 }}
               />
+              )}
 
               {/* Scene navigation must sit below SVG — never overlay or steal plot height */}
               <section
@@ -1944,7 +1919,6 @@ export function ReaderJourneyWorkspace({
           markerMode={markerMode}
           exportFullJourney
           onSelectScene={() => undefined}
-          onSelectRisk={() => undefined}
           onSelectHook={() => undefined}
           onSelectPayoff={() => undefined}
         />
