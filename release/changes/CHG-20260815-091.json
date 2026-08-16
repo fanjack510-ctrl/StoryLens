@@ -1,0 +1,65 @@
+{
+  "id": "CHG-20260815-091",
+  "title": "PDF 导出设为 Pro（VIP）能力，支持爱发电月卡授权；报告导出补齐全部图表",
+  "type": "feature",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": false,
+  "commits": [],
+  "modules": [
+    "apps/api/app/narrative_core/whole_book_v2",
+    "apps/api/app/services",
+    "apps/api/app/narrative_core",
+    "apps/desktop/src/features/wholeBookV2",
+    "scripts"
+  ],
+  "files": [],
+  "user_summary": "全书分析报告现在可以从页面直接导出。「导出 PDF」生成真正的 .pdf 文件（26 页级别、矢量文字，雷达图、节奏曲线、关系网络、悬念墙、甘特条、热力图、问题地图全部在内），该功能属于 VIP（Pro）：免费版点击会看到清晰的说明与爱发电购买入口，已有授权码的在设置中激活即可；爱发电出售的月卡是带签名有效期的一次性授权，到期自动回落免费版且不可重复激活。HTML 导出保持免费——它内嵌完整原始数据，是给专业人士做对账用的审计面。",
+  "technical_summary": "Three pieces. (1) Licensing: license payloads gain an optional signed `valid_until` (absent = perpetual, so every previously issued license stays valid). parse_and_verify rejects already-lapsed codes at activation (LICENSE_EXPIRED); active_license_row lapses monthly rows in place on first read past expiry, so snapshot, capability gate and settings all agree without separate clock checks. entitlement_snapshot exposes license_kind/valid_until; scripts/issue_license.py is the off-machine 爱发电 fulfilment CLI (--valid-days 31). (2) Gate: ADVANCED_EXPORT capability flipped to shipped/available (it now ships as the PDF export); POST /{run_id}/v2/export-pdf evaluates it via can_use_feature and returns 403 PDF_REQUIRES_VIP with the commerce afdian_product_url before any browser work; rendering itself is headless Edge/Chrome --print-to-pdf on the client-built HTML. (3) Export content: the HTML/PDF builder re-renders every on-screen chart as static SVG/inline-styled HTML using the same layout math as the components (radar, six-series pacing curves, journey chart incl. screen-time bands, radial relationship graph, gantt coverage bars, colored heatmap cells, suspense wall, issue map), plus the full evidence index and embedded raw JSON. Frontend throws typed VipRequiredError on the gate (handles both flattened and detail-wrapped error bodies) and shows the notice instead of silently falling back to HTML.",
+  "acceptance_criteria": [
+    "免费版调用 /v2/export-pdf 返回 403 PDF_REQUIRES_VIP，details 携带 afdian_product_url 与 feature_key=advanced_export",
+    "激活月卡（valid_until 未来）后网关放行；机器无浏览器时返回 501 PDF_BROWSER_NOT_FOUND 而非 403",
+    "过期月卡激活即被拒（LICENSE_EXPIRED）；已激活的月卡过期后首次读取自动回落免费版并将行标记 expired",
+    "永久授权（无 valid_until）不受影响，任意未来时间仍为 pro",
+    "页面按钮标注 VIP；403 时显示爱发电入口且不发生 HTML 兜底下载；HTML 导出按钮保持免费可用",
+    "导出文件包含七模块全量数据、九类图表、证据索引与内嵌原始 JSON，正文无裸机器枚举"
+  ],
+  "tests": [
+    "apps/api/tests/test_pdf_export_vip_gate.py",
+    "apps/api/tests/test_pro_license_local.py",
+    "apps/api/tests/test_narrative_phase1c_capability_backend.py",
+    "apps/desktop/src/features/wholeBookV2/reportExport.test.ts",
+    "apps/desktop/src/features/wholeBookV2Mock/WholeBookV2MockPage.test.tsx"
+  ],
+  "verification_evidence": [
+    "后端 pytest：test_pdf_export_vip_gate 6 项 + pro_license_local 全部 + license_key_isolation 全部 = 26 通过；capability backend 36 通过",
+    "实机（免费版、dev trust）POST /v2/export-pdf → 403 PDF_REQUIRES_VIP，reason=PRO_LICENSE_REQUIRED，afdian_product_url 来自 fixture commerce 配置",
+    "实机页面点击「导出 PDF · VIP」→ VIP 提示条出现，含爱发电链接，无 HTML 兜底下载；HTML 按钮独立可用",
+    "带月卡授权路径：TestClient 激活 valid_days=31 → license_kind=monthly → 网关放行至 501（无浏览器桩），证明 403 消失",
+    "无头 Edge 打印实测：糙汉重生报告 → 26 页 863,971 字节 %PDF-1.4，雷达/节奏/关系网络三张 SVG 及六类 HTML 图全部渲染",
+    "前端 vitest：wholeBookV2 全套 54 通过 / 1 已知失败（legacy-404，与本变更无关）",
+    "生产 commerce 配置已含真实 afdian_product_url 与正式公钥（storylens-pro-1-prod-001），无需额外配置即可发售"
+  ],
+  "known_out_of_scope": [
+    "爱发电订单号自动核销（当前为人工签发授权码流程，scripts/issue_license.py）",
+    "设置页展示月卡剩余天数（snapshot 已携带 valid_until 字段，UI 展示未做）",
+    "PDF 目录页内跳转（浏览器打印管线限制）"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "无表结构变更：月卡有效期读自已存储的签名载荷本身（peek），过期仅翻转既有 license_status 字段。旧永久授权载荷无 valid_until，行为逐字节不变。"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false,
+    "notes": "后端新增端点与网关逻辑，需重启 sidecar（本机已重启验证）。打包发布前需照常重建 PyInstaller sidecar。PDF 依赖用户机器已装 Edge/Chrome（Windows 出厂自带 Edge），找不到时返回 501 且前端回退 HTML 下载。"
+  },
+  "blocker_level": "none",
+  "head_inclusion": false,
+  "created_at": "2026-08-15T01:20:00+08:00",
+  "updated_at": "2026-08-15T01:20:00+08:00"
+}

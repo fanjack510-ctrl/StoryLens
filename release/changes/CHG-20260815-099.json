@@ -1,0 +1,56 @@
+{
+  "id": "CHG-20260815-099",
+  "title": "AI 场景划分整章失效（两次都只切出 1 个场景）：改为整章一次性切分 v4.0",
+  "type": "fix",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": false,
+  "commits": [],
+  "modules": [
+    "apps/api/app/services",
+    "apps/api/app/schemas",
+    "packages/prompts/scene_boundary",
+    "apps/desktop/src/components/analysis"
+  ],
+  "user_summary": "单章分析里的「AI 自动场景划分」失效了：连续两次分析，一整章都只切出 1 个场景，等于没划分。查下来不是模型不行，是问法不对——原来的做法是把一章拆成几十个「第 N 段和第 N+1 段之间算不算换场景」的小问题，每个小问题还要填 6 个选项。测下来模型对 67 个问题全部填了同一套选项，等于没读。现在改成直接问「读完这一章，每个场景从第几段开始」，一次问完。同一章实测切出 6 个场景（街道／家门口／客厅／厨房／卧室／客厅），和人工读出来的一致，调用次数从 10 次降到 1 次，成本从约 3 分钱降到 3 厘。确认页面现在也会先把 AI 划出的每个场景（段落范围＋开头一句）列出来给你看，再问你要不要采用——之前只写「共 6 个场景」，看不见内容没法确认。",
+  "technical_summary": "scene_boundary v3.5 asked for a per-transition classification: for each adjacent paragraph pair, six enums plus boundary_candidate and confidence. On book 10 chapter 1445 (68 paragraphs, five plain-text location changes) it returned the first value of every enum for all 67 transitions at uniform 0.9 confidence — a labelling task with a uniform schema invites uniform filling. A real-API A/B/C probe on the same chapter and model: shipped prompt → 0 boundaries; reworded prompt, same task shape → 2; changed task shape to whole-chapter segmentation → 6 scenes in one call, 2310 vs 27679 input tokens. New scene_segmentation_v40 service builds a numbered-paragraph snapshot (integers, not 20-char ids, so the model cannot hallucinate a valid-looking id from another chapter), maps scene starts to boundaries (start<=1, out-of-range and duplicate starts are dropped rather than trusted), and validates that the first scene starts at 1 and at least one start lands in range. scene_pipeline branches on prompt_version == 'v4.0' before the v3.5 path. Two review-surface gaps followed: create_review_session only reads v3.5 checkpoint tables, so _seed_v40_review_decisions writes BoundaryReviewDecision rows from the adopted boundaries; and the screen reads model_revision from boundary_revisions, which v4.0 never wrote because it stops before scenes exist, so ensure_model_revision_from_boundaries_v1 builds the partition straight from the boundary paragraph ids. That revision carries status 'proposed' — a new state distinct from 'draft' (a human mid-edit), recognised by _model_revision, confirm_scene_revision_v1 and the draft fork, so the AI's own proposal is what the reader confirms and the header no longer reads 「AI 场景数：0 · 新增 6」.",
+  "acceptance_criteria": [
+    "整章切分一次调用完成，切出的场景数与人工阅读一致",
+    "模型给出的越界、重复、start=1 的切点被丢弃而不是被采信",
+    "第一个场景不从第 1 段开始时触发重试而不是静默接受",
+    "确认页面列出每个待确认场景的段落范围与开头一句",
+    "确认页面把 AI 的划分记为 AI 基线，而不是记成用户新增"
+  ],
+  "tests": [
+    "apps/api/tests/test_scene_segmentation_v40.py",
+    "apps/api/tests/test_scene_boundary_v40_proposal_state.py"
+  ],
+  "verification_evidence": [
+    "复现（书 10 章 1445，68 段）：v3.5 返回 67 个 transition 全部 same/continuous/continuous/same/same/none，置信度全 0.9，成章 1 个场景",
+    "真实 API A/B/C 探针：现行提示词 0 处边界；改写措辞 2 处；改成整章切分 6 个场景，命中人工基准",
+    "生产路径实跑：prompt v4.0，1 次调用（原 10 次），2801 输入 / 313 输出 token，¥0.00343，采纳 5 个边界 = 6 个场景，切点 P28/P30/P41/P59/P62",
+    "确认页读到 model_revision（6 场景、status=proposed），确认后落库 6 个 scene 行",
+    "后端单元测试 31 项通过（v4.0 映射 8 项 + proposed 状态 4 项 + CHG-041 既有 19 项）"
+  ],
+  "known_out_of_scope": [
+    "v3.5 路径保留未删，本地模型仍走旧分支；两条路径并存的清理属于另一轮改动",
+    "切分质量目前只在一章上验证过，跨类型（群像多线、快穿单元）的表现需要更多样本"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "无表结构变更。boundary_revisions.status 新增取值 'proposed'（原有取值不变），旧数据不受影响。"
+  },
+  "release_impact": {
+    "requires_reanalysis": true,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false,
+    "notes": "已经用 v3.5 跑出「只有 1 个场景」的章节需要重跑才能拿到正确划分。需重启 sidecar。"
+  },
+  "blocker_level": "none",
+  "head_inclusion": false,
+  "created_at": "2026-08-15T21:00:00+08:00",
+  "updated_at": "2026-08-15T21:00:00+08:00"
+}

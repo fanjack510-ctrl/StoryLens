@@ -1,0 +1,64 @@
+{
+  "id": "CHG-20260815-101",
+  "title": "画像决定曲线量什么：补齐类型覆盖、主线权重按类型分流、横轴按篇幅、加悬念欠账",
+  "type": "feature",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": false,
+  "commits": [],
+  "modules": [
+    "apps/api/app/narrative_core/long_novel",
+    "apps/api/app/services",
+    "apps/desktop/src/components/readerJourney",
+    "apps/desktop/src/types"
+  ],
+  "user_summary": "上一轮做的类型专项维度其实只覆盖了番茄那一类。这轮补齐并往下走了一层。\n\n一、覆盖：订阅制（晋江/起点那种按章付费）此前一条专项维度都没有，而免费快餐流有两条——整套类型层是照着一种付费模式做的。现在订阅制有了「本章价值」和「追更钩」；群像权谋有了「势力变动」「信息差」；双主角有了「换线必要」。确实不需要专项的取值（中性受众、单主角、四种长度）也明确写下了理由，不再是空着。\n\n二、曲线量什么按类型换。以前不管什么书，主曲线都用同一套悬疑权重算。现在情感类的主线由「情绪投入」主导而不是「好奇」，并且不再要求一章必须推动剧情；升级流按「兑现了没有」算；种田类不因为张力低而被压分。实测：悬疑那本几乎不动（本来用的就是它那套），情感那本把 29 段闲聊和 11 段坦白的差距从 8.4 分拉到 13.4 分。\n\n三、曲线横轴改成按字数铺开。以前 6 个场景画成 6 个等距的点，读者花 43% 时间的开场和一晃而过的 3 段画得一样宽。现在场景宽度就是它在这一章里的真实占比，「前面太拖」这种判断不用文字就自己显形了。\n\n四、场景详情新增「读者此刻背着的问题」。这是整页唯一一个有记忆的数字：其余每个分数都是就这一场论这一场，而读者是累积的。《我不是戏神》第一章看完背着 7 个没答的问题，《再也不见》第一章是 0——后者意味着第二章没有「非读不可」的理由。",
+  "technical_summary": "Coverage first: a gap check over AXES showed paid_subscription / neutral / ensemble_politics / dual_lead / single_lead / all four length values had no ChapterFocus. Added ENSEMBLE_POLITICS (power_shift, information_asymmetry) and DUAL_LEAD (thread_necessity); declared NO_FOCUS_BY_DESIGN with reasons for the values that legitimately need none, and LENGTH_EXPECTATION for the axis that modulates rather than adds, so the coverage test can tell a hole from a decision.\n\nChapterFocus gains a `weights` field merged into reader_journey_formulas_v2.json's weights block. That config has carried \"default_genre\": \"suspense\" since v2.0 and nothing ever read it — one suspense weighting scored every book. __post_init__ rejects an unknown block name or a table that does not sum to 1 (both fail silently otherwise: a misspelled block never applies; a table summing to 0.9 makes the deriver renormalise and shift every score). apply_formula_weights replaces blocks whole rather than key by key for the same reason. finalize_v2_profiles takes formula_weights and records the applied table in provenance under profile_formula_weights, so a stored result can be read back. Empty overrides reproduce the previous numbers exactly (INV-P1).\n\nbuildProportionalXScale positions each scene at the midpoint of its share of the chapter, weighted by paragraph_count, which is already on every node — no backend change. Falls back to xForSceneOrdinal when weights are absent or uniform, so legacy payloads keep their geometry.\n\nbuild_open_question_ledger accumulates hook minus payoff per scene, floored at zero, and rides to the client through v2_open_question_ledger in deterministic_statistics_json onto node.open_questions.",
+  "acceptance_criteria": [
+    "每个画像取值要么有 focus，要么在 NO_FOCUS_BY_DESIGN 里写明为什么没有",
+    "未确认画像的书主线数值与改动前逐位相同",
+    "权重块名写错或权重和不为 1 时在导入期报错，而不是静默生效",
+    "情感类主线由情绪投入主导，且不再重罚剧情推进低",
+    "横轴场景宽度等于该场景在本章的篇幅占比，缺数据时退回等距",
+    "场景详情显示累计未答问题数，旧结果不显示该区块"
+  ],
+  "tests": [
+    "apps/api/tests/test_profile_formula_weights.py",
+    "apps/api/tests/test_chapter_profile_focus.py",
+    "apps/desktop/src/components/readerJourney/proportionalXScale.test.ts",
+    "apps/desktop/src/components/readerJourney/sceneGenreAxes.test.tsx"
+  ],
+  "verification_evidence": [
+    "覆盖缺口实测：改动前 monetization 未覆盖 paid_subscription、audience 未覆盖 neutral、engine 未覆盖 ensemble_politics、pov 未覆盖 single_lead/dual_lead、length 四个取值全未覆盖",
+    "权重效果实测（两本书的真实场景档案重新 finalize）：《我不是戏神》均值 73.8→74.1（+0.3，出厂权重本来就是悬疑那套）；《再也不见》S2 63.9→60.7、S3 72.3→74.1，水段与实场景的落差从 8.4 拉到 13.4",
+    "横轴实测：《我不是戏神》六场景段数 28/2/11/18/3/6，等距画法下 S1→S2 与 S5→S6 的水平距离相同，按篇幅后前者是后者的 2 倍以上",
+    "悬念欠账实测：《我不是戏神》2→4→5→6→6→7 单调上升；《再也不见》0→0→0 开一个还一个",
+    "两本书都通过真实 API 读取路径验证：paragraph_count、open_questions、genre_axes 都到达客户端",
+    "后端 406 项通过（journey/scene/focus/profile/weight 全集），仅剩既有的 test_long_novel_pipeline_dispatch 夹具问题",
+    "前端 586 项通过（readerJourney + analysis）；tsc --noEmit 通过"
+  ],
+  "known_out_of_scope": [
+    "六个镜头收成「一条主线 + 归因展开」尚未做——它改变页面的信息架构，按惯例应先出预览再动",
+    "主线在界面上仍叫「综合阅读」，没有按类型改名（情感类应显示为「情感投入」）",
+    "悬念欠账目前只在场景详情里以数字出现，还没有画成曲线下方的堆叠带",
+    "欠账用 hook 减 payoff 作代理；更准的做法是接 question_lifecycle 的真实开合，属于下一轮",
+    "ensemble_politics / dual_lead 两组新维度只验证了提示词渲染，没有真实书跑过"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "无表结构变更。deterministic_statistics_json 新增 v2_open_question_ledger 键，旧结果没有该键时前端不渲染对应区块。"
+  },
+  "release_impact": {
+    "requires_reanalysis": true,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false,
+    "notes": "已有分析结果不会自动获得类型权重与欠账账本，需要重跑。横轴改动对旧结果立即生效（paragraph_count 是既有字段）。需重启 sidecar。"
+  },
+  "blocker_level": "none",
+  "head_inclusion": false,
+  "created_at": "2026-08-15T23:40:00+08:00",
+  "updated_at": "2026-08-15T23:40:00+08:00"
+}

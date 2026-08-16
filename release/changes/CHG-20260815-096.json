@@ -1,0 +1,71 @@
+{
+  "id": "CHG-20260815-096",
+  "title": "API 设置合并为一处：服务商一个下拉带出地址与模型，删除重复的模型与API页",
+  "type": "refactor",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": false,
+  "commits": [],
+  "modules": [
+    "apps/api/app/api/v1",
+    "apps/desktop/src/components/settings",
+    "apps/desktop/src/pages",
+    "apps/desktop/src/app",
+    "apps/desktop/src/services"
+  ],
+  "files": [],
+  "user_summary": "API 配置原本散在四个地方：设置的「AI与模型」、设置的「开发者设置」、独立的 /providers 页、以及开发者导航里叫「AI 诊断」的同一个页——同一个阿里云表单被三处引用，改哪一处都影响另外两处。现在只剩一处：设置 → AI与模型。切换服务商是**一个下拉**，选完自动带出该服务商的接口地址和可用模型档位（地址是服务商的属性，不再是另一个要单独填的东西）。下拉里的服务商由后端下发，不再是界面里写死的两个。诊断能力没有丢：真实连接测试（会花钱的那个，带费用确认）搬进了开发者设置，传输诊断和路由预览本来就在那里。/providers 页（920 行）已删除，开发者导航的「AI 诊断」入口一并移除。 另外补回一个此前无处可开的开关：「允许云端模型连接」是所有云端分析的总闸，它原本只在 /providers 页上；而设置里那份拷贝（SettingsBudgetPrivacyTab）自 V1.0 起就是没有任何标签引用的孤儿组件。删页后这个开关一度无处可开——关着的用户会看到所有分析按钮禁用、写着「云端分析尚未开启」却无处可点。现已放进 AI 服务卡片。",
+  "technical_summary": "Backend: GET/PUT /settings/active-cloud-provider now returns `options: CloudProviderOption[]` (name, display_name, base_url, distinct model tiers read off the one ProviderConfiguration row per vendor). Frontend: SettingsAiServiceTab derives the picker and the active id from that payload instead of the DEFAULT_AI_SERVICE_ID/DEEPSEEK_PROVIDER_ID ternary, which mapped every unrecognised vendor onto 阿里云 — a third vendor could not be selected or displayed however it was configured. base_url and model tiers render as read-only properties of the selected vendor. Deleted pages/ProvidersPage.tsx (920 lines), its route and the DevelopmentNavigationGroup entry; removed the duplicate AliyunForm from SettingsAdvancedTab (now a read-only provider list pointing at the AI tab) and the dead /providers link from SettingsAiServiceTab. Salvaged the page's one unique capability into components/settings/RealConnectionTest.tsx — preflight, cost confirmation, then the paid call — mounted in the dev-only advanced tab beside the transport diagnostic.",
+  "acceptance_criteria": [
+    "设置 → AI与模型 是配置 API 的唯一位置；服务商、接口地址、模型档位在同一张卡内",
+    "服务商下拉的选项来自后端 options，不在前端硬编码",
+    "切换服务商不删除其他服务商已保存的 API Key（保留既有行为）",
+    "/providers 路由与开发者导航入口均已移除，访问该地址显示页面未找到",
+    "开发者设置不再重复渲染阿里云配置表单，只保留只读 provider 清单并指向 AI 标签",
+    "真实连接测试保留：先预检并显示预计费用，确认后才发起付费请求；预算门禁不通过时不发请求",
+    "「允许云端模型连接」总开关在 AI 与模型标签内可切换，关闭时说明影响范围且不删除配置"
+  ],
+  "tests": [
+    "apps/desktop/src/components/settings/RealConnectionTest.test.tsx",
+    "apps/desktop/src/components/settings/SettingsAiServiceTab.test.tsx",
+    "apps/desktop/src/pages/CloudBudgetPages.test.tsx",
+    "apps/api/tests/test_desktop_api.py",
+    "apps/desktop/src/components/settings/SettingsAiServiceTab.test.tsx"
+  ],
+  "verification_evidence": [
+    "实机 GET /settings/active-cloud-provider 返回 options：阿里云百炼（3 个模型档位）与 DeepSeek（1 个），各带 base_url",
+    "实机设置页：下拉两项均由 options 渲染，选中 deepseek 时显示「接口地址 https://api.deepseek.com/」与「可用模型档位：deepseek-v4-flash」",
+    "实机访问 /providers 显示「页面未找到」",
+    "RealConnectionTest 4 项通过：取消不发请求、声明不发送小说正文、确认后执行并展示结果、预算门禁不通过时不发请求",
+    "前端全量 1489 通过 / 5 失败，5 项与本次改动前的基线完全一致（settings_ux_polish、wholeBookFreeProduct×2、wholeBookFreeStructure、WholeBookV2 legacy-404）",
+    "后端 test_desktop_api 5 项通过",
+    "零真实供应商调用",
+    "缺口复现与修复：删页后 GET /settings/cloud 为 enabled=false 且界面无任何入口；补回开关后实机点击 → 后端 enabled=true state=available",
+    "实机回到书 9 单章弹窗：「云端分析尚未开启」消失，AI 服务显示「深度求索/DeepSeek · 已连接 · 配置完成，可以开始分析」，禁用原因变为正常的「请先确认正文发送说明」",
+    "SettingsAiServiceTab 31 项通过（含新增的下拉来自后端 options、云端总开关可切换两项）",
+    "前端全量 1491 通过 / 5 失败，5 项与改动前基线一致"
+  ],
+  "known_out_of_scope": [
+    "FORMAL_CLOUD_PROVIDERS 仍是后端常量（阿里云 + DeepSeek）；新增服务商需要后端登记，但前端已不再需要改动",
+    "阿里云的三个模型档位仍以三个 provider 记录存在于 /model-providers 列表（分析时按档位选择 provider），设置页只展示档位名称",
+    "本地模型仍在开发者设置里（按用户选择的方案 B，云端服务商归下拉，本地模型独立成块）",
+    "SettingsBudgetPrivacyTab 仍是孤儿组件（没有标签引用）；本次未删除，留待单独清理"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "无数据变更。已保存的 API Key、已选服务商、预算设置均不受影响。"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false,
+    "notes": "后端新增响应字段需重启 sidecar（本机已重启）。用户可见变化：/providers 页不复存在，开发者导航少一项「AI 诊断」，其能力已并入设置。"
+  },
+  "blocker_level": "none",
+  "head_inclusion": false,
+  "created_at": "2026-08-15T14:10:00+08:00",
+  "updated_at": "2026-08-15T15:05:00+08:00"
+}

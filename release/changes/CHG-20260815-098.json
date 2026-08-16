@@ -1,0 +1,55 @@
+{
+  "id": "CHG-20260815-098",
+  "title": "并发建快照互相清空导致画像页 BOOK_HAS_NO_SNAPSHOT：按书串行化",
+  "type": "fix",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": false,
+  "commits": [],
+  "modules": [
+    "apps/api/app/narrative_core/services",
+    "apps/desktop/src/features/bookProfile"
+  ],
+  "files": [],
+  "user_summary": "新导入的长篇（《我不是戏神》1299 章）第一次打开作品画像页时报 BOOK_HAS_NO_SNAPSHOT。原因是同一本书的两个建索引请求撞在一起：后到的那个等 5 秒发现前一个还没做完，就判定它「卡死」，把前一个正在写的数据清空了——结果两边都拿到空索引。而这本书建索引本来就要一分钟左右，5 秒的判定标准对长篇完全不成立。现在同一本书的建索引请求会排队，后到的等前一个完成后直接复用，不再互相破坏。页面等待时也会说明「长篇可能要一分钟左右，请不要刷新」——此前只有一句「正在统计全书…」，等太久会让人去刷新，而刷新正好又制造一次并发。",
+  "technical_summary": "BookSnapshotServiceImpl.create_or_reuse_snapshot now takes a per-book threading.Lock (single-process sidecar, so process-level locking is the whole scope) and delegates to _create_or_reuse_snapshot_locked. Without it, two callers hit the BUILDING branch: the loser's _wait_for_terminal(timeout_s=5.0) expired long before an 11s+ build finished, so it fell through to _clear_snapshot_children() and rebuilt in place — destroying rows the winner was still inserting. Both then committed empty snapshots, and the profile router's raw chapter SELECT returned nothing (BOOK_HAS_NO_SNAPSHOT / SNAPSHOT_HAS_NO_CHAPTERS). React StrictMode double-firing the draft on page mount is enough to trigger it. Frontend: the profile page's loading state now states the expected duration and asks the user not to reload, since reloading is what spawns the second builder.",
+  "acceptance_criteria": [
+    "同一本书的两个并发建索引请求都成功，且复用同一个快照",
+    "并发构建后快照包含全部章节，profile draft 的章节查询能读到内容",
+    "长篇画像页首次打开不再报 BOOK_HAS_NO_SNAPSHOT",
+    "等待期间页面说明预计耗时并提示不要刷新"
+  ],
+  "tests": [
+    "apps/api/tests/test_snapshot_concurrent_build.py",
+    "apps/desktop/src/features/bookProfile/BookProfilePage.test.tsx"
+  ],
+  "verification_evidence": [
+    "复现（书 10《我不是戏神》1299 章 / 77749 段）：清空快照后并发两次 draft，两次均 409 SNAPSHOT_HAS_NO_CHAPTERS，快照行停在 building、0 章、0 段落行",
+    "修复后同一复现：两次均 200 返回 draft（59.0s / 74.1s，后者等待前者），快照 completed 1299 章 77749 段，无孤儿行",
+    "后端回归测试 2 项通过：并发构建产出同一个完整快照；并发后 profile draft 读取的章节查询返回全部章节且内容非空",
+    "实机 /books/10/profile?from=chapter&chapterId=1445 正常加载，五轴全部有值，按钮为「确认并分析本章」",
+    "BookProfilePage 12 项通过",
+    "零真实供应商调用"
+  ],
+  "known_out_of_scope": [
+    "建索引仍是同步阻塞请求（长篇约 1 分钟）；改为后台任务 + 进度上报是更好的形态，但属于另一轮改动",
+    "调查过程中我手工清理测试数据时漏删 book_snapshot_paragraphs，加上 SQLite 复用行 id，一度制造出 UNIQUE 冲突的假象；已清理干净并确认无孤儿行，与产品缺陷无关"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "无表结构变更。书 10 的快照在排查过程中被重建，数据完好（1299 章 / 77749 段）。"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false,
+    "notes": "后端锁与前端文案变更，需重启 sidecar（本机已重启）。此缺陷会让长篇书的画像页完全无法打开，而画像是两条分析管线的前置，属于阻断级。"
+  },
+  "blocker_level": "none",
+  "head_inclusion": false,
+  "created_at": "2026-08-15T17:30:00+08:00",
+  "updated_at": "2026-08-15T17:30:00+08:00"
+}

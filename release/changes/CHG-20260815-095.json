@@ -1,0 +1,65 @@
+{
+  "id": "CHG-20260815-095",
+  "title": "统一分析导航：作品画像成为独立入口，确认后回到来路而非固定跳全书",
+  "type": "fix",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": false,
+  "commits": [],
+  "modules": [
+    "apps/desktop/src/features/bookProfile",
+    "apps/desktop/src/components/books",
+    "apps/desktop/src/components/analysis",
+    "apps/desktop/src/pages",
+    "apps/desktop/src/services"
+  ],
+  "files": [],
+  "user_summary": "修掉一个明确的错路：从单章分析点「去确认作品画像」，确认完会被丢进全书分析——那是另一件更贵的事。现在画像页记住你从哪来，按钮文案也跟着变（确认并分析本章 / 确认并开始全书分析 / 保存画像），确认后回到你原本在做的事并自动重开分析弹窗。同时整顿工作台顶部导航：作品画像升为独立入口并常驻显示状态（未确认是琥珀色「作品画像 · 待确认」，确认后变灰带勾），主按钮从「开始分析」改为「分析本章」以区别于旁边的「全书分析」，删掉「更多 → 重新分析」这个和主按钮完全重复的入口。画像仍然是一本书确认一次，两条管线共用。",
+  "technical_summary": "New `features/bookProfile/origin.ts` owns the round trip: profileHref(bookId, origin) builds the link, readProfileOrigin parses ?from=chapter&chapterId / ?from=whole-book, returnHref maps origin → destination (chapter returns with &startAnalysis=1; direct navigation returns null and the page stays put), confirmLabel keeps the CTA from promising the wrong kind of analysis. BookProfilePage consumes it instead of the hardcoded navigate(`/books/${id}/whole-book`). Both gate links (StartAnalysisDialog banner + 409 notice, WholeBookV2ProductPage header) now pass origin. BookRoutePage consumes startAnalysis=1 once on arrival (deleted from the URL with replace, so a reload does not reopen the dialog) and renders the new BookProfileEntry, which reads the profile status itself and renders nothing when the backend cannot answer — an unreadable profile must not be presented as an unconfirmed one. Chapter-scope labels moved from 开始分析/重新分析 to 分析本章/重新分析本章 in both label tables (chapterPrimaryAction, chapterAnalysisPresentation); the duplicate 更多→重新分析 overflow item is gone.",
+  "acceptance_criteria": [
+    "从单章弹窗进入画像页，确认后回到该章并自动重开分析弹窗，不再跳全书",
+    "从全书页进入画像页，确认后回全书页",
+    "直接访问画像页，确认后停在原地（按钮显示「保存画像」）",
+    "chapterId 缺失或非法时退回直接访问语义，不构造坏链接",
+    "工具栏画像入口显示确认状态；后端读不出时不渲染，不误导用户去确认",
+    "主按钮显示「分析本章」；「更多」菜单不再有重复的「重新分析」"
+  ],
+  "tests": [
+    "apps/desktop/src/features/bookProfile/origin.test.ts",
+    "apps/desktop/src/features/bookProfile/BookProfilePage.test.tsx",
+    "apps/desktop/src/components/books/BookProfileEntry.test.tsx",
+    "apps/desktop/src/components/analysis/StartAnalysisDialog.test.tsx",
+    "apps/desktop/src/services/chapterPrimaryAction.test.ts",
+    "apps/desktop/src/pages/BookRoutePage.test.tsx"
+  ],
+  "verification_evidence": [
+    "origin 单元测试 5 项：三种来路的回程与文案、非法 chapterId 退化、profileHref 是唯一决定回程的地方",
+    "BookProfilePage 12 项通过（新增「从单章来时确认后回到本章，而不是被丢进全书分析」）",
+    "BookProfileEntry 3 项：未确认标待办并带来路、已确认退成普通入口、后端失败时不渲染",
+    "实机全链路（书 2《黑白道》）：工具栏显示「作品画像 · 待确认」+ href 带 from=chapter&chapterId=807；点入后按钮为「确认并分析本章」；补全五轴确认 → 落到 /books/2?chapter=807、分析弹窗自动打开、门横幅消失、入口变为「作品画像 ✓」",
+    "实机确认「更多」菜单已无重复的重新分析项，主按钮为「分析本章」",
+    "前端全量 1496 通过 / 5 失败，5 项均经 HEAD 基线复现为既有红灯（settings_ux_polish、wholeBookFreeProduct×2、wholeBookFreeStructure、WholeBookV2ProductPage legacy-404）",
+    "零后端改动，零真实供应商调用"
+  ],
+  "known_out_of_scope": [
+    "全书页尚未像单章弹窗那样在打开时就显示画像门（目前仍是点开始后由 409 提示）",
+    "画像入口的状态不随确认实时刷新（依赖页面导航；实机确认后已正确显示 ✓）"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "纯前端导航与文案变更，无数据影响。"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false,
+    "notes": "前端热更新即可生效，无需重启 sidecar。按钮文案变化会影响用户的肌肉记忆：「开始分析」→「分析本章」。"
+  },
+  "blocker_level": "none",
+  "head_inclusion": false,
+  "created_at": "2026-08-15T12:40:00+08:00",
+  "updated_at": "2026-08-15T12:40:00+08:00"
+}

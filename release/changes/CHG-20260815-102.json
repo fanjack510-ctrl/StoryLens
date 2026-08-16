@@ -1,0 +1,81 @@
+{
+  "id": "CHG-20260815-102",
+  "title": "钩子回收：问题由模型直接给出、回收不再恒为空、整套说法按类型换，并把单章可测的三个数放到主位",
+  "type": "fix",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": false,
+  "commits": [],
+  "modules": [
+    "apps/api/app/schemas/reader_journey_v2.py",
+    "apps/api/app/services/reader_journey_v2_persist.py",
+    "apps/api/app/services/reader_journey_visualization.py",
+    "apps/api/app/narrative_core/long_novel/chapter_focus.py",
+    "packages/prompts/reader_journey_scene/v2.2",
+    "apps/desktop/src/components/readerJourney"
+  ],
+  "user_summary": "「钩子回收」这一页用户反馈「感觉没啥作用」。查下来不是排版问题，是这一页的数据大半是假的。\n\n一、「读者最想知道」显示的不是读者的问题，是评分理由。程序把钩子评分的理由后面加了个问号就当成读者问题用，于是「场景开头无新钩子，仅延续前文。？」「不足以构成强烈钩子。？」这种否定式判断，被放在标题叫「读者最想知道」的卡片里显示出来。现在模型直接给读者问题，且契约会拒绝「这里没有钩子」这类写法。\n\n二、「回收」从来没发生过。三本真实的书，10 个钩子，0 个被回收——不是因为单章太短，是因为程序里写死了一句空数组，本章回答了什么问题这件事根本无处存放。现在模型可以给出本场回答了哪个先前的问题。\n\n三、情感类的书被按悬疑打分。《再也不见》第一章识别出的三个「钩子」，翻译过来是同一句话：「这本书不按悬念运转」——「不足以构成强烈钩子」「缺乏吸引力」「章末钩子强度中等」。现在整套说法按书的类型换：言情的四个动作是「起了心结／越陷越深／挑明／悬而未说」，镜头本身叫「心结与挑明」，体检项叫「第一处牵挂」；升级流是「立下目标／受阻加码／兑现／留到下章」＋「立标与兑现」＋「第一个目标」；悬疑保持原样。「开篇抓力」「章末牵引」两项不换——这两个词本身不带类型预设。未确认画像的书一个字都不改（画像是推断，不能拿推断去命名读者的体验）。\n\n四、页面主位换成单章真正量得到的三个数：开篇抓力、章末牵引、首钩位置。实测这三个数区分得开——《我不是戏神》开篇 95，《再也不见》开篇 50——而原来那三张卡永远是「新提出·留到下章」，没有任何区分度。首钩位置是这一轮新加的字段：模型以前把它写在散文里（「第一个钩子出现在第10段」），而结构化字段指向的是场景首段，三本书全都对不上。\n\n此外：问题卡不再被截到 18 字（那是钩子的身份标识长度，不是显示长度），状态与轨迹并作一行，删掉与轨迹逐字重复的诊断带。\n\n另外修了三处在真实页面上才现形的问题：曲线两端平推到章首章尾之后，面积填充的回程路径没跟着走，在情感投入那条曲线下方留下两块斜楔形；阶段卡把后端给的 summary 原样显示，而那个值就是阶段自己的标题，于是卡片写成「开端 … 开端」，兜底文案里又只有「收束」没有「开端」「发展」；图例和轨迹标签由两个不同组件渲染，只改了后者，于是「提出疑问」和「起了心结」出现在同一屏。",
+  "technical_summary": "Root cause is `v2_profile_to_v1_compat_payload`. It manufactured the entire hook layer from scored fields:\n\n    q = (profile.hook.rationale or profile.scene_value_summary or \"本章疑问\")[:160]\n    question = q if (\"？\" in q or \"?\" in q) else f\"{q}？\"\n    ...\n    \"hooks\": [{\"summary\": question[:120], \"gap\": question[:120], \"strength\": hook,\n               \"evidence_paragraph_ids\": [first]}] if hook >= 40 else [],\n    \"payoffs\": [],\n    \"reader_question_answered\": [],\n\nSo the reader question was a scoring rationale with a `？` stapled on (negatives included), `summary` and `gap` were the same expression stored twice, the hook's evidence pointed at the scene's first paragraph rather than the hook, and payoff was structurally unreachable — 0/10 across three books is `[]` in code, not a property of chapters.\n\nPrompt v2.2 (contract still 2.0 — every field optional with an empty default, so stored v2.0/v2.1 artifacts validate unchanged, INV-P1) adds `reader_questions_opened`, `reader_questions_answered`, `first_hook_paragraph_id`. `SceneReaderQuestionV2` enforces ≤48 chars and a terminal question mark and rejects absence assertions, which makes a rationale structurally unable to occupy the field rather than merely discouraged in prose. The shim reads them when present and keeps its previous behaviour verbatim when absent.\n\n`HOOK_VOCABULARY` in chapter_focus mirrors `MAIN_CURVE_NAMING`: ordered triggers, first match wins, `DEFAULT_HOOK_VOCABULARY` (the suspense reading) for an unconfirmed profile — naming the reader's experience off a drafted profile is the substitution INV-P2 forbids. It ships to the client on the visualization payload (INV-P4) rather than being re-derived from the genre there; `hookLabelZh` translates at render time so the four canonical labels stay the internal identity for every derivation, test and stored artifact.\n\n`buildChapterHookVitals` derives opening pull, ending pull + ledger, and first-hook position from data the page already holds. A vital whose number is missing is still returned with band `unknown` and a basis saying so — a silently absent row reads as a passing one.",
+  "acceptance_criteria": [
+    "读者问题由模型给出，且契约拒绝以「没有钩子」为内容的问题",
+    "本场回答了哪个先前问题可以被表达并到达客户端（payoffs 不再恒为空）",
+    "旧的 v2.0/v2.1 结果渲染与改动前逐字相同",
+    "已确认画像的言情书，四个动作显示为该类型的说法；未确认画像的书保持悬疑说法",
+    "首钩位置来自结构化字段；旧结果显示为「未记录」而不是猜一个数",
+    "缺数据的体检项显示为「—」并标灰，不得看起来像及格",
+    "镜头名、图例、轨迹标签、体检项在同一本书上用同一套说法",
+    "面积填充的基线在曲线的真实两端闭合，不产生斜边",
+    "阶段卡的描述不等于它自己的标题"
+  ],
+  "tests": [
+    "apps/desktop/src/components/readerJourney/chapterHookVitals.test.ts",
+    "apps/desktop/src/components/readerJourney/hookPayoffLayout_local.test.tsx",
+    "apps/api/tests/test_reader_journey_v2_local.py",
+    "apps/api/tests/test_reader_journey_v2_pipeline_wiring_local.py",
+    "apps/api/tests/test_chapter_profile_focus.py",
+    "apps/desktop/src/components/readerJourney/chartAreaAndPhaseCopy.test.ts"
+  ],
+  "verification_evidence": [
+    "回收实测（改动前，三本真实的书）：《我不是戏神》6 个钩子 0 回收、《剩女翻身记》1/0、《再也不见》3/0——合计 10/0",
+    "回收实测（改动后，真实 API 重跑）：《我不是戏神》3 条、《再也不见》1 条；且跨场景成立——S2 在 P30 提出「陈伶没有钥匙怎么进家门？」，S3 在 P31 给出回应",
+    "读者问题实测（戏神，改动前→改动后）：「首段即抛出'我是谁'的疑问，第二段雷声和朱红人影营造强烈悬念，读者无划走窗口。？」→「他为什么会穿越到这个世界？」；「场景开头无新钩子，仅延续前文。？」→ 该场（hook 30）不再产出问题，为空",
+    "读者问题实测（再也不见）：三条否定式评语 →「她为什么希望这条路一直走下去？」「他们白天去哪了？」「他到底能不能放下齐沫？」——且都是关系问题，不是谜题",
+    "首钩位置实测：戏神 P1（模型改动前原话即「首段」，而旧结构化字段给 P23）；再也不见 P2。各场首钩互不相同且落在本场范围内，不再等于场景首段",
+    "类型词表实测：戏神（fast_food_free+mystery）保持「提出疑问/加深悬念/给出回应/留到下章」；再也不见（female_romance+romance）显示「起了心结/越陷越深/挑明/悬而未说」，data-canonical-label 仍为原标签",
+    "三项体检实测：戏神 开篇 95 / 章末 95 / 首钩 P1（开5收3欠12）；再也不见 开篇 50 / 章末 65 / 首钩 P2（开3收3欠0）",
+    "过滤器实测（六条原文逐条）：三条否定式判断被拒，「构成小钩子，但非强悬念」保留，真问句的问号保留、陈述句尾的多余问号摘除",
+    "前端 622 项通过（readerJourney + analysis）；全量 1545 通过，5 项既有失败（settings_ux_polish / wholeBookFree* / WholeBookV2Product）与本轮无关；tsc --noEmit 通过",
+    "后端 425 项通过；两处收集错误为既有的 storylens_private_engine 未安装",
+    "真实 API 花费：本日累计 ¥0.47（含本轮两次重跑），授权额度 ¥30",
+    "整屏一致性实测（《再也不见》）：按钮「心结与挑明」/ 标题「心结与挑明」/ 图例「起了心结·越陷越深·挑明·悬而未说」/ 体检「第一处牵挂 P2」/ 轨迹「起了心结·起了心结·挑明」；《我不是戏神》同屏全部保持「钩子回收 / 首钩位置 / 提出疑问…」",
+    "面积填充实测：改前 d=「… L 700 116 L 619.8 380 L 80.4 380 Z」（两条斜边），改后「… L 700 116 L 700 380 L 44 380 Z」",
+    "阶段卡实测：改前「开端 · 节奏速度 65 · 开端」，改后「开端 · 节奏速度 65 · 建立背景、人物与阅读期待」",
+    "前端 631 项通过（readerJourney + analysis）；全量 1554 通过，5 项既有失败与本轮无关；tsc --noEmit 通过",
+    "后端 276 项通过（focus/profile/journey/visual）；test_long_novel_pipeline_dispatch 仍是既有的 4 个失败，数量未变"
+  ],
+  "known_out_of_scope": [
+    "跨章回收（第 1 章埋的坑第 30 章填）仍属全书分析，本轮只让单章能表达「本场回答了什么」",
+    "群像权谋 / 双主角尚无专属钩子词表，落到默认悬疑说法",
+    "节奏速度镜头对慢节奏言情几乎不产出信息（《再也不见》三场全是 65），属于「情感类该看什么」的下一轮",
+    "顶部「旧版分析尚未完成来源校验」横幅在新契约的 run 上仍然显示，判据未查",
+    "《剩女翻身记》未重跑（单场景章，验证价值低）；除 journey run 7/8 外的既有结果需重跑才有新字段",
+    "test_long_novel_pipeline_dispatch 的 4 个夹具失败是更早的欠账，未在本轮处理"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "无表结构变更。契约版本仍为 2.0：三个新字段均可选且默认为空，旧结果原样通过校验，兼容层在字段缺失时保留原行为。visualization 新增 hook_vocabulary 键，旧客户端忽略即可。"
+  },
+  "release_impact": {
+    "requires_reanalysis": true,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false,
+    "notes": "已有分析结果不会自动获得真实的读者问题、回收记录与首钩位置，需要重跑。类型词表与三项体检对旧结果立即生效（前两者不依赖新字段）。需重启 sidecar。"
+  },
+  "blocker_level": "none",
+  "head_inclusion": false,
+  "created_at": "2026-08-16T02:10:00+08:00",
+  "updated_at": "2026-08-16T04:20:00+08:00"
+}

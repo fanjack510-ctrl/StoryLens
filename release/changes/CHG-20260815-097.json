@@ -1,0 +1,61 @@
+{
+  "id": "CHG-20260815-097",
+  "title": "修复任务列表混合时区排序导致的 500；前置内容改为开弹窗即拦下，失败提示不再用成功样式",
+  "type": "fix",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": false,
+  "commits": [],
+  "modules": [
+    "apps/api/app/narrative_core/whole_book_v2",
+    "apps/desktop/src/components/analysis",
+    "apps/desktop/src/pages",
+    "apps/desktop/src/styles"
+  ],
+  "files": [],
+  "user_summary": "「分析本章」按钮变绿但点了没反应，实际有三个叠加的原因，现已全部修复。（1）后端任务列表接口直接 500：它把章节分析和全书分析的记录合在一起排序，前者的时间不带时区、后者带，Python 拒绝比较两者。因为未捕获的异常拿不到跨域响应头，浏览器把这个 500 报成了 CORS 错误，控制台完全指错方向。（2）你停留的那一章是「前置内容」（版权页、简介一类），本来就不参与分析——但界面允许你按下去，再返回一条 422。现在打开弹窗就会说明，并禁用按钮。（3）那条失败提示用的是绿色成功底色，看起来像「已完成」，加上它在滚动区下方，所以体验就是「点了没反应」。失败现在是红底左边框。",
+  "technical_summary": "Backend: task_center_projection.merge_whole_book_runs_into_task_list sorted with `r.created_at or datetime.now(timezone.utc)`; SQLite returns naive datetimes for chapter runs while project_whole_book_run emits aware ones, so the comparison raised TypeError and GET /api/v1/analysis-runs 500'd whenever both kinds were present. Extracted `_sort_key`, which normalises naive values to UTC (not local — guessing the offset would silently reorder runs) and never raises. Pre-existing bug, unmodified file, triggered by the data in this library. Frontend: StartAnalysisDialog takes chapterSectionType and gates front_matter on open (banner + disabled submit + reason), matching the profile gate's treatment; BookRoutePage supplies it from the chapters query. The submit notice renders `notice error` when submitState is failed, and .notice.error gains a red ground — the class existed with only a color rule and nothing used it.",
+  "acceptance_criteria": [
+    "GET /api/v1/analysis-runs 在同时存在章节运行与全书运行时返回 200",
+    "无时区的时间按 UTC 解释，不按本地时区猜测",
+    "created_at 缺失时排序不抛异常",
+    "前置内容章节：打开分析弹窗即显示说明并禁用提交，禁用原因写明「请选择正文章节」",
+    "正文章节不受该规则影响",
+    "提交失败时提示使用错误样式，而不是成功的绿底"
+  ],
+  "tests": [
+    "apps/api/tests/test_task_center_mixed_timezone_sort.py",
+    "apps/desktop/src/components/analysis/StartAnalysisDialog.test.tsx"
+  ],
+  "verification_evidence": [
+    "复现：GET /api/v1/analysis-runs 返回 500 且响应无 Access-Control-Allow-Origin，浏览器控制台报 CORS；直接调用 list_analysis_runs 抛 TypeError: can't compare offset-naive and offset-aware datetimes",
+    "修复后同一调用返回 12 条记录并正确按时间倒序；重启后 GET /api/v1/analysis-runs → 200",
+    "后端回归测试 4 项通过：混合时区可排序、naive 按 UTC 解释、缺失时间不抛、aware 值原样返回",
+    "实机书 9 第 1355 章（前置内容）：打开弹窗即显示「这一章是前置内容，不参与分析」，提交禁用，原因「前置内容不参与分析，请选择正文章节」",
+    "实机书 9 第 1357 章（正文）：无拦截横幅，勾选正文发送说明后提交按钮可用",
+    "StartAnalysisDialog 40 项通过（新增前置内容拦截、正文不受影响、失败样式三项）",
+    "前端全量 1494 通过 / 5 失败，5 项与基线一致",
+    "零真实供应商调用"
+  ],
+  "known_out_of_scope": [
+    "未代用户真实执行一次单章分析（会产生费用，预估约 ¥0.156/章），留待用户自行决定",
+    "《剩女遇见爱情》章节标题重复书名（原文格式如此），未做标题去重清洗"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "无数据变更；仅修正读取时的排序比较。"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false,
+    "notes": "后端排序修复需重启 sidecar（本机已重启）。此 500 会让任务中心与分析创建流程整体不可用，属于阻断级缺陷。"
+  },
+  "blocker_level": "none",
+  "head_inclusion": false,
+  "created_at": "2026-08-15T16:20:00+08:00",
+  "updated_at": "2026-08-15T16:20:00+08:00"
+}

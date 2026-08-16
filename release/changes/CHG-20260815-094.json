@@ -1,0 +1,63 @@
+{
+  "id": "CHG-20260815-094",
+  "title": "章节识别支持非「第N章」格式；识别失败的书不再让全书页 500",
+  "type": "fix",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": false,
+  "commits": [],
+  "modules": [
+    "apps/api/app/domain",
+    "apps/api/app/narrative_core/services",
+    "apps/api/app/routers"
+  ],
+  "files": [],
+  "user_summary": "章节识别此前只认「第N章」一种写法，导致三本书导入后整本被当成 1–4 章：《黑白道》用「1.标题」序号式（识别出 4 章）、《剩女遇见爱情》用「Chapter1标题」拉丁式（识别出 1 章）。现在补上序号式、拉丁式与卷/部/篇三种兜底写法，并且只在「第N章」失效时才启用，已经识别正确的书一章不动。对这两本书重新识别章节后：黑白道 4→207 章，剩女遇见爱情 1→89 章。另外修掉一个连带故障：章节识别失败的书如果已确认画像，全书页会直接报「无法读取数据」——长篇引擎要求每块至少 4 章，1 章的书让规划器抛错、整个准备接口 500。现在这类书自动退回旧引擎，页面正常打开。《碧血洗银枪》原文确实没有任何章节标记（古龙连续文本），不属于可识别范围。",
+  "technical_summary": "Detection: CHAPTER_PATTERN stays the primary and is unchanged. ALT_CHAPTER_PATTERNS adds three anchored fallbacks (latin `Chapter\\d+`, ordinal `\\d+[、.．:：]<title>` with a mandatory non-empty short title, volume 第N卷/部/篇), tried in order only when the primary yields < MIN_BELIEVABLE_CHAPTERS (4) and only adopted when the alternative both clears that floor and beats the primary — so a book carrying both forms is never re-cut by the weaker signal. detect_chapters was refactored into a `_collect(pattern, kind)` helper; scoring, adoption and downstream shape are untouched. Dispatch: book_uses_long_novel_engine now also requires the book to have >= MIN_VIABLE_CHAPTERS_PER_BLOCK chapters (completed snapshot count, falling back to a chapters COUNT) — a confirmed profile on an undetectable book previously reached joint_resolve, which raised OUTPUT_BUDGET_TOO_LOW and 500'd prepare. Profile router: snapshot auto-create now logs the real exception and re-reads before claiming BOOK_HAS_NO_SNAPSHOT, so a lost race (React StrictMode double-fires the draft POST) reports the winner's snapshot instead of a false 409.",
+  "acceptance_criteria": [
+    "「第N章」格式的书识别结果逐字不变（深海余烬 806、糙汉重生 12 经 reparse-preview 验证）",
+    "序号式（1.标题）与拉丁式（Chapter1标题）被识别，且需满足最少 4 章才采纳",
+    "同时含两种格式时以「第N章」为准，不被弱信号重切",
+    "散文中的数字（2008.、价格 3.5 元）与孤立的「1、」不触发切分",
+    "章节数不足 4 的书即使已确认画像也走旧引擎，prepare 返回 200 而非 500",
+    "画像草稿并发重复请求不再误报 BOOK_HAS_NO_SNAPSHOT"
+  ],
+  "tests": [
+    "apps/api/tests/test_chapter_detection_formats.py",
+    "apps/api/tests/test_scene_pipeline.py",
+    "apps/api/tests/test_hardening.py",
+    "apps/api/tests/test_profile_confirmation_gate.py"
+  ],
+  "verification_evidence": [
+    "test_chapter_detection_formats 7 项通过：房内格式不变、两种兜底生效、混合时房内格式优先、散文不误切、单个标记不采纳",
+    "真实库 reparse-preview（不落盘）：黑白道 4→207、剩女遇见爱情 1→89、深海余烬 806→806、糙汉重生 12→12、碧血洗银枪 2→2（原文无标记）",
+    "书 6 prepare：修复前 LongNovelError OUTPUT_BUDGET_TOO_LOW → HTTP 500；修复后 200，planner=hierarchical_v2，chapter_count=1",
+    "书 8 prepare 仍为 planner=long_novel_engine，派发未被削弱",
+    "并发两次 /books/5/profile/draft：两次均 200 draft（修复前竞速方会 409）",
+    "受影响回归 41 项通过（scene_pipeline / hardening / 画像门 / 单章侧重 / PDF 门）",
+    "test_native_overview_walking_skeleton 的 7 项失败经 HEAD 基线复现，属既有红灯，与本次无关",
+    "零真实供应商调用"
+  ],
+  "known_out_of_scope": [
+    "《碧血洗银枪》一类原文无章节标记的书：需要按长度或空行分段的兜底切分，或提示用户手动分章（未做）",
+    "对已导入书籍自动重跑识别（用户需在书籍工具中手动执行「重新识别章节」）",
+    "识别质量的主动体检提示（导入后若章数异常少，UI 未主动提醒）"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "已导入书籍的章节数据不会自动变化；新检测器只在导入新书或用户主动执行「重新识别章节」时生效。重新识别会重建章节与段落，该书已有的分析结果需重跑——这是既有 reparse 行为，非本次引入。"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false,
+    "notes": "需重启 sidecar（本机已重启）。建议对《黑白道》《剩女遇见爱情》执行一次「重新识别章节」后再确认画像——旧的 1 章/4 章状态会让画像的篇幅轴推断错误。"
+  },
+  "blocker_level": "none",
+  "head_inclusion": false,
+  "created_at": "2026-08-15T11:20:00+08:00",
+  "updated_at": "2026-08-15T11:20:00+08:00"
+}

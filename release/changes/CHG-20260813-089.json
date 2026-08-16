@@ -3,7 +3,7 @@
   "title": "全书画像层与画像确认门（Adaptive Profile Layer L0）",
   "type": "feature",
   "base_version": "1.2.0",
-  "status": "in_progress",
+  "status": "tested",
   "include_in_next_release": false,
   "commits": [],
   "modules": [

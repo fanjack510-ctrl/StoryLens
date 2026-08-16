@@ -1,0 +1,66 @@
+{
+  "id": "CHG-20260814-090",
+  "title": "主角历程改为画像驱动的纵轴，并把「重新分析 V2」接到长篇引擎",
+  "type": "feature",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": false,
+  "commits": [],
+  "modules": [
+    "apps/api/app/narrative_core/long_novel",
+    "apps/api/app/narrative_core/services",
+    "apps/api/app/narrative_core/whole_book_v2",
+    "apps/desktop/src/features/wholeBookV2"
+  ],
+  "files": [],
+  "user_summary": "「主角历程」以前对每本书都画成同一张上升的楼梯——因为台阶的高度就是第几个阶段，这个数字本身不携带任何信息。现在这条线的纵轴由作品画像决定：悬疑书画的是读者掌握了多少真相，升级流画的是主角站在书里写明的第几阶，群像书没有单一主角，改画各人的戏份带宽。三种都能往下走，而往下走的地方往往才是这本书真正发生的事。旁边补了一张每一程的账：这一程遇见了谁、做了什么、得到什么、失去什么。「失去」那一栏做了筛选——抽取记下的代价里有六成是「可能被识破」这类没发生的风险，留着会让这一栏看起来很满但什么也没说，现在只留真的发生过的。另外，确认过画像的书，点「重新分析 V2」会真正走新的长篇引擎；确认页以前没有任何入口，只能手敲网址，现在全书分析页上有链接。",
+  "technical_summary": "Four changes, all additive to the shipped contract. (1) `JourneyResult` on WholeBookAnalysisV2: a `JourneyAxis` of cognition | ladder | screen_time | none chosen by the engine from the confirmed profile (pov=ensemble outranks engine, per 10_ADAPTIVE_PROFILE_LAYER §9 axis 4), with points, screen-time bands, a per-stage ledger and a caveat string the client renders verbatim. The ordinal staircase is not a fallback: an engine with no axis returns `none` and the client shows the stage list. (2) `power_beats` extraction delta on engine=progression, with a free-text `level` (a closed enum would force an unseen ladder onto 练气/筑基) and a `kind` vocabulary that is closed but not pydantic-validated (rejecting a block over one word discards eight chapters of paid extraction). (3) `long_novel_pipeline_v1`: books with a confirmed profile dispatch from `execute_hierarchical_v2_pipeline_v1` into RunCoordinator, sharing the same repository, usage ledger and progress checkpoints; progress is written per completed provider call rather than per stage transition. (4) The prepare estimate now describes whichever engine will run, derived from the same `joint_resolve` the run uses.",
+  "acceptance_criteria": [
+    "确认过画像的书，重新分析 V2 走 long_novel_engine；未确认的书仍走 hierarchical_v2；草稿画像不算确认（INV-P2）",
+    "journey.axis 由画像决定，engine 无对应轴时返回 none 且不画任何曲线",
+    "三种轴的 journey 段都能通过 WholeBookAnalysisV2 契约验证",
+    "运行期间 /v2/progress 可读，且百分比由已完成的付费调用推动",
+    "预估面板的块数与调用数描述实际将要运行的引擎",
+    "旧文档缺少 journey 字段时前端不报错，退回阶段列表"
+  ],
+  "tests": [
+    "apps/api/tests/test_long_novel_deltas.py",
+    "apps/api/tests/test_long_novel_journey_section.py",
+    "apps/api/tests/test_long_novel_pipeline_dispatch.py",
+    "apps/desktop/src/features/wholeBookV2/WholeBookV2Journey.test.tsx",
+    "scripts/check_sidecar_contract_current.py"
+  ],
+  "verification_evidence": [
+    "真实运行 run_id=10《深海余烬》806 章：114 次调用、¥2.45、零失败块，pipeline_version=long-novel-engine-1.0，result_origin=real_provider，journey.axis=screen_time，8 条戏份带",
+    "戏份带跨度与独立测量一致：凡娜 127 章对 127 章，阿加莎第 310 章首次行动",
+    "预估器按两次真实测量钉住：深海余烬 101 块 / 116 调用（实际 114），我不是戏神 163 块（实际 163）",
+    "《我不是戏神》1299 章 power_beats 全书扫描：改题面前主角阶位读数有 8 次错误下降，改后 1 次且为真实受挫（第 1205 章）",
+    "「失去」栏筛选依据：《深海余烬》抽取的 815 条代价中 62% 以「可能」开头，剔除后余 18 条",
+    "sidecar 重建并验证：13/13 契约字段（含 journey），端口 8099 启动 /health 200；守卫脚本双向实测——新构建 exit 0，模拟缺字段 exit 1 并点名 journey"
+  ],
+  "known_out_of_scope": [
+    "cognition 轴在产品中从未显示过：深海余烬判为群像，pov 优先于 engine；需要一本悬疑+单主角的书",
+    "ladder 轴同理未在产品中显示：《我不是戏神》不在开发库",
+    "twist 抽取题面未修：806 章仅抽到 1 次反转，认知曲线目前必然近乎单调",
+    "pov_entity delta 实际未生效（806 章仅 7 章填写），单独排查",
+    "romance / episodic_transmigration / slice_of_life 三个引擎的 delta 仅有规格，无样本书，未实现",
+    "费用估算的 token 算法仍为旧估算器：估 ¥1.97–2.19，实测 ¥2.45，偏低约 12%，样本仅一次"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "向后兼容。journey 段整体带默认值，缺失时按 availability=unavailable / axis=none 解析；power_beats 在未启用 delta 的书上为空列表，核心 schema 与提示词逐字节不变，因此不会使既有抽取缓存失效。已完成的旧运行结果无需迁移。"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false,
+    "notes": "契约新增字段，发布前必须重建 PyInstaller sidecar：过期的 sidecar 使用 extra='forbid'，遇到 journey 字段会 500。已重建并验证：新 sidecar 携带全部 13 个契约字段，独立端口启动 /health 返回 200。新增 scripts/check_sidecar_contract_current.py 作为常设守卫，构建时由 build_sidecar.ps1 写清单，缺清单一律判为过期。注意 start_storylens_dev.ps1 启动的后端没有 --reload，改动需重启。"
+  },
+  "blocker_level": "none",
+  "head_inclusion": false,
+  "created_at": "2026-08-14T00:00:00Z",
+  "updated_at": "2026-08-14T00:00:00Z"
+}

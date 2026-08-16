@@ -1,0 +1,63 @@
+{
+  "id": "CHG-20260815-092",
+  "title": "单章分析接入画像层：按已确认五轴注入类型侧重（10_ADAPTIVE_PROFILE_LAYER §4.4）",
+  "type": "feature",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": false,
+  "commits": [],
+  "modules": [
+    "apps/api/app/narrative_core/long_novel",
+    "apps/api/app/services",
+    "docs/whole-book"
+  ],
+  "files": [],
+  "user_summary": "单章分析终于知道自己在读什么书了。此前修仙升级文和都市情感文用同一套中性指令逐场景打分——分析在不知道对象是什么的前提下进行。现在：一本书的画像（五轴）经你确认后，单章分析的四段提示词会按类型追加观察侧重——免费快餐流看钩子位置与断章质量，男频升级流看爽点类型与兑现位置，女频情感看感情节拍与糖刀强度，悬疑看线索是否对读者公平，群像看本章视角人物，日常种田不再因低冲突被折价。未确认画像的书一个字节都不变，行为与从前完全一致。附带一份单章管线审计（docs/whole-book/CHAPTER_PROFILE_FOCUS.md），列明已修复、已缓解与待产品决策的问题。",
+  "technical_summary": "New `long_novel/chapter_focus.py`: a registry of 8 ChapterFocus entries mirroring deltas.py, triggered by the same closed five-axis vocabulary from contracts/profile.py (dataclass validates triggers at import; conjunctions supported — 爽点 requires male_gratification AND progression per §4). Payload is prompt emphasis only: `apply_chapter_focus(prompt, session, book_id)` appends a clearly-scoped block to the system prompt and recomputes content_hash with load_prompt's formula so provenance follows the real text. Wired at four load_prompt sites: scene_pipeline (scene_analysis), reader_journey_pipeline (scene + chapter synthesis), reader_journey_v2_execution (scene). Invariants: additive-only (INV-P1), confirmed-profile-only (INV-P2 — drafts and absent profiles return the identical PromptBundle object, keeping cache hashes stable), and defensive reads (a pre-migration DB without book_profiles rolls the session back and behaves as no-profile; the focus can never be why an analysis fails — this exact failure was caught by the journey persistence tests and fixed).",
+  "acceptance_criteria": [
+    "无画像或仅草稿画像的书：四段提示词逐字节不变，apply_chapter_focus 返回同一对象（content_hash 不动）",
+    "确认 mystery 画像后：reader_journey_scene 系统提示以原文为完整前缀，尾部追加线索/公平侧重，content_hash 改变",
+    "male_gratification 与 progression 必须同时成立才触发爽点侧重（AND 语义）",
+    "多轴叠加时侧重块按注册表顺序稳定输出",
+    "非法轴值在定义期抛错（import 即失败），不允许静默永不触发",
+    "旧数据库（无 book_profiles 表）上的单章运行行为与改动前一致，会话不被污染"
+  ],
+  "tests": [
+    "apps/api/tests/test_chapter_profile_focus.py",
+    "apps/api/tests/test_chg041_journey_persistence_reload.py",
+    "apps/api/tests/test_chg041_fake_journey_success_e2e.py",
+    "apps/api/tests/test_chapter_analysis_completion_local.py",
+    "apps/api/tests/test_chg041_scene_boundary_manual_review.py",
+    "apps/api/tests/test_defect_canary_001_a1_replay.py"
+  ],
+  "verification_evidence": [
+    "test_chapter_profile_focus 9 项通过：字节不变性、附加性、AND 触发、叠加顺序、定义期校验、全注册表触发",
+    "受影响管线回归 66 项通过（journey e2e、persistence reload、boundary manual review、canary a1 replay、repair resilience、race chg013）",
+    "回归曾抓到真缺陷：旧测试库缺 book_profiles 表时 SELECT 失败污染会话，导致 journey 工件为空；修复为不可读=无画像并回滚会话，复跑通过",
+    "触发词表与全书 delta 同源验证：chapter_focus 触发校验直接引用 contracts/profile.AXES 闭集",
+    "零真实供应商调用（预算未动）"
+  ],
+  "known_out_of_scope": [
+    "scene_role 九选一词表偏冲突叙事（改词表=新提示词版本+重标定，见审计 A2）",
+    "确认门未覆盖单章入口的 UI 提示（产品决策，见审计 A4）",
+    "单章与全书两条管线的成果互喂（架构级，见审计 A5）",
+    "侧重效果的真书标定（需付费运行，留待预算恢复后与用户一起做）"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "无表结构变更。未确认画像的书提示词哈希不变，既有场景/旅程缓存与断点续跑不受影响；已确认画像的书首次单章分析起使用新哈希，属于预期的重新计价点。"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false,
+    "notes": "纯后端提示词装配变更，需重启 sidecar 生效（本机已重启）。对已确认画像的书，下一次单章分析自动带侧重，无需用户操作。"
+  },
+  "blocker_level": "none",
+  "head_inclusion": false,
+  "created_at": "2026-08-15T02:30:00+08:00",
+  "updated_at": "2026-08-15T02:30:00+08:00"
+}

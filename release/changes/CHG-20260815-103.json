@@ -1,0 +1,80 @@
+{
+  "id": "CHG-20260815-103",
+  "title": "v2 结果终于可校验：补上来源指纹、把问句移出断言检验，并让诊断按类型收手",
+  "type": "fix",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": false,
+  "commits": [],
+  "modules": [
+    "apps/api/app/services/reader_journey_v2_persist.py",
+    "apps/api/app/services/analysis_integrity_guard.py",
+    "apps/api/app/services/reader_journey_v2_diagnosis.py",
+    "apps/api/app/services/reader_journey_v2_finalize.py",
+    "apps/api/app/narrative_core/long_novel/chapter_focus.py",
+    "apps/api/tests/whole_book_minimal_test_helpers.py"
+  ],
+  "user_summary": "一、页面顶上那条「旧版分析尚未完成来源校验，仅供参考」，在刚跑完的新分析上也挂着。查下来不是横幅写错了，是它说的是实话：v2 从来不写来源指纹（v1 一直写）。没有指纹，完整性守卫就无法证明这份分析是从你现在看到的正文算出来的——也就是说，**正文被改过它也发现不了**，对主力管线完全失效。现在 v2 也写指纹，新跑的结果状态是「已校验」，横幅消失。\n\n二、指纹补上之后立刻暴露了第二个问题：守卫醒过来，把每一个钩子字段都判为不可信并隐藏，页面上读者问题全变成空白。原因是范畴错误——它检查「结论里的词有没有出现在所引段落里」，而读者问题不是对正文的断言，是正文让读者产生的疑问，本来就不该逐词出现。这不是拍脑袋：同一个问题引到真正提出它的那一段，24 个词里 23 个「无支持」；引到另一本书毫不相干的段落，24 个里 24 个。两种情况分不开，说明这个检验对问句没有区分力，跑在那里只会制造误判。现在问句不参与断言检验，但仍必须引本场景内的段落，同一条目里的陈述句照常检验。\n\n三、诊断也在拿悬疑的尺子量言情。实测两章：《再也不见》3 个场景被判 2 条缺陷（开场「张力不足」、宿舍闲聊「好奇不足」），《我不是戏神》6 个场景 1 条（那个 3 段的停顿场，判得对）。订阅制言情开场安静是形式不是缺陷。现在画像可以声明「本类型不适用哪些诊断码」：言情撤掉张力不足与好奇不足，日常向再撤掉节奏过慢；情绪投入那一项照常armed，撤的是尺子不是警报。撤销会记进 provenance，不会悄悄消失。未确认画像的书一条都不撤。\n\n四、群像权谋与双主角补上了自己的钩子说法（布局与摊牌 / 错位与对上）。\n\n五、清掉 test_long_novel_pipeline_dispatch 的 4 个长期失败：共享夹具建 3 章，而长篇引擎要求至少 4 章才能成块，于是「已确认画像的书应走新引擎」这条断言永远不成立——错的是夹具不是规则。",
+  "acceptance_criteria": [
+    "新跑的 v2 结果带来源指纹，状态为 trusted，不再显示旧版横幅",
+    "写入端与校验端用同一批段落和同一组版本号，否则会误报为篡改",
+    "问句不参与断言检验；同一条目里的陈述句仍然检验；证据范围检验对问句照常生效",
+    "已确认画像的言情/日常书不再被判张力不足、好奇不足；悬疑书不受影响",
+    "撤掉了哪些诊断码写进 provenance",
+    "未确认画像的书：指纹照写，诊断一条不撤",
+    "共享夹具默认仍是 3 章，46 个既有调用方行为逐位不变"
+  ],
+  "tests": [
+    "apps/api/tests/test_v2_grounding_and_fingerprint_local.py",
+    "apps/api/tests/test_chapter_profile_focus.py",
+    "apps/api/tests/test_long_novel_pipeline_dispatch.py"
+  ],
+  "verification_evidence": [
+    "指纹实测：改动前 run8 三个场景 fingerprint_state 全为 missing_legacy、状态 legacy_unverified；改动后 run9 全为 ok、状态 trusted、横幅在页面上消失",
+    "守卫误判实测：run9 首次带指纹时 9 个字段被判 hide_field（S1/S3 的 hooks、payoffs、reader_question_*），页面上读者问题全空；修正后同一结果 0 个字段被隐藏",
+    "区分力实测：「他到底能不能放下齐沫？」引到真正提出它的 P0042，23/24 词无支持；引到另一本书的 P0050，24/24。两者不可分",
+    "诊断实测（去重后，每场取最新档案）：《再也不见》第1章 3 场景 2 条缺陷 → 0 条；《我不是戏神》第1章 6 场景 1 条（S5 好奇不足）→ 1 条，不变",
+    "端到端实测：真实 API 重跑 run10，缺陷 2→0，provenance 记录 profile_suppressed_diagnoses=['weak_curiosity','weak_tension']，integrity 仍为 trusted",
+    "夹具实测：test_long_novel_pipeline_dispatch 10/10 通过（改动前 4 失败）",
+    "共享夹具等价性：默认 3 章路径下切片结果与改动前逐条相同（已验证）",
+    "后端 307 项通过（journey/focus/profile/diagnos/ground/dispatch/weight）；前端 631 项通过；tsc --noEmit 通过",
+    "既有失败未变：test_native_overview_* 与 test_whole_book_chg054_* 的失败源于 storylens_private_engine 未安装，与本轮无关",
+    "真实 API 花费：本轮两次重跑，本日累计约 ¥0.6，授权额度 ¥30"
+  ],
+  "known_out_of_scope": [
+    "run7/run8 等改动前落库的结果仍为 legacy_unverified，需重跑才带指纹",
+    "实体抽取器仍是 2–4 字定长切分（非重叠），对陈述句的检验精度未改善，只是不再作用于问句",
+    "诊断阈值本身仍是绝对值，只是可以按类型整条撤掉；按类型调阈值属于更大的改动",
+    "节奏速度镜头未改画什么：run9 实测 50/65/65 有变化，一章数据不足以支撑重设计"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "无表结构变更。source_context_fingerprint 是 v1 契约里既有的可选字段，v2 现在也填。deterministic_statistics 新增 profile_suppressed_diagnoses 键，旧结果没有该键。"
+  },
+  "release_impact": {
+    "requires_reanalysis": true,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false,
+    "notes": "已有结果不会追认指纹，需重跑才会从 legacy_unverified 变为 trusted。诊断撤销同样要重跑（诊断是落库的）。需重启 sidecar。"
+  },
+  "blocker_level": "none",
+  "head_inclusion": false,
+  "created_at": "2026-08-16T05:30:00+08:00",
+  "updated_at": "2026-08-16T05:30:00+08:00",
+  "technical_summary": "Three findings, each of which exposed the next.\n\n1. `persist_finalized_v2_profiles` never wrote `source_context_fingerprint`; the v1 pipeline always has. `classify_integrity_status` therefore returned `legacy_unverified` for every v2 result — cosmetically the banner, materially a guard that could not detect edited text under any v2 run. `_source_context_fingerprint` now computes it through the verifier's own `_paragraphs_for_scene` and takes prompt/contract/formula versions off `journey_run`, so the value stored is the value recomputed. Diverging on either side would produce `mismatch`, which the UI reports as tampering — a worse failure than the missing fingerprint.\n\n2. With the fingerprint present the guard ran, and `validate_claim_entities_against_evidence` flagged every hook field (`display_policy: hide_field`). The check asks whether a claim's tokens appear in the paragraph it cites; a reader question is not a claim about the text. Measured: the same question against the paragraph that raises it scored 23/24 tokens unsupported, against an unrelated paragraph from another book 24/24 — no discriminating power. `_is_question_text` splits the item's fields on the text itself (terminal question mark) rather than on a field-name list, because the v2 compat shim writes the question into `hooks[].summary`. Evidence scope still runs on questions; assertive text in the same item is still checked.\n\n3. `ChapterFocus.suppressed_diagnoses` mirrors `weights`: validated against a frozen code set at import (a misspelled code is silent otherwise), unioned across matching foci, and empty unless the profile is confirmed (INV-P2). `finalize_v2_profiles` threads it to `diagnose_chapter` and records the applied set in provenance under `profile_suppressed_diagnoses`, so a withdrawn warning leaves a trace.\n\n4. `seed_sample_s_book` gains `chapter_count` defaulting to 3. The dispatch tests ask for 4 because `book_uses_long_novel_engine` requires `MIN_VIABLE_CHAPTERS_PER_BLOCK`; the default slicing is unchanged for all 46 existing callers.",
+  "files": [
+    "apps/api/app/services/reader_journey_v2_persist.py",
+    "apps/api/app/services/analysis_integrity_guard.py",
+    "apps/api/app/services/reader_journey_v2_diagnosis.py",
+    "apps/api/app/services/reader_journey_v2_finalize.py",
+    "apps/api/app/services/reader_journey_v2_execution.py",
+    "apps/api/app/narrative_core/long_novel/chapter_focus.py",
+    "apps/api/tests/whole_book_minimal_test_helpers.py",
+    "apps/api/tests/test_long_novel_pipeline_dispatch.py",
+    "apps/api/tests/test_chapter_profile_focus.py",
+    "apps/api/tests/test_v2_grounding_and_fingerprint_local.py"
+  ]
+}

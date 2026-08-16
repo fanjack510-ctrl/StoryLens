@@ -1,0 +1,67 @@
+{
+  "id": "CHG-20260815-100",
+  "title": "阅读旅程按画像类型专项打分：新增类型维度、工艺缺陷标记，并修复确认后分析拿不到 API 配置",
+  "type": "feature",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": false,
+  "commits": [],
+  "modules": [
+    "apps/api/app/narrative_core/long_novel",
+    "apps/api/app/services",
+    "apps/api/app/schemas",
+    "apps/api/app/api/v1",
+    "packages/prompts/reader_journey_scene",
+    "apps/desktop/src/components/readerJourney"
+  ],
+  "user_summary": "以前不管什么类型的小说，单章分析都用同一套 21 个维度打分。查了已完成分析的 42 个真实场景，其中四项几乎从来不变——「清晰度」81% 的场景都是满分，「设定一致」从没低于 4 分，「冗余」81% 都是 1 分。也就是说这四项占着版面却不提供任何信息；同时真正决定读者读不读得下去的东西一个都没量：爽文读者盯的是这一章的爽点兑现了没有，悬疑读者盯的是线索给得公不公平。现在会根据你确认过的作品画像，额外给出 2—4 条该类型专属的维度（悬疑：线索投放／信息公平；快餐免费：开篇抓力／断章质量；男频升级：爽点兑现／憋屈控制；女频情感：心动强度／关系推进；群像、快穿、种田各有自己的），每条都带 0—5 分和正文段号。原来那四项改成「先查再打分」：先逐条检查有没有矛盾、重复、指代不明、因果缺口，查到才降分并在「需要留意」里指出是哪几段——之前只给一个分数，看不出问题在哪。另外修掉一个会让人以为程序坏了的问题：确认场景后点开始分析，会报「Provider 已停用」，其实 API 是开着的。",
+  "technical_summary": "Audit first: 42 production reader_journey_scene_profile_v2 artifacts show setup_consistency confined to {4,5}, clarity 5 for 81%, redundancy 1 for 81%, causal_coherence confined to {3,4,5}. Those four are hygiene checks, not scoring axes. GenreAxis (key/label/anchors/scope) hangs off the existing ChapterFocus registry so triggers stay the same closed profile vocabulary; selected_axes dedupes and caps at MAX_GENRE_AXES=4 in registration order. Every axis states what 0/3/5 mean in that book's terms — the production sample is the argument for anchors, since an unanchored axis gets answered 5. scope gates opening_grip and chapter_end_hook to the scene that actually carries them (the first real run scored 断章质量=1 on a middle scene, which restates the scene's position rather than judging the writing); the scene payload now carries is_chapter_opening / is_chapter_ending taken from the full scene list, not the batch, since a batch edge is a token-budget artefact. Contract gains genre_axes and craft_flags, both defaulting empty so every pre-existing artifact still validates. Prompt bumped to reader_journey_scene v2.1: anchors for the four hygiene dimensions, a four-item pre-scoring checklist that must run before they are scored, and an explicit rule that genre_axes may only use keys from the supplied list. validate_scene_batch_result_v2 rejects axis keys outside the book's own list (None = no opinion, empty set = nothing legal), out-of-scene evidence on axes and flags, and any craft flag whose matching field was not downgraded (redundancy inverts: the bound is a minimum). Separately, POST /scene-boundaries/draft/{id}/confirm never called bind_gateway_runtime, so the scene analysis it queues ran against registry-bootstrap providers and died on MODEL_PROVIDER_DISABLED_PRECHECK; binding copies the ProviderConfiguration row onto the provider objects and therefore outlives the request session the background task cannot use. Axes and flags reach the UI through v2_genre_axes / v2_craft_flags in deterministic_statistics_json, rendered above the fold in JourneySceneDetailPanel.",
+  "acceptance_criteria": [
+    "已确认画像的书拿到该类型的专项维度，每条带 level 与正文段号",
+    "未确认画像的书 genre_axes 为空，且模型自造的维度名被拒绝",
+    "开篇抓力只在本章第一个场景评，断章质量只在最后一个场景评",
+    "注入矛盾或重复段落时 craft_flags 会触发并指出段号",
+    "craft_flags 与对应字段的分数必须一致，否则整批重来",
+    "确认场景后启动的分析能读到用户配置的 API，不再报 Provider 已停用",
+    "每个场景都必须给出该书所有按场景评的专项维度，漏给一条整批重来"
+  ],
+  "tests": [
+    "apps/api/tests/test_reader_journey_genre_axes.py",
+    "apps/api/tests/test_chapter_profile_focus.py",
+    "apps/desktop/src/components/readerJourney/sceneGenreAxes.test.tsx"
+  ],
+  "verification_evidence": [
+    "维度审计：读用户生产库（只读）42 个真实场景档案，统计 21 个维度的分布，四项工艺维度几乎恒定（clarity 5 占 81%、setup_consistency 从未低于 4、redundancy 1 占 81%、causal_coherence 仅 {3,4,5}）",
+    "真实 API 对照（书 10 章 1445）：v2.0 无画像时自造出 mystery_hook / clue_fairness 两个不存在的维度名；v2.1 无画像时 genre_axes 为空",
+    "真实 API 对照：加画像后 6 个场景的线索投放分别为 4/2/4/4/2/4，开篇抓力只出现在 S1，断章质量只出现在 S6",
+    "craft_flags 有效性验证：向场景注入一段逐字重复的正文，v2.1 命中 redundant_passage 并列出段号，redundancy 同步从 1 升到 3；改写提示词前同样的注入完全没有触发",
+    "后端测试 20 项通过（genre_axes 8 项 + chapter_profile_focus 12 项）",
+    "前端测试 3 项通过（专项维度渲染、无画像时不渲染、工艺缺陷以文字而非分数呈现）；tsc --noEmit 通过",
+    "生产路径全链实跑（确认 6 个场景 → 场景分析 → 阅读旅程）：journey status=succeeded，6 个场景档案全部带专项维度",
+    "发现并修掉配置漏配：config/reader_journey_pipeline_version.json 仍钉在 v2.0，常量改了但实际跑的还是旧提示词；改钉 v2.1 后重跑，reader_journey_runs.scene_prompt_version 记录为 v2.1",
+    "v2.1 首次实跑暴露漏给：6 个场景里 S5 一条专项维度都没给。补上「每个场景都要给」的措辞与 JOURNEY_GENRE_AXIS_MISSING 校验后重跑，S1—S6 全部带齐（S1 多一条开篇抓力，S6 多一条断章质量，与适用范围一致）",
+    "本轮真实 API 累计：书 10 章 1445 上 32 次调用，128762 输入 / 65377 输出 token，¥0.2595（授权额度 ¥30）"
+  ],
+  "known_out_of_scope": [
+    "四项工艺维度仍留在契约里（章节合成与既有产物依赖它们），只是改成缺陷驱动；彻底移出评分要等下一次契约版本",
+    "章节级合成提示词仍是 v2.0，专项维度目前只在场景级评分，未汇总进章节结论",
+    "专项维度只在一本悬疑＋快餐免费的书上做过真实验证，其余六类只验证了提示词渲染"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "契约新增 genre_axes / craft_flags 两个可选数组，默认空，旧产物照常校验通过。contract_version 保持 2.0——没有字段被删除或改变形状，读取端不需要区分。"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false,
+    "notes": "已有分析结果不会凭空长出专项维度，需要重跑才有。需重启 sidecar。"
+  },
+  "blocker_level": "none",
+  "head_inclusion": false,
+  "created_at": "2026-08-15T22:30:00+08:00",
+  "updated_at": "2026-08-15T22:30:00+08:00"
+}

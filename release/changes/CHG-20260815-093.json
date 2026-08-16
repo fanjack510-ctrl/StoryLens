@@ -1,0 +1,64 @@
+{
+  "id": "CHG-20260815-093",
+  "title": "画像确认硬门：单章与全书分析均需先确认作品画像（10_ADAPTIVE_PROFILE_LAYER §4.3）",
+  "type": "feature",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": false,
+  "commits": [],
+  "modules": [
+    "apps/api/app/api/v1",
+    "apps/api/app/routers",
+    "apps/api/app/narrative_core/services",
+    "apps/desktop/src/components/analysis",
+    "apps/desktop/src/services"
+  ],
+  "files": [],
+  "user_summary": "分析入口现在有一道统一的确认门：不论单章分析还是全书分析，开始之前都必须先确认这本书的作品画像（五轴下拉确认，一本书只做一次）。此前画像只在后台决定用哪个引擎，未确认的书会静默按中性方式分析——现在入口直接拦下，提示语写明原因（画像决定分析按什么类型侧重进行），单章弹窗内附「去确认作品画像 →」链接，全书页顶部本就有画像入口。已生成草稿但未确认的书，提示会注明「草稿已生成，确认即可」。恢复中断的运行和开发用 fixture 入口不受门限制。顺带修复：只做单章分析的用户此前无法生成画像（画像依赖的书籍快照只在全书流程里创建），现在画像页会自行创建快照，不再死锁。",
+  "technical_summary": "One shared state function, two gated entries. `profile_confirmation_state(session, book_id)` (long_novel_pipeline_v1) returns confirmed|draft|none, defensively (unreadable store → none, session rolled back). POST /chapters/{id}/analysis-runs raises 409 PROFILE_CONFIRMATION_REQUIRED after the client_request_id idempotent replay (pre-gate runs replay fine) and after the more specific front-matter 422; POST /books/{id}/whole-book/free/create gates at the top; resume and fixture entries stay open (resumed progress is paid for; fixtures are dev tooling). Deadlock fix: book_profile_router._chapter_texts now calls BookSnapshotServiceImpl.create_or_reuse_snapshot when the book has no snapshot — previously only the whole-book prepare built one, so a chapter-only user could never draft the profile the gate demands. Frontend: StartAnalysisDialog maps the code, stores details.book_id, and renders a /books/{id}/profile link; mapWholeBookStartError adds the code for the whole-book page. Test infra: conftest engines now run apply_narrative_migrations (book_profiles existed only in migrations, not Base.metadata); tests that start runs confirm a profile via tests/profile_gate_helpers.confirm_book_profile — the same two API calls a user's client makes.",
+  "acceptance_criteria": [
+    "无画像的书：POST /chapters/{id}/analysis-runs 与 /whole-book/free/create 均返回 409 PROFILE_CONFIRMATION_REQUIRED，details 携带 book_id 与 profile_status",
+    "仅有草稿的书同样 409，profile_status=draft，提示语注明草稿已生成",
+    "确认画像后单章创建返回 202；全书创建走到下一层校验而非 409",
+    "front_matter 的 422 优先于确认门；已存在运行的幂等重放不被追溯拦截",
+    "无快照的书访问画像草稿端点时自动创建快照，不再 409 BOOK_HAS_NO_SNAPSHOT 死锁",
+    "单章弹窗 409 时显示画像页链接 /books/{book_id}/profile"
+  ],
+  "tests": [
+    "apps/api/tests/test_profile_confirmation_gate.py",
+    "apps/api/tests/profile_gate_helpers.py",
+    "apps/desktop/src/components/analysis/StartAnalysisDialog.test.tsx",
+    "apps/desktop/src/services/wholeBookStartLimits.test.ts"
+  ],
+  "verification_evidence": [
+    "test_profile_confirmation_gate 6 项通过：无画像 409 / 草稿 409 / 确认后 202 / front-matter 优先 / 全书 409 / 确认后过门",
+    "受影响既有测试 54 项（scene_pipeline、hardening、phase_2a2、aliyun、stale_run、wb17、desktop_api、phase_1c_a7、scene_evidence）+ journey 回归 56 项全部通过",
+    "实机（dev DB）：书 2（无画像）单章与全书均 409 PROFILE_CONFIRMATION_REQUIRED {book_id:2, profile_status:none}；书 8（已确认）过门后停在 provider 校验（非 409）",
+    "前端 StartAnalysisDialog 36 项通过（含新增画像门用例）；wholeBookStartLimits 5 项通过",
+    "零真实供应商调用",
+    "补强：确认门改为弹窗打开即校验（getBookProfile 预检）——横幅说明 + 「去确认作品画像 →」链接 + 提交按钮禁用并显示「需要先确认作品画像」；409 兜底保留（防直接 API 调用与未传 bookId 的旧入口）",
+    "实机（书 2《黑白道》，无画像）：打开开始分析弹窗立即出现门横幅，链接指向 /books/2/profile，提交禁用；画像草稿端点自动创建快照后 200 返回草稿（engine=mystery 推断，audience/pov 留空待选）",
+    "StartAnalysisDialog 37 项测试全部通过（新增打开即提示用例）"
+  ],
+  "known_out_of_scope": [
+    "画像页对「从分析入口跳转而来」的回跳（确认后自动返回原章节/原书页）",
+    "已有历史运行结果的书不受影响（门只拦新建），无迁移动作"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "无表结构变更。已确认画像的书（当前库中 3 本）无感知；未确认的书首次新建分析被拦，确认一次后永久放行。历史运行与结果不受影响。"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false,
+    "notes": "行为变更：未确认画像的书不能再直接开始任何分析。这是设计文档 §4.3 的既定决策（确认门先于首次分析），由用户 2026-08-15 拍板选择硬门。sidecar 已重启生效。"
+  },
+  "blocker_level": "none",
+  "head_inclusion": false,
+  "created_at": "2026-08-15T09:30:00+08:00",
+  "updated_at": "2026-08-15T10:10:00+08:00"
+}
