@@ -78,9 +78,39 @@ POWER_BEATS = Delta(
     ),
 )
 
+#: The 拆文 addition. Not a *profile* delta — no axis switches it on, the analysis mode does —
+#: but the same shape and the same invariant: it may add fields, never remove or loosen one, so
+#: a 拆文 run extracts everything a diagnostic run does and two things more.
+#:
+#: Both fields exist because L1 is the only layer that reads the prose. A whole-book unit can
+#: decide which moments matter; it cannot quote a line it has never seen, and a breakdown whose
+#: quotations are paraphrases is worse than one with none.
+STORY_BREAKDOWN = Delta(
+    key="story_breakdown",
+    trigger=("mode", "story_breakdown"),
+    fields=("end_hook_question", "standout_moments"),
+    instruction=(
+        "- 在每个 `chapter_signals` 条目里**额外加一个键** `end_hook_question`，"
+        "填**这一章结尾留给读者的那个问题**，写成一句疑问句，≤30 字。\n"
+        "  用这一章自己的说法，例如「温肃在书房要说什么？」「那笔钱到底进没进账？」。\n"
+        "  **章末没有留问题就填空字符串，不要为了填满而编一个。**\n"
+        '  形状：`"chapter_signals": [{"chapter_ref": 1, ..., "end_hook_question": ""}]`\n'
+        "- **额外返回一个顶层数组** `standout_moments`：这一块里**最可能打动读者**的地方，"
+        "每块最多 3 条，宁可少给。\n"
+        "  `quote` 必须是**正文里原样出现的一句话**——照抄，一个字都不要改，"
+        "不要合并两句，不要改标点。这一条会被逐字校验，改写过的会被丢弃。\n"
+        "  优先选**有原话的**：一句台词、一句心理活动、一个具体动作的那一句。"
+        "「两人和好了」这种概括不要选。\n"
+        "  `why` 用 ≤50 字写**为什么这一处会打动人**——是身份倒转、是长期铺垫兑现、"
+        "还是这个人第一次这样。写机制，不要写「很感人」「情绪强烈」。\n"
+        '  形状：`"standout_moments": [{"chapter_ref": 1, "quote": "", "why": "", '
+        '"evidence": [{"paragraph_ref": 1}]}]`'
+    ),
+)
+
 #: Registered deltas. Adding one requires: the field on the asset contract, the prompt
 #: fragment here, and a fixture in ``test_long_novel_document_sections.py`` (INV-P5).
-DELTAS: tuple[Delta, ...] = (POV_ENTITY, POWER_BEATS)
+DELTAS: tuple[Delta, ...] = (POV_ENTITY, POWER_BEATS, STORY_BREAKDOWN)
 
 
 def deltas_for(axes: Mapping[str, Mapping[str, str]] | Mapping[str, str]) -> tuple[Delta, ...]:

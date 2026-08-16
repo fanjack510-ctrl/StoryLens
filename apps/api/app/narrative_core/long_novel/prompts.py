@@ -38,6 +38,11 @@ __all__ = [
     "build_reversal_prompt",
     "SUSPENSE_PAIRING_INSTRUCTION",
     "build_suspense_pairing_prompt",
+    "FOUR_BEATS_INSTRUCTION",
+    "STANDOUT_INSTRUCTION",
+    "CAST_FUNCTION_INSTRUCTION",
+    "REUSABLE_INSTRUCTION",
+    "build_standout_prompt",
 ]
 
 #: Stated to the model because the contract's enums are closed. Without them a model returns
@@ -371,4 +376,105 @@ def build_suspense_pairing_prompt(
         + _json.dumps(threads, ensure_ascii=False, indent=None)
         + "\n\n揭示：\n"
         + _json.dumps(reveals, ensure_ascii=False, indent=None)
+    )
+
+
+# =====================================================================  拆文（B）
+#
+# Four bounded units. None of them may ask for a number: the whole point of this reading is
+# that a judgement it cannot state in words is a judgement it has not made
+# (docs/whole-book/STORY_BREAKDOWN_DESIGN §0, INV-B1).
+
+FOUR_BEATS_INSTRUCTION = """把这本书归纳成**起承转合四段**，恰好四段，不多不少。
+
+每段给出：
+- `beat`：只能是 起 / 承 / 转 / 合 四个字之一
+- `title`：一句话概括这一段发生了什么，**标题本身就要有情节**。
+  好例子：「自卖为婢入温家，抄家后带痴妹逃生做船娘」
+  坏例子：「开端」「第一阶段」「主角登场」
+- `summary`：这一段的经过，100–200 字
+- `chapter_start` / `chapter_end`：章号区间，四段首尾相接、覆盖全书、不重叠
+
+四段的分界按**叙事功能**划，不要按章数平均分。转折点在哪里就在哪里断。
+只输出 JSON：`{"four_beats": [...]}`"""
+
+
+STANDOUT_INSTRUCTION = """从候选里**选出**这本书最打动读者的若干个瞬间。
+
+**这是一次挑选，不是一次分配。** 允许全部集中在某几章，允许某一整幕一个都不选。
+按「每一段选几个」来凑是错的。
+
+条数由你定，**8 到 12 条之间**。
+`count_rationale` 要真的解释**为什么是这个数而不是别的数**：说清楚第 N 条和落选的
+下一条差在哪里。「选取了最打动人的十个瞬间」这种话等于没说，不要写。
+如果只有六个真的站得住，就说「只有六个站得住」并只给六个——宁可少，不要凑。
+
+每条给出：
+- `title`：具体到**一句话或一个动作**。
+  好例子：「宝银说"取舍之间也是风骨"」「十二岁自卖自身换四两银子」
+  坏例子：「主角的成长」「情感高潮」「中段冲突」
+- `quote`：从候选的 `quote` 里**原样照抄**一句，不要改写、不要合并
+- `why_it_lands`：为什么这一处打动人，80–150 字。**写机制**：
+  是身份倒转？是长期铺垫在这里兑现？是这个人物第一次这样？是读者知道而当事人不知道？
+  不要写「很感人」「情绪强烈」「张力很高」——那些是形容词，不是原因。
+  **也不要用「读者会因此感动 / 也会反思……」收尾**：那句话对任何一条都成立，
+  因此对这一条什么都没说。写完机制就停。
+- `chapter`：章号
+
+按打动程度从高到低排，`rank` 从 1 开始。
+只输出 JSON：`{"count_rationale": "", "standout_moments": [...]}`"""
+
+
+CAST_FUNCTION_INSTRUCTION = """说清楚每个配角**在这本书的结构里承担什么任务**。
+
+注意区分两种回答，只要后一种：
+- 「他做了什么」——「负责执行和协调」「提供资金」「警方代表」。这是职务说明，不要。
+- 「他为什么必须存在」——「女主的感情投射：她嫁得好、被宠爱，是女主自己得不到的那一份」
+  「主角的对照面：他选了安稳，主角选了追查」「引发复仇动机的那条命」。要这种。
+
+每条给出：
+- `name`
+- `function`：一句话，≤40 字，回答「去掉这个人，这本书会缺什么」。
+
+**只列真正出场并起作用的人。** 名字出现过但没有戏份的，直接不要列——
+「未出场」「无明确功能」这样的条目本身就说明它不该在名单上。主角不要列。
+
+另外给一句 `cast_note`：这批配角整体上是**各司其职做完就退场**，还是有人抢戏、
+有两个人在做同一件事？≤60 字，具体点名。如果确实都很克制，就说都很克制。
+只输出 JSON：`{"supporting_cast": [...], "cast_note": ""}`"""
+
+
+REUSABLE_INSTRUCTION = """从上面这些材料里，提炼**别的作者可以拿走用的写法**，5 到 8 条。
+
+这一节的读者是想写同类书的人，不是这本书的作者。所以每条要能脱离这本书成立：
+- `name`：给这个写法起个名字，≤20 字。例如「"忠仆"二字制造情感爆点」
+- `what_it_is`：这个写法具体是怎么做的，60–120 字，要引到这本书里的实例
+- `why_it_works`：为什么它有效，60–120 字，讲读者心理
+- `transfers_to`：可以迁移到什么样的故事里，一句话。
+  例如「任何有身份差距、有距离的爱情故事」
+
+优先挑**跨全书反复出现**的东西：一个梗被重复问起、一种关系模式贯穿始终、
+一类场景反复出现。一次性的巧思不如反复奏效的结构值钱。
+只输出 JSON：`{"reusable_techniques": [...]}`"""
+
+
+def build_standout_prompt(
+    candidates: "list[dict[str, object]]", vocabulary: "dict[str, str]"
+) -> str:
+    """Render the candidates plus what this genre calls its beats.
+
+    The vocabulary is the one the profile layer already built for hooks: a 言情 book's moments
+    are 心结 and 挑明, a 升级流 book's are 立标 and 兑现. Told rather than left implicit, because
+    a model asked for "the moving parts" of a progression novel will otherwise describe them in
+    romance terms.
+    """
+    import json as _json
+
+    lens = str(vocabulary.get("lens", "")).strip()
+    hint = f"\n\n这本书的读者跟的是「{lens}」，选爆点时以此为准。" if lens else ""
+    return (
+        STANDOUT_INSTRUCTION
+        + hint
+        + "\n\n候选（按章节顺序）：\n"
+        + _json.dumps(candidates, ensure_ascii=False, indent=None)
     )

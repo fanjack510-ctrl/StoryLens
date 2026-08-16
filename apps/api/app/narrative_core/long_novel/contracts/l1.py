@@ -113,6 +113,10 @@ class ChapterSignal(_Strict):
     #: ask for it, so the core schema is unchanged for every other book (INV-P1: a profile may
     #: add, never remove). Dispatch is not built yet; the POC fills it unconditionally.
     pov_entity: str = Field(default="", max_length=120)
+    #: MODE DELTA — 拆文. The question this chapter leaves the reader with, in the chapter's own
+    #: words. ``hook_present`` says a hook exists; this says what it is, which is the difference
+    #: between "钩子密度 67" and 「温肃在书房要说什么？」. Empty when the chapter ends on nothing.
+    end_hook_question: str = Field(default="", max_length=60)
     evidence: list[EvidenceRef] = Field(default_factory=list)
 
 
@@ -210,6 +214,25 @@ class PowerBeat(_Fact):
     why: str = Field(default="", max_length=40)
 
 
+class StandoutMoment(_Fact):
+    """MODE DELTA — 拆文. A nomination, not a verdict: a place this block thinks lands hard.
+
+    L1 is the only layer that ever sees the prose, so it is the only layer that can hand up a
+    line worth quoting — and a 拆文 without the line is a review, not a breakdown. Selection
+    happens later and over the whole book, because "the hardest-hitting moments" is a
+    comparison and a block cannot make it. Hence at most three per block, freely: over-supply
+    here costs little and gives the selector something to choose between.
+
+    ``quote`` must appear **verbatim** in the block's own text and is checked against it. A
+    model asked for a memorable line will otherwise write one that sounds like the book, and a
+    breakdown whose quotations are paraphrases is worse than one with no quotations at all.
+    """
+
+    chapter_ref: int = Field(ge=1)
+    quote: str = Field(max_length=120)
+    why: str = Field(default="", max_length=60)
+
+
 #: Which way each beat moves the curve. Deliberately **not** a pydantic enum on ``kind``:
 #: rejecting the whole block because the model wrote 「晋升」instead of ``promote`` would throw
 #: away eight chapters of paid extraction, and that exact failure is on record. A word this
@@ -272,6 +295,8 @@ class BlockAsset(_Strict):
     suspense_threads: list[SuspenseThread] = Field(default_factory=list)
     #: PROFILE DELTA — empty unless axis 3 is ``progression``.
     power_beats: list[PowerBeat] = Field(default_factory=list)
+    #: MODE DELTA — empty unless the run is a 拆文.
+    standout_moments: list[StandoutMoment] = Field(default_factory=list)
     identity_assertions: list[IdentityAssertion] = Field(default_factory=list)
     mentions: list[Mention] = Field(default_factory=list)
     provisional_entities: list[ProvisionalEntity] = Field(default_factory=list)

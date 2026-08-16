@@ -36,6 +36,7 @@ from app.narrative_core.whole_book_v2.contracts import (
     RevisionPriority,
     ScreenTimeBand,
     StageLedger,
+    StoryBreakdownResult,
     TypeProfile,
 )
 
@@ -933,6 +934,7 @@ def to_whole_book_v2(
     type_profile: Mapping[str, Any] | None = None,
     evidence_index: Mapping[str, Any] | None = None,
     journey: Mapping[str, Any] | None = None,
+    story_breakdown: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Assemble the document the existing UI already knows how to render.
 
@@ -1007,6 +1009,12 @@ def to_whole_book_v2(
         # falls back to the ordinal staircase: that drew the same rising line for every book.
         "journey": dict(journey) if journey else conform(
             JourneyResult, {"availability": "unavailable", "axis": "none"}
+        ),
+        # Absent on a diagnostic run, and honestly absent: a 拆文 section left at
+        # `unavailable` says the reading was not done, which is different from saying the
+        # book had nothing worth quoting.
+        "story_breakdown": dict(story_breakdown) if story_breakdown else conform(
+            StoryBreakdownResult, {"availability": "unavailable"}
         ),
         "analysis_metadata": {
             "run_id": run_id,

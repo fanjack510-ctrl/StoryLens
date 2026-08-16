@@ -188,9 +188,48 @@ class JourneyResult(M):
     #: rather than being shown a confident line drawn over three points.
     caveat:str=""
 
+# ---------------------------------------------------------------------------- 拆文（B）
+#
+# A second reading of the same book, for the reader who wants to learn from it rather than
+# find fault in it. Three rules hold this section apart from everything above, and each has a
+# matching failure on record in the diagnostic report (docs/whole-book/STORY_BREAKDOWN_DESIGN):
+#
+#   * Not one numeric score anywhere. If a field wants a number, the judgement behind it was
+#     not made in words, and the words are the product.
+#   * Every claim quotable. `StandoutMoment.quote` stores the prose itself, not a reference to
+#     it — the report has to survive being exported and read away from the index.
+#   * Moments are *chosen*, never allotted. The diagnostic's 重大转折 hands out one per stage
+#     and a professional reader spotted it immediately; nothing here may be per-anything.
+class StoryBeat(Ranged): beat:Literal["起","承","转","合"]; title:str; summary:str
+class StandoutMoment(M):
+    rank:int=Field(ge=1); title:str; quote:str; why_it_lands:str; chapter:int=Field(ge=1); evidence:list[str]=Field(default_factory=list)
+class ChapterHook(M): chapter:int=Field(ge=1); question:str; evidence:list[str]=Field(default_factory=list)
+class ReusableTechnique(M): name:str; what_it_is:str; why_it_works:str; transfers_to:str
+# No per-character `stays_in_lane` flag. It was there for one run and came back true for all
+# twenty-three, which makes it the same non-measurement as the heatmap's hard-coded zeroes: a
+# field that cannot come out false is not telling anyone anything. Certifying each of
+# twenty-three characters is also the harder question; naming the two who crowd the page is the
+# easy one, and it belongs to the cast as a whole — which is how the 《一梦》 breakdown says it,
+# in a single line about every supporting character finishing their job and leaving.
+class CastFunction(M): name:str; function:str; evidence:list[str]=Field(default_factory=list)
+class StoryBreakdownResult(M):
+    version:str="1.0"; availability:Availability=Availability.UNAVAILABLE
+    four_beats:list[StoryBeat]=Field(default_factory=list)
+    standout_moments:list[StandoutMoment]=Field(default_factory=list)
+    #: Why this many moments and not another number. Asked for explicitly so that "only six of
+    #: them really stand up" has somewhere to be said instead of being padded to a round ten.
+    moment_count_rationale:str=""
+    chapter_hooks:list[ChapterHook]=Field(default_factory=list)
+    reusable_techniques:list[ReusableTechnique]=Field(default_factory=list)
+    supporting_cast:list[CastFunction]=Field(default_factory=list)
+    #: One observation about the cast as a whole — who crowds the page, whose job is done twice.
+    cast_note:str=""
+
 class WholeBookAnalysisV2(M):
     schema_version:str=SCHEMA_VERSION; book_metadata:BookMetadata; type_profile:TypeProfile; overview:OverviewResult; story:StoryResult; characters:CharactersResult; suspense:SuspenseResult; pacing:PacingResult; chapters:ChaptersResult; assessment:AssessmentResult; evidence_index:dict[str,EvidenceRef]; analysis_metadata:AnalysisMetadata
     journey:JourneyResult=Field(default_factory=JourneyResult)
+    #: Defaulted, so every document stored before this section existed still validates.
+    story_breakdown:StoryBreakdownResult=Field(default_factory=StoryBreakdownResult)
 
 # Provider synthesis is deliberately split.  These DTOs are the validation and
 # persistence boundary; the monolithic result is only assembled locally.

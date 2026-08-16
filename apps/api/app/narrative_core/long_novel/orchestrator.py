@@ -27,17 +27,23 @@ from typing import Any, Callable, Mapping, Sequence
 from app.narrative_core.long_novel import constants as C
 from app.narrative_core.whole_book_v2.contracts import (
     ArcStage,
+    CastFunction,
+    ChapterHook,
     ChronologyEvent,
     PacingMarker,
     Relationship,
+    ReusableTechnique,
+    StandoutMoment,
     Storyline,
     StorylineNode,
+    StoryBeat,
     SuspenseEvent,
     StoryStage,
     SuspenseLifecycle,
     TurningPoint,
 )
 
+from app.narrative_core.long_novel.chapter_focus import hook_vocabulary
 from app.narrative_core.long_novel.adapter import (
     build_assessment_section,
     conform,
@@ -106,6 +112,19 @@ def _is_not_a_name(surface: str) -> bool:
     if text in _NOT_NAMES:
         return True
     return "/" in text or "、" in text
+
+#: Answers that say the character is not in the book. The prompt asks for people who appear and
+#: do something; when the model lists one anyway it says so plainly, so the honest reading of
+#: 「未出场」 is not a function but a confession that the row should not exist. Filtered here as
+#: well as asked for there, because a cast list padded with people who never appear is the
+#: 「24 人，其中两个没出场」 that a professional reader spotted in the diagnostic's character table.
+_NOT_IN_THE_BOOK = ("未出场", "无明确功能", "未出现", "没有出场", "无功能")
+
+
+def _is_absent_from_the_book(row: Mapping[str, Any]) -> bool:
+    text = str(row.get("function", "") or "")
+    return not text.strip() or any(mark in text for mark in _NOT_IN_THE_BOOK)
+
 
 def _is_contraction_of(short: str, full: str) -> bool:
     """Is ``short`` the same person as ``full``, written with the middle left out?
@@ -232,6 +251,12 @@ class RunCoordinator:
         #: the others: a run without it produces a journey with no down-moves rather than
         #: failing, which is what every run did before this existed.
         reversal_finder: Callable[[list[dict[str, Any]]], dict[str, Any]] | None = None,
+        #: The four 拆文 units. All optional and all absent on a diagnostic run, so the two
+        #: modes are one pipeline with different units above L1 rather than two engines.
+        beat_shaper: Callable[[dict[str, Any]], dict[str, Any]] | None = None,
+        moment_selector: Callable[[list[dict[str, Any]]], dict[str, Any]] | None = None,
+        cast_reader: Callable[[dict[str, Any]], dict[str, Any]] | None = None,
+        technique_reader: Callable[[dict[str, Any]], dict[str, Any]] | None = None,
         max_provider_calls: int | None = None,
     ) -> None:
         self._extractor = extractor
@@ -242,6 +267,10 @@ class RunCoordinator:
         self._finalise = finaliser
         self._pair_threads = thread_pairer
         self._find_reversals = reversal_finder
+        self._shape_beats = beat_shaper
+        self._select_moments = moment_selector
+        self._read_cast = cast_reader
+        self._read_techniques = technique_reader
         self._max_calls = max_provider_calls
         #: evidence_id -> citable row, accumulated across blocks and deduplicated. Many facts
         #: legitimately cite the same paragraph, and the index is what makes every claim in
@@ -375,6 +404,176 @@ class RunCoordinator:
             profile_axes=profile_axes,
         )
         return report
+
+    # ------------------------------------------------------------------ 拆文（B）
+    #: How many nominations reach the selector. Bounded like every other unit input, and
+    #: generous on purpose: choosing well needs something to choose between, and a nomination
+    #: costs nothing once its block has been paid for.
+    MOMENT_CANDIDATES_MAX = 120
+
+    def _moment_candidates(self, assets: dict[str, BlockAsset]) -> list[dict[str, Any]]:
+        """Every nomination L1 made, in chapter order, deduplicated by quote.
+
+        Sampled across the book if it overflows — never truncated at the front. A prefix here
+        would hand the selector the opening and let it conclude, quite reasonably, that the
+        opening is where this book's best moments are.
+        """
+        rows: list[dict[str, Any]] = []
+        seen: set[str] = set()
+        for block_key, asset in assets.items():
+            for moment in getattr(asset, "standout_moments", ()):
+                quote = str(moment.quote or "").strip()
+                if not quote or quote in seen:
+                    continue
+                seen.add(quote)
+                rows.append({
+                    "chapter": int(moment.chapter_ref),
+                    "quote": quote,
+                    "why": str(moment.why or ""),
+                    "evidence": self._cite(block_key, moment),
+                })
+        rows.sort(key=lambda r: r["chapter"])
+        return spread(rows, self.MOMENT_CANDIDATES_MAX)
+
+    @staticmethod
+    def _chapter_hooks(assets: dict[str, BlockAsset]) -> list[dict[str, Any]]:
+        """The question each chapter leaves the reader with, in the chapter's own words.
+
+        Kept whole rather than sampled: this is the one place in either report where the unit
+        is genuinely the chapter, and an author reading it wants to find their own chapter 47.
+        """
+        rows: list[dict[str, Any]] = []
+        for asset in assets.values():
+            for signal in asset.chapter_signals:
+                question = str(getattr(signal, "end_hook_question", "") or "").strip()
+                if question:
+                    rows.append(conform(ChapterHook, {
+                        "chapter": int(signal.chapter_ref), "question": question, "evidence": [],
+                    }))
+        rows.sort(key=lambda r: r["chapter"])
+        return rows
+
+    def _story_breakdown(
+        self,
+        assets: dict[str, BlockAsset],
+        report: RunReport,
+        *,
+        stages: Sequence[Mapping[str, Any]],
+        entities: Sequence[Mapping[str, Any]],
+        character_facts: Mapping[str, Mapping[str, Any]],
+        chronology: Sequence[Mapping[str, Any]],
+        vocabulary: Mapping[str, str],
+    ) -> dict[str, Any]:
+        """The 拆文 section: four beats, chosen moments, per-chapter hooks, techniques, cast.
+
+        Three calls that do not depend on each other, then one that reads all three. Each is
+        bounded by a fixed input cap, so this stays O(1) in book length like everything else
+        above L1.
+
+        A unit that returns nothing costs its own section and not the run — the same rule the
+        diagnostic units follow, and the reason a 拆文 with no cast reading still ships its
+        moments.
+        """
+        hooks = self._chapter_hooks(assets)
+        candidates = self._moment_candidates(assets)
+
+        beats: list[dict[str, Any]] = []
+        if self._shape_beats is not None and not self._budget_exhausted(report):
+            answer = self._shape_beats({
+                "stages": list(stages), "chronology": spread(list(chronology), 60),
+            }) or {}
+            beats = [
+                conform(StoryBeat, row)
+                for row in (answer.get("four_beats") or [])
+                if isinstance(row, Mapping)
+            ][:4]
+            report.provider_calls += 1
+
+        moments: list[dict[str, Any]] = []
+        rationale = ""
+        if self._select_moments is not None and candidates and not self._budget_exhausted(report):
+            answer = self._select_moments(candidates) or {}
+            rationale = str(answer.get("count_rationale", ""))
+            quoted = {row["quote"]: row for row in candidates}
+            for index, row in enumerate(answer.get("standout_moments") or [], start=1):
+                if not isinstance(row, Mapping):
+                    continue
+                quote = str(row.get("quote", "")).strip()
+                # The selector chooses; it does not get to write new prose. A quote that is not
+                # one of the candidates it was handed never passed L1's verbatim check against
+                # the book, so it is exactly the fabrication that check exists to stop —
+                # arriving one layer later.
+                source = quoted.get(quote)
+                if source is None:
+                    continue
+                moments.append(conform(StandoutMoment, {
+                    "rank": int(row.get("rank", index) or index),
+                    "title": str(row.get("title", "")),
+                    "quote": quote,
+                    "why_it_lands": str(row.get("why_it_lands", "") or row.get("why", "")),
+                    "chapter": int(row.get("chapter", source["chapter"]) or source["chapter"]),
+                    "evidence": list(source["evidence"]),
+                }))
+            moments.sort(key=lambda m: m["rank"])
+            report.provider_calls += 1
+
+        cast: list[dict[str, Any]] = []
+        cast_note = ""
+        if self._read_cast is not None and entities and not self._budget_exhausted(report):
+            lead = str(entities[0].get("display_surface_norm", "")) if entities else ""
+            answer = self._read_cast({
+                "lead": lead,
+                "cast": [
+                    {
+                        "name": str(e.get("display_surface_norm", "")),
+                        "key_events": list(
+                            (character_facts.get(str(e.get("display_surface_norm", ""))) or {})
+                            .get("key_events", ())
+                        )[:6],
+                    }
+                    for e in entities[1 : C.CHARACTERS_MAX]
+                ],
+            }) or {}
+            cast = [
+                conform(CastFunction, row)
+                for row in (answer.get("supporting_cast") or [])
+                if isinstance(row, Mapping) and not _is_absent_from_the_book(row)
+            ]
+            cast_note = str(answer.get("cast_note", ""))
+            report.provider_calls += 1
+
+        techniques: list[dict[str, Any]] = []
+        if self._read_techniques is not None and not self._budget_exhausted(report):
+            answer = self._read_techniques({
+                "four_beats": beats,
+                "standout_moments": [
+                    {k: m[k] for k in ("title", "quote", "why_it_lands", "chapter")}
+                    for m in moments
+                ],
+                "supporting_cast": cast,
+                "chapter_hooks": spread(hooks, 30),
+            }) or {}
+            techniques = [
+                conform(ReusableTechnique, row)
+                for row in (answer.get("reusable_techniques") or [])
+                if isinstance(row, Mapping)
+            ]
+            report.provider_calls += 1
+
+        produced = any((beats, moments, hooks, techniques, cast))
+        return {
+            "version": "1.0",
+            "availability": (
+                "available" if (beats and moments) else ("partial" if produced else "unavailable")
+            ),
+            "four_beats": beats,
+            "standout_moments": moments,
+            "moment_count_rationale": rationale,
+            "chapter_hooks": hooks,
+            "reusable_techniques": techniques,
+            "supporting_cast": cast,
+            "cast_note": cast_note,
+        }
 
     @staticmethod
     def _causal_chain(assets: dict[str, BlockAsset]) -> list[str]:
@@ -1769,6 +1968,21 @@ class RunCoordinator:
                 key: {**row, "snapshot_id": snapshot_id, "revision_hash": revision_hash}
                 for key, row in self._evidence.items()
             },
+            story_breakdown=self._story_breakdown(
+                assets, report,
+                # The interpreted stages, which already carry title, summary, turning point and
+                # chapter range. 起承转合 is a re-segmentation of the book by narrative function,
+                # so what it needs is what happened in each act, not where the acts were cut.
+                stages=interpretations,
+                entities=entities,
+                character_facts=self._character_facts(
+                    assets,
+                    [str(e.get("display_surface_norm", "")) for e in entities[:C.CHARACTERS_MAX]],
+                    lead,
+                ),
+                chronology=self._chronology(assets),
+                vocabulary=hook_vocabulary(profile_axes or {}),
+            ),
             assessment=build_assessment_section(assessment),
             # The genre profile comes from the same synthesis call as the overview — it is a
             # judgement about the whole book, and that is the only unit that has seen it.

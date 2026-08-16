@@ -37,12 +37,17 @@ from app.narrative_core.long_novel.extractor import BlockExtractor
 from app.narrative_core.long_novel.orchestrator import RunCoordinator
 from app.narrative_core.long_novel.planner import BlockPlanner
 from app.narrative_core.long_novel.profile_repository import BookProfileRepository
+from app.narrative_core.long_novel.chapter_focus import hook_vocabulary
 from app.narrative_core.long_novel.prompts import (
+    CAST_FUNCTION_INSTRUCTION,
     FINAL_INSTRUCTION,
+    FOUR_BEATS_INSTRUCTION,
+    REUSABLE_INSTRUCTION,
     STAGE_INSTRUCTION,
     SYSTEM_PROMPT,
     TOPIC_INSTRUCTION,
     build_assessment_instruction,
+    build_standout_prompt,
     build_reversal_prompt,
     build_suspense_pairing_prompt,
     build_user_prompt,
@@ -338,6 +343,8 @@ def estimate_tokens(*, character_count: int, blocks: int, units: int) -> tuple[i
 #: ``len(Topic)`` was standing in for the topic count and includes ``chapters``, which is a
 #: deterministic local merge and has never cost a call.
 _UNITS_BESIDES_STAGES = C.TOPIC_PROVIDER_CALLS_BEFORE_ASSESSMENT + 4
+#: 拆文's units above the stage interpretations: 起承转合, 爆点选择, 配角功能, 可复用点.
+_BREAKDOWN_UNITS = 4
 
 
 def estimate_long_novel_plan(*, chapter_count: int, character_count: int) -> dict[str, int]:
@@ -437,14 +444,24 @@ def book_uses_long_novel_engine(session: Session, book_id: int) -> bool:
     return int(chapters or 0) >= C.MIN_VIABLE_CHAPTERS_PER_BLOCK
 
 
+#: What the run is reading *for*. ``story_breakdown`` is 拆文 — the same book, read to learn
+#: from rather than to find fault in (docs/whole-book/STORY_BREAKDOWN_DESIGN). It is not a
+#: second engine: same planner, same extraction, different units above L1.
+ANALYSIS_MODES = ("diagnostic", "story_breakdown")
+
+
 def execute_long_novel_pipeline_v1(
     session: Session,
     run_id: int,
     *,
     use_fake_gateway: Any | None = None,
     commit_progress: bool = False,
+    mode: str = "diagnostic",
 ) -> dict[str, Any]:
     """Run the long-novel engine for an existing ``WholeBookRun`` and persist the result."""
+    if mode not in ANALYSIS_MODES:
+        raise ValueError(f"unknown analysis mode: {mode}")
+    breakdown = mode == "story_breakdown"
     run = get_run(session, int(run_id))
     book = session.get(Book, int(run.book_id))
     if book is None:
@@ -479,11 +496,15 @@ def execute_long_novel_pipeline_v1(
 
     stored = BookProfileRepository(session).get(int(run.book_id)) or {}
     axes = stored.get("axes") or {}
-    deltas = deltas_for(axes)
+    # The 拆文 addition rides the same delta mechanism as the profile axes, keyed on a
+    # pseudo-axis the mode sets. One extraction prompt, assembled one way, whichever reading
+    # the run is doing — which is what lets the two modes ever share an L1 pass.
+    deltas = deltas_for({**axes, "mode": mode} if mode else axes)
     instructions = delta_prompt(deltas)
     logger.info(
-        "long_novel_run_start run_id=%s chapters=%s blocks=%s deltas=%s",
-        run_id, stats.chapter_count, len(plan.blocks), [d.key for d in deltas],
+        "long_novel_run_start run_id=%s mode=%s chapters=%s blocks=%s deltas=%s",
+        run_id, mode or "diagnostic", stats.chapter_count, len(plan.blocks),
+        [d.key for d in deltas],
     )
 
     if use_fake_gateway is not None:
@@ -495,9 +516,11 @@ def execute_long_novel_pipeline_v1(
 
         gateway = _bind_formal_gateway(session, provider_name=provider_name)
 
-    # One call per block, plus the bounded units above it: stage interpretations, topic
-    # projections, the assessment, the final synthesis, reversal detection and thread pairing.
-    expected_calls = len(plan.blocks) + len(plan.stages) + _UNITS_BESIDES_STAGES
+    # One call per block, plus the bounded units above it: stage interpretations, then either
+    # the diagnostic's thirteen or 拆文's four.
+    expected_calls = len(plan.blocks) + len(plan.stages) + (
+        _BREAKDOWN_UNITS if breakdown else _UNITS_BESIDES_STAGES
+    )
     provider = _GatewayProvider(
         gateway,
         provider_name=provider_name,
@@ -529,23 +552,57 @@ def execute_long_novel_pipeline_v1(
             prompt_template_hash=prompt_template_hash(density, instructions),
         ),
         profile=density,
+        # The stage interpretations are the one unit both readings need: 拆文 re-segments the
+        # book into 起承转合 and needs to know what happened in each act to do it.
         stage_interpreter=lambda payload: provider.json_unit("stage", STAGE_INSTRUCTION, payload),
-        topic_synthesizer=lambda topic, payload: provider.json_unit(
-            f"topic:{topic.value}", TOPIC_INSTRUCTION.format(topic=topic.value), payload
+        # Everything below is the diagnostic reading, and a 拆文 run passes None for all of it —
+        # which is how the mode costs four calls above L1 instead of thirteen. The coordinator
+        # already treats a missing unit as "that section was not produced", so nothing here
+        # needed a branch.
+        topic_synthesizer=None if breakdown else (
+            lambda topic, payload: provider.json_unit(
+                f"topic:{topic.value}", TOPIC_INSTRUCTION.format(topic=topic.value), payload
+            )
         ),
-        assessor=lambda payload: provider.json_unit(
-            "assessment", build_assessment_instruction(payload.get("pacing_regions", ())), payload
+        assessor=None if breakdown else (
+            lambda payload: provider.json_unit(
+                "assessment",
+                build_assessment_instruction(payload.get("pacing_regions", ())),
+                payload,
+            )
         ),
-        finaliser=lambda payload: provider.json_unit("final", FINAL_INSTRUCTION, payload),
-        thread_pairer=lambda payload: provider.json_unit(
-            "pairing", "", payload,
-            prompt=build_suspense_pairing_prompt(payload["threads"], payload["reveals"]),
+        finaliser=None if breakdown else (
+            lambda payload: provider.json_unit("final", FINAL_INSTRUCTION, payload)
+        ),
+        thread_pairer=None if breakdown else (
+            lambda payload: provider.json_unit(
+                "pairing", "", payload,
+                prompt=build_suspense_pairing_prompt(payload["threads"], payload["reveals"]),
+            )
         ),
         # One more bounded whole-book call, for the judgement a block structurally cannot
         # make: which beats overturned an earlier one.
-        reversal_finder=lambda reveals: provider.json_unit(
-            "reversal", "", reveals, prompt=build_reversal_prompt(reveals)
+        reversal_finder=None if breakdown else (
+            lambda reveals: provider.json_unit(
+                "reversal", "", reveals, prompt=build_reversal_prompt(reveals)
+            )
         ),
+        # ------------------------------------------------------------------ 拆文
+        beat_shaper=(
+            lambda payload: provider.json_unit("beats", FOUR_BEATS_INSTRUCTION, payload)
+        ) if breakdown else None,
+        moment_selector=(
+            lambda candidates: provider.json_unit(
+                "moments", "", candidates,
+                prompt=build_standout_prompt(candidates, hook_vocabulary(axes)),
+            )
+        ) if breakdown else None,
+        cast_reader=(
+            lambda payload: provider.json_unit("cast", CAST_FUNCTION_INSTRUCTION, payload)
+        ) if breakdown else None,
+        technique_reader=(
+            lambda payload: provider.json_unit("techniques", REUSABLE_INSTRUCTION, payload)
+        ) if breakdown else None,
     )
 
     if run.status == WholeBookRunStatus.pending.value:

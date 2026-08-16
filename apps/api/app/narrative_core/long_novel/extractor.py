@@ -93,6 +93,11 @@ class ExtractionResult:
     mentions_rejected: list[str]
     repairs_applied: list[str]
     provider_calls: int
+    #: 拆文 nominations whose quote was not in the block's text word for word. Recorded rather
+    #: than dropped in silence: if a book loses most of its nominations this way the extraction
+    #: is paraphrasing, and a run that quietly published the survivors would look identical to
+    #: one where the model quoted honestly.
+    moments_rejected: list[str] = field(default_factory=list)
     #: Every paragraph an accepted fact actually cited, resolved to product-contract shape.
     #: Traceability is the point of the whole design — a claim a reader cannot follow back
     #: to a sentence is the thing the old engine already produced.
@@ -301,6 +306,7 @@ class BlockExtractor:
             )
             calls += extra_calls
 
+        moments_rejected = self._drop_unquoted_moments(asset, rendered)
         evidence_rows, evidence_by_anchor = self._collect_evidence(asset, rendered)
         return ExtractionResult(
             evidence=evidence_rows,
@@ -312,7 +318,38 @@ class BlockExtractor:
             mentions_rejected=[f"{r.surface_norm}@p{r.paragraph_ref}:{r.reason}" for r in rejected],
             repairs_applied=outcome.steps,
             provider_calls=calls,
+            moments_rejected=moments_rejected,
         )
+
+    @staticmethod
+    def _drop_unquoted_moments(asset: BlockAsset, rendered: RenderedBlock) -> list[str]:
+        """Keep only the 拆文 nominations whose quote really is in the block, word for word.
+
+        Dropped, not raised. A fabricated quotation costs that one nomination; failing the block
+        would throw away a paid extraction of eight chapters over a field the whole report can
+        do without, and the selector downstream has two more nominations per block to choose
+        from anyway.
+
+        Compared with whitespace removed, which is the right tolerance for Chinese prose: it
+        forgives a space the model normalised away and forgives nothing else. A rewording, a
+        merge of two sentences, a changed particle — all fail, which is the point. The rule this
+        enforces is the difference between a breakdown and a review: a line the reader can turn
+        to, or a line that merely sounds like the book.
+        """
+        if not asset.standout_moments:
+            return []
+        haystack = "".join(rendered.text.split())
+        kept, rejected = [], []
+        for moment in asset.standout_moments:
+            needle = "".join(str(moment.quote or "").split())
+            # Four characters is the floor at which a Chinese fragment stops matching by
+            # accident; below it a "quote" is not one.
+            if len(needle) >= 4 and needle in haystack:
+                kept.append(moment)
+            else:
+                rejected.append(moment.quote)
+        asset.standout_moments = kept
+        return rejected
 
     def _collect_evidence(
         self, asset: BlockAsset, rendered: RenderedBlock
