@@ -32,6 +32,14 @@ from app.schemas.reader_journey_v2 import (
 )
 from app.services.budget_reservation import release_run_reservation, reserve_budget
 from app.services.cloud_pricing import pricing_status
+from app.narrative_core.long_novel.chapter_focus import (
+    apply_chapter_focus,
+    chapter_foci_for_book,
+    formula_weights_for_book,
+    required_axis_keys as required_axis_keys_for,
+    selected_axes,
+    suppressed_diagnoses_for_book,
+)
 from app.services.prompt_service import load_prompt
 from app.services.reader_journey_batch_planner import (
     plan_scene_batches,
@@ -80,6 +88,8 @@ def validate_scene_batch_result_v2(
     expected_scene_ids: set[int],
     paragraph_ids_by_scene: dict[int, set[str]],
     boundary_meta_by_scene: dict[int, object] | None = None,
+    allowed_axis_keys: set[str] | None = None,
+    required_axis_keys: set[str] | None = None,
 ) -> None:
     """Lightweight V2 business validation — no v1 engagement / q_in rules."""
     from app.services.scene_evidence_validation import (
@@ -105,6 +115,12 @@ def validate_scene_batch_result_v2(
                     "JOURNEY_EVIDENCE_OUT_OF_SCENE",
                     no_model_repair=False,
                 )
+        _validate_genre_axes(
+            profile,
+            allowed_axis_keys=allowed_axis_keys,
+            required_axis_keys=required_axis_keys,
+            allowed=allowed,
+        )
         if not allowed:
             continue
         ordered = sorted(allowed)
@@ -128,6 +144,81 @@ def validate_scene_batch_result_v2(
             )
         except SceneEvidenceValidationError:
             raise
+
+
+#: Which scored field each craft flag must agree with, and the level it may not exceed
+#: (or, for redundancy, may not fall below — redundancy is the one axis where low is good).
+_FLAG_FIELD_BOUNDS: dict[str, tuple[str, str, int]] = {
+    "setup_contradiction": ("setup_consistency", "max", 3),
+    "unclear_reference": ("clarity", "max", 3),
+    "causal_gap": ("causal_coherence", "max", 3),
+    "redundant_passage": ("redundancy", "min", 3),
+}
+
+
+def _validate_genre_axes(
+    profile: SceneReaderJourneyProfileItemV2,
+    *,
+    allowed_axis_keys: set[str] | None,
+    required_axis_keys: set[str] | None,
+    allowed: set[str],
+) -> None:
+    """Keep the profile-selected axes and the craft flags honest.
+
+    Two things go wrong without this. The model invents axis keys — an unprompted run
+    returned ``mystery_hook`` and ``clue_fairness``, names that exist nowhere in the
+    profile vocabulary and so can never be compared across books. And it raises a flag
+    while leaving the corresponding score at 5, which reads on screen as "no problems"
+    directly above a named problem.
+    """
+    for axis in profile.genre_axes:
+        # None means the caller has no opinion (legacy paths). An *empty set* is a real
+        # answer — this book confirmed no profile, so no axis key is legal and anything
+        # here was invented.
+        if allowed_axis_keys is not None and axis.key not in allowed_axis_keys:
+            raise StructuralValidationError(
+                f"scene {profile.scene_id} genre axis {axis.key!r} is not one of "
+                f"{sorted(allowed_axis_keys)}",
+                "JOURNEY_GENRE_AXIS_UNKNOWN",
+                no_model_repair=False,
+            )
+        for pid in axis.evidence_paragraph_ids:
+            if allowed and pid not in allowed:
+                raise StructuralValidationError(
+                    f"scene {profile.scene_id} genre axis {axis.key} evidence {pid} "
+                    "not in scene paragraphs",
+                    "JOURNEY_EVIDENCE_OUT_OF_SCENE",
+                    no_model_repair=False,
+                )
+    if required_axis_keys:
+        missing = required_axis_keys - {axis.key for axis in profile.genre_axes}
+        if missing:
+            raise StructuralValidationError(
+                f"scene {profile.scene_id} is missing genre axes {sorted(missing)}",
+                "JOURNEY_GENRE_AXIS_MISSING",
+                no_model_repair=False,
+            )
+    for flag in profile.craft_flags:
+        bound = _FLAG_FIELD_BOUNDS.get(flag.kind)
+        if bound is None:
+            continue
+        field_name, direction, limit = bound
+        level = int(getattr(profile, field_name).level)
+        if (direction == "max" and level > limit) or (direction == "min" and level < limit):
+            raise StructuralValidationError(
+                f"scene {profile.scene_id} raised {flag.kind} but {field_name}={level} "
+                f"({direction} {limit})",
+                "JOURNEY_CRAFT_FLAG_INCONSISTENT",
+                no_model_repair=False,
+            )
+        for pid in flag.evidence_paragraph_ids:
+            if allowed and pid not in allowed:
+                raise StructuralValidationError(
+                    f"scene {profile.scene_id} craft flag evidence {pid} "
+                    "not in scene paragraphs",
+                    "JOURNEY_EVIDENCE_OUT_OF_SCENE",
+                    no_model_repair=False,
+                )
 
 
 def _load_v2_profiles_from_artifacts(
@@ -352,9 +443,20 @@ async def execute_reader_journey_v2(
             journey_run.completed_at = None
             session.commit()
 
-            scene_prompt = load_prompt(
-                "reader_journey_scene", versions.scene_prompt_version or SCENE_PROMPT_VERSION_V2
+            scene_prompt = apply_chapter_focus(
+                load_prompt(
+                    "reader_journey_scene", versions.scene_prompt_version or SCENE_PROMPT_VERSION_V2
+                ),
+                session,
+                journey_run.book_id,
             )
+            # The axis keys this book's confirmed profile actually asked for. Empty for an
+            # unprofiled book, which the validator reads as "no genre axes are legal here" —
+            # the model must then return the empty list the base prompt asks for.
+            _book_axes = selected_axes(chapter_foci_for_book(session, journey_run.book_id))
+            allowed_axis_keys = {axis.key for axis in _book_axes}
+            # The gated axes are excluded from "required" — see required_axis_keys.
+            required_axis_keys = required_axis_keys_for(_book_axes)
             completed_ids = set(progress.completed_scene_ids)
             batches = plan_scene_batches(
                 scenes,
@@ -387,6 +489,12 @@ async def execute_reader_journey_v2(
             session.commit()
 
             prior_summaries: list[str] = []
+            # The chapter's own ends, taken from the full scene list rather than the batch —
+            # a batch boundary is a token-budget artefact and must not be read as a chapter
+            # opening or ending.
+            chapter_ordinals = [item.ordinal for item in scenes]
+            first_scene_ordinal = min(chapter_ordinals) if chapter_ordinals else None
+            last_scene_ordinal = max(chapter_ordinals) if chapter_ordinals else None
             work: deque[ReaderJourneySceneBatch] = deque(batches)
             while work:
                 raise_if_cancel_requested(session, analysis_run.id)
@@ -407,6 +515,12 @@ async def execute_reader_journey_v2(
                             "scene_ordinal": scene.ordinal,
                             "scene_key": scene.scene_key,
                             "boundary_source": scene.boundary_source,
+                            # Batching means a scene arrives without knowing where it sits in
+                            # the chapter, and two of the profile-selected axes (开篇抓力,
+                            # 断章质量) are properties of the chapter's ends. Stating it beats
+                            # letting the model infer it from an ordinal it cannot bound.
+                            "is_chapter_opening": scene.ordinal == first_scene_ordinal,
+                            "is_chapter_ending": scene.ordinal == last_scene_ordinal,
                             "paragraphs": [
                                 {"id": item.id, "text": item.normalized_text}
                                 for item in included
@@ -478,6 +592,8 @@ async def execute_reader_journey_v2(
                             value,
                             expected_scene_ids={item["scene_id"] for item in scene_payloads},
                             paragraph_ids_by_scene=paragraph_ids_by_scene,
+                            allowed_axis_keys=allowed_axis_keys,
+                            required_axis_keys=required_axis_keys,
                         ),
                         initial_invocation_kind=invocation_kind,
                         allow_truncation_retry=False,
@@ -514,7 +630,13 @@ async def execute_reader_journey_v2(
             if try_finalize_if_cancel_requested(session, analysis_run.id):
                 return
             raw_profiles = _load_v2_profiles_from_artifacts(session, journey_run)
-            derived, stats = finalize_v2_profiles(raw_profiles)
+            derived, stats = finalize_v2_profiles(
+                raw_profiles,
+                formula_weights=formula_weights_for_book(session, journey_run.book_id),
+                suppressed_diagnoses=suppressed_diagnoses_for_book(
+                    session, journey_run.book_id
+                ),
+            )
             paragraph_ids_by_scene = {
                 int(scene.id): list(_paragraph_ids_for_scene(scene, paragraphs, position))
                 for scene in scenes

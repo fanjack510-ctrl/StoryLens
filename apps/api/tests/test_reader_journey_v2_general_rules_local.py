@@ -46,8 +46,10 @@ V2_PRODUCT_GLOBS = (
     "apps/api/app/services/scene_fragment_consolidation.py",
     "config/reader_journey_formulas_v2.json",
     "config/scene_role_targets.json",
-    "packages/prompts/reader_journey_scene/v2.0/*",
-    "packages/prompts/reader_journey_chapter/v2.0/*",
+    # v2.* rather than v2.0: a new prompt version under the same contract is still a product
+    # module, and pinning the glob to one directory let v2.1 ship outside this audit.
+    "packages/prompts/reader_journey_scene/v2.*/*",
+    "packages/prompts/reader_journey_chapter/v2.*/*",
     "apps/desktop/src/components/readerJourney/lensMetricBinding.ts",
     "apps/desktop/src/components/readerJourney/observationLenses.ts",
     "apps/desktop/src/components/readerJourney/diagnosisBandModel.ts",

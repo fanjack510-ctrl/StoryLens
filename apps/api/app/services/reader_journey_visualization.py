@@ -21,6 +21,10 @@ from app.db.models import (
     SceneReaderJourneyProfile,
 )
 from app.schemas.reader_journey import SceneReaderJourneyProfileItem
+from app.narrative_core.long_novel.chapter_focus import (
+    hook_vocabulary_for_book,
+    main_curve_naming_for_book,
+)
 from app.services.reader_journey_dimension_insights import attach_dimension_insights_to_node
 from app.services.reader_journey_comprehensive_presentation import (
     attach_comprehensive_reading_presentation,
@@ -941,6 +945,13 @@ def _apply_v2_presentation_overrides(
 
     scores_by_ordinal = deterministic.get("v2_scene_scores") or {}
     insights_by_ordinal = deterministic.get("v2_dimension_insights") or {}
+    axes_by_ordinal = deterministic.get("v2_genre_axes") or {}
+    ledger_by_ordinal = {
+        str(row.get("scene_ordinal")): row
+        for row in (deterministic.get("v2_open_question_ledger") or [])
+        if isinstance(row, dict)
+    }
+    flags_by_ordinal = deterministic.get("v2_craft_flags") or {}
     diagnoses = deterministic.get("scene_diagnoses") or []
     overrides = deterministic.get("v2_node_overrides") or {}
     diagnosis_by_ordinal: dict[int, dict[str, Any]] = {}
@@ -1013,6 +1024,19 @@ def _apply_v2_presentation_overrides(
             elif override.get("node_type") == "scene" and node.get("role") == "beat":
                 # Fixture main scenes must not remain classifier beats.
                 node["role"] = "core"
+
+        if isinstance(axes_by_ordinal, dict) and axes_by_ordinal.get(key):
+            node["genre_axes"] = list(axes_by_ordinal[key])
+        ledger_row = ledger_by_ordinal.get(key)
+        if ledger_row is not None:
+            # The one number on the page that remembers what came before it.
+            node["open_questions"] = {
+                "opened": int(ledger_row.get("opened") or 0),
+                "closed": int(ledger_row.get("closed") or 0),
+                "balance": int(ledger_row.get("balance") or 0),
+            }
+        if isinstance(flags_by_ordinal, dict) and flags_by_ordinal.get(key):
+            node["craft_flags"] = list(flags_by_ordinal[key])
 
         persisted = (
             insights_by_ordinal.get(key)
@@ -1504,8 +1528,18 @@ def build_reader_journey_visualization(
     }
     question_lifecycle = _question_lifecycle_from_summary(summary)
 
+    # What the main curve is called and what decision it stands for. Only the profile knows,
+    # and INV-P4 says presentation rules come from the backend — a client that re-derived the
+    # genre would drift from the analysis the rest of the document was built on.
+    main_curve_label, main_curve_why = main_curve_naming_for_book(session, journey_run.book_id)
+    # What to call the four things a scene does to the reader's open questions. The client
+    # must not re-derive this from the genre (INV-P4) — it is a fact about the book, and the
+    # book's profile lives here.
+    hook_words = hook_vocabulary_for_book(session, journey_run.book_id)
     payload = {
         "visualization_version": VISUALIZATION_VERSION,
+        "main_curve": {"label": main_curve_label, "why": main_curve_why},
+        "hook_vocabulary": hook_words,
         "chapter_summary": {
             "chapter_id": journey_run.chapter_id,
             "chapter_title": chapter.title if chapter else "",

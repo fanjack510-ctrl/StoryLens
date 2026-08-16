@@ -90,8 +90,22 @@ def v2_profile_to_v1_compat_payload(
     valence_end = max(-100, min(100, valence_end))
     arousal_start = int(mapped_or_zero(profile.arousal_start))
     arousal_end = int(mapped_or_zero(profile.arousal_end))
-    q = (profile.hook.rationale or profile.scene_value_summary or "本章疑问")[:160]
-    question = q if ("？" in q or "?" in q) else f"{q}？"
+    # v2.2 gives the reader's question directly. Before it, this shim built one out of
+    # `hook.rationale` with a `？` appended — so 「场景开头无新钩子，仅延续前文。？」, the
+    # justification for a LOW hook score, was displayed as what the reader most wants to
+    # know. The fallback below is kept verbatim so v2.0/v2.1 artifacts render as they did.
+    opened = list(profile.reader_questions_opened)
+    answered = list(profile.reader_questions_answered)
+    if opened:
+        question = opened[0].text
+        question_paragraph = opened[0].paragraph_id or first
+    else:
+        q = (profile.hook.rationale or profile.scene_value_summary or "本章疑问")[:160]
+        question = q if ("？" in q or "?" in q) else f"{q}？"
+        question_paragraph = first
+    # Where the hook actually lands, not where the scene starts. `first` is the scene's first
+    # paragraph; using it made every hook look like it opened on the scene's opening line.
+    hook_paragraph = profile.first_hook_paragraph_id or question_paragraph
     return {
         "scene_id": profile.scene_id,
         "scene_ordinal": profile.scene_ordinal,
@@ -102,19 +116,27 @@ def v2_profile_to_v1_compat_payload(
                 "question": question,
                 "trigger_summary": "场景推进触发",
                 "strength": hook,
-                "evidence_paragraph_ids": [first],
+                "evidence_paragraph_ids": [question_paragraph],
             }
         ]
         if profile.node_type != "beat"
         else [],
-        "reader_question_answered": [],
+        "reader_question_answered": [
+            {
+                "question": item.text,
+                "answer_summary": item.text,
+                "answer_degree": item.completeness,
+                "evidence_paragraph_ids": [item.paragraph_id or first],
+            }
+            for item in answered
+        ],
         "reader_question_out": [
             {
                 "question": question,
                 "origin": "created_here",
                 "hook_type": "information",
                 "strength": hook,
-                "evidence_paragraph_ids": [first],
+                "evidence_paragraph_ids": [question_paragraph],
             }
         ]
         if profile.node_type != "beat" and hook >= 50
@@ -132,15 +154,28 @@ def v2_profile_to_v1_compat_payload(
         "emotional_resonance_score": emotion,
         "cognitive_load_score": cognitive,
         "dropoff_risk_score": dropoff,
-        "payoffs": [],
+        # Was hardcoded `[]`. Across three real books that meant 0 of 10 hooks ever resolved
+        # and the 回收 half of the lens could not fire on any input whatsoever.
+        "payoffs": [
+            {
+                "type": "information",
+                "summary": item.text[:160],
+                "strength": payoff,
+                "evidence_paragraph_ids": [item.paragraph_id or first],
+            }
+            for item in answered
+        ],
         "hooks": [
             {
                 "type": "information",
                 "summary": question[:120],
-                "gap": question[:120],
+                # `gap` used to be the same expression as `summary` — the identical string
+                # stored twice. It is the open part of the question, so leave it empty when
+                # the model did not distinguish one rather than duplicating.
+                "gap": "",
                 "continue_drive": "继续阅读",
                 "strength": hook,
-                "evidence_paragraph_ids": [first],
+                "evidence_paragraph_ids": [hook_paragraph],
             }
         ]
         if hook >= 40
@@ -197,6 +232,42 @@ def build_v2_dimension_insights_patch(
     return payload or None
 
 
+def build_open_question_ledger(
+    derived: list[SceneReaderJourneyProfileItemV2],
+) -> list[dict[str, Any]]:
+    """The running count of questions the reader is still carrying, scene by scene.
+
+    Every other number on the page is memoryless: each scene is scored without reference to
+    what came before, so a chapter that opens a question in scene 1 and never answers it
+    looks identical to one that answers it in scene 2. But a reader accumulates. Measured on
+    two real first chapters, a 悬疑 one ends owing a net seven questions while a 情感 one ends
+    at zero — the same shape of curve saying two completely different things, and neither
+    visible in any single scene's score. An unpaid pile is fine for 悬疑 and is exactly what
+    turns into 「作者你倒是说啊」 in a romance three chapters later.
+
+    ``hook`` minus ``payoff`` is the honest available proxy: both are model output on the
+    same 0–5 scale, and their difference per scene is what the chapter added to the pile.
+    The running total is floored at zero because a reader cannot be owed less than nothing.
+    """
+    ledger: list[dict[str, Any]] = []
+    balance = 0
+    for profile in sorted(derived, key=lambda item: item.scene_ordinal):
+        if profile.node_type == "beat":
+            continue
+        opened = int(profile.hook.level)
+        closed = int(profile.payoff.level)
+        balance = max(0, balance + opened - closed)
+        ledger.append(
+            {
+                "scene_ordinal": int(profile.scene_ordinal),
+                "opened": opened,
+                "closed": closed,
+                "balance": balance,
+            }
+        )
+    return ledger
+
+
 def build_v2_deterministic_statistics(
     *,
     derived: list[SceneReaderJourneyProfileItemV2],
@@ -232,6 +303,26 @@ def build_v2_deterministic_statistics(
     }
     if v2_dimension_insights:
         result["v2_dimension_insights"] = v2_dimension_insights
+    # The profile-selected axes and any craft defect the scorer named. Carried here rather
+    # than added to the node override so a legacy payload without them keeps its exact
+    # shape — an unprofiled book emits neither and the key is simply absent.
+    v2_genre_axes = {
+        str(profile.scene_ordinal): [axis.model_dump() for axis in profile.genre_axes]
+        for profile in derived
+        if profile.genre_axes
+    }
+    if v2_genre_axes:
+        result["v2_genre_axes"] = v2_genre_axes
+    v2_craft_flags = {
+        str(profile.scene_ordinal): [flag.model_dump() for flag in profile.craft_flags]
+        for profile in derived
+        if profile.craft_flags
+    }
+    if v2_craft_flags:
+        result["v2_craft_flags"] = v2_craft_flags
+    ledger = build_open_question_ledger(derived)
+    if ledger:
+        result["v2_open_question_ledger"] = ledger
     return result
 
 
@@ -280,6 +371,50 @@ def ensure_basic_phases(
         )
 
 
+def _source_context_fingerprint(
+    session: Session,
+    journey_run: ReaderJourneyRun,
+    scene_id: int,
+) -> str | None:
+    """Prove this profile was computed from the text currently on screen.
+
+    The v1 pipeline has always written this; the v2 path never did. The consequence was not
+    a cosmetic one: with no fingerprint stored, ``classify_integrity_status`` returns
+    ``legacy_unverified`` for **every** v2 result, which is what put 「旧版分析尚未完成来源校验，
+    仅供参考」 on top of freshly-run native analyses — and, more importantly, meant the
+    integrity guard could not detect edited text under any v2 run at all.
+
+    Both sides read the scene's paragraphs through ``_paragraphs_for_scene`` and take the
+    versions off ``journey_run``, so the value stored here is the value the verifier
+    recomputes. Diverging on either would produce a false ``mismatch``, which reads as
+    tampering rather than as a bug.
+    """
+    from app.db.models import Scene
+    from app.services.analysis_context_fingerprint import (
+        compute_source_context_fingerprint,
+        paragraph_content_hash,
+    )
+    from app.services.analysis_integrity_guard import _paragraphs_for_scene
+
+    scene = session.get(Scene, int(scene_id))
+    if scene is None:
+        return None
+    paragraphs = _paragraphs_for_scene(session, scene)
+    if not paragraphs:
+        return None
+    return compute_source_context_fingerprint(
+        book_id=journey_run.book_id,
+        chapter_id=journey_run.chapter_id,
+        analysis_run_id=journey_run.analysis_run_id,
+        scene_id=int(scene_id),
+        ordered_paragraph_ids=[p.id for p in paragraphs],
+        paragraph_content_hashes=[paragraph_content_hash(p.raw_text) for p in paragraphs],
+        prompt_version=journey_run.scene_prompt_version,
+        contract_version=journey_run.scene_contract_version,
+        formula_version=journey_run.formula_version,
+    )
+
+
 def persist_finalized_v2_profiles(
     session: Session,
     *,
@@ -308,6 +443,9 @@ def persist_finalized_v2_profiles(
         if not pids:
             pids = ["P0001"]
         v1_dict = v2_profile_to_v1_compat_payload(profile, paragraph_ids=pids)
+        fingerprint = _source_context_fingerprint(session, journey_run, profile.scene_id)
+        if fingerprint:
+            v1_dict["source_context_fingerprint"] = fingerprint
         v1_item = SceneReaderJourneyProfileItem.model_validate(v1_dict)
         artifact = AnalysisArtifact(
             run_id=journey_run.analysis_run_id,

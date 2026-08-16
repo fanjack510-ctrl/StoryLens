@@ -44,6 +44,7 @@ def diagnose_scene(
     *,
     previous: SceneReaderJourneyProfileItemV2 | None = None,
     lifecycle: list[QuestionLifecycleRecord] | None = None,
+    suppressed: frozenset[str] | None = None,
 ) -> SceneDiagnosisV2:
     codes: list[DiagnosisCode] = []
     positive: DiagnosisCode | None = None
@@ -137,6 +138,12 @@ def diagnose_scene(
         if code not in unique:
             unique.append(code)
 
+    # Codes this book's confirmed profile says do not apply. Empty for an unconfirmed book,
+    # so nothing is silently withdrawn on the strength of an inference (INV-P2). Positive
+    # findings are never suppressed — only defect flags.
+    if suppressed:
+        unique = [code for code in unique if code not in suppressed]
+
     primary: DiagnosisCode | None = None
     secondary: list[DiagnosisCode] = []
     for code in unique:
@@ -170,11 +177,16 @@ def diagnose_chapter(
     profiles: list[SceneReaderJourneyProfileItemV2],
     *,
     lifecycle: list[QuestionLifecycleRecord] | None = None,
+    suppressed: frozenset[str] | None = None,
 ) -> list[SceneDiagnosisV2]:
     ordered = sorted(profiles, key=lambda item: item.scene_ordinal)
     out: list[SceneDiagnosisV2] = []
     previous = None
     for profile in ordered:
-        out.append(diagnose_scene(profile, previous=previous, lifecycle=lifecycle))
+        out.append(
+            diagnose_scene(
+                profile, previous=previous, lifecycle=lifecycle, suppressed=suppressed
+            )
+        )
         previous = profile
     return out

@@ -37,6 +37,7 @@ from app.schemas.reader_journey import (
 )
 from app.services.budget_reservation import release_run_reservation, reserve_budget
 from app.services.cloud_pricing import pricing_status
+from app.narrative_core.long_novel.chapter_focus import apply_chapter_focus
 from app.services.prompt_service import load_prompt
 from app.services.reader_journey_batch_planner import (
     PLANNER_VERSION,
@@ -518,7 +519,11 @@ async def _execute_reader_journey_legacy(
             journey_run.completed_at = None
             session.commit()
 
-            scene_prompt = load_prompt("reader_journey_scene", SCENE_PROMPT_VERSION)
+            scene_prompt = apply_chapter_focus(
+                load_prompt("reader_journey_scene", SCENE_PROMPT_VERSION),
+                session,
+                journey_run.book_id,
+            )
             completed_ids = set(progress.completed_scene_ids)
             batches = plan_scene_batches(
                 scenes,
@@ -821,7 +826,11 @@ async def _execute_reader_journey_legacy(
             )
             session.commit()
 
-            chapter_prompt = load_prompt("reader_journey_chapter", CHAPTER_PROMPT_VERSION)
+            chapter_prompt = apply_chapter_focus(
+                load_prompt("reader_journey_chapter", CHAPTER_PROMPT_VERSION),
+                session,
+                journey_run.book_id,
+            )
             synthesis_input = {
                 "scene_profiles": [
                     {

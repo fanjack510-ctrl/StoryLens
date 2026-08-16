@@ -143,7 +143,11 @@ def _range_texts(paragraphs, boundary_ids, boundary_meta=None):
 
 def test_v2_schema_versions_and_required_fields():
     assert SCENE_CONTRACT_VERSION_V2 == "2.0"
-    assert SCENE_PROMPT_VERSION_V2 == "v2.0"
+    # Prompt v2.2 under contract 2.0: the two versions move independently, and this pair
+    # is the assertion that keeps them honest. v2.2 adds reader_questions_opened /
+    # reader_questions_answered / first_hook_paragraph_id — all optional with empty
+    # defaults, so the contract version does not move.
+    assert SCENE_PROMPT_VERSION_V2 == "v2.2"
     assert CHAPTER_PROMPT_VERSION_V2 == "v2.0"
     assert FORMULA_VERSION_V2 == "2.0"
     assert SCENE_ROLE_TARGETS_VERSION == "1.0"

@@ -31,6 +31,17 @@ from app.services.analysis_grounding import (
 )
 
 
+def _is_question_text(text: str | None) -> bool:
+    """A question, not an assertion — judged on the text, not on which field it came from.
+
+    v2 puts the reader's question into `hooks[].summary` through the compat shim, so keying
+    this off a field-name list would exempt the wrong things in one pipeline and nothing in
+    the other.
+    """
+    stripped = (text or "").strip()
+    return bool(stripped) and stripped.endswith(("？", "?"))
+
+
 CLAIM_FIELDS = (
     "scene_value_summary",
     "overview",
@@ -214,7 +225,7 @@ def scan_journey_profile_grounding(
         for idx, item in enumerate(items):
             if not isinstance(item, dict):
                 continue
-            item_claim = " ".join(
+            claim_parts = [
                 _as_text(item.get(k))
                 for k in (
                     "summary",
@@ -227,7 +238,26 @@ def scan_journey_profile_grounding(
                     "description",
                     "takeaway",
                 )
-            )
+            ]
+            item_claim = " ".join(claim_parts)
+            # Assertions only. A reader question is not a claim about the text — it is what
+            # the text makes the reader wonder — so its words are under no obligation to
+            # appear in the paragraph that raised it.
+            #
+            # This is not a judgement call, it is a measurement. On 《再也不见》第一章, with the
+            # question cited to the paragraph that genuinely raises it, the entity overlap
+            # was 23 of 24 tokens unsupported; with the same question cited to an unrelated
+            # paragraph from a different book it was 24 of 24. The check cannot tell the two
+            # apart on this field type, so running it there only produces false positives —
+            # and a false positive here sets display_policy to hide_field, which blanked the
+            # reader questions on the page.
+            #
+            # Everything else about the item is still checked: evidence scope above runs on
+            # every item including questions, and any assertive text in the same item is
+            # still held to the entity requirement.
+            assertive_claim = " ".join(
+                part for part in claim_parts if not _is_question_text(part)
+            ).strip()
             cited = [
                 str(x)
                 for x in (item.get("evidence_paragraph_ids") or [])
@@ -249,9 +279,11 @@ def scan_journey_profile_grounding(
             # but craft-language false positives must not block whole journeys.
             if fingerprint_state != "ok":
                 continue
+            if not assertive_claim:
+                continue
             issues.extend(
                 validate_claim_entities_against_evidence(
-                    claim_text=item_claim,
+                    claim_text=assertive_claim,
                     evidence_texts=text_by_id,
                     cited_paragraph_ids=cited,
                     scene_id=scene.id,
@@ -262,7 +294,7 @@ def scan_journey_profile_grounding(
             )
             issues.extend(
                 validate_entities_in_scene_or_aliases(
-                    claim_text=item_claim,
+                    claim_text=assertive_claim,
                     scene_text="\n".join(text_by_id.get(pid, "") for pid in cited) + "\n" + scene_text,
                     alias_texts=[scene_text],
                     scene_id=scene.id,

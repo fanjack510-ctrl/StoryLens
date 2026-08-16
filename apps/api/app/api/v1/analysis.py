@@ -1050,15 +1050,19 @@ def create_run_record(
     input_hash = hashlib.sha256(
         "\n".join(f"{item.id}:{item.normalized_text}" for item in paragraphs).encode()
     ).hexdigest()
+    # v4.0 segments the chapter in one call instead of labelling all 67 adjacent
+    # transitions. Measured on book 10 chapter 1445: v3.5 returned the first enum value for
+    # every transition and produced one scene; v4.0 produced six, matching a hand reading,
+    # with a tenth of the calls. See services/scene_segmentation_v40.
     prompt_version = (
-        "v3.5"
+        "v4.0"
         if capabilities.cloud
         else ("v2" if capabilities.profile_name == "qwen3_14b_dev" else "v1")
     )
     boundary_prompt = load_prompt("scene_boundary", prompt_version)
     analysis_prompt = load_prompt(
         "scene_analysis",
-        "v3.1" if prompt_version in {"v3.2", "v3.3", "v3.4", "v3.5"} else prompt_version,
+        "v3.1" if prompt_version in {"v3.2", "v3.3", "v3.4", "v3.5", "v4.0"} else prompt_version,
     )
     run = AnalysisRun(
         task_type="scene_pipeline",
@@ -1113,6 +1117,19 @@ async def create_analysis_run(
         )
         if existing_request is not None:
             return AnalysisRunAccepted(run_id=existing_request.id, status=existing_request.status)
+    # 确认门（10_ADAPTIVE_PROFILE_LAYER §4.3）：画像先于首次分析，单章与全书同一道门。
+    # 放在幂等回放之后：门上线前已被接受的运行，重放请求仍返回原运行，不追溯报错。
+    from app.narrative_core.services.long_novel_pipeline_v1 import profile_confirmation_state
+
+    profile_state = profile_confirmation_state(session, chapter.book_id)
+    if profile_state != "confirmed":
+        raise error(
+            409,
+            "PROFILE_CONFIRMATION_REQUIRED",
+            "开始分析前，请先确认这本书的作品画像——画像决定分析按什么类型侧重进行。"
+            + ("画像草稿已生成，确认即可。" if profile_state == "draft" else ""),
+            details={"book_id": chapter.book_id, "profile_status": profile_state},
+        )
     provider = gateway.get(request.provider_name)
     ProviderRuntimeService.bind_gateway(gateway, session, store)
     capabilities = provider.capabilities()
