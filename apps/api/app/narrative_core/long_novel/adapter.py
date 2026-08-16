@@ -27,7 +27,7 @@ from typing import Any, Mapping, Sequence
 from pydantic import BaseModel
 
 from app.narrative_core.long_novel.constants import CHARACTERS_MAX as C_CHARACTERS_MAX
-from app.narrative_core.long_novel.topics import ChapterSignalRow, PacingCurve
+from app.narrative_core.long_novel.topics import ChapterSignalRow, PacingCurve, spread as _sample
 from app.narrative_core.whole_book_v2.contracts import (
     JourneyPoint,
     JourneyResult,
@@ -108,25 +108,39 @@ def percentile_scores(values: Sequence[float]) -> list[int]:
     return scores
 
 
+def reading_drive_ranks(curve: PacingCurve) -> list[int]:
+    """"Would a reader keep going", per bin, as a within-book percentile.
+
+    This composite used to be published as a fourth curve, which is why it had to go: it is
+    ``2×hooks + beats``, so it sat on the chart between the two curves it is made of and moved
+    with both. As a *signal* it is still the right one — a run of low values is what a reader
+    experiences as a slow stretch, and the fatigue regions it finds are the assessment's most
+    actionable output (第 43–45 章 on 《系统豪横》). So it is computed and used, not drawn.
+    """
+    return percentile_scores([b["hooks"] * 2 + b["beats"] for b in curve.bins])
+
+
 def build_pacing_section(
     curve: PacingCurve, *, regions: Sequence[Mapping[str, Any]] = ()
 ) -> dict[str, Any]:
-    """Turn the bounded curve into the UI's pacing points, with engine-computed scores."""
+    """Turn the bounded curve into the UI's pacing points, with engine-computed scores.
+
+    Three curves, not six. The six were five counters recombined: ``reading_drive`` was
+    ``2×hooks + beats`` and therefore a weighted sum of two curves already on the chart —
+    measured on 《系统豪横》 it correlated 0.73 with ``hook_density`` and 0.65 with
+    ``plot_progress``; ``tension`` was ``action + hooks`` and ``pace_speed`` was
+    ``action + dialogue``, correlating 0.54 with each other. Six lines that carry three lines'
+    worth of information is not a richer chart, it is an unreadable one, and it invited the
+    reasonable complaint that the measurement must be over-parameterised. What remains is one
+    curve per independent counter: how much plot happens, how often a chapter ends on a hook,
+    and how much of the page is interior.
+    """
     if not curve.bins:
         return {"availability": "unavailable", "points": [], "event_markers": [], "pacing_regions": []}
 
-    beats = [b["beats"] for b in curve.bins]
-    action = [b["action"] for b in curve.bins]
-    interiority = [b["interiority"] for b in curve.bins]
-    dialogue = [b["dialogue"] for b in curve.bins]
-    hooks = [b["hooks"] for b in curve.bins]
-
-    plot = percentile_scores(beats)
-    tension = percentile_scores([a + h for a, h in zip(action, hooks)])
-    emotion = percentile_scores(interiority)
-    drive = percentile_scores([h * 2 + b for h, b in zip(hooks, beats)])
-    hook_density = percentile_scores(hooks)
-    speed = percentile_scores([a + d for a, d in zip(action, dialogue)])
+    plot = percentile_scores([b["beats"] for b in curve.bins])
+    emotion = percentile_scores([b["interiority"] for b in curve.bins])
+    hook_density = percentile_scores([b["hooks"] for b in curve.bins])
 
     points = []
     for i, b in enumerate(curve.bins):
@@ -135,11 +149,8 @@ def build_pacing_section(
                 "chapter_start": int(b["from_chapter"]),
                 "chapter_end": int(b["to_chapter"]),
                 "plot_progress": plot[i],
-                "tension": tension[i],
                 "emotion": emotion[i],
-                "reading_drive": drive[i],
                 "hook_density": hook_density[i],
-                "pace_speed": speed[i],
                 "dominant_events": [],
                 "reason": "",
                 "story_consequence": "",
@@ -210,6 +221,15 @@ def build_chapters_section(
             }
         )
 
+    # Five columns, not seven. `foreshadow` and `payoff` were the literals 0.0 in every run
+    # this engine has ever produced, because nothing measures them — and they name exactly what
+    # the suspense module answers with real lifecycles, so filling them in would be a second,
+    # worse copy of an existing page rather than a new finding.
+    #
+    # What remains is counted paragraphs per chapter, averaged. It is not a score out of
+    # anything and the columns are on different scales by nature (a chapter has ~20 dialogue
+    # paragraphs and either 0 or 1 hooks), which is why each column is labelled with its own
+    # unit downstream instead of being presented as one comparable grid.
     heatmap = []
     for start in range(0, len(rows), aggregation_size):
         group = rows[start : start + aggregation_size]
@@ -222,8 +242,6 @@ def build_chapters_section(
                 "character_development": round(sum(g.get("interiority_paragraphs", 0) for g in group) / size, 2),
                 "conflict": round(sum(g.get("action_paragraphs", 0) for g in group) / size, 2),
                 "suspense": round(sum(1 for g in group if g.get("hook_present")) / size, 2),
-                "foreshadow": 0.0,
-                "payoff": 0.0,
                 "transition": round(sum(g.get("dialogue_paragraphs", 0) for g in group) / size, 2),
             }
         )
@@ -744,12 +762,19 @@ def build_stage_ledger(
         events_here = did[position]
         # Events are sampled across the span rather than truncated at the front: a stage's
         # last act deserves the same chance of being shown as its first.
-        step = max(1, len(events_here) // _LEDGER_SHOWN)
+        #
+        # ``events[::step][:N]`` did not do that, though the line above has always claimed it
+        # did. With ``step = n // N`` the stride is rounded down, so the first N of the strided
+        # list stop well short of the end — 22 events reached the 15th, and 15 events with a
+        # stride of 1 degenerated to a plain prefix. Measured on 《系统豪横》: the 49–64 stage
+        # ended at chapter 57 and the 65–84 stage at chapter 78, so every act silently lost its
+        # closing chapters. Index arithmetic instead, which lands on the last element by
+        # construction.
         ledger.append(conform(StageLedger, {
             "stage_name": str(stage.get("stage_name") or ""),
             "chapter_start": spans[position][0], "chapter_end": spans[position][1],
             "met": rows[:_LEDGER_SHOWN], "met_total": len(rows),
-            "did": events_here[::step][:_LEDGER_SHOWN], "did_total": len(events_here),
+            "did": _sample(events_here, _LEDGER_SHOWN), "did_total": len(events_here),
             "gained": _distinct(gained[position]), "gained_total": len(gained[position]),
             "lost": _distinct(lost[position]), "lost_total": len(lost[position]),
         }))

@@ -51,8 +51,16 @@ class SuspenseEvent(M): chapter:int=Field(ge=1); type:SuspenseType; description:
 class SuspenseLifecycle(Ranged):
     suspense_id:str; question:str; importance:float=Field(ge=0,le=1); reader_initial_knowledge:str; truth:str; events:list[SuspenseEvent]; clues:list[str]; misdirections:list[str]; partial_reveals:list[str]; twist:str; payoff:str; storyline_effect:str; status:Literal["unresolved","partial","resolved","long_term"]
 class SuspenseResult(M): version:str="2.0"; availability:Availability=Availability.AVAILABLE; lifecycles:list[SuspenseLifecycle]
+# Three of the six curves were the same five counters combined a second time, and drawing
+# them together made the chart unreadable while adding nothing: `reading_drive` is
+# `2×hooks + beats`, so it correlated 0.73 with `hook_density` and 0.65 with `plot_progress`
+# on 《系统豪横》; `tension` is `action + hooks` and `pace_speed` is `action + dialogue`, which
+# correlate 0.54 with each other. They are optional rather than deleted so documents stored
+# before this still validate — a stored report must not stop rendering because the engine
+# changed its mind about what is worth measuring.
 class PacingPoint(M):
-    chapter_start:int=Field(ge=1); chapter_end:int=Field(ge=1); plot_progress:float=Field(ge=0,le=100); tension:float=Field(ge=0,le=100); emotion:float=Field(ge=0,le=100); reading_drive:float=Field(ge=0,le=100); hook_density:float=Field(ge=0,le=100); pace_speed:float=Field(ge=0,le=100); dominant_events:list[str]; reason:str; story_consequence:str
+    chapter_start:int=Field(ge=1); chapter_end:int=Field(ge=1); plot_progress:float=Field(ge=0,le=100); emotion:float=Field(ge=0,le=100); hook_density:float=Field(ge=0,le=100); dominant_events:list[str]; reason:str; story_consequence:str
+    tension:float|None=Field(default=None,ge=0,le=100); reading_drive:float|None=Field(default=None,ge=0,le=100); pace_speed:float|None=Field(default=None,ge=0,le=100)
     chapter_id:int|None=None; chapter_index:int|None=Field(default=None,ge=1); chapter_title:str|None=None
 class PacingMarker(M):
     chapter:int=Field(ge=1); title:str; event:str; importance:float=Field(ge=0,le=1); effect_on_pacing:str; evidence:list[str]
@@ -60,7 +68,12 @@ class PacingMarker(M):
 class PacingRegion(Ranged): type:Literal["fatigue","climax","acceleration","slow_build","high_pressure","transition"]; reason:str; related_events:list[str]; diagnosis:str
 class PacingResult(M): version:str="2.0"; availability:Availability=Availability.AVAILABLE; points:list[PacingPoint]; event_markers:list[PacingMarker]; pacing_regions:list[PacingRegion]
 class ChapterFunction(M): chapter_id:int; chapter_index:int=Field(ge=1); title:str; primary_function:str; secondary_functions:list[str]; summary:str; importance:float=Field(ge=0,le=1); evidence:list[str]
-class HeatmapBin(M): chapter_start:int; chapter_end:int; mainline_progress:float; character_development:float; conflict:float; suspense:float; foreshadow:float; payoff:float; transition:float
+# `foreshadow` and `payoff` were literal 0.0 in every run ever produced — nothing measured
+# them — and they name what the suspense module already answers with real lifecycles. Optional
+# so stored documents keep validating; not produced any more.
+class HeatmapBin(M):
+    chapter_start:int; chapter_end:int; mainline_progress:float; character_development:float; conflict:float; suspense:float; transition:float
+    foreshadow:float|None=None; payoff:float|None=None
 class ChaptersResult(M): version:str="2.0"; availability:Availability=Availability.AVAILABLE; functions:list[ChapterFunction]; heatmap:list[HeatmapBin]; aggregation_size:int=50
 class OverviewResult(M):
     version:str="2.0"; one_sentence_story:str; full_summary:str; protagonist:str; initial_state:str; final_state:str; core_goal:str; goal_evolution:list[str]; core_conflict:str; conflict_evolution:list[str]; core_question:str; major_storylines:list[str]; major_turning_points:list[TurningPoint]; major_suspense:list[str]; final_climax:str; ending_resolution:list[str]; ending_open_questions:list[str]; story_skeleton:list[str]; evidence:list[str]

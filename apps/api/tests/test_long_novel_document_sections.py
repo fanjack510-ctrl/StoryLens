@@ -67,7 +67,10 @@ def _block_response(payload):
                 "chapter_ref": ref,
                 "dialogue_paragraphs": 6 + ref % 5,
                 "action_paragraphs": 3 + ref % 3,
-                "interiority_paragraphs": 2,
+                # Varied, not constant. Held at 2 it made the 情绪浓度 curve a flat line, which
+                # is the exact shape this file exists to reject — the check only reached it once
+                # the chart stopped being dominated by a composite curve.
+                "interiority_paragraphs": 1 + ref % 4,
                 "scene_breaks": 1,
                 "new_information_beats": 1 + ref % 4,
                 "hook_present": ref % 2 == 0,
@@ -344,9 +347,20 @@ def test_the_pacing_curve_is_a_reading_and_not_a_flat_line(document):
 
     A real run published a curve whose 96 bins held 4 distinct values, 72 of them tied at
     the floor, because 87% of chapter signals came back with every counter zero.
+
+    Checks every published curve, not one of them: the chart is now three lines and any of them
+    flattening is the same failure. ``reading_drive``, which this used to read, is no longer
+    published — it was the sum of two of the lines beside it.
+
+    ``hook_density`` is held to two values rather than three, and that is not a weaker check but
+    a different quantity: a chapter either ends on a hook or it does not, so while a bin holds
+    one chapter the curve is a square wave by construction. Measured on 《系统豪横》: exactly
+    two ranks, 17 and 67. It only becomes graded on a book long enough for a bin to hold
+    several chapters, which is the same reason the heatmap carries it per ten chapters.
     """
-    drives = [point["reading_drive"] for point in document["pacing"]["points"]]
-    assert len(set(drives)) >= 3, "曲线只有 %d 种取值" % len(set(drives))
+    for key, distinct in (("plot_progress", 3), ("emotion", 3), ("hook_density", 2)):
+        values = [point[key] for point in document["pacing"]["points"]]
+        assert len(set(values)) >= distinct, "%s 只有 %d 种取值" % (key, len(set(values)))
 
 
 def test_claims_resolve_to_evidence_that_exists_in_the_index(document):
@@ -449,3 +463,135 @@ def test_each_stage_interpreter_reads_across_its_stage_not_its_opening(document)
         if not covered or span < 2:
             continue
         assert max(covered) - min(covered) > span * 0.5, stage
+
+
+# ----------------------------------------------------------------- 评审反馈（CHG-107）
+#
+# Every assertion below names something a professional reader found in the finished report of
+# 《系统豪横》 and that no test could have caught, because each defect produced a page that was
+# populated, validated and wrong.
+
+
+def test_the_ledger_reaches_the_end_of_every_stage(document):
+    """`events[::step][:8]` claimed to sample a span and delivered its opening.
+
+    With ``step = n // 8`` the stride rounds down, so eight strided picks stop short of the
+    end — and at ``n < 16`` the stride is 1 and it degenerates to a plain prefix. Measured on
+    《系统豪横》: the 49–64 stage's 做了什么 ended at chapter 57, the 65–84 stage at 78. Every
+    act quietly lost its closing chapters.
+    """
+    ledger = document["journey"].get("ledger") or []
+    assert ledger, "行动台账是空的"
+    for row in ledger:
+        if row["did_total"] <= len(row["did"]):
+            continue  # nothing was dropped, so there is nothing to sample
+        span = row["chapter_end"] - row["chapter_start"]
+        last = max(int(e["chapter"]) for e in row["did"])
+        assert last >= row["chapter_end"] - span * 0.25, (
+            "第%d-%d章这一段的台账只到第%d章" % (row["chapter_start"], row["chapter_end"], last)
+        )
+
+
+def test_a_relationship_is_not_the_same_string_three_times(document):
+    """`relationship_type`, `initial_state` and `evolution[0]` all held the first relation.
+
+    So a pair that changed once was printed three times and the detail panel counted it as a
+    step it had not taken.
+    """
+    rows = document["characters"]["relationships"]
+    assert rows, "关系为空"
+    for row in rows:
+        assert row["initial_state"] not in row["evolution"], row
+        assert row["final_state"] not in row["evolution"], row
+        if row["initial_state"] == row["final_state"]:
+            assert not row["evolution"], "单步关系不应该有演变项：%s" % row
+
+
+def test_the_heatmap_does_not_publish_columns_nothing_measures(document):
+    """伏笔铺设 and 回收兑现 were the literal 0.0 in every run this engine ever produced.
+
+    They also name what the suspense module answers with real lifecycles, so filling them in
+    would be a worse second copy of an existing page rather than a new finding.
+    """
+    for cell in document["chapters"]["heatmap"]:
+        assert cell.get("foreshadow") is None, cell
+        assert cell.get("payoff") is None, cell
+
+
+def test_the_pacing_curve_publishes_only_independent_series(document):
+    """Six curves from five counters, three of them recombinations of the other three."""
+    point = document["pacing"]["points"][0]
+    for derived in ("reading_drive", "tension", "pace_speed"):
+        assert derived not in point, "%s 是其它曲线的组合，不应再发布" % derived
+    # The composite still has to *work* as an internal signal — it is what finds slow stretches.
+    assert isinstance(document["pacing"]["pacing_regions"], list)
+
+
+def test_a_causal_link_does_not_run_backwards(document):
+    """「曾昭野报警抓获李山木 → 系统激活」, with the system activating in chapter 1.
+
+    Both sides name an event some block extracted, so where both can be found the chapter
+    numbers settle which came first.
+    """
+    chapters: dict[str, int] = {}
+    for row in document["story"]["chronology"]:
+        chapters.setdefault(row["description"], row["chapter"])
+    for line in document["story"]["causal_chain"]:
+        cause, _, effect = line.partition(" → ")
+        assert cause != effect, "因果两端是同一件事：%s" % line
+        if cause in chapters and effect in chapters:
+            assert chapters[cause] <= chapters[effect], line
+
+
+def test_the_event_markers_are_not_the_stage_list_again(document):
+    """Ten of this book's twelve markers were 「阶段开启」 and 「转折」, one pair per act.
+
+    The chart sits directly under the stage list, so those marks said nothing the reader had
+    not just read, and buried the two that did.
+    """
+    markers = document["pacing"]["event_markers"]
+    assert markers, "没有事件标记"
+    assert not any(m["marker_type"] == "story_stage" for m in markers), markers
+
+
+@pytest.mark.parametrize(
+    "short,full,merge",
+    [
+        # A contraction drops the middle and keeps both ends. This is the case that split
+        # 《系统豪横》's cast: 洪霞警官 and 洪警官 ranked as two people, each holding half a
+        # history, and the character table listed both.
+        ("洪警官", "洪霞警官", True),
+        ("王主任", "王建国主任", True),
+        ("贝姐", "贝小姐", True),
+        # A relative keeps the whole name and appends a role, which is why the obvious
+        # substring test is wrong: merging these would delete a character from the book.
+        ("李山木", "李山木父亲", False),
+        ("李山木", "李山木的母亲", False),
+        ("李山木", "李山木儿子", False),
+        # Different people who merely share a surname, and a name against itself.
+        ("赵明", "赵玲", False),
+        ("马勇", "马妈妈", False),
+        ("张三", "张三丰", False),
+        ("曾昭野", "曾昭野", False),
+    ],
+)
+def test_a_contracted_name_merges_but_a_relative_does_not(short, full, merge):
+    from app.narrative_core.long_novel.orchestrator import _is_contraction_of
+
+    assert _is_contraction_of(short, full) is merge
+
+
+def test_merging_a_contraction_keeps_the_fuller_name_and_its_mentions():
+    from app.narrative_core.long_novel.orchestrator import _fold_contracted_names
+
+    rows = _fold_contracted_names([
+        {"display_surface_norm": "洪霞警官", "centrality": 30, "blocks": 6},
+        {"display_surface_norm": "洪警官", "centrality": 12, "blocks": 3},
+        {"display_surface_norm": "李山木", "centrality": 20, "blocks": 5},
+        {"display_surface_norm": "李山木父亲", "centrality": 8, "blocks": 2},
+    ])
+    names = [r["display_surface_norm"] for r in rows]
+    assert names.count("洪霞警官") == 1 and "洪警官" not in names
+    assert "李山木" in names and "李山木父亲" in names
+    merged = next(r for r in rows if r["display_surface_norm"] == "洪霞警官")
+    assert merged["centrality"] == 42 and merged["aliases"] == ["洪警官"]

@@ -7,7 +7,8 @@ import {
   type ModuleKey,
 } from "./modules";
 import {
-  PACING_LABELS,
+  PACING_SERIES,
+  PACING_SCALE_NOTE,
   HEATMAP_DIMS,
   STORYLINE_STATUS,
   JOURNEY_TAB,
@@ -34,7 +35,15 @@ export type WholeBookV2ReportViewProps = {
   headerExtra?: ReactNode;
 };
 
-const PACING_COLORS = ["#2f6b57", "#729f8d", "#d18b55", "#657a99", "#a06a85", "#8b8054"];
+/** Three curves, told apart twice over: by hue-and-lightness, and by stroke pattern.
+ *
+ *  The old six were all desaturated mid-tones — ten of the fifteen pairs came out under a 1.5
+ *  contrast ratio and the worst, 阅读动力 against 钩子密度, was 1.02, which is the same colour.
+ *  Those two also happened to be the pair that moved together, so the two hardest lines to tell
+ *  apart were also the two hardest to tell apart. Worst pair here is 1.39, and the dash pattern
+ *  settles it regardless — which is also what makes the chart readable without colour vision. */
+const PACING_COLORS = ["#14503c", "#d1793a", "#6b74a8"];
+const PACING_DASHES = ["", "7 4", "2 4"];
 
 function pct(chapter: number, total: number): string {
   return `${(chapter / Math.max(1, total)) * 100}%`;
@@ -1461,20 +1470,21 @@ function PacingModule({ data }: { data: WholeBookAnalysisV2 }) {
   const H = 390;
   const pad = 48;
   const [hover, setHover] = useState(0);
-  // Six curves drawn together are a ball of wool: at 96 points each they cross constantly
-  // and none of them can be followed. Reading drive is the one that answers "would a reader
-  // keep going", so it is the default; the rest are there when a comparison is wanted.
-  const [shown, setShown] = useState<Set<number>>(() => new Set([3]));
+  // Curves drawn together cross constantly and none can be followed, so one is on by default
+  // and the others join it on request. Plot progress is the one that answers "is the story
+  // moving", which is what a reader opens this chart to ask.
+  const [shown, setShown] = useState<Set<number>>(() => new Set([0]));
   const pacing = data.pacing;
   const maxChapter = pacing.points.at(-1)?.chapter_end ?? data.book_metadata.chapter_count;
   const marker = pacing.event_markers[hover] ?? pacing.event_markers[0];
   const series = useMemo(
     () =>
-      PACING_LABELS.map((name, si) => ({
-        name,
+      PACING_SERIES.map((s) => ({
+        name: s.label,
+        measures: s.measures,
         values: pacing.points.map((p) => ({
           chapter: p.chapter_index ?? p.chapter_start,
-          value: [p.plot_progress, p.tension, p.emotion, p.reading_drive, p.hook_density, p.pace_speed][si],
+          value: Number(p[s.key] ?? 0),
         })),
       })),
     [pacing.points],
@@ -1482,11 +1492,13 @@ function PacingModule({ data }: { data: WholeBookAnalysisV2 }) {
 
   return (
     <>
+      <p className="wb2-scale-note">{PACING_SCALE_NOTE}</p>
       <div className="wb2-legend wb2-metric-toggle">
         {series.map((s, i) => (
           <button
             key={s.name}
             type="button"
+            title={`${s.name}：${s.measures}（本书内百分位）`}
             aria-pressed={shown.has(i)}
             onClick={() =>
               setShown((prev) => {
@@ -1498,7 +1510,13 @@ function PacingModule({ data }: { data: WholeBookAnalysisV2 }) {
               })
             }
           >
-            <i style={{ background: PACING_COLORS[i] }} />
+            <i
+              style={{
+                background: PACING_DASHES[i]
+                  ? `repeating-linear-gradient(90deg, ${PACING_COLORS[i]} 0 5px, transparent 5px 9px)`
+                  : PACING_COLORS[i],
+              }}
+            />
             {s.name}
           </button>
         ))}
@@ -1529,7 +1547,8 @@ function PacingModule({ data }: { data: WholeBookAnalysisV2 }) {
                 key={s.name}
                 fill="none"
                 stroke={PACING_COLORS[si]}
-                strokeWidth="2"
+                strokeDasharray={PACING_DASHES[si] || undefined}
+                strokeWidth="2.4"
                 points={s.values
                   .map(
                     (v) =>
@@ -1627,19 +1646,22 @@ function ChaptersModule({ data }: { data: WholeBookAnalysisV2 }) {
         ))}
         {HEATMAP_DIMS.map((d) => {
           // Each row scaled to its own range. The raw value was being used directly as a
-          // percentage, and the rows are on wildly different scales — 过渡衔接 runs 3.9–21.2
-          // while 悬念密度 runs 0.4–1.0 — so six of the seven rendered as near-transparent
-          // and the grid read as uniformly pale.
+          // percentage, and the rows are on different scales by nature — 对话段落 runs 13–23
+          // per chapter while 章末留钩 is a 0–1 proportion — so most rows rendered as
+          // near-transparent and the grid read as uniformly pale.
           const values = ch.heatmap.map((x) => Number(x[d.key]) || 0);
           const lo = Math.min(...values);
           const hi = Math.max(...values);
           const flat = hi - lo === 0;
           return (
           <Fragment key={d.key}>
-            <strong data-empty={flat ? "1" : "0"}>{d.label}</strong>
+            <strong data-empty={flat ? "1" : "0"} title={`${d.label}（${d.unit}）`}>
+              {d.label}
+              <small>{d.unit}</small>
+            </strong>
             {ch.heatmap.map((x, i) => (
               <button
-                aria-label={`${d.label} ${x.chapter_start}-${x.chapter_end} ${x[d.key]}`}
+                aria-label={`${d.label} 第${x.chapter_start}-${x.chapter_end}章 ${x[d.key]} ${d.unit}`}
                 onClick={() => setSelected(i)}
                 key={`${d.key}${i}`}
                 // A row with no variation is marked as *absent*, not drawn as a low value:
@@ -1662,7 +1684,8 @@ function ChaptersModule({ data }: { data: WholeBookAnalysisV2 }) {
         })}
       </div>
       <p className="wb2-heat-note">
-        每行按自身取值范围着色，行内对比才出得来。
+        这里是<b>清点结果的每章均值</b>，不是评分：各行量纲不同（段落数 / 占比），只在行内比较，
+        深浅按该行自身的取值范围着色。
         {HEATMAP_DIMS.filter((d) => {
           const values = ch.heatmap.map((x) => Number(x[d.key]) || 0);
           return Math.max(...values) - Math.min(...values) === 0;

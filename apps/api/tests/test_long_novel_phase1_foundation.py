@@ -802,18 +802,24 @@ def test_invariant_report_raises_with_every_violation_not_just_the_first():
 # Chinese label 高潮 where the contract declares a closed English vocabulary, and it surfaced
 # only after 115 real calls had been spent. These tests move that discovery to 0.2 seconds.
 
-def _curve(drives: list[int]) -> list[dict]:
-    return [
-        {"chapter_start": i * 8 + 1, "chapter_end": i * 8 + 8, "reading_drive": d}
-        for i, d in enumerate(drives)
+def _curve(drives: list[int]) -> tuple[list[dict], list[int]]:
+    """Points and their drive ranks, which the point itself no longer carries.
+
+    ``reading_drive`` was ``2×hooks + beats`` and therefore a recombination of two curves
+    already on the chart, so it stopped being published. It is still the signal these regions
+    are found with — see ``reading_drive_ranks`` — it is just passed in now.
+    """
+    points = [
+        {"chapter_start": i * 8 + 1, "chapter_end": i * 8 + 8} for i, _ in enumerate(drives)
     ]
+    return points, list(drives)
 
 
 def test_pacing_regions_emit_contract_vocabulary_not_display_text():
     from app.narrative_core.long_novel.orchestrator import RunCoordinator
     from app.narrative_core.whole_book_v2.contracts import PacingRegion
 
-    regions = RunCoordinator._pacing_regions(_curve([90, 92, 88, 91, 50, 10, 8, 12, 9]))
+    regions = RunCoordinator._pacing_regions(*_curve([90, 92, 88, 91, 50, 10, 8, 12, 9]))
     kinds = {r["type"] for r in regions}
     assert kinds == {"climax", "fatigue"}, kinds
     for region in regions:
@@ -826,7 +832,7 @@ def test_pacing_regions_emit_contract_vocabulary_not_display_text():
 def test_pacing_regions_ignore_runs_shorter_than_three_bins():
     from app.narrative_core.long_novel.orchestrator import RunCoordinator
 
-    assert RunCoordinator._pacing_regions(_curve([90, 91, 40, 40, 40])) == []
+    assert RunCoordinator._pacing_regions(*_curve([90, 91, 40, 40, 40])) == []
 
 
 def test_derived_story_sections_validate_against_the_contract():

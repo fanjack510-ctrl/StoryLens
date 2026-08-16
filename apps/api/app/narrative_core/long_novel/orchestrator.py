@@ -46,6 +46,7 @@ from app.narrative_core.long_novel.adapter import (
     build_characters_section,
     build_journey_section,
     build_pacing_section,
+    reading_drive_ranks,
     build_stage_ledger,
     build_type_profile_section,
     parse_rank,
@@ -105,6 +106,57 @@ def _is_not_a_name(surface: str) -> bool:
     if text in _NOT_NAMES:
         return True
     return "/" in text or "、" in text
+
+def _is_contraction_of(short: str, full: str) -> bool:
+    """Is ``short`` the same person as ``full``, written with the middle left out?
+
+    Chinese prose contracts a name by dropping interior characters — 洪霞警官 is called 洪警官,
+    王建国主任 becomes 王主任 — and the two surfaces then rank as two people. On 《系统豪横》
+    the cast list carried 洪霞警官 and 洪警官 as separate rows, each with its own partial
+    history.
+
+    The test is deliberately narrow, because the obvious one is wrong: 李山木 is a substring of
+    李山木父亲, and merging those would erase a character. What separates the two cases is
+    *where* the extra characters sit. A contraction keeps both ends and loses the middle; a
+    relative keeps the whole name and appends a role. So the rule is: same first character,
+    same last character, ``short`` embeds in ``full`` in order, and at most two characters
+    differ.
+    """
+    if not short or not full or short == full or len(full) <= len(short):
+        return False
+    if len(full) - len(short) > 2 or len(short) < 2:
+        return False
+    if short[0] != full[0] or short[-1] != full[-1]:
+        return False
+    position = 0
+    for character in full:
+        if position < len(short) and character == short[position]:
+            position += 1
+    return position == len(short)
+
+
+def _fold_contracted_names(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Merge contracted forms into the fullest surface, keeping the short one as an alias.
+
+    Ranked input, so the surviving row is the one the book uses most and its centrality gains
+    the mentions that were being counted against a second, phantom character.
+    """
+    survivors: list[dict[str, Any]] = []
+    for row in rows:
+        surface = str(row.get("display_surface_norm", ""))
+        for kept in survivors:
+            other = str(kept.get("display_surface_norm", ""))
+            if _is_contraction_of(surface, other) or _is_contraction_of(other, surface):
+                kept["centrality"] += row.get("centrality", 0)
+                kept["blocks"] += row.get("blocks", 0)
+                aliases = kept.setdefault("aliases", [])
+                if surface not in aliases:
+                    aliases.append(surface)
+                break
+        else:
+            survivors.append(row)
+    return sorted(survivors, key=lambda r: (r["centrality"], r["blocks"]), reverse=True)
+
 
 #: L1 names an action by what it *did* to a thread; the product contract names it by the
 #: reader-facing beat. Both vocabularies are closed, so the mapping is explicit — an
@@ -281,8 +333,9 @@ class RunCoordinator:
             # The engine has already measured where the book drags. Handing that over turns
             # "第 1–806 章，提升叙事密度" — which is what an assessor with no measurements
             # returns, and which no author can act on — into a range they can open.
+            curve = resample_pacing_curve(signals)
             payload["pacing_regions"] = self._pacing_regions(
-                build_pacing_section(resample_pacing_curve(signals))["points"]
+                build_pacing_section(curve)["points"], reading_drive_ranks(curve)
             )
             assessment = self._assess(payload)
             report.provider_calls += 1
@@ -328,12 +381,31 @@ class RunCoordinator:
         """The causal spine, from the links L1 already extracted.
 
         These were being thrown away exactly like the stage interpretations were: the facts
-        existed in every block asset and nothing read them, so the tab rendered empty.
+        existed in every block asset and nothing read them, so the tab rendered empty. Then
+        they were passed through untouched, which put two kinds of nonsense on the page.
+
+        A link whose cause happens *after* its effect is not a cause. Both sides name an event
+        the same block extracted, so where both can be found the chapters settle it — measured
+        on 《系统豪横》: 「曾昭野报警抓获李山木 → 系统激活」, with the system activating in
+        chapter 1 and the arrest following it. And a link whose two sides are the same event is
+        a sentence restated with an arrow in the middle, not a finding.
         """
+        chapter_of: dict[str, int] = {}
+        for asset in assets.values():
+            for event in asset.events:
+                chapter_of.setdefault(event.summary.strip(), event.chapter_ref)
+
         chain: list[str] = []
         for asset in assets.values():
             for link in asset.causal_links:
-                chain.append(f"{link.cause_fact_ref} → {link.effect_fact_ref}")
+                cause = str(link.cause_fact_ref or "").strip()
+                effect = str(link.effect_fact_ref or "").strip()
+                if not cause or not effect or cause == effect:
+                    continue
+                cause_at, effect_at = chapter_of.get(cause), chapter_of.get(effect)
+                if cause_at is not None and effect_at is not None and cause_at > effect_at:
+                    continue
+                chain.append(f"{cause} → {effect}")
         return chain[:60]
 
     #: Bounds on the pairing call's input. The payload must not grow with book length, which
@@ -554,11 +626,21 @@ class RunCoordinator:
                 ][:6]
 
             payoffs = _of("payoff")
+            # "未收束" was being printed over questions the book had visibly answered in part,
+            # because status only ever took two values and only a `resolve`/`close` action set
+            # the second one. Extraction returns `advance` for almost everything — measured on
+            # 《系统豪横》: 25 clues against a single payoff — so a thread that got a real reveal
+            # was filed identically to one nobody ever returned to. The contract has always had
+            # a third value; a thread that was revealed but never paid off is what it is for.
+            status = entry["status"]
+            if status != "resolved" and _of("reveal", "twist", "partial_reveal"):
+                status = "partial"
             lifecycles.append(
                 conform(
                     SuspenseLifecycle,
                     {
                         **entry,
+                        "status": status,
                         "suspense_id": f"SUS-{index}",
                         "clues": _of("clue", "foreshadow"),
                         "misdirections": _of("misdirection"),
@@ -732,14 +814,20 @@ class RunCoordinator:
         return points
 
     @staticmethod
-    def _pacing_regions(points: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
+    def _pacing_regions(
+        points: Sequence[dict[str, Any]], drive: Sequence[int] = ()
+    ) -> list[dict[str, Any]]:
         """Name the stretches a reader would actually feel, from the computed curve.
 
         Derived rather than asked for: the curve is already whole-book percentiles, so a run
         of low values *is* a slow stretch. Asking a model to label regions it cannot see
         would be inventing.
+
+        ``drive`` is the composite that used to be published as a curve and is now an internal
+        signal — see ``reading_drive_ranks``. Passed in rather than read off the point, because
+        the point no longer carries it.
         """
-        if not points:
+        if not points or len(drive) < len(points):
             return []
         regions: list[dict[str, Any]] = []
         run_kind: str | None = None
@@ -747,11 +835,13 @@ class RunCoordinator:
         for index, point in enumerate(list(points) + [None]):  # sentinel closes the last run
             kind = None
             if point is not None:
-                drive = point["reading_drive"]
+                drive_here = drive[index]
                 # ``type`` is a closed vocabulary in the contract. It reached the document in
                 # Chinese and failed validation on a finished paid run — the label a reader
                 # sees belongs in ``reason``, never in the enum.
-                kind = "climax" if drive >= 75 else ("fatigue" if drive <= 25 else None)
+                kind = (
+                    "climax" if drive_here >= 75 else ("fatigue" if drive_here <= 25 else None)
+                )
             if kind != run_kind:
                 if run_kind and index - start >= 3:
                     slow = run_kind == "fatigue"
@@ -795,21 +885,36 @@ class RunCoordinator:
                     {
                         "person_a": key[0],
                         "person_b": key[1],
-                        "relationship_type": change.relation,
-                        "initial_state": change.relation,
-                        "evolution": [],
+                        "steps": [],
                         "chapter_start": chapter,
                         "chapter_end": chapter,
                     },
                 )
                 entry["chapter_start"] = min(entry["chapter_start"], chapter)
                 entry["chapter_end"] = max(entry["chapter_end"], chapter)
-                entry["evolution"].append(change.relation)
-                entry["final_state"] = change.relation
-        return [
-            conform(Relationship, entry)
-            for entry in sorted(pairs.values(), key=lambda e: len(e["evolution"]), reverse=True)[:30]
-        ]
+                if not entry["steps"] or entry["steps"][-1] != change.relation:
+                    entry["steps"].append(change.relation)
+
+        # One string, four fields. `relationship_type`, `initial_state` and `evolution[0]` all
+        # carried the first recorded relation, so a pair that changed once was printed three
+        # times and the detail panel counted it as a step it had not taken. Each field now says
+        # something the others do not: where the pair started, where it ended, and — only when
+        # there is one — what it passed through between.
+        rows: list[dict[str, Any]] = []
+        for entry in sorted(pairs.values(), key=lambda e: len(e["steps"]), reverse=True)[:30]:
+            steps: list[str] = entry.pop("steps")
+            rows.append(
+                conform(Relationship, {
+                    **entry,
+                    "initial_state": steps[0] if steps else "",
+                    "final_state": steps[-1] if steps else "",
+                    "evolution": steps[1:-1],
+                    # No relationship taxonomy is extracted, so the honest label for the kind of
+                    # bond is the state it settled into — stated once, here, and nowhere else.
+                    "relationship_type": steps[-1] if steps else "",
+                })
+            )
+        return rows
 
     def _character_facts(
         self, assets: dict[str, BlockAsset], names: Sequence[str], lead: str
@@ -1080,39 +1185,39 @@ class RunCoordinator:
         interpretations: Sequence[Mapping[str, Any]],
         lifecycles: Sequence[Mapping[str, Any]],
     ) -> list[dict[str, Any]]:
-        """Points worth naming on the pacing curve: stage openings and their turning points."""
+        """Points worth naming on the pacing curve: turning points, and answered questions.
+
+        Stage openings used to be marked too, one per act, which made ten of this book's twelve
+        markers a second printing of the stage list — the chart sat directly beneath that list,
+        so the marks added nothing a reader had not just read, and buried the two that did. A
+        stage boundary is a division of the book; a marker should be a thing that happened in
+        it.
+        """
         markers: list[dict[str, Any]] = []
         for item in interpretations:
             if not isinstance(item, Mapping):
                 continue
             start = int(item.get("chapter_start_order", 1) or 1)
-            markers.append(conform(PacingMarker, {
-                "chapter": start,
-                "title": str(item.get("title", "")),
-                "event": str(item.get("stage_goal") or item.get("summary", ""))[:120],
-                "importance": 0.8,
-                "marker_type": "story_stage",
-                "effect_on_pacing": "阶段开启",
-            }))
             turn = str(item.get("turning_point", "")).strip()
             if turn:
                 markers.append(conform(PacingMarker, {
                     "chapter": max(start, int(item.get("chapter_end_order", start) or start)),
-                    "title": "转折",
+                    "title": str(item.get("title", "")) or "转折",
                     "event": turn[:120],
                     "importance": 1.0,
                     "marker_type": "turning_point",
                     "effect_on_pacing": "推动进入下一阶段",
                 }))
         for entry in list(lifecycles)[:8]:
-            if str(entry.get("status")) == "resolved" and entry.get("events"):
+            if str(entry.get("status")) in {"resolved", "partial"} and entry.get("events"):
+                answered = str(entry.get("status")) == "resolved"
                 markers.append(conform(PacingMarker, {
                     "chapter": int(entry.get("chapter_end", 1) or 1),
-                    "title": "悬念收束",
+                    "title": "悬念收束" if answered else "悬念揭示",
                     "event": str(entry.get("question", ""))[:120],
-                    "importance": 0.6,
+                    "importance": 0.6 if answered else 0.4,
                     "marker_type": "major_event",
-                    "effect_on_pacing": "张力释放",
+                    "effect_on_pacing": "张力释放" if answered else "张力部分释放",
                 }))
         markers.sort(key=lambda m: m["chapter"])
         return markers[:40]
@@ -1432,9 +1537,10 @@ class RunCoordinator:
             row["blocks"] += 1
         # Appearing across many blocks breaks ties between characters with similar mention
         # counts: presence through the whole book beats a crowd scene.
-        return sorted(
+        ranked = sorted(
             folded.values(), key=lambda r: (r["centrality"], r["blocks"]), reverse=True
         )
+        return _fold_contracted_names(ranked)
 
     # ------------------------------------------------------------------ stages
     def _extract_all(
@@ -1576,8 +1682,11 @@ class RunCoordinator:
         lead = entities[0]["display_surface_norm"] if entities else ""
         tracks = self._growth_tracks(assets, lead)
         goal_evolution, conflict_evolution = self._goal_and_conflict_evolution(assets)
-        pacing = build_pacing_section(resample_pacing_curve(signals))
-        pacing["pacing_regions"] = self._pacing_regions(pacing["points"])
+        curve = resample_pacing_curve(signals)
+        pacing = build_pacing_section(curve)
+        pacing["pacing_regions"] = self._pacing_regions(
+            pacing["points"], reading_drive_ranks(curve)
+        )
         pacing["event_markers"] = self._event_markers(interpretations, suspense_lifecycles)
         self._annotate_pacing(pacing["points"], assets)
         chapters = build_chapters_section(

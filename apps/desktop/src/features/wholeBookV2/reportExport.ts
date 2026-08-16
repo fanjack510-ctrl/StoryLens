@@ -12,7 +12,8 @@
  */
 import type { WholeBookAnalysisV2 } from "./contracts";
 import {
-  PACING_LABELS,
+  PACING_SERIES,
+  PACING_SCALE_NOTE,
   HEATMAP_DIMS,
   STORYLINE_STATUS,
   JOURNEY_TAB,
@@ -33,6 +34,9 @@ const esc = (x: unknown): string =>
 const INK = "#1b2621", GREEN = "#2f6b57", FAINT = "#8a968f", LINE = "#dbe1dc",
   RED = "#a4523f", AMBER = "#b8791c";
 const PAL = ["#2f6b57", "#7a6ba8", "#b8791c", "#5b7596", "#a4523f", "#3f7a75", "#b04e72", "#62744c"];
+/** Must match the screen's pacing palette and dashes exactly — see `PACING_COLORS` there. */
+const EXPORT_PACING_COLORS = ["#14503c", "#d1793a", "#6b74a8"];
+const EXPORT_DASHES = ["", "7 4", "2 4"];
 const DOWN_KINDS = new Set(["setback", "demote", "twist", "misdirect"]);
 const RATING_SCORE: Record<string, number> = { A: 7, "A-": 6, "B+": 5, B: 4, "B-": 3, C: 2, D: 1 };
 
@@ -65,19 +69,26 @@ function svgPacing(d: WholeBookAnalysisV2): string {
   const maxCh = points.at(-1)?.chapter_end ?? d.book_metadata.chapter_count;
   const x = (ch: number) => L + (Math.min(ch, maxCh) / Math.max(1, maxCh)) * (W - L - Rp);
   const y = (v: number) => T + (1 - v / 100) * (H - T - B);
-  const keys = ["plot_progress", "tension", "emotion", "reading_drive", "hook_density", "pace_speed"] as const;
-  const lines = keys.map((k, si) => {
+  // Same three curves, same colours and dashes as the screen. An export that draws a different
+  // chart from the app cannot be checked against it, which is the whole reason both read one
+  // vocabulary out of `labels.ts`.
+  const lines = PACING_SERIES.map((s, si) => {
     const path = points
-      .map((p, i) => `${i ? "L" : "M"} ${x((p.chapter_start + p.chapter_end) / 2).toFixed(1)} ${y(p[k]).toFixed(1)}`)
+      .map(
+        (p, i) =>
+          `${i ? "L" : "M"} ${x((p.chapter_start + p.chapter_end) / 2).toFixed(1)} ${y(Number(p[s.key] ?? 0)).toFixed(1)}`,
+      )
       .join(" ");
-    return `<path d="${path}" fill="none" stroke="${PAL[si]}" stroke-width="1.6"/>`;
+    const dash = EXPORT_DASHES[si] ? ` stroke-dasharray="${EXPORT_DASHES[si]}"` : "";
+    return `<path d="${path}" fill="none" stroke="${EXPORT_PACING_COLORS[si]}" stroke-width="1.8"${dash}/>`;
   });
   return `<svg viewBox="0 0 ${W} ${H}" style="width:100%" role="img" aria-label="全书节奏曲线">
     ${[0, 50, 100].map((v) => `<line x1="${L}" y1="${y(v)}" x2="${W - Rp}" y2="${y(v)}" stroke="${LINE}"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end" font-size="11" fill="${FAINT}">${v}</text>`).join("")}
     ${points.map((p) => `<text x="${x((p.chapter_start + p.chapter_end) / 2).toFixed(1)}" y="${H - 6}" text-anchor="middle" font-size="10" fill="${FAINT}">${p.chapter_start}</text>`).join("")}
     ${lines.join("")}
   </svg>
-  <p class="legend">${PACING_LABELS.map((l, i) => `<span><i style="background:${PAL[i]}"></i>${esc(l)}</span>`).join("")}</p>`;
+  <p class="legend">${PACING_SERIES.map((s, i) => `<span><i style="background:${EXPORT_PACING_COLORS[i]}"></i>${esc(s.label)}（${esc(s.measures)}）</span>`).join("")}</p>
+  <p class="note">${esc(PACING_SCALE_NOTE)}</p>`;
 }
 
 function svgJourney(d: WholeBookAnalysisV2): string {
@@ -396,15 +407,14 @@ function sectionPacing(d: WholeBookAnalysisV2): string {
   <h2 id="s5">5　节奏</h2>
   <h3>节奏曲线</h3>
   ${svgPacing(d)}
-  <h3>逐段指标（0–100）</h3>
+  <h3>逐段指标（本书内百分位，0–100）</h3>
+  <p class="note">${esc(PACING_SCALE_NOTE)}</p>
   <table class="wide">
-    <tr><th>章段</th>${PACING_LABELS.map((l) => `<th>${esc(l)}</th>`).join("")}<th>主导事件</th></tr>
+    <tr><th>章段</th>${PACING_SERIES.map((s) => `<th>${esc(s.label)}<br><small>${esc(s.measures)}</small></th>`).join("")}<th>主导事件</th></tr>
     ${pc.points
       .map(
         (x) =>
-          `<tr><td>${rng(x.chapter_start, x.chapter_end)}</td>${[x.plot_progress, x.tension, x.emotion, x.reading_drive, x.hook_density, x.pace_speed]
-            .map((v) => `<td>${Math.round(v)}</td>`)
-            .join("")}<td>${esc(x.dominant_events.join("；") || "—")}</td></tr>`,
+          `<tr><td>${rng(x.chapter_start, x.chapter_end)}</td>${PACING_SERIES.map((s) => `<td>${Math.round(Number(x[s.key] ?? 0))}</td>`).join("")}<td>${esc(x.dominant_events.join("；") || "—")}</td></tr>`,
       )
       .join("")}
   </table>
@@ -437,8 +447,9 @@ function sectionChapters(d: WholeBookAnalysisV2): string {
       .join("")}
   </table>
   <h3>聚合热力（每 ${c.aggregation_size} 章一段）</h3>
+  <p class="note">各列是清点结果的每章均值，不是评分；量纲不同（段落数 / 占比），深浅只在列内比较。</p>
   <table>
-    <tr><th>章段</th>${HEATMAP_DIMS.map((h) => `<th>${esc(h.label)}</th>`).join("")}</tr>
+    <tr><th>章段</th>${HEATMAP_DIMS.map((h) => `<th>${esc(h.label)}<br><small>${esc(h.unit)}</small></th>`).join("")}</tr>
     ${(() => {
       const maxes = HEATMAP_DIMS.map((k) => Math.max(...c.heatmap.map((h) => Number(h[k.key])), 0));
       return c.heatmap
