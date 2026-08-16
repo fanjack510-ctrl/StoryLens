@@ -26,6 +26,9 @@ from app.narrative_core.long_novel.chapter_focus import (
     MAX_GENRE_AXES,
     selected_axes,
     DEFAULT_HOOK_VOCABULARY,
+    DEFAULT_MAIN_CURVE,
+    main_curve_naming,
+    merged_weights,
     HOOK_VOCABULARY,
     hook_vocabulary,
     suppressed_diagnoses,
@@ -132,8 +135,10 @@ def test_the_cap_counts_only_what_every_scene_pays_for(session) -> None:
 
 
 def test_a_gated_axis_does_not_consume_the_per_scene_budget(session) -> None:
-    # 快餐免费 + 男频升级: two gated + two per-scene. Nothing is dropped, and the per-scene
-    # count stays well under the cap even though four axes are returned.
+    # 快餐免费 + 男频升级: two gated + three per-scene. Nothing is dropped, and the per-scene
+    # count stays under the cap even though five axes are returned. 目标明确度 joined when
+    # engine=progression got a focus of its own — a neutral-audience ladder novel was
+    # otherwise getting none of the ladder's dimensions.
     foci = chapter_foci_for(
         {
             "monetization": {"value": "fast_food_free"},
@@ -145,10 +150,12 @@ def test_a_gated_axis_does_not_consume_the_per_scene_budget(session) -> None:
     assert [axis.key for axis in axes] == [
         "opening_grip",
         "chapter_end_hook",
+        "goal_clarity",
         "gratification_payoff",
         "frustration_control",
     ]
-    assert len([a for a in axes if a.scope == "scene"]) == 2
+    assert len([a for a in axes if a.scope == "scene"]) == 3
+    assert len([a for a in axes if a.scope != "scene"]) == 2
 
 
 def test_chapter_scoped_axes_are_gated_to_the_scene_that_carries_them() -> None:
@@ -355,3 +362,58 @@ def test_a_misspelled_diagnosis_code_is_rejected_at_import() -> None:
             instruction="",
             suppressed_diagnoses=("weak_tensionn",),
         )
+
+
+def test_a_progression_book_gets_progression_dimensions_without_being_a_爽文() -> None:
+    """`engine=progression` alone had no focus; only the male_gratification pairing did.
+
+    Measured on 《系统豪横！救宠奖无限创业金》 — 84 chapters, neutral audience, structurally a
+    ladder (one villain prosecuted and one product line opened per arc). Before this it
+    activated fast_food_hooks alone: two gated axes and the factory weighting, while its hook
+    vocabulary already read 立标与兑现 because HOOK_VOCABULARY keys on the engine. One axis
+    recognised by the naming table and not by the scoring table is a hole, not a decision.
+    """
+    neutral = {
+        "monetization": {"value": "fast_food_free"},
+        "engine": {"value": "progression"},
+        "audience": {"value": "neutral"},
+    }
+    keys = {f.key for f in chapter_foci_for(neutral)}
+    assert "progression_engine" in keys
+    assert "gratification_beats" not in keys, "neutral audience must not get the 爽文 beats"
+    labels = {a.label for f in chapter_foci_for(neutral) for a in f.axes}
+    assert "目标明确度" in labels
+    assert "爽点兑现" not in labels
+
+
+def test_a_爽文_still_gets_both_and_its_own_weighting_wins() -> None:
+    ladder = {
+        "monetization": {"value": "fast_food_free"},
+        "engine": {"value": "progression"},
+        "audience": {"value": "male_gratification"},
+    }
+    foci = chapter_foci_for(ladder)
+    assert {"progression_engine", "gratification_beats"} <= {f.key for f in foci}
+    labels = {a.label for f in foci for a in f.axes}
+    assert {"目标明确度", "爽点兑现", "憋屈控制"} <= labels
+    # More specific wins the shared block: merged_weights replaces block by block in
+    # registration order, and GRATIFICATION_BEATS is registered after PROGRESSION_ENGINE.
+    assert merged_weights(foci)["reading_momentum"]["hook_payoff_fit"] == 0.40
+
+
+def test_the_ensemble_curve_has_a_name_of_its_own() -> None:
+    # 《醉枕江山》 showed 布局与摊牌 as the lens and 综合阅读 as the main curve — the same
+    # half-renamed state already fixed twice for romance.
+    label, why = main_curve_naming({"engine": {"value": "ensemble_politics"}})
+    assert label == "局势张力"
+    assert why and label not in DEFAULT_MAIN_CURVE[0]
+
+
+def test_the_ensemble_weighting_follows_its_own_instruction() -> None:
+    """The focus says read 「哪一方得到了什么」 and 「谁知道什么」, so the curve must too."""
+    weights = merged_weights(chapter_foci_for({"engine": {"value": "ensemble_politics"}}))
+    plot = weights["plot_progress"]
+    assert plot["information_gain"] >= 0.25
+    # The viewpoint character is frequently not the mover in this form.
+    assert plot["character_agency"] <= 0.10
+    assert abs(sum(plot.values()) - 1.0) < 1e-6

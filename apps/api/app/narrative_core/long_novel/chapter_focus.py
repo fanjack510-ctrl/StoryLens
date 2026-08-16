@@ -238,6 +238,56 @@ FAST_FOOD_HOOKS = ChapterFocus(
     ),
 )
 
+PROGRESSION_ENGINE = ChapterFocus(
+    key="progression_engine",
+    triggers=(("engine", "progression"),),
+    # 「立目标 → 受阻 → 兑现」 is the engine, and it is not the property of one audience.
+    # GRATIFICATION_BEATS requires male_gratification *and* progression, so 《系统豪横！救宠
+    # 奖无限创业金》 — a neutral-audience book whose 84 chapters are exactly that structure,
+    # one villain prosecuted and one product line opened per arc — activated only
+    # fast_food_hooks: two gated axes and the factory weighting. Its hook vocabulary already
+    # read 立标与兑现, because HOOK_VOCABULARY keys on the engine alone. One axis recognised
+    # by the naming table and not by the scoring table is not a decision, it is a hole.
+    #
+    # Registered before GRATIFICATION_BEATS so a 爽文 book's more specific weighting wins the
+    # same blocks (merged_weights: later focus replaces the block whole).
+    weights={
+        "reading_momentum": {
+            "plot_progress": 0.30,
+            "reading_tension": 0.20,
+            "pacing_fit": 0.15,
+            "hook_payoff_fit": 0.35,
+        },
+        "plot_progress": {
+            "goal_progress": 0.30,
+            "state_change": 0.25,
+            "conflict_change": 0.15,
+            "information_gain": 0.15,
+            "character_agency": 0.10,
+            "causal_coherence": 0.05,
+        },
+    },
+    instruction=(
+        "- 本书由目标推进：先指明**本章服务于哪一个已经立下的目标**（原样引用正文里的说法），"
+        "再说这一章把它推到了哪一步——立下、受阻、部分兑现、还是完成。"
+        "「兑现」按**读者能否指着正文说出「这件事成了」**来判断，"
+        "不是按人物心情，也不是按叙述者的许诺。"
+    ),
+    axes=(
+        GenreAxis(
+            key="goal_clarity",
+            label="目标明确度",
+            anchors=(
+                "0=读完本场景说不出主角在追什么，也说不出谁在挡；"
+                "3=目标存在但只在人物心里，正文没有把它说成一件可完成的事；"
+                "5=正文里有一个具体、可判定成败的目标，读者能说出「做成什么才算成」。"
+                "注意这一项量的是**目标写清楚了没有**，不是目标大不大——"
+                "「把这批狗送出收容所」和「统一天下」在这一项上可以同分。"
+            ),
+        ),
+    ),
+)
+
 GRATIFICATION_BEATS = ChapterFocus(
     key="gratification_beats",
     triggers=(("audience", "male_gratification"), ("engine", "progression")),
@@ -571,6 +621,21 @@ SLICE_RHYTHM = ChapterFocus(
 ENSEMBLE_POLITICS = ChapterFocus(
     key="ensemble_politics",
     triggers=(("engine", "ensemble_politics"),),
+    # The focus's own instruction says to read 「哪一方得到了什么、失去了什么」 and 「谁知道
+    # 什么、谁以为什么」, so the curve has to weigh the same things: what moved and who now
+    # knows it. character_agency drops because in this form the protagonist is frequently
+    # not the mover — 《醉枕江山》第一章 rises 68→84.6 on soldiers arriving and a official
+    # ordering a village killed, none of which the viewpoint character causes.
+    weights={
+        "plot_progress": {
+            "information_gain": 0.25,
+            "state_change": 0.25,
+            "conflict_change": 0.20,
+            "goal_progress": 0.15,
+            "causal_coherence": 0.10,
+            "character_agency": 0.05,
+        },
+    },
     instruction=(
         "- 本书是群像权谋：推动情节的不是单个人物的目标，而是**势力之间的位置变化**。"
         "评 goal_progress / conflict_change 时按「哪一方得到了什么、失去了什么」来看，"
@@ -648,6 +713,12 @@ MAIN_CURVE_NAMING: tuple[tuple[tuple[tuple[str, str], ...], str, str], ...] = (
         (("audience", "male_gratification"), ("engine", "progression")),
         "期待值",
         "升级流的读者在等兑现，主线量的是「憋着还是爽着」。",
+    ),
+    (
+        (("engine", "ensemble_politics"),),
+        "局势张力",
+        "群像权谋的读者跟的既不是某个人的目标，也不是谜底，而是各方位置的变化——"
+        "主线量的是「局面绷得有多紧」。",
     ),
     (
         (("monetization", "fast_food_free"),),
@@ -812,6 +883,7 @@ LENGTH_EXPECTATION: dict[str, str] = {
 CHAPTER_FOCI: tuple[ChapterFocus, ...] = (
     FAST_FOOD_HOOKS,
     PAID_SUBSCRIPTION,
+    PROGRESSION_ENGINE,
     GRATIFICATION_BEATS,
     ROMANCE_BEATS,
     MYSTERY_CLUES,
