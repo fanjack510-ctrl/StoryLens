@@ -28,6 +28,11 @@ from app.schemas.scene import (
     CompactTransitionClassificationResultV34,
     CompactTransitionClassificationResultV35,
     BoundaryCandidateAdjudicationResult,
+    SceneSegmentationResultV40,
+)
+from app.narrative_core.long_novel.chapter_focus import (
+    apply_chapter_focus,
+    apply_segmentation_focus,
 )
 from app.services.prompt_service import load_prompt
 from app.services.structured_output import generate_validated
@@ -36,6 +41,11 @@ from app.services.scene_transitions import build_adjacent_transitions, validate_
 from app.services.compact_transition_adapter import compact_to_canonical
 from app.services.compact_transition_adapter_v34 import compact_v34_to_canonical
 from app.services.transition_batch_planner import plan_transition_batches
+from app.services.scene_segmentation_v40 import (
+    build_segmentation_snapshot,
+    map_segments_to_boundaries,
+    validate_segmentation,
+)
 from app.services.scene_boundary_adjudicator import (
     adjudicated_to_canonical,
     validate_candidate_detection,
@@ -849,7 +859,10 @@ async def _execute(session: Session, gateway: ModelGateway, run: AnalysisRun) ->
     if not paragraphs:
         raise ValueError("章节没有段落")
     key = chapter_key(chapter)
-    boundary_prompt = load_prompt("scene_boundary", run.prompt_version)
+    # Where the cuts go is a profile decision too, not only how the scenes are scored.
+    boundary_prompt = apply_segmentation_focus(
+        load_prompt("scene_boundary", run.prompt_version), session, chapter.book_id
+    )
     windows = build_windows(paragraphs)
     window_results: list[SceneBoundaryResult] = []
     # Formal units (phase 1): one step per boundary window.
@@ -865,7 +878,37 @@ async def _execute(session: Session, gateway: ModelGateway, run: AnalysisRun) ->
             "paragraphs": [{"id": item.id, "text": item.normalized_text} for item in window],
         }
         allowed = {item.id for item in window}
-        if run.prompt_version == "v3.5":
+        if run.prompt_version == "v4.0":
+            # Whole-chapter segmentation in one call. See scene_segmentation_v40 for the
+            # measurement that motivated replacing per-transition labelling.
+            seg_snapshot = build_segmentation_snapshot(
+                chapter_id=key,
+                title=chapter.title,
+                paragraph_ids=[item.id for item in window],
+                texts=[item.normalized_text for item in window],
+            )
+            segmentation = await generate_validated(
+                session=session,
+                gateway=gateway,
+                run_id=run.id,
+                provider_name=run.provider,
+                task_type="scene_boundary",
+                prompt=boundary_prompt,
+                schema=SceneSegmentationResultV40,
+                input_snapshot=seg_snapshot,
+                user_content=boundary_prompt.user_template.format(
+                    input_json=json.dumps(seg_snapshot, ensure_ascii=False)
+                ),
+                business_validator=lambda value, ids=[item.id for item in window]: (
+                    validate_segmentation(value, expected_chapter_id=key, paragraph_ids=ids)
+                ),
+            )
+            result = map_segments_to_boundaries(
+                segmentation,
+                chapter_id=key,
+                paragraph_ids=[item.id for item in window],
+            )
+        elif run.prompt_version == "v3.5":
             batches = plan_transition_batches(transition_candidates, contract_version="3.5")
             paragraph_payload = {
                 item.id: {"id": item.id, "text": item.normalized_text} for item in window
@@ -1269,7 +1312,7 @@ async def _execute(session: Session, gateway: ModelGateway, run: AnalysisRun) ->
         "window_overall_confidences": window_confidences,
         "overall_confidence": overall_confidence,
     }
-    if run.prompt_version == "v3.5":
+    if run.prompt_version in {"v3.5", "v4.0"}:
         position = {item.id: index for index, item in enumerate(paragraphs)}
         boundary_payload["boundary_evidence"] = [
             {
@@ -1292,10 +1335,23 @@ async def _execute(session: Session, gateway: ModelGateway, run: AnalysisRun) ->
         )
     )
     session.commit()
-    if run.prompt_version == "v3.5":
+    # Human review is the point, not a formality: the model proposes the cuts and the
+    # reader accepts, moves, adds or removes them before anything is analysed.
+    if run.prompt_version in {"v3.5", "v4.0"}:
         from app.services.boundary_review_service import create_review_session
 
         create_review_session(session, run)
+        if run.prompt_version == "v4.0":
+            from app.services.scene_boundary_manual_review import (
+                ensure_model_revision_from_boundaries_v1,
+            )
+
+            # The review screen reads the model revision, and v4.0 stops before scenes
+            # exist, so the proposal has to be published from the boundaries themselves.
+            ensure_model_revision_from_boundaries_v1(
+                session, run, boundary_paragraph_ids=list(ordered_ids)
+            )
+            session.commit()
         return True
     ranges = scene_ranges(
         paragraphs,
@@ -1310,9 +1366,12 @@ async def _execute(session: Session, gateway: ModelGateway, run: AnalysisRun) ->
     analysis_prompt = load_prompt(
         "scene_analysis",
         "v3.2"
-        if run.prompt_version in {"v3.2", "v3.3", "v3.4", "v3.5"}
+        if run.prompt_version in {"v3.2", "v3.3", "v3.4", "v3.5", "v4.0"}
         else run.prompt_version,
     )
+    # 画像 → 单章侧重（10_ADAPTIVE_PROFILE_LAYER §4.4）：确认过画像的书，
+    # 场景分析按类型加观察点；未确认的书提示词逐字节不变。
+    analysis_prompt = apply_chapter_focus(analysis_prompt, session, chapter.book_id)
     paragraph_by_id = {item.id: item for item in paragraphs}
     for ordinal, (start, end) in enumerate(ranges, start=1):
         raise_if_cancel_requested(session, run.id)

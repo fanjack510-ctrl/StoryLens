@@ -257,12 +257,19 @@ def _draft_revision(session: Session, chapter_id: int) -> BoundaryRevision | Non
 
 
 def _model_revision(session: Session, chapter_id: int) -> BoundaryRevision | None:
+    """The AI's proposal, whatever state it is in.
+
+    "proposed" joins the list because v4.0 publishes its segmentation *before* anyone has
+    confirmed it — that is the point of the review gate. Reading only confirmed revisions
+    made the screen report 「AI 场景数：0 · 新增 6」 and credit the reader with six scenes
+    the model had found.
+    """
     return session.scalar(
         select(BoundaryRevision)
         .where(
             BoundaryRevision.chapter_id == chapter_id,
             BoundaryRevision.source == "model",
-            BoundaryRevision.status.in_(["confirmed", "superseded"]),
+            BoundaryRevision.status.in_(["proposed", "confirmed", "superseded"]),
         )
         .order_by(BoundaryRevision.id.desc())
     )
@@ -431,6 +438,11 @@ def create_or_get_scene_boundary_draft_v1(
     if draft is not None:
         return draft
     base = _confirmed_revision(session, chapter_id)
+    if base is None:
+        # Nothing confirmed yet — the AI's proposal is what the reader is adjusting. Without
+        # this the first edit before the first confirm forked from the legacy single-scene
+        # partition and silently threw away the segmentation.
+        base = _model_revision(session, chapter_id)
     if base is None:
         base = ensure_legacy_confirmed_revision_v1(session, chapter_id)
     if base is None:
@@ -650,6 +662,9 @@ def confirm_scene_revision_v1(
 ) -> tuple[BoundaryRevision, bool]:
     """Confirm a draft revision.
 
+    Accepts a user draft or the AI's own proposal — adopting the segmentation unchanged is
+    the ordinary path, and it should not require forking a draft first.
+
     Returns ``(revision, already_confirmed)``. When a draft encodes the same
     boundary/chapter hashes as the current confirmed revision, the draft is
     discarded and the existing confirmed revision is returned without creating
@@ -662,7 +677,7 @@ def confirm_scene_revision_v1(
         if revision.revision_etag == expected_etag or not expected_etag:
             return revision, True
         raise SceneBoundaryError("SCENE_REVISION_CONCURRENT_MODIFICATION")
-    if revision.status != "draft":
+    if revision.status not in {"draft", "proposed"}:
         raise SceneBoundaryError("SCENE_PARTITION_EMPTY")
     if revision.revision_etag != expected_etag:
         raise SceneBoundaryError("SCENE_REVISION_CONCURRENT_MODIFICATION")
@@ -1307,6 +1322,7 @@ __all__ = [
     "confirm_scene_revision_v1",
     "confirm_scene_revision_and_start_journey_v1",
     "ensure_legacy_confirmed_revision_v1",
+    "ensure_model_revision_from_boundaries_v1",
     "ensure_ai_model_revision_after_scenes_v1",
     "move_boundary",
     "add_boundary",
@@ -1325,3 +1341,84 @@ __all__ = [
     "get_confirmed_revision",
     "run_scenes",
 ]
+
+
+def ensure_model_revision_from_boundaries_v1(
+    session: Session, run: AnalysisRun, *, boundary_paragraph_ids: list[str]
+) -> BoundaryRevision | None:
+    """Publish a v4.0 segmentation as the model revision the review screen reads.
+
+    The older flow built this from scene rows, which only exist after the pipeline has run
+    to completion. v4.0 stops at the review gate on purpose — the cuts are a proposal, not a
+    result — so the partition is computed straight from the boundaries instead. Without it
+    the review screen has no proposal to show and reports one scene, which is precisely the
+    outcome this whole change exists to prevent.
+    """
+    chapter_id = int(run.subject_id)
+    chapter = session.get(Chapter, chapter_id)
+    if chapter is None:
+        return None
+    existing = session.scalar(
+        select(BoundaryRevision)
+        .where(BoundaryRevision.analysis_run_id == run.id, BoundaryRevision.source == "model")
+        .order_by(BoundaryRevision.id.desc())
+    )
+    if existing is not None:
+        return existing
+
+    paragraphs = list(
+        session.scalars(
+            select(Paragraph)
+            .where(Paragraph.chapter_id == chapter_id)
+            .order_by(Paragraph.paragraph_index)
+        )
+    )
+    if not paragraphs:
+        return None
+    position = {item.id: index for index, item in enumerate(paragraphs)}
+    cuts = sorted(
+        {position[pid] for pid in boundary_paragraph_ids if pid in position}
+    )
+
+    partition: list[dict] = []
+    start = 0
+    for order, cut in enumerate(cuts + [len(paragraphs) - 1], start=1):
+        end = min(cut, len(paragraphs) - 1)
+        if end < start:
+            continue
+        partition.append(
+            {
+                "scene_order": order,
+                "start_paragraph_id": paragraphs[start].id,
+                "end_paragraph_id": paragraphs[end].id,
+                "included_in_journey": True,
+            }
+        )
+        start = end + 1
+        if start >= len(paragraphs):
+            break
+
+    review = _get_or_create_partition_session(session, run, chapter)
+    chapter_hash = compute_chapter_text_hash_v1(session, chapter_id)
+    validate_scene_partition_v1(
+        session, chapter_id, partition, expected_chapter_text_hash=chapter_hash
+    )
+    revision = BoundaryRevision(
+        review_session_id=review.id,
+        chapter_id=chapter_id,
+        analysis_run_id=run.id,
+        revision_number=_next_revision_number(session, chapter_id, review.id),
+        final_boundaries_json=dump_partition_json(partition),
+        confirmed_by="model-pipeline",
+        # A proposal, not a decision: the reviewer confirms it, and until then nothing
+        # downstream may treat these cuts as settled. Distinct from "draft", which means a
+        # human is mid-edit — this is the AI's starting point for that edit.
+        status="proposed",
+        source="model",
+        chapter_text_hash=chapter_hash,
+        boundary_hash=compute_scene_boundary_hash_v1(chapter_id, chapter_hash, partition),
+        revision_etag=_new_etag(),
+    )
+    session.add(revision)
+    session.flush()
+    return revision

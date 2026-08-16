@@ -115,6 +115,38 @@ class CompactTransitionClassificationResultV34(BaseModel):
     boundary_evidence: list[BoundaryEvidence] = Field(default_factory=list)
 
 
+class SceneSegmentMarker(BaseModel):
+    """Evidence for a cut: the paragraph where the model saw a change, and what changed."""
+
+    model_config = ConfigDict(extra="forbid")
+    n: int = Field(ge=1)
+    kind: Literal["location", "time", "viewpoint", "action_chain"]
+    what: str = ""
+
+
+class SceneSegment(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    start: int = Field(ge=1)
+    where: str = ""
+    why: str = ""
+
+
+class SceneSegmentationResultV40(BaseModel):
+    """Whole-chapter segmentation (prompt v4.0).
+
+    Replaces the per-transition labelling of v3.5, which asked the model to fill six enums
+    for every adjacent paragraph pair. On a 68-paragraph chapter with five explicit location
+    changes it returned the *first* value of every enum 67 times out of 67 — 「same,
+    continuous, same, same, none」 at a uniform 0.9 confidence — and the chapter came out as
+    one scene. Asking for the segmentation directly is the task a reader actually performs:
+    the same chapter and model produced six scenes in one call instead of ten.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+    markers: list[SceneSegmentMarker] = Field(default_factory=list)
+    scenes: list[SceneSegment] = Field(default_factory=list)
+
+
 class CompactTransitionCandidateDecision(BaseModel):
     model_config = ConfigDict(extra="forbid")
     transition_id: str

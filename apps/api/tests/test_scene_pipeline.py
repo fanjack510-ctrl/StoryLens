@@ -5,6 +5,7 @@ import pytest
 from app.schemas.scene import EvidenceField, SceneAnalysisResult, SceneBoundaryResult
 from app.services.scene_pipeline import scene_ranges, validate_boundaries, validate_scene_analysis
 from tests.fakes import FakeProvider
+from tests.profile_gate_helpers import confirm_book_profile
 
 TEXT = """第一章 测试
 
@@ -24,6 +25,8 @@ def import_chapter(client: TestClient) -> int:
     )
     assert response.status_code == 201
     book_id = response.json()["book_id"]
+    # 确认门：分析入口要求已确认画像，测试与用户走同一条路。
+    confirm_book_profile(client, book_id)
     return client.get(f"/api/v1/books/{book_id}/chapters").json()[0]["id"]
 
 

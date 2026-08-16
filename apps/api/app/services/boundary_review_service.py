@@ -147,7 +147,19 @@ def create_review_session(session: Session, run: AnalysisRun) -> BoundaryReviewS
     seen_left: set[str] = set()
     seen_transition_ids: set[str] = set()
     ordinal = 1
-    if checkpoints:
+    if run.prompt_version == "v4.0":
+        # v4.0 produces boundaries directly and writes no per-transition checkpoints, so the
+        # two branches below (which read v3.5 checkpoint tables and per-transition
+        # invocations) find nothing and the review screen shows one scene — exactly the
+        # symptom v4.0 exists to fix. The adopted boundaries live in the run's artifact.
+        _seed_v40_review_decisions(
+            session,
+            run=run,
+            review=review,
+            paragraphs=paragraphs,
+            position=position,
+        )
+    elif checkpoints:
         for checkpoint in checkpoints:
             transition_map = json.loads(checkpoint.transition_map_json or "{}")
             issues = {
@@ -797,3 +809,63 @@ async def analyze_confirmed_review(
             if run is not None:
                 release_run_reservation(session, run.id, stage=STAGE_ANALYSIS)
 
+
+def _seed_v40_review_decisions(
+    session: Session,
+    *,
+    run: AnalysisRun,
+    review: BoundaryReviewSession,
+    paragraphs: list,
+    position: dict[str, int],
+) -> None:
+    """Turn the v4.0 boundary artifact into review rows the editor can act on.
+
+    One row per adopted cut, carrying the model's own words for why it cut there. The
+    reviewer moves, adds, merges or drops them exactly as before — the editing surface is
+    unchanged, only where its starting proposal comes from.
+    """
+    artifact = session.scalar(
+        select(AnalysisArtifact)
+        .where(
+            AnalysisArtifact.run_id == run.id,
+            AnalysisArtifact.artifact_type == "scene_boundary",
+        )
+        .order_by(AnalysisArtifact.id.desc())
+    )
+    if artifact is None:
+        return
+    try:
+        payload = json.loads(artifact.payload_json or "{}")
+    except json.JSONDecodeError:
+        return
+
+    ordinal = 1
+    for adopted in payload.get("adopted_boundaries") or []:
+        left_id = str(adopted.get("after_paragraph_id") or "")
+        index = position.get(left_id)
+        if index is None or index >= len(paragraphs) - 1:
+            continue
+        right_id = paragraphs[index + 1].id
+        confidence = float(adopted.get("confidence_max") or 0.8)
+        session.add(
+            BoundaryReviewDecision(
+                review_session_id=review.id,
+                transition_id=f"S{ordinal:03d}",
+                left_paragraph_id=left_id,
+                right_paragraph_id=right_id,
+                model_candidate=True,
+                model_boundary_candidate=True,
+                model_confidence=confidence,
+                model_reason_code=None,
+                deterministic_reason=None,
+                deterministic_legal=False,
+                first_pass_json=json.dumps(adopted, ensure_ascii=False),
+                adjudication_result=None,
+                review_priority="normal",
+                semantic_conflict=False,
+                conflict_code=None,
+                enum_snapshot_json=json.dumps(adopted, ensure_ascii=False),
+                source_batch_index=0,
+            )
+        )
+        ordinal += 1

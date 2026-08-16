@@ -232,6 +232,16 @@ async def confirm_scene_boundary(
     gateway: ModelGateway = Depends(get_model_gateway),
 ):
     _revision_or_404(session, revision_id, chapter_id)
+    # The gateway arrives from the registry with bootstrap defaults; the user's actual
+    # provider row lives in the database. Every other paid path binds it before use and
+    # this one never did, so the analysis queued right here died on
+    # MODEL_PROVIDER_DISABLED_PRECHECK: "Provider已停用" for a provider the user had
+    # enabled. Binding copies the row onto the provider objects, so it outlives the request
+    # session the background task cannot use.
+    from app.services.credentials.service import get_credential_store
+    from app.services.provider_runtime import bind_gateway_runtime
+
+    bind_gateway_runtime(gateway, session, get_credential_store())
     journey_run_id: int | None = None
     journey_started = False
     journey_status: str | None = None
