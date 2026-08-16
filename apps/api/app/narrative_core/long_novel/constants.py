@@ -85,9 +85,15 @@ TOK_PROVISIONAL_ENTITY: Final[int] = 29
 TOK_EVIDENCE_REF: Final[int] = 2
 
 # --------------------------------------------------------------------------- structure
-PARTITION_TARGET_BLOCKS: Final[int] = 6  # EMPIRICAL DEFAULT (03 §4.1b)
+PARTITION_TARGET_BLOCKS: Final[int] = 6  # EMPIRICAL DEFAULT (03 §4.1b) — a ceiling, see below
 PARTITIONS_PER_STAGE_TARGET: Final[int] = 2  # EMPIRICAL DEFAULT (03 §4.1b)
 MAX_STAGES: Final[int] = 14  # SAFETY GUARD (03 §4.1b)
+#: How many Narrative Stages a book should get when it is short enough that
+#: ``PARTITION_TARGET_BLOCKS`` would otherwise decide the answer for it. A book has acts
+#: regardless of how few blocks it took to read; this is the count the partition sizer aims
+#: at so that the layers above L1 — which are all sized in stages — have a structure to work
+#: over. See ``BlockPlanner.blocks_per_partition``.
+STAGE_TARGET: Final[int] = 5  # EMPIRICAL DEFAULT
 CARRY_PROPAGATION_CEILING: Final[int] = 12  # SAFETY GUARD, not a correctness bound (ADR-08b)
 
 # --------------------------------------------------------------------------- projections

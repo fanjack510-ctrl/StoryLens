@@ -69,8 +69,10 @@ from app.narrative_core.long_novel.topics import (
     build_chapters_topic,
     build_digest,
     build_final_input,
+    build_stage_digest,
     project_topic,
     resample_pacing_curve,
+    spread,
 )
 
 #: A timeline is read, not scrolled: past a couple of hundred rows it stops being a view of
@@ -241,6 +243,11 @@ class RunCoordinator:
         interpretations = self._interpret_stages(stage_inputs, report)
         entities = self._resolve_entities(assets)
 
+        # From here up, "the stages" means the interpreted ones. The skeleton is four integers
+        # per act; handing it to a layer whose job is to describe the book asks that layer to
+        # describe a book it has not been shown.
+        stages = build_stage_digest(stage_skeleton, interpretations)
+
         chapters_topic = build_chapters_topic(signals)
         report.topics_projected.append(Topic.CHAPTERS.value)
 
@@ -251,7 +258,7 @@ class RunCoordinator:
                 continue
             projection = project_topic(
                 topic,
-                stage_skeleton=stage_skeleton,
+                stages=stages,
                 entities=entities,
                 threads=[],
                 events=self._collect_events(assets),
@@ -269,7 +276,7 @@ class RunCoordinator:
         assessment: dict[str, Any] | None = None
         if self._assess is not None and not self._budget_exhausted(report):
             payload = build_assessment_input(
-                digests, stage_skeleton=stage_skeleton, quality_metrics=self._metrics(report, signals)
+                digests, stages=stages, quality_metrics=self._metrics(report, signals)
             )
             # The engine has already measured where the book drags. Handing that over turns
             # "第 1–806 章，提升叙事密度" — which is what an assessor with no measurements
@@ -286,7 +293,7 @@ class RunCoordinator:
             overview = self._finalise(
                 build_final_input(
                     digests,
-                    stage_skeleton=stage_skeleton,
+                    stages=stages,
                     assessment_digest=assessment or {},
                     selected_evidence_ids=[],
                     quality_metrics=self._metrics(report, signals),
@@ -1055,9 +1062,7 @@ class RunCoordinator:
             for event in asset.events:
                 rows.append((event.chapter_ref, event.summary, self._cite(block_key, event)))
         rows.sort(key=lambda r: r[0])
-        if len(rows) > _CHRONOLOGY_MAX:
-            step = len(rows) / _CHRONOLOGY_MAX
-            rows = [rows[int(i * step)] for i in range(_CHRONOLOGY_MAX)]
+        rows = spread(rows, _CHRONOLOGY_MAX)
         return [
             conform(ChronologyEvent, {
                 "event_id": f"CHR-{index}",
@@ -1321,16 +1326,20 @@ class RunCoordinator:
                 )
 
             # Bounded: the interpreter's input must not grow with the size of the stage, or
-            # a longer book would eventually blow the window (INV-18).
+            # a longer book would eventually blow the window (INV-18). Events, questions and
+            # state changes are sampled evenly across the stage rather than truncated at the
+            # front: they arrive in block order, so a prefix is the stage's opening and the
+            # interpreter would describe that instead of the stage. The cast keeps its prefix
+            # on purpose — order of appearance is a ranking there, not a position.
             seen: set[str] = set()
             unique_people = [p for p in people if not (p in seen or seen.add(p))]
             enriched.append(
                 {
                     **entry,
-                    "events": events[:40],
-                    "open_questions": threads[:15],
+                    "events": spread(events, 40),
+                    "open_questions": spread(threads, 15),
                     "characters": unique_people[:20],
-                    "state_changes": state_changes[:20],
+                    "state_changes": spread(state_changes, 20),
                     "event_count": len(events),
                 }
             )

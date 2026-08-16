@@ -300,12 +300,18 @@ def test_the_estimate_describes_the_engine_that_will_actually_run():
 
 
 def test_the_token_estimate_is_fitted_to_measured_runs():
-    """Two complete runs, both read from the usage ledger rather than forecast.
+    """Three complete runs, every figure read from the usage ledger rather than forecast.
 
-    A flat per-character rate under-reported both by 12% and 25%, because input is the text
-    *plus* a per-call prompt overhead that a character count cannot see. Two samples fit two
-    coefficients exactly, so agreement here is interpolation, not validation — what it buys is
-    a model whose shape matches where the tokens actually go. The third book is the real test.
+    A flat per-character rate under-reported the first two by 12% and 25%, because input is the
+    text *plus* a per-call prompt overhead that a character count cannot see. Those two fitted
+    the input coefficients exactly, so the agreement was interpolation and this test said the
+    third book would be the real test.
+
+    《系统豪横》 is that book, and it moved the model twice. Its input landed inside 5% without
+    a refit, which is the validation the note asked for. Its *output* was 25% out, because it is
+    the first run whose calls are not overwhelmingly block calls — 57% blocks against 87% for
+    《深海余烬》 — and a block call and a bounded synthesis unit do not cost the same thing. They
+    are now counted separately, at 2,815 and 421 output tokens.
     """
     from app.narrative_core.services.long_novel_pipeline_v1 import estimate_long_novel_plan
 
@@ -318,6 +324,12 @@ def test_the_token_estimate_is_fitted_to_measured_runs():
     house = estimate_long_novel_plan(chapter_count=277, character_count=797_953)
     assert abs(house["estimated_input_tokens"] - 671_493) / 671_493 < 0.05
     assert abs(house["estimated_output_tokens"] - 104_393) / 104_393 < 0.10
+
+    # 《系统豪横》 84 章 / 195,269 字 → 21 calls (12 block + 9 unit), 208,590 in, 39,840 out.
+    # The short book is where a per-call blended rate breaks, so it is the one that has to hold.
+    system = estimate_long_novel_plan(chapter_count=84, character_count=195_269)
+    assert abs(system["estimated_input_tokens"] - 208_590) / 208_590 < 0.05
+    assert abs(system["estimated_output_tokens"] - 39_840) / 39_840 < 0.10
 
     # The old flat model's failure, kept as the thing not to regress to: characters alone
     # cannot produce both books' input, because the overhead differs by call count.

@@ -34,7 +34,13 @@ from app.narrative_core.long_novel.planner import BlockPlanner, PlannedChapter
 from app.narrative_core.long_novel.prompts import prompt_template_hash
 from app.narrative_core.whole_book_v2.contracts import WholeBookAnalysisV2
 
-CHAPTERS = 32
+#: Long enough to be read in twelve blocks, which is the size where the whole-book layers used
+#: to collapse: twelve blocks gave two Reduction Partitions and therefore one Narrative Stage,
+#: and every layer above L1 is sized in stages. At 32 chapters the fixture was read in four
+#: blocks and never entered that regime, so a run whose 全书总览 covered only its opening
+#: passed this file cleanly. It is also close to the book the defect was measured on
+#: (《系统豪横》, 84 chapters in 11 blocks).
+CHAPTERS = 96
 PARAGRAPHS = 21
 COSTS = ContextCosts(3_000, 1_200, 1_800, 400)
 LEAD = "老王"
@@ -153,7 +159,14 @@ class _FakeProvider:
         return _block_response(payload)
 
 
+#: What each upper layer was actually handed. The document alone cannot show this: a report
+#: assembled from the first act and a report assembled from the whole book are the same shape,
+#: and the difference is only visible in what the layer was given to read.
+SEEN: dict[str, object] = {}
+
+
 def _stage(stage):
+    SEEN.setdefault("stages", []).append(stage)  # type: ignore[union-attr]
     seq = stage["stage_seq"]
     return {
         "stage_seq": seq,
@@ -170,7 +183,18 @@ def _stage(stage):
     }
 
 
-def _assessment(_payload):
+def _topic(topic, payload):
+    SEEN.setdefault("topics", {})[topic.value] = payload  # type: ignore[index]
+    return {
+        "summary": "%s 综合结论" % topic.value,
+        "structure_stages": [],
+        "lifecycles": [],
+        "claims": [],
+    }
+
+
+def _assessment(payload):
+    SEEN["assessment"] = payload
     return {
         "overall_summary": "总评",
         "dimensions": [{"dimension": "pacing", "rating": "B", "conclusion": "尚可"}],
@@ -189,7 +213,8 @@ def _assessment(_payload):
     }
 
 
-def _final(_payload):
+def _final(payload):
+    SEEN["final"] = payload
     return {
         "one_sentence_story": "一个交接与追查的故事。",
         "protagonist": LEAD,
@@ -256,12 +281,7 @@ def document() -> dict:
         ),
         profile=prof,
         stage_interpreter=_stage,
-        topic_synthesizer=lambda topic, payload: {
-            "summary": "%s 综合结论" % topic.value,
-            "structure_stages": [],
-            "lifecycles": [],
-            "claims": [],
-        },
+        topic_synthesizer=_topic,
         assessor=_assessment,
         finaliser=_final,
     )
@@ -363,3 +383,69 @@ def test_the_chapter_list_carries_its_own_summaries(document):
     assert len(functions) == CHAPTERS
     filled = [row for row in functions if row["summary"]]
     assert len(filled) == CHAPTERS, "只有 %d/%d 章有摘要" % (len(filled), CHAPTERS)
+
+
+# --------------------------------------------------------------------- 全书层看到的是全书
+#
+# The failure these pin is the one the section-emptiness tests above cannot see. On
+# 《系统豪横》 every section was populated, every call succeeded, 84/84 chapters carried a
+# function row — and the 全书总览 described chapters 1 to 11 and stopped. Nothing was empty;
+# the layers that write about the whole book had simply never been shown it.
+
+
+def test_a_medium_book_gets_more_than_one_narrative_stage(document):
+    """One stage means one act, and everything above L1 is sized in stages.
+
+    84 chapters read in 11 blocks used to give 2 partitions and therefore a single stage: one
+    interpretation call for the whole novel, one turning point, one journey band, and a story
+    topic budget of eight events. A book has acts regardless of how few blocks it took to read.
+    """
+    stages = document["story"]["structure_stages"]
+    assert len(stages) >= 3, "%d 章只切出 %d 个阶段" % (CHAPTERS, len(stages))
+    assert stages[0]["chapter_start"] == 1
+    assert stages[-1]["chapter_end"] == CHAPTERS
+    # Contiguous and non-overlapping: a gap is a stretch of book no act accounts for.
+    for earlier, later in zip(stages, stages[1:]):
+        assert later["chapter_start"] == earlier["chapter_end"] + 1, stages
+
+
+def test_the_final_synthesis_is_given_what_happened_and_not_only_where(document):
+    """Final used to receive four integers per act and be asked to summarise the book.
+
+    The stage interpretations were already paid for and already covered every chapter; they
+    were passed to the renderer and to nothing else. So the one call that writes 全书总览 wrote
+    it out of the topic digests, and what survives a digest is the opening.
+    """
+    stages = SEEN["final"]["stages"]  # type: ignore[index]
+    assert stages, "final 收到的 stages 是空的"
+    assert all(s.get("title") for s in stages), stages
+    assert all(s.get("key_events") for s in stages), stages
+    # And the same for the assessment, which grades the book on the same evidence.
+    assert all(s.get("title") for s in SEEN["assessment"]["stages"])  # type: ignore[index]
+
+
+def test_the_story_topic_reads_the_whole_book_and_not_its_first_act(document):
+    """Top-K by evidence count is a front-loaded selection, because evidence counts tie.
+
+    ``sorted`` is stable, so ties resolve in extraction order and the survivors are the
+    earliest blocks. Measured on 《系统豪横》: eight events, all from the first act.
+    """
+    events = SEEN["topics"]["story"]["events"]  # type: ignore[index]
+    chapters = [int(e["chapter_ref"]) for e in events]
+    assert chapters, "story 主题没有收到任何事件"
+    assert max(chapters) > CHAPTERS * 0.75, (
+        "story 主题只读到第 %d 章为止，全书 %d 章" % (max(chapters), CHAPTERS)
+    )
+    assert min(chapters) <= CHAPTERS * 0.25, chapters
+
+
+def test_each_stage_interpreter_reads_across_its_stage_not_its_opening(document):
+    """``events[:40]`` is a prefix of a list that arrives in block order."""
+    for stage in SEEN["stages"]:  # type: ignore[union-attr]
+        if stage["event_count"] <= len(stage["events"]):
+            continue  # nothing was dropped, so there is no sampling to check
+        span = stage["chapter_end_order"] - stage["chapter_start_order"]
+        covered = [int(e.split("章")[0].split("第")[-1]) for e in stage["events"] if "第" in e]
+        if not covered or span < 2:
+            continue
+        assert max(covered) - min(covered) > span * 0.5, stage

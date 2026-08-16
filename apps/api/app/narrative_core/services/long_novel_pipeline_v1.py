@@ -32,7 +32,6 @@ from app.narrative_core.contracts.whole_book_contract_v1 import WholeBookRunStat
 from app.narrative_core.long_novel import constants as C
 from app.narrative_core.long_novel.budget import ContextCosts, joint_resolve
 from app.narrative_core.long_novel.contracts.density import profile as density_profile
-from app.narrative_core.long_novel.contracts.enums import Topic
 from app.narrative_core.long_novel.deltas import delta_prompt, deltas_for
 from app.narrative_core.long_novel.extractor import BlockExtractor
 from app.narrative_core.long_novel.orchestrator import RunCoordinator
@@ -65,6 +64,10 @@ ENGINE_VERSION = "long-novel-engine-1.0"
 _COSTS = ContextCosts(3000, 1200, 1800, 400)
 _CONTEXT_WINDOW = 128_000
 _PROVIDER_MAX_OUTPUT = 32_768
+#: Character cap on a synthesis unit's JSON payload. Sized off the largest declared unit budget
+#: at roughly two characters per token; the old flat 12,000 was under it and sat close enough to
+#: the real payloads that growing any projection would have started cutting them mid-value.
+_UNIT_PAYLOAD_MAX_CHARS = C.FINAL_INPUT_MAX_TOKENS * 2
 
 
 class _GatewayProvider:
@@ -171,11 +174,17 @@ class _GatewayProvider:
     def json_unit(
         self, label: str, instruction: str, payload: Any, prompt: str | None = None
     ) -> dict[str, Any]:
-        message = prompt or (
-            instruction
-            + "\n\n只输出 JSON。\n\n输入：\n"
-            + json.dumps(payload, ensure_ascii=False)[:12000]
-        )
+        body = json.dumps(payload, ensure_ascii=False)
+        if len(body) > _UNIT_PAYLOAD_MAX_CHARS:
+            # Logged rather than trimmed in silence: a payload over the cap means a projection
+            # upstream stopped being bounded, and the symptom — a model reading a blob that
+            # stops in the middle of a value — does not look like a budget problem from here.
+            logger.warning(
+                "long_novel_unit_payload_over_cap run_id=%s label=%s chars=%s cap=%s",
+                self._run_id, label, len(body), _UNIT_PAYLOAD_MAX_CHARS,
+            )
+            body = body[:_UNIT_PAYLOAD_MAX_CHARS]
+        message = prompt or (instruction + "\n\n只输出 JSON。\n\n输入：\n" + body)
         response = self._send(label, message, 4000)
         body = str(getattr(response, "text", "") or "").strip()
         if body.startswith("```"):
@@ -280,21 +289,37 @@ def _one_based(chapters: list[Any]) -> list[Any]:
     return [replace(c, chapter_order=c.chapter_order + 1) for c in chapters]
 
 
-#: Token model fitted to two complete runs, both measured from the usage ledger rather than
-#: from a forecast:
+#: Token model fitted to three complete runs, every figure read from the usage ledger rather
+#: than forecast:
 #:
-#:   《深海余烬》 806 章 / 2,402,385 字 → 114 calls, 1,885,739 in, 281,485 out
-#:   《凶宅笔记》 277 章 /   797,953 字 →  46 calls,   671,493 in, 104,393 out
+#:   《深海余烬》 806 章 / 2,402,385 字 → 114 calls (99 block + 15 unit), 1,885,739 in, 281,485 out
+#:   《凶宅笔记》 277 章 /   797,953 字 →  46 calls (35 block + 11 unit),   671,493 in, 104,393 out
+#:   《系统豪横》  84 章 /   195,269 字 →  21 calls (12 block +  9 unit),   208,590 in,  39,840 out
 #:
-#: Input splits into the text itself and a per-call prompt overhead (caps, schema skeleton,
-#: carry slate), which is why a flat per-character rate under-reported both runs by 12% and
-#: 25%. Two samples fit two coefficients exactly, so the agreement below is interpolation and
-#: not validation — the honest test is the third book. The coefficients are at least
-#: physically sensible: ~2 Chinese characters per token, and an overhead the prompt really is.
-_TOKENS_PER_CHAR = 0.5216
-_TOKENS_PER_CALL_OVERHEAD = 5549
-#: Output is one block asset per call and barely varies with book length (±4% across the two).
-_OUTPUT_TOKENS_PER_CALL = 2369
+#: A call is one of two things and they cost differently, so the model counts them separately.
+#: A **block call** carries a slice of the book plus the extraction contract, and returns a
+#: whole block asset. A **bounded unit** — a stage interpretation, a topic projection, the
+#: assessment, the final synthesis, reversal detection, thread pairing — carries digests and
+#: returns a short JSON object. The earlier model had one blended rate per call, which held
+#: only while blocks dominated: 87% of 《深海余烬》's calls are blocks, against 57% of
+#: 《系统豪横》's, and on that third book the blended rate over-charged output by 25%.
+#: Measured per call: 3,005 output tokens for a block against 421 for a unit — a factor of
+#: seven, so a rate fitted on block-heavy runs prices each added stage interpretation at six
+#: times what one costs.
+#:
+#: 《系统豪横》 and 《凶宅笔记》 fit the input coefficients; 《深海余烬》 is then validation
+#: rather than interpolation, and lands 2.1% high. All three agree on output within 4%.
+_TOKENS_PER_CHAR = 0.4344
+_INPUT_TOKENS_PER_BLOCK_CALL = 8539
+_INPUT_TOKENS_PER_UNIT_CALL = 2368
+_OUTPUT_TOKENS_PER_BLOCK_CALL = 2815
+_OUTPUT_TOKENS_PER_UNIT_CALL = 421
+
+#: Provider calls above L1 besides the per-stage interpretations: the four provider-backed
+#: topic projections, then assessment, final synthesis, reversal detection and thread pairing.
+#: ``len(Topic)`` was standing in for the topic count and includes ``chapters``, which is a
+#: deterministic local merge and has never cost a call.
+_UNITS_BESIDES_STAGES = C.TOPIC_PROVIDER_CALLS_BEFORE_ASSESSMENT + 4
 
 
 def estimate_long_novel_plan(*, chapter_count: int, character_count: int) -> dict[str, int]:
@@ -322,16 +347,21 @@ def estimate_long_novel_plan(*, chapter_count: int, character_count: int) -> dic
     )
     per_block = max(1, resolved.chapters_per_block)
     blocks = (chapters + per_block - 1) // per_block
-    # Stage interpretations scale with the book; the rest are the fixed bounded units.
-    stages = max(1, blocks // 16)
-    calls = blocks + stages + len(Topic) + 3
+    # Stage interpretations scale with the book; the rest are the fixed bounded units. Taken
+    # from the planner's own arithmetic rather than a second formula — ``blocks // 16`` was a
+    # third opinion on the stage count, and it under-reported every book short enough for the
+    # partition floor to apply.
+    stages = BlockPlanner.stage_count(BlockPlanner.partition_count(blocks))
+    units = stages + _UNITS_BESIDES_STAGES
     return {
         "blocks": blocks,
         "chapters_per_block": per_block,
-        "estimated_provider_calls": calls,
+        "estimated_provider_calls": blocks + units,
         "estimated_input_tokens": round(character_count * _TOKENS_PER_CHAR
-                                        + calls * _TOKENS_PER_CALL_OVERHEAD),
-        "estimated_output_tokens": round(calls * _OUTPUT_TOKENS_PER_CALL),
+                                        + blocks * _INPUT_TOKENS_PER_BLOCK_CALL
+                                        + units * _INPUT_TOKENS_PER_UNIT_CALL),
+        "estimated_output_tokens": round(blocks * _OUTPUT_TOKENS_PER_BLOCK_CALL
+                                         + units * _OUTPUT_TOKENS_PER_UNIT_CALL),
     }
 
 
@@ -448,8 +478,8 @@ def execute_long_novel_pipeline_v1(
         gateway = _bind_formal_gateway(session, provider_name=provider_name)
 
     # One call per block, plus the bounded units above it: stage interpretations, topic
-    # projections, the assessment, the final synthesis and the thread pairing.
-    expected_calls = len(plan.blocks) + len(plan.stages) + len(Topic) + 3
+    # projections, the assessment, the final synthesis, reversal detection and thread pairing.
+    expected_calls = len(plan.blocks) + len(plan.stages) + _UNITS_BESIDES_STAGES
     provider = _GatewayProvider(
         gateway,
         provider_name=provider_name,

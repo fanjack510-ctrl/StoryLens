@@ -283,11 +283,46 @@ class BlockPlanner:
 
     # ------------------------------------------------------------------ structure
     @staticmethod
+    def partition_count(n_blocks: int) -> int:
+        """How many Reduction Partitions a book of ``n_blocks`` blocks is cut into.
+
+        ``PARTITION_TARGET_BLOCKS`` is a ceiling on partition *size*, and taking it as the only
+        rule lets the provider's context window decide the book's act structure — because a
+        partition edge is the only place a Narrative Stage boundary may fall (Scheme A).
+        Measured on 《系统豪横》: 84 chapters read in 11 blocks → 2 partitions → **1 stage**.
+        Every layer above L1 is sized in stages: one interpretation call for the whole book,
+        ``8 × n_stages`` events for the story topic, one turning point, one journey band. The
+        finished report was therefore built out of the opening, and read like one — an
+        84-chapter novel whose 全书总览 stopped at chapter 11.
+
+        So there are two lower bounds and a book takes the larger: enough partitions that none
+        exceeds the size ceiling, and enough partitions to carry a stage structure at all. A
+        book long enough to reach the ceiling is decided by it exactly as before — 101 blocks
+        still give 17 partitions and 8 stages.
+        """
+        if n_blocks <= 0:
+            return 0
+        by_ceiling = -(-n_blocks // C.PARTITION_TARGET_BLOCKS)
+        for_stages = min(n_blocks, C.PARTITIONS_PER_STAGE_TARGET * C.STAGE_TARGET)
+        return max(by_ceiling, for_stages)
+
+    @staticmethod
     def plan_partitions(blocks: Sequence[PlannedBlock]) -> tuple[PlannedPartition, ...]:
-        """Group blocks into Reduction Partitions. Feasible for every block count ≥ 1."""
+        """Group blocks into Reduction Partitions. Feasible for every block count ≥ 1.
+
+        Sizes are levelled rather than filled-then-remainder: with a fixed stride the last
+        partition takes whatever is left, which on a short book is one block sitting beside
+        partitions several times its size — and that partition is the book's closing act.
+        Edges at ``i * n_blocks // n_partitions`` differ by at most one block.
+        """
+        count = BlockPlanner.partition_count(len(blocks))
         partitions: list[PlannedPartition] = []
-        for index in range(0, len(blocks), C.PARTITION_TARGET_BLOCKS):
-            members = blocks[index : index + C.PARTITION_TARGET_BLOCKS]
+        for index in range(count):
+            members = blocks[
+                (index * len(blocks)) // count : ((index + 1) * len(blocks)) // count
+            ]
+            if not members:
+                continue
             occurrence_key = ids.partition_occurrence_key([b.occurrence_key for b in members])
             partitions.append(
                 PlannedPartition(
@@ -299,6 +334,18 @@ class BlockPlanner:
                 )
             )
         return tuple(partitions)
+
+    @staticmethod
+    def stage_count(n_partitions: int) -> int:
+        """How many Narrative Stages ``n_partitions`` partitions become.
+
+        Exposed so the cost estimate and the run itself read the same number. They did not:
+        the prepare panel carried its own ``blocks // 16``, which is a third opinion on the
+        stage count and under-reports every book the partition floor applies to.
+        """
+        if n_partitions <= 0:
+            return 0
+        return max(1, min(C.MAX_STAGES, round(n_partitions / C.PARTITIONS_PER_STAGE_TARGET)))
 
     @staticmethod
     def plan_stages(
@@ -313,7 +360,7 @@ class BlockPlanner:
         """
         if not partitions:
             return ()
-        n_stages = max(1, min(C.MAX_STAGES, round(len(partitions) / C.PARTITIONS_PER_STAGE_TARGET)))
+        n_stages = BlockPlanner.stage_count(len(partitions))
         per_stage = -(-len(partitions) // n_stages)
         keys = partition_occurrence_keys or {}
         stages: list[PlannedStage] = []

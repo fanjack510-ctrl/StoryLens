@@ -33,9 +33,24 @@ __all__ = [
     "project_topic",
     "TopicDigest",
     "build_digest",
+    "build_stage_digest",
     "build_assessment_input",
     "build_final_input",
 ]
+
+
+def spread(items: Sequence[Any], k: int) -> list[Any]:
+    """``k`` items taken evenly across ``items``, order preserved.
+
+    A prefix — ``items[:k]`` — is the cheap way to bound a list and the wrong one whenever the
+    list is in book order, because it hands the reader the beginning of the range and nothing
+    else. That is how a layer that has the whole book available ends up describing its opening.
+    """
+    if k <= 0:
+        return []
+    if len(items) <= k:
+        return list(items)
+    return [items[(i * len(items)) // k] for i in range(k)]
 
 
 @dataclass(frozen=True)
@@ -159,10 +174,54 @@ def _top_k(items: Sequence[Any], k: int, key: Callable[[Any], float]) -> tuple[l
     return ranked[:k], max(0, len(ranked) - k)
 
 
+def _weight(event: Mapping[str, Any]) -> float:
+    return float(event.get("weight", 0) or 0)
+
+
+def _cover_stages(
+    events: Sequence[Mapping[str, Any]], stages: Sequence[Mapping[str, Any]], budget: int
+) -> tuple[list[Any], int]:
+    """The event budget, allocated across the stages so every act is represented.
+
+    A plain top-K over the whole book ranks by evidence count, and evidence counts tie
+    constantly — one or two citations is the norm. ``sorted`` is stable, so the ties resolve in
+    extraction order and the survivors are the earliest blocks. On 《系统豪横》 that handed the
+    story topic eight events, all from the first act, and the topic's summary said as much.
+
+    Stage chapter ranges are disjoint (a stage groups whole partitions, and a block belongs to
+    exactly one), so no event is picked twice. Within a stage the same tie problem recurs at a
+    smaller scale, so events on the cut line are spread across the stage rather than taken in
+    order — otherwise each act would be represented by its own first few chapters.
+    """
+    if not stages:
+        return _top_k(events, budget, _weight)
+    per_stage = max(1, budget // len(stages))
+    picked: list[Any] = []
+    for stage in stages:
+        start = int(stage.get("chapter_start_order", 1) or 1)
+        end = int(stage.get("chapter_end_order", start) or start)
+        inside = sorted(
+            (e for e in events if start <= int(e.get("chapter_ref", 0) or 0) <= end),
+            key=_weight,
+            reverse=True,
+        )
+        if len(inside) > per_stage:
+            cutoff = _weight(inside[per_stage - 1])
+            above = [e for e in inside if _weight(e) > cutoff]
+            on_the_line = sorted(
+                (e for e in inside if _weight(e) == cutoff),
+                key=lambda e: int(e.get("chapter_ref", 0) or 0),
+            )
+            inside = above + spread(on_the_line, per_stage - len(above))
+        picked.extend(inside)
+    picked.sort(key=lambda e: int(e.get("chapter_ref", 0) or 0))
+    return picked, max(0, len(events) - len(picked))
+
+
 def project_topic(
     topic: Topic,
     *,
-    stage_skeleton: Sequence[Mapping[str, Any]],
+    stages: Sequence[Mapping[str, Any]],
     entities: Sequence[Mapping[str, Any]] = (),
     threads: Sequence[Mapping[str, Any]] = (),
     events: Sequence[Mapping[str, Any]] = (),
@@ -189,21 +248,21 @@ def project_topic(
         )
 
     if topic is Topic.STORY:
-        picked, dropped = _top_k(events, 8 * max(1, len(stage_skeleton)), lambda e: e.get("weight", 0))
+        picked, dropped = _cover_stages(events, stages, 8 * max(1, len(stages)))
         omitted = {"events_dropped": dropped}
-        payload = {"stages": list(stage_skeleton), "events": picked}
+        payload = {"stages": list(stages), "events": picked}
         selected_keys = [str(e.get("fact_key", "")) for e in picked]
 
     elif topic is Topic.CHARACTERS:
         picked, dropped = _top_k(entities, C.CHARACTERS_MAX, lambda e: e.get("centrality", 0))
         omitted = {"entities_dropped": dropped, "cap": C.CHARACTERS_MAX}
-        payload = {"stages": list(stage_skeleton), "entities": picked}
+        payload = {"stages": list(stages), "entities": picked}
         selected_keys = [str(e.get("entity_key", "")) for e in picked]
 
     elif topic is Topic.SUSPENSE:
         picked, dropped = _top_k(threads, 40, lambda t: t.get("salience", 0))
         omitted = {"threads_dropped": dropped}
-        payload = {"stages": list(stage_skeleton), "threads": picked}
+        payload = {"stages": list(stages), "threads": picked}
         selected_keys = [str(t.get("thread_key", "")) for t in picked]
 
     elif topic is Topic.PACING:
@@ -213,7 +272,7 @@ def project_topic(
             "curve": curve.bins,
             "stage_boundaries": [
                 {"stage_seq": s.get("stage_seq"), "from_chapter": s.get("chapter_start_order")}
-                for s in stage_skeleton
+                for s in stages
             ],
         }
         selected_keys = [f"bin{b['bin']}" for b in curve.bins]
@@ -288,16 +347,61 @@ def build_digest(topic: Topic, result: Mapping[str, Any]) -> TopicDigest:
     )
 
 
+#: What a stage interpretation contributes to the layers above it. The rest of what the
+#: interpreter returns stays at L2: the cost/gain ledger and the cast list belong to the stage
+#: card, not to a judgement about the whole book.
+_STAGE_DIGEST_FIELDS: tuple[str, ...] = ("title", "summary", "turning_point", "next_question")
+
+
+def build_stage_digest(
+    stage_skeleton: Sequence[Mapping[str, Any]],
+    interpretations: Sequence[Mapping[str, Any]] = (),
+    *,
+    key_events_per_stage: int = 6,
+) -> list[dict[str, Any]]:
+    """The stage list as the layers above it should see it: ranges **and what happened in them**.
+
+    Assessment and Final were handed ``stage_skeleton`` — a sequence number, a key and a chapter
+    range. The stage interpretations sitting beside it had already been paid for, already
+    covered the whole book, and were passed only to the renderer. So the one call that writes
+    全书总览 was asked to summarise a novel from four integers per act plus whatever plot had
+    survived into the topic digests, and what survives there is the opening: measured on
+    《系统豪横》, an 84-chapter book whose ``full_summary`` ended at chapter 11.
+
+    Bounded by construction — at most ``MAX_STAGES`` rows, each a fixed field set — so this
+    stays O(1) in book length, which is the property the whole layer exists to hold.
+    """
+    rows: list[dict[str, Any]] = []
+    for index, entry in enumerate(list(stage_skeleton)[: C.MAX_STAGES]):
+        row: dict[str, Any] = {
+            "stage_seq": entry.get("stage_seq", index),
+            "chapter_start_order": entry.get("chapter_start_order", 1),
+            "chapter_end_order": entry.get("chapter_end_order", 1),
+        }
+        interpreted = interpretations[index] if index < len(interpretations) else {}
+        if not isinstance(interpreted, Mapping):
+            interpreted = {}
+        for field_name in _STAGE_DIGEST_FIELDS:
+            value = str(interpreted.get(field_name, "") or "").strip()
+            if value:
+                row[field_name] = value
+        events = [str(e).strip() for e in (interpreted.get("key_events") or ()) if str(e).strip()]
+        if events:
+            row["key_events"] = spread(events, key_events_per_stage)
+        rows.append(row)
+    return rows
+
+
 def build_assessment_input(
     digests: Sequence[TopicDigest],
     *,
-    stage_skeleton: Sequence[Mapping[str, Any]],
+    stages: Sequence[Mapping[str, Any]],
     quality_metrics: Mapping[str, Any],
 ) -> dict[str, Any]:
     """Assessment reads the five ``TopicDigest``s — four provider topics plus ``chapters``."""
     return {
         "digests": {d.topic.value: d.digest for d in digests},
-        "stages": list(stage_skeleton),
+        "stages": list(stages),
         "quality_metrics": dict(quality_metrics),
     }
 
@@ -305,7 +409,7 @@ def build_assessment_input(
 def build_final_input(
     digests: Sequence[TopicDigest],
     *,
-    stage_skeleton: Sequence[Mapping[str, Any]],
+    stages: Sequence[Mapping[str, Any]],
     assessment_digest: Mapping[str, Any],
     selected_evidence_ids: Sequence[str],
     quality_metrics: Mapping[str, Any],
@@ -314,7 +418,7 @@ def build_final_input(
     return {
         "digests": {d.topic.value: d.digest for d in digests},
         "assessment": dict(assessment_digest),
-        "stages": list(stage_skeleton),
+        "stages": list(stages),
         "evidence_ids": list(selected_evidence_ids)[:200],
         "quality_metrics": dict(quality_metrics),
     }
