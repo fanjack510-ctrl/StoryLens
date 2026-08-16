@@ -90,7 +90,7 @@ def test_default_new_run_resolves_to_v2():
     # v2.2: the reader's question, what the scene answered, and where the first hook lands
     # become model output instead of being manufactured from hook.rationale by the compat
     # shim. The prompt moved; the contract did not, which is why only this line changes.
-    assert versions.scene_prompt_version == SCENE_PROMPT_VERSION_V2 == "v2.2"
+    assert versions.scene_prompt_version == SCENE_PROMPT_VERSION_V2 == "v2.3"
     assert versions.formula_version == FORMULA_VERSION_V2 == "2.0"
     assert versions.source_mode == SOURCE_MODE_V2_NATIVE
     assert versions.scores_origin == SCORES_ORIGIN_PROGRAM
@@ -108,7 +108,7 @@ def test_legacy_pipeline_resolver_keeps_v1():
 def test_new_journey_version_fields_persist_provenance():
     fields = new_journey_version_fields()
     assert fields["scene_contract_version"] == "2.0"
-    assert fields["scene_prompt_version"] == "v2.2"
+    assert fields["scene_prompt_version"] == "v2.3"
     assert fields["formula_version"] == "2.0"
     details = json.loads(fields["failure_details_json"])
     assert details["source_mode"] == SOURCE_MODE_V2_NATIVE

@@ -147,7 +147,7 @@ def test_v2_schema_versions_and_required_fields():
     # is the assertion that keeps them honest. v2.2 adds reader_questions_opened /
     # reader_questions_answered / first_hook_paragraph_id — all optional with empty
     # defaults, so the contract version does not move.
-    assert SCENE_PROMPT_VERSION_V2 == "v2.2"
+    assert SCENE_PROMPT_VERSION_V2 == "v2.3"
     assert CHAPTER_PROMPT_VERSION_V2 == "v2.0"
     assert FORMULA_VERSION_V2 == "2.0"
     assert SCENE_ROLE_TARGETS_VERSION == "1.0"

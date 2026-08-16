@@ -26,6 +26,7 @@ from app.db.models import (
 )
 from app.model_gateway.gateway import ModelGateway
 from app.schemas.reader_journey_v2 import (
+    LEVEL_METRIC_KEYS,
     SCENE_PROMPT_VERSION_V2,
     SceneReaderJourneyBatchResultV2,
     SceneReaderJourneyProfileItemV2,
@@ -80,6 +81,245 @@ from app.services.task_cancellation import (
 from app.services.validation_errors import StructuralValidationError
 
 logger = logging.getLogger(__name__)
+
+
+def _record_run_note(run: ReaderJourneyRun, key: str, payload: Any) -> None:
+    """Append a diagnostic note to the run's details JSON.
+
+    ``merge_run_provenance`` takes a ``ReaderJourneyPipelineVersions`` and calls
+    ``.provenance()`` on it; handing it a plain dict raises ``'dict' object has no attribute
+    'provenance'``, which the pipeline reports as ``PROVIDER_TRANSPORT_ERROR`` — a network
+    fault for what is a type error two frames up. These notes are not version provenance, so
+    they merge in directly.
+    """
+    try:
+        details = json.loads(run.failure_details_json or "{}")
+    except json.JSONDecodeError:
+        details = {}
+    if not isinstance(details, dict):
+        details = {}
+    details[key] = payload
+    run.failure_details_json = json.dumps(details, ensure_ascii=False)
+
+
+def normalize_scene_ids_v2(
+    value: SceneReaderJourneyBatchResultV2,
+    *,
+    expected_scene_ids: set[int],
+    ordinal_to_scene_id: dict[int, int],
+) -> list[str]:
+    """Repair the one ID confusion we can repair without guessing.
+
+    The scene payload hands the model ``scene_id`` (a database id) and ``scene_ordinal``
+    (1, 2, 3…) side by side and, until prompt v2.3, never said which one to echo. Measured on
+    four real chapters from two new books: two came back with the ordinal in the scene_id
+    field — 「expected scenes [18], got [1]」 — and both then failed permanently, because the
+    targeted-repair pass addresses profiles *by scene_id* and so could not even reach the
+    profile it needed to fix. The user is left with a analysis that cannot be retried.
+
+    This is a remap, not a guess: the ordinal→id mapping is ours, and the rewrite only
+    happens when the returned set is exactly the batch's ordinal set and the mapping is a
+    bijection over it. Anything else — a partial match, a duplicate, an unknown number —
+    falls through untouched and the validator rejects it as before.
+
+    Returns a note per rewritten profile so the repair is visible in the run's provenance;
+    a silent correction here would hide a prompt defect behind a code workaround.
+    """
+    got = {int(item.scene_id) for item in value.profiles}
+    if got == expected_scene_ids:
+        return []
+    ordinals = set(ordinal_to_scene_id)
+    if not got or got != ordinals:
+        return []
+    if len(got) != len(value.profiles):
+        # Duplicated ids: the mapping is not a bijection over what we received.
+        return []
+    if {ordinal_to_scene_id[o] for o in got} != expected_scene_ids:
+        return []
+    notes: list[str] = []
+    for item in value.profiles:
+        ordinal = int(item.scene_id)
+        real = ordinal_to_scene_id[ordinal]
+        if real != ordinal:
+            notes.append(f"scene_id {ordinal}→{real}")
+            item.scene_id = real
+    return notes
+
+
+def drop_unresolvable_paragraph_ids_v2(
+    value: SceneReaderJourneyBatchResultV2,
+    *,
+    paragraph_ids_by_scene: dict[int, set[str]],
+) -> dict[str, int]:
+    """Drop citations that point at text this scene does not contain.
+
+    A fabricated id is not a near-miss to be repaired; it is a citation to nothing. Measured
+    on 《星芒纵横》第3章, which failed four consecutive runs, each time on a different
+    invention: ``p1``; then ``B0013-C0060-P0007``, a paragraph of a different book copied out
+    of the prompt's own worked example; then ``B0025-C0001-P0001``, built out of the scene_id
+    it had been given; then ``B0001-C0001-P0001``. Two rounds of prompt wording did not move
+    it. The model will sometimes invent one, and the pipeline has to survive that.
+
+    What it must not do is survive it by *guessing*. There is no safe mapping from an
+    invented id back to a real paragraph — ``P0001`` in a fabricated id carries no
+    information about which paragraph was meant — so the citation is removed rather than
+    resolved, and everything that does not depend on it is kept.
+
+    That is a graceful degradation the system already understands: a scored field left with
+    no evidence has its mapped_score capped at ``DEFAULT_NO_EVIDENCE_CAP`` (40), and the
+    integrity guard downgrades an under-evidenced profile on its own. What it replaces is a
+    permanent, non-retryable failure that destroyed all 21 dimensions of a chapter because
+    one hygiene flag cited a paragraph that did not exist.
+
+    Returns per-location drop counts so the loss is visible rather than silent.
+    """
+    counts: dict[str, int] = {}
+
+    def bump(where: str, n: int = 1) -> None:
+        if n:
+            counts[where] = counts.get(where, 0) + n
+
+    for profile in value.profiles:
+        allowed = paragraph_ids_by_scene.get(int(profile.scene_id)) or set()
+        if not allowed:
+            # Nothing to check against; leave the profile exactly as it arrived.
+            continue
+
+        kept = [pid for pid in profile.evidence_paragraph_ids if pid in allowed]
+        bump("scene_evidence", len(profile.evidence_paragraph_ids) - len(kept))
+        profile.evidence_paragraph_ids = kept
+
+        for key in LEVEL_METRIC_KEYS:
+            field = getattr(profile, key, None)
+            ids = getattr(field, "evidence_paragraph_ids", None)
+            if ids is None:
+                continue
+            good = [pid for pid in ids if pid in allowed]
+            bump(f"field:{key}", len(ids) - len(good))
+            field.evidence_paragraph_ids = good
+
+        for name in ("craft_flags", "genre_axes"):
+            items = getattr(profile, name, None) or []
+            for item in items:
+                ids = getattr(item, "evidence_paragraph_ids", None)
+                if ids is None:
+                    continue
+                good = [pid for pid in ids if pid in allowed]
+                bump(name, len(ids) - len(good))
+                item.evidence_paragraph_ids = good
+
+        # The v2.2 question fields carry a single id each, and a question whose origin cannot
+        # be located is not a question we can show next to the text — drop the whole entry.
+        for name in ("reader_questions_opened", "reader_questions_answered"):
+            items = getattr(profile, name, None)
+            if items is None:
+                continue
+            good = [item for item in items if item.paragraph_id in allowed]
+            bump(name, len(items) - len(good))
+            setattr(profile, name, good)
+
+        first_hook = getattr(profile, "first_hook_paragraph_id", None)
+        if first_hook is not None and first_hook not in allowed:
+            bump("first_hook_paragraph_id")
+            profile.first_hook_paragraph_id = None
+
+    return counts
+
+
+def drop_unsupported_craft_flags_v2(
+    value: SceneReaderJourneyBatchResultV2,
+) -> dict[str, int]:
+    """Withdraw a hygiene flag whose own score contradicts it.
+
+    ``_FLAG_FIELD_BOUNDS`` requires the two to agree: a ``redundant_passage`` flag means
+    ``redundancy`` ≥ 3, a ``setup_contradiction`` means ``setup_consistency`` ≤ 3, and so on.
+    When the model raises the flag and then scores the field the other way, one of the two
+    is wrong and the pipeline currently destroys the chapter over it — measured on
+    《星芒纵横》第3章: 「raised redundant_passage but redundancy=1 (min 3)」.
+
+    The score is the primary field: it feeds the curve, the chapter mean and every stored
+    artifact. The flag is a reporting extra that exists to say *where* the defect is. So when
+    they disagree the flag is what goes — withdrawing an unsupported claim, rather than
+    editing a measurement to make a claim true, or throwing away 21 dimensions of analysis.
+    """
+    counts: dict[str, int] = {}
+    for profile in value.profiles:
+        flags = getattr(profile, "craft_flags", None)
+        if not flags:
+            continue
+        kept = []
+        for flag in flags:
+            bound = _FLAG_FIELD_BOUNDS.get(flag.kind)
+            if bound is None:
+                kept.append(flag)
+                continue
+            field_name, direction, limit = bound
+            field = getattr(profile, field_name, None)
+            level = getattr(field, "level", None)
+            if level is None:
+                kept.append(flag)
+                continue
+            contradicts = (direction == "max" and level > limit) or (
+                direction == "min" and level < limit
+            )
+            if contradicts:
+                counts[flag.kind] = counts.get(flag.kind, 0) + 1
+            else:
+                kept.append(flag)
+        profile.craft_flags = kept
+    return counts
+
+
+def _validate_batch_with_id_normalisation(
+    value: SceneReaderJourneyBatchResultV2,
+    *,
+    expected_scene_ids: set[int],
+    ordinal_to_scene_id: dict[int, int],
+    paragraph_ids_by_scene: dict[int, set[str]],
+    allowed_axis_keys: set[str] | None,
+    required_axis_keys: set[str] | None,
+    journey_run: ReaderJourneyRun,
+) -> None:
+    """Normalise the ordinal-for-id confusion, then validate exactly as before."""
+    notes = normalize_scene_ids_v2(
+        value,
+        expected_scene_ids=expected_scene_ids,
+        ordinal_to_scene_id=ordinal_to_scene_id,
+    )
+    if notes:
+        # Recorded, not swallowed: this is a prompt defect that code is papering over, and
+        # the next person needs to see how often it fires before deciding the prompt is fixed.
+        logger.warning(
+            "journey_run=%s scene_id normalised from ordinal: %s",
+            journey_run.id,
+            ", ".join(notes),
+        )
+        _record_run_note(journey_run, "scene_id_normalisations", notes)
+    unsupported = drop_unsupported_craft_flags_v2(value)
+    if unsupported:
+        logger.warning(
+            "journey_run=%s withdrew craft flags contradicted by their own score: %s",
+            journey_run.id,
+            unsupported,
+        )
+        _record_run_note(journey_run, "withdrawn_craft_flags", unsupported)
+    dropped = drop_unresolvable_paragraph_ids_v2(
+        value, paragraph_ids_by_scene=paragraph_ids_by_scene
+    )
+    if dropped:
+        logger.warning(
+            "journey_run=%s dropped fabricated paragraph citations: %s",
+            journey_run.id,
+            dropped,
+        )
+        _record_run_note(journey_run, "dropped_paragraph_citations", dropped)
+    validate_scene_batch_result_v2(
+        value,
+        expected_scene_ids=expected_scene_ids,
+        paragraph_ids_by_scene=paragraph_ids_by_scene,
+        allowed_axis_keys=allowed_axis_keys,
+        required_axis_keys=required_axis_keys,
+    )
 
 
 def validate_scene_batch_result_v2(
@@ -588,12 +828,17 @@ async def execute_reader_journey_v2(
                         schema=SceneReaderJourneyBatchResultV2,
                         input_snapshot=snapshot,
                         user_content=user_content,
-                        business_validator=lambda value: validate_scene_batch_result_v2(
+                        business_validator=lambda value: _validate_batch_with_id_normalisation(
                             value,
                             expected_scene_ids={item["scene_id"] for item in scene_payloads},
+                            ordinal_to_scene_id={
+                                int(item["scene_ordinal"]): int(item["scene_id"])
+                                for item in scene_payloads
+                            },
                             paragraph_ids_by_scene=paragraph_ids_by_scene,
                             allowed_axis_keys=allowed_axis_keys,
                             required_axis_keys=required_axis_keys,
+                            journey_run=journey_run,
                         ),
                         initial_invocation_kind=invocation_kind,
                         allow_truncation_retry=False,

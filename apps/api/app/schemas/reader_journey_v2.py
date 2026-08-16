@@ -17,7 +17,11 @@ CHAPTER_CONTRACT_VERSION_V2 = "2.0"
 # Contract version still "2.0" — all three are optional with empty defaults, so every stored
 # v2.0 and v2.1 artifact validates unchanged and the compat shim keeps its old behaviour when
 # they are absent (INV-P1).
-SCENE_PROMPT_VERSION_V2 = "v2.2"
+# v2.3 states the ID rule the contract never stated. The scene payload hands the model
+# scene_id and scene_ordinal side by side; measured on four real chapters from two new books,
+# two came back with the ordinal in the scene_id field and failed permanently, because the
+# repair pass addresses profiles by scene_id and could not reach the profile it had to fix.
+SCENE_PROMPT_VERSION_V2 = "v2.3"
 CHAPTER_PROMPT_VERSION_V2 = "v2.0"
 SCENE_CONTRACT_MAJOR_V2 = "2"
 FORMULA_VERSION_V2 = "2.0"
