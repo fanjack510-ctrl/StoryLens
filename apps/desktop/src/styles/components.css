@@ -1200,3 +1200,13 @@ button:disabled.primary {
   font-weight: var(--weight-semibold);
   color: var(--color-brand);
 }
+
+/* 画像确认门（CHG-20260815-093）：弹窗打开即说明，而不是提交后才报错 */
+.start-analysis-profile-gate{margin:12px 24px 0;padding:12px 16px;background:#f7ecd8;border-left:4px solid #b8791c}
+.start-analysis-profile-gate b{display:block;margin-bottom:4px}
+.start-analysis-profile-gate p{margin:4px 0;color:#5d5648;font-size:13px}
+.start-analysis-profile-gate a{color:#b8791c;font-weight:650}
+
+/* 作品画像入口（CHG-20260815-095）：状态即标签——未确认时它是待办，确认后退成背景。 */
+.book-profile-entry[data-state="unconfirmed"]{border-color:#b8791c;color:#b8791c;font-weight:650}
+.book-profile-entry[data-state="confirmed"]{color:#5d6b64}

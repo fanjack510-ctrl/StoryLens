@@ -345,6 +345,113 @@ describe("StartAnalysisDialog 布局与交互", () => {
     expect(screen.getByTestId("start-analysis-submit")).toBeVisible();
   });
 
+  it("前置内容：打开弹窗即拦下，不让用户按下去换一个 422", async () => {
+    render(
+      <MemoryRouter>
+        <QueryClientProvider
+          client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+        >
+          <StartAnalysisDialog
+            chapterId={7}
+            chapterSectionType="front_matter"
+            onClose={vi.fn()}
+            onCreated={vi.fn()}
+          />
+        </QueryClientProvider>
+      </MemoryRouter>,
+    );
+    const gate = await screen.findByTestId("start-analysis-front-matter-gate");
+    expect(gate).toHaveTextContent("前置内容");
+    await waitFor(() => expect(screen.getByTestId("start-analysis-submit")).toBeDisabled());
+  });
+
+  it("正文章节不被前置内容规则拦下", async () => {
+    vi.mocked(analysisApi.preflight).mockResolvedValue(longPreflight);
+    render(
+      <MemoryRouter>
+        <QueryClientProvider
+          client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+        >
+          <StartAnalysisDialog
+            chapterId={7}
+            chapterSectionType="chapter"
+            onClose={vi.fn()}
+            onCreated={vi.fn()}
+          />
+        </QueryClientProvider>
+      </MemoryRouter>,
+    );
+    await screen.findByLabelText("执行方式");
+    expect(screen.queryByTestId("start-analysis-front-matter-gate")).not.toBeInTheDocument();
+  });
+
+  it("失败提示不用成功的绿底——422 曾看起来像“已完成”", async () => {
+    vi.mocked(analysisApi.preflight).mockResolvedValue(longPreflight);
+    vi.mocked(analysisApi.start).mockRejectedValue(
+      new ApiError("FRONT_MATTER_ANALYSIS_DISABLED", "前置内容默认不参与场景分析", 422),
+    );
+    renderDialog();
+    await openCloudPlusWithConsent();
+    await screen.findByTestId("stage1-budget-preview");
+    fireEvent.click(screen.getByTestId("start-analysis-submit"));
+    await waitFor(() => {
+      const notice = screen.getByText(/前置内容默认不参与场景分析/).closest("p");
+      expect(notice).toHaveClass("error");
+    });
+  });
+
+  it("画像确认门：打开弹窗即提示并禁用提交（不必等到 409）", async () => {
+    const api = await import("../../features/bookProfile/api");
+    const spy = vi.spyOn(api, "getBookProfile").mockResolvedValue(null);
+    try {
+      render(
+        <MemoryRouter>
+          <QueryClientProvider
+            client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+          >
+            <StartAnalysisDialog chapterId={7} bookId={2} onClose={vi.fn()} onCreated={vi.fn()} />
+          </QueryClientProvider>
+        </MemoryRouter>,
+      );
+      const gate = await screen.findByTestId("start-analysis-profile-gate");
+      expect(gate).toHaveTextContent("先确认这本书的作品画像");
+      // The link carries where to come back to, so confirming resumes this chapter's
+      // analysis instead of dropping the user into whole-book analysis.
+      expect(screen.getByTestId("start-analysis-profile-link")).toHaveAttribute(
+        "href",
+        "/books/2/profile?from=chapter&chapterId=7",
+      );
+      await waitFor(() =>
+        expect(screen.getByTestId("start-analysis-submit")).toBeDisabled(),
+      );
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("画像确认门：409 显示说明与画像页链接", async () => {
+    vi.mocked(analysisApi.preflight).mockResolvedValue(longPreflight);
+    vi.mocked(analysisApi.start).mockRejectedValue(
+      new ApiError(
+        "PROFILE_CONFIRMATION_REQUIRED",
+        "开始分析前，请先确认这本书的作品画像",
+        409,
+        { book_id: 7, profile_status: "none" },
+      ),
+    );
+    renderDialog();
+    await openCloudPlusWithConsent();
+    await screen.findByTestId("stage1-budget-preview");
+    fireEvent.click(screen.getByTestId("start-analysis-submit"));
+    await waitFor(() =>
+      expect(screen.getByText(/画像决定分析按什么类型侧重进行/)).toBeInTheDocument(),
+    );
+    expect(screen.getByTestId("start-analysis-profile-link")).toHaveAttribute(
+      "href",
+      "/books/7/profile?from=chapter&chapterId=7",
+    );
+  });
+
   it("Escape 关闭弹窗", async () => {
     const onClose = vi.fn();
     renderDialog(onClose);

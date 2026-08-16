@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   AXIS_NAMES,
   AXIS_ORDER,
@@ -9,6 +9,7 @@ import {
   draftBookProfile,
   getBookProfile,
 } from "./api";
+import { confirmLabel, readProfileOrigin, returnHref } from "./origin";
 import "./bookProfile.css";
 
 /**
@@ -28,6 +29,12 @@ export function BookProfilePage() {
   const { bookId } = useParams();
   const id = Number(bookId);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  // Where the user came from decides where confirming returns them and what the button
+  // promises. Confirming used to send everyone to whole-book analysis regardless.
+  const origin = readProfileOrigin(id, searchParams);
+  //取消也回到来路：把用户丢回书籍首页，等于让他自己重新找一遍刚才在做的事。
+  const returnHrefOrBook = returnHref(origin)?.replace("&startAnalysis=1", "") ?? `/books/${id}`;
 
   const [profile, setProfile] = useState<BookProfile | null>(null);
   const [choice, setChoice] = useState<Record<string, string>>({});
@@ -64,14 +71,28 @@ export function BookProfilePage() {
     setError("");
     try {
       await confirmBookProfile(id, choice);
-      navigate(`/books/${id}/whole-book`);
+      const back = returnHref(origin);
+      if (back) navigate(back);
+      else await load();
     } catch (confirmError) {
       setError(confirmError instanceof Error ? confirmError.message : "确认失败");
       setBusy(false);
     }
   }
 
-  if (busy && !profile) return <main className="bp-page"><p className="bp-status">正在统计全书…</p></main>;
+  if (busy && !profile) {
+    // A 1299-chapter novel takes about a minute to snapshot and count. Saying only
+    // 「正在统计全书…」 for that long reads as a hang, and the user reaches for reload —
+    // which starts a second build behind the first.
+    return (
+      <main className="bp-page">
+        <p className="bp-status" data-testid="book-profile-loading">正在统计全书…</p>
+        <p className="bp-status">
+          第一次打开需要通读全书并建立索引，长篇（百万字以上）可能要一分钟左右。请不要刷新页面。
+        </p>
+      </main>
+    );
+  }
   if (!profile) {
     return (
       <main className="bp-page">
@@ -150,10 +171,16 @@ export function BookProfilePage() {
           })}
 
           <div className="bp-actions">
-            <button type="button" className="bp-primary" disabled={busy || incomplete.length > 0} onClick={() => void confirm()}>
-              确认并开始分析
+            <button
+              type="button"
+              className="bp-primary"
+              data-testid="book-profile-confirm"
+              disabled={busy || incomplete.length > 0}
+              onClick={() => void confirm()}
+            >
+              {confirmLabel(origin)}
             </button>
-            <Link to={`/books/${id}`}>先不分析</Link>
+            <Link to={returnHrefOrBook}>{origin.kind === "direct" ? "返回书籍" : "先不分析"}</Link>
             {incomplete.length > 0 && (
               <span className="bp-warn">
                 还有 {incomplete.map((a) => AXIS_NAMES[a]).join("、")} 没有选择

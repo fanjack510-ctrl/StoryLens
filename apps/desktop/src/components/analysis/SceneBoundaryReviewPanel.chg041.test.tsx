@@ -165,6 +165,16 @@ describe("SceneBoundaryReviewPanel CHG-041", () => {
     expect(screen.getByTestId("scene-boundary-waiting-lead")).toHaveTextContent("共 2 个场景");
   });
 
+  it("lists the proposed scenes so there is something to confirm", async () => {
+    // The screen used to ask for a yes on a bare count. Nobody can confirm a division they
+    // cannot see, so each proposed scene shows its paragraph range and its opening line.
+    vi.mocked(analysisApi.sceneBoundariesOverview).mockResolvedValue(overviewFixture() as any);
+    renderPanel();
+    const preview = await screen.findByTestId("scene-boundary-preview");
+    expect(preview.querySelectorAll("li")).toHaveLength(2);
+    await waitFor(() => expect(preview).toHaveTextContent("第一段。"));
+  });
+
   it("shows adopt AI button", async () => {
     vi.mocked(analysisApi.sceneBoundariesOverview).mockResolvedValue(overviewFixture() as any);
     renderPanel();

@@ -1,4 +1,16 @@
 import { api } from "./apiClient";
+
+/** The switchable cloud vendors, served by the backend so the client stops naming them. */
+export type CloudProviderOption = {
+  name: string;
+  display_name: string;
+  base_url?: string;
+  models?: string[];
+};
+export type ActiveCloudProviderResponse = {
+  provider_name: string;
+  options?: CloudProviderOption[];
+};
 import type { ConfigRuntimeProfile } from "./aiServiceConfig";
 
 export const settingsApi = {
@@ -18,9 +30,9 @@ export const settingsApi = {
   setCloud: (enabled: boolean) =>
     api("/api/v1/settings/cloud", { method: "PUT", body: JSON.stringify({ enabled }) }),
   activeCloudProvider: () =>
-    api<{ provider_name: string }>("/api/v1/settings/active-cloud-provider"),
+    api<ActiveCloudProviderResponse>("/api/v1/settings/active-cloud-provider"),
   setActiveCloudProvider: (provider_name: string) =>
-    api<{ provider_name: string }>("/api/v1/settings/active-cloud-provider", {
+    api<ActiveCloudProviderResponse>("/api/v1/settings/active-cloud-provider", {
       method: "PUT",
       body: JSON.stringify({ provider_name }),
     }),

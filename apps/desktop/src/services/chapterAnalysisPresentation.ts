@@ -608,9 +608,9 @@ export function primaryCtaLabel(action: ChapterPrimaryCta, sceneCount?: number |
     case "view_results":
       return "查看分析结果";
     case "start_analysis":
-      return "开始分析";
+      return "分析本章";
     case "reanalyze":
-      return "重新分析";
+      return "重新分析本章";
     default:
       return "";
   }

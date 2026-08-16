@@ -33,6 +33,13 @@ if (-not (Test-Path $Built)) {
     throw "Sidecar binary missing: $Built"
 }
 
+# Record the result contract this binary was compiled from, so a later release check can tell
+# a current sidecar from one that predates a contract field. A stale sidecar validates with
+# extra='forbid' and answers 500 on every document carrying the new field, with nothing in the
+# build to say so — that has cost a paid run twice.
+& $Python (Join-Path $Root "scripts\check_sidecar_contract_current.py") --write
+if ($LASTEXITCODE) { throw "Failed to write the sidecar contract manifest" }
+
 $Triple = "x86_64-pc-windows-msvc"
 $BinDir = Join-Path $Root "apps\desktop\src-tauri\binaries"
 New-Item -ItemType Directory -Force -Path $BinDir | Out-Null

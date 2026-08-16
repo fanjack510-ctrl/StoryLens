@@ -141,15 +141,67 @@ def put_cloud_settings(value: CloudSettingsUpdate, session: Session = Depends(ge
     return get_cloud_settings(session)
 
 
+class CloudProviderOption(BaseModel):
+    """One switchable cloud vendor, with everything the picker needs to render it."""
+
+    name: str
+    display_name: str
+    base_url: str = ""
+    models: list[str] = []
+
+
 class ActiveCloudProviderSettings(BaseModel):
     provider_name: str
+    #: Which vendors may be made active. Emitted so the client stops hardcoding the set —
+    #: it had 阿里云 and DeepSeek as two named constants and a boolean toggle between them,
+    #: which is why a third vendor could not appear in the UI at all.
+    options: list[CloudProviderOption] = []
+
+
+def _cloud_provider_options(session: Session) -> list[CloudProviderOption]:
+    from app.db.models import ProviderConfiguration
+    from app.services.provider_runtime import FORMAL_CLOUD_PROVIDERS
+
+    rows = {
+        row.provider_name: row
+        for row in session.scalars(select(ProviderConfiguration))
+        if row.provider_name in FORMAL_CLOUD_PROVIDERS
+    }
+    options: list[CloudProviderOption] = []
+    for name in sorted(FORMAL_CLOUD_PROVIDERS):
+        row = rows.get(name)
+        # A vendor with several model tiers stores them on one row; the picker shows the
+        # distinct ones so choosing a model never means choosing a different "provider".
+        models = [
+            model
+            for model in dict.fromkeys(
+                [
+                    str(getattr(row, "plus_model", "") or ""),
+                    str(getattr(row, "max_model", "") or ""),
+                    str(getattr(row, "flash_model", "") or ""),
+                ]
+            )
+            if model
+        ] if row is not None else []
+        options.append(
+            CloudProviderOption(
+                name=name,
+                display_name=str(getattr(row, "display_name", "") or "") or name,
+                base_url=str(getattr(row, "base_url", "") or ""),
+                models=models,
+            )
+        )
+    return options
 
 
 @router.get("/settings/active-cloud-provider", response_model=ActiveCloudProviderSettings)
 def get_active_cloud_provider_setting(session: Session = Depends(get_db)):
     from app.services.provider_runtime import get_active_cloud_provider
 
-    return ActiveCloudProviderSettings(provider_name=get_active_cloud_provider(session))
+    return ActiveCloudProviderSettings(
+        provider_name=get_active_cloud_provider(session),
+        options=_cloud_provider_options(session),
+    )
 
 
 @router.put("/settings/active-cloud-provider", response_model=ActiveCloudProviderSettings)
@@ -163,7 +215,9 @@ def put_active_cloud_provider_setting(
     except ValueError as exc:
         raise error(422, "UNSUPPORTED_CLOUD_PROVIDER", str(exc)) from exc
     session.commit()
-    return ActiveCloudProviderSettings(provider_name=name)
+    return ActiveCloudProviderSettings(
+        provider_name=name, options=_cloud_provider_options(session)
+    )
 
 
 def cloud_budget_value(session: Session) -> CloudBudgetUpdate:

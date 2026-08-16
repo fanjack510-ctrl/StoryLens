@@ -98,8 +98,26 @@ def merge_whole_book_runs_into_task_list(
             continue
         extras.append(project_whole_book_run(session, wb))
     merged = list(existing) + extras
-    merged.sort(key=lambda r: r.created_at or datetime.now(timezone.utc), reverse=True)
+    merged.sort(key=_sort_key, reverse=True)
     return merged[:limit]
+
+
+def _sort_key(row: AnalysisRunResponse) -> datetime:
+    """Sortable timestamp, always timezone-aware.
+
+    The two sources disagree: SQLite hands back naive datetimes for chapter runs while the
+    whole-book projection carries aware ones, and Python refuses to order the two. The
+    comparison raised TypeError and took the whole task list — and with it 开始分析, which
+    polls it — down with a 500 that the browser reported as a CORS failure, because an
+    unhandled exception never reaches the CORS middleware that would have labelled it.
+
+    Naive values are read as UTC: that is what the writer meant, and guessing local time
+    would silently reorder runs by the offset.
+    """
+    value = row.created_at
+    if value is None:
+        return datetime.now(timezone.utc)
+    return value if value.tzinfo is not None else value.replace(tzinfo=timezone.utc)
 
 
 __all__ = [

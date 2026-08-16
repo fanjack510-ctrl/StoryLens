@@ -50,12 +50,13 @@ const DRAFT: api.BookProfile = {
   active_deltas: ["pov_entity"],
 };
 
-function renderPage() {
+function renderPage(search = "?from=whole-book") {
   return render(
-    <MemoryRouter initialEntries={["/books/1/profile"]}>
+    <MemoryRouter initialEntries={[`/books/1/profile${search}`]}>
       <Routes>
         <Route path="/books/:bookId/profile" element={<BookProfilePage />} />
         <Route path="/books/:bookId/whole-book" element={<p>报告页</p>} />
+        <Route path="/books/:bookId" element={<p>书籍工作台</p>} />
       </Routes>
     </MemoryRouter>,
   );
@@ -85,7 +86,7 @@ describe("画像确认门", () => {
 
   it("有轴没填就不能确认——空值会被下游当成已决定", async () => {
     renderPage();
-    const confirm = await screen.findByRole("button", { name: "确认并开始分析" });
+    const confirm = await screen.findByRole("button", { name: "确认并开始全书分析" });
     expect(confirm).toBeDisabled();
     expect(screen.getByText(/还有 情感主轴 没有选择/)).toBeInTheDocument();
   });
@@ -99,13 +100,22 @@ describe("画像确认门", () => {
     fireEvent.change(screen.getByLabelText("视角结构"), { target: { value: "single_lead" } });
     expect(screen.getAllByText("你的选择").length).toBeGreaterThanOrEqual(2);
 
-    fireEvent.click(screen.getByRole("button", { name: "确认并开始分析" }));
+    fireEvent.click(screen.getByRole("button", { name: "确认并开始全书分析" }));
     await waitFor(() =>
       expect(confirmSpy).toHaveBeenCalledWith(1, expect.objectContaining({
         audience: "neutral",
         pov: "single_lead",
       })),
     );
+  });
+
+  it("从单章来时确认后回到本章，而不是被丢进全书分析", async () => {
+    renderPage("?from=chapter&chapterId=807");
+    fireEvent.change(await screen.findByLabelText("情感主轴"), { target: { value: "neutral" } });
+    fireEvent.change(screen.getByLabelText("视角结构"), { target: { value: "single_lead" } });
+    fireEvent.click(screen.getByRole("button", { name: "确认并分析本章" }));
+    await waitFor(() => expect(screen.getByText("书籍工作台")).toBeInTheDocument());
+    expect(screen.queryByText("报告页")).not.toBeInTheDocument();
   });
 
   it("会说明这套选择将额外提取什么", async () => {

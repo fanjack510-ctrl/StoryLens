@@ -26,13 +26,15 @@ export type ChapterPrimaryAction = {
   testId: string;
 };
 
+// 「开始分析」 named the act but not its scope, and the workspace also carries a
+// 全书分析 entry — two buttons, one of them lying about which one it is.
 const LABELS: Record<Exclude<ChapterPrimaryActionKind, "none">, string> = {
-  start: "开始分析",
+  start: "分析本章",
   progress: "查看分析进度",
   confirm: "确认场景",
   continue: "继续分析",
   result: "查看分析结果",
-  reanalyze: "重新分析",
+  reanalyze: "重新分析本章",
 };
 
 const TEST_IDS: Record<Exclude<ChapterPrimaryActionKind, "none">, string> = {

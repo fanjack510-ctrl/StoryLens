@@ -1264,6 +1264,12 @@ html[data-theme="dark"] .appearance-theme-panel button.is-selected,
   background: var(--accent2);
   padding: 9px;
 }
+/* A failure printed on the success ground reads as "done" — the 422 telling a user their
+   chapter cannot be analysed looked exactly like a confirmation that it had been. */
+.notice.error {
+  background: #f7e8e4;
+  border-left: 4px solid #a4523f;
+}
 .table-wrap {
   overflow: auto;
   padding: 0;

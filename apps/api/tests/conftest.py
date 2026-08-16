@@ -38,6 +38,8 @@ def testing_session(tmp_path):
     engine = create_engine(f"sqlite:///{tmp_path / 'unit.db'}")
     factory = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
     Base.metadata.create_all(engine)
+    from app.narrative_core.migrations.runner import apply_narrative_migrations
+    apply_narrative_migrations(engine)
     with factory() as session:
         yield session
     engine.dispose()
@@ -54,6 +56,8 @@ def client(tmp_path, fake_provider: FakeProvider) -> Generator[TestClient, None,
     )
     testing_session = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
     Base.metadata.create_all(engine)
+    from app.narrative_core.migrations.runner import apply_narrative_migrations
+    apply_narrative_migrations(engine)
 
     def override_db() -> Generator[Session, None, None]:
         with testing_session() as session:

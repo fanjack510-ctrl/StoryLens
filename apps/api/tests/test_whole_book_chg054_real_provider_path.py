@@ -203,7 +203,11 @@ def test_real_flag_on_no_capability_disabled(tmp_path, monkeypatch) -> None:
         book, _ = seed_sample_s_book(session)
         provider, estimate, consent, snap = _seed_consent(session, book.id)
 
-        def _resolve(_session):
+        # Mirrors `resolve_formal_provider_row(session, *, provider_name, provider_config_id)`.
+        # The stub was written before the callers passed the config id and had drifted out of
+        # step with the function it replaces, so every test using it failed on the call rather
+        # than on anything it was meant to check.
+        def _resolve(_session, *, provider_name=None, provider_config_id=None):
             return provider
 
         monkeypatch.setattr(
@@ -212,7 +216,7 @@ def test_real_flag_on_no_capability_disabled(tmp_path, monkeypatch) -> None:
         )
         monkeypatch.setattr(
             "app.narrative_core.services.whole_book_minimal_pipeline_v1_service.build_formal_gateway_transports",
-            lambda _s: _formal_mock_transports(),
+            lambda _s, **_kw: _formal_mock_transports(),
         )
         result = create_free_whole_book_analysis_v1(
             session,
@@ -262,7 +266,7 @@ def test_provider_unavailable_explicit_error(tmp_path, monkeypatch) -> None:
         book, _ = seed_sample_s_book(session)
         _, estimate, consent, _ = _seed_consent(session, book.id)
 
-        def _boom(_session):
+        def _boom(_session, *, provider_name=None, provider_config_id=None):
             raise WholeBookFoundationError(
                 WholeBookFoundationErrorCode.WHOLE_BOOK_REAL_PROVIDER_DISABLED,
                 "正式 Provider API Key 不可用",
@@ -295,7 +299,7 @@ def test_consent_invalid_rejects_create(tmp_path, monkeypatch) -> None:
         provider, estimate, consent, _ = _seed_consent(session, book.id)
         monkeypatch.setattr(
             "app.narrative_core.services.whole_book_gateway_transport_v1.resolve_formal_provider_row",
-            lambda _s: provider,
+            lambda _s, **_kw: provider,
         )
         with pytest.raises(WholeBookFoundationError):
             create_free_whole_book_analysis_v1(
@@ -321,7 +325,7 @@ def test_revision_change_rejects_old_consent(tmp_path, monkeypatch) -> None:
         session.flush()
         monkeypatch.setattr(
             "app.narrative_core.services.whole_book_gateway_transport_v1.resolve_formal_provider_row",
-            lambda _s: provider,
+            lambda _s, **_kw: provider,
         )
         with pytest.raises(WholeBookFoundationError) as exc:
             create_free_whole_book_analysis_v1(
@@ -380,11 +384,11 @@ def test_formal_four_modules_same_run_snapshot_revision(tmp_path, monkeypatch) -
         provider, estimate, consent, snap = _seed_consent(session, book.id)
         monkeypatch.setattr(
             "app.narrative_core.services.whole_book_gateway_transport_v1.resolve_formal_provider_row",
-            lambda _s: provider,
+            lambda _s, **_kw: provider,
         )
         monkeypatch.setattr(
             "app.narrative_core.services.whole_book_minimal_pipeline_v1_service.build_formal_gateway_transports",
-            lambda _s: _formal_mock_transports(),
+            lambda _s, **_kw: _formal_mock_transports(),
         )
         result = create_free_whole_book_analysis_v1(
             session,
@@ -422,7 +426,7 @@ def test_resume_completed_units_not_duplicated(tmp_path, monkeypatch) -> None:
         transports = _formal_mock_transports()
         monkeypatch.setattr(
             "app.narrative_core.services.whole_book_gateway_transport_v1.resolve_formal_provider_row",
-            lambda _s: provider,
+            lambda _s, **_kw: provider,
         )
         monkeypatch.setattr(
             "app.narrative_core.services.whole_book_minimal_pipeline_v1_service.build_formal_gateway_transports",

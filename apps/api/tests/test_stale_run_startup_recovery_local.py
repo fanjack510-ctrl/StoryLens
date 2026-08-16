@@ -162,6 +162,9 @@ def test_create_run_after_recovery_with_fake(client) -> None:
     )
     assert imported.status_code in {200, 201}, imported.text
     book_id = imported.json()["book_id"]
+    from tests.profile_gate_helpers import confirm_book_profile
+
+    confirm_book_profile(client, book_id)
     chapters = client.get(f"/api/v1/books/{book_id}/chapters").json()
     chapter_id = chapters[0]["id"]
 

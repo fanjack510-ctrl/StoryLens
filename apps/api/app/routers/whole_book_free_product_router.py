@@ -128,6 +128,22 @@ def create_free_analysis(
     db: Session = Depends(get_db),
     session_factory: sessionmaker[Session] = Depends(get_session_factory),
 ) -> dict:
+    # 确认门（10_ADAPTIVE_PROFILE_LAYER §4.3）：画像先于首次分析。此前画像只决定引擎选择，
+    # 未确认的书静默走旧引擎——现在与单章入口同一道硬门。resume 与 fixture 入口不设门：
+    # 恢复的是已付费的进度，fixture 是开发工具。
+    from app.narrative_core.services.long_novel_pipeline_v1 import profile_confirmation_state
+
+    profile_state = profile_confirmation_state(db, book_id)
+    if profile_state != "confirmed":
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error_code": "PROFILE_CONFIRMATION_REQUIRED",
+                "message": "开始分析前，请先确认这本书的作品画像——画像决定分析按什么类型侧重进行。"
+                + ("画像草稿已生成，确认即可。" if profile_state == "draft" else ""),
+                "details": {"book_id": book_id, "profile_status": profile_state},
+            },
+        )
     try:
         consent_id = body.consent_id
         if consent_id is None:

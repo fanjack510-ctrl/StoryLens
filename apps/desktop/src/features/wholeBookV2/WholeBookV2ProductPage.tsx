@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ErrorState, Loading } from "../../components/common/States";
 import { ApiError } from "../../services/apiClient";
+import { profileHref } from "../bookProfile/origin";
 import { isWholeBookFreeProductEnabled } from "../../services/wholeBookFreeProductFlag";
 import { isWholeBookRealProviderEnabled } from "../../services/wholeBookRealProviderFlag";
 import { settingsApi } from "../../services/settingsApi";
@@ -186,6 +187,8 @@ function PreparePanel({
   limits,
   onLimitsChange,
   limitGaps,
+  profileConfirmed,
+  bookId,
 }: {
   prepare: WholeBookPrepareResponse;
   consented: boolean;
@@ -197,11 +200,24 @@ function PreparePanel({
   limits: LimitsState;
   onLimitsChange: (next: LimitsState) => void;
   limitGaps: ReturnType<typeof compareLimitsToEstimate>;
+  /** null = still reading. The gate is only asserted once the answer is known. */
+  profileConfirmed: boolean | null;
+  bookId: number;
 }) {
   const est = prepare.estimate;
+  const profileGateClosed = profileConfirmed === false;
   return (
     <section className="wbv2-prepare" data-testid="whole-book-v2-prepare">
       <h2>开始全书分析</h2>
+      {/* Stated on open rather than after the click: a hard gate the user cannot see is
+          experienced as a failure, not as a step. Same treatment the chapter dialog got. */}
+      {profileGateClosed && (
+        <div className="wbv2-profile-gate" data-testid="whole-book-v2-profile-gate" role="alert">
+          <b>开始分析前，请先确认这本书的作品画像</b>
+          <p>画像决定分析按什么类型侧重进行（升级流看爽点、悬疑看线索、情感看节拍）。一本书只需确认一次。</p>
+          <Link to={profileHref(bookId, { from: "whole-book" })}>去确认作品画像 →</Link>
+        </div>
+      )}
       <p>{PREPARE_EXPLANATION}</p>
       <ul>
         {PREPARE_BULLETS.map((item) => (
@@ -222,9 +238,10 @@ function PreparePanel({
         {CONSENT_TEXT}
       </label>
       {actionError ? <p className="wbv2-error">{actionError}</p> : null}
-      <button type="button" disabled={!canStart} onClick={onStart}>
+      <button type="button" disabled={!canStart || profileGateClosed} onClick={onStart}>
         {starting ? "创建中…" : "开始全书分析"}
       </button>
+      {profileGateClosed && <p className="wbv2-reanalyse-meta">需要先确认作品画像</p>}
     </section>
   );
 }
@@ -437,6 +454,25 @@ function WholeBookV2ProductPageEnabled() {
   const realProviderFlagOn = isWholeBookRealProviderEnabled();
   const [activeModule, setActiveModule] = useState<ModuleKey>("overview");
   const [consented, setConsented] = useState(false);
+  // The profile gates this page too (10_ADAPTIVE_PROFILE_LAYER §4.3). Read on mount so the
+  // requirement is visible before the click, with the 409 kept as the backstop.
+  const [profileConfirmed, setProfileConfirmed] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (!bookId || bookId <= 0) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const { getBookProfile } = await import("../bookProfile/api");
+        const profile = await getBookProfile(bookId);
+        if (!cancelled) setProfileConfirmed(profile?.status === "confirmed");
+      } catch {
+        // Unreadable is not unconfirmed; leave the gate unasserted.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [bookId]);
   const [reanalyseConsented, setReanalyseConsented] = useState(false);
   const [forceFullReanalysis, setForceFullReanalysis] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -686,8 +722,22 @@ function WholeBookV2ProductPageEnabled() {
         </p>
         <h1>{PAGE_TITLE}</h1>
         <p className="muted">{PAGE_DESCRIPTION}</p>
-        <p>
-          {prepare.book_title} · {prepare.chapter_count} 章 · {prepare.character_count} 字
+        {/* The book's title, chapters and length are stated once, by the report's own header
+            band below. Repeating them here also printed a *different* word count — 27,766
+            (paragraph text) against the report's 28,768 (chapter text, which counts title
+            lines and newlines). Both are defensible measurements; showing both under the same
+            label 「字数」, two hundred pixels apart, is not. */}
+        {/* The confirmation page had no way in: the route existed and nothing linked to it,
+            so the only way to reach it was to type the URL. That matters more than a missing
+            link usually does — the profile decides which engine analyses the book, so an
+            unreachable page meant an unreachable engine. */}
+        <p className="muted">
+          <Link
+            to={profileHref(bookId, { from: "whole-book" })}
+            data-testid="whole-book-v2-profile-link"
+          >
+            作品画像 · 确认后由长篇引擎分析 →
+          </Link>
         </p>
       </header>
 
@@ -703,6 +753,8 @@ function WholeBookV2ProductPageEnabled() {
           limits={limits}
           onLimitsChange={setLimits}
           limitGaps={limitGaps}
+          profileConfirmed={profileConfirmed}
+          bookId={bookId}
         />
       )}
 

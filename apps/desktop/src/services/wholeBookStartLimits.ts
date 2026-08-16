@@ -137,6 +137,10 @@ export function mapWholeBookStartError(
   const maxBudget = detailNumber(detail, "max_cost_budget_cny");
 
   switch (code) {
+    case "PROFILE_CONFIRMATION_REQUIRED":
+      // The hard gate (10_ADAPTIVE_PROFILE_LAYER §4.3): analysis waits for the profile.
+      // The product page renders a 作品画像 link right above this message.
+      return "开始分析前，请先确认这本书的作品画像——画像决定分析按什么类型侧重进行。点击上方「作品画像」链接完成确认。";
     case "LIMIT_PROVIDER_CALLS_TOO_LOW":
       if (estimatedCalls != null && maxCalls != null) {
         return `预计需要 ${estimatedCalls} 次模型调用，超过当前允许上限 ${maxCalls} 次。请提高调用上限或调整分析范围。`;

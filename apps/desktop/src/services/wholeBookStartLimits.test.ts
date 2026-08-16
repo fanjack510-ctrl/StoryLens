@@ -13,6 +13,15 @@ const EST = {
 };
 
 describe("wholeBookStartLimits CHG-062/077", () => {
+  it("画像确认门错误给出下一步指引", () => {
+    const message = mapWholeBookStartError("PROFILE_CONFIRMATION_REQUIRED", "raw", {
+      book_id: 2,
+      profile_status: "none",
+    });
+    expect(message).toContain("作品画像");
+    expect(message).toContain("确认");
+  });
+
   it("flags provider calls / input / output too low and passes budget", () => {
     const gaps = compareLimitsToEstimate(EST, {
       max_provider_calls: "200",

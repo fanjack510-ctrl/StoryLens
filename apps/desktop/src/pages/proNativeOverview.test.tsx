@@ -368,7 +368,8 @@ describe("Pro Native Overview UI (STEP 2.3-C)", () => {
     // Standard workspace hides chapter aggregation and standalone journey start.
     expect(screen.queryByTestId("whole-book-insights-entry-free")).not.toBeInTheDocument();
     expect(screen.queryByTestId("reader-journey-entry-analyze")).not.toBeInTheDocument();
-    expect(screen.getByTestId("shell-start-analysis")).toHaveTextContent("开始分析");
+    // 「开始分析」 did not say what it analysed, next to a 全书分析 entry that did.
+    expect(screen.getByTestId("shell-start-analysis")).toHaveTextContent("分析本章");
     // Separate routes — Native must not share Aggregation path.
     expect(overview).toHaveAttribute("href", "/books/1/pro-native-overview");
     expect(overview.getAttribute("href")).not.toContain("whole-book-insights");

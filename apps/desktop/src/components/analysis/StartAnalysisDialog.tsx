@@ -10,6 +10,7 @@ import {
   PROVIDER_ELIGIBILITY_MISSING,
 } from "../../services/providerEligibility";
 import { ApiError } from "../../services/apiClient";
+import { profileHref } from "../../features/bookProfile/origin";
 import { existingRunDetailsFromError } from "../../services/runLifecycle";
 import { useDeveloperModeStore } from "../../stores/developerModeStore";
 import {
@@ -448,10 +449,20 @@ function HardBudgetBlockers({ blockers }: { blockers: CreateBudgetBlocker[] }) {
 
 export function StartAnalysisDialog({
   chapterId,
+  bookId,
+  chapterSectionType,
   onClose,
   onCreated,
 }: {
   chapterId: number;
+  /** When provided, the profile confirmation gate is checked on open instead of only
+   *  surfacing as a 409 at submit time — a hard gate the user cannot see is just a
+   *  confusing failure. */
+  bookId?: number;
+  /** Front matter (版权页、简介) never takes scene analysis. Knowing it here lets the
+   *  dialog say so on open instead of letting the user press a green button and receive a
+   *  422 in a notice styled like a success message. */
+  chapterSectionType?: string | null;
   onClose: () => void;
   onCreated?: (
     runId: number,
@@ -463,6 +474,29 @@ export function StartAnalysisDialog({
   const [provider, setProvider] = useState(developerMode ? "" : "");
   const [consent, setConsent] = useState(false);
   const [message, setMessage] = useState("");
+  const [profileGateBookId, setProfileGateBookId] = useState<number | null>(null);
+  // null = unknown/unchecked, true = confirmed, false = gate closed
+  const [profileConfirmed, setProfileConfirmed] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (!bookId) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const { getBookProfile } = await import("../../features/bookProfile/api");
+        const profile = await getBookProfile(bookId);
+        if (!cancelled) {
+          const ok = profile?.status === "confirmed";
+          setProfileConfirmed(ok);
+          setProfileGateBookId(ok ? null : bookId);
+        }
+      } catch {
+        // Unreachable backend surfaces through the provider checks; the gate stays quiet.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [bookId]);
   const [preflight, setPreflight] = useState<any>(null);
   const [fullAdvisory, setFullAdvisory] = useState<any>(null);
   const [budgetDetailOpen, setBudgetDetailOpen] = useState(false);
@@ -864,9 +898,11 @@ export function StartAnalysisDialog({
   const hardCreateBlocked = tokenBlocked || costBlocked
     || (budgetBlocked && !requestOnly)
     || (!developerMode && (!planAllowsStart || !consent));
+  const profileGateClosed = profileConfirmed === false;
+  const frontMatterBlocked = chapterSectionType === "front_matter";
   const effectiveSubmitDisabled = developerMode
-    ? busy || (budgetBlocked && !requestOnly) || providerUnavailable
-    : busy || hardCreateBlocked || providerUnavailable;
+    ? busy || (budgetBlocked && !requestOnly) || providerUnavailable || profileGateClosed || frontMatterBlocked
+    : busy || hardCreateBlocked || providerUnavailable || profileGateClosed || frontMatterBlocked;
 
   const showRequestQuotaPanel = Boolean(requestOnly && consent && preflight && costAndTokenOk);
 
@@ -880,6 +916,8 @@ export function StartAnalysisDialog({
 
   const submitDisabledReason = useMemo(() => {
     if (busy && (submitState === "checking" || submitState === "creating")) return null;
+    if (frontMatterBlocked) return "前置内容不参与分析，请选择正文章节";
+    if (profileGateClosed) return "需要先确认作品画像";
     if (providerUnavailable) {
       return unavailableReason || (developerMode ? "请选择可用 Provider" : "AI 服务尚未连接");
     }
@@ -899,6 +937,8 @@ export function StartAnalysisDialog({
   }, [
     busy,
     submitState,
+    frontMatterBlocked,
+    profileGateClosed,
     providerUnavailable,
     developerMode,
     planAllowsStart,
@@ -1018,6 +1058,11 @@ export function StartAnalysisDialog({
         return;
       }
       setSubmitState("failed");
+      setProfileGateBookId(
+        error instanceof ApiError && error.code === "PROFILE_CONFIRMATION_REQUIRED"
+          ? Number((error.detail as { book_id?: number } | undefined)?.book_id) || null
+          : null,
+      );
       const dimGaps = formatBudgetGaps({
         exceeded_dimensions: error.exceededDimensions || error.detail?.exceeded_dimensions,
         expected_request_count: error.required?.requests,
@@ -1038,6 +1083,8 @@ export function StartAnalysisDialog({
         BUDGET_NOT_AVAILABLE: "当前无法计算本次分析费用",
         MODEL_PRICING_NOT_FOUND: "当前模型缺少计价信息",
         CLOUD_CONSENT_REQUIRED: "请确认当前章节正文将发送至云端模型服务。",
+        PROFILE_CONFIRMATION_REQUIRED:
+          "开始分析前需要先确认这本书的作品画像——画像决定分析按什么类型侧重进行。",
         CLOUD_MODE_REQUIRED: "云端 Provider 需要 cloud 或 hybrid 执行模式，请重试或检查设置。",
         PROVIDER_STATE_CHANGED: "服务状态已经变化，请刷新后重新确认。",
         ANALYSIS_RUN_EXISTS: "该章节已有相同 Provider 的运行记录。",
@@ -1091,6 +1138,24 @@ export function StartAnalysisDialog({
           <h2 id="start-analysis-title">开始分析</h2>
           <button type="button" className="modal-close" aria-label="关闭" onClick={onClose}>×</button>
         </header>
+        {frontMatterBlocked && (
+          <div className="start-analysis-profile-gate" data-testid="start-analysis-front-matter-gate" role="alert">
+            <b>这一章是前置内容，不参与分析</b>
+            <p>版权页、内容简介一类的章节没有场景可拆。请在左侧章节列表里选择一个正文章节。</p>
+          </div>
+        )}
+        {profileGateClosed && (
+          <div className="start-analysis-profile-gate" data-testid="start-analysis-profile-gate" role="alert">
+            <b>开始分析前，请先确认这本书的作品画像</b>
+            <p>画像决定分析按什么类型侧重进行（升级流看爽点、悬疑看线索、情感看节拍）。一本书只需确认一次。</p>
+            <a
+              href={profileHref(bookId as number, { from: "chapter", chapterId })}
+              data-testid="start-analysis-profile-link"
+            >
+              去确认作品画像 →
+            </a>
+          </div>
+        )}
 
         <div className="modal-body" data-testid="start-analysis-modal-body">
           <section className="start-analysis-section">
@@ -1399,7 +1464,21 @@ export function StartAnalysisDialog({
             </details>
           )}
 
-          {message && <p className="notice">{message}</p>}
+          {message && (
+            <p className={submitState === "failed" ? "notice error" : "notice"}>{message}</p>
+          )}
+          {profileGateBookId != null && !profileGateClosed && (
+            /* Post-submit 409 path, for dialogs opened without a bookId. When the open-time
+               banner is already up it carries the link; two identical links confuse. */
+            <p className="notice">
+              <a
+                href={profileHref(profileGateBookId, { from: "chapter", chapterId })}
+                data-testid="start-analysis-profile-link"
+              >
+                去确认作品画像 →
+              </a>
+            </p>
+          )}
         </div>
 
         <footer className="modal-footer" data-testid="start-analysis-modal-footer">

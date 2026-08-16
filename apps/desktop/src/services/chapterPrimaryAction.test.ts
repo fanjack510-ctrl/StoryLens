@@ -37,7 +37,7 @@ function run(partial: Partial<Run>): Run {
 }
 
 describe("resolveChapterPrimaryAction", () => {
-  it("shows 开始分析 when idle", () => {
+  it("shows 分析本章 when idle", () => {
     const a = resolveChapterPrimaryAction({
       hasChapter: true,
       run: null,
@@ -46,7 +46,7 @@ describe("resolveChapterPrimaryAction", () => {
       inFlight: false,
     });
     expect(a.kind).toBe("start");
-    expect(a.label).toBe("开始分析");
+    expect(a.label).toBe("分析本章");
   });
 
   it("shows 查看分析进度 when running", () => {
@@ -73,7 +73,7 @@ describe("resolveChapterPrimaryAction", () => {
     expect(a.label).toBe("查看分析结果");
   });
 
-  it("shows 重新分析 when failed", () => {
+  it("shows 重新分析本章 when failed", () => {
     const a = resolveChapterPrimaryAction({
       hasChapter: true,
       run: run({ status: "failed" }),
@@ -82,7 +82,7 @@ describe("resolveChapterPrimaryAction", () => {
       inFlight: false,
     });
     expect(a.kind).toBe("reanalyze");
-    expect(a.label).toBe("重新分析");
+    expect(a.label).toBe("重新分析本章");
   });
 
   it("shows 确认场景 when awaiting scene boundary confirmation", () => {

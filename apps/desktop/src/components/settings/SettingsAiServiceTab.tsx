@@ -89,10 +89,16 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
     refetchOnMount: "always",
     staleTime: 0,
   });
+  // Whichever vendor the backend says is active. It used to be a ternary over two
+  // hardcoded ids, which silently mapped every unknown vendor onto 阿里云 — a third
+  // vendor could not be selected, or even displayed, however it was configured.
+  const cloudOptions: Array<{ name: string; display_name: string; base_url?: string; models?: string[] }> =
+    activeCloud.data?.options ?? [];
   const selectedProviderId =
-    activeCloud.data?.provider_name === DEEPSEEK_PROVIDER_ID
-      ? DEEPSEEK_PROVIDER_ID
-      : DEFAULT_AI_SERVICE_ID;
+    activeCloud.data?.provider_name ||
+    cloudOptions[0]?.name ||
+    DEFAULT_AI_SERVICE_ID;
+  const selectedOption = cloudOptions.find((item) => item.name === selectedProviderId);
   const configuration = useQuery({
     queryKey: ["provider-config", selectedProviderId],
     queryFn: () => providersApi.configuration(selectedProviderId),
@@ -345,23 +351,21 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
 
       <section className="settings-hero-card" data-testid="ai-active-cloud-provider">
         <header className="settings-panel-header">
-          <h2>当前默认 AI 服务商</h2>
+          <h2>AI 服务商</h2>
         </header>
         <label className="settings-field">
-          <span>当前默认 AI 服务商</span>
+          <span>服务商</span>
           <select
-            aria-label="当前默认 AI 服务商"
+            aria-label="服务商"
             data-testid="ai-cloud-provider-select"
             value={selectedProviderId}
             onChange={async (e) => {
               const next = e.target.value;
+              const label =
+                cloudOptions.find((item) => item.name === next)?.display_name || next;
               try {
                 await settingsApi.setActiveCloudProvider(next);
-                setUserMessage(
-                  next === DEEPSEEK_PROVIDER_ID
-                    ? "已切换默认服务商为 DeepSeek（不会删除阿里云密钥）。"
-                    : "已切换默认服务商为阿里云百炼（不会删除 DeepSeek 密钥）。",
-                );
+                setUserMessage(`已切换默认服务商为 ${label}（不会删除其他服务商已保存的 API Key）。`);
                 await qc.invalidateQueries({ queryKey: ["active-cloud-provider"] });
                 await qc.invalidateQueries({ queryKey: ["provider-config"] });
                 await qc.invalidateQueries({ queryKey: ["whole-book-free-prepare"] });
@@ -373,13 +377,61 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
               }
             }}
           >
-            <option value={DEFAULT_AI_SERVICE_ID}>阿里云百炼</option>
-            <option value={DEEPSEEK_PROVIDER_ID}>DeepSeek</option>
+            {cloudOptions.map((item) => (
+              <option key={item.name} value={item.name}>
+                {item.display_name}
+              </option>
+            ))}
           </select>
         </label>
+        {/* The endpoint is a property of the vendor, not a second thing to choose. Showing
+            it read-only here is what makes 「服务商」 and 「链接」 stop looking independent. */}
+        {selectedOption?.base_url ? (
+          <p className="settings-path-value" data-testid="ai-cloud-provider-endpoint">
+            接口地址 {selectedOption.base_url}
+          </p>
+        ) : null}
+        {selectedOption?.models?.length ? (
+          <p className="settings-status-reason" data-testid="ai-cloud-provider-models">
+            可用模型档位：{selectedOption.models.join(" · ")}
+          </p>
+        ) : null}
+        {/* The cloud master switch. It gates every cloud call, and its only toggle used to
+            live on the deleted /providers page — the other copy (SettingsBudgetPrivacyTab)
+            has been an orphan component since V1.0, referenced by no tab. With both gone a
+            user whose switch was off could not turn it on anywhere, and every analysis
+            button stayed disabled saying 「云端分析尚未开启」 with nothing to click. */}
+        <label className="settings-field" data-testid="ai-cloud-master-switch">
+          <span>允许云端模型连接</span>
+          <input
+            type="checkbox"
+            checked={cloudEnabled}
+            aria-label="允许云端模型连接"
+            onChange={async (e) => {
+              const next = e.target.checked;
+              try {
+                await settingsApi.setCloud(next);
+                setUserMessage(
+                  next
+                    ? "已允许云端模型连接。"
+                    : "已关闭云端模型连接；分析将无法使用云端服务商。",
+                );
+                await qc.invalidateQueries({ queryKey: ["cloud"] });
+                await qc.invalidateQueries({ queryKey: ["providers"] });
+                await qc.invalidateQueries({ queryKey: ["analysis-execution-plan"] });
+                await Promise.all([cloud.refetch(), setup.refetch()]);
+              } catch (err: any) {
+                setUserMessage(stripRawErrorCodes(err?.message || "切换云端连接失败"));
+              }
+            }}
+          />
+        </label>
+        <p className="settings-status-reason">
+          关闭后不会删除任何配置，但所有云端分析都无法开始。本地模型不受影响。
+        </p>
         <p className="settings-status-reason" data-testid="ai-default-provider-help">
           新建 AI 分析任务默认使用此服务商。已创建任务继续使用创建时的 Provider / Model。
-          切换不会删除另一方已保存的 API Key。此页是 Provider 配置的唯一入口。
+          切换不会删除其他服务商已保存的 API Key。这里是配置 AI 服务的唯一位置。
         </p>
       </section>
 
@@ -620,14 +672,8 @@ export function SettingsAiServiceTab({ autoOpenWizard = false, focusField }: Pro
 
       {(developerMode || showAdvanced) && (
         <p className="hint">
-          需要自定义连接参数？请打开 <Link to="/settings?tab=advanced">开发者设置</Link>
-          {developerMode && (
-            <>
-              {" "}
-              或 <Link to="/providers">模型与 API</Link>
-            </>
-          )}
-          。
+          需要自定义连接参数或运行诊断？请打开{" "}
+          <Link to="/settings?tab=advanced">开发者设置</Link>。
         </p>
       )}
     </article>

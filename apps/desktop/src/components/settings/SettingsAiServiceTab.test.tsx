@@ -22,6 +22,8 @@ vi.mock("../../services/settingsApi", () => ({
   settingsApi: {
     cloud: vi.fn(),
     setCloud: vi.fn(),
+    activeCloudProvider: vi.fn(),
+    setActiveCloudProvider: vi.fn(),
     cloudUsage: vi.fn(),
     cloudBudget: vi.fn(),
     saveCloudBudget: vi.fn(),
@@ -123,6 +125,14 @@ describe("SettingsAiServiceTab recommended setup", () => {
     vi.clearAllMocks();
     useAdvancedSettingsStore.setState({ showAdvancedSettings: false });
     vi.mocked(settingsApi.cloud).mockResolvedValue({ enabled: true, state: "available" });
+    vi.mocked(settingsApi.activeCloudProvider).mockResolvedValue({
+      provider_name: "aliyun_qwen_plus",
+      options: [
+        { name: "aliyun_qwen_plus", display_name: "阿里云百炼", base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1", models: ["qwen3.7-plus", "qwen3.7-max"] },
+        { name: "deepseek", display_name: "深度求索/DeepSeek", base_url: "https://api.deepseek.com/", models: ["deepseek-v4-flash"] },
+      ],
+    } as never);
+    vi.mocked(settingsApi.setCloud).mockResolvedValue(undefined as never);
     vi.mocked(providersApi.list).mockResolvedValue([eligibleProvider] as any);
     vi.mocked(providersApi.configuration).mockResolvedValue(connectedConfig as any);
     vi.mocked(aiServiceConfig.fetchRecommendedQwenStatus).mockResolvedValue(eligibleSetup as any);
@@ -135,6 +145,26 @@ describe("SettingsAiServiceTab recommended setup", () => {
 
   afterEach(() => {
     cleanup();
+  });
+
+  it("服务商下拉由后端 options 渲染，接口地址随之显示（CHG-20260815-096）", async () => {
+    renderTab();
+    const select = (await screen.findByTestId("ai-cloud-provider-select")) as HTMLSelectElement;
+    // Previously two hardcoded <option>s; an unrecognised vendor could not appear at all.
+    expect([...select.options].map((o) => o.value)).toEqual(["aliyun_qwen_plus", "deepseek"]);
+    expect(select.value).toBe("aliyun_qwen_plus");
+    expect(screen.getByTestId("ai-cloud-provider-endpoint")).toHaveTextContent(
+      "https://dashscope.aliyuncs.com/compatible-mode/v1",
+    );
+    expect(screen.getByTestId("ai-cloud-provider-models")).toHaveTextContent("qwen3.7-plus");
+  });
+
+  it("云端总开关在此可切换——它此前只存在于已删除的页面上", async () => {
+    renderTab();
+    const toggle = (await screen.findByLabelText("允许云端模型连接")) as HTMLInputElement;
+    expect(toggle.checked).toBe(true);
+    fireEvent.click(toggle);
+    await waitFor(() => expect(settingsApi.setCloud).toHaveBeenCalledWith(false));
   });
 
   it("shows eligible only when backend provider_eligible is true", async () => {

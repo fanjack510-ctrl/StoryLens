@@ -182,6 +182,24 @@ def execute_hierarchical_v2_pipeline_v1(
     book = session.get(Book, int(run.book_id))
     if book is None:
         raise ValueError(f"book not found: {run.book_id}")
+
+    # A book whose five profile axes have been confirmed goes through the long-novel engine.
+    # The dispatch lives here rather than at the two call sites so that both the API path and
+    # the background worker take the same decision, and so that the rule is written once.
+    from app.narrative_core.services.long_novel_pipeline_v1 import (
+        book_uses_long_novel_engine,
+        execute_long_novel_pipeline_v1,
+    )
+
+    if book_uses_long_novel_engine(session, int(run.book_id)):
+        logger.info("whole_book_v2_dispatch run_id=%s engine=long_novel", run_id)
+        return execute_long_novel_pipeline_v1(
+            session,
+            int(run_id),
+            use_fake_gateway=use_fake_gateway,
+            commit_progress=commit_progress,
+        )
+
     provider_name, model_name = pinned_provider(session, int(run_id))
     chapters = _source_chapters(session, run)
 

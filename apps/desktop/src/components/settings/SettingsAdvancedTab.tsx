@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { settingsApi } from "../../services/settingsApi";
 import { providersApi } from "../../services/providersApi";
-import { AliyunForm } from "../providers/AliyunForm";
+import { RealConnectionTest } from "./RealConnectionTest";
 import { Badge, Loading } from "../common/States";
 import { DEFAULT_AI_SERVICE_ID } from "../../services/aiServiceViewModel";
 import {
@@ -121,21 +121,13 @@ export function SettingsAdvancedTab() {
               </button>
             ))}
           </div>
-          <p>
-            <Link to="/providers">打开完整模型与API页</Link>
+          <p className="hint">
+            只读清单，用于排查路由与健康状态。配置 API 请到{" "}
+            <Link to="/settings?tab=ai">设置 · AI与模型</Link>。
           </p>
         </details>
 
-        {selected.startsWith("aliyun_") && (
-          <details className="advanced-section" data-testid="advanced-aliyun-form">
-            <summary>
-              工程配置 · {providerDisplayName(selected)}{" "}
-              <code className="settings-tech-id">{selected}</code>
-            </summary>
-            <p className="hint">含 Workspace ID、Base URL、Region、Timeout、Retry、Max/Flash、自动路由。</p>
-            <AliyunForm provider={selected} onSaved={refresh} />
-          </details>
-        )}
+        <RealConnectionTest provider={selected} />
 
         <details className="advanced-section">
           <summary>传输诊断（DNS / TCP / TLS）</summary>

@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BookWorkspacePage } from "./BookWorkspacePage";
 import { CompactToolbar } from "../components/layout/CompactToolbar";
 import { OverflowMenu } from "../components/layout/OverflowMenu";
+import { BookProfileEntry } from "../components/books/BookProfileEntry";
 import { ReadingSettingsPopover } from "../components/layout/ReadingSettingsPopover";
 import { WorkspaceViewSwitcher } from "../components/layout/WorkspaceViewSwitcher";
 import { StartAnalysisDialog } from "../components/analysis/StartAnalysisDialog";
@@ -189,6 +190,22 @@ export function BookRoutePage() {
   // reading; historical/in-flight runs only surface when explicitly bound (deep link / start).
 
   const analysisRunId = analysisRunFromUrl;
+
+  // Returning from the profile gate re-opens the dialog it interrupted, so the user
+  // resumes the thing they asked for instead of having to find it again. The flag is
+  // consumed on arrival — a reload must not reopen the dialog a second time.
+  useEffect(() => {
+    if (searchParams.get("startAnalysis") !== "1") return;
+    setDialog(true);
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("startAnalysis");
+        return next;
+      },
+      { replace: true },
+    );
+  }, [searchParams, setSearchParams]);
 
   // Alias resultTab → tab for frozen journey URL semantics
   useEffect(() => {
@@ -858,13 +875,6 @@ export function BookRoutePage() {
             group: "操作",
             testId: "book-more-tasks",
             onSelect: () => navigate(analysisRunId ? `/tasks?run_id=${analysisRunId}` : "/tasks"),
-          },
-          {
-            id: "reanalyze",
-            label: "重新分析",
-            group: "操作",
-            testId: "book-more-reanalyze",
-            onSelect: () => setDialog(true),
           },
           {
             id: "boundary",
@@ -1598,6 +1608,9 @@ export function BookRoutePage() {
               <ReadingSettingsPopover />
             ) : null}
             {!noChapters && !bootstrappingChapter ? (
+              <BookProfileEntry bookId={bookId} chapterId={chapterId} />
+            ) : null}
+            {!noChapters && !bootstrappingChapter ? (
               <ProNativeOverviewEntry bookId={bookId} />
             ) : null}
             {!noChapters && !bootstrappingChapter ? (
@@ -2286,6 +2299,11 @@ export function BookRoutePage() {
       {dialog && chapterId ? (
         <StartAnalysisDialog
           chapterId={chapterId}
+          bookId={bookId}
+          chapterSectionType={
+            (chapters.data || []).find((item: { id: number }) => item.id === chapterId)
+              ?.section_type ?? null
+          }
           onClose={() => setDialog(false)}
           onCreated={(runId, meta) => {
             bindAnalysisRun(runId, meta);

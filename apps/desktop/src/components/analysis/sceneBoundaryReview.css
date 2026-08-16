@@ -200,3 +200,35 @@
   border-radius: 6px;
   background: color-mix(in srgb, #2f7d4a 14%, var(--surface, #f7f4ef));
 }
+
+/* Proposed scenes, shown before the reader confirms them. */
+.scene-boundary-preview {
+  margin: 0.75rem 1.25rem 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  counter-reset: scene;
+}
+
+.scene-boundary-preview li {
+  display: grid;
+  grid-template-columns: 7.5rem 1fr;
+  gap: 12px;
+  align-items: baseline;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--text, #1a1a1a) 3%, transparent);
+}
+
+.scene-boundary-preview-range {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.875rem;
+  color: color-mix(in srgb, var(--text, #1a1a1a) 60%, transparent);
+}
+
+.scene-boundary-preview-text {
+  font-size: 0.9375rem;
+  line-height: 1.45;
+}

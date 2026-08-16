@@ -13,6 +13,7 @@ from app.services.prompt_service import load_prompt
 from app.services.scene_pipeline import aggregate_boundary_candidates, mark_interrupted_runs_failed
 from app.services.structured_output import generate_validated
 from tests.fakes import FakeProvider
+from tests.profile_gate_helpers import confirm_book_profile
 from tests.test_scene_pipeline import import_chapter
 
 
@@ -172,6 +173,7 @@ def test_prompt_injection_fixture_cannot_change_pipeline(client: TestClient) -> 
         files={"file": ("prompt_injection_text.txt", content.encode(), "text/plain")},
     )
     book_id = imported.json()["book_id"]
+    confirm_book_profile(client, book_id)
     chapter_id = client.get(f"/api/v1/books/{book_id}/chapters").json()[0]["id"]
     created = client.post(
         f"/api/v1/chapters/{chapter_id}/analysis-runs", json={"provider_name": "fake"}

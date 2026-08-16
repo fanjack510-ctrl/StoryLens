@@ -28,6 +28,7 @@ from app.services.license_crypto import (
     LicenseError,
     VerifiedLicense,
     parse_and_verify,
+    payload_valid_until,
     peek_license_payload,
 )
 
@@ -201,6 +202,15 @@ def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def license_valid_until(row: LocalLicense) -> datetime | None:
+    """Signed expiry of a stored license, read from its own payload. None = perpetual."""
+    try:
+        payload = peek_license_payload(row.signed_license)
+    except LicenseError:
+        return None
+    return payload_valid_until(payload)
+
+
 def active_license_row(session: Session) -> LocalLicense | None:
     rows = list(
         session.scalars(
@@ -209,7 +219,19 @@ def active_license_row(session: Session) -> LocalLicense | None:
             .order_by(LocalLicense.id.desc())
         )
     )
-    return rows[0] if rows else None
+    row = rows[0] if rows else None
+    if row is None:
+        return None
+    # Monthly cards lapse in place: the first read past the signed expiry flips the row,
+    # so every consumer — snapshot, capability gate, settings UI — sees the same state
+    # without needing its own clock check.
+    expires = license_valid_until(row)
+    if expires is not None and expires <= _now():
+        row.license_status = "expired"
+        row.updated_at = _now()
+        session.commit()
+        return None
+    return row
 
 
 def entitlement_snapshot(session: Session) -> dict[str, Any]:
@@ -230,6 +252,8 @@ def entitlement_snapshot(session: Session) -> dict[str, Any]:
         return {
             "edition": "free",
             "edition_label": "StoryLens 免费版",
+            "license_kind": None,
+            "valid_until": None,
             "license_id": None,
             "license_id_masked": None,
             "major_version": None,
@@ -242,9 +266,12 @@ def entitlement_snapshot(session: Session) -> dict[str, Any]:
     features = {key: True for key in PRO_FEATURES}
     lid = row.license_id
     masked = f"{lid[:8]}…{lid[-4:]}" if lid and len(lid) > 12 else lid
+    expires = license_valid_until(row)
     return {
         "edition": "pro",
-        "edition_label": "StoryLens Pro",
+        "edition_label": "StoryLens Pro（月卡）" if expires is not None else "StoryLens Pro",
+        "license_kind": "monthly" if expires is not None else "perpetual",
+        "valid_until": expires.isoformat() if expires is not None else None,
         "license_id": lid,
         "license_id_masked": masked,
         "major_version": row.major_version,

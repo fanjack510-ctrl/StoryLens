@@ -10,6 +10,7 @@ Transaction rules:
 
 from __future__ import annotations
 
+import threading
 import time
 from typing import Any
 
@@ -34,6 +35,21 @@ from app.narrative_core.services.hash_backfill import (
 from app.narrative_core.services.snapshot_repository import BookSnapshotRepositoryImpl
 
 
+#: One lock per book, so two requests for the same book queue instead of colliding. The
+#: sidecar is a single process, so a threading lock is the whole scope of the problem.
+_BUILD_LOCKS: dict[int, threading.Lock] = {}
+_BUILD_LOCKS_GUARD = threading.Lock()
+
+
+def _book_build_lock(book_id: int) -> threading.Lock:
+    with _BUILD_LOCKS_GUARD:
+        lock = _BUILD_LOCKS.get(int(book_id))
+        if lock is None:
+            lock = threading.Lock()
+            _BUILD_LOCKS[int(book_id)] = lock
+        return lock
+
+
 class BookSnapshotServiceImpl:
     """Implements ``BookSnapshotService`` and ``SnapshotValidationGateway``."""
 
@@ -43,6 +59,10 @@ class BookSnapshotServiceImpl:
         self._hashes = ContentHashServiceImpl(session)
 
     def create_or_reuse_snapshot(self, book_id: int) -> BookSnapshot:
+        with _book_build_lock(book_id):
+            return self._create_or_reuse_snapshot_locked(book_id)
+
+    def _create_or_reuse_snapshot_locked(self, book_id: int) -> BookSnapshot:
         book = self._session.get(Book, book_id)
         if book is None:
             raise NarrativeCoreError(

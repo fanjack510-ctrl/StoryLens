@@ -7,7 +7,6 @@ import { WorkspaceLandingPage } from "../pages/WorkspaceLandingPage";
 import { TasksPage } from "../pages/TasksPage";
 import { AnalysisResultsShellPage } from "../pages/AnalysisResultsShellPage";
 import { CasesPage } from "../pages/CasesPage";
-import { ProvidersPage } from "../pages/ProvidersPage";
 import { SettingsPage } from "../pages/SettingsPage";
 import { WholeBookInsightsPage } from "../pages/WholeBookInsightsPage";
 import { ProNativeOverviewPage } from "../pages/ProNativeOverviewPage";
@@ -97,7 +96,6 @@ export const router = createBrowserRouter([
         errorElement: routeErrorElement,
       },
       { path: "/cases", element: <CasesPage />, errorElement: routeErrorElement },
-      { path: "/providers", element: <ProvidersPage />, errorElement: routeErrorElement },
       { path: "/settings", element: <SettingsPage />, errorElement: routeErrorElement },
       ...devOnlyChildren,
       { path: "*", element: <NotFoundPage />, errorElement: routeErrorElement },

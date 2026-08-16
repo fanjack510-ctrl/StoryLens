@@ -92,8 +92,9 @@ def build_unsigned_payload(
     signature_version: int = 1,
     license_id: str | None = None,
     features: tuple[str, ...] | list[str] | None = None,
+    valid_until: str | None = None,
 ) -> dict[str, Any]:
-    return {
+    payload = {
         "license_id": license_id or str(uuid.uuid4()),
         "product_code": PRODUCT_CODE,
         "edition": EDITION,
@@ -106,6 +107,11 @@ def build_unsigned_payload(
         "signature_version": int(signature_version),
         "key_id": key_id,
     }
+    # Monthly cards (爱发电 one-shot purchases) are ordinary licenses with a signed
+    # expiry. Absent field = perpetual, which keeps every previously issued license valid.
+    if valid_until:
+        payload["valid_until"] = valid_until
+    return payload
 
 
 def encode_license(payload: dict[str, Any], private_key: Ed25519PrivateKey) -> str:
@@ -177,4 +183,24 @@ def parse_and_verify(
     except (InvalidSignature, ValueError, TypeError) as exc:
         raise LicenseError("LICENSE_SIGNATURE_INVALID", "授权签名无效。") from exc
 
+    # A monthly card that has already lapsed fails at activation with its own message,
+    # rather than activating into an entitlement that every later check refuses.
+    expires = payload_valid_until(payload)
+    if expires is not None and expires <= datetime.now(timezone.utc):
+        raise LicenseError("LICENSE_EXPIRED", "该授权已过期。月卡授权自到期后不可再激活。")
+
     return VerifiedLicense(payload=payload, signed_license=code, key_id=key_id)
+
+
+def payload_valid_until(payload: dict[str, Any]) -> datetime | None:
+    """The signed expiry, if the license carries one. None = perpetual."""
+    raw = str(payload.get("valid_until") or payload.get("expires_at") or "").strip()
+    if not raw:
+        return None
+    try:
+        parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed

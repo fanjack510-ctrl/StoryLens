@@ -100,8 +100,84 @@ class AnalysisMetadata(M):
     result_origin:RESULT_ORIGINS="unknown"
     pipeline_version:str="whole_book_v2_hierarchical/2.1.0"
     source_revision:str=""
+#: What "up" means on the protagonist-journey chart.  The engine decides this from the book's
+#: profile axes and the client renders whatever it is told (INV-P4); a client that picked the
+#: axis itself would have to re-derive the genre, and would drift from the analysis that the
+#: rest of the document was built on.
+#:
+#: The values are not interchangeable ways of drawing the same thing.  A stage-ordinal
+#: staircase — which is what shipped first — draws an identical rising line for every book,
+#: because its height *is* the stage index.  These axes each carry a quantity that can fall:
+#: 806 chapters of a mystery yielded 1 downward move, 1299 chapters of a progression novel
+#: yielded 130, and that difference is the analysis.
+JourneyAxis=Literal["cognition","ladder","screen_time","none"]
+
+class JourneyPoint(M):
+    """One reading on the journey axis.
+
+    ``value`` is already in axis units — cumulative information for ``cognition``, rank for
+    ``ladder`` — because normalising it needs the whole book, which no single view has.
+    ``load_bearing`` marks the readings the main line may pass through; the rest are drawn but
+    not connected.  On 《我不是戏神》 that distinction is load-bearing in the literal sense: a
+    ``gain`` reading often names the rank of the *skill* acquired rather than the character's
+    own, so a line through every reading climbs a ladder the book never climbed.
+    """
+    chapter:int=Field(ge=1); value:float; label:str=""; kind:str=""; who:str=""
+    note:str=""; load_bearing:bool=False; evidence:list[str]=Field(default_factory=list)
+
+class ScreenTimeBand(M):
+    """One character's share of the action, bin by bin.
+
+    ``share`` sums to at most 1 across the bands of a bin; the remainder is the unnamed cast.
+    """
+    name:str; share:list[float]=Field(default_factory=list)
+    first_chapter:int=Field(ge=1); last_chapter:int=Field(ge=1); chapters:int=Field(ge=0); total:int=Field(ge=0)
+
+class LedgerMeeting(M):
+    """Someone the protagonist met, the chapter it happened, and what the relation became."""
+    chapter:int=Field(ge=1); name:str; relation:str=""
+
+class LedgerEvent(M):
+    chapter:int=Field(ge=1); text:str
+
+class StageLedger(M):
+    """What one stage of the journey cost and bought, in the four terms a reader asks in.
+
+    Separate from ``ArcStage.cost_paid`` / ``gain_received``, which are the *options'*
+    projected trade-offs as the extraction recorded them: measured on 《深海余烬》, 62% of
+    those costs are hypotheses (「可能被识破」, 「可能损坏」) rather than things that happened.
+    The lists here are filtered to what the text says occurred, so the counts are smaller and
+    the column means what it says — 18 real losses across 806 chapters, not 815 mixed.
+    """
+    stage_name:str; chapter_start:int=Field(ge=1); chapter_end:int=Field(ge=1)
+    met:list[LedgerMeeting]=Field(default_factory=list); met_total:int=Field(default=0,ge=0)
+    did:list[LedgerEvent]=Field(default_factory=list); did_total:int=Field(default=0,ge=0)
+    gained:list[str]=Field(default_factory=list); gained_total:int=Field(default=0,ge=0)
+    lost:list[str]=Field(default_factory=list); lost_total:int=Field(default=0,ge=0)
+
+class JourneyResult(M):
+    """The protagonist journey, in whatever shape this book's profile calls for.
+
+    Defaulted throughout so a document produced before this section existed still validates:
+    ``axis="none"`` is the honest reading of "this run did not compute one", and the client
+    falls back to the stage list rather than inventing a curve.
+    """
+    version:str="2.0"; availability:Availability=Availability.AVAILABLE
+    axis:JourneyAxis="none"; axis_label:str=""; lead:str=""
+    ticks:list[str]=Field(default_factory=list)
+    points:list[JourneyPoint]=Field(default_factory=list)
+    bands:list[ScreenTimeBand]=Field(default_factory=list)
+    bins:int=0
+    #: One row per narrative stage, on every axis. The chart answers "how far has he got";
+    #: this answers "what did it cost him", and the two are not the same question.
+    ledger:list[StageLedger]=Field(default_factory=list)
+    #: Rendered verbatim under the chart.  Where the data is thin the reader is told so here,
+    #: rather than being shown a confident line drawn over three points.
+    caveat:str=""
+
 class WholeBookAnalysisV2(M):
     schema_version:str=SCHEMA_VERSION; book_metadata:BookMetadata; type_profile:TypeProfile; overview:OverviewResult; story:StoryResult; characters:CharactersResult; suspense:SuspenseResult; pacing:PacingResult; chapters:ChaptersResult; assessment:AssessmentResult; evidence_index:dict[str,EvidenceRef]; analysis_metadata:AnalysisMetadata
+    journey:JourneyResult=Field(default_factory=JourneyResult)
 
 # Provider synthesis is deliberately split.  These DTOs are the validation and
 # persistence boundary; the monolithic result is only assembled locally.

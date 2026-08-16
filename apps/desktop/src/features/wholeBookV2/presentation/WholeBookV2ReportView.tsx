@@ -1,11 +1,22 @@
 import { Fragment, useMemo, useState, type ReactNode } from "react";
-import type { WholeBookAnalysisV2 } from "../contracts";
+import type { JourneyAxis, JourneyResult, StageLedger, WholeBookAnalysisV2 } from "../contracts";
 import { needsReanalysisWarning } from "../adapter";
 import {
   MODULES,
   MODULE_DESCRIPTIONS,
   type ModuleKey,
 } from "./modules";
+import {
+  PACING_LABELS,
+  HEATMAP_DIMS,
+  STORYLINE_STATUS,
+  JOURNEY_TAB,
+  ROLE_LABEL,
+  SUSPENSE_BEATS,
+  DIMENSION_LABELS,
+  CATEGORY_ROW,
+} from "./labels";
+import { downloadReport, downloadReportPdf, VipRequiredError } from "../reportExport";
 import "../../wholeBookV2Mock/wholeBookV2Mock.css";
 
 export type WholeBookV2ReportViewProps = {
@@ -24,16 +35,6 @@ export type WholeBookV2ReportViewProps = {
 };
 
 const PACING_COLORS = ["#2f6b57", "#729f8d", "#d18b55", "#657a99", "#a06a85", "#8b8054"];
-const PACING_LABELS = ["剧情推进", "阅读张力", "情绪强度", "阅读动力", "钩子密度", "节奏速度"];
-const HEATMAP_DIMS: Array<{ key: keyof WholeBookAnalysisV2["chapters"]["heatmap"][number]; label: string }> = [
-  { key: "mainline_progress", label: "主线推进" },
-  { key: "character_development", label: "人物成长" },
-  { key: "conflict", label: "冲突强度" },
-  { key: "suspense", label: "悬念密度" },
-  { key: "foreshadow", label: "伏笔铺设" },
-  { key: "payoff", label: "回收兑现" },
-  { key: "transition", label: "过渡衔接" },
-];
 
 function pct(chapter: number, total: number): string {
   return `${(chapter / Math.max(1, total)) * 100}%`;
@@ -69,16 +70,35 @@ function RangeTrack({
   );
 }
 
+/** Which questions the 故事核心 block asks, and where each answer's history lives.
+ *
+ *  The page used to state the answer in one block and its evolution in another, a screen
+ *  apart — so both looked thin and the reader had to hold one half in their head. */
+const CORE_QUESTIONS = (ov: WholeBookAnalysisV2["overview"]) =>
+  [
+    { key: "主角", answer: `${ov.protagonist}｜${ov.initial_state}`, history: [] as string[] },
+    { key: "核心目标", answer: ov.core_goal, history: ov.goal_evolution },
+    { key: "核心冲突", answer: ov.core_conflict, history: ov.conflict_evolution },
+    { key: "核心悬念", answer: ov.core_question, history: ov.major_suspense },
+    { key: "最终高潮", answer: ov.final_climax, history: [] as string[] },
+  ].filter((row) => row.answer);
+
+/** 总览 — four blocks.
+ *
+ *  It was nine, holding five distinct facts: the core goal was stated in 故事核心 and again in
+ *  核心目标演变; the climax, the核心悬念 and the ending each appeared twice; the skeleton was
+ *  drawn once as a timeline and once as a list; and the one-sentence story was printed three
+ *  times. The page read as long because it repeated, and each block read as thin because it
+ *  held a fragment. Nothing is dropped here — each fact is simply said once.
+ */
 function OverviewModule({ data }: { data: WholeBookAnalysisV2 }) {
-  const [stage, setStage] = useState(0);
   const tp = data.type_profile;
   const ov = data.overview;
   const stages = data.story.structure_stages;
-  const detail = stages[stage];
 
   return (
     <>
-      <section className="wb2-soft-section wb2-work-profile">
+      <section className="wb2-soft-section wb2-work-profile is-tight">
         <div className="wb2-block-title">
           <small>作品画像</small>
           <h2>这是一部怎样的小说？</h2>
@@ -87,7 +107,7 @@ function OverviewModule({ data }: { data: WholeBookAnalysisV2 }) {
         <div className="wb2-profile-grid">
           <div>
             <small>主类型</small>
-            <strong>{tp.primary_genre}</strong>
+            <strong>{tp.primary_genre || "—"}</strong>
           </div>
           <div>
             <small>副类型</small>
@@ -108,34 +128,91 @@ function OverviewModule({ data }: { data: WholeBookAnalysisV2 }) {
         </div>
       </section>
 
-      <section className="wb2-soft-section">
+      <section className="wb2-soft-section is-core">
         <div className="wb2-block-title">
           <small>故事核心</small>
-          <h2>{ov.one_sentence_story}</h2>
+          <h2>五个问题的答案</h2>
+          <p>每个答案下面折着它一路是怎么变过来的。</p>
         </div>
-        <div className="wb2-facts">
-          {[
-            ["主角", `${ov.protagonist}｜${ov.initial_state}`],
-            ["核心目标", ov.core_goal],
-            ["核心冲突", ov.core_conflict],
-            ["核心悬念", ov.core_question],
-            ["最终高潮", ov.final_climax],
-            ["结局", ov.ending_resolution.join("；") || "—"],
-          ].map(([k, v]) => (
-            <div key={k}>
-              <dt>{k}</dt>
-              <dd>{v}</dd>
-            </div>
+        <div className="wb2-qa">
+          {CORE_QUESTIONS(ov).map((row) =>
+            row.history.length ? (
+              <div key={row.key}>
+                <details>
+                  <summary>
+                    <dt>{row.key}</dt>
+                    <div className="wb2-qa-answer">{row.answer}</div>
+                    <span className="wb2-qa-more">演变 {row.history.length} 步 ▾</span>
+                  </summary>
+                  <ul className="wb2-qa-history">
+                    {row.history.map((x, i) => (
+                      <li key={`${x}-${i}`}>{x}</li>
+                    ))}
+                  </ul>
+                </details>
+              </div>
+            ) : (
+              /* A question with nothing to unfold stays a plain row: an affordance that does
+                 nothing is worse than no affordance. */
+              <div key={row.key}>
+                <div className="wb2-qa-row">
+                  <dt>{row.key}</dt>
+                  <div className="wb2-qa-answer">{row.answer}</div>
+                </div>
+              </div>
+            ),
+          )}
+        </div>
+      </section>
+
+      <section className="wb2-soft-section is-tight">
+        <div className="wb2-block-title">
+          <small>全书脉络</small>
+          <h2>这本书是怎么走下来的</h2>
+        </div>
+        <ol className="wb2-skeleton">
+          {ov.story_skeleton.map((x, i) => (
+            <li key={`${x}-${i}`}>{x}</li>
           ))}
-        </div>
+        </ol>
+        {stages.length > 0 && (
+          <div className="wb2-stage-lines">
+            {stages.map((s) => (
+              <article key={s.stage_id}>
+                <h3>{s.title}</h3>
+                <span>
+                  第 {s.chapter_start}–{s.chapter_end} 章
+                </span>
+                <p>{s.summary}</p>
+              </article>
+            ))}
+          </div>
+        )}
+        {ov.major_storylines.length > 0 && (
+          <ol className="wb2-skeleton wb2-skeleton-lines">
+            {ov.major_storylines.map((x, i) => (
+              <li key={`${x}-${i}`}>{x}</li>
+            ))}
+          </ol>
+        )}
+        {stages.length > 0 && stages.length < 3 && (
+          /* A timeline through one point is not a line. The old nine-column grid left eight
+             columns of white space here, which reads as a rendering fault rather than as
+             "this book resolves into one stage". */
+          <p className="wb2-why-empty">
+            <b>没有画时间线。</b>
+            这本书解析出 {stages.length} 个结构阶段，阶段数达到 3 个以上时时间线才会出现。
+          </p>
+        )}
       </section>
 
       <section className="wb2-soft-section wb2-overview-rich">
         <div className="wb2-block-title">
-          <small>全书分析摘要</small>
-          <h2>{ov.one_sentence_story}</h2>
+          <small>落点</small>
+          <h2>这本书最后停在哪</h2>
         </div>
-        <p>{ov.full_summary}</p>
+        {ov.final_climax && <p className="wb2-climax">{ov.final_climax}</p>}
+        <p className="wb2-full-summary">{ov.full_summary}</p>
         <div className="wb2-compare">
           <div>
             <small>主角起点</small>
@@ -147,170 +224,9 @@ function OverviewModule({ data }: { data: WholeBookAnalysisV2 }) {
             <strong>{ov.final_state}</strong>
           </div>
         </div>
-      </section>
-
-      <section className="wb2-soft-section">
-        <div className="wb2-overview-columns">
+        <div className="wb2-overview-columns wb2-ending">
           <div>
-            <div className="wb2-block-title">
-              <small>核心目标演变</small>
-              <h2>他想得到什么</h2>
-            </div>
-            <ol className="wb2-evolution-list">
-              {ov.goal_evolution.map((x, i) => (
-                <li key={`${x}-${i}`}>{x}</li>
-              ))}
-            </ol>
-          </div>
-          <div>
-            <div className="wb2-block-title">
-              <small>核心冲突演变</small>
-              <h2>阻力如何升级</h2>
-            </div>
-            <ol className="wb2-evolution-list">
-              {ov.conflict_evolution.map((x, i) => (
-                <li key={`${x}-${i}`}>{x}</li>
-              ))}
-            </ol>
-          </div>
-        </div>
-      </section>
-
-      <section className="wb2-soft-section">
-        <div className="wb2-block-title">
-          <small>主要故事线</small>
-          <h2>多条长线如何共同抵达结局</h2>
-        </div>
-        <div className="wb2-storyline-summaries">
-          {ov.major_storylines.map((s, i) => (
-            <article key={s}>
-              <b>{String(i + 1).padStart(2, "0")}</b>
-              <div>
-                <h3>{s}</h3>
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="wb2-soft-section">
-        <div className="wb2-overview-columns">
-          <div>
-            <div className="wb2-block-title">
-              <small>关键转折</small>
-              <h2>改变故事方向的关键节点</h2>
-            </div>
-            {ov.major_turning_points.map((t) => (
-              <p className="wb2-numbered-insight" key={t.title}>
-                <b>
-                  第 {t.chapter_start}
-                  {t.chapter_end !== t.chapter_start ? `–${t.chapter_end}` : ""} 章
-                </b>
-                <span>
-                  {t.title}：{t.description}
-                </span>
-              </p>
-            ))}
-          </div>
-          <div>
-            <div className="wb2-block-title">
-              <small>核心悬念</small>
-              <h2>读者持续追问的问题</h2>
-            </div>
-            {ov.major_suspense.map((x, i) => (
-              <p className="wb2-numbered-insight" key={x}>
-                <b>{String(i + 1).padStart(2, "0")}</b>
-                <span>{x}</span>
-              </p>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {stages.length > 0 && (
-        <section className="wb2-soft-section">
-          <div className="wb2-block-title">
-            <small>故事骨架 Timeline</small>
-            <h2>各阶段的目标、选择与代价</h2>
-          </div>
-          <div className="wb2-stage-timeline">
-            {stages.map((s, i) => (
-              <article
-                className={stage === i ? "active" : ""}
-                onClick={() => setStage(i)}
-                key={s.stage_id}
-                title={`${s.stage_goal}｜点击查看详情`}
-              >
-                <b>{String(i + 1).padStart(2, "0")}</b>
-                <div>
-                  <strong>{s.title}</strong>
-                  <small>
-                    第 {s.chapter_start}–{s.chapter_end} 章
-                  </small>
-                  <p>{s.summary}</p>
-                </div>
-              </article>
-            ))}
-          </div>
-          {detail && (
-            <div className="wb2-detail-panel">
-              <header>
-                <div>
-                  <small>
-                    第 {detail.chapter_start}–{detail.chapter_end} 章
-                  </small>
-                  <h2>{detail.title}</h2>
-                </div>
-              </header>
-              <p className="wb2-long-summary">{detail.summary}</p>
-              <dl className="wb2-detail-grid">
-                <div>
-                  <dt>阶段目标</dt>
-                  <dd>{detail.stage_goal}</dd>
-                </div>
-                <div>
-                  <dt>核心冲突</dt>
-                  <dd>{detail.core_conflict}</dd>
-                </div>
-                <div>
-                  <dt>重大选择</dt>
-                  <dd>{detail.major_choice}</dd>
-                </div>
-                <div>
-                  <dt>付出</dt>
-                  <dd>{detail.cost_paid.join("、") || "—"}</dd>
-                </div>
-                <div>
-                  <dt>获得</dt>
-                  <dd>{detail.gain_received.join("、") || "—"}</dd>
-                </div>
-              </dl>
-              <Evidence ids={detail.evidence} />
-            </div>
-          )}
-        </section>
-      )}
-
-      <section className="wb2-soft-section">
-        <div className="wb2-block-title">
-          <small>故事骨架列表</small>
-          <h2>全书结构脉络</h2>
-        </div>
-        <ol className="wb2-evolution-list">
-          {ov.story_skeleton.map((x, i) => (
-            <li key={`${x}-${i}`}>{x}</li>
-          ))}
-        </ol>
-      </section>
-
-      <section className="wb2-soft-section">
-        <div className="wb2-block-title">
-          <small>最终高潮</small>
-          <h2>{ov.final_climax}</h2>
-        </div>
-        <div className="wb2-overview-columns">
-          <div>
-            <h3>结局解决项</h3>
+            <h3>已经解决的</h3>
             <ul className="wb2-resolution-list">
               {ov.ending_resolution.map((x) => (
                 <li key={x}>{x}</li>
@@ -318,7 +234,7 @@ function OverviewModule({ data }: { data: WholeBookAnalysisV2 }) {
             </ul>
           </div>
           <div>
-            <h3>结局遗留项</h3>
+            <h3>留下的问题</h3>
             <ul className="wb2-resolution-list is-open">
               {ov.ending_open_questions.map((x) => (
                 <li key={x}>{x}</li>
@@ -331,120 +247,643 @@ function OverviewModule({ data }: { data: WholeBookAnalysisV2 }) {
   );
 }
 
+
+/**  故事 —— 一页四段，没有内层页签。
+ *
+ *  It was three tabs holding eight facts: one structure stage, five storylines, two causal
+ *  links. Three clicks to read what fits on one screen — and the outer module bar is already
+ *  a set of seven tabs, so a second tier of tabs buries content rather than organising it.
+ *
+ *  The fourth section is new. The engine has been computing an 11-event chronology with two
+ *  evidence ids apiece since v2.0, and the page's own description promised 时间线, but nothing
+ *  ever rendered it.
+ */
 function StoryModule({ data }: { data: WholeBookAnalysisV2 }) {
-  const [tab, setTab] = useState("结构阶段");
-  const [selectedStage, setSelectedStage] = useState(0);
-  const tabs = ["结构阶段", "主线与支线", "因果链"];
   const total = data.book_metadata.chapter_count;
   const story = data.story;
-  const stage = story.structure_stages[selectedStage];
+  const chrono = story.chronology;
+  // Told out of order is a fact about the book, not a rendering detail: if every event's
+  // position in the story matches its position in the telling, there is no flashback to point at.
+  const reordered = chrono.filter((c) => c.story_order !== c.narrative_order).length;
+  const openFacts = story.structure_stages.length <= 4;
 
   return (
     <>
-      <div className="wb2-tabs">
-        {tabs.map((t) => (
-          <button className={tab === t ? "active" : ""} onClick={() => setTab(t)} key={t}>
-            {t}
-          </button>
-        ))}
-      </div>
-      {tab === "结构阶段" && (
-        <>
-          <div className="wb2-stage-table">
-            {story.structure_stages.map((s, i) => (
-              <div
-                className={selectedStage === i ? "active" : ""}
-                onClick={() => setSelectedStage(i)}
-                key={s.stage_id}
-              >
-                <b>{i + 1}</b>
-                <strong>{s.title}</strong>
-                <RangeTrack range={[s.chapter_start, s.chapter_end]} total={total} />
+      <section className="wb2-soft-section is-tight">
+        <div className="wb2-block-title">
+          <small>结构阶段</small>
+          <h2>这本书分成几段</h2>
+        </div>
+        <div className="wb2-stages">
+          {story.structure_stages.map((s, i) => (
+            <article key={s.stage_id}>
+              <div className="wb2-stage-head">
+                <b>{String(i + 1).padStart(2, "0")}</b>
+                <h3>{s.title}</h3>
                 <span>
-                  {s.chapter_start}–{s.chapter_end}
+                  第 {s.chapter_start}–{s.chapter_end} 章
                 </span>
-                <p>{s.summary}</p>
               </div>
-            ))}
-          </div>
-          {stage && (
-            <div className="wb2-detail-panel">
-              <header>
-                <div>
-                  <small>
-                    第 {stage.chapter_start}–{stage.chapter_end} 章
-                  </small>
-                  <h2>{stage.title}</h2>
-                </div>
-              </header>
-              <p className="wb2-long-summary">{stage.summary}</p>
-              <dl className="wb2-detail-grid">
-                <div>
-                  <dt>阶段目标</dt>
-                  <dd>{stage.stage_goal}</dd>
-                </div>
-                <div>
-                  <dt>核心冲突</dt>
-                  <dd>{stage.core_conflict}</dd>
-                </div>
-                <div>
-                  <dt>重大选择</dt>
-                  <dd>{stage.major_choice}</dd>
-                </div>
-                <div>
-                  <dt>付出</dt>
-                  <dd>{stage.cost_paid.join("、")}</dd>
-                </div>
-                <div>
-                  <dt>获得</dt>
-                  <dd>{stage.gain_received.join("、")}</dd>
-                </div>
-              </dl>
-              <Evidence ids={stage.evidence} />
-            </div>
-          )}
-        </>
-      )}
-      {tab === "主线与支线" && (
-        <div className="wb2-tracks">
-          {story.storylines.map((s) => (
-            <div key={s.storyline_id}>
-              <strong>
-                {s.type === "main" ? "主线" : "支线"}｜{s.name}
-              </strong>
               <RangeTrack range={[s.chapter_start, s.chapter_end]} total={total} />
-              <span>
-                {s.chapter_start}–{s.chapter_end} · {s.status}
-              </span>
-            </div>
+              <p>{s.summary}</p>
+              {/* Every stage's title, range and summary always show; only the four detail
+                  facts fold, and only once there are enough stages that leaving them open
+                  turns the page into a 2400px scroll. A book that resolves into two or
+                  three stages shows everything at once. */}
+              <details open={openFacts}>
+                <summary>目标 · 冲突 · 选择 · 代价</summary>
+                <dl className="wb2-stage-facts">
+                  <div>
+                    <dt>阶段目标</dt>
+                    <dd>{s.stage_goal || "—"}</dd>
+                  </div>
+                  <div>
+                    <dt>核心冲突</dt>
+                    <dd>{s.core_conflict || "—"}</dd>
+                  </div>
+                  <div>
+                    <dt>重大选择</dt>
+                    <dd>{s.major_choice || "—"}</dd>
+                  </div>
+                  <div>
+                    <dt>付出 / 获得</dt>
+                    <dd>
+                      {s.cost_paid.join("、") || "—"}
+                      <i> → </i>
+                      {s.gain_received.join("、") || "—"}
+                    </dd>
+                  </div>
+                </dl>
+                <Evidence ids={s.evidence} />
+              </details>
+            </article>
           ))}
         </div>
-      )}
-      {tab === "因果链" && (
-        // Vertical. As a horizontal strip these sixty links were 145px-wide cards with the
-        // text squeezed to two characters a line, and reading them meant dragging sideways.
-        // Down the page, cause and effect sit on one line and a dozen fit on a screen.
+      </section>
+
+      <section className="wb2-soft-section is-core">
+        <div className="wb2-block-title">
+          <small>主线与支线</small>
+          <h2>几条线，各自走到哪</h2>
+          <p>条的长度是它覆盖的章节；实心是已经收束的，空心是还开着的。</p>
+        </div>
+        <div className="wb2-gantt">
+          {story.storylines.map((s) => {
+            const done = s.status === "resolved";
+            return (
+              <Fragment key={s.storyline_id}>
+                <div className="wb2-gantt-name">
+                  <span className={s.type === "main" ? "wb2-tag" : "wb2-tag is-sub"}>
+                    {s.type === "main" ? "主线" : "支线"}
+                  </span>
+                  <b>{s.name}</b>
+                </div>
+                <div className={done ? "wb2-gantt-track is-done" : "wb2-gantt-track is-open"}>
+                  <RangeTrack range={[s.chapter_start, s.chapter_end]} total={total} />
+                </div>
+                <div className={done ? "wb2-gantt-state is-done" : "wb2-gantt-state is-open"}>
+                  <b>{STORYLINE_STATUS[s.status] ?? s.status}</b>
+                  <span>
+                    第 {s.chapter_start}–{s.chapter_end} 章
+                  </span>
+                </div>
+              </Fragment>
+            );
+          })}
+        </div>
+        <div className="wb2-gantt-legend">
+          <span>
+            <i className="is-done" />
+            已收束
+          </span>
+          <span>
+            <i className="is-open" />
+            未收束
+          </span>
+        </div>
+      </section>
+
+      <section className="wb2-soft-section is-tight">
+        <div className="wb2-block-title">
+          <small>因果链</small>
+          <h2>哪件事导致了哪件事</h2>
+        </div>
         <ol className="wb2-causal">
           {story.causal_chain.map((x, i) => {
             const [cause, effect] = x.split("→");
             return (
               <li key={`${i}-${x}`}>
                 <b>{String(i + 1).padStart(2, "0")}</b>
-                <span>
-                  {cause.trim()}
-                  {effect && <i>→</i>}
-                  {effect?.trim()}
-                </span>
+                <span className="wb2-causal-cause">{cause.trim()}</span>
+                <i className="wb2-causal-arrow">→</i>
+                <span className="wb2-causal-effect">{effect?.trim() ?? ""}</span>
               </li>
             );
           })}
         </ol>
+      </section>
+
+      {chrono.length > 0 && (
+        <section className="wb2-soft-section is-tight">
+          <div className="wb2-block-title">
+            <small>时间线</small>
+            <h2>按章顺序，发生了什么</h2>
+          </div>
+          <div className="wb2-chrono">
+            {chrono.map((c) => (
+              <div key={c.event_id}>
+                <span className="wb2-chrono-ch">第 {c.chapter} 章</span>
+                <span className="wb2-chrono-ev">{c.description}</span>
+                <Evidence ids={c.evidence} />
+              </div>
+            ))}
+          </div>
+          <p className={reordered > 0 ? "wb2-chrono-note is-reordered" : "wb2-chrono-note"}>
+            {reordered > 0 ? (
+              <>
+                <b>有 {reordered} 处倒叙。</b>这些事件在书里被讲述的顺序，和它们实际发生的顺序不一致。
+              </>
+            ) : (
+              <>
+                <b>全书顺叙。</b>{chrono.length} 个事件被讲述的顺序，和它们发生的顺序完全一致，没有倒叙或插叙。
+              </>
+            )}
+          </p>
+        </section>
       )}
     </>
   );
 }
 
+
+/** The protagonist journey, drawn on whatever axis the engine chose.
+ *
+ *  This replaced a staircase whose height was the stage index — which drew the same rising
+ *  line for every book, because the height *was* the ordinal. Every axis here carries a
+ *  quantity that can fall, and the fall is most of the information: the same engine measured
+ *  1 downward move across 806 chapters of a mystery and 130 across 1299 of a progression
+ *  novel. Nothing in this component decides the axis; it renders `journey.axis`.
+ */
+const JOURNEY_KIND_LABELS: Record<string, string> = {
+  partial: "只揭一半",
+  reveal: "揭示",
+  resolve: "给出答案",
+  close: "收束",
+  twist: "反转 · 推翻先前认知",
+  misdirect: "误导",
+  promote: "晋升",
+  gain: "获得",
+  faceslap: "打脸压制",
+  setback: "受挫",
+  demote: "跌落",
+};
+
+function JourneyChart({ journey, chapterCount }: { journey: JourneyResult; chapterCount: number }) {
+  const width = 1000;
+  const total = Math.max(1, chapterCount);
+  const x = (chapter: number) => 60 + (Math.min(chapter, total) / total) * (width - 74);
+  // Which reading is expanded below the chart. The note each point carries — what was
+  // revealed, what was overturned — was previously only in a hover <title>, which is content
+  // the reader can never see all of and touch devices can never see at all.
+  const [at, setAt] = useState<number | null>(null);
+
+  if (journey.axis === "screen_time") {
+    const bins = journey.bins || journey.bands[0]?.share.length || 0;
+    const top = 12;
+    const height = 240;
+    let base = new Array(bins).fill(0);
+    const bands = journey.bands.map((band, index) => {
+      const upper = band.share.map((v, i) => base[i] + v);
+      const points =
+        upper.map((v, i) => `${x(((i + 0.5) * total) / bins).toFixed(1)},${(height - v * (height - top)).toFixed(1)}`).join(" ") +
+        " " +
+        base
+          .map((v, i) => `${x(((bins - 0.5 - i) * total) / bins).toFixed(1)},${(height - base[bins - 1 - i] * (height - top)).toFixed(1)}`)
+          .join(" ");
+      base = upper;
+      return { name: band.name, points, index, band };
+    });
+    return (
+      <div className="wb2-journey">
+        <svg viewBox={`0 0 ${width} ${height + 8}`} role="img" aria-label="戏份分布">
+          {bands.map((b) => (
+            <polygon key={b.name} points={b.points} className={`wb2-band wb2-band-${b.index % 8}`}>
+              <title>{`${b.name}　第 ${b.band.first_chapter}–${b.band.last_chapter} 章，出现 ${b.band.chapters} 章`}</title>
+            </polygon>
+          ))}
+        </svg>
+        <ul className="wb2-journey-legend">
+          {journey.bands.map((band, index) => (
+            <li key={band.name}>
+              <i className={`wb2-band-${index % 8}`} />
+              {band.name}
+              <small>{band.chapters} 章</small>
+            </li>
+          ))}
+        </ul>
+        {journey.caveat && <p className="wb2-journey-caveat">{journey.caveat}</p>}
+      </div>
+    );
+  }
+
+  const values = journey.points.map((p) => p.value);
+  const lo = Math.min(...values, 0);
+  const hi = Math.max(...values, lo + 1);
+  const top = 20;
+  const height = 260;
+  const y = (v: number) => height - ((v - lo) / (hi - lo)) * (height - top);
+  const connected = journey.points.filter((p) => p.load_bearing);
+  // A ladder reading holds until the book states a new one, so the line steps rather than
+  // sloping. A cognition curve is cumulative and slopes between its own points.
+  const path =
+    journey.axis === "ladder"
+      ? connected
+          .map((p, i) =>
+            i === 0
+              ? `M ${x(p.chapter).toFixed(1)} ${y(p.value).toFixed(1)}`
+              : `L ${x(p.chapter).toFixed(1)} ${y(connected[i - 1].value).toFixed(1)} L ${x(p.chapter).toFixed(1)} ${y(p.value).toFixed(1)}`,
+          )
+          .join(" ")
+      : connected.map((p, i) => `${i ? "L" : "M"} ${x(p.chapter).toFixed(1)} ${y(p.value).toFixed(1)}`).join(" ");
+
+  return (
+    <div className="wb2-journey">
+      <svg viewBox={`0 0 ${width} ${height + 16}`} role="img" aria-label={journey.axis_label}>
+        {journey.ticks.map((tick, i) => {
+          const at = journey.axis === "ladder" ? i + 1 : i === 0 ? lo : hi;
+          return (
+            <g key={tick}>
+              <line x1={60} y1={y(at)} x2={width - 14} y2={y(at)} className="wb2-journey-rule" />
+              <text x={54} y={y(at) + 4} textAnchor="end" className="wb2-journey-tick">
+                {tick}
+              </text>
+            </g>
+          );
+        })}
+        {path && <path d={path} className="wb2-journey-line" />}
+        {journey.points.map((p, i) => (
+          <circle
+            key={`${p.chapter}-${i}`}
+            cx={x(p.chapter)}
+            cy={y(p.value)}
+            r={at === i ? 6 : p.load_bearing ? 4.2 : 2.6}
+            className={`wb2-journey-dot${DOWN_KINDS.has(p.kind) ? " down" : ""}${p.load_bearing ? " lead" : ""}${at === i ? " selected" : ""}`}
+            onClick={() => setAt(at === i ? null : i)}
+          >
+            <title>{`第 ${p.chapter} 章　${p.who || ""}${p.label ? " " + p.label : ""}　${p.kind}　${p.note}`}</title>
+          </circle>
+        ))}
+      </svg>
+      {at !== null && journey.points[at] && (
+        <div className="wb2-journey-point-detail">
+          <b className="wb2-journey-point-ch">第 {journey.points[at].chapter} 章</b>
+          <span className={`wb2-journey-point-kind${DOWN_KINDS.has(journey.points[at].kind) ? " down" : ""}`}>
+            {JOURNEY_KIND_LABELS[journey.points[at].kind] ?? journey.points[at].kind}
+          </span>
+          {journey.points[at].who && <span>{journey.points[at].who}</span>}
+          {journey.points[at].label && <span>{journey.points[at].label}</span>}
+          <p>{journey.points[at].note || "（这一处没有记录说明文字）"}</p>
+        </div>
+      )}
+      <p className="wb2-journey-axis-note">
+        纵轴＝{journey.axis_label}
+        {journey.lead && `　主线＝${journey.lead}`}　共 {journey.points.length} 个读数，其中下跌{" "}
+        {journey.points.filter((p) => DOWN_KINDS.has(p.kind)).length} 次　·　点任意一个点看它的内容
+      </p>
+      {journey.caveat && <p className="wb2-journey-caveat">{journey.caveat}</p>}
+      <JourneyTurnList
+        points={journey.points}
+        active={at}
+        onPick={(i) => setAt(at === i ? null : i)}
+      />
+    </div>
+  );
+}
+
+/** The chart's down-moves and answers, as prose the reader can scan without hunting dots.
+ *
+ *  A mystery's reversals *are* the analysis — burying them behind 2.6px hover targets keeps
+ *  the shape visible but the content unread. Only the information-heavy kinds are listed;
+ *  the 31 partial reveals stay as dots, or the list would drown the seven moments that
+ *  reorganise the book.
+ */
+function JourneyTurnList({
+  points,
+  active,
+  onPick,
+}: {
+  points: JourneyResult["points"];
+  active: number | null;
+  onPick: (index: number) => void;
+}) {
+  const rows = points
+    .map((p, i) => ({ ...p, index: i }))
+    .filter((p) => DOWN_KINDS.has(p.kind) || p.kind === "resolve" || p.kind === "demote");
+  if (!rows.length) return null;
+  return (
+    <ol className="wb2-journey-turns">
+      {rows.map((p) => (
+        <li key={p.index}>
+          <button
+            className={active === p.index ? "active" : ""}
+            onClick={() => onPick(p.index)}
+            aria-pressed={active === p.index}
+          >
+            <b>第 {p.chapter} 章</b>
+            <i className={DOWN_KINDS.has(p.kind) ? "down" : ""}>
+              {JOURNEY_KIND_LABELS[p.kind] ?? p.kind}
+            </i>
+            <span>{p.note || "（无说明）"}</span>
+          </button>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+const DOWN_KINDS = new Set(["setback", "demote", "twist", "misdirect"]);
+
+/** Per-stage 遇见谁 / 做了什么 / 得到 / 失去.
+ *
+ *  The chart answers how far the protagonist got; this answers what it cost him, and the two
+ *  are different questions. It reads the engine's filtered ledger rather than
+ *  `ArcStage.cost_paid` / `gain_received`, which carry the *options'* projected trade-offs —
+ *  62% of those "costs" on a measured book are hypotheses like 「可能被识破」, so a reader
+ *  scanning that column is reading risks that were considered, not prices that were paid.
+ */
+/** The card frame every block on this page lives in: a numbered title bar, a count at the
+ *  right edge, the content indented below. Three ranks the eye can hold — tab band, card
+ *  bar, content row — instead of sibling grey boxes floating unlabelled in the section. */
+function SubCard({
+  n,
+  title,
+  meta,
+  children,
+}: {
+  n: number;
+  title: string;
+  meta?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="wb2-sub">
+      <header>
+        <i>{n}</i>
+        <h3>{title}</h3>
+        {meta && <span>{meta}</span>}
+      </header>
+      <div className="wb2-sub-body">{children}</div>
+    </div>
+  );
+}
+
+/** 行动台账 —— 一列时间线，一列侧栏。
+ *
+ *  Four equal columns holding 1/8/1/1 items drew three tall empty walls beside one full
+ *  column. The deeds are the record — they get the wide column; who was met, what was
+ *  gained and lost are summaries, and stack beside it at whatever height they need.
+ */
+function StageLedgerTable({ ledger }: { ledger: StageLedger[] }) {
+  const [at, setAt] = useState(0);
+  const stage = ledger[Math.min(at, ledger.length - 1)];
+  if (!stage) return null;
+
+  return (
+    <div className="wb2-ledger">
+      {ledger.length > 1 && (
+        <div className="wb2-ledger-stages">
+          {ledger.map((row, i) => (
+            <button
+              key={`${row.stage_name}-${i}`}
+              className={i === at ? "active" : ""}
+              onClick={() => setAt(i)}
+              aria-pressed={i === at}
+            >
+              第 {i + 1} 程　{row.stage_name}
+            </button>
+          ))}
+        </div>
+      )}
+      <p className="wb2-ledger-range">
+        第 {stage.chapter_start}–{stage.chapter_end} 章
+      </p>
+      <div className="wb2-ledger-split">
+        <div className="wb2-ledger-main">
+          {/* Counts are the full tally; the rows are the load-bearing few the engine kept. */}
+          <h4>做了什么 · {stage.did_total}</h4>
+          <ol className="wb2-evlist">
+            {stage.did.length ? (
+              stage.did.map((e, i) => (
+                <li key={`${e.chapter}-${i}`}>
+                  <span className="wb2-evlist-ch">第 {e.chapter} 章</span>
+                  <span>{e.text}</span>
+                </li>
+              ))
+            ) : (
+              <li className="none">这一程没有记录到行动</li>
+            )}
+          </ol>
+        </div>
+        <div className="wb2-ledger-side">
+          <div className="wb2-ledger-who">
+            <h4>遇见谁 · {stage.met_total}</h4>
+            {stage.met.length ? (
+              stage.met.map((m) => (
+                <p key={`${m.chapter}-${m.name}`}>
+                  <b>{m.name}</b>
+                  <i>
+                    第 {m.chapter} 章 · {m.relation || "初次出现"}
+                  </i>
+                </p>
+              ))
+            ) : (
+              <p className="none">这一程没有新的人</p>
+            )}
+          </div>
+          <div className="wb2-ledger-g">
+            <h4>得到 · {stage.gained_total}</h4>
+            {stage.gained.length ? stage.gained.map((g) => <p key={g}>{g}</p>) : <p className="none">—</p>}
+          </div>
+          <div className="wb2-ledger-l">
+            <h4>失去 · {stage.lost_total}</h4>
+            {stage.lost.length ? (
+              stage.lost.map((g) => <p key={g}>{g}</p>)
+            ) : (
+              <p className="none">这一程没有代价</p>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** 四轨成长 · 与主时间线对齐。
+ *
+ *  It claimed alignment it did not have: the header printed one column per *stage* while the
+ *  rows printed one cell per *track point*, so a book with one stage and three points drew a
+ *  one-column header over three-cell rows. The columns are the chapters that actually carry a
+ *  point, and every cell sits under its own chapter — which is what "对齐" has to mean here.
+ *
+ *  Cell text was also cut at `slice(0, 8)`, which severed 「克制情感 → 情感流露」 mid-phrase.
+ *  A cell that cannot hold its sentence wraps; it does not lie about it.
+ */
+function GrowthTracks({
+  protagonist,
+}: {
+  protagonist: WholeBookAnalysisV2["characters"]["protagonist"];
+}) {
+  const rows = [
+    { name: "外在身份 / 社会位置", track: protagonist.external_status_track },
+    { name: "能力与资源", track: protagonist.ability_track },
+    { name: "内在信念", track: protagonist.internal_belief_track },
+    { name: "关系网络", track: protagonist.relationship_track },
+  ].filter((t) => t.track.length > 0);
+
+  const chapters = [...new Set(rows.flatMap((r) => r.track.map((v) => v.chapter)))].sort(
+    (a, b) => a - b,
+  );
+  if (!chapters.length) return null;
+  const silent = ["外在身份 / 社会位置", "能力与资源", "内在信念", "关系网络"].filter(
+    (n) => !rows.some((r) => r.name === n),
+  );
+
+  return (
+    <SubCard n={5} title="四轨成长" meta={`${rows.length} 条轨道动过 · ${chapters.length} 个章节`}>
+      <div
+        className="wb2-tracks-grid"
+        style={{ gridTemplateColumns: `minmax(120px,auto) repeat(${chapters.length}, 1fr)` }}
+      >
+        <b className="wb2-tracks-corner" />
+        {chapters.map((c) => (
+          <b key={`h-${c}`} className="wb2-tracks-ch">
+            第 {c} 章
+          </b>
+        ))}
+        {rows.map((r) => (
+          <Fragment key={r.name}>
+            <strong>{r.name}</strong>
+            {chapters.map((c) => {
+              const hit = r.track.find((v) => v.chapter === c);
+              return (
+                <span key={`${r.name}-${c}`} className={hit ? "is-hit" : ""}>
+                  {hit?.state ?? ""}
+                </span>
+              );
+            })}
+          </Fragment>
+        ))}
+      </div>
+      {silent.length > 0 && (
+        <p className="wb2-quiet">
+          <b>{silent.join("、")}这{silent.length === 1 ? "条" : "几条"}轨道全书没有记录到变化</b>
+          ，所以不占行。
+        </p>
+      )}
+    </SubCard>
+  );
+}
+
+
+/** 人物档案。
+ *
+ *  This card used to print a name, a role and a row of evidence ids and stop — not because
+ *  the analysis was thin but because contracts.ts declared five of the seventeen fields the
+ *  engine returns. 慕秋阳's record carries eight key events, a choice, what it cost and what
+ *  it bought; none of it had a way to reach the page.
+ *
+ *  Fields the book genuinely has nothing for are dropped rather than drawn as a labelled
+ *  blank: a heading over empty space claims the page failed, when the truth is the book
+ *  never said.
+ */
+function CharacterProfile({
+  character: c,
+}: {
+  character: WholeBookAnalysisV2["characters"]["major_characters"][number];
+}) {
+  const goalMoved = Boolean(c.initial_goal && c.final_goal && c.initial_goal !== c.final_goal);
+  const cost = (c.cost_paid ?? []).join("、");
+  const gain = (c.gain_received ?? []).join("、");
+  // hl marks the two facts that define the character — goal and choice — with a green top
+  // edge; the rest keep the neutral edge, so the grid ranks its own contents.
+  const facts: Array<{ k: string; v: ReactNode; text: string; hl?: boolean }> = [
+    { k: "身份", v: c.identity, text: c.identity ?? "" },
+    { k: "与主角的关系", v: c.relationship_to_protagonist, text: c.relationship_to_protagonist ?? "" },
+    {
+      k: goalMoved ? "目标演变" : "全书目标",
+      v: goalMoved ? `${c.initial_goal} → ${c.final_goal}` : c.final_goal,
+      text: c.final_goal ?? "",
+      hl: true,
+    },
+    { k: "重大选择", v: c.major_choice, text: c.major_choice ?? "", hl: true },
+    {
+      k: "付出 / 获得",
+      v:
+        cost || gain ? (
+          <>
+            {cost || "—"}
+            <i> → </i>
+            {gain || "—"}
+          </>
+        ) : null,
+      text: cost + gain,
+    },
+    { k: "关系变化", v: (c.relationship_changes ?? []).join(" → "), text: (c.relationship_changes ?? []).join("") },
+    { k: "结局", v: c.ending, text: c.ending ?? "" },
+  ];
+  const shown = facts.filter((f) => f.text.trim().length > 0);
+  const events = c.key_events ?? [];
+
+  return (
+    <div className="wb2-profile">
+      <div className="wb2-profile-head">
+        <h3>{c.name}</h3>
+        <span>{ROLE_LABEL[c.role] ?? c.role}</span>
+      </div>
+      {shown.length > 0 && (
+        <dl className="wb2-profile-facts">
+          {shown.map((f) => (
+            <div key={f.k} className={f.hl ? "hl" : ""}>
+              <dt>{f.k}</dt>
+              <dd>{f.v}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+      {events.length > 0 && (
+        <div className="wb2-profile-events">
+          <h4>
+            这个人做过的事<span>{events.length}</span>
+          </h4>
+          <ol className="wb2-evlist">
+            {events.map((e, i) => {
+              // The engine writes these as 「第N章｜…」; splitting lets the chapter sit in its
+              // own column so the eye can run down the numbers instead of hunting them in prose.
+              const m = /^(第\s*\d+\s*章)｜(.*)$/.exec(e);
+              return (
+                <li key={`${i}-${e}`}>
+                  <span className="wb2-evlist-ch">{m ? m[1] : ""}</span>
+                  <span>{m ? m[2] : e}</span>
+                </li>
+              );
+            })}
+          </ol>
+        </div>
+      )}
+      {shown.length === 0 && events.length === 0 && (
+        <p className="wb2-why-empty">
+          <b>这个人物只有证据，没有档案。</b>引擎为 {c.name} 建立了索引，但没有提取出身份、目标或事件——通常是因为出场集中在少数几章。
+        </p>
+      )}
+      <Evidence ids={c.evidence} />
+    </div>
+  );
+}
+
 function CharactersModule({ data }: { data: WholeBookAnalysisV2 }) {
+  const journey = data.journey;
+  const journeyAxis: JourneyAxis = journey && journey.axis !== "none" ? journey.axis : "none";
+  const journeyTab = JOURNEY_TAB[journeyAxis];
   const [tab, setTab] = useState("人物系统");
   const [selectedCharacter, setSelectedCharacter] = useState(0);
   const [arc, setArc] = useState(0);
@@ -456,178 +895,231 @@ function CharactersModule({ data }: { data: WholeBookAnalysisV2 }) {
   return (
     <>
       <div className="wb2-tabs">
-        {["人物系统", "主角历程", "人物关系"].map((t) => (
+        {["人物系统", journeyTab, "人物关系"].map((t) => (
           <button className={tab === t ? "active" : ""} onClick={() => setTab(t)} key={t}>
             {t}
           </button>
         ))}
       </div>
       {tab === "人物系统" && (
-        <>
-          <table>
-            <thead>
-              <tr>
-                <th>人物</th>
-                <th>叙事角色</th>
-                <th>全书变化</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {chars.major_characters.map((c, i) => (
-                <tr
-                  className={selectedCharacter === i ? "selected" : ""}
-                  onClick={() => setSelectedCharacter(i)}
-                  key={c.character_id}
-                >
-                  <th>{c.name}</th>
-                  <td>{c.role}</td>
-                  <td>{c.character_arc}</td>
-                  <td>查看档案 →</td>
+        <div className="wb2-sub-stack">
+          <SubCard n={1} title="全员一览" meta={`${chars.major_characters.length} 人`}>
+            <table>
+              <thead>
+                <tr>
+                  <th>人物</th>
+                  <th>叙事角色</th>
+                  <th>全书变化</th>
+                  <th></th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-          {major && (
-            <div className="wb2-detail-panel">
-              <header>
-                <div>
-                  <small>{major.role}</small>
-                  <h2>{major.name}</h2>
-                </div>
-                <span>{major.character_arc}</span>
-              </header>
-              <Evidence ids={major.evidence} />
-            </div>
-          )}
-        </>
-      )}
-      {tab === "主角历程" && (
-        <>
-          <p className="wb2-long-summary">
-            {protagonist.initial_identity} → {protagonist.final_identity}｜
-            {protagonist.arc_summary || protagonist.core_transformation || ""}
-          </p>
-          <div className="wb2-arc">
-            {protagonist.stages.map((s, i) => (
-              <button className={arc === i ? "active" : ""} onClick={() => setArc(i)} key={s.stage_name}>
-                <b>{i + 1}</b>
-                <strong>{s.stage_name}</strong>
-                <small>第 {s.chapter} 章</small>
-              </button>
-            ))}
-          </div>
-          {arcStage && (
-            <div className="wb2-detail-panel wb2-arc-detail">
-              <header>
-                <div>
-                  <small>
-                    第 {arcStage.chapter} 章 · 主角历程 {arc + 1}/{protagonist.stages.length}
-                  </small>
-                  <h2>{arcStage.stage_name}</h2>
-                </div>
-                <span>
-                  {arcStage.entry_state} → {arcStage.exit_state}
-                </span>
-              </header>
-              <div className="wb2-choice-chain">
-                <div>
-                  <small>想得到什么</small>
-                  <b>{arcStage.goal}</b>
-                </div>
-                <i>→</i>
-                <div>
-                  <small>遭遇什么</small>
-                  <b>{arcStage.conflict}</b>
-                </div>
-                <i>→</i>
-                <div>
-                  <small>做出选择</small>
-                  <b>{arcStage.choice}</b>
-                </div>
-              </div>
-              <div className="wb2-cost-gain">
-                <div>
-                  <small>付出 COST</small>
-                  <strong>{arcStage.cost_paid.join("、") || "—"}</strong>
-                </div>
-                <div>
-                  <small>获得 GAIN</small>
-                  <strong>{arcStage.gain_received.join("、") || "—"}</strong>
-                </div>
-              </div>
-              <dl className="wb2-detail-grid">
-                <div>
-                  <dt>能力变化</dt>
-                  <dd>{arcStage.ability_change}</dd>
-                </div>
-                <div>
-                  <dt>关系变化</dt>
-                  <dd>{arcStage.relationship_change}</dd>
-                </div>
-                <div>
-                  <dt>社会位置变化</dt>
-                  <dd>{arcStage.status_change}</dd>
-                </div>
-                <div>
-                  <dt>内在信念变化</dt>
-                  <dd>{arcStage.internal_belief_change}</dd>
-                </div>
-                <div>
-                  <dt>下一阶段触发</dt>
-                  <dd>{arcStage.next_stage_trigger}</dd>
-                </div>
-              </dl>
-              <h3>重大事件</h3>
-              <ul>
-                {arcStage.major_events.map((x) => (
-                  <li key={x}>{x}</li>
+              </thead>
+              <tbody>
+                {chars.major_characters.map((c, i) => (
+                  <tr
+                    className={selectedCharacter === i ? "selected" : ""}
+                    onClick={() => setSelectedCharacter(i)}
+                    key={c.character_id}
+                  >
+                    <th>{c.name}</th>
+                    <td>{ROLE_LABEL[c.role] ?? c.role}</td>
+                    {/* An empty cell reads as a rendering fault. A character whose stated goal
+                        is the same at the end as at the start did not fail to be analysed —
+                        not changing is the finding. */}
+                    <td>{c.character_arc || (c.initial_goal ? "目标全书未变" : "—")}</td>
+                    <td>查看档案 →</td>
+                  </tr>
                 ))}
-              </ul>
-              <Evidence ids={arcStage.evidence} />
+              </tbody>
+            </table>
+          </SubCard>
+          {major && (
+            <SubCard n={2} title="人物档案" meta={`当前：${major.name}`}>
+              <CharacterProfile character={major} />
+            </SubCard>
+          )}
+        </div>
+      )}
+      {tab === journeyTab && (
+        <>
+          {/* 「慕秋阳 → 慕秋阳｜」 — an arrow to itself followed by a separator with nothing
+              after it. When the identity does not move and there is no summary, there is no
+              sentence to print. */}
+          {(() => {
+            const moved = protagonist.initial_identity !== protagonist.final_identity;
+            const summary = protagonist.arc_summary || protagonist.core_transformation || "";
+            if (!moved && !summary) return null;
+            return (
+              <p className="wb2-long-summary">
+                {moved && (
+                  <b>
+                    {protagonist.initial_identity} → {protagonist.final_identity}
+                  </b>
+                )}
+                {moved && summary ? "｜" : ""}
+                {summary}
+              </p>
+            );
+          })()}
+          {journey && journeyAxis !== "none" && (
+            <JourneyChart journey={journey} chapterCount={data.book_metadata.chapter_count} />
+          )}
+          {/* A picker over one item is not a picker — it was one small chip stranded in an
+              otherwise empty band, which reads as a chart that failed to draw. */}
+          {protagonist.stages.length > 1 && (
+            <div className="wb2-arc">
+              {protagonist.stages.map((s, i) => (
+                <button className={arc === i ? "active" : ""} onClick={() => setArc(i)} key={s.stage_name}>
+                  <b>{i + 1}</b>
+                  <strong>{s.stage_name}</strong>
+                  <small>第 {s.chapter} 章</small>
+                </button>
+              ))}
             </div>
           )}
-          {(protagonist.ability_track.length > 0 ||
-            protagonist.relationship_track.length > 0 ||
-            protagonist.external_status_track.length > 0 ||
-            protagonist.internal_belief_track.length > 0) && (
-            <>
-              <h2>四轨成长 · 与主时间线对齐</h2>
-              <div className="wb2-growth-tracks">
-                <header>
-                  <b>成长轨道</b>
-                  {protagonist.stages.map((a) => (
-                    <span key={a.chapter}>C{a.chapter}</span>
-                  ))}
-                </header>
-                {[
-                  { name: "外在身份 / 社会位置", track: protagonist.external_status_track },
-                  { name: "能力与资源", track: protagonist.ability_track },
-                  { name: "内在信念", track: protagonist.internal_belief_track },
-                  { name: "关系网络", track: protagonist.relationship_track },
-                ]
-                  .filter((t) => t.track.length > 0)
-                  .map((track) => (
-                    <div key={track.name}>
-                      <strong>{track.name}</strong>
-                      {track.track.map((v, i) => (
-                        <button
-                          className={arc === i ? "active" : ""}
-                          title={v.state}
-                          onClick={() => setArc(i)}
-                          key={`${track.name}-${v.chapter}`}
-                        >
-                          {v.state.slice(0, 8)}
-                        </button>
+          {arcStage && (
+            <div className="wb2-sub-stack">
+              <SubCard
+                n={1}
+                title="这一程的起止"
+                meta={`${arcStage.stage_name} · 第 ${arcStage.chapter}–${arcStage.chapter_end} 章 · ${arc + 1}/${protagonist.stages.length} 程`}
+              >
+                <div className="wb2-fromto">
+                  <div>
+                    <small>起点</small>
+                    {arcStage.entry_state || "—"}
+                  </div>
+                  <i>→</i>
+                  <div>
+                    <small>终点</small>
+                    {arcStage.exit_state || "—"}
+                  </div>
+                </div>
+              </SubCard>
+
+              <SubCard n={2} title="抉择链" meta="想要 → 遭遇 → 选择，以及这一步的代价">
+                <div className="wb2-choice-chain">
+                  <div>
+                    <small>想得到什么</small>
+                    <b>{arcStage.goal}</b>
+                  </div>
+                  <i>→</i>
+                  <div>
+                    <small>遭遇什么</small>
+                    <b>{arcStage.conflict}</b>
+                  </div>
+                  <i>→</i>
+                  <div>
+                    <small>做出选择</small>
+                    <b>{arcStage.choice}</b>
+                  </div>
+                </div>
+                <div className="wb2-cost-gain">
+                  <div>
+                    <small>付出 COST</small>
+                    <strong>{arcStage.cost_paid.join("、") || "—"}</strong>
+                  </div>
+                  <div>
+                    <small>获得 GAIN</small>
+                    <strong>{arcStage.gain_received.join("、") || "—"}</strong>
+                  </div>
+                </div>
+              </SubCard>
+
+              {/* One list of deeds, said once. The same eight events used to appear here
+                  three times — in the ledger, under 重大事件, and again in the profile tab. */}
+              {journey?.ledger?.length ? (
+                <SubCard
+                  n={3}
+                  title="行动台账"
+                  meta={
+                    journey.ledger.length > 1
+                      ? `${journey.ledger.length} 程`
+                      : `做了什么 ${journey.ledger[0].did_total} · 遇见 ${journey.ledger[0].met_total} · 得到 ${journey.ledger[0].gained_total} · 失去 ${journey.ledger[0].lost_total}`
+                  }
+                >
+                  <StageLedgerTable ledger={journey.ledger} />
+                </SubCard>
+              ) : (
+                arcStage.major_events.length > 0 && (
+                  <SubCard n={3} title="行动台账" meta={`做了什么 ${arcStage.major_events.length}`}>
+                    <ol className="wb2-evlist">
+                      {arcStage.major_events.map((x, i) => (
+                        <li key={`${i}-${x}`}>
+                          <span>{x}</span>
+                        </li>
                       ))}
-                    </div>
-                  ))}
-              </div>
-            </>
+                    </ol>
+                  </SubCard>
+                )
+              )}
+
+              {(() => {
+                const tracks: Array<[string, string]> = [
+                  ["能力变化", arcStage.ability_change],
+                  ["关系变化", arcStage.relationship_change],
+                  ["社会位置变化", arcStage.status_change],
+                  ["内在信念变化", arcStage.internal_belief_change],
+                ];
+                const filled = tracks.filter(([, v]) => v.trim().length > 0);
+                const blank = tracks.filter(([, v]) => !v.trim().length).map(([k]) => k.replace("变化", ""));
+                return (
+                  <SubCard
+                    n={4}
+                    title="这一程带来的变化"
+                    meta={`${filled.length} 项有记录${blank.length ? ` · ${blank.length} 项书中未写` : ""}`}
+                  >
+                    {filled.length > 0 && (
+                      <dl className="wb2-changes">
+                        {filled.map(([k, v]) => (
+                          <div key={k}>
+                            <dt>{k}</dt>
+                            <dd>{v}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                    )}
+                    {blank.length > 0 && (
+                      <p className="wb2-quiet">
+                        <b>
+                          {blank.join("、")}
+                          {blank.length === 1 ? "这一项" : blank.length === 2 ? "这两项" : "这几项"}
+                          没有记录
+                        </b>
+                        ——引擎没有抽到相应的变化，通常是原文里没有明写。
+                      </p>
+                    )}
+                    {arcStage.next_stage_trigger && (
+                      <div className="wb2-nextq">
+                        <small>下一阶段触发</small>
+                        {arcStage.next_stage_trigger}
+                      </div>
+                    )}
+                    <Evidence ids={arcStage.evidence} />
+                  </SubCard>
+                );
+              })()}
+
+              {(protagonist.ability_track.length > 0 ||
+                protagonist.relationship_track.length > 0 ||
+                protagonist.external_status_track.length > 0 ||
+                protagonist.internal_belief_track.length > 0) && (
+                <GrowthTracks protagonist={protagonist} />
+              )}
+            </div>
           )}
         </>
       )}
-      {tab === "人物关系" && <RelationshipGraph relationships={chars.relationships} />}
+      {tab === "人物关系" && (
+        <div className="wb2-sub-stack">
+          <SubCard
+            n={1}
+            title="关系网络 + 演变明细"
+            meta={`${new Set(chars.relationships.flatMap((r) => [r.person_a, r.person_b])).size} 人 · ${chars.relationships.length} 条关系`}
+          >
+            <RelationshipGraph relationships={chars.relationships} />
+          </SubCard>
+        </div>
+      )}
     </>
   );
 }
@@ -671,7 +1163,9 @@ function RelationshipGraph({
   }, [relationships]);
 
   const active = picked || lead;
-  const mine = relationships.filter((r) => r.person_a === active || r.person_b === active);
+  const mine = relationships
+    .filter((r) => r.person_a === active || r.person_b === active)
+    .sort((a, b) => (b.evolution?.length ?? 1) - (a.evolution?.length ?? 1));
 
   return (
     <div className="wb2-graph-layout">
@@ -681,8 +1175,12 @@ function RelationshipGraph({
           const b = positions.get(r.person_b);
           if (!a || !b) return null;
           const on = r.person_a === active || r.person_b === active;
+          // A relationship that turned three times is a thicker thread than one stated once —
+          // the structure view carries the amount of story each edge holds.
+          const steps = Math.min(4, r.evolution?.length ?? 1);
           return (
             <line key={i} className={on ? "edge on" : "edge"}
+                  strokeWidth={1 + steps * 0.7}
                   x1={a[0].toFixed(1)} y1={a[1].toFixed(1)}
                   x2={b[0].toFixed(1)} y2={b[1].toFixed(1)}>
               <title>{`${r.person_a}–${r.person_b}：${r.relationship_type}`}</title>
@@ -709,29 +1207,38 @@ function RelationshipGraph({
       </svg>
       <div className="wb2-graph-detail">
         <h3>{active}</h3>
-        <small>{mine.length} 条关系</small>
-        <ul>
+        <small>{mine.length} 条关系，按演变步数排序</small>
+        <div className="wb2-rel-list">
           {mine.map((r, i) => {
             const other = r.person_a === active ? r.person_b : r.person_a;
+            // The structure view says the thread exists; this says where it went. A
+            // relationship that moved shows every turn; one stated once shows that state.
+            const steps = r.evolution?.length ? r.evolution : [r.relationship_type];
             return (
-              <li key={i}>
-                <b>{other}</b>
-                <span>{r.relationship_type}</span>
-                <em>第 {r.chapter_start}–{r.chapter_end} 章</em>
-              </li>
+              <div className={i === 0 && steps.length > 1 ? "wb2-rel on" : "wb2-rel"} key={i}>
+                <div className="wb2-rel-pair">
+                  <b>{other}</b>
+                  <span>
+                    第 {r.chapter_start}–{r.chapter_end} 章 · {steps.length} 步
+                  </span>
+                </div>
+                <div className="wb2-rel-arc">
+                  {steps.map((s, j) => (
+                    <Fragment key={`${j}-${s}`}>
+                      {j > 0 && <i>→</i>}
+                      <span>{s}</span>
+                    </Fragment>
+                  ))}
+                </div>
+              </div>
             );
           })}
-        </ul>
+        </div>
       </div>
     </div>
   );
 }
 
-/** What each beat did to the question, as a reader would name it. */
-const SUSPENSE_BEATS: Record<string, string> = {
-  hook: "抛出", clue: "线索", foreshadow: "伏笔", misdirection: "误导",
-  partial_reveal: "部分揭示", reveal: "揭示", twist: "反转", payoff: "兑现",
-};
 
 /**
  * One tile per suspense thread, coloured by whether the book ever answers it.
@@ -747,41 +1254,40 @@ function SuspenseWall({ data }: { data: WholeBookAnalysisV2 }) {
   const resolved = threads.filter((t) => t.status === "resolved").length;
 
   return (
-    <>
-      <div className="wb2-wall">
-        {threads.map((t, i) => (
-          <button
-            key={t.suspense_id}
-            type="button"
-            className="wb2-tile"
-            data-resolved={t.status === "resolved" ? "1" : "0"}
-            data-picked={picked === i ? "1" : "0"}
-            onClick={() => setPicked(i)}
-          >
-            <u />
-            <b>{t.question}</b>
-            <i>
-              第 {t.chapter_start}–{t.chapter_end} 章 · {t.events.length} 次
-            </i>
-          </button>
-        ))}
-      </div>
-      <div className="wb2-wall-legend">
-        <span><i data-resolved="1" />已回收</span>
-        <span><i data-resolved="0" />未回收</span>
-        <span className="wb2-wall-count">
-          {threads.length} 条悬念，<b>{resolved}</b> 条已回收
-        </span>
-      </div>
+    <div className="wb2-sub-stack">
+      <SubCard n={1} title="全部悬念" meta={`${threads.length} 条 · ${resolved} 条已回收`}>
+        <div className="wb2-wall">
+          {threads.map((t, i) => (
+            <button
+              key={t.suspense_id}
+              type="button"
+              className="wb2-tile"
+              data-resolved={t.status === "resolved" ? "1" : "0"}
+              data-picked={picked === i ? "1" : "0"}
+              onClick={() => setPicked(i)}
+            >
+              <u />
+              <b>{t.question}</b>
+              <i>
+                第 {t.chapter_start}–{t.chapter_end} 章 · {t.events.length} 次
+              </i>
+            </button>
+          ))}
+        </div>
+        <div className="wb2-wall-legend">
+          <span><i data-resolved="1" />已回收</span>
+          <span><i data-resolved="0" />未回收</span>
+        </div>
+      </SubCard>
       {chosen && (
-        <div className="wb2-wall-detail">
-          <h3>{chosen.question}</h3>
-          <small>
-            第 {chosen.chapter_start}–{chosen.chapter_end} 章 · 被回访 {chosen.events.length} 次 ·
-            {chosen.status === "resolved" ? " 已回收" : " 未回收"}
-          </small>
+        <SubCard
+          n={2}
+          title="这条悬念的经过"
+          meta={`第 ${chosen.chapter_start}–${chosen.chapter_end} 章 · 回访 ${chosen.events.length} 次 · ${chosen.status === "resolved" ? "已回收" : "未回收"}`}
+        >
+          <h3 className="wb2-wall-q">{chosen.question}</h3>
           {chosen.status === "resolved" ? (
-            <p><b>答案</b>　{chosen.payoff}</p>
+            <p className="wb2-payoff"><small>答案</small>{chosen.payoff}</p>
           ) : (
             // Said plainly rather than left blank: an unanswered question is a finding, and
             // whether it is deliberate is the author's call, not the engine's.
@@ -802,9 +1308,9 @@ function SuspenseWall({ data }: { data: WholeBookAnalysisV2 }) {
                 ))}
             </ol>
           )}
-        </div>
+        </SubCard>
       )}
-    </>
+    </div>
   );
 }
 
@@ -834,42 +1340,51 @@ function SuspenseLedger({ data }: { data: WholeBookAnalysisV2 }) {
   const resolved = data.suspense.lifecycles.filter((l) => l.status === "resolved").length;
 
   return (
-    <>
-      <div className="wb2-ledger-wrap">
-        <table className="wb2-ledger">
-          <thead>
-            <tr>
-              <th>章段</th><th>表面事件</th><th>露出线索</th><th>读者疑问</th><th>下次回响</th><th>状态</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.key}>
-                <td className="ch">第 {r.chapter} 章</td>
-                <td>{r.surface || "—"}</td>
-                <td>
-                  <span className="beat" data-beat={r.beat}>{SUSPENSE_BEATS[r.beat] ?? r.beat}</span>
-                  {r.clue}
-                </td>
-                <td className="q">{r.question}</td>
-                <td className="next">{r.next ? `第 ${r.next} 章` : "无"}</td>
-                <td>
-                  <span className="state" data-resolved={r.resolved ? "1" : "0"}>
-                    {r.resolved ? "已回收" : "未回收"}
-                  </span>
-                </td>
+    <div className="wb2-sub-stack">
+      <SubCard
+        n={1}
+        title="每一次线索揭示"
+        meta={`${rows.length} 次揭示 · ${data.suspense.lifecycles.length} 条线 · ${resolved} 条已回收`}
+      >
+        <div className="wb2-cluetable-wrap">
+          {/* The status pill's class used to be `state`, which an app-global empty-state rule
+              (.sl-state, .state {min-height:180px; display:grid}) also matches — every row
+              inflated to 158px to hold a 12px word. Names here are wb2-prefixed or nothing. */}
+          <table className="wb2-cluetable">
+            <thead>
+              <tr>
+                <th>章段</th><th>表面事件</th><th>露出线索</th><th>读者疑问</th><th>下次回响</th><th>状态</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <p className="wb2-ledger-note">
-        共 {rows.length} 次线索揭示，分属 {data.suspense.lifecycles.length} 条悬念线，
-        其中 <b>{resolved}</b> 条已回收。
-        {resolved < data.suspense.lifecycles.length / 2 &&
-          "「真实含义」需要线程被明确回收才填得出，目前多数线程未被标记为回收。"}
-      </p>
-    </>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.key}>
+                  <td className="ch">第 {r.chapter} 章</td>
+                  <td>{r.surface || "—"}</td>
+                  <td>
+                    <span className="wb2-beat" data-beat={r.beat}>{SUSPENSE_BEATS[r.beat] ?? r.beat}</span>
+                    {r.clue}
+                  </td>
+                  <td className="q">{r.question}</td>
+                  <td className="next">{r.next ? `第 ${r.next} 章` : "无"}</td>
+                  <td>
+                    <span className="wb2-pill" data-resolved={r.resolved ? "1" : "0"}>
+                      {r.resolved ? "已回收" : "未回收"}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="wb2-cluetable-note">
+          共 {rows.length} 次线索揭示，分属 {data.suspense.lifecycles.length} 条悬念线，
+          其中 <b>{resolved}</b> 条已回收。
+          {resolved < data.suspense.lifecycles.length / 2 &&
+            "「真实含义」需要线程被明确回收才填得出，目前多数线程未被标记为回收。"}
+        </p>
+      </SubCard>
+    </div>
   );
 }
 
@@ -891,47 +1406,51 @@ function SuspenseModule({ data }: { data: WholeBookAnalysisV2 }) {
       {tab === "悬念全景" && <SuspenseWall data={data} />}
       {tab === "线索顺序表" && <SuspenseLedger data={data} />}
       {tab === "单条追踪" && (
-    <div className="wb2-hook-layout">
-      <aside>
-        {hooks.map((x, i) => (
-          <button className={i === selected ? "active" : ""} onClick={() => setSelected(i)} key={x.suspense_id}>
-            <b>{String(i + 1).padStart(2, "0")}</b>
-            {x.question.slice(0, 24)}
-          </button>
-        ))}
-      </aside>
-      {h && (
-        <section>
-          <header className="wb2-inline-head">
-            <div>
-              <small>
-                {h.status} · 第 {h.chapter_start}–{h.chapter_end} 章
-              </small>
-              <h2>{h.question}</h2>
+        <div className="wb2-sub-stack">
+          <SubCard n={1} title="逐条追踪" meta={`${hooks.length} 条悬念`}>
+            <div className="wb2-hook-layout">
+              <aside>
+                {hooks.map((x, i) => (
+                  <button className={i === selected ? "active" : ""} onClick={() => setSelected(i)} key={x.suspense_id}>
+                    <b>{String(i + 1).padStart(2, "0")}</b>
+                    {x.question.slice(0, 24)}
+                  </button>
+                ))}
+              </aside>
+              {h && (
+                <section>
+                  <header className="wb2-inline-head">
+                    <div>
+                      <small>
+                        {h.status === "resolved" ? "已回收" : "未回收"} · 第 {h.chapter_start}–{h.chapter_end} 章
+                      </small>
+                      <h2>{h.question}</h2>
+                    </div>
+                  </header>
+                  <div className="wb2-hook-timeline">
+                    {h.events.map((n, i) => (
+                      <article key={`${n.chapter}-${n.type}-${i}`}>
+                        <i>{i + 1}</i>
+                        <strong>{SUSPENSE_BEATS[n.type] ?? n.type}</strong>
+                        <small>第 {n.chapter} 章</small>
+                        <p>{n.description}</p>
+                      </article>
+                    ))}
+                  </div>
+                  {/* 最终回收 used to render as a labelled blank for every unresolved thread —
+                      a full-width bordered panel holding a heading and nothing. The unanswered
+                      case is a finding and gets the same sentence the wall uses. */}
+                  {h.payoff ? (
+                    <p className="wb2-payoff"><small>最终回收</small>{h.payoff}</p>
+                  ) : (
+                    <p className="wb2-wall-open">全书未给出答案。如果是有意留到续作，这里就是伏笔；如果不是，这是个缺口。</p>
+                  )}
+                  <Evidence ids={h.evidence} />
+                </section>
+              )}
             </div>
-          </header>
-          <div className="wb2-hook-timeline">
-            {h.events.map((n, i) => (
-              <article key={`${n.chapter}-${n.type}-${i}`}>
-                <i>{i + 1}</i>
-                <strong>{n.type}</strong>
-                <small>第 {n.chapter} 章</small>
-                <p>{n.description}</p>
-              </article>
-            ))}
-          </div>
-          <div className="wb2-detail-panel">
-            <dl className="wb2-detail-grid">
-              <div>
-                <dt>最终回收</dt>
-                <dd>{h.payoff}</dd>
-              </div>
-            </dl>
-            <Evidence ids={h.evidence} />
-          </div>
-        </section>
-      )}
-    </div>
+          </SubCard>
+        </div>
       )}
     </>
   );
@@ -1196,14 +1715,7 @@ function ChaptersModule({ data }: { data: WholeBookAnalysisV2 }) {
  * rejects a document carrying it. So the mapping lives here until a build ships that
  * understands the field, at which point this becomes the fallback.
  */
-const DIMENSION_LABELS: Record<string, string> = {
-  story_structure: "故事结构",
-  protagonist_growth: "主角成长",
-  character_relationships: "人物关系",
-  suspense_payoff: "悬念回收",
-  pacing: "节奏",
-  chapter_efficiency: "章节效率",
-};
+
 
 const REVISION_RANK: Record<string, string> = {
   first: "第一优先级",
@@ -1336,9 +1848,12 @@ function AssessmentModule({ data }: { data: WholeBookAnalysisV2 }) {
       <section className="wb2-soft-section wb2-assessment-summary">
         <div className="wb2-block-title">
           <small>全书总体判断</small>
-          <h2>{a.overall_assessment || a.overall_summary.slice(0, 48)}</h2>
+          {/* overall_assessment is a distinct one-line verdict when the engine emits one.
+              When it is empty the summary is not truncated into a fake title — the same
+              sentence printed twice, the first copy cut mid-clause, reads as a bug. */}
+          {a.overall_assessment && <h2>{a.overall_assessment}</h2>}
         </div>
-        <p>{a.overall_summary}</p>
+        <p className={a.overall_assessment ? undefined : "wb2-verdict-lead"}>{a.overall_summary}</p>
       </section>
 
       <section className="wb2-soft-section">
@@ -1396,43 +1911,64 @@ function AssessmentModule({ data }: { data: WholeBookAnalysisV2 }) {
             <small>全书问题地图</small>
             <h2>问题集中在哪些章节？</h2>
           </div>
-          <div className="wb2-priority-legend">
-            <span className="priority-P0">P0 必须优先处理</span>
-            <span className="priority-P1">P1 明显影响体验</span>
-            <span className="priority-P2">P2 局部优化</span>
-          </div>
-          <div className="wb2-issue-map">
-            <div className="wb2-map-axis">
-              <span></span>
-              {[1, Math.round(total * 0.25), Math.round(total * 0.5), Math.round(total * 0.75), total].map(
-                (x) => (
-                  <b key={x} style={{ left: pct(x, total) }}>
-                    {x}
-                  </b>
-                ),
-              )}
-            </div>
-            {assessmentRows.map((row) => (
-              <div className="wb2-map-row" key={row}>
-                <strong>{row}</strong>
-                <i>
-                  {a.issues
-                    .filter((issue) => issue.category.includes(row.replace("效率", "")) || row === "章节效率")
-                    .map((issue) => (
-                      <span
-                        className={`priority-${issue.priority}`}
-                        title={`${issue.priority}｜${issue.symptom}`}
-                        key={issue.issue_id}
-                        style={{
-                          left: pct(issue.chapter_start, total),
-                          width: `${((issue.chapter_end - issue.chapter_start + 1) / Math.max(1, total)) * 100}%`,
-                        }}
-                      />
-                    ))}
-                </i>
-              </div>
-            ))}
-          </div>
+          {(() => {
+            // The old filter compared English categories (`pacing`, `suspense_payoff`)
+            // against Chinese row names with includes(), which never matched — and a
+            // `row === "章节效率"` fallback then dumped every issue into the last row.
+            // Four empty rails and one wrong bar. The mapping is explicit now, and only
+            // rows that actually carry an issue are drawn.
+            const rowOf = (cat: string): string =>
+              CATEGORY_ROW[cat] ?? DIMENSION_LABELS[cat] ?? cat;
+            const rows = assessmentRows.filter((row) => a.issues.some((x) => rowOf(x.category) === row));
+            const silent = assessmentRows.filter((r) => !rows.includes(r));
+            const priorities = [...new Set(a.issues.map((x) => x.priority))].sort();
+            return (
+              <>
+                <div className="wb2-priority-legend">
+                  {priorities.includes("P0") && <span className="priority-P0">P0 必须优先处理</span>}
+                  {priorities.includes("P1") && <span className="priority-P1">P1 明显影响体验</span>}
+                  {priorities.includes("P2") && <span className="priority-P2">P2 局部优化</span>}
+                </div>
+                <div className="wb2-issue-map">
+                  <div className="wb2-map-axis">
+                    <span></span>
+                    {[1, Math.round(total * 0.25), Math.round(total * 0.5), Math.round(total * 0.75), total].map(
+                      (x) => (
+                        <b key={x} style={{ left: pct(x, total) }}>
+                          {x}
+                        </b>
+                      ),
+                    )}
+                  </div>
+                  {rows.map((row) => (
+                    <div className="wb2-map-row" key={row}>
+                      <strong>{row}</strong>
+                      <i>
+                        {a.issues
+                          .filter((x) => rowOf(x.category) === row)
+                          .map((x) => (
+                            <span
+                              className={`priority-${x.priority}`}
+                              title={`${x.priority}｜${x.symptom}`}
+                              key={x.issue_id}
+                              style={{
+                                left: pct(x.chapter_start, total),
+                                width: `${((x.chapter_end - x.chapter_start + 1) / Math.max(1, total)) * 100}%`,
+                              }}
+                            />
+                          ))}
+                      </i>
+                    </div>
+                  ))}
+                </div>
+                {silent.length > 0 && (
+                  <p className="wb2-quiet">
+                    <b>{silent.join("、")}没有登记问题</b>，所以不占行。
+                  </p>
+                )}
+              </>
+            );
+          })()}
         </section>
       )}
 
@@ -1449,7 +1985,7 @@ function AssessmentModule({ data }: { data: WholeBookAnalysisV2 }) {
                 <div>
                   <b>{item.symptom.slice(0, 40)}</b>
                   <small>
-                    {item.category} · 第 {item.chapter_start}–{item.chapter_end} 章
+                    {DIMENSION_LABELS[item.category] ?? item.category} · 第 {item.chapter_start}–{item.chapter_end} 章
                   </small>
                 </div>
               </button>
@@ -1460,33 +1996,31 @@ function AssessmentModule({ data }: { data: WholeBookAnalysisV2 }) {
               <header>
                 <div>
                   <small>
-                    {issue.category} · 第 {issue.chapter_start}–{issue.chapter_end} 章
+                    {DIMENSION_LABELS[issue.category] ?? issue.category} · 第 {issue.chapter_start}–{issue.chapter_end} 章
                   </small>
                   <h2>{issue.symptom}</h2>
                 </div>
                 <span className={`priority-${issue.priority}`}>{issue.priority}</span>
               </header>
+              {/* The title IS the symptom — repeating it as the first row said everything
+                  twice. And rows the engine left empty (支持指标 on this book) are dropped
+                  rather than drawn as a labelled blank. */}
               <dl className="wb2-detail-grid">
-                <div>
-                  <dt>症状</dt>
-                  <dd>{issue.symptom}</dd>
-                </div>
-                <div>
-                  <dt>根本原因</dt>
-                  <dd>{issue.root_cause}</dd>
-                </div>
-                <div>
-                  <dt>读者影响</dt>
-                  <dd>{issue.reader_impact}</dd>
-                </div>
-                <div>
-                  <dt>支持指标</dt>
-                  <dd>{issue.supporting_metrics.join(" · ")}</dd>
-                </div>
-                <div>
-                  <dt>可能方向</dt>
-                  <dd>{issue.recommended_direction || issue.possible_direction || "—"}</dd>
-                </div>
+                {(
+                  [
+                    ["根本原因", issue.root_cause],
+                    ["读者影响", issue.reader_impact],
+                    ["支持指标", issue.supporting_metrics.join(" · ")],
+                    ["可能方向", issue.recommended_direction || issue.possible_direction],
+                  ] as Array<[string, string]>
+                )
+                  .filter(([, v]) => v && v.trim().length > 0)
+                  .map(([k, v]) => (
+                    <div key={k}>
+                      <dt>{k}</dt>
+                      <dd>{v}</dd>
+                    </div>
+                  ))}
               </dl>
               <Evidence ids={issue.evidence} />
             </div>
@@ -1541,6 +2075,8 @@ export function WholeBookV2ReportView({
   const activeLabel = MODULES.find((m) => m.key === activeModule)?.label ?? activeModule;
   const handleReanalyze = onReanalyzeClick ?? onReanalyze;
   const statusLabel = analysisStatusLabel ?? "已完成";
+  const [exporting, setExporting] = useState(false);
+  const [vipNotice, setVipNotice] = useState<{ message: string; url: string } | null>(null);
   const showNonRealWarning = mode === "formal" && needsReanalysisWarning(data);
 
   return (
@@ -1584,18 +2120,75 @@ export function WholeBookV2ReportView({
             </dd>
           </div>
         </dl>
-        {showReanalyzeButton && handleReanalyze ? (
+        <div className="wb2-header-actions">
+          <button
+            type="button"
+            className="wbv2-reanalyse-btn wb2-export-btn"
+            data-testid="whole-book-v2-export-button"
+            disabled={exporting}
+            onClick={async () => {
+              setExporting(true);
+              setVipNotice(null);
+              try {
+                await downloadReportPdf(data);
+              } catch (err) {
+                if (err instanceof VipRequiredError) {
+                  // The gate refusing is an answer, not an outage — no silent fallback
+                  // that would hand out the gated artifact by another name.
+                  setVipNotice({ message: err.message, url: err.afdianUrl });
+                } else {
+                  // No headless browser on this machine, or the sidecar is down — the
+                  // HTML file carries the same report, so the click still delivers one.
+                  downloadReport(data);
+                }
+              } finally {
+                setExporting(false);
+              }
+            }}
+          >
+            {exporting ? "正在生成 PDF…" : "导出 PDF · VIP"}
+          </button>
           <button
             type="button"
             className="wbv2-reanalyse-btn"
-            data-testid="whole-book-v2-reanalyse-button"
-            onClick={handleReanalyze}
+            data-testid="whole-book-v2-export-html-button"
+            title="自包含网页版，内嵌完整原始 JSON，可做机器对账"
+            onClick={() => downloadReport(data)}
           >
-            重新分析 V2
+            HTML
           </button>
-        ) : null}
+          {showReanalyzeButton && handleReanalyze ? (
+            <button
+              type="button"
+              className="wbv2-reanalyse-btn"
+              data-testid="whole-book-v2-reanalyse-button"
+              onClick={handleReanalyze}
+            >
+              重新分析 V2
+            </button>
+          ) : null}
+        </div>
         {headerExtra}
       </header>
+      {vipNotice && (
+        <div className="wb2-vip-notice" data-testid="whole-book-v2-vip-notice" role="alert">
+          <b>PDF 导出是 VIP 功能</b>
+          <p>{vipNotice.message}</p>
+          <p>
+            {vipNotice.url ? (
+              <a href={vipNotice.url} target="_blank" rel="noreferrer">
+                前往爱发电购买月卡授权 →
+              </a>
+            ) : (
+              <span>购买入口尚未配置，请联系作者获取授权码。</span>
+            )}
+            　已有授权码？在 设置 → 授权 中激活。
+          </p>
+          <button type="button" onClick={() => setVipNotice(null)}>
+            知道了
+          </button>
+        </div>
+      )}
 
       <nav className="wb2-nav" aria-label="全书分析模块">
         {MODULES.map((m, i) => (

@@ -207,7 +207,12 @@ def test_budget_too_low_rejected(testing_session, verified_cloud_pricing) -> Non
             estimate_id=est.id,
             user_budget_limit_cny="0.000001",
         )
-    assert exc.value.code == WholeBookFoundationErrorCode.WHOLE_BOOK_BUDGET_TOO_LOW.value
+    # Two codes exist on purpose and they are not interchangeable:
+    # WHOLE_BOOK_BUDGET_TOO_LOW rejects a *negative* budget, while BUDGET_TOO_LOW reports a
+    # positive budget that is below the estimate. This case passes 0.000001 — positive, under
+    # the estimate — so BUDGET_TOO_LOW is correct, and it is the one the desktop client
+    # handles (`wholeBookStartLimits.ts`). The assertion, not the code, was wrong.
+    assert exc.value.code == WholeBookFoundationErrorCode.BUDGET_TOO_LOW.value
 
 
 def test_unavailable_requires_limits(testing_session) -> None:

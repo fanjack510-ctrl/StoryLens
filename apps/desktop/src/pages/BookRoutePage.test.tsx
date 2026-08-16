@@ -305,7 +305,7 @@ describe("Book chapter shell", () => {
     renderBook();
     expect(screen.getByTestId("book-chapter-shell")).toBeInTheDocument();
     expect(screen.getByTestId("shell-start-analysis")).toBeInTheDocument();
-    expect(screen.getByTestId("shell-start-analysis")).toHaveTextContent("开始分析");
+    expect(screen.getByTestId("shell-start-analysis")).toHaveTextContent("分析本章");
     expect(screen.queryByTestId("reader-journey-entry-analyze")).not.toBeInTheDocument();
     expect(screen.queryByTestId("whole-book-insights-entry-pro")).not.toBeInTheDocument();
     expect(screen.queryByTestId("whole-book-insights-entry-free")).not.toBeInTheDocument();

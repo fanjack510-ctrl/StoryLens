@@ -667,6 +667,20 @@ export function SceneBoundaryReviewPanel({
 
   const title = chapterTitle || "本章";
   const aiSceneCount = modelScenes.length;
+  // The awaiting screen used to ask for a yes on a bare count. Nobody can confirm a
+  // division they cannot see, so each proposed scene shows its paragraph range and its
+  // opening line — enough to recognise 街道 / 客厅 / 厨房 without opening the editor.
+  // Built only once the paragraphs are in hand: a preview rendered ahead of them reads
+  // 「第 — 段（无正文）」, which looks like a failed analysis rather than a pending fetch.
+  const modelPreview = (paragraphsQuery.data?.length ? modelScenes : []).map((scene) => {
+    const opening = paragraphsQuery.data?.find((p) => p.id === scene.start_paragraph_id);
+    const text = (opening?.raw_text || "").trim().replace(/\s+/g, " ");
+    return {
+      order: scene.scene_order,
+      range: paragraphRangeLabel(scene, paragraphIndexById),
+      opening: text.length > 42 ? `${text.slice(0, 42)}…` : text,
+    };
+  });
   const currentSceneCount =
     editorOpen || mode === "confirmed_readonly" ? draftScenes.length : aiSceneCount;
 
@@ -785,6 +799,16 @@ export function SceneBoundaryReviewPanel({
             个场景。请确认是否采用，或手动调整场景边界。
           </p>
         </header>
+        {modelPreview.length ? (
+          <ol className="scene-boundary-preview" data-testid="scene-boundary-preview">
+            {modelPreview.map((item) => (
+              <li key={item.order}>
+                <span className="scene-boundary-preview-range">第 {item.range} 段</span>
+                <span className="scene-boundary-preview-text">{item.opening || "（无正文）"}</span>
+              </li>
+            ))}
+          </ol>
+        ) : null}
         <div className="scene-boundary-waiting-actions">
           <button
             type="button"

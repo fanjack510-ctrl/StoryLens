@@ -6,7 +6,6 @@ const DEV_LINKS: Array<[string, string]> = [
   ["/workspace", "分析工作台"],
   ["/tasks", "任务中心"],
   ["/cases", "案例库"],
-  ["/providers", "AI 诊断"],
 ];
 
 type Props = {

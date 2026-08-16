@@ -163,14 +163,24 @@ def prepare_free_whole_book_analysis_v1(session: Session, book_id: int) -> dict[
 
             provider = ensure_active_provider_row(session, active_name)
     if provider is None and not real_provider_enabled():
-        provider = ProviderConfiguration(
-            provider_name="default",
-            plus_model="default-model",
-            enabled=False,
-            disconnected=True,
+        # Reuse the placeholder row if one is already there. `provider_name` is unique, so
+        # inserting unconditionally raises IntegrityError the second time this shell path is
+        # reached for the same database — which is what a prepare call after any other call
+        # that created it does.
+        provider = (
+            session.query(ProviderConfiguration)
+            .filter(ProviderConfiguration.provider_name == "default")
+            .one_or_none()
         )
-        session.add(provider)
-        session.flush()
+        if provider is None:
+            provider = ProviderConfiguration(
+                provider_name="default",
+                plus_model="default-model",
+                enabled=False,
+                disconnected=True,
+            )
+            session.add(provider)
+            session.flush()
     if provider is None:
         # Real path with missing active row — fail closed for create; estimate shell blocked.
         raise WholeBookFoundationError(
@@ -203,6 +213,59 @@ def prepare_free_whole_book_analysis_v1(session: Session, book_id: int) -> dict[
     non_real_completed = _non_real_completed_v2_run(session, book_id)
     model_name = str(est.get("model_name") or provider.plus_model or "")
     context_safe = bool(hier_plan.get("context_safe", True))
+    # Which engine this book will actually get, and therefore which plan the panel should
+    # describe. The estimate below priced the hierarchical planner's windows even for books
+    # dispatched to the long-novel engine — the token total was close, because both engines
+    # read the book once, but the call and window counts a user reads to judge duration were
+    # out by roughly 4x.
+    from app.narrative_core.services.long_novel_pipeline_v1 import (
+        book_uses_long_novel_engine,
+        estimate_long_novel_plan,
+    )
+
+    long_novel = book_uses_long_novel_engine(session, book_id)
+    planner = "long_novel_engine" if long_novel else "hierarchical_v2"
+    ln_plan = (
+        estimate_long_novel_plan(
+            chapter_count=int(est.get("chapter_count") or 0),
+            character_count=int(est.get("character_count") or 0),
+        )
+        if long_novel
+        else {}
+    )
+
+    def _ln_costs() -> "tuple[float | None, float | None]":
+        """Price the long-novel token counts with the estimator's own pricing function.
+
+        Scaling the hierarchical *total* by a token ratio was tried first and left a 7–8%
+        error: the two engines have different input-to-output mixes, and input and output are
+        not priced the same, so one multiplier cannot carry both. Calling the same pricing
+        function with the right split keeps a single source of truth for rates while fixing
+        the part that was actually wrong.
+        """
+        from app.narrative_core.services.whole_book_cost_estimate_service import (
+            estimate_pre_run_cost_cny,
+        )
+
+        tokens_in = ln_plan.get("estimated_input_tokens")
+        tokens_out = ln_plan.get("estimated_output_tokens")
+        if not tokens_in or not tokens_out or not model_name:
+            return est.get("estimated_cost_min_cny"), est.get("estimated_cost_max_cny")
+        # Same ±band the estimator applies to output, which is the term that actually varies.
+        low, high, failed = estimate_pre_run_cost_cny(
+            model_name,
+            estimated_input_tokens=int(tokens_in),
+            estimated_output_tokens_min=int(round(tokens_out * 0.85)),
+            estimated_output_tokens_max=int(round(tokens_out * 1.25)),
+        )
+        if failed or low is None or high is None:
+            return est.get("estimated_cost_min_cny"), est.get("estimated_cost_max_cny")
+        return round(float(low), 6), round(float(high), 6)
+
+    _ln_cost_min, _ln_cost_max = (
+        _ln_costs() if long_novel
+        else (est.get("estimated_cost_min_cny"), est.get("estimated_cost_max_cny"))
+    )
     return {
         "book_id": book_id,
         "book_title": book.title or "",
@@ -232,7 +295,7 @@ def prepare_free_whole_book_analysis_v1(session: Session, book_id: int) -> dict[
         "needs_new_snapshot": needs_new_snapshot,
         "snapshot_rebuild_required": needs_new_snapshot,
         "context_safe": context_safe,
-        "planner": "hierarchical_v2",
+        "planner": planner,
         "snapshot": {
             "snapshot_id": snap_result["snapshot"].id,
             "reused": snap_result["reused"],
@@ -241,12 +304,18 @@ def prepare_free_whole_book_analysis_v1(session: Session, book_id: int) -> dict[
             "estimate_id": est["id"],
             "book_id": est["book_id"],
             "mode": est["mode"],
-            "estimated_windows": est.get("estimated_window_count"),
-            "estimated_provider_calls": est.get("estimated_provider_call_count"),
-            "estimated_input_tokens": est.get("estimated_input_tokens"),
-            "estimated_output_tokens": est.get("estimated_output_tokens"),
-            "estimated_cost_min_cny": est.get("estimated_cost_min_cny"),
-            "estimated_cost_max_cny": est.get("estimated_cost_max_cny"),
+            "estimated_windows": ln_plan.get("blocks", est.get("estimated_window_count")),
+            "estimated_provider_calls": ln_plan.get(
+                "estimated_provider_calls", est.get("estimated_provider_call_count")
+            ),
+            "estimated_input_tokens": ln_plan.get(
+                "estimated_input_tokens", est.get("estimated_input_tokens")
+            ),
+            "estimated_output_tokens": ln_plan.get(
+                "estimated_output_tokens", est.get("estimated_output_tokens")
+            ),
+            "estimated_cost_min_cny": _ln_cost_min,
+            "estimated_cost_max_cny": _ln_cost_max,
             "call_breakdown": est.get("call_breakdown"),
             "provider_name": provider.provider_name,
             "provider_config_id": provider.id,
@@ -254,7 +323,7 @@ def prepare_free_whole_book_analysis_v1(session: Session, book_id: int) -> dict[
             "price_known": str(est.get("pricing_status") or "") == "available",
             "currency": est.get("currency") or "CNY",
             "estimate_version": est.get("estimate_version"),
-            "planner": "hierarchical_v2",
+            "planner": planner,
         },
         "recommended_limits": suggest_limits_from_estimate(estimate),
         "blocking_reasons": blockers,

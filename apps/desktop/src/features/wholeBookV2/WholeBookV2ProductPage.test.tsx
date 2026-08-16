@@ -122,6 +122,47 @@ describe("WholeBookV2ProductPage", () => {
     realProviderState.enabled = true;
   });
 
+  it("画像确认门：准备页打开即提示并禁用开始（CHG-20260815-095）", async () => {
+    const profileApi = await import("../bookProfile/api");
+    const spy = vi.spyOn(profileApi, "getBookProfile").mockResolvedValue(null);
+    prepareSpy.mockResolvedValue({ ...basePrepare, latest_run: null, active_run: null } as never);
+    try {
+      renderPage();
+      const gate = await screen.findByTestId("whole-book-v2-profile-gate");
+      expect(gate).toHaveTextContent("先确认这本书的作品画像");
+      // Confirming from here returns here, not to a chapter.
+      expect(gate.querySelector("a")).toHaveAttribute(
+        "href",
+        "/books/42/profile?from=whole-book",
+      );
+      await waitFor(() =>
+        expect(screen.getByRole("button", { name: /开始全书分析/ })).toBeDisabled(),
+      );
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("画像已确认时准备页没有门", async () => {
+    const profileApi = await import("../bookProfile/api");
+    const spy = vi.spyOn(profileApi, "getBookProfile").mockResolvedValue({
+      status: "confirmed",
+      axes: {},
+      options: [],
+      active_deltas: [],
+    } as never);
+    prepareSpy.mockResolvedValue({ ...basePrepare, latest_run: null, active_run: null } as never);
+    try {
+      renderPage();
+      await screen.findByTestId("whole-book-v2-prepare");
+      await waitFor(() =>
+        expect(screen.queryByTestId("whole-book-v2-profile-gate")).not.toBeInTheDocument(),
+      );
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   it("shows V2 nav labels when completed with v2 result", async () => {
     prepareSpy.mockResolvedValue({
       ...basePrepare,
