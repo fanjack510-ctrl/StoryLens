@@ -1,0 +1,75 @@
+{
+  "id": "CHG-20260816-106",
+  "title": "全书分析读的是全书，不是它的开头",
+  "type": "fix",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": false,
+  "commits": [
+    "1422e512",
+    "5e847693"
+  ],
+  "modules": [
+    "apps/api/app/narrative_core/long_novel/planner.py",
+    "apps/api/app/narrative_core/long_novel/topics.py",
+    "apps/api/app/narrative_core/long_novel/orchestrator.py",
+    "apps/api/app/narrative_core/services/long_novel_pipeline_v1.py"
+  ],
+  "files": [
+    "apps/api/app/narrative_core/long_novel/constants.py",
+    "apps/api/app/narrative_core/long_novel/planner.py",
+    "apps/api/app/narrative_core/long_novel/topics.py",
+    "apps/api/app/narrative_core/long_novel/orchestrator.py",
+    "apps/api/app/narrative_core/services/long_novel_pipeline_v1.py",
+    "apps/api/tests/test_long_novel_document_sections.py",
+    "apps/api/tests/test_long_novel_pipeline_dispatch.py"
+  ],
+  "user_summary": "《系统豪横》84 章跑完，七个板块全满、21 次调用零失败、84 章一章不漏都有功能行——「全书总览」却写到第 11 章就停了。没有一处是空的，所以任何「检查有没有空板块」的办法都发现不了。\n\n根子在一个地方：这本书 84 章分成 11 个抽取块，11 个块合成 2 个归并分区，而阶段的边界只能落在分区的接缝上，于是整本书变成了**一个阶段**。而 L1 以上的每一层都是按阶段来配额的——整本书只做一次阶段解读、只给故事主题 8 条事件、只出一个转折点、旅程只有一条带子。等于让模型的上下文窗口去决定这本书有几幕。\n\n另外两处，各自单独就够坏事。一是终稿合成和整体评估拿到的是阶段的**骨架**——序号加章号区间，四个数字；而旁边那份已经付过钱、已经覆盖全书的阶段解读，只送去了渲染。二是所有「取前 N 条」的地方：每阶段取前 40 条事件、按证据条数取前 K 条（而证据条数大量并列，排序稳定，并列就按抽取顺序解决）。一个按章节顺序排好的列表，取前 N 条就是取这本书的开头。\n\n重跑同一本书验证：阶段从 1 个变成 5 个（1-16 / 17-32 / 33-48 / 49-64 / 65-84 章，首尾相接不留空档），全书总览从「泼水→系统激活→贝姐冲进直播间」变成一路写到「梁刚投毒被拘、直播宣战」，故事骨架 6 个节拍、关键转折 5 个，全都铺满整本书。25 次调用，¥0.32。\n\n成本预估也跟着改了。这本书是第一本调用里不以抽取块为主的（46% 对《深海余烬》的 87%），暴露出原来「每次调用算一个价」是错的：一次抽取块调用出 3000 多 token，一次合成单元只出 400–600，差七倍。原来的算法把每一次新增的阶段解读按六倍的价钱算。现在按两类分开计价，三本书都对得上。",
+  "technical_summary": "`BlockPlanner.partition_count()` replaces the fixed `PARTITION_TARGET_BLOCKS` stride: a book takes the larger of `ceil(blocks/6)` and `min(blocks, PARTITIONS_PER_STAGE_TARGET * STAGE_TARGET)`. Monotone in block count, and unchanged above the ceiling — 101 blocks still give 17 partitions and 8 stages. `plan_partitions` also levels partition sizes via `i*n//count` edges instead of filled-then-remainder, so a short book's closing act is not one block wide. `BlockPlanner.stage_count()` is exposed so the planner and the cost estimate share one derivation.\n\n`build_stage_digest()` merges the skeleton with the interpretations into at most `MAX_STAGES` rows (title / summary / turning_point / next_question / 6 spread key_events) and is what `build_assessment_input` and `build_final_input` now receive — both parameters renamed `stage_skeleton` → `stages`. Bounded by construction, so the O(1)-in-book-length property holds.\n\n`spread(items, k)` takes k items at `i*len//k` and replaces the prefix truncations in `_stage_inputs` (events/threads/state_changes) and `_chronology`. The cast keeps its prefix deliberately — order of appearance ranks there. `_cover_stages()` allocates the story topic's event budget per stage and breaks weight ties by spreading across the stage rather than by extraction order.\n\n`_UNIT_PAYLOAD_MAX_CHARS` (= `FINAL_INPUT_MAX_TOKENS * 2`) replaces the flat `[:12000]` on `json_unit` payloads and logs when a payload exceeds it, because a JSON blob cut mid-value is malformed input, not smaller input, and the enlarged stage digest sat close to the old cap.\n\n`estimate_tokens(character_count, blocks, units)` is split out of `estimate_long_novel_plan` so the token fit can be checked against a measured run's actual call mix. Input coefficients least-squares fitted across three books (residuals <1%); output kept at directly-measured per-call-type rates. `_UNITS_BESIDES_STAGES` replaces `len(Topic) + 3`, which counted `chapters` — a deterministic local merge that has never cost a call.",
+  "acceptance_criteria": [
+    "84 章的书切出多个叙事阶段，首尾相接、覆盖到最后一章",
+    "全书总览、故事骨架、关键转折写到全书末尾而非开头",
+    "终稿合成与整体评估收到的每个阶段都带标题与关键事件",
+    "故事主题收到的事件横跨全书，不集中在第一幕",
+    "长篇书（101 块）的分区数与阶段数与改前完全一致",
+    "成本预估的调用数与真实运行一致，三本实测书的花费落在预估区间内"
+  ],
+  "tests": [
+    "apps/api/tests/test_long_novel_document_sections.py",
+    "apps/api/tests/test_long_novel_pipeline_dispatch.py"
+  ],
+  "verification_evidence": [
+    "真实 API 重跑《系统豪横》全书（run 15，24 次有效调用 + 1 次修复，210,225 in / 44,524 out，¥0.32）",
+    "阶段数 1 → 5：第1-16/17-32/33-48/49-64/65-84 章，首尾相接无空档；改前为单一阶段第1-84章",
+    "full_summary 改前 154 字止于第 11 章（贝姐冲进直播间）；改后 117 字写到梁刚投毒被拘、直播宣战（第 84 章附近）",
+    "story_skeleton 6 个节拍、major_turning_points 5 条，章号区间铺满全书；改前各为 6 条止于第 11 章、1 条第1-84章",
+    "四项新测试在旧行为下逐一复现缺陷：单一阶段第1-96章、stages 无 title、story 事件仅第1-8章、阶段事件仅第1-40章；改后全部通过",
+    "文档断面测试样本书从 32 章提到 96 章——32 章只读成 4 个块，进不了出问题的区间，旧行为在该规模下测试全绿",
+    "后端定向 499 项通过；剩余 4 失败 3 收集错误均为既有环境问题（storylens_private_engine 未安装、变更登记表 CHG-055 起的历史缺字段、git 输出 gbk 解码、FastAPI 版本的 _IncludedRouter、以及一条依赖仓库根目录相对路径的测试）",
+    "长篇不变性：101 块 → 17 分区 → 8 阶段，与改前逐位相同；200 块 → 14 阶段（仍触顶）"
+  ],
+  "known_out_of_scope": [
+    "全书报告顶栏的「作品画像」仍来自模型的终稿合成（本次实测为「都市生活」，置信度 0.0），与用户已确认的画像（升级流）不连通——画像只驱动了抽取增量与旅程轴，没有驱动报告的类型判定",
+    "评估六维度的 evidence 与 supporting_metrics 仍为空，而证据索引有 385 条可引",
+    "goal_evolution 全部停在 formed，没有一条走到完成——与单章那次 payoffs 恒空是同一类问题",
+    "engine=progression 的旅程曲线（阶位轴）points/bands/bins 全空，availability 为 partial：power_beats 增量已接线但这本书没抽出读数",
+    "《深海余烬》《凶宅笔记》两本长篇未在新规划下重跑，其阶段数变化（6→8、2→5）只有算术验证，没有实跑验证"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "无表结构变更。已有的全书结果不会追认新的阶段划分，需重跑；重跑的分区键与阶段键会变（分区大小改了），但这两类都不是按键复用的付费单元。"
+  },
+  "release_impact": {
+    "requires_reanalysis": true,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false,
+    "notes": "已有全书结果需重跑才能拿到完整的阶段结构与总览。中短篇书的调用数会上升（84 章：21 → 24 次，约 +¥0.03），长篇不变。需重启 sidecar。"
+  },
+  "blocker_level": "none",
+  "head_inclusion": false,
+  "created_at": "2026-08-16T23:10:00+08:00",
+  "updated_at": "2026-08-16T23:10:00+08:00"
+}
