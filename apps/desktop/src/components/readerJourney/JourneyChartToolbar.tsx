@@ -7,7 +7,10 @@ import {
   METRIC_LABELS_ZH,
   formatJourneyMetricLabel,
 } from "./journeyUiLabels";
-import type { ChartHeightPreset, YDomainMode } from "./journeyVisualizationConfig";
+import type {
+  ChartHeightPreset,
+  YDomainMode,
+} from "./journeyVisualizationConfig";
 import {
   DEFAULT_OBSERVATION_LENS,
   OBSERVATION_LENSES,
@@ -114,7 +117,9 @@ export function JourneyChartToolbar({
 }: Props) {
   const [metricOpen, setMetricOpen] = useState(false);
   const [comparePanelOpen, setComparePanelOpen] = useState(false);
-  const [pendingCompare, setPendingCompare] = useState<CompareMetricKey | null>(null);
+  const [pendingCompare, setPendingCompare] = useState<CompareMetricKey | null>(
+    null,
+  );
   const metricTriggerId = useId();
   const compareTriggerId = useId();
   const comparePanelTitleId = useId();
@@ -144,12 +149,14 @@ export function JourneyChartToolbar({
   const foldedLenses = OBSERVATION_LENSES.filter(
     (item) => item.tier === "folded" && item.id !== observationLens,
   );
-  const mainLabel = mainCurveLabel || getObservationLens(DEFAULT_OBSERVATION_LENS).labelZh;
+  const mainLabel =
+    mainCurveLabel || getObservationLens(DEFAULT_OBSERVATION_LENS).labelZh;
   const mainWhy = mainCurveWhy || "";
   const lensLabelFor = (id: ObservationLensId, fallback: string) =>
     id === "hook_payoff" && hookLensLabel ? hookLensLabel : fallback;
   const comparison = buildComparisonState(observationLens, compareWith);
-  const compareEnabled = !lensDef.isPairedHookPayoff && typeof onCompareWithChange === "function";
+  const compareEnabled =
+    !lensDef.isPairedHookPayoff && typeof onCompareWithChange === "function";
   const compareActive = comparison.mode === "active";
 
   useEffect(() => {
@@ -166,7 +173,11 @@ export function JourneyChartToolbar({
     const active = list.querySelector<HTMLElement>(
       `[data-testid="journey-lens-${lensDef.id}"]`,
     );
-    active?.scrollIntoView({ inline: "nearest", block: "nearest", behavior: "smooth" });
+    active?.scrollIntoView({
+      inline: "nearest",
+      block: "nearest",
+      behavior: "smooth",
+    });
   }, [lensDef.id]);
 
   const handleMetricSelect = (key: JourneyCurveMetric) => {
@@ -213,13 +224,20 @@ export function JourneyChartToolbar({
       <h4 id={comparePanelTitleId} className="journey-compare-picker-title">
         选择对比指标
       </h4>
-      <p className="journey-compare-picker-primary" data-testid="journey-compare-primary-label">
+      <p
+        className="journey-compare-picker-primary"
+        data-testid="journey-compare-primary-label"
+      >
         当前主指标
         <br />
         <span aria-current="true">● {lensDef.labelZh}</span>
       </p>
       <p className="journey-compare-picker-secondary-label">选择第二个指标</p>
-      <div role="radiogroup" aria-label="选择第二个指标" className="journey-compare-picker-options">
+      <div
+        role="radiogroup"
+        aria-label="选择第二个指标"
+        className="journey-compare-picker-options"
+      >
         {COMPARE_CANDIDATE_METRICS.map(({ key, label }) => {
           const disabled = key === lensDef.primaryKey;
           const selected = pendingCompare === key;
@@ -305,7 +323,9 @@ export function JourneyChartToolbar({
                 }
                 aria-checked={selected}
                 aria-current={selected ? "true" : undefined}
-                aria-label={isMain ? mainLabel : lensLabelFor(item.id, item.labelZh)}
+                aria-label={
+                  isMain ? mainLabel : lensLabelFor(item.id, item.labelZh)
+                }
                 title={
                   isMain
                     ? [mainLabel, mainWhy, getObservationLensHint(item.id)]
@@ -319,12 +339,16 @@ export function JourneyChartToolbar({
               </button>
             );
           })}
-          {foldedLenses.length ? (
+        </div>
+      </div>
+
+      {foldedLenses.length ? (
         <details className="journey-lens-more" data-testid="journey-lens-more">
           <summary>更多视角</summary>
           <div className="journey-lens-more-body">
             <p className="journey-lens-more-note">
-              这三项与主线或彼此高度重合（实测 r=0.70–0.91），已并入主线的归因；需要单独看时在这里打开。
+              这三项与主线或彼此高度重合（实测
+              r=0.70–0.91），已并入主线的归因；需要单独看时在这里打开。
             </p>
             {foldedLenses.map((item) => (
               <button
@@ -340,8 +364,6 @@ export function JourneyChartToolbar({
           </div>
         </details>
       ) : null}
-        </div>
-      </div>
     </div>
   );
 
@@ -394,7 +416,9 @@ export function JourneyChartToolbar({
               onClick={() => handleMetricSelect(key)}
             >
               <span className="journey-metric-option-label">{label}</span>
-              {hint ? <span className="journey-metric-option-hint">{hint}</span> : null}
+              {hint ? (
+                <span className="journey-metric-option-hint">{hint}</span>
+              ) : null}
             </button>
           );
         })}
@@ -466,7 +490,10 @@ export function JourneyChartToolbar({
         role="toolbar"
         aria-label="阅读旅程顶部操作"
       >
-        <div className="journey-toolbar-left journey-topbar__lenses-wrap" data-testid="journey-metric-switcher">
+        <div
+          className="journey-toolbar-left journey-topbar__lenses-wrap"
+          data-testid="journey-metric-switcher"
+        >
           {useLenses ? lensSegmented : metricMenu}
           {useLenses ? (
             <span hidden aria-hidden="true">
@@ -514,7 +541,12 @@ export function JourneyChartToolbar({
         >
           当前阶段
         </button>
-        <button type="button" hidden aria-hidden="true" data-testid="journey-all-metrics">
+        <button
+          type="button"
+          hidden
+          aria-hidden="true"
+          data-testid="journey-all-metrics"
+        >
           全部指标
         </button>
         <button

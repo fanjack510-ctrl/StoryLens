@@ -4383,16 +4383,26 @@ body.journey-pane-resizing[data-row-resize="true"] * {
   white-space: nowrap;
 }
 
-/* 更多视角 now sits inside the lens button row. Its body must float rather than expand,
-   or opening it would push the curve down by exactly the rows we just reclaimed. */
-.journey-lens-selector-list .journey-lens-more {
+/* 更多视角 sits at the end of the lens row but OUTSIDE the button list.
+   The list is `overflow-x: auto` so a long row can scroll, and an ancestor with a
+   non-visible overflow clips absolutely-positioned descendants — the popover rendered at
+   the right size and position and was simply cut away, which on screen looks like an empty
+   panel. Keeping it a sibling lets it escape while flex keeps it on the same line. */
+.journey-topbar__lenses {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.journey-topbar__lenses > .journey-lens-more {
   position: relative;
   display: inline-flex;
   align-items: center;
   margin-left: 4px;
 }
 
-.journey-lens-selector-list .journey-lens-more > summary {
+.journey-topbar__lenses > .journey-lens-more > summary {
   cursor: pointer;
   font-size: 0.75rem;
   padding: 2px 6px;
@@ -4400,11 +4410,11 @@ body.journey-pane-resizing[data-row-resize="true"] * {
   opacity: 0.72;
 }
 
-.journey-lens-selector-list .journey-lens-more > summary:hover {
+.journey-topbar__lenses > .journey-lens-more > summary:hover {
   opacity: 1;
 }
 
-.journey-lens-selector-list .journey-lens-more[open] > .journey-lens-more-body {
+.journey-topbar__lenses > .journey-lens-more[open] > .journey-lens-more-body {
   position: absolute;
   top: calc(100% + 6px);
   left: 0;
@@ -4421,7 +4431,7 @@ body.journey-pane-resizing[data-row-resize="true"] * {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
 }
 
-.journey-lens-selector-list .journey-lens-more-note {
+.journey-topbar__lenses > .journey-lens-more-note {
   flex: 1 1 100%;
   margin: 0;
   font-size: 0.75rem;
