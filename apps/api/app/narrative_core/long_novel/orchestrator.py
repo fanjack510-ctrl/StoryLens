@@ -1983,10 +1983,10 @@ class RunCoordinator:
                 chronology=self._chronology(assets),
                 vocabulary=hook_vocabulary(profile_axes or {}),
             ),
-            assessment=build_assessment_section(assessment),
+            assessment=build_assessment_section(assessment, self._evidence),
             # The genre profile comes from the same synthesis call as the overview — it is a
             # judgement about the whole book, and that is the only unit that has seen it.
-            type_profile=build_type_profile_section(overview),
+            type_profile=build_type_profile_section(overview, profile_axes),
             journey=self._journey(
                 assets, profile_axes, len(signals),
                 stages=tracks.get("stages") or [], lead=lead, reversals=reversals,

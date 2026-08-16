@@ -595,3 +595,54 @@ def test_merging_a_contraction_keeps_the_fuller_name_and_its_mentions():
     assert "李山木" in names and "李山木父亲" in names
     merged = next(r for r in rows if r["display_surface_norm"] == "洪霞警官")
     assert merged["centrality"] == 42 and merged["aliases"] == ["洪警官"]
+
+
+def test_the_confirmed_profile_names_the_book_not_the_models_guess():
+    """INV-P2, at the one place on the page the user typed in themselves.
+
+    The report printed whatever the final synthesis call guessed — on 《系统豪横》 that was
+    「都市生活」 at confidence 0.0, on a page belonging to the user who had confirmed the book
+    as 升级流. The axes were already steering extraction and the journey; they were not
+    steering the line at the top that names the book.
+    """
+    from app.narrative_core.long_novel.adapter import build_type_profile_section
+
+    guessed = {"primary_genre": "都市生活", "secondary_genres": ["家庭伦理"]}
+    axes = {"engine": "progression", "audience": "male_gratification"}
+
+    confirmed = build_type_profile_section(guessed, axes)
+    assert confirmed["primary_genre"] == "男频升级流"
+    # The guess is an observation about the text and is kept, just not as the headline.
+    assert confirmed["secondary_genres"][0] == "都市生活"
+    # A person answered this, which is not the model being sure — it is the question being
+    # settled by someone entitled to settle it.
+    assert confirmed["genre_confidence"] == 1.0
+
+    # No confirmed axes: the guess stands, and claims no confidence it cannot measure.
+    unconfirmed = build_type_profile_section(guessed, {})
+    assert unconfirmed["primary_genre"] == "都市生活"
+    assert unconfirmed["genre_confidence"] == 0.0
+    assert build_type_profile_section(None, {}) is None
+    # Axes alone are enough: a confirmed book whose synthesis said nothing still gets named.
+    assert build_type_profile_section(None, axes)["primary_genre"] == "男频升级流"
+
+
+def test_an_assessment_finding_can_be_opened(document):
+    """Every dimension and every issue carried an empty evidence list on the real run.
+
+    Beside them sat 419 real quotations in the index. The conclusions were right — 第 43–45 章
+    节奏偏缓 is the most actionable line either report produces — and there was no way to read
+    the chapters it was about.
+    """
+    index = document["evidence_index"]
+    findings = document["assessment"]["issues"] + document["assessment"]["strengths"]
+    assert findings, "评估里没有任何结论"
+    for finding in findings:
+        assert finding["evidence"], finding
+        assert all(e in index for e in finding["evidence"]), finding
+        for e in finding["evidence"]:
+            chapter = index[e]["chapter_index"]
+            assert finding["chapter_start"] <= chapter <= finding["chapter_end"], (
+                "引的原文不在这条结论说的章节范围里：%s" % finding
+            )
+

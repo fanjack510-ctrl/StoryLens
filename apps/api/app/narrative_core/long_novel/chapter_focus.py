@@ -1201,3 +1201,40 @@ def apply_chapter_focus(prompt: Any, session: Session, book_id: int) -> Any:
         repair_template=prompt.repair_template,
         content_hash=digest,
     )
+
+
+#: What to call the book's type, from the axes a person confirmed.
+#:
+#: The whole-book report has been printing whatever the final synthesis call guessed — on
+#: 《系统豪横》 that was 「都市生活」 with a confidence of 0.0, sitting on a page belonging to a
+#: user who had themselves confirmed the book as 升级流. INV-P2 says human confirmation
+#: outranks inference, and nowhere is that clearer than here: the profile is the one thing on
+#: the screen the user typed in, and the report contradicted it.
+#:
+#: Ordered most-specific first; the first matching entry wins. Genre in the web-novel sense is
+#: mostly engine plus audience — 升级流 is 升级流 whoever it is written for, but a 男频 one and
+#: a 女频 one are not sold, read or written the same way, so where both axes are confirmed both
+#: are said.
+GENRE_NAMING: tuple[tuple[tuple[tuple[str, str], ...], str], ...] = (
+    ((("engine", "progression"), ("audience", "male_gratification")), "男频升级流"),
+    ((("engine", "progression"), ("audience", "female_romance")), "女频升级流"),
+    ((("engine", "progression"),), "升级流"),
+    ((("engine", "romance"), ("audience", "female_romance")), "女频言情"),
+    ((("engine", "romance"),), "言情"),
+    ((("engine", "mystery"),), "悬疑"),
+    ((("engine", "ensemble_politics"),), "群像权谋"),
+    ((("engine", "slice_of_life"),), "种田日常"),
+    ((("engine", "episodic_transmigration"),), "快穿单元剧"),
+    # No engine confirmed, but an audience is: worth saying, and honestly less than the above.
+    ((("audience", "female_romance"),), "女频"),
+    ((("audience", "male_gratification"),), "男频"),
+)
+
+
+def genre_naming(axes: Mapping[str, Any]) -> str:
+    """The confirmed profile's own name for this book's type, or "" if the axes say nothing."""
+    resolved = _resolve_axes(axes)
+    for triggers, label in GENRE_NAMING:
+        if all(resolved.get(axis) == value for axis, value in triggers):
+            return label
+    return ""

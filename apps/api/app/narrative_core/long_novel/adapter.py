@@ -47,6 +47,7 @@ __all__ = [
     "build_chapters_section",
     "build_characters_section",
     "build_assessment_section",
+    "evidence_in_range",
     "build_overview_section",
     "build_type_profile_section",
     "build_journey_section",
@@ -370,12 +371,40 @@ def _major_character(
     }
 
 
-def build_assessment_section(result: Mapping[str, Any] | None) -> dict[str, Any]:
+def evidence_in_range(
+    index: Mapping[str, Mapping[str, Any]], start: int, end: int, limit: int = 3
+) -> list[str]:
+    """Evidence ids from chapters ``start``–``end``, sampled across the span.
+
+    Resolved rather than asked for. The assessor names a chapter range — 「第 43–45 章节奏偏缓」
+    — and the index already knows which chapter every quotation came from, so the link is
+    arithmetic. Asking the model to cite instead would invite it to invent an id, which is the
+    failure the whole evidence design exists to prevent, and it would cost a bigger payload for
+    a worse answer.
+
+    This is the gap a professional reader named: every dimension and every issue carried an
+    empty ``evidence`` list while 419 real quotations sat in the index beside them. The
+    conclusions were right and could not be opened.
+    """
+    if end < start:
+        start, end = end, start
+    inside = sorted(
+        (row for row in index.values() if start <= int(row.get("chapter_index", 0) or 0) <= end),
+        key=lambda row: int(row.get("chapter_index", 0) or 0),
+    )
+    return [str(row["evidence_id"]) for row in _sample(inside, limit)]
+
+
+def build_assessment_section(
+    result: Mapping[str, Any] | None,
+    evidence_index: Mapping[str, Mapping[str, Any]] | None = None,
+) -> dict[str, Any]:
     """The assessment, or an empty one that says so.
 
     An assessment section filled with generic praise is worse than an empty one: a reader
     cannot tell it apart from a real judgement, and it is the section they are most likely to
-    act on.
+    act on. Which is also why every finding that names a range now carries the quotations from
+    it: a judgement a reader cannot open is one they have to take on faith.
     """
     if not result:
         return {
@@ -387,11 +416,20 @@ def build_assessment_section(result: Mapping[str, Any] | None) -> dict[str, Any]
             "revision_priorities": [],
             "preserve_list": [],
         }
+    index = evidence_index or {}
+
+    def cited(row: dict[str, Any]) -> dict[str, Any]:
+        if index and not row.get("evidence"):
+            row["evidence"] = evidence_in_range(
+                index, int(row.get("chapter_start", 1) or 1), int(row.get("chapter_end", 1) or 1)
+            )
+        return row
+
     return {
         "overall_summary": str(result.get("overall_summary", result.get("summary", ""))),
         "dimensions": [d for d in (_as_dimension(x) for x in result.get("dimensions", [])) if d],
-        "strengths": [_as_strength(x) for x in result.get("strengths", [])],
-        "issues": [_as_issue(i, x) for i, x in enumerate(result.get("issues", []))],
+        "strengths": [cited(_as_strength(x)) for x in result.get("strengths", [])],
+        "issues": [cited(_as_issue(i, x)) for i, x in enumerate(result.get("issues", []))],
         "issue_map": list(result.get("issue_map", [])),
         "revision_priorities": [
             p for p in (_as_priority(i, x) for i, x in enumerate(result.get("revision_priorities", [])))
@@ -437,22 +475,50 @@ def _as_priority(index: int, value: Any) -> dict[str, Any] | None:
     })
 
 
-def build_type_profile_section(result: Mapping[str, Any] | None) -> dict[str, Any] | None:
-    """The work's genre profile, out of the final synthesis call.
+def build_type_profile_section(
+    result: Mapping[str, Any] | None, axes: Mapping[str, Any] | None = None
+) -> dict[str, Any] | None:
+    """The work's genre profile: the confirmed axes first, the synthesis call second.
 
-    Returns ``None`` when the synthesis did not name a genre, so the caller falls back to the
+    The report used to print whatever the final call guessed. Measured on 《系统豪横》: 「都市
+    生活」 at a confidence of 0.0, on a page belonging to the user who had themselves confirmed
+    the book as 升级流 — and the axes they confirmed were already steering the extraction and
+    the journey, just not the one line at the top that names the book. INV-P2 is exactly this:
+    human confirmation outranks inference, and contradicting the user's own answer back to them
+    is the worst form of ignoring it.
+
+    The model's guess is kept as a secondary genre rather than dropped. It is an observation
+    about the text, and 「都市生活」 is not wrong about this book — it is just not the axis the
+    user is reading it on.
+
+    Returns ``None`` only when neither source has anything, so the caller falls back to the
     empty profile rather than publishing a confident-looking blank.
     """
-    if not result or not str(result.get("primary_genre", "")).strip():
+    from app.narrative_core.long_novel.chapter_focus import genre_naming
+
+    confirmed = genre_naming(axes or {})
+    guessed = str((result or {}).get("primary_genre", "")).strip()
+    if not confirmed and not guessed:
         return None
+
+    secondary = [str(x) for x in (result or {}).get("secondary_genres", []) if str(x).strip()]
+    if confirmed and guessed and guessed != confirmed:
+        secondary = [guessed] + [x for x in secondary if x != guessed]
+
     return conform(TypeProfile, {
-        **result,
-        "primary_genre": str(result.get("primary_genre", "")),
-        "secondary_genres": [str(x) for x in result.get("secondary_genres", []) if str(x).strip()],
-        "narrative_drivers": [str(x) for x in result.get("narrative_drivers", []) if str(x).strip()],
-        "narrative_traits": [str(x) for x in result.get("narrative_traits", []) if str(x).strip()],
-        # The engine does not measure genre agreement, so it does not claim a number for it.
-        "genre_confidence": 0.0,
+        **(result or {}),
+        "primary_genre": confirmed or guessed,
+        "secondary_genres": secondary,
+        "narrative_drivers": [
+            str(x) for x in (result or {}).get("narrative_drivers", []) if str(x).strip()
+        ],
+        "narrative_traits": [
+            str(x) for x in (result or {}).get("narrative_traits", []) if str(x).strip()
+        ],
+        # 1.0 when a person confirmed the axes — that is not the model being sure, it is the
+        # question having been answered by someone entitled to answer it. Otherwise 0.0: the
+        # engine does not measure genre agreement, so it claims no number for a guess.
+        "genre_confidence": 1.0 if confirmed else 0.0,
     })
 
 
