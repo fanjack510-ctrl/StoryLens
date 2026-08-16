@@ -47,6 +47,7 @@ def execute_free_whole_book_pipeline_background(
     provider_config_id: int | None = None,
     force_full_reanalysis: bool = False,
     previous_run_id: int | None = None,
+    mode: str = "diagnostic",
 ) -> None:
     """Continue a deferred formal Free whole-book run in a fresh session.
 
@@ -78,6 +79,7 @@ def execute_free_whole_book_pipeline_background(
                 force_full_reanalysis=bool(force_full_reanalysis),
                 previous_run_id=int(previous_run_id) if previous_run_id else None,
                 commit_progress=True,
+                mode=mode,
             )
             session.commit()
             logger.info(
@@ -121,6 +123,7 @@ def schedule_free_whole_book_pipeline_background(
     provider_config_id: int | None = None,
     force_full_reanalysis: bool = False,
     previous_run_id: int | None = None,
+    mode: str = "diagnostic",
 ) -> threading.Thread:
     """Detach V2 execution from the HTTP request / FastAPI BackgroundTasks lifecycle.
 
@@ -136,6 +139,7 @@ def schedule_free_whole_book_pipeline_background(
                 session_factory,
                 int(run_id),
                 provider_config_id=provider_config_id,
+                mode=mode,
                 force_full_reanalysis=bool(force_full_reanalysis),
                 previous_run_id=previous_run_id,
             )

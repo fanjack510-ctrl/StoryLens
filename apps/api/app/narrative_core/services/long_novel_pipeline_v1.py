@@ -610,7 +610,9 @@ def execute_long_novel_pipeline_v1(
         session.refresh(run)
         _persist_commit()
     run.engine_id = ENGINE_ID
-    run.engine_version = ENGINE_VERSION
+    # The reading is stamped into the version so a run resumed after a restart still knows
+    # which four units it owes. See ``_reading_of`` on the dispatcher.
+    run.engine_version = ENGINE_VERSION if not breakdown else f"{ENGINE_VERSION}+{mode}"
     session.flush()
     _persist_commit()
 

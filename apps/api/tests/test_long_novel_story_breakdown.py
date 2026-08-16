@@ -341,3 +341,34 @@ def test_the_cast_is_judged_once_as_a_whole_not_certified_one_by_one(document):
     assert b["cast_note"], "没有对整批配角的判断"
     assert all("stays_in_lane" not in x for x in b["supporting_cast"])
 
+
+def test_a_resumed_run_remembers_which_reading_it_was():
+    """The background worker takes the mode as an argument; a restart has no caller left.
+
+    So the reading is stamped into engine_version and read back on dispatch. Without it a
+    拆文 interrupted by a restart would come back as a diagnostic — completing successfully,
+    costing a second book's worth of calls, and producing the wrong report.
+    """
+    from app.narrative_core.services.whole_book_v2_formal_pipeline_v1 import _reading_of
+
+    class _Run:
+        def __init__(self, version):
+            self.engine_version = version
+
+    assert _reading_of(_Run("long-novel-engine-1.0+story_breakdown")) == "story_breakdown"
+    assert _reading_of(_Run("long-novel-engine-1.0")) == "diagnostic"
+    # A run from before the stamp existed, and one that never got a version at all.
+    assert _reading_of(_Run("")) == "diagnostic"
+    assert _reading_of(_Run(None)) == "diagnostic"
+
+
+def test_the_request_defaults_to_the_reading_every_caller_already_wanted():
+    """Adding a mode must not change what an existing client gets by not asking."""
+    from app.routers.whole_book_free_product_router import CreateFreeRunRequest
+
+    body = CreateFreeRunRequest(estimate_id=1, client_request_id="x")
+    assert body.analysis_mode == "diagnostic"
+    assert CreateFreeRunRequest(
+        estimate_id=1, client_request_id="x", analysis_mode="story_breakdown"
+    ).analysis_mode == "story_breakdown"
+

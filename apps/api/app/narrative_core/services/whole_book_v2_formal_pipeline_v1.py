@@ -47,6 +47,18 @@ def _env_flag(name: str) -> bool:
     return os.environ.get(name, "").lower() in {"1", "true", "yes", "on"}
 
 
+#: Separates the engine's version from the reading it was run for, inside ``engine_version``.
+#: Carried there rather than in a new column because the two readings *are* two configurations
+#: of one engine — same planner, same extraction, a different four units above L1 — and because
+#: a run resumed after a restart has no caller left to ask.
+_READING_MARK = "+"
+
+
+def _reading_of(run: WholeBookRun) -> str:
+    version = str(getattr(run, "engine_version", "") or "")
+    return version.split(_READING_MARK, 1)[1] if _READING_MARK in version else "diagnostic"
+
+
 class _DeterministicV2Gateway:
     """Opt-in packaged/local evidence gateway — zero real Provider HTTP calls."""
 
@@ -169,6 +181,9 @@ def execute_hierarchical_v2_pipeline_v1(
     force_full_reanalysis: bool = False,
     previous_run_id: int | None = None,
     commit_progress: bool = False,
+    #: Which reading this run is: the diagnostic, or 拆文. Only the long-novel engine offers
+    #: both; the hierarchical path below ignores it.
+    mode: str = "diagnostic",
 ) -> dict[str, Any]:
     """Run hierarchical V2 analyze for an existing WholeBookRun and persist V2 result.
 
@@ -192,12 +207,20 @@ def execute_hierarchical_v2_pipeline_v1(
     )
 
     if book_uses_long_novel_engine(session, int(run.book_id)):
-        logger.info("whole_book_v2_dispatch run_id=%s engine=long_novel", run_id)
+        # A run resumed after a restart arrives here with no caller to say which reading it
+        # was. The engine version carries it, because the two readings genuinely are different
+        # engine configurations — a 拆文 run that came back as a diagnostic would silently
+        # spend a second book's worth of calls on the wrong four units.
+        reading = mode if mode != "diagnostic" else _reading_of(run)
+        logger.info(
+            "whole_book_v2_dispatch run_id=%s engine=long_novel mode=%s", run_id, reading
+        )
         return execute_long_novel_pipeline_v1(
             session,
             int(run_id),
             use_fake_gateway=use_fake_gateway,
             commit_progress=commit_progress,
+            mode=reading,
         )
 
     provider_name, model_name = pinned_provider(session, int(run_id))

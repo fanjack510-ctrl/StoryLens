@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -55,6 +57,10 @@ class CreateFreeRunRequest(BaseModel):
     max_output_tokens: int | None = Field(default=None, gt=0)
     max_cost_budget_cny: str | None = None
     auto_retry_enabled: bool = False
+    #: Which reading to run: the diagnostic, or 拆文 (CHG-108). Defaults to the diagnostic, so
+    #: every existing caller keeps the behaviour it has. The two share a snapshot, a planner and
+    #: an extraction pass and differ only in the four bounded units above L1.
+    analysis_mode: Literal["diagnostic", "story_breakdown"] = "diagnostic"
     # CHG-080 reanalysis
     reanalyse: bool = False
     force_full_reanalysis: bool = False
@@ -203,6 +209,7 @@ def create_free_analysis(
             provider_config_id=result.get("provider_config_id"),
             force_full_reanalysis=bool(result.get("force_full_reanalysis")),
             previous_run_id=result.get("previous_run_id"),
+            mode=body.analysis_mode,
         )
     return result
 
