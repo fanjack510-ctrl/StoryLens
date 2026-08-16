@@ -32,19 +32,34 @@ def make_engine(tmp_path, name: str = "wb-minimal.db"):
     return engine
 
 
-def seed_sample_s_book(session: Session) -> tuple[Book, int]:
+def seed_sample_s_book(session: Session, *, chapter_count: int = 3) -> tuple[Book, int]:
+    """Seed the Sample S fixture book.
+
+    ``chapter_count`` defaults to 3, which is what every existing caller has always got.
+    Raise it only where the test needs to clear ``MIN_VIABLE_CHAPTERS_PER_BLOCK`` (4): the
+    long-novel dispatch predicate refuses a book that cannot be planned in one block, so a
+    3-chapter fixture makes a *correctly* confirmed book report as not-dispatched. The
+    fixture only carries 9 paragraphs, so chapters past the ninth paragraph cycle through
+    them again — enough to exist and be counted, which is all the block floor asks.
+    """
+    if chapter_count < 1:
+        raise ValueError("chapter_count must be at least 1")
     book = Book(title="Sample S", source_file_name="sample-s.txt", source_file_hash=sha256_utf8("sample-s"))
     session.add(book)
     session.flush()
     chapters: list[Chapter] = []
-    for idx in range(3):
+    for idx in range(chapter_count):
         ch = Chapter(book_id=book.id, chapter_index=idx, title=f"第{idx + 1}章")
         session.add(ch)
         session.flush()
         chapters.append(ch)
     global_idx = 0
+    total = len(SAMPLE_S_PARAGRAPH_TEXTS)
     for ch_idx, ch in enumerate(chapters):
-        for para_idx, text in enumerate(SAMPLE_S_PARAGRAPH_TEXTS[ch_idx * 3 : ch_idx * 3 + 3]):
+        window = [
+            SAMPLE_S_PARAGRAPH_TEXTS[(ch_idx * 3 + offset) % total] for offset in range(3)
+        ]
+        for para_idx, text in enumerate(window):
             session.add(
                 Paragraph(
                     id=f"p-{book.id}-{global_idx}",

@@ -140,3 +140,9 @@ def full_run_provider_calls(n_blocks: int, n_stages: int) -> int:
     if n_blocks < 0 or n_stages < 0:
         raise ValueError("n_blocks and n_stages must be non-negative")
     return n_blocks + n_stages + TOPIC_PROVIDER_CALLS_BEFORE_ASSESSMENT + 1 + 1
+
+
+#: Points kept per protagonist growth track. A lane is read as a shape, and past a few dozen
+#: points the dots merge; the cap is a legibility bound, not a data bound. Rows beyond it are
+#: sampled evenly across the book rather than truncated, so the last act stays represented.
+TRACK_POINTS_MAX: Final[int] = 40

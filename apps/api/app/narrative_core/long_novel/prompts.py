@@ -34,6 +34,8 @@ __all__ = [
     "PROFILE_SAMPLE_SYSTEM_PROMPT",
     "PROFILE_SAMPLE_INSTRUCTION",
     "build_profile_sample_prompt",
+    "REVERSAL_INSTRUCTION",
+    "build_reversal_prompt",
     "SUSPENSE_PAIRING_INSTRUCTION",
     "build_suspense_pairing_prompt",
 ]
@@ -311,6 +313,50 @@ SUSPENSE_PAIRING_INSTRUCTION = """下面是一本长篇小说里**所有被抛�
 {"pairs": [{"thread_id": "", "reveal_id": "", "answer": ""}]}
 
 配不上的疑问不要出现在结果里。"""
+
+
+REVERSAL_INSTRUCTION = """下面是一本长篇小说里**所有揭示性的情节点**，按章节顺序排列。
+
+你的任务只有一件：找出哪些情节点**推翻了此前已经成立的说法**。
+
+什么算推翻：后文让前文里已经被当成事实的东西不再成立——身份是假的、死掉的人还活着、
+盟友原来是对手、之前给出的解释被证明是错的。判断标准是**读到这里，前面读过的内容要重新理解一遍**。
+
+什么不算：给出新信息（那只是揭示）、把已知的事说得更细、换个角度重述、
+悬念被正常回答。**信息变多不等于认知被推翻。**
+
+规则：
+1. `overturns` 必须指向列表里**更早**的那一条 id；`id` 是推翻它的那一条。
+2. **宁可不报，也不要凑数。** 一条被错标成反转的情节点，会让作者以为这里有个转折，
+   从而不去补真正缺的那个——这比漏报更糟。
+3. 一本书里有三五处反转是常见的，有几十处不是。**不确定就不要写。**
+4. `why` 用一句话写清楚：此前成立的是什么，现在变成了什么。
+
+只输出 JSON：
+{"reversals": [{"id": "", "overturns": "", "why": ""}]}
+
+没有找到就返回 {"reversals": []}。"""
+
+
+def build_reversal_prompt(reveals: "list[dict[str, object]]") -> str:
+    """Ask once, over the whole book, which beats overturned an earlier one.
+
+    Block-level extraction cannot answer this and two measured attempts confirmed it: across
+    806 chapters the ``twist`` kind was chosen once, and rewriting the field description made
+    it worse — ``advance`` rose from 58% to 77% because a longer instruction pushed the model
+    toward the default. The judgement is structurally out of a block's reach, since a reversal
+    overturns something established hundreds of chapters earlier and the block never saw it.
+
+    Shaped exactly like the thread pairing call, which had the same problem and the same fix:
+    resolved threads went from 0 to 24 for about one cent.
+    """
+    import json as _json
+
+    return (
+        REVERSAL_INSTRUCTION
+        + "\n\n揭示（按章节顺序）：\n"
+        + _json.dumps(reveals, ensure_ascii=False, indent=None)
+    )
 
 
 def build_suspense_pairing_prompt(

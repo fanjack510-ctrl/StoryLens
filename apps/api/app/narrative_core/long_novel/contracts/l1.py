@@ -185,6 +185,46 @@ class SuspenseThread(_Fact):
     opened_chapter_ref: int = Field(ge=1)
 
 
+class PowerBeat(_Fact):
+    """PROFILE DELTA — axis 3 ``progression`` (10_ADAPTIVE_PROFILE_LAYER §9).
+
+    One reading of where a character stands on the book's own advancement ladder, plus what
+    moved them. The list is empty for every book whose profile does not ask for it, so the
+    core schema is unchanged (INV-P1).
+
+    ``level`` is free text on purpose. Every book names its ladder differently — 境界 in 修仙,
+    「阶位」in 《我不是戏神》, 序列 elsewhere — and a closed enum here would force the model to
+    map an unseen ladder onto 练气/筑基, which is how a whole axis silently becomes fiction.
+    Ordering is recovered downstream by first appearance, not by parsing the name.
+
+    ``kind`` is closed, because it dispatches: the up kinds raise the curve, the down kinds
+    drop it. The vocabulary is enumerated in the prompt rather than implied, for the reason
+    296 of 297 ``suspense_actions`` came back ``advance`` when it was not.
+    """
+
+    entity_ref: str
+    chapter_ref: int = Field(ge=1)
+    #: ``promote`` 晋升 | ``gain`` 获得 | ``faceslap`` 打脸压制 | ``setback`` 受挫 | ``demote`` 跌落
+    kind: str = Field(max_length=16)
+    level: str = Field(default="", max_length=24)
+    why: str = Field(default="", max_length=40)
+
+
+#: Which way each beat moves the curve. Deliberately **not** a pydantic enum on ``kind``:
+#: rejecting the whole block because the model wrote 「晋升」instead of ``promote`` would throw
+#: away eight chapters of paid extraction, and that exact failure is on record. A word this
+#: table does not know returns 0 — counted, visible, and never silently read as a rise.
+POWER_DIRECTION: dict[str, int] = {
+    "promote": 1, "gain": 1, "faceslap": 1,
+    "setback": -1, "demote": -1,
+}
+
+
+def power_direction(kind: str) -> int:
+    """+1 up, -1 down, 0 when the kind is not one this engine knows."""
+    return POWER_DIRECTION.get((kind or "").strip().lower(), 0)
+
+
 class IdentityAssertion(_Fact):
     left_entity_ref: str
     right_entity_ref: str
@@ -230,6 +270,8 @@ class BlockAsset(_Strict):
     goal_changes: list[GoalChange] = Field(default_factory=list)
     choices: list[Choice] = Field(default_factory=list)
     suspense_threads: list[SuspenseThread] = Field(default_factory=list)
+    #: PROFILE DELTA — empty unless axis 3 is ``progression``.
+    power_beats: list[PowerBeat] = Field(default_factory=list)
     identity_assertions: list[IdentityAssertion] = Field(default_factory=list)
     mentions: list[Mention] = Field(default_factory=list)
     provisional_entities: list[ProvisionalEntity] = Field(default_factory=list)

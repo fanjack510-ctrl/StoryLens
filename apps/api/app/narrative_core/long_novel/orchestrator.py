@@ -44,8 +44,11 @@ from app.narrative_core.long_novel.adapter import (
     build_overview_section,
     build_chapters_section,
     build_characters_section,
+    build_journey_section,
     build_pacing_section,
+    build_stage_ledger,
     build_type_profile_section,
+    parse_rank,
     to_whole_book_v2,
 )
 from app.narrative_core.long_novel.contracts.density import DensityProfile
@@ -171,6 +174,10 @@ class RunCoordinator:
         #: One bounded call that decides which reveals answer which questions. Injected like
         #: the others, so a run without it behaves exactly as before rather than failing.
         thread_pairer: Callable[[dict[str, Any]], dict[str, Any]] | None = None,
+        #: One bounded call that names which beats overturned an earlier one. Injected like
+        #: the others: a run without it produces a journey with no down-moves rather than
+        #: failing, which is what every run did before this existed.
+        reversal_finder: Callable[[list[dict[str, Any]]], dict[str, Any]] | None = None,
         max_provider_calls: int | None = None,
     ) -> None:
         self._extractor = extractor
@@ -180,6 +187,7 @@ class RunCoordinator:
         self._assess = assessor
         self._finalise = finaliser
         self._pair_threads = thread_pairer
+        self._find_reversals = reversal_finder
         self._max_calls = max_provider_calls
         #: evidence_id -> citable row, accumulated across blocks and deduplicated. Many facts
         #: legitimately cite the same paragraph, and the index is what makes every claim in
@@ -202,6 +210,9 @@ class RunCoordinator:
         run_id: int,
         provider_name: str,
         model_name: str,
+        #: The book's confirmed profile axes. Decides which journey axis the report carries;
+        #: absent means no journey is computed, and the report falls back to the stage list.
+        profile_axes: Mapping[str, Any] | None = None,
     ) -> RunReport:
         report = RunReport(
             blocks_total=len(plan.blocks),
@@ -301,6 +312,7 @@ class RunCoordinator:
             run_id=run_id,
             provider_name=provider_name,
             model_name=model_name,
+            profile_axes=profile_axes,
         )
         return report
 
@@ -327,6 +339,63 @@ class RunCoordinator:
     #: Which action kinds could plausibly answer a question. `advance` cannot — it is defined
     #: as movement without revelation — so feeding it in would only invite a false pairing.
     _REVEALING_KINDS = frozenset({"reveal", "partial", "twist", "resolve", "close"})
+
+    #: Actions that state something the reader can later find out was wrong.
+    _REVERSIBLE_KINDS = frozenset({"reveal", "partial", "resolve", "twist", "close"})
+
+    def _reversal_input(self, assets: dict[str, BlockAsset]) -> list[dict[str, Any]]:
+        """Every revealing beat in chapter order, for the one call that can see a reversal.
+
+        A block sees eight chapters, so it cannot know that what it just read overturns
+        something from chapter 76. Measured twice: block extraction chose ``twist`` once in
+        806 chapters, and expanding the field's description made it worse — ``advance`` went
+        from 58% to 77%, because a longer instruction pushes toward the default. Moving the
+        judgement to one whole-book call found five valid reversals for ¥0.004.
+        """
+        rows: list[dict[str, Any]] = []
+        for asset in assets.values():
+            for action in asset.suspense_actions:
+                if action.action_kind not in self._REVERSIBLE_KINDS:
+                    continue
+                text = (action.information_added or "").strip()
+                if text:
+                    rows.append({"chapter": action.chapter_ref, "text": text[:60]})
+        rows.sort(key=lambda row: row["chapter"])
+        if len(rows) > self.PAIRING_REVEALS_MAX:
+            step = len(rows) / self.PAIRING_REVEALS_MAX
+            rows = [rows[int(i * step)] for i in range(self.PAIRING_REVEALS_MAX)]
+        return [
+            {"id": f"R{index}", "chapter": row["chapter"], "text": row["text"]}
+            for index, row in enumerate(rows, start=1)
+        ]
+
+    @staticmethod
+    def _accept_reversals(
+        reveals: Sequence[Mapping[str, Any]], result: Mapping[str, Any] | None
+    ) -> list[dict[str, Any]]:
+        """Keep the reversals that survive a check the engine can make on its own.
+
+        A reversal must overturn something *earlier*. On a 90-row list two of seven answers
+        pointed the wrong way; the chapter numbers are already in hand, so those are dropped
+        here rather than shown. This is deterministic filtering of a model's answer, not a
+        second opinion about it.
+        """
+        by_id = {str(row["id"]): row for row in reveals}
+        kept: list[dict[str, Any]] = []
+        for row in (result or {}).get("reversals") or []:
+            later = by_id.get(str(row.get("id", "")))
+            earlier = by_id.get(str(row.get("overturns", "")))
+            if not later or not earlier:
+                continue
+            if int(later["chapter"]) <= int(earlier["chapter"]):
+                continue
+            kept.append({
+                "chapter": int(later["chapter"]),
+                "overturns_chapter": int(earlier["chapter"]),
+                "text": str(later["text"]),
+                "why": str(row.get("why") or "")[:60],
+            })
+        return kept
 
     def _pairing_input(self, assets: dict[str, BlockAsset]) -> dict[str, list[dict[str, Any]]]:
         """Every open question and every revealing beat, side by side, for one L2 call.
@@ -511,8 +580,19 @@ class RunCoordinator:
         belief: list[dict[str, Any]] = []
         relations: list[dict[str, Any]] = []
 
-        ABILITY = ("能力", "掌握", "学会", "力量", "技能", "获得")
-        BELIEF = ("相信", "信念", "怀疑", "决心", "信仰", "认知")
+        # Two of the four tracks were nearly empty — 2 and 5 points against 40 — because
+        # these lists were short enough that almost every state change fell through to the
+        # status track by default. A lead who "掌握" something is the same growth beat as one
+        # who 突破 or 精通; leaving those out did not mean the book lacked ability growth, it
+        # meant the classifier could not see it.
+        ABILITY = (
+            "能力", "掌握", "学会", "力量", "技能", "获得", "突破", "精通", "熟练",
+            "强大", "变强", "提升", "领悟", "觉醒", "解锁", "使用", "施展", "控制",
+        )
+        BELIEF = (
+            "相信", "信念", "怀疑", "决心", "信仰", "认知", "以为", "明白", "意识到",
+            "接受", "理解", "动摇", "释怀", "认清", "醒悟", "笃定", "犹豫", "确信",
+        )
 
         # What the lead paid and got, indexed by the chapter it happened in, so a point on a
         # track can carry its own ledger instead of two permanently empty columns.
@@ -565,12 +645,24 @@ class RunCoordinator:
                     }
                 )
 
-        order = lambda rows: sorted(rows, key=lambda r: r["chapter"])[:40]
+        def order(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+            """Chronological, and thinned by sampling across the span rather than truncating.
+
+            Taking the first forty made a track stop dead partway through the book: the
+            relationship lane ended at chapter 217 of 806, which reads as "nothing happened
+            after that" instead of "we stopped looking". Sampling keeps the last act.
+            """
+            ordered = sorted(rows, key=lambda r: r["chapter"])
+            if len(ordered) <= C.TRACK_POINTS_MAX:
+                return ordered
+            step = len(ordered) / C.TRACK_POINTS_MAX
+            return [ordered[int(i * step)] for i in range(C.TRACK_POINTS_MAX)]
+
         return {
             "external_status_track": order(status),
             "ability_track": order(ability),
             "internal_belief_track": order(belief),
-            "relationship_track": relations[:40],
+            "relationship_track": order(relations),
         }
 
     @staticmethod
@@ -1453,8 +1545,16 @@ class RunCoordinator:
         run_id: int,
         provider_name: str,
         model_name: str,
+        profile_axes: Mapping[str, Any] | None = None,
     ) -> dict[str, Any]:
         suspense_lifecycles = self._suspense_lifecycles(assets)
+        # Which beats overturned an earlier one. Asked once over the whole book, because no
+        # block can answer it — see ``_reversal_input``.
+        reversals: list[dict[str, Any]] = []
+        if self._find_reversals is not None:
+            reveals = self._reversal_input(assets)
+            if len(reveals) >= 2:
+                reversals = self._accept_reversals(reveals, self._find_reversals(reveals))
         # The one judgement a block structurally cannot make: does this reveal answer that
         # question. Carrying the slate forward got threads recognised across blocks; whether
         # a thread is *answered* needs the whole book at once, so it is asked once here.
@@ -1555,4 +1655,110 @@ class RunCoordinator:
             # The genre profile comes from the same synthesis call as the overview — it is a
             # judgement about the whole book, and that is the only unit that has seen it.
             type_profile=build_type_profile_section(overview),
+            journey=self._journey(
+                assets, profile_axes, len(signals),
+                stages=tracks.get("stages") or [], lead=lead, reversals=reversals,
+            ),
+        )
+
+    def _ledger(
+        self, assets: dict[str, BlockAsset], stages: Sequence[Mapping[str, Any]], lead: str
+    ) -> list[dict[str, Any]]:
+        """Gather the per-stage ledger inputs. All three come from facts already extracted.
+
+        A relationship change is dated by the block it came from rather than by a field: the
+        L1 shape carries no ``chapter_ref`` on relationship or choice rows, so the block's own
+        first chapter is the tightest honest bound available.
+        """
+        meetings: list[dict[str, Any]] = []
+        choices: list[dict[str, Any]] = []
+        for asset in assets.values():
+            first = min((signal.chapter_ref for signal in asset.chapter_signals), default=1)
+            for change in asset.relationship_changes:
+                left, right = change.from_entity_ref, change.to_entity_ref
+                if lead not in (left, right):
+                    continue
+                meetings.append({
+                    "chapter": first,
+                    "other": right if left == lead else left,
+                    "relation": change.relation,
+                })
+            for choice in asset.choices:
+                choices.append({
+                    "entity_ref": choice.entity_ref, "chapter": first,
+                    "gains": list(choice.gains), "costs": list(choice.costs),
+                })
+        events = [
+            {"chapter": event.chapter_ref, "text": event.summary}
+            for asset in assets.values()
+            for event in asset.events
+            if lead in event.actors
+        ]
+        return build_stage_ledger(
+            stages, lead=lead, meetings=meetings, events=events, choices=choices
+        )
+
+    def _journey(
+        self,
+        assets: dict[str, BlockAsset],
+        profile_axes: Mapping[str, Any] | None,
+        chapter_count: int,
+        *,
+        stages: Sequence[Mapping[str, Any]] = (),
+        lead: str = "",
+        reversals: Sequence[Mapping[str, Any]] = (),
+    ) -> dict[str, Any]:
+        """Feed the journey builder from the assets; it decides the axis from the profile.
+
+        Everything here is already in hand — the book was read once, and screen time, ladder
+        readings and suspense actions all come out of the same block assets. No extra call.
+        """
+        actors = self._actors_by_chapter(assets)
+        bins = min(C.PACING_CURVE_BINS_MAX, max(1, chapter_count))
+        width = max(1, chapter_count) / bins
+        counts: dict[str, list[int]] = {}
+        spans: dict[str, tuple[int, int, int]] = {}
+        appearances: dict[str, set[int]] = {}
+        for chapter, names in actors.items():
+            index = min(bins - 1, int((max(1, chapter) - 1) / width))
+            for name in names:
+                if _is_not_a_name(name):
+                    continue
+                counts.setdefault(name, [0] * bins)[index] += 1
+                appearances.setdefault(name, set()).add(chapter)
+        for name, chapters in appearances.items():
+            spans[name] = (min(chapters), max(chapters), len(chapters))
+        # Only the leading cast gets a band; the rest would be a hairline nobody can read.
+        top = sorted(counts, key=lambda name: -sum(counts[name]))[: C.CHARACTERS_MAX // 3 or 8]
+
+        return build_journey_section(
+            axes=profile_axes,
+            chapter_count=chapter_count,
+            ledger=self._ledger(assets, stages, lead),
+            # The confirmed reversals are appended as `twist` actions. They are the only
+            # source of downward movement on the cognition axis: block extraction produced
+            # one twist in 806 chapters, so a curve built from its output alone can only rise.
+            suspense_actions=[
+                {"action_kind": action.action_kind, "chapter_ref": action.chapter_ref,
+                 "information_added": action.information_added,
+                 "evidence_ids": self._cite(key, action.evidence)}
+                for key, asset in assets.items()
+                for action in asset.suspense_actions
+                if action.action_kind != "twist"
+            ] + [
+                {"action_kind": "twist", "chapter_ref": row["chapter"],
+                 "information_added": row["why"] or row["text"], "evidence_ids": []}
+                for row in reversals
+            ],
+            power_beats=[
+                {"entity_ref": beat.entity_ref, "chapter_ref": beat.chapter_ref,
+                 "kind": beat.kind, "level": beat.level, "why": beat.why,
+                 "rank": parse_rank(beat.level),
+                 "evidence_ids": self._cite(key, beat.evidence)}
+                for key, asset in assets.items()
+                for beat in getattr(asset, "power_beats", [])
+            ],
+            screen_time={name: counts[name] for name in top},
+            screen_time_spans={name: spans[name] for name in top},
+            bins=bins,
         )

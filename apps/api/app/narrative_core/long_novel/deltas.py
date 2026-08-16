@@ -48,13 +48,39 @@ POV_ENTITY = Delta(
     instruction=(
         "- 在每个 `chapter_signals` 条目里**额外加一个键** `pov_entity`，"
         "填**这一章是通过谁的视角叙述的**，取值必须是该章正文里原样出现的人物称呼。\n"
-        "  一章只填一个；若该章切换过视角，填占篇幅更多的那个。**每一章都必须填，不要留空。**"
+        "  一章只填一个；若该章切换过视角，填占篇幅更多的那个。**每一章都必须填，不要留空。**\n"
+        '  形状：`"chapter_signals": [{"chapter_ref": 1, ..., "pov_entity": ""}]`'
+    ),
+)
+
+POWER_BEATS = Delta(
+    key="power_beats",
+    trigger=("engine", "progression"),
+    fields=("power_beats",),
+    instruction=(
+        "- **额外返回一个顶层数组** `power_beats`：主角（或其他重要人物）在实力/地位阶梯上的位置读数，"
+        "以及推动它的那一下。每章最多 2 条，没有就不写。\n"
+        "  `kind` 必须从这五个里选，**按这一处实际发生的事选**：\n"
+        "  `promote`(在阶梯上往上走了一级) `gain`(得到手段、资源、靠山，位置未变但更强)\n"
+        "  `faceslap`(压过此前压制自己的人) `setback`(受挫、被压制、失去依仗)\n"
+        "  `demote`(在阶梯上往下掉了一级)。\n"
+        "  `level` 填 `entity_ref` 这个人**自己当前所处**的等级/阶位，且必须是"
+        "**正文里原样出现的名称**（例如「四阶」「大宗师」「三级演员」）。\n"
+        "  **这一条最容易填错，看清楚**：正文写「获得四阶技能【审判庭】」，四阶是<技能>的阶，"
+        "不是这个人的阶；正文写「击败二阶执法官」，二阶是<对手>的阶。"
+        "这两种情况 `level` 一律**留空字符串**，只把事情写进 `why`。"
+        "只有正文明确说明这个人本人处在某一阶时才填。\n"
+        "  也**不要自己发明一套等级，不要套用别的小说的境界名**。\n"
+        "  `why` 用 ≤20 字写清楚是什么事导致的。\n"
+        "  注意 `setback` 和 `demote` 与上升同样重要：**一本书里如果一次下降都没有，通常是漏标了**。\n"
+        '  形状：`"power_beats": [{"entity_ref": "", "chapter_ref": 1, "kind": "", '
+        '"level": "", "why": "", "evidence": [{"paragraph_ref": 1}]}]`'
     ),
 )
 
 #: Registered deltas. Adding one requires: the field on the asset contract, the prompt
 #: fragment here, and a fixture in ``test_long_novel_document_sections.py`` (INV-P5).
-DELTAS: tuple[Delta, ...] = (POV_ENTITY,)
+DELTAS: tuple[Delta, ...] = (POV_ENTITY, POWER_BEATS)
 
 
 def deltas_for(axes: Mapping[str, Mapping[str, str]] | Mapping[str, str]) -> tuple[Delta, ...]:

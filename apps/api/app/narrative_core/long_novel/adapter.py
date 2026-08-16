@@ -21,13 +21,23 @@ the failure mode this rebuild exists to end.
 
 from __future__ import annotations
 
+import re
 from typing import Any, Mapping, Sequence
 
 from pydantic import BaseModel
 
 from app.narrative_core.long_novel.constants import CHARACTERS_MAX as C_CHARACTERS_MAX
 from app.narrative_core.long_novel.topics import ChapterSignalRow, PacingCurve
-from app.narrative_core.whole_book_v2.contracts import RevisionPriority, TypeProfile
+from app.narrative_core.whole_book_v2.contracts import (
+    JourneyPoint,
+    JourneyResult,
+    LedgerEvent,
+    LedgerMeeting,
+    RevisionPriority,
+    ScreenTimeBand,
+    StageLedger,
+    TypeProfile,
+)
 
 __all__ = [
     "conform",
@@ -38,6 +48,9 @@ __all__ = [
     "build_assessment_section",
     "build_overview_section",
     "build_type_profile_section",
+    "build_journey_section",
+    "build_stage_ledger",
+    "parse_rank",
     "to_whole_book_v2",
 ]
 
@@ -314,7 +327,19 @@ def _major_character(
         "character_arc": (
             f"{goals[0]} → {goals[-1]}" if len(goals) > 1 and goals[0] != goals[-1] else ""
         ),
-        "key_events": [summary for _, summary in events[:8]],
+        # The chapter is carried inside the string rather than as its own field. The contract
+        # forbids extras and the API a user is running was built before any addition to it,
+        # so a new field would fail the whole document — and without the chapter these events
+        # cannot be placed on a timeline at all. Sampled across the character's span rather
+        # than truncated, so a late arrival is not represented only by their first scenes.
+        "key_events": [
+            f"第{chapter}章｜{summary}"
+            for chapter, summary in (
+                events
+                if len(events) <= 8
+                else [events[int(i * len(events) / 8)] for i in range(8)]
+            )
+        ],
         "relationship_to_protagonist": "" if index == 0 else (to_lead[-1] if to_lead else "unknown"),
         "relationship_changes": to_lead[:6],
         "major_choice": choices[0][0] if choices else "",
@@ -560,6 +585,307 @@ def _empty(availability: str = "unavailable") -> dict[str, Any]:
     return {"availability": availability}
 
 
+#: Which axis each narrative engine's journey is measured on, and what the axis is called in
+#: the report.  Absent from this table means "no axis this engine knows how to compute", which
+#: renders as the stage list rather than as a line — see ``JourneyAxis`` on the contract for
+#: why an ordinal staircase is not an acceptable fallback.
+_JOURNEY_AXIS: dict[str, tuple[str, str]] = {
+    "mystery": ("cognition", "认知度"),
+    "progression": ("ladder", "阶位"),
+}
+
+#: How far each suspense action moves the cognition axis.  Reveals and answers add; a twist
+#: subtracts, because what the reader believed has just been taken away.  Misdirection costs
+#: less than a twist: it sends the reader the wrong way without overturning a settled belief.
+_COGNITION_WEIGHT: dict[str, int] = {
+    "partial": 1, "close": 2, "reveal": 3, "resolve": 4, "twist": -5, "misdirect": -1,
+}
+
+#: Every ranked reading of the lead is on the line.  This was briefly restricted to
+#: ``promote``/``demote``, to work around an extraction prompt that filled ``level`` with the
+#: rank of whatever the sentence mentioned — a 六阶 *skill* in the hands of a 二阶 character
+#: read as a promotion to 六阶.  That prompt has been fixed and the fix measured on the same
+#: 1299-chapter book: the lead's raw ladder went from 8 downward steps to 1, and the one that
+#: remains is a real setback (第 1205 章，被核爆余波震伤).  Filtering now would throw away
+#: two thirds of a correct series, so the rule is the plain one and the prompt carries the
+#: burden — which is where it belongs.
+_LADDER_UP = frozenset({"promote", "gain", "faceslap"})
+
+
+#: Chinese numerals, for reading a rank out of a level name the book wrote itself.
+_CN_DIGITS = {"零": 0, "一": 1, "二": 2, "三": 3, "四": 4, "五": 5, "六": 6, "七": 7, "八": 8, "九": 9, "十": 10}
+
+#: Refinements *within* a rank — 「五阶巅峰」 is above 五阶 and below 六阶, not a rank of its own.
+_RANK_REFINEMENTS = (("巅峰", 0.6), ("顶峰", 0.6), ("中段", 0.3), ("半神", 0.5))
+
+
+def parse_rank(level: str) -> float | None:
+    """Read an ordinal out of a level name, or ``None`` when it is not on the numbered ladder.
+
+    Deliberately narrow. A book's ladder is named by the book — 「五阶」, 「第三阶」,
+    「四阶中段」 — and this reads the number out of that name and nothing else. Titles like
+    「执法官」 or 「名角儿」 return ``None``: 《我不是戏神》 carries eighteen of them alongside
+    its numbered ladder, and forcing them onto the same axis would invent an ordering the
+    book never states.
+    """
+    text = (level or "").strip()
+    if "阶" not in text:
+        return None
+    arabic = re.search(r"\d+", text)
+    if arabic:
+        base = int(arabic.group(0))
+    else:
+        digits = [_CN_DIGITS[char] for char in text if char in _CN_DIGITS]
+        if not digits:
+            return None
+        base = digits[0]
+    if not 1 <= base <= 12:
+        return None
+    for word, bump in _RANK_REFINEMENTS:
+        if word in text:
+            return base + bump
+    return float(base)
+
+
+#: Words a projected trade-off starts with. A choice's ``costs``/``gains`` describe what an
+#: option *might* bring, so 62% of the costs on a measured 806-chapter book began this way —
+#: 「可能被识破」 is a risk that was considered, not a price that was paid. Dropping them is
+#: what makes the 「失去」 column mean what it says; the count falls from 815 to 18, and the
+#: 18 are real.
+_HYPOTHETICAL = re.compile(r"^(可能|或许|也许|有可能|将会|可以|恐怕|或将|大概|说不定)")
+
+#: How many rows of each kind a stage shows before the count carries the rest.
+_LEDGER_SHOWN = 8
+
+
+def _distinct(phrases: Sequence[str], limit: int = _LEDGER_SHOWN) -> list[str]:
+    """Deduplicate, then drop phrases wholly contained in a longer kept one.
+
+    Extraction repeats 「获取情报」 dozens of times across a book. Showing it eight times is
+    not eight facts, so the more specific phrasing wins the slot.
+    """
+    kept: list[str] = []
+    for phrase in phrases:
+        if any(phrase != other and phrase in other for other in kept):
+            continue
+        kept = [other for other in kept if not (other != phrase and other in phrase)]
+        if phrase not in kept:
+            kept.append(phrase)
+        if len(kept) >= limit:
+            break
+    return kept
+
+
+def build_stage_ledger(
+    stages: Sequence[Mapping[str, Any]],
+    *,
+    lead: str,
+    meetings: Sequence[Mapping[str, Any]] = (),
+    events: Sequence[Mapping[str, Any]] = (),
+    choices: Sequence[Mapping[str, Any]] = (),
+) -> list[dict[str, Any]]:
+    """Per-stage 遇见谁 / 做了什么 / 得到 / 失去, from signals that record an actual change.
+
+    ``meetings`` come from relationship changes rather than from the cast list, because what a
+    reader wants is *when* someone entered the story and what the relation became — a name in
+    a table cannot say that. Each counterpart is credited once, at first appearance.
+    """
+    if not stages or not lead:
+        return []
+    spans = [
+        (int(stage.get("chapter") or 1), int(stage.get("chapter_end") or stage.get("chapter") or 1))
+        for stage in stages
+    ]
+
+    def index_of(chapter: int) -> int:
+        for position, (start, end) in enumerate(spans):
+            if start <= chapter <= end:
+                return position
+        return len(spans) - 1
+
+    met: list[dict[str, list[Any]]] = [{"rows": []} for _ in stages]
+    seen_people: set[str] = set()
+    for row in sorted(meetings, key=lambda r: int(r.get("chapter") or 0)):
+        other = str(row.get("other") or "").strip()
+        if not other or other in seen_people or lead in other:
+            continue
+        seen_people.add(other)
+        chapter = max(1, int(row.get("chapter") or 1))
+        met[index_of(chapter)]["rows"].append(
+            conform(LedgerMeeting, {"chapter": chapter, "name": other,
+                                    "relation": str(row.get("relation") or "")})
+        )
+
+    did: list[list[dict[str, Any]]] = [[] for _ in stages]
+    for row in sorted(events, key=lambda r: int(r.get("chapter") or 0)):
+        chapter = max(1, int(row.get("chapter") or 1))
+        did[index_of(chapter)].append(
+            conform(LedgerEvent, {"chapter": chapter, "text": str(row.get("text") or "")})
+        )
+
+    gained: list[list[str]] = [[] for _ in stages]
+    lost: list[list[str]] = [[] for _ in stages]
+    for row in choices:
+        if str(row.get("entity_ref") or "") != lead:
+            continue
+        position = index_of(max(1, int(row.get("chapter") or 1)))
+        for phrase in row.get("gains") or []:
+            text = str(phrase or "").strip()
+            if text and not _HYPOTHETICAL.match(text):
+                gained[position].append(text)
+        for phrase in row.get("costs") or []:
+            text = str(phrase or "").strip()
+            if text and not _HYPOTHETICAL.match(text):
+                lost[position].append(text)
+
+    ledger = []
+    for position, stage in enumerate(stages):
+        rows = met[position]["rows"]
+        events_here = did[position]
+        # Events are sampled across the span rather than truncated at the front: a stage's
+        # last act deserves the same chance of being shown as its first.
+        step = max(1, len(events_here) // _LEDGER_SHOWN)
+        ledger.append(conform(StageLedger, {
+            "stage_name": str(stage.get("stage_name") or ""),
+            "chapter_start": spans[position][0], "chapter_end": spans[position][1],
+            "met": rows[:_LEDGER_SHOWN], "met_total": len(rows),
+            "did": events_here[::step][:_LEDGER_SHOWN], "did_total": len(events_here),
+            "gained": _distinct(gained[position]), "gained_total": len(gained[position]),
+            "lost": _distinct(lost[position]), "lost_total": len(lost[position]),
+        }))
+    return ledger
+
+
+def build_journey_section(
+    *,
+    axes: Mapping[str, Any] | None,
+    ledger: Sequence[Mapping[str, Any]] = (),
+    chapter_count: int,
+    suspense_actions: Sequence[Mapping[str, Any]] = (),
+    power_beats: Sequence[Mapping[str, Any]] = (),
+    screen_time: Mapping[str, Sequence[int]] | None = None,
+    screen_time_spans: Mapping[str, tuple[int, int, int]] | None = None,
+    bins: int = 0,
+) -> dict[str, Any]:
+    """Build the journey the book's profile asks for, or an empty one.
+
+    The axis is decided here, on the engine side, and the client renders what it is told
+    (INV-P4).  ``pov`` outranks ``engine`` for the *shape*: an ensemble book has no single
+    protagonist whose level or knowledge is the story, so its journey is the screen-time
+    distribution — which is what §9 of the profile design already says replaces the
+    protagonist-arc subview for ``ensemble``.
+    """
+    resolved: dict[str, str] = {}
+    for axis, value in (axes or {}).items():
+        resolved[axis] = value.get("value", "") if isinstance(value, Mapping) else str(value)
+
+    if resolved.get("pov") == "ensemble" and screen_time:
+        section = _screen_time_journey(screen_time, screen_time_spans or {}, bins)
+    else:
+        kind, label = _JOURNEY_AXIS.get(resolved.get("engine", ""), ("", ""))
+        if kind == "cognition":
+            section = _cognition_journey(label, suspense_actions, chapter_count)
+        elif kind == "ladder":
+            section = _ladder_journey(label, power_beats)
+        else:
+            section = conform(JourneyResult, {"availability": "unavailable", "axis": "none"})
+    # The ledger is axis-independent: what a stage cost is worth showing even when no curve
+    # could be drawn, which is the whole point of keeping it out of the chart.
+    section["ledger"] = list(ledger)
+    if ledger and section["availability"] == "unavailable":
+        section["availability"] = "partial"
+    return section
+
+
+def _screen_time_journey(
+    bands: Mapping[str, Sequence[int]],
+    spans: Mapping[str, tuple[int, int, int]],
+    bins: int,
+) -> dict[str, Any]:
+    width = bins or max((len(v) for v in bands.values()), default=0)
+    totals = [sum(band[i] if i < len(band) else 0 for band in bands.values()) for i in range(width)]
+    rows = []
+    for name, counts in bands.items():
+        first, last, chapters = spans.get(name, (1, 1, 0))
+        rows.append(conform(ScreenTimeBand, {
+            "name": name,
+            # A bin with no recorded action is 0 for everyone rather than an even split: the
+            # honest reading of "nothing was extracted here" is a gap, not a shared stage.
+            "share": [round((counts[i] if i < len(counts) else 0) / totals[i], 4) if totals[i] else 0.0
+                      for i in range(width)],
+            "first_chapter": max(1, first), "last_chapter": max(1, last),
+            "chapters": chapters, "total": sum(counts),
+        }))
+    return conform(JourneyResult, {
+        "availability": "available" if rows else "unavailable",
+        "axis": "screen_time", "axis_label": "戏份占比", "bins": width, "bands": rows,
+        "caveat": "群像书没有单一主角的历程，这里看的是戏份带宽的此消彼长：谁在哪一段接过主线、谁中途淡出。",
+    })
+
+
+def _cognition_journey(
+    label: str, actions: Sequence[Mapping[str, Any]], chapter_count: int
+) -> dict[str, Any]:
+    moves = sorted(
+        (row for row in actions if str(row.get("action_kind", "")) in _COGNITION_WEIGHT),
+        key=lambda row: int(row.get("chapter_ref") or 0),
+    )
+    running, points = 0.0, []
+    for row in moves:
+        kind = str(row.get("action_kind", ""))
+        running += _COGNITION_WEIGHT[kind]
+        points.append(conform(JourneyPoint, {
+            "chapter": max(1, int(row.get("chapter_ref") or 1)),
+            "value": running, "kind": kind, "load_bearing": True,
+            "note": str(row.get("information_added") or "")[:40],
+            "evidence": list(row.get("evidence_ids") or []),
+        }))
+    down = sum(1 for row in moves if _COGNITION_WEIGHT[str(row.get("action_kind", ""))] < 0)
+    caveat = ""
+    if points and not down:
+        caveat = (f"全书 {chapter_count} 章没有抽到一次反转，所以这条线只涨不跌。"
+                  "这通常是抽取时没有认真区分 twist，而不是书里真的没有反转。")
+    return conform(JourneyResult, {
+        "availability": "available" if points else "unavailable",
+        "axis": "cognition", "axis_label": label or "认知度",
+        "ticks": ["什么都不知道", "知道得最多"], "points": points, "caveat": caveat,
+    })
+
+
+def _ladder_journey(label: str, beats: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    ranked = [row for row in beats if row.get("rank") is not None]
+    if not ranked:
+        return conform(JourneyResult, {"availability": "unavailable", "axis": "ladder"})
+    tally: dict[str, int] = {}
+    for row in beats:
+        tally[str(row.get("entity_ref") or "")] = tally.get(str(row.get("entity_ref") or ""), 0) + 1
+    lead = max(tally, key=lambda name: tally[name]) if tally else ""
+    top = max(int(row["rank"]) for row in ranked)
+    points = [
+        conform(JourneyPoint, {
+            "chapter": max(1, int(row.get("chapter_ref") or 1)),
+            "value": float(row["rank"]) if row.get("rank") is not None else 0.0,
+            "label": str(row.get("level") or ""), "kind": str(row.get("kind") or ""),
+            "who": str(row.get("entity_ref") or ""), "note": str(row.get("why") or "")[:40],
+            "load_bearing": str(row.get("entity_ref") or "") == lead and row.get("rank") is not None,
+            "evidence": list(row.get("evidence_ids") or []),
+        })
+        for row in sorted(beats, key=lambda r: int(r.get("chapter_ref") or 0))
+    ]
+    connected = [point for point in points if point["load_bearing"]]
+    falls = sum(1 for a, b in zip(connected, connected[1:]) if b["value"] < a["value"])
+    return conform(JourneyResult, {
+        "availability": "available",
+        "axis": "ladder", "axis_label": label or "阶位", "lead": lead,
+        "ticks": [f"{n}阶" for n in range(1, top + 1)], "points": points,
+        # A ladder that only ever rises is the failure this axis exists to catch, so it is
+        # named rather than left for the reader to notice.
+        "caveat": (f"主线 {len(connected)} 个读数里一次下降都没有，"
+                   "通常是抽取时把受挫记成了别的东西，而不是这本书真的只涨。"
+                   if connected and not falls else ""),
+    })
+
+
 def to_whole_book_v2(
     *,
     book_id: int,
@@ -581,6 +907,7 @@ def to_whole_book_v2(
     overview: Mapping[str, Any] | None = None,
     type_profile: Mapping[str, Any] | None = None,
     evidence_index: Mapping[str, Any] | None = None,
+    journey: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Assemble the document the existing UI already knows how to render.
 
@@ -651,6 +978,11 @@ def to_whole_book_v2(
             "preserve_list": [],
         },
         "evidence_index": dict(evidence_index or {}),
+        # Defaults to "no axis computed", which the client renders as the stage list. It never
+        # falls back to the ordinal staircase: that drew the same rising line for every book.
+        "journey": dict(journey) if journey else conform(
+            JourneyResult, {"availability": "unavailable", "axis": "none"}
+        ),
         "analysis_metadata": {
             "run_id": run_id,
             "provider_name": provider_name,

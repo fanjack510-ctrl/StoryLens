@@ -13,6 +13,8 @@ silently spends money is not something a client should have to guess about.
 
 from __future__ import annotations
 
+import logging
+
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -30,6 +32,8 @@ from app.narrative_core.long_novel.profile import (
     select_sample_chapters,
 )
 from app.narrative_core.long_novel.profile_repository import BookProfileRepository
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1", tags=["book-profile"])
 
@@ -50,7 +54,32 @@ def _chapter_texts(db: Session, book_id: int) -> tuple[list[str], int]:
         {"book_id": book_id},
     ).scalar()
     if snapshot_id is None:
-        raise HTTPException(status_code=409, detail="BOOK_HAS_NO_SNAPSHOT")
+        # The profile is a prerequisite for BOTH analysis entries now (§4.3), so its own
+        # entry point must be self-sufficient. A chapter-only user has no snapshot yet —
+        # historically only the whole-book prepare built one — and answering 409 here
+        # would deadlock them: analysis needs the profile, the profile needs a snapshot,
+        # the snapshot needs the whole-book flow they never use. Building it is free.
+        from app.narrative_core.services.snapshot_service import BookSnapshotServiceImpl
+
+        try:
+            snapshot_id = BookSnapshotServiceImpl(db).create_or_reuse_snapshot(book_id).id
+            db.commit()
+        except Exception:  # noqa: BLE001 — no chapters, unreadable book, or a lost race
+            logger.warning("profile_snapshot_autocreate_failed book_id=%s", book_id, exc_info=True)
+            db.rollback()
+            # React dev mode double-fires the draft request; two builders race and the
+            # loser lands here with a unique-constraint error while the winner's snapshot
+            # is already committed. Losing the race is not "the book has no snapshot" —
+            # re-read before claiming so.
+            snapshot_id = db.execute(
+                text(
+                    "SELECT id FROM book_snapshots WHERE book_id = :book_id "
+                    "ORDER BY id DESC LIMIT 1"
+                ),
+                {"book_id": book_id},
+            ).scalar()
+            if snapshot_id is None:
+                raise HTTPException(status_code=409, detail="BOOK_HAS_NO_SNAPSHOT")
     rows = db.execute(
         text(
             "SELECT content_text FROM book_snapshot_chapters "
