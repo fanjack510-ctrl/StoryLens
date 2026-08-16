@@ -1,0 +1,73 @@
+{
+  "id": "CHG-20260816-104",
+  "title": "一个编造的段落 ID 不再毁掉整章分析：五个永久失败点",
+  "type": "fix",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": false,
+  "commits": [
+    "1d98f2dd"
+  ],
+  "modules": [
+    "apps/api/app/services/reader_journey_v2_execution.py",
+    "apps/api/app/schemas/reader_journey_v2.py",
+    "packages/prompts/reader_journey_scene/v2.3"
+  ],
+  "user_summary": "新导入两本书（升级流《星芒纵横》、群像权谋《醉枕江山》）跑单章分析，四章里两章失败，而且**失败后不能重试**——用户等于白等一场，且没有任何办法自救。查下来是五个各自独立的失败点，前四个是产品既有的。\n\n一、场景载荷同时把「场景 ID」和「场景序号」交给模型，却从没说过该回哪个。模型回了序号之后，负责补救的修复流程是按 ID 去定位那条记录的，于是连要修的东西都找不到，整章作废。现在程序按自己的对应表把序号换回 ID——这是查表不是猜测，只在返回的那组数字恰好就是序号集合、且一一对应时才换，差一个、重一个、多一个都不换，原样交给校验拒绝。\n\n二、模型偶尔会自己编一个段落编号。同一章连跑四次，编了四种不同的：`p1`；另一本书的真实段号（因为我把它写进了提示词当例子，模型照抄了）；拿场景 ID 25 当书号拼出来的 `B0025-…`；以及通用占位符 `B0001-…`。改了两轮提示词都没用。现在的处理是**作废那一条引用，不作废整章**——编造的编号里不含任何关于「本来想指哪一段」的信息，硬猜会把一句论断挂到模型根本没看过的正文上。丢掉之后系统会自然降级：没有证据的维度分数封顶 40，这是原本就有的规则。\n\n三、模型说「这里有一段冗余」，却又给冗余度打了 1 分（低分为好）——自己跟自己矛盾。原来这会让整章失败。现在撤掉那条标记，不动分数：分数是主字段（进曲线、进存档），标记只是说明冗余在哪，两者矛盾时该退的是没有支撑的说法。\n\n四、提示词在讲工艺标记时要的是「段号」，而契约字段叫 `evidence_paragraph_ids`（完整 ID）。这个矛盾在更早的版本就在，是第一条规则把它照出来的。\n\n五、这一条是我修前四条时自己引入的：把修复动作写进运行记录时传错了参数类型，抛出的类型错误被管线归类成了「网络故障」。一个类型错误被报成网络问题，很容易让人以为是服务商抽风而反复重试。已修，并且钉了测试：记录修复动作这件事，永远不能让它刚救回来的请求失败。\n\n这些缺陷之前一直没暴露，是因为最早两本书的场景 ID 恰好从 1 开始，跟序号撞上了。**书库里越往后导入的书越容易踩。**",
+  "technical_summary": "Found by running two freshly imported books; 2 of 4 chapters failed permanently (`retryable: false`).\n\n`normalize_scene_ids_v2` remaps ordinal→scene_id before `validate_scene_batch_result_v2`. Narrow by construction: the returned set must equal the batch's ordinal set, sizes must match (no duplicates), and the image under the mapping must equal the expected id set. Anything else returns [] and the validator rejects as before. Verified firing in production logs: `scene_id 1→25`.\n\n`drop_unresolvable_paragraph_ids_v2` removes citations not in the scene's paragraph set, across `evidence_paragraph_ids` (top level), all 21 `LEVEL_METRIC_KEYS` scored fields, `craft_flags`, `genre_axes`, and the v2.2 single-id fields (`reader_questions_*[].paragraph_id`, `first_hook_paragraph_id`). It never resolves — an invented id carries no information about intent, and guessing would attach a claim to text the model never read, which is the failure the grounding guard exists to catch. Degradation is the existing `DEFAULT_NO_EVIDENCE_CAP = 40`.\n\n`drop_unsupported_craft_flags_v2` withdraws a flag whose `_FLAG_FIELD_BOUNDS` partner contradicts it. The score is primary (curve, chapter mean, stored artifacts); the flag is locational reporting.\n\nPrompt v2.3 (contract still 2.0) states the ID rule ahead of all scoring, using `B####-C####-P####` — v2.3's first draft used a real id and the model copied it verbatim into another book's analysis. craft_flags now names `evidence_paragraph_ids` rather than 段号.\n\n`_record_run_note` replaces three `merge_run_provenance(json, dict)` calls; that helper takes a `ReaderJourneyPipelineVersions` and calls `.provenance()`, so a dict raised `AttributeError`, surfaced as `PROVIDER_TRANSPORT_ERROR` at `provider_request`.",
+  "acceptance_criteria": [
+    "序号误当 ID 时按自有映射改回；非双射一律不改，交给校验拒绝",
+    "编造的段落引用被丢弃且绝不被解析成某个真实段落",
+    "标记与自身分数矛盾时撤标记，分数不动，整章不废",
+    "提示词的 ID 规则不含任何可照抄的真实 ID",
+    "工艺标记要的字段名与契约一致",
+    "记录修复动作不会让请求失败，且保住已有内容"
+  ],
+  "tests": [
+    "apps/api/tests/test_v2_grounding_and_fingerprint_local.py",
+    "apps/api/tests/test_reader_journey_v2_local.py",
+    "apps/api/tests/test_reader_journey_v2_pipeline_wiring_local.py"
+  ],
+  "verification_evidence": [
+    "失败实测：《星芒纵横》第3章连续 6 次失败，每次根因不同——scene_id 回序号 / 抄走提示词示例里的 B0013-C0060-P0007（另一本书）/ 拿 scene_id 拼出 B0025-C0001-P0001 / B0001-C0001-P0001 / 标记与分数矛盾 / 我自己引入的类型错误；第 7 次通过",
+    "归一实测（生产日志）：journey_run=20 scene_id normalised from ordinal: scene_id 1→25",
+    "撤销实测（生产日志）：journey_run=21 withdrew craft flags contradicted by their own score: {'redundant_passage': 1}",
+    "升级流四条专项维度首次在真书上打出分差：爽点兑现 第2章[4,0,1,0] 第3章[0,2,0]；憋屈控制 [3,0,2,2] / [0,3,3]；断章质量 2 vs 5，与章末牵引 50 vs 80 一致",
+    "群像权谋首次跑通：镜头「布局与摊牌」、四动作「埋了个局/局面收紧/摊牌/按下不表」、专项维度势力变动·信息差·本线贡献·本章价值·追更钩",
+    "首个中段章实测（醉枕江山第59章 vs 第1章）：章末牵引 95 vs 50、欠账 3 vs 9、诊断 0 条 vs 2 条——第 1 章在「章末牵引」上系统性偏低，此前五轮全用第 1 章验证",
+    "后端 319 项通过；两处收集错误与一项 native_overview 失败均为既有的 storylens_private_engine 未安装",
+    "真实 API 花费：本日累计约 ¥0.7，授权额度 ¥30"
+  ],
+  "known_out_of_scope": [
+    "《穿越之种田难为》分章失败（源站行号把章标题粘进正文），按用户决定搁置到分段器修好",
+    "《星芒纵横》第一章被并进 front_matter，本轮只跑了第 2、3 章，验不到它的开篇抓力",
+    "ensemble_politics 仍无主线改名（显示「综合阅读」）与权重覆盖",
+    "升级流 / 群像权谋尚未声明诊断收手，两者都被判了张力不足或好奇不足",
+    "模型编造 ID 的根因未除，只是不再致命；根治要么换成让模型回本场景内的序号，要么换模型"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "无表结构变更，契约版本仍为 2.0。运行记录 JSON 新增三个诊断键（scene_id_normalisations / dropped_paragraph_citations / withdrawn_craft_flags），旧结果没有这些键。"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false,
+    "notes": "只影响新跑的分析；已有结果不受影响。需重启 sidecar。"
+  },
+  "blocker_level": "none",
+  "head_inclusion": false,
+  "created_at": "2026-08-16T07:10:00+08:00",
+  "updated_at": "2026-08-16T07:10:00+08:00",
+  "files": [
+    "apps/api/app/services/reader_journey_v2_execution.py",
+    "apps/api/app/schemas/reader_journey_v2.py",
+    "packages/prompts/reader_journey_scene/v2.3",
+    "apps/api/tests/test_v2_grounding_and_fingerprint_local.py",
+    "apps/api/tests/test_reader_journey_v2_local.py",
+    "apps/api/tests/test_reader_journey_v2_pipeline_wiring_local.py"
+  ]
+}
