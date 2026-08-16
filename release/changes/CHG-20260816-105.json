@@ -1,0 +1,60 @@
+{
+  "id": "CHG-20260816-105",
+  "title": "升级流不再只属于男频爽；群像权谋的主线终于有了自己的名字",
+  "type": "feature",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": false,
+  "commits": [
+    "cc831440"
+  ],
+  "modules": [
+    "apps/api/app/narrative_core/long_novel/chapter_focus.py"
+  ],
+  "files": [
+    "apps/api/app/narrative_core/long_novel/chapter_focus.py",
+    "apps/api/tests/test_chapter_profile_focus.py"
+  ],
+  "user_summary": "又导入两本书跑真实分析，暴露两个口子。\n\n一、一本升级流结构的书，只要受众不是「男频爽」，就拿不到任何升级流的维度。《系统豪横！救宠奖无限创业金》84 章，结构是彻头彻尾的升级流——办一个反派、开一条产品线，立目标→受阻→兑现——但主角是女性、受众填的中性，于是「爽点兑现」「憋屈控制」那一整套都不生效，只剩下免费流的两条。而它的钩子说法**已经**是「立标与兑现」，因为词表只看引擎不看受众。同一个轴，起名的地方认它，打分的地方不认。\n\n现在升级流单独有一条专项，只看引擎。它带一条新维度「目标明确度」——量的是**目标写清楚了没有**，不是目标大不大：「把这批狗送出收容所」和「统一天下」在这一项上可以同分。故意不跟「爽点兑现」重叠。男频爽的书两条都生效，且它自己那套更极端的权重仍然压过通用的（兑现权重 0.40 对 0.35）。\n\n二、《醉枕江山》的镜头已经叫「布局与摊牌」，主线却还挂着通用的「综合阅读」——跟之前言情那次「钩子回收＋起了心结」是同一种半拉子状态。现在叫「局势张力」：群像权谋的读者跟的既不是某个人的目标，也不是谜底，是各方位置的变化。权重也跟着改了，「信息增量」提到 0.25、「人物能动性」压到 0.05——那一章从 68 升到 84.6，靠的是官兵进村和文官下令屠村，视角人物一件都没做。\n\n两个类型都**没有**加诊断收手。言情那次我有两章的前后对照（2 条缺陷→0），这两个各只有一两个数据点，在这种证据上撤掉一条警报，比它造成的误报更糟。",
+  "technical_summary": "`PROGRESSION_ENGINE` triggers on `engine=progression` alone and is registered **before** `GRATIFICATION_BEATS` in `CHAPTER_FOCI`, because `merged_weights` replaces a block whole in registration order — the more specific pairing therefore still wins `reading_momentum` and `plot_progress` for a 爽文 book. Verified: hook_payoff_fit 0.35 (neutral) vs 0.40 (male_gratification).\n\nOne axis only, `goal_clarity`. Adding a second would have overlapped `gratification_payoff`, and the 42-scene audit that motivated genre axes in the first place showed overlapping axes produce no discrimination.\n\n`MAIN_CURVE_NAMING` gains an `ensemble_politics` row (局势张力) ahead of the fast_food_free row, and `ENSEMBLE_POLITICS` gains a `plot_progress` weight table matching its own instruction (information_gain 0.25 / state_change 0.25 / character_agency 0.05).\n\n`test_a_gated_axis_does_not_consume_the_per_scene_budget` updated: the 爽文 axis list is now five, three of them per-scene, still under `MAX_GENRE_AXES`.",
+  "acceptance_criteria": [
+    "中性受众的升级流书拿得到升级流维度与权重，且拿不到爽文维度",
+    "男频爽的书两条 focus 都生效，其权重覆盖通用的",
+    "群像权谋的主线不再显示默认名，权重与该 focus 的说明一致",
+    "带门控的轴仍不占每场景配额",
+    "未确认画像的书行为不变"
+  ],
+  "tests": [
+    "apps/api/tests/test_chapter_profile_focus.py"
+  ],
+  "verification_evidence": [
+    "真实 API 实测《系统豪横》第1章：维度 目标明确度[4,5,4,5]、开篇抓力[4]、断章质量[4]；权重 hook_payoff_fit 0.35；integrity trusted",
+    "真实 API 实测《系统豪横》第40章：目标明确度[4,4,4]、开篇抓力[3]、断章质量[3]；同样 0.35",
+    "对照《星芒纵横》第2章（男频爽）：爽点兑现[4,0,1,0]、憋屈控制[3,0,2,2]，权重 0.40——更具体的覆盖成立",
+    "群像主线实测：改前 main_curve=「综合阅读」而镜头已是「布局与摊牌」；改后为「局势张力」",
+    "后端 134 项通过（focus/weight/journey_v2/ground）；剩余失败与收集错误为既有的 storylens_private_engine 未安装"
+  ],
+  "known_out_of_scope": [
+    "「目标明确度」七个场景全落在 4–5，无区分度——锚点写得太宽（「目标存在且写清楚」在任何目标驱动的书里都成立），需要更多升级流样本才能把 5 分卡到更窄的位置，本轮不改",
+    "升级流 / 群像权谋的诊断收手未加，证据不足",
+    "《穿越之种田难为》分章失败，等分段器",
+    "《星芒纵横》第一章被并进 front_matter，其开篇抓力仍未验证"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "无表结构变更。已确认画像为 engine=progression 的书重跑后会多一条 genre_axis 并换用升级流权重；未确认画像的书逐位不变。"
+  },
+  "release_impact": {
+    "requires_reanalysis": true,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false,
+    "notes": "已有结果不会追认新维度与新权重，需重跑。需重启 sidecar。"
+  },
+  "blocker_level": "none",
+  "head_inclusion": false,
+  "created_at": "2026-08-16T12:20:00+08:00",
+  "updated_at": "2026-08-16T12:20:00+08:00"
+}
