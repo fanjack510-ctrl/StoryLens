@@ -1,0 +1,3 @@
+chore(release): record CHG-085 commit hash after synthesis/resume hotfix.
+
+StoryLens-Change: CHG-20260811-085

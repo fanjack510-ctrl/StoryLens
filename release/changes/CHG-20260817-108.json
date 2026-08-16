@@ -1,0 +1,84 @@
+{
+  "id": "CHG-20260817-108",
+  "title": "拆文：同一本书的第二种读法，给想学的人而不是想改的人",
+  "type": "feature",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": false,
+  "commits": [
+    "0dd5ef6d",
+    "f06b9638",
+    "d103b06a"
+  ],
+  "modules": [
+    "apps/api/app/narrative_core/long_novel/deltas.py",
+    "apps/api/app/narrative_core/long_novel/prompts.py",
+    "apps/api/app/narrative_core/long_novel/orchestrator.py",
+    "apps/api/app/narrative_core/long_novel/chapter_focus.py",
+    "apps/api/app/narrative_core/services/long_novel_pipeline_v1.py"
+  ],
+  "files": [
+    "docs/whole-book/STORY_BREAKDOWN_DESIGN.md",
+    "apps/api/app/narrative_core/whole_book_v2/contracts.py",
+    "apps/api/app/narrative_core/long_novel/contracts/l1.py",
+    "apps/api/app/narrative_core/long_novel/deltas.py",
+    "apps/api/app/narrative_core/long_novel/prompts.py",
+    "apps/api/app/narrative_core/long_novel/extractor.py",
+    "apps/api/app/narrative_core/long_novel/orchestrator.py",
+    "apps/api/app/narrative_core/long_novel/adapter.py",
+    "apps/api/app/narrative_core/long_novel/chapter_focus.py",
+    "apps/api/app/narrative_core/services/long_novel_pipeline_v1.py",
+    "apps/api/tests/test_long_novel_story_breakdown.py",
+    "apps/api/tests/test_long_novel_document_sections.py"
+  ],
+  "user_summary": "你给了一份《一梦》的专业拆文，说「拆文和评测应该有区别」。核对下来区别比表面更根本：那份材料**通篇零个数字**，单位是「一句话」不是「章节区间」，每一条都在回答「为什么打动人」，而且第六节直接就是可以拿走用的写法。而我们的报告是一份体检报告。\n\n更说明问题的是：评审九条里唯一被肯定的「综合诊断」，恰好是唯一不靠数字说话的模块。\n\n所以做成两个东西，不是把现在这个改长。**诊断看自己的书，拆文看别人的书。**\n\n拆文产出六样：起承转合四段、爆点清单（每条带原文）、逐章钩子（原话疑问句）、可复用点、配角功能、分章拆解。三条规矩写死在代码里，每一条都对应诊断那边一个已经犯过的错：\n\n1. **不出现任何数字。** 一旦某块想放数字，说明那条结论没能用文字讲清楚。\n2. **每条都能引出原文**，而且引文要在书里逐字存在——校验两道，抽取时对着正文查一遍，选出来的时候再对着候选查一遍。模型被要求给「金句」时一定会写出「像这本书的句子」，而引文是转述的拆文比没有引文更糟。\n3. **爆点是选出来的，不是每幕分一个。** 诊断的「重大转折」就是每阶段摊一条，评审一眼看穿。\n\n**实测两轮《系统豪横》。** 第一轮十条爆点全部有真实原文，分布是 0/2/4/4——开篇一条都没有，而诊断那边也恰好判定这本书开篇最弱。同时暴露三个毛病，第二轮全部修掉：\n\n- 「为什么是十条」原来只是复述「选取了最打动人的十个」。现在会说：第 10 条（第 83 章立 Flag）比落选的第 81 章强在哪、第 9 条比第 44 章强在哪。\n- 十条里有两条以「读者会因此感动」收尾——这句话对任何一条都成立，因此对这一条什么都没说。现在零条。\n- 配角 23 人，「是否抢戏」全部是「否」。一个永远不会为假的开关不是测量，跟热力那两列写死的 0 是同一类问题。而且里面有两个人标着「未出场，无明确功能」——那不是功能，那是模型在说这一行不该存在。现在配角 16 人，功能从「负责执行和协调」变成「缺他则主角孤军奋战」，并且整批给一句判断：「小虎和贝姐在运营上功能重叠，沈妍和壮壮妈在维权上角色相似，略有抢戏」——这句话是那个布尔值永远给不出来的。\n\n**没做的：** 运行模式、应用入口、L1 落库复用。设计文档自己写着「先证明这个读法值得要，再花钱做怎么交付」，那两轮就是在证明。\n\n**成本要更正：** 设计初稿写「复用 L1 → ≈¥0.01」，那是**基于一个不存在的机制**——`long_novel_*` 五张表全是零行，块抽取跑完就丢，`LongNovelRepository` 建好了没人调用。真实代价是 ¥0.30 一本。文档里已改正。",
+  "technical_summary": "`StoryBreakdownResult` is a defaulted optional section on `WholeBookAnalysisV2`, so documents stored before it validate unchanged.\n\nL1 gains a mode delta (same `Delta` machinery as the profile axes, keyed on a pseudo-axis): `ChapterSignal.end_hook_question` and `BlockAsset.standout_moments`. L1 is the only layer that sees prose, so it nominates; a whole-book unit selects, because \"hardest-hitting\" is a comparison a block cannot make. `_drop_unquoted_moments` compares whitespace-stripped, which forgives a normalised space and nothing else; a rejected nomination is recorded on `ExtractionResult.moments_rejected` rather than dropped in silence.\n\nFour units above L1: `beat_shaper`, `moment_selector`, `cast_reader`, `technique_reader` — three independent, then one reading all three. All optional on `RunCoordinator`, so a diagnostic run passes None for the breakdown units and a breakdown run passes None for the diagnostic ones; the coordinator already treated a missing unit as \"section not produced\", so neither path needed a branch. Stage interpretation is the one unit both modes need, since 起承转合 re-segments by narrative function and needs what happened in each act.\n\n`build_standout_prompt` carries the profile's `HOOK_VOCABULARY` lens, so a 升级流 book's moments are read as 立标与兑现 rather than in romance terms.\n\n`GENRE_NAMING` in `chapter_focus` maps confirmed axes to the book's type, in the same ordered-trigger shape as `MAIN_CURVE_NAMING`.",
+  "acceptance_criteria": [
+    "起承转合恰好四段，首尾相接覆盖全书",
+    "爆点每条带书里逐字存在的原文，条数由引擎自定 8–12 并说明理由",
+    "编造的引文在抽取层与选择层都进不了报告",
+    "逐章钩子是原话疑问句，只列真的留了问题的章节",
+    "配角只列真正出场起作用的人，并对整批给一句判断",
+    "拆文这一节里不出现任何评分",
+    "诊断模式跑出的文档，拆文一节诚实地标为 unavailable",
+    "已存的旧文档仍然通过契约校验"
+  ],
+  "tests": [
+    "apps/api/tests/test_long_novel_story_breakdown.py",
+    "apps/api/tests/test_long_novel_document_sections.py"
+  ],
+  "verification_evidence": [
+    "真实 API 跑《系统豪横》拆文两轮（run 16 / run 17），各 21 次调用，11/11 块，¥0.30 一轮",
+    "第一轮：10 条爆点全部有真实原文，按幕分布 0/2/4/4（开篇为 0，与诊断判定该书开篇最弱一致）",
+    "第二轮验证三处提示词收紧全部生效：count_rationale 从复述变为逐条对比落选项；「读者会因…感动」收尾 2/10 → 0/10；配角 23 → 16 人且无「未出场」条目",
+    "cast_note 实测产出真实判断：「小虎和贝姐在运营上功能重叠，沈妍和壮壮妈在维权上角色相似，略有抢戏」",
+    "逐章钩子 71/84 章，全部为疑问句，未留问题的 13 章正确留空",
+    "伪造引文用例：抽取层与选择层各拦一次，真实提名不受牵连",
+    "后端定向 449 项通过；前端 tsc 干净"
+  ],
+  "known_out_of_scope": [
+    "运行模式、应用入口、导出、界面全部未做——只能用脚本直接调用管线跑",
+    "L1 未落库，两个模式各跑各的抽取；`LongNovelRepository` 已建但无人调用，复用是独立一期",
+    "全书唯一性判断（样本里「这是她全书唯一一次哭」）做不到，需要否定性统计",
+    "跨章重复的梗（样本里「狗蛋」在三处被问起）未单独抽取，只能靠可复用点那一次调用顺带识别",
+    "尚未拿《一梦》本身跑过——设计 §8 定的判据（引擎选的十个爆点与人写的重合 ≥6 条）还没执行，因为那本书还没导入",
+    "逐章批注按决定不做"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "契约新增一个带默认值的可选节，已存文档逐位通过校验。拆文结果写在同一份 WholeBookAnalysisV2 文档里，与诊断共用存储。"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false,
+    "notes": "对现有诊断流程零影响：拆文单元只在 mode=story_breakdown 时注入。用户暂时还看不到这个功能，入口未做。需重启 sidecar。"
+  },
+  "blocker_level": "none",
+  "head_inclusion": false,
+  "created_at": "2026-08-17T02:00:00+08:00",
+  "updated_at": "2026-08-17T02:00:00+08:00"
+}

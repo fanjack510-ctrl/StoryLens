@@ -1,0 +1,77 @@
+{
+  "id": "CHG-20260817-107",
+  "title": "把没测的列砍掉，把测了的说清楚——专业评审九条的整改",
+  "type": "fix",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": false,
+  "commits": [
+    "55d9d98d"
+  ],
+  "modules": [
+    "apps/api/app/narrative_core/long_novel/adapter.py",
+    "apps/api/app/narrative_core/long_novel/orchestrator.py",
+    "apps/api/app/narrative_core/whole_book_v2/contracts.py",
+    "apps/desktop/src/features/wholeBookV2/presentation/labels.ts"
+  ],
+  "files": [
+    "apps/api/app/narrative_core/long_novel/adapter.py",
+    "apps/api/app/narrative_core/long_novel/orchestrator.py",
+    "apps/api/app/narrative_core/whole_book_v2/contracts.py",
+    "apps/desktop/src/features/wholeBookV2/presentation/labels.ts",
+    "apps/desktop/src/features/wholeBookV2/presentation/WholeBookV2ReportView.tsx",
+    "apps/desktop/src/features/wholeBookV2/reportExport.ts",
+    "apps/api/tests/test_long_novel_document_sections.py",
+    "apps/api/tests/test_long_novel_phase1_foundation.py"
+  ],
+  "user_summary": "一位专业读者把《系统豪横》的成品报告从头到尾看了一遍，提了九条。核对下来分成两类：一类是**根本没在测**，一类是**测了但没说清楚在测什么**。\n\n**没在测的，全部砍掉：**\n\n- 聚合热力的「伏笔铺设」「回收兑现」两列，是代码里写死的 `0.0`，从来没有任何东西测过它们。而且它们要答的问题，悬念模块已经用真实的悬念生命周期答过了。\n- 节奏六条曲线里有三条是另外三条重新组合的。「阅读动力」literally 等于 `钩子×2 + 信息节拍`，实测它跟旁边两条曲线的相关性是 0.73 和 0.65。六条线只装了三条线的信息，不是更丰富，是看不清——评审说「参数太复杂导致不准」，判断完全正确。\n- 十二个事件标记里有十个在复述紧挨着它上面的阶段列表。\n- 人物关系的「关系类型」「初始状态」「演变[0]」是同一个字符串，一条只变过一次的关系被印了三遍，还被当成走了三步。\n\n**测了但没说清楚的，补上标注：**\n\n- 节奏那六个数字**不是评分，是本书内部的百分位排名**。所以它必然铺满 0–100（这是百分位的性质，不是这本书的性质），而且跨书不可比。页面上一个字都没说——「满分是 100 分？」是唯一能得出的读法。\n- 热力各列是**清点出来的段落均值**，四种量纲混在一张表里，却挂着「冲突强度」这种数字支撑不了的名字。现在标出单位和真实含义：「动作段落 段/章」。\n\n**还有三件是真错了：**\n\n- 行动台账的取样代码，注释写着「across the span」，做的是取开头。实测：49-64 章那一段只到第 57 章，65-84 章那一段只到第 78 章——**每一幕的收尾章节都被悄悄吃掉了**。\n- 「洪霞警官」和「洪警官」被当成两个人，各拿着半份履历。现在会合并，规则窄到「李山木」和「李山木父亲」不会被误合。\n- 因果链里「曾昭野报警抓获李山木 → 系统激活」——系统第 1 章就激活了，因在果之后。现在会按章号校验。\n\n另外「未收束」被印在书里明明已经部分回答了的问题上：状态只有两个值，而抽取层几乎把所有动作都标成「推进」（实测 25 条线索对 1 条兑现）。契约里本来就有第三个值，现在用上了。抽取层本身的失衡这次没动，那才是真正的上限。\n\n配色也一起换了：原来六条线全是低饱和中间调，十五对里有十对对比度低于 1.5，最糟的一对是 1.02——而那一对恰好也是走势最像的一对。现在三条，最差 1.39，加上虚线实线区分，不看颜色也分得开。",
+  "technical_summary": "`HeatmapBin.foreshadow/payoff` and `PacingPoint.tension/reading_drive/pace_speed` become `float|None = None` rather than being deleted, so documents stored before this still validate; producers stop emitting them.\n\n`reading_drive_ranks(curve)` keeps the composite as an internal signal — it is what `_pacing_regions` finds fatigue with, and those regions drive the assessment's most actionable output — while removing it from the published curve. `_pacing_regions` takes the ranks as a parameter now.\n\n`build_stage_ledger` replaces `events[::step][:8]` with `spread()`. With `step = n // N` the stride rounds down so N strided picks never reach the end, and at `n < 2N` it degenerates to a plain prefix.\n\n`_is_contraction_of(short, full)`: same first and last character, subsequence, at most two characters' difference. Separates 洪警官⊂洪霞警官 (interior contraction) from 李山木⊂李山木父亲 (appended role) — the obvious substring test merges both and deletes a character from the book. `_fold_contracted_names` keeps the fuller surface and records the short one as an alias.\n\n`_causal_chain` resolves both sides against the events' own chapter refs and drops a link whose cause is later than its effect, or whose two sides are the same fact.\n\n`_suspense_lifecycles` derives `partial` from the measured event types when no `resolve` action arrived. `_event_markers` stops emitting `story_stage` markers.\n\nFrontend: `PACING_SERIES` (key + label + what was counted) replaces `PACING_LABELS`; `PACING_SCALE_NOTE` is rendered on screen and in the export; `HEATMAP_DIMS` carries a `unit`. Export and screen read one vocabulary from `labels.ts`, so an export cannot name things differently from the page it is audited against.",
+  "acceptance_criteria": [
+    "热力不再发布任何从未被测量的列",
+    "节奏只发布互相独立的曲线，且组合信号仍能找出节奏异常区间",
+    "行动台账取到每一段的最后几章",
+    "同一个人的缩略称呼与全称合并，亲属称谓不被误合",
+    "因果链里因不晚于果",
+    "书里已部分回答的悬念不再显示为「未收束」",
+    "页面与导出都说明百分位不是评分、热力各列的单位",
+    "已存的旧报告仍然通过契约校验"
+  ],
+  "tests": [
+    "apps/api/tests/test_long_novel_document_sections.py",
+    "apps/api/tests/test_long_novel_phase1_foundation.py"
+  ],
+  "verification_evidence": [
+    "评审九条逐条核对，全部拉 run 15 的真实文档比对，非猜测",
+    "节奏六条曲线相关性实测：阅读动力 vs 钩子密度 0.73、vs 剧情推进 0.65；节奏速度 vs 张力 0.54",
+    "配色对比度实测：旧六色 15 对中 10 对 <1.5，最差 1.02（阅读动力 vs 钩子密度）；新三色最差 1.39",
+    "台账缺口实测：改前 49-64 章那段止于第 57 章、65-84 章那段止于第 78 章",
+    "悬念动作类型实测：clue 25 / reveal 2 / partial_reveal 2 / payoff 1 / hook 1",
+    "缩略名合并规则对 12 组人名逐一验证，含 李山木/李山木父亲、赵明/赵玲、马勇/马妈妈 等反例",
+    "后端定向 449 项通过；剩余 3 项失败为既有环境问题（变更登记历史缺字段、git 输出 gbk 解码、FastAPI 版本 _IncludedRouter）",
+    "前端 tsc 干净"
+  ],
+  "known_out_of_scope": [
+    "抽取层把几乎所有悬念动作标成 advance（25:1），这是「未收束」的真正上限，本轮只改了判定不改抽取",
+    "重大转折仍按阶段均摊一条，不是按重要性选出来的——评审第 3 条的根因，留给拆文那套「选而不是分」的机制先验证",
+    "配角仍只有主角有深度画像",
+    "时间线的 story_order 与 narrative_order 恒相等（无倒叙检测能力），本轮未处理",
+    "「关键转折点设计巧妙」这类跨全书的结论，证据只能按全书均匀取样，引不到点子上"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "契约字段改为可选而非删除，已存文档逐位仍然通过校验。重跑后的文档会少两列热力、少三条曲线。"
+  },
+  "release_impact": {
+    "requires_reanalysis": true,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false,
+    "notes": "已有报告仍可打开，但要拿到修好的台账、合并后的人名、校验过的因果链需重跑。需重启 sidecar。"
+  },
+  "blocker_level": "none",
+  "head_inclusion": false,
+  "created_at": "2026-08-17T01:30:00+08:00",
+  "updated_at": "2026-08-17T01:30:00+08:00"
+}
