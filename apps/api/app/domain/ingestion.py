@@ -41,6 +41,13 @@ ALT_CHAPTER_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
             r"(?P<separator>[:：、.\-—]?)\s*(?P<title>.*?)\s*$"
         ),
     ),
+    # A bare numeral alone on its line.  （一梦如初）
+    #
+    # Last, and the only pattern that carries an extra guard: a line that is nothing but a
+    # number is also what a year, a quantity or a list item looks like, so the regex alone
+    # would cut books in the middle of a sentence. The guard is `_counts_like_chapters`, and
+    # without it this entry must not be enabled.
+    ("bare", re.compile(r"^\s*(?P<number>\d{1,4})\s*$")),
 )
 
 #: A detection is believed only if it produces enough chapters to be a real division of the
@@ -141,6 +148,36 @@ def chapter_title_metadata(source: str) -> dict[str, object]:
             "source_title_line": source}
 
 
+#: How many steps in a bare-numeral run may fail to advance before the run is disbelieved.
+#: One in ten, so a single missing or duplicated marker does not disqualify a real book.
+_BARE_RUN_TOLERANCE = 0.1
+
+
+def _counts_like_chapters(candidates: list["ChapterCandidate"]) -> bool:
+    """Do these bare numerals actually count, the way chapter markers do?
+
+    A line holding nothing but a number is indistinguishable, by shape, from a year, a price or
+    a list item. What separates a chapter marker from those is not how it looks but what it does
+    next: it goes up by one. 《一梦如初》 numbers its nineteen sections 1…19 and then restarts at
+    1 for 番外一, which is why a restart counts as a legal step — but only a couple of them, or
+    "restart" would excuse any sequence at all.
+
+    Without this the pattern is worse than not having it: a stray numeral would cut a chapter in
+    the middle of a sentence, and the reader would have no way to tell that is what happened.
+    """
+    numbers = [c.number for c in candidates if c.number is not None]
+    if len(numbers) < MIN_BELIEVABLE_CHAPTERS or len(numbers) != len(candidates):
+        return False
+    if numbers[0] > 2:
+        return False
+    steps = list(zip(numbers, numbers[1:]))
+    restarts = sum(1 for previous, current in steps if current == 1 and previous > 1)
+    if restarts > 2:
+        return False
+    advances = sum(1 for previous, current in steps if current == previous + 1)
+    return advances + restarts >= len(steps) - max(1, int(len(steps) * _BARE_RUN_TOLERANCE))
+
+
 def detect_chapters(text: str) -> ChapterDetection:
     lines = text.replace("\r\n", "\n").replace("\r", "\n").split("\n")
 
@@ -180,6 +217,8 @@ def detect_chapters(text: str) -> ChapterDetection:
     if len(candidates) < MIN_BELIEVABLE_CHAPTERS:
         for kind, pattern in ALT_CHAPTER_PATTERNS:
             alternative = _collect(pattern, kind)
+            if kind == "bare" and not _counts_like_chapters(alternative):
+                continue
             if len(alternative) >= MIN_BELIEVABLE_CHAPTERS and len(alternative) > len(candidates):
                 candidates = alternative
                 break
@@ -209,11 +248,15 @@ def detect_chapters(text: str) -> ChapterDetection:
     title = "正文"
     paragraphs: list[str] = []
 
-    def flush() -> None:
+    def flush() -> bool:
+        """Close the open chapter. Returns whether it had any text — the caller needs to know,
+        because a heading that produced nothing is a heading the next marker sits *under*."""
         nonlocal paragraphs
-        if paragraphs:
-            chapters.append(ParsedChapter(title=title, paragraphs=paragraphs))
-            paragraphs = []
+        if not paragraphs:
+            return False
+        chapters.append(ParsedChapter(title=title, paragraphs=paragraphs))
+        paragraphs = []
+        return True
 
     for index, raw in enumerate(lines, start=1):
         normalized = normalize_paragraph(raw)
@@ -224,8 +267,18 @@ def detect_chapters(text: str) -> ChapterDetection:
         candidate = candidate_by_line.get(index)
         is_special = bool(SPECIAL_PATTERN.fullmatch(normalized) or VOLUME_PATTERN.fullmatch(normalized))
         if candidate or (is_special and len(normalized) <= 120):
-            flush()
-            title = normalized
+            had_text = flush()
+            if candidate and candidate.unit == "bare":
+                # A bare marker's own text is just "7", which reads as a stray line everywhere it
+                # is later shown; render it as the chapter it denotes, since the number is the
+                # marker's whole content. And when it lands directly under a heading that
+                # produced no text, it is numbering *within* that section rather than replacing
+                # it — 《一梦如初》 restarts at 1 under 番外一：慧娘, and letting the marker win
+                # dropped the 番外's name from the book entirely.
+                numbered = f"第{candidate.number_text}章"
+                title = numbered if had_text or title == "正文" else f"{title}·{numbered}"
+            else:
+                title = normalized
         else:
             paragraphs.append(normalized)
     flush()

@@ -71,3 +71,54 @@ def test_single_marker_does_not_trigger_alternative() -> None:
     # 「1.」 line must not become the book's only division.
     text = "1.某个小标题\n\n" + "\n\n".join(["普通正文段落。"] * 20)
     assert len(_adopted(text)) == 0
+
+
+def _bare(n: int, restart_at: int | None = None) -> str:
+    """A book whose only chapter markers are numerals alone on their line."""
+    out: list[str] = []
+    for i in range(1, n + 1):
+        out.append(str(i if restart_at is None or i < restart_at else i - restart_at + 1))
+        out.append("这一段是第 %d 节的正文，写了一些事情。" % i)
+    return "\n\n".join(out)
+
+
+def test_a_numeral_alone_on_its_line_is_a_chapter_marker() -> None:
+    """《一梦如初》 marks its sections with nothing but 1, 2, 3 … and no 第X章 anywhere.
+
+    Before this format was recognised the whole book — 36,714 words — arrived as a single
+    chapter, which silently disables every downstream analysis for that book.
+    """
+    adopted = _adopted(_bare(19))
+    assert len(adopted) == 19
+
+
+def test_a_numeral_run_may_restart_once_for_a_番外() -> None:
+    # The real book runs 1…19 and then restarts at 1 under 番外一：慧娘.
+    adopted = _adopted(_bare(24, restart_at=20))
+    assert len(adopted) == 24
+
+
+def test_bare_numerals_that_do_not_count_are_not_chapters() -> None:
+    """The guard that makes the bare rule safe: markers count, stray numerals do not.
+
+    Every one of these lines matches the pattern. None of them forms an ascending run, and
+    adopting any would cut a chapter in the middle of a sentence.
+    """
+    scattered = "\n\n".join(
+        ["他数了数，一共有", "2008", "那年的事。", "5", "又过了几年。", "1999", "他不再提起。", "42"] * 3
+    )
+    assert len(_adopted(scattered)) == 0
+
+
+def test_a_run_that_starts_too_high_is_not_believed() -> None:
+    # Chapter numbering starts at the beginning. A run of 90, 91, 92 … is a page number or a
+    # year column, not a table of contents.
+    text = "\n\n".join(sum(([str(n), "正文一段。"] for n in range(90, 99)), []))
+    assert len(_adopted(text)) == 0
+
+
+def test_house_format_still_wins_over_bare_numerals() -> None:
+    # A book carrying both must not be re-cut by the weaker signal.
+    mixed = HOUSE + "\n\n" + _bare(8)
+    adopted = _adopted(mixed)
+    assert all(item.startswith("第") and "章" in item for item in adopted)
