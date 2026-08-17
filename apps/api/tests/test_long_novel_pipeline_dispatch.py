@@ -351,6 +351,35 @@ def test_the_plan_predicts_the_call_mix_the_run_actually_makes():
     assert plan["estimated_provider_calls"] == 24
 
 
+def test_the_plan_prices_the_mode_the_caller_is_about_to_run():
+    """拆文 makes four bounded calls where the diagnostic makes eight, so quoting one price for
+    both overstated 拆文 by four calls on every book.
+
+    The number checked here is not a recalculation: 《再也不见》 was actually run in
+    story_breakdown mode and made thirteen calls — 6 blocks + 3 stage interpretations + 4 units.
+    """
+    from app.narrative_core.services.long_novel_pipeline_v1 import estimate_long_novel_plan
+
+    measured_breakdown_calls = 13
+    breakdown = estimate_long_novel_plan(
+        chapter_count=46, character_count=120_000, mode="story_breakdown"
+    )
+    assert breakdown["estimated_provider_calls"] == measured_breakdown_calls
+
+    diagnostic = estimate_long_novel_plan(chapter_count=46, character_count=120_000)
+    assert diagnostic["blocks"] == breakdown["blocks"]
+    # Same book, same reading of it — the difference is entirely the units above L1.
+    assert diagnostic["estimated_provider_calls"] - breakdown["estimated_provider_calls"] == 4
+    assert breakdown["estimated_output_tokens"] < diagnostic["estimated_output_tokens"]
+
+    # An unknown mode must price the run the engine will actually dispatch, which is the
+    # diagnostic — never the cheaper one, or the panel would under-quote.
+    assert (
+        estimate_long_novel_plan(chapter_count=46, character_count=120_000, mode="nonsense")
+        == diagnostic
+    )
+
+
 def test_a_book_with_no_text_still_yields_a_usable_estimate():
     from app.narrative_core.services.long_novel_pipeline_v1 import estimate_long_novel_plan
 

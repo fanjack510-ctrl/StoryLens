@@ -89,9 +89,9 @@ def _raise_foundation(exc: WholeBookFoundationError) -> None:
     )
 
 
-def _prepare(book_id: int, db: Session) -> dict:
+def _prepare(book_id: int, db: Session, analysis_mode: str = "diagnostic") -> dict:
     try:
-        result = prepare_free_whole_book_analysis_v1(db, book_id)
+        result = prepare_free_whole_book_analysis_v1(db, book_id, analysis_mode=analysis_mode)
         db.commit()
         return result
     except WholeBookFoundationError as exc:
@@ -117,14 +117,24 @@ def _create_fixture(book_id: int, body: CreateFixtureFreeRunRequest, db: Session
 
 
 @router.get("/books/{book_id}/whole-book/free/prepare")
-def prepare_free_analysis(book_id: int, db: Session = Depends(get_db)) -> dict:
-    return _prepare(book_id, db)
+def prepare_free_analysis(
+    book_id: int,
+    analysis_mode: Literal["diagnostic", "story_breakdown"] = "diagnostic",
+    db: Session = Depends(get_db),
+) -> dict:
+    """The panel prices the run the caller is about to start, which is not always the
+    diagnostic: 拆文 makes four bounded calls where the diagnostic makes eight."""
+    return _prepare(book_id, db, analysis_mode)
 
 
 @router.get("/books/{book_id}/whole-book/prepare")
-def prepare_free_analysis_product_alias(book_id: int, db: Session = Depends(get_db)) -> dict:
+def prepare_free_analysis_product_alias(
+    book_id: int,
+    analysis_mode: Literal["diagnostic", "story_breakdown"] = "diagnostic",
+    db: Session = Depends(get_db),
+) -> dict:
     """Product-facing alias used by Wave D desktop client."""
-    return _prepare(book_id, db)
+    return _prepare(book_id, db, analysis_mode)
 
 
 @router.post("/books/{book_id}/whole-book/free/create")

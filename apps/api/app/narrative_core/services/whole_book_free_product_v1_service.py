@@ -130,7 +130,9 @@ def _non_real_completed_v2_run(session: Session, book_id: int) -> WholeBookRun |
     return None
 
 
-def prepare_free_whole_book_analysis_v1(session: Session, book_id: int) -> dict[str, Any]:
+def prepare_free_whole_book_analysis_v1(
+    session: Session, book_id: int, *, analysis_mode: str = "diagnostic"
+) -> dict[str, Any]:
     _require_free_product_enabled()
     require_capability_access("whole_book.overview", AccessTier.free)
     require_capability_access("whole_book.characters_events", AccessTier.free)
@@ -229,6 +231,7 @@ def prepare_free_whole_book_analysis_v1(session: Session, book_id: int) -> dict[
         estimate_long_novel_plan(
             chapter_count=int(est.get("chapter_count") or 0),
             character_count=int(est.get("character_count") or 0),
+            mode=analysis_mode,
         )
         if long_novel
         else {}

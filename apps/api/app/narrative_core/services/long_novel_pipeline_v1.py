@@ -347,7 +347,9 @@ _UNITS_BESIDES_STAGES = C.TOPIC_PROVIDER_CALLS_BEFORE_ASSESSMENT + 4
 _BREAKDOWN_UNITS = 4
 
 
-def estimate_long_novel_plan(*, chapter_count: int, character_count: int) -> dict[str, int]:
+def estimate_long_novel_plan(
+    *, chapter_count: int, character_count: int, mode: str = "diagnostic"
+) -> dict[str, int]:
     """How many blocks and calls this engine will actually make.
 
     The prepare panel priced a run that was not going to happen: it reported the hierarchical
@@ -377,7 +379,10 @@ def estimate_long_novel_plan(*, chapter_count: int, character_count: int) -> dic
     # third opinion on the stage count, and it under-reported every book short enough for the
     # partition floor to apply.
     stages = BlockPlanner.stage_count(BlockPlanner.partition_count(blocks))
-    units = stages + _UNITS_BESIDES_STAGES
+    # 拆文 runs four bounded units where the diagnostic runs eight, so pricing both the same way
+    # quoted 拆文 seventeen calls for a run that made thirteen. Read from the same constants the
+    # coordinator is built from, so the panel and the run cannot disagree.
+    units = stages + (_BREAKDOWN_UNITS if mode == "story_breakdown" else _UNITS_BESIDES_STAGES)
     input_tokens, output_tokens = estimate_tokens(
         character_count=character_count, blocks=blocks, units=units
     )
