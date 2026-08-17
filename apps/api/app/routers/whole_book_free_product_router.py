@@ -175,6 +175,20 @@ def create_free_analysis(
                     WholeBookFoundationErrorCode.BUDGET_TOO_LOW,
                     "请填写最高费用预算后再开始分析",
                 )
+            # 拆文 exists only in the long-novel engine. The dispatcher drops the mode for a book
+            # that engine will not take, so without this the user pays for a full run and is
+            # handed a diagnostic they did not ask for — the worst way to fail, because the
+            # result looks complete.
+            if body.analysis_mode == "story_breakdown":
+                from app.narrative_core.services.long_novel_pipeline_v1 import (
+                    book_uses_long_novel_engine,
+                )
+
+                if not book_uses_long_novel_engine(db, book_id):
+                    raise WholeBookFoundationError(
+                        WholeBookFoundationErrorCode.WHOLE_BOOK_MODE_UNAVAILABLE,
+                        "拆文需要先确认这本书的作品画像，并且书籍要能被切分成 4 章以上。",
+                    )
             estimate = db.get(WholeBookCostEstimate, body.estimate_id)
             if estimate is None or estimate.book_id != book_id:
                 raise WholeBookFoundationError(

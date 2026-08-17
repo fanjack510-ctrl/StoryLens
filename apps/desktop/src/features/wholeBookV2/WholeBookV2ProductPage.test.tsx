@@ -163,6 +163,48 @@ describe("WholeBookV2ProductPage", () => {
     }
   });
 
+  it("拆文只在长篇引擎的书上可选", async () => {
+    // The dispatcher drops the mode for a book the long-novel engine will not take, so a 拆文
+    // request there spends a full run and returns a diagnostic. An option that cannot be
+    // honoured must not look available.
+    const profileApi = await import("../bookProfile/api");
+    const spy = vi.spyOn(profileApi, "getBookProfile").mockResolvedValue({
+      status: "confirmed",
+      axes: {},
+      options: [],
+      active_deltas: [],
+    } as never);
+    try {
+      prepareSpy.mockResolvedValue({
+        ...basePrepare,
+        planner: "hierarchical_v2",
+        latest_run: null,
+        active_run: null,
+      } as never);
+      renderPage();
+      await screen.findByTestId("whole-book-v2-mode");
+      const breakdown = () =>
+        document.querySelector<HTMLInputElement>('input[value="story_breakdown"]')!;
+      await waitFor(() => expect(breakdown().disabled).toBe(true));
+      expect(document.querySelector<HTMLInputElement>('input[value="diagnostic"]')!.disabled).toBe(
+        false,
+      );
+
+      cleanup();
+      prepareSpy.mockResolvedValue({
+        ...basePrepare,
+        planner: "long_novel_engine",
+        latest_run: null,
+        active_run: null,
+      } as never);
+      renderPage();
+      await screen.findByTestId("whole-book-v2-mode");
+      await waitFor(() => expect(breakdown().disabled).toBe(false));
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   it("shows V2 nav labels when completed with v2 result", async () => {
     prepareSpy.mockResolvedValue({
       ...basePrepare,

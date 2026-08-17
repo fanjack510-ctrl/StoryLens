@@ -138,7 +138,14 @@ export type CreateWholeBookRunRequest = {
   reanalyse?: boolean;
   /** Completed run id to preserve/display while the new run is in flight. */
   previous_run_id?: number | null;
+  /** Which reading of the book to run. Omitted means the diagnostic, which is what every
+   *  caller written before 拆文 existed intends. */
+  analysis_mode?: WholeBookAnalysisMode;
 };
+
+/** 评测 finds what to fix in your own book; 拆文 reads someone else's for how it is done.
+ *  They are different products over the same extraction, not two lengths of one report. */
+export type WholeBookAnalysisMode = "diagnostic" | "story_breakdown";
 
 export type CreateWholeBookRunResponse = {
   run: WholeBookRunRecord;
@@ -284,9 +291,14 @@ export const wholeBookFreeProductApi = {
   productCapabilities: () =>
     api<{ capabilities: ProductCapabilityRow[] }>("/api/v1/whole-book/product-capabilities"),
 
-  /** Product prepare — aliases `/whole-book/free/prepare`. */
-  prepare: (bookId: number) =>
-    api<WholeBookPrepareResponse>(`/api/v1/books/${bookId}/whole-book/prepare`),
+  /** Product prepare — aliases `/whole-book/free/prepare`.
+   *
+   *  The mode is a query parameter because the panel quotes calls and money, and the two modes
+   *  do not cost the same: 拆文 runs four bounded units where the diagnostic runs eight. */
+  prepare: (bookId: number, analysisMode: WholeBookAnalysisMode = "diagnostic") =>
+    api<WholeBookPrepareResponse>(
+      `/api/v1/books/${bookId}/whole-book/prepare?analysis_mode=${analysisMode}`,
+    ),
 
   createRun: (bookId: number, body: CreateWholeBookRunRequest) =>
     api<CreateWholeBookRunResponse>(`/api/v1/books/${bookId}/whole-book/free/create`, {
@@ -303,6 +315,7 @@ export const wholeBookFreeProductApi = {
         force_full_reanalysis: Boolean(body.force_full_reanalysis),
         reanalyse: Boolean(body.reanalyse),
         ...(body.previous_run_id != null ? { previous_run_id: body.previous_run_id } : {}),
+        ...(body.analysis_mode ? { analysis_mode: body.analysis_mode } : {}),
       }),
     }),
 

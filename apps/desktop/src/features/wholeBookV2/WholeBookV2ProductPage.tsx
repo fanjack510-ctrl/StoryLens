@@ -15,6 +15,7 @@ import {
 import {
   newWholeBookClientRequestId,
   wholeBookFreeProductApi,
+  type WholeBookAnalysisMode,
   type WholeBookPrepareResponse,
   type WholeBookRunRecord,
 } from "../../services/wholeBookFreeProductApi";
@@ -35,6 +36,26 @@ const PREPARE_BULLETS = [
   "当前分析以完整原文为事实源，不依赖已有单章分析。",
 ];
 const CONSENT_TEXT = "我已了解本次分析会调用我配置的大模型 API，并可能产生模型费用。";
+
+/** The two readings, and what each is *for*. Wording matters more than usual here: a user who
+ *  picks the wrong one pays for a report answering a question they did not ask. So each option
+ *  names whose book it suits rather than describing its contents. */
+const ANALYSIS_MODES: ReadonlyArray<{
+  value: WholeBookAnalysisMode;
+  label: string;
+  hint: string;
+}> = [
+  {
+    value: "diagnostic",
+    label: "评测",
+    hint: "看自己的书：找出该改哪里、为什么、动的时候不能损伤什么。",
+  },
+  {
+    value: "story_breakdown",
+    label: "拆文",
+    hint: "看别人的书：起承转合、爆点在哪、钩子怎么下、哪些写法可以拿走用。不打分。",
+  },
+];
 const REANALYSE_CONSENT_TEXT =
   "我已了解重新分析会调用我配置的大模型 API，并可能产生模型费用。";
 
@@ -189,6 +210,8 @@ function PreparePanel({
   limitGaps,
   profileConfirmed,
   bookId,
+  analysisMode,
+  onAnalysisModeChange,
 }: {
   prepare: WholeBookPrepareResponse;
   consented: boolean;
@@ -203,9 +226,12 @@ function PreparePanel({
   /** null = still reading. The gate is only asserted once the answer is known. */
   profileConfirmed: boolean | null;
   bookId: number;
+  analysisMode: WholeBookAnalysisMode;
+  onAnalysisModeChange: (next: WholeBookAnalysisMode) => void;
 }) {
   const est = prepare.estimate;
   const profileGateClosed = profileConfirmed === false;
+  const breakdownAvailable = prepare.planner === "long_novel_engine";
   return (
     <section className="wbv2-prepare" data-testid="whole-book-v2-prepare">
       <h2>开始全书分析</h2>
@@ -218,6 +244,36 @@ function PreparePanel({
           <Link to={profileHref(bookId, { from: "whole-book" })}>去确认作品画像 →</Link>
         </div>
       )}
+      <fieldset className="wbv2-mode" data-testid="whole-book-v2-mode">
+        <legend>这次要哪一种</legend>
+        {ANALYSIS_MODES.map((item) => {
+          // 拆文 exists only in the long-novel engine, and the panel knows which engine this
+          // book gets. Offering it on a book that cannot run it would take the money and hand
+          // back a diagnostic — an option that cannot be honoured must not look available.
+          const unavailable = item.value === "story_breakdown" && !breakdownAvailable;
+          return (
+            <label
+              key={item.value}
+              data-selected={item.value === analysisMode}
+              data-unavailable={unavailable || undefined}
+            >
+              <input
+                type="radio"
+                name="whole-book-analysis-mode"
+                value={item.value}
+                checked={item.value === analysisMode}
+                disabled={unavailable}
+                onChange={() => onAnalysisModeChange(item.value)}
+              />
+              <b>{item.label}</b>
+              <span>
+                {item.hint}
+                {unavailable ? "（本书暂不可用：需先确认作品画像，且章节数不少于 4）" : ""}
+              </span>
+            </label>
+          );
+        })}
+      </fieldset>
       <p>{PREPARE_EXPLANATION}</p>
       <ul>
         {PREPARE_BULLETS.map((item) => (
@@ -495,9 +551,13 @@ function WholeBookV2ProductPageEnabled() {
   });
   const activeProviderName = activeCloudQuery.data?.provider_name ?? "unknown";
 
+  // In the query key because the panel's headline numbers are mode-dependent: quoting the
+  // diagnostic's eight bounded calls for a 拆文 run overstates it by four on every book.
+  const [analysisMode, setAnalysisMode] = useState<WholeBookAnalysisMode>("diagnostic");
+
   const prepareQuery = useQuery({
-    queryKey: ["whole-book-v2-prepare", bookId, activeProviderName],
-    queryFn: () => wholeBookFreeProductApi.prepare(bookId),
+    queryKey: ["whole-book-v2-prepare", bookId, activeProviderName, analysisMode],
+    queryFn: () => wholeBookFreeProductApi.prepare(bookId, analysisMode),
     enabled: bookId > 0 && Boolean(activeCloudQuery.data?.provider_name),
     retry: false,
     refetchInterval: (query) => {
@@ -550,6 +610,7 @@ function WholeBookV2ProductPageEnabled() {
         reanalyse: isReanalyse,
         force_full_reanalysis: isReanalyse ? forceFullReanalysis : false,
         previous_run_id: isReanalyse ? (opts?.previousRunId ?? null) : null,
+        analysis_mode: analysisMode,
       });
     },
     onSuccess: () => {
@@ -748,6 +809,8 @@ function WholeBookV2ProductPageEnabled() {
           onConsent={setConsented}
           canStart={canStart}
           starting={createMutation.isPending}
+          analysisMode={analysisMode}
+          onAnalysisModeChange={setAnalysisMode}
           onStart={() => createMutation.mutate(undefined)}
           actionError={actionError}
           limits={limits}

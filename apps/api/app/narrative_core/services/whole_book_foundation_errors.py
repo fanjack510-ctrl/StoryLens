@@ -36,6 +36,9 @@ class WholeBookFoundationErrorCode(StrEnum):
     WHOLE_BOOK_RUN_INVALID_TRANSITION = "WHOLE_BOOK_RUN_INVALID_TRANSITION"
     WHOLE_BOOK_RUN_TERMINAL = "WHOLE_BOOK_RUN_TERMINAL"
     WHOLE_BOOK_RUN_NOT_FOUND = "WHOLE_BOOK_RUN_NOT_FOUND"
+    #: The requested reading of the book is not available for this book — 拆文 lives in the
+    #: long-novel engine, and a book that engine will not take can only be read diagnostically.
+    WHOLE_BOOK_MODE_UNAVAILABLE = "WHOLE_BOOK_MODE_UNAVAILABLE"
     WHOLE_BOOK_CLIENT_REQUEST_CONFLICT = "WHOLE_BOOK_CLIENT_REQUEST_CONFLICT"
     WHOLE_BOOK_WINDOW_SET_CONFLICT = "WHOLE_BOOK_WINDOW_SET_CONFLICT"
     UPDATE_COMPLETED_FORBIDDEN = "update_completed_forbidden"

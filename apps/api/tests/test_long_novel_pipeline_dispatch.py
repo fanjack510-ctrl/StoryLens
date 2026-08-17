@@ -160,6 +160,28 @@ def test_a_draft_profile_is_not_enough(tmp_path):
         assert book_uses_long_novel_engine(session, int(book.id)) is False
 
 
+def test_a_confirmed_book_can_still_be_refused_by_the_engine(tmp_path):
+    """The state that makes the 拆文 guard in the create route necessary, not paranoid.
+
+    拆文 exists only in the long-novel engine, and the dispatcher drops the mode for a book that
+    engine will not take — so a 拆文 request on such a book spends a full run and returns a
+    diagnostic, which looks complete and is not what was asked for.
+
+    The profile gate catches most of that: an unconfirmed book is refused before any of this.
+    What it does not catch is *this* book — confirmed by a person, and still below the planner's
+    four-chapter floor. Deleting the route's check on the grounds that the profile gate already
+    covers it would reopen exactly this case.
+    """
+    engine = make_engine(tmp_path, "ln-dispatch-confirmed-but-short.db")
+    with sessionmaker(bind=engine)() as session:
+        book, snap_id = seed_sample_s_book(session, chapter_count=3)
+        repo = BookProfileRepository(session)
+        repo.save_draft(int(book.id), AXES)
+        repo.confirm(int(book.id), AXES)
+        session.commit()
+        assert book_uses_long_novel_engine(session, int(book.id)) is False
+
+
 def test_a_confirmed_book_is_dispatched_to_the_long_novel_engine(tmp_path):
     engine = make_engine(tmp_path, "ln-dispatch-confirmed.db")
     with sessionmaker(bind=engine)() as session:
