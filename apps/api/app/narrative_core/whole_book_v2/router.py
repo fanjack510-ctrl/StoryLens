@@ -1,6 +1,6 @@
 """Formal read-only V2 result API. Creation remains owned by the existing run API."""
 from __future__ import annotations
-import os,subprocess,tempfile
+import os,re,subprocess,tempfile
 from typing import Any
 from fastapi import APIRouter,Depends,HTTPException,Query
 from fastapi.responses import Response
@@ -41,6 +41,85 @@ def _find_pdf_browser()->str|None:
     for c in candidates:
         if c and os.path.isfile(c): return c
     return None
+_FOOTER_CSS="font-family:'Microsoft YaHei','PingFang SC',sans-serif;font-size:7.5px;color:#6f7d74;"
+def _print_via_devtools(browser:str,profile:str,url:str,title:str,timeout:float=90.0)->bytes|None:
+    """Print through DevTools, so the footer can carry a real page number.
+
+    ``--print-to-pdf`` has no way to supply a header or footer template: it either omits them
+    (``--no-pdf-header-footer``) or prints Chromium's default, which stamps the temporary
+    ``file:///`` path of the source HTML onto every page — not something to hand a paying
+    reader. ``Page.printToPDF`` takes a template, and ``<span class=pageNumber>`` is
+    substituted by the browser, which is the only place the page count is actually known.
+
+    Returns ``None`` on any failure rather than raising: the caller falls back to the CLI, and
+    a report without page numbers is still a report.
+    """
+    import asyncio,base64,json,shutil
+    async def run()->bytes|None:
+        import httpx,websockets
+        port_file=os.path.join(profile,"DevToolsActivePort")
+        proc=subprocess.Popen([browser,"--headless=new","--disable-gpu","--no-first-run",
+            "--disable-extensions","--remote-debugging-port=0",f"--user-data-dir={profile}",url],
+            stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+        try:
+            loop=asyncio.get_running_loop(); deadline=loop.time()+timeout; port=None
+            while loop.time()<deadline:
+                if os.path.isfile(port_file):
+                    head=open(port_file,encoding="utf-8").read().splitlines()
+                    if head and head[0].strip().isdigit(): port=int(head[0].strip()); break
+                if proc.poll() is not None: return None
+                await asyncio.sleep(0.15)
+            if port is None: return None
+            base=f"http://127.0.0.1:{port}"
+            async with httpx.AsyncClient(timeout=10.0) as http:
+                ws_url=None
+                while loop.time()<deadline and ws_url is None:
+                    try:
+                        for t in (await http.get(f"{base}/json/list")).json():
+                            if t.get("type")=="page" and t.get("webSocketDebuggerUrl"):
+                                ws_url=t["webSocketDebuggerUrl"]; break
+                    except Exception: pass
+                    if ws_url is None: await asyncio.sleep(0.15)
+                if ws_url is None: return None
+            async with websockets.connect(ws_url,max_size=256*1024*1024) as ws:
+                n=0
+                async def call(method:str,params:dict[str,Any]|None=None)->dict[str,Any]:
+                    nonlocal n; n+=1; mid=n
+                    await ws.send(json.dumps({"id":mid,"method":method,"params":params or {}}))
+                    while True:
+                        msg=json.loads(await ws.recv())
+                        if msg.get("id")==mid: return msg.get("result") or {}
+                await call("Page.enable")
+                # The target exists before its document finishes; poll rather than race the load
+                # event, which may already have fired by the time the websocket is attached.
+                while loop.time()<deadline:
+                    r=await call("Runtime.evaluate",{"expression":"document.readyState","returnByValue":True})
+                    if (r.get("result") or {}).get("value")=="complete": break
+                    await asyncio.sleep(0.1)
+                safe=title.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;")
+                res=await call("Page.printToPDF",{
+                    "paperWidth":8.27,"paperHeight":11.69,
+                    "marginTop":0.71,"marginBottom":0.63,"marginLeft":0.67,"marginRight":0.67,
+                    "printBackground":True,"displayHeaderFooter":True,
+                    "headerTemplate":"<span></span>",
+                    "footerTemplate":(
+                        f"<div style=\"{_FOOTER_CSS}width:100%;padding:0 17mm;display:flex;"
+                        "justify-content:space-between;align-items:center;\">"
+                        f"<span>{safe} · 全书分析报告</span>"
+                        "<span><span class=\"pageNumber\"></span> / <span class=\"totalPages\"></span></span>"
+                        "</div>"),
+                })
+                data=res.get("data")
+                return base64.b64decode(data) if data else None
+        finally:
+            proc.kill()
+            try: proc.wait(timeout=10)
+            except Exception: pass
+            shutil.rmtree(profile,ignore_errors=True)
+    try:
+        return asyncio.run(run())
+    except Exception:
+        return None
 @router.post("/{run_id}/v2/export-pdf")
 def export_v2_pdf(run_id:int,req:_PdfRequest,db:Session=Depends(get_db))->Response:
     """Print the client-rendered report HTML to a real PDF via a headless Chromium.
@@ -70,6 +149,13 @@ def export_v2_pdf(run_id:int,req:_PdfRequest,db:Session=Depends(get_db))->Respon
         src=os.path.join(td,"report.html"); dst=os.path.join(td,"report.pdf")
         with open(src,"w",encoding="utf-8") as f: f.write(req.html)
         url="file:///"+src.replace("\\","/")
+        # The page number lives in the browser's footer template, so try DevTools first and keep
+        # the CLI as the path that always works. The title comes off the document rather than the
+        # request so the client owns the report's wording in one place.
+        m=re.search(r"<title>(.*?)</title>",req.html,re.S|re.I)
+        pdf=_print_via_devtools(browser,os.path.join(td,"cdp-profile"),url,
+                                (m.group(1) if m else "").split("·")[0].strip())
+        if pdf: return Response(content=pdf,media_type="application/pdf")
         last_err=b""
         # --headless=new is current Chromium; plain --headless keeps older Edge builds working.
         for headless_flag in ("--headless=new","--headless"):

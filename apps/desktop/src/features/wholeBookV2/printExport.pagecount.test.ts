@@ -282,8 +282,8 @@ function book(chapters: number): WholeBookAnalysisV2 {
     evidence_index: ev as never,
     analysis_metadata: {
       run_id: 1,
-      provider: "deepseek",
-      model: "deepseek-v4-flash",
+      provider_name: "deepseek",
+      model_name: "deepseek-v4-flash",
       real_provider_calls: 24,
       result_origin: "real_provider",
       generated_at: "2026-08-17T00:00:00Z",
@@ -298,7 +298,7 @@ function book(chapters: number): WholeBookAnalysisV2 {
 describe("印刷版全书报告", () => {
   it("章节表按剩余页数截断，并说明砍掉了多少", () => {
     const html = buildPrintHtml(book(800));
-    expect(html).toContain("章没有印出来");
+    expect(html).toContain("章未列出");
     // The elastic section must not silently swallow the whole book.
     const rows = (html.match(/<tr><th>\d+<\/th>/g) ?? []).length;
     expect(rows).toBeGreaterThan(0);
@@ -307,7 +307,7 @@ describe("印刷版全书报告", () => {
 
   it("短书不触发截断提示", () => {
     const html = buildPrintHtml(book(12));
-    expect(html).not.toContain("章没有印出来");
+    expect(html).not.toContain("章未列出");
   });
 
   it("每一页都声明了分页，且页数不超过预算", () => {
@@ -321,7 +321,7 @@ describe("印刷版全书报告", () => {
     const d = book(20);
     d.suspense.lifecycles = [];
     const html = buildPrintHtml(d);
-    expect(html).not.toContain("没有回答的问题");
+    expect(html).not.toContain("六</span>悬念分析");
   });
 
   it("声明了编码，不靠浏览器猜", () => {
@@ -331,6 +331,38 @@ describe("印刷版全书报告", () => {
     expect(html.startsWith("<!doctype html>")).toBe(true);
     expect(html).toContain('<meta charset="utf-8">');
     expect(html).toContain('lang="zh-CN"');
+  });
+
+  it("模型名取自契约里真实存在的字段", () => {
+    // The old code read `provider` / `model`; the document carries `provider_name` /
+    // `model_name`, so the source table printed a lone separator where the model should be.
+    const html = buildPrintHtml(book(20));
+    expect(html).toContain("deepseek / deepseek-v4-flash");
+  });
+
+  it("模型答不上来的字段不印：unknown 不是一个值", () => {
+    const d = book(20);
+    d.characters.major_characters = [
+      { name: "甲", role: "supporting", relationship_to_protagonist: "从对立到合作", character_arc: "", evidence: [] },
+      { name: "乙", role: "supporting", relationship_to_protagonist: "unknown", character_arc: "", evidence: [] },
+    ] as never;
+    const html = buildPrintHtml(d);
+    expect(html).not.toContain("unknown");
+    // The one we cannot describe is still counted and named, just not given a table row.
+    expect(html).toContain("另有 1 人登场");
+  });
+
+  it("每一个分析章都落在一个判断上", () => {
+    // This is the report's spine: a chapter that measures something must end by saying what the
+    // measurement means, otherwise the reader is left holding data.
+    const html = buildPrintHtml(book(40));
+    expect((html.match(/本章判断/g) ?? []).length).toBeGreaterThanOrEqual(4);
+  });
+
+  it("问题与建议合成一章，不重复列两遍", () => {
+    const html = buildPrintHtml(book(40));
+    expect(html).toContain("七</span>问题与修订建议");
+    expect(html).not.toContain("问题清单");
   });
 
   it("引文解析到真实的证据条目", () => {

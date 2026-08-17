@@ -57,6 +57,27 @@ __all__ = [
 ]
 
 
+def str_list(value: Any) -> list[str]:
+    """Model output for a list-of-strings field, coerced without shredding it.
+
+    A model asked for a list sometimes answers with one string, and ``[str(x) for x in value]``
+    then iterates its characters. That is not a hypothetical: the first revision priority of a
+    real run reached the printed report as twenty-seven one-character bullets — 保 / 持 / 法 /
+    律 / … — because its ``preserve`` note came back as prose. A string is one item.
+    """
+    if value is None:
+        return []
+    if isinstance(value, str):
+        text = value.strip()
+        return [text] if text else []
+    if isinstance(value, Mapping):
+        return []
+    if not isinstance(value, Sequence):
+        text = str(value).strip()
+        return [text] if text else []
+    return [str(x).strip() for x in value if str(x).strip()]
+
+
 def conform(model: type[BaseModel], values: Mapping[str, Any]) -> dict[str, Any]:
     """Fill every field the contract declares, taking what ``values`` supplies.
 
@@ -442,7 +463,7 @@ def build_assessment_section(
             p for p in (_as_priority(i, x) for i, x in enumerate(result.get("revision_priorities", [])))
             if p
         ],
-        "preserve_list": [str(x) for x in result.get("preserve_list", []) if str(x).strip()],
+        "preserve_list": str_list(result.get("preserve_list")),
     }
 
 
@@ -478,7 +499,7 @@ def _as_priority(index: int, value: Any) -> dict[str, Any] | None:
         "priority": _PRIORITY_RANKS[index],
         "chapter_ranges": ranges,
         "direction": str(value.get("direction") or value.get("recommended_direction", "")),
-        "preserve": [str(x) for x in value.get("preserve", []) if str(x).strip()],
+        "preserve": str_list(value.get("preserve")),
     })
 
 
@@ -508,7 +529,7 @@ def build_type_profile_section(
     if not confirmed and not guessed:
         return None
 
-    secondary = [str(x) for x in (result or {}).get("secondary_genres", []) if str(x).strip()]
+    secondary = str_list((result or {}).get("secondary_genres"))
     if confirmed and guessed and guessed != confirmed:
         secondary = [guessed] + [x for x in secondary if x != guessed]
 
@@ -516,12 +537,8 @@ def build_type_profile_section(
         **(result or {}),
         "primary_genre": confirmed or guessed,
         "secondary_genres": secondary,
-        "narrative_drivers": [
-            str(x) for x in (result or {}).get("narrative_drivers", []) if str(x).strip()
-        ],
-        "narrative_traits": [
-            str(x) for x in (result or {}).get("narrative_traits", []) if str(x).strip()
-        ],
+        "narrative_drivers": str_list((result or {}).get("narrative_drivers")),
+        "narrative_traits": str_list((result or {}).get("narrative_traits")),
         # 1.0 when a person confirmed the axes — that is not the model being sure, it is the
         # question having been answered by someone entitled to answer it. Otherwise 0.0: the
         # engine does not measure genre agreement, so it claims no number for a guess.
@@ -654,21 +671,19 @@ def build_overview_section(
         "core_goal": str(base.get("core_goal", "")),
         # Prefer what the synthesis said; fall back to the changes L1 counted, so the field
         # reflects the book even when the summary call omitted it.
-        "goal_evolution": [str(x) for x in (base.get("goal_evolution") or goal_evolution)],
+        "goal_evolution": str_list(base.get("goal_evolution") or goal_evolution),
         "core_conflict": str(base.get("core_conflict", "")),
-        "conflict_evolution": [
-            str(x) for x in (base.get("conflict_evolution") or conflict_evolution)
-        ],
+        "conflict_evolution": str_list(base.get("conflict_evolution") or conflict_evolution),
         "core_question": str(base.get("core_question", "")),
-        "major_storylines": [str(x) for x in base.get("major_storylines", [])],
+        "major_storylines": str_list(base.get("major_storylines")),
         "major_turning_points": [
             x for x in base.get("major_turning_points", []) if isinstance(x, Mapping)
         ] or list(turning_points),
-        "major_suspense": [str(x) for x in base.get("major_suspense", [])],
+        "major_suspense": str_list(base.get("major_suspense")),
         "final_climax": str(base.get("final_climax", "")),
-        "ending_resolution": [str(x) for x in base.get("ending_resolution", [])],
-        "ending_open_questions": [str(x) for x in base.get("ending_open_questions", [])],
-        "story_skeleton": [str(x) for x in base.get("story_skeleton", [])],
+        "ending_resolution": str_list(base.get("ending_resolution")),
+        "ending_open_questions": str_list(base.get("ending_open_questions")),
+        "story_skeleton": str_list(base.get("story_skeleton")),
         "evidence": [],
     }
 

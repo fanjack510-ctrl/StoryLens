@@ -646,3 +646,25 @@ def test_an_assessment_finding_can_be_opened(document):
                 "引的原文不在这条结论说的章节范围里：%s" % finding
             )
 
+
+
+def test_a_prose_answer_to_a_list_field_is_one_item_not_one_item_per_character() -> None:
+    """The defect this guards against reached a printed report, so it is worth naming.
+
+    《系统豪横》 run 18 asked for ``preserve`` — the things a revision must not damage — and the
+    model answered with a sentence instead of a list. The old coercion iterated the string, so
+    the report printed twenty-seven bullets reading 保 / 持 / 法 / 律 / 与 / 舆 / 论 / …. Nothing
+    downstream could detect it: the field was a list of non-empty strings, exactly as declared.
+    """
+    from app.narrative_core.long_novel.adapter import _as_priority, str_list
+
+    sentence = "保持法律与舆论结合的反击方式，以及主角坚持原则的性格。"
+    assert str_list(sentence) == [sentence]
+
+    priority = _as_priority(0, {"chapter_ranges": [[43, 45]], "direction": "压缩对话", "preserve": sentence})
+    assert priority is not None
+    assert priority["preserve"] == [sentence]
+
+    # The ordinary case still behaves, and blanks are still dropped.
+    assert str_list(["甲", "  ", "乙 "]) == ["甲", "乙"]
+    assert str_list(None) == []
