@@ -11,6 +11,7 @@
  *  hand-off path.
  */
 import type { WholeBookAnalysisV2 } from "./contracts";
+import { buildPrintHtml } from "./printExport";
 import {
   PACING_SERIES,
   PACING_SCALE_NOTE,
@@ -685,7 +686,10 @@ export async function downloadReportPdf(d: WholeBookAnalysisV2): Promise<void> {
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ html: buildReportHtml(d) }),
+      // The printed report is a different document from the HTML export, not a smaller copy
+      // of it: that one is the audit surface and holds everything, this one is what an author
+      // marks up, and it is capped at twenty pages. See printExport.ts.
+      body: JSON.stringify({ html: buildPrintHtml(d) }),
     },
   );
   if (!res.ok) {
