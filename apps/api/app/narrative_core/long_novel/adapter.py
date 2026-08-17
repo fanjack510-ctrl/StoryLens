@@ -1023,6 +1023,7 @@ def to_whole_book_v2(
     evidence_index: Mapping[str, Any] | None = None,
     journey: Mapping[str, Any] | None = None,
     story_breakdown: Mapping[str, Any] | None = None,
+    coverage: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Assemble the document the existing UI already knows how to render.
 
@@ -1116,6 +1117,11 @@ def to_whole_book_v2(
                 "chapters": chapters.get("availability", "unavailable"),
             },
             "real_provider_calls": real_provider_calls,
+            # What the analysis did not read. Carried on the document rather than left in the
+            # run log, because the reader is the person who needs it: a hole in the pacing
+            # curve is invisible, and an act structure that opens at chapter 9 reads as the
+            # book's beginning unless something on the page says otherwise.
+            "coverage": dict(coverage) if coverage else None,
             # Required by the contract, and load-bearing for the user: it is how a result
             # produced by this engine is told apart from one the old pipeline produced.
             "engine_version": "long-novel-engine-1.0",

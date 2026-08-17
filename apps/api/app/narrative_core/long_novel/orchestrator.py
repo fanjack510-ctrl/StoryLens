@@ -207,6 +207,14 @@ class RunReport:
     output_tokens: int = 0
     topics_projected: list[str] = field(default_factory=list)
     chapters_lost: list[int] = field(default_factory=list)
+    #: Chapters the run set out to read. Held on the report rather than passed alongside it,
+    #: because the document was built from ``len(signals)`` — the chapters that survived — and
+    #: so reported a book that had lost a third of itself as simply being shorter.
+    chapters_planned: int = 0
+    #: Blocks that failed once and were tried again. Separate from ``blocks_failed``: a block
+    #: that succeeded on the retry is not a failure, but it is worth being able to see that the
+    #: run needed the retry at all.
+    blocks_retried: int = 0
     document: dict[str, Any] | None = None
     #: The block assets the run extracted, keyed by block. The report could previously say how
     #: many blocks succeeded but not what came back inside them, so anything asking "was this
@@ -301,6 +309,7 @@ class RunCoordinator:
             blocks_total=len(plan.blocks),
             partitions=len(plan.partitions),
             stages=len(plan.stages),
+            chapters_planned=len(chapters_by_order),
         )
 
         assets = self._extract_all(plan.blocks, chapters_by_order, report)
@@ -1765,18 +1774,41 @@ class RunCoordinator:
             if not chapters:
                 report.blocks_failed.append((block.block_key, "SOURCE_CHAPTERS_MISSING"))
                 continue
-            try:
-                result = self._extractor.extract(
-                    block_key=block.block_key, chapters=chapters, carry_in=carry
-                )
-            except LongNovelError as exc:
+            # One clean retry before the block is given up on.
+            #
+            # This is not a second repair. The extractor already makes one, and it is right
+            # that it makes only one: a repair re-sends the same payload with the failure
+            # appended, and asking twice for the same correction mostly buys the same defect
+            # again. What is different here is that the retry is a *fresh* call — no repair
+            # note, nothing about the previous answer — and that is what the evidence supports.
+            # 《一梦如初》's first block failed its extraction and its repair during run 22,
+            # losing chapters 1–8 of 22; re-running the plain call afterwards returned all
+            # eight chapter signals. The defect was in the response, not in the text.
+            #
+            # One call against a third of a book.
+            result = None
+            last_error: LongNovelError | None = None
+            for attempt in range(2):
+                if attempt and self._budget_exhausted(report):
+                    break
+                try:
+                    result = self._extractor.extract(
+                        block_key=block.block_key, chapters=chapters, carry_in=carry
+                    )
+                    break
+                except LongNovelError as exc:
+                    last_error = exc
+                    report.provider_calls += 1
+                    report.blocks_retried += attempt == 0
+            if result is None:
                 # The message, not just the code. A run that records only "SCHEMA_MISMATCH"
                 # cannot be diagnosed afterwards without paying to reproduce it — which is
                 # exactly what happened the first time eight blocks failed this way.
-                detail = exc.message.strip().splitlines()[0][:300] if exc.message else ""
-                report.blocks_failed.append((block.block_key, f"{exc.code.value}: {detail}"))
+                exc = last_error
+                detail = (exc.message.strip().splitlines()[0][:300] if exc and exc.message else "")
+                code = exc.code.value if exc else "UNKNOWN"
+                report.blocks_failed.append((block.block_key, f"{code}: {detail}"))
                 report.chapters_lost.extend(block.chapter_orders)
-                report.provider_calls += 1
                 continue
             assets[block.block_key] = result.asset
             self._anchors[block.block_key] = result.evidence_by_anchor
@@ -1923,8 +1955,19 @@ class RunCoordinator:
             snapshot_id=snapshot_id,
             revision_hash=revision_hash,
             title=title,
-            chapter_count=len(signals),
+            # The book's chapters, not the surviving ones. `len(signals)` is what the analysis
+            # managed to read, and publishing it as the book's length is what turned a lost
+            # block into an invisible one — the missing chapters simply stopped existing.
+            chapter_count=report.chapters_planned or len(signals),
             character_count=character_count,
+            coverage={
+                "chapters_total": report.chapters_planned or len(signals),
+                "chapters_analysed": len(signals),
+                "chapters_missing": sorted(set(report.chapters_lost)),
+                "blocks_total": report.blocks_total,
+                "blocks_failed": len(report.blocks_failed),
+                "failure_reasons": [reason for _, reason in report.blocks_failed],
+            },
             run_id=run_id,
             provider_name=provider_name,
             model_name=model_name,

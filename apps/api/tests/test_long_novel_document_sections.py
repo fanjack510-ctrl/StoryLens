@@ -668,3 +668,133 @@ def test_a_prose_answer_to_a_list_field_is_one_item_not_one_item_per_character()
     # The ordinary case still behaves, and blanks are still dropped.
     assert str_list(["甲", "  ", "乙 "]) == ["甲", "乙"]
     assert str_list(None) == []
+
+
+class _FlakyProvider:
+    """Fails a chosen block's first call the way a real model does, then behaves.
+
+    The failure is a contract violation, not a transport error: one chapter signal missing
+    from an otherwise well-formed response. That is what `_check_chapter_coverage` rejects,
+    and it is what actually happened to 《一梦如初》's first block.
+    """
+
+    def __init__(self, *, fail_block_containing: int, fail_times: int) -> None:
+        self.fail_chapter = fail_block_containing
+        self.fail_times = fail_times
+        self.calls = 0
+        self.failures = 0
+
+    def complete(self, *, payload, max_output_tokens, repair_note=None):
+        self.calls += 1
+        body, finish, tokens = _block_response(payload)
+        text = str(payload["text"])
+        refs = [
+            int(line.split("第")[1].split("章")[0].strip())
+            for line in text.splitlines()
+            if line.startswith("=== 第")
+        ]
+        if self.fail_chapter not in refs or self.failures >= self.fail_times:
+            return body, finish, tokens
+        self.failures += 1
+        asset = json.loads(body.strip().removeprefix("```json").removesuffix("```").strip())
+        # One chapter signal short of the mandatory one-per-chapter — the response is otherwise
+        # well formed, which is what makes this failure mode expensive to notice.
+        asset["chapter_signals"] = asset["chapter_signals"][1:]
+        return "```json\n" + json.dumps(asset, ensure_ascii=False) + "\n```", finish, tokens
+
+
+def _run_with(provider):
+    """The document fixture's run, with an injectable provider."""
+    from app.narrative_core.long_novel.orchestrator import RunCoordinator
+
+    resolution = joint_resolve(
+        context_window=128_000,
+        provider_max_output_tokens=8_192,
+        provider_max_output_tokens_source="probed",
+        costs=COSTS,
+        mean_chapter_tokens=4_041,
+        mean_paragraphs_per_chapter=PARAGRAPHS,
+    )
+    prof = profile(resolution.density_profile)
+    plan = BlockPlanner(
+        profile=prof, output_budget=resolution.output_budget,
+        context_window=128_000, costs=COSTS,
+    ).plan(
+        [PlannedChapter(i, 10_000 + i, "h%d" % i, 4_041, PARAGRAPHS) for i in range(1, CHAPTERS + 1)]
+    )
+    sources = {
+        i: SourceChapter(
+            chapter_order=i, source_chapter_id=10_000 + i, content_hash="h%d" % i,
+            snapshot_chapter_id=10_000 + i,
+            paragraphs=[
+                SourceParagraph(j, "第%d章第%d段，老王走进房间。" % (i, j), "c%dp%d" % (i, j))
+                for j in range(1, PARAGRAPHS + 1)
+            ],
+        )
+        for i in range(1, CHAPTERS + 1)
+    }
+    coordinator = RunCoordinator(
+        extractor=BlockExtractor(
+            provider=provider, profile=prof, output_budget=resolution.output_budget,
+            prompt_template_hash=prompt_template_hash(prof),
+        ),
+        profile=prof, stage_interpreter=_stage, topic_synthesizer=_topic,
+        assessor=_assessment, finaliser=_final,
+    )
+    return coordinator.run(
+        plan=plan, chapters_by_order=sources, character_count=100_000,
+        book_id=1, snapshot_id=1, revision_hash="rev", title="测试书",
+        run_id=1, provider_name="fake", model_name="fake",
+    )
+
+
+def test_a_block_that_fails_once_is_tried_again() -> None:
+    """One retry, because these failures are intermittent and the alternative is losing a block.
+
+    Proven on a real book before it was written: 《一梦如初》's first block was rejected during
+    run 22 and, re-run afterwards with the identical call, returned all eight chapter signals.
+    Not retrying cost that book chapters 1–8 of 22 — a third of it — to save one provider call.
+    """
+    # Two failures: the extraction and the extractor's own repair, which is what run 22 saw.
+    # The third call is the coordinator's clean retry, and it is the one under test.
+    provider = _FlakyProvider(fail_block_containing=1, fail_times=2)
+    report = _run_with(provider)
+    assert provider.failures == 2, "fixture did not exercise the failure path"
+    assert report.blocks_retried == 1
+    assert not report.blocks_failed, report.blocks_failed
+    assert not report.chapters_lost
+    assert report.document["book_metadata"]["chapter_count"] == CHAPTERS
+
+
+def test_a_block_that_stays_broken_is_disclosed_rather_than_hidden() -> None:
+    """The half that was missing: a lost block has to reach the reader.
+
+    Run 22 dropped eight of twenty-two chapters and published `chapter_count: 14`. The report
+    then opened its act structure at chapter 9 and presented it as the book's beginning. There
+    was nothing on the page to check that against — the missing chapters had simply stopped
+    existing, so the engine's failure read as the author's.
+    """
+    provider = _FlakyProvider(fail_block_containing=1, fail_times=99)
+    report = _run_with(provider)
+    assert report.blocks_failed
+    assert report.chapters_lost
+
+    meta = report.document["analysis_metadata"]
+    coverage = meta["coverage"]
+    # The book's length is the book's length, whatever the analysis managed to read.
+    assert report.document["book_metadata"]["chapter_count"] == CHAPTERS
+    assert coverage["chapters_total"] == CHAPTERS
+    assert coverage["chapters_analysed"] < CHAPTERS
+    assert coverage["chapters_missing"] == sorted(report.chapters_lost)
+    assert coverage["blocks_failed"] == len(report.blocks_failed)
+    # Why, not just how many — diagnosing this afterwards otherwise means paying to reproduce it.
+    assert any("CARDINALITY_VIOLATION" in reason for reason in coverage["failure_reasons"])
+
+
+def test_a_complete_run_says_so_rather_than_staying_silent() -> None:
+    # A coverage block that only appears on failure is one a reader learns to ignore.
+    report = _run_with(_FakeProvider())
+    coverage = report.document["analysis_metadata"]["coverage"]
+    assert coverage["chapters_missing"] == []
+    assert coverage["chapters_analysed"] == coverage["chapters_total"] == CHAPTERS
+    assert coverage["blocks_failed"] == 0

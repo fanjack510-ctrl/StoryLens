@@ -99,6 +99,29 @@ RESULT_ORIGINS=Literal[
     "legacy_migration",
     "unknown",
 ]
+class CoverageReport(M):
+    """How much of the book the analysis actually read.
+
+    Every number here is about the *source*, never about the writing. A reader who cannot tell
+    a gap in the analysis from a gap in the novel will attribute the engine's failure to the
+    author, which is worse than reporting nothing.
+    """
+
+    chapters_total: int = 0
+    chapters_analysed: int = 0
+    #: Chapter numbers that never reached the analysis, ascending.
+    chapters_missing: list[int] = Field(default_factory=list)
+    blocks_total: int = 0
+    blocks_failed: int = 0
+    #: Why each block failed, in the engine's own words — kept because diagnosing a failure
+    #: afterwards otherwise means paying to reproduce it.
+    failure_reasons: list[str] = Field(default_factory=list)
+
+    @property
+    def complete(self) -> bool:
+        return not self.chapters_missing
+
+
 class AnalysisMetadata(M):
     run_id:int
     schema_version:str=SCHEMA_VERSION
@@ -113,6 +136,16 @@ class AnalysisMetadata(M):
     result_origin:RESULT_ORIGINS="unknown"
     pipeline_version:str="whole_book_v2_hierarchical/2.1.0"
     source_revision:str=""
+    #: Which chapters of the book did **not** reach the analysis, and why.
+    #:
+    #: A block that fails is skipped so the rest of the book still produces a report — that is
+    #: the right trade. What was missing is the second half of it. 《一梦如初》 lost its first
+    #: block of eight chapters to one intermittent failure and the document reported the book
+    #: as fourteen chapters long, so 起承转合 opened at chapter 9 and presented it as the
+    #: beginning. Nothing on the page could be cross-checked against anything that knew better.
+    #:
+    #: Defaulted and optional, so every document stored before it validates unchanged.
+    coverage:CoverageReport|None=None
 #: What "up" means on the protagonist-journey chart.  The engine decides this from the book's
 #: profile axes and the client renders whatever it is told (INV-P4); a client that picked the
 #: axis itself would have to re-derive the genre, and would drift from the analysis that the
