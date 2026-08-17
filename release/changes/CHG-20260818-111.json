@@ -1,0 +1,73 @@
+{
+  "id": "CHG-20260818-111",
+  "title": "丢掉的一块会重试，丢不回来就必须告诉读者；起承转合必须切分全书而不是自相重叠",
+  "type": "fix",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": false,
+  "commits": [
+    "112e3bd2",
+    "8e5b4e2d"
+  ],
+  "modules": [
+    "apps/api/app/narrative_core/long_novel/orchestrator.py",
+    "apps/api/app/narrative_core/long_novel/adapter.py",
+    "apps/api/app/narrative_core/whole_book_v2/contracts.py"
+  ],
+  "files": [
+    "apps/api/app/narrative_core/long_novel/orchestrator.py",
+    "apps/api/app/narrative_core/long_novel/adapter.py",
+    "apps/api/app/narrative_core/whole_book_v2/contracts.py",
+    "apps/api/tests/test_long_novel_document_sections.py",
+    "apps/api/tests/test_long_novel_story_breakdown.py"
+  ],
+  "user_summary": "跑《一梦如初》的拆文时发现的，三个问题都属于同一类：**引擎自己的失误被呈现成作者的失误**。\n\n**一、丢了三分之一本书，而且没说。** 这本书分成 3 块（1–8 / 9–16 / 17–22 章），第 1 块抽取失败，报告只覆盖 9–22 章。于是「起」从第 9 章开始，被当作这本书的开头呈现；节奏曲线连续地画过那个洞；文档写着 `chapter_count: 14`。\n\n**信息从来没丢**——`chapters_lost` 精确记下了是哪几章，`failed_calls: 1` 也写进了进度。它只是从没到过文档，而文档正是读者唯一会看的地方。`orchestrator.py` 的模块注释本来就写着「报告降级保真度，**前提是告诉读者少了哪一块**」，前半句做了，后半句没做。\n\n现在 `analysis_metadata` 带一个覆盖块：总章数、实际读到的章数、**缺哪几章**、失败了几块、以及引擎自己给出的失败原因。**完整的运行也会带这个块并写明「无缺失」**——只有出事才出现的提示，读者会学会忽略它。`book_metadata.chapter_count` 也改成书的真实章数，不再是幸存章数。\n\n**二、失败的块不重试。** 这一条我先做了个证伪：单独把第 1 块原样重跑一次，8 章信号全齐、干净通过。**缺陷在那次响应里，不在那段文字里。**\n\n需要说清楚的是，扩展器**本来就有一次修复重试**，而且它只做一次是对的——修复是把同一份 payload 附上错误再发一遍，同一个毛病问两遍多半买回同一个毛病。这次加的不是第二次修复，是一次**干净调用**：不带修复提示、不提上一次的回答。run 22 里第 1 块的抽取和修复都失败了，而事后那次裸调用成功了——这就是区别所在。**一次调用，换回三分之一本书。**\n\n修完重跑：22/22 章全覆盖，0 块失败。\n\n**三、起承转合自相重叠。** 重跑后的结果是 起 1–16、承 17–19、转 19–22、合 22–22——第 19 章被两段同时认领，而「合」整个套在「转」里面。「第 19 章属于哪一幕」这个问题没有答案。设计从一开始就写着四段要首尾相接覆盖全书，但没有任何东西在执行它。\n\n现在只动边界，不动别的：每一段从上一段结束处开始，最后一段抵达末章，被前面挤压的段至少保住一章——长度为零的段能通过校验、印成空行、然后被读成「这本书没有第三幕」，而这是数据支撑不了的关于写作的判断。顺序、标题、某个转折归属哪一段，仍然是模型的判断。**本来就正确的输入原样返回**，所以这个修正不会变成对结构的第二种意见。",
+  "technical_summary": "`CoverageReport` is a new optional model on `AnalysisMetadata`, defaulted to None so every stored document validates unchanged. Populated from `RunReport.chapters_planned` (new, set from `len(chapters_by_order)` at run start), `chapters_lost` and `blocks_failed`.\n\n`_extract_all` wraps the extraction in a two-attempt loop. The second attempt is a plain `extract()` — it does not go through `_repair`, which the extractor already does once internally and deliberately only once. `RunReport.blocks_retried` counts blocks that needed the second attempt but succeeded, kept separate from `blocks_failed`.\n\n`_abutting_beats(beats, last_chapter=...)` runs over the shaper's output before it reaches the document. Boundaries only move forward from where the model put them; the final beat absorbs the remainder; each beat is guaranteed at least one chapter by reserving `len(beats) - index - 1` chapters for the beats still to come.",
+  "acceptance_criteria": [
+    "文档里的 chapter_count 是书的章数，不是幸存章数",
+    "缺失章号、失败块数与失败原因出现在 analysis_metadata.coverage",
+    "完整的运行也带覆盖块并写明无缺失",
+    "一次失败的块会被干净重试一次",
+    "重试成功的块不计入失败，但可以看出运行用到了重试",
+    "起承转合四段首尾相接、覆盖全书、无重叠",
+    "本来就正确的四段区间不被改动",
+    "任何一段都不会被挤压成零长度"
+  ],
+  "tests": [
+    "apps/api/tests/test_long_novel_document_sections.py",
+    "apps/api/tests/test_long_novel_story_breakdown.py"
+  ],
+  "verification_evidence": [
+    "run 22（修复前，《一梦如初》拆文）：覆盖第 9–22 章，chapter_count 报 14，progress failed_calls=1，起始幕从第 9 章开始",
+    "单独重跑第 1 块（1 次调用，in 27,131 / out 10,390）：8 章信号齐全、成功——证明失败是间歇性的，不是文本必然触发",
+    "run 23（修复后，同一本书同一模式）：10 次调用、¥0.10、failed_calls=0，coverage = {total 22, analysed 22, missing []}，逐章覆盖 1–22",
+    "run 23 的 4 条爆点原文逐字比对 GBK 原文：4/4 命中",
+    "run 23 拆文全节无任何评分字样",
+    "run 23 的条数理由明确拒绝凑数：「第9章的满足感虽温暖但相对平淡…故落选。因此选取四条，而非凑足八条」",
+    "起承转合归一化对 run 23 实测输入（1-16 / 17-19 / 19-22 / 22-22）产出 1-16 / 17-19 / 20-21 / 22-22",
+    "后端 test_long_novel_document_sections 52 项、test_long_novel_story_breakdown 与 dispatch 合计 38 项通过；前端 tsc 干净"
+  ],
+  "known_out_of_scope": [
+    "run 23 的文档在起承转合归一化之前生成，其四段区间仍带重叠；下一次运行才会是切分好的",
+    "覆盖块尚未在界面或 PDF 上呈现——数据已在文档里，展示是下一步",
+    "《一梦》的 §8 验收（引擎十条爆点与人写的十条重合 ≥6）仍未执行：引擎这次只选了 4 条并说明了理由，且需要人写的那十条才能计数",
+    "扩展器内部那次修复重试与协调器这次干净重试的先后关系没有做成可配置，两次都失败即放弃"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "AnalysisMetadata.coverage 可选且带默认值，已存文档逐位通过校验；旧文档读出时 coverage 为 None。"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false,
+    "notes": "已完成的旧运行不会补出覆盖信息；要拿到覆盖块与正确的 chapter_count 需重跑。需重启 sidecar。"
+  },
+  "blocker_level": "none",
+  "head_inclusion": false,
+  "created_at": "2026-08-18T01:10:00+08:00",
+  "updated_at": "2026-08-18T01:10:00+08:00"
+}
