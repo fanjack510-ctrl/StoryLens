@@ -1,0 +1,81 @@
+{
+  "id": "CHG-20260817-110",
+  "title": "只有数字的章节标记；拆文有了入口，并且不能在跑不了它的书上被选中",
+  "type": "fix",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": false,
+  "commits": [
+    "8c292ca9",
+    "b93989ac",
+    "0738b9e5"
+  ],
+  "modules": [
+    "apps/api/app/domain/ingestion.py",
+    "apps/api/app/routers/whole_book_free_product_router.py",
+    "apps/api/app/narrative_core/services/long_novel_pipeline_v1.py",
+    "apps/desktop/src/features/wholeBookV2/WholeBookV2ProductPage.tsx"
+  ],
+  "files": [
+    "apps/api/app/domain/ingestion.py",
+    "apps/api/app/routers/whole_book_free_product_router.py",
+    "apps/api/app/narrative_core/services/long_novel_pipeline_v1.py",
+    "apps/api/app/narrative_core/services/whole_book_free_product_v1_service.py",
+    "apps/api/app/narrative_core/services/whole_book_foundation_errors.py",
+    "apps/desktop/src/features/wholeBookV2/WholeBookV2ProductPage.tsx",
+    "apps/desktop/src/features/wholeBookV2/formal.css",
+    "apps/desktop/src/services/wholeBookFreeProductApi.ts",
+    "apps/api/tests/test_chapter_detection_formats.py",
+    "apps/api/tests/test_long_novel_pipeline_dispatch.py"
+  ],
+  "user_summary": "三件事，都是「明明做好了却用不上」那一类。\n\n**一、《一梦如初》根本没被分章。** 这本书的章节标记是**单独成行的阿拉伯数字**（1、2、3……共 19 节 + 番外），全文没有一个「第X章」。所以识别不到任何章节，整本 36,714 字进了一个「正文」块。长篇引擎要求至少 4 章才肯跑——也就是说，这本书从导入那一刻起就是**不可分析的，而且没有任何提示**。跟《穿越之种田难为》同一类。\n\n加规则只要一行正则，但它一直没加是有原因的：**只有一个数字的行，跟年份、价格、数量、列表项长得一模一样**，规则松一点就会把一章从句子中间切开——而这种错误读者看不见，也无从归因。\n\n所以判据不是「长得像不像」，而是**数字会不会数数**：必须从 1 或 2 起步，几乎每一步都 +1，最多允许两次重新计数（因为番外会另起一号——这本书正是 1…19 然后在「番外一：慧娘」下重新从 1 开始）。散落的数字永远凑不出这样的序列，测试里年份、价格、以及从 90 起步的一串都识别不到任何章节。\n\n顺带两件小事：标记本身的文字是「7」，在任何显示章节名的地方都像一行乱入，所以渲染成「第7章」——数字就是这个标记的全部内容，这么说不算编造。还有，紧跟在一个没产出正文的标题下面的标记，是在**那个小节内部**编号而不是取代它——之前让标记赢，结果把「番外一：慧娘」整个弄丢了，现在是「番外一：慧娘·第1章」。\n\n书 15 已就地重新分章：3 章 → 22 章，40,187 字，无识别警告，且它没有已成功的分析可保护。\n\n**二、准备面板按诊断报价，不管你要跑哪个。** 拆文被报成 17 次调用，实跑 13 次。用户看这个数字决定要不要花钱，它描述的却是另一次运行。现在读法会传到估算器，单元数取自协调器同一批常量，报价和实跑不会再各说各话。认不出的读法按**诊断**报价——引擎在认不出读法时就是跑诊断，面板若猜便宜的那个就会低报。\n\n**三、拆文终于有了按钮。** 它从做好那天起就只能用 HTTP 调，等于不存在。面板现在先问「这次要哪一种」再问钱。选项措辞讲的是**这本书是谁的**——评测「看自己的书」，拆文「看别人的书」——而不是各自包含什么内容：两种都会讲结构、人物、转折，按内容挑必挑错。\n\n**但比按钮更要紧的是同时补的那个洞：** 派发器对于长篇引擎不接的书，会**静默丢掉读法**，而拆文只存在于长篇引擎。也就是说，那种书上的一次拆文请求会跑完整分析、照样收费、然后返回一份诊断——这是最糟的失败形状，因为结果看起来是完整的。只加按钮不补这个，等于把一个休眠的洞变成一个能走到的洞。\n\n两端都堵了：创建接口直接拒绝（WHOLE_BOOK_MODE_UNAVAILABLE），HTTP 调用方同样受保护；面板把该选项置灰并附上原因，用户不会等到被拒绝才知道。\n\n画像门本来就挡掉了大部分情况——未确认的书在这两道检查之前就被拒了——但挡不住一种：**已经由人确认画像、章节却仍不足 4 章的书**。它会走到派发器并被丢掉读法。这个状态现在是一条测试，写明了它就是「接口那道检查并不多余」的理由。",
+  "technical_summary": "`ALT_CHAPTER_PATTERNS` gains a `bare` entry, and it is the only entry with an extra guard: `_counts_like_chapters` requires the run to start at ≤2, allows at most two restarts (`current == 1 and previous > 1`), and requires advances + restarts to cover all but a 10% tolerance of the steps. The regex alone must not be enabled.\n\n`flush()` now returns whether it emitted a chapter, so a bare marker under a heading that produced no text composes (`番外一：慧娘·第1章`) rather than replacing it.\n\n`estimate_long_novel_plan(mode=...)` selects `_BREAKDOWN_UNITS` vs `_UNITS_BESIDES_STAGES`; unknown modes fall to the diagnostic. `prepare_free_whole_book_analysis_v1(analysis_mode=...)` and both prepare routes take it as a query parameter.\n\nThe create route refuses `story_breakdown` when `book_uses_long_novel_engine` is False, using the new `WHOLE_BOOK_MODE_UNAVAILABLE` code. The client mirrors it off `prepare.planner === \"long_novel_engine\"`.",
+  "acceptance_criteria": [
+    "只有数字的章节标记能被识别，且允许番外重新计数",
+    "正文里的年份、价格、散落数字不会切分书籍",
+    "从 90 起步的数字串不被当作章节",
+    "「第X章」格式仍然优先，不被弱信号重切",
+    "番外标题不因紧随其后的数字标记而丢失",
+    "拆文与诊断的报价不同，且拆文报价等于实测调用次数",
+    "认不出的读法按诊断报价",
+    "长篇引擎不接的书上，拆文在界面上不可选、在接口上被拒绝"
+  ],
+  "tests": [
+    "apps/api/tests/test_chapter_detection_formats.py",
+    "apps/api/tests/test_long_novel_pipeline_dispatch.py",
+    "apps/desktop/src/features/wholeBookV2/WholeBookV2ProductPage.test.tsx"
+  ],
+  "verification_evidence": [
+    "《一梦如初》（书 15）实测重新分章：3 章 → 22 章，40,187 字，无识别警告；章名为 正文 / 第1–19章 / 番外一：慧娘·第1章 / 番外二：日常",
+    "反例实测：散落年份价格 → 0 章；从 90 起步的九个数字 → 0 章；连号 1..8 → 8 章",
+    "报价实测（HTTP，书 14）：diagnostic 24 次 / ¥0.276–0.309，story_breakdown 20 次 / ¥0.261–0.291",
+    "拆文报价与实测吻合：《再也不见》估 13 次，实跑 13 次（6 块 + 3 阶段 + 4 单元）",
+    "界面实测：准备面板出现「这次要哪一种」两个选项；书 15（planner=hierarchical_v2）拆文置灰",
+    "创建接口实测：书 15 请求拆文被拒（先被既有画像门以 409 PROFILE_CONFIRMATION_REQUIRED 拦下）",
+    "后端 test_chapter_detection_formats 12 项、test_long_novel_pipeline_dispatch 13 项通过",
+    "前端 WholeBookV2ProductPage 10 项通过，1 项失败为本轮开始前既有（shows legacy notice when v2 returns 404，已在起点 commit 上复现）"
+  ],
+  "known_out_of_scope": [
+    "《一梦如初》的拆文验收（设计 §8：引擎选的十个爆点与人写的重合 ≥6 条）尚未执行——需先确认该书的作品画像，且要花一次真实调用",
+    "路由层拒绝拆文的那条检查没有端到端测试：需要一本「画像已确认但不足 4 章」的书，目前以单元测试证明该状态可达",
+    "书 15 之外的历史导入书籍未重新扫描是否也受分章格式影响",
+    "L1 未落库，两个模式仍各跑各的抽取"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "分章规则只影响新导入与显式重新识别。书 15 已就地重新识别（该操作会删除旧章节，仅在没有成功分析历史时允许）。已导入的其他书籍不受影响。"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false,
+    "notes": "以「只有数字」为章节标记的书需要用户在书籍页重新识别章节后才会分章。需重启 sidecar。"
+  },
+  "blocker_level": "none",
+  "head_inclusion": false,
+  "created_at": "2026-08-17T20:55:00+08:00",
+  "updated_at": "2026-08-17T20:55:00+08:00"
+}

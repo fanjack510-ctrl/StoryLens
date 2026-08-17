@@ -1,0 +1,72 @@
+{
+  "id": "CHG-20260817-109",
+  "title": "PDF 报告重做成一份有论证的正式报告，并修掉两个让内容不可用的数据缺陷",
+  "type": "feature",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": false,
+  "commits": [
+    "1b4730e1",
+    "ec08c0f6"
+  ],
+  "modules": [
+    "apps/desktop/src/features/wholeBookV2/printExport.ts",
+    "apps/api/app/narrative_core/long_novel/adapter.py",
+    "apps/api/app/narrative_core/whole_book_v2/router.py"
+  ],
+  "files": [
+    "apps/desktop/src/features/wholeBookV2/printExport.ts",
+    "apps/desktop/src/features/wholeBookV2/printExport.pagecount.test.ts",
+    "apps/desktop/src/features/wholeBookV2/reportExport.ts",
+    "apps/desktop/src/features/wholeBookV2/contracts.ts",
+    "apps/api/app/narrative_core/long_novel/adapter.py",
+    "apps/api/app/narrative_core/whole_book_v2/router.py",
+    "apps/api/tests/test_long_novel_document_sections.py"
+  ],
+  "user_summary": "你看完第一版 PDF 的判断是「完全不合格」，具体列了五条。核对下来，五条底下是同一件事：**报告没有论证链**。它把七个数据板块按文档里的存放顺序摆出来，所以每翻一页读者都要自己重新判断「我在看什么、这跟上一页什么关系」。板块是屏幕的正确形状——读者自己挑着开；纸是从头读到尾的，形状不能一样。\n\n所以整篇改成一条链，并且在第一页就把这条链告诉读者：\n\n**测量 → 分项判断 → 问题 → 建议**\n\n每个分析章只看一件事，章末落一个「本章判断」——就是评测本来就会给出的、针对这一件事的评级和结论。这六个判断汇总成第一页的评级表；第七章是其中的负面结论具体化；建议是问题的可执行化。全篇没有一页是孤立的。\n\n**我推翻了上一版的排序。** 上一版把建议放最前，理由是「判断优先」。那是错的：**建议放在依据之前，就只是断言**——你说的「没有逻辑性」正是这个。判断前置的好处由第一页的执行摘要承担，论证顺序不必为此让路。\n\n**问题清单和修订建议合并成一章。** 评测对同一个章节区间同时产出 issue（哪里不对）和 priority（怎么改），分成两章印，等于让读者把同样三条读两遍——一遍当抱怨、一遍当指令。这就是你说的「凑页数」。\n\n**字体只有一条规则**：无衬线用于结构（编号、标题、标签、章号、数字、表头），衬线用于正文散文。之前是逐处点缀，同一行里出现三种字，所以显脏。\n\n**加了三张屏幕上没有的派生统计**，都是交叉现有数据算出来的，这是「基于分析内容重构」的实处：各阶段情节线新开/收束/净额（这本书是边走边收还是把债堆到结局）、悬念回收率与平均跨度、章节功能分布（也正是「章节效率」评级的依据）。\n\n**页码**要换渲染方式。`--print-to-pdf` 命令行只能二选一：不要页脚，或者用浏览器默认页脚——后者会把源 HTML 的临时路径 `file:///C:/Users/…` 印在每一页上。改走 DevTools 的 `Page.printToPDF`，它接受页脚模板，页码由浏览器替换。命令行保留为兜底：没页码的报告也好过没报告。\n\n---\n\n**两个数据缺陷，是「内容不可用」的直接原因：**\n\n1. **「修订时须予保留」印成了 27 个单字**（保／持／法／律／…）。模型把该列表字段答成了一句话，而 `[str(x) for x in value]` 迭代了它的字符。下游没有任何东西能发现——字段确实是一个「非空字符串的列表」，完全符合声明。adapter 里有 13 处同样写法，现在统一走一个「字符串是一个条目」的函数。\n\n2. **出处里「模型」是空的**，因为打印代码取 `provider`/`model`，文档里的字段叫 `provider_name`/`model_name`。\n\n3. **`unknown` 现在按「没答上来」处理**。22 个人物里有 12 个的「与主角关系」是字面量 unknown，之前印成 12 行表格。读者无法据此行动、无法核对、也分不清这是模型没答还是程序出错。现在这些人被计数并列名在一句话里，不占表格。\n\n**页数是量出来的，不是数出来的。** 数节数会漏算——一节溢出就占两页。之前正是这么算错的：附录 A 自带的分布表和判断框占掉整整一页，却没从行数额度里扣，于是 20 页的承诺印出 21 页。现在用 print 媒体模拟渲染、逐节量高度对比可印区域（A4 减页边距 = 263mm）。800 章合成书与真实《系统豪横》**都是 18 页**。",
+  "technical_summary": "`printExport.ts` is a separate document from `reportExport.ts` by design: the HTML export is the audit surface and holds everything, which is correct for checking the engine. The print document is organised as an argument.\n\n`CHAPTER_DIMENSION` maps each analytical chapter to the assessment dimension it is answerable to; `judgement()` renders that dimension's rating and conclusion as the chapter's closing block. That mapping is the report's spine and the reason each chapter can end rather than trail off.\n\n`val()` treats `unknown` / `未知` / `待定` / `无` / `—` as absence. `str_list()` in `adapter.py` replaces thirteen `[str(x) for x in ...]` sites: a `str` is one item, a `Mapping` is none, everything else is iterated.\n\n`_print_via_devtools` launches the same Chromium with `--remote-debugging-port=0`, reads the port from `DevToolsActivePort`, attaches to the page target and calls `Page.printToPDF` with a `footerTemplate` carrying `<span class=\"pageNumber\">`. Returns `None` on any failure so the caller falls back to the CLI path unchanged.\n\n`FIXED_PAGES` and `APPENDIX_HEADER_PAGES` are measured constants, and the docstrings say how to re-measure: emulate print media, read each `section.page` height against 263mm.\n\nThe TS contract gained the `structure_stages` fields the server has been sending since the stage interpreter landed (`turning_point`, `protagonist_state`, `ending_state`, `next_question`, `key_events`, `major_characters`) and `storylines[].nodes`, all optional so stored documents keep loading.",
+  "acceptance_criteria": [
+    "每一个分析章都以「本章判断」收尾，判断取自该章对应的评测维度",
+    "问题与修订建议在同一章，一条发现只出现一次",
+    "unknown 一类占位值不出现在报告任何位置",
+    "出处表印出真实的模型名",
+    "列表字段收到一句话时，作为一个条目而不是一串单字",
+    "页脚带页码，且不包含源文件路径",
+    "800 章与真实文档实测渲染均不超过 20 页",
+    "附录 A 被截断时印出砍掉了多少章"
+  ],
+  "tests": [
+    "apps/desktop/src/features/wholeBookV2/printExport.pagecount.test.ts",
+    "apps/api/tests/test_long_novel_document_sections.py"
+  ],
+  "verification_evidence": [
+    "真实文档（run 18《系统豪横》84 章）经 DevTools 渲染实测 18 页；800 章合成书 18 页",
+    "逐节高度实测（print 媒体模拟，可印区域 263mm）：800 章书正文合计 14.5 页，附录 A 5.04 页——附录首页 0.97 页是之前 21 页超标的原因",
+    "页脚开关对照实测：页数不变（18 = 18），内容流每页多绘制约 395 字节，确认页脚已渲染",
+    "adapter 修复后 str_list('保持…性格。') == ['保持…性格。']，并有回归测试覆盖 _as_priority",
+    "前端 12 项印刷测试通过，tsc 干净；wholeBookV2 全套 68 通过 1 失败（失败项为本轮开始前既有）",
+    "后端 79 项定向测试通过"
+  ],
+  "known_out_of_scope": [
+    "PDF 内中文字体为子集编码，无法从输出中提取页脚字形核对页码数字本身；已通过页脚开关对照确认页脚在绘制",
+    "run 18 等已存文档里被拆成单字的 preserve 仍是坏数据——修复只对之后的运行生效，重跑才会更新",
+    "拆文尚未有对应的 PDF 版式，导出的仍是评测版式"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "契约新增字段全部可选，已存文档逐位通过校验。"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false,
+    "notes": "PDF 渲染改走 DevTools，需重启 sidecar。命令行渲染保留为兜底路径，旧环境不受影响。"
+  },
+  "blocker_level": "none",
+  "head_inclusion": false,
+  "created_at": "2026-08-17T20:20:00+08:00",
+  "updated_at": "2026-08-17T20:20:00+08:00"
+}
