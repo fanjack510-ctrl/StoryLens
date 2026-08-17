@@ -398,3 +398,63 @@ def test_a_document_stored_before_a_field_was_removed_still_loads():
         {"availability": "available", "supporting_cast": [legacy.model_dump()]}
     )
 
+
+
+def test_the_four_beats_partition_the_book_rather_than_overlapping() -> None:
+    """起承转合 has to answer "which act is chapter 19 in", and once it did not.
+
+    《一梦如初》 came back from a real run with 起 1–16, 承 17–19, 转 19–22, 合 22–22: chapter 19
+    claimed by two beats and 合 sitting entirely inside 转. Printed as a structure table, that
+    reads as a fault in the book rather than in the arithmetic.
+
+    Only the boundaries move. The model's reading — the order, the titles, which beat a turn
+    belongs to — is not the thing being corrected.
+    """
+    from app.narrative_core.long_novel.orchestrator import _abutting_beats
+
+    measured = [
+        {"beat": "起", "chapter_start": 1, "chapter_end": 16},
+        {"beat": "承", "chapter_start": 17, "chapter_end": 19},
+        {"beat": "转", "chapter_start": 19, "chapter_end": 22},
+        {"beat": "合", "chapter_start": 22, "chapter_end": 22},
+    ]
+    beats = _abutting_beats([dict(b) for b in measured], last_chapter=22)
+
+    assert [(b["chapter_start"], b["chapter_end"]) for b in beats] == [(1, 16), (17, 19), (20, 21), (22, 22)]
+    assert [b["beat"] for b in beats] == ["起", "承", "转", "合"]
+
+
+def test_beats_that_already_partition_the_book_are_left_alone() -> None:
+    # The repair must be invisible when there is nothing to repair, or it becomes a second
+    # opinion on the structure rather than a correction to its edges.
+    from app.narrative_core.long_novel.orchestrator import _abutting_beats
+
+    clean = [
+        {"beat": "起", "chapter_start": 1, "chapter_end": 20},
+        {"beat": "承", "chapter_start": 21, "chapter_end": 40},
+        {"beat": "转", "chapter_start": 41, "chapter_end": 60},
+        {"beat": "合", "chapter_start": 61, "chapter_end": 84},
+    ]
+    assert _abutting_beats([dict(b) for b in clean], last_chapter=84) == clean
+
+
+def test_a_beat_is_never_squeezed_out_of_existence() -> None:
+    """A first beat that swallows the book still leaves the other three a chapter each.
+
+    A zero-length beat would validate, print as an empty row, and be read as "this book has no
+    third act" — a claim about the writing that the data does not support.
+    """
+    from app.narrative_core.long_novel.orchestrator import _abutting_beats
+
+    greedy = [
+        {"beat": "起", "chapter_start": 1, "chapter_end": 30},
+        {"beat": "承", "chapter_start": 2, "chapter_end": 3},
+        {"beat": "转", "chapter_start": 2, "chapter_end": 3},
+        {"beat": "合", "chapter_start": 2, "chapter_end": 3},
+    ]
+    beats = _abutting_beats([dict(b) for b in greedy], last_chapter=30)
+
+    assert all(b["chapter_end"] >= b["chapter_start"] for b in beats)
+    assert beats[0]["chapter_start"] == 1 and beats[-1]["chapter_end"] == 30
+    for previous, following in zip(beats, beats[1:]):
+        assert following["chapter_start"] == previous["chapter_end"] + 1

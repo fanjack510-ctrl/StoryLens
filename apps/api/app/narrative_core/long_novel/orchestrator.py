@@ -195,6 +195,41 @@ _SUSPENSE_EVENT_TYPES = {
 __all__ = ["RunReport", "RunCoordinator"]
 
 
+def _abutting_beats(
+    beats: list[dict[str, Any]], *, last_chapter: int
+) -> list[dict[str, Any]]:
+    """Make 起承转合 a partition of the book: contiguous, no overlaps, ending at the last chapter.
+
+    The model is asked for four beats covering the whole book and mostly complies on substance
+    while being loose about the edges. 《一梦如初》 came back with 起 1–16, 承 17–19, 转 19–22,
+    合 22–22 — 承 and 转 both claiming chapter 19, and 合 sitting entirely inside 转. Printed as
+    a structure table that reads as an error in the book rather than in the arithmetic, and it
+    makes "which act is chapter 19 in" unanswerable.
+
+    Only the boundaries move, and only forward from where the model put them: each beat begins
+    where the previous ended, and the last reaches the final chapter. The reading — the order,
+    the titles, which beat a turn belongs to — is the model's and is left alone. A beat squeezed
+    to nothing still keeps one chapter, because a beat with no chapters is not a beat.
+    """
+    if not beats:
+        return beats
+    cursor = 1
+    for index, beat in enumerate(beats):
+        start = max(cursor, int(beat.get("chapter_start") or cursor))
+        # The last beat owns everything left, so the four together cover the book exactly.
+        if index == len(beats) - 1 and last_chapter:
+            end = max(start, last_chapter)
+        else:
+            end = max(start, int(beat.get("chapter_end") or start))
+            # Leave one chapter for each beat still to come.
+            remaining = len(beats) - index - 1
+            if last_chapter and remaining:
+                end = min(end, max(start, last_chapter - remaining))
+        beat["chapter_start"], beat["chapter_end"] = start, end
+        cursor = end + 1
+    return beats
+
+
 @dataclass
 class RunReport:
     blocks_total: int = 0
@@ -491,11 +526,14 @@ class RunCoordinator:
             answer = self._shape_beats({
                 "stages": list(stages), "chronology": spread(list(chronology), 60),
             }) or {}
-            beats = [
-                conform(StoryBeat, row)
-                for row in (answer.get("four_beats") or [])
-                if isinstance(row, Mapping)
-            ][:4]
+            beats = _abutting_beats(
+                [
+                    conform(StoryBeat, row)
+                    for row in (answer.get("four_beats") or [])
+                    if isinstance(row, Mapping)
+                ][:4],
+                last_chapter=max((int(s.get("chapter_end") or 0) for s in stages), default=0),
+            )
             report.provider_calls += 1
 
         moments: list[dict[str, Any]] = []
