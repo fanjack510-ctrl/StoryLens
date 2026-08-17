@@ -339,7 +339,9 @@ def test_the_cast_is_judged_once_as_a_whole_not_certified_one_by_one(document):
     """
     b = document["story_breakdown"]
     assert b["cast_note"], "没有对整批配角的判断"
-    assert all("stays_in_lane" not in x for x in b["supporting_cast"])
+    # The field is still declared so documents written while it existed keep loading, but
+    # nothing produces it: a row that carries a value would mean the flag came back.
+    assert all(x.get("stays_in_lane") is None for x in b["supporting_cast"])
 
 
 def test_a_resumed_run_remembers_which_reading_it_was():
@@ -371,4 +373,28 @@ def test_the_request_defaults_to_the_reading_every_caller_already_wanted():
     assert CreateFreeRunRequest(
         estimate_id=1, client_request_id="x", analysis_mode="story_breakdown"
     ).analysis_mode == "story_breakdown"
+
+
+def test_a_document_stored_before_a_field_was_removed_still_loads():
+    """Removing a field from a model that forbids extras breaks every document that has it.
+
+     was deleted rather than deprecated, and one run had already written it. The
+    whole-book page then returned 500 — not a missing section, the entire report — because
+    loading the stored document raised. Every other field cut in the same pass was made
+    optional; this one was not, and that is the difference between a section quietly going away
+    and a page going down.
+
+    Stored documents outlive the decision to stop measuring something.
+    """
+    from app.narrative_core.whole_book_v2.contracts import CastFunction, StoryBreakdownResult
+
+    legacy = CastFunction.model_validate(
+        {"name": "小虎", "function": "主角的执行者", "evidence": [], "stays_in_lane": True}
+    )
+    assert legacy.stays_in_lane is True
+    # Nothing produces it any more, so a fresh row simply has nothing there.
+    assert CastFunction(name="小陈", function="对照面").stays_in_lane is None
+    StoryBreakdownResult.model_validate(
+        {"availability": "available", "supporting_cast": [legacy.model_dump()]}
+    )
 

@@ -77,7 +77,14 @@ def conform(model: type[BaseModel], values: Mapping[str, Any]) -> dict[str, Any]
             continue
         annotation = field.annotation
         origin = getattr(annotation, "__origin__", None)
-        if origin in (list, tuple) or annotation in (list, tuple):
+        # A field that may be None *is* filled by being None — that is what the contract says
+        # the empty case looks like. Without this the union falls through to the string branch
+        # below and an optional bool is written as `""`, which then fails validation at the last
+        # step of a paid run. Found when a deprecated flag was made optional for backward
+        # compatibility and every fresh row started carrying an empty string in its place.
+        if type(None) in getattr(annotation, "__args__", ()):
+            out[name] = None
+        elif origin in (list, tuple) or annotation in (list, tuple):
             out[name] = []
         elif annotation is int:
             out[name] = 0

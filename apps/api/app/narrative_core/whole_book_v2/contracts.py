@@ -205,13 +205,21 @@ class StandoutMoment(M):
     rank:int=Field(ge=1); title:str; quote:str; why_it_lands:str; chapter:int=Field(ge=1); evidence:list[str]=Field(default_factory=list)
 class ChapterHook(M): chapter:int=Field(ge=1); question:str; evidence:list[str]=Field(default_factory=list)
 class ReusableTechnique(M): name:str; what_it_is:str; why_it_works:str; transfers_to:str
-# No per-character `stays_in_lane` flag. It was there for one run and came back true for all
-# twenty-three, which makes it the same non-measurement as the heatmap's hard-coded zeroes: a
-# field that cannot come out false is not telling anyone anything. Certifying each of
+# No per-character `stays_in_lane` flag *is produced*. It was there for one run and came back
+# true for all twenty-three, which makes it the same non-measurement as the heatmap's hard-coded
+# zeroes: a field that cannot come out false is not telling anyone anything. Certifying each of
 # twenty-three characters is also the harder question; naming the two who crowd the page is the
 # easy one, and it belongs to the cast as a whole — which is how the 《一梦》 breakdown says it,
 # in a single line about every supporting character finishing their job and leaving.
-class CastFunction(M): name:str; function:str; evidence:list[str]=Field(default_factory=list)
+#
+# But it is *declared*, because one run wrote it before it was removed and this model forbids
+# extras — so deleting the field outright made that stored document unloadable and returned 500
+# for the whole book page, not just this section. Every other field cut in the same pass was
+# made optional for exactly this reason; this one was deleted, and the page went down. Stored
+# documents outlive the decision to stop measuring something.
+class CastFunction(M):
+    name:str; function:str; evidence:list[str]=Field(default_factory=list)
+    stays_in_lane:bool|None=None
 class StoryBreakdownResult(M):
     version:str="1.0"; availability:Availability=Availability.UNAVAILABLE
     four_beats:list[StoryBeat]=Field(default_factory=list)
