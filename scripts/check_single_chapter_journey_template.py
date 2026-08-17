@@ -475,9 +475,15 @@ def build_report(template: dict, write_report: bool) -> dict:
     }
 
     if write_report:
+        # newline="" so the "\n" below is written literally. Without it, Python translates on
+        # Windows and this tracked report comes back CRLF — byte-different, semantically
+        # identical, and enough to make the repository dirty. The suite then fails its own five
+        # `git diff --check` tests on every run *after* the first, which reads as a regression
+        # from whatever was being worked on rather than as the test suite dirtying its own repo.
         DEFAULT_REPORT.write_text(
             json.dumps(report, ensure_ascii=False, indent=2) + "\n",
             encoding="utf-8",
+            newline="",
         )
 
     return report
