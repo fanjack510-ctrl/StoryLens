@@ -1,0 +1,62 @@
+{
+  "id": "CHG-20260818-115",
+  "title": "两份文档：三条管线为什么合不了，六十份人写的拆文一致在做什么",
+  "type": "documentation",
+  "base_version": "1.2.0",
+  "status": "implemented",
+  "include_in_next_release": false,
+  "commits": [
+    "9fa0bf7d",
+    "de30ecf9",
+    "8bedd835",
+    "940b7488"
+  ],
+  "modules": [
+    "docs/whole-book/ARCHITECTURE_AUDIT.md",
+    "docs/whole-book/BREAKDOWN_CORPUS_FINDINGS.md"
+  ],
+  "files": [
+    "docs/whole-book/ARCHITECTURE_AUDIT.md",
+    "docs/whole-book/BREAKDOWN_CORPUS_FINDINGS.md"
+  ],
+  "user_summary": "**架构审计**——起因是那个开山假设：「如果有单章分析比较细的，就基于它做更详细的全书解构」。查下来这条路不是没做，是**被一条契约不变量明令禁止的**：`whole_book_native` 模式下 `chapter_analysis_asset_count != 0` 直接抛错。枚举里留了 `whole_book_enhanced`，全代码库只有两处提到它，都是注释。\n\n禁令本身是对的，理由是三条不可换算：单章的结论挂在**段落**上、全书挂在**章号**上；单章切场景用**目标变化**、全书分阶段用**事件密度**，两套判据会在不同位置断开且没有任何机制发现；而单章分析实测**覆盖 6 本书共 9 章，这 6 本合计 3,600 余章**——覆盖率 0.25%，「有细的就用细的」在真实数据上等于「几乎永远没有细的」。\n\n审计还改变了我对「最弱一环」的判断：不是分析，是**分章**。15 本书里 5 本切坏，一本有 168 万字的「一章」，而上面每一层都按章计量。\n\n**语料发现**——59 份 xlsx、2 份方法论 PDF。以「出现在多少份里」排序，只留 ≥3 份的做法，因为出现在 1 份里的是那位分析者的习惯，出现在 40 份里的才是手艺。\n\n**这份文档我误伤过一次，值得记下来。** 上下文压缩后我丢了写它的那段记忆，试着读 xlsx 失败（缺包），就断定「我从没读过语料，那些数字是编的」，提交了一条 commit 说它全是捏造，并据此改坏了审计文档里对应的一节。\n\n这次先数了再说：59 份对得上，「反派」43/59 份共 211 次**一字不差**，它引的每一句都真实存在于 `短篇-两块表.xlsx`——包括那句我宣称是自己编的。**工具缺失是关于我的工具的证据，不是关于别人算术的证据。**\n\n我提出的「37%」也不是伪证，是**另一个分母**：全部七种表头变体下手艺列 219 条、45% 带引文；文档的 88% 问的是「引了原文的那些，有多少接着讲清机制」——两个都成立，而后者才是它的论点。末列同理：120 条平均 26 字多为情绪标注（我测得没错），**但《两块表》的末列写的是完整诊断**，症状根因改法齐全，就在「学习之处」旁边——**这正是「拆文与评测本是一遍阅读」的直接证据，而我以「它不存在」为由删掉了它。**",
+  "technical_summary": "`ARCHITECTURE_AUDIT.md` records the three pipelines with measured figures (178 single-chapter artifacts over 9 chapters; 15 empty `long_novel_*` tables; 23 whole-book runs, all `whole_book_native`), the contract invariant that forbids composing them, the chapter-split table for all fifteen books, and a proposed ordering.\n\n`BREAKDOWN_CORPUS_FINDINGS.md` counts practice frequency across the corpus rather than reading examples, on the rule that a practice in one breakdown is a habit and one in forty is the craft.\n\n8bedd835 asserted the second document was unmeasured; 940b7488 withdraws that and restores what it removed, keeping both denominators and saying why they do not conflict.",
+  "acceptance_criteria": [
+    "审计中的每一个数字都可在本机库或代码上复查",
+    "契约不变量的引用与代码一致",
+    "语料文档的计数可用仓库内的读取脚本复现",
+    "被撤回的指控在文档与提交历史中都有明确记录",
+    "两份文档对同一统计给出的不同数字，都标明各自的分母"
+  ],
+  "tests": [],
+  "verification_evidence": [
+    "语料计数复核：59 份 xlsx（文档 59）、「反派」43/59 份 211 次（文档 43/59 211 次）、带方括号单元格 117 对文档 114、破折号占比 86% 对文档 88%",
+    "文档引用的四处例句在 短篇-两块表.xlsx 中全部命中，包括「张哥是加班狂魔」与咖啡渍一句",
+    "手艺列全变体复测：219 条、平均 46 字、45% 带引文；末列 120 条、平均 26 字",
+    "审计数字复核：单章资产 178 行覆盖 9 章、long_novel_* 15 张表 0 行、whole_book_runs 23 次全为 whole_book_native",
+    "分章表 15 本逐本复核，最大单章 1,686,950 字"
+  ],
+  "known_out_of_scope": [
+    "两份文档只描述与建议，未改动任何代码行为",
+    "「过半原作没有章号」这类关于原作的推断，语料不直接记录，已在审计中改为不作断言",
+    "生产环境用户数据未读（按约定只读且本次未读）",
+    "纯文档变更没有测试证据，因此状态停在 implemented 而不是 tested——登记器要求 tested 必须附测试，文档改不出测试来。"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "纯文档。"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false,
+    "notes": "纯文档，不影响运行。"
+  },
+  "blocker_level": "none",
+  "head_inclusion": false,
+  "created_at": "2026-08-18T21:20:00+08:00",
+  "updated_at": "2026-08-18T21:20:00+08:00"
+}

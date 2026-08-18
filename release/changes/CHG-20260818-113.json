@@ -1,0 +1,68 @@
+{
+  "id": "CHG-20260818-113",
+  "title": "分章出错时说清是哪里错了，并把「我们认得的格式」交给用户",
+  "type": "fix",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": false,
+  "commits": [
+    "55669ac2"
+  ],
+  "modules": [
+    "apps/api/app/domain/ingestion.py",
+    "apps/api/app/services/book_service.py",
+    "apps/desktop/src/pages/LibraryPage.tsx"
+  ],
+  "files": [
+    "apps/api/app/domain/ingestion.py",
+    "apps/api/app/services/book_service.py",
+    "apps/desktop/src/pages/LibraryPage.tsx",
+    "apps/desktop/src/types/index.ts",
+    "apps/desktop/src/styles/components.css",
+    "apps/api/tests/test_import.py"
+  ],
+  "user_summary": "分章是整个系统的地基——节奏曲线、逐章表、幕结构、块规划，**上面每一层都是按章计量的**——而它是防护最薄弱的一环。\n\n本机书库实测：**15 本书里 5 本分章坏到会污染分析**，其中《最终进化》有一章 **168 万字**。下游没有任何东西能把它和「一本有长章节的书」区分开。\n\n两处错。\n\n**一、可疑判据漏掉了最明显的情况。** 原来三条判据全部以「章数 ≤ 1」为键，所以《碧血洗银枪》——**2 章、99.5% 的正文在其中一章**——一声警告都没有。现在补两条：一章是否占了全书一半以上、有没有哪一章大到不像一章。\n\n在整个书库上核对过：新判据**恰好命中那 5 本坏的，10 本好的一本都没误伤**。会在好书上响的警告，是用户会学着无视的警告。\n\n**二、界面把错误说错了。** 不管什么毛病都印同一句「文件较大但只识别出一个章节」，而这句话对上面两本**都是假的**（一本 2 章、一本 206 章）。现在诊断会带上**是哪几条检查触发的**，界面照实说：「其中一章占了全书 99%」「最长的一章有 151,228 字」。\n\n然后给出真正管用的修法：**拿着文件的人一眼就能看出它是不是按我们认得的格式标注的，而程序看不出来。** 所以界面把支持的格式印出来，请用户改好再传。这份清单由后端下发、和实现它的正则放在同一个文件里——放在前端维护的格式清单，迟早会跟代码走散。\n\n「继续导入」保留：有些书本来就不分章，用户知道自己在做什么。\n\n**顺带发现两本书不用改代码就能救**：《黑白道》和《剩女遇见爱情》用当前分段器重新识别会得到 207 章和 89 章——分段器早就修好了，它们还存着导入当天的坏切分，在书籍页点一次「重新识别章节」即可。",
+  "technical_summary": "`SUPPORTED_CHAPTER_FORMATS`, `OVERSIZED_CHAPTER_CHARS` (50,000) and `DOMINANT_CHAPTER_SHARE` (0.5) live in `ingestion.py` beside the patterns they describe.\n\n`_diagnostics` replaces the boolean `suspect` with `suspect_reasons: list[str]` — SINGLE_CHAPTER, OVERSIZED_CHAPTER, ONE_CHAPTER_DOMINATES, CHAPTER_TOO_MANY_PARAGRAPHS, MARKERS_FOUND_BUT_NOT_ADOPTED — and adds `max_chapter_share` and `supported_chapter_formats` to the payload.\n\n`describeSuspectReasons` in `LibraryPage.tsx` renders the reasons that fired, falling back to the old generic sentence for diagnostics stored before the field existed.",
+  "acceptance_criteria": [
+    "一章占全书一半以上会触发警告，即使章数大于 1",
+    "任何超过 5 万字的章会触发警告",
+    "均匀切分的书不触发任何警告",
+    "诊断里带上具体触发了哪几条检查",
+    "诊断里带上后端下发的支持格式清单",
+    "警告面板按实际触发的检查说话，而不是一句固定文案",
+    "「继续导入」在警告状态下仍然可用"
+  ],
+  "tests": [
+    "apps/api/tests/test_import.py",
+    "apps/desktop/src/pages/LibraryPage.test.tsx"
+  ],
+  "verification_evidence": [
+    "全书库 15 本实测：新判据命中 碧血洗银枪 / 最终进化 / 穿越之种田难为 / 黑白道 / 剩女遇见爱情 共 5 本，其余 10 本无警告",
+    "《碧血洗银枪》原判据无警告，新判据触发 OVERSIZED_CHAPTER + ONE_CHAPTER_DOMINATES，最大章占比 100%",
+    "HTTP 实测 /api/v1/books/chapter-detection/preview：2 章、占比 0.9999、原因两条、格式清单 5 条",
+    "后端 21 项通过（test_import + test_chapter_detection_formats + test_import_docx_epub）",
+    "前端 LibraryPage 11 项通过，tsc 干净"
+  ],
+  "known_out_of_scope": [
+    "已导入书籍不会自动重新识别；《黑白道》《剩女遇见爱情》需用户手动触发一次重新识别才能拿到正确切分",
+    "超大章被规划器切成 part 后仍共用同一个 chapter_ref，报告尚未声明「本章过大，已切为 N 段」",
+    "格式清单是静态文案，未按检测到的候选给出针对性建议"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "只影响导入与重新识别时生成的诊断 JSON；旧诊断缺少新字段时界面回退到原有文案。"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false,
+    "notes": "需重启 sidecar。已存书籍的诊断不会回填。"
+  },
+  "blocker_level": "none",
+  "head_inclusion": false,
+  "created_at": "2026-08-18T20:35:00+08:00",
+  "updated_at": "2026-08-18T20:35:00+08:00"
+}

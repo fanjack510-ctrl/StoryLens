@@ -1,0 +1,71 @@
+{
+  "id": "CHG-20260818-112",
+  "title": "没有台词的瞬间也能被提名；提示词不再拿验收用的那本书当范例",
+  "type": "fix",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": false,
+  "commits": [
+    "140032ce"
+  ],
+  "modules": [
+    "apps/api/app/narrative_core/long_novel/contracts/l1.py",
+    "apps/api/app/narrative_core/long_novel/extractor.py",
+    "apps/api/app/narrative_core/long_novel/orchestrator.py",
+    "apps/api/app/narrative_core/long_novel/prompts.py",
+    "apps/api/app/narrative_core/long_novel/deltas.py"
+  ],
+  "files": [
+    "apps/api/app/narrative_core/long_novel/contracts/l1.py",
+    "apps/api/app/narrative_core/long_novel/extractor.py",
+    "apps/api/app/narrative_core/long_novel/orchestrator.py",
+    "apps/api/app/narrative_core/long_novel/prompts.py",
+    "apps/api/app/narrative_core/long_novel/deltas.py",
+    "apps/api/app/narrative_core/whole_book_v2/contracts.py",
+    "apps/api/tests/test_long_novel_story_breakdown.py"
+  ],
+  "user_summary": "终于执行了设计里定了很久的那条验收：把引擎选出的爆点，跟你给的那份《一梦如初》专业拆文里的十条逐条比对。**只对上一条。**\n\n查出来两个原因，第二个是我造成的。\n\n**一、没有台词的瞬间，引擎在结构上就提名不了。**\n\n`quote` 是必填并逐字校验的。这对「引文」是对的规矩，对「瞬间」是错的规矩——人写的那十条里，将近一半靠的是**没人说话**：她看见他满身伤痕一句话都没说、「忠仆」两个字让她沉默、全书唯一一次哭。这些拿不出可校验的一句话。\n\n**引擎不是选得不好，是根本看不见它们**，再怎么调提示词也找不到。\n\n现在提名可以用两种锚点之一：逐字引文，**或者**它的证据段落。段落不是更弱的引用——**它的文字是从快照里读出来的，从来不经过模型**，只是改由引擎决定展示哪几个字。两者必须有其一，都没有就丢弃（否则「没有引文」就成了「什么都能说、什么都不用引」的后门）。\n\n为了让它端到端跑通，还发现三处断线：`standout_moments` 既不在证据收集的字段表里、也不在候选池里，所以爆点的段落锚点**从来没变成过真正的证据行**，而无台词的提名在到达选择层之前就被丢掉了。\n\n**二、提示词把答案发给了考生。**\n\n建拆文引擎时，我照着你发的那份《一梦如初》拆文写了范例——**然后又拿同一本书做验收**：\n\n- 四段指令里的「好例子」= 人写的「起」标题，逐字\n- 爆点指令里的两个「好例子」= 人写十条里的第 1 条和第 4 条\n- 章末钩子的例子 = 人写细纲里的钩子，逐字\n\n引擎产出的「起」标题与人写的**一字不差**，我一度以为是模型记住了网上流传的拆文——不是，是它印在我们自己的提示词上面。\n\n这让「重合」这个指标在那本书上完全失效，而且**从产出看不出来**：被喂过答案的结果，和引擎读得好的结果，长得一模一样。全部换成一本不存在的书的范例，并加测试守着。\n\n**这反而让原结论更硬**：选择层被印着「取舍之间也是风骨」当范例，仍然没能选中它——因为 L1 从没提名过。**瓶颈在提名层，这一点现在是被证明的，不是推断的。**",
+  "technical_summary": "`StandoutMoment.quote` (both the L1 fact and the output contract) is defaulted to \"\". `_drop_unquoted_moments` becomes `_drop_unanchored_moments`: a quote, if offered, must still match verbatim with whitespace stripped and >= 4 characters; with no quote, at least one `evidence.paragraph_ref` must resolve inside the rendered block. A quote that is offered and fails is still fatal to that nomination even when its anchor would have carried it.\n\n`standout_moments` added to `_collect_evidence`'s field list so a nomination's anchor becomes a real evidence row. Deliberately **not** added to `_check_evidence_anchors`: a bad anchor there raises and fails the whole block, which is the right severity for a fact the report is built on and the wrong one for an optional nomination.\n\n`_moment_candidates` carries `excerpt` for wordless nominations — a separate field from `quote` on purpose, since both are real text and no verbatim check can distinguish an engine's paragraph slice from a line the book speaks.\n\nEvery worked example in `prompts.py`, `deltas.py` and `contracts/l1.py` now names an invented story, with `test_no_prompt_teaches_the_engine_a_real_book_it_may_be_asked_to_analyse` asserting the corpus book's prose appears in none of them.",
+  "acceptance_criteria": [
+    "无台词的提名可以通过抽取层并到达选择层",
+    "既无引文又无有效锚点的提名被丢弃",
+    "提供了引文但对不上原文的提名仍被丢弃",
+    "引文与摘录分属不同字段，不会合并",
+    "爆点的段落锚点会变成真正的证据行",
+    "一条坏锚点不会导致整块抽取作废",
+    "任何提示词里都不出现《一梦如初》的原文"
+  ],
+  "tests": [
+    "apps/api/tests/test_long_novel_story_breakdown.py"
+  ],
+  "verification_evidence": [
+    "《一梦如初》拆文实测（run 23）：引擎选 4 条，与人写十条严格重合 1 条，放宽到同章 2 条，判据 ≥6 不通过",
+    "四条引文逐字比对 GBK 原文：4/4 命中；拆文全节无任何评分字样",
+    "候选池实测仅 5 条——人写十条里至少 5 条从未进入候选，其中「宫门骂御史」「春药局」出现在引擎自己的起承转合标题里却未被提名",
+    "提示词污染实测：FOUR_BEATS_INSTRUCTION 的好例子与人写的「起」标题逐字相同；STANDOUT_INSTRUCTION 的两个好例子即人写十条中的第 1、4 条",
+    "后端 test_long_novel_story_breakdown 20 项通过"
+  ],
+  "known_out_of_scope": [
+    "《一梦如初》的验收作废：该样本在提示词污染条件下测得，只能说明「即使被喂了答案也没选中」，不能作为引擎能力的读数",
+    "需要换一本没有公开拆文的作品重做验收",
+    "判据本身要改：设计假定引擎选十条，而引擎选四条并说明理由是 INV-B3 正常工作。建议拆成准确率（选的是否都在人选的十条里）与召回率（人选的十条有几条进了候选池）",
+    "选择层「不要把摘录抄进引文」只靠提示词约束，代码无法校验——两者都是原文"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "quote 由必填改为带默认值，已存文档逐位通过校验。"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false,
+    "notes": "已完成的旧运行不会补出无台词的爆点，需重跑。需重启 sidecar。"
+  },
+  "blocker_level": "none",
+  "head_inclusion": false,
+  "created_at": "2026-08-18T18:20:00+08:00",
+  "updated_at": "2026-08-18T18:20:00+08:00"
+}

@@ -1,0 +1,74 @@
+{
+  "id": "CHG-20260818-114",
+  "title": "短篇精读：第三条管线，给按章计量的引擎读不了的作品",
+  "type": "feature",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": false,
+  "commits": [
+    "fca26cb9",
+    "f2277d66"
+  ],
+  "modules": [
+    "apps/api/app/narrative_core/short_form/contracts.py",
+    "apps/api/app/narrative_core/short_form/prompts.py",
+    "apps/api/app/narrative_core/short_form/dispatch.py",
+    "apps/api/app/narrative_core/short_form/pipeline.py",
+    "apps/api/app/narrative_core/short_form/service.py"
+  ],
+  "files": [
+    "apps/api/app/narrative_core/short_form/__init__.py",
+    "apps/api/app/narrative_core/short_form/contracts.py",
+    "apps/api/app/narrative_core/short_form/prompts.py",
+    "apps/api/app/narrative_core/short_form/dispatch.py",
+    "apps/api/app/narrative_core/short_form/pipeline.py",
+    "apps/api/app/narrative_core/short_form/service.py",
+    "apps/api/tests/test_short_form_pipeline.py"
+  ],
+  "user_summary": "长篇引擎按「块 → 分区 → 叙事阶段」规划，这套骨架在短篇上会退化：《一梦如初》4 万字解出 **3 块 → 3 分区 → 2 阶段**，而起承转合是四段——**四段只能从两段里切**，这就是上次「起」吞掉全书四分之三的根因。这不是调参能救的：分区不能比块更细，3 个块永远撑不起 4 个阶段。\n\n所以短篇走自己的管线。\n\n**形状照着人写的语料来。** `data/raw/breakdowns/` 里有 21 份用「拆稿学习表」模板：一行一**段**，六列——分段字数 / 故事进展 / 地点人物 / 事件冲突 / 学习之处 / 自己的联想感慨。有字数记录的 15 篇实测 9,143–19,199 字、中位 11,830，切成 15–30 段，**约 790 字一段**——比章细一个数量级，这就是它当不成现有引擎一个模式的原因。\n\n有两件事是照抄语料而不是「改进」它的：语料**概述多于引文**（手艺列 45% 带引文），所以每段的证据是可选的——段落本身就是一段读者能翻到的定位；语料的情绪列是 **26 字的标注**（「至暗时刻」「挑战失败」），**不是诊断**——诊断属于评测。\n\n**分段按场景切，而且是修出来的不是信来的。** 模型如果说这一段到第 4 自然段结束、下一段从第 8 开始，它不是在描述一个空隙，它是在数错号——而**照单全收会让 5–7 段从分析里消失，同时每一个显示出来的段都好好的**。所以只有「在哪结束」是模型说了算：每一段从上一段结束处开始，连续性由构造保证。四段起承转合同一个修法，于是「第 11 段属于哪一幕」有且只有一个答案。\n\n**分派要同时看字数和章数**，理由是《剩女遇见爱情》：19.4 万字、**1 章**，一本分章失败的长篇。只看章数会把长篇当短篇一口气读完；只看字数会把它交给需要章号的引擎，然后什么也产不出。两个都要，才分得开「一篇短的」和「一本我们没切开的」。\n\n**真跑过两次**《糙汉重生·第一卷》（27,766 字）：20 段、6 次调用、六列全满、零段落丢失。「学习之处」写的是机制不是评语（「把坏消息放在她刚以为熬过去的时候」），情绪下行真的写出了它在为谁积欠。\n\n**假供应商测不出来的一个 bug**：要的是字符串列表，模型给了对象列表，`str(x)` 把它变成 Python repr 原样印在报告上——跟「须予保留」被拆成 27 个单字是同一族毛病：转换时从不问拿到的是什么形状。\n\n**尚未接路由和界面。**",
+  "technical_summary": "`run_short_form` is pure — paragraphs plus a provider in, a report out — so `service.py` holds everything that knows about the session, the gateway and the book, and can be replaced without touching the reading logic. Paragraphs are flattened across chapters, which is the property that will let a piece with no chapter markers be read at all.\n\nThree prompts, one job each; the middle pass is batched at `SEGMENTS_PER_READ_CALL = 6` because six columns per segment overruns the output ceiling long before the input one. `MIN_SEGMENT_CHARS` folds fragments into the neighbouring scene.\n\n`plan_segments` and `_abutting_beats` both take the start from the cursor rather than from the model. `_emotion_lines` accepts either a string or an object and renders both as the corpus writes them, and skips None explicitly — the fallback would print the string \"None\".\n\n`is_short_form` requires both bounds: <=30,000 characters outright, or <=80,000 with fewer than 20 chapters.",
+  "acceptance_criteria": [
+    "结果通过契约校验，且每一个自然段恰好属于一段",
+    "模型给出跳号边界时，中间的段落不会丢失",
+    "起承转合四段首尾相接、覆盖全篇、不重叠",
+    "每一段都带齐六列",
+    "逐段阅读是批处理而非一段一次调用",
+    "空文本不调用模型，并诚实标为 unavailable",
+    "分派同时依据字数与章数，单章长篇不会被当作短篇"
+  ],
+  "tests": [
+    "apps/api/tests/test_short_form_pipeline.py"
+  ],
+  "verification_evidence": [
+    "真实运行《糙汉重生·第一卷》（书 8，27,766 字 / 1,014 自然段）两次：第一次 19 段、第二次 20 段，均 6 次调用",
+    "段落覆盖实测：漏 0、重 0；六列空值 0/20",
+    "段落字数中位 896（语料约 790），但 4/20 超 2000 字、最大 5,046 —— 分段偏粗，见范围外",
+    "情绪列修复前存的是 \"{'segment': '第7段', 'note': '...'}\" 的 Python repr；修复后为「第7段：发布会成功，贺修化解危机，当众握手，爽点」",
+    "分派规则在全书库 15 本上实测：仅《糙汉重生·第一卷》走短篇；语料样本 9,143/11,830/19,199 字走短篇，79,616 字走全书",
+    "后端 test_short_form_pipeline 8 项通过"
+  ],
+  "known_out_of_scope": [
+    "未接 HTTP 路由与界面：只能在进程内调用",
+    "分段偏粗：20 段里 4 段超 2000 字，最大 5,046；提示词已写上限但该次运行仍超出",
+    "四段偏后：合占 20 段中的 12 段（60%）。分区修复保证首尾相接与覆盖（正确性成立），但没有任何机制阻止一幕吞掉后半篇",
+    "结果不落库，每次都要重跑",
+    "《一梦如初》（4 万字 / 22 章）判为全书，处在阈值边界上"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "只读 books / chapters / paragraphs，不写任何表。"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false,
+    "notes": "新增模块，对现有两条管线零影响。用户暂时接触不到——没有入口。需重启 sidecar。"
+  },
+  "blocker_level": "none",
+  "head_inclusion": false,
+  "created_at": "2026-08-18T21:10:00+08:00",
+  "updated_at": "2026-08-18T21:10:00+08:00"
+}
