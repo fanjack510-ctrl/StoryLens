@@ -32,6 +32,7 @@ from app.narrative_core.migrations import (
     MIGRATION_WHOLE_BOOK_RUN_PROVIDER_PINNING,
     MIGRATION_LONG_NOVEL_FOUNDATION,
     MIGRATION_BOOK_PROFILE,
+    MIGRATION_SHORT_FORM_RESULTS,
     MIGRATION_WHOLE_BOOK_SNAPSHOT_IMMUTABILITY,
     migration_checksum,
 )
@@ -1151,6 +1152,7 @@ def apply_narrative_migrations(engine: Engine) -> None:
     migrate_narrative_20260808_017_whole_book_run_provider_pinning(engine)
     migrate_narrative_20260812_018_long_novel_foundation(engine)
     migrate_narrative_20260813_019_book_profile(engine)
+    migrate_narrative_20260818_020_short_form_results(engine)
 
 
 SQL_012 = """
@@ -2641,3 +2643,56 @@ def migrate_narrative_20260813_019_book_profile(engine: Engine) -> None:
             connection.execute(text(statement))
 
     _record_applied(engine, MIGRATION_BOOK_PROFILE, checksum)
+
+SQL_020 = """
+CREATE TABLE short_form_results (
+    id INTEGER NOT NULL PRIMARY KEY,
+    book_id INTEGER NOT NULL,
+    genre VARCHAR(32) NOT NULL DEFAULT '',
+    provider_name VARCHAR(100) NOT NULL DEFAULT '',
+    model_name VARCHAR(255) NOT NULL DEFAULT '',
+    segments_planned INTEGER NOT NULL DEFAULT 0,
+    segments_resplit INTEGER NOT NULL DEFAULT 0,
+    provider_calls INTEGER NOT NULL DEFAULT 0,
+    input_tokens INTEGER NOT NULL DEFAULT 0,
+    output_tokens INTEGER NOT NULL DEFAULT 0,
+    result_json TEXT NOT NULL DEFAULT '{}',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(book_id) REFERENCES books (id) ON DELETE CASCADE
+);
+CREATE INDEX ix_short_form_results_book ON short_form_results (book_id, id);
+"""
+
+#: One row per paid reading, never overwritten. A run costs real money, and the previous one is
+#: the only way to see whether a prompt change helped — overwriting in place would make every
+#: improvement unfalsifiable.
+SHORT_FORM_TABLES: tuple[str, ...] = ("short_form_results",)
+
+
+def migrate_narrative_20260818_020_short_form_results(engine: Engine) -> None:
+    """CHG-20260818-116: storage for 短篇精读.
+
+    Additive and isolated: nothing else reads this table, so a book with no row here behaves
+    exactly as before. Kept out of `analysis_artifacts` because that table's `run_id` is a
+    required foreign key into the chapter-scoped run table, and a short-form reading is a
+    book-level thing that has no chapter run to belong to.
+    """
+    checksum = migration_checksum(SQL_020)
+    existing = _table_names(engine)
+
+    with engine.begin() as connection:
+        for statement in (s.strip() for s in SQL_020.split(";")):
+            if not statement:
+                continue
+            first_line = statement.splitlines()[0].upper()
+            if first_line.startswith("CREATE TABLE"):
+                if statement.splitlines()[0].split()[2] in existing:
+                    continue
+            elif "CREATE" in first_line and "INDEX" in first_line:
+                target = statement.split(" ON ")[1].split("(")[0].strip()
+                if target in existing:
+                    continue
+            connection.execute(text(statement))
+
+    _record_applied(engine, MIGRATION_SHORT_FORM_RESULTS, checksum)
+

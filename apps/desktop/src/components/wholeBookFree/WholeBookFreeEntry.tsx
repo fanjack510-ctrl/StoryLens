@@ -1,4 +1,6 @@
 import { Link, useSearchParams } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { shortFormApi } from "../../services/shortFormApi";
 import { isWholeBookFreeProductEnabled } from "../../services/wholeBookFreeProductFlag";
 import {
   readEvidenceRestoreState,
@@ -33,7 +35,20 @@ const MODULE_KEYS = new Set<string>([
  */
 export function WholeBookFreeEntry({ bookId }: Props) {
   const [searchParams] = useSearchParams();
+  // Hidden for books that take 短篇精读 instead. The two entries are exclusive rather than
+  // side by side: which pipeline a book gets is a fact about the book, and offering both would
+  // invite the user to choose an engine that structurally cannot read their piece — the
+  // whole-book planner collapses to two narrative stages on anything this short.
+  // Same query key as ShortFormEntry, so the pair costs one request.
+  const shortForm = useQuery({
+    queryKey: ["short-form-prepare", bookId],
+    queryFn: () => shortFormApi.prepare(bookId),
+    enabled: bookId > 0,
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  });
   if (!isWholeBookFreeProductEnabled() || bookId <= 0) return null;
+  if (shortForm.data?.is_short_form) return null;
 
   const returnTo = searchParams.get("returnTo");
   const returnModuleRaw = searchParams.get("returnModule");

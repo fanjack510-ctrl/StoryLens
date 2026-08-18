@@ -25,6 +25,7 @@ import { EmbeddedAnalysisResultShell } from "../components/chapterResult/Embedde
 import { WorkspaceJourneyPane } from "../components/readerJourney/WorkspaceJourneyPane";
 import { ProNativeOverviewEntry } from "../components/proNativeOverview/ProNativeOverviewEntry";
 import { WholeBookFreeEntry } from "../components/wholeBookFree/WholeBookFreeEntry";
+import { ShortFormEntry } from "../components/shortForm/ShortFormEntry";
 import { StateView } from "../components/ui/StateView";
 import { useCurrentPageAnalysisProgress } from "../hooks/useCurrentPageAnalysisProgress";
 import { analysisApi } from "../services/analysisApi";
@@ -1615,6 +1616,9 @@ export function BookRoutePage() {
             ) : null}
             {!noChapters && !bootstrappingChapter ? (
               <WholeBookFreeEntry bookId={bookId} />
+            ) : null}
+            {!noChapters && !bootstrappingChapter ? (
+              <ShortFormEntry bookId={bookId} />
             ) : null}
             {!noChapters &&
             !bootstrappingChapter &&

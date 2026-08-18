@@ -15,6 +15,7 @@ import { ChapterFunctionsHarnessPage } from "../pages/ChapterFunctionsHarnessPag
 import { NotFoundPage, RouteErrorPage } from "../pages/RouteErrorPages";
 import { WholeBookV2FormalPage } from "../features/wholeBookV2/WholeBookV2FormalPage";
 import { WholeBookV2ProductPage } from "../features/wholeBookV2/WholeBookV2ProductPage";
+import { ShortFormPage } from "../features/shortForm/ShortFormPage";
 
 const routeErrorElement = <RouteErrorPage />;
 
@@ -73,6 +74,13 @@ export const router = createBrowserRouter([
       {
         path: "/books/:bookId/whole-book",
         element: <WholeBookV2ProductPage />,
+        errorElement: routeErrorElement,
+      },
+      {
+        // Its own route rather than a mode of the whole-book page: a short piece is read in
+        // one sitting and measured in scenes, and nothing on that page applies to it.
+        path: "/books/:bookId/short-form",
+        element: <ShortFormPage />,
         errorElement: routeErrorElement,
       },
       {
