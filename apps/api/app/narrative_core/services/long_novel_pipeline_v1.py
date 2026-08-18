@@ -30,7 +30,9 @@ from app.db.models import Book, WholeBookRun
 from app.model_gateway.base import ModelRequest
 from app.narrative_core.contracts.whole_book_contract_v1 import WholeBookRunStatus
 from app.narrative_core.long_novel import constants as C
+from app.narrative_core.long_novel.block_store import SqlBlockAssetStore
 from app.narrative_core.long_novel.budget import ContextCosts, joint_resolve
+from app.narrative_core.long_novel.ids import semantic_compat_key
 from app.narrative_core.long_novel.contracts.density import profile as density_profile
 from app.narrative_core.long_novel.deltas import delta_prompt, deltas_for
 from app.narrative_core.long_novel.extractor import BlockExtractor
@@ -549,12 +551,39 @@ def execute_long_novel_pipeline_v1(
             commit=_persist_commit,
         ),
     )
+    # Storage is keyed on the exact payload, so a stored block is only ever reused by a call
+    # that would have been byte-for-byte identical. That covers the case that recurs — the same
+    # book analysed twice, and a failed run resumed after paying for some of its blocks — and
+    # deliberately does not cover reuse across readings, which needs a different key.
+    template_hash = prompt_template_hash(density, instructions)
+    block_store = SqlBlockAssetStore(
+        session,
+        run_id=int(run_id),
+        snapshot_id=int(run.snapshot_id or 0),
+        revision_hash=str(chapters[0].content_hash or "") if chapters else "",
+        provider_name=provider_name,
+        model_name=model_name,
+        semantic_compat_key=semantic_compat_key(
+            engine_semantics_version=ENGINE_VERSION,
+            asset_schema_version="l1/1.0",
+            prompt_template_content_hash=template_hash,
+            normalization_version=C.NORMALIZATION_VERSION,
+            fact_key_algorithm_version=C.FACT_KEY_ALGORITHM_VERSION,
+            projection_algorithm_version=C.PROJECTION_ALGORITHM_VERSION,
+            resolution_algorithm_version=C.RESOLUTION_ALGORITHM_VERSION,
+            provider_name=provider_name,
+            model_name=model_name,
+            density_profile=str(resolved.density_profile),
+        ),
+        enabled=use_fake_gateway is None,
+    )
     coordinator = RunCoordinator(
         extractor=BlockExtractor(
             provider=provider,
             profile=density,
             output_budget=resolved.output_budget,
-            prompt_template_hash=prompt_template_hash(density, instructions),
+            prompt_template_hash=template_hash,
+            store=block_store,
         ),
         profile=density,
         # The stage interpretations are the one unit both readings need: 拆文 re-segments the

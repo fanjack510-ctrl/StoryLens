@@ -84,6 +84,21 @@ class RenderedBlock:
     metadata: dict[int, dict[str, object]] = field(default_factory=dict)
 
 
+class BlockAssetStore(Protocol):
+    """Where an already-paid-for block asset can be found again.
+
+    Keyed on ``provider_input_fingerprint`` and nothing else. That is the design's own rule —
+    "the only value that may authorise skipping a paid call" — because it hashes the exact
+    payload that would be sent, while every component hash describes which inputs were
+    *selected* rather than what was assembled. A cheaper key would reuse an asset that answers
+    a slightly different question, and nothing downstream could tell.
+    """
+
+    def get(self, fingerprint: str) -> "BlockAsset | None": ...
+
+    def put(self, fingerprint: str, block_key: str, asset: "BlockAsset") -> None: ...
+
+
 @dataclass
 class ExtractionResult:
     block_key: str
@@ -93,6 +108,10 @@ class ExtractionResult:
     mentions_rejected: list[str]
     repairs_applied: list[str]
     provider_calls: int
+    #: True when this asset came from storage rather than from the provider. Recorded so a
+    #: run's call count stays honest: a reused block is not a call that was made cheaply,
+    #: it is a call that did not happen.
+    reused: bool = False
     #: 拆文 nominations whose quote was not in the block's text word for word. Recorded rather
     #: than dropped in silence: if a book loses most of its nominations this way the extraction
     #: is paraphrasing, and a run that quietly published the survivors would look identical to
@@ -139,11 +158,15 @@ class BlockExtractor:
         output_budget: int,
         prompt_template_hash: str = "",
         max_repair_attempts: int = 3,
+        #: Optional. Absent means every block is bought, which is what every caller did before
+        #: storage existed and remains the correct behaviour when there is nowhere to store to.
+        store: BlockAssetStore | None = None,
     ) -> None:
         self._provider = provider
         self._profile = profile
         self._output_budget = output_budget
         self._prompt_template_hash = prompt_template_hash
+        self._store = store
         # A schema failure here is usually the model formatting badly on this particular
         # draw, not a disagreement about the contract: the same block re-sent unchanged
         # validates. One attempt was too few — eight blocks and 171 chapters were dropped
@@ -246,6 +269,25 @@ class BlockExtractor:
             UnitKind.BLOCK.value, C.SEMANTIC_CONTRACT_VERSION, payload
         )
 
+        stored = self._store.get(fingerprint) if self._store is not None else None
+        if stored is not None:
+            # Everything below the asset is derived from it and the rendered text, both of which
+            # are deterministic — so a reused block is rebuilt rather than re-fetched, and the
+            # evidence ids come out identical to the run that paid for it.
+            evidence_rows, evidence_by_anchor = self._collect_evidence(stored, rendered)
+            return ExtractionResult(
+                evidence=evidence_rows,
+                evidence_by_anchor=evidence_by_anchor,
+                block_key=block_key,
+                asset=stored,
+                provider_input_fingerprint=fingerprint,
+                mentions_bound=0,
+                mentions_rejected=[],
+                repairs_applied=[],
+                provider_calls=0,
+                reused=True,
+            )
+
         raw, finish_reason, output_tokens = self._provider.complete(
             payload=payload, max_output_tokens=self._output_budget
         )
@@ -308,6 +350,8 @@ class BlockExtractor:
 
         moments_rejected = self._drop_unanchored_moments(asset, rendered)
         evidence_rows, evidence_by_anchor = self._collect_evidence(asset, rendered)
+        if self._store is not None:
+            self._store.put(fingerprint, block_key, asset)
         return ExtractionResult(
             evidence=evidence_rows,
             evidence_by_anchor=evidence_by_anchor,
