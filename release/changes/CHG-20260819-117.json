@@ -1,0 +1,77 @@
+{
+  "id": "CHG-20260819-117",
+  "title": "同一本书同一读法不再重复购买块抽取；短篇拆稿可导出",
+  "type": "improvement",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": false,
+  "commits": [
+    "668704ce",
+    "683601fb"
+  ],
+  "modules": [
+    "apps/api/app/narrative_core/long_novel/block_store.py",
+    "apps/api/app/narrative_core/long_novel/extractor.py",
+    "apps/api/app/narrative_core/services/long_novel_pipeline_v1.py",
+    "apps/desktop/src/features/shortForm/shortFormExport.ts"
+  ],
+  "files": [
+    "apps/api/app/narrative_core/long_novel/block_store.py",
+    "apps/api/app/narrative_core/long_novel/extractor.py",
+    "apps/api/app/narrative_core/services/long_novel_pipeline_v1.py",
+    "apps/api/tests/test_long_novel_block_reuse.py",
+    "apps/desktop/src/features/shortForm/shortFormExport.ts",
+    "apps/desktop/src/features/shortForm/shortFormExport.test.ts",
+    "apps/desktop/src/features/shortForm/ShortFormPage.tsx",
+    "apps/desktop/src/features/shortForm/shortForm.css"
+  ],
+  "user_summary": "**一、L1 落库复用。** 十五张为此建的表一直是空的——零行——而每一次重新分析都在为已经做过的活再付一次钱。这次接通了其中最要紧的那张。\n\n钥匙只有一个：`provider_input_fingerprint`。这是设计自己定的规矩，就写在那个值的定义处——**它哈希的是「将要发出去的那份完整载荷」**，而其它每一个组件哈希描述的只是「挑了哪些输入」，不是「最终组装成了什么」。用更便宜的钥匙，就会拿一份旧答案去回答一个略有不同的问题，而下游没有任何东西分得出来。\n\n**这条规矩排除掉了我先前说是「大头」的那个场景，而我当时的说法是错的。** 拆文和评测读同一本书用的是不同的 L1 delta 集合，载荷不同，两者互相都不能替代——**即使拆文的资产是评测的严格超集**（delta 只增不减，这是 INV-P1）。跨读法复用在原理上成立，但它需要一把不是载荷哈希的钥匙；放宽这条规矩应该是一次专门的改动，配一条**机械地检验「只增不减」的测试**，而不是接线时的副作用。\n\n它真正解决的是会反复发生的那个场景：**同一本书用同样的读法读第二次**——重新分析，以及一次付了部分块的钱之后失败、需要续跑的运行。\n\n《一梦如初》实测：第一次拆文 9 次调用、写下 3 份块资产；第二次 **6 次调用**，报告完整——22 章全在、无缺失。省掉的 3 次正是块抽取，而块调用要把整段正文当输入，是最贵的。\n\n路上出了两件事，都值得留着：\n\n**第一次真跑什么都没存下来。** `asset_hash` 是 NOT NULL 而我没给，于是每一条插入都失败——**而那次运行照常跑完、照常交出了报告**，因为落库只是优化，一次记账失败不该让一份已付费的抽取白费。降级路径完全按设计生效；也正因如此，这件事表现为一张空表而不是一次失败的分析。\n\n**测试没拦住它**，因为测试里的建表语句比真表宽松。约束本身就是被测的东西，所以 fixture 现在带上了真表的 NOT NULL 列。\n\n**二、短篇拆稿导出。** 刻意不套用全书那套版式。那份报告是一条论证，且封顶二十页——会随书变长的报告没人读得完；它的章节附录是弹性的，还会写明砍掉了多少行。\n\n这份是**工作表**：读的时候摊在原文旁边，一行一场景，六列照人写的拆稿来，**有几段就有多长**。这里没有页数上限，也不该有——砍掉行就毁掉了它唯一的用处。横向排版，因为七列需要宽度，而「学习之处」是那列绝不能被挤窄的：读者要看的那句话就在里面。\n\n《糙汉重生·第一卷》实测：34 段渲染成横向 A4 六页。",
+  "technical_summary": "`BlockAssetStore` is an optional Protocol on `BlockExtractor`; absent means every block is bought, which is what every caller did before and remains correct where there is nowhere to store. The lookup sits immediately after the fingerprint is computed and before the paid call; a hit rebuilds the evidence rows from the asset and the rendered text, both deterministic, so the evidence ids come out identical to the run that paid.\n\n`SqlBlockAssetStore` filters on fingerprint + snapshot_id + semantic_compat_key, excluding superseded, invalidated and non-`real_provider` rows. Reads cross runs, writes for one. Disabled when the gateway is fake, so a fixture run can neither populate nor read the store a paid run relies on. Both `get` and `put` degrade rather than raise.\n\n`buildShortFormHtml` has no page budget and no truncation path, unlike `printExport.ts`.",
+  "acceptance_criteria": [
+    "同一本书同一读法第二次运行不再购买块抽取",
+    "复用后的报告与首次一样完整，章节覆盖不变",
+    "载荷不同（例如换读法）不复用",
+    "跨快照、跨语义兼容键不复用",
+    "被取代或已失效的块不再被服务",
+    "存下的资产不再通过契约校验时，重新购买而不是让运行失败",
+    "落库失败不会让运行失败",
+    "假供应商既不写入也不读取缓存",
+    "短篇拆稿导出包含全部分段，不做截断"
+  ],
+  "tests": [
+    "apps/api/tests/test_long_novel_block_reuse.py",
+    "apps/desktop/src/features/shortForm/shortFormExport.test.ts"
+  ],
+  "verification_evidence": [
+    "《一梦如初》拆文 run 25：9 次调用，long_novel_blocks 由 0 行变为 3 行（章 1-8 / 9-16 / 17-22）",
+    "同书同读法 run 26：6 次调用（少的 3 次即 3 个块），coverage = {total 22, analysed 22, missing []}，缓存仍为 3 行未重复写入",
+    "首次接线时 asset_hash 缺失导致三次插入失败，运行仍完成并产出报告——降级路径按设计生效",
+    "短篇导出实测：《糙汉重生·第一卷》34 段渲染 30,372 字节 HTML，Edge 无头打印为横向 A4 六页",
+    "后端 test_long_novel_block_reuse 7 项、相关四套合计 103 项通过",
+    "前端 shortForm 4 项通过，tsc 干净"
+  ],
+  "known_out_of_scope": [
+    "跨读法复用（拆文与评测共用一次抽取）未做：需要一把不是载荷哈希的钥匙，以及一条机械检验 delta 只增不减的测试。我先前把它说成本次的主要收益，那是错的",
+    "只有块抽取落库；阶段解释与上层单元仍每次重算",
+    "缓存没有清理或容量上限，长期使用会随快照增长",
+    "缓存命中不在界面上体现，用户看不到「这次省了几次调用」",
+    "短篇导出只有 HTML，没有直接出 PDF 的按钮（浏览器打印即可）"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "只向既有的 long_novel_blocks 表写入，表结构未变。既有数据不受影响；没有缓存行时行为与从前完全一致。"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false,
+    "notes": "需重启 sidecar。已完成的旧运行不会回填缓存，第一次重跑仍是全价。"
+  },
+  "blocker_level": "none",
+  "head_inclusion": false,
+  "created_at": "2026-08-19T01:15:00+08:00",
+  "updated_at": "2026-08-19T01:15:00+08:00"
+}
