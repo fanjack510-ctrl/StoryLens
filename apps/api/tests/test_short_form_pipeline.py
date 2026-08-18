@@ -203,3 +203,49 @@ def test_the_emotion_stages_survive_whichever_shape_the_model_sends() -> None:
     # Half an object is still worth printing; nothing at all is not.
     assert _emotion_lines([{"note": "只有说明"}, {"segment": "第9段"}]) == ["只有说明", "第9段"]
     assert _emotion_lines([None, "", "   ", {}]) == []
+
+
+def test_an_oversized_segment_is_cut_by_asking_again_not_by_arithmetic() -> None:
+    """Half the first real run's text sat in four segments, each getting one craft note.
+
+    《糙汉重生·第一卷》 came back as twenty segments of which four exceeded 2,000 characters and
+    between them held **54.6% of the piece** — the largest was 5,046. Every column was filled and
+    the page looked right, which is what makes this a quality failure rather than a visible one.
+
+    Bisecting by paragraph count was the cheaper repair and the wrong one: these are meant to be
+    scenes, and halving one puts the boundary wherever the arithmetic lands. The model is asked
+    again instead, once for all of them together.
+    """
+    from app.narrative_core.short_form.pipeline import apply_resplits
+
+    paragraphs = ["x" * 400] * 20
+    spans = [(1, 4), (5, 16), (17, 20)]
+    out = apply_resplits(spans, {"splits": [{"index": 2, "ends": [8, 12]}]}, paragraphs)
+
+    assert out == [(1, 4), (5, 8), (9, 12), (13, 16), (17, 20)]
+    covered: set[int] = set()
+    for start, end in out:
+        covered |= set(range(start, end + 1))
+    assert covered == set(range(1, 21))
+    assert sum(e - s + 1 for s, e in out) == 20
+
+
+def test_a_careless_split_point_can_shorten_a_segment_but_never_lose_a_paragraph() -> None:
+    # Out of range, negative and duplicated cuts are all things a model returns. None of them
+    # may reorder the piece or drop text — the same guarantee the first segmentation pass gives.
+    from app.narrative_core.short_form.pipeline import apply_resplits
+
+    paragraphs = ["y" * 300] * 10
+    out = apply_resplits([(1, 10)], {"splits": [{"index": 1, "ends": [99, -3, 5, 5]}]}, paragraphs)
+
+    assert out == [(1, 5), (6, 10)]
+    # And a model that says the span really is one scene is believed.
+    assert apply_resplits([(1, 10)], {"splits": [{"index": 1, "ends": []}]}, paragraphs) == [(1, 10)]
+
+
+def test_a_cleanly_segmented_piece_pays_for_no_extra_call(report) -> None:
+    # The re-split is one call for all oversized spans, or none at all. Charging per oversized
+    # segment would make a badly-segmented piece cost several times a well-segmented one for
+    # the same reading.
+    assert report.segments_resplit == 0
+    assert report.provider_calls == 1 + 1 + 1  # segment + one read batch + shape

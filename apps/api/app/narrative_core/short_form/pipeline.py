@@ -24,6 +24,7 @@ from app.narrative_core.short_form.contracts import (
 )
 from app.narrative_core.short_form.prompts import (
     READ_INSTRUCTION,
+    RESPLIT_INSTRUCTION,
     SEGMENT_INSTRUCTION,
     SHAPE_INSTRUCTION,
     genre_lens,
@@ -33,6 +34,12 @@ from app.narrative_core.short_form.prompts import (
 #: keeps each call inside the output ceiling with room for the model to write full craft notes
 #: rather than truncated ones.
 SEGMENTS_PER_READ_CALL = 6
+
+#: A segment longer than this holds more than one scene. Measured on the first real run:
+#: four of twenty segments exceeded it and between them held **54.6% of the whole piece** — so
+#: more than half the text was getting one craft note each. The columns were filled and looked
+#: right, which is what makes this a quality failure rather than a visible one.
+MAX_SEGMENT_CHARS = 2_000
 
 #: A segment shorter than this is a fragment, not a scene — usually a one-line reply the model
 #: cut away from the exchange it belongs to. Merged into its neighbour rather than analysed.
@@ -46,6 +53,8 @@ class Provider(Protocol):
 @dataclass
 class ShortFormReport:
     segments_planned: int = 0
+    #: How many spans came back too long for one scene and were sent back to be cut.
+    segments_resplit: int = 0
     provider_calls: int = 0
     result: ShortFormResult | None = None
     failures: list[str] = field(default_factory=list)
@@ -128,6 +137,50 @@ def _merge_short(spans: list[tuple[int, int]], paragraphs: Sequence[str]) -> lis
         merged[1] = (merged[0][0], merged[1][1])
         merged.pop(0)
     return merged
+
+
+def apply_resplits(
+    spans: list[tuple[int, int]],
+    raw: dict[str, Any],
+    paragraphs: Sequence[str],
+) -> list[tuple[int, int]]:
+    """Cut the oversized spans at the boundaries the model came back with.
+
+    Deterministic bisection was the cheaper option and is the wrong one: the segments are
+    supposed to be *scenes*, and halving one by paragraph count puts the boundary wherever the
+    arithmetic lands. Asking again costs one call for all of them at once.
+
+    The answer is repaired the same way the first pass is — ends only, clamped inside the span,
+    sorted, deduplicated — so a careless number can shorten a subsegment but can never drop a
+    paragraph or reorder the piece.
+    """
+    by_index = {}
+    for row in raw.get("splits") or ():
+        if not isinstance(row, dict):
+            continue
+        try:
+            index = int(row.get("index") or 0)
+        except (TypeError, ValueError):
+            continue
+        ends = []
+        for value in row.get("ends") or ():
+            try:
+                ends.append(int(value))
+            except (TypeError, ValueError):
+                continue
+        by_index[index] = ends
+
+    out: list[tuple[int, int]] = []
+    for position, (start, end) in enumerate(spans, start=1):
+        cuts = sorted({e for e in by_index.get(position, []) if start <= e < end})
+        cursor = start
+        for cut in cuts:
+            if cut < cursor:
+                continue
+            out.append((cursor, cut))
+            cursor = cut + 1
+        out.append((cursor, end))
+    return _merge_short(out, paragraphs)
 
 
 def _abutting_beats(rows: list[dict[str, Any]], *, last_segment: int) -> list[ShortFormBeat]:
@@ -230,6 +283,26 @@ def run_short_form(
         ),
         body,
     )
+
+    def span_chars(span: tuple[int, int]) -> int:
+        return sum(len(body[i - 1]) for i in range(span[0], span[1] + 1))
+
+    # One extra call for all of the oversized spans together, or none at all when the first
+    # pass already cut cleanly. Charging per oversized segment would make a badly-segmented
+    # piece cost several times a well-segmented one for the same reading.
+    oversized = [
+        {
+            "index": i,
+            "text": "\n".join(f"[p:{p}] {body[p - 1]}" for p in range(start, end + 1)),
+        }
+        for i, (start, end) in enumerate(spans, start=1)
+        if span_chars((start, end)) > MAX_SEGMENT_CHARS
+    ]
+    if oversized:
+        report.segments_resplit = len(oversized)
+        spans = apply_resplits(
+            spans, call("resplit", RESPLIT_INSTRUCTION, {"segments": oversized}), body
+        )
     report.segments_planned = len(spans)
 
     segments: list[ShortFormSegment] = []

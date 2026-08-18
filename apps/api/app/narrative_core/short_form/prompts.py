@@ -8,7 +8,13 @@ invisible from the output, because a seeded answer looks exactly like a good rea
 
 from __future__ import annotations
 
-__all__ = ["SEGMENT_INSTRUCTION", "READ_INSTRUCTION", "SHAPE_INSTRUCTION", "GENRE_LENS"]
+__all__ = [
+    "SEGMENT_INSTRUCTION",
+    "RESPLIT_INSTRUCTION",
+    "READ_INSTRUCTION",
+    "SHAPE_INSTRUCTION",
+    "GENRE_LENS",
+]
 
 
 SEGMENT_INSTRUCTION = """把这篇小说切成若干**场景段**。
@@ -30,6 +36,18 @@ SEGMENT_INSTRUCTION = """把这篇小说切成若干**场景段**。
 
 **首尾相接、覆盖全文、不重叠。** 第一段从 1 开始，最后一段到最后一个自然段。
 只输出 JSON：`{"segments": [{"paragraph_start": 1, "paragraph_end": 6, "why": ""}]}`"""
+
+
+RESPLIT_INSTRUCTION = """下面这些段太长了——一段里装了不止一个场景。请把每一段再切开。
+
+判据和上一次一样，任意一条发生了就断：地点变了 / 在场的人变了 / 时间跳了 / 目标变了。
+
+- 每段切成 2–4 小段，切完每小段大致 500–1200 字
+- `ends` 填**该段内部的断点**：断点处的自然段号，表示「这个自然段是一小段的最后一段」
+- 不要填该段的最后一个自然段号——结尾是自动的
+- 如果这一段确实通篇是一个连续场景，`ends` 给空数组，不要硬切
+
+只输出 JSON：`{"splits": [{"index": 7, "ends": [210, 250]}]}`"""
 
 
 READ_INSTRUCTION = """逐段填写这张拆稿表。每一段给出六项：
