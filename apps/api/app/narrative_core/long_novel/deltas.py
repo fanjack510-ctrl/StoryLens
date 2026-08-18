@@ -92,7 +92,7 @@ STORY_BREAKDOWN = Delta(
     instruction=(
         "- 在每个 `chapter_signals` 条目里**额外加一个键** `end_hook_question`，"
         "填**这一章结尾留给读者的那个问题**，写成一句疑问句，≤30 字。\n"
-        "  用这一章自己的说法，例如「温肃在书房要说什么？」「那笔钱到底进没进账？」。\n"
+        "  用这一章自己的说法，例如「他在书房要说的是什么？」「那笔钱到底进没进账？」。\n"
         "  **章末没有留问题就填空字符串，不要为了填满而编一个。**\n"
         '  形状：`"chapter_signals": [{"chapter_ref": 1, ..., "end_hook_question": ""}]`\n'
         "- **额外返回一个顶层数组** `standout_moments`：这一块里**最可能打动读者**的地方，"
@@ -105,6 +105,7 @@ STORY_BREAKDOWN = Delta(
         "还是这个人第一次这样。写机制，不要写「很感人」「情绪强烈」。\n"
         '  形状：`"standout_moments": [{"chapter_ref": 1, "quote": "", "why": "", '
         '"evidence": [{"paragraph_ref": 1}]}]`'
+        "——`quote` 可以是空串，`evidence` 不能空。"
     ),
 )
 

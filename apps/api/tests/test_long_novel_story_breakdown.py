@@ -16,6 +16,7 @@ the case that matters most, a model that returns a quotation it made up.
 from __future__ import annotations
 
 import json
+import pathlib
 
 import pytest
 
@@ -108,6 +109,14 @@ def _asset(refs, first):
              "evidence": [{"paragraph_ref": first}]},
             {"chapter_ref": refs[0], "quote": FAKE_QUOTE, "why": "听起来很像",
              "evidence": [{"paragraph_ref": first}]},
+            # No quote, because nobody speaks — the kind of moment a professional breakdown
+            # picks constantly and this contract used to make unnominatable. Anchored by its
+            # paragraph, which is read out of the snapshot and is no weaker a citation.
+            {"chapter_ref": refs[0], "quote": "", "why": "她一句话都没说",
+             "evidence": [{"paragraph_ref": first}]},
+            # No quote and no anchor that resolves: nothing to show the reader, so it goes.
+            {"chapter_ref": refs[0], "quote": "", "why": "无处可查",
+             "evidence": [{"paragraph_ref": 99_999}]},
         ],
     }
 
@@ -148,6 +157,9 @@ def _beats(payload):
 def _moments(candidates):
     SEEN["moment_candidates"] = candidates
     picked = [
+        # `excerpt` is deliberately not copied into `quote`: it is the engine's slice of a
+        # paragraph, not a line the book speaks, and printing it as one would be a forgery the
+        # verbatim check cannot catch because the words really are in the book.
         {"rank": i + 1, "title": "第%d个瞬间" % (i + 1), "quote": row["quote"],
          "why_it_lands": "身份倒转，读者第一次看清他", "chapter": row["chapter"]}
         for i, row in enumerate(candidates[:9])
@@ -265,7 +277,9 @@ def test_an_invented_quotation_never_reaches_the_report(document):
     moments = document["story_breakdown"]["standout_moments"]
     assert moments, "一条爆点都没有"
     assert all(m["quote"] != FAKE_QUOTE for m in moments), moments
-    assert all(m["quote"].startswith("第") and m["quote"].endswith(LINE) for m in moments)
+    quoted = [m for m in moments if m["quote"]]
+    assert quoted, "一条带引文的爆点都没有"
+    assert all(m["quote"].startswith("第") and m["quote"].endswith(LINE) for m in quoted)
     # And the fabrication did not take its honest sibling down with it.
     candidates = SEEN["moment_candidates"]
     assert all(c["quote"] != FAKE_QUOTE for c in candidates)
@@ -458,3 +472,82 @@ def test_a_beat_is_never_squeezed_out_of_existence() -> None:
     assert beats[0]["chapter_start"] == 1 and beats[-1]["chapter_end"] == 30
     for previous, following in zip(beats, beats[1:]):
         assert following["chapter_start"] == previous["chapter_end"] + 1
+
+
+def test_a_moment_with_no_line_in_it_can_still_be_nominated(document):
+    """The blind spot this contract used to have, measured on a real book before it was fixed.
+
+    A professional breakdown of 《一梦如初》 picked ten moments; roughly half turn on nobody
+    speaking — the protagonist seeing his scars and saying nothing, the one word that silences
+    her, the single time in the book she cries. `quote` was mandatory, so none of them could be
+    nominated at all: the engine was not choosing them badly, it was structurally unable to see
+    them. The validation run found one of the ten.
+
+    Such a moment is anchored by its paragraph instead, which is read out of the snapshot — so
+    the reader still lands on real prose, and the engine rather than the model picks the words.
+    """
+    candidates = SEEN["moment_candidates"]
+    wordless = [c for c in candidates if not c["quote"]]
+    assert wordless, "无台词的提名没有到达选择层"
+    for row in wordless:
+        assert row["excerpt"], "无台词的候选必须带上锚定段落的原文，否则选择层无从判断"
+        assert row["evidence"], "无台词的候选必须带证据 id"
+
+
+def test_a_moment_with_neither_a_line_nor_an_anchor_is_dropped(document):
+    """Optional quote must not become optional evidence. One of the two is mandatory.
+
+    Without this, "no quote" is a way to assert anything about the book and cite nothing — which
+    is the failure the verbatim check exists to prevent, reached by the other door.
+    """
+    moments = document["story_breakdown"]["standout_moments"]
+    assert all(m["quote"] or m["evidence"] for m in moments), moments
+
+    candidates = SEEN["moment_candidates"]
+    assert all(c["quote"] or c["excerpt"] for c in candidates)
+    # The fixture nominates one with an unresolvable paragraph and no quote; it must not be here.
+    assert all(c["why"] != "无处可查" for c in candidates)
+
+
+def test_a_quote_and_an_excerpt_stay_separate_fields(document):
+    """The two are different claims, and only separate fields can keep them apart.
+
+    A quote is a sentence the book speaks. An excerpt is a paragraph the engine sliced. Both are
+    real text, so no verbatim check can tell them apart — if the excerpt were handed to the
+    selector in the `quote` field, a moment chosen for its silence would print a line the book
+    never spoke, and nothing downstream could detect it.
+
+    What the code guarantees is this separation and that a wordless candidate arrives with an
+    empty `quote`. That the *model* does not copy one into the other is a matter of the
+    instruction it is given, and is not asserted here — a test that mocks the selector cannot
+    prove anything about the real one.
+    """
+    candidates = SEEN["moment_candidates"]
+    assert any(c["excerpt"] for c in candidates), "fixture 没有产生任何 excerpt"
+    for row in candidates:
+        assert not (row["quote"] and row["excerpt"]), "同一条不应既有引文又有摘录：" + repr(row)
+        if row["excerpt"]:
+            assert row["quote"] == "", "无台词的候选必须以空引文到达选择层"
+
+
+def test_no_prompt_teaches_the_engine_a_real_book_it_may_be_asked_to_analyse():
+    """The examples must be invented, and this is not a style rule.
+
+    The worked examples were taken from 《一梦如初》 while the engine was being built from that
+    book's professional breakdown — and 《一梦如初》 is the book the engine was then validated
+    against. The prompt was handing the model the answers to the exam: the 起 title the engine
+    produced came back word for word identical to the example printed above it, and two of the
+    ten moments the human picked were named in the selection instruction as examples of a good
+    title.
+
+    That makes agreement worthless as evidence, and it is invisible from the output — the
+    result looks like the engine reading the book well.
+    """
+    from app.narrative_core.long_novel import deltas, prompts
+    from app.narrative_core.long_novel.contracts import l1
+
+    borrowed = ("宝银", "温肃", "取舍之间也是风骨", "痴妹", "自卖为婢", "狗蛋")
+    for module in (prompts, deltas, l1):
+        source = pathlib.Path(module.__file__).read_text(encoding="utf-8")
+        for phrase in borrowed:
+            assert phrase not in source, f"{module.__name__} 里还留着《一梦如初》的原文：{phrase}"

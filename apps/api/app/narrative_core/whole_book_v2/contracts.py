@@ -235,7 +235,13 @@ class JourneyResult(M):
 #     and a professional reader spotted it immediately; nothing here may be per-anything.
 class StoryBeat(Ranged): beat:Literal["起","承","转","合"]; title:str; summary:str
 class StandoutMoment(M):
-    rank:int=Field(ge=1); title:str; quote:str; why_it_lands:str; chapter:int=Field(ge=1); evidence:list[str]=Field(default_factory=list)
+    # `quote` is defaulted because the moments a breakdown most wants are often the ones with no
+    # line in them — the protagonist who says nothing, the single word that silences her, the one
+    # time in the book she cries. Those are anchored by `evidence` instead, which resolves to a
+    # paragraph read out of the snapshot. A moment must have one or the other; a moment with a
+    # quote is showing the book's words, a moment without is showing the engine's excerpt of the
+    # book's paragraph, and the two must not be presented as the same thing.
+    rank:int=Field(ge=1); title:str; quote:str=""; why_it_lands:str; chapter:int=Field(ge=1); evidence:list[str]=Field(default_factory=list)
 class ChapterHook(M): chapter:int=Field(ge=1); question:str; evidence:list[str]=Field(default_factory=list)
 class ReusableTechnique(M): name:str; what_it_is:str; why_it_works:str; transfers_to:str
 # No per-character `stays_in_lane` flag *is produced*. It was there for one run and came back

@@ -115,7 +115,7 @@ class ChapterSignal(_Strict):
     pov_entity: str = Field(default="", max_length=120)
     #: MODE DELTA — 拆文. The question this chapter leaves the reader with, in the chapter's own
     #: words. ``hook_present`` says a hook exists; this says what it is, which is the difference
-    #: between "钩子密度 67" and 「温肃在书房要说什么？」. Empty when the chapter ends on nothing.
+    #: between "钩子密度 67" and 「他在书房要说的是什么？」. Empty when the chapter ends on nothing.
     end_hook_question: str = Field(default="", max_length=60)
     evidence: list[EvidenceRef] = Field(default_factory=list)
 
@@ -223,13 +223,29 @@ class StandoutMoment(_Fact):
     comparison and a block cannot make it. Hence at most three per block, freely: over-supply
     here costs little and gives the selector something to choose between.
 
+    A nomination must be **anchored**, and there are two ways to anchor one.
+
     ``quote`` must appear **verbatim** in the block's own text and is checked against it. A
     model asked for a memorable line will otherwise write one that sounds like the book, and a
     breakdown whose quotations are paraphrases is worse than one with no quotations at all.
+
+    But requiring a quote made half the book unnominatable, and that was measured rather than
+    guessed. Of the ten moments a professional breakdown of 《一梦如初》 picked out, roughly half
+    turn on nobody speaking: the protagonist seeing his scars and saying nothing, the single
+    word 「忠仆」 that silences her, the one time in the book she cries. A moment whose whole
+    force is that no line is spoken cannot produce a line to quote, so the contract was
+    excluding exactly the kind of moment a breakdown exists to find.
+
+    So ``quote`` may be empty, and the nomination is then anchored by its ``evidence``
+    paragraph instead. That is no weaker a guarantee: the paragraph's text is read out of the
+    snapshot, never out of the model, so a reader still lands on real prose. What changes is
+    only that the engine, not the model, decides which words to show.
+
+    One of the two is mandatory. A nomination with neither is dropped.
     """
 
     chapter_ref: int = Field(ge=1)
-    quote: str = Field(max_length=120)
+    quote: str = Field(default="", max_length=120)
     why: str = Field(default="", max_length=60)
 
 

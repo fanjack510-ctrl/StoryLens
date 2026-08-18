@@ -306,7 +306,7 @@ class BlockExtractor:
             )
             calls += extra_calls
 
-        moments_rejected = self._drop_unquoted_moments(asset, rendered)
+        moments_rejected = self._drop_unanchored_moments(asset, rendered)
         evidence_rows, evidence_by_anchor = self._collect_evidence(asset, rendered)
         return ExtractionResult(
             evidence=evidence_rows,
@@ -322,19 +322,28 @@ class BlockExtractor:
         )
 
     @staticmethod
-    def _drop_unquoted_moments(asset: BlockAsset, rendered: RenderedBlock) -> list[str]:
-        """Keep only the 拆文 nominations whose quote really is in the block, word for word.
+    def _drop_unanchored_moments(asset: BlockAsset, rendered: RenderedBlock) -> list[str]:
+        """Keep the 拆文 nominations that land on real text, by either of the two anchors.
 
         Dropped, not raised. A fabricated quotation costs that one nomination; failing the block
         would throw away a paid extraction of eight chapters over a field the whole report can
         do without, and the selector downstream has two more nominations per block to choose
         from anyway.
 
-        Compared with whitespace removed, which is the right tolerance for Chinese prose: it
-        forgives a space the model normalised away and forgives nothing else. A rewording, a
-        merge of two sentences, a changed particle — all fail, which is the point. The rule this
-        enforces is the difference between a breakdown and a review: a line the reader can turn
-        to, or a line that merely sounds like the book.
+        **A quote, if given, is compared with whitespace removed** — the right tolerance for
+        Chinese prose: it forgives a space the model normalised away and forgives nothing else.
+        A rewording, a merge of two sentences, a changed particle all fail, which is the point.
+
+        **A nomination with no quote is anchored by its paragraph instead**, and that is what
+        lets the wordless moments in. Half of what a professional breakdown of 《一梦如初》 picked
+        out turns on nobody speaking, and under the old rule none of them could be nominated at
+        all. The paragraph is no weaker: its text is read out of the snapshot, so the reader
+        still lands on real prose — the engine simply chooses which words to show instead of the
+        model choosing them.
+
+        A quote that is offered and does not check out is a fabrication, and the nomination goes
+        even if its paragraph would have anchored it. Having invented one thing, it has not
+        earned the benefit of the doubt on the other.
         """
         if not asset.standout_moments:
             return []
@@ -342,12 +351,19 @@ class BlockExtractor:
         kept, rejected = [], []
         for moment in asset.standout_moments:
             needle = "".join(str(moment.quote or "").split())
-            # Four characters is the floor at which a Chinese fragment stops matching by
-            # accident; below it a "quote" is not one.
-            if len(needle) >= 4 and needle in haystack:
+            if needle:
+                # Four characters is the floor at which a Chinese fragment stops matching by
+                # accident; below it a "quote" is not one.
+                if len(needle) >= 4 and needle in haystack:
+                    kept.append(moment)
+                else:
+                    rejected.append(moment.quote)
+                continue
+            anchored = any(ref.paragraph_ref in rendered.texts for ref in moment.evidence)
+            if anchored:
                 kept.append(moment)
             else:
-                rejected.append(moment.quote)
+                rejected.append(f"[无引文且无有效锚点] 第{moment.chapter_ref}章：{moment.why}"[:120])
         asset.standout_moments = kept
         return rejected
 
@@ -366,6 +382,10 @@ class BlockExtractor:
             "chapter_signals", "events", "character_state_changes", "causal_links",
             "suspense_actions", "relationship_changes", "goal_changes", "choices",
             "suspense_threads", "identity_assertions",
+            # 拆文 nominations, which used to be left out. Their anchors never became evidence
+            # rows, so a moment reached the report citing nothing — and a moment with no quote
+            # has nothing else to show the reader.
+            "standout_moments",
         ):
             for item in getattr(asset, field_name):
                 for ref in item.evidence:
@@ -734,6 +754,11 @@ class BlockExtractor:
             "choices",
             "suspense_threads",
             "identity_assertions",
+            # `standout_moments` is deliberately absent. A bad anchor here raises and takes the
+            # whole block with it, which is the right severity for a fact the report is built
+            # on and the wrong one for a nomination: eight chapters of paid extraction thrown
+            # away over one optional flourish. `_drop_unanchored_moments` runs first and drops
+            # the nomination instead — dropped, not raised, as this field has always been.
         ):
             for item in getattr(asset, field_name):
                 for ref in item.evidence:

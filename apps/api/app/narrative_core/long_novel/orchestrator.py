@@ -456,25 +456,45 @@ class RunCoordinator:
     MOMENT_CANDIDATES_MAX = 120
 
     def _moment_candidates(self, assets: dict[str, BlockAsset]) -> list[dict[str, Any]]:
-        """Every nomination L1 made, in chapter order, deduplicated by quote.
+        """Every nomination L1 made, in chapter order, deduplicated.
 
         Sampled across the book if it overflows — never truncated at the front. A prefix here
         would hand the selector the opening and let it conclude, quite reasonably, that the
         opening is where this book's best moments are.
+
+        A nomination with no quote carries its **anchored paragraph** as ``excerpt`` instead, so
+        the selector has real prose to weigh either way. Dropping the quoteless ones here — which
+        is what this did — undid the contract change upstream: they could be nominated and then
+        never reached the layer that chooses.
         """
         rows: list[dict[str, Any]] = []
         seen: set[str] = set()
         for block_key, asset in assets.items():
             for moment in getattr(asset, "standout_moments", ()):
                 quote = str(moment.quote or "").strip()
-                if not quote or quote in seen:
+                evidence = self._cite(block_key, moment)
+                excerpt = ""
+                if not quote:
+                    # The engine's own words for this paragraph, not the model's.
+                    for evidence_id in evidence:
+                        excerpt = str(self._evidence.get(evidence_id, {}).get("quote_or_excerpt", ""))
+                        if excerpt:
+                            break
+                    if not excerpt:
+                        continue
+                key = quote or f"p:{evidence[0] if evidence else excerpt[:40]}"
+                if key in seen:
                     continue
-                seen.add(quote)
+                seen.add(key)
                 rows.append({
                     "chapter": int(moment.chapter_ref),
                     "quote": quote,
+                    # Present only for the wordless ones, and named differently on purpose: the
+                    # selector must not copy it into `quote` and present the engine's excerpt as
+                    # a line the book speaks.
+                    "excerpt": excerpt,
                     "why": str(moment.why or ""),
-                    "evidence": self._cite(block_key, moment),
+                    "evidence": evidence,
                 })
         rows.sort(key=lambda r: r["chapter"])
         return spread(rows, self.MOMENT_CANDIDATES_MAX)

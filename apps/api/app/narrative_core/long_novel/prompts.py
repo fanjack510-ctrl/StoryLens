@@ -385,12 +385,20 @@ def build_suspense_pairing_prompt(
 # that a judgement it cannot state in words is a judgement it has not made
 # (docs/whole-book/STORY_BREAKDOWN_DESIGN §0, INV-B1).
 
+#: The worked examples in this file and in ``deltas.py`` are **invented**, and deliberately so.
+#: They were drawn from 《一梦如初》 when this engine was built, because that book's professional
+#: breakdown was the material being modelled — and 《一梦如初》 is also the book the engine was
+#: then validated against. So the prompt was handing the model the answers for the very book the
+#: validation was scoring: the 起 title it produced was, word for word, the example above it.
+#:
+#: A few-shot example taken from a book the engine may later be asked to analyse cannot be told
+#: apart from a result. Examples here name a book that does not exist.
 FOUR_BEATS_INSTRUCTION = """把这本书归纳成**起承转合四段**，恰好四段，不多不少。
 
 每段给出：
 - `beat`：只能是 起 / 承 / 转 / 合 四个字之一
 - `title`：一句话概括这一段发生了什么，**标题本身就要有情节**。
-  好例子：「自卖为婢入温家，抄家后带痴妹逃生做船娘」
+  好例子：「顶下濒临倒闭的旧书店，靠夜市摆摊熬过第一个冬天」
   坏例子：「开端」「第一阶段」「主角登场」
 - `summary`：这一段的经过，100–200 字
 - `chapter_start` / `chapter_end`：章号区间，四段首尾相接、覆盖全书、不重叠
@@ -411,9 +419,13 @@ STANDOUT_INSTRUCTION = """从候选里**选出**这本书最打动读者的若�
 
 每条给出：
 - `title`：具体到**一句话或一个动作**。
-  好例子：「宝银说"取舍之间也是风骨"」「十二岁自卖自身换四两银子」
+  好例子：「他说"这把刀我磨了三年"」「用半年工钱换回母亲当掉的镯子」
   坏例子：「主角的成长」「情感高潮」「中段冲突」
-- `quote`：从候选的 `quote` 里**原样照抄**一句，不要改写、不要合并
+- `quote`：从候选的 `quote` 里**原样照抄**一句，不要改写、不要合并。
+  候选里有些没有 `quote`、只有 `excerpt`——那是没人说话的瞬间（她一句话都没说、
+  沉默、独自哭）。这类**照样可以选**，选中时 `quote` 留空，引文由引擎从原文取。
+  **不要把 `excerpt` 抄进 `quote`**：那是引擎摘的段落，不是书里的一句台词，
+  当成台词印出来就是在冒充原文。
 - `why_it_lands`：为什么这一处打动人，80–150 字。**写机制**：
   是身份倒转？是长期铺垫在这里兑现？是这个人物第一次这样？是读者知道而当事人不知道？
   不要写「很感人」「情绪强烈」「张力很高」——那些是形容词，不是原因。
