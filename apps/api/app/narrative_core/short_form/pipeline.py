@@ -165,6 +165,36 @@ def _abutting_beats(rows: list[dict[str, Any]], *, last_segment: int) -> list[Sh
     return beats
 
 
+def _emotion_lines(rows: Any) -> list[str]:
+    """The emotion stages as sentences, whatever shape the model chose to send them in.
+
+    Asked for a list of strings, the model returned a list of objects — `{"segment": "第7段",
+    "note": "..."}` — and `str(x)` turned each into a Python repr, so the report carried
+    `"{'segment': '第7段', 'note': '发布会高潮…'}"` on the page. Same family as the revision note
+    that arrived as prose and was iterated into one-character bullets: a coercion that never
+    asks what shape it was handed.
+
+    Both shapes are legitimate answers to the instruction, so both are accepted and rendered
+    the way the corpus writes them — 「第 6–7 段：面对逼婚，她当众撕掉了合同」.
+    """
+    out: list[str] = []
+    for row in rows or ():
+        if row is None:
+            # The fallback below would render this as the string "None" and print it.
+            continue
+        if isinstance(row, str):
+            text = row.strip()
+        elif isinstance(row, dict):
+            where = str(row.get("segment") or row.get("stage") or "").strip()
+            note = str(row.get("note") or row.get("text") or row.get("why") or "").strip()
+            text = f"{where}：{note}" if where and note else (note or where)
+        else:
+            text = str(row).strip()
+        if text:
+            out.append(text)
+    return out
+
+
 def run_short_form(
     *,
     provider: Provider,
@@ -264,7 +294,7 @@ def run_short_form(
         one_line=str(shape.get("one_line") or ""),
         beats=_abutting_beats(list(shape.get("beats") or []), last_segment=len(segments)),
         segments=segments,
-        emotion_up=[str(x) for x in (shape.get("emotion_up") or []) if str(x).strip()],
-        emotion_down=[str(x) for x in (shape.get("emotion_down") or []) if str(x).strip()],
+        emotion_up=_emotion_lines(shape.get("emotion_up")),
+        emotion_down=_emotion_lines(shape.get("emotion_down")),
     )
     return report

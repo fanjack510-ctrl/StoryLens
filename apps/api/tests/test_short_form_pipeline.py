@@ -184,3 +184,22 @@ def test_length_alone_does_not_decide_which_pipeline_a_book_gets() -> None:
     assert is_short_form(character_count=79_616, chapter_count=0) is False
     assert is_short_form(character_count=147_030, chapter_count=46) is False
     assert is_short_form(character_count=0, chapter_count=0) is False
+
+
+def test_the_emotion_stages_survive_whichever_shape_the_model_sends() -> None:
+    """A real run returned objects where the instruction asked for strings.
+
+    `str(x)` on a dict is its Python repr, so the report carried
+    `"{'segment': '第7段', 'note': '发布会高潮…'}"` onto the page — the same failure as the
+    revision note that arrived as prose and was iterated into one-character bullets. A coercion
+    that never asks what shape it was handed will eventually be handed the other one.
+    """
+    from app.narrative_core.short_form.pipeline import _emotion_lines
+
+    assert _emotion_lines([{"segment": "第7段", "note": "发布会高潮，主角掌控全局"}]) == [
+        "第7段：发布会高潮，主角掌控全局"
+    ]
+    assert _emotion_lines(["第 3 段：母亲去世"]) == ["第 3 段：母亲去世"]
+    # Half an object is still worth printing; nothing at all is not.
+    assert _emotion_lines([{"note": "只有说明"}, {"segment": "第9段"}]) == ["只有说明", "第9段"]
+    assert _emotion_lines([None, "", "   ", {}]) == []
