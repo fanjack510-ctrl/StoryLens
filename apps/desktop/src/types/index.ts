@@ -42,6 +42,14 @@ export type ImportDiagnostics = {
   max_chapter_characters: number;
   max_chapter_paragraphs: number;
   old_chapter_count?: number;
+  /** Why the split looks wrong, so the panel can say which thing is wrong rather than
+   *  guessing. Absent on diagnostics stored before these were recorded. */
+  suspect_reasons?: string[];
+  /** The largest chapter's share of the whole book, 0–1. */
+  max_chapter_share?: number;
+  /** What the splitter recognises, sent by the server so the list cannot drift from the
+   *  patterns that implement it. */
+  supported_chapter_formats?: string[];
 };
 export type Scene = {
   id: number;

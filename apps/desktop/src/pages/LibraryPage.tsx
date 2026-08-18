@@ -14,7 +14,7 @@ import { OverflowMenu } from "../components/layout/OverflowMenu";
 import { PageHeader, PageSubtitle, PageTitle } from "../components/ui/PageHeader";
 import { StateView } from "../components/ui/StateView";
 import { isLocalWebShell, useRuntimeInfo } from "../services/runtimeCapabilities";
-import type { Book } from "../types";
+import type { Book, ImportDiagnostics } from "../types";
 
 const FORMAT_OPTIONS = ["TXT", "DOCX", "EPUB"] as const;
 type FormatOption = (typeof FORMAT_OPTIONS)[number];
@@ -49,6 +49,31 @@ function importErrorKind(error: unknown): {
     }
   }
   return { title: "导入失败", tone: "danger" };
+}
+
+/** Say which thing is wrong, not that something is.
+ *
+ *  The panel used to print one fixed sentence — "文件较大但只识别出一个章节" — for every kind of
+ *  failure, and it was usually false: 《碧血洗银枪》 has two chapters and 《最终进化》 has 206. A
+ *  warning that misdescribes what it found teaches the reader to dismiss it. */
+function describeSuspectReasons(d: ImportDiagnostics): string {
+  const reasons = d.suspect_reasons ?? [];
+  const said: string[] = [];
+  if (reasons.includes("SINGLE_CHAPTER")) said.push("整本书只切出了一章");
+  if (reasons.includes("ONE_CHAPTER_DOMINATES") && d.max_chapter_share) {
+    said.push(`其中一章占了全书 ${Math.round(d.max_chapter_share * 100)}%`);
+  }
+  if (reasons.includes("OVERSIZED_CHAPTER")) {
+    said.push(`最长的一章有 ${d.max_chapter_characters.toLocaleString()} 字`);
+  }
+  if (reasons.includes("CHAPTER_TOO_MANY_PARAGRAPHS")) {
+    said.push(`最长的一章有 ${d.max_chapter_paragraphs.toLocaleString()} 个自然段`);
+  }
+  if (reasons.includes("MARKERS_FOUND_BUT_NOT_ADOPTED")) {
+    said.push(`找到 ${d.candidate_count} 处疑似章节标题，但都没能采纳`);
+  }
+  // Older diagnostics carry the warning without the reasons behind it.
+  return said.length ? said.join("；") + "。" : "章节标题的格式可能没有被识别。";
 }
 
 export function LibraryPage() {
@@ -190,9 +215,24 @@ export function LibraryPage() {
             </span>
           </p>
           {preview.data.warning === "CHAPTER_DETECTION_SUSPECT" ? (
-            <p className="notice" role="status">
-              章节识别结果可能不准确：文件较大但只识别出一个章节，标题格式可能未被识别。
-            </p>
+            <div className="notice" role="status">
+              <p>
+                <b>识别出 {preview.data.final_chapter_count} 个章节，但看起来不对：</b>
+                {describeSuspectReasons(preview.data)}
+              </p>
+              <p>
+                后面的分析全部按章计算，分错了会一路算错且不会报错。
+                <b>请对照下面的格式看一眼原文件</b>——改好再传，比让程序猜要准。
+              </p>
+              {preview.data.supported_chapter_formats?.length ? (
+                <ul className="import-formats">
+                  {preview.data.supported_chapter_formats.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              ) : null}
+              <p className="muted">本来就不分章的作品，可以直接继续导入。</p>
+            </div>
           ) : (
             <p role="status">已识别 {preview.data.final_chapter_count} 个章节</p>
           )}

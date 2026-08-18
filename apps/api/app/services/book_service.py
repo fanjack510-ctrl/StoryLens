@@ -6,7 +6,14 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from app.db.models import AnalysisRun, Book, Chapter, Paragraph, ReparseAudit
-from app.domain.ingestion import ChapterDetection, chapter_title_metadata, detect_chapters
+from app.domain.ingestion import (
+    DOMINANT_CHAPTER_SHARE,
+    OVERSIZED_CHAPTER_CHARS,
+    SUPPORTED_CHAPTER_FORMATS,
+    ChapterDetection,
+    chapter_title_metadata,
+    detect_chapters,
+)
 from app.services.extractors import ExtractedDocument, extract_document
 
 
@@ -23,11 +30,25 @@ def _diagnostics(document: ExtractedDocument, detection: ChapterDetection) -> di
     chapters = detection.chapters
     maximum_chars = max((sum(map(len, item.paragraphs)) for item in chapters), default=0)
     maximum_paragraphs = max((len(item.paragraphs) for item in chapters), default=0)
-    suspect = (
-        (len(document.text) > 200_000 and len(chapters) <= 1)
-        or maximum_paragraphs > 2_000
-        or (len(detection.candidates) >= 5 and len(chapters) <= 1)
-    )
+    # Why it looks wrong, not just that it does. The import screen shows these to the user
+    # along with the formats we recognise, because the person holding the file can tell in one
+    # glance whether it is marked up that way and this code cannot.
+    total_chars = sum(sum(map(len, item.paragraphs)) for item in chapters)
+    dominant_share = (maximum_chars / total_chars) if total_chars else 0.0
+    suspect_reasons: list[str] = []
+    if len(chapters) <= 1:
+        suspect_reasons.append("SINGLE_CHAPTER")
+    if maximum_chars > OVERSIZED_CHAPTER_CHARS:
+        suspect_reasons.append("OVERSIZED_CHAPTER")
+    if len(chapters) > 1 and dominant_share > DOMINANT_CHAPTER_SHARE:
+        # 《碧血洗银枪》 arrived as two chapters with 99.5% of the book in one of them and raised
+        # no warning, because every earlier rule keyed on "one chapter or fewer".
+        suspect_reasons.append("ONE_CHAPTER_DOMINATES")
+    if maximum_paragraphs > 2_000:
+        suspect_reasons.append("CHAPTER_TOO_MANY_PARAGRAPHS")
+    if len(detection.candidates) >= 5 and len(chapters) <= 1:
+        suspect_reasons.append("MARKERS_FOUND_BUT_NOT_ADOPTED")
+    suspect = bool(suspect_reasons)
     adopted = [item for item in detection.candidates if item.adopted]
     rejected = [item for item in detection.candidates if not item.adopted]
     numbers = [item.number for item in adopted if item.number is not None]
@@ -65,6 +86,9 @@ def _diagnostics(document: ExtractedDocument, detection: ChapterDetection) -> di
         "max_chapter_characters": maximum_chars,
         "max_chapter_paragraphs": maximum_paragraphs,
         "warning": "CHAPTER_DETECTION_SUSPECT" if suspect else None,
+        "suspect_reasons": suspect_reasons,
+        "max_chapter_share": round(dominant_share, 4),
+        "supported_chapter_formats": list(SUPPORTED_CHAPTER_FORMATS),
         "recommended_to_import": not suspect,
         "chapter_titles": [item.title for item in chapters[:20]],
         "unadopted_candidates": [item.public() for item in rejected[:200]],

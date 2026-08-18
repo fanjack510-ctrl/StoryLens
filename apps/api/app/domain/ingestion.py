@@ -1,5 +1,6 @@
 import re
 from dataclasses import asdict, dataclass, field
+from typing import Final
 
 
 NUMBER = r"[0-9０-９零〇一二三四五六七八九十百千万两]+"
@@ -49,6 +50,33 @@ ALT_CHAPTER_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     # without it this entry must not be enabled.
     ("bare", re.compile(r"^\s*(?P<number>\d{1,4})\s*$")),
 )
+
+#: The formats this module recognises, in the words a user would use to check their own file.
+#:
+#: Shown to the user when detection looks wrong, because that is the cheaper repair: the person
+#: holding the file can see in one glance whether it is marked up this way, and the system
+#: cannot. Measured on the library — one book arrived as 206 chapters of which one held 1.69
+#: million characters, and nothing downstream could tell that from a book with a long chapter.
+#:
+#: Kept beside the patterns so the two cannot drift. Adding a pattern means adding a line here.
+SUPPORTED_CHAPTER_FORMATS: tuple[str, ...] = (
+    "第1章 标题　／　第一回　／　第1节",
+    "Chapter 1 标题　／　CHAPTER 12: Title",
+    "1、标题　／　12.标题",
+    "第1卷　／　第1部　／　第1篇　／　第1集",
+    "单独一行的数字：1  2  3 …（需连续递增，可在番外处重新计数）",
+)
+
+#: A chapter this large is not a chapter. Every layer above ingestion is sized in chapters, so
+#: one oversized chapter is not a cosmetic problem — the pacing curve, the per-chapter table and
+#: the act structure all collapse onto it, and the report says so about the book rather than
+#: about the split.
+OVERSIZED_CHAPTER_CHARS: Final[int] = 50_000
+
+#: One chapter holding this much of the whole book means the rest were not found. Measured:
+#: 《碧血洗银枪》 arrived as 2 chapters with 99.5% of the text in one of them and raised no
+#: warning at all, because every criterion keyed on "one chapter or fewer".
+DOMINANT_CHAPTER_SHARE: Final[float] = 0.5
 
 #: A detection is believed only if it produces enough chapters to be a real division of the
 #: book. Below this a fallback format is tried instead of shipping a one-chapter "book".

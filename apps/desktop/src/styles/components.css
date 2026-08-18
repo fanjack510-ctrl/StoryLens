@@ -1210,3 +1210,7 @@ button:disabled.primary {
 /* 作品画像入口（CHG-20260815-095）：状态即标签——未确认时它是待办，确认后退成背景。 */
 .book-profile-entry[data-state="unconfirmed"]{border-color:#b8791c;color:#b8791c;font-weight:650}
 .book-profile-entry[data-state="confirmed"]{color:#5d6b64}
+
+/* 分章可疑时列出「我们认得的格式」——修文件比让程序猜准，前提是说清楚认得什么。 */
+.import-formats { margin: 8px 0 10px; padding-left: 18px; line-height: 1.9; font-size: 13px; }
+.import-formats li { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; }
