@@ -1,0 +1,83 @@
+{
+  "id": "CHG-20260818-116",
+  "title": "短篇精读接上路由、落库与页面；两个分析入口互斥",
+  "type": "feature",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": false,
+  "commits": [
+    "3f1fc357",
+    "63aa072c"
+  ],
+  "modules": [
+    "apps/api/app/routers/short_form_router.py",
+    "apps/api/app/narrative_core/short_form/pipeline.py",
+    "apps/api/app/narrative_core/migrations/runner.py",
+    "apps/desktop/src/features/shortForm/ShortFormPage.tsx",
+    "apps/desktop/src/components/shortForm/ShortFormEntry.tsx"
+  ],
+  "files": [
+    "apps/api/app/routers/short_form_router.py",
+    "apps/api/app/narrative_core/short_form/pipeline.py",
+    "apps/api/app/narrative_core/short_form/prompts.py",
+    "apps/api/app/narrative_core/migrations/__init__.py",
+    "apps/api/app/narrative_core/migrations/runner.py",
+    "apps/api/app/main.py",
+    "apps/desktop/src/features/shortForm/ShortFormPage.tsx",
+    "apps/desktop/src/features/shortForm/shortForm.css",
+    "apps/desktop/src/components/shortForm/ShortFormEntry.tsx",
+    "apps/desktop/src/components/wholeBookFree/WholeBookFreeEntry.tsx",
+    "apps/desktop/src/services/shortFormApi.ts",
+    "apps/desktop/src/app/router.tsx",
+    "apps/desktop/src/pages/BookRoutePage.tsx",
+    "apps/api/tests/test_short_form_pipeline.py"
+  ],
+  "user_summary": "短篇精读之前只能在进程里调用。这次补齐其余部分：两个接口、结果落库、一个页面，以及**只在这条管线读得了的书上才出现的入口**。\n\n**先修了一个质量问题。** 第一次真跑《糙汉重生·第一卷》出来 20 段，其中 4 段超过 2000 字（最大 5,046），这四段合起来**占了全篇 54.6%**——半篇多的文本每段只得到一句「学习之处」。每一列都填满了、页面看着也对，所以它是质量失败而不是可见失败。\n\n按段落数二分是更省的修法，也是错的：这些本该是**场景**，对半砍会把边界放在算术落点上。改成把超长段送回模型再切一次——**所有超长段合在一次调用里**，因为按段收费会让一篇切得差的书为同样的阅读付好几倍钱；第一遍就切干净的书一分不多花。\n\n同一本书重跑：**34 段、中位 803 字（语料约 790）、最大 1,839、没有超顶的**，覆盖完整无重叠，9 次调用对 6 次。\n\n**顺带解决了一件我本来当成独立问题的事**：四段原来是「合」占 20 段里的 12 段（60%），我以为要单独想办法。分段切开后自己变成了 12%/24%/29%/35%。那个偏后从来不是四段的问题——合成器之前只有 20 段可选，其中 4 段各塞了六七件事，**后半篇看起来真的就像一整幕**。\n\n**接口是同步的。** 十次调用，端到端实测 1 分 17 秒。异步要配运行表、进度投影、后台线程和恢复路径——那套是为二十分钟的全书引擎建的，**在还没人跑过两次之前先建，是给不存在的问题造机器**。\n\n**结果落库，但用自己的小表**，不塞进 `analysis_artifacts`：那张表的 `run_id` 是指向章级运行表的必填外键，而短篇是书级的、没有章运行可挂。一次付费一行、永不覆盖——跑一次花真钱，上一次是判断提示词改动有没有用的唯一依据。已有读法时再请求会返回旧的，不偷偷买第二份。\n\n**页面照语料的样子排**：七列一行一场景，竖着扫「读者此刻」找哪里塌了，横着读一行看这一手怎么做的。两处刻意不做「好看」——情绪画成色带不画曲线（引擎记的是每段的**方向**，不是幅度，连成平滑曲线是编造没人测过的精度）；「学习之处」为空就留空（提示词明说没东西可学时留白，凑一句「这里写得不错」比空白更糟）。\n\n**两个分析入口互斥。** 走哪条管线是关于书的事实，不是偏好；同时给两个等于请用户在「能读你这篇的引擎」和「结构上读不了的引擎」之间挑。两者共用一个查询键，只发一次请求。",
+  "technical_summary": "`MAX_SEGMENT_CHARS = 2000`; `apply_resplits` repairs the second answer exactly as `plan_segments` repairs the first — ends only, clamped inside the span, sorted and deduplicated — so a careless cut can shorten a subsegment but never drop a paragraph or reorder the piece. `ShortFormReport.segments_resplit` records how many spans needed it.\n\nMigration `20260818_020_short_form_results` creates one table, idempotent and additive. `short_form_router` resolves provider and model from `ProviderConfiguration.plus_model` — the same field the whole-book run pins at create — because a short-form reading has no run row to read a pin from.\n\n`WholeBookFreeEntry` and `ShortFormEntry` both query `[\"short-form-prepare\", bookId]`, so react-query serves the pair from one request; the hook sits above the early return so hook order stays stable.",
+  "acceptance_criteria": [
+    "超过 2000 字的分段会被送回模型再切，切完不超过上限",
+    "再切是一次调用处理全部超长段；没有超长段时不产生额外调用",
+    "再切的断点乱写也不会丢段落或打乱顺序",
+    "非短篇的书请求分析会被拒绝并说明原因",
+    "已有读法时再次请求返回旧结果，不产生新的模型调用",
+    "结果落库后刷新页面仍能读回",
+    "短篇的书只显示短篇入口，长篇的书只显示全书入口"
+  ],
+  "tests": [
+    "apps/api/tests/test_short_form_pipeline.py"
+  ],
+  "verification_evidence": [
+    "《糙汉重生·第一卷》真实运行：再切前 20 段、4 段超 2000 字（占全篇 54.6%）、最大 5,046；再切后 34 段、中位 803 字、最大 1,839、超顶 0 段",
+    "四段占比由 10/20/10/60 变为 12/24/29/35，未改动四段逻辑",
+    "HTTP 端到端：POST analyse 1m17s、34 段、9 次调用；再次 POST 0.098s 且 reused=true；库中仅 1 行",
+    "非短篇书（14）POST 返回 NOT_SHORT_FORM",
+    "页面实测：34 行 7 列、无横向滚动、四段宽度 125/227/278/329px 对应 12/24/29/35%、情绪带 34 格含三种方向",
+    "入口互斥实测：书 8 只有 short-form-entry，书 14 只有 whole-book-free-entry",
+    "迁移幂等：连跑两次不报错，schema_migrations 登记一次",
+    "后端 test_short_form_pipeline 11 项通过；前端 80 通过 1 失败（失败项为本轮开始前既有）"
+  ],
+  "known_out_of_scope": [
+    "短篇结果没有导出（PDF / HTML），34 行的表打印出来会有用",
+    "同步接口没有进度反馈，前端只有一个「分析中…约一分半钟」",
+    "结果不带证据 id，段落定位靠 paragraph_start/end 而非可点的引文",
+    "旧读法只保留不展示，页面只显示最新一份",
+    "《一梦如初》（4 万字 / 22 章）仍判为全书，处在阈值边界"
+  ],
+  "data_compatibility": {
+    "database_changed": true,
+    "migration_required": true,
+    "user_data_compatible": true,
+    "notes": "新增 short_form_results 一张表，additive，幂等。没有这张表的旧库升级后自动创建；不修改任何既有表。"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false,
+    "notes": "需重启 sidecar 以应用迁移与新路由。对既有两条管线零影响。"
+  },
+  "blocker_level": "none",
+  "head_inclusion": false,
+  "created_at": "2026-08-18T23:50:00+08:00",
+  "updated_at": "2026-08-18T23:50:00+08:00"
+}
