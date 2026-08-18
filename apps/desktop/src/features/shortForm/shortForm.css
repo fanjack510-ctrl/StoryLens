@@ -81,3 +81,9 @@
 .sf-dir.sf-up { color: #2f6b57; }
 .sf-dir.sf-down { color: #a8551f; }
 .sf-dir.sf-flat { color: #99a49c; }
+
+.sf-export { margin: 10px 0 0; }
+.sf-export button {
+  padding: 7px 15px; background: #eef4f0; color: #1d2923; border: 1px solid #cfd9d2;
+  border-radius: 6px; cursor: pointer; font-size: 13px;
+}

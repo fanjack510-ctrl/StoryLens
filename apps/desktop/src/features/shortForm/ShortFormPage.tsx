@@ -9,6 +9,7 @@ import {
   type ShortFormResult,
   type ShortFormSegment,
 } from "../../services/shortFormApi";
+import { downloadShortForm } from "./shortFormExport";
 import "./shortForm.css";
 
 /** 短篇精读 — the whole piece read in one sitting, one row per scene.
@@ -79,6 +80,14 @@ function Reading({ reading }: { reading: ShortFormReading }) {
         {result.character_count.toLocaleString()} 字 · {result.segments.length} 段
         {result.genre ? ` · ${result.genre}` : ""} · {reading.provider_calls} 次模型调用
         {reading.segments_resplit > 0 ? ` · ${reading.segments_resplit} 段过长已再切` : ""}
+      </p>
+      <p className="sf-export">
+        {/* No page budget, unlike the whole-book report: that one is an argument and is capped
+            at twenty pages, this is a worksheet read beside the text and is as long as the
+            piece has scenes. Truncating it would defeat its only purpose. */}
+        <button type="button" onClick={() => downloadShortForm(reading)}>
+          导出这份拆稿（HTML，可打印）
+        </button>
       </p>
 
       <h2>起承转合</h2>
