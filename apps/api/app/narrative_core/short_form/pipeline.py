@@ -18,10 +18,12 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Protocol, Sequence
 
 from app.narrative_core.short_form.contracts import (
+    RecurringPhrase,
     ShortFormBeat,
     ShortFormResult,
     ShortFormSegment,
 )
+from app.narrative_core.short_form.recurrence import find_recurrences
 from app.narrative_core.short_form.prompts import (
     READ_INSTRUCTION,
     RESPLIT_INSTRUCTION,
@@ -376,10 +378,25 @@ def run_short_form(
                 )
             )
 
+    # Found by comparing the prose, not by asking. The model reads six segments at a time and
+    # cannot see a wording return across the whole piece; a loop can, and does it exactly.
+    recurring = [
+        RecurringPhrase(phrase=r.phrase, segments=list(r.segments))
+        for r in find_recurrences(
+            {
+                s.index: "".join(body[s.paragraph_start - 1 : s.paragraph_end])
+                for s in segments
+            }
+        )
+    ]
+
     shape = call(
         "shape",
         SHAPE_INSTRUCTION,
         {
+            "反复出现": [
+                {"说法": r.phrase, "出现在": r.segments} for r in recurring
+            ],
             "segments": [
                 {
                     "index": s.index,
@@ -403,5 +420,6 @@ def run_short_form(
         segments=segments,
         emotion_up=_emotion_lines(shape.get("emotion_up")),
         emotion_down=_emotion_lines(shape.get("emotion_down")),
+        recurring=recurring,
     )
     return report

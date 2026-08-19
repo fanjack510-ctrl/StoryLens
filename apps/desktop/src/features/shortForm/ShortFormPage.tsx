@@ -114,6 +114,22 @@ function Reading({ reading }: { reading: ShortFormReading }) {
         </div>
       </div>
 
+      {result.recurring?.length ? (
+        <>
+          <h2>
+            反复出现的说法<small>逐字比对原文得出，不是模型的判断</small>
+          </h2>
+          <ul className="sf-recurring">
+            {result.recurring.map((r) => (
+              <li key={r.phrase}>
+                <b>{r.phrase}</b>
+                <span>第 {r.segments.join("、")} 段</span>
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : null}
+
       <h2>
         逐段拆稿<small>{result.segments.length} 段</small>
       </h2>

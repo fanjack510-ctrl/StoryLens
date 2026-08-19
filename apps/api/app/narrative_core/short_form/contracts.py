@@ -102,6 +102,23 @@ class ShortFormBeat(M):
         return self
 
 
+class RecurringPhrase(M):
+    """A wording that comes back, and where it comes back.
+
+    Found by comparing strings across segments rather than by asking the model, because that is
+    the one thing here code does better. Given 《面馆的最后一天》 with the whole prior reading
+    carried forward and the instruction naming recurrence first, the model reliably caught
+    recurring *objects* — the chilli oil, the ten-yuan note, the blue notebook — and missed the
+    recurring *line*: 「老规矩」, spoken by two different customers six segments apart, present in
+    both segments' beats, identified in neither.
+    """
+
+    phrase: str
+    #: Segment indices it appears in, ascending. Two is the floor — a wording used once is a
+    #: wording, not a motif.
+    segments: list[int] = Field(default_factory=list)
+
+
 class ShortFormResult(M):
     version: str = "1.0"
     availability: Literal["available", "partial", "unavailable"] = "unavailable"
@@ -120,4 +137,6 @@ class ShortFormResult(M):
     emotion_up: list[str] = Field(default_factory=list)
     emotion_down: list[str] = Field(default_factory=list)
 
+    #: 反复出现的说法, found by comparison rather than asked for.
+    recurring: list[RecurringPhrase] = Field(default_factory=list)
     evidence_index: dict[str, dict] = Field(default_factory=dict)

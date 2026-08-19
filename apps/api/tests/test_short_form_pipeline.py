@@ -310,3 +310,82 @@ def test_the_carry_forward_is_bounded_but_not_a_short_window() -> None:
     assert len(digest) == CARRY_MAX_SEGMENTS
     # The most recent, not the oldest: what a segment reaches back to is usually nearby.
     assert digest[-1]["index"] == many[-1].index
+
+
+def test_a_wording_that_comes_back_is_found_by_comparison_not_by_asking() -> None:
+    """The one thing here a loop does better than a model.
+
+    《面馆的最后一天》 says 「老规矩」 twice, six segments apart. The reading missed it with the
+    whole prior reading carried forward, with the instruction naming recurrence first, and with
+    the phrase present in both segments' beats. Recurring *objects* it caught; a recurring *line*
+    it did not.
+    """
+    from app.narrative_core.short_form.recurrence import find_recurrences
+
+    texts = {
+        1: "老顾客推门进来，说老规矩。她照着下了一碗面。" + "他坐在窗边看报纸。" * 6,
+        2: "她翻着母亲的账本，一页一页往后看。" * 8,
+        3: "老太太拄着拐进来，说老规矩啊。她愣住了。" + "外面下着雨。" * 8,
+    }
+    found = find_recurrences(texts)
+
+    # `contains` rather than equals: when both occurrences share an adjacent word the longer
+    # string wins the subsumption, and 「说老规矩」 is the same finding. On the real story the two
+    # occurrences differ — 要老规矩 and 说「老规矩」 — and the bare phrase comes out.
+    hit = next((r for r in found if "老规矩" in r.phrase), None)
+    assert hit is not None, [r.phrase for r in found]
+    assert hit.segments == (1, 3)
+
+
+def test_the_story_is_the_baseline_so_common_constructions_do_not_win() -> None:
+    """Ranked by how unusual the characters are *here*, not by how often the phrase returns.
+
+    There is no Chinese frequency corpus in this repo and none is needed. Ranking by frequency
+    surfaced 「了很久」, 「在桌上」, 「没说话」 — constructions that came back in a third of the
+    segments and mean nothing — and buried the motif that came back twice.
+    """
+    from app.narrative_core.short_form.recurrence import find_recurrences
+
+    common = "他站了很久，没说话，把东西放在桌上。"
+    texts = {
+        1: common + "老板娘端出一碗牛肉面。" + "外面天黑了。" * 5,
+        2: common + "他又站了很久。" + "屋里很安静。" * 6,
+        3: "老板娘擦着桌子。" + common + "雨一直下。" * 5,
+    }
+    ranked = [r.phrase for r in find_recurrences(texts)]
+
+    assert ranked, "什么都没找到"
+    assert any("老板娘" in p for p in ranked[:3]), ranked
+    # The construction may appear, but never above the distinctive noun.
+    if "了很久" in ranked:
+        assert ranked.index("了很久") > min(i for i, p in enumerate(ranked) if "老板娘" in p)
+
+
+def test_fragments_of_one_phrase_are_reported_once() -> None:
+    # 「湖北省黄冈市」 generates 「黄冈市」, 「省黄冈市」, 「北省黄冈市」 … all returning in the same
+    # two segments. Seven rows for one finding is a concordance, not a reading.
+    from app.narrative_core.short_form.recurrence import find_recurrences
+
+    texts = {
+        1: "收款人赵建军，地址湖北省黄冈市浠水县。" + "她把单子收好。" * 6,
+        2: "她又看了一遍湖北省黄冈市那几个字。" + "外面很冷。" * 6,
+    }
+    found = [r.phrase for r in find_recurrences(texts)]
+
+    address = [p for p in found if "黄冈" in p]
+    assert len(address) == 1, address
+
+
+def test_a_wording_in_most_of_the_piece_is_furniture() -> None:
+    """Telling a motif from a name is the hard part, and coverage is the separation used.
+
+    「母亲」 recurs in nearly every segment of this story and is not a motif; it is who the story
+    is about. A wording in two or three segments is a callback; one in nearly all of them is the
+    furniture.
+    """
+    from app.narrative_core.short_form.recurrence import find_recurrences
+
+    texts = {i: f"母亲在面馆里忙着，她把碗摞起来。这是第{i}段的事情。" for i in range(1, 11)}
+    found = [r.phrase for r in find_recurrences(texts)]
+
+    assert not any("母亲" in p for p in found), found

@@ -28,6 +28,10 @@ export type ShortFormBeat = {
   summary: string;
 };
 
+/** A wording the engine found coming back, and where. Found by comparing the prose, not by
+ *  asking — which is why it is a fact rather than a judgement. */
+export type RecurringPhrase = { phrase: string; segments: number[] };
+
 export type ShortFormResult = {
   version: string;
   availability: "available" | "partial" | "unavailable";
@@ -39,6 +43,7 @@ export type ShortFormResult = {
   segments: ShortFormSegment[];
   emotion_up: string[];
   emotion_down: string[];
+  recurring: RecurringPhrase[];
 };
 
 /** A stored reading, with what it cost to make. */

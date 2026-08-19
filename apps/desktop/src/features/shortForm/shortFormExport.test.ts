@@ -43,6 +43,7 @@ function reading(segments: number): ShortFormReading {
         callback: i === 3 ? "呼应第 1 段的老规矩" : "",
         evidence: [],
       })),
+      recurring: [{ phrase: "老规矩", segments: [1, 3] }],
       emotion_up: ["第 4 段：第一天卖光了"],
       emotion_down: ["第 1 段：债主上门"],
     },
@@ -87,5 +88,17 @@ describe("callback", () => {
     const html = buildShortFormHtml(reading(6));
     expect(html).toContain("↩ 呼应第 1 段的老规矩");
     expect((html.match(/class="cb"/g) ?? []).length).toBe(1);
+  });
+});
+
+describe("recurring", () => {
+  it("prints the wordings that come back, and where", () => {
+    // Labelled as comparison rather than judgement on the page and here, because that is what
+    // it is: the engine compared the prose and these strings came back. Which of them are
+    // motifs is the reader's call.
+    const html = buildShortFormHtml(reading(6));
+    expect(html).toContain("反复出现的说法");
+    expect(html).toContain("老规矩");
+    expect(html).toContain("第 1、3 段");
   });
 });

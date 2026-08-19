@@ -109,6 +109,10 @@ table { width: 100%; border-collapse: collapse; }
 .emotion th { width: 14mm; text-align: left; font-size: 9pt; color: #6f7d74; vertical-align: top; padding: 1.5mm 0; }
 .emotion td { padding: 1.5mm 0 1.5mm 3mm; }
 .emotion ul { margin: 0; padding-left: 5mm; }
+.rec { margin: 0; line-height: 2; }
+.rec b { color: #14503c; }
+.rec span { font-family: "PingFang SC", sans-serif; font-size: 7.5pt; color: #6f7d74;
+  margin-left: 1.5mm; margin-right: 3mm; }
 
 .sheet { font-size: 8.5pt; }
 .sheet thead th {
@@ -146,6 +150,13 @@ ${r.one_line ? `<p class="one-line">${esc(r.one_line)}</p>` : ""}
 ${r.beats.length ? `<h2>起承转合</h2>${beatsBar(r)}` : ""}
 ${r.emotion_up.length || r.emotion_down.length ? `<h2>情绪走向</h2>${emotionRows(r)}` : ""}
 
+${
+  r.recurring?.length
+    ? `<h2>反复出现的说法</h2><p class="rec">${r.recurring
+        .map((x) => `<b>${esc(x.phrase)}</b><span>第 ${x.segments.join("、")} 段</span>`)
+        .join("　")}</p>`
+    : ""
+}
 <h2>逐段拆稿</h2>
 <table class="sheet">
   <thead><tr>
