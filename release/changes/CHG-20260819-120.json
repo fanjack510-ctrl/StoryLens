@@ -1,0 +1,91 @@
+{
+  "id": "CHG-20260819-120",
+  "title": "导入时直接选长篇还是短篇；章数不再决定这本书拿哪个产品",
+  "type": "improvement",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": false,
+  "commits": [
+    "0d0f2bc8"
+  ],
+  "modules": [
+    "apps/api/app/narrative_core/short_form/dispatch.py",
+    "apps/api/app/routers/short_form_router.py",
+    "apps/desktop/src/pages/LibraryPage.tsx",
+    "apps/desktop/src/components/shortForm/AnalysisFormSwitch.tsx"
+  ],
+  "files": [
+    "apps/api/app/api/v1/router.py",
+    "apps/api/app/db/models.py",
+    "apps/api/app/narrative_core/migrations/__init__.py",
+    "apps/api/app/narrative_core/migrations/runner.py",
+    "apps/api/app/narrative_core/short_form/dispatch.py",
+    "apps/api/app/routers/short_form_router.py",
+    "apps/api/app/services/book_service.py",
+    "apps/api/tests/test_short_form_analysis_form.py",
+    "apps/desktop/src/components/shortForm/AnalysisFormSwitch.tsx",
+    "apps/desktop/src/features/shortForm/ShortFormPage.tsx",
+    "apps/desktop/src/features/shortForm/shortForm.css",
+    "apps/desktop/src/features/wholeBookV2/WholeBookV2ProductPage.tsx",
+    "apps/desktop/src/pages/LibraryPage.analysisForm.test.tsx",
+    "apps/desktop/src/pages/LibraryPage.tsx",
+    "apps/desktop/src/services/booksApi.ts",
+    "apps/desktop/src/services/shortFormApi.ts",
+    "apps/desktop/src/services/wholeBookFreeProductApi.ts",
+    "apps/desktop/src/styles/components.css",
+    "apps/desktop/src/types/index.ts"
+  ],
+  "user_summary": "**一本书走「全书分析」还是「短篇精读」，以前是程序按字数和章数猜的。现在导入时你自己选。**\n\n猜法有一条跨不过去的缝。《一梦如初》4 万字、22 章——比 20 章的门槛**多两章**，于是被送去全书分析；而全书引擎在它身上只解出 **2 个结构阶段**，页面自己写着「阶段数达到 3 个以上时时间线才会出现」，所以时间线是空的。\n\n**短篇读不了它（章数超了），全书撑不起它（结构塌成两段）。** 挪门槛也没用：换一本书缝就换个地方出现。而这个门槛真正想问的那个问题，拿着文件的人一句话就能回答。\n\n**所以导入面板直接问。** 就问在已有的那个确认步上（就是显示「已识别 22 个章节」那一屏）。老规则还在跑，但降级成**默认勾选**而不是判决——所以常见情况仍然是一路点过去，不用多想。\n\n**导入后随时能改**，从短篇页或全书页都行。这不是顺手加的：**导入时定死、事后无法改，就是书名今天出的那个问题**——取自文件名、不校验、产品里没有任何改名入口，错了就永远错。切换按钮放在全书页的**页头**而不是「开始分析」面板里，因为最想切换的那一刻，恰恰是刚读完一份把中篇解成两阶段的报告之后，而那时候开始面板根本不在屏幕上。\n\n**不设上限。** 你选短篇，它就按短篇读，多长都不拦。\n\n但有一条物理墙得说清：**切段是把全文一次性发出去的**——必须如此，因为场景断点取决于它两边的文字，分批切会在批次边界上凭空造出断点。所以上下文就是硬墙。实测下来这堵墙在 **14.5 万到 18 万字**之间（对话密的书每段都带一个位置标记，开销大，所以低一些）。\n\n超过墙的时候，页面**照样让你开始**，只是先把话说明白：「这篇大概率切不动。切段要把全文一次发出去，估计约 1,651k token，超过模型 128k 的上下文。仍然可以开始，但那一次调用很可能失败，而它是整轮里最贵的一次。」\n\n**顺带修了两个既有的类型错误，其中一个是活的**：短篇页在读不到数据时给错误组件传的是 `message`，而那个组件要的是 `error` 并且会读 `error.message`——所以**报错界面自己会在报错的路上崩掉**。这条一直藏在错误路径里没被触发。\n\n**已导入的书不受影响**：没被问过的书字段为空，仍然按老规则推断，行为逐位不变。",
+  "technical_summary": "New nullable `books.analysis_form` (migration 021, additive). `book_is_short_form` reads it first and falls back to `suggested_form`, which is the old `is_short_form` inference; a value outside {short, long} is treated as unanswered so a bad write cannot route a book silently.\n\n`segmentation_estimate` reports paragraphs, characters, estimated tokens and `fits` against a 128k window, using the planner's own 1.6 chars/token ratio plus 4 tokens per `[p:N]` marker. Reported, never enforced.\n\nThe import panel's default comes from `suggested_analysis_form` on the preview diagnostics rather than being recomputed client-side, so the rule has one home (INV-P4).",
+  "acceptance_criteria": [
+    "导入面板出现长篇/短篇二选一，默认勾选服务端给的建议",
+    "改选后导入，存下的是用户的答案而不是建议",
+    "不动它就按建议导入",
+    "服务端没给建议时仍有选中项，不会两个都不选",
+    "已选的答案盖过推断，章数不参与",
+    "推断值不被覆盖，仍可查",
+    "字段为空的旧书行为与改动前逐位一致",
+    "非法值不被当作答案，退回推断",
+    "短篇页与全书页都能切换，全书页在已分析完的状态下也能切",
+    "切段预估超出上下文时给出警告但不阻拦"
+  ],
+  "tests": [
+    "apps/api/tests/test_short_form_analysis_form.py",
+    "apps/desktop/src/pages/LibraryPage.analysisForm.test.tsx"
+  ],
+  "verification_evidence": [
+    "切段天花板实测：按各书自己的段落密度反推，落在 145,968–183,116 字之间（面馆每段 19 字最低，星芒纵横每段 97 字最高）",
+    "反复出现模块在 15.2 万字处 108MB / 7.9 秒，不是瓶颈；唯一的墙是切段那一次调用",
+    "一梦如初（4万字/22章）：推断 long → PUT short → is_short_form 变 True，推断值仍为 long",
+    "深海余烬（235万字）：选 short 被接受，切段预估 1,651k token vs 128k 上下文，页面显示警告但「开始精读」仍可点",
+    "非法值 medium：接口 400，且若已写入库中则退回推断",
+    "浏览器实测导入：112字/3章样本默认勾「短篇」，改勾「长篇」后导入，库中 analysis_form=long、prepare 返回走全书分析",
+    "浏览器实测切换：全书页页头按钮 PUT 200 并跳转；已分析完的书上按钮同样可见",
+    "后端 test_short_form_analysis_form 5 项通过；short_form/dispatch/book_service/import/ingestion 相关 58 项通过",
+    "前端新增 4 项通过；全量 1577 通过 / 5 失败，5 项均已逐一验证为改动前既有（摘掉本次组件后仍失败，或在未触及的文件中）",
+    "tsc 干净"
+  ],
+  "known_out_of_scope": [
+    "选了短篇的超长书仍会在切段调用后失败：只警告不阻拦是本次的明确决定，分批切段会在批次边界造出假场景断点，没做",
+    "分章仍然承重：选了长篇之后，引擎按章规划块，没识别出章仍然规划不了。本次只是让分章不再决定「拿哪个产品」",
+    "书名依然取自文件名、不校验、没有改名入口——这次只把「事后可改」这条经验用在了分析形式上",
+    "已有的 16 本书未回填，字段为空按推断走；要改的自己点一下"
+  ],
+  "data_compatibility": {
+    "database_changed": true,
+    "migration_required": true,
+    "user_data_compatible": true,
+    "notes": "迁移 021 给 books 加一列可空 analysis_form。空值＝没被问过＝按老规则推断，所以已有数据行为逐位不变。"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false,
+    "notes": "需重启 sidecar 以应用迁移。已存的分析结果不受影响；切换分析形式不会重算也不会丢弃另一侧已付费的结果。"
+  },
+  "blocker_level": "none",
+  "head_inclusion": false,
+  "created_at": "2026-08-20T00:30:00+08:00",
+  "updated_at": "2026-08-20T00:30:00+08:00"
+}
