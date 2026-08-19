@@ -67,6 +67,15 @@ class ShortFormSegment(M):
     #: 自己的联想/感慨 — where the reader is. Averages 24 characters in the corpus.
     emotion_note: str = ""
     emotion_direction: EmotionDirection = "flat"
+    #: What this segment reaches back to, in one line. Empty when it reaches back to nothing.
+    #:
+    #: A separate field rather than a sentence inside ``craft``, because the whole point is that
+    #: it can be checked. Measured on 《面馆的最后一天》 before this existed: the reading found
+    #: every craft move that lived inside one segment and none of the three that spanned
+    #: segments — a phrase said twice, a reversal of what the reader had assumed, a moment whose
+    #: force was that nobody spoke. Each reading call saw six segments and nothing of what came
+    #: before, so there was nothing to reach back *to*.
+    callback: str = ""
     evidence: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")

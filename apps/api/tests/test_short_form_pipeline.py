@@ -249,3 +249,64 @@ def test_a_cleanly_segmented_piece_pays_for_no_extra_call(report) -> None:
     # the same reading.
     assert report.segments_resplit == 0
     assert report.provider_calls == 1 + 1 + 1  # segment + one read batch + shape
+
+
+def test_the_carry_forward_takes_the_words_and_not_a_label() -> None:
+    """A phrase said twice is only visible if the phrase itself travels.
+
+    Each reading call used to see six segments and nothing before them, so nothing could recur
+    and nothing could be overturned. Measured on 《面馆的最后一天》 before this existed: every
+    craft move that lived inside one segment was found, and all three that spanned segments were
+    missed.
+
+    Carrying the beats rather than a summary of them is the load-bearing part. 「老规矩」 is
+    three characters inside one beat; a digest of phases — 「陷入危机」, 「至暗时刻」 — would show
+    the shape of the arc and carry none of them.
+    """
+    from app.narrative_core.short_form.contracts import ShortFormSegment
+    from app.narrative_core.short_form.pipeline import CARRY_MAX_SEGMENTS, carry_digest
+
+    segments = [
+        ShortFormSegment(
+            index=i,
+            paragraph_start=i,
+            paragraph_end=i,
+            characters=500,
+            phase="陷入危机",
+            beats=["老顾客说了一句老规矩", "她愣住了"],
+            emotion_note="至暗时刻",
+        )
+        for i in range(1, 4)
+    ]
+    digest = carry_digest(segments)
+
+    assert len(digest) == 3
+    assert "老规矩" in digest[0]["beats"][0], "原话没有随前文传下去，重复就无从被发现"
+    assert digest[0]["phase"] == "陷入危机"
+    assert digest[0]["emotion"] == "至暗时刻"
+
+
+def test_the_carry_forward_is_bounded_but_not_a_short_window() -> None:
+    """Bounded so a long piece cannot inflate every call; wide enough to be worth having.
+
+    A motif reaches back as far as it reaches. 《面馆的最后一天》 says 「老规矩」 in one segment
+    and again six later — a window sized to the reading batch would have missed it by exactly
+    that margin.
+    """
+    from app.narrative_core.short_form.contracts import ShortFormSegment
+    from app.narrative_core.short_form.pipeline import (
+        CARRY_MAX_SEGMENTS,
+        SEGMENTS_PER_READ_CALL,
+        carry_digest,
+    )
+
+    assert CARRY_MAX_SEGMENTS > SEGMENTS_PER_READ_CALL * 2
+
+    many = [
+        ShortFormSegment(index=i, paragraph_start=i, paragraph_end=i, characters=100)
+        for i in range(1, CARRY_MAX_SEGMENTS + 20)
+    ]
+    digest = carry_digest(many)
+    assert len(digest) == CARRY_MAX_SEGMENTS
+    # The most recent, not the oldest: what a segment reaches back to is usually nearby.
+    assert digest[-1]["index"] == many[-1].index

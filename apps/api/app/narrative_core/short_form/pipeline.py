@@ -45,6 +45,14 @@ MAX_SEGMENT_CHARS = 2_000
 #: cut away from the exchange it belongs to. Merged into its neighbour rather than analysed.
 MIN_SEGMENT_CHARS = 120
 
+#: How many earlier segments travel with each reading call.
+#:
+#: The whole piece, in practice, rather than a window: a motif that recurs is as likely to reach
+#: back twenty segments as two, and a window of six would have missed 《面馆的最后一天》's 「老规矩」
+#: by exactly that margin — it is said in segment 10 and again in segment 16. What travels is a
+#: digest, not the prose, so forty segments of it cost a few hundred tokens.
+CARRY_MAX_SEGMENTS = 40
+
 
 class Provider(Protocol):
     def complete(self, *, payload: dict[str, Any], max_output_tokens: int) -> str: ...
@@ -248,6 +256,27 @@ def _emotion_lines(rows: Any) -> list[str]:
     return out
 
 
+def carry_digest(segments: list[ShortFormSegment]) -> list[dict[str, Any]]:
+    """What the next batch needs to know about the batches before it.
+
+    Carries the **beats**, not a summary of them. A digest of labels — 「陷入危机」, 「至暗时刻」 —
+    is enough to show the shape of the arc and useless for the thing this exists to fix: a phrase
+    said twice is only visible if the actual phrase is present both times. 《面馆的最后一天》 says
+    「老规矩」 in segment 10 and again in segment 16, and no summary of segment 10 would have
+    carried those three characters forward.
+    """
+    return [
+        {
+            "index": s.index,
+            "phase": s.phase,
+            "beats": [b[:40] for b in s.beats[:4]],
+            "emotion": s.emotion_note,
+            "direction": s.emotion_direction,
+        }
+        for s in segments[-CARRY_MAX_SEGMENTS:]
+    ]
+
+
 def run_short_form(
     *,
     provider: Provider,
@@ -312,10 +341,14 @@ def run_short_form(
             "read",
             READ_INSTRUCTION,
             {
+                # Everything read so far. Without it each batch was blind to the ones before,
+                # so nothing could recur, nothing could be overturned, and a silence could not
+                # be recognised as the answer to something said earlier.
+                "前文": carry_digest(segments),
                 "segments": [
                     {"index": offset + i + 1, "text": "\n".join(body[s - 1 : e])}
                     for i, (s, e) in enumerate(batch)
-                ]
+                ],
             },
         )
         by_index = {
@@ -339,6 +372,7 @@ def run_short_form(
                     craft=str(row.get("craft") or ""),
                     emotion_note=str(row.get("emotion_note") or ""),
                     emotion_direction=direction if direction in ("up", "down", "flat") else "flat",
+                    callback=str(row.get("callback") or ""),
                 )
             )
 

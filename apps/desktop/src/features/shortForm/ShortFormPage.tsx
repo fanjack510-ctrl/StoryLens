@@ -155,7 +155,12 @@ function Reading({ reading }: { reading: ShortFormReading }) {
               {/* Empty rather than padded: the instruction tells the model to leave this blank
                   when a segment has nothing worth learning from, and a manufactured
                   「这里写得不错」 would be worse than a gap. */}
-              <td className="sf-craft">{s.craft || <span className="sf-muted">—</span>}</td>
+              <td className="sf-craft">
+                {s.craft || <span className="sf-muted">—</span>}
+                {/* Inside the craft cell rather than a seventh column: the corpus's template is
+                    six wide, and a callback is a property of the craft note, not a peer of it. */}
+                {s.callback ? <span className="sf-callback">↩ {s.callback}</span> : null}
+              </td>
               <td className="sf-emotion">
                 <span className={`sf-dir sf-${s.emotion_direction}`}>
                   {DIRECTION_LABEL[s.emotion_direction] ?? "—"}

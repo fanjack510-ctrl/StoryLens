@@ -65,7 +65,7 @@ function segmentRow(s: ShortFormSegment): string {
         ? `<ol>${s.beats.map((b) => `<li>${esc(b)}</li>`).join("")}</ol>`
         : "—"
     }</td>
-    <td class="craft">${esc(s.craft) || "—"}</td>
+    <td class="craft">${esc(s.craft) || "—"}${s.callback ? `<span class="cb">↩ ${esc(s.callback)}</span>` : ""}</td>
     <td class="emo"><b>${ARROW[s.emotion_direction] ?? "—"}</b>${esc(s.emotion_note)}</td>
   </tr>`;
 }
@@ -127,6 +127,8 @@ table { width: 100%; border-collapse: collapse; }
 .sheet .setting { width: 38mm; color: #3d4a42; font-size: 8pt; }
 .sheet ol { margin: 0; padding-left: 4.5mm; }
 .sheet .craft { width: 26%; color: #35443c; }
+.sheet .cb { display: block; margin-top: 1mm; color: #14503c; font-size: 7.5pt;
+  border-left: .8pt solid #cfe3d6; padding-left: 2mm; }
 .sheet .emo { width: 36mm; }
 .sheet .emo b { display: inline-block; width: 4mm; }
 .dir-up { background: #f7fbf9; }

@@ -15,6 +15,8 @@ export type ShortFormSegment = {
   craft: string;
   emotion_note: string;
   emotion_direction: EmotionDirection;
+  /** What this segment reaches back to. Empty when it reaches back to nothing. */
+  callback: string;
   evidence: string[];
 };
 

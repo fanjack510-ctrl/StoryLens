@@ -40,6 +40,7 @@ function reading(segments: number): ShortFormReading {
         craft: i % 5 === 0 ? "" : "把坏消息放在她刚以为熬过去的时候。",
         emotion_note: "至暗时刻",
         emotion_direction: (["up", "down", "flat"] as const)[i % 3],
+        callback: i === 3 ? "呼应第 1 段的老规矩" : "",
         evidence: [],
       })),
       emotion_up: ["第 4 段：第一天卖光了"],
@@ -76,5 +77,15 @@ describe("shortFormExport", () => {
 
   it("names the file after the piece", () => {
     expect(shortFormFileName(reading(3))).toBe("老屋-短篇精读.html");
+  });
+});
+
+describe("callback", () => {
+  it("shows what a segment reaches back to, and shows nothing when it reaches back to nothing", () => {
+    // Inside the craft cell rather than a seventh column: the corpus's template is six wide,
+    // and a callback is a property of the craft note rather than a peer of it.
+    const html = buildShortFormHtml(reading(6));
+    expect(html).toContain("↩ 呼应第 1 段的老规矩");
+    expect((html.match(/class="cb"/g) ?? []).length).toBe(1);
   });
 });
