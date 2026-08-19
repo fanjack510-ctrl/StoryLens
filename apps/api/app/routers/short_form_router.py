@@ -25,7 +25,12 @@ from app.narrative_core.short_form.dispatch import (
     SHORT_FORM_MAX_CHARS,
     SHORT_FORM_MAX_CHAPTERS,
     SHORT_FORM_SOFT_MAX_CHARS,
+    book_analysis_form,
     book_is_short_form,
+    segmentation_estimate,
+    suggested_form,
+    FORM_LONG,
+    FORM_SHORT,
 )
 from app.narrative_core.short_form.prompts import GENRE_LENS
 from app.narrative_core.short_form.service import analyse_short_form
@@ -117,6 +122,13 @@ def prepare(book_id: int, db: Session = Depends(get_db)) -> dict[str, Any]:
         "chapter_count": chapters,
         "character_count": characters,
         "is_short_form": book_is_short_form(db, int(book_id)),
+        # What the reader chose, "" if they were never asked; and what the old inference would
+        # have said, which is what the import panel offers as the default.
+        "analysis_form": book_analysis_form(db, int(book_id)),
+        "suggested_form": suggested_form(db, int(book_id)),
+        # Reported so the panel can warn before the most expensive call of the run, not
+        # enforced — the reader's answer stands either way.
+        "segmentation": segmentation_estimate(db, int(book_id)),
         "thresholds": {
             "max_chars": SHORT_FORM_MAX_CHARS,
             "soft_max_chars": SHORT_FORM_SOFT_MAX_CHARS,
@@ -189,3 +201,46 @@ def analyse(
         report.segments_planned, report.provider_calls,
     )
     return {"reused": False, **(_stored(db, int(book_id)) or {})}
+
+
+class AnalysisFormRequest(BaseModel):
+    #: "short" | "long". Changeable at any time: the book title taught this lesson the hard
+    #: way — a value fixed at import with no way to correct it is wrong forever.
+    form: str
+
+
+@router.put("/{book_id}/analysis-form")
+def set_analysis_form(
+    book_id: int, body: AnalysisFormRequest, db: Session = Depends(get_db)
+) -> dict[str, Any]:
+    """Record whether this work is read as one piece or as a book.
+
+    Nothing is recomputed and nothing is discarded: a stored reading from the other pipeline
+    stays where it is, because it was paid for and is still what it was.
+    """
+    form = str(body.form or "").strip()
+    if form not in (FORM_SHORT, FORM_LONG):
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error_code": "INVALID_ANALYSIS_FORM",
+                "message": "只能是 short 或 long。",
+                "details": {"got": form},
+            },
+        )
+    updated = db.execute(
+        text("UPDATE books SET analysis_form = :form WHERE id = :book_id"),
+        {"form": form, "book_id": int(book_id)},
+    ).rowcount
+    if not updated:
+        raise HTTPException(
+            status_code=404,
+            detail={"error_code": "BOOK_NOT_FOUND", "message": "书籍不存在", "details": {}},
+        )
+    db.commit()
+    return {
+        "book_id": int(book_id),
+        "analysis_form": form,
+        "is_short_form": book_is_short_form(db, int(book_id)),
+        "segmentation": segmentation_estimate(db, int(book_id)),
+    }

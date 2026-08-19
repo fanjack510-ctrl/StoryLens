@@ -50,6 +50,10 @@ export type ImportDiagnostics = {
   /** What the splitter recognises, sent by the server so the list cannot drift from the
    *  patterns that implement it. */
   supported_chapter_formats?: string[];
+  /** Which pipeline this file looks like it wants, computed server-side so the rule has one
+   *  home. The import panel offers it as the default answer; the reader overrides it with one
+   *  click and their answer is what gets stored. */
+  suggested_analysis_form?: "short" | "long";
 };
 export type Scene = {
   id: number;

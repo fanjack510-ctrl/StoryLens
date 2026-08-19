@@ -32,6 +32,7 @@ from app.narrative_core.migrations import (
     MIGRATION_WHOLE_BOOK_RUN_PROVIDER_PINNING,
     MIGRATION_LONG_NOVEL_FOUNDATION,
     MIGRATION_BOOK_PROFILE,
+    MIGRATION_BOOK_ANALYSIS_FORM,
     MIGRATION_SHORT_FORM_RESULTS,
     MIGRATION_WHOLE_BOOK_SNAPSHOT_IMMUTABILITY,
     migration_checksum,
@@ -1153,6 +1154,7 @@ def apply_narrative_migrations(engine: Engine) -> None:
     migrate_narrative_20260812_018_long_novel_foundation(engine)
     migrate_narrative_20260813_019_book_profile(engine)
     migrate_narrative_20260818_020_short_form_results(engine)
+    migrate_narrative_20260819_021_book_analysis_form(engine)
 
 
 SQL_012 = """
@@ -2696,3 +2698,30 @@ def migrate_narrative_20260818_020_short_form_results(engine: Engine) -> None:
 
     _record_applied(engine, MIGRATION_SHORT_FORM_RESULTS, checksum)
 
+
+
+SQL_021 = """
+ALTER TABLE books ADD COLUMN analysis_form VARCHAR(16);
+"""
+
+
+def migrate_narrative_20260819_021_book_analysis_form(engine: Engine) -> None:
+    """CHG-20260819-120: the reader says whether this is a long work or a short one.
+
+    Which pipeline a book takes used to be inferred from its length and its chapter count, and
+    the inference had a seam nothing could cross: 《一梦如初》 is 40,187 characters in 22
+    chapters, so two chapters over the limit sent a novella to the whole-book engine, which
+    resolved it into two narrative stages and could not draw a timeline. The person importing
+    the file already knows the answer; asking them is cheaper and more reliable than any
+    threshold.
+
+    NULL means unanswered, and unanswered still infers — so every book imported before this
+    behaves exactly as it did, and the column is additive in effect as well as in schema.
+    """
+    checksum = migration_checksum(SQL_021)
+    if "analysis_form" in _column_names(engine, "books"):
+        _record_applied(engine, MIGRATION_BOOK_ANALYSIS_FORM, checksum)
+        return
+    with engine.begin() as connection:
+        connection.execute(text("ALTER TABLE books ADD COLUMN analysis_form VARCHAR(16)"))
+    _record_applied(engine, MIGRATION_BOOK_ANALYSIS_FORM, checksum)

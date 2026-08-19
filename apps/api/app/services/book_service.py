@@ -5,6 +5,7 @@ from pathlib import Path
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
+from app.narrative_core.short_form.dispatch import is_short_form
 from app.db.models import AnalysisRun, Book, Chapter, Paragraph, ReparseAudit
 from app.domain.ingestion import (
     DOMINANT_CHAPTER_SHARE,
@@ -85,6 +86,14 @@ def _diagnostics(document: ExtractedDocument, detection: ChapterDetection) -> di
         "single_chapter_fallback": len(chapters) == 1 and chapters[0].title == "正文",
         "max_chapter_characters": maximum_chars,
         "max_chapter_paragraphs": maximum_paragraphs,
+        # Which pipeline this file looks like it wants. Offered as the import panel's default
+        # answer, not as the decision — the person holding the file overrides it with one
+        # click, and their answer is what gets stored. Computed here so the rule has one home.
+        "suggested_analysis_form": (
+            "short"
+            if is_short_form(character_count=total_chars, chapter_count=len(chapters))
+            else "long"
+        ),
         "warning": "CHAPTER_DETECTION_SUSPECT" if suspect else None,
         "suspect_reasons": suspect_reasons,
         "max_chapter_share": round(dominant_share, 4),

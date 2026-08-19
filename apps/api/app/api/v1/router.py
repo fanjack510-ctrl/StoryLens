@@ -44,11 +44,19 @@ def error(
 
 @router.post("/books/import", response_model=ImportResponse, status_code=201)
 async def upload_book(
-    file: UploadFile = File(...), session: Session = Depends(get_db)
+    file: UploadFile = File(...),
+    #: "short" | "long", the reader's own answer from the import panel. Empty means they were
+    #: not asked (an older client, or a scripted import), and the length inference stands in.
+    analysis_form: str = Form(""),
+    session: Session = Depends(get_db),
 ) -> ImportResponse:
     filename = file.filename or ""
     try:
         book = import_book(session, filename, await file.read())
+        chosen = str(analysis_form or "").strip()
+        if chosen in ("short", "long"):
+            book.analysis_form = chosen
+            session.commit()
     except InvalidFileTypeError as exc:
         raise error(415, "INVALID_FILE_TYPE", str(exc)) from exc
     except EmptyDocumentError as exc:

@@ -60,12 +60,30 @@ export type ShortFormReading = {
   reused?: boolean;
 };
 
+/** What the one segmentation call will cost. Segmentation sends the whole piece at once — a
+ *  batched pass would invent scene breaks at its own batch edges — so the context window is a
+ *  wall rather than a budget. Reported to warn, never to refuse. */
+export type SegmentationEstimate = {
+  paragraphs: number;
+  characters: number;
+  estimated_tokens: number;
+  context_window: number;
+  fits: boolean;
+};
+
+export type AnalysisForm = "short" | "long";
+
 export type ShortFormPrepare = {
   book_id: number;
   book_title: string;
   chapter_count: number;
   character_count: number;
   is_short_form: boolean;
+  /** What the reader chose. Empty string means they were never asked. */
+  analysis_form: AnalysisForm | "";
+  /** What the old length/chapter inference says — the default the panel offers. */
+  suggested_form: AnalysisForm;
+  segmentation: SegmentationEstimate;
   thresholds: { max_chars: number; soft_max_chars: number; max_chapters: number };
   genres: string[];
   latest: ShortFormReading | null;
@@ -74,6 +92,15 @@ export type ShortFormPrepare = {
 export const shortFormApi = {
   prepare: (bookId: number) =>
     api<ShortFormPrepare>(`/api/v1/books/${bookId}/short-form/prepare`),
+
+  /** Records whether this work is read as one piece or as a book. Changeable at any time:
+   *  a value fixed at import with no way to correct it is wrong forever, which is exactly
+   *  what happened to book titles. Nothing stored is recomputed or discarded. */
+  setForm: (bookId: number, form: AnalysisForm) =>
+    api<{ book_id: number; analysis_form: AnalysisForm; is_short_form: boolean }>(
+      `/api/v1/books/${bookId}/analysis-form`,
+      { method: "PUT", body: JSON.stringify({ form }) },
+    ),
 
   /** Runs synchronously — a short piece is nine or ten provider calls, about a minute and a
    *  half. `force` is sent only from an explicit 重新分析, because the default must never be

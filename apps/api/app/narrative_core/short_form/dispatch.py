@@ -7,6 +7,17 @@ not a tuning problem — a partition cannot be finer than a block, so three bloc
 carry four stages.
 
 So short pieces get their own pipeline, and this is the rule that sends them there.
+
+**The reader decides; the rule only suggests.** Inferring from length and chapter count has a
+seam nothing can cross — 《一梦如初》 is two chapters over the limit, so a 40,000-character
+novella went to the whole-book engine and came back with two stages and no timeline. The
+person importing the file already knows whether they are holding a short story or a novel, and
+asking costs one click. ``is_short_form`` still runs, but now as the default selection rather
+than the decision; a stored ``analysis_form`` outranks it.
+
+There is no ceiling on that choice. Segmentation sends the whole piece in one call, so above
+roughly 145,000 characters it will not fit a 128k context and the run fails — but it fails
+loudly, after a warning that quotes the estimate, rather than being refused in advance.
 """
 
 from __future__ import annotations
@@ -49,7 +60,35 @@ def is_short_form(*, character_count: int, chapter_count: int) -> bool:
     return False
 
 
+#: What a book's stored ``analysis_form`` may say. Anything else — including NULL — means the
+#: question has not been answered for this book, and the inference stands in.
+FORM_SHORT = "short"
+FORM_LONG = "long"
+
+
+def book_analysis_form(session: Session, book_id: int) -> str:
+    """The reader's answer for this book, or "" if they have not given one."""
+    value = session.execute(
+        text("SELECT analysis_form FROM books WHERE id = :book_id"),
+        {"book_id": int(book_id)},
+    ).scalar()
+    text_value = str(value or "").strip()
+    return text_value if text_value in (FORM_SHORT, FORM_LONG) else ""
+
+
 def book_is_short_form(session: Session, book_id: int) -> bool:
+    """Does this book take 短篇精读?
+
+    A stored answer wins outright, chapter count included: that is the whole point of asking.
+    """
+    stored = book_analysis_form(session, int(book_id))
+    if stored:
+        return stored == FORM_SHORT
+    return suggested_form(session, int(book_id)) == FORM_SHORT
+
+
+def suggested_form(session: Session, book_id: int) -> str:
+    """What the import panel should offer as the default, before anyone answers."""
     row = session.execute(
         text(
             "SELECT COUNT(*), COALESCE(SUM(word_count), 0) FROM chapters WHERE book_id = :book_id"
@@ -57,4 +96,58 @@ def book_is_short_form(session: Session, book_id: int) -> bool:
         {"book_id": int(book_id)},
     ).first()
     chapters, characters = (row or (0, 0))
-    return is_short_form(character_count=int(characters or 0), chapter_count=int(chapters or 0))
+    return (
+        FORM_SHORT
+        if is_short_form(
+            character_count=int(characters or 0), chapter_count=int(chapters or 0)
+        )
+        else FORM_LONG
+    )
+
+
+# --------------------------------------------------------------------------- 切段的一次性开销
+#: The provider context the segmentation call has to fit inside. Same number the long-novel
+#: planner uses, for the same provider.
+SEGMENT_CONTEXT_WINDOW = 128_000
+
+#: Chinese prose per token — the ratio the planner already assumes.
+CHARS_PER_TOKEN = 1.6
+
+#: Each paragraph carries a ``[p:N]`` marker so the model can name boundaries. Cheap per
+#: paragraph and anything but cheap in aggregate: 《面馆的最后一天》 averages 19 characters a
+#: paragraph, so its markers cost about a third of the whole call.
+MARKER_TOKENS_PER_PARAGRAPH = 4
+
+#: Instruction, response and headroom.
+SEGMENT_CALL_RESERVE_TOKENS = 6_000
+
+
+def segmentation_estimate(session: Session, book_id: int) -> dict[str, int | bool]:
+    """What the one segmentation call will cost, and whether it can fit.
+
+    Segmentation sends the **whole piece** in a single call — it has to, because a scene break
+    is a property of the text on both sides of it, and a batched pass would invent boundaries
+    at its own batch edges. That makes the context window a real wall rather than a budget:
+    measured across the local library it lands between 145,000 and 183,000 characters depending
+    on how short the paragraphs are.
+
+    This is reported, never enforced. A reader who asks for the short-form reading of a long
+    work gets the estimate and their answer stands; refusing would substitute a threshold for
+    the judgement this whole mechanism exists to hand back to them.
+    """
+    row = session.execute(
+        text(
+            "SELECT COUNT(*), COALESCE(SUM(LENGTH(raw_text)), 0) FROM paragraphs "
+            "WHERE book_id = :book_id"
+        ),
+        {"book_id": int(book_id)},
+    ).first()
+    paragraphs, characters = int((row or (0, 0))[0] or 0), int((row or (0, 0))[1] or 0)
+    tokens = int(characters / CHARS_PER_TOKEN) + paragraphs * MARKER_TOKENS_PER_PARAGRAPH
+    return {
+        "paragraphs": paragraphs,
+        "characters": characters,
+        "estimated_tokens": tokens,
+        "context_window": SEGMENT_CONTEXT_WINDOW,
+        "fits": tokens + SEGMENT_CALL_RESERVE_TOKENS <= SEGMENT_CONTEXT_WINDOW,
+    }

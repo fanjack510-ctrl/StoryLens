@@ -38,6 +38,10 @@ class Book(Base):
     source_content: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
     import_diagnostics_json: Mapped[str] = mapped_column(Text, default="{}")
     import_warning: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    #: "short" | "long" — which pipeline the reader chose for this work. NULL means they have
+    #: not been asked, and the length/chapter inference stands in, so every book imported
+    #: before the question existed behaves exactly as it did.
+    analysis_form: Mapped[str | None] = mapped_column(String(16), nullable=True)
     revision_of_book_id: Mapped[int | None] = mapped_column(ForeignKey("books.id"), nullable=True)
     revision_number: Mapped[int] = mapped_column(Integer, default=1)
     fixture_name: Mapped[str | None] = mapped_column(String(100), nullable=True)

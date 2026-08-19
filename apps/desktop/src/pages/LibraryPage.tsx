@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
 import { booksApi } from "../services/booksApi";
+import type { AnalysisForm } from "../services/shortFormApi";
 import { ApiError } from "../services/apiClient";
 import { ErrorState, Loading } from "../components/common/States";
 import { QwenFirstLaunchBanner } from "../components/onboarding/QwenFirstLaunchBanner";
@@ -90,15 +91,23 @@ export function LibraryPage() {
   });
   const [sort, setSort] = useState<"recent" | "title">("recent");
   const [pendingFile, setPendingFile] = useState<File>();
+  //: Which pipeline the reader says this work takes. Seeded from the server's suggestion when
+  //: the preview lands, so the common case is still one click, and overridden by them freely —
+  //: chapter count decides nothing here any more.
+  const [form, setForm] = useState<AnalysisForm>("long");
   const [dragOver, setDragOver] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const qc = useQueryClient();
   const books = useQuery({ queryKey: ["books"], queryFn: booksApi.list });
   const upload = useMutation({
-    mutationFn: booksApi.importFile,
+    mutationFn: (input: { file: File; form: AnalysisForm }) =>
+      booksApi.importFile(input.file, input.form),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["books"] }),
   });
-  const preview = useMutation({ mutationFn: booksApi.preview });
+  const preview = useMutation({
+    mutationFn: booksApi.preview,
+    onSuccess: (data) => setForm(data.suggested_analysis_form === "short" ? "short" : "long"),
+  });
   const accept = (files: FileList | null) => {
     const file = files?.[0];
     if (file) {
@@ -245,13 +254,43 @@ export function LibraryPage() {
             ))}
           </ol>
           {moreChapters > 0 && <p className="muted">还有 {moreChapters} 个章节</p>}
+          <fieldset className="import-form-choice">
+            <legend>这是一部长篇，还是一个短篇？</legend>
+            <p className="muted">
+              决定它走「全书分析」还是「短篇精读」。识别到几章不参与这个判断——
+              你手里拿着文件，比程序清楚。导入后随时可以改。
+            </p>
+            <div className="import-form-options" role="radiogroup">
+              {(
+                [
+                  { value: "long", title: "长篇", hint: "分章读，出全书报告" },
+                  { value: "short", title: "短篇", hint: "按场景切段，出逐段拆稿" },
+                ] as const
+              ).map((option) => (
+                <label
+                  key={option.value}
+                  className={`import-form-option${form === option.value ? " is-chosen" : ""}`}
+                >
+                  <input
+                    type="radio"
+                    name="analysis-form"
+                    value={option.value}
+                    checked={form === option.value}
+                    onChange={() => setForm(option.value)}
+                  />
+                  <span className="import-form-option__title">{option.title}</span>
+                  <span className="import-form-option__hint">{option.hint}</span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
           <div className="import-panel-actions">
             {preview.data.warning === "CHAPTER_DETECTION_SUSPECT" ? (
               <>
                 <Button
                   variant="primary"
                   onClick={() => {
-                    upload.mutate(pendingFile);
+                    upload.mutate({ file: pendingFile, form });
                     setPendingFile(undefined);
                     preview.reset();
                   }}
@@ -266,7 +305,7 @@ export function LibraryPage() {
               <Button
                 variant="primary"
                 onClick={() => {
-                  upload.mutate(pendingFile);
+                  upload.mutate({ file: pendingFile, form });
                   setPendingFile(undefined);
                   preview.reset();
                 }}

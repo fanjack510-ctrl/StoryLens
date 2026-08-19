@@ -51,9 +51,12 @@ export const booksApi = {
       body: data,
     });
   },
-  importFile: (file: File) => {
+  /** `analysisForm` is the reader's own answer from the import panel — "short" or "long".
+   *  Omitted means nobody was asked and the length inference stands in. */
+  importFile: (file: File, analysisForm?: "short" | "long") => {
     const data = new FormData();
     data.append("file", file);
+    if (analysisForm) data.append("analysis_form", analysisForm);
     return api<{ book_id: number }>("/api/v1/books/import", {
       method: "POST",
       body: data,

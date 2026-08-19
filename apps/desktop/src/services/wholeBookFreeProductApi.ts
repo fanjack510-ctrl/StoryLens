@@ -76,6 +76,11 @@ export type WholeBookCostEstimateRow = {
 export type WholeBookPrepareResponse = {
   book_id: number;
   book_title: string;
+  /** Which engine this book gets. Sent at the top level as well as inside `estimate`, and
+   *  read from here to decide whether 拆文 can be offered — it exists only in the long-novel
+   *  engine. The field was being read without being declared, so the check compiled to
+   *  `undefined === "long_novel_engine"` in the type-checker's view while working at runtime. */
+  planner?: string | null;
   chapter_count: number;
   character_count: number;
   mode: string;

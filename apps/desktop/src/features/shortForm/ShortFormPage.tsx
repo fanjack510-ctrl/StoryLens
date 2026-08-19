@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { AnalysisFormSwitch } from "../../components/shortForm/AnalysisFormSwitch";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ErrorState, Loading } from "../../components/common/States";
 import { ApiError } from "../../services/apiClient";
@@ -219,7 +220,18 @@ export function ShortFormPage() {
 
   if (prepare.isLoading) return <Loading />;
   if (prepare.isError || !prepare.data) {
-    return <ErrorState message="读不到这本书的信息。" />;
+    // ErrorState reads `error.message`, so handing it a bare `message` prop left `error`
+    // undefined and the error screen threw on the way to reporting the error.
+    return (
+      <ErrorState
+        error={
+          prepare.error instanceof Error
+            ? prepare.error
+            : new Error("读不到这本书的信息。")
+        }
+        retry={() => void prepare.refetch()}
+      />
+    );
   }
 
   const data = prepare.data;
@@ -233,18 +245,17 @@ export function ShortFormPage() {
       <header>
         <p className="sf-kicker">短篇精读</p>
         <h1>{data.book_title}</h1>
+        <AnalysisFormSwitch bookId={bookId} on="short" />
       </header>
 
       {!data.is_short_form ? (
         <section className="sf-panel" data-testid="short-form-unavailable">
           <p>
-            <b>这本书走全书分析，不走短篇精读。</b>
+            <b>这本书按长篇读，所以走全书分析。</b>
           </p>
           <p className="sf-muted">
-            短篇精读适用于 {data.thresholds.max_chars.toLocaleString()} 字以内，
-            或 {data.thresholds.soft_max_chars.toLocaleString()} 字以内且不超过{" "}
-            {data.thresholds.max_chapters} 章的作品。这本书是 {data.chapter_count} 章、
-            {data.character_count.toLocaleString()} 字。
+            {data.chapter_count} 章、{data.character_count.toLocaleString()} 字。
+            章数不参与这个判断——上面那行可以随时改。
           </p>
           <p>
             <Link to={`/books/${bookId}/whole-book`}>去全书分析 →</Link>
@@ -253,6 +264,19 @@ export function ShortFormPage() {
       ) : (
         <section className="sf-panel" data-testid="short-form-start">
           <h2>{reading ? "重新分析" : "开始精读"}</h2>
+          {!data.segmentation.fits && (
+            // A warning, not a gate. Segmentation sends the whole piece in one call, so a long
+            // work will not fit — but the reader asked for this reading, and the estimate is
+            // what they need to decide, not a refusal. Shown before the button because that
+            // one call is the most expensive of the run.
+            <p className="sf-warn" role="alert" data-testid="short-form-oversize">
+              <b>这篇大概率切不动。</b>
+              切段要把全文一次发出去，估计约{" "}
+              {Math.round(data.segmentation.estimated_tokens / 1000).toLocaleString()}k token，
+              超过模型 {Math.round(data.segmentation.context_window / 1000)}k 的上下文。
+              仍然可以开始，但那一次调用很可能失败，而它是整轮里最贵的一次。
+            </p>
+          )}
           <p className="sf-muted">
             整篇按场景切段，逐段给出故事进展、事件冲突、学习之处与读者情绪，
             另给一句话梗概、起承转合与情绪走向。约十次模型调用，一分半钟。

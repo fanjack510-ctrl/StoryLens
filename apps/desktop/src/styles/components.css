@@ -1214,3 +1214,105 @@ button:disabled.primary {
 /* 分章可疑时列出「我们认得的格式」——修文件比让程序猜准，前提是说清楚认得什么。 */
 .import-formats { margin: 8px 0 10px; padding-left: 18px; line-height: 1.9; font-size: 13px; }
 .import-formats li { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; }
+
+/* 长篇 / 短篇 —— 导入时问一次，之后随时可改。
+   两个选项并排且同等分量：这不是「默认值加一个例外」，是一个真正的二选一。 */
+.import-form-choice {
+  margin: 0;
+  padding: var(--space-3) 0 0;
+  border: 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.import-form-choice legend {
+  padding: 0;
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-md);
+}
+
+.import-form-choice > p {
+  margin: var(--space-1) 0 var(--space-3);
+  font-size: var(--text-sm);
+  line-height: var(--line-normal);
+}
+
+.import-form-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.import-form-option {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  gap: 0 var(--space-2);
+  align-items: center;
+  min-width: 200px;
+  flex: 1 1 200px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-surface);
+  cursor: pointer;
+}
+
+.import-form-option:hover {
+  border-color: var(--color-border-strong);
+}
+
+.import-form-option.is-chosen {
+  border-color: var(--color-brand);
+  background: var(--color-brand-soft);
+}
+
+.import-form-option input {
+  grid-row: 1 / span 2;
+  margin: 0;
+}
+
+.import-form-option__title {
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-base);
+}
+
+.import-form-option__hint {
+  grid-column: 2;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+.import-form-option:focus-within {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
+
+/* The same choice, offered from either destination page. */
+.analysis-form-switch {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.analysis-form-switch button.link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-brand);
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.analysis-form-switch button.link:disabled {
+  color: var(--color-text-tertiary);
+  cursor: default;
+}
+
+.analysis-form-switch__error {
+  color: var(--color-warning);
+}

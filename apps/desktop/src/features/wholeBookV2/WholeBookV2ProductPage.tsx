@@ -7,6 +7,7 @@ import { profileHref } from "../bookProfile/origin";
 import { isWholeBookFreeProductEnabled } from "../../services/wholeBookFreeProductFlag";
 import { isWholeBookRealProviderEnabled } from "../../services/wholeBookRealProviderFlag";
 import { settingsApi } from "../../services/settingsApi";
+import { AnalysisFormSwitch } from "../../components/shortForm/AnalysisFormSwitch";
 import {
   compareLimitsToEstimate,
   formatLimitGapsMessage,
@@ -783,6 +784,7 @@ function WholeBookV2ProductPageEnabled() {
         </p>
         <h1>{PAGE_TITLE}</h1>
         <p className="muted">{PAGE_DESCRIPTION}</p>
+        <AnalysisFormSwitch bookId={bookId} on="long" />
         {/* The book's title, chapters and length are stated once, by the report's own header
             band below. Repeating them here also printed a *different* word count — 27,766
             (paragraph text) against the report's 28,768 (chapter text, which counts title
