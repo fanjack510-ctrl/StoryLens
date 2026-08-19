@@ -505,7 +505,15 @@ def execute_long_novel_pipeline_v1(
     axes = stored.get("axes") or {}
     # The 拆文 addition rides the same delta mechanism as the profile axes, keyed on a
     # pseudo-axis the mode sets. One extraction prompt, assembled one way, whichever reading
-    # the run is doing — which is what lets the two modes ever share an L1 pass.
+    # the run is doing.
+    #
+    # It does NOT let the two modes share an L1 pass, which is what this comment used to
+    # claim. Measured on 《一梦如初》 — three blocks, temperature 0, each arm run twice so the
+    # noise floor was known — a run with the 拆文 delta on returned FEWER items in 11 of the
+    # 12 fields both modes share, and more in none (sign test p = 0.0005). Additive in the
+    # schema is not additive in effect: a 拆文 block is a thinner diagnostic block plus
+    # extras, so reusing one for a diagnostic reading would publish a sparser extraction
+    # under the other reading's name, with the run reporting success.
     deltas = deltas_for({**axes, "mode": mode} if mode else axes)
     instructions = delta_prompt(deltas)
     logger.info(

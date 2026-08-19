@@ -1,0 +1,310 @@
+{
+  "setup": {
+    "book": "一梦如初",
+    "snapshot_id": 16,
+    "blocks": [
+      "1-8",
+      "9-16",
+      "17-22"
+    ],
+    "provider": "deepseek",
+    "model": "deepseek-v4-flash",
+    "temperature": 0.0,
+    "output_budget": 8000,
+    "date": "2026-08-19",
+    "note": "each arm run twice to establish the noise floor"
+  },
+  "counts": {
+    "B0_stored_with_delta": {
+      "events": {
+        "1-8": 10,
+        "17-22": 7,
+        "9-16": 7
+      },
+      "character_state_changes": {
+        "1-8": 4,
+        "17-22": 2,
+        "9-16": 2
+      },
+      "causal_links": {
+        "1-8": 1,
+        "17-22": 1,
+        "9-16": 1
+      },
+      "suspense_actions": {
+        "1-8": 2,
+        "17-22": 1,
+        "9-16": 1
+      },
+      "relationship_changes": {
+        "1-8": 3,
+        "17-22": 2,
+        "9-16": 2
+      },
+      "goal_changes": {
+        "1-8": 4,
+        "17-22": 1,
+        "9-16": 1
+      },
+      "choices": {
+        "1-8": 3,
+        "17-22": 2,
+        "9-16": 1
+      },
+      "suspense_threads": {
+        "1-8": 4,
+        "17-22": 4,
+        "9-16": 4
+      },
+      "identity_assertions": {
+        "1-8": 1,
+        "17-22": 1,
+        "9-16": 1
+      },
+      "mentions": {
+        "1-8": 12,
+        "17-22": 4,
+        "9-16": 4
+      },
+      "provisional_entities": {
+        "1-8": 1,
+        "17-22": 2,
+        "9-16": 2
+      },
+      "power_beats": {
+        "1-8": 0,
+        "17-22": 0,
+        "9-16": 0
+      },
+      "standout_moments": {
+        "1-8": 3,
+        "17-22": 3,
+        "9-16": 3
+      }
+    },
+    "B1_带delta": {
+      "events": {
+        "1-8": 10,
+        "17-22": 7,
+        "9-16": 8
+      },
+      "character_state_changes": {
+        "1-8": 4,
+        "17-22": 2,
+        "9-16": 4
+      },
+      "causal_links": {
+        "1-8": 4,
+        "17-22": 1,
+        "9-16": 1
+      },
+      "suspense_actions": {
+        "1-8": 3,
+        "17-22": 2,
+        "9-16": 2
+      },
+      "relationship_changes": {
+        "1-8": 4,
+        "17-22": 1,
+        "9-16": 3
+      },
+      "goal_changes": {
+        "1-8": 4,
+        "17-22": 2,
+        "9-16": 2
+      },
+      "choices": {
+        "1-8": 4,
+        "17-22": 2,
+        "9-16": 2
+      },
+      "suspense_threads": {
+        "1-8": 4,
+        "17-22": 2,
+        "9-16": 2
+      },
+      "identity_assertions": {
+        "1-8": 2,
+        "17-22": 1,
+        "9-16": 1
+      },
+      "mentions": {
+        "1-8": 12,
+        "17-22": 3,
+        "9-16": 8
+      },
+      "provisional_entities": {
+        "1-8": 8,
+        "17-22": 3,
+        "9-16": 5
+      },
+      "power_beats": {
+        "1-8": 0,
+        "17-22": 0,
+        "9-16": 0
+      },
+      "standout_moments": {
+        "1-8": 3,
+        "17-22": 3,
+        "9-16": 3
+      }
+    },
+    "A1_不带": {
+      "events": {
+        "1-8": 15,
+        "17-22": 6,
+        "9-16": 8
+      },
+      "character_state_changes": {
+        "1-8": 6,
+        "17-22": 2,
+        "9-16": 4
+      },
+      "causal_links": {
+        "1-8": 6,
+        "17-22": 1,
+        "9-16": 1
+      },
+      "suspense_actions": {
+        "1-8": 4,
+        "17-22": 4,
+        "9-16": 3
+      },
+      "relationship_changes": {
+        "1-8": 5,
+        "17-22": 2,
+        "9-16": 4
+      },
+      "goal_changes": {
+        "1-8": 4,
+        "17-22": 2,
+        "9-16": 3
+      },
+      "choices": {
+        "1-8": 4,
+        "17-22": 2,
+        "9-16": 3
+      },
+      "suspense_threads": {
+        "1-8": 4,
+        "17-22": 4,
+        "9-16": 3
+      },
+      "identity_assertions": {
+        "1-8": 2,
+        "17-22": 1,
+        "9-16": 1
+      },
+      "mentions": {
+        "1-8": 12,
+        "17-22": 3,
+        "9-16": 8
+      },
+      "provisional_entities": {
+        "1-8": 8,
+        "17-22": 3,
+        "9-16": 2
+      },
+      "power_beats": {
+        "1-8": 0,
+        "17-22": 0,
+        "9-16": 0
+      },
+      "standout_moments": {
+        "1-8": 0,
+        "17-22": 0,
+        "9-16": 0
+      }
+    },
+    "A2_不带": {
+      "events": {
+        "1-8": 16,
+        "17-22": 6,
+        "9-16": 8
+      },
+      "character_state_changes": {
+        "1-8": 6,
+        "17-22": 2,
+        "9-16": 4
+      },
+      "causal_links": {
+        "1-8": 1,
+        "17-22": 1,
+        "9-16": 1
+      },
+      "suspense_actions": {
+        "1-8": 4,
+        "17-22": 2,
+        "9-16": 4
+      },
+      "relationship_changes": {
+        "1-8": 4,
+        "17-22": 2,
+        "9-16": 4
+      },
+      "goal_changes": {
+        "1-8": 4,
+        "17-22": 2,
+        "9-16": 3
+      },
+      "choices": {
+        "1-8": 4,
+        "17-22": 2,
+        "9-16": 3
+      },
+      "suspense_threads": {
+        "1-8": 4,
+        "17-22": 2,
+        "9-16": 4
+      },
+      "identity_assertions": {
+        "1-8": 2,
+        "17-22": 1,
+        "9-16": 1
+      },
+      "mentions": {
+        "1-8": 10,
+        "17-22": 3,
+        "9-16": 8
+      },
+      "provisional_entities": {
+        "1-8": 7,
+        "17-22": 3,
+        "9-16": 7
+      },
+      "power_beats": {
+        "1-8": 0,
+        "17-22": 0,
+        "9-16": 0
+      },
+      "standout_moments": {
+        "1-8": 0,
+        "17-22": 0,
+        "9-16": 0
+      }
+    }
+  },
+  "spend": {
+    "B1_带delta": {
+      "calls": 4,
+      "input_tokens": 51762,
+      "output_tokens": 14032
+    },
+    "A1_不带": {
+      "calls": 6,
+      "input_tokens": 74582,
+      "output_tokens": 19769
+    },
+    "A2_不带": {
+      "calls": 4,
+      "input_tokens": 47499,
+      "output_tokens": 11927
+    }
+  },
+  "result": {
+    "shared_fields_thinner_with_delta": 11,
+    "richer": 0,
+    "tied": 1,
+    "sign_test_p": 0.0005
+  }
+}

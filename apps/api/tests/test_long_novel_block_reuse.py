@@ -192,3 +192,53 @@ def test_reuse_is_off_when_the_provider_is_fake(session) -> None:
 
     assert disabled.writes == 0
     assert _store(session, run_id=2).get("fp-a") is None
+
+
+def test_a_breakdown_extraction_cannot_serve_a_diagnostic_one(session) -> None:
+    """The two readings must not share an L1 pass, and this is why.
+
+    The tempting shortcut: a 拆文 asset carries every diagnostic field plus two more, so it
+    looks like a strict superset that could be served to a diagnostic run for free. Measured on
+    《一梦如初》 — three blocks, temperature 0, each arm run twice so the noise floor was known —
+    a run with the 拆文 delta on returned FEWER items in 11 of the 12 shared fields and more in
+    none, sign test p = 0.0005. Additive in the schema, not additive in effect: it is a thinner
+    diagnostic block plus extras.
+
+    What keeps that shortcut shut is the delta set reaching the payload through the prompt
+    hash, so the two modes never produce the same fingerprint. This pins that, because the
+    protection is one field in one dict and nothing else would notice its removal.
+    """
+    from app.narrative_core.long_novel import constants as C, ids
+    from app.narrative_core.long_novel.contracts.density import (
+        DensityProfileName,
+        profile as density_profile,
+    )
+    from app.narrative_core.long_novel.deltas import DELTAS, delta_prompt, deltas_for
+    from app.narrative_core.long_novel.extractor import BlockExtractor
+    from app.narrative_core.long_novel.contracts.l1 import CarryForwardState
+    from app.narrative_core.long_novel.prompts import prompt_template_hash
+
+    density = density_profile(DensityProfileName.D_STD)
+    breakdown = deltas_for({"mode": "story_breakdown"})
+    assert [d.key for d in breakdown] == ["story_breakdown"]
+
+    def fingerprint(deltas) -> str:
+        extractor = BlockExtractor(
+            provider=object(),
+            profile=density,
+            output_budget=8000,
+            prompt_template_hash=prompt_template_hash(density, delta_prompt(deltas)),
+        )
+        rendered = extractor.render(())
+        payload = extractor.build_payload(rendered, CarryForwardState())
+        return ids.provider_input_fingerprint(
+            "block", C.SEMANTIC_CONTRACT_VERSION, payload
+        )
+
+    assert fingerprint(breakdown) != fingerprint(())
+    # And a diagnostic run still matches itself, or nothing would ever be reused at all.
+    assert fingerprint(()) == fingerprint(())
+    # Every registered delta separates, not just this one: an axis-driven delta reusing a
+    # diagnostic block would drop the field the axis was confirmed to add.
+    for delta in DELTAS:
+        assert fingerprint((delta,)) != fingerprint(()), delta.key

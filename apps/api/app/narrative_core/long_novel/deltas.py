@@ -5,6 +5,24 @@ does not carry; it may never remove a field, loosen a cap, or narrow what is ext
 is INV-P1, and it is enforced here by construction: a delta owns a list of field names and a
 fragment of prompt text, and there is no mechanism for it to subtract anything.
 
+**Additive in the schema is not additive in effect, and that is measured.** On 《一梦如初》 —
+three blocks, temperature 0, each arm run twice so the noise floor was known — turning the
+拆文 delta on returned FEWER items in 11 of the 12 fields both modes share, and more in none
+(sign test p = 0.0005). Asking for two more things makes the model report less of everything
+else.
+
+It is not the output budget. The block was capped at 8 chapters by
+``MAX_CHAPTERS_FOR_SIGNAL_FIDELITY`` while the budget afforded 24, and the responses ran about
+3.5k tokens against 8k, so nothing was truncated and nothing was competing for room. Charging
+the deltas against the budget was tried and reverted: it costs a 进阶流 book a shorter block
+and more paid calls to fix a constraint that was never binding, and ``constants.py`` says in
+as many words that the 0.80 utilisation margin exists to absorb this class of error.
+
+So the effect is attention, not arithmetic, and nothing here fixes it. Two consequences worth
+stating plainly: a 拆文 run's non-拆文 facts are thinner than the same book's diagnostic run
+would produce, and an L1 pass made under one mode can never be reused for the other — the
+saving would be paid for in coverage nobody would see go missing.
+
 The invariant exists because a wrong profile that *removes* a signal fails silently. Nothing
 downstream can distinguish "this book has no relationship beats" from "we stopped counting
 them" — and a measured instance of that failure is on record: when 87% of chapter signal
@@ -143,3 +161,4 @@ def delta_prompt(deltas: Sequence[Delta]) -> str:
     if not deltas:
         return ""
     return "\n" + "\n".join(delta.instruction for delta in deltas)
+

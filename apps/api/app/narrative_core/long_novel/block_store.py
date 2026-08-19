@@ -9,12 +9,22 @@ while every component hash describes which inputs were *selected* rather than wh
 assembled. So a stored asset is reused only when the call about to be made is byte-for-byte the
 call that produced it: same text, same carry-in, same prompt, same deltas, same model.
 
-That rules out the case worth wanting. 拆文 and 评测 read the same book with different L1 delta
-sets, so their payloads differ and neither can serve the other, even though 拆文's asset is a
-strict superset of the diagnostic's — deltas being additive is INV-P1. Reuse across readings is
-sound in principle and is deliberately *not* done here: it needs a key that is not the payload
-hash, and weakening that rule is a decision to take deliberately with a test that mechanically
-enforces additivity, not a side effect of wiring up storage.
+That rules out what looked like the case worth wanting — and it turns out to rule it out
+correctly. 拆文 and 评测 read the same book with different L1 delta sets, so their payloads
+differ and neither can serve the other. The obvious objection was that 拆文's asset is a strict
+superset of the diagnostic's, deltas being additive by INV-P1, so it should be allowed to serve
+a diagnostic reading.
+
+**It should not, and that is measured rather than argued.** Replaying three blocks of
+《一梦如初》 at temperature 0, each arm run twice so the noise floor was known, a run with the
+拆文 delta on came back with FEWER items in 11 of the 12 fields both modes share and more in
+none — sign test p = 0.0005. Additive in the schema, not additive in effect: a 拆文 block is a
+*thinner* diagnostic block plus extras. Serving it to a diagnostic reading would publish a
+measurably sparser extraction under the other reading's name, and the run would report success.
+
+The mechanism is attention, not budget — the block was capped at 8 chapters while the budget
+afforded 24, and responses ran about 3.5k tokens against 8k — so no amount of re-budgeting makes
+this reuse sound. Cross-reading reuse is closed, not deferred. See ``deltas.py``.
 
 What this does deliver is the case that actually recurs: re-analysing a book, and resuming a run
 that failed after paying for some of its blocks.
