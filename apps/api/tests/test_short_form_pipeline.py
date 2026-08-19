@@ -446,3 +446,45 @@ def test_a_callback_that_cites_a_segment_that_cannot_exist_is_dropped() -> None:
     # Naming no segment is a legitimate way to say it, and there is nothing to verify.
     assert _checked_callback("呼应开头的价目表", index=5, known=20) == "呼应开头的价目表"
     assert _checked_callback("", index=5, known=20) == ""
+
+
+def test_a_callback_with_a_right_number_and_an_invented_claim_is_dropped() -> None:
+    """The segment number was already checked. What it says about that segment was not.
+
+    Measured on 《面馆的最后一天》: of sixteen callbacks the reading produced, fifteen were sound
+    and one said 「呼应第12段夹克男欠账」 — a segment that is 寻找赵建军未果 and contains no jacket
+    and no debt. A correct number carrying an invented claim, printed identically to a real
+    finding. It was the only one of the sixteen with no rare character in common with the segment
+    it cited; the next lowest matched one of five and was half right, so the threshold is zero.
+    """
+    from app.narrative_core.short_form.recurrence import names_something_in
+
+    found = "赵建军的汇款单压在蓝色塑料皮的账本下面，母亲翻了很久。"
+    absent = "第二天我去找赵建军，敲门没人应，楼道里堆着纸箱，我等了很久就走了。"
+    # Long enough to have a vocabulary. Under about four hundred characters a character used
+    # once is still a large share of the text, nothing counts as rare, and the check abstains.
+    whole = (
+        "母亲把辣椒油端上桌，母亲说老规矩。我在店里等母亲，母亲没说话。"
+        + found
+        + absent
+        + "我在店里坐了很久，看着门外的雨，没有客人进来。母亲在里面洗碗，水声一直响着。"
+        + "后来我把桌子擦了一遍又一遍，把凳子摆好，把灯关了一盏。天黑得很慢。"
+        + "我想着要不要跟母亲说，想了很久还是没有说出来，就那样坐到了天亮。"
+        + "第二天早上母亲照常开门，照常把水烧上，照常把面下进锅里，什么也没有问我。"
+        # Distinct filler, not a repeat: repeating the same prose scales counts and length
+        # together and leaves every share exactly where it was.
+        "巷口的修车铺换了招牌，卖水果的换成了卖手机壳的，只有我们这家还挂着从前的木牌子。"
+        "对面新开的连锁店贴着彩色海报，晚上亮到十二点，隔着马路能听见里面放歌。"
+        "父亲走的那年冬天特别冷，管道冻裂过一次，师傅来修了整整一个下午才通。"
+        "我小时候在这条街上学骑自行车，摔在拐角的水泥台阶上，膝盖留下一道疤到现在。"
+        "老顾客里有个退休的教师，每周三来一次，坐靠窗那张桌子，从不加醋。"
+    )
+
+    assert names_something_in("呼应第 6 段的汇款单", found, whole_text=whole) is True
+    assert names_something_in("呼应第 12 段夹克男欠账", absent, whole_text=whole) is False
+    # Half right is kept. 「呼应第13段存根和磨损的碗」 named two things and only the bowls were
+    # in that segment; a fractional threshold would have taken it, and it was a real finding.
+    assert names_something_in("呼应第 6 段的汇款单和夹克男", found, whole_text=whole) is True
+    # 呼应/第/段 are absent from every story and would otherwise score as maximally rare,
+    # failing every callback including the true ones.
+    assert names_something_in("呼应第 6 段", found, whole_text=whole) is True

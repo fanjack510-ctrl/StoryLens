@@ -128,3 +128,58 @@ def find_recurrences(
     # this whole module exists to fix.
     results.sort(key=lambda r: (-rarity(r.phrase), -len(r.segments), r.phrase))
     return results[:MAX_RESULTS]
+
+
+#: A character taking up less than this share of the piece carries enough signal to test a claim
+#: against. Above it sits the language — 的, 了, 我, 她 — which appears in every segment and
+#: therefore proves nothing about any of them.
+#:
+#: Stated as a share rather than a surprise value because it makes the one consequence visible:
+#: in a piece under about 400 characters a character appearing once is still 0.25% of it, so
+#: nothing qualifies and the check abstains. That is the right answer for a text too short to
+#: have a vocabulary, and it is why this reads as a fraction.
+RARE_CHARACTER_SHARE = 0.0025
+
+#: The part of a callback that is *about* the reference rather than the content. Left in, these
+#: characters are absent from the story, therefore score as maximally rare, therefore never
+#: match — and every callback fails a check it should have passed.
+_META = re.compile(r"呼应|对应|回应|照应|第\s*\d+\s*段|的")
+
+
+def names_something_in(claim: str, target_text: str, *, whole_text: str) -> bool:
+    """Does this claim mention anything actually present in that passage?
+
+    Used to check a callback — 「呼应第 12 段夹克男欠账」 — against the segment it names. The
+    check is the loosest one that still catches a fabrication: **not one** of the claim's
+    distinctive characters appears in the passage it cites.
+
+    Distinctive is the operative word, and it is the same insight the recurrence finder rests
+    on. Matching whole phrases fails because the claim paraphrases: 「账本中李婶的赊账」 is a
+    description, not a quotation, and demanding it appear verbatim rejects a correct callback.
+    Matching common characters fails the other way: 的 and 母 are in every segment and match
+    anything.
+
+    Calibrated on one story, and deliberately at zero rather than at a fraction. Of sixteen
+    callbacks on 《面馆的最后一天》 exactly one was fabricated — 第12段 is 寻找赵建军未果 and has
+    no jacket, no debt — and it was the only one with no rare character in common. The next
+    lowest scored 1 of 5 and was half right: the worn bowls are in that segment, the remittance
+    stubs are not. A fractional threshold would have taken it too.
+    """
+    text = _META.sub("", str(claim or ""))
+    if not text or not target_text:
+        return True
+    counts = Counter(whole_text)
+    length = max(1, len(whole_text))
+    distinctive = {
+        c
+        for c in "".join(_RUN.findall(text))
+        # A character absent from the whole piece is evidence about the analyst's vocabulary,
+        # not about the story: 「那句话」 and 「呼应」 describe the finding rather than name
+        # anything in it. Scoring absent characters as maximally rare made every paraphrase
+        # unmatchable and rejected callbacks that were sound.
+        if 0 < counts.get(c, 0) / length < RARE_CHARACTER_SHARE
+    }
+    if not distinctive:
+        # Nothing distinctive to test. Saying so is honest; guessing is not.
+        return True
+    return any(c in target_text for c in distinctive)

@@ -23,7 +23,7 @@ from app.narrative_core.short_form.contracts import (
     ShortFormResult,
     ShortFormSegment,
 )
-from app.narrative_core.short_form.recurrence import find_recurrences
+from app.narrative_core.short_form.recurrence import find_recurrences, names_something_in
 from app.narrative_core.short_form.prompts import (
     READ_INSTRUCTION,
     RESPLIT_INSTRUCTION,
@@ -437,15 +437,31 @@ def run_short_form(
                 )
             )
 
+    # A callback names a segment; this checks it also names something *in* that segment. The
+    # number was verified when the segment was read, but 「呼应第 12 段夹克男欠账」 cited a segment
+    # that has no jacket and no debt — a correct number attached to an invented claim, which
+    # renders exactly like a real finding.
+    span_text = {
+        s.index: "".join(body[s.paragraph_start - 1 : s.paragraph_end]) for s in segments
+    }
+    whole = "".join(span_text.values())
+    for segment in segments:
+        if not segment.callback:
+            continue
+        target = _CALLBACK_TARGET.search(segment.callback)
+        if not target:
+            continue
+        if not names_something_in(
+            segment.callback, span_text.get(int(target.group(1)), ""), whole_text=whole
+        ):
+            segment.callback = ""
+
     # Found by comparing the prose, not by asking. The model reads six segments at a time and
     # cannot see a wording return across the whole piece; a loop can, and does it exactly.
     recurring = [
         RecurringPhrase(phrase=r.phrase, segments=list(r.segments))
         for r in find_recurrences(
-            {
-                s.index: "".join(body[s.paragraph_start - 1 : s.paragraph_end])
-                for s in segments
-            }
+            span_text
         )
     ]
 
