@@ -1,32 +1,38 @@
 {
   "id": "CHG-20260819-118",
-  "title": "短篇逐段阅读带上前文，让重复、推翻与沉默有可能被认出来",
+  "title": "短篇逐段阅读带上前文；反复出现的说法由代码比对得出；重读保住原有分段",
   "type": "improvement",
   "base_version": "1.2.0",
   "status": "tested",
   "include_in_next_release": false,
   "commits": [
-    "eb22f47f"
+    "eb22f47f",
+    "760e2808",
+    "69a2bda2"
   ],
   "modules": [
+    "apps/api/app/narrative_core/short_form/contracts.py",
     "apps/api/app/narrative_core/short_form/pipeline.py",
     "apps/api/app/narrative_core/short_form/prompts.py",
-    "apps/api/app/narrative_core/short_form/contracts.py",
+    "apps/api/app/narrative_core/short_form/recurrence.py",
     "apps/desktop/src/features/shortForm/ShortFormPage.tsx",
     "apps/desktop/src/features/shortForm/shortFormExport.ts"
   ],
   "files": [
+    "apps/api/app/narrative_core/short_form/contracts.py",
     "apps/api/app/narrative_core/short_form/pipeline.py",
     "apps/api/app/narrative_core/short_form/prompts.py",
-    "apps/api/app/narrative_core/short_form/contracts.py",
+    "apps/api/app/narrative_core/short_form/recurrence.py",
+    "apps/api/app/narrative_core/short_form/service.py",
+    "apps/api/app/routers/short_form_router.py",
     "apps/api/tests/test_short_form_pipeline.py",
     "apps/desktop/src/features/shortForm/ShortFormPage.tsx",
     "apps/desktop/src/features/shortForm/shortForm.css",
-    "apps/desktop/src/features/shortForm/shortFormExport.ts",
     "apps/desktop/src/features/shortForm/shortFormExport.test.ts",
+    "apps/desktop/src/features/shortForm/shortFormExport.ts",
     "apps/desktop/src/services/shortFormApi.ts"
   ],
-  "user_summary": "逐段阅读原本每次只看六段，**看不到之前的任何东西**。于是一个梗没法重复、一个先前的判断没法被推翻、一处沉默也没法回应更早说过的话。\n\n**这次是先量了再改的。** 我写了一篇 8,577 字的短篇《面馆的最后一天》，故意在里面埋了七处手法，然后跑引擎看它找到几处——因为是自己写的，答案事先就知道。\n\n结果很干净：**活在单个段落里的手法，一处不落全找到了**（涂掉的价目表这条伏笔，从埋到收到结尾再呼应，三处都点了出来；那段我特意写平的雨天独坐，它也认出了在干什么）。**跨段落的三处，一处没找到。**\n\n改法是把已读段落的摘要传给下一批。**关键在于传的是「事件原话」而不是概括**——「陷入危机」「至暗时刻」这种标签能看出情节起伏的形状，却一个字都带不过去；而「老规矩」就是三个字，藏在某一条事件里，一概括就没了。四十段摘要只多几百 token，不多花一次调用。\n\n同一篇重跑：**沉默从只字未提变成三处被点名**——「我沉默的动作，表现震惊与困惑」「我按钱、下面，动作胜过言语」；**21 段里有 15 段写出了自己在呼应哪里**。调用次数不变，还是 6 次。\n\n**三处里有两处没解决，而且都不像是提示词能解决的：**\n\n**反转仍然没被命名。** 要认出反转，得记着「读者上一刻应该以为什么」——这是没有任何地方要求模型维护的状态。\n\n**「老规矩」这个梗仍然没被认出来。** 那句台词被两位不同的顾客各说了一次，两段的事件列里都有这三个字，提示词里我还把这条放在第一位——它照样没认出来。而**反复出现的「物件」它抓得很稳**（辣椒油、那张十块钱、蓝皮本子、墙上的留白都抓到了），**反复出现的「一句话」抓不住**。跨段比对字符串这件事，代码做得比模型可靠，下一次应该从那个方向做。\n\n**顺带暴露一件事**：同一篇文章切两次，一次 19 段、一次 21 段。而呼应写的是「呼应第 N 段」——**段号在两次运行之间是不稳定的**。",
+  "user_summary": "逐段阅读原本每次只看六段，**看不到之前的任何东西**。于是一个梗没法重复、一个先前的判断没法被推翻、一处沉默也没法回应更早说过的话。\n\n**这次是先量了再改的。** 我写了一篇 8,577 字的短篇《面馆的最后一天》，故意在里面埋了七处手法，然后跑引擎看它找到几处——因为是自己写的，答案事先就知道。\n\n结果很干净：**活在单个段落里的手法，一处不落全找到了**（涂掉的价目表这条伏笔，从埋到收到结尾再呼应，三处都点了出来；那段我特意写平的雨天独坐，它也认出了在干什么）。**跨段落的三处，一处没找到。**\n\n改法是把已读段落的摘要传给下一批。**关键在于传的是「事件原话」而不是概括**——「陷入危机」「至暗时刻」这种标签能看出情节起伏的形状，却一个字都带不过去；而「老规矩」就是三个字，藏在某一条事件里，一概括就没了。四十段摘要只多几百 token，不多花一次调用。\n\n同一篇重跑：**沉默从只字未提变成三处被点名**——「我沉默的动作，表现震惊与困惑」「我按钱、下面，动作胜过言语」；**21 段里有 15 段写出了自己在呼应哪里**。调用次数不变，还是 6 次。\n\n**三处里有两处没解决，而且都不像是提示词能解决的：**\n\n**反转仍然没被命名。** 要认出反转，得记着「读者上一刻应该以为什么」——这是没有任何地方要求模型维护的状态。\n\n**「老规矩」这个梗仍然没被认出来。** 那句台词被两位不同的顾客各说了一次，两段的事件列里都有这三个字，提示词里我还把这条放在第一位——它照样没认出来。而**反复出现的「物件」它抓得很稳**（辣椒油、那张十块钱、蓝皮本子、墙上的留白都抓到了），**反复出现的「一句话」抓不住**。跨段比对字符串这件事，代码做得比模型可靠，下一次应该从那个方向做。\n\n**顺带暴露一件事**：同一篇文章切两次，一次 19 段、一次 21 段。而呼应写的是「呼应第 N 段」——**段号在两次运行之间是不稳定的**。\n\n---\n\n**补记：那两条没解决的，后来解决了一条。**\n\n「老规矩」这类**台词复现**改成由代码逐字比对原文得出，不再指望模型。路上走错两次，都值得记：\n\n第一次我扫的是**模型写的摘要**，结果是「得知母亲去世」「发现母亲」「意识到母亲」——这些字在小说里一次都没出现过。它们反复出现是因为摘要器每次都这么写，**扫它的输出只会找到模型的口头禅，然后管它叫作者的手法**。\n\n第二次我按**出现次数**排序，浮上来的是「了很久」「在桌上」「没说话」——出现在三分之一的段落里，那是汉语不是这篇小说；而「老规矩」出现两次，排在 798 条里的第 28 位。真正区分它们的不是复现频率，是**这些字在本文里有多罕见**：「了」满篇都是，「规」「矩」不是。仓库里没有中文词频语料，也不需要——**这篇小说自己就是基准**。\n\n最终捞出九条，全是真的复现，**其中两条是模型漏掉的埋伏**：「困难免」（墙上涂掉的那行 → 结尾的呼应）、「蓝色塑料皮」（母亲的账本 → 女儿新钉的那本）。它标着「逐字比对原文得出，不是模型的判断」——**事实的呈现不取决于模型有没有注意到它**。\n\n**分段不稳定那条也处理了。** 先量：同一篇跑三次，13 个边界**每次都一模一样**，分歧全部集中在第 274–368 自然段——那一段的文字本来就没有清晰的场景界。**这是文本的性质，不是分段不可靠**，再怎么改提示词也没用。\n\n值得修的是它的后果：**一个边界挪动会把之后所有段号推移**。所以重读默认保住原有分段，「重新切分场景」做成可选并在勾选框上写明代价。存下的边界如果不再恰好切分全文就拒绝复用——书要是重新导入或重新分章过，每一段都会变成对着错误段落的窗口，而表面上一切正常。顺带少花一次调用（6 → 5）。\n\n**另外补了一个校验**：此前没有任何东西检查呼应指向哪里。第 5 段写「呼应第 9 段」不是呼应，二十段的篇子写「呼应第 99 段」是指向没人能翻到的地方，而两者印出来都跟真发现一模一样。不点段号的（「呼应开头的价目表」）保留——没什么可校验的。",
   "technical_summary": "`carry_digest` sends index, phase, trimmed beats, emotion note and direction for the last `CARRY_MAX_SEGMENTS` (40) completed segments, under the payload key `前文`. Beats are trimmed to 40 characters and 4 per segment rather than summarised, because the concrete nouns are the whole value.\n\n`READ_INSTRUCTION` names three uses for it — recurrence, reversal, and the wordless moment — and asks for the reader's prior belief to be stated explicitly when something overturns it.\n\n`ShortFormSegment.callback` is a defaulted optional field so stored readings validate unchanged. It renders inside the craft cell in both the page and the export.",
   "acceptance_criteria": [
     "前文摘要携带事件原话，而不是概括",
@@ -34,7 +40,14 @@
     "前文取最近的若干段",
     "呼应是独立字段，没有可呼应处时为空",
     "呼应在页面与导出里都显示，且不新增第七列",
-    "带前文后调用次数不变"
+    "带前文后调用次数不变",
+    "反复出现的说法扫的是原文，不是模型写的摘要",
+    "排序按字在本文中的罕见度，不按复现次数",
+    "同一词组的重叠碎片只报一条",
+    "出现在大多数段落里的说法不算复现",
+    "重读默认复用上一次的分段边界，段号保持不变",
+    "存下的边界不再恰好切分全文时拒绝复用",
+    "呼应指向不存在或靠后的段时被丢弃"
   ],
   "tests": [
     "apps/api/tests/test_short_form_pipeline.py",
@@ -47,14 +60,20 @@
     "呼应实测内容包括：呼应第1段价目表涂掉的字、呼应第4段欠债人留下的十块钱、呼应第13段拿起笔又放下",
     "仍未解决：全文搜不到「反转/推翻/读者原以为」；「老规矩」在第10、17段均出现于事件列，两段的呼应字段都未指向对方",
     "分段不稳定：同一文本两次运行分别得到 19 段与 21 段",
-    "后端 test_short_form_pipeline 13 项通过；前端 shortForm 5 项通过；tsc 干净"
+    "后端 test_short_form_pipeline 13 项通过；前端 shortForm 5 项通过；tsc 干净",
+    "反复出现实测（书 16，20 段）：困难免[8,20] · 圆珠笔[2,6] · 湖北省黄冈市[6,12] · 汇款单[6,7] · 蓝色塑料皮[2,18] · 价目表[1,5,8,18] · 卷帘门[1,4,13] · 老规矩[10,17] · 老板娘[4,17]",
+    "排序方式对照：按次数排时「老规矩」为 798 条中的第 28 位；按字罕见度排后进入前十",
+    "分段稳定性实测：同一文本三跑分别 19/21/20 段，边界并集 24 个、三跑共有 17 个（71%），分歧全部落在第 274–368 自然段",
+    "复用实测：重读得到与上一跑逐位相同的边界，调用由 6 次降为 5 次",
+    "呼应校验实测：16/20 段有呼应，无一条指向不存在或靠后的段",
+    "后端 test_short_form_pipeline 20 项通过；前端 shortForm 6 项通过"
   ],
   "known_out_of_scope": [
     "反转未被命名：需要模型维护「读者当前应当相信什么」这一状态，本次未做",
-    "台词复现未被识别：应改为在代码里跨段做字符串比对，把「反复出现的说法」作为确定性清单送进整体判断，本次未做",
-    "分段在两次运行之间不稳定（19 vs 21），而呼应引用的是段号——段号不可跨运行引用",
-    "呼应内容本身未被校验：模型可以写一个不存在的呼应，代码不会发现",
-    "本次验证不能替代 §8 拆文验收：故事由我所写、引擎由我所跑，没有独立的人做对照"
+    "本次验证不能替代 §8 拆文验收：故事由我所写、引擎由我所跑，没有独立的人做对照",
+    "呼应的「内容」仍未校验：段号是对的，但它说的那件事是否真在那一段里，代码不检查",
+    "分段本身仍会因文本歧义而变化，复用只是让它不再重复发生；换一本书或勾选重新切分时仍会变",
+    "反复出现只找中文连续串，跨标点、跨英文数字的复现找不到"
   ],
   "data_compatibility": {
     "database_changed": false,
@@ -72,5 +91,5 @@
   "blocker_level": "none",
   "head_inclusion": false,
   "created_at": "2026-08-19T02:40:00+08:00",
-  "updated_at": "2026-08-19T02:40:00+08:00"
+  "updated_at": "2026-08-19T04:30:00+08:00"
 }
