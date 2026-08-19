@@ -1,0 +1,66 @@
+{
+  "id": "CHG-20260819-119",
+  "title": "长篇：取消「评测与拆文共用一次抽取」——实测证明拆文那次抽取更薄",
+  "type": "fix",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": false,
+  "commits": [
+    "ba9ac7b2"
+  ],
+  "modules": [
+    "apps/api/app/narrative_core/long_novel/block_store.py",
+    "apps/api/app/narrative_core/long_novel/deltas.py"
+  ],
+  "files": [
+    "apps/api/app/narrative_core/long_novel/block_store.py",
+    "apps/api/app/narrative_core/long_novel/deltas.py",
+    "apps/api/app/narrative_core/services/long_novel_pipeline_v1.py",
+    "apps/api/tests/test_long_novel_block_reuse.py",
+    "docs/whole-book/ARCHITECTURE_AUDIT.md",
+    "docs/whole-book/evidence/delta_additivity_probe_20260819.json"
+  ],
+  "user_summary": "**这条是取消一个我自己提的方案，不是加功能。**\n\n架构审计里我写过：全书**评测**和全书**拆文**读的是同一本书，应该共用同一次「块抽取」——那是最贵的一层，因为只有它读原文。拆文那次抽取比评测多两样东西（每章的悬念问句、每块最多三处高光时刻），少的没有，所以它看上去是评测的**严格超集**，白送给评测用就行。我当时把这写成「唯一一处真正该融合的地方」，第二种读法能从 ¥0.26 降到约 ¥0.09。\n\n**去测了，结论反过来。**\n\n拿《一梦如初》的三个块重放，温度 0，**每一臂都跑两次**——不跑两次就分不清「差异」是 delta 造成的还是模型本身每次都不一样。\n\n结果很干净：**开着拆文那两样要求时，两种读法共有的 12 个字段里，11 个报得更少，一个持平，没有一个更多。**\n\n| 字段 | 拆文 | 评测 |\n|---|---|---|\n| 事件 | 24.5 | 29.5 |\n| 人物状态变化 | 9.0 | 12.0 |\n| 悬念动作 | 5.5 | 10.5 |\n| 关系变化 | 7.5 | 10.5 |\n| 临时人物 | 10.5 | 15.0 |\n\n单侧符号检验 **p = 0.0005**。如果只是模型每次不一样，应该一半多一半少。\n\n**也就是说：schema 上是超集，实际读出来的东西不是。** 拆文的块是一个**更薄的**评测块，加两样东西。多要两样，别的就都少报一点。\n\n把它当评测块复用，会把一份明显更稀疏的抽取挂在「评测」名下发布——**而运行会报成功**，用户看不出少了什么。这正是那条「只有 `provider_input_fingerprint` 能授权跳过付费调用」的规矩在防的事；这次不是靠规矩挡住的，是量出来该挡。\n\n**顺带排除了一个看似显然的解释。** 我一开始以为是输出预算被挤了：多写两样东西，别的就写不下。于是把 delta 的开销记进了排块的预算，让开着 delta 的块少装几章。**然后撤了**——因为块本来就被「每块最多 8 章」卡着，而预算允许 24 章；响应约 3.5k token，上限 8k，根本没截断。**约束从来没生效过。** 那一版改动会让进阶流的书块更短、调用更多，去修一个不存在的问题；而 `constants.py` 里本来就写着，0.80 的利用率余量就是留给这类误差的。\n\n真正的机制是**注意力**，不是算术。这一层没有便宜的修法，所以这条只记录，不假装修好。\n\n**对用户的实际影响：**\n\n- 跨读法复用**关闭，不是推迟**。同一本书重跑、以及跑到一半失败后续跑的复用**照旧有效**——那才是真正常发生的情况。\n- 新记下一条拆文产出的已知限制：**拆文运行里那些非拆文的事实（事件、关系、悬念），比同一本书的评测运行更薄。** 想要最全的事实层，跑评测。",
+  "technical_summary": "The delta set reaches the L1 payload through ``prompt_template_hash``, so a 拆文 run and a diagnostic run never produce the same ``provider_input_fingerprint`` and the store can never serve one to the other. That protection is one field in one dict; ``test_a_breakdown_extraction_cannot_serve_a_diagnostic_one`` pins it for every registered delta, not just the mode one.\n\nNo behaviour changed. The probe ran outside the pipeline with ``store=None`` and wrote nothing.",
+  "acceptance_criteria": [
+    "拆文与评测的块指纹在任何情况下都不相同",
+    "每一个已注册 delta 都与无 delta 分开，不只是拆文那个",
+    "同一读法的指纹仍然相同，否则同书复用也会失效",
+    "同书重跑与断点续跑的复用不受影响"
+  ],
+  "tests": [
+    "apps/api/tests/test_long_novel_block_reuse.py"
+  ],
+  "verification_evidence": [
+    "对照实验：《一梦如初》快照 16 的三个块（第1-8、9-16、17-22章），deepseek-v4-flash，温度 0，输出预算 8000",
+    "四臂：B0 库中已存的拆文块 · B1 带 delta 重跑 · A1/A2 不带 delta 各跑一次，同臂重跑用于确定噪声底",
+    "共享字段条目数：11 个降、0 个升、1 个持平（power_beats 两臂均为 0），单侧符号检验 p = 0.0005",
+    "证据锚点 Jaccard：同臂重跑 0.47（带）/ 0.63（不带），跨臂 0.40 —— 该指标本身分不开处理与噪声，方向性才分得开",
+    "排除预算解释：块被 MAX_CHAPTERS_FOR_SIGNAL_FIDELITY=8 卡住而预算允许 24 章；实测输出约 3.5k token / 上限 8k，output_fidelity 无截断",
+    "花费：14 次调用，输入 173,843 token，输出 45,728 token",
+    "原始计数留档 docs/whole-book/evidence/delta_additivity_probe_20260819.json",
+    "test_long_novel_block_reuse 8 项通过；long_novel/delta/budget/planner/short_form 相关 346 项通过"
+  ],
+  "known_out_of_scope": [
+    "「多要两样东西就少报别的」这件事本身没有修：机制是注意力不是预算，提示词与预算两条路都不通",
+    "只在一本书三个块上测过，换书换模型未必是同一个幅度——但方向性结论（11:0）不依赖幅度",
+    "把 delta 开销记进排块预算的那一版已撤销；若日后 MAX_CHAPTERS_FOR_SIGNAL_FIDELITY 放宽到预算真正成为约束，需要重新考虑"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "无行为变更，已存块不受影响。"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": false,
+    "updater_impact": false,
+    "breaking_change": false,
+    "notes": "只改注释、文档与测试，运行行为不变。"
+  },
+  "blocker_level": "none",
+  "head_inclusion": false,
+  "created_at": "2026-08-19T07:20:00+08:00",
+  "updated_at": "2026-08-19T07:20:00+08:00"
+}
