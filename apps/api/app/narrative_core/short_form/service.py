@@ -8,6 +8,7 @@ lives here and can be replaced without touching the reading logic.
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 from typing import Any
 
@@ -99,6 +100,31 @@ def load_paragraphs(session: Session, book_id: int) -> tuple[str, list[str]]:
     return str(title), [str(r) for r in rows if str(r or "").strip()]
 
 
+def stored_spans(session: Session, book_id: int) -> list[tuple[int, int]]:
+    """The boundaries an earlier reading of this book settled on, if there was one.
+
+    Re-reading keeps the structure. Measured across three runs of the same 8,577-character
+    story: thirteen boundaries came back identical every time and the disagreement sat entirely
+    in one stretch where the prose has no clean scene break. One boundary moving renumbers every
+    segment after it, and the callbacks cite segment numbers — so a second reading that re-cut
+    the piece would silently invalidate every reference in the first.
+    """
+    row = session.execute(
+        text(
+            "SELECT result_json FROM short_form_results WHERE book_id = :book_id"
+            " ORDER BY id DESC LIMIT 1"
+        ),
+        {"book_id": int(book_id)},
+    ).scalar()
+    if not row:
+        return []
+    try:
+        segments = json.loads(row).get("segments") or []
+        return [(int(s["paragraph_start"]), int(s["paragraph_end"])) for s in segments]
+    except Exception:  # noqa: BLE001 — a cache that cannot be read is a cache that is absent
+        return []
+
+
 def analyse_short_form(
     session: Session,
     book_id: int,
@@ -107,6 +133,7 @@ def analyse_short_form(
     provider_name: str = "",
     model_name: str = "",
     use_fake_provider: Any | None = None,
+    resegment: bool = False,
 ) -> ShortFormReport:
     if not book_is_short_form(session, int(book_id)):
         raise ValueError("book is not short-form; use the whole-book pipeline")
@@ -125,13 +152,18 @@ def analyse_short_form(
         )
 
     report = run_short_form(
-        provider=provider, paragraphs=paragraphs, title=title, genre=genre
+        provider=provider,
+        paragraphs=paragraphs,
+        title=title,
+        genre=genre,
+        reuse_spans=None if resegment else (stored_spans(session, int(book_id)) or None),
     )
     logger.info(
-        "short_form_run book_id=%s segments=%s calls=%s in=%s out=%s",
+        "short_form_run book_id=%s segments=%s calls=%s reused_spans=%s in=%s out=%s",
         book_id,
         report.segments_planned,
         report.provider_calls,
+        report.spans_reused,
         getattr(provider, "input_tokens", 0),
         getattr(provider, "output_tokens", 0),
     )

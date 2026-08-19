@@ -65,6 +65,8 @@ class ShortFormReport:
     segments_planned: int = 0
     #: How many spans came back too long for one scene and were sent back to be cut.
     segments_resplit: int = 0
+    #: True when the boundaries came from an earlier reading instead of being asked for.
+    spans_reused: bool = False
     provider_calls: int = 0
     result: ShortFormResult | None = None
     failures: list[str] = field(default_factory=list)
@@ -279,6 +281,48 @@ def carry_digest(segments: list[ShortFormSegment]) -> list[dict[str, Any]]:
     ]
 
 
+_CALLBACK_TARGET = re.compile(r"第\s*(\d+)\s*段")
+
+
+def _checked_callback(text: str, *, index: int, known: int) -> str:
+    """Keep a callback only when the segment it names is one that exists, and is earlier.
+
+    The model writes 「呼应第 4 段的十块钱」 and nothing checked that segment 4 existed or came
+    first. A callback pointing forward is not a callback, and one pointing at a segment the
+    piece does not have is a citation to nothing — both look exactly like a real finding on the
+    page, which is why they have to be caught here rather than read past.
+
+    A callback naming no segment at all is kept: 「呼应开头的价目表」 is a legitimate way to say
+    it and there is nothing to verify.
+    """
+    note = str(text or "").strip()
+    if not note:
+        return ""
+    targets = [int(m) for m in _CALLBACK_TARGET.findall(note)]
+    if not targets:
+        return note
+    if all(1 <= t < index and t <= known for t in targets):
+        return note
+    return ""
+
+
+def _covers(spans: Sequence[tuple[int, int]], total: int) -> bool:
+    """Are these boundaries a partition of exactly this many paragraphs?
+
+    The guard on reuse. Boundaries from an earlier reading describe the text as it was then; if
+    the book has been re-imported or re-split since, they cite paragraphs that have moved, and
+    every segment would be a window onto the wrong prose while looking entirely normal.
+    """
+    if not spans:
+        return False
+    cursor = 1
+    for start, end in spans:
+        if int(start) != cursor or int(end) < int(start):
+            return False
+        cursor = int(end) + 1
+    return cursor == total + 1
+
+
 def run_short_form(
     *,
     provider: Provider,
@@ -287,6 +331,15 @@ def run_short_form(
     genre: str = "",
     max_output_tokens: int = 6_000,
     on_call: Callable[[str, int], None] | None = None,
+    #: Boundaries from an earlier reading of this same text, to be used instead of asking again.
+    #:
+    #: Measured on 《面馆的最后一天》 across three runs: thirteen of the boundaries were identical
+    #: every time and the disagreement sat entirely in one stretch of the story where the prose
+    #: genuinely has no clean scene break. That is not unreliability — it is the text — but a
+    #: single boundary moving renumbers every segment after it, and the callbacks cite segment
+    #: numbers. Re-reading a piece keeps its structure so the numbers keep meaning the same
+    #: thing; it also saves the two calls the segmentation would have cost.
+    reuse_spans: Sequence[tuple[int, int]] | None = None,
 ) -> ShortFormReport:
     """Read a short piece end to end. Pure: the caller owns persistence and the provider."""
     report = ShortFormReport()
@@ -307,13 +360,17 @@ def run_short_form(
             on_call(kind, report.provider_calls)
         return _json(raw)
 
-    spans = _merge_short(
-        plan_segments(
-            call("segment", SEGMENT_INSTRUCTION, {"text": rendered}),
-            total_paragraphs=len(body),
-        ),
-        body,
-    )
+    if reuse_spans and _covers(reuse_spans, len(body)):
+        spans = [(int(a), int(b)) for a, b in reuse_spans]
+        report.spans_reused = True
+    else:
+        spans = _merge_short(
+            plan_segments(
+                call("segment", SEGMENT_INSTRUCTION, {"text": rendered}),
+                total_paragraphs=len(body),
+            ),
+            body,
+        )
 
     def span_chars(span: tuple[int, int]) -> int:
         return sum(len(body[i - 1]) for i in range(span[0], span[1] + 1))
@@ -321,7 +378,7 @@ def run_short_form(
     # One extra call for all of the oversized spans together, or none at all when the first
     # pass already cut cleanly. Charging per oversized segment would make a badly-segmented
     # piece cost several times a well-segmented one for the same reading.
-    oversized = [
+    oversized = [] if report.spans_reused else [
         {
             "index": i,
             "text": "\n".join(f"[p:{p}] {body[p - 1]}" for p in range(start, end + 1)),
@@ -374,7 +431,9 @@ def run_short_form(
                     craft=str(row.get("craft") or ""),
                     emotion_note=str(row.get("emotion_note") or ""),
                     emotion_direction=direction if direction in ("up", "down", "flat") else "flat",
-                    callback=str(row.get("callback") or ""),
+                    callback=_checked_callback(
+                        row.get("callback") or "", index=index, known=len(spans)
+                    ),
                 )
             )
 

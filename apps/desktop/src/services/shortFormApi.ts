@@ -78,9 +78,13 @@ export const shortFormApi = {
   /** Runs synchronously — a short piece is nine or ten provider calls, about a minute and a
    *  half. `force` is sent only from an explicit 重新分析, because the default must never be
    *  to pay for a second reading of the same book. */
-  analyse: (bookId: number, body: { genre: string; force?: boolean }) =>
+  analyse: (bookId: number, body: { genre: string; force?: boolean; resegment?: boolean }) =>
     api<ShortFormReading>(`/api/v1/books/${bookId}/short-form/analyse`, {
       method: "POST",
-      body: JSON.stringify({ genre: body.genre, force: Boolean(body.force) }),
+      body: JSON.stringify({
+        genre: body.genre,
+        force: Boolean(body.force),
+        resegment: Boolean(body.resegment),
+      }),
     }),
 };

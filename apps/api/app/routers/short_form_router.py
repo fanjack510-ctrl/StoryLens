@@ -39,6 +39,10 @@ class AnalyseRequest(BaseModel):
     #: Ask again even though a reading is already stored. The client sends this only from an
     #: explicit "重新分析", because the default must never be to spend money twice.
     force: bool = False
+    #: Cut the piece into scenes afresh rather than keeping the boundaries the last reading
+    #: settled on. Off by default: re-reading is for a better reading, and re-cutting renumbers
+    #: every segment, which invalidates every callback the previous reading wrote.
+    resegment: bool = False
 
 
 def _stored(session: Session, book_id: int) -> dict[str, Any] | None:
@@ -149,6 +153,7 @@ def analyse(
         genre=body.genre,
         provider_name=provider_name,
         model_name=model_name,
+        resegment=body.resegment,
     )
     result = report.result
     if result is None or result.availability == "unavailable":

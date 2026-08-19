@@ -197,6 +197,7 @@ export function ShortFormPage() {
   const queryClient = useQueryClient();
   const [genre, setGenre] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [resegment, setResegment] = useState(false);
 
   const prepare = useQuery({
     queryKey: ["short-form-prepare", bookId],
@@ -206,7 +207,7 @@ export function ShortFormPage() {
   });
 
   const analyse = useMutation({
-    mutationFn: (force: boolean) => shortFormApi.analyse(bookId, { genre, force }),
+    mutationFn: (force: boolean) => shortFormApi.analyse(bookId, { genre, force, resegment }),
     onSuccess: () => {
       setError(null);
       void queryClient.invalidateQueries({ queryKey: ["short-form-prepare", bookId] });
@@ -283,9 +284,21 @@ export function ShortFormPage() {
             {!genre ? <span className="sf-muted">请先选一个类型</span> : null}
           </div>
           {reading ? (
-            <p className="sf-muted sf-stored">
-              已有一份读法（{reading.created_at}）。重新分析会再花一次模型费用。
-            </p>
+            <>
+              <p className="sf-muted sf-stored">
+                已有一份读法（{reading.created_at}）。重新分析会再花一次模型费用。
+              </p>
+              <label className="sf-reseg">
+                <input
+                  type="checkbox"
+                  checked={resegment}
+                  onChange={(e) => setResegment(e.target.checked)}
+                />
+                {/* Off by default. Re-reading is for a better reading; re-cutting renumbers every
+                    segment, and every 「呼应第 N 段」 the last reading wrote stops lining up. */}
+                重新切分场景（会改变段号，上一份读法里的「呼应第 N 段」将不再对应）
+              </label>
+            </>
           ) : null}
         </section>
       )}

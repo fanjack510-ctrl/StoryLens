@@ -389,3 +389,60 @@ def test_a_wording_in_most_of_the_piece_is_furniture() -> None:
     found = [r.phrase for r in find_recurrences(texts)]
 
     assert not any("母亲" in p for p in found), found
+
+
+def test_re_reading_a_piece_keeps_the_boundaries_it_already_had() -> None:
+    """One boundary moving renumbers every segment after it, and callbacks cite segment numbers.
+
+    Measured across three runs of the same 8,577-character story: thirteen boundaries came back
+    identical every time, and all the disagreement sat in one stretch where the prose genuinely
+    has no clean scene break. That is the text, not unreliability — but a second reading that
+    re-cut the piece would silently invalidate every reference the first one wrote.
+
+    Reusing also skips the segmentation and the re-split, so a second reading costs two calls
+    fewer.
+    """
+    provider = _Provider()
+    spans = [(1, 6), (7, 12), (13, 18), (19, 24)]
+    report = run_short_form(
+        provider=provider, paragraphs=PARAGRAPHS, title="老屋", reuse_spans=spans
+    )
+
+    assert report.spans_reused is True
+    assert [(s.paragraph_start, s.paragraph_end) for s in report.result.segments] == spans
+    assert "segment" not in provider.calls and "resplit" not in provider.calls
+    assert provider.calls == ["read", "shape"]
+
+
+def test_boundaries_from_a_text_that_has_since_changed_are_not_reused() -> None:
+    """Stale boundaries cite paragraphs that have moved.
+
+    Every segment would be a window onto the wrong prose while looking entirely normal — the
+    columns fill, the counts add up, and the analysis is about a different passage than the one
+    it names.
+    """
+    provider = _Provider()
+    report = run_short_form(
+        provider=provider,
+        paragraphs=PARAGRAPHS,
+        reuse_spans=[(1, 6), (7, 12)],  # only 12 of 24 paragraphs
+    )
+
+    assert report.spans_reused is False
+    assert "segment" in provider.calls
+
+
+def test_a_callback_that_cites_a_segment_that_cannot_exist_is_dropped() -> None:
+    """A citation to nothing looks exactly like a finding on the page.
+
+    Pointing forward is not a callback, and pointing past the end of the piece is a reference to
+    a segment nobody can turn to. Both were possible and neither was checked.
+    """
+    from app.narrative_core.short_form.pipeline import _checked_callback
+
+    assert _checked_callback("呼应第 2 段的账本", index=5, known=20) == "呼应第 2 段的账本"
+    assert _checked_callback("呼应第 9 段的十块钱", index=5, known=20) == ""
+    assert _checked_callback("呼应第 99 段", index=5, known=20) == ""
+    # Naming no segment is a legitimate way to say it, and there is nothing to verify.
+    assert _checked_callback("呼应开头的价目表", index=5, known=20) == "呼应开头的价目表"
+    assert _checked_callback("", index=5, known=20) == ""
