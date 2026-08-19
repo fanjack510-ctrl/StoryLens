@@ -1,0 +1,76 @@
+{
+  "id": "CHG-20260819-118",
+  "title": "短篇逐段阅读带上前文，让重复、推翻与沉默有可能被认出来",
+  "type": "improvement",
+  "base_version": "1.2.0",
+  "status": "tested",
+  "include_in_next_release": false,
+  "commits": [
+    "eb22f47f"
+  ],
+  "modules": [
+    "apps/api/app/narrative_core/short_form/pipeline.py",
+    "apps/api/app/narrative_core/short_form/prompts.py",
+    "apps/api/app/narrative_core/short_form/contracts.py",
+    "apps/desktop/src/features/shortForm/ShortFormPage.tsx",
+    "apps/desktop/src/features/shortForm/shortFormExport.ts"
+  ],
+  "files": [
+    "apps/api/app/narrative_core/short_form/pipeline.py",
+    "apps/api/app/narrative_core/short_form/prompts.py",
+    "apps/api/app/narrative_core/short_form/contracts.py",
+    "apps/api/tests/test_short_form_pipeline.py",
+    "apps/desktop/src/features/shortForm/ShortFormPage.tsx",
+    "apps/desktop/src/features/shortForm/shortForm.css",
+    "apps/desktop/src/features/shortForm/shortFormExport.ts",
+    "apps/desktop/src/features/shortForm/shortFormExport.test.ts",
+    "apps/desktop/src/services/shortFormApi.ts"
+  ],
+  "user_summary": "逐段阅读原本每次只看六段，**看不到之前的任何东西**。于是一个梗没法重复、一个先前的判断没法被推翻、一处沉默也没法回应更早说过的话。\n\n**这次是先量了再改的。** 我写了一篇 8,577 字的短篇《面馆的最后一天》，故意在里面埋了七处手法，然后跑引擎看它找到几处——因为是自己写的，答案事先就知道。\n\n结果很干净：**活在单个段落里的手法，一处不落全找到了**（涂掉的价目表这条伏笔，从埋到收到结尾再呼应，三处都点了出来；那段我特意写平的雨天独坐，它也认出了在干什么）。**跨段落的三处，一处没找到。**\n\n改法是把已读段落的摘要传给下一批。**关键在于传的是「事件原话」而不是概括**——「陷入危机」「至暗时刻」这种标签能看出情节起伏的形状，却一个字都带不过去；而「老规矩」就是三个字，藏在某一条事件里，一概括就没了。四十段摘要只多几百 token，不多花一次调用。\n\n同一篇重跑：**沉默从只字未提变成三处被点名**——「我沉默的动作，表现震惊与困惑」「我按钱、下面，动作胜过言语」；**21 段里有 15 段写出了自己在呼应哪里**。调用次数不变，还是 6 次。\n\n**三处里有两处没解决，而且都不像是提示词能解决的：**\n\n**反转仍然没被命名。** 要认出反转，得记着「读者上一刻应该以为什么」——这是没有任何地方要求模型维护的状态。\n\n**「老规矩」这个梗仍然没被认出来。** 那句台词被两位不同的顾客各说了一次，两段的事件列里都有这三个字，提示词里我还把这条放在第一位——它照样没认出来。而**反复出现的「物件」它抓得很稳**（辣椒油、那张十块钱、蓝皮本子、墙上的留白都抓到了），**反复出现的「一句话」抓不住**。跨段比对字符串这件事，代码做得比模型可靠，下一次应该从那个方向做。\n\n**顺带暴露一件事**：同一篇文章切两次，一次 19 段、一次 21 段。而呼应写的是「呼应第 N 段」——**段号在两次运行之间是不稳定的**。",
+  "technical_summary": "`carry_digest` sends index, phase, trimmed beats, emotion note and direction for the last `CARRY_MAX_SEGMENTS` (40) completed segments, under the payload key `前文`. Beats are trimmed to 40 characters and 4 per segment rather than summarised, because the concrete nouns are the whole value.\n\n`READ_INSTRUCTION` names three uses for it — recurrence, reversal, and the wordless moment — and asks for the reader's prior belief to be stated explicitly when something overturns it.\n\n`ShortFormSegment.callback` is a defaulted optional field so stored readings validate unchanged. It renders inside the craft cell in both the page and the export.",
+  "acceptance_criteria": [
+    "前文摘要携带事件原话，而不是概括",
+    "前文窗口大于两批阅读的段数",
+    "前文取最近的若干段",
+    "呼应是独立字段，没有可呼应处时为空",
+    "呼应在页面与导出里都显示，且不新增第七列",
+    "带前文后调用次数不变"
+  ],
+  "tests": [
+    "apps/api/tests/test_short_form_pipeline.py",
+    "apps/desktop/src/features/shortForm/shortFormExport.test.ts"
+  ],
+  "verification_evidence": [
+    "对照实验用同一篇 8,577 字自撰短篇《面馆的最后一天》（书 16）跑前后两次，genre 均为现实题材",
+    "改前：19 段 / 6 次调用；埋的七处手法中段内四处全部命中，跨段三处全部漏掉",
+    "改后：21 段 / 6 次调用；沉默动作在第 4、6、20 段被点名，呼应字段填写 15/21 段",
+    "呼应实测内容包括：呼应第1段价目表涂掉的字、呼应第4段欠债人留下的十块钱、呼应第13段拿起笔又放下",
+    "仍未解决：全文搜不到「反转/推翻/读者原以为」；「老规矩」在第10、17段均出现于事件列，两段的呼应字段都未指向对方",
+    "分段不稳定：同一文本两次运行分别得到 19 段与 21 段",
+    "后端 test_short_form_pipeline 13 项通过；前端 shortForm 5 项通过；tsc 干净"
+  ],
+  "known_out_of_scope": [
+    "反转未被命名：需要模型维护「读者当前应当相信什么」这一状态，本次未做",
+    "台词复现未被识别：应改为在代码里跨段做字符串比对，把「反复出现的说法」作为确定性清单送进整体判断，本次未做",
+    "分段在两次运行之间不稳定（19 vs 21），而呼应引用的是段号——段号不可跨运行引用",
+    "呼应内容本身未被校验：模型可以写一个不存在的呼应，代码不会发现",
+    "本次验证不能替代 §8 拆文验收：故事由我所写、引擎由我所跑，没有独立的人做对照"
+  ],
+  "data_compatibility": {
+    "database_changed": false,
+    "migration_required": false,
+    "user_data_compatible": true,
+    "notes": "callback 为带默认值的可选字段，此前存下的读法逐位通过校验，读出时为空字符串。"
+  },
+  "release_impact": {
+    "requires_reanalysis": false,
+    "requires_restart": true,
+    "updater_impact": false,
+    "breaking_change": false,
+    "notes": "需重启 sidecar。已存的读法不会补出呼应，要重新分析才有。"
+  },
+  "blocker_level": "none",
+  "head_inclusion": false,
+  "created_at": "2026-08-19T02:40:00+08:00",
+  "updated_at": "2026-08-19T02:40:00+08:00"
+}
