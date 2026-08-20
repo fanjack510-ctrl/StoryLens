@@ -3,7 +3,23 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-ReviewStatus = Literal["pending", "in_review", "confirmed", "superseded", "cancelled"]
+#: ``partition_ready`` is written by ``_get_or_create_partition_session`` and was missing here,
+#: so every GET of a partition-ready review failed schema validation and returned 500 — which
+#: the workspace rendered as 「当前章节没有待确认的场景划分」. One word absent from a Literal
+#: took out the whole single-chapter line: the analysis ran, the session was written with the
+#: right book and chapter, and nothing downstream could read it back.
+#:
+#: It belongs beside ``pending`` rather than replacing it: the guards that block further edits
+#: check ``{confirmed, cancelled, superseded}``, and partition-ready is none of those — it is a
+#: review waiting to happen, which is what ``pending`` means too.
+ReviewStatus = Literal[
+    "pending",
+    "partition_ready",
+    "in_review",
+    "confirmed",
+    "superseded",
+    "cancelled",
+]
 UserBoundaryDecision = Literal["pending", "accept", "reject", "manually_added"]
 ManualBoundaryReason = Literal[
     "location_change",

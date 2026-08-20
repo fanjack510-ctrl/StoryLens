@@ -124,8 +124,15 @@ export function DeepSeekForm({ onSaved }: { onSaved: () => void }) {
     setTesting(true);
     setMsg("");
     try {
-      // Prefer lightweight transport/health path — no long chat completion.
+      // Transport first: it is free and it names URL, credential and enablement problems
+      // precisely, which a model call would only report as a generic failure.
       await providersApi.transportDiagnostic(DEEPSEEK_PROVIDER);
+      // Then a real minimal call, because only that writes the validation snapshot the
+      // analysis preflight reads. Without it 「分析本章」 goes permanently dead 24 hours
+      // after the last real probe — PROVIDER_HEALTH_STALE against a 24h TTL — and nothing
+      // in Settings could clear it: a transport diagnostic proves the pipe, not the
+      // provider. Costs one 32-token completion; measured at 76 input / 5 output.
+      await providersApi.testConnection(DEEPSEEK_PROVIDER, 32);
       const modelLabel =
         form.plus_model === MODEL_PRO ? "DeepSeek V4 Pro" : "DeepSeek V4 Flash";
       setMsg(`✓ DeepSeek API 连接正常\n当前模型：${modelLabel}`);
@@ -258,7 +265,7 @@ export function DeepSeekForm({ onSaved }: { onSaved: () => void }) {
           disabled={testing}
           onClick={testConnection}
         >
-          {testing ? "诊断中…" : "测试连接"}
+          {testing ? "验证中…" : "验证连接"}
         </button>
         <button type="button" data-testid="deepseek-delete-creds" onClick={remove}>
           删除凭据

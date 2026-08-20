@@ -76,6 +76,9 @@ const DECISION_LABELS: Record<string, string> = {
 const REVIEW_STATUS_LABELS: Record<string, string> = {
   in_review: "审阅中",
   pending: "审阅中",
+  // Written by the partition path; reads the same to a person as pending — a review that has
+  // not happened yet — so it gets the same label rather than a new word for the same state.
+  partition_ready: "审阅中",
   confirmed: "已完成",
   draft: "草稿",
 };
