@@ -144,6 +144,7 @@ def recover_analysis_run(
         import json as _json
 
         from app.services.chapter_analysis_completion import (
+            boundary_review_confirmed,
             ensure_auto_reader_journey_row,
             is_scene_pipeline_complete,
             mark_scenes_complete_awaiting_journey,
@@ -162,7 +163,18 @@ def recover_analysis_run(
         except _json.JSONDecodeError:
             marker = {}
         if marker.get("chapter_pipeline") == "awaiting_scene_boundary_confirmation":
-            return None
+            # The same marker nobody clears on confirmation. Refusing on it alone made this a
+            # silent dead end: the endpoint still answered 202 with
+            # actions_executed=['start_or_resume_reader_journey'], no journey row was created,
+            # no model call was made, and the reader's button did nothing at all. Seen on
+            # 《长安的荔枝》 with its review confirmed, 14 scenes and 14 scene_analysis
+            # artifacts already in place.
+            #
+            # Same rule as effective_chapter_status: a confirmed review outranks a stale
+            # marker. If the review really is still open, the refusal below is correct and
+            # `confirmed is None` catches it a few lines on anyway.
+            if not boundary_review_confirmed(session, fresh):
+                return None
         chapter_id = int(fresh.subject_id)
         confirmed = get_confirmed_revision(session, chapter_id)
         if confirmed is None:

@@ -1636,8 +1636,15 @@ def execute_unified_recover(
         jid = background_start_journey()
         if jid:
             created_journey_id = int(jid)
-        actions_executed.append("start_or_resume_reader_journey")
-        model_started = True
+            actions_executed.append("start_or_resume_reader_journey")
+            model_started = True
+        else:
+            # The starter returns None whenever it declines, and this used to report the
+            # action as executed anyway: a 202 saying start_or_resume_reader_journey ran,
+            # with no journey row and no model call behind it. The reader's button did
+            # nothing and the response insisted it had. The branch below for boundary
+            # detection already had this right; this now matches it.
+            actions_executed.append("start_or_resume_reader_journey_deferred")
     elif plan.resume_stage == "boundary_detection" and background_resume_boundary is not None:
         created = background_resume_boundary()
         if created:

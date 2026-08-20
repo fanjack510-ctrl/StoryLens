@@ -316,3 +316,50 @@ def test_a_confirmed_review_outranks_the_marker_nobody_cleared(testing_session):
     assert json.loads(run.raw_output or "{}")["chapter_pipeline"] == (
         "awaiting_scene_boundary_confirmation"
     ), "the stale marker is left as-is; it records history, and rewriting it would lose that"
+
+
+def test_the_stale_marker_must_not_silently_refuse_the_journey(testing_session):
+    """The same marker that made the panel lie also made the journey refuse to start.
+
+    `_start_journey` in analysis_recovery reads the raw marker and returns None when it says
+    `awaiting_scene_boundary_confirmation`. Nothing else reported that refusal: the endpoint
+    still answered 202 with actions_executed=['start_or_resume_reader_journey'], so the
+    reader's 「生成阅读旅程」 button did nothing at all and the response claimed it had.
+    《长安的荔枝》 sat there with its review confirmed and 14 scenes analysed.
+
+    This pins the predicate both paths now share.
+    """
+    from app.db.models import BoundaryReviewSession
+
+    book = Book(title="t", source_file_name="t.txt", source_file_hash="d" * 64)
+    testing_session.add(book)
+    testing_session.flush()
+    chapter = Chapter(book_id=book.id, chapter_index=1, title="一", section_type="chapter")
+    testing_session.add(chapter)
+    testing_session.flush()
+    run = _run(subject_id=str(chapter.id))
+    testing_session.add(run)
+    testing_session.flush()
+    cac.mark_scenes_complete_awaiting_boundary_confirmation(testing_session, run)
+
+    review = BoundaryReviewSession(
+        book_id=book.id,
+        chapter_id=chapter.id,
+        analysis_run_id=run.id,
+        prompt_version="v4.0",
+        provider="fake",
+        model="fake",
+        status="partition_ready",
+    )
+    testing_session.add(review)
+    testing_session.flush()
+    assert cac.boundary_review_confirmed(testing_session, run) is False
+
+    review.status = "confirmed"
+    testing_session.flush()
+    assert cac.boundary_review_confirmed(testing_session, run) is True
+
+    # A cancelled review has not closed the checkpoint either — only `confirmed` does.
+    review.status = "cancelled"
+    testing_session.flush()
+    assert cac.boundary_review_confirmed(testing_session, run) is False

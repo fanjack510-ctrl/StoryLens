@@ -100,7 +100,7 @@ def is_chapter_analysis_complete(session: Session, run: AnalysisRun) -> bool:
 
 
 
-def _boundary_review_confirmed(session: Session, run: AnalysisRun) -> bool:
+def boundary_review_confirmed(session: Session, run: AnalysisRun) -> bool:
     """Has this run's boundary review already been confirmed?
 
     Read from the review session rather than the run marker, because the marker is what goes
@@ -173,7 +173,7 @@ def effective_chapter_status(session: Session, run: AnalysisRun) -> str:
         # Line 119 above already had to defeat this same stale marker for a live journey. The
         # rule is the same one: a confirmed review is harder evidence than a marker nobody
         # updated, so it wins.
-        if not _boundary_review_confirmed(session, run):
+        if not boundary_review_confirmed(session, run):
             return "awaiting_scene_boundary_confirmation"
     if scenes_done and (journey is None or journey.status != "succeeded"):
         return "partial_complete"
