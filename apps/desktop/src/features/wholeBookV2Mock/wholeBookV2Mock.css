@@ -510,3 +510,16 @@ table.wb2-cluetable{min-width:1040px;border-collapse:collapse;background:#fff}
 .wbv2-profile-gate b{display:block;margin-bottom:4px}
 .wbv2-profile-gate p{margin:4px 0;color:#5d5648;font-size:13px}
 .wbv2-profile-gate a{color:#b8791c;font-weight:650}
+
+/* 拆文模块。四个部分、打动人的瞬间、章末钩子、可复用手法、配角功能。 */
+.wb2-note{margin:0 0 20px;padding:12px 16px;background:#f1f5f2;border-left:3px solid #7da18f;color:#5d6b64;line-height:1.5}
+.wb2-num{white-space:nowrap;color:#718078}
+.wb2-moment{padding:20px 0;border-top:1px solid #e1e6e3}
+.wb2-moment:first-of-type{border-top:0}
+.wb2-moment header{display:flex;align-items:baseline;gap:12px}
+.wb2-moment header i{display:grid;place-items:center;flex:none;width:24px;height:24px;border-radius:50%;background:#2f6b57;color:#fff;font-style:normal;font-size:12px}
+.wb2-moment header b{flex:1;line-height:1.45}
+.wb2-moment header span{flex:none;color:#839087;font-size:12px}
+.wb2-moment blockquote{margin:12px 0 12px 36px;padding:12px 16px;background:#fff;border-left:3px solid #c9a227;color:#3e4e46;line-height:1.6}
+.wb2-moment p{margin:0 0 0 36px;color:#5d6b64;line-height:1.5}
+.wb2-sub p b{display:block;margin-top:12px;color:#4d7a65;font-size:12px;letter-spacing:.06em}

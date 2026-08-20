@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { WholeBookV2MockPage } from "./WholeBookV2MockPage";
 import { WholeBookV2ProgressMockPage } from "./WholeBookV2ProgressMockPage";
 import { buildMockWholeBookAnalysisV2 } from "../wholeBookV2/mockAdapter";
-import { MODULES } from "../wholeBookV2/presentation/modules";
+import { modulesForDocument } from "../wholeBookV2/presentation/modules";
 
 afterEach(cleanup);
 
@@ -27,7 +27,7 @@ describe("Whole-Book V2 static mock", () => {
     expect(screen.getByTestId("whole-book-v2-report")).toBeInTheDocument();
     expect(screen.getAllByText("作品画像").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByRole("navigation", { name: "全书分析模块" }).querySelectorAll("button")).toHaveLength(7);
-    for (const mod of MODULES) {
+    for (const mod of modulesForDocument(false)) {
       expect(screen.getByRole("button", { name: new RegExp(mod.label) })).toBeInTheDocument();
     }
     expect(screen.queryByRole("button", { name: /类型专项/ })).not.toBeInTheDocument();

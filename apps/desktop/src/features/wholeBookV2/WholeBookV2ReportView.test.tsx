@@ -1,13 +1,16 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { buildMockWholeBookAnalysisV2 } from "./mockAdapter";
-import { MODULES } from "./presentation/modules";
+import { modulesForDocument } from "./presentation/modules";
 import { WholeBookV2ReportView } from "./presentation/WholeBookV2ReportView";
 
 afterEach(cleanup);
 
 describe("WholeBookV2ReportView", () => {
   const data = buildMockWholeBookAnalysisV2();
+
+  // 评测文档没有拆文，拆文文档没有总览和综合诊断——导航按文档实际有什么来排。
+  const assessmentModules = modulesForDocument(false);
 
   it("renders all seven modules with formal nav labels", () => {
     const seen = new Set<string>();
@@ -23,11 +26,11 @@ describe("WholeBookV2ReportView", () => {
     expect(screen.getByTestId("whole-book-v2-report")).toHaveAttribute("data-module", "overview");
     const nav = screen.getByRole("navigation", { name: "全书分析模块" });
     expect(within(nav).getAllByRole("button")).toHaveLength(7);
-    for (const mod of MODULES) {
+    for (const mod of assessmentModules) {
       expect(within(nav).getByRole("button", { name: new RegExp(mod.label) })).toBeInTheDocument();
     }
 
-    for (const mod of MODULES) {
+    for (const mod of assessmentModules) {
       rerender(
         <WholeBookV2ReportView
           data={data}
@@ -40,6 +43,64 @@ describe("WholeBookV2ReportView", () => {
       expect(screen.getByTestId("whole-book-v2-report")).toHaveAttribute("data-module", mod.key);
     }
     expect(seen.size).toBe(7);
+  });
+
+  // 拆文报告曾经把「拆文」的九段内容整个丢掉，只留下总览和综合诊断两张空白页——
+  // 空白页正是这次要修的东西，所以这里同时断言「有拆文」和「没有那两页」。
+  it("swaps overview and assessment for 拆文 when the document is a breakdown", () => {
+    const breakdown = {
+      ...data,
+      story_breakdown: {
+        four_beats: [
+          {
+            beat: "起",
+            title: "两人第一次同处一室",
+            summary: "把气味写成距离。",
+            chapter_start: 1,
+            chapter_end: 8,
+            evidence: [],
+          },
+        ],
+        standout_moments: [
+          {
+            rank: 1,
+            title: "他闻到了",
+            quote: "空气忽然变甜",
+            why_it_lands: "第一次把设定用在情绪上。",
+            chapter: 12,
+            evidence: [],
+          },
+        ],
+        moment_count_rationale: "只有十处真正推动了关系。",
+        chapter_hooks: [{ chapter: 1, question: "他为什么不躲", evidence: [] }],
+        reusable_techniques: [
+          {
+            name: "气味代替独白",
+            what_it_is: "用嗅觉写心理",
+            why_it_works: "省掉解释",
+            transfers_to: "任何有身体感官的设定",
+          },
+        ],
+        supporting_cast: [
+          { name: "室友", function: "把秘密说破", stays_in_lane: "是", evidence: [] },
+        ],
+        cast_note: "配角都只服务一条线。",
+      },
+    } as never;
+
+    render(
+      <WholeBookV2ReportView
+        data={breakdown}
+        activeModule="story_breakdown"
+        onModuleChange={() => {}}
+        mode="formal"
+      />,
+    );
+    const nav = screen.getByRole("navigation", { name: "全书分析模块" });
+    expect(within(nav).getByRole("button", { name: /拆文/ })).toBeInTheDocument();
+    expect(within(nav).queryByRole("button", { name: /全书总览/ })).not.toBeInTheDocument();
+    expect(within(nav).queryByRole("button", { name: /综合诊断/ })).not.toBeInTheDocument();
+    expect(screen.getByText("两人第一次同处一室")).toBeInTheDocument();
   });
 
   it("does not show DEV badge or mock strings in formal mode", () => {

@@ -28,6 +28,20 @@ export type WholeBookAnalysisV2={
  pacing:{availability:Availability;points:Array<{chapter_start:number;chapter_end:number;chapter_id?:number|null;chapter_index?:number|null;chapter_title?:string|null;plot_progress:number;emotion:number;hook_density:number;tension?:number|null;reading_drive?:number|null;pace_speed?:number|null;dominant_events:string[];reason:string;story_consequence:string}>;event_markers:Array<{chapter:number;title:string;event:string;effect_on_pacing:string;evidence:string[];marker_type?:string}>;pacing_regions:Array<{chapter_start:number;chapter_end:number;type:string;reason:string;diagnosis:string}>};
  chapters:{availability:Availability;aggregation_size:number;functions:Array<{chapter_id:number;chapter_index:number;title:string;primary_function:string;secondary_functions:string[];summary:string;importance:number;evidence:string[]}>;heatmap:Array<{chapter_start:number;chapter_end:number;mainline_progress:number;character_development:number;conflict:number;suspense:number;transition:number;foreshadow?:number|null;payoff?:number|null}>};
  assessment:{overall_summary:string;overall_assessment?:string;dimensions:Array<{dimension:string;rating:string;conclusion:string;supporting_metrics:string[];evidence:string[]}>;strengths:Array<{title:string;why_good:string;chapter_start:number;chapter_end:number;evidence:string[]}>;issues:Array<{issue_id:string;priority:"P0"|"P1"|"P2";category:string;chapter_start:number;chapter_end:number;symptom:string;root_cause:string;reader_impact:string;supporting_metrics:string[];evidence:string[];possible_direction:string;dimension?:string;problem?:string;cause?:string;recommended_direction?:string}>;issue_map:unknown[];revision_priorities:unknown[];preserve_list:string[]};
+ /** 拆文 only. A diagnostic run leaves this absent; a 拆文 run fills every field and leaves
+  *  `overview` and `assessment` mostly empty, because those are the diagnostic reading's
+  *  sections and 拆文 never produces them. */
+ story_breakdown?:{
+  version?:string;
+  availability?:Availability;
+  four_beats:Array<{beat:string;title:string;summary:string;chapter_start:number;chapter_end:number;evidence:string[]}>;
+  standout_moments:Array<{rank:number;title:string;quote:string;why_it_lands:string;chapter:number;evidence:string[]}>;
+  moment_count_rationale?:string;
+  chapter_hooks:Array<{chapter:number;question:string;evidence:string[]}>;
+  reusable_techniques:Array<{name:string;what_it_is:string;why_it_works:string;transfers_to:string}>;
+  supporting_cast:Array<{name:string;function:string;stays_in_lane?:string|null;evidence:string[]}>;
+  cast_note?:string;
+ };
  evidence_index:Record<string,EvidenceRef>;
  /** Optional: absent on every document produced before the journey section existed. */
  journey?:JourneyResult;

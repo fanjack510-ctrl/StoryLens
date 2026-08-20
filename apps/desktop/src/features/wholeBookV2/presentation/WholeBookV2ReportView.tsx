@@ -1,9 +1,9 @@
-import { Fragment, useMemo, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { JourneyAxis, JourneyResult, StageLedger, WholeBookAnalysisV2 } from "../contracts";
 import { needsReanalysisWarning } from "../adapter";
 import {
-  MODULES,
   MODULE_DESCRIPTIONS,
+  modulesForDocument,
   type ModuleKey,
 } from "./modules";
 import {
@@ -623,6 +623,165 @@ const DOWN_KINDS = new Set(["setback", "demote", "twist", "misdirect"]);
 /** The card frame every block on this page lives in: a numbered title bar, a count at the
  *  right edge, the content indented below. Three ranks the eye can hold — tab band, card
  *  bar, content row — instead of sibling grey boxes floating unlabelled in the section. */
+/** The 拆文 reading. Its data was complete on the very first real run — four beats, ten
+ *  moments with the line quoted, sixty-one chapter hooks, eight techniques, eleven cast
+ *  entries — and there was no module to put it in, so the reader saw 全书总览 and 综合诊断
+ *  standing empty instead. */
+function StoryBreakdownModule({ data }: { data: WholeBookAnalysisV2 }) {
+  const [tab, setTab] = useState("起承转合");
+  const b = data.story_breakdown;
+  if (!b) return null;
+  const moments = [...(b.standout_moments || [])].sort(
+    (x, y) => (x.rank ?? 999) - (y.rank ?? 999),
+  );
+  const tabs = ["起承转合", "打动人的瞬间", "每章留下的问题", "可复用的手法", "配角功能"];
+  return (
+    <>
+      <div className="wb2-tabs">
+        {tabs.map((t) => (
+          <button key={t} className={tab === t ? "active" : ""} onClick={() => setTab(t)}>
+            {t}
+          </button>
+        ))}
+      </div>
+
+      {tab === "起承转合" && (
+        <div className="wb2-sub-stack">
+          <SubCard n={1} title="四个部分" meta={`${b.four_beats?.length ?? 0} 段`}>
+            <table className="wb2-table">
+              <thead>
+                <tr>
+                  <th>部分</th>
+                  <th>章节</th>
+                  <th>这一段在做什么</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(b.four_beats || []).map((x, i) => (
+                  <tr key={i}>
+                    <td>
+                      <b>{x.beat}</b>
+                    </td>
+                    <td className="wb2-num">
+                      第 {x.chapter_start}–{x.chapter_end} 章
+                    </td>
+                    <td>
+                      <b>{x.title}</b>
+                      <p>{x.summary}</p>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </SubCard>
+        </div>
+      )}
+
+      {tab === "打动人的瞬间" && (
+        <div className="wb2-sub-stack">
+          <SubCard
+            n={1}
+            title="选出来的瞬间"
+            meta={`${moments.length} 处 · 按打动人的程度排序`}
+          >
+            {b.moment_count_rationale && (
+              <p className="wb2-note">{b.moment_count_rationale}</p>
+            )}
+            {moments.map((m, i) => (
+              <div className="wb2-moment" key={i}>
+                <header>
+                  <i>{m.rank ?? i + 1}</i>
+                  <b>{m.title}</b>
+                  <span>第 {m.chapter} 章</span>
+                </header>
+                {m.quote && <blockquote>{m.quote}</blockquote>}
+                <p>{m.why_it_lands}</p>
+              </div>
+            ))}
+          </SubCard>
+        </div>
+      )}
+
+      {tab === "每章留下的问题" && (
+        <div className="wb2-sub-stack">
+          <SubCard
+            n={1}
+            title="章末钩子"
+            meta={`${b.chapter_hooks?.length ?? 0} 章留下了问题`}
+          >
+            <table className="wb2-table">
+              <thead>
+                <tr>
+                  <th>章</th>
+                  <th>这一章结尾留给读者的问题</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(b.chapter_hooks || []).map((h, i) => (
+                  <tr key={i}>
+                    <td className="wb2-num">第 {h.chapter} 章</td>
+                    <td>{h.question}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </SubCard>
+        </div>
+      )}
+
+      {tab === "可复用的手法" && (
+        <div className="wb2-sub-stack">
+          {(b.reusable_techniques || []).map((t, i) => (
+            <SubCard n={i + 1} title={t.name} key={i}>
+              <p>
+                <b>是什么</b>
+                {t.what_it_is}
+              </p>
+              <p>
+                <b>为什么有效</b>
+                {t.why_it_works}
+              </p>
+              <p>
+                <b>能用到哪</b>
+                {t.transfers_to}
+              </p>
+            </SubCard>
+          ))}
+        </div>
+      )}
+
+      {tab === "配角功能" && (
+        <div className="wb2-sub-stack">
+          <SubCard n={1} title="每个配角在担什么" meta={`${b.supporting_cast?.length ?? 0} 人`}>
+            {b.cast_note && <p className="wb2-note">{b.cast_note}</p>}
+            <table className="wb2-table">
+              <thead>
+                <tr>
+                  <th>人物</th>
+                  <th>承担的功能</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(b.supporting_cast || []).map((c, i) => (
+                  <tr key={i}>
+                    <td>
+                      <b>{c.name}</b>
+                    </td>
+                    <td>
+                      {c.function}
+                      {c.stays_in_lane ? <p>{c.stays_in_lane}</p> : null}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </SubCard>
+        </div>
+      )}
+    </>
+  );
+}
+
 function SubCard({
   n,
   title,
@@ -2095,7 +2254,22 @@ export function WholeBookV2ReportView({
 }: WholeBookV2ReportViewProps) {
   const meta = data.book_metadata;
   const tp = data.type_profile;
-  const activeLabel = MODULES.find((m) => m.key === activeModule)?.label ?? activeModule;
+  // Which modules this document actually filled. A 拆文 document has `story_breakdown` and
+  // leaves 全书总览 / 综合诊断 nearly empty; a diagnostic one is the other way round. Listing
+  // all seven regardless is how a 拆文 run showed two blank pages and hid the one section it
+  // had filled.
+  const hasBreakdown = Boolean(data.story_breakdown?.four_beats?.length);
+  const modules = modulesForDocument(hasBreakdown);
+  const activeLabel = modules.find((m) => m.key === activeModule)?.label ?? activeModule;
+
+  // A module the current document has no page for — a deep link, or a mode switch under a
+  // remembered tab. Fall to the first module this document does fill rather than rendering
+  // an empty frame.
+  useEffect(() => {
+    if (!modules.length) return;
+    if (modules.some((m) => m.key === activeModule)) return;
+    onModuleChange(modules[0].key);
+  }, [activeModule, modules, onModuleChange]);
   const handleReanalyze = onReanalyzeClick ?? onReanalyze;
   const statusLabel = analysisStatusLabel ?? "已完成";
   const [exporting, setExporting] = useState(false);
@@ -2214,7 +2388,7 @@ export function WholeBookV2ReportView({
       )}
 
       <nav className="wb2-nav" aria-label="全书分析模块">
-        {MODULES.map((m, i) => (
+        {modules.map((m, i) => (
           <button
             key={m.key}
             className={activeModule === m.key ? "active" : ""}
@@ -2233,6 +2407,7 @@ export function WholeBookV2ReportView({
         </div>
 
         {activeModule === "overview" && <OverviewModule data={data} />}
+        {activeModule === "story_breakdown" && <StoryBreakdownModule data={data} />}
         {activeModule === "story" && <StoryModule data={data} />}
         {activeModule === "characters" && <CharactersModule data={data} />}
         {activeModule === "suspense" && <SuspenseModule data={data} />}
