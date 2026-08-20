@@ -259,3 +259,60 @@ def test_ensure_auto_journey_idempotent_client_key(testing_session):
         again = cac.ensure_auto_reader_journey_row(testing_session, run)
         assert again is not None
         assert again.id == existing.id
+
+
+def test_a_confirmed_review_outranks_the_marker_nobody_cleared(testing_session):
+    """The marker records reaching the checkpoint, not that it is still open.
+
+    Confirming boundaries writes its own keys and leaves `chapter_pipeline` alone, so a run
+    whose scenes were confirmed and analysed kept reporting
+    `awaiting_scene_boundary_confirmation` forever. The workspace then told the reader to
+    confirm a division that was already confirmed — and showed no button, because there was
+    nothing left to confirm. Seen on 《长安的荔枝》 in the 1.2.0 build: run succeeded, review
+    confirmed with 13 boundaries accepted, 14 scenes and 14 scene_analysis artifacts, and the
+    panel still said 待确认场景划分.
+    """
+    from app.db.models import BoundaryReviewSession
+
+    book = Book(title="t", source_file_name="t.txt", source_file_hash="c" * 64)
+    testing_session.add(book)
+    testing_session.flush()
+    chapter = Chapter(book_id=book.id, chapter_index=1, title="一", section_type="chapter")
+    testing_session.add(chapter)
+    testing_session.flush()
+    run = _run(subject_id=str(chapter.id))
+    testing_session.add(run)
+    testing_session.flush()
+
+    cac.mark_scenes_complete_awaiting_boundary_confirmation(testing_session, run)
+    testing_session.flush()
+    # No review row yet: the checkpoint really is open, and the marker is right.
+    assert cac.effective_chapter_status(testing_session, run) == (
+        "awaiting_scene_boundary_confirmation"
+    )
+
+    review = BoundaryReviewSession(
+        book_id=book.id,
+        chapter_id=chapter.id,
+        analysis_run_id=run.id,
+        prompt_version="v4.0",
+        provider="fake",
+        model="fake",
+        status="partition_ready",
+    )
+    testing_session.add(review)
+    testing_session.flush()
+    # Offered but not answered — still open.
+    assert cac.effective_chapter_status(testing_session, run) == (
+        "awaiting_scene_boundary_confirmation"
+    )
+
+    review.status = "confirmed"
+    testing_session.flush()
+    # Answered. The marker still says otherwise and must lose.
+    assert cac.effective_chapter_status(testing_session, run) != (
+        "awaiting_scene_boundary_confirmation"
+    )
+    assert json.loads(run.raw_output or "{}")["chapter_pipeline"] == (
+        "awaiting_scene_boundary_confirmation"
+    ), "the stale marker is left as-is; it records history, and rewriting it would lose that"

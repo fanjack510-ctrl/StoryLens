@@ -99,6 +99,24 @@ def is_chapter_analysis_complete(session: Session, run: AnalysisRun) -> bool:
     return bool(journey is not None and journey.status == "succeeded")
 
 
+
+def _boundary_review_confirmed(session: Session, run: AnalysisRun) -> bool:
+    """Has this run's boundary review already been confirmed?
+
+    Read from the review session rather than the run marker, because the marker is what goes
+    stale. `confirmed` is the only status that closes the checkpoint: `partition_ready` and
+    `in_review` are both still open, and a cancelled or superseded review never closed it.
+    """
+    from app.db.models import BoundaryReviewSession
+
+    status = session.scalar(
+        select(BoundaryReviewSession.status)
+        .where(BoundaryReviewSession.analysis_run_id == run.id)
+        .order_by(BoundaryReviewSession.id.desc())
+        .limit(1)
+    )
+    return str(status or "") == "confirmed"
+
 def effective_chapter_status(session: Session, run: AnalysisRun) -> str:
     """Derived product status for UI / tasks (does not rewrite legacy rows)."""
     journey = latest_journey(session, run.id)
@@ -144,7 +162,19 @@ def effective_chapter_status(session: Session, run: AnalysisRun) -> str:
         return "journey_failed"
     marker = _marker(run)
     if marker.get("chapter_pipeline") == "awaiting_scene_boundary_confirmation":
-        return "awaiting_scene_boundary_confirmation"
+        # The marker records that the run *reached* the confirmation checkpoint; it is not
+        # evidence that the checkpoint is still open. Confirming boundaries does not clear it —
+        # the confirmation path writes its own keys and leaves `chapter_pipeline` alone — so a
+        # run whose scenes were confirmed and fully analysed kept reporting
+        # `awaiting_scene_boundary_confirmation` forever. The workspace then told the reader to
+        # confirm a division that was already confirmed, and offered no button to do it with,
+        # because there was nothing left to confirm.
+        #
+        # Line 119 above already had to defeat this same stale marker for a live journey. The
+        # rule is the same one: a confirmed review is harder evidence than a marker nobody
+        # updated, so it wins.
+        if not _boundary_review_confirmed(session, run):
+            return "awaiting_scene_boundary_confirmation"
     if scenes_done and (journey is None or journey.status != "succeeded"):
         return "partial_complete"
     if is_chapter_analysis_complete(session, run):
