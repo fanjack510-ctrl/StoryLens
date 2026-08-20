@@ -131,6 +131,12 @@ export function BookRoutePage() {
   const [budgetModalOpen, setBudgetModalOpen] = useState(false);
   /** CHG-023: HTTP click-lock only — must not drive page view / sidebar / progress card. */
   const [journeyResumePending, setJourneyResumePending] = useState(false);
+  /** What the server said stopped the journey. The recover response was being awaited and
+   *  discarded, so a run blocked by COST_BUDGET_INSUFFICIENT — with `今日费用预算不足` and a
+   *  `settings_focus` already in the payload — showed the reader an empty page instead. */
+  const [journeyBlockers, setJourneyBlockers] = useState<
+    Array<{ code?: string; user_message?: string; settings_focus?: string | null }>
+  >([]);
   const journeyResumeInFlightRef = useRef(false);
   const [budgetModalRunId, setBudgetModalRunId] = useState<number | null>(null);
   /** In-memory only: survives polling, clears on full page refresh/remount. */
@@ -189,8 +195,33 @@ export function BookRoutePage() {
 
   // Do not auto-write analysisRun into the URL. Library Open and chapter switches stay on
   // reading; historical/in-flight runs only surface when explicitly bound (deep link / start).
+  //
+  // One exception, and it is not a violation of that rule: asking for `view=result` *is* the
+  // explicit request. Without this the result view rendered the shell and nothing else — 30
+  // characters of toolbar over an empty page — for a chapter that had five scenes and five
+  // scene_analysis artifacts sitting in the database, because the body is gated on
+  // `analysisRunId` and nothing ever supplied one. Reading stays untouched; only an explicit
+  // result request resolves a run, and only from this chapter's own finished runs.
+  const latestChapterResultRun = useMemo(() => {
+    if (chapterId == null) return null;
+    const rows = recentRuns.data || [];
+    const mine = rows.filter(
+      (r) =>
+        r.task_type === "scene_pipeline" &&
+        r.subject_type === "chapter" &&
+        String(r.subject_id) === String(chapterId) &&
+        r.status === "succeeded",
+    );
+    if (!mine.length) return null;
+    return mine.reduce((best, r) => (r.id > best.id ? r : best), mine[0]);
+  }, [chapterId, recentRuns.data]);
 
-  const analysisRunId = analysisRunFromUrl;
+  // Read straight from the URL rather than the resolved `view`, which is derived later —
+  // and the URL is the right source anyway: what matters is that the reader asked for the
+  // result, not what the page settled on showing.
+  const analysisRunId =
+    analysisRunFromUrl ??
+    (searchParams.get("view") === "result" ? latestChapterResultRun?.id ?? null : null);
 
   // Returning from the profile gate re-opens the dialog it interrupted, so the user
   // resumes the thing they asked for instead of having to find it again. The flag is
@@ -1325,13 +1356,18 @@ export function BookRoutePage() {
       setJourneyResumePending(true);
       void (async () => {
         try {
-          await analysisRecoveryApi.recover(progress.run!.id, {
+          const outcome = await analysisRecoveryApi.recover(progress.run!.id, {
             client_request_id: getOrCreateJourneyClientRequestId(requestRunId),
             cloud_consent: true,
             confirmed: true,
             recovery_mode: "unified",
             resume: true,
           });
+          // A 202 with blockers is not a success. AWAITING_READER_JOURNEY only says the
+          // journey has not produced anything yet; anything else is the reason it cannot.
+          setJourneyBlockers(
+            (outcome?.blockers || []).filter((b) => b?.code !== "AWAITING_READER_JOURNEY"),
+          );
         } finally {
           journeyResumeInFlightRef.current = false;
           setJourneyResumePending(false);
@@ -2068,6 +2104,61 @@ export function BookRoutePage() {
                         testId: gate.primaryTestId,
                         onClick: () => openSceneBoundaryReview(),
                       }}
+                    />
+                  );
+                })()}
+                {(() => {
+                  // Last resort. Every branch above is conditional and CHG-017 deliberately
+                  // suppresses a 「尚未开始」 page, trusting a redirect to move the reader on.
+                  // When no redirect fires and no branch matches, what is left is a blank
+                  // page — which is what 《长安的荔枝》 showed after its scenes were analysed:
+                  // fourteen scenes done, journey never started, nothing on screen and no way
+                  // to act. A page that states the position is strictly better than one that
+                  // states nothing.
+                  const somethingElseRendered =
+                    showJourneyActive ||
+                    showJourneyResult ||
+                    showJourneyInterrupted ||
+                    showJourneyTerminalFailed ||
+                    (showJourneyAwaiting &&
+                      progress.run &&
+                      chapterPresentation.show_recovery_card);
+                  const redirecting =
+                    chapterPresentation.redirect_journey_to_confirm ||
+                    chapterPresentation.redirect_journey_to_progress;
+                  if (activeTab !== "journey" || somethingElseRendered || redirecting) {
+                    return null;
+                  }
+                  const blocker = journeyBlockers[0];
+                  return (
+                    <StateView
+                      kind={blocker ? "error" : "empty"}
+                      data-testid="reader-journey-not-started"
+                      title={blocker ? "阅读旅程无法开始" : "阅读旅程尚未生成"}
+                      description={
+                        blocker?.user_message ||
+                        "本章的场景分析已经完成，阅读旅程还没有生成过。生成它不会重新分析场景。"
+                      }
+                      primaryAction={
+                        progress.run
+                          ? {
+                              label: journeyResumePending ? "正在开始…" : "生成阅读旅程",
+                              testId: "reader-journey-not-started-start",
+                              disabled:
+                                journeyResumePending || journeyResumeInFlightRef.current,
+                              onClick: resumeJourneyAnalysis,
+                            }
+                          : undefined
+                      }
+                      secondaryAction={
+                        blocker?.settings_focus
+                          ? {
+                              label: "去设置",
+                              testId: "reader-journey-not-started-settings",
+                              onClick: () => navigate("/settings"),
+                            }
+                          : undefined
+                      }
                     />
                   );
                 })()}
