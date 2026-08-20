@@ -202,8 +202,10 @@ export function LibraryPage() {
           data-testid="import-panel-error"
           role="alert"
         >
-          <h2>{importErrorKind(preview.error).title}</h2>
-          <ErrorState error={preview.error as Error} />
+          <ErrorState
+            error={preview.error as Error}
+            title={importErrorKind(preview.error).title}
+          />
           <div className="import-panel-actions">
             <Button variant="secondary" onClick={clearImport}>
               重新选择文件

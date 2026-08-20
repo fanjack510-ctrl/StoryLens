@@ -21,14 +21,20 @@ export const ErrorState = ({
   error,
   retry,
   classifyTaskErrors = false,
+  title: titleOverride,
 }: {
   error: Error;
   retry?: () => void;
   /** When true, 422/5xx keep business copy instead of "local service offline". */
   classifyTaskErrors?: boolean;
+  /** A caller that already knows what went wrong supplies the heading. Without this the
+   *  import panel printed its own title and then this component's generic one right under
+   *  it, so a duplicate import read 「书籍可能已存在 / 无法读取数据 / 该文件已导入」 — a true
+   *  heading, a meaningless one, and the real message. */
+  title?: string;
 }) => {
   const mapped = classifyTaskErrors ? mapTaskCenterError(error) : null;
-  const title = mapped?.title || "无法读取数据";
+  const title = titleOverride || mapped?.title || "无法读取数据";
   const description = mapped?.message || error.message;
   const requestId =
     mapped?.requestId ||

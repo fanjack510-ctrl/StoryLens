@@ -190,13 +190,27 @@ def prepare_free_whole_book_analysis_v1(
             f"当前服务商 {active_name} 尚未配置，无法准备全书分析",
         )
     # CHG-081: formal V2 start + reanalysis share Hierarchical planners (not legacy Free).
-    estimate, hier_plan = estimate_hierarchical_whole_book_analysis_v1(
-        session,
-        book_id,
-        WholeBookMode.whole_book_native.value,
-        provider.id,
-        provider_name=str(provider.provider_name or ""),
-    )
+    try:
+        estimate, hier_plan = estimate_hierarchical_whole_book_analysis_v1(
+            session,
+            book_id,
+            WholeBookMode.whole_book_native.value,
+            provider.id,
+            provider_name=str(provider.provider_name or ""),
+        )
+    except ValueError as exc:
+        # The planner fails closed on a chapter too big for one window, with a bare ValueError.
+        # Left alone it became a 500, and the workspace reported it as the local service being
+        # unavailable — which sends the reader to restart something that is running fine. The
+        # real cause is upstream of the analysis entirely: the chapters were never split.
+        if "single chapter exceeds safe context capacity" not in str(exc):
+            raise
+        raise WholeBookFoundationError(
+            WholeBookFoundationErrorCode.WHOLE_BOOK_CHAPTER_TOO_LARGE,
+            "这本书有单独一章超出了一次分析能读的长度，通常是章节没有被正确切分。"
+            "请用「重新识别章节」检查分章，或换一个能识别章号的文件重新导入。",
+            details={"planner_message": str(exc)},
+        ) from exc
     latest = _latest_run_for_book(session, book_id)
     recoverable = _recoverable_run(session, book_id)
     snap_result = create_or_reuse_book_snapshot_v1(session, book_id)

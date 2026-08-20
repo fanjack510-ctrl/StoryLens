@@ -46,6 +46,13 @@ class WholeBookFoundationErrorCode(StrEnum):
     WHOLE_BOOK_FREE_PRODUCT_DISABLED = "WHOLE_BOOK_FREE_PRODUCT_DISABLED"
     WHOLE_BOOK_NATIVE_INPUT_CONTAMINATED = "WHOLE_BOOK_NATIVE_INPUT_CONTAMINATED"
     WHOLE_BOOK_FIXTURE_PREVIEW_DISABLED = "WHOLE_BOOK_FIXTURE_PREVIEW_DISABLED"
+    #: A single chapter is larger than one window can hold, so the book cannot be planned at
+    #: all. Almost always a chapter-splitting failure rather than a genuinely huge chapter:
+    #: 《穿越之种田难为》 arrived as 2 chapters holding 390,000 characters. It needs its own
+    #: code because the planner raised a bare ValueError, which surfaced as a 500 and was
+    #: reported to the reader as 「本地分析服务暂时不可用」 — sending them to restart a service
+    #: that was never down, instead of to the file that was never split.
+    WHOLE_BOOK_CHAPTER_TOO_LARGE = "WHOLE_BOOK_CHAPTER_TOO_LARGE"
 
 
 class WholeBookFoundationError(Exception):
