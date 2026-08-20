@@ -17,7 +17,9 @@ export type JourneyResult={availability:Availability;axis:JourneyAxis;axis_label
 export type WholeBookAnalysisV2={
  schema_version:"whole-book-analysis-v2.0";
  book_metadata:{book_id:number;snapshot_id:number;revision_hash:string;title:string;chapter_count:number;character_count:number};
- type_profile:{primary_genre:string;secondary_genres:string[];narrative_drivers:string[];narrative_traits:string[];genre_confidence:number;analysis_focus:string[];genre_expectations?:string[];evidence:string[]};
+ /** `confirmed_axes` is attached at read time from the book's confirmed profile, so it is
+  * absent on documents fetched from an older sidecar. Labels come from the backend. */
+ type_profile:{primary_genre:string;secondary_genres:string[];narrative_drivers:string[];narrative_traits:string[];genre_confidence:number;analysis_focus:string[];genre_expectations?:string[];evidence:string[];confirmed_axes?:Array<{axis:string;title:string;label:string;source?:string}>};
  overview:{one_sentence_story:string;full_summary:string;protagonist:string;initial_state:string;final_state:string;core_goal:string;goal_evolution:string[];core_conflict:string;conflict_evolution:string[];core_question:string;major_storylines:string[];major_turning_points:Array<{chapter_start:number;chapter_end:number;title:string;description:string;evidence:string[]}>;major_suspense:string[];final_climax:string;ending_resolution:string[];ending_open_questions:string[];story_skeleton:string[];evidence:string[]};
  story:{availability:Availability;structure_stages:Array<{stage_id:string;chapter_start:number;chapter_end:number;title:string;summary:string;stage_goal:string;core_conflict:string;major_choice:string;cost_paid:string[];gain_received:string[];evidence:string[];
   /* Sent by the engine since the stage interpreter landed; declared optional so documents

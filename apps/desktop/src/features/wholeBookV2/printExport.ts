@@ -39,24 +39,20 @@
  * skip the furniture and find the sentences.
  */
 import type { WholeBookAnalysisV2 } from "./contracts";
-import { DIMENSION_LABELS, PACING_SCALE_NOTE } from "./presentation/labels";
+import { DIMENSION_LABELS, PACING_SCALE_NOTE, saidNothing } from "./presentation/labels";
 
 const esc = (s: unknown): string =>
   String(s ?? "").replace(/[&<>"']/g, (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[c]!,
   );
 
-/** Placeholders a model returns when it has nothing to say. They are not values.
+/** A field's usable text, or "" when there is nothing usable in it.
  *
- *  Run 18 of 《系统豪横》 returned the literal string `unknown` for twelve of its twenty-two
- *  characters' relationship to the protagonist, and the report printed twelve rows of it. A
- *  reader cannot act on `unknown`, cannot check it, and cannot tell it apart from a bug. */
-const PLACEHOLDER = /^(unknown|未知|不详|待定|n\/?a|null|none|nan|无|-{1,2}|—|\.+)$/i;
-
-/** A field's usable text, or "" when there is nothing usable in it. */
+ *  The placeholder rule itself lives in ./presentation/labels so the screen, the HTML
+ *  export and this one cannot disagree about what counts as an answer. */
 const val = (s: unknown): string => {
   const t = String(s ?? "").trim();
-  return t && !PLACEHOLDER.test(t) ? t : "";
+  return saidNothing(t) ? "" : t;
 };
 
 const rng = (a: number, b: number): string => (a === b ? `第 ${a} 章` : `第 ${a}–${b} 章`);

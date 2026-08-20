@@ -25,6 +25,21 @@ describe("结构化报告导出", () => {
     }
   });
 
+  // 模型答不上来时写下的 `unknown`，在 PDF 那一侧早就挡住了，屏幕和这份 HTML 没有。
+  // 一份真实报告里有 13 处。
+  it("模型没答上来的字段不印占位词", () => {
+    const d = structuredClone(buildMockWholeBookAnalysisV2());
+    d.characters.major_characters = [
+      { ...d.characters.major_characters[0], relationship_to_protagonist: "unknown" },
+      { ...d.characters.major_characters[0], name: "乙", relationship_to_protagonist: "未知" },
+    ] as never;
+    const out = buildReportHtml(d, new Date("2026-08-15T12:00:00"));
+    const body = out.slice(0, out.indexOf('<script id="raw-data"'));
+    expect(body).not.toContain("unknown");
+    expect(body).not.toContain("未知");
+    expect(body).not.toContain("与主角的关系");
+  });
+
   it("内嵌 JSON 能取回并等于原始数据", () => {
     const m = /<script id="raw-data" type="application\/json">([\s\S]*?)<\/script>/.exec(html);
     expect(m).not.toBeNull();

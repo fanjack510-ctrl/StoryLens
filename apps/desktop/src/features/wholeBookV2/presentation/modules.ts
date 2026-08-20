@@ -67,17 +67,37 @@ export const MODULE_DESCRIPTIONS: Record<ModuleKey, string> = Object.fromEntries
 /** Which modules a reading actually fills.
  *
  *  拆文 and 评测 share the extraction layers, so 故事 / 人物 / 悬念 / 节奏 / 章节 come out of
- *  both. What differs is the top: 评测 produces 全书总览 and 综合诊断; 拆文 produces its own
- *  section and leaves those two almost entirely empty — `overview` at 5 of 19 fields and
- *  `assessment` at 1 of 9 on a real run.
+ *  both. What differs is the top: 评测 produces 全书总览 and 综合诊断, 拆文 produces its own
+ *  section — and a run often produces only some of the three.
  *
- *  Showing every module regardless of mode is how a 拆文 run came to display two blank pages
- *  while the section it had actually filled had nowhere to appear at all.
+ *  Showing all of them regardless is how a 拆文 run came to display two blank pages while the
+ *  section it had actually filled had nowhere to appear at all. The test is content, not
+ *  mode: a 拆文 run that did write an overview keeps its 全书总览 tab, because the reason to
+ *  hide a tab is that it is empty, not that the run was of the other kind.
+ *
+ *  `module_availability` cannot answer this — real documents omit these three keys entirely.
  */
-export function modulesForDocument(hasBreakdown: boolean): typeof MODULES {
-  return MODULES.filter((m) => {
-    if (m.key === "story_breakdown") return hasBreakdown;
-    if (m.key === "overview" || m.key === "assessment") return !hasBreakdown;
-    return true;
-  });
+export function modulesForDocument(doc: DocumentContent): typeof MODULES {
+  const has = {
+    story_breakdown: Boolean(doc?.story_breakdown?.four_beats?.length),
+    overview: Boolean(
+      (doc?.overview?.one_sentence_story || "").trim() ||
+        (doc?.overview?.full_summary || "").trim(),
+    ),
+    assessment: Boolean(
+      (doc?.assessment?.overall_summary || "").trim() || doc?.assessment?.issues?.length,
+    ),
+  };
+  return MODULES.filter((m) =>
+    m.key === "story_breakdown" || m.key === "overview" || m.key === "assessment"
+      ? has[m.key]
+      : true,
+  );
 }
+
+/** The parts of a report document that decide which modules are worth a tab. */
+export type DocumentContent = {
+  story_breakdown?: { four_beats?: unknown[] } | null;
+  overview?: { one_sentence_story?: string; full_summary?: string } | null;
+  assessment?: { overall_summary?: string; issues?: unknown[] } | null;
+} | null;

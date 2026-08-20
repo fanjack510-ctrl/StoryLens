@@ -74,7 +74,7 @@ def product_flags_for_result(result: WholeBookAnalysisV2) -> dict[str, Any]:
     }
 
 
-def enrich_v2_payload(result: WholeBookAnalysisV2) -> dict[str, Any]:
+def enrich_v2_payload(result: WholeBookAnalysisV2, session: Any | None = None) -> dict[str, Any]:
     payload = result.model_dump(mode="json")
     flags = product_flags_for_result(result)
     # Backfill origin for older persisted results without rewriting DB.
@@ -82,4 +82,36 @@ def enrich_v2_payload(result: WholeBookAnalysisV2) -> dict[str, Any]:
     if not meta.get("result_origin") or meta.get("result_origin") == "unknown":
         meta["result_origin"] = flags["result_origin"]
     payload["product_flags"] = flags
+    _attach_confirmed_axes(payload, session)
     return payload
+
+
+def _attach_confirmed_axes(payload: dict[str, Any], session: Any | None) -> None:
+    """Put the confirmed profile on the document at read time.
+
+    The report's 作品画像 card printed 主类型 and three cells — 副类型, 核心叙事驱动力,
+    重点分析方向 — that nothing on the long-novel engine fills; every book showed one value
+    and three blanks. What a person actually confirmed about the book is the five axes, and
+    they live on the book, not in the run's document.
+
+    Done here rather than at write time so books analysed before this change get it too:
+    rewriting stored documents to fix a display would be a migration, and this is not one.
+    Any failure is swallowed — an enrichment must never take the report down with it.
+    """
+    if session is None:
+        return
+    try:
+        from app.narrative_core.long_novel.contracts.profile import confirmed_axis_rows
+        from app.narrative_core.long_novel.profile_repository import BookProfileRepository
+
+        book_id = int((payload.get("book_metadata") or {}).get("book_id") or 0)
+        if book_id <= 0:
+            return
+        stored = BookProfileRepository(session).get(book_id) or {}
+        if str(stored.get("status") or "") != "confirmed":
+            return
+        rows = confirmed_axis_rows(stored.get("axes") or {})
+        if rows:
+            payload.setdefault("type_profile", {})["confirmed_axes"] = rows
+    except Exception:  # noqa: BLE001 — an enrichment must never take the report down
+        return

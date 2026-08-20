@@ -21,6 +21,7 @@ import {
   ROLE_LABEL,
   SUSPENSE_BEATS,
   DIMENSION_LABELS,
+  saidNothing,
 } from "./presentation/labels";
 
 const esc = (x: unknown): string =>
@@ -181,8 +182,13 @@ const list = (xs: readonly string[] | undefined, empty = "—"): string =>
 const evd = (ids: readonly string[] | undefined): string =>
   ids && ids.length ? `<p class="evd">证据 ${ids.map((i) => `<code>${esc(i)}</code>`).join(" ")}</p>` : "";
 
+// Same rule the on-screen report follows: a placeholder the model left behind
+// (`unknown`, `未知`) is not an answer, so the row is dropped rather than printed.
+// The exported HTML carried 13 of these before this guard existed.
 const row = (k: string, v: string | undefined | null): string =>
-  v && String(v).trim() ? `<tr><th>${esc(k)}</th><td>${esc(v)}</td></tr>` : "";
+  v && String(v).trim() && !saidNothing(v)
+    ? `<tr><th>${esc(k)}</th><td>${esc(v)}</td></tr>`
+    : "";
 
 const rng = (a: number, b: number): string => (a === b ? `第 ${a} 章` : `第 ${a}–${b} 章`);
 
@@ -626,7 +632,7 @@ export function buildReportHtml(d: WholeBookAnalysisV2, generatedAt: Date = new 
       ${row("章节 / 字数", `${meta.chapter_count.toLocaleString()} 章 / ${meta.character_count.toLocaleString()} 字`)}
       ${row("作品画像", `${d.type_profile.primary_genre}${d.type_profile.secondary_genres.length ? "（" + d.type_profile.secondary_genres.join("、") + "）" : ""}`)}
       ${row("分析引擎", `${am.provider_name} / ${am.model_name}${am.pipeline_version ? ` · ${am.pipeline_version}` : ""}`)}
-      ${row("结果来源", `${am.result_origin ?? "unknown"} · run ${am.run_id} · 真实调用 ${am.real_provider_calls} 次`)}
+      ${row("结果来源", `${am.result_origin && !saidNothing(am.result_origin) ? am.result_origin + " · " : ""}run ${am.run_id} · 真实调用 ${am.real_provider_calls} 次`)}
       ${row("数据版本", `${d.schema_version} · snapshot ${meta.snapshot_id} · ${meta.revision_hash.slice(0, 12)}`)}
       ${row("导出时间", generatedAt.toLocaleString("zh-CN"))}
     </table>

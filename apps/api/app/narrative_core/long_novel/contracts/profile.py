@@ -16,16 +16,20 @@ than by code.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from enum import Enum
+from typing import Any
 
 __all__ = [
-    "Monetization",
-    "Audience",
-    "NarrativeEngine",
-    "PointOfView",
-    "BookLength",
     "AXES",
     "AXIS_LABELS",
+    "AXIS_TITLES",
+    "Audience",
+    "BookLength",
+    "Monetization",
+    "NarrativeEngine",
+    "PointOfView",
+    "confirmed_axis_rows",
     "is_legal",
 ]
 
@@ -128,6 +132,44 @@ AXIS_LABELS: dict[str, dict[str, str]] = {
     },
 }
 
+
+#: What each axis is called when the report shows the confirmed profile back to the reader.
+#: Kept here beside AXIS_LABELS so the axis name and its values cannot drift apart, and so
+#: presentation stays on the backend (INV-P4) — the client renders these strings, it does
+#: not own a second copy of them.
+AXIS_TITLES: dict[str, str] = {
+    "monetization": "变现模式",
+    "audience": "读者向",
+    "engine": "叙事引擎",
+    "pov": "视角结构",
+    "length": "网文分级",
+}
+
+
+def confirmed_axis_rows(axes: Mapping[str, Any] | None) -> list[dict[str, str]]:
+    """The confirmed profile as label/value pairs a report can print.
+
+    The report card used to show 主类型 plus three cells — 副类型, 核心叙事驱动力,
+    重点分析方向 — that nothing on the long-novel engine fills, so readers of every book
+    saw one value and three blanks. The five axes are what a person actually confirmed
+    about the book, and they are the thing worth showing there.
+
+    Axes with no value, or a value the engine cannot dispatch on, are omitted rather than
+    printed raw: an English enum on the page is not an answer, it is a leak.
+    """
+    rows: list[dict[str, str]] = []
+    for axis in AXES:
+        raw = (axes or {}).get(axis)
+        value = str((raw or {}).get("value") if isinstance(raw, Mapping) else (raw or "")).strip()
+        if not value or not is_legal(axis, value):
+            continue
+        rows.append({
+            "axis": axis,
+            "title": AXIS_TITLES.get(axis, axis),
+            "label": AXIS_LABELS.get(axis, {}).get(value, value),
+            "source": str((raw or {}).get("source") or "") if isinstance(raw, Mapping) else "",
+        })
+    return rows
 
 def is_legal(axis: str, value: str) -> bool:
     """Is this a value the engine can dispatch on?

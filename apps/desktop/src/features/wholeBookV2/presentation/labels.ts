@@ -98,3 +98,19 @@ export const CATEGORY_ROW: Record<string, string> = {
   pacing: "节奏",
   chapter_efficiency: "章节效率",
 };
+
+/** 模型没答上来时留下的占位词。它们不是值。
+ *
+ *  《系统豪横》第 18 次运行里，二十二个人物有十二个的「与主角的关系」是字面量 `unknown`，
+ *  报告照印十二行。读者拿 `unknown` 做不了任何事，核不了，也分不清它和一个 bug 的区别。
+ *
+ *  同样的词也出现在屏幕上的人物档案里（十二人中六人），因为这条规则原先只写在 PDF 导出
+ *  那一侧。现在放在这里，屏幕、HTML 导出、PDF 三处共用一份定义。
+ */
+const PLACEHOLDER = /^(unknown|unspecified|未知|不详|不明|待定|暂无|n\/?a|null|none|nan|无|-{1,2}|—|\.+)$/i;
+
+/** True when the value is a placeholder rather than something the book actually says. */
+export function saidNothing(value: unknown): boolean {
+  const text = String(value ?? "").trim();
+  return !text || PLACEHOLDER.test(text);
+}

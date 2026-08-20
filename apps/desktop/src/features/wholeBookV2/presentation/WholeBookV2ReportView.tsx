@@ -13,6 +13,7 @@ import {
   STORYLINE_STATUS,
   JOURNEY_TAB,
   ROLE_LABEL,
+  saidNothing,
   SUSPENSE_BEATS,
   DIMENSION_LABELS,
   CATEGORY_ROW,
@@ -92,6 +93,67 @@ const CORE_QUESTIONS = (ov: WholeBookAnalysisV2["overview"]) =>
     { key: "最终高潮", answer: ov.final_climax, history: [] as string[] },
   ].filter((row) => row.answer);
 
+/** 作品画像 card.
+ *
+ *  This used to be four fixed cells: 主类型 and three lists — 副类型, 核心叙事驱动力,
+ *  重点分析方向 — that nothing on the long-novel engine fills. Every book showed one value
+ *  and three blanks, which reads as "the analysis failed" rather than "no one asks this
+ *  question any more".
+ *
+ *  What a person actually confirmed about the book is the five axes, and the backend now
+ *  attaches them (with their labels — the client never names an axis value itself). The old
+ *  cells are still drawn when a document has them, so a report from the other engine does
+ *  not lose anything; cells with nothing in them are dropped, the same rule the character
+ *  cards follow.
+ */
+function ProfileCells({ profile: tp }: { profile: WholeBookAnalysisV2["type_profile"] }) {
+  const cells: Array<{ k: string; v: ReactNode; text: string }> = [
+    { k: "主类型", v: tp.primary_genre, text: tp.primary_genre ?? "" },
+    ...(tp.confirmed_axes ?? []).map((a) => ({ k: a.title, v: a.label, text: a.label })),
+    {
+      k: "副类型",
+      v: tp.secondary_genres.join(" · "),
+      text: tp.secondary_genres.join(""),
+    },
+    {
+      k: "核心叙事驱动力",
+      v: tp.narrative_drivers.join(" · "),
+      text: tp.narrative_drivers.join(""),
+    },
+    {
+      k: "重点分析方向",
+      v: (
+        <ul>
+          {tp.analysis_focus.map((x) => (
+            <li key={x}>{x}</li>
+          ))}
+        </ul>
+      ),
+      text: tp.analysis_focus.join(""),
+    },
+  ];
+  // 主类型 is derived from the confirmed axes, so on a book with a confirmed profile it
+  // repeats 叙事引擎 word for word. Two cells saying 升级流 is not two facts.
+  const seen = new Set<string>();
+  const shown = cells.filter((c) => {
+    const text = c.text.trim();
+    if (!text || saidNothing(text) || seen.has(text)) return false;
+    seen.add(text);
+    return true;
+  });
+  if (!shown.length) return null;
+  return (
+    <div className="wb2-profile-grid" data-cells={shown.length}>
+      {shown.map((c) => (
+        <div key={c.k}>
+          <small>{c.k}</small>
+          {typeof c.v === "string" ? <strong>{c.v}</strong> : c.v}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /** 总览 — four blocks.
  *
  *  It was nine, holding five distinct facts: the core goal was stated in 故事核心 and again in
@@ -113,28 +175,7 @@ function OverviewModule({ data }: { data: WholeBookAnalysisV2 }) {
           <h2>这是一部怎样的小说？</h2>
           <p>{ov.one_sentence_story}</p>
         </div>
-        <div className="wb2-profile-grid">
-          <div>
-            <small>主类型</small>
-            <strong>{tp.primary_genre || "—"}</strong>
-          </div>
-          <div>
-            <small>副类型</small>
-            <strong>{tp.secondary_genres.join(" · ") || "—"}</strong>
-          </div>
-          <div>
-            <small>核心叙事驱动力</small>
-            <strong>{tp.narrative_drivers.join(" · ") || "—"}</strong>
-          </div>
-          <div>
-            <small>重点分析方向</small>
-            <ul>
-              {tp.analysis_focus.map((x) => (
-                <li key={x}>{x}</li>
-              ))}
-            </ul>
-          </div>
-        </div>
+        <ProfileCells profile={tp} />
       </section>
 
       <section className="wb2-soft-section is-core">
@@ -999,7 +1040,7 @@ function CharacterProfile({
     { k: "关系变化", v: (c.relationship_changes ?? []).join(" → "), text: (c.relationship_changes ?? []).join("") },
     { k: "结局", v: c.ending, text: c.ending ?? "" },
   ];
-  const shown = facts.filter((f) => f.text.trim().length > 0);
+  const shown = facts.filter((f) => f.text.trim().length > 0 && !saidNothing(f.text));
   const events = c.key_events ?? [];
 
   return (
@@ -2254,12 +2295,11 @@ export function WholeBookV2ReportView({
 }: WholeBookV2ReportViewProps) {
   const meta = data.book_metadata;
   const tp = data.type_profile;
-  // Which modules this document actually filled. A 拆文 document has `story_breakdown` and
-  // leaves 全书总览 / 综合诊断 nearly empty; a diagnostic one is the other way round. Listing
-  // all seven regardless is how a 拆文 run showed two blank pages and hid the one section it
-  // had filled.
-  const hasBreakdown = Boolean(data.story_breakdown?.four_beats?.length);
-  const modules = modulesForDocument(hasBreakdown);
+  // Which modules this document actually filled — by content, not by which reading was run.
+  // Listing all seven regardless is how a 拆文 run showed two blank pages and hid the one
+  // section it had filled; keying off the mode instead would hide a 全书总览 that a 拆文 run
+  // did write.
+  const modules = modulesForDocument(data);
   const activeLabel = modules.find((m) => m.key === activeModule)?.label ?? activeModule;
 
   // A module the current document has no page for — a deep link, or a mode switch under a

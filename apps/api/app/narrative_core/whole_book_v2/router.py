@@ -18,7 +18,7 @@ def missing()->HTTPException:return HTTPException(status_code=404,detail={"error
 def get_v2(run_id:int,r:WholeBookV2Repository=Depends(repo))->dict[str,Any]:
     result=r.load_result(run_id)
     if result is None: raise missing()
-    return enrich_v2_payload(result)
+    return enrich_v2_payload(result,r.session)
 @router.get("/{run_id}/v2/modules/{module}")
 def get_v2_module(run_id:int,module:str,cursor:int=Query(0,ge=0),limit:int=Query(100,ge=1,le=500),r:WholeBookV2Repository=Depends(repo))->dict[str,Any]:
     if module not in MODULES: raise HTTPException(status_code=404,detail={"error_code":"WHOLE_BOOK_V2_MODULE_NOT_FOUND","message":"没有这个分析模块。","details":{"module":module}})
