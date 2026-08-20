@@ -83,6 +83,11 @@ export type ShortFormPrepare = {
   analysis_form: AnalysisForm | "";
   /** What the old length/chapter inference says — the default the panel offers. */
   suggested_form: AnalysisForm;
+  /** Whether 短篇 may be chosen at all. Above the ceiling the server refuses it, so the UI
+   *  must not offer it — segmentation sends the whole piece in one call and would spend the
+   *  run's most expensive call before failing on context length. */
+  short_form_allowed: boolean;
+  hard_max_chars: number;
   segmentation: SegmentationEstimate;
   thresholds: { max_chars: number; soft_max_chars: number; max_chapters: number };
   genres: string[];

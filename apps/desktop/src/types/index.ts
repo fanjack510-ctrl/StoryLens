@@ -54,6 +54,10 @@ export type ImportDiagnostics = {
    *  home. The import panel offers it as the default answer; the reader overrides it with one
    *  click and their answer is what gets stored. */
   suggested_analysis_form?: "short" | "long";
+  /** Whether 短篇 may be picked for this file at all. False above the length ceiling, where
+   *  segmentation cannot fit the whole piece into one call. */
+  short_form_allowed?: boolean;
+  hard_max_chars?: number;
 };
 export type Scene = {
   id: number;

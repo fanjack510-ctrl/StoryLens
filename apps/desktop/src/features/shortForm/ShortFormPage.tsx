@@ -245,18 +245,35 @@ export function ShortFormPage() {
       <header>
         <p className="sf-kicker">短篇精读</p>
         <h1>{data.book_title}</h1>
-        <AnalysisFormSwitch bookId={bookId} on="short" />
+        <AnalysisFormSwitch bookId={bookId} />
       </header>
 
       {!data.is_short_form ? (
         <section className="sf-panel" data-testid="short-form-unavailable">
-          <p>
-            <b>这本书按长篇读，所以走全书分析。</b>
-          </p>
-          <p className="sf-muted">
-            {data.chapter_count} 章、{data.character_count.toLocaleString()} 字。
-            章数不参与这个判断——上面那行可以随时改。
-          </p>
+          {data.short_form_allowed !== false ? (
+            <>
+              <p>
+                <b>这本书按长篇读，所以走全书分析。</b>
+              </p>
+              <p className="sf-muted">
+                {data.chapter_count} 章、{data.character_count.toLocaleString()} 字。
+                章数不参与这个判断——上面那行可以随时改。
+              </p>
+            </>
+          ) : (
+            <>
+              <p>
+                <b>
+                  这本书超过 {(data.hard_max_chars ?? 150_000).toLocaleString()} 字，不能按短篇读。
+                </b>
+              </p>
+              <p className="sf-muted">
+                {data.chapter_count} 章、{data.character_count.toLocaleString()} 字。
+                切段要把全文一次发给模型，超过这个长度就装不下——这一条改不了，
+                不是偏好问题。
+              </p>
+            </>
+          )}
           <p>
             <Link to={`/books/${bookId}/whole-book`}>去全书分析 →</Link>
           </p>

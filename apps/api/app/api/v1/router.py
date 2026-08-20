@@ -55,6 +55,14 @@ async def upload_book(
         book = import_book(session, filename, await file.read())
         chosen = str(analysis_form or "").strip()
         if chosen in ("short", "long"):
+            # A `short` above the ceiling is dropped rather than stored, and the import still
+            # succeeds: the panel disables that option already, so this only catches a client
+            # that ignored it, and failing a whole import over it would lose the file for
+            # nothing. The book lands on 长篇, which is the only reading that can actually run.
+            from app.narrative_core.short_form.dispatch import book_short_form_allowed
+
+            if chosen == "short" and not book_short_form_allowed(session, book.id):
+                chosen = "long"
             book.analysis_form = chosen
             session.commit()
     except InvalidFileTypeError as exc:

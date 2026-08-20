@@ -5,7 +5,11 @@ from pathlib import Path
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
-from app.narrative_core.short_form.dispatch import is_short_form
+from app.narrative_core.short_form.dispatch import (
+    SHORT_FORM_HARD_MAX_CHARS,
+    is_short_form,
+    short_form_allowed,
+)
 from app.db.models import AnalysisRun, Book, Chapter, Paragraph, ReparseAudit
 from app.domain.ingestion import (
     DOMINANT_CHAPTER_SHARE,
@@ -94,6 +98,10 @@ def _diagnostics(document: ExtractedDocument, detection: ChapterDetection) -> di
             if is_short_form(character_count=total_chars, chapter_count=len(chapters))
             else "long"
         ),
+        # Whether 短篇 may be picked for this file at all, decided before it is imported so
+        # the panel never offers an option the import would drop.
+        "short_form_allowed": short_form_allowed(total_chars),
+        "hard_max_chars": SHORT_FORM_HARD_MAX_CHARS,
         "warning": "CHAPTER_DETECTION_SUSPECT" if suspect else None,
         "suspect_reasons": suspect_reasons,
         "max_chapter_share": round(dominant_share, 4),

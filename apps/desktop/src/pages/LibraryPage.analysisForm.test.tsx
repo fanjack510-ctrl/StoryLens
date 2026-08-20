@@ -33,7 +33,11 @@ function renderLibrary() {
   );
 }
 
-async function dropFile(suggested: "short" | "long", chapters: number) {
+async function dropFile(
+  suggested: "short" | "long",
+  chapters: number,
+  shortFormAllowed = true,
+) {
   preview.mockResolvedValue({
     encoding: "utf-8",
     byte_count: 1000,
@@ -42,6 +46,8 @@ async function dropFile(suggested: "short" | "long", chapters: number) {
     chapter_titles: [],
     warning: null,
     suggested_analysis_form: suggested,
+    short_form_allowed: shortFormAllowed,
+    hard_max_chars: 150000,
   });
   importFile.mockResolvedValue({ book_id: 1 });
   renderLibrary();
@@ -106,5 +112,25 @@ describe("导入时选长篇还是短篇", () => {
     await screen.findByTestId("import-panel");
     const long = screen.getByRole("radio", { name: /长篇/ }) as HTMLInputElement;
     expect(long.checked).toBe(true);
+  });
+
+  it("超过上限时短篇被禁用，并就地说明为什么", async () => {
+    // The ceiling is not a preference: segmentation sends the whole piece in one call, so past
+    // it there is no reading to be had. Shown disabled rather than removed — an option that
+    // vanishes between one file and the next reads as a bug, not as a rule.
+    await dropFile("long", 2, false);
+    const short = screen.getByRole("radio", { name: /短篇/ }) as HTMLInputElement;
+    expect(short.disabled).toBe(true);
+    expect(short.checked).toBe(false);
+    expect(screen.getByText(/超过 150,000 字，切段装不下/)).toBeTruthy();
+    const long = screen.getByRole("radio", { name: /长篇/ }) as HTMLInputElement;
+    expect(long.disabled).toBe(false);
+    expect(long.checked).toBe(true);
+  });
+
+  it("上限之内两项都可选", async () => {
+    await dropFile("short", 3, true);
+    expect((screen.getByRole("radio", { name: /短篇/ }) as HTMLInputElement).disabled).toBe(false);
+    expect((screen.getByRole("radio", { name: /长篇/ }) as HTMLInputElement).disabled).toBe(false);
   });
 });

@@ -106,7 +106,12 @@ export function LibraryPage() {
   });
   const preview = useMutation({
     mutationFn: booksApi.preview,
-    onSuccess: (data) => setForm(data.suggested_analysis_form === "short" ? "short" : "long"),
+    onSuccess: (data) =>
+      setForm(
+        data.suggested_analysis_form === "short" && data.short_form_allowed !== false
+          ? "short"
+          : "long",
+      ),
   });
   const accept = (files: FileList | null) => {
     const file = files?.[0];
@@ -266,22 +271,36 @@ export function LibraryPage() {
                   { value: "long", title: "长篇", hint: "分章读，出全书报告" },
                   { value: "short", title: "短篇", hint: "按场景切段，出逐段拆稿" },
                 ] as const
-              ).map((option) => (
-                <label
-                  key={option.value}
-                  className={`import-form-option${form === option.value ? " is-chosen" : ""}`}
-                >
-                  <input
-                    type="radio"
-                    name="analysis-form"
-                    value={option.value}
-                    checked={form === option.value}
-                    onChange={() => setForm(option.value)}
-                  />
-                  <span className="import-form-option__title">{option.title}</span>
-                  <span className="import-form-option__hint">{option.hint}</span>
-                </label>
-              ))}
+              ).map((option) => {
+                // 短篇 has a hard ceiling: segmentation sends the whole piece to the model in
+                // one call, and past it nothing fits. Shown disabled with the reason rather
+                // than hidden — an option that silently vanishes reads as a bug.
+                const blocked =
+                  option.value === "short" && preview.data?.short_form_allowed === false;
+                return (
+                  <label
+                    key={option.value}
+                    className={`import-form-option${form === option.value ? " is-chosen" : ""}${
+                      blocked ? " is-blocked" : ""
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="analysis-form"
+                      value={option.value}
+                      checked={form === option.value}
+                      disabled={blocked}
+                      onChange={() => setForm(option.value)}
+                    />
+                    <span className="import-form-option__title">{option.title}</span>
+                    <span className="import-form-option__hint">
+                      {blocked
+                        ? `超过 ${(preview.data?.hard_max_chars ?? 150000).toLocaleString()} 字，切段装不下`
+                        : option.hint}
+                    </span>
+                  </label>
+                );
+              })}
             </div>
           </fieldset>
           <div className="import-panel-actions">

@@ -1287,6 +1287,19 @@ button:disabled.primary {
   outline-offset: 2px;
 }
 
+/* Shown disabled with the reason in place of the hint, rather than removed: an option that
+   silently disappears between one file and the next reads as a bug, not as a rule. */
+.import-form-option.is-blocked {
+  cursor: not-allowed;
+  border-style: dashed;
+  background: var(--color-bg-muted);
+}
+
+.import-form-option.is-blocked .import-form-option__title,
+.import-form-option.is-blocked .import-form-option__hint {
+  color: var(--color-text-tertiary);
+}
+
 /* The same choice, offered from either destination page. */
 .analysis-form-switch {
   display: flex;
@@ -1315,4 +1328,8 @@ button:disabled.primary {
 
 .analysis-form-switch__error {
   color: var(--color-warning);
+}
+
+.analysis-form-switch__blocked {
+  color: var(--color-text-tertiary);
 }

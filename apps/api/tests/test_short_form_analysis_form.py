@@ -138,3 +138,53 @@ def test_the_segmentation_estimate_reports_and_never_refuses(session) -> None:
     assert huge["fits"] is False
     # The book is still short-form: the estimate informs, it does not veto.
     assert book_is_short_form(session, 2) is True
+
+
+def test_the_length_ceiling_outranks_the_reader(session) -> None:
+    """The one thing the answer does not win against.
+
+    Segmentation sends the whole piece in one call, so past the ceiling there is no reading to
+    be had — only the run's most expensive call, spent and then failed on context length.
+    Checked at dispatch rather than only where the answer is given, so a row saying ``short``
+    for a 2.3-million-character novel cannot route it there however it got written.
+    """
+    from app.narrative_core.short_form.dispatch import (
+        SHORT_FORM_HARD_MAX_CHARS,
+        book_short_form_allowed,
+        short_form_allowed,
+    )
+
+    assert short_form_allowed(SHORT_FORM_HARD_MAX_CHARS) is True
+    assert short_form_allowed(SHORT_FORM_HARD_MAX_CHARS + 1) is False
+    assert short_form_allowed(0) is False
+
+    _book(session, 1, chapters=806, chars=2_359_092, form="short")
+    assert book_short_form_allowed(session, 1) is False
+    assert book_is_short_form(session, 1) is False
+    # The stored answer is left alone: it records what someone asked for, and overwriting it
+    # would lose that while fixing nothing.
+    assert book_analysis_form(session, 1) == "short"
+
+
+def test_the_ceiling_is_the_bottom_of_the_measured_range_not_the_top(session) -> None:
+    """A piece just under it can still overflow, which is why the estimate is still reported.
+
+    The wall sits between 145,968 and 183,116 characters across the local library, the spread
+    coming from paragraph density: every paragraph carries a ``[p:N]`` marker, and a
+    dialogue-heavy piece pays that toll far more often per character.
+    """
+    from app.narrative_core.short_form.dispatch import SHORT_FORM_HARD_MAX_CHARS
+
+    _book(session, 1, chapters=2, chars=149_000, form="short")
+    assert book_is_short_form(session, 1) is True
+
+    # 149,000 characters of very short paragraphs: allowed by the ceiling, still over context.
+    for _ in range(14_900):
+        session.execute(
+            text("INSERT INTO paragraphs (book_id, raw_text) VALUES (1, :t)"),
+            {"t": "他没说话。他没说"},
+        )
+    session.commit()
+    estimate = segmentation_estimate(session, 1)
+    assert estimate["characters"] < SHORT_FORM_HARD_MAX_CHARS
+    assert estimate["fits"] is False

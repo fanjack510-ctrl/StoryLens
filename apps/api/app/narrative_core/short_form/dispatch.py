@@ -15,9 +15,16 @@ person importing the file already knows whether they are holding a short story o
 asking costs one click. ``is_short_form`` still runs, but now as the default selection rather
 than the decision; a stored ``analysis_form`` outranks it.
 
-There is no ceiling on that choice. Segmentation sends the whole piece in one call, so above
-roughly 145,000 characters it will not fit a 128k context and the run fails — but it fails
-loudly, after a warning that quotes the estimate, rather than being refused in advance.
+The choice is free below a hard ceiling and unavailable above it. Segmentation sends the whole
+piece in one call, so the provider context is a wall rather than a budget: measured across the
+local library it lands between 145,000 and 183,000 characters, the spread coming from paragraph
+density. ``SHORT_FORM_HARD_MAX_CHARS`` sits at the bottom of that range, and above it 短篇 is
+refused rather than attempted — the attempt would spend the run's most expensive call before
+failing.
+
+The ceiling binds wherever the answer is given: at import, at the later switch, and at
+dispatch. A cap enforced only at import is not a cap, because the switch would walk straight
+around it and land on the failure the cap exists to prevent.
 """
 
 from __future__ import annotations
@@ -35,6 +42,22 @@ SHORT_FORM_MAX_CHARS = 30_000
 #: whole-book engine.
 SHORT_FORM_SOFT_MAX_CHARS = 80_000
 SHORT_FORM_MAX_CHAPTERS = 20
+
+
+#: 短篇精读 is refused above this, whatever anyone chooses. Not a preference and not a quality
+#: judgement: segmentation has to send the whole piece in one call, and past roughly this many
+#: characters it does not fit a 128k context. The number is the *bottom* of the measured range
+#: (145,968 for 《面馆的最后一天》 at 19 characters a paragraph, where the per-paragraph position
+#: markers cost about a third of the call) rounded to something a person can hold in their head.
+#:
+#: Being the bottom of the range, it is necessary but not sufficient: a very dialogue-heavy
+#: piece just under it can still overflow, which is why the per-book estimate is still shown.
+SHORT_FORM_HARD_MAX_CHARS = 150_000
+
+
+def short_form_allowed(character_count: int) -> bool:
+    """Can this length be read as one piece at all, regardless of what anyone prefers?"""
+    return 0 < int(character_count or 0) <= SHORT_FORM_HARD_MAX_CHARS
 
 
 def is_short_form(*, character_count: int, chapter_count: int) -> bool:
@@ -80,11 +103,30 @@ def book_is_short_form(session: Session, book_id: int) -> bool:
     """Does this book take 短篇精读?
 
     A stored answer wins outright, chapter count included: that is the whole point of asking.
+    The length ceiling is the one thing it does not win against, and it is checked here rather
+    than only where the answer is given — so a row that says ``short`` for a 2.3-million-character
+    novel, however it got written, cannot route that book into a pipeline that cannot read it.
     """
+    if not book_short_form_allowed(session, int(book_id)):
+        return False
     stored = book_analysis_form(session, int(book_id))
     if stored:
         return stored == FORM_SHORT
     return suggested_form(session, int(book_id)) == FORM_SHORT
+
+
+def book_character_count(session: Session, book_id: int) -> int:
+    return int(
+        session.execute(
+            text("SELECT COALESCE(SUM(word_count), 0) FROM chapters WHERE book_id = :book_id"),
+            {"book_id": int(book_id)},
+        ).scalar()
+        or 0
+    )
+
+
+def book_short_form_allowed(session: Session, book_id: int) -> bool:
+    return short_form_allowed(book_character_count(session, int(book_id)))
 
 
 def suggested_form(session: Session, book_id: int) -> str:

@@ -27,8 +27,11 @@ from app.narrative_core.short_form.dispatch import (
     SHORT_FORM_SOFT_MAX_CHARS,
     book_analysis_form,
     book_is_short_form,
+    book_short_form_allowed,
     segmentation_estimate,
+    short_form_allowed,
     suggested_form,
+    SHORT_FORM_HARD_MAX_CHARS,
     FORM_LONG,
     FORM_SHORT,
 )
@@ -126,6 +129,10 @@ def prepare(book_id: int, db: Session = Depends(get_db)) -> dict[str, Any]:
         # have said, which is what the import panel offers as the default.
         "analysis_form": book_analysis_form(db, int(book_id)),
         "suggested_form": suggested_form(db, int(book_id)),
+        # Whether 短篇 may be picked at all. Sent so the panel can disable the option and say
+        # why, rather than offering something the server will refuse.
+        "short_form_allowed": short_form_allowed(characters),
+        "hard_max_chars": SHORT_FORM_HARD_MAX_CHARS,
         # Reported so the panel can warn before the most expensive call of the run, not
         # enforced — the reader's answer stands either way.
         "segmentation": segmentation_estimate(db, int(book_id)),
@@ -226,6 +233,20 @@ def set_analysis_form(
                 "error_code": "INVALID_ANALYSIS_FORM",
                 "message": "只能是 short 或 long。",
                 "details": {"got": form},
+            },
+        )
+    if form == FORM_SHORT and not book_short_form_allowed(db, int(book_id)):
+        # Refused, not warned. Segmentation sends the whole piece in one call, so this would
+        # spend the most expensive call of the run and then fail on context length.
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error_code": "SHORT_FORM_TOO_LONG",
+                "message": (
+                    f"超过 {SHORT_FORM_HARD_MAX_CHARS:,} 字的作品不能按短篇读："
+                    "切段要把全文一次发给模型，装不下。"
+                ),
+                "details": {"hard_max_chars": SHORT_FORM_HARD_MAX_CHARS},
             },
         )
     updated = db.execute(
