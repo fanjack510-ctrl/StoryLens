@@ -245,36 +245,11 @@ function PreparePanel({
           <Link to={profileHref(bookId, { from: "whole-book" })}>去确认作品画像 →</Link>
         </div>
       )}
-      <fieldset className="wbv2-mode" data-testid="whole-book-v2-mode">
-        <legend>这次要哪一种</legend>
-        {ANALYSIS_MODES.map((item) => {
-          // 拆文 exists only in the long-novel engine, and the panel knows which engine this
-          // book gets. Offering it on a book that cannot run it would take the money and hand
-          // back a diagnostic — an option that cannot be honoured must not look available.
-          const unavailable = item.value === "story_breakdown" && !breakdownAvailable;
-          return (
-            <label
-              key={item.value}
-              data-selected={item.value === analysisMode}
-              data-unavailable={unavailable || undefined}
-            >
-              <input
-                type="radio"
-                name="whole-book-analysis-mode"
-                value={item.value}
-                checked={item.value === analysisMode}
-                disabled={unavailable}
-                onChange={() => onAnalysisModeChange(item.value)}
-              />
-              <b>{item.label}</b>
-              <span>
-                {item.hint}
-                {unavailable ? "（本书暂不可用：需先确认作品画像，且章节数不少于 4）" : ""}
-              </span>
-            </label>
-          );
-        })}
-      </fieldset>
+      <AnalysisModeFieldset
+        analysisMode={analysisMode}
+        onAnalysisModeChange={onAnalysisModeChange}
+        breakdownAvailable={breakdownAvailable}
+      />
       <p>{PREPARE_EXPLANATION}</p>
       <ul>
         {PREPARE_BULLETS.map((item) => (
@@ -303,6 +278,57 @@ function PreparePanel({
   );
 }
 
+/** 评测 / 拆文. Rendered by both the first-run panel and the re-analysis panel.
+ *
+ *  It used to live only in the first-run panel, so once a book had a result there was no way
+ *  to ask for the other reading — and 重新分析 quietly re-ran whatever the component state
+ *  happened to hold, which was 评测 by default. A book analysed as 拆文 could be re-run as a
+ *  diagnostic without the person clicking ever being shown the choice.
+ */
+function AnalysisModeFieldset({
+  analysisMode,
+  onAnalysisModeChange,
+  breakdownAvailable,
+  legend = "这次要哪一种",
+}: {
+  analysisMode: WholeBookAnalysisMode;
+  onAnalysisModeChange: (next: WholeBookAnalysisMode) => void;
+  breakdownAvailable: boolean;
+  legend?: string;
+}) {
+  return (
+    <fieldset className="wbv2-mode" data-testid="whole-book-v2-mode">
+      <legend>{legend}</legend>
+      {ANALYSIS_MODES.map((item) => {
+        // 拆文 exists only in the long-novel engine, and the panel knows which engine this
+        // book gets. Offering it on a book that cannot run it would take the money and hand
+        // back a diagnostic — an option that cannot be honoured must not look available.
+        const unavailable = item.value === "story_breakdown" && !breakdownAvailable;
+        return (
+          <label
+            key={item.value}
+            data-selected={item.value === analysisMode}
+            data-unavailable={unavailable || undefined}
+          >
+            <input
+              type="radio"
+              name="whole-book-analysis-mode"
+              value={item.value}
+              checked={item.value === analysisMode}
+              disabled={unavailable}
+              onChange={() => onAnalysisModeChange(item.value)}
+            />
+            <b>{item.label}</b>
+            <span>
+              {item.hint}
+              {unavailable ? "（本书暂不可用：需先确认作品画像，且章节数不少于 4）" : ""}
+            </span>
+          </label>
+        );
+      })}
+    </fieldset>
+  );
+}
 function ReanalyseConfirmPanel({
   prepare,
   consented,
@@ -317,6 +343,8 @@ function ReanalyseConfirmPanel({
   limits,
   onLimitsChange,
   limitGaps,
+  analysisMode,
+  onAnalysisModeChange,
 }: {
   prepare: WholeBookPrepareResponse;
   consented: boolean;
@@ -331,10 +359,13 @@ function ReanalyseConfirmPanel({
   limits: LimitsState;
   onLimitsChange: (next: LimitsState) => void;
   limitGaps: ReturnType<typeof compareLimitsToEstimate>;
+  analysisMode: WholeBookAnalysisMode;
+  onAnalysisModeChange: (next: WholeBookAnalysisMode) => void;
 }) {
   const est = prepare.estimate;
   const provider = est?.provider_name ?? prepare.active_provider_name ?? "—";
   const model = est?.model_name ?? prepare.active_model_name ?? "—";
+  const breakdownAvailable = prepare.planner === "long_novel_engine";
 
   return (
     <section className="wbv2-reanalyse-confirm" data-testid="whole-book-v2-reanalyse-confirm">
@@ -342,6 +373,15 @@ function ReanalyseConfirmPanel({
       <p>
         重新分析会创建新的 V2 分析任务。当前分析结果不会立即删除。新分析成功后将显示最新结果。
       </p>
+      {/* Defaulted to the reading this book already has, so 重新分析 repeats what is on screen
+          unless the person deliberately changes it. This is also the only place to switch a
+          book from 评测 to 拆文 or back once it has a result. */}
+      <AnalysisModeFieldset
+        analysisMode={analysisMode}
+        onAnalysisModeChange={onAnalysisModeChange}
+        breakdownAvailable={breakdownAvailable}
+        legend="这次要哪一种"
+      />
       <dl className="wbv2-reanalyse-meta">
         <div>
           <dt>模型服务商</dt>
@@ -561,6 +601,10 @@ function WholeBookV2ProductPageEnabled() {
     queryFn: () => wholeBookFreeProductApi.prepare(bookId, analysisMode),
     enabled: bookId > 0 && Boolean(activeCloudQuery.data?.provider_name),
     retry: false,
+    // The estimate depends on which reading is selected, so the key carries the mode — but a
+    // key change must not blank the page. Without this, picking the other reading throws the
+    // whole report away and shows 「正在载入…」 until the estimate comes back.
+    placeholderData: (previous) => previous,
     refetchInterval: (query) => {
       const prepare = query.state.data;
       if (!prepare) return false;
@@ -586,6 +630,22 @@ function WholeBookV2ProductPageEnabled() {
     enabled: displayV2RunId != null,
     retry: false,
   });
+
+  // Seed the selector from the reading this book already has, once, and only until the
+  // person touches it. Without this, 重新分析 offers 评测 on a book whose report is 拆文 —
+  // and before the selector existed on that panel it simply re-ran as 评测 without asking.
+  const modeTouched = useRef(false);
+  useEffect(() => {
+    if (modeTouched.current) return;
+    const doc = v2ResultQuery.data;
+    if (!doc) return;
+    if (doc.story_breakdown?.four_beats?.length) setAnalysisMode("story_breakdown");
+  }, [v2ResultQuery.data]);
+
+  const chooseAnalysisMode = useCallback((next: WholeBookAnalysisMode) => {
+    modeTouched.current = true;
+    setAnalysisMode(next);
+  }, []);
 
   const invalidateAll = useCallback(async () => {
     await queryClient.invalidateQueries({ queryKey: ["whole-book-v2-prepare", bookId] });
@@ -812,7 +872,7 @@ function WholeBookV2ProductPageEnabled() {
           canStart={canStart}
           starting={createMutation.isPending}
           analysisMode={analysisMode}
-          onAnalysisModeChange={setAnalysisMode}
+          onAnalysisModeChange={chooseAnalysisMode}
           onStart={() => createMutation.mutate(undefined)}
           actionError={actionError}
           limits={limits}
@@ -838,6 +898,8 @@ function WholeBookV2ProductPageEnabled() {
           limits={limits}
           onLimitsChange={setLimits}
           limitGaps={limitGaps}
+          analysisMode={analysisMode}
+          onAnalysisModeChange={chooseAnalysisMode}
         />
       )}
 

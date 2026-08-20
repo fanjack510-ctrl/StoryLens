@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -274,6 +274,52 @@ describe("WholeBookV2ProductPage", () => {
       expect(screen.queryByTestId("whole-book-v2-reanalyse-confirm")).not.toBeInTheDocument();
     });
     expect(screen.getByTestId("whole-book-v2-report")).toBeInTheDocument();
+  });
+
+  // 分析完之后，改读法没有入口：评测/拆文 的选择只在首次分析面板上，重新分析面板没有。
+  // 更糟的是重新分析会按组件里那个默认值跑，也就是评测——一本按拆文分析过的书，会在没人
+  // 被问过的情况下被重跑成评测。
+  it("重新分析面板能改读法，且默认沿用这本已有的那一种", async () => {
+    prepareSpy.mockResolvedValue({
+      ...basePrepare,
+      latest_run: completedV2Run,
+      completed_v2_run: completedV2Run,
+      active_run: null,
+    } as never);
+    getV2Spy.mockResolvedValue({
+      ...analysisFixture,
+      story_breakdown: {
+        version: "1.0",
+        availability: "available",
+        four_beats: [
+          { beat: "起", title: "开场", summary: "", chapter_start: 1, chapter_end: 2, evidence: [] },
+        ],
+        standout_moments: [],
+        moment_count_rationale: "",
+        chapter_hooks: [],
+        reusable_techniques: [],
+        supporting_cast: [],
+        cast_note: "",
+      },
+    } as never);
+
+    renderPage();
+    await screen.findByTestId("whole-book-v2-reanalyse-button", undefined, { timeout: 5000 });
+    fireEvent.click(screen.getByTestId("whole-book-v2-reanalyse-button"));
+
+    const panel = await screen.findByTestId("whole-book-v2-reanalyse-confirm");
+    const modes = within(panel).getByTestId("whole-book-v2-mode");
+    const radios = within(modes).getAllByRole("radio") as HTMLInputElement[];
+    const breakdown = radios.find((r) => r.value === "story_breakdown");
+    const diagnostic = radios.find((r) => r.value === "diagnostic");
+
+    // 这本的报告是拆文，所以重新分析默认还是拆文——不改读法的人不该被换掉读法。
+    await waitFor(() => expect(breakdown!.checked).toBe(true));
+    expect(diagnostic!.checked).toBe(false);
+
+    // 而想换的人现在换得了。
+    fireEvent.click(diagnostic!);
+    expect(diagnostic!.checked).toBe(true);
   });
 
   it("test_non_real_result_origin_shows_reanalysis_warning", async () => {
