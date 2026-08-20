@@ -105,6 +105,46 @@ def _completed_v2_run(session: Session, book_id: int) -> WholeBookRun | None:
     return None
 
 
+BREAKDOWN_ENGINE_SUFFIX = "+story_breakdown"
+
+
+def reading_of_run(run: WholeBookRun) -> str:
+    """Which reading produced this run: "story_breakdown" or "diagnostic".
+
+    The pipeline stamps the reading onto ``engine_version`` (``…-1.0+story_breakdown``)
+    because the runs table has no column for it. Reading it back here keeps that decision in
+    one place rather than spreading string surgery through the API.
+    """
+    version = str(getattr(run, "engine_version", "") or "")
+    return "story_breakdown" if version.endswith(BREAKDOWN_ENGINE_SUFFIX) else "diagnostic"
+
+
+def _completed_v2_runs_by_reading(session: Session, book_id: int) -> dict[str, WholeBookRun]:
+    """The newest real completed run of each reading.
+
+    A book can hold both a 评测 and a 拆文 — they answer different questions and neither
+    replaces the other. The page could only ever reach the newest one, so running the second
+    reading made the first unreachable: the analysis was paid for, stored, and invisible.
+    """
+    from app.narrative_core.whole_book_v2.repository import WholeBookV2Repository
+    from app.narrative_core.whole_book_v2.result_origin import product_flags_for_result
+
+    repo = WholeBookV2Repository(session)
+    newest: dict[str, WholeBookRun] = {}
+    for run in list_runs_for_book(session, book_id):
+        if run.status != WholeBookRunStatus.completed.value:
+            continue
+        reading = reading_of_run(run)
+        if reading in newest:
+            continue
+        result = repo.load_result(int(run.id))
+        if result is None:
+            continue
+        if product_flags_for_result(result).get("is_real_provider_result"):
+            newest[reading] = run
+    return newest
+
+
 def _latest_failed_run(session: Session, book_id: int) -> WholeBookRun | None:
     for run in list_runs_for_book(session, book_id):
         if run.status == WholeBookRunStatus.failed.value:
@@ -302,6 +342,12 @@ def prepare_free_whole_book_analysis_v1(
         "recoverable_run": run_to_dict(recoverable) if recoverable is not None else None,
         "active_run": run_to_dict(active_run) if active_run is not None else None,
         "completed_v2_run": run_to_dict(completed_v2) if completed_v2 is not None else None,
+        # Both readings, newest of each, so the client can offer the other one instead of
+        # silently hiding it behind the most recent run.
+        "completed_v2_runs_by_reading": {
+            reading: run_to_dict(run)
+            for reading, run in _completed_v2_runs_by_reading(session, book_id).items()
+        },
         "latest_failed_run": run_to_dict(latest_failed) if latest_failed is not None else None,
         "non_real_completed_v2_run": (
             run_to_dict(non_real_completed) if non_real_completed is not None else None

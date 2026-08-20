@@ -285,6 +285,42 @@ function PreparePanel({
  *  happened to hold, which was 评测 by default. A book analysed as 拆文 could be re-run as a
  *  diagnostic without the person clicking ever being shown the choice.
  */
+/** 评测 ⇄ 拆文, when the book has both.
+ *
+ *  They answer different questions and neither replaces the other, but the page showed only
+ *  whichever run finished last. Running the second reading therefore made the first one
+ *  unreachable — paid for, stored, and with no way back to it.
+ *
+ *  Nothing renders when a book has fewer than two readings: a switch with one position is
+ *  not a switch.
+ */
+function ReadingSwitch({
+  readings,
+  current,
+  onChange,
+}: {
+  readings: ReadonlyArray<{ value: WholeBookAnalysisMode; label: string }>;
+  current: WholeBookAnalysisMode | null;
+  onChange: (next: WholeBookAnalysisMode) => void;
+}) {
+  if (readings.length < 2) return null;
+  return (
+    <div className="wbv2-reading-switch" data-testid="whole-book-v2-reading-switch">
+      <span>这本书有两份报告</span>
+      {readings.map((r) => (
+        <button
+          key={r.value}
+          type="button"
+          className={r.value === current ? "active" : ""}
+          aria-pressed={r.value === current}
+          onClick={() => onChange(r.value)}
+        >
+          {r.label}
+        </button>
+      ))}
+    </div>
+  );
+}
 function AnalysisModeFieldset({
   analysisMode,
   onAnalysisModeChange,
@@ -619,7 +655,19 @@ function WholeBookV2ProductPageEnabled() {
   const latestFailedRun = prepare ? resolveLatestFailedRun(prepare) : null;
   const nonRealCompletedRun = prepare ? resolveNonRealCompletedRun(prepare) : null;
   const activeRunId = activeRun?.run_id ?? null;
+  // Which reading the reader is looking at. A book can hold both a 评测 and a 拆文; the page
+  // used to show whichever finished last and give the other one no entry at all — analysis
+  // that was paid for, stored, and unreachable.
+  const readings = prepare?.completed_v2_runs_by_reading ?? {};
+  const availableReadings = ANALYSIS_MODES.filter((m) => readings[m.value]?.run_id != null);
+  const [viewReading, setViewReading] = useState<WholeBookAnalysisMode | null>(null);
+  const shownReading =
+    viewReading && readings[viewReading]?.run_id != null ? viewReading : null;
+  const defaultReading =
+    (ANALYSIS_MODES.find((m) => readings[m.value]?.run_id === completedV2Run?.run_id)?.value ??
+      null);
   const displayV2RunId =
+    (shownReading ? readings[shownReading]?.run_id ?? null : null) ??
     completedV2Run?.run_id ??
     (latestFailedRun ? nonRealCompletedRun?.run_id ?? null : nonRealCompletedRun?.run_id ?? null);
   const hasOldResultWhileRunning = activeRunId != null && displayV2RunId != null;
@@ -964,6 +1012,13 @@ function WholeBookV2ProductPageEnabled() {
           showReanalyzeButton={pageMode === "completed-v2" && !activeRun}
           onReanalyzeClick={openReanalyseConfirm}
           analysisStatusLabel={showOldResultWhileRunning ? "当前旧结果" : undefined}
+          headerExtra={
+            <ReadingSwitch
+              readings={availableReadings}
+              current={shownReading ?? defaultReading}
+              onChange={setViewReading}
+            />
+          }
         />
       )}
 

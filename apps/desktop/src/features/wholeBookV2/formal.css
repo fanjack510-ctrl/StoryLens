@@ -26,3 +26,10 @@
 .wbv2-mode b{font-size:15px}
 .wbv2-mode span{grid-column:2;font-size:12.5px;color:#5a6b62;line-height:1.6}
 .wbv2-mode label[data-unavailable]{opacity:.55;cursor:not-allowed}
+
+/* 评测 ⇄ 拆文, shown only when the book actually holds both readings. */
+.wbv2-reading-switch{display:flex;align-items:center;gap:8px;margin-top:12px}
+.wbv2-reading-switch>span{font-size:12.5px;color:#5a6b62}
+.wbv2-reading-switch button{border:1px solid #cfd9d2;background:#fff;color:#3d4a44;border-radius:6px;padding:6px 14px;font-size:13px;cursor:pointer}
+.wbv2-reading-switch button:hover{border-color:#8fae9f}
+.wbv2-reading-switch button.active{border-color:#2f6b57;background:#eaf2ed;color:#235c48;font-weight:700}

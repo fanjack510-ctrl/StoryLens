@@ -322,6 +322,73 @@ describe("WholeBookV2ProductPage", () => {
     expect(diagnostic!.checked).toBe(true);
   });
 
+  // 一本书可以同时有评测和拆文，两者回答的不是同一个问题，谁也不替代谁。页面原先只能
+  // 到达最后跑完的那一份，所以跑了第二种读法就等于把第一份藏起来——钱花了、结果存了、
+  // 没有入口看。
+  it("两种读法都在时给出切换入口，且能切过去", async () => {
+    const breakdownRun = { ...completedV2Run, run_id: 77 };
+    prepareSpy.mockResolvedValue({
+      ...basePrepare,
+      latest_run: completedV2Run,
+      completed_v2_run: completedV2Run,
+      completed_v2_runs_by_reading: {
+        diagnostic: completedV2Run,
+        story_breakdown: breakdownRun,
+      },
+      active_run: null,
+    } as never);
+    getV2Spy.mockImplementation(async (runId: number) =>
+      runId === 77
+        ? ({
+            ...analysisFixture,
+            story_breakdown: {
+              version: "1.0",
+              availability: "available",
+              four_beats: [
+                { beat: "起", title: "开场", summary: "", chapter_start: 1, chapter_end: 2, evidence: [] },
+              ],
+              standout_moments: [],
+              moment_count_rationale: "",
+              chapter_hooks: [],
+              reusable_techniques: [],
+              supporting_cast: [],
+              cast_note: "",
+            },
+          } as never)
+        : (analysisFixture as never),
+    );
+
+    renderPage();
+    const sw = await screen.findByTestId("whole-book-v2-reading-switch", undefined, {
+      timeout: 5000,
+    });
+    expect(within(sw).getByRole("button", { name: "评测" })).toBeInTheDocument();
+    expect(within(sw).getByRole("button", { name: "拆文" })).toBeInTheDocument();
+
+    // 默认停在最新那一份（评测），点「拆文」应当去取另一次运行的文档。
+    fireEvent.click(within(sw).getByRole("button", { name: "拆文" }));
+    await waitFor(() => expect(getV2Spy).toHaveBeenCalledWith(77));
+    await waitFor(() => {
+      const nav = screen.getByRole("navigation", { name: "全书分析模块" });
+      expect(within(nav).getByRole("button", { name: /拆文/ })).toBeInTheDocument();
+    });
+  });
+
+  // 只有一种读法时不画开关：只有一个位置的开关不是开关。
+  it("只有一种读法时没有切换入口", async () => {
+    prepareSpy.mockResolvedValue({
+      ...basePrepare,
+      latest_run: completedV2Run,
+      completed_v2_run: completedV2Run,
+      completed_v2_runs_by_reading: { diagnostic: completedV2Run },
+      active_run: null,
+    } as never);
+    getV2Spy.mockResolvedValue(analysisFixture as never);
+    renderPage();
+    await screen.findByTestId("whole-book-v2-report", undefined, { timeout: 5000 });
+    expect(screen.queryByTestId("whole-book-v2-reading-switch")).not.toBeInTheDocument();
+  });
+
   it("test_non_real_result_origin_shows_reanalysis_warning", async () => {
     const nonRealFixture = {
       ...analysisFixture,

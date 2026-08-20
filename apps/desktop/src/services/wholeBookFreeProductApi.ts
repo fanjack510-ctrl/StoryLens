@@ -96,6 +96,9 @@ export type WholeBookPrepareResponse = {
   recoverable_run: WholeBookRunRecord | null;
   /** Last completed run that has or had V2 materialized. */
   completed_v2_run?: WholeBookRunRecord | null;
+  /** Newest real completed run of each reading. A book can hold both a 评测 and a 拆文;
+   *  without this the page can only ever reach the newer one. Absent on an older sidecar. */
+  completed_v2_runs_by_reading?: Partial<Record<WholeBookAnalysisMode, WholeBookRunRecord>>;
   /** Pending, running, or recoverable run (may overlap with latest_run). */
   active_run?: WholeBookRunRecord | null;
   /** Latest failed WholeBookRun (CHG-084 — do not auto-show scaffold as completed). */
