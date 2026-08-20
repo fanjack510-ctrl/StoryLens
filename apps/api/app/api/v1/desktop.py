@@ -263,7 +263,27 @@ def put_desktop_settings(value: DemoSettings, session: Session = Depends(get_db)
 
 def configuration_response(row: ProviderConfiguration | None, name: str, store: CredentialStore):
     if row is None:
-        row = ProviderConfiguration(provider_name=name)
+        # A transient ORM instance does NOT carry its column defaults — SQLAlchemy applies
+        # those on INSERT — so every field came back None and the response model failed with
+        # 13 validation errors. On a fresh install that is four 500s in the first seconds of
+        # the app's life, before any provider row exists. The fallback has to state the
+        # defaults itself; they mirror ProviderConfiguration in db/models.py.
+        row = ProviderConfiguration(
+            provider_name=name,
+            display_name="",
+            region="cn-beijing",
+            workspace_id="",
+            base_url="",
+            plus_model="qwen3.7-plus",
+            max_model="qwen3.7-max",
+            flash_model="qwen3.6-flash",
+            timeout_seconds=300,
+            max_retries=3,
+            enabled=False,
+            disconnected=True,
+            allow_auto_route=False,
+            raw_logging_enabled=False,
+        )
     credential = store.get(name) if store.available() else None
     credential_state = (
         "configured" if credential else ("missing" if store.available() else "unknown")
