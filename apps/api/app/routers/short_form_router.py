@@ -203,9 +203,16 @@ def analyse(
         },
     )
     db.commit()
+    # The callback counts are logged rather than stored because both checks *blank* the
+    # field, so a reading with few callbacks looks exactly like a reading whose callbacks were
+    # all thrown away — and only the second is a problem. Measured on 《面馆的最后一天》: one
+    # run kept 15 of 16, the next kept 8, and nothing anywhere said which of the two it was.
     logger.info(
-        "short_form_stored book_id=%s segments=%s calls=%s", book_id,
-        report.segments_planned, report.provider_calls,
+        "short_form_stored book_id=%s segments=%s calls=%s "
+        "callbacks_written=%s dropped_bad_target=%s dropped_bad_content=%s",
+        book_id, report.segments_planned, report.provider_calls,
+        report.callbacks_written, report.callbacks_dropped_bad_target,
+        report.callbacks_dropped_bad_content,
     )
     return {"reused": False, **(_stored(db, int(book_id)) or {})}
 

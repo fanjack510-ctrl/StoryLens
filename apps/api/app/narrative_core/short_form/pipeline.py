@@ -67,6 +67,14 @@ class ShortFormReport:
     segments_resplit: int = 0
     #: True when the boundaries came from an earlier reading instead of being asked for.
     spans_reused: bool = False
+    #: How many callbacks the model wrote, and how many survived each check. Counted because
+    #: the checks blank the field, so without these a reading with few callbacks is
+    #: indistinguishable from a reading whose callbacks were all thrown away — and the second
+    #: is the case worth knowing about. Measured on 《面馆的最后一天》: one reading kept 15 of
+    #: 16, the next kept 8, and nothing on the page or in the row said which.
+    callbacks_written: int = 0
+    callbacks_dropped_bad_target: int = 0
+    callbacks_dropped_bad_content: int = 0
     provider_calls: int = 0
     result: ShortFormResult | None = None
     failures: list[str] = field(default_factory=list)
@@ -419,6 +427,10 @@ def run_short_form(
             index = offset + i + 1
             row = by_index.get(index, {})
             direction = str(row.get("emotion_direction") or "flat")
+            written = str(row.get("callback") or "").strip()
+            checked = _checked_callback(written, index=index, known=len(spans))
+            report.callbacks_written += bool(written)
+            report.callbacks_dropped_bad_target += bool(written) and not checked
             segments.append(
                 ShortFormSegment(
                     index=index,
@@ -431,9 +443,7 @@ def run_short_form(
                     craft=str(row.get("craft") or ""),
                     emotion_note=str(row.get("emotion_note") or ""),
                     emotion_direction=direction if direction in ("up", "down", "flat") else "flat",
-                    callback=_checked_callback(
-                        row.get("callback") or "", index=index, known=len(spans)
-                    ),
+                    callback=checked,
                 )
             )
 
@@ -455,6 +465,7 @@ def run_short_form(
             segment.callback, span_text.get(int(target.group(1)), ""), whole_text=whole
         ):
             segment.callback = ""
+            report.callbacks_dropped_bad_content += 1
 
     # Found by comparing the prose, not by asking. The model reads six segments at a time and
     # cannot see a wording return across the whole piece; a loop can, and does it exactly.
