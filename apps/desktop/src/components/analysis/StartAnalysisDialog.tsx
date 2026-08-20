@@ -1158,15 +1158,20 @@ export function StartAnalysisDialog({
         )}
 
         <div className="modal-body" data-testid="start-analysis-modal-body">
+          {/* 这里原先有一个「分析范围」下拉框：唯一可选项是当前章节，另一项写着
+              「全书（后续开放）」，下面一句提示说全书分析将在后续版本开放。全书分析
+              早就开放了，就在书籍页上。一个只有一个选项的下拉框不是选择，一句过期的
+              提示比没有提示更糟——它让人以为那条路还不存在。 */}
           <section className="start-analysis-section">
-            <label className="start-analysis-field">
-              <span className="start-analysis-field-label">分析范围</span>
-              <select aria-label="分析范围">
-                <option>当前章节</option>
-                <option disabled>全书（后续开放）</option>
-              </select>
-            </label>
-            <p className="hint">当前仅支持分析单个章节；全书分析将在后续版本开放。</p>
+            <p className="hint">
+              这次分析这一章。
+              {bookId ? (
+                <>
+                  {" "}
+                  想读整本书？<a href={`/books/${bookId}/whole-book`}>去全书分析 →</a>
+                </>
+              ) : null}
+            </p>
           </section>
 
           <section className="start-analysis-section">

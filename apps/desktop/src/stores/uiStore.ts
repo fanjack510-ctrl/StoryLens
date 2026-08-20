@@ -12,8 +12,12 @@ import {
   readInterfaceZoom,
   type InterfaceZoomPercent,
 } from "../lib/interfaceZoom";
-
-type ContentWidth = "narrow" | "normal" | "wide";
+import {
+  readReadingSettings,
+  writeReadingSettings,
+  type ContentWidth,
+  type ReadingSettings,
+} from "../lib/readingSettings";
 
 type State = {
   theme: AppearanceTheme;
@@ -48,13 +52,33 @@ function hydrateInterfaceZoom(): InterfaceZoomPercent {
   return zoom;
 }
 
+/** Reading settings are read once at startup and written on every change, the same way theme
+ *  and zoom already work. Before this they lived only in memory, so enlarging the text lasted
+ *  until the next restart — which reads as the control not working. */
+const reading = readReadingSettings();
+
+/** Merge one changed field into the other three and write all four, so the stored object is
+ *  always a whole settings record rather than whichever field was touched last. */
+function persistReading(next: Partial<ReadingSettings>) {
+  return (state: State): Partial<State> => {
+    const merged: ReadingSettings = {
+      fontSize: next.fontSize ?? state.fontSize,
+      lineHeight: next.lineHeight ?? state.lineHeight,
+      contentWidth: next.contentWidth ?? state.contentWidth,
+      showParagraphIds: next.showParagraphIds ?? state.showParagraphIds,
+    };
+    writeReadingSettings(merged);
+    return merged;
+  };
+}
+
 export const useUiStore = create<State>((set) => ({
   theme: hydrateTheme(),
   demo: true,
-  fontSize: 17,
-  lineHeight: 1.9,
-  contentWidth: "wide",
-  showParagraphIds: false,
+  fontSize: reading.fontSize,
+  lineHeight: reading.lineHeight,
+  contentWidth: reading.contentWidth,
+  showParagraphIds: reading.showParagraphIds,
   interfaceZoom: hydrateInterfaceZoom(),
   setTheme: (theme) => {
     writeAppearanceTheme(theme);
@@ -64,9 +88,9 @@ export const useUiStore = create<State>((set) => ({
     set({ theme });
   },
   setDemo: (demo) => set({ demo }),
-  setReading: (fontSize, lineHeight) => set({ fontSize, lineHeight }),
-  setContentWidth: (contentWidth) => set({ contentWidth }),
-  setShowParagraphIds: (showParagraphIds) => set({ showParagraphIds }),
+  setReading: (fontSize, lineHeight) => set(persistReading({ fontSize, lineHeight })),
+  setContentWidth: (contentWidth) => set(persistReading({ contentWidth })),
+  setShowParagraphIds: (showParagraphIds) => set(persistReading({ showParagraphIds })),
   setInterfaceZoom: async (raw) => {
     const percent = parseInterfaceZoom(raw);
     set({ interfaceZoom: percent });
