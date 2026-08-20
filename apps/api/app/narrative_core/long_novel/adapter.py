@@ -388,7 +388,11 @@ def _major_character(
                 else [events[int(i * len(events) / 8)] for i in range(8)]
             )
         ],
-        "relationship_to_protagonist": "" if index == 0 else (to_lead[-1] if to_lead else "unknown"),
+        # Empty, not "unknown". The placeholder was written into the stored document and
+        # printed verbatim on the character card — six of this book's twelve people said
+        # `unknown` where a relationship should be. An empty field is dropped by every
+        # surface; a machine word is shown, and a reader cannot tell it from a bug.
+        "relationship_to_protagonist": "" if index == 0 else (to_lead[-1] if to_lead else ""),
         "relationship_changes": to_lead[:6],
         "major_choice": choices[0][0] if choices else "",
         "cost_paid": costs[:4],
