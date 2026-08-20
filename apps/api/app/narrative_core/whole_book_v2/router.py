@@ -13,7 +13,7 @@ from .result_origin import enrich_v2_payload
 router=APIRouter(prefix="/api/v1/whole-book-runs",tags=["whole-book-v2"])
 MODULES={"overview","story","characters","suspense","pacing","chapters","assessment","type_profile"}
 def repo(db:Session=Depends(get_db))->WholeBookV2Repository:return WholeBookV2Repository(db)
-def missing()->HTTPException:return HTTPException(status_code=404,detail={"error_code":"WHOLE_BOOK_V2_RESULT_NOT_FOUND","message":"V2 result is not available; legacy results are not promoted to complete V2.","details":{}})
+def missing()->HTTPException:return HTTPException(status_code=404,detail={"error_code":"WHOLE_BOOK_V2_RESULT_NOT_FOUND","message":"这本书还没有完整的全书分析结果。旧版本的分析结果不会被当作新版结果使用，需要重新分析一次。","details":{}})
 @router.get("/{run_id}/v2")
 def get_v2(run_id:int,r:WholeBookV2Repository=Depends(repo))->dict[str,Any]:
     result=r.load_result(run_id)
@@ -21,7 +21,7 @@ def get_v2(run_id:int,r:WholeBookV2Repository=Depends(repo))->dict[str,Any]:
     return enrich_v2_payload(result)
 @router.get("/{run_id}/v2/modules/{module}")
 def get_v2_module(run_id:int,module:str,cursor:int=Query(0,ge=0),limit:int=Query(100,ge=1,le=500),r:WholeBookV2Repository=Depends(repo))->dict[str,Any]:
-    if module not in MODULES: raise HTTPException(status_code=404,detail={"error_code":"WHOLE_BOOK_V2_MODULE_NOT_FOUND","message":"Unknown V2 module","details":{"module":module}})
+    if module not in MODULES: raise HTTPException(status_code=404,detail={"error_code":"WHOLE_BOOK_V2_MODULE_NOT_FOUND","message":"没有这个分析模块。","details":{"module":module}})
     result=r.load_result(run_id)
     if result is None: raise missing()
     payload=getattr(result,module).model_dump(mode="json"); collection_key={"characters":"major_characters","suspense":"lifecycles","pacing":"points","chapters":"functions","assessment":"issues"}.get(module)
@@ -175,5 +175,5 @@ def export_v2_pdf(run_id:int,req:_PdfRequest,db:Session=Depends(get_db))->Respon
 @router.get("/{run_id}/v2/progress")
 def get_v2_progress(run_id:int,r:WholeBookV2Repository=Depends(repo))->dict[str,Any]:
     progress=r.load_progress(run_id)
-    if progress is None: raise HTTPException(status_code=404,detail={"error_code":"WHOLE_BOOK_V2_PROGRESS_NOT_FOUND","message":"V2 progress is not available","details":{}})
+    if progress is None: raise HTTPException(status_code=404,detail={"error_code":"WHOLE_BOOK_V2_PROGRESS_NOT_FOUND","message":"这次分析还没有进度可读。刚开始的分析要过一会儿才有第一条进度；如果分析已经结束，请刷新页面查看结果。","details":{}})
     return progress.model_dump(mode="json")

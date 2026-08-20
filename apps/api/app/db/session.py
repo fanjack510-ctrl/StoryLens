@@ -31,9 +31,21 @@ def _ensure_sqlite_parent(database_url: str) -> None:
 
 _ensure_sqlite_parent(settings.database_url)
 
+#: How long a statement waits for the write lock before giving up. SQLite's default is zero,
+#: so the moment a second writer appears it raises "database is locked" instead of queueing —
+#: and the whole-book analysis is a writer that holds the lock in bursts for minutes. Opening
+#: that analysis's own page 500'd for exactly this reason: `prepare` commits, could not get
+#: the lock, and failed instantly. Ten seconds is far longer than any single write here takes
+#: and still short enough that a genuinely stuck lock surfaces as an error rather than a hang.
+SQLITE_BUSY_TIMEOUT_MS = 10_000
+
 engine = create_engine(
     settings.database_url,
-    connect_args={"check_same_thread": False} if settings.database_url.startswith("sqlite") else {},
+    connect_args=(
+        {"check_same_thread": False, "timeout": SQLITE_BUSY_TIMEOUT_MS / 1000}
+        if settings.database_url.startswith("sqlite")
+        else {}
+    ),
 )
 
 
@@ -43,9 +55,12 @@ def enable_sqlite_foreign_keys(dbapi_connection, _) -> None:
     if module.startswith("sqlite3"):
         cursor = dbapi_connection.cursor()
         cursor.execute("PRAGMA foreign_keys=ON")
-        # WAL allows concurrent readers while one writer owns AnalysisRun tasks.
+        # WAL allows concurrent readers while one writer owns AnalysisRun tasks. It does not
+        # help two writers, which is the case that actually broke: a page whose prepare commits
+        # while an analysis is mid-run.
         cursor.execute("PRAGMA journal_mode=WAL")
         cursor.execute("PRAGMA synchronous=NORMAL")
+        cursor.execute(f"PRAGMA busy_timeout={SQLITE_BUSY_TIMEOUT_MS}")
         cursor.close()
 
 
