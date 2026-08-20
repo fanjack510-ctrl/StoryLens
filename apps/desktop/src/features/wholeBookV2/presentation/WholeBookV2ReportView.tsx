@@ -1169,8 +1169,16 @@ function CharactersModule({ data }: { data: WholeBookAnalysisV2 }) {
               </p>
             );
           })()}
-          {journey && journeyAxis !== "none" && (
+          {journey && journeyAxis !== "none" ? (
             <JourneyChart journey={journey} chapterCount={data.book_metadata.chapter_count} />
+          ) : (
+            // 只有悬疑（认知度）和升级流（阶位）有一条能升能降的纵轴。情感、群像、种田、
+            // 单元这四种引擎目前数不出这样的量，引擎的原则是数不出来就不画。不画是对的，
+            // 但一声不吭地不画，读者看到的是「图挂了」——所以这里把原因说出来。
+            <p className="wb2-journey-axis-note" data-testid="whole-book-v2-journey-no-axis">
+              这类作品还没有一条能升能降的纵轴可画（目前只有悬疑的「认知度」和升级流的
+              「阶位」有）。下面是分程的起止、抉择链与行动台账。
+            </p>
           )}
           {/* A picker over one item is not a picker — it was one small chip stranded in an
               otherwise empty band, which reads as a chart that failed to draw. */}

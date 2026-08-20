@@ -560,6 +560,19 @@ describe("WholeBookV2ProductPage", () => {
         completed_at: null,
       },
       completed_v2_run: null,
+      // 旧结果是从这个字段读的，不是从 latest_run 推的——后端对一本旧书返回的正是它。
+      // 这条用例的桩一直没给它，于是页面正确地停在准备页，用例却以为是页面坏了。
+      non_real_completed_v2_run: {
+        run_id: 902,
+        book_id: 42,
+        status: "completed",
+        mode: "free",
+        engine_id: "legacy",
+        result_origin: "legacy",
+        snapshot_id: 1,
+        started_at: null,
+        completed_at: null,
+      },
       active_run: null,
     } as never);
 
