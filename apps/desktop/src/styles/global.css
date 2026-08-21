@@ -1095,6 +1095,32 @@ html[data-theme="dark"] .appearance-theme-panel button.is-selected,
 .start-analysis-tech-details .provider-diagnostics {
   margin-top: 10px;
 }
+/* 执行方式 / AI 服务 / 分析模式：就绪时折起，标题写明当前用的是什么。 */
+.start-analysis-settings {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: var(--surface2);
+  margin-bottom: 14px;
+}
+.start-analysis-settings > summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+}
+.start-analysis-settings[open] > summary {
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+.start-analysis-settings > summary .muted {
+  font-weight: 400;
+}
+.budget-headline {
+  font-size: 15px;
+  margin: 0 0 6px;
+}
+
 .start-analysis-footer-actions {
   display: flex;
   align-items: center;

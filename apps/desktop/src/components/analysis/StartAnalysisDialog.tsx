@@ -30,6 +30,7 @@ import { trackAnalysisStarted } from "../../services/telemetry/analysisRunTeleme
 import { formatCny, formatTokenCount } from "./analysisDisplayLabels";
 import {
   ordinaryModeOptions,
+  presetFor,
   readStoredAnalysisMode,
   writeStoredAnalysisMode,
   type AnalysisModePresetId,
@@ -932,6 +933,9 @@ export function StartAnalysisDialog({
 
   const showRequestQuotaPanel = Boolean(requestOnly && consent && preflight && costAndTokenOk);
 
+  // 一切就绪＝可以直接开始，此时上面那三节没有任何要做的决定，折起来。
+  const ready = !effectiveSubmitDisabled && !budgetBlocked;
+
   const submitLabel = providers.isFetching && (submitState === "idle" || submitState === "failed")
     ? (developerMode ? "正在刷新 Provider……" : "正在刷新服务状态……")
     : submitState === "checking"
@@ -1208,6 +1212,25 @@ export function StartAnalysisDialog({
             </p>
           </section>
 
+          {/* 执行方式、AI 服务、分析模式三节收进一个折叠壳。
+
+              API 配好、服务连着、模式有推荐值——这三节每次打开都长得一模一样，而人要做的
+              决定只有一个：花不花这个钱。一切就绪时默认折起，标题里写明当前是什么；任何一项
+              没就绪（服务不可用、还没同意发送正文）就默认展开，因为那时它们才是要看的东西。 */}
+          <details
+            className="start-analysis-settings"
+            data-testid="start-analysis-settings"
+            open={!ready}
+          >
+            <summary>
+              {mode === "cloud" || mode === "hybrid" ? "云端 AI" : "本地"}
+              {" · "}
+              {aiView.serviceDisplayName || provider || "未选择"}
+              {" · "}
+              {presetFor(analysisModePreset)?.shortLabel ?? analysisModePreset}
+              <span className="muted">　更改</span>
+            </summary>
+
           <section className="start-analysis-section">
             <span className="start-analysis-field-label">执行方式</span>
             {developerMode ? (
@@ -1423,6 +1446,8 @@ export function StartAnalysisDialog({
             />
           )}
 
+          </details>
+
           {(mode === "cloud" || mode === "hybrid") && preflight && (
             <>
               <Stage1BudgetSummary preflight={preflight} budgetBlocked={budgetBlocked} />
@@ -1593,7 +1618,13 @@ export function StartAnalysisDialog({
                 disabled={effectiveSubmitDisabled}
                 onClick={() => void submit()}
               >
-                {busy ? submitLabel : "按当前额度开始"}
+                {/* 钱写在按钮上。「按当前额度开始」既没说要花多少，也没说「当前额度」是
+                    什么——而这是整个弹窗里唯一需要人决定的事。 */}
+                {busy
+                  ? submitLabel
+                  : preflight?.estimated_cost != null
+                    ? `开始分析 · 约 ${preflight.estimated_cost} ${preflight.currency || "CNY"}`
+                    : "开始分析"}
               </button>
             )}
             {showRequestQuotaPanel && (

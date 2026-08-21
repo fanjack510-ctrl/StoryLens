@@ -227,6 +227,17 @@ describe("开始分析人工审阅入口", () => {
     expect(preview).not.toHaveTextContent("最坏Token");
   });
 
+  // API 配好、服务连着、模式有推荐值——执行方式/AI 服务/分析模式这三节每次打开都长得
+  // 一模一样，而人要做的决定只有一个：花不花这个钱。就绪时折起，标题里写明当前是什么。
+  it("一切就绪时把设置折起来，标题写明当前用的是什么", async () => {
+    renderDialog();
+    await openCloudPlusWithConsent();
+    const settings = await screen.findByTestId("start-analysis-settings");
+    expect(settings).not.toHaveAttribute("open");
+    expect(settings).toHaveTextContent("云端 AI");
+    expect(settings).toHaveTextContent("更改");
+  });
+
   it("那些数字一个不少，收在技术详情里", async () => {
     renderDialog();
     await openCloudPlusWithConsent();
@@ -479,7 +490,8 @@ describe("StartAnalysisDialog 布局与交互", () => {
     const dialog = await screen.findByRole("dialog");
     const submit = await waitFor(() => {
       const button = screen.getByTestId("start-analysis-submit");
-      expect(button).toHaveTextContent("按当前额度开始");
+      // 钱写在按钮上：「按当前额度开始」既没说要花多少，也没说「当前额度」是什么。
+      expect(button).toHaveTextContent("开始分析");
       expect(button).not.toBeDisabled();
       return button;
     });
@@ -786,7 +798,7 @@ describe("普通模式开始分析弹窗", () => {
       "预计额度足够，暂无重试余量。",
     );
     expect(screen.getByTestId("start-analysis-adjust-quota")).toHaveTextContent("调整额度");
-    expect(screen.getByTestId("start-analysis-submit")).toHaveTextContent("按当前额度开始");
+    expect(screen.getByTestId("start-analysis-submit")).toHaveTextContent("开始分析");
   });
 
   it("本阶段预计请求不足时显示阻塞原因并提供临时授权创建", async () => {
