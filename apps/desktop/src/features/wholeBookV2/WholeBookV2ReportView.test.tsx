@@ -95,13 +95,17 @@ describe("WholeBookV2ReportView", () => {
     render(
       <WholeBookV2ReportView
         data={breakdown}
-        activeModule="story_breakdown"
+        activeModule="beats"
         onModuleChange={() => {}}
         mode="formal"
       />,
     );
     const nav = screen.getByRole("navigation", { name: "全书分析模块" });
-    expect(within(nav).getByRole("button", { name: /拆文/ })).toBeInTheDocument();
+    // 拆文现在是顶层四页，不再是一个页签折着五个小标签——同一份内容在 PDF 里是三个正章，
+    // 屏幕上却要点两层才看得到。
+    for (const label of ["起承转合", "打动人的瞬间", "每章问题", "手法与配角"]) {
+      expect(within(nav).getByRole("button", { name: new RegExp(label) })).toBeInTheDocument();
+    }
     expect(within(nav).queryByRole("button", { name: /全书总览/ })).not.toBeInTheDocument();
     expect(within(nav).queryByRole("button", { name: /综合诊断/ })).not.toBeInTheDocument();
     expect(screen.getByText("两人第一次同处一室")).toBeInTheDocument();
@@ -119,7 +123,11 @@ describe("WholeBookV2ReportView", () => {
     );
     const nav = screen.getByRole("navigation", { name: "全书分析模块" });
     expect(within(nav).getByRole("button", { name: /全书总览/ })).toBeInTheDocument();
-    expect(within(nav).getByRole("button", { name: /拆文/ })).toBeInTheDocument();
+    // 拆文现在是顶层四页，不再是一个页签折着五个小标签——同一份内容在 PDF 里是三个正章，
+    // 屏幕上却要点两层才看得到。
+    for (const label of ["起承转合", "打动人的瞬间", "每章问题", "手法与配角"]) {
+      expect(within(nav).getByRole("button", { name: new RegExp(label) })).toBeInTheDocument();
+    }
   });
 
   // An empty `story_breakdown` block is what a 评测 run writes; it must not earn a tab.
@@ -129,7 +137,7 @@ describe("WholeBookV2ReportView", () => {
       <WholeBookV2ReportView data={empty} activeModule="overview" onModuleChange={() => {}} mode="formal" />,
     );
     const nav = screen.getByRole("navigation", { name: "全书分析模块" });
-    expect(within(nav).queryByRole("button", { name: /拆文/ })).not.toBeInTheDocument();
+    expect(within(nav).queryByRole("button", { name: /起承转合/ })).not.toBeInTheDocument();
     expect(within(nav).getByRole("button", { name: /综合诊断/ })).toBeInTheDocument();
   });
 

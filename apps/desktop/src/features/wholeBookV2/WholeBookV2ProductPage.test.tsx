@@ -370,7 +370,7 @@ describe("WholeBookV2ProductPage", () => {
     await waitFor(() => expect(getV2Spy).toHaveBeenCalledWith(77));
     await waitFor(() => {
       const nav = screen.getByRole("navigation", { name: "全书分析模块" });
-      expect(within(nav).getByRole("button", { name: /拆文/ })).toBeInTheDocument();
+      expect(within(nav).getByRole("button", { name: /起承转合/ })).toBeInTheDocument();
     });
   });
 

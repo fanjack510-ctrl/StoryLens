@@ -703,161 +703,158 @@ function fallingPoints(points: JourneyResult["points"]): boolean[] {
  *  moments with the line quoted, sixty-one chapter hooks, eight techniques, eleven cast
  *  entries — and there was no module to put it in, so the reader saw 全书总览 and 综合诊断
  *  standing empty instead. */
-function StoryBreakdownModule({ data }: { data: WholeBookAnalysisV2 }) {
-  const [tab, setTab] = useState("起承转合");
+/** 拆文的四页。
+ *
+ *  这五块内容原本折在一个「拆文」页签下面的小标签里。同一份内容在 PDF 里是三个正章，
+ *  屏幕上却要点两层才看得到——于是切到拆文的人第一眼看见的仍然是故事/人物/悬念/节奏/章节，
+ *  和评测毫无分别，「换了读法」这件事在页面上等于没发生。现在它们是顶层的四页。
+ */
+function BeatsModule({ data }: { data: WholeBookAnalysisV2 }) {
+  const b = data.story_breakdown;
+  if (!b) return null;
+  return <div className="wb2-sub-stack">
+      <SubCard n={1} title="四个部分" meta={`${b.four_beats?.length ?? 0} 段`}>
+        <table className="wb2-table">
+          <thead>
+            <tr>
+              <th>部分</th>
+              <th>章节</th>
+              <th>这一段在做什么</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(b.four_beats || []).map((x, i) => (
+              <tr key={i}>
+                <td>
+                  <b>{x.beat}</b>
+                </td>
+                <td className="wb2-num">
+                  第 {x.chapter_start}–{x.chapter_end} 章
+                </td>
+                <td>
+                  <b>{x.title}</b>
+                  <p>{x.summary}</p>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </SubCard>
+    </div>;
+}
+
+function MomentsModule({ data }: { data: WholeBookAnalysisV2 }) {
   const b = data.story_breakdown;
   if (!b) return null;
   const moments = [...(b.standout_moments || [])].sort(
     (x, y) => (x.rank ?? 999) - (y.rank ?? 999),
   );
-  const tabs = ["起承转合", "打动人的瞬间", "每章留下的问题", "可复用的手法", "配角功能"];
+  return <div className="wb2-sub-stack">
+      <SubCard
+        n={1}
+        title="选出来的瞬间"
+        meta={`${moments.length} 处 · 按打动人的程度排序`}
+      >
+        {b.moment_count_rationale && (
+          <p className="wb2-note">{b.moment_count_rationale}</p>
+        )}
+        {moments.map((m, i) => (
+          <div className="wb2-moment" key={i}>
+            <header>
+              <i>{m.rank ?? i + 1}</i>
+              <b>{m.title}</b>
+              <span>第 {m.chapter} 章</span>
+            </header>
+            {m.quote && <blockquote>{m.quote}</blockquote>}
+            <p>{m.why_it_lands}</p>
+          </div>
+        ))}
+      </SubCard>
+    </div>;
+}
+
+function HooksModule({ data }: { data: WholeBookAnalysisV2 }) {
+  const b = data.story_breakdown;
+  if (!b) return null;
+  return <div className="wb2-sub-stack">
+      <SubCard
+        n={1}
+        title="章末钩子"
+        meta={`${b.chapter_hooks?.length ?? 0} 章留下了问题`}
+      >
+        <table className="wb2-table">
+          <thead>
+            <tr>
+              <th>章</th>
+              <th>这一章结尾留给读者的问题</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(b.chapter_hooks || []).map((h, i) => (
+              <tr key={i}>
+                <td className="wb2-num">第 {h.chapter} 章</td>
+                <td>{h.question}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </SubCard>
+    </div>;
+}
+
+/** 手法与配角合成一页：两者都在回答「这本书是怎么做到的」，而且各自都不够撑满一页。 */
+function TechniquesModule({ data }: { data: WholeBookAnalysisV2 }) {
+  const b = data.story_breakdown;
+  if (!b) return null;
   return (
     <>
-      <div className="wb2-tabs">
-        {tabs.map((t) => (
-          <button key={t} className={tab === t ? "active" : ""} onClick={() => setTab(t)}>
-            {t}
-          </button>
-        ))}
-      </div>
-
-      {tab === "起承转合" && (
-        <div className="wb2-sub-stack">
-          <SubCard n={1} title="四个部分" meta={`${b.four_beats?.length ?? 0} 段`}>
-            <table className="wb2-table">
-              <thead>
-                <tr>
-                  <th>部分</th>
-                  <th>章节</th>
-                  <th>这一段在做什么</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(b.four_beats || []).map((x, i) => (
-                  <tr key={i}>
-                    <td>
-                      <b>{x.beat}</b>
-                    </td>
-                    <td className="wb2-num">
-                      第 {x.chapter_start}–{x.chapter_end} 章
-                    </td>
-                    <td>
-                      <b>{x.title}</b>
-                      <p>{x.summary}</p>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </SubCard>
-        </div>
-      )}
-
-      {tab === "打动人的瞬间" && (
-        <div className="wb2-sub-stack">
-          <SubCard
-            n={1}
-            title="选出来的瞬间"
-            meta={`${moments.length} 处 · 按打动人的程度排序`}
-          >
-            {b.moment_count_rationale && (
-              <p className="wb2-note">{b.moment_count_rationale}</p>
-            )}
-            {moments.map((m, i) => (
-              <div className="wb2-moment" key={i}>
-                <header>
-                  <i>{m.rank ?? i + 1}</i>
-                  <b>{m.title}</b>
-                  <span>第 {m.chapter} 章</span>
-                </header>
-                {m.quote && <blockquote>{m.quote}</blockquote>}
-                <p>{m.why_it_lands}</p>
-              </div>
+      <div className="wb2-sub-stack">
+            {(b.reusable_techniques || []).map((t, i) => (
+              <SubCard n={i + 1} title={t.name} key={i}>
+                <p>
+                  <b>是什么</b>
+                  {t.what_it_is}
+                </p>
+                <p>
+                  <b>为什么有效</b>
+                  {t.why_it_works}
+                </p>
+                <p>
+                  <b>能用到哪</b>
+                  {t.transfers_to}
+                </p>
+              </SubCard>
             ))}
-          </SubCard>
-        </div>
-      )}
-
-      {tab === "每章留下的问题" && (
-        <div className="wb2-sub-stack">
-          <SubCard
-            n={1}
-            title="章末钩子"
-            meta={`${b.chapter_hooks?.length ?? 0} 章留下了问题`}
-          >
-            <table className="wb2-table">
-              <thead>
-                <tr>
-                  <th>章</th>
-                  <th>这一章结尾留给读者的问题</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(b.chapter_hooks || []).map((h, i) => (
-                  <tr key={i}>
-                    <td className="wb2-num">第 {h.chapter} 章</td>
-                    <td>{h.question}</td>
+          </div>
+      <div className="wb2-sub-stack">
+            <SubCard n={1} title="每个配角在担什么" meta={`${b.supporting_cast?.length ?? 0} 人`}>
+              {b.cast_note && <p className="wb2-note">{b.cast_note}</p>}
+              <table className="wb2-table">
+                <thead>
+                  <tr>
+                    <th>人物</th>
+                    <th>承担的功能</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </SubCard>
-        </div>
-      )}
-
-      {tab === "可复用的手法" && (
-        <div className="wb2-sub-stack">
-          {(b.reusable_techniques || []).map((t, i) => (
-            <SubCard n={i + 1} title={t.name} key={i}>
-              <p>
-                <b>是什么</b>
-                {t.what_it_is}
-              </p>
-              <p>
-                <b>为什么有效</b>
-                {t.why_it_works}
-              </p>
-              <p>
-                <b>能用到哪</b>
-                {t.transfers_to}
-              </p>
+                </thead>
+                <tbody>
+                  {(b.supporting_cast || []).map((c, i) => (
+                    <tr key={i}>
+                      <td>
+                        <b>{c.name}</b>
+                      </td>
+                      <td>
+                        {c.function}
+                        {c.stays_in_lane ? <p>{c.stays_in_lane}</p> : null}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </SubCard>
-          ))}
-        </div>
-      )}
-
-      {tab === "配角功能" && (
-        <div className="wb2-sub-stack">
-          <SubCard n={1} title="每个配角在担什么" meta={`${b.supporting_cast?.length ?? 0} 人`}>
-            {b.cast_note && <p className="wb2-note">{b.cast_note}</p>}
-            <table className="wb2-table">
-              <thead>
-                <tr>
-                  <th>人物</th>
-                  <th>承担的功能</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(b.supporting_cast || []).map((c, i) => (
-                  <tr key={i}>
-                    <td>
-                      <b>{c.name}</b>
-                    </td>
-                    <td>
-                      {c.function}
-                      {c.stays_in_lane ? <p>{c.stays_in_lane}</p> : null}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </SubCard>
-        </div>
-      )}
+          </div>
     </>
   );
 }
-
 function SubCard({
   n,
   title,
@@ -2493,7 +2490,10 @@ export function WholeBookV2ReportView({
         </div>
 
         {activeModule === "overview" && <OverviewModule data={data} />}
-        {activeModule === "story_breakdown" && <StoryBreakdownModule data={data} />}
+        {activeModule === "beats" && <BeatsModule data={data} />}
+        {activeModule === "moments" && <MomentsModule data={data} />}
+        {activeModule === "hooks" && <HooksModule data={data} />}
+        {activeModule === "techniques" && <TechniquesModule data={data} />}
         {activeModule === "story" && <StoryModule data={data} />}
         {activeModule === "characters" && <CharactersModule data={data} />}
         {activeModule === "suspense" && <SuspenseModule data={data} />}

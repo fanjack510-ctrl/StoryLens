@@ -1,6 +1,12 @@
 export type ModuleKey =
   | "overview"
-  | "story_breakdown"
+  // 拆文的四页。此前是一个页签「拆文」，五块内容折在里面的小标签后——同一份内容在
+  // PDF 里是三个正章，屏幕上却要点两层才看得到，于是切到拆文的人第一眼看见的还是
+  // 「故事/人物/悬念/节奏/章节」，和评测毫无分别。
+  | "beats"
+  | "moments"
+  | "hooks"
+  | "techniques"
   | "story"
   | "characters"
   | "suspense"
@@ -19,9 +25,24 @@ export const MODULES: Array<{
     description: "快速理解作品画像、故事核心、长线演变与最终落点。",
   },
   {
-    key: "story_breakdown",
-    label: "拆文",
-    description: "起承转合、最打动人的瞬间、每章留下的问题、可以拿走的手法与配角功能。",
+    key: "beats",
+    label: "起承转合",
+    description: "全书分成哪四段，每一段在做什么。",
+  },
+  {
+    key: "moments",
+    label: "打动人的瞬间",
+    description: "最有冲击力的那几处，连原文引用与为什么打动人。",
+  },
+  {
+    key: "hooks",
+    label: "每章问题",
+    description: "每一章结尾留给读者的那个待答问题。",
+  },
+  {
+    key: "techniques",
+    label: "手法与配角",
+    description: "可以拿走用的写法，以及每个配角在书里担什么。",
   },
   {
     key: "story",
@@ -77,6 +98,9 @@ export const MODULE_DESCRIPTIONS: Record<ModuleKey, string> = Object.fromEntries
  *
  *  `module_availability` cannot answer this — real documents omit these three keys entirely.
  */
+/** 拆文那份读法自己的四页。 */
+export const BREAKDOWN_KEYS = new Set<ModuleKey>(["beats", "moments", "hooks", "techniques"]);
+
 export function modulesForDocument(doc: DocumentContent): typeof MODULES {
   const has = {
     story_breakdown: Boolean(doc?.story_breakdown?.four_beats?.length),
@@ -88,11 +112,12 @@ export function modulesForDocument(doc: DocumentContent): typeof MODULES {
       (doc?.assessment?.overall_summary || "").trim() || doc?.assessment?.issues?.length,
     ),
   };
-  return MODULES.filter((m) =>
-    m.key === "story_breakdown" || m.key === "overview" || m.key === "assessment"
-      ? has[m.key]
-      : true,
-  );
+  return MODULES.filter((m) => {
+    if (BREAKDOWN_KEYS.has(m.key)) return has.story_breakdown;
+    if (m.key === "overview") return has.overview;
+    if (m.key === "assessment") return has.assessment;
+    return true;
+  });
 }
 
 /** The parts of a report document that decide which modules are worth a tab. */
